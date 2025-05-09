@@ -239,4 +239,8 @@
 #define _POSIX_ARG_MAX 4096
 #endif
 
+#ifndef IOV_MAX
+#define IOV_MAX 1024
+#endif // IOV_MAX
+
 #endif // LLVM_LIBC_MACROS_LIMITS_MACROS_H

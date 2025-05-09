@@ -18,14 +18,13 @@
 #include "test_macros.h"
 #include "../../../test_compare.h"
 
-int main(int, char**)
-{
-    typedef test_less<int> C;
-    const std::multiset<int, C> m(C(3));
-    assert(m.empty());
-    assert(m.begin() == m.end());
-    assert(m.key_comp() == C(3));
-    assert(m.value_comp() == C(3));
+int main(int, char**) {
+  typedef test_less<int> C;
+  const std::multiset<int, C> m(C(3));
+  assert(m.empty());
+  assert(m.begin() == m.end());
+  assert(m.key_comp() == C(3));
+  assert(m.value_comp() == C(3));
 
   return 0;
 }

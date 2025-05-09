@@ -17,7 +17,7 @@ subroutine test_1(x)
   type(sometype) :: x
 end subroutine
 ! CHECK-LABEL:   fir.type_info @_QFtest_1Tsometype
-! CHECK-SAME     component_info {
+! CHECK-SAME:    component_info {
 ! CHECK:           fir.dt_component "i" lbs [-1] init @_QFtest_1E.di.sometype.i
 ! CHECK-NOT:       fir.dt_component "j"
 ! CHECK:           fir.dt_component "p" init @_QFtest_1E.di.sometype.p
@@ -35,7 +35,7 @@ subroutine test_nesting(x)
   type(sometype2) :: x
 end subroutine
 ! CHECK-LABEL:   fir.type_info @_QFtest_nestingTsome_sub_type
-! CHECK-SAME     component_info {
+! CHECK-SAME:    component_info {
 ! CHECK:           fir.dt_component "i" init @_QFtest_nestingE.di.some_sub_type.i
 ! CHECK:         }
 
@@ -50,6 +50,6 @@ subroutine data_like(x)
   type(sometype3) :: x
 end subroutine
 ! CHECK-LABEL:   fir.type_info @_QFdata_likeTsometype3
-! CHECK-SAME     component_info {
+! CHECK-SAME:    component_info {
 ! CHECK:           fir.dt_component "i" init @_QFdata_likeE.di.sometype3.i
 ! CHECK:         }

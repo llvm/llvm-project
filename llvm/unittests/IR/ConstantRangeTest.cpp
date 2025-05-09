@@ -1631,11 +1631,46 @@ TEST_F(ConstantRangeTest, Ashr) {
             ConstantRange(APInt(16, 0xfffc), APInt(16, 0xfffe)));
 }
 
-TEST(ConstantRange, MakeAllowedICmpRegion) {
-  // PR8250
-  ConstantRange SMax = ConstantRange(APInt::getSignedMaxValue(32));
+TEST(ConstantRange, MakeAllowedICmpRegionEdgeCases) {
+  ConstantRange SMax = ConstantRange(APInt::getSignedMaxValue(8));
   EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_SGT, SMax)
                   .isEmptySet());
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_SGE, SMax)
+                  .isSingleElement());
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_SLE, SMax)
+                  .isFullSet());
+  ConstantRange SMin = ConstantRange(APInt::getSignedMinValue(8));
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_SLT, SMin)
+                  .isEmptySet());
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_SLE, SMin)
+                  .isSingleElement());
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_SGE, SMin)
+                  .isFullSet());
+  ConstantRange UMax = ConstantRange(APInt::getMaxValue(8));
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_UGT, UMax)
+                  .isEmptySet());
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_UGE, UMax)
+                  .isSingleElement());
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_ULE, UMax)
+                  .isFullSet());
+  ConstantRange UMin = ConstantRange(APInt::getMinValue(8));
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_ULT, UMin)
+                  .isEmptySet());
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_ULE, UMin)
+                  .isSingleElement());
+  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(ICmpInst::ICMP_UGE, UMin)
+                  .isFullSet());
+}
+
+TEST(ConstantRange, MakeExactICmpRegion) {
+  for (unsigned Bits : {1, 4}) {
+    EnumerateAPInts(Bits, [](const APInt &N) {
+      for (auto Pred : ICmpInst::predicates()) {
+        EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(Pred, N),
+                  ConstantRange::makeSatisfyingICmpRegion(Pred, N));
+      };
+    });
+  }
 }
 
 TEST(ConstantRange, MakeSatisfyingICmpRegion) {
@@ -2123,6 +2158,16 @@ TEST(ConstantRange, GetEquivalentICmp) {
         EXPECT_EQ(CR.contains(N), Result);
       });
     }
+  });
+}
+
+TEST(ConstantRange, SplitPosNeg) {
+  EnumerateInterestingConstantRanges([](const ConstantRange &CR) {
+    auto [Pos, Neg] = CR.splitPosNeg();
+    EXPECT_TRUE(Pos.isAllPositive());
+    EXPECT_TRUE(Neg.isAllNegative());
+    if (CR.getBitWidth() == 1)
+      EXPECT_TRUE(Pos.isEmptySet());
   });
 }
 

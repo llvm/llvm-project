@@ -1,9 +1,6 @@
 ; RUN: opt %s -passes=verify   \
 ; RUN: | opt -passes=verify -S \
 ; RUN: | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators %s -passes=verify   \
-; RUN: | opt -passes=verify -S \
-; RUN: | FileCheck %s
 
 ;; Roundtrip test (text -> bitcode -> text) for DIAssignID metadata and
 ;; llvm.dbg.assign intrinsics.

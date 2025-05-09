@@ -226,6 +226,19 @@ struct ExecutorAddrRange {
   ExecutorAddrRange(ExecutorAddr Start, ExecutorAddrDiff Size)
       : Start(Start), End(Start + Size) {}
 
+  template <typename T, typename UnwrapFn = ExecutorAddr::defaultUnwrap<T>>
+  static ExecutorAddrRange fromPtrRange(T *Start, T *End,
+                                        UnwrapFn &&Unwrap = UnwrapFn()) {
+    return {ExecutorAddr::fromPtr(Start, Unwrap),
+            ExecutorAddr::fromPtr(End, Unwrap)};
+  }
+
+  template <typename T, typename UnwrapFn = ExecutorAddr::defaultUnwrap<T>>
+  static ExecutorAddrRange fromPtrRange(T *Ptr, ExecutorAddrDiff Size,
+                                        UnwrapFn &&Unwrap = UnwrapFn()) {
+    return {ExecutorAddr::fromPtr(Ptr, std::forward<UnwrapFn>(Unwrap)), Size};
+  }
+
   bool empty() const { return Start == End; }
   ExecutorAddrDiff size() const { return End - Start; }
 

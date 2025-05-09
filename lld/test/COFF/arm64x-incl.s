@@ -40,14 +40,15 @@
 // Check that including a missing symbol results in an error.
 
 // RUN: not lld-link -machine:arm64x -out:err.dll -dll -noentry loadconfig-arm64.obj loadconfig-arm64ec.obj -include:sym sym-aarch64.obj \
-// RUN:              2>&1 | FileCheck --check-prefix=ERR %s
-// ERR: lld-link: error: <root>: undefined symbol: sym
+// RUN:              2>&1 | FileCheck --check-prefix=ERR-EC %s
+// ERR-EC: lld-link: error: <root>: undefined symbol: sym (EC symbol)
 
 // RUN: not lld-link -machine:arm64x -out:err.dll -dll -noentry loadconfig-arm64.obj loadconfig-arm64ec.obj drectve-arm64ec.obj sym-aarch64.obj \
-// RUN:              2>&1 | FileCheck --check-prefix=ERR %s
+// RUN:              2>&1 | FileCheck --check-prefix=ERR-EC %s
 
 // RUN: not lld-link -machine:arm64x -out:err.dll -dll -noentry loadconfig-arm64.obj loadconfig-arm64ec.obj drectve-aarch64.obj sym-arm64ec.obj \
-// RUN:              2>&1 | FileCheck --check-prefix=ERR %s
+// RUN:              2>&1 | FileCheck --check-prefix=ERR-NATIVE %s
+// ERR-NATIVE: lld-link: error: <root>: undefined symbol: sym (native symbol)
 
 #--- sym-aarch64.s
         .section ".test","dr"

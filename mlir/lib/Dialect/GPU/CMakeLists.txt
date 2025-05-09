@@ -40,6 +40,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/ROCDLAttachTarget.cpp
   Transforms/ShuffleRewriter.cpp
   Transforms/SPIRVAttachTarget.cpp
+  Transforms/SubgroupIdRewriter.cpp
   Transforms/SubgroupReduceLowering.cpp
 
   OBJECT
@@ -53,6 +54,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffineUtils
+  MLIRAMDGPUDialect
   MLIRArithDialect
   MLIRAsyncDialect
   MLIRBufferizationDialect
@@ -70,6 +72,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRSideEffectInterfaces
   MLIRSPIRVTarget
   MLIRSupport
+  MLIRROCDLDialect
   MLIRROCDLTarget
   MLIRTransformUtils
   MLIRVectorDialect

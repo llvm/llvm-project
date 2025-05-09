@@ -197,7 +197,7 @@ int testStdCtorDoesNotInvalidateParentObject() {
 int testStdCtorDoesNotInvalidateParentObjectSwapped() {
   StdWrappingOpaqueSwapped obj;
   int x = obj.o.nested_member; // no-garbage: std::Opaque::ctor might initialized this
-  int y = obj.uninit; // expected-warning {{Assigned value is garbage or undefined}}
+  int y = obj.uninit; // expected-warning {{Assigned value is uninitialized}}
   return x + y;
 }
 
@@ -277,6 +277,6 @@ struct StdWrappingFancyOpaque {
 int testNestedStdNamespacesAndRecords() {
   StdWrappingFancyOpaque obj;
   int x = obj.o.nested_member; // no-garbage: ctor
-  int y = obj.uninit; // expected-warning {{Assigned value is garbage or undefined}}
+  int y = obj.uninit; // expected-warning {{Assigned value is uninitialized}}
   return x + y;
 }

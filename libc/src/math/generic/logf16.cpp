@@ -23,7 +23,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
 static constexpr size_t N_LOGF16_EXCEPTS = 5;
 #else
 static constexpr size_t N_LOGF16_EXCEPTS = 11;
@@ -32,7 +33,7 @@ static constexpr size_t N_LOGF16_EXCEPTS = 11;
 static constexpr fputil::ExceptValues<float16, N_LOGF16_EXCEPTS>
     LOGF16_EXCEPTS = {{
 // (input, RZ output, RU offset, RD offset, RN offset)
-#ifndef LIBC_TARGET_CPU_HAS_FMA
+#ifndef LIBC_TARGET_CPU_HAS_FMA_FLOAT
         // x = 0x1.61cp-13, logf16(x) = -0x1.16p+3 (RZ)
         {0x0987U, 0xc858U, 0U, 1U, 0U},
         // x = 0x1.f2p-12, logf16(x) = -0x1.e98p+2 (RZ)
@@ -42,7 +43,7 @@ static constexpr fputil::ExceptValues<float16, N_LOGF16_EXCEPTS>
         {0x1935U, 0xc5f9U, 0U, 1U, 0U},
         // x = 0x1.5ep-8, logf16(x) = -0x1.4ecp+2 (RZ)
         {0x1d78U, 0xc53bU, 0U, 1U, 0U},
-#ifndef LIBC_TARGET_CPU_HAS_FMA
+#ifndef LIBC_TARGET_CPU_HAS_FMA_FLOAT
         // x = 0x1.fdp-1, logf16(x) = -0x1.81p-8 (RZ)
         {0x3bf4U, 0x9e04U, 0U, 1U, 1U},
         // x = 0x1.fep-1, logf16(x) = -0x1.008p-8 (RZ)
@@ -52,7 +53,7 @@ static constexpr fputil::ExceptValues<float16, N_LOGF16_EXCEPTS>
         {0x3bfcU, 0x9801U, 0U, 1U, 0U},
         // x = 0x1.ff8p-1, logf16(x) = -0x1p-10 (RZ)
         {0x3bfeU, 0x9400U, 0U, 1U, 1U},
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
         // x = 0x1.4c4p+1, logf16(x) = 0x1.e84p-1 (RZ)
         {0x4131U, 0x3ba1U, 1U, 0U, 1U},
 #else
@@ -64,6 +65,7 @@ static constexpr fputil::ExceptValues<float16, N_LOGF16_EXCEPTS>
         {0x6354U, 0x46d7U, 1U, 0U, 1U},
 #endif
     }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -103,8 +105,10 @@ LLVM_LIBC_FUNCTION(float16, logf16, (float16 x)) {
     return FPBits::inf().get_val();
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (auto r = LOGF16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // To compute log(x), we perform the following range reduction:
   //   x = 2^m * 1.mant,

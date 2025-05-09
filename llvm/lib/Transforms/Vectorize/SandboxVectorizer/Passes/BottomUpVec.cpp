@@ -12,20 +12,12 @@
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
+#include "llvm/SandboxIR/Region.h"
 #include "llvm/SandboxIR/Utils.h"
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm {
-
-static cl::opt<unsigned>
-    OverrideVecRegBits("sbvec-vec-reg-bits", cl::init(0), cl::Hidden,
-                       cl::desc("Override the vector register size in bits, "
-                                "which is otherwise found by querying TTI."));
-static cl::opt<bool>
-    AllowNonPow2("sbvec-allow-non-pow2", cl::init(false), cl::Hidden,
-                 cl::desc("Allow non-power-of-2 vectorization."));
 
 #ifndef NDEBUG
 static cl::opt<bool>
@@ -34,11 +26,20 @@ static cl::opt<bool>
                           "emit new instructions (*very* expensive)."));
 #endif // NDEBUG
 
-namespace sandboxir {
+static constexpr const unsigned long StopAtDisabled =
+    std::numeric_limits<unsigned long>::max();
+static cl::opt<unsigned long>
+    StopAt("sbvec-stop-at", cl::init(StopAtDisabled), cl::Hidden,
+           cl::desc("Vectorize if the invocation count is < than this. 0 "
+                    "disables vectorization."));
 
-BottomUpVec::BottomUpVec(StringRef Pipeline)
-    : FunctionPass("bottom-up-vec"),
-      RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {}
+static constexpr const unsigned long StopBundleDisabled =
+    std::numeric_limits<unsigned long>::max();
+static cl::opt<unsigned long>
+    StopBundle("sbvec-stop-bndl", cl::init(StopBundleDisabled), cl::Hidden,
+               cl::desc("Vectorize up to this many bundles."));
+
+namespace sandboxir {
 
 static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
                                           unsigned OpIdx) {
@@ -169,12 +170,9 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
     // TODO: Propagate debug info.
   };
 
-  auto *VecI = CreateVectorInstr(Bndl, Operands);
-  if (VecI != nullptr) {
-    Change = true;
-    IMaps->registerVector(Bndl, VecI);
-  }
-  return VecI;
+  auto *NewI = CreateVectorInstr(Bndl, Operands);
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "New instr: " << *NewI << "\n");
+  return NewI;
 }
 
 void BottomUpVec::tryEraseDeadInstrs() {
@@ -187,9 +185,11 @@ void BottomUpVec::tryEraseDeadInstrs() {
          [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
   for (const auto &Pair : SortedDeadInstrCandidates) {
     for (Instruction *I : reverse(Pair.second)) {
-      if (I->hasNUses(0))
+      if (I->hasNUses(0)) {
         // Erase the dead instructions bottom-to-top.
+        LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Erase dead: " << *I << "\n");
         I->eraseFromParent();
+      }
     }
   }
   DeadInstrCandidates.clear();
@@ -235,10 +235,9 @@ Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
         // This may also return a Constant if ExtrI is a Constant.
         auto *InsertI = InsertElementInst::create(
             LastInsert, ExtrI, InsertLaneC, WhereIt, Ctx, "VPack");
-        if (!isa<Constant>(InsertI)) {
-          LastInsert = InsertI;
+        LastInsert = InsertI;
+        if (!isa<Constant>(InsertI))
           WhereIt = std::next(cast<Instruction>(LastInsert)->getIterator());
-        }
       }
     } else {
       Constant *InsertLaneC =
@@ -279,187 +278,237 @@ void BottomUpVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
   }
 }
 
-Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
-                                 ArrayRef<Value *> UserBndl, unsigned Depth) {
-  Value *NewVec = nullptr;
-  auto *UserBB = !UserBndl.empty()
-                     ? cast<Instruction>(UserBndl.front())->getParent()
-                     : cast<Instruction>(Bndl[0])->getParent();
-  const auto &LegalityRes = Legality->canVectorize(Bndl);
+Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
+                                  ArrayRef<Value *> UserBndl, unsigned Depth) {
+  bool StopForDebug =
+      DebugBndlCnt++ >= StopBundle && StopBundle != StopBundleDisabled;
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
+             VecUtils::dump(Bndl));
+  const auto &LegalityRes = StopForDebug ? Legality->getForcedPackForDebugging()
+                                         : Legality->canVectorize(Bndl);
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Legality: " << LegalityRes << "\n");
+  auto ActionPtr =
+      std::make_unique<Action>(&LegalityRes, Bndl, UserBndl, Depth);
+  SmallVector<Action *> Operands;
   switch (LegalityRes.getSubclassID()) {
   case LegalityResultID::Widen: {
     auto *I = cast<Instruction>(Bndl[0]);
-    SmallVector<Value *, 2> VecOperands;
     switch (I->getOpcode()) {
     case Instruction::Opcode::Load:
-      // Don't recurse towards the pointer operand.
-      VecOperands.push_back(cast<LoadInst>(I)->getPointerOperand());
       break;
     case Instruction::Opcode::Store: {
       // Don't recurse towards the pointer operand.
-      auto *VecOp = vectorizeRec(getOperand(Bndl, 0), Bndl, Depth + 1);
-      VecOperands.push_back(VecOp);
-      VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
+      Action *OpA = vectorizeRec(getOperand(Bndl, 0), Bndl, Depth + 1);
+      Operands.push_back(OpA);
       break;
     }
     default:
       // Visit all operands.
       for (auto OpIdx : seq<unsigned>(I->getNumOperands())) {
-        auto *VecOp = vectorizeRec(getOperand(Bndl, OpIdx), Bndl, Depth + 1);
-        VecOperands.push_back(VecOp);
+        Action *OpA = vectorizeRec(getOperand(Bndl, OpIdx), Bndl, Depth + 1);
+        Operands.push_back(OpA);
       }
       break;
     }
-    NewVec = createVectorInstr(Bndl, VecOperands);
+    // Update the maps to mark Bndl as "vectorized".
+    IMaps->registerVector(Bndl, ActionPtr.get());
+    break;
+  }
+  case LegalityResultID::DiamondReuse:
+  case LegalityResultID::DiamondReuseWithShuffle:
+  case LegalityResultID::DiamondReuseMultiInput:
+  case LegalityResultID::Pack:
+    break;
+  }
+  // Create actions in post-order.
+  ActionPtr->Operands = std::move(Operands);
+  auto *Action = ActionPtr.get();
+  Actions.push_back(std::move(ActionPtr));
+  return Action;
+}
 
-    // Collect any potentially dead scalar instructions, including the original
-    // scalars and pointer operands of loads/stores.
-    if (NewVec != nullptr)
-      collectPotentiallyDeadInstrs(Bndl);
-    break;
-  }
-  case LegalityResultID::DiamondReuse: {
-    NewVec = cast<DiamondReuse>(LegalityRes).getVector();
-    break;
-  }
-  case LegalityResultID::DiamondReuseWithShuffle: {
-    auto *VecOp = cast<DiamondReuseWithShuffle>(LegalityRes).getVector();
-    const ShuffleMask &Mask =
-        cast<DiamondReuseWithShuffle>(LegalityRes).getMask();
-    NewVec = createShuffle(VecOp, Mask, UserBB);
-    break;
-  }
-  case LegalityResultID::DiamondReuseMultiInput: {
-    const auto &Descr =
-        cast<DiamondReuseMultiInput>(LegalityRes).getCollectDescr();
-    Type *ResTy = FixedVectorType::get(Bndl[0]->getType(), Bndl.size());
-
-    // TODO: Try to get WhereIt without creating a vector.
-    SmallVector<Value *, 4> DescrInstrs;
-    for (const auto &ElmDescr : Descr.getDescrs()) {
-      if (auto *I = dyn_cast<Instruction>(ElmDescr.getValue()))
-        DescrInstrs.push_back(I);
-    }
-    BasicBlock::iterator WhereIt =
-        getInsertPointAfterInstrs(DescrInstrs, UserBB);
-
-    Value *LastV = PoisonValue::get(ResTy);
-    for (auto [Lane, ElmDescr] : enumerate(Descr.getDescrs())) {
-      Value *VecOp = ElmDescr.getValue();
-      Context &Ctx = VecOp->getContext();
-      Value *ValueToInsert;
-      if (ElmDescr.needsExtract()) {
-        ConstantInt *IdxC =
-            ConstantInt::get(Type::getInt32Ty(Ctx), ElmDescr.getExtractIdx());
-        ValueToInsert = ExtractElementInst::create(VecOp, IdxC, WhereIt,
-                                                   VecOp->getContext(), "VExt");
-      } else {
-        ValueToInsert = VecOp;
-      }
-      ConstantInt *LaneC = ConstantInt::get(Type::getInt32Ty(Ctx), Lane);
-      Value *Ins = InsertElementInst::create(LastV, ValueToInsert, LaneC,
-                                             WhereIt, Ctx, "VIns");
-      LastV = Ins;
-    }
-    NewVec = LastV;
-    break;
-  }
-  case LegalityResultID::Pack: {
-    // If we can't vectorize the seeds then just return.
-    if (Depth == 0)
-      return nullptr;
-    NewVec = createPack(Bndl, UserBB);
-    break;
-  }
-  }
 #ifndef NDEBUG
-  if (AlwaysVerify) {
-    // This helps find broken IR by constantly verifying the function. Note that
-    // this is very expensive and should only be used for debugging.
-    Instruction *I0 = isa<Instruction>(Bndl[0])
-                          ? cast<Instruction>(Bndl[0])
-                          : cast<Instruction>(UserBndl[0]);
-    assert(!Utils::verifyFunction(I0->getParent()->getParent(), dbgs()) &&
-           "Broken function!");
+void BottomUpVec::ActionsVector::print(raw_ostream &OS) const {
+  for (auto [Idx, Action] : enumerate(Actions)) {
+    Action->print(OS);
+    OS << "\n";
   }
-#endif
+}
+void BottomUpVec::ActionsVector::dump() const { print(dbgs()); }
+#endif // NDEBUG
+
+Value *BottomUpVec::emitVectors() {
+  Value *NewVec = nullptr;
+  for (const auto &ActionPtr : Actions) {
+    ArrayRef<Value *> Bndl = ActionPtr->Bndl;
+    ArrayRef<Value *> UserBndl = ActionPtr->UserBndl;
+    const LegalityResult &LegalityRes = *ActionPtr->LegalityRes;
+    unsigned Depth = ActionPtr->Depth;
+    auto *UserBB = !UserBndl.empty()
+                       ? cast<Instruction>(UserBndl.front())->getParent()
+                       : cast<Instruction>(Bndl[0])->getParent();
+
+    switch (LegalityRes.getSubclassID()) {
+    case LegalityResultID::Widen: {
+      auto *I = cast<Instruction>(Bndl[0]);
+      SmallVector<Value *, 2> VecOperands;
+      switch (I->getOpcode()) {
+      case Instruction::Opcode::Load:
+        VecOperands.push_back(cast<LoadInst>(I)->getPointerOperand());
+        break;
+      case Instruction::Opcode::Store: {
+        VecOperands.push_back(ActionPtr->Operands[0]->Vec);
+        VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
+        break;
+      }
+      default:
+        // Visit all operands.
+        for (Action *OpA : ActionPtr->Operands) {
+          auto *VecOp = OpA->Vec;
+          VecOperands.push_back(VecOp);
+        }
+        break;
+      }
+      NewVec = createVectorInstr(ActionPtr->Bndl, VecOperands);
+      // Collect any potentially dead scalar instructions, including the
+      // original scalars and pointer operands of loads/stores.
+      if (NewVec != nullptr)
+        collectPotentiallyDeadInstrs(Bndl);
+      break;
+    }
+    case LegalityResultID::DiamondReuse: {
+      NewVec = cast<DiamondReuse>(LegalityRes).getVector()->Vec;
+      break;
+    }
+    case LegalityResultID::DiamondReuseWithShuffle: {
+      auto *VecOp = cast<DiamondReuseWithShuffle>(LegalityRes).getVector()->Vec;
+      const ShuffleMask &Mask =
+          cast<DiamondReuseWithShuffle>(LegalityRes).getMask();
+      NewVec = createShuffle(VecOp, Mask, UserBB);
+      assert(NewVec->getType() == VecOp->getType() &&
+             "Expected same type! Bad mask ?");
+      break;
+    }
+    case LegalityResultID::DiamondReuseMultiInput: {
+      const auto &Descr =
+          cast<DiamondReuseMultiInput>(LegalityRes).getCollectDescr();
+      Type *ResTy = VecUtils::getWideType(Bndl[0]->getType(), Bndl.size());
+
+      // TODO: Try to get WhereIt without creating a vector.
+      SmallVector<Value *, 4> DescrInstrs;
+      for (const auto &ElmDescr : Descr.getDescrs()) {
+        auto *V = ElmDescr.needsExtract() ? ElmDescr.getValue()->Vec
+                                          : ElmDescr.getScalar();
+        if (auto *I = dyn_cast<Instruction>(V))
+          DescrInstrs.push_back(I);
+      }
+      BasicBlock::iterator WhereIt =
+          getInsertPointAfterInstrs(DescrInstrs, UserBB);
+
+      Value *LastV = PoisonValue::get(ResTy);
+      Context &Ctx = LastV->getContext();
+      unsigned Lane = 0;
+      for (const auto &ElmDescr : Descr.getDescrs()) {
+        Value *VecOp = nullptr;
+        Value *ValueToInsert;
+        if (ElmDescr.needsExtract()) {
+          VecOp = ElmDescr.getValue()->Vec;
+          ConstantInt *IdxC =
+              ConstantInt::get(Type::getInt32Ty(Ctx), ElmDescr.getExtractIdx());
+          ValueToInsert = ExtractElementInst::create(
+              VecOp, IdxC, WhereIt, VecOp->getContext(), "VExt");
+        } else {
+          ValueToInsert = ElmDescr.getScalar();
+        }
+        auto NumLanesToInsert = VecUtils::getNumLanes(ValueToInsert);
+        if (NumLanesToInsert == 1) {
+          // If we are inserting a scalar element then we need a single insert.
+          //   %VIns = insert %DstVec,  %SrcScalar, Lane
+          ConstantInt *LaneC = ConstantInt::get(Type::getInt32Ty(Ctx), Lane);
+          LastV = InsertElementInst::create(LastV, ValueToInsert, LaneC,
+                                            WhereIt, Ctx, "VIns");
+        } else {
+          // If we are inserting a vector element then we need to extract and
+          // insert each vector element one by one with a chain of extracts and
+          // inserts, for example:
+          //   %VExt0 = extract %SrcVec, 0
+          //   %VIns0 = insert  %DstVec, %Vect0, Lane + 0
+          //   %VExt1 = extract %SrcVec, 1
+          //   %VIns1 = insert  %VIns0,  %Vect0, Lane + 1
+          for (unsigned LnCnt = 0; LnCnt != NumLanesToInsert; ++LnCnt) {
+            auto *ExtrIdxC = ConstantInt::get(Type::getInt32Ty(Ctx), LnCnt);
+            auto *ExtrI = ExtractElementInst::create(ValueToInsert, ExtrIdxC,
+                                                     WhereIt, Ctx, "VExt");
+            unsigned InsLane = Lane + LnCnt;
+            auto *InsLaneC = ConstantInt::get(Type::getInt32Ty(Ctx), InsLane);
+            LastV = InsertElementInst::create(LastV, ExtrI, InsLaneC, WhereIt,
+                                              Ctx, "VIns");
+          }
+        }
+        Lane += NumLanesToInsert;
+      }
+      NewVec = LastV;
+      break;
+    }
+    case LegalityResultID::Pack: {
+      // If we can't vectorize the seeds then just return.
+      if (Depth == 0)
+        return nullptr;
+      NewVec = createPack(Bndl, UserBB);
+      break;
+    }
+    }
+    if (NewVec != nullptr) {
+      Change = true;
+      ActionPtr->Vec = NewVec;
+    }
+#ifndef NDEBUG
+    if (AlwaysVerify) {
+      // This helps find broken IR by constantly verifying the function. Note
+      // that this is very expensive and should only be used for debugging.
+      Instruction *I0 = isa<Instruction>(Bndl[0])
+                            ? cast<Instruction>(Bndl[0])
+                            : cast<Instruction>(UserBndl[0]);
+      assert(!Utils::verifyFunction(I0->getParent()->getParent(), dbgs()) &&
+             "Broken function!");
+    }
+#endif // NDEBUG
+  }
   return NewVec;
 }
 
 bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
+  Change = false;
+  if (LLVM_UNLIKELY(BottomUpInvocationCnt++ >= StopAt &&
+                    StopAt != StopAtDisabled))
+    return false;
   DeadInstrCandidates.clear();
   Legality->clear();
+  Actions.clear();
+  DebugBndlCnt = 0;
   vectorizeRec(Bndl, {}, /*Depth=*/0);
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "BottomUpVec: Vectorization Actions:\n";
+             Actions.dump());
+  emitVectors();
   tryEraseDeadInstrs();
   return Change;
 }
 
-bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
-  IMaps = std::make_unique<InstrMaps>(F.getContext());
+bool BottomUpVec::runOnRegion(Region &Rgn, const Analyses &A) {
+  const auto &SeedSlice = Rgn.getAux();
+  assert(SeedSlice.size() >= 2 && "Bad slice!");
+  Function &F = *SeedSlice[0]->getParent()->getParent();
+  IMaps = std::make_unique<InstrMaps>();
   Legality = std::make_unique<LegalityAnalysis>(
       A.getAA(), A.getScalarEvolution(), F.getParent()->getDataLayout(),
       F.getContext(), *IMaps);
-  Change = false;
-  const auto &DL = F.getParent()->getDataLayout();
-  unsigned VecRegBits =
-      OverrideVecRegBits != 0
-          ? OverrideVecRegBits
-          : A.getTTI()
-                .getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
-                .getFixedValue();
 
-  // TODO: Start from innermost BBs first
-  for (auto &BB : F) {
-    SeedCollector SC(&BB, A.getScalarEvolution());
-    for (SeedBundle &Seeds : SC.getStoreSeeds()) {
-      unsigned ElmBits =
-          Utils::getNumBits(VecUtils::getElementType(Utils::getExpectedType(
-                                Seeds[Seeds.getFirstUnusedElementIdx()])),
-                            DL);
-
-      auto DivideBy2 = [](unsigned Num) {
-        auto Floor = VecUtils::getFloorPowerOf2(Num);
-        if (Floor == Num)
-          return Floor / 2;
-        return Floor;
-      };
-      // Try to create the largest vector supported by the target. If it fails
-      // reduce the vector size by half.
-      for (unsigned SliceElms = std::min(VecRegBits / ElmBits,
-                                         Seeds.getNumUnusedBits() / ElmBits);
-           SliceElms >= 2u; SliceElms = DivideBy2(SliceElms)) {
-        if (Seeds.allUsed())
-          break;
-        // Keep trying offsets after FirstUnusedElementIdx, until we vectorize
-        // the slice. This could be quite expensive, so we enforce a limit.
-        for (unsigned Offset = Seeds.getFirstUnusedElementIdx(),
-                      OE = Seeds.size();
-             Offset + 1 < OE; Offset += 1) {
-          // Seeds are getting used as we vectorize, so skip them.
-          if (Seeds.isUsed(Offset))
-            continue;
-          if (Seeds.allUsed())
-            break;
-
-          auto SeedSlice =
-              Seeds.getSlice(Offset, SliceElms * ElmBits, !AllowNonPow2);
-          if (SeedSlice.empty())
-            continue;
-
-          assert(SeedSlice.size() >= 2 && "Should have been rejected!");
-
-          // TODO: If vectorization succeeds, run the RegionPassManager on the
-          // resulting region.
-
-          // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
-          SmallVector<Value *> SeedSliceVals(SeedSlice.begin(),
-                                             SeedSlice.end());
-          Change |= tryVectorize(SeedSliceVals);
-        }
-      }
-    }
-  }
-  return Change;
+  // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
+  SmallVector<Value *> SeedSliceVals(SeedSlice.begin(), SeedSlice.end());
+  // Try to vectorize starting from the seed slice. The returned value
+  // is true if we found vectorizable code and generated some vector
+  // code for it. It does not mean that the code is profitable.
+  return tryVectorize(SeedSliceVals);
 }
 
 } // namespace sandboxir

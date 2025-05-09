@@ -90,8 +90,8 @@ bool DINodeAttr::classof(Attribute attr) {
 
 bool DIScopeAttr::classof(Attribute attr) {
   return llvm::isa<DICommonBlockAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                   DIFileAttr, DILocalScopeAttr, DIModuleAttr, DINamespaceAttr>(
-      attr);
+                   DIDerivedTypeAttr, DIFileAttr, DILocalScopeAttr,
+                   DIModuleAttr, DINamespaceAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -374,4 +374,33 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
     return {};
   return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
       getAttributeName());
+}
+
+LogicalResult
+ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       LLVM::ModFlagBehavior flagBehavior, StringAttr key,
+                       Attribute value) {
+  if (key == LLVMDialect::getModuleFlagKeyCGProfileName()) {
+    auto arrayAttr = dyn_cast<ArrayAttr>(value);
+    if ((!arrayAttr) || (!llvm::all_of(arrayAttr, [](Attribute attr) {
+          return isa<ModuleFlagCGProfileEntryAttr>(attr);
+        })))
+      return emitError()
+             << "'CG Profile' key expects an array of '#llvm.cgprofile_entry'";
+    return success();
+  }
+
+  if (key == LLVMDialect::getModuleFlagKeyProfileSummaryName()) {
+    if (!isa<ModuleFlagProfileSummaryAttr>(value))
+      return emitError() << "'ProfileSummary' key expects a "
+                            "'#llvm.profile_summary' attribute";
+    return success();
+  }
+
+  if (isa<IntegerAttr, StringAttr>(value))
+    return success();
+
+  return emitError() << "only integer and string values are currently "
+                        "supported for unknown key '"
+                     << key << "'";
 }

@@ -377,7 +377,7 @@ add_subdirectory(DeviceRTL)
 add_subdirectory(tools)
 
 # Build target agnostic offloading library.
-add_subdirectory(src)
+add_subdirectory(libomptarget)
 
 add_subdirectory(tools/offload-tblgen)
 add_subdirectory(liboffload)
@@ -386,9 +386,12 @@ add_subdirectory(liboffload)
 add_subdirectory(test)
 
 # Add unit tests if GMock/GTest is present
-if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest)
-  if (NOT TARGET llvm_gtest)
-    add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
-  endif()
+if(NOT LLVM_THIRD_PARTY_DIR)
+  set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
+endif()
+if(EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest AND NOT TARGET llvm_gtest)
+  add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
+endif()
+if(TARGET llvm_gtest)
   add_subdirectory(unittests)
 endif()

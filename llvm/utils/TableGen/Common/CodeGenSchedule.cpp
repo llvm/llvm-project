@@ -413,9 +413,9 @@ void CodeGenSchedModels::collectSTIPredicates() {
   for (const Record *R : Records.getAllDerivedDefinitions("STIPredicate")) {
     const Record *Decl = R->getValueAsDef("Declaration");
 
-    const auto It = Decl2Index.find(Decl);
-    if (It == Decl2Index.end()) {
-      Decl2Index[Decl] = STIPredicates.size();
+    const auto [It, Inserted] =
+        Decl2Index.try_emplace(Decl, STIPredicates.size());
+    if (Inserted) {
       STIPredicateFunction Predicate(Decl);
       Predicate.addDefinition(R);
       STIPredicates.emplace_back(std::move(Predicate));

@@ -64,11 +64,18 @@ public:
 /// This struct can be extended as needed to add additional configuration
 /// points specific to a vendor's implementation.
 struct Config {
-  virtual ~Config() = default;
+  static constexpr bool BuildTimeEnableTelemetry = LLVM_ENABLE_TELEMETRY;
 
   // If true, telemetry will be enabled.
   const bool EnableTelemetry;
-  Config(bool E) : EnableTelemetry(E) {}
+
+  explicit Config() : EnableTelemetry(BuildTimeEnableTelemetry) {}
+
+  virtual ~Config() = default;
+
+  // Telemetry can only be enabled if both the runtime and buildtime flag
+  // are set.
+  explicit Config(bool E) : EnableTelemetry(E && BuildTimeEnableTelemetry) {}
 
   virtual std::optional<std::string> makeSessionId() { return std::nullopt; }
 };
@@ -138,10 +145,6 @@ class Manager {
 public:
   virtual ~Manager() = default;
 
-  // Optional callback for subclasses to perform additional tasks before
-  // dispatching to Destinations.
-  virtual Error preDispatch(TelemetryInfo *Entry) = 0;
-
   // Dispatch Telemetry data to the Destination(s).
   // The argument is non-const because the Manager may add or remove
   // data from the entry.
@@ -149,6 +152,11 @@ public:
 
   // Register a Destination.
   void addDestination(std::unique_ptr<Destination> Destination);
+
+protected:
+  // Optional callback for subclasses to perform additional tasks before
+  // dispatching to Destinations.
+  virtual Error preDispatch(TelemetryInfo *Entry);
 
 private:
   std::vector<std::unique_ptr<Destination>> Destinations;

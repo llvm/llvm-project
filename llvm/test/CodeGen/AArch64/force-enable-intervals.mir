@@ -4,8 +4,18 @@
 # RUN:  -o - %s 2>&1 -misched-prera-direction=topdown | FileCheck %s 
 
 # RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55 \
+# RUN:  -misched-dump-reserved-cycles=true \
+# RUN:  -passes=machine-scheduler -debug-only=machine-scheduler \
+# RUN:  -o - %s 2>&1 -misched-prera-direction=topdown | FileCheck %s 
+
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55 \
 # RUN:  -misched-dump-reserved-cycles=true -sched-model-force-enable-intervals=true \
 # RUN:  -run-pass=machine-scheduler -debug-only=machine-scheduler \
+# RUN:  -o - %s 2>&1 -misched-prera-direction=topdown | FileCheck %s  --check-prefix=FORCE
+
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55 \
+# RUN:  -misched-dump-reserved-cycles=true -sched-model-force-enable-intervals=true \
+# RUN:  -passes=machine-scheduler -debug-only=machine-scheduler \
 # RUN:  -o - %s 2>&1 -misched-prera-direction=topdown | FileCheck %s  --check-prefix=FORCE
 
 # REQUIRES: asserts, aarch64-registered-target

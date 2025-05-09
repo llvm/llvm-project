@@ -1,0 +1,99 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering  | FileCheck %s -check-prefix=LLVM
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @foo(%arg0: !s32i) -> !s32i {
+    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    cir.if %4 {
+      %5 = cir.const #cir.int<1> : !s32i
+      cir.return %5 : !s32i
+    } else {
+      %5 = cir.const #cir.int<0> : !s32i
+      cir.return %5 : !s32i
+    }
+    cir.return %arg0 : !s32i
+  }
+
+//      MLIR:   llvm.func @foo(%arg0: i32) -> i32
+// MLIR-NEXT:     %0 = llvm.mlir.constant(0 : i32) : i32
+// MLIR-NEXT:     %1 = llvm.icmp "ne" %arg0, %0 : i32
+// MLIR-NEXT:     llvm.cond_br %1, ^bb1, ^bb2
+// MLIR-NEXT:   ^bb1:  // pred: ^bb0
+// MLIR-NEXT:     %2 = llvm.mlir.constant(1 : i32) : i32
+// MLIR-NEXT:     llvm.return %2 : i32
+// MLIR-NEXT:   ^bb2:  // pred: ^bb0
+// MLIR-NEXT:     %3 = llvm.mlir.constant(0 : i32) : i32
+// MLIR-NEXT:     llvm.return %3 : i32
+// MLIR-NEXT:   ^bb3:  // no predecessors
+// MLIR-NEXT:     llvm.return %arg0 : i32
+// MLIR-NEXT:   }
+
+//       LLVM: define i32 @foo(i32 %0)
+//  LLVM-NEXT:   %2 = icmp ne i32 %0, 0
+//  LLVM-NEXT:   br i1 %2, label %3, label %4
+// LLVM-EMPTY:
+//  LLVM-NEXT: 3:
+//  LLVM-NEXT:   ret i32 1
+// LLVM-EMPTY:
+//  LLVM-NEXT: 4:
+//  LLVM-NEXT:   ret i32 0
+// LLVM-EMPTY:
+//  LLVM-NEXT: 5:
+//  LLVM-NEXT:   ret i32 %0
+//  LLVM-NEXT: }
+
+  cir.func @onlyIf(%arg0: !s32i) -> !s32i {
+    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    cir.if %4 {
+      %5 = cir.const #cir.int<1> : !s32i
+      cir.return %5 : !s32i
+    }
+    cir.return %arg0 : !s32i
+  }
+
+  //      MLIR: llvm.func @onlyIf(%arg0: i32) -> i32
+  // MLIR-NEXT:   %0 = llvm.mlir.constant(0 : i32) : i32
+  // MLIR-NEXT:   %1 = llvm.icmp "ne" %arg0, %0 : i32
+  // MLIR-NEXT:   llvm.cond_br %1, ^bb1, ^bb2
+  // MLIR-NEXT: ^bb1:  // pred: ^bb0
+  // MLIR-NEXT:   %2 = llvm.mlir.constant(1 : i32) : i32
+  // MLIR-NEXT:   llvm.return %2 : i32
+  // MLIR-NEXT: ^bb2:  // pred: ^bb0
+  // MLIR-NEXT:   llvm.return %arg0 : i32
+  // MLIR-NEXT: }
+
+  // Verify empty if clause is properly lowered to empty block
+  cir.func @emptyIfClause(%arg0: !s32i) -> !s32i {
+    // MLIR-LABEL: llvm.func @emptyIfClause
+    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    // MLIR: llvm.cond_br {{%.*}}, ^[[T:.*]], ^[[PHI:.*]]
+    cir.if %4 {
+      // MLIR-NEXT: ^[[T]]:
+      // MLIR-NEXT:   llvm.br ^[[PHI]]
+    }
+    // MLIR-NEXT: ^[[PHI]]:
+    // MLIR-NEXT:   llvm.return
+    cir.return %arg0 : !s32i
+  }
+
+  // Verify empty if-else clauses are properly lowered to empty blocks
+  // TODO: Fix reversed order of blocks in the test once Issue clangir/#1094 is
+  // addressed
+  cir.func @emptyIfElseClause(%arg0: !s32i) -> !s32i {
+    // MLIR-LABEL: llvm.func @emptyIfElseClause
+    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    // MLIR: llvm.cond_br {{%.*}}, ^[[T:.*]], ^[[F:.*]]
+    cir.if %4 {
+    // MLIR-NEXT: ^[[T]]:
+    // MLIR-NEXT:   llvm.br ^[[PHI:.*]]
+    } else {
+    // MLIR-NEXT: ^[[F]]:
+    // MLIR-NEXT:   llvm.br ^[[PHI]]
+    }
+    // MLIR-NEXT: ^[[PHI]]:
+    // MLIR-NEXT:   llvm.return
+    cir.return %arg0 : !s32i
+  }
+
+}

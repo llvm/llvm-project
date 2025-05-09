@@ -246,10 +246,10 @@ bb3:
 ; CHECK-LABEL: {{^}}spill_func:
 ; GCN:    NumSgprs: 104
 ; GCN-GCNTRACKERS:    NumSgprs: 104
-; GCN:    NumVgprs: 3
-; GCN-GCNTRACKERS:    NumVgprs: 4
-; GCN:    ScratchSize: 12
-; GCN-GCNTRACKERS:    ScratchSize: 16
+; GCN:    NumVgprs: 2
+; GCN-GCNTRACKERS:    NumVgprs: 3
+; GCN:    ScratchSize: 8
+; GCN-GCNTRACKERS:    ScratchSize: 12
 
 define void @spill_func(ptr addrspace(1) %arg) #0 {
 entry:

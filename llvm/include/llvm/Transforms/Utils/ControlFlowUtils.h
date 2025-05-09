@@ -110,7 +110,9 @@ struct ControlFlowHub {
     Branches.emplace_back(BB, Succ0, Succ1);
   }
 
-  BasicBlock *
+  /// Return the unified loop exit block and a flag indicating if the CFG was
+  /// changed at all.
+  std::pair<BasicBlock *, bool>
   finalize(DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
            const StringRef Prefix,
            std::optional<unsigned> MaxControlFlowBooleans = std::nullopt);

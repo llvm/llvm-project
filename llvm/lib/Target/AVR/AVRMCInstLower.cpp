@@ -42,21 +42,19 @@ AVRMCInstLower::lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
 
   if (TF & AVRII::MO_LO) {
     if (IsFunction) {
-      Expr =
-          AVRMCExpr::create(Subtarget.hasEIJMPCALL() ? AVRMCExpr::VK_AVR_LO8_GS
-                                                     : AVRMCExpr::VK_AVR_PM_LO8,
-                            Expr, IsNegated, Ctx);
+      Expr = AVRMCExpr::create(Subtarget.hasEIJMPCALL() ? AVRMCExpr::VK_LO8_GS
+                                                        : AVRMCExpr::VK_PM_LO8,
+                               Expr, IsNegated, Ctx);
     } else {
-      Expr = AVRMCExpr::create(AVRMCExpr::VK_AVR_LO8, Expr, IsNegated, Ctx);
+      Expr = AVRMCExpr::create(AVRMCExpr::VK_LO8, Expr, IsNegated, Ctx);
     }
   } else if (TF & AVRII::MO_HI) {
     if (IsFunction) {
-      Expr =
-          AVRMCExpr::create(Subtarget.hasEIJMPCALL() ? AVRMCExpr::VK_AVR_HI8_GS
-                                                     : AVRMCExpr::VK_AVR_PM_HI8,
-                            Expr, IsNegated, Ctx);
+      Expr = AVRMCExpr::create(Subtarget.hasEIJMPCALL() ? AVRMCExpr::VK_HI8_GS
+                                                        : AVRMCExpr::VK_PM_HI8,
+                               Expr, IsNegated, Ctx);
     } else {
-      Expr = AVRMCExpr::create(AVRMCExpr::VK_AVR_HI8, Expr, IsNegated, Ctx);
+      Expr = AVRMCExpr::create(AVRMCExpr::VK_HI8, Expr, IsNegated, Ctx);
     }
   } else if (TF != 0) {
     llvm_unreachable("Unknown target flag on symbol operand");

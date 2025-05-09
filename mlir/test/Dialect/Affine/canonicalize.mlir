@@ -1460,8 +1460,8 @@ func.func @mod_of_mod(%lb: index, %ub: index, %step: index) -> (index, index) {
 func.func @prefetch_canonicalize(%arg0: memref<512xf32>) -> () {
   // CHECK: affine.for [[I_0_:%.+]] = 0 to 8 {
   affine.for %arg3 = 0 to 8  {
-    %1 = affine.apply affine_map<()[s0] -> (s0 * 64)>()[%arg3]
-    // CHECK: affine.prefetch [[PARAM_0_]][symbol([[I_0_]]) * 64], read, locality<3>, data : memref<512xf32>
+    %1 = affine.apply affine_map<(d0) -> (d0 * 64)>(%arg3)
+    // CHECK: affine.prefetch [[PARAM_0_]][[[I_0_]] * 64], read, locality<3>, data : memref<512xf32>
     affine.prefetch %arg0[%1], read, locality<3>, data : memref<512xf32>
   }
   return
@@ -2261,4 +2261,13 @@ func.func @cst_value_to_cst_attr_basis_linearize_index(%arg0 : index, %arg1 : in
   %c2 = arith.constant 2 : index
   %0 = affine.linearize_index disjoint [%arg0, %arg1, %arg2] by  (%c2, 3, %c4) : index
   return %0 : index
+}
+
+// CHECK-LABEL: func @for_empty_body_folder_iv_yield
+func.func @for_empty_body_folder_iv_yield() -> index {
+  %c18 = arith.constant 18 : index
+  %10 = affine.for %arg3 = 0 to 114 iter_args(%arg4 = %c18) -> (index) {
+    affine.yield %arg3 : index
+  }
+  return %10 : index
 }

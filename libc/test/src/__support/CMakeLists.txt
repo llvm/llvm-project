@@ -63,7 +63,6 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
     SUITE
       libc-support-tests
     SRCS
-      fake_heap.s
       freelist_heap_test.cpp
     DEPENDS
       libc.src.__support.CPP.span
@@ -234,7 +233,7 @@ add_libc_test(
     libc.src.stdlib.srand
     libc.src.string.memset
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   UNIT_TEST_ONLY
     # Aligned Allocation is not supported in hermetic builds.
 )
@@ -249,33 +248,25 @@ add_libc_test(
     libc.src.__support.memory_size
 )
 
-# FIXME: We shouldn't have regular executables created because we could be
-#        cross-compiling the tests and running through an emulator.
-if(NOT LIBC_TARGET_OS_IS_GPU)
-  add_executable(
-    libc_str_to_float_comparison_test
+add_libc_test(
+  str_to_float_comparison_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc-support-tests
+  SRCS
     str_to_float_comparison_test.cpp
-  )
-
-  target_link_libraries(libc_str_to_float_comparison_test
-    PRIVATE
-      "${LIBC_TARGET}"
-  )
-
-  add_executable(
-    libc_system_str_to_float_comparison_test
-    str_to_float_comparison_test.cpp
-  )
-
-  set(float_test_file ${CMAKE_CURRENT_SOURCE_DIR}/str_to_float_comparison_data.txt)
-
-  add_custom_command(TARGET libc_str_to_float_comparison_test
-                     POST_BUILD
-                     COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:libc_str_to_float_comparison_test> ${float_test_file}
-                     DEPENDS ${float_test_file}
-                     COMMENT "Test the strtof and strtod implementations against precomputed results."
-                     VERBATIM)
-endif()
+  DEPENDS
+    libc.src.stdio.printf
+    libc.src.stdio.fopen
+    libc.src.stdio.fclose
+    libc.src.stdio.fgets
+    libc.src.stdlib.strtof
+    libc.src.stdlib.strtod
+    libc.src.stdlib.getenv
+    libc.src.string.strtok
+    libc.src.string.strdup
+    libc.src.__support.CPP.bit
+)
 
 add_subdirectory(CPP)
 add_subdirectory(File)

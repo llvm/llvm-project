@@ -2,6 +2,8 @@
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard -mtriple x86_64-linux-gnu -S | FileCheck %s --check-prefixes=CHECK,ELF
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard -mtriple x86_64-windows-msvc -S | FileCheck %s --check-prefixes=CHECK,COFF
 
+$WeakComdat = comdat any
+
 define void @Vanilla() {
 entry:
   ret void
@@ -29,14 +31,22 @@ entry:
   ret void
 }
 
+define weak void @WeakComdat() comdat {
+entry:
+  ret void
+}
+
+
 ; CHECK:      $Vanilla = comdat nodeduplicate
 ; ELF:        $LinkOnceOdr = comdat nodeduplicate
 ; COFF:       $LinkOnceOdr = comdat any
+; CHECK:      $WeakComdat = comdat any
 ; CHECK:      @__sancov_gen_ = private global [1 x i32] zeroinitializer, section {{.*}}, comdat($Vanilla), align 4{{$}}
 ; CHECK-NEXT: @__sancov_gen_.1 = private global [1 x i32] zeroinitializer, section {{.*}}, align 4{{$}}
 ; CHECK-NEXT: @__sancov_gen_.2 = private global [1 x i32] zeroinitializer, section {{.*}}, align 4{{$}}
 ; CHECK-NEXT: @__sancov_gen_.3 = private global [1 x i32] zeroinitializer, section {{.*}}, comdat($LinkOnceOdr), align 4{{$}}
 ; CHECK-NEXT: @__sancov_gen_.4 = private global [1 x i32] zeroinitializer, section {{.*}}, comdat($WeakOdr), align 4{{$}}
+; CHECK-NEXT: @__sancov_gen_.5 = private global [1 x i32] zeroinitializer, section {{.*}}, comdat($WeakComdat), align 4{{$}}
 
 ; CHECK: define void @Vanilla() comdat {
 ; ELF:   define linkonce void @LinkOnce() comdat {
@@ -46,3 +56,4 @@ entry:
 ; CHECK: declare extern_weak void @ExternWeak()
 ; CHECK: define linkonce_odr void @LinkOnceOdr() comdat {
 ; CHECK: define weak_odr void @WeakOdr() comdat {
+; CHECK: define weak void @WeakComdat() comdat {

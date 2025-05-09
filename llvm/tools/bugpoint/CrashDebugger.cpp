@@ -390,9 +390,7 @@ bool ReduceCrashingFunctionAttributes::TestFuncAttrs(
 
     // Pass along the set of attributes that caused the crash.
     Attrs.clear();
-    for (Attribute A : NewAttrs.getFnAttrs()) {
-      Attrs.push_back(A);
-    }
+    llvm::append_range(Attrs, NewAttrs.getFnAttrs());
     return true;
   }
   return false;
@@ -417,9 +415,8 @@ void simpleSimplifyCfg(Function &F, SmallVectorImpl<BasicBlock *> &BBs) {
   // undefined behavior into unreachables, but bugpoint was the thing that
   // generated the undefined behavior, and we don't want it to kill the entire
   // program.
-  SmallPtrSet<BasicBlock *, 16> Visited;
-  for (auto *BB : depth_first(&F.getEntryBlock()))
-    Visited.insert(BB);
+  SmallPtrSet<BasicBlock *, 16> Visited(llvm::from_range,
+                                        depth_first(&F.getEntryBlock()));
 
   SmallVector<BasicBlock *, 16> Unreachable;
   for (auto &BB : F)
@@ -801,8 +798,7 @@ bool ReduceCrashingInstructions::TestInsts(
     // Make sure to use instruction pointers that point into the now-current
     // module, and that they don't include any deleted blocks.
     Insts.clear();
-    for (Instruction *Inst : Instructions)
-      Insts.push_back(Inst);
+    llvm::append_range(Insts, Instructions);
     return true;
   }
   // It didn't crash, try something else.
@@ -871,8 +867,7 @@ bool ReduceCrashingMetadata::TestInsts(std::vector<Instruction *> &Insts) {
     // Make sure to use instruction pointers that point into the now-current
     // module, and that they don't include any deleted blocks.
     Insts.clear();
-    for (Instruction *I : Instructions)
-      Insts.push_back(I);
+    llvm::append_range(Insts, Instructions);
     return true;
   }
   // It didn't crash, try something else.
@@ -917,9 +912,7 @@ bool ReduceCrashingNamedMD::TestNamedMDs(std::vector<std::string> &NamedMDs) {
   outs() << ": ";
 
   // Make a StringMap for faster lookup
-  StringSet<> Names;
-  for (const std::string &Name : NamedMDs)
-    Names.insert(Name);
+  StringSet<> Names(llvm::from_range, NamedMDs);
 
   // First collect all the metadata to delete in a vector, then
   // delete them all at once to avoid invalidating the iterator
@@ -971,10 +964,7 @@ public:
 bool ReduceCrashingNamedMDOps::TestNamedMDOps(
     std::vector<const MDNode *> &NamedMDOps) {
   // Convert list to set for fast lookup...
-  SmallPtrSet<const MDNode *, 32> OldMDNodeOps;
-  for (unsigned i = 0, e = NamedMDOps.size(); i != e; ++i) {
-    OldMDNodeOps.insert(NamedMDOps[i]);
-  }
+  SmallPtrSet<const MDNode *, 32> OldMDNodeOps(llvm::from_range, NamedMDOps);
 
   outs() << "Checking for crash with only " << OldMDNodeOps.size();
   if (OldMDNodeOps.size() == 1)
@@ -1217,8 +1207,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
         assert(Fn && "Could not find function?");
 
         std::vector<Attribute> Attrs;
-        for (Attribute A : Fn->getAttributes().getFnAttrs())
-          Attrs.push_back(A);
+        llvm::append_range(Attrs, Fn->getAttributes().getFnAttrs());
 
         OldSize += Attrs.size();
         Expected<bool> Result =
@@ -1325,8 +1314,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
       // contribute to the crash, bisect the operands of the remaining ones
       std::vector<const MDNode *> NamedMDOps;
       for (auto &NamedMD : BD.getProgram().named_metadata())
-        for (auto *op : NamedMD.operands())
-          NamedMDOps.push_back(op);
+        llvm::append_range(NamedMDOps, NamedMD.operands());
       Expected<bool> Result =
           ReduceCrashingNamedMDOps(BD, TestFn).reduceList(NamedMDOps);
       if (Error E = Result.takeError())

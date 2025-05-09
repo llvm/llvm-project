@@ -338,7 +338,7 @@ TEST(LogicalViewTest, DWARFReader) {
   TT.setOS(Triple::UnknownOS);
 
   std::string TargetLookupError;
-  if (!TargetRegistry::lookupTarget(std::string(TT.str()), TargetLookupError))
+  if (!TargetRegistry::lookupTarget(TT, TargetLookupError))
     GTEST_SKIP();
 
   SmallString<128> InputsDir = unittest::getInputFileDirectory(TestMainArgv0);

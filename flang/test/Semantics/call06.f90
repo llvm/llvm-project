@@ -41,9 +41,9 @@ module m
     call s01(allofunc()) ! subtle: ALLOCATABLE function result isn't
     call s02(cov) ! ok
     call s03(com) ! ok
-    !ERROR: ALLOCATABLE dummy argument 'x=' has corank 1 but actual argument has corank 2
+    !ERROR: ALLOCATABLE or POINTER dummy argument 'x=' has corank 1 but actual argument has corank 2
     call s02(com)
-    !ERROR: ALLOCATABLE dummy argument 'x=' has corank 2 but actual argument has corank 1
+    !ERROR: ALLOCATABLE or POINTER dummy argument 'x=' has corank 2 but actual argument has corank 1
     call s03(cov)
     call s04(cov[1]) ! ok
     !ERROR: ALLOCATABLE dummy argument 'x=' must have INTENT(IN) to be associated with a coindexed actual argument

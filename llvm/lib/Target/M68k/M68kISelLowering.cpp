@@ -18,6 +18,7 @@
 #include "M68kSubtarget.h"
 #include "M68kTargetMachine.h"
 #include "M68kTargetObjectFile.h"
+#include "MCTargetDesc/M68kMCExpr.h"
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -1594,13 +1595,13 @@ static void lowerOverflowArithmetic(SDValue Op, SelectionDAG &DAG,
   case ISD::UMULO:
     PromoteMULO(ISD::ZERO_EXTEND);
     NoOverflow = VT != MVT::i32;
-    BaseOp = NoOverflow ? ISD::MUL : M68kISD::UMUL;
+    BaseOp = NoOverflow ? (unsigned)ISD::MUL : (unsigned)M68kISD::UMUL;
     CC = M68k::COND_VS;
     break;
   case ISD::SMULO:
     PromoteMULO(ISD::SIGN_EXTEND);
     NoOverflow = VT != MVT::i32;
-    BaseOp = NoOverflow ? ISD::MUL : M68kISD::SMUL;
+    BaseOp = NoOverflow ? (unsigned)ISD::MUL : (unsigned)M68kISD::SMUL;
     CC = M68k::COND_VS;
     break;
   }
@@ -2831,8 +2832,7 @@ unsigned M68kTargetLowering::getJumpTableEncoding() const {
 const MCExpr *M68kTargetLowering::LowerCustomJumpTableEntry(
     const MachineJumpTableInfo *MJTI, const MachineBasicBlock *MBB,
     unsigned uid, MCContext &Ctx) const {
-  return MCSymbolRefExpr::create(MBB->getSymbol(), MCSymbolRefExpr::VK_GOTOFF,
-                                 Ctx);
+  return MCSymbolRefExpr::create(MBB->getSymbol(), M68kMCExpr::VK_GOTOFF, Ctx);
 }
 
 SDValue M68kTargetLowering::getPICJumpTableRelocBase(SDValue Table,

@@ -19,25 +19,23 @@
 // equal_range shall not participate in overload resolution unless the
 // qualified-id Compare::is_transparent is valid and denotes a type
 
-
 #include <map>
 #include <cassert>
 
 #include "test_macros.h"
 #include "is_transparent.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::multimap<int, double, transparent_less> M;
     M example;
     assert(example.lower_bound(C2Int{5}) == example.end());
-    }
-    {
+  }
+  {
     typedef std::multimap<int, double, transparent_less_not_referenceable> M;
     M example;
     assert(example.lower_bound(C2Int{5}) == example.end());
-    }
+  }
 
   return 0;
 }

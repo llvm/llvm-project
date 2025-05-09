@@ -6,7 +6,7 @@
 
 ;; Two kernels access the same variable, specialisation gives them each their own copy of it
 
-@kernel.lds = addrspace(3) global i8 undef
+@kernel.lds = addrspace(3) global i8 poison
 define amdgpu_kernel void @k0() {
 ; CHECK-LABEL: @k0(
 ; CHECK-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) @llvm.amdgcn.kernel.k0.lds, align 1
@@ -38,7 +38,7 @@ define amdgpu_kernel void @k1() {
 
 ; KERNEL: LLVM ERROR: cannot lower LDS 'function.lds' to kernel access as it is reachable from multiple kernels
 
-@function.lds = addrspace(3) global i16 undef
+@function.lds = addrspace(3) global i16 poison
 define void @f0() {
 ; M_OR_HY-LABEL: @f0(
 ; M_OR_HY-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) @llvm.amdgcn.module.lds, align 2

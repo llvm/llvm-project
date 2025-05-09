@@ -10,12 +10,12 @@
 ; CHECK-DAG: Extension "SPV_INTEL_joint_matrix"
 ; CHECK-DAG: %[[#Int8Ty:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#Int32Ty:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#Const12:]] = OpConstant %[[#Int32Ty]] 12
-; CHECK-DAG: %[[#Const48:]] = OpConstant %[[#Int32Ty]] 48
-; CHECK-DAG: %[[#Const0:]] = OpConstant %[[#Int32Ty]] 0
-; CHECK-DAG: %[[#Const3:]] = OpConstant %[[#Int32Ty]] 3
-; CHECK-DAG: %[[#Const2:]] = OpConstant %[[#Int32Ty]] 2
-; CHECK-DAG: %[[#Const1:]] = OpConstant %[[#Int32Ty]] 1
+; CHECK-DAG: %[[#Const12:]] = OpConstant %[[#Int32Ty]] 12{{$}}
+; CHECK-DAG: %[[#Const48:]] = OpConstant %[[#Int32Ty]] 48{{$}}
+; CHECK-DAG: %[[#Const0:]] = OpConstantNull %[[#Int32Ty]]
+; CHECK-DAG: %[[#Const3:]] = OpConstant %[[#Int32Ty]] 3{{$}}
+; CHECK-DAG: %[[#Const2:]] = OpConstant %[[#Int32Ty]] 2{{$}}
+; CHECK-DAG: %[[#Const1:]] = OpConstant %[[#Int32Ty]] 1{{$}}
 ; CHECK-DAG: %[[#MatTy1:]] = OpTypeCooperativeMatrixKHR %[[#Int32Ty]] %[[#Const3]] %[[#Const12]] %[[#Const12]] %[[#Const2]]
 ; CHECK-DAG: %[[#MatTy2:]] = OpTypeCooperativeMatrixKHR %[[#Int8Ty]] %[[#Const3]] %[[#Const12]] %[[#Const48]] %[[#Const0]]
 ; CHECK-DAG: %[[#MatTy3:]] = OpTypeCooperativeMatrixKHR %[[#Int8Ty]] %[[#Const2]] %[[#Const48]] %[[#Const12]] %[[#Const1]]

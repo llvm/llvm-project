@@ -17,17 +17,17 @@ define void @vector_interleave_store_nxv32i1_nxv16i1(<vscale x 16 x i1> %a, <vsc
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    vmerge.vim v12, v10, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
-; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
+; CHECK-NEXT:    vmerge.vim v14, v10, 1, v0
 ; CHECK-NEXT:    srli a2, a2, 2
-; CHECK-NEXT:    vwaddu.vv v16, v8, v12
-; CHECK-NEXT:    vwmaccu.vx v16, a1, v12
-; CHECK-NEXT:    vmsne.vi v8, v18, 0
-; CHECK-NEXT:    vmsne.vi v9, v16, 0
+; CHECK-NEXT:    vwaddu.vv v8, v14, v12
+; CHECK-NEXT:    vwmaccu.vx v8, a1, v12
+; CHECK-NEXT:    vmsne.vi v12, v10, 0
+; CHECK-NEXT:    vmsne.vi v10, v8, 0
 ; CHECK-NEXT:    add a1, a2, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v9, v8, a2
+; CHECK-NEXT:    vslideup.vx v10, v12, a2
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vsm.v v9, (a0)
+; CHECK-NEXT:    vsm.v v10, (a0)
 ; CHECK-NEXT:    ret
   %res = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
   store <vscale x 32 x i1> %res, ptr %p
@@ -104,17 +104,17 @@ define void @vector_interleave_store_nxv16i64_nxv8i64(<vscale x 8 x i64> %a, <vs
 ; CHECK-NEXT:    srli a2, a1, 1
 ; CHECK-NEXT:    vmv4r.v v28, v16
 ; CHECK-NEXT:    vmv4r.v v16, v12
-; CHECK-NEXT:    vsrl.vi v8, v6, 1
-; CHECK-NEXT:    vand.vi v10, v6, 1
+; CHECK-NEXT:    vsrl.vi v4, v6, 1
+; CHECK-NEXT:    vand.vi v8, v6, 1
 ; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    vmsne.vi v0, v10, 0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    add a1, a0, a1
-; CHECK-NEXT:    vadd.vx v8, v8, a2, v0.t
+; CHECK-NEXT:    vadd.vx v4, v4, a2, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v0, v24, v8
-; CHECK-NEXT:    vrgatherei16.vv v24, v16, v8
+; CHECK-NEXT:    vrgatherei16.vv v8, v24, v4
+; CHECK-NEXT:    vrgatherei16.vv v24, v16, v4
 ; CHECK-NEXT:    vs8r.v v24, (a1)
-; CHECK-NEXT:    vs8r.v v0, (a0)
+; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x i64> @llvm.vector.interleave2.nxv16i64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %b)
   store <vscale x 16 x i64> %res, ptr %p

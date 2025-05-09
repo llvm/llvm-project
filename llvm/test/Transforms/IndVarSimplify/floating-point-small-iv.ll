@@ -261,7 +261,7 @@ define void @sitofp_fptoui_range() {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [16777219 x i32], ptr @array, i64 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    store i32 [[IV_INT]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[DEC_INT]] = add nsw i32 [[IV_INT]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[DEC_INT]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[DEC_INT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret void

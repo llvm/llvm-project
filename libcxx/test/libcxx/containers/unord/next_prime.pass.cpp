@@ -24,34 +24,28 @@
 
 #include "test_macros.h"
 
-bool
-is_prime(std::size_t n)
-{
-    switch (n)
-    {
-    case 0:
-    case 1:
-        return false;
-    }
-    for (std::size_t i = 2; i*i <= n; ++i)
-    {
-        if (n % i == 0)
-            return false;
-    }
-    return true;
+bool is_prime(std::size_t n) {
+  switch (n) {
+  case 0:
+  case 1:
+    return false;
+  }
+  for (std::size_t i = 2; i * i <= n; ++i) {
+    if (n % i == 0)
+      return false;
+  }
+  return true;
 }
 
-int main(int, char**)
-{
-    assert(std::__next_prime(0) == 0);
-    for (std::size_t n = 1; n <= 100000; ++n)
-    {
-        std::size_t p = std::__next_prime(n);
-        assert(p >= n);
-        for (std::size_t i = n; i < p; ++i)
-            assert(!is_prime(i));
-        assert(is_prime(p));
-    }
+int main(int, char**) {
+  assert(std::__next_prime(0) == 0);
+  for (std::size_t n = 1; n <= 100000; ++n) {
+    std::size_t p = std::__next_prime(n);
+    assert(p >= n);
+    for (std::size_t i = n; i < p; ++i)
+      assert(!is_prime(i));
+    assert(is_prime(p));
+  }
 
   return 0;
 }

@@ -47,12 +47,6 @@ static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
   return result;
 }
 
-/// Assert that the given value range contains a single value and return it.
-static Value getSingleValue(ValueRange values) {
-  assert(values.size() == 1 && "expected single value");
-  return values.front();
-}
-
 /// Generates a load with proper `index` typing.
 static Value genLoad(OpBuilder &builder, Location loc, Value mem, Value idx) {
   idx = genCast(builder, loc, idx, builder.getIndexType());
@@ -622,8 +616,7 @@ public:
     }
 
     assert(packedResultVals.size() == op.getNumResults());
-    rewriter.replaceOpWithMultiple(
-        op, llvm::to_vector_of<ValueRange>(packedResultVals));
+    rewriter.replaceOpWithMultiple(op, std::move(packedResultVals));
     return success();
   }
 };
@@ -962,10 +955,10 @@ public:
     SmallVector<Value> fields;
     auto desc = getMutDescriptorFromTensorTuple(adaptor.getTensor(), fields,
                                                 op.getTensor().getType());
-    Value values = getSingleValue(adaptor.getValues());
-    Value filled = getSingleValue(adaptor.getFilled());
-    Value added = getSingleValue(adaptor.getAdded());
-    Value count = getSingleValue(adaptor.getCount());
+    Value values = llvm::getSingleElement(adaptor.getValues());
+    Value filled = llvm::getSingleElement(adaptor.getFilled());
+    Value added = llvm::getSingleElement(adaptor.getAdded());
+    Value count = llvm::getSingleElement(adaptor.getCount());
     const SparseTensorType dstType(desc.getRankedTensorType());
     Type eltType = dstType.getElementType();
 
@@ -1041,7 +1034,7 @@ public:
     SmallVector<Value> params = llvm::to_vector(desc.getFields());
     SmallVector<Value> flatIndices = flattenValues(adaptor.getIndices());
     params.append(flatIndices.begin(), flatIndices.end());
-    params.push_back(getSingleValue(adaptor.getScalar()));
+    params.push_back(llvm::getSingleElement(adaptor.getScalar()));
     SparseInsertGenerator insertGen(op.getDest().getType(), flatSpTensorTps,
                                     params, /*genCall=*/true);
     SmallVector<Value> ret = insertGen.genCallOrInline(rewriter, loc);

@@ -18,14 +18,13 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 
-int main(int, char**)
-{
-    typedef std::less<int> C;
-    typedef test_allocator<int> A;
-    std::set<int, C, A> m(A(5));
-    assert(m.empty());
-    assert(m.begin() == m.end());
-    assert(m.get_allocator() == A(5));
+int main(int, char**) {
+  typedef std::less<int> C;
+  typedef test_allocator<int> A;
+  std::set<int, C, A> m(A(5));
+  assert(m.empty());
+  assert(m.begin() == m.end());
+  assert(m.get_allocator() == A(5));
 
   return 0;
 }

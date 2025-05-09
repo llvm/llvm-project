@@ -366,11 +366,11 @@ Symbol *COFFLinkGraphBuilder::createExternalSymbol(
     COFFSymbolIndex SymIndex, orc::SymbolStringPtr SymbolName,
     object::COFFSymbolRef Symbol, const object::coff_section *Section) {
   llvm::jitlink::Symbol *Sym = nullptr;
-  if (!ExternalSymbols.count(SymbolName)) {
+  if (auto It = ExternalSymbols.find(SymbolName); It == ExternalSymbols.end()) {
     Sym = &G->addExternalSymbol(*SymbolName, Symbol.getValue(), false);
     ExternalSymbols[Sym->getName()] = Sym;
   } else {
-    Sym = ExternalSymbols[SymbolName];
+    Sym = It->second;
   }
 
   LLVM_DEBUG({

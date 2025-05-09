@@ -30,8 +30,8 @@ define void @test_svst1wq_i32_si(<vscale x 4 x i32> %zt, <vscale x 1 x i1> %pred
 define void @test_svst1wq_i32_out_of_bound(<vscale x 4 x i32> %zt, <vscale x 1 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: test_svst1wq_i32_out_of_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    addvl x8, x0, #2
-; CHECK-NEXT:    st1w { z0.q }, p0, [x8]
+; CHECK-NEXT:    incb x0, all, mul #2
+; CHECK-NEXT:    st1w { z0.q }, p0, [x0]
 ; CHECK-NEXT:    ret
   %gep = getelementptr inbounds <vscale x 1 x i32>, ptr %base, i64 8
   call void @llvm.aarch64.sve.st1wq.nxv4i32(<vscale x 4 x i32> %zt, <vscale x 1 x i1> %pred, ptr %gep)

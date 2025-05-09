@@ -47,7 +47,7 @@ parseAsmSourceFile(const llvm::SourceMgr &sourceMgr, Block *block,
 /// not, an error diagnostic is emitted to the context and a null value is
 /// returned.
 /// If `numRead` is provided, it is set to the number of consumed characters on
-/// succesful parse. Otherwise, parsing fails if the entire string is not
+/// successful parse. Otherwise, parsing fails if the entire string is not
 /// consumed.
 /// Some internal copying can be skipped if the source string is known to be
 /// null terminated.
@@ -58,7 +58,7 @@ Attribute parseAttribute(llvm::StringRef attrStr, MLIRContext *context,
 /// This parses a single MLIR type to an MLIR context if it was valid. If not,
 /// an error diagnostic is emitted to the context.
 /// If `numRead` is provided, it is set to the number of consumed characters on
-/// succesful parse. Otherwise, parsing fails if the entire string is not
+/// successful parse. Otherwise, parsing fails if the entire string is not
 /// consumed.
 /// Some internal copying can be skipped if the source string is known to be
 /// null terminated.

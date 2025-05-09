@@ -61,12 +61,12 @@ dependency with ``INITIALIZE_PASS_DEPENDENCY``.
 
 .. code-block:: c++
 
-  #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+  #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 
   ...
 
   INITIALIZE_PASS_BEGIN(...)
-  INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
+  INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysis)
   INITIALIZE_PASS_END(...)
 
 and require the pass in ``getAnalysisUsage``.
@@ -74,10 +74,10 @@ and require the pass in ``getAnalysisUsage``.
 .. code-block:: c++
 
   void MyPass::getAnalysisUsage(AnalysisUsage &AU) const {
-    AU.addRequired<GISelKnownBitsAnalysis>();
+    AU.addRequired<GISelValueTrackingAnalysis>();
     // Optional: If your pass preserves known bits analysis (many do) then
     //           indicate that it's preserved for re-use by another pass here.
-    AU.addPreserved<GISelKnownBitsAnalysis>();
+    AU.addPreserved<GISelValueTrackingAnalysis>();
   }
 
 Then it's just a matter of fetching the analysis and using it:
@@ -86,10 +86,10 @@ Then it's just a matter of fetching the analysis and using it:
 
   bool MyPass::runOnMachineFunction(MachineFunction &MF) {
     ...
-    GISelKnownBits &KB = getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+    GISelValueTracking &VT = getAnalysis<GISelValueTrackingAnalysis>().get(MF);
     ...
     MachineInstr *MI = ...;
-    KnownBits Known = KB->getKnownBits(MI->getOperand(0).getReg());
+    KnownBits Known = VT->getKnownBits(MI->getOperand(0).getReg());
     if (Known.Zeros & 1) {
       // Bit 0 is known to be zero
     }

@@ -36,26 +36,22 @@ entry:
 define dso_local i32 @test_global_valv() #3 {
 ; X64-LABEL: test_global_valv:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    leaq g_int, %rax
-; X64-NEXT:    movl (%rax), %eax
+; X64-NEXT:    movl g_int, %eax
 ; X64-NEXT:    retq
 ;
 ; X64_DARWIN_PIC-LABEL: test_global_valv:
 ; X64_DARWIN_PIC:       ## %bb.0: ## %entry
-; X64_DARWIN_PIC-NEXT:    leaq _g_int(%rip), %rax
-; X64_DARWIN_PIC-NEXT:    movl (%rax), %eax
+; X64_DARWIN_PIC-NEXT:    movl _g_int(%rip), %eax
 ; X64_DARWIN_PIC-NEXT:    retq
 ;
 ; X32-LABEL: test_global_valv:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    leal g_int, %eax
-; X32-NEXT:    movl (%eax), %eax
+; X32-NEXT:    movl g_int, %eax
 ; X32-NEXT:    retl
 ;
 ; X32ABI-LABEL: test_global_valv:
 ; X32ABI:       # %bb.0: # %entry
-; X32ABI-NEXT:    leal g_int, %eax
-; X32ABI-NEXT:    movl (%eax), %eax
+; X32ABI-NEXT:    movl g_int, %eax
 ; X32ABI-NEXT:    retq
 entry:
   %0 = load i32, ptr @g_int, align 4

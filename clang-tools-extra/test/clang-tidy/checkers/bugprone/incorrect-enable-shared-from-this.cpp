@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-incorrect-enable-shared-from-this %t
+// RUN: %check_clang_tidy --match-partial-fixes -std=c++11-or-later %s bugprone-incorrect-enable-shared-from-this %t
 
 // NOLINTBEGIN
 namespace std {

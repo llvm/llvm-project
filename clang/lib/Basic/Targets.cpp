@@ -749,8 +749,14 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
   case llvm::Triple::loongarch64:
     switch (os) {
     case llvm::Triple::Linux:
-      return std::make_unique<LinuxTargetInfo<LoongArch64TargetInfo>>(Triple,
-                                                                      Opts);
+      switch (Triple.getEnvironment()) {
+      default:
+        return std::make_unique<LinuxTargetInfo<LoongArch64TargetInfo>>(Triple,
+                                                                        Opts);
+      case llvm::Triple::OpenHOS:
+        return std::make_unique<OHOSTargetInfo<LoongArch64TargetInfo>>(Triple,
+                                                                       Opts);
+      }
     case llvm::Triple::FreeBSD:
       return std::make_unique<FreeBSDTargetInfo<LoongArch64TargetInfo>>(Triple,
                                                                         Opts);
@@ -768,9 +774,10 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 using namespace clang::targets;
 /// CreateTargetInfo - Return the target info object for the specified target
 /// options.
-TargetInfo *
-TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
-                             const std::shared_ptr<TargetOptions> &Opts) {
+TargetInfo *TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
+                                         TargetOptions &OptsRef) {
+  TargetOptions *Opts = &OptsRef;
+
   llvm::Triple Triple(llvm::Triple::normalize(Opts->Triple));
 
   // Construct the target

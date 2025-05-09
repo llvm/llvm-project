@@ -44,7 +44,7 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 
   ; scc is unavailable since it is live in
   call void asm sideeffect "; use $0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10",
-                           "{s[0:15]},{s[16:31]},{s[32:47]},{s[48:55]},{s[56:57]},{s58},{v[0:15]},{v[16:22]},{vcc},{s59},{scc}"(
+                           "{s[0:15]},{s[16:31]},{s[32:47]},{s[48:55]},{s[56:57]},{s58},{v[0:15]},{v[16:22]},{vcc},{s64},{scc}"(
     <16 x i32> %s0,
     <16 x i32> %s1,
     <16 x i32> %s2,

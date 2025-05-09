@@ -74,7 +74,7 @@ private:
 class SampleProfileProber {
 public:
   // Give an empty module id when the prober is not used for instrumentation.
-  SampleProfileProber(Function &F, const std::string &CurModuleUniqueId);
+  SampleProfileProber(Function &F);
   void instrumentOneFunc(Function &F, TargetMachine *TM);
 
 private:

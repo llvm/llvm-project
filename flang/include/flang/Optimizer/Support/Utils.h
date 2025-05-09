@@ -13,13 +13,13 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_UTILS_H
 #define FORTRAN_OPTIMIZER_SUPPORT_UTILS_H
 
-#include "flang/Common/default-kinds.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Support/default-kinds.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"

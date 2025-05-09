@@ -18,6 +18,10 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 
+// Target Windows 2000 and above. This is needed for newer Windows API
+// functions, e.g. GetComputerNameExA()
+#define _WIN32_WINNT 0x0500
+
 #include <windows.h>
 
 #endif // _WIN32

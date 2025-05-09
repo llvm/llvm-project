@@ -1,4 +1,4 @@
-# RUN: llc -start-after=livedebugvalues --filetype=obj %s -o - \
+# RUN: llc -start-before=x86-asm-printer --filetype=obj %s -o - \
 # RUN:     | llvm-dwarfdump -v - | FileCheck %s
 #
 # Generated at -O2, stopped after livedebugvalues, with some metadata removed

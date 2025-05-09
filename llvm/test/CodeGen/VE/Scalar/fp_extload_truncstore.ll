@@ -26,9 +26,9 @@ define float @func_i16fp32(ptr %a) {
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    ld2b.zx %s0, (, %s0)
-; CHECK-NEXT:    lea %s1, __gnu_h2f_ieee@lo
+; CHECK-NEXT:    lea %s1, __extendhfsf2@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    lea.sl %s12, __gnu_h2f_ieee@hi(, %s1)
+; CHECK-NEXT:    lea.sl %s12, __extendhfsf2@hi(, %s1)
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
@@ -58,9 +58,9 @@ define double @func_i16fp64(ptr %a) {
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    ld2b.zx %s0, (, %s0)
-; CHECK-NEXT:    lea %s1, __gnu_h2f_ieee@lo
+; CHECK-NEXT:    lea %s1, __extendhfsf2@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    lea.sl %s12, __gnu_h2f_ieee@hi(, %s1)
+; CHECK-NEXT:    lea.sl %s12, __extendhfsf2@hi(, %s1)
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    cvt.d.s %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -91,9 +91,9 @@ define float @func_fp16fp32(ptr %a) {
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    ld2b.zx %s0, (, %s0)
-; CHECK-NEXT:    lea %s1, __gnu_h2f_ieee@lo
+; CHECK-NEXT:    lea %s1, __extendhfsf2@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    lea.sl %s12, __gnu_h2f_ieee@hi(, %s1)
+; CHECK-NEXT:    lea.sl %s12, __extendhfsf2@hi(, %s1)
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
@@ -123,9 +123,9 @@ define double @func_fp16fp64(ptr %a) {
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    ld2b.zx %s0, (, %s0)
-; CHECK-NEXT:    lea %s1, __gnu_h2f_ieee@lo
+; CHECK-NEXT:    lea %s1, __extendhfsf2@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    lea.sl %s12, __gnu_h2f_ieee@hi(, %s1)
+; CHECK-NEXT:    lea.sl %s12, __extendhfsf2@hi(, %s1)
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    cvt.d.s %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -157,9 +157,9 @@ define void @func_fp32i16(ptr %fl.ptr, float %val) {
 ; CHECK-NEXT:  .LBB4_2:
 ; CHECK-NEXT:    st %s18, 288(, %s11) # 8-byte Folded Spill
 ; CHECK-NEXT:    or %s18, 0, %s0
-; CHECK-NEXT:    lea %s0, __gnu_f2h_ieee@lo
+; CHECK-NEXT:    lea %s0, __truncsfhf2@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s12, __gnu_f2h_ieee@hi(, %s0)
+; CHECK-NEXT:    lea.sl %s12, __truncsfhf2@hi(, %s0)
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    st2b %s0, (, %s18)
@@ -194,15 +194,15 @@ define half @func_fp32fp16(ptr %fl.ptr, float %a) {
 ; CHECK-NEXT:    st %s18, 288(, %s11) # 8-byte Folded Spill
 ; CHECK-NEXT:    st %s19, 296(, %s11) # 8-byte Folded Spill
 ; CHECK-NEXT:    or %s18, 0, %s0
-; CHECK-NEXT:    lea %s0, __gnu_f2h_ieee@lo
+; CHECK-NEXT:    lea %s0, __truncsfhf2@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s12, __gnu_f2h_ieee@hi(, %s0)
+; CHECK-NEXT:    lea.sl %s12, __truncsfhf2@hi(, %s0)
 ; CHECK-NEXT:    or %s0, 0, %s1
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s19, 0, %s0
-; CHECK-NEXT:    lea %s0, __gnu_h2f_ieee@lo
+; CHECK-NEXT:    lea %s0, __extendhfsf2@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s12, __gnu_h2f_ieee@hi(, %s0)
+; CHECK-NEXT:    lea.sl %s12, __extendhfsf2@hi(, %s0)
 ; CHECK-NEXT:    or %s0, 0, %s19
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    st2b %s19, (, %s18)

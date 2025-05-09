@@ -44,7 +44,7 @@ end subroutine
 ! CHECK:  %[[VAL_5:.*]]:3 = fir.if %[[VAL_4]] -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>, i1) {
 ! CHECK:    %[[VAL_6:.*]] = hlfir.as_expr %[[VAL_3]]#0 : (!fir.ref<!fir.array<100xf32>>) -> !hlfir.expr<100xf32>
 ! CHECK:    %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_6]](%[[VAL_2]]) {adapt.valuebyref} : (!hlfir.expr<100xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>, i1)
-! CHECK:    fir.result %[[VAL_7]]#1, %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>, i1
+! CHECK:    fir.result %[[VAL_7]]#0, %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>, i1
 ! CHECK:  } else {
 ! CHECK:    %[[VAL_8:.*]] = fir.absent !fir.ref<!fir.array<100xf32>>
 ! CHECK:    %[[VAL_9:.*]] = fir.absent !fir.ref<!fir.array<100xf32>>
@@ -67,7 +67,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPelem_pointer_to_optional(
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFelem_pointer_to_optionalEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFelem_pointer_to_optionalEy"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
-! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:  %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.ptr<!fir.array<?xf32>>) -> i64
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 0 : i64

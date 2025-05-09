@@ -35,7 +35,7 @@ void OptionValuePathMappings::DumpValue(const ExecutionContext *exe_ctx,
 }
 
 llvm::json::Value
-OptionValuePathMappings::ToJSON(const ExecutionContext *exe_ctx) {
+OptionValuePathMappings::ToJSON(const ExecutionContext *exe_ctx) const {
   return m_path_mappings.ToJSON();
 }
 

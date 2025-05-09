@@ -17,6 +17,7 @@
 
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseSet.h"
@@ -31,6 +32,7 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -111,7 +113,7 @@ public:
   /// Information about each phi in the Tail block.
   struct PHIInfo {
     MachineInstr *PHI;
-    unsigned TReg = 0, FReg = 0;
+    Register TReg, FReg;
     // Latencies from Cond+Branch, TReg, and FReg to DstReg.
     int CondCycles = 0, TCycles = 0, FCycles = 0;
 
@@ -162,6 +164,11 @@ private:
 
   /// Insert selects and rewrite PHI operands to use them.
   void rewritePHIOperands();
+
+  /// If virtual register has "killed" flag in TBB and FBB basic blocks, remove
+  /// the flag in TBB instruction.
+  void clearRepeatedKillFlagsFromTBB(MachineBasicBlock *TBB,
+                                     MachineBasicBlock *FBB);
 
 public:
   /// init - Initialize per-function data structures.
@@ -522,8 +529,8 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
       if (PI.PHI->getOperand(i+1).getMBB() == FPred)
         PI.FReg = PI.PHI->getOperand(i).getReg();
     }
-    assert(Register::isVirtualRegister(PI.TReg) && "Bad PHI");
-    assert(Register::isVirtualRegister(PI.FReg) && "Bad PHI");
+    assert(PI.TReg.isVirtual() && "Bad PHI");
+    assert(PI.FReg.isVirtual() && "Bad PHI");
 
     // Get target information.
     if (!TII->canInsertSelect(*Head, Cond, PI.PHI->getOperand(0).getReg(),
@@ -645,7 +652,7 @@ void SSAIfConv::rewritePHIOperands() {
 
   // Convert all PHIs to select instructions inserted before FirstTerm.
   for (PHIInfo &PI : PHIs) {
-    unsigned DstReg = 0;
+    Register DstReg;
 
     LLVM_DEBUG(dbgs() << "If-converting " << *PI.PHI);
     if (hasSameValue(*MRI, TII, PI.TReg, PI.FReg)) {
@@ -675,6 +682,31 @@ void SSAIfConv::rewritePHIOperands() {
   }
 }
 
+void SSAIfConv::clearRepeatedKillFlagsFromTBB(MachineBasicBlock *TBB,
+                                              MachineBasicBlock *FBB) {
+  assert(TBB != FBB);
+
+  // Collect virtual registers killed in FBB.
+  SmallDenseSet<Register> FBBKilledRegs;
+  for (MachineInstr &MI : FBB->instrs()) {
+    for (MachineOperand &MO : MI.operands()) {
+      if (MO.isReg() && MO.isKill() && MO.getReg().isVirtual())
+        FBBKilledRegs.insert(MO.getReg());
+    }
+  }
+
+  if (FBBKilledRegs.empty())
+    return;
+
+  // Find the same killed registers in TBB and clear kill flags for them.
+  for (MachineInstr &MI : TBB->instrs()) {
+    for (MachineOperand &MO : MI.operands()) {
+      if (MO.isReg() && MO.isKill() && FBBKilledRegs.contains(MO.getReg()))
+        MO.setIsKill(false);
+    }
+  }
+}
+
 /// convertIf - Execute the if conversion after canConvertIf has determined the
 /// feasibility.
 ///
@@ -689,6 +721,13 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks,
     ++NumTrianglesConv;
   else
     ++NumDiamondsConv;
+
+  // If both blocks are going to be merged into Head, remove "killed" flag in
+  // TBB for registers, which are killed in TBB and FBB. Otherwise, register
+  // will be killed twice in Head after splice. Register killed twice is an
+  // incorrect MIR.
+  if (TBB != Tail && FBB != Tail)
+    clearRepeatedKillFlagsFromTBB(TBB, FBB);
 
   // Move all instructions into Head, except for the terminators.
   if (TBB != Tail) {

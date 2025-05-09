@@ -7,8 +7,8 @@
 
 define void @fill_nxv16i8() {
 ; CHECK-LABEL: fill_nxv16i8
-; CHECK-DAG: ld1b    { z{{[01]}}.b }, p0/z, [sp]
-; CHECK-DAG: ld1b    { z{{[01]}}.b }, p0/z, [sp, #1, mul vl]
+; CHECK-DAG: ldr    z{{[01]}}, [sp]
+; CHECK-DAG: ldr    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 16 x i8>
   %local1 = alloca <vscale x 16 x i8>
   load volatile <vscale x 16 x i8>, ptr %local0
@@ -93,8 +93,8 @@ define <vscale x 2 x i64> @fill_signed_nxv2i8() {
 
 define void @fill_nxv8i16() {
 ; CHECK-LABEL: fill_nxv8i16
-; CHECK-DAG: ld1h    { z{{[01]}}.h }, p0/z, [sp]
-; CHECK-DAG: ld1h    { z{{[01]}}.h }, p0/z, [sp, #1, mul vl]
+; CHECK-DAG: ldr    z{{[01]}}, [sp]
+; CHECK-DAG: ldr    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 8 x i16>
   %local1 = alloca <vscale x 8 x i16>
   load volatile <vscale x 8 x i16>, ptr %local0
@@ -154,8 +154,8 @@ define <vscale x 2 x i64> @fill_signed_nxv2i16() {
 
 define void @fill_nxv4i32() {
 ; CHECK-LABEL: fill_nxv4i32
-; CHECK-DAG: ld1w    { z{{[01]}}.s }, p0/z, [sp]
-; CHECK-DAG: ld1w    { z{{[01]}}.s }, p0/z, [sp, #1, mul vl]
+; CHECK-DAG: ldr    z{{[01]}}, [sp]
+; CHECK-DAG: ldr    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 4 x i32>
   %local1 = alloca <vscale x 4 x i32>
   load volatile <vscale x 4 x i32>, ptr %local0
@@ -190,8 +190,8 @@ define <vscale x 2 x i64> @fill_signed_nxv2i32() {
 
 define void @fill_nxv2i64() {
 ; CHECK-LABEL: fill_nxv2i64
-; CHECK-DAG: ld1d    { z{{[01]}}.d }, p0/z, [sp]
-; CHECK-DAG: ld1d    { z{{[01]}}.d }, p0/z, [sp, #1, mul vl]
+; CHECK-DAG: ldr    z{{[01]}}, [sp]
+; CHECK-DAG: ldr    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 2 x i64>
   %local1 = alloca <vscale x 2 x i64>
   load volatile <vscale x 2 x i64>, ptr %local0
@@ -201,8 +201,8 @@ define void @fill_nxv2i64() {
 
 define void @fill_nxv8bf16() {
 ; CHECK-LABEL: fill_nxv8bf16
-; CHECK-DAG: ld1h    { z{{[01]}}.h }, p0/z, [sp]
-; CHECK-DAG: ld1h    { z{{[01]}}.h }, p0/z, [sp, #1, mul vl]
+; CHECK-DAG: ldr    z{{[01]}}, [sp]
+; CHECK-DAG: ldr    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 8 x bfloat>
   %local1 = alloca <vscale x 8 x bfloat>
   load volatile <vscale x 8 x bfloat>, ptr %local0
@@ -212,8 +212,8 @@ define void @fill_nxv8bf16() {
 
 define void @fill_nxv8f16() {
 ; CHECK-LABEL: fill_nxv8f16
-; CHECK-DAG: ld1h    { z{{[01]}}.h }, p0/z, [sp]
-; CHECK-DAG: ld1h    { z{{[01]}}.h }, p0/z, [sp, #1, mul vl]
+; CHECK-DAG: ldr    z{{[01]}}, [sp]
+; CHECK-DAG: ldr    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 8 x half>
   %local1 = alloca <vscale x 8 x half>
   load volatile <vscale x 8 x half>, ptr %local0
@@ -223,8 +223,8 @@ define void @fill_nxv8f16() {
 
 define void @fill_nxv4f32() {
 ; CHECK-LABEL: fill_nxv4f32
-; CHECK-DAG: ld1w    { z{{[01]}}.s }, p0/z, [sp]
-; CHECK-DAG: ld1w    { z{{[01]}}.s }, p0/z, [sp, #1, mul vl]
+; CHECK-DAG: ldr    z{{[01]}}, [sp]
+; CHECK-DAG: ldr    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 4 x float>
   %local1 = alloca <vscale x 4 x float>
   load volatile <vscale x 4 x float>, ptr %local0
@@ -234,8 +234,8 @@ define void @fill_nxv4f32() {
 
 define void @fill_nxv2f64() {
 ; CHECK-LABEL: fill_nxv2f64
-; CHECK-DAG: ld1d    { z{{[01]}}.d }, p0/z, [sp]
-; CHECK-DAG: ld1d    { z{{[01]}}.d }, p0/z, [sp, #1, mul vl]
+; CHECK-DAG: ldr    z{{[01]}}, [sp]
+; CHECK-DAG: ldr    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 2 x double>
   %local1 = alloca <vscale x 2 x double>
   load volatile <vscale x 2 x double>, ptr %local0
@@ -248,8 +248,8 @@ define void @fill_nxv2f64() {
 
 define void @spill_nxv16i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1) {
 ; CHECK-LABEL: spill_nxv16i8
-; CHECK-DAG: st1b    { z{{[01]}}.b }, p0, [sp]
-; CHECK-DAG: st1b    { z{{[01]}}.b }, p0, [sp, #1, mul vl]
+; CHECK-DAG: str    z{{[01]}}, [sp]
+; CHECK-DAG: str    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 16 x i8>
   %local1 = alloca <vscale x 16 x i8>
   store volatile <vscale x 16 x i8> %v0, ptr %local0
@@ -292,8 +292,8 @@ define void @spill_nxv2i8(<vscale x 2 x i8> %v0, <vscale x 2 x i8> %v1) {
 
 define void @spill_nxv8i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1) {
 ; CHECK-LABEL: spill_nxv8i16
-; CHECK-DAG: st1h    { z{{[01]}}.h }, p0, [sp]
-; CHECK-DAG: st1h    { z{{[01]}}.h }, p0, [sp, #1, mul vl]
+; CHECK-DAG: str    z{{[01]}}, [sp]
+; CHECK-DAG: str    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 8 x i16>
   %local1 = alloca <vscale x 8 x i16>
   store volatile <vscale x 8 x i16> %v0, ptr %local0
@@ -325,8 +325,8 @@ define void @spill_nxv2i16(<vscale x 2 x i16> %v0, <vscale x 2 x i16> %v1) {
 
 define void @spill_nxv4i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1) {
 ; CHECK-LABEL: spill_nxv4i32
-; CHECK-DAG: st1w    { z{{[01]}}.s }, p0, [sp]
-; CHECK-DAG: st1w    { z{{[01]}}.s }, p0, [sp, #1, mul vl]
+; CHECK-DAG: str    z{{[01]}}, [sp]
+; CHECK-DAG: str    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 4 x i32>
   %local1 = alloca <vscale x 4 x i32>
   store volatile <vscale x 4 x i32> %v0, ptr %local0
@@ -347,8 +347,8 @@ define void @spill_nxv2i32(<vscale x 2 x i32> %v0, <vscale x 2 x i32> %v1) {
 
 define void @spill_nxv2i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1) {
 ; CHECK-LABEL: spill_nxv2i64
-; CHECK-DAG: st1d    { z{{[01]}}.d }, p0, [sp]
-; CHECK-DAG: st1d    { z{{[01]}}.d }, p0, [sp, #1, mul vl]
+; CHECK-DAG: str    z{{[01]}}, [sp]
+; CHECK-DAG: str    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 2 x i64>
   %local1 = alloca <vscale x 2 x i64>
   store volatile <vscale x 2 x i64> %v0, ptr %local0
@@ -358,8 +358,8 @@ define void @spill_nxv2i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1) {
 
 define void @spill_nxv8f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1) {
 ; CHECK-LABEL: spill_nxv8f16
-; CHECK-DAG: st1h    { z{{[01]}}.h }, p0, [sp]
-; CHECK-DAG: st1h    { z{{[01]}}.h }, p0, [sp, #1, mul vl]
+; CHECK-DAG: str    z{{[01]}}, [sp]
+; CHECK-DAG: str    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 8 x half>
   %local1 = alloca <vscale x 8 x half>
   store volatile <vscale x 8 x half> %v0, ptr %local0
@@ -369,8 +369,8 @@ define void @spill_nxv8f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1) {
 
 define void @spill_nxv8bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1) {
 ; CHECK-LABEL: spill_nxv8bf16
-; CHECK-DAG: st1h    { z{{[01]}}.h }, p0, [sp]
-; CHECK-DAG: st1h    { z{{[01]}}.h }, p0, [sp, #1, mul vl]
+; CHECK-DAG: str    z{{[01]}}, [sp]
+; CHECK-DAG: str    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 8 x bfloat>
   %local1 = alloca <vscale x 8 x bfloat>
   store volatile <vscale x 8 x bfloat> %v0, ptr %local0
@@ -380,8 +380,8 @@ define void @spill_nxv8bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1
 
 define void @spill_nxv4f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1) {
 ; CHECK-LABEL: spill_nxv4f32
-; CHECK-DAG: st1w    { z{{[01]}}.s }, p0, [sp]
-; CHECK-DAG: st1w    { z{{[01]}}.s }, p0, [sp, #1, mul vl]
+; CHECK-DAG: str    z{{[01]}}, [sp]
+; CHECK-DAG: str    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 4 x float>
   %local1 = alloca <vscale x 4 x float>
   store volatile <vscale x 4 x float> %v0, ptr %local0
@@ -391,8 +391,8 @@ define void @spill_nxv4f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1) {
 
 define void @spill_nxv2f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1) {
 ; CHECK-LABEL: spill_nxv2f64
-; CHECK-DAG: st1d    { z{{[01]}}.d }, p0, [sp]
-; CHECK-DAG: st1d    { z{{[01]}}.d }, p0, [sp, #1, mul vl]
+; CHECK-DAG: str    z{{[01]}}, [sp]
+; CHECK-DAG: str    z{{[01]}}, [sp, #1, mul vl]
   %local0 = alloca <vscale x 2 x double>
   %local1 = alloca <vscale x 2 x double>
   store volatile <vscale x 2 x double> %v0, ptr %local0

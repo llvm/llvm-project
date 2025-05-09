@@ -239,10 +239,10 @@ void BlockCoverageInference::getReachableAvoiding(const BasicBlock &Start,
   Visited.insert(&Avoid);
   if (IsForward) {
     auto Range = depth_first_ext(&Start, Visited);
-    Reachable.insert(Range.begin(), Range.end());
+    Reachable.insert_range(Range);
   } else {
     auto Range = inverse_depth_first_ext(&Start, Visited);
-    Reachable.insert(Range.begin(), Range.end());
+    Reachable.insert_range(Range);
   }
 }
 

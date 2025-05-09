@@ -14,31 +14,35 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %v6, ptr %out6, align 4
-; SSE2:  Cost of 51 for VF 2: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
-; SSE2:  Cost of 108 for VF 4: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
-; SSE2:  Cost of 216 for VF 8: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
+; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %v6, ptr %out6, align 4
+; SSE2:  LV: Found an estimated cost of 51 for VF 2 For instruction: store i32 %v6, ptr %out6, align 4
+; SSE2:  LV: Found an estimated cost of 108 for VF 4 For instruction: store i32 %v6, ptr %out6, align 4
+; SSE2:  LV: Found an estimated cost of 216 for VF 8 For instruction: store i32 %v6, ptr %out6, align 4
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %v6, ptr %out6, align 4
-; AVX1:  Cost of 35 for VF 2: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
-; AVX1:  Cost of 64 for VF 4: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
-; AVX1:  Cost of 133 for VF 8: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
-; AVX1:  Cost of 266 for VF 16: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
+; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %v6, ptr %out6, align 4
+; AVX1:  LV: Found an estimated cost of 35 for VF 2 For instruction: store i32 %v6, ptr %out6, align 4
+; AVX1:  LV: Found an estimated cost of 64 for VF 4 For instruction: store i32 %v6, ptr %out6, align 4
+; AVX1:  LV: Found an estimated cost of 133 for VF 8 For instruction: store i32 %v6, ptr %out6, align 4
+; AVX1:  LV: Found an estimated cost of 266 for VF 16 For instruction: store i32 %v6, ptr %out6, align 4
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %v6, ptr %out6, align 4
-; AVX2:  Cost of 35 for VF 2: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
-; AVX2:  Cost of 64 for VF 4: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
-; AVX2:  Cost of 133 for VF 8: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
-; AVX2:  Cost of 266 for VF 16: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
+; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %v6, ptr %out6, align 4
+; AVX2:  LV: Found an estimated cost of 35 for VF 2 For instruction: store i32 %v6, ptr %out6, align 4
+; AVX2:  LV: Found an estimated cost of 64 for VF 4 For instruction: store i32 %v6, ptr %out6, align 4
+; AVX2:  LV: Found an estimated cost of 133 for VF 8 For instruction: store i32 %v6, ptr %out6, align 4
+; AVX2:  LV: Found an estimated cost of 266 for VF 16 For instruction: store i32 %v6, ptr %out6, align 4
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %v6, ptr %out6, align 4
-; AVX512:  Cost of 10 for VF 2: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
-; AVX512:  Cost of 20 for VF 4: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
-; AVX512:  Cost of 40 for VF 8: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
-; AVX512:  Cost of 70 for VF 16: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
-; AVX512:  Cost of 140 for VF 32: INTERLEAVE-GROUP with factor 7 at <badref>, ir<%out0>
+; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %v6, ptr %out6, align 4
+; AVX512:  LV: Found an estimated cost of 10 for VF 2 For instruction: store i32 %v6, ptr %out6, align 4
+; AVX512:  LV: Found an estimated cost of 20 for VF 4 For instruction: store i32 %v6, ptr %out6, align 4
+; AVX512:  LV: Found an estimated cost of 40 for VF 8 For instruction: store i32 %v6, ptr %out6, align 4
+; AVX512:  LV: Found an estimated cost of 70 for VF 16 For instruction: store i32 %v6, ptr %out6, align 4
+; AVX512:  LV: Found an estimated cost of 140 for VF 32 For instruction: store i32 %v6, ptr %out6, align 4
 ;
 entry:
   br label %for.body

@@ -387,7 +387,7 @@ struct ChainEdge {
   void appendJump(JumpT *Jump) { Jumps.push_back(Jump); }
 
   void moveJumps(ChainEdge *Other) {
-    Jumps.insert(Jumps.end(), Other->Jumps.begin(), Other->Jumps.end());
+    llvm::append_range(Jumps, Other->Jumps);
     Other->Jumps.clear();
     Other->Jumps.shrink_to_fit();
   }

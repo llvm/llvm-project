@@ -623,7 +623,7 @@ define amdgpu_kernel void @test_export_pos_before_param_ordered(float %x, float 
 define amdgpu_kernel void @test_export_pos_before_param_across_load(i32 %idx) #0 {
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float 1.0, float 1.0, float 1.0, float 1.0, i1 false, i1 false)
   call void @llvm.amdgcn.exp.f32(i32 33, i32 15, float 1.0, float 1.0, float 1.0, float 0.5, i1 false, i1 false)
-  %load = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0)
+  %load = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float 0.0, float 0.0, float 0.0, float %load, i1 true, i1 false)
   ret void
 }

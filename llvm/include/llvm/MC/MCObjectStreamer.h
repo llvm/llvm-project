@@ -63,7 +63,6 @@ class MCObjectStreamer : public MCStreamer {
   virtual void emitInstToData(const MCInst &Inst, const MCSubtargetInfo&) = 0;
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
-  MCSymbol *emitCFILabel() override;
   void emitInstructionImpl(const MCInst &Inst, const MCSubtargetInfo &STI);
   void resolvePendingFixups();
 
@@ -81,6 +80,7 @@ public:
   bool isIntegratedAssemblerRequired() const override { return true; }
 
   void emitFrames(MCAsmBackend *MAB);
+  MCSymbol *emitCFILabel() override;
   void emitCFISections(bool EH, bool Debug) override;
 
   void insert(MCFragment *F) {
@@ -141,8 +141,8 @@ public:
                          SMLoc Loc) override;
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,
                              unsigned Flags, unsigned Isa,
-                             unsigned Discriminator,
-                             StringRef FileName) override;
+                             unsigned Discriminator, StringRef FileName,
+                             StringRef Comment = {}) override;
   void emitDwarfAdvanceLineAddr(int64_t LineDelta, const MCSymbol *LastLabel,
                                 const MCSymbol *Label,
                                 unsigned PointerSize) override;
@@ -166,12 +166,6 @@ public:
   void emitCVStringTableDirective() override;
   void emitCVFileChecksumsDirective() override;
   void emitCVFileChecksumOffsetDirective(unsigned FileNo) override;
-  void emitDTPRel32Value(const MCExpr *Value) override;
-  void emitDTPRel64Value(const MCExpr *Value) override;
-  void emitTPRel32Value(const MCExpr *Value) override;
-  void emitTPRel64Value(const MCExpr *Value) override;
-  void emitGPRel32Value(const MCExpr *Value) override;
-  void emitGPRel64Value(const MCExpr *Value) override;
   std::optional<std::pair<bool, std::string>>
   emitRelocDirective(const MCExpr &Offset, StringRef Name, const MCExpr *Expr,
                      SMLoc Loc, const MCSubtargetInfo &STI) override;

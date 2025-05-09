@@ -112,7 +112,7 @@ define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, p
   %shl = shl i32 %src, %sub
   %bfe = lshr i32 %shl, %sub
   store i32 %bfe, ptr addrspace(1) %out.gep
-  store volatile i32 %shl, ptr addrspace(1) undef
+  store volatile i32 %shl, ptr addrspace(1) poison
   ret void
 }
 
@@ -200,7 +200,7 @@ define amdgpu_kernel void @s_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i
   %shl = shl i32 %src, %sub
   %bfe = lshr i32 %shl, %sub
   store i32 %bfe, ptr addrspace(1) %out.gep
-  store volatile i32 %shl, ptr addrspace(1) undef
+  store volatile i32 %shl, ptr addrspace(1) poison
   ret void
 }
 
@@ -314,7 +314,7 @@ define amdgpu_kernel void @v_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, p
   %shl = shl i32 %src, %sub
   %bfe = ashr i32 %shl, %sub
   store i32 %bfe, ptr addrspace(1) %out.gep
-  store volatile i32 %shl, ptr addrspace(1) undef
+  store volatile i32 %shl, ptr addrspace(1) poison
   ret void
 }
 
@@ -402,7 +402,7 @@ define amdgpu_kernel void @s_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i
   %shl = shl i32 %src, %sub
   %bfe = ashr i32 %shl, %sub
   store i32 %bfe, ptr addrspace(1) %out.gep
-  store volatile i32 %shl, ptr addrspace(1) undef
+  store volatile i32 %shl, ptr addrspace(1) poison
   ret void
 }
 

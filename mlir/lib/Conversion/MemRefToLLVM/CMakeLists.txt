@@ -1,5 +1,4 @@
 add_mlir_conversion_library(MLIRMemRefToLLVM
-  AllocLikeConversion.cpp
   MemRefToLLVM.cpp
 
   ADDITIONAL_HEADER_DIRS

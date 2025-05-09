@@ -75,7 +75,7 @@ body:             |
     successors: %bb.1.atomic(0x40000000), %bb.2.exit(0x40000000)
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     $vgpr1 = V_ASHRREV_I32_e32 31, $vgpr0, implicit $exec
     $vgpr1_vgpr2 = V_LSHL_B64_e64 $vgpr0_vgpr1, 3, implicit $exec
     $sgpr7 = S_MOV_B32 61440
@@ -92,7 +92,7 @@ body:             |
     successors: %bb.2.exit(0x80000000)
     liveins: $sgpr4_sgpr5_sgpr6_sgpr7:0x0000000C, $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr1_vgpr2_vgpr3_vgpr4:0x00000003
 
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 15, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) undef`)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 15, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) poison`)
     dead $vgpr0 = V_MOV_B32_e32 -1, implicit $exec
     dead $vgpr0 = V_MOV_B32_e32 61440, implicit $exec
     $sgpr4_sgpr5 = S_MOV_B64 0

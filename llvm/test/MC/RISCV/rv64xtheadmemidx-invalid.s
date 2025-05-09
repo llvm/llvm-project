@@ -1,7 +1,7 @@
 # RUN: not llvm-mc -triple riscv32 -mattr=+xtheadmemidx < %s 2>&1 | FileCheck %s
 # RUN: not llvm-mc -triple riscv64 -mattr=+xtheadmemidx < %s 2>&1 | FileCheck %s
 
-th.ldia		0(a0), (a1), 0, 0  # CHECK: :[[@LINE]]:23: error: invalid operand for instruction
+th.ldia		0(a0), (a1), 0, 0  # CHECK: :[[@LINE]]:26: error: invalid operand for instruction
 th.ldib		a0, 2(a1), 15, 1   # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
 th.lwia		a0, (a1), 30, 2    # CHECK: :[[@LINE]]:20: error: immediate must be an integer in the range [-16, 15]
 th.lwib		a0, (a1), -16, 43  # CHECK: :[[@LINE]]:25: error: immediate must be an integer in the range [0, 3]

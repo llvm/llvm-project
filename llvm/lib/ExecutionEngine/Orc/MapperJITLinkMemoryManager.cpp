@@ -43,7 +43,7 @@ public:
   }
 
   void abandon(OnAbandonedFunction OnFinalize) override {
-    Parent.Mapper->release({AllocAddr}, std::move(OnFinalize));
+    Parent.Mapper->deinitialize({AllocAddr}, std::move(OnFinalize));
   }
 
 private:

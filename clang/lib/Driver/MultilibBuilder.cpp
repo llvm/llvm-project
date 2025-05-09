@@ -142,8 +142,8 @@ static MultilibBuilder compose(const MultilibBuilder &Base,
 
   MultilibBuilder::flags_list &Flags = Composed.flags();
 
-  Flags.insert(Flags.end(), Base.flags().begin(), Base.flags().end());
-  Flags.insert(Flags.end(), New.flags().begin(), New.flags().end());
+  llvm::append_range(Flags, Base.flags());
+  llvm::append_range(Flags, New.flags());
 
   return Composed;
 }
@@ -153,8 +153,7 @@ MultilibSetBuilder::Either(ArrayRef<MultilibBuilder> MultilibSegments) {
   multilib_list Composed;
 
   if (Multilibs.empty())
-    Multilibs.insert(Multilibs.end(), MultilibSegments.begin(),
-                     MultilibSegments.end());
+    llvm::append_range(Multilibs, MultilibSegments);
   else {
     for (const auto &New : MultilibSegments) {
       for (const auto &Base : Multilibs) {

@@ -17,45 +17,45 @@
 template <typename InputT>
 class StrfromTest : public LIBC_NAMESPACE::testing::Test {
 
-  static const bool is_single_prec =
+  static constexpr bool is_single_prec =
       LIBC_NAMESPACE::cpp::is_same<InputT, float>::value;
-  static const bool is_double_prec =
+  static constexpr bool is_double_prec =
       LIBC_NAMESPACE::cpp::is_same<InputT, double>::value;
 
   using FunctionT = int (*)(char *, size_t, const char *, InputT fp);
 
 public:
   void floatDecimalFormat(FunctionT func) {
-    if (is_single_prec)
+    if constexpr (is_single_prec)
       floatDecimalSinglePrec(func);
-    else if (is_double_prec)
+    else if constexpr (is_double_prec)
       floatDecimalDoublePrec(func);
     else
       floatDecimalLongDoublePrec(func);
   }
 
   void floatHexExpFormat(FunctionT func) {
-    if (is_single_prec)
+    if constexpr (is_single_prec)
       floatHexExpSinglePrec(func);
-    else if (is_double_prec)
+    else if constexpr (is_double_prec)
       floatHexExpDoublePrec(func);
     else
       floatHexExpLongDoublePrec(func);
   }
 
   void floatDecimalExpFormat(FunctionT func) {
-    if (is_single_prec)
+    if constexpr (is_single_prec)
       floatDecimalExpSinglePrec(func);
-    else if (is_double_prec)
+    else if constexpr (is_double_prec)
       floatDecimalExpDoublePrec(func);
     else
       floatDecimalExpLongDoublePrec(func);
   }
 
   void floatDecimalAutoFormat(FunctionT func) {
-    if (is_single_prec)
+    if constexpr (is_single_prec)
       floatDecimalAutoSinglePrec(func);
-    else if (is_double_prec)
+    else if constexpr (is_double_prec)
       floatDecimalAutoDoublePrec(func);
     else
       floatDecimalAutoLongDoublePrec(func);
@@ -95,7 +95,7 @@ public:
     written = func(buff, 36, "A simple string with one conversion", 1.0);
     ASSERT_STREQ_LEN(written, buff, "A simple string with one conversion");
 
-    written = func(buff, 20, "%1f", 1234567890.0);
+    written = func(buff, 20, "%1f", static_cast<InputT>(1234567890.0));
     ASSERT_STREQ_LEN(written, buff, "%1f");
   }
 
@@ -103,23 +103,23 @@ public:
     char buff[20];
     int written;
 
-    written = func(buff, 5, "%f", 1234567890.0);
+    written = func(buff, 5, "%f", static_cast<InputT>(1234567890.0));
     EXPECT_EQ(written, 17);
     ASSERT_STREQ(buff, "1234");
 
-    written = func(buff, 5, "%.5f", 1.05);
+    written = func(buff, 5, "%.5f", static_cast<InputT>(1.05));
     EXPECT_EQ(written, 7);
     ASSERT_STREQ(buff, "1.05");
 
-    written = func(buff, 0, "%g", 1.0);
+    written = func(buff, 0, "%g", static_cast<InputT>(1.0));
     EXPECT_EQ(written, 1);
     ASSERT_STREQ(buff, "1.05"); // Make sure that buff has not changed
   }
 
   void infNanValues(FunctionT func) {
-    if (is_double_prec)
+    if constexpr (is_double_prec)
       doublePrecInfNan(func);
-    else if (!is_single_prec)
+    else if constexpr (!is_single_prec)
       longDoublePrecInfNan(func);
   }
 
@@ -127,13 +127,13 @@ public:
     char buff[70];
     int written;
 
-    written = func(buff, 16, "%f", 1.0);
+    written = func(buff, 16, "%f", 1.0f);
     ASSERT_STREQ_LEN(written, buff, "1.000000");
 
-    written = func(buff, 20, "%f", 1234567890.0);
+    written = func(buff, 20, "%f", 1234567890.0f);
     ASSERT_STREQ_LEN(written, buff, "1234567936.000000");
 
-    written = func(buff, 67, "%.3f", 1.0);
+    written = func(buff, 67, "%.3f", 1.0f);
     ASSERT_STREQ_LEN(written, buff, "1.000");
   }
 
@@ -222,14 +222,14 @@ public:
     char buff[25];
     int written;
 
-    written = func(buff, 0, "%a", 1234567890.0);
+    written = func(buff, 0, "%a", 1234567890.0f);
     EXPECT_EQ(written, 14);
 
-    written = func(buff, 20, "%a", 1234567890.0);
+    written = func(buff, 20, "%a", 1234567890.0f);
     EXPECT_EQ(written, 14);
     ASSERT_STREQ(buff, "0x1.26580cp+30");
 
-    written = func(buff, 20, "%A", 1234567890.0);
+    written = func(buff, 20, "%A", 1234567890.0f);
     EXPECT_EQ(written, 14);
     ASSERT_STREQ(buff, "0X1.26580CP+30");
   }
@@ -314,10 +314,10 @@ public:
     char buff[25];
     int written;
 
-    written = func(buff, 20, "%.9e", 1234567890.0);
+    written = func(buff, 20, "%.9e", 1234567890.0f);
     ASSERT_STREQ_LEN(written, buff, "1.234567936e+09");
 
-    written = func(buff, 20, "%.9E", 1234567890.0);
+    written = func(buff, 20, "%.9E", 1234567890.0f);
     ASSERT_STREQ_LEN(written, buff, "1.234567936E+09");
   }
 
@@ -379,10 +379,10 @@ public:
     char buff[25];
     int written;
 
-    written = func(buff, 20, "%.9g", 1234567890.0);
+    written = func(buff, 20, "%.9g", 1234567890.0f);
     ASSERT_STREQ_LEN(written, buff, "1.23456794e+09");
 
-    written = func(buff, 20, "%.9G", 1234567890.0);
+    written = func(buff, 20, "%.9G", 1234567890.0f);
     ASSERT_STREQ_LEN(written, buff, "1.23456794E+09");
   }
 

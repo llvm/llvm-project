@@ -14,12 +14,10 @@
 #include <__cxx03/__algorithm/iterator_operations.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__iterator/advance.h>
-#include <__cxx03/__iterator/concepts.h>
 #include <__cxx03/__iterator/distance.h>
 #include <__cxx03/__iterator/iterator_traits.h>
-#include <__cxx03/__ranges/concepts.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__type_traits/is_callable.h>
 #include <__cxx03/__utility/convert_to_integral.h>
 #include <__cxx03/__utility/pair.h>

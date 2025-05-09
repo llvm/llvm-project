@@ -73,7 +73,7 @@ class VirtRegMap;
 
     /// Return the preferred allocation register for reg, given a COPY
     /// instruction.
-    static Register copyHint(const MachineInstr *MI, unsigned Reg,
+    static Register copyHint(const MachineInstr *MI, Register Reg,
                              const TargetRegisterInfo &TRI,
                              const MachineRegisterInfo &MRI);
 

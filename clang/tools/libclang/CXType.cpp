@@ -19,6 +19,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/QualTypeNames.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -326,6 +327,22 @@ CXString clang_getTypePrettyPrinted(CXType CT, CXPrintingPolicy cxPolicy) {
   T.print(OS, *UserPolicy);
 
   return cxstring::createDup(OS.str());
+}
+
+CXString clang_getFullyQualifiedName(CXType CT, CXPrintingPolicy cxPolicy,
+                                     unsigned int WithGlobalNsPrefix) {
+  const QualType T = GetQualType(CT);
+  if (T.isNull())
+    return cxstring::createEmpty();
+  const CXTranslationUnit TU = GetTU(CT);
+  const ASTContext &Ctx = cxtu::getASTUnit(TU)->getASTContext();
+  const PrintingPolicy *UserPolicy = static_cast<PrintingPolicy *>(cxPolicy);
+  const bool WithGlobalNs = (WithGlobalNsPrefix != 0);
+
+  const std::string Str =
+      TypeName::getFullyQualifiedName(T, Ctx, *UserPolicy, WithGlobalNs);
+
+  return cxstring::createDup(Str);
 }
 
 CXType clang_getTypedefDeclUnderlyingType(CXCursor C) {
@@ -701,6 +718,18 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
       TCALLINGCONV(M68kRTD);
       TCALLINGCONV(PreserveNone);
       TCALLINGCONV(RISCVVectorCall);
+      TCALLINGCONV(RISCVVLSCall_32);
+      TCALLINGCONV(RISCVVLSCall_64);
+      TCALLINGCONV(RISCVVLSCall_128);
+      TCALLINGCONV(RISCVVLSCall_256);
+      TCALLINGCONV(RISCVVLSCall_512);
+      TCALLINGCONV(RISCVVLSCall_1024);
+      TCALLINGCONV(RISCVVLSCall_2048);
+      TCALLINGCONV(RISCVVLSCall_4096);
+      TCALLINGCONV(RISCVVLSCall_8192);
+      TCALLINGCONV(RISCVVLSCall_16384);
+      TCALLINGCONV(RISCVVLSCall_32768);
+      TCALLINGCONV(RISCVVLSCall_65536);
     case CC_SpirFunction: return CXCallingConv_Unexposed;
     case CC_AMDGPUKernelCall: return CXCallingConv_Unexposed;
     case CC_OpenCLKernel: return CXCallingConv_Unexposed;
@@ -954,12 +983,14 @@ long long clang_Type_getAlignOf(CXType T) {
 }
 
 CXType clang_Type_getClassType(CXType CT) {
+  ASTContext &Ctx = cxtu::getASTUnit(GetTU(CT))->getASTContext();
   QualType ET = QualType();
   QualType T = GetQualType(CT);
   const Type *TP = T.getTypePtrOrNull();
 
   if (TP && TP->getTypeClass() == Type::MemberPointer) {
-    ET = QualType(cast<MemberPointerType> (TP)->getClass(), 0);
+    ET = Ctx.getTypeDeclType(
+        cast<MemberPointerType>(TP)->getMostRecentCXXRecordDecl());
   }
   return MakeCXType(ET, GetTU(CT));
 }

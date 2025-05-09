@@ -954,8 +954,8 @@ Instruction Operand Name Mapping
 TableGen will also generate a function called getNamedOperandIdx() which
 can be used to look up an operand's index in a MachineInstr based on its
 TableGen name.  Setting the UseNamedOperandTable bit in an instruction's
-TableGen definition will add all of its operands to an enumeration in the
-llvm::XXX:OpName namespace and also add an entry for it into the OperandMap
+TableGen definition will add all of its operands to an enumeration
+llvm::XXX:OpName and also add an entry for it into the OperandMap
 table, which can be queried using getNamedOperandIdx()
 
 .. code-block:: text
@@ -978,19 +978,17 @@ XXXInstrInfo.cpp:
 
 .. code-block:: c++
 
-  #define GET_INSTRINFO_NAMED_OPS // For getNamedOperandIdx() function
+  // For getNamedOperandIdx() function definition.
+  #define GET_INSTRINFO_NAMED_OPS
   #include "XXXGenInstrInfo.inc"
 
 XXXInstrInfo.h:
 
 .. code-block:: c++
 
-  #define GET_INSTRINFO_OPERAND_ENUM // For OpName enum
+  // For OpName enum and getNamedOperandIdx declaration.
+  #define GET_INSTRINFO_OPERAND_ENUM
   #include "XXXGenInstrInfo.inc"
-
-  namespace XXX {
-    int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIndex);
-  } // End namespace XXX
 
 Instruction Operand Types
 ^^^^^^^^^^^^^^^^^^^^^^^^^

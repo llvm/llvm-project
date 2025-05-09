@@ -17,6 +17,7 @@
 #include "NVPTX.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Support/AtomicOrdering.h"
 
 namespace llvm {
 namespace NVPTXISD {
@@ -60,6 +61,17 @@ enum NodeType : unsigned {
   BFE,
   BFI,
   PRMT,
+
+  /// This node is similar to ISD::BUILD_VECTOR except that the output may be
+  /// implicitly bitcast to a scalar. This allows for the representation of
+  /// packing move instructions for vector types which are not legal i.e. v2i32
+  BUILD_VECTOR,
+
+  /// This node is the inverse of NVPTX::BUILD_VECTOR. It takes a single value
+  /// which may be a scalar and unpacks it into multiple values by implicitly
+  /// converting it to a vector.
+  UNPACK_VECTOR,
+
   FCOPYSIGN,
   DYNAMIC_STACKALLOC,
   STACKRESTORE,
@@ -260,10 +272,26 @@ public:
     return true;
   }
 
+  bool shouldInsertFencesForAtomic(const Instruction *) const override;
+
+  AtomicOrdering
+  atomicOperationOrderAfterFenceSplit(const Instruction *I) const override;
+
+  Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                AtomicOrdering Ord) const override;
+  Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                 AtomicOrdering Ord) const override;
+
+  unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
+                                     EVT ToVT) const override;
+
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
+  mutable unsigned GlobalUniqueCallSite;
+
   SDValue getParamSymbol(SelectionDAG &DAG, int idx, EVT) const;
 
+  SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
@@ -295,8 +323,6 @@ private:
 
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
-
-  SDValue LowerSelect(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
 

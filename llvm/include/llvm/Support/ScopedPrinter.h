@@ -539,7 +539,13 @@ ScopedPrinter::printHex<support::ulittle16_t>(StringRef Label,
   startLine() << Label << ": " << hex(Value) << "\n";
 }
 
-struct DelimitedScope;
+struct DelimitedScope {
+  DelimitedScope(ScopedPrinter &W) : W(&W) {}
+  DelimitedScope() : W(nullptr) {}
+  virtual ~DelimitedScope() = default;
+  virtual void setPrinter(ScopedPrinter &W) = 0;
+  ScopedPrinter *W;
+};
 
 class JSONScopedPrinter : public ScopedPrinter {
 private:
@@ -836,14 +842,6 @@ private:
       JOS.objectEnd();
     ScopeHistory.pop_back();
   }
-};
-
-struct DelimitedScope {
-  DelimitedScope(ScopedPrinter &W) : W(&W) {}
-  DelimitedScope() : W(nullptr) {}
-  virtual ~DelimitedScope() = default;
-  virtual void setPrinter(ScopedPrinter &W) = 0;
-  ScopedPrinter *W;
 };
 
 struct DictScope : DelimitedScope {

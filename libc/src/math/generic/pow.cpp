@@ -217,6 +217,11 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
   uint64_t sign = 0;
 
   ///////// BEGIN - Check exceptional cases ////////////////////////////////////
+  // If x or y is signaling NaN
+  if (x_abs.is_signaling_nan() || y_abs.is_signaling_nan()) {
+    fputil::raise_except_if_required(FE_INVALID);
+    return FPBits::quiet_nan().get_val();
+  }
 
   // The double precision number that is closest to 1 is (1 - 2^-53), which has
   //   log2(1 - 2^-53) ~ -1.715...p-53.
@@ -394,14 +399,14 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
   DoubleDouble dx_c0;
 
   // Perform exact range reduction and exact product dx * c0.
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   dx = fputil::multiply_add(RD[idx_x], m_x.get_val(), -1.0); // Exact
   dx_c0 = fputil::exact_mult(COEFFS[0], dx);
 #else
   double c = FPBits(m_x.uintval() & 0x3fff'e000'0000'0000).get_val();
   dx = fputil::multiply_add(RD[idx_x], m_x.get_val() - c, CD[idx_x]); // Exact
-  dx_c0 = fputil::exact_mult<28>(dx, COEFFS[0]);                      // Exact
-#endif // LIBC_TARGET_CPU_HAS_FMA
+  dx_c0 = fputil::exact_mult<double, 28>(dx, COEFFS[0]);              // Exact
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
   double dx2 = dx * dx;
   double c0 = fputil::multiply_add(dx, COEFFS[2], COEFFS[1]);

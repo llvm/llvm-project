@@ -18,7 +18,7 @@ namespace {
 AST_MATCHER(VarDecl, isAsm) { return Node.hasAttr<clang::AsmLabelAttr>(); }
 const ast_matchers::internal::VariadicDynCastAllOfMatcher<Decl,
                                                           FileScopeAsmDecl>
-    fileScopeAsmDecl;
+    fileScopeAsmDecl; // NOLINT(readability-identifier-*) preserve clang style
 } // namespace
 
 void NoAssemblerCheck::registerMatchers(MatchFinder *Finder) {

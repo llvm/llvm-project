@@ -58,24 +58,16 @@ bool ProcessRunLock::ReadUnlock() { return ::ReadUnlock(m_rwlock); }
 
 bool ProcessRunLock::SetRunning() {
   WriteLock(m_rwlock);
+  bool was_stopped = !m_running;
   m_running = true;
   WriteUnlock(m_rwlock);
-  return true;
-}
-
-bool ProcessRunLock::TrySetRunning() {
-  if (WriteTryLock(m_rwlock)) {
-    bool was_running = m_running;
-    m_running = true;
-    WriteUnlock(m_rwlock);
-    return !was_running;
-  }
-  return false;
+  return was_stopped;
 }
 
 bool ProcessRunLock::SetStopped() {
   WriteLock(m_rwlock);
+  bool was_running = m_running;
   m_running = false;
   WriteUnlock(m_rwlock);
-  return true;
+  return was_running;
 }

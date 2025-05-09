@@ -21,7 +21,7 @@ class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             return False
 
     @skipIfWindows
-    @skipIf(archs=["arm"])  # Always times out on buildbot
+    @skipIf(oslist=["linux"], archs=["arm"])  # Always times out on buildbot
     def test_basic_functionality(self):
         """
         Test basic restarting functionality when the process is running in
@@ -61,7 +61,7 @@ class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIf(archs=["arm"])  # Always times out on buildbot
+    @skipIf(oslist=["linux"], archs=["arm"])  # Always times out on buildbot
     def test_stopOnEntry(self):
         """
         Check that stopOnEntry works correctly when using runInTerminal.
@@ -74,7 +74,6 @@ class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, runInTerminal=True, stopOnEntry=True)
         [bp_main] = self.set_function_breakpoints(["main"])
-        self.dap_server.request_configurationDone()
 
         # When using stopOnEntry, configurationDone doesn't result in a running
         # process, we should immediately get a stopped event instead.

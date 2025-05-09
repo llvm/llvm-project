@@ -28,7 +28,7 @@ struct noop_coroutine_promise {};
 
 // [coroutine.handle.noop]
 template <>
-struct _LIBCPP_TEMPLATE_VIS coroutine_handle<noop_coroutine_promise> {
+struct coroutine_handle<noop_coroutine_promise> {
 public:
   // [coroutine.handle.noop.conv], conversion
   _LIBCPP_HIDE_FROM_ABI constexpr operator coroutine_handle<>() const noexcept {

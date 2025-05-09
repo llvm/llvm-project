@@ -44,3 +44,22 @@ func.func @generalize_pad_tensor_dynamic_shape(%arg0: tensor<4x?x2x?xf32>, %arg1
   } : tensor<4x?x2x?xf32> to tensor<4x?x?x?xf32>
   return %out : tensor<4x?x?x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @generalize_pad_tensor_constant_inside(
+// CHECK-SAME:                                                     %[[SRC:.*]]: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1xf32> {
+// CHECK:           %[[INIT:.*]] = tensor.empty() : tensor<1x32x32x1xf32>
+// CHECK:           %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[FILL:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[INIT]] : tensor<1x32x32x1xf32>) -> tensor<1x32x32x1xf32>
+// CHECK:           %[[PADDED:.*]] = tensor.insert_slice %[[SRC]] into %[[FILL]][0, 2, 2, 0] [1, 28, 28, 1] [1, 1, 1, 1] : tensor<1x28x28x1xf32> into tensor<1x32x32x1xf32>
+// CHECK:           return %[[PADDED]] : tensor<1x32x32x1xf32>
+// CHECK:         }
+func.func @generalize_pad_tensor_constant_inside(%arg0: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1xf32> {
+  %0 = tensor.pad %arg0 low[0, 2, 2, 0] high[0, 2, 2, 0]  {
+  ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
+    %cst = arith.constant 0.000000e+00 : f32
+    tensor.yield %cst : f32
+  } : tensor<1x28x28x1xf32> to tensor<1x32x32x1xf32>
+  return %0 : tensor<1x32x32x1xf32>
+}

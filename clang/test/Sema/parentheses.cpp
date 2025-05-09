@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Wparentheses -fsyntax-only -verify %s
-// RUN: %clang_cc1 -Wparentheses -fsyntax-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -Wno-error=parentheses -fsyntax-only -verify %s
+// RUN: %clang_cc1 -Wno-error=parentheses -fsyntax-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 bool someConditionFunc();
 
@@ -217,10 +217,10 @@ namespace PR20735 {
 }
 
 void consecutive_builtin_compare(int x, int y, int z) {
-  (void)(x < y < z);  // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
-  (void)(x < y > z);  // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
-  (void)(x < y <= z); // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
-  (void)(x <= y > z); // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
+  (void)(x < y < z);  // expected-warning {{chained comparison 'X < Y < Z' does not behave the same as a mathematical expression}}
+  (void)(x < y > z);  // expected-warning {{chained comparison 'X < Y > Z' does not behave the same as a mathematical expression}}
+  (void)(x < y <= z); // expected-warning {{chained comparison 'X < Y <= Z' does not behave the same as a mathematical expression}}
+  (void)(x <= y > z); // expected-warning {{chained comparison 'X <= Y > Z' does not behave the same as a mathematical expression}}
   (void)((x < y) < z);  // no-warning
   (void)((x < y) >= z); // no-warning
 

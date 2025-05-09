@@ -458,6 +458,8 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::RequiresExprBody:
   case Decl::UnresolvedUsingIfExists:
   case Decl::HLSLBuffer:
+  case Decl::OpenACCDeclare:
+  case Decl::OpenACCRoutine:
     return false;
 
   // These indirectly derive from Redeclarable<T> but are not actually
@@ -507,16 +509,4 @@ bool serialization::needsAnonymousDeclarationNumber(const NamedDecl *D) {
   if (!isa<RecordDecl, ObjCInterfaceDecl>(D->getLexicalDeclContext()))
     return false;
   return isa<TagDecl, FieldDecl>(D);
-}
-
-void serialization::updateModuleTimestamp(StringRef ModuleFilename) {
-  // Overwrite the timestamp file contents so that file's mtime changes.
-  std::error_code EC;
-  llvm::raw_fd_ostream OS(ModuleFile::getTimestampFilename(ModuleFilename), EC,
-                          llvm::sys::fs::OF_TextWithCRLF);
-  if (EC)
-    return;
-  OS << "Timestamp file\n";
-  OS.close();
-  OS.clear_error(); // Avoid triggering a fatal error.
 }

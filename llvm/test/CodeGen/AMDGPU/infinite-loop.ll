@@ -122,7 +122,7 @@ define amdgpu_kernel void @infinite_loops(ptr addrspace(1) %out) {
 ; SI-NEXT:    s_endpgm
 ; IR-LABEL: @infinite_loops(
 ; IR-NEXT:  entry:
-; IR-NEXT:    br i1 undef, label [[LOOP1:%.*]], label [[LOOP2:%.*]]
+; IR-NEXT:    br i1 poison, label [[LOOP1:%.*]], label [[LOOP2:%.*]]
 ; IR:       loop1:
 ; IR-NEXT:    store volatile i32 999, ptr addrspace(1) [[OUT:%.*]], align 4
 ; IR-NEXT:    br i1 true, label [[LOOP1]], label [[DUMMYRETURNBLOCK:%.*]]
@@ -133,7 +133,7 @@ define amdgpu_kernel void @infinite_loops(ptr addrspace(1) %out) {
 ; IR-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %loop1, label %loop2
+  br i1 poison, label %loop1, label %loop2
 
 loop1:
   store volatile i32 999, ptr addrspace(1) %out, align 4

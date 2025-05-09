@@ -69,6 +69,12 @@ def TestAttrWithLoc : TEST_Op<"attr_with_loc"> {
   let assemblyFormat = "`(` $value `` custom<OptionalLoc>($loc) `)` attr-dict";
 }
 
+def ParseCustomOperationNameAPI : TEST_Op<"parse_custom_operation_name_api"> {
+  let summary = "noop that exercises the parseCustomOperationName API";
+  let arguments = (ins StrAttr:$name);
+  let assemblyFormat = "`(` custom<CustomOperationNameEntry>($name) `)` attr-dict";
+}
+
 // -----
 
 // This is used to test that the fallback for a custom op's parser and printer
@@ -475,6 +481,7 @@ def FormatQualifiedNestedType : TEST_Op<"format_qual_cpmd_nested_type"> {
 
 //===----------------------------------------------------------------------===//
 // Custom Directives
+//===----------------------------------------------------------------------===//
 
 def FormatCustomDirectiveOperands
     : TEST_Op<"format_custom_directive_operands", [AttrSizedOperandSegments]> {
@@ -599,6 +606,7 @@ def FormatLiteralFollowingOptionalGroup
 
 //===----------------------------------------------------------------------===//
 // AllTypesMatch type inference
+//===----------------------------------------------------------------------===//
 
 def FormatAllTypesMatchVarOp : TEST_Op<"format_all_types_match_var", [
     AllTypesMatch<["value1", "value2", "result"]>
@@ -618,6 +626,7 @@ def FormatAllTypesMatchAttrOp : TEST_Op<"format_all_types_match_attr", [
 
 //===----------------------------------------------------------------------===//
 // TypesMatchWith type inference
+//===----------------------------------------------------------------------===//
 
 def FormatTypesMatchVarOp : TEST_Op<"format_types_match_var", [
     TypesMatchWith<"result type matches operand", "value", "result", "$_self">
@@ -655,6 +664,7 @@ def FormatTypesMatchContextOp : TEST_Op<"format_types_match_context", [
 
 //===----------------------------------------------------------------------===//
 // InferTypeOpInterface type inference in assembly format
+//===----------------------------------------------------------------------===//
 
 def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
   let results = (outs AnyType);
@@ -765,6 +775,11 @@ def FormatInferTypeVariadicOperandsOp
       return ::mlir::success();
     }
   }];
+}
+
+def VariadicArgsTypesSplit : TEST_Op<"variadic_args_types_split"> {
+  let arguments = (ins StrAttr:$str, Variadic<AnyType>:$args);
+  let assemblyFormat = "$str (`,` $args^)? attr-dict (`:` type($args)^)?";
 }
 
 #endif  // TEST_OPS_SYNTAX

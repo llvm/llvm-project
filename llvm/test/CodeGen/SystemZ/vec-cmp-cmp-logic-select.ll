@@ -58,8 +58,7 @@ define <16 x i16> @fun3(<16 x i8> %val1, <16 x i8> %val2, <16 x i16> %val3, <16 
 ; CHECK:       # %bb.0:
 ; CHECK-DAG:     vceqb [[REG0:%v[0-9]+]], %v24, %v26
 ; CHECK-DAG:     vuphb [[REG2:%v[0-9]+]], [[REG0]]
-; CHECK-DAG:     vmrlg [[REG1:%v[0-9]+]], [[REG0]], [[REG0]]
-; CHECK-DAG:     vuphb [[REG1]], [[REG1]]
+; CHECK-DAG:     vuplb [[REG1:%v[0-9]+]], [[REG0]]
 ; CHECK-DAG:     vceqh [[REG3:%v[0-9]+]], %v28, %v25
 ; CHECK-DAG:     vceqh [[REG4:%v[0-9]+]], %v30, %v27
 ; CHECK-DAG:     vl [[REG5:%v[0-9]+]], 176(%r15)
@@ -186,10 +185,9 @@ define <8 x i32> @fun10(<8 x i16> %val1, <8 x i16> %val2, <8 x i16> %val3, <8 x 
 ; CHECK-DAG:     vceqh [[REG1:%v[0-9]+]], %v28, %v30
 ; CHECK-NEXT:    vx [[REG2:%v[0-9]+]], [[REG0]], [[REG1]]
 ; CHECK-DAG:     vuphh [[REG3:%v[0-9]+]], [[REG2]]
-; CHECK-DAG:     vmrlg [[REG4:%v[0-9]+]], [[REG2]], [[REG2]]
-; CHECK-DAG:     vuphh [[REG5:%v[0-9]+]], [[REG4]]
+; CHECK-DAG:     vuplhw [[REG4:%v[0-9]+]], [[REG2]]
 ; CHECK-NEXT:    vsel %v24, %v25, %v29, [[REG3]]
-; CHECK-NEXT:    vsel %v26, %v27, %v31, [[REG5]]
+; CHECK-NEXT:    vsel %v26, %v27, %v31, [[REG4]]
 ; CHECK-NEXT:    br %r14
   %cmp0 = icmp eq <8 x i16> %val1, %val2
   %cmp1 = icmp eq <8 x i16> %val3, %val4
@@ -347,10 +345,9 @@ define <4 x i64> @fun18(<4 x i32> %val1, <4 x i32> %val2, <4 x i16> %val3, <4 x 
 ; CHECK-NEXT:    vuphh %v1, %v1
 ; CHECK-NEXT:    vn %v0, %v0, %v1
 ; CHECK-DAG:     vuphf [[REG0:%v[0-9]+]], %v0
-; CHECK-DAG:     vmrlg [[REG1:%v[0-9]+]], %v0, %v0
-; CHECK-DAG:     vuphf [[REG2:%v[0-9]+]], [[REG1]]
+; CHECK-DAG:     vuplf [[REG1:%v[0-9]+]], %v0
 ; CHECK-NEXT:    vsel %v24, %v25, %v29, [[REG0]]
-; CHECK-NEXT:    vsel %v26, %v27, %v31, [[REG2]]
+; CHECK-NEXT:    vsel %v26, %v27, %v31, [[REG1]]
 ; CHECK-NEXT:    br %r14
   %cmp0 = icmp eq <4 x i32> %val1, %val2
   %cmp1 = icmp eq <4 x i16> %val3, %val4
@@ -455,14 +452,13 @@ define <4 x i64> @fun24(<4 x i64> %val1, <4 x i64> %val2, <4 x i32> %val3, <4 x 
 ; CHECK-LABEL: fun24:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vceqf [[REG0:%v[0-9]+]], %v25, %v27
-; CHECK-NEXT:    vuphf [[REG1:%v[0-9]+]], [[REG0]]
-; CHECK-NEXT:    vmrlg [[REG2:%v[0-9]+]], [[REG0]], [[REG0]]
+; CHECK-DAG:     vuphf [[REG1:%v[0-9]+]], [[REG0]]
+; CHECK-DAG:     vuplf [[REG2:%v[0-9]+]], [[REG0]]
 ; CHECK-DAG:     vceqg [[REG3:%v[0-9]+]], %v24, %v28
 ; CHECK-DAG:     vceqg [[REG4:%v[0-9]+]], %v26, %v30
-; CHECK-DAG:     vuphf [[REG5:%v[0-9]+]], [[REG2]]
 ; CHECK-DAG:     vl [[REG6:%v[0-9]+]], 176(%r15)
 ; CHECK-DAG:     vl [[REG7:%v[0-9]+]], 160(%r15)
-; CHECK-DAG:     vx [[REG8:%v[0-9]+]], [[REG4]], [[REG5]]
+; CHECK-DAG:     vx [[REG8:%v[0-9]+]], [[REG4]], [[REG2]]
 ; CHECK-DAG:     vx [[REG9:%v[0-9]+]], [[REG3]], [[REG1]]
 ; CHECK-DAG:     vsel %v24, %v29, [[REG7]], [[REG9]]
 ; CHECK-DAG:     vsel %v26, %v31, [[REG6]], [[REG8]]
@@ -631,8 +627,7 @@ define <4 x double> @fun29(<4 x float> %val1, <4 x float> %val2, <4 x float> %va
 ; CHECK-NEXT:    vfchdb %v2, %v3, %v2
 ; CHECK-NEXT:    vpkg %v1, %v2, %v1
 ; CHECK-NEXT:    vx %v0, %v0, %v1
-; CHECK-NEXT:    vmrlg %v1, %v0, %v0
-; CHECK-NEXT:    vuphf %v1, %v1
+; CHECK-NEXT:    vuplf %v1, %v0
 ; CHECK-NEXT:    vuphf %v0, %v0
 ; CHECK-NEXT:    vsel %v24, %v25, %v29, %v0
 ; CHECK-NEXT:    vsel %v26, %v27, %v31, %v1
@@ -643,8 +638,7 @@ define <4 x double> @fun29(<4 x float> %val1, <4 x float> %val2, <4 x float> %va
 ; CHECK-Z14-NEXT:    vfchsb %v0, %v24, %v26
 ; CHECK-Z14-NEXT:    vfchsb %v1, %v28, %v30
 ; CHECK-Z14-NEXT:    vx %v0, %v0, %v1
-; CHECK-Z14-NEXT:    vmrlg %v1, %v0, %v0
-; CHECK-Z14-NEXT:    vuphf %v1, %v1
+; CHECK-Z14-NEXT:    vuplf %v1, %v0
 ; CHECK-Z14-NEXT:    vuphf %v0, %v0
 ; CHECK-Z14-NEXT:    vsel %v24, %v25, %v29, %v0
 ; CHECK-Z14-NEXT:    vsel %v26, %v27, %v31, %v1
@@ -816,11 +810,10 @@ define <4 x double> @fun34(<4 x double> %val1, <4 x double> %val2, <4 x float> %
 ; CHECK-DAG:     vfchdb [[REG11:%v[0-9]+]], [[REG9]], [[REG7]]
 ; CHECK-DAG:     vpkg [[REG12:%v[0-9]+]], [[REG11]], [[REG4]]
 ; CHECK-DAG:     vuphf [[REG13:%v[0-9]+]], [[REG12]]
-; CHECK-DAG:     vmrlg [[REG14:%v[0-9]+]], [[REG12]], [[REG12]]
-; CHECK-NEXT:    vfchdb [[REG15:%v[0-9]+]], %v24, %v28
-; CHECK-NEXT:    vfchdb [[REG16:%v[0-9]+]], %v26, %v30
-; CHECK-NEXT:    vuphf [[REG17:%v[0-9]+]], [[REG14]]
-; CHECK-NEXT:    vn [[REG18:%v[0-9]+]], [[REG16]], [[REG17]]
+; CHECK-DAG:     vuplf [[REG14:%v[0-9]+]], [[REG12]]
+; CHECK-DAG:     vfchdb [[REG15:%v[0-9]+]], %v24, %v28
+; CHECK-DAG:     vfchdb [[REG16:%v[0-9]+]], %v26, %v30
+; CHECK-NEXT:    vn [[REG18:%v[0-9]+]], [[REG16]], [[REG14]]
 ; CHECK-NEXT:    vn [[REG19:%v[0-9]+]], [[REG15]], [[REG13]]
 ; CHECK-NEXT:    vsel %v24, %v29, [[REG10]], [[REG19]]
 ; CHECK-NEXT:    vsel %v26, %v31, [[REG8]], [[REG18]]
@@ -829,13 +822,12 @@ define <4 x double> @fun34(<4 x double> %val1, <4 x double> %val2, <4 x float> %
 ; CHECK-Z14-LABEL: fun34:
 ; CHECK-Z14:       # %bb.0:
 ; CHECK-Z14-NEXT:    vfchsb %v4, %v25, %v27
+; CHECK-Z14-NEXT:    vl %v0, 176(%r15)
+; CHECK-Z14-NEXT:    vl %v1, 160(%r15)
+; CHECK-Z14-NEXT:    vfchdb %v2, %v24, %v28
+; CHECK-Z14-NEXT:    vfchdb %v3, %v26, %v30
 ; CHECK-Z14-NEXT:    vuphf %v5, %v4
-; CHECK-Z14-NEXT:    vmrlg %v4, %v4, %v4
-; CHECK-Z14-DAG:     vfchdb %v2, %v24, %v28
-; CHECK-Z14-DAG:     vfchdb %v3, %v26, %v30
-; CHECK-Z14-DAG:     vuphf %v4, %v4
-; CHECK-Z14-DAG:     vl %v0, 176(%r15)
-; CHECK-Z14-DAG:     vl %v1, 160(%r15)
+; CHECK-Z14-NEXT:    vuplf %v4, %v4
 ; CHECK-Z14-NEXT:    vn %v3, %v3, %v4
 ; CHECK-Z14-NEXT:    vn %v2, %v2, %v5
 ; CHECK-Z14-NEXT:    vsel %v24, %v29, %v1, %v2

@@ -39,7 +39,7 @@ public:
     return m_backend.GetChildAtIndex(idx);
   }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     return m_backend.GetIndexOfChildWithName(name);
   }
 
@@ -133,7 +133,7 @@ bool ValueObjectSynthetic::MightHaveChildren() {
   return (m_might_have_children != eLazyBoolNo);
 }
 
-std::optional<uint64_t> ValueObjectSynthetic::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectSynthetic::GetByteSize() {
   return m_parent->GetByteSize();
 }
 
@@ -319,40 +319,45 @@ ValueObjectSynthetic::GetChildMemberWithName(llvm::StringRef name,
                                              bool can_create) {
   UpdateValueIfNeeded();
 
-  uint32_t index = GetIndexOfChildWithName(name);
+  auto index_or_err = GetIndexOfChildWithName(name);
 
-  if (index == UINT32_MAX)
+  if (!index_or_err) {
+    llvm::consumeError(index_or_err.takeError());
     return lldb::ValueObjectSP();
+  }
 
-  return GetChildAtIndex(index, can_create);
+  return GetChildAtIndex(*index_or_err, can_create);
 }
 
-size_t ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
+llvm::Expected<size_t>
+ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
   UpdateValueIfNeeded();
 
   ConstString name(name_ref);
 
-  uint32_t found_index = UINT32_MAX;
-  bool did_find;
+  std::optional<uint32_t> found_index = std::nullopt;
   {
     std::lock_guard<std::mutex> guard(m_child_mutex);
     auto name_to_index = m_name_toindex.find(name.GetCString());
-    did_find = name_to_index != m_name_toindex.end();
-    if (did_find)
+    if (name_to_index != m_name_toindex.end())
       found_index = name_to_index->second;
   }
 
-  if (!did_find && m_synth_filter_up != nullptr) {
-    uint32_t index = m_synth_filter_up->GetIndexOfChildWithName(name);
-    if (index == UINT32_MAX)
-      return index;
+  if (!found_index && m_synth_filter_up != nullptr) {
+    auto index_or_err = m_synth_filter_up->GetIndexOfChildWithName(name);
+    if (!index_or_err)
+      return index_or_err.takeError();
     std::lock_guard<std::mutex> guard(m_child_mutex);
-    m_name_toindex[name.GetCString()] = index;
-    return index;
-  } else if (!did_find && m_synth_filter_up == nullptr)
-    return UINT32_MAX;
-  else /*if (iter != m_name_toindex.end())*/
-    return found_index;
+    m_name_toindex[name.GetCString()] = *index_or_err;
+    return *index_or_err;
+  } else if (!found_index && m_synth_filter_up == nullptr) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  } else if (found_index)
+    return *found_index;
+
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 bool ValueObjectSynthetic::IsInScope() { return m_parent->IsInScope(); }
@@ -362,7 +367,9 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetNonSyntheticValue() {
 }
 
 void ValueObjectSynthetic::CopyValueData(ValueObject *source) {
-  m_value = (source->UpdateValueIfNeeded(), source->GetValue());
+  if (!source->UpdateValueIfNeeded())
+    return;
+  m_value = source->GetValue();
   ExecutionContext exe_ctx(GetExecutionContextRef());
   m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
 }

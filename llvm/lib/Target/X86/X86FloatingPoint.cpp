@@ -462,7 +462,7 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
 
     // Get dead variables list now because the MI pointer may be deleted as part
     // of processing!
-    SmallVector<unsigned, 8> DeadRegs;
+    SmallVector<Register, 8> DeadRegs;
     for (const MachineOperand &MO : MI.operands())
       if (MO.isReg() && MO.isDead())
         DeadRegs.push_back(MO.getReg());
@@ -480,7 +480,7 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
 
     // Check to see if any of the values defined by this instruction are dead
     // after definition.  If so, pop them.
-    for (unsigned Reg : DeadRegs) {
+    for (Register Reg : DeadRegs) {
       // Check if Reg is live on the stack. An inline-asm register operand that
       // is in the clobber list and marked dead might not be live on the stack.
       static_assert(X86::FP7 - X86::FP0 == 7, "sequential FP regnumbers");

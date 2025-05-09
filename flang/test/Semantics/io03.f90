@@ -171,6 +171,22 @@
   !ERROR: ID kind (2) is smaller than default INTEGER kind (4)
   read(10, id=id2, asynchronous='yes') jj
 
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
+  read((msg), *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(KIND=1,LEN=8_8)
+  read("a string", *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
+  read(msg//msg, *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type LOGICAL(4)
+  read(.true., *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type REAL(4)
+  read(1.0, *)
+  read(internal_fileA, *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
+  read((internal_fileA), *)
+  !ERROR: I/O unit number must be scalar
+  read([1,2,3], *)
+
 9 continue
 end
 

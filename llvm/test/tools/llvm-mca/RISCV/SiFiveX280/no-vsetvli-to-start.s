@@ -24,9 +24,9 @@ vadd.vv v12, v12, v12
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      4     17.00                       vadd.vv	v12, v12, v12
+# CHECK-NEXT:  1      4     16.00                       vadd.vv	v12, v12, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, a0, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     3.00                        vadd.vv	v12, v12, v12
+# CHECK-NEXT:  1      4     2.00                        vadd.vv	v12, v12, v12
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFive7FDiv

@@ -136,6 +136,8 @@ struct Session {
   StringSet<> HarnessDefinitions;
   DenseMap<StringRef, StringRef> CanonicalWeakDefs;
 
+  StringSet<> HiddenArchives;
+
   std::optional<Regex> ShowGraphsRegex;
 
 private:

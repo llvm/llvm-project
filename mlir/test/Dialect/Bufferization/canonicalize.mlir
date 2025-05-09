@@ -28,17 +28,20 @@ func.func @buffer_cast_of_tensor_load(%arg0: memref<?xf32>) -> memref<?xf32> {
 // -----
 
 // If the memrefs are not the same type, don't fold them.
-// If the memrefs are not cast-compatible (e.g. different address space), don't
-// canonicalize them either.
-// CHECK-LABEL: func @no_fold_buffer_cast_of_tensor_load(
+// If the memrefs are not cast-compatible but one can be copied into the other
+// (e.g. different address space), canonicalize them to add + copy.
+// CHECK-LABEL: func @canonicalize_buffer_cast_of_tensor_load_different_address_space(
 //  CHECK-SAME:   %[[MEMREF_ADDRSPACE2:.*]]: memref<?xf32, 2>)
 //  CHECK-SAME:     -> memref<?xf32, 7> {
-//       CHECK: %[[TENSOR:.*]] = bufferization.to_tensor
-//  CHECK-SAME:   %[[MEMREF_ADDRSPACE2]] : memref<?xf32, 2> to tensor<?xf32, 7 : i64>
-//       CHECK: %[[MEMREF_ADDRSPACE7:.*]] = bufferization.to_memref
-//  CHECK-SAME:   %[[TENSOR]] : tensor<?xf32, 7 : i64> to memref<?xf32, 7>
-//       CHECK: return %[[MEMREF_ADDRSPACE7]]
-func.func @no_fold_buffer_cast_of_tensor_load(%arg0: memref<?xf32, 2>)
+//  CHECK-NOT: bufferization.to_tensor
+//  CHECK-NOT: bufferization.to_memref
+//      CHECK: %[[C0:.*]] = arith.constant 0 : index
+//      CHECK: %[[DIM:.*]] = memref.dim %[[MEMREF_ADDRSPACE2]], %[[C0]] : memref<?xf32, 2>
+//      CHECK: %[[MEMREF_ADDRSPACE7:.*]] = memref.alloc(%[[DIM]]) : memref<?xf32, 7>
+//      CHECK: memref.copy %[[MEMREF_ADDRSPACE2]], %[[MEMREF_ADDRSPACE7]]
+// CHECK-SAME:   memref<?xf32, 2> to memref<?xf32, 7>
+//      CHECK: return %[[MEMREF_ADDRSPACE7]]
+func.func @canonicalize_buffer_cast_of_tensor_load_different_address_space(%arg0: memref<?xf32, 2>)
     -> memref<?xf32, 7> {
   %0 = bufferization.to_tensor %arg0 : memref<?xf32, 2> to tensor<?xf32, 7>
   %1 = bufferization.to_memref %0 : tensor<?xf32, 7> to memref<?xf32, 7>

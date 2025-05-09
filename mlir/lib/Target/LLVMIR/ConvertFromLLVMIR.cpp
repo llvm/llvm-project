@@ -37,6 +37,13 @@ void registerFromLLVMIRTranslation() {
           "the LLVM IR import (discouraged: testing only!)"),
       llvm::cl::init(false));
 
+  static llvm::cl::opt<bool> preferUnregisteredIntrinsics(
+      "prefer-unregistered-intrinsics",
+      llvm::cl::desc(
+          "Prefer translating all intrinsics into llvm.call_intrinsic instead "
+          "of using dialect supported intrinsics"),
+      llvm::cl::init(false));
+
   TranslateToMLIRRegistration registration(
       "import-llvm", "Translate LLVMIR to MLIR",
       [](llvm::SourceMgr &sourceMgr,
@@ -60,9 +67,10 @@ void registerFromLLVMIRTranslation() {
         if (llvmModule->IsNewDbgInfoFormat)
           llvmModule->convertFromNewDbgValues();
 
-        return translateLLVMIRToModule(std::move(llvmModule), context,
-                                       emitExpensiveWarnings,
-                                       dropDICompositeTypeElements);
+        return translateLLVMIRToModule(
+            std::move(llvmModule), context, emitExpensiveWarnings,
+            dropDICompositeTypeElements, /*loadAllDialects=*/true,
+            preferUnregisteredIntrinsics);
       },
       [](DialectRegistry &registry) {
         // Register the DLTI dialect used to express the data layout

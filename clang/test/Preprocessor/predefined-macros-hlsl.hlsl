@@ -9,6 +9,8 @@
 // RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-vertex | FileCheck -match-full-lines %s --check-prefixes=CHECK,VERTEX,NOHALF
 // RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.3-vertex -fnative-half-type | FileCheck -match-full-lines %s --check-prefixes=CHECK,VERTEX,HALF
 
+// RUN: %clang_cc1 %s -E -dM -o - -triple spirv-unknown-vulkan-compute | FileCheck -match-full-lines %s --check-prefixes=CHECK,COMPUTE,NOHALF,SPIRV
+
 // HALF: #define __HLSL_ENABLE_16_BIT 1
 // NOHALF-NOT: __HLSL_ENABLE_16_BIT
 
@@ -33,6 +35,8 @@
 // MESH: #define __SHADER_TARGET_STAGE 13
 // PIXEL: #define __SHADER_TARGET_STAGE 0
 // VERTEX: #define __SHADER_TARGET_STAGE 1
+
+// SPIRV: #define __spirv__ 1
 
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -E -dM -o - -x hlsl -std=hlsl2015 2>&1 | FileCheck -match-full-lines %s --check-prefixes=STD2015
 // STD2015: warning: support for HLSL language version hlsl2015 is incomplete, recommend using hlsl202x instead

@@ -81,7 +81,7 @@ end subroutine
 ! CHECK:      hlfir.yield %[[VAL_2]]#0 : !fir.ref<i32>
 ! CHECK:    } user_defined_assign  (%[[VAL_5:.*]]: !fir.logical<4>) to (%[[VAL_6:.*]]: !fir.ref<i32>) {
 ! CHECK:      %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] {adapt.valuebyref} : (!fir.logical<4>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, i1)
-! CHECK:      fir.call @_QPlogical_to_numeric(%[[VAL_6]], %[[VAL_7]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>) -> ()
+! CHECK:      fir.call @_QPlogical_to_numeric(%[[VAL_6]], %[[VAL_7]]#0) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>) -> ()
 ! CHECK:      hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<!fir.logical<4>>, i1
 ! CHECK:    }
 
@@ -155,7 +155,7 @@ end subroutine
 ! CHECK:        hlfir.yield %[[VAL_3]]#0 : !fir.box<!fir.array<?xi32>>
 ! CHECK:      } user_defined_assign  (%[[VAL_20:.*]]: !fir.logical<4>) to (%[[VAL_21:.*]]: !fir.ref<i32>) {
 ! CHECK:        %[[VAL_22:.*]]:3 = hlfir.associate %[[VAL_20]] {adapt.valuebyref} : (!fir.logical<4>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, i1)
-! CHECK:        fir.call @_QPlogical_to_numeric(%[[VAL_21]], %[[VAL_22]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>) -> ()
+! CHECK:        fir.call @_QPlogical_to_numeric(%[[VAL_21]], %[[VAL_22]]#0) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>) -> ()
 ! CHECK:        hlfir.end_associate %[[VAL_22]]#1, %[[VAL_22]]#2 : !fir.ref<!fir.logical<4>>, i1
 ! CHECK:      }
 ! CHECK:    }

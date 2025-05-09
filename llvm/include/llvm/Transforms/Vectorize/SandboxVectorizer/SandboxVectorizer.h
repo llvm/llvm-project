@@ -37,6 +37,9 @@ class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
   // within FPM may register/unregister callbacks, so they need access to
   // Context.
   sandboxir::FunctionPassManager FPM;
+  /// \Returns true if we should attempt to vectorize \p SrcFilePath based on
+  /// `AllowFiles` option.
+  bool allowFile(const std::string &SrcFilePath);
 
   bool runImpl(Function &F);
 

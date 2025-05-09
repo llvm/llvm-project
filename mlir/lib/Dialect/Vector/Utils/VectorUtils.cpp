@@ -27,7 +27,7 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/Support/InterleavedRange.h"
 
 #define DEBUG_TYPE "vector-utils"
 
@@ -327,26 +327,28 @@ bool vector::isLinearizableVector(VectorType type) {
 }
 
 Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
-                                     Value source, ArrayRef<int64_t> readShape,
+                                     Value source,
+                                     ArrayRef<int64_t> inputVectorSizes,
                                      Value padValue,
                                      bool useInBoundsInsteadOfMasking) {
-  assert(llvm::none_of(readShape,
+  assert(llvm::none_of(inputVectorSizes,
                        [](int64_t s) { return s == ShapedType::kDynamic; }) &&
-         "expected static shape");
+         "invalid input vector sizes");
   auto sourceShapedType = cast<ShapedType>(source.getType());
   auto sourceShape = sourceShapedType.getShape();
-  assert(sourceShape.size() == readShape.size() && "expected same ranks.");
-  auto maskType = VectorType::get(readShape, builder.getI1Type());
-  auto vectorType = VectorType::get(readShape, padValue.getType());
+  assert(sourceShape.size() == inputVectorSizes.size() &&
+         "expected same ranks.");
+  auto maskType = VectorType::get(inputVectorSizes, builder.getI1Type());
+  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType());
   assert(padValue.getType() == sourceShapedType.getElementType() &&
          "expected same pad element type to match source element type");
-  int64_t readRank = readShape.size();
+  int64_t readRank = inputVectorSizes.size();
   auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
   SmallVector<bool> inBoundsVal(readRank, true);
   if (useInBoundsInsteadOfMasking) {
     // Update the inBounds attribute.
     for (unsigned i = 0; i < readRank; i++)
-      inBoundsVal[i] = (sourceShape[i] == readShape[i]) &&
+      inBoundsVal[i] = (sourceShape[i] == inputVectorSizes[i]) &&
                        !ShapedType::isDynamic(sourceShape[i]);
   }
   auto transferReadOp = builder.create<vector::TransferReadOp>(
@@ -357,7 +359,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
       /*padding=*/padValue,
       /*inBounds=*/inBoundsVal);
 
-  if (llvm::equal(readShape, sourceShape) || useInBoundsInsteadOfMasking)
+  if (llvm::equal(inputVectorSizes, sourceShape) || useInBoundsInsteadOfMasking)
     return transferReadOp;
   SmallVector<OpFoldResult> mixedSourceDims =
       tensor::getMixedSizes(builder, loc, source);
@@ -370,9 +372,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
 LogicalResult
 vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
                                  ArrayRef<int64_t> inputVectorSizes) {
-  LDBG("Iteration space static sizes:");
-  LLVM_DEBUG(llvm::interleaveComma(shape, llvm::dbgs()));
-  LLVM_DEBUG(llvm::dbgs() << "\n");
+  LDBG("Iteration space static sizes:" << llvm::interleaved(shape));
 
   if (inputVectorSizes.size() != shape.size()) {
     LDBG("Input vector sizes don't match the number of loops");

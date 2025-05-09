@@ -250,35 +250,25 @@ define <128 x i16> @vwadd_v128i16(ptr %x, ptr %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    vle8.v v0, (a1)
+; CHECK-NEXT:    vle8.v v16, (a0)
+; CHECK-NEXT:    vle8.v v24, (a1)
 ; CHECK-NEXT:    li a0, 64
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v8, a0
-; CHECK-NEXT:    vslidedown.vx v8, v0, a0
+; CHECK-NEXT:    vslidedown.vx v8, v16, a0
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vslidedown.vx v0, v24, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-NEXT:    vwadd.vv v24, v16, v8
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vwadd.vv v8, v16, v24
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vwadd.vv v8, v16, v0
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vwadd.vv v16, v24, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
@@ -295,35 +285,25 @@ define <64 x i32> @vwadd_v64i32(ptr %x, ptr %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    vle16.v v0, (a1)
+; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    vle16.v v24, (a1)
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v8, a0
-; CHECK-NEXT:    vslidedown.vx v8, v0, a0
+; CHECK-NEXT:    vslidedown.vx v8, v16, a0
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vslidedown.vx v0, v24, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vwadd.vv v24, v16, v8
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vwadd.vv v8, v16, v24
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vwadd.vv v8, v16, v0
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vwadd.vv v16, v24, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
@@ -340,34 +320,23 @@ define <32 x i64> @vwadd_v32i64(ptr %x, ptr %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    vle32.v v0, (a1)
+; CHECK-NEXT:    vle32.v v16, (a0)
+; CHECK-NEXT:    vle32.v v24, (a1)
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vi v16, v8, 16
-; CHECK-NEXT:    vslidedown.vi v8, v0, 16
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vwadd.vv v24, v16, v8
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vslidedown.vi v8, v16, 16
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vwadd.vv v8, v16, v0
+; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vslidedown.vi v0, v24, 16
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vwadd.vv v8, v16, v24
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vwadd.vv v16, v24, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
@@ -906,4 +875,100 @@ define <2 x i64> @vwadd_v2i64_of_v2i16(ptr %x, ptr %y) {
   %d = sext <2 x i16> %b to <2 x i64>
   %e = add <2 x i64> %c, %d
   ret <2 x i64> %e
+}
+
+; %x.i32 and %y.i32 are disjoint, so DAGCombiner will combine it into an or.
+define <4 x i32> @vwaddu_vv_disjoint_or_add(<4 x i8> %x.i8, <4 x i8> %y.i8) {
+; CHECK-LABEL: vwaddu_vv_disjoint_or_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vsll.vi v10, v10, 8
+; CHECK-NEXT:    vzext.vf2 v11, v9
+; CHECK-NEXT:    vwaddu.vv v8, v10, v11
+; CHECK-NEXT:    ret
+  %x.i16 = zext <4 x i8> %x.i8 to <4 x i16>
+  %x.shl = shl <4 x i16> %x.i16, splat (i16 8)
+  %x.i32 = zext <4 x i16> %x.shl to <4 x i32>
+  %y.i32 = zext <4 x i8> %y.i8 to <4 x i32>
+  %add = add <4 x i32> %x.i32, %y.i32
+  ret <4 x i32> %add
+}
+
+define <4 x i32> @vwaddu_vv_disjoint_or(<4 x i16> %x.i16, <4 x i16> %y.i16) {
+; CHECK-LABEL: vwaddu_vv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    ret
+  %x.i32 = zext <4 x i16> %x.i16 to <4 x i32>
+  %y.i32 = zext <4 x i16> %y.i16 to <4 x i32>
+  %or = or disjoint <4 x i32> %x.i32, %y.i32
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @vwadd_vv_disjoint_or(<4 x i16> %x.i16, <4 x i16> %y.i16) {
+; CHECK-LABEL: vwadd_vv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vwadd.vv v10, v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    ret
+  %x.i32 = sext <4 x i16> %x.i16 to <4 x i32>
+  %y.i32 = sext <4 x i16> %y.i16 to <4 x i32>
+  %or = or disjoint <4 x i32> %x.i32, %y.i32
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @vwaddu_vx_disjoint_or(<4 x i16> %x.i16, i16 %y.i16) {
+; CHECK-LABEL: vwaddu_vx_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vwaddu.vx v9, v8, a0
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %x.i32 = zext <4 x i16> %x.i16 to <4 x i32>
+  %y.head = insertelement <4 x i16> poison, i16 %y.i16, i32 0
+  %y.splat = shufflevector <4 x i16> %y.head, <4 x i16> poison, <4 x i32> zeroinitializer
+  %y.i32 = zext <4 x i16> %y.splat to <4 x i32>
+  %or = or disjoint <4 x i32> %x.i32, %y.i32
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @vwadd_vx_disjoint_or(<4 x i16> %x.i16, i16 %y.i16) {
+; CHECK-LABEL: vwadd_vx_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vwadd.vx v9, v8, a0
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %x.i32 = sext <4 x i16> %x.i16 to <4 x i32>
+  %y.head = insertelement <4 x i16> poison, i16 %y.i16, i32 0
+  %y.splat = shufflevector <4 x i16> %y.head, <4 x i16> poison, <4 x i32> zeroinitializer
+  %y.i32 = sext <4 x i16> %y.splat to <4 x i32>
+  %or = or disjoint <4 x i32> %x.i32, %y.i32
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @vwaddu_wv_disjoint_or(<4 x i32> %x.i32, <4 x i16> %y.i16) {
+; CHECK-LABEL: vwaddu_wv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vwaddu.wv v8, v8, v9
+; CHECK-NEXT:    ret
+  %y.i32 = zext <4 x i16> %y.i16 to <4 x i32>
+  %or = or disjoint <4 x i32> %x.i32, %y.i32
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @vwadd_wv_disjoint_or(<4 x i32> %x.i32, <4 x i16> %y.i16) {
+; CHECK-LABEL: vwadd_wv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vwadd.wv v8, v8, v9
+; CHECK-NEXT:    ret
+  %y.i32 = sext <4 x i16> %y.i16 to <4 x i32>
+  %or = or disjoint <4 x i32> %x.i32, %y.i32
+  ret <4 x i32> %or
 }

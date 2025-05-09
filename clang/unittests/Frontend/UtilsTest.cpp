@@ -33,7 +33,7 @@ TEST(BuildCompilerInvocationTest, RecoverMultipleJobs) {
       *Opts.VFS, new DiagnosticOptions, &D, false);
   std::unique_ptr<CompilerInvocation> CI = createInvocation(Args, Opts);
   ASSERT_TRUE(CI);
-  EXPECT_THAT(CI->TargetOpts->Triple, testing::StartsWith("i386-"));
+  EXPECT_THAT(CI->getTargetOpts().Triple, testing::StartsWith("i386-"));
 }
 
 // buildInvocationFromCommandLine should not translate -include to -include-pch,

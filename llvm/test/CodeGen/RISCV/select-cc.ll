@@ -3,7 +3,7 @@
 ; RUN:   | FileCheck -check-prefixes=RV32I %s
 ; RUN: llc -mtriple=riscv64 -disable-block-placement -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64I %s
-; RUN: llc -mtriple=riscv64 -mattr=+xmipscmove -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+xmipscmov -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I-CCMOV %s
 
 define signext i32 @foo(i32 signext %a, ptr %b) nounwind {

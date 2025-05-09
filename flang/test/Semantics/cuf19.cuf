@@ -1,0 +1,30 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+interface
+  subroutine foo(a)
+    real, device, dimension(:,:) :: a
+  end
+end interface
+
+real, device, allocatable :: a(:,:)
+complex, device, allocatable :: z(:,:)
+integer :: i = 2, j = 3
+allocate(a(10,10))
+allocate(z(10,10))
+call foo(a) ! ok
+call foo(a(:,:)) ! ok
+call foo(a(1:10,1:10)) ! ok
+!ERROR: actual argument associated with assumed shape/rank device dummy argument 'a=' is known to be discontiguous on its first dimension
+call foo(a(1:10:2,1:10))
+call foo(a(1:0:2,1:10)) ! empty dimension is ok
+call foo(a(1:10:2,1:0)) ! any empty dimension is ok
+call foo(a(1:10,1:10:2)) ! discontiguous second dimension is ok
+!WARNING: actual argument associated with assumed shape/rank device dummy argument 'a=' is not known to be contiguous on its first dimension
+call foo(a(1:10:i,1:10))
+!WARNING: actual argument associated with assumed shape/rank device dummy argument 'a=' is not known to be contiguous on its first dimension
+call foo(a(1:i:2,1:10))
+call foo(a(i:j:1,1:10)) ! stride 1, okay, despite unknown bounds
+!WARNING: actual argument associated with assumed shape/rank device dummy argument 'a=' is not known to be contiguous on its first dimension
+call foo(a(i:j:-1,1:10))
+!ERROR: actual argument associated with assumed shape/rank device dummy argument 'a=' is known to be discontiguous on its first dimension
+call foo(z%re)
+end

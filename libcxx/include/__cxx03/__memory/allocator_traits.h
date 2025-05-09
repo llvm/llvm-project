@@ -61,11 +61,7 @@ struct __const_pointer {
 };
 template <class _Tp, class _Ptr, class _Alloc>
 struct __const_pointer<_Tp, _Ptr, _Alloc, false> {
-#ifdef _LIBCPP_CXX03_LANG
   using type = typename pointer_traits<_Ptr>::template rebind<const _Tp>::other;
-#else
-  using type _LIBCPP_NODEBUG = typename pointer_traits<_Ptr>::template rebind<const _Tp>;
-#endif
 };
 
 // __void_pointer
@@ -76,11 +72,7 @@ struct __void_pointer {
 };
 template <class _Ptr, class _Alloc>
 struct __void_pointer<_Ptr, _Alloc, false> {
-#ifdef _LIBCPP_CXX03_LANG
   using type _LIBCPP_NODEBUG = typename pointer_traits<_Ptr>::template rebind<void>::other;
-#else
-  using type _LIBCPP_NODEBUG = typename pointer_traits<_Ptr>::template rebind<void>;
-#endif
 };
 
 // __const_void_pointer
@@ -91,11 +83,7 @@ struct __const_void_pointer {
 };
 template <class _Ptr, class _Alloc>
 struct __const_void_pointer<_Ptr, _Alloc, false> {
-#ifdef _LIBCPP_CXX03_LANG
   using type _LIBCPP_NODEBUG = typename pointer_traits<_Ptr>::template rebind<const void>::other;
-#else
-  using type _LIBCPP_NODEBUG = typename pointer_traits<_Ptr>::template rebind<const void>;
-#endif
 };
 
 // __size_type
@@ -231,17 +219,6 @@ struct __has_select_on_container_copy_construction<
 
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
-#if _LIBCPP_STD_VER >= 23
-
-template <class _Pointer, class _SizeType = size_t>
-struct allocation_result {
-  _Pointer ptr;
-  _SizeType count;
-};
-_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(allocation_result);
-
-#endif // _LIBCPP_STD_VER
-
 template <class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS allocator_traits {
   using allocator_type     = _Alloc;
@@ -259,12 +236,6 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits {
   using propagate_on_container_swap = typename __propagate_on_container_swap<allocator_type>::type;
   using is_always_equal             = typename __is_always_equal<allocator_type>::type;
 
-#ifndef _LIBCPP_CXX03_LANG
-  template <class _Tp>
-  using rebind_alloc = __allocator_traits_rebind_t<allocator_type, _Tp>;
-  template <class _Tp>
-  using rebind_traits = allocator_traits<rebind_alloc<_Tp> >;
-#else  // _LIBCPP_CXX03_LANG
   template <class _Tp>
   struct rebind_alloc {
     using other = __allocator_traits_rebind_t<allocator_type, _Tp>;
@@ -273,7 +244,6 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits {
   struct rebind_traits {
     using other = allocator_traits<typename rebind_alloc<_Tp>::other>;
   };
-#endif // _LIBCPP_CXX03_LANG
 
   _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
   allocate(allocator_type& __a, size_type __n) {
@@ -294,18 +264,6 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits {
   allocate(allocator_type& __a, size_type __n, const_void_pointer) {
     return __a.allocate(__n);
   }
-
-#if _LIBCPP_STD_VER >= 23
-  template <class _Ap = _Alloc>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr allocation_result<pointer, size_type>
-  allocate_at_least(_Ap& __alloc, size_type __n) {
-    if constexpr (requires { __alloc.allocate_at_least(__n); }) {
-      return __alloc.allocate_at_least(__n);
-    } else {
-      return {__alloc.allocate(__n), __n};
-    }
-  }
-#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void
   deallocate(allocator_type& __a, pointer __p, size_type __n) _NOEXCEPT {
@@ -364,13 +322,8 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits {
   }
 };
 
-#ifndef _LIBCPP_CXX03_LANG
-template <class _Traits, class _Tp>
-using __rebind_alloc _LIBCPP_NODEBUG = typename _Traits::template rebind_alloc<_Tp>;
-#else
 template <class _Traits, class _Tp>
 using __rebind_alloc = typename _Traits::template rebind_alloc<_Tp>::other;
-#endif
 
 template <class _Alloc>
 struct __check_valid_allocator : true_type {

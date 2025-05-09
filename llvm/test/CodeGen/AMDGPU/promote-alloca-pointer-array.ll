@@ -4,8 +4,9 @@
 define i64 @test_pointer_array(i64 %v) {
 ; OPT-LABEL: @test_pointer_array(
 ; OPT-NEXT:  entry:
+; OPT-NEXT:    [[A:%.*]] = freeze <3 x ptr> poison
 ; OPT-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[V:%.*]] to ptr
-; OPT-NEXT:    [[TMP1:%.*]] = insertelement <3 x ptr> undef, ptr [[TMP0]], i32 0
+; OPT-NEXT:    [[TMP1:%.*]] = insertelement <3 x ptr> [[A]], ptr [[TMP0]], i32 0
 ; OPT-NEXT:    ret i64 [[V]]
 ;
 entry:

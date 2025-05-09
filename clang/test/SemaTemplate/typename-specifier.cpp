@@ -22,35 +22,35 @@ int i;
 
 typename N::A::type *ip1 = &i;
 #if __cplusplus <= 199711L // C++03 or earlier modes
-// expected-warning@-2 {{'typename' occurs outside of a template}}
+// expected-warning@-2 {{'typename' outside of a template is a C++11 extension}}
 #endif
 typename N::B::type *ip2 = &i; // expected-error{{no type named 'type' in 'N::B'}}
 #if __cplusplus <= 199711L
-// expected-warning@-2 {{'typename' occurs outside of a template}}
+// expected-warning@-2 {{'typename' outside of a template is a C++11 extension}}
 #endif
 typename N::C::type *ip3 = &i; // expected-error{{typename specifier refers to non-type member 'type'}}
 #if __cplusplus <= 199711L
-// expected-warning@-2 {{'typename' occurs outside of a template}}
+// expected-warning@-2 {{'typename' outside of a template is a C++11 extension}}
 #endif
 
 void test(double d) {
   typename N::A::type f(typename N::A::type(a)); // expected-warning{{disambiguated as a function declaration}}
   // expected-note@-1 {{add a pair of parentheses}}
 #if __cplusplus <= 199711L
-  // expected-warning@-3 2{{'typename' occurs outside of a template}}
+  // expected-warning@-3 2{{'typename' outside of a template is a C++11 extension}}
 #endif
   int five = f(5);
   
   using namespace N;
   for (typename A::type i = 0; i < 10; ++i)
 #if __cplusplus <= 199711L
-// expected-warning@-2 {{'typename' occurs outside of a template}}
+// expected-warning@-2 {{'typename' outside of a template is a C++11 extension}}
 #endif
     five += 1;
 
   const typename N::A::type f2(d);
 #if __cplusplus <= 199711L
-// expected-warning@-2 {{'typename' occurs outside of a template}}
+// expected-warning@-2 {{'typename' outside of a template is a C++11 extension}}
 #endif
 }
 

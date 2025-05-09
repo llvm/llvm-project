@@ -123,7 +123,7 @@ func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
 
 // -----
 
-// EmptyTensorElimination does currently not apply to chains where the type is
+// EmptyTensorElimination does not currently apply to chains where the type is
 // changing. (Casts are supported.) This test just ensures that we do not crash
 // or generate IR that does not verify.
 

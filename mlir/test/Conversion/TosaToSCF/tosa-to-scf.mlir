@@ -6,7 +6,7 @@ func.func @while_test(%arg0 : tensor<i32>) -> (tensor<i32>) {
   // CHECK: [[WHILE:%.+]] = scf.while ([[ARG1:%.+]] = [[ARG0]])
   %0 = tosa.while_loop (%arg1 = %arg0) : (tensor<i32>) -> tensor<i32> {
     // CHECK: tosa.const
-    %1 = "tosa.const"() {value = dense<3> : tensor<i32>} : () -> tensor<i32>
+    %1 = "tosa.const"() {values = dense<3> : tensor<i32>} : () -> tensor<i32>
 
     // CHECK: [[COMPARE:%.+]] = tosa.greater_equal
     %2 = tosa.greater_equal %1, %arg1 : (tensor<i32>, tensor<i32>) -> tensor<i1>
@@ -18,7 +18,7 @@ func.func @while_test(%arg0 : tensor<i32>) -> (tensor<i32>) {
   // CHECK: ^bb0([[ARG1:%.+]]: tensor<i32>)
   ^bb0(%arg1: tensor<i32>):
     // CHECK: tosa.const
-    %1 = "tosa.const"() {value = dense<1> : tensor<i32>} : () -> tensor<i32>
+    %1 = "tosa.const"() {values = dense<1> : tensor<i32>} : () -> tensor<i32>
 
     // CHECK: [[ADD:%.+]] = tosa.add
     %2 = tosa.add %arg1, %1 : (tensor<i32>, tensor<i32>) -> tensor<i32>

@@ -413,10 +413,12 @@ protected:
   // Visit operands on call instructions that are not forwarded.
   virtual void visitCallOperand(OpOperand &operand) = 0;
 
-  /// Set the given lattice element(s) at control flow exit point(s).
+  /// Set the given lattice element(s) at control flow exit point(s) and
+  /// propagate the update if it chaned.
   virtual void setToExitState(AbstractSparseLattice *lattice) = 0;
 
-  /// Set the given lattice element(s) at control flow exit point(s).
+  /// Set the given lattice element(s) at control flow exit point(s) and
+  /// propagate the update if it chaned.
   void setAllToExitStates(ArrayRef<AbstractSparseLattice *> lattices);
 
   /// Get the lattice element for a value.

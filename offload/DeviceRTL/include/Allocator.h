@@ -17,8 +17,6 @@
 // Forward declaration.
 struct KernelEnvironmentTy;
 
-#pragma omp begin declare target device_type(nohost)
-
 namespace ompx {
 
 namespace allocator {
@@ -43,7 +41,5 @@ extern "C" {
 [[gnu::weak]] void *malloc(size_t Size);
 [[gnu::weak]] void free(void *Ptr);
 }
-
-#pragma omp end declare target
 
 #endif

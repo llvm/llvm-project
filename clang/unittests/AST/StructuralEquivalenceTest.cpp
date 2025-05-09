@@ -137,13 +137,15 @@ struct StructuralEquivalenceTest : ::testing::Test {
     StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls01;
     StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls10;
     StructuralEquivalenceContext Ctx01(
-        D0->getASTContext(), D1->getASTContext(), NonEquivalentDecls01,
-        StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+        D0->getLangOpts(), D0->getASTContext(), D1->getASTContext(),
+        NonEquivalentDecls01, StructuralEquivalenceKind::Default,
+        /*StrictTypeSpelling=*/false,
         /*Complain=*/false, /*ErrorOnTagTypeMismatch=*/false,
         IgnoreTemplateParmDepth);
     StructuralEquivalenceContext Ctx10(
-        D1->getASTContext(), D0->getASTContext(), NonEquivalentDecls10,
-        StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+        D1->getLangOpts(), D1->getASTContext(), D0->getASTContext(),
+        NonEquivalentDecls10, StructuralEquivalenceKind::Default,
+        /*StrictTypeSpelling=*/false,
         /*Complain=*/false, /*ErrorOnTagTypeMismatch=*/false,
         IgnoreTemplateParmDepth);
     bool Eq01 = Ctx01.IsEquivalent(D0, D1);
@@ -155,12 +157,16 @@ struct StructuralEquivalenceTest : ::testing::Test {
   bool testStructuralMatch(StmtWithASTContext S0, StmtWithASTContext S1) {
     StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls01;
     StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls10;
-    StructuralEquivalenceContext Ctx01(
-        *S0.Context, *S1.Context, NonEquivalentDecls01,
-        StructuralEquivalenceKind::Default, false, false);
-    StructuralEquivalenceContext Ctx10(
-        *S1.Context, *S0.Context, NonEquivalentDecls10,
-        StructuralEquivalenceKind::Default, false, false);
+    StructuralEquivalenceContext Ctx01(S0.Context->getLangOpts(), *S0.Context,
+                                       *S1.Context, NonEquivalentDecls01,
+                                       StructuralEquivalenceKind::Default,
+                                       /*StrictTypeSpelling=*/false,
+                                       /*Complain=*/false);
+    StructuralEquivalenceContext Ctx10(S1.Context->getLangOpts(), *S1.Context,
+                                       *S0.Context, NonEquivalentDecls10,
+                                       StructuralEquivalenceKind::Default,
+                                       /*StrictTypeSpelling=*/false,
+                                       /*Complain=*/false);
     bool Eq01 = Ctx01.IsEquivalent(S0.S, S1.S);
     bool Eq10 = Ctx10.IsEquivalent(S1.S, S0.S);
     EXPECT_EQ(Eq01, Eq10);
@@ -1826,8 +1832,10 @@ TEST_F(StructuralEquivalenceCacheTest, SimpleNonEq) {
       Lang_CXX03);
 
   StructuralEquivalenceContext Ctx(
-      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
-      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+      get<0>(TU)->getASTContext().getLangOpts(), get<0>(TU)->getASTContext(),
+      get<1>(TU)->getASTContext(), NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false);
 
   auto X = findDeclPair<FunctionDecl>(TU, functionDecl(hasName("x")));
   EXPECT_FALSE(Ctx.IsEquivalent(X.first, X.second));
@@ -1849,8 +1857,10 @@ TEST_F(StructuralEquivalenceCacheTest, ReturnStmtNonEq) {
       Lang_CXX03);
 
   StructuralEquivalenceContext Ctx(
-      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
-      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+      get<0>(TU)->getASTContext().getLangOpts(), get<0>(TU)->getASTContext(),
+      get<1>(TU)->getASTContext(), NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false);
 
   auto X = findDeclPair<FunctionDecl>(TU, functionDecl(hasName("x")));
   EXPECT_FALSE(Ctx.IsEquivalent(X.first->getBody(), X.second->getBody()));
@@ -1868,8 +1878,10 @@ TEST_F(StructuralEquivalenceCacheTest, VarDeclNoEq) {
       Lang_CXX03);
 
   StructuralEquivalenceContext Ctx(
-      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
-      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+      get<0>(TU)->getASTContext().getLangOpts(), get<0>(TU)->getASTContext(),
+      get<1>(TU)->getASTContext(), NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false);
 
   auto Var = findDeclPair<VarDecl>(TU, varDecl());
   EXPECT_FALSE(Ctx.IsEquivalent(Var.first, Var.second));
@@ -1886,8 +1898,10 @@ TEST_F(StructuralEquivalenceCacheTest, VarDeclWithDifferentStorageClassNoEq) {
       Lang_CXX03);
 
   StructuralEquivalenceContext Ctx(
-      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
-      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+      get<0>(TU)->getASTContext().getLangOpts(), get<0>(TU)->getASTContext(),
+      get<1>(TU)->getASTContext(), NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false);
 
   auto Var = findDeclPair<VarDecl>(TU, varDecl());
   EXPECT_FALSE(Ctx.IsEquivalent(Var.first, Var.second));
@@ -1913,8 +1927,10 @@ TEST_F(StructuralEquivalenceCacheTest,
       Lang_CXX03);
 
   StructuralEquivalenceContext Ctx(
-      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
-      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+      get<0>(TU)->getASTContext().getLangOpts(), get<0>(TU)->getASTContext(),
+      get<1>(TU)->getASTContext(), NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false);
 
   auto NTTP = findDeclPair<NonTypeTemplateParmDecl>(
       TU, nonTypeTemplateParmDecl(hasName("T")));
@@ -1932,8 +1948,10 @@ TEST_F(StructuralEquivalenceCacheTest, VarDeclWithInitNoEq) {
       Lang_CXX03);
 
   StructuralEquivalenceContext Ctx(
-      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
-      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+      get<0>(TU)->getASTContext().getLangOpts(), get<0>(TU)->getASTContext(),
+      get<1>(TU)->getASTContext(), NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false);
 
   auto Var = findDeclPair<VarDecl>(TU, varDecl());
   EXPECT_FALSE(Ctx.IsEquivalent(Var.first, Var.second));
@@ -1964,8 +1982,10 @@ TEST_F(StructuralEquivalenceCacheTest, SpecialNonEq) {
       Lang_CXX03);
 
   StructuralEquivalenceContext Ctx(
-      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
-      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+      get<0>(TU)->getASTContext().getLangOpts(), get<0>(TU)->getASTContext(),
+      get<1>(TU)->getASTContext(), NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false);
 
   auto C = findDeclPair<CXXRecordDecl>(
       TU, cxxRecordDecl(hasName("C"), unless(isImplicit())));
@@ -2003,8 +2023,10 @@ TEST_F(StructuralEquivalenceCacheTest, Cycle) {
       Lang_CXX03);
 
   StructuralEquivalenceContext Ctx(
-      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
-      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false);
+      get<0>(TU)->getASTContext().getLangOpts(), get<0>(TU)->getASTContext(),
+      get<1>(TU)->getASTContext(), NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false);
 
   auto C = findDeclPair<CXXRecordDecl>(
       TU, cxxRecordDecl(hasName("C"), unless(isImplicit())));
@@ -2066,9 +2088,11 @@ TEST_F(StructuralEquivalenceCacheTest, TemplateParmDepth) {
   ASSERT_EQ(D1->getTemplateDepth(), 0u);
 
   StructuralEquivalenceContext Ctx_NoIgnoreTemplateParmDepth(
-      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
-      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false,
-      false, false);
+      get<0>(TU)->getASTContext().getLangOpts(), get<0>(TU)->getASTContext(),
+      get<1>(TU)->getASTContext(), NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false, /*ErrorOnTagTypeMismatch=*/false,
+      /*IgnoreTemplateParmDepth=*/false);
 
   EXPECT_FALSE(Ctx_NoIgnoreTemplateParmDepth.IsEquivalent(D0, D1));
 
@@ -2080,9 +2104,11 @@ TEST_F(StructuralEquivalenceCacheTest, TemplateParmDepth) {
   EXPECT_FALSE(isInNonEqCache(std::make_pair(NonEqDecl0, NonEqDecl1), true));
 
   StructuralEquivalenceContext Ctx_IgnoreTemplateParmDepth(
-      get<0>(TU)->getASTContext(), get<1>(TU)->getASTContext(),
-      NonEquivalentDecls, StructuralEquivalenceKind::Default, false, false,
-      false, true);
+      get<0>(TU)->getASTContext().getLangOpts(), get<0>(TU)->getASTContext(),
+      get<1>(TU)->getASTContext(), NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false, /*ErrorOnTagTypeMismatch=*/false,
+      /*IgnoreTemplateParmDepth=*/true);
 
   EXPECT_TRUE(Ctx_IgnoreTemplateParmDepth.IsEquivalent(D0, D1));
 

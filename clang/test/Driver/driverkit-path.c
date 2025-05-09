@@ -21,13 +21,15 @@ int main() { return 0; }
 // LD64-NEW: "-isysroot" "[[PATH:[^"]*]]Inputs/DriverKit19.0.sdk"
 // LD64-NEW-NOT: "-L[[PATH]]Inputs/DriverKit19.0.sdk/System/DriverKit/usr/lib"
 // LD64-NEW-NOT: "-F[[PATH]]Inputs/DriverKit19.0.sdk/System/DriverKit/System/Library/Frameworks"
+// LD64-NEW-NOT: "-F[[PATH]]Inputs/DriverKit19.0.sdk/System/DriverKit/System/Library/SubFrameworks"
 
 
-// RUN: %clang %s -target x86_64-apple-driverkit19.0 -isysroot %S/Inputs/DriverKit19.0.sdk -E -v -x c++ 2>&1 | FileCheck %s --check-prefix=INC
+// RUN: %clang %s -target x86_64-apple-driverkit19.0 -isysroot %S/Inputs/DriverKit19.0.sdk -x c++ -### 2>&1 \
+// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit19.0.sdk --check-prefix=INC
 //
-// INC:       -isysroot [[PATH:[^ ]*/Inputs/DriverKit19.0.sdk]]
-// INC-LABEL: #include <...> search starts here:
-// INC:       [[PATH]]/System/DriverKit/usr/local/include
-// INC:       /lib{{(64)?}}/clang/{{[^/ ]+}}/include
-// INC:       [[PATH]]/System/DriverKit/usr/include
-// INC:       [[PATH]]/System/DriverKit/System/Library/Frameworks (framework directory)
+// INC: "-isysroot" "[[SDKROOT]]"
+// INC: "-internal-isystem" "[[SDKROOT]]/System/DriverKit/usr/local/include"
+// INC: "-internal-isystem" "{{.+}}/lib{{(64)?}}/clang/{{[^/ ]+}}/include"
+// INC: "-internal-externc-isystem" "[[SDKROOT]]/System/DriverKit/usr/include"
+// INC: "-internal-iframework" "[[SDKROOT]]/System/DriverKit/System/Library/Frameworks"
+// INC: "-internal-iframework" "[[SDKROOT]]/System/DriverKit/System/Library/SubFrameworks"

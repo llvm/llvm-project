@@ -8,7 +8,7 @@
 // lldb-8, even outside of dexter, will sometimes trigger an asan fault in
 // the debugged process and generally freak out.
 
-// RUN: %clang -std=gnu++11 -O1 -glldb -fsanitize=address -arch x86_64 %s -o %t
+// RUN: %clang++ -std=gnu++11 -O1 -glldb -fsanitize=address -arch x86_64 %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
 // RUN:     --binary %t --debugger 'lldb' -- %s
 #include <deque>

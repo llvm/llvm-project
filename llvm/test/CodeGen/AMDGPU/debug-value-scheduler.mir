@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx908 -run-pass=machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -passes=machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # CHECK: All regions recorded, starting actual scheduling.

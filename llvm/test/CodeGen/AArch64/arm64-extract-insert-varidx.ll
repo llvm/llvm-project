@@ -11,14 +11,11 @@ define <4 x i8> @test_varidx_extract_v8s8(<8 x i8> %x, i32 %idx) {
 ; CHECK-SDAG-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SDAG-NEXT:    str d0, [sp, #8]
-; CHECK-SDAG-NEXT:    umov w9, v0.b[1]
 ; CHECK-SDAG-NEXT:    bfxil x8, x0, #0, #3
 ; CHECK-SDAG-NEXT:    ld1 { v1.b }[0], [x8]
-; CHECK-SDAG-NEXT:    umov w8, v0.b[2]
-; CHECK-SDAG-NEXT:    mov v1.h[1], w9
-; CHECK-SDAG-NEXT:    umov w9, v0.b[3]
-; CHECK-SDAG-NEXT:    mov v1.h[2], w8
-; CHECK-SDAG-NEXT:    mov v1.h[3], w9
+; CHECK-SDAG-NEXT:    mov v1.b[2], v0.b[1]
+; CHECK-SDAG-NEXT:    mov v1.b[4], v0.b[2]
+; CHECK-SDAG-NEXT:    mov v1.b[6], v0.b[3]
 ; CHECK-SDAG-NEXT:    fmov d0, d1
 ; CHECK-SDAG-NEXT:    add sp, sp, #16
 ; CHECK-SDAG-NEXT:    ret
@@ -168,11 +165,10 @@ define <2 x i16> @test_varidx_extract_v4s16(<4 x i16> %x, i32 %idx) {
 ; CHECK-SDAG-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SDAG-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SDAG-NEXT:    str d0, [sp, #8]
-; CHECK-SDAG-NEXT:    umov w9, v0.h[1]
 ; CHECK-SDAG-NEXT:    bfi x8, x0, #1, #2
-; CHECK-SDAG-NEXT:    ld1 { v0.h }[0], [x8]
-; CHECK-SDAG-NEXT:    mov v0.s[1], w9
-; CHECK-SDAG-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SDAG-NEXT:    ld1 { v1.h }[0], [x8]
+; CHECK-SDAG-NEXT:    mov v1.h[2], v0.h[1]
+; CHECK-SDAG-NEXT:    fmov d0, d1
 ; CHECK-SDAG-NEXT:    add sp, sp, #16
 ; CHECK-SDAG-NEXT:    ret
 ;

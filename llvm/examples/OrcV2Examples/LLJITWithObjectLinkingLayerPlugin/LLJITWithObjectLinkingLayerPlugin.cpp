@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
       LLJITBuilder()
           .setJITTargetMachineBuilder(std::move(JTMB))
           .setObjectLinkingLayerCreator(
-              [&](ExecutionSession &ES, const Triple &TT) {
+              [&](ExecutionSession &ES) {
                 // Create ObjectLinkingLayer.
                 auto ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
                     ES, ExitOnErr(jitlink::InProcessMemoryManager::Create()));

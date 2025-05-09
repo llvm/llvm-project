@@ -79,8 +79,7 @@ subroutine ref_scalar_real_p(p0_0, p1_0, p0_1, p1_1)
   type(real_p0) :: p0_0, p0_1(100)
   type(real_p1) :: p1_0, p1_1(100)
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[arg0]], %[[fld]] : (!fir.ref<!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[arg0]], p : (!fir.ref<!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   ! CHECK: %[[load:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.ptr<f32>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   ! CHECK: %[[cast:.*]] = fir.convert %[[addr]] : (!fir.ptr<f32>) -> !fir.ref<f32>
@@ -88,16 +87,14 @@ subroutine ref_scalar_real_p(p0_0, p1_0, p0_1, p1_1)
   call takes_real_scalar(p0_0%p)
 
   ! CHECK: %[[p0_1_coor:.*]] = fir.coordinate_of %[[arg2]], %{{.*}} : (!fir.ref<!fir.array<100x!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>>, i64) -> !fir.ref<!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>
-  ! CHECK: %[[fld:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_1_coor]], %[[fld]] : (!fir.ref<!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_1_coor]], p : (!fir.ref<!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   ! CHECK: %[[load:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.ptr<f32>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   ! CHECK: %[[cast:.*]] = fir.convert %[[addr]] : (!fir.ptr<f32>) -> !fir.ref<f32>
   ! CHECK: fir.call @_QPtakes_real_scalar(%[[cast]]) {{.*}}: (!fir.ref<f32>) -> ()
   call takes_real_scalar(p0_1(5)%p)
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[arg1]], %[[fld]] : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[arg1]], p : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: %[[load:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %[[load]], %c0{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
   ! CHECK: %[[lb:.*]] = fir.convert %[[dims]]#0 : (index) -> i64
@@ -107,8 +104,7 @@ subroutine ref_scalar_real_p(p0_0, p1_0, p0_1, p1_1)
   call takes_real_scalar(p1_0%p(7))
 
   ! CHECK: %[[p1_1_coor:.*]] = fir.coordinate_of %[[arg3]], %{{.*}} : (!fir.ref<!fir.array<100x!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>, i64) -> !fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
-  ! CHECK: %[[fld:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_1_coor]], %[[fld]] : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_1_coor]], p : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: %[[load:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %[[load]], %c0{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
   ! CHECK: %[[lb:.*]] = fir.convert %[[dims]]#0 : (index) -> i64
@@ -120,8 +116,7 @@ end subroutine
 
 ! CHECK-LABEL: func @_QMpcompPref_array_real_p(
 ! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<!fir.array<100x!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>{{.*}}) {
-! CHECK:         %[[VAL_2:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
-! CHECK:         %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2]] : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:         %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_0]], p : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:         %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:         %[[VAL_5:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_6:.*]]:3 = fir.box_dims %[[VAL_4]], %[[VAL_5]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
@@ -140,8 +135,7 @@ end subroutine
 ! CHECK:         %[[VAL_17:.*]] = arith.constant 1 : i64
 ! CHECK:         %[[VAL_18:.*]] = arith.subi %[[VAL_16]], %[[VAL_17]] : i64
 ! CHECK:         %[[VAL_19:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_18]] : (!fir.ref<!fir.array<100x!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>, i64) -> !fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
-! CHECK:         %[[VAL_20:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
-! CHECK:         %[[VAL_21:.*]] = fir.coordinate_of %[[VAL_19]], %[[VAL_20]] : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:         %[[VAL_21:.*]] = fir.coordinate_of %[[VAL_19]], p : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:         %[[VAL_22:.*]] = fir.load %[[VAL_21]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:         %[[VAL_23:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_24:.*]]:3 = fir.box_dims %[[VAL_22]], %[[VAL_23]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
@@ -171,31 +165,27 @@ end subroutine
 subroutine assign_scalar_real_p(p0_0, p1_0, p0_1, p1_1)
   type(real_p0) :: p0_0, p0_1(100)
   type(real_p1) :: p1_0, p1_1(100)
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]]
   ! CHECK: fir.store {{.*}} to %[[addr]]
   p0_0%p = 1.
 
   ! CHECK: %[[coor0:.*]] = fir.coordinate_of %[[p0_1]], %{{.*}}
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]]
   ! CHECK: fir.store {{.*}} to %[[addr]]
   p0_1(5)%p = 2.
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[box]], {{.*}}
   ! CHECK: fir.store {{.*}} to %[[addr]]
   p1_0%p(7) = 3.
 
   ! CHECK: %[[coor0:.*]] = fir.coordinate_of %[[p1_1]], %{{.*}}
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[box]], {{.*}}
   ! CHECK: fir.store {{.*}} to %[[addr]]
@@ -208,8 +198,7 @@ subroutine ref_scalar_cst_char_p(p0_0, p1_0, p0_1, p1_1)
   type(cst_char_p0) :: p0_0, p0_1(100)
   type(cst_char_p1) :: p1_0, p1_1(100)
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]]
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %c10{{.*}}
@@ -217,8 +206,7 @@ subroutine ref_scalar_cst_char_p(p0_0, p1_0, p0_1, p1_1)
   call takes_char_scalar(p0_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p0_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]]
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr]], %c10{{.*}}
@@ -226,8 +214,7 @@ subroutine ref_scalar_cst_char_p(p0_0, p1_0, p0_1, p1_1)
   call takes_char_scalar(p0_1(5)%p)
 
 
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %[[box]], %c0{{.*}}
   ! CHECK: %[[lb:.*]] = fir.convert %[[dims]]#0 : (index) -> i64
@@ -239,8 +226,7 @@ subroutine ref_scalar_cst_char_p(p0_0, p1_0, p0_1, p1_1)
 
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p1_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %[[box]], %c0{{.*}}
   ! CHECK: %[[lb:.*]] = fir.convert %[[dims]]#0 : (index) -> i64
@@ -258,8 +244,7 @@ subroutine ref_scalar_def_char_p(p0_0, p1_0, p0_1, p1_1)
   type(def_char_p0) :: p0_0, p0_1(100)
   type(def_char_p1) :: p1_0, p1_1(100)
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK-DAG: %[[len:.*]] = fir.box_elesize %[[box]]
   ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]]
@@ -268,8 +253,7 @@ subroutine ref_scalar_def_char_p(p0_0, p1_0, p0_1, p1_1)
   call takes_char_scalar(p0_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p0_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK-DAG: %[[len:.*]] = fir.box_elesize %[[box]]
   ! CHECK-DAG: %[[addr:.*]] = fir.box_addr %[[box]]
@@ -278,8 +262,7 @@ subroutine ref_scalar_def_char_p(p0_0, p1_0, p0_1, p1_1)
   call takes_char_scalar(p0_1(5)%p)
 
 
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK-DAG: %[[len:.*]] = fir.box_elesize %[[box]]
   ! CHECK-DAG: %[[dims:.*]]:3 = fir.box_dims %[[box]], %c0{{.*}}
@@ -292,8 +275,7 @@ subroutine ref_scalar_def_char_p(p0_0, p1_0, p0_1, p1_1)
 
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p1_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK-DAG: %[[len:.*]] = fir.box_elesize %[[box]]
   ! CHECK-DAG: %[[dims:.*]]:3 = fir.box_dims %[[box]], %c0{{.*}}
@@ -312,45 +294,37 @@ subroutine ref_scalar_derived(p0_0, p1_0, p0_1, p1_1)
   type(derived_p0) :: p0_0, p0_1(100)
   type(derived_p1) :: p1_0, p1_1(100)
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
-  ! CHECK: %[[fldx:.*]] = fir.field_index x
-  ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[box]], %[[fldx]]
+  ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[box]], x
   ! CHECK: fir.call @_QPtakes_real_scalar(%[[addr]])
   call takes_real_scalar(p0_0%p%x)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p0_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
-  ! CHECK: %[[fldx:.*]] = fir.field_index x
-  ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[box]], %[[fldx]]
+  ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[box]], x
   ! CHECK: fir.call @_QPtakes_real_scalar(%[[addr]])
   call takes_real_scalar(p0_1(5)%p%x)
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %[[box]], %c0{{.*}}
   ! CHECK: %[[lb:.*]] = fir.convert %[[dims]]#0 : (index) -> i64
   ! CHECK: %[[index:.*]] = arith.subi %c7{{.*}}, %[[lb]]
   ! CHECK: %[[elem:.*]] = fir.coordinate_of %[[box]], %[[index]]
-  ! CHECK: %[[fldx:.*]] = fir.field_index x
-  ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[elem]], %[[fldx]]
+  ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[elem]], x
   ! CHECK: fir.call @_QPtakes_real_scalar(%[[addr]])
   call takes_real_scalar(p1_0%p(7)%x)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p1_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %[[box]], %c0{{.*}}
   ! CHECK: %[[lb:.*]] = fir.convert %[[dims]]#0 : (index) -> i64
   ! CHECK: %[[index:.*]] = arith.subi %c7{{.*}}, %[[lb]]
   ! CHECK: %[[elem:.*]] = fir.coordinate_of %[[box]], %[[index]]
-  ! CHECK: %[[fldx:.*]] = fir.field_index x
-  ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[elem]], %[[fldx]]
+  ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[elem]], x
   ! CHECK: fir.call @_QPtakes_real_scalar(%[[addr]])
   call takes_real_scalar(p1_1(5)%p(7)%x)
 
@@ -365,25 +339,21 @@ end subroutine
 subroutine pass_real_p(p0_0, p1_0, p0_1, p1_1)
   type(real_p0) :: p0_0, p0_1(100)
   type(real_p1) :: p1_0, p1_1(100)
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], p
   ! CHECK: fir.call @_QPtakes_real_scalar_pointer(%[[coor]])
   call takes_real_scalar_pointer(p0_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p0_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.call @_QPtakes_real_scalar_pointer(%[[coor]])
   call takes_real_scalar_pointer(p0_1(5)%p)
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], p
   ! CHECK: fir.call @_QPtakes_real_array_pointer(%[[coor]])
   call takes_real_array_pointer(p1_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p1_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.call @_QPtakes_real_array_pointer(%[[coor]])
   call takes_real_array_pointer(p1_1(5)%p)
 end subroutine
@@ -397,28 +367,24 @@ end subroutine
 subroutine associated_p(p0_0, p1_0, p0_1, p1_1)
   type(real_p0) :: p0_0, p0_1(100)
   type(def_char_p1) :: p1_0, p1_1(100)
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: fir.box_addr %[[box]]
   call takes_logical(associated(p0_0%p))
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p0_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: fir.box_addr %[[box]]
   call takes_logical(associated(p0_1(5)%p))
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: fir.box_addr %[[box]]
   call takes_logical(associated(p1_0%p))
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p1_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: fir.box_addr %[[box]]
   call takes_logical(associated(p1_1(5)%p))
@@ -433,25 +399,21 @@ end subroutine
 subroutine passoc_real(p0_0, p1_0, p0_1, p1_1)
   type(real_p0) :: p0_0, p0_1(100)
   type(real_p1) :: p1_0, p1_1(100)
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   p0_0%p => real_target
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p0_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   p0_1(5)%p => real_target
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   p1_0%p => real_array_target
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p1_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   p1_1(5)%p => real_array_target
 end subroutine
@@ -461,25 +423,21 @@ end subroutine
 subroutine passoc_char(p0_0, p1_0, p0_1, p1_1)
   type(cst_char_p0) :: p0_0, p0_1(100)
   type(def_char_p1) :: p1_0, p1_1(100)
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   p0_0%p => char_target
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p0_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   p0_1(5)%p => char_target
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   p1_0%p => char_array_target
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p1_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   p1_1(5)%p => char_array_target
 end subroutine
@@ -493,25 +451,21 @@ end subroutine
 subroutine nullify_test(p0_0, p1_0, p0_1, p1_1)
   type(real_p0) :: p0_0, p0_1(100)
   type(def_char_p1) :: p1_0, p1_1(100)
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   nullify(p0_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p0_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   nullify(p0_1(5)%p)
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   nullify(p1_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p1_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   nullify(p1_1(5)%p)
 end subroutine
@@ -525,25 +479,21 @@ end subroutine
 subroutine allocate_real(p0_0, p1_0, p0_1, p1_1)
   type(real_p0) :: p0_0, p0_1(100)
   type(real_p1) :: p1_0, p1_1(100)
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(p0_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p0_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(p0_1(5)%p)
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(p1_0%p(100))
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p1_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(p1_1(5)%p(100))
 end subroutine
@@ -553,25 +503,21 @@ end subroutine
 subroutine allocate_cst_char(p0_0, p1_0, p0_1, p1_1)
   type(cst_char_p0) :: p0_0, p0_1(100)
   type(cst_char_p1) :: p1_0, p1_1(100)
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(p0_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p0_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(p0_1(5)%p)
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(p1_0%p(100))
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p1_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(p1_1(5)%p(100))
 end subroutine
@@ -581,25 +527,21 @@ end subroutine
 subroutine allocate_def_char(p0_0, p1_0, p0_1, p1_1)
   type(def_char_p0) :: p0_0, p0_1(100)
   type(def_char_p1) :: p1_0, p1_1(100)
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(character(18)::p0_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p0_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(character(18)::p0_1(5)%p)
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(character(18)::p1_0%p(100))
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p1_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(character(18)::p1_1(5)%p(100))
 end subroutine
@@ -617,8 +559,7 @@ subroutine deallocate_real(p0_0, p1_0, p0_1, p1_1)
   ! CHECK: %[[VAL_0:.*]] = fir.absent !fir.box<none>
   ! CHECK: %[[VAL_1:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<{{.*}}>>
   ! CHECK: %[[LINE_0:.*]] = arith.constant {{.*}} : i32
-  ! CHECK: %[[VAL_2:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>
-  ! CHECK: %[[VAL_3:.*]] = fir.coordinate_of %arg0, %[[VAL_2]] : (!fir.ref<!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  ! CHECK: %[[VAL_3:.*]] = fir.coordinate_of %arg0, p : (!fir.ref<!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   ! CHECK: %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[VAL_5:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_6:.*]] = fir.call @_FortranAPointerDeallocate(%[[VAL_4]], %false, %[[VAL_0]], %[[VAL_5]], %[[LINE_0]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -632,8 +573,7 @@ subroutine deallocate_real(p0_0, p1_0, p0_1, p1_1)
   ! CHECK: %[[CON_1:.*]] = arith.constant 1 : i64
   ! CHECK: %[[VAL_9:.*]] = arith.subi %[[CON_5]], %[[CON_1]] : i64
   ! CHECK: %[[VAL_10:.*]] = fir.coordinate_of %arg2, %[[VAL_9:.*]] : (!fir.ref<!fir.array<100x!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>>, i64) -> !fir.ref<!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>
-  ! CHECK: %[[VAL_11:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>
-  ! CHECK: %[[VAL_12:.*]] = fir.coordinate_of %[[VAL_10]], %[[VAL_11]] : (!fir.ref<!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  ! CHECK: %[[VAL_12:.*]] = fir.coordinate_of %[[VAL_10]], p : (!fir.ref<!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   ! CHECK: %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[VAL_14:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_15:.*]] = fir.call @_FortranAPointerDeallocate(%[[VAL_13]], %false_0, %[[VAL_7]], %[[VAL_14]], %[[LINE_1]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -643,8 +583,7 @@ subroutine deallocate_real(p0_0, p1_0, p0_1, p1_1)
   ! CHECK: %[[VAL_16:.*]] = fir.absent !fir.box<none>
   ! CHECK: %[[VAL_17:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
   ! CHECK: %[[LINE_2:.*]] = arith.constant {{.*}} : i32
-  ! CHECK: %[[VAL_18:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
-  ! CHECK: %[[VAL_19:.*]] = fir.coordinate_of %arg1, %[[VAL_18]] : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  ! CHECK: %[[VAL_19:.*]] = fir.coordinate_of %arg1, p : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[VAL_21:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_22:.*]] = fir.call @_FortranAPointerDeallocate(%[[VAL_20]], %false_1, %[[VAL_16]], %[[VAL_21]], %[[LINE_2]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -658,8 +597,7 @@ subroutine deallocate_real(p0_0, p1_0, p0_1, p1_1)
   ! CHECK: %[[CON_1A:.*]] = arith.constant 1 : i64
   ! CHECK: %[[VAL_25:.*]] = arith.subi %[[CON_5A]], %[[CON_1A]] : i64
   ! CHECK: %[[VAL_26:.*]] = fir.coordinate_of %arg3, %[[VAL_25]] : (!fir.ref<!fir.array<100x!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>, i64) -> !fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
-  ! CHECK: %[[VAL_27:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
-  ! CHECK: %[[VAL_28:.*]] = fir.coordinate_of %[[VAL_26]], %[[VAL_27]] : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  ! CHECK: %[[VAL_28:.*]] = fir.coordinate_of %[[VAL_26]], p : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[VAL_30:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_31:.*]] = fir.call @_FortranAPointerDeallocate(%[[VAL_29]], %false_2, %[[VAL_23]], %[[VAL_30]], %[[LINE_3]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -694,24 +632,18 @@ subroutine very_long(x)
   type(t5) :: x(:, :, :, :, :)
 
   ! CHECK: %[[coor0:.*]] = fir.coordinate_of %[[x]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.}}
-  ! CHECK-DAG: %[[flda:.*]] = fir.field_index a
-  ! CHECK-DAG: %[[fldb:.*]] = fir.field_index b
-  ! CHECK: %[[coor1:.*]] = fir.coordinate_of %[[coor0]], %[[flda]], %[[fldb]]
+  ! CHECK: %[[coor1:.*]] = fir.coordinate_of %[[coor0]], a, b
   ! CHECK: %[[b_box:.*]] = fir.load %[[coor1]]
-  ! CHECK-DAG: %[[fldc:.*]] = fir.field_index c
-  ! CHECK-DAG: %[[fldd:.*]] = fir.field_index d
-  ! CHECK: %[[coor2:.*]] = fir.coordinate_of %[[b_box]], %[[fldc]], %[[fldd]]
+  ! CHECK: %[[coor2:.*]] = fir.coordinate_of %[[b_box]], c, d
   ! CHECK: %[[index:.*]] = arith.subi %c6{{.*}}, %c1{{.*}} : i64
   ! CHECK: %[[coor3:.*]] = fir.coordinate_of %[[coor2]], %[[index]]
-  ! CHECK: %[[flde:.*]] = fir.field_index e
-  ! CHECK: %[[coor4:.*]] = fir.coordinate_of %[[coor3]], %[[flde]]
+  ! CHECK: %[[coor4:.*]] = fir.coordinate_of %[[coor3]], e
   ! CHECK: %[[e_box:.*]] = fir.load %[[coor4]]
   ! CHECK: %[[edims:.*]]:3 = fir.box_dims %[[e_box]], %c0{{.*}}
   ! CHECK: %[[lb:.*]] = fir.convert %[[edims]]#0 : (index) -> i64
   ! CHECK: %[[index2:.*]] = arith.subi %c7{{.*}}, %[[lb]]
   ! CHECK: %[[coor5:.*]] = fir.coordinate_of %[[e_box]], %[[index2]]
-  ! CHECK: %[[fldf:.*]] = fir.field_index f
-  ! CHECK: %[[coor6:.*]] = fir.coordinate_of %[[coor5]], %[[fldf:.*]]
+  ! CHECK: %[[coor6:.*]] = fir.coordinate_of %[[coor5]], f
   ! CHECK: fir.load %[[coor6]] : !fir.ref<f32>
   print *, x(1,2,3,4,5)%a%b%c%d(6)%e(7)%f
 end subroutine
@@ -729,17 +661,13 @@ subroutine test_recursive(x)
   end type
   type(t) :: x
 
-  ! CHECK: %[[fldNext1:.*]] = fir.field_index next
-  ! CHECK: %[[next1:.*]] = fir.coordinate_of %[[x]], %[[fldNext1]]
+  ! CHECK: %[[next1:.*]] = fir.coordinate_of %[[x]], next
   ! CHECK: %[[nextBox1:.*]] = fir.load %[[next1]]
-  ! CHECK: %[[fldNext2:.*]] = fir.field_index next
-  ! CHECK: %[[next2:.*]] = fir.coordinate_of %[[nextBox1]], %[[fldNext2]]
+  ! CHECK: %[[next2:.*]] = fir.coordinate_of %[[nextBox1]], next
   ! CHECK: %[[nextBox2:.*]] = fir.load %[[next2]]
-  ! CHECK: %[[fldNext3:.*]] = fir.field_index next
-  ! CHECK: %[[next3:.*]] = fir.coordinate_of %[[nextBox2]], %[[fldNext3]]
+  ! CHECK: %[[next3:.*]] = fir.coordinate_of %[[nextBox2]], next
   ! CHECK: %[[nextBox3:.*]] = fir.load %[[next3]]
-  ! CHECK: %[[fldi:.*]] = fir.field_index i
-  ! CHECK: %[[i:.*]] = fir.coordinate_of %[[nextBox3]], %[[fldi]]
+  ! CHECK: %[[i:.*]] = fir.coordinate_of %[[nextBox3]], i
   ! CHECK: %[[nextBox3:.*]] = fir.load %[[i]] : !fir.ref<i32>
   print *, x%next%next%next%i
 end subroutine
@@ -754,7 +682,6 @@ module pinit
   use pcomp
   ! CHECK-LABEL: fir.global {{.*}}@_QMpinitEarp0
     ! CHECK-DAG: %[[undef:.*]] = fir.undefined
-    ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
     ! CHECK-DAG: %[[target:.*]] = fir.address_of(@_QMpcompEreal_target)
     ! CHECK: %[[box:.*]] = fir.embox %[[target]] : (!fir.ref<f32>) -> !fir.box<f32>
     ! CHECK: %[[rebox:.*]] = fir.rebox %[[box]] : (!fir.box<f32>) -> !fir.box<!fir.ptr<f32>>
@@ -764,7 +691,6 @@ module pinit
 
 ! CHECK-LABEL: fir.global @_QMpinitEbrp1 : !fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}> {
 ! CHECK:         %[[VAL_0:.*]] = fir.undefined !fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
-! CHECK:         %[[VAL_1:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
 ! CHECK:         %[[VAL_2:.*]] = fir.address_of(@_QMpcompEreal_array_target) : !fir.ref<!fir.array<100xf32>>
 ! CHECK:         %[[VAL_3:.*]] = arith.constant 100 : index
 ! CHECK:         %[[VAL_4:.*]] = arith.constant 1 : index
@@ -792,7 +718,6 @@ module pinit
 
   ! CHECK-LABEL: fir.global {{.*}}@_QMpinitEccp0
     ! CHECK-DAG: %[[undef:.*]] = fir.undefined
-    ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
     ! CHECK-DAG: %[[target:.*]] = fir.address_of(@_QMpcompEchar_target)
     ! CHECK: %[[box:.*]] = fir.embox %[[target]] : (!fir.ref<!fir.char<1,10>>) -> !fir.box<!fir.char<1,10>>
     ! CHECK: %[[rebox:.*]] = fir.rebox %[[box]] : (!fir.box<!fir.char<1,10>>) -> !fir.box<!fir.ptr<!fir.char<1,10>>>
@@ -802,7 +727,6 @@ module pinit
 
   ! CHECK-LABEL: fir.global {{.*}}@_QMpinitEdcp1
     ! CHECK-DAG: %[[undef:.*]] = fir.undefined
-    ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
     ! CHECK-DAG: %[[target:.*]] = fir.address_of(@_QMpcompEchar_array_target)
     ! CHECK-DAG: %[[shape:.*]] = fir.shape %c100{{.*}}
     ! CHECK-DAG: %[[box:.*]] = fir.embox %[[target]](%[[shape]]) : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, !fir.shape<1>) -> !fir.box<!fir.array<100x!fir.char<1,10>>>

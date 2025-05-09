@@ -112,7 +112,7 @@ BitVector RegScavenger::getRegsAvailable(const TargetRegisterClass *RC) {
   BitVector Mask(TRI->getNumRegs());
   for (Register Reg : *RC)
     if (!isRegUsed(Reg))
-      Mask.set(Reg);
+      Mask.set(Reg.id());
   return Mask;
 }
 

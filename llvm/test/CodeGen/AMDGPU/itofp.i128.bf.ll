@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,SDAG %s
 ; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s 2>&1 | FileCheck -check-prefix=GISEL %s
 
-; FIXME: GISEL can't handle the "fptrunc float to bfloat" that expand-large-fp-convert emits.
+; FIXME: GISEL can't handle the "fptrunc float to bfloat" that expand-fp emits.
 
 ; GISEL: unable to translate instruction: fptrunc
 
@@ -38,30 +38,30 @@ define bfloat @sitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
 ; GCN-NEXT:    v_add_u32_e32 v6, 64, v6
 ; GCN-NEXT:    v_cndmask_b32_e32 v7, v6, v2, vcc
-; GCN-NEXT:    v_sub_u32_e32 v6, 0x80, v7
-; GCN-NEXT:    v_sub_u32_e32 v2, 0x7f, v7
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 25, v6
+; GCN-NEXT:    v_sub_u32_e32 v2, 0x80, v7
+; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 25, v2
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:  ; %bb.2: ; %itofp-if-else
-; GCN-NEXT:    v_add_u32_e32 v4, 0xffffff98, v7
-; GCN-NEXT:    v_lshlrev_b64 v[0:1], v4, v[0:1]
-; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v4
+; GCN-NEXT:    v_add_u32_e32 v2, 0xffffff98, v7
+; GCN-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
+; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v2
 ; GCN-NEXT:    v_cndmask_b32_e32 v8, 0, v0, vcc
-; GCN-NEXT:    ; implicit-def: $vgpr6
+; GCN-NEXT:    ; implicit-def: $vgpr2
 ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN-NEXT:    ; implicit-def: $vgpr7
 ; GCN-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GCN-NEXT:  ; %bb.3: ; %Flow3
-; GCN-NEXT:    s_andn2_saveexec_b64 s[8:9], s[4:5]
+; GCN-NEXT:    s_or_saveexec_b64 s[8:9], s[4:5]
+; GCN-NEXT:    v_sub_u32_e32 v6, 0x7f, v7
+; GCN-NEXT:    s_xor_b64 exec, exec, s[8:9]
 ; GCN-NEXT:    s_cbranch_execz .LBB0_13
 ; GCN-NEXT:  ; %bb.4: ; %NodeBlock
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 25, v6
+; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 25, v2
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_xor_b64 s[10:11], exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB0_8
 ; GCN-NEXT:  ; %bb.5: ; %LeafBlock
-; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 26, v6
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 26, v2
 ; GCN-NEXT:    s_and_saveexec_b64 s[12:13], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB0_7
 ; GCN-NEXT:  ; %bb.6: ; %itofp-sw-default
@@ -120,13 +120,13 @@ define bfloat @sitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:  ; %bb.11: ; %itofp-if-then20
 ; GCN-NEXT:    v_alignbit_b32 v8, v1, v0, 3
-; GCN-NEXT:    v_mov_b32_e32 v2, v6
+; GCN-NEXT:    v_mov_b32_e32 v6, v2
 ; GCN-NEXT:  ; %bb.12: ; %Flow
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:  .LBB0_13: ; %Flow4
 ; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x80000000, v3
-; GCN-NEXT:    v_lshl_add_u32 v1, v2, 23, 1.0
+; GCN-NEXT:    v_lshl_add_u32 v1, v6, 23, 1.0
 ; GCN-NEXT:    v_and_b32_e32 v2, 0x7fffff, v8
 ; GCN-NEXT:    v_or3_b32 v0, v2, v0, v1
 ; GCN-NEXT:    v_bfe_u32 v1, v8, 16, 1
@@ -166,9 +166,8 @@ define bfloat @uitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
 ; GCN-NEXT:    v_add_u32_e32 v5, 64, v5
 ; GCN-NEXT:    v_cndmask_b32_e32 v6, v5, v4, vcc
-; GCN-NEXT:    v_sub_u32_e32 v5, 0x80, v6
-; GCN-NEXT:    v_sub_u32_e32 v4, 0x7f, v6
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 25, v5
+; GCN-NEXT:    v_sub_u32_e32 v4, 0x80, v6
+; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 25, v4
 ; GCN-NEXT:    ; implicit-def: $vgpr7
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -177,20 +176,21 @@ define bfloat @uitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
 ; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v2
 ; GCN-NEXT:    v_cndmask_b32_e32 v7, 0, v0, vcc
-; GCN-NEXT:    ; implicit-def: $vgpr5
+; GCN-NEXT:    ; implicit-def: $vgpr4
 ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN-NEXT:    ; implicit-def: $vgpr6
 ; GCN-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN-NEXT:  ; %bb.3: ; %Flow3
-; GCN-NEXT:    s_andn2_saveexec_b64 s[8:9], s[4:5]
+; GCN-NEXT:    s_or_saveexec_b64 s[8:9], s[4:5]
+; GCN-NEXT:    v_sub_u32_e32 v5, 0x7f, v6
+; GCN-NEXT:    s_xor_b64 exec, exec, s[8:9]
 ; GCN-NEXT:    s_cbranch_execz .LBB1_13
 ; GCN-NEXT:  ; %bb.4: ; %NodeBlock
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 25, v5
+; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 25, v4
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_xor_b64 s[10:11], exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB1_8
 ; GCN-NEXT:  ; %bb.5: ; %LeafBlock
-; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 26, v5
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 26, v4
 ; GCN-NEXT:    s_and_saveexec_b64 s[12:13], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB1_7
 ; GCN-NEXT:  ; %bb.6: ; %itofp-sw-default
@@ -249,13 +249,13 @@ define bfloat @uitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:  ; %bb.11: ; %itofp-if-then20
 ; GCN-NEXT:    v_alignbit_b32 v7, v1, v0, 3
-; GCN-NEXT:    v_mov_b32_e32 v4, v5
+; GCN-NEXT:    v_mov_b32_e32 v5, v4
 ; GCN-NEXT:  ; %bb.12: ; %Flow
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:  .LBB1_13: ; %Flow4
 ; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x7fffff, v7
-; GCN-NEXT:    v_lshl_or_b32 v0, v4, 23, v0
+; GCN-NEXT:    v_lshl_or_b32 v0, v5, 23, v0
 ; GCN-NEXT:    v_add_u32_e32 v0, 1.0, v0
 ; GCN-NEXT:    v_bfe_u32 v1, v0, 16, 1
 ; GCN-NEXT:    s_movk_i32 s4, 0x7fff

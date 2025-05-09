@@ -438,7 +438,7 @@ bool LoongArchFrameLowering::spillCalleeSavedRegisters(
 
   // Insert the spill to the stack frame.
   for (auto &CS : CSI) {
-    Register Reg = CS.getReg();
+    MCRegister Reg = CS.getReg();
     // If the register is RA and the return address is taken by method
     // LoongArchTargetLowering::lowerRETURNADDR, don't set kill flag.
     bool IsKill =

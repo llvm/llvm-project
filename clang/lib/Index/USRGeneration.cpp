@@ -859,16 +859,12 @@ void USRGenerator::VisitType(QualType T) {
     }
 
     // If we have already seen this (non-built-in) type, use a substitution
-    // encoding.
-    llvm::DenseMap<const Type *, unsigned>::iterator Substitution
-      = TypeSubstitutions.find(T.getTypePtr());
-    if (Substitution != TypeSubstitutions.end()) {
+    // encoding.  Otherwise, record this as a substitution.
+    auto [Substitution, Inserted] =
+        TypeSubstitutions.try_emplace(T.getTypePtr(), TypeSubstitutions.size());
+    if (!Inserted) {
       Out << 'S' << Substitution->second << '_';
       return;
-    } else {
-      // Record this as a substitution.
-      unsigned Number = TypeSubstitutions.size();
-      TypeSubstitutions[T.getTypePtr()] = Number;
     }
 
     if (const PointerType *PT = T->getAs<PointerType>()) {

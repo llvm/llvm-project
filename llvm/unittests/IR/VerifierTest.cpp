@@ -416,26 +416,5 @@ TEST(VerifierTest, GetElementPtrInst) {
       << Error;
 }
 
-TEST(VerifierTest, DetectTaggedGlobalInSection) {
-  LLVMContext C;
-  Module M("M", C);
-  GlobalVariable *GV = new GlobalVariable(
-      Type::getInt64Ty(C), false, GlobalValue::InternalLinkage,
-      ConstantInt::get(Type::getInt64Ty(C), 1));
-  GV->setDSOLocal(true);
-  GlobalValue::SanitizerMetadata MD{};
-  MD.Memtag = true;
-  GV->setSanitizerMetadata(MD);
-  GV->setSection("foo");
-  M.insertGlobalVariable(GV);
-
-  std::string Error;
-  raw_string_ostream ErrorOS(Error);
-  EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(
-      StringRef(Error).starts_with("tagged GlobalValue must not be in section"))
-      << Error;
-}
-
 } // end anonymous namespace
 } // end namespace llvm

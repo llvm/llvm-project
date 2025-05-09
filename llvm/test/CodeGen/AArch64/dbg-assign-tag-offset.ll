@@ -1,5 +1,4 @@
 ; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 
 ;; Copied from dbg-value-tag-offset.ll. Check that variables with locations
 ;; tracked with dbg.assigns with DW_OP_LLVM_TAG_offset operators in their

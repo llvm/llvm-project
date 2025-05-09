@@ -165,8 +165,8 @@ define void @hoistable_buffer_construction_intrinsic(ptr addrspace(1) noalias %p
 ; CHECK-LABEL: define void @hoistable_buffer_construction_intrinsic
 ; CHECK-SAME: (ptr addrspace(1) noalias [[P_GLOBAL:%.*]], ptr addrspace(1) noalias [[Q_GLOBAL:%.*]], i32 [[BOUND:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) [[P_GLOBAL]], i16 0, i32 0, i32 0)
-; CHECK-NEXT:    [[Q:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) [[Q_GLOBAL]], i16 0, i32 0, i32 0)
+; CHECK-NEXT:    [[P:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[P_GLOBAL]], i16 0, i32 0, i32 0)
+; CHECK-NEXT:    [[Q:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[Q_GLOBAL]], i16 0, i32 0, i32 0)
 ; CHECK-NEXT:    [[HOISTABLE:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.load.i32(ptr addrspace(8) [[Q]], i32 0, i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -181,8 +181,8 @@ define void @hoistable_buffer_construction_intrinsic(ptr addrspace(1) noalias %p
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %p = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) %p.global, i16 0, i32 0, i32 0)
-  %q = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) %q.global, i16 0, i32 0, i32 0)
+  %p = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) %p.global, i16 0, i32 0, i32 0)
+  %q = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) %q.global, i16 0, i32 0, i32 0)
   br label %loop
 loop:
   %i = phi i32 [0, %entry], [%next, %loop]
@@ -256,8 +256,8 @@ declare i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) nocapture read
 declare i32 @llvm.amdgcn.struct.ptr.buffer.load.i32(ptr addrspace(8) nocapture readonly, i32, i32, i32, i32 immarg) #0
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: write)
 declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8) nocapture writeonly, i32, i32, i32 immarg) #1
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) nocapture readnone, i16, i32, i32) #2
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) readnone nocapture, i16, i32, i32)
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) nocapture readnone, i16, i32, i32) #2
+declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) readnone nocapture, i16, i32, i32)
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

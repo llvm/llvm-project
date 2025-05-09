@@ -1,8 +1,8 @@
-; REQUIRES: x86_64-linux
 ; RUN: split-file %s %t
-; RUN: llvm-profdata merge %t/memprof-in.yaml -o %t/memprof-out.indexed
+; COM: The text format only supports the latest version.
+; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in.yaml -o %t/memprof-out.indexed
 ; RUN: llvm-profdata show --memory %t/memprof-out.indexed > %t/memprof-out.yaml
-; RUN: cmp %t/memprof-in.yaml %t/memprof-out.yaml
+; RUN: diff -b %t/memprof-in.yaml %t/memprof-out.yaml
 
 ; Verify that the YAML output is identical to the YAML input.
 ;--- memprof-in.yaml
@@ -27,8 +27,12 @@ HeapProfileRecords:
           TotalLifetime:   777
           TotalLifetimeAccessDensity: 888
     CallSites:
-      - - { Function: 0x5555555555555555, LineOffset: 55, Column: 50, IsInlineFrame: true }
+      - Frames:
+        - { Function: 0x5555555555555555, LineOffset: 55, Column: 50, IsInlineFrame: true }
         - { Function: 0x6666666666666666, LineOffset: 66, Column: 60, IsInlineFrame: false }
-      - - { Function: 0x7777777777777777, LineOffset: 77, Column: 70, IsInlineFrame: true }
+        CalleeGuids: [ 0x100, 0x200 ]
+      - Frames:
+        - { Function: 0x7777777777777777, LineOffset: 77, Column: 70, IsInlineFrame: true }
         - { Function: 0x8888888888888888, LineOffset: 88, Column: 80, IsInlineFrame: false }
+        CalleeGuids: [ 0x300 ]
 ...

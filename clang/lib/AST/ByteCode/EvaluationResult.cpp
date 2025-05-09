@@ -230,8 +230,9 @@ bool EvaluationResult::checkReturnValue(InterpState &S, const Context &Ctx,
       assert(B->getDescriptor());
       assert(B->getDescriptor()->asExpr());
 
+      bool IsSubobj = !Ptr.isRoot() || Ptr.isArrayElement();
       S.FFDiag(Info, diag::note_constexpr_dynamic_alloc)
-          << Ptr.getType()->isReferenceType() << !Ptr.isRoot();
+          << Ptr.getType()->isReferenceType() << IsSubobj;
       S.Note(B->getDescriptor()->asExpr()->getExprLoc(),
              diag::note_constexpr_dynamic_alloc_here);
       return false;

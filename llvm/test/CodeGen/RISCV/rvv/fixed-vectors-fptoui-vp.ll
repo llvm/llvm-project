@@ -269,8 +269,8 @@ define <4 x i64> @vfptoui_v4i64_v4f32(<4 x float> %va, <4 x i1> %m, i32 zeroext 
 ; CHECK-LABEL: vfptoui_v4i64_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v10, v8, v0.t
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x i64> @llvm.vp.fptoui.v4i64.v4f32(<4 x float> %va, <4 x i1> %m, i32 %evl)
   ret <4 x i64> %v
@@ -280,8 +280,8 @@ define <4 x i64> @vfptoui_v4i64_v4f32_unmasked(<4 x float> %va, i32 zeroext %evl
 ; CHECK-LABEL: vfptoui_v4i64_v4f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v10
 ; CHECK-NEXT:    ret
   %v = call <4 x i64> @llvm.vp.fptoui.v4i64.v4f32(<4 x float> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i64> %v

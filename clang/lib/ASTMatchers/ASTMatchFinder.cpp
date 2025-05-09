@@ -584,7 +584,8 @@ public:
 
         if (LE->hasExplicitResultType())
           TraverseTypeLoc(Proto.getReturnLoc());
-        TraverseStmt(LE->getTrailingRequiresClause());
+        TraverseStmt(
+            const_cast<Expr *>(LE->getTrailingRequiresClause().ConstraintExpr));
       }
 
       TraverseStmt(LE->getBody());
@@ -1287,6 +1288,27 @@ private:
     auto Aliases = TypeAliases.find(CanonicalType);
     if (Aliases == TypeAliases.end())
       return false;
+
+    if (const auto *ElaboratedTypeNode =
+            llvm::dyn_cast<ElaboratedType>(TypeNode)) {
+      if (ElaboratedTypeNode->isSugared() && Aliases->second.size() > 1) {
+        const auto &DesugaredTypeName =
+            ElaboratedTypeNode->desugar().getAsString();
+
+        for (const TypedefNameDecl *Alias : Aliases->second) {
+          if (Alias->getName() != DesugaredTypeName) {
+            continue;
+          }
+
+          BoundNodesTreeBuilder Result(*Builder);
+          if (Matcher.matches(*Alias, this, &Result)) {
+            *Builder = std::move(Result);
+            return true;
+          }
+        }
+      }
+    }
+
     for (const TypedefNameDecl *Alias : Aliases->second) {
       BoundNodesTreeBuilder Result(*Builder);
       if (Matcher.matches(*Alias, this, &Result)) {

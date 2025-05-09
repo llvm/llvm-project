@@ -2,6 +2,9 @@
 # RUN: llc -mtriple=x86_64 -machine-sink-load-instrs-threshold=2 -run-pass=machine-sink %s -o - | FileCheck %s
 # RUN: llc -mtriple=x86_64 -machine-sink-load-instrs-threshold=2 -run-pass=mir-debugify,machine-sink,mir-strip-debug %s -o - | FileCheck %s
 
+# RUN: llc -mtriple=x86_64 -machine-sink-load-instrs-threshold=2 -passes=machine-sink %s -o - | FileCheck %s
+# TODO: add test with mir-debugify once it is ported
+
 # Verify that machine-sink pass is debug invariant wrt to given input. Since
 # the pass examines MemOperands the IR is required for the original bug to
 # trigger.

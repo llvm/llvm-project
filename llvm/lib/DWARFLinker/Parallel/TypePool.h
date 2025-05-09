@@ -135,7 +135,7 @@ public:
       return DIE;
 
     TypeEntryBody *NewDIE = TypeEntryBody::create(Allocator);
-    if (Entry->getValue().compare_exchange_weak(DIE, NewDIE)) {
+    if (Entry->getValue().compare_exchange_strong(DIE, NewDIE)) {
       ParentEntry->getValue().load()->Children.add(Entry);
       return NewDIE;
     }

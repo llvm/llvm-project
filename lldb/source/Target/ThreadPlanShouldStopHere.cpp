@@ -8,6 +8,8 @@
 
 #include "lldb/Target/ThreadPlanShouldStopHere.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/Language.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -76,6 +78,24 @@ bool ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
     }
   }
 
+  // Check whether the frame we are in is a language runtime thunk, only for
+  // step out:
+  if (operation == eFrameCompareOlder) {
+    if (Symbol *symbol = frame->GetSymbolContext(eSymbolContextSymbol).symbol) {
+      ProcessSP process_sp(current_plan->GetThread().GetProcess());
+      for (auto *runtime : process_sp->GetLanguageRuntimes()) {
+        if (runtime->IsSymbolARuntimeThunk(*symbol) &&
+            flags.Test(ThreadPlanShouldStopHere::eStepOutPastThunks)) {
+          LLDB_LOGF(
+              log, "Stepping out past a language thunk %s for: %s",
+              frame->GetFunctionName(),
+              Language::GetNameForLanguageType(runtime->GetLanguageType()));
+          should_stop_here = false;
+          break;
+        }
+      }
+    }
+  }
   // Always avoid code with line number 0.
   // FIXME: At present the ShouldStop and the StepFromHere calculate this
   // independently.  If this ever
@@ -109,18 +129,38 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
 
   if (sc.line_entry.line == 0) {
     AddressRange range = sc.line_entry.range;
-
-    // If the whole function is marked line 0 just step out, that's easier &
-    // faster than continuing to step through it.
     bool just_step_out = false;
-    if (sc.symbol && sc.symbol->ValueIsAddress()) {
-      Address symbol_end = sc.symbol->GetAddress();
-      symbol_end.Slide(sc.symbol->GetByteSize() - 1);
-      if (range.ContainsFileAddress(sc.symbol->GetAddress()) &&
-          range.ContainsFileAddress(symbol_end)) {
-        LLDB_LOGF(log, "Stopped in a function with only line 0 lines, just "
-                       "stepping out.");
-        just_step_out = true;
+    if (sc.symbol) {
+      ProcessSP process_sp(current_plan->GetThread().GetProcess());
+
+      // If this is a runtime thunk, step through it, rather than stepping out
+      // because it's marked line 0.
+      bool is_thunk = false;
+      for (auto *runtime : process_sp->GetLanguageRuntimes()) {
+        if (runtime->IsSymbolARuntimeThunk(*sc.symbol) &&
+            flags.Test(ThreadPlanShouldStopHere::eStepOutPastThunks)) {
+          LLDB_LOGF(
+              log, "Stepping out past a language thunk %s for: %s",
+              frame->GetFunctionName(),
+              Language::GetNameForLanguageType(runtime->GetLanguageType()));
+          is_thunk = true;
+          break;
+        }
+      }
+
+      // If the whole function is marked line 0 just step out, that's easier &
+      // faster than continuing to step through it.
+      // FIXME: This assumes that the function is a single line range.  It could
+      // be a series of contiguous line 0 ranges.  Check for that too.
+      if (!is_thunk && sc.symbol->ValueIsAddress()) {
+        Address symbol_end = sc.symbol->GetAddress();
+        symbol_end.Slide(sc.symbol->GetByteSize() - 1);
+        if (range.ContainsFileAddress(sc.symbol->GetAddress()) &&
+            range.ContainsFileAddress(symbol_end)) {
+          LLDB_LOGF(log, "Stopped in a function with only line 0 lines, just "
+                         "stepping out.");
+          just_step_out = true;
+        }
       }
     }
     if (!just_step_out) {

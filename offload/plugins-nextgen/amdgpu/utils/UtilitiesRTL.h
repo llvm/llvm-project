@@ -40,17 +40,10 @@ struct AMDGPUImplicitArgsTy {
   uint8_t Unused2[132]; // 132 byte offset.
 };
 
-// Dummy struct for COV4 implicitargs.
-struct AMDGPUImplicitArgsTyCOV4 {
-  uint8_t Unused[56];
-};
-
 /// Returns the size in bytes of the implicit arguments of AMDGPU kernels.
 /// `Version` is the ELF ABI version, e.g. COV5.
 inline uint32_t getImplicitArgsSize(uint16_t Version) {
-  return Version < ELF::ELFABIVERSION_AMDGPU_HSA_V5
-             ? sizeof(AMDGPUImplicitArgsTyCOV4)
-             : sizeof(AMDGPUImplicitArgsTy);
+  return sizeof(AMDGPUImplicitArgsTy);
 }
 
 /// Reads the AMDGPU specific metadata from the ELF file and propagates the

@@ -98,7 +98,7 @@ protected:
   //  const_iterator  FindThreadByID (thread_t tid) const;
 
   collection m_threads;
-  mutable PThreadMutex m_threads_mutex;
+  mutable std::recursive_mutex m_threads_mutex;
   MachThreadSP m_current_thread;
   bool m_is_64_bit;
 };

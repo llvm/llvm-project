@@ -7,16 +7,16 @@
 ; that case, the machine verifier, which relies on analyzing branches for this
 ; kind of verification, is unable to check anything, so accepts the CFG.
 
-define void @test_branch_to_landingpad() personality ptr @__objc_personality_v0 {
+define void @test_branch_to_landingpad(i1 %arg) personality ptr @__objc_personality_v0 {
 entry:
-  br i1 undef, label %if.end50.thread, label %if.then6
+  br i1 %arg, label %if.end50.thread, label %if.then6
 
 lpad:
   %0 = landingpad { ptr, i32 }
           catch ptr @"OBJC_EHTYPE_$_NSString"
           catch ptr @OBJC_EHTYPE_id
           catch ptr null
-  br i1 undef, label %invoke.cont33, label %catch.fallthrough
+  br i1 %arg, label %invoke.cont33, label %catch.fallthrough
 
 catch.fallthrough:
   %matches31 = icmp eq i32 undef, 0

@@ -338,3 +338,17 @@ define i16 @global_var_alias() {
   ret i16 %l
 }
 
+declare void @byval_fn(ptr byval(i32) initializes((0, 4)) %am)
+
+define void @test_byval() {
+; CHECK-LABEL: @test_byval(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    call void @byval_fn(ptr [[A]])
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i32
+  store i32 0, ptr %a
+  call void @byval_fn(ptr %a)
+  ret void
+}

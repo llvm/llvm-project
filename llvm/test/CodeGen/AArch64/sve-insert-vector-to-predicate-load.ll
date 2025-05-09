@@ -7,7 +7,7 @@ define <vscale x 16 x i1> @pred_load_v2i8(ptr %addr) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, ptr %addr
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
   %load = load <2 x i8>, ptr %addr, align 4
-  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> undef, <2 x i8> %load, i64 0)
+  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> %load, i64 0)
   %ret = bitcast <vscale x 2 x i8> %insert to <vscale x 16 x i1>
   ret <vscale x 16 x i1> %ret
 }
@@ -17,7 +17,7 @@ define <vscale x 16 x i1> @pred_load_v4i8(ptr %addr) #1 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, ptr %addr
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
   %load = load <4 x i8>, ptr %addr, align 4
-  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v4i8(<vscale x 2 x i8> undef, <4 x i8> %load, i64 0)
+  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v4i8(<vscale x 2 x i8> poison, <4 x i8> %load, i64 0)
   %ret = bitcast <vscale x 2 x i8> %insert to <vscale x 16 x i1>
   ret <vscale x 16 x i1> %ret
 }
@@ -27,7 +27,7 @@ define <vscale x 16 x i1> @pred_load_v8i8(ptr %addr) #2 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, ptr %addr
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
   %load = load <8 x i8>, ptr %addr, align 4
-  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> undef, <8 x i8> %load, i64 0)
+  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> poison, <8 x i8> %load, i64 0)
   %ret = bitcast <vscale x 2 x i8> %insert to <vscale x 16 x i1>
   ret <vscale x 16 x i1> %ret
 }
@@ -45,7 +45,7 @@ entry:
   br label %bb1
 
 bb1:
-  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> undef, <2 x i8> %load, i64 0)
+  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> %load, i64 0)
   %ret = bitcast <vscale x 2 x i8> %insert to <vscale x 16 x i1>
   ret <vscale x 16 x i1> %ret
 }
@@ -55,7 +55,7 @@ define <vscale x 16 x i1> @pred_load_neg1(ptr %addr) #0 {
 ; CHECK-LABEL: @pred_load_neg1(
 ; CHECK:         call <vscale x 2 x i8> @llvm.vector.insert
   %load = load <4 x i8>, ptr %addr, align 4
-  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v4i8(<vscale x 2 x i8> undef, <4 x i8> %load, i64 0)
+  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v4i8(<vscale x 2 x i8> poison, <4 x i8> %load, i64 0)
   %ret = bitcast <vscale x 2 x i8> %insert to <vscale x 16 x i1>
   ret <vscale x 16 x i1> %ret
 }
@@ -65,7 +65,7 @@ define <vscale x 16 x i1> @pred_load_neg2(ptr %addr) #2 {
 ; CHECK-LABEL: @pred_load_neg2(
 ; CHECK:         call <vscale x 2 x i8> @llvm.vector.insert
   %load = load <4 x i8>, ptr %addr, align 4
-  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v4i8(<vscale x 2 x i8> undef, <4 x i8> %load, i64 0)
+  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v4i8(<vscale x 2 x i8> poison, <4 x i8> %load, i64 0)
   %ret = bitcast <vscale x 2 x i8> %insert to <vscale x 16 x i1>
   ret <vscale x 16 x i1> %ret
 }
@@ -75,7 +75,7 @@ define <vscale x 16 x i1> @pred_load_neg3(ptr %addr) #1 {
 ; CHECK-LABEL: @pred_load_neg3(
 ; CHECK:         call <vscale x 2 x i8> @llvm.vector.insert
   %load = load <4 x i8>, ptr %addr, align 4
-  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v4i8(<vscale x 2 x i8> undef, <4 x i8> %load, i64 4)
+  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v4i8(<vscale x 2 x i8> poison, <4 x i8> %load, i64 4)
   %ret = bitcast <vscale x 2 x i8> %insert to <vscale x 16 x i1>
   ret <vscale x 16 x i1> %ret
 }
@@ -85,7 +85,7 @@ define <vscale x 16 x i1> @pred_load_neg4(ptr %addr) #3 {
 ; CHECK-LABEL: @pred_load_neg4(
 ; CHECK:         call <vscale x 2 x i8> @llvm.vector.insert
   %load = load <4 x i8>, ptr %addr, align 4
-  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v4i8(<vscale x 2 x i8> undef, <4 x i8> %load, i64 0)
+  %insert = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v4i8(<vscale x 2 x i8> poison, <4 x i8> %load, i64 0)
   %ret = bitcast <vscale x 2 x i8> %insert to <vscale x 16 x i1>
   ret <vscale x 16 x i1> %ret
 }

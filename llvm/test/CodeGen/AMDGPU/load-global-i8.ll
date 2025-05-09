@@ -916,38 +916,22 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i16(ptr addrspace(1) %out
 
 ; EG-DAG: VTX_READ_128 T{{[0-9]+}}.XYZW, T{{[0-9]+}}.X, 0, #1
 ; EG-DAG: VTX_READ_128 T{{[0-9]+}}.XYZW, T{{[0-9]+}}.X, 16, #1
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
-; EG-DAG: BFE_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{.*}}, 0.0, literal
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
+; EG: BFE_{{U?}}INT
 define amdgpu_kernel void @global_sextload_v32i8_to_v32i16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %load = load <32 x i8>, ptr addrspace(1) %in
   %ext = sext <32 x i8> %load to <32 x i16>

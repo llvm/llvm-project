@@ -105,60 +105,27 @@ static mlir::Value getBufferizedExprMustFreeFlag(mlir::Value bufferizedExpr) {
 static std::pair<hlfir::Entity, mlir::Value>
 createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
                 mlir::Type exprType, mlir::Value shape,
-                mlir::ValueRange extents, mlir::ValueRange lenParams,
+                llvm::ArrayRef<mlir::Value> extents,
+                llvm::ArrayRef<mlir::Value> lenParams,
                 std::optional<hlfir::Entity> polymorphicMold) {
-  mlir::Type sequenceType = hlfir::getFortranElementOrSequenceType(exprType);
-  llvm::StringRef tmpName{".tmp.array"};
+  auto sequenceType = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(exprType));
 
-  if (polymorphicMold) {
-    // Create *allocated* polymorphic temporary using the dynamic type
-    // of the mold and the provided shape/extents. The created temporary
-    // array will be written element per element, that is why it has to be
-    // allocated.
-    mlir::Type boxHeapType = fir::HeapType::get(sequenceType);
-    mlir::Value alloc = fir::factory::genNullBoxStorage(
-        builder, loc, fir::ClassType::get(boxHeapType));
-    mlir::Value isHeapAlloc = builder.createBool(loc, true);
-    fir::FortranVariableFlagsAttr declAttrs =
-        fir::FortranVariableFlagsAttr::get(
-            builder.getContext(), fir::FortranVariableFlagsEnum::allocatable);
-
+  auto genTempDeclareOp =
+      [](fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value memref,
+         llvm::StringRef name, mlir::Value shape,
+         llvm::ArrayRef<mlir::Value> typeParams,
+         fir::FortranVariableFlagsAttr attrs) -> mlir::Value {
     auto declareOp =
-        builder.create<hlfir::DeclareOp>(loc, alloc, tmpName,
-                                         /*shape=*/nullptr, lenParams,
-                                         /*dummy_scope=*/nullptr, declAttrs);
+        builder.create<hlfir::DeclareOp>(loc, memref, name, shape, typeParams,
+                                         /*dummy_scope=*/nullptr, attrs);
+    return declareOp.getBase();
+  };
 
-    int rank = extents.size();
-    fir::runtime::genAllocatableApplyMold(builder, loc, alloc,
-                                          polymorphicMold->getFirBase(), rank);
-    if (!extents.empty()) {
-      mlir::Type idxTy = builder.getIndexType();
-      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-      unsigned dim = 0;
-      for (mlir::Value extent : extents) {
-        mlir::Value dimIndex = builder.createIntegerConstant(loc, idxTy, dim++);
-        fir::runtime::genAllocatableSetBounds(builder, loc, alloc, dimIndex,
-                                              one, extent);
-      }
-    }
-    if (!lenParams.empty()) {
-      // We should call AllocatableSetDerivedLength() here.
-      // TODO: does the mold provide the length parameters or
-      // the operation itself or should they be in sync?
-      TODO(loc, "polymorphic type with length parameters in HLFIR");
-    }
-    fir::runtime::genAllocatableAllocate(builder, loc, alloc);
-
-    return {hlfir::Entity{declareOp.getBase()}, isHeapAlloc};
-  }
-
-  mlir::Value allocmem = builder.createHeapTemporary(loc, sequenceType, tmpName,
-                                                     extents, lenParams);
-  auto declareOp = builder.create<hlfir::DeclareOp>(
-      loc, allocmem, tmpName, shape, lenParams,
-      /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
-  mlir::Value trueVal = builder.createBool(loc, true);
-  return {hlfir::Entity{declareOp.getBase()}, trueVal};
+  auto [base, isHeapAlloc] = builder.createArrayTemp(
+      loc, sequenceType, shape, extents, lenParams, genTempDeclareOp,
+      polymorphicMold ? polymorphicMold->getFirBase() : nullptr);
+  return {hlfir::Entity{base}, builder.createBool(loc, isHeapAlloc)};
 }
 
 /// Copy \p source into a new temporary and package the temporary into a
@@ -786,9 +753,10 @@ struct ElementalOpConversion
     if (adaptor.getMold())
       mold = getBufferizedExprStorage(adaptor.getMold());
     auto extents = hlfir::getIndexExtents(loc, builder, shape);
-    auto [temp, cleanup] =
-        createArrayTemp(loc, builder, elemental.getType(), shape, extents,
-                        adaptor.getTypeparams(), mold);
+    llvm::SmallVector<mlir::Value> typeParams(adaptor.getTypeparams().begin(),
+                                              adaptor.getTypeparams().end());
+    auto [temp, cleanup] = createArrayTemp(loc, builder, elemental.getType(),
+                                           shape, extents, typeParams, mold);
     // If the box load is needed, we'd better place it outside
     // of the loop nest.
     temp = derefPointersAndAllocatables(loc, builder, temp);

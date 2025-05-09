@@ -7,7 +7,7 @@
 ; Check AMDGPULowerModuleLDS can run more than once on the same module, and that
 ; the second run is a no-op.
 
-@lds = internal unnamed_addr addrspace(3) global i32 undef, align 4, !absolute_symbol !0
+@lds = internal unnamed_addr addrspace(3) global i32 poison, align 4, !absolute_symbol !0
 
 define amdgpu_kernel void @test() {
 entry:

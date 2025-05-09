@@ -17,6 +17,6 @@ func.func @test_embox(%addr: !fir.ref<!some_freestyle_type>) {
 // CHECK-LABEL: define void @test_embox(
 // CHECK-SAME: ptr captures(none) %[[ADDR:.*]])
 // CHECK: insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
-// CHECK-SAME: { ptr undef, i64 ptrtoint (ptr getelementptr (%some_not_mangled_type, ptr null, i32 1) to i64),
+// CHECK-SAME: { ptr undef, i64 4,
 // CHECK-SAME: i32 20240719, i8 0, i8 42, i8 0, i8 1, ptr null, [1 x i64] zeroinitializer },
 // CHECK-SAME: ptr %[[ADDR]], 0

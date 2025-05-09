@@ -9,22 +9,27 @@ from lldbsuite.test import lldbutil
 
 
 class LibcxxDequeDataFormatterTestCase(TestBase):
-    def check_numbers(self, var_name):
+    def check_numbers(self, var_name, show_ptr=False):
+        patterns = []
+        substrs = [
+            "[0] = 1",
+            "[1] = 12",
+            "[2] = 123",
+            "[3] = 1234",
+            "[4] = 12345",
+            "[5] = 123456",
+            "[6] = 1234567",
+            "}",
+        ]
+        if show_ptr:
+            patterns = [var_name + " = 0x.* size=7"]
+        else:
+            substrs.insert(0, var_name + " = size=7")
         self.expect(
             "frame variable " + var_name,
-            substrs=[
-                var_name + " = size=7",
-                "[0] = 1",
-                "[1] = 12",
-                "[2] = 123",
-                "[3] = 1234",
-                "[4] = 12345",
-                "[5] = 123456",
-                "[6] = 1234567",
-                "}",
-            ],
+            patterns=patterns,
+            substrs=substrs,
         )
-
         self.expect_expr(
             var_name,
             result_summary="size=7",
@@ -75,7 +80,7 @@ class LibcxxDequeDataFormatterTestCase(TestBase):
         )
 
         # The reference should display the same was as the value did
-        self.check_numbers("ref")
+        self.check_numbers("ref", True)
 
         # The pointer should just show the right number of elements:
         self.expect("frame variable ptr", substrs=["ptr =", " size=7"])

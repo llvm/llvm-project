@@ -8,6 +8,7 @@ tablegen(LLVM ARCGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM ARCGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM ARCGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM ARCGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM ARCGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM ARCGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(ARCCommonTableGen)
@@ -24,6 +25,7 @@ add_llvm_target(ARCCodeGen
   ARCMCInstLower.cpp
   ARCOptAddrMode.cpp
   ARCRegisterInfo.cpp
+  ARCSelectionDAGInfo.cpp
   ARCSubtarget.cpp
   ARCTargetMachine.cpp
 

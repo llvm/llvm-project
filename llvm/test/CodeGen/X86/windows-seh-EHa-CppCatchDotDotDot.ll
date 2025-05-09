@@ -1,10 +1,10 @@
 ; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: "$cppxdata$?crash@@YAXH@Z":
-; CHECK:	.long	("$stateUnwindMap$?crash@@YAXH@Z")
-; CHECK:        .long   ("$tryMap$?crash@@YAXH@Z")@IMGREL # TryBlockMap
+; CHECK:	.long	"$stateUnwindMap$?crash@@YAXH@Z"
+; CHECK:        .long   "$tryMap$?crash@@YAXH@Z"@IMGREL # TryBlockMap
 ; CHECK-NEXT:   .long   6                       # IPMapEntries
-; CHECK-NEXT:	.long	("$ip2state$?crash@@YAXH@Z")
+; CHECK-NEXT:	.long	"$ip2state$?crash@@YAXH@Z"
 
 ; CHECK-LABEL: "$stateUnwindMap$?crash@@YAXH@Z":
 ; CHECK-NEXT:        .long   -1
@@ -19,7 +19,7 @@
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   ("$handlerMap$
+; CHECK-NEXT:        .long   "$handlerMap$
 
 ; CHECK:       "$handlerMap$0$?crash@@YAXH@Z"
 ; CHECK-NEXT:        .long   0

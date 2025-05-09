@@ -54,6 +54,8 @@ class Expr;
 /// Returns false if any of calls to callbacks returned false. Otherwise true.
 bool tryToFindPtrOrigin(
     const clang::Expr *E, bool StopAtFirstRefCountedObj,
+    std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
+    std::function<bool(const clang::QualType)> isSafePtrType,
     std::function<bool(const clang::Expr *, bool)> callback);
 
 /// For \p E referring to a ref-countable/-counted pointer/reference we return

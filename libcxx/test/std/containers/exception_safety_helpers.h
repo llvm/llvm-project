@@ -25,9 +25,7 @@ struct ThrowingCopy {
 
   ThrowingCopy() = default;
   ThrowingCopy(int value) : x(value) {}
-  ~ThrowingCopy() {
-    ++destroyed;
-  }
+  ~ThrowingCopy() { ++destroyed; }
 
   ThrowingCopy(const ThrowingCopy& other) : x(other.x) {
     ++created_by_copying;
@@ -45,9 +43,7 @@ struct ThrowingCopy {
   friend bool operator==(const ThrowingCopy& lhs, const ThrowingCopy& rhs) { return lhs.x == rhs.x; }
   friend bool operator<(const ThrowingCopy& lhs, const ThrowingCopy& rhs) { return lhs.x < rhs.x; }
 
-  static void reset() {
-    created_by_copying = destroyed = 0;
-  }
+  static void reset() { created_by_copying = destroyed = 0; }
 };
 
 template <int N>
@@ -59,9 +55,7 @@ int ThrowingCopy<N>::destroyed = 0;
 
 template <int N>
 struct std::hash<ThrowingCopy<N>> {
-  std::size_t operator()(const ThrowingCopy<N>& value) const {
-    return value.x;
-  }
+  std::size_t operator()(const ThrowingCopy<N>& value) const { return value.x; }
 };
 
 template <int ThrowOn, int Size, class Func>
@@ -84,7 +78,7 @@ void test_exception_safety_throwing_copy(Func&& func) {
 // complicate asserting that the expected number of elements was destroyed).
 template <class Container, int ThrowOn, int Size, class Func>
 void test_exception_safety_throwing_copy_container(Func&& func) {
-  using T = ThrowingCopy<ThrowOn>;
+  using T             = ThrowingCopy<ThrowOn>;
   T::throwing_enabled = false;
   T in[Size];
   Container c(in, in + Size);

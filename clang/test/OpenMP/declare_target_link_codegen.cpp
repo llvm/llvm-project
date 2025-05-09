@@ -27,11 +27,11 @@
 // HOST: [[SIZES:@.+]] = private unnamed_addr constant [3 x i64] [i64 4, i64 4, i64 4]
 // HOST: [[MAPTYPES:@.+]] = private unnamed_addr constant [3 x i64] [i64 35, i64 531, i64 531]
 // HOST: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"c_decl_tgt_ref_ptr\00"
-// HOST: @.offloading.entry.c_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 1, ptr @c_decl_tgt_ref_ptr, ptr @.offloading.entry_name, i64 8, i64 0, ptr null }, section "omp_offloading_entries", align 1 
-// HOST-COFF: @.offloading.entry.{{.*}} = weak constant %struct.__tgt_offload_entry { {{.*}} }, section "omp_offloading_entries$OE", align 1 
+// HOST: @.offloading.entry.c_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 1, ptr @c_decl_tgt_ref_ptr, ptr @.offloading.entry_name, i64 8, i64 0, ptr null }, section "llvm_offload_entries"
+// HOST-COFF: @.offloading.entry.{{.*}} = weak constant %struct.__tgt_offload_entry { {{.*}} }, section "llvm_offload_entries$OE"
 // DEVICE-NOT: internal unnamed_addr constant [{{[0-9]+}} x i8] c"c_{{.*}}_decl_tgt_ref_ptr\00"
 // HOST: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"_{{.*}}d_{{.*}}_decl_tgt_ref_ptr\00"
-// HOST: @.offloading.entry.[[D_PTR]] = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 1, ptr @[[D_PTR]], ptr @.offloading.entry_name.3, i64 8, i64 0, ptr null }, section "omp_offloading_entries", align 1 
+// HOST: @.offloading.entry.[[D_PTR]] = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 1, ptr @[[D_PTR]], ptr @.offloading.entry_name.3, i64 8, i64 0, ptr null }, section "llvm_offload_entries"
 
 extern int c;
 #pragma omp declare target link(c)

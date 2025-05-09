@@ -333,6 +333,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
                                                      MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   MachineConstantPool *CP = MI.getParent()->getParent()->getConstantPool();
+  bool HasSSE2 = ST->hasSSE2();
   bool HasSSE41 = ST->hasSSE41();
   bool HasAVX2 = ST->hasAVX2();
   bool HasDQI = ST->hasDQI();
@@ -360,8 +361,8 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     assert(MI.getNumOperands() >= (OperandNo + X86::AddrNumOperands) &&
            "Unexpected number of operands!");
     if (auto *C = X86::getConstantFromPool(MI, OperandNo)) {
-      RegBitWidth =
-          RegBitWidth ? RegBitWidth : C->getType()->getPrimitiveSizeInBits();
+      unsigned CstBitWidth = C->getType()->getPrimitiveSizeInBits();
+      RegBitWidth = RegBitWidth ? RegBitWidth : CstBitWidth;
       for (const FixupEntry &Fixup : Fixups) {
         if (Fixup.Op) {
           // Construct a suitable constant and adjust the MI to use the new
@@ -394,11 +395,13 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::MOVAPDrm:
   case X86::MOVAPSrm:
   case X86::MOVUPDrm:
-  case X86::MOVUPSrm:
+  case X86::MOVUPSrm: {
     // TODO: SSE3 MOVDDUP Handling
-    return FixupConstant({{X86::MOVSSrm, 1, 32, rebuildZeroUpperCst},
-                          {X86::MOVSDrm, 1, 64, rebuildZeroUpperCst}},
-                         128, 1);
+    FixupEntry Fixups[] = {
+        {X86::MOVSSrm, 1, 32, rebuildZeroUpperCst},
+        {HasSSE2 ? X86::MOVSDrm : 0, 1, 64, rebuildZeroUpperCst}};
+    return FixupConstant(Fixups, 128, 1);
+  }
   case X86::VMOVAPDrm:
   case X86::VMOVAPSrm:
   case X86::VMOVUPDrm:

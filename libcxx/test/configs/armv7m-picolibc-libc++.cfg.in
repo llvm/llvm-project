@@ -11,10 +11,6 @@ config.substitutions.append(('%{compile_flags}',
     # "large atomic operation may incur significant performance penalty; the
     # access size (4 bytes) exceeds the max lock-free size (0 bytes)"
     ' -Wno-atomic-alignment'
-
-    # Various libc++ headers check for the definition of _NEWLIB_VERSION
-    # which for picolibc is defined in picolibc.h.
-    ' -include picolibc.h'
 ))
 config.substitutions.append(('%{link_flags}',
     '-nostdlib -nostdlib++ -L %{lib-dir} -lc++ -lc++abi'

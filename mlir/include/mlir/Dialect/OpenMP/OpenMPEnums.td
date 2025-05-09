@@ -223,6 +223,24 @@ def ScheduleModifier : OpenMP_I32EnumAttr<
 def ScheduleModifierAttr : OpenMP_EnumAttr<ScheduleModifier, "sched_mod">;
 
 //===----------------------------------------------------------------------===//
+// target_region_flags enum.
+//===----------------------------------------------------------------------===//
+
+def TargetRegionFlagsNone : I32BitEnumAttrCaseNone<"none">;
+def TargetRegionFlagsGeneric : I32BitEnumAttrCaseBit<"generic", 0>;
+def TargetRegionFlagsSpmd : I32BitEnumAttrCaseBit<"spmd", 1>;
+def TargetRegionFlagsTripCount : I32BitEnumAttrCaseBit<"trip_count", 2>;
+
+def TargetRegionFlags : OpenMP_BitEnumAttr<
+    "TargetRegionFlags",
+    "target region property flags", [
+      TargetRegionFlagsNone,
+      TargetRegionFlagsGeneric,
+      TargetRegionFlagsSpmd,
+      TargetRegionFlagsTripCount
+    ]>;
+
+//===----------------------------------------------------------------------===//
 // variable_capture_kind enum.
 //===----------------------------------------------------------------------===//
 

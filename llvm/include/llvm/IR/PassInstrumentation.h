@@ -216,14 +216,9 @@ class PassInstrumentation {
   template <typename PassT>
   using has_required_t = decltype(std::declval<PassT &>().isRequired());
 
-  template <typename PassT>
-  static std::enable_if_t<is_detected<has_required_t, PassT>::value, bool>
-  isRequired(const PassT &Pass) {
-    return Pass.isRequired();
-  }
-  template <typename PassT>
-  static std::enable_if_t<!is_detected<has_required_t, PassT>::value, bool>
-  isRequired(const PassT &Pass) {
+  template <typename PassT> static bool isRequired(const PassT &Pass) {
+    if constexpr (is_detected<has_required_t, PassT>::value)
+      return Pass.isRequired();
     return false;
   }
 

@@ -147,7 +147,7 @@ void PseudoProbeRewriter::parsePseudoProbe(bool ProfiledOnly) {
         if (!Name)
           continue;
         SymName = *Name;
-        uint64_t GUID = Function::getGUID(SymName);
+        uint64_t GUID = Function::getGUIDAssumingExternalLinkage(SymName);
         FuncStartAddrs[GUID] = F->getAddress();
         if (ProfiledOnly && HasProfile)
           GuidFilter.insert(GUID);
@@ -173,7 +173,7 @@ void PseudoProbeRewriter::parsePseudoProbe(bool ProfiledOnly) {
   const GUIDProbeFunctionMap &GUID2Func = ProbeDecoder.getGUID2FuncDescMap();
   // Checks GUID in GUID2Func and returns it if it's present or null otherwise.
   auto checkGUID = [&](StringRef SymName) -> uint64_t {
-    uint64_t GUID = Function::getGUID(SymName);
+    uint64_t GUID = Function::getGUIDAssumingExternalLinkage(SymName);
     if (GUID2Func.find(GUID) == GUID2Func.end())
       return 0;
     return GUID;
@@ -435,7 +435,7 @@ void PseudoProbeRewriter::encodePseudoProbes() {
     for (const BinaryFunction *F : BC.getAllBinaryFunctions()) {
       const uint64_t Addr =
           F->isEmitted() ? F->getOutputAddress() : F->getAddress();
-      FuncStartAddrs[Function::getGUID(
+      FuncStartAddrs[Function::getGUIDAssumingExternalLinkage(
           NameResolver::restore(F->getOneName()))] = Addr;
     }
     DummyDecoder.buildAddress2ProbeMap(

@@ -29,7 +29,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
 
-using __lconv_t = std::lconv;
+using __lconv_t _LIBCPP_NODEBUG = std::lconv;
 
 class __lconv_storage {
 public:
@@ -153,6 +153,7 @@ private:
   __lconv_storage* __lc_ = nullptr;
 };
 
+#if defined(_LIBCPP_BUILDING_LIBRARY)
 _LIBCPP_EXPORTED_FROM_ABI __locale_t __newlocale(int __mask, const char* __locale, __locale_t __base);
 inline _LIBCPP_HIDE_FROM_ABI void __freelocale(__locale_t __loc) { ::_free_locale(__loc); }
 inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, const char* __locale) {
@@ -162,6 +163,7 @@ inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, const char* __loc
   return __new_locale;
 }
 _LIBCPP_EXPORTED_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc);
+#endif // _LIBCPP_BUILDING_LIBRARY
 
 //
 // Strtonum functions
@@ -195,14 +197,17 @@ __strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
 //
 // Character manipulation functions
 //
+#if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __islower(int __c, __locale_t __loc) { return _islower_l(__c, __loc); }
 
 inline _LIBCPP_HIDE_FROM_ABI int __isupper(int __c, __locale_t __loc) { return _isupper_l(__c, __loc); }
+#endif
 
 inline _LIBCPP_HIDE_FROM_ABI int __isdigit(int __c, __locale_t __loc) { return _isdigit_l(__c, __loc); }
 
 inline _LIBCPP_HIDE_FROM_ABI int __isxdigit(int __c, __locale_t __loc) { return _isxdigit_l(__c, __loc); }
 
+#if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __toupper(int __c, __locale_t __loc) { return ::_toupper_l(__c, __loc); }
 
 inline _LIBCPP_HIDE_FROM_ABI int __tolower(int __c, __locale_t __loc) { return ::_tolower_l(__c, __loc); }
@@ -215,7 +220,7 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __strxfrm(char* __dest, const char* __src, s
   return ::_strxfrm_l(__dest, __src, __n, __loc);
 }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI int __iswctype(wint_t __c, wctype_t __type, __locale_t __loc) {
   return ::_iswctype_l(__c, __type, __loc);
 }
@@ -240,16 +245,16 @@ inline _LIBCPP_HIDE_FROM_ABI int __wcscoll(const wchar_t* __ws1, const wchar_t* 
 inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __src, size_t __n, __locale_t __loc) {
   return ::_wcsxfrm_l(__dest, __src, __n, __loc);
 }
-#endif // !_LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-#if defined(__MINGW32__) && __MSVCRT_VERSION__ < 0x0800
+#  if defined(__MINGW32__) && __MSVCRT_VERSION__ < 0x0800
 _LIBCPP_EXPORTED_FROM_ABI size_t __strftime(char*, size_t, const char*, const struct tm*, __locale_t);
-#else
+#  else
 inline _LIBCPP_HIDE_FROM_ABI size_t
 __strftime(char* __ret, size_t __n, const char* __format, const struct tm* __tm, __locale_t __loc) {
   return ::_strftime_l(__ret, __n, __format, __tm, __loc);
 }
-#endif
+#  endif
 
 //
 // Other functions
@@ -273,6 +278,7 @@ _LIBCPP_EXPORTED_FROM_ABI size_t __mbrlen(const char* __restrict, size_t, mbstat
 
 _LIBCPP_EXPORTED_FROM_ABI size_t
 __mbsrtowcs(wchar_t* __restrict, const char** __restrict, size_t, mbstate_t* __restrict, __locale_t);
+#endif // _LIBCPP_BUILDING_LIBRARY
 
 _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 4, 5) int __snprintf(
     char* __ret, size_t __n, __locale_t __loc, const char* __format, ...);
@@ -297,6 +303,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __s
 _LIBCPP_DIAGNOSTIC_POP
 #undef _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT
 
+#if defined(_LIBCPP_BUILDING_LIBRARY)
 struct __locale_guard {
   _LIBCPP_HIDE_FROM_ABI __locale_guard(__locale_t __l) : __status(_configthreadlocale(_ENABLE_PER_THREAD_LOCALE)) {
     // Setting the locale can be expensive even when the locale given is
@@ -310,7 +317,7 @@ struct __locale_guard {
     if (std::strcmp(__l.__get_locale(), __lc) != 0) {
       __locale_all = _strdup(__lc);
       if (__locale_all == nullptr)
-        __throw_bad_alloc();
+        std::__throw_bad_alloc();
       __locale::__setlocale(LC_ALL, __l.__get_locale());
     }
   }
@@ -328,6 +335,7 @@ struct __locale_guard {
   int __status;
   char* __locale_all = nullptr;
 };
+#endif // _LIBCPP_BUILDING_LIBRARY
 
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD

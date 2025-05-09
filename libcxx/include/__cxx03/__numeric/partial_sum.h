@@ -30,11 +30,7 @@ partial_sum(_InputIterator __first, _InputIterator __last, _OutputIterator __res
     typename iterator_traits<_InputIterator>::value_type __t(*__first);
     *__result = __t;
     for (++__first, (void)++__result; __first != __last; ++__first, (void)++__result) {
-#if _LIBCPP_STD_VER >= 20
-      __t = std::move(__t) + *__first;
-#else
-      __t = __t + *__first;
-#endif
+      __t       = __t + *__first;
       *__result = __t;
     }
   }
@@ -48,11 +44,7 @@ partial_sum(_InputIterator __first, _InputIterator __last, _OutputIterator __res
     typename iterator_traits<_InputIterator>::value_type __t(*__first);
     *__result = __t;
     for (++__first, (void)++__result; __first != __last; ++__first, (void)++__result) {
-#if _LIBCPP_STD_VER >= 20
-      __t = __binary_op(std::move(__t), *__first);
-#else
-      __t = __binary_op(__t, *__first);
-#endif
+      __t       = __binary_op(__t, *__first);
       *__result = __t;
     }
   }

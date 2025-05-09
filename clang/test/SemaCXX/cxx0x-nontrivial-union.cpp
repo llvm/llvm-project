@@ -51,7 +51,7 @@ namespace disabled_dtor {
   union disable_dtor {
     T val;
     template<typename...U>
-    disable_dtor(U &&...u) : val(forward<U>(u)...) {}
+    disable_dtor(U &&...u) : val(forward<U>(u)...) {} // expected-error {{attempt to use a deleted function}}
     ~disable_dtor() {}
   };
 
@@ -59,10 +59,10 @@ namespace disabled_dtor {
     deleted_dtor(int n, char c) : n(n), c(c) {}
     int n;
     char c;
-    ~deleted_dtor() = delete;
+    ~deleted_dtor() = delete; // expected-note {{'~deleted_dtor' has been explicitly marked deleted here}}
   };
 
-  disable_dtor<deleted_dtor> dd(4, 'x');
+  disable_dtor<deleted_dtor> dd(4, 'x');  // expected-note {{in instantiation of function template specialization 'disabled_dtor::disable_dtor<disabled_dtor::deleted_dtor>::disable_dtor<int, char>' requested here}}
 }
 
 namespace optional {

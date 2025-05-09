@@ -1200,51 +1200,51 @@ uint32_t ARMMCCodeEmitter::getHiLoImmOpValue(const MCInst &MI, unsigned OpIdx,
       if (Value > UINT32_MAX)
         report_fatal_error("constant value truncated (limited to 32-bit)");
 
-      switch (ARM16Expr->getKind()) {
-      case ARMMCExpr::VK_ARM_HI16:
+      switch (ARM16Expr->getSpecifier()) {
+      case ARMMCExpr::VK_HI16:
         return (int32_t(Value) & 0xffff0000) >> 16;
-      case ARMMCExpr::VK_ARM_LO16:
+      case ARMMCExpr::VK_LO16:
         return (int32_t(Value) & 0x0000ffff);
 
-      case ARMMCExpr::VK_ARM_HI_8_15:
+      case ARMMCExpr::VK_HI_8_15:
         return (int32_t(Value) & 0xff000000) >> 24;
-      case ARMMCExpr::VK_ARM_HI_0_7:
+      case ARMMCExpr::VK_HI_0_7:
         return (int32_t(Value) & 0x00ff0000) >> 16;
-      case ARMMCExpr::VK_ARM_LO_8_15:
+      case ARMMCExpr::VK_LO_8_15:
         return (int32_t(Value) & 0x0000ff00) >> 8;
-      case ARMMCExpr::VK_ARM_LO_0_7:
+      case ARMMCExpr::VK_LO_0_7:
         return (int32_t(Value) & 0x000000ff);
 
       default: llvm_unreachable("Unsupported ARMFixup");
       }
     }
 
-    switch (ARM16Expr->getKind()) {
+    switch (ARM16Expr->getSpecifier()) {
     default: llvm_unreachable("Unsupported ARMFixup");
-    case ARMMCExpr::VK_ARM_HI16:
+    case ARMMCExpr::VK_HI16:
       Kind = MCFixupKind(isThumb(STI) ? ARM::fixup_t2_movt_hi16
                                       : ARM::fixup_arm_movt_hi16);
       break;
-    case ARMMCExpr::VK_ARM_LO16:
+    case ARMMCExpr::VK_LO16:
       Kind = MCFixupKind(isThumb(STI) ? ARM::fixup_t2_movw_lo16
                                       : ARM::fixup_arm_movw_lo16);
       break;
-    case ARMMCExpr::VK_ARM_HI_8_15:
+    case ARMMCExpr::VK_HI_8_15:
       if (!isThumb(STI))
         llvm_unreachable(":upper_8_15: not supported in Arm state");
       Kind = MCFixupKind(ARM::fixup_arm_thumb_upper_8_15);
       break;
-    case ARMMCExpr::VK_ARM_HI_0_7:
+    case ARMMCExpr::VK_HI_0_7:
       if (!isThumb(STI))
         llvm_unreachable(":upper_0_7: not supported in Arm state");
       Kind = MCFixupKind(ARM::fixup_arm_thumb_upper_0_7);
       break;
-    case ARMMCExpr::VK_ARM_LO_8_15:
+    case ARMMCExpr::VK_LO_8_15:
       if (!isThumb(STI))
         llvm_unreachable(":lower_8_15: not supported in Arm state");
       Kind = MCFixupKind(ARM::fixup_arm_thumb_lower_8_15);
       break;
-    case ARMMCExpr::VK_ARM_LO_0_7:
+    case ARMMCExpr::VK_LO_0_7:
       if (!isThumb(STI))
         llvm_unreachable(":lower_0_7: not supported in Arm state");
       Kind = MCFixupKind(ARM::fixup_arm_thumb_lower_0_7);

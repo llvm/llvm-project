@@ -349,8 +349,8 @@ define <vscale x 4 x i32> @vfptosi_nxv4f16_nxv4i32(<vscale x 4 x half> %va) stri
 ; CHECK-LABEL: vfptosi_nxv4f16_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v10
 ; CHECK-NEXT:    ret
   %evec = call <vscale x 4 x i32> @llvm.experimental.constrained.fptosi.nxv4i32.nxv4f16(<vscale x 4 x half> %va, metadata !"fpexcept.strict")
   ret <vscale x 4 x i32> %evec
@@ -361,8 +361,8 @@ define <vscale x 4 x i32> @vfptoui_nxv4f16_nxv4i32(<vscale x 4 x half> %va) stri
 ; CHECK-LABEL: vfptoui_nxv4f16_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v10
 ; CHECK-NEXT:    ret
   %evec = call <vscale x 4 x i32> @llvm.experimental.constrained.fptoui.nxv4i32.nxv4f16(<vscale x 4 x half> %va, metadata !"fpexcept.strict")
   ret <vscale x 4 x i32> %evec
@@ -471,8 +471,8 @@ define <vscale x 8 x i32> @vfptosi_nxv8f16_nxv8i32(<vscale x 8 x half> %va) stri
 ; CHECK-LABEL: vfptosi_nxv8f16_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v12, v8
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v12
 ; CHECK-NEXT:    ret
   %evec = call <vscale x 8 x i32> @llvm.experimental.constrained.fptosi.nxv8i32.nxv8f16(<vscale x 8 x half> %va, metadata !"fpexcept.strict")
   ret <vscale x 8 x i32> %evec
@@ -483,8 +483,8 @@ define <vscale x 8 x i32> @vfptoui_nxv8f16_nxv8i32(<vscale x 8 x half> %va) stri
 ; CHECK-LABEL: vfptoui_nxv8f16_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v12, v8
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v12
 ; CHECK-NEXT:    ret
   %evec = call <vscale x 8 x i32> @llvm.experimental.constrained.fptoui.nxv8i32.nxv8f16(<vscale x 8 x half> %va, metadata !"fpexcept.strict")
   ret <vscale x 8 x i32> %evec
@@ -593,8 +593,8 @@ define <vscale x 16 x i32> @vfptosi_nxv16f16_nxv16i32(<vscale x 16 x half> %va) 
 ; CHECK-LABEL: vfptosi_nxv16f16_nxv16i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v16, v8
-; CHECK-NEXT:    vmv8r.v v8, v16
+; CHECK-NEXT:    vmv4r.v v16, v8
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v16
 ; CHECK-NEXT:    ret
   %evec = call <vscale x 16 x i32> @llvm.experimental.constrained.fptosi.nxv16i32.nxv16f16(<vscale x 16 x half> %va, metadata !"fpexcept.strict")
   ret <vscale x 16 x i32> %evec
@@ -605,8 +605,8 @@ define <vscale x 16 x i32> @vfptoui_nxv16f16_nxv16i32(<vscale x 16 x half> %va) 
 ; CHECK-LABEL: vfptoui_nxv16f16_nxv16i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v16, v8
-; CHECK-NEXT:    vmv8r.v v8, v16
+; CHECK-NEXT:    vmv4r.v v16, v8
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v16
 ; CHECK-NEXT:    ret
   %evec = call <vscale x 16 x i32> @llvm.experimental.constrained.fptoui.nxv16i32.nxv16f16(<vscale x 16 x half> %va, metadata !"fpexcept.strict")
   ret <vscale x 16 x i32> %evec
@@ -909,8 +909,8 @@ define <vscale x 2 x i64> @vfptosi_nxv2f32_nxv2i64(<vscale x 2 x float> %va) str
 ; CHECK-LABEL: vfptosi_nxv2f32_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v10
 ; CHECK-NEXT:    ret
   %evec = call <vscale x 2 x i64> @llvm.experimental.constrained.fptosi.nxv2i64.nxv2f32(<vscale x 2 x float> %va, metadata !"fpexcept.strict")
   ret <vscale x 2 x i64> %evec
@@ -921,8 +921,8 @@ define <vscale x 2 x i64> @vfptoui_nxv2f32_nxv2i64(<vscale x 2 x float> %va) str
 ; CHECK-LABEL: vfptoui_nxv2f32_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v10
 ; CHECK-NEXT:    ret
   %evec = call <vscale x 2 x i64> @llvm.experimental.constrained.fptoui.nxv2i64.nxv2f32(<vscale x 2 x float> %va, metadata !"fpexcept.strict")
   ret <vscale x 2 x i64> %evec
@@ -1031,8 +1031,8 @@ define <vscale x 4 x i64> @vfptosi_nxv4f32_nxv4i64(<vscale x 4 x float> %va) str
 ; CHECK-LABEL: vfptosi_nxv4f32_nxv4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v12, v8
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v12
 ; CHECK-NEXT:    ret
   %evec = call <vscale x 4 x i64> @llvm.experimental.constrained.fptosi.nxv4i64.nxv4f32(<vscale x 4 x float> %va, metadata !"fpexcept.strict")
   ret <vscale x 4 x i64> %evec
@@ -1043,8 +1043,8 @@ define <vscale x 4 x i64> @vfptoui_nxv4f32_nxv4i64(<vscale x 4 x float> %va) str
 ; CHECK-LABEL: vfptoui_nxv4f32_nxv4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v12, v8
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v12
 ; CHECK-NEXT:    ret
   %evec = call <vscale x 4 x i64> @llvm.experimental.constrained.fptoui.nxv4i64.nxv4f32(<vscale x 4 x float> %va, metadata !"fpexcept.strict")
   ret <vscale x 4 x i64> %evec
@@ -1153,8 +1153,8 @@ define <vscale x 8 x i64> @vfptosi_nxv8f32_nxv8i64(<vscale x 8 x float> %va) str
 ; CHECK-LABEL: vfptosi_nxv8f32_nxv8i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v16, v8
-; CHECK-NEXT:    vmv8r.v v8, v16
+; CHECK-NEXT:    vmv4r.v v16, v8
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v16
 ; CHECK-NEXT:    ret
   %evec = call <vscale x 8 x i64> @llvm.experimental.constrained.fptosi.nxv8i64.nxv8f32(<vscale x 8 x float> %va, metadata !"fpexcept.strict")
   ret <vscale x 8 x i64> %evec
@@ -1165,8 +1165,8 @@ define <vscale x 8 x i64> @vfptoui_nxv8f32_nxv8i64(<vscale x 8 x float> %va) str
 ; CHECK-LABEL: vfptoui_nxv8f32_nxv8i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v16, v8
-; CHECK-NEXT:    vmv8r.v v8, v16
+; CHECK-NEXT:    vmv4r.v v16, v8
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v16
 ; CHECK-NEXT:    ret
   %evec = call <vscale x 8 x i64> @llvm.experimental.constrained.fptoui.nxv8i64.nxv8f32(<vscale x 8 x float> %va, metadata !"fpexcept.strict")
   ret <vscale x 8 x i64> %evec

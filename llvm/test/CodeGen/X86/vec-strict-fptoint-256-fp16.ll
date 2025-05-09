@@ -104,7 +104,7 @@ define <16 x i1> @strict_vector_fptosi_v16f16_to_v16i1(<16 x half> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptosi_v16f16_to_v16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttph2dq %ymm0, %zmm0
-; CHECK-NEXT:    vpmovd2m %zmm0, %k0
+; CHECK-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; CHECK-NEXT:    vpmovm2b %k0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
@@ -118,7 +118,7 @@ define <16 x i1> @strict_vector_fptoui_v16f16_to_v16i1(<16 x half> %a) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttph2dq %ymm0, %zmm0
 ; CHECK-NEXT:    vpslld $31, %zmm0, %zmm0
-; CHECK-NEXT:    vpmovd2m %zmm0, %k0
+; CHECK-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; CHECK-NEXT:    vpmovm2b %k0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}

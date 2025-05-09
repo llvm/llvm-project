@@ -1,12 +1,12 @@
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s --check-prefixes=CHECK,Z13
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=arch15 | FileCheck %s --check-prefixes=CHECK,ARC15
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z17 | FileCheck %s --check-prefixes=CHECK,Z17
 ;
 
 define i128 @fun1(i128 %val1, i128 %val2) {
 ; CHECK-LABEL: 'fun1'
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %cmp = icmp eq i128 %val1, %val2
 ; Z13:   Cost Model: Found an estimated cost of 5 for instruction:   %v128 = sext i1 %cmp to i128
-; ARC15: Cost Model: Found an estimated cost of 0 for instruction:   %v128 = sext i1 %cmp to i128
+; Z17:   Cost Model: Found an estimated cost of 0 for instruction:   %v128 = sext i1 %cmp to i128
   %cmp = icmp eq i128 %val1, %val2
   %v128 = sext i1 %cmp to i128
   ret i128 %v128
@@ -27,7 +27,7 @@ define i128 @fun3(i128 %val1, i128 %val2,
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %cmp = icmp eq i128 %val1, %val2
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %add = add i128 %val3, %val4
 ; Z13:   Cost Model: Found an estimated cost of 4 for instruction:   %sel = select i1 %cmp, i128 %val3, i128 %add
-; ARC15: Cost Model: Found an estimated cost of 1 for instruction:   %sel = select i1 %cmp, i128 %val3, i128 %add
+; Z17:   Cost Model: Found an estimated cost of 1 for instruction:   %sel = select i1 %cmp, i128 %val3, i128 %add
   %cmp = icmp eq i128 %val1, %val2
   %add = add i128 %val3, %val4
   %sel = select i1 %cmp, i128 %val3, i128 %add
@@ -40,7 +40,7 @@ define i64 @fun3_sel64(i128 %val1, i128 %val2,
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %cmp = icmp ugt i128 %val1, %val2
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %add = add i64 %val3, %val4
 ; Z13:   Cost Model: Found an estimated cost of 4 for instruction:   %sel = select i1 %cmp, i64 %val3, i64 %add
-; ARC15: Cost Model: Found an estimated cost of 1 for instruction:   %sel = select i1 %cmp, i64 %val3, i64 %add
+; Z17:   Cost Model: Found an estimated cost of 1 for instruction:   %sel = select i1 %cmp, i64 %val3, i64 %add
   %cmp = icmp ugt i128 %val1, %val2
   %add = add i64 %val3, %val4
   %sel = select i1 %cmp, i64 %val3, i64 %add

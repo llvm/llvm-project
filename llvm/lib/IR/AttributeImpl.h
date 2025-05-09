@@ -258,7 +258,7 @@ public:
       : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind), Size(Val.size()) {
     assert(Size > 0);
     ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
-    std::uninitialized_copy(Val.begin(), Val.end(), TrailingCR);
+    llvm::uninitialized_copy(Val, TrailingCR);
   }
 
   ~ConstantRangeListAttributeImpl() {

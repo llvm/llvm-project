@@ -70,8 +70,8 @@ __attribute__((noinline)) void func6(int &sink, int x) {
 __attribute__((noinline)) void func7(int &sink, int x) {
   //% self.filecheck("bt", "main.cpp", "-check-prefix=FUNC7-BT")
   // FUNC7-BT: func7
-  // FUNC7-BT-NEXT: [inlined] func8_inlined
-  // FUNC7-BT-NEXT: [inlined] func9_inlined
+  // FUNC7-BT-NEXT: func8_inlined
+  // FUNC7-BT-NEXT: func9_inlined
   // FUNC7-BT-NEXT: func10
   use<int &, int>(sink, x);
   use<int &, int>(dummy, 0);

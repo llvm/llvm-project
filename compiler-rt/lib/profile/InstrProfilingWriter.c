@@ -254,21 +254,21 @@ COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
   const VTableProfData *VTableEnd = __llvm_profile_end_vtables();
   const char *VNamesBegin = __llvm_profile_begin_vtabnames();
   const char *VNamesEnd = __llvm_profile_end_vtabnames();
+  uint64_t Version = __llvm_profile_get_version();
   return lprofWriteDataImpl(Writer, DataBegin, DataEnd, CountersBegin,
                             CountersEnd, BitmapBegin, BitmapEnd, VPDataReader,
                             NamesBegin, NamesEnd, VTableBegin, VTableEnd,
-                            VNamesBegin, VNamesEnd, SkipNameDataWrite);
+                            VNamesBegin, VNamesEnd, SkipNameDataWrite, Version);
 }
 
-COMPILER_RT_VISIBILITY int
-lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
-                   const __llvm_profile_data *DataEnd,
-                   const char *CountersBegin, const char *CountersEnd,
-                   const char *BitmapBegin, const char *BitmapEnd,
-                   VPDataReaderType *VPDataReader, const char *NamesBegin,
-                   const char *NamesEnd, const VTableProfData *VTableBegin,
-                   const VTableProfData *VTableEnd, const char *VNamesBegin,
-                   const char *VNamesEnd, int SkipNameDataWrite) {
+COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
+    ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
+    const __llvm_profile_data *DataEnd, const char *CountersBegin,
+    const char *CountersEnd, const char *BitmapBegin, const char *BitmapEnd,
+    VPDataReaderType *VPDataReader, const char *NamesBegin,
+    const char *NamesEnd, const VTableProfData *VTableBegin,
+    const VTableProfData *VTableEnd, const char *VNamesBegin,
+    const char *VNamesEnd, int SkipNameDataWrite, uint64_t Version) {
   /* Calculate size of sections. */
   const uint64_t DataSectionSize =
       __llvm_profile_get_data_size(DataBegin, DataEnd);
@@ -308,6 +308,7 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 #define INSTR_PROF_RAW_HEADER(Type, Name, Init) Header.Name = Init;
 #include "profile/InstrProfData.inc"
   }
+  Header.Version = Version;
 
   /* On WIN64, label differences are truncated 32-bit values. Truncate
    * CountersDelta to match. */

@@ -32,7 +32,8 @@ unsigned R600TTIImpl::getHardwareNumberOfRegisters(bool Vec) const {
   return 4 * 128; // XXX - 4 channels. Should these count as vector instead?
 }
 
-unsigned R600TTIImpl::getNumberOfRegisters(bool Vec) const {
+unsigned R600TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
+  bool Vec = ClassID == 1;
   return getHardwareNumberOfRegisters(Vec);
 }
 
@@ -82,7 +83,7 @@ bool R600TTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
   return isLegalToVectorizeMemChain(ChainSizeInBytes, Alignment, AddrSpace);
 }
 
-unsigned R600TTIImpl::getMaxInterleaveFactor(ElementCount VF) {
+unsigned R600TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
   // Disable unrolling if the loop is not vectorized.
   // TODO: Enable this again.
   if (VF.isScalar())
@@ -93,7 +94,7 @@ unsigned R600TTIImpl::getMaxInterleaveFactor(ElementCount VF) {
 
 InstructionCost R600TTIImpl::getCFInstrCost(unsigned Opcode,
                                             TTI::TargetCostKind CostKind,
-                                            const Instruction *I) {
+                                            const Instruction *I) const {
   if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency)
     return Opcode == Instruction::PHI ? 0 : 1;
 
@@ -109,8 +110,9 @@ InstructionCost R600TTIImpl::getCFInstrCost(unsigned Opcode,
 
 InstructionCost R600TTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                                 TTI::TargetCostKind CostKind,
-                                                unsigned Index, Value *Op0,
-                                                Value *Op1) {
+                                                unsigned Index,
+                                                const Value *Op0,
+                                                const Value *Op1) const {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
@@ -133,13 +135,13 @@ InstructionCost R600TTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
   }
 }
 
-void R600TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                          TTI::UnrollingPreferences &UP,
-                                          OptimizationRemarkEmitter *ORE) {
+void R600TTIImpl::getUnrollingPreferences(
+    Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP,
+    OptimizationRemarkEmitter *ORE) const {
   CommonTTI.getUnrollingPreferences(L, SE, UP, ORE);
 }
 
 void R600TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                        TTI::PeelingPreferences &PP) {
+                                        TTI::PeelingPreferences &PP) const {
   CommonTTI.getPeelingPreferences(L, SE, PP);
 }

@@ -173,6 +173,47 @@ MLIR_CAPI_EXPORTED bool
 mlirUniformQuantizedPerAxisTypeIsFixedPoint(MlirType type);
 
 //===---------------------------------------------------------------------===//
+// UniformQuantizedSubChannelType
+//===---------------------------------------------------------------------===//
+
+/// Returns `true` if the given type is a UniformQuantizedSubChannel.
+MLIR_CAPI_EXPORTED bool
+mlirTypeIsAUniformQuantizedSubChannelType(MlirType type);
+
+/// Creates a UniformQuantizedSubChannelType with the given parameters.
+///
+/// The type is owned by the context. `scalesAttr` and `zeroPointsAttr` must be
+/// DenseElementsAttrs.  `quantizedDimensions` and `blockSizes`
+/// point to `blockSizeInfoLength` number of elements, describing respectively
+/// the quantization axis and corresponding block size.
+MLIR_CAPI_EXPORTED MlirType mlirUniformQuantizedSubChannelTypeGet(
+    unsigned flags, MlirType storageType, MlirType expressedType,
+    MlirAttribute scalesAttr, MlirAttribute zeroPointsAttr,
+    intptr_t blockSizeInfoLength, int32_t *quantizedDimensions,
+    int64_t *blockSizes, int64_t storageTypeMin, int64_t storageTypeMax);
+
+/// Returns the number of block sizes provided in type.
+MLIR_CAPI_EXPORTED intptr_t
+mlirUniformQuantizedSubChannelTypeGetNumBlockSizes(MlirType type);
+
+/// Returns the quantized dimension at the given position.
+MLIR_CAPI_EXPORTED int32_t
+mlirUniformQuantizedSubChannelTypeGetQuantizedDimension(MlirType type,
+                                                        intptr_t pos);
+
+/// Returns the block size at the given position.
+MLIR_CAPI_EXPORTED int64_t
+mlirUniformQuantizedSubChannelTypeGetBlockSize(MlirType type, intptr_t pos);
+
+/// Returns the scales of the quantized type.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirUniformQuantizedSubChannelTypeGetScales(MlirType type);
+
+/// Returns the zero-points of the quantized type.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirUniformQuantizedSubChannelTypeGetZeroPoints(MlirType type);
+
+//===---------------------------------------------------------------------===//
 // CalibratedQuantizedType
 //===---------------------------------------------------------------------===//
 

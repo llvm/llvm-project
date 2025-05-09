@@ -454,62 +454,41 @@ void DiagnosticRenderer::emitSingleMacroExpansion(
                  SpellingRanges, {});
 }
 
-/// Check that the macro argument location of Loc starts with ArgumentLoc.
-/// The starting location of the macro expansions is used to differeniate
-/// different macro expansions.
-static bool checkLocForMacroArgExpansion(SourceLocation Loc,
-                                         const SourceManager &SM,
-                                         SourceLocation ArgumentLoc) {
-  SourceLocation MacroLoc;
-  if (SM.isMacroArgExpansion(Loc, &MacroLoc)) {
-    if (ArgumentLoc == MacroLoc) return true;
-  }
-
-  return false;
-}
-
-/// Check if all the locations in the range have the same macro argument
-/// expansion, and that the expansion starts with ArgumentLoc.
-static bool checkRangeForMacroArgExpansion(CharSourceRange Range,
-                                           const SourceManager &SM,
-                                           SourceLocation ArgumentLoc) {
-  SourceLocation BegLoc = Range.getBegin(), EndLoc = Range.getEnd();
-  while (BegLoc != EndLoc) {
-    if (!checkLocForMacroArgExpansion(BegLoc, SM, ArgumentLoc))
-      return false;
-    BegLoc.getLocWithOffset(1);
-  }
-
-  return checkLocForMacroArgExpansion(BegLoc, SM, ArgumentLoc);
-}
-
 /// A helper function to check if the current ranges are all inside the same
 /// macro argument expansion as Loc.
-static bool checkRangesForMacroArgExpansion(FullSourceLoc Loc,
-                                            ArrayRef<CharSourceRange> Ranges) {
+static bool
+rangesInsideSameMacroArgExpansion(FullSourceLoc Loc,
+                                  ArrayRef<CharSourceRange> Ranges) {
   assert(Loc.isMacroID() && "Must be a macro expansion!");
 
-  SmallVector<CharSourceRange, 4> SpellingRanges;
+  SmallVector<CharSourceRange> SpellingRanges;
   mapDiagnosticRanges(Loc, Ranges, SpellingRanges);
 
-  // Count all valid ranges.
   unsigned ValidCount =
       llvm::count_if(Ranges, [](const auto &R) { return R.isValid(); });
-
   if (ValidCount > SpellingRanges.size())
     return false;
 
-  // To store the source location of the argument location.
-  FullSourceLoc ArgumentLoc;
+  const SourceManager &SM = Loc.getManager();
+  for (const auto &R : Ranges) {
+    // All positions in the range need to point to Loc.
+    SourceLocation Begin = R.getBegin();
+    if (Begin == R.getEnd()) {
+      if (!SM.isMacroArgExpansion(Begin))
+        return false;
+      continue;
+    }
 
-  // Set the ArgumentLoc to the beginning location of the expansion of Loc
-  // so to check if the ranges expands to the same beginning location.
-  if (!Loc.isMacroArgExpansion(&ArgumentLoc))
-    return false;
+    while (Begin != R.getEnd()) {
+      SourceLocation MacroLoc;
+      if (!SM.isMacroArgExpansion(Begin, &MacroLoc))
+        return false;
+      if (MacroLoc != Loc)
+        return false;
 
-  for (const auto &Range : SpellingRanges)
-    if (!checkRangeForMacroArgExpansion(Range, Loc.getManager(), ArgumentLoc))
-      return false;
+      Begin = Begin.getLocWithOffset(1);
+    }
+  }
 
   return true;
 }
@@ -539,13 +518,13 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
   while (L.isMacroID()) {
     // If this is the expansion of a macro argument, point the caret at the
     // use of the argument in the definition of the macro, not the expansion.
-    if (SM.isMacroArgExpansion(L))
+    if (SM.isMacroArgExpansion(L)) {
       LocationStack.push_back(SM.getImmediateExpansionRange(L).getBegin());
-    else
-      LocationStack.push_back(L);
 
-    if (checkRangesForMacroArgExpansion(FullSourceLoc(L, SM), Ranges))
-      IgnoredEnd = LocationStack.size();
+      if (rangesInsideSameMacroArgExpansion(FullSourceLoc(L, SM), Ranges))
+        IgnoredEnd = LocationStack.size();
+    } else
+      LocationStack.push_back(L);
 
     L = SM.getImmediateMacroCallerLoc(L);
 

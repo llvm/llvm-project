@@ -225,6 +225,18 @@ struct IfOpConversion : SCFToSPIRVPattern<scf::IfOp> {
     // subsequently converges.
     auto loc = ifOp.getLoc();
 
+    // Compute return types.
+    SmallVector<Type, 8> returnTypes;
+    for (auto result : ifOp.getResults()) {
+      auto convertedType = typeConverter.convertType(result.getType());
+      if (!convertedType)
+        return rewriter.notifyMatchFailure(
+            loc,
+            llvm::formatv("failed to convert type '{0}'", result.getType()));
+
+      returnTypes.push_back(convertedType);
+    }
+
     // Create `spirv.selection` operation, selection header block and merge
     // block.
     auto selectionOp =
@@ -261,16 +273,6 @@ struct IfOpConversion : SCFToSPIRVPattern<scf::IfOp> {
                                                 thenBlock, ArrayRef<Value>(),
                                                 elseBlock, ArrayRef<Value>());
 
-    SmallVector<Type, 8> returnTypes;
-    for (auto result : ifOp.getResults()) {
-      auto convertedType = typeConverter.convertType(result.getType());
-      if (!convertedType)
-        return rewriter.notifyMatchFailure(
-            loc,
-            llvm::formatv("failed to convert type '{0}'", result.getType()));
-
-      returnTypes.push_back(convertedType);
-    }
     replaceSCFOutputValue(ifOp, selectionOp, rewriter, scfToSPIRVContext,
                           returnTypes);
     return success();

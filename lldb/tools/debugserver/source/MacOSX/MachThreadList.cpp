@@ -23,8 +23,7 @@
 #include <memory>
 
 MachThreadList::MachThreadList()
-    : m_threads(), m_threads_mutex(PTHREAD_MUTEX_RECURSIVE),
-      m_is_64_bit(false) {}
+    : m_threads(), m_threads_mutex(), m_is_64_bit(false) {}
 
 MachThreadList::~MachThreadList() = default;
 
@@ -116,7 +115,7 @@ const char *MachThreadList::GetThreadInfo(nub_thread_t tid) const {
 }
 
 MachThreadSP MachThreadList::GetThreadByID(nub_thread_t tid) const {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   MachThreadSP thread_sp;
   const size_t num_threads = m_threads.size();
   for (size_t idx = 0; idx < num_threads; ++idx) {
@@ -130,7 +129,7 @@ MachThreadSP MachThreadList::GetThreadByID(nub_thread_t tid) const {
 
 MachThreadSP
 MachThreadList::GetThreadByMachPortNumber(thread_t mach_port_number) const {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   MachThreadSP thread_sp;
   const size_t num_threads = m_threads.size();
   for (size_t idx = 0; idx < num_threads; ++idx) {
@@ -144,7 +143,7 @@ MachThreadList::GetThreadByMachPortNumber(thread_t mach_port_number) const {
 
 nub_thread_t
 MachThreadList::GetThreadIDByMachPortNumber(thread_t mach_port_number) const {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   MachThreadSP thread_sp;
   const size_t num_threads = m_threads.size();
   for (size_t idx = 0; idx < num_threads; ++idx) {
@@ -157,7 +156,7 @@ MachThreadList::GetThreadIDByMachPortNumber(thread_t mach_port_number) const {
 
 thread_t MachThreadList::GetMachPortNumberByThreadID(
     nub_thread_t globally_unique_id) const {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   MachThreadSP thread_sp;
   const size_t num_threads = m_threads.size();
   for (size_t idx = 0; idx < num_threads; ++idx) {
@@ -219,12 +218,12 @@ bool MachThreadList::RestoreRegisterState(nub_thread_t tid, uint32_t save_id) {
 }
 
 nub_size_t MachThreadList::NumThreads() const {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   return m_threads.size();
 }
 
 nub_thread_t MachThreadList::ThreadIDAtIndex(nub_size_t idx) const {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   if (idx < m_threads.size())
     return m_threads[idx]->ThreadID();
   return INVALID_NUB_THREAD;
@@ -248,7 +247,7 @@ bool MachThreadList::NotifyException(MachException::Data &exc) {
 }
 
 void MachThreadList::Clear() {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   m_threads.clear();
 }
 
@@ -259,7 +258,7 @@ MachThreadList::UpdateThreadList(MachProcess *process, bool update,
   DNBLogThreadedIf(LOG_THREAD, "MachThreadList::UpdateThreadList (pid = %4.4x, "
                                "update = %u) process stop count = %u",
                    process->ProcessID(), update, process->StopCount());
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
 
   if (process->StopCount() == 0) {
     int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, process->ProcessID()};
@@ -346,8 +345,7 @@ MachThreadList::UpdateThreadList(MachProcess *process, bool update,
 }
 
 void MachThreadList::CurrentThread(MachThreadSP &thread_sp) {
-  // locker will keep a mutex locked until it goes out of scope
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   if (m_current_thread.get() == NULL) {
     // Figure out which thread is going to be our current thread.
     // This is currently done by finding the first thread in the list
@@ -364,7 +362,7 @@ void MachThreadList::CurrentThread(MachThreadSP &thread_sp) {
 }
 
 void MachThreadList::Dump() const {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   const size_t num_threads = m_threads.size();
   for (uint32_t idx = 0; idx < num_threads; ++idx) {
     m_threads[idx]->Dump(idx);
@@ -373,7 +371,7 @@ void MachThreadList::Dump() const {
 
 void MachThreadList::ProcessWillResume(
     MachProcess *process, const DNBThreadResumeActions &thread_actions) {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
 
   // Update our thread list, because sometimes libdispatch or the kernel
   // will spawn threads while a task is suspended.
@@ -447,7 +445,7 @@ void MachThreadList::ProcessWillResume(
 }
 
 uint32_t MachThreadList::ProcessDidStop(MachProcess *process) {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   // Update our thread list
   const uint32_t num_threads = UpdateThreadList(process, true);
   for (uint32_t idx = 0; idx < num_threads; ++idx) {
@@ -466,7 +464,7 @@ uint32_t MachThreadList::ProcessDidStop(MachProcess *process) {
 //    true if we should stop and notify our clients
 //    false if we should resume our child process and skip notification
 bool MachThreadList::ShouldStop(bool &step_more) {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   uint32_t should_stop = false;
   const size_t num_threads = m_threads.size();
   for (uint32_t idx = 0; !should_stop && idx < num_threads; ++idx) {
@@ -476,7 +474,7 @@ bool MachThreadList::ShouldStop(bool &step_more) {
 }
 
 void MachThreadList::NotifyBreakpointChanged(const DNBBreakpoint *bp) {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   const size_t num_threads = m_threads.size();
   for (uint32_t idx = 0; idx < num_threads; ++idx) {
     m_threads[idx]->NotifyBreakpointChanged(bp);
@@ -489,7 +487,7 @@ uint32_t MachThreadList::DoHardwareBreakpointAction(
     return INVALID_NUB_HW_INDEX;
 
   uint32_t hw_index = INVALID_NUB_HW_INDEX;
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   const size_t num_threads = m_threads.size();
   // On Mac OS X we have to prime the control registers for new threads.  We do
   // this using the control register data for the first thread, for lack of a
@@ -555,7 +553,7 @@ bool MachThreadList::DisableHardwareBreakpoint(const DNBBreakpoint *bp) const {
 }
 
 uint32_t MachThreadList::NumSupportedHardwareWatchpoints() const {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   const size_t num_threads = m_threads.size();
   // Use an arbitrary thread to retrieve the number of supported hardware
   // watchpoints.
@@ -566,7 +564,7 @@ uint32_t MachThreadList::NumSupportedHardwareWatchpoints() const {
 
 uint32_t MachThreadList::GetThreadIndexForThreadStoppedWithSignal(
     const int signo) const {
-  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   uint32_t should_stop = false;
   const size_t num_threads = m_threads.size();
   for (uint32_t idx = 0; !should_stop && idx < num_threads; ++idx) {

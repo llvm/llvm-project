@@ -18,24 +18,19 @@
 #include "test_macros.h"
 #include "MoveOnly.h"
 
-
 template <class C>
-C
-make(int n)
-{
-    C c;
-    for (int i = 0; i < n; ++i)
-        c.push_back(MoveOnly(i));
-    return c;
+C make(int n) {
+  C c;
+  for (int i = 0; i < n; ++i)
+    c.push_back(MoveOnly(i));
+  return c;
 }
 
-
-int main(int, char**)
-{
-    std::priority_queue<MoveOnly> qo(std::less<MoveOnly>(), make<std::vector<MoveOnly> >(5));
-    std::priority_queue<MoveOnly> q = std::move(qo);
-    assert(q.size() == 5);
-    assert(q.top() == MoveOnly(4));
+int main(int, char**) {
+  std::priority_queue<MoveOnly> qo(std::less<MoveOnly>(), make<std::vector<MoveOnly> >(5));
+  std::priority_queue<MoveOnly> q = std::move(qo);
+  assert(q.size() == 5);
+  assert(q.top() == MoveOnly(4));
 
   return 0;
 }

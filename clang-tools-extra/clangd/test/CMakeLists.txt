@@ -3,13 +3,16 @@ set(CLANGD_TEST_DEPS
   ClangdTests
   clangd-indexer
   split-file
-  # No tests for it, but we should still make sure they build.
-  dexp
   )
 
 if(CLANGD_BUILD_XPC)
   list(APPEND CLANGD_TEST_DEPS clangd-xpc-test-client)
   list(APPEND CLANGD_TEST_DEPS ClangdXpcUnitTests)
+endif()
+
+if(CLANGD_BUILD_DEXP)
+  # No tests for it, but we should still make sure they build.
+  list(APPEND CLANGD_TEST_DEPS dexp)
 endif()
 
 if(CLANGD_ENABLE_REMOTE)

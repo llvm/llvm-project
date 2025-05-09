@@ -22,6 +22,9 @@ define amdgpu_kernel void @constant_load_f64(ptr addrspace(1) %out, ptr addrspac
 ; GFX7-HSA-LABEL: constant_load_f64:
 ; GFX7-HSA:       ; %bb.0:
 ; GFX7-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GFX7-HSA-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-HSA-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-HSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-HSA-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; GFX7-HSA-NEXT:    v_mov_b32_e32 v0, s0
@@ -90,7 +93,10 @@ define amdgpu_kernel void @constant_load_2v4f64(ptr addrspace(4) noalias nocaptu
 ;
 ; GFX7-HSA-LABEL: constant_load_2v4f64:
 ; GFX7-HSA:       ; %bb.0: ; %entry
+; GFX7-HSA-NEXT:    s_add_i32 s12, s12, s17
 ; GFX7-HSA-NEXT:    s_load_dwordx4 s[16:19], s[8:9], 0x0
+; GFX7-HSA-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-HSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-HSA-NEXT:    s_load_dwordx2 s[20:21], s[18:19], 0x0
 ; GFX7-HSA-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0

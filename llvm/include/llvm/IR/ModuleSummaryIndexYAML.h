@@ -9,8 +9,10 @@
 #ifndef LLVM_IR_MODULESUMMARYINDEXYAML_H
 #define LLVM_IR_MODULESUMMARYINDEXYAML_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <algorithm>
 
 namespace llvm {
 namespace yaml {
@@ -229,8 +231,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           static_cast<GlobalValueSummary::ImportKind>(GVSum.ImportType));
       if (GVSum.Aliasee) {
         auto ASum = std::make_unique<AliasSummary>(GVFlags);
-        if (!V.count(*GVSum.Aliasee))
-          V.emplace(*GVSum.Aliasee, /*IsAnalysis=*/false);
+        V.try_emplace(*GVSum.Aliasee, /*IsAnalysis=*/false);
         ValueInfo AliaseeVI(/*IsAnalysis=*/false, &*V.find(*GVSum.Aliasee));
         // Note: Aliasee cannot be filled until all summaries are loaded.
         // This is done in fixAliaseeLinks() which is called in
@@ -313,7 +314,7 @@ template <> struct CustomMappingTraits<TypeIdSummaryMapTy> {
   static void inputOne(IO &io, StringRef Key, TypeIdSummaryMapTy &V) {
     TypeIdSummary TId;
     io.mapRequired(Key.str().c_str(), TId);
-    V.insert({GlobalValue::getGUID(Key), {Key, TId}});
+    V.insert({GlobalValue::getGUIDAssumingExternalLinkage(Key), {Key, TId}});
   }
   static void output(IO &io, TypeIdSummaryMapTy &V) {
     for (auto &TidIter : V)
@@ -346,11 +347,11 @@ template <> struct MappingTraits<ModuleSummaryIndex> {
                    index.WithGlobalValueDeadStripping);
 
     if (io.outputting()) {
-      std::vector<std::string> CfiFunctionDefs(index.CfiFunctionDefs.begin(),
-                                               index.CfiFunctionDefs.end());
+      auto CfiFunctionDefs = index.CfiFunctionDefs.symbols();
+      llvm::sort(CfiFunctionDefs);
       io.mapOptional("CfiFunctionDefs", CfiFunctionDefs);
-      std::vector<std::string> CfiFunctionDecls(index.CfiFunctionDecls.begin(),
-                                                index.CfiFunctionDecls.end());
+      auto CfiFunctionDecls(index.CfiFunctionDecls.symbols());
+      llvm::sort(CfiFunctionDecls);
       io.mapOptional("CfiFunctionDecls", CfiFunctionDecls);
     } else {
       std::vector<std::string> CfiFunctionDefs;

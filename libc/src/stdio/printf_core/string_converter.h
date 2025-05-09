@@ -20,7 +20,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-LIBC_INLINE int convert_string(Writer *writer, const FormatSection &to_conv) {
+template <WriteMode write_mode>
+LIBC_INLINE int convert_string(Writer<write_mode> *writer,
+                               const FormatSection &to_conv) {
   size_t string_len = 0;
   const char *str_ptr = reinterpret_cast<const char *>(to_conv.conv_val_ptr);
 

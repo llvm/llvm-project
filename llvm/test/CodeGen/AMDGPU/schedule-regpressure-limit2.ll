@@ -1,7 +1,11 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -misched=gcn-iterative-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=SI-MINREG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -misched=gcn-iterative-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck --check-prefix=SI-MAXOCC %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -misched=gcn-iterative-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=VI %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -misched=gcn-iterative-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck --check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=SI-MINREG %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-maxocc -verify-machineinstrs < %s | FileCheck --check-prefix=SI-MAXOCC %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -misched=gcn-iterative-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=VI-MINREG %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -misched=gcn-iterative-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck --check-prefix=VI-MAXOCC %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=VI-MINREG %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-maxocc -verify-machineinstrs < %s | FileCheck --check-prefix=VI-MAXOCC %s
 
 ; SI-MINREG: NumSgprs: {{[1-9]$}}
 ; SI-MINREG: NumVgprs: {{[1-9]$}}
@@ -10,8 +14,12 @@
 ; SI-MAXOCC: NumVgprs: {{[1-4]?[0-9]$}}
 
 ; stores may alias loads
-; VI: NumSgprs: {{[0-9]$}}
-; VI: NumVgprs: {{[1-3][0-9]$}}
+; VI-MINREG: NumSgprs: {{[0-9]$}}
+; VI-MINREG: NumVgprs: {{[1-3][0-9]$}}
+
+; stores may alias loads
+; VI-MAXOCC: NumSgprs: {{[1-3][0-9]$}}
+; VI-MAXOCC: NumVgprs: {{[1-6][0-9]$}}
 
 define amdgpu_kernel void @load_fma_store(ptr addrspace(3) nocapture readonly %in_arg, ptr addrspace(1) nocapture %out_arg) {
 bb:

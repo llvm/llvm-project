@@ -397,6 +397,42 @@ define double @no_sat_fmin_inf(ptr %addr) {
   ret double %res
 }
 
+define double @sat_fmaximum_inf(ptr %addr) {
+; CHECK-LABEL: @sat_fmaximum_inf(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fmaximum ptr [[ADDR:%.*]], double 0x7FF0000000000000 monotonic, align 8
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fmaximum ptr %addr, double 0x7FF0000000000000 monotonic
+  ret double %res
+}
+
+define double @no_sat_fmaximum_inf(ptr %addr) {
+; CHECK-LABEL: @no_sat_fmaximum_inf(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fmaximum ptr [[ADDR:%.*]], double 1.000000e-01 monotonic, align 8
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fmaximum ptr %addr, double 1.000000e-01 monotonic
+  ret double %res
+}
+
+define double @sat_fminimum_inf(ptr %addr) {
+; CHECK-LABEL: @sat_fminimum_inf(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fminimum ptr [[ADDR:%.*]], double 0xFFF0000000000000 monotonic, align 8
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fminimum ptr %addr, double 0xFFF0000000000000 monotonic
+  ret double %res
+}
+
+define double @no_sat_fminimum_inf(ptr %addr) {
+; CHECK-LABEL: @no_sat_fminimum_inf(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fminimum ptr [[ADDR:%.*]], double 1.000000e-01 monotonic, align 8
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fminimum ptr %addr, double 1.000000e-01 monotonic
+  ret double %res
+}
+
 ; Idempotent atomicrmw are still canonicalized.
 define i32 @atomic_add_zero_preserve_md(ptr %addr) {
 ; CHECK-LABEL: @atomic_add_zero_preserve_md(
@@ -785,6 +821,42 @@ define double @no_sat_fmin_inf_preserve_md(ptr %addr) {
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fmin ptr %addr, double 1.000000e-01 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret double %res
+}
+
+define double @sat_fmaximum_inf_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_fmaximum_inf_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fmaximum ptr [[ADDR:%.*]], double 0x7FF0000000000000 syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fmaximum ptr %addr, double 0x7FF0000000000000 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret double %res
+}
+
+define double @no_sat_fmaximum_inf_preserve_md(ptr %addr) {
+; CHECK-LABEL: @no_sat_fmaximum_inf_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fmaximum ptr [[ADDR:%.*]], double 1.000000e-01 syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fmaximum ptr %addr, double 1.000000e-01 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret double %res
+}
+
+define double @sat_fminimum_inf_preserve_md(ptr %addr) {
+; CHECK-LABEL: @sat_fminimum_inf_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fminimum ptr [[ADDR:%.*]], double 0xFFF0000000000000 syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fminimum ptr %addr, double 0xFFF0000000000000 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  ret double %res
+}
+
+define double @no_sat_fminimum_inf_preserve_md(ptr %addr) {
+; CHECK-LABEL: @no_sat_fminimum_inf_preserve_md(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fminimum ptr [[ADDR:%.*]], double 1.000000e-01 syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = atomicrmw fminimum ptr %addr, double 1.000000e-01 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
   ret double %res
 }
 

@@ -407,14 +407,14 @@ namespace cwg638 { // cwg638: no
 
   class X {
     typedef int type;
-    template<class T> friend struct A<T>::B; 
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'X'}}
+    template<class T> friend struct A<T>::B;
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::f();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'X'}}
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::g();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'X'}}
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::C::h();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::C::' for friend class declaration is not supported; turning off access control for 'X'}}
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>::C' for friend class declaration is not supported; turning off access control for 'X'}}
   };
 
   template<> struct A<int> {
@@ -1078,7 +1078,7 @@ namespace cwg677 { // cwg677: no
   struct A {
     void *operator new(std::size_t);
     void operator delete(void*) = delete; // #cwg677-A-delete
-    // cxx98-error@-1 {{deleted function definitions are a C++11 extension}} 
+    // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
   };
   struct B {
     void *operator new(std::size_t);

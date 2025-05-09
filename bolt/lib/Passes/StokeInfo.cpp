@@ -21,7 +21,7 @@ using namespace llvm;
 using namespace bolt;
 
 namespace opts {
-cl::OptionCategory StokeOptCategory("STOKE pass options");
+static cl::OptionCategory StokeOptCategory("STOKE pass options");
 
 static cl::opt<std::string>
 StokeOutputDataFilename("stoke-out",

@@ -106,12 +106,12 @@ define <32 x i1> @fv32(ptr %p, i64 %index, i64 %tc) {
 ; CHECK-NEXT:    lui a0, %hi(.LCPI8_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI8_0)
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vid.v v16
-; CHECK-NEXT:    vsaddu.vx v16, v16, a1
-; CHECK-NEXT:    vmsltu.vx v0, v16, a2
-; CHECK-NEXT:    vsext.vf8 v16, v8
-; CHECK-NEXT:    vsaddu.vx v8, v16, a1
+; CHECK-NEXT:    vle8.v v16, (a0)
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vsaddu.vx v8, v8, a1
+; CHECK-NEXT:    vmsltu.vx v0, v8, a2
+; CHECK-NEXT:    vsext.vf8 v8, v16
+; CHECK-NEXT:    vsaddu.vx v8, v8, a1
 ; CHECK-NEXT:    vmsltu.vx v16, v8, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v0, v16, 2

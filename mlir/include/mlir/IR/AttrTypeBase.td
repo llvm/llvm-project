@@ -383,6 +383,14 @@ class StringRefParameter<string desc = "", string value = ""> :
   let defaultValue = value;
 }
 
+// For APInts, which require comparison supporting different bitwidths. The
+// default APInt comparison operator asserts when the bitwidths differ, so
+// a custom implementation is necessary.
+class APIntParameter<string desc> :
+    AttrOrTypeParameter<"::llvm::APInt", desc> {
+  let comparator = "$_lhs.getBitWidth() == $_rhs.getBitWidth() && $_lhs == $_rhs";
+}
+
 // For APFloats, which require comparison.
 class APFloatParameter<string desc> :
     AttrOrTypeParameter<"::llvm::APFloat", desc> {

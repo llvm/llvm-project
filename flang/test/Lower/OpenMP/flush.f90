@@ -10,7 +10,7 @@ subroutine flush_standalone(a, b, c)
 !CHECK:    %[[A:.*]]:2 = hlfir.declare %[[ARG_A]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFflush_standaloneEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[B:.*]]:2 = hlfir.declare %[[ARG_B]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFflush_standaloneEb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[C:.*]]:2 = hlfir.declare %[[ARG_C]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFflush_standaloneEc"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    omp.flush(%[[A]]#1, %[[B]]#1, %[[C]]#1 : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>)
+!CHECK:    omp.flush(%[[A]]#0, %[[B]]#0, %[[C]]#0 : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    omp.flush
 !$omp flush(a,b,c)
 !$omp flush
@@ -27,7 +27,7 @@ subroutine flush_parallel(a, b, c)
 
 !$omp parallel
 !CHECK:    omp.parallel
-!CHECK:      omp.flush(%[[A]]#1, %[[B]]#1, %[[C]]#1 : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>)
+!CHECK:      omp.flush(%[[A]]#0, %[[B]]#0, %[[C]]#0 : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>)
 !CHECK:      omp.flush
 !$omp flush(a,b,c)
 !$omp flush

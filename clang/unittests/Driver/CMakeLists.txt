@@ -1,11 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  ${LLVM_TARGETS_TO_BUILD}
-  MC
-  Option
-  Support
-  TargetParser
-  )
-
 add_clang_unittest(ClangDriverTests
   DistroTest.cpp
   DXCModeTest.cpp
@@ -15,12 +7,15 @@ add_clang_unittest(ClangDriverTests
   MultilibBuilderTest.cpp
   MultilibTest.cpp
   SanitizerArgsTest.cpp
-  )
-
-clang_target_link_libraries(ClangDriverTests
-  PRIVATE
+  CLANG_LIBS
   clangDriver
   clangBasic
   clangFrontend # For TextDiagnosticPrinter.
   clangSerialization
+  LLVM_COMPONENTS
+  ${LLVM_TARGETS_TO_BUILD}
+  MC
+  Option
+  Support
+  TargetParser
   )

@@ -17,8 +17,6 @@
 #ifndef MLIR_REDUCER_TESTER_H
 #define MLIR_REDUCER_TESTER_H
 
-#include <vector>
-
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"

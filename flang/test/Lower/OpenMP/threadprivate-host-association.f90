@@ -6,7 +6,7 @@
 !CHECK: func.func @_QQmain() attributes {fir.bindc_name = "main"} {
 !CHECK:   %[[A:.*]] = fir.address_of(@_QFEa) : !fir.ref<i32>
 !CHECK:   %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:   %[[TP_A:.*]] = omp.threadprivate %[[A_DECL]]#1 : !fir.ref<i32> -> !fir.ref<i32>
+!CHECK:   %[[TP_A:.*]] = omp.threadprivate %[[A_DECL]]#0 : !fir.ref<i32> -> !fir.ref<i32>
 !CHECK:   %[[TP_A_DECL:.*]]:2 = hlfir.declare %[[TP_A]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   fir.call @_QFPsub() fastmath<contract> : () -> ()
 !CHECK:   return
@@ -14,10 +14,10 @@
 !CHECK: func.func private @_QFPsub() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
 !CHECK:   %[[A:.*]] = fir.address_of(@_QFEa) : !fir.ref<i32>
 !CHECK:   %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:   %[[TP_A:.*]] = omp.threadprivate %[[A_DECL]]#1 : !fir.ref<i32> -> !fir.ref<i32>
+!CHECK:   %[[TP_A:.*]] = omp.threadprivate %[[A_DECL]]#0 : !fir.ref<i32> -> !fir.ref<i32>
 !CHECK:   %[[TP_A_DECL:.*]]:2 = hlfir.declare %[[TP_A]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   omp.parallel {
-!CHECK:     %[[PAR_TP_A:.*]] = omp.threadprivate %[[A_DECL]]#1 : !fir.ref<i32> -> !fir.ref<i32>
+!CHECK:     %[[PAR_TP_A:.*]] = omp.threadprivate %[[A_DECL]]#0 : !fir.ref<i32> -> !fir.ref<i32>
 !CHECK:     %[[PAR_TP_A_DECL:.*]]:2 = hlfir.declare %[[PAR_TP_A]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:     %{{.*}} = fir.load %[[PAR_TP_A_DECL]]#0 : !fir.ref<i32>
 !CHECK:     omp.terminator

@@ -211,8 +211,17 @@ defm V_CUBEMA_F32 : VOP3Inst <"v_cubema_f32", VOP3_Profile<VOP_F32_F32_F32_F32>,
 defm V_BFE_U32 : VOP3Inst <"v_bfe_u32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMDGPUbfe_u32>;
 defm V_BFE_I32 : VOP3Inst <"v_bfe_i32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMDGPUbfe_i32>;
 defm V_BFI_B32 : VOP3Inst <"v_bfi_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMDGPUbfi>;
-defm V_ALIGNBIT_B32 : VOP3Inst <"v_alignbit_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, fshr>;
+defm V_ALIGNBIT_B32 : VOP3Inst_t16_with_profiles <"v_alignbit_b32",
+                                                   VOP3_Profile<VOP_I32_I32_I32_I32>,
+                                                   VOP3_Profile_True16<VOP_I32_I32_I32_I16, VOP3_OPSEL>,
+                                                   VOP3_Profile_Fake16<VOP_I32_I32_I32_I16, VOP3_OPSEL>,
+                                                   fshr, null_frag>;
+
 defm V_ALIGNBYTE_B32 : VOP3Inst <"v_alignbyte_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_alignbyte>;
+let True16Predicate = UseRealTrue16Insts in
+defm V_ALIGNBYTE_B32_t16 : VOP3Inst <"v_alignbyte_b32_t16", VOP3_Profile_True16<VOP_I32_I32_I32_I16, VOP3_OPSEL>>;
+let True16Predicate = UseFakeTrue16Insts in
+defm V_ALIGNBYTE_B32_fake16 : VOP3Inst <"v_alignbyte_b32_fake16", VOP3_Profile_Fake16<VOP_I32_I32_I32_I16, VOP3_OPSEL>>;
 
 // XXX - No FPException seems suspect but manual doesn't say it does
 let mayRaiseFPException = 0 in {
@@ -250,6 +259,25 @@ let SchedRW = [WriteDoubleAdd], FPDPRounding = 1 in {
 } // End SchedRW = [WriteDoubleAdd], FPDPRounding = 1
 } // End isReMaterializable = 1
 
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat <
+(i32 (int_amdgcn_alignbyte (i32 (VOP3OpSelMods i32:$src0, i32:$src0_modifiers)),
+                           (i32 (VOP3OpSelMods i32:$src1, i32:$src1_modifiers)),
+                           (i32 (VOP3OpSelMods i32:$src2, i32:$src2_modifiers)))),
+(V_ALIGNBYTE_B32_fake16_e64 i32:$src0_modifiers, VSrc_b32:$src0,
+                            i32:$src1_modifiers, VSrc_b32:$src1,
+                            i32:$src2_modifiers, VGPR_32:$src2)
+>;
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <
+(i32 (int_amdgcn_alignbyte (i32 (VOP3OpSelMods i32:$src0, i32:$src0_modifiers)),
+                           (i32 (VOP3OpSelMods i32:$src1, i32:$src1_modifiers)),
+                           (i32 (VOP3OpSelMods i32:$src2, i32:$src2_modifiers)))),
+(V_ALIGNBYTE_B32_t16_e64 i32:$src0_modifiers, VSrc_b32:$src0,
+                         i32:$src1_modifiers, VSrc_b32:$src1,
+                         i32:$src2_modifiers, (i16 (EXTRACT_SUBREG VGPR_32:$src2, lo16)))
+>;
 
 let mayRaiseFPException = 0 in { // Seems suspicious but manual doesn't say it does.
   let SchedRW = [WriteFloatFMA, WriteSALU] in
@@ -528,27 +556,16 @@ def shl_0_to_4 : PatFrag<
 }
 
 def VOP3_CVT_PK_F8_F32_Profile : VOP3_Profile<VOP_I32_F32_F32, VOP3_OPSEL> {
-  let InsVOP3OpSel = (ins FP32InputMods:$src0_modifiers, Src0RC64:$src0,
-                          FP32InputMods:$src1_modifiers, Src1RC64:$src1,
-                          VGPR_32:$vdst_in, op_sel0:$op_sel);
-  let InsVOP3DPP = (ins VGPR_32:$old,
-                        FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
-                        FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
-                        VGPR_32:$vdst_in, op_sel0:$op_sel,
-                        dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
-                        DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
-
-  let InsVOP3DPP16 = (ins VGPR_32:$old,
-                          FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
-                          FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
-                          VGPR_32:$vdst_in, op_sel0:$op_sel,
-                          dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
-                          DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi);
-  let InsVOP3DPP8 = (ins VGPR_32:$old,
-                         FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
-                         FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
-                         VGPR_32:$vdst_in, op_sel0:$op_sel, dpp8:$dpp8, Dpp8FI:$fi);
-
+  defvar Tail = (ins VGPR_32:$vdst_in, op_sel0:$op_sel);
+  let InsVOP3OpSel = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
+                                   0, HasModifiers, HasSrc2Mods,
+                                   HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
+                          Tail);
+  let InsVOP3Base = !con(getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
+                                        Src2VOP3DPP, NumSrcArgs, 0, HasModifiers,
+                                        HasSrc2Mods, HasOMod, Src0ModVOP3DPP, Src1ModVOP3DPP,
+                                        Src2ModVOP3DPP, false>.ret,
+                         Tail);
   let HasClamp = 0;
   let HasExtVOP3DPP = 1;
 }
@@ -662,7 +679,7 @@ defm V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32
 
 // V_LSHL_ADD_U64: D0.u64 = (S0.u64 << S1.u[2:0]) + S2.u64
 // src0 is shifted left by 0-4 (use “0” to get ADD_U64).
-let SubtargetPredicate = isGFX940Plus in
+let SubtargetPredicate = HasLshlAddU64Inst in
 defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", VOP3_Profile<VOP_I64_I64_I32_I64>>;
 
 let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
@@ -1027,8 +1044,12 @@ class VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<ValueType Src0Ty> :
   let HasFP4DstByteSel = 1;
 }
 
-def VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile : VOP3_Profile<VOPProfile<[i32, v2f32, i32, f32]>, VOP3_OPSEL> {
-  let InsVOP3OpSel = (ins PackedF32InputMods: $src0_modifiers, Src0RC64:$src0,
+class VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile<VOPProfile P>
+    : VOP3_Profile<P, VOP3_OPSEL> {
+
+  let Src0RC64 = !if(!gt(P.Src0VT.Size, 32), getVOP3VRegSrcForVT<P.Src0VT>.ret,
+                     getVOP3SrcForVT<P.Src0VT>.ret);
+  let InsVOP3OpSel = (ins PackedVGPRF32InputMods: $src0_modifiers, Src0RC64:$src0,
                           Int32InputMods:     $src1_modifiers, Src1RC64:$src1,
                           FP32InputMods:      $src2_modifiers, Src2RC64:$src2,
                           VGPR_32:$vdst_in,   op_sel0:$op_sel);
@@ -1075,6 +1096,11 @@ class VOP3_CVT_SCALEF32_PK_F864_Profile<VOPProfile P> : VOP3_Profile<P> {
   let HasExt32BitDPP = 0;
   let HasExtVOP3DPP = 0;
   let HasExt64BitDPP = 0;
+
+  // All convert opcodes operating on FP6/BF6/FP4 data must use VGPR sources for
+  // any operand slots > 32 bit.
+  let Src0RC64 = !if(!gt(P.Src0VT.Size, 32), getVOP3VRegSrcForVT<P.Src0VT>.ret,
+                     getVOP3SrcForVT<P.Src0VT>.ret);
 }
 
 let SubtargetPredicate = HasFP8ConversionScaleInsts, mayRaiseFPException = 0 in {
@@ -1116,7 +1142,10 @@ let SubtargetPredicate = HasFP4ConversionScaleInsts, mayRaiseFPException = 0 in 
     let Constraints = "@earlyclobber $vdst" in {
       defm V_CVT_SCALEF32_SR_PK_FP4_F16:  VOP3Inst<"v_cvt_scalef32_sr_pk_fp4_f16", VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<v2f16>>;
       defm V_CVT_SCALEF32_SR_PK_FP4_BF16: VOP3Inst<"v_cvt_scalef32_sr_pk_fp4_bf16", VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<v2bf16>>;
-      defm V_CVT_SCALEF32_SR_PK_FP4_F32:  VOP3Inst<"v_cvt_scalef32_sr_pk_fp4_f32", VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile>;
+      defm V_CVT_SCALEF32_SR_PK_FP4_F32
+          : VOP3Inst<"v_cvt_scalef32_sr_pk_fp4_f32",
+                     VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile<
+                         VOP_I32_V2F32_I32_F32>>;
     }
   }
   defm V_CVT_SCALEF32_PK_F16_FP4 : VOP3Inst<"v_cvt_scalef32_pk_f16_fp4", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f16>>;
@@ -1414,16 +1443,11 @@ let SubtargetPredicate = HasBF16ConversionInsts in {
   }
   def : GCNPat<(v2bf16 (bf16_fpround v2f32:$src)),
                (V_CVT_PK_BF16_F32_e64 0, (EXTRACT_SUBREG VReg_64:$src, sub0), 0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
-  def : GCNPat<(v2bf16 (bf16_fpround v2f64:$src)),
-               (V_CVT_PK_BF16_F32_e64 0, (V_CVT_F32_F64_e64 0, (EXTRACT_SUBREG VReg_128:$src, sub0_sub1)),
-                                      0, (V_CVT_F32_F64_e64 0, (EXTRACT_SUBREG VReg_128:$src, sub2_sub3)))>;
   def : GCNPat<(v2bf16 (build_vector (bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                                      (bf16 (bf16_fpround (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)))))),
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
   def : GCNPat<(bf16 (bf16_fpround (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))>;
-  def : GCNPat<(bf16 (bf16_fpround (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)))),
-               (V_CVT_PK_BF16_F32_e64 0, (f32 (V_CVT_F32_F64_e64 $src0_modifiers, $src0)), 0, (f32 (IMPLICIT_DEF)))>;
 }
 
 class Cvt_Scale_Sr_F32ToBF16F16_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<
@@ -1507,14 +1531,14 @@ let SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1 in {
 } // End SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1
 
 class AshrPkI8Pat<VOP3_Pseudo inst, int lo, int hi>: GCNPat<
-    (i16 (or (i16 (shl (i16 (trunc (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))))), (i16 8))),
-             (i16 (and (i16 (trunc (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))))), (i16 255))))),
+    (i32 (or (i32 (shl (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))), (i32 8))),
+             (i32 (and (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))), (i32 255))))),
     (inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 )
 >;
 
 class AshrPkU8Pat<VOP3_Pseudo inst, int lo, int hi>: GCNPat<
-    (i16 (or (i16 (shl (i16 (trunc (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))))), (i16 8))),
-             (i16 (trunc (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))))))),
+    (i32 (or (i32 (shl (i32 (AMDGPUsmed3 (i32 (sra i32:$src1, i32:$src2)), (i32 lo), (i32 hi))), (i32 8))),
+             (i32 (AMDGPUsmed3 (i32 (sra i32:$src0, i32:$src2)), (i32 lo), (i32 hi))))),
     (inst 0, VSrc_b32:$src0, 0,  VSrc_b32:$src1, 0, VSrc_b32:$src2, 0 )
 >;
 
@@ -1689,8 +1713,8 @@ defm V_BFI_B32             : VOP3_Realtriple_gfx11_gfx12<0x212>;
 defm V_FMA_F32             : VOP3_Realtriple_gfx11_gfx12<0x213>;
 defm V_FMA_F64             : VOP3_Real_Base_gfx11_gfx12<0x214>;
 defm V_LERP_U8             : VOP3_Realtriple_gfx11_gfx12<0x215>;
-defm V_ALIGNBIT_B32        : VOP3_Realtriple_gfx11_gfx12<0x216>;
-defm V_ALIGNBYTE_B32       : VOP3_Realtriple_gfx11_gfx12<0x217>;
+defm V_ALIGNBIT_B32        : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x216, "v_alignbit_b32">;
+defm V_ALIGNBYTE_B32       : VOP3_Realtriple_t16_and_fake16_gfx11_gfx12<0x217, "v_alignbyte_b32">;
 defm V_MULLIT_F32          : VOP3_Realtriple_gfx11_gfx12<0x218>;
 defm V_MIN3_F32            : VOP3_Realtriple_gfx11<0x219>;
 defm V_MIN3_I32            : VOP3_Realtriple_gfx11_gfx12<0x21a>;

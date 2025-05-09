@@ -52,11 +52,6 @@ public:
 
 char AMDGPUAnnotateKernelFeatures::ID = 0;
 
-char &llvm::AMDGPUAnnotateKernelFeaturesID = AMDGPUAnnotateKernelFeatures::ID;
-
-INITIALIZE_PASS(AMDGPUAnnotateKernelFeatures, DEBUG_TYPE,
-                "Add AMDGPU function attributes", false, false)
-
 bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
   bool HaveStackObjects = false;
   bool Changed = false;
@@ -130,8 +125,4 @@ bool AMDGPUAnnotateKernelFeatures::doInitialization(CallGraph &CG) {
 
   TM = &TPC->getTM<TargetMachine>();
   return false;
-}
-
-Pass *llvm::createAMDGPUAnnotateKernelFeaturesPass() {
-  return new AMDGPUAnnotateKernelFeatures();
 }

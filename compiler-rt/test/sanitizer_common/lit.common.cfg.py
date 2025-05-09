@@ -100,3 +100,6 @@ if not config.parallelism_group:
 
 if config.host_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))
+
+if os.path.exists("/etc/services"):
+    config.available_features.add("netbase")

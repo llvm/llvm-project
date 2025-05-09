@@ -15,19 +15,19 @@
 #include <cassert>
 
 int main(int, char**) {
-    typedef std::multiset<int> set_type;
+  typedef std::multiset<int> set_type;
 
-    set_type s;
-    set_type::iterator i1 = s.insert(1);
-    set_type::iterator i2 = s.insert(2);
+  set_type s;
+  set_type::iterator i1 = s.insert(1);
+  set_type::iterator i2 = s.insert(2);
 
-    const set_type& cs = s;
+  const set_type& cs = s;
 
-    assert(cs.key_comp()(*i1, *i2));
-    assert(!cs.key_comp()(*i2, *i1));
+  assert(cs.key_comp()(*i1, *i2));
+  assert(!cs.key_comp()(*i2, *i1));
 
-    assert(cs.value_comp()(*i1, *i2));
-    assert(!cs.value_comp()(*i2, *i1));
+  assert(cs.value_comp()(*i1, *i2));
+  assert(!cs.value_comp()(*i2, *i1));
 
-    return 0;
+  return 0;
 }

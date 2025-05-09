@@ -267,8 +267,8 @@ body:             |
 # GCN: %0:vgpr_32 = COPY $vgpr0
 # GCN-NEXT: %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, killed %1, %subreg.sub1
-# GCN-NEXT: %3:sgpr_32 = V_READFIRSTLANE_B32 %2.sub0, implicit $exec
-# GCN-NEXT: %4:sgpr_32 = S_MOV_B32 0
+# GCN-NEXT: %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0, implicit $exec
+# GCN-NEXT: %4:sreg_32_xm0 = S_MOV_B32 0
 ---
 name: fold-imm-readfirstlane-regsequence0
 tracksRegLiveness: true
@@ -278,8 +278,8 @@ body:             |
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, killed %1:vgpr_32, %subreg.sub1
-    %3:sgpr_32 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
-    %4:sgpr_32 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
+    %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
+    %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
     S_NOP 0, implicit %3, implicit %4
 ...
 
@@ -288,8 +288,8 @@ body:             |
 # GCN: %0:vgpr_32 = COPY $vgpr0
 # GCN-NEXT: %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, killed %0, %subreg.sub1
-# GCN-NEXT: %3:sgpr_32 = S_MOV_B32 0
-# GCN-NEXT: %4:sgpr_32 = V_READFIRSTLANE_B32 %2.sub1, implicit $exec
+# GCN-NEXT: %3:sreg_32_xm0 = S_MOV_B32 0
+# GCN-NEXT: %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1, implicit $exec
 
 ---
 name: fold-imm-readfirstlane-regsequence1
@@ -300,8 +300,8 @@ body:             |
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vreg_64 = REG_SEQUENCE %1:vgpr_32, %subreg.sub0, killed %0:vgpr_32, %subreg.sub1
-    %3:sgpr_32 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
-    %4:sgpr_32 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
+    %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
+    %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
     S_NOP 0, implicit %3, implicit %4
 ...
 
@@ -310,8 +310,8 @@ body:             |
 # GCN: %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # GCN-NEXT: %1:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
 # GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, killed %1, %subreg.sub1
-# GCN-NEXT: %3:sgpr_32 = S_MOV_B32 0
-# GCN-NEXT: %4:sgpr_32 = S_MOV_B32 1
+# GCN-NEXT: %3:sreg_32_xm0 = S_MOV_B32 0
+# GCN-NEXT: %4:sreg_32_xm0 = S_MOV_B32 1
 ---
 name: fold-imm-readfirstlane-regsequence2
 tracksRegLiveness: true
@@ -320,8 +320,8 @@ body:             |
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %1:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, killed %1:vgpr_32, %subreg.sub1
-    %3:sgpr_32 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
-    %4:sgpr_32 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
+    %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
+    %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
     S_NOP 0, implicit %3, implicit %4
 ...
 
@@ -330,8 +330,8 @@ body:             |
 # GCN: %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # GCN-NEXT: %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, killed %1, %subreg.sub1
-# GCN-NEXT: %3:sgpr_32 = S_MOV_B32 0
-# GCN-NEXT: %4:sgpr_32 = S_MOV_B32 0
+# GCN-NEXT: %3:sreg_32_xm0 = S_MOV_B32 0
+# GCN-NEXT: %4:sreg_32_xm0 = S_MOV_B32 0
 ---
 name: fold-imm-readfirstlane-regsequence3
 tracksRegLiveness: true
@@ -340,8 +340,8 @@ body:             |
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, killed %1:vgpr_32, %subreg.sub1
-    %3:sgpr_32 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
-    %4:sgpr_32 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
+    %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
+    %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
     S_NOP 0, implicit %3, implicit %4
 ...
 
@@ -350,8 +350,8 @@ body:             |
 # GCN: %0:vgpr_32 = COPY $sgpr10
 # GCN-NEXT: %1:vgpr_32 = COPY $sgpr11
 # GCN-NEXT: %2:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, killed %1, %subreg.sub1
-# GCN-NEXT: %3:sgpr_32 = V_READFIRSTLANE_B32 %2.sub0, implicit $exec
-# GCN-NEXT: %4:sgpr_32 = V_READFIRSTLANE_B32 %2.sub1, implicit $exec
+# GCN-NEXT: %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0, implicit $exec
+# GCN-NEXT: %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1, implicit $exec
 ---
 name: fold-copy-readfirstlane-regsequence0
 tracksRegLiveness: true
@@ -361,8 +361,8 @@ body:             |
     %0:vgpr_32 = COPY $sgpr10
     %1:vgpr_32 = COPY $sgpr11
     %2:vreg_64 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, killed %1:vgpr_32, %subreg.sub1
-    %3:sgpr_32 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
-    %4:sgpr_32 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
+    %3:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub0:vreg_64, implicit $exec
+    %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1:vreg_64, implicit $exec
 ...
 
 # GCN-LABEL: name: fold-copy-readfirstlane-regsequence1{{$}}
@@ -371,8 +371,8 @@ body:             |
 # GCN-NEXT: %2:vgpr_32 = COPY %0
 # GCN-NEXT: %3:vgpr_32 = COPY %1
 # GCN-NEXT: %4:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, killed %3, %subreg.sub1
-# GCN-NEXT: %5:sgpr_32 = V_READFIRSTLANE_B32 %4.sub0, implicit $exec
-# GCN-NEXT: %6:sgpr_32 = V_READFIRSTLANE_B32 %4.sub1, implicit $exec
+# GCN-NEXT: %5:sreg_32_xm0 = V_READFIRSTLANE_B32 %4.sub0, implicit $exec
+# GCN-NEXT: %6:sreg_32_xm0 = V_READFIRSTLANE_B32 %4.sub1, implicit $exec
 ---
 name: fold-copy-readfirstlane-regsequence1
 tracksRegLiveness: true
@@ -384,6 +384,6 @@ body:             |
     %2:vgpr_32 = COPY %0
     %3:vgpr_32 = COPY %1
     %4:vreg_64 = REG_SEQUENCE %2:vgpr_32, %subreg.sub0, killed %3:vgpr_32, %subreg.sub1
-    %5:sgpr_32 = V_READFIRSTLANE_B32 %4.sub0:vreg_64, implicit $exec
-    %6:sgpr_32 = V_READFIRSTLANE_B32 %4.sub1:vreg_64, implicit $exec
+    %5:sreg_32_xm0 = V_READFIRSTLANE_B32 %4.sub0:vreg_64, implicit $exec
+    %6:sreg_32_xm0 = V_READFIRSTLANE_B32 %4.sub1:vreg_64, implicit $exec
 ...

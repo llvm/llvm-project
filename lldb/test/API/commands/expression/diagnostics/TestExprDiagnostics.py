@@ -33,7 +33,7 @@ class ExprDiagnosticsTestCase(TestBase):
         self.assertIn(
             """
     1 | unknown_identifier
-      | ^
+      | ^~~~~~~~~~~~~~~~~~
 """,
             value.GetError().GetCString(),
         )
@@ -45,7 +45,7 @@ class ExprDiagnosticsTestCase(TestBase):
         self.assertIn(
             """
     1 | 1 + unknown_identifier
-      |     ^
+      |     ^~~~~~~~~~~~~~~~~~
 """,
             value.GetError().GetCString(),
         )
@@ -57,7 +57,7 @@ class ExprDiagnosticsTestCase(TestBase):
         self.assertIn(
             """
     2 | foobar +=1;
-      | ^
+      | ^~~~~~
 """,
             value.GetError().GetCString(),
         )

@@ -125,7 +125,7 @@ entry:
 ; GCN-NEXT: s_buffer_load_dword s0, s[0:3], 0x0
 define amdgpu_ps float @smrd_hazard(<4 x i32> inreg %desc) #0 {
 main_body:
-  %d0 = insertelement <4 x i32> undef, i32 0, i32 0
+  %d0 = insertelement <4 x i32> poison, i32 0, i32 0
   %d1 = insertelement <4 x i32> %d0, i32 1, i32 1
   %d2 = insertelement <4 x i32> %d1, i32 2, i32 2
   %d3 = insertelement <4 x i32> %d2, i32 3, i32 3
@@ -385,7 +385,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %desc, i32 28, i32 0)
   %r6 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %desc, i32 32, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true) #0
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true) #0
   ret void
 }
 
@@ -419,7 +419,7 @@ main_body:
   %v0.y = call nsz float @llvm.amdgcn.interp.p2(float %v0.y1, float %v, i32 0, i32 1, i32 %prim)
   %v0.z1 = call nsz float @llvm.amdgcn.interp.p1(float %u, i32 0, i32 2, i32 %prim)
   %v0.z = call nsz float @llvm.amdgcn.interp.p2(float %v0.z1, float %v, i32 0, i32 2, i32 %prim)
-  %v0.tmp0 = insertelement <3 x float> undef, float %v0.x, i32 0
+  %v0.tmp0 = insertelement <3 x float> poison, float %v0.x, i32 0
   %v0.tmp1 = insertelement <3 x float> %v0.tmp0, float %v0.y, i32 1
   %v0 = insertelement <3 x float> %v0.tmp1, float %v0.z, i32 2
   %a = extractelement <3 x float> %v0, i32 %idx1
@@ -430,7 +430,7 @@ main_body:
   %v1.y = call nsz float @llvm.amdgcn.interp.p2(float %v1.y1, float %v, i32 1, i32 1, i32 %prim)
   %v1.z1 = call nsz float @llvm.amdgcn.interp.p1(float %u, i32 1, i32 2, i32 %prim)
   %v1.z = call nsz float @llvm.amdgcn.interp.p2(float %v1.z1, float %v, i32 1, i32 2, i32 %prim)
-  %v1.tmp0 = insertelement <3 x float> undef, float %v0.x, i32 0
+  %v1.tmp0 = insertelement <3 x float> poison, float %v0.x, i32 0
   %v1.tmp1 = insertelement <3 x float> %v0.tmp0, float %v0.y, i32 1
   %v1 = insertelement <3 x float> %v0.tmp1, float %v0.z, i32 2
 
@@ -462,7 +462,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %desc, i32 %a5, i32 0)
   %r6 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %desc, i32 %a6, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true) #0
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true) #0
   ret void
 }
 
@@ -487,7 +487,7 @@ ret_block:                                       ; preds = %.outer, %.label22, %
 .inner_loop_body:
   %descriptor = load <4 x i32>, ptr addrspace(4) %0, align 16, !invariant.load !0
   %load1result = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %descriptor, i32 0, i32 0)
-  store float %load1result, ptr addrspace(1) undef
+  store float %load1result, ptr addrspace(1) poison
   %inner_br2 = icmp uge i32 %1, 10
   br i1 %inner_br2, label %.inner_loop_header, label %.outer_loop_body
 
@@ -687,17 +687,18 @@ exit:
 ; GCN: buffer_load_dword v0, v0,
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: ; return to shader part epilog
-define amdgpu_cs float @arg_divergence(i32 inreg %unused, <3 x i32> %arg4) #0 {
+define amdgpu_cs float @arg_divergence(i32 inreg %cmp, <3 x i32> %arg4) #0 {
 main_body:
-  br i1 undef, label %if1, label %endif1
+  %uniform.cond = icmp eq i32 %cmp, 0
+  br i1 %uniform.cond, label %endif1, label %if1
 
 if1:                                              ; preds = %main_body
-  store i32 0, ptr addrspace(3) undef, align 4
+  store i32 0, ptr addrspace(3) poison, align 4
   br label %endif1
 
 endif1:                                           ; preds = %if1, %main_body
   %tmp13 = extractelement <3 x i32> %arg4, i32 0
-  %tmp97 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 %tmp13, i32 0)
+  %tmp97 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 %tmp13, i32 0)
   ret float %tmp97
 }
 

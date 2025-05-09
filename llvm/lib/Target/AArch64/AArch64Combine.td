@@ -21,7 +21,7 @@ def icmp_redundant_trunc_matchdata : GIDefMatchData<"Register">;
 def icmp_redundant_trunc : GICombineRule<
   (defs root:$root, icmp_redundant_trunc_matchdata:$matchinfo),
   (match (G_ICMP $dst, $tst, $src1, $src2):$root,
-         [{ return matchICmpRedundantTrunc(*${root}, MRI, Helper.getKnownBits(), ${matchinfo}); }]),
+         [{ return matchICmpRedundantTrunc(*${root}, MRI, Helper.getValueTracking(), ${matchinfo}); }]),
   (apply [{ applyICmpRedundantTrunc(*${root}, MRI, B, Observer, ${matchinfo}); }])>;
 
 // AArch64-specific offset folding for G_GLOBAL_VALUE.
@@ -217,11 +217,19 @@ def mul_const : GICombineRule<
   (apply [{ applyAArch64MulConstCombine(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
-def lower_mull : GICombineRule<
+def mull_matchdata : GIDefMatchData<"std::tuple<bool, Register, Register>">;
+def extmultomull : GICombineRule<
+  (defs root:$root, mull_matchdata:$matchinfo),
+  (match (G_MUL $dst, $src1, $src2):$root,
+          [{ return matchExtMulToMULL(*${root}, MRI, VT, ${matchinfo}); }]),
+  (apply [{ applyExtMulToMULL(*${root}, MRI, B, Observer, ${matchinfo}); }])
+>;
+
+def lower_mulv2s64 : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_MUL):$root,
-          [{ return matchExtMulToMULL(*${root}, MRI); }]),
-  (apply [{ applyExtMulToMULL(*${root}, MRI, B, Observer); }])
+  (match (G_MUL $dst, $src1, $src2):$root,
+          [{ return matchMulv2s64(*${root}, MRI); }]),
+  (apply [{ applyMulv2s64(*${root}, MRI, B, Observer); }])
 >;
 
 def build_vector_to_dup : GICombineRule<
@@ -316,7 +324,7 @@ def AArch64PostLegalizerLowering
                         icmp_lowering, build_vector_lowering,
                         lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
-                        unmerge_ext_to_unmerge, lower_mull,
+                        unmerge_ext_to_unmerge, lower_mulv2s64,
                         vector_unmerge_lowering, insertelt_nonconst]> {
 }
 
@@ -339,5 +347,5 @@ def AArch64PostLegalizerCombiner
                         select_to_minmax, or_to_bsp, combine_concat_vector,
                         commute_constant_to_rhs,
                         push_freeze_to_prevent_poison_from_propagating,
-                        combine_mul_cmlt, combine_use_vector_truncate]> {
+                        combine_mul_cmlt, combine_use_vector_truncate, extmultomull]> {
 }

@@ -59,6 +59,13 @@ llvm.func @parallel_op_firstprivate_multi_block(%arg0: !llvm.ptr) {
 // CHECK:  %[[ORIG_PTR_PTR:.*]] = getelementptr { ptr }, ptr %{{.*}}, i32 0, i32 0
 // CHECK:  %[[ORIG_PTR:.*]] = load ptr, ptr %[[ORIG_PTR_PTR]], align 8
 // CHECK:  %[[PRIV_ALLOC:.*]] = alloca float, align 4
+// CHECK-NEXT: br label %omp.region.after_alloca
+
+// CHECK: omp.region.after_alloca:
+// CHECK-NEXT:   br label %[[PAR_REG:.*]]
+
+// Check that the body of the parallel region loads from the private clone.
+// CHECK: [[PAR_REG]]:
 // CHECK:   br label %[[PRIV_BB1:.*]]
 
 // CHECK: [[PRIV_BB1]]:
@@ -95,10 +102,6 @@ llvm.func @parallel_op_firstprivate_multi_block(%arg0: !llvm.ptr) {
 // address.
 // CHECK: [[PRIV_CONT]]:
 // CHECK-NEXT:   %[[PRIV_ALLOC4:.*]] = phi ptr [ %[[PRIV_ALLOC3]], %[[PRIV_BB3]] ]
-// CHECK-NEXT:   br label %[[PAR_REG:.*]]
-
-// Check that the body of the parallel region loads from the private clone.
-// CHECK: [[PAR_REG]]:
 // CHECK:        %{{.*}} = load float, ptr %[[PRIV_ALLOC2]], align 4
 
 omp.private {type = firstprivate} @multi_block.privatizer : f32 init {

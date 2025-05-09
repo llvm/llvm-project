@@ -249,8 +249,8 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
 
   switch (ActionArgs[0]->getOption().getID()) {
   case LIPO_verify_arch:
-    for (auto A : InputArgs.getAllArgValues(LIPO_verify_arch))
-      C.VerifyArchList.push_back(A);
+    llvm::append_range(C.VerifyArchList,
+                       InputArgs.getAllArgValues(LIPO_verify_arch));
     if (C.VerifyArchList.empty())
       reportError(
           "verify_arch requires at least one architecture to be specified");

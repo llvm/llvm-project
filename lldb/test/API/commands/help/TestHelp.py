@@ -349,13 +349,13 @@ class HelpCommandTestCase(TestBase):
         self.expect(
             "help memory read",
             patterns=[
-                "--show-tags\n\s+Include memory tags in output "
-                "\(does not apply to binary output\)."
+                "--show-tags\n\\s+Include memory tags in output "
+                "\\(does not apply to binary output\\)."
             ],
         )
         self.expect(
             "help memory find",
-            patterns=["--show-tags\n\s+Include memory tags in output."],
+            patterns=["--show-tags\n\\s+Include memory tags in output."],
         )
 
     @no_debug_info_test

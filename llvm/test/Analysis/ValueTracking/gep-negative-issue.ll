@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %ArrayImpl = type { i64, ptr addrspace(100), [1 x i64], [1 x i64], [1 x i64], i64, i64, ptr addrspace(100), ptr addrspace(100), i8, i64 }
 %_array = type { i64, ptr addrspace(100), i8 }
 
-define void @test(i64 %n_chpl) {
+define void @test(i64 %n_chpl) null_pointer_is_valid {
 entry:
   ; First section is some code
   %0 = getelementptr inbounds %_array, ptr null, i32 0, i32 1

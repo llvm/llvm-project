@@ -1,6 +1,6 @@
-; Test vector multiplication on arch15.
+; Test vector multiplication on z17.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch15 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z17 | FileCheck %s
 
 ; Test a v2i64 multiplication.
 define <2 x i64> @f1(<2 x i64> %dummy, <2 x i64> %val1, <2 x i64> %val2) {

@@ -28,6 +28,8 @@
 // CHECK-NEXT:     FEAT_FP16                                              Enable half-precision floating-point data processing
 // CHECK-NEXT:     FEAT_FP8                                               Enable FP8 instructions
 // CHECK-NEXT:     FEAT_FP8DOT2                                           Enable FP8 2-way dot instructions
+// CHECK-NEXT:     FEAT_FP8DOT4                                           Enable FP8 4-way dot instructions
+// CHECK-NEXT:     FEAT_FP8FMA                                            Enable Armv9.5-A FP8 multiply-add instructions
 // CHECK-NEXT:     FEAT_FPAC                                              Enable Armv8.3-A Pointer Authentication Faulting enhancement
 // CHECK-NEXT:     FEAT_FRINTTS                                           Enable FRInt[32|64][Z|X] instructions that round a floating-point number to an integer (in FP format) forcing it to fit into a 32- or 64-bit int
 // CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation instructions

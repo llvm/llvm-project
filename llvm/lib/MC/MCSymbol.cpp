@@ -74,6 +74,8 @@ void MCSymbol::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
       OS << "\\n";
     else if (C == '"')
       OS << "\\\"";
+    else if (C == '\\')
+      OS << "\\\\";
     else
       OS << C;
   }

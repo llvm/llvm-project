@@ -94,7 +94,7 @@ void check_string_literal2( FILE* fp, const char* s, char *buf, ... ) {
   // expected-note@-1{{treat the string as an argument to avoid this}}
   __builtin___vsnprintf_chk(buf,2,0,-1,s,ap); // no-warning
 
-  vscanf(s, ap); // expected-warning {{format string is not a string literal}}
+  vscanf(s, ap); // expected-warning {{passing 'printf' format string where 'scanf' format string is expected}}
 }
 
 void check_conditional_literal(const char* s, int i) {
@@ -494,6 +494,26 @@ extern void rdar8332221_vprintf_scanf(const char *, va_list, const char *, ...)
 
 void rdar8332221(va_list ap, int *x, long *y) {
   rdar8332221_vprintf_scanf("%", ap, "%d", x); // expected-warning{{incomplete format specifier}}
+}
+
+void rdar8332221_vprintf_scanf(const char *p, va_list ap, const char *s, ...) {
+  vprintf(p, ap);
+
+  va_list vs;
+  va_start(vs, s);
+  vscanf(s, vs);
+  va_end(vs);
+}
+
+__attribute__((__format__(__printf__, 1, 0)))
+__attribute__((__format__(__scanf__, 3, 4)))
+void vprintf_scanf_bad(const char *p, va_list ap, const char *s, ...) {
+  vscanf(p, ap); // expected-warning{{passing 'printf' format string where 'scanf' format string is expected}}
+
+  va_list vs;
+  va_start(vs, s);
+  vprintf(s, vs); // expected-warning{{passing 'scanf' format string where 'printf' format string is expected}}
+  va_end(vs);
 }
 
 // PR8641

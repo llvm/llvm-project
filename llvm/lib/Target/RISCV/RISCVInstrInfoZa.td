@@ -59,7 +59,7 @@ let Predicates = [HasStdExtZacas], IsSignExtendingOpW = 1 in {
 defm AMOCAS_W : AMO_cas_aq_rl<0b00101, 0b010, "amocas.w", GPR>;
 } // Predicates = [HasStdExtZacas]
 
-let Predicates = [HasStdExtZacas, IsRV32], DecoderNamespace = "RV32Zacas"  in {
+let Predicates = [HasStdExtZacas, IsRV32], DecoderNamespace = "RV32Only"  in {
 defm AMOCAS_D_RV32 : AMO_cas_aq_rl<0b00101, 0b011, "amocas.d", GPRPairRV32>;
 } // Predicates = [HasStdExtZacas, IsRV32]
 

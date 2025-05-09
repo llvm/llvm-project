@@ -50,11 +50,12 @@ static_assert(std::is_same<my_derived<int, min_allocator<int>>::base, my_base>::
 static_assert(std::is_same<my_derived<my_base, min_allocator<my_base>>::base, my_base>::value, "");
 #endif
 
-struct A { std::forward_list<A> v; }; // incomplete type support
+struct A {
+  std::forward_list<A> v;
+}; // incomplete type support
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::forward_list<char> C;
     static_assert((std::is_same<C::value_type, char>::value), "");
     static_assert((std::is_same<C::allocator_type, std::allocator<char> >::value), "");
@@ -68,12 +69,14 @@ int main(int, char**)
     static_assert((std::is_signed<typename C::difference_type>::value), "");
     static_assert((std::is_unsigned<typename C::size_type>::value), "");
     static_assert((std::is_same<typename C::difference_type,
-        typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
+                                typename std::iterator_traits<typename C::iterator>::difference_type>::value),
+                  "");
     static_assert((std::is_same<typename C::difference_type,
-        typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
-    }
+                                typename std::iterator_traits<typename C::const_iterator>::difference_type>::value),
+                  "");
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::forward_list<char, min_allocator<char>> C;
     static_assert((std::is_same<C::value_type, char>::value), "");
     static_assert((std::is_same<C::allocator_type, min_allocator<char> >::value), "");
@@ -81,17 +84,19 @@ int main(int, char**)
     static_assert((std::is_same<C::const_reference, const char&>::value), "");
     static_assert((std::is_same<C::pointer, min_pointer<char>>::value), "");
     static_assert((std::is_same<C::const_pointer, min_pointer<const char>>::value), "");
-//  min_allocator doesn't have a size_type, so one gets synthesized
+    //  min_allocator doesn't have a size_type, so one gets synthesized
     static_assert((std::is_same<C::size_type, std::make_unsigned<C::difference_type>::type>::value), "");
     static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
 
     static_assert((std::is_signed<typename C::difference_type>::value), "");
     static_assert((std::is_unsigned<typename C::size_type>::value), "");
     static_assert((std::is_same<typename C::difference_type,
-        typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
+                                typename std::iterator_traits<typename C::iterator>::difference_type>::value),
+                  "");
     static_assert((std::is_same<typename C::difference_type,
-        typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
-    }
+                                typename std::iterator_traits<typename C::const_iterator>::difference_type>::value),
+                  "");
+  }
 #endif
 
   return 0;

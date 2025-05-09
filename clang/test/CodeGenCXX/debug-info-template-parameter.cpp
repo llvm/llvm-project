@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -emit-llvm %std_cxx11-14 -dwarf-version=5 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefixes=CHECK,PRE17
 // RUN: %clang_cc1 -emit-llvm %std_cxx17- -dwarf-version=5 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefixes=CHECK,CXX17
 // RUN: %clang_cc1 -emit-llvm %std_cxx17- -dwarf-version=4 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefixes=CHECK,CXX17
+// RUN: %clang_cc1 -emit-llvm %std_cxx20- -dwarf-version=5 -DCXX20=1 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefix=CHECK-CXX20
 
 // CHECK: DILocalVariable(name: "f1", {{.*}}, type: ![[TEMPLATE_TYPE:[0-9]+]]
 // CHECK: [[TEMPLATE_TYPE]] = {{.*}}!DICompositeType({{.*}}, templateParams: ![[F1_TYPE:[0-9]+]]
@@ -49,6 +50,29 @@ class foo {
 template <template <typename T> class CT = bar>
 class baz {
 };
+
+#ifdef CXX20
+struct non_empty { int mem; int mem2; } ne;
+
+template<float f = -1.5f, double d = 5.2, int * p = &ne.mem2>
+class nttp {};
+nttp<> n1;
+
+// CHECK-CXX20:      DIGlobalVariable(name: "n1", {{.*}}, type: ![[NTTP_TYPE:[0-9]+]]
+// CHECK-CXX20:      [[NTTP_TYPE]] = {{.*}}!DICompositeType({{.*}}name: "nttp
+// CHECK-CXX20-SAME:                                        templateParams: ![[NTTP_TEMPLATES:[0-9]+]]
+// CHECK-CXX20:      [[NTTP_TEMPLATES]] = !{![[FIRST:[0-9]+]], ![[SECOND:[0-9]+]], ![[THIRD:[0-9]+]]}
+// CHECK-CXX20:      [[FIRST]] = !DITemplateValueParameter(name: "f"
+// CHECK-CXX20-SAME:                                       defaulted: true
+// CHECK-CXX20-SAME:                                       value: float -1.500000e+00
+// CHECK-CXX20:      [[SECOND]] = !DITemplateValueParameter(name: "d"
+// CHECK-CXX20-SAME:                                        defaulted: true
+// CHECK-CXX20-SAME:                                        value: double 5.200000e+00
+// CHECK-CXX20:      [[THIRD]] = !DITemplateValueParameter(name: "p"
+// CHECK-CXX20-SAME:                                       defaulted: true
+// CHECK-CXX20-SAME:                                       value: ptr getelementptr (i8, ptr @ne, i64 4)
+
+#endif // CXX20
 
 int main() {
   foo<int, 6, false, 3, double> f1;

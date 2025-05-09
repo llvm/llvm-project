@@ -19,6 +19,13 @@
 #include "ubsan_init.h"
 #include "ubsan_signals_standalone.h"
 
+#if SANITIZER_FUCHSIA
+namespace __sanitizer {
+// UBSan doesn't need to do anything else special in the startup hook.
+void EarlySanitizerInit() {}
+} // namespace __sanitizer
+#endif // SANITIZER_FUCHSIA
+
 namespace __ubsan {
 
 class UbsanStandaloneInitializer {

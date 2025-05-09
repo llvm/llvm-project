@@ -317,7 +317,9 @@ public:
 
   void VisitMemberPointerType(const MemberPointerType *T) {
     AddQualType(T->getPointeeType());
-    AddType(T->getClass());
+    AddType(T->getQualifier()->getAsType());
+    if (auto *RD = T->getMostRecentCXXRecordDecl())
+      AddDecl(RD->getCanonicalDecl());
   }
 
   void VisitPackExpansionType(const PackExpansionType *T) {

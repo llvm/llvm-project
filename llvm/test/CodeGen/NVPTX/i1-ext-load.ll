@@ -12,14 +12,14 @@ define ptx_kernel void @foo(ptr noalias readonly %ptr, ptr noalias %retval) {
 ; CHECK:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK:    ld.param.u64 %rd1, [foo_param_0];
-; CHECK:    ld.param.u64 %rd2, [foo_param_1];
-; CHECK:    cvta.to.global.u64 %rd3, %rd2;
-; CHECK:    cvta.to.global.u64 %rd4, %rd1;
-; CHECK:    ld.global.nc.u8 %rs1, [%rd4];
+; CHECK:    cvta.to.global.u64 %rd2, %rd1;
+; CHECK:    ld.param.u64 %rd3, [foo_param_1];
+; CHECK:    cvta.to.global.u64 %rd4, %rd3;
+; CHECK:    ld.global.nc.u8 %rs1, [%rd2];
 ; CHECK:    cvt.u32.u8 %r1, %rs1;
 ; CHECK:    add.s32 %r2, %r1, 1;
 ; CHECK:    and.b32 %r3, %r2, 1;
-; CHECK:    st.global.u32 [%rd3], %r3;
+; CHECK:    st.global.u32 [%rd4], %r3;
 ; CHECK:    ret;
   %ld = load i1, ptr %ptr, align 1
   %zext = zext i1 %ld to i32

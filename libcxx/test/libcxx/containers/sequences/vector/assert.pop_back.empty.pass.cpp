@@ -20,10 +20,10 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    std::vector<int> v;
-    v.push_back(0);
-    v.pop_back();
-    TEST_LIBCPP_ASSERT_FAILURE(v.pop_back(), "vector::pop_back called on an empty vector");
+  std::vector<int> v;
+  v.push_back(0);
+  v.pop_back();
+  TEST_LIBCPP_ASSERT_FAILURE(v.pop_back(), "vector::pop_back called on an empty vector");
 
-    return 0;
+  return 0;
 }

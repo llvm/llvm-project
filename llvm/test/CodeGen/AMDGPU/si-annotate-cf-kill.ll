@@ -109,7 +109,7 @@ endif1:
   br i1 %.0, label %if2, label %endif2
 
 if2:
-  %.5 = getelementptr inbounds ptr addrspace(8), ptr addrspace(6) undef, i32 31, !amdgpu.uniform !0
+  %.5 = getelementptr inbounds ptr addrspace(8), ptr addrspace(6) poison, i32 31, !amdgpu.uniform !0
   %.6 = load ptr addrspace(8), ptr addrspace(6) %.5, align 16, !invariant.load !0
   %.7 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.swap.i32(i32 %.test1, ptr addrspace(8) %.6, i32 4, i32 0, i32 0)
   %.8 = sitofp i32 %.7 to float

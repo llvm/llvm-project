@@ -11,10 +11,10 @@
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
 
-TEST(LlvmLibcCtime, NULL) {
+TEST(LlvmLibcCtime, nullptr) {
   char *result;
-  result = LIBC_NAMESPACE::ctime(NULL);
-  ASSERT_STREQ(NULL, result);
+  result = LIBC_NAMESPACE::ctime(nullptr);
+  ASSERT_STREQ(nullptr, result);
 }
 
 TEST(LlvmLibcCtime, ValidUnixTimestamp0) {
@@ -38,5 +38,5 @@ TEST(LlvmLibcCtime, InvalidArgument) {
   char *result;
   t = 2147483648;
   result = LIBC_NAMESPACE::ctime(&t);
-  ASSERT_STREQ(NULL, result);
+  ASSERT_STREQ(nullptr, result);
 }

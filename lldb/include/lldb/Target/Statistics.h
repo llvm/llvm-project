@@ -90,6 +90,26 @@ public:
   }
 };
 
+/// A class to count time for plugins
+class StatisticsMap {
+public:
+  void add(llvm::StringRef key, double value) {
+    if (key.empty())
+      return;
+    auto it = map.find(key);
+    if (it == map.end())
+      map.try_emplace(key, value);
+    else
+      it->second += value;
+  }
+  void merge(StatisticsMap map_to_merge) {
+    for (const auto &entry : map_to_merge.map) {
+      add(entry.first(), entry.second);
+    }
+  }
+  llvm::StringMap<double> map;
+};
+
 /// A class to count success/fail statistics.
 struct StatsSuccessFail {
   StatsSuccessFail(llvm::StringRef n) : name(n.str()) {}
@@ -118,8 +138,10 @@ struct ModuleStats {
   // track down all of the stats that contribute to this module.
   std::vector<intptr_t> symfile_modules;
   llvm::StringMap<llvm::json::Value> type_system_stats;
+  StatisticsMap symbol_locator_time;
   double symtab_parse_time = 0.0;
   double symtab_index_time = 0.0;
+  uint32_t symtab_symbol_count = 0;
   double debug_parse_time = 0.0;
   double debug_index_time = 0.0;
   uint64_t debug_info_size = 0;

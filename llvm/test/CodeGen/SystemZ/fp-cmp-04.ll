@@ -227,6 +227,38 @@ exit:
   ret float %add
 }
 
+define half @f12_half(half %dummy, half %val, ptr %dest) {
+; CHECK-LABEL: f12_half:
+; CHECK:      ler %f8, %f2
+; CHECK-NEXT: ler %f0, %f2
+; CHECK-NEXT: #APP
+; CHECK-NEXT: blah %f0
+; CHECK-NEXT: #NO_APP
+; CHECK-NEXT: brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT: ltebr %f0, %f0
+; CHECK-NEXT: jl .LBB11_2
+; CHECK-NEXT:# %bb.1:
+; CHECK-NEXT: lgdr %r0, %f8
+; CHECK-NEXT: srlg %r0, %r0, 48
+; CHECK-NEXT: sth  %r0, 0(%r13)
+; CHECK-NEXT:.LBB11_2:
+; CHECK-NEXT: ler %f0, %f8
+; CHECK-NEXT: ld %f8, 160(%r15)
+; CHECK-NEXT: lmg %r13, %r15, 272(%r15)
+; CHECK-NEXT: br %r14
+entry:
+  call void asm sideeffect "blah $0", "{f0}"(half %val)
+  %cmp = fcmp olt half %val, 0.0
+  br i1 %cmp, label %exit, label %store
+
+store:
+  store half %val, ptr %dest
+  br label %exit
+
+exit:
+  ret half %val
+}
+
 ; %val in %f2 must be preserved during comparison and also copied to %f0.
 define float @f12(float %dummy, float %val, ptr %dest) {
 ; CHECK-LABEL: f12:
@@ -304,6 +336,38 @@ exit:
   ret void
 }
 
+define half @f15_half(half %val, half %dummy, ptr %dest) {
+; CHECK-LABEL: f15_half:
+; CHECK:      ler %f8, %f0
+; CHECK-NEXT: ler %f2, %f0
+; CHECK-NEXT: #APP
+; CHECK-NEXT: blah %f2
+; CHECK-NEXT: #NO_APP
+; CHECK-NEXT: brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT: ltebr %f0, %f0
+; CHECK-NEXT: jl .LBB15_2
+; CHECK-NEXT:# %bb.1:
+; CHECK-NEXT: lgdr %r0, %f8
+; CHECK-NEXT: srlg %r0, %r0, 48
+; CHECK-NEXT: sth %r0, 0(%r13)
+; CHECK-NEXT:.LBB15_2:
+; CHECK-NEXT: ler %f0, %f8
+; CHECK-NEXT: ld %f8, 160(%r15)
+; CHECK-NEXT: lmg %r13, %r15, 272(%r15)
+; CHECK-NEXT: br %r14
+entry:
+  call void asm sideeffect "blah $0", "{f2}"(half %val)
+  %cmp = fcmp olt half %val, 0.0
+  br i1 %cmp, label %exit, label %store
+
+store:
+  store half %val, ptr %dest
+  br label %exit
+
+exit:
+  ret half %val
+}
+
 define float @f15(float %val, float %dummy, ptr %dest) {
 ; CHECK-LABEL: f15:
 ; CHECK: ltebr %f1, %f0
@@ -374,7 +438,7 @@ define float @f18(float %dummy, float %a, ptr %dest) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lnebr %f0, %f2
 ; CHECK-NEXT:    blr %r14
-; CHECK-NEXT:  .LBB17_1: # %store
+; CHECK-NEXT:  .LBB19_1: # %store
 ; CHECK-NEXT:    ste %f0, 0(%r2)
 ; CHECK-NEXT:    br %r14
 entry:
@@ -397,7 +461,7 @@ define float @f19(float %dummy, float %a, ptr %dest) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lcebr %f0, %f2
 ; CHECK-NEXT:    bler %r14
-; CHECK-NEXT:  .LBB18_1: # %store
+; CHECK-NEXT:  .LBB20_1: # %store
 ; CHECK-NEXT:    ste %f0, 0(%r2)
 ; CHECK-NEXT:    br %r14
 entry:

@@ -112,9 +112,7 @@ struct PPCMIPeephole : public MachineFunctionPass {
   MachineRegisterInfo *MRI;
   LiveVariables *LV;
 
-  PPCMIPeephole() : MachineFunctionPass(ID) {
-    initializePPCMIPeepholePass(*PassRegistry::getPassRegistry());
-  }
+  PPCMIPeephole() : MachineFunctionPass(ID) {}
 
 private:
   MachineDominatorTree *MDT;

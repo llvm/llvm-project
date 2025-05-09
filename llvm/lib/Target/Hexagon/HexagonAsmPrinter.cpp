@@ -16,11 +16,11 @@
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
-#include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonInstPrinter.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "MCTargetDesc/HexagonTargetStreamer.h"
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -460,8 +460,8 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
       TmpInst.setOpcode(Hexagon::A2_combinew);
       TmpInst.addOperand(MappedInst.getOperand(0));
       MCOperand &MO1 = MappedInst.getOperand(1);
-      unsigned High = RI->getSubReg(MO1.getReg(), Hexagon::isub_hi);
-      unsigned Low = RI->getSubReg(MO1.getReg(), Hexagon::isub_lo);
+      MCRegister High = RI->getSubReg(MO1.getReg(), Hexagon::isub_hi);
+      MCRegister Low = RI->getSubReg(MO1.getReg(), Hexagon::isub_lo);
       // Add a new operand for the second register in the pair.
       TmpInst.addOperand(MCOperand::createReg(High));
       TmpInst.addOperand(MCOperand::createReg(Low));
@@ -537,8 +537,8 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   // Translate a "$Rdd = $Rss" to "$Rdd = combine($Rs, $Rt)"
   case Hexagon::A2_tfrp: {
     MCOperand &MO = MappedInst.getOperand(1);
-    unsigned High = RI->getSubReg(MO.getReg(), Hexagon::isub_hi);
-    unsigned Low = RI->getSubReg(MO.getReg(), Hexagon::isub_lo);
+    MCRegister High = RI->getSubReg(MO.getReg(), Hexagon::isub_hi);
+    MCRegister Low = RI->getSubReg(MO.getReg(), Hexagon::isub_lo);
     MO.setReg(High);
     // Add a new operand for the second register in the pair.
     MappedInst.addOperand(MCOperand::createReg(Low));
@@ -549,8 +549,8 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::A2_tfrpt:
   case Hexagon::A2_tfrpf: {
     MCOperand &MO = MappedInst.getOperand(2);
-    unsigned High = RI->getSubReg(MO.getReg(), Hexagon::isub_hi);
-    unsigned Low = RI->getSubReg(MO.getReg(), Hexagon::isub_lo);
+    MCRegister High = RI->getSubReg(MO.getReg(), Hexagon::isub_hi);
+    MCRegister Low = RI->getSubReg(MO.getReg(), Hexagon::isub_lo);
     MO.setReg(High);
     // Add a new operand for the second register in the pair.
     MappedInst.addOperand(MCOperand::createReg(Low));
@@ -563,8 +563,8 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::A2_tfrptnew:
   case Hexagon::A2_tfrpfnew: {
     MCOperand &MO = MappedInst.getOperand(2);
-    unsigned High = RI->getSubReg(MO.getReg(), Hexagon::isub_hi);
-    unsigned Low = RI->getSubReg(MO.getReg(), Hexagon::isub_lo);
+    MCRegister High = RI->getSubReg(MO.getReg(), Hexagon::isub_hi);
+    MCRegister Low = RI->getSubReg(MO.getReg(), Hexagon::isub_lo);
     MO.setReg(High);
     // Add a new operand for the second register in the pair.
     MappedInst.addOperand(MCOperand::createReg(Low));
@@ -852,6 +852,11 @@ void HexagonAsmPrinter::LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI) {
 void HexagonAsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI) {
   EmitSled(MI, SledKind::TAIL_CALL);
 }
+
+char HexagonAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(HexagonAsmPrinter, "hexagon-asm-printer",
+                "Hexagon Assembly Printer", false, false)
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonAsmPrinter() {
   RegisterAsmPrinter<HexagonAsmPrinter> X(getTheHexagonTarget());

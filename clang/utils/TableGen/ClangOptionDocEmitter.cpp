@@ -109,13 +109,17 @@ Documentation extractDocumentation(const RecordKeeper &Records,
     // Pretend no-X and Xno-Y options are aliases of X and XY.
     std::string Name = std::string(R->getValueAsString("Name"));
     if (Name.size() >= 4) {
-      if (Name.substr(0, 3) == "no-" && OptionsByName[Name.substr(3)]) {
-        Aliases[OptionsByName[Name.substr(3)]].push_back(R);
-        continue;
+      if (Name.substr(0, 3) == "no-") {
+        if (const Record *Opt = OptionsByName[Name.substr(3)]) {
+          Aliases[Opt].push_back(R);
+          continue;
+        }
       }
-      if (Name.substr(1, 3) == "no-" && OptionsByName[Name[0] + Name.substr(4)]) {
-        Aliases[OptionsByName[Name[0] + Name.substr(4)]].push_back(R);
-        continue;
+      if (Name.substr(1, 3) == "no-") {
+        if (const Record *Opt = OptionsByName[Name[0] + Name.substr(4)]) {
+          Aliases[Opt].push_back(R);
+          continue;
+        }
       }
     }
 

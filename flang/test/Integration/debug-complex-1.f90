@@ -1,3 +1,4 @@
+! REQUIRES: flang-supports-f128-math
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -o - | FileCheck  %s
 
 program mn

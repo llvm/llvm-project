@@ -113,7 +113,7 @@ static SourceLocation getStartOfNextLine(SourceLocation Loc,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts) {
   std::unique_ptr<Lexer> Lex = getLexerStartingFromLoc(Loc, SM, LangOpts);
-  if (!Lex.get())
+  if (!Lex)
     return SourceLocation();
   llvm::SmallVector<char, 16> Line;
   // FIXME: this is a bit hacky to get ReadToEndOfLine work.
@@ -647,9 +647,8 @@ static SourceLocation getLocAfterNamespaceLBrace(const NamespaceDecl *NsDecl,
                                                  const LangOptions &LangOpts) {
   std::unique_ptr<Lexer> Lex =
       getLexerStartingFromLoc(NsDecl->getBeginLoc(), SM, LangOpts);
-  assert(Lex.get() &&
-         "Failed to create lexer from the beginning of namespace.");
-  if (!Lex.get())
+  assert(Lex && "Failed to create lexer from the beginning of namespace.");
+  if (!Lex)
     return SourceLocation();
   Token Tok;
   while (!Lex->LexFromRawLexer(Tok) && Tok.isNot(tok::TokenKind::l_brace)) {

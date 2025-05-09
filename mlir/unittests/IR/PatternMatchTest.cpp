@@ -19,6 +19,11 @@ struct AnOpRewritePattern : OpRewritePattern<test::OpA> {
   AnOpRewritePattern(MLIRContext *context)
       : OpRewritePattern(context, /*benefit=*/1,
                          /*generatedNames=*/{test::OpB::getOperationName()}) {}
+
+  LogicalResult matchAndRewrite(test::OpA op,
+                                PatternRewriter &rewriter) const override {
+    return failure();
+  }
 };
 TEST(OpRewritePatternTest, GetGeneratedNames) {
   MLIRContext context;

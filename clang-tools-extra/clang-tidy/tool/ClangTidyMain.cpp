@@ -33,7 +33,7 @@
 using namespace clang::tooling;
 using namespace llvm;
 
-static cl::desc desc(StringRef description) { return {description.ltrim()}; }
+static cl::desc desc(StringRef Description) { return {Description.ltrim()}; }
 
 static cl::OptionCategory ClangTidyCategory("clang-tidy options");
 

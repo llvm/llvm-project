@@ -17,10 +17,10 @@ define <1 x i64> @llrint_v1i64_v1f16(<1 x half> %x) {
 ; BE-NEXT:    std r0, 128(r1)
 ; BE-NEXT:    .cfi_def_cfa_offset 112
 ; BE-NEXT:    .cfi_offset lr, 16
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    bl llrintf
 ; BE-NEXT:    nop
@@ -36,10 +36,10 @@ define <1 x i64> @llrint_v1i64_v1f16(<1 x half> %x) {
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
@@ -55,10 +55,10 @@ define <1 x i64> @llrint_v1i64_v1f16(<1 x half> %x) {
 ; FAST-NEXT:    std r0, 48(r1)
 ; FAST-NEXT:    .cfi_def_cfa_offset 32
 ; FAST-NEXT:    .cfi_offset lr, 16
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fctid f0, f1
 ; FAST-NEXT:    mffprd r3, f0
@@ -85,18 +85,18 @@ define <2 x i64> @llrint_v1i64_v2f16(<2 x half> %x) {
 ; BE-NEXT:    fmr f31, f1
 ; BE-NEXT:    fmr f1, f2
 ; BE-NEXT:    std r30, 136(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f31
 ; BE-NEXT:    mr r30, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r30, 48
 ; BE-NEXT:    fmr f31, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    bl llrintf
 ; BE-NEXT:    nop
@@ -129,18 +129,18 @@ define <2 x i64> @llrint_v1i64_v2f16(<2 x half> %x) {
 ; CHECK-NEXT:    stfd f31, 88(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    fmr f31, f2
 ; CHECK-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f31
 ; CHECK-NEXT:    mr r30, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r30, 48
 ; CHECK-NEXT:    fmr f31, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
@@ -172,17 +172,17 @@ define <2 x i64> @llrint_v1i64_v2f16(<2 x half> %x) {
 ; FAST-NEXT:    fmr f31, f1
 ; FAST-NEXT:    fmr f1, f2
 ; FAST-NEXT:    std r0, 64(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f30, f1
 ; FAST-NEXT:    fmr f1, f31
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fctid f0, f1
 ; FAST-NEXT:    fctid f1, f30
@@ -226,34 +226,34 @@ define <4 x i64> @llrint_v4i64_v4f16(<4 x half> %x) {
 ; BE-NEXT:    stfd f31, 200(r1) # 8-byte Folded Spill
 ; BE-NEXT:    fmr f31, f4
 ; BE-NEXT:    fmr f30, f3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f29
 ; BE-NEXT:    mr r30, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f31
 ; BE-NEXT:    mr r29, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f30
 ; BE-NEXT:    mr r28, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r28, 48
 ; BE-NEXT:    fmr f31, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r29, 48
 ; BE-NEXT:    fmr f30, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r30, 48
 ; BE-NEXT:    fmr f29, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    bl llrintf
 ; BE-NEXT:    nop
@@ -313,34 +313,34 @@ define <4 x i64> @llrint_v4i64_v4f16(<4 x half> %x) {
 ; CHECK-NEXT:    stfd f31, 136(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    fmr f31, f4
 ; CHECK-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f29
 ; CHECK-NEXT:    mr r30, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f30
 ; CHECK-NEXT:    mr r29, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f31
 ; CHECK-NEXT:    mr r28, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r28, 48
 ; CHECK-NEXT:    fmr f31, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r29, 48
 ; CHECK-NEXT:    fmr f30, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r30, 48
 ; CHECK-NEXT:    fmr f29, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
@@ -394,31 +394,31 @@ define <4 x i64> @llrint_v4i64_v4f16(<4 x half> %x) {
 ; FAST-NEXT:    std r0, 80(r1)
 ; FAST-NEXT:    fmr f31, f3
 ; FAST-NEXT:    fmr f30, f2
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f28, f1
 ; FAST-NEXT:    fmr f1, f31
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f31, f1
 ; FAST-NEXT:    fmr f1, f30
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f30, f1
 ; FAST-NEXT:    fmr f1, f29
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fctid f0, f30
 ; FAST-NEXT:    fctid f2, f31
@@ -491,66 +491,66 @@ define <8 x i64> @llrint_v8i64_v8f16(<8 x half> %x) {
 ; BE-NEXT:    fmr f28, f5
 ; BE-NEXT:    fmr f27, f4
 ; BE-NEXT:    fmr f26, f3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f25
 ; BE-NEXT:    mr r30, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f27
 ; BE-NEXT:    mr r29, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f26
 ; BE-NEXT:    mr r28, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f29
 ; BE-NEXT:    mr r27, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f28
 ; BE-NEXT:    mr r26, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f31
 ; BE-NEXT:    mr r25, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f30
 ; BE-NEXT:    mr r24, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r24, 48
 ; BE-NEXT:    fmr f31, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r25, 48
 ; BE-NEXT:    fmr f30, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r26, 48
 ; BE-NEXT:    fmr f29, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r27, 48
 ; BE-NEXT:    fmr f28, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r28, 48
 ; BE-NEXT:    fmr f27, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r29, 48
 ; BE-NEXT:    fmr f26, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r30, 48
 ; BE-NEXT:    fmr f25, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    bl llrintf
 ; BE-NEXT:    nop
@@ -664,66 +664,66 @@ define <8 x i64> @llrint_v8i64_v8f16(<8 x half> %x) {
 ; CHECK-NEXT:    stfd f31, 232(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    fmr f31, f8
 ; CHECK-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f25
 ; CHECK-NEXT:    mr r30, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f26
 ; CHECK-NEXT:    mr r29, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f27
 ; CHECK-NEXT:    mr r28, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f28
 ; CHECK-NEXT:    mr r27, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f29
 ; CHECK-NEXT:    mr r26, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f30
 ; CHECK-NEXT:    mr r25, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f31
 ; CHECK-NEXT:    mr r24, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r24, 48
 ; CHECK-NEXT:    fmr f31, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r25, 48
 ; CHECK-NEXT:    fmr f30, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r26, 48
 ; CHECK-NEXT:    fmr f29, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r27, 48
 ; CHECK-NEXT:    fmr f28, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r28, 48
 ; CHECK-NEXT:    fmr f27, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r29, 48
 ; CHECK-NEXT:    fmr f26, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r30, 48
 ; CHECK-NEXT:    fmr f25, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
@@ -821,59 +821,59 @@ define <8 x i64> @llrint_v8i64_v8f16(<8 x half> %x) {
 ; FAST-NEXT:    fmr f27, f4
 ; FAST-NEXT:    fmr f26, f3
 ; FAST-NEXT:    fmr f25, f2
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f31, f1
 ; FAST-NEXT:    fmr f1, f30
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f30, f1
 ; FAST-NEXT:    fmr f1, f29
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f29, f1
 ; FAST-NEXT:    fmr f1, f28
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f28, f1
 ; FAST-NEXT:    fmr f1, f27
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f27, f1
 ; FAST-NEXT:    fmr f1, f26
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f26, f1
 ; FAST-NEXT:    fmr f1, f25
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f25, f1
 ; FAST-NEXT:    fmr f1, f24
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fctid f0, f25
 ; FAST-NEXT:    fctid f2, f26
@@ -1001,130 +1001,130 @@ define <16 x i64> @llrint_v16i64_v16f16(<16 x half> %x) {
 ; BE-NEXT:    fmr f23, f5
 ; BE-NEXT:    fmr f22, f4
 ; BE-NEXT:    fmr f21, f3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f20
 ; BE-NEXT:    mr r30, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f22
 ; BE-NEXT:    mr r29, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f21
 ; BE-NEXT:    mr r28, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f24
 ; BE-NEXT:    mr r27, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f23
 ; BE-NEXT:    mr r26, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f26
 ; BE-NEXT:    mr r25, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f25
 ; BE-NEXT:    mr r24, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f28
 ; BE-NEXT:    mr r23, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f27
 ; BE-NEXT:    mr r22, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f29
 ; BE-NEXT:    mr r21, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f30
 ; BE-NEXT:    mr r20, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 652(r1)
 ; BE-NEXT:    mr r19, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f31
 ; BE-NEXT:    mr r18, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 668(r1)
 ; BE-NEXT:    mr r17, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 660(r1)
 ; BE-NEXT:    mr r16, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r16, 48
 ; BE-NEXT:    fmr f31, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r17, 48
 ; BE-NEXT:    fmr f30, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r18, 48
 ; BE-NEXT:    fmr f29, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r19, 48
 ; BE-NEXT:    fmr f28, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r20, 48
 ; BE-NEXT:    fmr f27, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r21, 48
 ; BE-NEXT:    fmr f26, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r22, 48
 ; BE-NEXT:    fmr f25, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r23, 48
 ; BE-NEXT:    fmr f24, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r24, 48
 ; BE-NEXT:    fmr f23, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r25, 48
 ; BE-NEXT:    fmr f22, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r26, 48
 ; BE-NEXT:    fmr f21, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r27, 48
 ; BE-NEXT:    fmr f20, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r28, 48
 ; BE-NEXT:    fmr f19, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r29, 48
 ; BE-NEXT:    fmr f18, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r30, 48
 ; BE-NEXT:    fmr f17, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    bl llrintf
 ; BE-NEXT:    nop
@@ -1343,130 +1343,130 @@ define <16 x i64> @llrint_v16i64_v16f16(<16 x half> %x) {
 ; CHECK-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
 ; CHECK-NEXT:    li r3, 160
 ; CHECK-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f20
 ; CHECK-NEXT:    mr r30, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f21
 ; CHECK-NEXT:    mr r29, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f22
 ; CHECK-NEXT:    mr r28, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f23
 ; CHECK-NEXT:    mr r27, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f24
 ; CHECK-NEXT:    mr r26, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f25
 ; CHECK-NEXT:    mr r25, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f26
 ; CHECK-NEXT:    mr r24, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f27
 ; CHECK-NEXT:    mr r23, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f28
 ; CHECK-NEXT:    mr r22, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f29
 ; CHECK-NEXT:    mr r21, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f30
 ; CHECK-NEXT:    mr r20, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f31
 ; CHECK-NEXT:    mr r19, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 568(r1)
 ; CHECK-NEXT:    mr r18, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 576(r1)
 ; CHECK-NEXT:    mr r17, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 584(r1)
 ; CHECK-NEXT:    mr r16, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r16, 48
 ; CHECK-NEXT:    fmr f31, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r17, 48
 ; CHECK-NEXT:    fmr f30, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r18, 48
 ; CHECK-NEXT:    fmr f29, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r19, 48
 ; CHECK-NEXT:    fmr f28, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r20, 48
 ; CHECK-NEXT:    fmr f27, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r21, 48
 ; CHECK-NEXT:    fmr f26, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r22, 48
 ; CHECK-NEXT:    fmr f25, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r23, 48
 ; CHECK-NEXT:    fmr f24, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r24, 48
 ; CHECK-NEXT:    fmr f23, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r25, 48
 ; CHECK-NEXT:    fmr f22, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r26, 48
 ; CHECK-NEXT:    fmr f21, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r27, 48
 ; CHECK-NEXT:    fmr f20, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r28, 48
 ; CHECK-NEXT:    fmr f19, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r29, 48
 ; CHECK-NEXT:    fmr f18, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r30, 48
 ; CHECK-NEXT:    fmr f17, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
@@ -1650,115 +1650,115 @@ define <16 x i64> @llrint_v16i64_v16f16(<16 x half> %x) {
 ; FAST-NEXT:    fmr f22, f4
 ; FAST-NEXT:    fmr f23, f3
 ; FAST-NEXT:    fmr f25, f2
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f31, f1
 ; FAST-NEXT:    lfs f1, 304(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f30, f1
 ; FAST-NEXT:    lfs f1, 296(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f29, f1
 ; FAST-NEXT:    fmr f1, f28
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f28, f1
 ; FAST-NEXT:    fmr f1, f27
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f27, f1
 ; FAST-NEXT:    fmr f1, f24
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f24, f1
 ; FAST-NEXT:    fmr f1, f21
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f21, f1
 ; FAST-NEXT:    fmr f1, f19
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f19, f1
 ; FAST-NEXT:    fmr f1, f18
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f18, f1
 ; FAST-NEXT:    fmr f1, f17
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f17, f1
 ; FAST-NEXT:    fmr f1, f16
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f16, f1
 ; FAST-NEXT:    fmr f1, f20
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f20, f1
 ; FAST-NEXT:    fmr f1, f22
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f22, f1
 ; FAST-NEXT:    fmr f1, f23
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f23, f1
 ; FAST-NEXT:    fmr f1, f25
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f25, f1
 ; FAST-NEXT:    fmr f1, f26
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fctid f0, f25
 ; FAST-NEXT:    fctid f2, f23
@@ -1935,272 +1935,272 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) {
 ; BE-NEXT:    fmr f22, f4
 ; BE-NEXT:    fmr f21, f3
 ; BE-NEXT:    mr r30, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f20
 ; BE-NEXT:    std r3, 304(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f22
 ; BE-NEXT:    std r3, 296(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f21
 ; BE-NEXT:    std r3, 280(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f24
 ; BE-NEXT:    std r3, 264(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f23
 ; BE-NEXT:    std r3, 248(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f26
 ; BE-NEXT:    std r3, 232(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f25
 ; BE-NEXT:    std r3, 216(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f28
 ; BE-NEXT:    std r3, 200(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f27
 ; BE-NEXT:    std r3, 184(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f29
 ; BE-NEXT:    std r3, 168(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f30
 ; BE-NEXT:    std r3, 152(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1028(r1)
 ; BE-NEXT:    std r3, 136(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    fmr f1, f31
 ; BE-NEXT:    std r3, 120(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1044(r1)
 ; BE-NEXT:    std r3, 112(r1) # 8-byte Folded Spill
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1036(r1)
 ; BE-NEXT:    mr r15, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1060(r1)
 ; BE-NEXT:    mr r14, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1052(r1)
 ; BE-NEXT:    mr r31, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1076(r1)
 ; BE-NEXT:    mr r29, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1068(r1)
 ; BE-NEXT:    mr r28, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1092(r1)
 ; BE-NEXT:    mr r27, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1084(r1)
 ; BE-NEXT:    mr r26, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1108(r1)
 ; BE-NEXT:    mr r25, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1100(r1)
 ; BE-NEXT:    mr r24, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1124(r1)
 ; BE-NEXT:    mr r23, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1116(r1)
 ; BE-NEXT:    mr r22, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1140(r1)
 ; BE-NEXT:    mr r21, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1132(r1)
 ; BE-NEXT:    mr r20, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1156(r1)
 ; BE-NEXT:    mr r19, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1148(r1)
 ; BE-NEXT:    mr r18, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1172(r1)
 ; BE-NEXT:    mr r17, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    lfs f1, 1164(r1)
 ; BE-NEXT:    mr r16, r3
-; BE-NEXT:    bl __gnu_f2h_ieee
+; BE-NEXT:    bl __truncsfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r16, 48
 ; BE-NEXT:    stfs f1, 316(r1) # 4-byte Folded Spill
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r17, 48
 ; BE-NEXT:    stfs f1, 312(r1) # 4-byte Folded Spill
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r18, 48
 ; BE-NEXT:    stfs f1, 292(r1) # 4-byte Folded Spill
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r19, 48
 ; BE-NEXT:    stfs f1, 276(r1) # 4-byte Folded Spill
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r20, 48
 ; BE-NEXT:    stfs f1, 260(r1) # 4-byte Folded Spill
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r21, 48
 ; BE-NEXT:    stfs f1, 244(r1) # 4-byte Folded Spill
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r22, 48
 ; BE-NEXT:    stfs f1, 228(r1) # 4-byte Folded Spill
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r23, 48
 ; BE-NEXT:    stfs f1, 212(r1) # 4-byte Folded Spill
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r24, 48
 ; BE-NEXT:    stfs f1, 196(r1) # 4-byte Folded Spill
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r25, 48
 ; BE-NEXT:    stfs f1, 180(r1) # 4-byte Folded Spill
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r26, 48
 ; BE-NEXT:    stfs f1, 164(r1) # 4-byte Folded Spill
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r27, 48
 ; BE-NEXT:    stfs f1, 148(r1) # 4-byte Folded Spill
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r28, 48
 ; BE-NEXT:    stfs f1, 132(r1) # 4-byte Folded Spill
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r29, 48
 ; BE-NEXT:    fmr f18, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r31, 48
 ; BE-NEXT:    fmr f17, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r14, 48
 ; BE-NEXT:    fmr f16, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r15, 48
 ; BE-NEXT:    fmr f15, f1
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 112(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f14, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 120(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f31, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 136(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f30, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 152(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f29, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 168(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f28, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 184(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f27, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 200(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f26, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 216(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f25, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 232(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f24, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 248(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f23, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 264(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f22, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 280(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f21, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 296(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f20, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    ld r3, 304(r1) # 8-byte Folded Reload
 ; BE-NEXT:    fmr f19, f1
 ; BE-NEXT:    clrldi r3, r3, 48
-; BE-NEXT:    bl __gnu_h2f_ieee
+; BE-NEXT:    bl __extendhfsf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    bl llrintf
 ; BE-NEXT:    nop
@@ -2561,274 +2561,274 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) {
 ; CHECK-NEXT:    stvx v30, r1, r4 # 16-byte Folded Spill
 ; CHECK-NEXT:    li r4, 384
 ; CHECK-NEXT:    stvx v31, r1, r4 # 16-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f20
 ; CHECK-NEXT:    std r3, 176(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f21
 ; CHECK-NEXT:    std r3, 160(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f22
 ; CHECK-NEXT:    std r3, 144(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f23
 ; CHECK-NEXT:    std r3, 128(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f24
 ; CHECK-NEXT:    std r3, 120(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f25
 ; CHECK-NEXT:    std r3, 112(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f26
 ; CHECK-NEXT:    std r3, 104(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f27
 ; CHECK-NEXT:    std r3, 96(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f28
 ; CHECK-NEXT:    std r3, 88(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f29
 ; CHECK-NEXT:    std r3, 80(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f30
 ; CHECK-NEXT:    std r3, 72(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    fmr f1, f31
 ; CHECK-NEXT:    std r3, 64(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 832(r1)
 ; CHECK-NEXT:    std r3, 56(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 840(r1)
 ; CHECK-NEXT:    std r3, 48(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 848(r1)
 ; CHECK-NEXT:    mr r15, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 856(r1)
 ; CHECK-NEXT:    mr r14, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 864(r1)
 ; CHECK-NEXT:    mr r31, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 872(r1)
 ; CHECK-NEXT:    mr r29, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 880(r1)
 ; CHECK-NEXT:    mr r28, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 888(r1)
 ; CHECK-NEXT:    mr r27, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 896(r1)
 ; CHECK-NEXT:    mr r26, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 904(r1)
 ; CHECK-NEXT:    mr r25, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 912(r1)
 ; CHECK-NEXT:    mr r24, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 920(r1)
 ; CHECK-NEXT:    mr r23, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 928(r1)
 ; CHECK-NEXT:    mr r22, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 936(r1)
 ; CHECK-NEXT:    mr r21, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 944(r1)
 ; CHECK-NEXT:    mr r20, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 952(r1)
 ; CHECK-NEXT:    mr r19, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 960(r1)
 ; CHECK-NEXT:    mr r18, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 968(r1)
 ; CHECK-NEXT:    mr r17, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lfs f1, 976(r1)
 ; CHECK-NEXT:    mr r16, r3
-; CHECK-NEXT:    bl __gnu_f2h_ieee
+; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    li r3, 204
 ; CHECK-NEXT:    stxsspx f1, r1, r3 # 4-byte Folded Spill
 ; CHECK-NEXT:    clrldi r3, r16, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    li r3, 200
 ; CHECK-NEXT:    stxsspx f1, r1, r3 # 4-byte Folded Spill
 ; CHECK-NEXT:    clrldi r3, r17, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r18, 48
 ; CHECK-NEXT:    fmr f29, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r19, 48
 ; CHECK-NEXT:    fmr f28, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r20, 48
 ; CHECK-NEXT:    fmr f27, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r21, 48
 ; CHECK-NEXT:    fmr f26, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r22, 48
 ; CHECK-NEXT:    fmr f25, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r23, 48
 ; CHECK-NEXT:    fmr f24, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r24, 48
 ; CHECK-NEXT:    fmr f23, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r25, 48
 ; CHECK-NEXT:    fmr f22, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r26, 48
 ; CHECK-NEXT:    fmr f21, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r27, 48
 ; CHECK-NEXT:    fmr f20, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r28, 48
 ; CHECK-NEXT:    fmr f19, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r29, 48
 ; CHECK-NEXT:    fmr f18, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r31, 48
 ; CHECK-NEXT:    fmr f17, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r14, 48
 ; CHECK-NEXT:    fmr f16, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrldi r3, r15, 48
 ; CHECK-NEXT:    fmr f15, f1
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 48(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    fmr f14, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 56(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    fmr f30, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 64(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxlor v30, f1, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 72(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxlor v29, f1, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 80(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxlor v28, f1, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 88(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxlor v27, f1, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 96(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxlor v26, f1, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 104(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxlor v25, f1, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 112(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxlor v24, f1, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 120(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxlor v23, f1, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 128(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxlor v22, f1, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 144(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxlor v21, f1, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 160(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxlor v20, f1, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld r3, 176(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    fmr f31, f1
 ; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __gnu_h2f_ieee
+; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
@@ -3200,238 +3200,238 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) {
 ; FAST-NEXT:    xxlor v31, f6, f6
 ; FAST-NEXT:    stxsspx f1, r1, r4 # 4-byte Folded Spill
 ; FAST-NEXT:    lfs f1, 768(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    li r3, 120
 ; FAST-NEXT:    stxsdx f1, r1, r3 # 8-byte Folded Spill
 ; FAST-NEXT:    lfs f1, 760(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    li r3, 112
 ; FAST-NEXT:    stxsdx f1, r1, r3 # 8-byte Folded Spill
 ; FAST-NEXT:    lfs f1, 752(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    li r3, 104
 ; FAST-NEXT:    stxsdx f1, r1, r3 # 8-byte Folded Spill
 ; FAST-NEXT:    lfs f1, 744(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    li r3, 96
 ; FAST-NEXT:    stxsdx f1, r1, r3 # 8-byte Folded Spill
 ; FAST-NEXT:    lfs f1, 736(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    li r3, 88
 ; FAST-NEXT:    stxsdx f1, r1, r3 # 8-byte Folded Spill
 ; FAST-NEXT:    lfs f1, 728(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    li r3, 80
 ; FAST-NEXT:    stxsdx f1, r1, r3 # 8-byte Folded Spill
 ; FAST-NEXT:    lfs f1, 720(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    li r3, 72
 ; FAST-NEXT:    stxsdx f1, r1, r3 # 8-byte Folded Spill
 ; FAST-NEXT:    lfs f1, 712(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    li r3, 64
 ; FAST-NEXT:    stxsdx f1, r1, r3 # 8-byte Folded Spill
 ; FAST-NEXT:    lfs f1, 704(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    li r3, 56
 ; FAST-NEXT:    stxsdx f1, r1, r3 # 8-byte Folded Spill
 ; FAST-NEXT:    lfs f1, 696(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    li r3, 48
 ; FAST-NEXT:    stxsdx f1, r1, r3 # 8-byte Folded Spill
 ; FAST-NEXT:    lfs f1, 688(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    xxlor v21, f1, f1
 ; FAST-NEXT:    lfs f1, 680(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    xxlor v20, f1, f1
 ; FAST-NEXT:    lfs f1, 672(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    xxlor v24, f1, f1
 ; FAST-NEXT:    lfs f1, 664(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f31, f1
 ; FAST-NEXT:    lfs f1, 656(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f30, f1
 ; FAST-NEXT:    lfs f1, 648(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f28, f1
 ; FAST-NEXT:    lfs f1, 640(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f27, f1
 ; FAST-NEXT:    lfs f1, 632(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f26, f1
 ; FAST-NEXT:    lfs f1, 624(r1)
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f25, f1
 ; FAST-NEXT:    xxlor f1, v25, v25
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f24, f1
 ; FAST-NEXT:    xxlor f1, v26, v26
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f23, f1
 ; FAST-NEXT:    xxlor f1, v27, v27
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f22, f1
 ; FAST-NEXT:    xxlor f1, v28, v28
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f21, f1
 ; FAST-NEXT:    fmr f1, f29
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f20, f1
 ; FAST-NEXT:    xxlor f1, v29, v29
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f19, f1
 ; FAST-NEXT:    xxlor f1, v30, v30
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f18, f1
 ; FAST-NEXT:    xxlor f1, v31, v31
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f29, f1
 ; FAST-NEXT:    fmr f1, f14
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f14, f1
 ; FAST-NEXT:    fmr f1, f16
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f16, f1
 ; FAST-NEXT:    xxlor f1, v22, v22
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fmr f17, f1
 ; FAST-NEXT:    xxlor f1, v23, v23
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    li r3, 44
 ; FAST-NEXT:    fmr f15, f1
 ; FAST-NEXT:    lxsspx f1, r1, r3 # 4-byte Folded Reload
-; FAST-NEXT:    bl __gnu_f2h_ieee
+; FAST-NEXT:    bl __truncsfhf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    clrldi r3, r3, 48
-; FAST-NEXT:    bl __gnu_h2f_ieee
+; FAST-NEXT:    bl __extendhfsf2
 ; FAST-NEXT:    nop
 ; FAST-NEXT:    fctid f3, f15
 ; FAST-NEXT:    fctid f4, f17

@@ -19,6 +19,36 @@ int test_int(int expr, uint idx) {
 // CHECK-DXIL: declare [[TY]] @llvm.dx.wave.readlane.i32([[TY]], i32) #[[#attr:]]
 // CHECK-SPIRV: declare spir_func [[TY]] @llvm.spv.wave.readlane.i32([[TY]], i32) #[[#attr:]]
 
+// CHECK-LABEL: test_uint
+uint test_uint(uint expr, uint idx) {
+  // CHECK-SPIRV: %[[#entry_tok0:]] = call token @llvm.experimental.convergence.entry()
+  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.readlane.i32([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok0]]) ]
+  // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.readlane.i32([[TY]] %[[#]], i32 %[[#]])
+  // CHECK:  ret [[TY]] %[[RET]]
+  return WaveReadLaneAt(expr, idx);
+}
+
+// CHECK-LABEL: test_int64_t
+int64_t test_int64_t(int64_t expr, uint idx) {
+  // CHECK-SPIRV: %[[#entry_tok0:]] = call token @llvm.experimental.convergence.entry()
+  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.readlane.i64([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok0]]) ]
+  // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.readlane.i64([[TY]] %[[#]], i32 %[[#]])
+  // CHECK:  ret [[TY]] %[[RET]]
+  return WaveReadLaneAt(expr, idx);
+}
+
+// CHECK-DXIL: declare [[TY]] @llvm.dx.wave.readlane.i64([[TY]], i32) #[[#attr:]]
+// CHECK-SPIRV: declare spir_func [[TY]] @llvm.spv.wave.readlane.i64([[TY]], i32) #[[#attr:]]
+
+// CHECK-LABEL: test_uint64_t
+uint64_t test_uint64_t(uint64_t expr, uint idx) {
+  // CHECK-SPIRV: %[[#entry_tok0:]] = call token @llvm.experimental.convergence.entry()
+  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.readlane.i64([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok0]]) ]
+  // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.readlane.i64([[TY]] %[[#]], i32 %[[#]])
+  // CHECK:  ret [[TY]] %[[RET]]
+  return WaveReadLaneAt(expr, idx);
+}
+
 #ifdef __HLSL_ENABLE_16_BIT
 // CHECK-LABEL: test_int16
 int16_t test_int16(int16_t expr, uint idx) {
@@ -31,6 +61,15 @@ int16_t test_int16(int16_t expr, uint idx) {
 
 // CHECK-DXIL: declare [[TY]] @llvm.dx.wave.readlane.i16([[TY]], i32) #[[#attr:]]
 // CHECK-SPIRV: declare spir_func [[TY]] @llvm.spv.wave.readlane.i16([[TY]], i32) #[[#attr:]]
+
+// CHECK-LABEL: test_uint16
+uint16_t test_uint16(uint16_t expr, uint idx) {
+  // CHECK-SPIRV: %[[#entry_tok1:]] = call token @llvm.experimental.convergence.entry()
+  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.readlane.i16([[TY]] %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#entry_tok1]]) ]
+  // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.readlane.i16([[TY]] %[[#]], i32 %[[#]])
+  // CHECK:  ret [[TY]] %[[RET]]
+  return WaveReadLaneAt(expr, idx);
+}
 #endif
 
 // Test basic lowering to runtime function call with array and float values.

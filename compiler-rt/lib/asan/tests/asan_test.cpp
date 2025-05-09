@@ -369,8 +369,7 @@ void *ManyThreadsWorker(void *a) {
   return 0;
 }
 
-#if !defined(__aarch64__) && !defined(__powerpc64__)
-// FIXME: Infinite loop in AArch64 (PR24389).
+#if !defined(__powerpc64__)
 // FIXME: Also occasional hang on powerpc.  Maybe same problem as on AArch64?
 TEST(AddressSanitizer, ManyThreadsTest) {
   const size_t kNumThreads =
@@ -1164,7 +1163,7 @@ TEST(AddressSanitizer, DISABLED_StressStackReuseAndExceptionsTest) {
 }
 #endif
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__HAIKU__)
 TEST(AddressSanitizer, MlockTest) {
   EXPECT_EQ(0, mlockall(MCL_CURRENT));
   EXPECT_EQ(0, mlock((void *)0x12345, 0x5678));

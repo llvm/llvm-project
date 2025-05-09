@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_ABI_POWERPC_ABISYSV_PPC64_H
 
 #include "lldb/Target/ABI.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
 class ABISysV_ppc64 : public lldb_private::RegInfoBasedABI {
@@ -34,10 +35,9 @@ public:
   GetReturnValueObjectImpl(lldb_private::Thread &thread,
                            lldb_private::CompilerType &type) const override;
 
-  bool
-  CreateFunctionEntryUnwindPlan(lldb_private::UnwindPlan &unwind_plan) override;
+  lldb::UnwindPlanSP CreateFunctionEntryUnwindPlan() override;
 
-  bool CreateDefaultUnwindPlan(lldb_private::UnwindPlan &unwind_plan) override;
+  lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
 
   bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
 

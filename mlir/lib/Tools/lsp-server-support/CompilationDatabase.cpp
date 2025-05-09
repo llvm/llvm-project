@@ -104,8 +104,7 @@ void CompilationDatabase::loadDatabase(StringRef filename) {
     }
 
     // Track the includes for the file.
-    for (StringRef include : it.first->second.includeDirs)
-      knownIncludes.insert(include);
+    knownIncludes.insert_range(it.first->second.includeDirs);
   }
 
   // Add all of the known includes to the default file info. We don't know any

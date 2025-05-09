@@ -497,7 +497,7 @@ def Q30   : AArch64Reg<30, "q30", [D30, D30_HI], ["v30", ""]>, DwarfRegAlias<B30
 def Q31   : AArch64Reg<31, "q31", [D31, D31_HI], ["v31", ""]>, DwarfRegAlias<B31>;
 }
 
-def FPR8  : RegisterClass<"AArch64", [i8], 8, (sequence "B%u", 0, 31)> {
+def FPR8  : RegisterClass<"AArch64", [i8, aarch64mfp8], 8, (sequence "B%u", 0, 31)> {
   let Size = 8;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::FPR8RegClassID, 0, 32>";
 }
@@ -979,10 +979,19 @@ class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
 //******************************************************************************
 
 // SVE predicate register classes.
+
+// Note: This hardware mode is enabled in AArch64Subtarget::getHwModeSet()
+// (without the use of the table-gen'd predicates).
+def SMEWithZPRPredicateSpills : HwMode<"", [Predicate<"false">]>;
+
+def PPRSpillFillRI : RegInfoByHwMode<
+      [DefaultMode,              SMEWithZPRPredicateSpills],
+      [RegInfo<16,16,16>,        RegInfo<16,128,128>]>;
+
 class PPRClass<int firstreg, int lastreg, int step = 1> : RegisterClass<"AArch64",
                                   [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1 ], 16,
                                   (sequence "P%u", firstreg, lastreg, step)> {
-  let Size = 16;
+  let RegInfos = PPRSpillFillRI;
 }
 
 def PPR    : PPRClass<0, 15> {
@@ -1260,8 +1269,10 @@ def ZPRMul2AsmOp32_Hi : ZPRAsmOperand<"VectorS_Hi", 32, "Mul2_Hi">;
 def ZPRMul2AsmOp64_Lo : ZPRAsmOperand<"VectorD_Lo", 64, "Mul2_Lo">;
 def ZPRMul2AsmOp64_Hi : ZPRAsmOperand<"VectorD_Hi", 64, "Mul2_Hi">;
 
-def ZPR_K : RegisterClass<"AArch64", [untyped], 128,
-                          (add Z20, Z21, Z22, Z23, Z28, Z29, Z30, Z31)>;
+def ZPR_K : RegisterClass<"AArch64", [nxv16i8], 128,
+                          (add Z20, Z21, Z22, Z23, Z28, Z29, Z30, Z31)>{
+                             let Size = 128;
+}
 
 def ZK : RegisterOperand<ZPR_K, "printSVERegOp<>">{
   let EncoderMethod = "EncodeZK";

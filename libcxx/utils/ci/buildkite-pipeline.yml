@@ -115,19 +115,17 @@ steps:
       os: aix
     <<: *common
 
-# TODO: Re-enable this when the FreeBSD runners are back online
-#       https://github.com/llvm/llvm-project/issues/117780
-# - group: ':freebsd: FreeBSD'
-#   steps:
-#   - label: FreeBSD 13 amd64
-#     command: libcxx/utils/ci/run-buildbot generic-cxx26
-#     env:
-#       CC: clang17
-#       CXX: clang++17
-#     agents:
-#       queue: libcxx-builders
-#       os: freebsd
-#     <<: *common
+- group: ':freebsd: FreeBSD'
+  steps:
+  - label: FreeBSD 13 amd64
+    command: libcxx/utils/ci/run-buildbot generic-cxx26
+    env:
+      CC: clang19
+      CXX: clang++19
+    agents:
+      queue: libcxx-builders
+      os: freebsd
+    <<: *common
 
 - group: ':android: Android'
   steps:

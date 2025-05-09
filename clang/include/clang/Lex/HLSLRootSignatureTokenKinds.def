@@ -1,0 +1,136 @@
+//===--- HLSLRootSignature.def - Tokens and Enum Database -------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the TokenKinds used in the Root Signature DSL. This
+// includes keywords, enums and a small subset of punctuators. Users of this
+// file must optionally #define the TOK, KEYWORD, ENUM or specific ENUM macros
+// to make use of this file.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TOK
+#define TOK(X, SPELLING)
+#endif
+#ifndef PUNCTUATOR
+#define PUNCTUATOR(X,Y) TOK(pu_ ## X, Y)
+#endif
+#ifndef KEYWORD
+#define KEYWORD(X) TOK(kw_ ## X, #X)
+#endif
+#ifndef ENUM
+#define ENUM(NAME, LIT) TOK(en_ ## NAME, LIT)
+#endif
+
+// Defines the various types of enum
+#ifndef UNBOUNDED_ENUM
+#define UNBOUNDED_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
+#ifndef DESCRIPTOR_RANGE_OFFSET_ENUM
+#define DESCRIPTOR_RANGE_OFFSET_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
+#ifndef ROOT_DESCRIPTOR_FLAG_ENUM
+#define ROOT_DESCRIPTOR_FLAG_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
+// Note: ON denotes that the flag is unique from the above Root Descriptor
+//  Flags. This is required to avoid token kind enum conflicts.
+#ifndef DESCRIPTOR_RANGE_FLAG_ENUM_OFF
+#define DESCRIPTOR_RANGE_FLAG_ENUM_OFF(NAME, LIT)
+#endif
+#ifndef DESCRIPTOR_RANGE_FLAG_ENUM_ON
+#define DESCRIPTOR_RANGE_FLAG_ENUM_ON(NAME, LIT) ENUM(NAME, LIT)
+#endif
+#ifndef DESCRIPTOR_RANGE_FLAG_ENUM
+#define DESCRIPTOR_RANGE_FLAG_ENUM(NAME, LIT, ON) DESCRIPTOR_RANGE_FLAG_ENUM_##ON(NAME, LIT)
+#endif
+#ifndef SHADER_VISIBILITY_ENUM
+#define SHADER_VISIBILITY_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
+
+// General Tokens:
+TOK(invalid, "invalid identifier")
+TOK(end_of_stream, "end of stream")
+TOK(int_literal, "integer literal")
+TOK(float_literal, "float literal")
+
+// Register Tokens:
+TOK(bReg, "b register")
+TOK(tReg, "t register")
+TOK(uReg, "u register")
+TOK(sReg, "s register")
+
+// Punctuators:
+PUNCTUATOR(l_paren, '(')
+PUNCTUATOR(r_paren, ')')
+PUNCTUATOR(comma,   ',')
+PUNCTUATOR(or,      '|')
+PUNCTUATOR(equal,   '=')
+PUNCTUATOR(plus,    '+')
+PUNCTUATOR(minus,   '-')
+
+// RootElement Keywords:
+KEYWORD(RootSignature) // used only for diagnostic messaging
+KEYWORD(DescriptorTable)
+KEYWORD(RootConstants)
+
+// RootConstants Keywords:
+KEYWORD(num32BitConstants)
+
+// DescriptorTable Keywords:
+KEYWORD(CBV)
+KEYWORD(SRV)
+KEYWORD(UAV)
+KEYWORD(Sampler)
+
+// General Parameter Keywords:
+KEYWORD(space)
+KEYWORD(visibility)
+KEYWORD(flags)
+
+// View Parameter Keywords:
+KEYWORD(numDescriptors)
+KEYWORD(offset)
+
+// Unbounded Enum:
+UNBOUNDED_ENUM(unbounded, "unbounded")
+
+// Descriptor Range Offset Enum:
+DESCRIPTOR_RANGE_OFFSET_ENUM(DescriptorRangeOffsetAppend, "DESCRIPTOR_RANGE_OFFSET_APPEND")
+
+// Root Descriptor Flag Enums:
+ROOT_DESCRIPTOR_FLAG_ENUM(DataVolatile, "DATA_VOLATILE")
+ROOT_DESCRIPTOR_FLAG_ENUM(DataStaticWhileSetAtExecute, "DATA_STATIC_WHILE_SET_AT_EXECUTE")
+ROOT_DESCRIPTOR_FLAG_ENUM(DataStatic, "DATA_STATIC")
+
+// Descriptor Range Flag Enums:
+DESCRIPTOR_RANGE_FLAG_ENUM(DescriptorsVolatile, "DESCRIPTORS_VOLATILE", ON)
+DESCRIPTOR_RANGE_FLAG_ENUM(DataVolatile, "DATA_VOLATILE", OFF)
+DESCRIPTOR_RANGE_FLAG_ENUM(DataStaticWhileSetAtExecute, "DATA_STATIC_WHILE_SET_AT_EXECUTE", OFF)
+DESCRIPTOR_RANGE_FLAG_ENUM(DataStatic, "DATA_STATIC", OFF)
+DESCRIPTOR_RANGE_FLAG_ENUM(DescriptorsStaticKeepingBufferBoundsChecks, "DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS", ON)
+
+// Shader Visibiliy Enums:
+SHADER_VISIBILITY_ENUM(All, "SHADER_VISIBILITY_ALL")
+SHADER_VISIBILITY_ENUM(Vertex, "SHADER_VISIBILITY_VERTEX")
+SHADER_VISIBILITY_ENUM(Hull, "SHADER_VISIBILITY_HULL")
+SHADER_VISIBILITY_ENUM(Domain, "SHADER_VISIBILITY_DOMAIN")
+SHADER_VISIBILITY_ENUM(Geometry, "SHADER_VISIBILITY_GEOMETRY")
+SHADER_VISIBILITY_ENUM(Pixel, "SHADER_VISIBILITY_PIXEL")
+SHADER_VISIBILITY_ENUM(Amplification, "SHADER_VISIBILITY_AMPLIFICATION")
+SHADER_VISIBILITY_ENUM(Mesh, "SHADER_VISIBILITY_MESH")
+
+#undef SHADER_VISIBILITY_ENUM
+#undef DESCRIPTOR_RANGE_FLAG_ENUM
+#undef DESCRIPTOR_RANGE_FLAG_ENUM_OFF
+#undef DESCRIPTOR_RANGE_FLAG_ENUM_ON
+#undef ROOT_DESCRIPTOR_FLAG_ENUM
+#undef DESCRIPTOR_RANGE_OFFSET_ENUM
+#undef UNBOUNDED_ENUM
+#undef ENUM
+#undef KEYWORD
+#undef PUNCTUATOR
+#undef TOK

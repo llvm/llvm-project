@@ -6,12 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO(mordante) Investigate
+// UNSUPPORTED: apple-clang
+
 // <fstream>
 
 // basic_streambuf<charT, traits>* setbuf(char_type* s, streamsize n) override;
 
-// In C++23 and later, this test requires support for P2467R1 in the dylib (a3f17ba3febbd546f2342ffc780ac93b694fdc8d)
-// XFAIL: (!c++03 && !c++11 && !c++14 && !c++17 && !c++20) && using-built-library-before-llvm-18
+// This test requires the fix to https://github.com/llvm/llvm-project/issues/60509 in the dylib,
+// which landed in 5afb937d8a30445642ccaf33866ee4cdd0713222.
+// XFAIL using-built-library-before-llvm-19
 
 #include <fstream>
 #include <cstddef>

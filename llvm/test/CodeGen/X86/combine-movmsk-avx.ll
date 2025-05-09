@@ -75,39 +75,15 @@ define i1 @movmskps_allof_bitcast_v4f64(<4 x double> %a0) {
 }
 
 ;
-; TODO - Avoid sign extension ops when just extracting the sign bits.
+; Avoid sign extension ops when just extracting the sign bits.
 ;
 
 define i32 @movmskpd_cmpgt_v4i64(<4 x i64> %a0) {
-; VTEST-AVX1-LABEL: movmskpd_cmpgt_v4i64:
-; VTEST-AVX1:       # %bb.0:
-; VTEST-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; VTEST-AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm1
-; VTEST-AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
-; VTEST-AVX1-NEXT:    vmovmskpd %ymm0, %eax
-; VTEST-AVX1-NEXT:    vzeroupper
-; VTEST-AVX1-NEXT:    retq
-;
-; VTEST-AVX2-LABEL: movmskpd_cmpgt_v4i64:
-; VTEST-AVX2:       # %bb.0:
-; VTEST-AVX2-NEXT:    vmovmskpd %ymm0, %eax
-; VTEST-AVX2-NEXT:    vzeroupper
-; VTEST-AVX2-NEXT:    retq
-;
-; MOVMSK-AVX1-LABEL: movmskpd_cmpgt_v4i64:
-; MOVMSK-AVX1:       # %bb.0:
-; MOVMSK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; MOVMSK-AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm1
-; MOVMSK-AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
-; MOVMSK-AVX1-NEXT:    vmovmskpd %ymm0, %eax
-; MOVMSK-AVX1-NEXT:    vzeroupper
-; MOVMSK-AVX1-NEXT:    retq
-;
-; MOVMSK-AVX2-LABEL: movmskpd_cmpgt_v4i64:
-; MOVMSK-AVX2:       # %bb.0:
-; MOVMSK-AVX2-NEXT:    vmovmskpd %ymm0, %eax
-; MOVMSK-AVX2-NEXT:    vzeroupper
-; MOVMSK-AVX2-NEXT:    retq
+; CHECK-LABEL: movmskpd_cmpgt_v4i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovmskpd %ymm0, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %1 = icmp sgt <4 x i64> zeroinitializer, %a0
   %2 = sext <4 x i1> %1 to <4 x i64>
   %3 = bitcast <4 x i64> %2 to <4 x double>
@@ -116,33 +92,11 @@ define i32 @movmskpd_cmpgt_v4i64(<4 x i64> %a0) {
 }
 
 define i32 @movmskps_ashr_v8i32(<8 x i32> %a0)  {
-; VTEST-AVX1-LABEL: movmskps_ashr_v8i32:
-; VTEST-AVX1:       # %bb.0:
-; VTEST-AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
-; VTEST-AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; VTEST-AVX1-NEXT:    vmovmskps %ymm0, %eax
-; VTEST-AVX1-NEXT:    vzeroupper
-; VTEST-AVX1-NEXT:    retq
-;
-; VTEST-AVX2-LABEL: movmskps_ashr_v8i32:
-; VTEST-AVX2:       # %bb.0:
-; VTEST-AVX2-NEXT:    vmovmskps %ymm0, %eax
-; VTEST-AVX2-NEXT:    vzeroupper
-; VTEST-AVX2-NEXT:    retq
-;
-; MOVMSK-AVX1-LABEL: movmskps_ashr_v8i32:
-; MOVMSK-AVX1:       # %bb.0:
-; MOVMSK-AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
-; MOVMSK-AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; MOVMSK-AVX1-NEXT:    vmovmskps %ymm0, %eax
-; MOVMSK-AVX1-NEXT:    vzeroupper
-; MOVMSK-AVX1-NEXT:    retq
-;
-; MOVMSK-AVX2-LABEL: movmskps_ashr_v8i32:
-; MOVMSK-AVX2:       # %bb.0:
-; MOVMSK-AVX2-NEXT:    vmovmskps %ymm0, %eax
-; MOVMSK-AVX2-NEXT:    vzeroupper
-; MOVMSK-AVX2-NEXT:    retq
+; CHECK-LABEL: movmskps_ashr_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovmskps %ymm0, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %1 = ashr <8 x i32> %a0, <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
   %2 = bitcast <8 x i32> %1 to <8 x float>
   %3 = tail call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %2)

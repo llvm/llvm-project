@@ -263,7 +263,6 @@ define i64 @sel_shift_bool_i64(i1 %t) {
   ret i64 %shl
 }
 
-; FIXME: This should use sraiw+and
 define i64 @sraiw_andi(i32 signext %0, i32 signext %1) nounwind {
 ; RV32-LABEL: sraiw_andi:
 ; RV32:       # %bb.0: # %entry

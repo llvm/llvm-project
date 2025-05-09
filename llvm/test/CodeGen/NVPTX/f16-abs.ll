@@ -49,7 +49,7 @@ define half @test_fabs(half %a) {
 ; CHECK-NOF16-LABEL: test_fabs(
 ; CHECK-NOF16:       {
 ; CHECK-NOF16-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NOF16-NEXT:    .reg .f32 %f<3>;
+; CHECK-NOF16-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NOF16-EMPTY:
 ; CHECK-NOF16-NEXT:  // %bb.0:
 ; CHECK-NOF16-NEXT:    ld.param.b16 %rs1, [test_fabs_param_0];

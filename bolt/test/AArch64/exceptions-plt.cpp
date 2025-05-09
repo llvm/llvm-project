@@ -2,7 +2,9 @@
 
 // REQUIRES: system-linux
 
-// RUN: %clangxx %cxxflags -O1 -Wl,-q,-znow %s -o %t.exe
+// RUN: %clang %cflags -fpic -shared -xc /dev/null -o %t.so
+// Link against a DSO to ensure PLT entries.
+// RUN: %clangxx %cxxflags -O1 -Wl,-q,-znow %s %t.so -o %t.exe
 // RUN: llvm-bolt %t.exe -o %t.bolt.exe --plt=all --print-only=.*main.* \
 // RUN:   --print-finalized 2>&1 | FileCheck %s
 

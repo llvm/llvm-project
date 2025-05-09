@@ -63,4 +63,3 @@ float3 test_radians_float3(float3 p0) { return radians(p0); }
 // CHECK: %{{.*}} = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].radians.v4f32
 // CHECK: ret <4 x float> %{{.*}}
 float4 test_radians_float4(float4 p0) { return radians(p0); }
-

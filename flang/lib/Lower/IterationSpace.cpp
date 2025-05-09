@@ -19,36 +19,6 @@
 
 #define DEBUG_TYPE "flang-lower-iteration-space"
 
-unsigned Fortran::lower::getHashValue(
-    const Fortran::lower::ExplicitIterSpace::ArrayBases &x) {
-  return Fortran::common::visit(
-      [&](const auto *p) { return HashEvaluateExpr::getHashValue(*p); }, x);
-}
-
-bool Fortran::lower::isEqual(
-    const Fortran::lower::ExplicitIterSpace::ArrayBases &x,
-    const Fortran::lower::ExplicitIterSpace::ArrayBases &y) {
-  return Fortran::common::visit(
-      Fortran::common::visitors{
-          // Fortran::semantics::Symbol * are the exception here. These pointers
-          // have identity; if two Symbol * values are the same (different) then
-          // they are the same (different) logical symbol.
-          [&](Fortran::lower::FrontEndSymbol p,
-              Fortran::lower::FrontEndSymbol q) { return p == q; },
-          [&](const auto *p, const auto *q) {
-            if constexpr (std::is_same_v<decltype(p), decltype(q)>) {
-              LLVM_DEBUG(llvm::dbgs()
-                         << "is equal: " << p << ' ' << q << ' '
-                         << IsEqualEvaluateExpr::isEqual(*p, *q) << '\n');
-              return IsEqualEvaluateExpr::isEqual(*p, *q);
-            } else {
-              // Different subtree types are never equal.
-              return false;
-            }
-          }},
-      x, y);
-}
-
 namespace {
 
 /// This class can recover the base array in an expression that contains
@@ -193,10 +163,6 @@ private:
   RT find(const Fortran::evaluate::ComplexPart &x) { return {}; }
   template <typename T>
   RT find(const Fortran::evaluate::Designator<T> &x) {
-    return find(x.u);
-  }
-  template <typename T>
-  RT find(const Fortran::evaluate::Variable<T> &x) {
     return find(x.u);
   }
   RT find(const Fortran::evaluate::DescriptorInquiry &) { return {}; }

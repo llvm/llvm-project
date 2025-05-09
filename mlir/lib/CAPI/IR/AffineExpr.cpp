@@ -61,6 +61,23 @@ MlirAffineExpr mlirAffineExprCompose(MlirAffineExpr affineExpr,
   return wrap(unwrap(affineExpr).compose(unwrap(affineMap)));
 }
 
+MlirAffineExpr mlirAffineExprShiftDims(MlirAffineExpr affineExpr,
+                                       uint32_t numDims, uint32_t shift,
+                                       uint32_t offset) {
+  return wrap(unwrap(affineExpr).shiftDims(numDims, shift, offset));
+}
+
+MlirAffineExpr mlirAffineExprShiftSymbols(MlirAffineExpr affineExpr,
+                                          uint32_t numSymbols, uint32_t shift,
+                                          uint32_t offset) {
+  return wrap(unwrap(affineExpr).shiftSymbols(numSymbols, shift, offset));
+}
+
+MlirAffineExpr mlirSimplifyAffineExpr(MlirAffineExpr expr, uint32_t numDims,
+                                      uint32_t numSymbols) {
+  return wrap(simplifyAffineExpr(unwrap(expr), numDims, numSymbols));
+}
+
 //===----------------------------------------------------------------------===//
 // Affine Dimension Expression.
 //===----------------------------------------------------------------------===//

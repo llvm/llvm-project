@@ -219,5 +219,5 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:       omp_section_loop.inc:                             ; preds = %[[VAL_69]]
 // CHECK:         %[[VAL_31]] = add nuw i32 %[[VAL_30]], 1
 // CHECK:         br label %[[VAL_28]]
-// CHECK:       omp.par.outlined.exit.exitStub:                   ; preds = %[[VAL_64]]
+// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_64]]
 // CHECK:         ret void

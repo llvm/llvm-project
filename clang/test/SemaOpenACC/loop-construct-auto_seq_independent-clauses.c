@@ -8,29 +8,42 @@ void uses() {
 #pragma acc loop independent
   for(unsigned i = 0; i < 5; ++i);
 
-  // expected-error@+2{{OpenACC clause 'seq' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'auto' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'auto' clause is here}}
 #pragma acc loop auto seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'independent' may not appear on the same construct as a 'auto' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'auto' clause is here}}
 #pragma acc loop auto independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'auto' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'auto' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'independent' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'independent' clause is here}}
 #pragma acc loop independent auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'seq' on 'loop' construct conflicts with previous data dependence clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'independent' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'independent' clause is here}}
 #pragma acc loop independent seq
+  for(unsigned i = 0; i < 5; ++i);
+
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'seq' clause is here}}
+#pragma acc loop seq seq
+  for(unsigned i = 0; i < 5; ++i);
+  // expected-error@+2{{OpenACC clause 'independent' may not appear on the same construct as a 'independent' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'independent' clause is here}}
+#pragma acc loop independent independent
+  for(unsigned i = 0; i < 5; ++i);
+  // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'auto' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'auto' clause is here}}
+#pragma acc loop auto auto
   for(unsigned i = 0; i < 5; ++i);
 
   int Var;
@@ -47,7 +60,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop auto vector
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop auto nohost
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -86,7 +99,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
 #pragma acc loop auto deviceptr(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_resident' clause is not valid on 'loop' directive}}
 #pragma acc loop auto device_resident(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
@@ -95,7 +108,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'host' clause is not valid on 'loop' directive}}
 #pragma acc loop auto host(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
+  // expected-error@+1{{OpenACC 'link' clause is not valid on 'loop' directive}}
 #pragma acc loop auto link(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'no_create' clause is not valid on 'loop' directive}}
@@ -137,7 +150,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop auto collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'loop' directive}}
 #pragma acc loop auto bind(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}
@@ -181,7 +194,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop vector auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop nohost auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -220,7 +233,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
 #pragma acc loop deviceptr(VarPtr) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_resident' clause is not valid on 'loop' directive}}
 #pragma acc loop device_resident(VarPtr) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
@@ -229,7 +242,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'host' clause is not valid on 'loop' directive}}
 #pragma acc loop host(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
+  // expected-error@+1{{OpenACC 'link' clause is not valid on 'loop' directive}}
 #pragma acc loop link(Var) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'no_create' clause is not valid on 'loop' directive}}
@@ -271,7 +284,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop collapse(1) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'loop' directive}}
 #pragma acc loop bind(Var) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}
@@ -316,7 +329,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop independent vector
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop independent nohost
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -355,7 +368,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
 #pragma acc loop independent deviceptr(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_resident' clause is not valid on 'loop' directive}}
 #pragma acc loop independent device_resident(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
@@ -364,7 +377,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'host' clause is not valid on 'loop' directive}}
 #pragma acc loop independent host(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
+  // expected-error@+1{{OpenACC 'link' clause is not valid on 'loop' directive}}
 #pragma acc loop independent link(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'no_create' clause is not valid on 'loop' directive}}
@@ -406,7 +419,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop independent collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'loop' directive}}
 #pragma acc loop independent bind(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}
@@ -450,7 +463,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop vector independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop nohost independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -489,7 +502,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
 #pragma acc loop deviceptr(VarPtr) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_resident' clause is not valid on 'loop' directive}}
 #pragma acc loop device_resident(VarPtr) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
@@ -498,7 +511,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'host' clause is not valid on 'loop' directive}}
 #pragma acc loop host(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
+  // expected-error@+1{{OpenACC 'link' clause is not valid on 'loop' directive}}
 #pragma acc loop link(Var) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'no_create' clause is not valid on 'loop' directive}}
@@ -540,7 +553,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop collapse(1) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'loop' directive}}
 #pragma acc loop bind(Var) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}
@@ -576,15 +589,19 @@ void uses() {
 
   // 'seq' cannot be combined with 'gang', 'worker' or 'vector'
   // expected-error@+2{{OpenACC clause 'gang' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq gang
   for(unsigned i = 0; i < 5; ++i);
+  // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'gang' clause on a 'loop' construct}}
+  // expected-note@+1{{previous 'gang' clause is here}}
+#pragma acc loop gang seq
+  for(unsigned i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'worker' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq worker
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq vector
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'loop' directive}}
@@ -593,7 +610,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'loop' directive}}
 #pragma acc loop seq if_present
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop seq nohost
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -632,7 +649,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
 #pragma acc loop seq deviceptr(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_resident' clause is not valid on 'loop' directive}}
 #pragma acc loop seq device_resident(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
@@ -641,7 +658,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'host' clause is not valid on 'loop' directive}}
 #pragma acc loop seq host(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
+  // expected-error@+1{{OpenACC 'link' clause is not valid on 'loop' directive}}
 #pragma acc loop seq link(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'no_create' clause is not valid on 'loop' directive}}
@@ -683,7 +700,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop seq collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'loop' directive}}
 #pragma acc loop seq bind(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}
@@ -716,15 +733,15 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 
   // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'gang' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'gang' clause is here}}
 #pragma acc loop gang seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'worker' clause is here}}
 #pragma acc loop worker seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'seq' may not appear on the same construct as a 'vector' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'vector' clause is here}}
 #pragma acc loop vector seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'finalize' clause is not valid on 'loop' directive}}
@@ -733,7 +750,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'loop' directive}}
 #pragma acc loop if_present seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop nohost seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -772,7 +789,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
 #pragma acc loop deviceptr(VarPtr) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device_resident' clause is not valid on 'loop' directive}}
 #pragma acc loop device_resident(VarPtr) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
@@ -781,7 +798,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'host' clause is not valid on 'loop' directive}}
 #pragma acc loop host(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
+  // expected-error@+1{{OpenACC 'link' clause is not valid on 'loop' directive}}
 #pragma acc loop link(Var) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'no_create' clause is not valid on 'loop' directive}}
@@ -823,7 +840,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop collapse(1) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'loop' directive}}
 #pragma acc loop bind(Var) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}

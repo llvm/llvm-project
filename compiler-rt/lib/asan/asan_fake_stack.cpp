@@ -27,6 +27,7 @@ static const u64 kAllocaRedzoneMask = 31UL;
 
 // For small size classes inline PoisonShadow for better performance.
 ALWAYS_INLINE void SetShadow(uptr ptr, uptr size, uptr class_id, u64 magic) {
+  CHECK(AddrIsAlignedByGranularity(ptr + size));
   u64 *shadow = reinterpret_cast<u64*>(MemToShadow(ptr));
   if (ASAN_SHADOW_SCALE == 3 && class_id <= 6) {
     // This code expects ASAN_SHADOW_SCALE=3.
@@ -38,6 +39,11 @@ ALWAYS_INLINE void SetShadow(uptr ptr, uptr size, uptr class_id, u64 magic) {
   } else {
     // The size class is too big, it's cheaper to poison only size bytes.
     PoisonShadow(ptr, size, static_cast<u8>(magic));
+  }
+
+  if (magic == 0) {
+    uptr redzone_size = FakeStack::BytesInSizeClass(class_id) - size;
+    PoisonShadow(ptr + size, redzone_size, kAsanStackRightRedzoneMagic);
   }
 }
 

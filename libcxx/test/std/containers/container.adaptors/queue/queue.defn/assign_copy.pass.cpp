@@ -16,21 +16,18 @@
 #include "test_macros.h"
 
 template <class C>
-C
-make(int n)
-{
-    C c;
-    for (int i = 0; i < n; ++i)
-        c.push_back(i);
-    return c;
+C make(int n) {
+  C c;
+  for (int i = 0; i < n; ++i)
+    c.push_back(i);
+  return c;
 }
 
-int main(int, char**)
-{
-    std::queue<int> q(make<std::deque<int> >(5));
-    std::queue<int> q2;
-    q2 = q;
-    assert(q2 == q);
+int main(int, char**) {
+  std::queue<int> q(make<std::deque<int> >(5));
+  std::queue<int> q2;
+  q2 = q;
+  assert(q2 == q);
 
   return 0;
 }

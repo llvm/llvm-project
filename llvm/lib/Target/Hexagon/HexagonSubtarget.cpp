@@ -361,11 +361,13 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
           } else if (MO.isDef() && MO.getReg().isPhysical()) {
             for (MCRegAliasIterator AI(MO.getReg(), &TRI, true); AI.isValid();
                  ++AI) {
-              if (LastVRegUse.count(*AI) &&
-                  LastVRegUse[*AI] != &DAG->SUnits[su])
-                // %r0 = ...
-                DAG->addEdge(&DAG->SUnits[su], SDep(LastVRegUse[*AI], SDep::Barrier));
-              LastVRegUse.erase(*AI);
+              if (auto It = LastVRegUse.find(*AI); It != LastVRegUse.end()) {
+                if (It->second != &DAG->SUnits[su])
+                  // %r0 = ...
+                  DAG->addEdge(&DAG->SUnits[su],
+                               SDep(It->second, SDep::Barrier));
+                LastVRegUse.erase(It);
+              }
             }
           }
         }
@@ -390,7 +392,7 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
         HII.getAddrMode(L0) != HexagonII::BaseImmOffset)
       continue;
     int64_t Offset0;
-    LocationSize Size0 = 0;
+    LocationSize Size0 = LocationSize::precise(0);
     MachineOperand *BaseOp0 = HII.getBaseAndOffset(L0, Offset0, Size0);
     // Is the access size is longer than the L1 cache line, skip the check.
     if (BaseOp0 == nullptr || !BaseOp0->isReg() || !Size0.hasValue() ||
@@ -404,7 +406,7 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
           HII.getAddrMode(L1) != HexagonII::BaseImmOffset)
         continue;
       int64_t Offset1;
-      LocationSize Size1 = 0;
+      LocationSize Size1 = LocationSize::precise(0);
       MachineOperand *BaseOp1 = HII.getBaseAndOffset(L1, Offset1, Size1);
       if (BaseOp1 == nullptr || !BaseOp1->isReg() || !Size0.hasValue() ||
           Size1.getValue() >= 32 || BaseOp0->getReg() != BaseOp1->getReg())
@@ -686,7 +688,7 @@ bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
       restoreLatency(Src, DstBest);
   }
 
-  // Attempt to find another opprotunity for zero latency in a different
+  // Attempt to find another opportunity for zero latency in a different
   // dependence.
   if (SrcBest && DstBest)
     // If there is an edge from SrcBest to DstBst, then try to change that

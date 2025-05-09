@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_ALLOCATIONACTIONS_H
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_ALLOCATIONACTIONS_H
 
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/Support/Memory.h"
@@ -52,6 +53,9 @@ inline size_t numDeallocActions(const AllocActions &AAs) {
       AAs, [](const AllocActionCallPair &P) { return !!P.Dealloc; });
 }
 
+using OnRunFinalizeActionsCompleteFn =
+    unique_function<void(Expected<std::vector<WrapperFunctionCall>>)>;
+
 /// Run finalize actions.
 ///
 /// If any finalize action fails then the corresponding dealloc actions will be
@@ -62,13 +66,16 @@ inline size_t numDeallocActions(const AllocActions &AAs) {
 /// be returned. The dealloc actions should be run by calling
 /// runDeallocationActions. If this function succeeds then the AA argument will
 /// be cleared before the function returns.
-Expected<std::vector<WrapperFunctionCall>>
-runFinalizeActions(AllocActions &AAs);
+void runFinalizeActions(AllocActions &AAs,
+                        OnRunFinalizeActionsCompleteFn OnComplete);
+
+using OnRunDeallocActionsComeleteFn = unique_function<void(Error)>;
 
 /// Run deallocation actions.
 /// Dealloc actions will be run in reverse order (from last element of DAs to
 /// first).
-Error runDeallocActions(ArrayRef<WrapperFunctionCall> DAs);
+void runDeallocActions(ArrayRef<WrapperFunctionCall> DAs,
+                       OnRunDeallocActionsComeleteFn OnComplete);
 
 using SPSAllocActionCallPair =
     SPSTuple<SPSWrapperFunctionCall, SPSWrapperFunctionCall>;

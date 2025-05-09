@@ -1,15 +1,15 @@
-; RUN: llc -O0 < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,CLS32,G32
-; RUN: llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,NOPTRCONV,CLS64,G64
-; RUN: llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 --nvptx-short-ptr| FileCheck %s -check-prefixes=ALL,PTRCONV,CLS64,G64
+; RUN: llc -O0 < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,CLS32
+; RUN: llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,NOPTRCONV,CLS64
+; RUN: llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 --nvptx-short-ptr | FileCheck %s -check-prefixes=ALL,PTRCONV,CLS64
 ; RUN: %if ptxas && !ptxas-12.0 %{ llc -O0 < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 --nvptx-short-ptr | %ptxas-verify %}
 
 ; ALL-LABEL: conv1
 define i32 @conv1(ptr addrspace(1) %ptr) {
-; G32: cvta.global.u32
+; CLS32: cvta.global.u32
 ; ALL-NOT: cvt.u64.u32
-; G64: cvta.global.u64
+; CLS64: cvta.global.u64
 ; ALL: ld.u32
   %genptr = addrspacecast ptr addrspace(1) %ptr to ptr
   %val = load i32, ptr %genptr
@@ -96,6 +96,17 @@ define i32 @conv8(ptr %ptr) {
 ; ALL: ld.local.u32
   %specptr = addrspacecast ptr %ptr to ptr addrspace(5)
   %val = load i32, ptr addrspace(5) %specptr
+  ret i32 %val
+}
+
+; ALL-LABEL: conv9
+define i32 @conv9(ptr addrspace(1) %ptr) {
+; CLS32:     // implicit-def: %[[ADDR:r[0-9]+]]
+; PTRCONV:   // implicit-def: %[[ADDR:r[0-9]+]]
+; NOPTRCONV: // implicit-def: %[[ADDR:rd[0-9]+]]
+; ALL: ld.shared.u32 %r{{[0-9]+}}, [%[[ADDR]]]
+  %specptr = addrspacecast ptr addrspace(1) %ptr to ptr addrspace(3)
+  %val = load i32, ptr addrspace(3) %specptr
   ret i32 %val
 }
 

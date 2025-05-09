@@ -50,8 +50,8 @@ TEST_F(ObjectLinkingLayerTest, AddLinkGraph) {
       SubtargetFeatures(), x86_64::getEdgeKindName);
 
   auto &Sec1 = G->createSection("__data", MemProt::Read | MemProt::Write);
-  auto &B1 = G->createContentBlock(Sec1, BlockContent,
-                                   orc::ExecutorAddr(0x1000), 8, 0);
+  auto &B1 =
+      G->createContentBlock(Sec1, BlockContent, ExecutorAddr(0x1000), 8, 0);
   G->addDefinedSymbol(B1, 4, "_X", 4, Linkage::Strong, Scope::Default, false,
                       false);
   G->addDefinedSymbol(B1, 4, "_Y", 4, Linkage::Weak, Scope::Default, false,
@@ -77,8 +77,8 @@ TEST_F(ObjectLinkingLayerTest, ResourceTracker) {
         SubtargetFeatures(), x86_64::getEdgeKindName);
 
     auto &Sec1 = G->createSection("__data", MemProt::Read | MemProt::Write);
-    auto &B1 = G->createContentBlock(Sec1, BlockContent,
-                                     orc::ExecutorAddr(0x1000), 8, 0);
+    auto &B1 =
+        G->createContentBlock(Sec1, BlockContent, ExecutorAddr(0x1000), 8, 0);
     llvm::SmallString<0> SymbolName;
     SymbolName += "_X";
     SymbolName += std::to_string(I);
@@ -109,15 +109,15 @@ TEST_F(ObjectLinkingLayerTest, ClaimLateDefinedWeakSymbols) {
       Config.PrePrunePasses.insert(
           Config.PrePrunePasses.begin(), [](LinkGraph &G) {
             auto *DataSec = G.findSectionByName("__data");
-            auto &DataBlock = G.createContentBlock(
-                *DataSec, BlockContent, orc::ExecutorAddr(0x2000), 8, 0);
+            auto &DataBlock = G.createContentBlock(*DataSec, BlockContent,
+                                                   ExecutorAddr(0x2000), 8, 0);
             G.addDefinedSymbol(DataBlock, 4, "_x", 4, Linkage::Weak,
                                Scope::Default, false, false);
 
             auto &TextSec =
                 G.createSection("__text", MemProt::Read | MemProt::Write);
-            auto &FuncBlock = G.createContentBlock(
-                TextSec, BlockContent, orc::ExecutorAddr(0x3000), 8, 0);
+            auto &FuncBlock = G.createContentBlock(TextSec, BlockContent,
+                                                   ExecutorAddr(0x3000), 8, 0);
             G.addDefinedSymbol(FuncBlock, 4, "_f", 4, Linkage::Weak,
                                Scope::Default, true, false);
 
@@ -144,8 +144,8 @@ TEST_F(ObjectLinkingLayerTest, ClaimLateDefinedWeakSymbols) {
       SubtargetFeatures(), getGenericEdgeKindName);
 
   auto &DataSec = G->createSection("__data", MemProt::Read | MemProt::Write);
-  auto &DataBlock = G->createContentBlock(DataSec, BlockContent,
-                                          orc::ExecutorAddr(0x1000), 8, 0);
+  auto &DataBlock =
+      G->createContentBlock(DataSec, BlockContent, ExecutorAddr(0x1000), 8, 0);
   G->addDefinedSymbol(DataBlock, 4, "_anchor", 4, Linkage::Weak, Scope::Default,
                       false, true);
 
@@ -197,8 +197,8 @@ TEST_F(ObjectLinkingLayerTest, HandleErrorDuringPostAllocationPass) {
       SubtargetFeatures(), getGenericEdgeKindName);
 
   auto &DataSec = G->createSection("__data", MemProt::Read | MemProt::Write);
-  auto &DataBlock = G->createContentBlock(DataSec, BlockContent,
-                                          orc::ExecutorAddr(0x1000), 8, 0);
+  auto &DataBlock =
+      G->createContentBlock(DataSec, BlockContent, ExecutorAddr(0x1000), 8, 0);
   G->addDefinedSymbol(DataBlock, 4, "_anchor", 4, Linkage::Weak, Scope::Default,
                       false, true);
 
@@ -252,7 +252,7 @@ TEST_F(ObjectLinkingLayerTest, AddAndRemovePlugins) {
 
     auto &DataSec = G1->createSection("__data", MemProt::Read | MemProt::Write);
     auto &DataBlock = G1->createContentBlock(DataSec, BlockContent,
-                                             orc::ExecutorAddr(0x1000), 8, 0);
+                                             ExecutorAddr(0x1000), 8, 0);
     G1->addDefinedSymbol(DataBlock, 4, "_anchor1", 4, Linkage::Weak,
                          Scope::Default, false, true);
 
@@ -270,7 +270,7 @@ TEST_F(ObjectLinkingLayerTest, AddAndRemovePlugins) {
 
     auto &DataSec = G2->createSection("__data", MemProt::Read | MemProt::Write);
     auto &DataBlock = G2->createContentBlock(DataSec, BlockContent,
-                                             orc::ExecutorAddr(0x1000), 8, 0);
+                                             ExecutorAddr(0x1000), 8, 0);
     G2->addDefinedSymbol(DataBlock, 4, "_anchor2", 4, Linkage::Weak,
                          Scope::Default, false, true);
 

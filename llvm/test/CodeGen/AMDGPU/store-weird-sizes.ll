@@ -3,7 +3,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=CIVI,FIJI %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GFX11,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GFX11,GFX11-FAKE16 %s
 
 define void @local_store_i56(ptr addrspace(3) %ptr, i56 %arg) #0 {
 ; CIVI-LABEL: local_store_i56:
@@ -50,7 +51,10 @@ define void @local_store_i56(ptr addrspace(3) %ptr, i56 %arg) #0 {
 define amdgpu_kernel void @local_store_i55(ptr addrspace(3) %ptr, i55 %arg) #0 {
 ; HAWAII-LABEL: local_store_i55:
 ; HAWAII:       ; %bb.0:
+; HAWAII-NEXT:    s_add_i32 s12, s12, s17
 ; HAWAII-NEXT:    s_or_b32 s0, s8, 14
+; HAWAII-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; HAWAII-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; HAWAII-NEXT:    v_mov_b32_e32 v0, s0
 ; HAWAII-NEXT:    v_mov_b32_e32 v1, s9
 ; HAWAII-NEXT:    flat_load_ubyte v0, v[0:1]
@@ -70,7 +74,10 @@ define amdgpu_kernel void @local_store_i55(ptr addrspace(3) %ptr, i55 %arg) #0 {
 ;
 ; FIJI-LABEL: local_store_i55:
 ; FIJI:       ; %bb.0:
+; FIJI-NEXT:    s_add_i32 s12, s12, s17
 ; FIJI-NEXT:    s_or_b32 s0, s8, 14
+; FIJI-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; FIJI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; FIJI-NEXT:    v_mov_b32_e32 v0, s0
 ; FIJI-NEXT:    v_mov_b32_e32 v1, s9
 ; FIJI-NEXT:    flat_load_ubyte v0, v[0:1]
@@ -328,13 +335,21 @@ define void @local_store_i13(ptr addrspace(3) %ptr, i13 %arg) #0 {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: local_store_i13:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v1, 0x1fff, v1
-; GFX11-NEXT:    ds_store_b16 v0, v1
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: local_store_i13:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_and_b16 v1.l, 0x1fff, v1.l
+; GFX11-TRUE16-NEXT:    ds_store_b16 v0, v1
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: local_store_i13:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v1, 0x1fff, v1
+; GFX11-FAKE16-NEXT:    ds_store_b16 v0, v1
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   store i13 %arg, ptr addrspace(3) %ptr, align 8
   ret void
 }

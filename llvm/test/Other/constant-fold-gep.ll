@@ -48,7 +48,6 @@
 ; simplifications on sizeof, alignof, and offsetof expressions. The
 ; target-dependent folder should fold these down to constants.
 
-; PLAIN: @a = constant i64 mul (i64 ptrtoint (ptr getelementptr ({ [7 x double], [7 x double] }, ptr null, i64 11) to i64), i64 15)
 ; PLAIN: @b = constant i64 ptrtoint (ptr getelementptr ({ i1, [13 x double] }, ptr null, i64 0, i32 1) to i64)
 ; PLAIN: @c = constant i64 ptrtoint (ptr getelementptr ({ double, double, double, double }, ptr null, i64 0, i32 2) to i64)
 ; PLAIN: @d = constant i64 ptrtoint (ptr getelementptr ([13 x double], ptr null, i64 0, i32 11) to i64)
@@ -57,7 +56,6 @@
 ; PLAIN: @g = constant i64 ptrtoint (ptr getelementptr ({ i1, { double, double } }, ptr null, i64 0, i32 1) to i64)
 ; PLAIN: @h = constant i64 ptrtoint (ptr getelementptr (ptr, ptr null, i64 1) to i64)
 ; PLAIN: @i = constant i64 ptrtoint (ptr getelementptr ({ i1, ptr }, ptr null, i64 0, i32 1) to i64)
-; OPT: @a = local_unnamed_addr constant i64 18480
 ; OPT: @b = local_unnamed_addr constant i64 8
 ; OPT: @c = local_unnamed_addr constant i64 16
 ; OPT: @d = local_unnamed_addr constant i64 88
@@ -66,7 +64,6 @@
 ; OPT: @g = local_unnamed_addr constant i64 8
 ; OPT: @h = local_unnamed_addr constant i64 8
 ; OPT: @i = local_unnamed_addr constant i64 8
-; TO: @a = local_unnamed_addr constant i64 18480
 ; TO: @b = local_unnamed_addr constant i64 8
 ; TO: @c = local_unnamed_addr constant i64 16
 ; TO: @d = local_unnamed_addr constant i64 88
@@ -76,7 +73,6 @@
 ; TO: @h = local_unnamed_addr constant i64 8
 ; TO: @i = local_unnamed_addr constant i64 8
 
-@a = constant i64 mul (i64 3, i64 mul (i64 ptrtoint (ptr getelementptr ({[7 x double], [7 x double]}, ptr null, i64 11) to i64), i64 5))
 @b = constant i64 ptrtoint (ptr getelementptr ({i1, [13 x double]}, ptr null, i64 0, i32 1) to i64)
 @c = constant i64 ptrtoint (ptr getelementptr ({double, double, double, double}, ptr null, i64 0, i32 2) to i64)
 @d = constant i64 ptrtoint (ptr getelementptr ([13 x double], ptr null, i64 0, i32 11) to i64)
@@ -220,10 +216,6 @@ define ptr @hoo1() nounwind {
   ret ptr %t
 }
 
-; PLAIN: define i64 @fa() #0 {
-; PLAIN:   %t = bitcast i64 mul (i64 ptrtoint (ptr getelementptr ({ [7 x double], [7 x double] }, ptr null, i64 11) to i64), i64 15) to i64
-; PLAIN:   ret i64 %t
-; PLAIN: }
 ; PLAIN: define i64 @fb() #0 {
 ; PLAIN:   %t = bitcast i64 ptrtoint (ptr getelementptr ({ i1, [13 x double] }, ptr null, i64 0, i32 1) to i64) to i64
 ; PLAIN:   ret i64 %t
@@ -256,9 +248,6 @@ define ptr @hoo1() nounwind {
 ; PLAIN:   %t = bitcast i64 ptrtoint (ptr getelementptr ({ i1, ptr }, ptr null, i64 0, i32 1) to i64) to i64
 ; PLAIN:   ret i64 %t
 ; PLAIN: }
-; OPT: define i64 @fa() local_unnamed_addr #0 {
-; OPT:   ret i64 18480
-; OPT: }
 ; OPT: define i64 @fb() local_unnamed_addr #0 {
 ; OPT:   ret i64 8
 ; OPT: }
@@ -283,9 +272,6 @@ define ptr @hoo1() nounwind {
 ; OPT: define i64 @fi() local_unnamed_addr #0 {
 ; OPT:   ret i64 8
 ; OPT: }
-; TO: define i64 @fa() local_unnamed_addr #0 {
-; TO:   ret i64 18480
-; TO: }
 ; TO: define i64 @fb() local_unnamed_addr #0 {
 ; TO:   ret i64 8
 ; TO: }
@@ -310,9 +296,6 @@ define ptr @hoo1() nounwind {
 ; TO: define i64 @fi() local_unnamed_addr #0 {
 ; TO:   ret i64 8
 ; TO: }
-; SCEV-LABEL: Classifying expressions for: @fa
-; SCEV:   %t = bitcast i64 mul (i64 ptrtoint (ptr getelementptr ({ [7 x double], [7 x double] }, ptr null, i64 11) to i64), i64 15) to i64
-; SCEV:   -->  18480
 ; SCEV-LABEL: Classifying expressions for: @fb
 ; SCEV:  %t = bitcast i64 ptrtoint (ptr getelementptr ({ i1, [13 x double] }, ptr null, i64 0, i32 1) to i64) to i64
 ; SCEV:   -->  8
@@ -338,10 +321,6 @@ define ptr @hoo1() nounwind {
 ; SCEV:   %t = bitcast i64 ptrtoint (ptr getelementptr ({ i1, ptr }, ptr null, i64 0, i32 1) to i64) to i64
 ; SCEV:   --> 8
 
-define i64 @fa() nounwind {
-  %t = bitcast i64 mul (i64 3, i64 mul (i64 ptrtoint (ptr getelementptr ({[7 x double], [7 x double]}, ptr null, i64 11) to i64), i64 5)) to i64
-  ret i64 %t
-}
 define i64 @fb() nounwind {
   %t = bitcast i64 ptrtoint (ptr getelementptr ({i1, [13 x double]}, ptr null, i64 0, i32 1) to i64) to i64
   ret i64 %t

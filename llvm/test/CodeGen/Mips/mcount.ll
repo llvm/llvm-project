@@ -40,7 +40,7 @@ define void @foo() {
 ; MIPS32-PIC-NEXT:    addu $gp, $2, $25
 ; MIPS32-PIC-NEXT:    lw $25, %call16(_mcount)($gp)
 ; MIPS32-PIC-NEXT:    move $1, $ra
-; MIPS32-PIC-NEXT:    .reloc ($tmp0), R_MIPS_JALR, _mcount
+; MIPS32-PIC-NEXT:    .reloc $tmp0, R_MIPS_JALR, _mcount
 ; MIPS32-PIC-NEXT:  $tmp0:
 ; MIPS32-PIC-NEXT:    jalr $25
 ; MIPS32-PIC-NEXT:    addiu $sp, $sp, -8
@@ -107,7 +107,7 @@ define void @foo() {
 ; MIPS32-MM-PIC-NEXT:    addu $gp, $2, $25
 ; MIPS32-MM-PIC-NEXT:    lw $25, %call16(_mcount)($gp)
 ; MIPS32-MM-PIC-NEXT:    move $1, $ra
-; MIPS32-MM-PIC-NEXT:    .reloc ($tmp0), R_MICROMIPS_JALR, _mcount
+; MIPS32-MM-PIC-NEXT:    .reloc $tmp0, R_MICROMIPS_JALR, _mcount
 ; MIPS32-MM-PIC-NEXT:  $tmp0:
 ; MIPS32-MM-PIC-NEXT:    jalr $25
 ; MIPS32-MM-PIC-NEXT:    addiu $sp, $sp, -8

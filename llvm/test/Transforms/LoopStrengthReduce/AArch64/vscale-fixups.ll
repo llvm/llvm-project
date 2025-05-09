@@ -13,17 +13,17 @@ define void @mulvl123_addressing(ptr %src, ptr %dst, i64 %count) #0 {
 ; COMMON-NEXT:    mov x8, xzr
 ; COMMON-NEXT:  .LBB0_1: // %for.body
 ; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
-; COMMON-NEXT:    ld1b { z0.b }, p0/z, [x0]
-; COMMON-NEXT:    ld1b { z1.b }, p0/z, [x0, #1, mul vl]
-; COMMON-NEXT:    ld1b { z2.b }, p0/z, [x0, #2, mul vl]
-; COMMON-NEXT:    ld1b { z3.b }, p0/z, [x0, #3, mul vl]
+; COMMON-NEXT:    ldr z0, [x0]
+; COMMON-NEXT:    ldr z1, [x0, #1, mul vl]
+; COMMON-NEXT:    ldr z2, [x0, #2, mul vl]
+; COMMON-NEXT:    ldr z3, [x0, #3, mul vl]
 ; COMMON-NEXT:    addvl x0, x0, #5
 ; COMMON-NEXT:    umax z0.b, p0/m, z0.b, z1.b
 ; COMMON-NEXT:    movprfx z1, z2
 ; COMMON-NEXT:    umax z1.b, p0/m, z1.b, z3.b
 ; COMMON-NEXT:    umax z0.b, p0/m, z0.b, z1.b
 ; COMMON-NEXT:    st1b { z0.b }, p0, [x1, x8]
-; COMMON-NEXT:    addvl x8, x8, #1
+; COMMON-NEXT:    incb x8
 ; COMMON-NEXT:    cmp x8, x2
 ; COMMON-NEXT:    b.lo .LBB0_1
 ; COMMON-NEXT:  // %bb.2: // %for.exit
@@ -67,17 +67,17 @@ define void @many_mulvl1_addressing(ptr %src_rows, ptr %dst_rows, i64 %stride, i
 ; COMMON-NEXT:  .LBB1_1: // %for.body
 ; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
 ; COMMON-NEXT:    add x8, x0, x2
-; COMMON-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; COMMON-NEXT:    ldr z0, [x0]
 ; COMMON-NEXT:    ld1b { z1.b }, p0/z, [x0, x2]
-; COMMON-NEXT:    ld1b { z2.b }, p0/z, [x0, #1, mul vl]
-; COMMON-NEXT:    ld1b { z3.b }, p0/z, [x8, #1, mul vl]
+; COMMON-NEXT:    ldr z2, [x0, #1, mul vl]
+; COMMON-NEXT:    ldr z3, [x8, #1, mul vl]
+; COMMON-NEXT:    incb x0, all, mul #2
 ; COMMON-NEXT:    subs x3, x3, #1
-; COMMON-NEXT:    addvl x0, x0, #2
 ; COMMON-NEXT:    add z0.b, z0.b, z1.b
 ; COMMON-NEXT:    add z1.b, z2.b, z3.b
 ; COMMON-NEXT:    st1b { z0.h }, p1, [x1]
 ; COMMON-NEXT:    st1b { z1.h }, p1, [x1, #1, mul vl]
-; COMMON-NEXT:    addvl x1, x1, #2
+; COMMON-NEXT:    incb x1, all, mul #2
 ; COMMON-NEXT:    b.ne .LBB1_1
 ; COMMON-NEXT:  // %bb.2: // %for.exit
 ; COMMON-NEXT:    ret
@@ -119,15 +119,14 @@ for.exit:
 define void @fixed_iv_scalable_offset(ptr %src, ptr %dst, i64 %count) #0 {
 ; COMMON-LABEL: fixed_iv_scalable_offset:
 ; COMMON:       // %bb.0: // %entry
-; COMMON-NEXT:    ptrue p0.s
 ; COMMON-NEXT:  .LBB2_1: // %for.body
 ; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
-; COMMON-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; COMMON-NEXT:    ld1w { z1.s }, p0/z, [x0, #4, mul vl]
+; COMMON-NEXT:    ldr z0, [x0]
+; COMMON-NEXT:    ldr z1, [x0, #4, mul vl]
 ; COMMON-NEXT:    subs x2, x2, #4
 ; COMMON-NEXT:    add x0, x0, #16
 ; COMMON-NEXT:    add z0.s, z0.s, z1.s
-; COMMON-NEXT:    st1w { z0.s }, p0, [x1]
+; COMMON-NEXT:    str z0, [x1]
 ; COMMON-NEXT:    add x1, x1, #16
 ; COMMON-NEXT:    b.ne .LBB2_1
 ; COMMON-NEXT:  // %bb.2: // %for.exit
@@ -157,56 +156,56 @@ for.exit:
 define void @mixed_offsets_scalable_then_fixed(ptr %src, ptr %dst, i64 %count) #0 {
 ; BASE-LABEL: mixed_offsets_scalable_then_fixed:
 ; BASE:       // %bb.0: // %entry
+; BASE-NEXT:    incb x0, all, mul #4
 ; BASE-NEXT:    ptrue p0.s
-; BASE-NEXT:    addvl x8, x0, #4
-; BASE-NEXT:    mov x9, #8 // =0x8
+; BASE-NEXT:    mov x8, #8 // =0x8
 ; BASE-NEXT:  .LBB3_1: // %for.body
 ; BASE-NEXT:    // =>This Inner Loop Header: Depth=1
-; BASE-NEXT:    ld1w { z0.s }, p0/z, [x8, #-4, mul vl]
-; BASE-NEXT:    ld1w { z1.s }, p0/z, [x8]
+; BASE-NEXT:    ldr z0, [x0, #-4, mul vl]
+; BASE-NEXT:    ldr z1, [x0]
 ; BASE-NEXT:    decw x2
-; BASE-NEXT:    ld1w { z2.s }, p0/z, [x8, x9, lsl #2]
-; BASE-NEXT:    addvl x8, x8, #1
+; BASE-NEXT:    ld1w { z2.s }, p0/z, [x0, x8, lsl #2]
+; BASE-NEXT:    incb x0
 ; BASE-NEXT:    add z0.s, z0.s, z1.s
 ; BASE-NEXT:    add z0.s, z0.s, z2.s
-; BASE-NEXT:    st1w { z0.s }, p0, [x1]
-; BASE-NEXT:    addvl x1, x1, #1
+; BASE-NEXT:    str z0, [x1]
+; BASE-NEXT:    incb x1
 ; BASE-NEXT:    cbnz x2, .LBB3_1
 ; BASE-NEXT:  // %bb.2: // %for.exit
 ; BASE-NEXT:    ret
 ;
 ; PREINDEX-LABEL: mixed_offsets_scalable_then_fixed:
 ; PREINDEX:       // %bb.0: // %entry
+; PREINDEX-NEXT:    incb x0, all, mul #4
 ; PREINDEX-NEXT:    ptrue p0.s
-; PREINDEX-NEXT:    addvl x8, x0, #4
-; PREINDEX-NEXT:    mov x9, #8 // =0x8
+; PREINDEX-NEXT:    mov x8, #8 // =0x8
 ; PREINDEX-NEXT:  .LBB3_1: // %for.body
 ; PREINDEX-NEXT:    // =>This Inner Loop Header: Depth=1
-; PREINDEX-NEXT:    ld1w { z0.s }, p0/z, [x8, #-4, mul vl]
-; PREINDEX-NEXT:    ld1w { z1.s }, p0/z, [x8]
+; PREINDEX-NEXT:    ldr z0, [x0, #-4, mul vl]
+; PREINDEX-NEXT:    ldr z1, [x0]
 ; PREINDEX-NEXT:    decw x2
-; PREINDEX-NEXT:    ld1w { z2.s }, p0/z, [x8, x9, lsl #2]
-; PREINDEX-NEXT:    addvl x8, x8, #1
+; PREINDEX-NEXT:    ld1w { z2.s }, p0/z, [x0, x8, lsl #2]
+; PREINDEX-NEXT:    incb x0
 ; PREINDEX-NEXT:    add z0.s, z0.s, z1.s
 ; PREINDEX-NEXT:    add z0.s, z0.s, z2.s
-; PREINDEX-NEXT:    st1w { z0.s }, p0, [x1]
-; PREINDEX-NEXT:    addvl x1, x1, #1
+; PREINDEX-NEXT:    str z0, [x1]
+; PREINDEX-NEXT:    incb x1
 ; PREINDEX-NEXT:    cbnz x2, .LBB3_1
 ; PREINDEX-NEXT:  // %bb.2: // %for.exit
 ; PREINDEX-NEXT:    ret
 ;
 ; POSTINDEX-LABEL: mixed_offsets_scalable_then_fixed:
 ; POSTINDEX:       // %bb.0: // %entry
+; POSTINDEX-NEXT:    incb x0, all, mul #4
 ; POSTINDEX-NEXT:    ptrue p0.s
 ; POSTINDEX-NEXT:    mov x8, xzr
-; POSTINDEX-NEXT:    addvl x9, x0, #4
-; POSTINDEX-NEXT:    mov x10, #8 // =0x8
+; POSTINDEX-NEXT:    mov x9, #8 // =0x8
 ; POSTINDEX-NEXT:  .LBB3_1: // %for.body
 ; POSTINDEX-NEXT:    // =>This Inner Loop Header: Depth=1
-; POSTINDEX-NEXT:    ld1w { z0.s }, p0/z, [x9, #-4, mul vl]
-; POSTINDEX-NEXT:    ld1w { z1.s }, p0/z, [x9]
-; POSTINDEX-NEXT:    ld1w { z2.s }, p0/z, [x9, x10, lsl #2]
-; POSTINDEX-NEXT:    addvl x9, x9, #1
+; POSTINDEX-NEXT:    ldr z0, [x0, #-4, mul vl]
+; POSTINDEX-NEXT:    ldr z1, [x0]
+; POSTINDEX-NEXT:    ld1w { z2.s }, p0/z, [x0, x9, lsl #2]
+; POSTINDEX-NEXT:    incb x0
 ; POSTINDEX-NEXT:    add z0.s, z0.s, z1.s
 ; POSTINDEX-NEXT:    add z0.s, z0.s, z2.s
 ; POSTINDEX-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
@@ -244,11 +243,12 @@ for.exit:
 define void @mixed_offsets_fixed_then_scalable(ptr %src, ptr %dst, i64 %count) #0 {
 ; COMMON-LABEL: mixed_offsets_fixed_then_scalable:
 ; COMMON:       // %bb.0: // %entry
-; COMMON-NEXT:    addvl x9, x0, #4
+; COMMON-NEXT:    mov x9, x0
 ; COMMON-NEXT:    ptrue p0.s
 ; COMMON-NEXT:    mov x8, xzr
-; COMMON-NEXT:    add x9, x9, #32
+; COMMON-NEXT:    incb x9, all, mul #4
 ; COMMON-NEXT:    mov x10, #8 // =0x8
+; COMMON-NEXT:    add x9, x9, #32
 ; COMMON-NEXT:  .LBB4_1: // %for.body
 ; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
 ; COMMON-NEXT:    add x11, x0, x8, lsl #2
@@ -299,40 +299,34 @@ for.exit:
 define void @three_access_wide_gap(ptr %src, ptr %dst, i64 %count) #0 {
 ; BASE-LABEL: three_access_wide_gap:
 ; BASE:       // %bb.0: // %entry
-; BASE-NEXT:    ptrue p0.s
-; BASE-NEXT:    rdvl x8, #8
-; BASE-NEXT:    ptrue p1.b
 ; BASE-NEXT:  .LBB5_1: // %for.body
 ; BASE-NEXT:    // =>This Inner Loop Header: Depth=1
-; BASE-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; BASE-NEXT:    ld1w { z1.s }, p0/z, [x0, #4, mul vl]
+; BASE-NEXT:    ldr z0, [x0]
+; BASE-NEXT:    ldr z1, [x0, #4, mul vl]
 ; BASE-NEXT:    decw x2
-; BASE-NEXT:    ld1b { z2.b }, p1/z, [x0, x8]
-; BASE-NEXT:    addvl x0, x0, #1
+; BASE-NEXT:    ldr z2, [x0, #8, mul vl]
+; BASE-NEXT:    incb x0
 ; BASE-NEXT:    add z0.s, z0.s, z1.s
 ; BASE-NEXT:    add z0.s, z0.s, z2.s
-; BASE-NEXT:    st1w { z0.s }, p0, [x1]
-; BASE-NEXT:    addvl x1, x1, #1
+; BASE-NEXT:    str z0, [x1]
+; BASE-NEXT:    incb x1
 ; BASE-NEXT:    cbnz x2, .LBB5_1
 ; BASE-NEXT:  // %bb.2: // %for.exit
 ; BASE-NEXT:    ret
 ;
 ; PREINDEX-LABEL: three_access_wide_gap:
 ; PREINDEX:       // %bb.0: // %entry
-; PREINDEX-NEXT:    ptrue p0.s
-; PREINDEX-NEXT:    rdvl x8, #8
-; PREINDEX-NEXT:    ptrue p1.b
 ; PREINDEX-NEXT:  .LBB5_1: // %for.body
 ; PREINDEX-NEXT:    // =>This Inner Loop Header: Depth=1
-; PREINDEX-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; PREINDEX-NEXT:    ld1w { z1.s }, p0/z, [x0, #4, mul vl]
+; PREINDEX-NEXT:    ldr z0, [x0]
+; PREINDEX-NEXT:    ldr z1, [x0, #4, mul vl]
 ; PREINDEX-NEXT:    decw x2
-; PREINDEX-NEXT:    ld1b { z2.b }, p1/z, [x0, x8]
-; PREINDEX-NEXT:    addvl x0, x0, #1
+; PREINDEX-NEXT:    ldr z2, [x0, #8, mul vl]
+; PREINDEX-NEXT:    incb x0
 ; PREINDEX-NEXT:    add z0.s, z0.s, z1.s
 ; PREINDEX-NEXT:    add z0.s, z0.s, z2.s
-; PREINDEX-NEXT:    st1w { z0.s }, p0, [x1]
-; PREINDEX-NEXT:    addvl x1, x1, #1
+; PREINDEX-NEXT:    str z0, [x1]
+; PREINDEX-NEXT:    incb x1
 ; PREINDEX-NEXT:    cbnz x2, .LBB5_1
 ; PREINDEX-NEXT:  // %bb.2: // %for.exit
 ; PREINDEX-NEXT:    ret
@@ -341,14 +335,12 @@ define void @three_access_wide_gap(ptr %src, ptr %dst, i64 %count) #0 {
 ; POSTINDEX:       // %bb.0: // %entry
 ; POSTINDEX-NEXT:    ptrue p0.s
 ; POSTINDEX-NEXT:    mov x8, xzr
-; POSTINDEX-NEXT:    rdvl x9, #8
-; POSTINDEX-NEXT:    ptrue p1.b
 ; POSTINDEX-NEXT:  .LBB5_1: // %for.body
 ; POSTINDEX-NEXT:    // =>This Inner Loop Header: Depth=1
-; POSTINDEX-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; POSTINDEX-NEXT:    ld1w { z1.s }, p0/z, [x0, #4, mul vl]
-; POSTINDEX-NEXT:    ld1b { z2.b }, p1/z, [x0, x9]
-; POSTINDEX-NEXT:    addvl x0, x0, #1
+; POSTINDEX-NEXT:    ldr z0, [x0]
+; POSTINDEX-NEXT:    ldr z1, [x0, #4, mul vl]
+; POSTINDEX-NEXT:    ldr z2, [x0, #8, mul vl]
+; POSTINDEX-NEXT:    incb x0
 ; POSTINDEX-NEXT:    add z0.s, z0.s, z1.s
 ; POSTINDEX-NEXT:    add z0.s, z0.s, z2.s
 ; POSTINDEX-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
@@ -405,9 +397,9 @@ define void @vscale_squared_offset(ptr %alloc) #0 {
 ; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
 ; COMMON-NEXT:    add x11, x0, x9
 ; COMMON-NEXT:    st1w { z0.s }, p0, [x0]
-; COMMON-NEXT:    add x8, x8, #1
+; COMMON-NEXT:    incb x0
 ; COMMON-NEXT:    st1w { z1.s }, p0, [x11]
-; COMMON-NEXT:    addvl x0, x0, #1
+; COMMON-NEXT:    add x8, x8, #1
 ; COMMON-NEXT:    cmp x8, x10
 ; COMMON-NEXT:    b.lt .LBB6_1
 ; COMMON-NEXT:  .LBB6_2: // %for.exit

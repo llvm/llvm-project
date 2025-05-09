@@ -1,5 +1,4 @@
 ; RUN: opt %s -passes=loop-deletion -S | FileCheck %s --implicit-check-not=dbg.value
-; RUN: opt %s -passes=loop-deletion -S --try-experimental-debuginfo-iterators | FileCheck %s --implicit-check-not=dbg.value
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
@@ -10,8 +9,8 @@ define i32 @b() local_unnamed_addr !dbg !12 {
 ; CHECK-LABEL: entry
 ; CHECK:       #dbg_value(i32 0, ![[IVAR:[0-9]+]],
 ; CHECK-LABEL: for.end:
-; CHECK-NEXT:  #dbg_value(i32 undef, ![[IVAR]], !DIExpression(), !17
-; CHECK-NEXT:  #dbg_value(i32 undef, ![[JVAR:[0-9]+]], !DIExpression(), !17
+; CHECK-NEXT:  #dbg_value(i32 poison, ![[IVAR]], !DIExpression(), !17
+; CHECK-NEXT:  #dbg_value(i32 poison, ![[JVAR:[0-9]+]], !DIExpression(), !17
 ; CHECK-NEXT:  %call = tail call i32 {{.*}} @patatino()
 entry:
   call void @llvm.dbg.value(metadata i32 0, metadata !16, metadata !DIExpression()), !dbg !17

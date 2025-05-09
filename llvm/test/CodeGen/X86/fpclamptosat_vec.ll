@@ -698,7 +698,7 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) nounwind {
 ;
 ; AVX2-LABEL: stest_f16i32:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[3,3,3,3,4,5,6,7]
+; AVX2-NEXT:    vpsrlq $48, %xmm0, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vcvttss2si %xmm1, %rax
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
@@ -709,7 +709,7 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) nounwind {
 ; AVX2-NEXT:    vcvttss2si %xmm1, %rax
 ; AVX2-NEXT:    vmovq %rcx, %xmm1
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
+; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX2-NEXT:    vmovq %rax, %xmm2
 ; AVX2-NEXT:    vcvttss2si %xmm0, %rax
@@ -836,7 +836,7 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) nounwind {
 ;
 ; AVX2-LABEL: utesth_f16i32:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[3,3,3,3,4,5,6,7]
+; AVX2-NEXT:    vpsrlq $48, %xmm0, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm2
 ; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
 ; AVX2-NEXT:    vsubss %xmm1, %xmm2, %xmm3
@@ -866,7 +866,7 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) nounwind {
 ; AVX2-NEXT:    sarq $63, %rdx
 ; AVX2-NEXT:    andq %rax, %rdx
 ; AVX2-NEXT:    orq %rcx, %rdx
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
+; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX2-NEXT:    vsubss %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vcvttss2si %xmm1, %rax
@@ -999,7 +999,7 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) nounwind {
 ;
 ; AVX2-LABEL: ustest_f16i32:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[3,3,3,3,4,5,6,7]
+; AVX2-NEXT:    vpsrlq $48, %xmm0, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vcvttss2si %xmm1, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm1
@@ -1011,7 +1011,7 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) nounwind {
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm2
 ; AVX2-NEXT:    vcvttss2si %xmm2, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm2
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
+; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX2-NEXT:    vcvttss2si %xmm0, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0
@@ -3310,7 +3310,7 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) nounwind {
 ;
 ; AVX2-LABEL: stest_f16i32_mm:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[3,3,3,3,4,5,6,7]
+; AVX2-NEXT:    vpsrlq $48, %xmm0, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vcvttss2si %xmm1, %rax
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
@@ -3321,7 +3321,7 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) nounwind {
 ; AVX2-NEXT:    vcvttss2si %xmm1, %rax
 ; AVX2-NEXT:    vmovq %rcx, %xmm1
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
+; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX2-NEXT:    vmovq %rax, %xmm2
 ; AVX2-NEXT:    vcvttss2si %xmm0, %rax
@@ -3446,7 +3446,7 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) nounwind {
 ;
 ; AVX2-LABEL: utesth_f16i32_mm:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[3,3,3,3,4,5,6,7]
+; AVX2-NEXT:    vpsrlq $48, %xmm0, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm2
 ; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
 ; AVX2-NEXT:    vsubss %xmm1, %xmm2, %xmm3
@@ -3476,7 +3476,7 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) nounwind {
 ; AVX2-NEXT:    sarq $63, %rdx
 ; AVX2-NEXT:    andq %rax, %rdx
 ; AVX2-NEXT:    orq %rcx, %rdx
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
+; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX2-NEXT:    vsubss %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vcvttss2si %xmm1, %rax
@@ -3608,7 +3608,7 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) nounwind {
 ;
 ; AVX2-LABEL: ustest_f16i32_mm:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[3,3,3,3,4,5,6,7]
+; AVX2-NEXT:    vpsrlq $48, %xmm0, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vcvttss2si %xmm1, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm1
@@ -3620,7 +3620,7 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) nounwind {
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm2
 ; AVX2-NEXT:    vcvttss2si %xmm2, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm2
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
+; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX2-NEXT:    vcvttss2si %xmm0, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0

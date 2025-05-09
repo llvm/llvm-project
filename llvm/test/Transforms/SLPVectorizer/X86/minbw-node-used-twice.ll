@@ -8,9 +8,9 @@ define i8 @test() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i16> <i16 poison, i16 0>, i16 [[SUB_I_I79_PEEL_I]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> zeroinitializer, [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <2 x i32> [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i16> [[TMP3]], [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <2 x i16> [[TMP4]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[CONV13_I89_PEEL_I:%.*]] = zext i1 [[TMP5]] to i8
 ; CHECK-NEXT:    ret i8 [[CONV13_I89_PEEL_I]]

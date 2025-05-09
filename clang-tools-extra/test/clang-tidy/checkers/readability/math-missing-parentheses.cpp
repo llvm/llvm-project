@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-math-missing-parentheses %t
+// RUN: %check_clang_tidy --match-partial-fixes %s readability-math-missing-parentheses %t
 
 #define MACRO_AND &
 #define MACRO_ADD +

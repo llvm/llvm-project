@@ -81,10 +81,7 @@ class FalkorMarkStridedAccessesLegacy : public FunctionPass {
 public:
   static char ID; // Pass ID, replacement for typeid
 
-  FalkorMarkStridedAccessesLegacy() : FunctionPass(ID) {
-    initializeFalkorMarkStridedAccessesLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  FalkorMarkStridedAccessesLegacy() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
@@ -180,9 +177,7 @@ class FalkorHWPFFix : public MachineFunctionPass {
 public:
   static char ID;
 
-  FalkorHWPFFix() : MachineFunctionPass(ID) {
-    initializeFalkorHWPFFixPass(*PassRegistry::getPassRegistry());
-  }
+  FalkorHWPFFix() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 

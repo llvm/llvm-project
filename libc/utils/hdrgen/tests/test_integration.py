@@ -10,15 +10,16 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.output_dir = TestHeaderGenIntegration.output_dir
         self.source_dir = Path(__file__).parent
         self.main_script = self.source_dir.parent / "main.py"
+        self.maxDiff = 80 * 100
 
-    def run_script(self, yaml_file, output_file, entry_points):
+    def run_script(self, yaml_file, output_file, entry_points=[], switches=[]):
         command = [
             "python3",
             str(self.main_script),
             str(yaml_file),
             "--output",
             str(output_file),
-        ]
+        ] + switches
 
         for entry_point in entry_points:
             command.extend(["--entry-point", entry_point])
@@ -48,6 +49,22 @@ class TestHeaderGenIntegration(unittest.TestCase):
         entry_points = {"func_b", "func_a", "func_c", "func_d", "func_e"}
 
         self.run_script(yaml_file, output_file, entry_points)
+
+        self.compare_files(output_file, expected_output_file)
+
+    def test_generate_subdir_header(self):
+        yaml_file = self.source_dir / "input" / "subdir" / "test.yaml"
+        expected_output_file = self.source_dir / "expected_output" / "subdir" / "test.h"
+        output_file = self.output_dir / "subdir" / "test.h"
+        self.run_script(yaml_file, output_file)
+        self.compare_files(output_file, expected_output_file)
+
+    def test_generate_json(self):
+        yaml_file = self.source_dir / "input/test_small.yaml"
+        expected_output_file = self.source_dir / "expected_output/test_small.json"
+        output_file = self.output_dir / "test_small.json"
+
+        self.run_script(yaml_file, output_file, switches=["--json"])
 
         self.compare_files(output_file, expected_output_file)
 

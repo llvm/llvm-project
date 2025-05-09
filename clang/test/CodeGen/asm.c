@@ -284,3 +284,9 @@ void *t33(void *ptr)
   // CHECK: @t33
   // CHECK: %1 = call ptr asm "lea $1, $0", "=r,p,~{dirflag},~{fpsr},~{flags}"(ptr %0)
 }
+
+void t34(void) {
+  __asm__ volatile("T34 CC NAMED MODIFIER: %cc[input]" :: [input] "i" (4));
+  // CHECK: @t34()
+  // CHECK: T34 CC NAMED MODIFIER: ${0:c}
+}

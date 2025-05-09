@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMXtensaDisassembler
   LINK_COMPONENTS
   MCDisassembler
   Support
+  XtensaDesc
   XtensaInfo
 
   ADD_TO_COMPONENT

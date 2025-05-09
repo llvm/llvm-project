@@ -55,22 +55,19 @@ void func1(int *x) {
 // CL20-NEXT:    [[LP1:%.*]] = alloca ptr, align 8, addrspace(5)
 // CL20-NEXT:    [[LP2:%.*]] = alloca ptr, align 8, addrspace(5)
 // CL20-NEXT:    [[LVC:%.*]] = alloca i32, align 4, addrspace(5)
+// CL20-NEXT:    store i32 1, ptr addrspace(5) [[LV1]], align 4
+// CL20-NEXT:    store i32 2, ptr addrspace(5) [[LV2]], align 4
+// CL20-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [100 x i32], ptr addrspace(5) [[LA]], i64 0, i64 0
+// CL20-NEXT:    store i32 3, ptr addrspace(5) [[ARRAYIDX]], align 4
 // CL20-NEXT:    [[LV1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[LV1]] to ptr
-// CL20-NEXT:    [[LV2_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[LV2]] to ptr
-// CL20-NEXT:    [[LA_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[LA]] to ptr
-// CL20-NEXT:    [[LP1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[LP1]] to ptr
-// CL20-NEXT:    [[LP2_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[LP2]] to ptr
-// CL20-NEXT:    [[LVC_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[LVC]] to ptr
-// CL20-NEXT:    store i32 1, ptr [[LV1_ASCAST]], align 4
-// CL20-NEXT:    store i32 2, ptr [[LV2_ASCAST]], align 4
-// CL20-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [100 x i32], ptr [[LA_ASCAST]], i64 0, i64 0
-// CL20-NEXT:    store i32 3, ptr [[ARRAYIDX]], align 4
-// CL20-NEXT:    store ptr [[LV1_ASCAST]], ptr [[LP1_ASCAST]], align 8
-// CL20-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [100 x i32], ptr [[LA_ASCAST]], i64 0, i64 0
-// CL20-NEXT:    store ptr [[ARRAYDECAY]], ptr [[LP2_ASCAST]], align 8
-// CL20-NEXT:    call void @func1(ptr noundef [[LV1_ASCAST]]) #[[ATTR2:[0-9]+]]
-// CL20-NEXT:    store i32 4, ptr [[LVC_ASCAST]], align 4
-// CL20-NEXT:    store i32 4, ptr [[LV1_ASCAST]], align 4
+// CL20-NEXT:    store ptr [[LV1_ASCAST]], ptr addrspace(5) [[LP1]], align 8
+// CL20-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [100 x i32], ptr addrspace(5) [[LA]], i64 0, i64 0
+// CL20-NEXT:    [[ARRAYDECAY_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ARRAYDECAY]] to ptr
+// CL20-NEXT:    store ptr [[ARRAYDECAY_ASCAST]], ptr addrspace(5) [[LP2]], align 8
+// CL20-NEXT:    [[LV1_ASCAST1:%.*]] = addrspacecast ptr addrspace(5) [[LV1]] to ptr
+// CL20-NEXT:    call void @func1(ptr noundef [[LV1_ASCAST1]]) #[[ATTR2:[0-9]+]]
+// CL20-NEXT:    store i32 4, ptr addrspace(5) [[LVC]], align 4
+// CL20-NEXT:    store i32 4, ptr addrspace(5) [[LV1]], align 4
 // CL20-NEXT:    ret void
 //
 void func2(void) {
@@ -102,10 +99,72 @@ void func2(void) {
 // CL20-SAME: ) #[[ATTR0]] {
 // CL20-NEXT:  [[ENTRY:.*:]]
 // CL20-NEXT:    [[A:%.*]] = alloca [16 x [1 x float]], align 4, addrspace(5)
-// CL20-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
-// CL20-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A_ASCAST]], i8 0, i64 64, i1 false)
+// CL20-NEXT:    call void @llvm.memset.p5.i64(ptr addrspace(5) align 4 [[A]], i8 0, i64 64, i1 false)
 // CL20-NEXT:    ret void
 //
 void func3(void) {
   float a[16][1] = {{0.}};
+}
+
+// CL12-LABEL: define dso_local void @wrong_store_type_private_pointer_alloca(
+// CL12-SAME: ) #[[ATTR0]] {
+// CL12-NEXT:  [[ENTRY:.*:]]
+// CL12-NEXT:    [[VAR:%.*]] = alloca i64, align 8, addrspace(5)
+// CL12-NEXT:    [[ALLOCA_ADDR:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
+// CL12-NEXT:    store i64 5, ptr addrspace(5) [[VAR]], align 8
+// CL12-NEXT:    store ptr addrspace(5) [[VAR]], ptr addrspace(5) [[ALLOCA_ADDR]], align 4
+// CL12-NEXT:    [[TMP0:%.*]] = load ptr addrspace(5), ptr addrspace(5) [[ALLOCA_ADDR]], align 4
+// CL12-NEXT:    store i64 8, ptr addrspace(5) [[TMP0]], align 8
+// CL12-NEXT:    ret void
+//
+// CL20-LABEL: define dso_local void @wrong_store_type_private_pointer_alloca(
+// CL20-SAME: ) #[[ATTR0]] {
+// CL20-NEXT:  [[ENTRY:.*:]]
+// CL20-NEXT:    [[VAR:%.*]] = alloca i64, align 8, addrspace(5)
+// CL20-NEXT:    [[ALLOCA_ADDR:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
+// CL20-NEXT:    store i64 5, ptr addrspace(5) [[VAR]], align 8
+// CL20-NEXT:    store ptr addrspace(5) [[VAR]], ptr addrspace(5) [[ALLOCA_ADDR]], align 4
+// CL20-NEXT:    [[TMP0:%.*]] = load ptr addrspace(5), ptr addrspace(5) [[ALLOCA_ADDR]], align 4
+// CL20-NEXT:    store i64 8, ptr addrspace(5) [[TMP0]], align 8
+// CL20-NEXT:    ret void
+//
+void wrong_store_type_private_pointer_alloca() {
+  long var = 5;
+
+  // This needs to write an addrspace(5) pointer to the temporary alloca,
+  // which should be allocated with the correct size.
+  __private long *alloca_addr = &var;
+  *alloca_addr = 8;
+}
+
+// CL12-LABEL: define dso_local void @wrong_store_type_private_pointer_as_generic_alloca(
+// CL12-SAME: ) #[[ATTR0]] {
+// CL12-NEXT:  [[ENTRY:.*:]]
+// CL12-NEXT:    [[VAR:%.*]] = alloca i64, align 8, addrspace(5)
+// CL12-NEXT:    [[ALLOCA_ADDR_AS_GENERIC:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
+// CL12-NEXT:    store i64 5, ptr addrspace(5) [[VAR]], align 8
+// CL12-NEXT:    store ptr addrspace(5) [[VAR]], ptr addrspace(5) [[ALLOCA_ADDR_AS_GENERIC]], align 4
+// CL12-NEXT:    [[TMP0:%.*]] = load ptr addrspace(5), ptr addrspace(5) [[ALLOCA_ADDR_AS_GENERIC]], align 4
+// CL12-NEXT:    store i64 9, ptr addrspace(5) [[TMP0]], align 8
+// CL12-NEXT:    ret void
+//
+// CL20-LABEL: define dso_local void @wrong_store_type_private_pointer_as_generic_alloca(
+// CL20-SAME: ) #[[ATTR0]] {
+// CL20-NEXT:  [[ENTRY:.*:]]
+// CL20-NEXT:    [[VAR:%.*]] = alloca i64, align 8, addrspace(5)
+// CL20-NEXT:    [[ALLOCA_ADDR_AS_GENERIC:%.*]] = alloca ptr, align 8, addrspace(5)
+// CL20-NEXT:    store i64 5, ptr addrspace(5) [[VAR]], align 8
+// CL20-NEXT:    [[VAR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VAR]] to ptr
+// CL20-NEXT:    store ptr [[VAR_ASCAST]], ptr addrspace(5) [[ALLOCA_ADDR_AS_GENERIC]], align 8
+// CL20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[ALLOCA_ADDR_AS_GENERIC]], align 8
+// CL20-NEXT:    store i64 9, ptr [[TMP0]], align 8
+// CL20-NEXT:    ret void
+//
+void wrong_store_type_private_pointer_as_generic_alloca() {
+  long var = 5;
+
+  // This needs to write an addrspace(0) pointer to the temporary alloca in
+  // CL2.0, which should be allocated with the correct size.
+  long *alloca_addr_as_generic = &var;
+  *alloca_addr_as_generic = 9;
 }

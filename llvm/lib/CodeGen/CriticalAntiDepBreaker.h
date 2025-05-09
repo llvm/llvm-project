@@ -53,10 +53,10 @@ class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
     std::vector<const TargetRegisterClass *> Classes;
 
     /// Map registers to all their references within a live range.
-    std::multimap<unsigned, MachineOperand *> RegRefs;
+    std::multimap<MCRegister, MachineOperand *> RegRefs;
 
     using RegRefIter =
-        std::multimap<unsigned, MachineOperand *>::const_iterator;
+        std::multimap<MCRegister, MachineOperand *>::const_iterator;
 
     /// The index of the most recent kill (proceeding bottom-up),
     /// or ~0u if the register is not live.
@@ -96,15 +96,13 @@ class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
   private:
     void PrescanInstruction(MachineInstr &MI);
     void ScanInstruction(MachineInstr &MI, unsigned Count);
-    bool isNewRegClobberedByRefs(RegRefIter RegRefBegin,
-                                 RegRefIter RegRefEnd,
-                                 unsigned NewReg);
-    unsigned findSuitableFreeRegister(RegRefIter RegRefBegin,
-                                      RegRefIter RegRefEnd,
-                                      unsigned AntiDepReg,
-                                      unsigned LastNewReg,
-                                      const TargetRegisterClass *RC,
-                                      SmallVectorImpl<unsigned> &Forbid);
+    bool isNewRegClobberedByRefs(RegRefIter RegRefBegin, RegRefIter RegRefEnd,
+                                 MCRegister NewReg);
+    MCRegister
+    findSuitableFreeRegister(RegRefIter RegRefBegin, RegRefIter RegRefEnd,
+                             MCRegister AntiDepReg, MCRegister LastNewReg,
+                             const TargetRegisterClass *RC,
+                             const SmallVectorImpl<Register> &Forbid);
   };
 
 } // end namespace llvm

@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s \
 // RUN: -one-shot-bufferize="bufferize-function-boundaries" --canonicalize \
-// RUN:   -finalize-memref-to-llvm\
+// RUN:   -buffer-deallocation-pipeline \
+// RUN:   -finalize-memref-to-llvm \
 // RUN:   -convert-func-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-runner \
 // RUN:  -e entry -entry-point-result=void  \

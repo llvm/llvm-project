@@ -91,7 +91,7 @@ mlir::Value fir::runtime::genSize(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, sizeFunc, args).getResult(0);
 }
 
-/// Generate call to `Is_contiguous` runtime routine.
+/// Generate call to `IsContiguous` runtime routine.
 mlir::Value fir::runtime::genIsContiguous(fir::FirOpBuilder &builder,
                                           mlir::Location loc,
                                           mlir::Value array) {
@@ -99,6 +99,18 @@ mlir::Value fir::runtime::genIsContiguous(fir::FirOpBuilder &builder,
       fir::runtime::getRuntimeFunc<mkRTKey(IsContiguous)>(loc, builder);
   auto fTy = isContiguousFunc.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, array);
+  return builder.create<fir::CallOp>(loc, isContiguousFunc, args).getResult(0);
+}
+
+/// Generate call to `IsContiguousUpTo` runtime routine.
+mlir::Value fir::runtime::genIsContiguousUpTo(fir::FirOpBuilder &builder,
+                                              mlir::Location loc,
+                                              mlir::Value array,
+                                              mlir::Value dim) {
+  mlir::func::FuncOp isContiguousFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(IsContiguousUpTo)>(loc, builder);
+  auto fTy = isContiguousFunc.getFunctionType();
+  auto args = fir::runtime::createArguments(builder, loc, fTy, array, dim);
   return builder.create<fir::CallOp>(loc, isContiguousFunc, args).getResult(0);
 }
 

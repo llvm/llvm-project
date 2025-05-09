@@ -49,8 +49,8 @@ define i64 @test_vleff_nxv8i8_mask(<vscale x 8 x i8> %maskedoff, ptr %p, <vscale
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
-  ; CHECK-NEXT:   $v0 = COPY [[COPY1]]
-  ; CHECK-NEXT:   [[PseudoVLE8FF_V_M1_MASK:%[0-9]+]]:vrnov0, [[PseudoVLE8FF_V_M1_MASK1:%[0-9]+]]:gpr = PseudoVLE8FF_V_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 3 /* e8 */, 0 /* tu, mu */, implicit-def dead $vl :: (load unknown-size from %ir.p, align 1)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vmv0 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[PseudoVLE8FF_V_M1_MASK:%[0-9]+]]:vrnov0, [[PseudoVLE8FF_V_M1_MASK1:%[0-9]+]]:gpr = PseudoVLE8FF_V_M1_MASK [[COPY3]], [[COPY2]], [[COPY4]], [[COPY]], 3 /* e8 */, 0 /* tu, mu */, implicit-def dead $vl :: (load unknown-size from %ir.p, align 1)
   ; CHECK-NEXT:   $x10 = COPY [[PseudoVLE8FF_V_M1_MASK1]]
   ; CHECK-NEXT:   PseudoRET implicit $x10
 entry:
@@ -101,8 +101,8 @@ define i64 @test_vlseg2ff_nxv8i8_mask(target("riscv.vector.tuple", <vscale x 8 x
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vrn2m1nov0 = COPY $v8_v9
-  ; CHECK-NEXT:   $v0 = COPY [[COPY1]]
-  ; CHECK-NEXT:   [[PseudoVLSEG2E8FF_V_M1_MASK:%[0-9]+]]:vrn2m1nov0, [[PseudoVLSEG2E8FF_V_M1_MASK1:%[0-9]+]]:gpr = PseudoVLSEG2E8FF_V_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 3 /* e8 */, 0 /* tu, mu */, implicit-def dead $vl :: (load unknown-size from %ir.base, align 1)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vmv0 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[PseudoVLSEG2E8FF_V_M1_MASK:%[0-9]+]]:vrn2m1nov0, [[PseudoVLSEG2E8FF_V_M1_MASK1:%[0-9]+]]:gpr = PseudoVLSEG2E8FF_V_M1_MASK [[COPY3]], [[COPY2]], [[COPY4]], [[COPY]], 3 /* e8 */, 0 /* tu, mu */, implicit-def dead $vl :: (load unknown-size from %ir.base, align 1)
   ; CHECK-NEXT:   $x10 = COPY [[PseudoVLSEG2E8FF_V_M1_MASK1]]
   ; CHECK-NEXT:   PseudoRET implicit $x10
 entry:

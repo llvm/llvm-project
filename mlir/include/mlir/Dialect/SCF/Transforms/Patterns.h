@@ -63,15 +63,6 @@ void populateSCFStructuralTypeConversions(const TypeConverter &typeConverter,
 void populateSCFStructuralTypeConversionTarget(
     const TypeConverter &typeConverter, ConversionTarget &target);
 
-/// Populates the provided pattern set with patterns that do 1:N type
-/// conversions on (some) SCF ops. This is intended to be used with
-/// applyPartialOneToNConversion.
-/// FIXME: The 1:N dialect conversion is deprecated and will be removed soon.
-/// 1:N support has been added to the regular dialect conversion driver.
-/// Use populateSCFStructuralTypeConversions() instead.
-void populateSCFStructuralOneToNTypeConversions(
-    const TypeConverter &typeConverter, RewritePatternSet &patterns);
-
 /// Populate patterns for SCF software pipelining transformation. See the
 /// ForLoopPipeliningPattern for the transformation details.
 void populateSCFLoopPipeliningPatterns(RewritePatternSet &patterns,

@@ -165,3 +165,34 @@ func.func @prefetch_normalize(%arg0: memref<512xf32, affine_map<(d0) -> (d0 floo
   }
   return
 }
+
+#map_strided = affine_map<(d0, d1) -> (d0 * 7 + d1)>
+
+// CHECK-LABEL: test_reinterpret_cast
+func.func @test_reinterpret_cast(%arg0: memref<5x7xf32>, %arg1: memref<5x7xf32>, %arg2: memref<5x7xf32>) {
+  %0 = memref.reinterpret_cast %arg0 to offset: [0], sizes: [5, 7], strides: [7, 1] : memref<5x7xf32> to memref<5x7xf32, #map_strided>
+  // CHECK: memref.reinterpret_cast %{{.*}} to offset: [0], sizes: [35], strides: [1] : memref<5x7xf32> to memref<35xf32>
+  affine.for %arg5 = 0 to 5 {
+    affine.for %arg6 = 0 to 7 {
+      %1 = affine.load %0[%arg5, %arg6] : memref<5x7xf32, #map_strided>
+      // CHECK: affine.load %reinterpret_cast[%{{.*}} * 7 + %{{.*}}] : memref<35xf32>
+      %2 = affine.load %arg1[%arg5, %arg6] : memref<5x7xf32>
+      %3 = arith.subf %1, %2 : f32
+      affine.store %3, %arg2[%arg5, %arg6] : memref<5x7xf32>
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: reinterpret_cast_non_zero_offset
+func.func @reinterpret_cast_non_zero_offset(%arg0: index, %arg1: memref<1x10x17xi32, strided<[?, ?, ?], offset: ?>>, %arg2: memref<1x10x17xi32, strided<[?, ?, ?], offset: ?>>, %arg3: memref<1x10x17xi32, strided<[?, ?, ?], offset: ?>>) -> (memref<1x5xf32, strided<[17, 1], offset: 27>>, memref<1x5xf32, strided<[17, 1], offset: 27>>, memref<2x17xf32>, memref<1x10x17xi32>, memref<1x10x17xf32>) {
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x10x17xi32>
+  %alloc_0 = memref.alloc() {alignment = 64 : i64} : memref<2x17xf32>
+  %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x10x17xf32>
+  cf.br ^bb3
+^bb3:  // pred: ^bb1
+  // CHECK: %[[REINTERPRET_CAST:.*]] = memref.reinterpret_cast %{{.*}} to offset: [0], sizes: [32], strides: [1] : memref<2x17xf32> to memref<32xf32>
+  // CHECK: return %[[REINTERPRET_CAST]], %[[REINTERPRET_CAST]], %{{.*}}, %{{.*}}, %{{.*}} : memref<32xf32>, memref<32xf32>, memref<2x17xf32>, memref<1x10x17xi32>, memref<1x10x17xf32>
+  %reinterpret_cast = memref.reinterpret_cast %alloc_0 to offset: [27], sizes: [1, 5], strides: [17, 1] : memref<2x17xf32> to memref<1x5xf32, strided<[17, 1], offset: 27>>
+  return %reinterpret_cast, %reinterpret_cast, %alloc_0, %alloc, %alloc_1 : memref<1x5xf32, strided<[17, 1], offset: 27>>, memref<1x5xf32, strided<[17, 1], offset: 27>>, memref<2x17xf32>, memref<1x10x17xi32>, memref<1x10x17xf32>
+}

@@ -3,7 +3,7 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX9 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX908 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX90A %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX940 %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX942 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX11 %s
 
 define void @test_atomicrmw_fadd_f32_global_no_use_unsafe(ptr addrspace(1) %ptr, float %value) #3 {
@@ -71,9 +71,9 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe(ptr addrspace(1) %ptr,
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
@@ -160,9 +160,9 @@ define void @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(ptr addrspace(
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(7) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(7) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(7) [[PTR:%.*]], align 4
@@ -249,9 +249,9 @@ define void @test_atomicrmw_fadd_f32_as999_no_use_unsafe(ptr addrspace(999) %ptr
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_as999_no_use_unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(999) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_as999_no_use_unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(999) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_as999_no_use_unsafe(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(999) [[PTR:%.*]], align 4
@@ -326,9 +326,9 @@ define float @test_atomicrmw_fadd_f32_global_unsafe(ptr addrspace(1) %ptr, float
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]]
 ; GFX90A-NEXT:    ret float [[RES]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_global_unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_global_unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_global_unsafe(
 ; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]]
@@ -391,9 +391,9 @@ define float @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(ptr addrspace(7) %pt
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(7) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret float [[RES]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(7) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(7) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(
 ; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(7) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
@@ -456,9 +456,9 @@ define float @test_atomicrmw_fadd_f32_as999_unsafe(ptr addrspace(999) %ptr, floa
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(999) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret float [[RES]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_as999_unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(999) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_as999_unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(999) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_as999_unsafe(
 ; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(999) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
@@ -521,9 +521,9 @@ define double @test_atomicrmw_fadd_f64_global_unsafe(ptr addrspace(1) %ptr, doub
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]] syncscope("wavefront") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f64_global_unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]] syncscope("wavefront") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f64_global_unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]] syncscope("wavefront") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_global_unsafe(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
@@ -620,9 +620,9 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #3 {
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[RES]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_flat_unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META1:![0-9]+]], !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_flat_unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META1:![0-9]+]], !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_flat_unsafe(
 ; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META1:![0-9]+]], !amdgpu.no.fine.grained.memory [[META0]]
@@ -685,9 +685,9 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(ptr %ptr, double %
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], double [[VALUE:%.*]] syncscope("wavefront") monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], double [[VALUE:%.*]] syncscope("wavefront") monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], double [[VALUE:%.*]] syncscope("wavefront") monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
@@ -818,23 +818,23 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
-; GFX940-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR:%.*]])
-; GFX940-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
-; GFX940:       atomicrmw.private:
-; GFX940-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
-; GFX940-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
-; GFX940-NEXT:    [[NEW:%.*]] = fadd double [[LOADED_PRIVATE]], [[VALUE:%.*]]
-; GFX940-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
-; GFX940-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
-; GFX940:       atomicrmw.global:
-; GFX940-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[PTR]], double [[VALUE]] syncscope("wavefront") monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    br label [[ATOMICRMW_PHI]]
-; GFX940:       atomicrmw.phi:
-; GFX940-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ]
-; GFX940-NEXT:    br label [[ATOMICRMW_END:%.*]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
+; GFX942-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR:%.*]])
+; GFX942-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
+; GFX942:       atomicrmw.private:
+; GFX942-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; GFX942-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
+; GFX942-NEXT:    [[NEW:%.*]] = fadd double [[LOADED_PRIVATE]], [[VALUE:%.*]]
+; GFX942-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; GFX942-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
+; GFX942:       atomicrmw.global:
+; GFX942-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[PTR]], double [[VALUE]] syncscope("wavefront") monotonic, align 8, !noalias.addrspace [[META1]], !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    br label [[ATOMICRMW_PHI]]
+; GFX942:       atomicrmw.phi:
+; GFX942-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ]
+; GFX942-NEXT:    br label [[ATOMICRMW_END:%.*]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe(
 ; GFX11-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR:%.*]])
@@ -1040,9 +1040,9 @@ define void @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(ptr addrspace(1)
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(
 ; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
@@ -1081,9 +1081,9 @@ define float @test_atomicrmw_fadd_f32_local(ptr addrspace(3) %ptr, float %value)
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4
 ; GFX90A-NEXT:    ret float [[RES]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_local(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_local(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_local(
 ; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4
@@ -1356,9 +1356,9 @@ define double @test_atomicrmw_fadd_f64_local(ptr addrspace(3) %ptr, double %valu
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] seq_cst, align 8
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f64_local(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] seq_cst, align 8
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f64_local(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] seq_cst, align 8
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_local(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
@@ -1445,9 +1445,9 @@ define float @test_atomicrmw_fadd_f32_global_agent(ptr addrspace(1) %ptr, float 
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_global_agent(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("agent") monotonic, align 4
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_global_agent(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("agent") monotonic, align 4
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_global_agent(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
@@ -1531,9 +1531,9 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(ptr addrspace
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(
 ; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]]
@@ -1596,9 +1596,9 @@ define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]] syncscope("wavefront") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f64_global_unsafe_strictfp(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]] syncscope("wavefront") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f64_global_unsafe_strictfp(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]] syncscope("wavefront") monotonic, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_global_unsafe_strictfp(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
@@ -1649,9 +1649,9 @@ define float @test_atomicrmw_fadd_f32_local_strictfp(ptr addrspace(3) %ptr, floa
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4
 ; GFX90A-NEXT:    ret float [[RES]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_local_strictfp(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_local_strictfp(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_local_strictfp(
 ; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] seq_cst, align 4
@@ -2244,9 +2244,9 @@ define void @test_atomicrmw_fadd_f32_local_noret(ptr addrspace(3) %ptr, float %v
 ; GFX90A-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_local_noret(
-; GFX940-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_local_noret(
+; GFX942-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_local_noret(
 ; GFX11-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4
@@ -2285,9 +2285,9 @@ define float @test_atomicrmw_fadd_f32_local_ret(ptr addrspace(3) %ptr, float %va
 ; GFX90A-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4
 ; GFX90A-NEXT:    ret float [[RET]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_local_ret(
-; GFX940-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4
-; GFX940-NEXT:    ret float [[RET]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_local_ret(
+; GFX942-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4
+; GFX942-NEXT:    ret float [[RET]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_local_ret(
 ; GFX11-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4
@@ -2326,9 +2326,9 @@ define void @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(pt
 ; GFX90A-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(
-; GFX940-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(
+; GFX942-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(
 ; GFX11-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
@@ -2367,9 +2367,9 @@ define float @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(ptr
 ; GFX90A-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret float [[RET]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(
-; GFX940-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret float [[RET]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(
+; GFX942-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret float [[RET]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(
 ; GFX11-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], float [[VALUE:%.*]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META0]]
@@ -2516,9 +2516,9 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret(ptr addrspace(
 ; GFX90A-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret(
-; GFX940-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret(
+; GFX942-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
@@ -2593,9 +2593,9 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret(ptr addrspace(
 ; GFX90A-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8
 ; GFX90A-NEXT:    ret double [[RET]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret(
-; GFX940-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8
-; GFX940-NEXT:    ret double [[RET]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret(
+; GFX942-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8
+; GFX942-NEXT:    ret double [[RET]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
@@ -2670,9 +2670,9 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore
 ; GFX90A-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore_denormal_mode(
-; GFX940-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore_denormal_mode(
+; GFX942-NEXT:    [[UNUSED:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore_denormal_mode(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
@@ -2747,9 +2747,9 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore
 ; GFX90A-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret double [[RET]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore_denormal_mode(
-; GFX940-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret double [[RET]]
+; GFX942-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore_denormal_mode(
+; GFX942-NEXT:    [[RET:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], double [[VALUE:%.*]] monotonic, align 8, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret double [[RET]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore_denormal_mode(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
@@ -3031,9 +3031,9 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent(ptr %ptr, <2 x half> %va
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret <2 x half> [[TMP5]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret <2 x half> [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
@@ -3120,9 +3120,9 @@ define void @test_atomicrmw_fadd_v2f16_flat_agent_noret(ptr %ptr, <2 x half> %va
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
@@ -3209,9 +3209,9 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent(ptr addrspace(1) %ptr,
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret <2 x half> [[TMP5]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2f16_global_agent(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret <2 x half> [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_v2f16_global_agent(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_global_agent(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
@@ -3298,9 +3298,9 @@ define void @test_atomicrmw_fadd_v2f16_flat_global_noret(ptr addrspace(1) %ptr, 
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2f16_flat_global_noret(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_v2f16_flat_global_noret(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_flat_global_noret(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
@@ -3387,9 +3387,9 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_local_agent(ptr addrspace(3) %ptr, 
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret <2 x half> [[TMP5]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2f16_local_agent(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret <2 x half> [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_v2f16_local_agent(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_local_agent(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
@@ -3476,9 +3476,9 @@ define void @test_atomicrmw_fadd_v2f16_flat_local_noret(ptr addrspace(3) %ptr, <
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2f16_flat_local_noret(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_v2f16_flat_local_noret(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_flat_local_noret(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
@@ -3565,9 +3565,9 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent(ptr %ptr, <2 x bfloat
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret <2 x bfloat> [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
@@ -3654,9 +3654,9 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret(ptr %ptr, <2 x bfloat> 
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
@@ -3743,9 +3743,9 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %p
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret <2 x bfloat> [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
@@ -3832,9 +3832,9 @@ define void @test_atomicrmw_fadd_v2bf16_flat_global_noret(ptr addrspace(1) %ptr,
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2bf16_flat_global_noret(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_v2bf16_flat_global_noret(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_flat_global_noret(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
@@ -3921,9 +3921,9 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_local_agent(ptr addrspace(3) %pt
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2bf16_local_agent(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret <2 x bfloat> [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_v2bf16_local_agent(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_local_agent(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
@@ -4010,9 +4010,9 @@ define void @test_atomicrmw_fadd_v2bf16_flat_local_noret(ptr addrspace(3) %ptr, 
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2bf16_flat_local_noret(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_v2bf16_flat_local_noret(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(3) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_flat_local_noret(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
@@ -4099,9 +4099,9 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(ptr %ptr, <2 x h
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret <2 x half> [[TMP5]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret <2 x half> [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
@@ -4188,9 +4188,9 @@ define void @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(ptr %ptr, <2 x h
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
@@ -4265,9 +4265,9 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__unsafe(ptr addrspace(
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret <2 x half> [[RES]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2f16_global_agent__unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret <2 x half> [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_v2f16_global_agent__unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_global_agent__unsafe(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
@@ -4330,9 +4330,9 @@ define void @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(ptr addrspace(
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
@@ -4419,9 +4419,9 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(ptr %ptr, <2 
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret <2 x bfloat> [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
@@ -4508,9 +4508,9 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(ptr %ptr, <2 x 
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
@@ -4597,9 +4597,9 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(ptr addrspa
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret <2 x bfloat> [[RES]]
+; GFX942-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
@@ -4686,9 +4686,9 @@ define void @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(ptr addrspace
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(
 ; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4

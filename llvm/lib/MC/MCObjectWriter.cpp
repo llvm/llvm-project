@@ -27,16 +27,10 @@ void MCObjectWriter::reset() {
   CGProfile.clear();
 }
 
-bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(
-    const MCAssembler &Asm, const MCSymbolRefExpr *A, const MCSymbolRefExpr *B,
-    bool InSet) const {
-  // Modified symbol references cannot be resolved.
-  if (A->getKind() != MCSymbolRefExpr::VK_None ||
-      B->getKind() != MCSymbolRefExpr::VK_None)
-    return false;
-
-  const MCSymbol &SA = A->getSymbol();
-  const MCSymbol &SB = B->getSymbol();
+bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(const MCAssembler &Asm,
+                                                        const MCSymbol &SA,
+                                                        const MCSymbol &SB,
+                                                        bool InSet) const {
   assert(!SA.isUndefined() && !SB.isUndefined());
   return isSymbolRefDifferenceFullyResolvedImpl(Asm, SA, *SB.getFragment(),
                                                 InSet, /*IsPCRel=*/false);

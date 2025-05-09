@@ -814,21 +814,21 @@ define void @infiniteloop() {
 ; ENABLE-NEXT:    pushq %rbx
 ; ENABLE-NEXT:    pushq %rax
 ; ENABLE-NEXT:    .cfi_offset %rbx, -24
-; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    testb %al, %al
 ; ENABLE-NEXT:    jne LBB10_3
 ; ENABLE-NEXT:  ## %bb.1: ## %if.then
-; ENABLE-NEXT:    movq %rsp, %rcx
-; ENABLE-NEXT:    addq $-16, %rcx
-; ENABLE-NEXT:    movq %rcx, %rsp
-; ENABLE-NEXT:    ## InlineAsm Start
-; ENABLE-NEXT:    movl $1, %edx
-; ENABLE-NEXT:    ## InlineAsm End
+; ENABLE-NEXT:    movq %rsp, %rax
+; ENABLE-NEXT:    addq $-16, %rax
+; ENABLE-NEXT:    movq %rax, %rsp
+; ENABLE-NEXT:    xorl    %ecx, %ecx
 ; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB10_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
-; ENABLE-NEXT:    addl %edx, %eax
-; ENABLE-NEXT:    movl %eax, (%rcx)
+; ENABLE-NEXT:    ## InlineAsm Start
+; ENABLE-NEXT:    movl $1, %edx
+; ENABLE-NEXT:    ## InlineAsm End
+; ENABLE-NEXT:    addl %edx, %ecx
+; ENABLE-NEXT:    movl %ecx, (%rax)
 ; ENABLE-NEXT:    jmp LBB10_2
 ; ENABLE-NEXT:  LBB10_3: ## %if.end
 ; ENABLE-NEXT:    leaq -8(%rbp), %rsp
@@ -846,21 +846,21 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:    pushq %rbx
 ; DISABLE-NEXT:    pushq %rax
 ; DISABLE-NEXT:    .cfi_offset %rbx, -24
-; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    testb %al, %al
 ; DISABLE-NEXT:    jne LBB10_3
 ; DISABLE-NEXT:  ## %bb.1: ## %if.then
-; DISABLE-NEXT:    movq %rsp, %rcx
-; DISABLE-NEXT:    addq $-16, %rcx
-; DISABLE-NEXT:    movq %rcx, %rsp
-; DISABLE-NEXT:    ## InlineAsm Start
-; DISABLE-NEXT:    movl $1, %edx
-; DISABLE-NEXT:    ## InlineAsm End
+; DISABLE-NEXT:    movq %rsp, %rax
+; DISABLE-NEXT:    addq $-16, %rax
+; DISABLE-NEXT:    %rax, %rsp
+; DISABLE-NEXT:    xorl    %ecx, %ecx
 ; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB10_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
-; DISABLE-NEXT:    addl %edx, %eax
-; DISABLE-NEXT:    movl %eax, (%rcx)
+; DISABLE-NEXT:    ## InlineAsm Start
+; DISABLE-NEXT:    movl $1, %edx
+; DISABLE-NEXT:    ## InlineAsm End
+; DISABLE-NEXT:    addl %edx, %ecx
+; DISABLE-NEXT:    movl %ecx, (%rax)
 ; DISABLE-NEXT:    jmp LBB10_2
 ; DISABLE-NEXT:  LBB10_3: ## %if.end
 ; DISABLE-NEXT:    leaq -8(%rbp), %rsp
@@ -897,14 +897,13 @@ define void @infiniteloop2() {
 ; ENABLE-NEXT:    pushq %rbx
 ; ENABLE-NEXT:    pushq %rax
 ; ENABLE-NEXT:    .cfi_offset %rbx, -24
-; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    testb %al, %al
 ; ENABLE-NEXT:    jne LBB11_5
 ; ENABLE-NEXT:  ## %bb.1: ## %if.then
-; ENABLE-NEXT:    movq %rsp, %rcx
-; ENABLE-NEXT:    addq $-16, %rcx
-; ENABLE-NEXT:    movq %rcx, %rsp
-; ENABLE-NEXT:    xorl %edx, %edx
+; ENABLE-NEXT:    movq %rsp, %rax
+; ENABLE-NEXT:    addq $-16, %rax
+; ENABLE-NEXT:    movq %rax, %rsp
+; ENABLE-NEXT:    xorl %ecx, %ecx
 ; ENABLE-NEXT:    jmp LBB11_2
 ; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB11_4: ## %body2
@@ -912,15 +911,15 @@ define void @infiniteloop2() {
 ; ENABLE-NEXT:    ## InlineAsm Start
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    ## InlineAsm End
-; ENABLE-NEXT:    movl $1, %edx
+; ENABLE-NEXT:    movl $1, %ecx
 ; ENABLE-NEXT:  LBB11_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
-; ENABLE-NEXT:    movl %edx, %esi
+; ENABLE-NEXT:    movl %ecx, %edx
 ; ENABLE-NEXT:    ## InlineAsm Start
-; ENABLE-NEXT:    movl $1, %edx
+; ENABLE-NEXT:    movl $1, %ecx
 ; ENABLE-NEXT:    ## InlineAsm End
-; ENABLE-NEXT:    addl %esi, %edx
-; ENABLE-NEXT:    movl %edx, (%rcx)
+; ENABLE-NEXT:    addl %edx, %ecx
+; ENABLE-NEXT:    movl %ecx, (%rax)
 ; ENABLE-NEXT:    testb %al, %al
 ; ENABLE-NEXT:    jne LBB11_4
 ; ENABLE-NEXT:  ## %bb.3: ## %body1
@@ -945,14 +944,13 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    pushq %rbx
 ; DISABLE-NEXT:    pushq %rax
 ; DISABLE-NEXT:    .cfi_offset %rbx, -24
-; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    testb %al, %al
 ; DISABLE-NEXT:    jne LBB11_5
 ; DISABLE-NEXT:  ## %bb.1: ## %if.then
-; DISABLE-NEXT:    movq %rsp, %rcx
-; DISABLE-NEXT:    addq $-16, %rcx
-; DISABLE-NEXT:    movq %rcx, %rsp
-; DISABLE-NEXT:    xorl %edx, %edx
+; DISABLE-NEXT:    movq %rsp, %rax
+; DISABLE-NEXT:    addq $-16, %rax
+; DISABLE-NEXT:    movq %rax, %rsp
+; DISABLE-NEXT:    xorl %ecx, %ecx
 ; DISABLE-NEXT:    jmp LBB11_2
 ; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB11_4: ## %body2
@@ -960,15 +958,15 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    ## InlineAsm Start
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    ## InlineAsm End
-; DISABLE-NEXT:    movl $1, %edx
+; DISABLE-NEXT:    movl $1, %ecx
 ; DISABLE-NEXT:  LBB11_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
-; DISABLE-NEXT:    movl %edx, %esi
+; DISABLE-NEXT:    movl %ecx, %edx
 ; DISABLE-NEXT:    ## InlineAsm Start
-; DISABLE-NEXT:    movl $1, %edx
+; DISABLE-NEXT:    movl $1, %ecx
 ; DISABLE-NEXT:    ## InlineAsm End
-; DISABLE-NEXT:    addl %esi, %edx
-; DISABLE-NEXT:    movl %edx, (%rcx)
+; DISABLE-NEXT:    addl %edx, %ecx
+; DISABLE-NEXT:    movl %ecx, (%rax)
 ; DISABLE-NEXT:    testb %al, %al
 ; DISABLE-NEXT:    jne LBB11_4
 ; DISABLE-NEXT:  ## %bb.3: ## %body1
@@ -1012,11 +1010,9 @@ if.end:
 define void @infiniteloop3() {
 ; ENABLE-LABEL: infiniteloop3:
 ; ENABLE:       ## %bb.0: ## %entry
-; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    testb %al, %al
 ; ENABLE-NEXT:    jne LBB12_2
 ; ENABLE-NEXT:  ## %bb.1: ## %body
-; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    testb %al, %al
 ; ENABLE-NEXT:    jne LBB12_7
 ; ENABLE-NEXT:  LBB12_2: ## %loop2a.preheader
@@ -1044,11 +1040,9 @@ define void @infiniteloop3() {
 ;
 ; DISABLE-LABEL: infiniteloop3:
 ; DISABLE:       ## %bb.0: ## %entry
-; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    testb %al, %al
 ; DISABLE-NEXT:    jne LBB12_2
 ; DISABLE-NEXT:  ## %bb.1: ## %body
-; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    testb %al, %al
 ; DISABLE-NEXT:    jne LBB12_7
 ; DISABLE-NEXT:  LBB12_2: ## %loop2a.preheader

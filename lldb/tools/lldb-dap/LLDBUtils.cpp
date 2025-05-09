@@ -7,21 +7,48 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDBUtils.h"
-#include "DAP.h"
 #include "JSONUtils.h"
+#include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandReturnObject.h"
+#include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBFrame.h"
 #include "lldb/API/SBStringList.h"
+#include "lldb/API/SBStructuredData.h"
+#include "lldb/API/SBThread.h"
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <mutex>
+#include <system_error>
 
 namespace lldb_dap {
 
 bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                      const llvm::ArrayRef<std::string> &commands,
-                     llvm::raw_ostream &strm, bool parse_command_directives) {
+                     llvm::raw_ostream &strm, bool parse_command_directives,
+                     bool echo_commands) {
   if (commands.empty())
     return true;
 
   bool did_print_prefix = false;
+
+  // We only need the prompt when echoing commands.
+  std::string prompt_string;
+  if (echo_commands) {
+    prompt_string = "(lldb) ";
+
+    // Get the current prompt from settings.
+    if (const lldb::SBStructuredData prompt = debugger.GetSetting("prompt")) {
+      const size_t prompt_length = prompt.GetStringValue(nullptr, 0);
+
+      if (prompt_length != 0) {
+        prompt_string.resize(prompt_length + 1);
+        prompt.GetStringValue(prompt_string.data(), prompt_string.length());
+      }
+    }
+  }
 
   lldb::SBCommandInterpreter interp = debugger.GetCommandInterpreter();
   for (llvm::StringRef command : commands) {
@@ -60,7 +87,10 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
         strm << prefix << "\n";
         did_print_prefix = true;
       }
-      strm << "(lldb) " << command << "\n";
+
+      if (echo_commands)
+        strm << prompt_string.c_str() << command << '\n';
+
       auto output_len = result.GetOutputSize();
       if (output_len) {
         const char *output = result.GetOutput();
@@ -81,21 +111,14 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                             const llvm::ArrayRef<std::string> &commands,
                             bool &required_command_failed,
-                            bool parse_command_directives) {
+                            bool parse_command_directives, bool echo_commands) {
   required_command_failed = false;
   std::string s;
   llvm::raw_string_ostream strm(s);
-  required_command_failed = !RunLLDBCommands(debugger, prefix, commands, strm,
-                                             parse_command_directives);
+  required_command_failed =
+      !RunLLDBCommands(debugger, prefix, commands, strm,
+                       parse_command_directives, echo_commands);
   return s;
-}
-
-std::string
-RunLLDBCommandsVerbatim(lldb::SBDebugger &debugger, llvm::StringRef prefix,
-                        const llvm::ArrayRef<std::string> &commands) {
-  bool required_command_failed = false;
-  return RunLLDBCommands(debugger, prefix, commands, required_command_failed,
-                         /*parse_command_directives=*/false);
 }
 
 bool ThreadHasStopReason(lldb::SBThread &thread) {
@@ -113,6 +136,7 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   case lldb::eStopReasonVFork:
   case lldb::eStopReasonVForkDone:
   case lldb::eStopReasonInterrupt:
+  case lldb::eStopReasonHistoryBoundary:
     return true;
   case lldb::eStopReasonThreadExiting:
   case lldb::eStopReasonInvalid:
@@ -161,5 +185,61 @@ GetEnvironmentFromArguments(const llvm::json::Object &arguments) {
   }
   return envs;
 }
+
+lldb::StopDisassemblyType
+GetStopDisassemblyDisplay(lldb::SBDebugger &debugger) {
+  lldb::StopDisassemblyType result =
+      lldb::StopDisassemblyType::eStopDisassemblyTypeNoDebugInfo;
+  lldb::SBStructuredData string_result =
+      debugger.GetSetting("stop-disassembly-display");
+  const size_t result_length = string_result.GetStringValue(nullptr, 0);
+  if (result_length > 0) {
+    std::string result_string(result_length, '\0');
+    string_result.GetStringValue(result_string.data(), result_length + 1);
+
+    result =
+        llvm::StringSwitch<lldb::StopDisassemblyType>(result_string)
+            .Case("never", lldb::StopDisassemblyType::eStopDisassemblyTypeNever)
+            .Case("always",
+                  lldb::StopDisassemblyType::eStopDisassemblyTypeAlways)
+            .Case("no-source",
+                  lldb::StopDisassemblyType::eStopDisassemblyTypeNoSource)
+            .Case("no-debuginfo",
+                  lldb::StopDisassemblyType::eStopDisassemblyTypeNoDebugInfo)
+            .Default(
+                lldb::StopDisassemblyType::eStopDisassemblyTypeNoDebugInfo);
+  }
+
+  return result;
+}
+
+llvm::Error ToError(const lldb::SBError &error) {
+  if (error.Success())
+    return llvm::Error::success();
+
+  return llvm::createStringError(
+      std::error_code(error.GetError(), std::generic_category()),
+      error.GetCString());
+}
+
+std::string GetStringValue(const lldb::SBStructuredData &data) {
+  if (!data.IsValid())
+    return "";
+
+  const size_t str_length = data.GetStringValue(nullptr, 0);
+  if (!str_length)
+    return "";
+
+  std::string str(str_length, 0);
+  data.GetStringValue(str.data(), str_length + 1);
+  return str;
+}
+
+ScopeSyncMode::ScopeSyncMode(lldb::SBDebugger &debugger)
+    : m_debugger(debugger), m_async(m_debugger.GetAsync()) {
+  m_debugger.SetAsync(false);
+}
+
+ScopeSyncMode::~ScopeSyncMode() { m_debugger.SetAsync(m_async); }
 
 } // namespace lldb_dap

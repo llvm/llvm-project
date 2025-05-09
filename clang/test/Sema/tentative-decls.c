@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -Wprivate-extern -verify
+// RUN: %clang_cc1 %s -fsyntax-only -Wprivate-extern -pedantic -verify
 
 // PR3310
 struct a x1; // expected-note 2{{forward declaration of 'struct a'}}
@@ -58,7 +58,7 @@ void func2(void)
   extern double *p;
 }
 
-static int a0[];
+static int a0[]; // expected-warning {{tentative definition of variable with internal linkage has incomplete array type 'int[]'}}
 static int b0;
 
 static int a0[] = { 4 };

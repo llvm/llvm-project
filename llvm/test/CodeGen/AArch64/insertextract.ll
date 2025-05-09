@@ -271,7 +271,7 @@ define <3 x float> @insert_v3f32_2(<3 x float> %a, float %b, i32 %c) {
 ;
 ; CHECK-GI-LABEL: insert_v3f32_2:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov s2, v0.s[0]
 ; CHECK-GI-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    mov v2.s[2], v1.s[0]
@@ -992,7 +992,7 @@ define <3 x i32> @insert_v3i32_2(<3 x i32> %a, i32 %b, i32 %c) {
 ;
 ; CHECK-GI-LABEL: insert_v3i32_2:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov s1, v0.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    mov v1.s[2], w0
 ; CHECK-GI-NEXT:    mov v0.16b, v1.16b

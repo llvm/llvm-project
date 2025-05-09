@@ -136,3 +136,46 @@ exit:
   %res = phi i32 [ %iv.next, %loop.latch ]
   ret i32 %res
 }
+
+; FIXME: evaluating at symbolic max BTC wraps around to a positive
+; offset: (2 + (2 * %y) + %P)
+define void @runtime_check_with_symbolic_max_wraps_to_positive_offset(ptr %P, ptr %S, i32 %x, i32 %y) {
+; CHECK-LABEL: 'runtime_check_with_symbolic_max_wraps_to_positive_offset'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.iv = getelementptr inbounds i16, ptr %P, i32 %iv
+; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:        ptr %S
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:          (Low: ((2 * %y) + %P) High: (2 + (2 * %y) + %P))
+; CHECK-NEXT:            Member: {((2 * %y) + %P),+,2}<%loop>
+; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:          (Low: %S High: (4 + %S))
+; CHECK-NEXT:            Member: %S
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %y, %entry ], [ %iv.next, %loop ]
+  %gep.iv = getelementptr inbounds i16 , ptr %P, i32 %iv
+  %l = load i32, ptr %S
+  store i16 0, ptr %gep.iv, align 4
+  %iv.next = add nsw i32 %iv, 1
+  %a = and i32 %l, 2147483648
+  %c.2 = icmp slt i32 %iv.next, %a
+  br i1 %c.2, label %loop, label %exit
+
+exit:
+  ret void
+}

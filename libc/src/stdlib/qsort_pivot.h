@@ -9,7 +9,9 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_QSORT_PIVOT_H
 #define LLVM_LIBC_SRC_STDLIB_QSORT_PIVOT_H
 
-#include <stddef.h>  // For size_t
+#include "src/__support/macros/attributes.h"
+
+#include <stddef.h> // For size_t
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -22,7 +24,7 @@ constexpr size_t PSEUDO_MEDIAN_REC_THRESHOLD = 64;
 // This chooses a pivot by sampling an adaptive amount of points, approximating
 // the quality of a median of sqrt(n) elements.
 template <typename A, typename F>
-size_t choose_pivot(const A &array, const F &is_less) {
+LIBC_INLINE size_t choose_pivot(const A &array, const F &is_less) {
   const size_t len = array.len();
 
   if (len < 8) {
@@ -47,8 +49,8 @@ size_t choose_pivot(const A &array, const F &is_less) {
 // recursion depth and overall sample from f(n) = 3*f(n/8) -> f(n) =
 // O(n^(log(3)/log(8))) ~= O(n^0.528) elements.
 template <typename A, typename F>
-size_t median3_rec(const A &array, size_t a, size_t b, size_t c, size_t n,
-                   const F &is_less) {
+LIBC_INLINE size_t median3_rec(const A &array, size_t a, size_t b, size_t c,
+                               size_t n, const F &is_less) {
   if (n * 8 >= PSEUDO_MEDIAN_REC_THRESHOLD) {
     const size_t n8 = n / 8;
     a = median3_rec(array, a, a + (n8 * 4), a + (n8 * 7), n8, is_less);
@@ -60,7 +62,8 @@ size_t median3_rec(const A &array, size_t a, size_t b, size_t c, size_t n,
 
 /// Calculates the median of 3 elements.
 template <typename A, typename F>
-size_t median3(const A &array, size_t a, size_t b, size_t c, const F &is_less) {
+LIBC_INLINE size_t median3(const A &array, size_t a, size_t b, size_t c,
+                           const F &is_less) {
   const void *a_ptr = array.get(a);
   const void *b_ptr = array.get(b);
   const void *c_ptr = array.get(c);

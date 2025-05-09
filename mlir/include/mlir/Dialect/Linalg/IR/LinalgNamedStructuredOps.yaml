@@ -1473,75 +1473,6 @@ structured_op: !LinalgStructuredOpConfig
                   scalar_arg: rhs
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: batch_matmul
-  cpp_class_name: BatchMatmulOp
-  doc: |-
-    Performs a batched matrix multiplication of two 3D inputs.
-
-    Numeric casting is performed on the operands to the inner multiply, promoting
-    them to the same data type as the accumulator/output.
-  implements:
-  - LinalgContractionOpInterface
-structured_op: !LinalgStructuredOpConfig
-  args:
-  - !LinalgOperandDefConfig
-    name: A
-    kind: input_tensor
-    type_var: T1
-    shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s2)>
-  - !LinalgOperandDefConfig
-    name: B
-    kind: input_tensor
-    type_var: T2
-    shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s2, s3)>
-  - !LinalgOperandDefConfig
-    name: C
-    kind: output_tensor
-    type_var: U
-    shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s3)>
-  indexing_maps: !LinalgIndexingMapsConfig
-    static_indexing_maps:
-    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0, d1, d3)>
-    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0, d3, d2)>
-    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0, d1, d2)>
-  iterator_types:
-  - parallel
-  - parallel
-  - parallel
-  - reduction
-  assignments:
-  - !ScalarAssign
-    arg: C
-    value: !ScalarExpression
-      scalar_fn:
-        kind: binary
-        fn_name: add
-        operands:
-        - !ScalarExpression
-          scalar_arg: C
-        - !ScalarExpression
-          scalar_fn:
-            kind: binary
-            fn_name: mul
-            operands:
-            - !ScalarExpression
-              scalar_fn:
-                kind: type
-                fn_name: cast_signed
-                type_var: U
-                operands:
-                - !ScalarExpression
-                  scalar_arg: A
-            - !ScalarExpression
-              scalar_fn:
-                kind: type
-                fn_name: cast_signed
-                type_var: U
-                operands:
-                - !ScalarExpression
-                  scalar_arg: B
---- !LinalgOpConfig
-metadata: !LinalgOpMetadata
   name: batch_matmul_transpose_a
   cpp_class_name: BatchMatmulTransposeAOp
   doc: |-
@@ -4141,12 +4072,12 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8)[s0, s1, s2, s3, s4, s5, s6,
-      s7, s8, s9, s10, s11, s12, s13, s14] -> (d0, d8, d1 * s3 + d5 * s5, d2 * s7
-      + d6 * s9, d3 * s11 + d7 * s13)>
+      s7, s8, s9, s10, s11, s12, s13, s14] -> (d0, d5, d2 * s3 + d6 * s5, d3 * s7
+      + d7 * s9, d4 * s11 + d8 * s13)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8)[s0, s1, s2, s3, s4, s5, s6,
-      s7, s8, s9, s10, s11, s12, s13, s14] -> (d4, d8, d5, d6, d7)>
+      s7, s8, s9, s10, s11, s12, s13, s14] -> (d1, d5, d6, d7, d8)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8)[s0, s1, s2, s3, s4, s5, s6,
-      s7, s8, s9, s10, s11, s12, s13, s14] -> (d0, d4, d1, d2, d3)>
+      s7, s8, s9, s10, s11, s12, s13, s14] -> (d0, d1, d2, d3, d4)>
   iterator_types:
   - parallel
   - parallel

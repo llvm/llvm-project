@@ -57,10 +57,9 @@ define half @reduction_half16(<16 x half> %vec16) {
 ; VI-LABEL: @reduction_half16(
 ; VI-NEXT:  entry:
 ; VI-NEXT:    [[TMP0:%.*]] = shufflevector <16 x half> [[VEC16:%.*]], <16 x half> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VI-NEXT:    [[TMP1:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[TMP0]])
 ; VI-NEXT:    [[TMP2:%.*]] = shufflevector <16 x half> [[VEC16]], <16 x half> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; VI-NEXT:    [[TMP3:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[TMP2]])
-; VI-NEXT:    [[OP_RDX:%.*]] = fadd fast half [[TMP1]], [[TMP3]]
+; VI-NEXT:    [[RDX_OP:%.*]] = fadd fast <8 x half> [[TMP0]], [[TMP2]]
+; VI-NEXT:    [[OP_RDX:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[RDX_OP]])
 ; VI-NEXT:    ret half [[OP_RDX]]
 ;
 entry:

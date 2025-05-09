@@ -156,7 +156,7 @@ def : Proc<"niagara",         [FeatureV9, FeatureV8Deprecated, FeatureVIS,
 def : Proc<"niagara2",        [FeatureV9, FeatureV8Deprecated, UsePopc,
                                FeatureVIS, FeatureVIS2]>;
 def : Proc<"niagara3",        [FeatureV9, FeatureV8Deprecated, UsePopc,
-                               FeatureVIS, FeatureVIS2]>;
+                               FeatureVIS, FeatureVIS2, FeatureVIS3]>;
 def : Proc<"niagara4",        [FeatureV9, FeatureV8Deprecated, UsePopc,
                                FeatureVIS, FeatureVIS2, FeatureVIS3]>;
 

@@ -42,6 +42,17 @@
 # REEXPORT-HEADERS-NOT: Load command
 # REEXPORT-HEADERS:     name    [[PATH]]
 
+## Check that specifying a library both with `l` and `reexport_library`
+## doesn't emit two load commands.
+# RUN: %lld -dylib -reexport_library %t/libgoodbye.dylib \
+# RUN:   -L%t -lgoodbye %t/libsuper.o -o %t/libsuper.dylib
+# RUN: llvm-otool -L %t/libsuper.dylib | FileCheck %s \
+# RUN:   --check-prefix=REEXPORT-DOUBLE -DPATH=%t/libgoodbye.dylib
+
+# REEXPORT-DOUBLE: [[PATH]]
+# REEXPORT-DOUBLE-SAME: reexport
+# REEXPORT-DOUBLE-NOT: [[PATH]]
+
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/sub-library.o
 # RUN: %lld -o %t/sub-library -L%t -lsuper %t/sub-library.o
 

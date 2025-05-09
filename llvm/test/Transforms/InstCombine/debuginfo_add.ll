@@ -1,5 +1,4 @@
 ; RUN: opt -passes=instcombine %s -o - -S | FileCheck %s
-; RUN: opt -passes=instcombine %s -o - -S --try-experimental-debuginfo-iterators | FileCheck %s
 ; typedef struct v *v_t;
 ; struct v {
 ;   unsigned long long p;

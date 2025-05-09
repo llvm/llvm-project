@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @foo_(%arg0: !fir.ref<!fir.array<?x?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}, %arg2: !fir.ref<i32> {fir.bindc_name = "m"}, %arg3: !fir.ref<i32> {fir.bindc_name = "p"}) attributes {fir.internal_name = "_QPfoo"} {
     %c5_i32 = arith.constant 5 : i32
     %c6_i32 = arith.constant 6 : i32

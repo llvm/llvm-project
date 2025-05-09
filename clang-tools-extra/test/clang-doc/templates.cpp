@@ -19,7 +19,7 @@
 // MD: # Global Namespace
 // MD: ## Functions
 
-template<class... T>
+template <class... T>
 void ParamPackFunction(T... args);
 
 // YAML-NEXT: ChildFunctions:
@@ -44,7 +44,7 @@ void ParamPackFunction(T... args);
 // MD: ### ParamPackFunction
 // MD: *void ParamPackFunction(T... args)*
 
-template<typename T, int U = 1>
+template <typename T, int U = 1>
 void function(T x) {}
 
 // YAML-NEXT:   - USR:             '{{([0-9A-F]{40})}}'
@@ -70,7 +70,7 @@ void function(T x) {}
 // MD: *void function(T x)*
 // MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 23]]*
 
-template<>
+template <>
 void function<bool, 0>(bool x) {}
 
 // YAML-NEXT:   - USR:             '{{([0-9A-F]{40})}}'
@@ -101,13 +101,13 @@ void function<bool, 0>(bool x) {}
 /// A Tuple type
 ///
 /// Does Tuple things.
-template<typename ...Tys>
-struct tuple{};
+template <typename... Tys>
+struct tuple {};
 
 /// A function with a tuple parameter
 ///
 /// \param t The input to func_with_tuple_param
-tuple<int,int,bool> func_with_tuple_param(tuple<int,int,bool> t){ return t;}
+tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t) { return t; }
 
 // YAML-NEXT:   - USR:             '{{([0-9A-F]{40})}}'
 // YAML-NEXT:    Name:            'func_with_tuple_param'
@@ -154,4 +154,3 @@ tuple<int,int,bool> func_with_tuple_param(tuple<int,int,bool> t){ return t;}
 // MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 44]]*
 // MD:  A function with a tuple parameter
 // MD: **t** The input to func_with_tuple_param
-

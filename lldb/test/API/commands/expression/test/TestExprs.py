@@ -50,7 +50,7 @@ class BasicExprCommandsTestCase(TestBase):
     def test_floating_point_expr_commands(self):
         self.build_and_run()
 
-        self.expect("expression 2.234f", patterns=["\(float\) \$.* = 2\.234"])
+        self.expect("expression 2.234f", patterns=[r"\(float\) \$.* = 2\.234"])
         # (float) $2 = 2.234
 
     def test_many_expr_commands(self):

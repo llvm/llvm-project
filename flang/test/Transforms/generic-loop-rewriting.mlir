@@ -45,3 +45,36 @@ func.func @_QPteams_loop() {
 // CHECK:             }
 // CHECK:           }
 // CHECK:         }
+
+func.func @_QPparallel_loop() {
+  %i = fir.alloca i32
+  omp.parallel {
+    %c0 = arith.constant 0 : i32
+    %c10 = arith.constant 10 : i32
+    %c1 = arith.constant 1 : i32
+    omp.loop private(@_QFteams_loopEi_private_i32 %i -> %arg2 : !fir.ref<i32>) {
+      omp.loop_nest (%arg3) : i32 = (%c0) to (%c10) inclusive step (%c1) {
+        fir.store %arg3 to %arg2 : !fir.ref<i32>
+        omp.yield
+      }
+    }
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @_QPparallel_loop
+// CHECK:         %[[I:.*]] = fir.alloca i32
+// CHECK:         omp.parallel {
+
+// CHECK:           %[[LB:.*]] = arith.constant 0 : i32
+// CHECK:           %[[UB:.*]] = arith.constant 10 : i32
+// CHECK:           %[[STEP:.*]] = arith.constant 1 : i32
+// CHECK:           omp.wsloop private(@{{.*}} %[[I]]
+// CHECK-SAME:        -> %[[I_PRIV_ARG:[^[:space:]]+]] : !fir.ref<i32>) {
+// CHECK:              omp.loop_nest (%{{.*}}) : i32 =
+// CHECK-SAME:           (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
+// CHECK:                fir.store %{{.*}} to %[[I_PRIV_ARG]] : !fir.ref<i32>
+// CHECK:              }
+// CHECK:           }
+// CHECK:         }

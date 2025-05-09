@@ -39,8 +39,11 @@ constexpr double LOG2_E = 0x1.71547652b82fep+0;
 // Error bounds:
 // Errors when using double precision.
 constexpr double ERR_D = 0x1.8p-63;
+
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Errors when using double-double precision.
 constexpr double ERR_DD = 0x1.0p-99;
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 // -2^-12 * log(2)
 // > a = -2^-12 * log(2);
@@ -50,8 +53,11 @@ constexpr double ERR_DD = 0x1.0p-99;
 // Errors < 1.5 * 2^-133
 constexpr double MLOG_2_EXP2_M12_HI = -0x1.62e42ffp-13;
 constexpr double MLOG_2_EXP2_M12_MID = 0x1.718432a1b0e26p-47;
+
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 constexpr double MLOG_2_EXP2_M12_MID_30 = 0x1.718432ap-47;
 constexpr double MLOG_2_EXP2_M12_LO = 0x1.b0e2633fe0685p-79;
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 namespace {
 
@@ -72,6 +78,7 @@ LIBC_INLINE double poly_approx_d(double dx) {
   return p;
 }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Polynomial approximation with double-double precision:
 // Return exp(dx) ~ 1 + dx + dx^2 / 2 + ... + dx^6 / 720
 // For |dx| < 2^-13 + 2^-30:
@@ -171,6 +178,7 @@ DoubleDouble exp_double_double(double x, double kd,
 
   return r;
 }
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 // Check for exceptional cases when
 // |x| <= 2^-53 or x < log(2^-1075) or x >= 0x1.6232bdd7abcd3p+9
@@ -373,6 +381,19 @@ LLVM_LIBC_FUNCTION(double, exp, (double x)) {
 
   double lo = fputil::multiply_add(p, mid_lo, exp_mid.lo);
 
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  if (LIBC_UNLIKELY(denorm)) {
+    return ziv_test_denorm</*SKIP_ZIV_TEST=*/true>(hi, exp_mid.hi, lo, ERR_D)
+        .value();
+  } else {
+    // to multiply by 2^hi, a fast way is to simply add hi to the exponent
+    // field.
+    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+    double r =
+        cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(exp_mid.hi + lo));
+    return r;
+  }
+#else
   if (LIBC_UNLIKELY(denorm)) {
     if (auto r = ziv_test_denorm(hi, exp_mid.hi, lo, ERR_D);
         LIBC_LIKELY(r.has_value()))
@@ -413,6 +434,7 @@ LLVM_LIBC_FUNCTION(double, exp, (double x)) {
   Float128 r_f128 = exp_f128(x, kd, idx1, idx2);
 
   return static_cast<double>(r_f128);
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 }
 
 } // namespace LIBC_NAMESPACE_DECL

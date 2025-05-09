@@ -47,7 +47,7 @@ protected:
 
 /// Note that you have to add:
 ///   DAG.addMutation(createARMLatencyMutation(ST, AA));
-/// to ARMPassConfig::createMachineScheduler() to have an effect.
+/// to ARMTargetMachine::createMachineScheduler() to have an effect.
 std::unique_ptr<ScheduleDAGMutation>
 createARMLatencyMutations(const class ARMSubtarget &, AAResults *AA);
 

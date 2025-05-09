@@ -26,7 +26,7 @@ define void @bar1() nounwind {
 ; MIPS32-EL-NEXT:    lbu $1, 3($1)
 ; MIPS32-EL-NEXT:    sll $1, $1, 8
 ; MIPS32-EL-NEXT:    lw $25, %call16(foo2)($gp)
-; MIPS32-EL-NEXT:    .reloc ($tmp0), R_MIPS_JALR, foo2
+; MIPS32-EL-NEXT:    .reloc $tmp0, R_MIPS_JALR, foo2
 ; MIPS32-EL-NEXT:  $tmp0:
 ; MIPS32-EL-NEXT:    jalr $25
 ; MIPS32-EL-NEXT:    or $4, $1, $2
@@ -47,7 +47,7 @@ define void @bar1() nounwind {
 ; MIPS32-EB-NEXT:    lbu $1, 2($1)
 ; MIPS32-EB-NEXT:    sll $1, $1, 24
 ; MIPS32-EB-NEXT:    lw $25, %call16(foo2)($gp)
-; MIPS32-EB-NEXT:    .reloc ($tmp0), R_MIPS_JALR, foo2
+; MIPS32-EB-NEXT:    .reloc $tmp0, R_MIPS_JALR, foo2
 ; MIPS32-EB-NEXT:  $tmp0:
 ; MIPS32-EB-NEXT:    jalr $25
 ; MIPS32-EB-NEXT:    or $4, $1, $2
@@ -65,7 +65,7 @@ define void @bar1() nounwind {
 ; MIPS32R6-EL-NEXT:    lw $1, %got(s2)($gp)
 ; MIPS32R6-EL-NEXT:    lhu $4, 2($1)
 ; MIPS32R6-EL-NEXT:    lw $25, %call16(foo2)($gp)
-; MIPS32R6-EL-NEXT:    .reloc ($tmp0), R_MIPS_JALR, foo2
+; MIPS32R6-EL-NEXT:    .reloc $tmp0, R_MIPS_JALR, foo2
 ; MIPS32R6-EL-NEXT:  $tmp0:
 ; MIPS32R6-EL-NEXT:    jalrc $25
 ; MIPS32R6-EL-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
@@ -82,7 +82,7 @@ define void @bar1() nounwind {
 ; MIPS32R6-EB-NEXT:    lw $1, %got(s2)($gp)
 ; MIPS32R6-EB-NEXT:    lhu $1, 2($1)
 ; MIPS32R6-EB-NEXT:    lw $25, %call16(foo2)($gp)
-; MIPS32R6-EB-NEXT:    .reloc ($tmp0), R_MIPS_JALR, foo2
+; MIPS32R6-EB-NEXT:    .reloc $tmp0, R_MIPS_JALR, foo2
 ; MIPS32R6-EB-NEXT:  $tmp0:
 ; MIPS32R6-EB-NEXT:    jalr $25
 ; MIPS32R6-EB-NEXT:    sll $4, $1, 16
@@ -113,7 +113,7 @@ define void @bar2() nounwind {
 ; MIPS32-EL-NEXT:    lbu $1, 6($1)
 ; MIPS32-EL-NEXT:    sll $1, $1, 16
 ; MIPS32-EL-NEXT:    lw $25, %call16(foo4)($gp)
-; MIPS32-EL-NEXT:    .reloc ($tmp1), R_MIPS_JALR, foo4
+; MIPS32-EL-NEXT:    .reloc $tmp1, R_MIPS_JALR, foo4
 ; MIPS32-EL-NEXT:  $tmp1:
 ; MIPS32-EL-NEXT:    jalr $25
 ; MIPS32-EL-NEXT:    or $5, $2, $1
@@ -139,7 +139,7 @@ define void @bar2() nounwind {
 ; MIPS32-EB-NEXT:    lbu $1, 6($1)
 ; MIPS32-EB-NEXT:    sll $1, $1, 8
 ; MIPS32-EB-NEXT:    lw $25, %call16(foo4)($gp)
-; MIPS32-EB-NEXT:    .reloc ($tmp1), R_MIPS_JALR, foo4
+; MIPS32-EB-NEXT:    .reloc $tmp1, R_MIPS_JALR, foo4
 ; MIPS32-EB-NEXT:  $tmp1:
 ; MIPS32-EB-NEXT:    jalr $25
 ; MIPS32-EB-NEXT:    or $5, $2, $1
@@ -160,7 +160,7 @@ define void @bar2() nounwind {
 ; MIPS32R6-EL-NEXT:    sll $3, $3, 16
 ; MIPS32R6-EL-NEXT:    lw $4, 0($1)
 ; MIPS32R6-EL-NEXT:    lw $25, %call16(foo4)($gp)
-; MIPS32R6-EL-NEXT:    .reloc ($tmp1), R_MIPS_JALR, foo4
+; MIPS32R6-EL-NEXT:    .reloc $tmp1, R_MIPS_JALR, foo4
 ; MIPS32R6-EL-NEXT:  $tmp1:
 ; MIPS32R6-EL-NEXT:    jalr $25
 ; MIPS32R6-EL-NEXT:    or $5, $2, $3
@@ -182,7 +182,7 @@ define void @bar2() nounwind {
 ; MIPS32R6-EB-NEXT:    sll $3, $3, 16
 ; MIPS32R6-EB-NEXT:    lw $4, 0($1)
 ; MIPS32R6-EB-NEXT:    lw $25, %call16(foo4)($gp)
-; MIPS32R6-EB-NEXT:    .reloc ($tmp1), R_MIPS_JALR, foo4
+; MIPS32R6-EB-NEXT:    .reloc $tmp1, R_MIPS_JALR, foo4
 ; MIPS32R6-EB-NEXT:  $tmp1:
 ; MIPS32R6-EB-NEXT:    jalr $25
 ; MIPS32R6-EB-NEXT:    or $5, $3, $2

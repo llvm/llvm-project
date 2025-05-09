@@ -20,6 +20,34 @@ int16_t3 test_abs_int16_t3(int16_t3 p0) { return abs(p0); }
 // NATIVE_HALF-LABEL: define noundef <4 x i16> @_Z17test_abs_int16_t4
 // NATIVE_HALF: call <4 x i16> @llvm.abs.v4i16(
 int16_t4 test_abs_int16_t4(int16_t4 p0) { return abs(p0); }
+
+// NATIVE_HALF-LABEL: define {{.*}}hlsl3abs{{.*}}(i16
+// NATIVE_HALF: [[Alloca:%.*]] = alloca i16
+// NATIVE_HALF-NEXT: store i16 {{%.*}}, ptr [[Alloca]]
+// NATIVE_HALF-NEXT: [[Val:%.*]] = load i16, ptr [[Alloca]]
+// NATIVE_HALF-NEXT: ret i16 [[Val]]
+uint16_t test_abs_uint64_t(uint16_t p0) { return abs(p0); }
+
+// NATIVE_HALF-LABEL: define {{.*}}hlsl3abs{{.*}}(<2 x i16
+// NATIVE_HALF: [[Alloca:%.*]] = alloca <2 x i16>
+// NATIVE_HALF-NEXT: store <2 x i16> {{%.*}}, ptr [[Alloca]]
+// NATIVE_HALF-NEXT: [[Val:%.*]] = load <2 x i16>, ptr [[Alloca]]
+// NATIVE_HALF-NEXT: ret <2 x i16> [[Val]]
+uint16_t2 test_abs_uint64_t2(uint16_t2 p0) { return abs(p0); }
+
+// NATIVE_HALF-LABEL: define {{.*}}hlsl3abs{{.*}}(<3 x i16
+// NATIVE_HALF: [[Alloca:%.*]] = alloca <3 x i16>
+// NATIVE_HALF-NEXT: store <3 x i16> {{%.*}}, ptr [[Alloca]]
+// NATIVE_HALF-NEXT: [[Val:%.*]] = load <3 x i16>, ptr [[Alloca]]
+// NATIVE_HALF-NEXT: ret <3 x i16> [[Val]]
+uint16_t3 test_abs_uint64_t3(uint16_t3 p0) { return abs(p0); }
+
+// NATIVE_HALF-LABEL: define {{.*}}hlsl3abs{{.*}}(<4 x i16
+// NATIVE_HALF: [[Alloca:%.*]] = alloca <4 x i16>
+// NATIVE_HALF-NEXT: store <4 x i16> {{%.*}}, ptr [[Alloca]]
+// NATIVE_HALF-NEXT: [[Val:%.*]] = load <4 x i16>, ptr [[Alloca]]
+// NATIVE_HALF-NEXT: ret <4 x i16> [[Val]]
+uint16_t4 test_abs_uint64_t4(uint16_t4 p0) { return abs(p0); }
 #endif // __HLSL_ENABLE_16_BIT
 
 // NATIVE_HALF-LABEL: define noundef nofpclass(nan inf) half @_Z13test_abs_half
@@ -94,3 +122,60 @@ double3 test_abs_double3(double3 p0) { return abs(p0); }
 // CHECK-LABEL: define noundef nofpclass(nan inf) <4 x double> @_Z16test_abs_double4
 // CHECK: call reassoc nnan ninf nsz arcp afn <4 x double> @llvm.fabs.v4f64(
 double4 test_abs_double4(double4 p0) { return abs(p0); }
+
+
+// CHECK-LABEL: define {{.*}}hlsl3abs{{.*}}(i32
+// CHECK: [[Alloca:%.*]] = alloca i32
+// CHECK-NEXT: store i32 {{%.*}}, ptr [[Alloca]]
+// CHECK-NEXT: [[Val:%.*]] = load i32, ptr [[Alloca]]
+// CHECK-NEXT: ret i32 [[Val]]
+uint test_abs_uint(uint p0) { return abs(p0); }
+
+// CHECK-LABEL: define {{.*}}hlsl3abs{{.*}}(<2 x i32
+// CHECK: [[Alloca:%.*]] = alloca <2 x i32>
+// CHECK-NEXT: store <2 x i32> {{%.*}}, ptr [[Alloca]]
+// CHECK-NEXT: [[Val:%.*]] = load <2 x i32>, ptr [[Alloca]]
+// CHECK-NEXT: ret <2 x i32> [[Val]]
+uint2 test_abs_uint2(uint2 p0) { return abs(p0); }
+
+// CHECK-LABEL: define {{.*}}hlsl3abs{{.*}}(<3 x i32
+// CHECK: [[Alloca:%.*]] = alloca <3 x i32>
+// CHECK-NEXT: store <3 x i32> {{%.*}}, ptr [[Alloca]]
+// CHECK-NEXT: [[Val:%.*]] = load <3 x i32>, ptr [[Alloca]]
+// CHECK-NEXT: ret <3 x i32> [[Val]]
+uint3 test_abs_uint3(uint3 p0) { return abs(p0); }
+
+// CHECK-LABEL: define {{.*}}hlsl3abs{{.*}}(<4 x i32
+// CHECK: [[Alloca:%.*]] = alloca <4 x i32>
+// CHECK-NEXT: store <4 x i32> {{%.*}}, ptr [[Alloca]]
+// CHECK-NEXT: [[Val:%.*]] = load <4 x i32>, ptr [[Alloca]]
+// CHECK-NEXT: ret <4 x i32> [[Val]]
+uint4 test_abs_uint4(uint4 p0) { return abs(p0); }
+
+// CHECK-LABEL: define {{.*}}hlsl3abs{{.*}}(i64
+// CHECK: [[Alloca:%.*]] = alloca i64
+// CHECK-NEXT: store i64 {{%.*}}, ptr [[Alloca]]
+// CHECK-NEXT: [[Val:%.*]] = load i64, ptr [[Alloca]]
+// CHECK-NEXT: ret i64 [[Val]]
+uint64_t test_abs_uint64_t(uint64_t p0) { return abs(p0); }
+
+// CHECK-LABEL: define {{.*}}hlsl3abs{{.*}}(<2 x i64
+// CHECK: [[Alloca:%.*]] = alloca <2 x i64>
+// CHECK-NEXT: store <2 x i64> {{%.*}}, ptr [[Alloca]]
+// CHECK-NEXT: [[Val:%.*]] = load <2 x i64>, ptr [[Alloca]]
+// CHECK-NEXT: ret <2 x i64> [[Val]]
+uint64_t2 test_abs_uint64_t2(uint64_t2 p0) { return abs(p0); }
+
+// CHECK-LABEL: define {{.*}}hlsl3abs{{.*}}(<3 x i64
+// CHECK: [[Alloca:%.*]] = alloca <3 x i64>
+// CHECK-NEXT: store <3 x i64> {{%.*}}, ptr [[Alloca]]
+// CHECK-NEXT: [[Val:%.*]] = load <3 x i64>, ptr [[Alloca]]
+// CHECK-NEXT: ret <3 x i64> [[Val]]
+uint64_t3 test_abs_uint64_t3(uint64_t3 p0) { return abs(p0); }
+
+// CHECK-LABEL: define {{.*}}hlsl3abs{{.*}}(<4 x i64
+// CHECK: [[Alloca:%.*]] = alloca <4 x i64>
+// CHECK-NEXT: store <4 x i64> {{%.*}}, ptr [[Alloca]]
+// CHECK-NEXT: [[Val:%.*]] = load <4 x i64>, ptr [[Alloca]]
+// CHECK-NEXT: ret <4 x i64> [[Val]]
+uint64_t4 test_abs_uint64_t4(uint64_t4 p0) { return abs(p0); }

@@ -18,7 +18,7 @@
 ; OPTNONE-NOT: s_mov_b32
 ; OPTNONE: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen{{$}}
 define amdgpu_kernel void @store_to_undef() #0 {
-  store volatile i32 0, ptr addrspace(5) undef
+  store volatile i32 0, ptr addrspace(5) poison
   ret void
 }
 
@@ -36,7 +36,7 @@ define amdgpu_kernel void @store_to_inttoptr() #0 {
 ; OPT-DAG: s_mov_b64 s{{\[[0-9]+}}:[[RSRC_HI:[0-9]+]]], s[2:3]
 ; OPT: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[[[RSRC_LO]]:[[RSRC_HI]]], 0 offen glc{{$}}
 define amdgpu_kernel void @load_from_undef() #0 {
-  %ld = load volatile i32, ptr addrspace(5) undef
+  %ld = load volatile i32, ptr addrspace(5) poison
   ret void
 }
 

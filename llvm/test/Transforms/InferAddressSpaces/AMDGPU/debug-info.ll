@@ -2,7 +2,7 @@
 
 ; check that the debug locations are correctly propagated
 
-@lds = internal unnamed_addr addrspace(3) global [648 x double] undef, align 8
+@lds = internal unnamed_addr addrspace(3) global [648 x double] poison, align 8
 
 ; CHECK-LABEL: @load_global_from_flat(
 ; CHECK-NEXT: %tmp0 = addrspacecast ptr %generic_scalar to ptr addrspace(1), !dbg ![[DEBUG_LOC_TMP0:[0-9]+]]

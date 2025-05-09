@@ -498,6 +498,7 @@ void ompt_post_init() {
     kmp_info_t *root_thread = ompt_get_thread();
 
     ompt_set_thread_state(root_thread, ompt_state_overhead);
+    __ompt_task_init(root_thread->th.th_current_task, 0);
 
     if (ompt_enabled.ompt_callback_thread_begin) {
       ompt_callbacks.ompt_callback(ompt_callback_thread_begin)(

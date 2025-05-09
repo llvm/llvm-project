@@ -75,7 +75,7 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 bb:
   %cond = load i1, ptr addrspace(4) null
   %tmp = select i1 %cond, ptr @wobble, ptr @snork
-  call void %tmp(ptr undef, i32 undef, ptr undef)
+  call void %tmp(ptr poison, i32 poison, ptr poison)
   ret void
 }
 

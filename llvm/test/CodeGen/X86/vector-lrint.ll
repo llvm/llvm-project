@@ -269,31 +269,17 @@ declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f64(<1 x double>)
 define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
 ; X86-SSE2-LABEL: lrint_v2f64:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    cvtsd2si %xmm0, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; X86-SSE2-NEXT:    cvtsd2si %xmm0, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
+; X86-SSE2-NEXT:    cvtpd2dq %xmm0, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: lrint_v2f64:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
-; X86-AVX-NEXT:    vcvtsd2si %xmm1, %eax
-; X86-AVX-NEXT:    vcvtsd2si %xmm0, %ecx
-; X86-AVX-NEXT:    vmovd %ecx, %xmm0
-; X86-AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X86-AVX-NEXT:    vcvtpd2dq %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-AVX-i32-LABEL: lrint_v2f64:
 ; X64-AVX-i32:       # %bb.0:
-; X64-AVX-i32-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
-; X64-AVX-i32-NEXT:    vcvtsd2si %xmm1, %eax
-; X64-AVX-i32-NEXT:    vcvtsd2si %xmm0, %ecx
-; X64-AVX-i32-NEXT:    vmovd %ecx, %xmm0
-; X64-AVX-i32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X64-AVX-i32-NEXT:    vcvtpd2dq %xmm0, %xmm0
 ; X64-AVX-i32-NEXT:    retq
 ;
 ; X64-AVX1-i64-LABEL: lrint_v2f64:
@@ -328,20 +314,9 @@ declare <2 x iXLen> @llvm.lrint.v2iXLen.v2f64(<2 x double>)
 define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 ; X86-SSE2-LABEL: lrint_v4f64:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    cvtsd2si %xmm1, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm2
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
-; X86-SSE2-NEXT:    cvtsd2si %xmm1, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; X86-SSE2-NEXT:    cvtsd2si %xmm0, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; X86-SSE2-NEXT:    cvtsd2si %xmm0, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
+; X86-SSE2-NEXT:    cvtpd2dq %xmm1, %xmm1
+; X86-SSE2-NEXT:    cvtpd2dq %xmm0, %xmm0
+; X86-SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: lrint_v4f64:
@@ -411,34 +386,12 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
-; X86-SSE2-NEXT:    movapd %xmm0, %xmm3
-; X86-SSE2-NEXT:    movapd 8(%ebp), %xmm4
-; X86-SSE2-NEXT:    cvtsd2si %xmm1, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm5
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
-; X86-SSE2-NEXT:    cvtsd2si %xmm1, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm0[0],xmm5[1],xmm0[1]
-; X86-SSE2-NEXT:    cvtsd2si %xmm3, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1,1]
-; X86-SSE2-NEXT:    cvtsd2si %xmm3, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm5[0]
-; X86-SSE2-NEXT:    cvtsd2si %xmm4, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm3
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
-; X86-SSE2-NEXT:    cvtsd2si %xmm4, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; X86-SSE2-NEXT:    cvtsd2si %xmm2, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
-; X86-SSE2-NEXT:    cvtsd2si %xmm2, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm2
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; X86-SSE2-NEXT:    cvtpd2dq %xmm1, %xmm1
+; X86-SSE2-NEXT:    cvtpd2dq %xmm0, %xmm0
+; X86-SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-SSE2-NEXT:    cvtpd2dq %xmm2, %xmm1
+; X86-SSE2-NEXT:    cvtpd2dq 8(%ebp), %xmm2
+; X86-SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4

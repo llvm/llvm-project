@@ -27,6 +27,7 @@ unittest("AnalysisTests") {
     "DDGTest.cpp",
     "DXILResourceTest.cpp",
     "DomTreeUpdaterTest.cpp",
+    "EphemeralValuesCacheTest.cpp",
     "FunctionPropertiesAnalysisTest.cpp",
     "GlobalsModRefTest.cpp",
     "GraphWriterTest.cpp",

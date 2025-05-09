@@ -22,11 +22,11 @@
 #include "src/math/generic/range_reduction_double_common.h"
 #include "src/math/generic/sincos_eval.h"
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 #include "range_reduction_double_fma.h"
 #else
 #include "range_reduction_double_nofma.h"
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -57,7 +57,7 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
         }
 
         // For |x| < 2^-27, max(|sin(x) - x|, |cos(x) - 1|) < ulp(x)/2.
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
         *sin_x = fputil::multiply_add(x, -0x1.0p-54, x);
         *cos_x = fputil::multiply_add(x, -x, 1.0);
 #else
@@ -71,7 +71,7 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
             *sin_x = FPBits(xbits.uintval() - 1).get_val();
         }
         *sin_x = fputil::multiply_add(x, -0x1.0p-54, x);
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
         return;
       }
       // No range reduction needed.
@@ -85,6 +85,12 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
   } else {
     // Inf or NaN
     if (LIBC_UNLIKELY(x_e > 2 * FPBits::EXP_BIAS)) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        *sin_x = *cos_x = FPBits::quiet_nan().get_val();
+        return;
+      }
+
       // sin(+-Inf) = NaN
       if (xbits.get_mantissa() == 0) {
         fputil::set_errno_if_required(EDOM);

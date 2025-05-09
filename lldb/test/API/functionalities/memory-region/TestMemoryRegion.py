@@ -95,7 +95,7 @@ class MemoryCommandRegion(TestBase):
         self.assertFalse(result.Succeeded())
         self.assertRegex(
             result.GetError(),
-            "Usage: memory region <address\-expression> \(or \-\-all\)",
+            r"Usage: memory region <address\-expression> \(or \-\-all\)",
         )
 
         # --all should match what repeating the command gives you

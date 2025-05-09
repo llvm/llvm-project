@@ -33,14 +33,14 @@ LIBC_INLINE unsigned LargeRangeReduction::fast(double x, DoubleDouble &u) {
   // 2^62 <= |x_reduced| < 2^(62 + 16) = 2^78
   x_reduced = xbits.get_val();
   // x * c_hi = ph.hi + ph.lo exactly.
-  DoubleDouble ph =
-      fputil::exact_mult<SPLIT>(x_reduced, ONE_TWENTY_EIGHT_OVER_PI[idx][0]);
+  DoubleDouble ph = fputil::exact_mult<double, SPLIT>(
+      x_reduced, ONE_TWENTY_EIGHT_OVER_PI[idx][0]);
   // x * c_mid = pm.hi + pm.lo exactly.
-  DoubleDouble pm =
-      fputil::exact_mult<SPLIT>(x_reduced, ONE_TWENTY_EIGHT_OVER_PI[idx][1]);
+  DoubleDouble pm = fputil::exact_mult<double, SPLIT>(
+      x_reduced, ONE_TWENTY_EIGHT_OVER_PI[idx][1]);
   // x * c_lo = pl.hi + pl.lo exactly.
-  DoubleDouble pl =
-      fputil::exact_mult<SPLIT>(x_reduced, ONE_TWENTY_EIGHT_OVER_PI[idx][2]);
+  DoubleDouble pl = fputil::exact_mult<double, SPLIT>(
+      x_reduced, ONE_TWENTY_EIGHT_OVER_PI[idx][2]);
   // Extract integral parts and fractional parts of (ph.lo + pm.hi).
   double sum_hi = ph.lo + pm.hi;
   double kd = fputil::nearest_integer(sum_hi);
@@ -80,7 +80,7 @@ LIBC_INLINE unsigned LargeRangeReduction::fast(double x, DoubleDouble &u) {
 //     b = D(sin(k * pi/128) - a);
 //     print("{", b, ",", a, "},");
 //   };
-LIBC_INLINE constexpr DoubleDouble SIN_K_PI_OVER_128[256] = {
+LIBC_INLINE constexpr DoubleDouble SIN_K_PI_OVER_128[] = {
     {0, 0},
     {-0x1.b1d63091a013p-64, 0x1.92155f7a3667ep-6},
     {-0x1.912bd0d569a9p-61, 0x1.91f65f10dd814p-5},

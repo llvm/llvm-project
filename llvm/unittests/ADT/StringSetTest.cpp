@@ -81,4 +81,23 @@ TEST_F(StringSetTest, Equal) {
   ASSERT_TRUE(A == A);
 }
 
+TEST_F(StringSetTest, CtorRange) {
+  const char *Args[] = {"chair", "desk", "bed"};
+  StringSet<> Set(llvm::from_range, Args);
+  EXPECT_EQ(Set.size(), 3U);
+  EXPECT_TRUE(Set.contains("bed"));
+  EXPECT_TRUE(Set.contains("chair"));
+  EXPECT_TRUE(Set.contains("desk"));
+}
+
+TEST_F(StringSetTest, InsertRange) {
+  StringSet<> Set;
+  const char *Args[] = {"chair", "desk", "bed"};
+  Set.insert_range(Args);
+  EXPECT_EQ(Set.size(), 3U);
+  EXPECT_TRUE(Set.contains("bed"));
+  EXPECT_TRUE(Set.contains("chair"));
+  EXPECT_TRUE(Set.contains("desk"));
+}
+
 } // end anonymous namespace

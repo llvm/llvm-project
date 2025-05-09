@@ -1490,7 +1490,7 @@ static DecodeStatus DecoderGPRRegisterClass(MCInst &Inst, unsigned RegNo,
   return S;
 }
 
-static const uint16_t SPRDecoderTable[] = {
+static const MCPhysReg SPRDecoderTable[] = {
      ARM::S0,  ARM::S1,  ARM::S2,  ARM::S3,
      ARM::S4,  ARM::S5,  ARM::S6,  ARM::S7,
      ARM::S8,  ARM::S9, ARM::S10, ARM::S11,
@@ -1518,7 +1518,7 @@ static DecodeStatus DecodeHPRRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeSPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-static const uint16_t DPRDecoderTable[] = {
+static const MCPhysReg DPRDecoderTable[] = {
      ARM::D0,  ARM::D1,  ARM::D2,  ARM::D3,
      ARM::D4,  ARM::D5,  ARM::D6,  ARM::D7,
      ARM::D8,  ARM::D9, ARM::D10, ARM::D11,
@@ -1573,7 +1573,7 @@ static DecodeStatus DecodeDPR_VFP2RegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeDPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-static const uint16_t QPRDecoderTable[] = {
+static const MCPhysReg QPRDecoderTable[] = {
      ARM::Q0,  ARM::Q1,  ARM::Q2,  ARM::Q3,
      ARM::Q4,  ARM::Q5,  ARM::Q6,  ARM::Q7,
      ARM::Q8,  ARM::Q9, ARM::Q10, ARM::Q11,
@@ -1592,7 +1592,7 @@ static DecodeStatus DecodeQPRRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static const uint16_t DPairDecoderTable[] = {
+static const MCPhysReg DPairDecoderTable[] = {
   ARM::Q0,  ARM::D1_D2,   ARM::Q1,  ARM::D3_D4,   ARM::Q2,  ARM::D5_D6,
   ARM::Q3,  ARM::D7_D8,   ARM::Q4,  ARM::D9_D10,  ARM::Q5,  ARM::D11_D12,
   ARM::Q6,  ARM::D13_D14, ARM::Q7,  ARM::D15_D16, ARM::Q8,  ARM::D17_D18,
@@ -1612,7 +1612,7 @@ static DecodeStatus DecodeDPairRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static const uint16_t DPairSpacedDecoderTable[] = {
+static const MCPhysReg DPairSpacedDecoderTable[] = {
   ARM::D0_D2,   ARM::D1_D3,   ARM::D2_D4,   ARM::D3_D5,
   ARM::D4_D6,   ARM::D5_D7,   ARM::D6_D8,   ARM::D7_D9,
   ARM::D8_D10,  ARM::D9_D11,  ARM::D10_D12, ARM::D11_D13,
@@ -6494,7 +6494,7 @@ static DecodeStatus DecodeMQPRRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static const uint16_t QQPRDecoderTable[] = {
+static const MCPhysReg QQPRDecoderTable[] = {
      ARM::Q0_Q1,  ARM::Q1_Q2,  ARM::Q2_Q3,  ARM::Q3_Q4,
      ARM::Q4_Q5,  ARM::Q5_Q6,  ARM::Q6_Q7
 };
@@ -6510,7 +6510,7 @@ static DecodeStatus DecodeMQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static const uint16_t QQQQPRDecoderTable[] = {
+static const MCPhysReg QQQQPRDecoderTable[] = {
      ARM::Q0_Q1_Q2_Q3,  ARM::Q1_Q2_Q3_Q4,  ARM::Q2_Q3_Q4_Q5,
      ARM::Q3_Q4_Q5_Q6,  ARM::Q4_Q5_Q6_Q7
 };

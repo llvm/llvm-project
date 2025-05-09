@@ -28,7 +28,7 @@ func.func @_QQmain() {
 }
 
 // CHECK: %[[RECORD_DECL:.*]]:2 = hlfir.declare %0 {uniq_name = "_QFEdst_record"}
-// CHECK: %[[FIELD_COORD:.*]] = fir.coordinate_of %[[RECORD_DECL]]#1, %{{c1.*}}
+// CHECK: %[[FIELD_COORD:.*]] = fir.coordinate_of %[[RECORD_DECL]]#1, to_implicitly_map
 
 // CHECK: %[[UPPER_BOUND:.*]] = arith.subi %{{.*}}#1, %{{c1.*}} : index
 
@@ -39,9 +39,9 @@ func.func @_QQmain() {
 
 // CHECK: %[[BASE_ADDR:.*]] = fir.box_offset %[[FIELD_COORD]] base_addr
 // CHECK: %[[FIELD_BASE_ADDR_MAP:.*]] = omp.map.info var_ptr(
-// CHECK-SAME: %[[FIELD_COORD]] : {{.*}}) var_ptr_ptr(
-// CHECK-SAME: %[[BASE_ADDR]] : {{.*}}) map_clauses(
-// CHECK-SAME: implicit, tofrom) capture(ByRef) bounds(
+// CHECK-SAME: %[[FIELD_COORD]] : {{.*}}) map_clauses(
+// CHECK-SAME: implicit, tofrom) capture(ByRef) var_ptr_ptr(
+// CHECK-SAME: %[[BASE_ADDR]] : {{.*}}) bounds(
 // CHECK-SAME: %[[BOUNDS]])
 
 // CHECK: %[[FIELD_MAP:.*]] = omp.map.info var_ptr(

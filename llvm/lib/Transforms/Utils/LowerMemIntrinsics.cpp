@@ -982,9 +982,10 @@ void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset) {
                    Memset->isVolatile());
 }
 
-void llvm::expandAtomicMemCpyAsLoop(AtomicMemCpyInst *AtomicMemcpy,
+void llvm::expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemcpy,
                                     const TargetTransformInfo &TTI,
                                     ScalarEvolution *SE) {
+  assert(AtomicMemcpy->isAtomic());
   if (ConstantInt *CI = dyn_cast<ConstantInt>(AtomicMemcpy->getLength())) {
     createMemCpyLoopKnownSize(
         /* InsertBefore */ AtomicMemcpy,

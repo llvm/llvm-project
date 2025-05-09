@@ -103,6 +103,8 @@ public:
   StringRef getType() const { return rec->getValueAsString("type"); }
   StringRef getName() const { return rec->getValueAsString("name"); }
   StringRef getDesc() const { return rec->getValueAsString("desc"); }
+  bool isPointerType() const { return getType().ends_with('*'); }
+  bool isHandleType() const { return getType().ends_with("_handle_t"); }
 
 private:
   const Record *rec;
@@ -153,6 +155,7 @@ public:
   StringRef getType() const { return rec->getValueAsString("type"); }
   bool isPointerType() const { return getType().ends_with('*'); }
   bool isHandleType() const { return getType().ends_with("_handle_t"); }
+  bool isFptrType() const { return getType().ends_with("_cb_t"); }
   StringRef getDesc() const { return rec->getValueAsString("desc"); }
   bool isIn() const { return dyn_cast<BitInit>(flags->getBit(0))->getValue(); }
   bool isOut() const { return dyn_cast<BitInit>(flags->getBit(1))->getValue(); }
@@ -217,6 +220,23 @@ public:
 
 private:
   std::vector<ReturnRec> rets;
+  std::vector<ParamRec> params;
+
+  const Record *rec;
+};
+
+class FptrTypedefRec {
+public:
+  explicit FptrTypedefRec(const Record *rec) : rec(rec) {
+    for (auto &Param : rec->getValueAsListOfDefs("params"))
+      params.emplace_back(Param);
+  }
+  StringRef getName() const { return rec->getValueAsString("name"); }
+  StringRef getDesc() const { return rec->getValueAsString("desc"); }
+  StringRef getReturn() const { return rec->getValueAsString("return"); }
+  const std::vector<ParamRec> &getParams() const { return params; }
+
+private:
   std::vector<ParamRec> params;
 
   const Record *rec;

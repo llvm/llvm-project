@@ -367,13 +367,13 @@ class StdLibraryFunctionsChecker
   };
 
   /// Check null or non-null-ness of an argument that is of pointer type.
-  class NotNullConstraint : public ValueConstraint {
+  class NullnessConstraint : public ValueConstraint {
     using ValueConstraint::ValueConstraint;
     // This variable has a role when we negate the constraint.
     bool CannotBeNull = true;
 
   public:
-    NotNullConstraint(ArgNo ArgN, bool CannotBeNull = true)
+    NullnessConstraint(ArgNo ArgN, bool CannotBeNull = true)
         : ValueConstraint(ArgN), CannotBeNull(CannotBeNull) {}
 
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
@@ -389,9 +389,9 @@ class StdLibraryFunctionsChecker
                                llvm::raw_ostream &Out) const override;
 
     ValueConstraintPtr negate() const override {
-      NotNullConstraint Tmp(*this);
+      NullnessConstraint Tmp(*this);
       Tmp.CannotBeNull = !this->CannotBeNull;
-      return std::make_shared<NotNullConstraint>(Tmp);
+      return std::make_shared<NullnessConstraint>(Tmp);
     }
 
   protected:
@@ -407,9 +407,9 @@ class StdLibraryFunctionsChecker
   /// The argument is meant to be a buffer that has a size constraint, and it
   /// is allowed to have a NULL value if the size is 0. The size can depend on
   /// 1 or 2 additional arguments, if one of these is 0 the buffer is allowed to
-  /// be NULL. This is useful for functions like `fread` which have this special
-  /// property.
-  class NotNullBufferConstraint : public ValueConstraint {
+  /// be NULL. Otherwise, the buffer pointer must be non-null. This is useful
+  /// for functions like `fread` which have this special property.
+  class BufferNullnessConstraint : public ValueConstraint {
     using ValueConstraint::ValueConstraint;
     ArgNo SizeArg1N;
     std::optional<ArgNo> SizeArg2N;
@@ -417,9 +417,9 @@ class StdLibraryFunctionsChecker
     bool CannotBeNull = true;
 
   public:
-    NotNullBufferConstraint(ArgNo ArgN, ArgNo SizeArg1N,
-                            std::optional<ArgNo> SizeArg2N,
-                            bool CannotBeNull = true)
+    BufferNullnessConstraint(ArgNo ArgN, ArgNo SizeArg1N,
+                             std::optional<ArgNo> SizeArg2N,
+                             bool CannotBeNull = true)
         : ValueConstraint(ArgN), SizeArg1N(SizeArg1N), SizeArg2N(SizeArg2N),
           CannotBeNull(CannotBeNull) {}
 
@@ -436,9 +436,9 @@ class StdLibraryFunctionsChecker
                                llvm::raw_ostream &Out) const override;
 
     ValueConstraintPtr negate() const override {
-      NotNullBufferConstraint Tmp(*this);
+      BufferNullnessConstraint Tmp(*this);
       Tmp.CannotBeNull = !this->CannotBeNull;
-      return std::make_shared<NotNullBufferConstraint>(Tmp);
+      return std::make_shared<BufferNullnessConstraint>(Tmp);
     }
 
   protected:
@@ -584,11 +584,9 @@ class StdLibraryFunctionsChecker
                           const Summary &Summary,
                           CheckerContext &C) const override {
       SValBuilder &SVB = C.getSValBuilder();
-      NonLoc ErrnoSVal =
-          SVB.conjureSymbolVal(&Tag, Call.getOriginExpr(),
-                               C.getLocationContext(), C.getASTContext().IntTy,
-                               C.blockCount())
-              .castAs<NonLoc>();
+      NonLoc ErrnoSVal = SVB.conjureSymbolVal(Call, C.getASTContext().IntTy,
+                                              C.blockCount(), &Tag)
+                             .castAs<NonLoc>();
       return errno_modeling::setErrnoForStdFailure(State, C, ErrnoSVal);
     }
   };
@@ -1151,7 +1149,7 @@ ProgramStateRef StdLibraryFunctionsChecker::ComparisonConstraint::apply(
   return State;
 }
 
-ProgramStateRef StdLibraryFunctionsChecker::NotNullConstraint::apply(
+ProgramStateRef StdLibraryFunctionsChecker::NullnessConstraint::apply(
     ProgramStateRef State, const CallEvent &Call, const Summary &Summary,
     CheckerContext &C) const {
   SVal V = getArgSVal(Call, getArgNo());
@@ -1165,26 +1163,27 @@ ProgramStateRef StdLibraryFunctionsChecker::NotNullConstraint::apply(
   return State->assume(L, CannotBeNull);
 }
 
-void StdLibraryFunctionsChecker::NotNullConstraint::describe(
+void StdLibraryFunctionsChecker::NullnessConstraint::describe(
     DescriptionKind DK, const CallEvent &Call, ProgramStateRef State,
     const Summary &Summary, llvm::raw_ostream &Out) const {
   assert(CannotBeNull &&
-         "Describe should not be used when the value must be NULL");
+         "'describe' is not implemented when the value must be NULL");
   if (DK == Violation)
     Out << "should not be NULL";
   else
     Out << "is not NULL";
 }
 
-bool StdLibraryFunctionsChecker::NotNullConstraint::describeArgumentValue(
+bool StdLibraryFunctionsChecker::NullnessConstraint::describeArgumentValue(
     const CallEvent &Call, ProgramStateRef State, const Summary &Summary,
     llvm::raw_ostream &Out) const {
-  assert(!CannotBeNull && "This function is used when the value is NULL");
+  assert(!CannotBeNull && "'describeArgumentValue' is not implemented when the "
+                          "value must be non-NULL");
   Out << "is NULL";
   return true;
 }
 
-ProgramStateRef StdLibraryFunctionsChecker::NotNullBufferConstraint::apply(
+ProgramStateRef StdLibraryFunctionsChecker::BufferNullnessConstraint::apply(
     ProgramStateRef State, const CallEvent &Call, const Summary &Summary,
     CheckerContext &C) const {
   SVal V = getArgSVal(Call, getArgNo());
@@ -1213,21 +1212,23 @@ ProgramStateRef StdLibraryFunctionsChecker::NotNullBufferConstraint::apply(
   return State->assume(L, CannotBeNull);
 }
 
-void StdLibraryFunctionsChecker::NotNullBufferConstraint::describe(
+void StdLibraryFunctionsChecker::BufferNullnessConstraint::describe(
     DescriptionKind DK, const CallEvent &Call, ProgramStateRef State,
     const Summary &Summary, llvm::raw_ostream &Out) const {
   assert(CannotBeNull &&
-         "Describe should not be used when the value must be NULL");
+         "'describe' is not implemented when the buffer must be NULL");
   if (DK == Violation)
     Out << "should not be NULL";
   else
     Out << "is not NULL";
 }
 
-bool StdLibraryFunctionsChecker::NotNullBufferConstraint::describeArgumentValue(
-    const CallEvent &Call, ProgramStateRef State, const Summary &Summary,
-    llvm::raw_ostream &Out) const {
-  assert(!CannotBeNull && "This function is used when the value is NULL");
+bool StdLibraryFunctionsChecker::BufferNullnessConstraint::
+    describeArgumentValue(const CallEvent &Call, ProgramStateRef State,
+                          const Summary &Summary,
+                          llvm::raw_ostream &Out) const {
+  assert(!CannotBeNull && "'describeArgumentValue' is not implemented when the "
+                          "buffer must be non-NULL");
   Out << "is NULL";
   return true;
 }
@@ -1478,8 +1479,7 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
     ProgramStateRef State = C.getState();
     const LocationContext *LC = C.getLocationContext();
     const auto *CE = cast<CallExpr>(Call.getOriginExpr());
-    SVal V = C.getSValBuilder().conjureSymbolVal(
-        CE, LC, CE->getType().getCanonicalType(), C.blockCount());
+    SVal V = C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
     State = State->BindExpr(CE, LC, V);
 
     C.addTransition(State);
@@ -1582,7 +1582,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
       if (LookupRes.empty())
         return std::nullopt;
 
-      // Prioritze typedef declarations.
+      // Prioritize typedef declarations.
       // This is needed in case of C struct typedefs. E.g.:
       //   typedef struct FILE FILE;
       // In this case, we have a RecordDecl 'struct FILE' with the name 'FILE'
@@ -1792,14 +1792,15 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   };
   auto LessThanOrEq = BO_LE;
   auto NotNull = [&](ArgNo ArgN) {
-    return std::make_shared<NotNullConstraint>(ArgN);
+    return std::make_shared<NullnessConstraint>(ArgN);
   };
   auto IsNull = [&](ArgNo ArgN) {
-    return std::make_shared<NotNullConstraint>(ArgN, false);
+    return std::make_shared<NullnessConstraint>(ArgN, false);
   };
-  auto NotNullBuffer = [&](ArgNo ArgN, ArgNo SizeArg1N, ArgNo SizeArg2N) {
-    return std::make_shared<NotNullBufferConstraint>(ArgN, SizeArg1N,
-                                                     SizeArg2N);
+  auto NotNullBuffer = [&](ArgNo ArgN, ArgNo SizeArg1N,
+                           std::optional<ArgNo> SizeArg2N = std::nullopt) {
+    return std::make_shared<BufferNullnessConstraint>(ArgN, SizeArg1N,
+                                                      SizeArg2N);
   };
 
   std::optional<QualType> FileTy = lookupTy("FILE");
@@ -3365,7 +3366,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
-            .ArgConstraint(NotNull(ArgNo(3)))
+            .ArgConstraint(NotNullBuffer(ArgNo(3), ArgNo(4)))
             .ArgConstraint(
                 BufferSize(/*Buffer=*/ArgNo(3), /*BufSize=*/ArgNo(4)))
             .ArgConstraint(

@@ -4,78 +4,77 @@
 
 @.str.28 = external unnamed_addr constant [69 x i8], align 1
 
-define void @print_res() nounwind {
+define void @print_res(ptr %p) nounwind {
 ; CHECK-LABEL: print_res:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lwz 3, 0(3)
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    addi 3, 3, -1
-; CHECK-NEXT:    clrldi 4, 3, 32
-; CHECK-NEXT:    cmplwi 3, 3
-; CHECK-NEXT:    li 3, 3
-; CHECK-NEXT:    isellt 3, 4, 3
-; CHECK-NEXT:    li 4, 1
-; CHECK-NEXT:    cmpldi 3, 1
-; CHECK-NEXT:    iselgt 3, 3, 4
-; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:    mtctr 3
-; CHECK-NEXT:    stdu 1, -128(1)
+; CHECK-NEXT:    lwz 4, 0(3)
+; CHECK-NEXT:    addi 4, 4, -1
+; CHECK-NEXT:    clrldi 5, 4, 32
+; CHECK-NEXT:    cmplwi 4, 3
+; CHECK-NEXT:    li 4, 3
+; CHECK-NEXT:    isellt 4, 5, 4
+; CHECK-NEXT:    li 5, 1
+; CHECK-NEXT:    cmpldi 4, 1
+; CHECK-NEXT:    iselgt 4, 4, 5
 ; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    std 0, 144(1)
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    li 7, -1
-; CHECK-NEXT:    lbz 5, 0(5)
+; CHECK-NEXT:    mtctr 4
+; CHECK-NEXT:    li 8, -1
+; CHECK-NEXT:    lbz 6, 0(3)
+; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    bdz .LBB0_6
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    xori 6, 5, 84
-; CHECK-NEXT:    clrldi 5, 7, 32
-; CHECK-NEXT:    addi 3, 3, 1
-; CHECK-NEXT:    addi 8, 7, -1
-; CHECK-NEXT:    lbz 5, 0(5)
+; CHECK-NEXT:    xori 7, 6, 84
+; CHECK-NEXT:    clrldi 6, 8, 32
+; CHECK-NEXT:    addi 4, 4, 1
+; CHECK-NEXT:    addi 9, 8, -1
+; CHECK-NEXT:    lbzx 6, 3, 6
 ; CHECK-NEXT:    bdz .LBB0_5
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    cntlzw 6, 6
-; CHECK-NEXT:    addi 3, 3, 1
-; CHECK-NEXT:    srwi 7, 6, 5
-; CHECK-NEXT:    xori 6, 5, 84
-; CHECK-NEXT:    clrldi 5, 8, 32
-; CHECK-NEXT:    addi 8, 8, -1
-; CHECK-NEXT:    lbz 5, 0(5)
+; CHECK-NEXT:    cntlzw 7, 7
+; CHECK-NEXT:    addi 4, 4, 1
+; CHECK-NEXT:    srwi 8, 7, 5
+; CHECK-NEXT:    xori 7, 6, 84
+; CHECK-NEXT:    clrldi 6, 9, 32
+; CHECK-NEXT:    addi 9, 9, -1
+; CHECK-NEXT:    lbzx 6, 3, 6
 ; CHECK-NEXT:    bdz .LBB0_4
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    clrldi 10, 8, 32
-; CHECK-NEXT:    cntlzw 9, 6
-; CHECK-NEXT:    xori 6, 5, 84
-; CHECK-NEXT:    addi 8, 8, -1
-; CHECK-NEXT:    lbz 5, 0(10)
-; CHECK-NEXT:    addi 3, 3, 1
-; CHECK-NEXT:    add 4, 4, 7
-; CHECK-NEXT:    srwi 7, 9, 5
+; CHECK-NEXT:    clrldi 11, 9, 32
+; CHECK-NEXT:    cntlzw 10, 7
+; CHECK-NEXT:    xori 7, 6, 84
+; CHECK-NEXT:    addi 9, 9, -1
+; CHECK-NEXT:    lbzx 6, 3, 11
+; CHECK-NEXT:    addi 4, 4, 1
+; CHECK-NEXT:    add 5, 5, 8
+; CHECK-NEXT:    srwi 8, 10, 5
 ; CHECK-NEXT:    bdnz .LBB0_3
 ; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    add 4, 4, 7
+; CHECK-NEXT:    add 5, 5, 8
 ; CHECK-NEXT:  .LBB0_5:
-; CHECK-NEXT:    cntlzw 6, 6
-; CHECK-NEXT:    srwi 6, 6, 5
-; CHECK-NEXT:    add 4, 4, 6
+; CHECK-NEXT:    cntlzw 3, 7
+; CHECK-NEXT:    srwi 3, 3, 5
+; CHECK-NEXT:    add 5, 5, 3
 ; CHECK-NEXT:  .LBB0_6:
-; CHECK-NEXT:    xori 5, 5, 84
-; CHECK-NEXT:    clrldi 3, 3, 32
-; CHECK-NEXT:    li 7, 0
-; CHECK-NEXT:    li 8, 3
-; CHECK-NEXT:    std 3, 104(1)
-; CHECK-NEXT:    cntlzw 5, 5
+; CHECK-NEXT:    xori 3, 6, 84
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    cntlzw 3, 3
+; CHECK-NEXT:    srwi 3, 3, 5
+; CHECK-NEXT:    add 3, 5, 3
+; CHECK-NEXT:    stdu 1, -128(1)
+; CHECK-NEXT:    clrldi 6, 3, 32
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
-; CHECK-NEXT:    li 10, 0
-; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
-; CHECK-NEXT:    srwi 5, 5, 5
-; CHECK-NEXT:    add 4, 4, 5
 ; CHECK-NEXT:    li 5, 0
+; CHECK-NEXT:    std 0, 144(1)
+; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
 ; CHECK-NEXT:    std 5, 120(1)
 ; CHECK-NEXT:    li 5, 3
-; CHECK-NEXT:    clrldi 6, 4, 32
+; CHECK-NEXT:    clrldi 4, 4, 32
+; CHECK-NEXT:    std 4, 104(1)
 ; CHECK-NEXT:    li 4, 3
+; CHECK-NEXT:    li 7, 0
+; CHECK-NEXT:    li 8, 3
+; CHECK-NEXT:    li 10, 0
 ; CHECK-NEXT:    std 5, 96(1)
 ; CHECK-NEXT:    li 5, 0
 ; CHECK-NEXT:    bl printf
@@ -92,7 +91,7 @@ define void @print_res() nounwind {
   %8 = trunc i64 %6 to i32
   %9 = sub i32 0, %8
   %10 = zext i32 %9 to i64
-  %11 = getelementptr inbounds i8, ptr null, i64 %10
+  %11 = getelementptr inbounds i8, ptr %p, i64 %10
   %12 = load i8, ptr %11, align 1
   %13 = icmp eq i8 %12, 84
   %14 = zext i1 %13 to i32

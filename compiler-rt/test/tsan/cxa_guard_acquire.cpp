@@ -1,7 +1,15 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 
+#include "test.h"
+#include <assert.h>
 #include <sanitizer/tsan_interface.h>
 #include <stdio.h>
+
+// We only enter a potentially blocking region on thread contention. To reliably
+// trigger this, we force the initialization function to block until another
+// thread has entered the potentially blocking region.
+
+static bool init_done = false;
 
 namespace __tsan {
 
@@ -9,23 +17,79 @@ namespace __tsan {
 __attribute__((weak))
 #endif
 void OnPotentiallyBlockingRegionBegin() {
-  printf("Enter __cxa_guard_acquire\n");
+  assert(!init_done);
+  printf("Enter potentially blocking region\n");
+  // Signal the other thread to finish initialization.
+  barrier_wait(&barrier);
 }
 
 #if (__APPLE__)
 __attribute__((weak))
 #endif
-void OnPotentiallyBlockingRegionEnd() { printf("Exit __cxa_guard_acquire\n"); }
+void OnPotentiallyBlockingRegionEnd() {
+  printf("Exit potentially blocking region\n");
+}
 
 } // namespace __tsan
+
+struct LazyInit {
+  LazyInit() {
+    assert(!init_done);
+    printf("Enter constructor\n");
+    // Wait for the other thread to get to the blocking region.
+    barrier_wait(&barrier);
+    printf("Exit constructor\n");
+  }
+};
+
+const LazyInit &get_lazy_init() {
+  static const LazyInit lazy_init;
+  return lazy_init;
+}
+
+void *thread(void *arg) {
+  get_lazy_init();
+  return nullptr;
+}
+
+struct LazyInit2 {
+  LazyInit2() { printf("Enter constructor 2\n"); }
+};
+
+const LazyInit2 &get_lazy_init2() {
+  static const LazyInit2 lazy_init2;
+  return lazy_init2;
+}
 
 int main(int argc, char **argv) {
   // CHECK: Enter main
   printf("Enter main\n");
-  // CHECK-NEXT: Enter __cxa_guard_acquire
-  // CHECK-NEXT: Exit __cxa_guard_acquire
-  static int s = argc;
-  (void)s;
+
+  // If initialization is contended, the blocked thread should enter a
+  // potentially blocking region.
+  //
+  // CHECK-NEXT: Enter constructor
+  // CHECK-NEXT: Enter potentially blocking region
+  // CHECK-NEXT: Exit constructor
+  // CHECK-NEXT: Exit potentially blocking region
+  barrier_init(&barrier, 2);
+  pthread_t th1, th2;
+  pthread_create(&th1, nullptr, thread, nullptr);
+  pthread_create(&th2, nullptr, thread, nullptr);
+  pthread_join(th1, nullptr);
+  pthread_join(th2, nullptr);
+
+  // Now that the value has been initialized, subsequent calls should not enter
+  // a potentially blocking region.
+  init_done = true;
+  get_lazy_init();
+
+  // If uncontended, there is no potentially blocking region.
+  //
+  // CHECK-NEXT: Enter constructor 2
+  get_lazy_init2();
+  get_lazy_init2();
+
   // CHECK-NEXT: Exit main
   printf("Exit main\n");
   return 0;

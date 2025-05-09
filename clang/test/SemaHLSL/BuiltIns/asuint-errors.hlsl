@@ -32,24 +32,24 @@ void test_asuint_first_arg_const(double D) {
   const uint A = 0;
   uint B;
   asuint(D, A, B);
- // expected-error@hlsl/hlsl_intrinsics.h:* {{read-only variable is not assignable}} 
+ // expected-error@hlsl/hlsl_intrinsics.h:* {{read-only variable is not assignable}}
 }
 
 void test_asuint_second_arg_const(double D) {
   const uint A = 0;
   uint B;
   asuint(D, B, A);
- // expected-error@hlsl/hlsl_intrinsics.h:* {{read-only variable is not assignable}} 
+ // expected-error@hlsl/hlsl_intrinsics.h:* {{read-only variable is not assignable}}
 }
 
 void test_asuint_imidiate_value(double D) {
   uint B;
   asuint(D, B, 1);
- // expected-error@-1 {{cannot bind non-lvalue argument 1 to out paramemter}} 
+ // expected-error@-1 {{cannot bind non-lvalue argument '1' to out paramemter}}
 }
 
 void test_asuint_expr(double D) {
   uint B;
   asuint(D, B, B + 1);
- // expected-error@-1 {{cannot bind non-lvalue argument B + 1 to out paramemter}} 
+ // expected-error@-1 {{cannot bind non-lvalue argument 'B + 1' to out paramemter}}
 }

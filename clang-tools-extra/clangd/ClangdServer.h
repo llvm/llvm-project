@@ -184,7 +184,7 @@ public:
     bool UseDirtyHeaders = false;
 
     // If true, parse emplace-like functions in the preamble.
-    bool PreambleParseForwardingFunctions = false;
+    bool PreambleParseForwardingFunctions = true;
 
     /// Whether include fixer insertions for Objective-C code should use #import
     /// instead of #include.
@@ -501,7 +501,7 @@ private:
   // Whether the client supports folding only complete lines.
   bool LineFoldingOnly = false;
 
-  bool PreambleParseForwardingFunctions = false;
+  bool PreambleParseForwardingFunctions = true;
 
   bool ImportInsertions = false;
 

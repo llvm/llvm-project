@@ -35,60 +35,60 @@ define i32 @test1(ptr nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP3]], [[SUM_02]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_1:%.*]]
 ; CHECK:       for.exiting_block.1:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_1:%.*]]
 ; CHECK:       latch.1:
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i8, ptr [[TMP13]], i64 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[TMP4]], [[ADD]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = or disjoint i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_2:%.*]]
 ; CHECK:       for.exiting_block.2:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_2:%.*]]
 ; CHECK:       latch.2:
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT_1]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr i8, ptr [[TMP15]], i64 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX_2]], align 4
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[TMP5]], [[ADD_1]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = or disjoint i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_3:%.*]]
 ; CHECK:       for.exiting_block.3:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_3:%.*]]
 ; CHECK:       latch.3:
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT_2]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr i8, ptr [[TMP17]], i64 12
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i32 [[TMP6]], [[ADD_2]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_3:%.*]] = or disjoint i64 [[INDVARS_IV]], 4
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_4:%.*]]
 ; CHECK:       for.exiting_block.4:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_4:%.*]]
 ; CHECK:       latch.4:
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT_3]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr i8, ptr [[TMP18]], i64 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX_4]], align 4
 ; CHECK-NEXT:    [[ADD_4:%.*]] = add nsw i32 [[TMP7]], [[ADD_3]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_4:%.*]] = or disjoint i64 [[INDVARS_IV]], 5
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_5:%.*]]
 ; CHECK:       for.exiting_block.5:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_5:%.*]]
 ; CHECK:       latch.5:
-; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT_4]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr i8, ptr [[TMP12]], i64 20
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX_5]], align 4
 ; CHECK-NEXT:    [[ADD_5:%.*]] = add nsw i32 [[TMP8]], [[ADD_4]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_5:%.*]] = or disjoint i64 [[INDVARS_IV]], 6
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_6:%.*]]
 ; CHECK:       for.exiting_block.6:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_6:%.*]]
 ; CHECK:       latch.6:
-; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT_5]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr i8, ptr [[TMP14]], i64 24
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX_6]], align 4
 ; CHECK-NEXT:    [[ADD_6:%.*]] = add nsw i32 [[TMP9]], [[ADD_5]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_6:%.*]] = or disjoint i64 [[INDVARS_IV]], 7
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_7:%.*]]
 ; CHECK:       for.exiting_block.7:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_7]]
 ; CHECK:       latch.7:
-; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT_6]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr i8, ptr [[TMP16]], i64 28
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX_7]], align 4
 ; CHECK-NEXT:    [[ADD_7]] = add nsw i32 [[TMP10]], [[ADD_6]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_7]] = add i64 [[INDVARS_IV]], 8
@@ -763,60 +763,60 @@ define i32 @test5(ptr nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP3]], [[SUM_02]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_1:%.*]]
 ; CHECK:       for.exiting_block.1:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_1:%.*]]
 ; CHECK:       latch.1:
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i8, ptr [[TMP13]], i64 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[TMP4]], [[ADD]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = or disjoint i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_2:%.*]]
 ; CHECK:       for.exiting_block.2:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_2:%.*]]
 ; CHECK:       latch.2:
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT_1]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr i8, ptr [[TMP15]], i64 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX_2]], align 4
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[TMP5]], [[ADD_1]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = or disjoint i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_3:%.*]]
 ; CHECK:       for.exiting_block.3:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_3:%.*]]
 ; CHECK:       latch.3:
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT_2]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr i8, ptr [[TMP17]], i64 12
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i32 [[TMP6]], [[ADD_2]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_3:%.*]] = or disjoint i64 [[INDVARS_IV]], 4
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_4:%.*]]
 ; CHECK:       for.exiting_block.4:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_4:%.*]]
 ; CHECK:       latch.4:
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT_3]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr i8, ptr [[TMP18]], i64 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX_4]], align 4
 ; CHECK-NEXT:    [[ADD_4:%.*]] = add nsw i32 [[TMP7]], [[ADD_3]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_4:%.*]] = or disjoint i64 [[INDVARS_IV]], 5
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_5:%.*]]
 ; CHECK:       for.exiting_block.5:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_5:%.*]]
 ; CHECK:       latch.5:
-; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT_4]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr i8, ptr [[TMP12]], i64 20
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX_5]], align 4
 ; CHECK-NEXT:    [[ADD_5:%.*]] = add nsw i32 [[TMP8]], [[ADD_4]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_5:%.*]] = or disjoint i64 [[INDVARS_IV]], 6
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_6:%.*]]
 ; CHECK:       for.exiting_block.6:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_6:%.*]]
 ; CHECK:       latch.6:
-; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT_5]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr i8, ptr [[TMP14]], i64 24
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX_6]], align 4
 ; CHECK-NEXT:    [[ADD_6:%.*]] = add nsw i32 [[TMP9]], [[ADD_5]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_6:%.*]] = or disjoint i64 [[INDVARS_IV]], 7
 ; CHECK-NEXT:    br label [[FOR_EXITING_BLOCK_7:%.*]]
 ; CHECK:       for.exiting_block.7:
 ; CHECK-NEXT:    br i1 false, label [[OTHEREXIT_LOOPEXIT]], label [[LATCH_7]]
 ; CHECK:       latch.7:
-; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV_NEXT_6]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr i8, ptr [[TMP16]], i64 28
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX_7]], align 4
 ; CHECK-NEXT:    [[ADD_7]] = add nsw i32 [[TMP10]], [[ADD_6]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_7]] = add i64 [[INDVARS_IV]], 8

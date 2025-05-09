@@ -74,7 +74,7 @@ end subroutine
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca tuple<!fir.ref<!fir.boxproc<() -> ()>>>
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_3]] : (!fir.ref<tuple<!fir.ref<!fir.boxproc<() -> ()>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.boxproc<() -> ()>>>
-! CHECK:           fir.store %[[VAL_1]]#1 to %[[VAL_4]] : !fir.llvm_ptr<!fir.ref<!fir.boxproc<() -> ()>>>
+! CHECK:           fir.store %[[VAL_1]]#0 to %[[VAL_4]] : !fir.llvm_ptr<!fir.ref<!fir.boxproc<() -> ()>>>
 ! CHECK:           fir.call @_QFtest_proc_pointerPinternal(%[[VAL_2]]) {{.*}}: (!fir.ref<tuple<!fir.ref<!fir.boxproc<() -> ()>>>>) -> ()
 ! CHECK:           return
 ! CHECK:         }

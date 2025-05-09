@@ -15,7 +15,6 @@
 # SAFEICFCHECK-NEXT: skipping function with reference taken barMulFunc
 # SAFEICFCHECK-NEXT: skipping function with reference taken barAddFunc
 # SAFEICFCHECK-NEXT: ICF iteration 1
-# SAFEICFCHECK-NEXT: ===---------
 
 ## clang++ main.cpp -c -o -fno-PIC
 ## Similar code gets generated for external reference function.

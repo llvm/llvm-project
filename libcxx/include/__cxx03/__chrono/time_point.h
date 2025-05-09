@@ -11,8 +11,6 @@
 #define _LIBCPP___CXX03___CHRONO_TIME_POINT_H
 
 #include <__cxx03/__chrono/duration.h>
-#include <__cxx03/__compare/ordering.h>
-#include <__cxx03/__compare/three_way_comparable.h>
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/common_type.h>
 #include <__cxx03/__type_traits/enable_if.h>
@@ -90,28 +88,6 @@ time_point_cast(const time_point<_Clock, _Duration>& __t) {
   return time_point<_Clock, _ToDuration>(chrono::duration_cast<_ToDuration>(__t.time_since_epoch()));
 }
 
-#if _LIBCPP_STD_VER >= 17
-template <class _ToDuration, class _Clock, class _Duration, enable_if_t<__is_duration<_ToDuration>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI constexpr time_point<_Clock, _ToDuration> floor(const time_point<_Clock, _Duration>& __t) {
-  return time_point<_Clock, _ToDuration>{chrono::floor<_ToDuration>(__t.time_since_epoch())};
-}
-
-template <class _ToDuration, class _Clock, class _Duration, enable_if_t<__is_duration<_ToDuration>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI constexpr time_point<_Clock, _ToDuration> ceil(const time_point<_Clock, _Duration>& __t) {
-  return time_point<_Clock, _ToDuration>{chrono::ceil<_ToDuration>(__t.time_since_epoch())};
-}
-
-template <class _ToDuration, class _Clock, class _Duration, enable_if_t<__is_duration<_ToDuration>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI constexpr time_point<_Clock, _ToDuration> round(const time_point<_Clock, _Duration>& __t) {
-  return time_point<_Clock, _ToDuration>{chrono::round<_ToDuration>(__t.time_since_epoch())};
-}
-
-template <class _Rep, class _Period, enable_if_t<numeric_limits<_Rep>::is_signed, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI constexpr duration<_Rep, _Period> abs(duration<_Rep, _Period> __d) {
-  return __d >= __d.zero() ? +__d : -__d;
-}
-#endif // _LIBCPP_STD_VER >= 17
-
 // time_point ==
 
 template <class _Clock, class _Duration1, class _Duration2>
@@ -120,8 +96,6 @@ operator==(const time_point<_Clock, _Duration1>& __lhs, const time_point<_Clock,
   return __lhs.time_since_epoch() == __rhs.time_since_epoch();
 }
 
-#if _LIBCPP_STD_VER <= 17
-
 // time_point !=
 
 template <class _Clock, class _Duration1, class _Duration2>
@@ -129,8 +103,6 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
 operator!=(const time_point<_Clock, _Duration1>& __lhs, const time_point<_Clock, _Duration2>& __rhs) {
   return !(__lhs == __rhs);
 }
-
-#endif // _LIBCPP_STD_VER <= 17
 
 // time_point <
 
@@ -163,16 +135,6 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
 operator>=(const time_point<_Clock, _Duration1>& __lhs, const time_point<_Clock, _Duration2>& __rhs) {
   return !(__lhs < __rhs);
 }
-
-#if _LIBCPP_STD_VER >= 20
-
-template <class _Clock, class _Duration1, three_way_comparable_with<_Duration1> _Duration2>
-_LIBCPP_HIDE_FROM_ABI constexpr auto
-operator<=>(const time_point<_Clock, _Duration1>& __lhs, const time_point<_Clock, _Duration2>& __rhs) {
-  return __lhs.time_since_epoch() <=> __rhs.time_since_epoch();
-}
-
-#endif // _LIBCPP_STD_VER >= 20
 
 // time_point operator+(time_point x, duration y);
 

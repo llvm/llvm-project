@@ -386,7 +386,7 @@ PDLDocument::PDLDocument(const lsp::URIForFile &uri, StringRef contents,
   llvm::SmallString<32> uriDirectory(uri.file());
   llvm::sys::path::remove_filename(uriDirectory);
   includeDirs.push_back(uriDirectory.str().str());
-  includeDirs.insert(includeDirs.end(), extraDirs.begin(), extraDirs.end());
+  llvm::append_range(includeDirs, extraDirs);
 
   sourceMgr.setIncludeDirs(includeDirs);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());

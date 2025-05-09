@@ -42,11 +42,11 @@ declare dso_local void @printf(ptr, ...)
 ; CHECK-LABEL: $cppxdata$test:
 ; CHECK-NEXT:    .long    429065506                       # MagicNumber
 ; CHECK-NEXT:    .long    1                               # MaxState
-; CHECK-NEXT:    .long    ($stateUnwindMap$test)@IMGREL   # UnwindMap
+; CHECK-NEXT:    .long    $stateUnwindMap$test@IMGREL   # UnwindMap
 ; CHECK-NEXT:    .long    0                               # NumTryBlocks
 ; CHECK-NEXT:    .long    0                               # TryBlockMap
 ; CHECK-NEXT:    .long    3                               # IPMapEntries
-; CHECK-NEXT:    .long    ($ip2state$test)@IMGREL         # IPToStateXData
+; CHECK-NEXT:    .long    $ip2state$test@IMGREL         # IPToStateXData
 ; CHECK-NEXT:    .long    40                              # UnwindHelp
 ; CHECK-NEXT:    .long    0                               # ESTypeList
 ; CHECK-NEXT:    .long    1                               # EHFlags

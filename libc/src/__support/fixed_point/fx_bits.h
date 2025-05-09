@@ -11,9 +11,11 @@
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/limits.h" // numeric_limits
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/config.h"       // LIBC_NAMESPACE_DECL
+#include "src/__support/macros/null_check.h"   // LIBC_CRASH_ON_VALUE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
 
@@ -50,6 +52,12 @@ private:
   static constexpr StorageType SIGN_MASK =
       (fx_rep::SIGN_LEN == 0 ? 0 : StorageType(1) << SIGN_OFFSET);
 
+  // mask for <integral | fraction>
+  static constexpr StorageType VALUE_MASK = INTEGRAL_MASK | FRACTION_MASK;
+
+  // mask for <sign | integral | fraction>
+  static constexpr StorageType TOTAL_MASK = SIGN_MASK | VALUE_MASK;
+
 public:
   LIBC_INLINE constexpr FXBits() = default;
 
@@ -72,6 +80,12 @@ public:
 
   LIBC_INLINE constexpr StorageType get_integral() {
     return (value & INTEGRAL_MASK) >> INTEGRAL_OFFSET;
+  }
+
+  // returns complete bitstring representation the fixed point number
+  // the bitstring is of the form: padding | sign | integral | fraction
+  LIBC_INLINE constexpr StorageType get_bits() {
+    return (value & TOTAL_MASK) >> FRACTION_OFFSET;
   }
 
   // TODO: replace bool with Sign
@@ -161,6 +175,53 @@ template <typename T> LIBC_INLINE constexpr T round(T x, int n) {
   T rounding_mask =
       (shift == FXRep::TOTAL_LEN) ? FXRep::ZERO() : (all_ones << shift);
   return bit_and((x + round_bit), rounding_mask);
+}
+
+// count leading sign bits
+// TODO: support fixed_point_padding
+template <typename T>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, int>
+countls(T f) {
+  using FXRep = FXRep<T>;
+  using BitType = typename FXRep::StorageType;
+  using FXBits = FXBits<T>;
+
+  if constexpr (FXRep::SIGN_LEN > 0) {
+    if (f < 0)
+      f = bit_not(f);
+  }
+
+  BitType value_bits = FXBits(f).get_bits();
+  return cpp::countl_zero(value_bits) - FXRep::SIGN_LEN;
+}
+
+// fixed-point to integer conversion
+template <typename T, typename XType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, XType>
+bitsfx(T f) {
+  return cpp::bit_cast<XType, T>(f);
+}
+
+// divide the two fixed-point types and return an integer result
+template <typename T, typename XType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, XType>
+idiv(T x, T y) {
+  using FXBits = FXBits<T>;
+  using FXRep = FXRep<T>;
+  using CompType = typename FXRep::CompType;
+
+  // If the value of the second operand of the / operator is zero, the
+  // behavior is undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
+  LIBC_CRASH_ON_VALUE(y, FXRep::ZERO());
+
+  CompType x_comp = static_cast<CompType>(FXBits(x).get_bits());
+  CompType y_comp = static_cast<CompType>(FXBits(y).get_bits());
+
+  // If an integer result of one of these functions overflows, the behavior is
+  // undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
+  CompType result = x_comp / y_comp;
+
+  return static_cast<XType>(result);
 }
 
 } // namespace fixed_point

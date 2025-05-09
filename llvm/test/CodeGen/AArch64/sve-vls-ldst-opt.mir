@@ -1,0 +1,74 @@
+# RUN: llc -mtriple=aarch64-unknown-linux -mattr=+sve -aarch64-sve-vector-bits-min=128 -aarch64-sve-vector-bits-max=128 -run-pass=aarch64-ldst-opt -verify-machineinstrs %s -o - | FileCheck %s
+---
+name: pair-sve-fill-spill
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0, $x1
+    renamable $z0 = LDR_ZXI renamable $x0, 0 :: (load (<vscale x 1 x s128>))
+    renamable $z1 = LDR_ZXI killed renamable $x0, 1 :: (load (<vscale x 1 x s128>))
+    STR_ZXI killed renamable $z0, renamable $x1, 0 :: (store (<vscale x 1 x s128>))
+    STR_ZXI killed renamable $z1, killed renamable $x1, 1 :: (store (<vscale x 1 x s128>))
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: pair-sve-fill-spill
+# CHECK: $q0, $q1 = LDPQi renamable $x0, 0 :: (load (<vscale x 1 x s128>))
+# CHECK: STPQi killed $q0, killed $q1, renamable $x1, 0 :: (store (<vscale x 1 x s128>))
+---
+name: do-not-pair-sve-with-neon-scaled
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0, $x1
+    ; SVE LDR + Neon LDR
+    renamable $z0 = LDR_ZXI renamable $x0, 0 :: (load (<vscale x 1 x s128>))
+    renamable $q1 = LDRQui renamable $x0, 1 :: (load (s128))
+    ; Neon LDR + SVE LDR
+    renamable $q2 = LDRQui renamable $x0, 3 :: (load (s128))
+    renamable $z3 = LDR_ZXI renamable $x0, 4 :: (load (<vscale x 1 x s128>))
+    ; SVE STR + Neon STR
+    STR_ZXI killed renamable $z0, renamable $x1, 0 :: (store (<vscale x 1 x s128>))
+    STRQui killed renamable $q1, renamable $x1, 1 :: (store (s128))
+    ; Neon STR + SVE STR
+    STRQui killed renamable $q2, renamable $x1, 3 :: (store (s128))
+    STR_ZXI killed renamable $z3, renamable $x1, 4 :: (store (<vscale x 1 x s128>))
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: do-not-pair-sve-with-neon-scaled
+# CHECK: renamable $z0 = LDR_ZXI renamable $x0, 0 :: (load (<vscale x 1 x s128>))
+# CHECK: renamable $q1 = LDRQui renamable $x0, 1 :: (load (s128))
+# CHECK: renamable $q2 = LDRQui renamable $x0, 3 :: (load (s128))
+# CHECK: renamable $z3 = LDR_ZXI renamable $x0, 4 :: (load (<vscale x 1 x s128>))
+# CHECK: STR_ZXI killed renamable $z0, renamable $x1, 0 :: (store (<vscale x 1 x s128>))
+# CHECK: STRQui killed renamable $q1, renamable $x1, 1 :: (store (s128))
+# CHECK: STRQui killed renamable $q2, renamable $x1, 3 :: (store (s128))
+# CHECK: STR_ZXI killed renamable $z3, renamable $x1, 4 :: (store (<vscale x 1 x s128>))
+---
+name: do-not-pair-sve-with-neon-unscaled
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0, $x1
+    ; SVE LDR + Neon LDUR
+    renamable $z0 = LDR_ZXI renamable $x0, 0 :: (load (<vscale x 1 x s128>))
+    renamable $q1 = LDURQi renamable $x0, 16 :: (load (s128))
+    ; Neon LDUR + SVE LDR
+    renamable $q2 = LDURQi renamable $x0, 48 :: (load (s128))
+    renamable $z3 = LDR_ZXI renamable $x0, 4 :: (load (<vscale x 1 x s128>))
+    ; SVE STR + Neon STUR
+    STR_ZXI killed renamable $z0, renamable $x1, 0 :: (store (<vscale x 1 x s128>))
+    STURQi killed renamable $q1, renamable $x1, 16 :: (store (s128))
+    ; Neon STUR + SVE STR
+    STURQi killed renamable $q2, renamable $x1, 48 :: (store (s128))
+    STR_ZXI killed renamable $z3, renamable $x1, 4 :: (store (<vscale x 1 x s128>))
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: do-not-pair-sve-with-neon-unscaled
+# CHECK: renamable $z0 = LDR_ZXI renamable $x0, 0 :: (load (<vscale x 1 x s128>))
+# CHECK: renamable $q1 = LDURQi renamable $x0, 16 :: (load (s128))
+# CHECK: renamable $q2 = LDURQi renamable $x0, 48 :: (load (s128))
+# CHECK: renamable $z3 = LDR_ZXI renamable $x0, 4 :: (load (<vscale x 1 x s128>))
+# CHECK: STR_ZXI killed renamable $z0, renamable $x1, 0 :: (store (<vscale x 1 x s128>))
+# CHECK: STURQi killed renamable $q1, renamable $x1, 16 :: (store (s128))
+# CHECK: STURQi killed renamable $q2, renamable $x1, 48 :: (store (s128))
+# CHECK: STR_ZXI killed renamable $z3, renamable $x1, 4 :: (store (<vscale x 1 x s128>))

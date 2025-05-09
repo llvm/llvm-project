@@ -15,5 +15,5 @@
 // silence-no-diagnostics
 
 // AIX-error@+2 {{'patchable_function_entry' attribute is not yet supported on AIX}}
-// expected-warning@+1 {{unknown attribute 'patchable_function_entry' ignored}}
+// expected-warning@+1 {{unknown attribute 'gnu::patchable_function_entry' ignored}}
 [[gnu::patchable_function_entry(0)]] void f();

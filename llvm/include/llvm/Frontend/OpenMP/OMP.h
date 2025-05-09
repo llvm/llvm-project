@@ -47,6 +47,7 @@ static constexpr inline bool canHaveIterator(Clause C) {
   }
 }
 
+static constexpr unsigned FallbackVersion = 52;
 ArrayRef<unsigned> getOpenMPVersions();
 
 /// Create a nicer version of a function name for humans to look at.

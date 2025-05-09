@@ -27,6 +27,14 @@ static unsigned getEFlagsForFeatureSet(const MCSubtargetInfo &STI) {
   if (STI.hasFeature(Sparc::FeatureV8Plus))
     EFlags |= ELF::EF_SPARC_32PLUS;
 
+  if (STI.hasFeature(Sparc::FeatureVIS))
+    EFlags |= ELF::EF_SPARC_SUN_US1;
+
+  if (STI.hasFeature(Sparc::FeatureVIS2))
+    EFlags |= ELF::EF_SPARC_SUN_US3;
+
+  // VIS 3 and other ISA extensions doesn't set any flags.
+
   return EFlags;
 }
 

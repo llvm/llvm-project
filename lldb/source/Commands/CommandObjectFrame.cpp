@@ -152,6 +152,7 @@ protected:
       return;
     }
 
+    result.GetValueObjectList().Append(valobj_sp);
     DumpValueObjectOptions::DeclPrintingHelper helper =
         [&valobj_sp](ConstString type, ConstString var,
                      const DumpValueObjectOptions &opts,
@@ -317,10 +318,10 @@ protected:
       } else if (*m_options.relative_frame_offset > 0) {
         // I don't want "up 20" where "20" takes you past the top of the stack
         // to produce an error, but rather to just go to the top.  OTOH, start
-        // by seeing if the requested frame exists, in which case we can avoid 
+        // by seeing if the requested frame exists, in which case we can avoid
         // counting the stack here...
-        const uint32_t frame_requested = frame_idx 
-            + *m_options.relative_frame_offset;
+        const uint32_t frame_requested =
+            frame_idx + *m_options.relative_frame_offset;
         StackFrameSP frame_sp = thread->GetStackFrameAtIndex(frame_requested);
         if (frame_sp)
           frame_idx = frame_requested;
@@ -515,8 +516,8 @@ protected:
 
     if (error.Fail() && (!variable_list || variable_list->GetSize() == 0)) {
       result.AppendError(error.AsCString());
-
     }
+
     ValueObjectSP valobj_sp;
 
     TypeSummaryImplSP summary_format_sp;
@@ -564,6 +565,8 @@ protected:
                 valobj_sp = frame->GetValueObjectForFrameVariable(
                     var_sp, m_varobj_options.use_dynamic);
                 if (valobj_sp) {
+                  result.GetValueObjectList().Append(valobj_sp);
+
                   std::string scope_string;
                   if (m_option_variable.show_scope)
                     scope_string = GetScopeString(var_sp).str();
@@ -604,6 +607,8 @@ protected:
                 entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
                 var_sp, error);
             if (valobj_sp) {
+              result.GetValueObjectList().Append(valobj_sp);
+
               std::string scope_string;
               if (m_option_variable.show_scope)
                 scope_string = GetScopeString(var_sp).str();
@@ -653,6 +658,8 @@ protected:
             valobj_sp = frame->GetValueObjectForFrameVariable(
                 var_sp, m_varobj_options.use_dynamic);
             if (valobj_sp) {
+              result.GetValueObjectList().Append(valobj_sp);
+
               // When dumping all variables, don't print any variables that are
               // not in scope to avoid extra unneeded output
               if (valobj_sp->IsInScope()) {
@@ -694,6 +701,7 @@ protected:
             recognized_frame->GetRecognizedArguments();
         if (recognized_arg_list) {
           for (auto &rec_value_sp : recognized_arg_list->GetObjects()) {
+            result.GetValueObjectList().Append(rec_value_sp);
             options.SetFormat(m_option_format.GetFormat());
             options.SetVariableFormatDisplayLanguage(
                 rec_value_sp->GetPreferredDisplayLanguage());

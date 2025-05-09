@@ -80,7 +80,7 @@ void test2() {
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   I2<
 // CHECK-ELIDE-TREE:     [double != int],
-// CHECK-ELIDE-TREE:     [...], 
+// CHECK-ELIDE-TREE:     [...],
 // CHECK-ELIDE-TREE:     [int != (default) void]>
 // CHECK-NOELIDE-TREE: no matching function for call to 'set2'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
@@ -241,13 +241,13 @@ int k8 = f8(U8<char>());
 // CHECK-ELIDE-TREE: no matching function for call to 'f8'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   S8<
-// CHECK-ELIDE-TREE:     [2 * ...], 
+// CHECK-ELIDE-TREE:     [2 * ...],
 // CHECK-ELIDE-TREE:     [char != double]>
 // CHECK-NOELIDE-TREE: no matching function for call to 'f8'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   S8<
-// CHECK-NOELIDE-TREE:     int, 
-// CHECK-NOELIDE-TREE:     char, 
+// CHECK-NOELIDE-TREE:     int,
+// CHECK-NOELIDE-TREE:     char,
 // CHECK-NOELIDE-TREE:     [char != double]>
 
 template<typename ...T> struct S9 {};
@@ -265,14 +265,14 @@ int k9 = f9(V9<double>());
 // CHECK-ELIDE-TREE:   S9<
 // CHECK-ELIDE-TREE:     [2 * ...],
 // CHECK-ELIDE-TREE:     U9<
-// CHECK-ELIDE-TREE:       [(no qualifiers) != const] double>>
+// CHECK-ELIDE-TREE:       [double != const double]>>
 // CHECK-NOELIDE-TREE: no matching function for call to 'f9'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   S9<
 // CHECK-NOELIDE-TREE:     int,
 // CHECK-NOELIDE-TREE:     char,
 // CHECK-NOELIDE-TREE:     U9<
-// CHECK-NOELIDE-TREE:       [(no qualifiers) != const] double>>
+// CHECK-NOELIDE-TREE:       [double != const double]>>
 
 template<typename ...A> class class_types {};
 void set10(class_types<int, int>) {}
@@ -292,23 +292,23 @@ void test10() {
 // CHECK-ELIDE-TREE: no matching function for call to 'set10'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   class_types<
-// CHECK-ELIDE-TREE:     [...], 
+// CHECK-ELIDE-TREE:     [...],
 // CHECK-ELIDE-TREE:     [(no argument) != int]>
 // CHECK-ELIDE-TREE: no matching function for call to 'set10'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   class_types<
-// CHECK-ELIDE-TREE:     [2 * ...], 
+// CHECK-ELIDE-TREE:     [2 * ...],
 // CHECK-ELIDE-TREE:     [int != (no argument)]>
 // CHECK-NOELIDE-TREE: no matching function for call to 'set10'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   class_types<
-// CHECK-NOELIDE-TREE:     int, 
+// CHECK-NOELIDE-TREE:     int,
 // CHECK-NOELIDE-TREE:     [(no argument) != int]>
 // CHECK-NOELIDE-TREE: no matching function for call to 'set10'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   class_types<
-// CHECK-NOELIDE-TREE:     int, 
-// CHECK-NOELIDE-TREE:     int, 
+// CHECK-NOELIDE-TREE:     int,
+// CHECK-NOELIDE-TREE:     int,
 // CHECK-NOELIDE-TREE:     [int != (no argument)]>
 
 template<int ...A> class class_ints {};
@@ -328,24 +328,24 @@ void test11() {
 // CHECK-ELIDE-TREE: no matching function for call to 'set11'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   class_ints<
-// CHECK-ELIDE-TREE:     [1 != 2], 
+// CHECK-ELIDE-TREE:     [1 != 2],
 // CHECK-ELIDE-TREE:     [(no argument) != 3]>
 // CHECK-ELIDE-TREE: no matching function for call to 'set11'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   class_ints<
-// CHECK-ELIDE-TREE:     [0 != 2], 
-// CHECK-ELIDE-TREE:     [...], 
+// CHECK-ELIDE-TREE:     [0 != 2],
+// CHECK-ELIDE-TREE:     [...],
 // CHECK-ELIDE-TREE:     [6 != (no argument)]>
 // CHECK-NOELIDE-TREE: no matching function for call to 'set11'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   class_ints<
-// CHECK-NOELIDE-TREE:     [1 != 2], 
+// CHECK-NOELIDE-TREE:     [1 != 2],
 // CHECK-NOELIDE-TREE:     [(no argument) != 3]>
 // CHECK-NOELIDE-TREE: no matching function for call to 'set11'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   class_ints<
-// CHECK-NOELIDE-TREE:     [0 != 2], 
-// CHECK-NOELIDE-TREE:     3, 
+// CHECK-NOELIDE-TREE:     [0 != 2],
+// CHECK-NOELIDE-TREE:     3,
 // CHECK-NOELIDE-TREE:     [6 != (no argument)]>
 
 template<template<class> class ...A> class class_template_templates {};
@@ -367,23 +367,23 @@ void test12() {
 // CHECK-ELIDE-TREE: no matching function for call to 'set12'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   class_template_templates<
-// CHECK-ELIDE-TREE:     [template tt2 != template tt1], 
+// CHECK-ELIDE-TREE:     [template tt2 != template tt1],
 // CHECK-ELIDE-TREE:     [template (no argument) != template tt1]>
 // CHECK-ELIDE-TREE: no matching function for call to 'set12'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   class_template_templates<
-// CHECK-ELIDE-TREE:     [2 * ...], 
+// CHECK-ELIDE-TREE:     [2 * ...],
 // CHECK-ELIDE-TREE:     [template tt1 != template (no argument)]>
 // CHECK-NOELIDE-TREE: no matching function for call to 'set12'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   class_template_templates<
-// CHECK-NOELIDE-TREE:     [template tt2 != template tt1], 
+// CHECK-NOELIDE-TREE:     [template tt2 != template tt1],
 // CHECK-NOELIDE-TREE:     [template (no argument) != template tt1]>
 // CHECK-NOELIDE-TREE: no matching function for call to 'set12'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   class_template_templates<
-// CHECK-NOELIDE-TREE:     template tt1, 
-// CHECK-NOELIDE-TREE:     template tt1, 
+// CHECK-NOELIDE-TREE:     template tt1,
+// CHECK-NOELIDE-TREE:     template tt1,
 // CHECK-NOELIDE-TREE:     [template tt1 != template (no argument)]>
 
 double a13, b13, c13, d13;
@@ -404,23 +404,23 @@ void test13() {
 // CHECK-ELIDE-TREE: no matching function for call to 'set13'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   class_ptrs<
-// CHECK-ELIDE-TREE:     [&c13 != &a13], 
+// CHECK-ELIDE-TREE:     [&c13 != &a13],
 // CHECK-ELIDE-TREE:     [(no argument) != &b13]>
 // CHECK-ELIDE-TREE: no matching function for call to 'set13'
 // CHECK-ELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   class_ptrs<
-// CHECK-ELIDE-TREE:     [2 * ...], 
+// CHECK-ELIDE-TREE:     [2 * ...],
 // CHECK-ELIDE-TREE:     [&d13 != (no argument)]>
 // CHECK-NOELIDE-TREE: no matching function for call to 'set13'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   class_ptrs<
-// CHECK-NOELIDE-TREE:     [&c13 != &a13], 
+// CHECK-NOELIDE-TREE:     [&c13 != &a13],
 // CHECK-NOELIDE-TREE:     [(no argument) != &b13]>
 // CHECK-NOELIDE-TREE: no matching function for call to 'set13'
 // CHECK-NOELIDE-TREE: candidate function not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   class_ptrs<
-// CHECK-NOELIDE-TREE:     &a13, 
-// CHECK-NOELIDE-TREE:     &b13, 
+// CHECK-NOELIDE-TREE:     &a13,
+// CHECK-NOELIDE-TREE:     &b13,
 // CHECK-NOELIDE-TREE:     [&d13 != (no argument)]>
 
 template<typename T> struct s14 {};
@@ -550,7 +550,7 @@ template<typename T> using U21 = volatile S21<T>;
 int f21(vector<const U21<int>>);
 int k21 = f21(vector<U21<int>>());
 // CHECK-ELIDE-NOTREE: no matching function for call to 'f21'
-// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<U21<...>>' to 'vector<const U21<...>>' for 1st argument 
+// CHECK-ELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<U21<...>>' to 'vector<const U21<...>>' for 1st argument
 // CHECK-NOELIDE-NOTREE: no matching function for call to 'f21'
 // CHECK-NOELIDE-NOTREE: candidate function not viable: no known conversion from 'vector<U21<int>>' to 'vector<const U21<int>>' for 1st argument
 // CHECK-ELIDE-TREE: no matching function for call to 'f21'
@@ -748,7 +748,7 @@ void Play3() {
 // CHECK-ELIDE-TREE: no viable overloaded '='
 // CHECK-ELIDE-TREE: candidate function (the implicit copy assignment operator) not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   [(no qualifiers) != const] Foo3<
-// CHECK-ELIDE-TREE:     [1 != 2], 
+// CHECK-ELIDE-TREE:     [1 != 2],
 // CHECK-ELIDE-TREE:     [(no argument) != 1]>
 // CHECK-ELIDE-TREE: candidate function (the implicit move assignment operator) not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   Foo3<
@@ -761,25 +761,25 @@ void Play3() {
 // CHECK-ELIDE-TREE:     [1 != (no argument)]>
 // CHECK-ELIDE-TREE: candidate function (the implicit move assignment operator) not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-ELIDE-TREE:   Foo3<
-// CHECK-ELIDE-TREE:     [2 != 1], 
+// CHECK-ELIDE-TREE:     [2 != 1],
 // CHECK-ELIDE-TREE:     [1 != (no argument)]>
 // CHECK-NOELIDE-TREE: no viable overloaded '='
 // CHECK-NOELIDE-TREE: candidate function (the implicit copy assignment operator) not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   [(no qualifiers) != const] Foo3<
-// CHECK-NOELIDE-TREE:     [1 != 2], 
+// CHECK-NOELIDE-TREE:     [1 != 2],
 // CHECK-NOELIDE-TREE:     [(no argument) != 1]>
 // CHECK-NOELIDE-TREE: candidate function (the implicit move assignment operator) not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   Foo3<
-// CHECK-NOELIDE-TREE:     [1 != 2], 
+// CHECK-NOELIDE-TREE:     [1 != 2],
 // CHECK-NOELIDE-TREE:     [(no argument) != 1]>
 // CHECK-NOELIDE-TREE: no viable overloaded '='
 // CHECK-NOELIDE-TREE: candidate function (the implicit copy assignment operator) not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   [(no qualifiers) != const] Foo3<
-// CHECK-NOELIDE-TREE:     [2 != 1], 
+// CHECK-NOELIDE-TREE:     [2 != 1],
 // CHECK-NOELIDE-TREE:     [1 != (no argument)]>
 // CHECK-NOELIDE-TREE: candidate function (the implicit move assignment operator) not viable: no known conversion from argument type to parameter type for 1st argument
 // CHECK-NOELIDE-TREE:   Foo3<
-// CHECK-NOELIDE-TREE:     [2 != 1], 
+// CHECK-NOELIDE-TREE:     [2 != 1],
 // CHECK-NOELIDE-TREE:     [1 != (no argument)]>
 }
 
@@ -807,14 +807,14 @@ namespace rdar12456626 {
   struct IntWrapper {
     typedef int type;
   };
-  
+
   template<typename T, typename T::type V>
   struct X { };
-  
+
   struct A {
     virtual X<IntWrapper, 1> foo();
   };
-  
+
   struct B : A {
     // CHECK-ELIDE-NOTREE: virtual function 'foo' has a different return type
     virtual X<IntWrapper, 2> foo();

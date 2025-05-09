@@ -322,9 +322,7 @@ template <class ConstantClass> struct ConstantAggrKeyType {
     return true;
   }
 
-  unsigned getHash() const {
-    return hash_combine_range(Operands.begin(), Operands.end());
-  }
+  unsigned getHash() const { return hash_combine_range(Operands); }
 
   using TypeClass = typename ConstantInfo<ConstantClass>::TypeClass;
 
@@ -478,10 +476,8 @@ public:
   }
 
   unsigned getHash() const {
-    return hash_combine(
-        Opcode, SubclassOptionalData,
-        hash_combine_range(Ops.begin(), Ops.end()),
-        hash_combine_range(ShuffleMask.begin(), ShuffleMask.end()), ExplicitTy);
+    return hash_combine(Opcode, SubclassOptionalData, hash_combine_range(Ops),
+                        hash_combine_range(ShuffleMask), ExplicitTy);
   }
 
   using TypeClass = ConstantInfo<ConstantExpr>::TypeClass;
@@ -537,9 +533,7 @@ struct ConstantPtrAuthKeyType {
     return true;
   }
 
-  unsigned getHash() const {
-    return hash_combine_range(Operands.begin(), Operands.end());
-  }
+  unsigned getHash() const { return hash_combine_range(Operands); }
 
   using TypeClass = typename ConstantInfo<ConstantPtrAuth>::TypeClass;
 

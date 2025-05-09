@@ -68,13 +68,8 @@ public:
   // engine characteristics
   static _LIBCPP_CONSTEXPR const size_t table_size = __k;
 
-#ifdef _LIBCPP_CXX03_LANG
   static const result_type _Min = _Engine::_Min;
   static const result_type _Max = _Engine::_Max;
-#else
-  static _LIBCPP_CONSTEXPR const result_type _Min = _Engine::min();
-  static _LIBCPP_CONSTEXPR const result_type _Max = _Engine::max();
-#endif
   static_assert(_Min < _Max, "shuffle_order_engine invalid parameters");
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
@@ -84,9 +79,6 @@ public:
   // constructors and seeding functions
   _LIBCPP_HIDE_FROM_ABI shuffle_order_engine() { __init(); }
   _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(const _Engine& __e) : __e_(__e) { __init(); }
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(_Engine&& __e) : __e_(std::move(__e)) { __init(); }
-#endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(result_type __sd) : __e_(__sd) { __init(); }
   template <
       class _Sseq,

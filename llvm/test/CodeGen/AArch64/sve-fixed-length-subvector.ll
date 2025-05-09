@@ -48,10 +48,10 @@ define void @subvector_v32i16(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
-; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1, x8, lsl #1]
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x1]
+; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x1, x8, lsl #1]
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: subvector_v32i16:
@@ -103,10 +103,10 @@ define void @subvector_v16i32(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1]
+; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: subvector_v16i32:
@@ -159,10 +159,10 @@ define void @subvector_v8i64(ptr %in, ptr %out) vscale_range(2,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    mov x8, #4 // =0x4
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; CHECK-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
-; CHECK-NEXT:    st1d { z1.d }, p0, [x1]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <8 x i64>, ptr %in
   br label %bb1
@@ -236,10 +236,10 @@ define void @subvector_v32f16(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
-; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1, x8, lsl #1]
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x1]
+; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x1, x8, lsl #1]
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: subvector_v32f16:
@@ -291,10 +291,10 @@ define void @subvector_v16f32(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1]
+; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: subvector_v16f32:
@@ -345,10 +345,10 @@ define void @subvector_v8f64(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1]
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: subvector_v8f64:

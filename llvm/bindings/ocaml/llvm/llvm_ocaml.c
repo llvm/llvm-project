@@ -15,16 +15,16 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include "llvm_ocaml.h"
+#include "caml/callback.h"
+#include "caml/fail.h"
+#include "caml/memory.h"
 #include "llvm-c/Core.h"
 #include "llvm-c/Support.h"
 #include "llvm/Config/llvm-config.h"
-#include "caml/memory.h"
-#include "caml/fail.h"
-#include "caml/callback.h"
-#include "llvm_ocaml.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if OCAML_VERSION < 41200
 value caml_alloc_some(value v) {
@@ -1211,24 +1211,6 @@ value llvm_const_nuw_sub(value LHS, value RHS) {
 }
 
 /* llvalue -> llvalue -> llvalue */
-value llvm_const_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_nsw_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstNSWMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_nuw_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstNUWMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
 value llvm_const_xor(value LHS, value RHS) {
   LLVMValueRef Value = LLVMConstXor(Value_val(LHS), Value_val(RHS));
   return to_val(Value);
@@ -1561,6 +1543,14 @@ value llvm_is_global_constant(value GlobalVar) {
 /* bool -> llvalue -> unit */
 value llvm_set_global_constant(value Flag, value GlobalVar) {
   LLVMSetGlobalConstant(Value_val(GlobalVar), Bool_val(Flag));
+  return Val_unit;
+}
+
+/* llvalue -> llmdkind -> llmetadata -> unit */
+value llvm_global_set_metadata(value Value, value MetadataKind,
+                               value Metadata) {
+  LLVMGlobalSetMetadata(Value_val(Value), (unsigned int)Int_val(MetadataKind),
+                        Metadata_val(Metadata));
   return Val_unit;
 }
 

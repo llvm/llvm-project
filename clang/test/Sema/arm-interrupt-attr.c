@@ -3,7 +3,7 @@
 
 
 #ifdef __ARM_FP
-__attribute__((interrupt("IRQ"))) void float_irq(void); // expected-warning {{interrupt service routine with vfp enabled may clobber the interruptee's vfp state}}
+__attribute__((interrupt("IRQ"))) void float_irq(void); // expected-warning {{interrupt service routine with vfp enabled may clobber the interruptee's vfp state; consider using the `interrupt_save_fp` attribute to prevent this behavior}}
 #else // !defined(__ARM_FP)
 __attribute__((interrupt("irq"))) void foo1(void) {} // expected-warning {{'interrupt' attribute argument not supported: irq}}
 __attribute__((interrupt(IRQ))) void foo(void) {} // expected-error {{'interrupt' attribute requires a string}}

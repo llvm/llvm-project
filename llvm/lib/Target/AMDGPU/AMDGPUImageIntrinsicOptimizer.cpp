@@ -256,7 +256,7 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
         VecOp = B.CreateExtractElement(NewCalls[0], Idx->getValue().urem(4));
         LLVM_DEBUG(dbgs() << "Add: " << *VecOp << "\n");
       } else {
-        VecOp = UndefValue::get(II->getType());
+        VecOp = PoisonValue::get(II->getType());
         for (unsigned I = 0; I < NumElts; ++I) {
           VecOp = B.CreateInsertElement(
               VecOp,

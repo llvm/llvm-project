@@ -360,10 +360,7 @@ size_t SourceManager::DisplayMoreWithLineNumbers(
     GetDefaultFileAndLine();
 
   if (last_file_sp) {
-    if (m_last_line == UINT32_MAX)
-      return 0;
-
-    if (reverse && m_last_line == 1)
+    if (AtLastLine(reverse))
       return 0;
 
     if (count > 0)
@@ -435,9 +432,8 @@ SourceManager::GetDefaultFileAndLine() {
         for (const SymbolContext &sc : sc_list) {
           if (sc.function) {
             lldb_private::LineEntry line_entry;
-            if (sc.function->GetAddressRange()
-                    .GetBaseAddress()
-                    .CalculateSymbolContextLineEntry(line_entry)) {
+            if (sc.function->GetAddress().CalculateSymbolContextLineEntry(
+                    line_entry)) {
               SetDefaultFileAndLine(line_entry.file_sp, line_entry.line);
               return SupportFileAndLine(line_entry.file_sp, m_last_line);
             }

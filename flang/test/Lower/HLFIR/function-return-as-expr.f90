@@ -146,5 +146,5 @@ contains
 end subroutine test8
 ! CHECK-LABEL:   func.func @_QPtest8() {
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
-! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
+! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>

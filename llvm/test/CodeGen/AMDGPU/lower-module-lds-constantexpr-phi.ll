@@ -2,7 +2,7 @@
 ; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 
-@var = addrspace(3) global i32 undef, align 4
+@var = addrspace(3) global i32 poison, align 4
 
 ; Regression test. Duplicate constantexpr in phi nodes shall not emit broken IR
 define amdgpu_kernel void @func(i32 %c) {

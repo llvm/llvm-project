@@ -23,6 +23,9 @@ public:
 
   bool isTargetStrictFPOpcode(unsigned Opcode) const override;
 
+  void verifyTargetNode(const SelectionDAG &DAG,
+                        const SDNode *N) const override;
+
   SDValue EmitMOPS(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL,
                    SDValue Chain, SDValue Dst, SDValue SrcOrValue, SDValue Size,
                    Align Alignment, bool isVolatile,

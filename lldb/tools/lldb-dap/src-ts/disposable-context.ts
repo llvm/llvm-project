@@ -21,7 +21,7 @@ export class DisposableContext implements vscode.Disposable {
    *
    * @param disposable The disposable to register.
    */
-  public pushSubscription(disposable: vscode.Disposable) {
-    this._disposables.push(disposable);
+  public pushSubscription(...disposable: vscode.Disposable[]) {
+    this._disposables.push(...disposable);
   }
 }

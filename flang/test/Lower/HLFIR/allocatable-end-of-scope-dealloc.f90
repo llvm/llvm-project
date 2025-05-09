@@ -28,18 +28,18 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPsimple() {
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}"_QFsimpleEx"
 ! CHECK:  fir.call @_QPbar
-! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK:  %[[VAL_7:.*]] = fir.box_addr %[[VAL_6]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.heap<f32>) -> i64
 ! CHECK:  %[[VAL_9:.*]] = arith.constant 0 : i64
 ! CHECK:  %[[VAL_10:.*]] = arith.cmpi ne, %[[VAL_8]], %[[VAL_9]] : i64
 ! CHECK:  fir.if %[[VAL_10]] {
-! CHECK:    %[[VAL_11:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+! CHECK:    %[[VAL_11:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK:    %[[VAL_12:.*]] = fir.box_addr %[[VAL_11]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
 ! CHECK:    fir.freemem %[[VAL_12]] : !fir.heap<f32>
 ! CHECK:    %[[VAL_13:.*]] = fir.zero_bits !fir.heap<f32>
 ! CHECK:    %[[VAL_14:.*]] = fir.embox %[[VAL_13]] : (!fir.heap<f32>) -> !fir.box<!fir.heap<f32>>
-! CHECK:    fir.store %[[VAL_14]] to %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.heap<f32>>>
+! CHECK:    fir.store %[[VAL_14]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK:  }
 
 subroutine multiple_return(cdt)
@@ -72,7 +72,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPderived() {
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}"_QFderivedEx"
 ! CHECK:  fir.call @_QPbar
-! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMdtypedefTmust_finalize{i:i32}>>>>
+! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMdtypedefTmust_finalize{i:i32}>>>>
 ! CHECK:  %[[VAL_12:.*]] = fir.box_addr %[[VAL_11]] : (!fir.box<!fir.heap<!fir.type<_QMdtypedefTmust_finalize{i:i32}>>>) -> !fir.heap<!fir.type<_QMdtypedefTmust_finalize{i:i32}>>
 ! CHECK:  %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (!fir.heap<!fir.type<_QMdtypedefTmust_finalize{i:i32}>>) -> i64
 ! CHECK:  %[[VAL_14:.*]] = arith.constant 0 : i64
@@ -80,7 +80,7 @@ end subroutine
 ! CHECK:  fir.if %[[VAL_15]] {
 ! CHECK:    %[[VAL_16:.*]] = arith.constant false
 ! CHECK:    %[[VAL_17:.*]] = fir.absent !fir.box<none>
-! CHECK:    %[[VAL_20:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMdtypedefTmust_finalize{i:i32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:    %[[VAL_20:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMdtypedefTmust_finalize{i:i32}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:    %[[VAL_22:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_20]], %[[VAL_16]], %[[VAL_17]], %{{.*}}, %{{.*}})
 ! CHECK:  }
 

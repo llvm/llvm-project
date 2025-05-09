@@ -118,7 +118,6 @@ void DfaEmitter::emit(StringRef Name, raw_ostream &OS) {
   OS << "// to by index in " << Name << "Transitions[].\n";
 
   SequenceToOffsetTable<DfaTransitionInfo> Table;
-  std::map<DfaTransitionInfo, unsigned> EmittedIndices;
   for (auto &T : DfaTransitions)
     Table.add(T.second.second);
   Table.layout();

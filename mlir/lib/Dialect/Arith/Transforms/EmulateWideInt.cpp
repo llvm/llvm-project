@@ -17,6 +17,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
@@ -867,6 +868,46 @@ struct ConvertShRSI final : OpConversionPattern<arith::ShRSIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertSubI
+//===----------------------------------------------------------------------===//
+
+struct ConvertSubI final : OpConversionPattern<arith::SubIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::SubIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto newTy = getTypeConverter()->convertType<VectorType>(op.getType());
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {}", op.getType()));
+
+    Type newElemTy = reduceInnermostDim(newTy);
+
+    auto [lhsElem0, lhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getLhs());
+    auto [rhsElem0, rhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getRhs());
+
+    // Emulates LHS - RHS by [LHS0 - RHS0, LHS1 - RHS1 - CARRY] where
+    // CARRY is 1 or 0.
+    Value low = rewriter.create<arith::SubIOp>(loc, lhsElem0, rhsElem0);
+    // We have a carry if lhsElem0 < rhsElem0.
+    Value carry0 = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ult, lhsElem0, rhsElem0);
+    Value carryVal = rewriter.create<arith::ExtUIOp>(loc, newElemTy, carry0);
+
+    Value high0 = rewriter.create<arith::SubIOp>(loc, lhsElem1, carryVal);
+    Value high = rewriter.create<arith::SubIOp>(loc, high0, rhsElem1);
+
+    Value resultVec = constructResultVector(rewriter, loc, newTy, {low, high});
+    rewriter.replaceOp(op, resultVec);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertSIToFP
 //===----------------------------------------------------------------------===//
 
@@ -885,22 +926,16 @@ struct ConvertSIToFP final : OpConversionPattern<arith::SIToFPOp> {
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", oldTy));
 
-    unsigned oldBitWidth = getElementTypeOrSelf(oldTy).getIntOrFloatBitWidth();
     Value zeroCst = createScalarOrSplatConstant(rewriter, loc, oldTy, 0);
-    Value oneCst = createScalarOrSplatConstant(rewriter, loc, oldTy, 1);
-    Value allOnesCst = createScalarOrSplatConstant(
-        rewriter, loc, oldTy, APInt::getAllOnes(oldBitWidth));
 
     // To avoid operating on very large unsigned numbers, perform the
     // conversion on the absolute value. Then, decide whether to negate the
-    // result or not based on that sign bit. We assume two's complement and
-    // implement negation by flipping all bits and adding 1.
-    // Note that this relies on the the other conversion patterns to legalize
-    // created ops and narrow the bit widths.
+    // result or not based on that sign bit. We implement negation by
+    // subtracting from zero. Note that this relies on the the other conversion
+    // patterns to legalize created ops and narrow the bit widths.
     Value isNeg = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
                                                  in, zeroCst);
-    Value bitwiseNeg = rewriter.create<arith::XOrIOp>(loc, in, allOnesCst);
-    Value neg = rewriter.create<arith::AddIOp>(loc, bitwiseNeg, oneCst);
+    Value neg = rewriter.create<arith::SubIOp>(loc, zeroCst, in);
     Value abs = rewriter.create<arith::SelectOp>(loc, isNeg, neg, in);
 
     Value absResult = rewriter.create<arith::UIToFPOp>(loc, op.getType(), abs);
@@ -975,6 +1010,128 @@ struct ConvertUIToFP final : OpConversionPattern<arith::UIToFPOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertFPToSI
+//===----------------------------------------------------------------------===//
+
+struct ConvertFPToSI final : OpConversionPattern<arith::FPToSIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::FPToSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    // Get the input float type.
+    Value inFp = adaptor.getIn();
+    Type fpTy = inFp.getType();
+
+    Type intTy = op.getType();
+
+    auto newTy = getTypeConverter()->convertType<VectorType>(intTy);
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {}", intTy));
+
+    // Work on the absolute value and then convert the result to signed integer.
+    // Defer absolute value to fptoui. If minSInt < fp < maxSInt, i.e. if the fp
+    // is representable in signed i2N, emits the correct result. Else, the
+    // result is UB.
+
+    TypedAttr zeroAttr = rewriter.getZeroAttr(fpTy);
+    Value zeroCst = rewriter.create<arith::ConstantOp>(loc, zeroAttr);
+    Value zeroCstInt = createScalarOrSplatConstant(rewriter, loc, intTy, 0);
+
+    // Get the absolute value. One could have used math.absf here, but that
+    // introduces an extra dependency.
+    Value isNeg = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OLT,
+                                                 inFp, zeroCst);
+    Value negInFp = rewriter.create<arith::NegFOp>(loc, inFp);
+
+    Value absVal = rewriter.create<arith::SelectOp>(loc, isNeg, negInFp, inFp);
+
+    // Defer the absolute value to fptoui.
+    Value res = rewriter.create<arith::FPToUIOp>(loc, intTy, absVal);
+
+    // Negate the value if < 0 .
+    Value neg = rewriter.create<arith::SubIOp>(loc, zeroCstInt, res);
+
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNeg, neg, res);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ConvertFPToUI
+//===----------------------------------------------------------------------===//
+
+struct ConvertFPToUI final : OpConversionPattern<arith::FPToUIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::FPToUIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    // Get the input float type.
+    Value inFp = adaptor.getIn();
+    Type fpTy = inFp.getType();
+
+    Type intTy = op.getType();
+    auto newTy = getTypeConverter()->convertType<VectorType>(intTy);
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {}", intTy));
+    unsigned newBitWidth = newTy.getElementTypeBitWidth();
+
+    Type newHalfType = IntegerType::get(inFp.getContext(), newBitWidth);
+    if (auto vecType = dyn_cast<VectorType>(fpTy))
+      newHalfType = VectorType::get(vecType.getShape(), newHalfType);
+
+    // The resulting integer has the upper part and the lower part. This would
+    // be interpreted as 2^N * high + low, where N is the bitwidth. Therefore,
+    // to calculate the higher part, we emit resHigh = fptoui(fp/2^N). For the
+    // lower part, we emit fptoui(fp - resHigh * 2^N). The special cases of
+    // overflows including +-inf, NaNs and negative numbers are UB.
+
+    const llvm::fltSemantics &fSemantics =
+        cast<FloatType>(getElementTypeOrSelf(fpTy)).getFloatSemantics();
+
+    auto powBitwidth = llvm::APFloat(fSemantics);
+    // If the integer does not fit the floating point number, we set the
+    // powBitwidth to inf. This ensures that the upper part is set
+    // correctly to 0. The opStatus inexact here only occurs when we have an
+    // overflow, since the number is always a power of two.
+    if (powBitwidth.convertFromAPInt(APInt(newBitWidth * 2, 1).shl(newBitWidth),
+                                     false, llvm::RoundingMode::TowardZero) ==
+        llvm::detail::opStatus::opInexact)
+      powBitwidth = llvm::APFloat::getInf(fSemantics);
+
+    TypedAttr powBitwidthAttr =
+        FloatAttr::get(getElementTypeOrSelf(fpTy), powBitwidth);
+    if (auto vecType = dyn_cast<VectorType>(fpTy))
+      powBitwidthAttr = SplatElementsAttr::get(vecType, powBitwidthAttr);
+    Value powBitwidthFloatCst =
+        rewriter.create<arith::ConstantOp>(loc, powBitwidthAttr);
+
+    Value fpDivPowBitwidth =
+        rewriter.create<arith::DivFOp>(loc, inFp, powBitwidthFloatCst);
+    Value resHigh =
+        rewriter.create<arith::FPToUIOp>(loc, newHalfType, fpDivPowBitwidth);
+    // Calculate fp - resHigh * 2^N by getting the remainder of the division
+    Value remainder =
+        rewriter.create<arith::RemFOp>(loc, inFp, powBitwidthFloatCst);
+    Value resLow =
+        rewriter.create<arith::FPToUIOp>(loc, newHalfType, remainder);
+
+    Value high = appendX1Dim(rewriter, loc, resHigh);
+    Value low = appendX1Dim(rewriter, loc, resLow);
+
+    Value resultVec = constructResultVector(rewriter, loc, newTy, {low, high});
+
+    rewriter.replaceOp(op, resultVec);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertTruncI
 //===----------------------------------------------------------------------===//
 
@@ -1044,12 +1201,18 @@ struct EmulateWideIntPass final
       return typeConverter.isLegal(op);
     };
     target.addDynamicallyLegalOp<func::CallOp, func::ReturnOp>(opLegalCallback);
-    target
-        .addDynamicallyLegalDialect<arith::ArithDialect, vector::VectorDialect>(
-            opLegalCallback);
+    target.addDynamicallyLegalOp<vector::PrintOp>(opLegalCallback);
+    target.addDynamicallyLegalDialect<arith::ArithDialect>(opLegalCallback);
+    target.addLegalDialect<vector::VectorDialect>();
 
     RewritePatternSet patterns(ctx);
     arith::populateArithWideIntEmulationPatterns(typeConverter, patterns);
+
+    // Populate `func.*` conversion patterns.
+    populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
+        patterns, typeConverter);
+    populateCallOpTypeConversionPattern(patterns, typeConverter);
+    populateReturnOpTypeConversionPattern(patterns, typeConverter);
 
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
@@ -1124,12 +1287,6 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
 void arith::populateArithWideIntEmulationPatterns(
     const WideIntEmulationConverter &typeConverter,
     RewritePatternSet &patterns) {
-  // Populate `func.*` conversion patterns.
-  populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
-                                                                 typeConverter);
-  populateCallOpTypeConversionPattern(patterns, typeConverter);
-  populateReturnOpTypeConversionPattern(patterns, typeConverter);
-
   // Populate `arith.*` conversion patterns.
   patterns.add<
       // Misc ops.
@@ -1139,7 +1296,7 @@ void arith::populateArithWideIntEmulationPatterns(
       ConvertMaxMin<arith::MaxUIOp, arith::CmpIPredicate::ugt>,
       ConvertMaxMin<arith::MaxSIOp, arith::CmpIPredicate::sgt>,
       ConvertMaxMin<arith::MinUIOp, arith::CmpIPredicate::ult>,
-      ConvertMaxMin<arith::MinSIOp, arith::CmpIPredicate::slt>,
+      ConvertMaxMin<arith::MinSIOp, arith::CmpIPredicate::slt>, ConvertSubI,
       // Bitwise binary ops.
       ConvertBitwiseBinary<arith::AndIOp>, ConvertBitwiseBinary<arith::OrIOp>,
       ConvertBitwiseBinary<arith::XOrIOp>,
@@ -1150,5 +1307,6 @@ void arith::populateArithWideIntEmulationPatterns(
       ConvertIndexCastIntToIndex<arith::IndexCastUIOp>,
       ConvertIndexCastIndexToInt<arith::IndexCastOp, arith::ExtSIOp>,
       ConvertIndexCastIndexToInt<arith::IndexCastUIOp, arith::ExtUIOp>,
-      ConvertSIToFP, ConvertUIToFP>(typeConverter, patterns.getContext());
+      ConvertSIToFP, ConvertUIToFP, ConvertFPToUI, ConvertFPToSI>(
+      typeConverter, patterns.getContext());
 }

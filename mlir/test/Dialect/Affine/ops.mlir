@@ -301,29 +301,29 @@ func.func @linearize_mixed(%index0: index, %index1: index, %index2: index, %basi
 
 // -----
 
-#map = affine_map<()[s0] -> (s0)>
+// CHECK-LABEL: @gpu_launch_affine
 
-// CHECK-LABEL: @gpu_affine_for
+// Test `thread_id` in AffineScope, the `thread_id` is in AffineScope's toplevel,
+// it is a valid symbol.
 
-module attributes {gpu.container_module} {
-  gpu.module @gpu {
-    gpu.func @gpu_affine_for(%arg0: memref<?x?xf32>) kernel {
-      %c3 = arith.constant 1 : index
-      %dim = memref.dim %arg0, %c3 : memref<?x?xf32>
-      %c0 = arith.constant 0 : index
-      affine.for %arg3 = %c0 to #map()[%dim] step 32 {
+module {
+  func.func @gpu_launch_affine() {
+    %c1 = arith.constant 1 : index
+    gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1) 
+    threads(%arg3, %arg4, %arg5) in (%arg9 = %c1, %arg10 = %c1, %arg11 = %c1) {
+      %thread_id_x = gpu.thread_id  x
+      %c128 = arith.constant 128 : index
+      affine.for %arg12 = %thread_id_x to %c128 step 8 {
       }
-      gpu.return
+      gpu.terminator
     }
+    return
   }
 }
-// CHECK-SAME:        (%[[VAL_0:.*]]: memref<?x?xf32>) kernel {
-// CHECK:             %[[VAL_1:.*]] = arith.constant 1 : index
-// CHECK:             %[[VAL_2:.*]] = memref.dim %[[VAL_0]], %[[VAL_1]] : memref<?x?xf32>
-// CHECK:             %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:             affine.for %[[VAL_4:.*]] = %[[VAL_3]] to %[[VAL_2]] step 32 {
-// CHECK:             }
-// CHECK:             gpu.return
+
+// CHECK: %[[THREAD_ID:.*]] = gpu.thread_id  x
+// CHECK: %[[VAL:.*]] = arith.constant 128 : index
+// CHECK: affine.for %{{.*}} = %[[THREAD_ID]] to %[[VAL]] step 8 {
 
 // -----
 

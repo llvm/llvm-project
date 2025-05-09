@@ -305,6 +305,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // since it forwards only to non-live value(s) (%1#1).
   Operation *lastReturnOp = funcOp.back().getTerminator();
   size_t numReturns = lastReturnOp->getNumOperands();
+  if (numReturns == 0)
+    return;
   BitVector nonLiveRets(numReturns, true);
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();
@@ -375,6 +377,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   // Mark live arguments in the regions of `regionBranchOp` in `liveArgs`.
   auto markLiveArgs = [&](DenseMap<Region *, BitVector> &liveArgs) {
     for (Region &region : regionBranchOp->getRegions()) {
+      if (region.empty())
+        continue;
       SmallVector<Value> arguments(region.front().getArguments());
       BitVector regionLiveArgs = markLives(arguments, nonLiveSet, la);
       liveArgs[&region] = regionLiveArgs;
@@ -420,6 +424,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   auto markNonForwardedReturnValues =
       [&](DenseMap<Operation *, BitVector> &nonForwardedRets) {
         for (Region &region : regionBranchOp->getRegions()) {
+          if (region.empty())
+            continue;
           Operation *terminator = region.front().getTerminator();
           nonForwardedRets[terminator] =
               BitVector(terminator->getNumOperands(), true);
@@ -499,6 +505,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
         // Recompute `resultsToKeep` and `argsToKeep` based on
         // `terminatorOperandsToKeep`.
         for (Region &region : regionBranchOp->getRegions()) {
+          if (region.empty())
+            continue;
           Operation *terminator = region.front().getTerminator();
           for (const RegionSuccessor &successor : getSuccessors(&region)) {
             Region *successorRegion = successor.getSuccessor();
@@ -547,6 +555,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 
           // Update the terminator operands that need to be kept.
           for (Region &region : regionBranchOp->getRegions()) {
+            if (region.empty())
+              continue;
             updateOperandsOrTerminatorOperandsToKeep(
                 terminatorOperandsToKeep[region.back().getTerminator()],
                 resultsToKeep, argsToKeep, &region);
@@ -611,8 +621,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 
   // Do (2.a) and (2.b).
   for (Region &region : regionBranchOp->getRegions()) {
-    assert(!region.empty() && "expected a non-empty region in an op "
-                              "implementing `RegionBranchOpInterface`");
+    if (region.empty())
+      continue;
     BitVector argsToRemove = argsToKeep[&region].flip();
     cl.blocks.push_back({&region.front(), argsToRemove});
     collectNonLiveValues(nonLiveSet, region.front().getArguments(),
@@ -621,6 +631,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 
   // Do (2.c).
   for (Region &region : regionBranchOp->getRegions()) {
+    if (region.empty())
+      continue;
     Operation *terminator = region.front().getTerminator();
     cl.operands.push_back(
         {terminator, terminatorOperandsToKeep[terminator].flip()});
@@ -686,8 +698,11 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
 
   // 3. Functions
   for (auto &f : list.functions) {
-    f.funcOp.eraseArguments(f.nonLiveArgs);
-    f.funcOp.eraseResults(f.nonLiveRets);
+    // Some functions may not allow erasing arguments or results. These calls
+    // return failure in such cases without modifying the function, so it's okay
+    // to proceed.
+    (void)f.funcOp.eraseArguments(f.nonLiveArgs);
+    (void)f.funcOp.eraseResults(f.nonLiveRets);
   }
 
   // 4. Operands

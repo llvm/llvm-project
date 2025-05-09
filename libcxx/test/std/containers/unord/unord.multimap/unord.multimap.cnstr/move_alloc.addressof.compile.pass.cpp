@@ -28,8 +28,12 @@
 
 void test() {
   using A = test_allocator<std::pair<const operator_hijacker, operator_hijacker>>;
-  using C = std::unordered_multimap<operator_hijacker, operator_hijacker, std::hash<operator_hijacker>,
-                                    std::equal_to<operator_hijacker>, A>;
+  using C =
+      std::unordered_multimap<operator_hijacker,
+                              operator_hijacker,
+                              std::hash<operator_hijacker>,
+                              std::equal_to<operator_hijacker>,
+                              A>;
 
   C mo;
   C m(std::move(mo), A());

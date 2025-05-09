@@ -541,7 +541,7 @@ void VFABI::getVectorVariantNames(
   SmallVector<StringRef, 8> ListAttr;
   S.split(ListAttr, ",");
 
-  for (const auto &S : SetVector<StringRef>(ListAttr.begin(), ListAttr.end())) {
+  for (const auto &S : SetVector<StringRef>(llvm::from_range, ListAttr)) {
     std::optional<VFInfo> Info =
         VFABI::tryDemangleForVFABI(S, CI.getFunctionType());
     if (Info && CI.getModule()->getFunction(Info->VectorName)) {

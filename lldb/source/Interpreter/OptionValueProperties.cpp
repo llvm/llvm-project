@@ -335,7 +335,7 @@ void OptionValueProperties::DumpValue(const ExecutionContext *exe_ctx,
 }
 
 llvm::json::Value
-OptionValueProperties::ToJSON(const ExecutionContext *exe_ctx) {
+OptionValueProperties::ToJSON(const ExecutionContext *exe_ctx) const {
   llvm::json::Object json_properties;
   const size_t num_properties = m_properties.size();
   for (size_t i = 0; i < num_properties; ++i) {

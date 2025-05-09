@@ -41,9 +41,16 @@ static std::string MakeComment(StringRef in) {
 }
 
 static void ProcessHandle(const HandleRec &H, raw_ostream &OS) {
+  if (!H.getName().ends_with("_handle_t")) {
+    errs() << "Handle type name (" << H.getName()
+           << ") must end with '_handle_t'!\n";
+    exit(1);
+  }
+
+  auto ImplName = H.getName().substr(0, H.getName().size() - 9) + "_impl_t";
   OS << CommentsHeader;
   OS << formatv("/// @brief {0}\n", H.getDesc());
-  OS << formatv("typedef struct {0}_ *{0};\n", H.getName());
+  OS << formatv("typedef struct {0} *{1};\n", ImplName, H.getName());
 }
 
 static void ProcessTypedef(const TypedefRec &T, raw_ostream &OS) {
@@ -158,6 +165,19 @@ static void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
   OS << formatv("} {0};\n\n", Struct.getName());
 }
 
+static void ProcessFptrTypedef(const FptrTypedefRec &F, raw_ostream &OS) {
+  OS << CommentsHeader;
+  OS << formatv("/// @brief {0}\n", F.getDesc());
+  OS << formatv("typedef {0} (*{1})(", F.getReturn(), F.getName());
+  for (const auto &Param : F.getParams()) {
+    OS << formatv("\n  // {0}\n  {1} {2}", Param.getDesc(), Param.getType(),
+                  Param.getName());
+    if (Param != F.getParams().back())
+      OS << ",";
+  }
+  OS << ");\n";
+}
+
 static void ProcessFuncParamStruct(const FunctionRec &Func, raw_ostream &OS) {
   if (Func.getParams().size() == 0) {
     return;
@@ -213,6 +233,8 @@ void EmitOffloadAPI(const RecordKeeper &Records, raw_ostream &OS) {
       ProcessEnum(EnumRec{R}, OS);
     } else if (R->isSubClassOf("Struct")) {
       ProcessStruct(StructRec{R}, OS);
+    } else if (R->isSubClassOf("FptrTypedef")) {
+      ProcessFptrTypedef(FptrTypedefRec{R}, OS);
     }
   }
 

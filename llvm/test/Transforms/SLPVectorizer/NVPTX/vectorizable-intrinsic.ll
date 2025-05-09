@@ -4,13 +4,17 @@
 target datalayout = "e-p:32:32-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx--nvidiacl"
 
-; Test that CTLZ can be vectorized currently even though the second argument is a scalar
-
+; Vector versions of the intrinsics are scalarized, so keep them scalar
 define <2 x i8> @cltz_test(<2 x i8> %x) #0 {
 ; CHECK-LABEL: define <2 x i8> @cltz_test(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[VEC:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[X]], i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i8> [[X]], i32 0
+; CHECK-NEXT:    [[CALL_I:%.*]] = call i8 @llvm.ctlz.i8(i8 [[TMP0]], i1 false)
+; CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <2 x i8> zeroinitializer, i8 [[CALL_I]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i8> [[X]], i32 1
+; CHECK-NEXT:    [[CALL_I4:%.*]] = call i8 @llvm.ctlz.i8(i8 [[TMP1]], i1 false)
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x i8> [[VECINIT]], i8 [[CALL_I4]], i32 1
 ; CHECK-NEXT:    ret <2 x i8> [[VEC]]
 ;
 entry:
@@ -28,7 +32,12 @@ define <2 x i8> @cltz_test_poison(<2 x i8> %x) #0 {
 ; CHECK-LABEL: define <2 x i8> @cltz_test_poison(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[VEC:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[X]], i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i8> [[X]], i32 0
+; CHECK-NEXT:    [[CALL_I:%.*]] = call i8 @llvm.ctlz.i8(i8 [[TMP0]], i1 false)
+; CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <2 x i8> poison, i8 [[CALL_I]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i8> [[X]], i32 1
+; CHECK-NEXT:    [[CALL_I4:%.*]] = call i8 @llvm.ctlz.i8(i8 [[TMP1]], i1 false)
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x i8> [[VECINIT]], i8 [[CALL_I4]], i32 1
 ; CHECK-NEXT:    ret <2 x i8> [[VEC]]
 ;
 entry:

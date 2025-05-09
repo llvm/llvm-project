@@ -29,14 +29,17 @@ namespace __locale {
 //
 // Character manipulation functions
 //
+#if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __islower(int __c, __locale_t) { return std::islower(__c); }
 
 inline _LIBCPP_HIDE_FROM_ABI int __isupper(int __c, __locale_t) { return std::isupper(__c); }
+#endif
 
 inline _LIBCPP_HIDE_FROM_ABI int __isdigit(int __c, __locale_t) { return std::isdigit(__c); }
 
 inline _LIBCPP_HIDE_FROM_ABI int __isxdigit(int __c, __locale_t) { return std::isxdigit(__c); }
 
+#if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __toupper(int __c, __locale_t) { return std::toupper(__c); }
 
 inline _LIBCPP_HIDE_FROM_ABI int __tolower(int __c, __locale_t) { return std::tolower(__c); }
@@ -49,7 +52,7 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __strxfrm(char* __dest, const char* __src, s
   return std::strxfrm(__dest, __src, __n);
 }
 
-#if _LIBCPP_HAS_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI int __iswctype(wint_t __c, wctype_t __type, __locale_t) {
   return std::iswctype(__c, __type);
 }
@@ -85,12 +88,13 @@ inline _LIBCPP_HIDE_FROM_ABI int __wcscoll(const wchar_t* __ws1, const wchar_t* 
 inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __src, size_t __n, __locale_t) {
   return std::wcsxfrm(__dest, __src, __n);
 }
-#endif // _LIBCPP_HAS_WIDE_CHARACTERS
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 inline _LIBCPP_HIDE_FROM_ABI size_t
 __strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t) {
   return std::strftime(__s, __max, __format, __tm);
 }
+#endif // _LIBCPP_BUILDING_LIBRARY
 
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD

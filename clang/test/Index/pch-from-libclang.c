@@ -18,7 +18,7 @@
 // RUN: c-index-test -test-load-source local %s -include %t.clang.h -fmodules -fmodules-cache-path=%t.mcp -Xclang -triple -Xclang x86_64-apple-darwin | FileCheck %s
 
 // FIXME: Still fails on at least some linux boxen.
-// REQUIRES: system-darwin
+// REQUIRES: system-darwin && target={{.*}}-{{darwin|macos}}{{.*}}
 
 #ifndef HEADER
 #define HEADER

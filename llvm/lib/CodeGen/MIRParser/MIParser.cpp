@@ -66,7 +66,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <cctype>
@@ -1477,6 +1476,7 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
          Token.is(MIToken::kw_unpredictable) ||
          Token.is(MIToken::kw_nneg) ||
          Token.is(MIToken::kw_disjoint) ||
+         Token.is(MIToken::kw_nusw) ||
          Token.is(MIToken::kw_samesign)) {
     // clang-format on
     // Mine frame and fast math flags
@@ -1514,6 +1514,8 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
       Flags |= MachineInstr::NonNeg;
     if (Token.is(MIToken::kw_disjoint))
       Flags |= MachineInstr::Disjoint;
+    if (Token.is(MIToken::kw_nusw))
+      Flags |= MachineInstr::NoUSWrap;
     if (Token.is(MIToken::kw_samesign))
       Flags |= MachineInstr::SameSign;
 
@@ -2330,6 +2332,8 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
   MDNode *Scope = nullptr;
   MDNode *InlinedAt = nullptr;
   bool ImplicitCode = false;
+  uint64_t AtomGroup = 0;
+  uint64_t AtomRank = 0;
 
   if (expectAndConsume(MIToken::lparen))
     return true;
@@ -2404,6 +2408,28 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
           lex();
           continue;
         }
+        if (Token.stringValue() == "atomGroup") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (Token.isNot(MIToken::IntegerLiteral) ||
+              Token.integerValue().isSigned())
+            return error("expected unsigned integer");
+          AtomGroup = Token.integerValue().getZExtValue();
+          lex();
+          continue;
+        }
+        if (Token.stringValue() == "atomRank") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (Token.isNot(MIToken::IntegerLiteral) ||
+              Token.integerValue().isSigned())
+            return error("expected unsigned integer");
+          AtomRank = Token.integerValue().getZExtValue();
+          lex();
+          continue;
+        }
       }
       return error(Twine("invalid DILocation argument '") +
                    Token.stringValue() + "'");
@@ -2419,7 +2445,7 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
     return error("DILocation requires a scope");
 
   Loc = DILocation::get(MF.getFunction().getContext(), Line, Column, Scope,
-                        InlinedAt, ImplicitCode);
+                        InlinedAt, ImplicitCode, AtomGroup, AtomRank);
   return false;
 }
 
@@ -2669,13 +2695,8 @@ bool MIParser::parseIntrinsicOperand(MachineOperand &Dest) {
   if (expectAndConsume(MIToken::rparen))
     return error("expected ')' to terminate intrinsic name");
 
-  // Find out what intrinsic we're dealing with, first try the global namespace
-  // and then the target's private intrinsics if that fails.
-  const TargetIntrinsicInfo *TII = MF.getTarget().getIntrinsicInfo();
+  // Find out what intrinsic we're dealing with.
   Intrinsic::ID ID = Intrinsic::lookupIntrinsicID(Name);
-  if (ID == Intrinsic::not_intrinsic && TII)
-    ID = static_cast<Intrinsic::ID>(TII->lookupName(Name));
-
   if (ID == Intrinsic::not_intrinsic)
     return error("unknown intrinsic name");
   Dest = MachineOperand::CreateIntrinsicID(ID);
@@ -2834,7 +2855,7 @@ bool MIParser::parseCustomRegisterMaskOperand(MachineOperand &Dest) {
       if (parseNamedRegister(Reg))
         return true;
       lex();
-      Mask[Reg / 32] |= 1U << (Reg % 32);
+      Mask[Reg.id() / 32] |= 1U << (Reg.id() % 32);
     }
 
     // TODO: Report an error if the same register is used more than once.
@@ -2859,7 +2880,7 @@ bool MIParser::parseLiveoutRegisterMaskOperand(MachineOperand &Dest) {
     if (parseNamedRegister(Reg))
       return true;
     lex();
-    Mask[Reg / 32] |= 1U << (Reg % 32);
+    Mask[Reg.id() / 32] |= 1U << (Reg.id() % 32);
     // TODO: Report an error if the same register is used more than once.
     if (Token.isNot(MIToken::comma))
       break;

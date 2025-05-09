@@ -101,6 +101,9 @@ _start:
 # CHECK-ALL-NEXT:      - Name:            __table_base
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           10
+# CHECK-ALL-NEXT:      - Name:            __wasm_first_page_end
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           11
 # CHECK-ALL-NEXT:  - Type:            CODE
 
 # CHECK-ALL:         Name:            target_features
@@ -110,4 +113,3 @@ _start:
 # CHECK-ALL-NEXT:      - Prefix:          USED
 # CHECK-ALL-NEXT:        Name:            mutable-globals
 # CHECK-ALL-NEXT: ...
-

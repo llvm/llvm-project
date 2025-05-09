@@ -131,7 +131,7 @@ bool FoldingSetNodeID::operator<(FoldingSetNodeIDRef RHS) const {
 FoldingSetNodeIDRef
 FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
   unsigned *New = Allocator.Allocate<unsigned>(Bits.size());
-  std::uninitialized_copy(Bits.begin(), Bits.end(), New);
+  llvm::uninitialized_copy(Bits, New);
   return FoldingSetNodeIDRef(New, Bits.size());
 }
 
@@ -142,7 +142,7 @@ FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
 /// singly-linked-list. In order to make deletion more efficient, we make
 /// the list circular, so we can delete a node without computing its hash.
 /// The problem with this is that the start of the hash buckets are not
-/// Nodes.  If NextInBucketPtr is a bucket pointer, this method returns null:
+/// Nodes. If NextInBucketPtr is a bucket pointer, this method returns null:
 /// use GetBucketPtr when this happens.
 static FoldingSetBase::Node *GetNextPtr(void *NextInBucketPtr) {
   // The low bit is set if this is the pointer back to the bucket.

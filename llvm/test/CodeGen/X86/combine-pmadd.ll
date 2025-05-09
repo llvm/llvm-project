@@ -51,11 +51,9 @@ define <8 x i32> @combine_pmaddwd_concat(<8 x i16> %a0, <8 x i16> %a1, <8 x i16>
 ;
 ; AVX2-LABEL: combine_pmaddwd_concat:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpmaddwd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpmaddwd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmaddwd %xmm3, %xmm2, %xmm1
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a0, <8 x i16> %a1)
   %2 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a2, <8 x i16> %a3)
@@ -179,28 +177,57 @@ define <8 x i16> @combine_pmaddubsw_zero_commute(<16 x i8> %a0, <16 x i8> %a1) {
   ret <8 x i16> %1
 }
 
-define <16 x i16> @combine_pmaddubsw_concat(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2, <16 x i8> %a3) {
+define <16 x i16> @combine_pmaddubsw_concat(<32 x i8> %a0, <32 x i8> %a1) {
 ; SSE-LABEL: combine_pmaddubsw_concat:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmaddubsw %xmm2, %xmm0
+; SSE-NEXT:    pmaddubsw %xmm3, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_pmaddubsw_concat:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpmaddubsw %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_pmaddubsw_concat:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %lo0 = shufflevector <32 x i8> %a0, <32 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %lo1 = shufflevector <32 x i8> %a1, <32 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %hi0 = shufflevector <32 x i8> %a0, <32 x i8> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %hi1 = shufflevector <32 x i8> %a1, <32 x i8> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %lo = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %lo0, <16 x i8> %lo1)
+  %hi = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %hi0, <16 x i8> %hi1)
+  %res = shufflevector <8 x i16> %lo, <8 x i16> %hi, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i16> %res
+}
+
+; Not beneficial to concatenate both inputs just to create a 256-bit pmaddubsw
+define <16 x i16> @combine_pmaddubsw_concat_unecessary(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2, <16 x i8> %a3) {
+; SSE-LABEL: combine_pmaddubsw_concat_unecessary:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pmaddubsw %xmm1, %xmm0
 ; SSE-NEXT:    pmaddubsw %xmm3, %xmm2
 ; SSE-NEXT:    movdqa %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: combine_pmaddubsw_concat:
+; AVX1-LABEL: combine_pmaddubsw_concat_unecessary:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmaddubsw %xmm3, %xmm2, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: combine_pmaddubsw_concat:
+; AVX2-LABEL: combine_pmaddubsw_concat_unecessary:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmaddubsw %xmm3, %xmm2, %xmm1
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %1 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %a0, <16 x i8> %a1)
   %2 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %a2, <16 x i8> %a3)

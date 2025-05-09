@@ -18,4 +18,4 @@ Options
 .. option:: IgnoredContainers
 
    Semicolon-separated list of containers regexp for which this check won't be
-   enforced. Default is `empty`.
+   enforced. Default is an empty string.

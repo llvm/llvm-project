@@ -27,7 +27,7 @@
 ; CHECK-INTERESTINGNESS: = fadd <2 x float>
 ; CHECK-INTERESTINGNESS: = fadd <2 x float>
 
-; CHECK-LABEL: define void @foo(
+; CHECK-LABEL: define {{(void|<2 x float>)}} @foo(
 
 
 ; ONE: %fadd0 = fadd float %arg0, 1.000000e+00

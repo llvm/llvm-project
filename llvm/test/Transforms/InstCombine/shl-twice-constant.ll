@@ -14,3 +14,14 @@ define i64 @testfunc() {
   %shl2 = shl i64 %shl1, ptrtoint (ptr @c to i64)
   ret i64 %shl2
 }
+
+define <vscale x 1 x i64> @scalable() {
+; CHECK-LABEL: @scalable(
+; CHECK-NEXT:    [[SHL1:%.*]] = shl nuw <vscale x 1 x i64> splat (i64 1), shufflevector (<vscale x 1 x i64> insertelement (<vscale x 1 x i64> poison, i64 ptrtoint (ptr @c2 to i64), i64 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[SHL2:%.*]] = shl <vscale x 1 x i64> [[SHL1]], shufflevector (<vscale x 1 x i64> insertelement (<vscale x 1 x i64> poison, i64 ptrtoint (ptr @c to i64), i64 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[SHL2]]
+;
+  %shl1 = shl <vscale x 1 x i64> splat (i64 1), splat (i64 ptrtoint (ptr @c2 to i64))
+  %shl2 = shl <vscale x 1 x i64> %shl1, splat (i64 ptrtoint (ptr @c to i64))
+  ret <vscale x 1 x i64> %shl2
+}

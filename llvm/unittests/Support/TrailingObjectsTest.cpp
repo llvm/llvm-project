@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/TrailingObjects.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -23,17 +25,16 @@ class Class1 final : protected TrailingObjects<Class1, short> {
 protected:
   size_t numTrailingObjects(OverloadToken<short>) const { return NumShorts; }
 
-  Class1(int *ShortArray, unsigned NumShorts) : NumShorts(NumShorts) {
-    std::uninitialized_copy(ShortArray, ShortArray + NumShorts,
-                            getTrailingObjects<short>());
+  Class1(ArrayRef<int> ShortArray) : NumShorts(ShortArray.size()) {
+    llvm::copy(ShortArray, getTrailingObjects<short>());
   }
 
 public:
-  static Class1 *create(int *ShortArray, unsigned NumShorts) {
-    void *Mem = ::operator new(totalSizeToAlloc<short>(NumShorts));
-    return new (Mem) Class1(ShortArray, NumShorts);
+  static Class1 *create(ArrayRef<int> ShortArray) {
+    void *Mem = ::operator new(totalSizeToAlloc<short>(ShortArray.size()));
+    return new (Mem) Class1(ShortArray);
   }
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   short get(unsigned Num) const { return getTrailingObjects<short>()[Num]; }
 
@@ -81,7 +82,7 @@ public:
       *C->getTrailingObjects<double>() = D;
     return C;
   }
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   short getShort() const {
     if (!HasShort)
@@ -106,7 +107,7 @@ public:
 
 TEST(TrailingObjects, OneArg) {
   int arr[] = {1, 2, 3};
-  Class1 *C = Class1::create(arr, 3);
+  Class1 *C = Class1::create(arr);
   EXPECT_EQ(sizeof(Class1), sizeof(unsigned));
   EXPECT_EQ(Class1::additionalSizeToAlloc<short>(1), sizeof(short));
   EXPECT_EQ(Class1::additionalSizeToAlloc<short>(3), sizeof(short) * 3);

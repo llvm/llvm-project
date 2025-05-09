@@ -173,6 +173,14 @@ private:
 
   Qualifiers demanglePointerExtQualifiers(std::string_view &MangledName);
 
+  bool isMemberPointer(std::string_view MangledName, bool &Error);
+
+  std::optional<PointerAuthQualifierNode::ArgArray>
+  demanglePointerAuthQualifier(std::string_view &MangledName);
+
+  PointerAuthQualifierNode *
+  createPointerAuthQualifier(std::string_view &MangledName);
+
   // Parser functions. This is a recursive-descent parser.
   TypeNode *demangleType(std::string_view &MangledName,
                          QualifierMangleMode QMM);

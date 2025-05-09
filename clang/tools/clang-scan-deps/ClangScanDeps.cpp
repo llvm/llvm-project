@@ -23,6 +23,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -31,6 +32,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -85,8 +87,9 @@ static std::string ModuleFilesDir;
 static bool EagerLoadModules;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
-static std::string ModuleName;
+static std::optional<std::string> ModuleName;
 static std::vector<std::string> ModuleDepTargets;
+static std::string TranslationUnitFile;
 static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
@@ -164,6 +167,8 @@ static void ParseArgs(int argc, char **argv) {
             .Case("system-warnings", ScanningOptimizations::SystemWarnings)
             .Case("vfs", ScanningOptimizations::VFS)
             .Case("canonicalize-macros", ScanningOptimizations::Macros)
+            .Case("ignore-current-working-dir",
+                  ScanningOptimizations::IgnoreCWD)
             .Case("all", ScanningOptimizations::All)
             .Default(std::nullopt);
     if (!Optimization) {
@@ -203,6 +208,9 @@ static void ParseArgs(int argc, char **argv) {
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_dependency_target_EQ))
     ModuleDepTargets.emplace_back(A->getValue());
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_tu_buffer_path_EQ))
+    TranslationUnitFile = A->getValue();
 
   DeprecatedDriverCommand = Args.hasArg(OPT_deprecated_driver_command);
 
@@ -290,18 +298,19 @@ public:
     };
     if (llvm::sys::ExecuteAndWait(ClangBinaryPath, PrintResourceDirArgs, {},
                                   Redirects)) {
-      auto ErrorBuf = llvm::MemoryBuffer::getFile(ErrorFile.c_str());
+      auto ErrorBuf =
+          llvm::MemoryBuffer::getFile(ErrorFile.c_str(), /*IsText=*/true);
       llvm::errs() << ErrorBuf.get()->getBuffer();
       return "";
     }
 
-    auto OutputBuf = llvm::MemoryBuffer::getFile(OutputFile.c_str());
+    auto OutputBuf =
+        llvm::MemoryBuffer::getFile(OutputFile.c_str(), /*IsText=*/true);
     if (!OutputBuf)
       return "";
     StringRef Output = OutputBuf.get()->getBuffer().rtrim('\n');
 
-    Cache[ClangBinaryPath] = Output.str();
-    return Cache[ClangBinaryPath];
+    return Cache[ClangBinaryPath] = Output.str();
   }
 
 private:
@@ -341,16 +350,32 @@ static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings) {
   };
 }
 
+static auto toJSONModuleID(llvm::json::OStream &JOS, StringRef ContextHash,
+                           StringRef ModuleName, bool Exported) {
+  return JOS.object([&] {
+    JOS.attribute("context-hash", StringRef(ContextHash));
+    JOS.attribute("module-name", StringRef(ModuleName));
+    if (Exported)
+      JOS.attribute("exported", StringRef("true"));
+  });
+}
+
 // Technically, we don't need to sort the dependency list to get determinism.
 // Leaving these be will simply preserve the import order.
 static auto toJSONSorted(llvm::json::OStream &JOS, std::vector<ModuleID> V) {
   llvm::sort(V);
   return [&JOS, V = std::move(V)] {
-    for (const ModuleID &MID : V)
-      JOS.object([&] {
-        JOS.attribute("context-hash", StringRef(MID.ContextHash));
-        JOS.attribute("module-name", StringRef(MID.ModuleName));
-      });
+    for (const auto &MID : V)
+      toJSONModuleID(JOS, MID.ContextHash, MID.ModuleName, false);
+  };
+}
+
+static auto toJSONSorted(llvm::json::OStream &JOS,
+                         std::vector<ModuleDeps::DepInfo> V) {
+  llvm::sort(V);
+  return [&JOS, V = std::move(V)] {
+    for (const ModuleDeps::DepInfo &MID : V)
+      toJSONModuleID(JOS, MID.ID.ContextHash, MID.ID.ModuleName, MID.Exported);
   };
 }
 
@@ -462,6 +487,9 @@ public:
         for (auto &&ModID : ModuleIDs) {
           auto &MD = Modules[ModID];
           JOS.object([&] {
+            if (MD.IsInStableDirectories)
+              JOS.attribute("is-in-stable-directories",
+                            MD.IsInStableDirectories);
             JOS.attributeArray("clang-module-deps",
                                toJSONSorted(JOS, MD.ClangModuleDeps));
             JOS.attribute("clang-modulemap-file",
@@ -697,9 +725,10 @@ static std::string constructPCMPath(ModuleID MID, StringRef OutputDir) {
   return std::string(ExplicitPCMPath);
 }
 
-static std::string lookupModuleOutput(const ModuleID &MID, ModuleOutputKind MOK,
+static std::string lookupModuleOutput(const ModuleDeps &MD,
+                                      ModuleOutputKind MOK,
                                       StringRef OutputDir) {
-  std::string PCMPath = constructPCMPath(MID, OutputDir);
+  std::string PCMPath = constructPCMPath(MD.ID, OutputDir);
   switch (MOK) {
   case ModuleOutputKind::ModuleFile:
     return PCMPath;
@@ -916,7 +945,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     FileOS.emplace(OutputFileName, EC, llvm::sys::fs::OF_Text);
     if (EC) {
       llvm::errs() << "Failed to open output file '" << OutputFileName
-                   << "': " << llvm::errorCodeToError(EC) << '\n';
+                   << "': " << EC.message() << '\n';
       std::exit(1);
     }
     return *FileOS;
@@ -940,7 +969,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   };
 
   if (Format == ScanningOutputFormat::Full)
-    FD.emplace(ModuleName.empty() ? Inputs.size() : 0);
+    FD.emplace(!ModuleName ? Inputs.size() : 0);
 
   std::atomic<size_t> NumStatusCalls = 0;
   std::atomic<size_t> NumOpenFileForReadCalls = 0;
@@ -959,15 +988,11 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       std::string Filename = std::move(Input->Filename);
       std::string CWD = std::move(Input->Directory);
 
-      std::optional<StringRef> MaybeModuleName;
-      if (!ModuleName.empty())
-        MaybeModuleName = ModuleName;
-
       std::string OutputDir(ModuleFilesDir);
       if (OutputDir.empty())
         OutputDir = getModuleCachePath(Input->CommandLine);
-      auto LookupOutput = [&](const ModuleID &MID, ModuleOutputKind MOK) {
-        return ::lookupModuleOutput(MID, MOK, OutputDir);
+      auto LookupOutput = [&](const ModuleDeps &MD, ModuleOutputKind MOK) {
+        return ::lookupModuleOutput(MD, MOK, OutputDir);
       };
 
       // Run the tool on it.
@@ -1018,16 +1043,32 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                                              MakeformatOS, Errs))
             HadErrors = true;
         }
-      } else if (MaybeModuleName) {
+      } else if (ModuleName) {
         auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
-            *MaybeModuleName, Input->CommandLine, CWD, AlreadySeenModules,
+            *ModuleName, Input->CommandLine, CWD, AlreadySeenModules,
             LookupOutput);
-        if (handleModuleResult(*MaybeModuleName, MaybeModuleDepsGraph, *FD,
+        if (handleModuleResult(*ModuleName, MaybeModuleDepsGraph, *FD,
                                LocalIndex, DependencyOS, Errs))
           HadErrors = true;
       } else {
+        std::unique_ptr<llvm::MemoryBuffer> TU;
+        std::optional<llvm::MemoryBufferRef> TUBuffer;
+        if (!TranslationUnitFile.empty()) {
+          auto MaybeTU =
+              llvm::MemoryBuffer::getFile(TranslationUnitFile, /*IsText=*/true);
+          if (!MaybeTU) {
+            llvm::errs() << "cannot open input translation unit: "
+                         << MaybeTU.getError().message() << "\n";
+            HadErrors = true;
+            continue;
+          }
+          TU = std::move(*MaybeTU);
+          TUBuffer = TU->getMemBufferRef();
+          Filename = TU->getBufferIdentifier();
+        }
         auto MaybeTUDeps = WorkerTool.getTranslationUnitDependencies(
-            Input->CommandLine, CWD, AlreadySeenModules, LookupOutput);
+            Input->CommandLine, CWD, AlreadySeenModules, LookupOutput,
+            TUBuffer);
         if (handleTranslationUnitResult(Filename, MaybeTUDeps, *FD, LocalIndex,
                                         DependencyOS, Errs))
           HadErrors = true;

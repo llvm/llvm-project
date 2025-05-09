@@ -2403,7 +2403,7 @@ define <4 x float> @shuffle_mem_pmovzx_v4f32(ptr %p0, ptr %p1) {
 ; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vunpckhps {{.*#+}} xmm1 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; AVX1-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX1-NEXT:    retq
 ;

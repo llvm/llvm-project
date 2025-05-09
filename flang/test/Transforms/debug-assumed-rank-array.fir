@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @_QFPfn(%arg0: !fir.box<!fir.array<*:i32>> )  {
     %1 = fir.undefined !fir.dscope
     %2 = fircg.ext_declare %arg0 dummy_scope %1 {uniq_name = "_QFFfnEx"} : (!fir.box<!fir.array<*:i32>>, !fir.dscope) -> !fir.box<!fir.array<*:i32>> loc(#loc2)

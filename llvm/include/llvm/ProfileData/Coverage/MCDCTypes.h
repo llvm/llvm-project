@@ -13,6 +13,7 @@
 #ifndef LLVM_PROFILEDATA_COVERAGE_MCDCTYPES_H
 #define LLVM_PROFILEDATA_COVERAGE_MCDCTYPES_H
 
+#include "llvm/Support/DataTypes.h"
 #include <array>
 #include <cassert>
 #include <type_traits>

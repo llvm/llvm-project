@@ -1,0 +1,19 @@
+macros:
+  - macro_name: MACRO_A
+    macro_value: 1
+types:
+  - type_name: type_a
+enums:
+  - name: enum_a
+    value: value_1
+objects:
+  - object_name: object_1
+    object_type: obj
+functions:
+  - name: func_a
+    return_type: void
+    arguments: []
+    standards:
+      - stdc
+    attributes:
+      - CONST_FUNC_A

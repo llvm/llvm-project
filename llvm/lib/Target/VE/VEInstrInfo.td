@@ -1794,10 +1794,10 @@ multiclass ATMLDm<SDPatternOperator from,
   def : Pat<(iAny (from ADDRzri:$addr)), (tozri MEMzri:$addr)>;
   def : Pat<(iAny (from ADDRzii:$addr)), (tozii MEMzii:$addr)>;
 }
-defm : ATMLDm<atomic_load_8, LD1BZXrri, LD1BZXrii, LD1BZXzri, LD1BZXzii>;
-defm : ATMLDm<atomic_load_16, LD2BZXrri, LD2BZXrii, LD2BZXzri, LD2BZXzii>;
-defm : ATMLDm<atomic_load_32, LDLZXrri, LDLZXrii, LDLZXzri, LDLZXzii>;
-defm : ATMLDm<atomic_load_64, LDrri, LDrii, LDzri, LDzii>;
+defm : ATMLDm<atomic_load_aext_8, LD1BZXrri, LD1BZXrii, LD1BZXzri, LD1BZXzii>;
+defm : ATMLDm<atomic_load_aext_16, LD2BZXrri, LD2BZXrii, LD2BZXzri, LD2BZXzii>;
+defm : ATMLDm<atomic_load_nonext_32, LDLZXrri, LDLZXrii, LDLZXzri, LDLZXzii>;
+defm : ATMLDm<atomic_load_nonext_64, LDrri, LDrii, LDzri, LDzii>;
 
 // Optimized atomic loads with sext
 multiclass SXATMLDm<SDPatternOperator from, ValueType TY,
@@ -1824,10 +1824,10 @@ multiclass SXATMLD32m<SDPatternOperator from,
   def : Pat<(i64 (sext (from ADDRzii:$addr))),
             (i2l (tozii MEMzii:$addr))>;
 }
-defm : SXATMLDm<atomic_load_8, i8, LD1BSXrri, LD1BSXrii, LD1BSXzri, LD1BSXzii>;
-defm : SXATMLDm<atomic_load_16, i16, LD2BSXrri, LD2BSXrii, LD2BSXzri,
+defm : SXATMLDm<atomic_load_aext_8, i8, LD1BSXrri, LD1BSXrii, LD1BSXzri, LD1BSXzii>;
+defm : SXATMLDm<atomic_load_aext_16, i16, LD2BSXrri, LD2BSXrii, LD2BSXzri,
                 LD2BSXzii>;
-defm : SXATMLD32m<atomic_load_32, LDLSXrri, LDLSXrii, LDLSXzri, LDLSXzii>;
+defm : SXATMLD32m<atomic_load_nonext_32, LDLSXrri, LDLSXrii, LDLSXzri, LDLSXzii>;
 
 // Optimized atomic loads with zext
 multiclass ZXATMLDm<SDPatternOperator from, int VAL,
@@ -1854,11 +1854,11 @@ multiclass ZXATMLD32m<SDPatternOperator from,
   def : Pat<(i64 (zext (from ADDRzii:$addr))),
             (i2l (tozii MEMzii:$addr))>;
 }
-defm : ZXATMLDm<atomic_load_8, 0xFF, LD1BZXrri, LD1BZXrii, LD1BZXzri,
+defm : ZXATMLDm<atomic_load_aext_8, 0xFF, LD1BZXrri, LD1BZXrii, LD1BZXzri,
                 LD1BZXzii>;
-defm : ZXATMLDm<atomic_load_16, 0xFFFF, LD2BZXrri, LD2BZXrii, LD2BZXzri,
+defm : ZXATMLDm<atomic_load_aext_16, 0xFFFF, LD2BZXrri, LD2BZXrii, LD2BZXzri,
                 LD2BZXzii>;
-defm : ZXATMLD32m<atomic_load_32, LDLZXrri, LDLZXrii, LDLZXzri, LDLZXzii>;
+defm : ZXATMLD32m<atomic_load_nonext_32, LDLZXrri, LDLZXrii, LDLZXzri, LDLZXzii>;
 
 // Atomic stores
 multiclass ATMSTm<SDPatternOperator from, ValueType ty,

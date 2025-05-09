@@ -16,15 +16,14 @@
 #ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTASK_H
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTASK_H
 
-#include <mach/mach.h>
-#include <sys/socket.h>
-#include <map>
-#include <string>
 #include "DNBDefs.h"
-#include "RNBContext.h"
 #include "MachException.h"
 #include "MachVMMemory.h"
-#include "PThreadMutex.h"
+#include "RNBContext.h"
+#include <mach/mach.h>
+#include <map>
+#include <string>
+#include <sys/socket.h>
 
 class MachProcess;
 

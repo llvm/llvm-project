@@ -67,7 +67,7 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
   std::string Status;
   llvm::Triple triple = arch.GetTriple();
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple.getTriple(), Status);
+      llvm::TargetRegistry::lookupTarget(triple, Status);
 
 /*
  * If we fail to get the target then we haven't registered it. The
@@ -84,7 +84,7 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
     LLVMInitializeMipsAsmPrinter();
     LLVMInitializeMipsTargetMC();
     LLVMInitializeMipsDisassembler();
-    target = llvm::TargetRegistry::lookupTarget(triple.getTriple(), Status);
+    target = llvm::TargetRegistry::lookupTarget(triple, Status);
   }
 #endif
 
@@ -1128,16 +1128,16 @@ bool EmulateInstructionMIPS::CreateFunctionEntryUnwind(
   unwind_plan.Clear();
   unwind_plan.SetRegisterKind(eRegisterKindDWARF);
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
   const bool can_replace = false;
 
   // Our previous Call Frame Address is the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_sp_mips, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_sp_mips, 0);
 
   // Our previous PC is in the RA
-  row->SetRegisterLocationToRegister(dwarf_pc_mips, dwarf_ra_mips, can_replace);
+  row.SetRegisterLocationToRegister(dwarf_pc_mips, dwarf_ra_mips, can_replace);
 
-  unwind_plan.AppendRow(row);
+  unwind_plan.AppendRow(std::move(row));
 
   // All other registers are the same.
   unwind_plan.SetSourceName("EmulateInstructionMIPS");

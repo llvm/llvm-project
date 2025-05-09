@@ -107,7 +107,7 @@ define amdgpu_kernel void @s_trunc_srl_i64_16_to_i16(i64 %x) {
   %shift = lshr i64 %x, 16
   %trunc = trunc i64 %shift to i16
   %add = or i16 %trunc, 4
-  store i16 %add, ptr addrspace(1) undef
+  store i16 %add, ptr addrspace(1) poison
   ret void
 }
 

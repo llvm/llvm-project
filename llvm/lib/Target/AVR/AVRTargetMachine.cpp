@@ -92,6 +92,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
   RegisterTargetMachine<AVRTargetMachine> X(getTheAVRTarget());
 
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeAVRAsmPrinterPass(PR);
   initializeAVRExpandPseudoPass(PR);
   initializeAVRShiftExpandPass(PR);
   initializeAVRDAGToDAGISelLegacyPass(PR);

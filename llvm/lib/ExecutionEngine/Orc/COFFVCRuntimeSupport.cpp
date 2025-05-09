@@ -86,8 +86,7 @@ Error COFFVCRuntimeBootstrapper::loadVCRuntime(
     if (!G)
       return G.takeError();
 
-    for (auto &Lib : (*G)->getImportedDynamicLibraries())
-      ImportedLibraries.push_back(Lib);
+    llvm::append_range(ImportedLibraries, (*G)->getImportedDynamicLibraries());
 
     JD.addGenerator(std::move(*G));
 

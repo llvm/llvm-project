@@ -5,9 +5,8 @@ what goes in or not.
 
 The list is sorted by surname and formatted to allow easy grepping and
 beautification by scripts. The fields are: name (N), email (E), web-address
-(W), PGP key ID and fingerprint (P), description (D), snail-mail address
-(S) and (I) IRC handle. Each entry should contain at least the (N), (E) and
-(D) fields.
+(W), PGP key ID and fingerprint (P), and description (D). Each entry should
+contain at least the (N), (E) and (D) fields.
 
 N: Maksim Panchenko, Rafael Auler
 E: maks@fb.com, rafaelauler@fb.com

@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir %s  -split-input-file --verify-diagnostics | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // CHECK-LABEL: @convert_float_to_tf32_rna
 llvm.func @convert_float_to_tf32_rna(%src : f32) -> i32 {

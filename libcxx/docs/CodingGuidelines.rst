@@ -36,7 +36,7 @@ Function overloading also applies to operators. Using ``&user_object`` may call 
       ...
     }
 
-This is mostly enforced by the clang-tidy checks ``libcpp-robust-against-adl`` and ``libcpp-qualify-declval``.
+This is mostly enforced by the clang-tidy check ``libcpp-robust-against-adl``.
 
 Avoid including public headers
 ==============================
@@ -191,6 +191,7 @@ Library-internal type aliases should be annotated with ``_LIBCPP_NODEBUG``
 Libc++ has lots of internal type aliases. Accumulated, these can result in significant amounts of debug information that
 users generally don't care about, since users don't try to debug standard library facilities in most cases. For that
 reason, all library-internal type aliases that aren't function-local should be annotated with ``_LIBCPP_NODEBUG`` to
-prevent compilers from generating said debug information.
+prevent compilers from generating said debug information. Aliases inside type traits (i.e. aliases named ``type``)
+should be annotated for the same reason.
 
 This is enforced by the clang-tidy check ``libcpp-nodebug-on-aliases``.

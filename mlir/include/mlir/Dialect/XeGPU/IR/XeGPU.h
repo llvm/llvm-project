@@ -25,12 +25,14 @@ class TensorDescType;
 } // namespace xegpu
 } // namespace mlir
 
-#include <mlir/Dialect/XeGPU/IR/XeGPUDialect.h.inc>
 #include <mlir/Dialect/XeGPU/IR/XeGPUEnums.h.inc>
 #define GET_ATTRDEF_CLASSES
 #include <mlir/Dialect/XeGPU/IR/XeGPUAttrs.h.inc>
 #define GET_TYPEDEF_CLASSES
 #include <mlir/Dialect/XeGPU/IR/XeGPUTypes.h.inc>
+
+#include <mlir/Dialect/XeGPU/IR/XeGPUDialect.h.inc>
+
 #define GET_OP_CLASSES
 #include <mlir/Dialect/XeGPU/IR/XeGPU.h.inc>
 

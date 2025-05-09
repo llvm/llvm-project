@@ -14,6 +14,9 @@
 // Two values p1 and p2 of type pair<T, U> are template-argument-equivalent ([temp.type]) if and only if
 // p1.first and p2.first are template-argument-equivalent and p1.second and p2.second are template-argument-equivalent.
 
+// This deprecated ABI switch makes pair a non-structural type.
+// XFAIL: libcpp-deprecated-abi-disable-pair-trivial-copy-ctor
+
 #include <utility>
 
 #include <type_traits>

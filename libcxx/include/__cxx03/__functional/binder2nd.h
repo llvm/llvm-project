@@ -19,8 +19,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS)
-
 template <class _Operation>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 binder2nd
     : public __unary_function<typename _Operation::first_argument_type, typename _Operation::result_type> {
@@ -46,8 +44,6 @@ _LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_HIDE_FROM_ABI binder2nd<_Operation>
 bind2nd(const _Operation& __op, const _Tp& __x) {
   return binder2nd<_Operation>(__op, __x);
 }
-
-#endif // _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS)
 
 _LIBCPP_END_NAMESPACE_STD
 

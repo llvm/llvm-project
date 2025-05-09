@@ -193,7 +193,8 @@ void ento::createHTMLDiagnosticConsumer(
   if (OutputDir.empty())
     return;
 
-  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, true));
+  C.emplace_back(std::make_unique<HTMLDiagnostics>(std::move(DiagOpts),
+                                                   OutputDir, PP, true));
 }
 
 void ento::createHTMLSingleFileDiagnosticConsumer(
@@ -208,7 +209,8 @@ void ento::createHTMLSingleFileDiagnosticConsumer(
   if (OutputDir.empty())
     return;
 
-  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, false));
+  C.emplace_back(std::make_unique<HTMLDiagnostics>(std::move(DiagOpts),
+                                                   OutputDir, PP, false));
 }
 
 void ento::createPlistHTMLDiagnosticConsumer(

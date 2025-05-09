@@ -179,7 +179,7 @@ class ClassTypesTestCase(TestBase):
         self.expect(
             "expression this->m_c_int",
             VARIABLES_DISPLAYED_CORRECTLY,
-            patterns=["\(int\) \$[0-9]+ = 66"],
+            patterns=[r"\(int\) \$[0-9]+ = 66"],
         )
 
     def test_with_constructor_name(self):

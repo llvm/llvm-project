@@ -3,6 +3,13 @@
 
 # Test that the loop carried dependence check correctly identifies a recurrence.
 
+# CHECK: Overlap check:
+# CHECK-NEXT:   BaseMI:   S2_storerh_io %{{[0-9]+}}:intregs, 0, %{{[0-9]+}}:intregs :: (store (s16) into %ir.lsr.iv24)
+# CHECK-NEXT:     Base + 0 + I * 4, Len: 2
+# CHECK-NEXT:   OtherMI:   %{{[0-9]+}}:intregs = L2_loadrh_io %{{[0-9]+}}:intregs, -8 :: (load (s16) from %ir.cgep10)
+# CHECK-NEXT:     Base + -8 + I * 4, Len: 2
+# CHECK-NEXT:   Result: Overlap
+
 # CHECK: Rec NodeSet
 # CHECK: Rec NodeSet
 # CHECK: Rec NodeSet

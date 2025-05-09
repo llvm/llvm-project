@@ -53,4 +53,7 @@ TARGET_OS(TARGET_OS_NANO, Triple.isWatchOS())
 TARGET_OS(TARGET_IPHONE_SIMULATOR, Triple.isSimulatorEnvironment())
 TARGET_OS(TARGET_OS_UIKITFORMAC, Triple.isMacCatalystEnvironment())
 
+// UEFI target.
+TARGET_OS(TARGET_OS_UEFI, Triple.isUEFI())
+
 #undef TARGET_OS

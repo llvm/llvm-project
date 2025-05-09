@@ -47,6 +47,37 @@ static std::string convertToString(double d, unsigned Prec, unsigned Pad,
   return std::string(Buffer.data(), Buffer.size());
 }
 
+namespace llvm {
+namespace detail {
+class IEEEFloatUnitTestHelper {
+public:
+  static void runTest(bool subtract, bool lhsSign,
+                      APFloat::ExponentType lhsExponent,
+                      APFloat::integerPart lhsSignificand, bool rhsSign,
+                      APFloat::ExponentType rhsExponent,
+                      APFloat::integerPart rhsSignificand, bool expectedSign,
+                      APFloat::ExponentType expectedExponent,
+                      APFloat::integerPart expectedSignificand,
+                      lostFraction expectedLoss) {
+    // `addOrSubtractSignificand` only uses the sign, exponent and significand
+    IEEEFloat lhs(1.0);
+    lhs.sign = lhsSign;
+    lhs.exponent = lhsExponent;
+    lhs.significand.part = lhsSignificand;
+    IEEEFloat rhs(1.0);
+    rhs.sign = rhsSign;
+    rhs.exponent = rhsExponent;
+    rhs.significand.part = rhsSignificand;
+    lostFraction resultLoss = lhs.addOrSubtractSignificand(rhs, subtract);
+    EXPECT_EQ(resultLoss, expectedLoss);
+    EXPECT_EQ(lhs.sign, expectedSign);
+    EXPECT_EQ(lhs.exponent, expectedExponent);
+    EXPECT_EQ(lhs.significand.part, expectedSignificand);
+  }
+};
+} // namespace detail
+} // namespace llvm
+
 namespace {
 
 TEST(APFloatTest, isSignaling) {
@@ -560,6 +591,104 @@ TEST(APFloatTest, FMA) {
     EXPECT_EQ(-8.85242279E-41f, f1.convertToFloat());
   }
 
+  // The `addOrSubtractSignificand` can be considered to have 9 possible cases
+  // when subtracting: all combinations of {cmpLessThan, cmpGreaterThan,
+  // cmpEqual} and {no loss, loss from lhs, loss from rhs}. Test each reachable
+  // case here.
+
+  // Regression test for failing the `assert(!carry)` in
+  // `addOrSubtractSignificand` and normalizing the exponent even when the
+  // significand is zero if there is a lost fraction.
+  // This tests cmpEqual, loss from lhs
+  {
+    APFloat f1(-1.4728589E-38f);
+    APFloat f2(3.7105144E-6f);
+    APFloat f3(5.5E-44f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(-0.0f, f1.convertToFloat());
+  }
+
+  // Test cmpGreaterThan, no loss
+  {
+    APFloat f1(2.0f);
+    APFloat f2(2.0f);
+    APFloat f3(-3.5f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(0.5f, f1.convertToFloat());
+  }
+
+  // Test cmpLessThan, no loss
+  {
+    APFloat f1(2.0f);
+    APFloat f2(2.0f);
+    APFloat f3(-4.5f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(-0.5f, f1.convertToFloat());
+  }
+
+  // Test cmpEqual, no loss
+  {
+    APFloat f1(2.0f);
+    APFloat f2(2.0f);
+    APFloat f3(-4.0f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(0.0f, f1.convertToFloat());
+  }
+
+  // Test cmpLessThan, loss from lhs
+  {
+    APFloat f1(2.0000002f);
+    APFloat f2(2.0000002f);
+    APFloat f3(-32.0f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(-27.999998f, f1.convertToFloat());
+  }
+
+  // Test cmpGreaterThan, loss from rhs
+  {
+    APFloat f1(1e10f);
+    APFloat f2(1e10f);
+    APFloat f3(-2.0000002f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(1e20f, f1.convertToFloat());
+  }
+
+  // Test cmpGreaterThan, loss from lhs
+  {
+    APFloat f1(1e-36f);
+    APFloat f2(0.0019531252f);
+    APFloat f3(-1e-45f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(1.953124e-39f, f1.convertToFloat());
+  }
+
+  // {cmpEqual, cmpLessThan} with loss from rhs can't occur for the usage in
+  // `fusedMultiplyAdd` as `multiplySignificand` normalises the MSB of lhs to
+  // one bit below the top.
+
+  // Test cases from #104984
+  {
+    APFloat f1(0.24999998f);
+    APFloat f2(2.3509885e-38f);
+    APFloat f3(-1e-45f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(5.87747e-39f, f1.convertToFloat());
+  }
+  {
+    APFloat f1(4.4501477170144023e-308);
+    APFloat f2(0.24999999999999997);
+    APFloat f3(-8.475904604373977e-309);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(2.64946468816203e-309, f1.convertToDouble());
+  }
+  {
+    APFloat f1(APFloat::IEEEhalf(), APInt(16, 0x8fffu));
+    APFloat f2(APFloat::IEEEhalf(), APInt(16, 0x2bffu));
+    APFloat f3(APFloat::IEEEhalf(), APInt(16, 0x0172u));
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(0x808eu, f1.bitcastToAPInt().getZExtValue());
+  }
+
   // Test using only a single instance of APFloat.
   {
     APFloat F(1.5);
@@ -582,7 +711,46 @@ TEST(APFloatTest, MinNum) {
   APFloat zp(0.0);
   APFloat zn(-0.0);
   EXPECT_EQ(-0.0, minnum(zp, zn).convertToDouble());
-  EXPECT_EQ(-0.0, minnum(zn, zp).convertToDouble());
+
+  APInt intPayload_89ab(64, 0x89ab);
+  APInt intPayload_cdef(64, 0xcdef);
+  APFloat nan_0123[2] = {APFloat::getNaN(APFloat::IEEEdouble(), false, 0x0123),
+                         APFloat::getNaN(APFloat::IEEEdouble(), false, 0x0123)};
+  APFloat mnan_4567[2] = {APFloat::getNaN(APFloat::IEEEdouble(), true, 0x4567),
+                          APFloat::getNaN(APFloat::IEEEdouble(), true, 0x4567)};
+  APFloat nan_89ab[2] = {
+      APFloat::getSNaN(APFloat::IEEEdouble(), false, &intPayload_89ab),
+      APFloat::getNaN(APFloat::IEEEdouble(), false, 0x89ab)};
+  APFloat mnan_cdef[2] = {
+      APFloat::getSNaN(APFloat::IEEEdouble(), true, &intPayload_cdef),
+      APFloat::getNaN(APFloat::IEEEdouble(), true, 0xcdef)};
+
+  for (APFloat n : {nan_0123[0], mnan_4567[0]})
+    for (APFloat f : {f1, f2, zn, zp}) {
+      APFloat res = minnum(f, n);
+      EXPECT_FALSE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(f));
+      res = minnum(n, f);
+      EXPECT_FALSE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(f));
+    }
+  for (auto n : {nan_89ab, mnan_cdef})
+    for (APFloat f : {f1, f2, zn, zp}) {
+      APFloat res = minnum(f, n[0]);
+      EXPECT_TRUE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(n[1]));
+      res = minnum(n[0], f);
+      EXPECT_TRUE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(n[1]));
+    }
+
+  // When NaN vs NaN, we should keep payload/sign of either one.
+  for (auto n1 : {nan_0123, mnan_4567, nan_89ab, mnan_cdef})
+    for (auto n2 : {nan_0123, mnan_4567, nan_89ab, mnan_cdef}) {
+      APFloat res = minnum(n1[0], n2[0]);
+      EXPECT_TRUE(res.bitwiseIsEqual(n1[1]) || res.bitwiseIsEqual(n2[1]));
+      EXPECT_FALSE(res.isSignaling());
+    }
 }
 
 TEST(APFloatTest, MaxNum) {
@@ -599,6 +767,46 @@ TEST(APFloatTest, MaxNum) {
   APFloat zn(-0.0);
   EXPECT_EQ(0.0, maxnum(zp, zn).convertToDouble());
   EXPECT_EQ(0.0, maxnum(zn, zp).convertToDouble());
+
+  APInt intPayload_89ab(64, 0x89ab);
+  APInt intPayload_cdef(64, 0xcdef);
+  APFloat nan_0123[2] = {APFloat::getNaN(APFloat::IEEEdouble(), false, 0x0123),
+                         APFloat::getNaN(APFloat::IEEEdouble(), false, 0x0123)};
+  APFloat mnan_4567[2] = {APFloat::getNaN(APFloat::IEEEdouble(), true, 0x4567),
+                          APFloat::getNaN(APFloat::IEEEdouble(), true, 0x4567)};
+  APFloat nan_89ab[2] = {
+      APFloat::getSNaN(APFloat::IEEEdouble(), false, &intPayload_89ab),
+      APFloat::getNaN(APFloat::IEEEdouble(), false, 0x89ab)};
+  APFloat mnan_cdef[2] = {
+      APFloat::getSNaN(APFloat::IEEEdouble(), true, &intPayload_cdef),
+      APFloat::getNaN(APFloat::IEEEdouble(), true, 0xcdef)};
+
+  for (APFloat n : {nan_0123[0], mnan_4567[0]})
+    for (APFloat f : {f1, f2, zn, zp}) {
+      APFloat res = maxnum(f, n);
+      EXPECT_FALSE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(f));
+      res = maxnum(n, f);
+      EXPECT_FALSE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(f));
+    }
+  for (auto n : {nan_89ab, mnan_cdef})
+    for (APFloat f : {f1, f2, zn, zp}) {
+      APFloat res = maxnum(f, n[0]);
+      EXPECT_TRUE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(n[1]));
+      res = maxnum(n[0], f);
+      EXPECT_TRUE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(n[1]));
+    }
+
+  // When NaN vs NaN, we should keep payload/sign of either one.
+  for (auto n1 : {nan_0123, mnan_4567, nan_89ab, mnan_cdef})
+    for (auto n2 : {nan_0123, mnan_4567, nan_89ab, mnan_cdef}) {
+      APFloat res = maxnum(n1[0], n2[0]);
+      EXPECT_TRUE(res.bitwiseIsEqual(n1[1]) || res.bitwiseIsEqual(n2[1]));
+      EXPECT_FALSE(res.isSignaling());
+    }
 }
 
 TEST(APFloatTest, Minimum) {
@@ -8089,4 +8297,63 @@ TEST(APFloatTest, Float4E2M1FNToFloat) {
   EXPECT_TRUE(SmallestDenorm.isDenormal());
   EXPECT_EQ(0x0.8p0, SmallestDenorm.convertToFloat());
 }
+
+TEST(APFloatTest, AddOrSubtractSignificand) {
+  typedef detail::IEEEFloatUnitTestHelper Helper;
+  // Test cases are all combinations of:
+  // {equal exponents, LHS larger exponent, RHS larger exponent}
+  // {equal significands, LHS larger significand, RHS larger significand}
+  // {no loss, loss}
+
+  // Equal exponents (loss cannot occur as their is no shifting)
+  Helper::runTest(true, false, 1, 0x10, false, 1, 0x5, false, 1, 0xb,
+                  lfExactlyZero);
+  Helper::runTest(false, false, -2, 0x20, true, -2, 0x20, false, -2, 0,
+                  lfExactlyZero);
+  Helper::runTest(false, true, 3, 0x20, false, 3, 0x30, false, 3, 0x10,
+                  lfExactlyZero);
+
+  // LHS larger exponent
+  // LHS significand greater after shitfing
+  Helper::runTest(true, false, 7, 0x100, false, 3, 0x100, false, 6, 0x1e0,
+                  lfExactlyZero);
+  Helper::runTest(true, false, 7, 0x100, false, 3, 0x101, false, 6, 0x1df,
+                  lfMoreThanHalf);
+  // Significands equal after shitfing
+  Helper::runTest(true, false, 7, 0x100, false, 3, 0x1000, false, 6, 0,
+                  lfExactlyZero);
+  Helper::runTest(true, false, 7, 0x100, false, 3, 0x1001, true, 6, 0,
+                  lfLessThanHalf);
+  // RHS significand greater after shitfing
+  Helper::runTest(true, false, 7, 0x100, false, 3, 0x10000, true, 6, 0x1e00,
+                  lfExactlyZero);
+  Helper::runTest(true, false, 7, 0x100, false, 3, 0x10001, true, 6, 0x1e00,
+                  lfLessThanHalf);
+
+  // RHS larger exponent
+  // RHS significand greater after shitfing
+  Helper::runTest(true, false, 3, 0x100, false, 7, 0x100, true, 6, 0x1e0,
+                  lfExactlyZero);
+  Helper::runTest(true, false, 3, 0x101, false, 7, 0x100, true, 6, 0x1df,
+                  lfMoreThanHalf);
+  // Significands equal after shitfing
+  Helper::runTest(true, false, 3, 0x1000, false, 7, 0x100, false, 6, 0,
+                  lfExactlyZero);
+  Helper::runTest(true, false, 3, 0x1001, false, 7, 0x100, false, 6, 0,
+                  lfLessThanHalf);
+  // LHS significand greater after shitfing
+  Helper::runTest(true, false, 3, 0x10000, false, 7, 0x100, false, 6, 0x1e00,
+                  lfExactlyZero);
+  Helper::runTest(true, false, 3, 0x10001, false, 7, 0x100, false, 6, 0x1e00,
+                  lfLessThanHalf);
+}
+
+TEST(APFloatTest, hasSignBitInMSB) {
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::IEEEsingle()));
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::x87DoubleExtended()));
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::PPCDoubleDouble()));
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::IEEEquad()));
+  EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E8M0FNU()));
+}
+
 } // namespace

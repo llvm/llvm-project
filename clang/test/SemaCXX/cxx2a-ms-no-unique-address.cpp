@@ -27,13 +27,13 @@ struct CStructNoUniqueAddress {
 struct CStructMSVCNoUniqueAddress {
   int one;
   [[msvc::no_unique_address]] int two;
-  // unsupported-warning@-1 {{unknown attribute 'no_unique_address' ignored}}
+  // unsupported-warning@-1 {{unknown attribute 'msvc::no_unique_address' ignored}}
 };
 
 struct CStructMSVCNoUniqueAddress2 {
   int one;
   [[msvc::no_unique_address]] int two;
-  // unsupported-warning@-1 {{unknown attribute 'no_unique_address' ignored}}
+  // unsupported-warning@-1 {{unknown attribute 'msvc::no_unique_address' ignored}}
 };
 
 static_assert(__has_cpp_attribute(no_unique_address) == 0);

@@ -13,7 +13,7 @@ program main
   !$omp declare mapper(mymapper : ty :: mapped) map(mapped, mapped%x)
 
 !PARSE-TREE:      OpenMPDeclareMapperConstruct
-!PARSE-TREE:        OmpDeclareMapperSpecifier
+!PARSE-TREE:        OmpMapperSpecifier
 !PARSE-TREE:         Name = 'mymapper'
 !PARSE-TREE:         TypeSpec -> DerivedTypeSpec
 !PARSE-TREE:           Name = 'ty'
@@ -28,7 +28,7 @@ program main
   !$omp declare mapper(ty :: mapped) map(mapped, mapped%x)
   
 !PARSE-TREE:      OpenMPDeclareMapperConstruct
-!PARSE-TREE:        OmpDeclareMapperSpecifier
+!PARSE-TREE:        OmpMapperSpecifier
 !PARSE-TREE:         TypeSpec -> DerivedTypeSpec
 !PARSE-TREE:           Name = 'ty'
 !PARSE-TREE:         Name = 'mapped'    

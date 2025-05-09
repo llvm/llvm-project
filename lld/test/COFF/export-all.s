@@ -81,14 +81,14 @@ __imp__unexported:
 
 # RUN: echo -e ".global foobar\n.global DllMainCRTStartup\n.text\nDllMainCRTStartup:\nret\nfoobar:\ncall mingwfunc\ncall crtfunc\nret\n" > %t.main.s
 # RUN: llvm-mc -triple=x86_64-windows-gnu %t.main.s -filetype=obj -o %t.main.obj
-# RUN: mkdir -p %T/libs
-# RUN: echo -e ".global mingwfunc\n.text\nmingwfunc:\nret\n" > %T/libs/mingwfunc.s
-# RUN: llvm-mc -triple=x86_64-windows-gnu %T/libs/mingwfunc.s -filetype=obj -o %T/libs/mingwfunc.o
-# RUN: rm -f %T/libs/libmingwex.a
-# RUN: llvm-ar rcs %T/libs/libmingwex.a %T/libs/mingwfunc.o
-# RUN: echo -e ".global crtfunc\n.text\ncrtfunc:\nret\n" > %T/libs/crtfunc.s
-# RUN: llvm-mc -triple=x86_64-windows-gnu %T/libs/crtfunc.s -filetype=obj -o %T/libs/crt2.o
-# RUN: lld-link -safeseh:no -out:%t.dll -dll -entry:DllMainCRTStartup %t.main.obj -lldmingw %T/libs/crt2.o %T/libs/libmingwex.a -output-def:%t.def
+# RUN: mkdir -p %t.dir/libs
+# RUN: echo -e ".global mingwfunc\n.text\nmingwfunc:\nret\n" > %t.dir/libs/mingwfunc.s
+# RUN: llvm-mc -triple=x86_64-windows-gnu %t.dir/libs/mingwfunc.s -filetype=obj -o %t.dir/libs/mingwfunc.o
+# RUN: rm -f %t.dir/libs/libmingwex.a
+# RUN: llvm-ar rcs %t.dir/libs/libmingwex.a %t.dir/libs/mingwfunc.o
+# RUN: echo -e ".global crtfunc\n.text\ncrtfunc:\nret\n" > %t.dir/libs/crtfunc.s
+# RUN: llvm-mc -triple=x86_64-windows-gnu %t.dir/libs/crtfunc.s -filetype=obj -o %t.dir/libs/crt2.o
+# RUN: lld-link -safeseh:no -out:%t.dll -dll -entry:DllMainCRTStartup %t.main.obj -lldmingw %t.dir/libs/crt2.o %t.dir/libs/libmingwex.a -output-def:%t.def
 # RUN: echo "EOF" >> %t.def
 # RUN: cat %t.def | FileCheck -check-prefix=CHECK-EXCLUDE %s
 
@@ -99,7 +99,7 @@ __imp__unexported:
 # Test that libraries included with -wholearchive: are autoexported, even if
 # they are in a library that otherwise normally would be excluded.
 
-# RUN: lld-link -safeseh:no -out:%t.dll -dll -entry:DllMainCRTStartup %t.main.obj -lldmingw %T/libs/crt2.o -wholearchive:%T/libs/libmingwex.a -output-def:%t.def
+# RUN: lld-link -safeseh:no -out:%t.dll -dll -entry:DllMainCRTStartup %t.main.obj -lldmingw %t.dir/libs/crt2.o -wholearchive:%t.dir/libs/libmingwex.a -output-def:%t.def
 # RUN: echo "EOF" >> %t.def
 # RUN: cat %t.def | FileCheck -check-prefix=CHECK-WHOLEARCHIVE %s
 

@@ -12,7 +12,7 @@
 ## LA32 IE -> LE
 # RUN: ld.lld %t/32.o -o %t/32
 # RUN: llvm-readelf -r %t/32 | FileCheck --check-prefix=NOREL %s
-# RUN: llvm-readelf -x .got %t/32 | FileCheck --check-prefix=LE32-GOT %s
+# RUN: llvm-readelf -x .got %t/32 2>&1 | FileCheck --check-prefix=LE32-GOT %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/32 | FileCheck --check-prefixes=LE32 %s
 
 ## LA64 IE
@@ -23,7 +23,7 @@
 ## LA64 IE -> LE
 # RUN: ld.lld %t/64.o -o %t/64
 # RUN: llvm-readelf -r %t/64 | FileCheck --check-prefix=NOREL %s
-# RUN: llvm-readelf -x .got %t/64 | FileCheck --check-prefix=LE64-GOT %s
+# RUN: llvm-readelf -x .got %t/64 2>&1 | FileCheck --check-prefix=LE64-GOT %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/64 | FileCheck --check-prefixes=LE64 %s
 
 # IE32-REL:      FLAGS STATIC_TLS
@@ -62,29 +62,23 @@
 
 # a@tprel = st_value(a) = 0x8
 # b@tprel = st_value(a) = 0xc
-# LE32-GOT: section '.got':
-# LE32-GOT-NEXT: 0x0003012c 08000000 0c000000
-# LE64-GOT: section '.got':
-# LE64-GOT-NEXT: 0x000301e0 08000000 00000000 0c000000 00000000
+# LE32-GOT: could not find section '.got'
+# LE64-GOT: could not find section '.got'
 
 ## LA32:
-## &.got[0] - . = 0x3012c - 0x20114: 0x10 pages, page offset 0x12c
-## &.got[1] - . = 0x30130 - 0x20120: 0x10 pages, page offset 0x130
-# LE32:      20114: pcalau12i $a4, 16
-# LE32-NEXT:        ld.w $a4, $a4, 300
+# LE32:      200d4: nop
+# LE32-NEXT:        ori $a4, $zero, 8
 # LE32-NEXT:        add.w $a4, $a4, $tp
-# LE32-NEXT: 20120: pcalau12i $a5, 16
-# LE32-NEXT:        ld.w $a5, $a5, 304
+# LE32-NEXT: 200e0: nop
+# LE32-NEXT:        ori $a5, $zero, 12
 # LE32-NEXT:        add.w $a5, $a5, $tp
 
 ## LA64:
-## &.got[0] - . = 0x301e0 - 0x201c8: 0x10 pages, page offset 0x1e0
-## &.got[1] - . = 0x301e8 - 0x201d4: 0x10 pages, page offset 0x1e8
-# LE64:      201c8: pcalau12i $a4, 16
-# LE64-NEXT:        ld.d $a4, $a4, 480
+# LE64:      20158: nop
+# LE64-NEXT:        ori $a4, $zero, 8
 # LE64-NEXT:        add.d $a4, $a4, $tp
-# LE64-NEXT: 201d4: pcalau12i $a5, 16
-# LE64-NEXT:        ld.d $a5, $a5, 488
+# LE64-NEXT: 20164: nop
+# LE64-NEXT:        ori $a5, $zero, 12
 # LE64-NEXT:        add.d $a5, $a5, $tp
 
 #--- 32.s

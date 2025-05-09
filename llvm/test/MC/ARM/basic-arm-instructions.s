@@ -289,8 +289,8 @@ Lforward:
 @ CHECK: addseq r0, pc, #-1073741824    @ encoding: [0x03,0x01,0x9f,0x02]
 @ CHECK:        Ltmp0:
 @ CHECK-NEXT:   Ltmp1:
-@ CHECK-NEXT:   adr	r0, (Ltmp1+8)+(Lback-Ltmp0) @ encoding: [A,A,0x0f'A',0xe2'A']
-@ CHECK-NEXT:                           @   fixup A - offset: 0, value: (Ltmp1+8)+(Lback-Ltmp0), kind: fixup_arm_adr_pcrel_12
+@ CHECK-NEXT:   adr	r0, Ltmp1+8+(Lback-Ltmp0) @ encoding: [A,A,0x0f'A',0xe2'A']
+@ CHECK-NEXT:                           @   fixup A - offset: 0, value: Ltmp1+8+(Lback-Ltmp0), kind: fixup_arm_adr_pcrel_12
 
     @ Test right shift by 32, which is encoded as 0
     add r3, r1, r2, lsr #32

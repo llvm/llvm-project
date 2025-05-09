@@ -27,14 +27,6 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    li a4, 0
-; CHECK-NEXT:    li a5, 0
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    li a7, 0
 ; CHECK-NEXT:    call _Z3fooiiiiiiiiiiPi
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:  .Ltmp1:

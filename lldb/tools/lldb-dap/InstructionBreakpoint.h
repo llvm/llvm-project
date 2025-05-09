@@ -17,16 +17,21 @@
 
 namespace lldb_dap {
 
-// Instruction Breakpoint
-struct InstructionBreakpoint : public Breakpoint {
-
-  lldb::addr_t instructionAddressReference;
-  int32_t offset;
-
+/// Instruction Breakpoint
+class InstructionBreakpoint : public Breakpoint {
+public:
   InstructionBreakpoint(DAP &d, const llvm::json::Object &obj);
 
-  // Set instruction breakpoint in LLDB as a new breakpoint
+  /// Set instruction breakpoint in LLDB as a new breakpoint.
   void SetBreakpoint();
+
+  lldb::addr_t GetInstructionAddressReference() const {
+    return m_instruction_address_reference;
+  }
+
+protected:
+  lldb::addr_t m_instruction_address_reference;
+  int32_t m_offset;
 };
 
 } // namespace lldb_dap

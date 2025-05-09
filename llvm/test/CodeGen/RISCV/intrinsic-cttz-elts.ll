@@ -19,7 +19,7 @@ define i16 @ctz_v4i32(<4 x i32> %a) {
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    li a1, 4
 ; RV32-NEXT:    sub a1, a1, a0
-; RV32-NEXT:    andi a0, a1, 255
+; RV32-NEXT:    zext.b a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ctz_v4i32:
@@ -36,7 +36,7 @@ define i16 @ctz_v4i32(<4 x i32> %a) {
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    li a1, 4
 ; RV64-NEXT:    subw a1, a1, a0
-; RV64-NEXT:    andi a0, a1, 255
+; RV64-NEXT:    zext.b a0, a1
 ; RV64-NEXT:    ret
   %res = call i16 @llvm.experimental.cttz.elts.i16.v4i32(<4 x i32> %a, i1 0)
   ret i16 %res

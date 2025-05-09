@@ -134,8 +134,8 @@ static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C,
   // routine arguments in the heap.
   while (const MemRegion *MR = Sym->getOriginRegion()) {
     const auto *VR = dyn_cast<VarRegion>(MR);
-    if (VR && VR->hasStackParametersStorage() &&
-           VR->getStackFrame()->inTopFrame())
+    if (VR && VR->hasMemorySpace<StackArgumentsSpaceRegion>(C.getState()) &&
+        VR->getStackFrame()->inTopFrame())
       return cast<ParmVarDecl>(VR->getDecl());
 
     const SymbolicRegion *SR = MR->getSymbolicBase();

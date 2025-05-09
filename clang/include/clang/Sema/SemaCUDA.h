@@ -274,6 +274,10 @@ public:
   /// parameters specified via <<<>>>.
   std::string getConfigureFuncName() const;
 
+  /// Record variables that are potentially ODR-used in CUDA/HIP.
+  void recordPotentialODRUsedVariable(MultiExprArg Args,
+                                      OverloadCandidateSet &CandidateSet);
+
 private:
   unsigned ForceHostDeviceDepth = 0;
 

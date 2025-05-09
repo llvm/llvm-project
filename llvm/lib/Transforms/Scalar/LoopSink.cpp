@@ -120,7 +120,7 @@ findBBsToSinkInto(const Loop &L, const SmallPtrSetImpl<BasicBlock *> &UseBBs,
   if (UseBBs.size() == 0)
     return BBsToSinkInto;
 
-  BBsToSinkInto.insert(UseBBs.begin(), UseBBs.end());
+  BBsToSinkInto.insert_range(UseBBs);
   SmallPtrSet<BasicBlock *, 2> BBsDominatedByColdestBB;
 
   // For every iteration:

@@ -58,7 +58,7 @@ double intial_approximation(double x) {
 
 // Get the error term for Newton iteration:
 //   h(x) = x^3 * a^2 - 1,
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 double get_error(const DoubleDouble &x_3, const DoubleDouble &a_sq) {
   return fputil::multiply_add(x_3.hi, a_sq.hi, -1.0) +
          fputil::multiply_add(x_3.lo, a_sq.hi, x_3.hi * a_sq.lo);

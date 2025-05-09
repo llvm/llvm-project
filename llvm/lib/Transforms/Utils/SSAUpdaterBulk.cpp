@@ -53,7 +53,7 @@ void SSAUpdaterBulk::AddAvailableValue(unsigned Var, BasicBlock *BB, Value *V) {
   LLVM_DEBUG(dbgs() << "SSAUpdater: Var=" << Var
                     << ": added new available value " << *V << " in "
                     << BB->getName() << "\n");
-  Rewrites[Var].Defines[BB] = V;
+  Rewrites[Var].Defines.emplace_back(BB, V);
 }
 
 /// Record a use of the symbolic value. This use will be updated with a
@@ -63,21 +63,6 @@ void SSAUpdaterBulk::AddUse(unsigned Var, Use *U) {
   LLVM_DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": added a use" << *U->get()
                     << " in " << getUserBB(U)->getName() << "\n");
   Rewrites[Var].Uses.push_back(U);
-}
-
-// Compute value at the given block BB. We either should already know it, or we
-// should be able to recursively reach it going up dominator tree.
-Value *SSAUpdaterBulk::computeValueAt(BasicBlock *BB, RewriteInfo &R,
-                                      DominatorTree *DT) {
-  if (!R.Defines.count(BB)) {
-    if (DT->isReachableFromEntry(BB) && PredCache.get(BB).size()) {
-      BasicBlock *IDom = DT->getNode(BB)->getIDom()->getBlock();
-      Value *V = computeValueAt(IDom, R, DT);
-      R.Defines[BB] = V;
-    } else
-      R.Defines[BB] = UndefValue::get(R.Ty);
-  }
-  return R.Defines[BB];
 }
 
 /// Given sets of UsingBlocks and DefBlocks, compute the set of LiveInBlocks.
@@ -117,11 +102,19 @@ ComputeLiveInBlocks(const SmallPtrSetImpl<BasicBlock *> &UsingBlocks,
   }
 }
 
+struct BBValueInfo {
+  Value *LiveInValue = nullptr;
+  Value *LiveOutValue = nullptr;
+};
+
 /// Perform all the necessary updates, including new PHI-nodes insertion and the
 /// requested uses update.
 void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
                                     SmallVectorImpl<PHINode *> *InsertedPHIs) {
+  DenseMap<BasicBlock *, BBValueInfo> BBInfos;
   for (auto &R : Rewrites) {
+    BBInfos.clear();
+
     // Compute locations for new phi-nodes.
     // For that we need to initialize DefBlocks from definitions in R.Defines,
     // UsingBlocks from uses in R.Uses, then compute LiveInBlocks, and then use
@@ -131,9 +124,8 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     LLVM_DEBUG(dbgs() << "SSAUpdater: rewriting " << R.Uses.size()
                       << " use(s)\n");
 
-    SmallPtrSet<BasicBlock *, 2> DefBlocks;
-    for (auto &Def : R.Defines)
-      DefBlocks.insert(Def.first);
+    SmallPtrSet<BasicBlock *, 2> DefBlocks(llvm::from_range,
+                                           llvm::make_first_range(R.Defines));
     IDF.setDefiningBlocks(DefBlocks);
 
     SmallPtrSet<BasicBlock *, 2> UsingBlocks;
@@ -143,26 +135,71 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     SmallVector<BasicBlock *, 32> IDFBlocks;
     SmallPtrSet<BasicBlock *, 32> LiveInBlocks;
     ComputeLiveInBlocks(UsingBlocks, DefBlocks, LiveInBlocks, PredCache);
-    IDF.resetLiveInBlocks();
     IDF.setLiveInBlocks(LiveInBlocks);
     IDF.calculate(IDFBlocks);
 
+    // Reserve sufficient buckets to prevent map growth. [1]
+    BBInfos.reserve(LiveInBlocks.size() + DefBlocks.size());
+
+    for (auto [BB, V] : R.Defines)
+      BBInfos[BB].LiveOutValue = V;
+
     // We've computed IDF, now insert new phi-nodes there.
-    SmallVector<PHINode *, 4> InsertedPHIsForVar;
     for (auto *FrontierBB : IDFBlocks) {
       IRBuilder<> B(FrontierBB, FrontierBB->begin());
       PHINode *PN = B.CreatePHI(R.Ty, 0, R.Name);
-      R.Defines[FrontierBB] = PN;
-      InsertedPHIsForVar.push_back(PN);
+      BBInfos[FrontierBB].LiveInValue = PN;
       if (InsertedPHIs)
         InsertedPHIs->push_back(PN);
     }
 
+    // IsLiveOut indicates whether we are computing live-out values (true) or
+    // live-in values (false).
+    auto ComputeValue = [&](BasicBlock *BB, bool IsLiveOut) -> Value * {
+      auto *BBInfo = &BBInfos[BB];
+
+      if (IsLiveOut && BBInfo->LiveOutValue)
+        return BBInfo->LiveOutValue;
+
+      if (BBInfo->LiveInValue)
+        return BBInfo->LiveInValue;
+
+      SmallVector<BBValueInfo *, 4> Stack = {BBInfo};
+      Value *V = nullptr;
+
+      while (DT->isReachableFromEntry(BB) && !PredCache.get(BB).empty() &&
+             (BB = DT->getNode(BB)->getIDom()->getBlock())) {
+        BBInfo = &BBInfos[BB];
+
+        if (BBInfo->LiveOutValue) {
+          V = BBInfo->LiveOutValue;
+          break;
+        }
+
+        if (BBInfo->LiveInValue) {
+          V = BBInfo->LiveInValue;
+          break;
+        }
+
+        Stack.emplace_back(BBInfo);
+      }
+
+      if (!V)
+        V = UndefValue::get(R.Ty);
+
+      for (auto *BBInfo : Stack)
+        // Loop above can insert new entries into the BBInfos map: assume the
+        // map shouldn't grow due to [1] and BBInfo references are valid.
+        BBInfo->LiveInValue = V;
+
+      return V;
+    };
+
     // Fill in arguments of the inserted PHIs.
-    for (auto *PN : InsertedPHIsForVar) {
-      BasicBlock *PBB = PN->getParent();
-      for (BasicBlock *Pred : PredCache.get(PBB))
-        PN->addIncoming(computeValueAt(Pred, R, DT), Pred);
+    for (auto *BB : IDFBlocks) {
+      auto *PHI = cast<PHINode>(&BB->front());
+      for (BasicBlock *Pred : PredCache.get(BB))
+        PHI->addIncoming(ComputeValue(Pred, /*IsLiveOut=*/true), Pred);
     }
 
     // Rewrite actual uses with the inserted definitions.
@@ -170,7 +207,10 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     for (Use *U : R.Uses) {
       if (!ProcessedUses.insert(U).second)
         continue;
-      Value *V = computeValueAt(getUserBB(U), R, DT);
+
+      auto *User = cast<Instruction>(U->getUser());
+      BasicBlock *BB = getUserBB(U);
+      Value *V = ComputeValue(BB, /*IsLiveOut=*/BB != User->getParent());
       Value *OldVal = U->get();
       assert(OldVal && "Invalid use!");
       // Notify that users of the existing value that it is being replaced.

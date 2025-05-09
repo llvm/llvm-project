@@ -23,8 +23,11 @@ define void @function_lds_id(ptr addrspace(1) %out) {
 define amdgpu_kernel void @kernel_lds_id(ptr addrspace(1) %out) !llvm.amdgcn.lds.kernel.id !0 {
 ; GCN-LABEL: kernel_lds_id:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GCN-NEXT:    s_add_i32 s12, s12, s17
+; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GCN-NEXT:    s_add_i32 s2, s12, 42
+; GCN-NEXT:    s_add_i32 s2, s14, 42
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
@@ -74,6 +77,9 @@ define amdgpu_kernel void @indirect_lds_id(ptr addrspace(1) %out) !llvm.amdgcn.l
 define amdgpu_kernel void @doesnt_use_it(ptr addrspace(1) %out) !llvm.amdgcn.lds.kernel.id !0 {
 ; GCN-LABEL: doesnt_use_it:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GCN-NEXT:    s_add_i32 s12, s12, s17
+; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0x64
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)

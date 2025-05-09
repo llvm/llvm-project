@@ -97,7 +97,7 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: (store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1 :: (load (s32) from %stack.0, addrspace 5)
-    ; MUBUF-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1 :: (load (s32) from %stack.0 + 4, addrspace 5)
+    ; MUBUF-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_v2
@@ -131,7 +131,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1 :: (store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1 :: (load (s32) from %stack.0, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1 :: (load (s32) from %stack.0 + 4, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_v2
@@ -184,7 +184,7 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2 :: (store (s32) into %stack.0 + 8, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2 :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
-    ; MUBUF-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2 :: (load (s32) from %stack.0 + 8, addrspace 5)
+    ; MUBUF-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_v3
@@ -224,7 +224,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2 :: (store (s32) into %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2 :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2 :: (load (s32) from %stack.0 + 8, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_v3
@@ -283,7 +283,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3 :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
-    ; MUBUF-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3 :: (load (s32) from %stack.0 + 12, addrspace 5)
+    ; MUBUF-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_v4
@@ -329,7 +329,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3 :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3 :: (load (s32) from %stack.0 + 12, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_v4
@@ -394,7 +394,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
-    ; MUBUF-NEXT: $vgpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 :: (load (s32) from %stack.0 + 16, addrspace 5)
+    ; MUBUF-NEXT: $vgpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_v5
@@ -418,7 +418,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 :: (store (s128) into %stack.0, align 4, addrspace 5)
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr4, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 :: (store (s32) into %stack.0 + 16, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr4 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 :: (load (s32) from %stack.0 + 16, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr4 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v5
@@ -448,7 +448,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $vgpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 :: (load (s32) from %stack.0 + 16, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $vgpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_v5
@@ -472,7 +472,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 :: (store (s128) into %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr4, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 :: (store (s32) into %stack.0 + 16, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $vgpr4 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 :: (load (s32) from %stack.0 + 16, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $vgpr4 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v5
@@ -521,7 +521,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
     ; MUBUF-NEXT: $vgpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
-    ; MUBUF-NEXT: $vgpr5 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (load (s32) from %stack.0 + 20, addrspace 5)
+    ; MUBUF-NEXT: $vgpr5 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 20, addrspace 5)
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_v6
@@ -547,7 +547,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (store (s128) into %stack.0, align 4, addrspace 5)
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $vgpr4_vgpr5, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (store (s64) into %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr4_vgpr5 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (load (s64) from %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr4_vgpr5 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s64) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v6
@@ -581,7 +581,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $vgpr5 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (load (s32) from %stack.0 + 20, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $vgpr5 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 20, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_v6
@@ -607,7 +607,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (store (s128) into %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $vgpr4_vgpr5, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (store (s64) into %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $vgpr4_vgpr5 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (load (s64) from %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $vgpr4_vgpr5 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s64) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v6
@@ -660,7 +660,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
     ; MUBUF-NEXT: $vgpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; MUBUF-NEXT: $vgpr5 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 20, addrspace 5)
-    ; MUBUF-NEXT: $vgpr6 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6 :: (load (s32) from %stack.0 + 24, addrspace 5)
+    ; MUBUF-NEXT: $vgpr6 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 24, addrspace 5)
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_v7
@@ -688,7 +688,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6 :: (store (s128) into %stack.0, align 4, addrspace 5)
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $vgpr4_vgpr5_vgpr6, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6 :: (store (s96) into %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6 :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr4_vgpr5_vgpr6 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6 :: (load (s96) from %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr4_vgpr5_vgpr6 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s96) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v7
@@ -726,7 +726,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $vgpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr5 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 20, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $vgpr6 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6 :: (load (s32) from %stack.0 + 24, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $vgpr6 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 24, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_v7
@@ -754,7 +754,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6 :: (store (s128) into %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $vgpr4_vgpr5_vgpr6, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6 :: (store (s96) into %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6 :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $vgpr4_vgpr5_vgpr6 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6 :: (load (s96) from %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $vgpr4_vgpr5_vgpr6 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s96) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v7
@@ -811,7 +811,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; MUBUF-NEXT: $vgpr5 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 20, addrspace 5)
     ; MUBUF-NEXT: $vgpr6 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 24, addrspace 5)
-    ; MUBUF-NEXT: $vgpr7 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: (load (s32) from %stack.0 + 28, addrspace 5)
+    ; MUBUF-NEXT: $vgpr7 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 28, addrspace 5)
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_v8
@@ -841,7 +841,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: (store (s128) into %stack.0, align 4, addrspace 5)
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr4_vgpr5_vgpr6_vgpr7, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: (store (s128) into %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: (load (s128) from %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v8
@@ -883,7 +883,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $vgpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr5 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 20, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr6 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 24, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $vgpr7 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: (load (s32) from %stack.0 + 28, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $vgpr7 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 28, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_v8
@@ -913,7 +913,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: (store (s128) into %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr4_vgpr5_vgpr6_vgpr7, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: (store (s128) into %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: (load (s128) from %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v8
@@ -988,7 +988,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr12 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 48, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 48, addrspace 5)
     ; MUBUF-NEXT: $vgpr13 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 52, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 52, addrspace 5)
     ; MUBUF-NEXT: $vgpr14 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 56, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 56, addrspace 5)
-    ; MUBUF-NEXT: $vgpr15 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 60, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 :: (load (s32) from %stack.0 + 60, addrspace 5)
+    ; MUBUF-NEXT: $vgpr15 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 60, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 60, addrspace 5)
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_v16
@@ -1038,7 +1038,7 @@ body:             |
     ; FLATSCR-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 :: (load (s128) from %stack.0, align 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr8_vgpr9_vgpr10_vgpr11 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 32, align 4, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr12_vgpr13_vgpr14_vgpr15 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 48, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 :: (load (s128) from %stack.0 + 48, align 4, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr12_vgpr13_vgpr14_vgpr15 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 48, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 48, align 4, addrspace 5)
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v16
@@ -1112,7 +1112,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $vgpr12 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 48, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 48, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr13 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 52, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 52, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr14 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 56, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 56, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $vgpr15 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 60, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 :: (load (s32) from %stack.0 + 60, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $vgpr15 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 60, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 60, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_v16
@@ -1162,7 +1162,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 :: (load (s128) from %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $vgpr8_vgpr9_vgpr10_vgpr11 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 32, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $vgpr12_vgpr13_vgpr14_vgpr15 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 48, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 :: (load (s128) from %stack.0 + 48, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $vgpr12_vgpr13_vgpr14_vgpr15 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 48, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 48, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v16
@@ -1285,7 +1285,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr28 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 112, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 112, addrspace 5)
     ; MUBUF-NEXT: $vgpr29 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 116, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 116, addrspace 5)
     ; MUBUF-NEXT: $vgpr30 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 120, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 120, addrspace 5)
-    ; MUBUF-NEXT: $vgpr31 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 124, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 :: (load (s32) from %stack.0 + 124, addrspace 5)
+    ; MUBUF-NEXT: $vgpr31 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 124, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 124, addrspace 5)
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_v32
@@ -1375,7 +1375,7 @@ body:             |
     ; FLATSCR-NEXT: $vgpr16_vgpr17_vgpr18_vgpr19 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 64, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 64, align 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr20_vgpr21_vgpr22_vgpr23 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 80, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 80, align 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr24_vgpr25_vgpr26_vgpr27 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 96, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 96, align 4, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr28_vgpr29_vgpr30_vgpr31 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 112, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 :: (load (s128) from %stack.0 + 112, align 4, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr28_vgpr29_vgpr30_vgpr31 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 112, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 112, align 4, addrspace 5)
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v32
@@ -1513,7 +1513,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $vgpr28 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 112, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 112, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr29 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 116, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 116, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $vgpr30 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 120, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 120, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $vgpr31 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 124, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 :: (load (s32) from %stack.0 + 124, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $vgpr31 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 124, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 124, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_v32
@@ -1603,7 +1603,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: $vgpr16_vgpr17_vgpr18_vgpr19 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 64, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 64, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $vgpr20_vgpr21_vgpr22_vgpr23 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 80, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 80, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $vgpr24_vgpr25_vgpr26_vgpr27 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 96, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 96, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $vgpr28_vgpr29_vgpr30_vgpr31 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 112, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 :: (load (s128) from %stack.0 + 112, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $vgpr28_vgpr29_vgpr30_vgpr31 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 112, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 112, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v32
@@ -1772,14 +1772,14 @@ body:             |
   bb.0.entry:
     ; MUBUF-LABEL: name: test_spill_av_a2
     ; MUBUF: $agpr0_agpr1 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1 :: (store (s32) into %stack.0, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $agpr0_agpr1 :: (store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
-    ; MUBUF-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1
+    ; MUBUF-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_a2
@@ -1794,14 +1794,14 @@ body:             |
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a2
     ; FLATSCR: $agpr0_agpr1 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1 :: (store (s32) into %stack.0, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1 :: (store (s32) into %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 4, addrspace 5)
-    ; FLATSCR-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1
+    ; FLATSCR-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a2
@@ -1819,7 +1819,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $agpr0_agpr1 :: (store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1 :: (load (s32) from %stack.0, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec, implicit-def $agpr0_agpr1 :: (load (s32) from %stack.0 + 4, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_a2
@@ -1867,18 +1867,18 @@ body:             |
   bb.0.entry:
     ; MUBUF-LABEL: name: test_spill_av_a3
     ; MUBUF: $agpr0_agpr1_agpr2 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2 :: (store (s32) into %stack.0 + 8, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
-    ; MUBUF-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
+    ; MUBUF-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_a3
@@ -1895,18 +1895,18 @@ body:             |
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a3
     ; FLATSCR: $agpr0_agpr1_agpr2 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2 :: (store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 4, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2 :: (store (s32) into %stack.0 + 8, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 8, addrspace 5)
-    ; FLATSCR-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
+    ; FLATSCR-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a3
@@ -1928,7 +1928,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2 :: (store (s32) into %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2 :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2 :: (load (s32) from %stack.0 + 8, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_a3
@@ -1980,13 +1980,13 @@ body:             |
   bb.0.entry:
     ; MUBUF-LABEL: name: test_spill_av_a4
     ; MUBUF: $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 8, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3 :: (store (s32) into %stack.0 + 12, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
@@ -1995,7 +1995,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
-    ; MUBUF-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
+    ; MUBUF-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_a4
@@ -2014,13 +2014,13 @@ body:             |
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a4
     ; FLATSCR: $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3 :: (store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 8, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3 :: (store (s32) into %stack.0 + 12, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
@@ -2029,7 +2029,7 @@ body:             |
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 8, addrspace 5)
     ; FLATSCR-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 12, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 12, addrspace 5)
-    ; FLATSCR-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
+    ; FLATSCR-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a4
@@ -2055,7 +2055,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3 :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3 :: (load (s32) from %stack.0 + 12, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_a4
@@ -2111,7 +2111,7 @@ body:             |
   bb.0.entry:
     ; MUBUF-LABEL: name: test_spill_av_a5
     ; MUBUF: $agpr0_agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -2119,7 +2119,7 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 8, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 12, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4 :: (store (s32) into %stack.0 + 16, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4
@@ -2130,7 +2130,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
     ; MUBUF-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
-    ; MUBUF-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; MUBUF-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_a5
@@ -2151,7 +2151,7 @@ body:             |
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a5
     ; FLATSCR: $agpr0_agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4 :: (store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -2159,7 +2159,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 8, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 12, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4 :: (store (s32) into %stack.0 + 16, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4
@@ -2170,7 +2170,7 @@ body:             |
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 12, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 12, addrspace 5)
     ; FLATSCR-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 16, addrspace 5)
-    ; FLATSCR-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; FLATSCR-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a5
@@ -2200,7 +2200,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $agpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4 :: (load (s32) from %stack.0 + 16, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_a5
@@ -2224,7 +2224,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_agpr1_agpr2_agpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4, implicit $agpr0_agpr1_agpr2_agpr3_agpr4 :: (store (s128) into %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORD_SADDR killed $agpr4, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4 :: (store (s32) into %stack.0 + 16, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4 :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr4 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4 :: (load (s32) from %stack.0 + 16, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr4 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a5
@@ -2262,7 +2262,7 @@ body:             |
   bb.0.entry:
     ; MUBUF-LABEL: name: test_spill_av_a6
     ; MUBUF: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -2272,7 +2272,7 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 12, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 16, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: (store (s32) into %stack.0 + 20, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
@@ -2285,7 +2285,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; MUBUF-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 20, addrspace 5)
-    ; MUBUF-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; MUBUF-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_a6
@@ -2308,7 +2308,7 @@ body:             |
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a6
     ; FLATSCR: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: (store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -2318,7 +2318,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 12, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 16, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: (store (s32) into %stack.0 + 20, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
@@ -2331,7 +2331,7 @@ body:             |
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; FLATSCR-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 20, addrspace 5)
-    ; FLATSCR-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; FLATSCR-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a6
@@ -2365,7 +2365,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $agpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 8, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr5 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: (load (s32) from %stack.0 + 20, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr5 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 20, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_a6
@@ -2391,7 +2391,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_agpr1_agpr2_agpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: (store (s128) into %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $agpr4_agpr5, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: (store (s64) into %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: (load (s64) from %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s64) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a6
@@ -2431,7 +2431,7 @@ body:             |
   bb.0.entry:
     ; MUBUF-LABEL: name: test_spill_av_a7
     ; MUBUF: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -2443,7 +2443,7 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 16, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 20, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 :: (store (s32) into %stack.0 + 24, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6
@@ -2458,7 +2458,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 20, addrspace 5)
     ; MUBUF-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 24, addrspace 5)
-    ; MUBUF-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6
+    ; MUBUF-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_a7
@@ -2483,7 +2483,7 @@ body:             |
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a7
     ; FLATSCR: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 :: (store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -2495,7 +2495,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 16, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 20, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 24, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 :: (store (s32) into %stack.0 + 24, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6
@@ -2510,7 +2510,7 @@ body:             |
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 20, addrspace 5)
     ; FLATSCR-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 24, addrspace 5)
-    ; FLATSCR-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6
+    ; FLATSCR-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a7
@@ -2548,7 +2548,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $agpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 12, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 12, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr5 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 20, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr6 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 :: (load (s32) from %stack.0 + 24, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr6 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 24, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_a7
@@ -2576,7 +2576,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_agpr1_agpr2_agpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 :: (store (s128) into %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $agpr4_agpr5_agpr6, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 :: (store (s96) into %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5_agpr6 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 :: (load (s96) from %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5_agpr6 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s96) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a7
@@ -2618,7 +2618,7 @@ body:             |
   bb.0.entry:
     ; MUBUF-LABEL: name: test_spill_av_a8
     ; MUBUF: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -2632,7 +2632,7 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 20, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 24, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: (store (s32) into %stack.0 + 28, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
@@ -2649,7 +2649,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 24, addrspace 5)
     ; MUBUF-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 28, addrspace 5)
-    ; MUBUF-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; MUBUF-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_a8
@@ -2676,7 +2676,7 @@ body:             |
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a8
     ; FLATSCR: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: (store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -2690,7 +2690,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 20, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 24, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 28, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: (store (s32) into %stack.0 + 28, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
@@ -2707,7 +2707,7 @@ body:             |
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 24, addrspace 5)
     ; FLATSCR-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 28, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 28, addrspace 5)
-    ; FLATSCR-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; FLATSCR-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a8
@@ -2749,7 +2749,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $agpr4 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 16, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 16, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr5 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 20, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr6 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 24, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr7 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: (load (s32) from %stack.0 + 28, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr7 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 28, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_a8
@@ -2779,7 +2779,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_agpr1_agpr2_agpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: (store (s128) into %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr4_agpr5_agpr6_agpr7, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: (store (s128) into %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5_agpr6_agpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: (load (s128) from %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5_agpr6_agpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a8
@@ -2823,7 +2823,7 @@ body:             |
   bb.0.entry:
     ; MUBUF-LABEL: name: test_spill_av_a9
     ; MUBUF: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -2839,7 +2839,7 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 24, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 28, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr8, implicit $exec
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr8, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 32, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 :: (store (s32) into %stack.0 + 32, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8
@@ -2858,7 +2858,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 28, addrspace 5)
     ; MUBUF-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 32, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 32, addrspace 5)
-    ; MUBUF-NEXT: $agpr8 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8
+    ; MUBUF-NEXT: $agpr8 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_a9
@@ -2887,7 +2887,7 @@ body:             |
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a9
     ; FLATSCR: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 :: (store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -2903,7 +2903,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 24, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 28, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 28, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr8, implicit $exec
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr8, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 :: (store (s32) into %stack.0 + 32, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8
@@ -2922,7 +2922,7 @@ body:             |
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 28, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 28, addrspace 5)
     ; FLATSCR-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 32, addrspace 5)
-    ; FLATSCR-NEXT: $agpr8 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8
+    ; FLATSCR-NEXT: $agpr8 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a9
@@ -2968,7 +2968,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $agpr5 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 20, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 20, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr6 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 24, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr7 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 28, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr8 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 32, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 :: (load (s32) from %stack.0 + 32, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr8 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 32, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 32, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_a9
@@ -3002,7 +3002,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORD_SADDR killed $agpr8, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 :: (store (s32) into %stack.0 + 32, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 :: (load (s128) from %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5_agpr6_agpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 16, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr8 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 :: (load (s32) from %stack.0 + 32, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr8 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 32, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a9
@@ -3048,7 +3048,7 @@ body:             |
   bb.0.entry:
     ; MUBUF-LABEL: name: test_spill_av_a10
     ; MUBUF: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -3066,7 +3066,7 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 28, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr8, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 32, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 32, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr9, implicit $exec
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr9, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 36, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 :: (store (s32) into %stack.0 + 36, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9
@@ -3087,7 +3087,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 32, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 32, addrspace 5)
     ; MUBUF-NEXT: $agpr8 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 36, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 36, addrspace 5)
-    ; MUBUF-NEXT: $agpr9 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9
+    ; MUBUF-NEXT: $agpr9 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_a10
@@ -3118,7 +3118,7 @@ body:             |
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a10
     ; FLATSCR: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 :: (store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -3136,7 +3136,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 28, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 28, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr8, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 32, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr9, implicit $exec
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr9, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 36, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 :: (store (s32) into %stack.0 + 36, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9
@@ -3157,7 +3157,7 @@ body:             |
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 32, addrspace 5)
     ; FLATSCR-NEXT: $agpr8 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 36, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 36, addrspace 5)
-    ; FLATSCR-NEXT: $agpr9 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9
+    ; FLATSCR-NEXT: $agpr9 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a10
@@ -3207,7 +3207,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $agpr6 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 24, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 24, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr7 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 28, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr8 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 32, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 32, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr9 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 36, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 :: (load (s32) from %stack.0 + 36, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr9 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 36, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 36, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_a10
@@ -3243,7 +3243,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $agpr8_agpr9, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 :: (store (s64) into %stack.0 + 32, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 :: (load (s128) from %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5_agpr6_agpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 16, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr8_agpr9 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 :: (load (s64) from %stack.0 + 32, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr8_agpr9 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: (load (s64) from %stack.0 + 32, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a10
@@ -3291,7 +3291,7 @@ body:             |
   bb.0.entry:
     ; MUBUF-LABEL: name: test_spill_av_a11
     ; MUBUF: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -3311,7 +3311,7 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 32, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 32, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr9, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 36, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 36, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr10, implicit $exec
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr10, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 40, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 :: (store (s32) into %stack.0 + 40, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10
@@ -3334,7 +3334,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 36, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 36, addrspace 5)
     ; MUBUF-NEXT: $agpr9 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 40, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 40, addrspace 5)
-    ; MUBUF-NEXT: $agpr10 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10
+    ; MUBUF-NEXT: $agpr10 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_a11
@@ -3367,7 +3367,7 @@ body:             |
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a11
     ; FLATSCR: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 :: (store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -3387,7 +3387,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 32, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr9, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 36, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 36, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr10, implicit $exec
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr10, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 40, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 :: (store (s32) into %stack.0 + 40, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10
@@ -3410,7 +3410,7 @@ body:             |
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 36, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 36, addrspace 5)
     ; FLATSCR-NEXT: $agpr9 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 40, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 40, addrspace 5)
-    ; FLATSCR-NEXT: $agpr10 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10
+    ; FLATSCR-NEXT: $agpr10 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a11
@@ -3464,7 +3464,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $agpr7 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 28, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 28, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr8 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 32, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 32, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr9 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 36, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 36, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr10 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 40, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 :: (load (s32) from %stack.0 + 40, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr10 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 40, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 40, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_a11
@@ -3502,7 +3502,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $agpr8_agpr9_agpr10, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 :: (store (s96) into %stack.0 + 32, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 :: (load (s128) from %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5_agpr6_agpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 16, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr8_agpr9_agpr10 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 :: (load (s96) from %stack.0 + 32, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr8_agpr9_agpr10 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: (load (s96) from %stack.0 + 32, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a11
@@ -3552,7 +3552,7 @@ body:             |
   bb.0.entry:
     ; MUBUF-LABEL: name: test_spill_av_a12
     ; MUBUF: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -3574,7 +3574,7 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 36, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 36, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr10, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 40, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 40, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr11, implicit $exec
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr11, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 44, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 :: (store (s32) into %stack.0 + 44, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11
@@ -3599,7 +3599,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 40, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 40, addrspace 5)
     ; MUBUF-NEXT: $agpr10 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 44, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 44, addrspace 5)
-    ; MUBUF-NEXT: $agpr11 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11
+    ; MUBUF-NEXT: $agpr11 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_a12
@@ -3634,7 +3634,7 @@ body:             |
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a12
     ; FLATSCR: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 :: (store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -3656,7 +3656,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 36, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 36, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr10, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 40, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 40, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr11, implicit $exec
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr11, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 44, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 :: (store (s32) into %stack.0 + 44, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11
@@ -3681,7 +3681,7 @@ body:             |
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 40, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 40, addrspace 5)
     ; FLATSCR-NEXT: $agpr10 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 44, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 44, addrspace 5)
-    ; FLATSCR-NEXT: $agpr11 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11
+    ; FLATSCR-NEXT: $agpr11 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a12
@@ -3739,7 +3739,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $agpr8 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 32, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 32, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr9 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 36, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 36, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr10 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 40, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 40, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr11 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 44, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 :: (load (s32) from %stack.0 + 44, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr11 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 44, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 44, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_a12
@@ -3779,7 +3779,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr8_agpr9_agpr10_agpr11, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 :: (store (s128) into %stack.0 + 32, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 :: (load (s128) from %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5_agpr6_agpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 16, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr8_agpr9_agpr10_agpr11 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 :: (load (s128) from %stack.0 + 32, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr8_agpr9_agpr10_agpr11 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 32, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a12
@@ -3831,7 +3831,7 @@ body:             |
   bb.0.entry:
     ; MUBUF-LABEL: name: test_spill_av_a16
     ; MUBUF: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -3861,7 +3861,7 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 52, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 52, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr14, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 56, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 56, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 60, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: (store (s32) into %stack.0 + 60, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
@@ -3894,7 +3894,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 56, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 56, addrspace 5)
     ; MUBUF-NEXT: $agpr14 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 60, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 60, addrspace 5)
-    ; MUBUF-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; MUBUF-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_a16
@@ -3937,7 +3937,7 @@ body:             |
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a16
     ; FLATSCR: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: (store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -3967,7 +3967,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 52, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 52, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr14, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 56, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 56, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 60, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: (store (s32) into %stack.0 + 60, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
@@ -4000,7 +4000,7 @@ body:             |
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 56, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 56, addrspace 5)
     ; FLATSCR-NEXT: $agpr14 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 60, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 60, addrspace 5)
-    ; FLATSCR-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; FLATSCR-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a16
@@ -4074,7 +4074,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $agpr12 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 48, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 48, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr13 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 52, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 52, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr14 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 56, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 56, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr15 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 60, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: (load (s32) from %stack.0 + 60, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr15 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 60, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 60, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_a16
@@ -4124,7 +4124,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: (load (s128) from %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5_agpr6_agpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr8_agpr9_agpr10_agpr11 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 32, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr12_agpr13_agpr14_agpr15 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 48, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: (load (s128) from %stack.0 + 48, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr12_agpr13_agpr14_agpr15 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 48, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 48, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a16
@@ -4184,7 +4184,7 @@ body:             |
   bb.0.entry:
     ; MUBUF-LABEL: name: test_spill_av_a32
     ; MUBUF: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: (store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -4246,7 +4246,7 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 116, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 116, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr30, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 120, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 120, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 124, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: (store (s32) into %stack.0 + 124, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
@@ -4311,7 +4311,7 @@ body:             |
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 120, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 120, addrspace 5)
     ; MUBUF-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 124, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 124, addrspace 5)
-    ; MUBUF-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; MUBUF-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-V2A-LABEL: name: test_spill_av_a32
@@ -4386,7 +4386,7 @@ body:             |
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a32
     ; FLATSCR: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: (store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 4, addrspace 5)
@@ -4448,7 +4448,7 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 116, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 116, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr30, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 120, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0 + 120, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 124, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: (store (s32) into %stack.0 + 124, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
@@ -4513,7 +4513,7 @@ body:             |
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 120, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 120, addrspace 5)
     ; FLATSCR-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 124, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0 + 124, addrspace 5)
-    ; FLATSCR-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; FLATSCR-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a32
@@ -4651,7 +4651,7 @@ body:             |
     ; MUBUF-GFX90A-NEXT: $agpr28 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 112, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 112, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr29 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 116, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 116, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr30 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 120, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 120, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr31 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 124, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: (load (s32) from %stack.0 + 124, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr31 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 124, 0, 0, implicit $exec :: (load (s32) from %stack.0 + 124, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-V2A-LABEL: name: test_spill_av_a32
@@ -4741,7 +4741,7 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: $agpr16_agpr17_agpr18_agpr19 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 64, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 64, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr20_agpr21_agpr22_agpr23 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 80, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 80, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr24_agpr25_agpr26_agpr27 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 96, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 96, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr28_agpr29_agpr30_agpr31 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 112, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: (load (s128) from %stack.0 + 112, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr28_agpr29_agpr30_agpr31 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 112, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %stack.0 + 112, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a32

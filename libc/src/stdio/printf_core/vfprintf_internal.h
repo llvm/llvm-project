@@ -72,9 +72,9 @@ LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
                                   internal::ArgList &args) {
   constexpr size_t BUFF_SIZE = 1024;
   char buffer[BUFF_SIZE];
-  printf_core::WriteBuffer wb(buffer, BUFF_SIZE, &file_write_hook,
-                              reinterpret_cast<void *>(stream));
-  Writer writer(&wb);
+  printf_core::WriteBuffer<Mode<WriteMode::FLUSH_TO_STREAM>::value> wb(
+      buffer, BUFF_SIZE, &file_write_hook, reinterpret_cast<void *>(stream));
+  Writer writer(wb);
   internal::flockfile(stream);
   int retval = printf_main(&writer, format, args);
   int flushval = wb.overflow_write("");

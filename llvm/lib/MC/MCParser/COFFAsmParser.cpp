@@ -38,12 +38,12 @@ class COFFAsmParser : public MCAsmParserExtension {
   bool parseSectionSwitch(StringRef Section, unsigned Characteristics);
 
   bool parseSectionSwitch(StringRef Section, unsigned Characteristics,
-                          StringRef COMDATSymName, COFF::COMDATType Type);
+                          StringRef COMDATSymName, COFF::COMDATType Type,
+                          unsigned UniqueID);
 
   bool parseSectionName(StringRef &SectionName);
   bool parseSectionFlags(StringRef SectionName, StringRef FlagsString,
                          unsigned *Flags);
-
   void Initialize(MCAsmParser &Parser) override {
     // Call the base implementation.
     MCAsmParserExtension::Initialize(Parser);
@@ -315,19 +315,21 @@ bool COFFAsmParser::parseDirectiveCGProfile(StringRef S, SMLoc Loc) {
 
 bool COFFAsmParser::parseSectionSwitch(StringRef Section,
                                        unsigned Characteristics) {
-  return parseSectionSwitch(Section, Characteristics, "", (COFF::COMDATType)0);
+  return parseSectionSwitch(Section, Characteristics, "", (COFF::COMDATType)0,
+                            MCSection::NonUniqueID);
 }
 
 bool COFFAsmParser::parseSectionSwitch(StringRef Section,
                                        unsigned Characteristics,
                                        StringRef COMDATSymName,
-                                       COFF::COMDATType Type) {
+                                       COFF::COMDATType Type,
+                                       unsigned UniqueID) {
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in section switching directive");
   Lex();
 
   getStreamer().switchSection(getContext().getCOFFSection(
-      Section, Characteristics, COMDATSymName, Type));
+      Section, Characteristics, COMDATSymName, Type, UniqueID));
 
   return false;
 }
@@ -386,7 +388,8 @@ bool COFFAsmParser::parseSectionArguments(StringRef, SMLoc) {
 
   COFF::COMDATType Type = (COFF::COMDATType)0;
   StringRef COMDATSymName;
-  if (getLexer().is(AsmToken::Comma)) {
+  if (getLexer().is(AsmToken::Comma) &&
+      getLexer().peekTok().getString() != "unique") {
     Type = COFF::IMAGE_COMDAT_SELECT_ANY;
     Lex();
 
@@ -407,6 +410,10 @@ bool COFFAsmParser::parseSectionArguments(StringRef, SMLoc) {
       return TokError("expected identifier in directive");
   }
 
+  int64_t UniqueID = MCSection::NonUniqueID;
+  if (maybeParseUniqueID(UniqueID))
+    return true;
+
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in directive");
 
@@ -415,7 +422,7 @@ bool COFFAsmParser::parseSectionArguments(StringRef, SMLoc) {
     if (T.getArch() == Triple::arm || T.getArch() == Triple::thumb)
       Flags |= COFF::IMAGE_SCN_MEM_16BIT;
   }
-  parseSectionSwitch(SectionName, Flags, COMDATSymName, Type);
+  parseSectionSwitch(SectionName, Flags, COMDATSymName, Type, UniqueID);
   return false;
 }
 

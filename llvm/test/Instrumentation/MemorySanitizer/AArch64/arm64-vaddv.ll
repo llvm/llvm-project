@@ -2,11 +2,6 @@
 ; RUN: opt < %s -passes=msan -S | FileCheck %s
 ;
 ; Forked from llvm/test/CodeGen/AArch64/arm64-vaddv.ll
-;
-; Incorrectly handled by handleUnknownInstruction:
-; - llvm.aarch64.neon.faddv
-; - llvm.aarch64.neon.saddv
-; - llvm.aarch64.neon.uaddv
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android9001"
@@ -17,16 +12,12 @@ define signext i8 @test_vaddv_s8(<8 x i8> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.saddv.i32.v8i8(<8 x i8> [[A1]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = trunc i32 [[TMP2]] to i8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[VADDV_I]] to i8
-; CHECK-NEXT:    store i8 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i8 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i8 [[TMP4]]
 ;
 entry:
@@ -42,16 +33,12 @@ define <8 x i8> @test_vaddv_s8_used_by_laneop(<8 x i8> %a1, <8 x i8> %a2) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP0]])
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.aarch64.neon.saddv.i32.v8i8(<8 x i8> [[A2]])
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = trunc i32 [[TMP3]] to i8
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i8
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i8> [[TMP1]], i8 0, i32 3
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i8> [[TMP1]], i8 [[_MSPROP1]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i8> [[A1]], i8 [[TMP6]], i32 3
 ; CHECK-NEXT:    store <8 x i8> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i8> [[TMP7]]
@@ -69,16 +56,12 @@ define signext i16 @test_vaddv_s16(<4 x i16> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.saddv.i32.v4i16(<4 x i16> [[A1]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[VADDV_I]] to i16
-; CHECK-NEXT:    store i16 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i16 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i16 [[TMP4]]
 ;
 entry:
@@ -94,16 +77,12 @@ define <4 x i16> @test_vaddv_s16_used_by_laneop(<4 x i16> %a1, <4 x i16> %a2) #0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP0]])
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.aarch64.neon.saddv.i32.v4i16(<4 x i16> [[A2]])
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = trunc i32 [[TMP3]] to i16
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i16
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <4 x i16> [[TMP1]], i16 0, i32 3
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <4 x i16> [[TMP1]], i16 [[_MSPROP1]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i16> [[A1]], i16 [[TMP6]], i32 3
 ; CHECK-NEXT:    store <4 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[TMP7]]
@@ -121,15 +100,9 @@ define i32 @test_vaddv_s32(<2 x i32> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.saddv.i32.v2i32(<2 x i32> [[A1]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[VADDV_I]]
 ;
 ; 2 x i32 is not supported by the ISA, thus, this is a special case
@@ -145,15 +118,9 @@ define <2 x i32> @test_vaddv_s32_used_by_laneop(<2 x i32> %a1, <2 x i32> %a2) #0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.aarch64.neon.saddv.i32.v2i32(<2 x i32> [[A2]])
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> [[TMP1]], i32 0, i32 1
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[A1]], i32 [[TMP5]], i32 1
 ; CHECK-NEXT:    store <2 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMP6]]
@@ -170,15 +137,9 @@ define i64 @test_vaddv_s64(<2 x i64> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i64 @llvm.aarch64.neon.saddv.i64.v2i64(<2 x i64> [[A1]])
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[VADDV_I]]
 ;
 entry:
@@ -193,15 +154,9 @@ define <2 x i64> @test_vaddv_s64_used_by_laneop(<2 x i64> %a1, <2 x i64> %a2) #0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i64 @llvm.aarch64.neon.saddv.i64.v2i64(<2 x i64> [[A2]])
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i64> [[TMP1]], i64 0, i64 1
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i64> [[TMP1]], i64 [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[A1]], i64 [[TMP5]], i64 1
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[TMP6]]
@@ -218,16 +173,12 @@ define zeroext i8 @test_vaddv_u8(<8 x i8> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v8i8(<8 x i8> [[A1]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = trunc i32 [[TMP2]] to i8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[VADDV_I]] to i8
-; CHECK-NEXT:    store i8 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i8 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i8 [[TMP4]]
 ;
 entry:
@@ -243,16 +194,12 @@ define <8 x i8> @test_vaddv_u8_used_by_laneop(<8 x i8> %a1, <8 x i8> %a2) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP0]])
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v8i8(<8 x i8> [[A2]])
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = trunc i32 [[TMP3]] to i8
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i8
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i8> [[TMP1]], i8 0, i32 3
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i8> [[TMP1]], i8 [[_MSPROP1]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i8> [[A1]], i8 [[TMP6]], i32 3
 ; CHECK-NEXT:    store <8 x i8> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i8> [[TMP7]]
@@ -270,17 +217,14 @@ define i32 @test_vaddv_u8_masked(<8 x i8> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v8i8(<8 x i8> [[A1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[VADDV_I]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = or i32 0, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or i32 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP2]], 511
+; CHECK-NEXT:    [[TMP8:%.*]] = or i32 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = or i32 [[TMP8]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[VADDV_I]], 511
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[TMP7]]
@@ -297,16 +241,12 @@ define zeroext i16 @test_vaddv_u16(<4 x i16> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v4i16(<4 x i16> [[A1]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[VADDV_I]] to i16
-; CHECK-NEXT:    store i16 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i16 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i16 [[TMP4]]
 ;
 entry:
@@ -322,16 +262,12 @@ define <4 x i16> @test_vaddv_u16_used_by_laneop(<4 x i16> %a1, <4 x i16> %a2) #0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP0]])
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v4i16(<4 x i16> [[A2]])
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = trunc i32 [[TMP3]] to i16
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i16
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <4 x i16> [[TMP1]], i16 0, i32 3
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <4 x i16> [[TMP1]], i16 [[_MSPROP1]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i16> [[A1]], i16 [[TMP6]], i32 3
 ; CHECK-NEXT:    store <4 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[TMP7]]
@@ -349,17 +285,14 @@ define i32 @test_vaddv_u16_masked(<4 x i16> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v4i16(<4 x i16> [[A1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[VADDV_I]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = or i32 0, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or i32 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP2]], 3276799
+; CHECK-NEXT:    [[TMP8:%.*]] = or i32 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = or i32 [[TMP8]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[VADDV_I]], 3276799
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[TMP7]]
@@ -376,15 +309,9 @@ define i32 @test_vaddv_u32(<2 x i32> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v2i32(<2 x i32> [[A1]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[VADDV_I]]
 ;
 ; 2 x i32 is not supported by the ISA, thus, this is a special case
@@ -400,15 +327,9 @@ define <2 x i32> @test_vaddv_u32_used_by_laneop(<2 x i32> %a1, <2 x i32> %a2) #0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v2i32(<2 x i32> [[A2]])
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> [[TMP1]], i32 0, i32 1
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[A1]], i32 [[TMP5]], i32 1
 ; CHECK-NEXT:    store <2 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMP6]]
@@ -425,15 +346,9 @@ define float @test_vaddv_f32(<2 x float> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call float @llvm.aarch64.neon.faddv.f32.v2f32(<2 x float> [[A1]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[VADDV_I]]
 ;
 entry:
@@ -447,15 +362,9 @@ define float @test_vaddv_v4f32(<4 x float> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call float @llvm.aarch64.neon.faddv.f32.v4f32(<4 x float> [[A1]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[VADDV_I]]
 ;
 entry:
@@ -469,15 +378,9 @@ define double @test_vaddv_f64(<2 x double> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call double @llvm.aarch64.neon.faddv.f64.v2f64(<2 x double> [[A1]])
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[VADDV_I]]
 ;
 entry:
@@ -491,15 +394,9 @@ define i64 @test_vaddv_u64(<2 x i64> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> [[A1]])
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[VADDV_I]]
 ;
 entry:
@@ -514,15 +411,9 @@ define <2 x i64> @test_vaddv_u64_used_by_laneop(<2 x i64> %a1, <2 x i64> %a2) #0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> [[A2]])
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i64> [[TMP1]], i64 0, i64 1
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i64> [[TMP1]], i64 [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> [[A1]], i64 [[TMP5]], i64 1
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[TMP6]]
@@ -540,15 +431,9 @@ define <1 x i64> @test_vaddv_u64_to_vec(<2 x i64> %a1, <1 x i64> %param1) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP0]])
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> [[A1]])
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <1 x i64> [[TMP2]], i64 0, i32 0
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <1 x i64> [[TMP2]], i64 [[TMP3]], i32 0
 ; CHECK-NEXT:    [[VEC:%.*]] = insertelement <1 x i64> [[PARAM1]], i64 [[VADDV_I]], i32 0
 ; CHECK-NEXT:    store <1 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[VEC]]
@@ -565,16 +450,12 @@ define signext i8 @test_vaddvq_s8(<16 x i8> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.saddv.i32.v16i8(<16 x i8> [[A1]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = trunc i32 [[TMP2]] to i8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[VADDV_I]] to i8
-; CHECK-NEXT:    store i8 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i8 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i8 [[TMP4]]
 ;
 entry:
@@ -590,16 +471,12 @@ define <16 x i8> @test_vaddvq_s8_used_by_laneop(<16 x i8> %a1, <16 x i8> %a2) #0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP0]])
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.aarch64.neon.saddv.i32.v16i8(<16 x i8> [[A2]])
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = trunc i32 [[TMP3]] to i8
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i8
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i8> [[TMP1]], i8 0, i32 3
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[_MSPROP1]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[A1]], i8 [[TMP6]], i32 3
 ; CHECK-NEXT:    store <16 x i8> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x i8> [[TMP7]]
@@ -617,16 +494,12 @@ define signext i16 @test_vaddvq_s16(<8 x i16> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.saddv.i32.v8i16(<8 x i16> [[A1]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[VADDV_I]] to i16
-; CHECK-NEXT:    store i16 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i16 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i16 [[TMP4]]
 ;
 entry:
@@ -642,16 +515,12 @@ define <8 x i16> @test_vaddvq_s16_used_by_laneop(<8 x i16> %a1, <8 x i16> %a2) #
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> [[TMP0]])
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.aarch64.neon.saddv.i32.v8i16(<8 x i16> [[A2]])
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = trunc i32 [[TMP3]] to i16
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i16
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i16> [[TMP1]], i16 0, i32 3
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[_MSPROP1]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[A1]], i16 [[TMP6]], i32 3
 ; CHECK-NEXT:    store <8 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[TMP7]]
@@ -669,15 +538,9 @@ define i32 @test_vaddvq_s32(<4 x i32> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.saddv.i32.v4i32(<4 x i32> [[A1]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[VADDV_I]]
 ;
 entry:
@@ -692,15 +555,9 @@ define <4 x i32> @test_vaddvq_s32_used_by_laneop(<4 x i32> %a1, <4 x i32> %a2) #
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.aarch64.neon.saddv.i32.v4i32(<4 x i32> [[A2]])
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <4 x i32> [[TMP1]], i32 0, i32 3
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[TMP2]], i32 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[A1]], i32 [[TMP5]], i32 3
 ; CHECK-NEXT:    store <4 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[TMP6]]
@@ -717,16 +574,12 @@ define zeroext i8 @test_vaddvq_u8(<16 x i8> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v16i8(<16 x i8> [[A1]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = trunc i32 [[TMP2]] to i8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[VADDV_I]] to i8
-; CHECK-NEXT:    store i8 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i8 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i8 [[TMP4]]
 ;
 entry:
@@ -742,16 +595,12 @@ define <16 x i8> @test_vaddvq_u8_used_by_laneop(<16 x i8> %a1, <16 x i8> %a2) #0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP0]])
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v16i8(<16 x i8> [[A2]])
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = trunc i32 [[TMP3]] to i8
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i8
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i8> [[TMP1]], i8 0, i32 3
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[_MSPROP1]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[A1]], i8 [[TMP6]], i32 3
 ; CHECK-NEXT:    store <16 x i8> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x i8> [[TMP7]]
@@ -769,16 +618,12 @@ define zeroext i16 @test_vaddvq_u16(<8 x i16> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v8i16(<8 x i16> [[A1]])
+; CHECK-NEXT:    [[_MSPROP:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[VADDV_I]] to i16
-; CHECK-NEXT:    store i16 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i16 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i16 [[TMP4]]
 ;
 entry:
@@ -794,16 +639,12 @@ define <8 x i16> @test_vaddvq_u16_used_by_laneop(<8 x i16> %a1, <8 x i16> %a2) #
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> [[TMP0]])
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v8i16(<8 x i16> [[A2]])
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = trunc i32 [[TMP3]] to i16
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i16
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i16> [[TMP1]], i16 0, i32 3
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i16> [[TMP1]], i16 [[_MSPROP1]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[A1]], i16 [[TMP6]], i32 3
 ; CHECK-NEXT:    store <8 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[TMP7]]
@@ -821,15 +662,9 @@ define i32 @test_vaddvq_u32(<4 x i32> %a1) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[VADDV_I:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v4i32(<4 x i32> [[A1]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[VADDV_I]]
 ;
 entry:
@@ -844,15 +679,9 @@ define <4 x i32> @test_vaddvq_u32_used_by_laneop(<4 x i32> %a1, <4 x i32> %a2) #
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.aarch64.neon.uaddv.i32.v4i32(<4 x i32> [[A2]])
-; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <4 x i32> [[TMP1]], i32 0, i32 3
+; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[TMP2]], i32 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[A1]], i32 [[TMP5]], i32 3
 ; CHECK-NEXT:    store <4 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[TMP6]]
@@ -896,6 +725,3 @@ declare float @llvm.aarch64.neon.faddv.f32.v4f32(<4 x float> %a1)
 declare double @llvm.aarch64.neon.faddv.f64.v2f64(<2 x double> %a1)
 
 attributes #0 = { sanitize_memory }
-;.
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.

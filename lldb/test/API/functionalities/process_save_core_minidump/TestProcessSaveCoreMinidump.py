@@ -636,3 +636,42 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(self.dbg.DeleteTarget(target))
             if os.path.isfile(tls_file):
                 os.unlink(tls_file)
+
+    @skipUnlessPlatform(["linux"])
+    @skipUnlessArch("x86_64")
+    def test_invalid_custom_regions_not_included(self):
+        options = lldb.SBSaveCoreOptions()
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        output_file = self.getBuildArtifact("no_empty_regions.dmp")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+            options.SetPluginName("minidump")
+            options.SetOutputFile(lldb.SBFileSpec(output_file))
+            options.SetStyle(lldb.eSaveCoreCustomOnly)
+            region_one = lldb.SBMemoryRegionInfo()
+            process.GetMemoryRegions().GetMemoryRegionAtIndex(0, region_one)
+            options.AddMemoryRegionToSave(region_one)
+            empty_region = lldb.SBMemoryRegionInfo(
+                "empty region", 0x0, 0x0, 3, True, False
+            )
+            options.AddMemoryRegionToSave(empty_region)
+            region_with_no_permissions = lldb.SBMemoryRegionInfo(
+                "no permissions", 0x2AAA, 0x2BBB, 0, True, False
+            )
+            options.AddMemoryRegionToSave(region_with_no_permissions)
+            error = process.SaveCore(options)
+            self.assertTrue(error.Success(), error.GetCString())
+            core_target = self.dbg.CreateTarget(None)
+            core_process = core_target.LoadCore(output_file)
+            self.assertNotIn(
+                region_with_no_permissions, core_process.GetMemoryRegions()
+            )
+            self.assertNotIn(empty_region, core_process.GetMemoryRegions())
+        finally:
+            if os.path.isfile(output_file):
+                os.unlink(output_file)

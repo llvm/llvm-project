@@ -21,11 +21,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS has_virtual_destructor : public integral_constant<bool, __has_virtual_destructor(_Tp)> {};
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool has_virtual_destructor_v = __has_virtual_destructor(_Tp);
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___TYPE_TRAITS_HAS_VIRTUAL_DESTRUCTOR_H

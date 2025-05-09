@@ -17,15 +17,14 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::priority_queue<int> q;
-    q.push(1);
-    assert(q.top() == 1);
-    q.push(3);
-    assert(q.top() == 3);
-    q.push(2);
-    assert(q.top() == 3);
+int main(int, char**) {
+  std::priority_queue<int> q;
+  q.push(1);
+  assert(q.top() == 1);
+  q.push(3);
+  assert(q.top() == 3);
+  q.push(2);
+  assert(q.top() == 3);
 
   return 0;
 }

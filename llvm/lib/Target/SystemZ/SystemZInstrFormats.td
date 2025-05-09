@@ -5210,14 +5210,18 @@ multiclass CmpSwapRSPair<string mnemonic, bits<8> rsOpcode, bits<16> rsyOpcode,
   }
 }
 
-class RotateSelectRIEf<string mnemonic, bits<16> opcode, RegisterOperand cls1,
-                       RegisterOperand cls2, bits<8> I3Or = 0, bits<8> I4Or = 0>
-  : InstRIEf<opcode, (outs cls1:$R1),
+multiclass RotateSelectRIEf<string mnemonic, bits<16> opcode, RegisterOperand cls1,
+                       RegisterOperand cls2, bits<8> I3Or = 0, bits<8> I4Or = 0> {
+  let Constraints = "$R1 = $R1src", DisableEncoding = "$R1src" in {
+  def "" : InstRIEf<opcode, (outs cls1:$R1),
              (ins cls1:$R1src, cls2:$R2, imm32zx8:$I3, imm32zx8:$I4,
                   imm32zx8:$I5),
-             mnemonic#"\t$R1, $R2, $I3, $I4, $I5", [], I3Or, I4Or> {
-  let Constraints = "$R1 = $R1src";
-  let DisableEncoding = "$R1src";
+             mnemonic#"\t$R1, $R2, $I3, $I4, $I5", [], I3Or, I4Or>;
+  let I5 = 0 in
+    def Opt : InstRIEf<opcode, (outs cls1:$R1),
+               (ins cls1:$R1src, cls2:$R2, imm32zx8:$I3, imm32zx8:$I4),
+               mnemonic#"\t$R1, $R2, $I3, $I4", [], I3Or, I4Or>;
+  }
 }
 
 class PrefetchRXY<string mnemonic, bits<16> opcode, SDPatternOperator operator>
@@ -5609,11 +5613,14 @@ class CompareAliasRI<SDPatternOperator operator, RegisterOperand cls,
 }
 
 // An alias of a RotateSelectRIEf, but with different register sizes.
-class RotateSelectAliasRIEf<RegisterOperand cls1, RegisterOperand cls2>
-  : Alias<6, (outs cls1:$R1),
-          (ins cls1:$R1src, cls2:$R2, imm32zx8:$I3, imm32zx8:$I4,
-               imm32zx8:$I5), []> {
-  let Constraints = "$R1 = $R1src";
+multiclass RotateSelectAliasRIEf<RegisterOperand cls1, RegisterOperand cls2> {
+  let Constraints = "$R1 = $R1src" in {
+    def "" : Alias<6, (outs cls1:$R1),
+            (ins cls1:$R1src, cls2:$R2, imm32zx8:$I3, imm32zx8:$I4,
+                imm32zx8:$I5), []>;
+    def Opt : Alias<6, (outs cls1:$R1),
+            (ins cls1:$R1src, cls2:$R2, imm32zx8:$I3, imm32zx8:$I4), []>;
+  }
 }
 
 class MemsetPseudo<DAGOperand lenop, DAGOperand byteop>

@@ -22,6 +22,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 static constexpr size_t N_EXCEPTS_LO = 11;
 
 static constexpr fputil::ExceptValues<float, N_EXCEPTS_LO> EXP10M1F_EXCEPTS_LO =
@@ -94,6 +95,7 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS_HI> EXP10M1F_EXCEPTS_HI =
         // x = -0x1.ca4322p-5, exp10m1f(x) = -0x1.ef073p-4 (RZ)
         {0xbd65'2191U, 0xbdf7'8398U, 0U, 1U, 1U},
     }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float, exp10m1f, (float x)) {
   using FPBits = fputil::FPBits<float>;
@@ -119,8 +121,10 @@ LLVM_LIBC_FUNCTION(float, exp10m1f, (float x)) {
 
   // When |x| <= log10(2) * 2^(-6)
   if (LIBC_UNLIKELY(x_abs <= 0x3b9a'209bU)) {
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     if (auto r = EXP10M1F_EXCEPTS_LO.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
       return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
     double dx = x;
     double dx_sq = dx * dx;
@@ -192,8 +196,10 @@ LLVM_LIBC_FUNCTION(float, exp10m1f, (float x)) {
     }
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (auto r = EXP10M1F_EXCEPTS_HI.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // Range reduction: 10^x = 2^(mid + hi) * 10^lo
   //   rr = (2^(mid + hi), lo)

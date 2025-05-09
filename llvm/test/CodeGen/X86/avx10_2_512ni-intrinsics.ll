@@ -422,3 +422,14 @@ define { <32 x i16>, <32 x i16>, <32 x i16> } @test_mm512_mask_mpsadbw(<64 x i8>
 }
 
 declare <32 x i16> @llvm.x86.avx10.vmpsadbw.512(<64 x i8>, <64 x i8>, i8)
+
+; Regression test
+
+define <8 x float> @avx_dp_ps(<8 x float> %a, <8 x float> %b) {
+; CHECK-LABEL: avx_dp_ps:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vdpps $255, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x40,0xc1,0xff]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %r = tail call <8 x float> @llvm.x86.avx.dp.ps.256(<8 x float> %a, <8 x float> %b, i8 -1)
+  ret <8 x float> %r
+}

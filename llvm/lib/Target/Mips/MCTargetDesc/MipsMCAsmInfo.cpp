@@ -39,17 +39,10 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
   Data64bitsDirective         = "\t.8byte\t";
   CommentString               = "#";
   ZeroDirective               = "\t.space\t";
-  GPRel32Directive            = "\t.gpword\t";
-  GPRel64Directive            = "\t.gpdword\t";
-  DTPRel32Directive           = "\t.dtprelword\t";
-  DTPRel64Directive           = "\t.dtpreldword\t";
-  TPRel32Directive            = "\t.tprelword\t";
-  TPRel64Directive            = "\t.tpreldword\t";
   UseAssignmentForEHBegin = true;
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
   DwarfRegNumForCFI = true;
-  HasMipsExpressions = true;
 }
 
 void MipsCOFFMCAsmInfo::anchor() {}

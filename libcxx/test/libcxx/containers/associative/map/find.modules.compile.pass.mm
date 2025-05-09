@@ -13,6 +13,4 @@
 
 #include <map>
 
-void f(std::map<int, int> const& map, int key) {
-    (void)map.find(key);
-}
+void f(std::map<int, int> const& map, int key) { (void)map.find(key); }

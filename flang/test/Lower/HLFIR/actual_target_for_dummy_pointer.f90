@@ -24,10 +24,10 @@ end subroutine integer_scalar
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "i", fir.target, uniq_name = "_QFinteger_scalarEi"}
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFinteger_scalarEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#1 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
+! CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#0 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
 ! CHECK:           fir.store %[[VAL_4]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:           fir.call @_QPinteger_scalar_callee(%[[VAL_1]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> ()
-! CHECK:           %[[VAL_5:.*]] = fir.embox %[[VAL_3]]#1 : (!fir.ref<i32>) -> !fir.class<!fir.ptr<none>>
+! CHECK:           %[[VAL_5:.*]] = fir.embox %[[VAL_3]]#0 : (!fir.ref<i32>) -> !fir.class<!fir.ptr<none>>
 ! CHECK:           fir.store %[[VAL_5]] to %[[VAL_0]] : !fir.ref<!fir.class<!fir.ptr<none>>>
 ! CHECK:           fir.call @_QPinteger_scalar_uclass_callee(%[[VAL_0]]) fastmath<contract> : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> ()
 ! CHECK:           return
@@ -81,11 +81,11 @@ end subroutine integer_explicit_shape_array
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_4]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFinteger_explicit_shape_arrayEi"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_5]]#1(%[[VAL_6]]) : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_5]]#0(%[[VAL_6]]) : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[VAL_7]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           fir.call @_QPinteger_explicit_shape_array_callee(%[[VAL_1]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> ()
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_9:.*]] = fir.embox %[[VAL_5]]#1(%[[VAL_8]]) : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
+! CHECK:           %[[VAL_9:.*]] = fir.embox %[[VAL_5]]#0(%[[VAL_8]]) : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
 ! CHECK:           fir.store %[[VAL_9]] to %[[VAL_0]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>
 ! CHECK:           fir.call @_QPinteger_explicit_shape_array_uclass_callee(%[[VAL_0]]) fastmath<contract> : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>) -> ()
 ! CHECK:           return
@@ -115,14 +115,14 @@ end subroutine char_scalar
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.char<1,2> {bindc_name = "a", fir.target, uniq_name = "_QFchar_scalarEa"}
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] typeparams %[[VAL_3]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFchar_scalarEa"} : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
-! CHECK:           %[[VAL_6:.*]] = fir.embox %[[VAL_5]]#1 : (!fir.ref<!fir.char<1,2>>) -> !fir.box<!fir.ptr<!fir.char<1,2>>>
+! CHECK:           %[[VAL_6:.*]] = fir.embox %[[VAL_5]]#0 : (!fir.ref<!fir.char<1,2>>) -> !fir.box<!fir.ptr<!fir.char<1,2>>>
 ! CHECK:           fir.store %[[VAL_6]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,2>>>>
 ! CHECK:           fir.call @_QPchar_scalar_explicit_len_callee(%[[VAL_2]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,2>>>>) -> ()
-! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.char<1,2>>) -> !fir.ref<!fir.char<1,?>>
+! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_5]]#0 : (!fir.ref<!fir.char<1,2>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:           %[[VAL_8:.*]] = fir.embox %[[VAL_7]] typeparams %[[VAL_3]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
 ! CHECK:           fir.store %[[VAL_8]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK:           fir.call @_QPchar_scalar_assumed_len_callee(%[[VAL_1]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>) -> ()
-! CHECK:           %[[VAL_9:.*]] = fir.embox %[[VAL_5]]#1 : (!fir.ref<!fir.char<1,2>>) -> !fir.class<!fir.ptr<none>>
+! CHECK:           %[[VAL_9:.*]] = fir.embox %[[VAL_5]]#0 : (!fir.ref<!fir.char<1,2>>) -> !fir.class<!fir.ptr<none>>
 ! CHECK:           fir.store %[[VAL_9]] to %[[VAL_0]] : !fir.ref<!fir.class<!fir.ptr<none>>>
 ! CHECK:           fir.call @_QPchar_scalar_uclass_callee(%[[VAL_0]]) fastmath<contract> : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> ()
 ! CHECK:           return
@@ -222,17 +222,17 @@ end subroutine char_explicit_shape_array
 ! CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_14]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_13]](%[[VAL_15]]) typeparams %[[VAL_12]]#1 dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFchar_explicit_shape_arrayEa2"} : (!fir.ref<!fir.array<100x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<100x!fir.char<1,?>>>, !fir.ref<!fir.array<100x!fir.char<1,?>>>)
 ! CHECK:           %[[VAL_17:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_11]]#1 : (!fir.ref<!fir.array<100x!fir.char<1,2>>>) -> !fir.ref<!fir.array<?x!fir.char<1,2>>>
+! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_11]]#0 : (!fir.ref<!fir.array<100x!fir.char<1,2>>>) -> !fir.ref<!fir.array<?x!fir.char<1,2>>>
 ! CHECK:           %[[VAL_19:.*]] = fir.embox %[[VAL_18]](%[[VAL_17]]) : (!fir.ref<!fir.array<?x!fir.char<1,2>>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,2>>>>
 ! CHECK:           fir.store %[[VAL_19]] to %[[VAL_6]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,2>>>>>
 ! CHECK:           fir.call @_QPchar_explicit_shape_array_explicit_len_callee(%[[VAL_6]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,2>>>>>) -> ()
 ! CHECK:           %[[VAL_20:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_11]]#1 : (!fir.ref<!fir.array<100x!fir.char<1,2>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
+! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_11]]#0 : (!fir.ref<!fir.array<100x!fir.char<1,2>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_22:.*]] = fir.embox %[[VAL_21]](%[[VAL_20]]) typeparams %[[VAL_7]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
 ! CHECK:           fir.store %[[VAL_22]] to %[[VAL_5]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:           fir.call @_QPchar_explicit_shape_array_assumed_len_callee(%[[VAL_5]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>) -> ()
 ! CHECK:           %[[VAL_23:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_24:.*]] = fir.embox %[[VAL_11]]#1(%[[VAL_23]]) : (!fir.ref<!fir.array<100x!fir.char<1,2>>>, !fir.shape<1>) -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
+! CHECK:           %[[VAL_24:.*]] = fir.embox %[[VAL_11]]#0(%[[VAL_23]]) : (!fir.ref<!fir.array<100x!fir.char<1,2>>>, !fir.shape<1>) -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
 ! CHECK:           fir.store %[[VAL_24]] to %[[VAL_4]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>
 ! CHECK:           fir.call @_QPchar_explicit_shape_array_uclass_callee(%[[VAL_4]]) fastmath<contract> : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>) -> ()
 ! CHECK:           %[[VAL_25:.*]] = fir.shape %[[VAL_14]] : (index) -> !fir.shape<1>
@@ -279,13 +279,13 @@ end subroutine type_scalar
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMtarget_to_pointer_typesTt1>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.type<_QMtarget_to_pointer_typesTt1> {bindc_name = "t", fir.target, uniq_name = "_QFtype_scalarEt"}
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtype_scalarEt"} : (!fir.ref<!fir.type<_QMtarget_to_pointer_typesTt1>>) -> (!fir.ref<!fir.type<_QMtarget_to_pointer_typesTt1>>, !fir.ref<!fir.type<_QMtarget_to_pointer_typesTt1>>)
-! CHECK:           %[[VAL_5:.*]] = fir.embox %[[VAL_4]]#1 : (!fir.ref<!fir.type<_QMtarget_to_pointer_typesTt1>>) -> !fir.box<!fir.ptr<!fir.type<_QMtarget_to_pointer_typesTt1>>>
+! CHECK:           %[[VAL_5:.*]] = fir.embox %[[VAL_4]]#0 : (!fir.ref<!fir.type<_QMtarget_to_pointer_typesTt1>>) -> !fir.box<!fir.ptr<!fir.type<_QMtarget_to_pointer_typesTt1>>>
 ! CHECK:           fir.store %[[VAL_5]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMtarget_to_pointer_typesTt1>>>>
 ! CHECK:           fir.call @_QPtype_scalar_callee(%[[VAL_2]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMtarget_to_pointer_typesTt1>>>>) -> ()
-! CHECK:           %[[VAL_6:.*]] = fir.embox %[[VAL_4]]#1 : (!fir.ref<!fir.type<_QMtarget_to_pointer_typesTt1>>) -> !fir.class<!fir.ptr<!fir.type<_QMtarget_to_pointer_typesTt1>>>
+! CHECK:           %[[VAL_6:.*]] = fir.embox %[[VAL_4]]#0 : (!fir.ref<!fir.type<_QMtarget_to_pointer_typesTt1>>) -> !fir.class<!fir.ptr<!fir.type<_QMtarget_to_pointer_typesTt1>>>
 ! CHECK:           fir.store %[[VAL_6]] to %[[VAL_1]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMtarget_to_pointer_typesTt1>>>>
 ! CHECK:           fir.call @_QPtype_scalar_class_callee(%[[VAL_1]]) fastmath<contract> : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMtarget_to_pointer_typesTt1>>>>) -> ()
-! CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_4]]#1 : (!fir.ref<!fir.type<_QMtarget_to_pointer_typesTt1>>) -> !fir.class<!fir.ptr<none>>
+! CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_4]]#0 : (!fir.ref<!fir.type<_QMtarget_to_pointer_typesTt1>>) -> !fir.class<!fir.ptr<none>>
 ! CHECK:           fir.store %[[VAL_7]] to %[[VAL_0]] : !fir.ref<!fir.class<!fir.ptr<none>>>
 ! CHECK:           fir.call @_QPtype_scalar_uclass_callee(%[[VAL_0]]) fastmath<contract> : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> ()
 ! CHECK:           return
@@ -360,15 +360,15 @@ end subroutine type_explicit_shape_array
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_5]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtype_explicit_shape_arrayEt"} : (!fir.ref<!fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>>>, !fir.ref<!fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>>>)
 ! CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_8:.*]] = fir.embox %[[VAL_6]]#1(%[[VAL_7]]) : (!fir.ref<!fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMtarget_to_pointer_typesTt1>>>>
+! CHECK:           %[[VAL_8:.*]] = fir.embox %[[VAL_6]]#0(%[[VAL_7]]) : (!fir.ref<!fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMtarget_to_pointer_typesTt1>>>>
 ! CHECK:           fir.store %[[VAL_8]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMtarget_to_pointer_typesTt1>>>>>
 ! CHECK:           fir.call @_QPtype_explicit_shape_array_callee(%[[VAL_2]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMtarget_to_pointer_typesTt1>>>>>) -> ()
 ! CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_10:.*]] = fir.embox %[[VAL_6]]#1(%[[VAL_9]]) : (!fir.ref<!fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>>>, !fir.shape<1>) -> !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMtarget_to_pointer_typesTt1>>>>
+! CHECK:           %[[VAL_10:.*]] = fir.embox %[[VAL_6]]#0(%[[VAL_9]]) : (!fir.ref<!fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>>>, !fir.shape<1>) -> !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMtarget_to_pointer_typesTt1>>>>
 ! CHECK:           fir.store %[[VAL_10]] to %[[VAL_1]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMtarget_to_pointer_typesTt1>>>>>
 ! CHECK:           fir.call @_QPtype_explicit_shape_array_class_callee(%[[VAL_1]]) fastmath<contract> : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMtarget_to_pointer_typesTt1>>>>>) -> ()
 ! CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_6]]#1(%[[VAL_11]]) : (!fir.ref<!fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>>>, !fir.shape<1>) -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
+! CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_6]]#0(%[[VAL_11]]) : (!fir.ref<!fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>>>, !fir.shape<1>) -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
 ! CHECK:           fir.store %[[VAL_12]] to %[[VAL_0]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>
 ! CHECK:           fir.call @_QPtype_explicit_shape_array_uclass_callee(%[[VAL_0]]) fastmath<contract> : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>) -> ()
 ! CHECK:           return

@@ -8,6 +8,7 @@
 
 #include "../lib/Transforms/Vectorize/VPlanVerifier.h"
 #include "../lib/Transforms/Vectorize/VPlan.h"
+#include "../lib/Transforms/Vectorize/VPlanCFG.h"
 #include "VPlanTestBase.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -222,4 +223,44 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
 #endif
 }
 
+class VPIRVerifierTest : public VPlanTestIRBase {};
+
+TEST_F(VPIRVerifierTest, testVerifyIRPhi) {
+  const char *ModuleString =
+      "define void @f(ptr %A, i64 %N) {\n"
+      "entry:\n"
+      "  br label %loop\n"
+      "loop:\n"
+      "  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]\n"
+      "  %arr.idx = getelementptr inbounds i32, ptr %A, i64 %iv\n"
+      "  %l1 = load i32, ptr %arr.idx, align 4\n"
+      "  %res = add i32 %l1, 10\n"
+      "  store i32 %res, ptr %arr.idx, align 4\n"
+      "  %iv.next = add i64 %iv, 1\n"
+      "  %exitcond = icmp ne i64 %iv.next, %N\n"
+      "  br i1 %exitcond, label %loop, label %for.end\n"
+      "for.end:\n"
+      "  %p = phi i32 [ %l1, %loop ]\n"
+      "  ret void\n"
+      "}\n";
+
+  Module &M = parseModule(ModuleString);
+
+  Function *F = M.getFunction("f");
+  BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
+  auto Plan = buildVPlan(LoopHeader);
+
+  Plan->getExitBlocks()[0]->front().addOperand(
+      Plan->getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(*Ctx), 0)));
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(*Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_STREQ(
+      "Phi-like recipe with different number of operands and predecessors.\n",
+      ::testing::internal::GetCapturedStderr().c_str());
+#endif
+}
 } // namespace

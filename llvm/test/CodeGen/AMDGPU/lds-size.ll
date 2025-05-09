@@ -16,7 +16,7 @@
 ; HSA: .amdhsa_group_segment_fixed_size 4
 
 ; GCN: ; LDSByteSize: 4 bytes/workgroup (compile time only)
-@lds = internal unnamed_addr addrspace(3) global i32 undef, align 4
+@lds = internal unnamed_addr addrspace(3) global i32 poison, align 4
 
 define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %cond) {
 entry:

@@ -58,7 +58,7 @@
 ; CHECK:          {{\.?}}LJTI0_0:
 ; I686-NEXT:      .long   LBB0_[[#]]
 ; X64-NEXT:       .long   .LBB0_[[#]]-.LJTI0_0
-; A32-NEXT:       .byte   (($MBB0_[[#]])-(.LCPI0_0+4))/2
+; A32-NEXT:       .byte   ($MBB0_[[#]]-(.LCPI0_0+4))/2
 ; A64-NEXT:       .byte   (.LBB0_[[FIRSTBLOCK:[0-9]+]]-.LBB0_[[FIRSTBLOCK]])>>2
 ; NOTE: thumbv7a places the jump tables just after the branch, so check for the other branch now
 ; A32:            .LCPI0_1:
@@ -66,7 +66,7 @@
 ; CHECK:          {{\.?}}LJTI0_1:
 ; I686-NEXT:      .long   LBB0_[[#]]
 ; X64-NEXT:       .long   .LBB0_[[#]]-.LJTI0_1
-; A32-NEXT:       .byte   (($MBB0_[[#]])-(.LCPI0_1+4))/2
+; A32-NEXT:       .byte   ($MBB0_[[#]]-(.LCPI0_1+4))/2
 ; A64-NEXT:       .byte   (.LBB0_[[SECONDBLOCK:[0-9]+]]-.LBB0_[[SECONDBLOCK]])>>2
 
 ; Verify CodeView

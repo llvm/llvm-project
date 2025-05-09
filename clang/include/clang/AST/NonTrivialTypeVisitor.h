@@ -93,6 +93,8 @@ struct CopiedTypeVisitor {
       return asDerived().visitARCStrong(FT, std::forward<Ts>(Args)...);
     case QualType::PCK_ARCWeak:
       return asDerived().visitARCWeak(FT, std::forward<Ts>(Args)...);
+    case QualType::PCK_PtrAuth:
+      return asDerived().visitPtrAuth(FT, std::forward<Ts>(Args)...);
     case QualType::PCK_Struct:
       return asDerived().visitStruct(FT, std::forward<Ts>(Args)...);
     case QualType::PCK_Trivial:

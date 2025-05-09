@@ -47,3 +47,26 @@ c4_capsule = c4._CAPIPtr
 assert '"mlir.ir.Context._CAPIPtr"' in repr(c4_capsule)
 c5 = mlir.ir.Context._CAPICreate(c4_capsule)
 assert c4 is c5
+c4 = None
+c5 = None
+gc.collect()
+
+# Create a global threadpool and use it in two contexts
+tp = mlir.ir.ThreadPool()
+assert tp.get_max_concurrency() > 0
+c5 = mlir.ir.Context()
+c5.set_thread_pool(tp)
+assert c5.get_num_threads() == tp.get_max_concurrency()
+assert c5._mlir_thread_pool_ptr() == tp._mlir_thread_pool_ptr()
+c6 = mlir.ir.Context()
+c6.set_thread_pool(tp)
+assert c6.get_num_threads() == tp.get_max_concurrency()
+assert c6._mlir_thread_pool_ptr() == tp._mlir_thread_pool_ptr()
+c7 = mlir.ir.Context(thread_pool=tp)
+assert c7.get_num_threads() == tp.get_max_concurrency()
+assert c7._mlir_thread_pool_ptr() == tp._mlir_thread_pool_ptr()
+assert mlir.ir.Context._get_live_count() == 3
+c5 = None
+c6 = None
+c7 = None
+gc.collect()

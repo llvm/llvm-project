@@ -91,7 +91,7 @@ struct Y {};
 struct Z : W,
   X, check_derived_from<Z, X>, // #cwg2310-X
   check_derived_from<Z, Y>, Y  // #cwg2310-Y
-{  
+{
   // FIXME: It was properly rejected before, but we're crashing since Clang 11 in C++11 and C++14 modes.
   //        See https://github.com/llvm/llvm-project/issues/59920
 #if __cplusplus >= 201703L
@@ -188,7 +188,7 @@ struct InitListCtor {
 
 std::initializer_list<InitListCtor> i;
 auto j = std::initializer_list<InitListCtor>{ i };
-// since-cxx17-error@-1 {{conversion function from 'std::initializer_list<InitListCtor>' to 'const cwg2311::InitListCtor' invokes a deleted function}}
+// since-cxx17-error@-1 {{conversion function from 'std::initializer_list<InitListCtor>' to 'const InitListCtor' invokes a deleted function}}
 //   since-cxx17-note@#cwg2311-InitListCtor {{'InitListCtor' has been explicitly marked deleted here}}
 #endif
 } // namespace cwg2311
@@ -378,6 +378,20 @@ class C {
   friend void N::h(N_type);
 };
 } // namespace cwg2370
+
+namespace cwg2376 { // cwg2376: 21
+#if __cplusplus >= 201703L
+template<int = 0> class C {};
+
+C a;
+const volatile C b = C<2>();
+C (c) = {};
+C* d;
+// expected-error@-1 {{cannot form pointer to deduced class template specialization type}}
+C e[1];
+// expected-error@-1 {{cannot form array of deduced class template specialization type}}
+#endif
+}
 
 namespace cwg2386 { // cwg2386: 9
 // Otherwise, if the qualified-id std::tuple_size<E> names a complete class

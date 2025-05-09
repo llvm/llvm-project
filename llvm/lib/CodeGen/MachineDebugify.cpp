@@ -123,10 +123,14 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
 
       // Find a suitable local variable for the DBG_VALUE.
       unsigned Line = MI.getDebugLoc().getLine();
-      if (!Line2Var.count(Line))
+      auto It = Line2Var.find(Line);
+      if (It == Line2Var.end()) {
         Line = EarliestDVI ? EarliestDVI->getDebugLoc().getLine()
                            : EarliestDVR->getDebugLoc().getLine();
-      DILocalVariable *LocalVar = Line2Var[Line];
+        It = Line2Var.find(Line);
+        assert(It != Line2Var.end());
+      }
+      DILocalVariable *LocalVar = It->second;
       assert(LocalVar && "No variable for current line?");
       VarSet.insert(LocalVar);
 

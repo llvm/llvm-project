@@ -16,6 +16,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ADL.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstddef>
@@ -122,6 +123,17 @@ inline auto *getSpecificAttr(const Container &container) {
                                     const SpecificAttr, SpecificAttr>;
   auto It = specific_attr_begin<IterTy>(container);
   return It != specific_attr_end<IterTy>(container) ? *It : nullptr;
+}
+
+template <typename SpecificAttr, typename Container>
+inline auto getSpecificAttrs(const Container &container) {
+  using ValueTy = llvm::detail::ValueOfRange<Container>;
+  using ValuePointeeTy = std::remove_pointer_t<ValueTy>;
+  using IterTy = std::conditional_t<std::is_const_v<ValuePointeeTy>,
+                                    const SpecificAttr, SpecificAttr>;
+  auto Begin = specific_attr_begin<IterTy>(container);
+  auto End = specific_attr_end<IterTy>(container);
+  return llvm::make_range(Begin, End);
 }
 
 } // namespace clang

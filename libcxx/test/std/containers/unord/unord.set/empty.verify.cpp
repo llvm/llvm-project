@@ -17,6 +17,6 @@
 #include <unordered_set>
 
 void f() {
-    std::unordered_set<int> c;
-    c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::unordered_set<int> c;
+  c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

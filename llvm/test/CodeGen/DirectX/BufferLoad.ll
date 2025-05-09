@@ -43,7 +43,7 @@ define void @loadv4f32() {
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATA4]], 1
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATA4]], 2
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATA4]], 3
-  ; CHECK: insertelement <4 x float> undef
+  ; CHECK: insertelement <4 x float> poison
   ; CHECK: insertelement <4 x float>
   ; CHECK: insertelement <4 x float>
   ; CHECK: insertelement <4 x float>

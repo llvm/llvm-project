@@ -1,6 +1,6 @@
 @AUTO_GEN_COMMENT@
 
-config.bin_llvm_tools_dir = "@CMAKE_BINARY_DIR@/bin"
+config.bin_llvm_tools_dir = "@LLVM_RUNTIME_OUTPUT_INTDIR@"
 config.test_c_compiler = "@OPENMP_TEST_C_COMPILER@"
 config.test_cxx_compiler = "@OPENMP_TEST_CXX_COMPILER@"
 config.test_fortran_compiler="@OPENMP_TEST_Fortran_COMPILER@"

@@ -67,7 +67,8 @@ protected:
   }
 
   std::unique_ptr<TargetMachine>
-  createTargetMachine(std::string TT, StringRef CPU, StringRef FS) {
+  createTargetMachine(std::string TargetStr, StringRef CPU, StringRef FS) {
+    Triple TT(TargetStr);
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget(TT, Error);
     if (!T)
@@ -131,8 +132,7 @@ TEST_F(MachineMetadataTest, TrivialHook) {
               MO.print(OS, MST, LLT{}, /*OpIdx*/ ~0U, /*PrintDef=*/false,
                        /*IsStandalone=*/false,
                        /*ShouldPrintRegisterTies=*/false, /*TiedOperandIdx=*/0,
-                       /*TRI=*/nullptr,
-                       /*IntrinsicInfo=*/nullptr);
+                       /*TRI=*/nullptr);
             }));
   // Print the definition of that metadata node.
   EXPECT_EQ("!0 = !{!\"foo\"}",
@@ -169,8 +169,7 @@ TEST_F(MachineMetadataTest, BasicHook) {
               MO.print(OS, MST, LLT{}, /*OpIdx*/ ~0U, /*PrintDef=*/false,
                        /*IsStandalone=*/false,
                        /*ShouldPrintRegisterTies=*/false, /*TiedOperandIdx=*/0,
-                       /*TRI=*/nullptr,
-                       /*IntrinsicInfo=*/nullptr);
+                       /*TRI=*/nullptr);
             }));
   // Print the definition of these unnamed metadata nodes.
   EXPECT_EQ("!0 = !{!\"bar\"}",

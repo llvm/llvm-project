@@ -346,4 +346,13 @@ TEST_F(SuppressionMappingTest, IsIgnored) {
   EXPECT_FALSE(Diags.isIgnored(diag::warn_unused_function,
                                SM.getLocForStartOfFile(ClangID)));
 }
+
+TEST_F(SuppressionMappingTest, ParsingRespectsOtherWarningOpts) {
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer("[non-existing-warning]"));
+  Diags.getDiagnosticOptions().Warnings.push_back("no-unknown-warning-option");
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
+}
 } // namespace

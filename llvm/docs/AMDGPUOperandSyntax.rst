@@ -63,7 +63,7 @@ Note: *N* and *K* must satisfy the following conditions:
 * 0 <= *K* <= 255.
 * *K-N+1* must be in the range from 1 to 12 or equal to 16 or 32.
 
-GFX90A and GFX940 have an additional alignment requirement:
+GFX90A and GFX942 have an additional alignment requirement:
 pairs of *vector* registers must be even-aligned
 (first register must be even).
 
@@ -183,7 +183,7 @@ Note: *N* and *K* must satisfy the following conditions:
 * 0 <= *K* <= 255.
 * *K-N+1* must be in the range from 1 to 12 or equal to 16 or 32.
 
-GFX90A and GFX940 have an additional alignment requirement:
+GFX90A and GFX942 have an additional alignment requirement:
 pairs of *accumulator* registers must be even-aligned
 (first register must be even).
 

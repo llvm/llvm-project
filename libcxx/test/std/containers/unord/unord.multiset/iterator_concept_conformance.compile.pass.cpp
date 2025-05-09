@@ -16,11 +16,11 @@
 
 #include "test_macros.h"
 
-using iterator = std::unordered_multiset<int>::iterator;
-using const_iterator = std::unordered_multiset<int>::const_iterator;
-using local_iterator = std::unordered_multiset<int>::local_iterator;
+using iterator             = std::unordered_multiset<int>::iterator;
+using const_iterator       = std::unordered_multiset<int>::const_iterator;
+using local_iterator       = std::unordered_multiset<int>::local_iterator;
 using const_local_iterator = std::unordered_multiset<int>::const_local_iterator;
-using value_type = int;
+using value_type           = int;
 
 static_assert(std::forward_iterator<iterator>);
 LIBCPP_STATIC_ASSERT(!std::bidirectional_iterator<iterator>);

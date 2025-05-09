@@ -1,5 +1,5 @@
 # Xqciint - Qualcomm uC Interrupts extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqciint -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqciint -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqciint < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqciint -M no-aliases --no-print-imm-hex -d - \
@@ -79,3 +79,13 @@ qc.c.mileaveret
 # CHECK-INST: qc.c.setint     a0
 # CHECK-ENC: encoding: [0x0a,0x15]
 qc.c.setint x10
+
+
+# CHECK-INST: qc.c.mret
+# CHECK-ENC: encoding: [0x12,0x19]
+qc.c.mret
+
+
+# CHECK-INST: qc.c.mnret
+# CHECK-ENC: encoding: [0x92,0x19]
+qc.c.mnret

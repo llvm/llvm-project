@@ -55,7 +55,7 @@ func.func @dim_index_out_of_bounds() {
   %alloc_4 = memref.alloc() : memref<4xi64>
   %dim = memref.dim %alloc_4, %c6 : memref<4xi64>
   %alloca_100 = memref.alloca() : memref<100xi64>
-  // expected-error@+1 {{'affine.vector_load' op index must be a valid dimension or symbol identifier}}
+  // expected-error@+1 {{'affine.vector_load' op operand cannot be used as a dimension id}}
   %70 = affine.vector_load %alloca_100[%dim] : memref<100xi64>, vector<31xi64>
   return
 }

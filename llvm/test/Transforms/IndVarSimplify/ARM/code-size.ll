@@ -4,30 +4,32 @@
 
 define i32 @remove_loop(i32 %size) #0 {
 ; CHECK-V8M-LABEL: @remove_loop(
+; CHECK-V8M-SAME: i32 [[SIZE:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-V8M-NEXT:  entry:
-; CHECK-V8M-NEXT:    [[TMP0:%.*]] = add i32 [[SIZE:%.*]], 31
+; CHECK-V8M-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK-V8M:       while.cond:
+; CHECK-V8M-NEXT:    br i1 false, label %[[WHILE_COND]], label %[[WHILE_END:.*]]
+; CHECK-V8M:       while.end:
+; CHECK-V8M-NEXT:    [[TMP0:%.*]] = add i32 [[SIZE]], 31
 ; CHECK-V8M-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SIZE]], i32 31)
 ; CHECK-V8M-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[UMIN]]
 ; CHECK-V8M-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 5
 ; CHECK-V8M-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 5
-; CHECK-V8M-NEXT:    br label [[WHILE_COND:%.*]]
-; CHECK-V8M:       while.cond:
-; CHECK-V8M-NEXT:    br i1 false, label [[WHILE_COND]], label [[WHILE_END:%.*]]
-; CHECK-V8M:       while.end:
 ; CHECK-V8M-NEXT:    [[TMP4:%.*]] = sub i32 [[SIZE]], [[TMP3]]
 ; CHECK-V8M-NEXT:    ret i32 [[TMP4]]
 ;
 ; CHECK-V8A-LABEL: @remove_loop(
+; CHECK-V8A-SAME: i32 [[SIZE:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-V8A-NEXT:  entry:
-; CHECK-V8A-NEXT:    [[TMP0:%.*]] = add i32 [[SIZE:%.*]], 31
+; CHECK-V8A-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK-V8A:       while.cond:
+; CHECK-V8A-NEXT:    br i1 false, label %[[WHILE_COND]], label %[[WHILE_END:.*]]
+; CHECK-V8A:       while.end:
+; CHECK-V8A-NEXT:    [[TMP0:%.*]] = add i32 [[SIZE]], 31
 ; CHECK-V8A-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SIZE]], i32 31)
 ; CHECK-V8A-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[UMIN]]
 ; CHECK-V8A-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 5
 ; CHECK-V8A-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 5
-; CHECK-V8A-NEXT:    br label [[WHILE_COND:%.*]]
-; CHECK-V8A:       while.cond:
-; CHECK-V8A-NEXT:    br i1 false, label [[WHILE_COND]], label [[WHILE_END:%.*]]
-; CHECK-V8A:       while.end:
 ; CHECK-V8A-NEXT:    [[TMP4:%.*]] = sub i32 [[SIZE]], [[TMP3]]
 ; CHECK-V8A-NEXT:    ret i32 [[TMP4]]
 ;

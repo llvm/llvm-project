@@ -16,6 +16,7 @@ class TestCase(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
+    @skipIfEditlineWideCharSupportMissing
     def test_unicode_input(self):
         self.launch()
 

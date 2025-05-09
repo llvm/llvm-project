@@ -133,8 +133,8 @@ bool CopyPropagation::run() {
     for (NodeId I : Copies) {
       dbgs() << "Instr: " << *DFG.addr<StmtNode*>(I).Addr->getCode();
       dbgs() << "   eq: {";
-      if (CopyMap.count(I)) {
-        for (auto J : CopyMap.at(I))
+      if (auto It = CopyMap.find(I); It != CopyMap.end()) {
+        for (auto J : It->second)
           dbgs() << ' ' << Print<RegisterRef>(J.first, DFG) << '='
                  << Print<RegisterRef>(J.second, DFG);
       }

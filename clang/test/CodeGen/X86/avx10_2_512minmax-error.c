@@ -113,17 +113,6 @@ __m512 test_mm512_minmax_round_ps(__m512 __A, __m512 __B) {
   return _mm512_minmax_round_ps(__A, __B, 127, 11); // expected-error {{invalid rounding argument}}
 }
 
-__m256d test_mm256_minmax_round_pd(__m256d __A, __m256d __B) {
-  return _mm256_minmax_round_pd(__A, __B, 127, 11); // expected-error {{invalid rounding argument}}
-}
-
-__m256h test_mm256_minmax_round_ph(__m256h __A, __m256h __B) {
-  return _mm256_minmax_round_ph(__A, __B, 127, 11); // expected-error {{invalid rounding argument}}
-}
-
-__m256 test_mm256_minmax_round_ps(__m256 __A, __m256 __B) {
-  return _mm256_minmax_round_ps(__A, __B, 127, 11); // expected-error {{invalid rounding argument}}
-}
 __m128d test_mm_minmax_round_sd(__m128d __A, __m128d __B) {
   return _mm_minmax_round_sd(__A, __B, 127, 11); // expected-error {{invalid rounding argument}}
 }

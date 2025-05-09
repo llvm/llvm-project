@@ -59,11 +59,15 @@ void test_float(void) {
   // CHECK: call <4 x float> @llvm.experimental.constrained.nearbyint.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
   vf = __builtin_s390_vfisb(vf, 4, 1);
   // CHECK: call <4 x float> @llvm.experimental.constrained.round.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  vf = __builtin_s390_vfisb(vf, 4, 4);
+  // CHECK: call <4 x float> @llvm.experimental.constrained.roundeven.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
   vf = __builtin_s390_vfisb(vf, 4, 5);
   // CHECK: call <4 x float> @llvm.experimental.constrained.trunc.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
   vf = __builtin_s390_vfisb(vf, 4, 6);
   // CHECK: call <4 x float> @llvm.experimental.constrained.ceil.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
   vf = __builtin_s390_vfisb(vf, 4, 7);
   // CHECK: call <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
+  vf = __builtin_s390_vfisb(vf, 4, 3);
+  // CHECK: call <4 x float> @llvm.s390.vfisb(<4 x float> %{{.*}}, i32 4, i32 3)
 }
 

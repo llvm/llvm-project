@@ -1158,6 +1158,12 @@ template void f16<int>(int, __remove_volatile(int));
 template <typename T> void f17(T, __remove_restrict(T)) {}
 template void f17<int>(int, __remove_restrict(int));
 // CHECK-LABEL: @_ZN6test553f17IiEEvT_u17__remove_restrictIS1_E
+
+struct S{};
+template <class T> void f18(decltype(__builtin_structured_binding_size(T))) {}
+template void f18<S>(__SIZE_TYPE__);
+// CHECK: void @_ZN6test553f18INS_1SEEEvDTu33__builtin_structured_binding_sizeT_EE
+
 } // namespace test55
 
 namespace test56 {
@@ -1214,3 +1220,30 @@ namespace test61 {
   // CHECK-LABEL: @_ZN6test611fINS_1XEEEvNT_1Y1aENS3_1bE
   template void f<X>(int, int);
 }
+
+namespace test62 {
+  template <class> struct integral_constant {
+    static const int value = true;
+  };
+  template <int> struct _OrImpl {};
+  template <class _Args> using _Or = _OrImpl<_Args::value>;
+  template <class _Up>
+  void f(_Or<integral_constant<_Up>>) {}
+  // CHECK-LABEL: @_ZN6test621fIiEEvNS_7_OrImplIXsr17integral_constantIT_EE5valueEEE
+  template void f<int>(_OrImpl<1>);
+} // namespace test62
+
+namespace test63 {
+  namespace {
+    template <class, class> struct integral_constant {
+      static const int value = true;
+    };
+    template <class, class> struct _And {};
+    template <int> struct _OrImpl {};
+    template <class _First> using _Or = _OrImpl<_First::value>;
+    template <class _Up>
+    void f(_And<integral_constant<int, void>, _Or<integral_constant<_Up, int>>>);
+  } // namespace
+  // CHECK-LABEL: @_ZN6test6312_GLOBAL__N_11fIiEEvNS0_4_AndINS0_17integral_constantIivEENS0_7_OrImplIXsr17integral_constantIT_iEE5valueEEEEE
+  void g() { f<int>({}); }
+} // namespace test63

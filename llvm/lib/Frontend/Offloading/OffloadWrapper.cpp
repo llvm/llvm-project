@@ -267,7 +267,7 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP,
                                  StringRef Suffix) {
   LLVMContext &C = M.getContext();
   llvm::Type *Int8PtrTy = PointerType::getUnqual(C);
-  llvm::Triple Triple = llvm::Triple(M.getTargetTriple());
+  const llvm::Triple &Triple = M.getTargetTriple();
 
   // Create the global string containing the fatbinary.
   StringRef FatbinConstantSection =

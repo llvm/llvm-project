@@ -292,9 +292,7 @@ void AssumptionCacheTracker::verifyAnalysis() const {
   }
 }
 
-AssumptionCacheTracker::AssumptionCacheTracker() : ImmutablePass(ID) {
-  initializeAssumptionCacheTrackerPass(*PassRegistry::getPassRegistry());
-}
+AssumptionCacheTracker::AssumptionCacheTracker() : ImmutablePass(ID) {}
 
 AssumptionCacheTracker::~AssumptionCacheTracker() = default;
 

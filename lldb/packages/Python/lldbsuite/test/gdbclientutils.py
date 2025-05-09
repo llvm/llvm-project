@@ -516,8 +516,9 @@ class MockGDBServer:
         self._thread.start()
 
     def stop(self):
-        self._thread.join()
-        self._thread = None
+        if self._thread is not None:
+            self._thread.join()
+            self._thread = None
 
     def get_connect_address(self):
         return self._socket.get_connect_address()

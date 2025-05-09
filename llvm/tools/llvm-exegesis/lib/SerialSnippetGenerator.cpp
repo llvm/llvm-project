@@ -53,6 +53,8 @@ computeAliasingInstructions(const LLVMState &State, const Instruction *Instr,
     if (OtherOpcode == Instr->Description.getOpcode())
       continue;
     const Instruction &OtherInstr = State.getIC().getInstr(OtherOpcode);
+    if (ET.getIgnoredOpcodeReasonOrNull(State, OtherInstr.getOpcode()))
+      continue;
     if (OtherInstr.hasMemoryOperands())
       continue;
     if (!ET.allowAsBackToBack(OtherInstr))
@@ -104,7 +106,48 @@ static void appendCodeTemplates(const LLVMState &State,
   }
   case ExecutionMode::SERIAL_VIA_MEMORY_INSTR: {
     // Select back-to-back memory instruction.
-    // TODO: Implement me.
+
+    auto &I = Variant.getInstr();
+    if (I.Description.mayLoad()) {
+      // If instruction is load, we can self-alias it in case when instruction
+      // overrides whole address register. For that we use provided scratch
+      // memory.
+
+      // TODO: now it is not checked if load writes the whole register.
+
+      auto DefOpIt = find_if(I.Operands, [](Operand const &Op) {
+        return Op.isDef() && Op.isReg();
+      });
+
+      if (DefOpIt == I.Operands.end())
+        return;
+
+      const Operand &DefOp = *DefOpIt;
+      const ExegesisTarget &ET = State.getExegesisTarget();
+      unsigned ScratchMemoryRegister = ET.getScratchMemoryRegister(
+          State.getTargetMachine().getTargetTriple());
+      const llvm::MCRegisterClass &RegClass =
+          State.getTargetMachine().getMCRegisterInfo()->getRegClass(
+              DefOp.getExplicitOperandInfo().RegClass);
+
+      // Register classes of def operand and memory operand must be the same
+      // to perform aliasing.
+      if (!RegClass.contains(ScratchMemoryRegister))
+        return;
+
+      ET.fillMemoryOperands(Variant, ScratchMemoryRegister, 0);
+      Variant.getValueFor(DefOp) = MCOperand::createReg(ScratchMemoryRegister);
+
+      CodeTemplate CT;
+      CT.Execution = ExecutionModeBit;
+      CT.ScratchSpacePointerInReg = ScratchMemoryRegister;
+
+      CT.Info = std::string(ExecutionClassDescription);
+      CT.Instructions.push_back(std::move(Variant));
+      CodeTemplates.push_back(std::move(CT));
+    }
+
+    // TODO: implement more cases
     return;
   }
   case ExecutionMode::SERIAL_VIA_EXPLICIT_REGS: {

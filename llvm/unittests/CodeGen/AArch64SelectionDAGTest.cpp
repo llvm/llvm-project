@@ -45,7 +45,7 @@ protected:
 
     TargetOptions Options;
     TM = std::unique_ptr<TargetMachine>(
-        T->createTargetMachine("AArch64", "", "+sve", Options, std::nullopt,
+        T->createTargetMachine(TargetTriple, "", "+sve", Options, std::nullopt,
                                std::nullopt, CodeGenOptLevel::Aggressive));
     if (!TM)
       GTEST_SKIP();

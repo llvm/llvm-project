@@ -34,10 +34,6 @@ template <typename Ty1, typename Ty2> Ty1 *advancePtr(Ty1 *Ptr, Ty2 Offset) {
 template <typename Ty1, typename Ty2> inline Ty1 alignPtr(Ty1 V, Ty2 Align) {
   return reinterpret_cast<Ty1>(((uintptr_t(V) + Align - 1) / Align) * Align);
 }
-/// Return \p V aligned "downwards" according to \p Align.
-template <typename Ty1, typename Ty2> inline Ty1 alignDown(Ty1 V, Ty2 Align) {
-  return V - V % Align;
-}
 
 /// Round up \p V to a \p Boundary.
 template <typename Ty> inline Ty roundUp(Ty V, Ty Boundary) {

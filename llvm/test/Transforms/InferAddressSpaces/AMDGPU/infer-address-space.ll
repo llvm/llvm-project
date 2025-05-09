@@ -193,14 +193,14 @@ define void @select_bug() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr inttoptr (i64 4873 to ptr), null
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i64 73, i64 93
-; CHECK-NEXT:    [[ADD_PTR157:%.*]] = getelementptr inbounds i64, ptr undef, i64 [[SEL]]
-; CHECK-NEXT:    [[CMP169:%.*]] = icmp uge ptr undef, [[ADD_PTR157]]
+; CHECK-NEXT:    [[ADD_PTR157:%.*]] = getelementptr inbounds i64, ptr poison, i64 [[SEL]]
+; CHECK-NEXT:    [[CMP169:%.*]] = icmp uge ptr poison, [[ADD_PTR157]]
 ; CHECK-NEXT:    unreachable
 ;
   %cmp = icmp ne ptr inttoptr (i64 4873 to ptr), null
   %sel = select i1 %cmp, i64 73, i64 93
-  %add.ptr157 = getelementptr inbounds i64, ptr undef, i64 %sel
-  %cmp169 = icmp uge ptr undef, %add.ptr157
+  %add.ptr157 = getelementptr inbounds i64, ptr poison, i64 %sel
+  %cmp169 = icmp uge ptr poison, %add.ptr157
   unreachable
 }
 

@@ -870,6 +870,19 @@ TEST(ExprMutationAnalyzerTest, TemplateWithArrayToPointerDecay) {
   EXPECT_THAT(mutatedBy(ResultsY, AST.get()), ElementsAre("y"));
 }
 
+TEST(ExprMutationAnalyzerTest, T1) {
+  const auto AST = buildASTFromCodeWithArgs(
+      "template <class T> struct vector { T &operator[](int t); };"
+      "template <typename T> void func() {"
+      "  vector<int> x;"
+      "  x[T{}] = 3;"
+      "}",
+      {"-fno-delayed-template-parsing"});
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isMutated(Results, AST.get()));
+}
+
 // section: special case: all created references are non-mutating themself
 //          and therefore all become 'const'/the value is not modified!
 

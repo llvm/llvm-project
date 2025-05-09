@@ -1,0 +1,28 @@
+macros:
+  GLOB_APPEND:
+    in-latest-posix: ''
+  GLOB_DOOFFS:
+    in-latest-posix: ''
+  GLOB_ERR:
+    in-latest-posix: ''
+  GLOB_MARK:
+    in-latest-posix: ''
+  GLOB_NOCHECK:
+    in-latest-posix: ''
+  GLOB_NOESCAPE:
+    in-latest-posix: ''
+  GLOB_NOSORT:
+    in-latest-posix: ''
+  GLOB_ABORTED:
+    in-latest-posix: ''
+  GLOB_NOMATCH:
+    in-latest-posix: ''
+  GLOB_NOSPACE:
+    in-latest-posix: ''
+
+functions:
+  glob:
+    in-latest-posix: ''
+  globfree:
+    in-latest-posix: ''
+    

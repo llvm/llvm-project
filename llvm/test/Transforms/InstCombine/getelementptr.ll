@@ -1326,42 +1326,6 @@ define ptr @PR45084_extra_use(i1 %cond, ptr %p) {
   ret ptr %sel
 }
 
-define ptr @gep_null_inbounds(i64 %idx) {
-; CHECK-LABEL: @gep_null_inbounds(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr null, i64 [[IDX:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-  %gep = getelementptr inbounds i8, ptr null, i64 %idx
-  ret ptr %gep
-}
-
-define ptr @gep_null_not_inbounds(i64 %idx) {
-; CHECK-LABEL: @gep_null_not_inbounds(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr null, i64 [[IDX:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-  %gep = getelementptr i8, ptr null, i64 %idx
-  ret ptr %gep
-}
-
-define ptr @gep_null_defined(i64 %idx) null_pointer_is_valid {
-; CHECK-LABEL: @gep_null_defined(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr null, i64 [[IDX:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-  %gep = getelementptr inbounds i8, ptr null, i64 %idx
-  ret ptr %gep
-}
-
-define ptr @gep_null_inbounds_different_type(i64 %idx1, i64 %idx2) {
-; CHECK-LABEL: @gep_null_inbounds_different_type(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [0 x i8], ptr null, i64 0, i64 [[IDX2:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-  %gep = getelementptr inbounds [0 x i8], ptr null, i64 %idx1, i64 %idx2
-  ret ptr %gep
-}
-
 define ptr @D98588(ptr %c1, i64 %offset) {
 ; CHECK-LABEL: @D98588(
 ; CHECK-NEXT:    [[C2_NEXT_IDX:%.*]] = shl nsw i64 [[OFFSET:%.*]], 3
@@ -2018,6 +1982,5 @@ define ptr @gep_merge_nusw_const(ptr %p, i64 %idx, i64 %idx2) {
   %gep = getelementptr nusw i8, ptr %gep1, i64 4
   ret ptr %gep
 }
-
 
 !0 = !{!"branch_weights", i32 2, i32 10}

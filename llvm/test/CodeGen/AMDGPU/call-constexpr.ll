@@ -8,7 +8,7 @@
 define amdgpu_kernel void @test_bitcast_return_type_noinline() #0 {
   %val = call float @ret_i32_noinline()
   %op = fadd float %val, 1.0
-  store volatile float %op, ptr addrspace(1) undef
+  store volatile float %op, ptr addrspace(1) poison
   ret void
 }
 
@@ -17,7 +17,7 @@ define amdgpu_kernel void @test_bitcast_return_type_noinline() #0 {
 define amdgpu_kernel void @test_bitcast_return_type_alwaysinline() #0 {
   %val = call float @ret_i32_alwaysinline()
   %op = fadd float %val, 1.0
-  store volatile float %op, ptr addrspace(1) undef
+  store volatile float %op, ptr addrspace(1) poison
   ret void
 }
 
@@ -29,7 +29,7 @@ define amdgpu_kernel void @test_bitcast_return_type_alwaysinline() #0 {
 define amdgpu_kernel void @test_bitcast_argument_type() #0 {
   %val = call i32 @ident_i32(float 2.0)
   %op = add i32 %val, 1
-  store volatile i32 %op, ptr addrspace(1) undef
+  store volatile i32 %op, ptr addrspace(1) poison
   ret void
 }
 
@@ -41,7 +41,7 @@ define amdgpu_kernel void @test_bitcast_argument_type() #0 {
 define amdgpu_kernel void @test_bitcast_argument_and_return_types() #0 {
   %val = call float @ident_i32(float 2.0)
   %op = fadd float %val, 1.0
-  store volatile float %op, ptr addrspace(1) undef
+  store volatile float %op, ptr addrspace(1) poison
   ret void
 }
 
@@ -67,7 +67,7 @@ define hidden i32 @use_workitem_id_x(i32 %arg0) #3 {
 define amdgpu_kernel void @test_bitcast_use_workitem_id_x() #3 {
   %val = call float @use_workitem_id_x(i32 9)
   %op = fadd float %val, 1.0
-  store volatile float %op, ptr addrspace(1) undef
+  store volatile float %op, ptr addrspace(1) poison
   ret void
 }
 
@@ -88,7 +88,7 @@ broken:
 
 continue:
   %op = fadd float %val, 1.0
-  store volatile float %op, ptr addrspace(1) undef
+  store volatile float %op, ptr addrspace(1) poison
   ret void
 }
 

@@ -16,7 +16,7 @@ int test_abs(int a) {
   return __builtin_abs(a);
 }
 
-// CHECK-LABEL: @test_alu_slet(
+// CHECK-LABEL: @test_alu_sle(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
@@ -28,11 +28,11 @@ int test_abs(int a) {
 // CHECK-NEXT:    [[SLE:%.*]] = zext i1 [[TMP2]] to i32
 // CHECK-NEXT:    ret i32 [[SLE]]
 //
-int test_alu_slet(int32_t a, int32_t b) {
-  return __builtin_riscv_cv_alu_slet(a, b);
+int test_alu_sle(int32_t a, int32_t b) {
+  return __builtin_riscv_cv_alu_sle(a, b);
 }
 
-// CHECK-LABEL: @test_alu_sletu(
+// CHECK-LABEL: @test_alu_sleu(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
@@ -44,8 +44,8 @@ int test_alu_slet(int32_t a, int32_t b) {
 // CHECK-NEXT:    [[SLEU:%.*]] = zext i1 [[TMP2]] to i32
 // CHECK-NEXT:    ret i32 [[SLEU]]
 //
-int test_alu_sletu(uint32_t a, uint32_t b) {
-  return __builtin_riscv_cv_alu_sletu(a, b);
+int test_alu_sleu(uint32_t a, uint32_t b) {
+  return __builtin_riscv_cv_alu_sleu(a, b);
 }
 
 // CHECK-LABEL: @test_alu_exths(

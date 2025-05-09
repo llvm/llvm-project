@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx940 -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx942 -verify -S -o - %s
 
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef float float16 __attribute__((ext_vector_type(16)));

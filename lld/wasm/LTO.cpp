@@ -108,9 +108,10 @@ BitcodeCompiler::~BitcodeCompiler() = default;
 
 static void undefine(Symbol *s) {
   if (auto f = dyn_cast<DefinedFunction>(s))
+    // If the signature is null, there were no calls from non-bitcode objects.
     replaceSymbol<UndefinedFunction>(f, f->getName(), std::nullopt,
                                      std::nullopt, 0, f->getFile(),
-                                     f->signature);
+                                     f->signature, f->signature != nullptr);
   else if (isa<DefinedData>(s))
     replaceSymbol<UndefinedData>(s, s->getName(), 0, s->getFile());
   else
@@ -182,10 +183,11 @@ static void thinLTOCreateEmptyIndexFiles() {
 
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting objects.
-std::vector<StringRef> BitcodeCompiler::compile() {
+SmallVector<InputFile *, 0> BitcodeCompiler::compile() {
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
   files.resize(maxTasks);
+  filenames.resize(maxTasks);
 
   // The --thinlto-cache-dir option specifies the path to a directory in which
   // to cache native object files for ThinLTO incremental builds. If a path was
@@ -232,14 +234,20 @@ std::vector<StringRef> BitcodeCompiler::compile() {
   if (!ctx.arg.thinLTOCacheDir.empty())
     pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files);
 
-  std::vector<StringRef> ret;
+  SmallVector<InputFile *, 0> ret;
   for (unsigned i = 0; i != maxTasks; ++i) {
     StringRef objBuf = buf[i].second;
     StringRef bitcodeFilePath = buf[i].first;
+    if (files[i]) {
+      // When files[i] is not null, we get the native relocatable file from the
+      // cache. filenames[i] contains the original BitcodeFile's identifier.
+      objBuf = files[i]->getBuffer();
+      bitcodeFilePath = filenames[i];
+    } else {
+      objBuf = buf[i].second;
+      bitcodeFilePath = buf[i].first;
+    }
     if (objBuf.empty())
-      continue;
-    ret.emplace_back(objBuf.data(), objBuf.size());
-    if (!ctx.arg.saveTemps)
       continue;
 
     // If the input bitcode file is path/to/x.o and -o specifies a.out, the
@@ -265,7 +273,9 @@ std::vector<StringRef> BitcodeCompiler::compile() {
       sys::path::remove_dots(path, true);
       ltoObjName = saver().save(path.str());
     }
-    saveBuffer(objBuf, ltoObjName);
+    if (ctx.arg.saveTemps)
+      saveBuffer(objBuf, ltoObjName);
+    ret.emplace_back(createObjectFile(MemoryBufferRef(objBuf, ltoObjName)));
   }
 
   if (!ctx.arg.ltoObjPath.empty()) {
@@ -273,10 +283,6 @@ std::vector<StringRef> BitcodeCompiler::compile() {
     for (unsigned i = 1; i != maxTasks; ++i)
       saveBuffer(buf[i].second, ctx.arg.ltoObjPath + Twine(i));
   }
-
-  for (std::unique_ptr<MemoryBuffer> &file : files)
-    if (file)
-      ret.push_back(file->getBuffer());
 
   return ret;
 }

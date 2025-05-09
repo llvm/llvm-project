@@ -41,19 +41,19 @@ entry:
 define <vscale x 4 x double> @mul_add_mull(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x double> %d) {
 ; CHECK-LABEL: mul_add_mull:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z24.d, #0 // =0x0
+; CHECK-NEXT:    movi v24.2d, #0000000000000000
+; CHECK-NEXT:    movi v25.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z25.d, z24.d
-; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #0
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #0
-; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #0
+; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #0
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #0
-; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #90
+; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #90
-; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #90
+; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #90
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #90
-; CHECK-NEXT:    mov z1.d, z24.d
+; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #90
 ; CHECK-NEXT:    mov z0.d, z25.d
+; CHECK-NEXT:    mov z1.d, z24.d
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
@@ -90,19 +90,19 @@ entry:
 define <vscale x 4 x double> @mul_sub_mull(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x double> %d) {
 ; CHECK-LABEL: mul_sub_mull:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z24.d, #0 // =0x0
+; CHECK-NEXT:    movi v24.2d, #0000000000000000
+; CHECK-NEXT:    movi v25.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z25.d, z24.d
-; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #270
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #270
-; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #0
+; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #270
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #0
-; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #180
+; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #180
-; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #90
+; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #180
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #90
-; CHECK-NEXT:    mov z1.d, z24.d
+; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #90
 ; CHECK-NEXT:    mov z0.d, z25.d
+; CHECK-NEXT:    mov z1.d, z24.d
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
@@ -139,19 +139,19 @@ entry:
 define <vscale x 4 x double> @mul_conj_mull(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x double> %d) {
 ; CHECK-LABEL: mul_conj_mull:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z24.d, #0 // =0x0
+; CHECK-NEXT:    movi v24.2d, #0000000000000000
+; CHECK-NEXT:    movi v25.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z25.d, z24.d
-; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #0
-; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #90
+; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #90
-; CHECK-NEXT:    fcmla z24.d, p0/m, z5.d, z7.d, #0
+; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #90
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z4.d, z6.d, #0
-; CHECK-NEXT:    fcmla z24.d, p0/m, z5.d, z7.d, #270
+; CHECK-NEXT:    fcmla z24.d, p0/m, z5.d, z7.d, #0
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z4.d, z6.d, #270
-; CHECK-NEXT:    mov z1.d, z24.d
+; CHECK-NEXT:    fcmla z24.d, p0/m, z5.d, z7.d, #270
 ; CHECK-NEXT:    mov z0.d, z25.d
+; CHECK-NEXT:    mov z1.d, z24.d
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)

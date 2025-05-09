@@ -49,6 +49,11 @@ void genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
 
 void genFree(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value ptr);
 
+mlir::Value genFseek(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value unit, mlir::Value offset, mlir::Value whence);
+mlir::Value genFtell(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value unit);
+
 mlir::Value genGetUID(fir::FirOpBuilder &, mlir::Location);
 mlir::Value genGetGID(fir::FirOpBuilder &, mlir::Location);
 
@@ -64,6 +69,9 @@ void genRandomSeed(fir::FirOpBuilder &, mlir::Location, mlir::Value size,
 /// generate rename runtime call
 void genRename(fir::FirOpBuilder &builder, mlir::Location loc,
                mlir::Value path1, mlir::Value path2, mlir::Value status);
+
+/// generate time runtime call
+mlir::Value genTime(fir::FirOpBuilder &builder, mlir::Location loc);
 
 /// generate runtime call to transfer intrinsic with no size argument
 void genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,

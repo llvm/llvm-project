@@ -39,8 +39,7 @@ define i1 @ptest_any1(<vscale x 2 x i1> %a) #0 {
 ; No transform because the ptest is using differently sized operands.
 define i1 @ptest_any2(<vscale x 4 x i1> %a) #0 {
 ; CHECK-LABEL: @ptest_any2(
-; CHECK-NEXT:    [[MASK:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[MASK]])
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
 ; CHECK-NEXT:    [[OUT:%.*]] = call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> [[TMP1]], <vscale x 16 x i1> [[TMP2]])
 ; CHECK-NEXT:    ret i1 [[OUT]]

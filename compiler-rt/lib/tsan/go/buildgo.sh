@@ -112,6 +112,12 @@ if [ "$GOOS" = "linux" ]; then
 		ARCHCFLAGS="-mips64 -EL"
 	elif [ "$GOARCH" = "mips64" ]; then
 		ARCHCFLAGS="-mips64 -EB"
+	elif [ "$GOARCH" = "riscv64" ]; then
+		if [ "$GORISCV64" = "rva23u64" ]; then
+			ARCHCFLAGS="-march=rv64gcv"
+		else
+			ARCHCFLAGS="-march=rv64gc"
+		fi
 	elif [ "$GOARCH" = "s390x" ]; then
 		SRCS="$SRCS ../../sanitizer_common/sanitizer_linux_s390.cpp"
 		ARCHCFLAGS=""

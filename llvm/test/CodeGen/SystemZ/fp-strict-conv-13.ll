@@ -3,13 +3,27 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z196 | FileCheck %s
 
+declare half @llvm.experimental.constrained.uitofp.f16.i32(i32, metadata, metadata)
 declare float @llvm.experimental.constrained.uitofp.f32.i32(i32, metadata, metadata)
 declare double @llvm.experimental.constrained.uitofp.f64.i32(i32, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.uitofp.f128.i32(i32, metadata, metadata)
 
+declare half @llvm.experimental.constrained.uitofp.f16.i64(i64, metadata, metadata)
 declare float @llvm.experimental.constrained.uitofp.f32.i64(i64, metadata, metadata)
 declare double @llvm.experimental.constrained.uitofp.f64.i64(i64, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.uitofp.f128.i64(i64, metadata, metadata)
+
+; Check i32->f16.
+define half @f0(i32 %i) #0 {
+; CHECK-LABEL: f0:
+; CHECK: celfbr %f0, 0, %r2, 0
+; CHECK-NEXT: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %conv = call half @llvm.experimental.constrained.uitofp.f16.i32(i32 %i,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret half %conv
+}
 
 ; Check i32->f32.
 define float @f1(i32 %i) #0 {
@@ -47,9 +61,21 @@ define void @f3(i32 %i, ptr %dst) #0 {
   ret void
 }
 
-; Check i64->f32.
-define float @f4(i64 %i) #0 {
+; Check i64->f16.
+define half @f4(i64 %i) #0 {
 ; CHECK-LABEL: f4:
+; CHECK: celgbr %f0, 0, %r2, 0
+; CHECK-NEXT: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %conv = call half @llvm.experimental.constrained.uitofp.f16.i64(i64 %i,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret half %conv
+}
+
+; Check i64->f32.
+define float @f5(i64 %i) #0 {
+; CHECK-LABEL: f5:
 ; CHECK: celgbr %f0, 0, %r2, 0
 ; CHECK: br %r14
   %conv = call float @llvm.experimental.constrained.uitofp.f32.i64(i64 %i,
@@ -59,8 +85,8 @@ define float @f4(i64 %i) #0 {
 }
 
 ; Check i64->f64.
-define double @f5(i64 %i) #0 {
-; CHECK-LABEL: f5:
+define double @f6(i64 %i) #0 {
+; CHECK-LABEL: f6:
 ; CHECK: cdlgbr %f0, 0, %r2, 0
 ; CHECK: br %r14
   %conv = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %i,
@@ -70,8 +96,8 @@ define double @f5(i64 %i) #0 {
 }
 
 ; Check i64->f128.
-define void @f6(i64 %i, ptr %dst) #0 {
-; CHECK-LABEL: f6:
+define void @f7(i64 %i, ptr %dst) #0 {
+; CHECK-LABEL: f7:
 ; CHECK: cxlgbr %f0, 0, %r2, 0
 ; CHECK-DAG: std %f0, 0(%r3)
 ; CHECK-DAG: std %f2, 8(%r3)

@@ -18,5 +18,5 @@
 // RUN:   | FileCheck --check-prefix=SIMUL %s
 
 // LINKER-OLD: "-watchos_version_min" "5.2.0"
-// LINKER-NEW: "-platform_version" "watchos" "5.2.0" "6.0.0"
-// SIMUL: "-platform_version" "watchos-simulator" "6.0.0" "6.0.0"
+// LINKER-NEW: "-platform_version" "watchos" "5.2.0" "6.0"
+// SIMUL: "-platform_version" "watchos-simulator" "6.0.0" "6.0"

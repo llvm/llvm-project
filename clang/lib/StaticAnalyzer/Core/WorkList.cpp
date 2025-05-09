@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/WorkList.h"
-#include "llvm/ADT/PriorityQueue.h"
-#include "llvm/ADT/DenseSet.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Statistic.h"
 #include <deque>
 #include <vector>
 
@@ -24,8 +24,8 @@ using namespace ento;
 
 #define DEBUG_TYPE "WorkList"
 
-STATISTIC(MaxQueueSize, "Maximum size of the worklist");
-STATISTIC(MaxReachableSize, "Maximum size of auxiliary worklist set");
+STAT_MAX(MaxQueueSize, "Maximum size of the worklist");
+STAT_MAX(MaxReachableSize, "Maximum size of auxiliary worklist set");
 
 //===----------------------------------------------------------------------===//
 // Worklist classes for exploration of reachable states.

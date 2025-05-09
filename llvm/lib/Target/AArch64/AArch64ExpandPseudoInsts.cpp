@@ -50,9 +50,7 @@ public:
 
   static char ID;
 
-  AArch64ExpandPseudo() : MachineFunctionPass(ID) {
-    initializeAArch64ExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64ExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
@@ -838,21 +836,22 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   // Expand CALL_RVMARKER pseudo to:
   // - a branch to the call target, followed by
-  // - the special `mov x29, x29` marker, and
+  // - the special `mov x29, x29` marker, if necessary, and
   // - another branch, to the runtime function
   // Mark the sequence as bundle, to avoid passes moving other code in between.
   MachineInstr &MI = *MBBI;
   MachineOperand &RVTarget = MI.getOperand(0);
+  bool DoEmitMarker = MI.getOperand(1).getImm();
   assert(RVTarget.isGlobal() && "invalid operand for attached call");
 
   MachineInstr *OriginalCall = nullptr;
 
   if (MI.getOpcode() == AArch64::BLRA_RVMARKER) {
     // ptrauth call.
-    const MachineOperand &CallTarget = MI.getOperand(1);
-    const MachineOperand &Key = MI.getOperand(2);
-    const MachineOperand &IntDisc = MI.getOperand(3);
-    const MachineOperand &AddrDisc = MI.getOperand(4);
+    const MachineOperand &CallTarget = MI.getOperand(2);
+    const MachineOperand &Key = MI.getOperand(3);
+    const MachineOperand &IntDisc = MI.getOperand(4);
+    const MachineOperand &AddrDisc = MI.getOperand(5);
 
     assert((Key.getImm() == AArch64PACKey::IA ||
             Key.getImm() == AArch64PACKey::IB) &&
@@ -861,19 +860,20 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
     MachineOperand Ops[] = {CallTarget, Key, IntDisc, AddrDisc};
 
     OriginalCall = createCallWithOps(MBB, MBBI, TII, AArch64::BLRA, Ops,
-                                     /*RegMaskStartIdx=*/5);
+                                     /*RegMaskStartIdx=*/6);
   } else {
     assert(MI.getOpcode() == AArch64::BLR_RVMARKER && "unknown rvmarker MI");
-    OriginalCall = createCall(MBB, MBBI, TII, MI.getOperand(1),
+    OriginalCall = createCall(MBB, MBBI, TII, MI.getOperand(2),
                               // Regmask starts after the RV and call targets.
-                              /*RegMaskStartIdx=*/2);
+                              /*RegMaskStartIdx=*/3);
   }
 
-  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
-                     .addReg(AArch64::FP, RegState::Define)
-                     .addReg(AArch64::XZR)
-                     .addReg(AArch64::FP)
-                     .addImm(0);
+  if (DoEmitMarker)
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
+        .addReg(AArch64::FP, RegState::Define)
+        .addReg(AArch64::XZR)
+        .addReg(AArch64::FP)
+        .addImm(0);
 
   auto *RVCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::BL))
                      .add(RVTarget)
@@ -1382,6 +1382,11 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                                       AArch64II::MO_NC);
       }
 
+      // If the LOADgot instruction has a debug-instr-number, annotate the
+      // LDRWui instruction that it is expanded to with the same
+      // debug-instr-number to preserve debug information.
+      if (MI.peekDebugInstrNum() != 0)
+        MIB2->setDebugInstrNum(MI.peekDebugInstrNum());
       transferImpOps(MI, MIB1, MIB2);
     }
     MI.eraseFromParent();

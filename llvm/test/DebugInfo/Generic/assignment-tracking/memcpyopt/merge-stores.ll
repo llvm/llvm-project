@@ -1,5 +1,4 @@
 ; RUN: opt %s -S -passes=memcpyopt -o - | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=memcpyopt -o - | FileCheck %s
 
 ;; $ cat test.cpp
 ;; struct v {

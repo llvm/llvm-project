@@ -143,7 +143,7 @@ then:
   ret void
 
 exit:
-  store volatile i32 7, ptr addrspace(3) undef
+  store volatile i32 7, ptr addrspace(3) poison
   ret void
 }
 

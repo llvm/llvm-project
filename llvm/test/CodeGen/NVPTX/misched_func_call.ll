@@ -9,7 +9,7 @@ define ptx_kernel void @wombat(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<11>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<6>;
+; CHECK-NEXT:    .reg .b64 %fd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %bb
 ; CHECK-NEXT:    ld.param.u32 %r4, [wombat_param_2];

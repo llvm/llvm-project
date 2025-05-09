@@ -368,7 +368,7 @@ define void @callerC2() {
 }
 define void @callerD1() {
 ; CHECK-LABEL: define {{[^@]+}}@callerD1() {
-; CHECK-NEXT:    [[UNKNOWN:%.*]] = call ptr @argmem_only(ptr noundef align 4294967296 null)
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call ptr @argmem_only(ptr noundef null)
 ; CHECK-NEXT:    store i8 0, ptr [[UNKNOWN]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -378,7 +378,7 @@ define void @callerD1() {
 }
 define void @callerD2() {
 ; CHECK-LABEL: define {{[^@]+}}@callerD2() {
-; CHECK-NEXT:    [[UNKNOWN:%.*]] = call ptr @inaccesible_argmem_only_decl(ptr noundef align 4294967296 null)
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call ptr @inaccesible_argmem_only_decl(ptr noundef null)
 ; CHECK-NEXT:    store i8 0, ptr [[UNKNOWN]], align 1
 ; CHECK-NEXT:    ret void
 ;

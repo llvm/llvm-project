@@ -52,7 +52,7 @@ static cl::opt<unsigned>
                   "Do not use more megabytes of memory"),
                 cl::init(1000));
 
-cl::opt<cl::boolOrDefault>
+static cl::opt<cl::boolOrDefault>
     UseColor("use-color", cl::desc("Emit colored output (default=autodetect)"),
              cl::init(cl::BOU_UNSET));
 

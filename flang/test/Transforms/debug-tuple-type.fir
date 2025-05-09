@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func private @fn1(!fir.ref<tuple<f64, f64>>)
   func.func private @_FortranAioOutputDerivedType(!fir.ref<tuple<>>)
 }

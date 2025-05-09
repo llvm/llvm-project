@@ -16,7 +16,7 @@ namespace llvm {
 
 /// Note that you have to add:
 ///   DAG.addMutation(createAMDGPUMacroFusionDAGMutation());
-/// to AMDGPUPassConfig::createMachineScheduler() to have an effect.
+/// to AMDGPUTargetMachine::createMachineScheduler() to have an effect.
 std::unique_ptr<ScheduleDAGMutation> createAMDGPUMacroFusionDAGMutation();
 
 } // llvm

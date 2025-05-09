@@ -27,41 +27,39 @@ void test0(S s, Pred p, S expected, std::size_t expected_erased_count) {
 }
 
 template <typename S>
-void test()
-{
-    auto is1 = [](auto v) { return v == 1;};
-    auto is2 = [](auto v) { return v == 2;};
-    auto is3 = [](auto v) { return v == 3;};
-    auto is4 = [](auto v) { return v == 4;};
-    auto True  = [](auto) { return true; };
-    auto False = [](auto) { return false; };
+void test() {
+  auto is1   = [](auto v) { return v == 1; };
+  auto is2   = [](auto v) { return v == 2; };
+  auto is3   = [](auto v) { return v == 3; };
+  auto is4   = [](auto v) { return v == 4; };
+  auto True  = [](auto) { return true; };
+  auto False = [](auto) { return false; };
 
-    test0(S(), is1, S(), 0);
+  test0(S(), is1, S(), 0);
 
-    test0(S({1}), is1, S(), 1);
-    test0(S({1}), is2, S({1}), 0);
+  test0(S({1}), is1, S(), 1);
+  test0(S({1}), is2, S({1}), 0);
 
-    test0(S({1, 2}), is1, S({2}), 1);
-    test0(S({1, 2}), is2, S({1}), 1);
-    test0(S({1, 2}), is3, S({1, 2}), 0);
+  test0(S({1, 2}), is1, S({2}), 1);
+  test0(S({1, 2}), is2, S({1}), 1);
+  test0(S({1, 2}), is3, S({1, 2}), 0);
 
-    test0(S({1, 2, 3}), is1, S({2, 3}), 1);
-    test0(S({1, 2, 3}), is2, S({1, 3}), 1);
-    test0(S({1, 2, 3}), is3, S({1, 2}), 1);
-    test0(S({1, 2, 3}), is4, S({1, 2, 3}), 0);
+  test0(S({1, 2, 3}), is1, S({2, 3}), 1);
+  test0(S({1, 2, 3}), is2, S({1, 3}), 1);
+  test0(S({1, 2, 3}), is3, S({1, 2}), 1);
+  test0(S({1, 2, 3}), is4, S({1, 2, 3}), 0);
 
-    test0(S({1, 2, 3}), True, S(), 3);
-    test0(S({1, 2, 3}), False, S({1, 2, 3}), 0);
+  test0(S({1, 2, 3}), True, S(), 3);
+  test0(S({1, 2, 3}), False, S({1, 2, 3}), 0);
 }
 
-int main(int, char**)
-{
-    test<std::set<int>>();
-    test<std::set<int, std::less<int>, min_allocator<int>>> ();
-    test<std::set<int, std::less<int>, test_allocator<int>>> ();
+int main(int, char**) {
+  test<std::set<int>>();
+  test<std::set<int, std::less<int>, min_allocator<int>>>();
+  test<std::set<int, std::less<int>, test_allocator<int>>>();
 
-    test<std::set<long>>();
-    test<std::set<double>>();
+  test<std::set<long>>();
+  test<std::set<double>>();
 
   return 0;
 }

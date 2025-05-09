@@ -17,20 +17,20 @@ main_body:
   %j.f.i = bitcast i32 %j.i to float
   %p1.i = call float @llvm.amdgcn.interp.p1(float %i.f.i, i32 3, i32 4, i32 %arg6) #2
   %p2.i = call float @llvm.amdgcn.interp.p2(float %p1.i, float %j.f.i, i32 3, i32 4, i32 %arg6) #2
-  %tmp23 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float undef, float undef, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
+  %tmp23 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float poison, float poison, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
 
   %tmp24 = extractelement <4 x float> %tmp23, i32 3
   %tmp25 = fmul float %tmp24, %tmp24
   %tmp26 = fmul float %p2.i, %p2.i
   %tmp27 = fadd float %tmp26, %tmp26
-  %tmp32 = call <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32 15, float %tmp27, float 0.0, float undef, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
+  %tmp32 = call <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32 15, float %tmp27, float 0.0, float poison, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp33 = extractelement <4 x float> %tmp32, i32 0
   %tmp34 = fadd float %tmp33, %tmp33
   %tmp35 = fadd float %tmp34, %tmp34
   %tmp36 = fadd float %tmp35, %tmp35
   %tmp37 = fadd float %tmp36, %tmp36
   %tmp38 = fadd float %tmp37, %tmp37
-  %tmp39 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float undef, float undef, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
+  %tmp39 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float poison, float poison, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp40 = extractelement <4 x float> %tmp39, i32 0
   %tmp41 = extractelement <4 x float> %tmp39, i32 1
   %tmp42 = extractelement <4 x float> %tmp39, i32 2
@@ -44,16 +44,16 @@ main_body:
   %tmp50 = bitcast float %tmp27 to i32
   %tmp51 = bitcast float %tmp48 to i32
   %tmp52 = bitcast float %tmp49 to i32
-  %tmp53 = insertelement <4 x i32> undef, i32 %tmp50, i32 0
+  %tmp53 = insertelement <4 x i32> poison, i32 %tmp50, i32 0
   %tmp54 = insertelement <4 x i32> %tmp53, i32 %tmp51, i32 1
   %tmp55 = insertelement <4 x i32> %tmp54, i32 %tmp52, i32 2
   %tmp55.cast = bitcast <4 x i32> %tmp55 to <4 x float>
-  %tmp56 = call <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32 15, float %tmp27, float %tmp48, float %tmp49, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
+  %tmp56 = call <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32 15, float %tmp27, float %tmp48, float %tmp49, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp57 = extractelement <4 x float> %tmp56, i32 0
   %tmp58 = fadd float %tmp38, %tmp57
   %tmp59 = fadd float %tmp46, %tmp46
   %tmp60 = fadd float %tmp47, %tmp47
-  %tmp65 = call <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32 15, float undef, float %tmp59, float %tmp60, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
+  %tmp65 = call <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32 15, float poison, float %tmp59, float %tmp60, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp66 = extractelement <4 x float> %tmp65, i32 0
   %tmp67 = fadd float %tmp58, %tmp66
   %tmp68 = fmul float %tmp67, 1.250000e-01
@@ -63,7 +63,7 @@ main_body:
 
 IF26:                                             ; preds = %main_body
   %tmp71 = bitcast float %tmp27 to i32
-  %tmp72 = insertelement <4 x i32> undef, i32 %tmp71, i32 0
+  %tmp72 = insertelement <4 x i32> poison, i32 %tmp71, i32 0
   br label %LOOP
 
 ENDIF25:                                          ; preds = %IF29, %main_body
@@ -74,16 +74,16 @@ ENDIF25:                                          ; preds = %IF29, %main_body
   %tmp75 = fmul float %clamp.i, %clamp.i
   %tmp76 = fmul float %tmp75, %tmp75
   %tmp77 = fadd float %tmp76, %tmp76
-  %tmp78 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> undef, float %tmp77, 11
-  %tmp79 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp78, float undef, 12
-  %tmp80 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp79, float undef, 13
+  %tmp78 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> poison, float %tmp77, 11
+  %tmp79 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp78, float poison, 12
+  %tmp80 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp79, float poison, 13
   %tmp81 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp80, float %tmp25, 14
-  %tmp82 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp81, float undef, 15
+  %tmp82 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp81, float poison, 15
   %tmp83 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp82, float %arg21, 24
   ret <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp83
 
 LOOP:                                             ; preds = %ENDIF28, %IF26
-  %.5 = phi float [ undef, %IF26 ], [ %tmp89, %ENDIF28 ]
+  %.5 = phi float [ poison, %IF26 ], [ %tmp89, %ENDIF28 ]
   br i1 false, label %IF29, label %ENDIF28
 
 IF29:                                             ; preds = %LOOP
@@ -91,7 +91,7 @@ IF29:                                             ; preds = %LOOP
   br label %ENDIF25
 
 ENDIF28:                                          ; preds = %LOOP
-  %tmp87 = call <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32 15, float %tmp27, float undef, float undef, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
+  %tmp87 = call <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32 15, float %tmp27, float poison, float poison, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp88 = extractelement <4 x float> %tmp87, i32 0
   %tmp89 = fadd float %tmp88, %tmp88
   br label %LOOP

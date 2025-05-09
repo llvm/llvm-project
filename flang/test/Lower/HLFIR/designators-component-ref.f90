@@ -126,6 +126,16 @@ subroutine test_array_comp_non_contiguous_slice(a)
 ! CHECK:  %[[VAL_19:.*]] = hlfir.designate %[[VAL_1]]#0{"array_comp"} <%[[VAL_9]]> (%[[VAL_10]]:%[[VAL_11]]:%[[VAL_12]], %[[VAL_14]]:%[[VAL_15]]:%[[VAL_16]])  shape %[[VAL_18]] : (!fir.ref<!fir.type<_QMcomp_refTt_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>, !fir.shape<2>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<6x17xf32>>
 end subroutine
 
+subroutine test_array_lbs_array_ctor()
+  use comp_ref
+  type(t_array_lbs) :: a(-1:1)
+  real :: array_comp(2:11,3:22)
+  a = (/ (t_array_lbs(i, array_comp), i=-1,1) /)
+! CHECK: hlfir.designate %{{.+}}#0{"array_comp_lbs"} <%{{.+}}> shape %{{.+}} {fortran_attrs = #fir.var_attrs<contiguous>}
+! CHECK-SAME: (!fir.ref<!fir.type<_QMcomp_refTt_array_lbs{scalar_i:i32,array_comp_lbs:!fir.array<10x20xf32>}>>, !fir.shapeshift<2>, !fir.shapeshift<2>)
+! CHECK-SAME: -> !fir.box<!fir.array<10x20xf32>>
+end subroutine
+
 subroutine test_array_lbs_comp_lbs_1(a)
   use comp_ref
   type(t_array_lbs) :: a

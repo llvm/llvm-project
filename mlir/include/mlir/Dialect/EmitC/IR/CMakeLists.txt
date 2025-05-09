@@ -1,5 +1,5 @@
 add_mlir_dialect(EmitC emitc)
-add_mlir_doc(EmitC EmitC Dialects/ -gen-dialect-doc)
+add_mlir_doc(EmitC EmitC Dialects/ -gen-dialect-doc -dialect emitc)
 
 set(LLVM_TARGET_DEFINITIONS EmitCAttributes.td)
 mlir_tablegen(EmitCEnums.h.inc -gen-enum-decls)

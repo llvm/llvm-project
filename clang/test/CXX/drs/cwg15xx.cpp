@@ -38,7 +38,7 @@ namespace cwg1512 { // cwg1512: 4
   template<typename A, typename B, typename C> void composite_pointer_type_is_ord() {
     composite_pointer_type_is_base<A, B, C>();
 
-    typedef __typeof(val<A>() < val<B>()) cmp; // #cwg1512-lt 
+    typedef __typeof(val<A>() < val<B>()) cmp; // #cwg1512-lt
     // since-cxx17-warning@#cwg1512-lt {{ordered comparison of function pointers ('int (*)() noexcept' and 'int (*)()')}}
     //   since-cxx17-note@#cwg1512-noexcept-1st {{in instantiation of function template specialization 'cwg1512::composite_pointer_type_is_ord<int (*)() noexcept, int (*)(), int (*)()>' requested here}}
     // since-cxx17-warning@#cwg1512-lt {{ordered comparison of function pointers ('int (*)()' and 'int (*)() noexcept')}}
@@ -332,7 +332,7 @@ namespace cwg1550 { // cwg1550: 3.4
 namespace cwg1558 { // cwg1558: 12
 #if __cplusplus >= 201103L
   template<class T, class...> using first_of = T;
-  template<class T> first_of<void, typename T::type> f(int); // #cwg1558-f 
+  template<class T> first_of<void, typename T::type> f(int); // #cwg1558-f
   template<class T> void f(...) = delete; // #cwg1558-f-deleted
 
   struct X { typedef void type; };
@@ -639,7 +639,7 @@ namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initi
 #if __cplusplus >= 201103L
   template<class T, int N> int h(T const(&)[N]);
   int X = h({1,2,3});              // T deduced to int, N deduced to 3
-  
+
   template<class T> int j(T const(&)[3]);
   int Y = j({42});                 // T deduced to int, array bound not considered
 
@@ -655,12 +655,12 @@ namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initi
 
   template<class T, int N> int n(T const(&)[N], T);
   int X1 = n({{1},{2},{3}},Aggr()); // OK, T is Aggr, N is 3
-  
-  
+
+
   namespace check_multi_dim_arrays {
     template<class T, int N, int M, int O> int ***f(const T (&a)[N][M][O]); // #cwg1591-f-3
     template<class T, int N, int M> int **f(const T (&a)[N][M]); // #cwg1591-f-2
-   
+
    template<class T, int N> int *f(const T (&a)[N]); // #cwg1591-f-1
     int ***p3 = f({  {  {1,2}, {3, 4}  }, {  {5,6}, {7, 8}  }, {  {9,10}, {11, 12}  } });
     int ***p33 = f({  {  {1,2}, {3, 4}  }, {  {5,6}, {7, 8}  }, {  {9,10}, {11, 12, 13}  } });
@@ -675,7 +675,7 @@ namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initi
   namespace check_multi_dim_arrays_rref {
     template<class T, int N, int M, int O> int ***g(T (&&a)[N][M][O]); // #cwg1591-g-3
     template<class T, int N, int M> int **g(T (&&a)[N][M]); // #cwg1591-g-2
-   
+
     template<class T, int N> int *g(T (&&a)[N]); // #cwg1591-g-1
     int ***p3 = g({  {  {1,2}, {3, 4}  }, {  {5,6}, {7, 8}  }, {  {9,10}, {11, 12}  } });
     int ***p33 = g({  {  {1,2}, {3, 4}  }, {  {5,6}, {7, 8}  }, {  {9,10}, {11, 12, 13}  } });
@@ -687,7 +687,7 @@ namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initi
     int **p22 = g({  {1,2}, {3, 4}  });
     int *p1 = g({1, 2, 3});
   }
-  
+
   namespace check_arrays_of_init_list {
     template<class T, int N> float *h(const std::initializer_list<T> (&)[N]);
     template<class T, int N> double *h(const T(&)[N]);
@@ -695,7 +695,7 @@ namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initi
     float *fp = h({{1}, {1, 2}, {1, 2, 3}});
   }
   namespace core_reflector_28543 {
-    
+
     template<class T, int N> int *i(T (&&)[N]);  // #1
     template<class T> char *i(std::initializer_list<T> &&);  // #2
     template<class T, int N, int M> int **i(T (&&)[N][M]); // #3 #cwg1591-i-2
@@ -704,13 +704,13 @@ namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initi
     template<class T> short *i(T (&&)[2]);  // #5
 
     template<class T> using Arr = T[];
-     
+
     char *pc = i({1, 2, 3}); // OK prefer #2 via 13.3.3.2 [over.ics.rank]
-    char *pc2 = i({1, 2}); // #2 also 
+    char *pc2 = i({1, 2}); // #2 also
     int *pi = i(Arr<int>{1, 2, 3}); // OK prefer #1
 
     void *pv1 = i({ {1, 2, 3}, {4, 5, 6} }); // ambiguous btw 3 & 4
-    // since-cxx11-error@-1 {{call to 'i' is ambiguous}} 
+    // since-cxx11-error@-1 {{call to 'i' is ambiguous}}
     //   since-cxx11-note@#cwg1591-i-2 {{candidate function [with T = int, N = 2, M = 3]}}
     //   since-cxx11-note@#cwg1591-i-1 {{candidate function [with T = int, N = 2]}}
     char **pcc = i({ {1}, {2, 3} }); // OK #4

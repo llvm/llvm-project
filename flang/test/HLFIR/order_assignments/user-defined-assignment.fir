@@ -198,7 +198,7 @@ func.func private @user_assign_box(!fir.class<!fir.type<sometype>>, !fir.box<!fi
 // CHECK-SAME:                    %[[VAL_1:.*]]: !fir.class<!fir.type<sometype>>) {
 // CHECK:           %[[VAL_2:.*]] = hlfir.as_expr %[[VAL_0]] : (!fir.box<!fir.type<sometype>>) -> !hlfir.expr<!fir.type<sometype>>
 // CHECK:           %[[VAL_3:.*]]:3 = hlfir.associate %[[VAL_2]]
-// CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#1 : (!fir.ref<!fir.type<sometype>>) -> !fir.box<!fir.type<sometype>>
+// CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#0 : (!fir.ref<!fir.type<sometype>>) -> !fir.box<!fir.type<sometype>>
 // CHECK:           fir.call @user_assign_box(%[[VAL_1]], %[[VAL_4]]) : (!fir.class<!fir.type<sometype>>, !fir.box<!fir.type<sometype>>) -> ()
 // CHECK:           hlfir.end_associate %[[VAL_3]]#1, %[[VAL_3]]#2 : !fir.ref<!fir.type<sometype>>, i1
 // CHECK:           return

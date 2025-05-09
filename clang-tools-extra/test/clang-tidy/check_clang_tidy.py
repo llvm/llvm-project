@@ -48,15 +48,16 @@ import pathlib
 import re
 import subprocess
 import sys
+from typing import List, Tuple
 
 
-def write_file(file_name, text):
+def write_file(file_name: str, text: str) -> None:
     with open(file_name, "w", encoding="utf-8") as f:
         f.write(text)
         f.truncate()
 
 
-def try_run(args, raise_error=True):
+def try_run(args: List[str], raise_error: bool = True) -> str:
     try:
         process_output = subprocess.check_output(args, stderr=subprocess.STDOUT).decode(
             errors="ignore"
@@ -71,12 +72,12 @@ def try_run(args, raise_error=True):
 
 # This class represents the appearance of a message prefix in a file.
 class MessagePrefix:
-    def __init__(self, label):
+    def __init__(self, label: str) -> None:
         self.has_message = False
-        self.prefixes = []
+        self.prefixes: List[str] = []
         self.label = label
 
-    def check(self, file_check_suffix, input_text):
+    def check(self, file_check_suffix: str, input_text: str) -> bool:
         self.prefix = self.label + file_check_suffix
         self.has_message = self.prefix in input_text
         if self.has_message:
@@ -85,7 +86,7 @@ class MessagePrefix:
 
 
 class CheckRunner:
-    def __init__(self, args, extra_args):
+    def __init__(self, args: argparse.Namespace, extra_args: List[str]) -> None:
         self.resource_dir = args.resource_dir
         self.assume_file_name = args.assume_filename
         self.input_file_name = args.input_file_name
@@ -104,6 +105,7 @@ class CheckRunner:
         self.fixes = MessagePrefix("CHECK-FIXES")
         self.messages = MessagePrefix("CHECK-MESSAGES")
         self.notes = MessagePrefix("CHECK-NOTES")
+        self.match_partial_fixes = args.match_partial_fixes
 
         file_name_with_extension = self.assume_file_name or self.input_file_name
         _, extension = os.path.splitext(file_name_with_extension)
@@ -143,11 +145,11 @@ class CheckRunner:
         if self.resource_dir is not None:
             self.clang_extra_args.append("-resource-dir=%s" % self.resource_dir)
 
-    def read_input(self):
+    def read_input(self) -> None:
         with open(self.input_file_name, "r", encoding="utf-8") as input_file:
             self.input_text = input_file.read()
 
-    def get_prefixes(self):
+    def get_prefixes(self) -> None:
         for suffix in self.check_suffix:
             if suffix and not re.match("^[A-Z0-9\\-]+$", suffix):
                 sys.exit(
@@ -189,7 +191,7 @@ class CheckRunner:
             )
         assert expect_diagnosis or self.expect_no_diagnosis
 
-    def prepare_test_inputs(self):
+    def prepare_test_inputs(self) -> None:
         # Remove the contents of the CHECK lines to avoid CHECKs matching on
         # themselves.  We need to keep the comments to preserve line numbers while
         # avoiding empty lines which could potentially trigger formatting-related
@@ -198,7 +200,7 @@ class CheckRunner:
         write_file(self.temp_file_name, cleaned_test)
         write_file(self.original_file_name, cleaned_test)
 
-    def run_clang_tidy(self):
+    def run_clang_tidy(self) -> str:
         args = (
             [
                 "clang-tidy",
@@ -238,23 +240,27 @@ class CheckRunner:
         print("------------------------------------------------------------------")
         return clang_tidy_output
 
-    def check_no_diagnosis(self, clang_tidy_output):
+    def check_no_diagnosis(self, clang_tidy_output: str) -> None:
         if clang_tidy_output != "":
             sys.exit("No diagnostics were expected, but found the ones above")
 
-    def check_fixes(self):
+    def check_fixes(self) -> None:
         if self.has_check_fixes:
             try_run(
                 [
                     "FileCheck",
-                    "-input-file=" + self.temp_file_name,
+                    "--input-file=" + self.temp_file_name,
                     self.input_file_name,
-                    "-check-prefixes=" + ",".join(self.fixes.prefixes),
-                    "-strict-whitespace",
+                    "--check-prefixes=" + ",".join(self.fixes.prefixes),
+                    (
+                        "--match-full-lines"
+                        if not self.match_partial_fixes
+                        else "--strict-whitespace"  # Keeping past behavior.
+                    ),
                 ]
             )
 
-    def check_messages(self, clang_tidy_output):
+    def check_messages(self, clang_tidy_output: str) -> None:
         if self.has_check_messages:
             messages_file = self.temp_file_name + ".msg"
             write_file(messages_file, clang_tidy_output)
@@ -268,7 +274,7 @@ class CheckRunner:
                 ]
             )
 
-    def check_notes(self, clang_tidy_output):
+    def check_notes(self, clang_tidy_output: str) -> None:
         if self.has_check_notes:
             notes_file = self.temp_file_name + ".notes"
             filtered_output = [
@@ -287,7 +293,7 @@ class CheckRunner:
                 ]
             )
 
-    def run(self):
+    def run(self) -> None:
         self.read_input()
         if self.export_fixes is None:
             self.get_prefixes()
@@ -313,7 +319,7 @@ CPP_STANDARDS = [
 C_STANDARDS = ["c99", ("c11", "c1x"), "c17", ("c23", "c2x"), "c2y"]
 
 
-def expand_std(std):
+def expand_std(std: str) -> List[str]:
     split_std, or_later, _ = std.partition("-or-later")
 
     if not or_later:
@@ -335,11 +341,11 @@ def expand_std(std):
     return [std]
 
 
-def csv(string):
+def csv(string: str) -> List[str]:
     return string.split(",")
 
 
-def parse_arguments():
+def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
     parser = argparse.ArgumentParser(
         prog=pathlib.Path(__file__).stem,
         description=__doc__,
@@ -371,10 +377,15 @@ def parse_arguments():
         default=["c++11-or-later"],
         help="Passed to clang. Special -or-later values are expanded.",
     )
+    parser.add_argument(
+        "--match-partial-fixes",
+        action="store_true",
+        help="allow partial line matches for fixes",
+    )
     return parser.parse_known_args()
 
 
-def main():
+def main() -> None:
     args, extra_args = parse_arguments()
 
     abbreviated_stds = args.std

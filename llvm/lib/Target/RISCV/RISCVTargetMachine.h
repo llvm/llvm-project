@@ -59,6 +59,10 @@ public:
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 };
 
 std::unique_ptr<ScheduleDAGMutation>

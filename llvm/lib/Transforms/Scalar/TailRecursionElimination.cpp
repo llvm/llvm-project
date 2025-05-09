@@ -725,6 +725,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
       SelectInst *SI =
           SelectInst::Create(RetKnownPN, RetPN, Ret->getReturnValue(),
                              "current.ret.tr", Ret->getIterator());
+      SI->setDebugLoc(Ret->getDebugLoc());
       RetSelects.push_back(SI);
 
       RetPN->addIncoming(SI, BB);

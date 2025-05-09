@@ -83,8 +83,7 @@ public:
   /// Clients are not required to answer precisely and may conservatively return
   /// false, even when a difference is fully resolved.
   bool isSymbolRefDifferenceFullyResolved(const MCAssembler &Asm,
-                                          const MCSymbolRefExpr *A,
-                                          const MCSymbolRefExpr *B,
+                                          const MCSymbol &A, const MCSymbol &B,
                                           bool InSet) const;
 
   virtual bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,

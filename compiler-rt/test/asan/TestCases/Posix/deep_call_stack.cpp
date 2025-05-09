@@ -1,4 +1,4 @@
-// Check that UAR mode can handle very deep recusrion.
+// Check that UAR mode can handle very deep recursion.
 // REQUIRES: shell
 // RUN: %clangxx_asan -O2 %s -o %t
 // RUN: ulimit -s 4096

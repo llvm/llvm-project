@@ -23,18 +23,18 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    {
-        std::array<int, 3> array{0, 1, 2};
-        std::span<int> const s(array.data(), array.size());
-        TEST_LIBCPP_ASSERT_FAILURE(s.first(4), "span<T>::first(count): count out of range");
-        TEST_LIBCPP_ASSERT_FAILURE(s.first<4>(), "span<T>::first<Count>(): Count out of range");
-    }
-    {
-        std::array<int, 3> array{0, 1, 2};
-        std::span<int, 3> const s(array.data(), array.size());
-        TEST_LIBCPP_ASSERT_FAILURE(s.first(4), "span<T, N>::first(count): count out of range");
-        // s.first<4>() caught at compile-time (tested elsewhere)
-    }
+  {
+    std::array<int, 3> array{0, 1, 2};
+    std::span<int> const s(array.data(), array.size());
+    TEST_LIBCPP_ASSERT_FAILURE(s.first(4), "span<T>::first(count): count out of range");
+    TEST_LIBCPP_ASSERT_FAILURE(s.first<4>(), "span<T>::first<Count>(): Count out of range");
+  }
+  {
+    std::array<int, 3> array{0, 1, 2};
+    std::span<int, 3> const s(array.data(), array.size());
+    TEST_LIBCPP_ASSERT_FAILURE(s.first(4), "span<T, N>::first(count): count out of range");
+    // s.first<4>() caught at compile-time (tested elsewhere)
+  }
 
-    return 0;
+  return 0;
 }

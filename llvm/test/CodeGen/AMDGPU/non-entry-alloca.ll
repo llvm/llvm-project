@@ -106,7 +106,7 @@ bb.1:
   br label %bb.2
 
 bb.2:
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   ret void
 }
 ; DEFAULTSIZE: .amdhsa_private_segment_fixed_size 4112
@@ -200,7 +200,7 @@ bb.0:
   br label %bb.1
 
 bb.1:
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   ret void
 }
 
@@ -306,7 +306,7 @@ bb.1:
   br label %bb.2
 
 bb.2:
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   ret void
 }
 
@@ -399,7 +399,7 @@ bb.0:
   br label %bb.1
 
 bb.1:
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   ret void
 }
 

@@ -18,6 +18,8 @@
 # CHECK-NEXT: d4 d4 d4 d4   .word   0xd4d4d4d4
 # CHECK-NEXT: d4 d4 d4 d4   .word   0xd4d4d4d4
 # CHECK-NEXT: d4 d4 d4 d4   .word   0xd4d4d4d4
+# CHECK-EMPTY:
+# CHECK-NEXT: <bar@plt>:
 # CHECK-NEXT: e28fc600      add     r12, pc, #0, #12
 # CHECK-NEXT: e28cca20      add     r12, r12, #32, #20
 # CHECK-NEXT: e5bcf06c      ldr     pc, [r12, #0x6c]!

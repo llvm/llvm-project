@@ -103,20 +103,32 @@ static int sectionOrder(OutputSection *osec) {
     // be the section that determines whether we need thunks or not.
     if (osec->name == section_names::text)
       return -6;
+
+    // Prioritize specific section ordering based on our knowledge. This ensures
+    // that certain sections are placed in a particular order, even if they
+    // are also categorized as code sections. This explicit ordering takes
+    // precedence over the general code section ordering.
+    int knownPriority =
+        StringSwitch<int>(osec->name)
+            .Case(section_names::stubs, -4)
+            .Case(section_names::stubHelper, -3)
+            .Case(section_names::objcStubs, -2)
+            .Case(section_names::initOffsets, -1)
+            .Case(section_names::unwindInfo,
+                  std::numeric_limits<int>::max() - 1)
+            .Case(section_names::ehFrame, std::numeric_limits<int>::max())
+            .Default(0);
+
+    if (knownPriority != 0)
+      return knownPriority;
+
     // Ensure all code sections are contiguous with `__text` for thunk
     // calculations.
-    if (sections::isCodeSection(osec->name, segment_names::text, osec->flags) &&
-        osec->name != section_names::stubHelper) {
+    if (sections::isCodeSection(osec->name, segment_names::text, osec->flags)) {
       return -5;
     }
-    return StringSwitch<int>(osec->name)
-        .Case(section_names::stubs, -4)
-        .Case(section_names::stubHelper, -3)
-        .Case(section_names::objcStubs, -2)
-        .Case(section_names::initOffsets, -1)
-        .Case(section_names::unwindInfo, std::numeric_limits<int>::max() - 1)
-        .Case(section_names::ehFrame, std::numeric_limits<int>::max())
-        .Default(osec->inputOrder);
+
+    return osec->inputOrder;
   } else if (segname == segment_names::data ||
              segname == segment_names::dataConst) {
     // For each thread spawned, dyld will initialize its TLVs by copying the

@@ -97,9 +97,9 @@ static Error ToError(const RunInTerminalMessage &message) {
 
 RunInTerminalLauncherCommChannel::RunInTerminalLauncherCommChannel(
     StringRef comm_file)
-    : m_io(comm_file, "debug adaptor") {}
+    : m_io(comm_file, "debug adapter") {}
 
-Error RunInTerminalLauncherCommChannel::WaitUntilDebugAdaptorAttaches(
+Error RunInTerminalLauncherCommChannel::WaitUntilDebugAdapterAttaches(
     std::chrono::milliseconds timeout) {
   if (Expected<RunInTerminalMessageUP> message =
           GetNextMessage(m_io, timeout)) {

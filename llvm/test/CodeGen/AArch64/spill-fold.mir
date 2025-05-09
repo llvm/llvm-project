@@ -1,5 +1,7 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass greedy -verify-machineinstrs  -o - %s | FileCheck %s
 # RUN: llc -mtriple=aarch64_be-none-linux-gnu -run-pass greedy -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -passes=greedy -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64_be-none-linux-gnu -passes=greedy -o - %s | FileCheck %s
 --- |
   define i64 @test_subreg_spill_fold() { ret i64 0 }
   define i64 @test_subreg_spill_fold2() { ret i64 0 }

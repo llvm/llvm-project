@@ -58,18 +58,26 @@ Mixed arm64x code:
 RUN: lld-link -out:test4.dll -machine:arm64x arm64-func-sym.obj arm64ec-func-sym.obj \
 RUN:          x86_64-func-sym.obj loadconfig-arm64.obj loadconfig-arm64ec.obj -dll -noentry
 
-RUN: llvm-readobj --headers test4.dll | FileCheck -check-prefix=DIR3 %s
+RUN: llvm-readobj --headers --coff-load-config test4.dll | FileCheck -check-prefix=DIR3 %s
 DIR3:      ImageOptionalHeader {
 DIR3:        DataDirectory {
 DIR3:          ExceptionTableRVA: 0x6000
 DIR3-NEXT:     ExceptionTableSize: 0x10
 DIR3:        }
 DIR3:      }
+DIR3:      CHPEMetadata [
+DIR3:        ExtraRFETable: 0x6010
+DIR3-NEXT:   ExtraRFETableSize: 0xC
+DIR3:      ]
 DIR3:      HybridObject {
 DIR3:        ImageOptionalHeader {
 DIR3:          ExceptionTableRVA: 0x6010
 DIR3-NEXT:     ExceptionTableSize: 0xC
 DIR3:        }
+DIR3:        CHPEMetadata [
+DIR3:          ExtraRFETable: 0x6000
+DIR3-NEXT:     ExtraRFETableSize: 0x10
+DIR3:        ]
 DIR3:      }
 
 RUN: llvm-objdump -s --section=.pdata test4.dll | FileCheck -check-prefix=DATA4 %s
@@ -86,12 +94,12 @@ RUN: llvm-objdump -s --section=.pdata test5.dll | FileCheck -check-prefix=DATA3 
 
 RUN: lld-link -out:test6.dll -machine:arm64x arm64ec-func-sym.obj x86_64-func-sym.obj \
 RUN:          arm64-func-sym.obj loadconfig-arm64.obj loadconfig-arm64ec.obj -dll -noentry
-RUN: llvm-readobj --headers test6.dll | FileCheck -check-prefix=DIR3 %s
+RUN: llvm-readobj --headers --coff-load-config test6.dll | FileCheck -check-prefix=DIR3 %s
 RUN: llvm-objdump -s --section=.pdata test6.dll | FileCheck -check-prefix=DATA4 %s
 
 RUN: lld-link -out:test7.dll -machine:arm64x x86_64-func-sym.obj arm64ec-func-sym.obj \
 RUN:          arm64-func-sym.obj loadconfig-arm64.obj loadconfig-arm64ec.obj -dll -noentry
-RUN: llvm-readobj --headers test7.dll | FileCheck -check-prefix=DIR3 %s
+RUN: llvm-readobj --headers --coff-load-config test7.dll | FileCheck -check-prefix=DIR3 %s
 RUN: llvm-objdump -s --section=.pdata test7.dll | FileCheck -check-prefix=DATA4 %s
 
 #--- arm64-func-sym.s

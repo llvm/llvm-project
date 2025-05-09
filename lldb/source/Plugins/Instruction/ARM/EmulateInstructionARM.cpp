@@ -14458,12 +14458,12 @@ bool EmulateInstructionARM::CreateFunctionEntryUnwind(UnwindPlan &unwind_plan) {
   unwind_plan.Clear();
   unwind_plan.SetRegisterKind(eRegisterKindDWARF);
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our previous Call Frame Address is the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_sp, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_sp, 0);
 
-  unwind_plan.AppendRow(row);
+  unwind_plan.AppendRow(std::move(row));
   unwind_plan.SetSourceName("EmulateInstructionARM");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);

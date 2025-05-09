@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -O0 -filetype=obj < %s > %t
 ; RUN: llvm-dwarfdump %t | FileCheck %s
 
-; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-unknown-unknown -O0 -filetype=obj < %s > %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
-
 ; IR generated from clang -g with the following source:
 ; struct foo {
 ;   foo(const foo&);

@@ -172,7 +172,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonDisassembler() {
 DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
-                                                 raw_ostream &cs) const {
+                                                 raw_ostream &CS) const {
+  CommentStream = &CS;
+
   DecodeStatus Result = DecodeStatus::Success;
   bool Complete = false;
   Size = 0;
@@ -184,7 +186,7 @@ DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Bytes.size() < HEXAGON_INSTR_SIZE)
       return MCDisassembler::Fail;
     MCInst *Inst = getContext().createMCInst();
-    Result = getSingleInstruction(*Inst, MI, Bytes, Address, cs, Complete);
+    Result = getSingleInstruction(*Inst, MI, Bytes, Address, CS, Complete);
     MI.addOperand(MCOperand::createInst(Inst));
     Size += HEXAGON_INSTR_SIZE;
     Bytes = Bytes.slice(HEXAGON_INSTR_SIZE);

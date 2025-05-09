@@ -35,8 +35,8 @@ define void @test(ptr nocapture %t2) {
 ; CHECK-NEXT:    [[T47:%.*]] = mul nsw i32 [[T37]], -16069
 ; CHECK-NEXT:    [[T48:%.*]] = mul nsw i32 [[T38]], -3196
 ; CHECK-NEXT:    [[T49:%.*]] = add nsw i32 [[T40]], [[T47]]
-; CHECK-NEXT:    [[T15:%.*]] = load i32, ptr [[T14]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[T8]], align 4
+; CHECK-NEXT:    [[T15:%.*]] = load i32, ptr [[T14]], align 4
 ; CHECK-NEXT:    [[T9:%.*]] = load i32, ptr [[T8]], align 4
 ; CHECK-NEXT:    [[T29:%.*]] = sub nsw i32 [[T9]], [[T15]]
 ; CHECK-NEXT:    [[T30:%.*]] = add nsw i32 [[T27]], [[T29]]

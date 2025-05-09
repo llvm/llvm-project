@@ -108,6 +108,10 @@ public:
     return (Top == I || Top->comesBefore(I)) &&
            (I == Bottom || I->comesBefore(Bottom));
   }
+  /// \Returns true if \p Elm is right before the top or right after the bottom.
+  bool touches(T *Elm) const {
+    return Top == Elm->getNextNode() || Bottom == Elm->getPrevNode();
+  }
   T *top() const { return Top; }
   T *bottom() const { return Bottom; }
 

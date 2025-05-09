@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// #include "src/__support/str_float_conv_utils.h"
-
-#include <stdlib.h> // For string to float functions
-
-// #include "src/__support/FPUtil/FPBits.h"
-
-#include <cstdint>
-#include <fstream>
-#include <iostream>
-#include <string>
+#include "src/__support/CPP/bit.h"
+#include "src/stdio/fclose.h"
+#include "src/stdio/fgets.h"
+#include "src/stdio/fopen.h"
+#include "src/stdio/printf.h"
+#include "src/stdlib/getenv.h"
+#include "src/stdlib/strtod.h"
+#include "src/stdlib/strtof.h"
+#include "src/string/strdup.h"
+#include "src/string/strtok.h"
+#include "test/UnitTest/Test.h"
+#include <stdint.h>
 
 // The intent of this test is to read in files in the format used in this test
 // dataset: https://github.com/nigeltao/parse-number-fxx-test-data
@@ -31,6 +33,19 @@
 // should be in llvm_project/build/bin). Run the following command:
 // ./libc_str_to_float_comparison_test <path/to/dataset/repo>/data/*
 // It will take a few seconds to run.
+
+struct ParseResult {
+  uint32_t totalFails;
+  uint32_t totalBitDiffs;
+  uint32_t detailedBitDiffs[4];
+  uint32_t total;
+};
+
+enum class ParseStatus : uint8_t {
+  SUCCESS,
+  FILE_ERROR,
+  PARSE_ERROR,
+};
 
 static inline uint32_t hexCharToU32(char in) {
   return in > '9' ? in + 10 - 'A' : in - '0';
@@ -54,120 +69,168 @@ static inline uint64_t fastHexToU64(const char *inStr) {
   return result;
 }
 
-int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
-              int *detailedBitDiffs, int *total) {
-  int32_t curFails = 0;    // Only counts actual failures, not bitdiffs.
-  int32_t curBitDiffs = 0; // A bitdiff is when the expected result and actual
-                           // result are off by +/- 1 bit.
-  std::string line;
-  std::string num;
+static void parseLine(const char *line, ParseResult &parseResult,
+                      int32_t &curFails, int32_t &curBitDiffs) {
 
-  std::ifstream fileStream(inputFileName, std::ifstream::in);
+  if (line[0] == '#')
+    return;
 
-  if (!fileStream.is_open()) {
-    std::cout << "file '" << inputFileName << "' failed to open. Exiting.\n";
-    return 1;
-  }
-  while (getline(fileStream, line)) {
-    if (line[0] == '#') {
-      continue;
-    }
-    *total = *total + 1;
-    uint32_t expectedFloatRaw;
-    uint64_t expectedDoubleRaw;
+  parseResult.total += 1;
+  uint32_t expectedFloatRaw;
+  uint64_t expectedDoubleRaw;
 
-    expectedFloatRaw = fastHexToU32(line.c_str() + 5);
-    expectedDoubleRaw = fastHexToU64(line.c_str() + 14);
-    num = line.substr(31);
+  expectedFloatRaw = fastHexToU32(line + 5);
+  expectedDoubleRaw = fastHexToU64(line + 14);
 
-    float floatResult = strtof(num.c_str(), nullptr);
+  const char *num = line + 31;
 
-    double doubleResult = strtod(num.c_str(), nullptr);
+  float floatResult = LIBC_NAMESPACE::strtof(num, nullptr);
 
-    uint32_t floatRaw = *(uint32_t *)(&floatResult);
+  double doubleResult = LIBC_NAMESPACE::strtod(num, nullptr);
 
-    uint64_t doubleRaw = *(uint64_t *)(&doubleResult);
+  uint32_t floatRaw = LIBC_NAMESPACE::cpp::bit_cast<uint32_t>(floatResult);
 
-    if (!(expectedFloatRaw == floatRaw)) {
-      if (expectedFloatRaw == floatRaw + 1 ||
-          expectedFloatRaw == floatRaw - 1) {
-        curBitDiffs++;
-        if (expectedFloatRaw == floatRaw + 1) {
-          detailedBitDiffs[0] = detailedBitDiffs[0] + 1; // float low
-        } else {
-          detailedBitDiffs[1] = detailedBitDiffs[1] + 1; // float high
-        }
+  uint64_t doubleRaw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(doubleResult);
+
+  if (!(expectedFloatRaw == floatRaw)) {
+    if (expectedFloatRaw == floatRaw + 1 || expectedFloatRaw == floatRaw - 1) {
+      curBitDiffs++;
+      if (expectedFloatRaw == floatRaw + 1) {
+        parseResult.detailedBitDiffs[0] =
+            parseResult.detailedBitDiffs[0] + 1; // float low
       } else {
-        curFails++;
+        parseResult.detailedBitDiffs[1] =
+            parseResult.detailedBitDiffs[1] + 1; // float high
       }
-      if (curFails + curBitDiffs < 10) {
-        std::cout << "Float fail for '" << num << "'. Expected " << std::hex
-                  << expectedFloatRaw << " but got " << floatRaw << "\n"
-                  << std::dec;
-      }
+    } else {
+      curFails++;
     }
+    if (curFails + curBitDiffs < 10) {
+      LIBC_NAMESPACE::printf("Float fail for '%s'. Expected %x but got %x\n",
+                             num, expectedFloatRaw, floatRaw);
+    }
+  }
 
-    if (!(expectedDoubleRaw == doubleRaw)) {
-      if (expectedDoubleRaw == doubleRaw + 1 ||
-          expectedDoubleRaw == doubleRaw - 1) {
-        curBitDiffs++;
-        if (expectedDoubleRaw == doubleRaw + 1) {
-          detailedBitDiffs[2] = detailedBitDiffs[2] + 1; // double low
-        } else {
-          detailedBitDiffs[3] = detailedBitDiffs[3] + 1; // double high
-        }
+  if (!(expectedDoubleRaw == doubleRaw)) {
+    if (expectedDoubleRaw == doubleRaw + 1 ||
+        expectedDoubleRaw == doubleRaw - 1) {
+      curBitDiffs++;
+      if (expectedDoubleRaw == doubleRaw + 1) {
+        parseResult.detailedBitDiffs[2] =
+            parseResult.detailedBitDiffs[2] + 1; // double low
       } else {
-        curFails++;
+        parseResult.detailedBitDiffs[3] =
+            parseResult.detailedBitDiffs[3] + 1; // double high
       }
-      if (curFails + curBitDiffs < 10) {
-        std::cout << "Double fail for '" << num << "'. Expected " << std::hex
-                  << expectedDoubleRaw << " but got " << doubleRaw << "\n"
-                  << std::dec;
-      }
+    } else {
+      curFails++;
+    }
+    if (curFails + curBitDiffs < 10) {
+      LIBC_NAMESPACE::printf("Double fail for '%s'. Expected %lx but got %lx\n",
+                             num, expectedDoubleRaw, doubleRaw);
     }
   }
-
-  fileStream.close();
-
-  *totalBitDiffs += curBitDiffs;
-  *totalFails += curFails;
-
-  if (curFails > 1 || curBitDiffs > 1) {
-    return 2;
-  }
-  return 0;
 }
 
-int main(int argc, char *argv[]) {
-  int result = 0;
-  int fails = 0;
+ParseStatus checkBuffer(ParseResult &parseResult) {
+  constexpr const char *LINES[] = {
+      "3C00 3F800000 3FF0000000000000 1",
+      "3D00 3FA00000 3FF4000000000000 1.25",
+      "3D9A 3FB33333 3FF6666666666666 1.4",
+      "57B7 42F6E979 405EDD2F1A9FBE77 123.456",
+      "622A 44454000 4088A80000000000 789",
+      "7C00 7F800000 7FF0000000000000 123.456e789"};
+
+  int32_t curFails = 0;    // Only counts actual failures, not bitdiffs.
+  int32_t curBitDiffs = 0; // A bitdiff is when the expected result and actual
+  // result are off by +/- 1 bit.
+
+  for (uint8_t i = 0; i < sizeof(LINES) / sizeof(LINES[0]); i++) {
+    parseLine(LINES[i], parseResult, curFails, curBitDiffs);
+  }
+
+  parseResult.totalBitDiffs += curBitDiffs;
+  parseResult.totalFails += curFails;
+
+  if (curFails > 1 || curBitDiffs > 1) {
+    return ParseStatus::PARSE_ERROR;
+  }
+  return ParseStatus::SUCCESS;
+}
+
+ParseStatus checkFile(char *inputFileName, ParseResult &parseResult) {
+  int32_t curFails = 0;    // Only counts actual failures, not bitdiffs.
+  int32_t curBitDiffs = 0; // A bitdiff is when the expected result and actual
+  // result are off by +/- 1 bit.
+  char line[1000];
+
+  auto *fileHandle = LIBC_NAMESPACE::fopen(inputFileName, "r");
+
+  if (!fileHandle) {
+    LIBC_NAMESPACE::printf("file '%s' failed to open. Exiting.\n",
+                           inputFileName);
+    return ParseStatus::FILE_ERROR;
+  }
+
+  while (LIBC_NAMESPACE::fgets(line, sizeof(line), fileHandle)) {
+    parseLine(line, parseResult, curFails, curBitDiffs);
+  }
+
+  LIBC_NAMESPACE::fclose(fileHandle);
+
+  parseResult.totalBitDiffs += curBitDiffs;
+  parseResult.totalFails += curFails;
+
+  if (curFails > 1 || curBitDiffs > 1) {
+    return ParseStatus::PARSE_ERROR;
+  }
+  return ParseStatus::SUCCESS;
+}
+
+ParseStatus updateStatus(ParseStatus parse_status, ParseStatus cur_status) {
+  if (cur_status == ParseStatus::FILE_ERROR) {
+    parse_status = ParseStatus::FILE_ERROR;
+  } else if (cur_status == ParseStatus::PARSE_ERROR) {
+    parse_status = ParseStatus::PARSE_ERROR;
+  }
+  return parse_status;
+}
+
+TEST(LlvmLibcStrToFloatComparisonTest, CheckFloats) {
+  ParseStatus parseStatus = ParseStatus::SUCCESS;
 
   // Bitdiffs are cases where the expected result and actual result only differ
   // by +/- the least significant bit. They are tracked separately from larger
   // failures since a bitdiff is most likely the result of a rounding error, and
   // splitting them off makes them easier to track down.
-  int bitdiffs = 0;
-  int detailedBitDiffs[4] = {0, 0, 0, 0};
 
-  int total = 0;
-  for (int i = 1; i < argc; i++) {
-    std::cout << "Starting file " << argv[i] << "\n";
-    int curResult =
-        checkFile(argv[i], &fails, &bitdiffs, detailedBitDiffs, &total);
-    if (curResult == 1) {
-      result = 1;
-      break;
-    } else if (curResult == 2) {
-      result = 2;
+  ParseResult parseResult = {
+      .totalFails = 0,
+      .totalBitDiffs = 0,
+      .detailedBitDiffs = {0, 0, 0, 0},
+      .total = 0,
+  };
+
+  char *files = LIBC_NAMESPACE::getenv("FILES");
+
+  if (files == nullptr) {
+    ParseStatus cur_status = checkBuffer(parseResult);
+    parseStatus = updateStatus(parseStatus, cur_status);
+  } else {
+    files = LIBC_NAMESPACE::strdup(files);
+    for (char *file = LIBC_NAMESPACE::strtok(files, ","); file != nullptr;
+         file = LIBC_NAMESPACE::strtok(nullptr, ",")) {
+      ParseStatus cur_status = checkFile(file, parseResult);
+      parseStatus = updateStatus(parseStatus, cur_status);
     }
   }
-  std::cout << "Results:\n"
-            << "Total significant failed conversions: " << fails << "\n"
-            << "Total conversions off by +/- 1 bit: " << bitdiffs << "\n"
-            << "\t" << detailedBitDiffs[0] << "\tfloat low\n"
-            << "\t" << detailedBitDiffs[1] << "\tfloat high\n"
-            << "\t" << detailedBitDiffs[2] << "\tdouble low\n"
-            << "\t" << detailedBitDiffs[3] << "\tdouble high\n"
-            << "Total lines: " << total << "\n";
-  return result;
+
+  EXPECT_EQ(parseStatus, ParseStatus::SUCCESS);
+  EXPECT_EQ(parseResult.totalFails, 0u);
+  EXPECT_EQ(parseResult.totalBitDiffs, 0u);
+  EXPECT_EQ(parseResult.detailedBitDiffs[0], 0u); // float low
+  EXPECT_EQ(parseResult.detailedBitDiffs[1], 0u); // float high
+  EXPECT_EQ(parseResult.detailedBitDiffs[2], 0u); // double low
+  EXPECT_EQ(parseResult.detailedBitDiffs[3], 0u); // double high
+  LIBC_NAMESPACE::printf("Total lines: %d\n", parseResult.total);
 }

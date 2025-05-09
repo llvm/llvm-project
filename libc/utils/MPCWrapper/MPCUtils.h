@@ -174,11 +174,11 @@ template <Operation op, typename InputType, typename OutputType>
 constexpr bool is_valid_operation() {
   return (Operation::BeginBinaryOperationsSingleOutput < op &&
           op < Operation::EndBinaryOperationsSingleOutput &&
-          cpp::is_complex_type_same<InputType, OutputType> &&
+          cpp::is_complex_type_same<InputType, OutputType>() &&
           cpp::is_complex_v<InputType>) ||
          (Operation::BeginUnaryOperationsSingleOutputSameOutputType < op &&
           op < Operation::EndUnaryOperationsSingleOutputSameOutputType &&
-          cpp::is_complex_type_same<InputType, OutputType> &&
+          cpp::is_complex_type_same<InputType, OutputType>() &&
           cpp::is_complex_v<InputType>) ||
          (Operation::BeginUnaryOperationsSingleOutputDifferentOutputType < op &&
           op < Operation::EndUnaryOperationsSingleOutputDifferentOutputType &&

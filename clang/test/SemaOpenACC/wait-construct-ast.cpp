@@ -21,7 +21,7 @@ void NormalFunc() {
   // CHECK-NEXT: CallExpr{{.*}}'int'
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int (*)()' <FunctionToPointerDecay>
   // CHECK-NEXT: DeclRefExpr{{.*}}'some_int'
-#pragma acc wait() async
+#pragma acc wait async
   // CHECK-NEXT: OpenACCWaitConstruct{{.*}}wait
   // CHECK-NEXT: <<<NULL>>
   // CHECK-NEXT: async clause
@@ -90,7 +90,7 @@ void TemplFunc(T t) {
   // CHECK-NEXT: async clause
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>'
   // CHECK-NEXT: NestedNameSpecifier{{.*}} 'T'
-#pragma acc wait() async
+#pragma acc wait async
   // CHECK-NEXT: OpenACCWaitConstruct{{.*}}wait
   // CHECK-NEXT: <<<NULL>>
   // CHECK-NEXT: async clause

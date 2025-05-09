@@ -17,11 +17,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-struct PlatformDarwinTester : public PlatformDarwin {
-public:
-  using PlatformDarwin::FindComponentInPath;
-};
-
 TEST(PlatformDarwinTest, TestParseVersionBuildDir) {
   llvm::VersionTuple V;
   llvm::StringRef D;
@@ -48,21 +43,4 @@ TEST(PlatformDarwinTest, TestParseVersionBuildDir) {
 
   std::tie(V, D) = PlatformDarwin::ParseVersionBuildDir("3.4.5");
   EXPECT_EQ(llvm::VersionTuple(3, 4, 5), V);
-}
-
-TEST(PlatformDarwinTest, FindComponentInPath) {
-  EXPECT_EQ("/path/to/foo",
-            PlatformDarwinTester::FindComponentInPath("/path/to/foo/", "foo"));
-
-  EXPECT_EQ("/path/to/foo",
-            PlatformDarwinTester::FindComponentInPath("/path/to/foo", "foo"));
-
-  EXPECT_EQ("/path/to/foobar", PlatformDarwinTester::FindComponentInPath(
-                                   "/path/to/foobar", "foo"));
-
-  EXPECT_EQ("/path/to/foobar", PlatformDarwinTester::FindComponentInPath(
-                                   "/path/to/foobar", "bar"));
-
-  EXPECT_EQ("",
-            PlatformDarwinTester::FindComponentInPath("/path/to/foo", "bar"));
 }

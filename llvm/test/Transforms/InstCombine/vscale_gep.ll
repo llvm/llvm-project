@@ -60,8 +60,8 @@ define i32 @gep_alloca_inbounds_vscale_nonzero() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca <vscale x 4 x i32>, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
-; CHECK-NEXT:    [[TMP_OFFS:%.*]] = or disjoint i64 [[TMP2]], 8
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP_OFFS]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[TMP]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;

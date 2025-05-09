@@ -49,25 +49,43 @@ public:
   /// larger patterns when given an ambiguous pattern set.
   ///
   /// Note: Only applicable when simplifying entire regions.
-  bool useTopDownTraversal = false;
+  bool getUseTopDownTraversal() const { return useTopDownTraversal; }
+  GreedyRewriteConfig &setUseTopDownTraversal(bool use = true) {
+    useTopDownTraversal = use;
+    return *this;
+  }
 
   /// Perform control flow optimizations to the region tree after applying all
   /// patterns.
   ///
   /// Note: Only applicable when simplifying entire regions.
-  GreedySimplifyRegionLevel enableRegionSimplification =
-      GreedySimplifyRegionLevel::Aggressive;
+  GreedySimplifyRegionLevel getRegionSimplificationLevel() const {
+    return regionSimplificationLevel;
+  }
+  GreedyRewriteConfig &
+  setRegionSimplificationLevel(GreedySimplifyRegionLevel level) {
+    regionSimplificationLevel = level;
+    return *this;
+  }
 
   /// This specifies the maximum number of times the rewriter will iterate
   /// between applying patterns and simplifying regions. Use `kNoLimit` to
   /// disable this iteration limit.
   ///
   /// Note: Only applicable when simplifying entire regions.
-  int64_t maxIterations = 10;
+  int64_t getMaxIterations() const { return maxIterations; }
+  GreedyRewriteConfig &setMaxIterations(int64_t iterations) {
+    maxIterations = iterations;
+    return *this;
+  }
 
   /// This specifies the maximum number of rewrites within an iteration. Use
   /// `kNoLimit` to disable this limit.
-  int64_t maxNumRewrites = kNoLimit;
+  int64_t getMaxNumRewrites() const { return maxNumRewrites; }
+  GreedyRewriteConfig &setMaxNumRewrites(int64_t limit) {
+    maxNumRewrites = limit;
+    return *this;
+  }
 
   static constexpr int64_t kNoLimit = -1;
 
@@ -75,7 +93,11 @@ public:
   /// specified, the closest enclosing region around the initial list of ops
   /// (or the specified region, depending on which greedy rewrite entry point
   /// is used) is used as a scope.
-  Region *scope = nullptr;
+  Region *getScope() const { return scope; }
+  GreedyRewriteConfig &setScope(Region *scope) {
+    this->scope = scope;
+    return *this;
+  }
 
   /// Strict mode can restrict the ops that are added to the worklist during
   /// the rewrite.
@@ -87,16 +109,44 @@ public:
   /// * GreedyRewriteStrictness::ExistingOps: Only pre-existing ops (that were
   ///   were on the worklist at the very beginning) enqueued. All other ops are
   ///   excluded.
-  GreedyRewriteStrictness strictMode = GreedyRewriteStrictness::AnyOp;
+  GreedyRewriteStrictness getStrictness() const { return strictness; }
+  GreedyRewriteConfig &setStrictness(GreedyRewriteStrictness mode) {
+    strictness = mode;
+    return *this;
+  }
 
   /// An optional listener that should be notified about IR modifications.
-  RewriterBase::Listener *listener = nullptr;
+  RewriterBase::Listener *getListener() const { return listener; }
+  GreedyRewriteConfig &setListener(RewriterBase::Listener *listener) {
+    this->listener = listener;
+    return *this;
+  }
 
   /// Whether this should fold while greedily rewriting.
-  bool fold = true;
+  bool isFoldingEnabled() const { return fold; }
+  GreedyRewriteConfig &enableFolding(bool enable = true) {
+    fold = enable;
+    return *this;
+  }
 
   /// If set to "true", constants are CSE'd (even across multiple regions that
   /// are in a parent-ancestor relationship).
+  bool isConstantCSEEnabled() const { return cseConstants; }
+  GreedyRewriteConfig &enableConstantCSE(bool enable = true) {
+    cseConstants = enable;
+    return *this;
+  }
+
+private:
+  Region *scope = nullptr;
+  bool useTopDownTraversal = false;
+  GreedySimplifyRegionLevel regionSimplificationLevel =
+      GreedySimplifyRegionLevel::Aggressive;
+  int64_t maxIterations = 10;
+  int64_t maxNumRewrites = kNoLimit;
+  GreedyRewriteStrictness strictness = GreedyRewriteStrictness::AnyOp;
+  RewriterBase::Listener *listener = nullptr;
+  bool fold = true;
   bool cseConstants = true;
 };
 
@@ -128,14 +178,14 @@ applyPatternsGreedily(Region &region, const FrozenRewritePatternSet &patterns,
                       GreedyRewriteConfig config = GreedyRewriteConfig(),
                       bool *changed = nullptr);
 /// Same as `applyPatternsAndGreedily` above with folding.
-/// FIXME: Remove this once transition to above is complieted.
+/// FIXME: Remove this once transition to above is completed.
 LLVM_DEPRECATED("Use applyPatternsGreedily() instead", "applyPatternsGreedily")
 inline LogicalResult
 applyPatternsAndFoldGreedily(Region &region,
                              const FrozenRewritePatternSet &patterns,
                              GreedyRewriteConfig config = GreedyRewriteConfig(),
                              bool *changed = nullptr) {
-  config.fold = true;
+  config.enableFolding();
   return applyPatternsGreedily(region, patterns, config, changed);
 }
 
@@ -187,7 +237,7 @@ applyPatternsAndFoldGreedily(Operation *op,
                              const FrozenRewritePatternSet &patterns,
                              GreedyRewriteConfig config = GreedyRewriteConfig(),
                              bool *changed = nullptr) {
-  config.fold = true;
+  config.enableFolding();
   return applyPatternsGreedily(op, patterns, config, changed);
 }
 
@@ -233,7 +283,7 @@ applyOpPatternsAndFold(ArrayRef<Operation *> ops,
                        const FrozenRewritePatternSet &patterns,
                        GreedyRewriteConfig config = GreedyRewriteConfig(),
                        bool *changed = nullptr, bool *allErased = nullptr) {
-  config.fold = true;
+  config.enableFolding();
   return applyOpPatternsGreedily(ops, patterns, config, changed, allErased);
 }
 

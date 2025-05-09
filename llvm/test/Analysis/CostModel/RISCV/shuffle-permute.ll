@@ -3,6 +3,8 @@
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=riscv32 -mattr=+v,+f,+d,+zfh,+zvfhmin | FileCheck %s
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=riscv32 -mattr=+v,+f,+d,+zfh,+zvfh | FileCheck %s --check-prefix=SIZE
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=riscv32 -mattr=+v,+f,+d,+zfh,+zvfhmin | FileCheck %s --check-prefix=SIZE
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=riscv32 -mattr=+v,+f,+d,+zfh,+zvfh,+log-vrgather | FileCheck %s --check-prefix=LOG-VRG
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=riscv32 -mattr=+v,+f,+d,+zfh,+zvfhmin,+log-vrgather | FileCheck %s --check-prefix=LOG-VRG
 ; Check that we don't crash querying costs when vectors are not enabled.
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=riscv32
 
@@ -44,6 +46,24 @@ define void @general_permute_single_source() {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8f32 = shufflevector <8 x float> undef, <8 x float> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 5, i32 3, i32 2, i32 1, i32 0>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f64 = shufflevector <4 x double> undef, <4 x double> undef, <4 x i32> <i32 3, i32 2, i32 3, i32 0>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; LOG-VRG-LABEL: 'general_permute_single_source'
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <4 x i32> <i32 2, i32 3, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> <i32 7, i32 5, i32 5, i32 5, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 9, i32 6, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <4 x i32> <i32 3, i32 2, i32 2, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 5, i32 5, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 11, i32 11, i32 11, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 2, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> <i32 7, i32 4, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <4 x i32> <i32 3, i32 1, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f16 = shufflevector <4 x half> undef, <4 x half> undef, <4 x i32> <i32 3, i32 1, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8f16 = shufflevector <8 x half> undef, <8 x half> undef, <8 x i32> <i32 7, i32 5, i32 5, i32 5, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v16f16 = shufflevector <16 x half> undef, <16 x half> undef, <16 x i32> <i32 15, i32 14, i32 12, i32 12, i32 12, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f32 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 1>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v8f32 = shufflevector <8 x float> undef, <8 x float> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 5, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4f64 = shufflevector <4 x double> undef, <4 x double> undef, <4 x i32> <i32 3, i32 2, i32 3, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <4 x i32> <i32 2, i32 3, i32 1, i32 0>
   %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> <i32 7, i32 5, i32 5, i32 5, i32 3, i32 2, i32 1, i32 0>
@@ -134,6 +154,37 @@ define void @general_permute_two_source() {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v16double = shufflevector <16 x double> undef, <16 x double> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 17, i32 11, i32 20, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
+; LOG-VRG-LABEL: 'general_permute_two_source'
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v2i8 = shufflevector <2 x i8> undef, <2 x i8> undef, <2 x i32> <i32 3, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <4 x i32> <i32 5, i32 7, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> <i32 14, i32 6, i32 5, i32 4, i32 13, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 17, i32 11, i32 20, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v2i16 = shufflevector <2 x i16> undef, <2 x i16> undef, <2 x i32> <i32 3, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <4 x i32> <i32 5, i32 7, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <8 x i32> <i32 14, i32 6, i32 5, i32 4, i32 13, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 17, i32 11, i32 20, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v2i32 = shufflevector <2 x i32> undef, <2 x i32> undef, <2 x i32> <i32 3, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> <i32 5, i32 7, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> <i32 14, i32 6, i32 5, i32 4, i32 13, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16i32 = shufflevector <16 x i32> undef, <16 x i32> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 17, i32 11, i32 20, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v2i64 = shufflevector <2 x i64> undef, <2 x i64> undef, <2 x i32> <i32 3, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <4 x i32> <i32 5, i32 7, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v8i64 = shufflevector <8 x i64> undef, <8 x i64> undef, <8 x i32> <i32 14, i32 6, i32 5, i32 4, i32 13, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 59 for instruction: %v16i64 = shufflevector <16 x i64> undef, <16 x i64> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 17, i32 11, i32 20, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v2half = shufflevector <2 x half> undef, <2 x half> undef, <2 x i32> <i32 3, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4half = shufflevector <4 x half> undef, <4 x half> undef, <4 x i32> <i32 5, i32 7, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v8half = shufflevector <8 x half> undef, <8 x half> undef, <8 x i32> <i32 14, i32 6, i32 5, i32 4, i32 13, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v16half = shufflevector <16 x half> undef, <16 x half> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 17, i32 11, i32 20, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v2float = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> <i32 3, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4float = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> <i32 5, i32 7, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8float = shufflevector <8 x float> undef, <8 x float> undef, <8 x i32> <i32 14, i32 6, i32 5, i32 4, i32 13, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16float = shufflevector <16 x float> undef, <16 x float> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 17, i32 11, i32 20, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v2double = shufflevector <2 x double> undef, <2 x double> undef, <2 x i32> <i32 3, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %v4double = shufflevector <4 x double> undef, <4 x double> undef, <4 x i32> <i32 5, i32 7, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v8double = shufflevector <8 x double> undef, <8 x double> undef, <8 x i32> <i32 14, i32 6, i32 5, i32 4, i32 13, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 59 for instruction: %v16double = shufflevector <16 x double> undef, <16 x double> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 17, i32 11, i32 20, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
   %v2i8 = shufflevector <2 x i8> undef, <2 x i8> undef, <2 x i32> <i32 3, i32 0>
   %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <4 x i32> <i32 5, i32 7, i32 1, i32 0>
   %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> <i32 14, i32 6, i32 5, i32 4, i32 13, i32 2, i32 1, i32 0>
@@ -169,5 +220,35 @@ define void @general_permute_two_source() {
   %v8double = shufflevector <8 x double> undef, <8 x double> undef, <8 x i32> <i32 14, i32 6, i32 5, i32 4, i32 13, i32 2, i32 1, i32 0>
   %v16double = shufflevector <16 x double> undef, <16 x double> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 17, i32 11, i32 20, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 
+  ret void
+}
+
+
+define void @legalization_examples() {
+; CHECK-LABEL: 'legalization_examples'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %1 = shufflevector <32 x i64> undef, <32 x i64> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %2 = shufflevector <16 x i64> undef, <16 x i64> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 0, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %3 = shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 32, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 294 for instruction: %4 = shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> <i32 30, i32 1, i32 22, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 32, i32 23, i32 8, i32 25, i32 7, i32 27, i32 28, i32 15, i32 30, i32 31>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; SIZE-LABEL: 'legalization_examples'
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <32 x i64> undef, <32 x i64> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %2 = shufflevector <16 x i64> undef, <16 x i64> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 0, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 32, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %4 = shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> <i32 30, i32 1, i32 22, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 32, i32 23, i32 8, i32 25, i32 7, i32 27, i32 28, i32 15, i32 30, i32 31>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; LOG-VRG-LABEL: 'legalization_examples'
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %1 = shufflevector <32 x i64> undef, <32 x i64> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %2 = shufflevector <16 x i64> undef, <16 x i64> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 0, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %3 = shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 32, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %4 = shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> <i32 30, i32 1, i32 22, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 32, i32 23, i32 8, i32 25, i32 7, i32 27, i32 28, i32 15, i32 30, i32 31>
+; LOG-VRG-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  shufflevector <32 x i64> undef, <32 x i64> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32>
+  shufflevector <16 x i64> undef, <16 x i64> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 0, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 32, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> <i32 30, i32 1, i32 22, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 32, i32 23, i32 8, i32 25, i32 7, i32 27, i32 28, i32 15, i32 30, i32 31>
   ret void
 }

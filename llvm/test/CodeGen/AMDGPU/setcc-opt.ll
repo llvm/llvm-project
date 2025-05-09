@@ -190,7 +190,7 @@ define amdgpu_kernel void @cmp_sext_k_neg1(ptr addrspace(1) %out, ptr addrspace(
 define void @v_cmp_sext_k_neg1_i8_sext_arg(i8 signext %b) nounwind {
   %b.ext = sext i8 %b to i32
   %icmp0 = icmp ne i32 %b.ext, -1
-  store i1 %icmp0, ptr addrspace(1) undef
+  store i1 %icmp0, ptr addrspace(1) poison
   ret void
 }
 

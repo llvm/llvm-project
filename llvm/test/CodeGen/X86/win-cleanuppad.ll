@@ -39,11 +39,11 @@ ehcleanup:                                        ; preds = %entry
 ; CHECK: $cppxdata$simple_cleanup:
 ; CHECK-NEXT:         .long   429065506
 ; CHECK-NEXT:         .long   1
-; CHECK-NEXT:         .long   ($stateUnwindMap$simple_cleanup)@IMGREL
+; CHECK-NEXT:         .long   $stateUnwindMap$simple_cleanup@IMGREL
 ; CHECK-NEXT:         .long   0
 ; CHECK-NEXT:         .long   0
 ; CHECK-NEXT:         .long   3
-; CHECK-NEXT:         .long   ($ip2state$simple_cleanup)@IMGREL
+; CHECK-NEXT:         .long   $ip2state$simple_cleanup@IMGREL
 ; UnwindHelp offset should match the -2 store above
 ; CHECK-NEXT:         .long   40
 ; CHECK-NEXT:         .long   0
@@ -114,7 +114,7 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 ; X86: L__ehtable$nested_cleanup:
 ; X86:         .long   429065506
 ; X86:         .long   2
-; X86:         .long   ($stateUnwindMap$nested_cleanup)
+; X86:         .long   $stateUnwindMap$nested_cleanup
 ; X86:         .long   0
 ; X86:         .long   0
 ; X86:         .long   0
@@ -167,11 +167,11 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 ; X64: $cppxdata$nested_cleanup:
 ; X64-NEXT: .long   429065506
 ; X64-NEXT: .long   2
-; X64-NEXT: .long   ($stateUnwindMap$nested_cleanup)@IMGREL
+; X64-NEXT: .long   $stateUnwindMap$nested_cleanup@IMGREL
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   5
-; X64-NEXT: .long   ($ip2state$nested_cleanup)@IMGREL
+; X64-NEXT: .long   $ip2state$nested_cleanup@IMGREL
 ; X64-NEXT: .long   56
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   1

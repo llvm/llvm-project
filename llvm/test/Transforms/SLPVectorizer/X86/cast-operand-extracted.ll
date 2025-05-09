@@ -8,19 +8,19 @@ define void @test(ptr %0, i32 %add651) {
 ; CHECK-NEXT:    [[PREDPEL11:%.*]] = alloca [0 x [0 x [25 x i32]]], i32 0, align 16
 ; CHECK-NEXT:    [[ARRAYIDX469_6:%.*]] = getelementptr i8, ptr [[PREDPEL11]], i64 28
 ; CHECK-NEXT:    [[ARRAYIDX469_7:%.*]] = getelementptr i8, ptr [[PREDPEL11]], i64 32
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PREDPEL11]], i64 36
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX469_7]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PREDPEL11]], i64 40
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[ARRAYIDX469_6]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i32>, ptr [[ARRAYIDX469_7]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX469_7]], align 16
 ; CHECK-NEXT:    [[CONV470_7:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    store i16 [[CONV470_7]], ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX660:%.*]] = getelementptr i8, ptr [[TMP4]], i64 7800
 ; CHECK-NEXT:    [[ARRAYIDX689:%.*]] = getelementptr i8, ptr [[TMP4]], i64 7816
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[TMP3]], splat (i32 1)
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP5]], <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i32> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> <i32 1, i32 poison>, <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> <i32 1, i32 poison>, i32 [[TMP5]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> poison, i32 [[ADD651]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP2]], i32 1

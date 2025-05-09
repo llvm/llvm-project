@@ -55,6 +55,9 @@ uptr FindDynamicShadowStart() {
                           GetMmapGranularity());
 }
 
+// Not used.
+void TryReExecWithoutASLR() {}
+
 // No-op. Mac does not support static linkage anyway.
 void AsanCheckDynamicRTPrereqs() {}
 

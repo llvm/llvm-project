@@ -14,12 +14,12 @@
 @q = external dso_local unnamed_addr global ptr, align 8
 
 ; Function Attrs: nounwind
-define void @test() local_unnamed_addr #0 {
+define void @test(i1 %arg) local_unnamed_addr #0 {
 entry:
   br label %for.body453.i
 
 for.body453.i:                                    ; preds = %for.body453.i, %entry
-  br i1 undef, label %for.body453.i, label %for.end705.i
+  br i1 %arg, label %for.body453.i, label %for.end705.i
 
 for.end705.i:                                     ; preds = %for.body453.i
   %0 = load ptr, ptr @q, align 8

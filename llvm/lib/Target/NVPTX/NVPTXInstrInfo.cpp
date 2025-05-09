@@ -28,8 +28,8 @@ NVPTXInstrInfo::NVPTXInstrInfo() : RegInfo() {}
 
 void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
-                                 const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc,
+                                 const DebugLoc &DL, Register DestReg,
+                                 Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *DestRC = MRI.getRegClass(DestReg);
@@ -40,22 +40,22 @@ void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   unsigned Op;
   if (DestRC == &NVPTX::Int1RegsRegClass) {
-    Op = NVPTX::IMOV1rr;
+    Op = NVPTX::IMOV1r;
   } else if (DestRC == &NVPTX::Int16RegsRegClass) {
-    Op = NVPTX::IMOV16rr;
+    Op = NVPTX::MOV16r;
   } else if (DestRC == &NVPTX::Int32RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Int32RegsRegClass ? NVPTX::IMOV32rr
+    Op = (SrcRC == &NVPTX::Int32RegsRegClass ? NVPTX::IMOV32r
                                              : NVPTX::BITCONVERT_32_F2I);
   } else if (DestRC == &NVPTX::Int64RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Int64RegsRegClass ? NVPTX::IMOV64rr
+    Op = (SrcRC == &NVPTX::Int64RegsRegClass ? NVPTX::IMOV64r
                                              : NVPTX::BITCONVERT_64_F2I);
   } else if (DestRC == &NVPTX::Int128RegsRegClass) {
-    Op = NVPTX::IMOV128rr;
+    Op = NVPTX::IMOV128r;
   } else if (DestRC == &NVPTX::Float32RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Float32RegsRegClass ? NVPTX::FMOV32rr
+    Op = (SrcRC == &NVPTX::Float32RegsRegClass ? NVPTX::FMOV32r
                                                : NVPTX::BITCONVERT_32_I2F);
   } else if (DestRC == &NVPTX::Float64RegsRegClass) {
-    Op = (SrcRC == &NVPTX::Float64RegsRegClass ? NVPTX::FMOV64rr
+    Op = (SrcRC == &NVPTX::Float64RegsRegClass ? NVPTX::FMOV64r
                                                : NVPTX::BITCONVERT_64_I2F);
   } else {
     llvm_unreachable("Bad register copy");
@@ -209,9 +209,7 @@ bool NVPTXInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   case NVPTX::CallUniPrintCallRetInst1:
   case NVPTX::CallArgBeginInst:
-  case NVPTX::CallArgI32imm:
   case NVPTX::CallArgParam:
-  case NVPTX::LastCallArgI32imm:
   case NVPTX::LastCallArgParam:
   case NVPTX::CallArgEndInst1:
     return true;

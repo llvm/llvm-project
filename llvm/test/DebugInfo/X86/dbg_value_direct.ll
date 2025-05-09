@@ -1,5 +1,4 @@
 ; RUN: llc -filetype=obj -O0 < %s
-; RUN: llc --try-experimental-debuginfo-iterators -filetype=obj -O0 < %s
 ; Test that we handle DBG_VALUEs in a register without crashing.
 ;
 ; Generated from clang with -fsanitize=address:

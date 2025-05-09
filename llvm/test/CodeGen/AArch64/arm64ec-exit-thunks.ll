@@ -35,8 +35,8 @@ declare void @no_op() nounwind;
 ; CHECK-NEXT:     adrp    x11, no_op
 ; CHECK-NEXT:     add     x11, x11, :lo12:no_op
 ; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, ($iexit_thunk$cdecl$v$v)
-; CHECK-NEXT:     add     x10, x10, :lo12:($iexit_thunk$cdecl$v$v)
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$v$v
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$v$v
 ; CHECK-NEXT:     blr     x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -82,8 +82,8 @@ declare i64 @simple_integers(i8, i16, i32, i64) nounwind;
 ; CHECK-NEXT:     adrp    x11, simple_integers
 ; CHECK-NEXT:     add     x11, x11, :lo12:simple_integers
 ; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, ($iexit_thunk$cdecl$i8$i8i8i8i8)
-; CHECK-NEXT:     add     x10, x10, :lo12:($iexit_thunk$cdecl$i8$i8i8i8i8)
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$i8$i8i8i8i8
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$i8$i8i8i8i8
 ; CHECK-NEXT:     blr     x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -129,8 +129,8 @@ declare double @simple_floats(float, double) nounwind;
 ; CHECK-NEXT:     adrp    x11, simple_floats
 ; CHECK-NEXT:     add     x11, x11, :lo12:simple_floats
 ; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, ($iexit_thunk$cdecl$d$fd)
-; CHECK-NEXT:     add     x10, x10, :lo12:($iexit_thunk$cdecl$d$fd)
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$d$fd
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$d$fd
 ; CHECK-NEXT:     blr     x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -176,8 +176,8 @@ declare void @has_varargs(...) nounwind;
 ; CHECK-NEXT:     adrp    x11, has_varargs
 ; CHECK-NEXT:     add     x11, x11, :lo12:has_varargs
 ; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, ($iexit_thunk$cdecl$v$varargs)
-; CHECK-NEXT:     add     x10, x10, :lo12:($iexit_thunk$cdecl$v$varargs)
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$v$varargs
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$v$varargs
 ; CHECK-NEXT:     blr     x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -223,8 +223,8 @@ declare void @has_sret(ptr sret([100 x i8])) nounwind;
 ; CHECK-NEXT:     adrp    x11, has_sret
 ; CHECK-NEXT:     add     x11, x11, :lo12:has_sret
 ; CHECK-NEXT:     ldr     x9, [x9, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, ($iexit_thunk$cdecl$m100$v)
-; CHECK-NEXT:     add     x10, x10, :lo12:($iexit_thunk$cdecl$m100$v)
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$m100$v
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$m100$v
 ; CHECK-NEXT:     blr     x9
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -271,8 +271,8 @@ declare void @has_aligned_sret(ptr align 32 sret(%TSRet)) nounwind;
 ; CHECK:          adrp    x11, has_aligned_sret
 ; CHECK:          add     x11, x11, :lo12:has_aligned_sret
 ; CHECK:          ldr     x9, [x9, :lo12:__os_arm64x_check_icall]
-; CHECK:          adrp    x10, ($iexit_thunk$cdecl$m16$v)
-; CHECK:          add     x10, x10, :lo12:($iexit_thunk$cdecl$m16$v)
+; CHECK:          adrp    x10, $iexit_thunk$cdecl$m16$v
+; CHECK:          add     x10, x10, :lo12:$iexit_thunk$cdecl$m16$v
 ; CHECK:          blr     x9
 ; CHECK:          .seh_startepilogue
 ; CHECK:          ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -325,8 +325,8 @@ declare [2 x i8] @small_array([2 x i8], [2 x float]) nounwind;
 ; CHECK-NEXT:     adrp    x11, small_array
 ; CHECK-NEXT:     add     x11, x11, :lo12:small_array
 ; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, ($iexit_thunk$cdecl$m2$m2F8)
-; CHECK-NEXT:     add     x10, x10, :lo12:($iexit_thunk$cdecl$m2$m2F8)
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$m2$m2F8
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$m2$m2F8
 ; CHECK-NEXT:     blr     x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -382,8 +382,8 @@ declare [3 x i64] @large_array([3 x i64], [2 x double], [2 x [2 x i64]]) nounwin
 ; CHECK-NEXT:     adrp    x11, large_array
 ; CHECK-NEXT:     add     x11, x11, :lo12:large_array
 ; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, ($iexit_thunk$cdecl$m24$m24D16m32)
-; CHECK-NEXT:     add     x10, x10, :lo12:($iexit_thunk$cdecl$m24$m24D16m32)
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$m24$m24D16m32
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$m24$m24D16m32
 ; CHECK-NEXT:     blr     x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -446,8 +446,8 @@ declare %T2 @simple_struct(%T1, %T2, %T3, %T4) nounwind;
 ; CHECK-NEXT:     adrp    x11, simple_struct
 ; CHECK-NEXT:     add     x11, x11, :lo12:simple_struct
 ; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, ($iexit_thunk$cdecl$m8$i8m8m16m24)
-; CHECK-NEXT:     add     x10, x10, :lo12:($iexit_thunk$cdecl$m8$i8m8m16m24)
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$m8$i8m8m16m24
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$m8$i8m8m16m24
 ; CHECK-NEXT:     blr     x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -499,8 +499,8 @@ declare <4 x i8> @small_vector(<4 x i8> %0) nounwind;
 ; CHECK-NEXT:     adrp	x11, small_vector
 ; CHECK-NEXT:     add	x11, x11, :lo12:small_vector
 ; CHECK-NEXT:     ldr	x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp	x10, ($iexit_thunk$cdecl$m$m)
-; CHECK-NEXT:     add	x10, x10, :lo12:($iexit_thunk$cdecl$m$m)
+; CHECK-NEXT:     adrp	x10, $iexit_thunk$cdecl$m$m
+; CHECK-NEXT:     add	x10, x10, :lo12:$iexit_thunk$cdecl$m$m
 ; CHECK-NEXT:     blr	x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr	x30, [sp], #16                  // 8-byte Folded Reload
@@ -549,8 +549,8 @@ declare <8 x i16> @large_vector(<8 x i16> %0) nounwind;
 ; CHECK-NEXT:     adrp	x11, large_vector
 ; CHECK-NEXT:     add	x11, x11, :lo12:large_vector
 ; CHECK-NEXT:     ldr	x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp	x10, ($iexit_thunk$cdecl$m16$m16)
-; CHECK-NEXT:     add	x10, x10, :lo12:($iexit_thunk$cdecl$m16$m16)
+; CHECK-NEXT:     adrp	x10, $iexit_thunk$cdecl$m16$m16
+; CHECK-NEXT:     add	x10, x10, :lo12:$iexit_thunk$cdecl$m16$m16
 ; CHECK-NEXT:     blr	x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr	x30, [sp], #16                  // 8-byte Folded Reload

@@ -157,8 +157,8 @@ define ptr @partialConstant3(ptr %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl nsw i64 [[TMP2]], 5
-; CHECK-NEXT:    [[DOTOFFS:%.*]] = or disjoint i64 [[DOTIDX]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[DOTOFFS]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[DOTIDX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP4]], i64 16
 ; CHECK-NEXT:    ret ptr [[TMP3]]
 ;
   %1 = getelementptr inbounds i32, ptr %p, i64 1

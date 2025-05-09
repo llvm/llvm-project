@@ -37,22 +37,13 @@ static cl::opt<uint32_t>
     BranchRelaxSafetyBuffer("branch-relax-safety-buffer", cl::init(200),
                             cl::Hidden, cl::desc("safety buffer size"));
 
-namespace llvm {
-
-  FunctionPass *createHexagonBranchRelaxation();
-  void initializeHexagonBranchRelaxationPass(PassRegistry&);
-
-} // end namespace llvm
-
 namespace {
 
   struct HexagonBranchRelaxation : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonBranchRelaxation() : MachineFunctionPass(ID) {
-      initializeHexagonBranchRelaxationPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonBranchRelaxation() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 

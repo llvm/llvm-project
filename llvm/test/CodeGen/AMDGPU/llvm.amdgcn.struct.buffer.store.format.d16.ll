@@ -47,7 +47,7 @@ main_body:
 ; PACKED: buffer_store_format_d16_xyz v[[[LO]]:[[HI]]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
 define amdgpu_kernel void @buffer_store_format_d16_xyz(<4 x i32> %rsrc, <4 x half> %data, i32 %index) {
 main_body:
-  %data_subvec = shufflevector <4 x half> %data, <4 x half> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  %data_subvec = shufflevector <4 x half> %data, <4 x half> poison, <3 x i32> <i32 0, i32 1, i32 2>
   call void @llvm.amdgcn.struct.buffer.store.format.v3f16(<3 x half> %data_subvec, <4 x i32> %rsrc, i32 %index, i32 0, i32 0, i32 0)
   ret void
 }

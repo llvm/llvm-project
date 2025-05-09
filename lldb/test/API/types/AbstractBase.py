@@ -20,7 +20,7 @@ def Msg(var, val, using_frame_variable):
 class GenericTester(TestBase):
     # This is the pattern by design to match the " var = 'value'" output from
     # printf() stmts (see basic_type.cpp).
-    pattern = re.compile(" (\*?a[^=]*) = '([^=]*)'$")
+    pattern = re.compile(r" (\*?a[^=]*) = '([^=]*)'$")
 
     # Assert message.
     DATA_TYPE_GROKKED = "Data type from expr parser output is parsed correctly"
@@ -205,7 +205,7 @@ class GenericTester(TestBase):
             #     output: (char) a_array_bounded[0] = 'a'
             #
             try:
-                dt = re.match("^\((.*)\)", output).group(1)
+                dt = re.match(r"^\((.*)\)", output).group(1)
             except:
                 self.fail(self.DATA_TYPE_GROKKED)
 
@@ -284,7 +284,7 @@ class GenericTester(TestBase):
             #     output: (double) $0 = 1100.12
             #
             try:
-                dt = re.match("^\((.*)\) \$[0-9]+ = ", output).group(1)
+                dt = re.match(r"^\((.*)\) \$[0-9]+ = ", output).group(1)
             except:
                 self.fail(self.DATA_TYPE_GROKKED)
 

@@ -20,15 +20,14 @@
 #include "test_macros.h"
 #include "../../../Emplaceable.h"
 
-int main(int, char**)
-{
-    std::priority_queue<Emplaceable> q;
-    q.emplace(1, 2.5);
-    assert(q.top() == Emplaceable(1, 2.5));
-    q.emplace(3, 4.5);
-    assert(q.top() == Emplaceable(3, 4.5));
-    q.emplace(2, 3.5);
-    assert(q.top() == Emplaceable(3, 4.5));
+int main(int, char**) {
+  std::priority_queue<Emplaceable> q;
+  q.emplace(1, 2.5);
+  assert(q.top() == Emplaceable(1, 2.5));
+  q.emplace(3, 4.5);
+  assert(q.top() == Emplaceable(3, 4.5));
+  q.emplace(2, 3.5);
+  assert(q.top() == Emplaceable(3, 4.5));
 
   return 0;
 }

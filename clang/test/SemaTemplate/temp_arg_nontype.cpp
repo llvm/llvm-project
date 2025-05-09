@@ -90,7 +90,7 @@ template<int Z::*pm> struct A7c;
 A7<&Z::int_member> *a18_1;
 A7c<&Z::int_member> *a18_2;
 A7<&Z::float_member> *a18_3; // expected-error{{non-type template argument of type 'float Z::*' cannot be converted to a value of type 'int Z::*'}}
-A7c<(&Z::int_member)> *a18_4; // expected-warning{{address non-type template argument cannot be surrounded by parentheses}}
+A7c<(&Z::int_member)> *a18_4; // expected-warning{{parentheses around address non-type template argument are a C++11 extension}}
 A7c<&Z::union_member> *a18_5;
 
 template<unsigned char C> struct Overflow; // expected-note{{template parameter is declared here}}
@@ -255,6 +255,7 @@ namespace test8 {
 namespace PR8372 {
   template <int I> void foo() { } // expected-note{{template parameter is declared here}}
   void bar() { foo <0x80000000> (); } // expected-warning{{non-type template argument value '2147483648' truncated to '-2147483648' for template parameter of type 'int'}}
+  // expected-note@-1 {{while substituting explicitly-specified template arguments}}
 }
 
 namespace PR9227 {
@@ -388,10 +389,13 @@ namespace PR17696 {
 namespace partial_order_different_types {
   template<int, int, typename T, typename, T> struct A;
   // expected-note@-1 {{template is declared here}}
-  template<int N, typename T, typename U, T V> struct A<0, N, T, U, V> {};
-  template<int N, typename T, typename U, U V> struct A<0, N, T, U, V>;
+  template<int N, typename T, typename U, T V> struct A<0, N, T, U, V> {}; // #P1
+  template<int N, typename T, typename U, U V> struct A<0, N, T, U, V>;    // #P2
   // expected-error@-1 {{class template partial specialization is not more specialized than the primary template}}
   A<0, 0, int, int, 0> a;
+  // expected-error@-1 {{ambiguous partial specializations}}
+  // expected-note@#P1 {{partial specialization matches}}
+  // expected-note@#P2 {{partial specialization matches}}
 }
 
 namespace partial_order_references {
@@ -411,19 +415,18 @@ namespace partial_order_references {
   template<int, int &R> struct B; // expected-note 2{{template}}
   template<const int &R> struct B<0, R> {};
   // expected-error@-1 {{not more specialized than the primary}}
-  // expected-note@-2 {{'const int' vs 'int &'}}
+  // expected-note@-2 {{value of type 'const int' is not implicitly convertible to 'int &'}}
   B<0, N> b; // expected-error {{undefined}}
 
-  template<int, const int &R> struct C; // expected-note 2{{template}}
+  template<int, const int &R> struct C; // expected-note {{template}}
+  // This partial specialization is more specialized than the primary template.
   template<int &R> struct C<0, R> {};
-  // expected-error@-1 {{not more specialized than the primary}}
-  // expected-note@-2 {{'int' vs 'const int &'}}
   C<0, N> c; // expected-error {{undefined}}
 
   template<int, const int &R> struct D; // expected-note 2{{template}}
   template<int N> struct D<0, N> {};
   // expected-error@-1 {{not more specialized than the primary}}
-  // expected-note@-2 {{'int' vs 'const int &'}}
+  // expected-note@-2 {{conversion from 'int' to 'const int &'}}
   extern const int K = 5;
   D<0, K> d; // expected-error {{undefined}}
 }

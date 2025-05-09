@@ -17,8 +17,15 @@ program omp_depend
   a(2:1) = b(2, 2)
   !$omp end task
 
-  !ERROR: Stride should not be specified for array section in DEPEND clause
-  !$omp task shared(x) depend(in: a(5:10:1))
+  !ERROR: 'a' in DEPEND clause must have a positive stride
+  !ERROR: 'b' in DEPEND clause must have a positive stride
+  !ERROR: 'b' in DEPEND clause is a zero size array section
+  !$omp task shared(x) depend(in: a(10:5:-1)) depend(in: b(5:10:-1))
+  print *, a(5:10), b
+  !$omp end task
+
+  !ERROR: 'a' in DEPEND clause is a zero size array section
+  !$omp task shared(x) depend(in: a(1:5:10))
   print *, a(5:10), b
   !$omp end task
 

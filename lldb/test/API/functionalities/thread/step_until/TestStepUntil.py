@@ -16,9 +16,18 @@ class StepUntilTestCase(TestBase):
         self.less_than_two = line_number("main.c", "Less than 2")
         self.greater_than_two = line_number("main.c", "Greater than or equal to 2.")
         self.back_out_in_main = line_number("main.c", "Back out in main")
+        self.in_foo = line_number("main.c", "In foo")
 
-    def common_setup(self, args):
-        self.build()
+    def _build_dict_for_discontinuity(self):
+        return dict(
+            CFLAGS_EXTRAS="-funique-basic-block-section-names "
+            + "-ffunction-sections -fbasic-block-sections=list="
+            + self.getSourcePath("function.list"),
+            LD_EXTRAS="-Wl,--script=" + self.getSourcePath("symbol.order"),
+        )
+
+    def _common_setup(self, build_dict, args):
+        self.build(dictionary=build_dict)
         exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
@@ -45,7 +54,7 @@ class StepUntilTestCase(TestBase):
         return thread
 
     def do_until(self, args, until_lines, expected_linenum):
-        thread = self.common_setup(args)
+        thread = self._common_setup(None, args)
 
         cmd_interp = self.dbg.GetCommandInterpreter()
         ret_obj = lldb.SBCommandReturnObject()
@@ -87,4 +96,31 @@ class StepUntilTestCase(TestBase):
         """Test thread step until - targeting one line and missing it by stepping out to call site"""
         self.do_until(
             ["foo", "bar", "baz"], [self.less_than_two], self.back_out_in_main
+        )
+
+    @no_debug_info_test
+    def test_bad_line(self):
+        """Test that we get an error if attempting to step outside the current
+        function"""
+        thread = self._common_setup(None, None)
+        self.expect(
+            f"thread until {self.in_foo}",
+            substrs=["Until target outside of the current function"],
+            error=True,
+        )
+
+    @no_debug_info_test
+    @skipIf(oslist=lldbplatformutil.getDarwinOSTriples() + ["windows"])
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    def test_bad_line_discontinuous(self):
+        """Test that we get an error if attempting to step outside the current
+        function -- and the function is discontinuous"""
+        self.build(dictionary=self._build_dict_for_discontinuity())
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "At the start", lldb.SBFileSpec(self.main_source)
+        )
+        self.expect(
+            f"thread until {self.in_foo}",
+            substrs=["Until target outside of the current function"],
+            error=True,
         )

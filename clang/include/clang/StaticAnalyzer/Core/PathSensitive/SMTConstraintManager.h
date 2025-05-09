@@ -324,8 +324,6 @@ protected:
 
     // Construct the logical AND of all the constraints
     if (I != IE) {
-      std::vector<llvm::SMTExprRef> ASTs;
-
       llvm::SMTExprRef Constraint = I++->second;
       while (I != IE) {
         Constraint = Solver->mkAnd(Constraint, I++->second);

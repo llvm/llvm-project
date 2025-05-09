@@ -139,8 +139,8 @@ def HasNoUseOf: Constraint<CPred<"$_self.use_empty()">, "has no use">;
 
 // Check if two values have a ShapedType with the same element type.
 def HasSameElementType : Constraint<
-    CPred<"$0.getType().cast<ShapedType>().getElementType() == "
-          "$1.getType().cast<ShapedType>().getElementType()">,
+    CPred<"cast<ShapedType>($0.getType()).getElementType() == "
+          "cast<ShapedType>($1.getType()).getElementType()">,
     "values have same element type">;
 
 def : Pattern<(TwoResultOp:$results $input),
@@ -161,8 +161,8 @@ Constraint HasNoUseOf(value: Value) [{
   return success(value.use_empty());
 }];
 Constraint HasSameElementType(value1: Value, value2: Value) [{
-  return success(value1.getType().cast<ShapedType>().getElementType() ==
-                 value2.getType().cast<ShapedType>().getElementType());
+  return success(cast<ShapedType>(value1.getType()).getElementType() ==
+                 cast<ShapedType>(value2.getType()).getElementType());
 }];
 
 Pattern {
@@ -1105,8 +1105,8 @@ static LogicalResult hasOneUseImpl(PatternRewriter &rewriter, Value value) {
 }
 static LogicalResult hasSameElementTypeImpl(PatternRewriter &rewriter,
                                             Value value1, Value Value2) {
-  return success(value1.getType().cast<ShapedType>().getElementType() ==
-                 value2.getType().cast<ShapedType>().getElementType());
+  return success(cast<ShapedType>(value1.getType()).getElementType() ==
+                 cast<ShapedType>(value2.getType()).getElementType());
 }
 
 void registerNativeConstraints(RewritePatternSet &patterns) {
@@ -1129,8 +1129,8 @@ Constraint HasOneUse(value: Value) [{
   return success(value.hasOneUse());
 }];
 Constraint HasSameElementType(value1: Value, value2: Value) [{
-  return success(value1.getType().cast<ShapedType>().getElementType() ==
-                 value2.getType().cast<ShapedType>().getElementType());
+  return success(cast<ShapedType>(value1.getType()).getElementType() ==
+                 cast<ShapedType>(value2.getType()).getElementType());
 }];
 
 Pattern {
@@ -1160,8 +1160,8 @@ LogicalResult HasOneUse(PatternRewriter &rewriter, Value value) {
   return success(value.hasOneUse());
 }
 LogicalResult HasSameElementType(Value value1, Value value2) {
-  return success(value1.getType().cast<ShapedType>().getElementType() ==
-                 value2.getType().cast<ShapedType>().getElementType());
+  return success(cast<ShapedType>(value1.getType()).getElementType() ==
+                 cast<ShapedType>(value2.getType()).getElementType());
 }
 ```
 

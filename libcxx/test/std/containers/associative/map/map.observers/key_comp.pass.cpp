@@ -15,16 +15,16 @@
 #include <string>
 
 int main(int, char**) {
-    typedef std::map<int, std::string> map_type;
+  typedef std::map<int, std::string> map_type;
 
-    map_type m;
-    std::pair<map_type::iterator, bool> p1 = m.insert(map_type::value_type(1, "abc"));
-    std::pair<map_type::iterator, bool> p2 = m.insert(map_type::value_type(2, "abc"));
+  map_type m;
+  std::pair<map_type::iterator, bool> p1 = m.insert(map_type::value_type(1, "abc"));
+  std::pair<map_type::iterator, bool> p2 = m.insert(map_type::value_type(2, "abc"));
 
-    const map_type& cm = m;
+  const map_type& cm = m;
 
-    assert(cm.key_comp()(p1.first->first, p2.first->first));
-    assert(!cm.key_comp()(p2.first->first, p1.first->first));
+  assert(cm.key_comp()(p1.first->first, p2.first->first));
+  assert(!cm.key_comp()(p2.first->first, p1.first->first));
 
-    return 0;
+  return 0;
 }

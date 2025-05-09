@@ -964,3 +964,24 @@ static_assert(sizeof(b::d) == 16, "");
 static_assert(sizeof(void (a<int>::*)()) == 16, "");
 #endif
 }
+
+namespace ContainerOf {
+  using size_t = unsigned long long;
+
+  struct List {
+    int data;
+  };
+
+  struct Node {
+    int data;
+    struct List list1;
+    struct List list2;
+  };
+
+  // CHECK-LABEL: define{{.*}} ptr @"?getOwner@ContainerOf@@
+  // CHECK: %memptr.offset = getelementptr i8, ptr null, {{.*}}
+  Node* getOwner(List *list, List Node::*member) {
+    size_t offset = reinterpret_cast<size_t>(&((Node*)nullptr->*member));
+    return reinterpret_cast<Node*>(reinterpret_cast<char*>(list) - offset);
+  }
+}

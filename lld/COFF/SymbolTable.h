@@ -34,6 +34,15 @@ class LazyArchive;
 class SectionChunk;
 class Symbol;
 
+// This data structure is instantiated for each -wrap option.
+struct WrappedSymbol {
+  Symbol *sym;
+  Symbol *real;
+  Symbol *wrap;
+};
+
+struct UndefinedDiag;
+
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
 // files whose archive members are not yet loaded).
@@ -58,10 +67,7 @@ public:
   // Try to resolve any undefined symbols and update the symbol table
   // accordingly, then print an error message for any remaining undefined
   // symbols and warn about imported local symbols.
-  // Returns whether more files might need to be linked in to resolve lazy
-  // symbols, in which case the caller is expected to call the function again
-  // after linking those files.
-  bool resolveRemainingUndefines();
+  void resolveRemainingUndefines();
 
   // Load lazy objects that are needed for MinGW automatic import and for
   // doing stdcall fixups.
@@ -161,9 +167,20 @@ public:
   Symbol *delayLoadHelper = nullptr;
   Chunk *tailMergeUnwindInfoChunk = nullptr;
 
+  // A list of wrapped symbols.
+  std::vector<WrappedSymbol> wrapped;
+
+  // Used for /alternatename.
+  std::map<StringRef, StringRef> alternateNames;
+
+  // Used for /aligncomm.
+  std::map<std::string, int> alignComm;
+
   void fixupExports();
   void assignExportOrdinals();
   void parseModuleDefs(StringRef path);
+  void parseAlternateName(StringRef);
+  void parseAligncomm(StringRef);
 
   // Iterates symbols in non-determinstic hash table order.
   template <typename T> void forEachSymbol(T callback) {
@@ -176,6 +193,8 @@ public:
   DefinedRegular *loadConfigSym = nullptr;
   uint32_t loadConfigSize = 0;
   void initializeLoadConfig();
+
+  std::string printSymbol(Symbol *sym) const;
 
 private:
   /// Given a name without "__imp_" prefix, returns a defined symbol
@@ -198,6 +217,7 @@ private:
   reportProblemSymbols(const llvm::SmallPtrSetImpl<Symbol *> &undefs,
                        const llvm::DenseMap<Symbol *, Symbol *> *localImports,
                        bool needBitcodeFiles);
+  void reportUndefinedSymbol(const UndefinedDiag &undefDiag);
 };
 
 std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);

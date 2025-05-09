@@ -6,10 +6,10 @@
 llvm.func @baz()
 
 // CHECK-LABEL: func @ops
-// CHECK-SAME: (%[[I32:.*]]: i32, %[[FLOAT:.*]]: f32, %[[PTR1:.*]]: !llvm.ptr, %[[PTR2:.*]]: !llvm.ptr, %[[BOOL:.*]]: i1, %[[VPTR1:.*]]: !llvm.vec<2 x ptr>)
+// CHECK-SAME: (%[[I32:.*]]: i32, %[[FLOAT:.*]]: f32, %[[PTR1:.*]]: !llvm.ptr, %[[PTR2:.*]]: !llvm.ptr, %[[BOOL:.*]]: i1, %[[VPTR1:.*]]: vector<2x!llvm.ptr>)
 func.func @ops(%arg0: i32, %arg1: f32,
           %arg2: !llvm.ptr, %arg3: !llvm.ptr,
-          %arg4: i1, %arg5 : !llvm.vec<2x!llvm.ptr>) {
+          %arg4: i1, %arg5 : vector<2x!llvm.ptr>) {
 // Integer arithmetic binary operations.
 //
 // CHECK: {{.*}} = llvm.add %[[I32]], %[[I32]] : i32
@@ -23,7 +23,7 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: {{.*}} = llvm.add %[[SCALAR_PRED0]], %[[SCALAR_PRED0]] : i1
 // CHECK: %[[SCALAR_PRED1:.+]] = llvm.icmp "ne" %[[PTR1]], %[[PTR1]] : !llvm.ptr
 // CHECK: {{.*}} = llvm.add %[[SCALAR_PRED1]], %[[SCALAR_PRED1]] : i1
-// CHECK: %[[VEC_PRED:.+]] = llvm.icmp "ne" %[[VPTR1]], %[[VPTR1]] : !llvm.vec<2 x ptr>
+// CHECK: %[[VEC_PRED:.+]] = llvm.icmp "ne" %[[VPTR1]], %[[VPTR1]] : vector<2x!llvm.ptr>
 // CHECK: {{.*}} = llvm.add %[[VEC_PRED]], %[[VEC_PRED]] : vector<2xi1>
   %0 = llvm.add %arg0, %arg0 : i32
   %1 = llvm.sub %arg0, %arg0 : i32
@@ -36,7 +36,7 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %typecheck_7 = llvm.add %7, %7 : i1
   %ptrcmp = llvm.icmp "ne" %arg2, %arg2 : !llvm.ptr
   %typecheck_ptrcmp = llvm.add %ptrcmp, %ptrcmp : i1
-  %vptrcmp = llvm.icmp "ne" %arg5, %arg5 : !llvm.vec<2 x ptr>
+  %vptrcmp = llvm.icmp "ne" %arg5, %arg5 : vector<2x!llvm.ptr>
   %typecheck_vptrcmp = llvm.add %vptrcmp, %vptrcmp : vector<2 x i1>
 
 // Integer overflow flags
@@ -144,12 +144,14 @@ func.func @ops(%arg0: i32, %arg1: f32,
   // CHECK:      llvm.switch %0 : i32, ^[[BB3]] [
   // CHECK-NEXT:   1: ^[[BB4:.*]],
   // CHECK-NEXT:   2: ^[[BB5:.*]],
-  // CHECK-NEXT:   3: ^[[BB6:.*]]
+  // CHECK-NEXT:   3: ^[[BB6:.*]],
+  // CHECK-NEXT:   -3: ^[[BB6:.*]]
   // CHECK-NEXT: ]
   llvm.switch %0 : i32, ^bb3 [
     1: ^bb4,
     2: ^bb5,
-    3: ^bb6
+    3: ^bb6,
+    -3: ^bb6
   ]
 
 // CHECK: ^[[BB3]]
@@ -234,6 +236,16 @@ llvm.func @gep(%ptr: !llvm.ptr, %idx: i64, %ptr2: !llvm.ptr) {
   llvm.getelementptr %ptr[%idx, 1, 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(i32, struct<(i32, f32)>)>
   // CHECK: llvm.getelementptr inbounds %{{.*}}[%{{.*}}, 0, %{{.*}}] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
   llvm.getelementptr inbounds %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: llvm.getelementptr inbounds|nuw %{{.*}}[%{{.*}}, 0, %{{.*}}] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  llvm.getelementptr inbounds | nuw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: llvm.getelementptr inbounds %{{.*}}[%{{.*}}, 0, %{{.*}}] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  llvm.getelementptr inbounds | nusw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: llvm.getelementptr nusw %{{.*}}[%{{.*}}, 0, %{{.*}}] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  llvm.getelementptr nusw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: llvm.getelementptr nusw|nuw %{{.*}}[%{{.*}}, 0, %{{.*}}] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  llvm.getelementptr nusw | nuw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: llvm.getelementptr nuw %{{.*}}[%{{.*}}, 0, %{{.*}}] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  llvm.getelementptr nuw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
   llvm.return
 }
 
@@ -360,15 +372,15 @@ func.func @casts_overflow(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
 }
 
 // CHECK-LABEL: @vect
-func.func @vect(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32, %arg3: !llvm.vec<2 x ptr>) {
+func.func @vect(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32, %arg3: vector<2x!llvm.ptr>) {
 // CHECK:  = llvm.extractelement {{.*}} : vector<4xf32>
   %0 = llvm.extractelement %arg0[%arg1 : i32] : vector<4xf32>
 // CHECK:  = llvm.insertelement {{.*}} : vector<4xf32>
   %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : vector<4xf32>
 // CHECK:  = llvm.shufflevector {{.*}} [0, 0, 0, 0, 7] : vector<4xf32>
   %2 = llvm.shufflevector %arg0, %arg0 [0, 0, 0, 0, 7] : vector<4xf32>
-// CHECK:  = llvm.shufflevector %{{.+}}, %{{.+}} [1, 0] : !llvm.vec<2 x ptr>
-  %3 = llvm.shufflevector %arg3, %arg3 [1, 0] : !llvm.vec<2 x ptr>
+// CHECK:  = llvm.shufflevector %{{.+}}, %{{.+}} [1, 0] : vector<2x!llvm.ptr>
+  %3 = llvm.shufflevector %arg3, %arg3 [1, 0] : vector<2x!llvm.ptr>
 // CHECK:  = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
   %4 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : vector<4xf32>
   return
@@ -941,3 +953,95 @@ llvm.func @test_assume_intr_with_opbundles(%arg0 : !llvm.ptr) {
   llvm.intr.assume %0 ["tag1"(%1, %2 : i32, i32), "tag2"(%3 : i32)] : i1
   llvm.return
 }
+
+llvm.func @somefunc(i32, !llvm.ptr)
+
+// CHECK-LABEL: llvm.func @test_call_arg_attrs_direct(
+// CHECK-SAME:    %[[VAL_0:.*]]: i32,
+// CHECK-SAME:    %[[VAL_1:.*]]: !llvm.ptr)
+llvm.func @test_call_arg_attrs_direct(%arg0: i32, %arg1: !llvm.ptr) {
+  // CHECK: llvm.call @somefunc(%[[VAL_0]], %[[VAL_1]]) : (i32, !llvm.ptr {llvm.byval = i64}) -> ()
+  llvm.call @somefunc(%arg0, %arg1) : (i32, !llvm.ptr {llvm.byval = i64}) -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_call_arg_attrs_indirect(
+// CHECK-SAME:    %[[VAL_0:.*]]: i16,
+// CHECK-SAME:    %[[VAL_1:.*]]: !llvm.ptr
+llvm.func @test_call_arg_attrs_indirect(%arg0: i16, %arg1: !llvm.ptr) -> i16 {
+  // CHECK: llvm.call tail %[[VAL_1]](%[[VAL_0]]) : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+  %0 = llvm.call tail %arg1(%arg0) : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+  llvm.return %0 : i16
+}
+
+// CHECK-LABEL:   llvm.func @test_invoke_arg_attrs(
+// CHECK-SAME:      %[[VAL_0:.*]]: i16) attributes {personality = @__gxx_personality_v0} {
+llvm.func @test_invoke_arg_attrs(%arg0: i16) attributes { personality = @__gxx_personality_v0 } {
+  // CHECK:  llvm.invoke @somefunc(%[[VAL_0]]) to ^bb2 unwind ^bb1 : (i16 {llvm.noundef, llvm.signext}) -> ()
+  llvm.invoke @somefunc(%arg0) to ^bb2 unwind ^bb1 : (i16 {llvm.noundef, llvm.signext}) -> ()
+^bb1:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// CHECK-LABEL:   llvm.func @test_invoke_arg_attrs_indirect(
+// CHECK-SAME:      %[[VAL_0:.*]]: i16,
+// CHECK-SAME:      %[[VAL_1:.*]]: !llvm.ptr) -> i16 attributes {personality = @__gxx_personality_v0} {
+llvm.func @test_invoke_arg_attrs_indirect(%arg0: i16, %arg1: !llvm.ptr) -> i16 attributes { personality = @__gxx_personality_v0 } {
+  // CHECK: llvm.invoke %[[VAL_1]](%[[VAL_0]]) to ^bb2 unwind ^bb1 : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+  %0 = llvm.invoke %arg1(%arg0) to ^bb2 unwind ^bb1 : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+^bb1:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return %0 : i16
+^bb2:
+  llvm.return %0 : i16
+}
+
+// CHECK-LABEL: intrinsic_call_arg_attrs
+llvm.func @intrinsic_call_arg_attrs(%arg0: i32) -> i32 {
+  // CHECK: %{{.*}} = llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) : (i32 {llvm.signext}) -> i32
+  %0 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) : (i32 {llvm.signext}) -> (i32)
+  llvm.return %0 : i32
+}
+
+// CHECK-LABEL: intrinsic_call_arg_attrs_bundles
+llvm.func @intrinsic_call_arg_attrs_bundles(%arg0: i32) -> i32 {
+  // CHECK: %{{.*}} = llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) ["adazdazd"()] {constant} : (i32 {llvm.signext}) -> i32
+  %0 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) ["adazdazd"()] {constant} : (i32 {llvm.signext}) -> (i32)
+  llvm.return %0 : i32
+}
+
+llvm.mlir.global private @blockaddr_global() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+  %0 = llvm.blockaddress <function = @blockaddr_fn, tag = <id = 0>> : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// CHECK: llvm.mlir.global private @blockaddr_global() {{.*}}
+// CHECK-NEXT:   %{{.*}} = llvm.blockaddress <function = @blockaddr_fn, tag = <id = 0>> : !llvm.ptr
+// CHECK-NEXT:   llvm.return %{{.*}} : !llvm.ptr
+
+llvm.func @blockaddr_fn() {
+  llvm.br ^bb1
+^bb1:
+  llvm.blocktag <id = 0>
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @blockaddr_fn
+// CHECK-NEXT:  llvm.br ^bb1
+// CHECK-NEXT:^bb1:
+// CHECK-NEXT:  llvm.blocktag <id = 0>
+
+llvm.func @callintrin_voidret(%arg0: vector<8xi8>, %arg1: vector<8xi8>, %arg2: vector<8xi8>, %arg3: !llvm.ptr) {
+  llvm.call_intrinsic "llvm.aarch64.neon.st3.v8i8.p0"(%arg0, %arg1, %arg2, %arg3) : (vector<8xi8>, vector<8xi8>, vector<8xi8>, !llvm.ptr) -> ()
+  llvm.return
+}
+llvm.func @llvm.aarch64.neon.st3.v8i8.p0(vector<8xi8>, vector<8xi8>, vector<8xi8>, !llvm.ptr)
+
+// CHECK-LABEL: llvm.func @callintrin_voidret
+// CHECK-NEXT: llvm.call_intrinsic "llvm.aarch64.neon.st3.v8i8.p0"(%arg0, %arg1, %arg2, %arg3) : (vector<8xi8>, vector<8xi8>, vector<8xi8>, !llvm.ptr) -> ()
+
+llvm.mlir.global internal thread_local unnamed_addr @myglobal(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+// CHECK: llvm.mlir.global internal thread_local unnamed_addr @myglobal(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32

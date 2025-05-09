@@ -11,7 +11,7 @@
 #ifndef __UNWINDCURSOR_HPP__
 #define __UNWINDCURSOR_HPP__
 
-#include "cet_unwind.h"
+#include "shadow_stack_unwind.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,8 +31,9 @@
 #endif
 
 #if defined(_LIBUNWIND_TARGET_LINUX) &&                                        \
-    (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_RISCV) || \
-     defined(_LIBUNWIND_TARGET_S390X))
+    (defined(_LIBUNWIND_TARGET_AARCH64) ||                                     \
+     defined(_LIBUNWIND_TARGET_LOONGARCH) ||                                   \
+     defined(_LIBUNWIND_TARGET_RISCV) || defined(_LIBUNWIND_TARGET_S390X))
 #include <errno.h>
 #include <signal.h>
 #include <sys/syscall.h>
@@ -81,6 +82,22 @@ struct UNWIND_INFO {
   uint8_t FrameOffset : 4;
   uint16_t UnwindCodes[2];
 };
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
+union UNWIND_INFO_ARM {
+  DWORD HeaderData;
+  struct {
+    DWORD FunctionLength : 18;
+    DWORD Version : 2;
+    DWORD ExceptionDataPresent : 1;
+    DWORD EpilogInHeader : 1;
+    DWORD FunctionFragment : 1;
+    DWORD EpilogCount : 5;
+    DWORD CodeWords : 4;
+  };
+};
+#pragma clang diagnostic pop
 
 extern "C" _Unwind_Reason_Code __libunwind_seh_personality(
     int, _Unwind_Action, uint64_t, _Unwind_Exception *,
@@ -995,6 +1012,10 @@ private:
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   bool setInfoForSigReturn(Registers_arm64 &);
   int stepThroughSigReturn(Registers_arm64 &);
+#endif
+#if defined(_LIBUNWIND_TARGET_LOONGARCH)
+  bool setInfoForSigReturn(Registers_loongarch &);
+  int stepThroughSigReturn(Registers_loongarch &);
 #endif
 #if defined(_LIBUNWIND_TARGET_RISCV)
   bool setInfoForSigReturn(Registers_riscv &);
@@ -2013,6 +2034,61 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
       _info.handler = 0;
     }
   }
+#elif defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_ARM)
+
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+#define FUNC_LENGTH_UNIT 4
+#define XDATA_TYPE IMAGE_ARM64_RUNTIME_FUNCTION_ENTRY_XDATA
+#else
+#define FUNC_LENGTH_UNIT 2
+#define XDATA_TYPE UNWIND_INFO_ARM
+#endif
+  if (unwindEntry->Flag != 0) { // Packed unwind info
+    _info.end_ip =
+        _info.start_ip + unwindEntry->FunctionLength * FUNC_LENGTH_UNIT;
+    // Only fill in the handler and LSDA if they're stale.
+    if (pc != getLastPC()) {
+      // Packed unwind info doesn't have an exception handler.
+      _info.lsda = 0;
+      _info.handler = 0;
+    }
+  } else {
+    XDATA_TYPE *xdata =
+        reinterpret_cast<XDATA_TYPE *>(base + unwindEntry->UnwindData);
+    _info.end_ip = _info.start_ip + xdata->FunctionLength * FUNC_LENGTH_UNIT;
+    // Only fill in the handler and LSDA if they're stale.
+    if (pc != getLastPC()) {
+      if (xdata->ExceptionDataPresent) {
+        uint32_t offset = 1; // The main xdata
+        uint32_t codeWords = xdata->CodeWords;
+        uint32_t epilogScopes = xdata->EpilogCount;
+        if (xdata->EpilogCount == 0 && xdata->CodeWords == 0) {
+          // The extension word has got the same layout for both ARM and ARM64
+          uint32_t extensionWord = reinterpret_cast<uint32_t *>(xdata)[1];
+          codeWords = (extensionWord >> 16) & 0xff;
+          epilogScopes = extensionWord & 0xffff;
+          offset++;
+        }
+        if (!xdata->EpilogInHeader)
+          offset += epilogScopes;
+        offset += codeWords;
+        uint32_t *exceptionHandlerInfo =
+            reinterpret_cast<uint32_t *>(xdata) + offset;
+        _dispContext.HandlerData = &exceptionHandlerInfo[1];
+        _dispContext.LanguageHandler = reinterpret_cast<EXCEPTION_ROUTINE *>(
+            base + exceptionHandlerInfo[0]);
+        _info.lsda = reinterpret_cast<unw_word_t>(_dispContext.HandlerData);
+        if (exceptionHandlerInfo[0])
+          _info.handler =
+              reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
+        else
+          _info.handler = 0;
+      } else {
+        _info.lsda = 0;
+        _info.handler = 0;
+      }
+    }
+  }
 #endif
   setLastPC(pc);
   return true;
@@ -2816,6 +2892,61 @@ int UnwindCursor<A, R>::stepThroughSigReturn() {
        // defined(_LIBUNWIND_TARGET_AARCH64)
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
+    defined(_LIBUNWIND_TARGET_LOONGARCH)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_loongarch &) {
+  const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
+  // The PC might contain an invalid address if the unwind info is bad, so
+  // directly accessing it could cause a SIGSEGV.
+  if (!isReadableAddr(pc))
+    return false;
+  const auto *instructions = reinterpret_cast<const uint32_t *>(pc);
+  // Look for the two instructions used in the sigreturn trampoline
+  // __vdso_rt_sigreturn:
+  //
+  // 0x03822c0b li a7,0x8b
+  // 0x002b0000 syscall 0
+  if (instructions[0] != 0x03822c0b || instructions[1] != 0x002b0000)
+    return false;
+
+  _info = {};
+  _info.start_ip = pc;
+  _info.end_ip = pc + 4;
+  _isSigReturn = true;
+  return true;
+}
+
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepThroughSigReturn(Registers_loongarch &) {
+  // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
+  //  - 128-byte siginfo struct
+  //  - ucontext_t struct:
+  //     - 8-byte long (__uc_flags)
+  //     - 8-byte pointer (*uc_link)
+  //     - 24-byte uc_stack
+  //     - 8-byte uc_sigmask
+  //     - 120-byte of padding to allow sigset_t to be expanded in the future
+  //     - 8 bytes of padding because sigcontext has 16-byte alignment
+  //     - struct sigcontext uc_mcontext
+  // [1]
+  // https://github.com/torvalds/linux/blob/master/arch/loongarch/kernel/signal.c
+  const pint_t kOffsetSpToSigcontext = 128 + 8 + 8 + 24 + 8 + 128;
+
+  const pint_t sigctx = _registers.getSP() + kOffsetSpToSigcontext;
+  _registers.setIP(_addressSpace.get64(sigctx));
+  for (int i = UNW_LOONGARCH_R1; i <= UNW_LOONGARCH_R31; ++i) {
+    // skip R0
+    uint64_t value =
+        _addressSpace.get64(sigctx + static_cast<pint_t>((i + 1) * 8));
+    _registers.setRegister(i, value);
+  }
+  _isSignalFrame = true;
+  return UNW_STEP_SUCCESS;
+}
+#endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
+       // defined(_LIBUNWIND_TARGET_LOONGARCH)
+
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
     defined(_LIBUNWIND_TARGET_RISCV)
 template <typename A, typename R>
 bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_riscv &) {
@@ -3062,7 +3193,7 @@ bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
 #endif
 
 #if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
-extern "C" void *__libunwind_cet_get_registers(unw_cursor_t *cursor) {
+extern "C" void *__libunwind_shstk_get_registers(unw_cursor_t *cursor) {
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   return co->get_registers();
 }

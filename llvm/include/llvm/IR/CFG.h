@@ -54,9 +54,10 @@ protected:
   inline void advancePastNonTerminators() {
     // Loop to ignore non-terminator uses (for example BlockAddresses).
     while (!It.atEnd()) {
-      if (auto *Inst = dyn_cast<Instruction>(*It))
-        if (Inst->isTerminator())
-          break;
+      if (auto *Inst = dyn_cast<Instruction>(*It)) {
+        assert(Inst->isTerminator() && "BasicBlock used in non-terminator");
+        break;
+      }
 
       ++It;
     }

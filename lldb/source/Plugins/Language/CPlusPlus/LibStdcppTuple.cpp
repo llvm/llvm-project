@@ -32,9 +32,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   // The lifetime of a ValueObject and all its derivative ValueObjects
@@ -86,8 +84,6 @@ lldb::ChildCacheState LibStdcppTupleSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool LibStdcppTupleSyntheticFrontEnd::MightHaveChildren() { return true; }
-
 lldb::ValueObjectSP
 LibStdcppTupleSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (idx < m_members.size() && m_members[idx])
@@ -100,9 +96,14 @@ LibStdcppTupleSyntheticFrontEnd::CalculateNumChildren() {
   return m_members.size();
 }
 
-size_t LibStdcppTupleSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
-  return ExtractIndexFromString(name.GetCString());
+llvm::Expected<size_t>
+LibStdcppTupleSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
+  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+  if (!optional_idx) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  return *optional_idx;
 }
 
 SyntheticChildrenFrontEnd *

@@ -162,6 +162,7 @@ struct SanitizerCoverageOptions {
   bool TraceStores = false;
   bool CollectControlFlow = false;
   bool GatedCallbacks = false;
+  int StackDepthCallbackMin = 0;
 
   SanitizerCoverageOptions() = default;
 };

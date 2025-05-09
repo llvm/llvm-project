@@ -74,8 +74,9 @@ struct TestLinalgTransforms
       *this, "test-decompose-pad-tensor",
       llvm::cl::desc("Test transform pad tensor by copying with generic ops"),
       llvm::cl::init(false)};
+  // TODO: This is not used - delete.
   Option<bool> testDecomposeTensorPackOp{
-      *this, "test-decompose-tensor-pack",
+      *this, "test-decompose-linalg-pack",
       llvm::cl::desc("Test transform that generalizes pack ops into a sequence "
                      "of tensor and Linalg ops"),
       llvm::cl::init(false)};
@@ -130,6 +131,14 @@ struct TestLinalgTransforms
   Option<bool> testDecomposeWinogradOps{
       *this, "test-decompose-winograd-ops",
       llvm::cl::desc("Test decompose Winograd ops"), llvm::cl::init(false)};
+  Option<bool> testFoldIntoPackAndUnpack{
+      *this, "test-fold-into-pack-and-unpack",
+      llvm::cl::desc("Test folding ops into linalg.pack and linalg.unpack"),
+      llvm::cl::init(false)};
+  Option<bool> testSimplifyPackUnpackPatterns{
+      *this, "test-simplify-pack-unpack-patterns",
+      llvm::cl::desc("Test patterns to simplify linalg.pack and linalg.unpack"),
+      llvm::cl::init(false)};
 };
 } // namespace
 
@@ -227,6 +236,18 @@ static void applyDecomposeWinogradOps(func::FuncOp funcOp) {
   (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
+static void applyFoldIntoPackAndUnpackPatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  linalg::populateFoldIntoPackAndUnpackPatterns(patterns);
+  (void)applyPatternsGreedily(rootOp, std::move(patterns));
+}
+
+static void applySimplifyPackUnpackPatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  linalg::populateSimplifyPackAndUnpackPatterns(patterns);
+  (void)applyPatternsGreedily(rootOp, std::move(patterns));
+}
+
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnOperation() {
   if (testPatterns)
@@ -255,6 +276,11 @@ void TestLinalgTransforms::runOnOperation() {
     return applyWinogradConv2D(getOperation());
   if (testDecomposeWinogradOps)
     return applyDecomposeWinogradOps(getOperation());
+  Operation *rootOp = getOperation();
+  if (testFoldIntoPackAndUnpack)
+    applyFoldIntoPackAndUnpackPatterns(rootOp);
+  if (testSimplifyPackUnpackPatterns)
+    applySimplifyPackUnpackPatterns(rootOp);
 }
 
 namespace mlir {

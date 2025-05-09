@@ -24,7 +24,7 @@ _start:
         /// Thunk to far_away, size 16-bytes goes here.
 
         .section .text.02, "ax", %progbits
-        .space 4096 - 28
+        .space 4096 - 32
 
         /// Erratum sequence will only line up at address 0 modulo 0xffc when
         /// Thunk is inserted.

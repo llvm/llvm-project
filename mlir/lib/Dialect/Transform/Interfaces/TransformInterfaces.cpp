@@ -15,8 +15,10 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 
 #define DEBUG_TYPE "transform-dialect"
 #define DEBUG_TYPE_FULL "transform-dialect-full"
@@ -486,11 +488,11 @@ void transform::TransformState::recordOpHandleInvalidationOne(
     return;
 
   FULL_LDBG("--recordOpHandleInvalidationOne\n");
-  DEBUG_WITH_TYPE(
-      DEBUG_TYPE_FULL,
-      llvm::interleaveComma(potentialAncestors, DBGS() << "--ancestors: ",
-                            [](Operation *op) { llvm::dbgs() << *op; });
-      llvm::dbgs() << "\n");
+  DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
+    (DBGS() << "--ancestors: "
+            << llvm::interleaved(llvm::make_pointee_range(potentialAncestors))
+            << "\n");
+  });
 
   Operation *owner = consumingHandle.getOwner();
   unsigned operandNo = consumingHandle.getOperandNumber();
@@ -1390,6 +1392,21 @@ void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
   ++errorCounter;
 }
 
+std::string
+transform::ErrorCheckingTrackingListener::getLatestMatchFailureMessage() {
+  if (!matchFailure) {
+    return "";
+  }
+  return matchFailure->str();
+}
+
+void transform::ErrorCheckingTrackingListener::notifyMatchFailure(
+    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
+  Diagnostic diag(loc, DiagnosticSeverity::Remark);
+  reasonCallback(diag);
+  matchFailure = std::move(diag);
+}
+
 //===----------------------------------------------------------------------===//
 // TransformRewriter
 //===----------------------------------------------------------------------===//
@@ -1642,7 +1659,6 @@ void transform::detail::getPotentialTopLevelEffects(
       if (!iface)
         continue;
 
-      SmallVector<MemoryEffects::EffectInstance, 2> nestedEffects;
       iface.getEffects(effects);
     }
     return;

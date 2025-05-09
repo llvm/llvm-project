@@ -4,7 +4,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 < %s | FileCheck %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 --filetype=obj -o %t/global-merge-aix-sections.o < %s
-; RUN; llvm-objdump --syms %t/global-merge-aix-sections.o | FileCheck %s --check-prefix=DATA
+; RUN: llvm-objdump --syms %t/global-merge-aix-sections.o | FileCheck %s --check-prefix=DATA
 
 %struct.Example = type { i32, i8 }
 
@@ -45,8 +45,8 @@ declare void @s(ptr noundef)
 ; CHECK-NEXT: myStruct1:
 ; CHECK-NEXT:        .space  8
 
-; DATA: 00000078 l     O .data  00000014 mycsect
-; DATA-NEXT: 00000078 l     O .data (csect: mycsect)         00000000 u
-; DATA-NEXT: 0000007c l     O .data (csect: mycsect)         00000000 y
-; DATA-NEXT: 00000080 l     O .data (csect: mycsect)         00000000 z
-; DATA-NEXT: 00000084 l     O .data (csect: mycsect)         00000000 myStruct1
+; DATA:      0000000000000080 l     O .data	0000000000000014 mycsect
+; DATA-NEXT: 0000000000000080 l     O .data (csect: mycsect) 	0000000000000000 u
+; DATA-NEXT: 0000000000000084 l     O .data (csect: mycsect) 	0000000000000000 y
+; DATA-NEXT: 0000000000000088 l     O .data (csect: mycsect) 	0000000000000000 z
+; DATA-NEXT: 000000000000008c l     O .data (csect: mycsect) 	0000000000000000 myStruct1

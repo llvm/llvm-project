@@ -11,8 +11,8 @@ define <vscale x 8 x i64> @vpload_nxv8i64(ptr %ptr, <vscale x 8 x i1> %m, i32 ze
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x11
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x10
-  ; CHECK-NEXT:   $v0 = COPY [[COPY1]]
-  ; CHECK-NEXT:   [[PseudoVLE64_V_M8_MASK:%[0-9]+]]:vrm8nov0 = PseudoVLE64_V_M8_MASK $noreg, [[COPY2]], $v0, [[COPY]], 6 /* e64 */, 1 /* ta, mu */ :: (load unknown-size from %ir.ptr, align 64)
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vmv0 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[PseudoVLE64_V_M8_MASK:%[0-9]+]]:vrm8nov0 = PseudoVLE64_V_M8_MASK $noreg, [[COPY2]], [[COPY3]], [[COPY]], 6 /* e64 */, 1 /* ta, mu */ :: (load unknown-size from %ir.ptr, align 64)
   ; CHECK-NEXT:   $v8m8 = COPY [[PseudoVLE64_V_M8_MASK]]
   ; CHECK-NEXT:   PseudoRET implicit $v8m8
   %load = call <vscale x 8 x i64> @llvm.vp.load.nxv8i64.p0(ptr %ptr, <vscale x 8 x i1> %m, i32 %evl)

@@ -5,6 +5,9 @@
 // RUN:     -fsanitize=address -fsanitize-address-use-after-scope \
 // RUN:     -Xclang -disable-llvm-passes %s | FileCheck %s -check-prefixes=CHECK,LIFETIME
 // RUN: %clang -w -target x86_64-linux-gnu -S -emit-llvm -o - -fno-exceptions -O0 \
+// RUN:     -fsanitize=kernel-address -fsanitize-address-use-after-scope \
+// RUN:     -Xclang -disable-llvm-passes %s | FileCheck %s -check-prefixes=CHECK,LIFETIME
+// RUN: %clang -w -target x86_64-linux-gnu -S -emit-llvm -o - -fno-exceptions -O0 \
 // RUN:     -fsanitize=memory -Xclang -disable-llvm-passes %s | \
 // RUN:     FileCheck %s -check-prefixes=CHECK,LIFETIME
 // RUN: %clang -w -target aarch64-linux-gnu -S -emit-llvm -o - -fno-exceptions -O0 \

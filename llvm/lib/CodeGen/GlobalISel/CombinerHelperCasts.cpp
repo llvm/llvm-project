@@ -36,6 +36,26 @@ bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);
 
+  // Combines without nsw trunc.
+  if (!Trunc->getFlag(MachineInstr::NoSWrap)) {
+    if (DstTy != SrcTy ||
+        !isLegalOrBeforeLegalizer({TargetOpcode::G_SEXT_INREG, {DstTy, SrcTy}}))
+      return false;
+
+    // Do this for 8 bit values and up. We don't want to do it for e.g. G_TRUNC
+    // to i1.
+    unsigned TruncWidth = MRI.getType(Trunc->getReg(0)).getScalarSizeInBits();
+    if (TruncWidth < 8)
+      return false;
+
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildSExtInReg(Dst, Src, TruncWidth);
+    };
+    return true;
+  }
+
+  // Combines for nsw trunc.
+
   if (DstTy == SrcTy) {
     MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
     return true;
@@ -357,4 +377,39 @@ bool CombinerHelper::matchCastOfInteger(const MachineInstr &CastMI,
   default:
     return false;
   }
+}
+
+bool CombinerHelper::matchRedundantSextInReg(MachineInstr &Root,
+                                             MachineInstr &Other,
+                                             BuildFnTy &MatchInfo) const {
+  assert(Root.getOpcode() == TargetOpcode::G_SEXT_INREG &&
+         Other.getOpcode() == TargetOpcode::G_SEXT_INREG);
+
+  unsigned RootWidth = Root.getOperand(2).getImm();
+  unsigned OtherWidth = Other.getOperand(2).getImm();
+
+  Register Dst = Root.getOperand(0).getReg();
+  Register OtherDst = Other.getOperand(0).getReg();
+  Register Src = Other.getOperand(1).getReg();
+
+  if (RootWidth >= OtherWidth) {
+    // The root sext_inreg is entirely redundant because the other one
+    // is narrower.
+    if (!canReplaceReg(Dst, OtherDst, MRI))
+      return false;
+
+    MatchInfo = [=](MachineIRBuilder &B) {
+      Observer.changingAllUsesOfReg(MRI, Dst);
+      MRI.replaceRegWith(Dst, OtherDst);
+      Observer.finishedChangingAllUsesOfReg();
+    };
+  } else {
+    // RootWidth < OtherWidth, rewrite this G_SEXT_INREG with the source of the
+    // other G_SEXT_INREG.
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildSExtInReg(Dst, Src, RootWidth);
+    };
+  }
+
+  return true;
 }

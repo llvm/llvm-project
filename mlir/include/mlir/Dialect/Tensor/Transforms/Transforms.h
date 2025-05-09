@@ -58,6 +58,12 @@ void populateFoldTensorSubsetIntoVectorTransferPatterns(
 void populateMergeConsecutiveInsertExtractSlicePatterns(
     RewritePatternSet &patterns);
 
+/// Appends patterns that are used to bubble up tensor.extract slice op above
+/// its producer. When used as cleanup patterns of tile and fuse, enables fusing
+/// the producer with the consumer even if the producer does not implement the
+/// tiling interface.
+void populateBubbleUpExtractSliceOpPatterns(RewritePatternSet &patterns);
+
 /// Populates `patterns` with patterns that drop redundant tensor.insert_slice
 /// rank expansions.
 void populateDropRedundantInsertSliceRankExpansionPatterns(
@@ -85,15 +91,6 @@ void populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
 /// used as a fallback tensor -> tensor lowering that decomposes concat such
 /// that it can be bufferized into a sequence of copies.
 void populateDecomposeTensorConcatPatterns(RewritePatternSet &patterns);
-
-/// Populates `patterns` with patterns that simplify `tensor.pack` and
-/// `tensor.unpack` operations.
-void populateSimplifyPackAndUnpackPatterns(RewritePatternSet &patterns);
-
-/// Populates `patterns` with patterns that fold operations like `tensor.pad`
-/// and `tensor.extract_slice` into `tensor.pack` and `tensor.unpack` operations
-/// respectively.
-void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns);
 
 using ControlFoldFn = std::function<bool(OpOperand *)>;
 

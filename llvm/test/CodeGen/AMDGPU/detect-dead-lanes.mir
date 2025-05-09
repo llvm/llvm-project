@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn -run-pass detect-dead-lanes -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -passes detect-dead-lanes -o - %s | FileCheck %s
 ...
 ---
 # Combined use/def transfer check, the basics.

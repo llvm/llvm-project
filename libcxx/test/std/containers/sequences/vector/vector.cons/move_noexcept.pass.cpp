@@ -23,36 +23,34 @@
 #include "test_allocator.h"
 
 template <class T>
-struct some_alloc
-{
-    typedef T value_type;
-    some_alloc(const some_alloc&);
-    void allocate(std::size_t);
+struct some_alloc {
+  typedef T value_type;
+  some_alloc(const some_alloc&);
+  void allocate(std::size_t);
 };
 
-int main(int, char**)
-{
-    {
-        typedef std::vector<MoveOnly> C;
-        static_assert(std::is_nothrow_move_constructible<C>::value, "");
-    }
-    {
-        typedef std::vector<MoveOnly, test_allocator<MoveOnly>> C;
-        static_assert(std::is_nothrow_move_constructible<C>::value, "");
-    }
-    {
-        typedef std::vector<MoveOnly, other_allocator<MoveOnly>> C;
-        static_assert(std::is_nothrow_move_constructible<C>::value, "");
-    }
-    {
-        typedef std::vector<MoveOnly, some_alloc<MoveOnly>> C;
+int main(int, char**) {
+  {
+    typedef std::vector<MoveOnly> C;
+    static_assert(std::is_nothrow_move_constructible<C>::value, "");
+  }
+  {
+    typedef std::vector<MoveOnly, test_allocator<MoveOnly>> C;
+    static_assert(std::is_nothrow_move_constructible<C>::value, "");
+  }
+  {
+    typedef std::vector<MoveOnly, other_allocator<MoveOnly>> C;
+    static_assert(std::is_nothrow_move_constructible<C>::value, "");
+  }
+  {
+    typedef std::vector<MoveOnly, some_alloc<MoveOnly>> C;
     //  In C++17, move constructors for allocators are not allowed to throw
 #if TEST_STD_VER > 14
-        static_assert( std::is_nothrow_move_constructible<C>::value, "");
+    static_assert(std::is_nothrow_move_constructible<C>::value, "");
 #else
-        static_assert(!std::is_nothrow_move_constructible<C>::value, "");
+    static_assert(!std::is_nothrow_move_constructible<C>::value, "");
 #endif
-    }
+  }
 
   return 0;
 }

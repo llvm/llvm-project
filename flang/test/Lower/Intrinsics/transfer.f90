@@ -106,8 +106,7 @@ subroutine trans_test(store, word)
     ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
     ! CHECK:         fir.call @_FortranAAssign(%[[VAL_21]], %[[VAL_22]], %[[VAL_23]], %[[VAL_20]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
     ! CHECK:         fir.freemem %[[VAL_17]]
-    ! CHECK:         %[[VAL_25:.*]] = fir.field_index x, !fir.type<_QFtrans_test3Tobj{x:i32}>
-    ! CHECK:         %[[VAL_26:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_25]] : (!fir.ref<!fir.type<_QFtrans_test3Tobj{x:i32}>>, !fir.field) -> !fir.ref<i32>
+    ! CHECK:         %[[VAL_26:.*]] = fir.coordinate_of %[[VAL_3]], x : (!fir.ref<!fir.type<_QFtrans_test3Tobj{x:i32}>>) -> !fir.ref<i32>
     ! CHECK:         %[[VAL_27:.*]] = fir.load %[[VAL_26]] : !fir.ref<i32>
     ! CHECK:         fir.store %[[VAL_27]] to %[[VAL_4]] : !fir.ref<i32>
     ! CHECK:         %[[VAL_28:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>

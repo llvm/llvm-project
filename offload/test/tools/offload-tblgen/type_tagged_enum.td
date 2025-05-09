@@ -50,7 +50,7 @@ def : Function {
 }
 
 // Check that a tagged enum print function definition is generated
-// CHECK-PRINT: void printTagged(std::ostream &os, const void *ptr, my_type_tagged_enum_t value, size_t size) {
+// CHECK-PRINT: void printTagged(llvm::raw_ostream &os, const void *ptr, my_type_tagged_enum_t value, size_t size) {
 // CHECK-PRINT: case MY_TYPE_TAGGED_ENUM_VALUE_ONE: {
 // CHECK-PRINT:   const uint32_t * const tptr = (const uint32_t * const)ptr;
 // CHECK-PRINT:   os << (const void *)tptr << " (";
@@ -71,6 +71,6 @@ def : Function {
 // CHECK-PRINT: }
 
 // Check that the tagged type information is used when printing function parameters
-// CHECK-PRINT: std::ostream &operator<<(std::ostream &os, const struct function_a_params_t *params) {
+// CHECK-PRINT: llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct function_a_params_t *params) {
 // CHECK-PRINT: os << ".PropValue = " 
 // CHECK-PRINT-NEXT: printTagged(os, *params->pPropValue, *params->pPropName, *params->pPropSize);

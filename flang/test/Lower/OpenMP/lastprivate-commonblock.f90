@@ -11,12 +11,10 @@
 !CHECK:      %[[CB_C_Y_COOR:.*]] = fir.coordinate_of %[[CB_C_REF_CVT]], %{{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 !CHECK:      %[[CB_C_Y_ADDR:.*]] = fir.convert %[[CB_C_Y_COOR]] : (!fir.ref<i8>) -> !fir.ref<f32>
 !CHECK:      %[[Y_DECL:.*]]:2 = hlfir.declare %[[CB_C_Y_ADDR]] {uniq_name = "_QFlastprivate_commonEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-!CHECK:      %[[PRIVATE_X_REF:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivate_commonEx"}
-!CHECK:      %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X_REF]] {uniq_name = "_QFlastprivate_commonEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-!CHECK:      %[[PRIVATE_Y_REF:.*]] = fir.alloca f32 {bindc_name = "y", pinned, uniq_name = "_QFlastprivate_commonEy"}
-!CHECK:      %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y_REF]] {uniq_name = "_QFlastprivate_commonEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-!CHECK:      omp.wsloop {
+!CHECK:      omp.wsloop private(@{{.*}} %{{.*}} -> %[[PRIVATE_X_REF:.*]], @{{.*}} %{{.*}} -> %[[PRIVATE_Y_REF:.*]], @{{.*}} %{{.*}} -> %{{.*}} : !{{.*}}, !{{.*}}, !{{.*}}) {
 !CHECK-NEXT:   omp.loop_nest (%[[I:.*]]) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
+!CHECK:      %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X_REF]] {uniq_name = "_QFlastprivate_commonEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:      %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y_REF]] {uniq_name = "_QFlastprivate_commonEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:          %[[V:.*]] = arith.addi %[[I]], %{{.*}} : i32
 !CHECK:          %[[C0:.*]] = arith.constant 0 : i32
 !CHECK:          %[[NEG_STEP:.*]] = arith.cmpi slt, %{{.*}}, %[[C0]] : i32
@@ -24,7 +22,7 @@
 !CHECK:          %[[V_GT:.*]] = arith.cmpi sgt, %[[V]], %{{.*}} : i32
 !CHECK:          %[[LAST_ITER:.*]] = arith.select %[[NEG_STEP]], %[[V_LT]], %[[V_GT]] : i1
 !CHECK:          fir.if %[[LAST_ITER]] {
-!CHECK:            fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
+!CHECK:            hlfir.assign %[[V]] to %{{.*}} : i32, !fir.ref<i32>
 !CHECK:            %[[PRIVATE_X_VAL:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<f32>
 !CHECK:            hlfir.assign %[[PRIVATE_X_VAL]] to %[[X_DECL]]#0 : f32, !fir.ref<f32>
 !CHECK:            %[[PRIVATE_Y_VAL:.*]] = fir.load %[[PRIVATE_Y_DECL]]#0 : !fir.ref<f32>

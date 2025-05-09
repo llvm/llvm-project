@@ -26,6 +26,8 @@
 namespace clang {
 class AttributeCommonInfo;
 class IdentifierInfo;
+class InitializedEntity;
+class InitializationKind;
 class ParsedAttr;
 class Scope;
 class VarDecl;
@@ -103,13 +105,14 @@ public:
                          HLSLParamModifierAttr::Spelling Spelling);
   void ActOnTopLevelFunction(FunctionDecl *FD);
   void ActOnVariableDeclarator(VarDecl *VD);
+  bool ActOnUninitializedVarDecl(VarDecl *D);
+  void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAnnotationAttr *AnnotationAttr);
   void DiagnoseAttrStageMismatch(
       const Attr *A, llvm::Triple::EnvironmentType Stage,
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
-  void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 
   QualType handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
                                        QualType LHSType, QualType RHSType,
@@ -141,9 +144,17 @@ public:
   // Diagnose whether the input ID is uint/unit2/uint3 type.
   bool diagnoseInputIDType(QualType T, const ParsedAttr &AL);
 
+  bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
+  bool ContainsBitField(QualType BaseTy);
+  bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
+  bool CanPerformAggregateSplatCast(Expr *Src, QualType DestType);
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 
   QualType getInoutParameterType(QualType Ty);
+
+  bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
+
+  void deduceAddressSpace(VarDecl *Decl);
 
 private:
   // HLSL resource type attributes need to be processed all at once.
@@ -159,11 +170,17 @@ private:
   // List of all resource bindings
   ResourceBindings Bindings;
 
+  // Global declaration collected for the $Globals default constant
+  // buffer which will be created at the end of the translation unit.
+  llvm::SmallVector<Decl *> DefaultCBufferDecls;
+
 private:
-  void collectResourcesOnVarDecl(VarDecl *D);
-  void collectResourcesOnUserRecordDecl(const VarDecl *VD,
-                                        const RecordType *RT);
+  void collectResourceBindingsOnVarDecl(VarDecl *D);
+  void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
+                                               const RecordType *RT);
   void processExplicitBindingsOnDecl(VarDecl *D);
+
+  void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 };
 
 } // namespace clang

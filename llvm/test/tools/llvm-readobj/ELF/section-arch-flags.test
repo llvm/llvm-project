@@ -117,7 +117,7 @@ Sections:
     Type:  SHT_PROGBITS
     Flags: [ SHF_X86_64_LARGE, SHF_EXCLUDE ]
 
-# RUN: yaml2obj --docnum 5 %s -o %t-arm.o
+# RUN: yaml2obj --docnum 5 -DARCH=ARM %s -o %t-arm.o
 # RUN: llvm-readobj -S %t-arm.o | FileCheck --check-prefix=ARM-LLVM %s
 # RUN: llvm-readelf -S %t-arm.o | FileCheck --check-prefix=ARM-GNU %s
 
@@ -128,13 +128,24 @@ Sections:
 # ARM-GNU: [Nr] Name Type     Address          Off    Size   ES Flg Lk Inf Al
 # ARM-GNU: [ 1] foo  PROGBITS 0000000000000000 000040 000000 00   y 0   0  0
 
+# RUN: yaml2obj --docnum 5 -DARCH=AARCH64 %s -o %t-aarch64.o
+# RUN: llvm-readobj -S %t-aarch64.o | FileCheck --check-prefix=AARCH64-LLVM %s
+# RUN: llvm-readelf -S %t-aarch64.o | FileCheck --check-prefix=AARCH64-GNU %s
+
+# AARCH64-LLVM:      Flags [ (0x20000000)
+# AARCH64-LLVM-NEXT:   SHF_AARCH64_PURECODE (0x20000000)
+# AARCH64-LLVM-NEXT: ]
+
+# AARCH64-GNU: [Nr] Name Type     Address          Off    Size   ES Flg Lk Inf Al
+# AARCH64-GNU: [ 1] foo  PROGBITS 0000000000000000 000040 000000 00   y 0   0  0
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2LSB
   Type:    ET_REL
-  Machine: EM_ARM
+  Machine: EM_[[ARCH]]
 Sections:
   - Name:  foo
     Type:  SHT_PROGBITS
-    Flags: [ SHF_ARM_PURECODE ]
+    Flags: [ SHF_[[ARCH]]_PURECODE ]

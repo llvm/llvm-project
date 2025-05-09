@@ -874,7 +874,6 @@ TEST_F(MemorySSATest, Irreducible) {
   // }
   // use(x)
 
-  SmallVector<PHINode *, 8> Inserted;
   IRBuilder<> B(C);
   F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
                        GlobalValue::ExternalLinkage, "F", &M);

@@ -114,9 +114,7 @@ Type *AMDGPURewriteOutArguments::getStoredType(Value &Arg) const {
   const int MaxUses = 10;
   int UseCount = 0;
 
-  SmallVector<Use *> Worklist;
-  for (Use &U : Arg.uses())
-    Worklist.push_back(&U);
+  SmallVector<Use *> Worklist(llvm::make_pointer_range(Arg.uses()));
 
   Type *StoredType = nullptr;
   while (!Worklist.empty()) {
@@ -376,10 +374,11 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
   int RetIdx = RetTy->isVoidTy() ? 0 : 1;
   for (Argument &Arg : F.args()) {
-    if (!OutArgIndexes.count(Arg.getArgNo()))
+    auto It = OutArgIndexes.find(Arg.getArgNo());
+    if (It == OutArgIndexes.end())
       continue;
 
-    Type *EltTy = OutArgIndexes[Arg.getArgNo()];
+    Type *EltTy = It->second;
     const auto Align =
         DL->getValueOrABITypeAlignment(Arg.getParamAlign(), EltTy);
 

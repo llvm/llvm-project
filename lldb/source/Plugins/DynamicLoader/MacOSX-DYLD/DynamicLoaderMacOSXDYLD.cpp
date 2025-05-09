@@ -75,8 +75,9 @@ DynamicLoader *DynamicLoaderMacOSXDYLD::CreateInstance(Process *process,
       case llvm::Triple::IOS:
       case llvm::Triple::TvOS:
       case llvm::Triple::WatchOS:
-      case llvm::Triple::XROS:
       case llvm::Triple::BridgeOS:
+      case llvm::Triple::DriverKit:
+      case llvm::Triple::XROS:
         create = triple_ref.getVendor() == llvm::Triple::Apple;
         break;
       default:
@@ -1148,19 +1149,13 @@ bool DynamicLoaderMacOSXDYLD::IsFullyInitialized() {
 
 void DynamicLoaderMacOSXDYLD::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                GetPluginDescriptionStatic(), CreateInstance,
-                                DebuggerInitialize);
+                                GetPluginDescriptionStatic(), CreateInstance);
   DynamicLoaderMacOS::Initialize();
 }
 
 void DynamicLoaderMacOSXDYLD::Terminate() {
   DynamicLoaderMacOS::Terminate();
   PluginManager::UnregisterPlugin(CreateInstance);
-}
-
-void DynamicLoaderMacOSXDYLD::DebuggerInitialize(
-    lldb_private::Debugger &debugger) {
-  CreateSettings(debugger);
 }
 
 llvm::StringRef DynamicLoaderMacOSXDYLD::GetPluginDescriptionStatic() {

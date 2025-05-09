@@ -13,7 +13,7 @@ class TestCase(TestBase):
     # FIXME: This regressed in 69d5a6662115499198ebfa07a081e98a6ce4b915
     # but needs further investigation for what underlying Clang/LLDB bug can't
     # handle that code change.
-    @skipIf
+    @skip
     def test(self):
         self.build()
 

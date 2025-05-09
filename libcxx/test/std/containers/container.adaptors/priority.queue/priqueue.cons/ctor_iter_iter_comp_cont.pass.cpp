@@ -17,14 +17,13 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    int a[] = {3, 5, 2, 0, 6, 8, 1};
-    const int n = sizeof(a)/sizeof(a[0]);
-    std::vector<int> v(a, a+n/2);
-    std::priority_queue<int> q(a+n/2, a+n, std::less<int>(), v);
-    assert(q.size() == n);
-    assert(q.top() == 8);
+int main(int, char**) {
+  int a[]     = {3, 5, 2, 0, 6, 8, 1};
+  const int n = sizeof(a) / sizeof(a[0]);
+  std::vector<int> v(a, a + n / 2);
+  std::priority_queue<int> q(a + n / 2, a + n, std::less<int>(), v);
+  assert(q.size() == n);
+  assert(q.top() == 8);
 
   return 0;
 }

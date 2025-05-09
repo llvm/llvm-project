@@ -12,9 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DeltaManager.h"
-#include "ReducerWorkItem.h"
+#include "DeltaPass.h"
 #include "TestRunner.h"
-#include "deltas/Delta.h"
 #include "deltas/ReduceAliases.h"
 #include "deltas/ReduceArguments.h"
 #include "deltas/ReduceAttributes.h"
@@ -46,7 +45,9 @@
 #include "deltas/ReduceRegisterMasks.h"
 #include "deltas/ReduceRegisterUses.h"
 #include "deltas/ReduceSpecialGlobals.h"
+#include "deltas/ReduceTargetFeaturesAttr.h"
 #include "deltas/ReduceUsingSimplifyCFG.h"
+#include "deltas/ReduceValuesToReturn.h"
 #include "deltas/ReduceVirtualRegisters.h"
 #include "deltas/RunIRPasses.h"
 #include "deltas/SimplifyInstructions.h"
@@ -71,91 +72,56 @@ static cl::list<std::string>
                              "default, run all delta passes."),
                     cl::cat(LLVMReduceOptions), cl::CommaSeparated);
 
-#define DELTA_PASSES                                                           \
-  do {                                                                         \
-    DELTA_PASS("strip-debug-info", stripDebugInfoDeltaPass)                    \
-    DELTA_PASS("functions", reduceFunctionsDeltaPass)                          \
-    DELTA_PASS("function-bodies", reduceFunctionBodiesDeltaPass)               \
-    DELTA_PASS("special-globals", reduceSpecialGlobalsDeltaPass)               \
-    DELTA_PASS("aliases", reduceAliasesDeltaPass)                              \
-    DELTA_PASS("ifuncs", reduceIFuncsDeltaPass)                                \
-    DELTA_PASS("simplify-conditionals-true", reduceConditionalsTrueDeltaPass)  \
-    DELTA_PASS("simplify-conditionals-false",                                  \
-               reduceConditionalsFalseDeltaPass)                               \
-    DELTA_PASS("invokes", reduceInvokesDeltaPass)                              \
-    DELTA_PASS("unreachable-basic-blocks",                                     \
-               reduceUnreachableBasicBlocksDeltaPass)                          \
-    DELTA_PASS("basic-blocks", reduceBasicBlocksDeltaPass)                     \
-    DELTA_PASS("simplify-cfg", reduceUsingSimplifyCFGDeltaPass)                \
-    DELTA_PASS("function-data", reduceFunctionDataDeltaPass)                   \
-    DELTA_PASS("global-values", reduceGlobalValuesDeltaPass)                   \
-    DELTA_PASS("global-objects", reduceGlobalObjectsDeltaPass)                 \
-    DELTA_PASS("global-initializers", reduceGlobalsInitializersDeltaPass)      \
-    DELTA_PASS("global-variables", reduceGlobalsDeltaPass)                     \
-    DELTA_PASS("di-metadata", reduceDIMetadataDeltaPass)                       \
-    DELTA_PASS("dbg-records", reduceDbgRecordDeltaPass)                        \
-    DELTA_PASS("distinct-metadata", reduceDistinctMetadataDeltaPass)           \
-    DELTA_PASS("metadata", reduceMetadataDeltaPass)                            \
-    DELTA_PASS("named-metadata", reduceNamedMetadataDeltaPass)                 \
-    DELTA_PASS("arguments", reduceArgumentsDeltaPass)                          \
-    DELTA_PASS("instructions", reduceInstructionsDeltaPass)                    \
-    DELTA_PASS("simplify-instructions", simplifyInstructionsDeltaPass)         \
-    DELTA_PASS("ir-passes", runIRPassesDeltaPass)                              \
-    DELTA_PASS("operands-zero", reduceOperandsZeroDeltaPass)                   \
-    DELTA_PASS("operands-one", reduceOperandsOneDeltaPass)                     \
-    DELTA_PASS("operands-nan", reduceOperandsNaNDeltaPass)                     \
-    DELTA_PASS("operands-to-args", reduceOperandsToArgsDeltaPass)              \
-    DELTA_PASS("operands-skip", reduceOperandsSkipDeltaPass)                   \
-    DELTA_PASS("operand-bundles", reduceOperandBundesDeltaPass)                \
-    DELTA_PASS("attributes", reduceAttributesDeltaPass)                        \
-    DELTA_PASS("module-data", reduceModuleDataDeltaPass)                       \
-    DELTA_PASS("opcodes", reduceOpcodesDeltaPass)                              \
-    DELTA_PASS("volatile", reduceVolatileInstructionsDeltaPass)                \
-    DELTA_PASS("atomic-ordering", reduceAtomicOrderingDeltaPass)               \
-    DELTA_PASS("syncscopes", reduceAtomicSyncScopesDeltaPass)                  \
-    DELTA_PASS("instruction-flags", reduceInstructionFlagsDeltaPass)           \
-  } while (false)
+// Generate two separate Pass lists: IR_Passes and MIR_Passes
+static const DeltaPass IR_Passes[] = {
+#undef DELTA_PASS_IR
+#undef DELTA_PASS_MIR
+#define DELTA_PASS_IR(NAME, FUNC, DESC) {NAME, FUNC, DESC},
+#include "DeltaPasses.def"
+#undef DELTA_PASS_IR
+};
 
-#define DELTA_PASSES_MIR                                                       \
-  do {                                                                         \
-    DELTA_PASS("instructions", reduceInstructionsMIRDeltaPass)                 \
-    DELTA_PASS("ir-instruction-references",                                    \
-               reduceIRInstructionReferencesDeltaPass)                         \
-    DELTA_PASS("ir-block-references", reduceIRBlockReferencesDeltaPass)        \
-    DELTA_PASS("ir-function-references", reduceIRFunctionReferencesDeltaPass)  \
-    DELTA_PASS("instruction-flags", reduceInstructionFlagsMIRDeltaPass)        \
-    DELTA_PASS("register-uses", reduceRegisterUsesMIRDeltaPass)                \
-    DELTA_PASS("register-defs", reduceRegisterDefsMIRDeltaPass)                \
-    DELTA_PASS("register-hints", reduceVirtualRegisterHintsDeltaPass)          \
-    DELTA_PASS("register-masks", reduceRegisterMasksMIRDeltaPass)              \
-  } while (false)
+static const DeltaPass MIR_Passes[] = {
+#undef DELTA_PASS_IR
+#undef DELTA_PASS_MIR
+#define DELTA_PASS_MIR(NAME, FUNC, DESC) {NAME, FUNC, DESC},
+#include "DeltaPasses.def"
+#undef DELTA_PASS_MIR
+};
 
 static void runAllDeltaPasses(TestRunner &Tester,
                               const SmallStringSet &SkipPass) {
-#define DELTA_PASS(NAME, FUNC)                                                 \
-  if (!SkipPass.count(NAME)) {                                                 \
-    FUNC(Tester);                                                              \
-  }
   if (Tester.getProgram().isMIR()) {
-    DELTA_PASSES_MIR;
+    for (const DeltaPass &Pass : MIR_Passes) {
+      if (!SkipPass.count(Pass.Name)) {
+        runDeltaPass(Tester, Pass);
+      }
+    }
   } else {
-    DELTA_PASSES;
+    for (const DeltaPass &Pass : IR_Passes) {
+      if (!SkipPass.count(Pass.Name)) {
+        runDeltaPass(Tester, Pass);
+      }
+    }
   }
-#undef DELTA_PASS
 }
 
 static void runDeltaPassName(TestRunner &Tester, StringRef PassName) {
-#define DELTA_PASS(NAME, FUNC)                                                 \
-  if (PassName == NAME) {                                                      \
-    FUNC(Tester);                                                              \
-    return;                                                                    \
-  }
   if (Tester.getProgram().isMIR()) {
-    DELTA_PASSES_MIR;
+    for (const DeltaPass &Pass : MIR_Passes) {
+      if (PassName == Pass.Name) {
+        runDeltaPass(Tester, Pass);
+        return;
+      }
+    }
   } else {
-    DELTA_PASSES;
+    for (const DeltaPass &Pass : IR_Passes) {
+      if (PassName == Pass.Name) {
+        runDeltaPass(Tester, Pass);
+        return;
+      }
+    }
   }
-#undef DELTA_PASS
 
   // We should have errored on unrecognized passes before trying to run
   // anything.
@@ -164,24 +130,25 @@ static void runDeltaPassName(TestRunner &Tester, StringRef PassName) {
 
 void llvm::printDeltaPasses(raw_ostream &OS) {
   OS << "Delta passes (pass to `--delta-passes=` as a comma separated list):\n";
-#define DELTA_PASS(NAME, FUNC) OS << "  " << NAME << "\n";
   OS << " IR:\n";
-  DELTA_PASSES;
+  for (const DeltaPass &Pass : IR_Passes) {
+    OS << "  " << Pass.Name << '\n';
+  }
   OS << " MIR:\n";
-  DELTA_PASSES_MIR;
-#undef DELTA_PASS
+  for (const DeltaPass &Pass : MIR_Passes) {
+    OS << "  " << Pass.Name << '\n';
+  }
 }
 
 // Built a set of available delta passes.
 static void collectPassNames(const TestRunner &Tester,
                              SmallStringSet &NameSet) {
-#define DELTA_PASS(NAME, FUNC) NameSet.insert(NAME);
-  if (Tester.getProgram().isMIR()) {
-    DELTA_PASSES_MIR;
-  } else {
-    DELTA_PASSES;
+  for (const DeltaPass &Pass : MIR_Passes) {
+    NameSet.insert(Pass.Name);
   }
-#undef DELTA_PASS
+  for (const DeltaPass &Pass : IR_Passes) {
+    NameSet.insert(Pass.Name);
+  }
 }
 
 /// Verify all requested or skipped passes are valid names, and return them in a

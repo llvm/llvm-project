@@ -9,9 +9,7 @@ define <vscale x 1 x i32> @select_opt(<vscale x 1 x i32> %b, <vscale x 1 x i1> %
 ; CHECK-NEXT:    [[D:%.*]] = select <vscale x 1 x i1> [[M:%.*]], <vscale x 1 x i32> [[C]], <vscale x 1 x i32> [[B]]
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[D]]
 ;
-  %head = insertelement <vscale x 1 x i32> undef, i32 2, i32 0
-  %splat = shufflevector <vscale x 1 x i32> %head, <vscale x 1 x i32> undef, <vscale x 1 x i32> zeroinitializer
-  %c = add nsw <vscale x 1 x i32> %b, %splat
+  %c = add nsw <vscale x 1 x i32> %b, splat (i32 2)
   %d = select <vscale x 1 x i1> %m, <vscale x 1 x i32> %c, <vscale x 1 x i32> %b
   ret <vscale x 1 x i32> %d
 }

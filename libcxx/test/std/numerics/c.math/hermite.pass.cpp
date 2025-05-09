@@ -350,7 +350,9 @@ struct TestInt {
   }
 };
 
-int main() {
+int main(int, char**) {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::type_list<short, int, long, long long>(), TestInt());
+
+  return 0;
 }

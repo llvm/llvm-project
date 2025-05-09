@@ -124,11 +124,9 @@ define void @f4(ptr %a0, ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-NEXT:     r0 = memub(r0+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = memub(r2+#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = r0
 ; CHECK-NEXT:     p1 = r1
+; CHECK-NEXT:     r2 = memub(r2+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p2 = r2
@@ -160,11 +158,9 @@ define void @f5(ptr %a0, ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-NEXT:     r0 = memub(r0+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = memub(r2+#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = r0
 ; CHECK-NEXT:     p1 = r1
+; CHECK-NEXT:     r2 = memub(r2+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p2 = r2
@@ -196,11 +192,9 @@ define void @f6(ptr %a0, ptr %a1, ptr %a2, ptr %a3) {
 ; CHECK-NEXT:     r0 = memub(r0+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = memub(r2+#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = r0
 ; CHECK-NEXT:     p1 = r1
+; CHECK-NEXT:     r2 = memub(r2+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p2 = r2

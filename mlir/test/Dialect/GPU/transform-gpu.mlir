@@ -43,7 +43,7 @@ module attributes {transform.with_named_sequence} {
 !type = memref<2 x 32 x f32>
 !type1d = memref<32 x f32>
 
-// CHECK-DAG: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 floordiv 128)> 
+// CHECK-DAG: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 floordiv 128)>
 
 // CHECK-LABEL: func.func @warpgroup_3d(
 // CHECK-SAME:    %[[ARGX:[0-9a-z]+]]: memref<2x32xf32>
@@ -647,7 +647,7 @@ module attributes {transform.with_named_sequence} {
 #map = affine_map<(d0) -> (d0 *  128)>
 #map1 = affine_map<(d0) -> (d0 * 32)>
 
-// CHECK-DAG: #[[$MAPB:.*]] = affine_map<()[s0] -> (s0 * 128)> 
+// CHECK-DAG: #[[$MAPB:.*]] = affine_map<()[s0] -> (s0 * 128)>
 // CHECK-DAG: #[[$MAPW:.*]] = affine_map<()[s0, s1, s2] -> (s2 * 32 + ((s0 + s1 * 4) floordiv 32) * 32)>
 
 // CHECK-LABEL: func.func @simple_fill(

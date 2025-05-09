@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   fir.global @__BLNK__ {alignment = 4 : i64} : tuple<i32, !fir.array<8xi8>> {} loc(#loc1)
   fir.global @a_ {alignment = 4 : i64} : tuple<i32, !fir.array<8xi8>> {} loc(#loc2)
   func.func @f1() {

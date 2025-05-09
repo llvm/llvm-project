@@ -311,12 +311,12 @@ enum GlobalValueSummarySymtabCodes {
   // [nummib x (numcontext x total size)]?]
   FS_PERMODULE_ALLOC_INFO = 27,
   // Summary of combined index memprof callsite metadata.
-  // [valueid, context radix tree index, numver,
-  //  numver x version]
+  // [valueid, numstackindices, numver,
+  //  numstackindices x stackidindex, numver x version]
   FS_COMBINED_CALLSITE_INFO = 28,
   // Summary of combined index allocation memprof metadata.
   // [nummib, numver,
-  //  nummib x (alloc type, numstackids, numstackids x stackidindex),
+  //  nummib x (alloc type, context radix tree index),
   //  numver x version]
   FS_COMBINED_ALLOC_INFO = 29,
   // List of all stack ids referenced by index in the callsite and alloc infos.
@@ -385,6 +385,8 @@ enum MetadataCodes {
   METADATA_GENERIC_SUBRANGE = 45, // [distinct, count, lo, up, stride]
   METADATA_ARG_LIST = 46,         // [n x [type num, value num]]
   METADATA_ASSIGN_ID = 47,        // [distinct, ...]
+  METADATA_SUBRANGE_TYPE = 48,    // [distinct, ...]
+  METADATA_FIXED_POINT_TYPE = 49, // [distinct, ...]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -502,7 +504,9 @@ enum RMWOperations {
   RMW_UINC_WRAP = 15,
   RMW_UDEC_WRAP = 16,
   RMW_USUB_COND = 17,
-  RMW_USUB_SAT = 18
+  RMW_USUB_SAT = 18,
+  RMW_FMAXIMUM = 19,
+  RMW_FMINIMUM = 20,
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing

@@ -30,12 +30,12 @@ cl::opt<bool> EnableDetailedFunctionProperties(
     "enable-detailed-function-properties", cl::Hidden, cl::init(false),
     cl::desc("Whether or not to compute detailed function properties."));
 
-cl::opt<unsigned> BigBasicBlockInstructionThreshold(
+static cl::opt<unsigned> BigBasicBlockInstructionThreshold(
     "big-basic-block-instruction-threshold", cl::Hidden, cl::init(500),
     cl::desc("The minimum number of instructions a basic block should contain "
              "before being considered big."));
 
-cl::opt<unsigned> MediumBasicBlockInstructionThreshold(
+static cl::opt<unsigned> MediumBasicBlockInstructionThreshold(
     "medium-basic-block-instruction-threshold", cl::Hidden, cl::init(15),
     cl::desc("The minimum number of instructions a basic block should contain "
              "before being considered medium-sized."));
@@ -324,7 +324,7 @@ FunctionPropertiesUpdater::FunctionPropertiesUpdater(
   // The successors may become unreachable in the case of `invoke` inlining.
   // We track successors separately, too, because they form a boundary, together
   // with the CB BB ('Entry') between which the inlined callee will be pasted.
-  Successors.insert(succ_begin(&CallSiteBB), succ_end(&CallSiteBB));
+  Successors.insert_range(successors(&CallSiteBB));
 
   // the outcome of the inlining may be that some edges get lost (DCEd BBs
   // because inlining brought some constant, for example). We don't know which
@@ -349,7 +349,7 @@ FunctionPropertiesUpdater::FunctionPropertiesUpdater(
   // discounted BBs will be checked if reachable and re-added.
   if (const auto *II = dyn_cast<InvokeInst>(&CB)) {
     const auto *UnwindDest = II->getUnwindDest();
-    Successors.insert(succ_begin(UnwindDest), succ_end(UnwindDest));
+    Successors.insert_range(successors(UnwindDest));
     // Same idea as above, we pretend we lose all these edges.
     for (auto *Succ : successors(UnwindDest))
       if (Inserted.insert(Succ).second)
@@ -365,8 +365,7 @@ FunctionPropertiesUpdater::FunctionPropertiesUpdater(
   // finish().
   Successors.erase(&CallSiteBB);
 
-  for (const auto *BB : Successors)
-    LikelyToChangeBBs.insert(BB);
+  LikelyToChangeBBs.insert_range(Successors);
 
   // Commit the change. While some of the BBs accounted for above may play dual
   // role - e.g. caller's entry BB may be the same as the callsite BB - set
@@ -454,7 +453,7 @@ void FunctionPropertiesUpdater::finish(FunctionAnalysisManager &FAM) const {
     const auto *BB = Reinclude[I];
     FPI.reIncludeBB(*BB);
     if (I >= IncludeSuccessorsMark)
-      Reinclude.insert(succ_begin(BB), succ_end(BB));
+      Reinclude.insert_range(successors(BB));
   }
 
   // For exclusion, we don't need to exclude the set of BBs that were successors

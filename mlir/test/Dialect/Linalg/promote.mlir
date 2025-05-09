@@ -287,18 +287,18 @@ module attributes {transform.with_named_sequence} {
 #map = affine_map<(d0, d1) -> (d0, d1)>
 
   // CHECK-LABEL:   func.func @linalg_generic_update_all_function_inputs_outputs(
-  // CHECK-SAME:                                                                 %[[VAL_0:.*]]: memref<3x4xf32, 1>,
-  // CHECK-SAME:                                                                 %[[VAL_1:.*]]: memref<3x4xf32, 1>) -> memref<3x4xf32, 1> {
-func.func @linalg_generic_update_all_function_inputs_outputs(%arg0: memref<3x4xf32, 1>, %arg1: memref<3x4xf32, 1>) -> memref<3x4xf32, 1> {
-  // CHECK:           %[[VAL_2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<3x4xf32, 1>
-  // CHECK:           %[[VAL_3:.*]] = memref.subview %[[VAL_0]][0, 0] [4, 3] [1, 1] : memref<3x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
-  // CHECK:           %[[VAL_4:.*]] = memref.subview %[[VAL_1]][0, 0] [4, 3] [1, 1] : memref<3x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
-  // CHECK:           %[[VAL_5:.*]] = memref.subview %[[VAL_2]][0, 0] [4, 3] [1, 1] : memref<3x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
+  // CHECK-SAME:                                                                 %[[VAL_0:.*]]: memref<8x4xf32, 1>,
+  // CHECK-SAME:                                                                 %[[VAL_1:.*]]: memref<8x4xf32, 1>) -> memref<8x4xf32, 1> {
+func.func @linalg_generic_update_all_function_inputs_outputs(%arg0: memref<8x4xf32, 1>, %arg1: memref<8x4xf32, 1>) -> memref<8x4xf32, 1> {
+  // CHECK:           %[[VAL_2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<8x4xf32, 1>
+  // CHECK:           %[[VAL_3:.*]] = memref.subview %[[VAL_0]][0, 0] [4, 3] [1, 1] : memref<8x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
+  // CHECK:           %[[VAL_4:.*]] = memref.subview %[[VAL_1]][0, 0] [4, 3] [1, 1] : memref<8x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
+  // CHECK:           %[[VAL_5:.*]] = memref.subview %[[VAL_2]][0, 0] [4, 3] [1, 1] : memref<8x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
 
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<3x4xf32, 1>
-  %subview = memref.subview %arg0[0, 0] [4, 3] [1, 1] : memref<3x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
-  %subview_0 = memref.subview %arg1[0, 0] [4, 3] [1, 1] : memref<3x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
-  %subview_1 = memref.subview %alloc[0, 0] [4, 3] [1, 1] : memref<3x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<8x4xf32, 1>
+  %subview = memref.subview %arg0[0, 0] [4, 3] [1, 1] : memref<8x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
+  %subview_0 = memref.subview %arg1[0, 0] [4, 3] [1, 1] : memref<8x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
+  %subview_1 = memref.subview %alloc[0, 0] [4, 3] [1, 1] : memref<8x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
 
   // CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
   // CHECK:           %[[VAL_7:.*]] = arith.constant 4 : index
@@ -376,10 +376,10 @@ func.func @linalg_generic_update_all_function_inputs_outputs(%arg0: memref<3x4xf
   // CHECK:           memref.dealloc %[[VAL_22]] : memref<48xi8, #gpu.address_space<workgroup>>
   // CHECK:           memref.dealloc %[[VAL_41]] : memref<48xi8, #gpu.address_space<workgroup>>
   // CHECK:           memref.dealloc %[[VAL_60]] : memref<48xi8, #gpu.address_space<workgroup>>
-  // CHECK:           return %[[VAL_2]] : memref<3x4xf32, 1>
+  // CHECK:           return %[[VAL_2]] : memref<8x4xf32, 1>
   // CHECK:         }
 
-  return %alloc : memref<3x4xf32, 1>
+  return %alloc : memref<8x4xf32, 1>
 }
 
 

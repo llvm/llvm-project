@@ -3,8 +3,8 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX900 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX908 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX90A %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX940 %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX940 %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX942 %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX942 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -passes=atomic-expand %s | FileCheck -check-prefixes=ALL,GFX12 %s
 
 ; --------------------------------------------------------------------
@@ -594,24 +594,24 @@ define double @test_flat_atomicrmw_fadd_f64_agent(ptr %ptr, double %value) {
 ; GFX90A:       [[ATOMICRMW_END]]:
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_flat_atomicrmw_fadd_f64_agent(
-; GFX940-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
-; GFX940-NEXT:    br i1 [[IS_PRIVATE]], label %[[ATOMICRMW_PRIVATE:.*]], label %[[ATOMICRMW_GLOBAL:.*]]
-; GFX940:       [[ATOMICRMW_PRIVATE]]:
-; GFX940-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
-; GFX940-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
-; GFX940-NEXT:    [[NEW:%.*]] = fadd double [[LOADED_PRIVATE]], [[VALUE]]
-; GFX940-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
-; GFX940-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
-; GFX940:       [[ATOMICRMW_GLOBAL]]:
-; GFX940-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
-; GFX940-NEXT:    br label %[[ATOMICRMW_PHI]]
-; GFX940:       [[ATOMICRMW_PHI]]:
-; GFX940-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], %[[ATOMICRMW_PRIVATE]] ], [ [[TMP2]], %[[ATOMICRMW_GLOBAL]] ]
-; GFX940-NEXT:    br label %[[ATOMICRMW_END:.*]]
-; GFX940:       [[ATOMICRMW_END]]:
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_flat_atomicrmw_fadd_f64_agent(
+; GFX942-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
+; GFX942-NEXT:    br i1 [[IS_PRIVATE]], label %[[ATOMICRMW_PRIVATE:.*]], label %[[ATOMICRMW_GLOBAL:.*]]
+; GFX942:       [[ATOMICRMW_PRIVATE]]:
+; GFX942-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; GFX942-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
+; GFX942-NEXT:    [[NEW:%.*]] = fadd double [[LOADED_PRIVATE]], [[VALUE]]
+; GFX942-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
+; GFX942-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
+; GFX942:       [[ATOMICRMW_GLOBAL]]:
+; GFX942-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; GFX942-NEXT:    br label %[[ATOMICRMW_PHI]]
+; GFX942:       [[ATOMICRMW_PHI]]:
+; GFX942-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], %[[ATOMICRMW_PRIVATE]] ], [ [[TMP2]], %[[ATOMICRMW_GLOBAL]] ]
+; GFX942-NEXT:    br label %[[ATOMICRMW_END:.*]]
+; GFX942:       [[ATOMICRMW_END]]:
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX12-LABEL: define double @test_flat_atomicrmw_fadd_f64_agent(
 ; GFX12-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -705,10 +705,10 @@ define double @test_flat_atomicrmw_fadd_f64_agent__noalias_addrspace_5(ptr %ptr,
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_flat_atomicrmw_fadd_f64_agent__noalias_addrspace_5(
-; GFX940-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_flat_atomicrmw_fadd_f64_agent__noalias_addrspace_5(
+; GFX942-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX12-LABEL: define double @test_flat_atomicrmw_fadd_f64_agent__noalias_addrspace_5(
 ; GFX12-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -800,10 +800,10 @@ define double @test_flat_atomicrmw_fadd_f64_agent__noalias_addrspace_5__maybe_fi
 ; GFX90A:       [[ATOMICRMW_END]]:
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
-; GFX940-LABEL: define double @test_flat_atomicrmw_fadd_f64_agent__noalias_addrspace_5__maybe_fine_grained(
-; GFX940-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_flat_atomicrmw_fadd_f64_agent__noalias_addrspace_5__maybe_fine_grained(
+; GFX942-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX12-LABEL: define double @test_flat_atomicrmw_fadd_f64_agent__noalias_addrspace_5__maybe_fine_grained(
 ; GFX12-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -905,10 +905,10 @@ define float @test_flat_atomicrmw_fadd_f32_agent__noalias_addrspace_5(ptr %ptr, 
 ; GFX90A:       [[ATOMICRMW_END]]:
 ; GFX90A-NEXT:    ret float [[LOADED_PHI]]
 ;
-; GFX940-LABEL: define float @test_flat_atomicrmw_fadd_f32_agent__noalias_addrspace_5(
-; GFX940-SAME: ptr [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]], !amdgpu.ignore.denormal.mode [[META1]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_flat_atomicrmw_fadd_f32_agent__noalias_addrspace_5(
+; GFX942-SAME: ptr [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]], !amdgpu.ignore.denormal.mode [[META1]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX12-LABEL: define float @test_flat_atomicrmw_fadd_f32_agent__noalias_addrspace_5(
 ; GFX12-SAME: ptr [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -988,10 +988,10 @@ define <2 x half> @test_flat_atomicrmw_fadd_v2f16_agent__noalias_addrspace_5(ptr
 ; GFX90A:       [[ATOMICRMW_END]]:
 ; GFX90A-NEXT:    ret <2 x half> [[TMP5]]
 ;
-; GFX940-LABEL: define <2 x half> @test_flat_atomicrmw_fadd_v2f16_agent__noalias_addrspace_5(
-; GFX940-SAME: ptr [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
-; GFX940-NEXT:    ret <2 x half> [[RES]]
+; GFX942-LABEL: define <2 x half> @test_flat_atomicrmw_fadd_v2f16_agent__noalias_addrspace_5(
+; GFX942-SAME: ptr [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX12-LABEL: define <2 x half> @test_flat_atomicrmw_fadd_v2f16_agent__noalias_addrspace_5(
 ; GFX12-SAME: ptr [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1071,10 +1071,10 @@ define <2 x bfloat> @test_flat_atomicrmw_fadd_v2bf16_agent__noalias_addrspace_5(
 ; GFX90A:       [[ATOMICRMW_END]]:
 ; GFX90A-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-; GFX940-LABEL: define <2 x bfloat> @test_flat_atomicrmw_fadd_v2bf16_agent__noalias_addrspace_5(
-; GFX940-SAME: ptr [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], <2 x bfloat> [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
-; GFX940-NEXT:    ret <2 x bfloat> [[RES]]
+; GFX942-LABEL: define <2 x bfloat> @test_flat_atomicrmw_fadd_v2bf16_agent__noalias_addrspace_5(
+; GFX942-SAME: ptr [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[PTR]], <2 x bfloat> [[VALUE]] syncscope("agent") seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX12-LABEL: define <2 x bfloat> @test_flat_atomicrmw_fadd_v2bf16_agent__noalias_addrspace_5(
 ; GFX12-SAME: ptr [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1190,24 +1190,24 @@ define double @test_flat_atomicrmw_fmin_f64_agent(ptr %ptr, double %value) {
 ; GFX90A:       [[ATOMICRMW_END]]:
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_flat_atomicrmw_fmin_f64_agent(
-; GFX940-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
-; GFX940-NEXT:    br i1 [[IS_PRIVATE]], label %[[ATOMICRMW_PRIVATE:.*]], label %[[ATOMICRMW_GLOBAL:.*]]
-; GFX940:       [[ATOMICRMW_PRIVATE]]:
-; GFX940-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
-; GFX940-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
-; GFX940-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED_PRIVATE]], double [[VALUE]])
-; GFX940-NEXT:    store double [[TMP2]], ptr addrspace(5) [[TMP1]], align 8
-; GFX940-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
-; GFX940:       [[ATOMICRMW_GLOBAL]]:
-; GFX940-NEXT:    [[TMP3:%.*]] = atomicrmw fmin ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
-; GFX940-NEXT:    br label %[[ATOMICRMW_PHI]]
-; GFX940:       [[ATOMICRMW_PHI]]:
-; GFX940-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], %[[ATOMICRMW_PRIVATE]] ], [ [[TMP3]], %[[ATOMICRMW_GLOBAL]] ]
-; GFX940-NEXT:    br label %[[ATOMICRMW_END:.*]]
-; GFX940:       [[ATOMICRMW_END]]:
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_flat_atomicrmw_fmin_f64_agent(
+; GFX942-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
+; GFX942-NEXT:    br i1 [[IS_PRIVATE]], label %[[ATOMICRMW_PRIVATE:.*]], label %[[ATOMICRMW_GLOBAL:.*]]
+; GFX942:       [[ATOMICRMW_PRIVATE]]:
+; GFX942-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; GFX942-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
+; GFX942-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED_PRIVATE]], double [[VALUE]])
+; GFX942-NEXT:    store double [[TMP2]], ptr addrspace(5) [[TMP1]], align 8
+; GFX942-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
+; GFX942:       [[ATOMICRMW_GLOBAL]]:
+; GFX942-NEXT:    [[TMP3:%.*]] = atomicrmw fmin ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; GFX942-NEXT:    br label %[[ATOMICRMW_PHI]]
+; GFX942:       [[ATOMICRMW_PHI]]:
+; GFX942-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], %[[ATOMICRMW_PRIVATE]] ], [ [[TMP3]], %[[ATOMICRMW_GLOBAL]] ]
+; GFX942-NEXT:    br label %[[ATOMICRMW_END:.*]]
+; GFX942:       [[ATOMICRMW_END]]:
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX12-LABEL: define double @test_flat_atomicrmw_fmin_f64_agent(
 ; GFX12-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1289,10 +1289,10 @@ define double @test_flat_atomicrmw_fmin_f64_agent__noalias_addrspace_5(ptr %ptr,
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_flat_atomicrmw_fmin_f64_agent__noalias_addrspace_5(
-; GFX940-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_flat_atomicrmw_fmin_f64_agent__noalias_addrspace_5(
+; GFX942-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX12-LABEL: define double @test_flat_atomicrmw_fmin_f64_agent__noalias_addrspace_5(
 ; GFX12-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1384,10 +1384,10 @@ define double @test_flat_atomicrmw_fmin_f64_agent__noalias_addrspace_5__maybe_fi
 ; GFX90A:       [[ATOMICRMW_END]]:
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
-; GFX940-LABEL: define double @test_flat_atomicrmw_fmin_f64_agent__noalias_addrspace_5__maybe_fine_grained(
-; GFX940-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_flat_atomicrmw_fmin_f64_agent__noalias_addrspace_5__maybe_fine_grained(
+; GFX942-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX12-LABEL: define double @test_flat_atomicrmw_fmin_f64_agent__noalias_addrspace_5__maybe_fine_grained(
 ; GFX12-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1467,22 +1467,22 @@ define float @test_flat_atomicrmw_fmin_f32_agent__noalias_addrspace_5(ptr %ptr, 
 ; GFX90A:       [[ATOMICRMW_END]]:
 ; GFX90A-NEXT:    ret float [[LOADED_PHI]]
 ;
-; GFX940-LABEL: define float @test_flat_atomicrmw_fmin_f32_agent__noalias_addrspace_5(
-; GFX940-SAME: ptr [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR]], align 4
-; GFX940-NEXT:    br label %[[ATOMICRMW_START:.*]]
-; GFX940:       [[ATOMICRMW_START]]:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], %[[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
-; GFX940:       [[ATOMICRMW_END]]:
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_flat_atomicrmw_fmin_f32_agent__noalias_addrspace_5(
+; GFX942-SAME: ptr [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR]], align 4
+; GFX942-NEXT:    br label %[[ATOMICRMW_START:.*]]
+; GFX942:       [[ATOMICRMW_START]]:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], %[[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
+; GFX942:       [[ATOMICRMW_END]]:
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX12-LABEL: define float @test_flat_atomicrmw_fmin_f32_agent__noalias_addrspace_5(
 ; GFX12-SAME: ptr [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1598,24 +1598,24 @@ define double @test_flat_atomicrmw_fmax_f64_agent(ptr %ptr, double %value) {
 ; GFX90A:       [[ATOMICRMW_END]]:
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_flat_atomicrmw_fmax_f64_agent(
-; GFX940-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
-; GFX940-NEXT:    br i1 [[IS_PRIVATE]], label %[[ATOMICRMW_PRIVATE:.*]], label %[[ATOMICRMW_GLOBAL:.*]]
-; GFX940:       [[ATOMICRMW_PRIVATE]]:
-; GFX940-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
-; GFX940-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
-; GFX940-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED_PRIVATE]], double [[VALUE]])
-; GFX940-NEXT:    store double [[TMP2]], ptr addrspace(5) [[TMP1]], align 8
-; GFX940-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
-; GFX940:       [[ATOMICRMW_GLOBAL]]:
-; GFX940-NEXT:    [[TMP3:%.*]] = atomicrmw fmax ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
-; GFX940-NEXT:    br label %[[ATOMICRMW_PHI]]
-; GFX940:       [[ATOMICRMW_PHI]]:
-; GFX940-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], %[[ATOMICRMW_PRIVATE]] ], [ [[TMP3]], %[[ATOMICRMW_GLOBAL]] ]
-; GFX940-NEXT:    br label %[[ATOMICRMW_END:.*]]
-; GFX940:       [[ATOMICRMW_END]]:
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_flat_atomicrmw_fmax_f64_agent(
+; GFX942-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
+; GFX942-NEXT:    br i1 [[IS_PRIVATE]], label %[[ATOMICRMW_PRIVATE:.*]], label %[[ATOMICRMW_GLOBAL:.*]]
+; GFX942:       [[ATOMICRMW_PRIVATE]]:
+; GFX942-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; GFX942-NEXT:    [[LOADED_PRIVATE:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
+; GFX942-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED_PRIVATE]], double [[VALUE]])
+; GFX942-NEXT:    store double [[TMP2]], ptr addrspace(5) [[TMP1]], align 8
+; GFX942-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
+; GFX942:       [[ATOMICRMW_GLOBAL]]:
+; GFX942-NEXT:    [[TMP3:%.*]] = atomicrmw fmax ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; GFX942-NEXT:    br label %[[ATOMICRMW_PHI]]
+; GFX942:       [[ATOMICRMW_PHI]]:
+; GFX942-NEXT:    [[RES:%.*]] = phi double [ [[LOADED_PRIVATE]], %[[ATOMICRMW_PRIVATE]] ], [ [[TMP3]], %[[ATOMICRMW_GLOBAL]] ]
+; GFX942-NEXT:    br label %[[ATOMICRMW_END:.*]]
+; GFX942:       [[ATOMICRMW_END]]:
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX12-LABEL: define double @test_flat_atomicrmw_fmax_f64_agent(
 ; GFX12-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1697,10 +1697,10 @@ define double @test_flat_atomicrmw_fmax_f64_agent__noalias_addrspace_5(ptr %ptr,
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_flat_atomicrmw_fmax_f64_agent__noalias_addrspace_5(
-; GFX940-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_flat_atomicrmw_fmax_f64_agent__noalias_addrspace_5(
+; GFX942-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX12-LABEL: define double @test_flat_atomicrmw_fmax_f64_agent__noalias_addrspace_5(
 ; GFX12-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1792,10 +1792,10 @@ define double @test_flat_atomicrmw_fmax_f64_agent__noalias_addrspace_5__maybe_fi
 ; GFX90A:       [[ATOMICRMW_END]]:
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
-; GFX940-LABEL: define double @test_flat_atomicrmw_fmax_f64_agent__noalias_addrspace_5__maybe_fine_grained(
-; GFX940-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_flat_atomicrmw_fmax_f64_agent__noalias_addrspace_5__maybe_fine_grained(
+; GFX942-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr [[PTR]], double [[VALUE]] syncscope("agent") seq_cst, align 8, !noalias.addrspace [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX12-LABEL: define double @test_flat_atomicrmw_fmax_f64_agent__noalias_addrspace_5__maybe_fine_grained(
 ; GFX12-SAME: ptr [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1875,22 +1875,22 @@ define float @test_flat_atomicrmw_fmax_f32_agent__noalias_addrspace_5(ptr %ptr, 
 ; GFX90A:       [[ATOMICRMW_END]]:
 ; GFX90A-NEXT:    ret float [[LOADED_PHI]]
 ;
-; GFX940-LABEL: define float @test_flat_atomicrmw_fmax_f32_agent__noalias_addrspace_5(
-; GFX940-SAME: ptr [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR]], align 4
-; GFX940-NEXT:    br label %[[ATOMICRMW_START:.*]]
-; GFX940:       [[ATOMICRMW_START]]:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], %[[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
-; GFX940:       [[ATOMICRMW_END]]:
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_flat_atomicrmw_fmax_f32_agent__noalias_addrspace_5(
+; GFX942-SAME: ptr [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR]], align 4
+; GFX942-NEXT:    br label %[[ATOMICRMW_START:.*]]
+; GFX942:       [[ATOMICRMW_START]]:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], %[[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !noalias.addrspace [[META0]], !amdgpu.no.fine.grained.memory [[META1]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
+; GFX942:       [[ATOMICRMW_END]]:
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX12-LABEL: define float @test_flat_atomicrmw_fmax_f32_agent__noalias_addrspace_5(
 ; GFX12-SAME: ptr [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -2033,11 +2033,11 @@ define i32 @test_flat_atomicrmw_nand_i32_agent__noalias_addrspace_5(ptr %ptr, i3
 ; GFX90A: [[META3]] = !{!"foo", !"bar"}
 ; GFX90A: [[META4]] = !{!"bux", !"baz"}
 ;.
-; GFX940: [[META0]] = !{i32 5, i32 6}
-; GFX940: [[META1]] = !{}
-; GFX940: [[META2]] = !{[[META3:![0-9]+]], [[META4:![0-9]+]]}
-; GFX940: [[META3]] = !{!"foo", !"bar"}
-; GFX940: [[META4]] = !{!"bux", !"baz"}
+; GFX942: [[META0]] = !{i32 5, i32 6}
+; GFX942: [[META1]] = !{}
+; GFX942: [[META2]] = !{[[META3:![0-9]+]], [[META4:![0-9]+]]}
+; GFX942: [[META3]] = !{!"foo", !"bar"}
+; GFX942: [[META4]] = !{!"bux", !"baz"}
 ;.
 ; GFX12: [[META0]] = !{i32 5, i32 6}
 ; GFX12: [[META1]] = !{}

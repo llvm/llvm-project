@@ -27,7 +27,7 @@ reduce these impacts.
 The TypeSanitizer Algorithm
 ===========================
 For each TBAA type-access descriptor, encoded in LLVM IR using TBAA Metadata, the instrumentation 
-pass generates descriptor tales. Thus there is a unique pointer to each type (and access descriptor).
+pass generates descriptor tables. Thus there is a unique pointer to each type (and access descriptor).
 These tables are comdat (except for anonymous-namespace types), so the pointer values are unique 
 across the program.
 

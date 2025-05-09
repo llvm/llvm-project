@@ -12,9 +12,9 @@
 #include "call.h"
 #include "characteristics.h"
 #include "type.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
+#include "flang/Support/default-kinds.h"
 #include <memory>
 #include <optional>
 #include <string>

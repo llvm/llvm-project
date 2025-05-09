@@ -32,7 +32,7 @@
 // because the function does not return.
 DEFINE_COMPILERRT_PRIVATE_FUNCTION(do_abort)
   .cfi_startproc
-  .variant_pcs SYMBOL_NAME(do_abort)
+  .variant_pcs FUNC_SYMBOL(SYMBOL_NAME(do_abort))
   BTI_C
   stp  x29, x30, [sp, #-32]!
   cntd x0
@@ -42,14 +42,14 @@ DEFINE_COMPILERRT_PRIVATE_FUNCTION(do_abort)
   .cfi_offset w30, -24
   .cfi_offset w29, -32
   .cfi_offset 46, -16
-  bl  SYMBOL_NAME(__arm_sme_state)
+  bl  FUNC_SYMBOL(SYMBOL_NAME(__arm_sme_state))
   tbz  x0, #0, 2f
 1:
   smstop sm
 2:
   // We can't make this into a tail-call because the unwinder would
   // need to restore the value of VG.
-  bl  SYMBOL_NAME(abort)
+  bl  FUNC_SYMBOL(SYMBOL_NAME(abort))
   .cfi_endproc
 END_COMPILERRT_FUNCTION(do_abort)
 
@@ -107,7 +107,7 @@ DEFINE_COMPILERRT_FUNCTION(__arm_tpidr2_restore)
 1:
   ret
 2:
-  b  SYMBOL_NAME(do_abort)
+  b  FUNC_SYMBOL(SYMBOL_NAME(do_abort))
 END_COMPILERRT_FUNCTION(__arm_tpidr2_restore)
 
 DEFINE_COMPILERRT_FUNCTION(__arm_tpidr2_save)
@@ -148,7 +148,7 @@ DEFINE_COMPILERRT_FUNCTION(__arm_tpidr2_save)
 1:
   ret
 2:
-  b  SYMBOL_NAME(do_abort)
+  b  FUNC_SYMBOL(SYMBOL_NAME(do_abort))
 END_COMPILERRT_FUNCTION(__arm_tpidr2_save)
 
 DEFINE_COMPILERRT_FUNCTION(__arm_za_disable)
@@ -169,7 +169,7 @@ DEFINE_COMPILERRT_FUNCTION(__arm_za_disable)
   .cfi_def_cfa w29, 16
   .cfi_offset w30, -8
   .cfi_offset w29, -16
-  bl  SYMBOL_NAME(__arm_tpidr2_save)
+  bl  FUNC_SYMBOL(SYMBOL_NAME(__arm_tpidr2_save))
 
   // * Set TPIDR2_EL0 to null.
   msr TPIDR2_EL0, xzr
@@ -301,7 +301,7 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_save)
   ret
 
 3:
-  b       SYMBOL_NAME(do_abort)
+  b       FUNC_SYMBOL(SYMBOL_NAME(do_abort))
 END_COMPILERRT_FUNCTION(__arm_sme_save)
 
 DEFINE_COMPILERRT_FUNCTION(__arm_sme_restore)
@@ -365,7 +365,7 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_restore)
   ret
 
 3:
-  b       SYMBOL_NAME(do_abort)
+  b       FUNC_SYMBOL(SYMBOL_NAME(do_abort))
   .cfi_endproc
 END_COMPILERRT_FUNCTION(__arm_sme_restore)
 

@@ -17,7 +17,7 @@ target triple = "aarch64--linux"
 ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
 ; YAML-NEXT:   - Cost:            '-19'
 ; YAML-NEXT:   - String:          ' and with tree size '
-; YAML-NEXT:   - TreeSize:        '8'
+; YAML-NEXT:   - TreeSize:        '10'
 
 define i32 @test_select(ptr noalias nocapture readonly %blk1, ptr noalias nocapture readonly %blk2, i32 %lx, i32 %h) {
 ; CHECK-LABEL: @test_select(
@@ -228,9 +228,9 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; YAML-NEXT: Function:        test_unrolled_select
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-41'
+; YAML-NEXT:   - Cost:            '-44'
 ; YAML-NEXT:   - String:          ' and with tree size '
-; YAML-NEXT:   - TreeSize:        '10'
+; YAML-NEXT:   - TreeSize:        '12'
 
 define i32 @test_unrolled_select(ptr noalias nocapture readonly %blk1, ptr noalias nocapture readonly %blk2, i32 %lx, i32 %h, i32 %lim) #0 {
 ; CHECK-LABEL: @test_unrolled_select(

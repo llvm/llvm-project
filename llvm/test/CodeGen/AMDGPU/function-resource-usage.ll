@@ -24,7 +24,7 @@ define void @use_vcc() #1 {
 ; GCN: .set indirect_use_vcc.num_vgpr, max(41, use_vcc.num_vgpr)
 ; GCN: .set indirect_use_vcc.num_agpr, max(0, use_vcc.num_agpr)
 ; GCN: .set indirect_use_vcc.numbered_sgpr, max(34, use_vcc.numbered_sgpr)
-; GCN: .set indirect_use_vcc.private_seg_size, 16+(max(use_vcc.private_seg_size))
+; GCN: .set indirect_use_vcc.private_seg_size, 16+max(use_vcc.private_seg_size)
 ; GCN: .set indirect_use_vcc.uses_vcc, or(1, use_vcc.uses_vcc)
 ; GCN: .set indirect_use_vcc.uses_flat_scratch, or(0, use_vcc.uses_flat_scratch)
 ; GCN: .set indirect_use_vcc.has_dyn_sized_stack, or(0, use_vcc.has_dyn_sized_stack)
@@ -42,7 +42,7 @@ define void @indirect_use_vcc() #1 {
 ; GCN: .set indirect_2level_use_vcc_kernel.num_vgpr, max(32, indirect_use_vcc.num_vgpr)
 ; GCN: .set indirect_2level_use_vcc_kernel.num_agpr, max(0, indirect_use_vcc.num_agpr)
 ; GCN: .set indirect_2level_use_vcc_kernel.numbered_sgpr, max(33, indirect_use_vcc.numbered_sgpr)
-; GCN: .set indirect_2level_use_vcc_kernel.private_seg_size, 0+(max(indirect_use_vcc.private_seg_size))
+; GCN: .set indirect_2level_use_vcc_kernel.private_seg_size, 0+max(indirect_use_vcc.private_seg_size)
 ; GCN: .set indirect_2level_use_vcc_kernel.uses_vcc, or(1, indirect_use_vcc.uses_vcc)
 ; GCN: .set indirect_2level_use_vcc_kernel.uses_flat_scratch, or(1, indirect_use_vcc.uses_flat_scratch)
 ; GCN: .set indirect_2level_use_vcc_kernel.has_dyn_sized_stack, or(0, indirect_use_vcc.has_dyn_sized_stack)
@@ -78,7 +78,7 @@ define void @use_flat_scratch() #1 {
 ; GCN: .set indirect_use_flat_scratch.num_vgpr, max(41, use_flat_scratch.num_vgpr)
 ; GCN: .set indirect_use_flat_scratch.num_agpr, max(0, use_flat_scratch.num_agpr)
 ; GCN: .set indirect_use_flat_scratch.numbered_sgpr, max(34, use_flat_scratch.numbered_sgpr)
-; GCN: .set indirect_use_flat_scratch.private_seg_size, 16+(max(use_flat_scratch.private_seg_size))
+; GCN: .set indirect_use_flat_scratch.private_seg_size, 16+max(use_flat_scratch.private_seg_size)
 ; GCN: .set indirect_use_flat_scratch.uses_vcc, or(1, use_flat_scratch.uses_vcc)
 ; GCN: .set indirect_use_flat_scratch.uses_flat_scratch, or(0, use_flat_scratch.uses_flat_scratch)
 ; GCN: .set indirect_use_flat_scratch.has_dyn_sized_stack, or(0, use_flat_scratch.has_dyn_sized_stack)
@@ -96,7 +96,7 @@ define void @indirect_use_flat_scratch() #1 {
 ; GCN: .set indirect_2level_use_flat_scratch_kernel.num_vgpr, max(32, indirect_use_flat_scratch.num_vgpr)
 ; GCN: .set indirect_2level_use_flat_scratch_kernel.num_agpr, max(0, indirect_use_flat_scratch.num_agpr)
 ; GCN: .set indirect_2level_use_flat_scratch_kernel.numbered_sgpr, max(33, indirect_use_flat_scratch.numbered_sgpr)
-; GCN: .set indirect_2level_use_flat_scratch_kernel.private_seg_size, 0+(max(indirect_use_flat_scratch.private_seg_size))
+; GCN: .set indirect_2level_use_flat_scratch_kernel.private_seg_size, 0+max(indirect_use_flat_scratch.private_seg_size)
 ; GCN: .set indirect_2level_use_flat_scratch_kernel.uses_vcc, or(1, indirect_use_flat_scratch.uses_vcc)
 ; GCN: .set indirect_2level_use_flat_scratch_kernel.uses_flat_scratch, or(1, indirect_use_flat_scratch.uses_flat_scratch)
 ; GCN: .set indirect_2level_use_flat_scratch_kernel.has_dyn_sized_stack, or(0, indirect_use_flat_scratch.has_dyn_sized_stack)
@@ -133,7 +133,7 @@ define void @use_10_vgpr() #1 {
 ; GCN: .set indirect_use_10_vgpr.num_vgpr, max(41, use_10_vgpr.num_vgpr)
 ; GCN: .set indirect_use_10_vgpr.num_agpr, max(0, use_10_vgpr.num_agpr)
 ; GCN: .set indirect_use_10_vgpr.numbered_sgpr, max(34, use_10_vgpr.numbered_sgpr)
-; GCN: .set indirect_use_10_vgpr.private_seg_size, 16+(max(use_10_vgpr.private_seg_size))
+; GCN: .set indirect_use_10_vgpr.private_seg_size, 16+max(use_10_vgpr.private_seg_size)
 ; GCN: .set indirect_use_10_vgpr.uses_vcc, or(1, use_10_vgpr.uses_vcc)
 ; GCN: .set indirect_use_10_vgpr.uses_flat_scratch, or(0, use_10_vgpr.uses_flat_scratch)
 ; GCN: .set indirect_use_10_vgpr.has_dyn_sized_stack, or(0, use_10_vgpr.has_dyn_sized_stack)
@@ -151,7 +151,7 @@ define void @indirect_use_10_vgpr() #0 {
 ; GCN:	.set indirect_2_level_use_10_vgpr.num_vgpr, max(32, indirect_use_10_vgpr.num_vgpr)
 ; GCN:	.set indirect_2_level_use_10_vgpr.num_agpr, max(0, indirect_use_10_vgpr.num_agpr)
 ; GCN:	.set indirect_2_level_use_10_vgpr.numbered_sgpr, max(33, indirect_use_10_vgpr.numbered_sgpr)
-; GCN:	.set indirect_2_level_use_10_vgpr.private_seg_size, 0+(max(indirect_use_10_vgpr.private_seg_size))
+; GCN:	.set indirect_2_level_use_10_vgpr.private_seg_size, 0+max(indirect_use_10_vgpr.private_seg_size)
 ; GCN:	.set indirect_2_level_use_10_vgpr.uses_vcc, or(1, indirect_use_10_vgpr.uses_vcc)
 ; GCN:	.set indirect_2_level_use_10_vgpr.uses_flat_scratch, or(1, indirect_use_10_vgpr.uses_flat_scratch)
 ; GCN:	.set indirect_2_level_use_10_vgpr.has_dyn_sized_stack, or(0, indirect_use_10_vgpr.has_dyn_sized_stack)
@@ -187,7 +187,7 @@ define void @use_50_vgpr() #1 {
 ; GCN:	.set indirect_use_50_vgpr.num_vgpr, max(41, use_50_vgpr.num_vgpr)
 ; GCN:	.set indirect_use_50_vgpr.num_agpr, max(0, use_50_vgpr.num_agpr)
 ; GCN:	.set indirect_use_50_vgpr.numbered_sgpr, max(34, use_50_vgpr.numbered_sgpr)
-; GCN:	.set indirect_use_50_vgpr.private_seg_size, 16+(max(use_50_vgpr.private_seg_size))
+; GCN:	.set indirect_use_50_vgpr.private_seg_size, 16+max(use_50_vgpr.private_seg_size)
 ; GCN:	.set indirect_use_50_vgpr.uses_vcc, or(1, use_50_vgpr.uses_vcc)
 ; GCN:	.set indirect_use_50_vgpr.uses_flat_scratch, or(0, use_50_vgpr.uses_flat_scratch)
 ; GCN:	.set indirect_use_50_vgpr.has_dyn_sized_stack, or(0, use_50_vgpr.has_dyn_sized_stack)
@@ -202,18 +202,18 @@ define void @indirect_use_50_vgpr() #0 {
 }
 
 ; GCN-LABEL: {{^}}use_80_sgpr:
-; GCN:	.set use_80_sgpr.num_vgpr, 1
+; GCN:	.set use_80_sgpr.num_vgpr, 0
 ; GCN:	.set use_80_sgpr.num_agpr, 0
 ; GCN:	.set use_80_sgpr.numbered_sgpr, 80
-; GCN:	.set use_80_sgpr.private_seg_size, 8
+; GCN:	.set use_80_sgpr.private_seg_size, 0
 ; GCN:	.set use_80_sgpr.uses_vcc, 0
 ; GCN:	.set use_80_sgpr.uses_flat_scratch, 0
 ; GCN:	.set use_80_sgpr.has_dyn_sized_stack, 0
 ; GCN:	.set use_80_sgpr.has_recursion, 0
 ; GCN:	.set use_80_sgpr.has_indirect_call, 0
 ; GCN: TotalNumSgprs: 84
-; GCN: NumVgprs: 1
-; GCN: ScratchSize: 8
+; GCN: NumVgprs: 0
+; GCN: ScratchSize: 0
 define void @use_80_sgpr() #1 {
   call void asm sideeffect "", "~{s79}"() #0
   ret void
@@ -223,7 +223,7 @@ define void @use_80_sgpr() #1 {
 ; GCN:	.set indirect_use_80_sgpr.num_vgpr, max(41, use_80_sgpr.num_vgpr)
 ; GCN:	.set indirect_use_80_sgpr.num_agpr, max(0, use_80_sgpr.num_agpr)
 ; GCN:	.set indirect_use_80_sgpr.numbered_sgpr, max(34, use_80_sgpr.numbered_sgpr)
-; GCN:	.set indirect_use_80_sgpr.private_seg_size, 16+(max(use_80_sgpr.private_seg_size))
+; GCN:	.set indirect_use_80_sgpr.private_seg_size, 16+max(use_80_sgpr.private_seg_size)
 ; GCN:	.set indirect_use_80_sgpr.uses_vcc, or(1, use_80_sgpr.uses_vcc)
 ; GCN:	.set indirect_use_80_sgpr.uses_flat_scratch, or(0, use_80_sgpr.uses_flat_scratch)
 ; GCN:	.set indirect_use_80_sgpr.has_dyn_sized_stack, or(0, use_80_sgpr.has_dyn_sized_stack)
@@ -231,7 +231,7 @@ define void @use_80_sgpr() #1 {
 ; GCN:	.set indirect_use_80_sgpr.has_indirect_call, or(0, use_80_sgpr.has_indirect_call)
 ; GCN: TotalNumSgprs: 84
 ; GCN: NumVgprs: 41
-; GCN: ScratchSize: 24
+; GCN: ScratchSize: 16
 define void @indirect_use_80_sgpr() #1 {
   call void @use_80_sgpr()
   ret void
@@ -241,7 +241,7 @@ define void @indirect_use_80_sgpr() #1 {
 ; GCN:	.set indirect_2_level_use_80_sgpr.num_vgpr, max(32, indirect_use_80_sgpr.num_vgpr)
 ; GCN:	.set indirect_2_level_use_80_sgpr.num_agpr, max(0, indirect_use_80_sgpr.num_agpr)
 ; GCN:	.set indirect_2_level_use_80_sgpr.numbered_sgpr, max(33, indirect_use_80_sgpr.numbered_sgpr)
-; GCN:	.set indirect_2_level_use_80_sgpr.private_seg_size, 0+(max(indirect_use_80_sgpr.private_seg_size))
+; GCN:	.set indirect_2_level_use_80_sgpr.private_seg_size, 0+max(indirect_use_80_sgpr.private_seg_size)
 ; GCN:	.set indirect_2_level_use_80_sgpr.uses_vcc, or(1, indirect_use_80_sgpr.uses_vcc)
 ; GCN:	.set indirect_2_level_use_80_sgpr.uses_flat_scratch, or(1, indirect_use_80_sgpr.uses_flat_scratch)
 ; GCN:	.set indirect_2_level_use_80_sgpr.has_dyn_sized_stack, or(0, indirect_use_80_sgpr.has_dyn_sized_stack)
@@ -249,7 +249,7 @@ define void @indirect_use_80_sgpr() #1 {
 ; GCN:	.set indirect_2_level_use_80_sgpr.has_indirect_call, or(0, indirect_use_80_sgpr.has_indirect_call)
 ; GCN: TotalNumSgprs: 86
 ; GCN: NumVgprs: 41
-; GCN: ScratchSize: 24
+; GCN: ScratchSize: 16
 define amdgpu_kernel void @indirect_2_level_use_80_sgpr() #0 {
   call void @indirect_use_80_sgpr()
   ret void
@@ -297,7 +297,7 @@ define void @use_stack1() #1 {
 ; GCN:	.set indirect_use_stack.num_vgpr, max(41, use_stack0.num_vgpr)
 ; GCN:	.set indirect_use_stack.num_agpr, max(0, use_stack0.num_agpr)
 ; GCN:	.set indirect_use_stack.numbered_sgpr, max(34, use_stack0.numbered_sgpr)
-; GCN:	.set indirect_use_stack.private_seg_size, 80+(max(use_stack0.private_seg_size))
+; GCN:	.set indirect_use_stack.private_seg_size, 80+max(use_stack0.private_seg_size)
 ; GCN:	.set indirect_use_stack.uses_vcc, or(1, use_stack0.uses_vcc)
 ; GCN:	.set indirect_use_stack.uses_flat_scratch, or(0, use_stack0.uses_flat_scratch)
 ; GCN:	.set indirect_use_stack.has_dyn_sized_stack, or(0, use_stack0.has_dyn_sized_stack)
@@ -317,7 +317,7 @@ define void @indirect_use_stack() #1 {
 ; GCN:	.set indirect_2_level_use_stack.num_vgpr, max(32, indirect_use_stack.num_vgpr)
 ; GCN:	.set indirect_2_level_use_stack.num_agpr, max(0, indirect_use_stack.num_agpr)
 ; GCN:	.set indirect_2_level_use_stack.numbered_sgpr, max(33, indirect_use_stack.numbered_sgpr)
-; GCN:	.set indirect_2_level_use_stack.private_seg_size, 0+(max(indirect_use_stack.private_seg_size))
+; GCN:	.set indirect_2_level_use_stack.private_seg_size, 0+max(indirect_use_stack.private_seg_size)
 ; GCN:	.set indirect_2_level_use_stack.uses_vcc, or(1, indirect_use_stack.uses_vcc)
 ; GCN:	.set indirect_2_level_use_stack.uses_flat_scratch, or(1, indirect_use_stack.uses_flat_scratch)
 ; GCN:	.set indirect_2_level_use_stack.has_dyn_sized_stack, or(0, indirect_use_stack.has_dyn_sized_stack)
@@ -336,14 +336,14 @@ define amdgpu_kernel void @indirect_2_level_use_stack() #0 {
 ; GCN-LABEL: {{^}}multi_call_use_use_stack:
 ; GCN:	.set multi_call_use_use_stack.num_vgpr, max(41, use_stack0.num_vgpr, use_stack1.num_vgpr)
 ; GCN:	.set multi_call_use_use_stack.num_agpr, max(0, use_stack0.num_agpr, use_stack1.num_agpr)
-; GCN:	.set multi_call_use_use_stack.numbered_sgpr, max(44, use_stack0.numbered_sgpr, use_stack1.numbered_sgpr)
-; GCN:	.set multi_call_use_use_stack.private_seg_size, 0+(max(use_stack0.private_seg_size, use_stack1.private_seg_size))
+; GCN:	.set multi_call_use_use_stack.numbered_sgpr, max(52, use_stack0.numbered_sgpr, use_stack1.numbered_sgpr)
+; GCN:	.set multi_call_use_use_stack.private_seg_size, 0+max(use_stack0.private_seg_size, use_stack1.private_seg_size)
 ; GCN:	.set multi_call_use_use_stack.uses_vcc, or(1, use_stack0.uses_vcc, use_stack1.uses_vcc)
 ; GCN:	.set multi_call_use_use_stack.uses_flat_scratch, or(1, use_stack0.uses_flat_scratch, use_stack1.uses_flat_scratch)
 ; GCN:	.set multi_call_use_use_stack.has_dyn_sized_stack, or(0, use_stack0.has_dyn_sized_stack, use_stack1.has_dyn_sized_stack)
 ; GCN:	.set multi_call_use_use_stack.has_recursion, or(0, use_stack0.has_recursion, use_stack1.has_recursion)
 ; GCN:	.set multi_call_use_use_stack.has_indirect_call, or(0, use_stack0.has_indirect_call, use_stack1.has_indirect_call)
-; GCN: TotalNumSgprs: 50
+; GCN: TotalNumSgprs: 58
 ; GCN: NumVgprs: 41
 ; GCN: ScratchSize: 2052
 define amdgpu_kernel void @multi_call_use_use_stack() #0 {
@@ -357,8 +357,8 @@ declare void @external() #0
 ; GCN-LABEL: {{^}}multi_call_with_external:
 ; GCN:	.set multi_call_with_external.num_vgpr, max(41, amdgpu.max_num_vgpr)
 ; GCN:	.set multi_call_with_external.num_agpr, max(0, amdgpu.max_num_agpr)
-; GCN:	.set multi_call_with_external.numbered_sgpr, max(44, amdgpu.max_num_sgpr)
-; GCN:	.set multi_call_with_external.private_seg_size, 0+(max(use_stack0.private_seg_size, use_stack1.private_seg_size))
+; GCN:	.set multi_call_with_external.numbered_sgpr, max(52, amdgpu.max_num_sgpr)
+; GCN:	.set multi_call_with_external.private_seg_size, 0+max(use_stack0.private_seg_size, use_stack1.private_seg_size)
 ; GCN:	.set multi_call_with_external.uses_vcc, 1
 ; GCN:	.set multi_call_with_external.uses_flat_scratch, 1
 ; GCN:	.set multi_call_with_external.has_dyn_sized_stack, 1
@@ -377,8 +377,8 @@ define amdgpu_kernel void @multi_call_with_external() #0 {
 ; GCN-LABEL: {{^}}multi_call_with_external_and_duplicates:
 ; GCN:	.set multi_call_with_external_and_duplicates.num_vgpr, max(41, amdgpu.max_num_vgpr)
 ; GCN:	.set multi_call_with_external_and_duplicates.num_agpr, max(0, amdgpu.max_num_agpr)
-; GCN:	.set multi_call_with_external_and_duplicates.numbered_sgpr, max(46, amdgpu.max_num_sgpr)
-; GCN:	.set multi_call_with_external_and_duplicates.private_seg_size, 0+(max(use_stack0.private_seg_size, use_stack1.private_seg_size))
+; GCN:	.set multi_call_with_external_and_duplicates.numbered_sgpr, max(54, amdgpu.max_num_sgpr)
+; GCN:	.set multi_call_with_external_and_duplicates.private_seg_size, 0+max(use_stack0.private_seg_size, use_stack1.private_seg_size)
 ; GCN:	.set multi_call_with_external_and_duplicates.uses_vcc, 1
 ; GCN:	.set multi_call_with_external_and_duplicates.uses_flat_scratch, 1
 ; GCN:	.set multi_call_with_external_and_duplicates.has_dyn_sized_stack, 1
@@ -467,7 +467,7 @@ ret:
 ; GCN:  .set usage_direct_recursion.num_vgpr, max(32, direct_recursion_use_stack.num_vgpr)
 ; GCN:  .set usage_direct_recursion.num_agpr, max(0, direct_recursion_use_stack.num_agpr)
 ; GCN:  .set usage_direct_recursion.numbered_sgpr, max(33, direct_recursion_use_stack.numbered_sgpr)
-; GCN:  .set usage_direct_recursion.private_seg_size, 0+(max(direct_recursion_use_stack.private_seg_size))
+; GCN:  .set usage_direct_recursion.private_seg_size, 0+max(direct_recursion_use_stack.private_seg_size)
 ; GCN:  .set usage_direct_recursion.uses_vcc, or(1, direct_recursion_use_stack.uses_vcc)
 ; GCN:  .set usage_direct_recursion.uses_flat_scratch, or(1, direct_recursion_use_stack.uses_flat_scratch)
 ; GCN:  .set usage_direct_recursion.has_dyn_sized_stack, or(0, direct_recursion_use_stack.has_dyn_sized_stack)
@@ -485,15 +485,15 @@ define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
 ; GCN: .set multi_stage_recurse2.num_vgpr, max(43, multi_stage_recurse1.num_vgpr)
 ; GCN: .set multi_stage_recurse2.num_agpr, max(0, multi_stage_recurse1.num_agpr)
 ; GCN: .set multi_stage_recurse2.numbered_sgpr, max(34, multi_stage_recurse1.numbered_sgpr)
-; GCN: .set multi_stage_recurse2.private_seg_size, 16+(max(multi_stage_recurse1.private_seg_size))
+; GCN: .set multi_stage_recurse2.private_seg_size, 16+max(multi_stage_recurse1.private_seg_size)
 ; GCN: .set multi_stage_recurse2.uses_vcc, or(1, multi_stage_recurse1.uses_vcc)
 ; GCN: .set multi_stage_recurse2.uses_flat_scratch, or(0, multi_stage_recurse1.uses_flat_scratch)
 ; GCN: .set multi_stage_recurse2.has_dyn_sized_stack, or(0, multi_stage_recurse1.has_dyn_sized_stack)
 ; GCN: .set multi_stage_recurse2.has_recursion, or(1, multi_stage_recurse1.has_recursion)
 ; GCN: .set multi_stage_recurse2.has_indirect_call, or(0, multi_stage_recurse1.has_indirect_call)
-; GCN: TotalNumSgprs: multi_stage_recurse2.numbered_sgpr+(extrasgprs(multi_stage_recurse2.uses_vcc, multi_stage_recurse2.uses_flat_scratch, 1))
+; GCN: TotalNumSgprs: multi_stage_recurse2.numbered_sgpr+extrasgprs(multi_stage_recurse2.uses_vcc, multi_stage_recurse2.uses_flat_scratch, 1)
 ; GCN: NumVgprs: max(43, multi_stage_recurse1.num_vgpr)
-; GCN: ScratchSize: 16+(max(multi_stage_recurse1.private_seg_size))
+; GCN: ScratchSize: 16+max(multi_stage_recurse1.private_seg_size)
 ; GCN-LABEL: {{^}}multi_stage_recurse1:
 ; GCN: .set multi_stage_recurse1.num_vgpr, max(48, amdgpu.max_num_vgpr)
 ; GCN: .set multi_stage_recurse1.num_agpr, max(0, amdgpu.max_num_agpr)
@@ -522,7 +522,7 @@ define void @multi_stage_recurse2(i32 %val) #2 {
 ; GCN: .set usage_multi_stage_recurse.num_vgpr, max(32, multi_stage_recurse1.num_vgpr)
 ; GCN: .set usage_multi_stage_recurse.num_agpr, max(0, multi_stage_recurse1.num_agpr)
 ; GCN: .set usage_multi_stage_recurse.numbered_sgpr, max(33, multi_stage_recurse1.numbered_sgpr)
-; GCN: .set usage_multi_stage_recurse.private_seg_size, 0+(max(multi_stage_recurse1.private_seg_size))
+; GCN: .set usage_multi_stage_recurse.private_seg_size, 0+max(multi_stage_recurse1.private_seg_size)
 ; GCN: .set usage_multi_stage_recurse.uses_vcc, or(1, multi_stage_recurse1.uses_vcc)
 ; GCN: .set usage_multi_stage_recurse.uses_flat_scratch, or(1, multi_stage_recurse1.uses_flat_scratch)
 ; GCN: .set usage_multi_stage_recurse.has_dyn_sized_stack, or(0, multi_stage_recurse1.has_dyn_sized_stack)
@@ -540,15 +540,15 @@ define amdgpu_kernel void @usage_multi_stage_recurse(i32 %n) #0 {
 ; GCN: .set multi_stage_recurse_noattr2.num_vgpr, max(41, multi_stage_recurse_noattr1.num_vgpr)
 ; GCN: .set multi_stage_recurse_noattr2.num_agpr, max(0, multi_stage_recurse_noattr1.num_agpr)
 ; GCN: .set multi_stage_recurse_noattr2.numbered_sgpr, max(54, multi_stage_recurse_noattr1.numbered_sgpr)
-; GCN: .set multi_stage_recurse_noattr2.private_seg_size, 16+(max(multi_stage_recurse_noattr1.private_seg_size))
+; GCN: .set multi_stage_recurse_noattr2.private_seg_size, 16+max(multi_stage_recurse_noattr1.private_seg_size)
 ; GCN: .set multi_stage_recurse_noattr2.uses_vcc, or(1, multi_stage_recurse_noattr1.uses_vcc)
 ; GCN: .set multi_stage_recurse_noattr2.uses_flat_scratch, or(0, multi_stage_recurse_noattr1.uses_flat_scratch)
 ; GCN: .set multi_stage_recurse_noattr2.has_dyn_sized_stack, or(0, multi_stage_recurse_noattr1.has_dyn_sized_stack)
 ; GCN: .set multi_stage_recurse_noattr2.has_recursion, or(0, multi_stage_recurse_noattr1.has_recursion)
 ; GCN: .set multi_stage_recurse_noattr2.has_indirect_call, or(0, multi_stage_recurse_noattr1.has_indirect_call)
-; GCN: TotalNumSgprs: multi_stage_recurse_noattr2.numbered_sgpr+(extrasgprs(multi_stage_recurse_noattr2.uses_vcc, multi_stage_recurse_noattr2.uses_flat_scratch, 1))
+; GCN: TotalNumSgprs: multi_stage_recurse_noattr2.numbered_sgpr+extrasgprs(multi_stage_recurse_noattr2.uses_vcc, multi_stage_recurse_noattr2.uses_flat_scratch, 1)
 ; GCN: NumVgprs: max(41, multi_stage_recurse_noattr1.num_vgpr)
-; GCN: ScratchSize: 16+(max(multi_stage_recurse_noattr1.private_seg_size))
+; GCN: ScratchSize: 16+max(multi_stage_recurse_noattr1.private_seg_size)
 ; GCN-LABEL: {{^}}multi_stage_recurse_noattr1:
 ; GCN: .set multi_stage_recurse_noattr1.num_vgpr, max(41, amdgpu.max_num_vgpr)
 ; GCN: .set multi_stage_recurse_noattr1.num_agpr, max(0, amdgpu.max_num_agpr)
@@ -577,7 +577,7 @@ define void @multi_stage_recurse_noattr2(i32 %val) #0 {
 ; GCN: .set usage_multi_stage_recurse_noattrs.num_vgpr, max(32, multi_stage_recurse_noattr1.num_vgpr)
 ; GCN: .set usage_multi_stage_recurse_noattrs.num_agpr, max(0, multi_stage_recurse_noattr1.num_agpr)
 ; GCN: .set usage_multi_stage_recurse_noattrs.numbered_sgpr, max(33, multi_stage_recurse_noattr1.numbered_sgpr)
-; GCN: .set usage_multi_stage_recurse_noattrs.private_seg_size, 0+(max(multi_stage_recurse_noattr1.private_seg_size))
+; GCN: .set usage_multi_stage_recurse_noattrs.private_seg_size, 0+max(multi_stage_recurse_noattr1.private_seg_size)
 ; GCN: .set usage_multi_stage_recurse_noattrs.uses_vcc, or(1, multi_stage_recurse_noattr1.uses_vcc)
 ; GCN: .set usage_multi_stage_recurse_noattrs.uses_flat_scratch, or(1, multi_stage_recurse_noattr1.uses_flat_scratch)
 ; GCN: .set usage_multi_stage_recurse_noattrs.has_dyn_sized_stack, or(0, multi_stage_recurse_noattr1.has_dyn_sized_stack)
@@ -594,8 +594,8 @@ define amdgpu_kernel void @usage_multi_stage_recurse_noattrs(i32 %n) #0 {
 ; GCN-LABEL: {{^}}multi_call_with_multi_stage_recurse:
 ; GCN:  .set multi_call_with_multi_stage_recurse.num_vgpr, max(41, use_stack0.num_vgpr, use_stack1.num_vgpr, multi_stage_recurse1.num_vgpr)
 ; GCN:  .set multi_call_with_multi_stage_recurse.num_agpr, max(0, use_stack0.num_agpr, use_stack1.num_agpr, multi_stage_recurse1.num_agpr)
-; GCN:  .set multi_call_with_multi_stage_recurse.numbered_sgpr, max(45, use_stack0.numbered_sgpr, use_stack1.numbered_sgpr, multi_stage_recurse1.numbered_sgpr)
-; GCN:  .set multi_call_with_multi_stage_recurse.private_seg_size, 0+(max(use_stack0.private_seg_size, use_stack1.private_seg_size, multi_stage_recurse1.private_seg_size))
+; GCN:  .set multi_call_with_multi_stage_recurse.numbered_sgpr, max(53, use_stack0.numbered_sgpr, use_stack1.numbered_sgpr, multi_stage_recurse1.numbered_sgpr)
+; GCN:  .set multi_call_with_multi_stage_recurse.private_seg_size, 0+max(use_stack0.private_seg_size, use_stack1.private_seg_size, multi_stage_recurse1.private_seg_size)
 ; GCN:  .set multi_call_with_multi_stage_recurse.uses_vcc, or(1, use_stack0.uses_vcc, use_stack1.uses_vcc, multi_stage_recurse1.uses_vcc)
 ; GCN:  .set multi_call_with_multi_stage_recurse.uses_flat_scratch, or(1, use_stack0.uses_flat_scratch, use_stack1.uses_flat_scratch, multi_stage_recurse1.uses_flat_scratch)
 ; GCN:  .set multi_call_with_multi_stage_recurse.has_dyn_sized_stack, or(0, use_stack0.has_dyn_sized_stack, use_stack1.has_dyn_sized_stack, multi_stage_recurse1.has_dyn_sized_stack)

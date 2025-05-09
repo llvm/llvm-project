@@ -57,14 +57,8 @@ private:
 
 public:
   // constructor and reset functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI weibull_distribution() : weibull_distribution(1) {}
-  _LIBCPP_HIDE_FROM_ABI explicit weibull_distribution(result_type __a, result_type __b = 1)
-      : __p_(param_type(__a, __b)) {}
-#else
   _LIBCPP_HIDE_FROM_ABI explicit weibull_distribution(result_type __a = 1, result_type __b = 1)
       : __p_(param_type(__a, __b)) {}
-#endif
   _LIBCPP_HIDE_FROM_ABI explicit weibull_distribution(const param_type& __p) : __p_(__p) {}
   _LIBCPP_HIDE_FROM_ABI void reset() {}
 

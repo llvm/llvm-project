@@ -1134,3 +1134,10 @@ struct S {
 static_assert((S{} << 11) == a);
 // expected-error@-1 {{use of undeclared identifier 'a'}}
 }
+
+namespace GH135522 {
+struct S {
+  auto f(this auto) -> S;
+  bool g() { return f(); } // expected-error {{no viable conversion from returned value of type 'S' to function return type 'bool'}}
+};
+}

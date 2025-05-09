@@ -767,7 +767,7 @@ void PPCInstrInfo::genAlternativeCodeSequence(
     MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
   switch (Pattern) {
   case PPCMachineCombinerPattern::REASSOC_XY_AMM_BMM:
   case PPCMachineCombinerPattern::REASSOC_XMM_AMM_BMM:
@@ -787,7 +787,7 @@ void PPCInstrInfo::reassociateFMA(
     MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
   MachineFunction *MF = Root.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -1675,8 +1675,8 @@ static unsigned getCRBitValue(unsigned CRBit) {
 
 void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
-                               const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc,
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
                                bool RenamableDest, bool RenamableSrc) const {
   // We can end up with self copies and similar things as a result of VSX copy
   // legalization. Promote them here.
@@ -1757,6 +1757,23 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
              PPC::SPERCRegClass.contains(DestReg)) {
     BuildMI(MBB, I, DL, get(PPC::EFDCFS), DestReg).addReg(SrcReg);
     getKillRegState(KillSrc);
+    return;
+  } else if ((PPC::G8RCRegClass.contains(DestReg) ||
+              PPC::GPRCRegClass.contains(DestReg)) &&
+             SrcReg == PPC::CARRY) {
+    bool Is64Bit = PPC::G8RCRegClass.contains(DestReg);
+    BuildMI(MBB, I, DL, get(Is64Bit ? PPC::MFSPR8 : PPC::MFSPR), DestReg)
+        .addImm(1)
+        .addReg(PPC::CARRY, RegState::Implicit);
+    return;
+  } else if ((PPC::G8RCRegClass.contains(SrcReg) ||
+              PPC::GPRCRegClass.contains(SrcReg)) &&
+             DestReg == PPC::CARRY) {
+    bool Is64Bit = PPC::G8RCRegClass.contains(SrcReg);
+    BuildMI(MBB, I, DL, get(Is64Bit ? PPC::MTSPR8 : PPC::MTSPR))
+        .addImm(1)
+        .addReg(SrcReg)
+        .addReg(PPC::CARRY, RegState::ImplicitDefine);
     return;
   }
 
@@ -2926,7 +2943,8 @@ bool PPCInstrInfo::shouldClusterMemOps(
     return false;
 
   int64_t Offset1 = 0, Offset2 = 0;
-  LocationSize Width1 = 0, Width2 = 0;
+  LocationSize Width1 = LocationSize::precise(0),
+               Width2 = LocationSize::precise(0);
   const MachineOperand *Base1 = nullptr, *Base2 = nullptr;
   if (!getMemOperandWithOffsetWidth(FirstLdSt, Base1, Offset1, Width1, TRI) ||
       !getMemOperandWithOffsetWidth(SecondLdSt, Base2, Offset2, Width2, TRI) ||
@@ -5427,8 +5445,8 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   --Iter;
   MachineInstrBuilder MIBuilder(*Iter->getMF(), Iter);
   for (unsigned i = 1; i < MI->getNumOperands(); i++) {
-    if (PromoteRegs.find(i) != PromoteRegs.end())
-      MIBuilder.addReg(PromoteRegs[i], RegState::Kill);
+    if (auto It = PromoteRegs.find(i); It != PromoteRegs.end())
+      MIBuilder.addReg(It->second, RegState::Kill);
     else
       Iter->addOperand(MI->getOperand(i));
   }
@@ -5781,7 +5799,8 @@ bool PPCInstrInfo::areMemAccessesTriviallyDisjoint(
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
-  LocationSize WidthA = 0, WidthB = 0;
+  LocationSize WidthA = LocationSize::precise(0),
+               WidthB = LocationSize::precise(0);
   if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
       getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {

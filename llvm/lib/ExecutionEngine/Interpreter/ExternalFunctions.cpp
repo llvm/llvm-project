@@ -485,7 +485,7 @@ static GenericValue lle_X_fprintf(FunctionType *FT,
   char Buffer[10000];
   std::vector<GenericValue> NewArgs;
   NewArgs.push_back(PTOGV(Buffer));
-  NewArgs.insert(NewArgs.end(), Args.begin()+1, Args.end());
+  llvm::append_range(NewArgs, llvm::drop_begin(Args));
   GenericValue GV = lle_X_sprintf(FT, NewArgs);
 
   fputs(Buffer, (FILE *) GVTOP(Args[0]));

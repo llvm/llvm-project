@@ -652,14 +652,14 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8_with_select(ptr addrspace(1) noa
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 32
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v1
-; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v2, v2
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v2
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v1
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, 32, v2, vcc
+; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v1, v3
+; GFX9-GISEL-NEXT:    v_cndmask_b32_sdwa v1, v2, v1, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX9-GISEL-NEXT:    global_store_byte v0, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i8, ptr addrspace(1) %arrayidx, align 1
@@ -760,16 +760,16 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i16_with_select(ptr addrspace(1) no
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 32
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    global_load_ubyte v1, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    global_load_ubyte v2, v0, s[2:3] offset:1
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v1, v2, 8, v1
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
-; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v2, v2
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, 32, v2, vcc
+; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v1, v2
+; GFX9-GISEL-NEXT:    v_cndmask_b32_sdwa v1, v3, v1, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-GISEL-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i16, ptr addrspace(1) %arrayidx, align 1
@@ -1064,8 +1064,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64_with_select(ptr addrspace(1) no
 ; GFX9-GISEL-NEXT:    global_load_ubyte v4, v1, s[2:3] offset:3
 ; GFX9-GISEL-NEXT:    global_load_ubyte v5, v1, s[2:3] offset:4
 ; GFX9-GISEL-NEXT:    global_load_ubyte v6, v1, s[2:3] offset:5
-; GFX9-GISEL-NEXT:    global_load_ubyte v7, v1, s[2:3] offset:6
-; GFX9-GISEL-NEXT:    global_load_ubyte v8, v1, s[2:3] offset:7
+; GFX9-GISEL-NEXT:    global_load_ubyte v7, v1, s[2:3] offset:7
+; GFX9-GISEL-NEXT:    global_load_ubyte v8, v1, s[2:3] offset:6
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(6)
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v2, 8, v0
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(5)
@@ -1076,15 +1076,15 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i64_with_select(ptr addrspace(1) no
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v4, v6, 8, v5
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v7
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 24, v7
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v8, 24, v5
-; GFX9-GISEL-NEXT:    v_or3_b32 v3, v0, v4, 0
-; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v0, v2
-; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v4, v3
-; GFX9-GISEL-NEXT:    v_add_u32_e32 v0, 32, v0
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v8
+; GFX9-GISEL-NEXT:    v_or3_b32 v3, v5, v6, v4
+; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v4, v2
+; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v0, v3
+; GFX9-GISEL-NEXT:    v_add_u32_e32 v4, 32, v4
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
-; GFX9-GISEL-NEXT:    v_min_u32_e32 v0, v4, v0
+; GFX9-GISEL-NEXT:    v_min_u32_e32 v0, v0, v4
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, 64, v0, vcc
 ; GFX9-GISEL-NEXT:    global_store_dwordx2 v1, v[0:1], s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
@@ -1827,7 +1827,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_neg1_two_use(ptr addrspa
   %cmp = icmp eq i32 %val, 0
   %sel = select i1 %cmp, i32 -1, i32 %ctlz
   store volatile i32 %sel, ptr addrspace(1) %out
-  store volatile i1 %cmp, ptr addrspace(1) undef
+  store volatile i1 %cmp, ptr addrspace(1) poison
   ret void
 }
 

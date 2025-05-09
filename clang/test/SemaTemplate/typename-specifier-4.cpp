@@ -32,7 +32,7 @@ int a1[is_same<
          typename make_pair::template apply<int, float>, 
 #if __cplusplus <= 199711L // C++03 and earlier modes
          // expected-warning@-2 {{'template' keyword outside of a template}}
-         // expected-warning@-3 {{'typename' occurs outside of a template}}
+         // expected-warning@-3 {{'typename' outside of a template is a C++11 extension}}
 #endif
          make_pair::apply<int, float>
        >::value? 1 : -1];

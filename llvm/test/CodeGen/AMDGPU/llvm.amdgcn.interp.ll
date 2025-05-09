@@ -54,18 +54,18 @@ bb:
   %p0_10 = call float @llvm.amdgcn.interp.p1(float %i, i32 3, i32 64, i32 256)
   %p0_11 = call float @llvm.amdgcn.interp.p1(float %i, i32 4, i32 64, i32 256)
 
-  store volatile float %p0_0, ptr addrspace(1) undef
-  store volatile float %p0_1, ptr addrspace(1) undef
-  store volatile float %p0_2, ptr addrspace(1) undef
-  store volatile float %p0_3, ptr addrspace(1) undef
-  store volatile float %p0_4, ptr addrspace(1) undef
-  store volatile float %p0_5, ptr addrspace(1) undef
-  store volatile float %p0_6, ptr addrspace(1) undef
-  store volatile float %p0_7, ptr addrspace(1) undef
-  store volatile float %p0_8, ptr addrspace(1) undef
-  store volatile float %p0_9, ptr addrspace(1) undef
-  store volatile float %p0_10, ptr addrspace(1) undef
-  store volatile float %p0_11, ptr addrspace(1) undef
+  store volatile float %p0_0, ptr addrspace(1) poison
+  store volatile float %p0_1, ptr addrspace(1) poison
+  store volatile float %p0_2, ptr addrspace(1) poison
+  store volatile float %p0_3, ptr addrspace(1) poison
+  store volatile float %p0_4, ptr addrspace(1) poison
+  store volatile float %p0_5, ptr addrspace(1) poison
+  store volatile float %p0_6, ptr addrspace(1) poison
+  store volatile float %p0_7, ptr addrspace(1) poison
+  store volatile float %p0_8, ptr addrspace(1) poison
+  store volatile float %p0_9, ptr addrspace(1) poison
+  store volatile float %p0_10, ptr addrspace(1) poison
+  store volatile float %p0_11, ptr addrspace(1) poison
   ret void
 }
 
@@ -93,15 +93,15 @@ bb:
   %p2_7 = call float @llvm.amdgcn.interp.p2(float %x, float %j, i32 0, i32 64, i32 256)
   %p2_8 = call float @llvm.amdgcn.interp.p2(float %x, float %j, i32 4, i32 64, i32 256)
 
-  store volatile float %p2_0, ptr addrspace(1) undef
-  store volatile float %p2_1, ptr addrspace(1) undef
-  store volatile float %p2_2, ptr addrspace(1) undef
-  store volatile float %p2_3, ptr addrspace(1) undef
-  store volatile float %p2_4, ptr addrspace(1) undef
-  store volatile float %p2_5, ptr addrspace(1) undef
-  store volatile float %p2_6, ptr addrspace(1) undef
-  store volatile float %p2_7, ptr addrspace(1) undef
-  store volatile float %p2_8, ptr addrspace(1) undef
+  store volatile float %p2_0, ptr addrspace(1) poison
+  store volatile float %p2_1, ptr addrspace(1) poison
+  store volatile float %p2_2, ptr addrspace(1) poison
+  store volatile float %p2_3, ptr addrspace(1) poison
+  store volatile float %p2_4, ptr addrspace(1) poison
+  store volatile float %p2_5, ptr addrspace(1) poison
+  store volatile float %p2_6, ptr addrspace(1) poison
+  store volatile float %p2_7, ptr addrspace(1) poison
+  store volatile float %p2_8, ptr addrspace(1) poison
   ret void
 }
 
@@ -140,21 +140,21 @@ bb:
   %mov_11 = call float @llvm.amdgcn.interp.mov(i32 3, i32 1, i32 64, i32 256)
   %mov_12 = call float @llvm.amdgcn.interp.mov(i32 10, i32 4, i32 64, i32 256)
 
-  store volatile float %mov_0, ptr addrspace(1) undef
-  store volatile float %mov_1, ptr addrspace(1) undef
-  store volatile float %mov_2, ptr addrspace(1) undef
-  store volatile float %mov_3, ptr addrspace(1) undef
+  store volatile float %mov_0, ptr addrspace(1) poison
+  store volatile float %mov_1, ptr addrspace(1) poison
+  store volatile float %mov_2, ptr addrspace(1) poison
+  store volatile float %mov_3, ptr addrspace(1) poison
 
-  store volatile float %mov_4, ptr addrspace(1) undef
-  store volatile float %mov_5, ptr addrspace(1) undef
-  store volatile float %mov_6, ptr addrspace(1) undef
-  store volatile float %mov_7, ptr addrspace(1) undef
-  store volatile float %mov_8, ptr addrspace(1) undef
+  store volatile float %mov_4, ptr addrspace(1) poison
+  store volatile float %mov_5, ptr addrspace(1) poison
+  store volatile float %mov_6, ptr addrspace(1) poison
+  store volatile float %mov_7, ptr addrspace(1) poison
+  store volatile float %mov_8, ptr addrspace(1) poison
 
-  store volatile float %mov_9, ptr addrspace(1) undef
-  store volatile float %mov_10, ptr addrspace(1) undef
-  store volatile float %mov_11, ptr addrspace(1) undef
-  store volatile float %mov_12, ptr addrspace(1) undef
+  store volatile float %mov_9, ptr addrspace(1) poison
+  store volatile float %mov_10, ptr addrspace(1) poison
+  store volatile float %mov_11, ptr addrspace(1) poison
+  store volatile float %mov_12, ptr addrspace(1) poison
   ret void
 }
 

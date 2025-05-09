@@ -230,6 +230,12 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleInit(
   return false;
 }
 
+bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleNewTarget(
+    const char *python_module_name, const char *session_dictionary_name,
+    lldb::TargetSP target) {
+  return false;
+}
+
 python::PythonObject
 lldb_private::python::SWIGBridge::LLDBSWIGPythonCreateOSPlugin(
     const char *python_class_name, const char *session_dictionary_name,

@@ -6,7 +6,7 @@
 ## arm-thunk-many-passes.s is worst case case of thunk generation that takes 9
 ## passes to converge. It takes a few more passes to make symbol assignment
 ## converge. Test that
-## 1. we don't error that "thunk creation not converged".
+## 1. we don't error that "address assignment did not converge".
 ## 2. we check convergence of symbols defined in an output section descriptor.
 
 # CHECK: 01011050 T a

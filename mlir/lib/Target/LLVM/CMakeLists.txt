@@ -125,7 +125,7 @@ function(embed_binary_to_src file output_file symbol)
     # Convert hex data for C compatibility
     string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," filedata ${filedata})
     # Write data to output file
-    file(WRITE ${output_file} "const char ${symbol}[] = {${filedata}};\nconst int ${symbol}_size = sizeof(${symbol});\n")
+    file(WRITE ${output_file} "const unsigned char ${symbol}[] = {${filedata}};\nconst int ${symbol}_size = sizeof(${symbol});\n")
 endfunction()
 
 set(MLIR_NVVM_EMBED_LIBDEVICE 0 CACHE BOOL "Embed CUDA libdevice.bc in the binary at build time instead of looking it up at runtime")

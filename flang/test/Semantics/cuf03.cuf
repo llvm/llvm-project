@@ -54,6 +54,14 @@ module m
   !ERROR: Object 'um' with ATTRIBUTES(UNIFIED) must be declared in a host subprogram
   real, unified :: um
 
+  type :: t3
+  !ERROR: Component 'r' with ATTRIBUTES(DEVICE) must also be allocatable or pointer
+    real, device :: r
+    real, device, pointer :: rp ! ok
+    real, device, allocatable :: ra ! ok
+    real, device, pointer, contiguous :: rpc ! ok
+  end type
+
  contains
   attributes(device) subroutine devsubr(n,da,rs)
     integer, intent(in) :: n

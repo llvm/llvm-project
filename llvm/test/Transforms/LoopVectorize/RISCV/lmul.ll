@@ -19,8 +19,7 @@ define void @load_store(ptr %p) {
 ; LMUL1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL1:       vector.body:
 ; LMUL1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; LMUL1-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; LMUL1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[TMP2]]
+; LMUL1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[INDEX]]
 ; LMUL1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP3]], i32 0
 ; LMUL1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 1 x i64>, ptr [[TMP4]], align 8
 ; LMUL1-NEXT:    [[TMP5:%.*]] = add <vscale x 1 x i64> [[WIDE_LOAD]], splat (i64 1)
@@ -62,8 +61,7 @@ define void @load_store(ptr %p) {
 ; LMUL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL2:       vector.body:
 ; LMUL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; LMUL2-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; LMUL2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[TMP4]]
+; LMUL2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[INDEX]]
 ; LMUL2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i32 0
 ; LMUL2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP6]], align 8
 ; LMUL2-NEXT:    [[TMP7:%.*]] = add <vscale x 2 x i64> [[WIDE_LOAD]], splat (i64 1)
@@ -105,8 +103,7 @@ define void @load_store(ptr %p) {
 ; LMUL4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL4:       vector.body:
 ; LMUL4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; LMUL4-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; LMUL4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[TMP4]]
+; LMUL4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[INDEX]]
 ; LMUL4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i32 0
 ; LMUL4-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i64>, ptr [[TMP6]], align 8
 ; LMUL4-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i64> [[WIDE_LOAD]], splat (i64 1)
@@ -148,8 +145,7 @@ define void @load_store(ptr %p) {
 ; LMUL8-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL8:       vector.body:
 ; LMUL8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; LMUL8-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; LMUL8-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[TMP4]]
+; LMUL8-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[INDEX]]
 ; LMUL8-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i32 0
 ; LMUL8-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i64>, ptr [[TMP6]], align 8
 ; LMUL8-NEXT:    [[TMP7:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD]], splat (i64 1)

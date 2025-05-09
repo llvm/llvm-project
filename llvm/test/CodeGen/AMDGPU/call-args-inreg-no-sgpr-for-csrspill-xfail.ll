@@ -1,6 +1,6 @@
-; RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs=0 -filetype=null %s 2>&1 | FileCheck -enable-var-scope %s
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs=0 -filetype=null %s 2>&1 | FileCheck -enable-var-scope %s
 
-; CHECK: LLVM ERROR: failed to find free scratch register
+; CHECK: illegal VGPR to SGPR copy
 
 declare hidden void @external_void_func_a15i32_inreg([15 x i32] inreg) #0
 declare hidden void @external_void_func_a16i32_inreg([16 x i32] inreg) #0

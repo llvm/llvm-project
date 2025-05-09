@@ -48,7 +48,7 @@ inline constexpr int Cc = 65;
 inline constexpr int Cf = 170;
 inline constexpr int Cs = 2'048;
 inline constexpr int Co = 137'468;
-inline constexpr int Cn = 824'718;
+inline constexpr int Cn = 819'533;
 inline constexpr int C  = Cc + Cf + Cs + Co + Cn;
 
 // This is the final part of the Unicode properties table:

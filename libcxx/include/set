@@ -522,6 +522,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__config>
 #  include <__functional/is_transparent.h>
 #  include <__functional/operations.h>
+#  include <__fwd/set.h>
 #  include <__iterator/erase_if_container.h>
 #  include <__iterator/iterator_traits.h>
 #  include <__iterator/ranges_iterator_traits.h>
@@ -570,10 +571,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Key, class _Compare, class _Allocator>
-class multiset;
-
-template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
-class _LIBCPP_TEMPLATE_VIS set {
+class set {
 public:
   // types:
   typedef _Key key_type;
@@ -611,9 +609,9 @@ public:
 #  endif
 
   template <class _Key2, class _Compare2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS set;
+  friend class set;
   template <class _Key2, class _Compare2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS multiset;
+  friend class multiset;
 
   _LIBCPP_HIDE_FROM_ABI set() _NOEXCEPT_(
       is_nothrow_default_constructible<allocator_type>::value&& is_nothrow_default_constructible<key_compare>::value&&
@@ -709,7 +707,7 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI ~set() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~set() { static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
 
   _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
@@ -1003,9 +1001,9 @@ operator<=(const set<_Key, _Compare, _Allocator>& __x, const set<_Key, _Compare,
 
 #  else // _LIBCPP_STD_VER <= 17
 
-template <class _Key, class _Allocator>
+template <class _Key, class _Compare, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Key>
-operator<=>(const set<_Key, _Allocator>& __x, const set<_Key, _Allocator>& __y) {
+operator<=>(const set<_Key, _Compare, _Allocator>& __x, const set<_Key, _Compare, _Allocator>& __y) {
   return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
 
@@ -1034,8 +1032,8 @@ struct __container_traits<set<_Key, _Compare, _Allocator> > {
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
 };
 
-template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
-class _LIBCPP_TEMPLATE_VIS multiset {
+template <class _Key, class _Compare, class _Allocator>
+class multiset {
 public:
   // types:
   typedef _Key key_type;
@@ -1072,9 +1070,9 @@ public:
 #  endif
 
   template <class _Key2, class _Compare2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS set;
+  friend class set;
   template <class _Key2, class _Compare2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS multiset;
+  friend class multiset;
 
   // construct/copy/destroy:
   _LIBCPP_HIDE_FROM_ABI multiset() _NOEXCEPT_(
@@ -1174,7 +1172,9 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI ~multiset() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~multiset() {
+    static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), "");
+  }
 
   _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
@@ -1470,9 +1470,9 @@ operator<=(const multiset<_Key, _Compare, _Allocator>& __x, const multiset<_Key,
 
 #  else // _LIBCPP_STD_VER <= 17
 
-template <class _Key, class _Allocator>
+template <class _Key, class _Compare, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Key>
-operator<=>(const multiset<_Key, _Allocator>& __x, const multiset<_Key, _Allocator>& __y) {
+operator<=>(const multiset<_Key, _Compare, _Allocator>& __x, const multiset<_Key, _Compare, _Allocator>& __y) {
   return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), __synth_three_way);
 }
 

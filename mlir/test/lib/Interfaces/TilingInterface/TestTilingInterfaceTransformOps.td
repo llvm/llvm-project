@@ -58,14 +58,16 @@ def TestFuseConsumerOp : Op<Transform_Dialect, "test.fuse_consumer",
     using the options provided as attributes.
   }];
 
-  let arguments =
-    (ins TransformHandleTypeInterface:$target,
-        DefaultValuedAttr<I32Attr, "1">:$num_consumer_to_fuse);
+  let arguments = (ins 
+      TransformHandleTypeInterface:$target,
+      Variadic<TransformHandleTypeInterface>:$loops,
+      DefaultValuedAttr<I32Attr, "1">:$num_consumer_to_fuse);
   let results = (outs TransformHandleTypeInterface:$consumer,
                       TransformHandleTypeInterface:$fused_consumer);
 
   let assemblyFormat = [{
-    $target (`num_consumer_to_fuse` `=` $num_consumer_to_fuse^)? 
+    $target `in` `(` $loops `)`
+    (`num_consumer_to_fuse` `=` $num_consumer_to_fuse^)? 
     attr-dict `:` functional-type(operands, results)
   }];
 }

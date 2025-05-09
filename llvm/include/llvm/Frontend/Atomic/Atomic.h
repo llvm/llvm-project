@@ -22,14 +22,15 @@ protected:
   Align AtomicAlign;
   Align ValueAlign;
   bool UseLibcall;
+  IRBuilderBase::InsertPoint AllocaIP;
 
 public:
   AtomicInfo(IRBuilderBase *Builder, Type *Ty, uint64_t AtomicSizeInBits,
              uint64_t ValueSizeInBits, Align AtomicAlign, Align ValueAlign,
-             bool UseLibcall)
+             bool UseLibcall, IRBuilderBase::InsertPoint AllocaIP)
       : Builder(Builder), Ty(Ty), AtomicSizeInBits(AtomicSizeInBits),
         ValueSizeInBits(ValueSizeInBits), AtomicAlign(AtomicAlign),
-        ValueAlign(ValueAlign), UseLibcall(UseLibcall) {}
+        ValueAlign(ValueAlign), UseLibcall(UseLibcall), AllocaIP(AllocaIP) {}
 
   virtual ~AtomicInfo() = default;
 
@@ -96,6 +97,8 @@ public:
                             bool IsVolatile, bool IsWeak);
 
   std::pair<LoadInst *, AllocaInst *> EmitAtomicLoadLibcall(AtomicOrdering AO);
+
+  void EmitAtomicStoreLibcall(AtomicOrdering AO, Value *Source);
 };
 } // end namespace llvm
 

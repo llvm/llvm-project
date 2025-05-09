@@ -11,6 +11,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -731,4 +732,86 @@ TEST(CodeExtractor, OpenMPAggregateArgs) {
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));
 }
+
+TEST(CodeExtractor, ArgsDebugInfo) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"ir(
+
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+
+  define void @foo(i32 %a, i32 %b) !dbg !2 {
+    %1 = alloca i32, i64 1, align 4, !dbg !1
+    store i32 %a, ptr %1, align 4, !dbg !1
+    #dbg_declare(ptr %1, !8, !DIExpression(), !1)
+    #dbg_value(i32 %b, !9, !DIExpression(), !1)
+    br label %entry
+
+  entry:
+    br label %extract
+
+  extract:
+    store i32 10, ptr %1, align 4, !dbg !1
+    %2 = add i32 %b, 1, !dbg !1
+    br label %exit
+
+  exit:
+    ret void
+  }
+  !llvm.dbg.cu = !{!6}
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = !DILocation(line: 11, column: 7, scope: !2)
+  !2 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, type: !4, spFlags: DISPFlagDefinition, unit: !6)
+  !3 = !DIFile(filename: "test.f90", directory: "")
+  !4 = !DISubroutineType(cc: DW_CC_program, types: !5)
+  !5 = !{null}
+  !6 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !3)
+  !7 = !DIBasicType(name: "integer", size: 32, encoding: DW_ATE_signed)
+  !8 = !DILocalVariable(name: "a", scope: !2, file: !3, type: !7)
+  !9 = !DILocalVariable(name: "b", scope: !2, file: !3, type: !7)
+
+  )ir",
+                                                Err, Ctx));
+
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 1> Blocks{getBlockByName(Func, "extract")};
+
+  auto TestExtracted = [&](bool AggregateArgs) {
+    CodeExtractor CE(Blocks, /* DominatorTree */ nullptr, AggregateArgs);
+    EXPECT_TRUE(CE.isEligible());
+    CodeExtractorAnalysisCache CEAC(*Func);
+    SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
+    BasicBlock *CommonExit = nullptr;
+    CE.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
+    CE.findInputsOutputs(Inputs, Outputs, SinkingCands);
+    Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
+    EXPECT_TRUE(Outlined);
+    BasicBlock &EB = Outlined->getEntryBlock();
+    Instruction *Term = EB.getTerminator();
+    EXPECT_TRUE(Term);
+    EXPECT_TRUE(Term->hasDbgRecords());
+    for (DbgVariableRecord &DVR : filterDbgVars(Term->getDbgRecordRange())) {
+      DILocalVariable *Var = DVR.getVariable();
+      EXPECT_TRUE(Var);
+      if (DVR.isDbgDeclare())
+        EXPECT_TRUE(Var->getName() == "a");
+      else
+        EXPECT_TRUE(Var->getName() == "b");
+      for (Value *Loc : DVR.location_ops()) {
+        if (Instruction *I = dyn_cast<Instruction>(Loc))
+          EXPECT_TRUE(I->getParent() == &EB);
+        else if (Argument *A = dyn_cast<Argument>(Loc))
+          EXPECT_TRUE(A->getParent() == Outlined);
+      }
+    }
+    EXPECT_FALSE(verifyFunction(*Outlined));
+  };
+  // Test with both true and false for AggregateArgs.
+  TestExtracted(true);
+  TestExtracted(false);
+  EXPECT_FALSE(verifyFunction(*Func));
+}
+
 } // end anonymous namespace

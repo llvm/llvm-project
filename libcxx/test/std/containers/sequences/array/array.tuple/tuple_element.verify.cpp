@@ -10,12 +10,10 @@
 
 // tuple_element<I, array<T, N> >::type
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <array>
 #include <cassert>
 
 typedef double T;
 typedef std::array<T, 3> C;
 std::tuple_element<3, C> foo; // expected-note {{requested here}}
-// expected-error-re@array:* {{static assertion failed{{( due to requirement '3U[L]{0,2} < 3U[L]{0,2}')?}}{{.*}}Index out of bounds in std::tuple_element<> (std::array)}}
+// expected-error-re@*:* {{static assertion failed{{( due to requirement '3U[L]{0,2} < 3U[L]{0,2}')?}}{{.*}}Index out of bounds in std::tuple_element<> (std::array)}}

@@ -175,19 +175,18 @@ like this:
 
 ```
 $ flang -v -o example example.o
-"/usr/bin/ld" [...] example.o [...] "-lFortranRuntime" "-lFortranDecimal" [...]
+"/usr/bin/ld" [...] example.o [...] "-lflang_rt.runtime" [...]
 ```
 
 The automatically added libraries are:
 
-* `FortranRuntime`: Provides most of the Flang runtime library.
-* `FortranDecimal`: Provides operations for decimal numbers.
+* `flang_rt.runtime`: Provides most of the Flang runtime library.
 
 If the code is C/C++ based and invokes Fortran routines, one can either use Clang
 or Flang as the linker driver.  If Clang is used, it will automatically all
 required runtime libraries needed by C++ (e.g., for STL) to the linker invocation.
-In this case, one has to explicitly provide the Fortran runtime libraries
-`FortranRuntime` and/or `FortranDecimal`.  An alternative is to use Flang to link.
+In this case, one has to explicitly provide the Fortran runtime library
+`flang_rt.runtime`.  An alternative is to use Flang to link.
 In this case, it may be required to explicitly supply C++ runtime libraries.
 
 On Darwin, the logical root where the system libraries are located (sysroot)

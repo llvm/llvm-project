@@ -2,7 +2,7 @@ set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
   Object
   MC
-  ${LLVM_TARGETS_TO_BUILD}
+  ${BOLT_TARGETS_TO_BUILD}
   )
 
 add_bolt_unittest(CoreTests
@@ -19,6 +19,7 @@ target_link_libraries(CoreTests
   LLVMBOLTCore
   LLVMBOLTRewrite
   LLVMBOLTProfile
+  LLVMBOLTUtils
   LLVMTestingSupport
   )
 

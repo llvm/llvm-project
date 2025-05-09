@@ -30,7 +30,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "elim-avail-extern"
 
-cl::opt<bool> ConvertToLocal(
+static cl::opt<bool> ConvertToLocal(
     "avail-extern-to-local", cl::Hidden,
     cl::desc("Convert available_externally into locals, renaming them "
              "to avoid link-time clashes."));
@@ -133,7 +133,8 @@ EliminateAvailableExternallyPass::run(Module &M, ModuleAnalysisManager &MAM) {
   // that's imported, its optimizations will, thus, differ, and be specialized
   // for this contextual information. Eliding it in favor of the original would
   // undo these optimizations.
-  if (!eliminateAvailableExternally(M, /*Convert=*/(CtxProf && !!(*CtxProf))))
+  if (!eliminateAvailableExternally(
+          M, /*Convert=*/(CtxProf && CtxProf->isInSpecializedModule())))
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }

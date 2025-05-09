@@ -270,7 +270,7 @@ static bool isWithinConstantOverflowBounds(llvm::APSInt I) {
   assert(!AT.isUnsigned() &&
          "This only works with signed integers!");
 
-  llvm::APSInt Max = AT.getMaxValue() / AT.getValue(4), Min = -Max;
+  llvm::APSInt Max = AT.getMaxValue() / AT.getValue(4);
   return (I <= Max) && (I >= -Max);
 }
 
@@ -948,8 +948,8 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
 
     const MemRegion *LeftBase = LeftMR->getBaseRegion();
     const MemRegion *RightBase = RightMR->getBaseRegion();
-    const MemSpaceRegion *LeftMS = LeftBase->getMemorySpace();
-    const MemSpaceRegion *RightMS = RightBase->getMemorySpace();
+    const MemSpaceRegion *LeftMS = LeftBase->getMemorySpace(state);
+    const MemSpaceRegion *RightMS = RightBase->getMemorySpace(state);
     const MemSpaceRegion *UnknownMS = MemMgr.getUnknownRegion();
 
     // If the two regions are from different known memory spaces they cannot be

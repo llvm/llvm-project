@@ -1444,6 +1444,7 @@ void KMPAffinity::pick_api() {
   if (__kmp_affinity_top_method == affinity_top_method_hwloc &&
       __kmp_affinity.type != affinity_disabled) {
     affinity_dispatch = new KMPHwlocAffinity();
+    __kmp_hwloc_available = true;
   } else
 #endif
   {
@@ -5467,7 +5468,7 @@ void __kmp_affinity_bind_init_mask(int gtid) {
     __kmp_set_system_affinity(th->th.th_affin_mask, FALSE);
   } else
 #endif
-#ifndef KMP_OS_AIX
+#if !KMP_OS_AIX
     // Do not set the full mask as the init mask on AIX.
     __kmp_set_system_affinity(th->th.th_affin_mask, TRUE);
 #endif

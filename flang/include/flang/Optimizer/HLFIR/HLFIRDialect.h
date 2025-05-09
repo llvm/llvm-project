@@ -82,6 +82,17 @@ inline bool isPolymorphicType(mlir::Type type) {
   return fir::isPolymorphicType(type);
 }
 
+/// Is this the FIR type of a Fortran procedure pointer?
+inline bool isFortranProcedurePointerType(mlir::Type type) {
+  return fir::isBoxProcAddressType(type);
+}
+
+inline bool isFortranPointerObjectType(mlir::Type type) {
+  auto boxTy =
+      llvm::dyn_cast_or_null<fir::BaseBoxType>(fir::dyn_cast_ptrEleTy(type));
+  return boxTy && boxTy.isPointer();
+}
+
 /// Is this an SSA value type for the value of a Fortran procedure
 /// designator ?
 inline bool isFortranProcedureValue(mlir::Type type) {

@@ -65,6 +65,7 @@ module;
 #include <expected>
 #include <filesystem>
 #include <flat_map>
+#include <flat_set>
 #include <format>
 #include <forward_list>
 #if _LIBCPP_HAS_LOCALIZATION
@@ -162,9 +163,6 @@ module;
 #  if __has_include(<debugging>)
 #    error "please update the header information for <debugging> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<debugging>)
-#  if __has_include(<flat_set>)
-#    error "please update the header information for <flat_set> in headers_not_available in utils/libcxx/header_information.py"
-#  endif // __has_include(<flat_set>)
 #  if __has_include(<generator>)
 #    error "please update the header information for <generator> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<generator>)

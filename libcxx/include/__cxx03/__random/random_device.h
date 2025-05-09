@@ -54,12 +54,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
 
   // constructors
-#  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI random_device() : random_device("/dev/urandom") {}
-  explicit random_device(const string& __token);
-#  else
   explicit random_device(const string& __token = "/dev/urandom");
-#  endif
   ~random_device();
 
   // generating functions

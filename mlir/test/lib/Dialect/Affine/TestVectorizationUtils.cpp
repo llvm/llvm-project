@@ -239,7 +239,6 @@ void VectorizerTestPass::testVecAffineLoopNest(llvm::raw_ostream &outs) {
   strategy.vectorSizes.push_back(4 /*vectorization factor*/);
   strategy.loopToVectorDim[outermostLoop] = 0;
 
-  ReductionLoopMap reductionLoops;
   SmallVector<LoopReduction, 2> reductions;
   if (!isLoopParallel(outermostLoop, &reductions)) {
     outs << "Outermost loop cannot be parallel\n";

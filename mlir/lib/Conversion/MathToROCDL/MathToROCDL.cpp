@@ -113,6 +113,8 @@ void mlir::populateMathToROCDLConversionPatterns(
                                   "__ocml_tan_f64", "__ocml_tan_f16");
   populateOpPatterns<math::ErfOp>(converter, patterns, "__ocml_erf_f32",
                                   "__ocml_erf_f64", "__ocml_erf_f16");
+  populateOpPatterns<math::ErfcOp>(converter, patterns, "__ocml_erfc_f32",
+                                   "__ocml_erfc_f64", "__ocml_erfc_f16");
   populateOpPatterns<math::FPowIOp>(converter, patterns, "__ocml_pown_f32",
                                     "__ocml_pown_f64", "__ocml_pown_f16");
   // Single arith pattern that needs a ROCDL call, probably not

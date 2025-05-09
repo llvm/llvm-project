@@ -77,3 +77,9 @@ int constexpr_overflow_result() {
   // CHECK: [[RET_VAL:%.+]] = load i32, ptr [[Z]]
   // CHECK: ret i32 [[RET_VAL]]
 }
+
+int structured_binding_size() {
+  struct S2 {int a, b;};
+  return __builtin_structured_binding_size(S2);
+  // CHECK: ret i32 2
+}

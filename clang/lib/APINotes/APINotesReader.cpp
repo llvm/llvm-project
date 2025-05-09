@@ -624,6 +624,13 @@ public:
                                         ReleaseOpLength - 1);
       Data += ReleaseOpLength - 1;
     }
+    unsigned DefaultOwnershipLength =
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
+    if (DefaultOwnershipLength > 0) {
+      Info.SwiftDefaultOwnership = std::string(
+          reinterpret_cast<const char *>(Data), DefaultOwnershipLength - 1);
+      Data += DefaultOwnershipLength - 1;
+    }
     if (unsigned ConformanceLength =
             endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
       Info.SwiftConformance = std::string(reinterpret_cast<const char *>(Data),

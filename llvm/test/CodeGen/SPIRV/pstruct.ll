@@ -11,9 +11,9 @@
 ; CHECK-SPIRV: %[[#struct]] = OpTypeStruct %[[#int]] %[[#int]] %[[#int]]
 ; CHECK-SPIRV: %[[#structP:]] = OpTypePointer Function %[[#struct]]
 ; CHECK-SPIRV: %[[#structPP:]] = OpTypePointer Function %[[#structP]]
-; CHECK-SPIRV: %[[#zero:]] = OpConstant %[[#int]] 0
-; CHECK-SPIRV: %[[#one:]] = OpConstant %[[#int]] 1
-; CHECK-SPIRV: %[[#two:]] = OpConstant %[[#int]] 2
+; CHECK-SPIRV: %[[#zero:]] = OpConstantNull %[[#int]]
+; CHECK-SPIRV: %[[#one:]] = OpConstant %[[#int]] 1{{$}}
+; CHECK-SPIRV: %[[#two:]] = OpConstant %[[#int]] 2{{$}}
 
 define dso_local spir_func i32 @cmp_func(i8* %p1, i8* %p2) {
 entry:

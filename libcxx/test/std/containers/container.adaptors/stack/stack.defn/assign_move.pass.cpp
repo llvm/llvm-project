@@ -18,25 +18,20 @@
 #include "test_macros.h"
 #include "MoveOnly.h"
 
-
 template <class C>
-C
-make(int n)
-{
-    C c;
-    for (int i = 0; i < n; ++i)
-        c.push_back(MoveOnly(i));
-    return c;
+C make(int n) {
+  C c;
+  for (int i = 0; i < n; ++i)
+    c.push_back(MoveOnly(i));
+  return c;
 }
 
-
-int main(int, char**)
-{
-    std::stack<MoveOnly> q(make<std::deque<MoveOnly> >(5));
-    std::stack<MoveOnly> q2;
-    q2 = std::move(q);
-    assert(q2.size() == 5);
-    assert(q.empty());
+int main(int, char**) {
+  std::stack<MoveOnly> q(make<std::deque<MoveOnly> >(5));
+  std::stack<MoveOnly> q2;
+  q2 = std::move(q);
+  assert(q2.size() == 5);
+  assert(q.empty());
 
   return 0;
 }

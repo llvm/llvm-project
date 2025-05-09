@@ -37,8 +37,8 @@ void operator delete[](void *x) throw();
 void operator delete[](void * /*x*/) throw();
 
 struct X {
-  X operator++(int) {}
-  X operator--(int) {}
+  void operator++(int) {}
+  void operator--(int) {}
 
   X(X&) = delete;
   X &operator=(X&) = default;
@@ -86,22 +86,23 @@ void FDef2(int n, int) {}
 void FNoDef(int);
 
 class Z {};
+Z the_z;
 
-Z &operator++(Z&) {}
+Z &operator++(Z&) { return the_z; }
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: all parameters should be named in a function
-// CHECK-FIXES: Z &operator++(Z& /*unused*/) {}
+// CHECK-FIXES: Z &operator++(Z& /*unused*/) { return the_z; }
 
-Z &operator++(Z&, int) {}
+Z &operator++(Z&, int) { return the_z; }
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: all parameters should be named in a function
-// CHECK-FIXES: Z &operator++(Z& /*unused*/, int) {}
+// CHECK-FIXES: Z &operator++(Z& /*unused*/, int) { return the_z; }
 
-Z &operator--(Z&) {}
+Z &operator--(Z&) { return the_z; }
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: all parameters should be named in a function
-// CHECK-FIXES: Z &operator--(Z& /*unused*/) {}
+// CHECK-FIXES: Z &operator--(Z& /*unused*/) { return the_z; }
 
-Z &operator--(Z&, int) {}
+Z &operator--(Z&, int) { return the_z; }
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: all parameters should be named in a function
-// CHECK-FIXES: Z &operator--(Z& /*unused*/, int) {}
+// CHECK-FIXES: Z &operator--(Z& /*unused*/, int) { return the_z; }
 
 namespace testing {
 namespace internal {

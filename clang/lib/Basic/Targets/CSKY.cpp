@@ -139,10 +139,6 @@ bool CSKYTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   return true;
 }
 
-ArrayRef<Builtin::Info> CSKYTargetInfo::getTargetBuiltins() const {
-  return ArrayRef<Builtin::Info>();
-}
-
 ArrayRef<const char *> CSKYTargetInfo::getGCCRegNames() const {
   static const char *const GCCRegNames[] = {
       // Integer registers

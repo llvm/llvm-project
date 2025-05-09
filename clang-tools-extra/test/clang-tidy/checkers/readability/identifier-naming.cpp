@@ -547,6 +547,7 @@ struct_type GlobalTypedefTestFunction(struct_type a_argument1) {
 // CHECK-FIXES: {{^}}struct_type_t GlobalTypedefTestFunction(struct_type_t a_argument1) {
     struct_type typedef_test_1;
 // CHECK-FIXES: {{^}}    struct_type_t typedef_test_1;
+  return {};
 }
 
 using my_struct_type = THIS___Structure;
@@ -777,8 +778,8 @@ STATIC_MACRO void someFunc(ValueType a_v1, const ValueType& a_v2) {}
 // CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(value_type_t a_v1, const value_type_t& a_v2) {}
 STATIC_MACRO void someFunc(const ValueType** p_a_v1, ValueType (*p_a_v2)()) {}
 // CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(const value_type_t** p_a_v1, value_type_t (*p_a_v2)()) {}
-STATIC_MACRO ValueType someFunc() {}
-// CHECK-FIXES: {{^}}STATIC_MACRO value_type_t someFunc() {}
+STATIC_MACRO ValueType someFunc() { return {}; }
+// CHECK-FIXES: {{^}}STATIC_MACRO value_type_t someFunc() { return {}; }
 STATIC_MACRO void someFunc(MyFunPtr, const MyFunPtr****) {}
 // CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(my_fun_ptr_t, const my_fun_ptr_t****) {}
 #undef STATIC_MACRO

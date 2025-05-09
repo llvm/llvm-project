@@ -98,7 +98,7 @@ DNBBreakpointList::FindNearestWatchpoint(nub_addr_t addr) const {
     if (pos.second.IsEnabled()) {
       nub_addr_t start_addr = pos.second.Address();
       nub_addr_t end_addr = start_addr + pos.second.ByteSize();
-      if (addr >= start_addr && addr <= end_addr)
+      if (addr >= start_addr && addr < end_addr)
         return &pos.second;
     }
   }

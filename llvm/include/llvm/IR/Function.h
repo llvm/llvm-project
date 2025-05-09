@@ -346,12 +346,6 @@ public:
   /// sample PGO, to enable the same inlines as the profiled optimized binary.
   DenseSet<GlobalValue::GUID> getImportGUIDs() const;
 
-  /// Set the section prefix for this function.
-  void setSectionPrefix(StringRef Prefix);
-
-  /// Get the section prefix for this function.
-  std::optional<StringRef> getSectionPrefix() const;
-
   /// hasGC/getGC/setGC/clearGC - The name of the garbage collection algorithm
   ///                             to use during code generation.
   bool hasGC() const {
@@ -577,7 +571,7 @@ public:
   bool onlyWritesMemory() const;
   void setOnlyWritesMemory();
 
-  /// Determine if the call can access memmory only using pointers based
+  /// Determine if the call can access memory only using pointers based
   /// on its arguments.
   bool onlyAccessesArgMemory() const;
   void setOnlyAccessesArgMemory();
@@ -1053,6 +1047,14 @@ private:
   }
   void setValueSubclassDataBit(unsigned Bit, bool On);
 };
+
+namespace CallingConv {
+
+// TODO: Need similar function for support of argument in position. General
+// version on FunctionType + Attributes + CallingConv::ID?
+LLVM_READNONE
+bool supportsNonVoidReturnType(CallingConv::ID CC);
+} // namespace CallingConv
 
 /// Check whether null pointer dereferencing is considered undefined behavior
 /// for a given function or an address space.

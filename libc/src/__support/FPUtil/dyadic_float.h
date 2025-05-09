@@ -26,6 +26,54 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
+// Decide whether to round a UInt up, down or not at all at a given bit
+// position, based on the current rounding mode. The assumption is that the
+// caller is going to make the integer `value >> rshift`, and then might need
+// to round it up by 1 depending on the value of the bits shifted off the
+// bottom.
+//
+// `logical_sign` causes the behavior of FE_DOWNWARD and FE_UPWARD to
+// be reversed, which is what you'd want if this is the mantissa of a
+// negative floating-point number.
+//
+// Return value is +1 if the value should be rounded up; -1 if it should be
+// rounded down; 0 if it's exact and needs no rounding.
+template <size_t Bits>
+LIBC_INLINE constexpr int
+rounding_direction(const LIBC_NAMESPACE::UInt<Bits> &value, size_t rshift,
+                   Sign logical_sign) {
+  if (rshift == 0 || (rshift < Bits && (value << (Bits - rshift)) == 0) ||
+      (rshift >= Bits && value == 0))
+    return 0; // exact
+
+  switch (quick_get_round()) {
+  case FE_TONEAREST:
+    if (rshift > 0 && rshift <= Bits && value.get_bit(rshift - 1)) {
+      // We round up, unless the value is an exact halfway case and
+      // the bit that will end up in the units place is 0, in which
+      // case tie-break-to-even says round down.
+      bool round_bit = rshift < Bits ? value.get_bit(rshift) : 0;
+      return round_bit != 0 || (value << (Bits - rshift + 1)) != 0 ? +1 : -1;
+    } else {
+      return -1;
+    }
+  case FE_TOWARDZERO:
+    return -1;
+  case FE_DOWNWARD:
+    return logical_sign.is_neg() &&
+                   (rshift < Bits && (value << (Bits - rshift)) != 0)
+               ? +1
+               : -1;
+  case FE_UPWARD:
+    return logical_sign.is_pos() &&
+                   (rshift < Bits && (value << (Bits - rshift)) != 0)
+               ? +1
+               : -1;
+  default:
+    __builtin_unreachable();
+  }
+}
+
 // A generic class to perform computations of high precision floating points.
 // We store the value in dyadic format, including 3 fields:
 //   sign    : boolean value - false means positive, true means negative
@@ -56,7 +104,7 @@ template <size_t Bits> struct DyadicFloat {
     normalize();
   }
 
-  LIBC_INLINE constexpr DyadicFloat(Sign s, int e, MantissaType m)
+  LIBC_INLINE constexpr DyadicFloat(Sign s, int e, const MantissaType &m)
       : sign(s), exponent(e), mantissa(m) {
     normalize();
   }
@@ -99,6 +147,27 @@ template <size_t Bits> struct DyadicFloat {
   // Assume that it is already normalized.  Output the unbiased exponent.
   LIBC_INLINE constexpr int get_unbiased_exponent() const {
     return exponent + (Bits - 1);
+  }
+
+  // Produce a correctly rounded DyadicFloat from a too-large mantissa,
+  // by shifting it down and rounding if necessary.
+  template <size_t MantissaBits>
+  LIBC_INLINE constexpr static DyadicFloat<Bits>
+  round(Sign result_sign, int result_exponent,
+        const LIBC_NAMESPACE::UInt<MantissaBits> &input_mantissa,
+        size_t rshift) {
+    MantissaType result_mantissa(input_mantissa >> rshift);
+    if (rounding_direction(input_mantissa, rshift, result_sign) > 0) {
+      ++result_mantissa;
+      if (result_mantissa == 0) {
+        // Rounding up made the mantissa integer wrap round to 0,
+        // carrying a bit off the top. So we've rounded up to the next
+        // exponent.
+        result_mantissa.set_bit(Bits - 1);
+        ++result_exponent;
+      }
+    }
+    return DyadicFloat(result_sign, result_exponent, result_mantissa);
   }
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
@@ -266,7 +335,7 @@ template <size_t Bits> struct DyadicFloat {
                  .get_val();
 
     MantissaType round_mask =
-        shift > MantissaType::BITS ? 0 : MantissaType(1) << (shift - 1);
+        shift - 1 >= MantissaType::BITS ? 0 : MantissaType(1) << (shift - 1);
     MantissaType sticky_mask = round_mask - MantissaType(1);
 
     bool round_bit = !(mantissa & round_mask).is_zero();
@@ -365,7 +434,12 @@ template <size_t Bits> struct DyadicFloat {
     if (exponent > 0) {
       new_mant <<= exponent;
     } else {
-      new_mant >>= (-exponent);
+      // Cast the exponent to size_t before negating it, rather than after,
+      // to avoid undefined behavior negating INT_MIN as an integer (although
+      // exponents coming in to this function _shouldn't_ be that large). The
+      // result should always end up as a positive size_t.
+      size_t shift = -static_cast<size_t>(exponent);
+      new_mant >>= shift;
     }
 
     if (sign.is_neg()) {
@@ -373,6 +447,43 @@ template <size_t Bits> struct DyadicFloat {
     }
 
     return new_mant;
+  }
+
+  LIBC_INLINE constexpr MantissaType
+  as_mantissa_type_rounded(int *round_dir_out = nullptr) const {
+    int round_dir = 0;
+    MantissaType new_mant;
+    if (mantissa.is_zero()) {
+      new_mant = 0;
+    } else {
+      new_mant = mantissa;
+      if (exponent > 0) {
+        new_mant <<= exponent;
+      } else if (exponent < 0) {
+        // Cast the exponent to size_t before negating it, rather than after,
+        // to avoid undefined behavior negating INT_MIN as an integer (although
+        // exponents coming in to this function _shouldn't_ be that large). The
+        // result should always end up as a positive size_t.
+        size_t shift = -static_cast<size_t>(exponent);
+        new_mant >>= shift;
+        round_dir = rounding_direction(mantissa, shift, sign);
+        if (round_dir > 0)
+          ++new_mant;
+      }
+
+      if (sign.is_neg()) {
+        new_mant = (~new_mant) + 1;
+      }
+    }
+
+    if (round_dir_out)
+      *round_dir_out = round_dir;
+
+    return new_mant;
+  }
+
+  LIBC_INLINE constexpr DyadicFloat operator-() const {
+    return DyadicFloat(sign.negate(), exponent, mantissa);
   }
 };
 
@@ -433,6 +544,12 @@ LIBC_INLINE constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
   return result.normalize();
 }
 
+template <size_t Bits>
+LIBC_INLINE constexpr DyadicFloat<Bits> quick_sub(DyadicFloat<Bits> a,
+                                                  DyadicFloat<Bits> b) {
+  return quick_add(a, -b);
+}
+
 // Quick Mul - Slightly less accurate but efficient multiplication of 2 dyadic
 // floats with rounding toward 0 and then normalize the output:
 //   result.exponent = a.exponent + b.exponent + Bits,
@@ -462,6 +579,95 @@ LIBC_INLINE constexpr DyadicFloat<Bits> quick_mul(const DyadicFloat<Bits> &a,
     result.mantissa = (typename DyadicFloat<Bits>::MantissaType)(0);
   }
   return result;
+}
+
+// Correctly rounded multiplication of 2 dyadic floats, assuming the
+// exponent remains within range.
+template <size_t Bits>
+LIBC_INLINE constexpr DyadicFloat<Bits>
+rounded_mul(const DyadicFloat<Bits> &a, const DyadicFloat<Bits> &b) {
+  using DblMant = LIBC_NAMESPACE::UInt<(2 * Bits)>;
+  Sign result_sign = (a.sign != b.sign) ? Sign::NEG : Sign::POS;
+  int result_exponent = a.exponent + b.exponent + static_cast<int>(Bits);
+  auto product = DblMant(a.mantissa) * DblMant(b.mantissa);
+  // As in quick_mul(), renormalize by 1 bit manually rather than countl_zero
+  if (product.get_bit(2 * Bits - 1) == 0) {
+    product <<= 1;
+    result_exponent -= 1;
+  }
+
+  return DyadicFloat<Bits>::round(result_sign, result_exponent, product, Bits);
+}
+
+// Approximate reciprocal - given a nonzero a, make a good approximation to 1/a.
+// The method is Newton-Raphson iteration, based on quick_mul.
+template <size_t Bits, typename = cpp::enable_if_t<(Bits >= 32)>>
+LIBC_INLINE constexpr DyadicFloat<Bits>
+approx_reciprocal(const DyadicFloat<Bits> &a) {
+  // Given an approximation x to 1/a, a better one is x' = x(2-ax).
+  //
+  // You can derive this by using the Newton-Raphson formula with the function
+  // f(x) = 1/x - a. But another way to see that it works is to say: suppose
+  // that ax = 1-e for some small error e. Then ax' = ax(2-ax) = (1-e)(1+e) =
+  // 1-e^2. So the error in x' is the square of the error in x, i.e. the number
+  // of correct bits in x' is double the number in x.
+
+  // An initial approximation to the reciprocal
+  DyadicFloat<Bits> x(Sign::POS, -32 - a.exponent - int(Bits),
+                      uint64_t(0xFFFFFFFFFFFFFFFF) /
+                          static_cast<uint64_t>(a.mantissa >> (Bits - 32)));
+
+  // The constant 2, which we'll need in every iteration
+  DyadicFloat<Bits> two(Sign::POS, 1, 1);
+
+  // We expect at least 31 correct bits from our 32-bit starting approximation
+  size_t ok_bits = 31;
+
+  // The number of good bits doubles in each iteration, except that rounding
+  // errors introduce a little extra each time. Subtract a bit from our
+  // accuracy assessment to account for that.
+  while (ok_bits < Bits) {
+    x = quick_mul(x, quick_sub(two, quick_mul(a, x)));
+    ok_bits = 2 * ok_bits - 1;
+  }
+
+  return x;
+}
+
+// Correctly rounded division of 2 dyadic floats, assuming the
+// exponent remains within range.
+template <size_t Bits>
+LIBC_INLINE constexpr DyadicFloat<Bits>
+rounded_div(const DyadicFloat<Bits> &af, const DyadicFloat<Bits> &bf) {
+  using DblMant = LIBC_NAMESPACE::UInt<(Bits * 2 + 64)>;
+
+  // Make an approximation to the quotient as a * (1/b). Both the
+  // multiplication and the reciprocal are a bit sloppy, which doesn't
+  // matter, because we're going to correct for that below.
+  auto qf = fputil::quick_mul(af, fputil::approx_reciprocal(bf));
+
+  // Switch to BigInt and stop using quick_add and quick_mul: now
+  // we're working in exact integers so as to get the true remainder.
+  DblMant a = af.mantissa, b = bf.mantissa, q = qf.mantissa;
+  q <<= 2; // leave room for a round bit, even if exponent decreases
+  a <<= af.exponent - bf.exponent - qf.exponent + 2;
+  DblMant qb = q * b;
+  if (qb < a) {
+    DblMant too_small = a - b;
+    while (qb <= too_small) {
+      qb += b;
+      ++q;
+    }
+  } else {
+    while (qb > a) {
+      qb -= b;
+      --q;
+    }
+  }
+
+  DyadicFloat<(Bits * 2)> qbig(qf.sign, qf.exponent - 2, q);
+  return DyadicFloat<Bits>::round(qbig.sign, qbig.exponent + Bits,
+                                  qbig.mantissa, Bits);
 }
 
 // Simple polynomial approximation.

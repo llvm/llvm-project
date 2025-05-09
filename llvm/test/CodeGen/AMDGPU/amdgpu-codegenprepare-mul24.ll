@@ -414,7 +414,10 @@ define i64 @umul24_i64_2(i64 %lhs, i64 %rhs) {
 ; DISABLED-LABEL: @umul24_i64_2(
 ; DISABLED-NEXT:    [[LHS24:%.*]] = and i64 [[LHS:%.*]], 65535
 ; DISABLED-NEXT:    [[RHS24:%.*]] = and i64 [[RHS:%.*]], 65535
-; DISABLED-NEXT:    [[MUL:%.*]] = mul i64 [[LHS24]], [[RHS24]]
+; DISABLED-NEXT:    [[TMP1:%.*]] = trunc i64 [[LHS24]] to i32
+; DISABLED-NEXT:    [[TMP2:%.*]] = trunc i64 [[RHS24]] to i32
+; DISABLED-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP1]], [[TMP2]]
+; DISABLED-NEXT:    [[MUL:%.*]] = zext i32 [[TMP3]] to i64
 ; DISABLED-NEXT:    ret i64 [[MUL]]
 ;
   %lhs24 = and i64 %lhs, 65535

@@ -28,7 +28,7 @@ LogicalResult registerModule(cuf::RegisterModuleOp op,
                              llvm::IRBuilderBase &builder,
                              LLVM::ModuleTranslation &moduleTranslation) {
   std::string binaryIdentifier =
-      op.getName().getLeafReference().str() + "_bin_cst";
+      op.getName().getLeafReference().str() + "_binary";
   llvm::Module *module = moduleTranslation.getLLVMModule();
   llvm::Value *binary = module->getGlobalVariable(binaryIdentifier, true);
   if (!binary)

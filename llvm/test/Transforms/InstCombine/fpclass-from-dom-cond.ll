@@ -518,3 +518,31 @@ if.else:
 if.end:
   ret i1 false
 }
+
+define i1 @test_inv_and(float %x, i1 %cond2) {
+; CHECK-LABEL: define i1 @test_inv_and(
+; CHECK-SAME: float [[X:%.*]], i1 [[COND2:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = fcmp oge float [[X]], -1.000000e+00
+; CHECK-NEXT:    call void @use(i1 [[COND]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND2]], [[NOT]]
+; CHECK-NEXT:    br i1 [[AND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cond = fcmp oge float %x, -1.0
+  %neg = fneg float %x
+  call void @use(i1 %cond)
+  %not = xor i1 %cond, true
+  %and = and i1 %not, %cond2
+  br i1 %and, label %if.then, label %if.else
+if.then:
+  %ret1 = fcmp oeq float %neg, 0xFFF0000000000000
+  ret i1 %ret1
+if.else:
+  ret i1 false
+}
+
+declare void @use(i1)

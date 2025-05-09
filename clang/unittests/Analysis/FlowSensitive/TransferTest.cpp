@@ -4888,7 +4888,7 @@ TEST(TransferTest, PointerEquality) {
 
       // We won't duplicate all of the tests above with `!=`, as we know that
       // the implementation simply negates the result of the `==` comparison.
-      // Instaed, just spot-check one case.
+      // Instead, just spot-check one case.
       bool p1_ne_p1 = (p1 != p1);
 
       (void)0; // [[p]]
@@ -4971,6 +4971,41 @@ TEST(TransferTest, IntegerLiteralEquality) {
         auto &Equal =
             getValueForDecl<BoolValue>(ASTCtx, Env, "equal").formula();
         EXPECT_TRUE(Env.proves(Equal));
+      });
+}
+
+TEST(TransferTest, UnsupportedValueEquality) {
+  std::string Code = R"(
+    // An explicitly unsupported type by the framework.
+    enum class EC {
+      A,
+      B
+    };
+  
+    void target() {
+      EC ec = EC::A;
+
+      bool unsupported_eq_same = (EC::A == EC::A);
+      bool unsupported_eq_other = (EC::A == EC::B);
+      bool unsupported_eq_var = (ec == EC::B);
+
+      (void)0; // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        // We do not model the values of unsupported types, so this
+        // seemingly-trivial case will not be true either.
+        EXPECT_TRUE(isa<AtomicBoolValue>(
+            getValueForDecl<BoolValue>(ASTCtx, Env, "unsupported_eq_same")));
+        EXPECT_TRUE(isa<AtomicBoolValue>(
+            getValueForDecl<BoolValue>(ASTCtx, Env, "unsupported_eq_other")));
+        EXPECT_TRUE(isa<AtomicBoolValue>(
+            getValueForDecl<BoolValue>(ASTCtx, Env, "unsupported_eq_var")));
       });
 }
 

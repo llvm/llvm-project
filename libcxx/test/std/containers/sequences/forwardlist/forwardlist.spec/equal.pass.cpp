@@ -25,36 +25,33 @@
 #include "min_allocator.h"
 
 template <class C>
-void test(int N, int M)
-{
-    C c1;
-    for (int i = 0; i < N; ++i)
-        c1.push_front(i);
-    C c2;
-    for (int i = 0; i < M; ++i)
-        c2.push_front(i);
-    if (N == M)
-        assert(c1 == c2);
-    else
-        assert(c1 != c2);
-    c2 = c1;
+void test(int N, int M) {
+  C c1;
+  for (int i = 0; i < N; ++i)
+    c1.push_front(i);
+  C c2;
+  for (int i = 0; i < M; ++i)
+    c2.push_front(i);
+  if (N == M)
     assert(c1 == c2);
-    if (N > 0)
-    {
-        c2.front() = N+1;
-        assert(c1 != c2);
-    }
+  else
+    assert(c1 != c2);
+  c2 = c1;
+  assert(c1 == c2);
+  if (N > 0) {
+    c2.front() = N + 1;
+    assert(c1 != c2);
+  }
 }
 
-int main(int, char**)
-{
-    for (int i = 0; i < 10; ++i)
-        for (int j = 0; j < 10; ++j)
-            test<std::forward_list<int> >(i, j);
+int main(int, char**) {
+  for (int i = 0; i < 10; ++i)
+    for (int j = 0; j < 10; ++j)
+      test<std::forward_list<int> >(i, j);
 #if TEST_STD_VER >= 11
-    for (int i = 0; i < 10; ++i)
-        for (int j = 0; j < 10; ++j)
-            test<std::forward_list<int, min_allocator<int>> >(i, j);
+  for (int i = 0; i < 10; ++i)
+    for (int j = 0; j < 10; ++j)
+      test<std::forward_list<int, min_allocator<int>> >(i, j);
 #endif
 
   return 0;

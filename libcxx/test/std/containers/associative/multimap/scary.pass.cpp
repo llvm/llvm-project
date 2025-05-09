@@ -16,13 +16,12 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    typedef std::map<int, int> M1;
-    typedef std::multimap<int, int> M2;
-    M2::iterator i;
-    M1::iterator j = i;
-    ((void)j);
+int main(int, char**) {
+  typedef std::map<int, int> M1;
+  typedef std::multimap<int, int> M2;
+  M2::iterator i;
+  M1::iterator j = i;
+  ((void)j);
 
   return 0;
 }

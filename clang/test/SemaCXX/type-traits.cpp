@@ -779,36 +779,6 @@ void is_unbounded_array(int n) {
   (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported in '__is_unbounded_array'}}
 }
 
-void is_referenceable() {
-  static_assert(__is_referenceable(int));
-  static_assert(__is_referenceable(const int));
-  static_assert(__is_referenceable(volatile int));
-  static_assert(__is_referenceable(const volatile int));
-  static_assert(__is_referenceable(int *));
-  static_assert(__is_referenceable(int &));
-  static_assert(__is_referenceable(int &&));
-  static_assert(__is_referenceable(int (*)()));
-  static_assert(__is_referenceable(int (&)()));
-  static_assert(__is_referenceable(int(&&)()));
-  static_assert(__is_referenceable(IntAr));
-  static_assert(__is_referenceable(IntArNB));
-  static_assert(__is_referenceable(decltype(nullptr)));
-  static_assert(__is_referenceable(Empty));
-  static_assert(__is_referenceable(Union));
-  static_assert(__is_referenceable(Derives));
-  static_assert(__is_referenceable(Enum));
-  static_assert(__is_referenceable(EnumClass));
-  static_assert(__is_referenceable(int Empty::*));
-  static_assert(__is_referenceable(int(Empty::*)()));
-  static_assert(__is_referenceable(AnIncompleteType));
-  static_assert(__is_referenceable(struct AnIncompleteType));
-
-  using function_type = void(int);
-  static_assert(__is_referenceable(function_type));
-
-  static_assert(!__is_referenceable(void));
-}
-
 template <typename T> void tmpl_func(T&) {}
 
 template <typename T> struct type_wrapper {
@@ -3413,6 +3383,16 @@ static_assert(!__has_unique_object_representations(float), "definitely not Float
 static_assert(!__has_unique_object_representations(double), "definitely not Floating Point");
 static_assert(!__has_unique_object_representations(long double), "definitely not Floating Point");
 
+
+static_assert(!__has_unique_object_representations(AnIncompleteType[]));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
+static_assert(!__has_unique_object_representations(AnIncompleteType[][1]));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
+static_assert(!__has_unique_object_representations(AnIncompleteType[1]));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
+static_assert(!__has_unique_object_representations(AnIncompleteType));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
+
 struct NoPadding {
   int a;
   int b;
@@ -4739,8 +4719,6 @@ struct CheckAbominableFunction<M S::*> {
     static_assert(__is_same(remove_cvref_t<M>, M));
     static_assert(__is_same(remove_pointer_t<M>, M));
     static_assert(__is_same(remove_reference_t<M>, M));
-
-    static_assert(!__is_referenceable(M));
   }
 };
 

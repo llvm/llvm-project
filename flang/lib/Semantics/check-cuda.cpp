@@ -82,6 +82,14 @@ struct DeviceExprChecker
           }
         }
       }
+      const Symbol &ultimate{sym->GetUltimate()};
+      const Scope &scope{ultimate.owner()};
+      const Symbol *mod{scope.IsModule() ? scope.symbol() : nullptr};
+      // Allow ieee_arithmetic module functions to be called on the device.
+      // TODO: Check for unsupported ieee_arithmetic on the device.
+      if (mod && mod->name() == "ieee_arithmetic") {
+        return {};
+      }
     } else if (x.GetSpecificIntrinsic()) {
       // TODO(CUDA): Check for unsupported intrinsics here
       return {};
@@ -253,6 +261,9 @@ public:
           subp->cudaSubprogramAttrs().value_or(
               common::CUDASubprogramAttrs::Host) !=
               common::CUDASubprogramAttrs::Host) {
+        isHostDevice = subp->cudaSubprogramAttrs() &&
+            subp->cudaSubprogramAttrs() ==
+                common::CUDASubprogramAttrs::HostDevice;
         Check(body);
       }
     }
@@ -349,6 +360,8 @@ private:
   }
   template <typename A>
   void ErrorIfHostSymbol(const A &expr, parser::CharBlock source) {
+    if (isHostDevice)
+      return;
     if (const Symbol * hostArray{FindHostArray{}(expr)}) {
       context_.Say(source,
           "Host array '%s' cannot be present in device context"_err_en_US,
@@ -494,6 +507,7 @@ private:
   }
 
   SemanticsContext &context_;
+  bool isHostDevice{false};
 };
 
 void CUDAChecker::Enter(const parser::SubroutineSubprogram &x) {
@@ -525,6 +539,21 @@ static int DoConstructTightNesting(
     return 0;
   }
   innerBlock = &std::get<parser::Block>(doConstruct->t);
+  if (doConstruct->IsDoConcurrent()) {
+    const auto &loopControl = doConstruct->GetLoopControl();
+    if (loopControl) {
+      if (const auto *concurrentControl{
+              std::get_if<parser::LoopControl::Concurrent>(&loopControl->u)}) {
+        const auto &concurrentHeader =
+            std::get<Fortran::parser::ConcurrentHeader>(concurrentControl->t);
+        const auto &controls =
+            std::get<std::list<Fortran::parser::ConcurrentControl>>(
+                concurrentHeader.t);
+        return controls.size();
+      }
+    }
+    return 0;
+  }
   if (innerBlock->size() == 1) {
     if (const auto *execConstruct{
             std::get_if<parser::ExecutableConstruct>(&innerBlock->front().u)}) {
@@ -598,9 +627,14 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
       std::get<std::optional<parser::DoConstruct>>(x.t))};
   const parser::Block *innerBlock{nullptr};
   if (DoConstructTightNesting(doConstruct, innerBlock) < depth) {
-    context_.Say(source,
-        "!$CUF KERNEL DO (%jd) must be followed by a DO construct with tightly nested outer levels of counted DO loops"_err_en_US,
-        std::intmax_t{depth});
+    if (doConstruct && doConstruct->IsDoConcurrent())
+      context_.Say(source,
+          "!$CUF KERNEL DO (%jd) must be followed by a DO CONCURRENT construct with at least %jd indices"_err_en_US,
+          std::intmax_t{depth}, std::intmax_t{depth});
+    else
+      context_.Say(source,
+          "!$CUF KERNEL DO (%jd) must be followed by a DO construct with tightly nested outer levels of counted DO loops"_err_en_US,
+          std::intmax_t{depth});
   }
   if (innerBlock) {
     DeviceContextChecker<true>{context_}.Check(*innerBlock);

@@ -75,8 +75,7 @@ void ToyToAffineLoweringPass::runOnOperation() {
   // only treat it as `legal` if its operands are legal.
   target.addIllegalDialect<ToyDialect>();
   target.addDynamicallyLegalOp<toy::PrintOp>([](toy::PrintOp op) {
-    return llvm::none_of(op->getOperandTypes(),
-                         [](Type type) { return type.isa<TensorType>(); });
+    return llvm::none_of(op->getOperandTypes(), llvm::IsaPred<TensorType>);
   });
   ...
 }

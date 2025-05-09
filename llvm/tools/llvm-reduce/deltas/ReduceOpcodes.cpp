@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceOpcodes.h"
-#include "Delta.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -240,7 +239,7 @@ static Value *reduceInstruction(Oracle &O, Module &M, Instruction &I) {
   return nullptr;
 }
 
-static void replaceOpcodesInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceOpcodesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Mod = WorkItem.getModule();
 
   for (Function &F : Mod) {
@@ -260,8 +259,4 @@ static void replaceOpcodesInModule(Oracle &O, ReducerWorkItem &WorkItem) {
         }
       }
   }
-}
-
-void llvm::reduceOpcodesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, replaceOpcodesInModule, "Reducing Opcodes");
 }

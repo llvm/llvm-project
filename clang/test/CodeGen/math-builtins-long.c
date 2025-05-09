@@ -58,9 +58,9 @@ void foo(long double f, long double *l, int *i, const char *c) {
   // PPCF128: call fp128 @ldexpf128(fp128 noundef %{{.+}}, {{(signext)?.+}})
   __builtin_ldexpl(f,f);
 
-  // F80: call x86_fp80 @modfl(x86_fp80 noundef %{{.+}}, ptr noundef %{{.+}})
-  // PPC: call ppc_fp128 @modfl(ppc_fp128 noundef %{{.+}}, ptr noundef %{{.+}})
-  // X86F128: call fp128 @modfl(fp128 noundef %{{.+}}, ptr noundef %{{.+}})
+  // F80: call { x86_fp80, x86_fp80 } @llvm.modf.f80(x86_fp80 %{{.+}})
+  // PPC: call { ppc_fp128, ppc_fp128 } @llvm.modf.ppcf128(ppc_fp128 %{{.+}})
+  // X86F128: call { fp128, fp128 } @llvm.modf.f128(fp128 %{{.+}})
   // PPCF128: call fp128 @modff128(fp128 noundef %{{.+}}, ptr noundef %{{.+}})
   __builtin_modfl(f,l);
 

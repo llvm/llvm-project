@@ -10,7 +10,7 @@
 ; External LDS is checked because it influences LDS padding in general and because it will
 ; not be moved into either module or kernel struct
 
-@module_variable = addrspace(3) global i16 undef
+@module_variable = addrspace(3) global i16 poison
 
 ; Variables are allocated into module scope block when used by a non-kernel function
 define void @use_module() #0 {
@@ -26,8 +26,8 @@ define void @use_module() #0 {
 }
 
 ; Variables only used by kernels are specialised and allocated per-kernel
-@kernel_normal = addrspace(3) global i16 undef
-@kernel_overalign = addrspace(3) global i16 undef, align 4
+@kernel_normal = addrspace(3) global i16 poison
+@kernel_overalign = addrspace(3) global i16 poison, align 4
 
 ; External LDS shall not introduce padding between module and kernel scope variables
 @extern_normal = external addrspace(3) global [0 x float]
@@ -696,5 +696,3 @@ define amdgpu_kernel void @module_1_kernel_overalign_indirect_extern_overalign(i
 
 attributes #0 = { noinline }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

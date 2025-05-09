@@ -24,3 +24,17 @@ struct nope {
 // expected-note@+1 {{in instantiation of template class 'nope<long double, 4>' requested here}}
 nope<long double, 4> y2;
 
+namespace GH26612 {
+// This used to crash while issuing the diagnostic about only applying to a
+// pointer or reference type.
+// FIXME: it would be ideal to only diagnose once rather than twice. We get one
+// diagnostic from explicit template arguments and another one for deduced
+// template arguments, which seems silly.
+template <class T>
+void f(T __attribute__((align_value(4))) x) {} // expected-warning 2 {{'align_value' attribute only applies to a pointer or reference ('int' is invalid)}}
+
+void foo() {
+  f<int>(0); // expected-note {{while substituting explicitly-specified template arguments into function template 'f'}} \
+                expected-note {{while substituting deduced template arguments into function template 'f' [with T = int]}}
+}
+} // namespace GH26612

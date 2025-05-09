@@ -330,6 +330,43 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
   ];
 }
 
+def DereferenceableOpInterface : OpInterface<"DereferenceableOpInterface"> {
+  let description = [{
+    An interface for memory operations that can carry dereferenceable metadata.
+    It provides setters and getters for the operation's dereferenceable
+    attributes. The default implementations of the interface methods expect
+    the operation to have an attribute of type DereferenceableAttr.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+  let verify = [{ return detail::verifyDereferenceableOpInterface($_op); }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns the dereferenceable attribute or nullptr",
+      /*returnType=*/  "::mlir::LLVM::DereferenceableAttr",
+      /*methodName=*/  "getDereferenceableOrNull",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getDereferenceableAttr();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Sets the dereferenceable attribute",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setDereferenceable",
+      /*args=*/        (ins "::mlir::LLVM::DereferenceableAttr":$attr),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setDereferenceableAttr(attr);
+      }]
+      >
+  ];
+}
+
 def FPExceptionBehaviorOpInterface : OpInterface<"FPExceptionBehaviorOpInterface"> {
   let description = [{
     An interface for operations receiving an exception behavior attribute

@@ -34,7 +34,6 @@
 #include "MachVMMemory.h"
 #include "PThreadCondition.h"
 #include "PThreadEvent.h"
-#include "PThreadMutex.h"
 #include "RNBContext.h"
 #include "ThreadInfo.h"
 
@@ -413,7 +412,7 @@ private:
   uint32_t m_stop_count; // A count of many times have we stopped
   pthread_t m_stdio_thread;   // Thread ID for the thread that watches for child
                               // process stdio
-  PThreadMutex m_stdio_mutex; // Multithreaded protection for stdio
+  std::recursive_mutex m_stdio_mutex; // Multithreaded protection for stdio
   std::string m_stdout_data;
 
   bool m_profile_enabled; // A flag to indicate if profiling is enabled
@@ -423,11 +422,11 @@ private:
       m_profile_scan_type; // Indicates what needs to be profiled
   pthread_t
       m_profile_thread; // Thread ID for the thread that profiles the inferior
-  PThreadMutex
+  std::recursive_mutex
       m_profile_data_mutex; // Multithreaded protection for profile info data
   std::vector<std::string>
       m_profile_data; // Profile data, must be protected by m_profile_data_mutex
-  PThreadEvent m_profile_events; // Used for the profile thread cancellable wait  
+  PThreadEvent m_profile_events; // Used for the profile thread cancellable wait
   DNBThreadResumeActions m_thread_actions; // The thread actions for the current
                                            // MachProcess::Resume() call
   MachException::Message::collection m_exception_messages; // A collection of
@@ -435,15 +434,16 @@ private:
                                                            // caught when
                                                            // listening to the
                                                            // exception port
-  PThreadMutex m_exception_messages_mutex; // Multithreaded protection for
-                                           // m_exception_messages
+  std::recursive_mutex
+      m_exception_and_signal_mutex; // Multithreaded protection for
+                                    // exceptions and signals.
 
   MachThreadList m_thread_list; // A list of threads that is maintained/updated
                                 // after each stop
   Genealogy m_activities; // A list of activities that is updated after every
                           // stop lazily
   nub_state_t m_state;    // The state of our process
-  PThreadMutex m_state_mutex; // Multithreaded protection for m_state
+  std::recursive_mutex m_state_mutex; // Multithreaded protection for m_state
   PThreadEvent m_events;      // Process related events in the child processes
                               // lifetime can be waited upon
   PThreadEvent m_private_events; // Used to coordinate running and stopping the

@@ -70,7 +70,7 @@ multiclass LMULSEWWriteResMXSEW<string name, list<ProcResourceKind> resources,
 // behavior is aliased to a Variant. The Variant has Latency predLad and
 // ReleaseAtCycles predCycles if the SchedPredicate Pred is true, otherwise has
 // Latency noPredLat and ReleaseAtCycles noPredCycles. The WorstCase SchedWrite
-// is created similiarly if IsWorstCase is true.
+// is created similarly if IsWorstCase is true.
 multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
                                  list<ProcResourceKind> resources,
                                  int predLat, list<int> predAcquireCycles,

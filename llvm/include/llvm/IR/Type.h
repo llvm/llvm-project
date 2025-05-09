@@ -165,8 +165,8 @@ public:
   bool isPPC_FP128Ty() const { return getTypeID() == PPC_FP128TyID; }
 
   /// Return true if this is a well-behaved IEEE-like type, which has a IEEE
-  /// compatible layout as defined by APFloat::isIEEE(), and does not have
-  /// non-IEEE values, such as x86_fp80's unnormal values.
+  /// compatible layout, and does not have non-IEEE values, such as x86_fp80's
+  /// unnormal values.
   bool isIEEELikeFPTy() const {
     switch (getTypeID()) {
     case DoubleTyID:
@@ -286,9 +286,7 @@ public:
 
   /// Return true if the type is "first class", meaning it is a valid type for a
   /// Value.
-  bool isFirstClassType() const {
-    return getTypeID() != FunctionTyID && getTypeID() != VoidTyID;
-  }
+  bool isFirstClassType() const;
 
   /// Return true if the type is a valid type for a register in codegen. This
   /// includes all first-class types except struct and array types.
@@ -345,10 +343,6 @@ public:
   /// floating-point types. If the FP type does not have a stable mantissa (e.g.
   /// ppc long double), this method returns -1.
   int getFPMantissaWidth() const;
-
-  /// Return whether the type is IEEE compatible, as defined by the eponymous
-  /// method in APFloat.
-  bool isIEEE() const;
 
   /// If this is a vector type, return the element type, otherwise return
   /// 'this'.

@@ -83,8 +83,8 @@ define amdgpu_ps void @_amdgpu_ps_main(i32 inreg %PrimMask, <2 x float> %InterpC
   %i50 = select i1 %.not, i32 %i47, i32 %i45
   %i51 = call i32 @llvm.amdgcn.mov.dpp8.i32(i32 %i50, i32 14570689)
   %i52 = bitcast i32 %i51 to float
-  call void @llvm.amdgcn.exp.f32(i32 21, i32 3, float %i41, float %i49, float undef, float undef, i1 false, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 22, i32 3, float %i44, float %i52, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 21, i32 3, float %i41, float %i49, float poison, float poison, i1 false, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 22, i32 3, float %i44, float %i52, float poison, float poison, i1 true, i1 true)
   ret void
 }
 

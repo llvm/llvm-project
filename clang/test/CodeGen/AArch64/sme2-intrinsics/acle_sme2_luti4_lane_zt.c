@@ -38,6 +38,20 @@ svint8_t test_svluti4_lane_zt_s8(svuint8_t zn) __arm_streaming __arm_in("zt0") {
   return svluti4_lane_zt_s8(0, zn, 7);
 }
 
+// CHECK-LABEL: @test_svluti4_lane_zt_mf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sme.luti4.lane.zt.nxv16i8(i32 0, <vscale x 16 x i8> [[ZN:%.*]], i32 7)
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z24test_svluti4_lane_zt_mf8u11__SVUint8_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sme.luti4.lane.zt.nxv16i8(i32 0, <vscale x 16 x i8> [[ZN:%.*]], i32 7)
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+svmfloat8_t test_svluti4_lane_zt_mf8(svuint8_t zn) __arm_streaming __arm_in("zt0") {
+  return svluti4_lane_zt_mf8(0, zn, 7);
+}
+
 // CHECK-LABEL: @test_svluti4_lane_zt_u16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sme.luti4.lane.zt.nxv8i16(i32 0, <vscale x 16 x i8> [[ZN:%.*]], i32 7)

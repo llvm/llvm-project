@@ -1,30 +1,14 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include <clc/clc.h>
-#include <clc/clcmacro.h>
+#include <clc/math/clc_fmin.h>
 
-_CLC_DEFINE_BINARY_BUILTIN(float, fmin, __builtin_fminf, float, float);
-
-#ifdef cl_khr_fp64
-
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
-_CLC_DEFINE_BINARY_BUILTIN(double, fmin, __builtin_fmin, double, double);
-
-#endif
-#ifdef cl_khr_fp16
-
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-
-_CLC_DEF _CLC_OVERLOAD half fmin(half x, half y)
-{
-   if (isnan(x))
-      return y;
-   if (isnan(y))
-      return x;
-   return (y < x) ? y : x;
-}
-_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, fmin, half, half)
-
-#endif
-
-#define __CLC_BODY <fmin.inc>
+#define FUNCTION fmin
+#define __CLC_BODY <clc/shared/binary_def_with_scalar_second_arg.inc>
 #include <clc/math/gentype.inc>

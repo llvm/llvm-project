@@ -20,6 +20,7 @@
 
 ; SCALAR-LABEL: func:
 ; SCALAR:       # %bb.1:
+; SCALAR:         or %s1, 0, (0)1
 ; SCALAR-NEXT:    st %s1, 8(, %s0)
 ; SCALAR-NEXT:    st %s1, (, %s0)
 ; SCALAR-NEXT:    b.l.t (, %s10)

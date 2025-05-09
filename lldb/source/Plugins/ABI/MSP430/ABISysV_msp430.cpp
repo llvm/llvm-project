@@ -305,43 +305,39 @@ ValueObjectSP ABISysV_msp430::GetReturnValueObjectImpl(
 }
 
 // called when we are on the first instruction of a new function
-bool ABISysV_msp430::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_msp430::CreateFunctionEntryUnwindPlan() {
   uint32_t sp_reg_num = dwarf_sp;
   uint32_t pc_reg_num = dwarf_pc;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 2);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -2, true);
-  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  UnwindPlan::Row row;
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 2);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -2, true);
+  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("msp430 at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("msp430 at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_msp430::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_msp430::CreateDefaultUnwindPlan() {
   uint32_t fp_reg_num = dwarf_fp;
   uint32_t sp_reg_num = dwarf_sp;
   uint32_t pc_reg_num = dwarf_pc;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 2);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -2, true);
-  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
-  row->SetRegisterLocationToUnspecified(fp_reg_num, true);
+  UnwindPlan::Row row;
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 2);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -2, true);
+  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  row.SetRegisterLocationToUnspecified(fp_reg_num, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("msp430 default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("msp430 default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  return plan_sp;
 }
 
 bool ABISysV_msp430::RegisterIsVolatile(const RegisterInfo *reg_info) {

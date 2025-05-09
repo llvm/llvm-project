@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2c -triple=x86_64-linux -fsyntax-only %s -verify
+// RUN: %clang_cc1 -std=c++2c -triple=x86_64-linux -fsyntax-only %s -verify -fexperimental-new-constant-interpreter
 
 static_assert(true, "");
 static_assert(true, 0); // expected-error {{the message in a static assertion must be a string literal or an object with 'data()' and 'size()' member functions}}

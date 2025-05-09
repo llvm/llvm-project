@@ -1,6 +1,8 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass branch-relaxation -aarch64-b-offset-bits=64 -aarch64-tbz-offset-bits=9 -aarch64-cbz-offset-bits=9 %s -o - | FileCheck %s
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass branch-relaxation -aarch64-tbz-offset-bits=9 -aarch64-cbz-offset-bits=9 %s -o - | FileCheck --check-prefix=INDIRECT %s
 
+# RUN: llc -mtriple=aarch64-none-linux-gnu -passes branch-relaxation -aarch64-tbz-offset-bits=9 -aarch64-cbz-offset-bits=9 %s -o - | FileCheck --check-prefix=INDIRECT %s
+
 --- |
   declare i32 @bar()
   declare i32 @baz()

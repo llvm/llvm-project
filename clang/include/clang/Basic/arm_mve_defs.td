@@ -102,6 +102,7 @@ def int_min: CGHelperFn<"ARMMVEConstantSplat<1,0>">;
 def int_max: CGHelperFn<"ARMMVEConstantSplat<0,1>">;
 def uint_max: CGHelperFn<"ARMMVEConstantSplat<1,1>">;
 def undef: IRFunction<"UndefValue::get">;
+def poison: IRFunction<"PoisonValue::get">;
 def icmp_eq: IRBuilder<"CreateICmpEQ">;
 def icmp_ne: IRBuilder<"CreateICmpNE">;
 def icmp_ugt: IRBuilder<"CreateICmpUGT">;

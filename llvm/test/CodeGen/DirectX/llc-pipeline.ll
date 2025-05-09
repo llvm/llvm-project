@@ -15,16 +15,18 @@
 ; CHECK-NEXT: ModulePass Manager
 ; CHECK-NEXT:   DXIL Finalize Linkage
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
+; CHECK-NEXT:   DXIL CBuffer Access
 ; CHECK-NEXT:   DXIL Data Scalarization
 ; CHECK-NEXT:   DXIL Array Flattener
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     DXIL Resource Access
 ; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT:     Scalarize vector operations
-; CHECK-NEXT:   DXIL Resource Binding Analysis
-; CHECK-NEXT:   DXIL resource Information
-; CHECK-NEXT:   DXIL Shader Flag Analysis
+; CHECK-NEXT:     DXIL Forward Handle Accesses
+; CHECK-NEXT:     DXIL Legalizer
+; CHECK-NEXT:   DXIL Resources Analysis
 ; CHECK-NEXT:   DXIL Module Metadata analysis
+; CHECK-NEXT:   DXIL Shader Flag Analysis
 ; CHECK-NEXT:   DXIL Translate Metadata
 ; CHECK-NEXT:   DXIL Op Lowering
 ; CHECK-NEXT:   DXIL Prepare Module
@@ -33,6 +35,7 @@
 ; CHECK-ASM-NEXT: Print Module IR
 
 ; CHECK-OBJ-NEXT: DXIL Embedder
+; CHECK-OBJ-NEXT: DXIL Root Signature Analysis
 ; CHECK-OBJ-NEXT: DXContainer Global Emitter
 ; CHECK-OBJ-NEXT: FunctionPass Manager
 ; CHECK-OBJ-NEXT:   Lazy Machine Block Frequency Analysis

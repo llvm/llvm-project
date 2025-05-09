@@ -378,14 +378,6 @@ static MCInstPrinter *createAArch64MCInstPrinter(const Triple &T,
   return nullptr;
 }
 
-static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
-                                     std::unique_ptr<MCAsmBackend> &&TAB,
-                                     std::unique_ptr<MCObjectWriter> &&OW,
-                                     std::unique_ptr<MCCodeEmitter> &&Emitter) {
-  return createAArch64ELFStreamer(Ctx, std::move(TAB), std::move(OW),
-                                  std::move(Emitter));
-}
-
 static MCStreamer *
 createMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                     std::unique_ptr<MCObjectWriter> &&OW,
@@ -393,14 +385,6 @@ createMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
   return createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
                              std::move(Emitter), /*ignore=*/false,
                              /*LabelSections*/ true);
-}
-
-static MCStreamer *
-createWinCOFFStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
-                      std::unique_ptr<MCObjectWriter> &&OW,
-                      std::unique_ptr<MCCodeEmitter> &&Emitter) {
-  return createAArch64WinCOFFStreamer(Ctx, std::move(TAB), std::move(OW),
-                                      std::move(Emitter));
 }
 
 namespace {
@@ -481,7 +465,7 @@ public:
 
   std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 const Triple &TargetTriple) const override {
+                 const MCSubtargetInfo &STI) const override {
     // Do a lightweight parsing of PLT entries.
     std::vector<std::pair<uint64_t, uint64_t>> Result;
     for (uint64_t Byte = 0, End = PltContents.size(); Byte + 7 < End;
@@ -542,9 +526,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64TargetMC() {
     TargetRegistry::RegisterMCCodeEmitter(*T, createAArch64MCCodeEmitter);
 
     // Register the obj streamers.
-    TargetRegistry::RegisterELFStreamer(*T, createELFStreamer);
+    TargetRegistry::RegisterELFStreamer(*T, createAArch64ELFStreamer);
     TargetRegistry::RegisterMachOStreamer(*T, createMachOStreamer);
-    TargetRegistry::RegisterCOFFStreamer(*T, createWinCOFFStreamer);
+    TargetRegistry::RegisterCOFFStreamer(*T, createAArch64WinCOFFStreamer);
 
     // Register the obj target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(

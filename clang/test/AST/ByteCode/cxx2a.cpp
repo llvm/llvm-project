@@ -177,3 +177,13 @@ consteval int f(int i) {
     return 2 * i;
 }
 static_assert(test(42));
+
+namespace PureVirtual {
+  struct Abstract {
+    constexpr virtual void f() = 0; // both-note {{declared here}}
+    constexpr Abstract() { do_it(); } // both-note {{in call to}}
+    constexpr void do_it() { f(); } // both-note {{pure virtual function 'PureVirtual::Abstract::f' called}}
+  };
+  struct PureVirtualCall : Abstract { void f(); }; // both-note {{in call to 'Abstract}}
+  constexpr PureVirtualCall pure_virtual_call; // both-error {{constant expression}} both-note {{in call to 'PureVirtualCall}}
+}

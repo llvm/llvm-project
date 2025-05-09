@@ -26,7 +26,7 @@ int main(int, char**) {
 
     // expected-error-re@*:* {{static assertion failed due to requirement {{.*}}Using std::shared_ptr<> without a deleter in std::out_ptr is not supported.}}
     std::ignore = std::out_ptr(sPtr);
-    // expected-error@*:* {{no matching conversion for functional-style cast from 'std::shared_ptr<int>' to 'std::out_ptr_t<shared_ptr<int>, _Ptr>' (aka 'out_ptr_t<std::shared_ptr<int>, int *>')}}
+    // expected-error-re@*:* {{no matching conversion for functional-style cast from 'std::shared_ptr<int>' to 'std::out_ptr_t<{{(std::)?}}shared_ptr<int>, _Ptr>'{{( \(aka 'out_ptr_t<std::shared_ptr<int>, int *>'\))?}}}}
     std::ignore = std::out_ptr<int*>(sPtr);
   }
 

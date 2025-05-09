@@ -296,7 +296,7 @@ class CrashLog(symbolication.Symbolicator):
             except:
                 dsymForUUIDBinary = ""
 
-        dwarfdump_uuid_regex = re.compile("UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
+        dwarfdump_uuid_regex = re.compile(r"UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
 
         def __init__(
             self, text_addr_lo, text_addr_hi, identifier, version, uuid, path, verbose
@@ -501,7 +501,7 @@ class CrashLog(symbolication.Symbolicator):
         for image in self.images:
             if image.identifier == identifier:
                 return image
-        regex_text = "^.*\.%s$" % (re.escape(identifier))
+        regex_text = r"^.*\.%s$" % (re.escape(identifier))
         regex = re.compile(regex_text)
         for image in self.images:
             if regex.match(image.identifier):
@@ -925,7 +925,7 @@ class TextCrashLogParser(CrashLogParser):
             version = r"(?:" + super().version + r"\s+)?"
             address = r"(0x[0-9a-fA-F]{4,})"  # 4 digits or more
 
-            symbol = """
+            symbol = r"""
                         (?:
                             [ ]+
                             (?P<symbol>.+)
@@ -1095,7 +1095,7 @@ class TextCrashLogParser(CrashLogParser):
             self.crashlog.process_identifier = line[11:].strip()
         elif line.startswith("Version:"):
             version_string = line[8:].strip()
-            matched_pair = re.search("(.+)\((.+)\)", version_string)
+            matched_pair = re.search(r"(.+)\((.+)\)", version_string)
             if matched_pair:
                 self.crashlog.process_version = matched_pair.group(1)
                 self.crashlog.process_compatability_version = matched_pair.group(2)

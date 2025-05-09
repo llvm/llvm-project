@@ -8,6 +8,14 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 \
 ! RUN: | FileCheck %s
 
+!CHECK:  omp.private {type = private} @{{.*}}test_allocatable_fixed_len_stringEfixed_len_str{{.*}} init {
+!CHECK:    fir.if {{.*}} {
+!CHECK:      fir.embox %{{[^[:space:]]+}} : {{.*}}
+!CHECK:    } else {
+!CHECK:      fir.embox %{{[^[:space:]]+}} : {{.*}}
+!CHECK:    }
+!CHECK:  }
+
 !CHECK:  omp.private {type = private} @[[STR_ARR_PRIVATIZER:_QFtest_allocatable_string_arrayEc_private_box_heap_Uxc8xU]] : [[TYPE:.*]] init {
 !CHECK:  ^bb0(%[[ORIG_REF:.*]]: !fir.ref<[[TYPE]]>, %[[C_PVT_BOX_REF:.*]]: !fir.ref<[[TYPE]]>):
 !CHECK:      %{{.*}} = fir.load %[[ORIG_REF]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
@@ -72,4 +80,12 @@ subroutine test_allocatable_string_array(n)
   character(n), allocatable :: c(:)
   !$omp parallel private(c)
   !$omp end parallel
+end subroutine
+
+subroutine test_allocatable_fixed_len_string()
+  character(42), allocatable :: fixed_len_str
+  !$omp parallel do private(fixed_len_str)
+  do i = 1,10
+  end do
+  !$omp end parallel do
 end subroutine

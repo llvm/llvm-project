@@ -515,32 +515,32 @@ __device__ inline cuuint32_t __nvvm_get_smem_pointer(void *__ptr) {
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 800
 __device__ inline unsigned __reduce_add_sync(unsigned __mask,
                                              unsigned __value) {
-  return __nvvm_redux_sync_add(__mask, __value);
+  return __nvvm_redux_sync_add(__value, __mask);
 }
 __device__ inline unsigned __reduce_min_sync(unsigned __mask,
                                              unsigned __value) {
-  return __nvvm_redux_sync_umin(__mask, __value);
+  return __nvvm_redux_sync_umin(__value, __mask);
 }
 __device__ inline unsigned __reduce_max_sync(unsigned __mask,
                                              unsigned __value) {
-  return __nvvm_redux_sync_umax(__mask, __value);
+  return __nvvm_redux_sync_umax(__value, __mask);
 }
 __device__ inline int __reduce_min_sync(unsigned __mask, int __value) {
-  return __nvvm_redux_sync_min(__mask, __value);
+  return __nvvm_redux_sync_min(__value, __mask);
 }
 __device__ inline int __reduce_max_sync(unsigned __mask, int __value) {
-  return __nvvm_redux_sync_max(__mask, __value);
+  return __nvvm_redux_sync_max(__value, __mask);
 }
 __device__ inline unsigned __reduce_or_sync(unsigned __mask, unsigned __value) {
-  return __nvvm_redux_sync_or(__mask, __value);
+  return __nvvm_redux_sync_or(__value, __mask);
 }
 __device__ inline unsigned __reduce_and_sync(unsigned __mask,
                                              unsigned __value) {
-  return __nvvm_redux_sync_and(__mask, __value);
+  return __nvvm_redux_sync_and(__value, __mask);
 }
 __device__ inline unsigned __reduce_xor_sync(unsigned __mask,
                                              unsigned __value) {
-  return __nvvm_redux_sync_xor(__mask, __value);
+  return __nvvm_redux_sync_xor(__value, __mask);
 }
 
 __device__ inline void __nv_memcpy_async_shared_global_4(void *__dst,

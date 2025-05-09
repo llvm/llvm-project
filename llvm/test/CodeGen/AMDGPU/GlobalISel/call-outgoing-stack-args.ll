@@ -53,7 +53,7 @@ define amdgpu_kernel void @kernel_caller_stack() {
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s2
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    s_endpgm
-  call void @external_void_func_v16i32_v16i32_v4i32(<16 x i32> undef, <16 x i32> undef, <4 x i32> <i32 9, i32 10, i32 11, i32 12>)
+  call void @external_void_func_v16i32_v16i32_v4i32(<16 x i32> poison, <16 x i32> poison, <4 x i32> <i32 9, i32 10, i32 11, i32 12>)
   ret void
 }
 
@@ -294,7 +294,7 @@ define void @func_caller_stack() {
 ; FLATSCR-NEXT:    s_mov_b32 s33, s0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
-  call void @external_void_func_v16i32_v16i32_v4i32(<16 x i32> undef, <16 x i32> undef, <4 x i32> <i32 9, i32 10, i32 11, i32 12>)
+  call void @external_void_func_v16i32_v16i32_v4i32(<16 x i32> poison, <16 x i32> poison, <4 x i32> <i32 9, i32 10, i32 11, i32 12>)
   ret void
 }
 

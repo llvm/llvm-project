@@ -75,12 +75,12 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  assert(ST.hasAMXTILE() && "Only supported on AMXTILE targets");
+
   const X86InstrInfo *TII = ST.getInstrInfo();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   BitVector GR64Regs =
       TRI->getAllocatableSet(MF, TRI->getRegClass(X86::GR64RegClassID));
-  BitVector TILERegs =
-      TRI->getAllocatableSet(MF, TRI->getRegClass(X86::TILERegClassID));
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {

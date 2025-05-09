@@ -145,8 +145,8 @@ return:                                           ; preds = %cond.end, %if.then3
 
 ; TEST SCC test returning a pointer value argument
 ;
-; FNATTR: define ptr @ptr_sink_r0(ptr readnone returned %r)
-; FNATTR: define ptr @ptr_scc_r1(ptr %a, ptr readnone %r, ptr readnone captures(none) %b)
+; FNATTR: define ptr @ptr_sink_r0(ptr readnone returned captures(ret: address, provenance) %r)
+; FNATTR: define ptr @ptr_scc_r1(ptr readnone %a, ptr readnone %r, ptr readnone captures(none) %b)
 ; FNATTR: define ptr @ptr_scc_r2(ptr readnone %a, ptr readnone %b, ptr readnone %r)
 ;
 ;
@@ -260,8 +260,8 @@ entry:
 
 ; TEST another SCC test
 ;
-; FNATTR:  define ptr @rt2_helper(ptr %a)
-; FNATTR:  define ptr @rt2(ptr readnone %a, ptr readnone %b)
+; FNATTR:  define ptr @rt2_helper(ptr readnone captures(address_is_null) %a)
+; FNATTR:  define ptr @rt2(ptr readnone captures(address_is_null) %a, ptr readnone captures(ret: address, provenance) %b)
 define ptr @rt2_helper(ptr %a) #0 {
 entry:
   %call = call ptr @rt2(ptr %a, ptr %a)
@@ -284,8 +284,8 @@ if.end:
 
 ; TEST another SCC test
 ;
-; FNATTR:  define ptr @rt3_helper(ptr %a, ptr %b)
-; FNATTR:  define ptr @rt3(ptr readnone %a, ptr readnone %b)
+; FNATTR:  define ptr @rt3_helper(ptr readnone captures(address_is_null) %a, ptr readnone %b)
+; FNATTR:  define ptr @rt3(ptr readnone captures(address_is_null) %a, ptr readnone %b)
 define ptr @rt3_helper(ptr %a, ptr %b) #0 {
 entry:
   %call = call ptr @rt3(ptr %a, ptr %b)
@@ -316,7 +316,7 @@ if.end:
 ;  }
 ;
 ;
-; FNATTR:     define ptr @calls_unknown_fn(ptr readnone returned %r)
+; FNATTR:     define ptr @calls_unknown_fn(ptr readnone returned captures(ret: address, provenance) %r)
 declare void @unknown_fn(ptr) #0
 
 define ptr @calls_unknown_fn(ptr %r) #0 {
@@ -415,7 +415,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; }
 ;
 ;
-; FNATTR:     define ptr @bitcast(ptr readnone returned %b)
+; FNATTR:     define ptr @bitcast(ptr readnone returned captures(ret: address, provenance) %b)
 ;
 define ptr @bitcast(ptr %b) #0 {
 entry:
@@ -433,7 +433,7 @@ entry:
 ; }
 ;
 ;
-; FNATTR:     define ptr @bitcasts_select_and_phi(ptr readnone %b)
+; FNATTR:     define ptr @bitcasts_select_and_phi(ptr readnone captures(address_is_null, ret: address, provenance) %b)
 ;
 define ptr @bitcasts_select_and_phi(ptr %b) #0 {
 entry:
@@ -462,7 +462,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; }
 ;
 ;
-; FNATTR:     define ptr @ret_arg_arg_undef(ptr readnone %b)
+; FNATTR:     define ptr @ret_arg_arg_undef(ptr readnone captures(address_is_null, ret: address, provenance) %b)
 ;
 define ptr @ret_arg_arg_undef(ptr %b) #0 {
 entry:
@@ -494,7 +494,7 @@ ret_undef:
 ; }
 ;
 ;
-; FNATTR:     define ptr @ret_undef_arg_arg(ptr readnone %b)
+; FNATTR:     define ptr @ret_undef_arg_arg(ptr readnone captures(address_is_null, ret: address, provenance) %b)
 ;
 define ptr @ret_undef_arg_arg(ptr %b) #0 {
 entry:
@@ -526,7 +526,7 @@ ret_arg1:
 ; }
 ;
 ;
-; FNATTR:     define ptr @ret_undef_arg_undef(ptr readnone %b)
+; FNATTR:     define ptr @ret_undef_arg_undef(ptr readnone captures(address_is_null, ret: address, provenance) %b)
 define ptr @ret_undef_arg_undef(ptr %b) #0 {
 entry:
   %cmp = icmp eq ptr %b, null

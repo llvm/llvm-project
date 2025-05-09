@@ -266,3 +266,19 @@ void func() {
 }
 
 } // namespace GH88081
+
+namespace GH138018 {
+
+template <typename T> struct vec {};
+
+auto structure_to_typelist(auto)  {
+    return []<template <typename> typename T>(T<int>) {
+        return 0;
+    }(vec<int>{});
+}
+
+template <typename T> using helper = decltype(structure_to_typelist(T{}));
+static_assert(__is_same_as(int, helper<int>));
+
+
+} // namespace GH138018

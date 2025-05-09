@@ -49,13 +49,15 @@ class LLVM_LIBRARY_VISIBILITY M68kAsmPrinter
   void printAbsMem(const MachineInstr *MI, unsigned OpNum, raw_ostream &OS);
 
 public:
+  static char ID;
+
   const M68kSubtarget *Subtarget;
   const M68kMachineFunctionInfo *MMFI;
   std::unique_ptr<M68kMCInstLower> MCInstLowering;
 
   explicit M68kAsmPrinter(TargetMachine &TM,
                           std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)) {
+      : AsmPrinter(TM, std::move(Streamer), ID) {
     Subtarget = static_cast<M68kTargetMachine &>(TM).getSubtargetImpl();
   }
 

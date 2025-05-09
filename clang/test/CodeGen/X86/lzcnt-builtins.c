@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +lzcnt -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +lzcnt -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
 
 
 #include <immintrin.h>

@@ -25,10 +25,10 @@ struct A {
 };
 
 int main(int, char**) {
-    std::list<A> c1;
-    std::list<A> c2;
-    TEST_LIBCPP_ASSERT_FAILURE(c1.emplace(c2.cbegin(), 2, 3.5),
-                               "list::emplace(iterator, args...) called with an iterator not referring to this list");
+  std::list<A> c1;
+  std::list<A> c2;
+  TEST_LIBCPP_ASSERT_FAILURE(c1.emplace(c2.cbegin(), 2, 3.5),
+                             "list::emplace(iterator, args...) called with an iterator not referring to this list");
 
-    return 0;
+  return 0;
 }

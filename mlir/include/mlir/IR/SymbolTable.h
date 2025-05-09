@@ -316,6 +316,13 @@ public:
   /// Lookup, or create, a symbol table for an operation.
   SymbolTable &getSymbolTable(Operation *op);
 
+  /// Invalidate the cached symbol table for an operation.
+  /// This is important when doing IR modifications that erase and also create
+  /// operations having the 'OpTrait::SymbolTable' trait. If a symbol table of
+  /// an erased operation is not invalidated, a new operation sharing the same
+  /// address would be associated with outdated, and wrong, information.
+  void invalidateSymbolTable(Operation *op);
+
 private:
   friend class LockedSymbolTableCollection;
 

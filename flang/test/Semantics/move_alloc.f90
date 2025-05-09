@@ -1,7 +1,7 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Check for semantic errors in move_alloc() subroutine calls
 program main
-  integer, allocatable :: a(:)[:], b(:)[:], f(:), g(:)
+  integer, allocatable :: a(:)[:], b(:)[:], f(:), g(:), h(:)[:,:]
   type alloc_component
     integer, allocatable :: a(:)
   end type
@@ -72,5 +72,8 @@ program main
   call move_alloc(f(::2), g)
   !ERROR: Argument #2 to MOVE_ALLOC must be allocatable
   call move_alloc(f, g(::2))
+
+  !ERROR: FROM= argument to MOVE_ALLOC has corank 1, but TO= argument has corank 2
+  call move_alloc(a, h)
 
 end program main

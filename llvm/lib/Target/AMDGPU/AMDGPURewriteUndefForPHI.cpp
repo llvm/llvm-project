@@ -72,9 +72,7 @@ namespace {
 class AMDGPURewriteUndefForPHILegacy : public FunctionPass {
 public:
   static char ID;
-  AMDGPURewriteUndefForPHILegacy() : FunctionPass(ID) {
-    initializeAMDGPURewriteUndefForPHILegacyPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPURewriteUndefForPHILegacy() : FunctionPass(ID) {}
   bool runOnFunction(Function &F) override;
   StringRef getPassName() const override {
     return "AMDGPU Rewrite Undef for PHI";

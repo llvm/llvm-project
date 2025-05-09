@@ -24,9 +24,9 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_BUFFERHOISTING
-#define GEN_PASS_DEF_BUFFERLOOPHOISTING
-#define GEN_PASS_DEF_PROMOTEBUFFERSTOSTACK
+#define GEN_PASS_DEF_BUFFERHOISTINGPASS
+#define GEN_PASS_DEF_BUFFERLOOPHOISTINGPASS
+#define GEN_PASS_DEF_PROMOTEBUFFERSTOSTACKPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -416,7 +416,7 @@ public:
 /// The buffer hoisting pass that hoists allocation nodes into dominating
 /// blocks.
 struct BufferHoistingPass
-    : public bufferization::impl::BufferHoistingBase<BufferHoistingPass> {
+    : public bufferization::impl::BufferHoistingPassBase<BufferHoistingPass> {
 
   void runOnOperation() override {
     // Hoist all allocations into dominator blocks.
@@ -428,7 +428,7 @@ struct BufferHoistingPass
 
 /// The buffer loop hoisting pass that hoists allocation nodes out of loops.
 struct BufferLoopHoistingPass
-    : public bufferization::impl::BufferLoopHoistingBase<
+    : public bufferization::impl::BufferLoopHoistingPassBase<
           BufferLoopHoistingPass> {
 
   void runOnOperation() override {
@@ -440,15 +440,11 @@ struct BufferLoopHoistingPass
 /// The promote buffer to stack pass that tries to convert alloc nodes into
 /// alloca nodes.
 class PromoteBuffersToStackPass
-    : public bufferization::impl::PromoteBuffersToStackBase<
+    : public bufferization::impl::PromoteBuffersToStackPassBase<
           PromoteBuffersToStackPass> {
-public:
-  PromoteBuffersToStackPass(unsigned maxAllocSizeInBytes,
-                            unsigned maxRankOfAllocatedMemRef) {
-    this->maxAllocSizeInBytes = maxAllocSizeInBytes;
-    this->maxRankOfAllocatedMemRef = maxRankOfAllocatedMemRef;
-  }
+  using Base::Base;
 
+public:
   explicit PromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc)
       : isSmallAlloc(std::move(isSmallAlloc)) {}
 
@@ -477,20 +473,6 @@ private:
 void mlir::bufferization::hoistBuffersFromLoops(Operation *op) {
   BufferAllocationHoisting<BufferAllocationLoopHoistingState> optimizer(op);
   optimizer.hoist();
-}
-
-std::unique_ptr<Pass> mlir::bufferization::createBufferHoistingPass() {
-  return std::make_unique<BufferHoistingPass>();
-}
-
-std::unique_ptr<Pass> mlir::bufferization::createBufferLoopHoistingPass() {
-  return std::make_unique<BufferLoopHoistingPass>();
-}
-
-std::unique_ptr<Pass> mlir::bufferization::createPromoteBuffersToStackPass(
-    unsigned maxAllocSizeInBytes, unsigned maxRankOfAllocatedMemRef) {
-  return std::make_unique<PromoteBuffersToStackPass>(maxAllocSizeInBytes,
-                                                     maxRankOfAllocatedMemRef);
 }
 
 std::unique_ptr<Pass> mlir::bufferization::createPromoteBuffersToStackPass(

@@ -154,8 +154,6 @@ define half @complex_canonicalize_fmul_half(half %a, half %b) nounwind {
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
 entry:
 
@@ -239,15 +237,11 @@ define void @v_test_canonicalize_v2half(<2 x half> addrspace(1)* %out) nounwind 
 ; AVX512-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; AVX512-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0],xmm3[1,2,3]
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
-; AVX512-NEXT:    vmovd %xmm2, %eax
-; AVX512-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm2
 ; AVX512-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm3[1,2,3]
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; AVX512-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX512-NEXT:    retq

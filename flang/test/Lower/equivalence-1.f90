@@ -45,8 +45,7 @@ SUBROUTINE s3
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[group]], %c0 : (!fir.ref<!fir.array<40xi8>>, index) -> !fir.ref<i8>
   ! CHECK: %[[rloc:.*]] = fir.convert %[[coor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.array<10xf32>>
   ! CHECK: %[[xloc:.*]] = fir.convert %[[coor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.type<_QFs3Tt{r:!fir.array<10xf32>}>>
-  ! CHECK: %[[fidx:.*]] = fir.field_index r, !fir.type<_QFs3Tt{r:!fir.array<10xf32>}>
-  ! CHECK: %[[xrloc:.*]] = fir.coordinate_of %[[xloc]], %[[fidx]] :
+  ! CHECK: %[[xrloc:.*]] = fir.coordinate_of %[[xloc]], r
   ! CHECK: %[[v1loc:.*]] = fir.coordinate_of %[[xrloc]], %c8_i64 : (!fir.ref<!fir.array<10xf32>>, i64) -> !fir.ref<f32>
   ! CHECK: fir.store %{{.*}} to %[[v1loc]] : !fir.ref<f32>
   x%r(9) = 9.0

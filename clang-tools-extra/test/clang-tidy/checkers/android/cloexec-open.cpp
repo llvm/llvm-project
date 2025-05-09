@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s android-cloexec-open %t
+// RUN: %check_clang_tidy --match-partial-fixes %s android-cloexec-open %t
 
 #define O_RDWR 1
 #define O_EXCL 2

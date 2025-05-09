@@ -535,7 +535,7 @@ func.func @allowed_cases_pass() {
 // -----
 
 func.func @disallowed_case_sticky_fail() {
-  // expected-error@+2 {{expected test::TestBitEnum to be one of: read, write, execute}}
+  // expected-error@+2 {{expected one of [read, write, execute] for a test bit enum, got: sticky}}
   // expected-error@+1 {{failed to parse TestBitEnumAttr}}
   "test.op_with_bit_enum"() {value = #test.bit_enum<sticky>} : () -> ()
 }

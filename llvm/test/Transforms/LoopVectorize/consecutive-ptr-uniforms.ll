@@ -243,13 +243,13 @@ for.end:
 ; CHECK-NOT: LV: Found uniform instruction: %tmp1 = getelementptr inbounds x86_fp80, ptr %a, i64 %i
 ; CHECK:     vector.body
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:       %[[I1:.+]] = or disjoint i64 %index, 1
-; CHECK:       %[[I2:.+]] = or disjoint i64 %index, 2
-; CHECK:       %[[I3:.+]] = or disjoint i64 %index, 3
 ; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %index
-; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %[[I1]]
-; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %[[I2]]
-; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %[[I3]]
+; CHECK:       %[[G1:.+]] = getelementptr x86_fp80, ptr %a, i64 %index
+; CHECK:       getelementptr i8, ptr %[[G1]], i64 16
+; CHECK:       %[[G2:.+]] = getelementptr x86_fp80, ptr %a, i64 %index
+; CHECK:       getelementptr i8, ptr %[[G2]], i64 32
+; CHECK:       %[[G3:.+]] = getelementptr x86_fp80, ptr %a, i64 %index
+; CHECK:       getelementptr i8, ptr %[[G3]], i64 48
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @irregular_type(ptr %a, i64 %n) {
@@ -311,13 +311,13 @@ for.end:
 ; INTER:     vector.body
 ; INTER:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; INTER:       %[[I0:.+]] = shl i64 %index, 4
-; INTER:       %[[I1:.+]] = or disjoint i64 %[[I0]], 16
-; INTER:       %[[I2:.+]] = or disjoint i64 %[[I0]], 32
-; INTER:       %[[I3:.+]] = or disjoint i64 %[[I0]], 48
-; INTER:       %next.gep = getelementptr i8, ptr %a, i64 %[[I0]]
-; INTER-NEXT:  = getelementptr i8, ptr %a, i64 %[[I1]]
-; INTER-NEXT:  = getelementptr i8, ptr %a, i64 %[[I2]]
-; INTER-NEXT:  = getelementptr i8, ptr %a, i64 %[[I3]]
+; INTER-NEXT:  %next.gep = getelementptr i8, ptr %a, i64 %[[I0]]
+; INTER-NEXT:  %[[G2:.+]] = getelementptr i8, ptr %a, i64 %[[I0]]
+; INTER-NEXT:  %[[G3:.+]] = getelementptr i8, ptr %a, i64 %[[I0]]
+; INTER-NEXT:  %[[G4:.+]] = getelementptr i8, ptr %a, i64 %[[I0]]
+; INTER:       = getelementptr i8, ptr %[[G2]], i64 24
+; INTER-NEXT:  = getelementptr i8, ptr %[[G3]], i64 40
+; INTER-NEXT:  = getelementptr i8, ptr %[[G4]], i64 56
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
@@ -358,13 +358,13 @@ for.end:
 ; CHECK:     vector.body
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK:       [[SHL1:%.+]] = shl i64 %index, 4
-; CHECK:       %[[I1:.+]] = or disjoint i64 [[SHL1]], 16
-; CHECK:       %[[I2:.+]] = or disjoint i64 [[SHL1]], 32
-; CHECK:       %[[I3:.+]] = or disjoint i64 [[SHL1]], 48
 ; CHECK:       %next.gep = getelementptr i8, ptr %a, i64 [[SHL1]]
-; CHECK:       = getelementptr i8, ptr %a, i64 %[[I1]]
-; CHECK:       = getelementptr i8, ptr %a, i64 %[[I2]]
-; CHECK:       = getelementptr i8, ptr %a, i64 %[[I3]]
+; CHECK:       %[[G1:.+]] = getelementptr i8, ptr %a, i64 [[SHL1]]
+; CHECK:       = getelementptr i8, ptr %[[G1]], i64 16
+; CHECK:       %[[G2:.+]] = getelementptr i8, ptr %a, i64 [[SHL1]]
+; CHECK:       = getelementptr i8, ptr %[[G2]], i64 32
+; CHECK:       %[[G3:.+]] = getelementptr i8, ptr %a, i64 [[SHL1]]
+; CHECK:       = getelementptr i8, ptr %[[G3]], i64 48
 ; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @pointer_iv_non_uniform_1(ptr %a, i64 %n) {
@@ -395,8 +395,8 @@ for.end:
 ; CHECK-NOT: LV: Found uniform instruction: %p = phi ptr [ %tmp3, %for.body ], [ %a, %entry ]
 ; CHECK:     LV: Found uniform instruction: %q = phi ptr [ %tmp4, %for.body ], [ %b, %entry ]
 ; CHECK:     vector.body
-; CHECK:       %pointer.phi = phi ptr [ %a, %vector.ph ], [ %ptr.ind, %vector.body ]
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK:       %pointer.phi = phi ptr [ %a, %vector.ph ], [ %ptr.ind, %vector.body ]
 ; CHECK:       %[[PTRVEC:.+]] = getelementptr i8, ptr %pointer.phi, <4 x i64> <i64 0, i64 4, i64 8, i64 12>
 ; CHECK:       [[SHL:%.+]] = shl i64 %index, 3
 ; CHECK:       %next.gep = getelementptr i8, ptr %b, i64 [[SHL]]

@@ -1,0 +1,23 @@
+{{! 
+    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+    See https://llvm.org/LICENSE.txt for license information.
+    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+    This file defines the template for functions/methods
+}}
+<div class="delimiter-container">
+    <div id="{{ID}}">
+        {{! Function Prototype }}
+        <pre>
+            <code class="language-cpp code-clang-doc">
+{{ReturnType.Name}} {{Name}} ({{#Params}}{{^End}}{{Type}} {{Name}}, {{/End}}{{#End}}{{Type}} {{Name}}{{/End}}{{/Params}})
+            </code>
+        </pre>
+        {{! Function Comments }}
+        {{#FunctionComments}}
+        <div>
+            {{>Comments}}
+        </div>
+        {{/FunctionComments}}
+    </div>
+</div>

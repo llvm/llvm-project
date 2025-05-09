@@ -43,4 +43,6 @@ static_assert(b.lo.lo == 1); // expected-error {{not an integral constant expres
 // make sure clang rejects taking address of a vector element
 static_assert(&b[1]); // expected-error {{address of vector element requested}}
 
+constexpr const FourIntsExtVec *p = &b;
+static_assert(p->x == 1);
 }

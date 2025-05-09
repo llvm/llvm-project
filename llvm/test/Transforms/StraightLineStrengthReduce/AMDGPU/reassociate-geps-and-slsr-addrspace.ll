@@ -10,12 +10,12 @@ define amdgpu_kernel void @slsr_after_reassociate_global_geps_mubuf_max_offset(p
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr addrspace(1) [[ARR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[P12:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP1]], i64 4092
+; CHECK-NEXT:    [[P12:%.*]] = getelementptr i8, ptr addrspace(1) [[TMP1]], i64 4092
 ; CHECK-NEXT:    [[V11:%.*]] = load i32, ptr addrspace(1) [[P12]], align 4
 ; CHECK-NEXT:    store i32 [[V11]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr addrspace(1) [[TMP1]], i64 [[TMP2]]
-; CHECK-NEXT:    [[P24:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP3]], i64 4092
+; CHECK-NEXT:    [[P24:%.*]] = getelementptr i8, ptr addrspace(1) [[TMP3]], i64 4092
 ; CHECK-NEXT:    [[V22:%.*]] = load i32, ptr addrspace(1) [[P24]], align 4
 ; CHECK-NEXT:    store i32 [[V22]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
@@ -76,12 +76,12 @@ define amdgpu_kernel void @slsr_after_reassociate_lds_geps_ds_max_offset(ptr add
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(3) noalias [[ARR:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr addrspace(3) [[ARR]], i32 [[I]]
-; CHECK-NEXT:    [[P12:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP0]], i32 65532
+; CHECK-NEXT:    [[P12:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 65532
 ; CHECK-NEXT:    [[V11:%.*]] = load i32, ptr addrspace(3) [[P12]], align 4
 ; CHECK-NEXT:    store i32 [[V11]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[I]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 [[TMP1]]
-; CHECK-NEXT:    [[P24:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP2]], i32 65532
+; CHECK-NEXT:    [[P24:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP2]], i32 65532
 ; CHECK-NEXT:    [[V22:%.*]] = load i32, ptr addrspace(3) [[P24]], align 4
 ; CHECK-NEXT:    store i32 [[V22]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void

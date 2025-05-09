@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @_ZN2bg2baIiEC2ES_(i64 %v) {
 ; CHECK-LABEL: @_ZN2bg2baIiEC2ES_(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(ptr undef) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(ptr poison) ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

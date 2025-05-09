@@ -56,7 +56,6 @@ add_header_library(
   HDRS
     add_sub.h
   DEPENDS
-    libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.bit

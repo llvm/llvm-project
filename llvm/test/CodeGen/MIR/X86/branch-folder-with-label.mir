@@ -39,6 +39,7 @@
 # }
 #
 # RUN: llc -o - %s -mtriple=x86_64-- -run-pass=branch-folder | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64-- -passes="require<profile-summary>,function(machine-function(branch-folder<enable-tail-merge>))" | FileCheck %s
 --- |
   ; ModuleID = 'test.ll'
   source_filename = "test.ll"

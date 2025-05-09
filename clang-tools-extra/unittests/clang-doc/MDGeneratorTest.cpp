@@ -14,7 +14,7 @@
 namespace clang {
 namespace doc {
 
-std::unique_ptr<Generator> getMDGenerator() {
+static std::unique_ptr<Generator> getMDGenerator() {
   auto G = doc::findGeneratorByName("md");
   if (!G)
     return nullptr;
@@ -82,8 +82,8 @@ TEST(MDGeneratorTest, emitRecordMD) {
   I.Name = "r";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp");
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::Class;
@@ -149,8 +149,8 @@ TEST(MDGeneratorTest, emitFunctionMD) {
   I.Name = "f";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp");
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   I.Access = AccessSpecifier::AS_none;
 
@@ -181,8 +181,8 @@ TEST(MDGeneratorTest, emitEnumMD) {
   I.Name = "e";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+  I.DefLoc = Location(10, 10, "test.cpp");
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   I.Members.emplace_back("X");
   I.Scoped = true;
@@ -210,7 +210,8 @@ TEST(MDGeneratorTest, emitEnumMD) {
 TEST(MDGeneratorTest, emitCommentMD) {
   FunctionInfo I;
   I.Name = "f";
-  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
+
+  I.DefLoc = Location(10, 10, "test.cpp");
   I.ReturnType = TypeInfo("void");
   I.Params.emplace_back(TypeInfo("int"), "I");
   I.Params.emplace_back(TypeInfo("int"), "J");

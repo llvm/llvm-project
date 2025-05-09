@@ -1196,21 +1196,21 @@ TEST(DeclPrinter, TestUnnamedTemplateParameters) {
 }
 
 TEST(DeclPrinter, TestUnnamedTemplateParametersPacks) {
-  ASSERT_TRUE(PrintedDeclCXX17Matches(
-      "template <typename ..., int ...,"
-      " template <typename ..., bool ...> class ...> void A();",
-      functionTemplateDecl(hasName("A")).bind("id"),
-      "template <typename ..., int ...,"
-      " template <typename ..., bool ...> class ...> void A()"));
+  ASSERT_TRUE(
+      PrintedDeclCXX17Matches("template <typename ..., int ...,"
+                              " template <typename ...> class ...> void A();",
+                              functionTemplateDecl(hasName("A")).bind("id"),
+                              "template <typename ..., int ...,"
+                              " template <typename ...> class ...> void A()"));
 }
 
 TEST(DeclPrinter, TestNamedTemplateParametersPacks) {
   ASSERT_TRUE(PrintedDeclCXX17Matches(
       "template <typename ...T, int ...I,"
-      " template <typename ...X, bool ...B> class ...Z> void A();",
+      " template <typename ...X> class ...Z> void A();",
       functionTemplateDecl(hasName("A")).bind("id"),
       "template <typename ...T, int ...I,"
-      " template <typename ...X, bool ...B> class ...Z> void A()"));
+      " template <typename ...X> class ...Z> void A()"));
 }
 
 TEST(DeclPrinter, TestTemplateTemplateParameterWrittenWithTypename) {

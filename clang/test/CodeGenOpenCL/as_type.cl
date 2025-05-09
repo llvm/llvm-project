@@ -67,7 +67,7 @@ int3 f8(char16 x) {
   return __builtin_astype(x, int3);
 }
 
-//CHECK: define{{.*}} spir_func noundef ptr addrspace(1) @addr_cast(ptr noundef readnone %[[x:.*]])
+//CHECK: define{{.*}} spir_func noundef ptr addrspace(1) @addr_cast(ptr noundef readnone captures(ret: address, provenance) %[[x:.*]])
 //CHECK: %[[cast:.*]] ={{.*}} addrspacecast ptr %[[x]] to ptr addrspace(1)
 //CHECK: ret ptr addrspace(1) %[[cast]]
 global int* addr_cast(int *x) {

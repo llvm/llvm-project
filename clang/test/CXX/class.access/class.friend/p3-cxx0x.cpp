@@ -36,7 +36,7 @@ class A {
 public:
   class foo {};
   static int y;
-  template <typename S> friend class B<S>::ty; // expected-warning {{dependent nested name specifier 'B<S>::' for friend class declaration is not supported}}
+  template <typename S> friend class B<S>::ty; // expected-warning {{dependent nested name specifier 'B<S>' for friend class declaration is not supported}}
 };
 
 template<typename T> class B { typedef int ty; };

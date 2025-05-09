@@ -7,7 +7,7 @@ subroutine distribute_simple()
   ! CHECK: omp.teams
   !$omp teams
 
-  ! CHECK: omp.distribute {
+  ! CHECK: omp.distribute private({{.*}}) {
   !$omp distribute
 
   ! CHECK-NEXT: omp.loop_nest

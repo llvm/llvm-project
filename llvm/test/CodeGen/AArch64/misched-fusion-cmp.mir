@@ -1,4 +1,5 @@
 # RUN: llc -o /dev/null 2>&1 %s -mtriple aarch64-unknown -mcpu=cortex-x1 -run-pass=machine-scheduler
+# RUN: llc -o /dev/null 2>&1 %s -mtriple aarch64-unknown -mcpu=cortex-x1 -passes=machine-scheduler
 # Just ensure this doesn't crash.
 
 ---

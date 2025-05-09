@@ -8,6 +8,7 @@
 
 #include "AMDGPUFixupKinds.h"
 #include "AMDGPUMCTargetDesc.h"
+#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCValue.h"
@@ -37,38 +38,36 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
                                              const MCValue &Target,
                                              const MCFixup &Fixup,
                                              bool IsPCRel) const {
-  if (const auto *SymA = Target.getSymA()) {
+  if (const auto *SymA = Target.getAddSym()) {
     // SCRATCH_RSRC_DWORD[01] is a special global variable that represents
     // the scratch buffer.
-    if (SymA->getSymbol().getName() == "SCRATCH_RSRC_DWORD0" ||
-        SymA->getSymbol().getName() == "SCRATCH_RSRC_DWORD1")
+    if (SymA->getName() == "SCRATCH_RSRC_DWORD0" ||
+        SymA->getName() == "SCRATCH_RSRC_DWORD1")
       return ELF::R_AMDGPU_ABS32_LO;
   }
 
-  switch (Target.getAccessVariant()) {
+  switch (AMDGPUMCExpr::Specifier(Target.getSpecifier())) {
   default:
     break;
-  case MCSymbolRefExpr::VK_GOTPCREL:
+  case AMDGPUMCExpr::S_GOTPCREL:
     return ELF::R_AMDGPU_GOTPCREL;
-  case MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_LO:
+  case AMDGPUMCExpr::S_GOTPCREL32_LO:
     return ELF::R_AMDGPU_GOTPCREL32_LO;
-  case MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_HI:
+  case AMDGPUMCExpr::S_GOTPCREL32_HI:
     return ELF::R_AMDGPU_GOTPCREL32_HI;
-  case MCSymbolRefExpr::VK_AMDGPU_REL32_LO:
+  case AMDGPUMCExpr::S_REL32_LO:
     return ELF::R_AMDGPU_REL32_LO;
-  case MCSymbolRefExpr::VK_AMDGPU_REL32_HI:
+  case AMDGPUMCExpr::S_REL32_HI:
     return ELF::R_AMDGPU_REL32_HI;
-  case MCSymbolRefExpr::VK_AMDGPU_REL64:
+  case AMDGPUMCExpr::S_REL64:
     return ELF::R_AMDGPU_REL64;
-  case MCSymbolRefExpr::VK_AMDGPU_ABS32_LO:
+  case AMDGPUMCExpr::S_ABS32_LO:
     return ELF::R_AMDGPU_ABS32_LO;
-  case MCSymbolRefExpr::VK_AMDGPU_ABS32_HI:
+  case AMDGPUMCExpr::S_ABS32_HI:
     return ELF::R_AMDGPU_ABS32_HI;
   }
 
   MCFixupKind Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
   switch (Kind) {
   default: break;
   case FK_PCRel_4:
@@ -81,12 +80,12 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 
   if (Fixup.getTargetKind() == AMDGPU::fixup_si_sopp_br) {
-    const auto *SymA = Target.getSymA();
+    const auto *SymA = Target.getAddSym();
     assert(SymA);
 
-    if (SymA->getSymbol().isUndefined()) {
-      Ctx.reportError(Fixup.getLoc(), Twine("undefined label '") +
-                                          SymA->getSymbol().getName() + "'");
+    if (SymA->isUndefined()) {
+      Ctx.reportError(Fixup.getLoc(),
+                      Twine("undefined label '") + SymA->getName() + "'");
       return ELF::R_AMDGPU_NONE;
     }
     return ELF::R_AMDGPU_REL16;
