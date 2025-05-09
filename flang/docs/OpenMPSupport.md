@@ -48,7 +48,7 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | distribute simd construct                                  | P      | dist_schedule and linear clauses are not supported |
 | distribute parallel loop construct                         | P      | dist_schedule clause not supported |
 | distribute parallel loop simd construct                    | P      | dist_schedule and linear clauses are not supported |
-| depend clause                                              | P      | depend clause with array sections are not supported |
+| depend clause                                              | Y      | |
 | declare reduction construct                                | N      | |
 | atomic construct extensions                                | Y      | |
 | cancel construct                                           | Y      | |
