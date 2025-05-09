@@ -16,6 +16,7 @@
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
@@ -939,7 +940,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       DependentSizedMatrixTypes(this_()),
       FunctionProtoTypes(this_(), FunctionProtoTypesLog2InitSize),
       DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
-      TemplateSpecializationTypes(this_()),
+      DependentPackIndexingTypes(this_()), TemplateSpecializationTypes(this_()),
       DependentTemplateSpecializationTypes(this_()),
       DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
       DeducedTemplates(this_()), ArrayParameterTypes(this_()),
@@ -1685,6 +1686,24 @@ void ASTContext::getOverriddenMethods(
   SmallVector<const ObjCMethodDecl *, 8> OverDecls;
   Method->getOverriddenMethods(OverDecls);
   Overridden.append(OverDecls.begin(), OverDecls.end());
+}
+
+std::optional<ASTContext::CXXRecordDeclRelocationInfo>
+ASTContext::getRelocationInfoForCXXRecord(const CXXRecordDecl *RD) const {
+  assert(RD);
+  CXXRecordDecl *D = RD->getDefinition();
+  auto it = RelocatableClasses.find(D);
+  if (it != RelocatableClasses.end())
+    return it->getSecond();
+  return std::nullopt;
+}
+
+void ASTContext::setRelocationInfoForCXXRecord(
+    const CXXRecordDecl *RD, CXXRecordDeclRelocationInfo Info) {
+  assert(RD);
+  CXXRecordDecl *D = RD->getDefinition();
+  assert(RelocatableClasses.find(D) == RelocatableClasses.end());
+  RelocatableClasses.insert({D, Info});
 }
 
 void ASTContext::addedLocalImportDecl(ImportDecl *Import) {
@@ -2924,6 +2943,9 @@ bool ASTContext::hasUniqueObjectRepresentations(
 
   // All integrals and enums are unique.
   if (Ty->isIntegralOrEnumerationType()) {
+    // Address discriminated integer types are not unique.
+    if (Ty.hasAddressDiscriminatedPointerAuth())
+      return false;
     // Except _BitInt types that have padding bits.
     if (const auto *BIT = Ty->getAs<BitIntType>())
       return getTypeSize(BIT) == BIT->getNumBits();
@@ -6419,7 +6441,7 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
   } else {
     llvm::FoldingSetNodeID ID;
     PackIndexingType::Profile(ID, *this, Pattern.getCanonicalType(), IndexExpr,
-                              FullySubstituted);
+                              FullySubstituted, Expansions);
     void *InsertPos = nullptr;
     PackIndexingType *Canon =
         DependentPackIndexingTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -6427,9 +6449,9 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
       void *Mem = Allocate(
           PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
           TypeAlignment);
-      Canon = new (Mem)
-          PackIndexingType(*this, QualType(), Pattern.getCanonicalType(),
-                           IndexExpr, FullySubstituted, Expansions);
+      Canon =
+          new (Mem) PackIndexingType(QualType(), Pattern.getCanonicalType(),
+                                     IndexExpr, FullySubstituted, Expansions);
       DependentPackIndexingTypes.InsertNode(Canon, InsertPos);
     }
     Canonical = QualType(Canon, 0);
@@ -6438,7 +6460,7 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
   void *Mem =
       Allocate(PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
                TypeAlignment);
-  auto *T = new (Mem) PackIndexingType(*this, Canonical, Pattern, IndexExpr,
+  auto *T = new (Mem) PackIndexingType(Canonical, Pattern, IndexExpr,
                                        FullySubstituted, Expansions);
   Types.push_back(T);
   return QualType(T, 0);
@@ -6588,9 +6610,12 @@ QualType ASTContext::getDeducedTemplateSpecializationTypeInternal(
   auto *DTST = new (*this, alignof(DeducedTemplateSpecializationType))
       DeducedTemplateSpecializationType(Template, DeducedType, IsDependent,
                                         Canon);
+
+#ifndef NDEBUG
   llvm::FoldingSetNodeID TempID;
   DTST->Profile(TempID);
   assert(ID == TempID && "ID does not match");
+#endif
   Types.push_back(DTST);
   DeducedTemplateSpecializationTypes.InsertNode(DTST, InsertPos);
   return QualType(DTST, 0);
@@ -7638,6 +7663,55 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
   }
 
   // Silence GCC warning
+  llvm_unreachable("Unhandled template argument kind");
+}
+
+bool ASTContext::isSameTemplateArgument(const TemplateArgument &Arg1,
+                                        const TemplateArgument &Arg2) const {
+  if (Arg1.getKind() != Arg2.getKind())
+    return false;
+
+  switch (Arg1.getKind()) {
+  case TemplateArgument::Null:
+    llvm_unreachable("Comparing NULL template argument");
+
+  case TemplateArgument::Type:
+    return hasSameType(Arg1.getAsType(), Arg2.getAsType());
+
+  case TemplateArgument::Declaration:
+    return Arg1.getAsDecl()->getUnderlyingDecl()->getCanonicalDecl() ==
+           Arg2.getAsDecl()->getUnderlyingDecl()->getCanonicalDecl();
+
+  case TemplateArgument::NullPtr:
+    return hasSameType(Arg1.getNullPtrType(), Arg2.getNullPtrType());
+
+  case TemplateArgument::Template:
+  case TemplateArgument::TemplateExpansion:
+    return getCanonicalTemplateName(Arg1.getAsTemplateOrTemplatePattern()) ==
+           getCanonicalTemplateName(Arg2.getAsTemplateOrTemplatePattern());
+
+  case TemplateArgument::Integral:
+    return llvm::APSInt::isSameValue(Arg1.getAsIntegral(),
+                                     Arg2.getAsIntegral());
+
+  case TemplateArgument::StructuralValue:
+    return Arg1.structurallyEquals(Arg2);
+
+  case TemplateArgument::Expression: {
+    llvm::FoldingSetNodeID ID1, ID2;
+    Arg1.getAsExpr()->Profile(ID1, *this, /*Canonical=*/true);
+    Arg2.getAsExpr()->Profile(ID2, *this, /*Canonical=*/true);
+    return ID1 == ID2;
+  }
+
+  case TemplateArgument::Pack:
+    return llvm::equal(
+        Arg1.getPackAsArray(), Arg2.getPackAsArray(),
+        [&](const TemplateArgument &Arg1, const TemplateArgument &Arg2) {
+          return isSameTemplateArgument(Arg1, Arg2);
+        });
+  }
+
   llvm_unreachable("Unhandled template argument kind");
 }
 
@@ -11443,6 +11517,22 @@ static QualType mergeEnumWithInteger(ASTContext &Context, const EnumType *ET,
   return {};
 }
 
+QualType ASTContext::mergeTagDefinitions(QualType LHS, QualType RHS) {
+  // C17 and earlier and C++ disallow two tag definitions within the same TU
+  // from being compatible.
+  if (LangOpts.CPlusPlus || !LangOpts.C23)
+    return {};
+
+  // C23, on the other hand, requires the members to be "the same enough", so
+  // we use a structural equivalence check.
+  StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
+  StructuralEquivalenceContext Ctx(
+      getLangOpts(), *this, *this, NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false, /*ErrorOnTagTypeMismatch=*/true);
+  return Ctx.IsEquivalent(LHS, RHS) ? LHS : QualType{};
+}
+
 QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
                                 bool Unqualified, bool BlockReturnType,
                                 bool IsConditionalOperator) {
@@ -11740,7 +11830,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
                               /*AllowCXX=*/false, IsConditionalOperator);
   case Type::Record:
   case Type::Enum:
-    return {};
+    return mergeTagDefinitions(LHS, RHS);
   case Type::Builtin:
     // Only exactly equal builtin types are compatible, which is tested above.
     return {};

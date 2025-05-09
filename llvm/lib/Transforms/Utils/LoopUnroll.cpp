@@ -752,6 +752,14 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         }
       }
 
+      // Remap source location atom instance. Do this now, rather than
+      // when we remap instructions, because remap is called once we've
+      // cloned all blocks (all the clones would get the same atom
+      // number).
+      if (!VMap.AtomMap.empty())
+        for (Instruction &I : *New)
+          RemapSourceAtom(&I, VMap);
+
       // Update our running map of newest clones
       LastValueMap[*BB] = New;
       for (ValueToValueMapTy::iterator VI = VMap.begin(), VE = VMap.end();
@@ -802,7 +810,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       }
     }
 
-    // Remap all instructions in the most recent iteration
+    // Remap all instructions in the most recent iteration.
+    // Key Instructions: Nothing to do - we've already remapped the atoms.
     remapInstructionsInBlocks(NewBlocks, LastValueMap);
     for (BasicBlock *NewBlock : NewBlocks)
       for (Instruction &I : *NewBlock)

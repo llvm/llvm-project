@@ -190,6 +190,250 @@ void l3() {
 // OGCG:   store i32 0, ptr %[[I]], align 4
 // OGCG:   br label %[[FOR_COND]]
 
+void l4() {
+  int a[10];
+  for (int n : a)
+    ;
+}
+
+// CIR: cir.func @_Z2l4v
+// CIR:   %[[A_ADDR:.*]] = cir.alloca {{.*}} ["a"]
+// CIR:   cir.scope {
+// CIR:     %[[RANGE_ADDR:.*]] = cir.alloca {{.*}} ["__range1", init, const]
+// CIR:     %[[BEGIN_ADDR:.*]] = cir.alloca {{.*}} ["__begin1", init]
+// CIR:     %[[END_ADDR:.*]] = cir.alloca {{.*}} ["__end1", init]
+// CIR:     %[[N_ADDR:.*]] = cir.alloca {{.*}} ["n", init]
+// CIR:     cir.store %[[A_ADDR]], %[[RANGE_ADDR]]
+// CIR:     %[[RANGE_LOAD:.*]] = cir.load %[[RANGE_ADDR]]
+// CIR:     %[[RANGE_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[RANGE_LOAD]] : {{.*}})
+// CIR:     cir.store %[[RANGE_CAST]], %[[BEGIN_ADDR]]
+// CIR:     %[[BEGIN:.*]] = cir.load %[[RANGE_ADDR]]
+// CIR:     %[[BEGIN_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[BEGIN]] : {{.*}})
+// CIR:     %[[TEN:.*]] = cir.const #cir.int<10>
+// CIR:     %[[END_PTR:.*]] = cir.ptr_stride(%[[BEGIN_CAST]] : {{.*}}, %[[TEN]] : {{.*}})
+// CIR:     cir.store %[[END_PTR]], %[[END_ADDR]]
+// CIR:     cir.for : cond {
+// CIR:       %[[CUR:.*]] = cir.load %[[BEGIN_ADDR]]
+// CIR:       %[[END:.*]] = cir.load %[[END_ADDR]]
+// CIR:       %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[END]])
+// CIR:       cir.condition(%[[CMP]])
+// CIR:     } body {
+// CIR:       %[[CUR:.*]] = cir.load deref %[[BEGIN_ADDR]]
+// CIR:       %[[N:.*]] = cir.load %[[CUR]]
+// CIR:       cir.store %[[N]], %[[N_ADDR]]
+// CIR:       cir.yield
+// CIR:     } step {
+// CIR:       %[[CUR:.*]] = cir.load %[[BEGIN_ADDR]]
+// CIR:       %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR:       %[[NEXT:.*]] = cir.ptr_stride(%[[CUR]] : {{.*}}, %[[ONE]] : {{.*}})
+// CIR:       cir.store %[[NEXT]], %[[BEGIN_ADDR]]
+// CIR:       cir.yield
+// CIR:     }
+// CIR:   }
+
+// LLVM: define void @_Z2l4v() {
+// LLVM:   %[[RANGE_ADDR:.*]] = alloca ptr
+// LLVM:   %[[BEGIN_ADDR:.*]] = alloca ptr
+// LLVM:   %[[END_ADDR:.*]] = alloca ptr
+// LLVM:   %[[N_ADDR:.*]] = alloca i32
+// LLVM:   %[[A_ADDR:.*]] = alloca [10 x i32]
+// LLVM:   br label %[[SETUP:.*]]
+// LLVM: [[SETUP]]:
+// LLVM:   store ptr %[[A_ADDR]], ptr %[[RANGE_ADDR]]
+// LLVM:   %[[BEGIN:.*]] = load ptr, ptr %[[RANGE_ADDR]]
+// LLVM:   %[[BEGIN_CAST:.*]] = getelementptr i32, ptr %[[BEGIN]], i32 0
+// LLVM:   store ptr %[[BEGIN_CAST]], ptr %[[BEGIN_ADDR]]
+// LLVM:   %[[RANGE:.*]] = load ptr, ptr %[[RANGE_ADDR]]
+// LLVM:   %[[RANGE_CAST:.*]] = getelementptr i32, ptr %[[RANGE]], i32 0
+// LLVM:   %[[END_PTR:.*]] = getelementptr i32, ptr %[[RANGE_CAST]], i64 10
+// LLVM:   store ptr %[[END_PTR]], ptr %[[END_ADDR]]
+// LLVM:   br label %[[COND:.*]]
+// LLVM: [[COND]]:
+// LLVM:   %[[BEGIN:.*]] = load ptr, ptr %[[BEGIN_ADDR]]
+// LLVM:   %[[END:.*]] = load ptr, ptr %[[END_ADDR]]
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[BEGIN]], %[[END]]
+// LLVM:   br i1 %[[CMP]], label %[[BODY:.*]], label %[[END:.*]]
+// LLVM: [[BODY]]:
+// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[BEGIN_ADDR]]
+// LLVM:   %[[A_CUR:.*]] = load i32, ptr %[[CUR]]
+// LLVM:   store i32 %[[A_CUR]], ptr %[[N_ADDR]]
+// LLVM:   br label %[[STEP:.*]]
+// LLVM: [[STEP]]:
+// LLVM:   %[[BEGIN:.*]] = load ptr, ptr %[[BEGIN_ADDR]]
+// LLVM:   %[[NEXT:.*]] = getelementptr i32, ptr %[[BEGIN]], i64 1
+// LLVM:   store ptr %[[NEXT]], ptr %[[BEGIN_ADDR]]
+// LLVM:   br label %[[COND]]
+// LLVM: [[END]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[EXIT]]:
+// LLVM:   ret void
+
+// OGCG: define{{.*}} void @_Z2l4v()
+// OGCG:   %[[A_ADDR:.*]] = alloca [10 x i32]
+// OGCG:   %[[RANGE_ADDR:.*]] = alloca ptr
+// OGCG:   %[[BEGIN_ADDR:.*]] = alloca ptr
+// OGCG:   %[[END_ADDR:.*]] = alloca ptr
+// OGCG:   %[[N_ADDR:.*]] = alloca i32
+// OGCG:   store ptr %[[A_ADDR]], ptr %[[RANGE_ADDR]]
+// OGCG:   %[[BEGIN:.*]] = load ptr, ptr %[[RANGE_ADDR]]
+// OGCG:   %[[BEGIN_CAST:.*]] = getelementptr inbounds [10 x i32], ptr %[[BEGIN]], i64 0, i64 0
+// OGCG:   store ptr %[[BEGIN_CAST]], ptr %[[BEGIN_ADDR]]
+// OGCG:   %[[RANGE:.*]] = load ptr, ptr %[[RANGE_ADDR]]
+// OGCG:   %[[RANGE_CAST:.*]] = getelementptr inbounds [10 x i32], ptr %[[RANGE]], i64 0, i64 0
+// OGCG:   %[[END_PTR:.*]] = getelementptr inbounds i32, ptr %[[RANGE_CAST]], i64 10
+// OGCG:   store ptr %[[END_PTR]], ptr %[[END_ADDR]]
+// OGCG:   br label %[[COND:.*]]
+// OGCG: [[COND]]:
+// OGCG:   %[[BEGIN:.*]] = load ptr, ptr %[[BEGIN_ADDR]]
+// OGCG:   %[[END:.*]] = load ptr, ptr %[[END_ADDR]]
+// OGCG:   %[[CMP:.*]] = icmp ne ptr %[[BEGIN]], %[[END]]
+// OGCG:   br i1 %[[CMP]], label %[[BODY:.*]], label %[[END:.*]]
+// OGCG: [[BODY]]:
+// OGCG:   %[[CUR:.*]] = load ptr, ptr %[[BEGIN_ADDR]]
+// OGCG:   %[[A_CUR:.*]] = load i32, ptr %[[CUR]]
+// OGCG:   store i32 %[[A_CUR]], ptr %[[N_ADDR]]
+// OGCG:   br label %[[STEP:.*]]
+// OGCG: [[STEP]]:
+// OGCG:   %[[BEGIN:.*]] = load ptr, ptr %[[BEGIN_ADDR]]
+// OGCG:   %[[NEXT:.*]] = getelementptr inbounds nuw i32, ptr %[[BEGIN]], i32 1
+// OGCG:   store ptr %[[NEXT]], ptr %[[BEGIN_ADDR]]
+// OGCG:   br label %[[COND]]
+// OGCG: [[END]]:
+// OGCG:   ret void
+
+void l5() {
+  for (int arr[]{1,2,3,4}; auto x : arr) {} 
+}
+
+// CIR: cir.func @_Z2l5v
+// CIR:   cir.scope {
+// CIR:     %[[ARR_ADDR:.*]] = cir.alloca {{.*}} ["arr", init]
+// CIR:     %[[RANGE_ADDR:.*]] = cir.alloca {{.*}} ["__range1", init, const]
+// CIR:     %[[BEGIN_ADDR:.*]] = cir.alloca {{.*}} ["__begin1", init]
+// CIR:     %[[END_ADDR:.*]] = cir.alloca {{.*}} ["__end1", init]
+// CIR:     %[[X_ADDR:.*]] = cir.alloca {{.*}} ["x", init]
+// CIR:     %[[ARR_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[ARR_ADDR]] : {{.*}})
+// CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:     cir.store %[[ONE]], %[[ARR_CAST]]
+// CIR:     %[[OFFSET1:.*]] = cir.const #cir.int<1> : !s64i
+// CIR:     %[[STRIDE:.*]] = cir.ptr_stride(%[[ARR_CAST]] : {{.*}}, %[[OFFSET1]] : {{.*}})
+// CIR:     %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CIR:     cir.store %[[TWO]], %[[STRIDE]]
+// CIR:     %[[OFFSET2:.*]] = cir.const #cir.int<2> : !s64i
+// CIR:     %[[STRIDE2:.*]] = cir.ptr_stride(%[[ARR_CAST]] : {{.*}}, %[[OFFSET2]] : {{.*}})
+// CIR:     %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
+// CIR:     cir.store %[[THREE]], %[[STRIDE2]]
+// CIR:     %[[OFFSET3:.*]] = cir.const #cir.int<3> : !s64i
+// CIR:     %[[STRIDE3:.*]] = cir.ptr_stride(%[[ARR_CAST]] : {{.*}}, %[[OFFSET3]] : {{.*}})
+// CIR:     %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
+// CIR:     cir.store %[[FOUR]], %[[STRIDE3]]
+// CIR:     cir.store %[[ARR_ADDR]], %[[RANGE_ADDR]]
+// CIR:     %[[RANGE_LOAD:.*]] = cir.load %[[RANGE_ADDR]]
+// CIR:     %[[RANGE_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[RANGE_LOAD]] : {{.*}})
+// CIR:     cir.store %[[RANGE_CAST]], %[[BEGIN_ADDR]]
+// CIR:     %[[BEGIN:.*]] = cir.load %[[RANGE_ADDR]]
+// CIR:     %[[BEGIN_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[BEGIN]] : {{.*}})
+// CIR:     %[[FOUR:.*]] = cir.const #cir.int<4> : !s64i
+// CIR:     %[[END_PTR:.*]] = cir.ptr_stride(%[[BEGIN_CAST]] : {{.*}}, %[[FOUR]] : {{.*}})
+// CIR:     cir.store %[[END_PTR]], %[[END_ADDR]]
+// CIR:     cir.for : cond {
+// CIR:       %[[CUR:.*]] = cir.load %[[BEGIN_ADDR]]
+// CIR:       %[[END:.*]] = cir.load %[[END_ADDR]]
+// CIR:       %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[END]])
+// CIR:       cir.condition(%[[CMP]])
+// CIR:     } body {
+// CIR:       %[[CUR:.*]] = cir.load deref %[[BEGIN_ADDR]]
+// CIR:       %[[X:.*]] = cir.load %[[CUR]]
+// CIR:       cir.store %[[X]], %[[X_ADDR]]
+// CIR:       cir.yield
+// CIR:     } step {
+// CIR:       %[[CUR:.*]] = cir.load %[[BEGIN_ADDR]]
+// CIR:       %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR:       %[[NEXT:.*]] = cir.ptr_stride(%[[CUR]] : {{.*}}, %[[ONE]] : {{.*}})
+// CIR:       cir.store %[[NEXT]], %[[BEGIN_ADDR]]
+// CIR:       cir.yield
+// CIR:     }
+// CIR:   }
+
+// LLVM: define void @_Z2l5v() {
+// LLVM:   %[[ARR_ADDR:.*]] = alloca [4 x i32]
+// LLVM:   %[[RANGE_ADDR:.*]] = alloca ptr
+// LLVM:   %[[BEGIN_ADDR:.*]] = alloca ptr
+// LLVM:   %[[END_ADDR:.*]] = alloca ptr
+// LLVM:   %[[X_ADDR:.*]] = alloca i32
+// LLVM:   br label %[[SETUP:.*]]
+// LLVM: [[SETUP]]:
+// LLVM:   %[[ARR_0:.*]] = getelementptr i32, ptr %[[ARR_ADDR]], i32 0
+// LLVM:   store i32 1, ptr %[[ARR_0]]
+// LLVM:   %[[ARR_1:.*]] = getelementptr i32, ptr %[[ARR_0]], i64 1
+// LLVM:   store i32 2, ptr %[[ARR_1]]
+// LLVM:   %[[ARR_2:.*]] = getelementptr i32, ptr %[[ARR_0]], i64 2
+// LLVM:   store i32 3, ptr %[[ARR_2]]
+// LLVM:   %[[ARR_3:.*]] = getelementptr i32, ptr %[[ARR_0]], i64 3
+// LLVM:   store i32 4, ptr %[[ARR_3]]
+// LLVM:   store ptr %[[ARR_ADDR]], ptr %[[RANGE_ADDR]]
+// LLVM:   %[[BEGIN:.*]] = load ptr, ptr %[[RANGE_ADDR]]
+// LLVM:   %[[BEGIN_CAST:.*]] = getelementptr i32, ptr %[[BEGIN]], i32 0
+// LLVM:   store ptr %[[BEGIN_CAST]], ptr %[[BEGIN_ADDR]]
+// LLVM:   %[[RANGE:.*]] = load ptr, ptr %[[RANGE_ADDR]]
+// LLVM:   %[[RANGE_CAST:.*]] = getelementptr i32, ptr %[[RANGE]], i32 0
+// LLVM:   %[[END_PTR:.*]] = getelementptr i32, ptr %[[RANGE_CAST]], i64 4
+// LLVM:   store ptr %[[END_PTR]], ptr %[[END_ADDR]]
+// LLVM:   br label %[[COND:.*]]
+// LLVM: [[COND]]:
+// LLVM:   %[[BEGIN:.*]] = load ptr, ptr %[[BEGIN_ADDR]]
+// LLVM:   %[[END:.*]] = load ptr, ptr %[[END_ADDR]]
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[BEGIN]], %[[END]]
+// LLVM:   br i1 %[[CMP]], label %[[BODY:.*]], label %[[END:.*]]
+// LLVM: [[BODY]]:
+// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[BEGIN_ADDR]]
+// LLVM:   %[[ARR_CUR:.*]] = load i32, ptr %[[CUR]]
+// LLVM:   store i32 %[[ARR_CUR]], ptr %[[X_ADDR]]
+// LLVM:   br label %[[STEP:.*]]
+// LLVM: [[STEP]]:
+// LLVM:   %[[BEGIN:.*]] = load ptr, ptr %[[BEGIN_ADDR]]
+// LLVM:   %[[NEXT:.*]] = getelementptr i32, ptr %[[BEGIN]], i64 1
+// LLVM:   store ptr %[[NEXT]], ptr %[[BEGIN_ADDR]]
+// LLVM:   br label %[[COND]]
+// LLVM: [[END]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[EXIT]]:
+// LLVM:   ret void
+
+// OGCG: define{{.*}} void @_Z2l5v()
+// OGCG:   %[[ARR_ADDR:.*]] = alloca [4 x i32]
+// OGCG:   %[[RANGE_ADDR:.*]] = alloca ptr
+// OGCG:   %[[BEGIN_ADDR:.*]] = alloca ptr
+// OGCG:   %[[END_ADDR:.*]] = alloca ptr
+// OGCG:   %[[X_ADDR:.*]] = alloca i32
+// OGCG:   call void @llvm.memcpy.p0.p0.i64
+// OGCG:   store ptr %[[ARR_ADDR]], ptr %[[RANGE_ADDR]]
+// OGCG:   %[[BEGIN:.*]] = load ptr, ptr %[[RANGE_ADDR]]
+// OGCG:   %[[BEGIN_CAST:.*]] = getelementptr inbounds [4 x i32], ptr %[[BEGIN]], i64 0, i64 0
+// OGCG:   store ptr %[[BEGIN_CAST]], ptr %[[BEGIN_ADDR]]
+// OGCG:   %[[RANGE:.*]] = load ptr, ptr %[[RANGE_ADDR]]
+// OGCG:   %[[RANGE_CAST:.*]] = getelementptr inbounds [4 x i32], ptr %[[RANGE]], i64 0, i64 0
+// OGCG:   %[[END_PTR:.*]] = getelementptr inbounds i32, ptr %[[RANGE_CAST]], i64 4
+// OGCG:   store ptr %[[END_PTR]], ptr %[[END_ADDR]]
+// OGCG:   br label %[[COND:.*]]
+// OGCG: [[COND]]:
+// OGCG:   %[[BEGIN:.*]] = load ptr, ptr %[[BEGIN_ADDR]]
+// OGCG:   %[[END:.*]] = load ptr, ptr %[[END_ADDR]]
+// OGCG:   %[[CMP:.*]] = icmp ne ptr %[[BEGIN]], %[[END]]
+// OGCG:   br i1 %[[CMP]], label %[[BODY:.*]], label %[[END:.*]]
+// OGCG: [[BODY]]:
+// OGCG:   %[[CUR:.*]] = load ptr, ptr %[[BEGIN_ADDR]]
+// OGCG:   %[[ARR_CUR:.*]] = load i32, ptr %[[CUR]]
+// OGCG:   store i32 %[[ARR_CUR]], ptr %[[X_ADDR]]
+// OGCG:   br label %[[STEP:.*]]
+// OGCG: [[STEP]]:
+// OGCG:   %[[BEGIN:.*]] = load ptr, ptr %[[BEGIN_ADDR]]
+// OGCG:   %[[NEXT:.*]] = getelementptr inbounds nuw i32, ptr %[[BEGIN]], i32 1
+// OGCG:   store ptr %[[NEXT]], ptr %[[BEGIN_ADDR]]
+// OGCG:   br label %[[COND]]
+// OGCG: [[END]]:
+// OGCG:   ret void
+
 void test_do_while_false() {
   do {
   } while (0);

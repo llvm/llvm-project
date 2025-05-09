@@ -1,13 +1,19 @@
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 
 void f1() {}
 void f2() {
   f1();
 }
 
-// CHECK-LABEL: cir.func @_Z2f1v
-// CHECK-LABEL: cir.func @_Z2f2v
-// CHECK:         cir.call @_Z2f1v() : () -> ()
+// CIR-LABEL: cir.func @_Z2f1v
+// CIR-LABEL: cir.func @_Z2f2v
+// CIR:         cir.call @_Z2f1v() : () -> ()
+
+// LLVM-LABEL: define void @_Z2f2v() {
+// LLVM:         call void @_Z2f1v()
 
 int f3() { return 2; }
 int f4() {
@@ -15,6 +21,24 @@ int f4() {
   return x;
 }
 
-// CHECK-LABEL: cir.func @_Z2f3v() -> !s32i
-// CHECK-LABEL: cir.func @_Z2f4v() -> !s32i
-// CHECK:         cir.call @_Z2f3v() : () -> !s32i
+// CIR-LABEL: cir.func @_Z2f3v() -> !s32i
+// CIR-LABEL: cir.func @_Z2f4v() -> !s32i
+// CIR:         cir.call @_Z2f3v() : () -> !s32i
+
+// LLVM-LABEL: define i32 @_Z2f4v() {
+// LLVM:         %{{.+}} = call i32 @_Z2f3v()
+
+int f5(int a, int *b, bool c);
+int f6() {
+  int b = 1;
+  return f5(2, &b, false);
+}
+
+// CIR-LABEL: cir.func @_Z2f6v() -> !s32i
+// CIR:         %[[#b:]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR:         %[[#a:]] = cir.const #cir.int<2> : !s32i
+// CIR-NEXT:    %[[#c:]] = cir.const #false
+// CIR-NEXT:    %{{.+}} = cir.call @_Z2f5iPib(%[[#a]], %[[#b:]], %[[#c]]) : (!s32i, !cir.ptr<!s32i>, !cir.bool) -> !s32i
+
+// LLVM-LABEL: define i32 @_Z2f6v() {
+// LLVM:         %{{.+}} = call i32 @_Z2f5iPib(i32 2, ptr %{{.+}}, i1 false)

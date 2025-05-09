@@ -254,4 +254,24 @@ bool fromJSON(const llvm::json::Value &Params, SteppingGranularity &SG,
   return true;
 }
 
+bool fromJSON(const llvm::json::Value &Params, ValueFormat &VF,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.mapOptional("hex", VF.hex);
+}
+
+json::Value toJSON(const BreakpointLocation &B) {
+  json::Object result;
+
+  result.insert({"line", B.line});
+  if (B.column)
+    result.insert({"column", *B.column});
+  if (B.endLine)
+    result.insert({"endLine", *B.endLine});
+  if (B.endColumn)
+    result.insert({"endColumn", *B.endColumn});
+
+  return result;
+}
+
 } // namespace lldb_dap::protocol

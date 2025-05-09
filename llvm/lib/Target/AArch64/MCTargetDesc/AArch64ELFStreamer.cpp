@@ -55,6 +55,14 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     OS << "\t.variant_pcs\t" << Symbol->getName() << "\n";
   }
 
+  void emitDirectiveArch(StringRef Name) override {
+    OS << "\t.arch\t" << Name << "\n";
+  }
+
+  void emitDirectiveArchExtension(StringRef Name) override {
+    OS << "\t.arch_extension\t" << Name << "\n";
+  }
+
   void emitARM64WinCFIAllocStack(unsigned Size) override {
     OS << "\t.seh_stackalloc\t" << Size << "\n";
   }
@@ -149,6 +157,15 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   }
   void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) override {
     OS << "\t.seh_save_any_reg_px\tq" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFIAllocZ(int Offset) override {
+    OS << "\t.seh_allocz\t" << Offset << "\n";
+  }
+  void emitARM64WinCFISaveZReg(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_zreg\tz" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFISavePReg(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_preg\tp" << Reg << ", " << Offset << "\n";
   }
 
   void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
@@ -470,7 +487,6 @@ void AArch64TargetELFStreamer::finish() {
     }
     if (Syms.size() != NumSyms) {
       SmallVector<const MCSymbol *, 0> NewSyms;
-      DenseMap<MCSection *, size_t> Cnt;
       Syms.truncate(NumSyms);
       // Find the last symbol index for each candidate section.
       for (auto [I, Sym] : llvm::enumerate(Syms)) {

@@ -102,10 +102,12 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86ReturnThunksPass(PR);
   initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotPassPass(PR);
+  initializeX86AsmPrinterPass(PR);
   initializeX86FixupInstTuningPassPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
   initializeX86DynAllocaExpanderPass(PR);
   initializeX86SuppressAPXForRelocationPassPass(PR);
+  initializeX86WinEHUnwindV2Pass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -669,6 +671,11 @@ void X86PassConfig::addPreEmitPass2() {
             (M->getFunction("objc_retainAutoreleasedReturnValue") ||
              M->getFunction("objc_unsafeClaimAutoreleasedReturnValue")));
   }));
+
+  // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
+  // after all real instructions have been added to the epilog.
+  if (TT.isOSWindows() && (TT.getArch() == Triple::x86_64))
+    addPass(createX86WinEHUnwindV2Pass());
 }
 
 bool X86PassConfig::addPostFastRegAllocRewrite() {

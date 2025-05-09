@@ -1686,25 +1686,19 @@ static void printDeviceTypeOperandsWithKeywordOnly(
 static ParseResult
 parseCombinedConstructsLoop(mlir::OpAsmParser &parser,
                             mlir::acc::CombinedConstructsTypeAttr &attr) {
-  if (succeeded(parser.parseOptionalKeyword("combined"))) {
-    if (parser.parseLParen())
-      return failure();
-    if (succeeded(parser.parseOptionalKeyword("kernels"))) {
-      attr = mlir::acc::CombinedConstructsTypeAttr::get(
-          parser.getContext(), mlir::acc::CombinedConstructsType::KernelsLoop);
-    } else if (succeeded(parser.parseOptionalKeyword("parallel"))) {
-      attr = mlir::acc::CombinedConstructsTypeAttr::get(
-          parser.getContext(), mlir::acc::CombinedConstructsType::ParallelLoop);
-    } else if (succeeded(parser.parseOptionalKeyword("serial"))) {
-      attr = mlir::acc::CombinedConstructsTypeAttr::get(
-          parser.getContext(), mlir::acc::CombinedConstructsType::SerialLoop);
-    } else {
-      parser.emitError(parser.getCurrentLocation(),
-                       "expected compute construct name");
-      return failure();
-    }
-    if (parser.parseRParen())
-      return failure();
+  if (succeeded(parser.parseOptionalKeyword("kernels"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::KernelsLoop);
+  } else if (succeeded(parser.parseOptionalKeyword("parallel"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::ParallelLoop);
+  } else if (succeeded(parser.parseOptionalKeyword("serial"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::SerialLoop);
+  } else {
+    parser.emitError(parser.getCurrentLocation(),
+                     "expected compute construct name");
+    return failure();
   }
   return success();
 }
@@ -1715,13 +1709,13 @@ printCombinedConstructsLoop(mlir::OpAsmPrinter &p, mlir::Operation *op,
   if (attr) {
     switch (attr.getValue()) {
     case mlir::acc::CombinedConstructsType::KernelsLoop:
-      p << "combined(kernels)";
+      p << "kernels";
       break;
     case mlir::acc::CombinedConstructsType::ParallelLoop:
-      p << "combined(parallel)";
+      p << "parallel";
       break;
     case mlir::acc::CombinedConstructsType::SerialLoop:
-      p << "combined(serial)";
+      p << "serial";
       break;
     };
   }
@@ -2304,6 +2298,14 @@ LogicalResult checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
 }
 
 LogicalResult acc::LoopOp::verify() {
+  if (getUpperbound().size() != getStep().size())
+    return emitError() << "number of upperbounds expected to be the same as "
+                          "number of steps";
+
+  if (getUpperbound().size() != getLowerbound().size())
+    return emitError() << "number of upperbounds expected to be the same as "
+                          "number of lowerbounds";
+
   if (!getUpperbound().empty() && getInclusiveUpperbound() &&
       (getUpperbound().size() != getInclusiveUpperbound()->size()))
     return emitError() << "inclusiveUpperbound size is expected to be the same"
@@ -2420,6 +2422,49 @@ LogicalResult acc::LoopOp::verify() {
   // Check non-empty body().
   if (getRegion().empty())
     return emitError("expected non-empty body.");
+
+  // When it is container-like - it is expected to hold a loop-like operation.
+  if (isContainerLike()) {
+    // Obtain the maximum collapse count - we use this to check that there
+    // are enough loops contained.
+    uint64_t collapseCount = getCollapseValue().value_or(1);
+    if (getCollapseAttr()) {
+      for (auto collapseEntry : getCollapseAttr()) {
+        auto intAttr = mlir::dyn_cast<IntegerAttr>(collapseEntry);
+        if (intAttr.getValue().getZExtValue() > collapseCount)
+          collapseCount = intAttr.getValue().getZExtValue();
+      }
+    }
+
+    // We want to check that we find enough loop-like operations inside.
+    // PreOrder walk allows us to walk in a breadth-first manner at each nesting
+    // level.
+    mlir::Operation *expectedParent = this->getOperation();
+    bool foundSibling = false;
+    getRegion().walk<WalkOrder::PreOrder>([&](mlir::Operation *op) {
+      if (mlir::isa<mlir::LoopLikeOpInterface>(op)) {
+        // This effectively checks that we are not looking at a sibling loop.
+        if (op->getParentOfType<mlir::LoopLikeOpInterface>() !=
+            expectedParent) {
+          foundSibling = true;
+          return mlir::WalkResult::interrupt();
+        }
+
+        collapseCount--;
+        expectedParent = op;
+      }
+      // We found enough contained loops.
+      if (collapseCount == 0)
+        return mlir::WalkResult::interrupt();
+      return mlir::WalkResult::advance();
+    });
+
+    if (foundSibling)
+      return emitError("found sibling loops inside container-like acc.loop");
+    if (collapseCount != 0)
+      return emitError("failed to find enough loop-like operations inside "
+                       "container-like acc.loop");
+  }
 
   return success();
 }
@@ -2604,6 +2649,149 @@ void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
       << " : " << stepType << ") ";
   }
   p.printRegion(region, /*printEntryBlockArgs=*/false);
+}
+
+void acc::LoopOp::addSeq(MLIRContext *context,
+                         llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setSeqAttr(addDeviceTypeAffectedOperandHelper(context, getSeqAttr(),
+                                                effectiveDeviceTypes));
+}
+
+void acc::LoopOp::addIndependent(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setIndependentAttr(addDeviceTypeAffectedOperandHelper(
+      context, getIndependentAttr(), effectiveDeviceTypes));
+}
+
+void acc::LoopOp::addAuto(MLIRContext *context,
+                          llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAuto_Attr(addDeviceTypeAffectedOperandHelper(context, getAuto_Attr(),
+                                                  effectiveDeviceTypes));
+}
+
+void acc::LoopOp::setCollapseForDeviceTypes(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+    llvm::APInt value) {
+  llvm::SmallVector<mlir::Attribute> newValues;
+  llvm::SmallVector<mlir::Attribute> newDeviceTypes;
+
+  assert((getCollapseAttr() == nullptr) ==
+         (getCollapseDeviceTypeAttr() == nullptr));
+  assert(value.getBitWidth() == 64);
+
+  if (getCollapseAttr()) {
+    for (const auto &existing :
+         llvm::zip_equal(getCollapseAttr(), getCollapseDeviceTypeAttr())) {
+      newValues.push_back(std::get<0>(existing));
+      newDeviceTypes.push_back(std::get<1>(existing));
+    }
+  }
+
+  if (effectiveDeviceTypes.empty()) {
+    // If the effective device-types list is empty, this is before there are any
+    // being applied by device_type, so this should be added as a 'none'.
+    newValues.push_back(
+        mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), value));
+    newDeviceTypes.push_back(
+        acc::DeviceTypeAttr::get(context, DeviceType::None));
+  } else {
+    for (DeviceType DT : effectiveDeviceTypes) {
+      newValues.push_back(
+          mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), value));
+      newDeviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+    }
+  }
+
+  setCollapseAttr(ArrayAttr::get(context, newValues));
+  setCollapseDeviceTypeAttr(ArrayAttr::get(context, newDeviceTypes));
+}
+
+void acc::LoopOp::setTileForDeviceTypes(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+    ValueRange values) {
+  llvm::SmallVector<int32_t> segments;
+  if (getTileOperandsSegments())
+    llvm::copy(*getTileOperandsSegments(), std::back_inserter(segments));
+
+  setTileOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getTileOperandsDeviceTypeAttr(), effectiveDeviceTypes, values,
+      getTileOperandsMutable(), segments));
+
+  setTileOperandsSegments(segments);
+}
+
+void acc::LoopOp::addVectorOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setVectorOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getVectorOperandsDeviceTypeAttr(), effectiveDeviceTypes,
+      newValue, getVectorOperandsMutable()));
+}
+
+void acc::LoopOp::addEmptyVector(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setVectorAttr(addDeviceTypeAffectedOperandHelper(context, getVectorAttr(),
+                                                   effectiveDeviceTypes));
+}
+
+void acc::LoopOp::addWorkerNumOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWorkerNumOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getWorkerNumOperandsDeviceTypeAttr(), effectiveDeviceTypes,
+      newValue, getWorkerNumOperandsMutable()));
+}
+
+void acc::LoopOp::addEmptyWorker(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWorkerAttr(addDeviceTypeAffectedOperandHelper(context, getWorkerAttr(),
+                                                   effectiveDeviceTypes));
+}
+
+void acc::LoopOp::addEmptyGang(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setGangAttr(addDeviceTypeAffectedOperandHelper(context, getGangAttr(),
+                                                 effectiveDeviceTypes));
+}
+
+void acc::LoopOp::addGangOperands(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+    llvm::ArrayRef<GangArgType> argTypes, mlir::ValueRange values) {
+  llvm::SmallVector<int32_t> segments;
+  if (std::optional<ArrayRef<int32_t>> existingSegments =
+          getGangOperandsSegments())
+    llvm::copy(*existingSegments, std::back_inserter(segments));
+
+  unsigned beforeCount = segments.size();
+
+  setGangOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getGangOperandsDeviceTypeAttr(), effectiveDeviceTypes, values,
+      getGangOperandsMutable(), segments));
+
+  setGangOperandsSegments(segments);
+
+  // This is a bit of extra work to make sure we update the 'types' correctly by
+  // adding to the types collection the correct number of times. We could
+  // potentially add something similar to the
+  // addDeviceTypeAffectedOperandHelper, but it seems that would be pretty
+  // excessive for a one-off case.
+  unsigned numAdded = segments.size() - beforeCount;
+
+  if (numAdded > 0) {
+    llvm::SmallVector<mlir::Attribute> gangTypes;
+    if (getGangOperandsArgTypeAttr())
+      llvm::copy(getGangOperandsArgTypeAttr(), std::back_inserter(gangTypes));
+
+    for (auto i : llvm::index_range(0u, numAdded)) {
+      llvm::transform(argTypes, std::back_inserter(gangTypes),
+                      [=](mlir::acc::GangArgType gangTy) {
+                        return mlir::acc::GangArgTypeAttr::get(context, gangTy);
+                      });
+      (void)i;
+    }
+
+    setGangOperandsArgTypeAttr(mlir::ArrayAttr::get(context, gangTypes));
+  }
 }
 
 //===----------------------------------------------------------------------===//
