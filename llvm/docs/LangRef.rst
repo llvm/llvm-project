@@ -5776,6 +5776,7 @@ and GCC likely indicates a bug in LLVM.
 
 Target-independent:
 
+- ``a``: Print a memory reference. Targets might customize the output.
 - ``c``: Print an immediate integer constant unadorned, without
   the target-specific immediate punctuation (e.g. no ``$`` prefix).
 - ``n``: Negate and print immediate integer constant unadorned, without the
@@ -5913,6 +5914,8 @@ target-independent modifiers.
 
 X86:
 
+- ``a``: Print a memory reference. This displays as ``sym(%rip)`` for x86-64.
+  i386 should only use this with the static relocation model.
 - ``c``: Print an unadorned integer or symbol name. (The latter is
   target-specific behavior for this typically target-independent modifier).
 - ``A``: Print a register name with a '``*``' before it.
