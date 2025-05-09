@@ -1196,16 +1196,6 @@ parser::Message *AttachDeclaration(
       const auto *assoc{unhosted->detailsIf<semantics::HostAssocDetails>()}) {
     unhosted = &assoc->symbol();
   }
-  if (const auto *binding{
-          unhosted->detailsIf<semantics::ProcBindingDetails>()}) {
-    if (binding->symbol().name() != symbol.name()) {
-      message.Attach(binding->symbol().name(),
-          "Procedure '%s' of type '%s' is bound to '%s'"_en_US, symbol.name(),
-          symbol.owner().GetName().value(), binding->symbol().name());
-      return &message;
-    }
-    unhosted = &binding->symbol();
-  }
   if (const auto *use{symbol.detailsIf<semantics::UseDetails>()}) {
     message.Attach(use->location(),
         "'%s' is USE-associated with '%s' in module '%s'"_en_US, symbol.name(),
@@ -1213,6 +1203,14 @@ parser::Message *AttachDeclaration(
   } else {
     message.Attach(
         unhosted->name(), "Declaration of '%s'"_en_US, unhosted->name());
+  }
+  if (const auto *binding{
+          unhosted->detailsIf<semantics::ProcBindingDetails>()}) {
+    if (binding->symbol().name() != symbol.name()) {
+      message.Attach(binding->symbol().name(),
+          "Procedure '%s' of type '%s' is bound to '%s'"_en_US, symbol.name(),
+          symbol.owner().GetName().value(), binding->symbol().name());
+    }
   }
   return &message;
 }
