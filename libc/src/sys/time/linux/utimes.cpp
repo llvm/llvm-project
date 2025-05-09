@@ -9,8 +9,8 @@
 #include "src/sys/time/utimes.h"
 
 #include "hdr/fcntl_macros.h"
-#include "hdr/types/struct_timeval.h"
 #include "hdr/types/struct_timespec.h"
+#include "hdr/types/struct_timeval.h"
 
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
