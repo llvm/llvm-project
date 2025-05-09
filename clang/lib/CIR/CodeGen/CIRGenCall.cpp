@@ -39,86 +39,6 @@ CIRGenFunctionInfo::create(CanQualType resultType,
   return fi;
 }
 
-namespace {
-
-/// Encapsulates information about the way function arguments from
-/// CIRGenFunctionInfo should be passed to actual CIR function.
-class ClangToCIRArgMapping {
-  static constexpr unsigned invalidIndex = ~0U;
-  unsigned totalNumCIRArgs;
-
-  /// Arguments of CIR function corresponding to single Clang argument.
-  struct CIRArgs {
-    // Argument is expanded to CIR arguments at positions
-    // [FirstArgIndex, FirstArgIndex + NumberOfArgs).
-    unsigned firstArgIndex = 0;
-    unsigned numberOfArgs = 0;
-
-    CIRArgs() : firstArgIndex(invalidIndex), numberOfArgs(0) {}
-  };
-
-  SmallVector<CIRArgs, 8> argInfo;
-
-public:
-  ClangToCIRArgMapping(const ASTContext &astContext,
-                       const CIRGenFunctionInfo &funcInfo)
-      : totalNumCIRArgs(0), argInfo(funcInfo.arg_size()) {
-    unsigned cirArgNo = 0;
-
-    assert(!cir::MissingFeatures::opCallABIIndirectArg());
-
-    unsigned argNo = 0;
-    for (const CIRGenFunctionInfoArgInfo &i : funcInfo.arguments()) {
-      // Collect data about CIR arguments corresponding to Clang argument ArgNo.
-      CIRArgs &cirArgs = argInfo[argNo];
-
-      assert(!cir::MissingFeatures::opCallPaddingArgs());
-
-      switch (i.info.getKind()) {
-      default:
-        assert(!cir::MissingFeatures::abiArgInfo());
-        // For now we just fall through. More argument kinds will be added later
-        // as the upstreaming proceeds.
-        [[fallthrough]];
-      case cir::ABIArgInfo::Direct:
-        // Postpone splitting structs into elements since this makes it way
-        // more complicated for analysis to obtain information on the original
-        // arguments.
-        //
-        // TODO(cir): a LLVM lowering prepare pass should break this down into
-        // the appropriated pieces.
-        assert(!cir::MissingFeatures::opCallABIExtendArg());
-        cirArgs.numberOfArgs = 1;
-        break;
-      }
-
-      if (cirArgs.numberOfArgs > 0) {
-        cirArgs.firstArgIndex = cirArgNo;
-        cirArgNo += cirArgs.numberOfArgs;
-      }
-
-      ++argNo;
-    }
-
-    assert(argNo == argInfo.size());
-    assert(!cir::MissingFeatures::opCallInAlloca());
-
-    totalNumCIRArgs = cirArgNo;
-  }
-
-  unsigned totalCIRArgs() const { return totalNumCIRArgs; }
-
-  /// Returns index of first CIR argument corresponding to argNo, and their
-  /// quantity.
-  std::pair<unsigned, unsigned> getCIRArgs(unsigned argNo) const {
-    assert(argNo < argInfo.size());
-    return std::make_pair(argInfo[argNo].firstArgIndex,
-                          argInfo[argNo].numberOfArgs);
-  }
-};
-
-} // namespace
-
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
   assert(!cir::MissingFeatures::opCallVirtual());
   return *this;
@@ -175,56 +95,38 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 cir::CIRCallOpInterface *callOp,
                                 mlir::Location loc) {
   QualType retTy = funcInfo.getReturnType();
-  const cir::ABIArgInfo &retInfo = funcInfo.getReturnInfo();
 
-  ClangToCIRArgMapping cirFuncArgs(cgm.getASTContext(), funcInfo);
-  SmallVector<mlir::Value, 16> cirCallArgs(cirFuncArgs.totalCIRArgs());
+  SmallVector<mlir::Value, 16> cirCallArgs(args.size());
 
   assert(!cir::MissingFeatures::emitLifetimeMarkers());
 
   // Translate all of the arguments as necessary to match the CIR lowering.
-  assert(funcInfo.arg_size() == args.size() &&
-         "Mismatch between function signature & arguments.");
-  unsigned argNo = 0;
-  for (const auto &[arg, argInfo] : llvm::zip(args, funcInfo.arguments())) {
+  for (auto [argNo, arg, argInfo] :
+       llvm::enumerate(args, funcInfo.arguments())) {
     // Insert a padding argument to ensure proper alignment.
     assert(!cir::MissingFeatures::opCallPaddingArgs());
 
-    unsigned firstCIRArg;
-    unsigned numCIRArgs;
-    std::tie(firstCIRArg, numCIRArgs) = cirFuncArgs.getCIRArgs(argNo);
+    mlir::Type argType = convertType(argInfo.type);
+    if (!mlir::isa<cir::RecordType>(argType)) {
+      mlir::Value v;
+      if (arg.isAggregate())
+        cgm.errorNYI(loc, "emitCall: aggregate call argument");
+      v = arg.getKnownRValue().getScalarVal();
 
-    switch (argInfo.info.getKind()) {
-    case cir::ABIArgInfo::Direct: {
-      if (!mlir::isa<cir::RecordType>(argInfo.info.getCoerceToType()) &&
-          argInfo.info.getCoerceToType() == convertType(argInfo.type) &&
-          argInfo.info.getDirectOffset() == 0) {
-        assert(numCIRArgs == 1);
-        assert(!cir::MissingFeatures::opCallAggregateArgs());
-        mlir::Value v = arg.getKnownRValue().getScalarVal();
+      // We might have to widen integers, but we should never truncate.
+      if (argType != v.getType() && mlir::isa<cir::IntType>(v.getType()))
+        cgm.errorNYI(loc, "emitCall: widening integer call argument");
 
-        assert(!cir::MissingFeatures::opCallExtParameterInfo());
-
-        // We might have to widen integers, but we should never truncate.
-        assert(!cir::MissingFeatures::opCallWidenArg());
-
-        // If the argument doesn't match, perform a bitcast to coerce it. This
-        // can happen due to trivial type mismatches.
-        assert(!cir::MissingFeatures::opCallBitcastArg());
-
-        cirCallArgs[firstCIRArg] = v;
-        break;
-      }
-
+      // If the argument doesn't match, perform a bitcast to coerce it. This
+      // can happen due to trivial type mismatches.
+      // TODO(cir): When getFunctionType is added, assert that this isn't
+      // needed.
+      assert(!cir::MissingFeatures::opCallBitcastArg());
+      cirCallArgs[argNo] = v;
+    } else {
       assert(!cir::MissingFeatures::opCallAggregateArgs());
       cgm.errorNYI("emitCall: aggregate function call argument");
-      break;
     }
-    default:
-      cgm.errorNYI("unsupported argument kind");
-    }
-
-    ++argNo;
   }
 
   const CIRGenCallee &concreteCallee = callee.prepareConcreteCallee(*this);
@@ -256,45 +158,31 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   assert(!cir::MissingFeatures::opCallMustTail());
   assert(!cir::MissingFeatures::opCallReturn());
 
-  switch (retInfo.getKind()) {
-  case cir::ABIArgInfo::Direct: {
-    mlir::Type retCIRTy = convertType(retTy);
-    if (retInfo.getCoerceToType() == retCIRTy &&
-        retInfo.getDirectOffset() == 0) {
-      switch (getEvaluationKind(retTy)) {
-      case cir::TEK_Scalar: {
-        mlir::ResultRange results = theCall->getOpResults();
-        assert(results.size() == 1 && "unexpected number of returns");
+  mlir::Type retCIRTy = convertType(retTy);
+  if (isa<cir::VoidType>(retCIRTy))
+    return getUndefRValue(retTy);
+  switch (getEvaluationKind(retTy)) {
+  case cir::TEK_Scalar: {
+    mlir::ResultRange results = theCall->getOpResults();
+    assert(results.size() == 1 && "unexpected number of returns");
 
-        // If the argument doesn't match, perform a bitcast to coerce it. This
-        // can happen due to trivial type mismatches.
-        if (results[0].getType() != retCIRTy)
-          cgm.errorNYI(loc, "bitcast on function return value");
+    // If the argument doesn't match, perform a bitcast to coerce it. This
+    // can happen due to trivial type mismatches.
+    if (results[0].getType() != retCIRTy)
+      cgm.errorNYI(loc, "bitcast on function return value");
 
-        mlir::Region *region = builder.getBlock()->getParent();
-        if (region != theCall->getParentRegion())
-          cgm.errorNYI(loc, "function calls with cleanup");
+    mlir::Region *region = builder.getBlock()->getParent();
+    if (region != theCall->getParentRegion())
+      cgm.errorNYI(loc, "function calls with cleanup");
 
-        return RValue::get(results[0]);
-      }
-      case cir::TEK_Complex:
-      case cir::TEK_Aggregate:
-        cgm.errorNYI(loc,
-                     "unsupported evaluation kind of function call result");
-        return getUndefRValue(retTy);
-      }
-      llvm_unreachable("Invalid evaluation kind");
-    }
-    cgm.errorNYI(loc, "unsupported function call form");
+    return RValue::get(results[0]);
+  }
+  case cir::TEK_Complex:
+  case cir::TEK_Aggregate:
+    cgm.errorNYI(loc, "unsupported evaluation kind of function call result");
     return getUndefRValue(retTy);
   }
-  case cir::ABIArgInfo::Ignore:
-    // If we are ignoring an argument that had a result, make sure to construct
-    // the appropriate return value for our caller.
-    return getUndefRValue(retTy);
-  }
-
-  llvm_unreachable("Invalid return info kind");
+  llvm_unreachable("Invalid evaluation kind");
 }
 
 void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
@@ -304,7 +192,7 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
 
   if (e->isGLValue()) {
     assert(e->getObjectKind() == OK_Ordinary);
-    args.add(emitReferenceBindingToExpr(e), argType);
+    return args.add(emitReferenceBindingToExpr(e), argType);
   }
 
   bool hasAggregateEvalKind = hasAggregateEvaluationKind(argType);
