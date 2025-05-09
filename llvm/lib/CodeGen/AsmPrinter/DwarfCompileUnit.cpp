@@ -228,7 +228,7 @@ void DwarfCompileUnit::createGlobalVariableVTableDIE(
   // attribute and assume that they'll be a specification DIE somewhere
   // else that refers to it. Skip the DW_AT_declaration generation.
   DIE *VariableSpecDIE =
-      getOrCreateStaticMemberDIE(SDMDecl, /*IsDeclaration*/false);
+      getOrCreateStaticMemberDIE(SDMDecl, /*IsDeclaration*/ false);
 
   if (uint32_t AlignInBytes = GV->getAlignInBytes())
     addUInt(*VariableSpecDIE, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
