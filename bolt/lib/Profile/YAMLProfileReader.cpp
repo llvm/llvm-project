@@ -177,11 +177,11 @@ bool YAMLProfileReader::parseFunctionProfile(
 
   BF.setExecutionCount(YamlBF.ExecCount);
 
-  uint64_t FuncRawBranchCount = 0;
+  uint64_t FuncRawSampleCount = 0;
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks)
     for (const yaml::bolt::SuccessorInfo &YamlSI : YamlBB.Successors)
-      FuncRawBranchCount += YamlSI.Count;
-  BF.setRawBranchCount(FuncRawBranchCount);
+      FuncRawSampleCount += YamlSI.Count;
+  BF.setRawSampleCount(FuncRawSampleCount);
 
   if (BF.empty())
     return true;
