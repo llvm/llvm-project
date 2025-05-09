@@ -108,10 +108,10 @@ static cl::opt<bool> WriteRelBFToSummary(
 // FIXME: Convert to a const once this has undergone more sigificant testing.
 static cl::opt<bool>
     CombinedIndexMemProfContext("combined-index-memprof-context", cl::Hidden,
-#ifndef NDEBUG
-                                cl::init(true),
-#else
+#ifdef NDEBUG
                                 cl::init(false),
+#else
+                                cl::init(true),
 #endif
                                 cl::desc(""));
 
