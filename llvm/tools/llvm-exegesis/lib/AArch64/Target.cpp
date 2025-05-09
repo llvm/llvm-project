@@ -10,6 +10,7 @@
 #include "AArch64RegisterInfo.h"
 
 #if defined(__aarch64__) && defined(__linux__)
+#include <errno.h>
 #include <linux/prctl.h> // For PR_PAC_* constants
 #include <sys/prctl.h>
 #ifndef PR_PAC_SET_ENABLED_KEYS
@@ -199,6 +200,11 @@ private:
     PM.add(createAArch64ExpandPseudoPass());
   }
 
+  static long prctl_wrapper(int op, long arg2 = 0, long arg3 = 0, long arg4 = 0,
+                            long arg5 = 0) {
+    return prctl(op, arg2, arg3, arg4, arg5);
+  }
+
   const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
                                            unsigned Opcode) const override {
     if (const char *Reason =
@@ -213,20 +219,30 @@ private:
       // For systems without PAC, this is a No-op but with PAC, it is
       // safer to check the existing key state and then disable/enable them.
       // Hence the guard for switching.
-      unsigned long PacKeys = 0;
-      if (prctl(PR_PAC_GET_ENABLED_KEYS, &PacKeys, 0, 0, 0) < 0) {
+      errno = 0;
+      unsigned long PacKeys = prctl_wrapper(PR_PAC_GET_ENABLED_KEYS,
+                                            0,  // unused
+                                            0,  // unused
+                                            0,  // unused
+                                            0); // unused
+      if ((long)PacKeys < 0) {
+        if (errno == EINVAL) {
+          return "PAuth not supported on this system";
+        }
         return "Failed to get PAC key status";
       }
 
       // Disable all PAC keys. Note that while we expect the measurements to
       // be the same with PAC keys disabled, they could potentially be lower
       // since authentication checks are bypassed.
-      if (PacKeys != 0) {
-        if (prctl(PR_PAC_SET_ENABLED_KEYS,
-                  PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
-                      PR_PAC_APDBKEY, // all keys
-                  0,                  // disable all
-                  0, 0) < 0) {
+      if ((long)PacKeys != 0) {
+        if (prctl_wrapper(PR_PAC_SET_ENABLED_KEYS,
+                          PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
+                              PR_PAC_APDBKEY, // all keys
+                          0,                  // disable all
+                          0,                  // unused
+                          0)                  // unused
+            < 0) {
           return "Failed to disable PAC keys";
         }
       }
