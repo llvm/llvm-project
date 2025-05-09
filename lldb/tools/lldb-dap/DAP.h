@@ -167,8 +167,6 @@ struct DAP {
   lldb::SBTarget target;
   Variables variables;
   lldb::SBBroadcaster broadcaster;
-  std::thread event_thread;
-  std::thread progress_event_thread;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
@@ -277,6 +275,7 @@ struct DAP {
   lldb::SBThread GetLLDBThread(lldb::tid_t id);
   lldb::SBThread GetLLDBThread(const llvm::json::Object &arguments);
 
+  lldb::SBFrame GetLLDBFrame(uint64_t frame_id);
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
 
   llvm::json::Value CreateTopLevelScopes();
@@ -418,7 +417,19 @@ struct DAP {
 
   lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
 
+  void StartEventThread();
+  void StartProgressEventThread();
+
 private:
+  /// Event threads.
+  /// @{
+  void EventThread();
+  void ProgressEventThread();
+
+  std::thread event_thread;
+  std::thread progress_event_thread;
+  /// @}
+
   /// Queue for all incoming messages.
   std::deque<protocol::Message> m_queue;
   std::deque<protocol::Message> m_pending_queue;
