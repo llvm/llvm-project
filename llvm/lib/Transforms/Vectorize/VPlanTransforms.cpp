@@ -2472,6 +2472,9 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
   VPBlockBase *MiddleVPBB = LatchVPBB->getSuccessors()[0];
   if (!EarlyExitVPBB->getSinglePredecessor() &&
       EarlyExitVPBB->getPredecessors()[0] != MiddleVPBB) {
+    assert(EarlyExitVPBB->getNumPredecessors() == 2 &&
+           EarlyExitVPBB->getPredecessors()[1] == MiddleVPBB &&
+           "unsupported earl exit VPBB");
     // Early exit operand should always be last phi operand. If EarlyExitVPBB
     // has two predecessors and MiddleVPBB isn't the first, swap the operands of
     // the phis.

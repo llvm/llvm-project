@@ -491,6 +491,9 @@ void VPlanTransforms::prepareForVectorization(
                         cast<VPBasicBlock>(LatchVPB), InductionTy, IVDL);
 
   [[maybe_unused]] bool HandledUncountableEarlyExit = false;
+  // Handle the remaining early exits, either by converting the plan to one only
+  // exiting via the latch or by disconnecting all early exiting edges and
+  // requiring a scalar epilogue.
   for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
     for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
       if (Pred == MiddleVPBB)
