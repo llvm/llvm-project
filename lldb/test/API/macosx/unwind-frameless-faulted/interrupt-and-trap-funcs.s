@@ -18,10 +18,10 @@
 _to_be_interrupted:
   .cfi_startproc
 
-  // This is a garbage entry to ensure that eh_frame is emitted,
-  // it isn't used for anything.  If there's no eh_frame, lldb
-  // can do an assembly emulation scan and add a rule for $lr
-  // which won't expose the issue at hand.
+  // This is a garbage entry to ensure that eh_frame is emitted.
+  // If there's no eh_frame, lldb can use the assembly emulation scan,
+  // which always includes a rule for $lr, and we won't replicate the
+  // bug we're testing for.
   .cfi_escape DW_CFA_register, ehframe_x22, ehframe_x23
   mov x24, x0
   add x24, x24, #1
