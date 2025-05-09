@@ -11613,7 +11613,8 @@ def note_omp_implicit_dsa : Note<
 def err_omp_loop_var_dsa : Error<
   "loop iteration variable in the associated loop of 'omp %1' directive may not be %0, predetermined as %2">;
 def warn_omp_different_loop_ind_var_types : Warning <
-  "loop sequence following '#pragma omp %0' contains induction variables of differing types: %1 and %2">;
+  "loop sequence following '#pragma omp %0' contains induction variables of differing types: %1 and %2">,
+  InGroup<OpenMPLoopForm>;
 def err_omp_not_canonical_loop : Error <
   "loop after '#pragma omp %0' is not in canonical form">;
 def err_omp_not_a_loop_sequence : Error < 
@@ -11624,7 +11625,8 @@ def err_omp_invalid_looprange : Error <
   "loop range in '#pragma omp %0' exceeds the number of available loops: "
   "range end '%1' is greater than the total number of loops '%2'">;
 def warn_omp_redundant_fusion : Warning <
-  "loop range in '#pragma omp %0' contains only a single loop, resulting in redundant fusion">;
+  "loop range in '#pragma omp %0' contains only a single loop, resulting in redundant fusion">,
+  InGroup<OpenMPClauses>;
 def err_omp_not_for : Error<
   "%select{statement after '#pragma omp %1' must be a for loop|"
   "expected %2 for loops after '#pragma omp %1'%select{|, but found only %4}3}0">;
