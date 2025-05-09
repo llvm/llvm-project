@@ -95,19 +95,17 @@ x86vector::DotOp::getIntrinsicOperands(RewriterBase &rewriter,
   return operands;
 }
 
-SmallVector<Value> x86vector::BcstBF16ToPackedF32Op::getIntrinsicOperands(
+SmallVector<Value> x86vector::BcstToPackedF32Op::getIntrinsicOperands(
     RewriterBase &rewriter, const LLVMTypeConverter &typeConverter) {
   return getMemrefBuffPtr(getLoc(), getA(), rewriter, typeConverter);
 }
 
-SmallVector<Value>
-x86vector::CvtPackedOddIndexedBF16ToF32Op::getIntrinsicOperands(
+SmallVector<Value> x86vector::CvtPackedEvenIndexedToF32Op::getIntrinsicOperands(
     RewriterBase &rewriter, const LLVMTypeConverter &typeConverter) {
   return getMemrefBuffPtr(getLoc(), getA(), rewriter, typeConverter);
 }
 
-SmallVector<Value>
-x86vector::CvtPackedEvenIndexedBF16ToF32Op::getIntrinsicOperands(
+SmallVector<Value> x86vector::CvtPackedOddIndexedToF32Op::getIntrinsicOperands(
     RewriterBase &rewriter, const LLVMTypeConverter &typeConverter) {
   return getMemrefBuffPtr(getLoc(), getA(), rewriter, typeConverter);
 }

@@ -294,6 +294,97 @@ bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
 /// field is required.
 using LaunchResponseBody = VoidResponse;
 
+/// Arguments for `continue` request.
+struct ContinueArguments {
+  /// Specifies the active thread. If the debug adapter supports single thread
+  /// execution (see `supportsSingleThreadExecutionRequests`) and the argument
+  /// `singleThread` is true, only the thread with this ID is resumed.
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
+
+  /// If this flag is true, execution is resumed only for the thread with given
+  /// `threadId`.
+  bool singleThread = false;
+};
+bool fromJSON(const llvm::json::Value &, ContinueArguments &, llvm::json::Path);
+
+/// Response to `continue` request.
+struct ContinueResponseBody {
+  // If omitted or set to `true`, this response signals to the client that all
+  // threads have been resumed. The value `false` indicates that not all threads
+  // were resumed.
+  bool allThreadsContinued = true;
+};
+llvm::json::Value toJSON(const ContinueResponseBody &);
+
+/// Arguments for `setVariable` request.
+struct SetVariableArguments {
+  /// The reference of the variable container. The `variablesReference` must
+  /// have been obtained in the current suspended state. See 'Lifetime of Object
+  ///  References' in the Overview section for details.
+  uint64_t variablesReference = UINT64_MAX;
+
+  /// The name of the variable in the container.
+  std::string name;
+
+  /// The value of the variable.
+  std::string value;
+
+  /// Specifies details on how to format the response value.
+  ValueFormat format;
+};
+bool fromJSON(const llvm::json::Value &, SetVariableArguments &,
+              llvm::json::Path);
+
+/// Response to `setVariable` request.
+struct SetVariableResponseBody {
+
+  /// The new value of the variable.
+  std::string value;
+
+  /// The type of the new value. Typically shown in the UI when hovering over
+  /// the value.
+  std::optional<std::string> type;
+
+  /// If `variablesReference` is > 0, the new value is structured and its
+  /// children can be retrieved by passing `variablesReference` to the
+  /// `variables` request as long as execution remains suspended. See 'Lifetime
+  /// of Object References' in the Overview section for details.
+  ///
+  /// If this property is included in the response, any `variablesReference`
+  /// previously associated with the updated variable, and those of its
+  /// children, are no longer valid.
+  std::optional<uint64_t> variablesReference;
+
+  /// The number of named child variables.
+  /// The client can use this information to present the variables in a paged
+  /// UI and fetch them in chunks.
+  /// The value should be less than or equal to 2147483647 (2^31-1).
+  std::optional<uint32_t> namedVariables;
+
+  /// The number of indexed child variables.
+  /// The client can use this information to present the variables in a paged
+  /// UI and fetch them in chunks.
+  /// The value should be less than or equal to 2147483647 (2^31-1).
+  std::optional<uint32_t> indexedVariables;
+
+  /// A memory reference to a location appropriate for this result.
+  /// For pointer type eval results, this is generally a reference to the
+  /// memory address contained in the pointer.
+  /// This attribute may be returned by a debug adapter if corresponding
+  /// capability `supportsMemoryReferences` is true.
+  std::optional<std::string> memoryReference;
+
+  /// A reference that allows the client to request the location where the new
+  /// value is declared. For example, if the new value is function pointer, the
+  /// adapter may be able to look up the function's location. This should be
+  /// present only if the adapter is likely to be able to resolve the location.
+  ///
+  /// This reference shares the same lifetime as the `variablesReference`. See
+  /// 'Lifetime of Object References' in the Overview section for details.
+  std::optional<uint64_t> valueLocationReference;
+};
+llvm::json::Value toJSON(const SetVariableResponseBody &);
+
 /// Arguments for `source` request.
 struct SourceArguments {
   /// Specifies the source content to load. Either `source.path` or
@@ -321,7 +412,7 @@ llvm::json::Value toJSON(const SourceResponseBody &);
 struct NextArguments {
   /// Specifies the thread for which to resume execution for one step (of the
   /// given granularity).
-  uint64_t threadId = LLDB_INVALID_THREAD_ID;
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
 
   /// If this flag is true, all other suspended threads are not resumed.
   bool singleThread = false;
@@ -340,7 +431,7 @@ using NextResponse = VoidResponse;
 struct StepInArguments {
   /// Specifies the thread for which to resume execution for one step-into (of
   /// the given granularity).
-  uint64_t threadId = LLDB_INVALID_THREAD_ID;
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
 
   /// If this flag is true, all other suspended threads are not resumed.
   bool singleThread = false;
@@ -362,7 +453,7 @@ using StepInResponse = VoidResponse;
 struct StepOutArguments {
   /// Specifies the thread for which to resume execution for one step-out (of
   /// the given granularity).
-  uint64_t threadId = LLDB_INVALID_THREAD_ID;
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
 
   /// If this flag is true, all other suspended threads are not resumed.
   std::optional<bool> singleThread;

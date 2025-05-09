@@ -851,7 +851,6 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   StringRef WarningGroup;
-  SmallVector<StringRef, 2> Options;
   if (AL.getNumArgs() > 3) {
     if (!S.checkStringLiteralArgumentAttr(AL, 3, WarningGroup))
       return;
@@ -5398,6 +5397,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     }
   }
 
+  bool IsTargetDefaultMSABI =
+      Context.getTargetInfo().getTriple().isOSWindows() ||
+      Context.getTargetInfo().getTriple().isUEFI();
   // TODO: diagnose uses of these conventions on the wrong target.
   switch (Attrs.getKind()) {
   case ParsedAttr::AT_CDecl:
@@ -5437,12 +5439,10 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     CC = CC_X86RegCall;
     break;
   case ParsedAttr::AT_MSABI:
-    CC = Context.getTargetInfo().getTriple().isOSWindows() ? CC_C :
-                                                             CC_Win64;
+    CC = IsTargetDefaultMSABI ? CC_C : CC_Win64;
     break;
   case ParsedAttr::AT_SysVABI:
-    CC = Context.getTargetInfo().getTriple().isOSWindows() ? CC_X86_64SysV :
-                                                             CC_C;
+    CC = IsTargetDefaultMSABI ? CC_X86_64SysV : CC_C;
     break;
   case ParsedAttr::AT_Pcs: {
     StringRef StrRef;

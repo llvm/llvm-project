@@ -3216,8 +3216,7 @@ public:
   /// \p Load is a vp.load instruction.
   /// \p Mask is a mask value
   /// \p DeinterleaveRes is a list of deinterleaved results.
-  virtual bool
-  lowerDeinterleavedIntrinsicToVPLoad(VPIntrinsic *Load, Value *Mask,
+  virtual bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
                                       ArrayRef<Value *> DeinterleaveRes) const {
     return false;
   }
@@ -3228,9 +3227,8 @@ public:
   /// \p Store is the vp.store instruction.
   /// \p Mask is a mask value
   /// \p InterleaveOps is a list of values being interleaved.
-  virtual bool
-  lowerInterleavedIntrinsicToVPStore(VPIntrinsic *Store, Value *Mask,
-                                     ArrayRef<Value *> InterleaveOps) const {
+  virtual bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
+                                       ArrayRef<Value *> InterleaveOps) const {
     return false;
   }
 

@@ -4063,6 +4063,15 @@ private:
   }
 #endif
 
+  /// Create a new gather TreeEntry
+  TreeEntry *newGatherTreeEntry(ArrayRef<Value *> VL,
+                                const InstructionsState &S,
+                                const EdgeInfo &UserTreeIdx,
+                                ArrayRef<int> ReuseShuffleIndices = {}) {
+    auto Invalid = ScheduleBundle::invalid();
+    return newTreeEntry(VL, Invalid, S, UserTreeIdx, ReuseShuffleIndices);
+  }
+
   /// Create a new VectorizableTree entry.
   TreeEntry *newTreeEntry(ArrayRef<Value *> VL, ScheduleBundle &Bundle,
                           const InstructionsState &S,
@@ -4251,13 +4260,34 @@ private:
   bool areAltOperandsProfitable(const InstructionsState &S,
                                 ArrayRef<Value *> VL) const;
 
+  /// Contains all the outputs of legality analysis for a list of values to
+  /// vectorize.
+  class ScalarsVectorizationLegality {
+    InstructionsState S;
+    bool IsLegal;
+    bool TryToFindDuplicates;
+    bool TrySplitVectorize;
+
+  public:
+    ScalarsVectorizationLegality(InstructionsState S, bool IsLegal,
+                                 bool TryToFindDuplicates = true,
+                                 bool TrySplitVectorize = false)
+        : S(S), IsLegal(IsLegal), TryToFindDuplicates(TryToFindDuplicates),
+          TrySplitVectorize(TrySplitVectorize) {
+      assert((!IsLegal || (S.valid() && TryToFindDuplicates)) &&
+             "Inconsistent state");
+    }
+    const InstructionsState &getInstructionsState() const { return S; };
+    bool isLegal() const { return IsLegal; }
+    bool tryToFindDuplicates() const { return TryToFindDuplicates; }
+    bool trySplitVectorize() const { return TrySplitVectorize; }
+  };
+
   /// Checks if the specified list of the instructions/values can be vectorized
   /// in general.
-  bool isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
-                                 const EdgeInfo &UserTreeIdx,
-                                 InstructionsState &S,
-                                 bool &TryToFindDuplicates,
-                                 bool &TrySplitVectorize) const;
+  ScalarsVectorizationLegality
+  getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
+                                  const EdgeInfo &UserTreeIdx) const;
 
   /// Checks if the specified list of the instructions/values can be vectorized
   /// and fills required data before actual scheduling of the instructions.
@@ -7186,7 +7216,6 @@ void BoUpSLP::reorderTopToBottom() {
     MapVector<OrdersType, unsigned,
               DenseMap<OrdersType, unsigned, OrdersTypeDenseMapInfo>>
         OrdersUses;
-    SmallPtrSet<const TreeEntry *, 4> VisitedOps;
     for (const TreeEntry *OpTE : OrderedEntries) {
       // No need to reorder this nodes, still need to extend and to use shuffle,
       // just need to merge reordering shuffle and the reuse shuffle.
@@ -8153,7 +8182,6 @@ static void gatherPossiblyVectorizableLoads(
           int &Offset, unsigned &Start) {
         if (Loads.empty())
           return GatheredLoads.end();
-        SmallVector<std::pair<int, int>> Res;
         LoadInst *LI = Loads.front().first;
         for (auto [Idx, Data] : enumerate(GatheredLoads)) {
           if (Idx < Start)
@@ -9736,16 +9764,12 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
   return true;
 }
 
-bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
-                                        const EdgeInfo &UserTreeIdx,
-                                        InstructionsState &S,
-                                        bool &TryToFindDuplicates,
-                                        bool &TrySplitVectorize) const {
+BoUpSLP::ScalarsVectorizationLegality
+BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
+                                         const EdgeInfo &UserTreeIdx) const {
   assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
 
-  S = getSameOpcode(VL, *TLI);
-  TryToFindDuplicates = true;
-  TrySplitVectorize = false;
+  InstructionsState S = getSameOpcode(VL, *TLI);
 
   // Don't go into catchswitch blocks, which can happen with PHIs.
   // Such blocks can only have PHIs and the catchswitch.  There is no
@@ -9753,8 +9777,8 @@ bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
   if (S && isa<CatchSwitchInst>(S.getMainOp()->getParent()->getTerminator())) {
     LLVM_DEBUG(dbgs() << "SLP: bundle in catchswitch block.\n");
     // Do not try to pack to avoid extra instructions here.
-    TryToFindDuplicates = false;
-    return false;
+    return ScalarsVectorizationLegality(S, /*IsLegal=*/false,
+                                        /*TryToFindDuplicates=*/false);
   }
 
   // Check if this is a duplicate of another entry.
@@ -9764,14 +9788,14 @@ bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
       if (E->isSame(VL)) {
         LLVM_DEBUG(dbgs() << "SLP: Perfect diamond merge at " << *S.getMainOp()
                           << ".\n");
-        return false;
+        return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
       }
       SmallPtrSet<Value *, 8> Values(llvm::from_range, E->Scalars);
       if (all_of(VL, [&](Value *V) {
             return isa<PoisonValue>(V) || Values.contains(V);
           })) {
         LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
-        return false;
+        return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
       }
     }
   }
@@ -9788,7 +9812,7 @@ bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
                   cast<Instruction>(I)->getOpcode() == S.getOpcode();
          })))) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to max recursion depth.\n");
-    return false;
+    return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
   }
 
   // Don't handle scalable vectors
@@ -9796,15 +9820,15 @@ bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
       isa<ScalableVectorType>(
           cast<ExtractElementInst>(S.getMainOp())->getVectorOperandType())) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to scalable vector type.\n");
-    return false;
+    return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
   }
 
   // Don't handle vectors.
   if (!SLPReVec && getValueType(VL.front())->isVectorTy()) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to vector type.\n");
     // Do not try to pack to avoid extra instructions here.
-    TryToFindDuplicates = false;
-    return false;
+    return ScalarsVectorizationLegality(S, /*IsLegal=*/false,
+                                        /*TryToFindDuplicates=*/false);
   }
 
   // If all of the operands are identical or constant we have a simple solution.
@@ -9894,11 +9918,12 @@ bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
     if (!S) {
       LLVM_DEBUG(dbgs() << "SLP: Try split and if failed, gathering due to "
                            "C,S,B,O, small shuffle. \n");
-      TrySplitVectorize = true;
-      return false;
+      return ScalarsVectorizationLegality(S, /*IsLegal=*/false,
+                                          /*TryToFindDuplicates=*/true,
+                                          /*TrySplitVectorize=*/true);
     }
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to C,S,B,O, small shuffle. \n");
-    return false;
+    return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
   }
 
   // Don't vectorize ephemeral values.
@@ -9908,8 +9933,8 @@ bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
         LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
                           << ") is ephemeral.\n");
         // Do not try to pack to avoid extra instructions here.
-        TryToFindDuplicates = false;
-        return false;
+        return ScalarsVectorizationLegality(S, /*IsLegal=*/false,
+                                            /*TryToFindDuplicates=*/false);
       }
     }
   }
@@ -9958,7 +9983,7 @@ bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
     if (PreferScalarize) {
       LLVM_DEBUG(dbgs() << "SLP: The instructions are in tree and alternate "
                            "node is not profitable.\n");
-      return false;
+      return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
     }
   }
 
@@ -9967,7 +9992,7 @@ bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
     for (Value *V : VL) {
       if (UserIgnoreList->contains(V)) {
         LLVM_DEBUG(dbgs() << "SLP: Gathering due to gathered scalar.\n");
-        return false;
+        return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
       }
     }
   }
@@ -9997,9 +10022,9 @@ bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
     // Do not vectorize EH and non-returning blocks, not profitable in most
     // cases.
     LLVM_DEBUG(dbgs() << "SLP: bundle in unreachable block.\n");
-    return false;
+    return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
   }
-  return true;
+  return ScalarsVectorizationLegality(S, /*IsLegal=*/true);
 }
 
 void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
@@ -10010,7 +10035,6 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   SmallVector<int> ReuseShuffleIndices;
   SmallVector<Value *> VL(VLRef.begin(), VLRef.end());
 
-  InstructionsState S = InstructionsState::invalid();
   // Tries to build split node.
   auto TrySplitNode = [&](const InstructionsState &LocalState) {
     SmallVector<Value *> Op1, Op2;
@@ -10044,22 +10068,20 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     return true;
   };
 
-  bool TryToPackDuplicates;
-  bool TrySplitVectorize;
-  if (!isLegalToVectorizeScalars(VL, Depth, UserTreeIdx, S, TryToPackDuplicates,
-                                 TrySplitVectorize)) {
-    if (TrySplitVectorize) {
+  ScalarsVectorizationLegality Legality =
+      getScalarsVectorizationLegality(VL, Depth, UserTreeIdx);
+  const InstructionsState &S = Legality.getInstructionsState();
+  if (!Legality.isLegal()) {
+    if (Legality.trySplitVectorize()) {
       auto [MainOp, AltOp] = getMainAltOpsNoStateVL(VL);
       // Last chance to try to vectorize alternate node.
       if (MainOp && AltOp && TrySplitNode(InstructionsState(MainOp, AltOp)))
         return;
     }
-    if (TryToPackDuplicates)
+    if (Legality.tryToFindDuplicates())
       tryToFindDuplicates(VL, ReuseShuffleIndices, *TTI, *TLI, S, UserTreeIdx);
 
-    auto Invalid = ScheduleBundle::invalid();
-    newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                 ReuseShuffleIndices);
+    newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     return;
   }
 
@@ -10070,9 +10092,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   // Check that every instruction appears once in this bundle.
   if (!tryToFindDuplicates(VL, ReuseShuffleIndices, *TTI, *TLI, S, UserTreeIdx,
                            /*TryPad=*/true)) {
-    auto Invalid = ScheduleBundle::invalid();
-    newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                 ReuseShuffleIndices);
+    newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     return;
   }
 
@@ -10085,9 +10105,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   TreeEntry::EntryState State = getScalarsVectorizationState(
       S, VL, IsScatterVectorizeUserTE, CurrentOrder, PointerOps);
   if (State == TreeEntry::NeedToGather) {
-    auto Invalid = ScheduleBundle::invalid();
-    newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                 ReuseShuffleIndices);
+    newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     return;
   }
 
@@ -10111,9 +10129,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     // Last chance to try to vectorize alternate node.
     if (S.isAltShuffle() && ReuseShuffleIndices.empty() && TrySplitNode(S))
       return;
-    auto Invalid = ScheduleBundle::invalid();
-    newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                 ReuseShuffleIndices);
+    newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     NonScheduledFirst.insert(VL.front());
     if (S.getOpcode() == Instruction::Load &&
         BS.ScheduleRegionSize < BS.ScheduleRegionSizeLimit)
@@ -13801,7 +13817,6 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
   // with the second gather nodes if they have less scalar operands rather than
   // the initial tree element (may be profitable to shuffle the second gather)
   // or they are extractelements, which form shuffle.
-  SmallVector<int> Mask;
   if (VectorizableTree[0]->State == TreeEntry::Vectorize &&
       AreVectorizableGathers(VectorizableTree[1].get(),
                              VectorizableTree[0]->Scalars.size()))
@@ -15248,6 +15263,11 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
       }
 
+      if (!TEUseEI.UserTE->isGather() && !UserPHI &&
+          doesNotNeedToSchedule(TEUseEI.UserTE->Scalars) !=
+              doesNotNeedToSchedule(UseEI.UserTE->Scalars) &&
+          is_contained(UseEI.UserTE->Scalars, TEInsertPt))
+        continue;
       // Check if the user node of the TE comes after user node of TEPtr,
       // otherwise TEPtr depends on TE.
       if ((TEInsertBlock != InsertPt->getParent() ||
@@ -16875,8 +16895,6 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   unsigned VF = E->getVectorFactor();
 
   bool NeedFreeze = false;
-  SmallVector<int> ReuseShuffleIndices(E->ReuseShuffleIndices.begin(),
-                                       E->ReuseShuffleIndices.end());
   SmallVector<Value *> GatheredScalars(E->Scalars.begin(), E->Scalars.end());
   // Clear values, to be replaced by insertvector instructions.
   for (auto [EIdx, Idx] : E->CombinedEntriesWithIndices)
@@ -17619,7 +17637,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       SmallPtrSet<BasicBlock *, 4> VisitedBBs;
 
       for (unsigned I : seq<unsigned>(PH->getNumIncomingValues())) {
-        ValueList Operands;
         BasicBlock *IBB = PH->getIncomingBlock(I);
 
         // Stop emission if all incoming values are generated.
@@ -18291,7 +18308,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         TysForDecl.push_back(VecTy);
       auto *CEI = cast<CallInst>(VL0);
       for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
-        ValueList OpVL;
         // Some intrinsics have scalar arguments. This argument should not be
         // vectorized.
         if (UseIntrinsic && isVectorIntrinsicWithScalarOpAtArg(ID, I, TTI)) {

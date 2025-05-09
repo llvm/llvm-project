@@ -722,6 +722,11 @@ public:
     return R && classof(R);
   }
 
+  static inline bool classof(const VPValue *V) {
+    auto *R = dyn_cast_or_null<VPRecipeBase>(V->getDefiningRecipe());
+    return R && classof(R);
+  }
+
   /// Drop all poison-generating flags.
   void dropPoisonGeneratingFlags() {
     // NOTE: This needs to be kept in-sync with
@@ -897,6 +902,8 @@ public:
     /// Scale the first operand (vector step) by the second operand
     /// (scalar-step).  Casts both operands to the result type if needed.
     WideIVStep,
+    // Creates a step vector starting from 0 to VF with a step of 1.
+    StepVector,
 
   };
 
@@ -1067,7 +1074,15 @@ public:
     if (R->isScalarCast())
       return true;
     auto *VPI = dyn_cast<VPInstruction>(R);
-    return VPI && VPI->getOpcode() == VPInstruction::WideIVStep;
+    if (!VPI)
+      return false;
+    switch (VPI->getOpcode()) {
+    case VPInstruction::WideIVStep:
+    case VPInstruction::StepVector:
+      return true;
+    default:
+      return false;
+    }
   }
 
   static inline bool classof(const VPUser *R) {
@@ -1164,6 +1179,28 @@ public:
   /// Builder. Must only be used for VPIRInstructions with at least one operand
   /// wrapping a PHINode.
   void extractLastLaneOfFirstOperand(VPBuilder &Builder);
+};
+
+/// Helper type to provide functions to access incoming values and blocks for
+/// phi-like recipes.
+class VPPhiAccessors {
+protected:
+  /// Return a VPRecipeBase* to the current object.
+  virtual const VPRecipeBase *getAsRecipe() const = 0;
+
+public:
+  virtual ~VPPhiAccessors() = default;
+
+  /// Returns the incoming VPValue with index \p Idx.
+  VPValue *getIncomingValue(unsigned Idx) const {
+    return getAsRecipe()->getOperand(Idx);
+  }
+
+  /// Returns the incoming block with index \p Idx.
+  const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
+
+  /// Returns the number of incoming values, also number of incoming blocks.
+  unsigned getNumIncoming() const { return getAsRecipe()->getNumOperands(); }
 };
 
 /// An overlay for VPIRInstructions wrapping PHI nodes enabling convenient use
@@ -1842,7 +1879,7 @@ class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
   // If this recipe is unrolled it will have 2 additional operands.
-  bool isUnrolled() const { return getNumOperands() == 5; }
+  bool isUnrolled() const { return getNumOperands() == 6; }
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
@@ -1890,6 +1927,16 @@ public:
 
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
+
+  // TODO: Remove once VPWidenIntOrFpInduction is fully expanded in
+  // convertToConcreteRecipes.
+  VPInstructionWithType *getStepVector() {
+    auto *StepVector =
+        cast<VPInstructionWithType>(getOperand(3)->getDefiningRecipe());
+    assert(StepVector->getOpcode() == VPInstruction::StepVector &&
+           "step vector operand must be a VPInstruction::StepVector");
+    return StepVector;
+  }
 
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled return the VPValue for the induction
@@ -1969,9 +2016,12 @@ public:
 /// recipe is placed in an entry block to a (non-replicate) region, it must have
 /// exactly 2 incoming values, the first from the predecessor of the region and
 /// the second from the exiting block of the region.
-class VPWidenPHIRecipe : public VPSingleDefRecipe {
+class VPWidenPHIRecipe : public VPSingleDefRecipe, public VPPhiAccessors {
   /// Name to use for the generated IR instruction for the widened phi.
   std::string Name;
+
+protected:
+  const VPRecipeBase *getAsRecipe() const override { return this; }
 
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
@@ -2000,12 +2050,6 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
-
-  /// Returns the \p I th incoming VPBasicBlock.
-  VPBasicBlock *getIncomingBlock(unsigned I);
-
-  /// Returns the \p I th incoming VPValue.
-  VPValue *getIncomingValue(unsigned I) { return getOperand(I); }
 };
 
 /// A recipe for handling first-order recurrence phis. The start value is the
@@ -3324,6 +3368,12 @@ public:
   /// the cloned recipes.
   VPBasicBlock *clone() override;
 
+  /// Returns the predecessor block at index \p Idx with the predecessors as per
+  /// the corresponding plain CFG. If the block is an entry block to a region,
+  /// the first predecessor is the single predecessor of a region, and the
+  /// second predecessor is the exiting block of the region.
+  const VPBasicBlock *getCFGPredecessor(unsigned Idx) const;
+
 protected:
   /// Execute the recipes in the IR basic block \p BB.
   void executeRecipes(VPTransformState *State, BasicBlock *BB);
@@ -3337,6 +3387,11 @@ private:
   /// VPBasicBlock, and return it. Update the CFGState accordingly.
   BasicBlock *createEmptyBasicBlock(VPTransformState &State);
 };
+
+inline const VPBasicBlock *
+VPPhiAccessors::getIncomingBlock(unsigned Idx) const {
+  return getAsRecipe()->getParent()->getCFGPredecessor(Idx);
+}
 
 /// A special type of VPBasicBlock that wraps an existing IR basic block.
 /// Recipes of the block get added before the first non-phi instruction in the

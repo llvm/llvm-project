@@ -36,6 +36,8 @@ struct MissingFeatures {
   static bool opGlobalConstant() { return false; }
   static bool opGlobalAlignment() { return false; }
   static bool opGlobalWeakRef() { return false; }
+  static bool opGlobalLinkage() { return false; }
+  static bool opGlobalSetVisitibility() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
@@ -109,6 +111,10 @@ struct MissingFeatures {
   // Unary operator handling
   static bool opUnaryPromotionType() { return false; }
 
+  // SwitchOp handling
+  static bool foldCascadingCases() { return false; }
+  static bool foldRangeCase() { return false; }
+
   // Clang early optimizations or things defered to LLVM lowering.
   static bool mayHaveIntegerOverflow() { return false; }
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
@@ -174,8 +180,12 @@ struct MissingFeatures {
   static bool targetSpecificCXXABI() { return false; }
   static bool moduleNameHash() { return false; }
   static bool setDSOLocal() { return false; }
-  static bool foldCaseStmt() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
+  static bool cudaSupport() { return false; }
+  static bool maybeHandleStaticInExternC() { return false; }
+  static bool constEmitterArrayILE() { return false; }
+  static bool constEmitterVectorILE() { return false; }
+  static bool needsGlobalCtorDtor() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
@@ -199,7 +209,6 @@ struct MissingFeatures {
   static bool labelOp() { return false; }
   static bool ptrDiffOp() { return false; }
   static bool ptrStrideOp() { return false; }
-  static bool selectOp() { return false; }
   static bool switchOp() { return false; }
   static bool ternaryOp() { return false; }
   static bool tryOp() { return false; }

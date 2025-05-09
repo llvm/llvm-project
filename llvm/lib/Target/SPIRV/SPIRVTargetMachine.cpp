@@ -31,6 +31,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
@@ -46,6 +47,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeSPIRVModuleAnalysisPass(PR);
+  initializeSPIRVAsmPrinterPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
   initializeSPIRVStructurizerPass(PR);
   initializeSPIRVPreLegalizerCombinerPass(PR);
@@ -190,6 +192,12 @@ void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
   if (TM.getSubtargetImpl()->isVulkanEnv()) {
+    // Vulkan does not allow address space casts. This pass is run to remove
+    // address space casts that can be removed.
+    // If an address space cast is not removed while targeting Vulkan, lowering
+    // will fail during MIR lowering.
+    addPass(createInferAddressSpacesPass());
+
     // 1.  Simplify loop for subsequent transformations. After this steps, loops
     // have the following properties:
     //  - loops have a single entry edge (pre-header to loop header).
