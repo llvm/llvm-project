@@ -2530,8 +2530,10 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
       ToRemove.push_back(VPI);
     }
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (auto *ExtRed = dyn_cast<VPExtendedReductionRecipe>(&R))
+      if (auto *ExtRed = dyn_cast<VPExtendedReductionRecipe>(&R)) {
         expandVPExtendedReduction(ExtRed);
+        continue;
+      }
       if (auto *MulAcc = dyn_cast<VPMulAccumulateReductionRecipe>(&R))
         expandVPMulAccumulateReduction(MulAcc);
     }
