@@ -123,10 +123,9 @@ namespace DirectX {
 struct RootParameterView {
   const dxbc::RootParameterHeader &Header;
   StringRef ParamData;
-  uint32_t Version;
 
-  RootParameterView(uint32_t V, const dxbc::RootParameterHeader &H, StringRef P)
-      : Header(H), ParamData(P), Version(V) {}
+  RootParameterView(const dxbc::RootParameterHeader &H, StringRef P)
+      : Header(H), ParamData(P) {}
 
   template <typename T> Expected<T> readParameter() {
     T Struct;
@@ -238,7 +237,7 @@ public:
       return parseFailed("Reading structure out of file bounds");
 
     StringRef Buff = PartData.substr(Header.ParameterOffset, DataSize);
-    RootParameterView View = RootParameterView(Version, Header, Buff);
+    RootParameterView View = RootParameterView(Header, Buff);
     return View;
   }
 };
