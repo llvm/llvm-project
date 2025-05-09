@@ -1843,16 +1843,10 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
         Int32Ty, {Int32Ty, Int32Ty, Int64Ty, PtrTy, PtrTy}, false);
     bool IsLocal = P.first && (!isa<GlobalValue>(P.first) ||
                                cast<GlobalValue>(P.first)->hasLocalLinkage());
-    auto *ThunkFn = Function::Create(ThunkFnTy,
+    auto *ThunkFn = Function::createWithDefaultAttr(ThunkFnTy,
                                      IsLocal ? GlobalValue::InternalLinkage
                                              : GlobalValue::LinkOnceODRLinkage,
-                                     ThunkName, &M);
-    // TODO: think about other attributes as well.
-    if (any_of(P.second, [](const Function *F) {
-          return F->hasFnAttribute("branch-target-enforcement");
-        })) {
-      ThunkFn->addFnAttr("branch-target-enforcement");
-    }
+                                     /*AddrSpace=*/0, ThunkName, &M);
     if (!IsLocal) {
       ThunkFn->setVisibility(GlobalValue::HiddenVisibility);
       ThunkFn->setComdat(M.getOrInsertComdat(ThunkName));

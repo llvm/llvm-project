@@ -1,15 +1,22 @@
+; Test that HWASan personality-thunks correctly inherit branch protection attributes from module flags.
+
 ; RUN: opt < %s -mtriple aarch64-linux-android29 -passes=hwasan -S | FileCheck %s --check-prefix=NOPERS
 ; RUN: opt < %s -mtriple aarch64-linux-android30 -passes=hwasan -S | FileCheck %s --check-prefix=PERS
 
+!llvm.module.flags = !{!0, !1, !2}
+!0 = !{i32 8, !"branch-target-enforcement", i32 1}
+!1 = !{i32 8, !"guarded-control-stack",     i32 1}
+!2 = !{i32 8, !"sign-return-address",       i32 1}
+
 ; NOPERS: define void @nostack() #{{[0-9]+}} {
 ; PERS: define void @nostack() #{{[0-9]+}} {
-define void @nostack() sanitize_hwaddress "branch-target-enforcement" {
+define void @nostack() sanitize_hwaddress {
   ret void
 }
 
 ; NOPERS: define void @stack1() #{{[0-9]+}} {
 ; PERS: personality {{.*}} @__hwasan_personality_thunk
-define void @stack1() sanitize_hwaddress "branch-target-enforcement" {
+define void @stack1() sanitize_hwaddress {
   %p = alloca i8
   call void @sink(ptr %p)
   ret void
@@ -18,7 +25,7 @@ define void @stack1() sanitize_hwaddress "branch-target-enforcement" {
 
 ; NOPERS: personality ptr @global
 ; PERS: personality {{.*}} @__hwasan_personality_thunk.global
-define void @stack2() sanitize_hwaddress "branch-target-enforcement" personality ptr @global {
+define void @stack2() sanitize_hwaddress personality ptr @global {
   %p = alloca i8
   call void @sink(ptr %p)
   ret void
@@ -32,7 +39,7 @@ define internal void @local() {
 
 ; NOPERS: personality ptr @local
 ; PERS: personality {{.*}} @__hwasan_personality_thunk.local
-define void @stack3() sanitize_hwaddress "branch-target-enforcement" personality ptr @local {
+define void @stack3() sanitize_hwaddress personality ptr @local {
   %p = alloca i8
   call void @sink(ptr %p)
   ret void
@@ -40,7 +47,7 @@ define void @stack3() sanitize_hwaddress "branch-target-enforcement" personality
 
 ; NOPERS: personality ptr @local_alias
 ; PERS: personality {{.*}} @__hwasan_personality_thunk.local_alias
-define void @stack4() sanitize_hwaddress "branch-target-enforcement" personality ptr @local_alias {
+define void @stack4() sanitize_hwaddress personality ptr @local_alias {
   %p = alloca i8
   call void @sink(ptr %p)
   ret void
@@ -48,7 +55,7 @@ define void @stack4() sanitize_hwaddress "branch-target-enforcement" personality
 
 ; NOPERS: personality ptr inttoptr (i64 1 to ptr)
 ; PERS: personality ptr @__hwasan_personality_thunk.
-define void @stack5() sanitize_hwaddress "branch-target-enforcement" personality ptr inttoptr (i64 1 to ptr) {
+define void @stack5() sanitize_hwaddress personality ptr inttoptr (i64 1 to ptr) {
   %p = alloca i8
   call void @sink(ptr %p)
   ret void
@@ -56,7 +63,7 @@ define void @stack5() sanitize_hwaddress "branch-target-enforcement" personality
 
 ; NOPERS: personality ptr inttoptr (i64 2 to ptr)
 ; PERS: personality ptr @__hwasan_personality_thunk..1
-define void @stack6() sanitize_hwaddress "branch-target-enforcement" personality ptr inttoptr (i64 2 to ptr) {
+define void @stack6() sanitize_hwaddress personality ptr inttoptr (i64 2 to ptr) {
   %p = alloca i8
   call void @sink(ptr %p)
   ret void
@@ -64,9 +71,6 @@ define void @stack6() sanitize_hwaddress "branch-target-enforcement" personality
 
 declare void @global()
 declare void @sink(ptr)
-
-!llvm.module.flags = !{!0}
-!0 = !{i32 8, !"branch-target-enforcement", i32 1}
 
 ; PERS: define linkonce_odr hidden i32 @__hwasan_personality_thunk(i32 %0, i32 %1, i64 %2, ptr %3, ptr %4) [[ATTRS:#[0-9]+]] comdat
 ; PERS: %5 = tail call i32 @__hwasan_personality_wrapper(i32 %0, i32 %1, i64 %2, ptr %3, ptr %4, ptr null, ptr @_Unwind_GetGR, ptr @_Unwind_GetCFA)
@@ -92,4 +96,4 @@ declare void @sink(ptr)
 ; PERS: %5 = tail call i32 @__hwasan_personality_wrapper(i32 %0, i32 %1, i64 %2, ptr %3, ptr %4, ptr inttoptr (i64 2 to ptr), ptr @_Unwind_GetGR, ptr @_Unwind_GetCFA)
 ; PERS: ret i32 %5
 
-; PERS: {{.*}}[[ATTRS]] = {{.*}}branch-target-enforcement
+; PERS: {{.*}}[[ATTRS]] = {{.*branch-target-enforcement.*guarded-control-stack.*sign-return-address}}
