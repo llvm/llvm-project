@@ -67,3 +67,19 @@ add_entrypoint_object(
     libc.src.__support.time.units
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  localtime
+  SRCS
+    localtime.cpp
+  HDRS
+    ../localtime.h
+)
+
+add_entrypoint_object(
+  localtime_r
+  SRCS
+    localtime_r.cpp
+  HDRS
+    ../localtime_r.h
+)
