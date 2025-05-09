@@ -1068,6 +1068,7 @@ struct AdditionalKeywords {
     kw_interface = &IdentTable.get("interface");
     kw_native = &IdentTable.get("native");
     kw_package = &IdentTable.get("package");
+    kw_record = &IdentTable.get("record");
     kw_synchronized = &IdentTable.get("synchronized");
     kw_throws = &IdentTable.get("throws");
     kw___except = &IdentTable.get("__except");
@@ -1417,6 +1418,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_interface;
   IdentifierInfo *kw_native;
   IdentifierInfo *kw_package;
+  IdentifierInfo *kw_record;
   IdentifierInfo *kw_synchronized;
   IdentifierInfo *kw_throws;
 
