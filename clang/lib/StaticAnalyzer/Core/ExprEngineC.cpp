@@ -311,12 +311,17 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
     for (ExplodedNode *Node : DstEvalLoc) {
       ProgramStateRef State = Node->getState();
       const LocationContext *LCtx = Node->getLocationContext();
-      // getAsRegion should always be successful since Ex is an lvalue:
-      SVal OrigV = State->getSVal(State->getSVal(Ex, LCtx).getAsRegion());
-      SVal CastedV =
-          svalBuilder.evalCast(svalBuilder.simplifySVal(State, OrigV),
-                               CastE->getType(), Ex->getType());
+      // Although `Ex` is an lvalue, it could have `Loc::ConcreteInt` kind
+      // (e.g., `(int *)123456`).  In such cases, there is no MemRegion
+      // available and we can't get the value to be casted.
+      const MemRegion *MR = State->getSVal(Ex, LCtx).getAsRegion();
+      SVal CastedV = UnknownVal();
 
+      if (MR) {
+        SVal OrigV = State->getSVal(MR);
+        CastedV = svalBuilder.evalCast(svalBuilder.simplifySVal(State, OrigV),
+                                       CastE->getType(), Ex->getType());
+      }
       State = State->BindExpr(CastE, LCtx, CastedV);
       Bldr.generateNode(CastE, Node, State);
     }

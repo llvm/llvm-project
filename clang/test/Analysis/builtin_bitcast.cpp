@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-unknown-unknown -verify %s \
-// RUN:   -analyzer-checker=core,debug.ExprInspection
+// RUN:   -analyzer-checker=debug.ExprInspection -analyzer-disable-checker=core
 
 template <typename T> void clang_analyzer_dump(T);
 using size_t = decltype(sizeof(int));
@@ -59,5 +59,10 @@ namespace {
     clang_analyzer_dump(__builtin_bit_cast(void*, static_cast<uintptr_t>(-1)));
     // expected-warning-re@-1 {{{{[0-9]+}} (Loc)}}
     return ptr == __builtin_bit_cast(void*, static_cast<uintptr_t>(-1));
+  }
+
+  void check_loc_concreteInt() {
+    clang_analyzer_dump(__builtin_bit_cast(unsigned, *(reinterpret_cast<int*>(0xdeadbeef))));
+    // expected-warning@-1 {{Unknown}}
   }
 }
