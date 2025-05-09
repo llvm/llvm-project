@@ -4202,3 +4202,486 @@ define <4 x double> @v_maximumnum_v4f64_nnan(<4 x double> %x, <4 x double> %y) {
   %result = call nnan <4 x double> @llvm.maximumnum.v4f64(<4 x double> %x, <4 x double> %y)
   ret <4 x double> %result
 }
+
+define half @v_maximumnum_f16_no_ieee(half %x, half %y) #0 {
+; GFX7-LABEL: v_maximumnum_f16_no_ieee:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_maximumnum_f16_no_ieee:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_max_f16_e32 v1, v1, v1
+; GFX8-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX8-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_maximumnum_f16_no_ieee:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f16_e32 v1, v1, v1
+; GFX9-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX9-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_maximumnum_f16_no_ieee:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f16_e32 v1, v1, v1
+; GFX10-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX10-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_maximumnum_f16_no_ieee:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v1.l, v1.l
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_maximumnum_f16_no_ieee:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e32 v1, v1, v1
+; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-TRUE16-LABEL: v_maximumnum_f16_no_ieee:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
+; GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.l
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: v_maximumnum_f16_no_ieee:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v1, v1, v1
+; GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v0, v0, v0
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v0, v0, v1
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %result = call half @llvm.maximumnum.f16(half %x, half %y)
+  ret half %result
+}
+
+define half @v_maximumnum_f16_nan_no_ieee(half %x, half %y) #0 {
+; GFX7-LABEL: v_maximumnum_f16_nan_no_ieee:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_maximumnum_f16_nan_no_ieee:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_maximumnum_f16_nan_no_ieee:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_maximumnum_f16_nan_no_ieee:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_maximumnum_f16_nan_no_ieee:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_maximumnum_f16_nan_no_ieee:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-TRUE16-LABEL: v_maximumnum_f16_nan_no_ieee:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v1.l
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: v_maximumnum_f16_nan_no_ieee:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v0, v0, v1
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %result = call nnan half @llvm.maximumnum.f16(half %x, half %y)
+  ret half %result
+}
+
+define float @v_maximumnum_f32_no_ieee(float %x, float %y) #0 {
+; GFX7-LABEL: v_maximumnum_f32_no_ieee:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GFX7-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GFX7-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_maximumnum_f32_no_ieee:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GFX8-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GFX8-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_maximumnum_f32_no_ieee:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX9-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_maximumnum_f32_no_ieee:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX10-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_maximumnum_f32_no_ieee:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_dual_max_f32 v1, v1, v1 :: v_dual_max_f32 v0, v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_maximumnum_f32_no_ieee:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v0, v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %result = call float @llvm.maximumnum.f32(float %x, float %y)
+  ret float %result
+}
+
+define float @v_maximumnum_f32_nnan_no_ieee(float %x, float %y) #0 {
+; GFX7-LABEL: v_maximumnum_f32_nnan_no_ieee:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_maximumnum_f32_nnan_no_ieee:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_maximumnum_f32_nnan_no_ieee:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_maximumnum_f32_nnan_no_ieee:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_maximumnum_f32_nnan_no_ieee:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_max_f32_e32 v0, v0, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_maximumnum_f32_nnan_no_ieee:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %result = call nnan float @llvm.maximumnum.f32(float %x, float %y)
+  ret float %result
+}
+
+define double @v_maximumnum_f64_no_ieee(double %x, double %y) #0 {
+; GFX7-LABEL: v_maximumnum_f64_no_ieee:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX7-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX7-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_maximumnum_f64_no_ieee:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX8-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX8-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_maximumnum_f64_no_ieee:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_maximumnum_f64_no_ieee:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX10-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX10-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_maximumnum_f64_no_ieee:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_maximumnum_f64_no_ieee:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
+; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[2:3]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %result = call double @llvm.maximumnum.f64(double %x, double %y)
+  ret double %result
+}
+
+define double @v_maximumnum_f64_nnan_no_ieee(double %x, double %y) #0 {
+; GFX7-LABEL: v_maximumnum_f64_nnan_no_ieee:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_maximumnum_f64_nnan_no_ieee:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_maximumnum_f64_nnan_no_ieee:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_maximumnum_f64_nnan_no_ieee:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_maximumnum_f64_nnan_no_ieee:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_maximumnum_f64_nnan_no_ieee:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[2:3]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %result = call nnan double @llvm.maximumnum.f64(double %x, double %y)
+  ret double %result
+}
+
+define <2 x half> @v_maximumnum_v2f16_no_ieee(<2 x half> %x, <2 x half> %y) #0 {
+; GFX7-LABEL: v_maximumnum_v2f16_no_ieee:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; GFX7-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX7-NEXT:    v_max_f32_e32 v1, v1, v3
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_maximumnum_v2f16_no_ieee:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_max_f16_sdwa v2, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-NEXT:    v_max_f16_sdwa v3, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-NEXT:    v_max_f16_e32 v1, v1, v1
+; GFX8-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX8-NEXT:    v_max_f16_sdwa v2, v3, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX8-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-LABEL: v_maximumnum_v2f16_no_ieee:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX900-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX900-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: v_maximumnum_v2f16_no_ieee:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX950-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX950-NEXT:    s_nop 0
+; GFX950-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_maximumnum_v2f16_no_ieee:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX10-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX10-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_maximumnum_v2f16_no_ieee:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_maximumnum_v2f16_no_ieee:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_pk_max_num_f16 v1, v1, v1
+; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %result = call <2 x half> @llvm.maximumnum.v2f16(<2 x half> %x, <2 x half> %y)
+  ret <2 x half> %result
+}
+
+define <2 x half> @v_maximumnum_v2f16_nnan_no_ieee(<2 x half> %x, <2 x half> %y) #0 {
+; GFX7-LABEL: v_maximumnum_v2f16_nnan_no_ieee:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX7-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX7-NEXT:    v_max_f32_e32 v1, v1, v3
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_maximumnum_v2f16_nnan_no_ieee:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_max_f16_sdwa v2, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-NEXT:    v_max_f16_e32 v0, v0, v1
+; GFX8-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_maximumnum_v2f16_nnan_no_ieee:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_maximumnum_v2f16_nnan_no_ieee:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_maximumnum_v2f16_nnan_no_ieee:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_maximumnum_v2f16_nnan_no_ieee:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %result = call nnan <2 x half> @llvm.maximumnum.v2f16(<2 x half> %x, <2 x half> %y)
+  ret <2 x half> %result
+}
+
+attributes #0 = { "amdgpu-ieee"="false" }
