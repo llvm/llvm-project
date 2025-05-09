@@ -47,7 +47,8 @@ public:
   ///
   /// If FD is not null, this will consider pass_object_size params in FD.
   static RequiredArgs
-  forPrototypePlus(const clang::FunctionProtoType *prototype) {
+  forPrototypePlus(const clang::FunctionProtoType *prototype,
+                   unsigned additional) {
     if (!prototype->isVariadic())
       return All;
 
@@ -58,8 +59,9 @@ public:
   }
 
   static RequiredArgs
-  forPrototypePlus(clang::CanQual<clang::FunctionProtoType> prototype) {
-    return forPrototypePlus(prototype.getTypePtr());
+  forPrototypePlus(clang::CanQual<clang::FunctionProtoType> prototype,
+                   unsigned additional) {
+    return forPrototypePlus(prototype.getTypePtr(), additional);
   }
 
   unsigned getNumRequiredArgs() const {
@@ -112,6 +114,14 @@ public:
   void Profile(llvm::FoldingSetNodeID &id) {
     id.AddBoolean(required.getOpaqueData());
     getReturnType().Profile(id);
+  }
+
+  llvm::ArrayRef<ArgInfo> arguments() const {
+    return llvm::ArrayRef<ArgInfo>(argInfoBegin(), numArgs);
+  }
+
+  llvm::ArrayRef<ArgInfo> requiredArguments() const {
+    return llvm::ArrayRef<ArgInfo>(argInfoBegin(), getNumRequiredArgs());
   }
 
   CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
