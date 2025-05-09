@@ -196,7 +196,7 @@ static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
   std::optional<VectorLibrary> val =
       llvm::StringSwitch<std::optional<VectorLibrary>>(arg->getValue())
           .Case("Accelerate", VectorLibrary::Accelerate)
-          .Case("LIBMVEC", VectorLibrary::LIBMVEC)
+          .Case("libmvec", VectorLibrary::LIBMVEC)
           .Case("MASSV", VectorLibrary::MASSV)
           .Case("SVML", VectorLibrary::SVML)
           .Case("SLEEF", VectorLibrary::SLEEF)
@@ -1625,13 +1625,10 @@ void CompilerInvocation::setDefaultPredefinitions() {
   }
 
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
-  if (targetTriple.isPPC()) {
-    // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
-    // size.
-    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
-  }
   if (targetTriple.isOSLinux()) {
     fortranOptions.predefinitions.emplace_back("__linux__", "1");
+  } else if (targetTriple.isOSAIX()) {
+    fortranOptions.predefinitions.emplace_back("_AIX", "1");
   }
 
   switch (targetTriple.getArch()) {
@@ -1640,6 +1637,16 @@ void CompilerInvocation::setDefaultPredefinitions() {
   case llvm::Triple::ArchType::x86_64:
     fortranOptions.predefinitions.emplace_back("__x86_64__", "1");
     fortranOptions.predefinitions.emplace_back("__x86_64", "1");
+    break;
+  case llvm::Triple::ArchType::ppc:
+  case llvm::Triple::ArchType::ppc64:
+  case llvm::Triple::ArchType::ppcle:
+  case llvm::Triple::ArchType::ppc64le:
+    // '__powerpc__' is a generic macro for any PowerPC.
+    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
+    if (targetTriple.isOSAIX() && targetTriple.isArch64Bit()) {
+      fortranOptions.predefinitions.emplace_back("__64BIT__", "1");
+    }
     break;
   }
 }

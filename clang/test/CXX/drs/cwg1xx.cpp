@@ -96,7 +96,7 @@ namespace cwg108 { // cwg108: 2.9
   template<typename T> struct A {
     struct B { typedef int X; };
     B::X x;
-    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B::X'; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B::X' is a C++20 extension}}
     struct C : B { X x; };
     // expected-error@-1 {{unknown type name 'X'}}
   };
@@ -321,7 +321,7 @@ namespace cwg121 { // cwg121: 2.7
     X::Y<T> x;
     T::Y<T> y;
     // expected-error@-1 {{use 'template' keyword to treat 'Y' as a dependent template name}}
-    // cxx98-17-error@-2 {{missing 'typename' prior to dependent type name 'T::Y'; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-2 {{missing 'typename' prior to dependent type name 'T::Y' is a C++20 extension}}
   };
   Z<X> z;
 } // namespace cwg121

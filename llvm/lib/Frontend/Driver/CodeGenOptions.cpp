@@ -30,7 +30,7 @@ TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
                                              TargetTriple);
     break;
   case VectorLibrary::LIBMVEC:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::LIBMVEC_X86,
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::LIBMVEC,
                                              TargetTriple);
     break;
   case VectorLibrary::MASSV:
