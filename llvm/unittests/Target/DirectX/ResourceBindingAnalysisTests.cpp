@@ -80,7 +80,7 @@ entry:
   // check that UAV has exactly one gap
   DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
       DRBI.getBindingSpaces(ResourceClass::UAV);
-  EXPECT_EQ(UAVSpaces.ResClass, ResourceClass::UAV);
+  EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 1u);
   checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[0], 0,
                                   {0, 4, 6, UINT32_MAX});
@@ -89,7 +89,7 @@ entry:
   for (auto RC :
        {ResourceClass::SRV, ResourceClass::CBuffer, ResourceClass::Sampler}) {
     DXILResourceBindingInfo::BindingSpaces &Spaces = DRBI.getBindingSpaces(RC);
-    EXPECT_EQ(Spaces.ResClass, RC);
+    EXPECT_EQ(Spaces.RC, RC);
     EXPECT_EQ(Spaces.Spaces.size(), 0u);
   }
 }
@@ -101,6 +101,8 @@ TEST_F(ResourceBindingAnalysisTest, TestManyBindings) {
   // RWBuffer<float> C          : register(u5);
   // StructuredBuffer<int> D[5] : register(t0);
   // RWBuffer<float> E[2]       : register(u2);
+  // SamplerState S1            : register(s5, space2);
+  // SamplerState S2            : register(s4, space2);
   StringRef Assembly = R"(
 %__cblayout_CB = type <{ i32 }>
 define void @main() {
@@ -111,6 +113,10 @@ entry:
   %handleC = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false)
   %handleD = call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 5, i32 4, i1 false)
   %handleE = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 2, i32 0, i1 false)
+  %handleS1 = call target("dx.Sampler", 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 5, i32 1, i32 0, i1 false)
+  %handleS2 = call target("dx.Sampler", 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 4, i32 1, i32 0, i1 false)
+  ; duplicate binding for the same resource
+  %handleD2 = call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 5, i32 4, i1 false)
   ret void
 }
   )";
@@ -125,13 +131,15 @@ entry:
 
   DXILResourceBindingInfo::BindingSpaces &SRVSpaces =
       DRBI.getBindingSpaces(ResourceClass::SRV);
-  EXPECT_EQ(SRVSpaces.ResClass, ResourceClass::SRV);
+  EXPECT_EQ(SRVSpaces.RC, ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.Spaces.size(), 1u);
+  // verify that consecutive bindings are merged
+  // (SRVSpaces has only one free space range {6, UINT32_MAX}).
   checkExpectedSpaceAndFreeRanges(SRVSpaces.Spaces[0], 0, {6, UINT32_MAX});
 
   DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
       DRBI.getBindingSpaces(ResourceClass::UAV);
-  EXPECT_EQ(UAVSpaces.ResClass, ResourceClass::UAV);
+  EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 2u);
   checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[0], 0,
                                   {0, 1, 4, 4, 6, UINT32_MAX});
@@ -140,10 +148,17 @@ entry:
 
   DXILResourceBindingInfo::BindingSpaces &CBufferSpaces =
       DRBI.getBindingSpaces(ResourceClass::CBuffer);
-  EXPECT_EQ(CBufferSpaces.ResClass, ResourceClass::CBuffer);
+  EXPECT_EQ(CBufferSpaces.RC, ResourceClass::CBuffer);
   EXPECT_EQ(CBufferSpaces.Spaces.size(), 1u);
   checkExpectedSpaceAndFreeRanges(CBufferSpaces.Spaces[0], 0,
                                   {0, 2, 4, UINT32_MAX});
+
+  DXILResourceBindingInfo::BindingSpaces &SamplerSpaces =
+      DRBI.getBindingSpaces(ResourceClass::Sampler);
+  EXPECT_EQ(SamplerSpaces.RC, ResourceClass::Sampler);
+  EXPECT_EQ(SamplerSpaces.Spaces.size(), 1u);
+  checkExpectedSpaceAndFreeRanges(SamplerSpaces.Spaces[0], 2,
+                                  {0, 3, 6, UINT32_MAX});
 }
 
 TEST_F(ResourceBindingAnalysisTest, TestUnboundedAndOverlap) {
@@ -173,10 +188,41 @@ entry:
 
   DXILResourceBindingInfo::BindingSpaces &SRVSpaces =
       DRBI.getBindingSpaces(ResourceClass::SRV);
-  EXPECT_EQ(SRVSpaces.ResClass, ResourceClass::SRV);
+  EXPECT_EQ(SRVSpaces.RC, ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.Spaces.size(), 2u);
   checkExpectedSpaceAndFreeRanges(SRVSpaces.Spaces[0], 0, {3, 4});
   checkExpectedSpaceAndFreeRanges(SRVSpaces.Spaces[1], 2, {});
+}
+
+TEST_F(ResourceBindingAnalysisTest, TestExactOverlap) {
+  // StructuredBuffer<float> A  : register(t5);
+  // StructuredBuffer<float> B  : register(t5);
+  StringRef Assembly = R"(
+%__cblayout_CB = type <{ i32 }>
+define void @main() {
+entry:
+  %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false)
+  %handleB = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false)
+  ret void
+}
+  )";
+
+  auto M = parseAsm(Assembly);
+
+  DXILResourceBindingInfo &DRBI =
+      MAM->getResult<DXILResourceBindingAnalysis>(*M);
+
+  EXPECT_EQ(false, DRBI.hasImplicitBinding());
+  // FIXME (XFAIL): detecting overlap of two resource with identical binding
+  // is not yet supported (llvm/llvm-project#110723).
+  EXPECT_EQ(false, DRBI.hasOverlappingBinding());
+
+  DXILResourceBindingInfo::BindingSpaces &SRVSpaces =
+      DRBI.getBindingSpaces(ResourceClass::SRV);
+  EXPECT_EQ(SRVSpaces.RC, ResourceClass::SRV);
+  EXPECT_EQ(SRVSpaces.Spaces.size(), 1u);
+  checkExpectedSpaceAndFreeRanges(SRVSpaces.Spaces[0], 0,
+                                  {0, 4, 6, UINT32_MAX});
 }
 
 TEST_F(ResourceBindingAnalysisTest, TestEndOfRange) {
@@ -206,7 +252,7 @@ entry:
 
   DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
       DRBI.getBindingSpaces(ResourceClass::UAV);
-  EXPECT_EQ(UAVSpaces.ResClass, ResourceClass::UAV);
+  EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 3u);
   checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[0], 0, {0, UINT32_MAX - 1});
   checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[1], 1, {0, UINT32_MAX - 10});
@@ -236,7 +282,7 @@ entry:
 
   DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
       DRBI.getBindingSpaces(ResourceClass::UAV);
-  EXPECT_EQ(UAVSpaces.ResClass, ResourceClass::UAV);
+  EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 1u);
   checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[0], 100,
                                   {0, 4, 6, UINT32_MAX});

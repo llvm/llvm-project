@@ -54,6 +54,12 @@ struct Register {
   uint32_t Number;
 };
 
+// Models the parameter values of root constants
+struct RootConstants {
+  uint32_t Num32BitConstants;
+  Register Reg;
+};
+
 // Models the end of a descriptor table and stores its visibility
 struct DescriptorTable {
   ShaderVisibility Visibility = ShaderVisibility::All;
@@ -88,8 +94,9 @@ struct DescriptorTableClause {
   }
 };
 
-// Models RootElement : DescriptorTable | DescriptorTableClause
-using RootElement = std::variant<DescriptorTable, DescriptorTableClause>;
+// Models RootElement : RootConstants | DescriptorTable | DescriptorTableClause
+using RootElement =
+    std::variant<RootConstants, DescriptorTable, DescriptorTableClause>;
 
 } // namespace rootsig
 } // namespace hlsl

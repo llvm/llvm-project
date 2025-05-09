@@ -319,6 +319,8 @@ Modified Compiler Flags
 
 - The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
 
+- The ``-fchar8_t`` flag is no longer considered in non-C++ languages modes. (#GH55373)
+
 Removed Compiler Flags
 -------------------------
 
@@ -434,9 +436,9 @@ Improvements to Clang's diagnostics
 - The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers
   except for the case where the operand is an unsigned integer
   and throws warning if they are compared with unsigned integers (##18878).
-- The ``-Wunnecessary-virtual-specifier`` warning has been added to warn about
-  methods which are marked as virtual inside a ``final`` class, and hence can
-  never be overridden.
+- The ``-Wunnecessary-virtual-specifier`` warning (included in ``-Wextra``) has
+  been added to warn about methods which are marked as virtual inside a
+  ``final`` class, and hence can never be overridden.
 
 - Improve the diagnostics for chained comparisons to report actual expressions and operators (#GH129069).
 
@@ -504,6 +506,11 @@ Improvements to Clang's diagnostics
   behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
 - ``-Wreserved-identifier`` now fires on reserved parameter names in a function
   declaration which is not a definition.
+- Clang now prints the namespace for an attribute, if any,
+  when emitting an unknown attribute diagnostic.
+
+- Several compatibility diagnostics that were incorrectly being grouped under
+  ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -559,8 +566,10 @@ Bug Fixes in This Version
 - Fixed a bug where an attribute before a ``pragma clang attribute`` or
   ``pragma clang __debug`` would cause an assertion. Instead, this now diagnoses
   the invalid attribute location appropriately. (#GH137861)
-- Fixed a crash when a malformed ``_Pragma`` directive appears as part of an 
+- Fixed a crash when a malformed ``_Pragma`` directive appears as part of an
   ``#include`` directive. (#GH138094)
+- Fixed a crash during constant evaluation involving invalid lambda captures
+  (#GH138832)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -573,6 +582,15 @@ Bug Fixes to Compiler Builtins
 
 - ``__has_unique_object_representations(Incomplete[])`` is no longer accepted, per
   `LWG4113 <https://cplusplus.github.io/LWG/issue4113>`_.
+
+- ``__builtin_is_cpp_trivially_relocatable``, ``__builtin_is_replaceable`` and
+  ``__builtin_trivially_relocate`` have been added to support standard C++26 relocation.
+
+- ``__is_trivially_relocatable`` has been deprecated, and uses should be replaced by
+  ``__builtin_is_cpp_trivially_relocatable``.
+  Note that, it is generally unsafe to ``memcpy`` non-trivially copyable types that
+  are ``__builtin_is_cpp_trivially_relocatable``. It is recommanded to use
+  ``__builtin_trivially_relocate`` instead.
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -657,6 +675,11 @@ Bug Fixes to C++ Support
 - Fixed an assertion when trying to constant-fold various builtins when the argument
   referred to a reference to an incomplete type. (#GH129397)
 - Fixed a crash when a cast involved a parenthesized aggregate initialization in dependent context. (#GH72880)
+- No longer crashes when instantiating invalid variable template specialization
+  whose type depends on itself. (#GH51347), (#GH55872)
+- Improved parser recovery of invalid requirement expressions. In turn, this
+  fixes crashes from follow-on processing of the invalid requirement. (#GH138820)
+- Fixed the handling of pack indexing types in the constraints of a member function redeclaration. (#GH138255)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -706,6 +729,9 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- Support has been added for the following processors (command-line identifiers in parentheses):
+  - Arm Cortex-A320 (``cortex-a320``)
 - For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
 - The ``+nosimd`` attribute is now fully supported for ARM. Previously, this had no effect when being used with
   ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is
@@ -800,6 +826,7 @@ clang-format
 - Add ``EnumTrailingComma`` option for inserting/removing commas at the end of
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
+- Add ``SpaceAfterOperatorKeyword`` option.
 
 libclang
 --------
@@ -878,6 +905,12 @@ OpenMP Support
 - Added support 'no_openmp_constructs' assumption clause.
 - Added support for 'self_maps' in map and requirement clause.
 - Added support for 'omp stripe' directive.
+- Fixed a crashing bug with ``omp unroll partial`` if the argument to
+  ``partial`` was an invalid expression. (#GH139267)
+- Fixed a crashing bug with ``omp tile sizes`` if the argument to ``sizes`` was
+  an invalid expression. (#GH139073)
+- Fixed a crashing bug with ``omp distribute dist_schedule`` if the argument to
+  ``dist_schedule`` was not strictly positive. (#GH139266)
 
 Improvements
 ^^^^^^^^^^^^

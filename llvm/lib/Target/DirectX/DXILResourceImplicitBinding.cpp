@@ -40,13 +40,13 @@ static void diagnoseImplicitBindingNotFound(CallInst *ImplBindingCall) {
 
 static bool assignBindings(Module &M, DXILResourceBindingInfo &DRBI,
                            DXILResourceTypeMap &DRTM) {
-  struct ImplBindingCall {
+  struct ImplicitBindingCall {
     int OrderID;
     CallInst *Call;
-    ImplBindingCall(int OrderID, CallInst *Call)
+    ImplicitBindingCall(int OrderID, CallInst *Call)
         : OrderID(OrderID), Call(Call) {}
   };
-  SmallVector<ImplBindingCall> Calls;
+  SmallVector<ImplicitBindingCall> Calls;
   SmallVector<Function *> FunctionsToMaybeRemove;
 
   // collect all of the llvm.dx.resource.handlefromImplicitbinding calls
@@ -78,7 +78,7 @@ static bool assignBindings(Module &M, DXILResourceBindingInfo &DRBI,
   bool AllBindingsAssigned = true;
   bool Changed = false;
 
-  for (auto &IB : Calls) {
+  for (ImplicitBindingCall &IB : Calls) {
     IRBuilder<> Builder(IB.Call);
 
     if (IB.OrderID != LastOrderID) {
@@ -91,15 +91,14 @@ static bool assignBindings(Module &M, DXILResourceBindingInfo &DRBI,
       int32_t Size =
           cast<ConstantInt>(IB.Call->getArgOperand(2))->getZExtValue();
 
-      uint32_t RegSlot;
-      RegSlotOp = nullptr;
-      if (!DRBI.findAvailableBinding(RTI.getResourceClass(), Space, Size,
-                                     &RegSlot)) {
+      std::optional<uint32_t> RegSlot =
+          DRBI.findAvailableBinding(RTI.getResourceClass(), Space, Size);
+      if (!RegSlot) {
         diagnoseImplicitBindingNotFound(IB.Call);
         AllBindingsAssigned = false;
         continue;
       }
-      RegSlotOp = ConstantInt::get(Builder.getInt32Ty(), RegSlot);
+      RegSlotOp = ConstantInt::get(Builder.getInt32Ty(), RegSlot.value());
     }
 
     if (!RegSlotOp)

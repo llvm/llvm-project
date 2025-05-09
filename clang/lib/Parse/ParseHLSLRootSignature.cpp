@@ -27,6 +27,13 @@ RootSignatureParser::RootSignatureParser(SmallVector<RootElement> &Elements,
 bool RootSignatureParser::parse() {
   // Iterate as many RootElements as possible
   do {
+    if (tryConsumeExpectedToken(TokenKind::kw_RootConstants)) {
+      auto Constants = parseRootConstants();
+      if (!Constants.has_value())
+        return true;
+      Elements.push_back(*Constants);
+    }
+
     if (tryConsumeExpectedToken(TokenKind::kw_DescriptorTable)) {
       auto Table = parseDescriptorTable();
       if (!Table.has_value())
@@ -35,12 +42,48 @@ bool RootSignatureParser::parse() {
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
-  if (consumeExpectedToken(TokenKind::end_of_stream,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_RootSignature))
-    return true;
+  return consumeExpectedToken(TokenKind::end_of_stream,
+                              diag::err_hlsl_unexpected_end_of_params,
+                              /*param of=*/TokenKind::kw_RootSignature);
+}
 
-  return false;
+std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
+  assert(CurToken.TokKind == TokenKind::kw_RootConstants &&
+         "Expects to only be invoked starting at given keyword");
+
+  if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+                           CurToken.TokKind))
+    return std::nullopt;
+
+  RootConstants Constants;
+
+  auto Params = parseRootConstantParams();
+  if (!Params.has_value())
+    return std::nullopt;
+
+  // Check mandatory parameters where provided
+  if (!Params->Num32BitConstants.has_value()) {
+    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+        << TokenKind::kw_num32BitConstants;
+    return std::nullopt;
+  }
+
+  Constants.Num32BitConstants = Params->Num32BitConstants.value();
+
+  if (!Params->Reg.has_value()) {
+    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+        << TokenKind::bReg;
+    return std::nullopt;
+  }
+
+  Constants.Reg = Params->Reg.value();
+
+  if (consumeExpectedToken(TokenKind::pu_r_paren,
+                           diag::err_hlsl_unexpected_end_of_params,
+                           /*param of=*/TokenKind::kw_RootConstants))
+    return std::nullopt;
+
+  return Constants;
 }
 
 std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
@@ -165,14 +208,55 @@ RootSignatureParser::parseDescriptorTableClause() {
   return Clause;
 }
 
+// Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
+// order and only exactly once. The following methods will parse through as
+// many arguments as possible reporting an error if a duplicate is seen.
+std::optional<RootSignatureParser::ParsedConstantParams>
+RootSignatureParser::parseRootConstantParams() {
+  assert(CurToken.TokKind == TokenKind::pu_l_paren &&
+         "Expects to only be invoked starting at given token");
+
+  ParsedConstantParams Params;
+  do {
+    // `num32BitConstants` `=` POS_INT
+    if (tryConsumeExpectedToken(TokenKind::kw_num32BitConstants)) {
+      if (Params.Num32BitConstants.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Num32BitConstants = parseUIntParam();
+      if (!Num32BitConstants.has_value())
+        return std::nullopt;
+      Params.Num32BitConstants = Num32BitConstants;
+    }
+
+    // `b` POS_INT
+    if (tryConsumeExpectedToken(TokenKind::bReg)) {
+      if (Params.Reg.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+      auto Reg = parseRegister();
+      if (!Reg.has_value())
+        return std::nullopt;
+      Params.Reg = Reg;
+    }
+  } while (tryConsumeExpectedToken(TokenKind::pu_comma));
+
+  return Params;
+}
+
 std::optional<RootSignatureParser::ParsedClauseParams>
 RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
   assert(CurToken.TokKind == TokenKind::pu_l_paren &&
          "Expects to only be invoked starting at given token");
 
-  // Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
-  // order and only exactly once. Parse through as many arguments as possible
-  // reporting an error if a duplicate is seen.
   ParsedClauseParams Params;
   do {
     // ( `b` | `t` | `u` | `s`) POS_INT

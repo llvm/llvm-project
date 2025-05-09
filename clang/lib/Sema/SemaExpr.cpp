@@ -251,7 +251,8 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
         << D->getDeclName();
     } else {
       Diag(Loc, diag::err_auto_variable_cannot_appear_in_own_initializer)
-        << D->getDeclName() << cast<VarDecl>(D)->getType();
+          << diag::ParsingInitFor::Var << D->getDeclName()
+          << cast<VarDecl>(D)->getType();
     }
     return true;
   }
@@ -6361,6 +6362,14 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
     Params.push_back(Parm);
   }
   OverloadDecl->setParams(Params);
+  // We cannot merge host/device attributes of redeclarations. They have to
+  // be consistent when created.
+  if (Sema->LangOpts.CUDA) {
+    if (FDecl->hasAttr<CUDAHostAttr>())
+      OverloadDecl->addAttr(CUDAHostAttr::CreateImplicit(Context));
+    if (FDecl->hasAttr<CUDADeviceAttr>())
+      OverloadDecl->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+  }
   Sema->mergeDeclAttributes(OverloadDecl, FDecl);
   return OverloadDecl;
 }
@@ -9097,7 +9106,7 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
           diag::warn_typecheck_convert_incompatible_function_pointer_strict,
           Loc) &&
       RHSType->isFunctionPointerType() && LHSType->isFunctionPointerType() &&
-      !S.IsFunctionConversion(RHSType, LHSType, RHSType))
+      !S.TryFunctionConversion(RHSType, LHSType, RHSType))
     return AssignConvertType::IncompatibleFunctionPointerStrict;
 
   // C99 6.5.16.1p1 (constraint 3): both operands are pointers to qualified or
@@ -9161,8 +9170,7 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
       return AssignConvertType::IncompatibleFunctionPointer;
     return AssignConvertType::IncompatiblePointer;
   }
-  if (!S.getLangOpts().CPlusPlus &&
-      S.IsFunctionConversion(ltrans, rtrans, ltrans))
+  if (!S.getLangOpts().CPlusPlus && S.IsFunctionConversion(ltrans, rtrans))
     return AssignConvertType::IncompatibleFunctionPointer;
   if (IsInvalidCmseNSCallConversion(S, ltrans, rtrans))
     return AssignConvertType::IncompatibleFunctionPointer;
