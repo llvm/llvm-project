@@ -978,10 +978,10 @@ class LinuxCoreTestCase(TestBase):
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")
-    def test_ro_cstring(self):
+    def test_read_only_cstring(self):
         """
         Test that we can show the summary for a cstring variable that points
-        to a r/o memory page which is not dumped to a core file.
+        to a read-only memory page which is not dumped to a core file.
         """
         target = self.dbg.CreateTarget("altmain2.out")
         process = target.LoadCore("altmain2.core")
@@ -992,8 +992,9 @@ class LinuxCoreTestCase(TestBase):
 
         var = frame.FindVariable("F")
 
-        # The variable points to a RO segment that is not dumped to the core
-        # file and thus process.ReadCStringFromMemory() cannot get the value.
+        # The variable points to a read-only segment that is not dumped to
+        # the core file and thus 'process.ReadCStringFromMemory()' cannot get
+        # the value.
         error = lldb.SBError()
         cstr = process.ReadCStringFromMemory(var.GetValueAsUnsigned(), 256, error)
         self.assertFailure(error, error_str="core file does not contain 0x804a000")
