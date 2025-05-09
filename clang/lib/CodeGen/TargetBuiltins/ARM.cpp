@@ -4189,11 +4189,9 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
   // Mfloat8 types is stored as a vector, so extra work
   // to extract sclar element type is necessary.
   if (MemEltTy->isVectorTy()) {
-    #ifndef NDEBUG
     assert(MemEltTy == FixedVectorType::get(Int8Ty, 1) &&
            "Only <1 x i8> expected");
-#endif
-        MemEltTy = cast<llvm::VectorType>(MemEltTy)->getElementType();
+    MemEltTy = cast<llvm::VectorType>(MemEltTy)->getElementType();
   }
 
   // The vector type that is returned may be different from the
@@ -4246,11 +4244,9 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
   // Mfloat8 types is stored as a vector, so extra work
   // to extract sclar element type is necessary.
   if (MemEltTy->isVectorTy()) {
-    #ifndef NDEBUG
     assert(MemEltTy == FixedVectorType::get(Int8Ty, 1) &&
            "Only <1 x i8> expected");
-#endif
-        MemEltTy = cast<llvm::VectorType>(MemEltTy)->getElementType();
+    MemEltTy = cast<llvm::VectorType>(MemEltTy)->getElementType();
   }
 
   // The vector type that is stored may be different from the
