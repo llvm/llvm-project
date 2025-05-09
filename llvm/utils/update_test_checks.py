@@ -252,7 +252,9 @@ def update_test(ti: common.TestInfo):
             ):
                 # This input line of the function body will go as-is into the output.
                 # Except make leading whitespace uniform: 2 spaces. 4 for debug records.
-                indent = "  " if not common.IS_DEBUG_RECORD_RE.match(input_line) else "    "
+                indent = (
+                    "  " if not common.IS_DEBUG_RECORD_RE.match(input_line) else "    "
+                )
                 input_line = common.SCRUB_LEADING_WHITESPACE_RE.sub(indent, input_line)
                 output_lines.append(input_line)
                 dropped_previous_line = False
