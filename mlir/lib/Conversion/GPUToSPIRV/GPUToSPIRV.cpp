@@ -450,8 +450,19 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
     result = rewriter.create<spirv::GroupNonUniformShuffleOp>(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
     break;
-  default:
-    return rewriter.notifyMatchFailure(shuffleOp, "unimplemented shuffle mode");
+  case gpu::ShuffleMode::DOWN:
+    result = rewriter.create<spirv::GroupNonUniformRotateKHROp>(
+        loc, scope, adaptor.getValue(), adaptor.getOffset(),
+        shuffleOp.getWidth());
+    break;
+  case gpu::ShuffleMode::UP: {
+    Value offsetForShuffleDown = rewriter.create<arith::SubIOp>(
+        loc, shuffleOp.getWidth(), adaptor.getOffset());
+    result = rewriter.create<spirv::GroupNonUniformRotateKHROp>(
+        loc, scope, adaptor.getValue(), offsetForShuffleDown,
+        shuffleOp.getWidth());
+    break;
+  }
   }
 
   rewriter.replaceOp(shuffleOp, {result, trueVal});
