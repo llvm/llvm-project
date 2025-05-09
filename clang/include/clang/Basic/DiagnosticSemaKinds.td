@@ -10356,7 +10356,7 @@ def warn_tautological_negation_or_compare: Warning<
   "'||' of a value and its negation always evaluates to true">,
   InGroup<TautologicalNegationCompare>, DefaultIgnore;
 def warn_tautological_overlap_comparison : Warning<
-  "overlapping comparisons always evaluate to %select{false|true}0">,
+  "%select{non-|}0overlapping comparisons always evaluate to %select{false|true}0">,
   InGroup<TautologicalOverlapCompare>, DefaultIgnore;
 def warn_depr_array_comparison : Warning<
   "comparison between two arrays is deprecated; "

@@ -352,6 +352,9 @@ Improvements to Clang's diagnostics
 - Now correctly diagnose a tentative definition of an array with static
   storage duration in pedantic mode in C. (#GH50661)
 
+- Improved the ``-Wtautological-overlap-compare`` diagnostics to warn about overlapping and non-overlapping ranges involving character literals and floating-point literals. 
+  The warning message for non-overlapping cases has also been improved (#GH13473).
+  
 Improvements to Clang's time-trace
 ----------------------------------
 
