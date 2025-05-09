@@ -26,7 +26,7 @@ export class ModulesDataProvider
 
     const tooltip = new vscode.MarkdownString();
     tooltip.appendMarkdown(`# ${module.name}\n\n`);
-    tooltip.appendMarkdown(`- **ID** : ${module.id}\n`);
+    tooltip.appendMarkdown(`- **ID**: ${module.id}\n`);
     if (module.addressRange) {
       tooltip.appendMarkdown(
         `- **Load address**: 0x${Number(module.addressRange).toString(16)}\n`,
