@@ -11543,22 +11543,49 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
   // If the integer bounds are exactly representable as floats and min/max are
   // legal, emit a min+max+fptoi sequence. Otherwise we have to use a sequence
   // of comparisons and selects.
-  bool MinMaxLegal = isOperationLegal(ISD::FMINNUM, SrcVT) &&
-                     isOperationLegal(ISD::FMAXNUM, SrcVT);
-  if (AreExactFloatBounds && MinMaxLegal) {
-    SDValue Clamped = Src;
+  bool MinMax2019NumLegal = isOperationLegal(ISD::FMINIMUMNUM, SrcVT) &&
+                            isOperationLegal(ISD::FMAXIMUMNUM, SrcVT);
+  bool MinMax2019Legal = isOperationLegal(ISD::FMINIMUM, SrcVT) &&
+                         isOperationLegal(ISD::FMAXIMUM, SrcVT);
+  bool MinMax2008Legal = isOperationLegal(ISD::FMINNUM, SrcVT) &&
+                         isOperationLegal(ISD::FMAXNUM, SrcVT);
 
-    // Clamp Src by MinFloat from below. If Src is NaN the result is MinFloat.
-    Clamped = DAG.getNode(ISD::FMAXNUM, dl, SrcVT, Clamped, MinFloatNode);
-    // Clamp by MaxFloat from above. NaN cannot occur.
-    Clamped = DAG.getNode(ISD::FMINNUM, dl, SrcVT, Clamped, MaxFloatNode);
+  if (AreExactFloatBounds &&
+      (MinMax2019NumLegal || MinMax2019Legal || MinMax2008Legal)) {
+    SDValue Clamped = Src;
+    bool Use2019 = false;
+
+    if (MinMax2019NumLegal) {
+      // Clamp Src by MinFloat from below. If Src is NaN the result is MinFloat.
+      Clamped = DAG.getNode(ISD::FMAXIMUMNUM, dl, SrcVT, Clamped, MinFloatNode);
+      // Clamp by MaxFloat from above. NaN cannot occur.
+      Clamped = DAG.getNode(ISD::FMINIMUMNUM, dl, SrcVT, Clamped, MaxFloatNode);
+    } else if (MinMax2008Legal) {
+      // Try 2008 first as it has better performance for converting SNaN to
+      // unsigned.
+      if (!IsSigned && !DAG.isKnownNeverSNaN(Clamped)) {
+        Clamped = DAG.getNode(ISD::FMAXNUM, dl, SrcVT, Clamped, Clamped);
+      }
+      // Clamp Src by MinFloat from below. If Src is NaN the result is MinFloat.
+      Clamped = DAG.getNode(ISD::FMAXNUM, dl, SrcVT, Clamped, MinFloatNode);
+      // Clamp by MaxFloat from above. NaN cannot occur.
+      Clamped = DAG.getNode(ISD::FMINNUM, dl, SrcVT, Clamped, MaxFloatNode);
+    } else if (MinMax2019Legal) {
+      // Clamp Src by MinFloat from below. If Src is NaN the result is qNaN.
+      Clamped = DAG.getNode(ISD::FMAXIMUM, dl, SrcVT, Clamped, MinFloatNode);
+      // Clamp by MaxFloat from above. NaN may occur.
+      Clamped = DAG.getNode(ISD::FMINIMUM, dl, SrcVT, Clamped, MaxFloatNode);
+      Use2019 = true;
+    } else {
+      llvm_unreachable("No Min/Max supported?");
+    }
     // Convert clamped value to integer.
     SDValue FpToInt = DAG.getNode(IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT,
                                   dl, DstVT, Clamped);
 
     // In the unsigned case we're done, because we mapped NaN to MinFloat,
     // which will cast to zero.
-    if (!IsSigned)
+    if ((!IsSigned && !Use2019) || DAG.isKnownNeverNaN(Src))
       return FpToInt;
 
     // Otherwise, select 0 if Src is NaN.
