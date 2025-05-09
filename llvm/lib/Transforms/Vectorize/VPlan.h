@@ -1144,9 +1144,8 @@ public:
 };
 
 struct VPPhi : public VPInstruction, public VPPhiAccessors {
-  VPPhi(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
-        const Twine &Name = "")
-      : VPInstruction(Opcode, Operands, DL, Name) {}
+  VPPhi(ArrayRef<VPValue *> Operands, DebugLoc DL, const Twine &Name = "")
+      : VPInstruction(Instruction::PHI, Operands, DL, Name) {}
 
   static inline bool classof(const VPRecipeBase *U) {
     auto *R = dyn_cast<VPInstruction>(U);
