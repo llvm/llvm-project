@@ -1,4 +1,4 @@
-//===-- UEFI header uefi.h --------------------------------------------------===//
+//===-- Loader test for main without args ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UEFI_H
-#define LLVM_LIBC_UEFI_H
+#include "test/IntegrationTest/test.h"
 
-#include "__llvm-libc-common.h"
-
-%%public_api()
-
-#endif // LLVM_LIBC_UEFI_H
+TEST_MAIN() { return 0; }
