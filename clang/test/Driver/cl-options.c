@@ -823,4 +823,8 @@
 // RUN: %clang_cl /d2epilogunwind /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWIND
 // EPILOGUNWIND: -fwinx64-eh-unwindv2
 
+// RUN: %clang_cl /funcoverride:override_me1 /funcoverride:override_me2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=FUNCOVERRIDE
+// FUNCOVERRIDE: -loader-replaceable-function=override_me1
+// FUNCOVERRIDE-SAME: -loader-replaceable-function=override_me2
+
 void f(void) { }
