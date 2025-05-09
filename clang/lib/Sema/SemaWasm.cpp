@@ -52,13 +52,33 @@ static bool CheckWasmBuiltinArgIsInteger(Sema &S, CallExpr *E,
 }
 
 bool SemaWasm::BuiltinWasmRefNullExtern(CallExpr *TheCall) {
-  if (TheCall->getNumArgs() != 0)
+  if (TheCall->getNumArgs() != 0) {
+    Diag(TheCall->getBeginLoc(), diag::err_typecheck_call_too_many_args)
+        << 0 /*function call*/ << /*expected*/ 0 << TheCall->getNumArgs()
+        << /*is non object*/ 0;
     return true;
-
+  }
   TheCall->setType(getASTContext().getWebAssemblyExternrefType());
 
   return false;
 }
+
+bool SemaWasm::BuiltinWasmRefIsNullExtern(CallExpr *TheCall) {
+  if (SemaRef.checkArgCount(TheCall, 1)) {
+    return true;
+  }
+
+  Expr *ArgExpr = TheCall->getArg(0);
+  if (!ArgExpr->getType().isWebAssemblyExternrefType()) {
+    SemaRef.Diag(ArgExpr->getBeginLoc(),
+                  diag::err_wasm_builtin_arg_must_be_externref_type)
+           << 1 << ArgExpr->getSourceRange();
+    return true;
+  }
+
+  return false;
+}
+
 
 bool SemaWasm::BuiltinWasmRefNullFunc(CallExpr *TheCall) {
   ASTContext &Context = getASTContext();
@@ -224,6 +244,8 @@ bool SemaWasm::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
     return BuiltinWasmRefNullExtern(TheCall);
   case WebAssembly::BI__builtin_wasm_ref_null_func:
     return BuiltinWasmRefNullFunc(TheCall);
+  case WebAssembly::BI__builtin_wasm_ref_is_null_extern:
+    return BuiltinWasmRefIsNullExtern(TheCall);
   case WebAssembly::BI__builtin_wasm_table_get:
     return BuiltinWasmTableGet(TheCall);
   case WebAssembly::BI__builtin_wasm_table_set:
