@@ -536,7 +536,6 @@ OpenMP Support
   an invalid expression. (#GH139073)
 - Fixed a crashing bug with ``omp distribute dist_schedule`` if the argument to
   ``dist_schedule`` was not strictly positive. (#GH139266)
-- Added support for reduction over private variable with 'reduction' clause.
 
 Improvements
 ^^^^^^^^^^^^
