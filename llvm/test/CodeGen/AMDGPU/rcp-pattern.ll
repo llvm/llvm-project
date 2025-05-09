@@ -559,10 +559,11 @@ define float @v_rcp_fabs_f32_ieee_ulp25(float %x) #3 {
 ; SI-LABEL: v_rcp_fabs_f32_ieee_ulp25:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v0
 ; SI-NEXT:    s_mov_b32 s4, 0x7f800000
-; SI-NEXT:    v_frexp_mant_f32_e64 v1, |v0|
-; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
-; SI-NEXT:    v_cndmask_b32_e64 v1, |v0|, v1, s[4:5]
+; SI-NEXT:    v_frexp_mant_f32_e64 v2, |v0|
+; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v1|, s4
+; SI-NEXT:    v_cndmask_b32_e64 v1, |v0|, v2, s[4:5]
 ; SI-NEXT:    v_rcp_f32_e32 v1, v1
 ; SI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
 ; SI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
@@ -700,10 +701,11 @@ define float @v_rcp_neg_fabs_f32_ieee_ulp25(float %x) #3 {
 ; SI-LABEL: v_rcp_neg_fabs_f32_ieee_ulp25:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v0
 ; SI-NEXT:    s_mov_b32 s4, 0x7f800000
-; SI-NEXT:    v_frexp_mant_f32_e64 v1, -|v0|
-; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
-; SI-NEXT:    v_cndmask_b32_e64 v1, -|v0|, v1, s[4:5]
+; SI-NEXT:    v_frexp_mant_f32_e64 v2, -|v0|
+; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v1|, s4
+; SI-NEXT:    v_cndmask_b32_e64 v1, -|v0|, v2, s[4:5]
 ; SI-NEXT:    v_rcp_f32_e32 v1, v1
 ; SI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
 ; SI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0

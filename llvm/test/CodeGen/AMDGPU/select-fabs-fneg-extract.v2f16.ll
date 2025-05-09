@@ -776,20 +776,16 @@ define <2 x half> @add_select_fabs_negk_negk_v2f16(<2 x i32> %c, <2 x half> %x) 
 ; CI-LABEL: add_select_fabs_negk_negk_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; CI-NEXT:    v_cndmask_b32_e64 v0, -1.0, -2.0, vcc
-; CI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; CI-NEXT:    v_cndmask_b32_e64 v1, -1.0, -2.0, vcc
 ; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; CI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
+; CI-NEXT:    v_cndmask_b32_e64 v1, -1.0, -2.0, vcc
 ; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
-; CI-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
-; CI-NEXT:    v_add_f32_e32 v0, v0, v2
-; CI-NEXT:    v_add_f32_e32 v1, v1, v3
+; CI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; CI-NEXT:    v_cndmask_b32_e64 v0, -1.0, -2.0, vcc
+; CI-NEXT:    v_sub_f32_e32 v1, v3, v1
+; CI-NEXT:    v_sub_f32_e32 v0, v2, v0
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: add_select_fabs_negk_negk_v2f16:
@@ -801,8 +797,8 @@ define <2 x half> @add_select_fabs_negk_negk_v2f16(<2 x i32> %c, <2 x half> %x) 
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v4, vcc
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc
-; VI-NEXT:    v_add_f16_sdwa v1, |v1|, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; VI-NEXT:    v_add_f16_e64 v0, |v0|, v2
+; VI-NEXT:    v_sub_f16_sdwa v1, v2, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_sub_f16_e32 v0, v2, v0
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;

@@ -2966,6 +2966,77 @@ bool TargetLowering::SimplifyDemandedBits(
     }
     break;
   }
+  case ISD::FABS: {
+    SDValue Op0 = Op.getOperand(0);
+    APInt SignMask = APInt::getSignMask(BitWidth);
+
+    if (!DemandedBits.intersects(SignMask))
+      return TLO.CombineTo(Op, Op0);
+
+    if (SimplifyDemandedBits(Op0, ~SignMask & DemandedBits, DemandedElts, Known,
+                             TLO, Depth + 1))
+      return true;
+
+    if (Known.isNonNegative())
+      return TLO.CombineTo(Op, Op0);
+    if (Known.isNegative())
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::FNEG, dl, VT, Op0));
+
+    Known.Zero |= SignMask;
+    Known.One &= ~SignMask;
+
+    break;
+  }
+  case ISD::FCOPYSIGN: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    APInt SignMask = APInt::getSignMask(BitWidth);
+
+    if (!DemandedBits.intersects(SignMask))
+      return TLO.CombineTo(Op, Op0);
+
+    if (SimplifyDemandedBits(Op0, ~SignMask & DemandedBits, DemandedElts, Known,
+                             TLO, Depth + 1))
+      return true;
+    if (SimplifyDemandedBits(Op1, SignMask, DemandedElts, Known2, TLO,
+                             Depth + 1))
+      return true;
+
+    if (ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO))
+      return true;
+
+    if ((Known.isNonNegative() && Known2.isNonNegative()) ||
+        (Known.isNegative() && Known2.isNegative()))
+      return TLO.CombineTo(Op, Op0);
+
+    if (Known2.isNonNegative())
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::FABS, dl, VT, Op0));
+
+    if (Known2.isNegative()) {
+      Known.One |= SignMask;
+      Known.Zero &= ~SignMask;
+    }
+
+    break;
+  }
+  case ISD::FNEG: {
+    SDValue Op0 = Op.getOperand(0);
+    APInt SignMask = APInt::getSignMask(BitWidth);
+
+    if (!DemandedBits.intersects(SignMask))
+      return TLO.CombineTo(Op, Op0);
+
+    if (SimplifyDemandedBits(Op0, DemandedBits, DemandedElts, Known, TLO,
+                             Depth + 1))
+      return true;
+
+    if (Known.isNonNegative() || Known.isNegative()) {
+      Known.Zero ^= SignMask;
+      Known.One ^= SignMask;
+    }
+
+    break;
+  }
   default:
     // We also ask the target about intrinsics (which could be specific to it).
     if (Op.getOpcode() >= ISD::BUILTIN_OP_END ||
