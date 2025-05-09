@@ -338,6 +338,61 @@ void tfoo9() {
     foo9<1, 2>();
 }
 
+// PRINT-LABEL: void foo10(
+// DUMP-LABEL: FunctionDecl {{.*}} foo10
+void foo10() {
+    // PRINT: #pragma omp fuse looprange(2,2)
+    // DUMP:  OMPFuseDirective
+    // DUMP: OMPLooprangeClause
+    #pragma omp fuse looprange(2,2)
+    // PRINT: {
+    // DUMP: CompoundStmt       
+    {
+        // PRINT: for (int i = 0; i < 10; i += 2)
+        // DUMP: ForStmt
+        for (int i = 0; i < 10; i += 2)
+            // PRINT: body(i)
+            // DUMP: CallExpr
+            body(i);
+        // PRINT: for (int ii = 0; ii < 10; ii += 2)
+        // DUMP: ForStmt
+        for (int ii = 0; ii < 10; ii += 2)
+            // PRINT: body(ii)
+            // DUMP: CallExpr
+            body(ii);
+        // PRINT: #pragma omp fuse looprange(2,2)
+        // DUMP:  OMPFuseDirective
+        // DUMP: OMPLooprangeClause
+        #pragma omp fuse looprange(2,2)
+        {
+            // PRINT: for (int j = 10; j > 0; --j)
+            // DUMP: ForStmt
+            for (int j = 10; j > 0; --j)
+                // PRINT: body(j)
+                // DUMP: CallExpr
+                body(j);
+            // PRINT: for (int jj = 10; jj > 0; --jj)
+            // DUMP: ForStmt
+            for (int jj = 10; jj > 0; --jj)
+                // PRINT: body(jj)
+                // DUMP: CallExpr
+                body(jj);
+            // PRINT: for (int k = 0; k <= 10; ++k)
+            // DUMP: ForStmt
+            for (int k = 0; k <= 10; ++k)
+                // PRINT: body(k)
+                // DUMP: CallExpr
+                body(k);
+            // PRINT: for (int kk = 0; kk <= 10; ++kk)
+            // DUMP: ForStmt
+            for (int kk = 0; kk <= 10; ++kk)
+                // PRINT: body(kk)
+                // DUMP: CallExpr
+                body(kk);
+        }
+    }
+
+}
 
 
 

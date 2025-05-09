@@ -1005,8 +1005,7 @@ public:
     Stmt::StmtClass C = T->getStmtClass();
     return C == OMPTileDirectiveClass || C == OMPUnrollDirectiveClass ||
            C == OMPReverseDirectiveClass || C == OMPInterchangeDirectiveClass ||
-           C == OMPStripeDirectiveClass ||
-           C == OMPFuseDirectiveClass;
+           C == OMPStripeDirectiveClass || C == OMPFuseDirectiveClass;
   }
 };
 
@@ -5653,6 +5652,8 @@ class OMPStripeDirective final : public OMPLoopTransformationDirective {
                                        llvm::omp::OMPD_stripe, StartLoc, EndLoc,
                                        NumLoops) {
     setNumGeneratedLoops(2 * NumLoops);
+    // Similar to Tile, it only generates a single top level loop nest
+    setNumGeneratedLoopNests(1);
   }
 
   void setPreInits(Stmt *PreInits) {
