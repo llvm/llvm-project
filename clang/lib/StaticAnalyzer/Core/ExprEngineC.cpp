@@ -287,10 +287,34 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
 
   if (CastE->getCastKind() == CK_LValueToRValue ||
       CastE->getCastKind() == CK_LValueToRValueBitCast) {
+    ExplodedNodeSet dstEvalLoad;
+
     for (ExplodedNode *subExprNode : dstPreStmt) {
       ProgramStateRef state = subExprNode->getState();
       const LocationContext *LCtx = subExprNode->getLocationContext();
-      evalLoad(Dst, CastE, CastE, subExprNode, state, state->getSVal(Ex, LCtx));
+      evalLoad(dstEvalLoad, CastE, CastE, subExprNode, state,
+               state->getSVal(Ex, LCtx));
+    }
+    if (CastE->getCastKind() == CK_LValueToRValue) {
+      Dst.insert(dstEvalLoad);
+      return;
+    }
+    assert(CastE->getCastKind() == CK_LValueToRValueBitCast &&
+           "unexpected cast kind");
+    // Need to simulate the actual cast operation:
+    StmtNodeBuilder Bldr(dstEvalLoad, Dst, *currBldrCtx);
+
+    for (ExplodedNode *Node : dstEvalLoad) {
+      ProgramStateRef state = Node->getState();
+      const LocationContext *LCtx = Node->getLocationContext();
+      // getAsRegion should always be successful since Ex is an lvalue:
+      SVal OrigV = state->getSVal(state->getSVal(Ex, LCtx).getAsRegion());
+      SVal CastedV =
+          svalBuilder.evalCast(svalBuilder.simplifySVal(state, OrigV),
+                               CastE->getType(), Ex->getType());
+
+      state = state->BindExpr(CastE, LCtx, CastedV);
+      Bldr.generateNode(CastE, Node, state);
     }
     return;
   }

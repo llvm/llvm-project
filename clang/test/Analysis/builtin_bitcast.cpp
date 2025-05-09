@@ -39,7 +39,7 @@ struct A {
   }
 };
 void gh_69922(size_t p) {
-  // expected-warning-re@+1 {{(reg_${{[0-9]+}}<size_t p>) & 1U}}
+  // expected-warning@+1 {{Unknown}}
   clang_analyzer_dump(__builtin_bit_cast(A*, p & 1));
 
   __builtin_bit_cast(A*, p & 1)->set(2); // no-crash
@@ -49,5 +49,15 @@ void gh_69922(size_t p) {
   // store to the member variable `n`.
 
   clang_analyzer_dump(__builtin_bit_cast(A*, p & 1)->n); // Ideally, this should print "2".
-  // expected-warning-re@-1 {{(reg_${{[0-9]+}}<size_t p>) & 1U}}
+  // expected-warning@-1 {{Unknown}}
+}
+
+namespace {
+  typedef unsigned long uintptr_t;
+  
+  bool previously_crash(const void *& ptr) {
+    clang_analyzer_dump(__builtin_bit_cast(void*, static_cast<uintptr_t>(-1)));
+    // expected-warning-re@-1 {{{{[0-9]+}} (Loc)}}
+    return ptr == __builtin_bit_cast(void*, static_cast<uintptr_t>(-1));
+  }
 }
