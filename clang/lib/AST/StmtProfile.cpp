@@ -1026,6 +1026,10 @@ void StmtProfiler::VisitOMPInterchangeDirective(
   VisitOMPLoopTransformationDirective(S);
 }
 
+void StmtProfiler::VisitOMPFuseDirective(const OMPFuseDirective *S) {
+  VisitOMPLoopTransformationDirective(S);
+}
+
 void StmtProfiler::VisitOMPForDirective(const OMPForDirective *S) {
   VisitOMPLoopDirective(S);
 }
