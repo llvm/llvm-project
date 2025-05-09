@@ -62039,7 +62039,7 @@ bool X86TargetLowering::hasStackProbeSymbol(const MachineFunction &MF) const {
 bool X86TargetLowering::hasInlineStackProbe(const MachineFunction &MF) const {
 
   // No inline stack probe for Windows, they have their own mechanism.
-  if (Subtarget.isOSWindows() ||
+  if (Subtarget.isOSWindows() || Subtarget.isUEFI() ||
       MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return false;
 
@@ -62065,7 +62065,8 @@ X86TargetLowering::getStackProbeSymbolName(const MachineFunction &MF) const {
 
   // Generally, if we aren't on Windows, the platform ABI does not include
   // support for stack probes, so don't emit them.
-  if (!Subtarget.isOSWindows() || Subtarget.isTargetMachO() ||
+  if ((!Subtarget.isOSWindows() && !Subtarget.isUEFI()) ||
+      Subtarget.isTargetMachO() ||
       MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return "";
 
