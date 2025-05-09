@@ -2087,6 +2087,23 @@ void VPlanTransforms::addActiveLaneMask(
     HeaderMask->replaceAllUsesWith(LaneMask);
 }
 
+static bool replaceHeaderMaskToEVL(VPValue *HeaderMask, VPRecipeBase *R) {
+  using namespace llvm::VPlanPatternMatch;
+  VPValue *EdgeMask;
+  if (!R)
+    return false;
+  if (match(R, m_Binary<VPInstruction::BranchOnCount>(
+                   m_VPInstruction<VPInstruction::AnyOf>(
+                       m_Binary<VPInstruction::LogicalAnd>(
+                           m_Specific(HeaderMask), m_VPValue(EdgeMask))),
+                   m_VPValue()))) {
+
+    cast<VPInstruction>(R->getOperand(0))->setOperand(0, EdgeMask);
+    return true;
+  }
+  return false;
+}
+
 /// Try to convert \p CurRecipe to a corresponding EVL-based recipe. Returns
 /// nullptr if no EVL-based recipe could be created.
 /// \p HeaderMask  Header Mask.
@@ -2202,6 +2219,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
+      if (replaceHeaderMaskToEVL(HeaderMask, CurRecipe))
+        continue;
       VPRecipeBase *EVLRecipe = createEVLRecipe(
           HeaderMask, *CurRecipe, TypeInfo, *AllOneMask, EVL, PrevEVL);
       if (!EVLRecipe)
