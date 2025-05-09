@@ -9553,11 +9553,10 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
 
 // Try to find a tree of or's with leafs that are all loads that are offset from
 // the same base, and can be combined to a single larger load.
-static SDValue MatchOrOfLoadToLargeLoad(SDValue Root, SelectionDAG &DAG,
+static SDValue matchOrOfLoadToLargeLoad(SDValue Root, SelectionDAG &DAG,
                                         const TargetLowering &TLI) {
   EVT VT = Root.getValueType();
-  SmallVector<SDValue> Worklist;
-  Worklist.push_back(Root);
+  SmallVector<SDValue> Worklist = {Root};
   SmallVector<std::pair<LoadSDNode *, int64_t>> Loads;
   std::optional<BaseIndexOffset> Base;
   LoadSDNode *BaseLoad = nullptr;
@@ -28737,9 +28736,9 @@ SDValue DAGCombiner::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           TLI.SimplifySetCC(VT, N0, N1, Cond, foldBooleans, DagCombineInfo, DL))
     return C;
 
-  if ((Cond == ISD::SETNE || Cond == ISD::SETEQ) && isNullConstant(N1) &&
-      N0.getOpcode() == ISD::OR)
-    if (SDValue Load = MatchOrOfLoadToLargeLoad(N0, DAG, TLI))
+  if ((Cond == ISD::SETNE || Cond == ISD::SETEQ) && N0.getOpcode() == ISD::OR &&
+      isNullConstant(N1))
+    if (SDValue Load = matchOrOfLoadToLargeLoad(N0, DAG, TLI))
       return DAG.getSetCC(DL, VT, Load, N1, Cond);
   return SDValue();
 }
