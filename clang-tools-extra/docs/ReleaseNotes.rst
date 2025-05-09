@@ -117,6 +117,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`cppcoreguidelines-use-enum-class
+  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check.
+
+  Finds plain non-class ``enum`` definitions that could use ``enum class``.
+
 - New :doc:`bugprone-capturing-this-in-member-variable
   <clang-tidy/checks/bugprone/capturing-this-in-member-variable>` check.
 
@@ -147,11 +152,6 @@ New checks
 
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
-
-- New :doc:`cppcoreguidelines-use-enum-class
-  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check.
-
-  Finds plain non-class ``enum`` definitions that could use ``enum class``.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

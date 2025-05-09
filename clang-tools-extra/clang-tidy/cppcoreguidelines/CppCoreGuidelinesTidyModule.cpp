@@ -60,8 +60,6 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidCapturingLambdaCoroutinesCheck>(
         "cppcoreguidelines-avoid-capturing-lambda-coroutines");
-    CheckFactories.registerCheck<UseEnumClassCheck>(
-        "cppcoreguidelines-use-enum-class");
     CheckFactories.registerCheck<modernize::AvoidCArraysCheck>(
         "cppcoreguidelines-avoid-c-arrays");
     CheckFactories.registerCheck<AvoidConstOrRefDataMembersCheck>(
@@ -134,6 +132,8 @@ public:
     CheckFactories.registerCheck<SlicingCheck>("cppcoreguidelines-slicing");
     CheckFactories.registerCheck<modernize::UseDefaultMemberInitCheck>(
         "cppcoreguidelines-use-default-member-init");
+    CheckFactories.registerCheck<UseEnumClassCheck>(
+        "cppcoreguidelines-use-enum-class");
     CheckFactories.registerCheck<misc::UnconventionalAssignOperatorCheck>(
         "cppcoreguidelines-c-copy-assignment-signature");
     CheckFactories.registerCheck<VirtualClassDestructorCheck>(

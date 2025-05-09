@@ -1,9 +1,10 @@
 .. title:: clang-tidy - cppcoreguidelines-use-enum-class
 
 cppcoreguidelines-use-enum-class
-=============================
+================================
 
-Finds plain non-class ``enum`` definitions that could use ``enum class``.
+Finds unscoped (non-class) ``enum`` declarations and suggests using
+``enum class`` instead.
 
 This check implements `Enum.3
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Renum-class>`_
@@ -25,7 +26,10 @@ Example:
       enum E {};    // use "enum class E {};" instead
   }
 
+Options
+-------
 
 .. option:: IgnoreUnscopedEnumsInClasses
 
-   When `true` (default is `false`), ignores unscoped ``enum`` declarations in classes.
+   When `true`, ignores unscoped ``enum`` declarations in classes.
+   Default is `false`.
