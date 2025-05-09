@@ -36,6 +36,9 @@ Streams:
           Content:               'BAADBEEF'
   - Type:            Memory64List
     Memory Ranges:
-      - Start of Memory Range: 0x7FFF12A84030
-        Data Size:       0x2FD0
+      - Start of Memory Range: 0x1000
+        Data Size:       0x100
+        Content :        ''
+      - Start of Memory Range: 0x2000
+        Data Size:       0x200
         Content :        ''
