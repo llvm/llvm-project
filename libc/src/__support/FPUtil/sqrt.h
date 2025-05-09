@@ -41,7 +41,7 @@ template <> LIBC_INLINE double sqrt<double>(double x) {
 template <> LIBC_INLINE long double sqrt<long double>(long double x) {
   return __builtin_elementwise_sqrt(x);
 }
-#endif
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
