@@ -3276,6 +3276,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     else
       Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
     break;
+  case OMPC_threadset:
   case OMPC_fail:
   case OMPC_default:
   case OMPC_proc_bind:
