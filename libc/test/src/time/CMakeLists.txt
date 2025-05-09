@@ -78,8 +78,6 @@ add_libc_unittest(
     libc_time_unittests
   SRCS
     localtime_test.cpp
-  HDRS
-    TmHelper.h
   DEPENDS
     .time_utils.h
 )
@@ -90,8 +88,6 @@ add_libc_unittest(
     libc_time_unittests
   SRCS
     localtime_r_test.cpp
-  HDRS
-    TmHelper.h
   DEPENDS
     .time_utils.h
 )
