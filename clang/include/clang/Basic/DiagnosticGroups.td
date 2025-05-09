@@ -177,7 +177,7 @@ def DefaultConstInit : DiagGroup<"default-const-init",
 def ImplicitVoidPtrCast : DiagGroup<"implicit-void-ptr-cast">;
 def ImplicitIntToEnumCast : DiagGroup<"implicit-int-enum-cast",
                                       [ImplicitEnumEnumCast]>;
-def JumpBypassesInit : DiagGroup<"jump-bypasses-init">;
+def JumpBypassesInit : DiagGroup<"jump-misses-init">;
 def TentativeDefnCompat : DiagGroup<"tentative-definition-compat">;
 def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit,
                                         ImplicitIntToEnumCast, HiddenCppDecl,
@@ -421,13 +421,12 @@ def CXX11WarnSuggestOverride : DiagGroup<"suggest-override">;
 def WarnUnnecessaryVirtualSpecifier : DiagGroup<"unnecessary-virtual-specifier"> {
   code Documentation = [{
 Warns when a ``final`` class contains a virtual method (including virtual
-destructors). Since ``final`` classes cannot be subclassed, their methods
-cannot be overridden, and hence the ``virtual`` specifier is useless.
+destructors) that does not override anything. Since ``final`` classes cannot
+be subclassed, their methods cannot be overridden, so there is no point to
+introducing new ``virtual`` methods.
 
 The warning also detects virtual methods in classes whose destructor is
 ``final``, for the same reason.
-
-The warning does not fire on virtual methods which are also marked ``override``.
   }];
 }
 
@@ -621,6 +620,7 @@ def ModuleImport : DiagGroup<"module-import">;
 def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def ModuleIncludeDirectiveTranslation : DiagGroup<"module-include-translation">;
+def ModuleMap : DiagGroup<"module-map">;
 def RoundTripCC1Args : DiagGroup<"round-trip-cc1-args">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
@@ -1163,6 +1163,7 @@ def Extra : DiagGroup<"extra", [
     FUseLdPath,
     CastFunctionTypeMismatch,
     InitStringTooLongMissingNonString,
+    WarnUnnecessaryVirtualSpecifier,
   ]>;
 
 def Most : DiagGroup<"most", [

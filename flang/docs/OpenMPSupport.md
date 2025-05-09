@@ -48,11 +48,11 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | distribute simd construct                                  | P      | dist_schedule and linear clauses are not supported |
 | distribute parallel loop construct                         | P      | dist_schedule clause not supported |
 | distribute parallel loop simd construct                    | P      | dist_schedule and linear clauses are not supported |
-| depend clause                                              | P      | depend clause with array sections are not supported |
+| depend clause                                              | Y      | |
 | declare reduction construct                                | N      | |
 | atomic construct extensions                                | Y      | |
-| cancel construct                                           | N      | |
-| cancellation point construct                               | N      | |
+| cancel construct                                           | Y      | |
+| cancellation point construct                               | Y      | |
 | parallel do simd construct                                 | P      | linear clause is not supported |
 | target teams construct                                     | P      | device and reduction clauses are not supported |
 | teams distribute construct                                 | P      | reduction and dist_schedule clauses not supported |
@@ -64,4 +64,4 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | target teams distribute parallel loop simd construct       | P      | device, reduction, dist_schedule and linear clauses are not supported |
 
 ## OpenMP 3.1, OpenMP 2.5, OpenMP 1.1
-All features except a few corner cases in atomic (complex type, different but compatible types in lhs and rhs), threadprivate (character type) constructs/clauses are supported.
+All features except a few corner cases in atomic (complex type, different but compatible types in lhs and rhs) are supported.

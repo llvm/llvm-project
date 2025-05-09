@@ -662,32 +662,9 @@ static fir::GlobalOp globalInitialization(lower::AbstractConverter &converter,
                                           const semantics::Symbol &sym,
                                           const lower::pft::Variable &var,
                                           mlir::Location currentLocation) {
-  mlir::Type ty = converter.genType(sym);
   std::string globalName = converter.mangleName(sym);
   mlir::StringAttr linkage = firOpBuilder.createInternalLinkage();
-  fir::GlobalOp global =
-      firOpBuilder.createGlobal(currentLocation, ty, globalName, linkage);
-
-  // Create default initialization for non-character scalar.
-  if (semantics::IsAllocatableOrObjectPointer(&sym)) {
-    mlir::Type baseAddrType = mlir::dyn_cast<fir::BoxType>(ty).getEleTy();
-    lower::createGlobalInitialization(
-        firOpBuilder, global, [&](fir::FirOpBuilder &b) {
-          mlir::Value nullAddr =
-              b.createNullConstant(currentLocation, baseAddrType);
-          mlir::Value box =
-              b.create<fir::EmboxOp>(currentLocation, ty, nullAddr);
-          b.create<fir::HasValueOp>(currentLocation, box);
-        });
-  } else {
-    lower::createGlobalInitialization(
-        firOpBuilder, global, [&](fir::FirOpBuilder &b) {
-          mlir::Value undef = b.create<fir::UndefOp>(currentLocation, ty);
-          b.create<fir::HasValueOp>(currentLocation, undef);
-        });
-  }
-
-  return global;
+  return Fortran::lower::defineGlobal(converter, var, globalName, linkage);
 }
 
 // Get the extended value for \p val by extracting additional variable
@@ -1774,34 +1751,51 @@ static void genTargetEnterExitUpdateDataClauses(
   cp.processNowait(clauseOps);
 }
 
-static void genTaskClauses(lower::AbstractConverter &converter,
-                           semantics::SemanticsContext &semaCtx,
-                           lower::SymMap &symTable,
-                           lower::StatementContext &stmtCtx,
-                           const List<Clause> &clauses, mlir::Location loc,
-                           mlir::omp::TaskOperands &clauseOps) {
+static void genTaskClauses(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    lower::SymMap &symTable, lower::StatementContext &stmtCtx,
+    const List<Clause> &clauses, mlir::Location loc,
+    mlir::omp::TaskOperands &clauseOps,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &inReductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
   cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processFinal(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_task, clauseOps);
+  cp.processInReduction(loc, clauseOps, inReductionSyms);
   cp.processMergeable(clauseOps);
   cp.processPriority(stmtCtx, clauseOps);
   cp.processUntied(clauseOps);
   cp.processDetach(clauseOps);
 
-  cp.processTODO<clause::Affinity, clause::InReduction>(
-      loc, llvm::omp::Directive::OMPD_task);
+  cp.processTODO<clause::Affinity>(loc, llvm::omp::Directive::OMPD_task);
 }
 
-static void genTaskgroupClauses(lower::AbstractConverter &converter,
-                                semantics::SemanticsContext &semaCtx,
-                                const List<Clause> &clauses, mlir::Location loc,
-                                mlir::omp::TaskgroupOperands &clauseOps) {
+static void genTaskgroupClauses(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    const List<Clause> &clauses, mlir::Location loc,
+    mlir::omp::TaskgroupOperands &clauseOps,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &taskReductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
-  cp.processTODO<clause::TaskReduction>(loc,
-                                        llvm::omp::Directive::OMPD_taskgroup);
+  cp.processTaskReduction(loc, clauseOps, taskReductionSyms);
+}
+
+static void genTaskloopClauses(lower::AbstractConverter &converter,
+                               semantics::SemanticsContext &semaCtx,
+                               lower::StatementContext &stmtCtx,
+                               const List<Clause> &clauses, mlir::Location loc,
+                               mlir::omp::TaskloopOperands &clauseOps) {
+
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processGrainsize(stmtCtx, clauseOps);
+  cp.processNumTasks(stmtCtx, clauseOps);
+
+  cp.processTODO<clause::Allocate, clause::Collapse, clause::Default,
+                 clause::Final, clause::If, clause::InReduction,
+                 clause::Lastprivate, clause::Mergeable, clause::Nogroup,
+                 clause::Priority, clause::Reduction, clause::Shared,
+                 clause::Untied>(loc, llvm::omp::Directive::OMPD_taskloop);
 }
 
 static void genTaskwaitClauses(lower::AbstractConverter &converter,
@@ -2162,6 +2156,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         OpWithBodyGenInfo(converter, symTable, semaCtx, loc, nestedEval,
                           llvm::omp::Directive::OMPD_section)
             .setClauses(&sectionQueue.begin()->clauses)
+            .setDataSharingProcessor(&dsp)
             .setEntryBlockArgs(&args),
         sectionQueue, sectionQueue.begin());
   }
@@ -2327,7 +2322,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
       fir::factory::AddrAndBoundsInfo info =
           Fortran::lower::getDataOperandBaseAddr(
-              converter, firOpBuilder, sym, converter.getCurrentLocation());
+              converter, firOpBuilder, sym.GetUltimate(),
+              converter.getCurrentLocation());
       llvm::SmallVector<mlir::Value> bounds =
           fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
                                              mlir::omp::MapBoundsType>(
@@ -2481,8 +2477,9 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           mlir::Location loc, const ConstructQueue &queue,
           ConstructQueue::const_iterator item) {
   mlir::omp::TaskOperands clauseOps;
+  llvm::SmallVector<const semantics::Symbol *> inReductionSyms;
   genTaskClauses(converter, semaCtx, symTable, stmtCtx, item->clauses, loc,
-                 clauseOps);
+                 clauseOps, inReductionSyms);
 
   if (!enableDelayedPrivatization)
     return genOpWithBody<mlir::omp::TaskOp>(
@@ -2499,6 +2496,8 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   EntryBlockArgs taskArgs;
   taskArgs.priv.syms = dsp.getDelayedPrivSymbols();
   taskArgs.priv.vars = clauseOps.privateVars;
+  taskArgs.inReduction.syms = inReductionSyms;
+  taskArgs.inReduction.vars = clauseOps.inReductionVars;
 
   return genOpWithBody<mlir::omp::TaskOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
@@ -2516,12 +2515,19 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                const ConstructQueue &queue,
                ConstructQueue::const_iterator item) {
   mlir::omp::TaskgroupOperands clauseOps;
-  genTaskgroupClauses(converter, semaCtx, item->clauses, loc, clauseOps);
+  llvm::SmallVector<const semantics::Symbol *> taskReductionSyms;
+  genTaskgroupClauses(converter, semaCtx, item->clauses, loc, clauseOps,
+                      taskReductionSyms);
+
+  EntryBlockArgs taskgroupArgs;
+  taskgroupArgs.taskReduction.syms = taskReductionSyms;
+  taskgroupArgs.taskReduction.vars = clauseOps.taskReductionVars;
 
   return genOpWithBody<mlir::omp::TaskgroupOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_taskgroup)
-          .setClauses(&item->clauses),
+          .setClauses(&item->clauses)
+          .setEntryBlockArgs(&taskgroupArgs),
       queue, item, clauseOps);
 }
 
@@ -2833,9 +2839,23 @@ static void genAtomicUpdateStatement(
     lower::StatementContext atomicStmtCtx;
     mlir::Value rhsExpr = fir::getBase(converter.genExprValue(
         *semantics::GetExpr(assignmentStmtExpr), atomicStmtCtx));
-    mlir::Value convertResult =
-        firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
-    firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, convertResult);
+    mlir::Type exprType = fir::unwrapRefType(rhsExpr.getType());
+    if (fir::isa_complex(exprType) && !fir::isa_complex(varType)) {
+      // Emit an additional `ExtractValueOp` if the expression is of complex
+      // type
+      auto extract = firOpBuilder.create<fir::ExtractValueOp>(
+          currentLocation,
+          mlir::cast<mlir::ComplexType>(exprType).getElementType(), rhsExpr,
+          firOpBuilder.getArrayAttr(
+              firOpBuilder.getIntegerAttr(firOpBuilder.getIndexType(), 0)));
+      mlir::Value convertResult = firOpBuilder.create<fir::ConvertOp>(
+          currentLocation, varType, extract);
+      firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, convertResult);
+    } else {
+      mlir::Value convertResult =
+          firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
+      firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, convertResult);
+    }
     converter.resetExprOverrides();
   }
   firOpBuilder.setInsertionPointAfter(atomicUpdateOp);
@@ -3253,11 +3273,33 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
 static mlir::omp::TaskloopOp genStandaloneTaskloop(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item) {
-  TODO(loc, "Taskloop construct");
-  return nullptr;
+    lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
+    lower::pft::Evaluation &eval, mlir::Location loc,
+    const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+  mlir::omp::TaskloopOperands taskloopClauseOps;
+  genTaskloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
+                     taskloopClauseOps);
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           /*shouldCollectPreDeterminedSymbols=*/true,
+                           enableDelayedPrivatization, symTable);
+  dsp.processStep1(&taskloopClauseOps);
+
+  mlir::omp::LoopNestOperands loopNestClauseOps;
+  llvm::SmallVector<const semantics::Symbol *> iv;
+  genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
+                     loopNestClauseOps, iv);
+
+  EntryBlockArgs taskloopArgs;
+  taskloopArgs.priv.syms = dsp.getDelayedPrivSymbols();
+  taskloopArgs.priv.vars = taskloopClauseOps.privateVars;
+
+  auto taskLoopOp = genWrapperOp<mlir::omp::TaskloopOp>(
+      converter, loc, taskloopClauseOps, taskloopArgs);
+
+  genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
+                loopNestClauseOps, iv, {{taskLoopOp, taskloopArgs}},
+                llvm::omp::Directive::OMPD_taskloop, dsp);
+  return taskLoopOp;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3697,8 +3739,8 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
         genTaskgroupOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_taskloop:
-    newOp = genStandaloneTaskloop(converter, symTable, semaCtx, eval, loc,
-                                  queue, item);
+    newOp = genStandaloneTaskloop(converter, symTable, stmtCtx, semaCtx, eval,
+                                  loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_taskwait:
     newOp = genTaskwaitOp(converter, symTable, semaCtx, eval, loc, queue, item);
@@ -3712,9 +3754,11 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
                        item);
     break;
   case llvm::omp::Directive::OMPD_tile:
-  case llvm::omp::Directive::OMPD_unroll:
+  case llvm::omp::Directive::OMPD_unroll: {
+    unsigned version = semaCtx.langOptions().OpenMPVersion;
     TODO(loc, "Unhandled loop directive (" +
-                  llvm::omp::getOpenMPDirectiveName(dir) + ")");
+                  llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
+  }
   // case llvm::omp::Directive::OMPD_workdistribute:
   case llvm::omp::Directive::OMPD_workshare:
     newOp = genWorkshareOp(converter, symTable, stmtCtx, semaCtx, eval, loc,
@@ -3753,6 +3797,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPDeclarativeAssumes &assumesConstruct) {
   TODO(converter.getCurrentLocation(), "OpenMP ASSUMES declaration");
+}
+
+static void
+genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+       semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+       const parser::OmpDeclareVariantDirective &declareVariantDirective) {
+  TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
 }
 
 static void genOMP(

@@ -3,7 +3,7 @@
 # RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -run-pass=legalizer %s -o - | FileCheck -check-prefix=GFX8 %s
 # RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -run-pass=legalizer %s -o - | FileCheck -check-prefix=GFX6 %s
 # RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -run-pass=legalizer %s -o - | FileCheck -check-prefix=GFX9 %s
-# RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -run-pass=legalizer %s -o - | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=-real-true16 -run-pass=legalizer %s -o - | FileCheck -check-prefixes=GFX9 %s
 
 ---
 name: test_sext_inreg_s32_1
@@ -419,30 +419,26 @@ body: |
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 1
-    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SEXT_INREG]](s32)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s16)
+    ; GFX9-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     ;
     ; GFX8-LABEL: name: test_sext_inreg_s16_1
     ; GFX8: liveins: $vgpr0
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX8-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 15
-    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC]], [[C]](s16)
-    ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s16) = G_ASHR [[SHL]], [[C]](s16)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[ASHR]](s16)
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 1
+    ; GFX8-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     ;
     ; GFX6-LABEL: name: test_sext_inreg_s16_1
     ; GFX6: liveins: $vgpr0
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX6-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 1
-    ; GFX6-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SEXT_INREG]](s32)
-    ; GFX6-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s16)
+    ; GFX6-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s16) = G_SEXT_INREG %1, 1
-    S_ENDPGM 0, implicit %2
+    %3:_(s32) = G_ANYEXT %2
+    $vgpr0 = COPY %3
 
 ...
 
@@ -457,30 +453,94 @@ body: |
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 15
-    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SEXT_INREG]](s32)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s16)
+    ; GFX9-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     ;
     ; GFX8-LABEL: name: test_sext_inreg_s16_15
     ; GFX8: liveins: $vgpr0
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX8-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
-    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC]], [[C]](s16)
-    ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s16) = G_ASHR [[SHL]], [[C]](s16)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[ASHR]](s16)
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 15
+    ; GFX8-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     ;
     ; GFX6-LABEL: name: test_sext_inreg_s16_15
     ; GFX6: liveins: $vgpr0
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX6-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 15
-    ; GFX6-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SEXT_INREG]](s32)
-    ; GFX6-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s16)
+    ; GFX6-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s16) = G_SEXT_INREG %1, 15
-    S_ENDPGM 0, implicit %2
+    %3:_(s32) = G_ANYEXT %2
+    $vgpr0 = COPY %3
+
+...
+
+---
+name: test_sext_inreg_s8_1
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; GFX9-LABEL: name: test_sext_inreg_s8_1
+    ; GFX9: liveins: $vgpr0
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 1
+    ; GFX9-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ;
+    ; GFX8-LABEL: name: test_sext_inreg_s8_1
+    ; GFX8: liveins: $vgpr0
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 1
+    ; GFX8-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ;
+    ; GFX6-LABEL: name: test_sext_inreg_s8_1
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX6-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 1
+    ; GFX6-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s8) = G_TRUNC %0
+    %2:_(s8) = G_SEXT_INREG %1, 1
+    %3:_(s32) = G_ANYEXT %2
+    $vgpr0 = COPY %3
+
+...
+
+---
+name: test_sext_inreg_s16_7
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; GFX9-LABEL: name: test_sext_inreg_s16_7
+    ; GFX9: liveins: $vgpr0
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 7
+    ; GFX9-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ;
+    ; GFX8-LABEL: name: test_sext_inreg_s16_7
+    ; GFX8: liveins: $vgpr0
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 7
+    ; GFX8-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ;
+    ; GFX6-LABEL: name: test_sext_inreg_s16_7
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX6-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 7
+    ; GFX6-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s8) = G_TRUNC %0
+    %2:_(s8) = G_SEXT_INREG %1, 7
+    %3:_(s32) = G_ANYEXT %2
+    $vgpr0 = COPY %3
 
 ...
 
@@ -821,19 +881,15 @@ body: |
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
     ; GFX8-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 15
-    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s16) = G_ASHR [[SHL]], [[C1]](s16)
-    ; GFX8-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[TRUNC1]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR1:%[0-9]+]]:_(s16) = G_ASHR [[SHL1]], [[C1]](s16)
-    ; GFX8-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR]](s16)
-    ; GFX8-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR1]](s16)
-    ; GFX8-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL2]]
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST]], 1
+    ; GFX8-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 1
+    ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG]], [[C1]]
+    ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG1]], [[C1]]
+    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
+    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
     ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; GFX8-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     ;
@@ -907,38 +963,31 @@ body: |
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX8-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<6 x s16>)
     ; GFX8-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
-    ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
-    ; GFX8-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
-    ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 15
-    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s16) = G_ASHR [[SHL]], [[C1]](s16)
-    ; GFX8-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[TRUNC1]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR1:%[0-9]+]]:_(s16) = G_ASHR [[SHL1]], [[C1]](s16)
-    ; GFX8-NEXT: [[SHL2:%[0-9]+]]:_(s16) = G_SHL [[TRUNC2]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR2:%[0-9]+]]:_(s16) = G_ASHR [[SHL2]], [[C1]](s16)
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST]], 1
+    ; GFX8-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 1
+    ; GFX8-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST1]], 1
     ; GFX8-NEXT: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX8-NEXT: [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
     ; GFX8-NEXT: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
     ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
     ; GFX8-NEXT: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV4]](<2 x s16>)
-    ; GFX8-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR]](s16)
-    ; GFX8-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR1]](s16)
-    ; GFX8-NEXT: [[SHL3:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL3]]
+    ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG]], [[C1]]
+    ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG1]], [[C1]]
+    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
+    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
     ; GFX8-NEXT: [[BITCAST4:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; GFX8-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR2]](s16)
-    ; GFX8-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST2]], [[C2]]
-    ; GFX8-NEXT: [[SHL4:%[0-9]+]]:_(s32) = G_SHL [[AND]], [[C]](s32)
-    ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL4]]
+    ; GFX8-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG2]], [[C1]]
+    ; GFX8-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[BITCAST2]], [[C1]]
+    ; GFX8-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND3]], [[C]](s32)
+    ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
     ; GFX8-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[BITCAST3]], [[C2]]
-    ; GFX8-NEXT: [[SHL5:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
-    ; GFX8-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[LSHR1]], [[SHL5]]
+    ; GFX8-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[BITCAST3]], [[C1]]
+    ; GFX8-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND4]], [[C]](s32)
+    ; GFX8-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[LSHR1]], [[SHL2]]
     ; GFX8-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
     ; GFX8-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>), [[BITCAST6]](<2 x s16>)
     ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
@@ -1101,32 +1150,24 @@ body: |
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
     ; GFX8-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
     ; GFX8-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
-    ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
-    ; GFX8-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
     ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; GFX8-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 15
-    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s16) = G_ASHR [[SHL]], [[C1]](s16)
-    ; GFX8-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[TRUNC1]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR1:%[0-9]+]]:_(s16) = G_ASHR [[SHL1]], [[C1]](s16)
-    ; GFX8-NEXT: [[SHL2:%[0-9]+]]:_(s16) = G_SHL [[TRUNC2]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR2:%[0-9]+]]:_(s16) = G_ASHR [[SHL2]], [[C1]](s16)
-    ; GFX8-NEXT: [[SHL3:%[0-9]+]]:_(s16) = G_SHL [[TRUNC3]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR3:%[0-9]+]]:_(s16) = G_ASHR [[SHL3]], [[C1]](s16)
-    ; GFX8-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR]](s16)
-    ; GFX8-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR1]](s16)
-    ; GFX8-NEXT: [[SHL4:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL4]]
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST]], 1
+    ; GFX8-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 1
+    ; GFX8-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST1]], 1
+    ; GFX8-NEXT: [[SEXT_INREG3:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR1]], 1
+    ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG]], [[C1]]
+    ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG1]], [[C1]]
+    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
+    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
     ; GFX8-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; GFX8-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR2]](s16)
-    ; GFX8-NEXT: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR3]](s16)
-    ; GFX8-NEXT: [[SHL5:%[0-9]+]]:_(s32) = G_SHL [[ZEXT3]], [[C]](s32)
-    ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL5]]
+    ; GFX8-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG2]], [[C1]]
+    ; GFX8-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG3]], [[C1]]
+    ; GFX8-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND3]], [[C]](s32)
+    ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
     ; GFX8-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
     ; GFX8-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>)
     ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
@@ -1188,45 +1229,33 @@ body: |
     ; GFX8: [[DEF:%[0-9]+]]:_(<6 x s16>) = G_IMPLICIT_DEF
     ; GFX8-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<6 x s16>)
     ; GFX8-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
-    ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
-    ; GFX8-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
     ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; GFX8-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
     ; GFX8-NEXT: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
-    ; GFX8-NEXT: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST2]](s32)
     ; GFX8-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
-    ; GFX8-NEXT: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
-    ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 15
-    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s16) = G_ASHR [[SHL]], [[C1]](s16)
-    ; GFX8-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[TRUNC1]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR1:%[0-9]+]]:_(s16) = G_ASHR [[SHL1]], [[C1]](s16)
-    ; GFX8-NEXT: [[SHL2:%[0-9]+]]:_(s16) = G_SHL [[TRUNC2]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR2:%[0-9]+]]:_(s16) = G_ASHR [[SHL2]], [[C1]](s16)
-    ; GFX8-NEXT: [[SHL3:%[0-9]+]]:_(s16) = G_SHL [[TRUNC3]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR3:%[0-9]+]]:_(s16) = G_ASHR [[SHL3]], [[C1]](s16)
-    ; GFX8-NEXT: [[SHL4:%[0-9]+]]:_(s16) = G_SHL [[TRUNC4]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR4:%[0-9]+]]:_(s16) = G_ASHR [[SHL4]], [[C1]](s16)
-    ; GFX8-NEXT: [[SHL5:%[0-9]+]]:_(s16) = G_SHL [[TRUNC5]], [[C1]](s16)
-    ; GFX8-NEXT: [[ASHR5:%[0-9]+]]:_(s16) = G_ASHR [[SHL5]], [[C1]](s16)
-    ; GFX8-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR]](s16)
-    ; GFX8-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR1]](s16)
-    ; GFX8-NEXT: [[SHL6:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL6]]
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST]], 1
+    ; GFX8-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 1
+    ; GFX8-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST1]], 1
+    ; GFX8-NEXT: [[SEXT_INREG3:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR1]], 1
+    ; GFX8-NEXT: [[SEXT_INREG4:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST2]], 1
+    ; GFX8-NEXT: [[SEXT_INREG5:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR2]], 1
+    ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG]], [[C1]]
+    ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG1]], [[C1]]
+    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
+    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
     ; GFX8-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; GFX8-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR2]](s16)
-    ; GFX8-NEXT: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR3]](s16)
-    ; GFX8-NEXT: [[SHL7:%[0-9]+]]:_(s32) = G_SHL [[ZEXT3]], [[C]](s32)
-    ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL7]]
+    ; GFX8-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG2]], [[C1]]
+    ; GFX8-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG3]], [[C1]]
+    ; GFX8-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND3]], [[C]](s32)
+    ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
     ; GFX8-NEXT: [[BITCAST4:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; GFX8-NEXT: [[ZEXT4:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR4]](s16)
-    ; GFX8-NEXT: [[ZEXT5:%[0-9]+]]:_(s32) = G_ZEXT [[ASHR5]](s16)
-    ; GFX8-NEXT: [[SHL8:%[0-9]+]]:_(s32) = G_SHL [[ZEXT5]], [[C]](s32)
-    ; GFX8-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ZEXT4]], [[SHL8]]
+    ; GFX8-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG4]], [[C1]]
+    ; GFX8-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG5]], [[C1]]
+    ; GFX8-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND5]], [[C]](s32)
+    ; GFX8-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[AND4]], [[SHL2]]
     ; GFX8-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
     ; GFX8-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST3]](<2 x s16>), [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[CONCAT_VECTORS]](<6 x s16>)

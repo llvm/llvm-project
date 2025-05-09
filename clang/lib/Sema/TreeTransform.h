@@ -3099,6 +3099,15 @@ public:
     return getSema().ActOnParenListExpr(LParenLoc, RParenLoc, SubExprs);
   }
 
+  ExprResult RebuildCXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,
+                                         unsigned NumUserSpecifiedExprs,
+                                         SourceLocation InitLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation RParenLoc) {
+    return getSema().ActOnCXXParenListInitExpr(Args, T, NumUserSpecifiedExprs,
+                                               InitLoc, LParenLoc, RParenLoc);
+  }
+
   /// Build a new address-of-label expression.
   ///
   /// By default, performs semantic analysis, using the name of the label
@@ -3315,6 +3324,11 @@ public:
       return getSema().BuildCXXTypeConstructExpr(
           TInfo, LParenLoc, MultiExprArg(PLE->getExprs(), PLE->getNumExprs()),
           RParenLoc, ListInitialization);
+
+    if (auto *PLE = dyn_cast<CXXParenListInitExpr>(Sub))
+      return getSema().BuildCXXTypeConstructExpr(
+          TInfo, LParenLoc, PLE->getInitExprs(), RParenLoc, ListInitialization);
+
     return getSema().BuildCXXTypeConstructExpr(TInfo, LParenLoc,
                                                MultiExprArg(&Sub, 1), RParenLoc,
                                                ListInitialization);
@@ -9567,8 +9581,9 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
   // TODO: Fix This
+  unsigned OMPVersion = getDerived().getSema().getLangOpts().OpenMP;
   SemaRef.Diag(D->getBeginLoc(), diag::err_omp_instantiation_not_supported)
-      << getOpenMPDirectiveName(D->getDirectiveKind());
+      << getOpenMPDirectiveName(D->getDirectiveKind(), OMPVersion);
   return StmtError();
 }
 
@@ -16487,12 +16502,21 @@ ExprResult
 TreeTransform<Derived>::TransformCXXParenListInitExpr(CXXParenListInitExpr *E) {
   SmallVector<Expr *, 4> TransformedInits;
   ArrayRef<Expr *> InitExprs = E->getInitExprs();
-  if (TransformExprs(InitExprs.data(), InitExprs.size(), true,
-                     TransformedInits))
+
+  QualType T = getDerived().TransformType(E->getType());
+
+  bool ArgChanged = false;
+
+  if (getDerived().TransformExprs(InitExprs.data(), InitExprs.size(), true,
+                                  TransformedInits, &ArgChanged))
     return ExprError();
 
-  return getDerived().RebuildParenListExpr(E->getBeginLoc(), TransformedInits,
-                                           E->getEndLoc());
+  if (!getDerived().AlwaysRebuild() && !ArgChanged && T == E->getType())
+    return E;
+
+  return getDerived().RebuildCXXParenListInitExpr(
+      TransformedInits, T, E->getUserSpecifiedInitExprs().size(),
+      E->getInitLoc(), E->getBeginLoc(), E->getEndLoc());
 }
 
 template<typename Derived>

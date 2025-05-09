@@ -1114,8 +1114,8 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
     MaskTy = LLT::scalar(PtrTy.getSizeInBits());
   else {
     // Ensure that the type will fit the mask value.
-    for (unsigned I = 0, E = B.Cases.size(); I != E; ++I) {
-      if (!isUIntN(SwitchOpTy.getSizeInBits(), B.Cases[I].Mask)) {
+    for (const SwitchCG::BitTestCase &Case : B.Cases) {
+      if (!isUIntN(SwitchOpTy.getSizeInBits(), Case.Mask)) {
         // Switch table case range are encoded into series of masks.
         // Just use pointer type, it's guaranteed to fit.
         MaskTy = LLT::scalar(PtrTy.getSizeInBits());
@@ -1734,10 +1734,6 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
     DstAlign = MCI->getDestAlign().valueOrOne();
     SrcAlign = MCI->getSourceAlign().valueOrOne();
     CopySize = dyn_cast<ConstantInt>(MCI->getArgOperand(2));
-  } else if (auto *MCI = dyn_cast<MemCpyInlineInst>(&CI)) {
-    DstAlign = MCI->getDestAlign().valueOrOne();
-    SrcAlign = MCI->getSourceAlign().valueOrOne();
-    CopySize = dyn_cast<ConstantInt>(MCI->getArgOperand(2));
   } else if (auto *MMI = dyn_cast<MemMoveInst>(&CI)) {
     DstAlign = MMI->getDestAlign().valueOrOne();
     SrcAlign = MMI->getSourceAlign().valueOrOne();
@@ -1933,6 +1929,10 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FMINIMUM;
     case Intrinsic::maximum:
       return TargetOpcode::G_FMAXIMUM;
+    case Intrinsic::minimumnum:
+      return TargetOpcode::G_FMINIMUMNUM;
+    case Intrinsic::maximumnum:
+      return TargetOpcode::G_FMAXIMUMNUM;
     case Intrinsic::canonicalize:
       return TargetOpcode::G_FCANONICALIZE;
     case Intrinsic::floor:

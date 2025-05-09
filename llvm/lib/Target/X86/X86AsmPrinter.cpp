@@ -17,6 +17,7 @@
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
+#include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
@@ -53,7 +54,7 @@ using namespace llvm;
 
 X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer)), FM(*this) {}
+    : AsmPrinter(TM, std::move(Streamer), ID), FM(*this) {}
 
 //===----------------------------------------------------------------------===//
 // Primitive Helper Functions.
@@ -743,7 +744,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         llvm_unreachable("unexpected operand type!");
       case MachineOperand::MO_GlobalAddress:
         PrintSymbolOperand(MO, O);
-        if (Subtarget->isPICStyleRIPRel())
+        if (Subtarget->is64Bit())
           O << "(%rip)";
         return false;
       case MachineOperand::MO_Register:
@@ -1085,6 +1086,11 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
     }
   }
 }
+
+char X86AsmPrinter::ID = 0;
+
+INITIALIZE_PASS(X86AsmPrinter, "x86-asm-printer", "X86 Assembly Printer", false,
+                false)
 
 //===----------------------------------------------------------------------===//
 // Target Registry Stuff
