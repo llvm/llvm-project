@@ -14328,6 +14328,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   auto MakeDimTileSize = [&SemaRef = this->SemaRef, &CopyTransformer, &Context,
                           SizesClause, CurScope](int I) -> Expr * {
     Expr *DimTileSizeExpr = SizesClause->getSizesRefs()[I];
+
+    if (DimTileSizeExpr->containsErrors())
+      return nullptr;
+
     if (isa<ConstantExpr>(DimTileSizeExpr))
       return AssertSuccess(CopyTransformer.TransformExpr(DimTileSizeExpr));
 
@@ -14397,10 +14401,13 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
 
     // For cond-expression:
     //   .tile.iv < min(.floor.iv + DimTileSize, NumIterations)
+    Expr *DimTileSize = MakeDimTileSize(I);
+    if (!DimTileSize)
+      return StmtError();
     ExprResult EndOfTile = SemaRef.BuildBinOp(
         CurScope, LoopHelper.Cond->getExprLoc(), BO_Add,
         makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
-        MakeDimTileSize(I));
+        DimTileSize);
     if (!EndOfTile.isUsable())
       return StmtError();
     ExprResult IsPartialTile =
@@ -14482,10 +14489,13 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
       return StmtError();
 
     // For incr-statement: .floor.iv += DimTileSize
+    Expr *DimTileSize = MakeDimTileSize(I);
+    if (!DimTileSize)
+      return StmtError();
     ExprResult IncrStmt = SemaRef.BuildBinOp(
         CurScope, LoopHelper.Inc->getExprLoc(), BO_AddAssign,
         makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
-        MakeDimTileSize(I));
+        DimTileSize);
     if (!IncrStmt.isUsable())
       return StmtError();
 
