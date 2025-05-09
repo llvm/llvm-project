@@ -181,9 +181,11 @@ function(compileDeviceRTLLibrary target_name target_triple)
   target_compile_options(libomptarget-${target_name} PRIVATE
     "--target=${target_triple}" "-fuse-ld=lld" "-march=" "-mcpu="
     "-Wno-unused-command-line-argument")
-  target_link_options(libomptarget-${target_name} PRIVATE "--target=${target_triple}"
-                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm"
-                      "-fuse-ld=lld" "-march=" "-mcpu=")
+  target_link_options(libomptarget-${target_name} PRIVATE
+    "--target=${target_triple}" "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm"
+    "-Wl,--lto-newpm-passes=default<O3>" "-Wl,-plugin-opt=-openmp-opt-disable"
+    "-Wl,-plugin-opt=-attributor-enable=module"
+    "-Wl,-plugin-opt=-vectorize-slp=false" "-fuse-ld=lld" "-march=" "-mcpu=")
   install(TARGETS libomptarget-${target_name}
           PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
           DESTINATION "lib${LLVM_LIBDIR_SUFFIX}/${target_triple}")
