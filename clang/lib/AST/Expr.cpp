@@ -2468,6 +2468,16 @@ bool BinaryOperator::isNullPointerArithmeticExtension(ASTContext &Ctx,
     return false;
   }
 
+  // Workaround for old glibc's __PTR_ALIGN macro
+  if (auto *Select =
+          dyn_cast<ConditionalOperator>(PExp->IgnoreParenNoopCasts(Ctx))) {
+    // If the condition can be constant evaluated, we check the selected arm.
+    bool EvalResult;
+    if (!Select->getCond()->EvaluateAsBooleanCondition(EvalResult, Ctx))
+      return false;
+    PExp = EvalResult ? Select->getTrueExpr() : Select->getFalseExpr();
+  }
+
   // Check that the pointer is a nullptr.
   if (!PExp->IgnoreParenCasts()
           ->isNullPointerConstant(Ctx, Expr::NPC_ValueDependentIsNotNull))
