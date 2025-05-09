@@ -1639,77 +1639,33 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 
   // Set the action for vector operations to "expand", then override it with
   // either "custom" or "legal" for specific cases.
+  // clang-format off
   static const unsigned VectExpOps[] = {
-      // Integer arithmetic:
-      ISD::ADD,
-      ISD::SUB,
-      ISD::MUL,
-      ISD::SDIV,
-      ISD::UDIV,
-      ISD::SREM,
-      ISD::UREM,
-      ISD::SDIVREM,
-      ISD::UDIVREM,
-      ISD::SADDO,
-      ISD::UADDO,
-      ISD::SSUBO,
-      ISD::USUBO,
-      ISD::SMUL_LOHI,
-      ISD::UMUL_LOHI,
-      // Logical/bit:
-      ISD::AND,
-      ISD::OR,
-      ISD::XOR,
-      ISD::ROTL,
-      ISD::ROTR,
-      ISD::CTPOP,
-      ISD::CTLZ,
-      ISD::CTTZ,
-      ISD::BSWAP,
-      ISD::BITREVERSE,
-      // Floating point arithmetic/math functions:
-      ISD::FADD,
-      ISD::FSUB,
-      ISD::FMUL,
-      ISD::FMA,
-      ISD::FDIV,
-      ISD::FREM,
-      ISD::FNEG,
-      ISD::FABS,
-      ISD::FSQRT,
-      ISD::FSIN,
-      ISD::FCOS,
-      ISD::FPOW,
-      ISD::FLOG,
-      ISD::FLOG2,
-      ISD::FLOG10,
-      ISD::FEXP,
-      ISD::FEXP2,
-      ISD::FCEIL,
-      ISD::FTRUNC,
-      ISD::FRINT,
-      ISD::FNEARBYINT,
-      ISD::FROUND,
-      ISD::FFLOOR,
-      ISD::FMINIMUMNUM,
-      ISD::FMAXIMUMNUM,
-      ISD::FSINCOS,
-      ISD::FLDEXP,
-      // Misc:
-      ISD::BR_CC,
-      ISD::SELECT_CC,
-      ISD::ConstantPool,
-      // Vector:
-      ISD::BUILD_VECTOR,
-      ISD::SCALAR_TO_VECTOR,
-      ISD::EXTRACT_VECTOR_ELT,
-      ISD::INSERT_VECTOR_ELT,
-      ISD::EXTRACT_SUBVECTOR,
-      ISD::INSERT_SUBVECTOR,
-      ISD::CONCAT_VECTORS,
-      ISD::VECTOR_SHUFFLE,
-      ISD::SPLAT_VECTOR,
+    // Integer arithmetic:
+    ISD::ADD,     ISD::SUB,     ISD::MUL,     ISD::SDIV,      ISD::UDIV,
+    ISD::SREM,    ISD::UREM,    ISD::SDIVREM, ISD::UDIVREM,   ISD::SADDO,
+    ISD::UADDO,   ISD::SSUBO,   ISD::USUBO,   ISD::SMUL_LOHI, ISD::UMUL_LOHI,
+    // Logical/bit:
+    ISD::AND,     ISD::OR,      ISD::XOR,     ISD::ROTL,    ISD::ROTR,
+    ISD::CTPOP,   ISD::CTLZ,    ISD::CTTZ,    ISD::BSWAP,   ISD::BITREVERSE,
+    // Floating point arithmetic/math functions:
+    ISD::FADD,    ISD::FSUB,    ISD::FMUL,    ISD::FMA,     ISD::FDIV,
+    ISD::FREM,    ISD::FNEG,    ISD::FABS,    ISD::FSQRT,   ISD::FSIN,
+    ISD::FCOS,    ISD::FPOW,    ISD::FLOG,    ISD::FLOG2,
+    ISD::FLOG10,  ISD::FEXP,    ISD::FEXP2,   ISD::FCEIL,   ISD::FTRUNC,
+    ISD::FRINT,   ISD::FNEARBYINT,            ISD::FROUND,  ISD::FFLOOR,
+    ISD::FMINIMUMNUM,           ISD::FMAXIMUMNUM,
+    ISD::FSINCOS, ISD::FLDEXP,
+    // Misc:
+    ISD::BR_CC,   ISD::SELECT_CC,             ISD::ConstantPool,
+    // Vector:
+    ISD::BUILD_VECTOR,          ISD::SCALAR_TO_VECTOR,
+    ISD::EXTRACT_VECTOR_ELT,    ISD::INSERT_VECTOR_ELT,
+    ISD::EXTRACT_SUBVECTOR,     ISD::INSERT_SUBVECTOR,
+    ISD::CONCAT_VECTORS,        ISD::VECTOR_SHUFFLE,
+    ISD::SPLAT_VECTOR,
   };
+  // clang-format on
 
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
     for (unsigned VectExpOp : VectExpOps)
