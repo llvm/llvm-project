@@ -138,12 +138,14 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<256>], Features = "avx" in
   }
 }
 
-// PRFCHW
-let Features = "prfchw", Header = "intrin.h", Attributes = [NoThrow, Const] in {
+let Features = "mmx", Header = "mmintrin.h", Attributes = [NoThrow, Const] in {
   def _m_prefetch : X86LibBuiltin<"void(void *)">;
-  def _m_prefetchw : X86LibBuiltin<"void(void volatile const *)">;
 }
 
+// PRFCHW
+let Features = "prfchw", Header = "intrin.h", Attributes = [NoThrow, Const] in {
+  def _m_prefetchw : X86LibBuiltin<"void(void volatile const *)">;
+}
 
 // Mechanically ported builtins from the original `.def` file.
 //
