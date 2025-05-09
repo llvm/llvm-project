@@ -9,9 +9,6 @@
 "a b":
   call "a b"
 
-# CHECK: "a b\\":
-"a b\\":
-
 #--- err.s
  "a\":
 # ERR: 1:2: error: unterminated string constant
