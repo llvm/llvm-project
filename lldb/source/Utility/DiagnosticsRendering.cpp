@@ -185,9 +185,8 @@ void RenderDiagnosticDetails(Stream &stream,
 
   // Work through each detail in reverse order using the vector/stack.
   bool did_print = false;
-  for (auto detail = remaining_details.rbegin();
-       detail != remaining_details.rend();
-       ++detail, remaining_details.pop_back()) {
+  for (; !remaining_details.empty(); remaining_details.pop_back()) {
+    auto &detail = remaining_details.back();
     // Get the information to print this detail and remove it from the stack.
     // Print all the lines for all the other messages first.
     stream << std::string(padding, ' ');
@@ -196,7 +195,7 @@ void RenderDiagnosticDetails(Stream &stream,
          llvm::ArrayRef(remaining_details).drop_back(1)) {
       uint16_t column = remaining_detail.source_location->column;
       // Is this a note with the same column as another diagnostic?
-      if (column == detail->source_location->column)
+      if (column == detail.source_location->column)
         continue;
 
       if (column >= x_pos) {
@@ -205,16 +204,16 @@ void RenderDiagnosticDetails(Stream &stream,
       }
     }
 
-    uint16_t column = detail->source_location->column;
+    uint16_t column = detail.source_location->column;
     // Print the line connecting the ^ with the error message.
     if (column >= x_pos)
       stream << std::string(column - x_pos, ' ') << joint << hbar << spacer;
 
     // Print a colorized string based on the message's severity type.
-    PrintSeverity(stream, detail->severity);
+    PrintSeverity(stream, detail.severity);
 
     // Finally, print the message and start a new line.
-    stream << detail->message << '\n';
+    stream << detail.message << '\n';
     did_print = true;
   }
 
