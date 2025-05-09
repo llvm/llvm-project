@@ -38,7 +38,7 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   SmallVector<ReassociationIndices, 4> reassociationMap;
   reassociationMap.reserve(numTargetDims);
 
-  unsigned sourceDim = 0, targetDim = 0;
+  unsigned sourceDimIdx = 0, targetDimIdx = 0;
   // Source dimensions iteration logic for static target dimensions.
   // FIXME: Instead of lambda-capturing this function's source shape index "in
   // place", consider refactoring this into a separate function.
@@ -48,12 +48,12 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
     ReassociationIndices resultIndices;
     int64_t prodOfCollapsedDims = 1;
     bool reachedTargetDimSize = false;
-    for (; sourceDim < numSourceDims; ++sourceDim) {
+    for (; sourceDimIdx < numSourceDims; ++sourceDimIdx) {
       // Source shape cannot be dynamic if the target dim is static.
-      if (sourceShape[sourceDim] == ShapedType::kDynamic)
+      if (sourceShape[sourceDimIdx] == ShapedType::kDynamic)
         return failure();
-      prodOfCollapsedDims *= sourceShape[sourceDim];
-      resultIndices.push_back(sourceDim);
+      prodOfCollapsedDims *= sourceShape[sourceDimIdx];
+      resultIndices.push_back(sourceDimIdx);
       if (prodOfCollapsedDims > targetShape && !mayHaveOffset)
         return failure();
       while (prodOfCollapsedDims > targetShape) {
@@ -64,7 +64,7 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
       }
       if (prodOfCollapsedDims == targetShape) {
         reachedTargetDimSize = true;
-        ++sourceDim;
+        ++sourceDimIdx;
         break;
       }
     }
@@ -80,18 +80,18 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
           bool mapConsecutiveDynDims) -> FailureOr<ReassociationIndices> {
     ReassociationIndices resultIndices;
     bool foundFirstDynamic = false;
-    while (sourceDim < numSourceDims) {
-      if (sourceShape[sourceDim] == ShapedType::kDynamic) {
+    while (sourceDimIdx < numSourceDims) {
+      if (sourceShape[sourceDimIdx] == ShapedType::kDynamic) {
         if (foundFirstDynamic && !mapConsecutiveDynDims)
           break;
         foundFirstDynamic |= true;
       } else {
         if (foundFirstDynamic)
           break;
-        else if (sourceShape[sourceDim] > 1 && !allowStaticNonOnes)
+        else if (sourceShape[sourceDimIdx] > 1 && !allowStaticNonOnes)
           return failure();
       }
-      resultIndices.push_back(sourceDim++);
+      resultIndices.push_back(sourceDimIdx++);
     }
     if (!foundFirstDynamic)
       return failure();
@@ -99,10 +99,10 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   };
   // Iterate over target shape.
   bool wasLastDimDynamic = false;
-  for (; targetDim < numTargetDims; ++targetDim) {
-    int64_t currTargetShape = targetShape[targetDim];
+  for (; targetDimIdx < numTargetDims; ++targetDimIdx) {
+    int64_t currTargetShape = targetShape[targetDimIdx];
     if (currTargetShape != ShapedType::kDynamic) {
-      unsigned sourceDimAtStart = sourceDim;
+      unsigned sourceDimAtStart = sourceDimIdx;
       auto indices = collectSourceIndicesForStaticTargetDim(
           currTargetShape, /*mayHaveOffset=*/wasLastDimDynamic);
       if (failed(indices))
@@ -118,8 +118,9 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
       continue;
     }
 
-    bool isNextDimDynamic = targetDim + 1 < numTargetDims &&
-                            targetShape[targetDim + 1] == ShapedType::kDynamic;
+    bool isNextDimDynamic =
+        targetDimIdx + 1 < numTargetDims &&
+        targetShape[targetDimIdx + 1] == ShapedType::kDynamic;
     auto indices = collectSourceIndicesForDynamicTargetDim(
         /*allowStaticNonOnes=*/!wasLastDimDynamic,
         /*mapConsecutiveDynDims=*/!wasLastDimDynamic && !isNextDimDynamic);
@@ -130,9 +131,9 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   }
   // Now that we've mapped all the target dimensions, process any remaining
   // entries in the source shape explicitly.
-  for (; sourceDim < numSourceDims; sourceDim++) {
-    const bool isOne = sourceShape[sourceDim] == 1,
-               isDynamic = sourceShape[sourceDim] == ShapedType::kDynamic;
+  for (; sourceDimIdx < numSourceDims; sourceDimIdx++) {
+    const bool isOne = sourceShape[sourceDimIdx] == 1,
+               isDynamic = sourceShape[sourceDimIdx] == ShapedType::kDynamic;
     if (targetShape.empty()) {
       if (!isOne && !isDynamic)
         return std::nullopt;
@@ -145,7 +146,7 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
     if (!wasLastDimDynamic && !isOne)
       return std::nullopt;
     assert(!reassociationMap.empty());
-    reassociationMap.back().push_back(sourceDim);
+    reassociationMap.back().push_back(sourceDimIdx);
   }
   return reassociationMap;
 }
