@@ -561,8 +561,8 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   HLSLResourceBindingAttr *RBA = Dcl->getAttr<HLSLResourceBindingAttr>();
   if (!RBA || RBA->isImplicit()) {
     SemaRef.Diag(Dcl->getLocation(), diag::warn_hlsl_implicit_binding);
-    // Use HLSLResourceBindingAttr as a way to transfer implicit binding
-    // order_ID to codegen. If it does not exist, create an implicit one.
+    // Use HLSLResourceBindingAttr to transfer implicit binding order_ID
+    // to codegen. If it does not exist, create an implicit attribute.
     uint32_t OrderID = getNextImplicitBindingOrderID();
     if (RBA)
       RBA->setImplicitBindingOrderID(OrderID);
