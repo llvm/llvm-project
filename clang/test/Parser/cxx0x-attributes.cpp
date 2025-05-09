@@ -46,7 +46,7 @@ int & [[noreturn]] ref_attr_3 = after_attr; // expected-error {{'noreturn' attri
 int && [[]] rref_attr = 0;
 int array_attr [1] [[]];
 alignas(8) int aligned_attr;
-[[test::valid(for 42 [very] **** '+' symbols went on a trip and had a "good"_time; the end.)]] int garbage_attr; // expected-warning {{unknown attribute 'valid' ignored}}
+[[test::valid(for 42 [very] **** '+' symbols went on a trip and had a "good"_time; the end.)]] int garbage_attr; // expected-warning {{unknown attribute 'test::valid' ignored}}
 [[,,,static, class, namespace,, inline, constexpr, mutable,, bitand, bitor::compl(!.*_ Cx.!U^*R),,,]] int more_garbage_attr; // expected-warning {{unknown attribute 'static' ignored}} \
     // expected-warning {{unknown attribute 'class' ignored}} \
     // expected-warning {{unknown attribute 'namespace' ignored}} \
@@ -54,7 +54,7 @@ alignas(8) int aligned_attr;
     // expected-warning {{unknown attribute 'constexpr' ignored}} \
     // expected-warning {{unknown attribute 'mutable' ignored}} \
     // expected-warning {{unknown attribute 'bitand' ignored}} \
-    // expected-warning {{unknown attribute 'compl' ignored}}
+    // expected-warning {{unknown attribute 'bitor::compl' ignored}}
 [[u8"invalid!"]] int invalid_string_attr; // expected-error {{expected ']'}}
 void fn_attr () [[]];
 void noexcept_fn_attr () noexcept [[]];
@@ -293,7 +293,7 @@ template <int... Is> void variadic_nttp() {
   void baz [[clang::no_sanitize(Is...)]] ();          // expected-error {{expected string literal as argument of 'no_sanitize' attribute}}
   void bor [[clang::annotate("A", "V" ...)]] ();      // expected-error {{pack expansion does not contain any unexpanded parameter packs}}
   void bir [[clang::annotate("B", {1, 2, 3, 4})]] (); // expected-error {{'annotate' attribute requires parameter 1 to be a constant expression}} expected-note {{subexpression not valid in a constant expression}}
-  void boo [[unknown::foo(Is...)]] ();                // expected-warning {{unknown attribute 'foo' ignored}}
+  void boo [[unknown::foo(Is...)]] ();                // expected-warning {{unknown attribute 'unknown::foo' ignored}}
   void faz [[clang::annotate("C", (Is + ...))]] ();   // expected-warning {{pack fold expression is a C++17 extension}}
   void far [[clang::annotate("D", Is...)]] ();
   void foz [[clang::annotate("E", 1, 2, 3, Is...)]] ();

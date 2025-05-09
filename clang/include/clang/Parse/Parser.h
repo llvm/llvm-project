@@ -264,6 +264,8 @@ class Parser : public CodeCompletionHandler {
   mutable IdentifierInfo *Ident_final;
   mutable IdentifierInfo *Ident_GNU_final;
   mutable IdentifierInfo *Ident_override;
+  mutable IdentifierInfo *Ident_trivially_relocatable_if_eligible;
+  mutable IdentifierInfo *Ident_replaceable_if_eligible;
 
   // C++2a contextual keywords.
   mutable IdentifierInfo *Ident_import;
@@ -3199,6 +3201,16 @@ private:
                                           SourceLocation FriendLoc);
 
   bool isCXX11FinalKeyword() const;
+
+  bool isCXX2CTriviallyRelocatableKeyword(Token Tok) const;
+  bool isCXX2CTriviallyRelocatableKeyword() const;
+  void ParseCXX2CTriviallyRelocatableSpecifier(SourceLocation &TRS);
+
+  bool isCXX2CReplaceableKeyword(Token Tok) const;
+  bool isCXX2CReplaceableKeyword() const;
+  void ParseCXX2CReplaceableSpecifier(SourceLocation &MRS);
+
+  bool isClassCompatibleKeyword(Token Tok) const;
   bool isClassCompatibleKeyword() const;
 
   /// DeclaratorScopeObj - RAII object used in Parser::ParseDirectDeclarator to

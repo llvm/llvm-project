@@ -2027,7 +2027,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
            (DSC != DeclSpecContext::DSC_association &&
             getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||
            (isClassCompatibleKeyword() &&
-            (NextToken().is(tok::l_brace) || NextToken().is(tok::colon)))) {
+            (NextToken().is(tok::l_brace) || NextToken().is(tok::colon) ||
+             isClassCompatibleKeyword(NextToken())))) {
     if (DS.isFriendSpecified()) {
       // C++ [class.friend]p2:
       //   A class shall not be defined in a friend declaration.
@@ -2046,15 +2047,15 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
              (NextToken().is(tok::l_square) ||
               NextToken().is(tok::kw_alignas) ||
               NextToken().isRegularKeywordAttribute() ||
-              isCXX11VirtSpecifier(NextToken()) != VirtSpecifiers::VS_None)) {
+              isCXX11VirtSpecifier(NextToken()) != VirtSpecifiers::VS_None ||
+              isCXX2CTriviallyRelocatableKeyword())) {
     // We can't tell if this is a definition or reference
     // until we skipped the 'final' and C++11 attribute specifiers.
     TentativeParsingAction PA(*this);
 
     // Skip the 'final', abstract'... keywords.
-    while (isClassCompatibleKeyword()) {
+    while (isClassCompatibleKeyword())
       ConsumeToken();
-    }
 
     // Skip C++11 attribute specifiers.
     while (true) {
@@ -2696,14 +2697,74 @@ bool Parser::isCXX11FinalKeyword() const {
          Specifier == VirtSpecifiers::VS_Sealed;
 }
 
+bool Parser::isCXX2CTriviallyRelocatableKeyword(Token Tok) const {
+  if (!getLangOpts().CPlusPlus || Tok.isNot(tok::identifier))
+    return false;
+  if (!Ident_trivially_relocatable_if_eligible)
+    Ident_trivially_relocatable_if_eligible =
+        &PP.getIdentifierTable().get("trivially_relocatable_if_eligible");
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+  return II == Ident_trivially_relocatable_if_eligible;
+}
+
+bool Parser::isCXX2CTriviallyRelocatableKeyword() const {
+  return isCXX2CTriviallyRelocatableKeyword(Tok);
+}
+
+void Parser::ParseCXX2CTriviallyRelocatableSpecifier(SourceLocation &TRS) {
+  assert(isCXX2CTriviallyRelocatableKeyword() &&
+         "expected a trivially_relocatable specifier");
+
+  Diag(Tok.getLocation(), getLangOpts().CPlusPlus26
+                              ? diag::warn_relocatable_keyword
+                              : diag::ext_relocatable_keyword)
+      << /*relocatable*/ 0;
+
+  TRS = ConsumeToken();
+}
+
+bool Parser::isCXX2CReplaceableKeyword(Token Tok) const {
+  if (!getLangOpts().CPlusPlus || Tok.isNot(tok::identifier))
+    return false;
+  if (!Ident_replaceable_if_eligible)
+    Ident_replaceable_if_eligible =
+        &PP.getIdentifierTable().get("replaceable_if_eligible");
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+  return II == Ident_replaceable_if_eligible;
+}
+
+bool Parser::isCXX2CReplaceableKeyword() const {
+  return isCXX2CReplaceableKeyword(Tok);
+}
+
+void Parser::ParseCXX2CReplaceableSpecifier(SourceLocation &MRS) {
+  assert(isCXX2CReplaceableKeyword() &&
+         "expected a replaceable_if_eligible specifier");
+
+  Diag(Tok.getLocation(), getLangOpts().CPlusPlus26
+                              ? diag::warn_relocatable_keyword
+                              : diag::ext_relocatable_keyword)
+      << /*replaceable*/ 1;
+
+  MRS = ConsumeToken();
+}
+
 /// isClassCompatibleKeyword - Determine whether the next token is a C++11
-/// 'final' or Microsoft 'sealed' or 'abstract' contextual keywords.
-bool Parser::isClassCompatibleKeyword() const {
-  VirtSpecifiers::Specifier Specifier = isCXX11VirtSpecifier();
+/// 'final', a C++26 'trivially_relocatable_if_eligible',
+/// 'replaceable_if_eligible', or Microsoft 'sealed' or 'abstract' contextual
+/// keyword.
+bool Parser::isClassCompatibleKeyword(Token Tok) const {
+  if (isCXX2CTriviallyRelocatableKeyword(Tok) || isCXX2CReplaceableKeyword(Tok))
+    return true;
+  VirtSpecifiers::Specifier Specifier = isCXX11VirtSpecifier(Tok);
   return Specifier == VirtSpecifiers::VS_Final ||
          Specifier == VirtSpecifiers::VS_GNU_Final ||
          Specifier == VirtSpecifiers::VS_Sealed ||
          Specifier == VirtSpecifiers::VS_Abstract;
+}
+
+bool Parser::isClassCompatibleKeyword() const {
+  return isClassCompatibleKeyword(Tok);
 }
 
 /// Parse a C++ member-declarator up to, but not including, the optional
@@ -3600,21 +3661,19 @@ void Parser::SkipCXXMemberSpecification(SourceLocation RecordLoc,
                                         SourceLocation AttrFixitLoc,
                                         unsigned TagType, Decl *TagDecl) {
   // Skip the optional 'final' keyword.
-  if (getLangOpts().CPlusPlus && Tok.is(tok::identifier)) {
-    assert(isCXX11FinalKeyword() && "not a class definition");
+  while (isClassCompatibleKeyword())
     ConsumeToken();
 
-    // Diagnose any C++11 attributes after 'final' keyword.
-    // We deliberately discard these attributes.
-    ParsedAttributes Attrs(AttrFactory);
-    CheckMisplacedCXX11Attribute(Attrs, AttrFixitLoc);
+  // Diagnose any C++11 attributes after 'final' keyword.
+  // We deliberately discard these attributes.
+  ParsedAttributes Attrs(AttrFactory);
+  CheckMisplacedCXX11Attribute(Attrs, AttrFixitLoc);
 
-    // This can only happen if we had malformed misplaced attributes;
-    // we only get called if there is a colon or left-brace after the
-    // attributes.
-    if (Tok.isNot(tok::colon) && Tok.isNot(tok::l_brace))
-      return;
-  }
+  // This can only happen if we had malformed misplaced attributes;
+  // we only get called if there is a colon or left-brace after the
+  // attributes.
+  if (Tok.isNot(tok::colon) && Tok.isNot(tok::l_brace))
+    return;
 
   // Skip the base clauses. This requires actually parsing them, because
   // otherwise we can't be sure where they end (a left brace may appear
@@ -3828,13 +3887,38 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   SourceLocation AbstractLoc;
   bool IsFinalSpelledSealed = false;
   bool IsAbstract = false;
+  SourceLocation TriviallyRelocatable;
+  SourceLocation Replaceable;
 
   // Parse the optional 'final' keyword.
   if (getLangOpts().CPlusPlus && Tok.is(tok::identifier)) {
     while (true) {
       VirtSpecifiers::Specifier Specifier = isCXX11VirtSpecifier(Tok);
-      if (Specifier == VirtSpecifiers::VS_None)
+      if (Specifier == VirtSpecifiers::VS_None) {
+        if (isCXX2CTriviallyRelocatableKeyword(Tok)) {
+          if (TriviallyRelocatable.isValid()) {
+            auto Skipped = Tok;
+            ConsumeToken();
+            Diag(Skipped, diag::err_duplicate_class_relocation_specifier)
+                << /*trivial_relocatable*/ 0 << TriviallyRelocatable;
+          } else {
+            ParseCXX2CTriviallyRelocatableSpecifier(TriviallyRelocatable);
+          }
+          continue;
+        }
+        if (isCXX2CReplaceableKeyword(Tok)) {
+          if (Replaceable.isValid()) {
+            auto Skipped = Tok;
+            ConsumeToken();
+            Diag(Skipped, diag::err_duplicate_class_relocation_specifier)
+                << /*replaceable*/ 1 << Replaceable;
+          } else {
+            ParseCXX2CReplaceableSpecifier(Replaceable);
+          }
+          continue;
+        }
         break;
+      }
       if (isCXX11FinalKeyword()) {
         if (FinalLoc.isValid()) {
           auto Skipped = ConsumeToken();
@@ -3870,7 +3954,8 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
       else if (Specifier == VirtSpecifiers::VS_GNU_Final)
         Diag(FinalLoc, diag::ext_warn_gnu_final);
     }
-    assert((FinalLoc.isValid() || AbstractLoc.isValid()) &&
+    assert((FinalLoc.isValid() || AbstractLoc.isValid() ||
+            TriviallyRelocatable.isValid() || Replaceable.isValid()) &&
            "not a class definition");
 
     // Parse any C++11 attributes after 'final' keyword.
@@ -3943,9 +4028,9 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   T.consumeOpen();
 
   if (TagDecl)
-    Actions.ActOnStartCXXMemberDeclarations(getCurScope(), TagDecl, FinalLoc,
-                                            IsFinalSpelledSealed, IsAbstract,
-                                            T.getOpenLocation());
+    Actions.ActOnStartCXXMemberDeclarations(
+        getCurScope(), TagDecl, FinalLoc, IsFinalSpelledSealed, IsAbstract,
+        TriviallyRelocatable, Replaceable, T.getOpenLocation());
 
   // C++ 11p3: Members of a class defined with the keyword class are private
   // by default. Members of a class defined with the keywords struct or union
