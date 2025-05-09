@@ -622,6 +622,23 @@ public:
   getOrCreateOpTypePipe(MachineIRBuilder &MIRBuilder,
                         SPIRV::AccessQualifier::AccessQualifier AccQual);
   SPIRVType *getOrCreateOpTypeDeviceEvent(MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeVmeImageINTEL(MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeAvcMcePayloadINTEL(MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeAvcImePayloadINTEL(MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeAvcRefPayloadINTEL(MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeAvcSicPayloadINTEL(MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeAvcMceResultINTEL(MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeAvcImeResultINTEL(MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeAvcImeResultSingleReferenceStreamoutINTEL(
+      MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeAvcImeResultDualReferenceStreamoutINTEL(
+      MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeAvcImeSingleReferenceStreaminINTEL(
+      MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeAvcImeDualReferenceStreaminINTEL(
+      MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeAvcRefResultINTEL(MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeAvcSicResultINTEL(MachineIRBuilder &MIRBuilder);
   SPIRVType *getOrCreateOpTypeFunctionWithArgs(
       const Type *Ty, SPIRVType *RetType,
       const SmallVectorImpl<SPIRVType *> &ArgTypes,

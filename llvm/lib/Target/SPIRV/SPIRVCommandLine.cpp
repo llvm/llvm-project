@@ -97,7 +97,10 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::
              SPV_INTEL_subgroup_matrix_multiply_accumulate},
         {"SPV_INTEL_ternary_bitwise_function",
-         SPIRV::Extension::Extension::SPV_INTEL_ternary_bitwise_function}};
+         SPIRV::Extension::Extension::SPV_INTEL_ternary_bitwise_function},
+        {"SPV_INTEL_device_side_avc_motion_estimation",
+         SPIRV::Extension::Extension::
+             SPV_INTEL_device_side_avc_motion_estimation}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,

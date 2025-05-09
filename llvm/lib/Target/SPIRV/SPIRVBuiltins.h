@@ -47,6 +47,10 @@ std::tuple<int, unsigned, unsigned>
 mapBuiltinToOpcode(const StringRef DemangledCall,
                    SPIRV::InstructionSet::InstructionSet Set);
 
+// This enum represents different types of operations in the extension
+// SPV_INTEL_device_side_avc_motion_estimation
+enum AvcOpKind { IME, REF, SIC };
+
 /// Parses the provided \p ArgIdx argument base type in the \p DemangledCall
 /// skeleton. A base type is either a basic type (e.g. i32 for int), pointer
 /// element type (e.g. i8 for char*), or builtin type (TargetExtType).

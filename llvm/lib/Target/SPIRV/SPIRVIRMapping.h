@@ -67,6 +67,19 @@ enum SpecialTypeKind {
   STK_MachineInstr,
   STK_VkBuffer,
   STK_ExplictLayoutType,
+  STK_AvcVmeImage,
+  STK_AvcMcePayload,
+  STK_AvcImePayload,
+  STK_AvcRefPayload,
+  STK_AvcSicPayload,
+  STK_AvcMceResult,
+  STK_AvcImeResult,
+  STK_AvcImeResultSingleReferenceStreamout,
+  STK_AvcImeResultDualReferenceStreamout,
+  STK_AvcImeSingleReferenceStreamin,
+  STK_AvcImeDualReferenceStreamin,
+  STK_AvcRefResult,
+  STK_AvcSicResult,
   STK_Last = -1
 };
 
@@ -154,6 +167,10 @@ inline IRHandle irhandle_vkbuffer(const Type *ElementType,
 inline IRHandle irhandle_explict_layout_type(const Type *Ty) {
   const Type *WrpTy = unifyPtrType(Ty);
   return irhandle_ptr(WrpTy, Ty->getTypeID(), STK_ExplictLayoutType);
+}
+
+inline IRHandle irhandle_avc(SpecialTypeKind STK) {
+  return std::make_tuple(nullptr, 0U, STK);
 }
 
 inline IRHandle handle(const Type *Ty) {
