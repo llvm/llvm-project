@@ -450,14 +450,6 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
-  if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
-    outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
-    processFileBuildID(*FileBuildID);
-  } else {
-    errs() << "BOLT-WARNING: build-id will not be checked because we could "
-              "not read one from input binary\n";
-  }
-
   auto ErrorCallback = [](int ReturnCode, StringRef ErrBuf) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
     exit(1);
@@ -474,6 +466,14 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     if (std::error_code EC = parsePreAggregated())
       return errorCodeToError(EC);
     goto heatmap;
+  }
+
+  if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
+    outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
+    processFileBuildID(*FileBuildID);
+  } else {
+    errs() << "BOLT-WARNING: build-id will not be checked because we could "
+              "not read one from input binary\n";
   }
 
   if (BC.IsLinuxKernel) {
@@ -518,13 +518,12 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   deleteTempFiles();
 
 heatmap:
-  if (opts::HeatmapMode) {
-    if (std::error_code EC = printLBRHeatMap())
-      return errorCodeToError(EC);
-    exit(0);
-  }
+  if (!opts::HeatmapMode)
+    return Error::success();
 
-  return Error::success();
+  if (std::error_code EC = printLBRHeatMap())
+    return errorCodeToError(EC);
+  exit(0);
 }
 
 Error DataAggregator::readProfile(BinaryContext &BC) {
@@ -1357,12 +1356,10 @@ std::error_code DataAggregator::printLBRHeatMap() {
     HM.printCDF(opts::OutputFilename);
   else
     HM.printCDF(opts::OutputFilename + ".csv");
-  Heatmap::SectionStatsMap Stats = HM.computeSectionStats();
   if (opts::OutputFilename == "-")
-    HM.printSectionHotness(Stats, opts::OutputFilename);
+    HM.printSectionHotness(opts::OutputFilename);
   else
-    HM.printSectionHotness(Stats,
-                           opts::OutputFilename + "-section-hotness.csv");
+    HM.printSectionHotness(opts::OutputFilename + "-section-hotness.csv");
 
   return std::error_code();
 }
