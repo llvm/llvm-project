@@ -1306,7 +1306,7 @@ class DebugAdapterServer(DebugCommunication):
             process = self.process
             self.process = None
             try:
-                # When we close stdin it should signal the lldb-dap that no 
+                # When we close stdin it should signal the lldb-dap that no
                 # new messages will arrive and it should shutdown on its own.
                 process.stdin.close()
                 process.wait(timeout=20)
@@ -1317,11 +1317,11 @@ class DebugAdapterServer(DebugCommunication):
                 raise DebugAdapterProcessError(process.returncode)
 
 
-class DebugAdapterError(Exception): pass
+class DebugAdapterError(Exception):
+    pass
 
 class DebugAdapterProcessError(DebugAdapterError):
-    """Raised when the lldb-dap process exits with a non-zero exit status.
-    """
+    """Raised when the lldb-dap process exits with a non-zero exit status."""
 
     def __init__(self, returncode):
         self.returncode = returncode
