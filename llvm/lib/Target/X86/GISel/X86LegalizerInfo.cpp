@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -498,7 +499,16 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                 (typePairInSet(0, 1, {{s64, s32}})(Query) ||
                  (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query))));
       })
-      .clampScalar(1, s32, sMaxScalar)
+      .customIf([=](const LegalityQuery &Query) -> bool {
+        if (!UseX87)
+          return false;
+        if ((typeIs(0, s32)(Query) && HasSSE1) ||
+            (typeIs(0, s64)(Query) && HasSSE2))
+          return false;
+        return typeInSet(0, {s32, s64, s80})(Query) &&
+               typeInSet(1, {s16, s32, s64})(Query);
+      })
+      .clampScalar(1, (UseX87 && !HasSSE1) ? s16 : s32, sMaxScalar)
       .widenScalarToNextPow2(1)
       .clampScalar(0, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(0);
@@ -512,9 +522,18 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                 (typePairInSet(0, 1, {{s32, s64}})(Query) ||
                  (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query))));
       })
-      .clampScalar(1, s32, HasSSE2 ? s64 : s32)
+      .customIf([=](const LegalityQuery &Query) -> bool {
+        if (!UseX87)
+          return false;
+        if ((typeIs(1, s32)(Query) && HasSSE1) ||
+            (typeIs(1, s64)(Query) && HasSSE2))
+          return false;
+        return typeInSet(0, {s16, s32, s64})(Query) &&
+               typeInSet(1, {s32, s64, s80})(Query);
+      })
+      .clampScalar(0, (UseX87 && !HasSSE1) ? s16 : s32, sMaxScalar)
       .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, sMaxScalar)
+      .clampScalar(1, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(1);
 
   // For G_UITOFP and G_FPTOUI without AVX512, we have to custom legalize types
@@ -671,8 +690,75 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeUITOFP(MI, MRI, Helper);
   case TargetOpcode::G_STORE:
     return legalizeNarrowingStore(MI, MRI, Helper);
+  case TargetOpcode::G_SITOFP:
+    return legalizeSITOFP(MI, MRI, Helper);
+  case TargetOpcode::G_FPTOSI:
+    return legalizeFPTOSI(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
+}
+
+bool X86LegalizerInfo::legalizeSITOFP(MachineInstr &MI,
+                                      MachineRegisterInfo &MRI,
+                                      LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineFunction &MF = *MI.getMF();
+  auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
+
+  assert((SrcTy.getSizeInBits() == 16 || SrcTy.getSizeInBits() == 32 ||
+          SrcTy.getSizeInBits() == 64) &&
+         "Unexpected source type for SITOFP in X87 mode.");
+
+  const LLT p0 = LLT::pointer(0, MF.getTarget().getPointerSizeInBits(0));
+  int MemSize = SrcTy.getSizeInBytes();
+  int StackSlot =
+      MF.getFrameInfo().CreateStackObject(MemSize, Align(MemSize), false);
+
+  auto SlotPointer = MIRBuilder.buildFrameIndex(p0, StackSlot);
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, StackSlot);
+  MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOStore, MemSize, Align(MemSize));
+
+  // Store the integer value on the FPU stack.
+  MIRBuilder.buildStore(Src, SlotPointer, *StoreMMO);
+
+  MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, MemSize, Align(MemSize));
+  MIRBuilder.buildInstr(X86::G_FILD)
+      .addDef(Dst)
+      .addUse(SlotPointer.getReg(0))
+      .addMemOperand(LoadMMO);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeFPTOSI(MachineInstr &MI,
+                                      MachineRegisterInfo &MRI,
+                                      LegalizerHelper &Helper) const {
+  MachineFunction &MF = *MI.getMF();
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  const LLT p0 = LLT::pointer(0, MF.getTarget().getPointerSizeInBits(0));
+  auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
+
+  unsigned MemSize = DstTy.getSizeInBytes();
+  int StackSlot =
+      MF.getFrameInfo().CreateStackObject(MemSize, Align(MemSize), false);
+
+  auto SlotPointer = MIRBuilder.buildFrameIndex(p0, StackSlot);
+
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, StackSlot);
+  MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOStore, MemSize, Align(MemSize));
+
+  MIRBuilder.buildInstr(X86::G_FIST)
+      .addUse(Src)
+      .addUse(SlotPointer.getReg(0))
+      .addMemOperand(StoreMMO);
+
+  MIRBuilder.buildLoad(Dst, SlotPointer, PtrInfo, Align(MemSize));
+  MI.eraseFromParent();
+  return true;
 }
 
 bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,

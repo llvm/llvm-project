@@ -841,13 +841,21 @@ def X86fldf80 : PatFrag<(ops node:$ptr), (X86fld node:$ptr), [{
 
 def X86fild16 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return checkMemoryOpSize(MI, 2); }];
+}
+
 def X86fild32 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return checkMemoryOpSize(MI, 4); }];
+}
+
 def X86fild64 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return checkMemoryOpSize(MI, 8); }];
+}
 
 def X86fist32 : PatFrag<(ops node:$val, node:$ptr),
                         (X86fist node:$val, node:$ptr), [{
@@ -862,15 +870,23 @@ def X86fist64 : PatFrag<(ops node:$val, node:$ptr),
 def X86fp_to_i16mem : PatFrag<(ops node:$val, node:$ptr),
                               (X86fp_to_mem node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return checkMemoryOpSize(MI, 2); }];
+}
+
 def X86fp_to_i32mem : PatFrag<(ops node:$val, node:$ptr),
                               (X86fp_to_mem node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return checkMemoryOpSize(MI, 4); }];
+}
+
 def X86fp_to_i64mem : PatFrag<(ops node:$val, node:$ptr),
                               (X86fp_to_mem node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return checkMemoryOpSize(MI, 8); }];
+}
 
 //===----------------------------------------------------------------------===//
 // FPStack pattern fragments
