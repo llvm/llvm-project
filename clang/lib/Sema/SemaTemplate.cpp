@@ -7665,9 +7665,8 @@ ExprResult Sema::BuildExpressionFromDeclTemplateArgument(
   QualType DestExprType = ParamType.getNonLValueExprType(Context);
   if (!Context.hasSameType(RefExpr.get()->getType(), DestExprType)) {
     CastKind CK;
-    QualType Ignored;
     if (Context.hasSimilarType(RefExpr.get()->getType(), DestExprType) ||
-        IsFunctionConversion(RefExpr.get()->getType(), DestExprType, Ignored)) {
+        IsFunctionConversion(RefExpr.get()->getType(), DestExprType)) {
       CK = CK_NoOp;
     } else if (ParamType->isVoidPointerType() &&
                RefExpr.get()->getType()->isPointerType()) {

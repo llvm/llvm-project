@@ -1333,7 +1333,7 @@ bool Sema::isSameOrCompatibleFunctionType(QualType P, QualType A) {
     return Context.hasSameType(P, A);
 
   // Noreturn and noexcept adjustment.
-  if (QualType AdjustedParam; IsFunctionConversion(P, A, AdjustedParam))
+  if (QualType AdjustedParam; TryFunctionConversion(P, A, AdjustedParam))
     P = AdjustedParam;
 
   // FIXME: Compatible calling conventions.
@@ -3732,8 +3732,7 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
     // FIXME: Resolve core issue (no number yet): if the original P is a
     // reference type and the transformed A is function type "noexcept F",
     // the deduced A can be F.
-    QualType Tmp;
-    if (A->isFunctionType() && S.IsFunctionConversion(A, DeducedA, Tmp))
+    if (A->isFunctionType() && S.IsFunctionConversion(A, DeducedA))
       return TemplateDeductionResult::Success;
 
     Qualifiers AQuals = A.getQualifiers();
@@ -3770,11 +3769,10 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
   // Also allow conversions which merely strip __attribute__((noreturn)) from
   // function types (recursively).
   bool ObjCLifetimeConversion = false;
-  QualType ResultTy;
   if ((A->isAnyPointerType() || A->isMemberPointerType()) &&
       (S.IsQualificationConversion(A, DeducedA, false,
                                    ObjCLifetimeConversion) ||
-       S.IsFunctionConversion(A, DeducedA, ResultTy)))
+       S.IsFunctionConversion(A, DeducedA)))
     return TemplateDeductionResult::Success;
 
   //    - If P is a class and P has the form simple-template-id, then the
