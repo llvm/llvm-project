@@ -2783,10 +2783,9 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (auto *LoadGroup = dyn_cast<VPInterleaveRecipe>(R)) {
       // Narrow interleave group to wide load, as transformed VPlan will only
       // process one original iteration.
-      auto &LI =
-          *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos());
       auto *L = new VPWidenLoadRecipe(
-          LI, LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
+          *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos()),
+          LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
           /*Reverse=*/false, {}, LoadGroup->getDebugLoc());
       L->insertBefore(LoadGroup);
       return L;
