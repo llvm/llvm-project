@@ -77,8 +77,16 @@ private:
   parseDescriptorTableClause();
 
   /// Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
-  /// order and only exactly once. `ParsedClauseParams` denotes the current
-  /// state of parsed params
+  /// order and only exactly once. The following methods define a
+  /// `Parsed.*Params` struct to denote the current state of parsed params
+  struct ParsedConstantParams {
+    std::optional<llvm::hlsl::rootsig::Register> Reg;
+    std::optional<uint32_t> Num32BitConstants;
+    std::optional<uint32_t> Space;
+    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+  };
+  std::optional<ParsedConstantParams> parseRootConstantParams();
+
   struct ParsedClauseParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> NumDescriptors;
