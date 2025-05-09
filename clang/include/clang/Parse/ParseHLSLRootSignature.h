@@ -82,6 +82,8 @@ private:
   struct ParsedConstantParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> Num32BitConstants;
+    std::optional<uint32_t> Space;
+    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
   };
   std::optional<ParsedConstantParams> parseRootConstantParams();
 
