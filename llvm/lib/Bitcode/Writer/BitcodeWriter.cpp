@@ -105,6 +105,7 @@ static cl::opt<bool> WriteRelBFToSummary(
 // TODO: Currently this controls writing context of the allocation info records,
 // which are larger and more expensive, but we should do this for the callsite
 // records as well.
+// FIXME: Convert to a const once this has undergone more sigificant testing.
 static cl::opt<bool>
     CombinedIndexMemProfContext("combined-index-memprof-context", cl::Hidden,
 #ifndef NDEBUG
@@ -4366,6 +4367,9 @@ static void writeFunctionHeapProfileRecords(
       Record.push_back(AI.Versions.size());
     for (auto &MIB : AI.MIBs) {
       Record.push_back((uint8_t)MIB.AllocType);
+      // The per-module summary always needs to include the alloc context, as we
+      // use it during the thin link. For the combined index it is optional (see
+      // comments where CombinedIndexMemProfContext is defined).
       if (PerModule || CombinedIndexMemProfContext) {
         // Record the index into the radix tree array for this context.
         assert(CallStackCount <= CallStackPos.size());
