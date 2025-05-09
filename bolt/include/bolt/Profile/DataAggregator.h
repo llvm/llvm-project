@@ -15,7 +15,6 @@
 #define BOLT_PROFILE_DATA_AGGREGATOR_H
 
 #include "bolt/Profile/DataReader.h"
-#include "bolt/Profile/Heatmap.h"
 #include "bolt/Profile/YAMLProfileWriter.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -271,10 +270,8 @@ private:
   /// everything
   bool hasData() const { return !ParsingBuf.empty(); }
 
-  /// Build heat map based on LBR samples.
-  Expected<Heatmap> buildHeatMap();
   /// Print heat map based on LBR samples.
-  void printHeatMap(const Heatmap::SectionStatsMap &, const Heatmap &) const;
+  std::error_code printLBRHeatMap();
 
   /// Parse a single perf sample containing a PID associated with a sequence of
   /// LBR entries. If the PID does not correspond to the binary we are looking
@@ -476,8 +473,6 @@ private:
   void printBranchSamplesDiagnostics() const;
   void printBasicSamplesDiagnostics(uint64_t OutOfRangeSamples) const;
   void printBranchStacksDiagnostics(uint64_t IgnoredSamples) const;
-  void printHeatmapTextStats(const Heatmap &,
-                             const Heatmap::SectionStatsMap &) const;
 
 public:
   /// If perf.data was collected without build ids, the buildid-list may contain

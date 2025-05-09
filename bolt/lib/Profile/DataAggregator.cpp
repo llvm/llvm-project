@@ -164,6 +164,10 @@ void DataAggregator::findPerfExecutable() {
 void DataAggregator::start() {
   outs() << "PERF2BOLT: Starting data aggregation job for " << Filename << "\n";
 
+  // Turn on heatmap building if requested by --print-heatmap-stats flag.
+  if (opts::HeatmapStats)
+    opts::HeatmapMode = true;
+
   // Don't launch perf for pre-aggregated files or when perf input is specified
   // by the user.
   if (opts::ReadPreAggregated || !opts::ReadPerfEvents.empty())
@@ -450,14 +454,6 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
-  if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
-    outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
-    processFileBuildID(*FileBuildID);
-  } else {
-    errs() << "BOLT-WARNING: build-id will not be checked because we could "
-              "not read one from input binary\n";
-  }
-
   auto ErrorCallback = [](int ReturnCode, StringRef ErrBuf) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
     exit(1);
@@ -474,6 +470,14 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     if (std::error_code EC = parsePreAggregated())
       return errorCodeToError(EC);
     goto heatmap;
+  }
+
+  if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
+    outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
+    processFileBuildID(*FileBuildID);
+  } else {
+    errs() << "BOLT-WARNING: build-id will not be checked because we could "
+              "not read one from input binary\n";
   }
 
   if (BC.IsLinuxKernel) {
@@ -516,21 +520,16 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   deleteTempFiles();
 
 heatmap:
-  if (!opts::HeatmapMode && !opts::HeatmapStats)
+  if (!opts::HeatmapMode)
     return Error::success();
 
-  Expected<Heatmap> HM = buildHeatMap();
-  if (!HM)
-    return HM.takeError();
-  Heatmap::SectionStatsMap Stats = HM->computeSectionStats();
-  if (opts::HeatmapMode) {
-    printHeatMap(Stats, *HM);
-    exit(0);
-  }
-  // opts::HeatmapStats
-  printHeatmapTextStats(*HM, Stats);
+  if (std::error_code EC = printLBRHeatMap())
+    return errorCodeToError(EC);
 
-  return Error::success();
+  if (opts::HeatmapStats)
+    return Error::success();
+
+  exit(0);
 }
 
 Error DataAggregator::readProfile(BinaryContext &BC) {
@@ -1316,7 +1315,7 @@ bool DataAggregator::ignoreKernelInterrupt(LBREntry &LBR) const {
          (LBR.From >= KernelBaseAddr || LBR.To >= KernelBaseAddr);
 }
 
-Expected<Heatmap> DataAggregator::buildHeatMap() {
+std::error_code DataAggregator::printLBRHeatMap() {
   outs() << "PERF2BOLT: parse branch events...\n";
   NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
@@ -1329,12 +1328,15 @@ Expected<Heatmap> DataAggregator::buildHeatMap() {
              opts::HeatmapMaxAddress, getTextSections(BC));
 
   if (!NumTotalSamples) {
-    if (opts::BasicAggregation)
-      return createStringError(
-          "no basic event samples detected in profile. Cannot build heatmap");
-    return createStringError(
-        "no LBR traces detected in profile. Cannot build heatmap. Use -nl for "
-        "building heatmap from basic events");
+    if (opts::BasicAggregation) {
+      errs() << "HEATMAP-ERROR: no basic event samples detected in profile. "
+                "Cannot build heatmap.";
+    } else {
+      errs() << "HEATMAP-ERROR: no LBR traces detected in profile. "
+                "Cannot build heatmap. Use -nl for building heatmap from "
+                "basic events.\n";
+    }
+    exit(1);
   }
 
   outs() << "HEATMAP: building heat map...\n";
@@ -1350,44 +1352,26 @@ Expected<Heatmap> DataAggregator::buildHeatMap() {
   if (HM.getNumInvalidRanges())
     outs() << "HEATMAP: invalid traces: " << HM.getNumInvalidRanges() << '\n';
 
-  if (!HM.size())
-    return createStringError("no valid traces registered");
-  return HM;
-}
+  if (!HM.size()) {
+    errs() << "HEATMAP-ERROR: no valid traces registered\n";
+    exit(1);
+  }
 
-void DataAggregator::printHeatMap(const Heatmap::SectionStatsMap &Stats,
-                                  const Heatmap &HM) const {
+  if (opts::HeatmapStats) {
+    HM.printSectionHotness(outs());
+    return std::error_code();
+  }
   HM.print(opts::OutputFilename);
   if (opts::OutputFilename == "-")
     HM.printCDF(opts::OutputFilename);
   else
     HM.printCDF(opts::OutputFilename + ".csv");
   if (opts::OutputFilename == "-")
-    HM.printSectionHotness(Stats, opts::OutputFilename);
+    HM.printSectionHotness(opts::OutputFilename);
   else
-    HM.printSectionHotness(Stats,
-                           opts::OutputFilename + "-section-hotness.csv");
-}
+    HM.printSectionHotness(opts::OutputFilename + "-section-hotness.csv");
 
-void DataAggregator::printHeatmapTextStats(
-    const Heatmap &HM, const Heatmap::SectionStatsMap &Stats) const {
-  Heatmap::SectionStatsMap::const_iterator TotalStatsIt = Stats.find("[total]");
-  assert(TotalStatsIt != Stats.end() && "Malformed SectionStatsMap");
-  Heatmap::SectionStatsMap::const_iterator TextStatsIt =
-      Stats.find(BC->getMainCodeSectionName());
-  if (TextStatsIt == Stats.end())
-    return;
-
-  const Heatmap::SectionStats &TextStats = TextStatsIt->second;
-  const Heatmap::SectionStats &TotalStats = TotalStatsIt->second;
-
-  const float TextHotness = 1. * TextStats.Samples / TotalStats.Samples;
-  const float TextUtilization =
-      1. * TextStats.Buckets / HM.getNumBuckets(BC->getMainCodeSectionName());
-  const float TextPartitionScore = TextHotness * TextUtilization;
-  outs() << "HEATMAP: " << BC->getMainCodeSectionName() << " scores: "
-         << formatv("hotness: {0:f4}, utilization: {1:f4}, partition: {2:f4}\n",
-                    TextHotness, TextUtilization, TextPartitionScore);
+  return std::error_code();
 }
 
 void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
@@ -1412,7 +1396,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
       const uint64_t TraceTo = NextLBR->From;
       const BinaryFunction *TraceBF =
           getBinaryFunctionContainingAddress(TraceFrom);
-      if (opts::HeatmapMode || opts::HeatmapStats) {
+      if (opts::HeatmapMode) {
         FTInfo &Info = FallthroughLBRs[Trace(TraceFrom, TraceTo)];
         ++Info.InternCount;
       } else if (TraceBF && TraceBF->containsAddress(TraceTo)) {
@@ -1449,7 +1433,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     }
     NextLBR = &LBR;
 
-    if (opts::HeatmapMode || opts::HeatmapStats) {
+    if (opts::HeatmapMode) {
       TakenBranchInfo &Info = BranchLBRs[Trace(LBR.From, LBR.To)];
       ++Info.TakenCount;
       continue;
@@ -1462,7 +1446,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
   }
-  if ((opts::HeatmapMode || opts::HeatmapStats) && !Sample.LBR.empty()) {
+  if (opts::HeatmapMode && !Sample.LBR.empty()) {
     ++BasicSamples[Sample.LBR.front().To];
     ++BasicSamples[Sample.LBR.back().From];
   }
