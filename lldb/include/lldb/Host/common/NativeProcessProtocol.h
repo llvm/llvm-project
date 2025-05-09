@@ -191,7 +191,9 @@ public:
 
   bool IsStepping() const { return m_state == lldb::eStateStepping; }
 
-  bool CanResume() const { return m_state == lldb::eStateStopped; }
+  bool IsStopped() const { return m_state == lldb::eStateStopped; }
+
+  bool CanResume() const { return IsStopped(); }
 
   lldb::ByteOrder GetByteOrder() const {
     return GetArchitecture().GetByteOrder();

@@ -26,7 +26,7 @@ namespace lldb_private {
 namespace process_gdb_remote {
   class GDBRemoteCommunicationServerLLGS;
 }
-  
+
 namespace lldb_server {
 
 class LLDBServerPlugin {
@@ -50,14 +50,33 @@ public:
 
   virtual llvm::StringRef GetPluginName() = 0;
 
+  /// Stop the native process if it is running.
+  ///
+  /// Some plug-ins might want to stop the native process if it is running so
+  /// that the plug-in can return some GPUActions from the call to the
+  /// NativeProcessIsStopping(). This function will trigger the native process
+  /// to stop only if it is running.
+  ///
+  /// \param[out] was_halted The \a was_halted parameter will be set to
+  ///   true if the process was running and was halted. It will be false if the
+  ///   process was already stopped.
+  ///
+  /// \param[out] timeout_sec The timeout in seconds to wait for the process to
+  ///   enter the stopped state.
+  ///
+  /// \return The actual state of the process in case the process was not able
+  /// to be stopped within the specified timeout.
+  lldb::StateType HaltNativeProcessIfNeeded(bool &was_halted,
+                                            uint32_t timeout_sec = 5);
+
   /// Get notified when the process is stopping.
   ///
   /// This function will get called each time native process stops as the stop
   /// reply packet is being created. If the plug-in is ready to be activated,
-  /// return a GPUPluginConnectionInfo with a value connection URL to use with 
-  /// "process connect" which can connect to this plug-in. Plug-ins should wait 
-  /// for a connection to be made before trying to do any blocking code. The 
-  /// plug-in should assume the users do not want to use any features unless a 
+  /// return a GPUPluginConnectionInfo with a value connection URL to use with
+  /// "process connect" which can connect to this plug-in. Plug-ins should wait
+  /// for a connection to be made before trying to do any blocking code. The
+  /// plug-in should assume the users do not want to use any features unless a
   /// connection is made.
   virtual std::optional<GPUActions> NativeProcessIsStopping() {
     return std::nullopt;
@@ -65,16 +84,16 @@ public:
 
   /// Get the GPU plug-in initialization actions.
   ///
-  /// Each GPU plugin can return a structure that describes the GPU plug-in and 
+  /// Each GPU plugin can return a structure that describes the GPU plug-in and
   /// any actions that should be performed right away .Actions include setting
   /// any breakpoints it requires in the native process. GPU plug-ins might want
-  /// to set breakpoints in the native process to know when the GPU has been 
+  /// to set breakpoints in the native process to know when the GPU has been
   /// initialized, or when the GPU has shared libraries that get loaded.
   /// They can do this by populating returning any actions needed when this
   /// function is called.
-  /// 
-  /// The contents of this structure will be converted to JSON and sent to the 
-  /// LLDB client. The structure allows plug-ins to set breakpoints by name 
+  ///
+  /// The contents of this structure will be converted to JSON and sent to the
+  /// LLDB client. The structure allows plug-ins to set breakpoints by name
   /// and to also request symbol values that should be sent when the breakpoint
   /// gets hit. When the breakpoint is hit, the BreakpointWasHit(...) method
   /// will get called with a structure that identifies the plugin,
@@ -106,7 +125,7 @@ public:
   /// calling m_process.SetBreakpoint(...) to help implement funcionality,
   /// such as dynamic library loading in GPUs or to synchronize in any other
   /// way with the native process.
-  virtual GPUPluginBreakpointHitResponse 
+  virtual GPUPluginBreakpointHitResponse
   BreakpointWasHit(GPUPluginBreakpointHitArgs &args) = 0;
 
   protected:
