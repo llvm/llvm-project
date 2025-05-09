@@ -6551,25 +6551,20 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 }
 
 // Any type that could be used to form a callable expression
-static bool MayBeFunctionType(const ASTContext &Context, const Expr* E) {
-    QualType T = E->getType();
-    if(T->isDependentType())
-        return true;
+static bool MayBeFunctionType(const ASTContext &Context, const Expr *E) {
+  QualType T = E->getType();
+  if (T->isDependentType())
+    return true;
 
-    if( T == Context.BoundMemberTy || T == Context.UnknownAnyTy ||
-        T == Context.BuiltinFnTy || T == Context.OverloadTy ||
-        T->isFunctionType() || T->isFunctionReferenceType() ||
-        T->isMemberFunctionPointerType() || T->isFunctionPointerType() ||
-        T->isBlockPointerType() || T->isRecordType())
-        return true;
+  if (T == Context.BoundMemberTy || T == Context.UnknownAnyTy ||
+      T == Context.BuiltinFnTy || T == Context.OverloadTy ||
+      T->isFunctionType() || T->isFunctionReferenceType() ||
+      T->isMemberFunctionPointerType() || T->isFunctionPointerType() ||
+      T->isBlockPointerType() || T->isRecordType())
+    return true;
 
-    return isa<CallExpr,
-               DeclRefExpr,
-               MemberExpr,
-               CXXPseudoDestructorExpr,
-               OverloadExpr,
-               UnresolvedMemberExpr,
-               UnaryOperator>(E);
+  return isa<CallExpr, DeclRefExpr, MemberExpr, CXXPseudoDestructorExpr,
+             OverloadExpr, UnresolvedMemberExpr, UnaryOperator>(E);
 }
 
 ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
