@@ -181,7 +181,7 @@ public:
 
   /// Emits an error through a DiagnosticsEngine about an invalid user supplied
   /// checker option value.
-  void reportInvalidCheckerOptionValue(const CheckerFrontend *CP,
+  void reportInvalidCheckerOptionValue(const CheckerFrontend *CF,
                                        StringRef OptionName,
                                        StringRef ExpectedValueDesc) const;
 

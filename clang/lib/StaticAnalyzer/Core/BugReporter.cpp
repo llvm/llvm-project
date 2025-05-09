@@ -3411,12 +3411,12 @@ PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
 }
 
 void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
-                                  const CheckerFrontend *CP, StringRef Name,
+                                  const CheckerFrontend *CF, StringRef Name,
                                   StringRef Category, StringRef Str,
                                   PathDiagnosticLocation Loc,
                                   ArrayRef<SourceRange> Ranges,
                                   ArrayRef<FixItHint> Fixits) {
-  EmitBasicReport(DeclWithIssue, CP->getName(), Name, Category, Str, Loc,
+  EmitBasicReport(DeclWithIssue, CF->getName(), Name, Category, Str, Loc,
                   Ranges, Fixits);
 }
 
