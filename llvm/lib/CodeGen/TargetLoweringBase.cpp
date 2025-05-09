@@ -2320,18 +2320,20 @@ TargetLoweringBase::getAtomicMemOperandFlags(const Instruction &AI,
 
 Instruction *TargetLoweringBase::emitLeadingFence(IRBuilderBase &Builder,
                                                   Instruction *Inst,
-                                                  AtomicOrdering Ord) const {
+                                                  AtomicOrdering Ord,
+                                                  SyncScope::ID SSID) const {
   if (isReleaseOrStronger(Ord) && Inst->hasAtomicStore())
-    return Builder.CreateFence(Ord);
+    return Builder.CreateFence(Ord, SSID);
   else
     return nullptr;
 }
 
 Instruction *TargetLoweringBase::emitTrailingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
-                                                   AtomicOrdering Ord) const {
+                                                   AtomicOrdering Ord,
+                                                   SyncScope::ID SSID) const {
   if (isAcquireOrStronger(Ord))
-    return Builder.CreateFence(Ord);
+    return Builder.CreateFence(Ord, SSID);
   else
     return nullptr;
 }

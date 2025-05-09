@@ -2286,13 +2286,15 @@ public:
   ///   standard ABI uses a fence before a seq_cst load instead of after a
   ///   seq_cst store).
   /// @{
-  virtual Instruction *emitLeadingFence(IRBuilderBase &Builder,
-                                        Instruction *Inst,
-                                        AtomicOrdering Ord) const;
+  virtual Instruction *
+  emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                   AtomicOrdering Ord,
+                   SyncScope::ID SSID = SyncScope::System) const;
 
-  virtual Instruction *emitTrailingFence(IRBuilderBase &Builder,
-                                         Instruction *Inst,
-                                         AtomicOrdering Ord) const;
+  virtual Instruction *
+  emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                    AtomicOrdering Ord,
+                    SyncScope::ID SSID = SyncScope::System) const;
   /// @}
 
   // Emits code that executes when the comparison result in the ll/sc

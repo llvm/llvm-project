@@ -921,10 +921,14 @@ namespace llvm {
       return true;
     }
 
-    Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
-                                  AtomicOrdering Ord) const override;
-    Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
-                                   AtomicOrdering Ord) const override;
+    Instruction *
+    emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                     AtomicOrdering Ord,
+                     SyncScope::ID SSID = SyncScope::System) const override;
+    Instruction *
+    emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                      AtomicOrdering Ord,
+                      SyncScope::ID SSID = SyncScope::System) const override;
 
     bool shouldInlineQuadwordAtomics() const;
 

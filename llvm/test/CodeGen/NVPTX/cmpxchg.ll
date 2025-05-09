@@ -79,7 +79,7 @@ define i8 @relaxed_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM70-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM70-NEXT:    or.b32 %r18, %r20, %r4;
-; SM70-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM70-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM70-NEXT:    setp.eq.s32 %p1, %r7, %r18;
 ; SM70-NEXT:    @%p1 bra $L__BB0_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
@@ -206,7 +206,7 @@ define i8 @acquire_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM70-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM70-NEXT:    or.b32 %r18, %r20, %r4;
-; SM70-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM70-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM70-NEXT:    setp.eq.s32 %p1, %r7, %r18;
 ; SM70-NEXT:    @%p1 bra $L__BB1_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
@@ -336,7 +336,7 @@ define i8 @release_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM70-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM70-NEXT:    or.b32 %r18, %r20, %r4;
-; SM70-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM70-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM70-NEXT:    setp.eq.s32 %p1, %r7, %r18;
 ; SM70-NEXT:    @%p1 bra $L__BB2_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
@@ -466,7 +466,7 @@ define i8 @acq_rel_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM70-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM70-NEXT:    or.b32 %r18, %r20, %r4;
-; SM70-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM70-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM70-NEXT:    setp.eq.s32 %p1, %r7, %r18;
 ; SM70-NEXT:    @%p1 bra $L__BB3_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
@@ -598,7 +598,7 @@ define i8 @seq_cst_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM70-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM70-NEXT:    or.b32 %r18, %r20, %r4;
-; SM70-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM70-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM70-NEXT:    setp.eq.s32 %p1, %r7, %r18;
 ; SM70-NEXT:    @%p1 bra $L__BB4_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
@@ -726,7 +726,7 @@ define i16 @relaxed_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM70-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM70-NEXT:    or.b32 %r17, %r19, %r4;
-; SM70-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM70-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM70-NEXT:    setp.eq.s32 %p1, %r7, %r17;
 ; SM70-NEXT:    @%p1 bra $L__BB5_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
@@ -850,7 +850,7 @@ define i16 @acquire_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM70-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM70-NEXT:    or.b32 %r17, %r19, %r4;
-; SM70-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM70-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM70-NEXT:    setp.eq.s32 %p1, %r7, %r17;
 ; SM70-NEXT:    @%p1 bra $L__BB6_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
@@ -977,7 +977,7 @@ define i16 @release_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM70-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM70-NEXT:    or.b32 %r17, %r19, %r4;
-; SM70-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM70-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM70-NEXT:    setp.eq.s32 %p1, %r7, %r17;
 ; SM70-NEXT:    @%p1 bra $L__BB7_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
@@ -1104,7 +1104,7 @@ define i16 @acq_rel_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM70-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM70-NEXT:    or.b32 %r17, %r19, %r4;
-; SM70-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM70-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM70-NEXT:    setp.eq.s32 %p1, %r7, %r17;
 ; SM70-NEXT:    @%p1 bra $L__BB8_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
@@ -1234,7 +1234,7 @@ define i16 @seq_cst_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM70-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM70-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM70-NEXT:    or.b32 %r17, %r19, %r4;
-; SM70-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM70-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM70-NEXT:    setp.eq.s32 %p1, %r7, %r17;
 ; SM70-NEXT:    @%p1 bra $L__BB9_3;
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
@@ -1316,7 +1316,7 @@ define i32 @relaxed_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM70-NEXT:    ld.param.u64 %rd1, [relaxed_sys_i32_param_0];
 ; SM70-NEXT:    ld.param.u32 %r1, [relaxed_sys_i32_param_1];
 ; SM70-NEXT:    ld.param.u32 %r2, [relaxed_sys_i32_param_2];
-; SM70-NEXT:    atom.relaxed.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM70-NEXT:    atom.relaxed.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM70-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM70-NEXT:    ret;
 ; SM90-LABEL: relaxed_sys_i32(
@@ -1358,7 +1358,7 @@ define i32 @acq_rel_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM70-NEXT:    ld.param.u64 %rd1, [acq_rel_sys_i32_param_0];
 ; SM70-NEXT:    ld.param.u32 %r1, [acq_rel_sys_i32_param_1];
 ; SM70-NEXT:    ld.param.u32 %r2, [acq_rel_sys_i32_param_2];
-; SM70-NEXT:    atom.acq_rel.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM70-NEXT:    atom.acq_rel.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM70-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM70-NEXT:    ret;
 ; SM90-LABEL: acq_rel_sys_i32(
@@ -1400,7 +1400,7 @@ define i32 @acquire_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM70-NEXT:    ld.param.u64 %rd1, [acquire_sys_i32_param_0];
 ; SM70-NEXT:    ld.param.u32 %r1, [acquire_sys_i32_param_1];
 ; SM70-NEXT:    ld.param.u32 %r2, [acquire_sys_i32_param_2];
-; SM70-NEXT:    atom.acquire.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM70-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM70-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM70-NEXT:    ret;
 ; SM90-LABEL: acquire_sys_i32(
@@ -1442,7 +1442,7 @@ define i32 @release_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM70-NEXT:    ld.param.u64 %rd1, [release_sys_i32_param_0];
 ; SM70-NEXT:    ld.param.u32 %r1, [release_sys_i32_param_1];
 ; SM70-NEXT:    ld.param.u32 %r2, [release_sys_i32_param_2];
-; SM70-NEXT:    atom.release.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM70-NEXT:    atom.release.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM70-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM70-NEXT:    ret;
 ; SM90-LABEL: release_sys_i32(
@@ -1486,7 +1486,7 @@ define i32 @seq_cst_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM70-NEXT:    fence.sc.sys;
 ; SM70-NEXT:    ld.param.u32 %r1, [seq_cst_sys_i32_param_1];
 ; SM70-NEXT:    ld.param.u32 %r2, [seq_cst_sys_i32_param_2];
-; SM70-NEXT:    atom.acquire.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM70-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM70-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM70-NEXT:    ret;
 ; SM90-LABEL: seq_cst_sys_i32(
@@ -1529,7 +1529,7 @@ define i64 @relaxed_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM70-NEXT:    ld.param.u64 %rd1, [relaxed_sys_i64_param_0];
 ; SM70-NEXT:    ld.param.u64 %rd2, [relaxed_sys_i64_param_1];
 ; SM70-NEXT:    ld.param.u64 %rd3, [relaxed_sys_i64_param_2];
-; SM70-NEXT:    atom.relaxed.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM70-NEXT:    atom.relaxed.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM70-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM70-NEXT:    ret;
 ; SM90-LABEL: relaxed_sys_i64(
@@ -1568,7 +1568,7 @@ define i64 @acquire_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM70-NEXT:    ld.param.u64 %rd1, [acquire_sys_i64_param_0];
 ; SM70-NEXT:    ld.param.u64 %rd2, [acquire_sys_i64_param_1];
 ; SM70-NEXT:    ld.param.u64 %rd3, [acquire_sys_i64_param_2];
-; SM70-NEXT:    atom.acquire.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM70-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM70-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM70-NEXT:    ret;
 ; SM90-LABEL: acquire_sys_i64(
@@ -1607,7 +1607,7 @@ define i64 @acq_rel_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM70-NEXT:    ld.param.u64 %rd1, [acq_rel_sys_i64_param_0];
 ; SM70-NEXT:    ld.param.u64 %rd2, [acq_rel_sys_i64_param_1];
 ; SM70-NEXT:    ld.param.u64 %rd3, [acq_rel_sys_i64_param_2];
-; SM70-NEXT:    atom.acq_rel.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM70-NEXT:    atom.acq_rel.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM70-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM70-NEXT:    ret;
 ; SM90-LABEL: acq_rel_sys_i64(
@@ -1646,7 +1646,7 @@ define i64 @release_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM70-NEXT:    ld.param.u64 %rd1, [release_sys_i64_param_0];
 ; SM70-NEXT:    ld.param.u64 %rd2, [release_sys_i64_param_1];
 ; SM70-NEXT:    ld.param.u64 %rd3, [release_sys_i64_param_2];
-; SM70-NEXT:    atom.release.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM70-NEXT:    atom.release.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM70-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM70-NEXT:    ret;
 ; SM90-LABEL: release_sys_i64(
@@ -1687,7 +1687,7 @@ define i64 @seq_cst_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM70-NEXT:    fence.sc.sys;
 ; SM70-NEXT:    ld.param.u64 %rd2, [seq_cst_sys_i64_param_1];
 ; SM70-NEXT:    ld.param.u64 %rd3, [seq_cst_sys_i64_param_2];
-; SM70-NEXT:    atom.acquire.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM70-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM70-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM70-NEXT:    ret;
 ; SM90-LABEL: seq_cst_sys_i64(

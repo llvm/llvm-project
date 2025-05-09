@@ -266,10 +266,14 @@ public:
   AtomicOrdering
   atomicOperationOrderAfterFenceSplit(const Instruction *I) const override;
 
-  Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
-                                AtomicOrdering Ord) const override;
-  Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
-                                 AtomicOrdering Ord) const override;
+  Instruction *
+  emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                   AtomicOrdering Ord,
+                   SyncScope::ID SSID = SyncScope::System) const override;
+  Instruction *
+  emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                    AtomicOrdering Ord,
+                    SyncScope::ID SSID = SyncScope::System) const override;
 
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
