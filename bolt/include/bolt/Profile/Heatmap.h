@@ -9,7 +9,6 @@
 #ifndef BOLT_PROFILE_HEATMAP_H
 #define BOLT_PROFILE_HEATMAP_H
 
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <map>
@@ -46,10 +45,6 @@ class Heatmap {
   /// Map section names to their address range.
   const std::vector<SectionNameAndRange> TextSections;
 
-  uint64_t getNumBuckets(uint64_t Begin, uint64_t End) const {
-    return End / BucketSize + !!(End % BucketSize) - Begin / BucketSize;
-  };
-
 public:
   explicit Heatmap(uint64_t BucketSize = 4096, uint64_t MinAddress = 0,
                    uint64_t MaxAddress = std::numeric_limits<uint64_t>::max(),
@@ -82,22 +77,9 @@ public:
 
   void printCDF(raw_ostream &OS) const;
 
-  /// Struct describing individual section hotness.
-  struct SectionStats {
-    uint64_t Samples{0};
-    uint64_t Buckets{0};
-  };
+  void printSectionHotness(StringRef Filename) const;
 
-  /// Mapping from section name to associated \p SectionStats. Special entries:
-  /// - [total] for total stats,
-  /// - [unmapped] for samples outside any section, if non-zero.
-  using SectionStatsMap = StringMap<SectionStats>;
-
-  SectionStatsMap computeSectionStats() const;
-
-  void printSectionHotness(const SectionStatsMap &, StringRef Filename) const;
-
-  void printSectionHotness(const SectionStatsMap &, raw_ostream &OS) const;
+  void printSectionHotness(raw_ostream &OS) const;
 
   size_t size() const { return Map.size(); }
 };

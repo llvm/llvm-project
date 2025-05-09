@@ -1357,12 +1357,10 @@ std::error_code DataAggregator::printLBRHeatMap() {
     HM.printCDF(opts::OutputFilename);
   else
     HM.printCDF(opts::OutputFilename + ".csv");
-  Heatmap::SectionStatsMap Stats = HM.computeSectionStats();
   if (opts::OutputFilename == "-")
-    HM.printSectionHotness(Stats, opts::OutputFilename);
+    HM.printSectionHotness(opts::OutputFilename);
   else
-    HM.printSectionHotness(Stats,
-                           opts::OutputFilename + "-section-hotness.csv");
+    HM.printSectionHotness(opts::OutputFilename + "-section-hotness.csv");
 
   return std::error_code();
 }
