@@ -631,6 +631,13 @@ void MetadataStreamerMsgPackV5::emitVersion() {
   getRootMetadata("amdhsa.version") = Version;
 }
 
+void MetadataStreamerMsgPackV5::emitHiddenKernelArg(
+    const DataLayout &DL, Type *ArgTy, Align Alignment, StringRef ArgName,
+    unsigned &Offset, msgpack::ArrayDocNode Args,
+    KernArgPreload::HiddenArg HiddenArg, const AMDGPUFunctionArgInfo *ArgInfo) {
+  emitKernelArgImpl(DL, ArgTy, Alignment, ArgName, Offset, Args);
+}
+
 void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
     const MachineFunction &MF, unsigned &Offset, msgpack::ArrayDocNode Args) {
   auto &Func = MF.getFunction();
@@ -649,20 +656,27 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
   auto *Int16Ty = Type::getInt16Ty(Func.getContext());
 
   Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
-  emitKernelArgImpl(DL, Int32Ty, Align(4), "hidden_block_count_x", Offset,
-                    Args);
-  emitKernelArgImpl(DL, Int32Ty, Align(4), "hidden_block_count_y", Offset,
-                    Args);
-  emitKernelArgImpl(DL, Int32Ty, Align(4), "hidden_block_count_z", Offset,
-                    Args);
+  const AMDGPUFunctionArgInfo &ArgInfo = MFI.getArgInfo();
+  emitHiddenKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_x", Offset,
+                      Args, KernArgPreload::HIDDEN_BLOCK_COUNT_X, &ArgInfo);
+  emitHiddenKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_y", Offset,
+                      Args, KernArgPreload::HIDDEN_BLOCK_COUNT_Y, &ArgInfo);
+  emitHiddenKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_z", Offset,
+                      Args, KernArgPreload::HIDDEN_BLOCK_COUNT_Z, &ArgInfo);
 
-  emitKernelArgImpl(DL, Int16Ty, Align(2), "hidden_group_size_x", Offset, Args);
-  emitKernelArgImpl(DL, Int16Ty, Align(2), "hidden_group_size_y", Offset, Args);
-  emitKernelArgImpl(DL, Int16Ty, Align(2), "hidden_group_size_z", Offset, Args);
+  emitHiddenKernelArg(DL, Int16Ty, Align(2), "hidden_group_size_x", Offset,
+                      Args, KernArgPreload::HIDDEN_GROUP_SIZE_X, &ArgInfo);
+  emitHiddenKernelArg(DL, Int16Ty, Align(2), "hidden_group_size_y", Offset,
+                      Args, KernArgPreload::HIDDEN_GROUP_SIZE_Y, &ArgInfo);
+  emitHiddenKernelArg(DL, Int16Ty, Align(2), "hidden_group_size_z", Offset,
+                      Args, KernArgPreload::HIDDEN_GROUP_SIZE_Z, &ArgInfo);
 
-  emitKernelArgImpl(DL, Int16Ty, Align(2), "hidden_remainder_x", Offset, Args);
-  emitKernelArgImpl(DL, Int16Ty, Align(2), "hidden_remainder_y", Offset, Args);
-  emitKernelArgImpl(DL, Int16Ty, Align(2), "hidden_remainder_z", Offset, Args);
+  emitHiddenKernelArg(DL, Int16Ty, Align(2), "hidden_remainder_x", Offset, Args,
+                      KernArgPreload::HIDDEN_REMAINDER_X, &ArgInfo);
+  emitHiddenKernelArg(DL, Int16Ty, Align(2), "hidden_remainder_y", Offset, Args,
+                      KernArgPreload::HIDDEN_REMAINDER_Y, &ArgInfo);
+  emitHiddenKernelArg(DL, Int16Ty, Align(2), "hidden_remainder_z", Offset, Args,
+                      KernArgPreload::HIDDEN_REMAINDER_Z, &ArgInfo);
 
   // Reserved for hidden_tool_correlation_id.
   Offset += 8;
@@ -768,13 +782,14 @@ void MetadataStreamerMsgPackV6::emitVersion() {
   getRootMetadata("amdhsa.version") = Version;
 }
 
-void MetadataStreamerMsgPackV6::emitHiddenKernelArgWithPreload(
-    const DataLayout &DL, Type *ArgTy, Align Alignment,
-    KernArgPreload::HiddenArg HiddenArg, StringRef ArgName, unsigned &Offset,
-    msgpack::ArrayDocNode Args, const AMDGPUFunctionArgInfo &ArgInfo) {
+void MetadataStreamerMsgPackV6::emitHiddenKernelArg(
+    const DataLayout &DL, Type *ArgTy, Align Alignment, StringRef ArgName,
+    unsigned &Offset, msgpack::ArrayDocNode Args,
+    KernArgPreload::HiddenArg HiddenArg, const AMDGPUFunctionArgInfo *ArgInfo) {
+  assert(ArgInfo && HiddenArg != KernArgPreload::END_HIDDEN_ARGS);
 
   SmallString<16> PreloadStr;
-  const auto *PreloadDesc = ArgInfo.getHiddenArgPreloadDescriptor(HiddenArg);
+  const auto *PreloadDesc = ArgInfo->getHiddenArgPreloadDescriptor(HiddenArg);
   if (PreloadDesc) {
     const auto &Regs = PreloadDesc->Regs;
     for (unsigned I = 0; I < Regs.size(); ++I) {
@@ -784,140 +799,6 @@ void MetadataStreamerMsgPackV6::emitHiddenKernelArgWithPreload(
     }
   }
   emitKernelArgImpl(DL, ArgTy, Alignment, ArgName, Offset, Args, PreloadStr);
-}
-
-void MetadataStreamerMsgPackV6::emitHiddenKernelArgs(
-    const MachineFunction &MF, unsigned &Offset, msgpack::ArrayDocNode Args) {
-  auto &Func = MF.getFunction();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-
-  // No implicit kernel argument is used.
-  if (ST.getImplicitArgNumBytes(Func) == 0)
-    return;
-
-  const Module *M = Func.getParent();
-  auto &DL = M->getDataLayout();
-  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-
-  auto *Int64Ty = Type::getInt64Ty(Func.getContext());
-  auto *Int32Ty = Type::getInt32Ty(Func.getContext());
-  auto *Int16Ty = Type::getInt16Ty(Func.getContext());
-
-  Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
-
-  const AMDGPUFunctionArgInfo &ArgInfo = MFI.getArgInfo();
-  emitHiddenKernelArgWithPreload(DL, Int32Ty, Align(4),
-                                 KernArgPreload::HIDDEN_BLOCK_COUNT_X,
-                                 "hidden_block_count_x", Offset, Args, ArgInfo);
-  emitHiddenKernelArgWithPreload(DL, Int32Ty, Align(4),
-                                 KernArgPreload::HIDDEN_BLOCK_COUNT_Y,
-                                 "hidden_block_count_y", Offset, Args, ArgInfo);
-  emitHiddenKernelArgWithPreload(DL, Int32Ty, Align(4),
-                                 KernArgPreload::HIDDEN_BLOCK_COUNT_Z,
-                                 "hidden_block_count_z", Offset, Args, ArgInfo);
-
-  emitHiddenKernelArgWithPreload(DL, Int16Ty, Align(2),
-                                 KernArgPreload::HIDDEN_GROUP_SIZE_X,
-                                 "hidden_group_size_x", Offset, Args, ArgInfo);
-  emitHiddenKernelArgWithPreload(DL, Int16Ty, Align(2),
-                                 KernArgPreload::HIDDEN_GROUP_SIZE_Y,
-                                 "hidden_group_size_y", Offset, Args, ArgInfo);
-  emitHiddenKernelArgWithPreload(DL, Int16Ty, Align(2),
-                                 KernArgPreload::HIDDEN_GROUP_SIZE_Z,
-                                 "hidden_group_size_z", Offset, Args, ArgInfo);
-
-  emitHiddenKernelArgWithPreload(DL, Int16Ty, Align(2),
-                                 KernArgPreload::HIDDEN_REMAINDER_X,
-                                 "hidden_remainder_x", Offset, Args, ArgInfo);
-  emitHiddenKernelArgWithPreload(DL, Int16Ty, Align(2),
-                                 KernArgPreload::HIDDEN_REMAINDER_Y,
-                                 "hidden_remainder_y", Offset, Args, ArgInfo);
-  emitHiddenKernelArgWithPreload(DL, Int16Ty, Align(2),
-                                 KernArgPreload::HIDDEN_REMAINDER_Z,
-                                 "hidden_remainder_z", Offset, Args, ArgInfo);
-
-  // Reserved for hidden_tool_correlation_id.
-  Offset += 8;
-
-  Offset += 8; // Reserved.
-
-  emitKernelArgImpl(DL, Int64Ty, Align(8), "hidden_global_offset_x", Offset,
-                    Args);
-  emitKernelArgImpl(DL, Int64Ty, Align(8), "hidden_global_offset_y", Offset,
-                    Args);
-  emitKernelArgImpl(DL, Int64Ty, Align(8), "hidden_global_offset_z", Offset,
-                    Args);
-
-  emitKernelArgImpl(DL, Int16Ty, Align(2), "hidden_grid_dims", Offset, Args);
-
-  Offset += 6; // Reserved.
-  auto *Int8PtrTy =
-      PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
-
-  if (M->getNamedMetadata("llvm.printf.fmts")) {
-    emitKernelArgImpl(DL, Int8PtrTy, Align(8), "hidden_printf_buffer", Offset,
-                      Args);
-  } else {
-    Offset += 8; // Skipped.
-  }
-
-  if (!Func.hasFnAttribute("amdgpu-no-hostcall-ptr")) {
-    emitKernelArgImpl(DL, Int8PtrTy, Align(8), "hidden_hostcall_buffer", Offset,
-                      Args);
-  } else {
-    Offset += 8; // Skipped.
-  }
-
-  if (!Func.hasFnAttribute("amdgpu-no-multigrid-sync-arg")) {
-    emitKernelArgImpl(DL, Int8PtrTy, Align(8), "hidden_multigrid_sync_arg",
-                      Offset, Args);
-  } else {
-    Offset += 8; // Skipped.
-  }
-
-  if (!Func.hasFnAttribute("amdgpu-no-heap-ptr"))
-    emitKernelArgImpl(DL, Int8PtrTy, Align(8), "hidden_heap_v1", Offset, Args);
-  else
-    Offset += 8; // Skipped.
-
-  if (!Func.hasFnAttribute("amdgpu-no-default-queue")) {
-    emitKernelArgImpl(DL, Int8PtrTy, Align(8), "hidden_default_queue", Offset,
-                      Args);
-  } else {
-    Offset += 8; // Skipped.
-  }
-
-  if (!Func.hasFnAttribute("amdgpu-no-completion-action")) {
-    emitKernelArgImpl(DL, Int8PtrTy, Align(8), "hidden_completion_action",
-                      Offset, Args);
-  } else {
-    Offset += 8; // Skipped.
-  }
-
-  // Emit argument for hidden dynamic lds size
-  if (MFI.isDynamicLDSUsed()) {
-    emitKernelArgImpl(DL, Int32Ty, Align(4), "hidden_dynamic_lds_size", Offset,
-                      Args);
-  } else {
-    Offset += 4; // skipped
-  }
-
-  Offset += 68; // Reserved.
-
-  // hidden_private_base and hidden_shared_base are only when the subtarget has
-  // ApertureRegs.
-  if (!ST.hasApertureRegs()) {
-    emitKernelArgImpl(DL, Int32Ty, Align(4), "hidden_private_base", Offset,
-                      Args);
-    emitKernelArgImpl(DL, Int32Ty, Align(4), "hidden_shared_base", Offset,
-                      Args);
-  } else {
-    Offset += 8; // Skipped.
-  }
-
-  if (MFI.getUserSGPRInfo().hasQueuePtr())
-    emitKernelArgImpl(DL, Int8PtrTy, Align(8), "hidden_queue_ptr", Offset,
-                      Args);
 }
 
 void MetadataStreamerMsgPackV6::emitKernelArg(const Argument &Arg,
