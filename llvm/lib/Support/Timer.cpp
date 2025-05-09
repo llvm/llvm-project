@@ -53,6 +53,7 @@ class Name2PairMap;
 static std::string &libSupportInfoOutputFilename();
 static bool trackSpace();
 static bool sortTimers();
+cl::opt<unsigned> &minPrintTime();
 [[maybe_unused]]
 static SignpostEmitter &signposts();
 static sys::SmartMutex<true> &timerLock();
@@ -380,8 +381,12 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
 
   // Loop through all of the timing data, printing it out.
   for (const PrintRecord &Record : llvm::reverse(TimersToPrint)) {
-    Record.Time.print(Total, OS);
-    OS << Record.Description << '\n';
+    if (const TimeRecord &TR = Record.Time; TR.getUserTime() >= minPrintTime() ||
+                                            TR.getSystemTime() >= minPrintTime() ||
+                                            TR.getWallTime() >= minPrintTime()) {
+      Record.Time.print(Total, OS);
+      OS << Record.Description << '\n';
+    }
   }
 
   Total.print(Total, OS);
@@ -452,22 +457,31 @@ const char *TimerGroup::printJSONValues(raw_ostream &OS, const char *delim) {
 
   prepareToPrintList(false);
   for (const PrintRecord &R : TimersToPrint) {
-    OS << delim;
-    delim = ",\n";
-
     const TimeRecord &T = R.Time;
-    printJSONValue(OS, R, ".wall", T.getWallTime());
-    OS << delim;
-    printJSONValue(OS, R, ".user", T.getUserTime());
-    OS << delim;
-    printJSONValue(OS, R, ".sys", T.getSystemTime());
+    if (double Value = T.getWallTime(); Value >= minPrintTime()) {
+      OS << delim;
+      printJSONValue(OS, R, ".wall", Value);
+      delim = ",\n";
+    }
+    if (double Value = T.getWallTime(); Value >= minPrintTime()) {
+      OS << delim;
+      printJSONValue(OS, R, ".user", T.getUserTime());
+      delim = ",\n";
+    }
+    if (double Value = T.getWallTime(); Value >= minPrintTime()) {
+      OS << delim;
+      printJSONValue(OS, R, ".sys", T.getSystemTime());
+      delim = ",\n";
+    }
     if (T.getMemUsed()) {
       OS << delim;
       printJSONValue(OS, R, ".mem", T.getMemUsed());
+      delim = ",\n";
     }
     if (T.getInstructionsExecuted()) {
       OS << delim;
       printJSONValue(OS, R, ".instr", T.getInstructionsExecuted());
+      delim = ",\n";
     }
   }
   TimersToPrint.clear();
@@ -515,6 +529,9 @@ public:
       cl::desc("In the report, sort the timers in each group in wall clock"
                " time order"),
       cl::init(true), cl::Hidden};
+  cl::opt<unsigned> MinPrintTime{
+      "min-print-time",
+      cl::desc("Minimum time in seconds for a timer to be printed"), cl::init(0)};
 
   sys::SmartMutex<true> TimerLock;
   TimerGroup DefaultTimerGroup{"misc", "Miscellaneous Ungrouped Timers",
@@ -541,6 +558,7 @@ static std::string &libSupportInfoOutputFilename() {
 }
 static bool trackSpace() { return ManagedTimerGlobals->TrackSpace; }
 static bool sortTimers() { return ManagedTimerGlobals->SortTimers; }
+cl::opt<unsigned> &minPrintTime() { return ManagedTimerGlobals->MinPrintTime; }
 static SignpostEmitter &signposts() { return ManagedTimerGlobals->Signposts; }
 static sys::SmartMutex<true> &timerLock() {
   return ManagedTimerGlobals->TimerLock;
