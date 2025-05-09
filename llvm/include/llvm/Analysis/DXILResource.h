@@ -633,7 +633,7 @@ public:
       FreeRanges.emplace_back(0, UINT32_MAX);
     }
     // Size == -1 means unbounded array
-    bool findAvailableBinding(int32_t Size, uint32_t *RegSlot);
+    std::optional<uint32_t> findAvailableBinding(int32_t Size);
   };
 
   struct BindingSpaces {
@@ -678,8 +678,8 @@ public:
   }
 
   // Size == -1 means unbounded array
-  bool findAvailableBinding(dxil::ResourceClass RC, uint32_t Space,
-                            int32_t Size, uint32_t *RegSlot);
+  std::optional<uint32_t> findAvailableBinding(dxil::ResourceClass RC,
+                                               uint32_t Space, int32_t Size);
 
   friend class DXILResourceBindingAnalysis;
   friend class DXILResourceBindingWrapperPass;
