@@ -46,8 +46,9 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
   llvm::SmallPtrSet<const CFGBlock*, 32> reachable;
 
   // Root node should have the location context of the top most function.
-  const ExplodedNode *GraphRoot = *G.roots_begin();
-  const LocationContext *LC = GraphRoot->getLocation().getLocationContext();
+  // FIXME: Use `Eng.getRootLocationContext()` unless `G` can be different from
+  // the `ExplodedGraph` owned by Eng.
+  const LocationContext *LC = G.getRoot()->getLocation().getLocationContext();
 
   const Decl *D = LC->getDecl();
 
