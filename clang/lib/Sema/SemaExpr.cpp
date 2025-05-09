@@ -11279,7 +11279,7 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
           diag::warn_typecheck_convert_incompatible_function_pointer_strict,
           Loc) &&
       RHSType->isFunctionPointerType() && LHSType->isFunctionPointerType() &&
-      !S.IsFunctionConversion(RHSType, LHSType, RHSType))
+      !S.TryFunctionConversion(RHSType, LHSType, RHSType))
     return AssignConvertType::IncompatibleFunctionPointerStrict;
 
   // C99 6.5.16.1p1 (constraint 3): both operands are pointers to qualified or
@@ -11386,8 +11386,7 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
     }
     return AssignConvertType::IncompatiblePointer;
   }
-  if (!S.getLangOpts().CPlusPlus &&
-      S.IsFunctionConversion(ltrans, rtrans, ltrans))
+  if (!S.getLangOpts().CPlusPlus && S.IsFunctionConversion(ltrans, rtrans))
     return AssignConvertType::IncompatibleFunctionPointer;
   if (IsInvalidCmseNSCallConversion(S, ltrans, rtrans))
     return AssignConvertType::IncompatibleFunctionPointer;
