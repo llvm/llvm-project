@@ -46,9 +46,12 @@ if __name__ == "__main__":
     for sm, ptx in TESTS:
         with open("cmpxchg-sm{}.ll".format(str(sm)), "w") as fp:
             print(run_statement.substitute(sm=sm, ptx=ptx), file=fp)
-            for size, success, failure, addrspace in product(
-                SIZES, SUCCESS_ORDERINGS, FAILURE_ORDERINGS, ADDRSPACES
+            for size, success, failure, addrspace, llvm_scope in product(
+                SIZES, SUCCESS_ORDERINGS, FAILURE_ORDERINGS, ADDRSPACES, LLVM_SCOPES
             ):
+                # cluster ordering is supported from SM90 onwards
+                if sm != 90 and llvm_scope == "cluster":
+                    continue
                 if addrspace == 0:
                     addrspace_cast = ""
                 else:
@@ -61,6 +64,8 @@ if __name__ == "__main__":
                         size=size,
                         addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
                         addrspace_cast=addrspace_cast,
+                        llvm_scope=llvm_scope,
+                        ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
                     ),
                     file=fp,
                 )
