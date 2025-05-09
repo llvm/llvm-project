@@ -731,8 +731,7 @@ JITDylib::defineMaterializing(MaterializationResponsibility &FromMR,
             Symbols.erase(Symbols.find_as(S));
 
           // FIXME: Return all duplicates.
-          return make_error<DuplicateDefinition>(
-              std::string(*Name), "defineMaterializing operation");
+          return make_error<DuplicateDefinition>(std::string(*Name));
         }
 
         // Otherwise just make a note to discard this symbol after the loop.
@@ -1425,8 +1424,7 @@ Error JITDylib::defineImpl(MaterializationUnit &MU) {
   if (!Duplicates.empty()) {
     LLVM_DEBUG(
         { dbgs() << "  Error: Duplicate symbols " << Duplicates << "\n"; });
-    return make_error<DuplicateDefinition>(std::string(**Duplicates.begin()),
-                                           MU.getName().str());
+    return make_error<DuplicateDefinition>(std::string(**Duplicates.begin()));
   }
 
   // Discard any overridden defs in this MU.

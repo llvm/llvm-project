@@ -86,26 +86,19 @@ std::error_code orcError(OrcErrorCode ErrCode) {
   return std::error_code(static_cast<UT>(ErrCode), getOrcErrCat());
 }
 
-DuplicateDefinition::DuplicateDefinition(std::string SymbolName,
-                                         std::optional<std::string> Context)
-    : SymbolName(std::move(SymbolName)), Context(std::move(Context)) {}
+DuplicateDefinition::DuplicateDefinition(std::string SymbolName)
+    : SymbolName(std::move(SymbolName)) {}
 
 std::error_code DuplicateDefinition::convertToErrorCode() const {
   return orcError(OrcErrorCode::DuplicateDefinition);
 }
 
 void DuplicateDefinition::log(raw_ostream &OS) const {
-  if (Context)
-    OS << "In " << *Context << ", ";
-  OS << "duplicate definition of symbol '" << SymbolName << "'";
+  OS << "Duplicate definition of symbol '" << SymbolName << "'";
 }
 
 const std::string &DuplicateDefinition::getSymbolName() const {
   return SymbolName;
-}
-
-const std::optional<std::string> &DuplicateDefinition::getContext() const {
-  return Context;
 }
 
 JITSymbolNotFound::JITSymbolNotFound(std::string SymbolName)
