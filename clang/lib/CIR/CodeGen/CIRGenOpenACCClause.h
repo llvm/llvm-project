@@ -360,9 +360,11 @@ public:
         operation.addWaitOperands(builder.getContext(), clause.hasDevNumExpr(),
                                   values, lastDeviceTypeValues);
       }
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Enter data, exit data, update, Combined constructs remain.
+      // unreachable. Enter data, exit data, update constructs remain.
       return clauseNotImplemented(clause);
     }
   }
