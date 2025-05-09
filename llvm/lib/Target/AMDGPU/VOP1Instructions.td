@@ -259,6 +259,11 @@ foreach vt = Reg32Types.types in {
   >;
 }
 
+let HasOpSel = 1 in {
+  def VOP_F16_F32_Fake16_OP_SEL : VOPProfile_Fake16<VOP_F16_F32>;
+  def VOP_F32_F16_Fake16_OP_SEL : VOPProfile_Fake16<VOP_F32_F16>;
+} // End HasOpSel = 1
+
 let isReMaterializable = 1 in {
 let SchedRW = [WriteDoubleCvt] in {
 // OMod clears exceptions when set in this instruction
@@ -300,14 +305,14 @@ let FPDPRounding = 1, isReMaterializable = 0 in {
   let OtherPredicates = [UseRealTrue16Insts] in
     defm V_CVT_F16_F32_t16 : VOP1Inst <"v_cvt_f16_f32_t16", VOPProfile_True16<VOP_F16_F32>, any_fpround>;
   let OtherPredicates = [UseFakeTrue16Insts] in
-    defm V_CVT_F16_F32_fake16 : VOP1Inst <"v_cvt_f16_f32_fake16", VOPProfile_Fake16<VOP_F16_F32>, any_fpround>;
+    defm V_CVT_F16_F32_fake16 : VOP1Inst<"v_cvt_f16_f32_fake16", VOP_F16_F32_Fake16_OP_SEL, any_fpround>;
 } // End FPDPRounding = 1, isReMaterializable = 0
 let OtherPredicates = [NotHasTrue16BitInsts] in
   defm V_CVT_F32_F16 : VOP1Inst <"v_cvt_f32_f16", VOP_F32_F16, any_fpextend>;
 let OtherPredicates = [UseRealTrue16Insts] in
   defm V_CVT_F32_F16_t16 : VOP1Inst <"v_cvt_f32_f16_t16", VOPProfile_True16<VOP_F32_F16>, any_fpextend>;
 let OtherPredicates = [UseFakeTrue16Insts] in
-  defm V_CVT_F32_F16_fake16 : VOP1Inst <"v_cvt_f32_f16_fake16", VOPProfile_Fake16<VOP_F32_F16>, any_fpextend>;
+  defm V_CVT_F32_F16_fake16 : VOP1Inst<"v_cvt_f32_f16_fake16", VOP_F32_F16_Fake16_OP_SEL, any_fpextend>;
 
 let SubtargetPredicate = HasBF16ConversionInsts in
 defm V_CVT_F32_BF16 : VOP1Inst_t16 <"v_cvt_f32_bf16", VOP_F32_BF16>;

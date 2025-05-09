@@ -7654,11 +7654,17 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHRREV_B32_e64), TmpReg)
           .addImm(16)
           .add(Inst.getOperand(1));
-      BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
-          .addImm(0) // src0_modifiers
-          .addReg(TmpReg)
-          .addImm(0)  // clamp
-          .addImm(0); // omod
+      const MachineInstrBuilder &MIB =
+          BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
+              .addImm(0) // src0_modifiers
+              .addReg(TmpReg)
+              .addImm(0)  // clamp
+              .addImm(0); // omod
+      // FIXME: this is a temporary workaround to support opsel for certain
+      // fake16 instructions. Need to remove this code after we have true16 for
+      // related instructions.
+      if (NewOpcode == AMDGPU::V_CVT_F32_F16_fake16_e64)
+        MIB.addImm(0); // op_sel0
     }
 
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
