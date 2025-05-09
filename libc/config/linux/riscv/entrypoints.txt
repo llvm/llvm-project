@@ -416,6 +416,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
+    libc.src.math.acos
     libc.src.math.acosf
     libc.src.math.acoshf
     libc.src.math.asin
