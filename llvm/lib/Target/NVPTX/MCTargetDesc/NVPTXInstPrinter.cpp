@@ -319,6 +319,9 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
     case NVPTX::PTXLdStInstCode::V4:
       O << ".v4";
       return;
+    case NVPTX::PTXLdStInstCode::V8:
+      O << ".v8";
+      return;
     }
     // TODO: evaluate whether cases not covered by this switch are bugs
     return;

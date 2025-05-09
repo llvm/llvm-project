@@ -129,6 +129,7 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     return;
   case NVPTXISD::LoadV2:
   case NVPTXISD::LoadV4:
+  case NVPTXISD::LoadV8:
     if (tryLoadVector(N))
       return;
     break;
@@ -139,6 +140,7 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     break;
   case NVPTXISD::StoreV2:
   case NVPTXISD::StoreV4:
+  case NVPTXISD::StoreV8:
     if (tryStoreVector(N))
       return;
     break;
@@ -1170,6 +1172,12 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     FromTypeWidth = TotalWidth / 4;
     VecType = NVPTX::PTXLdStInstCode::V4;
     break;
+  case NVPTXISD::LoadV8:
+    if (!Subtarget->has256BitMaskedLoadStore())
+      return false;
+    FromTypeWidth = TotalWidth / 8;
+    VecType = NVPTX::PTXLdStInstCode::V8;
+    break;
   default:
     return false;
   }
@@ -1180,7 +1188,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   }
 
   assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
-         FromTypeWidth <= 128 && TotalWidth <= 128 && "Invalid width for load");
+         FromTypeWidth <= 128 && TotalWidth <= 256 && "Invalid width for load");
 
   SDValue Offset, Base;
   SelectADDR(N->getOperand(1), Base, Offset);
@@ -1205,9 +1213,22 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
                         NVPTX::LDV_f32_v2, NVPTX::LDV_f64_v2);
     break;
   case NVPTXISD::LoadV4:
-    Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy, NVPTX::LDV_i8_v4,
-                             NVPTX::LDV_i16_v4, NVPTX::LDV_i32_v4, std::nullopt,
-                             NVPTX::LDV_f32_v4, std::nullopt);
+    Opcode =
+        pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy, NVPTX::LDV_i8_v4,
+                        NVPTX::LDV_i16_v4, NVPTX::LDV_i32_v4, NVPTX::LDV_i64_v4,
+                        NVPTX::LDV_f32_v4, NVPTX::LDV_f64_v4);
+    break;
+  case NVPTXISD::LoadV8:
+    switch (EltVT.getSimpleVT().SimpleTy) {
+    case MVT::i32:
+      Opcode = NVPTX::LDV_i32_v8;
+      break;
+    case MVT::f32:
+      Opcode = NVPTX::LDV_f32_v8;
+      break;
+    default:
+      return false;
+    }
     break;
   }
   if (!Opcode)
@@ -1303,13 +1324,32 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     Opcode = pickOpcodeForVT(
         EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v4i8_ELE,
         NVPTX::INT_PTX_LDG_G_v4i16_ELE, NVPTX::INT_PTX_LDG_G_v4i32_ELE,
-        std::nullopt, NVPTX::INT_PTX_LDG_G_v4f32_ELE, std::nullopt);
+        NVPTX::INT_PTX_LDG_G_v4i64_ELE, NVPTX::INT_PTX_LDG_G_v4f32_ELE,
+        NVPTX::INT_PTX_LDG_G_v4f64_ELE);
     break;
   case NVPTXISD::LDUV4:
     Opcode = pickOpcodeForVT(
         EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_G_v4i8_ELE,
         NVPTX::INT_PTX_LDU_G_v4i16_ELE, NVPTX::INT_PTX_LDU_G_v4i32_ELE,
         std::nullopt, NVPTX::INT_PTX_LDU_G_v4f32_ELE, std::nullopt);
+    break;
+  case NVPTXISD::LoadV8:
+    switch (EltVT.getSimpleVT().SimpleTy) {
+    case MVT::i32:
+      Opcode = NVPTX::INT_PTX_LDG_G_v8i32_ELE;
+      break;
+    case MVT::f32:
+      Opcode = NVPTX::INT_PTX_LDG_G_v8f32_ELE;
+      break;
+    case MVT::v2i16:
+    case MVT::v2f16:
+    case MVT::v2bf16:
+    case MVT::v4i8:
+      Opcode = NVPTX::INT_PTX_LDG_G_v8i32_ELE;
+      break;
+    default:
+      return false;
+    }
     break;
   }
   if (!Opcode)
@@ -1462,6 +1502,16 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     N2 = N->getOperand(5);
     ToTypeWidth = TotalWidth / 4;
     break;
+  case NVPTXISD::StoreV8:
+    if (!Subtarget->has256BitMaskedLoadStore())
+      return false;
+    VecType = NVPTX::PTXLdStInstCode::V8;
+    Ops.append({N->getOperand(1), N->getOperand(2), N->getOperand(3),
+                N->getOperand(4), N->getOperand(5), N->getOperand(6),
+                N->getOperand(7), N->getOperand(8)});
+    N2 = N->getOperand(9);
+    ToTypeWidth = TotalWidth / 8;
+    break;
   default:
     return false;
   }
@@ -1471,7 +1521,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   }
 
   assert(isPowerOf2_32(ToTypeWidth) && ToTypeWidth >= 8 && ToTypeWidth <= 128 &&
-         TotalWidth <= 128 && "Invalid width for store");
+         TotalWidth <= 256 && "Invalid width for store");
 
   SDValue Offset, Base;
   SelectADDR(N2, Base, Offset);
@@ -1492,9 +1542,22 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
                         NVPTX::STV_f32_v2, NVPTX::STV_f64_v2);
     break;
   case NVPTXISD::StoreV4:
-    Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy, NVPTX::STV_i8_v4,
-                             NVPTX::STV_i16_v4, NVPTX::STV_i32_v4, std::nullopt,
-                             NVPTX::STV_f32_v4, std::nullopt);
+    Opcode =
+        pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy, NVPTX::STV_i8_v4,
+                        NVPTX::STV_i16_v4, NVPTX::STV_i32_v4, NVPTX::STV_i64_v4,
+                        NVPTX::STV_f32_v4, NVPTX::STV_f64_v4);
+    break;
+  case NVPTXISD::StoreV8:
+    switch (EltVT.getSimpleVT().SimpleTy) {
+    case MVT::i32:
+      Opcode = NVPTX::STV_i32_v8;
+      break;
+    case MVT::f32:
+      Opcode = NVPTX::STV_f32_v8;
+      break;
+    default:
+      return false;
+    }
     break;
   }
 

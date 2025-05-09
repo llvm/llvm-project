@@ -162,6 +162,14 @@ static bool IsPTXVectorType(MVT VT) {
   case MVT::v2f32:
   case MVT::v4f32:
   case MVT::v2f64:
+  case MVT::v4i64:
+  case MVT::v4f64:
+  case MVT::v8i32:
+  case MVT::v8f32:
+  case MVT::v16f16:  // <8 x f16x2>
+  case MVT::v16bf16: // <8 x bf16x2>
+  case MVT::v16i16:  // <8 x i16x2>
+  case MVT::v32i8:   // <8 x i8x4>
     return true;
   }
 }
@@ -179,7 +187,7 @@ static bool Is16bitsType(MVT VT) {
 //    - unsigned int NumElts - The number of elements in the final vector
 //    - EVT EltVT - The type of the elements in the final vector
 static std::optional<std::pair<unsigned int, MVT>>
-getVectorLoweringShape(EVT VectorEVT) {
+getVectorLoweringShape(EVT VectorEVT, bool CanLowerTo256Bit) {
   if (!VectorEVT.isSimple())
     return std::nullopt;
   const MVT VectorVT = VectorEVT.getSimpleVT();
@@ -199,6 +207,15 @@ getVectorLoweringShape(EVT VectorEVT) {
   switch (VectorVT.SimpleTy) {
   default:
     return std::nullopt;
+  case MVT::v4i64:
+  case MVT::v4f64:
+  case MVT::v8i32:
+  case MVT::v8f32:
+    // This is a "native" vector type iff the address space is global
+    // and the target supports 256-bit loads/stores
+    if (!CanLowerTo256Bit)
+      return std::nullopt;
+    LLVM_FALLTHROUGH;
   case MVT::v2i8:
   case MVT::v2i16:
   case MVT::v2i32:
@@ -215,6 +232,15 @@ getVectorLoweringShape(EVT VectorEVT) {
   case MVT::v4f32:
     // This is a "native" vector type
     return std::pair(NumElts, EltVT);
+  case MVT::v16f16:  // <8 x f16x2>
+  case MVT::v16bf16: // <8 x bf16x2>
+  case MVT::v16i16:  // <8 x i16x2>
+  case MVT::v32i8:   // <8 x i8x4>
+    // This can be upsized into a "native" vector type iff the address space is
+    // global and the target supports 256-bit loads/stores.
+    if (!CanLowerTo256Bit)
+      return std::nullopt;
+    LLVM_FALLTHROUGH;
   case MVT::v8i8:   // <2 x i8x4>
   case MVT::v8f16:  // <4 x f16x2>
   case MVT::v8bf16: // <4 x bf16x2>
@@ -1070,10 +1096,12 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::ProxyReg)
     MAKE_CASE(NVPTXISD::LoadV2)
     MAKE_CASE(NVPTXISD::LoadV4)
+    MAKE_CASE(NVPTXISD::LoadV8)
     MAKE_CASE(NVPTXISD::LDUV2)
     MAKE_CASE(NVPTXISD::LDUV4)
     MAKE_CASE(NVPTXISD::StoreV2)
     MAKE_CASE(NVPTXISD::StoreV4)
+    MAKE_CASE(NVPTXISD::StoreV8)
     MAKE_CASE(NVPTXISD::FSHL_CLAMP)
     MAKE_CASE(NVPTXISD::FSHR_CLAMP)
     MAKE_CASE(NVPTXISD::BFE)
@@ -3201,7 +3229,12 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
   if (ValVT != MemVT)
     return SDValue();
 
-  const auto NumEltsAndEltVT = getVectorLoweringShape(ValVT);
+  // 256-bit vectors are only allowed iff the address is global
+  // and the target supports 256-bit loads/stores
+  unsigned AddrSpace = cast<MemSDNode>(N)->getAddressSpace();
+  bool CanLowerTo256Bit =
+      AddrSpace == ADDRESS_SPACE_GLOBAL && STI.has256BitMaskedLoadStore();
+  const auto NumEltsAndEltVT = getVectorLoweringShape(ValVT, CanLowerTo256Bit);
   if (!NumEltsAndEltVT)
     return SDValue();
   const auto [NumElts, EltVT] = NumEltsAndEltVT.value();
@@ -3228,6 +3261,9 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
     break;
   case 4:
     Opcode = NVPTXISD::StoreV4;
+    break;
+  case 8:
+    Opcode = NVPTXISD::StoreV8;
     break;
   }
 
@@ -5765,7 +5801,8 @@ static void ReplaceBITCAST(SDNode *Node, SelectionDAG &DAG,
 
 /// ReplaceVectorLoad - Convert vector loads into multi-output scalar loads.
 static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
-                              SmallVectorImpl<SDValue> &Results) {
+                              SmallVectorImpl<SDValue> &Results,
+                              bool TargetHas256BitVectorLoadStore) {
   LoadSDNode *LD = cast<LoadSDNode>(N);
   const EVT ResVT = LD->getValueType(0);
   const EVT MemVT = LD->getMemoryVT();
@@ -5775,7 +5812,12 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   if (ResVT != MemVT)
     return;
 
-  const auto NumEltsAndEltVT = getVectorLoweringShape(ResVT);
+  // 256-bit vectors are only allowed iff the address is global
+  // and the target supports 256-bit loads/stores
+  unsigned AddrSpace = cast<MemSDNode>(N)->getAddressSpace();
+  bool CanLowerTo256Bit =
+      AddrSpace == ADDRESS_SPACE_GLOBAL && TargetHas256BitVectorLoadStore;
+  const auto NumEltsAndEltVT = getVectorLoweringShape(ResVT, CanLowerTo256Bit);
   if (!NumEltsAndEltVT)
     return;
   const auto [NumElts, EltVT] = NumEltsAndEltVT.value();
@@ -5810,6 +5852,13 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
     Opcode = NVPTXISD::LoadV4;
     LdResVTs =
         DAG.getVTList({LoadEltVT, LoadEltVT, LoadEltVT, LoadEltVT, MVT::Other});
+    break;
+  }
+  case 8: {
+    Opcode = NVPTXISD::LoadV8;
+    EVT ListVTs[] = {LoadEltVT, LoadEltVT, LoadEltVT, LoadEltVT, LoadEltVT,
+                     LoadEltVT, LoadEltVT, LoadEltVT, MVT::Other};
+    LdResVTs = DAG.getVTList(ListVTs);
     break;
   }
   }
@@ -6084,7 +6133,7 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     ReplaceBITCAST(N, DAG, Results);
     return;
   case ISD::LOAD:
-    ReplaceLoadVector(N, DAG, Results);
+    ReplaceLoadVector(N, DAG, Results, STI.has256BitMaskedLoadStore());
     return;
   case ISD::INTRINSIC_W_CHAIN:
     ReplaceINTRINSIC_W_CHAIN(N, DAG, Results);

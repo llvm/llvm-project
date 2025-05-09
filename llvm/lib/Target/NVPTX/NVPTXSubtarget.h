@@ -72,6 +72,9 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
+  bool has256BitMaskedLoadStore() const {
+    return SmVersion >= 100 && PTXVersion >= 88;
+  }
   bool hasAtomAddF64() const { return SmVersion >= 60; }
   bool hasAtomScope() const { return SmVersion >= 60; }
   bool hasAtomBitwise64() const { return SmVersion >= 32; }
