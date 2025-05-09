@@ -1411,7 +1411,10 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
     return {};
 
   const mlir::ArrayAttr elements = vectorAttr.getElts();
-  const int64_t index = indexAttr.getSInt();
+  const uint64_t index = indexAttr.getUInt();
+  if (index >= elements.size())
+    return {};
+
   return elements[index];
 }
 
