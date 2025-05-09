@@ -122,7 +122,7 @@ compound=true
     N2 [label =
       "vector.body:\l" +
       "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
-      "  WIDEN-PHI ir\<%indvars.iv\> = phi ir\<0\>, ir\<%indvars.iv.next\>\l" +
+      "  WIDEN-PHI ir\<%indvars.iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%indvars.iv.next\>, vector.body ]\l" +
       "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%indvars.iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
       "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
@@ -291,7 +291,7 @@ compound=true
     N2 [label =
       "vector.body:\l" +
       "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
-      "  WIDEN-PHI ir\<%iv\> = phi ir\<0\>, ir\<%iv.next\>\l" +
+      "  WIDEN-PHI ir\<%iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%iv.next\>, loop.latch ]\l" +
       "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
       "  EMIT ir\<%c\> = icmp ir\<%l1\>, ir\<0\>\l" +
