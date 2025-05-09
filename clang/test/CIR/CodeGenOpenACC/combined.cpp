@@ -252,4 +252,71 @@ extern "C" void acc_combined(int N) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
 
+  #pragma acc parallel loop tile(1, 2, 3)
+  for(unsigned I = 0; I < N; ++I)
+    for(unsigned J = 0; J < N; ++J)
+      for(unsigned K = 0; K < N; ++K);
+  // CHECK-NEXT: acc.parallel combined(loop) {
+  // CHECK: %[[ONE_CONST:.*]] = arith.constant 1 : i64
+  // CHECK-NEXT: %[[TWO_CONST:.*]] = arith.constant 2 : i64
+  // CHECK-NEXT: %[[THREE_CONST:.*]] = arith.constant 3 : i64
+  // CHECK-NEXT: acc.loop combined(parallel) tile({%[[ONE_CONST]] : i64, %[[TWO_CONST]] : i64, %[[THREE_CONST]] : i64}) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  #pragma acc serial loop tile(2) device_type(radeon)
+  for(unsigned I = 0; I < N; ++I)
+    for(unsigned J = 0; J < N; ++J)
+      for(unsigned K = 0; K < N; ++K);
+  // CHECK-NEXT: acc.serial combined(loop) {
+  // CHECK-NEXT: %[[TWO_CONST:.*]] = arith.constant 2 : i64
+  // CHECK-NEXT: acc.loop combined(serial) tile({%[[TWO_CONST]] : i64}) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  #pragma acc kernels loop tile(2) device_type(radeon) tile (1, *)
+  for(unsigned I = 0; I < N; ++I)
+    for(unsigned J = 0; J < N; ++J)
+      for(unsigned K = 0; K < N; ++K);
+  // CHECK-NEXT: acc.kernels combined(loop) {
+  // CHECK-NEXT: %[[TWO_CONST:.*]] = arith.constant 2 : i64
+  // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
+  // CHECK-NEXT: %[[STAR_CONST:.*]] = arith.constant -1 : i64
+  // CHECK-NEXT: acc.loop combined(kernels) tile({%[[TWO_CONST]] : i64}, {%[[ONE_CONST]] : i64, %[[STAR_CONST]] : i64} [#acc.device_type<radeon>]) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  #pragma acc parallel loop tile(*) device_type(radeon, nvidia) tile (1, 2)
+  for(unsigned I = 0; I < N; ++I)
+    for(unsigned J = 0; J < N; ++J)
+      for(unsigned K = 0; K < N; ++K);
+  // CHECK-NEXT: acc.parallel combined(loop) {
+  // CHECK-NEXT: %[[STAR_CONST:.*]] = arith.constant -1 : i64
+  // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
+  // CHECK-NEXT: %[[TWO_CONST:.*]] = arith.constant 2 : i64
+  // CHECK-NEXT: acc.loop combined(parallel) tile({%[[STAR_CONST]] : i64}, {%[[ONE_CONST]] : i64, %[[TWO_CONST]] : i64} [#acc.device_type<radeon>], {%[[ONE_CONST]] : i64, %[[TWO_CONST]] : i64} [#acc.device_type<nvidia>]) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  #pragma acc serial loop tile(1) device_type(radeon, nvidia) tile(2, 3) device_type(host) tile(*, *, *)
+  for(unsigned I = 0; I < N; ++I)
+    for(unsigned J = 0; J < N; ++J)
+      for(unsigned K = 0; K < N; ++K);
+  // CHECK-NEXT: acc.serial combined(loop) {
+  // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
+  // CHECK-NEXT: %[[TWO_CONST:.*]] = arith.constant 2 : i64
+  // CHECK-NEXT: %[[THREE_CONST:.*]] = arith.constant 3 : i64
+  // CHECK-NEXT: %[[STAR_CONST:.*]] = arith.constant -1 : i64
+  // CHECK-NEXT: %[[STAR2_CONST:.*]] = arith.constant -1 : i64
+  // CHECK-NEXT: %[[STAR3_CONST:.*]] = arith.constant -1 : i64
+  // CHECK-NEXT: acc.loop combined(serial) tile({%[[ONE_CONST]] : i64}, {%[[TWO_CONST]] : i64, %[[THREE_CONST]] : i64} [#acc.device_type<radeon>], {%[[TWO_CONST]] : i64, %[[THREE_CONST]] : i64} [#acc.device_type<nvidia>], {%[[STAR_CONST]] : i64, %[[STAR2_CONST]] : i64, %[[STAR3_CONST]] : i64} [#acc.device_type<host>]) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
 }
