@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
 
 namespace GH139266 {
 void f(void) {
-#pragma omp distribute dist_schedule(static, 0) // expected-error {[argument to 'dist_schedule' clause must be a strictly positive integer value}}
+#pragma omp distribute dist_schedule(static, 0) // expected-error {{argument to 'dist_schedule' clause must be a strictly positive integer value}}
   for (int i = 0; i < 10; i++)
     ;
 }
