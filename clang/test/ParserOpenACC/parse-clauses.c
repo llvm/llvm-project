@@ -28,41 +28,41 @@ void func() {
 #pragma acc host_data if_present, if_present
 
   // expected-error@+4{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+3{{previous clause is here}}
+  // expected-note@+3{{previous 'seq' clause is here}}
   // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq independent auto
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+4{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+3{{previous clause is here}}
+  // expected-note@+3{{previous 'seq' clause is here}}
   // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq, independent auto
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+4{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+3{{previous clause is here}}
+  // expected-note@+3{{previous 'seq' clause is here}}
   // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'seq' clause is here}}
 #pragma acc loop seq independent, auto
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+3{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'kernels loop' construct}}
   // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'kernels loop' construct}}
-  // expected-note@+1 2{{previous clause is here}}
+  // expected-note@+1 2{{previous 'seq' clause is here}}
 #pragma acc kernels loop seq independent auto
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+3{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'serial loop' construct}}
   // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'serial loop' construct}}
-  // expected-note@+1 2{{previous clause is here}}
+  // expected-note@+1 2{{previous 'seq' clause is here}}
 #pragma acc serial loop seq, independent auto
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+3{{OpenACC clause 'independent' may not appear on the same construct as a 'seq' clause on a 'parallel loop' construct}}
   // expected-error@+2{{OpenACC clause 'auto' may not appear on the same construct as a 'seq' clause on a 'parallel loop' construct}}
-  // expected-note@+1 2{{previous clause is here}}
+  // expected-note@+1 2{{previous 'seq' clause is here}}
 #pragma acc parallel loop seq independent, auto
   for(int i = 0; i < 5;++i) {}
 
@@ -1326,16 +1326,16 @@ void Gang() {
 }
 
   // expected-error@+4{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
-  // expected-note@+3{{previous clause is here}}
+  // expected-note@+3{{previous 'worker' clause is here}}
   // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'worker' clause is here}}
 #pragma acc routine worker, vector, seq, nohost
 void bar();
 
   // expected-error@+4{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
-  // expected-note@+3{{previous clause is here}}
+  // expected-note@+3{{previous 'worker' clause is here}}
   // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'worker' clause is here}}
 #pragma acc routine(bar) worker, vector, seq, nohost
 
 

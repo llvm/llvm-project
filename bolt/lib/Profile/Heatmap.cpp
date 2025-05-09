@@ -304,11 +304,10 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
 
   uint64_t UnmappedHotness = 0;
   auto RecordUnmappedBucket = [&](uint64_t Address, uint64_t Frequency) {
-    if (opts::Verbosity >= 1)
-      errs() << "Couldn't map the address bucket ["
-             << formatv("{0:x}, {1:x}", Address, Address + BucketSize)
-             << "] containing " << Frequency
-             << " samples to a text section in the binary.\n";
+    errs() << "Couldn't map the address bucket [0x" << Twine::utohexstr(Address)
+           << ", 0x" << Twine::utohexstr(Address + BucketSize)
+           << "] containing " << Frequency
+           << " samples to a text section in the binary.";
     UnmappedHotness += Frequency;
   };
 

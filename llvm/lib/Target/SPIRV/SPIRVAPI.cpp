@@ -124,7 +124,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   std::unique_ptr<MachineModuleInfoWrapperPass> MMIWP(
       new MachineModuleInfoWrapperPass(Target.get()));
   const_cast<TargetLoweringObjectFile *>(Target->getObjFileLowering())
-      ->Initialize(MMIWP.get()->getMMI().getContext(), *Target);
+      ->Initialize(MMIWP->getMMI().getContext(), *Target);
 
   SmallString<4096> OutBuffer;
   raw_svector_ostream OutStream(OutBuffer);

@@ -684,7 +684,8 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
             dir.GetIntervalProvenanceRange(j, tokens - j),
             "#else: excess tokens at end of directive"_port_en_US);
       }
-    } else if (ifStack_.empty()) {
+    }
+    if (ifStack_.empty()) {
       prescanner.Say(dir.GetTokenProvenanceRange(dirOffset),
           "#else: not nested within #if, #ifdef, or #ifndef"_err_en_US);
     } else if (ifStack_.top() != CanDeadElseAppear::Yes) {

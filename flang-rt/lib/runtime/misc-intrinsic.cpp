@@ -30,7 +30,7 @@ static RT_API_ATTRS void TransferImpl(Descriptor &result,
   if (const DescriptorAddendum * addendum{mold.Addendum()}) {
     *result.Addendum() = *addendum;
   }
-  if (int stat{result.Allocate(kNoAsyncObject)}) {
+  if (int stat{result.Allocate(kNoAsyncId)}) {
     Terminator{sourceFile, line}.Crash(
         "TRANSFER: could not allocate memory for result; STAT=%d", stat);
   }

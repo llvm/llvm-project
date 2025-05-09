@@ -19,7 +19,7 @@
 
 namespace Fortran::runtime {
 
-using AllocFct = void *(*)(std::size_t, std::int64_t *);
+using AllocFct = void *(*)(std::size_t, std::int64_t);
 using FreeFct = void (*)(void *);
 
 typedef struct Allocator_t {
@@ -28,7 +28,7 @@ typedef struct Allocator_t {
 } Allocator_t;
 
 static RT_API_ATTRS void *MallocWrapper(
-    std::size_t size, [[maybe_unused]] std::int64_t *) {
+    std::size_t size, [[maybe_unused]] std::int64_t) {
   return std::malloc(size);
 }
 #ifdef RT_DEVICE_COMPILATION

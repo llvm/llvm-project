@@ -292,6 +292,51 @@ TEST(MemProf, RecordSerializationRoundTripVerion2) {
   EXPECT_EQ(Record, GotRecord);
 }
 
+TEST(MemProf, RecordSerializationRoundTripVersion4) {
+  const auto Schema = getFullSchema();
+
+  MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
+                    /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
+                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
+
+  llvm::SmallVector<CallStackId> CallStackIds = {0x123, 0x456};
+
+  llvm::SmallVector<IndexedCallSiteInfo> CallSites;
+  CallSites.push_back(
+      IndexedCallSiteInfo(0x333, {0xaaa, 0xbbb})); // CSId with GUIDs
+  CallSites.push_back(IndexedCallSiteInfo(0x444)); // CSId without GUIDs
+
+  IndexedMemProfRecord Record;
+  for (const auto &CSId : CallStackIds) {
+    // Use the same info block for both allocation sites.
+    Record.AllocSites.emplace_back(CSId, Info);
+  }
+  Record.CallSites = std::move(CallSites);
+
+  std::string Buffer;
+  llvm::raw_string_ostream OS(Buffer);
+  // Need a dummy map for V4 serialization
+  llvm::DenseMap<CallStackId, LinearCallStackId> DummyMap = {
+      {0x123, 1}, {0x456, 2}, {0x333, 3}, {0x444, 4}};
+  Record.serialize(Schema, OS, Version4, &DummyMap);
+
+  const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
+      Schema, reinterpret_cast<const unsigned char *>(Buffer.data()), Version4);
+
+  // Create the expected record using the linear IDs from the dummy map.
+  IndexedMemProfRecord ExpectedRecord;
+  for (const auto &CSId : CallStackIds) {
+    ExpectedRecord.AllocSites.emplace_back(DummyMap[CSId], Info);
+  }
+  for (const auto &CSInfo :
+       Record.CallSites) { // Use original Record's CallSites to get GUIDs
+    ExpectedRecord.CallSites.emplace_back(DummyMap[CSInfo.CSId],
+                                          CSInfo.CalleeGuids);
+  }
+
+  EXPECT_EQ(ExpectedRecord, GotRecord);
+}
+
 TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
   const auto Schema = getHotColdSchema();
 
@@ -791,7 +836,7 @@ TEST(MemProf, YAMLWriterFrame) {
 
   std::string Out = serializeInYAML(F);
   EXPECT_EQ(Out, R"YAML(---
-{ Function: 0x0123456789abcdef, LineOffset: 22, Column: 33, IsInlineFrame: true }
+{ Function: 0x123456789abcdef, LineOffset: 22, Column: 33, IsInlineFrame: true }
 ...
 )YAML");
 }

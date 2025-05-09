@@ -2907,10 +2907,13 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
         std::string name(1, '&');
         name.append(m_name.AsCString(""));
         ExecutionContext exe_ctx(GetExecutionContextRef());
+
+        lldb::DataBufferSP buffer(
+            new lldb_private::DataBufferHeap(&addr, sizeof(lldb::addr_t)));
         m_addr_of_valobj_sp = ValueObjectConstResult::Create(
             exe_ctx.GetBestExecutionContextScope(),
-            compiler_type.GetPointerType(), ConstString(name.c_str()), addr,
-            eAddressTypeInvalid, m_data.GetAddressByteSize());
+            compiler_type.GetPointerType(), ConstString(name.c_str()), buffer,
+            endian::InlHostByteOrder(), exe_ctx.GetAddressByteSize());
       }
     } break;
     default:
