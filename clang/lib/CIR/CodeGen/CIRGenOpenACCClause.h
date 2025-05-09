@@ -517,10 +517,10 @@ public:
         operation.addGangOperands(builder.getContext(), lastDeviceTypeValues,
                                   argTypes, values);
       }
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitGangClause");
     }
   }
 };
