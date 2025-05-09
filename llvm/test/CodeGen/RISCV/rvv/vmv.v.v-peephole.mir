@@ -105,8 +105,8 @@ body: |
     %3:vr = COPY %0
 ...
 ---
-name:            diff_regclass
-body:             |
+name: diff_regclass
+body: |
   bb.0.entry:
     liveins: $v8
     ; CHECK-LABEL: name: diff_regclass
