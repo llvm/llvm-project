@@ -55,7 +55,10 @@ struct Register {
 };
 
 // Models the parameter values of root constants
-struct RootConstants {};
+struct RootConstants {
+  uint32_t Num32BitConstants;
+  Register Reg;
+};
 
 // Models the end of a descriptor table and stores its visibility
 struct DescriptorTable {
