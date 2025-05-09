@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -p loop-vectorize,'print<loops>' -disable-output -enable-early-exit-vectorization 2>&1 | FileCheck %s
+; RUN: opt -S < %s -p loop-vectorize,'print<loops>' -disable-output 2>&1 | FileCheck %s
 
 declare void @init_mem(ptr, i64);
 

@@ -395,7 +395,7 @@ static cl::opt<bool> UseWiderVFIfCallVariantsPresent(
     cl::desc("Try wider VFs if they enable the use of vector variants"));
 
 static cl::opt<bool> EnableEarlyExitVectorization(
-    "enable-early-exit-vectorization", cl::init(false), cl::Hidden,
+    "enable-early-exit-vectorization", cl::init(true), cl::Hidden,
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
