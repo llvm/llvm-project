@@ -26,7 +26,7 @@ template <std::size_t n = 64>
 static OwningPtr<Descriptor> CreateEmptyCharDescriptor() {
   OwningPtr<Descriptor> descriptor{Descriptor::Create(
       sizeof(char), n, nullptr, 0, nullptr, CFI_attribute_allocatable)};
-  if (descriptor->Allocate(kNoAsyncObject) != 0) {
+  if (descriptor->Allocate(kNoAsyncId) != 0) {
     return nullptr;
   }
   return descriptor;
@@ -36,7 +36,7 @@ static OwningPtr<Descriptor> CharDescriptor(const char *value) {
   std::size_t n{std::strlen(value)};
   OwningPtr<Descriptor> descriptor{Descriptor::Create(
       sizeof(char), n, nullptr, 0, nullptr, CFI_attribute_allocatable)};
-  if (descriptor->Allocate(kNoAsyncObject) != 0) {
+  if (descriptor->Allocate(kNoAsyncId) != 0) {
     return nullptr;
   }
   std::memcpy(descriptor->OffsetElement(), value, n);
@@ -47,7 +47,7 @@ template <int kind = sizeof(std::int64_t)>
 static OwningPtr<Descriptor> EmptyIntDescriptor() {
   OwningPtr<Descriptor> descriptor{Descriptor::Create(TypeCategory::Integer,
       kind, nullptr, 0, nullptr, CFI_attribute_allocatable)};
-  if (descriptor->Allocate(kNoAsyncObject) != 0) {
+  if (descriptor->Allocate(kNoAsyncId) != 0) {
     return nullptr;
   }
   return descriptor;
@@ -57,7 +57,7 @@ template <int kind = sizeof(std::int64_t)>
 static OwningPtr<Descriptor> IntDescriptor(const int &value) {
   OwningPtr<Descriptor> descriptor{Descriptor::Create(TypeCategory::Integer,
       kind, nullptr, 0, nullptr, CFI_attribute_allocatable)};
-  if (descriptor->Allocate(kNoAsyncObject) != 0) {
+  if (descriptor->Allocate(kNoAsyncId) != 0) {
     return nullptr;
   }
   std::memcpy(descriptor->OffsetElement<int>(), &value, sizeof(int));

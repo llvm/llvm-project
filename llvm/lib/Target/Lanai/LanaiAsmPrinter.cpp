@@ -38,7 +38,7 @@ class LanaiAsmPrinter : public AsmPrinter {
 public:
   explicit LanaiAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)) {}
+      : AsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override { return "Lanai Assembly Printer"; }
 
@@ -52,6 +52,9 @@ public:
 private:
   void customEmitInstruction(const MachineInstr *MI);
   void emitCallInstruction(const MachineInstr *MI);
+
+public:
+  static char ID;
 };
 } // end of anonymous namespace
 
@@ -232,6 +235,11 @@ bool LanaiAsmPrinter::isBlockOnlyReachableByFallthrough(
 
   return !I->isBarrier();
 }
+
+char LanaiAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(LanaiAsmPrinter, "lanai-asm-printer", "Lanai Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiAsmPrinter() {

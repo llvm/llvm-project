@@ -3657,13 +3657,17 @@ bool TypeSystemClang::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
     bool success;
     if (cxx_record_decl->isCompleteDefinition())
       success = cxx_record_decl->isDynamicClass();
-    else if (std::optional<ClangASTMetadata> metadata =
-                 GetMetadata(cxx_record_decl))
-      success = metadata->GetIsDynamicCXXType();
-    else if (GetType(pointee_qual_type).GetCompleteType())
-      success = cxx_record_decl->isDynamicClass();
-    else
-      success = false;
+    else {
+      std::optional<ClangASTMetadata> metadata = GetMetadata(cxx_record_decl);
+      std::optional<bool> is_dynamic =
+          metadata ? metadata->GetIsDynamicCXXType() : std::nullopt;
+      if (is_dynamic)
+        success = *is_dynamic;
+      else if (GetType(pointee_qual_type).GetCompleteType())
+        success = cxx_record_decl->isDynamicClass();
+      else
+        success = false;
+    }
 
     if (success)
       set_dynamic_pointee_type(pointee_qual_type);

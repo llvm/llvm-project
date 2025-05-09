@@ -1,4 +1,4 @@
-name: LLVM Premerge Checks
+name: CI Checks
 
 permissions:
   contents: read
@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   premerge-checks-linux:
-    name: Linux Premerge Checks (Test Only - Please Ignore Results)
+    name: Build and Test Linux (Test Only - Please Ignore Results)
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
@@ -74,7 +74,7 @@ jobs:
           include-hidden-files: 'true'
 
   premerge-checks-windows:
-    name: Windows Premerge Checks (Test Only - Please Ignore Results)
+    name: Build and Test Windows (Test Only - Please Ignore Results)
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')

@@ -42,7 +42,7 @@ static OwningPtr<Descriptor> MakeArray(const std::vector<int> &shape,
   for (int j{0}; j < rank; ++j) {
     result->GetDimension(j).SetBounds(1, shape[j]);
   }
-  int stat{result->Allocate(kNoAsyncObject)};
+  int stat{result->Allocate(kNoAsyncId)};
   EXPECT_EQ(stat, 0) << stat;
   EXPECT_LE(data.size(), result->Elements());
   char *p{result->OffsetElement<char>()};

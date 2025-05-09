@@ -957,8 +957,6 @@ private:
       auto *DAG = SyncPipe[0].DAG;
 
       if (Cache->empty()) {
-        SmallVector<SUnit *, 8> Worklist;
-
         auto I = DAG->SUnits.begin();
         auto E = DAG->SUnits.end();
         for (; I != E; I++) {
@@ -1290,7 +1288,6 @@ private:
     bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,
                SmallVectorImpl<SchedGroup> &SyncPipe) override {
 
-      SmallVector<SUnit *, 12> Worklist;
       auto *DAG = SyncPipe[0].DAG;
       if (Cache->empty()) {
         for (auto &SU : DAG->SUnits)

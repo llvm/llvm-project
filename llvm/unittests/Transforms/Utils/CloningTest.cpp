@@ -14,18 +14,21 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -1162,4 +1165,105 @@ declare i64 @foo(i32 noundef) local_unnamed_addr
   auto NewM = llvm::CloneModule(*M);
   EXPECT_FALSE(verifyModule(*NewM, &errs()));
 }
+
+TEST_F(CloneInstruction, cloneKeyInstructions) {
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M = parseIR(Context, R"(
+    define void @test(ptr align 4 %dst) !dbg !3 {
+      store i64 1, ptr %dst, align 4, !dbg !6
+      store i64 2, ptr %dst, align 4, !dbg !7
+      store i64 3, ptr %dst, align 4, !dbg !8
+      ret void, !dbg !9
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2}
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
+    !1 = !DIFile(filename: "test.cpp",  directory: "")
+    !2 = !{i32 1, !"Debug Info Version", i32 3}
+    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5})
+    !5 = !DILocalVariable(name: "awaitables", scope: !4)
+    !6 = !DILocation(line: 1, scope: !4, inlinedAt: !8, atomGroup: 1, atomRank: 1)
+    !7 = !DILocation(line: 2, scope: !3, atomGroup: 1, atomRank: 1)
+    !8 = !DILocation(line: 3, scope: !3, atomGroup: 1, atomRank: 1)
+    !9 = !DILocation(line: 4, scope: !3, atomGroup: 2, atomRank: 1)
+  )");
+
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+#define EXPECT_ATOM(Inst, G)                                                   \
+  EXPECT_TRUE(Inst->getDebugLoc());                                            \
+  EXPECT_EQ(Inst->getDebugLoc()->getAtomGroup(), uint64_t(G));
+#else
+#define EXPECT_ATOM(Inst, G) (void)Inst;
+#endif
+
+  Function *F = M->getFunction("test");
+  BasicBlock *BB = &*F->begin();
+  ASSERT_TRUE(F);
+  Instruction *Store1 = &*BB->begin();
+  Instruction *Store2 = Store1->getNextNode();
+  Instruction *Store3 = Store2->getNextNode();
+  Instruction *Ret = Store3->getNextNode();
+
+  // Test the remapping works as expected outside of cloning.
+  ValueToValueMapTy VM;
+  // Store1 and Store2 have the same atomGroup number, but have different
+  // inlining scopes, so only Store1 should change group.
+  mapAtomInstance(Store1->getDebugLoc(), VM);
+  for (Instruction &I : *BB)
+    RemapSourceAtom(&I, VM);
+  EXPECT_ATOM(Store1, 3);
+  EXPECT_ATOM(Store2, 1);
+  EXPECT_ATOM(Store3, 1);
+  EXPECT_ATOM(Ret, 2);
+  VM.clear();
+
+  // Store2 and Store3 have the same group number; both should get remapped.
+  mapAtomInstance(Store2->getDebugLoc(), VM);
+  for (Instruction &I : *BB)
+    RemapSourceAtom(&I, VM);
+  EXPECT_ATOM(Store1, 3);
+  EXPECT_ATOM(Store2, 4);
+  EXPECT_ATOM(Store3, 4);
+  EXPECT_ATOM(Ret, 2);
+  VM.clear();
+
+  // Cloning BB with MapAtoms=false should clone the atom numbers.
+  BasicBlock *BB2 =
+      CloneBasicBlock(BB, VM, "", nullptr, nullptr, /*MapAtoms*/ false);
+  for (Instruction &I : *BB2)
+    RemapSourceAtom(&I, VM);
+  Store1 = &*BB2->begin();
+  Store2 = Store1->getNextNode();
+  Store3 = Store2->getNextNode();
+  Ret = Store3->getNextNode();
+  EXPECT_ATOM(Store1, 3);
+  EXPECT_ATOM(Store2, 4);
+  EXPECT_ATOM(Store3, 4);
+  EXPECT_ATOM(Ret, 2);
+  VM.clear();
+  delete BB2;
+
+  // Cloning BB with MapAtoms=true should map the atom numbers.
+  BasicBlock *BB3 =
+      CloneBasicBlock(BB, VM, "", nullptr, nullptr, /*MapAtoms*/ true);
+  for (Instruction &I : *BB3)
+    RemapSourceAtom(&I, VM);
+  Store1 = &*BB3->begin();
+  Store2 = Store1->getNextNode();
+  Store3 = Store2->getNextNode();
+  Ret = Store3->getNextNode();
+  EXPECT_ATOM(Store1, 5);
+  EXPECT_ATOM(Store2, 6);
+  EXPECT_ATOM(Store3, 6);
+  EXPECT_ATOM(Ret, 7);
+  VM.clear();
+  delete BB3;
+#undef EXPECT_ATOM
+}
+
 } // namespace
