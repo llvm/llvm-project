@@ -47,10 +47,12 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeFinalizeISelPass(Registry);
   initializeFinalizeMachineBundlesPass(Registry);
   initializeFixupStatepointCallerSavedLegacyPass(Registry);
+  initializeFuncHotBBHashesProfileReaderPass(Registry);
   initializeFuncletLayoutPass(Registry);
   initializeGCMachineCodeAnalysisPass(Registry);
   initializeGCModuleInfoPass(Registry);
   initializeHardwareLoopsLegacyPass(Registry);
+  initializeHotMachineBasicBlockInfoGeneratorPass(Registry);
   initializeIfConverterPass(Registry);
   initializeImplicitNullChecksPass(Registry);
   initializeIndirectBrExpandLegacyPassPass(Registry);
@@ -72,6 +74,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMIRNamerPass(Registry);
   initializeMIRProfileLoaderPassPass(Registry);
   initializeMachineBlockFrequencyInfoWrapperPassPass(Registry);
+  initializeMachineBlockHashInfoPass(Registry);
   initializeMachineBlockPlacementLegacyPass(Registry);
   initializeMachineBlockPlacementStatsLegacyPass(Registry);
   initializeMachineCFGPrinterPass(Registry);

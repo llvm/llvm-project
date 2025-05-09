@@ -211,6 +211,7 @@ struct Config {
   llvm::StringRef ltoNewPmPasses;
   llvm::StringRef ltoObjPath;
   llvm::StringRef ltoSampleProfile;
+  llvm::StringRef ltoPropellerProfile;
   llvm::StringRef mapFile;
   llvm::StringRef outputFile;
   llvm::StringRef optRemarksFilename;

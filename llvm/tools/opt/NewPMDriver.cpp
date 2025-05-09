@@ -187,6 +187,10 @@ static cl::opt<std::string>
     MemoryProfileFile("memory-profile-file",
                       cl::desc("Path to the memory profile."), cl::Hidden);
 
+static cl::opt<std::string>
+    PropellerProfileFile("propeller-profile-file",
+                         cl::desc("Path to the propeller profile."), cl::Hidden);                  
+
 static cl::opt<CSPGOKind> CSPGOKindFlag(
     "cspgo-kind", cl::init(NoCSPGO), cl::Hidden,
     cl::desc("The kind of context sensitive profile guided optimization"),
@@ -361,23 +365,26 @@ bool llvm::runPassPipeline(
   std::optional<PGOOptions> P;
   switch (PGOKindFlag) {
   case InstrGen:
-    P = PGOOptions(ProfileFile, "", "", MemoryProfileFile, FS,
+    P = PGOOptions(ProfileFile, "", "", MemoryProfileFile, 
+                   PropellerProfileFile, FS,
                    PGOOptions::IRInstr, PGOOptions::NoCSAction,
                    PGOColdFuncAttr);
     break;
   case InstrUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
+    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, 
+                   MemoryProfileFile, PropellerProfileFile, FS,
                    PGOOptions::IRUse, PGOOptions::NoCSAction, PGOColdFuncAttr);
     break;
   case SampleUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
-                   PGOOptions::SampleUse, PGOOptions::NoCSAction,
-                   PGOColdFuncAttr);
+    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, 
+                   MemoryProfileFile, PropellerProfileFile, FS,
+                   PGOOptions::SampleUse, PGOOptions::NoCSAction, PGOColdFuncAttr);
     break;
   case NoPGO:
     if (DebugInfoForProfiling || PseudoProbeForProfiling ||
         !MemoryProfileFile.empty())
-      P = PGOOptions("", "", "", MemoryProfileFile, FS, PGOOptions::NoAction,
+      P = PGOOptions("", "", "", MemoryProfileFile, 
+                     PropellerProfileFile, FS, PGOOptions::NoAction,
                      PGOOptions::NoCSAction, PGOColdFuncAttr,
                      DebugInfoForProfiling, PseudoProbeForProfiling);
     else
@@ -399,8 +406,8 @@ bool llvm::runPassPipeline(
         P->CSProfileGenFile = CSProfileGenFile;
       } else
         P = PGOOptions("", CSProfileGenFile, ProfileRemappingFile,
-                       /*MemoryProfile=*/"", FS, PGOOptions::NoAction,
-                       PGOOptions::CSIRInstr);
+                       /*MemoryProfile=*/"", /*PropellerProfile=*/"", 
+                       FS, PGOOptions::NoAction, PGOOptions::CSIRInstr);
     } else /* CSPGOKindFlag == CSInstrUse */ {
       if (!P) {
         errs() << "CSInstrUse needs to be together with InstrUse";

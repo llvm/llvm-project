@@ -66,6 +66,7 @@ add_llvm_component_library(LLVMCodeGen
   FEntryInserter.cpp
   FinalizeISel.cpp
   FixupStatepointCallerSaved.cpp
+  FuncHotBBHashesProfileReader.cpp
   FuncletLayout.cpp
   MachineFunctionAnalysis.cpp
   GCMetadata.cpp
@@ -74,6 +75,7 @@ add_llvm_component_library(LLVMCodeGen
   GlobalMerge.cpp
   GlobalMergeFunctions.cpp
   HardwareLoops.cpp
+  HotMachineBasicBlockInfoGenerator.cpp
   IfConversion.cpp
   ImplicitNullChecks.cpp
   IndirectBrExpandPass.cpp
@@ -108,6 +110,7 @@ add_llvm_component_library(LLVMCodeGen
   LowerEmuTLS.cpp
   MachineBasicBlock.cpp
   MachineBlockFrequencyInfo.cpp
+  MachineBlockHashInfo.cpp
   MachineBlockPlacement.cpp
   MachineBranchProbabilityInfo.cpp
   MachineCFGPrinter.cpp
