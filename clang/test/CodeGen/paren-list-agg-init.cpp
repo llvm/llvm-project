@@ -48,13 +48,14 @@ struct E {
   ~E() {};
 };
 
+// CHECK-DAG: [[STRUCT_F:%.*]] = type { i8 }
 struct F {
   F (int i = 1);
   F (const F &f) = delete;
   F (F &&f) = default;
 };
 
-// CHECK-DAG: [[STRUCT_G:%.*]] = type <{ i32, [4 x i8] }>
+// CHECK-DAG: [[STRUCT_G:%.*]] = type <{ i32, [[STRUCT_F]], [3 x i8] }>
 struct G {
   int a;
   F f;
@@ -77,12 +78,12 @@ namespace gh61145 {
     ~Vec();
   };
 
-  // CHECK-DAG: [[STRUCT_S1:%.*]] = type { i8 }
+  // CHECK-DAG: [[STRUCT_S1:%.*]] = type { [[STRUCT_VEC]] }
   struct S1 {
     Vec v;
   };
 
-  // CHECK-DAG: [[STRUCT_S2:%.*]] = type { i8, i8 }
+  // CHECK-DAG: [[STRUCT_S2:%.*]] = type { [[STRUCT_VEC]], i8 }
   struct S2 {
     Vec v;
     char c;
@@ -376,7 +377,7 @@ void foo18() {
 // CHECK-NEXT: [[G:%.*g.*]] = alloca [[STRUCT_G]], align 4
 // CHECK-NEXT: [[A:%.*a.*]] = getelementptr inbounds nuw [[STRUCT_G]], ptr [[G]], i32 0, i32 0
 // CHECK-NEXT: store i32 2, ptr [[A]], align 4
-// CHECK-NEXT: [[F:%.*]] = getelementptr inbounds i8, ptr [[G]], i64 4
+// CHECK-NEXT: [[F:%.*f.*]] = getelementptr inbounds nuw [[STRUCT_G]], ptr [[G]], i32 0, i32 1
 // CHECk-NEXT: call void @{{.*F.*}}(ptr noundef nonnull align 1 dereferenceable(1)) [[F]], ie32 noundef 1)
 // CHECK: ret void
 void foo19() {
@@ -391,8 +392,9 @@ namespace gh61145 {
   // CHECK-NEXT: [[AGG_TMP_ENSURED:%.*agg.tmp.ensured.*]] = alloca [[STRUCT_S1]], align 1
   // a.k.a. Vec::Vec()
   // CHECK-NEXT: call void @_ZN7gh611453VecC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[V]])
+  // CHECK-NEXT: [[V1:%.*v1.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[AGG_TMP_ENSURED]], i32 0, i32 0
   // a.k.a. Vec::Vec(Vec&&)
-  // CHECK-NEXT: call void @_ZN7gh611453VecC1EOS0_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]], ptr noundef nonnull align 1 dereferenceable(1) [[V]])
+  // CHECK-NEXT: call void @_ZN7gh611453VecC1EOS0_(ptr noundef nonnull align 1 dereferenceable(1) [[V1]], ptr noundef nonnull align 1 dereferenceable(1) [[V]])
   // a.k.a. S1::~S1()
   // CHECK-NEXT: call void @_ZN7gh611452S1D1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]])
   // a.k.a.Vec::~Vec()
@@ -411,8 +413,9 @@ namespace gh61145 {
   // CHECK-NEXT: [[AGG_TMP_ENSURED:%.*agg.tmp.ensured.*]] = alloca [[STRUCT_S2]], align 1
   // a.k.a. Vec::Vec()
   // CHECK-NEXT: call void @_ZN7gh611453VecC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[V]])
+  // CHECK-NEXT: [[V1:%.*v1.*]] = getelementptr inbounds nuw [[STRUCT_S2]], ptr [[AGG_TMP_ENSURED]], i32 0, i32 0
   // a.k.a. Vec::Vec(Vec&&)
-  // CHECK-NEXT: call void @_ZN7gh611453VecC1EOS0_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]], ptr noundef nonnull align 1 dereferenceable(1) [[V]])
+  // CHECK-NEXT: call void @_ZN7gh611453VecC1EOS0_(ptr noundef nonnull align 1 dereferenceable(1) [[V1]], ptr noundef nonnull align 1 dereferenceable(1) [[V]])
   // CHECK-NEXT: [[C:%.*c.*]] = getelementptr inbounds nuw [[STRUCT_S2]], ptr [[AGG_TMP_ENSURED]], i32 0, i32
   // CHECK-NEXT: store i8 0, ptr [[C]], align 1
   // a.k.a. S2::~S2()

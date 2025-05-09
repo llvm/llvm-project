@@ -245,8 +245,7 @@ typedef struct {
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[RETVAL]], ptr align 4 [[ARGP_CUR]], i32 4, i1 false)
-// CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_EMPTY_INT_T]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COERCE_DIVE]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 empty_int_t empty_int(__builtin_va_list list) {
