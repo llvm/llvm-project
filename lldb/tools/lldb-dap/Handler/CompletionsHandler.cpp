@@ -136,7 +136,9 @@ void CompletionsRequestHandler::operator()(
   const auto *arguments = request.getObject("arguments");
 
   // If we have a frame, try to set the context for variable completions.
-  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
+  const uint64_t frame_id =
+      GetInteger<uint64_t>(*arguments, "frameId").value_or(UINT64_MAX);
+  lldb::SBFrame frame = dap.GetLLDBFrame(frame_id);
   if (frame.IsValid()) {
     frame.GetThread().GetProcess().SetSelectedThread(frame.GetThread());
     frame.GetThread().SetSelectedFrame(frame.GetFrameID());

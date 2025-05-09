@@ -552,26 +552,13 @@ lldb::SBThread DAP::GetLLDBThread(const llvm::json::Object &arguments) {
   return target.GetProcess().GetThreadByID(tid);
 }
 
-lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
-  const uint64_t frame_id =
-      GetInteger<uint64_t>(arguments, "frameId").value_or(UINT64_MAX);
+lldb::SBFrame DAP::GetLLDBFrame(uint64_t frame_id) {
   lldb::SBProcess process = target.GetProcess();
   // Upper 32 bits is the thread index ID
   lldb::SBThread thread =
       process.GetThreadByIndexID(GetLLDBThreadIndexID(frame_id));
   // Lower 32 bits is the frame index
   return thread.GetFrameAtIndex(GetLLDBFrameID(frame_id));
-}
-
-llvm::json::Value DAP::CreateTopLevelScopes() {
-  llvm::json::Array scopes;
-  scopes.emplace_back(
-      CreateScope("Locals", VARREF_LOCALS, variables.locals.GetSize(), false));
-  scopes.emplace_back(CreateScope("Globals", VARREF_GLOBALS,
-                                  variables.globals.GetSize(), false));
-  scopes.emplace_back(CreateScope("Registers", VARREF_REGS,
-                                  variables.registers.GetSize(), false));
-  return llvm::json::Value(std::move(scopes));
 }
 
 ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,

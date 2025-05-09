@@ -118,7 +118,10 @@ void DataBreakpointInfoRequestHandler::operator()(
   const auto variablesReference =
       GetInteger<uint64_t>(arguments, "variablesReference").value_or(0);
   llvm::StringRef name = GetString(arguments, "name").value_or("");
-  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
+
+  const uint64_t frame_id =
+      GetInteger<uint64_t>(arguments, "frameId").value_or(UINT64_MAX);
+  lldb::SBFrame frame = dap.GetLLDBFrame(frame_id);
   lldb::SBValue variable = dap.variables.FindVariable(variablesReference, name);
   std::string addr, size;
 

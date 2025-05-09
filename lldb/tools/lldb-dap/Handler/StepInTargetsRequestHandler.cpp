@@ -74,7 +74,10 @@ void StepInTargetsRequestHandler::operator()(
   const auto *arguments = request.getObject("arguments");
 
   dap.step_in_targets.clear();
-  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
+
+  const uint64_t frame_id =
+      GetInteger<uint64_t>(arguments, "frameId").value_or(UINT64_MAX);
+  lldb::SBFrame frame = dap.GetLLDBFrame(frame_id);
   if (frame.IsValid()) {
     lldb::SBAddress pc_addr = frame.GetPCAddress();
     lldb::SBAddress line_end_addr =
