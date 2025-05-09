@@ -3229,12 +3229,8 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
   if (ValVT != MemVT)
     return SDValue();
 
-  // 256-bit vectors are only allowed iff the address is global
-  // and the target supports 256-bit loads/stores
-  unsigned AddrSpace = cast<MemSDNode>(N)->getAddressSpace();
-  bool CanLowerTo256Bit =
-      AddrSpace == ADDRESS_SPACE_GLOBAL && STI.has256BitMaskedLoadStore();
-  const auto NumEltsAndEltVT = getVectorLoweringShape(ValVT, CanLowerTo256Bit);
+  const auto NumEltsAndEltVT = getVectorLoweringShape(
+      ValVT, STI.has256BitVectorLoadStore(N->getAddressSpace()));
   if (!NumEltsAndEltVT)
     return SDValue();
   const auto [NumElts, EltVT] = NumEltsAndEltVT.value();
@@ -5802,7 +5798,7 @@ static void ReplaceBITCAST(SDNode *Node, SelectionDAG &DAG,
 /// ReplaceVectorLoad - Convert vector loads into multi-output scalar loads.
 static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
                               SmallVectorImpl<SDValue> &Results,
-                              bool TargetHas256BitVectorLoadStore) {
+                              const NVPTXSubtarget &STI) {
   LoadSDNode *LD = cast<LoadSDNode>(N);
   const EVT ResVT = LD->getValueType(0);
   const EVT MemVT = LD->getMemoryVT();
@@ -5812,12 +5808,8 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   if (ResVT != MemVT)
     return;
 
-  // 256-bit vectors are only allowed iff the address is global
-  // and the target supports 256-bit loads/stores
-  unsigned AddrSpace = cast<MemSDNode>(N)->getAddressSpace();
-  bool CanLowerTo256Bit =
-      AddrSpace == ADDRESS_SPACE_GLOBAL && TargetHas256BitVectorLoadStore;
-  const auto NumEltsAndEltVT = getVectorLoweringShape(ResVT, CanLowerTo256Bit);
+  const auto NumEltsAndEltVT = getVectorLoweringShape(
+      ResVT, STI.has256BitVectorLoadStore(LD->getAddressSpace()));
   if (!NumEltsAndEltVT)
     return;
   const auto [NumElts, EltVT] = NumEltsAndEltVT.value();
@@ -5840,28 +5832,23 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   const MVT LoadEltVT = (EltVT.getSizeInBits() < 16) ? MVT::i16 : EltVT;
 
   unsigned Opcode;
-  SDVTList LdResVTs;
   switch (NumElts) {
   default:
     return;
   case 2:
     Opcode = NVPTXISD::LoadV2;
-    LdResVTs = DAG.getVTList(LoadEltVT, LoadEltVT, MVT::Other);
     break;
-  case 4: {
+  case 4:
     Opcode = NVPTXISD::LoadV4;
-    LdResVTs =
-        DAG.getVTList({LoadEltVT, LoadEltVT, LoadEltVT, LoadEltVT, MVT::Other});
     break;
-  }
-  case 8: {
+  case 8:
     Opcode = NVPTXISD::LoadV8;
-    EVT ListVTs[] = {LoadEltVT, LoadEltVT, LoadEltVT, LoadEltVT, LoadEltVT,
-                     LoadEltVT, LoadEltVT, LoadEltVT, MVT::Other};
-    LdResVTs = DAG.getVTList(ListVTs);
     break;
   }
-  }
+  auto ListVTs = SmallVector<EVT, 9>(NumElts, LoadEltVT);
+  ListVTs.push_back(MVT::Other);
+  SDVTList LdResVTs = DAG.getVTList(ListVTs);
+
   SDLoc DL(LD);
 
   // Copy regular operands
@@ -6133,7 +6120,7 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     ReplaceBITCAST(N, DAG, Results);
     return;
   case ISD::LOAD:
-    ReplaceLoadVector(N, DAG, Results, STI.has256BitMaskedLoadStore());
+    ReplaceLoadVector(N, DAG, Results, STI);
     return;
   case ISD::INTRINSIC_W_CHAIN:
     ReplaceINTRINSIC_W_CHAIN(N, DAG, Results);

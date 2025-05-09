@@ -197,70 +197,70 @@ define void @int8x32(ptr addrspace(1) %ptr) {
   %ptr1f = getelementptr i8, ptr addrspace(1) %ptr, i64 31
 
   %l0 = load i8, ptr addrspace(1) %ptr0, align 32
-  %l1 = load i8, ptr addrspace(1) %ptr1, align 1
-  %l2 = load i8, ptr addrspace(1) %ptr2, align 1
-  %l3 = load i8, ptr addrspace(1) %ptr3, align 1
-  %l4 = load i8, ptr addrspace(1) %ptr4, align 1
-  %l5 = load i8, ptr addrspace(1) %ptr5, align 1
-  %l6 = load i8, ptr addrspace(1) %ptr6, align 1
-  %l7 = load i8, ptr addrspace(1) %ptr7, align 1
-  %l8 = load i8, ptr addrspace(1) %ptr8, align 1
-  %l9 = load i8, ptr addrspace(1) %ptr9, align 1
-  %la = load i8, ptr addrspace(1) %ptra, align 1
-  %lb = load i8, ptr addrspace(1) %ptrb, align 1
-  %lc = load i8, ptr addrspace(1) %ptrc, align 1
-  %ld = load i8, ptr addrspace(1) %ptrd, align 1
-  %le = load i8, ptr addrspace(1) %ptre, align 1
-  %lf = load i8, ptr addrspace(1) %ptrf, align 1
+  %l1 = load i8, ptr addrspace(1) %ptr1
+  %l2 = load i8, ptr addrspace(1) %ptr2
+  %l3 = load i8, ptr addrspace(1) %ptr3
+  %l4 = load i8, ptr addrspace(1) %ptr4
+  %l5 = load i8, ptr addrspace(1) %ptr5
+  %l6 = load i8, ptr addrspace(1) %ptr6
+  %l7 = load i8, ptr addrspace(1) %ptr7
+  %l8 = load i8, ptr addrspace(1) %ptr8
+  %l9 = load i8, ptr addrspace(1) %ptr9
+  %la = load i8, ptr addrspace(1) %ptra
+  %lb = load i8, ptr addrspace(1) %ptrb
+  %lc = load i8, ptr addrspace(1) %ptrc
+  %ld = load i8, ptr addrspace(1) %ptrd
+  %le = load i8, ptr addrspace(1) %ptre
+  %lf = load i8, ptr addrspace(1) %ptrf
   %l10 = load i8, ptr addrspace(1) %ptr10, align 16
-  %l11 = load i8, ptr addrspace(1) %ptr11, align 1
-  %l12 = load i8, ptr addrspace(1) %ptr12, align 1
-  %l13 = load i8, ptr addrspace(1) %ptr13, align 1
-  %l14 = load i8, ptr addrspace(1) %ptr14, align 1
-  %l15 = load i8, ptr addrspace(1) %ptr15, align 1
-  %l16 = load i8, ptr addrspace(1) %ptr16, align 1
-  %l17 = load i8, ptr addrspace(1) %ptr17, align 1
-  %l18 = load i8, ptr addrspace(1) %ptr18, align 1
-  %l19 = load i8, ptr addrspace(1) %ptr19, align 1
-  %l1a = load i8, ptr addrspace(1) %ptr1a, align 1
-  %l1b = load i8, ptr addrspace(1) %ptr1b, align 1
-  %l1c = load i8, ptr addrspace(1) %ptr1c, align 1
-  %l1d = load i8, ptr addrspace(1) %ptr1d, align 1
-  %l1e = load i8, ptr addrspace(1) %ptr1e, align 1
-  %l1f = load i8, ptr addrspace(1) %ptr1f, align 1
+  %l11 = load i8, ptr addrspace(1) %ptr11
+  %l12 = load i8, ptr addrspace(1) %ptr12
+  %l13 = load i8, ptr addrspace(1) %ptr13
+  %l14 = load i8, ptr addrspace(1) %ptr14
+  %l15 = load i8, ptr addrspace(1) %ptr15
+  %l16 = load i8, ptr addrspace(1) %ptr16
+  %l17 = load i8, ptr addrspace(1) %ptr17
+  %l18 = load i8, ptr addrspace(1) %ptr18
+  %l19 = load i8, ptr addrspace(1) %ptr19
+  %l1a = load i8, ptr addrspace(1) %ptr1a
+  %l1b = load i8, ptr addrspace(1) %ptr1b
+  %l1c = load i8, ptr addrspace(1) %ptr1c
+  %l1d = load i8, ptr addrspace(1) %ptr1d
+  %l1e = load i8, ptr addrspace(1) %ptr1e
+  %l1f = load i8, ptr addrspace(1) %ptr1f
 
-  store i8 %lf, ptr addrspace(1) %ptrc, align 1
-  store i8 %le, ptr addrspace(1) %ptrd, align 1
-  store i8 %ld, ptr addrspace(1) %ptre, align 1
-  store i8 %lc, ptr addrspace(1) %ptrf, align 1
+  store i8 %lf, ptr addrspace(1) %ptrc
+  store i8 %le, ptr addrspace(1) %ptrd
+  store i8 %ld, ptr addrspace(1) %ptre
+  store i8 %lc, ptr addrspace(1) %ptrf
   store i8 %lb, ptr addrspace(1) %ptr0, align 32
-  store i8 %la, ptr addrspace(1) %ptr1, align 1
-  store i8 %l9, ptr addrspace(1) %ptr2, align 1
-  store i8 %l8, ptr addrspace(1) %ptr3, align 1
-  store i8 %l7, ptr addrspace(1) %ptr4, align 1
-  store i8 %l6, ptr addrspace(1) %ptr5, align 1
-  store i8 %l5, ptr addrspace(1) %ptr6, align 1
-  store i8 %l4, ptr addrspace(1) %ptr7, align 1
-  store i8 %l3, ptr addrspace(1) %ptr8, align 1
-  store i8 %l2, ptr addrspace(1) %ptr9, align 1
-  store i8 %l1, ptr addrspace(1) %ptra, align 1
-  store i8 %l0, ptr addrspace(1) %ptrb, align 1
-  store i8 %l1f, ptr addrspace(1) %ptr1c, align 1
-  store i8 %l1e, ptr addrspace(1) %ptr1d, align 1
-  store i8 %l1d, ptr addrspace(1) %ptr1e, align 1
-  store i8 %l1c, ptr addrspace(1) %ptr1f, align 1
+  store i8 %la, ptr addrspace(1) %ptr1
+  store i8 %l9, ptr addrspace(1) %ptr2
+  store i8 %l8, ptr addrspace(1) %ptr3
+  store i8 %l7, ptr addrspace(1) %ptr4
+  store i8 %l6, ptr addrspace(1) %ptr5
+  store i8 %l5, ptr addrspace(1) %ptr6
+  store i8 %l4, ptr addrspace(1) %ptr7
+  store i8 %l3, ptr addrspace(1) %ptr8
+  store i8 %l2, ptr addrspace(1) %ptr9
+  store i8 %l1, ptr addrspace(1) %ptra
+  store i8 %l0, ptr addrspace(1) %ptrb
+  store i8 %l1f, ptr addrspace(1) %ptr1c
+  store i8 %l1e, ptr addrspace(1) %ptr1d
+  store i8 %l1d, ptr addrspace(1) %ptr1e
+  store i8 %l1c, ptr addrspace(1) %ptr1f
   store i8 %l1b, ptr addrspace(1) %ptr10, align 16
-  store i8 %l1a, ptr addrspace(1) %ptr11, align 1
-  store i8 %l19, ptr addrspace(1) %ptr12, align 1
-  store i8 %l18, ptr addrspace(1) %ptr13, align 1
-  store i8 %l17, ptr addrspace(1) %ptr14, align 1
-  store i8 %l16, ptr addrspace(1) %ptr15, align 1
-  store i8 %l15, ptr addrspace(1) %ptr16, align 1
-  store i8 %l14, ptr addrspace(1) %ptr17, align 1
-  store i8 %l13, ptr addrspace(1) %ptr18, align 1
-  store i8 %l12, ptr addrspace(1) %ptr19, align 1
-  store i8 %l11, ptr addrspace(1) %ptr1a, align 1
-  store i8 %l10, ptr addrspace(1) %ptr1b, align 1
+  store i8 %l1a, ptr addrspace(1) %ptr11
+  store i8 %l19, ptr addrspace(1) %ptr12
+  store i8 %l18, ptr addrspace(1) %ptr13
+  store i8 %l17, ptr addrspace(1) %ptr14
+  store i8 %l16, ptr addrspace(1) %ptr15
+  store i8 %l15, ptr addrspace(1) %ptr16
+  store i8 %l14, ptr addrspace(1) %ptr17
+  store i8 %l13, ptr addrspace(1) %ptr18
+  store i8 %l12, ptr addrspace(1) %ptr19
+  store i8 %l11, ptr addrspace(1) %ptr1a
+  store i8 %l10, ptr addrspace(1) %ptr1b
 
   ret void
 }
@@ -366,38 +366,38 @@ define void @int16x16(ptr addrspace(1) %ptr) {
   %ptrf = getelementptr i16, ptr addrspace(1) %ptr, i64 15
 
   %l0 = load i16, ptr addrspace(1) %ptr0, align 32
-  %l1 = load i16, ptr addrspace(1) %ptr1, align 1
-  %l2 = load i16, ptr addrspace(1) %ptr2, align 1
-  %l3 = load i16, ptr addrspace(1) %ptr3, align 1
-  %l4 = load i16, ptr addrspace(1) %ptr4, align 1
-  %l5 = load i16, ptr addrspace(1) %ptr5, align 1
-  %l6 = load i16, ptr addrspace(1) %ptr6, align 1
-  %l7 = load i16, ptr addrspace(1) %ptr7, align 1
+  %l1 = load i16, ptr addrspace(1) %ptr1
+  %l2 = load i16, ptr addrspace(1) %ptr2
+  %l3 = load i16, ptr addrspace(1) %ptr3
+  %l4 = load i16, ptr addrspace(1) %ptr4
+  %l5 = load i16, ptr addrspace(1) %ptr5
+  %l6 = load i16, ptr addrspace(1) %ptr6
+  %l7 = load i16, ptr addrspace(1) %ptr7
   %l8 = load i16, ptr addrspace(1) %ptr8, align 16
-  %l9 = load i16, ptr addrspace(1) %ptr9, align 1
-  %la = load i16, ptr addrspace(1) %ptra, align 1
-  %lb = load i16, ptr addrspace(1) %ptrb, align 1
-  %lc = load i16, ptr addrspace(1) %ptrc, align 1
-  %ld = load i16, ptr addrspace(1) %ptrd, align 1
-  %le = load i16, ptr addrspace(1) %ptre, align 1
-  %lf = load i16, ptr addrspace(1) %ptrf, align 1
+  %l9 = load i16, ptr addrspace(1) %ptr9
+  %la = load i16, ptr addrspace(1) %ptra
+  %lb = load i16, ptr addrspace(1) %ptrb
+  %lc = load i16, ptr addrspace(1) %ptrc
+  %ld = load i16, ptr addrspace(1) %ptrd
+  %le = load i16, ptr addrspace(1) %ptre
+  %lf = load i16, ptr addrspace(1) %ptrf
 
-  store i16 %lf, ptr addrspace(1) %ptrc, align 1
-  store i16 %le, ptr addrspace(1) %ptrd, align 1
-  store i16 %ld, ptr addrspace(1) %ptre, align 1
-  store i16 %lc, ptr addrspace(1) %ptrf, align 1
+  store i16 %lf, ptr addrspace(1) %ptrc
+  store i16 %le, ptr addrspace(1) %ptrd
+  store i16 %ld, ptr addrspace(1) %ptre
+  store i16 %lc, ptr addrspace(1) %ptrf
   store i16 %lb, ptr addrspace(1) %ptr0, align 32
-  store i16 %la, ptr addrspace(1) %ptr1, align 1
-  store i16 %l9, ptr addrspace(1) %ptr2, align 1
-  store i16 %l8, ptr addrspace(1) %ptr3, align 1
-  store i16 %l7, ptr addrspace(1) %ptr4, align 1
-  store i16 %l6, ptr addrspace(1) %ptr5, align 1
-  store i16 %l5, ptr addrspace(1) %ptr6, align 1
-  store i16 %l4, ptr addrspace(1) %ptr7, align 1
+  store i16 %la, ptr addrspace(1) %ptr1
+  store i16 %l9, ptr addrspace(1) %ptr2
+  store i16 %l8, ptr addrspace(1) %ptr3
+  store i16 %l7, ptr addrspace(1) %ptr4
+  store i16 %l6, ptr addrspace(1) %ptr5
+  store i16 %l5, ptr addrspace(1) %ptr6
+  store i16 %l4, ptr addrspace(1) %ptr7
   store i16 %l3, ptr addrspace(1) %ptr8, align 16
-  store i16 %l2, ptr addrspace(1) %ptr9, align 1
-  store i16 %l1, ptr addrspace(1) %ptra, align 1
-  store i16 %l0, ptr addrspace(1) %ptrb, align 1
+  store i16 %l2, ptr addrspace(1) %ptr9
+  store i16 %l1, ptr addrspace(1) %ptra
+  store i16 %l0, ptr addrspace(1) %ptrb
 
   ret void
 }
@@ -463,22 +463,22 @@ define void @int32x8(ptr addrspace(1) %ptr) {
   %ptr7 = getelementptr i32, ptr addrspace(1) %ptr, i64 7
 
   %l0 = load i32, ptr addrspace(1) %ptr0, align 32
-  %l1 = load i32, ptr addrspace(1) %ptr1, align 1
-  %l2 = load i32, ptr addrspace(1) %ptr2, align 1
-  %l3 = load i32, ptr addrspace(1) %ptr3, align 1
+  %l1 = load i32, ptr addrspace(1) %ptr1
+  %l2 = load i32, ptr addrspace(1) %ptr2
+  %l3 = load i32, ptr addrspace(1) %ptr3
   %l4 = load i32, ptr addrspace(1) %ptr4, align 16
-  %l5 = load i32, ptr addrspace(1) %ptr5, align 1
-  %l6 = load i32, ptr addrspace(1) %ptr6, align 1
-  %l7 = load i32, ptr addrspace(1) %ptr7, align 1
+  %l5 = load i32, ptr addrspace(1) %ptr5
+  %l6 = load i32, ptr addrspace(1) %ptr6
+  %l7 = load i32, ptr addrspace(1) %ptr7
 
   store i32 %l7, ptr addrspace(1) %ptr0, align 32
-  store i32 %l6, ptr addrspace(1) %ptr1, align 1
-  store i32 %l5, ptr addrspace(1) %ptr2, align 1
-  store i32 %l4, ptr addrspace(1) %ptr3, align 1
+  store i32 %l6, ptr addrspace(1) %ptr1
+  store i32 %l5, ptr addrspace(1) %ptr2
+  store i32 %l4, ptr addrspace(1) %ptr3
   store i32 %l3, ptr addrspace(1) %ptr4, align 16
-  store i32 %l2, ptr addrspace(1) %ptr5, align 1
-  store i32 %l1, ptr addrspace(1) %ptr6, align 1
-  store i32 %l0, ptr addrspace(1) %ptr7, align 1
+  store i32 %l2, ptr addrspace(1) %ptr5
+  store i32 %l1, ptr addrspace(1) %ptr6
+  store i32 %l0, ptr addrspace(1) %ptr7
 
   ret void
 }
@@ -524,14 +524,14 @@ define void @int64x4(ptr addrspace(1) %ptr) {
   %ptr3 = getelementptr i64, ptr addrspace(1) %ptr, i64 3
 
   %l0 = load i64, ptr addrspace(1) %ptr0, align 32
-  %l1 = load i64, ptr addrspace(1) %ptr1, align 1
+  %l1 = load i64, ptr addrspace(1) %ptr1
   %l2 = load i64, ptr addrspace(1) %ptr2, align 16
-  %l3 = load i64, ptr addrspace(1) %ptr3, align 1
+  %l3 = load i64, ptr addrspace(1) %ptr3
 
   store i64 %l3, ptr addrspace(1) %ptr0, align 32
-  store i64 %l2, ptr addrspace(1) %ptr1, align 1
+  store i64 %l2, ptr addrspace(1) %ptr1
   store i64 %l1, ptr addrspace(1) %ptr2, align 16
-  store i64 %l0, ptr addrspace(1) %ptr3, align 1
+  store i64 %l0, ptr addrspace(1) %ptr3
 
   ret void
 }
@@ -597,22 +597,22 @@ define void @float32x8(ptr addrspace(1) %ptr) {
   %ptr7 = getelementptr float, ptr addrspace(1) %ptr, i64 7
 
   %l0 = load float, ptr addrspace(1) %ptr0, align 32
-  %l1 = load float, ptr addrspace(1) %ptr1, align 1
-  %l2 = load float, ptr addrspace(1) %ptr2, align 1
-  %l3 = load float, ptr addrspace(1) %ptr3, align 1
+  %l1 = load float, ptr addrspace(1) %ptr1
+  %l2 = load float, ptr addrspace(1) %ptr2
+  %l3 = load float, ptr addrspace(1) %ptr3
   %l4 = load float, ptr addrspace(1) %ptr4, align 16
-  %l5 = load float, ptr addrspace(1) %ptr5, align 1
-  %l6 = load float, ptr addrspace(1) %ptr6, align 1
-  %l7 = load float, ptr addrspace(1) %ptr7, align 1
+  %l5 = load float, ptr addrspace(1) %ptr5
+  %l6 = load float, ptr addrspace(1) %ptr6
+  %l7 = load float, ptr addrspace(1) %ptr7
 
   store float %l7, ptr addrspace(1) %ptr0, align 32
-  store float %l6, ptr addrspace(1) %ptr1, align 1
-  store float %l5, ptr addrspace(1) %ptr2, align 1
-  store float %l4, ptr addrspace(1) %ptr3, align 1
+  store float %l6, ptr addrspace(1) %ptr1
+  store float %l5, ptr addrspace(1) %ptr2
+  store float %l4, ptr addrspace(1) %ptr3
   store float %l3, ptr addrspace(1) %ptr4, align 16
-  store float %l2, ptr addrspace(1) %ptr5, align 1
-  store float %l1, ptr addrspace(1) %ptr6, align 1
-  store float %l0, ptr addrspace(1) %ptr7, align 1
+  store float %l2, ptr addrspace(1) %ptr5
+  store float %l1, ptr addrspace(1) %ptr6
+  store float %l0, ptr addrspace(1) %ptr7
 
   ret void
 }
@@ -658,14 +658,14 @@ define void @float64x4(ptr addrspace(1) %ptr) {
   %ptr3 = getelementptr double, ptr addrspace(1) %ptr, i64 3
 
   %l0 = load double, ptr addrspace(1) %ptr0, align 32
-  %l1 = load double, ptr addrspace(1) %ptr1, align 1
+  %l1 = load double, ptr addrspace(1) %ptr1
   %l2 = load double, ptr addrspace(1) %ptr2, align 16
-  %l3 = load double, ptr addrspace(1) %ptr3, align 1
+  %l3 = load double, ptr addrspace(1) %ptr3
 
   store double %l3, ptr addrspace(1) %ptr0, align 32
-  store double %l2, ptr addrspace(1) %ptr1, align 1
+  store double %l2, ptr addrspace(1) %ptr1
   store double %l1, ptr addrspace(1) %ptr2, align 16
-  store double %l0, ptr addrspace(1) %ptr3, align 1
+  store double %l0, ptr addrspace(1) %ptr3
 
   ret void
 }
@@ -707,22 +707,22 @@ define void @int32x8_non_global(ptr %ptr) {
   %ptr7 = getelementptr i32, ptr %ptr, i64 7
 
   %l0 = load i32, ptr %ptr0, align 32
-  %l1 = load i32, ptr %ptr1, align 1
-  %l2 = load i32, ptr %ptr2, align 1
-  %l3 = load i32, ptr %ptr3, align 1
+  %l1 = load i32, ptr %ptr1
+  %l2 = load i32, ptr %ptr2
+  %l3 = load i32, ptr %ptr3
   %l4 = load i32, ptr %ptr4, align 16
-  %l5 = load i32, ptr %ptr5, align 1
-  %l6 = load i32, ptr %ptr6, align 1
-  %l7 = load i32, ptr %ptr7, align 1
+  %l5 = load i32, ptr %ptr5
+  %l6 = load i32, ptr %ptr6
+  %l7 = load i32, ptr %ptr7
 
   store i32 %l7, ptr %ptr0, align 32
-  store i32 %l6, ptr %ptr1, align 1
-  store i32 %l5, ptr %ptr2, align 1
-  store i32 %l4, ptr %ptr3, align 1
+  store i32 %l6, ptr %ptr1
+  store i32 %l5, ptr %ptr2
+  store i32 %l4, ptr %ptr3
   store i32 %l3, ptr %ptr4, align 16
-  store i32 %l2, ptr %ptr5, align 1
-  store i32 %l1, ptr %ptr6, align 1
-  store i32 %l0, ptr %ptr7, align 1
+  store i32 %l2, ptr %ptr5
+  store i32 %l1, ptr %ptr6
+  store i32 %l0, ptr %ptr7
 
   ret void
 }
