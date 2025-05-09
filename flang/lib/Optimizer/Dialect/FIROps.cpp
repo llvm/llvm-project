@@ -1542,8 +1542,7 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
 // 1. passing an entity to an external function and there's nothing we can do
 //    about volatility after that happens, or
 // 2. for code generation, at which point we represent volatility with
-// attributes
-//    on the LLVM instructions and intrinsics.
+//    attributes on the LLVM instructions and intrinsics.
 //
 // For all other cases, volatility ought to match exactly.
 static mlir::LogicalResult verifyVolatility(mlir::Type inType,
