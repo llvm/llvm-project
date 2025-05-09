@@ -455,7 +455,7 @@ struct LinearizeVectorSplat final
 ///   %index = arith.index_cast %cmpi : i1 to index
 ///   %mul = arith.muli %index, %arg1 : index
 ///   %mask = vector.create_mask %mul : vector<4xi1>
-///   %out_1d = vector.shape_cast %mask : vector<4xi1> to vector<1x4xi1>
+///   %shape_cast = vector.shape_cast %mask : vector<4xi1> to vector<1x4xi1>
 struct LinearizeVectorCreateMask final
     : OpConversionPattern<vector::CreateMaskOp> {
   using OpConversionPattern::OpConversionPattern;
