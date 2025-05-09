@@ -55,6 +55,7 @@
 TOK(invalid, "invalid identifier")
 TOK(end_of_stream, "end of stream")
 TOK(int_literal, "integer literal")
+TOK(float_literal, "float literal")
 
 // Register Tokens:
 TOK(bReg, "b register")
@@ -74,6 +75,10 @@ PUNCTUATOR(minus,   '-')
 // RootElement Keywords:
 KEYWORD(RootSignature) // used only for diagnostic messaging
 KEYWORD(DescriptorTable)
+KEYWORD(RootConstants)
+
+// RootConstants Keywords:
+KEYWORD(num32BitConstants)
 
 // DescriptorTable Keywords:
 KEYWORD(CBV)

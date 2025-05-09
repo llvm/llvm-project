@@ -139,6 +139,19 @@ def llvm_shared_cluster_ptr_ty : LLVMQualPointerType<7>;  // (shared_cluster)ptr
 // MISC
 //
 
+defvar WARP_SIZE = 32;
+
+// Note: the maximum grid size in the x-dimension is the lower value of 65535
+// on sm_20. We conservatively use the larger value here as it required for
+// sm_30+ and also correct for sm_20.
+defvar MAX_GRID_SIZE_X = 0x7fffffff;
+defvar MAX_GRID_SIZE_Y = 0xffff;
+defvar MAX_GRID_SIZE_Z = 0xffff;
+
+defvar MAX_BLOCK_SIZE_X = 1024;
+defvar MAX_BLOCK_SIZE_Y = 1024;
+defvar MAX_BLOCK_SIZE_Z = 64;
+
 // Helper class that concatenates list elements with
 // a given separator 'sep' and returns the result.
 // Handles empty strings.
@@ -4747,26 +4760,35 @@ def int_nvvm_sust_p_3d_v4i32_trap
 
 // Accessing special registers.
 
-class PTXReadSRegIntrinsicNB_r32
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>;
-class PTXReadSRegIntrinsic_r32<string name>
-  : PTXReadSRegIntrinsicNB_r32, ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
+class PTXReadSRegIntrinsicNB_r32<list<IntrinsicProperty> properties = []>
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [],
+      !listconcat([IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>], properties)>;
 
-multiclass PTXReadSRegIntrinsic_v4i32<string regname> {
+class PTXReadSRegIntrinsic_r32<string name,
+                               list<IntrinsicProperty> properties = []>
+  : PTXReadSRegIntrinsicNB_r32<properties>,
+    ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
+
+multiclass PTXReadSRegIntrinsic_v4i32<string regname,
+                                      list<list<IntrinsicProperty>> properties = [[], [], [], []]> {
+  assert !eq(!size(properties), 4), "properties must be a list of 4 lists";
 // FIXME: Do we need the 128-bit integer type version?
 //    def _r64   : Intrinsic<[llvm_i128_ty],   [], [IntrNoMem, IntrSpeculatable]>;
 
 // FIXME: Enable this once v4i32 support is enabled in back-end.
 //    def _v4i16 : Intrinsic<[llvm_v4i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
-  foreach suffix = ["_x", "_y", "_z", "_w"] in
-    def suffix : PTXReadSRegIntrinsic_r32<regname # suffix>;
+  defvar suffixes = ["_x", "_y", "_z", "_w"];
+  foreach i = !range(suffixes) in
+    def suffixes[i] : PTXReadSRegIntrinsic_r32<regname # suffixes[i], properties[i]>;
 }
 
 // Same, but without automatic clang builtins. It will be used for
 // registers that require particular GPU or PTX version.
-multiclass PTXReadSRegIntrinsicNB_v4i32 {
-  foreach suffix = ["_x", "_y", "_z", "_w"] in
-    def suffix : PTXReadSRegIntrinsicNB_r32;
+multiclass PTXReadSRegIntrinsicNB_v4i32<list<list<IntrinsicProperty>> properties = [[], [], [], []]> {
+  assert !eq(!size(properties), 4), "properties must be a list of 4 lists";
+  defvar suffixes = ["_x", "_y", "_z", "_w"];
+  foreach i = !range(suffixes) in
+    def suffixes[i] : PTXReadSRegIntrinsicNB_r32<properties[i]>;
 }
 
 class PTXReadSRegIntrinsic_r64<string name>
@@ -4782,15 +4804,41 @@ class PTXReadNCSRegIntrinsic_r64<string name>
   : Intrinsic<[llvm_i64_ty], [], [IntrInaccessibleMemOnly, IntrNoCallback, NoUndef<RetIndex>]>,
     ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
 
-defm int_nvvm_read_ptx_sreg_tid : PTXReadSRegIntrinsic_v4i32<"tid">;
-defm int_nvvm_read_ptx_sreg_ntid : PTXReadSRegIntrinsic_v4i32<"ntid">;
+defm int_nvvm_read_ptx_sreg_tid
+  : PTXReadSRegIntrinsic_v4i32<"tid",
+                              [[Range<RetIndex, 0, MAX_BLOCK_SIZE_X>],
+                               [Range<RetIndex, 0, MAX_BLOCK_SIZE_Y>],
+                               [Range<RetIndex, 0, MAX_BLOCK_SIZE_Z>],
+                               [Range<RetIndex, 0, 1>]]>;
 
-def int_nvvm_read_ptx_sreg_laneid : PTXReadSRegIntrinsic_r32<"laneid">;
+defm int_nvvm_read_ptx_sreg_ntid
+  : PTXReadSRegIntrinsic_v4i32<"ntid",
+                               [[Range<RetIndex, 1, !add(MAX_BLOCK_SIZE_X, 1)>],
+                                [Range<RetIndex, 1, !add(MAX_BLOCK_SIZE_Y, 1)>],
+                                [Range<RetIndex, 1, !add(MAX_BLOCK_SIZE_Z, 1)>],
+                                [Range<RetIndex, 0, 1>]]>;
+
+def int_nvvm_read_ptx_sreg_laneid
+  : PTXReadSRegIntrinsic_r32<"laneid", [Range<RetIndex, 0, WARP_SIZE>]>;
+
 def int_nvvm_read_ptx_sreg_warpid : PTXReadSRegIntrinsic_r32<"warpid">;
 def int_nvvm_read_ptx_sreg_nwarpid : PTXReadSRegIntrinsic_r32<"nwarpid">;
 
-defm int_nvvm_read_ptx_sreg_ctaid : PTXReadSRegIntrinsic_v4i32<"ctaid">;
-defm int_nvvm_read_ptx_sreg_nctaid : PTXReadSRegIntrinsic_v4i32<"nctaid">;
+defvar MAX_GRID_ID_RANGE = [[Range<RetIndex, 0, MAX_GRID_SIZE_X>],
+                            [Range<RetIndex, 0, MAX_GRID_SIZE_Y>],
+                            [Range<RetIndex, 0, MAX_GRID_SIZE_Z>],
+                            [Range<RetIndex, 0, 1>]];
+
+defvar MAX_GRID_NID_RANGE = [[Range<RetIndex, 1, !add(MAX_GRID_SIZE_X, 1)>],
+                             [Range<RetIndex, 1, !add(MAX_GRID_SIZE_Y, 1)>],
+                             [Range<RetIndex, 1, !add(MAX_GRID_SIZE_Z, 1)>],
+                             [Range<RetIndex, 0, 1>]];
+
+defm int_nvvm_read_ptx_sreg_ctaid
+  : PTXReadSRegIntrinsic_v4i32<"ctaid", MAX_GRID_ID_RANGE>;
+
+defm int_nvvm_read_ptx_sreg_nctaid
+  : PTXReadSRegIntrinsic_v4i32<"nctaid", MAX_GRID_NID_RANGE>;
 
 def int_nvvm_read_ptx_sreg_smid : PTXReadSRegIntrinsic_r32<"smid">;
 def int_nvvm_read_ptx_sreg_nsmid : PTXReadSRegIntrinsic_r32<"nsmid">;
@@ -4817,13 +4865,25 @@ def int_nvvm_read_ptx_sreg_pm1 : PTXReadNCSRegIntrinsic_r32<"pm1">;
 def int_nvvm_read_ptx_sreg_pm2 : PTXReadNCSRegIntrinsic_r32<"pm2">;
 def int_nvvm_read_ptx_sreg_pm3 : PTXReadNCSRegIntrinsic_r32<"pm3">;
 
-def int_nvvm_read_ptx_sreg_warpsize : PTXReadSRegIntrinsic_r32<"warpsize">;
+def int_nvvm_read_ptx_sreg_warpsize
+  : PTXReadSRegIntrinsic_r32<"warpsize",
+                             [Range<RetIndex, WARP_SIZE, !add(WARP_SIZE, 1)>]>;
 
 // sm90+, PTX7.8+
-defm int_nvvm_read_ptx_sreg_clusterid : PTXReadSRegIntrinsicNB_v4i32;
-defm int_nvvm_read_ptx_sreg_nclusterid : PTXReadSRegIntrinsicNB_v4i32;
-defm int_nvvm_read_ptx_sreg_cluster_ctaid : PTXReadSRegIntrinsicNB_v4i32;
-defm int_nvvm_read_ptx_sreg_cluster_nctaid : PTXReadSRegIntrinsicNB_v4i32;
+
+// Note: Since clusters are subdivisions of the grid, we conservatively use the
+// maximum grid size as an upper bound for the clusterid and cluster_ctaid. In
+// practice, the clusterid will likely be much smaller. The CUDA programming
+// guide recommends 8 as a maximum portable value and H100s support 16.
+
+defm int_nvvm_read_ptx_sreg_clusterid
+  : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_ID_RANGE>;
+defm int_nvvm_read_ptx_sreg_nclusterid
+  : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_NID_RANGE>;
+defm int_nvvm_read_ptx_sreg_cluster_ctaid
+  : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_ID_RANGE>;
+defm int_nvvm_read_ptx_sreg_cluster_nctaid
+  : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_NID_RANGE>;
 
 def int_nvvm_read_ptx_sreg_cluster_ctarank : PTXReadSRegIntrinsicNB_r32;
 def int_nvvm_read_ptx_sreg_cluster_nctarank : PTXReadSRegIntrinsicNB_r32;

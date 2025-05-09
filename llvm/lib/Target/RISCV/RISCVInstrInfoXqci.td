@@ -40,6 +40,12 @@ def uimm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1Operand<5>";
   let OperandType = "OPERAND_UIMM5_PLUS1";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return (isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32);
+  }];
 }
 
 def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
@@ -48,6 +54,12 @@ def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   let EncoderMethod = "getImmOpValueMinus1";
   let DecoderMethod = "decodeUImmPlus1OperandGE<5,6>";
   let OperandType = "OPERAND_UIMM5_GE6_PLUS1";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return (Imm >= 6) && (isUInt<5>(Imm) || (Imm == 32));
+  }];
 }
 
 def uimm5slist : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
@@ -63,6 +75,15 @@ def uimm5slist : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   let EncoderMethod = "getImmOpValueSlist";
   let DecoderMethod = "decodeUImmSlistOperand";
   let OperandType = "OPERAND_UIMM5_SLIST";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return ((Imm == 0)  || (Imm == 1)  ||
+            (Imm == 2)  || (Imm == 4)  ||
+            (Imm == 8)  || (Imm == 16) ||
+            (Imm == 15) || (Imm == 31));
+  }];
 }
 
 def uimm10 : RISCVUImmLeafOp<10>;
@@ -1323,3 +1344,66 @@ def : PatGprNoX0GprNoX0<sshlsat, QC_SHLSAT>;
 
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
+
+
+//===----------------------------------------------------------------------===/i
+// Compress Instruction tablegen backend.
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXqcisync, IsRV32] in {
+def : CompressPat<(QC_SYNC uimm5slist:$imm5), (QC_C_SYNC uimm5slist:$imm5)>;
+def : CompressPat<(QC_SYNCR uimm5slist:$imm5), (QC_C_SYNCR uimm5slist:$imm5)>;
+def : CompressPat<(QC_SYNCWL uimm5slist:$imm5), (QC_C_SYNCWL uimm5slist:$imm5)>;
+def : CompressPat<(QC_SYNCWF uimm5slist:$imm5), (QC_C_SYNCWF uimm5slist:$imm5)>;
+} // Predicates = [HasVendorXqcisync, IsRV32]
+
+let isCompressOnly = true, Predicates = [HasVendorXqcilo, HasStdExtZcb, IsRV32] in {
+def : CompressPat<(QC_E_LBU GPRC:$rd, GPRCMem:$rs1, uimm2:$imm),
+                  (C_LBU GPRC:$rd, GPRCMem:$rs1, uimm2:$imm)>;
+def : CompressPat<(QC_E_LHU GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (C_LHU GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(QC_E_LH GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (C_LH GPRC:$rd, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(QC_E_SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm),
+                  (C_SB GPRC:$rs2, GPRCMem:$rs1, uimm2:$imm)>;
+def : CompressPat<(QC_E_SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
+                  (C_SH GPRC:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm)>;
+} // isCompressOnly = true, Predicates = [HasVendorXqcilo, HasStdExtZcb, IsRV32]
+
+let isCompressOnly = true, Predicates = [HasVendorXqcilo, IsRV32] in {
+def : CompressPat<(QC_E_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
+                  (C_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
+def : CompressPat<(QC_E_LW GPRNoX0:$rd, SPMem:$rs1,  uimm8_lsb00:$imm),
+                  (C_LWSP GPRNoX0:$rd, SPMem:$rs1, uimm8_lsb00:$imm)>;
+def : CompressPat<(QC_E_LB GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LB GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_LBU GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LBU GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_LH GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LH GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_LHU GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LHU GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_LW GPR:$rd, GPRMem:$rs1, simm12:$imm12),
+                  (LW GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+
+def : CompressPat<(QC_E_SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm),
+                  (C_SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
+def : CompressPat<(QC_E_SW GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm),
+                  (C_SWSP GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm)>;
+def : CompressPat<(QC_E_SB GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
+                  (SB GPR:$rs2, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_SH GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
+                  (SH GPR:$rs2, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_SW GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
+                  (SW GPR:$rs2, GPRMem:$rs1, simm12:$imm12)>;
+} // isCompressOnly = true, Predicates = [HasVendorXqcilo, IsRV32]
+
+let Predicates = [HasVendorXqcicm, IsRV32] in {
+def : CompressPat<(QC_MVEQI GPRC:$rd, GPRC:$rd, 0, GPRC:$rs1),
+                  (QC_C_MVEQZ GPRC:$rd, GPRC:$rs1)>;
+}
+
+let Predicates = [HasVendorXqcibm, IsRV32] in {
+def : CompressPat<(QC_EXTU GPRNoX0:$rd, GPRNoX0:$rd, uimm5ge6_plus1:$width, 0),
+                  (QC_C_EXTU GPRNoX0:$rd, uimm5ge6_plus1:$width)>;
+}

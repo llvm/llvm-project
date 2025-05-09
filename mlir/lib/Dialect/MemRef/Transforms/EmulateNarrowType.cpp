@@ -188,7 +188,6 @@ struct ConvertMemRefAllocation final : OpConversionPattern<OpTy> {
 
     Location loc = op.getLoc();
     OpFoldResult zero = rewriter.getIndexAttr(0);
-    SmallVector<OpFoldResult> indices(currentType.getRank(), zero);
 
     // Get linearized type.
     int srcBits = currentType.getElementType().getIntOrFloatBitWidth();

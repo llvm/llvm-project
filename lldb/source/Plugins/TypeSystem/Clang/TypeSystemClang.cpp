@@ -3657,13 +3657,17 @@ bool TypeSystemClang::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
     bool success;
     if (cxx_record_decl->isCompleteDefinition())
       success = cxx_record_decl->isDynamicClass();
-    else if (std::optional<ClangASTMetadata> metadata =
-                 GetMetadata(cxx_record_decl))
-      success = metadata->GetIsDynamicCXXType();
-    else if (GetType(pointee_qual_type).GetCompleteType())
-      success = cxx_record_decl->isDynamicClass();
-    else
-      success = false;
+    else {
+      std::optional<ClangASTMetadata> metadata = GetMetadata(cxx_record_decl);
+      std::optional<bool> is_dynamic =
+          metadata ? metadata->GetIsDynamicCXXType() : std::nullopt;
+      if (is_dynamic)
+        success = *is_dynamic;
+      else if (GetType(pointee_qual_type).GetCompleteType())
+        success = cxx_record_decl->isDynamicClass();
+      else
+        success = false;
+    }
 
     if (success)
       set_dynamic_pointee_type(pointee_qual_type);
@@ -6739,7 +6743,9 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           if (field_name.empty()) {
             CompilerType field_type = GetType(field->getType());
             std::vector<uint32_t> save_indices = child_indexes;
-            child_indexes.push_back(child_idx);
+            child_indexes.push_back(
+                child_idx + TypeSystemClang::GetNumBaseClasses(
+                                cxx_record_decl, omit_empty_base_classes));
             if (field_type.GetIndexOfChildMemberWithName(
                     name, omit_empty_base_classes, child_indexes))
               return child_indexes.size();
@@ -6875,46 +6881,6 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           name, omit_empty_base_classes, child_indexes);
     } break;
 
-    case clang::Type::ConstantArray: {
-      //                const clang::ConstantArrayType *array =
-      //                llvm::cast<clang::ConstantArrayType>(parent_qual_type.getTypePtr());
-      //                const uint64_t element_count =
-      //                array->getSize().getLimitedValue();
-      //
-      //                if (idx < element_count)
-      //                {
-      //                    std::pair<uint64_t, unsigned> field_type_info =
-      //                    ast->getTypeInfo(array->getElementType());
-      //
-      //                    char element_name[32];
-      //                    ::snprintf (element_name, sizeof (element_name),
-      //                    "%s[%u]", parent_name ? parent_name : "", idx);
-      //
-      //                    child_name.assign(element_name);
-      //                    assert(field_type_info.first % 8 == 0);
-      //                    child_byte_size = field_type_info.first / 8;
-      //                    child_byte_offset = idx * child_byte_size;
-      //                    return array->getElementType().getAsOpaquePtr();
-      //                }
-    } break;
-
-    //        case clang::Type::MemberPointerType:
-    //            {
-    //                MemberPointerType *mem_ptr_type =
-    //                llvm::cast<MemberPointerType>(qual_type.getTypePtr());
-    //                clang::QualType pointee_type =
-    //                mem_ptr_type->getPointeeType();
-    //
-    //                if (TypeSystemClang::IsAggregateType
-    //                (pointee_type.getAsOpaquePtr()))
-    //                {
-    //                    return GetIndexOfChildWithName (ast,
-    //                                                    mem_ptr_type->getPointeeType().getAsOpaquePtr(),
-    //                                                    name);
-    //                }
-    //            }
-    //            break;
-    //
     case clang::Type::LValueReference:
     case clang::Type::RValueReference: {
       const clang::ReferenceType *reference_type =
@@ -6948,7 +6914,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 // doesn't descend into the children, but only looks one level deep and name
 // matches can include base class names.
 
-uint32_t
+llvm::Expected<uint32_t>
 TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                                          llvm::StringRef name,
                                          bool omit_empty_base_classes) {
@@ -7054,46 +7020,6 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
           name, omit_empty_base_classes);
     } break;
 
-    case clang::Type::ConstantArray: {
-      //                const clang::ConstantArrayType *array =
-      //                llvm::cast<clang::ConstantArrayType>(parent_qual_type.getTypePtr());
-      //                const uint64_t element_count =
-      //                array->getSize().getLimitedValue();
-      //
-      //                if (idx < element_count)
-      //                {
-      //                    std::pair<uint64_t, unsigned> field_type_info =
-      //                    ast->getTypeInfo(array->getElementType());
-      //
-      //                    char element_name[32];
-      //                    ::snprintf (element_name, sizeof (element_name),
-      //                    "%s[%u]", parent_name ? parent_name : "", idx);
-      //
-      //                    child_name.assign(element_name);
-      //                    assert(field_type_info.first % 8 == 0);
-      //                    child_byte_size = field_type_info.first / 8;
-      //                    child_byte_offset = idx * child_byte_size;
-      //                    return array->getElementType().getAsOpaquePtr();
-      //                }
-    } break;
-
-    //        case clang::Type::MemberPointerType:
-    //            {
-    //                MemberPointerType *mem_ptr_type =
-    //                llvm::cast<MemberPointerType>(qual_type.getTypePtr());
-    //                clang::QualType pointee_type =
-    //                mem_ptr_type->getPointeeType();
-    //
-    //                if (TypeSystemClang::IsAggregateType
-    //                (pointee_type.getAsOpaquePtr()))
-    //                {
-    //                    return GetIndexOfChildWithName (ast,
-    //                                                    mem_ptr_type->getPointeeType().getAsOpaquePtr(),
-    //                                                    name);
-    //                }
-    //            }
-    //            break;
-    //
     case clang::Type::LValueReference:
     case clang::Type::RValueReference: {
       const clang::ReferenceType *reference_type =
@@ -7114,23 +7040,6 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       if (pointee_type.IsAggregateType()) {
         return pointee_type.GetIndexOfChildWithName(name,
                                                     omit_empty_base_classes);
-      } else {
-        //                    if (parent_name)
-        //                    {
-        //                        child_name.assign(1, '*');
-        //                        child_name += parent_name;
-        //                    }
-        //
-        //                    // We have a pointer to an simple type
-        //                    if (idx == 0)
-        //                    {
-        //                        std::pair<uint64_t, unsigned> clang_type_info
-        //                        = ast->getTypeInfo(pointee_type);
-        //                        assert(clang_type_info.first % 8 == 0);
-        //                        child_byte_size = clang_type_info.first / 8;
-        //                        child_byte_offset = 0;
-        //                        return pointee_type.getAsOpaquePtr();
-        //                    }
       }
     } break;
 
@@ -7138,7 +7047,8 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       break;
     }
   }
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.str().c_str());
 }
 
 CompilerType

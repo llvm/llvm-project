@@ -13,6 +13,7 @@
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
 #include "CGDebugInfo.h"
+#include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CGRecordLayout.h"
@@ -2095,6 +2096,18 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   assert (Ignore == false && "init list ignored");
   unsigned NumInitElements = E->getNumInits();
 
+  // HLSL initialization lists in the AST are an expansion which can contain
+  // side-effecting expressions wrapped in opaque value expressions. To properly
+  // emit these we need to emit the opaque values before we emit the argument
+  // expressions themselves. This is a little hacky, but it prevents us needing
+  // to do a bigger AST-level change for a language feature that we need
+  // deprecate in the near future. See related HLSL language proposals in the
+  // proposals (https://github.com/microsoft/hlsl-specs/blob/main/proposals):
+  // * 0005-strict-initializer-lists.md
+  // * 0032-constructors.md
+  if (CGF.getLangOpts().HLSL)
+    CGF.CGM.getHLSLRuntime().emitInitListOpaqueValues(CGF, E);
+
   if (E->hadArrayRangeDesignator())
     CGF.ErrorUnsupported(E, "GNU array range designator extension");
 
@@ -2487,9 +2500,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         }
         if (FixedSrcTy->getElementType() == ScalableDstTy->getElementType()) {
           llvm::Value *PoisonVec = llvm::PoisonValue::get(ScalableDstTy);
-          llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
           llvm::Value *Result = Builder.CreateInsertVector(
-              ScalableDstTy, PoisonVec, Src, Zero, "cast.scalable");
+              ScalableDstTy, PoisonVec, Src, uint64_t(0), "cast.scalable");
           if (Result->getType() != DstTy)
             Result = Builder.CreateBitCast(Result, DstTy);
           return Result;
@@ -2512,10 +2524,9 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
               ScalableSrcTy->getElementCount().getKnownMinValue() / 8);
           Src = Builder.CreateBitCast(Src, ScalableSrcTy);
         }
-        if (ScalableSrcTy->getElementType() == FixedDstTy->getElementType()) {
-          llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
-          return Builder.CreateExtractVector(DstTy, Src, Zero, "cast.fixed");
-        }
+        if (ScalableSrcTy->getElementType() == FixedDstTy->getElementType())
+          return Builder.CreateExtractVector(DstTy, Src, uint64_t(0),
+                                             "cast.fixed");
       }
     }
 
@@ -4169,11 +4180,28 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   //   The index is not pointer-sized.
   //   The pointer type is not byte-sized.
   //
-  if (BinaryOperator::isNullPointerArithmeticExtension(CGF.getContext(),
-                                                       op.Opcode,
-                                                       expr->getLHS(),
-                                                       expr->getRHS()))
-    return CGF.Builder.CreateIntToPtr(index, pointer->getType());
+  // Note that we do not suppress the pointer overflow check in this case.
+  if (BinaryOperator::isNullPointerArithmeticExtension(
+          CGF.getContext(), op.Opcode, expr->getLHS(), expr->getRHS())) {
+    Value *Ptr = CGF.Builder.CreateIntToPtr(index, pointer->getType());
+    if (CGF.getLangOpts().PointerOverflowDefined ||
+        !CGF.SanOpts.has(SanitizerKind::PointerOverflow) ||
+        NullPointerIsDefined(CGF.Builder.GetInsertBlock()->getParent(),
+                             PtrTy->getPointerAddressSpace()))
+      return Ptr;
+    // The inbounds GEP of null is valid iff the index is zero.
+    CodeGenFunction::SanitizerScope SanScope(&CGF);
+    Value *IsZeroIndex = CGF.Builder.CreateIsNull(index);
+    llvm::Constant *StaticArgs[] = {
+        CGF.EmitCheckSourceLocation(op.E->getExprLoc())};
+    llvm::Type *IntPtrTy = DL.getIntPtrType(PtrTy);
+    Value *IntPtr = llvm::Constant::getNullValue(IntPtrTy);
+    Value *ComputedGEP = CGF.Builder.CreateZExtOrTrunc(index, IntPtrTy);
+    Value *DynamicArgs[] = {IntPtr, ComputedGEP};
+    CGF.EmitCheck({{IsZeroIndex, SanitizerKind::SO_PointerOverflow}},
+                  SanitizerHandler::PointerOverflow, StaticArgs, DynamicArgs);
+    return Ptr;
+  }
 
   if (width != DL.getIndexTypeSizeInBits(PtrTy)) {
     // Zero-extend or sign-extend the pointer value according to

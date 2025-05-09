@@ -132,8 +132,7 @@ public:
     CI->getFrontendOpts().DisableFree = false;
     CI->getPreprocessorOpts().addRemappedFile(
         FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
-    CompilerInstance Compiler;
-    Compiler.setInvocation(std::move(CI));
+    CompilerInstance Compiler(std::move(CI));
     Compiler.setDiagnostics(Diags.get());
     Compiler.setFileManager(FileMgr.get());
     Compiler.setSourceManager(SourceMgr.get());

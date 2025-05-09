@@ -5832,15 +5832,6 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
         return false;
     return true;
   }
-  case ISD::AssertNoFPClass: {
-    FPClassTest NoFPClass =
-        static_cast<FPClassTest>(Op.getConstantOperandVal(1));
-    if ((NoFPClass & fcNan) == fcNan)
-      return true;
-    if (SNaN && (NoFPClass & fcSNan) == fcSNan)
-      return true;
-    return isKnownNeverNaN(Op.getOperand(0), DemandedElts, SNaN, Depth + 1);
-  }
   default:
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
         Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID) {
@@ -6361,7 +6352,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       SDNodeFlags Flags;
       if (OpOpcode == ISD::ZERO_EXTEND)
         Flags.setNonNeg(N1->getFlags().hasNonNeg());
-      return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
+      SDValue NewVal = getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
+      transferDbgValues(N1, NewVal);
+      return NewVal;
     }
 
     if (OpOpcode == ISD::POISON)
@@ -6385,7 +6378,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (OpOpcode == ISD::ZERO_EXTEND) { // (zext (zext x)) -> (zext x)
       SDNodeFlags Flags;
       Flags.setNonNeg(N1->getFlags().hasNonNeg());
-      return getNode(ISD::ZERO_EXTEND, DL, VT, N1.getOperand(0), Flags);
+      SDValue NewVal =
+          getNode(ISD::ZERO_EXTEND, DL, VT, N1.getOperand(0), Flags);
+      transferDbgValues(N1, NewVal);
+      return NewVal;
     }
 
     if (OpOpcode == ISD::POISON)
@@ -7495,17 +7491,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            N2.getOpcode() == ISD::TargetConstant && "Invalid FP_ROUND!");
     if (N1.getValueType() == VT) return N1;  // noop conversion.
     break;
-  case ISD::AssertNoFPClass: {
-    assert(N1.getValueType().isFloatingPoint() &&
-           "AssertNoFPClass is used for a non-floating type");
-    assert(isa<ConstantSDNode>(N2) && "NoFPClass is not Constant");
-    [[maybe_unused]] FPClassTest NoFPClass =
-           static_cast<FPClassTest>(N2->getAsZExtVal());
-    assert(llvm::to_underlying(NoFPClass) <=
-               BitmaskEnumDetail::Mask<FPClassTest>() &&
-           "FPClassTest value too large");
-    break;
-  }
   case ISD::AssertSext:
   case ISD::AssertZext: {
     EVT EVT = cast<VTSDNode>(N2)->getVT();
@@ -9101,6 +9086,8 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
           Opcode == ISD::ATOMIC_LOAD_UMAX || Opcode == ISD::ATOMIC_LOAD_FADD ||
           Opcode == ISD::ATOMIC_LOAD_FSUB || Opcode == ISD::ATOMIC_LOAD_FMAX ||
           Opcode == ISD::ATOMIC_LOAD_FMIN ||
+          Opcode == ISD::ATOMIC_LOAD_FMINIMUM ||
+          Opcode == ISD::ATOMIC_LOAD_FMAXIMUM ||
           Opcode == ISD::ATOMIC_LOAD_UINC_WRAP ||
           Opcode == ISD::ATOMIC_LOAD_UDEC_WRAP ||
           Opcode == ISD::ATOMIC_LOAD_USUB_COND ||
@@ -12687,8 +12674,7 @@ SelectionDAG::matchBinOpReduction(SDNode *Extract, ISD::NodeType &BinOp,
     if (!TLI->isExtractSubvectorCheap(SubVT, OpVT, 0))
       return SDValue();
     BinOp = (ISD::NodeType)CandidateBinOp;
-    return getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Op), SubVT, Op,
-                   getVectorIdxConstant(0, SDLoc(Op)));
+    return getExtractSubvector(SDLoc(Op), SubVT, Op, 0);
   };
 
   // At each stage, we're looking for something that looks like:
@@ -13058,8 +13044,7 @@ SelectionDAG::SplitVector(const SDValue &N, const SDLoc &DL, const EVT &LoVT,
              N.getValueType().getVectorMinNumElements() &&
          "More vector elements requested than available!");
   SDValue Lo, Hi;
-  Lo =
-      getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, N, getVectorIdxConstant(0, DL));
+  Lo = getExtractSubvector(DL, LoVT, N, 0);
   // For scalable vectors it is safe to use LoVT.getVectorMinNumElements()
   // (rather than having to use ElementCount), because EXTRACT_SUBVECTOR scales
   // IDX with the runtime scaling factor of the result vector type. For
@@ -13091,8 +13076,7 @@ SDValue SelectionDAG::WidenVector(const SDValue &N, const SDLoc &DL) {
   EVT VT = N.getValueType();
   EVT WideVT = EVT::getVectorVT(*getContext(), VT.getVectorElementType(),
                                 NextPowerOf2(VT.getVectorNumElements()));
-  return getNode(ISD::INSERT_SUBVECTOR, DL, WideVT, getUNDEF(WideVT), N,
-                 getVectorIdxConstant(0, DL));
+  return getInsertSubvector(DL, getUNDEF(WideVT), N, 0);
 }
 
 void SelectionDAG::ExtractVectorElements(SDValue Op,

@@ -35,10 +35,12 @@ enum IndexedVersion : uint64_t {
   // Version 3: Added a radix tree for call stacks.  Switched to linear IDs for
   // frames and call stacks.
   Version3 = 3,
+  // Version 4: Added CalleeGuids to call site info.
+  Version4 = 4,
 };
 
 constexpr uint64_t MinimumSupportedVersion = Version2;
-constexpr uint64_t MaximumSupportedVersion = Version3;
+constexpr uint64_t MaximumSupportedVersion = Version4;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
 static_assert(MinimumSupportedVersion <= MaximumSupportedVersion);
