@@ -311,8 +311,7 @@ public:
   /// mangling preference. If this object represents an inlined function,
   /// returns the name of the inlined function. Returns nullptr if no function
   /// name could be determined.
-  const char *GetPossiblyInlinedFunctionName(
-      Mangled::NamePreference mangling_preference) const;
+  Mangled GetPossiblyInlinedFunctionName() const;
 
   // Member variables
   lldb::TargetSP target_sp; ///< The Target for a given query

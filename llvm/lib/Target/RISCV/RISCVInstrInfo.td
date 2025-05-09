@@ -103,8 +103,7 @@ def riscv_add_tprel : SDNode<"RISCVISD::ADD_TPREL",
                                                   SDTCisInt<0>]>>;
 
 def riscv_probed_alloca : SDNode<"RISCVISD::PROBED_ALLOCA",
-                                 SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
-                                                      SDTCisVT<0, i32>]>,
+                                 SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
                                  [SDNPHasChain, SDNPMayStore]>;
 
 //===----------------------------------------------------------------------===//
@@ -279,8 +278,8 @@ def simm12_no6 : ImmLeaf<XLenVT, [{
 def bare_simm13_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
   let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsr1";
-  let DecoderMethod = "decodeSImmOperandAndLsl1<13>";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<13, 1>";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -316,8 +315,8 @@ def Simm21Lsb0JALAsmOperand : BareSImmNLsb0AsmOperand<21> {
 def simm21_lsb0_jal : Operand<OtherVT> {
   let ParserMatchClass = Simm21Lsb0JALAsmOperand;
   let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsr1";
-  let DecoderMethod = "decodeSImmOperandAndLsl1<21>";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<21, 1>";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -1337,7 +1336,7 @@ def ext_oneuse    : unop_oneuse<ext>;
 def fpext_oneuse  : unop_oneuse<any_fpextend>;
 
 def 33signbits_node : PatLeaf<(i64 GPR:$src), [{
-  return CurDAG->ComputeNumSignBits(SDValue(N, 0)) > 32;
+  return CurDAG->ComputeNumSignBits(Op) > 32;
 }]>;
 
 class immop_oneuse<ImmLeaf leaf> : PatLeaf<(leaf), [{
@@ -1456,17 +1455,17 @@ let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1 in {
 // Probed stack allocation of a constant size, used in function prologues when
 // stack-clash protection is enabled.
 def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
-                               (ins GPR:$scratch),
+                               (ins GPR:$target),
                                []>,
                                Sched<[]>;
 def PROBED_STACKALLOC_RVV : Pseudo<(outs GPR:$sp),
-                               (ins GPR:$scratch),
+                               (ins GPR:$target),
                                []>,
                                Sched<[]>;
 let usesCustomInserter = 1 in
-def PROBED_STACKALLOC_DYN : Pseudo<(outs GPR:$rd),
-                               (ins GPR:$scratch),
-                               [(set GPR:$rd, (riscv_probed_alloca GPR:$scratch))]>,
+def PROBED_STACKALLOC_DYN : Pseudo<(outs),
+                               (ins GPR:$target),
+                               [(riscv_probed_alloca GPR:$target)]>,
                                Sched<[]>;
 }
 
@@ -1977,7 +1976,7 @@ def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
 class binop_allhusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs),
               (XLenVT (operator node:$lhs, node:$rhs)), [{
-  return hasAllHUsers(Node);
+  return hasAllHUsers(N);
 }]> {
   let GISelPredicateCode = [{ return hasAllHUsers(MI); }];
 }
@@ -1987,14 +1986,14 @@ class binop_allhusers<SDPatternOperator operator>
 class binop_allwusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs), (i64 (operator node:$lhs, node:$rhs)),
               [{
-  return hasAllWUsers(Node);
+  return hasAllWUsers(N);
 }]> {
   let GISelPredicateCode = [{ return hasAllWUsers(MI); }];
 }
 
 def sexti32_allwusers : PatFrag<(ops node:$src),
                                 (sext_inreg node:$src, i32), [{
-  return hasAllWUsers(Node);
+  return hasAllWUsers(N);
 }]>;
 
 def ImmSExt32 : SDNodeXForm<imm, [{
@@ -2120,11 +2119,16 @@ def : Pat<(XLenVT (add GPR:$rs1, immop_oneuse<AddiPair>:$rs2)),
           (ADDI (XLenVT (ADDI GPR:$rs1, (AddiPairImmLarge imm:$rs2))),
                 (AddiPairImmSmall imm:$rs2))>;
 
+def negImm : ComplexPattern<i64, 1, "selectNegImm", [], [], 0>;
+
 let Predicates = [IsRV64] in {
 // Select W instructions if only the lower 32-bits of the result are used.
 def : Pat<(binop_allwusers<add> GPR:$rs1, immop_oneuse<AddiPair>:$rs2),
           (ADDIW (i64 (ADDIW GPR:$rs1, (AddiPairImmLarge imm:$rs2))),
                  (AddiPairImmSmall imm:$rs2))>;
+
+// Select SUB if the negated constant is cheaper to materialize.
+def : Pat<(i64 (add GPR:$rs1, negImm:$rs2)), (SUB GPR:$rs1, negImm:$rs2)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2184,6 +2188,7 @@ include "RISCVInstrInfoXqci.td"
 include "RISCVInstrInfoXqccmp.td"
 include "RISCVInstrInfoXMips.td"
 include "RISCVInstrInfoXRivos.td"
+include "RISCVInstrInfoXAndes.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

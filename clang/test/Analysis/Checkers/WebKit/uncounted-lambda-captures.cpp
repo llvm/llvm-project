@@ -137,13 +137,11 @@ void references() {
   RefCountable automatic;
   RefCountable& ref_countable_ref = automatic;
   auto foo1 = [ref_countable_ref](){ ref_countable_ref.constMethod(); };
-  // expected-warning@-1{{Captured reference 'ref_countable_ref' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
   auto foo2 = [&ref_countable_ref](){ ref_countable_ref.method(); };
   // expected-warning@-1{{Captured reference 'ref_countable_ref' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
   auto foo3 = [&](){ ref_countable_ref.method(); };
   // expected-warning@-1{{Implicitly captured reference 'ref_countable_ref' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
   auto foo4 = [=](){ ref_countable_ref.constMethod(); };
-  // expected-warning@-1{{Implicitly captured reference 'ref_countable_ref' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
 
   call(foo1);
   call(foo2);
@@ -372,6 +370,17 @@ void trivial_lambda() {
   trivial_lambda();
 }
 
+bool call_lambda_var_decl() {
+  RefCountable* ref_countable = make_obj();
+  auto lambda1 = [&]() -> bool {
+    return ref_countable->next();
+  };
+  auto lambda2 = [=]() -> bool {
+    return ref_countable->next();
+  };
+  return lambda1() && lambda2();
+}
+
 void lambda_with_args(RefCountable* obj) {
   auto trivial_lambda = [&](int v) {
     obj->method();
@@ -394,5 +403,16 @@ void lambda_converted_to_function(RefCountable* obj)
   callFunctionOpaque([&]() {
     obj->method();
     // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  });
+}
+
+void capture_copy_in_lambda(CheckedObj& checked) {
+  callFunctionOpaque([checked]() mutable {
+    checked.method();
+  });
+  auto* ptr = &checked;
+  callFunctionOpaque([ptr]() mutable {
+    // expected-warning@-1{{Captured raw-pointer 'ptr' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+    ptr->method();
   });
 }

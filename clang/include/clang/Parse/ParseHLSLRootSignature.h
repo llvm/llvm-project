@@ -71,6 +71,7 @@ private:
   // expected, or, there is a lexing error
 
   /// Root Element parse methods:
+  std::optional<llvm::hlsl::rootsig::RootConstants> parseRootConstants();
   std::optional<llvm::hlsl::rootsig::DescriptorTable> parseDescriptorTable();
   std::optional<llvm::hlsl::rootsig::DescriptorTableClause>
   parseDescriptorTableClause();
@@ -80,7 +81,10 @@ private:
   /// state of parsed params
   struct ParsedClauseParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
+    std::optional<uint32_t> NumDescriptors;
     std::optional<uint32_t> Space;
+    std::optional<uint32_t> Offset;
+    std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags> Flags;
   };
   std::optional<ParsedClauseParams>
   parseDescriptorTableClauseParams(RootSignatureToken::Kind RegType);
@@ -91,10 +95,18 @@ private:
 
   /// Parsing methods of various enums
   std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
+  std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
+  parseDescriptorRangeFlags();
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer
   std::optional<uint32_t> handleUIntLiteral();
+
+  /// Flags may specify the value of '0' to denote that there should be no
+  /// flags set.
+  ///
+  /// Return true if the current int_literal token is '0', otherwise false
+  bool verifyZeroFlag();
 
   /// Invoke the Lexer to consume a token and update CurToken with the result
   void consumeNextToken() { CurToken = Lexer.consumeToken(); }

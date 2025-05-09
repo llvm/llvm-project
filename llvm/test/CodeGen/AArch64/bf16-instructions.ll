@@ -202,16 +202,13 @@ define bfloat @test_fmadd(bfloat %a, bfloat %b, bfloat %c) #0 {
 ;
 ; CHECK-BF16-LABEL: test_fmadd:
 ; CHECK-BF16:       // %bb.0:
+; CHECK-BF16-NEXT:    // kill: def $h2 killed $h2 def $d2
 ; CHECK-BF16-NEXT:    // kill: def $h1 killed $h1 def $d1
 ; CHECK-BF16-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-BF16-NEXT:    // kill: def $h2 killed $h2 def $d2
 ; CHECK-BF16-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-BF16-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16-NEXT:    fmul s0, s0, s1
-; CHECK-BF16-NEXT:    shll v1.4s, v2.4h, #16
-; CHECK-BF16-NEXT:    bfcvt h0, s0
-; CHECK-BF16-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16-NEXT:    fadd s0, s0, s1
+; CHECK-BF16-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-BF16-NEXT:    fmadd s0, s0, s1, s2
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
   %mul = fmul fast bfloat %a, %b
@@ -1996,13 +1993,11 @@ define bfloat @test_copysign_f64(bfloat %a, double %b) #0 {
 define float @test_copysign_extended(bfloat %a, bfloat %b) #0 {
 ; CHECK-CVT-LABEL: test_copysign_extended:
 ; CHECK-CVT:       // %bb.0:
-; CHECK-CVT-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-CVT-NEXT:    movi v2.4s, #16
 ; CHECK-CVT-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-CVT-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-CVT-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-NEXT:    ushl v0.4s, v0.4s, v2.4s
+; CHECK-CVT-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-CVT-NEXT:    mvni v2.4s, #128, lsl #24
+; CHECK-CVT-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-CVT-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-CVT-NEXT:    fmov w8, s0
 ; CHECK-CVT-NEXT:    lsr w8, w8, #16
@@ -2013,16 +2008,12 @@ define float @test_copysign_extended(bfloat %a, bfloat %b) #0 {
 ;
 ; CHECK-SD-LABEL: test_copysign_extended:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-SD-NEXT:    movi v2.4s, #16
 ; CHECK-SD-NEXT:    // kill: def $h1 killed $h1 def $d1
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-SD-NEXT:    ushl v0.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-SD-NEXT:    mvni v2.4s, #128, lsl #24
-; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    bfcvt h0, s0
+; CHECK-SD-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;

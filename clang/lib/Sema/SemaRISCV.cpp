@@ -13,6 +13,7 @@
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
@@ -1453,25 +1454,14 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  // Check the attribute argument. Argument is optional.
-  if (!AL.checkAtMostNumArgs(SemaRef, 1))
-    return;
-
-  StringRef Str;
-  SourceLocation ArgLoc;
-
-  // 'machine'is the default interrupt mode.
-  if (AL.getNumArgs() == 0)
-    Str = "machine";
-  else if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
-    return;
-
   // Semantic checks for a function with the 'interrupt' attribute:
   // - Must be a function.
   // - Must have no parameters.
   // - Must have the 'void' return type.
-  // - The attribute itself must either have no argument or one of the
-  //   valid interrupt types, see [RISCVInterruptDocs].
+  // - The attribute itself must have at most 2 arguments
+  // - The attribute arguments must be string literals, and valid choices.
+  // - The attribute arguments must be a valid combination
+  // - The current target must support the right extensions for the combination.
 
   if (D->getFunctionType() == nullptr) {
     Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
@@ -1491,35 +1481,105 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  RISCVInterruptAttr::InterruptType Kind;
-  if (!RISCVInterruptAttr::ConvertStrToInterruptType(Str, Kind)) {
-    Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
-        << AL << Str << ArgLoc;
+  if (!AL.checkAtMostNumArgs(SemaRef, 2))
+    return;
+
+  bool HasSiFiveCLICType = false;
+  bool HasUnaryType = false;
+
+  SmallSet<RISCVInterruptAttr::InterruptType, 2> Types;
+  for (unsigned ArgIndex = 0; ArgIndex < AL.getNumArgs(); ++ArgIndex) {
+    RISCVInterruptAttr::InterruptType Type;
+    StringRef TypeString;
+    SourceLocation Loc;
+
+    if (!SemaRef.checkStringLiteralArgumentAttr(AL, ArgIndex, TypeString, &Loc))
+      return;
+
+    if (!RISCVInterruptAttr::ConvertStrToInterruptType(TypeString, Type)) {
+      std::string TypeLiteral = ("\"" + TypeString + "\"").str();
+      Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
+          << AL << TypeLiteral << Loc;
+      return;
+    }
+
+    switch (Type) {
+    case RISCVInterruptAttr::machine:
+      // "machine" could be combined with the SiFive CLIC types, or could be
+      // just "machine".
+      break;
+    case RISCVInterruptAttr::SiFiveCLICPreemptible:
+    case RISCVInterruptAttr::SiFiveCLICStackSwap:
+      // SiFive-CLIC types can be combined with each other and "machine"
+      HasSiFiveCLICType = true;
+      break;
+    case RISCVInterruptAttr::supervisor:
+    case RISCVInterruptAttr::qcinest:
+    case RISCVInterruptAttr::qcinonest:
+      // "supervisor" and "qci-(no)nest" cannot be combined with any other types
+      HasUnaryType = true;
+      break;
+    }
+
+    Types.insert(Type);
+  }
+
+  if (HasUnaryType && Types.size() > 1) {
+    Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
     return;
   }
 
-  switch (Kind) {
-  default:
-    break;
-  case RISCVInterruptAttr::InterruptType::qcinest:
-  case RISCVInterruptAttr::InterruptType::qcinonest: {
-    const TargetInfo &TI = getASTContext().getTargetInfo();
-    llvm::StringMap<bool> FunctionFeatureMap;
-    getASTContext().getFunctionFeatureMap(FunctionFeatureMap,
-                                          dyn_cast<FunctionDecl>(D));
-
-    if (!TI.hasFeature("experimental-xqciint") &&
-        !FunctionFeatureMap.lookup("experimental-xqciint")) {
-      Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_requires_extension)
-          << Str << "Xqciint";
-      return;
-    }
-    break;
+  if (HasUnaryType && HasSiFiveCLICType) {
+    Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
+    return;
   }
+
+  // "machine" is the default, if nothing is specified.
+  if (AL.getNumArgs() == 0)
+    Types.insert(RISCVInterruptAttr::machine);
+
+  const TargetInfo &TI = getASTContext().getTargetInfo();
+  llvm::StringMap<bool> FunctionFeatureMap;
+  getASTContext().getFunctionFeatureMap(FunctionFeatureMap,
+                                        dyn_cast<FunctionDecl>(D));
+
+  auto HasFeature = [&](StringRef FeatureName) -> bool {
+    return TI.hasFeature(FeatureName) || FunctionFeatureMap.lookup(FeatureName);
   };
 
-  D->addAttr(::new (getASTContext())
-                 RISCVInterruptAttr(getASTContext(), AL, Kind));
+  for (RISCVInterruptAttr::InterruptType Type : Types) {
+    switch (Type) {
+    // The QCI interrupt types require Xqciint
+    case RISCVInterruptAttr::qcinest:
+    case RISCVInterruptAttr::qcinonest: {
+      if (!HasFeature("experimental-xqciint")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Xqciint";
+        return;
+      }
+    } break;
+    // The SiFive CLIC interrupt types require Xsfmclic
+    case RISCVInterruptAttr::SiFiveCLICPreemptible:
+    case RISCVInterruptAttr::SiFiveCLICStackSwap: {
+      if (!HasFeature("experimental-xsfmclic")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type)
+            << "XSfmclic";
+        return;
+      }
+    } break;
+    default:
+      break;
+    }
+  }
+
+  SmallVector<RISCVInterruptAttr::InterruptType, 2> TypesVec(Types.begin(),
+                                                             Types.end());
+
+  D->addAttr(::new (getASTContext()) RISCVInterruptAttr(
+      getASTContext(), AL, TypesVec.data(), TypesVec.size()));
 }
 
 bool SemaRISCV::isAliasValid(unsigned BuiltinID, StringRef AliasName) {

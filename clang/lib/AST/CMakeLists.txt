@@ -145,5 +145,5 @@ add_clang_library(clangAST
   ClangDriverOptions
   intrinsics_gen
   # These generated headers are included transitively.
-  AArch64TargetParserTableGen
+  target_parser_gen
   )

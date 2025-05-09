@@ -869,7 +869,7 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
          "preconditions for fuse operation failed");
 
   Location loc = linalgOp.getLoc();
-  SmallVector<OpFoldResult> expandedShape, collapsedShape;
+  SmallVector<OpFoldResult> expandedShape;
   SmallVector<AffineMap, 4> reassociationIndices;
   Value src;
   if (auto expandingReshapeOp = dyn_cast<tensor::ExpandShapeOp>(reshapeOp)) {
@@ -1907,23 +1907,6 @@ struct FoldReshapeWithGenericOpByCollapsing
           producer, "failed to do the fusion by collapsing transformation");
     }
 
-    if (!collapseResult) {
-      return rewriter.notifyMatchFailure(reshapeOp,
-                                         "fusion by expansion failed");
-    }
-
-    // Find the replacement for the reshape op. Since the replacements have the
-    // same type as the returns of the original generic op, the consumer reshape
-    // op can be replaced by the source of the expand_shape op that defines
-    // the replacement.
-    Value reshapeReplacement =
-        (collapseResult
-             ->results)[cast<OpResult>(reshapeOp.getSrc()).getResultNumber()];
-    if (auto expandOp =
-            reshapeReplacement.getDefiningOp<tensor::ExpandShapeOp>()) {
-      reshapeReplacement = expandOp.getSrc();
-    }
-    rewriter.replaceOp(reshapeOp, reshapeReplacement);
     rewriter.replaceOp(producer, collapseResult->results);
     return success();
   }

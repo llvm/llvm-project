@@ -17,6 +17,7 @@
 #include "llvm/ADT/ADL.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/EpochTracker.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
@@ -94,6 +95,24 @@ public:
   }
   inline const_iterator end() const {
     return makeConstIterator(getBucketsEnd(), getBucketsEnd(), *this, true);
+  }
+
+  // Return an iterator to iterate over keys in the map.
+  inline auto keys() {
+    return map_range(*this, [](const BucketT &P) { return P.getFirst(); });
+  }
+
+  // Return an iterator to iterate over values in the map.
+  inline auto values() {
+    return map_range(*this, [](const BucketT &P) { return P.getSecond(); });
+  }
+
+  inline auto keys() const {
+    return map_range(*this, [](const BucketT &P) { return P.getFirst(); });
+  }
+
+  inline auto values() const {
+    return map_range(*this, [](const BucketT &P) { return P.getSecond(); });
   }
 
   [[nodiscard]] bool empty() const { return getNumEntries() == 0; }
@@ -196,6 +215,16 @@ public:
     if (const BucketT *Bucket = doFind(Val))
       return Bucket->getSecond();
     return ValueT();
+  }
+
+  // Return the entry with the specified key, or \p Default. This variant is
+  // useful, because `lookup` cannot be used with non-default-constructible
+  // values.
+  ValueT lookup_or(const_arg_type_t<KeyT> Val,
+                   const_arg_type_t<ValueT> Default) const {
+    if (const BucketT *Bucket = doFind(Val))
+      return Bucket->getSecond();
+    return Default;
   }
 
   /// at - Return the entry for the specified key, or abort if no such
@@ -321,6 +350,22 @@ public:
     auto Ret = try_emplace(std::move(Key), std::forward<V>(Val));
     if (!Ret.second)
       Ret.first->second = std::forward<V>(Val);
+    return Ret;
+  }
+
+  template <typename... Ts>
+  std::pair<iterator, bool> emplace_or_assign(const KeyT &Key, Ts &&...Args) {
+    auto Ret = try_emplace(Key, std::forward<Ts>(Args)...);
+    if (!Ret.second)
+      Ret.first->second = ValueT(std::forward<Ts>(Args)...);
+    return Ret;
+  }
+
+  template <typename... Ts>
+  std::pair<iterator, bool> emplace_or_assign(KeyT &&Key, Ts &&...Args) {
+    auto Ret = try_emplace(std::move(Key), std::forward<Ts>(Args)...);
+    if (!Ret.second)
+      Ret.first->second = ValueT(std::forward<Ts>(Args)...);
     return Ret;
   }
 

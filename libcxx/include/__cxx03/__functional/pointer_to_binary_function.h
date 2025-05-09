@@ -19,8 +19,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS)
-
 template <class _Arg1, class _Arg2, class _Result>
 class _LIBCPP_TEMPLATE_VIS
 _LIBCPP_DEPRECATED_IN_CXX11 pointer_to_binary_function : public __binary_function<_Arg1, _Arg2, _Result> {
@@ -36,8 +34,6 @@ _LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_HIDE_FROM_ABI pointer_to_binary_funct
 ptr_fun(_Result (*__f)(_Arg1, _Arg2)) {
   return pointer_to_binary_function<_Arg1, _Arg2, _Result>(__f);
 }
-
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

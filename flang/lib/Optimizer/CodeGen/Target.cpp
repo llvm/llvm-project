@@ -784,7 +784,7 @@ struct TargetX86_64Win : public GenericTarget<TargetX86_64Win> {
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// AArch64 linux target specifics.
+// AArch64 target specifics.
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -808,6 +808,34 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
       typeTodo(sem, loc, "argument");
     }
     return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  integerArgumentType(mlir::Location loc,
+                      mlir::IntegerType argTy) const override {
+    if (argTy.getWidth() < getCIntTypeWidth() && argTy.isSignless()) {
+      AT::IntegerExtension intExt;
+      if (argTy.getWidth() == 1) {
+        // Zero extend for 'i1'.
+        intExt = AT::IntegerExtension::Zero;
+      } else {
+        if (triple.isOSDarwin()) {
+          // On Darwin, sign extend. The apple developer guide specifies this as
+          // a divergence from the AArch64PCS:
+          // https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms#Pass-arguments-to-functions-correctly
+          intExt = AT::IntegerExtension::Sign;
+        } else {
+          // On linux, pass directly and do not extend.
+          intExt = AT::IntegerExtension::None;
+        }
+      }
+      CodeGenSpecifics::Marshalling marshal;
+      marshal.emplace_back(argTy, AT{/*alignment=*/0, /*byval=*/false,
+                                     /*sret=*/false, /*append=*/false,
+                                     /*intExt=*/intExt});
+      return marshal;
+    }
+    return GenericTarget::integerArgumentType(loc, argTy);
   }
 
   CodeGenSpecifics::Marshalling

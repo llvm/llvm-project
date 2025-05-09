@@ -94,10 +94,11 @@ struct IncrementLoopInfo {
   template <typename T>
   explicit IncrementLoopInfo(Fortran::semantics::Symbol &sym, const T &lower,
                              const T &upper, const std::optional<T> &step,
-                             bool isUnordered = false)
+                             bool isConcurrent = false)
       : loopVariableSym{&sym}, lowerExpr{Fortran::semantics::GetExpr(lower)},
         upperExpr{Fortran::semantics::GetExpr(upper)},
-        stepExpr{Fortran::semantics::GetExpr(step)}, isUnordered{isUnordered} {}
+        stepExpr{Fortran::semantics::GetExpr(step)},
+        isConcurrent{isConcurrent} {}
 
   IncrementLoopInfo(IncrementLoopInfo &&) = default;
   IncrementLoopInfo &operator=(IncrementLoopInfo &&x) = default;
@@ -120,7 +121,7 @@ struct IncrementLoopInfo {
   const Fortran::lower::SomeExpr *upperExpr;
   const Fortran::lower::SomeExpr *stepExpr;
   const Fortran::lower::SomeExpr *maskExpr = nullptr;
-  bool isUnordered; // do concurrent, forall
+  bool isConcurrent;
   llvm::SmallVector<const Fortran::semantics::Symbol *> localSymList;
   llvm::SmallVector<const Fortran::semantics::Symbol *> localInitSymList;
   llvm::SmallVector<
@@ -130,7 +131,7 @@ struct IncrementLoopInfo {
   mlir::Value loopVariable = nullptr;
 
   // Data members for structured loops.
-  fir::DoLoopOp doLoop = nullptr;
+  mlir::Operation *loopOp = nullptr;
 
   // Data members for unstructured loops.
   bool hasRealControl = false;
@@ -1755,7 +1756,8 @@ private:
           // tags all result variables with one of the largest types to allow
           // them to share the same storage. Convert this to the actual type.
           if (resultRef.getType() != resultRefType)
-            resultRef = builder->createConvert(loc, resultRefType, resultRef);
+            resultRef = builder->createConvertWithVolatileCast(
+                loc, resultRefType, resultRef);
           return builder->create<fir::LoadOp>(loc, resultRef);
         });
     genExitRoutine(false, resultVal);
@@ -1980,7 +1982,7 @@ private:
     llvm_unreachable("illegal reduction operator");
   }
 
-  /// Collect DO CONCURRENT or FORALL loop control information.
+  /// Collect DO CONCURRENT loop control information.
   IncrementLoopNestInfo getConcurrentControl(
       const Fortran::parser::ConcurrentHeader &header,
       const std::list<Fortran::parser::LocalitySpec> &localityList = {}) {
@@ -2291,8 +2293,14 @@ private:
     mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
         builder->getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ ua,
         /*unroll_and_jam*/ uja, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    if (has_attrs)
-      info.doLoop.setLoopAnnotationAttr(la);
+    if (has_attrs) {
+      if (auto loopOp = mlir::dyn_cast<fir::DoLoopOp>(info.loopOp))
+        loopOp.setLoopAnnotationAttr(la);
+
+      if (auto doConcurrentOp =
+              mlir::dyn_cast<fir::DoConcurrentLoopOp>(info.loopOp))
+        doConcurrentOp.setLoopAnnotationAttr(la);
+    }
   }
 
   /// Generate FIR to begin a structured or unstructured increment loop nest.
@@ -2301,96 +2309,77 @@ private:
       llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     mlir::Location loc = toLocation();
-    mlir::Operation *boundsAndStepIP = nullptr;
     mlir::arith::IntegerOverflowFlags iofBackup{};
 
+    llvm::SmallVector<mlir::Value> nestLBs;
+    llvm::SmallVector<mlir::Value> nestUBs;
+    llvm::SmallVector<mlir::Value> nestSts;
+    llvm::SmallVector<mlir::Value> nestReduceOperands;
+    llvm::SmallVector<mlir::Attribute> nestReduceAttrs;
+    bool genDoConcurrent = false;
+
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
-      mlir::Value lowerValue;
-      mlir::Value upperValue;
-      mlir::Value stepValue;
+      genDoConcurrent = info.isStructured() && info.isConcurrent;
 
-      {
-        mlir::OpBuilder::InsertionGuard guard(*builder);
-
-        // Set the IP before the first loop in the nest so that all nest bounds
-        // and step values are created outside the nest.
-        if (boundsAndStepIP)
-          builder->setInsertionPointAfter(boundsAndStepIP);
-
+      if (!genDoConcurrent)
         info.loopVariable = genLoopVariableAddress(loc, *info.loopVariableSym,
-                                                   info.isUnordered);
-        if (!getLoweringOptions().getIntegerWrapAround()) {
-          iofBackup = builder->getIntegerOverflowFlags();
-          builder->setIntegerOverflowFlags(
-              mlir::arith::IntegerOverflowFlags::nsw);
-        }
-        lowerValue = genControlValue(info.lowerExpr, info);
-        upperValue = genControlValue(info.upperExpr, info);
-        bool isConst = true;
-        stepValue = genControlValue(info.stepExpr, info,
-                                    info.isStructured() ? nullptr : &isConst);
-        if (!getLoweringOptions().getIntegerWrapAround())
-          builder->setIntegerOverflowFlags(iofBackup);
-        boundsAndStepIP = stepValue.getDefiningOp();
+                                                   info.isConcurrent);
 
-        // Use a temp variable for unstructured loops with non-const step.
-        if (!isConst) {
-          info.stepVariable =
-              builder->createTemporary(loc, stepValue.getType());
-          boundsAndStepIP =
-              builder->create<fir::StoreOp>(loc, stepValue, info.stepVariable);
-        }
+      if (!getLoweringOptions().getIntegerWrapAround()) {
+        iofBackup = builder->getIntegerOverflowFlags();
+        builder->setIntegerOverflowFlags(
+            mlir::arith::IntegerOverflowFlags::nsw);
       }
 
+      nestLBs.push_back(genControlValue(info.lowerExpr, info));
+      nestUBs.push_back(genControlValue(info.upperExpr, info));
+      bool isConst = true;
+      nestSts.push_back(genControlValue(
+          info.stepExpr, info, info.isStructured() ? nullptr : &isConst));
+
+      if (!getLoweringOptions().getIntegerWrapAround())
+        builder->setIntegerOverflowFlags(iofBackup);
+
+      // Use a temp variable for unstructured loops with non-const step.
+      if (!isConst) {
+        mlir::Value stepValue = nestSts.back();
+        info.stepVariable = builder->createTemporary(loc, stepValue.getType());
+        builder->create<fir::StoreOp>(loc, stepValue, info.stepVariable);
+      }
+
+      if (genDoConcurrent && nestReduceOperands.empty()) {
+        // Create DO CONCURRENT reduce operands and attributes
+        for (const auto &reduceSym : info.reduceSymList) {
+          const fir::ReduceOperationEnum reduceOperation = reduceSym.first;
+          const Fortran::semantics::Symbol *sym = reduceSym.second;
+          fir::ExtendedValue exv = getSymbolExtendedValue(*sym, nullptr);
+          nestReduceOperands.push_back(fir::getBase(exv));
+          auto reduceAttr =
+              fir::ReduceAttr::get(builder->getContext(), reduceOperation);
+          nestReduceAttrs.push_back(reduceAttr);
+        }
+      }
+    }
+
+    for (auto [info, lowerValue, upperValue, stepValue] :
+         llvm::zip_equal(incrementLoopNestInfo, nestLBs, nestUBs, nestSts)) {
       // Structured loop - generate fir.do_loop.
       if (info.isStructured()) {
+        if (genDoConcurrent)
+          continue;
+
+        // The loop variable is a doLoop op argument.
         mlir::Type loopVarType = info.getLoopVariableType();
-        mlir::Value loopValue;
-        if (info.isUnordered) {
-          llvm::SmallVector<mlir::Value> reduceOperands;
-          llvm::SmallVector<mlir::Attribute> reduceAttrs;
-          // Create DO CONCURRENT reduce operands and attributes
-          for (const auto &reduceSym : info.reduceSymList) {
-            const fir::ReduceOperationEnum reduce_operation = reduceSym.first;
-            const Fortran::semantics::Symbol *sym = reduceSym.second;
-            fir::ExtendedValue exv = getSymbolExtendedValue(*sym, nullptr);
-            reduceOperands.push_back(fir::getBase(exv));
-            auto reduce_attr =
-                fir::ReduceAttr::get(builder->getContext(), reduce_operation);
-            reduceAttrs.push_back(reduce_attr);
-          }
-          // The loop variable value is explicitly updated.
-          info.doLoop = builder->create<fir::DoLoopOp>(
-              loc, lowerValue, upperValue, stepValue, /*unordered=*/true,
-              /*finalCountValue=*/false, /*iterArgs=*/std::nullopt,
-              llvm::ArrayRef<mlir::Value>(reduceOperands), reduceAttrs);
-          builder->setInsertionPointToStart(info.doLoop.getBody());
-          loopValue = builder->createConvert(loc, loopVarType,
-                                             info.doLoop.getInductionVar());
-        } else {
-          // The loop variable is a doLoop op argument.
-          info.doLoop = builder->create<fir::DoLoopOp>(
-              loc, lowerValue, upperValue, stepValue, /*unordered=*/false,
-              /*finalCountValue=*/true,
-              builder->createConvert(loc, loopVarType, lowerValue));
-          builder->setInsertionPointToStart(info.doLoop.getBody());
-          loopValue = info.doLoop.getRegionIterArgs()[0];
-        }
+        auto loopOp = builder->create<fir::DoLoopOp>(
+            loc, lowerValue, upperValue, stepValue, /*unordered=*/false,
+            /*finalCountValue=*/true,
+            builder->createConvert(loc, loopVarType, lowerValue));
+        info.loopOp = loopOp;
+        builder->setInsertionPointToStart(loopOp.getBody());
+        mlir::Value loopValue = loopOp.getRegionIterArgs()[0];
+
         // Update the loop variable value in case it has non-index references.
         builder->create<fir::StoreOp>(loc, loopValue, info.loopVariable);
-        if (info.maskExpr) {
-          Fortran::lower::StatementContext stmtCtx;
-          mlir::Value maskCond = createFIRExpr(loc, info.maskExpr, stmtCtx);
-          stmtCtx.finalizeAndReset();
-          mlir::Value maskCondCast =
-              builder->createConvert(loc, builder->getI1Type(), maskCond);
-          auto ifOp = builder->create<fir::IfOp>(loc, maskCondCast,
-                                                 /*withElseRegion=*/false);
-          builder->setInsertionPointToStart(&ifOp.getThenRegion().front());
-        }
-        if (info.hasLocalitySpecs())
-          handleLocalitySpecs(info);
-
         addLoopAnnotationAttr(info, dirs);
         continue;
       }
@@ -2454,6 +2443,60 @@ private:
         builder->restoreInsertionPoint(insertPt);
       }
     }
+
+    if (genDoConcurrent) {
+      auto loopWrapperOp = builder->create<fir::DoConcurrentOp>(loc);
+      builder->setInsertionPointToStart(
+          builder->createBlock(&loopWrapperOp.getRegion()));
+
+      for (IncrementLoopInfo &info : llvm::reverse(incrementLoopNestInfo)) {
+        info.loopVariable = genLoopVariableAddress(loc, *info.loopVariableSym,
+                                                   info.isConcurrent);
+      }
+
+      builder->setInsertionPointToEnd(loopWrapperOp.getBody());
+      auto loopOp = builder->create<fir::DoConcurrentLoopOp>(
+          loc, nestLBs, nestUBs, nestSts, nestReduceOperands,
+          nestReduceAttrs.empty()
+              ? nullptr
+              : mlir::ArrayAttr::get(builder->getContext(), nestReduceAttrs),
+          nullptr, /*local_vars=*/std::nullopt, /*local_syms=*/nullptr);
+
+      llvm::SmallVector<mlir::Type> loopBlockArgTypes(
+          incrementLoopNestInfo.size(), builder->getIndexType());
+      llvm::SmallVector<mlir::Location> loopBlockArgLocs(
+          incrementLoopNestInfo.size(), loc);
+      mlir::Region &loopRegion = loopOp.getRegion();
+      mlir::Block *loopBlock = builder->createBlock(
+          &loopRegion, loopRegion.begin(), loopBlockArgTypes, loopBlockArgLocs);
+      builder->setInsertionPointToStart(loopBlock);
+
+      for (auto [info, blockArg] :
+           llvm::zip_equal(incrementLoopNestInfo, loopBlock->getArguments())) {
+        info.loopOp = loopOp;
+        mlir::Value loopValue =
+            builder->createConvert(loc, info.getLoopVariableType(), blockArg);
+        builder->create<fir::StoreOp>(loc, loopValue, info.loopVariable);
+
+        if (info.maskExpr) {
+          Fortran::lower::StatementContext stmtCtx;
+          mlir::Value maskCond = createFIRExpr(loc, info.maskExpr, stmtCtx);
+          stmtCtx.finalizeAndReset();
+          mlir::Value maskCondCast =
+              builder->createConvert(loc, builder->getI1Type(), maskCond);
+          auto ifOp = builder->create<fir::IfOp>(loc, maskCondCast,
+                                                 /*withElseRegion=*/false);
+          builder->setInsertionPointToStart(&ifOp.getThenRegion().front());
+        }
+      }
+
+      IncrementLoopInfo &innermostInfo = incrementLoopNestInfo.back();
+
+      if (innermostInfo.hasLocalitySpecs())
+        handleLocalitySpecs(innermostInfo);
+
+      addLoopAnnotationAttr(innermostInfo, dirs);
+    }
   }
 
   /// Generate FIR to end a structured or unstructured increment loop nest.
@@ -2470,29 +2513,31 @@ private:
          it != rend; ++it) {
       IncrementLoopInfo &info = *it;
       if (info.isStructured()) {
-        // End fir.do_loop.
-        if (info.isUnordered) {
-          builder->setInsertionPointAfter(info.doLoop);
+        // End fir.do_concurent.loop.
+        if (info.isConcurrent) {
+          builder->setInsertionPointAfter(info.loopOp->getParentOp());
           continue;
         }
+
+        // End fir.do_loop.
         // Decrement tripVariable.
-        builder->setInsertionPointToEnd(info.doLoop.getBody());
+        auto doLoopOp = mlir::cast<fir::DoLoopOp>(info.loopOp);
+        builder->setInsertionPointToEnd(doLoopOp.getBody());
         llvm::SmallVector<mlir::Value, 2> results;
         results.push_back(builder->create<mlir::arith::AddIOp>(
-            loc, info.doLoop.getInductionVar(), info.doLoop.getStep(),
-            iofAttr));
+            loc, doLoopOp.getInductionVar(), doLoopOp.getStep(), iofAttr));
         // Step loopVariable to help optimizations such as vectorization.
         // Induction variable elimination will clean up as necessary.
         mlir::Value step = builder->createConvert(
-            loc, info.getLoopVariableType(), info.doLoop.getStep());
+            loc, info.getLoopVariableType(), doLoopOp.getStep());
         mlir::Value loopVar =
             builder->create<fir::LoadOp>(loc, info.loopVariable);
         results.push_back(
             builder->create<mlir::arith::AddIOp>(loc, loopVar, step, iofAttr));
         builder->create<fir::ResultOp>(loc, results);
-        builder->setInsertionPointAfter(info.doLoop);
+        builder->setInsertionPointAfter(doLoopOp);
         // The loop control variable may be used after the loop.
-        builder->create<fir::StoreOp>(loc, info.doLoop.getResult(1),
+        builder->create<fir::StoreOp>(loc, doLoopOp.getResult(1),
                                       info.loopVariable);
         continue;
       }
@@ -3732,10 +3777,11 @@ private:
           builder->createMinusOneInteger(loc, builder->getIndexType())};
       mlir::Value baseAddr =
           hlfir::genVariableRawAddress(loc, *builder, selector);
+      const bool isVolatile = fir::isa_volatile_type(selector.getType());
       mlir::Type eleType =
           fir::unwrapSequenceType(fir::unwrapRefType(baseAddr.getType()));
-      mlir::Type rank1Type =
-          fir::ReferenceType::get(builder->getVarLenSeqTy(eleType, 1));
+      mlir::Type rank1Type = fir::ReferenceType::get(
+          builder->getVarLenSeqTy(eleType, 1), isVolatile);
       baseAddr = builder->createConvert(loc, rank1Type, baseAddr);
       if (selector.isCharacter()) {
         mlir::Value len = hlfir::genCharLength(loc, *builder, selector);
@@ -3755,7 +3801,8 @@ private:
           mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(selector.getType()));
       mlir::Type newBoxType = boxTy.getBoxTypeWithNewShape(rank);
       if (fir::isa_ref_type(selector.getType()))
-        newBoxType = fir::ReferenceType::get(newBoxType);
+        newBoxType = fir::ReferenceType::get(
+            newBoxType, fir::isa_volatile_type(selector.getType()));
       // Give rank info to value via cast, and get rid of the box if not needed
       // (simple scalars, contiguous arrays... This is done by
       // translateVariableToExtendedValue).
@@ -5491,8 +5538,9 @@ private:
         // return, PassBy::AddressAndLength should be retired.
         mlir::Location loc = toLocation();
         fir::factory::CharacterExprHelper charHelp{*builder, loc};
-        mlir::Value box =
-            charHelp.createEmboxChar(arg.firArgument, arg.firLength);
+        mlir::Value casted =
+            builder->createVolatileCast(loc, false, arg.firArgument);
+        mlir::Value box = charHelp.createEmboxChar(casted, arg.firLength);
         mapBlockArgToDummyOrResult(arg.entity->get(), box, isResult);
       } else {
         if (arg.entity.has_value()) {

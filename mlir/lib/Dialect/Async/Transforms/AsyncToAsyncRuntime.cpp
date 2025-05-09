@@ -32,8 +32,8 @@
 #include <optional>
 
 namespace mlir {
-#define GEN_PASS_DEF_ASYNCTOASYNCRUNTIME
-#define GEN_PASS_DEF_ASYNCFUNCTOASYNCRUNTIME
+#define GEN_PASS_DEF_ASYNCTOASYNCRUNTIMEPASS
+#define GEN_PASS_DEF_ASYNCFUNCTOASYNCRUNTIMEPASS
 #include "mlir/Dialect/Async/Passes.h.inc"
 } // namespace mlir
 
@@ -47,7 +47,7 @@ static constexpr const char kAsyncFnPrefix[] = "async_execute_fn";
 namespace {
 
 class AsyncToAsyncRuntimePass
-    : public impl::AsyncToAsyncRuntimeBase<AsyncToAsyncRuntimePass> {
+    : public impl::AsyncToAsyncRuntimePassBase<AsyncToAsyncRuntimePass> {
 public:
   AsyncToAsyncRuntimePass() = default;
   void runOnOperation() override;
@@ -58,7 +58,8 @@ public:
 namespace {
 
 class AsyncFuncToAsyncRuntimePass
-    : public impl::AsyncFuncToAsyncRuntimeBase<AsyncFuncToAsyncRuntimePass> {
+    : public impl::AsyncFuncToAsyncRuntimePassBase<
+          AsyncFuncToAsyncRuntimePass> {
 public:
   AsyncFuncToAsyncRuntimePass() = default;
   void runOnOperation() override;
@@ -304,8 +305,8 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   cloneConstantsIntoTheRegion(execute.getBodyRegion());
 
   // Collect all outlined function inputs.
-  SetVector<mlir::Value> functionInputs(execute.getDependencies().begin(),
-                                        execute.getDependencies().end());
+  SetVector<mlir::Value> functionInputs(llvm::from_range,
+                                        execute.getDependencies());
   functionInputs.insert_range(execute.getBodyOperands());
   getUsedValuesDefinedAbove(execute.getBodyRegion(), functionInputs);
 
@@ -895,13 +896,4 @@ void AsyncFuncToAsyncRuntimePass::runOnOperation() {
     signalPassFailure();
     return;
   }
-}
-
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createAsyncToAsyncRuntimePass() {
-  return std::make_unique<AsyncToAsyncRuntimePass>();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createAsyncFuncToAsyncRuntimePass() {
-  return std::make_unique<AsyncFuncToAsyncRuntimePass>();
 }

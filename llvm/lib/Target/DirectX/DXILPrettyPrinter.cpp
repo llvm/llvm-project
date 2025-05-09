@@ -291,7 +291,7 @@ INITIALIZE_PASS_END(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
 
 bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
   const DXILResourceMap &DRM =
-      getAnalysis<DXILResourceWrapperPass>().getBindingMap();
+      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
   prettyPrintResources(OS, DRM, DRTM);

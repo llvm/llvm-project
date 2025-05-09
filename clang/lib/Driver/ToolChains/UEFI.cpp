@@ -80,9 +80,6 @@ void tools::uefi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // "Terminal Service Aware" flag is not needed for UEFI applications.
   CmdArgs.push_back("-tsaware:no");
 
-  // EFI_APPLICATION to be linked as DLL by default.
-  CmdArgs.push_back("-dll");
-
   if (Args.hasArg(options::OPT_g_Group, options::OPT__SLASH_Z7))
     CmdArgs.push_back("-debug");
 

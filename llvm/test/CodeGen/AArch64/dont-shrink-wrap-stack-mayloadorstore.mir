@@ -4,6 +4,7 @@
  ; to a position where the stack might still be accessed by a load or store
  
  ; RUN: llc -x=mir -simplify-mir -run-pass=shrink-wrap -o - %s | FileCheck %s
+ ; RUN: llc -x=mir -simplify-mir -passes='shrink-wrap' -o - %s | FileCheck %s
  ; CHECK:      name:            compiler_pop_stack
  ; CHECK:      frameInfo:
  ; CHECK:      savePoint:       '%bb.1'

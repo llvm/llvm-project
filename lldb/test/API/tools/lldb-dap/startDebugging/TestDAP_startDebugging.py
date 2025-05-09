@@ -2,7 +2,6 @@
 Test lldb-dap start-debugging reverse requests.
 """
 
-
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
@@ -16,7 +15,7 @@ class TestDAP_startDebugging(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         source = "main.c"
-        self.build_and_launch(program)
+        self.build_and_launch(program, stopOnEntry=True)
 
         breakpoint_line = line_number(source, "// breakpoint")
 

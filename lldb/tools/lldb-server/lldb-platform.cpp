@@ -455,15 +455,9 @@ int main_platform(int argc, char *argv[]) {
   lldb_private::Args inferior_arguments;
   inferior_arguments.SetArguments(argc, const_cast<const char **>(argv));
 
-  Socket::SocketProtocol protocol = Socket::ProtocolUnixDomain;
-
+  Log *log = GetLog(LLDBLog::Platform);
   if (fd != SharedSocket::kInvalidFD) {
     // Child process will handle the connection and exit.
-    if (gdbserver_port)
-      protocol = Socket::ProtocolTcp;
-
-    Log *log = GetLog(LLDBLog::Platform);
-
     NativeSocket sockfd;
     error = SharedSocket::GetNativeSocket(fd, sockfd);
     if (error.Fail()) {
@@ -471,21 +465,30 @@ int main_platform(int argc, char *argv[]) {
       return socket_error;
     }
 
-    GDBRemoteCommunicationServerPlatform platform(protocol, gdbserver_port);
-    Socket *socket;
-    if (protocol == Socket::ProtocolTcp)
-      socket = new TCPSocket(sockfd, /*should_close=*/true);
-    else {
+    std::unique_ptr<Socket> socket;
+    if (gdbserver_port) {
+      socket = std::make_unique<TCPSocket>(sockfd, /*should_close=*/true);
+    } else {
 #if LLDB_ENABLE_POSIX
-      socket = new DomainSocket(sockfd, /*should_close=*/true);
+      llvm::Expected<std::unique_ptr<DomainSocket>> domain_socket =
+          DomainSocket::FromBoundNativeSocket(sockfd, /*should_close=*/true);
+      if (!domain_socket) {
+        LLDB_LOG_ERROR(log, domain_socket.takeError(),
+                       "Failed to create socket: {0}");
+        return socket_error;
+      }
+      socket = std::move(domain_socket.get());
 #else
       WithColor::error() << "lldb-platform child: Unix domain sockets are not "
                             "supported on this platform.";
       return socket_error;
 #endif
     }
-    platform.SetConnection(
-        std::unique_ptr<Connection>(new ConnectionFileDescriptor(socket)));
+
+    GDBRemoteCommunicationServerPlatform platform(socket->GetSocketProtocol(),
+                                                  gdbserver_port);
+    platform.SetConnection(std::unique_ptr<Connection>(
+        new ConnectionFileDescriptor(socket.release())));
     client_handle(platform, inferior_arguments);
     return 0;
   }
@@ -498,6 +501,7 @@ int main_platform(int argc, char *argv[]) {
     return 1;
   }
 
+  Socket::SocketProtocol protocol = Socket::ProtocolUnixDomain;
   std::string address;
   std::string gdb_address;
   uint16_t platform_port = 0;
