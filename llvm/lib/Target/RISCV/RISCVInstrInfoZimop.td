@@ -34,12 +34,12 @@ class RVInstRMoprr<bits<4> imm4, bits<3> imm3, bits<3> funct3, RISCVOpcode opcod
 
 // May-Be-Operations
 def riscv_mopr  : RVSDNode<"MOPR",
-                         SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
-                                              SDTCisSameAs<0, 2>]>>;
+                           SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
+                                                SDTCisSameAs<0, 2>]>>;
 def riscv_moprr : RVSDNode<"MOPRR",
-                         SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
-                                              SDTCisSameAs<0, 2>,
-                                              SDTCisSameAs<0, 3>]>>;
+                           SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
+                                                SDTCisSameAs<0, 2>,
+                                                SDTCisSameAs<0, 3>]>>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVMopr<bits<7> imm7, bits<5> imm5, bits<3> funct3,

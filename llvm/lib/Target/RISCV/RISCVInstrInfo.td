@@ -100,13 +100,13 @@ def riscv_srlw      : RVSDNode<"SRLW", SDT_RISCVIntBinOpW>;
 
 // Reads value of CSR. The first operand is the address of the required CSR.
 // The result is the read value.
-def riscv_read_csr  : RVSDNode<"READ_CSR", 
+def riscv_read_csr  : RVSDNode<"READ_CSR",
                                SDTypeProfile<1, 1, [SDTCisInt<0>,
                                                     SDTCisInt<1>]>,
                                [SDNPHasChain]>;
 // Write value to CSR. The first operand is the address of the required CSR,
 // the second is the value to write.
-def riscv_write_csr : RVSDNode<"WRITE_CSR", 
+def riscv_write_csr : RVSDNode<"WRITE_CSR",
                                SDTypeProfile<0, 2, [SDTCisInt<0>,
                                                     SDTCisInt<1>]>,
                                [SDNPHasChain]>;
@@ -170,7 +170,7 @@ def riscv_build_gpr_pair : RVSDNode<"BuildGPRPair",
 /// - Output 0: `i<xlen>` low-order bits, from even register.
 /// - Output 1: `i<xlen>` high-order bits, from odd register.
 /// - Input: `untyped` even-odd register pair
-def riscv_split_gpr_pair : RVSDNode<"SplitGPRPair", 
+def riscv_split_gpr_pair : RVSDNode<"SplitGPRPair",
                                     SDTypeProfile<2, 1, [SDTCisVT<0, XLenVT>,
                                                          SDTCisVT<1, XLenVT>,
                                                          SDTCisVT<2, GPRPairVT>]>>;

@@ -25,9 +25,9 @@
 // it is lowered before instruction selection.
 // FIXME: I'm not sure the types here are entirely correct.
 // Returns a vector. Operand 0 is a passthru, operand 1 and 2 are i32 scalars, operand 3 is VL
-def riscv_splat_vector_split_i64_vl : RVSDNode<"SPLAT_VECTOR_SPLIT_I64_VL", 
+def riscv_splat_vector_split_i64_vl : RVSDNode<"SPLAT_VECTOR_SPLIT_I64_VL",
                                                SDTypeProfile<1, 4, [SDTCisVec<0>,
-                                                                    SDTCVecEltisVT<0, i64>, 
+                                                                    SDTCVecEltisVT<0, i64>,
                                                                     SDTCisSameAs<1, 0>,
                                                                     SDTCisVT<2, i32>,
                                                                     SDTCisVT<3, i32>,
@@ -160,13 +160,13 @@ let HasPassthruOp = true, HasMaskOp = true in {
   def riscv_smax_vl  : RVSDNode<"SMAX_VL",  SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
   def riscv_umin_vl  : RVSDNode<"UMIN_VL",  SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
   def riscv_umax_vl  : RVSDNode<"UMAX_VL",  SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
-  
+
   def riscv_bitreverse_vl : RVSDNode<"BITREVERSE_VL", SDT_RISCVIntUnOp_VL>;
   def riscv_bswap_vl      : RVSDNode<"BSWAP_VL",      SDT_RISCVIntUnOp_VL>;
   def riscv_ctlz_vl       : RVSDNode<"CTLZ_VL",       SDT_RISCVIntUnOp_VL>;
   def riscv_cttz_vl       : RVSDNode<"CTTZ_VL",       SDT_RISCVIntUnOp_VL>;
   def riscv_ctpop_vl      : RVSDNode<"CTPOP_VL",      SDT_RISCVIntUnOp_VL>;
-  
+
   // Averaging adds of signed integers.
   def riscv_avgfloors_vl  : RVSDNode<"AVGFLOORS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
   // Averaging adds of unsigned integers.
@@ -179,7 +179,7 @@ let HasPassthruOp = true, HasMaskOp = true in {
   def riscv_uaddsat_vl   : RVSDNode<"UADDSAT_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
   def riscv_ssubsat_vl   : RVSDNode<"SSUBSAT_VL", SDT_RISCVIntBinOp_VL>;
   def riscv_usubsat_vl   : RVSDNode<"USUBSAT_VL", SDT_RISCVIntBinOp_VL>;
-  
+
   def riscv_fadd_vl  : RVSDNode<"FADD_VL",  SDT_RISCVFPBinOp_VL, [SDNPCommutative]>;
   def riscv_fsub_vl  : RVSDNode<"FSUB_VL",  SDT_RISCVFPBinOp_VL>;
   def riscv_fmul_vl  : RVSDNode<"FMUL_VL",  SDT_RISCVFPBinOp_VL, [SDNPCommutative]>;
@@ -205,7 +205,7 @@ let IsStrictFP = true, HasPassthruOp = true, HasMaskOp = true in {
   def riscv_strict_fmul_vl  : RVSDNode<"STRICT_FMUL_VL",  SDT_RISCVFPBinOp_VL, [SDNPCommutative, SDNPHasChain]>;
   def riscv_strict_fdiv_vl  : RVSDNode<"STRICT_FDIV_VL",  SDT_RISCVFPBinOp_VL, [SDNPHasChain]>;
 } // let IsStrictFP = true, HasPassthruOp = true, HasMaskOp = true
-  
+
 let IsStrictFP = true, HasMaskOp = true in
 def riscv_strict_fsqrt_vl : RVSDNode<"STRICT_FSQRT_VL", SDT_RISCVFPUnOp_VL, [SDNPHasChain]>;
 

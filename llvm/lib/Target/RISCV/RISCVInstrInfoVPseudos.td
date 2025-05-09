@@ -73,12 +73,12 @@
 // VMV_X_S matches the semantics of vmv.x.s. The result is always XLenVT sign
 // extended from the vector element size.
 def riscv_vmv_x_s : RVSDNode<"VMV_X_S",
-                           SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
-                                                SDTCisInt<1>]>>;
+                             SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
+                                                  SDTCisInt<1>]>>;
 
 // Read VLENB CSR
 def riscv_read_vlenb : RVSDNode<"READ_VLENB",
-                              SDTypeProfile<1, 0, [SDTCisVT<0, XLenVT>]>>;
+                                SDTypeProfile<1, 0, [SDTCisVT<0, XLenVT>]>>;
 
 // Operand that is allowed to be a register other than X0, a 5 bit unsigned
 // immediate, or -1. -1 means VLMAX. This allows us to pick between VSETIVLI and
