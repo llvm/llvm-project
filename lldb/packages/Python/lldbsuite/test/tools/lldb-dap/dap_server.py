@@ -1320,6 +1320,7 @@ class DebugAdapterServer(DebugCommunication):
 class DebugAdapterError(Exception):
     pass
 
+
 class DebugAdapterProcessError(DebugAdapterError):
     """Raised when the lldb-dap process exits with a non-zero exit status."""
 
@@ -1334,6 +1335,7 @@ class DebugAdapterProcessError(DebugAdapterError):
                 return f"lldb-dap died with unknown signal {-self.returncode}."
         else:
             return f"lldb-dap returned non-zero exit status {self.returncode}."
+
 
 def attach_options_specified(options):
     if options.pid is not None:
