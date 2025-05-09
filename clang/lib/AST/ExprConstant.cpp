@@ -9561,6 +9561,41 @@ public:
     return true;
   }
 
+  bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E) {
+    // This is the only UETT we evaluate here.
+    assert(E->getKind() == UETT_PtrAuthSchemaOptions &&
+           "Unknown UnaryExprOrTypeTraitExpr");
+
+    // Note for review: there are other UETTs down the road
+    // that make a switch make sense, but for now this is the only
+    // one should this just be an
+    //   if (E->getKind() != UETT_PtrAuthSchemaOptions)
+    //     return false;
+    ASTContext &Ctx = Info.Ctx;
+    switch (E->getKind()) {
+    case UETT_PtrAuthSchemaOptions: {
+      auto ArgumentType = E->getArgumentType();
+      auto Qualifier = Ctx.getExplicitOrImplicitPointerAuth(ArgumentType);
+      if (!Qualifier)
+        return false;
+      if (!Qualifier->isPresent())
+        return false;
+      auto OptionsString = Ctx.getPointerAuthOptionsString(*Qualifier);
+      QualType StrTy =
+          Ctx.getStringLiteralArrayType(Ctx.CharTy, OptionsString.length());
+      StringLiteral *OptionsLit =
+          StringLiteral::Create(Ctx, OptionsString, StringLiteralKind::Ordinary,
+                                /*Pascal=*/false, StrTy, SourceLocation());
+      APValue OptionsVal(OptionsLit, CharUnits::Zero(),
+                         {APValue::LValuePathEntry::ArrayIndex(0)},
+                         /*OnePastTheEnd=*/false);
+      return Success(OptionsVal, E);
+    }
+    default:
+      return false;
+    }
+  }
+
   bool VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *E) {
     std::string ResultStr = E->ComputeName(Info.Ctx);
 
@@ -14878,6 +14913,43 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
     return Success(
         Info.Ctx.getPointerAuthTypeDiscriminator(E->getArgumentType()), E);
   }
+  case UETT_PtrAuthHasAuthentication: {
+    auto ArgumentType = E->getArgumentType();
+    auto Qualifier = Info.Ctx.getExplicitOrImplicitPointerAuth(ArgumentType);
+    if (!Qualifier)
+      return false;
+    return Success(Qualifier->isPresent(), E);
+  }
+  case UETT_PtrAuthSchemaKey: {
+    auto ArgumentType = E->getArgumentType();
+    auto Qualifier = Info.Ctx.getExplicitOrImplicitPointerAuth(ArgumentType);
+    if (!Qualifier)
+      return false;
+    if (!Qualifier->isPresent())
+      return false;
+    return Success(Qualifier->getKey(), E);
+  }
+  case UETT_PtrAuthSchemaIsAddressDiscriminated: {
+    auto ArgumentType = E->getArgumentType();
+    auto Qualifier = Info.Ctx.getExplicitOrImplicitPointerAuth(ArgumentType);
+    if (!Qualifier)
+      return false;
+    if (!Qualifier->isPresent())
+      return false;
+    return Success(Qualifier->isAddressDiscriminated(), E);
+  }
+  case UETT_PtrAuthSchemaExtraDiscriminator: {
+    auto ArgumentType = E->getArgumentType();
+    auto Qualifier = Info.Ctx.getExplicitOrImplicitPointerAuth(ArgumentType);
+    if (!Qualifier)
+      return false;
+    if (!Qualifier->isPresent())
+      return false;
+    return Success(Qualifier->getExtraDiscriminator(), E);
+  }
+  case UETT_PtrAuthSchemaOptions:
+    llvm_unreachable(
+        "UETT_PtrAuthSchemaOptions should be evaluated as a pointer");
   case UETT_VecStep: {
     QualType Ty = E->getTypeOfArgument();
 

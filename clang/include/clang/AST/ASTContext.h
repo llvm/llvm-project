@@ -1358,6 +1358,11 @@ public:
   /// Return the "other" type-specific discriminator for the given type.
   uint16_t getPointerAuthTypeDiscriminator(QualType T);
 
+  /// Produces the canonical "options" string for the given PointerAuthQualifier
+  /// such that using it explicitly in a __ptrauth qualifier would result in as
+  /// identical configuration
+  std::string getPointerAuthOptionsString(const PointerAuthQualifier &PAQ);
+
   /// Apply Objective-C protocol qualifiers to the given type.
   /// \param allowOnPointerType specifies if we can apply protocol
   /// qualifiers on ObjCObjectPointerType. It can be set to true when
@@ -1695,6 +1700,13 @@ public:
   }
 
   QualType adjustStringLiteralBaseType(QualType StrLTy) const;
+
+  /// Synthesizes a PointerAuthQualifier representing the actual authentication
+  /// policy for the given type. This may be either the schema specified
+  /// explicitly via the __ptrauth qualified in the source, or the implicit
+  /// schema associated with function pointers and similar.
+  std::optional<PointerAuthQualifier>
+  getExplicitOrImplicitPointerAuth(QualType T);
 
 private:
   /// Return a normal function type with a typed argument list.
