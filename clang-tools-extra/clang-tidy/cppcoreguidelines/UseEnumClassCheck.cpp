@@ -11,7 +11,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::modernize {
+namespace clang::tidy::cppcoreguidelines {
 
 void UseEnumClassCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -31,4 +31,4 @@ void UseEnumClassCheck::check(const MatchFinder::MatchResult &Result) {
       << FixItHint::CreateInsertion(UnscopedEnum->getLocation(), "class ");
 }
 
-} // namespace clang::tidy::modernize
+} // namespace clang::tidy::cppcoreguidelines

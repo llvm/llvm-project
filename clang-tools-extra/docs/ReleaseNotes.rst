@@ -148,8 +148,8 @@ New checks
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
 
-- New :doc:`modernize-use-enum-class
-  <clang-tidy/checks/modernize/use-enum-class>` check.
+- New :doc:`cppcoreguidelines-use-enum-class
+  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check.
 
   Finds plain non-class enum definitions that could use ``enum class``.
 

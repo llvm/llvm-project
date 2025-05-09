@@ -34,7 +34,6 @@ add_clang_library(clangTidyModernizeModule STATIC
   UseDefaultMemberInitCheck.cpp
   UseDesignatedInitializersCheck.cpp
   UseEmplaceCheck.cpp
-  UseEnumClassCheck.cpp
   UseEqualsDefaultCheck.cpp
   UseEqualsDeleteCheck.cpp
   UseIntegerSignComparisonCheck.cpp

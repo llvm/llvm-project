@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USEENUMCLASSCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USEENUMCLASSCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_USEENUMCLASSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_USEENUMCLASSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::modernize {
+namespace clang::tidy::cppcoreguidelines {
 
 /// Check for unscoped enums that are not contained in classes/structs.
 /// Suggest to use scoped enums (enum class) instead.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-enum-class.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/use-enum-class.html
 class UseEnumClassCheck : public ClangTidyCheck {
 public:
   UseEnumClassCheck(StringRef Name, ClangTidyContext *Context)
@@ -29,6 +29,6 @@ public:
   }
 };
 
-} // namespace clang::tidy::modernize
+} // namespace clang::tidy::cppcoreguidelines
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USE_ENUM_CLASS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_USEENUMCLASSCHECK_H

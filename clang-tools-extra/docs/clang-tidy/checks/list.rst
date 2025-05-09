@@ -212,6 +212,7 @@ Clang-Tidy Checks
    :doc:`cppcoreguidelines-rvalue-reference-param-not-moved <cppcoreguidelines/rvalue-reference-param-not-moved>`,
    :doc:`cppcoreguidelines-slicing <cppcoreguidelines/slicing>`,
    :doc:`cppcoreguidelines-special-member-functions <cppcoreguidelines/special-member-functions>`,
+   :doc:`cppcoreguidelines-use-enum-class <cppcoreguidelines/use-enum-class>`, "Yes"
    :doc:`cppcoreguidelines-virtual-class-destructor <cppcoreguidelines/virtual-class-destructor>`, "Yes"
    :doc:`darwin-avoid-spinlock <darwin/avoid-spinlock>`,
    :doc:`darwin-dispatch-once-nonstatic <darwin/dispatch-once-nonstatic>`, "Yes"
@@ -303,7 +304,6 @@ Clang-Tidy Checks
    :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
    :doc:`modernize-use-designated-initializers <modernize/use-designated-initializers>`, "Yes"
    :doc:`modernize-use-emplace <modernize/use-emplace>`, "Yes"
-   :doc:`modernize-use-enum-class <modernize/use-enum-class>`, "Yes"
    :doc:`modernize-use-equals-default <modernize/use-equals-default>`, "Yes"
    :doc:`modernize-use-equals-delete <modernize/use-equals-delete>`, "Yes"
    :doc:`modernize-use-integer-sign-comparison <modernize/use-integer-sign-comparison>`, "Yes"
