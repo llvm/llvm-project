@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
@@ -20,6 +21,8 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include <algorithm>
 #include <cstdint>
 #include <numeric>
 #include <optional>
@@ -469,6 +472,14 @@ static bool isNotLinearizableBecauseScalable(Operation *op) {
   return containsScalableResult;
 }
 
+static bool
+isCreateMaskWithAtMostOneNonUnit(vector::CreateMaskOp createMaskOp) {
+  ArrayRef<int64_t> shape = createMaskOp.getType().getShape();
+  bool multipleNonUnitDim =
+      llvm::count_if(shape, [](int64_t dim) { return dim > 1; }) > 1;
+  return !multipleNonUnitDim;
+}
+
 static bool isNotLinearizable(Operation *op) {
 
   // Only ops that are in the vector dialect, are ConstantLike, or
@@ -484,6 +495,12 @@ static bool isNotLinearizable(Operation *op) {
   // Some ops currently don't support scalable vectors.
   if (isNotLinearizableBecauseScalable(op))
     return true;
+
+  if (auto createMaskOp = dyn_cast<vector::CreateMaskOp>(op)) {
+    if (!isCreateMaskWithAtMostOneNonUnit(createMaskOp)) {
+      return true;
+    }
+  }
 
   return false;
 }
@@ -527,12 +544,95 @@ void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
       });
 }
 
+/// Linearize a vector.create_mask that has at most 1 non-unit dimension.
+/// For example,
+/// ```
+/// %mask3 = vector.create_mask %arg0, %arg1, %arg2: vector<1x16x1xi1>
+/// ```
+///
+/// becomes,
+/// ```
+/// [...]
+/// %mask1 = vector.create_mask %prod: vector<16xi1>
+/// %mask3 = vector.shape_cast %mask1: vector<16xi1> to vector<1x16x1xi1>
+/// ```
+///
+/// where %prod above the product of the (clamped) dimension-wise masking ranges
+/// %arg0, %arg1, and %arg2.
+///
+/// This is equivalent to choosing the rank-1 masking range as:
+/// 1) %arg1 if %arg0 and %arg2 are stricty positive
+/// 2) 0     if either %arg0 or %arg2 are 0 or negative.
+///
+/// Specifically, %prod is obtained as
+///
+/// ```
+/// %true = arith.constant true
+/// %zero = arith.constant 0 : index
+/// %0    = arith.cmpi sgt, %arg0, %zero : index
+/// %1    = arith.muli %true, %0 : i1
+/// %2    = arith.cmpi sgt, %arg2, %zero : index
+/// %3    = arith.muli %1, %2 : i1
+/// %4    = arith.index_cast %3 : i1 to index
+/// %prod = arith.muli %4, %arg1 : index
+/// ```
+struct LinearizeVectorCreateMask final
+    : OpConversionPattern<vector::CreateMaskOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LinearizeVectorCreateMask(const TypeConverter &typeConverter,
+                            MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::CreateMaskOp maskOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    VectorType type = maskOp.getType();
+    assert(isCreateMaskWithAtMostOneNonUnit(maskOp) &&
+           "expected linearizable create_mask");
+
+    Location loc = maskOp.getLoc();
+
+    // First, get the product of (clamped) mask sizes in the unit-dimensions.
+    Value prod = rewriter.create<arith::ConstantIntOp>(loc, 1, 1);
+    Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    int nonUnitDim = -1;
+    for (unsigned i = 0; i < type.getRank(); ++i) {
+      Value dimRange = adaptor.getOperands()[i];
+      int64_t dimSize = type.getDimSize(i);
+      if (dimSize <= 1) {
+        Value nxt = rewriter.create<arith::CmpIOp>(
+            loc, arith::CmpIPredicate::sgt, dimRange, zero);
+        prod = rewriter.create<arith::MulIOp>(loc, prod, nxt);
+      } else {
+        assert(nonUnitDim == -1 && "at most 1 non-unit expected");
+        nonUnitDim = i;
+      }
+    }
+    prod =
+        rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), prod);
+
+    // Finally, multiply by the size in the dimension that is not unit.
+    if (nonUnitDim != -1) {
+      Value v = adaptor.getOperands()[nonUnitDim];
+      prod = rewriter.create<arith::MulIOp>(loc, prod, v);
+    }
+
+    Type flatType = getTypeConverter()->convertType(type);
+    auto newMask =
+        rewriter.create<mlir::vector::CreateMaskOp>(loc, flatType, prod);
+    rewriter.replaceOp(maskOp, newMask);
+    return success();
+  }
+};
+
 void mlir::vector::populateVectorLinearizeBasePatterns(
     const TypeConverter &typeConverter, const ConversionTarget &target,
     RewritePatternSet &patterns) {
   patterns.add<LinearizeConstantLike, LinearizeVectorizable,
-               LinearizeVectorBitCast, LinearizeVectorSplat>(
-      typeConverter, patterns.getContext());
+               LinearizeVectorCreateMask, LinearizeVectorBitCast,
+               LinearizeVectorSplat>(typeConverter, patterns.getContext());
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
