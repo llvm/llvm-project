@@ -2190,6 +2190,8 @@ bool AArch64FastISel::selectStore(const Instruction *I) {
     if (isReleaseOrStronger(Ord)) {
       // The STLR addressing mode only supports a base reg; pass that directly.
       Register AddrReg = getRegForValue(PtrV);
+      if (!AddrReg)
+        return false;
       return emitStoreRelease(VT, SrcReg, AddrReg,
                               createMachineMemOperandFor(I));
     }
@@ -5070,12 +5072,16 @@ bool AArch64FastISel::selectAtomicCmpXchg(const AtomicCmpXchgInst *I) {
 
   const MCInstrDesc &II = TII.get(Opc);
 
-  const Register AddrReg = constrainOperandRegClass(
-      II, getRegForValue(I->getPointerOperand()), II.getNumDefs());
-  const Register DesiredReg = constrainOperandRegClass(
-      II, getRegForValue(I->getCompareOperand()), II.getNumDefs() + 1);
-  const Register NewReg = constrainOperandRegClass(
-      II, getRegForValue(I->getNewValOperand()), II.getNumDefs() + 2);
+  Register AddrReg = getRegForValue(I->getPointerOperand());
+  Register DesiredReg = getRegForValue(I->getCompareOperand());
+  Register NewReg = getRegForValue(I->getNewValOperand());
+
+  if (!AddrReg || !DesiredReg || !NewReg)
+    return false;
+
+  AddrReg = constrainOperandRegClass(II, AddrReg, II.getNumDefs());
+  DesiredReg = constrainOperandRegClass(II, DesiredReg, II.getNumDefs() + 1);
+  NewReg = constrainOperandRegClass(II, NewReg, II.getNumDefs() + 2);
 
   const Register ResultReg1 = createResultReg(ResRC);
   const Register ResultReg2 = createResultReg(&AArch64::GPR32RegClass);

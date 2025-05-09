@@ -319,6 +319,8 @@ Modified Compiler Flags
 
 - The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
 
+- The ``-fchar8_t`` flag is no longer considered in non-C++ languages modes. (#GH55373)
+
 Removed Compiler Flags
 -------------------------
 
@@ -504,6 +506,8 @@ Improvements to Clang's diagnostics
   behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
 - ``-Wreserved-identifier`` now fires on reserved parameter names in a function
   declaration which is not a definition.
+- Clang now prints the namespace for an attribute, if any,
+  when emitting an unknown attribute diagnostic.
 
 - Several compatibility diagnostics that were incorrectly being grouped under
   ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
@@ -562,8 +566,10 @@ Bug Fixes in This Version
 - Fixed a bug where an attribute before a ``pragma clang attribute`` or
   ``pragma clang __debug`` would cause an assertion. Instead, this now diagnoses
   the invalid attribute location appropriately. (#GH137861)
-- Fixed a crash when a malformed ``_Pragma`` directive appears as part of an 
+- Fixed a crash when a malformed ``_Pragma`` directive appears as part of an
   ``#include`` directive. (#GH138094)
+- Fixed a crash during constant evaluation involving invalid lambda captures
+  (#GH138832)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -583,7 +589,7 @@ Bug Fixes to Compiler Builtins
 - ``__is_trivially_relocatable`` has been deprecated, and uses should be replaced by
   ``__builtin_is_cpp_trivially_relocatable``.
   Note that, it is generally unsafe to ``memcpy`` non-trivially copyable types that
-  are ``__builtin_is_cpp_trivially_relocatable``. It is recommended to use
+  are ``__builtin_is_cpp_trivially_relocatable``. It is recommanded to use
   ``__builtin_trivially_relocate`` instead.
 
 Bug Fixes to Attribute Support
@@ -669,7 +675,6 @@ Bug Fixes to C++ Support
 - Fixed an assertion when trying to constant-fold various builtins when the argument
   referred to a reference to an incomplete type. (#GH129397)
 - Fixed a crash when a cast involved a parenthesized aggregate initialization in dependent context. (#GH72880)
-- Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
 - No longer crashes when instantiating invalid variable template specialization
   whose type depends on itself. (#GH51347), (#GH55872)
 - Improved parser recovery of invalid requirement expressions. In turn, this
@@ -817,6 +822,7 @@ clang-format
 - Add ``EnumTrailingComma`` option for inserting/removing commas at the end of
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
+- Add ``SpaceAfterOperatorKeyword`` option.
 
 libclang
 --------
