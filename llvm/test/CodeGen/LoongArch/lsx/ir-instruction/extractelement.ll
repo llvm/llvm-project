@@ -5,8 +5,7 @@ define void @extract_16xi8(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: extract_16xi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $a1, 0
+; CHECK-NEXT:    vstelm.b $vr0, $a1, 0, 1
 ; CHECK-NEXT:    ret
   %v = load volatile <16 x i8>, ptr %src
   %e = extractelement <16 x i8> %v, i32 1
@@ -18,8 +17,7 @@ define void @extract_8xi16(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: extract_8xi16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    st.h $a0, $a1, 0
+; CHECK-NEXT:    vstelm.h $vr0, $a1, 0, 1
 ; CHECK-NEXT:    ret
   %v = load volatile <8 x i16>, ptr %src
   %e = extractelement <8 x i16> %v, i32 1
@@ -31,8 +29,7 @@ define void @extract_4xi32(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: extract_4xi32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; CHECK-NEXT:    st.w $a0, $a1, 0
+; CHECK-NEXT:    vstelm.w $vr0, $a1, 0, 1
 ; CHECK-NEXT:    ret
   %v = load volatile <4 x i32>, ptr %src
   %e = extractelement <4 x i32> %v, i32 1
@@ -44,8 +41,7 @@ define void @extract_2xi64(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: extract_2xi64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; CHECK-NEXT:    st.d $a0, $a1, 0
+; CHECK-NEXT:    vstelm.d $vr0, $a1, 0, 1
 ; CHECK-NEXT:    ret
   %v = load volatile <2 x i64>, ptr %src
   %e = extractelement <2 x i64> %v, i32 1
@@ -57,8 +53,7 @@ define void @extract_4xfloat(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: extract_4xfloat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 1
-; CHECK-NEXT:    fst.s $fa0, $a1, 0
+; CHECK-NEXT:    vstelm.w $vr0, $a1, 0, 1
 ; CHECK-NEXT:    ret
   %v = load volatile <4 x float>, ptr %src
   %e = extractelement <4 x float> %v, i32 1
@@ -70,8 +65,7 @@ define void @extract_2xdouble(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: extract_2xdouble:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 1
-; CHECK-NEXT:    fst.d $fa0, $a1, 0
+; CHECK-NEXT:    vstelm.d $vr0, $a1, 0, 1
 ; CHECK-NEXT:    ret
   %v = load volatile <2 x double>, ptr %src
   %e = extractelement <2 x double> %v, i32 1
