@@ -199,7 +199,8 @@ enum FromType {
 enum VecType {
   Scalar = 1,
   V2 = 2,
-  V4 = 4
+  V4 = 4,
+  V8 = 8
 };
 } // namespace PTXLdStInstCode
 
