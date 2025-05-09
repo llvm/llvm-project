@@ -285,23 +285,27 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
   ExplodedNodeSet dstPreStmt;
   getCheckerManager().runCheckersForPreStmt(dstPreStmt, Pred, CastE, *this);
 
-  if (CastE->getCastKind() == CK_LValueToRValue ||
-      CastE->getCastKind() == CK_LValueToRValueBitCast) {
-    ExplodedNodeSet dstEvalLoad;
-
+  if (CastE->getCastKind() == CK_LValueToRValue) {
     for (ExplodedNode *subExprNode : dstPreStmt) {
       ProgramStateRef state = subExprNode->getState();
       const LocationContext *LCtx = subExprNode->getLocationContext();
-      evalLoad(dstEvalLoad, CastE, CastE, subExprNode, state,
-               state->getSVal(Ex, LCtx));
+      evalLoad(Dst, CastE, CastE, subExprNode, state, state->getSVal(Ex, LCtx));
     }
-    if (CastE->getCastKind() == CK_LValueToRValue) {
-      Dst.insert(dstEvalLoad);
-      return;
+    return;
+  }
+  if (CastE->getCastKind() == CK_LValueToRValueBitCast) {
+    // Handle `__builtin_bit_cast`:
+    ExplodedNodeSet dstEvalLoad;
+
+    // Simulate the lvalue-to-rvalue conversion on `Ex`:
+    for (ExplodedNode *subExprNode : dstPreStmt) {
+      ProgramStateRef state = subExprNode->getState();
+      const LocationContext *LCtx = subExprNode->getLocationContext();
+      evalLocation(dstEvalLoad, CastE, Ex, subExprNode, state,
+                   state->getSVal(Ex, LCtx), true);
     }
-    assert(CastE->getCastKind() == CK_LValueToRValueBitCast &&
-           "unexpected cast kind");
-    // Need to simulate the actual cast operation:
+    // Simulate the operation that actually casts the original value to a new
+    // value of the destination type :
     StmtNodeBuilder Bldr(dstEvalLoad, Dst, *currBldrCtx);
 
     for (ExplodedNode *Node : dstEvalLoad) {
