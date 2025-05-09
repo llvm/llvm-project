@@ -59,7 +59,8 @@ _trap:
 
   // Mark x20 as undefined.  This is a callee-preserved
   // (non-volatile) register by the SysV AArch64 ABI, but
-  // it's be fun to see lldb not passing a value past this.
+  // it'll be fun to see lldb not passing a value past this
+  // point on the stack.
   .cfi_undefined ehframe_x20
 
   // standard prologue save of fp & lr so we can call 
