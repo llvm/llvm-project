@@ -381,9 +381,10 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
 
   // Loop through all of the timing data, printing it out.
   for (const PrintRecord &Record : llvm::reverse(TimersToPrint)) {
-    if (const TimeRecord &TR = Record.Time; TR.getUserTime() >= minPrintTime() ||
-                                            TR.getSystemTime() >= minPrintTime() ||
-                                            TR.getWallTime() >= minPrintTime()) {
+    if (const TimeRecord &TR = Record.Time;
+        TR.getUserTime() >= minPrintTime() ||
+        TR.getSystemTime() >= minPrintTime() ||
+        TR.getWallTime() >= minPrintTime()) {
       Record.Time.print(Total, OS);
       OS << Record.Description << '\n';
     }
@@ -531,7 +532,8 @@ public:
       cl::init(true), cl::Hidden};
   cl::opt<unsigned> MinPrintTime{
       "min-print-time",
-      cl::desc("Minimum time in seconds for a timer to be printed"), cl::init(0)};
+      cl::desc("Minimum time in seconds for a timer to be printed"),
+      cl::init(0)};
 
   sys::SmartMutex<true> TimerLock;
   TimerGroup DefaultTimerGroup{"misc", "Miscellaneous Ungrouped Timers",
