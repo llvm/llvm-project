@@ -530,12 +530,7 @@ OpenMP Support
 - Added support 'no_openmp_constructs' assumption clause.
 - Added support for 'self_maps' in map and requirement clause.
 - Added support for 'omp stripe' directive.
-- Fixed a crashing bug with ``omp unroll partial`` if the argument to
-  ``partial`` was an invalid expression. (#GH139267)
-- Fixed a crashing bug with ``omp tile sizes`` if the argument to ``sizes`` was
-  an invalid expression. (#GH139073)
-- Fixed a crashing bug with ``omp distribute dist_schedule`` if the argument to
-  ``dist_schedule`` was not strictly positive. (#GH139266)
+- Added support for private variable reduction.
 
 Improvements
 ^^^^^^^^^^^^
