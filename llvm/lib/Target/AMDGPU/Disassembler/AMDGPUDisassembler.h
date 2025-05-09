@@ -174,7 +174,7 @@ public:
 
   void convertEXPInst(MCInst &MI) const;
   void convertVINTERPInst(MCInst &MI) const;
-  void convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
+  void convertFMAanyK(MCInst &MI) const;
   void convertSDWAInst(MCInst &MI) const;
   void convertMAIInst(MCInst &MI) const;
   void convertDPP8Inst(MCInst &MI) const;
