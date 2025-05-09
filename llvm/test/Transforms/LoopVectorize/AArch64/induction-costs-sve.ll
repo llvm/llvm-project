@@ -103,8 +103,8 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 16
 ; PRED-NEXT:    [[TMP3:%.*]] = sub i64 [[DST2]], [[SRC3]]
 ; PRED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP2]]
-; PRED-NEXT:    br label %[[SCALAR_PH]]
-; PRED:       [[VECTOR_PH:.*]]:
+; PRED-NEXT:    br label %[[VECTOR_PH:.*]]
+; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 16
 ; PRED-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
@@ -159,7 +159,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br label %[[EXIT:.*]]
 ; PRED:       [[SCALAR_PH]]:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
 ; PRED-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

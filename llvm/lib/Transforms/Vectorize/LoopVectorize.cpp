@@ -560,7 +560,11 @@ protected:
   /// Introduces a new VPIRBasicBlock for \p CheckIRBB to Plan between the
   /// vector preheader and its predecessor, also connecting the new block to the
   /// scalar preheader.
-  void introduceCheckBlockInVPlan(BasicBlock *CheckIRBB);
+  /// If HasAliasMask is true then the vector loop will be branched to
+  /// unconditionally, instead of there being a conditional branch to the scalar
+  /// loop or vector loop
+  void introduceCheckBlockInVPlan(BasicBlock *CheckIRBB,
+                                  bool HasAliasMask = false);
 
   /// The original loop.
   Loop *OrigLoop;
@@ -1882,11 +1886,9 @@ public:
 
     const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
     if (RtPtrChecking.Need) {
-      if (!MemCheckBlock) {
-        auto *Pred = SCEVCheckBlock ? SCEVCheckBlock : Preheader;
-        MemCheckBlock = SplitBlock(Pred, Pred->getTerminator(), DT, LI, nullptr,
-                                   "vector.memcheck");
-      }
+      auto *Pred = SCEVCheckBlock ? SCEVCheckBlock : Preheader;
+      MemCheckBlock = SplitBlock(Pred, Pred->getTerminator(), DT, LI, nullptr,
+                                 "vector.memcheck");
 
       auto DiffChecks = RtPtrChecking.getDiffChecks();
       if (DiffChecks) {
@@ -2395,7 +2397,8 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
   return VectorTripCount;
 }
 
-void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
+void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB,
+                                                     bool HasAliasMask) {
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
   VPBlockBase *PreVectorPH = VectorPHVPB->getSinglePredecessor();
   if (PreVectorPH->getNumSuccessors() != 1) {
@@ -2406,17 +2409,20 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
     VPBlockUtils::insertOnEdge(PreVectorPH, VectorPHVPB, CheckVPIRBB);
     PreVectorPH = CheckVPIRBB;
   }
-  VPBlockUtils::connectBlocks(PreVectorPH, ScalarPH);
-  PreVectorPH->swapSuccessors();
+  if (!HasAliasMask) {
+    VPBlockUtils::connectBlocks(PreVectorPH, ScalarPH);
+    PreVectorPH->swapSuccessors();
 
-  // We just connected a new block to the scalar preheader. Update all
-  // ResumePhis by adding an incoming value for it, replicating the last value.
-  for (VPRecipeBase &R : *cast<VPBasicBlock>(ScalarPH)) {
-    auto *ResumePhi = dyn_cast<VPInstruction>(&R);
-    if (!ResumePhi || ResumePhi->getOpcode() != VPInstruction::ResumePhi)
-      continue;
-    ResumePhi->addOperand(
-        ResumePhi->getOperand(ResumePhi->getNumOperands() - 1));
+    // We just connected a new block to the scalar preheader. Update all
+    // ResumePhis by adding an incoming value for it, replicating the last
+    // value.
+    for (VPRecipeBase &R : *cast<VPBasicBlock>(ScalarPH)) {
+      auto *ResumePhi = dyn_cast<VPInstruction>(&R);
+      if (!ResumePhi || ResumePhi->getOpcode() != VPInstruction::ResumePhi)
+        continue;
+      ResumePhi->addOperand(
+          ResumePhi->getOperand(ResumePhi->getNumOperands() - 1));
+    }
   }
 }
 
@@ -2555,7 +2561,7 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
 
   AddedSafetyChecks = true;
 
-  introduceCheckBlockInVPlan(MemCheckBlock);
+  introduceCheckBlockInVPlan(MemCheckBlock, RTChecks.HasAliasMask);
   return MemCheckBlock;
 }
 
