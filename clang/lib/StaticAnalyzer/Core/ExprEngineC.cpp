@@ -282,43 +282,43 @@ ProgramStateRef ExprEngine::handleLValueBitCast(
 void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
                            ExplodedNode *Pred, ExplodedNodeSet &Dst) {
 
-  ExplodedNodeSet dstPreStmt;
-  getCheckerManager().runCheckersForPreStmt(dstPreStmt, Pred, CastE, *this);
+  ExplodedNodeSet DstPreStmt;
+  getCheckerManager().runCheckersForPreStmt(DstPreStmt, Pred, CastE, *this);
 
   if (CastE->getCastKind() == CK_LValueToRValue) {
-    for (ExplodedNode *subExprNode : dstPreStmt) {
-      ProgramStateRef state = subExprNode->getState();
-      const LocationContext *LCtx = subExprNode->getLocationContext();
-      evalLoad(Dst, CastE, CastE, subExprNode, state, state->getSVal(Ex, LCtx));
+    for (ExplodedNode *Node : DstPreStmt) {
+      ProgramStateRef State = Node->getState();
+      const LocationContext *LCtx = Node->getLocationContext();
+      evalLoad(Dst, CastE, CastE, Node, State, State->getSVal(Ex, LCtx));
     }
     return;
   }
   if (CastE->getCastKind() == CK_LValueToRValueBitCast) {
     // Handle `__builtin_bit_cast`:
-    ExplodedNodeSet dstEvalLoad;
+    ExplodedNodeSet DstEvalLoc;
 
     // Simulate the lvalue-to-rvalue conversion on `Ex`:
-    for (ExplodedNode *subExprNode : dstPreStmt) {
-      ProgramStateRef state = subExprNode->getState();
-      const LocationContext *LCtx = subExprNode->getLocationContext();
-      evalLocation(dstEvalLoad, CastE, Ex, subExprNode, state,
-                   state->getSVal(Ex, LCtx), true);
+    for (ExplodedNode *Node : DstPreStmt) {
+      ProgramStateRef State = Node->getState();
+      const LocationContext *LCtx = Node->getLocationContext();
+      evalLocation(DstEvalLoc, CastE, Ex, Node, State, State->getSVal(Ex, LCtx),
+                   true);
     }
     // Simulate the operation that actually casts the original value to a new
     // value of the destination type :
-    StmtNodeBuilder Bldr(dstEvalLoad, Dst, *currBldrCtx);
+    StmtNodeBuilder Bldr(DstEvalLoc, Dst, *currBldrCtx);
 
-    for (ExplodedNode *Node : dstEvalLoad) {
-      ProgramStateRef state = Node->getState();
+    for (ExplodedNode *Node : DstEvalLoc) {
+      ProgramStateRef State = Node->getState();
       const LocationContext *LCtx = Node->getLocationContext();
       // getAsRegion should always be successful since Ex is an lvalue:
-      SVal OrigV = state->getSVal(state->getSVal(Ex, LCtx).getAsRegion());
+      SVal OrigV = State->getSVal(State->getSVal(Ex, LCtx).getAsRegion());
       SVal CastedV =
-          svalBuilder.evalCast(svalBuilder.simplifySVal(state, OrigV),
+          svalBuilder.evalCast(svalBuilder.simplifySVal(State, OrigV),
                                CastE->getType(), Ex->getType());
 
-      state = state->BindExpr(CastE, LCtx, CastedV);
-      Bldr.generateNode(CastE, Node, state);
+      State = State->BindExpr(CastE, LCtx, CastedV);
+      Bldr.generateNode(CastE, Node, State);
     }
     return;
   }
@@ -330,8 +330,8 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
   if (const ExplicitCastExpr *ExCast=dyn_cast_or_null<ExplicitCastExpr>(CastE))
     T = ExCast->getTypeAsWritten();
 
-  StmtNodeBuilder Bldr(dstPreStmt, Dst, *currBldrCtx);
-  for (ExplodedNode *Pred : dstPreStmt) {
+  StmtNodeBuilder Bldr(DstPreStmt, Dst, *currBldrCtx);
+  for (ExplodedNode *Pred : DstPreStmt) {
     ProgramStateRef state = Pred->getState();
     const LocationContext *LCtx = Pred->getLocationContext();
 
