@@ -164,6 +164,10 @@ void DataAggregator::findPerfExecutable() {
 void DataAggregator::start() {
   outs() << "PERF2BOLT: Starting data aggregation job for " << Filename << "\n";
 
+  // Turn on heatmap building if requested by --print-heatmap-stats flag.
+  if (opts::HeatmapStats)
+    opts::HeatmapMode = true;
+
   // Don't launch perf for pre-aggregated files or when perf input is specified
   // by the user.
   if (opts::ReadPreAggregated || !opts::ReadPerfEvents.empty())
@@ -508,12 +512,10 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     errs() << "PERF2BOLT: failed to parse samples\n";
 
   // Special handling for memory events
-  if (prepareToParse("mem events", MemEventsPPI, MemEventsErrorCallback))
-    return Error::success();
-
-  if (const std::error_code EC = parseMemEvents())
-    errs() << "PERF2BOLT: failed to parse memory events: " << EC.message()
-           << '\n';
+  if (!prepareToParse("mem events", MemEventsPPI, MemEventsErrorCallback))
+    if (const std::error_code EC = parseMemEvents())
+      errs() << "PERF2BOLT: failed to parse memory events: " << EC.message()
+             << '\n';
 
   deleteTempFiles();
 
@@ -523,6 +525,10 @@ heatmap:
 
   if (std::error_code EC = printLBRHeatMap())
     return errorCodeToError(EC);
+
+  if (opts::HeatmapStats)
+    return Error::success();
+
   exit(0);
 }
 
@@ -1351,6 +1357,10 @@ std::error_code DataAggregator::printLBRHeatMap() {
     exit(1);
   }
 
+  if (opts::HeatmapStats) {
+    HM.printSectionHotness(outs());
+    return std::error_code();
+  }
   HM.print(opts::OutputFilename);
   if (opts::OutputFilename == "-")
     HM.printCDF(opts::OutputFilename);
