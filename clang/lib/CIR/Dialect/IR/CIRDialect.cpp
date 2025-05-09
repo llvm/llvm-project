@@ -1396,6 +1396,26 @@ LogicalResult cir::VecCreateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// VecExtractOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
+  const auto vectorAttr =
+      llvm::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getVec());
+  if (!vectorAttr)
+    return {};
+
+  const auto indexAttr =
+      llvm::dyn_cast_if_present<cir::IntAttr>(adaptor.getIndex());
+  if (!indexAttr)
+    return {};
+
+  const mlir::ArrayAttr elements = vectorAttr.getElts();
+  const int64_t index = indexAttr.getSInt();
+  return elements[index];
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
