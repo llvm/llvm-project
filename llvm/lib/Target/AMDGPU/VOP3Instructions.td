@@ -666,8 +666,11 @@ let isCommutable = 1 in {
   defm V_MAD_I32_I16 : VOP3Inst_t16 <"v_mad_i32_i16", VOP_I32_I16_I16_I32>;
 } // End isCommutable = 1
 
-defm V_CVT_PKNORM_I16_F16 : VOP3Inst_t16 <"v_cvt_pknorm_i16_f16", VOP_B32_F16_F16>;
-defm V_CVT_PKNORM_U16_F16 : VOP3Inst_t16 <"v_cvt_pknorm_u16_f16", VOP_B32_F16_F16>;
+defm V_CVT_PKNORM_I16_F16 : VOP3Inst_t16 <"v_cvt_pknorm_i16_f16", VOP_V2I16_F16_F16, int_amdgcn_cvt_pk_norm_i16_f16>;
+defm V_CVT_PKNORM_U16_F16 : VOP3Inst_t16 <"v_cvt_pknorm_u16_f16", VOP_V2I16_F16_F16, int_amdgcn_cvt_pk_norm_u16_f16>;
+//  multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag> {
+
+// multiclass VOP3Inst_t16<string OpName, VOPProfile P, SDPatternOperator node = null_frag, SDPatternOperator node_t16 = node>
 
 defm V_PACK_B32_F16 : VOP3Inst_t16 <"v_pack_b32_f16", VOP_B32_F16_F16>;
 
