@@ -1679,6 +1679,33 @@ foreach t = [I32RT, I64RT] in {
 }
 
 //
+// szext
+//
+
+foreach sign = ["s", "u"] in {
+  foreach mode = ["wrap", "clamp"] in {
+    defvar ext = !if(!eq(sign, "s"), "sext", "zext");
+    defvar intrin = !cast<Intrinsic>("int_nvvm_" # ext # "_" # mode);
+    defm SZEXT_ # sign # _ # mode
+      : I3Inst<"szext." # mode # "." # sign # "32",
+               intrin, I32RT, commutative = false,
+               requires = [hasSM<70>, hasPTX<76>]>;
+  }
+}
+
+//
+// BMSK
+//
+
+foreach mode = ["wrap", "clamp"] in {
+  defvar intrin = !cast<Intrinsic>("int_nvvm_bmsk_" # mode);
+  defm BMSK_ # mode
+    : I3Inst<"bmsk." # mode # ".b32",
+             intrin, I32RT, commutative = false,
+             requires = [hasSM<70>, hasPTX<76>]>;
+}
+
+//
 // Convert
 //
 
