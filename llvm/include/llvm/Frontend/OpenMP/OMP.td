@@ -273,6 +273,7 @@ def OMPC_Link : Clause<"link"> {
 }
 def OMPC_LoopRange : Clause<"looprange"> {
   let clangClass = "OMPLoopRangeClause";
+  let flangClass = "OmpLoopRangeClause";
 }
 def OMPC_Map : Clause<"map"> {
   let clangClass = "OMPMapClause";
