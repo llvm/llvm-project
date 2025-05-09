@@ -1597,6 +1597,8 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
 
 bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
 
+bool GenericDeviceTy::useSharedMemForDescriptor(int64_t Size) { return false; }
+
 Error GenericPluginTy::init() {
   if (Initialized)
     return Plugin::success();
@@ -2198,4 +2200,9 @@ int32_t GenericPluginTy::get_function(__tgt_device_binary Binary,
   // Note that this is not the kernel's device address.
   *KernelPtr = &Kernel;
   return OFFLOAD_SUCCESS;
+}
+
+bool GenericPluginTy::use_shared_mem_for_descriptor(int32_t DeviceId,
+                                                    int64_t Size) {
+  return getDevice(DeviceId).useSharedMemForDescriptor(Size);
 }
