@@ -134,7 +134,6 @@ class DebugCommunication(object):
         self.thread_stop_reasons = {}
         self.progress_events = []
         self.reverse_requests = []
-        self.module_events = []
         self.sequence = 1
         self.threads = None
         self.recv_thread.start()
@@ -248,11 +247,6 @@ class DebugCommunication(object):
                 # and 'progressEnd' events. Keep these around in case test
                 # cases want to verify them.
                 self.progress_events.append(packet)
-            elif event == "module":
-                # Module events indicate that some information about a module has changed.
-                self.module_events.append(packet)
-                # no need to add 'module' event packets to our packets list
-                return keepGoing
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":

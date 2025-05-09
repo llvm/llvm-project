@@ -267,10 +267,15 @@ CreateBreakpoint(BreakpointBase *bp,
 /// \param[in] module
 ///     A LLDB module object to convert into a JSON value
 ///
+/// \param[in] id_only
+///     Only include the module ID in the JSON value. This is used when sending
+///     a "removed" module event.
+///
 /// \return
 ///     A "Module" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module);
+llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
+                               bool id_only = false);
 
 /// Create a "Event" JSON object using \a event_name as the event name
 ///
