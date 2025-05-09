@@ -213,6 +213,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform. 
    * - ``SPV_INTEL_subgroup_matrix_multiply_accumulate``
      - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix. 
+   * - ``SPV_INTEL_maximum_registers``
+     - This extension adds an execution mode to specify the maximum number of registers a SPIR-V consumer should use when compiling an entry point.  
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
@@ -489,6 +491,11 @@ SPIR-V backend, along with their descriptions and argument details.
      - `[spirv.Image Image, 32-bit Integer coordinate, vec4 data]`
      - Stores the data to the image buffer at the given coordinate. The \
        data must be a 4-element vector.
+   * - `int_spv_max_reg_constant`
+     - void
+     - `[32-bit Integer Maximum registers allowed]`
+     - 32-bit integer indicating the maximum number of registers allowed. \
+       Used as an operand to the OpExecutionModeId MaximumRegistersIdINTEL.
 
 .. _spirv-builtin-functions:
 

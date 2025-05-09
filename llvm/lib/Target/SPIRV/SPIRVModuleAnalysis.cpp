@@ -1176,6 +1176,50 @@ static bool isImageTypeWithUnknownFormat(SPIRVType *TypeInst) {
   return TypeInst->getOperand(7).getImm() == 0;
 }
 
+static void setExtMaxRegId(const MachineFunction *MF,
+                           SPIRV::ModuleAnalysisInfo &MAI,
+                           SPIRVGlobalRegistry *GR) {
+  Register VirtualReg = GR->getMaxRegConstantExtMap(MF);
+  MCRegister MaxOpConstantReg = MAI.getNextIDRegister();
+  MAI.setRegisterAlias(MF, VirtualReg, MaxOpConstantReg);
+}
+
+static void transFunctionMetadataAsExecutionMode(const Function &F,
+                                                 const SPIRVSubtarget &ST,
+                                                 SPIRV::ModuleAnalysisInfo &MAI,
+                                                 MachineFunction *MF) {
+  SmallVector<MDNode *, 1> RegisterAllocModeMDs;
+  F.getMetadata("RegisterAllocMode", RegisterAllocModeMDs);
+  if (!RegisterAllocModeMDs.empty()) {
+    MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_maximum_registers);
+    MAI.Reqs.addCapability(SPIRV::Capability::RegisterLimitsINTEL);
+  }
+  for (unsigned I = 0; I < RegisterAllocModeMDs.size(); I++) {
+
+    auto *RegisterAllocMode = RegisterAllocModeMDs[I]->getOperand(0).get();
+    if (auto *MDS = dyn_cast<MDString>(RegisterAllocMode)) {
+      MAI.Reqs.getAndAddRequirements(
+          SPIRV::OperandCategory::ExecutionModeOperand,
+          SPIRV::ExecutionMode::NamedMaximumRegistersINTEL, ST);
+    } else if (isa<MDNode>(RegisterAllocMode)) {
+      MDNode *NestedNode = dyn_cast<MDNode>(RegisterAllocMode);
+      if (auto *CMD = dyn_cast<ConstantAsMetadata>(NestedNode->getOperand(0))) {
+        auto *CI = dyn_cast<ConstantInt>(CMD->getValue());
+        if (!CI)
+          break;
+        MAI.Reqs.getAndAddRequirements(
+            SPIRV::OperandCategory::ExecutionModeOperand,
+            SPIRV::ExecutionMode::MaximumRegistersIdINTEL, ST);
+        setExtMaxRegId(MF, MAI, ST.getSPIRVGlobalRegistry());
+      }
+    } else {
+      MAI.Reqs.getAndAddRequirements(
+          SPIRV::OperandCategory::ExecutionModeOperand,
+          SPIRV::ExecutionMode::MaximumRegistersINTEL, ST);
+    }
+  }
+}
+
 static void AddDotProductRequirements(const MachineInstr &MI,
                                       SPIRV::RequirementHandler &Reqs,
                                       const SPIRVSubtarget &ST) {
@@ -1921,7 +1965,10 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::VecTypeHint, ST);
-
+    if (F.getMetadata("RegisterAllocMode")) {
+      MachineFunction *MF = MMI->getMachineFunction(F);
+      transFunctionMetadataAsExecutionMode(F, ST, MAI, MF);
+    }
     if (F.hasOptNone()) {
       if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
         MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_optnone);
@@ -2059,7 +2106,6 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   // Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.
-  collectReqs(M, MAI, MMI, *ST);
   collectDeclarations(M);
 
   // Number rest of registers from N+1 onwards.
