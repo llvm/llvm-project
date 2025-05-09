@@ -1,8 +1,8 @@
 #ifndef LLVM_TOOLS_LLVM_MC_CFI_ANALYSIS_H
 #define LLVM_TOOLS_LLVM_MC_CFI_ANALYSIS_H
 
+#include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
@@ -11,11 +11,31 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
-#include <ostream>
+#include <memory>
 #include <set>
 
 namespace llvm {
+
+bolt::MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
+                                         const MCInstrAnalysis *Analysis,
+                                         const MCInstrInfo *Info,
+                                         const MCRegisterInfo *RegInfo,
+                                         const MCSubtargetInfo *STI) {
+  dbgs() << "arch: " << Arch << ", and expected " << Triple::x86_64 << "\n";
+  if (Arch == Triple::x86_64)
+    return bolt::createX86MCPlusBuilder(Analysis, Info, RegInfo, STI);
+
+  // if (Arch == Triple::aarch64)
+  //   return createAArch64MCPlusBuilder(Analysis, Info, RegInfo, STI);
+
+  // if (Arch == Triple::riscv64)
+  //   return createRISCVMCPlusBuilder(Analysis, Info, RegInfo, STI);
+
+  llvm_unreachable("architecture unsupported by MCPlusBuilder");
+}
 
 // TODO remove it, it's just for debug purposes.
 void printUntilNextLine(const char *Str) {
@@ -26,19 +46,24 @@ void printUntilNextLine(const char *Str) {
 class CFIAnalysis {
   MCContext &Context;
   MCInstrInfo const &MCII;
+  std::unique_ptr<bolt::MCPlusBuilder> MCPB;
 
 public:
-  CFIAnalysis(MCContext &Context, MCInstrInfo const &MCII)
+  CFIAnalysis(MCContext &Context, MCInstrInfo const &MCII,
+              MCInstrAnalysis *MCIA)
       : Context(Context), MCII(MCII) {
     // TODO it should look at the poluge directives and setup the
     // registers' previous value state here, but for now, it's assumed that all
     // values are by default `samevalue`.
+    MCPB.reset(createMCPlusBuilder(Context.getTargetTriple().getArch(), MCIA,
+                                   &MCII, Context.getRegisterInfo(),
+                                   Context.getSubtargetInfo()));
   }
 
   void update(const MCDwarfFrameInfo &DwarfFrame, const MCInst &Inst,
               ArrayRef<MCCFIInstruction> CFIDirectives) {
 
-    auto MCInstInfo = MCII.get(Inst.getOpcode());
+    const MCInstrDesc &MCInstInfo = MCII.get(Inst.getOpcode());
     auto *RI = Context.getRegisterInfo();
     auto CFAReg = RI->getLLVMRegNum(DwarfFrame.CurrentCfaRegister, false);
 
@@ -94,6 +119,8 @@ public:
       dbgs() << (int)Reg << " ";
     }
     dbgs() << "}\n";
+    dbgs() << "-----------------------------------------\n";
+    dbgs() << "isMoveMem2Reg: " << MCPB->isMoveMem2Reg(Inst) << "\n";
     dbgs() << "-----------------------------------------\n";
     dbgs() << "The CFA register is: " << CFAReg << "\n";
     dbgs() << "The instruction does " << (ChangedCFA ? "" : "NOT ")
