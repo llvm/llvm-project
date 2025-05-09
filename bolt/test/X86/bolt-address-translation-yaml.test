@@ -28,7 +28,7 @@ ORDER-YAML-CHECK-NEXT: calls: [ { off: 0x26, fid: [[#]], cnt: 20 } ]
 ORDER-YAML-CHECK-NEXT: succ: [ { bid: 5, cnt: 7 }
 ## Large profile test
 RUN: perf2bolt %t.out --pa -p %p/Inputs/blarge_new_bat.preagg.txt -w %t.yaml -o %t.fdata \
-RUN:   2>&1 | FileCheck --check-prefix READ-BAT-CHECK %s
+RUN:   --print-heatmap-stats 2>&1 | FileCheck --check-prefix READ-BAT-CHECK %s
 RUN: FileCheck --input-file %t.yaml --check-prefix YAML-BAT-CHECK %s
 ## Check that YAML converted from fdata matches YAML created directly with BAT.
 RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o /dev/null \
@@ -46,6 +46,7 @@ WRITE-BAT-CHECK: BOLT-INFO: BAT section size (bytes): 404
 READ-BAT-CHECK-NOT: BOLT-ERROR: unable to save profile in YAML format for input file processed by BOLT
 READ-BAT-CHECK: BOLT-INFO: Parsed 5 BAT entries
 READ-BAT-CHECK: PERF2BOLT: read 79 aggregated LBR entries
+READ-BAT-CHECK: HEATMAP: .text scores: hotness: 0.3876, utilization: 0.9167, partition: 0.3553
 READ-BAT-CHECK: BOLT-INFO: 5 out of 21 functions in the binary (23.8%) have non-empty execution profile
 READ-BAT-FDATA-CHECK: BOLT-INFO: 5 out of 16 functions in the binary (31.2%) have non-empty execution profile
 
