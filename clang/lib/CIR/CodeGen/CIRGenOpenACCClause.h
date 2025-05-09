@@ -385,9 +385,11 @@ public:
   void VisitAutoClause(const OpenACCAutoClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
       operation.addAuto(builder.getContext(), lastDeviceTypeValues);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine, Combined constructs remain.
+      // unreachable. Routine, construct remains.
       return clauseNotImplemented(clause);
     }
   }
@@ -395,9 +397,11 @@ public:
   void VisitIndependentClause(const OpenACCIndependentClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
       operation.addIndependent(builder.getContext(), lastDeviceTypeValues);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine, Combined constructs remain.
+      // unreachable. Routine construct remains.
       return clauseNotImplemented(clause);
     }
   }
@@ -410,10 +414,10 @@ public:
       value = value.sextOrTrunc(64);
       operation.setCollapseForDeviceTypes(builder.getContext(),
                                           lastDeviceTypeValues, value);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitCollapseClause");
     }
   }
 
