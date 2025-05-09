@@ -29,7 +29,7 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                           "Accelerate framework"),
                clEnumValN(TargetLibraryInfoImpl::DarwinLibSystemM,
                           "Darwin_libsystem_m", "Darwin libsystem_m"),
-               clEnumValN(TargetLibraryInfoImpl::LIBMVEC_X86, "LIBMVEC-X86",
+               clEnumValN(TargetLibraryInfoImpl::LIBMVEC, "LIBMVEC",
                           "GLIBC Vector Math library"),
                clEnumValN(TargetLibraryInfoImpl::MASSV, "MASSV",
                           "IBM MASS vector library"),
@@ -1306,21 +1306,21 @@ static const VecDesc VecFuncs_SVML[] = {
 static const VecDesc VecFuncs_SLEEFGNUABI_VF2[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
-  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX},
+  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 };
 static const VecDesc VecFuncs_SLEEFGNUABI_VF4[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
-  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX},
+  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 };
 static const VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 };
@@ -1328,15 +1328,15 @@ static const VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
 static const VecDesc VecFuncs_SLEEFGNUABI_VFScalableRISCV[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 };
 
 static const VecDesc VecFuncs_ArmPL[] = {
 #define TLI_DEFINE_ARMPL_VECFUNCS
-#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_ARMPL_VECFUNCS
 };
@@ -1344,7 +1344,7 @@ static const VecDesc VecFuncs_ArmPL[] = {
 const VecDesc VecFuncs_AMDLIBM[] = {
 #define TLI_DEFINE_AMDLIBM_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_AMDLIBM_VECFUNCS
 };
@@ -1360,8 +1360,15 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     addVectorizableFunctions(VecFuncs_DarwinLibSystemM);
     break;
   }
-  case LIBMVEC_X86: {
-    addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+  case LIBMVEC: {
+    switch (TargetTriple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+      break;
+    }
     break;
   }
   case MASSV: {
@@ -1471,20 +1478,14 @@ unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
 }
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()
-    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl()) {
-  initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl()) {}
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(const Triple &T)
-    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl(T)) {
-  initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl(T)) {}
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(
     const TargetLibraryInfoImpl &TLIImpl)
-    : ImmutablePass(ID), TLA(TLIImpl) {
-  initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), TLA(TLIImpl) {}
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(
     const TargetLibraryInfo &TLIOther)

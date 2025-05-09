@@ -92,8 +92,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   InlineAsmInfo = std::make_unique<SPIRVInlineAsmLowering>(TLInfo);
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
   RegBankInfo = std::make_unique<SPIRVRegisterBankInfo>();
-  InstSelector.reset(
-      createSPIRVInstructionSelector(TM, *this, *RegBankInfo.get()));
+  InstSelector.reset(createSPIRVInstructionSelector(TM, *this, *RegBankInfo));
 }
 
 SPIRVSubtarget &SPIRVSubtarget::initSubtargetDependencies(StringRef CPU,

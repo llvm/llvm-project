@@ -39,10 +39,10 @@ define void @tdmmr(ptr nocapture readonly %vp1, ptr nocapture %resp)  {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvp vsp34, 0(r3)
 ; CHECK-NEXT:    lxvp vsp36, 32(r3)
-; CHECK-NEXT:    dmxxinstfdmr512 wacc_hi0, vsp36, vsp34, 1
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
 ; CHECK-NEXT:    lxvp vsp34, 64(r3)
 ; CHECK-NEXT:    lxvp vsp36, 96(r3)
-; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
 ; CHECK-NEXT:    dmmr dmr0, dmr0
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxvp vsp34, 96(r4)
@@ -56,10 +56,10 @@ define void @tdmmr(ptr nocapture readonly %vp1, ptr nocapture %resp)  {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxvp vsp34, 96(r3)
 ; CHECK-BE-NEXT:    lxvp vsp36, 64(r3)
-; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc_hi0, vsp36, vsp34, 1
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
 ; CHECK-BE-NEXT:    lxvp vsp34, 32(r3)
 ; CHECK-BE-NEXT:    lxvp vsp36, 0(r3)
-; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
 ; CHECK-BE-NEXT:    dmmr dmr0, dmr0
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
 ; CHECK-BE-NEXT:    stxvp vsp36, 96(r4)
@@ -80,16 +80,16 @@ define void @tdmxor(ptr nocapture readonly %vp1, ptr %vp2, ptr nocapture %resp) 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvp vsp34, 0(r3)
 ; CHECK-NEXT:    lxvp vsp36, 32(r3)
-; CHECK-NEXT:    dmxxinstfdmr512 wacc_hi0, vsp36, vsp34, 1
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
 ; CHECK-NEXT:    lxvp vsp34, 64(r3)
 ; CHECK-NEXT:    lxvp vsp36, 96(r3)
-; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
 ; CHECK-NEXT:    lxvp vsp34, 0(r4)
 ; CHECK-NEXT:    lxvp vsp36, 32(r4)
-; CHECK-NEXT:    dmxxinstfdmr512 wacc_hi1, vsp36, vsp34, 1
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi1, vsp36, vsp34, 1
 ; CHECK-NEXT:    lxvp vsp34, 64(r4)
 ; CHECK-NEXT:    lxvp vsp36, 96(r4)
-; CHECK-NEXT:    dmxxinstfdmr512 wacc1, vsp36, vsp34, 0
+; CHECK-NEXT:    dmxxinstdmr512 wacc1, vsp36, vsp34, 0
 ; CHECK-NEXT:    dmxor dmr0, dmr1
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxvp vsp34, 96(r5)
@@ -103,16 +103,16 @@ define void @tdmxor(ptr nocapture readonly %vp1, ptr %vp2, ptr nocapture %resp) 
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxvp vsp34, 96(r3)
 ; CHECK-BE-NEXT:    lxvp vsp36, 64(r3)
-; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc_hi0, vsp36, vsp34, 1
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
 ; CHECK-BE-NEXT:    lxvp vsp34, 32(r3)
 ; CHECK-BE-NEXT:    lxvp vsp36, 0(r3)
-; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
 ; CHECK-BE-NEXT:    lxvp vsp34, 96(r4)
 ; CHECK-BE-NEXT:    lxvp vsp36, 64(r4)
-; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc_hi1, vsp36, vsp34, 1
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi1, vsp36, vsp34, 1
 ; CHECK-BE-NEXT:    lxvp vsp34, 32(r4)
 ; CHECK-BE-NEXT:    lxvp vsp36, 0(r4)
-; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc1, vsp36, vsp34, 0
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc1, vsp36, vsp34, 0
 ; CHECK-BE-NEXT:    dmxor dmr0, dmr1
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
 ; CHECK-BE-NEXT:    stxvp vsp36, 96(r5)
@@ -129,6 +129,248 @@ entry:
   ret void
 }
 
+define void @text512(ptr %vp1, ptr %rp1, ptr %rp2, ptr %rp3, ptr %rp4)  {
+; CHECK-LABEL: text512:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    dmsetdmrz dmr0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-NEXT:    stxv v2, 16(r4)
+; CHECK-NEXT:    stxv v3, 0(r4)
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-NEXT:    stxv v2, 16(r6)
+; CHECK-NEXT:    stxv v3, 0(r6)
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: text512:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    dmsetdmrz dmr0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-NEXT:    stxv v3, 16(r4)
+; CHECK-BE-NEXT:    stxv v2, 0(r4)
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-BE-NEXT:    stxv v3, 16(r6)
+; CHECK-BE-NEXT:    stxv v2, 0(r6)
+; CHECK-BE-NEXT:    blr
+entry:
+  %z = call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
+  %x = call { <256 x i1>, <256 x i1> } @llvm.ppc.mma.dmxxextfdmr512(<1024 x i1> %z, i32 0)
+  %p = extractvalue { <256 x i1>, <256 x i1 > } %x, 0
+  store <256 x i1> %p, ptr %rp1, align 16
+  %y = call { <256 x i1>, <256 x i1> } @llvm.ppc.mma.dmxxextfdmr512(<1024 x i1> %z, i32 1)
+  %q = extractvalue { <256 x i1>, <256 x i1 > } %y, 0
+  store <256 x i1> %q, ptr %rp3, align 16
+  ret void
+}
+
+define void @text256(ptr %vp1, ptr %rp1, ptr %rp2, ptr %rp3, ptr %rp4)  {
+; CHECK-LABEL: text256:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    dmsetdmrz dmr0
+; CHECK-NEXT:    dmxxextfdmr256 vsp34, dmr0, 0
+; CHECK-NEXT:    stxv v2, 16(r4)
+; CHECK-NEXT:    stxv v3, 0(r4)
+; CHECK-NEXT:    dmxxextfdmr256 vsp34, dmr0, 1
+; CHECK-NEXT:    stxv v2, 16(r5)
+; CHECK-NEXT:    stxv v3, 0(r5)
+; CHECK-NEXT:    dmxxextfdmr256 vsp34, dmr0, 2
+; CHECK-NEXT:    stxv v2, 16(r6)
+; CHECK-NEXT:    stxv v3, 0(r6)
+; CHECK-NEXT:    dmxxextfdmr256 vsp34, dmr0, 3
+; CHECK-NEXT:    stxv v2, 16(r7)
+; CHECK-NEXT:    stxv v3, 0(r7)
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: text256:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    dmsetdmrz dmr0
+; CHECK-BE-NEXT:    dmxxextfdmr256 vsp34, dmr0, 0
+; CHECK-BE-NEXT:    stxv v3, 16(r4)
+; CHECK-BE-NEXT:    stxv v2, 0(r4)
+; CHECK-BE-NEXT:    dmxxextfdmr256 vsp34, dmr0, 1
+; CHECK-BE-NEXT:    stxv v3, 16(r5)
+; CHECK-BE-NEXT:    stxv v2, 0(r5)
+; CHECK-BE-NEXT:    dmxxextfdmr256 vsp34, dmr0, 2
+; CHECK-BE-NEXT:    stxv v3, 16(r6)
+; CHECK-BE-NEXT:    stxv v2, 0(r6)
+; CHECK-BE-NEXT:    dmxxextfdmr256 vsp34, dmr0, 3
+; CHECK-BE-NEXT:    stxv v3, 16(r7)
+; CHECK-BE-NEXT:    stxv v2, 0(r7)
+; CHECK-BE-NEXT:    blr
+entry:
+  %z = call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
+  %x = call <256 x i1> @llvm.ppc.mma.dmxxextfdmr256(<1024 x i1> %z, i32 0)
+  store <256 x i1> %x, ptr %rp1, align 16
+  %q = call <256 x i1> @llvm.ppc.mma.dmxxextfdmr256(<1024 x i1> %z, i32 1)
+  store <256 x i1> %q, ptr %rp2, align 16
+  %w = call <256 x i1> @llvm.ppc.mma.dmxxextfdmr256(<1024 x i1> %z, i32 2)
+  store <256 x i1> %w, ptr %rp3, align 16
+  %y = call <256 x i1> @llvm.ppc.mma.dmxxextfdmr256(<1024 x i1> %z, i32 3)
+  store <256 x i1> %y, ptr %rp4, align 16
+  ret void
+}
+
+define void @tins512(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2)  {
+; CHECK-LABEL: tins512:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lxv v2, 16(r3)
+; CHECK-NEXT:    lxv v3, 0(r3)
+; CHECK-NEXT:    lxv v4, 16(r4)
+; CHECK-NEXT:    lxv v5, 0(r4)
+; CHECK-NEXT:    dmsetdmrz dmr0
+; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-NEXT:    stxvp vsp34, 96(r7)
+; CHECK-NEXT:    stxvp vsp36, 64(r7)
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-NEXT:    stxvp vsp34, 32(r7)
+; CHECK-NEXT:    stxvp vsp36, 0(r7)
+; CHECK-NEXT:    lxv v2, 16(r5)
+; CHECK-NEXT:    lxv v4, 16(r6)
+; CHECK-NEXT:    lxv v3, 0(r5)
+; CHECK-NEXT:    lxv v5, 0(r6)
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp34, vsp36, 1
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-NEXT:    stxvp vsp34, 96(r8)
+; CHECK-NEXT:    stxvp vsp36, 64(r8)
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-NEXT:    stxvp vsp34, 32(r8)
+; CHECK-NEXT:    stxvp vsp36, 0(r8)
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: tins512:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    lxv v2, 0(r3)
+; CHECK-BE-NEXT:    lxv v3, 16(r3)
+; CHECK-BE-NEXT:    lxv v4, 0(r4)
+; CHECK-BE-NEXT:    lxv v5, 16(r4)
+; CHECK-BE-NEXT:    dmsetdmrz dmr0
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-BE-NEXT:    stxvp vsp36, 96(r7)
+; CHECK-BE-NEXT:    stxvp vsp34, 64(r7)
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-NEXT:    stxvp vsp36, 32(r7)
+; CHECK-BE-NEXT:    stxvp vsp34, 0(r7)
+; CHECK-BE-NEXT:    lxv v2, 0(r5)
+; CHECK-BE-NEXT:    lxv v4, 0(r6)
+; CHECK-BE-NEXT:    lxv v3, 16(r5)
+; CHECK-BE-NEXT:    lxv v5, 16(r6)
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi0, vsp34, vsp36, 1
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-BE-NEXT:    stxvp vsp36, 96(r8)
+; CHECK-BE-NEXT:    stxvp vsp34, 64(r8)
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-NEXT:    stxvp vsp36, 32(r8)
+; CHECK-BE-NEXT:    stxvp vsp34, 0(r8)
+; CHECK-BE-NEXT:    blr
+entry:
+  %z = call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
+  %l1 = load <256 x i1>, ptr %vp1, align 16
+  %r1 = load <256 x i1>, ptr %vp2, align 16
+  %a = call <1024 x i1> @llvm.ppc.mma.dmxxinstdmr512(<1024 x i1> %z, <256 x i1> %l1, <256 x i1> %r1, i32 0)
+  store <1024 x i1> %a, ptr %rp1, align 16
+  %l2 = load <256 x i1>, ptr %vp3, align 16
+  %r2 = load <256 x i1>, ptr %vp4, align 16
+  %b = call <1024 x i1> @llvm.ppc.mma.dmxxinstdmr512(<1024 x i1> %a, <256 x i1> %l2, <256 x i1> %r2, i32 1)
+  store <1024 x i1> %b, ptr %rp2, align 16
+  ret void
+}
+
+define void @tins256(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2, ptr %rp3, ptr %rp4)  {
+; CHECK-LABEL: tins256:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lxv v2, 16(r3)
+; CHECK-NEXT:    lxv v3, 0(r3)
+; CHECK-NEXT:    dmsetdmrz dmr0
+; CHECK-NEXT:    dmxxinstdmr256 dmr0, vsp34, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-NEXT:    stxvp vsp34, 96(r7)
+; CHECK-NEXT:    stxvp vsp36, 64(r7)
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-NEXT:    stxvp vsp34, 32(r7)
+; CHECK-NEXT:    stxvp vsp36, 0(r7)
+; CHECK-NEXT:    lxv v2, 16(r4)
+; CHECK-NEXT:    lxv v3, 0(r4)
+; CHECK-NEXT:    dmxxinstdmr256 dmr0, vsp34, 1
+; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc0, 0
+; CHECK-NEXT:    stxvp vsp36, 96(r8)
+; CHECK-NEXT:    stxvp vsp32, 64(r8)
+; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc_hi0, 1
+; CHECK-NEXT:    stxvp vsp36, 32(r8)
+; CHECK-NEXT:    stxvp vsp32, 0(r8)
+; CHECK-NEXT:    dmxxinstdmr256 dmr0, vsp34, 2
+; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc0, 0
+; CHECK-NEXT:    stxvp vsp36, 96(r9)
+; CHECK-NEXT:    stxvp vsp32, 64(r9)
+; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc_hi0, 1
+; CHECK-NEXT:    stxvp vsp36, 32(r9)
+; CHECK-NEXT:    stxvp vsp32, 0(r9)
+; CHECK-NEXT:    dmxxinstdmr256 dmr0, vsp34, 3
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-NEXT:    stxvp vsp34, 96(r10)
+; CHECK-NEXT:    stxvp vsp36, 64(r10)
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-NEXT:    stxvp vsp34, 32(r10)
+; CHECK-NEXT:    stxvp vsp36, 0(r10)
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: tins256:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    lxv v2, 0(r3)
+; CHECK-BE-NEXT:    lxv v3, 16(r3)
+; CHECK-BE-NEXT:    dmsetdmrz dmr0
+; CHECK-BE-NEXT:    dmxxinstdmr256 dmr0, vsp34, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-BE-NEXT:    stxvp vsp36, 96(r7)
+; CHECK-BE-NEXT:    stxvp vsp34, 64(r7)
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-NEXT:    stxvp vsp36, 32(r7)
+; CHECK-BE-NEXT:    stxvp vsp34, 0(r7)
+; CHECK-BE-NEXT:    lxv v2, 0(r4)
+; CHECK-BE-NEXT:    lxv v3, 16(r4)
+; CHECK-BE-NEXT:    dmxxinstdmr256 dmr0, vsp34, 1
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc_hi0, 1
+; CHECK-BE-NEXT:    stxvp vsp32, 96(r8)
+; CHECK-BE-NEXT:    stxvp vsp36, 64(r8)
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc0, 0
+; CHECK-BE-NEXT:    stxvp vsp32, 32(r8)
+; CHECK-BE-NEXT:    stxvp vsp36, 0(r8)
+; CHECK-BE-NEXT:    dmxxinstdmr256 dmr0, vsp34, 2
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc_hi0, 1
+; CHECK-BE-NEXT:    stxvp vsp32, 96(r9)
+; CHECK-BE-NEXT:    stxvp vsp36, 64(r9)
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc0, 0
+; CHECK-BE-NEXT:    stxvp vsp32, 32(r9)
+; CHECK-BE-NEXT:    stxvp vsp36, 0(r9)
+; CHECK-BE-NEXT:    dmxxinstdmr256 dmr0, vsp34, 3
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-BE-NEXT:    stxvp vsp36, 96(r10)
+; CHECK-BE-NEXT:    stxvp vsp34, 64(r10)
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-NEXT:    stxvp vsp36, 32(r10)
+; CHECK-BE-NEXT:    stxvp vsp34, 0(r10)
+; CHECK-BE-NEXT:    blr
+entry:
+  %z = call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
+  %l1 = load <256 x i1>, ptr %vp1, align 16
+  %a = call <1024 x i1> @llvm.ppc.mma.dmxxinstdmr256(<1024 x i1> %z, <256 x i1> %l1, i32 0)
+  store <1024 x i1> %a, ptr %rp1, align 16
+  %l2 = load <256 x i1>, ptr %vp2, align 16
+  %b = call <1024 x i1> @llvm.ppc.mma.dmxxinstdmr256(<1024 x i1> %a, <256 x i1> %l2, i32 1)
+  store <1024 x i1> %b, ptr %rp2, align 16
+  %l3 = load <256 x i1>, ptr %vp3, align 16
+  %c = call <1024 x i1> @llvm.ppc.mma.dmxxinstdmr256(<1024 x i1> %b, <256 x i1> %l2, i32 2)
+  store <1024 x i1> %c, ptr %rp3, align 16
+  %l4 = load <256 x i1>, ptr %vp4, align 16
+  %d = call <1024 x i1> @llvm.ppc.mma.dmxxinstdmr256(<1024 x i1> %c, <256 x i1> %l2, i32 3)
+  store <1024 x i1> %d, ptr %rp4, align 16
+  ret void
+}
+
 declare <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
 declare <1024 x i1> @llvm.ppc.mma.dmmr(<1024 x i1>)
 declare <1024 x i1> @llvm.ppc.mma.dmxor(<1024 x i1>, <1024 x i1>)
+declare <1024 x i1> @llvm.ppc.mma.dmxxinstdmr512(<1024 x i1>, <256 x i1>, <256 x i1>, i32)
+declare <1024 x i1> @llvm.ppc.mma.dmxxinstdmr256(<1024 x i1>, <256 x i1>, i32)
+declare { <256 x i1>, <256 x i1> } @llvm.ppc.mma.dmxxextfdmr512(<1024 x i1>, i32)
+declare <256 x i1> @llvm.ppc.mma.dmxxextfdmr256(<1024 x i1>, i32)

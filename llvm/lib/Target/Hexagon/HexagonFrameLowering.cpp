@@ -196,23 +196,13 @@ static cl::opt<unsigned> SpillOptMax("spill-opt-max", cl::Hidden,
 static unsigned SpillOptCount = 0;
 #endif
 
-namespace llvm {
-
-  void initializeHexagonCallFrameInformationPass(PassRegistry&);
-  FunctionPass *createHexagonCallFrameInformation();
-
-} // end namespace llvm
-
 namespace {
 
   class HexagonCallFrameInformation : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonCallFrameInformation() : MachineFunctionPass(ID) {
-      PassRegistry &PR = *PassRegistry::getPassRegistry();
-      initializeHexagonCallFrameInformationPass(PR);
-    }
+    HexagonCallFrameInformation() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 

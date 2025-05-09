@@ -310,11 +310,16 @@ public:
     }
 
     // Otherwise call create mpi::CommRankOp
-    auto rank = rewriter
-                    .create<mpi::CommRankOp>(
-                        loc, TypeRange{mpi::RetvalType::get(op->getContext()),
-                                       rewriter.getI32Type()})
-                    .getRank();
+    auto ctx = op.getContext();
+    Value commWorld =
+        rewriter.create<mpi::CommWorldOp>(loc, mpi::CommType::get(ctx));
+    auto rank =
+        rewriter
+            .create<mpi::CommRankOp>(
+                loc,
+                TypeRange{mpi::RetvalType::get(ctx), rewriter.getI32Type()},
+                commWorld)
+            .getRank();
     rewriter.replaceOpWithNewOp<arith::IndexCastOp>(op, rewriter.getIndexType(),
                                                     rank);
     return success();
@@ -652,6 +657,9 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
       auto upperSendOffset = rewriter.create<arith::SubIOp>(
           loc, upperRecvOffset, toValue(haloSizes[currHaloDim * 2]));
 
+      Value commWorld = rewriter.create<mpi::CommWorldOp>(
+          loc, mpi::CommType::get(op->getContext()));
+
       // Make sure we send/recv in a way that does not lead to a dead-lock.
       // The current approach is by far not optimal, this should be at least
       // be a red-black pattern or using MPI_sendrecv.
@@ -680,7 +688,8 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
               auto subview = builder.create<memref::SubViewOp>(
                   loc, array, offsets, dimSizes, strides);
               builder.create<memref::CopyOp>(loc, subview, buffer);
-              builder.create<mpi::SendOp>(loc, TypeRange{}, buffer, tag, to);
+              builder.create<mpi::SendOp>(loc, TypeRange{}, buffer, tag, to,
+                                          commWorld);
               builder.create<scf::YieldOp>(loc);
             });
         // if has neighbor: receive halo data into buffer and copy to array
@@ -688,7 +697,8 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
             loc, hasFrom, [&](OpBuilder &builder, Location loc) {
               offsets[dim] = upperHalo ? OpFoldResult(upperRecvOffset)
                                        : OpFoldResult(lowerRecvOffset);
-              builder.create<mpi::RecvOp>(loc, TypeRange{}, buffer, tag, from);
+              builder.create<mpi::RecvOp>(loc, TypeRange{}, buffer, tag, from,
+                                          commWorld);
               auto subview = builder.create<memref::SubViewOp>(
                   loc, array, offsets, dimSizes, strides);
               builder.create<memref::CopyOp>(loc, buffer, subview);

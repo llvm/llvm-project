@@ -1067,7 +1067,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   // Emit RewritePattern for Pattern.
   auto locs = pattern.getLocation();
   os << formatv("/* Generated from:\n    {0:$[ instantiating\n    ]}\n*/\n",
-                make_range(locs.rbegin(), locs.rend()));
+                llvm::reverse(locs));
   os << formatv(R"(struct {0} : public ::mlir::RewritePattern {
   {0}(::mlir::MLIRContext *context)
       : ::mlir::RewritePattern("{1}", {2}, context, {{)",
@@ -1377,12 +1377,12 @@ std::string PatternEmitter::handleOpArgument(DagLeaf leaf,
     return handleConstantAttr(constAttr.getAttribute(),
                               constAttr.getConstantValue());
   }
-  if (leaf.isEnumAttrCase()) {
-    auto enumCase = leaf.getAsEnumAttrCase();
+  if (leaf.isEnumCase()) {
+    auto enumCase = leaf.getAsEnumCase();
     // This is an enum case backed by an IntegerAttr. We need to get its value
     // to build the constant.
     std::string val = std::to_string(enumCase.getValue());
-    return handleConstantAttr(enumCase, val);
+    return handleConstantAttr(Attribute(&enumCase.getDef()), val);
   }
 
   LLVM_DEBUG(llvm::dbgs() << "handle argument '" << patArgName << "'\n");
@@ -1782,7 +1782,7 @@ void PatternEmitter::supplyValuesForOpArgs(
       auto leaf = node.getArgAsLeaf(argIndex);
       // The argument in the result DAG pattern.
       auto patArgName = node.getArgName(argIndex);
-      if (leaf.isConstantAttr() || leaf.isEnumAttrCase()) {
+      if (leaf.isConstantAttr() || leaf.isEnumCase()) {
         // TODO: Refactor out into map to avoid recomputing these.
         if (!isa<NamedAttribute *>(opArg))
           PrintFatalError(loc, Twine("expected attribute ") + Twine(argIndex));
@@ -1847,7 +1847,6 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
 
     const auto *operand =
         cast<NamedTypeConstraint *>(resultOp.getArg(argIndex));
-    std::string varName;
     if (operand->isVariadic()) {
       ++numVariadic;
       std::string range;

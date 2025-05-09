@@ -518,7 +518,7 @@ Predefined Macros
    * - ``__HIPSTDPAR__``
      - Defined when Clang is compiling code in algorithm offload mode, enabled
        with the ``--hipstdpar`` compiler option.
-   * - ``__HIPSTDPAR_INTERPOSE_ALLOC__``
+   * - ``__HIPSTDPAR_INTERPOSE_ALLOC__`` / ``__HIPSTDPAR_INTERPOSE_ALLOC_V1__``
      - Defined only when compiling in algorithm offload mode, when the user
        enables interposition mode with the ``--hipstdpar-interpose-alloc``
        compiler option, indicating that all dynamic memory allocation /
@@ -704,7 +704,7 @@ Open Questions / Future Developments
 SPIR-V Support on HIPAMD ToolChain
 ==================================
 
-The HIPAMD ToolChain supports targetting
+The HIPAMD ToolChain supports targeting
 `AMDGCN Flavoured SPIR-V <https://llvm.org/docs/SPIRVUsage.html#target-triples>`_.
 The support for SPIR-V in the ROCm and HIPAMD ToolChain is under active
 development.

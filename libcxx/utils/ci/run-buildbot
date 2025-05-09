@@ -204,6 +204,13 @@ function test-armv7m-picolibc() {
 
     step "Generating CMake for compiler-rt"
     flags="--sysroot=${INSTALL_DIR}"
+    # LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON means that we produce a file
+    # libclang_rt.builtins.a that will be installed to
+    # ${INSTALL_DIR}/lib/armv7m-unknown-none-eabi/.
+    # With LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF, the filename includes the
+    # architecture name, which is not what Clang's driver expects to find.
+    # The install location will however be wrong with
+    # LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON, so we correct that below.
     ${CMAKE} \
         -S "${MONOREPO_ROOT}/compiler-rt" \
         -B "${BUILD_DIR}/compiler-rt" \
@@ -226,13 +233,8 @@ function test-armv7m-picolibc() {
 
     step "Installing compiler-rt"
     ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
-
-    # Prior to clang 19, armv7m-none-eabi normalised to armv7m-none-unknown-eabi.
-    # clang 19 changed this to armv7m-unknown-none-eabi. So for as long as 18.x
-    # is supported, we have to ask clang what the triple will be.
-    NORMALISED_TARGET_TRIPLE=$(${CC-cc} --target=armv7m-none-eabi -print-target-triple)
-    # Without this step linking fails later in the build.
-    mv "${BUILD_DIR}/install/lib/${NORMALISED_TARGET_TRIPLE}"/* "${BUILD_DIR}/install/lib"
+    # Move compiler-rt libs into the same directory as all the picolib objects.
+    mv "${INSTALL_DIR}/lib/armv7m-unknown-none-eabi"/* "${INSTALL_DIR}/lib"
 
     check-runtimes
 }

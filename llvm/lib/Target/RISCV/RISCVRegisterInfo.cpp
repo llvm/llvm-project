@@ -67,7 +67,8 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_NoRegs_SaveList;
   if (MF->getFunction().hasFnAttribute("interrupt")) {
     if (Subtarget.hasStdExtD())
-      return CSR_XLEN_F64_Interrupt_SaveList;
+      return Subtarget.hasStdExtE() ? CSR_XLEN_F64_Interrupt_RVE_SaveList
+                                    : CSR_XLEN_F64_Interrupt_SaveList;
     if (Subtarget.hasStdExtF())
       return Subtarget.hasStdExtE() ? CSR_XLEN_F32_Interrupt_RVE_SaveList
                                     : CSR_XLEN_F32_Interrupt_SaveList;
@@ -406,6 +407,12 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
   Register Base = II->getOperand(1).getReg();
   bool IsBaseKill = II->getOperand(1).isKill();
   Register NewBase = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+
+  auto *OldMMO = *(II->memoperands_begin());
+  LocationSize OldLoc = OldMMO->getSize();
+  assert(OldLoc.isPrecise() && OldLoc.getValue().isKnownMultipleOf(NF));
+  TypeSize NewSize = OldLoc.getValue().divideCoefficientBy(NF);
+  auto *NewMMO = MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(), NewSize);
   for (unsigned I = 0; I < NF; ++I) {
     // Adding implicit-use of super register to describe we are using part of
     // super register, that prevents machine verifier complaining when part of
@@ -414,7 +421,7 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
     BuildMI(MBB, II, DL, TII->get(Opcode))
         .addReg(TRI->getSubReg(SrcReg, SubRegIdx + I))
         .addReg(Base, getKillRegState(I == NF - 1))
-        .addMemOperand(*(II->memoperands_begin()))
+        .addMemOperand(NewMMO)
         .addReg(SrcReg, RegState::Implicit);
     if (I != NF - 1)
       BuildMI(MBB, II, DL, TII->get(RISCV::ADD), NewBase)
@@ -483,11 +490,16 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
   Register Base = II->getOperand(1).getReg();
   bool IsBaseKill = II->getOperand(1).isKill();
   Register NewBase = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  auto *OldMMO = *(II->memoperands_begin());
+  LocationSize OldLoc = OldMMO->getSize();
+  assert(OldLoc.isPrecise() && OldLoc.getValue().isKnownMultipleOf(NF));
+  TypeSize NewSize = OldLoc.getValue().divideCoefficientBy(NF);
+  auto *NewMMO = MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(), NewSize);
   for (unsigned I = 0; I < NF; ++I) {
     BuildMI(MBB, II, DL, TII->get(Opcode),
             TRI->getSubReg(DestReg, SubRegIdx + I))
         .addReg(Base, getKillRegState(I == NF - 1))
-        .addMemOperand(*(II->memoperands_begin()));
+        .addMemOperand(NewMMO);
     if (I != NF - 1)
       BuildMI(MBB, II, DL, TII->get(RISCV::ADD), NewBase)
           .addReg(Base, getKillRegState(I != 0 || IsBaseKill))

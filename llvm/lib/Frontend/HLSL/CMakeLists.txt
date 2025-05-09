@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMFrontendHLSL
+  CBuffer.cpp
   HLSLResource.cpp
 
   ADDITIONAL_HEADER_DIRS

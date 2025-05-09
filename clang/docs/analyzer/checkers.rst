@@ -610,7 +610,7 @@ pure virtual – but may be still surprising for the programmer.)
    void releaseResources() {
      // warn: This can call the pure virtual method A::getKind() when this is
      // called from the destructor.
-     callSomeFunction(getKind())
+     callSomeFunction(getKind());
    }
  };
 
@@ -936,7 +936,7 @@ checker does not report them**.
    void releaseResources() {
      // warn: This can be called within ~A() and calls A::getKind() even if
      // we are destructing a class that is derived from A.
-     callSomeFunction(getKind())
+     callSomeFunction(getKind());
    }
  };
 

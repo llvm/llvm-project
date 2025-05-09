@@ -83,17 +83,17 @@ define void @test_2xi64_unary_op_wide_load(ptr noalias %data, ptr noalias %A, pt
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[TMP14:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[TMP16:%.*]] = shl nsw i64 [[TMP14]], 1
-; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP14]]
-; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i32 0
-; VF2-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
-; VF2-NEXT:    [[TMP19:%.*]] = fneg <2 x double> [[WIDE_LOAD2]]
-; VF2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[TMP16]]
-; VF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP14]]
+; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[TMP14]], 1
+; VF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP14]]
 ; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[TMP6]], i32 0
 ; VF2-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x double>, ptr [[TMP7]], align 8
 ; VF2-NEXT:    [[TMP15:%.*]] = fneg <2 x double> [[WIDE_LOAD3]]
-; VF2-NEXT:    [[TMP17:%.*]] = shufflevector <2 x double> [[TMP19]], <2 x double> [[TMP15]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; VF2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP14]]
+; VF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i32 0
+; VF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP8]], align 8
+; VF2-NEXT:    [[TMP9:%.*]] = fneg <2 x double> [[WIDE_LOAD1]]
+; VF2-NEXT:    [[TMP17:%.*]] = shufflevector <2 x double> [[TMP15]], <2 x double> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; VF2-NEXT:    [[INTERLEAVED_VEC4:%.*]] = shufflevector <4 x double> [[TMP17]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; VF2-NEXT:    store <4 x double> [[INTERLEAVED_VEC4]], ptr [[TMP20]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP14]], 2
@@ -958,17 +958,17 @@ define void @test_2xi64_sub_of_wide_loads(ptr noalias %data, ptr noalias %A, ptr
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
-; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; VF2-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP3]], align 8
-; VF2-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i64> poison, i64 [[TMP6]], i64 0
-; VF2-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT3]], <2 x i64> poison, <2 x i32> zeroinitializer
-; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
-; VF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i32 0
-; VF2-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP8]], align 8
-; VF2-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <2 x i64> poison, i64 [[TMP11]], i64 0
-; VF2-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT5]], <2 x i64> poison, <2 x i32> zeroinitializer
-; VF2-NEXT:    [[TMP13:%.*]] = sub <2 x i64> [[BROADCAST_SPLAT4]], [[BROADCAST_SPLAT6]]
+; VF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP6]], i32 0
+; VF2-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
+; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
+; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP3]], i32 0
+; VF2-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
+; VF2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i64 0
+; VF2-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
+; VF2-NEXT:    [[TMP13:%.*]] = sub <2 x i64> [[BROADCAST_SPLAT]], [[BROADCAST_SPLAT2]]
 ; VF2-NEXT:    [[TMP20:%.*]] = shl nsw i64 [[TMP0]], 1
 ; VF2-NEXT:    [[DATA_1:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP20]]
 ; VF2-NEXT:    store <2 x i64> [[TMP13]], ptr [[DATA_1]], align 8
@@ -1041,16 +1041,16 @@ define void @test_2xi64_sub_of_wide_loads_ops_swapped(ptr noalias %data, ptr noa
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
-; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; VF2-NEXT:    [[BROADCAST_SPLAT4:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
-; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
 ; VF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i32 0
 ; VF2-NEXT:    [[BROADCAST_SPLAT6:%.*]] = load <2 x i64>, ptr [[TMP8]], align 8
-; VF2-NEXT:    [[TMP13:%.*]] = sub <2 x i64> [[BROADCAST_SPLAT4]], [[BROADCAST_SPLAT6]]
+; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
+; VF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
+; VF2-NEXT:    [[TMP13:%.*]] = sub <2 x i64> [[BROADCAST_SPLAT6]], [[WIDE_LOAD1]]
 ; VF2-NEXT:    [[TMP20:%.*]] = shl nsw i64 [[TMP0]], 1
 ; VF2-NEXT:    [[DATA_1:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP20]]
-; VF2-NEXT:    [[TMP15:%.*]] = sub <2 x i64> [[BROADCAST_SPLAT6]], [[BROADCAST_SPLAT4]]
+; VF2-NEXT:    [[TMP15:%.*]] = sub <2 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT6]]
 ; VF2-NEXT:    [[TMP17:%.*]] = shufflevector <2 x i64> [[TMP13]], <2 x i64> [[TMP15]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; VF2-NEXT:    [[INTERLEAVED_VEC4:%.*]] = shufflevector <4 x i64> [[TMP17]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC4]], ptr [[DATA_1]], align 8

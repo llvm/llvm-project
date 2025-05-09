@@ -145,6 +145,7 @@ protected:
   friend class CmpInst;               // For getting `Val`.
   friend class ConstantArray;         // For `Val`.
   friend class ConstantStruct;        // For `Val`.
+  friend class ConstantVector;        // For `Val`.
   friend class ConstantAggregateZero; // For `Val`.
   friend class ConstantPointerNull;   // For `Val`.
   friend class UndefValue;            // For `Val`.
@@ -169,6 +170,8 @@ protected:
   // expose metadata in sandboxir.
   friend class Region;
   friend class ScoreBoard; // Needs access to `Val` for the instruction cost.
+  friend class ConstantDataArray; // For `Val`
+  friend class ConstantDataVector; // For `Val`
 
   /// All values point to the context.
   Context &Ctx;

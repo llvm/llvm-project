@@ -20,7 +20,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -56,14 +56,15 @@ AMDGPUInstructionSelector::AMDGPUInstructionSelector(
 
 const char *AMDGPUInstructionSelector::getName() { return DEBUG_TYPE; }
 
-void AMDGPUInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
+void AMDGPUInstructionSelector::setupMF(MachineFunction &MF,
+                                        GISelValueTracking *VT,
                                         CodeGenCoverage *CoverageInfo,
                                         ProfileSummaryInfo *PSI,
                                         BlockFrequencyInfo *BFI) {
   MRI = &MF.getRegInfo();
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
   Subtarget->checkSubtargetFeatures(MF.getFunction());
-  InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
+  InstructionSelector::setupMF(MF, VT, CoverageInfo, PSI, BFI);
 }
 
 // Return the wave level SGPR base address if this is a wave address.
@@ -1190,12 +1191,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_permlane16_swap:
   case Intrinsic::amdgcn_permlane32_swap:
     return selectPermlaneSwapIntrin(I, IntrinsicID);
-  case Intrinsic::amdgcn_dead: {
-    I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
-    I.removeOperand(1); // drop intrinsic ID
-    return RBI.constrainGenericRegister(I.getOperand(0).getReg(),
-                                        AMDGPU::VGPR_32RegClass, *MRI);
-  }
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -1888,7 +1883,7 @@ bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
       .addImm(0);
   } else {
     std::tie(BaseOffset, ImmOffset) =
-        AMDGPU::getBaseWithConstantOffset(*MRI, BaseOffset, KB);
+        AMDGPU::getBaseWithConstantOffset(*MRI, BaseOffset, VT);
 
     if (Readfirstlane) {
       // We have the constant offset now, so put the readfirstlane back on the
@@ -2526,8 +2521,9 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
     return false;
 
   if (SrcSize > 32) {
-    unsigned SubRegIdx =
-        DstSize < 32 ? AMDGPU::sub0 : TRI.getSubRegFromChannel(0, DstSize / 32);
+    unsigned SubRegIdx = DstSize < 32
+                             ? static_cast<unsigned>(AMDGPU::sub0)
+                             : TRI.getSubRegFromChannel(0, DstSize / 32);
     if (SubRegIdx == AMDGPU::NoSubRegister)
       return false;
 
@@ -2945,8 +2941,7 @@ bool AMDGPUInstructionSelector::isInstrUniform(const MachineInstr &MI) const {
   // Sometimes LDS instructions have constant pointers.
   // If Ptr is null, then that means this mem operand contains a
   // PseudoSourceValue like GOT.
-  if (!Ptr || isa<UndefValue>(Ptr) || isa<Argument>(Ptr) ||
-      isa<Constant>(Ptr) || isa<GlobalValue>(Ptr))
+  if (!Ptr || isa<UndefValue, Argument, Constant, GlobalValue>(Ptr))
     return true;
 
   if (MMO->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
@@ -3096,7 +3091,7 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
 
   // Try to avoid emitting a bit operation when we only need to touch half of
   // the 64-bit pointer.
-  APInt MaskOnes = KB->getKnownOnes(MaskReg).zext(64);
+  APInt MaskOnes = VT->getKnownOnes(MaskReg).zext(64);
   const APInt MaskHi32 = APInt::getHighBitsSet(64, 32);
   const APInt MaskLo32 = APInt::getLowBitsSet(64, 32);
 
@@ -3195,12 +3190,12 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
 static std::pair<Register, unsigned>
 computeIndirectRegIndex(MachineRegisterInfo &MRI, const SIRegisterInfo &TRI,
                         const TargetRegisterClass *SuperRC, Register IdxReg,
-                        unsigned EltSize, GISelKnownBits &KnownBits) {
+                        unsigned EltSize, GISelValueTracking &ValueTracking) {
   Register IdxBaseReg;
   int Offset;
 
   std::tie(IdxBaseReg, Offset) =
-      AMDGPU::getBaseWithConstantOffset(MRI, IdxReg, &KnownBits);
+      AMDGPU::getBaseWithConstantOffset(MRI, IdxReg, &ValueTracking);
   if (IdxBaseReg == AMDGPU::NoRegister) {
     // This will happen if the index is a known constant. This should ordinarily
     // be legalized out, but handle it as a register just in case.
@@ -3252,7 +3247,7 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
 
   unsigned SubReg;
   std::tie(IdxReg, SubReg) = computeIndirectRegIndex(
-      *MRI, TRI, SrcRC, IdxReg, DstTy.getSizeInBits() / 8, *KB);
+      *MRI, TRI, SrcRC, IdxReg, DstTy.getSizeInBits() / 8, *VT);
 
   if (SrcRB->getID() == AMDGPU::SGPRRegBankID) {
     if (DstTy.getSizeInBits() != 32 && !Is64)
@@ -3333,7 +3328,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
 
   unsigned SubReg;
   std::tie(IdxReg, SubReg) =
-      computeIndirectRegIndex(*MRI, TRI, VecRC, IdxReg, ValSize / 8, *KB);
+      computeIndirectRegIndex(*MRI, TRI, VecRC, IdxReg, ValSize / 8, *VT);
 
   const bool IndexMode = VecRB->getID() == AMDGPU::VGPRRegBankID &&
                          STI.useVGPRIndexMode();
@@ -3368,7 +3363,8 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
 }
 
 bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
-  assert(!AMDGPU::isGFX12Plus(STI));
+  if (!Subtarget->hasVMemToLDSLoad())
+    return false;
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
 
@@ -3504,6 +3500,9 @@ static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
 }
 
 bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
+  if (!Subtarget->hasVMemToLDSLoad())
+    return false;
+
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
 
@@ -4702,7 +4701,7 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
           // to be negative if the resulting (Offset + (M0 or SOffset or zero)
           // is negative. Handle the case where the Immediate Offset + SOffset
           // is negative.
-          auto SKnown = KB->getKnownBits(*SOffset);
+          auto SKnown = VT->getKnownBits(*SOffset);
           if (*Offset + SKnown.getMinValue().getSExtValue() < 0)
             return false;
 
@@ -5036,8 +5035,8 @@ bool AMDGPUInstructionSelector::checkFlatScratchSVSSwizzleBug(
   // The bug affects the swizzling of SVS accesses if there is any carry out
   // from the two low order bits (i.e. from bit 1 into bit 2) when adding
   // voffset to (soffset + inst_offset).
-  auto VKnown = KB->getKnownBits(VAddr);
-  auto SKnown = KnownBits::add(KB->getKnownBits(SAddr),
+  auto VKnown = VT->getKnownBits(VAddr);
+  auto SKnown = KnownBits::add(VT->getKnownBits(SAddr),
                                KnownBits::makeConstant(APInt(32, ImmOffset)));
   uint64_t VMax = VKnown.getMaxValue().getZExtValue();
   uint64_t SMax = SKnown.getMaxValue().getZExtValue();
@@ -5152,7 +5151,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
   if (ConstOffset != 0) {
     if (TII.isLegalMUBUFImmOffset(ConstOffset) &&
         (!STI.privateMemoryResourceIsRangeChecked() ||
-         KB->signBitIsZero(PtrBase))) {
+         VT->signBitIsZero(PtrBase))) {
       const MachineInstr *PtrBaseDef = MRI->getVRegDef(PtrBase);
       if (PtrBaseDef->getOpcode() == AMDGPU::G_FRAME_INDEX)
         FI = PtrBaseDef->getOperand(1).getIndex();
@@ -5193,7 +5192,7 @@ bool AMDGPUInstructionSelector::isDSOffsetLegal(Register Base,
 
   // On Southern Islands instruction with a negative base value and an offset
   // don't seem to work.
-  return KB->signBitIsZero(Base);
+  return VT->signBitIsZero(Base);
 }
 
 bool AMDGPUInstructionSelector::isDSOffset2Legal(Register Base, int64_t Offset0,
@@ -5209,7 +5208,7 @@ bool AMDGPUInstructionSelector::isDSOffset2Legal(Register Base, int64_t Offset0,
 
   // On Southern Islands instruction with a negative base value and an offset
   // don't seem to work.
-  return KB->signBitIsZero(Base);
+  return VT->signBitIsZero(Base);
 }
 
 // Return whether the operation has NoUnsignedWrap property.
@@ -5248,7 +5247,7 @@ bool AMDGPUInstructionSelector::isFlatScratchBaseLegal(Register Addr) const {
       return true;
   }
 
-  return KB->signBitIsZero(LHS);
+  return VT->signBitIsZero(LHS);
 }
 
 // Check address value in SGPR/VGPR are legal for flat scratch in the form
@@ -5266,7 +5265,7 @@ bool AMDGPUInstructionSelector::isFlatScratchBaseLegalSV(Register Addr) const {
 
   Register LHS = AddrMI->getOperand(1).getReg();
   Register RHS = AddrMI->getOperand(2).getReg();
-  return KB->signBitIsZero(RHS) && KB->signBitIsZero(LHS);
+  return VT->signBitIsZero(RHS) && VT->signBitIsZero(LHS);
 }
 
 // Check address value in SGPR/VGPR are legal for flat scratch in the form
@@ -5298,7 +5297,7 @@ bool AMDGPUInstructionSelector::isFlatScratchBaseLegalSVImm(
 
   Register LHS = BaseDef->MI->getOperand(1).getReg();
   Register RHS = BaseDef->MI->getOperand(2).getReg();
-  return KB->signBitIsZero(RHS) && KB->signBitIsZero(LHS);
+  return VT->signBitIsZero(RHS) && VT->signBitIsZero(LHS);
 }
 
 bool AMDGPUInstructionSelector::isUnneededShiftMask(const MachineInstr &MI,
@@ -5313,7 +5312,7 @@ bool AMDGPUInstructionSelector::isUnneededShiftMask(const MachineInstr &MI,
   if (RHS->countr_one() >= ShAmtBits)
     return true;
 
-  const APInt &LHSKnownZeros = KB->getKnownZeroes(MI.getOperand(1).getReg());
+  const APInt &LHSKnownZeros = VT->getKnownZeroes(MI.getOperand(1).getReg());
   return (LHSKnownZeros | *RHS).countr_one() >= ShAmtBits;
 }
 
@@ -5813,7 +5812,7 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
   Register SOffset;
   unsigned Offset;
   std::tie(SOffset, Offset) = AMDGPU::getBaseWithConstantOffset(
-      *MRI, Root.getReg(), KB, /*CheckNUW*/ true);
+      *MRI, Root.getReg(), VT, /*CheckNUW*/ true);
   if (!SOffset)
     return std::nullopt;
 

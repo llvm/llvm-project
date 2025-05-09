@@ -421,6 +421,9 @@ static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
     case Win64EH::UOP_PACSignLR:
       Count += 1;
       break;
+    case Win64EH::UOP_AllocZ:
+      Count += 2;
+      break;
     case Win64EH::UOP_SaveAnyRegI:
     case Win64EH::UOP_SaveAnyRegIP:
     case Win64EH::UOP_SaveAnyRegD:
@@ -433,6 +436,8 @@ static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
     case Win64EH::UOP_SaveAnyRegDPX:
     case Win64EH::UOP_SaveAnyRegQX:
     case Win64EH::UOP_SaveAnyRegQPX:
+    case Win64EH::UOP_SaveZReg:
+    case Win64EH::UOP_SavePReg:
       Count += 3;
       break;
     }
@@ -637,6 +642,37 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer,
     b = inst.Register | (Writeback << 5) | (Paired << 6);
     streamer.emitInt8(b);
     b = Offset | (Mode << 6);
+    streamer.emitInt8(b);
+    break;
+  }
+  case Win64EH::UOP_AllocZ: {
+    b = 0xDF;
+    streamer.emitInt8(b);
+    b = inst.Offset;
+    streamer.emitInt8(b);
+    break;
+  }
+  case Win64EH::UOP_SaveZReg: {
+    assert(inst.Register >= 8 && inst.Register <= 23);
+    assert(inst.Offset < 256);
+    b = 0xE7;
+    streamer.emitInt8(b);
+    reg = inst.Register - 8;
+    b = ((inst.Offset & 0xC0) >> 1) | reg;
+    streamer.emitInt8(b);
+    b = 0xC0 | (inst.Offset & 0x3F);
+    streamer.emitInt8(b);
+    break;
+  }
+  case Win64EH::UOP_SavePReg: {
+    assert(inst.Register >= 4 && inst.Register <= 15);
+    assert(inst.Offset < 256);
+    b = 0xE7;
+    streamer.emitInt8(b);
+    reg = inst.Register;
+    b = ((inst.Offset & 0xC0) >> 1) | 0x10 | reg;
+    streamer.emitInt8(b);
+    b = 0xC0 | (inst.Offset & 0x3F);
     streamer.emitInt8(b);
     break;
   }
@@ -1015,6 +1051,11 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
     case Win64EH::UOP_AddFP:
       // "add x29, sp, #N" doesn't show up in the canonical pattern (except for
       // N=0, which is UOP_SetFP).
+      return false;
+    case Win64EH::UOP_AllocZ:
+    case Win64EH::UOP_SaveZReg:
+    case Win64EH::UOP_SavePReg:
+      // Canonical prologues don't support spilling SVE registers.
       return false;
     case Win64EH::UOP_TrapFrame:
     case Win64EH::UOP_Context:

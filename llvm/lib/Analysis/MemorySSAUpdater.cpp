@@ -679,8 +679,8 @@ void MemorySSAUpdater::updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
   auto FixPhiIncomingValues = [&](MemoryPhi *Phi, MemoryPhi *NewPhi) {
     assert(Phi && NewPhi && "Invalid Phi nodes.");
     BasicBlock *NewPhiBB = NewPhi->getBlock();
-    SmallPtrSet<BasicBlock *, 4> NewPhiBBPreds(pred_begin(NewPhiBB),
-                                               pred_end(NewPhiBB));
+    SmallPtrSet<BasicBlock *, 4> NewPhiBBPreds(llvm::from_range,
+                                               predecessors(NewPhiBB));
     for (unsigned It = 0, E = Phi->getNumIncomingValues(); It < E; ++It) {
       MemoryAccess *IncomingAccess = Phi->getIncomingValue(It);
       BasicBlock *IncBB = Phi->getIncomingBlock(It);
@@ -1083,8 +1083,8 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
   SmallVector<BasicBlock *, 32> IDFBlocks;
   if (!BlocksToProcess.empty()) {
     ForwardIDFCalculator IDFs(DT, GD);
-    SmallPtrSet<BasicBlock *, 16> DefiningBlocks(BlocksToProcess.begin(),
-                                                 BlocksToProcess.end());
+    SmallPtrSet<BasicBlock *, 16> DefiningBlocks(llvm::from_range,
+                                                 BlocksToProcess);
     IDFs.setDefiningBlocks(DefiningBlocks);
     IDFs.calculate(IDFBlocks);
 
@@ -1265,7 +1265,7 @@ void MemorySSAUpdater::wireOldPredecessorsToNewImmediatePredecessor(
     assert(!Preds.empty() && "Must be moving at least one predecessor to the "
                              "new immediate predecessor.");
     MemoryPhi *NewPhi = MSSA->createMemoryPhi(New);
-    SmallPtrSet<BasicBlock *, 16> PredsSet(Preds.begin(), Preds.end());
+    SmallPtrSet<BasicBlock *, 16> PredsSet(llvm::from_range, Preds);
     // Currently only support the case of removing a single incoming edge when
     // identical edges were not merged.
     if (!IdenticalEdgesWereMerged)

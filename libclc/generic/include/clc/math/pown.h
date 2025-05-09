@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_BODY <clc/math/pown.inc>
+#define __CLC_FUNCTION pown
+#define __CLC_BODY <clc/math/binary_decl_with_int_second_arg.inc>
+
 #include <clc/math/gentype.inc>
-#undef __CLC_BODY
+
+#undef __CLC_FUNCTION

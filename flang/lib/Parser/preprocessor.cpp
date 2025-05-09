@@ -101,7 +101,7 @@ TokenSequence Definition::Tokenize(const std::vector<std::string> &argNames,
         continue;
       }
     }
-    result.Put(token, firstToken + j, 1);
+    result.AppendRange(token, firstToken + j, 1);
   }
   return result;
 }
@@ -170,7 +170,7 @@ static TokenSequence TokenPasting(TokenSequence &&text) {
       }
     } else if (pasting && text.TokenAt(j).IsBlank()) {
     } else {
-      result.Put(text, j, 1);
+      result.AppendRange(text, j, 1);
       pasting = false;
     }
   }
@@ -223,7 +223,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
         CHECK(resultSize > 0 &&
             result.TokenAt(resultSize - 1) == replacement_.TokenAt(prev - 1));
         result.pop_back();
-        result.Put(Stringify(args[index], prescanner.allSources()));
+        result.CopyAll(Stringify(args[index], prescanner.allSources()));
       } else {
         const TokenSequence *arg{&args[index]};
         std::optional<TokenSequence> replaced;
@@ -243,7 +243,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
             }
           }
         }
-        result.Put(DEREF(arg));
+        result.CopyAll(DEREF(arg));
       }
     } else if (bytes == 11 && isVariadic_ &&
         token.ToString() == "__VA_ARGS__") {
@@ -254,7 +254,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
         if (k > argumentCount()) {
           result.Put(","s, commaProvenance);
         }
-        result.Put(args[k]);
+        result.CopyAll(args[k]);
       }
     } else if (bytes == 10 && isVariadic_ && token.ToString() == "__VA_OPT__" &&
         j + 2 < tokens && replacement_.TokenAt(j + 1).OnlyNonBlank() == '(' &&
@@ -274,7 +274,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
           }
         }
       }
-      result.Put(replacement_, j);
+      result.AppendRange(replacement_, j);
     }
   }
   return TokenPasting(std::move(result));
@@ -338,18 +338,18 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
           inIfExpression](std::size_t after, const TokenSequence &replacement,
           std::size_t pFLMOffset) {
         if (after < input.SizeInTokens()) {
-          result.Put(replacement, 0, pFLMOffset);
+          result.AppendRange(replacement, 0, pFLMOffset);
           TokenSequence suffix;
-          suffix.Put(
+          suffix.AppendRange(
               replacement, pFLMOffset, replacement.SizeInTokens() - pFLMOffset);
-          suffix.Put(input, after, input.SizeInTokens() - after);
+          suffix.AppendRange(input, after, input.SizeInTokens() - after);
           auto further{ReplaceMacros(
               suffix, prescanner, partialFunctionLikeMacro, inIfExpression)};
           if (partialFunctionLikeMacro && *partialFunctionLikeMacro) {
             // still not closed
             **partialFunctionLikeMacro += result.SizeInTokens();
           }
-          result.Put(further);
+          result.CopyAll(further);
           return true;
         } else {
           if (partialFunctionLikeMacro) {
@@ -362,7 +362,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
   for (; j < tokens; ++j) {
     CharBlock token{input.TokenAt(j)};
     if (token.IsBlank() || !IsLegalIdentifierStart(token[0])) {
-      result.Put(input, j);
+      result.AppendRange(input, j);
       continue;
     }
     // Process identifier in replacement text.
@@ -388,12 +388,12 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
       }
     }
     if (it == definitions_.end()) {
-      result.Put(input, j);
+      result.AppendRange(input, j);
       continue;
     }
     Definition *def{&it->second};
     if (def->isDisabled()) {
-      result.Put(input, j);
+      result.AppendRange(input, j);
       continue;
     }
     if (!def->isFunctionLike()) {
@@ -444,7 +444,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
         ProvenanceRange use{input.GetTokenProvenanceRange(j)};
         ProvenanceRange newRange{
             allSources_.AddMacroCall(from, use, replaced.ToString())};
-        result.Put(replaced, newRange);
+        result.CopyWithProvenance(replaced, newRange);
       }
     } else {
       // Possible function-like macro call.  Skip spaces and newlines to see
@@ -461,10 +461,10 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
       if (!leftParen) {
         if (partialFunctionLikeMacro) {
           *partialFunctionLikeMacro = result.SizeInTokens();
-          result.Put(input, j, tokens - j);
+          result.AppendRange(input, j, tokens - j);
           return result;
         } else {
-          result.Put(input, j);
+          result.AppendRange(input, j);
           continue;
         }
       }
@@ -491,11 +491,11 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
       }
       if (k >= tokens && partialFunctionLikeMacro) {
         *partialFunctionLikeMacro = result.SizeInTokens();
-        result.Put(input, j, tokens - j);
+        result.AppendRange(input, j, tokens - j);
         return result;
       } else if (k >= tokens || argStart.size() < def->argumentCount() ||
           (argStart.size() > def->argumentCount() && !def->isVariadic())) {
-        result.Put(input, j);
+        result.AppendRange(input, j);
         continue;
       }
       std::vector<TokenSequence> args;
@@ -520,7 +520,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
         ProvenanceRange use{input.GetIntervalProvenanceRange(j, k - j)};
         ProvenanceRange newRange{
             allSources_.AddMacroCall(from, use, replaced.ToString())};
-        result.Put(replaced, newRange);
+        result.CopyWithProvenance(replaced, newRange);
       }
       j = k; // advance to the terminal ')'
     }
@@ -684,7 +684,8 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
             dir.GetIntervalProvenanceRange(j, tokens - j),
             "#else: excess tokens at end of directive"_port_en_US);
       }
-    } else if (ifStack_.empty()) {
+    }
+    if (ifStack_.empty()) {
       prescanner.Say(dir.GetTokenProvenanceRange(dirOffset),
           "#else: not nested within #if, #ifdef, or #ifndef"_err_en_US);
     } else if (ifStack_.top() != CanDeadElseAppear::Yes) {

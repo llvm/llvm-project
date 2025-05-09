@@ -51,6 +51,8 @@ Operation *PassExecutionAction::getOp() const {
                          : llvm::dyn_cast_if_present<Operation *>(irUnits[0]);
 }
 
+MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::PassExecutionAction)
+
 //===----------------------------------------------------------------------===//
 // Pass
 //===----------------------------------------------------------------------===//

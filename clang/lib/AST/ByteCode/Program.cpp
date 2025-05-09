@@ -156,7 +156,7 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
   if (const auto *E = dyn_cast<const Expr *>(D)) {
     QT = E->getType();
   } else {
-    const ValueDecl *VD = cast<ValueDecl>(cast<const Decl *>(D));
+    const auto *VD = cast<ValueDecl>(cast<const Decl *>(D));
     IsWeak = VD->isWeak();
     QT = VD->getType();
     if (const auto *RT = QT->getAs<ReferenceType>())
@@ -166,11 +166,11 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
 
   Descriptor *Desc;
   if (std::optional<PrimType> T = Ctx.classify(QT))
-    Desc = createDescriptor(D, *T, nullptr, std::nullopt, /*IsTemporary=*/true,
-                            /*IsMutable=*/false);
+    Desc = createDescriptor(D, *T, /*SourceTy=*/nullptr, std::nullopt,
+                            /*IsConst=*/QT.isConstQualified());
   else
     Desc = createDescriptor(D, QT.getTypePtr(), std::nullopt,
-                            /*IsTemporary=*/true, /*IsMutable=*/false);
+                            /*IsConst=*/QT.isConstQualified());
   if (!Desc)
     Desc = allocateDescriptor(D);
 
@@ -243,12 +243,13 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   Descriptor *Desc;
   const bool IsConst = Ty.isConstQualified();
   const bool IsTemporary = D.dyn_cast<const Expr *>();
+  const bool IsVolatile = Ty.isVolatileQualified();
   if (std::optional<PrimType> T = Ctx.classify(Ty))
     Desc = createDescriptor(D, *T, nullptr, Descriptor::GlobalMD, IsConst,
-                            IsTemporary);
+                            IsTemporary, /*IsMutable=*/false, IsVolatile);
   else
     Desc = createDescriptor(D, Ty.getTypePtr(), Descriptor::GlobalMD, IsConst,
-                            IsTemporary);
+                            IsTemporary, /*IsMutable=*/false, IsVolatile);
 
   if (!Desc)
     return std::nullopt;
@@ -304,7 +305,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
       return nullptr;
     return allocateDescriptor(BD, BR, std::nullopt, /*isConst=*/false,
                               /*isTemporary=*/false,
-                              /*isMutable=*/false);
+                              /*isMutable=*/false, /*IsVolatile=*/false);
   };
 
   // Reserve space for base classes.
@@ -364,13 +365,14 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     QualType FT = FD->getType();
     const bool IsConst = FT.isConstQualified();
     const bool IsMutable = FD->isMutable();
+    const bool IsVolatile = FT.isVolatileQualified();
     const Descriptor *Desc;
     if (std::optional<PrimType> T = Ctx.classify(FT)) {
       Desc = createDescriptor(FD, *T, nullptr, std::nullopt, IsConst,
-                              /*isTemporary=*/false, IsMutable);
+                              /*isTemporary=*/false, IsMutable, IsVolatile);
     } else {
       Desc = createDescriptor(FD, FT.getTypePtr(), std::nullopt, IsConst,
-                              /*isTemporary=*/false, IsMutable);
+                              /*isTemporary=*/false, IsMutable, IsVolatile);
     }
     if (!Desc)
       return nullptr;
@@ -387,13 +389,14 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
 Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       Descriptor::MetadataSize MDSize,
                                       bool IsConst, bool IsTemporary,
-                                      bool IsMutable, const Expr *Init) {
+                                      bool IsMutable, bool IsVolatile,
+                                      const Expr *Init) {
 
   // Classes and structures.
   if (const auto *RT = Ty->getAs<RecordType>()) {
     if (const auto *Record = getOrCreateRecord(RT->getDecl()))
       return allocateDescriptor(D, Record, MDSize, IsConst, IsTemporary,
-                                IsMutable);
+                                IsMutable, IsVolatile);
     return allocateDescriptor(D, MDSize);
   }
 
@@ -431,7 +434,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     if (isa<IncompleteArrayType>(ArrayType) ||
         isa<VariableArrayType>(ArrayType)) {
       if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
-        return allocateDescriptor(D, *T, MDSize, IsTemporary,
+        return allocateDescriptor(D, *T, MDSize, IsConst, IsTemporary,
                                   Descriptor::UnknownSize{});
       } else {
         const Descriptor *Desc = createDescriptor(

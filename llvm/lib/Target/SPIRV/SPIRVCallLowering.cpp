@@ -215,11 +215,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   Argument *Arg = F.getArg(ArgIdx);
   Type *ArgType = Arg->getType();
   if (isTypedPointerTy(ArgType)) {
-    SPIRVType *ElementType = GR->getOrCreateSPIRVType(
-        cast<TypedPointerType>(ArgType)->getElementType(), MIRBuilder,
-        SPIRV::AccessQualifier::ReadWrite, true);
     return GR->getOrCreateSPIRVPointerType(
-        ElementType, MIRBuilder,
+        cast<TypedPointerType>(ArgType)->getElementType(), MIRBuilder,
         addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
   }
 
@@ -232,11 +229,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   // spv_assign_ptr_type intrinsic or otherwise use default pointer element
   // type.
   if (hasPointeeTypeAttr(Arg)) {
-    SPIRVType *ElementType =
-        GR->getOrCreateSPIRVType(getPointeeTypeByAttr(Arg), MIRBuilder,
-                                 SPIRV::AccessQualifier::ReadWrite, true);
     return GR->getOrCreateSPIRVPointerType(
-        ElementType, MIRBuilder,
+        getPointeeTypeByAttr(Arg), MIRBuilder,
         addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
   }
 
@@ -259,10 +253,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
     MetadataAsValue *VMD = cast<MetadataAsValue>(II->getOperand(1));
     Type *ElementTy =
         toTypedPointer(cast<ConstantAsMetadata>(VMD->getMetadata())->getType());
-    SPIRVType *ElementType = GR->getOrCreateSPIRVType(
-        ElementTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
     return GR->getOrCreateSPIRVPointerType(
-        ElementType, MIRBuilder,
+        ElementTy, MIRBuilder,
         addressSpaceToStorageClass(
             cast<ConstantInt>(II->getOperand(2))->getZExtValue(), ST));
   }
@@ -398,8 +390,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   auto MRI = MIRBuilder.getMRI();
   Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MRI->setRegClass(FuncVReg, &SPIRV::iIDRegClass);
-  if (F.isDeclaration())
-    GR->add(&F, &MIRBuilder.getMF(), FuncVReg);
   FunctionType *FTy = getOriginalFunctionType(F);
   Type *FRetTy = FTy->getReturnType();
   if (isUntypedPointerTy(FRetTy)) {
@@ -425,6 +415,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                .addUse(GR->getSPIRVTypeID(FuncTy));
   GR->recordFunctionDefinition(&F, &MB.getInstr()->getOperand(0));
   GR->addGlobalObject(&F, &MIRBuilder.getMF(), FuncVReg);
+  if (F.isDeclaration())
+    GR->add(&F, MB);
 
   // Add OpFunctionParameter instructions
   int i = 0;
@@ -433,11 +425,11 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     Register ArgReg = VRegs[i][0];
     MRI->setRegClass(ArgReg, GR->getRegClass(ArgTypeVRegs[i]));
     MRI->setType(ArgReg, GR->getRegType(ArgTypeVRegs[i]));
-    MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
-        .addDef(ArgReg)
-        .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
+                   .addDef(ArgReg)
+                   .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
     if (F.isDeclaration())
-      GR->add(&Arg, &MIRBuilder.getMF(), ArgReg);
+      GR->add(&Arg, MIB);
     GR->addGlobalObject(&Arg, &MIRBuilder.getMF(), ArgReg);
     i++;
   }
@@ -462,7 +454,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                    ? SPIRV::LinkageType::LinkOnceODR
                    : SPIRV::LinkageType::Export);
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
-                    {static_cast<uint32_t>(LnkTy)}, F.getGlobalIdentifier());
+                    {static_cast<uint32_t>(LnkTy)}, F.getName());
   }
 
   // Handle function pointers decoration

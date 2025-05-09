@@ -86,15 +86,15 @@ endif()
 # Keep this at the top to make sure we don't add _GNU_SOURCE dependent checks
 # before adding it.
 check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
-if(LLVM_USING_GLIBC)
+if(LLVM_USING_GLIBC OR CYGWIN)
   add_compile_definitions(_GNU_SOURCE)
   list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
+endif()
 
-  # enable 64bit off_t on 32bit systems using glibc
-  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    add_compile_definitions(_FILE_OFFSET_BITS=64)
-    list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
-  endif()
+# enable 64bit off_t on 32bit systems using glibc
+if(LLVM_USING_GLIBC AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+  add_compile_definitions(_FILE_OFFSET_BITS=64)
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
 endif()
 
 # include checks

@@ -61,14 +61,14 @@ define i32 @test_debug_loc_on_branch_in_loop(ptr noalias %src, ptr noalias %dst)
 ; CHECK-LABEL: define i32 @test_debug_loc_on_branch_in_loop(
 ; CHECK-LABEL: vector.body:
 ; CHECK:        [[LOAD:%.+]] = load <2 x i32>, ptr {{.+}}, align 4
-; CHECK-NEXT:   [[CMP:%.+]] = icmp eq <2 x i32> [[LOAD]], splat (i32 10)
-; CHECK-NEXT:   [[XOR:%.+]] = xor <2 x i1> [[CMP:%.+]], splat (i1 true), !dbg [[LOC3:!.+]]
-; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[XOR]], i32 0, !dbg [[LOC3]]
+; CHECK-NEXT:   [[CMP:%.+]] = icmp ne <2 x i32> [[LOAD]], splat (i32 10), !dbg [[LOC3:!.+]]
+; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[CMP]], i32 0, !dbg [[LOC3]]
 ; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue, !dbg [[LOC3]]
 ; CHECK-EMPTY:
 ; CHECK-NEXT: pred.store.if:
-; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, ptr %dst, i64 {{.+}}, !dbg [[LOC3]]
-; CHECK-NEXT:   store i32 0, ptr [[GEP]], align 4, !dbg [[LOC3]]
+; CHECK-NEXT:   [[IDX:%.+]] = add i64 %index, 0
+; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, ptr %dst, i64 [[IDX]]
+; CHECK-NEXT:   store i32 0, ptr [[GEP]], align 4
 ; CHECK-NEXT:   br label %pred.store.continue, !dbg [[LOC3]]
 ; CHECK-EMPTY:
 ;
@@ -100,14 +100,14 @@ define i32 @test_different_debug_loc_on_replicate_recipe(ptr noalias %src, ptr n
 ; CHECK-LABEL: define i32 @test_different_debug_loc_on_replicate_recipe(
 ; CHECK-LABEL: vector.body:
 ; CHECK:        [[LOAD:%.+]] = load <2 x i32>, ptr {{.+}}, align 4
-; CHECK-NEXT:   [[CMP:%.+]] = icmp eq <2 x i32> [[LOAD]], splat (i32 10)
-; CHECK-NEXT:   [[XOR:%.+]] = xor <2 x i1> [[CMP:%.+]], splat (i1 true), !dbg [[LOC4:!.+]]
-; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[XOR]], i32 0, !dbg [[LOC4]]
+; CHECK-NEXT:   [[CMP:%.+]] = icmp ne <2 x i32> [[LOAD]], splat (i32 10), !dbg [[LOC4:!.+]]
+; CHECK-NEXT:   [[EXT:%.+]] = extractelement <2 x i1> [[CMP]], i32 0, !dbg [[LOC4]]
 ; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue, !dbg [[LOC4]]
 ; CHECK-EMPTY:
 ; CHECK-NEXT: pred.store.if:
-; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, ptr %dst, i64 {{.+}}, !dbg [[LOC5:!.+]]
-; CHECK-NEXT:   store i32 0, ptr [[GEP]], align 4, !dbg [[LOC5]]
+; CHECK-NEXT:   [[IDX:%.+]] = add i64 %index, 0
+; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, ptr %dst, i64 [[IDX]], !dbg [[LOC5:!.+]]
+; CHECK-NEXT:   store i32 0, ptr [[GEP]], align 4
 ; CHECK-NEXT:   br label %pred.store.continue, !dbg [[LOC4]]
 ; CHECK-EMPTY:
 ;
@@ -175,9 +175,8 @@ define void @test_scalar_steps(ptr nocapture %a, ptr noalias %b, i64 %size) !dbg
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NOT:     !dbg
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 0, !dbg [[LOC8:!.+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 2, !dbg [[LOC8]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP6]]
@@ -215,6 +214,7 @@ exit:
 ; CHECK: [[LOC5]] = !DILocation(line: 320
 ; CHECK: [[LOC6]] = !DILocation(line: 430
 ; CHECK: [[LOC7]] = !DILocation(line: 540
+; CHECK: [[LOC8]] = !DILocation(line: 650
 
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)

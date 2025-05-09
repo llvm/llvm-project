@@ -664,6 +664,12 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   //   |y * log2(x)| = 0 or > 151.
   // Hence x^y will either overflow or underflow if x is not zero.
   if (LIBC_UNLIKELY((y_abs & 0x0007'ffff) == 0) || (y_abs > 0x4f170000)) {
+    // y is signaling NaN
+    if (xbits.is_signaling_nan() || ybits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FloatBits::quiet_nan().get_val();
+    }
+
     // Exceptional exponents.
     if (y == 0.0f)
       return 1.0f;
@@ -736,8 +742,8 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         }
       }
       if (y_abs > 0x4f17'0000) {
+        // if y is NaN
         if (y_abs > 0x7f80'0000) {
-          // y is NaN
           if (x_u == 0x3f80'0000) { // x = 1.0f
             // pow(1, NaN) = 1
             return 1.0f;
@@ -759,6 +765,12 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   // y is finite and non-zero.
   if (LIBC_UNLIKELY(((x_u & 0x801f'ffffU) == 0) || x_u >= 0x7f80'0000U ||
                     x_u < 0x0080'0000U)) {
+    // if x is signaling NaN
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FloatBits::quiet_nan().get_val();
+    }
+
     switch (x_u) {
     case 0x3f80'0000: // x = 1.0f
       return 1.0f;

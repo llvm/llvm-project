@@ -319,7 +319,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       // Only expand llvm.memcpy.inline with non-constant length in this
       // codepath, leaving the current SelectionDAG expansion for constant
       // length memcpy intrinsics undisturbed.
-      auto *Memcpy = cast<MemCpyInlineInst>(Inst);
+      auto *Memcpy = cast<MemCpyInst>(Inst);
       if (isa<ConstantInt>(Memcpy->getLength()))
         break;
 
@@ -367,7 +367,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       // Only expand llvm.memset.inline with non-constant length in this
       // codepath, leaving the current SelectionDAG expansion for constant
       // length memset intrinsics undisturbed.
-      auto *Memset = cast<MemSetInlineInst>(Inst);
+      auto *Memset = cast<MemSetInst>(Inst);
       if (isa<ConstantInt>(Memset->getLength()))
         break;
 

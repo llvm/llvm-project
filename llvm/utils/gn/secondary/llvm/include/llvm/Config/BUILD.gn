@@ -74,14 +74,16 @@ write_cmake_config("abi-breaking") {
 }
 
 write_cmake_config("config") {
-  public_deps = [ ":llvm-config" ]
+  public_deps = [
+    ":Targets",
+    ":llvm-config",
+  ]
 
   input = "config.h.cmake"
   output = "$target_gen_dir/config.h"
   values = [
     "BUG_REPORT_URL=https://github.com/llvm/llvm-project/issues/",
     "ENABLE_BACKTRACES=1",
-    "ENABLE_DEBUGLOC_COVERAGE_TRACKING=",
     "ENABLE_CRASH_OVERRIDES=1",
     "BACKTRACE_HEADER=execinfo.h",
     "HAVE_BUILTIN_THREAD_POINTER=",
@@ -294,6 +296,7 @@ write_cmake_config("llvm-config") {
     "LLVM_BUILD_SHARED_LIBS=",
     "LLVM_ENABLE_TELEMETRY=",
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
+    "LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=",
     "LLVM_ENABLE_DUMP=",
     "LLVM_ENABLE_HTTPLIB=",
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
@@ -384,6 +387,12 @@ write_cmake_config("llvm-config") {
   } else {
     values += [ "LLVM_FORCE_ENABLE_STATS=" ]
   }
+}
+
+write_cmake_config("Targets") {
+  input = "Targets.h.cmake"
+  output = "$target_gen_dir/Targets.h"
+  values = []
 
   if (llvm_build_AArch64) {
     values += [ "LLVM_HAS_AARCH64_TARGET=1" ]

@@ -241,7 +241,7 @@ define <64 x float> @interleave_v32f32(<32 x float> %x, <32 x float> %y) {
 ; V128-NEXT:    sub sp, sp, a0
 ; V128-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; V128-NEXT:    addi a0, sp, 16
-; V128-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; V128-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
 ; V128-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; V128-NEXT:    vslidedown.vi v24, v16, 16
 ; V128-NEXT:    li a0, 32
@@ -256,7 +256,7 @@ define <64 x float> @interleave_v32f32(<32 x float> %x, <32 x float> %y) {
 ; V128-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; V128-NEXT:    vmerge.vvm v24, v24, v8, v0
 ; V128-NEXT:    addi a0, sp, 16
-; V128-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; V128-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; V128-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; V128-NEXT:    vwaddu.vv v0, v8, v16
 ; V128-NEXT:    li a0, -1

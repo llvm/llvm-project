@@ -388,7 +388,8 @@ enum NodeType : unsigned {
   VMSET_VL,
 
   // Matches the semantics of vrgather.vx and vrgather.vv with extra operands
-  // for passthru and VL. Operands are (src, index, mask, passthru, vl).
+  // for passthru and VL, except that out of bound indices result in a poison
+  // result not zero.  Operands are (src, index, mask, passthru, vl).
   VRGATHER_VX_VL,
   VRGATHER_VV_VL,
   VRGATHEREI16_VV_VL,
@@ -403,7 +404,30 @@ enum NodeType : unsigned {
   //  vfirst.m with additional mask and VL operands.
   VFIRST_VL,
 
-  LAST_VL_VECTOR_OP = VFIRST_VL,
+  // XRivosVisni
+  // VINSERT matches the semantics of ri.vinsert.v.x. It carries a VL operand.
+  RI_VINSERT_VL,
+
+  // XRivosVizip
+  RI_VZIPEVEN_VL,
+  RI_VZIPODD_VL,
+  RI_VZIP2A_VL,
+  RI_VZIP2B_VL,
+  RI_VUNZIP2A_VL,
+  RI_VUNZIP2B_VL,
+
+  // zvqdot instructions with additional passthru, mask and VL operands
+  VQDOT_VL,
+  VQDOTU_VL,
+  VQDOTSU_VL,
+
+  LAST_VL_VECTOR_OP = VQDOTSU_VL,
+
+  // XRivosVisni
+  // VEXTRACT matches the semantics of ri.vextract.x.v. The result is always
+  // XLenVT sign extended from the vector element size.  VEXTRACT does *not*
+  // have a VL operand.
+  RI_VEXTRACT,
 
   // Read VLENB CSR
   READ_VLENB,
@@ -912,13 +936,11 @@ public:
   bool lowerInterleaveIntrinsicToStore(
       StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
 
-  bool lowerDeinterleavedIntrinsicToVPLoad(
-      VPIntrinsic *Load, Value *Mask,
-      ArrayRef<Value *> DeinterleaveRes) const override;
+  bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
+                              ArrayRef<Value *> DeinterleaveRes) const override;
 
-  bool lowerInterleavedIntrinsicToVPStore(
-      VPIntrinsic *Store, Value *Mask,
-      ArrayRef<Value *> InterleaveOps) const override;
+  bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
+                               ArrayRef<Value *> InterleaveOps) const override;
 
   bool supportKCFIBundles() const override { return true; }
 

@@ -444,7 +444,11 @@ Error RawMemProfReader::setupForSymbolization() {
       ProfiledTextSegmentEnd = Entry.End;
     }
   }
-  assert(NumMatched != 0 && "No matching executable segments in segment info.");
+  if (NumMatched == 0)
+    return make_error<StringError>(
+        Twine("No matching executable segments found in binary ") +
+            Binary.getBinary()->getFileName(),
+        inconvertibleErrorCode());
   assert((PreferredTextSegmentAddress == 0 ||
           (PreferredTextSegmentAddress == ProfiledTextSegmentStart)) &&
          "Expect text segment address to be 0 or equal to profiled text "
@@ -596,9 +600,12 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
   // Drop the entries where the callstack is empty.
   for (const uint64_t Id : EntriesToErase) {
     StackMap.erase(Id);
-    if (CallstackProfileData[Id].AccessHistogramSize > 0)
-      free((void *)CallstackProfileData[Id].AccessHistogram);
-    CallstackProfileData.erase(Id);
+    if (auto It = CallstackProfileData.find(Id);
+        It != CallstackProfileData.end()) {
+      if (It->second.AccessHistogramSize > 0)
+        free((void *)It->second.AccessHistogram);
+      CallstackProfileData.erase(It);
+    }
   }
 
   if (StackMap.empty())

@@ -14,14 +14,15 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 #define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
-#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
 #include <map>
@@ -488,9 +489,10 @@ public:
   public:
     AtomicInfo(IRBuilder<> *Builder, llvm::Type *Ty, uint64_t AtomicSizeInBits,
                uint64_t ValueSizeInBits, llvm::Align AtomicAlign,
-               llvm::Align ValueAlign, bool UseLibcall, llvm::Value *AtomicVar)
+               llvm::Align ValueAlign, bool UseLibcall,
+               IRBuilderBase::InsertPoint AllocaIP, llvm::Value *AtomicVar)
         : llvm::AtomicInfo(Builder, Ty, AtomicSizeInBits, ValueSizeInBits,
-                           AtomicAlign, ValueAlign, UseLibcall),
+                           AtomicAlign, ValueAlign, UseLibcall, AllocaIP),
           AtomicVar(AtomicVar) {}
 
     llvm::Value *getAtomicPointer() const override { return AtomicVar; }
@@ -683,6 +685,16 @@ public:
   InsertPointOrErrorTy createCancel(const LocationDescription &Loc,
                                     Value *IfCondition,
                                     omp::Directive CanceledDirective);
+
+  /// Generator for '#omp cancellation point'
+  ///
+  /// \param Loc The location where the directive was encountered.
+  /// \param CanceledDirective The kind of directive that is cancled.
+  ///
+  /// \returns The insertion point after the barrier.
+  InsertPointOrErrorTy
+  createCancellationPoint(const LocationDescription &Loc,
+                          omp::Directive CanceledDirective);
 
   /// Generator for '#omp parallel'
   ///
@@ -1093,7 +1105,8 @@ private:
   ///                   original and copied loop values and loop blocks.
   /// \param NamePrefix Optional name prefix for if.then if.else blocks.
   void createIfVersion(CanonicalLoopInfo *Loop, Value *IfCond,
-                       ValueToValueMapTy &VMap, const Twine &NamePrefix = "");
+                       ValueMap<const Value *, WeakTrackingVH> &VMap,
+                       const Twine &NamePrefix = "");
 
 public:
   /// Modifies the canonical loop to be a workshare loop.
@@ -1905,8 +1918,6 @@ public:
   ///                           nowait.
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
-  /// \param HasDistribute      Optional flag set if it is a
-  ///                           distribute reduction.
   /// \param GridValue          Optional GPU grid value.
   /// \param ReductionBufNum    Optional OpenMPCUDAReductionBufNumValue to be
   /// used for teams reduction.
@@ -1915,7 +1926,6 @@ public:
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
       bool IsNoWait = false, bool IsTeamsReduction = false,
-      bool HasDistribute = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
       Value *SrcLocInfo = nullptr);
@@ -1983,11 +1993,14 @@ public:
   /// \param IsNoWait           A flag set if the reduction is marked as nowait.
   /// \param IsByRef            A flag set if the reduction is using reference
   /// or direct value.
+  /// \param IsTeamsReduction   Optional flag set if it is a teams
+  ///                           reduction.
   InsertPointOrErrorTy createReductions(const LocationDescription &Loc,
                                         InsertPointTy AllocaIP,
                                         ArrayRef<ReductionInfo> ReductionInfos,
                                         ArrayRef<bool> IsByRef,
-                                        bool IsNoWait = false);
+                                        bool IsNoWait = false,
+                                        bool IsTeamsReduction = false);
 
   ///}
 
@@ -2271,6 +2284,8 @@ public:
     int32_t MinTeams = 1;
     SmallVector<int32_t, 3> MaxThreads = {-1};
     int32_t MinThreads = 1;
+    int32_t ReductionDataSize = 0;
+    int32_t ReductionBufferLength = 0;
   };
 
   /// Container to pass LLVM IR runtime values or constants related to the
@@ -3266,11 +3281,12 @@ public:
   /// 					    value
   /// \param AO			Atomic ordering of the generated atomic
   /// 					    instructions.
-  ///
+  /// \param AllocaIP           Insert point for allocas
+  //
   /// \return Insertion point after generated atomic read IR.
   InsertPointTy createAtomicRead(const LocationDescription &Loc,
                                  AtomicOpValue &X, AtomicOpValue &V,
-                                 AtomicOrdering AO);
+                                 AtomicOrdering AO, InsertPointTy AllocaIP);
 
   /// Emit atomic write for : X = Expr --- Only Scalar data types.
   ///
@@ -3279,11 +3295,12 @@ public:
   /// \param Expr		The value to store.
   /// \param AO			Atomic ordering of the generated atomic
   ///               instructions.
+  /// \param AllocaIP           Insert point for allocas
   ///
   /// \return Insertion point after generated atomic Write IR.
   InsertPointTy createAtomicWrite(const LocationDescription &Loc,
                                   AtomicOpValue &X, Value *Expr,
-                                  AtomicOrdering AO);
+                                  AtomicOrdering AO, InsertPointTy AllocaIP);
 
   /// Emit atomic update for constructs: X = X BinOp Expr ,or X = Expr BinOp X
   /// For complex Operations: X = UpdateOp(X) => CmpExch X, old_X, UpdateOp(X)

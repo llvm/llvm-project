@@ -48,11 +48,9 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
   if (!getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr))
     return nullptr;
 
-  const MCSymbolRefExpr *AUIPCSRE = AUIPCLoc.getSymA();
-  if (!AUIPCSRE)
+  const MCSymbol *AUIPCSymbol = AUIPCLoc.getAddSym();
+  if (!AUIPCSymbol)
     return nullptr;
-
-  const MCSymbol *AUIPCSymbol = &AUIPCSRE->getSymbol();
   const auto *DF = dyn_cast_or_null<MCDataFragment>(AUIPCSymbol->getFragment());
 
   if (!DF)
@@ -69,17 +67,20 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
   for (const MCFixup &F : DF->getFixups()) {
     if (F.getOffset() != Offset)
       continue;
-
-    switch ((unsigned)F.getKind()) {
-    default:
-      continue;
-    case RISCV::fixup_riscv_got_hi20:
-    case RISCV::fixup_riscv_tls_got_hi20:
-    case RISCV::fixup_riscv_tls_gd_hi20:
-    case RISCV::fixup_riscv_pcrel_hi20:
-    case RISCV::fixup_riscv_tlsdesc_hi20:
-      if (DFOut)
+    auto Kind = F.getTargetKind();
+    if (!mc::isRelocation(F.getKind())) {
+      if (Kind == RISCV::fixup_riscv_pcrel_hi20) {
         *DFOut = DF;
+        return &F;
+      }
+      break;
+    }
+    switch (Kind) {
+    case ELF::R_RISCV_GOT_HI20:
+    case ELF::R_RISCV_TLS_GOT_HI20:
+    case ELF::R_RISCV_TLS_GD_HI20:
+    case ELF::R_RISCV_TLSDESC_HI20:
+      *DFOut = DF;
       return &F;
     }
   }
@@ -94,7 +95,7 @@ bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   Res.setSpecifier(specifier);
 
   // Custom fixup types are not valid with symbol difference expressions.
-  return Res.getSymB() ? getSpecifier() == VK_None : true;
+  return !Res.getSubSym();
 }
 
 void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
@@ -118,14 +119,16 @@ RISCVMCExpr::getSpecifierForName(StringRef name) {
       .Case("tlsdesc_load_lo", VK_TLSDESC_LOAD_LO)
       .Case("tlsdesc_add_lo", VK_TLSDESC_ADD_LO)
       .Case("tlsdesc_call", VK_TLSDESC_CALL)
+      .Case("qc.abs20", VK_QC_ABS20)
+      // Used in data directives
+      .Case("pltpcrel", VK_PLTPCREL)
+      .Case("gotpcrel", VK_GOTPCREL)
       .Default(std::nullopt);
 }
 
 StringRef RISCVMCExpr::getSpecifierName(Specifier S) {
   switch (S) {
   case VK_None:
-  case VK_PLT:
-  case VK_GOTPCREL:
     llvm_unreachable("not used as %specifier()");
   case VK_LO:
     return "lo";
@@ -161,33 +164,12 @@ StringRef RISCVMCExpr::getSpecifierName(Specifier S) {
     return "call_plt";
   case VK_32_PCREL:
     return "32_pcrel";
+  case VK_GOTPCREL:
+    return "gotpcrel";
+  case VK_PLTPCREL:
+    return "pltpcrel";
+  case VK_QC_ABS20:
+    return "qc.abs20";
   }
   llvm_unreachable("Invalid ELF symbol kind");
-}
-
-bool RISCVMCExpr::evaluateAsConstant(int64_t &Res) const {
-  MCValue Value;
-  if (specifier != VK_LO && specifier != VK_HI)
-    return false;
-
-  if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr))
-    return false;
-
-  if (!Value.isAbsolute())
-    return false;
-
-  Res = evaluateAsInt64(Value.getConstant());
-  return true;
-}
-
-int64_t RISCVMCExpr::evaluateAsInt64(int64_t Value) const {
-  switch (specifier) {
-  default:
-    llvm_unreachable("Invalid kind");
-  case VK_LO:
-    return SignExtend64<12>(Value);
-  case VK_HI:
-    // Add 1 if bit 11 is 1, to compensate for low 12 bits being negative.
-    return ((Value + 0x800) >> 12) & 0xfffff;
-  }
 }

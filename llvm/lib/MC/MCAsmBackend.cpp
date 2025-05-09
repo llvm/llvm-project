@@ -87,7 +87,7 @@ std::optional<MCFixupKind> MCAsmBackend::getFixupKind(StringRef Name) const {
   return std::nullopt;
 }
 
-const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   static const MCFixupKindInfo Builtins[] = {
       {"FK_NONE", 0, 0, 0},
       {"FK_Data_1", 0, 8, 0},
@@ -105,15 +105,20 @@ const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"FK_SecRel_8", 0, 64, 0},
   };
 
-  assert((size_t)Kind <= std::size(Builtins) && "Unknown fixup kind");
-  return Builtins[Kind];
+  assert(size_t(Kind - FK_NONE) < std::size(Builtins) && "Unknown fixup kind");
+  return Builtins[Kind - FK_NONE];
 }
 
-bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+bool MCAsmBackend::shouldForceRelocation(const MCAssembler &, const MCFixup &,
+                                         const MCValue &Target,
+                                         const MCSubtargetInfo *) {
+  return Target.getSpecifier();
+}
+
+bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
                                                 const MCFixup &Fixup,
-                                                bool Resolved, uint64_t Value,
-                                                const MCRelaxableFragment *DF,
-                                                const bool WasForced) const {
+                                                const MCValue &, uint64_t Value,
+                                                bool Resolved) const {
   if (!Resolved)
     return true;
   return fixupNeedsRelaxation(Fixup, Value);

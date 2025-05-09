@@ -20,7 +20,7 @@ class TestDAP_repl_mode_detection(lldbdap_testcase.DAPTestCaseBase):
 
     def test_completions(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(program, stopOnEntry=True)
 
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
@@ -28,15 +28,12 @@ class TestDAP_repl_mode_detection(lldbdap_testcase.DAPTestCaseBase):
 
         self.set_source_breakpoints(source, [breakpoint1_line, breakpoint2_line])
 
-        self.assertEvaluate(
-            "`command regex user_command s/^$/platform/", r"\(lldb\) command regex"
-        )
-        self.assertEvaluate(
-            "`command alias alias_command platform", r"\(lldb\) command alias"
-        )
+        # The result of the commands should return the empty string.
+        self.assertEvaluate("`command regex user_command s/^$/platform/", r"^$")
+        self.assertEvaluate("`command alias alias_command platform", r"^$")
         self.assertEvaluate(
             "`command alias alias_command_with_arg platform select --sysroot %1 remote-linux",
-            r"\(lldb\) command alias",
+            r"^$",
         )
 
         self.continue_to_next_stop()

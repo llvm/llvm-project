@@ -73,8 +73,9 @@ void GlobalValue::copyAttributesFrom(const GlobalValue *Src) {
     removeSanitizerMetadata();
 }
 
-GlobalValue::GUID GlobalValue::getGUID(StringRef GlobalName) {
-  return MD5Hash(GlobalName);
+GlobalValue::GUID
+GlobalValue::getGUIDAssumingExternalLinkage(StringRef GlobalIdentifier) {
+  return MD5Hash(GlobalIdentifier);
 }
 
 void GlobalValue::removeFromParent() {
@@ -555,6 +556,15 @@ void GlobalVariable::setCodeModel(CodeModel::Model CM) {
                      (CodeModelData << CodeModelShift);
   setGlobalValueSubClassData(NewData);
   assert(getCodeModel() == CM && "Code model representation error!");
+}
+
+void GlobalVariable::clearCodeModel() {
+  unsigned CodeModelData = 0;
+  unsigned OldData = getGlobalValueSubClassData();
+  unsigned NewData = (OldData & ~(CodeModelMask << CodeModelShift)) |
+                     (CodeModelData << CodeModelShift);
+  setGlobalValueSubClassData(NewData);
+  assert(getCodeModel() == std::nullopt && "Code model representation error!");
 }
 
 //===----------------------------------------------------------------------===//

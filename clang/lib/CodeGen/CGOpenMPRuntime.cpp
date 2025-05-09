@@ -14,6 +14,7 @@
 #include "ABIInfoImpl.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "TargetInfo.h"
@@ -2614,8 +2615,7 @@ void CGOpenMPRuntime::emitDistributeStaticInit(
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
   llvm::FunctionCallee StaticInitFunction;
   bool isGPUDistribute =
-      CGM.getLangOpts().OpenMPIsTargetDevice &&
-      (CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX());
+      CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU();
   StaticInitFunction = OMPBuilder.createForStaticInitFunction(
       Values.IVSize, Values.IVSigned, isGPUDistribute);
 
@@ -2644,8 +2644,7 @@ void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
       getThreadID(CGF, Loc)};
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
   if (isOpenMPDistributeDirective(DKind) &&
-      CGM.getLangOpts().OpenMPIsTargetDevice &&
-      (CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()))
+      CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU())
     CGF.EmitRuntimeCall(
         OMPBuilder.getOrCreateRuntimeFunction(
             CGM.getModule(), OMPRTL___kmpc_distribute_static_fini),
@@ -3798,7 +3797,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
                                                     RValue::get(NumOfElements));
       KmpTaskAffinityInfoArrayTy = C.getVariableArrayType(
           KmpTaskAffinityInfoTy, OVE, ArraySizeModifier::Normal,
-          /*IndexTypeQuals=*/0, SourceRange(Loc, Loc));
+          /*IndexTypeQuals=*/0);
       // Properly emit variable-sized array.
       auto *PD = ImplicitParamDecl::Create(C, KmpTaskAffinityInfoArrayTy,
                                            ImplicitParamKind::Other);
@@ -4261,7 +4260,7 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
                                                   RValue::get(NumOfElements));
     KmpDependInfoArrayTy =
         C.getVariableArrayType(KmpDependInfoTy, OVE, ArraySizeModifier::Normal,
-                               /*IndexTypeQuals=*/0, SourceRange(Loc, Loc));
+                               /*IndexTypeQuals=*/0);
     // CGF.EmitVariablyModifiedType(KmpDependInfoArrayTy);
     // Properly emit variable-sized array.
     auto *PD = ImplicitParamDecl::Create(C, KmpDependInfoArrayTy,

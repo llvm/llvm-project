@@ -71,6 +71,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SELECT:            R = ScalarizeVecRes_SELECT(N); break;
   case ISD::SELECT_CC:         R = ScalarizeVecRes_SELECT_CC(N); break;
   case ISD::SETCC:             R = ScalarizeVecRes_SETCC(N); break;
+  case ISD::POISON:
   case ISD::UNDEF:             R = ScalarizeVecRes_UNDEF(N); break;
   case ISD::VECTOR_SHUFFLE:    R = ScalarizeVecRes_VECTOR_SHUFFLE(N); break;
   case ISD::IS_FPCLASS:        R = ScalarizeVecRes_IS_FPCLASS(N); break;
@@ -399,9 +400,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_MERGE_VALUES(SDNode *N,
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_BITCAST(SDNode *N) {
   SDValue Op = N->getOperand(0);
-  if (Op.getValueType().isVector()
-      && Op.getValueType().getVectorNumElements() == 1
-      && !isSimpleLegalType(Op.getValueType()))
+  if (getTypeAction(Op.getValueType()) == TargetLowering::TypeScalarizeVector)
     Op = GetScalarizedVector(Op);
   EVT NewVT = N->getValueType(0).getVectorElementType();
   return DAG.getNode(ISD::BITCAST, SDLoc(N),
@@ -1137,6 +1136,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_MERGE:
   case ISD::VP_SELECT:    SplitRes_Select(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
+  case ISD::POISON:
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
   case ISD::BITCAST:           SplitVecRes_BITCAST(N, Lo, Hi); break;
   case ISD::BUILD_VECTOR:      SplitVecRes_BUILD_VECTOR(N, Lo, Hi); break;
@@ -3220,8 +3220,30 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
 void DAGTypeLegalizer::SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N, SDValue &Lo,
                                                       SDValue &Hi) {
   SDLoc DL(N);
-  SDValue Expanded = TLI.expandPartialReduceMLA(N, DAG);
-  std::tie(Lo, Hi) = DAG.SplitVector(Expanded, DL);
+  SDValue Acc = N->getOperand(0);
+  SDValue Input1 = N->getOperand(1);
+  SDValue Input2 = N->getOperand(2);
+
+  SDValue AccLo, AccHi;
+  std::tie(AccLo, AccHi) = DAG.SplitVector(Acc, DL);
+  unsigned Opcode = N->getOpcode();
+
+  // If the input types don't need splitting, just accumulate into the
+  // low part of the accumulator.
+  if (getTypeAction(Input1.getValueType()) != TargetLowering::TypeSplitVector) {
+    Lo = DAG.getNode(Opcode, DL, AccLo.getValueType(), AccLo, Input1, Input2);
+    Hi = AccHi;
+    return;
+  }
+
+  SDValue Input1Lo, Input1Hi;
+  SDValue Input2Lo, Input2Hi;
+  std::tie(Input1Lo, Input1Hi) = DAG.SplitVector(Input1, DL);
+  std::tie(Input2Lo, Input2Hi) = DAG.SplitVector(Input2, DL);
+  EVT ResultVT = AccLo.getValueType();
+
+  Lo = DAG.getNode(Opcode, DL, ResultVT, AccLo, Input1Lo, Input2Lo);
+  Hi = DAG.getNode(Opcode, DL, ResultVT, AccHi, Input1Hi, Input2Hi);
 }
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
@@ -4501,7 +4523,20 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
-  return TLI.expandPartialReduceMLA(N, DAG);
+  SDValue Acc = N->getOperand(0);
+  assert(getTypeAction(Acc.getValueType()) != TargetLowering::TypeSplitVector &&
+         "Accumulator should already be a legal type, and shouldn't need "
+         "further splitting");
+
+  SDLoc DL(N);
+  SDValue Input1Lo, Input1Hi, Input2Lo, Input2Hi;
+  std::tie(Input1Lo, Input1Hi) = DAG.SplitVector(N->getOperand(1), DL);
+  std::tie(Input2Lo, Input2Hi) = DAG.SplitVector(N->getOperand(2), DL);
+  unsigned Opcode = N->getOpcode();
+  EVT ResultVT = Acc.getValueType();
+
+  SDValue Lo = DAG.getNode(Opcode, DL, ResultVT, Acc, Input1Lo, Input2Lo);
+  return DAG.getNode(Opcode, DL, ResultVT, Lo, Input1Hi, Input2Hi);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4592,6 +4627,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SELECT_CC:         Res = WidenVecRes_SELECT_CC(N); break;
   case ISD::VP_SETCC:
   case ISD::SETCC:             Res = WidenVecRes_SETCC(N); break;
+  case ISD::POISON:
   case ISD::UNDEF:             Res = WidenVecRes_UNDEF(N); break;
   case ISD::VECTOR_SHUFFLE:
     Res = WidenVecRes_VECTOR_SHUFFLE(cast<ShuffleVectorSDNode>(N));

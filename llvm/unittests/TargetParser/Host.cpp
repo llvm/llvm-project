@@ -73,6 +73,9 @@ Serial          : 0000000000000000
 
 TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd8f"),
+            "cortex-a320");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
                                               "CPU part        : 0xd03"),
             "cortex-a53");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
@@ -348,7 +351,7 @@ TEST(getLinuxHostCPUName, s390x) {
 
   // Model Id: 9175
   ExpectedCPUs.push_back("zEC12");
-  ExpectedCPUs.push_back("arch15");
+  ExpectedCPUs.push_back("z17");
 
   // Model Id: 3931
   ExpectedCPUs.push_back("zEC12");

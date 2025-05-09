@@ -103,8 +103,10 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   // ToDo: Remove this option after AMDGPU backend supports ISA-level linking.
   // Since AMDGPU backend currently does not support ISA-level linking, all
   // called functions need to be imported.
-  if (IsThinLTO)
+  if (IsThinLTO) {
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-force-import-all"));
+    LldArgs.push_back(Args.MakeArgString("-plugin-opt=-avail-extern-to-local"));
+  }
 
   for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
     LldArgs.push_back(
@@ -115,8 +117,6 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
     LldArgs.push_back("-save-temps");
 
   addLinkerCompressDebugSectionsOption(TC, Args, LldArgs);
-
-  amdgpu::addFullLTOPartitionOption(D, Args, LldArgs);
 
   // Given that host and device linking happen in separate processes, the device
   // linker doesn't always have the visibility as to which device symbols are
@@ -233,10 +233,11 @@ void HIPAMDToolChain::addClangTargetOptions(
   CC1Args.append({"-fcuda-is-device", "-fno-threadsafe-statics"});
 
   if (!DriverArgs.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                          false))
+                          false)) {
     CC1Args.append({"-mllvm", "-amdgpu-internalize-symbols"});
-  if (DriverArgs.hasArgNoClaim(options::OPT_hipstdpar))
-    CC1Args.append({"-mllvm", "-amdgpu-enable-hipstdpar"});
+    if (DriverArgs.hasArgNoClaim(options::OPT_hipstdpar))
+      CC1Args.append({"-mllvm", "-amdgpu-enable-hipstdpar"});
+  }
 
   StringRef MaxThreadsPerBlock =
       DriverArgs.getLastArgValue(options::OPT_gpu_max_threads_per_block_EQ);
@@ -293,6 +294,10 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ), BoundArch);
     checkTargetID(*DAL);
   }
+
+  if (!Args.hasArg(options::OPT_flto_partitions_EQ))
+    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_flto_partitions_EQ),
+                      "8");
 
   return DAL;
 }
@@ -389,9 +394,6 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     }
     StringRef GpuArch = getGPUArch(DriverArgs);
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
-
-    // Add the HIP specific bitcode library.
-    BCLibs.emplace_back(RocmInstallation->getHIPPath());
 
     // Add common device libraries like ocml etc.
     for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))

@@ -236,7 +236,7 @@ in. For example, to find a process that acted as a ``gdbserver`` instance::
 Remote Debugging
 ----------------
 
-If you want to debug part of LLDB running on a remote machine, the principals
+If you want to debug part of LLDB running on a remote machine, the principles
 are the same but we will have to start debug servers, then attach debuggers to
 those servers.
 

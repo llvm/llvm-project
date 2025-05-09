@@ -12,6 +12,7 @@
 
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
+#include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
@@ -42,8 +43,8 @@ using llvm::SMLoc;
 using llvm::StringMap;
 using llvm::StringRef;
 using mlir::tblgen::Attribute;
-using mlir::tblgen::EnumAttr;
-using mlir::tblgen::EnumAttrCase;
+using mlir::tblgen::EnumCase;
+using mlir::tblgen::EnumInfo;
 using mlir::tblgen::NamedAttribute;
 using mlir::tblgen::NamedTypeConstraint;
 using mlir::tblgen::NamespaceEmitter;
@@ -99,13 +100,11 @@ Availability::Availability(const llvm::Record *def) : def(def) {
 }
 
 StringRef Availability::getClass() const {
-  SmallVector<const Record *, 1> parentClass;
-  def->getDirectSuperClasses(parentClass);
-  if (parentClass.size() != 1) {
+  if (def->getDirectSuperClasses().size() != 1) {
     PrintFatalError(def->getLoc(),
                     "expected to only have one direct superclass");
   }
-  return parentClass.front()->getName();
+  return def->getDirectSuperClasses().front().first->getName();
 }
 
 StringRef Availability::getQueryFnRetType() const {

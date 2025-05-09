@@ -511,13 +511,9 @@ SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
   // Only allow non-integer offsets if the base region has no offset itself.
   // FIXME: This is a somewhat arbitrary restriction. We should be using
   // SValBuilder here to add the two offsets without checking their types.
-  if (!isa<nonloc::ConcreteInt>(Offset)) {
-    if (isa<ElementRegion>(BaseRegion->StripCasts()))
-      return UnknownVal();
-
+  if (!isa<nonloc::ConcreteInt>(Offset))
     return loc::MemRegionVal(MRMgr.getElementRegion(
         elementType, Offset, cast<SubRegion>(ElemR->getSuperRegion()), Ctx));
-  }
 
   const llvm::APSInt& OffI = Offset.castAs<nonloc::ConcreteInt>().getValue();
   assert(BaseIdxI.isSigned());

@@ -126,7 +126,7 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
   if (MO.isImm()) {
     switch (MI->getOpcode()) {
       default:
-        O << (int)MO.getImm();
+        markup(O, Markup::Immediate) << formatImm(int32_t(MO.getImm()));
         return;
 
       case SP::TICCri: // Fall through

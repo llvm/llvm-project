@@ -437,7 +437,9 @@
 // RUN:     /d1import_no_registry \
 // RUN:     /d1nodatetime \
 // RUN:     /d2FH4 \
+// RUN:     /d2TrimInlines \
 // RUN:     /docname \
+// RUN:     /dynamicdeopt \
 // RUN:     /experimental:external \
 // RUN:     /experimental:module \
 // RUN:     /experimental:preprocessor \
@@ -746,6 +748,7 @@
 // RUN:     -fwrapv-pointer \
 // RUN:     -fno-wrapv-pointer \
 // RUN:     --version \
+// RUN:     --warning-suppression-mappings=foo \
 // RUN:     -Werror /Zs -- %s 2>&1
 
 // Accept clang options under the /clang: flag.

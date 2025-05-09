@@ -3821,19 +3821,21 @@ HexagonTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
   return TargetLowering::findRepresentativeClass(TRI, VT);
 }
 
-bool HexagonTargetLowering::shouldReduceLoadWidth(SDNode *Load,
-      ISD::LoadExtType ExtTy, EVT NewVT) const {
+bool HexagonTargetLowering::shouldReduceLoadWidth(
+    SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+    std::optional<unsigned> ByteOffset) const {
   // TODO: This may be worth removing. Check regression tests for diffs.
-  if (!TargetLoweringBase::shouldReduceLoadWidth(Load, ExtTy, NewVT))
+  if (!TargetLoweringBase::shouldReduceLoadWidth(Load, ExtTy, NewVT,
+                                                 ByteOffset))
     return false;
 
   auto *L = cast<LoadSDNode>(Load);
-  std::pair<SDValue,int> BO = getBaseAndOffset(L->getBasePtr());
+  std::pair<SDValue, int> BO = getBaseAndOffset(L->getBasePtr());
   // Small-data object, do not shrink.
   if (BO.first.getOpcode() == HexagonISD::CONST32_GP)
     return false;
   if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(BO.first)) {
-    auto &HTM = static_cast<const HexagonTargetMachine&>(getTargetMachine());
+    auto &HTM = static_cast<const HexagonTargetMachine &>(getTargetMachine());
     const auto *GO = dyn_cast_or_null<const GlobalObject>(GA->getGlobal());
     return !GO || !HTM.getObjFileLowering()->isGlobalInSmallSection(GO, HTM);
   }
@@ -3854,7 +3856,7 @@ Value *HexagonTargetLowering::emitLoadLinked(IRBuilderBase &Builder,
                                    : Intrinsic::hexagon_L4_loadd_locked;
 
   Value *Call =
-      Builder.CreateIntrinsic(IntID, {}, Addr, /*FMFSource=*/nullptr, "larx");
+      Builder.CreateIntrinsic(IntID, Addr, /*FMFSource=*/nullptr, "larx");
 
   return Builder.CreateBitCast(Call, ValueTy);
 }
@@ -3876,7 +3878,7 @@ Value *HexagonTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
 
   Val = Builder.CreateBitCast(Val, CastTy);
 
-  Value *Call = Builder.CreateIntrinsic(IntID, {}, {Addr, Val},
+  Value *Call = Builder.CreateIntrinsic(IntID, {Addr, Val},
                                         /*FMFSource=*/nullptr, "stcx");
   Value *Cmp = Builder.CreateICmpEQ(Call, Builder.getInt32(0), "");
   Value *Ext = Builder.CreateZExt(Cmp, Type::getInt32Ty(M->getContext()));

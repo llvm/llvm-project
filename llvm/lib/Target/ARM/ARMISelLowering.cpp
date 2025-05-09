@@ -1221,7 +1221,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ROTR, VT, Expand);
   }
   setOperationAction(ISD::CTTZ,  MVT::i32, Custom);
+  // TODO: These two should be set to LibCall, but this currently breaks
+  //   the Linux kernel build. See #101786.
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
+  setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   if (!Subtarget->hasV5TOps() || Subtarget->isThumb1Only()) {
     setOperationAction(ISD::CTLZ, MVT::i32, Expand);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, LibCall);
@@ -10621,7 +10624,6 @@ SDValue ARMTargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
   EVT VT = getPointerTy(DAG.getDataLayout());
-  SDLoc DL(Op);
   int FI = MFI.CreateFixedObject(4, 0, false);
   return DAG.getFrameIndex(FI, VT);
 }
@@ -12450,7 +12452,6 @@ static void attachMEMCPYScratchRegs(const ARMSubtarget *Subtarget,
                                     MachineInstr &MI, const SDNode *Node) {
   bool isThumb1 = Subtarget->isThumb1Only();
 
-  DebugLoc DL = MI.getDebugLoc();
   MachineFunction *MF = MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   MachineInstrBuilder MIB(*MF, MI);
@@ -19696,7 +19697,7 @@ bool ARMTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   if (Subtarget->isThumb2())
     return ARM_AM::getT2SOImmVal(AbsImm) != -1;
   // Thumb1 only has 8-bit unsigned immediate.
-  return AbsImm >= 0 && AbsImm <= 255;
+  return AbsImm <= 255;
 }
 
 // Return false to prevent folding
@@ -21212,7 +21213,7 @@ Instruction *ARMTargetLowering::makeDMB(IRBuilderBase &Builder,
       Value* args[6] = {Builder.getInt32(15), Builder.getInt32(0),
                         Builder.getInt32(0), Builder.getInt32(7),
                         Builder.getInt32(10), Builder.getInt32(5)};
-      return Builder.CreateIntrinsic(Intrinsic::arm_mcr, {}, args);
+      return Builder.CreateIntrinsic(Intrinsic::arm_mcr, args);
     } else {
       // Instead of using barriers, atomic accesses on these subtargets use
       // libcalls.
@@ -21222,7 +21223,7 @@ Instruction *ARMTargetLowering::makeDMB(IRBuilderBase &Builder,
     // Only a full system barrier exists in the M-class architectures.
     Domain = Subtarget->isMClass() ? ARM_MB::SY : Domain;
     Constant *CDomain = Builder.getInt32(Domain);
-    return Builder.CreateIntrinsic(Intrinsic::arm_dmb, {}, CDomain);
+    return Builder.CreateIntrinsic(Intrinsic::arm_dmb, CDomain);
   }
 }
 
@@ -21477,7 +21478,7 @@ Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
         IsAcquire ? Intrinsic::arm_ldaexd : Intrinsic::arm_ldrexd;
 
     Value *LoHi =
-        Builder.CreateIntrinsic(Int, {}, Addr, /*FMFSource=*/nullptr, "lohi");
+        Builder.CreateIntrinsic(Int, Addr, /*FMFSource=*/nullptr, "lohi");
 
     Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
     Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
@@ -21502,7 +21503,7 @@ void ARMTargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
     IRBuilderBase &Builder) const {
   if (!Subtarget->hasV7Ops())
     return;
-  Builder.CreateIntrinsic(Intrinsic::arm_clrex, {}, {});
+  Builder.CreateIntrinsic(Intrinsic::arm_clrex, {});
 }
 
 Value *ARMTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
@@ -21523,7 +21524,7 @@ Value *ARMTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
     Value *Hi = Builder.CreateTrunc(Builder.CreateLShr(Val, 32), Int32Ty, "hi");
     if (!Subtarget->isLittle())
       std::swap(Lo, Hi);
-    return Builder.CreateIntrinsic(Int, {}, {Lo, Hi, Addr});
+    return Builder.CreateIntrinsic(Int, {Lo, Hi, Addr});
   }
 
   Intrinsic::ID Int = IsRelease ? Intrinsic::arm_stlex : Intrinsic::arm_strex;

@@ -6,5 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_BODY <clc/math/lgamma_r.inc>
+#define __CLC_FUNCTION lgamma_r
+#define __CLC_BODY <clc/math/unary_decl_with_int_ptr.inc>
+
 #include <clc/math/gentype.inc>
+
+#undef __CLC_FUNCTION

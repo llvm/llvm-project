@@ -57,6 +57,9 @@ public:
     return std::move(Vector);
   }
 
+  /// Returns an array reference of the underlying vector.
+  ArrayRef<value_type> getArrayRef() const { return Vector; }
+
   size_type size() const { return Vector.size(); }
 
   /// Grow the MapVector so that it can contain at least \p NumEntries items

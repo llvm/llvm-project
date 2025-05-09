@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginManager.h"
+#include "OffloadPolicy.h"
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
 #include "device.h"
@@ -30,6 +31,11 @@ PluginManager *PM = nullptr;
 
 void PluginManager::init() {
   TIMESCOPE();
+  if (OffloadPolicy::isOffloadDisabled()) {
+    DP("Offload is disabled. Skipping plugin initialization\n");
+    return;
+  }
+
   DP("Loading RTLs...\n");
 
   // Attempt to create an instance of each supported plugin.
@@ -196,9 +202,10 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
     PM->addDeviceImage(*Desc, Desc->DeviceImages[i]);
 
   // Register the images with the RTLs that understand them, if any.
-  for (DeviceImageTy &DI : PM->deviceImages()) {
+  llvm::DenseMap<GenericPluginTy *, llvm::DenseSet<int32_t>> UsedDevices;
+  for (int32_t i = 0; i < Desc->NumDeviceImages; ++i) {
     // Obtain the image and information that was previously extracted.
-    __tgt_device_image *Img = &DI.getExecutableImage();
+    __tgt_device_image *Img = &Desc->DeviceImages[i];
 
     GenericPluginTy *FoundRTL = nullptr;
 
@@ -217,6 +224,17 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
       }
 
       for (int32_t DeviceId = 0; DeviceId < R.number_of_devices(); ++DeviceId) {
+        // We only want a single matching image to be registered for each binary
+        // descriptor. This prevents multiple of the same image from being
+        // registered for the same device in the case that they are mutually
+        // compatible, such as sm_80 and sm_89.
+        if (UsedDevices[&R].contains(DeviceId)) {
+          DP("Image " DPxMOD
+             " is a duplicate, not loaded on RTL %s device %d!\n",
+             DPxPTR(Img->ImageStart), R.getName(), DeviceId);
+          continue;
+        }
+
         if (!R.is_device_compatible(DeviceId, Img))
           continue;
 
@@ -256,6 +274,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
         TT.TargetsImages[UserId] = Img;
         TT.TargetsTable[UserId] = nullptr;
 
+        UsedDevices[&R].insert(DeviceId);
         PM->UsedImages.insert(Img);
         FoundRTL = &R;
 

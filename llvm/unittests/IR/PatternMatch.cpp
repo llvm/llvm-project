@@ -2038,27 +2038,27 @@ TEST_F(PatternMatchTest, IntrinsicMatcher) {
 namespace {
 
 struct is_unsigned_zero_pred {
-  bool isValue(const APInt &C) { return C.isZero(); }
+  bool isValue(const APInt &C) const { return C.isZero(); }
 };
 
 struct is_float_zero_pred {
-  bool isValue(const APFloat &C) { return C.isZero(); }
+  bool isValue(const APFloat &C) const { return C.isZero(); }
 };
 
 template <typename T> struct always_true_pred {
-  bool isValue(const T &) { return true; }
+  bool isValue(const T &) const { return true; }
 };
 
 template <typename T> struct always_false_pred {
-  bool isValue(const T &) { return false; }
+  bool isValue(const T &) const { return false; }
 };
 
 struct is_unsigned_max_pred {
-  bool isValue(const APInt &C) { return C.isMaxValue(); }
+  bool isValue(const APInt &C) const { return C.isMaxValue(); }
 };
 
 struct is_float_nan_pred {
-  bool isValue(const APFloat &C) { return C.isNaN(); }
+  bool isValue(const APFloat &C) const { return C.isNaN(); }
 };
 
 } // namespace

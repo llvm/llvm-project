@@ -35,6 +35,11 @@ length_vec_impl(vector<T, N> X) {
 #endif
 }
 
+template <typename T>
+constexpr vector<T, 4> dst_impl(vector<T, 4> Src0, vector<T, 4> Src1) {
+  return {1, Src0[1] * Src1[1], Src0[2], Src1[3]};
+}
+
 template <typename T> constexpr T distance_impl(T X, T Y) {
   return length_impl(X - Y);
 }
@@ -43,6 +48,14 @@ template <typename T, int N>
 constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
 distance_vec_impl(vector<T, N> X, vector<T, N> Y) {
   return length_vec_impl(X - Y);
+}
+
+constexpr float dot2add_impl(half2 a, half2 b, float c) {
+#if (__has_builtin(__builtin_dx_dot2add))
+  return __builtin_dx_dot2add(a, b, c);
+#else
+  return dot(a, b) + c;
+#endif
 }
 
 template <typename T> constexpr T reflect_impl(T I, T N) {
@@ -79,6 +92,50 @@ constexpr vector<T, N> fmod_vec_impl(vector<T, N> X, vector<T, N> Y) {
   vector<T, N> frc = frac(abs(div));
   return select<T>(ge, frc, -frc) * Y;
 #endif
+}
+
+template <typename T> constexpr T smoothstep_impl(T Min, T Max, T X) {
+#if (__has_builtin(__builtin_spirv_smoothstep))
+  return __builtin_spirv_smoothstep(Min, Max, X);
+#else
+  T S = saturate((X - Min) / (Max - Min));
+  return (3 - 2 * S) * S * S;
+#endif
+}
+
+template <typename T, int N>
+constexpr vector<T, N> smoothstep_vec_impl(vector<T, N> Min, vector<T, N> Max,
+                                           vector<T, N> X) {
+#if (__has_builtin(__builtin_spirv_smoothstep))
+  return __builtin_spirv_smoothstep(Min, Max, X);
+#else
+  vector<T, N> S = saturate((X - Min) / (Max - Min));
+  return (3 - 2 * S) * S * S;
+#endif
+}
+
+template <typename T> constexpr vector<T, 4> lit_impl(T NDotL, T NDotH, T M) {
+  bool DiffuseCond = NDotL < 0;
+  T Diffuse = select<T>(DiffuseCond, 0, NDotL);
+  vector<T, 4> Result = {1, Diffuse, 0, 1};
+  // clang-format off
+  bool SpecularCond = or(DiffuseCond, (NDotH < 0));
+  // clang-format on
+  T SpecularExp = exp(log(NDotH) * M);
+  Result[2] = select<T>(SpecularCond, 0, SpecularExp);
+  return Result;
+}
+
+template <typename T> constexpr T faceforward_impl(T N, T I, T Ng) {
+#if (__has_builtin(__builtin_spirv_faceforward))
+  return __builtin_spirv_faceforward(N, I, Ng);
+#else
+  return select(dot(I, Ng) < 0, N, -N);
+#endif
+}
+
+template <typename T> constexpr T ldexp_impl(T X, T Exp) {
+  return exp2(Exp) * X;
 }
 
 } // namespace __detail

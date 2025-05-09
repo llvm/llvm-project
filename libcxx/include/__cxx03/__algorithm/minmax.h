@@ -15,7 +15,6 @@
 #include <__cxx03/__functional/identity.h>
 #include <__cxx03/__type_traits/is_callable.h>
 #include <__cxx03/__utility/pair.h>
-#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -34,25 +33,6 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pai
 minmax(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b) {
   return std::minmax(__a, __b, __less<>());
 }
-
-#ifndef _LIBCPP_CXX03_LANG
-
-template <class _Tp, class _Compare>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Tp, _Tp>
-minmax(initializer_list<_Tp> __t, _Compare __comp) {
-  static_assert(__is_callable<_Compare, _Tp, _Tp>::value, "The comparator has to be callable");
-  __identity __proj;
-  auto __ret = std::__minmax_element_impl(__t.begin(), __t.end(), __comp, __proj);
-  return pair<_Tp, _Tp>(*__ret.first, *__ret.second);
-}
-
-template <class _Tp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Tp, _Tp>
-minmax(initializer_list<_Tp> __t) {
-  return std::minmax(__t, __less<>());
-}
-
-#endif // _LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD
 

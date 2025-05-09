@@ -1,0 +1,17 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module  {
+  cir.func @foo() {
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<2> : !s32i
+    %3 = cir.const #cir.int<3> : !s32i
+    %4 = cir.const #cir.int<4> : !s64i
+
+    // expected-error @below {{operand type '!cir.int<s, 64>' doesn't match vector element type '!cir.int<s, 32>'}}
+    %5 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s64i) : !cir.vector<4 x !s32i>
+    cir.return
+  }
+}

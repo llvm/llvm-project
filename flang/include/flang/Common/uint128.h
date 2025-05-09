@@ -278,9 +278,11 @@ using SignedInt128 = Int128<true>;
 
 #if !AVOID_NATIVE_UINT128_T && (defined __GNUC__ || defined __clang__) && \
     defined __SIZEOF_INT128__
+#define USING_NATIVE_INT128_T 1
 using uint128_t = __uint128_t;
 using int128_t = __int128_t;
 #else
+#undef USING_NATIVE_INT128_T
 using uint128_t = UnsignedInt128;
 using int128_t = SignedInt128;
 #endif

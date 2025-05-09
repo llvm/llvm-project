@@ -784,13 +784,17 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
     return InstDesc(Kind == RecurKind::FMin, I);
   if (match(I, m_OrdOrUnordFMax(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMax, I);
-  if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
+  if (match(I, m_FMinNum(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);
-  if (match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value())))
+  if (match(I, m_FMaxNum(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMax, I);
-  if (match(I, m_Intrinsic<Intrinsic::minimum>(m_Value(), m_Value())))
+  if (match(I, m_FMinimumNum(m_Value(), m_Value())))
+    return InstDesc(Kind == RecurKind::FMinimumNum, I);
+  if (match(I, m_FMaximumNum(m_Value(), m_Value())))
+    return InstDesc(Kind == RecurKind::FMaximumNum, I);
+  if (match(I, m_FMinimum(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMinimum, I);
-  if (match(I, m_Intrinsic<Intrinsic::maximum>(m_Value(), m_Value())))
+  if (match(I, m_FMaximum(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMaximum, I);
 
   return InstDesc(false, I);
@@ -892,10 +896,14 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
        return true;
      if (isa<FPMathOperator>(I) && I->hasNoNaNs() && I->hasNoSignedZeros())
        return true;
-     // minimum and maximum intrinsics do not require nsz and nnan flags since
-     // NaN and signed zeroes are propagated in the intrinsic implementation.
+     // minimum/minnum and maximum/maxnum intrinsics do not require nsz and nnan
+     // flags since NaN and signed zeroes are propagated in the intrinsic
+     // implementation.
      return match(I, m_Intrinsic<Intrinsic::minimum>(m_Value(), m_Value())) ||
-            match(I, m_Intrinsic<Intrinsic::maximum>(m_Value(), m_Value()));
+            match(I, m_Intrinsic<Intrinsic::maximum>(m_Value(), m_Value())) ||
+            match(I,
+                  m_Intrinsic<Intrinsic::minimumnum>(m_Value(), m_Value())) ||
+            match(I, m_Intrinsic<Intrinsic::maximumnum>(m_Value(), m_Value()));
     };
     if (isIntMinMaxRecurrenceKind(Kind) ||
         (HasRequiredFMF() && isFPMinMaxRecurrenceKind(Kind)))
@@ -1035,6 +1043,19 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
     LLVM_DEBUG(dbgs() << "Found a float MINIMUM reduction PHI." << *Phi << "\n");
     return true;
   }
+  if (AddReductionVar(Phi, RecurKind::FMaximumNum, TheLoop, FMF, RedDes, DB, AC,
+                      DT, SE)) {
+    LLVM_DEBUG(dbgs() << "Found a float MAXIMUMNUM reduction PHI." << *Phi
+                      << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::FMinimumNum, TheLoop, FMF, RedDes, DB, AC,
+                      DT, SE)) {
+    LLVM_DEBUG(dbgs() << "Found a float MINIMUMNUM reduction PHI." << *Phi
+                      << "\n");
+    return true;
+  }
+
   // Not a reduction of known type.
   return false;
 }
@@ -1155,6 +1176,8 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMin:
   case RecurKind::FMaximum:
   case RecurKind::FMinimum:
+  case RecurKind::FMaximumNum:
+  case RecurKind::FMinimumNum:
   case RecurKind::FAnyOf:
   case RecurKind::FFindLastIV:
     return Instruction::FCmp;
@@ -1166,7 +1189,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
 SmallVector<Instruction *, 4>
 RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
   SmallVector<Instruction *, 4> ReductionOperations;
-  unsigned RedOp = getOpcode();
   const bool IsMinMax = isMinMaxRecurrenceKind(Kind);
 
   // Search down from the Phi to the LoopExitInstr, looking for instructions
@@ -1214,7 +1236,7 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     if (isFMulAddIntrinsic(Cur))
       return true;
 
-    return Cur->getOpcode() == RedOp;
+    return Cur->getOpcode() == getOpcode();
   };
 
   // Attempt to look through Phis which are part of the reduction chain
@@ -1296,11 +1318,8 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
             InductionBinOp->getOpcode() == Instruction::FSub))) &&
          "Binary opcode should be specified for FP induction");
 
-  if (Casts) {
-    for (auto &Inst : *Casts) {
-      RedundantCasts.push_back(Inst);
-    }
-  }
+  if (Casts)
+    llvm::append_range(RedundantCasts, *Casts);
 }
 
 ConstantInt *InductionDescriptor::getConstIntStepValue() const {

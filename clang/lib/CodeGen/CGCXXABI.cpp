@@ -60,10 +60,9 @@ CGCallee CGCXXABI::EmitLoadOfMemberFunctionPointer(
   return CGCallee::forDirect(FnPtr, FPT);
 }
 
-llvm::Value *
-CGCXXABI::EmitMemberDataPointerAddress(CodeGenFunction &CGF, const Expr *E,
-                                       Address Base, llvm::Value *MemPtr,
-                                       const MemberPointerType *MPT) {
+llvm::Value *CGCXXABI::EmitMemberDataPointerAddress(
+    CodeGenFunction &CGF, const Expr *E, Address Base, llvm::Value *MemPtr,
+    const MemberPointerType *MPT, bool IsInBounds) {
   ErrorUnsupportedABI(CGF, "loads of member pointers");
   llvm::Type *Ty =
       llvm::PointerType::get(CGF.getLLVMContext(), Base.getAddressSpace());

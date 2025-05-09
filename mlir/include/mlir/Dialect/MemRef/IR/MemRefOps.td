@@ -1331,7 +1331,79 @@ def MemRef_ReinterpretCastOp
   let description = [{
     Modify offset, sizes and strides of an unranked/ranked memref.
 
-    Example:
+    Example 1:
+
+    Consecutive `reinterpret_cast` operations on memref's with static
+    dimensions.
+
+    We distinguish between *underlying memory* — the sequence of elements as
+    they appear in the contiguous memory of the memref — and the
+    *strided memref*, which refers to the underlying memory interpreted
+    according to specified offsets, sizes, and strides.
+
+    ```mlir
+    %result1 = memref.reinterpret_cast %arg0 to 
+      offset: [9],
+      sizes: [4, 4],
+      strides: [16, 2]
+    : memref<8x8xf32, strided<[8, 1], offset: 0>> to
+      memref<4x4xf32, strided<[16, 2], offset: 9>>
+
+    %result2 = memref.reinterpret_cast %result1 to 
+      offset: [0],
+      sizes: [2, 2],
+      strides: [4, 2]
+    : memref<4x4xf32, strided<[16, 2], offset: 9>> to
+      memref<2x2xf32, strided<[4, 2], offset: 0>>
+    ```
+
+    The underlying memory of `%arg0` consists of a linear sequence of integers
+    from 1 to 64. Its memref has the following 8x8 elements:
+
+    ```mlir
+    [[1,  2,  3,  4,  5,  6,  7,  8],
+    [9,  10, 11, 12, 13, 14, 15, 16],
+    [17, 18, 19, 20, 21, 22, 23, 24],
+    [25, 26, 27, 28, 29, 30, 31, 32],
+    [33, 34, 35, 36, 37, 38, 39, 40],
+    [41, 42, 43, 44, 45, 46, 47, 48],
+    [49, 50, 51, 52, 53, 54, 55, 56],
+    [57, 58, 59, 60, 61, 62, 63, 64]]
+    ```
+
+    Following the first `reinterpret_cast`, the strided memref elements
+    of `%result1` are:
+
+    ```mlir
+    [[10, 12, 14, 16],
+    [26, 28, 30, 32],
+    [42, 44, 46, 48],
+    [58, 60, 62, 64]]
+    ```
+
+    Note: The offset and strides are relative to the underlying memory of
+    `%arg0`.
+
+    The second `reinterpret_cast` results in the following strided memref
+    for `%result2`:
+
+    ```mlir
+    [[1, 3],
+    [5, 7]]
+    ```
+
+    Notice that it does not matter if you use %result1 or %arg0 as a source
+    for the second `reinterpret_cast` operation. Only the underlying memory
+    pointers will be reused.
+
+    The offset and stride are relative to the base underlying memory of the
+    memref, starting at 1, not at 10 as seen in the output of `%result1`.
+    This behavior contrasts with the `subview` operator, where values are
+    relative to the strided memref (refer to `subview` examples).
+    Consequently, the second `reinterpret_cast` behaves as if `%arg0` were
+    passed directly as its argument.
+
+    Example 2:
     ```mlir
     memref.reinterpret_cast %ranked to
       offset: [0],
@@ -1372,7 +1444,7 @@ def MemRef_ReinterpretCastOp
                        DenseI64ArrayAttr:$static_offsets,
                        DenseI64ArrayAttr:$static_sizes,
                        DenseI64ArrayAttr:$static_strides);
-  let results = (outs AnyMemRef:$result);
+  let results = (outs AnyStridedMemRef:$result);
 
   let assemblyFormat = [{
     $source `to` `offset` `` `:`
@@ -1859,11 +1931,11 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
   ]> {
   let summary = "memref subview operation";
   let description = [{
-    The "subview" operation converts a memref type to another memref type
-    which represents a reduced-size view of the original memref as specified by
-    the operation's offsets, sizes and strides arguments.
+    The `subview` operation converts a memref type to a memref type which
+    represents a reduced-size view of the original memref as specified by the
+    operation's offsets, sizes and strides arguments.
 
-    The SubView operation supports the following arguments:
+    The `subview` operation supports the following arguments:
 
     * source: the "base" memref on which to create a "view" memref.
     * offsets: memref-rank number of offsets into the "base" memref at which to
@@ -1876,117 +1948,129 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     The representation based on offsets, sizes and strides support a
     partially-static specification via attributes specified through the
     `static_offsets`, `static_sizes` and `static_strides` arguments. A special
-    sentinel value ShapedType::kDynamic encodes that the corresponding entry has
-    a dynamic value.
+    sentinel value `ShapedType::kDynamic` encodes that the corresponding entry
+    has a dynamic value.
 
-    A subview operation may additionally reduce the rank of the resulting view
-    by removing dimensions that are statically known to be of size 1.
+    A `subview` operation may additionally reduce the rank of the resulting
+    view by removing dimensions that are statically known to be of size 1.
+
+    In the absence of rank reductions, the resulting memref type is computed
+    as follows:
+    ```
+    result_sizes[i] = size_operands[i]
+    result_strides[i] = src_strides[i] * stride_operands[i]
+    result_offset = src_offset + dot_product(offset_operands, src_strides)
+    ```
+
+    The offset, size and stride operands must be in-bounds with respect to the
+    source memref. When possible, the static operation verifier will detect
+    out-of-bounds subviews. Subviews that cannot be confirmed to be in-bounds
+    or out-of-bounds based on compile-time information are valid. However,
+    performing an out-of-bounds subview at runtime is undefined behavior.
 
     Example 1:
 
-    ```mlir
-    %0 = memref.alloc() : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>>
+    Consecutive `subview` operations on memref's with static dimensions.
 
-    // Create a sub-view of "base" memref '%0' with offset arguments '%c0',
-    // dynamic sizes for each dimension, and stride arguments '%c1'.
-    %1 = memref.subview %0[%c0, %c0][%size0, %size1][%c1, %c1]
-      : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>> to
-        memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + d1 + s0)>>
+    We distinguish between *underlying memory* — the sequence of elements as
+    they appear in the contiguous memory of the memref — and the
+    *strided memref*, which refers to the underlying memory interpreted
+    according to specified offsets, sizes, and strides.
+
+    ```mlir
+    %result1 = memref.subview %arg0[1, 1][4, 4][2, 2]
+    : memref<8x8xf32, strided<[8, 1], offset: 0>> to
+      memref<4x4xf32, strided<[16, 2], offset: 9>>
+
+    %result2 = memref.subview %result1[1, 1][2, 2][2, 2]
+    : memref<4x4xf32, strided<[16, 2], offset: 9>> to
+      memref<2x2xf32, strided<[32, 4], offset: 27>>
     ```
 
+    The underlying memory of `%arg0` consists of a linear sequence of integers
+    from 1 to 64. Its memref has the following 8x8 elements:
+
+    ```mlir
+    [[1,  2,  3,  4,  5,  6,  7,  8],
+    [9,  10, 11, 12, 13, 14, 15, 16],
+    [17, 18, 19, 20, 21, 22, 23, 24],
+    [25, 26, 27, 28, 29, 30, 31, 32],
+    [33, 34, 35, 36, 37, 38, 39, 40],
+    [41, 42, 43, 44, 45, 46, 47, 48],
+    [49, 50, 51, 52, 53, 54, 55, 56],
+    [57, 58, 59, 60, 61, 62, 63, 64]]
+    ```
+
+    Following the first `subview`, the strided memref elements of `%result1`
+    are:
+
+    ```mlir
+    [[10, 12, 14, 16],
+    [26, 28, 30, 32],
+    [42, 44, 46, 48],
+    [58, 60, 62, 64]]
+    ```
+
+    Note: The offset and strides are relative to the strided memref of `%arg0`
+    (compare to the corresponding `reinterpret_cast` example).
+
+    The second `subview` results in the following strided memref for
+    `%result2`:
+
+    ```mlir
+    [[28, 32],
+    [60, 64]]
+    ```
+
+    Unlike the `reinterpret_cast`, the values are relative to the strided
+    memref of the input (`%result1` in this case) and not its
+    underlying memory.
+    
     Example 2:
 
     ```mlir
-    %0 = memref.alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>
-
-    // Create a sub-view of "base" memref '%0' with dynamic offsets, sizes,
+    // Subview of static memref with strided layout at static offsets, sizes
     // and strides.
-    // Note that dynamic offsets are represented by the linearized dynamic
-    // offset symbol 's0' in the subview memref layout map, and that the
-    // dynamic strides operands, after being applied to the base memref
-    // strides in each dimension, are represented in the view memref layout
-    // map as symbols 's1', 's2' and 's3'.
-    %1 = memref.subview %0[%i, %j, %k][%size0, %size1, %size2][%x, %y, %z]
-      : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>> to
-        memref<?x?x?xf32,
-          affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + d1 * s2 + d2 * s3 + s0)>>
+    %1 = memref.subview %0[4, 2][8, 2][3, 2]
+        : memref<64x4xf32, strided<[7, 9], offset: 91>> to
+          memref<8x2xf32, strided<[21, 18], offset: 137>>
     ```
 
     Example 3:
 
     ```mlir
-    %0 = memref.alloc() : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>
-
-    // Subview with constant offsets, sizes and strides.
-    %1 = memref.subview %0[0, 2, 0][4, 4, 4][1, 1, 1]
-      : memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>> to
-        memref<4x4x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2 + 8)>>
+    // Subview of static memref with identity layout at dynamic offsets, sizes
+    // and strides.
+    %1 = memref.subview %0[%off0, %off1][%sz0, %sz1][%str0, %str1]
+        : memref<64x4xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
     ```
 
     Example 4:
 
     ```mlir
-    %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
-
-    // Subview with constant size, but dynamic offsets and
-    // strides. The resulting memref has a static shape, but if the
-    // base memref has an affine map to describe the layout, the result
-    // memref also uses an affine map to describe the layout. The
-    // strides of the result memref is computed as follows:
-    //
-    // Let #map1 represents the layout of the base memref, and #map2
-    // represents the layout of the result memref. A #mapsubview can be
-    // constructed to map an index from the result memref to the base
-    // memref (note that the description below uses more convenient
-    // naming for symbols, while in affine maps, symbols are
-    // represented as unsigned numbers that identify that symbol in the
-    // given affine map.
-    //
-    // #mapsubview = (d0, d1)[o0, o1, t0, t1] -> (d0 * t0 + o0, d1 * t1 + o1)
-    //
-    // where, o0, o1, ... are offsets, and t0, t1, ... are strides. Then,
-    //
-    // #map2 = #map1.compose(#mapsubview)
-    //
-    // If the layout map is represented as
-    //
-    // #map1 = (d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)
-    //
-    // then,
-    //
-    // #map2 = (d0, d1)[s0, s1, s2, o0, o1, t0, t1] ->
-    //              (d0 * s1 * t0 + d1 * s2 * t1 + o0 * s1 + o1 * s2 + s0)
-    //
-    // Representing this canonically
-    //
-    // #map2 = (d0, d1)[r0, r1, r2] -> (d0 * r1 + d1 * r2 + r0)
-    //
-    // where, r0 = o0 * s1 + o1 * s2 + s0, r1 = s1 * t0, r2 = s2 * t1.
-    %1 = memref.subview %0[%i, %j][4, 4][%x, %y] :
-      : memref<?x?xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)>> to
-        memref<4x4xf32, affine_map<(d0, d1)[r0, r1, r2] -> (d0 * r1 + d1 * r2 + r0)>>
-
-    // Note that the subview op does not guarantee that the result
-    // memref is "inbounds" w.r.t to base memref. It is upto the client
-    // to ensure that the subview is accessed in a manner that is
-    // in-bounds.
+    // Subview of dynamic memref with strided layout at dynamic offsets and
+    // strides, but static sizes.
+    %1 = memref.subview %0[%off0, %off1][4, 4][%str0, %str1]
+        : memref<?x?xf32, strided<[?, ?], offset: ?>> to
+          memref<4x4xf32, strided<[?, ?], offset: ?>>
     ```
 
     Example 5:
 
     ```mlir
-    // Rank-reducing subview.
-    %1 = memref.subview %0[0, 0, 0][1, 16, 4][1, 1, 1] :
-      memref<8x16x4xf32> to memref<16x4xf32>
+    // Rank-reducing subviews.
+    %1 = memref.subview %0[0, 0, 0][1, 16, 4][1, 1, 1]
+        : memref<8x16x4xf32> to memref<16x4xf32>
+    %3 = memref.subview %2[3, 4, 2][1, 6, 3][1, 1, 1]
+        : memref<8x16x4xf32> to memref<6x3xf32, strided<[4, 1], offset: 210>>
+    ```
 
-    // Original layout:
-    // (d0, d1, d2) -> (64 * d0 + 16 * d1 + d2)
-    // Subviewed layout:
-    // (d0, d1, d2) -> (64 * (d0 + 3) + 4 * (d1 + 4) + d2 + 2) = (64 * d0 + 4 * d1 + d2 + 210)
-    // After rank reducing:
-    // (d0, d1) -> (4 * d0 + d1 + 210)
-    %3 = memref.subview %2[3, 4, 2][1, 6, 3][1, 1, 1] :
-      memref<8x16x4xf32> to memref<6x3xf32, strided<[4, 1], offset: 210>>
+    Example 6:
+
+    ```mlir
+    // Identity subview. The subview is the full source memref.
+    %1 = memref.subview %0[0, 0, 0] [8, 16, 4] [1, 1, 1]
+        : memref<8x16x4xf32> to memref<8x16x4xf32>
     ```
   }];
 

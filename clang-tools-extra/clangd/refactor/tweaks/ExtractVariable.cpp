@@ -100,9 +100,9 @@ computeReferencedDecls(const clang::Expr *Expr) {
         TraverseLambdaCapture(LExpr, &Capture, Initializer);
       }
 
-      if (clang::Expr *const RequiresClause =
-              LExpr->getTrailingRequiresClause()) {
-        TraverseStmt(RequiresClause);
+      if (const clang::Expr *RequiresClause =
+              LExpr->getTrailingRequiresClause().ConstraintExpr) {
+        TraverseStmt(const_cast<clang::Expr *>(RequiresClause));
       }
 
       for (auto *const TemplateParam : LExpr->getExplicitTemplateParameters())

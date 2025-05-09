@@ -35,7 +35,8 @@ void addNestedPassToAllTopLevelOperationsConditionally(
 
 void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
   mlir::GreedyRewriteConfig config;
-  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
+  config.setRegionSimplificationLevel(
+      mlir::GreedySimplifyRegionLevel::Disabled);
   pm.addPass(mlir::createCanonicalizerPass(config));
 }
 
@@ -163,7 +164,8 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   // simplify the IR
   mlir::GreedyRewriteConfig config;
-  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
+  config.setRegionSimplificationLevel(
+      mlir::GreedySimplifyRegionLevel::Disabled);
   pm.addPass(mlir::createCSEPass());
   fir::addAVC(pm, pc.OptLevel);
   addNestedPassToAllTopLevelOperations<PassConstructor>(
@@ -198,6 +200,7 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createPolymorphicOpConversion());
   pm.addPass(fir::createAssumedRankOpConversion());
 
+  pm.addPass(fir::createLowerRepackArraysPass());
   // Expand FIR operations that may use SCF dialect for their
   // implementation. This is a mandatory pass.
   pm.addPass(fir::createSimplifyFIROperations(
@@ -286,12 +289,26 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
 /// \param pm - MLIR pass manager that will hold the pipeline definition.
 /// \param isTargetDevice - Whether code is being generated for a target device
 /// rather than the host device.
-void createOpenMPFIRPassPipeline(mlir::PassManager &pm, bool isTargetDevice) {
-  pm.addPass(flangomp::createMapInfoFinalizationPass());
+void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
+                                 OpenMPFIRPassPipelineOpts opts) {
+  using DoConcurrentMappingKind =
+      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+
+  if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None)
+    pm.addPass(flangomp::createDoConcurrentConversionPass(
+        opts.doConcurrentMappingKind == DoConcurrentMappingKind::DCMK_Device));
+
+  // The MapsForPrivatizedSymbols pass needs to run before
+  // MapInfoFinalizationPass because the former creates new
+  // MapInfoOp instances, typically for descriptors.
+  // MapInfoFinalizationPass adds MapInfoOp instances for the descriptors
+  // underlying data which is necessary to access the data on the offload
+  // target device.
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
+  pm.addPass(flangomp::createMapInfoFinalizationPass());
   pm.addPass(flangomp::createMarkDeclareTargetPass());
   pm.addPass(flangomp::createGenericLoopConversionPass());
-  if (isTargetDevice)
+  if (opts.isTargetDevice)
     pm.addPass(flangomp::createFunctionFilteringPass());
 }
 
@@ -332,9 +349,15 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 
   pm.addPass(fir::createFunctionAttr(
-      {framePointerKind, config.NoInfsFPMath, config.NoNaNsFPMath,
+      {framePointerKind, config.InstrumentFunctionEntry,
+       config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
        ""}));
+
+  if (config.EnableOpenMP) {
+    pm.addNestedPass<mlir::func::FuncOp>(
+        flangomp::createLowerNontemporalPass());
+  }
 
   fir::addFIRToLLVMPass(pm, config);
 }

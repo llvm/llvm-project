@@ -11,8 +11,6 @@
 #define _LIBCPP___CXX03___ITERATOR_BOUNDED_ITER_H
 
 #include <__cxx03/__assert>
-#include <__cxx03/__compare/ordering.h>
-#include <__cxx03/__compare/three_way_comparable.h>
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__memory/pointer_traits.h>
@@ -54,9 +52,6 @@ struct __bounded_iter {
   using pointer           = typename iterator_traits<_Iterator>::pointer;
   using reference         = typename iterator_traits<_Iterator>::reference;
   using iterator_category = typename iterator_traits<_Iterator>::iterator_category;
-#if _LIBCPP_STD_VER >= 20
-  using iterator_concept = contiguous_iterator_tag;
-#endif
 
   // Create a singular iterator.
   //
@@ -204,12 +199,10 @@ public:
     return __x.__current_ == __y.__current_;
   }
 
-#if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR friend bool
   operator!=(__bounded_iter const& __x, __bounded_iter const& __y) _NOEXCEPT {
     return __x.__current_ != __y.__current_;
   }
-#endif
 
   // TODO(mordante) disable these overloads in the LLVM 20 release.
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR friend bool
@@ -229,23 +222,6 @@ public:
     return __x.__current_ >= __y.__current_;
   }
 
-#if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI constexpr friend strong_ordering
-  operator<=>(__bounded_iter const& __x, __bounded_iter const& __y) noexcept {
-    if constexpr (three_way_comparable<_Iterator, strong_ordering>) {
-      return __x.__current_ <=> __y.__current_;
-    } else {
-      if (__x.__current_ < __y.__current_)
-        return strong_ordering::less;
-
-      if (__x.__current_ == __y.__current_)
-        return strong_ordering::equal;
-
-      return strong_ordering::greater;
-    }
-  }
-#endif // _LIBCPP_STD_VER >= 20
-
 private:
   template <class>
   friend struct pointer_traits;
@@ -260,10 +236,8 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __bounded_iter<_It> __make_bounded_iter(
   return __bounded_iter<_It>(std::move(__it), std::move(__begin), std::move(__end));
 }
 
-#if _LIBCPP_STD_VER <= 17
 template <class _Iterator>
 struct __libcpp_is_contiguous_iterator<__bounded_iter<_Iterator> > : true_type {};
-#endif
 
 template <class _Iterator>
 struct pointer_traits<__bounded_iter<_Iterator> > {

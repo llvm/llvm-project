@@ -30,11 +30,11 @@ void uses(bool cond) {
 // CHECK: #pragma acc update self(I) wait(devnum: I : queues: *iPtr, I) if(I == array[I]) async(I)
 #pragma acc update self(I) wait(devnum:I:queues:*iPtr, I) if(I == array[I]) async(I)
 
-// CHECK: #pragma acc update self(I) device_type(I) dtype(H)
-#pragma acc update self(I) device_type(I) dtype(H)
+// CHECK: #pragma acc update self(I) device_type(nvidia) dtype(host)
+#pragma acc update self(I) device_type(nvidia) dtype(host)
 
-// CHECK: #pragma acc update self(I) device_type(J) dtype(K)
-#pragma acc update self(I) device_type(J) dtype(K)
+// CHECK: #pragma acc update self(I) device_type(radeon) dtype(multicore)
+#pragma acc update self(I) device_type(radeon) dtype(multicore)
 
 // CHECK: #pragma acc update self(I, iPtr, array, array[1], array[1:2])
 #pragma acc update self(I, iPtr, array, array[1], array[1:2])
