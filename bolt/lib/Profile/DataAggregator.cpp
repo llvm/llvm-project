@@ -349,25 +349,29 @@ bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
   return false;
 }
 
-void DataAggregator::parsePreAggregated() {
-  std::string Error;
+std::error_code DataAggregator::parsePreAggregated() {
+  outs() << "PERF2BOLT: parsing pre-aggregated profile...\n";
+  NamedRegionTimer T("parseAggregated", "Parsing aggregated branch events",
+                     TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
       MemoryBuffer::getFileOrSTDIN(Filename);
-  if (std::error_code EC = MB.getError()) {
-    errs() << "PERF2BOLT-ERROR: cannot open " << Filename << ": "
-           << EC.message() << "\n";
-    exit(1);
-  }
+  if (std::error_code EC = MB.getError())
+    return EC;
 
   FileBuf = std::move(*MB);
   ParsingBuf = FileBuf->getBuffer();
   Col = 0;
   Line = 1;
-  if (parsePreAggregatedLBRSamples()) {
-    errs() << "PERF2BOLT: failed to parse samples\n";
-    exit(1);
+  size_t AggregatedLBRs = 0;
+  while (hasData()) {
+    if (std::error_code EC = parseAggregatedLBREntry())
+      return EC;
+    ++AggregatedLBRs;
   }
+
+  outs() << "PERF2BOLT: read " << AggregatedLBRs << " aggregated LBR entries\n";
+  return std::error_code();
 }
 
 void DataAggregator::filterBinaryMMapInfo() {
@@ -446,19 +450,6 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
-  if (opts::ReadPreAggregated) {
-    parsePreAggregated();
-    return Error::success();
-  }
-
-  if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
-    outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
-    processFileBuildID(*FileBuildID);
-  } else {
-    errs() << "BOLT-WARNING: build-id will not be checked because we could "
-              "not read one from input binary\n";
-  }
-
   auto ErrorCallback = [](int ReturnCode, StringRef ErrBuf) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
     exit(1);
@@ -470,6 +461,20 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     if (!NoData.match(ErrBuf))
       ErrorCallback(ReturnCode, ErrBuf);
   };
+
+  if (opts::ReadPreAggregated) {
+    if (std::error_code EC = parsePreAggregated())
+      return errorCodeToError(EC);
+    goto heatmap;
+  }
+
+  if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
+    outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
+    processFileBuildID(*FileBuildID);
+  } else {
+    errs() << "BOLT-WARNING: build-id will not be checked because we could "
+              "not read one from input binary\n";
+  }
 
   if (BC.IsLinuxKernel) {
     // Current MMap parsing logic does not work with linux kernel.
@@ -502,12 +507,6 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   if (opts::BasicAggregation ? parseBasicEvents() : parseBranchEvents())
     errs() << "PERF2BOLT: failed to parse samples\n";
 
-  if (opts::HeatmapMode) {
-    if (std::error_code EC = printLBRHeatMap())
-      return errorCodeToError(EC);
-    exit(0);
-  }
-
   // Special handling for memory events
   if (prepareToParse("mem events", MemEventsPPI, MemEventsErrorCallback))
     return Error::success();
@@ -518,7 +517,13 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
 
   deleteTempFiles();
 
-  return Error::success();
+heatmap:
+  if (!opts::HeatmapMode)
+    return Error::success();
+
+  if (std::error_code EC = printLBRHeatMap())
+    return errorCodeToError(EC);
+  exit(0);
 }
 
 Error DataAggregator::readProfile(BinaryContext &BC) {
@@ -554,9 +559,7 @@ bool DataAggregator::mayHaveProfileData(const BinaryFunction &Function) {
 }
 
 void DataAggregator::processProfile(BinaryContext &BC) {
-  if (opts::ReadPreAggregated)
-    processPreAggregated();
-  else if (opts::BasicAggregation)
+  if (opts::BasicAggregation)
     processBasicEvents();
   else
     processBranchEvents();
@@ -584,7 +587,6 @@ void DataAggregator::processProfile(BinaryContext &BC) {
   // Release intermediate storage.
   clear(BranchLBRs);
   clear(FallthroughLBRs);
-  clear(AggregatedLBRs);
   clear(BasicSamples);
   clear(MemSamples);
 }
@@ -1213,15 +1215,14 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   ErrorOr<StringRef> TypeOrErr = parseString(FieldSeparator);
   if (std::error_code EC = TypeOrErr.getError())
     return EC;
-  auto Type = AggregatedLBREntry::TRACE;
-  if (LLVM_LIKELY(TypeOrErr.get() == "T")) {
-  } else if (TypeOrErr.get() == "B") {
-    Type = AggregatedLBREntry::BRANCH;
-  } else if (TypeOrErr.get() == "F") {
-    Type = AggregatedLBREntry::FT;
-  } else if (TypeOrErr.get() == "f") {
-    Type = AggregatedLBREntry::FT_EXTERNAL_ORIGIN;
-  } else {
+  enum TType { TRACE, BRANCH, FT, FT_EXTERNAL_ORIGIN, INVALID };
+  auto Type = StringSwitch<TType>(TypeOrErr.get())
+                  .Case("T", TRACE)
+                  .Case("B", BRANCH)
+                  .Case("F", FT)
+                  .Case("f", FT_EXTERNAL_ORIGIN)
+                  .Default(INVALID);
+  if (Type == INVALID) {
     reportError("expected T, B, F or f");
     return make_error_code(llvm::errc::io_error);
   }
@@ -1239,7 +1240,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     return EC;
 
   ErrorOr<Location> TraceFtEnd = std::error_code();
-  if (Type == AggregatedLBREntry::TRACE) {
+  if (Type == TRACE) {
     while (checkAndConsumeFS()) {
     }
     TraceFtEnd = parseLocationOrOffset();
@@ -1249,13 +1250,12 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
 
   while (checkAndConsumeFS()) {
   }
-  ErrorOr<int64_t> Frequency =
-      parseNumberField(FieldSeparator, Type != AggregatedLBREntry::BRANCH);
+  ErrorOr<int64_t> Frequency = parseNumberField(FieldSeparator, Type != BRANCH);
   if (std::error_code EC = Frequency.getError())
     return EC;
 
   uint64_t Mispreds = 0;
-  if (Type == AggregatedLBREntry::BRANCH) {
+  if (Type == BRANCH) {
     while (checkAndConsumeFS()) {
     }
     ErrorOr<int64_t> MispredsOrErr = parseNumberField(FieldSeparator, true);
@@ -1277,13 +1277,28 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
       BF->setHasProfileAvailable();
 
   uint64_t Count = static_cast<uint64_t>(Frequency.get());
-  AggregatedLBREntry Entry{From.get(), To.get(), Count, Mispreds, Type};
-  AggregatedLBRs.emplace_back(Entry);
-  if (Type == AggregatedLBREntry::TRACE) {
-    auto FtType = (FromFunc == ToFunc) ? AggregatedLBREntry::FT
-                                       : AggregatedLBREntry::FT_EXTERNAL_ORIGIN;
-    AggregatedLBREntry TraceFt{To.get(), TraceFtEnd.get(), Count, 0, FtType};
-    AggregatedLBRs.emplace_back(TraceFt);
+
+  Trace Trace(From->Offset, To->Offset);
+  // Taken trace
+  if (Type == TRACE || Type == BRANCH) {
+    TakenBranchInfo &Info = BranchLBRs[Trace];
+    Info.TakenCount += Count;
+    Info.MispredCount += Mispreds;
+
+    NumTotalSamples += Count;
+  }
+  // Construct fallthrough part of the trace
+  if (Type == TRACE) {
+    Trace.From = To->Offset;
+    Trace.To = TraceFtEnd->Offset;
+    Type = FromFunc == ToFunc ? FT : FT_EXTERNAL_ORIGIN;
+  }
+  // Add fallthrough trace
+  if (Type != BRANCH) {
+    FTInfo &Info = FallthroughLBRs[Trace];
+    (Type == FT ? Info.InternCount : Info.ExternCount) += Count;
+
+    NumTraces += Count;
   }
 
   return std::error_code();
@@ -1560,7 +1575,6 @@ std::error_code DataAggregator::parseBranchEvents() {
       printBranchStacksDiagnostics(NumTotalSamples - NumSamples);
     }
   }
-  printBranchSamplesDiagnostics();
 
   return std::error_code();
 }
@@ -1588,6 +1602,7 @@ void DataAggregator::processBranchEvents() {
     const TakenBranchInfo &Info = AggrLBR.second;
     doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount);
   }
+  printBranchSamplesDiagnostics();
 }
 
 std::error_code DataAggregator::parseBasicEvents() {
@@ -1691,49 +1706,6 @@ void DataAggregator::processMemEvents() {
     MemData->update(FuncLoc, AddrLoc);
     LLVM_DEBUG(dbgs() << "Mem event: " << FuncLoc << " = " << AddrLoc << "\n");
   }
-}
-
-std::error_code DataAggregator::parsePreAggregatedLBRSamples() {
-  outs() << "PERF2BOLT: parsing pre-aggregated profile...\n";
-  NamedRegionTimer T("parseAggregated", "Parsing aggregated branch events",
-                     TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
-  while (hasData())
-    if (std::error_code EC = parseAggregatedLBREntry())
-      return EC;
-
-  return std::error_code();
-}
-
-void DataAggregator::processPreAggregated() {
-  outs() << "PERF2BOLT: processing pre-aggregated profile...\n";
-  NamedRegionTimer T("processAggregated", "Processing aggregated branch events",
-                     TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
-
-  for (const AggregatedLBREntry &AggrEntry : AggregatedLBRs) {
-    switch (AggrEntry.EntryType) {
-    case AggregatedLBREntry::BRANCH:
-    case AggregatedLBREntry::TRACE:
-      doBranch(AggrEntry.From.Offset, AggrEntry.To.Offset, AggrEntry.Count,
-               AggrEntry.Mispreds);
-      NumTotalSamples += AggrEntry.Count;
-      break;
-    case AggregatedLBREntry::FT:
-    case AggregatedLBREntry::FT_EXTERNAL_ORIGIN: {
-      LBREntry First{AggrEntry.EntryType == AggregatedLBREntry::FT
-                         ? AggrEntry.From.Offset
-                         : 0,
-                     AggrEntry.From.Offset, false};
-      LBREntry Second{AggrEntry.To.Offset, AggrEntry.To.Offset, false};
-      doTrace(First, Second, AggrEntry.Count);
-      NumTraces += AggrEntry.Count;
-      break;
-    }
-    }
-  }
-
-  outs() << "PERF2BOLT: read " << AggregatedLBRs.size()
-         << " aggregated LBR entries\n";
-  printBranchSamplesDiagnostics();
 }
 
 std::optional<int32_t> DataAggregator::parseCommExecEvent() {
