@@ -63,13 +63,14 @@ static uint32_t getVFFromIndVar(const SCEV *Step, const Function &F) {
 
   // Looking for loops with IV step value in the form of `(<constant VF> x
   // vscale)`.
-  if (auto *Mul = dyn_cast<SCEVMulExpr>(Step)) {
+  if (const auto *Mul = dyn_cast<SCEVMulExpr>(Step)) {
     if (Mul->getNumOperands() == 2) {
       const SCEV *LHS = Mul->getOperand(0);
       const SCEV *RHS = Mul->getOperand(1);
-      if (auto *Const = dyn_cast<SCEVConstant>(LHS)) {
+      if (const auto *Const = dyn_cast<SCEVConstant>(LHS);
+          Const && isa<SCEVVScale>(RHS)) {
         uint64_t V = Const->getAPInt().getLimitedValue();
-        if (isa<SCEVVScale>(RHS) && llvm::isUInt<32>(V))
+        if (llvm::isUInt<32>(V))
           return V;
       }
     }
@@ -78,7 +79,7 @@ static uint32_t getVFFromIndVar(const SCEV *Step, const Function &F) {
   // If not, see if the vscale_range of the parent function is a fixed value,
   // which makes the step value to be replaced by a constant.
   if (F.hasFnAttribute(Attribute::VScaleRange))
-    if (auto *ConstStep = dyn_cast<SCEVConstant>(Step)) {
+    if (const auto *ConstStep = dyn_cast<SCEVConstant>(Step)) {
       APInt V = ConstStep->getAPInt().abs();
       ConstantRange CR = llvm::getVScaleRange(&F, 64);
       if (const APInt *Fixed = CR.getSingleElement()) {
@@ -120,7 +121,7 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
                       << " because" << Reason << "\n");
     if (ORE) {
       ORE->emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "MissingIndVar",
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnrecognizedIndVar",
                                         L.getStartLoc(), L.getHeader())
                << "Cannot retrieve IV because " << ore::NV("Reason", Reason);
       });
@@ -132,6 +133,13 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   if (!L.getIncomingAndBackEdge(InitBlock, BackEdgeBlock)) {
     LLVM_DEBUG(dbgs() << "Expect unique incoming and backedge in "
                       << L.getName() << "\n");
+    if (ORE) {
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnrecognizedLoopStructure",
+                                        L.getStartLoc(), L.getHeader())
+               << "Does not have a unique incoming and backedge";
+      });
+    }
     return false;
   }
 
@@ -140,6 +148,13 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   if (!Bounds) {
     LLVM_DEBUG(dbgs() << "Could not obtain the bounds for loop " << L.getName()
                       << "\n");
+    if (ORE) {
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnrecognizedLoopStructure",
+                                        L.getStartLoc(), L.getHeader())
+               << "Could not obtain the loop bounds";
+      });
+    }
     return false;
   }
   Value *CanonicalIVInit = &Bounds->getInitialIVValue();
@@ -150,6 +165,14 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   if (!VF) {
     LLVM_DEBUG(dbgs() << "Could not infer VF from IndVar step '" << *StepV
                       << "'\n");
+    if (ORE) {
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnrecognizedIndVar",
+                                        L.getStartLoc(), L.getHeader())
+               << "Could not infer VF from IndVar step "
+               << ore::NV("Step", StepV);
+      });
+    }
     return false;
   }
   LLVM_DEBUG(dbgs() << "Using VF=" << VF << " for loop " << L.getName()
@@ -196,7 +219,7 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
       break;
     }
     Value *RecValue = PN.getIncomingValueForBlock(BackEdgeBlock);
-    assert(RecValue);
+    assert(RecValue && "expect recurrent IndVar value");
 
     LLVM_DEBUG(dbgs() << "Found candidate PN of EVL-based IndVar: " << PN
                       << "\n");
@@ -238,7 +261,8 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   // Loop::getLatchCmpInst check at the beginning of this function has ensured
   // that latch block ends in a conditional branch.
   auto *LatchBranch = cast<BranchInst>(LatchBlock->getTerminator());
-  assert(LatchBranch->isConditional());
+  assert(LatchBranch->isConditional() &&
+         "expect the loop latch to be ended with a conditional branch");
   ICmpInst::Predicate Pred;
   if (LatchBranch->getSuccessor(0) == L.getHeader())
     Pred = ICmpInst::ICMP_NE;
