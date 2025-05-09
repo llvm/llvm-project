@@ -3257,6 +3257,8 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
 
     // No other cases for now.
     } else {
+      llvm::dbgs() << "THE DAMN DECLREFEXPR HASN'T BEEN ENTERED IN LOCALDECLMAP\n";
+      VD->dumpColor();
       llvm_unreachable("DeclRefExpr for Decl not entered in LocalDeclMap?");
     }
 
