@@ -1608,3 +1608,32 @@ hlfir::Entity hlfir::gen1DSection(mlir::Location loc,
       sectionShape, typeParams);
   return hlfir::Entity{designate.getResult()};
 }
+
+bool hlfir::designatePreservesContinuity(hlfir::DesignateOp op) {
+  if (op.getComponent() || op.getComplexPart() || !op.getSubstring().empty())
+    return false;
+  auto subscripts = op.getIndices();
+  unsigned i = 0;
+  for (auto isTriplet : llvm::enumerate(op.getIsTriplet())) {
+    // TODO: we should allow any number of leading triplets
+    // that describe a whole dimension slice, then one optional
+    // triplet describing potentially partial dimension slice,
+    // then any number of non-triplet subscripts.
+    // For the time being just allow a single leading
+    // triplet and then any number of non-triplet subscripts.
+    if (isTriplet.value()) {
+      if (isTriplet.index() != 0) {
+        return false;
+      } else {
+        i += 2;
+        mlir::Value step = subscripts[i++];
+        auto constantStep = fir::getIntIfConstant(step);
+        if (!constantStep || *constantStep != 1)
+          return false;
+      }
+    } else {
+      ++i;
+    }
+  }
+  return true;
+}
