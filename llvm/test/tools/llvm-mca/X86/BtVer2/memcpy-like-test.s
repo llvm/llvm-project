@@ -70,17 +70,24 @@ vmovaps %xmm0, 48(%rdi)
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     vmovaps	%xmm0, 48(%rdi)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeER  ..   vmovaps	(%rsi), %xmm0
-# CHECK-NEXT: [0,1]     D=====eER ..   vmovaps	%xmm0, (%rdi)
+# CHECK-NEXT: [0,1]     DPPPPPeER ..   vmovaps	%xmm0, (%rdi)
 # CHECK-NEXT: [0,2]     .DeeeeeER ..   vmovaps	16(%rsi), %xmm0
-# CHECK-NEXT: [0,3]     .D=====eER..   vmovaps	%xmm0, 16(%rdi)
+# CHECK-NEXT: [0,3]     .DPPPPPeER..   vmovaps	%xmm0, 16(%rdi)
 # CHECK-NEXT: [0,4]     . DeeeeeER..   vmovaps	32(%rsi), %xmm0
-# CHECK-NEXT: [0,5]     . D=====eER.   vmovaps	%xmm0, 32(%rdi)
+# CHECK-NEXT: [0,5]     . DPPPPPeER.   vmovaps	%xmm0, 32(%rdi)
 # CHECK-NEXT: [0,6]     .  DeeeeeER.   vmovaps	48(%rsi), %xmm0
-# CHECK-NEXT: [0,7]     .  D=====eER   vmovaps	%xmm0, 48(%rdi)
+# CHECK-NEXT: [0,7]     .  DPPPPPeER   vmovaps	%xmm0, 48(%rdi)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

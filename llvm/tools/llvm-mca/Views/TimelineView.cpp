@@ -99,6 +99,10 @@ void TimelineView::onEvent(const HWInstructionEvent &Event) {
     if (Timeline[Index].CycleDispatched == -1)
       Timeline[Index].CycleDispatched = static_cast<int>(CurrentCycle);
     break;
+  case HWInstructionEvent::Pending: {
+    Timeline[Index].CyclePending = CurrentCycle;
+    break;
+  }
   default:
     return;
   }
@@ -231,7 +235,11 @@ void TimelineView::printTimelineViewEntry(formatted_raw_ostream &OS,
     // Zero latency instructions have the same value for CycleDispatched,
     // CycleIssued and CycleExecuted.
     for (unsigned I = CycleDispatched + 1, E = Entry.CycleIssued; I < E; ++I)
-      OS << TimelineView::DisplayChar::Waiting;
+      if (I >= Entry.CycleReady)
+        OS << TimelineView::DisplayChar::Waiting;
+      else
+        OS << TimelineView::DisplayChar::Pending;
+
     if (Entry.CycleIssued == Entry.CycleExecuted)
       OS << TimelineView::DisplayChar::DisplayChar::Executed;
     else {
@@ -255,7 +263,14 @@ void TimelineView::printTimelineViewEntry(formatted_raw_ostream &OS,
 }
 
 static void printTimelineHeader(formatted_raw_ostream &OS, unsigned Cycles) {
-  OS << "\n\nTimeline view:\n";
+  OS << "\n\nTimeline view:\n"
+        "D: Instruction dispatched\n"
+        "e: Instruction executing\n"
+        "E: Instruction executed (write-back stage)\n"
+        "P: Instruction waiting for data dependency\n"
+        "=: Instruction waiting for available HW resource\n"
+        "-: Instruction executed, waiting to retire in order.\n"
+        "\n";
   if (Cycles >= 10) {
     OS.PadToColumn(10);
     for (unsigned I = 0; I <= Cycles; ++I) {

@@ -54,16 +54,23 @@ lzcnt 2(%rsp), %cx
 # CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     lzcntw	2(%rsp), %cx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012345678
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeER    .    .  .   imull	%edx, %ecx
 # CHECK-NEXT: [0,1]     D=eeeeeeeeER   .  .   lzcntw	(%rsp), %cx
 # CHECK-NEXT: [0,2]     .D=eeeeeeeeER  .  .   lzcntw	2(%rsp), %cx
-# CHECK-NEXT: [1,0]     .D=========eeeER  .   imull	%edx, %ecx
+# CHECK-NEXT: [1,0]     .DPPPPPPPPPeeeER  .   imull	%edx, %ecx
 # CHECK-NEXT: [1,1]     . D=eeeeeeeeE--R  .   lzcntw	(%rsp), %cx
 # CHECK-NEXT: [1,2]     . D==eeeeeeeeE-R  .   lzcntw	2(%rsp), %cx
-# CHECK-NEXT: [2,0]     .  D==========eeeER   imull	%edx, %ecx
+# CHECK-NEXT: [2,0]     .  DPPPPPPPPPPeeeER   imull	%edx, %ecx
 # CHECK-NEXT: [2,1]     .  D==eeeeeeeeE---R   lzcntw	(%rsp), %cx
 # CHECK-NEXT: [2,2]     .   D==eeeeeeeeE--R   lzcntw	2(%rsp), %cx
 

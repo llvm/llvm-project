@@ -77,7 +77,14 @@ idiv %eax
 # CHECK-NEXT:  -     1.00   25.00   -      -      -      -      -      -      -      -      -      -      -     idivl	%eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789          01234
 # CHECK-NEXT: Index     0123456789          0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    .   .   idivl	%eax

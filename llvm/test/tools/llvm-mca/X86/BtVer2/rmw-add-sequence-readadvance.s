@@ -52,7 +52,14 @@ add %eax, 4(%rsp)
 # CHECK-NEXT: 1.00    -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     addl	%eax, 4(%rsp)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeER .  .   addl	%eax, %eax
 # CHECK-NEXT: [0,1]     DeeeeeeER   addl	%eax, 4(%rsp)

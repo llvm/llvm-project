@@ -66,30 +66,37 @@ pcmpeqw %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -     0.99    -     0.01    -      -     pcmpeqw	%xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .   .   pcmpeqb	%mm0, %mm0
-# CHECK-NEXT: [0,1]     D===eeeER .    .    .    .   .   pcmpeqd	%mm0, %mm0
-# CHECK-NEXT: [0,2]     D======eeeER   .    .    .   .   pcmpeqw	%mm0, %mm0
+# CHECK-NEXT: [0,1]     DPPPeeeER .    .    .    .   .   pcmpeqd	%mm0, %mm0
+# CHECK-NEXT: [0,2]     DPPPPPPeeeER   .    .    .   .   pcmpeqw	%mm0, %mm0
 # CHECK-NEXT: [0,3]     DeE--------R   .    .    .   .   pcmpeqb	%xmm0, %xmm0
 # CHECK-NEXT: [0,4]     .DeE-------R   .    .    .   .   pcmpeqd	%xmm0, %xmm0
-# CHECK-NEXT: [0,5]     .D=eE------R   .    .    .   .   pcmpeqq	%xmm0, %xmm0
-# CHECK-NEXT: [0,6]     .D==eE-----R   .    .    .   .   pcmpeqw	%xmm0, %xmm0
-# CHECK-NEXT: [1,0]     .D========eeeER.    .    .   .   pcmpeqb	%mm0, %mm0
-# CHECK-NEXT: [1,1]     . D==========eeeER  .    .   .   pcmpeqd	%mm0, %mm0
-# CHECK-NEXT: [1,2]     . D=============eeeER    .   .   pcmpeqw	%mm0, %mm0
-# CHECK-NEXT: [1,3]     . D==eE-------------R    .   .   pcmpeqb	%xmm0, %xmm0
-# CHECK-NEXT: [1,4]     . D===eE------------R    .   .   pcmpeqd	%xmm0, %xmm0
-# CHECK-NEXT: [1,5]     .  D===eE-----------R    .   .   pcmpeqq	%xmm0, %xmm0
-# CHECK-NEXT: [1,6]     .  D====eE----------R    .   .   pcmpeqw	%xmm0, %xmm0
-# CHECK-NEXT: [2,0]     .  D===============eeeER .   .   pcmpeqb	%mm0, %mm0
-# CHECK-NEXT: [2,1]     .  D==================eeeER  .   pcmpeqd	%mm0, %mm0
-# CHECK-NEXT: [2,2]     .   D====================eeeER   pcmpeqw	%mm0, %mm0
-# CHECK-NEXT: [2,3]     .   D====eE------------------R   pcmpeqb	%xmm0, %xmm0
-# CHECK-NEXT: [2,4]     .   D=====eE-----------------R   pcmpeqd	%xmm0, %xmm0
-# CHECK-NEXT: [2,5]     .   D======eE----------------R   pcmpeqq	%xmm0, %xmm0
-# CHECK-NEXT: [2,6]     .    D======eE---------------R   pcmpeqw	%xmm0, %xmm0
+# CHECK-NEXT: [0,5]     .DPeE------R   .    .    .   .   pcmpeqq	%xmm0, %xmm0
+# CHECK-NEXT: [0,6]     .DPPeE-----R   .    .    .   .   pcmpeqw	%xmm0, %xmm0
+# CHECK-NEXT: [1,0]     .DPPPPPPPPeeeER.    .    .   .   pcmpeqb	%mm0, %mm0
+# CHECK-NEXT: [1,1]     . DPPPPPPPPPPeeeER  .    .   .   pcmpeqd	%mm0, %mm0
+# CHECK-NEXT: [1,2]     . DPPPPPPPPPPPPPeeeER    .   .   pcmpeqw	%mm0, %mm0
+# CHECK-NEXT: [1,3]     . DPPeE-------------R    .   .   pcmpeqb	%xmm0, %xmm0
+# CHECK-NEXT: [1,4]     . DPPPeE------------R    .   .   pcmpeqd	%xmm0, %xmm0
+# CHECK-NEXT: [1,5]     .  DPPPeE-----------R    .   .   pcmpeqq	%xmm0, %xmm0
+# CHECK-NEXT: [1,6]     .  DPPPPeE----------R    .   .   pcmpeqw	%xmm0, %xmm0
+# CHECK-NEXT: [2,0]     .  DPPPPPPPPPPPPPPPeeeER .   .   pcmpeqb	%mm0, %mm0
+# CHECK-NEXT: [2,1]     .  DPPPPPPPPPPPPPPPPPPeeeER  .   pcmpeqd	%mm0, %mm0
+# CHECK-NEXT: [2,2]     .   DPPPPPPPPPPPPPPPPPPPPeeeER   pcmpeqw	%mm0, %mm0
+# CHECK-NEXT: [2,3]     .   DPPPPeE------------------R   pcmpeqb	%xmm0, %xmm0
+# CHECK-NEXT: [2,4]     .   DPPPPPeE-----------------R   pcmpeqd	%xmm0, %xmm0
+# CHECK-NEXT: [2,5]     .   DPPPPPPeE----------------R   pcmpeqq	%xmm0, %xmm0
+# CHECK-NEXT: [2,6]     .    DPPPPPPeE---------------R   pcmpeqw	%xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

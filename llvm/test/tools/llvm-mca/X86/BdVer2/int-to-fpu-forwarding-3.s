@@ -64,18 +64,25 @@ vpinsrb $1, %eax, %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     3.00    -      -      -     1.00    -      -      -      -      -      -      -      -     vpinsrb	$1, %eax, %xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345
 
 # CHECK:      [0,0]     DeER .    .    .    .    .   addl	%eax, %eax
-# CHECK-NEXT: [0,1]     D===========eeER    .    .   vpinsrb	$0, %eax, %xmm0, %xmm0
-# CHECK-NEXT: [0,2]     .D============eeER  .    .   vpinsrb	$1, %eax, %xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DPPPPPPPPPPPeeER    .    .   vpinsrb	$0, %eax, %xmm0, %xmm0
+# CHECK-NEXT: [0,2]     .DPPPPPPPPPPPPeeER  .    .   vpinsrb	$1, %eax, %xmm0, %xmm0
 # CHECK-NEXT: [1,0]     .DeE-------------R  .    .   addl	%eax, %eax
-# CHECK-NEXT: [1,1]     . D=============eeER.    .   vpinsrb	$0, %eax, %xmm0, %xmm0
-# CHECK-NEXT: [1,2]     . D===============eeER   .   vpinsrb	$1, %eax, %xmm0, %xmm0
+# CHECK-NEXT: [1,1]     . DPPPPPPPPPPPPPeeER.    .   vpinsrb	$0, %eax, %xmm0, %xmm0
+# CHECK-NEXT: [1,2]     . DPPPPPPPPPPPPPPPeeER   .   vpinsrb	$1, %eax, %xmm0, %xmm0
 # CHECK-NEXT: [2,0]     .  DeE---------------R   .   addl	%eax, %eax
-# CHECK-NEXT: [2,1]     .  D================eeER .   vpinsrb	$0, %eax, %xmm0, %xmm0
-# CHECK-NEXT: [2,2]     .   D=================eeER   vpinsrb	$1, %eax, %xmm0, %xmm0
+# CHECK-NEXT: [2,1]     .  DPPPPPPPPPPPPPPPPeeER .   vpinsrb	$0, %eax, %xmm0, %xmm0
+# CHECK-NEXT: [2,2]     .   DPPPPPPPPPPPPPPPPPeeER   vpinsrb	$1, %eax, %xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

@@ -159,7 +159,14 @@ pxor   %xmm2, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     pxor	%xmm2, %xmm2
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DR   .    .    .    .    .    .    ..   subl	%eax, %eax
@@ -167,35 +174,35 @@ pxor   %xmm2, %xmm2
 # CHECK-NEXT: [0,2]     DR   .    .    .    .    .    .    ..   xorl	%eax, %eax
 # CHECK-NEXT: [0,3]     DR   .    .    .    .    .    .    ..   xorq	%rax, %rax
 # CHECK-NEXT: [0,4]     .DeeeER   .    .    .    .    .    ..   pcmpgtb	%mm2, %mm2
-# CHECK-NEXT: [0,5]     .D===eeeER.    .    .    .    .    ..   pcmpgtd	%mm2, %mm2
-# CHECK-NEXT: [0,6]     .D======eeeER  .    .    .    .    ..   pcmpgtw	%mm2, %mm2
+# CHECK-NEXT: [0,5]     .DPPPeeeER.    .    .    .    .    ..   pcmpgtd	%mm2, %mm2
+# CHECK-NEXT: [0,6]     .DPPPPPPeeeER  .    .    .    .    ..   pcmpgtw	%mm2, %mm2
 # CHECK-NEXT: [0,7]     .D----------R  .    .    .    .    ..   pcmpgtb	%xmm2, %xmm2
 # CHECK-NEXT: [0,8]     . D---------R  .    .    .    .    ..   pcmpgtd	%xmm2, %xmm2
 # CHECK-NEXT: [0,9]     . D---------R  .    .    .    .    ..   pcmpgtq	%xmm2, %xmm2
 # CHECK-NEXT: [0,10]    . D---------R  .    .    .    .    ..   pcmpgtw	%xmm2, %xmm2
-# CHECK-NEXT: [0,11]    . D========eeeER    .    .    .    ..   psubb	%mm2, %mm2
-# CHECK-NEXT: [0,12]    .  D==========eeeER .    .    .    ..   psubd	%mm2, %mm2
-# CHECK-NEXT: [0,13]    .  D=============eER.    .    .    ..   psubq	%mm2, %mm2
-# CHECK-NEXT: [0,14]    .  D==============eeeER  .    .    ..   psubw	%mm2, %mm2
+# CHECK-NEXT: [0,11]    . DPPPPPPPPeeeER    .    .    .    ..   psubb	%mm2, %mm2
+# CHECK-NEXT: [0,12]    .  DPPPPPPPPPPeeeER .    .    .    ..   psubd	%mm2, %mm2
+# CHECK-NEXT: [0,13]    .  DPPPPPPPPPPPPPeER.    .    .    ..   psubq	%mm2, %mm2
+# CHECK-NEXT: [0,14]    .  DPPPPPPPPPPPPPPeeeER  .    .    ..   psubw	%mm2, %mm2
 # CHECK-NEXT: [0,15]    .  D------------------R  .    .    ..   psubb	%xmm2, %xmm2
 # CHECK-NEXT: [0,16]    .   D-----------------R  .    .    ..   psubd	%xmm2, %xmm2
 # CHECK-NEXT: [0,17]    .   D-----------------R  .    .    ..   psubq	%xmm2, %xmm2
 # CHECK-NEXT: [0,18]    .   D-----------------R  .    .    ..   psubw	%xmm2, %xmm2
-# CHECK-NEXT: [0,19]    .   D================eeeER    .    ..   psubsb	%mm2, %mm2
-# CHECK-NEXT: [0,20]    .    D==================eeeER .    ..   psubsw	%mm2, %mm2
+# CHECK-NEXT: [0,19]    .   DPPPPPPPPPPPPPPPPeeeER    .    ..   psubsb	%mm2, %mm2
+# CHECK-NEXT: [0,20]    .    DPPPPPPPPPPPPPPPPPPeeeER .    ..   psubsw	%mm2, %mm2
 # CHECK-NEXT: [0,21]    .    DeE--------------------R .    ..   psubsb	%xmm2, %xmm2
-# CHECK-NEXT: [0,22]    .    D=eE-------------------R .    ..   psubsw	%xmm2, %xmm2
-# CHECK-NEXT: [0,23]    .    D=====================eeeER   ..   psubusb	%mm2, %mm2
-# CHECK-NEXT: [0,24]    .    .D=======================eeeER..   psubusw	%mm2, %mm2
-# CHECK-NEXT: [0,25]    .    .D=eE------------------------R..   psubusb	%xmm2, %xmm2
-# CHECK-NEXT: [0,26]    .    .D==eE-----------------------R..   psubusw	%xmm2, %xmm2
+# CHECK-NEXT: [0,22]    .    DPeE-------------------R .    ..   psubsw	%xmm2, %xmm2
+# CHECK-NEXT: [0,23]    .    DPPPPPPPPPPPPPPPPPPPPPeeeER   ..   psubusb	%mm2, %mm2
+# CHECK-NEXT: [0,24]    .    .DPPPPPPPPPPPPPPPPPPPPPPPeeeER..   psubusw	%mm2, %mm2
+# CHECK-NEXT: [0,25]    .    .DPeE------------------------R..   psubusb	%xmm2, %xmm2
+# CHECK-NEXT: [0,26]    .    .DPPeE-----------------------R..   psubusw	%xmm2, %xmm2
 # CHECK-NEXT: [0,27]    .    .D==eE-----------------------R..   andnps	%xmm0, %xmm0
 # CHECK-NEXT: [0,28]    .    . D==eE----------------------R..   andnpd	%xmm1, %xmm1
-# CHECK-NEXT: [0,29]    .    . D=========================eER.   pandn	%mm2, %mm2
-# CHECK-NEXT: [0,30]    .    . D==eE-----------------------R.   pandn	%xmm2, %xmm2
+# CHECK-NEXT: [0,29]    .    . DPPPPPPPPPPPPPPPPPPPPPPPPPeER.   pandn	%mm2, %mm2
+# CHECK-NEXT: [0,30]    .    . DPPeE-----------------------R.   pandn	%xmm2, %xmm2
 # CHECK-NEXT: [0,31]    .    . D---------------------------R.   xorps	%xmm0, %xmm0
 # CHECK-NEXT: [0,32]    .    .  D--------------------------R.   xorpd	%xmm1, %xmm1
-# CHECK-NEXT: [0,33]    .    .  D=========================eER   pxor	%mm2, %mm2
+# CHECK-NEXT: [0,33]    .    .  DPPPPPPPPPPPPPPPPPPPPPPPPPeER   pxor	%mm2, %mm2
 # CHECK-NEXT: [0,34]    .    .  D---------------------------R   pxor	%xmm2, %xmm2
 
 # CHECK:      Average Wait times (based on the timeline view):

@@ -49,12 +49,19 @@ adc 4(%rsp), %eax
 # CHECK-NEXT: 1.00   1.00    -      -      -      -      -     1.00    -      -      -      -      -      -     adcl	4(%rsp), %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER  .   adcl	4(%rsp), %eax
-# CHECK-NEXT: [1,0]     D=eeeeER .   adcl	4(%rsp), %eax
-# CHECK-NEXT: [2,0]     .D=eeeeER.   adcl	4(%rsp), %eax
-# CHECK-NEXT: [3,0]     .D==eeeeER   adcl	4(%rsp), %eax
+# CHECK-NEXT: [1,0]     DPeeeeER .   adcl	4(%rsp), %eax
+# CHECK-NEXT: [2,0]     .DPeeeeER.   adcl	4(%rsp), %eax
+# CHECK-NEXT: [3,0]     .DPPeeeeER   adcl	4(%rsp), %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

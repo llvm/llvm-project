@@ -94,12 +94,19 @@ cmovael %eax, %ecx
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulxl	%eax, %eax, %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeER .  .   sbbl	%eax, %eax
-# CHECK-NEXT: [0,1]     D=eeeeER.   mulxl	%eax, %eax, %eax
-# CHECK-NEXT: [1,0]     D=eE---R.   sbbl	%eax, %eax
-# CHECK-NEXT: [1,1]     D==eeeeER   mulxl	%eax, %eax, %eax
+# CHECK-NEXT: [0,1]     DPeeeeER.   mulxl	%eax, %eax, %eax
+# CHECK-NEXT: [1,0]     DPeE---R.   sbbl	%eax, %eax
+# CHECK-NEXT: [1,1]     DPPeeeeER   mulxl	%eax, %eax, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -171,12 +178,19 @@ cmovael %eax, %ecx
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulxq	%rax, %rax, %rax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeER .  .   sbbq	%rax, %rax
-# CHECK-NEXT: [0,1]     D=eeeeER.   mulxq	%rax, %rax, %rax
-# CHECK-NEXT: [1,0]     D=eE---R.   sbbq	%rax, %rax
-# CHECK-NEXT: [1,1]     D==eeeeER   mulxq	%rax, %rax, %rax
+# CHECK-NEXT: [0,1]     DPeeeeER.   mulxq	%rax, %rax, %rax
+# CHECK-NEXT: [1,0]     DPeE---R.   sbbq	%rax, %rax
+# CHECK-NEXT: [1,1]     DPPeeeeER   mulxq	%rax, %rax, %rax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -250,15 +264,22 @@ cmovael %eax, %ecx
 # CHECK-NEXT:  -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmovael	%eax, %ecx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   ..   mulxl	%eax, %eax, %eax
 # CHECK-NEXT: [0,1]     D-----R   ..   cmpl	%eax, %eax
-# CHECK-NEXT: [0,2]     D====eER  ..   cmovael	%eax, %ecx
-# CHECK-NEXT: [1,0]     D====eeeeER.   mulxl	%eax, %eax, %eax
+# CHECK-NEXT: [0,2]     DPPPPeER  ..   cmovael	%eax, %ecx
+# CHECK-NEXT: [1,0]     DPPPPeeeeER.   mulxl	%eax, %eax, %eax
 # CHECK-NEXT: [1,1]     .D--------R.   cmpl	%eax, %eax
-# CHECK-NEXT: [1,2]     .D=======eER   cmovael	%eax, %ecx
+# CHECK-NEXT: [1,2]     .DPPPPPPPeER   cmovael	%eax, %ecx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -333,15 +354,22 @@ cmovael %eax, %ecx
 # CHECK-NEXT:  -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmovaeq	%rax, %rcx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   ..   mulxq	%rax, %rax, %rax
 # CHECK-NEXT: [0,1]     D-----R   ..   cmpq	%rax, %rax
-# CHECK-NEXT: [0,2]     D====eER  ..   cmovaeq	%rax, %rcx
-# CHECK-NEXT: [1,0]     D====eeeeER.   mulxq	%rax, %rax, %rax
+# CHECK-NEXT: [0,2]     DPPPPeER  ..   cmovaeq	%rax, %rcx
+# CHECK-NEXT: [1,0]     DPPPPeeeeER.   mulxq	%rax, %rax, %rax
 # CHECK-NEXT: [1,1]     .D--------R.   cmpq	%rax, %rax
-# CHECK-NEXT: [1,2]     .D=======eER   cmovaeq	%rax, %rcx
+# CHECK-NEXT: [1,2]     .DPPPPPPPeER   cmovaeq	%rax, %rcx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -416,15 +444,22 @@ cmovael %eax, %ecx
 # CHECK-NEXT:  -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmovael	%eax, %ecx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   ..   mulxl	%eax, %eax, %eax
 # CHECK-NEXT: [0,1]     D-----R   ..   cmpw	%ax, %ax
-# CHECK-NEXT: [0,2]     D====eER  ..   cmovael	%eax, %ecx
-# CHECK-NEXT: [1,0]     D====eeeeER.   mulxl	%eax, %eax, %eax
+# CHECK-NEXT: [0,2]     DPPPPeER  ..   cmovael	%eax, %ecx
+# CHECK-NEXT: [1,0]     DPPPPeeeeER.   mulxl	%eax, %eax, %eax
 # CHECK-NEXT: [1,1]     .D--------R.   cmpw	%ax, %ax
-# CHECK-NEXT: [1,2]     .D=======eER   cmovael	%eax, %ecx
+# CHECK-NEXT: [1,2]     .DPPPPPPPeER   cmovael	%eax, %ecx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -499,15 +534,22 @@ cmovael %eax, %ecx
 # CHECK-NEXT:  -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmovael	%eax, %ecx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeER   ..   mulxl	%eax, %eax, %eax
 # CHECK-NEXT: [0,1]     D-----R   ..   cmpb	%al, %al
-# CHECK-NEXT: [0,2]     D====eER  ..   cmovael	%eax, %ecx
-# CHECK-NEXT: [1,0]     D====eeeeER.   mulxl	%eax, %eax, %eax
+# CHECK-NEXT: [0,2]     DPPPPeER  ..   cmovael	%eax, %ecx
+# CHECK-NEXT: [1,0]     DPPPPeeeeER.   mulxl	%eax, %eax, %eax
 # CHECK-NEXT: [1,1]     .D--------R.   cmpb	%al, %al
-# CHECK-NEXT: [1,2]     .D=======eER   cmovael	%eax, %ecx
+# CHECK-NEXT: [1,2]     .DPPPPPPPeER   cmovael	%eax, %ecx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

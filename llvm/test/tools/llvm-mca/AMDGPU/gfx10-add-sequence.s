@@ -49,7 +49,14 @@ v_add_f32 v2, v1, v0
 # CHECK-NEXT:  -      -      -     1.00    -      -     1.00    -     v_add_f32_e32 v2, v1, v0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeE    ..   v_add_f32_e32 v0, v0, v0

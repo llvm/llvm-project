@@ -51,15 +51,22 @@ lmg	%r6, %r15, 48(%r15)
 # CHECK-NEXT:  -      -      -      -     0.10   4.90    -      -      -      -      -      -      -     lmg	%r6, %r15, 48(%r15)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeER .    .    .    .    .    .  .   stmg	%r6, %r15, 48(%r15)
 # CHECK-NEXT: [0,1]     .DeeeeeeeeeeER .    .    .    .  .   lmg	%r6, %r15, 48(%r15)
-# CHECK-NEXT: [1,0]     . D=========eER.    .    .    .  .   stmg	%r6, %r15, 48(%r15)
-# CHECK-NEXT: [1,1]     .  D========eeeeeeeeeeER .    .  .   lmg	%r6, %r15, 48(%r15)
-# CHECK-NEXT: [2,0]     .   D=================eER.    .  .   stmg	%r6, %r15, 48(%r15)
-# CHECK-NEXT: [2,1]     .    D================eeeeeeeeeeER   lmg	%r6, %r15, 48(%r15)
+# CHECK-NEXT: [1,0]     . DPPPPPPPPPeER.    .    .    .  .   stmg	%r6, %r15, 48(%r15)
+# CHECK-NEXT: [1,1]     .  DPPPPPPPPeeeeeeeeeeER .    .  .   lmg	%r6, %r15, 48(%r15)
+# CHECK-NEXT: [2,0]     .   DPPPPPPPPPPPPPPPPPeER.    .  .   stmg	%r6, %r15, 48(%r15)
+# CHECK-NEXT: [2,1]     .    DPPPPPPPPPPPPPPPPeeeeeeeeeeER   lmg	%r6, %r15, 48(%r15)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

@@ -57,30 +57,37 @@ add %cx, %bx
 # CHECK-NEXT:  -      -      -     0.33    -     0.33   0.33    -      -      -      -      -      -     addw	%cx, %bx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          01234567
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .    .    . .   imulw	%ax, %bx
-# CHECK-NEXT: [0,1]     D===eER   .    .    .    .    .    . .   lzcntw	%ax, %bx
-# CHECK-NEXT: [0,2]     D====eER  .    .    .    .    .    . .   addw	%cx, %bx
-# CHECK-NEXT: [1,0]     D=====eeeER    .    .    .    .    . .   imulw	%ax, %bx
-# CHECK-NEXT: [1,1]     .D=======eER   .    .    .    .    . .   lzcntw	%ax, %bx
-# CHECK-NEXT: [1,2]     .D========eER  .    .    .    .    . .   addw	%cx, %bx
-# CHECK-NEXT: [2,0]     .D=========eeeER    .    .    .    . .   imulw	%ax, %bx
-# CHECK-NEXT: [2,1]     .D============eER   .    .    .    . .   lzcntw	%ax, %bx
-# CHECK-NEXT: [2,2]     . D============eER  .    .    .    . .   addw	%cx, %bx
-# CHECK-NEXT: [3,0]     . D=============eeeER    .    .    . .   imulw	%ax, %bx
-# CHECK-NEXT: [3,1]     . D================eER   .    .    . .   lzcntw	%ax, %bx
-# CHECK-NEXT: [3,2]     . D=================eER  .    .    . .   addw	%cx, %bx
-# CHECK-NEXT: [4,0]     .  D=================eeeER    .    . .   imulw	%ax, %bx
-# CHECK-NEXT: [4,1]     .  D====================eER   .    . .   lzcntw	%ax, %bx
-# CHECK-NEXT: [4,2]     .  D=====================eER  .    . .   addw	%cx, %bx
-# CHECK-NEXT: [5,0]     .  D======================eeeER    . .   imulw	%ax, %bx
-# CHECK-NEXT: [5,1]     .   D========================eER   . .   lzcntw	%ax, %bx
-# CHECK-NEXT: [5,2]     .   D=========================eER  . .   addw	%cx, %bx
-# CHECK-NEXT: [6,0]     .   D==========================eeeER .   imulw	%ax, %bx
-# CHECK-NEXT: [6,1]     .   D=============================eER.   lzcntw	%ax, %bx
-# CHECK-NEXT: [6,2]     .    D=============================eER   addw	%cx, %bx
+# CHECK-NEXT: [0,1]     DPPPeER   .    .    .    .    .    . .   lzcntw	%ax, %bx
+# CHECK-NEXT: [0,2]     DPPPPeER  .    .    .    .    .    . .   addw	%cx, %bx
+# CHECK-NEXT: [1,0]     DPPPPPeeeER    .    .    .    .    . .   imulw	%ax, %bx
+# CHECK-NEXT: [1,1]     .DPPPPPPPeER   .    .    .    .    . .   lzcntw	%ax, %bx
+# CHECK-NEXT: [1,2]     .DPPPPPPPPeER  .    .    .    .    . .   addw	%cx, %bx
+# CHECK-NEXT: [2,0]     .DPPPPPPPPPeeeER    .    .    .    . .   imulw	%ax, %bx
+# CHECK-NEXT: [2,1]     .DPPPPPPPPPPPPeER   .    .    .    . .   lzcntw	%ax, %bx
+# CHECK-NEXT: [2,2]     . DPPPPPPPPPPPPeER  .    .    .    . .   addw	%cx, %bx
+# CHECK-NEXT: [3,0]     . DPPPPPPPPPPPPPeeeER    .    .    . .   imulw	%ax, %bx
+# CHECK-NEXT: [3,1]     . DPPPPPPPPPPPPPPPPeER   .    .    . .   lzcntw	%ax, %bx
+# CHECK-NEXT: [3,2]     . DPPPPPPPPPPPPPPPPPeER  .    .    . .   addw	%cx, %bx
+# CHECK-NEXT: [4,0]     .  DPPPPPPPPPPPPPPPPPeeeER    .    . .   imulw	%ax, %bx
+# CHECK-NEXT: [4,1]     .  DPPPPPPPPPPPPPPPPPPPPeER   .    . .   lzcntw	%ax, %bx
+# CHECK-NEXT: [4,2]     .  DPPPPPPPPPPPPPPPPPPPPPeER  .    . .   addw	%cx, %bx
+# CHECK-NEXT: [5,0]     .  DPPPPPPPPPPPPPPPPPPPPPPeeeER    . .   imulw	%ax, %bx
+# CHECK-NEXT: [5,1]     .   DPPPPPPPPPPPPPPPPPPPPPPPPeER   . .   lzcntw	%ax, %bx
+# CHECK-NEXT: [5,2]     .   DPPPPPPPPPPPPPPPPPPPPPPPPPeER  . .   addw	%cx, %bx
+# CHECK-NEXT: [6,0]     .   DPPPPPPPPPPPPPPPPPPPPPPPPPPeeeER .   imulw	%ax, %bx
+# CHECK-NEXT: [6,1]     .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER.   lzcntw	%ax, %bx
+# CHECK-NEXT: [6,2]     .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER   addw	%cx, %bx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

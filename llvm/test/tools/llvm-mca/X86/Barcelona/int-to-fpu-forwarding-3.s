@@ -49,18 +49,25 @@ pinsrw $1, %eax, %xmm0
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     pinsrw	$1, %eax, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012345
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeER .    .    .   addl	%eax, %eax
-# CHECK-NEXT: [0,1]     D=eeER    .    .   pinsrw	$0, %eax, %xmm0
-# CHECK-NEXT: [0,2]     .D==eeER  .    .   pinsrw	$1, %eax, %xmm0
+# CHECK-NEXT: [0,1]     DPeeER    .    .   pinsrw	$0, %eax, %xmm0
+# CHECK-NEXT: [0,2]     .DPPeeER  .    .   pinsrw	$1, %eax, %xmm0
 # CHECK-NEXT: [1,0]     .DeE---R  .    .   addl	%eax, %eax
-# CHECK-NEXT: [1,1]     . D===eeER.    .   pinsrw	$0, %eax, %xmm0
-# CHECK-NEXT: [1,2]     . D=====eeER   .   pinsrw	$1, %eax, %xmm0
+# CHECK-NEXT: [1,1]     . DPPPeeER.    .   pinsrw	$0, %eax, %xmm0
+# CHECK-NEXT: [1,2]     . DPPPPPeeER   .   pinsrw	$1, %eax, %xmm0
 # CHECK-NEXT: [2,0]     .  DeE-----R   .   addl	%eax, %eax
-# CHECK-NEXT: [2,1]     .  D======eeER .   pinsrw	$0, %eax, %xmm0
-# CHECK-NEXT: [2,2]     .   D=======eeER   pinsrw	$1, %eax, %xmm0
+# CHECK-NEXT: [2,1]     .  DPPPPPPeeER .   pinsrw	$0, %eax, %xmm0
+# CHECK-NEXT: [2,2]     .   DPPPPPPPeeER   pinsrw	$1, %eax, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

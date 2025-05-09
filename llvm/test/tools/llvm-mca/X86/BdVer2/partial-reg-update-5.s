@@ -60,11 +60,18 @@ lzcnt %ax, %bx  ## partial register stall.
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     lzcntw	%ax, %bx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeER.  .   lzcntw	%ax, %bx
-# CHECK-NEXT: [1,0]     D==eeER .   lzcntw	%ax, %bx
-# CHECK-NEXT: [2,0]     .D===eeER   lzcntw	%ax, %bx
+# CHECK-NEXT: [1,0]     DP=eeER .   lzcntw	%ax, %bx
+# CHECK-NEXT: [2,0]     .DPP=eeER   lzcntw	%ax, %bx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
