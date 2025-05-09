@@ -186,7 +186,7 @@ void RenderDiagnosticDetails(Stream &stream,
   // Work through each detail in reverse order using the vector/stack.
   bool did_print = false;
   for (; !remaining_details.empty(); remaining_details.pop_back()) {
-   const  auto &detail = remaining_details.back();
+    const auto &detail = remaining_details.back();
     // Get the information to print this detail and remove it from the stack.
     // Print all the lines for all the other messages first.
     stream << std::string(padding, ' ');
