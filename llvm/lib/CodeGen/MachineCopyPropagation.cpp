@@ -1206,7 +1206,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
     // Ignore non-trivial COPYs.
     std::optional<DestSourcePair> CopyOperands =
         isCopyInstr(MI, *TII, UseCopyInstr);
-    if (CopyOperands) {
+    if (CopyOperands && MI.getNumImplicitOperands() == 0) {
       Register DefReg = CopyOperands->Destination->getReg();
       Register SrcReg = CopyOperands->Source->getReg();
 

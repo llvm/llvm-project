@@ -8624,6 +8624,11 @@ def objc_isystem : Separate<["-"], "objc-isystem">,
 def objcxx_isystem : Separate<["-"], "objcxx-isystem">,
   MetaVarName<"<directory>">,
   HelpText<"Add directory to the ObjC++ SYSTEM include search path">;
+def internal_iframework : Separate<["-"], "internal-iframework">,
+  MetaVarName<"<directory>">,
+  HelpText<"Add directory to the internal system framework search path; these "
+           "are assumed to not be user-provided and are used to model system "
+           "and standard frameworks' paths.">;
 def internal_isystem : Separate<["-"], "internal-isystem">,
   MetaVarName<"<directory>">,
   HelpText<"Add directory to the internal system include search path; these "
