@@ -1558,6 +1558,7 @@ void DAP::EventThread() {
             event_mask & lldb::SBTarget::eBroadcastBitSymbolsChanged) {
           const uint32_t num_modules =
               lldb::SBTarget::GetNumModulesFromEvent(event);
+          std::lock_guard<std::mutex> guard(modules_mutex);
           for (uint32_t i = 0; i < num_modules; ++i) {
             lldb::SBModule module =
                 lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
@@ -1569,24 +1570,21 @@ void DAP::EventThread() {
 
             llvm::StringRef reason;
             bool id_only = false;
-            {
-              std::lock_guard<std::mutex> guard(modules_mutex);
-              if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded) {
-                modules.insert(module_id);
-                reason = "new";
-              } else {
-                // If this is a module we've never told the client about, don't
-                // send an event.
-                if (!modules.contains(module_id))
-                  continue;
+            if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded) {
+              modules.insert(module_id);
+              reason = "new";
+            } else {
+              // If this is a module we've never told the client about, don't
+              // send an event.
+              if (!modules.contains(module_id))
+                continue;
 
-                if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded) {
-                  modules.erase(module_id);
-                  reason = "removed";
-                  id_only = true;
-                } else {
-                  reason = "changed";
-                }
+              if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded) {
+                modules.erase(module_id);
+                reason = "removed";
+                id_only = true;
+              } else {
+                reason = "changed";
               }
             }
 
