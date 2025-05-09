@@ -21,10 +21,12 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/Target/LLVM/NVVM/Utils.h"
+#include "mlir/Target/LLVM/Target.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "mlir/Target/LLVMIR/Import.h"
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/Targets.h"
@@ -66,6 +68,16 @@ public:
                          const SmallVector<char, 0> &object,
                          const gpu::TargetOptions &options) const;
 };
+
+// Implementation of the `::mlir::TargetAttrInterface` model.
+class NVVMTargetInfoAttrImpl
+    : public mlir::TargetAttrInterface::FallbackModel<NVVMTargetInfoAttrImpl> {
+public:
+  StringRef getTargetTriple(Attribute attribute) const;
+  StringRef getTargetChip(Attribute attribute) const;
+  std::string getTargetFeatures(Attribute attribute) const;
+  LogicalResult setTargetSpec(Attribute attribute, TargetSpec &spec) const;
+};
 } // namespace
 
 // Register the NVVM dialect, the NVVM translation & the target interface.
@@ -73,6 +85,7 @@ void mlir::NVVM::registerNVVMTargetInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, NVVM::NVVMDialect *dialect) {
     NVVMTargetAttr::attachInterface<NVVMTargetAttrImpl>(*ctx);
+    NVVMTargetAttr::attachInterface<NVVMTargetInfoAttrImpl>(*ctx);
   });
 }
 
@@ -92,6 +105,19 @@ StringRef mlir::NVVM::getCUDAToolkitPath() {
   if (const char *var = std::getenv("CUDA_PATH"))
     return var;
   return __DEFAULT_CUDATOOLKIT_PATH__;
+}
+
+static void initializeTarget() {
+  static llvm::once_flag initializeBackendOnce;
+  llvm::call_once(initializeBackendOnce, []() {
+  // If the `NVPTX` LLVM target was built, initialize it.
+#if LLVM_HAS_NVPTX_TARGET
+    LLVMInitializeNVPTXTarget();
+    LLVMInitializeNVPTXTargetInfo();
+    LLVMInitializeNVPTXTargetMC();
+    LLVMInitializeNVPTXAsmPrinter();
+#endif
+  });
 }
 
 SerializeGPUModuleBase::SerializeGPUModuleBase(
@@ -118,18 +144,7 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
   (void)appendStandardLibs();
 }
 
-void SerializeGPUModuleBase::init() {
-  static llvm::once_flag initializeBackendOnce;
-  llvm::call_once(initializeBackendOnce, []() {
-  // If the `NVPTX` LLVM target was built, initialize it.
-#if LLVM_HAS_NVPTX_TARGET
-    LLVMInitializeNVPTXTarget();
-    LLVMInitializeNVPTXTargetInfo();
-    LLVMInitializeNVPTXTargetMC();
-    LLVMInitializeNVPTXAsmPrinter();
-#endif
-  });
-}
+void SerializeGPUModuleBase::init() { initializeTarget(); }
 
 NVVMTargetAttr SerializeGPUModuleBase::getTarget() const { return target; }
 
@@ -799,4 +814,29 @@ NVVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
       attribute, format,
       builder.getStringAttr(StringRef(object.data(), object.size())),
       objectProps, /*kernels=*/nullptr);
+}
+
+StringRef NVVMTargetInfoAttrImpl::getTargetTriple(Attribute attribute) const {
+  return cast<NVVMTargetAttr>(attribute).getTriple();
+}
+
+StringRef NVVMTargetInfoAttrImpl::getTargetChip(Attribute attribute) const {
+  return cast<NVVMTargetAttr>(attribute).getChip();
+}
+
+std::string
+NVVMTargetInfoAttrImpl::getTargetFeatures(Attribute attribute) const {
+  return cast<NVVMTargetAttr>(attribute).getFeatures().str();
+}
+
+LogicalResult NVVMTargetInfoAttrImpl::setTargetSpec(Attribute attribute,
+                                                    TargetSpec &spec) const {
+  initializeTarget();
+  FailureOr<TargetInfo> info =
+      TargetInfo::getTargetInfo(cast<TargetAttrInterface>(attribute));
+  if (failed(info))
+    return failure();
+  spec.dataLayout =
+      translateDataLayout(info->getDataLayout(), attribute.getContext());
+  return success(spec.dataLayout != nullptr);
 }
