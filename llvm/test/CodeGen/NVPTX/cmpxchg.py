@@ -5,8 +5,8 @@ from string import Template
 from itertools import product
 
 cmpxchg_func = Template(
-    """define i$size @${success}_${failure}_i${size}_${addrspace}(ptr${addrspace_cast} %addr, i$size %cmp, i$size %new) {
-    %pairold = cmpxchg ptr${addrspace_cast} %addr, i$size %cmp, i$size %new $success $failure
+    """define i$size @${success}_${failure}_i${size}_${addrspace}_${ptx_scope}(ptr${addrspace_cast} %addr, i$size %cmp, i$size %new) {
+    %pairold = cmpxchg ptr${addrspace_cast} %addr, i$size %cmp, i$size %new syncscope(\"${llvm_scope}\") $success $failure
     ret i$size %new
 }
 """
@@ -38,9 +38,12 @@ if __name__ == "__main__":
     for sm, ptx in TESTS:
         with open("cmpxchg-sm{}.ll".format(str(sm)), "w") as fp:
             print(run_statement.substitute(sm=sm, ptx=ptx), file=fp)
-            for size, success, failure, addrspace in product(
-                SIZES, SUCCESS_ORDERINGS, FAILURE_ORDERINGS, ADDRSPACES
+            for size, success, failure, addrspace, llvm_scope in product(
+                SIZES, SUCCESS_ORDERINGS, FAILURE_ORDERINGS, ADDRSPACES, LLVM_SCOPES
             ):
+                # cluster ordering is supported from SM90 onwards
+                if sm != 90 and llvm_scope == "cluster":
+                    continue
                 if addrspace == 0:
                     addrspace_cast = ""
                 else:
@@ -52,6 +55,8 @@ if __name__ == "__main__":
                         size=size,
                         addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
                         addrspace_cast=addrspace_cast,
+                        llvm_scope=llvm_scope,
+                        ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
                     ),
                     file=fp,
                 )

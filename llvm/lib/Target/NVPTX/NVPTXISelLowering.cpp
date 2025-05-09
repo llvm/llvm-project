@@ -6266,7 +6266,8 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
 
 Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
-                                                   AtomicOrdering Ord) const {
+                                                   AtomicOrdering Ord,
+                                                   SyncScope::ID SSID) const {
   if (!isa<AtomicCmpXchgInst>(Inst))
     return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
 
@@ -6274,15 +6275,17 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
   // Emit a fence.sc leading fence for cmpxchg seq_cst which are not emulated
   if (isReleaseOrStronger(Ord))
     return Ord == AtomicOrdering::SequentiallyConsistent
-               ? Builder.CreateFence(AtomicOrdering::SequentiallyConsistent)
-               : Builder.CreateFence(AtomicOrdering::Release);
+               ? Builder.CreateFence(AtomicOrdering::SequentiallyConsistent,
+                                     SSID)
+               : Builder.CreateFence(AtomicOrdering::Release, SSID);
 
   return nullptr;
 }
 
 Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
-                                                    AtomicOrdering Ord) const {
+                                                    AtomicOrdering Ord,
+                                                    SyncScope::ID SSID) const {
   // Specialize for cmpxchg
   if (!isa<AtomicCmpXchgInst>(Inst))
     return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
@@ -6295,7 +6298,7 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   if (isAcquireOrStronger(Ord) &&
       (Ord != AtomicOrdering::SequentiallyConsistent ||
        CASWidth < STI.getMinCmpXchgSizeInBits()))
-    return Builder.CreateFence(AtomicOrdering::Acquire);
+    return Builder.CreateFence(AtomicOrdering::Acquire, SSID);
 
   return nullptr;
 }

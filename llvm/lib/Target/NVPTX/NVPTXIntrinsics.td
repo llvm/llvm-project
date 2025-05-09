@@ -41,6 +41,27 @@ def AS_match {
   }];
 }
 
+multiclass nvvm_ternary_atomic_op_scoped<SDPatternOperator frag> {
+  defvar frag_pat = (frag node:$ptr, node:$cmp, node:$val);
+  def NAME#_cta: PatFrag<!setdagop(frag_pat, ops),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val), [{
+        return Scopes[cast<MemSDNode>(N)->getSyncScopeID()] == NVPTX::Scope::Block;
+  }]>;
+  def NAME#_cluster : PatFrag<!setdagop(frag_pat, ops),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val), [{
+        return Scopes[cast<MemSDNode>(N)->getSyncScopeID()] == NVPTX::Scope::Cluster;
+  }]>;
+  def NAME#_gpu: PatFrag<!setdagop(frag_pat, ops),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val), [{
+        return Scopes[cast<MemSDNode>(N)->getSyncScopeID()] == NVPTX::Scope::Device;
+  }]>;
+  def NAME#_sys: PatFrag<!setdagop(frag_pat, ops),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val), [{
+        return Scopes[cast<MemSDNode>(N)->getSyncScopeID()] == NVPTX::Scope::System;
+  }]>;
+}
+
+
 // A node that will be replaced with the current PTX version.
 class PTX {
   SDNodeXForm PTXVerXform = SDNodeXForm<imm, [{
@@ -1860,12 +1881,12 @@ multiclass F_ATOMIC_2_AS<RegTyInfo t, SDPatternOperator frag, string op_str, lis
   defm _GEN : F_ATOMIC_2<t, "", "", op_str, ATOMIC_GENERIC_CHK<frag_pat>, preds>;
 }
 
-multiclass F_ATOMIC_3_AS<RegTyInfo t, SDPatternOperator frag, string sem_str, string op_str, list<Predicate> preds = []> {
+multiclass F_ATOMIC_3_AS<RegTyInfo t, SDPatternOperator frag, string scope_str, string sem_str, string op_str, list<Predicate> preds = []> {
   defvar frag_pat = (frag node:$a, node:$b, node:$c);
-  defm _G : F_ATOMIC_3<t, sem_str, ".global", op_str, ATOMIC_GLOBAL_CHK<frag_pat>, preds>;
-  defm _S : F_ATOMIC_3<t, sem_str, ".shared", op_str, ATOMIC_SHARED_CHK<frag_pat>, preds>;
-  defm _S_C : F_ATOMIC_3<t, sem_str, ".shared::cluster", op_str, ATOMIC_SHARED_CLUSTER_CHK<frag_pat>, !listconcat([hasClusters], preds)>;
-  defm _GEN : F_ATOMIC_3<t, sem_str, "", op_str, ATOMIC_GENERIC_CHK<frag_pat>, preds>;
+  defm _G : F_ATOMIC_3<t, sem_str, scope_str, ".global", op_str, ATOMIC_GLOBAL_CHK<frag_pat>, preds>;
+  defm _S : F_ATOMIC_3<t, sem_str, scope_str, ".shared", op_str, ATOMIC_SHARED_CHK<frag_pat>, preds>;
+  defm _S_C : F_ATOMIC_3<t, sem_str, scope_str, ".shared::cluster", op_str, ATOMIC_SHARED_CLUSTER_CHK<frag_pat>, !listconcat([hasClusters], preds)>;
+  defm _GEN : F_ATOMIC_3<t, sem_str, scope_str, "", op_str, ATOMIC_GENERIC_CHK<frag_pat>, preds>;
 }
 
 // atom_add
@@ -1916,18 +1937,30 @@ foreach t = [I32RT, I64RT] in {
   foreach order = ["acquire", "release", "acq_rel", "monotonic"] in {
     defvar cas_order_string = !if(!eq(order, "monotonic"), ".relaxed", "."#order);
     defvar atomic_cmp_swap_pat = !cast<PatFrag>("atomic_cmp_swap_i"#t.Size#_#order);
+
+    // Instantiate scoped versions of the atomic compare and swap pattern
+    defm atomic_cmp_swap_i#t.Size#_#order: nvvm_ternary_atomic_op_scoped<atomic_cmp_swap_pat>;
+
+    foreach scope = ["cta", "cluster", "gpu", "sys"] in {
+      defvar atomic_cmp_swap_pat_scoped = !cast<PatFrag>("atomic_cmp_swap_i"#t.Size#_#order#_#scope);
+
+      // Syncscope is only supported for SM70+
+      defm INT_PTX_ATOM_CAS_#t.Size#_#order#_#scope
+        : F_ATOMIC_3_AS<t, atomic_cmp_swap_pat_scoped, "."#scope, cas_order_string, "cas.b"#t.Size, [hasSM<70>, hasPTX<63>]>;
+    }
+
     // Note that AtomicExpand will convert cmpxchg seq_cst to a cmpxchg monotonic with fences around it.
     // Memory orders are only supported for SM70+, PTX63+- so we have two sets of instruction definitions-
     // for SM70+, and "old" ones which lower to "atom.cas", for earlier archs.
     defm INT_PTX_ATOM_CAS_#t.Size#_#order
-      : F_ATOMIC_3_AS<t, atomic_cmp_swap_pat, cas_order_string, "cas.b"#t.Size, [hasSM<70>, hasPTX<63>]>;
+      : F_ATOMIC_3_AS<t, atomic_cmp_swap_pat, "", cas_order_string, "cas.b"#t.Size, [hasSM<70>, hasPTX<63>]>;
     defm INT_PTX_ATOM_CAS_#t.Size#_#order#_old
-      : F_ATOMIC_3_AS<t, atomic_cmp_swap_pat, "", "cas.b"#t.Size, []>;
+      : F_ATOMIC_3_AS<t, atomic_cmp_swap_pat, "", "", "cas.b"#t.Size, []>;
   }
 }
 
 // Note that 16-bit CAS support in PTX is emulated.
-defm INT_PTX_ATOM_CAS_16 : F_ATOMIC_3_AS<I16RT, atomic_cmp_swap_i16, "", "cas.b16", [hasSM<70>, hasPTX<63>]>;
+defm INT_PTX_ATOM_CAS_16 : F_ATOMIC_3_AS<I16RT, atomic_cmp_swap_i16, "", "", "cas.b16", [hasSM<70>, hasPTX<63>]>;
 
 // Support for scoped atomic operations.  Matches
 // int_nvvm_atomic_{op}_{space}_{type}_{scope}
@@ -1957,7 +1990,8 @@ multiclass ATOM3N_impl<string OpStr, string IntTypeStr, string TypeStr,
                        RegTyInfo t, list<Predicate> Preds> {
   defm "" : F_ATOMIC_3<t,
                        as_str = !if(!eq(SpaceStr, "gen"), "", "." # SpaceStr),
-                       sem_str = !if(!eq(ScopeStr, "gpu"), "", "." # ScopeStr),
+                       sem_str = "",
+                       scope_str = !if(!eq(ScopeStr, "gpu"), "", "." # ScopeStr),
                        op_str = OpStr # "." # TypeStr,
                        op = !cast<Intrinsic>(
                               "int_nvvm_atomic_" # OpStr
