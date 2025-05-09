@@ -284,13 +284,14 @@ __ptrauth Qualifier
 ^^^^^^^^^^^^^^^^^^^
 
 ``__ptrauth(key, address, discriminator)`` is an extended type
-qualifier which causes so-qualified objects to hold pointers signed using the
-specified schema rather than the default schema for such types.
+qualifier which causes so-qualified objects to hold pointers or pointer sized
+integers signed using the specified schema rather than the default schema for
+such types.
 
 In the current implementation in Clang, the qualified type must be a C pointer
-type, either to a function or to an object.  It currently cannot be an
-Objective-C pointer type, a C++ reference type, or a block pointer type; these
-restrictions may be lifted in the future.
+type, either to a function or to an object, or a pointer sized integer.  It
+currently cannot be an Objective-C pointer type, a C++ reference type, or a
+block pointer type; these restrictions may be lifted in the future.
 
 The qualifier's operands are as follows:
 

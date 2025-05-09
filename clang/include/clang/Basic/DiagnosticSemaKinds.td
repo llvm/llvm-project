@@ -1028,19 +1028,22 @@ def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
 
 // __ptrauth qualifier
 def err_ptrauth_qualifier_invalid : Error<
-  "%select{return type|parameter type|property}1 may not be qualified with '__ptrauth'; type is %0">;
+  "%select{return type|parameter type|property}1 may not be qualified with "
+  "'__ptrauth'; type is %0">;
 def err_ptrauth_qualifier_cast : Error<
   "cannot cast to '__ptrauth'-qualified type %0">;
-def err_ptrauth_qualifier_nonpointer : Error<
-  "'__ptrauth' qualifier only applies to pointer types; %0 is invalid">;
-def err_ptrauth_qualifier_redundant : Error<
-  "type %0 is already %1-qualified">;
+def err_ptrauth_qualifier_invalid_target : Error<
+  "'__ptrauth' qualifier only applies to pointer or pointer sized integer "
+  "types; %0 is invalid">;
+def err_ptrauth_qualifier_redundant: Error<
+  "type %0 is already '__ptrauth'-qualified">;
 def err_ptrauth_arg_not_ice : Error<
   "argument to '__ptrauth' must be an integer constant expression">;
 def err_ptrauth_address_discrimination_invalid : Error<
   "invalid address discrimination flag '%0'; '__ptrauth' requires '0' or '1'">;
 def err_ptrauth_extra_discriminator_invalid : Error<
-  "invalid extra discriminator flag '%0'; '__ptrauth' requires a value between '0' and '%1'">;
+  "invalid extra discriminator flag '%0'; '__ptrauth' requires a value between "
+  "'0' and '%1'">;
 
 /// main()
 // static main() is not an error in C, just in C++.
