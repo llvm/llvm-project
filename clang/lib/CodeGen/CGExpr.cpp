@@ -122,8 +122,8 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, LangAS DestLangAS,
     if (!ArraySize)
       Builder.SetInsertPoint(getPostAllocaInsertPoint());
     V = getTargetHooks().performAddrSpaceCast(
-        *this, V, getASTAllocaAddressSpace(), DestLangAS,
-        Builder.getPtrTy(DestAddrSpace), /*IsNonNull=*/true);
+        *this, V, getASTAllocaAddressSpace(), Builder.getPtrTy(DestAddrSpace),
+        /*IsNonNull=*/true);
   }
 
   return RawAddress(V, Ty, Align, KnownNonNull);
@@ -466,7 +466,7 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         llvm::Constant *C = GV;
         if (AS != LangAS::Default)
           C = TCG.performAddrSpaceCast(
-              CGF.CGM, GV, AS, LangAS::Default,
+              CGF.CGM, GV, AS,
               llvm::PointerType::get(
                   CGF.getLLVMContext(),
                   CGF.getContext().getTargetAddressSpace(LangAS::Default)));
@@ -3296,8 +3296,8 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     if (AS != T.getAddressSpace()) {
       auto TargetAS = getContext().getTargetAddressSpace(T.getAddressSpace());
       auto PtrTy = llvm::PointerType::get(CGM.getLLVMContext(), TargetAS);
-      auto ASC = getTargetHooks().performAddrSpaceCast(
-          CGM, ATPO.getPointer(), AS, T.getAddressSpace(), PtrTy);
+      auto ASC = getTargetHooks().performAddrSpaceCast(CGM, ATPO.getPointer(),
+                                                       AS, PtrTy);
       ATPO = ConstantAddress(ASC, ATPO.getElementType(), ATPO.getAlignment());
     }
 
@@ -5565,8 +5565,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
     QualType DestTy = getContext().getPointerType(E->getType());
     llvm::Value *V = getTargetHooks().performAddrSpaceCast(
         *this, LV.getPointer(*this),
-        E->getSubExpr()->getType().getAddressSpace(),
-        E->getType().getAddressSpace(), ConvertType(DestTy));
+        E->getSubExpr()->getType().getAddressSpace(), ConvertType(DestTy));
     return MakeAddrLValue(Address(V, ConvertTypeForMem(E->getType()),
                                   LV.getAddress().getAlignment()),
                           E->getType(), LV.getBaseInfo(), LV.getTBAAInfo());
