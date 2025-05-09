@@ -4592,6 +4592,10 @@ public:
     return {getTrailingObjects<Expr *>(), TransformedExpressions};
   }
 
+  bool isPartiallySubstituted() const {
+    return isValueDependent() && TransformedExpressions;
+  };
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == PackIndexingExprClass;
   }
