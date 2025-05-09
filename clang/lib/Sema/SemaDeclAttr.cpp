@@ -851,7 +851,6 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   StringRef WarningGroup;
-  SmallVector<StringRef, 2> Options;
   if (AL.getNumArgs() > 3) {
     if (!S.checkStringLiteralArgumentAttr(AL, 3, WarningGroup))
       return;
@@ -2188,14 +2187,14 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
   bool FoundAny = false;
   bool OverrideOrImpl = false;
   switch (AMK) {
-  case AMK_None:
-  case AMK_Redeclaration:
+  case AvailabilityMergeKind::None:
+  case AvailabilityMergeKind::Redeclaration:
     OverrideOrImpl = false;
     break;
 
-  case AMK_Override:
-  case AMK_ProtocolImplementation:
-  case AMK_OptionalProtocolImplementation:
+  case AvailabilityMergeKind::Override:
+  case AvailabilityMergeKind::ProtocolImplementation:
+  case AvailabilityMergeKind::OptionalProtocolImplementation:
     OverrideOrImpl = true;
     break;
   }
@@ -2268,9 +2267,10 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
           if (Which == -1) {
             Diag(OldAA->getLocation(),
                  diag::warn_mismatched_availability_override_unavail)
-              << AvailabilityAttr::getPrettyPlatformName(Platform->getName())
-              << (AMK == AMK_Override);
-          } else if (Which != 1 && AMK == AMK_OptionalProtocolImplementation) {
+                << AvailabilityAttr::getPrettyPlatformName(Platform->getName())
+                << (AMK == AvailabilityMergeKind::Override);
+          } else if (Which != 1 && AMK == AvailabilityMergeKind::
+                                              OptionalProtocolImplementation) {
             // Allow different 'introduced' / 'obsoleted' availability versions
             // on a method that implements an optional protocol requirement. It
             // makes less sense to allow this for 'deprecated' as the user can't
@@ -2281,12 +2281,12 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
           } else {
             Diag(OldAA->getLocation(),
                  diag::warn_mismatched_availability_override)
-              << Which
-              << AvailabilityAttr::getPrettyPlatformName(Platform->getName())
-              << FirstVersion.getAsString() << SecondVersion.getAsString()
-              << (AMK == AMK_Override);
+                << Which
+                << AvailabilityAttr::getPrettyPlatformName(Platform->getName())
+                << FirstVersion.getAsString() << SecondVersion.getAsString()
+                << (AMK == AvailabilityMergeKind::Override);
           }
-          if (AMK == AMK_Override)
+          if (AMK == AvailabilityMergeKind::Override)
             Diag(CI.getLoc(), diag::note_overridden_method);
           else
             Diag(CI.getLoc(), diag::note_protocol_method);
@@ -2427,7 +2427,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
       ND, AL, II, false /*Implicit*/, Introduced.Version, Deprecated.Version,
       Obsoleted.Version, IsUnavailable, Str, IsStrict, Replacement,
-      Sema::AMK_None, PriorityModifier, IIEnvironment);
+      AvailabilityMergeKind::None, PriorityModifier, IIEnvironment);
   if (NewAttr)
     D->addAttr(NewAttr);
 
@@ -2483,8 +2483,8 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
           ND, AL, NewII, true /*Implicit*/, NewIntroduced, NewDeprecated,
           NewObsoleted, IsUnavailable, Str, IsStrict, Replacement,
-          Sema::AMK_None, PriorityModifier + Sema::AP_InferredFromOtherPlatform,
-          IIEnvironment);
+          AvailabilityMergeKind::None,
+          PriorityModifier + Sema::AP_InferredFromOtherPlatform, IIEnvironment);
       if (NewAttr)
         D->addAttr(NewAttr);
     }
@@ -2525,8 +2525,8 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
           ND, AL, NewII, true /*Implicit*/, NewIntroduced, NewDeprecated,
           NewObsoleted, IsUnavailable, Str, IsStrict, Replacement,
-          Sema::AMK_None, PriorityModifier + Sema::AP_InferredFromOtherPlatform,
-          IIEnvironment);
+          AvailabilityMergeKind::None,
+          PriorityModifier + Sema::AP_InferredFromOtherPlatform, IIEnvironment);
       if (NewAttr)
         D->addAttr(NewAttr);
     }
@@ -2558,7 +2558,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
           MinMacCatalystVersion(Introduced.Version),
           MinMacCatalystVersion(Deprecated.Version),
           MinMacCatalystVersion(Obsoleted.Version), IsUnavailable, Str,
-          IsStrict, Replacement, Sema::AMK_None,
+          IsStrict, Replacement, AvailabilityMergeKind::None,
           PriorityModifier + Sema::AP_InferredFromOtherPlatform, IIEnvironment);
       if (NewAttr)
         D->addAttr(NewAttr);
@@ -2600,7 +2600,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
               VersionOrEmptyVersion(NewIntroduced),
               VersionOrEmptyVersion(NewDeprecated),
               VersionOrEmptyVersion(NewObsoleted), /*IsUnavailable=*/false, Str,
-              IsStrict, Replacement, Sema::AMK_None,
+              IsStrict, Replacement, AvailabilityMergeKind::None,
               PriorityModifier + Sema::AP_InferredFromOtherPlatform +
                   Sema::AP_InferredFromOtherPlatform,
               IIEnvironment);
@@ -5397,6 +5397,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     }
   }
 
+  bool IsTargetDefaultMSABI =
+      Context.getTargetInfo().getTriple().isOSWindows() ||
+      Context.getTargetInfo().getTriple().isUEFI();
   // TODO: diagnose uses of these conventions on the wrong target.
   switch (Attrs.getKind()) {
   case ParsedAttr::AT_CDecl:
@@ -5436,12 +5439,10 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     CC = CC_X86RegCall;
     break;
   case ParsedAttr::AT_MSABI:
-    CC = Context.getTargetInfo().getTriple().isOSWindows() ? CC_C :
-                                                             CC_Win64;
+    CC = IsTargetDefaultMSABI ? CC_C : CC_Win64;
     break;
   case ParsedAttr::AT_SysVABI:
-    CC = Context.getTargetInfo().getTriple().isOSWindows() ? CC_X86_64SysV :
-                                                             CC_C;
+    CC = IsTargetDefaultMSABI ? CC_X86_64SysV : CC_C;
     break;
   case ParsedAttr::AT_Pcs: {
     StringRef StrRef;
@@ -6861,13 +6862,16 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   // though they were unknown attributes.
   if (AL.getKind() == ParsedAttr::UnknownAttribute ||
       !AL.existsInTarget(S.Context.getTargetInfo())) {
-    S.Diag(AL.getLoc(),
-           AL.isRegularKeywordAttribute()
-               ? (unsigned)diag::err_keyword_not_supported_on_target
-           : AL.isDeclspecAttribute()
-               ? (unsigned)diag::warn_unhandled_ms_attribute_ignored
-               : (unsigned)diag::warn_unknown_attribute_ignored)
-        << AL << AL.getRange();
+    if (AL.isRegularKeywordAttribute() || AL.isDeclspecAttribute()) {
+      S.Diag(AL.getLoc(), AL.isRegularKeywordAttribute()
+                              ? diag::err_keyword_not_supported_on_target
+                              : diag::warn_unhandled_ms_attribute_ignored)
+          << AL.getAttrName() << AL.getRange();
+    } else {
+      S.Diag(AL.getNormalizedRange().getBegin(),
+             diag::warn_unknown_attribute_ignored)
+          << "'" + AL.getNormalizedFullName() + "'" << AL.getNormalizedRange();
+    }
     return;
   }
 

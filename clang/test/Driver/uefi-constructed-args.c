@@ -11,5 +11,4 @@
 // CHECK-SAME: "-subsystem:efi_application"
 // CHECK-SAME: "-entry:EfiMain"
 // CHECK-SAME: "-tsaware:no"
-// CHECK-SAME: "-dll"
 // CHECK-SAME: "-debug"

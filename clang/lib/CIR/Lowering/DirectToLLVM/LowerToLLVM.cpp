@@ -1599,7 +1599,9 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMStackSaveOpLowering,
                CIRToLLVMStackRestoreOpLowering,
                CIRToLLVMTrapOpLowering,
-               CIRToLLVMUnaryOpLowering
+               CIRToLLVMUnaryOpLowering,
+               CIRToLLVMVecCreateOpLowering,
+               CIRToLLVMVecExtractOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -1682,6 +1684,37 @@ mlir::LogicalResult CIRToLLVMStackRestoreOpLowering::matchAndRewrite(
     cir::StackRestoreOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<mlir::LLVM::StackRestoreOp>(op, adaptor.getPtr());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecCreateOpLowering::matchAndRewrite(
+    cir::VecCreateOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // Start with an 'undef' value for the vector.  Then 'insertelement' for
+  // each of the vector elements.
+  const auto vecTy = mlir::cast<cir::VectorType>(op.getType());
+  const mlir::Type llvmTy = typeConverter->convertType(vecTy);
+  const mlir::Location loc = op.getLoc();
+  mlir::Value result = rewriter.create<mlir::LLVM::PoisonOp>(loc, llvmTy);
+  assert(vecTy.getSize() == op.getElements().size() &&
+         "cir.vec.create op count doesn't match vector type elements count");
+
+  for (uint64_t i = 0; i < vecTy.getSize(); ++i) {
+    const mlir::Value indexValue =
+        rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), i);
+    result = rewriter.create<mlir::LLVM::InsertElementOp>(
+        loc, result, adaptor.getElements()[i], indexValue);
+  }
+
+  rewriter.replaceOp(op, result);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecExtractOpLowering::matchAndRewrite(
+    cir::VecExtractOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractElementOp>(
+      op, adaptor.getVec(), adaptor.getIndex());
   return mlir::success();
 }
 

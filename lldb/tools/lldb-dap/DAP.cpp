@@ -84,8 +84,8 @@ DAP::DAP(Log *log, const ReplMode default_repl_mode,
     : log(log), transport(transport), broadcaster("lldb-dap"),
       exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
       stop_at_entry(false), is_attach(false),
-      restarting_process_id(LLDB_INVALID_PROCESS_ID),
-      configuration_done_sent(false), waiting_for_run_in_terminal(false),
+      restarting_process_id(LLDB_INVALID_PROCESS_ID), configuration_done(false),
+      waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
       reverse_request_seq(0), repl_mode(default_repl_mode) {
@@ -676,10 +676,10 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   // omitted at all), so it is good to leave the user an opportunity to specify
   // those. Any of those three can be left empty.
   auto target = this->debugger.CreateTarget(
-      configuration.program.value_or("").data(),
-      configuration.targetTriple.value_or("").data(),
-      configuration.platformName.value_or("").data(),
-      true, // Add dependent modules.
+      /*filename=*/configuration.program.data(),
+      /*target_triple=*/configuration.targetTriple.data(),
+      /*platform_name=*/configuration.platformName.data(),
+      /*add_dependent_modules=*/true, // Add dependent modules.
       error);
 
   return target;
@@ -893,10 +893,19 @@ llvm::Error DAP::Loop() {
             return errWrapper;
           }
 
+          // The launch sequence is special and we need to carefully handle
+          // packets in the right order. Until we've handled configurationDone,
+          bool add_to_pending_queue = false;
+
           if (const protocol::Request *req =
-                  std::get_if<protocol::Request>(&*next);
-              req && req->command == "disconnect") {
-            disconnecting = true;
+                  std::get_if<protocol::Request>(&*next)) {
+            llvm::StringRef command = req->command;
+            if (command == "disconnect")
+              disconnecting = true;
+            if (!configuration_done)
+              add_to_pending_queue =
+                  command != "initialize" && command != "configurationDone" &&
+                  command != "disconnect" && !command.ends_with("Breakpoints");
           }
 
           const std::optional<CancelArguments> cancel_args =
@@ -924,7 +933,8 @@ llvm::Error DAP::Loop() {
 
           {
             std::lock_guard<std::mutex> guard(m_queue_mutex);
-            m_queue.push_back(std::move(*next));
+            auto &queue = add_to_pending_queue ? m_pending_queue : m_queue;
+            queue.push_back(std::move(*next));
           }
           m_queue_cv.notify_one();
         }
@@ -938,15 +948,18 @@ llvm::Error DAP::Loop() {
     StopEventHandlers();
   });
 
-  while (!disconnecting || !m_queue.empty()) {
+  while (true) {
     std::unique_lock<std::mutex> lock(m_queue_mutex);
     m_queue_cv.wait(lock, [&] { return disconnecting || !m_queue.empty(); });
 
-    if (m_queue.empty())
+    if (disconnecting && m_queue.empty())
       break;
 
     Message next = m_queue.front();
     m_queue.pop_front();
+
+    // Unlock while we're processing the event.
+    lock.unlock();
 
     if (!HandleObject(next))
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -968,6 +981,7 @@ lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
   while (std::chrono::steady_clock::now() < timeout_time) {
     const auto state = process.GetState();
     switch (state) {
+    case lldb::eStateUnloaded:
     case lldb::eStateAttaching:
     case lldb::eStateConnected:
     case lldb::eStateInvalid:
@@ -981,9 +995,6 @@ lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
       return error;
     case lldb::eStateExited:
       error.SetErrorString("process exited during launch or attach");
-      return error;
-    case lldb::eStateUnloaded:
-      error.SetErrorString("process unloaded during launch or attach");
       return error;
     case lldb::eStateCrashed:
     case lldb::eStateStopped:
@@ -1192,7 +1203,7 @@ bool SendEventRequestHandler::DoExecute(lldb::SBDebugger debugger,
 }
 
 void DAP::ConfigureSourceMaps() {
-  if (configuration.sourceMap.empty() && !configuration.sourcePath)
+  if (configuration.sourceMap.empty() && configuration.sourcePath.empty())
     return;
 
   std::string sourceMapCommand;
@@ -1203,8 +1214,8 @@ void DAP::ConfigureSourceMaps() {
     for (const auto &kv : configuration.sourceMap) {
       strm << "\"" << kv.first << "\" \"" << kv.second << "\" ";
     }
-  } else if (configuration.sourcePath) {
-    strm << "\".\" \"" << *configuration.sourcePath << "\"";
+  } else if (!configuration.sourcePath.empty()) {
+    strm << "\".\" \"" << configuration.sourcePath << "\"";
   }
 
   RunLLDBCommands("Setting source map:", {sourceMapCommand});
@@ -1213,6 +1224,7 @@ void DAP::ConfigureSourceMaps() {
 void DAP::SetConfiguration(const protocol::Configuration &config,
                            bool is_attach) {
   configuration = config;
+  stop_at_entry = config.stopOnEntry;
   this->is_attach = is_attach;
 
   if (configuration.customFrameFormat)
@@ -1221,9 +1233,17 @@ void DAP::SetConfiguration(const protocol::Configuration &config,
     SetThreadFormat(*configuration.customThreadFormat);
 }
 
+void DAP::SetConfigurationDone() {
+  {
+    std::lock_guard<std::mutex> guard(m_queue_mutex);
+    std::copy(m_pending_queue.begin(), m_pending_queue.end(),
+              std::front_inserter(m_queue));
+    configuration_done = true;
+  }
+  m_queue_cv.notify_all();
+}
+
 void DAP::SetFrameFormat(llvm::StringRef format) {
-  if (format.empty())
-    return;
   lldb::SBError error;
   frame_format = lldb::SBFormat(format.str().c_str(), error);
   if (error.Fail()) {
@@ -1236,8 +1256,6 @@ void DAP::SetFrameFormat(llvm::StringRef format) {
 }
 
 void DAP::SetThreadFormat(llvm::StringRef format) {
-  if (format.empty())
-    return;
   lldb::SBError error;
   thread_format = lldb::SBFormat(format.str().c_str(), error);
   if (error.Fail()) {

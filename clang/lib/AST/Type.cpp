@@ -2301,8 +2301,7 @@ bool Type::hasUnsignedIntegerRepresentation() const {
 
 bool Type::isFloatingType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
-    return BT->getKind() >= BuiltinType::Half &&
-           BT->getKind() <= BuiltinType::Ibm128;
+    return BT->isFloatingPoint();
   if (const auto *CT = dyn_cast<ComplexType>(CanonicalType))
     return CT->getElementType()->isFloatingType();
   return false;
@@ -2894,29 +2893,6 @@ bool QualType::isTriviallyCopyConstructibleType(
     const ASTContext &Context) const {
   return isTriviallyCopyableTypeImpl(*this, Context,
                                      /*IsCopyConstructible=*/true);
-}
-
-bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
-  QualType BaseElementType = Context.getBaseElementType(*this);
-
-  if (BaseElementType->isIncompleteType()) {
-    return false;
-  } else if (!BaseElementType->isObjectType()) {
-    return false;
-  } else if (const auto *RD = BaseElementType->getAsRecordDecl()) {
-    return RD->canPassInRegisters();
-  } else if (BaseElementType.isTriviallyCopyableType(Context)) {
-    return true;
-  } else {
-    switch (isNonTrivialToPrimitiveDestructiveMove()) {
-    case PCK_Trivial:
-      return !isDestructedType();
-    case PCK_ARCStrong:
-      return true;
-    default:
-      return false;
-    }
-  }
 }
 
 bool QualType::isNonWeakInMRRWithObjCWeak(const ASTContext &Context) const {
@@ -3807,13 +3783,13 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
 
     ArrayRef<FunctionEffect> SrcFX = epi.FunctionEffects.effects();
     auto *DestFX = getTrailingObjects<FunctionEffect>();
-    std::uninitialized_copy(SrcFX.begin(), SrcFX.end(), DestFX);
+    llvm::uninitialized_copy(SrcFX, DestFX);
 
     ArrayRef<EffectConditionExpr> SrcConds = epi.FunctionEffects.conditions();
     if (!SrcConds.empty()) {
       ExtraBits.EffectsHaveConditions = true;
       auto *DestConds = getTrailingObjects<EffectConditionExpr>();
-      std::uninitialized_copy(SrcConds.begin(), SrcConds.end(), DestConds);
+      llvm::uninitialized_copy(SrcConds, DestConds);
       assert(std::any_of(SrcConds.begin(), SrcConds.end(),
                          [](const EffectConditionExpr &EC) {
                            if (const Expr *E = EC.getCondition())
@@ -4157,9 +4133,7 @@ PackIndexingType::PackIndexingType(const ASTContext &Context,
            computeDependence(Pattern, IndexExpr, Expansions)),
       Context(Context), Pattern(Pattern), IndexExpr(IndexExpr),
       Size(Expansions.size()), FullySubstituted(FullySubstituted) {
-
-  std::uninitialized_copy(Expansions.begin(), Expansions.end(),
-                          getTrailingObjects<QualType>());
+  llvm::uninitialized_copy(Expansions, getTrailingObjects<QualType>());
 }
 
 UnsignedOrNone PackIndexingType::getSelectedIndex() const {
@@ -4912,8 +4886,8 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   QualType type = getCanonicalTypeInternal();
 
   switch (type->getTypeClass()) {
-    // We'll only see canonical types here.
 #define NON_CANONICAL_TYPE(Class, Parent)                                      \
+  /* We'll only see canonical types here. */                                   \
   case Type::Class:                                                            \
     llvm_unreachable("non-canonical type");
 #define TYPE(Class, Parent)
@@ -5305,10 +5279,14 @@ void MemberPointerType::Profile(llvm::FoldingSetNodeID &ID, QualType Pointee,
     ID.AddPointer(Cls->getCanonicalDecl());
 }
 
+CXXRecordDecl *MemberPointerType::getCXXRecordDecl() const {
+  return dyn_cast<MemberPointerType>(getCanonicalTypeInternal())
+      ->getQualifier()
+      ->getAsRecordDecl();
+}
+
 CXXRecordDecl *MemberPointerType::getMostRecentCXXRecordDecl() const {
-  auto *RD = dyn_cast<MemberPointerType>(getCanonicalTypeInternal())
-                 ->getQualifier()
-                 ->getAsRecordDecl();
+  auto *RD = getCXXRecordDecl();
   if (!RD)
     return nullptr;
   return RD->getMostRecentNonInjectedDecl();

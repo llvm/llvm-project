@@ -254,7 +254,7 @@ CodeGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
 }
 
 static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
-                                               bool IsWindows) {
+                                               bool IsTargetDefaultMSABI) {
   // Set the appropriate calling convention for the Function.
   if (D->hasAttr<StdCallAttr>())
     return CC_X86StdCall;
@@ -290,10 +290,10 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
     return CC_IntelOclBicc;
 
   if (D->hasAttr<MSABIAttr>())
-    return IsWindows ? CC_C : CC_Win64;
+    return IsTargetDefaultMSABI ? CC_C : CC_Win64;
 
   if (D->hasAttr<SysVABIAttr>())
-    return IsWindows ? CC_X86_64SysV : CC_C;
+    return IsTargetDefaultMSABI ? CC_X86_64SysV : CC_C;
 
   if (D->hasAttr<PreserveMostAttr>())
     return CC_PreserveMost;
@@ -581,8 +581,11 @@ CodeGenTypes::arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
   }
 
   FunctionType::ExtInfo einfo;
-  bool IsWindows = getContext().getTargetInfo().getTriple().isOSWindows();
-  einfo = einfo.withCallingConv(getCallingConventionForDecl(MD, IsWindows));
+  bool IsTargetDefaultMSABI =
+      getContext().getTargetInfo().getTriple().isOSWindows() ||
+      getContext().getTargetInfo().getTriple().isUEFI();
+  einfo = einfo.withCallingConv(
+      getCallingConventionForDecl(MD, IsTargetDefaultMSABI));
 
   if (getContext().getLangOpts().ObjCAutoRefCount &&
       MD->hasAttr<NSReturnsRetainedAttr>())
@@ -672,10 +675,10 @@ arrangeFreeFunctionLikeCall(CodeGenTypes &CGT, CodeGenModule &CGM,
       addExtParameterInfosForCall(paramInfos, proto, numExtraRequiredArgs,
                                   args.size());
 
-    // If we don't have a prototype at all, but we're supposed to
-    // explicitly use the variadic convention for unprototyped calls,
-    // treat all of the arguments as required but preserve the nominal
-    // possibility of variadics.
+  // If we don't have a prototype at all, but we're supposed to
+  // explicitly use the variadic convention for unprototyped calls,
+  // treat all of the arguments as required but preserve the nominal
+  // possibility of variadics.
   } else if (CGM.getTargetCodeGenInfo().isNoProtoCallVariadic(
                  args, cast<FunctionNoProtoType>(fnType))) {
     required = RequiredArgs(args.size());
@@ -1372,9 +1375,8 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
       if (ScalableDstTy->getElementType() == FixedSrcTy->getElementType()) {
         auto *Load = CGF.Builder.CreateLoad(Src);
         auto *PoisonVec = llvm::PoisonValue::get(ScalableDstTy);
-        auto *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
         llvm::Value *Result = CGF.Builder.CreateInsertVector(
-            ScalableDstTy, PoisonVec, Load, Zero, "cast.scalable");
+            ScalableDstTy, PoisonVec, Load, uint64_t(0), "cast.scalable");
         if (ScalableDstTy != Ty)
           Result = CGF.Builder.CreateBitCast(Result, Ty);
         return Result;
@@ -1482,10 +1484,8 @@ CoerceScalableToFixed(CodeGenFunction &CGF, llvm::FixedVectorType *ToTy,
     V = CGF.Builder.CreateBitCast(V, FromTy);
   }
   if (FromTy->getElementType() == ToTy->getElementType()) {
-    llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
-
     V->setName(Name + ".coerce");
-    V = CGF.Builder.CreateExtractVector(ToTy, V, Zero, "cast.fixed");
+    V = CGF.Builder.CreateExtractVector(ToTy, V, uint64_t(0), "cast.fixed");
     return {V, true};
   }
   return {V, false};
@@ -3520,8 +3520,7 @@ static llvm::Value *tryEmitFusedAutoreleaseOfResult(CodeGenFunction &CGF,
   // Look for:
   //   %generator = call i8* @objc_retain(i8* %originalResult)
   // or
-  //   %generator = call i8* @objc_retainAutoreleasedReturnValue(i8*
-  //   %originalResult)
+  //   %generator = call i8* @objc_retainAutoreleasedReturnValue(i8* %originalResult)
   llvm::CallInst *call = dyn_cast<llvm::CallInst>(generator);
   if (!call)
     return nullptr;
@@ -3997,7 +3996,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
         RV = SI->getValueOperand();
         SI->eraseFromParent();
 
-        // Otherwise, we have to do a simple load.
+      // Otherwise, we have to do a simple load.
       } else {
         RV = Builder.CreateLoad(ReturnValue);
       }
@@ -4065,7 +4064,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
     if (results.size() == 1) {
       RV = results[0];
 
-      // Otherwise, we need to make a first-class aggregate.
+    // Otherwise, we need to make a first-class aggregate.
     } else {
       // Construct a return type that lacks padding elements.
       llvm::Type *returnType = RetAI.getUnpaddedCoerceAndExpandType();
@@ -4204,11 +4203,11 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
   if (type->isReferenceType()) {
     args.add(RValue::get(Builder.CreateLoad(local)), type);
 
-    // In ARC, move out of consumed arguments so that the release cleanup
-    // entered by StartFunction doesn't cause an over-release.  This isn't
-    // optimal -O0 code generation, but it should get cleaned up when
-    // optimization is enabled.  This also assumes that delegate calls are
-    // performed exactly once for a set of arguments, but that should be safe.
+  // In ARC, move out of consumed arguments so that the release cleanup
+  // entered by StartFunction doesn't cause an over-release.  This isn't
+  // optimal -O0 code generation, but it should get cleaned up when
+  // optimization is enabled.  This also assumes that delegate calls are
+  // performed exactly once for a set of arguments, but that should be safe.
   } else if (getLangOpts().ObjCAutoRefCount &&
              param->hasAttr<NSConsumedAttr>() && type->isObjCRetainableType()) {
     llvm::Value *ptr = Builder.CreateLoad(local);
@@ -4217,8 +4216,8 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
     Builder.CreateStore(null, local);
     args.add(RValue::get(ptr), type);
 
-    // For the most part, we just need to load the alloca, except that
-    // aggregate r-values are actually pointers to temporaries.
+  // For the most part, we just need to load the alloca, except that
+  // aggregate r-values are actually pointers to temporaries.
   } else {
     args.add(convertTempToRValue(local, type, loc), type);
   }
@@ -4310,7 +4309,7 @@ static void emitWriteback(CodeGenFunction &CGF,
     // Release the old value.
     CGF.EmitARCRelease(oldValue, srcLV.isARCPreciseLifetime());
 
-    // Otherwise, we can just do a normal lvalue store.
+  // Otherwise, we can just do a normal lvalue store.
   } else {
     CGF.EmitStoreThroughLValue(RValue::get(value), srcLV);
   }
@@ -4351,7 +4350,7 @@ static void emitWritebackArg(CodeGenFunction &CGF, CallArgList &args,
   if (const Expr *lvExpr = maybeGetUnaryAddrOfOperand(CRE->getSubExpr())) {
     srcLV = CGF.EmitLValue(lvExpr);
 
-    // Otherwise, just emit it as a scalar.
+  // Otherwise, just emit it as a scalar.
   } else {
     Address srcAddr = CGF.EmitPointerWithAlignment(CRE->getSubExpr());
 
@@ -6111,8 +6110,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                   dyn_cast<llvm::ScalableVectorType>(V->getType())) {
             if (FixedDstTy->getElementType() ==
                 ScalableSrcTy->getElementType()) {
-              llvm::Value *Zero = llvm::Constant::getNullValue(CGM.Int64Ty);
-              V = Builder.CreateExtractVector(FixedDstTy, V, Zero,
+              V = Builder.CreateExtractVector(FixedDstTy, V, uint64_t(0),
                                               "cast.fixed");
               return RValue::get(V);
             }
