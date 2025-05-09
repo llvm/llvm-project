@@ -924,7 +924,7 @@ public:
   /// Example: shuffle A, B, <0,5,2,7> -> shuffle B, A, <4,1,6,3>
   SDValue getCommutedVectorShuffle(const ShuffleVectorSDNode &SV);
 
-  /// Extract element at \p Idx from \o Vec.  See EXTRACT_VECTOR_ELT
+  /// Extract element at \p Idx from \p Vec.  See EXTRACT_VECTOR_ELT
   /// description for result type handling.
   SDValue getExtractVectorElt(const SDLoc &DL, EVT VT, SDValue Vec,
                               unsigned Idx) {
