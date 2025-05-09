@@ -15,7 +15,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <functional>
 
@@ -258,12 +257,14 @@ static void emitMemcpyExpansion(IRBuilder<> &Builder, Value *Dst, Value *Src,
   const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
 
   auto GetArrTyFromVal = [](Value *Val) -> ArrayType * {
+    assert(isa<AllocaInst>(Val) ||
+           isa<GlobalVariable>(Val) &&
+               "Expected Val to be an Alloca or Global Variable");
     if (auto *Alloca = dyn_cast<AllocaInst>(Val))
       return dyn_cast<ArrayType>(Alloca->getAllocatedType());
     if (auto *GlobalVar = dyn_cast<GlobalVariable>(Val))
       return dyn_cast<ArrayType>(GlobalVar->getValueType());
-    llvm_unreachable(
-        "Expected an Alloca or GlobalVariable in memcpy Src and Dst");
+    return nullptr;
   };
 
   ArrayType *ArrTy = GetArrTyFromVal(Dst);
