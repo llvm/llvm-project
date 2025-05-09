@@ -934,6 +934,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FMAXNUM_IEEE,
                        ISD::FMINIMUM,
                        ISD::FMAXIMUM,
+                       ISD::FMINIMUMNUM,
+                       ISD::FMAXIMUMNUM,
                        ISD::FMA,
                        ISD::SMIN,
                        ISD::SMAX,
@@ -13483,6 +13485,7 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   switch (Opc) {
   case ISD::FMAXNUM:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMAXIMUMNUM:
     return AMDGPUISD::FMAX3;
   case ISD::FMAXIMUM:
     return AMDGPUISD::FMAXIMUM3;
@@ -13492,6 +13495,7 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
     return AMDGPUISD::UMAX3;
   case ISD::FMINNUM:
   case ISD::FMINNUM_IEEE:
+  case ISD::FMINIMUMNUM:
     return AMDGPUISD::FMIN3;
   case ISD::FMINIMUM:
     return AMDGPUISD::FMINIMUM3;
@@ -13613,6 +13617,8 @@ static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
   case ISD::FMAXNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case AMDGPUISD::FMIN_LEGACY:
   case AMDGPUISD::FMAX_LEGACY:
     return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16());
@@ -15318,6 +15324,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::FMINIMUMNUM:
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:
