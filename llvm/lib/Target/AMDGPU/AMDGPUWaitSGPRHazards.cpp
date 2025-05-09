@@ -164,6 +164,46 @@ public:
       BuildMI(MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::DS_NOP));
   }
 
+  unsigned mergeMasks(unsigned Mask1, unsigned Mask2) {
+    unsigned Mask = 0xffff;
+    Mask = AMDGPU::DepCtr::encodeFieldSaSdst(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldSaSdst(Mask1),
+                       AMDGPU::DepCtr::decodeFieldSaSdst(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaVcc(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaVcc(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaVcc(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVmVsrc(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVmVsrc(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVmVsrc(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaSdst(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaSdst(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaSdst(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaVdst(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaVdst(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaVdst(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldHoldCnt(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldHoldCnt(Mask1),
+                       AMDGPU::DepCtr::decodeFieldHoldCnt(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaSsrc(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaSsrc(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaSsrc(Mask2)));
+    return Mask;
+  }
+
+  bool mergeConsecutiveWaitAlus(MachineBasicBlock::instr_iterator &MI,
+                                unsigned Mask) {
+    auto MBB = MI->getParent();
+    if (MI == MBB->instr_begin())
+      return false;
+
+    auto It = prev_nodbg(MI, MBB->instr_begin());
+    if (It->getOpcode() != AMDGPU::S_WAITCNT_DEPCTR)
+      return false;
+
+    It->getOperand(0).setImm(mergeMasks(Mask, It->getOperand(0).getImm()));
+    return true;
+  }
+
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB, bool Emit) {
     enum { WA_VALU = 0x1, WA_SALU = 0x2, WA_VCC = 0x4 };
 
@@ -192,7 +232,9 @@ public:
         State.ActiveFlat = true;
 
       // SMEM or VMEM clears hazards
-      if (SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isSMRD(*MI)) {
+      // FIXME: adapt to add FLAT without VALU (so !isLDSDMA())?
+      if ((SIInstrInfo::isVMEM(*MI) && !SIInstrInfo::isFLAT(*MI)) ||
+          SIInstrInfo::isSMRD(*MI)) {
         State.VCCHazard = HazardState::None;
         State.SALUHazards.reset();
         State.VALUHazards.reset();
@@ -362,10 +404,12 @@ public:
           Mask = AMDGPU::DepCtr::encodeFieldVaSdst(Mask, 0);
         }
         if (Emit) {
-          auto NewMI = BuildMI(MBB, MI, MI->getDebugLoc(),
-                               TII->get(AMDGPU::S_WAITCNT_DEPCTR))
-                           .addImm(Mask);
-          updateGetPCBundle(NewMI);
+          if (!mergeConsecutiveWaitAlus(MI, Mask)) {
+            auto NewMI = BuildMI(MBB, MI, MI->getDebugLoc(),
+                                 TII->get(AMDGPU::S_WAITCNT_DEPCTR))
+                             .addImm(Mask);
+            updateGetPCBundle(NewMI);
+          }
           Emitted = true;
         }
       }
@@ -384,13 +428,14 @@ public:
       }
     }
 
-    bool Changed = State != BlockState[&MBB].Out;
+    BlockHazardState &BS = BlockState[&MBB];
+    bool Changed = State != BS.Out;
     if (Emit) {
       assert(!Changed && "Hazard state should not change on emit pass");
       return Emitted;
     }
     if (Changed)
-      BlockState[&MBB].Out = State;
+      BS.Out = State;
     return Changed;
   }
 

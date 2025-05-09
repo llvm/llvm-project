@@ -149,7 +149,7 @@ define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
   %and1 = and i64 %not.a, %mask
   %bitselect = or i64 %and0, %and1
   %scalar.use = add i64 %bitselect, 10
-  store i64 %scalar.use, ptr addrspace(1) undef
+  store i64 %scalar.use, ptr addrspace(1) poison
   ret void
 }
 
@@ -176,7 +176,7 @@ define amdgpu_kernel void @s_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
   %bitselect = xor i64 %and, %mask
 
   %scalar.use = add i64 %bitselect, 10
-  store i64 %scalar.use, ptr addrspace(1) undef
+  store i64 %scalar.use, ptr addrspace(1) poison
   ret void
 }
 
@@ -203,7 +203,7 @@ define amdgpu_kernel void @s_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
   %bitselect = xor i64 %and, %mask
 
   %scalar.use = add i64 %bitselect, 10
-  store i64 %scalar.use, ptr addrspace(1) undef
+  store i64 %scalar.use, ptr addrspace(1) poison
   ret void
 }
 
@@ -232,6 +232,6 @@ entry:
   %or1 = or i64 %and0, %and1
 
   %scalar.use = add i64 %or1, 10
-  store i64 %scalar.use, ptr addrspace(1) undef
+  store i64 %scalar.use, ptr addrspace(1) poison
   ret void
 }

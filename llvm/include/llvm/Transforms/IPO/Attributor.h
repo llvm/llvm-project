@@ -1208,7 +1208,8 @@ struct InformationCache {
         TargetTriple(M.getTargetTriple()) {
     if (UseExplorer)
       Explorer = new (Allocator) MustBeExecutedContextExplorer(
-          /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
+          /* ExploreInterBlock */
+          true, /* ExploreCFGForward */ true,
           /* ExploreCFGBackward */ true,
           /* LIGetter */
           [&](const Function &F) { return AG.getAnalysis<LoopAnalysis>(F); },
@@ -1338,14 +1339,11 @@ struct InformationCache {
   bool stackIsAccessibleByOtherThreads() { return !targetIsGPU(); }
 
   /// Return true if the target is a GPU.
-  bool targetIsGPU() {
-    return TargetTriple.isAMDGPU() || TargetTriple.isNVPTX();
-  }
+  bool targetIsGPU() { return TargetTriple.isGPU(); }
 
   /// Return all functions that might be called indirectly, only valid for
   /// closed world modules (see isClosedWorldModule).
-  const ArrayRef<Function *>
-  getIndirectlyCallableFunctions(Attributor &A) const;
+  ArrayRef<Function *> getIndirectlyCallableFunctions(Attributor &A) const;
 
   /// Return the flat address space if the associated target has.
   std::optional<unsigned> getFlatAddressSpace() const;
@@ -5102,8 +5100,7 @@ private:
       indicatePessimisticFixpoint();
       return;
     }
-    for (const MemberTy &C : R.Set)
-      Set.insert(C);
+    Set.insert_range(R.Set);
     UndefIsContained |= R.undefIsContained();
     checkAndInvalidate();
   }

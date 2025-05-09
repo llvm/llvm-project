@@ -443,7 +443,7 @@ std::string DiagnosticInfoOptimizationBase::getMsg() const {
 }
 
 DiagnosticInfoMisExpect::DiagnosticInfoMisExpect(const Instruction *Inst,
-                                                 Twine &Msg)
+                                                 const Twine &Msg)
     : DiagnosticInfoWithLocationBase(DK_MisExpect, DS_Warning,
                                      *Inst->getParent()->getParent(),
                                      Inst->getDebugLoc()),

@@ -405,3 +405,22 @@ def testHash():
         dictionary[s1] = 1
         assert d0 in dictionary
         assert s1 in dictionary
+
+
+# CHECK-LABEL: TEST: testAffineExprShift
+@run
+def testAffineExprShift():
+    with Context() as ctx:
+        dims = [AffineExpr.get_dim(i) for i in range(4)]
+        syms = [AffineExpr.get_symbol(i) for i in range(4)]
+
+        assert (dims[2] + dims[3]) == (dims[0] + dims[1]).shift_dims(2, 2)
+        assert (syms[2] + syms[3]) == (syms[0] + syms[1]).shift_symbols(2, 2, 0)
+
+
+# CHECK-LABEL: TEST: testAffineExprSimplify
+@run
+def testAffineExprSimplify():
+    with Context() as ctx:
+        expr = AffineExpr.get_dim(0) + AffineExpr.get_symbol(0)
+        assert expr == AffineExpr.simplify_affine_expr(expr, 1, 1)

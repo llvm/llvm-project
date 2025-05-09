@@ -381,7 +381,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
     if (static_cast<std::size_t>(offsetSymbol.offset() + offsetSymbol.size()) >
         symbol.size()) {
       OutOfRangeError();
-    } else if (evaluate::IsNullPointer(*expr)) {
+    } else if (evaluate::IsNullPointer(expr)) {
       // nothing to do; rely on zero initialization
       return true;
     } else if (isProcPointer) {
@@ -414,7 +414,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
       GetImage().AddPointer(offsetSymbol.offset(), *expr);
       return true;
     }
-  } else if (evaluate::IsNullPointer(*expr)) {
+  } else if (evaluate::IsNullPointer(expr)) {
     exprAnalyzer_.Say("Initializer for '%s' must not be a pointer"_err_en_US,
         DescribeElement());
   } else if (evaluate::IsProcedureDesignator(*expr)) {
@@ -900,7 +900,7 @@ void ConstructInitializer(const Symbol &symbol,
           mutableProc.set_init(DEREF(procDesignator->GetSymbol()));
         }
       } else {
-        CHECK(evaluate::IsNullProcedurePointer(*expr));
+        CHECK(evaluate::IsNullProcedurePointer(&*expr));
         mutableProc.set_init(nullptr);
       }
     } else {

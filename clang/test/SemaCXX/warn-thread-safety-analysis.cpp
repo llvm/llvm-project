@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
 
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 -Wc++98-compat %s
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
@@ -55,6 +55,20 @@ class SCOPED_LOCKABLE DoubleMutexLock {
 public:
   DoubleMutexLock(Mutex *mu1, Mutex *mu2) EXCLUSIVE_LOCK_FUNCTION(mu1, mu2);
   ~DoubleMutexLock() UNLOCK_FUNCTION();
+};
+
+template<typename Mu>
+class SCOPED_LOCKABLE TemplateMutexLock {
+public:
+  TemplateMutexLock(Mu *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
+  ~TemplateMutexLock() UNLOCK_FUNCTION();
+};
+
+template<typename... Mus>
+class SCOPED_LOCKABLE VariadicMutexLock {
+public:
+  VariadicMutexLock(Mus *...mus) EXCLUSIVE_LOCK_FUNCTION(mus...);
+  ~VariadicMutexLock() UNLOCK_FUNCTION();
 };
 
 // The universal lock, written "*", allows checking to be selectively turned
@@ -1821,6 +1835,18 @@ struct TestScopedLockable {
     a = b + 1;
     b = a + 1;
   }
+
+  void foo6() {
+    TemplateMutexLock<Mutex> mulock1(&mu1), mulock2(&mu2);
+    a = b + 1;
+    b = a + 1;
+  }
+
+  void foo7() {
+    VariadicMutexLock<Mutex, Mutex> mulock(&mu1, &mu2);
+    a = b + 1;
+    b = a + 1;
+  }
 };
 
 } // end namespace test_scoped_lockable
@@ -2438,6 +2464,7 @@ class Foo {
     // expected-warning {{declaration does not declare anything}}
     exclusive_locks_required(a))); // \
     // expected-warning {{attribute exclusive_locks_required ignored}}
+
 };
 
 } // end namespace WarnNoDecl
@@ -3114,6 +3141,16 @@ public:
   void Unlock() EXCLUSIVE_LOCK_FUNCTION();
 };
 
+template<typename... Mus>
+class SCOPED_LOCKABLE VariadicMutexUnlock {
+public:
+  VariadicMutexUnlock(Mus *...mus) EXCLUSIVE_UNLOCK_FUNCTION(mus...);
+  ~VariadicMutexUnlock() EXCLUSIVE_UNLOCK_FUNCTION();
+
+  void Lock() EXCLUSIVE_UNLOCK_FUNCTION();
+  void Unlock() EXCLUSIVE_LOCK_FUNCTION();
+};
+
 Mutex mu;
 int x GUARDED_BY(mu);
 bool c;
@@ -3174,6 +3211,17 @@ void doubleLock() EXCLUSIVE_LOCKS_REQUIRED(mu) {
 void doubleUnlock() EXCLUSIVE_LOCKS_REQUIRED(mu) {
   MutexUnlock scope(&mu); // expected-note{{mutex released here}}
   scope.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
+}
+
+Mutex mu2;
+int y GUARDED_BY(mu2);
+
+void variadic() EXCLUSIVE_LOCKS_REQUIRED(mu, mu2) {
+  VariadicMutexUnlock<Mutex, Mutex> scope(&mu, &mu2);
+  x = 2; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+  y = 3; // expected-warning {{writing variable 'y' requires holding mutex 'mu2' exclusively}}
+  scope.Lock();
+  x = y = 4;
 }
 
 class SCOPED_LOCKABLE MutexLockUnlock {
@@ -4863,6 +4911,11 @@ private:
   int dat;
 };
 
+class DataWithAddrOf : public Data {
+public:
+  const Data* operator&();
+  const Data* operator&() const;
+};
 
 class DataCell {
 public:
@@ -4873,6 +4926,7 @@ private:
 };
 
 
+void showData(const Data* d);
 void showDataCell(const DataCell& dc);
 
 
@@ -4944,6 +4998,11 @@ public:
     (*datap2_)[0] = 0;    // expected-warning {{reading the value pointed to by 'datap2_' requires holding mutex 'mu_'}}
 
     data_();              // expected-warning {{reading variable 'data_' requires holding mutex 'mu_'}}
+
+    // Calls operator&, and does not take the address.
+    (void)&data_ao_;      // expected-warning {{reading variable 'data_ao_' requires holding mutex 'mu_'}}
+    (void)__builtin_addressof(data_ao_); // expected-warning {{passing variable 'data_ao_' by reference requires holding mutex 'mu_'}}
+    showData(&data_ao_);  // expected-warning {{reading variable 'data_ao_' requires holding mutex 'mu_'}}
   }
 
   // const operator tests
@@ -4955,6 +5014,9 @@ public:
     //showDataCell(*datap2_); // xpected-warning {{reading the value pointed to by 'datap2_' requires holding mutex 'mu_'}}
 
     int a = data_[0];       // expected-warning {{reading variable 'data_' requires holding mutex 'mu_'}}
+
+    (void)&data_ao_;      // expected-warning {{reading variable 'data_ao_' requires holding mutex 'mu_'}}
+    showData(&data_ao_);  // expected-warning {{reading variable 'data_ao_' requires holding mutex 'mu_'}}
   }
 
 private:
@@ -4962,6 +5024,7 @@ private:
   Data  data_   GUARDED_BY(mu_);
   Data* datap1_ GUARDED_BY(mu_);
   Data* datap2_ PT_GUARDED_BY(mu_);
+  DataWithAddrOf data_ao_ GUARDED_BY(mu_);
 };
 
 }  // end namespace GuardedNonPrimitiveTypeTest
@@ -5911,8 +5974,12 @@ T&& mymove(T& f);
 void copy(Foo f);
 void write1(Foo& f);
 void write2(int a, Foo& f);
+void write3(Foo* f);
+void write4(Foo** f);
 void read1(const Foo& f);
 void read2(int a, const Foo& f);
+void read3(const Foo* f);
+void read4(Foo* const* f);
 void destroy(Foo&& f);
 
 void operator/(const Foo& f, const Foo& g);
@@ -5942,19 +6009,24 @@ public:
   Foo           foo   GUARDED_BY(mu);
   Foo           foo2  GUARDED_BY(mu);
   Foo*          foop  PT_GUARDED_BY(mu);
+  Foo*          foop2 GUARDED_BY(mu);
   SmartPtr<Foo> foosp PT_GUARDED_BY(mu);
 
   // test methods.
   void mwrite1(Foo& f);
   void mwrite2(int a, Foo& f);
+  void mwrite3(Foo* f);
   void mread1(const Foo& f);
   void mread2(int a, const Foo& f);
+  void mread3(const Foo* f);
 
   // static methods
   static void smwrite1(Foo& f);
   static void smwrite2(int a, Foo& f);
+  static void smwrite3(Foo* f);
   static void smread1(const Foo& f);
   static void smread2(int a, const Foo& f);
+  static void smread3(const Foo* f);
 
   void operator<<(const Foo& f);
 
@@ -6016,6 +6088,107 @@ public:
     read1(*foosp.get());
     read2(10, *foosp.get());
     destroy(mymove(*foosp.get()));
+  }
+
+  void test_pass_pointer() {
+    (void)&foo;               // no warning
+    (void)foop;               // no warning
+
+    write3(&foo);             // expected-warning {{passing pointer to variable 'foo' requires holding mutex 'mu'}}
+    write3(foop);             // expected-warning {{passing pointer 'foop' requires holding mutex 'mu'}}
+    write3(&*foop);           // expected-warning {{passing pointer 'foop' requires holding mutex 'mu'}}
+    write4((Foo **)&foo);     // expected-warning {{passing pointer to variable 'foo' requires holding mutex 'mu'}}
+    write4(&foop);            // no warning
+    read3(&foo);              // expected-warning {{passing pointer to variable 'foo' requires holding mutex 'mu'}}
+    read3(foop);              // expected-warning {{passing pointer 'foop' requires holding mutex 'mu'}}
+    read3(&*foop);            // expected-warning {{passing pointer 'foop' requires holding mutex 'mu'}}
+    read4((Foo **)&foo);      // expected-warning {{passing pointer to variable 'foo' requires holding mutex 'mu'}}
+    read4(&foop);             // no warning
+    mwrite3(&foo);            // expected-warning {{passing pointer to variable 'foo' requires holding mutex 'mu'}}
+    mwrite3(foop);            // expected-warning {{passing pointer 'foop' requires holding mutex 'mu'}}
+    mwrite3(&*foop);          // expected-warning {{passing pointer 'foop' requires holding mutex 'mu'}}
+    mread3(&foo);             // expected-warning {{passing pointer to variable 'foo' requires holding mutex 'mu'}}
+    mread3(foop);             // expected-warning {{passing pointer 'foop' requires holding mutex 'mu'}}
+    mread3(&*foop);           // expected-warning {{passing pointer 'foop' requires holding mutex 'mu'}}
+    smwrite3(&foo);           // expected-warning {{passing pointer to variable 'foo' requires holding mutex 'mu'}}
+    smwrite3(foop);           // expected-warning {{passing pointer 'foop' requires holding mutex 'mu'}}
+    smwrite3(&*foop);         // expected-warning {{passing pointer 'foop' requires holding mutex 'mu'}}
+    smread3(&foo);            // expected-warning {{passing pointer to variable 'foo' requires holding mutex 'mu'}}
+    smread3(foop);            // expected-warning {{passing pointer 'foop' requires holding mutex 'mu'}}
+    smread3(&*foop);          // expected-warning {{passing pointer 'foop' requires holding mutex 'mu'}}
+
+    write3(foop2);            // expected-warning {{reading variable 'foop2' requires holding mutex 'mu'}}
+    write3(&*foop2);          // expected-warning {{reading variable 'foop2' requires holding mutex 'mu'}}
+    write4(&foop2);           // expected-warning {{passing pointer to variable 'foop2' requires holding mutex 'mu'}}
+    read3(foop2);             // expected-warning {{reading variable 'foop2' requires holding mutex 'mu'}}
+    read3(&*foop2);           // expected-warning {{reading variable 'foop2' requires holding mutex 'mu'}}
+    read4(&foop2);            // expected-warning {{passing pointer to variable 'foop2' requires holding mutex 'mu'}}
+    mwrite3(foop2);           // expected-warning {{reading variable 'foop2' requires holding mutex 'mu'}}
+    mwrite3(&*foop2);         // expected-warning {{reading variable 'foop2' requires holding mutex 'mu'}}
+    mread3(foop2);            // expected-warning {{reading variable 'foop2' requires holding mutex 'mu'}}
+    mread3(&*foop2);          // expected-warning {{reading variable 'foop2' requires holding mutex 'mu'}}
+    smwrite3(foop2);          // expected-warning {{reading variable 'foop2' requires holding mutex 'mu'}}
+    smwrite3(&*foop2);        // expected-warning {{reading variable 'foop2' requires holding mutex 'mu'}}
+    smread3(foop2);           // expected-warning {{reading variable 'foop2' requires holding mutex 'mu'}}
+    smread3(&*foop2);         // expected-warning {{reading variable 'foop2' requires holding mutex 'mu'}}
+
+    mu.Lock();
+    write3(&foo);
+    write3(foop);
+    write3(&*foop);
+    write3(foop2);
+    write4(&foop2);
+    read3(&foo);
+    read3(foop);
+    read3(&*foop);
+    read3(foop2);
+    read4(&foop2);
+    mwrite3(&foo);
+    mwrite3(foop);
+    mwrite3(&*foop);
+    mwrite3(foop2);
+    mread3(&foo);
+    mread3(foop);
+    mread3(&*foop);
+    mread3(foop2);
+    smwrite3(&foo);
+    smwrite3(foop);
+    smwrite3(&*foop);
+    smwrite3(foop2);
+    smread3(&foo);
+    smread3(foop);
+    smread3(&*foop);
+    smread3(foop2);
+    mu.Unlock();
+
+    mu.ReaderLock();
+    write3(&foo);
+    write3(foop);
+    write3(&*foop);
+    write3(foop2);
+    write4(&foop2);
+    read3(&foo);
+    read3(foop);
+    read3(&*foop);
+    read3(foop2);
+    read4(&foop2);
+    mwrite3(&foo);
+    mwrite3(foop);
+    mwrite3(&*foop);
+    mwrite3(foop2);
+    mread3(&foo);
+    mread3(foop);
+    mread3(&*foop);
+    mread3(foop2);
+    smwrite3(&foo);
+    smwrite3(foop);
+    smwrite3(&*foop);
+    smwrite3(foop2);
+    smread3(&foo);
+    smread3(foop);
+    smread3(&*foop);
+    smread3(foop2);
+    mu.ReaderUnlock();
   }
 };
 
@@ -6087,15 +6260,64 @@ class Return {
   const Foo &returns_constref_shared_locks_required() SHARED_LOCKS_REQUIRED(mu) {
     return foo;
   }
+
+  Foo *returns_ptr_exclusive_locks_required() EXCLUSIVE_LOCKS_REQUIRED(mu) {
+    return &foo;
+  }
+
+  Foo *returns_pt_ptr_exclusive_locks_required() EXCLUSIVE_LOCKS_REQUIRED(mu) {
+    return foo_ptr;
+  }
+
+  Foo *returns_ptr_shared_locks_required() SHARED_LOCKS_REQUIRED(mu) {
+    return &foo;              // expected-warning {{returning pointer to variable 'foo' requires holding mutex 'mu' exclusively}}
+  }
+
+  Foo *returns_pt_ptr_shared_locks_required() SHARED_LOCKS_REQUIRED(mu) {
+    return foo_ptr;           // expected-warning {{returning pointer 'foo_ptr' requires holding mutex 'mu' exclusively}}
+  }
+
+  const Foo *returns_constptr_shared_locks_required() SHARED_LOCKS_REQUIRED(mu) {
+    return &foo;
+  }
+
+  const Foo *returns_pt_constptr_shared_locks_required() SHARED_LOCKS_REQUIRED(mu) {
+    return foo_ptr;
+  }
   
   Foo *returns_ptr() {
-    return &foo;              // FIXME -- Do we want to warn on this ?
+    return &foo;              // expected-warning {{returning pointer to variable 'foo' requires holding mutex 'mu' exclusively}}
+  }
+
+  Foo *returns_pt_ptr() {
+    return foo_ptr;           // expected-warning {{returning pointer 'foo_ptr' requires holding mutex 'mu' exclusively}}
   }
 
   Foo &returns_ref2() {
     return *foo_ptr;          // expected-warning {{returning the value that 'foo_ptr' points to by reference requires holding mutex 'mu' exclusively}}
   }
 
+  // FIXME: Basic alias analysis would help catch cases like below.
+  Foo *returns_ptr_alias() {
+    mu.Lock();
+    Foo *ret = &foo;
+    mu.Unlock();
+    return ret; // no warning (false negative)
+  }
+
+  Foo *returns_pt_ptr_alias() {
+    mu.Lock();
+    Foo *ret = foo_ptr;
+    mu.Unlock();
+    return ret; // no warning (false negative)
+  }
+
+  Foo &returns_ref2_alias() {
+    mu.Lock();
+    Foo *ret = foo_ptr;
+    mu.Unlock();
+    return *ret; // no warning (false negative)
+  }
 };
 
 
@@ -6534,7 +6756,7 @@ int testAdoptShared() {
 
 } // namespace ReturnScopedLockable
 
-#endif
+#endif // __cpp_guaranteed_copy_elision
 
 namespace PR38640 {
 void f() {
@@ -6542,7 +6764,7 @@ void f() {
   // safety analysis was enabled.
   int &i = i; // expected-warning {{reference 'i' is not yet bound to a value when used within its own initialization}}
 }
-}
+} // namespace PR38640
 
 namespace Derived_Smart_Pointer {
 template <class T>
@@ -6637,4 +6859,4 @@ class PointerGuard {
     mu1.Unlock();
   }
 };
-}
+} // namespace Derived_Smart_Pointer

@@ -84,12 +84,10 @@ func.func @_QMmPfoo.fir(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<
   %4 = fir.declare %3 {uniq_name = "_QMmFfooEi2"} : (!fir.ref<i32>) -> !fir.ref<i32>
   %5 = fir.declare %arg0 {test.ptr = "x.fir", uniq_name = "_QMmFfooEx"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
   %6 = fir.declare %arg1 {test.ptr = "y.fir", uniq_name = "_QMmFfooEy"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
-  %7 = fir.field_index next, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
-  %8 = fir.coordinate_of %5, %7 {test.ptr="xnext1.fir"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  %8 = fir.coordinate_of %5, next {test.ptr="xnext1.fir"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
   %9 = fir.load %8 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
   %10 = fir.box_addr %9 : (!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>) -> !fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
-  %11 = fir.field_index i, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
-  %12 = fir.coordinate_of %10, %11 : (!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+  %12 = fir.coordinate_of %10, i : (!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<i32>
   %13 = fir.load %12 : !fir.ref<i32>
   fir.store %13 to %2 : !fir.ref<i32>
   %14 = fir.embox %5 : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.box<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
@@ -102,16 +100,13 @@ func.func @_QMmPfoo.fir(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<
   %18 = fir.convert %15 : (!fir.box<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.box<none>
   %19 = fir.convert %16 : (!fir.ref<!fir.char<1,9>>) -> !fir.ref<i8>
   fir.call @_FortranAAssign(%17, %18, %19, %c14_i32) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-  %21 = fir.field_index next, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
-  %22 = fir.coordinate_of %5, %21 {test.ptr="xnext2.fir"}: (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  %22 = fir.coordinate_of %5, next {test.ptr="xnext2.fir"}: (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
   %23 = fir.load %22 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
   %24 = fir.box_addr %23 : (!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>) -> !fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
-  %25 = fir.field_index i, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
-  %26 = fir.coordinate_of %24, %25 : (!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+  %26 = fir.coordinate_of %24, i : (!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<i32>
   %27 = fir.load %26 : !fir.ref<i32>
   fir.store %27 to %4 : !fir.ref<i32>
-  %28 = fir.field_index next, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
-  %29 = fir.coordinate_of %6, %28 {test.ptr="ynext.fir"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  %29 = fir.coordinate_of %6, next {test.ptr="ynext.fir"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
   return
 }
 
@@ -138,12 +133,10 @@ func.func @_QMmPfoo2(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fi
 func.func @_QMmPfoo2.fir(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "y"}) {
   %0 = fir.declare %arg0 {uniq_name = "_QMmFfooEx"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
   %1 = fir.declare %arg1 {uniq_name = "_QMmFfooEy"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
-  %2 = fir.field_index next, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
-  %3 = fir.coordinate_of %0, %2 : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  %3 = fir.coordinate_of %0, next : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
   %4 = fir.load %3 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
   %5 = fir.box_addr %4 {test.ptr = "xnext.fir"} : (!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>) -> !fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
-  %6 = fir.field_index next, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
-  %7 = fir.coordinate_of %1, %6 : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  %7 = fir.coordinate_of %1, next : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
   %8 = fir.load %7 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
   %9 = fir.box_addr %8 {test.ptr = "ynext.fir"} : (!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>) -> !fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
   return
@@ -185,8 +178,7 @@ func.func @_QMmPfoo3(%arg0: !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!
 func.func @_QMmPfoo3.fir(%arg0: !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>> {fir.bindc_name = "y"}) {
   %0 = fir.declare %arg0 {uniq_name = "_QMmFfooEx"} : (!fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>
   %1 = fir.declare %arg1 {uniq_name = "_QMmFfooEy"} : (!fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>
-  %2 = fir.field_index array, !fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>
-  %3 = fir.coordinate_of %1, %2 : (!fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+  %3 = fir.coordinate_of %1, array : (!fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   %4 = fir.load %3 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
@@ -194,8 +186,7 @@ func.func @_QMmPfoo3.fir(%arg0: !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.p
   %6 = fir.shift %5#0 : (index) -> !fir.shift<1>
   %7 = fir.array_coor %4(%6) %c1 {test.ptr="yarray.fir"} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.shift<1>, index) -> !fir.ref<i32>
   %8 = fir.load %7 : !fir.ref<i32>
-  %9 = fir.field_index array, !fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>
-  %10 = fir.coordinate_of %0, %9 : (!fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+  %10 = fir.coordinate_of %0, array : (!fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   %11 = fir.load %10 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
   %c1_0 = arith.constant 1 : index
   %c0_1 = arith.constant 0 : index
@@ -238,8 +229,7 @@ func.func @_QMmPtest() {
 func.func @_QMmPtest.fir() {
   %0 = fir.address_of(@_QMmEx) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>
   %1 = fir.declare %0 {test.ptr = "x.fir", uniq_name = "_QMmEx"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>
-  %2 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>
-  %3 = fir.coordinate_of %1, %2 {test.ptr="x%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+  %3 = fir.coordinate_of %1, p {test.ptr="x%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
   return
 }
 
@@ -301,14 +291,10 @@ func.func @_QMmPtest() {
 func.func @_QMmPtest.fir() {
   %0 = fir.alloca !fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}> {bindc_name = "x", uniq_name = "_QMmFtestEx"}
   %1 = fir.declare %0 {test.ptr = "x.fir", uniq_name = "_QMmFtestEx"} : (!fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>
-  %2 = fir.field_index x, !fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %3 = fir.coordinate_of %1, %2 {test.ptr="x%x.fir"} : (!fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>>
-  %4 = fir.field_index p, !fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %5 = fir.coordinate_of %1, %4 {test.ptr="x%p.fir"} : (!fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-  %6 = fir.field_index i, !fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %7 = fir.coordinate_of %1, %6 {test.ptr="x%i.fir"} : (!fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
-  %8 = fir.field_index p, !fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>
-  %9 = fir.coordinate_of %3, %8 {test.ptr="x%x%p.fir"} : (!fir.ref<!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %3 = fir.coordinate_of %1, x {test.ptr="x%x.fir"} : (!fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>>
+  %5 = fir.coordinate_of %1, p {test.ptr="x%p.fir"} : (!fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %7 = fir.coordinate_of %1, i {test.ptr="x%i.fir"} : (!fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<i32>
+  %9 = fir.coordinate_of %3, p {test.ptr="x%x%p.fir"} : (!fir.ref<!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
   return
 }
 
@@ -441,24 +427,18 @@ func.func @_QMmPtest.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_nam
   %4 = fir.declare %arg1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<allocatable>, test.ptr = "arga.fir", uniq_name = "_QMmFtestEarga"} : (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<i32>>>
 
   %5 = fir.declare %arg2 dummy_scope %0 {test.ptr = "arg.fir", uniq_name = "_QMmFtestEarg"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.dscope) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
-  %6 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %7 = fir.coordinate_of %5, %6 {test.ptr="arg%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-  %8 = fir.field_index i, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %9 = fir.coordinate_of %5, %8 {test.ptr="arg%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+  %7 = fir.coordinate_of %5, p {test.ptr="arg%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %9 = fir.coordinate_of %5, i {test.ptr="arg%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<i32>
 
   %10 = fir.address_of(@_QMmEglob) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
   %11 = fir.declare %10 {test.ptr = "glob.fir", uniq_name = "_QMmEglob"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
-  %12 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %13 = fir.coordinate_of %11, %12 {test.ptr="glob%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-  %14 = fir.field_index i, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %15 = fir.coordinate_of %11, %14 {test.ptr="glob%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+  %13 = fir.coordinate_of %11, p {test.ptr="glob%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %15 = fir.coordinate_of %11, i {test.ptr="glob%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<i32>
 
   %16 = fir.alloca !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}> {bindc_name = "loc", uniq_name = "_QMmFtestEloc"}
   %17 = fir.declare %16 {test.ptr = "loc.fir", uniq_name = "_QMmFtestEloc"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
-  %18 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %19 = fir.coordinate_of %17, %18 {test.ptr="loc%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-  %20 = fir.field_index i, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %21 = fir.coordinate_of %17, %20 {test.ptr="loc%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+  %19 = fir.coordinate_of %17, p {test.ptr="loc%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %21 = fir.coordinate_of %17, i {test.ptr="loc%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<i32>
 
   return
 }
@@ -609,23 +589,17 @@ func.func private @_QMmFparentPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.
 
   %9 = fir.address_of(@_QMmEglob) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
   %10 = fir.declare %9 {test.ptr = "glob.fir", uniq_name = "_QMmEglob"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
-  %11 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %12 = fir.coordinate_of %10, %11 {test.ptr="glob%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-  %13 = fir.field_index i, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %14 = fir.coordinate_of %10, %13 {test.ptr="glob%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+  %12 = fir.coordinate_of %10, p {test.ptr="glob%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %14 = fir.coordinate_of %10, i {test.ptr="glob%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<i32>
 
   %15 = fir.declare %arg0 dummy_scope %0 {test.ptr = "arg.fir", uniq_name = "_QMmFparentFtestEarg"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.dscope) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
-  %16 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %17 = fir.coordinate_of %15, %16 {test.ptr="arg%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-  %18 = fir.field_index i, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %19 = fir.coordinate_of %15, %18 {test.ptr="arg%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+  %17 = fir.coordinate_of %15, p {test.ptr="arg%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %19 = fir.coordinate_of %15, i {test.ptr="arg%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<i32>
 
   %20 = fir.alloca !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}> {bindc_name = "loc", uniq_name = "_QMmFparentFtestEloc"}
   %21 = fir.declare %20 {test.ptr = "loc.fir", uniq_name = "_QMmFparentFtestEloc"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
-  %22 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %23 = fir.coordinate_of %21, %22 {test.ptr="loc%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-  %24 = fir.field_index i, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
-  %25 = fir.coordinate_of %21, %24 {test.ptr="loc%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+  %23 = fir.coordinate_of %21, p {test.ptr="loc%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %25 = fir.coordinate_of %21, i {test.ptr="loc%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<i32>
 
   return
 }
@@ -765,38 +739,26 @@ func.func @_QMmPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f3
   %0 = fir.dummy_scope : !fir.dscope
 
   %1 = fir.declare %arg0 dummy_scope %0 {test.ptr="arg0.fir", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmFtestEarg0"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.dscope) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
-  %2 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
-  %3 = fir.coordinate_of %1, %2 {test.ptr="arg0%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %4 = fir.field_index a, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
-  %5 = fir.coordinate_of %1, %4 {test.ptr="arg0%a.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<f32>>>
-  %6 = fir.field_index r, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
-  %7 = fir.coordinate_of %1, %6 {test.ptr="arg0%r.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<f32>
+  %3 = fir.coordinate_of %1, p {test.ptr="arg0%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %5 = fir.coordinate_of %1, a {test.ptr="arg0%a.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %7 = fir.coordinate_of %1, r {test.ptr="arg0%r.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<f32>
 
   %8 = fir.declare %arg1 dummy_scope %0 {test.ptr="arg1.fir", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmFtestEarg1"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.dscope) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
-  %9 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
-  %10 = fir.coordinate_of %8, %9 {test.ptr="arg1%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %11 = fir.field_index a, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
-  %12 = fir.coordinate_of %8, %11 {test.ptr="arg1%a.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<f32>>>
-  %13 = fir.field_index r, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
-  %14 = fir.coordinate_of %8, %13 {test.ptr="arg1%r.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<f32>
+  %10 = fir.coordinate_of %8, p {test.ptr="arg1%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %12 = fir.coordinate_of %8, a {test.ptr="arg1%a.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %14 = fir.coordinate_of %8, r {test.ptr="arg1%r.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<f32>
 
   %15 = fir.address_of(@_QMmEglob0) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
   %16 = fir.declare %15 {test.ptr="glob0.fir", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmEglob0"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
-  %17 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
-  %18 = fir.coordinate_of %16, %17 {test.ptr="glob0%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %19 = fir.field_index a, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
-  %20 = fir.coordinate_of %16, %19 {test.ptr="glob0%a.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<f32>>>
-  %21 = fir.field_index r, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
-  %22 = fir.coordinate_of %16, %21 {test.ptr="glob0%r.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<f32>
+  %18 = fir.coordinate_of %16, p {test.ptr="glob0%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %20 = fir.coordinate_of %16, a {test.ptr="glob0%a.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %22 = fir.coordinate_of %16, r {test.ptr="glob0%r.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<f32>
 
   %23 = fir.address_of(@_QMmEglob1) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
   %24 = fir.declare %23 {test.ptr="glob1.fir", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmEglob1"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
-  %25 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
-  %26 = fir.coordinate_of %24, %25 {test.ptr="glob1%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %27 = fir.field_index a, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
-  %28 = fir.coordinate_of %24, %27 {test.ptr="glob1%a.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<f32>>>
-  %29 = fir.field_index r, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
-  %30 = fir.coordinate_of %24, %29 {test.ptr="glob1%r.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<f32>
+  %26 = fir.coordinate_of %24, p {test.ptr="glob1%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %28 = fir.coordinate_of %24, a {test.ptr="glob1%a.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %30 = fir.coordinate_of %24, r {test.ptr="glob1%r.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<f32>
 
   return
 }

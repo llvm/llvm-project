@@ -16,7 +16,8 @@ static_library("Checkers") {
   sources = [
     "AnalysisOrderChecker.cpp",
     "AnalyzerStatsChecker.cpp",
-    "ArrayBoundCheckerV2.cpp",
+    "ArrayBoundChecker.cpp",
+    "AssumeModeling.cpp",
     "BasicObjCFoundationChecks.cpp",
     "BitwiseShiftChecker.cpp",
     "BlockInCriticalSectionChecker.cpp",
@@ -137,13 +138,15 @@ static_library("Checkers") {
     "VforkChecker.cpp",
     "VirtualCallChecker.cpp",
     "WebKit/ASTUtils.cpp",
+    "WebKit/ForwardDeclChecker.cpp",
     "WebKit/MemoryUnsafeCastChecker.cpp",
     "WebKit/PtrTypesSemantics.cpp",
     "WebKit/RawPtrRefCallArgsChecker.cpp",
+    "WebKit/RawPtrRefLambdaCapturesChecker.cpp",
     "WebKit/RawPtrRefLocalVarsChecker.cpp",
     "WebKit/RawPtrRefMemberChecker.cpp",
     "WebKit/RefCntblBaseVirtualDtorChecker.cpp",
-    "WebKit/UncountedLambdaCapturesChecker.cpp",
+    "WebKit/RetainPtrCtorAdoptChecker.cpp",
     "cert/InvalidPtrChecker.cpp",
   ]
 }

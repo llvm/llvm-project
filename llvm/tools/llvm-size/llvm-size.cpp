@@ -76,7 +76,7 @@ static std::vector<StringRef> ArchFlags;
 static bool ELFCommons;
 static OutputFormatTy OutputFormat;
 static bool DarwinLongFormat;
-static RadixTy Radix;
+static RadixTy Radix = RadixTy::decimal;
 static bool TotalSizes;
 
 static std::vector<std::string> InputFilenames;

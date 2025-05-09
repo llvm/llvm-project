@@ -37,6 +37,17 @@ program openacc_kernels_validity
   !$acc kernels async(async1)
   !$acc end kernels
 
+  !ERROR: At most one ASYNC clause can appear on the KERNELS directive or in group separated by the DEVICE_TYPE clause
+  !$acc kernels async(async1) async(2)
+  !$acc end kernels
+
+  !$acc kernels async(async1) device_type(multicore) async(2) ! ok
+  !$acc end kernels
+
+  !ERROR: At most one ASYNC clause can appear on the KERNELS directive or in group separated by the DEVICE_TYPE clause
+  !$acc kernels async(async1) device_type(multicore) async(2) async(3)
+  !$acc end kernels
+
   !$acc kernels wait(wait1)
   !$acc end kernels
 
@@ -61,10 +72,43 @@ program openacc_kernels_validity
   !$acc kernels num_gangs(8)
   !$acc end kernels
 
+  !ERROR: At most one NUM_GANGS clause can appear on the KERNELS directive or in group separated by the DEVICE_TYPE clause
+  !$acc kernels num_gangs(8) num_gangs(10)
+  !$acc end kernels
+
+  !ERROR: At most one NUM_GANGS clause can appear on the KERNELS directive or in group separated by the DEVICE_TYPE clause
+  !$acc kernels device_type(nvidia) num_gangs(8) num_gangs(10)
+  !$acc end kernels
+
+  !$acc kernels device_type(nvidia) num_gangs(8) device_type(radeon) num_gangs(10)
+  !$acc end kernels
+
   !$acc kernels num_workers(8)
   !$acc end kernels
 
+  !ERROR: At most one NUM_WORKERS clause can appear on the KERNELS directive or in group separated by the DEVICE_TYPE clause
+  !$acc kernels num_workers(8) num_workers(4)
+  !$acc end kernels
+
+  !ERROR: At most one NUM_WORKERS clause can appear on the KERNELS directive or in group separated by the DEVICE_TYPE clause
+  !$acc kernels device_type(nvidia) num_workers(8) num_workers(4)
+  !$acc end kernels
+
+  !$acc kernels device_type(nvidia) num_workers(8) device_type(radeon) num_workers(4)
+  !$acc end kernels
+
   !$acc kernels vector_length(128)
+  !$acc end kernels
+
+  !ERROR: At most one VECTOR_LENGTH clause can appear on the KERNELS directive or in group separated by the DEVICE_TYPE clause
+  !$acc kernels vector_length(128) vector_length(124)
+  !$acc end kernels
+
+  !ERROR: At most one VECTOR_LENGTH clause can appear on the KERNELS directive or in group separated by the DEVICE_TYPE clause
+  !$acc kernels device_type(nvidia) vector_length(256) vector_length(128)
+  !$acc end kernels
+
+  !$acc kernels device_type(nvidia) vector_length(256) device_type(radeon) vector_length(128)
   !$acc end kernels
 
   !$acc kernels if(.true.)

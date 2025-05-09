@@ -34,7 +34,7 @@ enum {
   HistOpcWidth = 40,
 };
 
-cl::OptionCategory DAGISelCat("Options for -gen-dag-isel");
+static cl::OptionCategory DAGISelCat("Options for -gen-dag-isel");
 
 // To reduce generated source code size.
 static cl::opt<bool> OmitComments("omit-comments",
@@ -1149,11 +1149,11 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
 
   // Emit Node predicates.
   EmitNodePredicatesFunction(
-      NodePredicates, "CheckNodePredicate(SDNode *Node, unsigned PredNo) const",
+      NodePredicates, "CheckNodePredicate(SDValue Op, unsigned PredNo) const",
       OS);
   EmitNodePredicatesFunction(
       NodePredicatesWithOperands,
-      "CheckNodePredicateWithOperands(SDNode *Node, unsigned PredNo, "
+      "CheckNodePredicateWithOperands(SDValue Op, unsigned PredNo, "
       "const SmallVectorImpl<SDValue> &Operands) const",
       OS);
 

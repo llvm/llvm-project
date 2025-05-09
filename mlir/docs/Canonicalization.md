@@ -275,3 +275,8 @@ Operation *MyDialect::materializeConstant(OpBuilder &builder, Attribute value,
   ...
 }
 ```
+
+### When to use the `fold` method vs `RewriterPattern`s for canonicalizations
+
+A canonicalization should always be implemented as a `fold` method if it can
+be, otherwise it should be implemented as a `RewritePattern`.

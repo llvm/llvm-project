@@ -719,6 +719,7 @@ protected:
   void NotePossibleBadForwardRef(const parser::Name &);
   std::optional<SourceName> HadForwardRef(const Symbol &) const;
   bool CheckPossibleBadForwardRef(const Symbol &);
+  bool ConvertToUseError(Symbol &, const SourceName &, const Symbol &used);
 
   bool inSpecificationPart_{false};
   bool deferImplicitTyping_{false};
@@ -1383,6 +1384,20 @@ public:
   void Post(const parser::AccEndBlockDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+  bool Pre(const parser::AccBeginCombinedDirective &x) {
+    AddAccSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::AccBeginCombinedDirective &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
+  bool Pre(const parser::AccEndCombinedDirective &x) {
+    AddAccSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::AccEndCombinedDirective &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
   bool Pre(const parser::AccBeginLoopDirective &x) {
     AddAccSourceRange(x.source);
     return true;
@@ -1440,11 +1455,13 @@ public:
   static bool NeedsScope(const parser::OpenMPBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OpenMPRequiresConstruct &x) {
-    AddOmpSourceRange(x.source);
+  bool Pre(const parser::OmpMetadirectiveDirective &) {
+    ++metaLevel_;
     return true;
   }
-  bool Pre(const parser::OmpSimpleStandaloneDirective &x) {
+  void Post(const parser::OmpMetadirectiveDirective &) { --metaLevel_; }
+
+  bool Pre(const parser::OpenMPRequiresConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
@@ -1482,6 +1499,44 @@ public:
     return false;
   }
 
+  bool Pre(const parser::OmpInitializerProc &x) {
+    auto &procDes = std::get<parser::ProcedureDesignator>(x.t);
+    auto &name = std::get<parser::Name>(procDes.u);
+    auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
+    if (!symbol) {
+      context().Say(name.source,
+          "Implicit subroutine declaration '%s' in !$OMP DECLARE REDUCTION"_err_en_US,
+          name.source);
+    }
+    return true;
+  }
+
+  bool Pre(const parser::OmpDeclareVariantDirective &x) {
+    AddOmpSourceRange(x.source);
+    auto FindSymbolOrError = [&](const parser::Name &procName) {
+      auto *symbol{FindSymbol(NonDerivedTypeScope(), procName)};
+      if (!symbol) {
+        context().Say(procName.source,
+            "Implicit subroutine declaration '%s' in !$OMP DECLARE VARIANT"_err_en_US,
+            procName.source);
+      }
+    };
+    auto &baseProcName = std::get<std::optional<parser::Name>>(x.t);
+    if (baseProcName) {
+      FindSymbolOrError(*baseProcName);
+    }
+    auto &varProcName = std::get<parser::Name>(x.t);
+    FindSymbolOrError(varProcName);
+    return true;
+  }
+
+  bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
+    AddOmpSourceRange(x.source);
+    ProcessReductionSpecifier(
+        std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
+        std::get<std::optional<parser::OmpClauseList>>(x.t));
+    return false;
+  }
   bool Pre(const parser::OmpMapClause &);
 
   void Post(const parser::OmpBeginLoopDirective &) {
@@ -1636,7 +1691,8 @@ private:
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
-      const parser::OmpClauseList &clauses);
+      const std::optional<parser::OmpClauseList> &clauses);
+  int metaLevel_{0};
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
@@ -1731,33 +1787,74 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
 
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
-    const parser::OmpClauseList &clauses) {
-  // Creating a new scope in case the combiner expression (or clauses) use
-  // reerved identifiers, like "omp_in". This is a temporary solution until
-  // we deal with these in a more thorough way.
-  PushScope(Scope::Kind::OtherConstruct, nullptr);
-  Walk(std::get<parser::OmpReductionIdentifier>(spec.t));
-  Walk(std::get<parser::OmpTypeNameList>(spec.t));
-  Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
-  Walk(clauses);
-  PopScope();
+    const std::optional<parser::OmpClauseList> &clauses) {
+  const auto &id{std::get<parser::OmpReductionIdentifier>(spec.t)};
+  if (auto procDes{std::get_if<parser::ProcedureDesignator>(&id.u)}) {
+    if (auto *name{std::get_if<parser::Name>(&procDes->u)}) {
+      name->symbol =
+          &MakeSymbol(*name, MiscDetails{MiscDetails::Kind::ConstructName});
+    }
+  }
+
+  auto &typeList{std::get<parser::OmpTypeNameList>(spec.t)};
+
+  // Create a temporary variable declaration for the four variables
+  // used in the reduction specifier and initializer (omp_out, omp_in,
+  // omp_priv and omp_orig), with the type in the  typeList.
+  //
+  // In theory it would be possible to create only variables that are
+  // actually used, but that requires walking the entire parse-tree of the
+  // expressions, and finding the relevant variables [there may well be other
+  // variables involved too].
+  //
+  // This allows doing semantic analysis where the type is a derived type
+  // e.g omp_out%x = omp_out%x + omp_in%x.
+  //
+  // These need to be temporary (in their own scope). If they are created
+  // as variables in the outer scope, if there's more than one type in the
+  // typelist, duplicate symbols will be reported.
+  const parser::CharBlock ompVarNames[]{
+      {"omp_in", 6}, {"omp_out", 7}, {"omp_priv", 8}, {"omp_orig", 8}};
+
+  for (auto &t : typeList.v) {
+    PushScope(Scope::Kind::OtherConstruct, nullptr);
+    BeginDeclTypeSpec();
+    // We need to walk t.u because Walk(t) does it's own BeginDeclTypeSpec.
+    Walk(t.u);
+
+    const DeclTypeSpec *typeSpec{GetDeclTypeSpec()};
+    assert(typeSpec && "We should have a type here");
+
+    for (auto &nm : ompVarNames) {
+      ObjectEntityDetails details{};
+      details.set_type(*typeSpec);
+      MakeSymbol(nm, Attrs{}, std::move(details));
+    }
+    EndDeclTypeSpec();
+    Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
+    Walk(clauses);
+    PopScope();
+  }
 }
 
 bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
-  // OmpDirectiveSpecification is only used in METADIRECTIVE at the moment.
-  // Since it contains directives and clauses, some semantic checks may
-  // not be applicable.
-  // Disable the semantic analysis for it for now to allow the compiler to
-  // parse METADIRECTIVE without flagging errors.
   AddOmpSourceRange(x.source);
-  auto dirId{std::get<llvm::omp::Directive>(x.t)};
-  auto &maybeArgs{std::get<std::optional<std::list<parser::OmpArgument>>>(x.t)};
+  if (metaLevel_ == 0) {
+    // Not in METADIRECTIVE.
+    return true;
+  }
+
+  // If OmpDirectiveSpecification (which contains clauses) is a part of
+  // METADIRECTIVE, some semantic checks may not be applicable.
+  // Disable the semantic analysis for it in such cases to allow the compiler
+  // to parse METADIRECTIVE without flagging errors.
+  auto &maybeArgs{std::get<std::optional<parser::OmpArgumentList>>(x.t)};
   auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
 
-  switch (dirId) {
+  switch (x.DirId()) {
   case llvm::omp::Directive::OMPD_declare_mapper:
     if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->front()};
+      const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpMapperSpecifier>(&first.u)}) {
         ProcessMapperSpecifier(*spec, *maybeClauses);
       }
@@ -1765,9 +1862,9 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
     break;
   case llvm::omp::Directive::OMPD_declare_reduction:
     if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->front()};
+      const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
-        ProcessReductionSpecifier(*spec, *maybeClauses);
+        ProcessReductionSpecifier(*spec, maybeClauses);
       }
     }
     break;
@@ -3261,9 +3358,19 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
     // Privacy is not enforced in module files so that generic interfaces
     // can be resolved to private specific procedures in specification
     // expressions.
-    Say(useName, "'%s' is PRIVATE in '%s'"_err_en_US, MakeOpName(useName),
-        useModuleScope_->GetName().value());
-    return {};
+    // Local names that contain currency symbols ('$') are created by the
+    // module file writer when a private name in another module is needed to
+    // process a local declaration.  These can show up in the output of
+    // -fdebug-unparse-with-modules, too, so go easy on them.
+    if (currScope().IsModule() &&
+        localName.ToString().find("$") != std::string::npos) {
+      Say(useName, "'%s' is PRIVATE in '%s'"_warn_en_US, MakeOpName(useName),
+          useModuleScope_->GetName().value());
+    } else {
+      Say(useName, "'%s' is PRIVATE in '%s'"_err_en_US, MakeOpName(useName),
+          useModuleScope_->GetName().value());
+      return {};
+    }
   }
   auto &localSymbol{MakeSymbol(localName)};
   DoAddUse(useName, localName, localSymbol, *useSymbol);
@@ -3272,7 +3379,7 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
 
 // symbol must be either a Use or a Generic formed by merging two uses.
 // Convert it to a UseError with this additional location.
-static bool ConvertToUseError(
+bool ScopeHandler::ConvertToUseError(
     Symbol &symbol, const SourceName &location, const Symbol &used) {
   if (auto *ued{symbol.detailsIf<UseErrorDetails>()}) {
     ued->add_occurrence(location, used);
@@ -3290,9 +3397,25 @@ static bool ConvertToUseError(
     symbol.set_details(
         UseErrorDetails{*useDetails}.add_occurrence(location, used));
     return true;
-  } else {
-    return false;
   }
+  if (const auto *hostAssocDetails{symbol.detailsIf<HostAssocDetails>()};
+      hostAssocDetails && hostAssocDetails->symbol().has<SubprogramDetails>() &&
+      &symbol.owner() == &currScope() &&
+      &hostAssocDetails->symbol() == currScope().symbol()) {
+    // Handle USE-association of procedure FOO into function/subroutine FOO,
+    // replacing its place-holding HostAssocDetails symbol.
+    context().Warn(common::UsageWarning::UseAssociationIntoSameNameSubprogram,
+        location,
+        "'%s' is use-associated into a subprogram of the same name"_port_en_US,
+        used.name());
+    SourceName created{context().GetTempName(currScope())};
+    Symbol &tmpUse{MakeSymbol(created, Attrs(), UseDetails{location, used})};
+    UseErrorDetails useError{tmpUse.get<UseDetails>()};
+    useError.add_occurrence(location, hostAssocDetails->symbol());
+    symbol.set_details(std::move(useError));
+    return true;
+  }
+  return false;
 }
 
 // Two ultimate symbols are distinct, but they have the same name and come
@@ -4263,7 +4386,9 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
     }
     if (auto attrs{subp->cudaSubprogramAttrs()}) {
       if (*attrs == common::CUDASubprogramAttrs::Global ||
-          *attrs == common::CUDASubprogramAttrs::Device) {
+          *attrs == common::CUDASubprogramAttrs::Grid_Global ||
+          *attrs == common::CUDASubprogramAttrs::Device ||
+          *attrs == common::CUDASubprogramAttrs::HostDevice) {
         const Scope &scope{currScope()};
         const Scope *mod{FindModuleContaining(scope)};
         if (mod &&
@@ -6110,32 +6235,6 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
               "POINTER or ALLOCATABLE"_err_en_US);
         }
       }
-      // TODO: This would be more appropriate in CheckDerivedType()
-      if (auto it{FindCoarrayUltimateComponent(*derived)}) { // C748
-        std::string ultimateName{it.BuildResultDesignatorName()};
-        // Strip off the leading "%"
-        if (ultimateName.length() > 1) {
-          ultimateName.erase(0, 1);
-          if (attrs.HasAny({Attr::POINTER, Attr::ALLOCATABLE})) {
-            evaluate::AttachDeclaration(
-                Say(name.source,
-                    "A component with a POINTER or ALLOCATABLE attribute may "
-                    "not "
-                    "be of a type with a coarray ultimate component (named "
-                    "'%s')"_err_en_US,
-                    ultimateName),
-                derived->typeSymbol());
-          }
-          if (!arraySpec().empty() || !coarraySpec().empty()) {
-            evaluate::AttachDeclaration(
-                Say(name.source,
-                    "An array or coarray component may not be of a type with a "
-                    "coarray ultimate component (named '%s')"_err_en_US,
-                    ultimateName),
-                derived->typeSymbol());
-          }
-        }
-      }
     }
   }
   if (OkToAddComponent(name)) {
@@ -6222,7 +6321,8 @@ bool DeclarationVisitor::Pre(const parser::ProcPointerInit &x) {
     const auto &null{DEREF(std::get_if<parser::NullInit>(&x.u))};
     Walk(null);
     if (auto nullInit{EvaluateExpr(null)}) {
-      if (!evaluate::IsNullPointer(*nullInit)) {
+      if (!evaluate::IsNullProcedurePointer(&*nullInit) &&
+          !evaluate::IsBareNullPointer(&*nullInit)) {
         Say(null.v.value().source,
             "Procedure pointer initializer must be a name or intrinsic NULL()"_err_en_US);
       }
@@ -6569,7 +6669,7 @@ bool DeclarationVisitor::Pre(const parser::BasedPointer &) {
 
 void DeclarationVisitor::Post(const parser::BasedPointer &bp) {
   const parser::ObjectName &pointerName{std::get<0>(bp.t)};
-  auto *pointer{FindSymbol(pointerName)};
+  auto *pointer{FindInScope(pointerName)};
   if (!pointer) {
     pointer = &MakeSymbol(pointerName, ObjectEntityDetails{});
   } else if (!ConvertToObjectEntity(*pointer)) {
@@ -7277,17 +7377,20 @@ bool DeclarationVisitor::OkToAddComponent(
       std::optional<parser::MessageFixedText> msg;
       std::optional<common::UsageWarning> warning;
       if (context().HasError(*prev)) { // don't pile on
-      } else if (extends) {
-        msg = "Type cannot be extended as it has a component named"
-              " '%s'"_err_en_US;
       } else if (CheckAccessibleSymbol(currScope(), *prev)) {
         // inaccessible component -- redeclaration is ok
-        if (context().ShouldWarn(
-                common::UsageWarning::RedeclaredInaccessibleComponent)) {
+        if (extends) {
+          // The parent type has a component of same name, but it remains
+          // extensible outside its module since that component is PRIVATE.
+        } else if (context().ShouldWarn(
+                       common::UsageWarning::RedeclaredInaccessibleComponent)) {
           msg =
               "Component '%s' is inaccessibly declared in or as a parent of this derived type"_warn_en_US;
           warning = common::UsageWarning::RedeclaredInaccessibleComponent;
         }
+      } else if (extends) {
+        msg =
+            "Type cannot be extended as it has a component named '%s'"_err_en_US;
       } else if (prev->test(Symbol::Flag::ParentComp)) {
         msg =
             "'%s' is a parent type of this type and so cannot be a component"_err_en_US;
@@ -7483,15 +7586,10 @@ bool ConstructVisitor::Pre(const parser::DataImpliedDo &x) {
   Walk(bounds.upper);
   Walk(bounds.step);
   EndCheckOnIndexUseInOwnBounds(restore);
-  bool pushScope{currScope().kind() != Scope::Kind::ImpliedDos};
-  if (pushScope) {
-    PushScope(Scope::Kind::ImpliedDos, nullptr);
-  }
+  PushScope(Scope::Kind::ImpliedDos, nullptr);
   DeclareStatementEntity(bounds.name, type);
   Walk(objects);
-  if (pushScope) {
-    PopScope();
-  }
+  PopScope();
   return false;
 }
 
@@ -7532,9 +7630,9 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
             }
           },
           [&](const parser::DataImpliedDo &y) {
-            PushScope(Scope::Kind::ImpliedDos, nullptr);
+            // Don't push scope here, since it's done when visiting
+            // DataImpliedDo.
             Walk(y);
-            PopScope();
           },
       },
       x.u);
@@ -7754,6 +7852,7 @@ void ConstructVisitor::Post(const parser::TypeGuardStmt::Guard &x) {
       SetTypeFromAssociation(*symbol);
     } else if (const auto *type{GetDeclTypeSpec()}) {
       symbol->SetType(*type);
+      symbol->get<AssocEntityDetails>().set_isTypeGuard();
     }
     SetAttrsFromAssociation(*symbol);
   }
@@ -8627,7 +8726,7 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
           [&](const parser::NullInit &null) { // => NULL()
             Walk(null);
             if (auto nullInit{EvaluateExpr(null)}) {
-              if (!evaluate::IsNullPointer(*nullInit)) { // C813
+              if (!evaluate::IsNullPointer(&*nullInit)) { // C813
                 Say(null.v.value().source,
                     "Pointer initializer must be intrinsic NULL()"_err_en_US);
               } else if (IsPointer(ultimate)) {
@@ -8677,7 +8776,7 @@ void DeclarationVisitor::PointerInitialization(
             ultimate.set(Symbol::Flag::InDataStmt, false);
           } else if (auto *details{ultimate.detailsIf<ProcEntityDetails>()}) {
             // something like "REAL, EXTERNAL, POINTER :: p => t"
-            if (evaluate::IsNullProcedurePointer(*expr)) {
+            if (evaluate::IsNullProcedurePointer(&*expr)) {
               CHECK(!details->init());
               details->set_init(nullptr);
             } else if (const Symbol *
@@ -9535,7 +9634,11 @@ void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
 
 void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
   if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::Unroll>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::Unroll>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoVector>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoUnroll>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u)) {
     return;
   }
   if (const auto *tkr{
@@ -9869,6 +9972,21 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
           (IsDummy(symbol) || object->IsArray())) {
         // Implicitly set device attribute if none is set in device context.
         object->set_cudaDataAttr(common::CUDADataAttr::Device);
+      }
+    }
+    // Main program local objects usually don't have an implied SAVE attribute,
+    // as one might think, but in the exceptional case of a derived type
+    // local object that contains a coarray, we have to mark it as an
+    // implied SAVE so that evaluate::IsSaved() will return true.
+    if (node.scope()->kind() == Scope::Kind::MainProgram) {
+      if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+        if (const DeclTypeSpec * type{object->type()}) {
+          if (const DerivedTypeSpec * derived{type->AsDerived()}) {
+            if (!IsSaved(symbol) && FindCoarrayPotentialComponent(*derived)) {
+              SetImplicitAttr(symbol, Attr::SAVE);
+            }
+          }
+        }
       }
     }
   }

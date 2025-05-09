@@ -148,13 +148,25 @@ def _site_initialize():
             break
 
     class Context(ir._BaseContext):
-        def __init__(self, load_on_create_dialects=None, *args, **kwargs):
+        def __init__(
+            self, load_on_create_dialects=None, thread_pool=None, *args, **kwargs
+        ):
             super().__init__(*args, **kwargs)
             self.append_dialect_registry(get_dialect_registry())
             for hook in post_init_hooks:
                 hook(self)
+            if disable_multithreading and thread_pool is not None:
+                raise ValueError(
+                    "Context constructor has given thread_pool argument, "
+                    "but disable_multithreading flag is True. "
+                    "Please, set thread_pool argument to None or "
+                    "set disable_multithreading flag to False."
+                )
             if not disable_multithreading:
-                self.enable_multithreading(True)
+                if thread_pool is None:
+                    self.enable_multithreading(True)
+                else:
+                    self.set_thread_pool(thread_pool)
             if load_on_create_dialects is not None:
                 logger.debug(
                     "Loading all dialects from load_on_create_dialects arg %r",

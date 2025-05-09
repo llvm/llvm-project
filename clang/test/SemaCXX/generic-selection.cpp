@@ -81,10 +81,10 @@ void func(struct S s) {
   // is an elaborated type specifier followed by the association's value and
   // it should work the same as in C.
   (void)_Generic(s, struct S : 1);
+  (void)_Generic(s, struct T : 1);
 
   // The rest of these cases test that we still produce a reasonable diagnostic
   // when referencing an unknown type or trying to define a type in other ways.
-  (void)_Generic(s, struct T : 1);            // expected-error {{type 'struct T' in generic association incomplete}}
   (void)_Generic(s, struct U { int a; } : 1); // expected-error {{'U' cannot be defined in a type specifier}}
   (void)_Generic(s, struct V : S);            // expected-error {{'S' does not refer to a value}}
   (void)_Generic(s, struct W : S { int b; } : 1); // expected-error {{expected '(' for function-style cast or type construction}}

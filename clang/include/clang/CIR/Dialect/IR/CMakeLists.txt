@@ -16,4 +16,12 @@ add_dependencies(mlir-headers MLIRCIROpsIncGen)
 
 mlir_tablegen(CIROpsAttributes.h.inc -gen-attrdef-decls)
 mlir_tablegen(CIROpsAttributes.cpp.inc -gen-attrdef-defs)
-add_public_tablegen_target(MLIRCIRAttrsEnumsGen)
+mlir_tablegen(CIROpsEnums.h.inc -gen-enum-decls)
+mlir_tablegen(CIROpsEnums.cpp.inc -gen-enum-defs)
+add_public_tablegen_target(MLIRCIREnumsGen)
+
+set(LLVM_TARGET_DEFINITIONS CIRTypeConstraints.td)
+mlir_tablegen(CIRTypeConstraints.h.inc -gen-type-constraint-decls)
+mlir_tablegen(CIRTypeConstraints.cpp.inc -gen-type-constraint-defs)
+add_public_tablegen_target(MLIRCIRTypeConstraintsIncGen)
+add_dependencies(mlir-headers MLIRCIRTypeConstraintsIncGen)

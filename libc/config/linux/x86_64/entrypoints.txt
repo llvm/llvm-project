@@ -93,6 +93,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.strings.bcmp
     libc.src.strings.bcopy
     libc.src.strings.bzero
+    libc.src.strings.ffs
+    libc.src.strings.ffsl
+    libc.src.strings.ffsll
     libc.src.strings.index
     libc.src.strings.rindex
     libc.src.strings.strcasecmp
@@ -177,6 +180,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_trailing_zeros_us
 
     # stdlib.h entrypoints
+    libc.src.stdlib.a64l
     libc.src.stdlib.abs
     libc.src.stdlib.atof
     libc.src.stdlib.atoi
@@ -184,10 +188,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.atoll
     libc.src.stdlib.bsearch
     libc.src.stdlib.div
+    libc.src.stdlib.l64a
     libc.src.stdlib.labs
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
@@ -211,8 +217,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.realloc
 
     # stdio.h entrypoints
-    libc.src.stdio.fdopen
-    libc.src.stdio.fileno
     libc.src.stdio.fprintf
     libc.src.stdio.fscanf
     libc.src.stdio.vfscanf
@@ -284,6 +288,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
 
+    # sys/utimes.h entrypoints
+    libc.src.sys.time.utimes
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
@@ -328,6 +335,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.geteuid
     libc.src.unistd.getpid
     libc.src.unistd.getppid
+    libc.src.unistd.getsid
     libc.src.unistd.gettid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
@@ -360,6 +368,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
     libc.src.sys.uio.readv
+
+    # sys/time.h entrypoints
+    libc.src.sys.time.setitimer
+    libc.src.sys.time.getitimer
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
@@ -403,12 +415,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
+    libc.src.math.acos
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.canonicalize
@@ -647,6 +662,12 @@ endif()
 if(LIBC_TYPES_HAS_FLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float16 entrypoints
+    libc.src.math.acosf16
+    libc.src.math.acoshf16
+    libc.src.math.acospif16
+    libc.src.math.asinf16
+    libc.src.math.asinhf16
+    libc.src.math.atanhf16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
@@ -680,6 +701,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fabsf16
     libc.src.math.fdimf16
     libc.src.math.floorf16
+    libc.src.math.fmaf16
     libc.src.math.fmaxf16
     libc.src.math.fmaximum_mag_numf16
     libc.src.math.fmaximum_magf16
@@ -695,6 +717,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fromfpf16
     libc.src.math.fromfpxf16
     libc.src.math.getpayloadf16
+    libc.src.math.hypotf16
     libc.src.math.ilogbf16
     libc.src.math.iscanonicalf16
     libc.src.math.issignalingf16
@@ -764,6 +787,7 @@ endif()
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
+    libc.src.math.atan2f128
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
@@ -874,6 +898,38 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.ukbits
     libc.src.stdfix.lkbits
     libc.src.stdfix.ulkbits
+    libc.src.stdfix.bitshr
+    libc.src.stdfix.bitsr
+    libc.src.stdfix.bitslr
+    libc.src.stdfix.bitshk
+    libc.src.stdfix.bitsk
+    libc.src.stdfix.bitslk
+    libc.src.stdfix.bitsuhr
+    libc.src.stdfix.bitsur
+    libc.src.stdfix.bitsulr
+    libc.src.stdfix.bitsuhk
+    libc.src.stdfix.bitsuk
+    libc.src.stdfix.bitsulk
+    libc.src.stdfix.countlshr
+    libc.src.stdfix.countlsr
+    libc.src.stdfix.countlslr
+    libc.src.stdfix.countlshk
+    libc.src.stdfix.countlsk
+    libc.src.stdfix.countlslk
+    libc.src.stdfix.countlsuhr
+    libc.src.stdfix.countlsur
+    libc.src.stdfix.countlsulr
+    libc.src.stdfix.countlsuhk
+    libc.src.stdfix.countlsuk
+    libc.src.stdfix.countlsulk
+    libc.src.stdfix.idivr
+    libc.src.stdfix.idivlr
+    libc.src.stdfix.idivk
+    libc.src.stdfix.idivlk
+    libc.src.stdfix.idivur
+    libc.src.stdfix.idivulr
+    libc.src.stdfix.idivuk
+    libc.src.stdfix.idivulk
   )
 endif()
 
@@ -907,6 +963,10 @@ if(LLVM_LIBC_FULL_BUILD)
     # string.h entrypoints
     libc.src.string.strcoll_l
     libc.src.string.strxfrm_l
+
+    # strings.h entrypoints
+    libc.src.strings.strcasecmp_l
+    libc.src.strings.strncasecmp_l
 
     # assert.h entrypoints
     libc.src.assert.__assert_fail
@@ -994,15 +1054,21 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sched.h entrypoints
     libc.src.sched.__sched_getcpucount
+    libc.src.sched.__sched_setcpuzero
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_getcpuisset
 
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp
+    libc.src.setjmp.siglongjmp
+    libc.src.setjmp.sigsetjmp
 
     # stdio.h entrypoints
     libc.src.stdio.clearerr
     libc.src.stdio.clearerr_unlocked
     libc.src.stdio.fclose
+    libc.src.stdio.fdopen
     libc.src.stdio.feof
     libc.src.stdio.feof_unlocked
     libc.src.stdio.ferror
@@ -1011,6 +1077,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fgetc
     libc.src.stdio.fgetc_unlocked
     libc.src.stdio.fgets
+    libc.src.stdio.fileno
     libc.src.stdio.flockfile
     libc.src.stdio.fopen
     libc.src.stdio.fopencookie
@@ -1077,6 +1144,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch_r
     libc.src.search.insque
     libc.src.search.lfind
+    libc.src.search.lsearch
     libc.src.search.remque
 
     # threads.h entrypoints
@@ -1114,6 +1182,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.gmtime_r
     libc.src.time.mktime
     libc.src.time.nanosleep
+    libc.src.time.strftime
+    libc.src.time.strftime_l
     libc.src.time.time
     libc.src.time.timespec_get
 

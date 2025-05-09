@@ -10,6 +10,7 @@
 #define LLVM_ANALYSIS_DXILRESOURCE_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -17,6 +18,8 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/DXILABI.h"
+#include <climits>
+#include <cstdint>
 
 namespace llvm {
 class CallInst;
@@ -166,7 +169,6 @@ public:
   CBufferExtType &operator=(const CBufferExtType &) = delete;
 
   Type *getResourceType() const { return getTypeParameter(0); }
-  uint32_t getCBufferSize() const { return getIntParameter(0); }
 
   static bool classof(const TargetExtType *T) {
     return T->getName() == "dx.CBuffer";
@@ -197,24 +199,55 @@ public:
   }
 };
 
+class AnyResourceExtType : public TargetExtType {
+public:
+  AnyResourceExtType() = delete;
+  AnyResourceExtType(const AnyResourceExtType &) = delete;
+  AnyResourceExtType &operator=(const AnyResourceExtType &) = delete;
+
+  static bool classof(const TargetExtType *T) {
+    return isa<RawBufferExtType>(T) || isa<TypedBufferExtType>(T) ||
+           isa<TextureExtType>(T) || isa<MSTextureExtType>(T) ||
+           isa<FeedbackTextureExtType>(T) || isa<CBufferExtType>(T) ||
+           isa<SamplerExtType>(T);
+  }
+
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
+/// The dx.Layout target extension type
+///
+/// `target("dx.Layout", <Type>, <size>, [offsets...])`
+class LayoutExtType : public TargetExtType {
+public:
+  LayoutExtType() = delete;
+  LayoutExtType(const LayoutExtType &) = delete;
+  LayoutExtType &operator=(const LayoutExtType &) = delete;
+
+  Type *getWrappedType() const { return getTypeParameter(0); }
+  uint32_t getSize() const { return getIntParameter(0); }
+  uint32_t getOffsetOfElement(int I) const { return getIntParameter(I + 1); }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.Layout";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
 //===----------------------------------------------------------------------===//
 
 class ResourceTypeInfo {
 public:
   struct UAVInfo {
-    bool GloballyCoherent;
-    bool HasCounter;
     bool IsROV;
 
-    bool operator==(const UAVInfo &RHS) const {
-      return std::tie(GloballyCoherent, HasCounter, IsROV) ==
-             std::tie(RHS.GloballyCoherent, RHS.HasCounter, RHS.IsROV);
-    }
+    bool operator==(const UAVInfo &RHS) const { return IsROV == RHS.IsROV; }
     bool operator!=(const UAVInfo &RHS) const { return !(*this == RHS); }
-    bool operator<(const UAVInfo &RHS) const {
-      return std::tie(GloballyCoherent, HasCounter, IsROV) <
-             std::tie(RHS.GloballyCoherent, RHS.HasCounter, RHS.IsROV);
-    }
+    bool operator<(const UAVInfo &RHS) const { return IsROV < RHS.IsROV; }
   };
 
   struct StructInfo {
@@ -252,23 +285,14 @@ public:
 private:
   TargetExtType *HandleTy;
 
-  // GloballyCoherent and HasCounter aren't really part of the type and need to
-  // be determined by analysis, so they're just provided directly by the
-  // DXILResourceTypeMap when we construct these.
-  bool GloballyCoherent;
-  bool HasCounter;
-
   dxil::ResourceClass RC;
   dxil::ResourceKind Kind;
 
 public:
   ResourceTypeInfo(TargetExtType *HandleTy, const dxil::ResourceClass RC,
-                   const dxil::ResourceKind Kind, bool GloballyCoherent = false,
-                   bool HasCounter = false);
-  ResourceTypeInfo(TargetExtType *HandleTy, bool GloballyCoherent = false,
-                   bool HasCounter = false)
-      : ResourceTypeInfo(HandleTy, {}, dxil::ResourceKind::Invalid,
-                         GloballyCoherent, HasCounter) {}
+                   const dxil::ResourceKind Kind);
+  ResourceTypeInfo(TargetExtType *HandleTy)
+      : ResourceTypeInfo(HandleTy, {}, dxil::ResourceKind::Invalid) {}
 
   TargetExtType *getHandleTy() const { return HandleTy; }
   StructType *createElementStruct();
@@ -294,9 +318,6 @@ public:
   dxil::ResourceClass getResourceClass() const { return RC; }
   dxil::ResourceKind getResourceKind() const { return Kind; }
 
-  void setGloballyCoherent(bool V) { GloballyCoherent = V; }
-  void setHasCounter(bool V) { HasCounter = V; }
-
   bool operator==(const ResourceTypeInfo &RHS) const;
   bool operator!=(const ResourceTypeInfo &RHS) const { return !(*this == RHS); }
   bool operator<(const ResourceTypeInfo &RHS) const;
@@ -306,7 +327,14 @@ public:
 
 //===----------------------------------------------------------------------===//
 
-class ResourceBindingInfo {
+enum class ResourceCounterDirection {
+  Increment,
+  Decrement,
+  Unknown,
+  Invalid,
+};
+
+class ResourceInfo {
 public:
   struct ResourceBinding {
     uint32_t RecordID;
@@ -333,17 +361,24 @@ private:
   GlobalVariable *Symbol = nullptr;
 
 public:
-  ResourceBindingInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
-                      uint32_t Size, TargetExtType *HandleTy,
-                      GlobalVariable *Symbol = nullptr)
+  bool GloballyCoherent = false;
+  ResourceCounterDirection CounterDirection = ResourceCounterDirection::Unknown;
+
+  ResourceInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
+               uint32_t Size, TargetExtType *HandleTy,
+               GlobalVariable *Symbol = nullptr)
       : Binding{RecordID, Space, LowerBound, Size}, HandleTy(HandleTy),
         Symbol(Symbol) {}
 
   void setBindingID(unsigned ID) { Binding.RecordID = ID; }
 
+  bool hasCounter() const {
+    return CounterDirection != ResourceCounterDirection::Unknown;
+  }
+
   const ResourceBinding &getBinding() const { return Binding; }
   TargetExtType *getHandleTy() const { return HandleTy; }
-  const StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
+  StringRef getName() const { return Symbol ? Symbol->getName() : ""; }
 
   bool hasSymbol() const { return Symbol; }
   GlobalVariable *createSymbol(Module &M, StructType *Ty, StringRef Name = "");
@@ -352,14 +387,12 @@ public:
   std::pair<uint32_t, uint32_t>
   getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
-  bool operator==(const ResourceBindingInfo &RHS) const {
+  bool operator==(const ResourceInfo &RHS) const {
     return std::tie(Binding, HandleTy, Symbol) ==
            std::tie(RHS.Binding, RHS.HandleTy, RHS.Symbol);
   }
-  bool operator!=(const ResourceBindingInfo &RHS) const {
-    return !(*this == RHS);
-  }
-  bool operator<(const ResourceBindingInfo &RHS) const {
+  bool operator!=(const ResourceInfo &RHS) const { return !(*this == RHS); }
+  bool operator<(const ResourceInfo &RHS) const {
     return Binding < RHS.Binding;
   }
 
@@ -420,19 +453,30 @@ ModulePass *createDXILResourceTypeWrapperPassPass();
 
 //===----------------------------------------------------------------------===//
 
-class DXILBindingMap {
-  SmallVector<dxil::ResourceBindingInfo> Infos;
+class DXILResourceMap {
+  SmallVector<dxil::ResourceInfo> Infos;
   DenseMap<CallInst *, unsigned> CallMap;
   unsigned FirstUAV = 0;
   unsigned FirstCBuffer = 0;
   unsigned FirstSampler = 0;
 
-  /// Populate the map given the resource binding calls in the given module.
+  /// Populate all the resource instance data.
   void populate(Module &M, DXILResourceTypeMap &DRTM);
+  /// Populate the map given the resource binding calls in the given module.
+  void populateResourceInfos(Module &M, DXILResourceTypeMap &DRTM);
+  /// Analyze and populate the directions of the resource counters.
+  void populateCounterDirections(Module &M);
+
+  /// Resolves a resource handle into a vector of ResourceInfos that
+  /// represent the possible unique creations of the handle. Certain cases are
+  /// ambiguous so multiple creation instructions may be returned. The resulting
+  /// ResourceInfo can be used to depuplicate unique handles that
+  /// reference the same resource
+  SmallVector<dxil::ResourceInfo *> findByUse(const Value *Key);
 
 public:
-  using iterator = SmallVector<dxil::ResourceBindingInfo>::iterator;
-  using const_iterator = SmallVector<dxil::ResourceBindingInfo>::const_iterator;
+  using iterator = SmallVector<dxil::ResourceInfo>::iterator;
+  using const_iterator = SmallVector<dxil::ResourceInfo>::const_iterator;
 
   iterator begin() { return Infos.begin(); }
   const_iterator begin() const { return Infos.begin(); }
@@ -494,6 +538,141 @@ public:
   void print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
              const DataLayout &DL) const;
 
+  friend class DXILResourceAnalysis;
+  friend class DXILResourceWrapperPass;
+};
+
+class DXILResourceAnalysis : public AnalysisInfoMixin<DXILResourceAnalysis> {
+  friend AnalysisInfoMixin<DXILResourceAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = DXILResourceMap;
+
+  /// Gather resource info for the module \c M.
+  DXILResourceMap run(Module &M, ModuleAnalysisManager &AM);
+};
+
+/// Printer pass for the \c DXILResourceAnalysis results.
+class DXILResourcePrinterPass : public PassInfoMixin<DXILResourcePrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit DXILResourcePrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
+};
+
+class DXILResourceWrapperPass : public ModulePass {
+  std::unique_ptr<DXILResourceMap> Map;
+  DXILResourceTypeMap *DRTM;
+
+public:
+  static char ID; // Class identification, replacement for typeinfo
+
+  DXILResourceWrapperPass();
+  ~DXILResourceWrapperPass() override;
+
+  const DXILResourceMap &getResourceMap() const { return *Map; }
+  DXILResourceMap &getResourceMap() { return *Map; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnModule(Module &M) override;
+  void releaseMemory() override;
+
+  void print(raw_ostream &OS, const Module *M) const override;
+  void dump() const;
+};
+
+ModulePass *createDXILResourceWrapperPassPass();
+
+//===----------------------------------------------------------------------===//
+
+// DXILResourceBindingInfo stores the results of DXILResourceBindingAnalysis
+// which analyses all llvm.dx.resource.handlefrombinding calls in the module
+// and puts together lists of used virtual register spaces and available
+// virtual register slot ranges for each binding type.
+// It also stores additional information found during the analysis such as
+// whether the module uses implicit bindings or if any of the bindings overlap.
+//
+// This information will be used in DXILResourceImplicitBindings pass to assign
+// register slots to resources with implicit bindings, and in a
+// post-optimization validation pass that will raise diagnostic about
+// overlapping bindings.
+//
+// For example for these resource bindings:
+//
+// RWBuffer<float> A[10] : register(u3);
+// RWBuffer<float> B[] : register(u5, space2)
+//
+// The analysis result for UAV binding type will look like this:
+//
+// UAVSpaces {
+//   ResClass = ResourceClass::UAV,
+//   Spaces = {
+//     { Space = 0, FreeRanges = {{ 0, 2 }, { 13, UINT32_MAX }} },
+//     { Space = 2, FreeRanges = {{ 0, 4 }} }
+//   }
+// }
+//
+class DXILResourceBindingInfo {
+public:
+  struct BindingRange {
+    uint32_t LowerBound;
+    uint32_t UpperBound;
+    BindingRange(uint32_t LB, uint32_t UB) : LowerBound(LB), UpperBound(UB) {}
+  };
+
+  struct RegisterSpace {
+    uint32_t Space;
+    SmallVector<BindingRange> FreeRanges;
+    RegisterSpace(uint32_t Space) : Space(Space) {
+      FreeRanges.emplace_back(0, UINT32_MAX);
+    }
+  };
+
+  struct BindingSpaces {
+    dxil::ResourceClass RC;
+    llvm::SmallVector<RegisterSpace> Spaces;
+    BindingSpaces(dxil::ResourceClass RC) : RC(RC) {}
+  };
+
+private:
+  BindingSpaces SRVSpaces, UAVSpaces, CBufferSpaces, SamplerSpaces;
+  bool ImplicitBinding;
+  bool OverlappingBinding;
+
+  // Populate the resource binding info given explicit resource binding calls
+  // in the module.
+  void populate(Module &M, DXILResourceTypeMap &DRTM);
+
+public:
+  DXILResourceBindingInfo()
+      : SRVSpaces(dxil::ResourceClass::SRV),
+        UAVSpaces(dxil::ResourceClass::UAV),
+        CBufferSpaces(dxil::ResourceClass::CBuffer),
+        SamplerSpaces(dxil::ResourceClass::Sampler), ImplicitBinding(false),
+        OverlappingBinding(false) {}
+
+  bool hasImplicitBinding() const { return ImplicitBinding; }
+  bool hasOverlappingBinding() const { return OverlappingBinding; }
+
+  BindingSpaces &getBindingSpaces(dxil::ResourceClass RC) {
+    switch (RC) {
+    case dxil::ResourceClass::SRV:
+      return SRVSpaces;
+    case dxil::ResourceClass::UAV:
+      return UAVSpaces;
+    case dxil::ResourceClass::CBuffer:
+      return CBufferSpaces;
+    case dxil::ResourceClass::Sampler:
+      return SamplerSpaces;
+    }
+  }
+
   friend class DXILResourceBindingAnalysis;
   friend class DXILResourceBindingWrapperPass;
 };
@@ -505,44 +684,26 @@ class DXILResourceBindingAnalysis
   static AnalysisKey Key;
 
 public:
-  using Result = DXILBindingMap;
+  using Result = DXILResourceBindingInfo;
 
-  /// Gather resource info for the module \c M.
-  DXILBindingMap run(Module &M, ModuleAnalysisManager &AM);
-};
-
-/// Printer pass for the \c DXILResourceBindingAnalysis results.
-class DXILResourceBindingPrinterPass
-    : public PassInfoMixin<DXILResourceBindingPrinterPass> {
-  raw_ostream &OS;
-
-public:
-  explicit DXILResourceBindingPrinterPass(raw_ostream &OS) : OS(OS) {}
-
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
+  DXILResourceBindingInfo run(Module &M, ModuleAnalysisManager &AM);
 };
 
 class DXILResourceBindingWrapperPass : public ModulePass {
-  std::unique_ptr<DXILBindingMap> Map;
-  DXILResourceTypeMap *DRTM;
+  std::unique_ptr<DXILResourceBindingInfo> BindingInfo;
 
 public:
-  static char ID; // Class identification, replacement for typeinfo
+  static char ID;
 
   DXILResourceBindingWrapperPass();
   ~DXILResourceBindingWrapperPass() override;
 
-  const DXILBindingMap &getBindingMap() const { return *Map; }
-  DXILBindingMap &getBindingMap() { return *Map; }
+  DXILResourceBindingInfo &getBindingInfo() { return *BindingInfo; }
+  const DXILResourceBindingInfo &getBindingInfo() const { return *BindingInfo; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnModule(Module &M) override;
   void releaseMemory() override;
-
-  void print(raw_ostream &OS, const Module *M) const override;
-  void dump() const;
 };
 
 ModulePass *createDXILResourceBindingWrapperPassPass();

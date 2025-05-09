@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++17 -ast-dump=json %s | FileCheck --check-prefix=JSON %s
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++17 -ast-print %s > %t
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++20 -ast-dump=json %s | FileCheck --check-prefix=JSON %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++20 -ast-print %s > %t
 // RUN: FileCheck < %t %s -check-prefix=CHECK1
 // RUN: FileCheck < %t %s -check-prefix=CHECK2
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++17 -ast-dump %s | FileCheck --check-prefix=DUMP %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++20 -ast-dump %s | FileCheck --check-prefix=DUMP %s
 
 // Test with serialization:
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++17 -emit-pch -o %t %s
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -x c++ -std=c++17 -include-pch %t \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++20 -emit-pch -o %t %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -x c++ -std=c++20 -include-pch %t \
 // RUN: -ast-dump-all /dev/null \
 // RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
 // RUN: | FileCheck --strict-whitespace --check-prefix=DUMP %s
@@ -134,6 +134,91 @@ namespace test7 {
 // DUMP-LABEL: NamespaceDecl {{.*}} test7{{$}}
 // DUMP:       ClassTemplateSpecializationDecl {{.*}} struct A definition explicit_instantiation_definition strict-pack-match{{$}}
 } // namespce test7
+
+namespace test8 {
+template<_Complex int x>
+struct pr126341;
+template<>
+struct pr126341<{1, 2}>;
+// DUMP-LABEL: NamespaceDecl {{.*}} test8{{$}}
+// DUMP-NEXT:  |-ClassTemplateDecl {{.*}} pr126341
+// DUMP:       `-ClassTemplateSpecializationDecl {{.*}} pr126341
+// DUMP:         `-TemplateArgument structural value '1+2i'
+} // namespace test8
+
+namespace TestMemberPointerPartialSpec {
+  template <class> struct A;
+  template <class T1, class T2> struct A<T1 T2::*>;
+// DUMP-LABEL: NamespaceDecl {{.+}} TestMemberPointerPartialSpec{{$}}
+// DUMP:       ClassTemplatePartialSpecializationDecl {{.*}} struct A
+// DUMP-NEXT:  |-TemplateArgument type 'type-parameter-0-0 type-parameter-0-1::*'
+// DUMP-NEXT:  | `-MemberPointerType {{.+}} 'type-parameter-0-0 type-parameter-0-1::*' dependent
+// DUMP-NEXT:  |   |-TemplateTypeParmType {{.+}} 'type-parameter-0-1' dependent depth 0 index 1
+// DUMP-NEXT:  |   `-TemplateTypeParmType {{.+}} 'type-parameter-0-0' dependent depth 0 index 0
+} // namespace TestMemberPointerPartialSpec
+
+namespace TestDependentMemberPointer {
+  template <class U> struct A {
+    using X = int U::*;
+    using Y = int U::test::*;
+    using Z = int U::template V<int>::*;
+  };
+// DUMP-LABEL: NamespaceDecl {{.+}} TestDependentMemberPointer{{$}}
+// DUMP:       |-TypeAliasDecl {{.+}} X 'int U::*'{{$}}
+// DUMP-NEXT:  | `-MemberPointerType {{.+}} 'int U::*' dependent
+// DUMP-NEXT:  |   |-TemplateTypeParmType {{.+}} 'U' dependent depth 0 index 0
+// DUMP-NEXT:  |   | `-TemplateTypeParm {{.+}} 'U'
+// DUMP-NEXT:  |   `-BuiltinType {{.+}} 'int'
+// DUMP-NEXT:  |-TypeAliasDecl {{.+}} Y 'int U::test::*'{{$}}
+// DUMP-NEXT:  | `-MemberPointerType {{.+}} 'int U::test::*' dependent
+// DUMP-NEXT:  |   `-BuiltinType {{.+}} 'int'
+// DUMP-NEXT:  `-TypeAliasDecl {{.+}} Z 'int U::template V<int>::*'{{$}}
+// DUMP-NEXT:    `-MemberPointerType {{.+}} 'int U::template V<int>::*' dependent
+// DUMP-NEXT:      |-DependentTemplateSpecializationType {{.+}} 'template V<int>' dependent
+// DUMP-NEXT:      `-BuiltinType {{.+}} 'int'
+} // namespace TestDependentMemberPointer
+
+namespace TestPartialSpecNTTP {
+// DUMP-LABEL: NamespaceDecl {{.+}} TestPartialSpecNTTP{{$}}
+  template <class TA1, bool TA2> struct Template1 {};
+  template <class TB1, bool TB2> struct Template2 {};
+
+  template <class U1, bool U2, bool U3>
+  struct Template2<Template1<U1, U2>, U3> {};
+// DUMP:      ClassTemplatePartialSpecializationDecl {{.+}} struct Template2
+// DUMP:      |-TemplateArgument type 'Template1<type-parameter-0-0, value-parameter-0-1>'
+// DUMP-NEXT: | `-TemplateSpecializationType {{.+}} 'Template1<type-parameter-0-0, value-parameter-0-1>' dependent
+// DUMP-NEXT: |   |-name: 'TestPartialSpecNTTP::Template1'
+// DUMP-NEXT: |   | `-ClassTemplateDecl {{.+}} Template1
+// DUMP-NEXT: |   |-TemplateArgument type 'type-parameter-0-0'
+// DUMP-NEXT: |   | `-TemplateTypeParmType {{.+}} 'type-parameter-0-0' dependent depth 0 index 0
+// DUMP-NEXT: |   `-TemplateArgument expr canonical 'value-parameter-0-1'
+// DUMP-NEXT: |     `-DeclRefExpr {{.+}} 'bool' NonTypeTemplateParm {{.+}} 'TA2' 'bool'
+// DUMP-NEXT: |-TemplateArgument expr canonical 'value-parameter-0-2'
+// DUMP-NEXT: | `-DeclRefExpr {{.+}} 'bool' NonTypeTemplateParm {{.+}} 'U3' 'bool'
+// DUMP-NEXT: |-TemplateTypeParmDecl {{.+}} referenced class depth 0 index 0 U1
+// DUMP-NEXT: |-NonTypeTemplateParmDecl {{.+}} referenced 'bool' depth 0 index 1 U2
+// DUMP-NEXT: |-NonTypeTemplateParmDecl {{.+}} referenced 'bool' depth 0 index 2 U3
+// DUMP-NEXT: `-CXXRecordDecl {{.+}} implicit struct Template2
+
+  template <typename U1, bool U3, bool U2>
+  struct Template2<Template1<U1, U2>, U3> {};
+// DUMP:      ClassTemplatePartialSpecializationDecl {{.+}} struct Template2 definition explicit_specialization
+// DUMP:      |-TemplateArgument type 'Template1<type-parameter-0-0, value-parameter-0-2>'
+// DUMP-NEXT: | `-TemplateSpecializationType {{.+}} 'Template1<type-parameter-0-0, value-parameter-0-2>' dependent
+// DUMP-NEXT: |   |-name: 'TestPartialSpecNTTP::Template1'
+// DUMP-NEXT: |   | `-ClassTemplateDecl {{.+}} Template1
+// DUMP-NEXT: |   |-TemplateArgument type 'type-parameter-0-0'
+// DUMP-NEXT: |   | `-TemplateTypeParmType {{.+}} 'type-parameter-0-0' dependent depth 0 index 0
+// DUMP-NEXT: |   `-TemplateArgument expr canonical 'value-parameter-0-2'
+// DUMP-NEXT: |     `-DeclRefExpr {{.+}} 'bool' NonTypeTemplateParm {{.+}} 'U2' 'bool'
+// DUMP-NEXT: |-TemplateArgument expr canonical 'value-parameter-0-1'
+// DUMP-NEXT: | `-DeclRefExpr {{.+}} 'bool' NonTypeTemplateParm {{.+}} 'U3' 'bool'
+// DUMP-NEXT: |-TemplateTypeParmDecl {{.+}} referenced typename depth 0 index 0 U1
+// DUMP-NEXT: |-NonTypeTemplateParmDecl {{.+}} referenced 'bool' depth 0 index 1 U3
+// DUMP-NEXT: |-NonTypeTemplateParmDecl {{.+}} referenced 'bool' depth 0 index 2 U2
+// DUMP-NEXT: `-CXXRecordDecl {{.+}} implicit struct Template2
+} // namespace TestPartialSpecNTTP
 
 // NOTE: CHECK lines have been autogenerated by gen_ast_dump_json_test.py
 
@@ -486,6 +571,7 @@ namespace test7 {
 // JSON-NEXT:        "trivial": true
 // JSON-NEXT:       },
 // JSON-NEXT:       "defaultCtor": {
+// JSON-NEXT:        "defaultedIsConstexpr": true,
 // JSON-NEXT:        "exists": true,
 // JSON-NEXT:        "nonTrivial": true,
 // JSON-NEXT:        "userProvided": true
@@ -819,6 +905,7 @@ namespace test7 {
 // JSON-NEXT:        "trivial": true
 // JSON-NEXT:       },
 // JSON-NEXT:       "defaultCtor": {
+// JSON-NEXT:        "defaultedIsConstexpr": true,
 // JSON-NEXT:        "exists": true,
 // JSON-NEXT:        "nonTrivial": true,
 // JSON-NEXT:        "userProvided": true
@@ -1408,6 +1495,7 @@ namespace test7 {
 // JSON-NEXT:         "qualType": "void () noexcept"
 // JSON-NEXT:        },
 // JSON-NEXT:        "inline": true,
+// JSON-NEXT:        "constexpr": true,
 // JSON-NEXT:        "explicitlyDefaulted": "default"
 // JSON-NEXT:       }
 // JSON-NEXT:      ]
@@ -1454,6 +1542,7 @@ namespace test7 {
 // JSON-NEXT:        "trivial": true
 // JSON-NEXT:       },
 // JSON-NEXT:       "defaultCtor": {
+// JSON-NEXT:        "defaultedIsConstexpr": true,
 // JSON-NEXT:        "exists": true,
 // JSON-NEXT:        "nonTrivial": true,
 // JSON-NEXT:        "userProvided": true
@@ -2067,6 +2156,7 @@ namespace test7 {
 // JSON-NEXT:         "qualType": "void () noexcept"
 // JSON-NEXT:        },
 // JSON-NEXT:        "inline": true,
+// JSON-NEXT:        "constexpr": true,
 // JSON-NEXT:        "explicitlyDefaulted": "default"
 // JSON-NEXT:       }
 // JSON-NEXT:      ]
@@ -6153,6 +6243,1697 @@ namespace test7 {
 // JSON-NEXT:        },
 // JSON-NEXT:        "isImplicit": true,
 // JSON-NEXT:        "name": "A",
+// JSON-NEXT:        "tagUsed": "struct"
+// JSON-NEXT:       }
+// JSON-NEXT:      ]
+// JSON-NEXT:     }
+// JSON-NEXT:    ]
+// JSON-NEXT:   },
+// JSON-NEXT:   {
+// JSON-NEXT:    "id": "0x{{.*}}",
+// JSON-NEXT:    "kind": "NamespaceDecl",
+// JSON-NEXT:    "loc": {
+// JSON-NEXT:     "offset": 4339,
+// JSON-NEXT:     "line": 138,
+// JSON-NEXT:     "col": 11,
+// JSON-NEXT:     "tokLen": 5
+// JSON-NEXT:    },
+// JSON-NEXT:    "range": {
+// JSON-NEXT:     "begin": {
+// JSON-NEXT:      "offset": 4329,
+// JSON-NEXT:      "col": 1,
+// JSON-NEXT:      "tokLen": 9
+// JSON-NEXT:     },
+// JSON-NEXT:     "end": {
+// JSON-NEXT:      "offset": 4648,
+// JSON-NEXT:      "line": 147,
+// JSON-NEXT:      "col": 1,
+// JSON-NEXT:      "tokLen": 1
+// JSON-NEXT:     }
+// JSON-NEXT:    },
+// JSON-NEXT:    "name": "test8",
+// JSON-NEXT:    "inner": [
+// JSON-NEXT:     {
+// JSON-NEXT:      "id": "0x{{.*}}",
+// JSON-NEXT:      "kind": "ClassTemplateDecl",
+// JSON-NEXT:      "loc": {
+// JSON-NEXT:       "offset": 4379,
+// JSON-NEXT:       "line": 140,
+// JSON-NEXT:       "col": 8,
+// JSON-NEXT:       "tokLen": 8
+// JSON-NEXT:      },
+// JSON-NEXT:      "range": {
+// JSON-NEXT:       "begin": {
+// JSON-NEXT:        "offset": 4347,
+// JSON-NEXT:        "line": 139,
+// JSON-NEXT:        "col": 1,
+// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:       },
+// JSON-NEXT:       "end": {
+// JSON-NEXT:        "offset": 4379,
+// JSON-NEXT:        "line": 140,
+// JSON-NEXT:        "col": 8,
+// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:       }
+// JSON-NEXT:      },
+// JSON-NEXT:      "name": "pr126341",
+// JSON-NEXT:      "inner": [
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 4369,
+// JSON-NEXT:         "line": 139,
+// JSON-NEXT:         "col": 23,
+// JSON-NEXT:         "tokLen": 1
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 4356,
+// JSON-NEXT:          "col": 10,
+// JSON-NEXT:          "tokLen": 8
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 4369,
+// JSON-NEXT:          "col": 23,
+// JSON-NEXT:          "tokLen": 1
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "name": "x",
+// JSON-NEXT:        "type": {
+// JSON-NEXT:         "qualType": "_Complex int"
+// JSON-NEXT:        },
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 0
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "CXXRecordDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 4379,
+// JSON-NEXT:         "line": 140,
+// JSON-NEXT:         "col": 8,
+// JSON-NEXT:         "tokLen": 8
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 4372,
+// JSON-NEXT:          "col": 1,
+// JSON-NEXT:          "tokLen": 6
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 4379,
+// JSON-NEXT:          "col": 8,
+// JSON-NEXT:          "tokLen": 8
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "name": "pr126341",
+// JSON-NEXT:        "tagUsed": "struct"
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "ClassTemplateSpecializationDecl",
+// JSON-NEXT:        "name": "pr126341"
+// JSON-NEXT:       }
+// JSON-NEXT:      ]
+// JSON-NEXT:     },
+// JSON-NEXT:     {
+// JSON-NEXT:      "id": "0x{{.*}}",
+// JSON-NEXT:      "kind": "ClassTemplateSpecializationDecl",
+// JSON-NEXT:      "loc": {
+// JSON-NEXT:       "offset": 4407,
+// JSON-NEXT:       "line": 142,
+// JSON-NEXT:       "col": 8,
+// JSON-NEXT:       "tokLen": 8
+// JSON-NEXT:      },
+// JSON-NEXT:      "range": {
+// JSON-NEXT:       "begin": {
+// JSON-NEXT:        "offset": 4389,
+// JSON-NEXT:        "line": 141,
+// JSON-NEXT:        "col": 1,
+// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:       },
+// JSON-NEXT:       "end": {
+// JSON-NEXT:        "offset": 4422,
+// JSON-NEXT:        "line": 142,
+// JSON-NEXT:        "col": 23,
+// JSON-NEXT:        "tokLen": 1
+// JSON-NEXT:       }
+// JSON-NEXT:      },
+// JSON-NEXT:      "name": "pr126341",
+// JSON-NEXT:      "tagUsed": "struct",
+// JSON-NEXT:      "inner": [
+// JSON-NEXT:       {
+// JSON-NEXT:        "kind": "TemplateArgument",
+// JSON-NEXT:        "value": "1+2i"
+// JSON-NEXT:       }
+// JSON-NEXT:      ]
+// JSON-NEXT:     }
+// JSON-NEXT:    ]
+// JSON-NEXT:   },
+// JSON-NEXT:   {
+// JSON-NEXT:    "id": "0x{{.*}}",
+// JSON-NEXT:    "kind": "NamespaceDecl",
+// JSON-NEXT:    "loc": {
+// JSON-NEXT:     "offset": 4680,
+// JSON-NEXT:     "line": 149,
+// JSON-NEXT:     "col": 11,
+// JSON-NEXT:     "tokLen": 28
+// JSON-NEXT:    },
+// JSON-NEXT:    "range": {
+// JSON-NEXT:     "begin": {
+// JSON-NEXT:      "offset": 4670,
+// JSON-NEXT:      "col": 1,
+// JSON-NEXT:      "tokLen": 9
+// JSON-NEXT:     },
+// JSON-NEXT:     "end": {
+// JSON-NEXT:      "offset": 5303,
+// JSON-NEXT:      "line": 158,
+// JSON-NEXT:      "col": 1,
+// JSON-NEXT:      "tokLen": 1
+// JSON-NEXT:     }
+// JSON-NEXT:    },
+// JSON-NEXT:    "name": "TestMemberPointerPartialSpec",
+// JSON-NEXT:    "inner": [
+// JSON-NEXT:     {
+// JSON-NEXT:      "id": "0x{{.*}}",
+// JSON-NEXT:      "kind": "ClassTemplateDecl",
+// JSON-NEXT:      "loc": {
+// JSON-NEXT:       "offset": 4737,
+// JSON-NEXT:       "line": 150,
+// JSON-NEXT:       "col": 27,
+// JSON-NEXT:       "tokLen": 1
+// JSON-NEXT:      },
+// JSON-NEXT:      "range": {
+// JSON-NEXT:       "begin": {
+// JSON-NEXT:        "offset": 4713,
+// JSON-NEXT:        "col": 3,
+// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:       },
+// JSON-NEXT:       "end": {
+// JSON-NEXT:        "offset": 4737,
+// JSON-NEXT:        "col": 27,
+// JSON-NEXT:        "tokLen": 1
+// JSON-NEXT:       }
+// JSON-NEXT:      },
+// JSON-NEXT:      "name": "A",
+// JSON-NEXT:      "inner": [
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "TemplateTypeParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 4728,
+// JSON-NEXT:         "col": 18,
+// JSON-NEXT:         "tokLen": 1
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 4723,
+// JSON-NEXT:          "col": 13,
+// JSON-NEXT:          "tokLen": 5
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 4723,
+// JSON-NEXT:          "col": 13,
+// JSON-NEXT:          "tokLen": 5
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "tagUsed": "class",
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 0
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "CXXRecordDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 4737,
+// JSON-NEXT:         "col": 27,
+// JSON-NEXT:         "tokLen": 1
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 4730,
+// JSON-NEXT:          "col": 20,
+// JSON-NEXT:          "tokLen": 6
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 4737,
+// JSON-NEXT:          "col": 27,
+// JSON-NEXT:          "tokLen": 1
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "name": "A",
+// JSON-NEXT:        "tagUsed": "struct"
+// JSON-NEXT:       }
+// JSON-NEXT:      ]
+// JSON-NEXT:     },
+// JSON-NEXT:     {
+// JSON-NEXT:      "id": "0x{{.*}}",
+// JSON-NEXT:      "kind": "ClassTemplatePartialSpecializationDecl",
+// JSON-NEXT:      "loc": {
+// JSON-NEXT:       "offset": 4779,
+// JSON-NEXT:       "line": 151,
+// JSON-NEXT:       "col": 40,
+// JSON-NEXT:       "tokLen": 1
+// JSON-NEXT:      },
+// JSON-NEXT:      "range": {
+// JSON-NEXT:       "begin": {
+// JSON-NEXT:        "offset": 4742,
+// JSON-NEXT:        "col": 3,
+// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:       },
+// JSON-NEXT:       "end": {
+// JSON-NEXT:        "offset": 4789,
+// JSON-NEXT:        "col": 50,
+// JSON-NEXT:        "tokLen": 1
+// JSON-NEXT:       }
+// JSON-NEXT:      },
+// JSON-NEXT:      "name": "A",
+// JSON-NEXT:      "tagUsed": "struct",
+// JSON-NEXT:      "inner": [
+// JSON-NEXT:       {
+// JSON-NEXT:        "kind": "TemplateArgument",
+// JSON-NEXT:        "type": {
+// JSON-NEXT:         "qualType": "type-parameter-0-0 type-parameter-0-1::*"
+// JSON-NEXT:        },
+// JSON-NEXT:        "inner": [
+// JSON-NEXT:         {
+// JSON-NEXT:          "id": "0x{{.*}}",
+// JSON-NEXT:          "kind": "MemberPointerType",
+// JSON-NEXT:          "type": {
+// JSON-NEXT:           "qualType": "type-parameter-0-0 type-parameter-0-1::*"
+// JSON-NEXT:          },
+// JSON-NEXT:          "isDependent": true,
+// JSON-NEXT:          "isInstantiationDependent": true,
+// JSON-NEXT:          "isData": true,
+// JSON-NEXT:          "inner": [
+// JSON-NEXT:           {
+// JSON-NEXT:            "id": "0x{{.*}}",
+// JSON-NEXT:            "kind": "TemplateTypeParmType",
+// JSON-NEXT:            "type": {
+// JSON-NEXT:             "qualType": "type-parameter-0-1"
+// JSON-NEXT:            },
+// JSON-NEXT:            "isDependent": true,
+// JSON-NEXT:            "isInstantiationDependent": true,
+// JSON-NEXT:            "depth": 0,
+// JSON-NEXT:            "index": 1,
+// JSON-NEXT:            "decl": {
+// JSON-NEXT:             "id": "0x0"
+// JSON-NEXT:            }
+// JSON-NEXT:           },
+// JSON-NEXT:           {
+// JSON-NEXT:            "id": "0x{{.*}}",
+// JSON-NEXT:            "kind": "TemplateTypeParmType",
+// JSON-NEXT:            "type": {
+// JSON-NEXT:             "qualType": "type-parameter-0-0"
+// JSON-NEXT:            },
+// JSON-NEXT:            "isDependent": true,
+// JSON-NEXT:            "isInstantiationDependent": true,
+// JSON-NEXT:            "depth": 0,
+// JSON-NEXT:            "index": 0,
+// JSON-NEXT:            "decl": {
+// JSON-NEXT:             "id": "0x0"
+// JSON-NEXT:            }
+// JSON-NEXT:           }
+// JSON-NEXT:          ]
+// JSON-NEXT:         }
+// JSON-NEXT:        ]
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "TemplateTypeParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 4758,
+// JSON-NEXT:         "col": 19,
+// JSON-NEXT:         "tokLen": 2
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 4752,
+// JSON-NEXT:          "col": 13,
+// JSON-NEXT:          "tokLen": 5
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 4758,
+// JSON-NEXT:          "col": 19,
+// JSON-NEXT:          "tokLen": 2
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
+// JSON-NEXT:        "name": "T1",
+// JSON-NEXT:        "tagUsed": "class",
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 0
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "TemplateTypeParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 4768,
+// JSON-NEXT:         "col": 29,
+// JSON-NEXT:         "tokLen": 2
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 4762,
+// JSON-NEXT:          "col": 23,
+// JSON-NEXT:          "tokLen": 5
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 4768,
+// JSON-NEXT:          "col": 29,
+// JSON-NEXT:          "tokLen": 2
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "name": "T2",
+// JSON-NEXT:        "tagUsed": "class",
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 1
+// JSON-NEXT:       }
+// JSON-NEXT:      ]
+// JSON-NEXT:     }
+// JSON-NEXT:    ]
+// JSON-NEXT:   },
+// JSON-NEXT:   {
+// JSON-NEXT:    "id": "0x{{.*}}",
+// JSON-NEXT:    "kind": "NamespaceDecl",
+// JSON-NEXT:    "loc": {
+// JSON-NEXT:     "offset": 5358,
+// JSON-NEXT:     "line": 160,
+// JSON-NEXT:     "col": 11,
+// JSON-NEXT:     "tokLen": 26
+// JSON-NEXT:    },
+// JSON-NEXT:    "range": {
+// JSON-NEXT:     "begin": {
+// JSON-NEXT:      "offset": 5348,
+// JSON-NEXT:      "col": 1,
+// JSON-NEXT:      "tokLen": 9
+// JSON-NEXT:     },
+// JSON-NEXT:     "end": {
+// JSON-NEXT:      "offset": 6356,
+// JSON-NEXT:      "line": 179,
+// JSON-NEXT:      "col": 1,
+// JSON-NEXT:      "tokLen": 1
+// JSON-NEXT:     }
+// JSON-NEXT:    },
+// JSON-NEXT:    "name": "TestDependentMemberPointer",
+// JSON-NEXT:    "inner": [
+// JSON-NEXT:     {
+// JSON-NEXT:      "id": "0x{{.*}}",
+// JSON-NEXT:      "kind": "ClassTemplateDecl",
+// JSON-NEXT:      "loc": {
+// JSON-NEXT:       "offset": 5415,
+// JSON-NEXT:       "line": 161,
+// JSON-NEXT:       "col": 29,
+// JSON-NEXT:       "tokLen": 1
+// JSON-NEXT:      },
+// JSON-NEXT:      "range": {
+// JSON-NEXT:       "begin": {
+// JSON-NEXT:        "offset": 5389,
+// JSON-NEXT:        "col": 3,
+// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:       },
+// JSON-NEXT:       "end": {
+// JSON-NEXT:        "offset": 5516,
+// JSON-NEXT:        "line": 165,
+// JSON-NEXT:        "col": 3,
+// JSON-NEXT:        "tokLen": 1
+// JSON-NEXT:       }
+// JSON-NEXT:      },
+// JSON-NEXT:      "name": "A",
+// JSON-NEXT:      "inner": [
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "TemplateTypeParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 5405,
+// JSON-NEXT:         "line": 161,
+// JSON-NEXT:         "col": 19,
+// JSON-NEXT:         "tokLen": 1
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 5399,
+// JSON-NEXT:          "col": 13,
+// JSON-NEXT:          "tokLen": 5
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 5405,
+// JSON-NEXT:          "col": 19,
+// JSON-NEXT:          "tokLen": 1
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "name": "U",
+// JSON-NEXT:        "tagUsed": "class",
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 0
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "CXXRecordDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 5415,
+// JSON-NEXT:         "col": 29,
+// JSON-NEXT:         "tokLen": 1
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 5408,
+// JSON-NEXT:          "col": 22,
+// JSON-NEXT:          "tokLen": 6
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 5516,
+// JSON-NEXT:          "line": 165,
+// JSON-NEXT:          "col": 3,
+// JSON-NEXT:          "tokLen": 1
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "name": "A",
+// JSON-NEXT:        "tagUsed": "struct",
+// JSON-NEXT:        "completeDefinition": true,
+// JSON-NEXT:        "definitionData": {
+// JSON-NEXT:         "canConstDefaultInit": true,
+// JSON-NEXT:         "copyAssign": {
+// JSON-NEXT:          "hasConstParam": true,
+// JSON-NEXT:          "implicitHasConstParam": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "copyCtor": {
+// JSON-NEXT:          "hasConstParam": true,
+// JSON-NEXT:          "implicitHasConstParam": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "defaultCtor": {
+// JSON-NEXT:          "defaultedIsConstexpr": true,
+// JSON-NEXT:          "exists": true,
+// JSON-NEXT:          "isConstexpr": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "dtor": {
+// JSON-NEXT:          "irrelevant": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "hasConstexprNonCopyMoveConstructor": true,
+// JSON-NEXT:         "isAggregate": true,
+// JSON-NEXT:         "isEmpty": true,
+// JSON-NEXT:         "isLiteral": true,
+// JSON-NEXT:         "isPOD": true,
+// JSON-NEXT:         "isStandardLayout": true,
+// JSON-NEXT:         "isTrivial": true,
+// JSON-NEXT:         "isTriviallyCopyable": true,
+// JSON-NEXT:         "moveAssign": {
+// JSON-NEXT:          "exists": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "moveCtor": {
+// JSON-NEXT:          "exists": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "inner": [
+// JSON-NEXT:         {
+// JSON-NEXT:          "id": "0x{{.*}}",
+// JSON-NEXT:          "kind": "CXXRecordDecl",
+// JSON-NEXT:          "loc": {
+// JSON-NEXT:           "offset": 5415,
+// JSON-NEXT:           "line": 161,
+// JSON-NEXT:           "col": 29,
+// JSON-NEXT:           "tokLen": 1
+// JSON-NEXT:          },
+// JSON-NEXT:          "range": {
+// JSON-NEXT:           "begin": {
+// JSON-NEXT:            "offset": 5408,
+// JSON-NEXT:            "col": 22,
+// JSON-NEXT:            "tokLen": 6
+// JSON-NEXT:           },
+// JSON-NEXT:           "end": {
+// JSON-NEXT:            "offset": 5415,
+// JSON-NEXT:            "col": 29,
+// JSON-NEXT:            "tokLen": 1
+// JSON-NEXT:           }
+// JSON-NEXT:          },
+// JSON-NEXT:          "isImplicit": true,
+// JSON-NEXT:          "name": "A",
+// JSON-NEXT:          "tagUsed": "struct"
+// JSON-NEXT:         },
+// JSON-NEXT:         {
+// JSON-NEXT:          "id": "0x{{.*}}",
+// JSON-NEXT:          "kind": "TypeAliasDecl",
+// JSON-NEXT:          "loc": {
+// JSON-NEXT:           "offset": 5429,
+// JSON-NEXT:           "line": 162,
+// JSON-NEXT:           "col": 11,
+// JSON-NEXT:           "tokLen": 1
+// JSON-NEXT:          },
+// JSON-NEXT:          "range": {
+// JSON-NEXT:           "begin": {
+// JSON-NEXT:            "offset": 5423,
+// JSON-NEXT:            "col": 5,
+// JSON-NEXT:            "tokLen": 5
+// JSON-NEXT:           },
+// JSON-NEXT:           "end": {
+// JSON-NEXT:            "offset": 5440,
+// JSON-NEXT:            "col": 22,
+// JSON-NEXT:            "tokLen": 1
+// JSON-NEXT:           }
+// JSON-NEXT:          },
+// JSON-NEXT:          "name": "X",
+// JSON-NEXT:          "type": {
+// JSON-NEXT:           "qualType": "int U::*"
+// JSON-NEXT:          },
+// JSON-NEXT:          "inner": [
+// JSON-NEXT:           {
+// JSON-NEXT:            "id": "0x{{.*}}",
+// JSON-NEXT:            "kind": "MemberPointerType",
+// JSON-NEXT:            "type": {
+// JSON-NEXT:             "qualType": "int U::*"
+// JSON-NEXT:            },
+// JSON-NEXT:            "isDependent": true,
+// JSON-NEXT:            "isInstantiationDependent": true,
+// JSON-NEXT:            "isData": true,
+// JSON-NEXT:            "inner": [
+// JSON-NEXT:             {
+// JSON-NEXT:              "id": "0x{{.*}}",
+// JSON-NEXT:              "kind": "TemplateTypeParmType",
+// JSON-NEXT:              "type": {
+// JSON-NEXT:               "qualType": "U"
+// JSON-NEXT:              },
+// JSON-NEXT:              "isDependent": true,
+// JSON-NEXT:              "isInstantiationDependent": true,
+// JSON-NEXT:              "depth": 0,
+// JSON-NEXT:              "index": 0,
+// JSON-NEXT:              "decl": {
+// JSON-NEXT:               "id": "0x{{.*}}",
+// JSON-NEXT:               "kind": "TemplateTypeParmDecl",
+// JSON-NEXT:               "name": "U"
+// JSON-NEXT:              }
+// JSON-NEXT:             },
+// JSON-NEXT:             {
+// JSON-NEXT:              "id": "0x{{.*}}",
+// JSON-NEXT:              "kind": "BuiltinType",
+// JSON-NEXT:              "type": {
+// JSON-NEXT:               "qualType": "int"
+// JSON-NEXT:              }
+// JSON-NEXT:             }
+// JSON-NEXT:            ]
+// JSON-NEXT:           }
+// JSON-NEXT:          ]
+// JSON-NEXT:         },
+// JSON-NEXT:         {
+// JSON-NEXT:          "id": "0x{{.*}}",
+// JSON-NEXT:          "kind": "TypeAliasDecl",
+// JSON-NEXT:          "loc": {
+// JSON-NEXT:           "offset": 5453,
+// JSON-NEXT:           "line": 163,
+// JSON-NEXT:           "col": 11,
+// JSON-NEXT:           "tokLen": 1
+// JSON-NEXT:          },
+// JSON-NEXT:          "range": {
+// JSON-NEXT:           "begin": {
+// JSON-NEXT:            "offset": 5447,
+// JSON-NEXT:            "col": 5,
+// JSON-NEXT:            "tokLen": 5
+// JSON-NEXT:           },
+// JSON-NEXT:           "end": {
+// JSON-NEXT:            "offset": 5470,
+// JSON-NEXT:            "col": 28,
+// JSON-NEXT:            "tokLen": 1
+// JSON-NEXT:           }
+// JSON-NEXT:          },
+// JSON-NEXT:          "name": "Y",
+// JSON-NEXT:          "type": {
+// JSON-NEXT:           "qualType": "int U::test::*"
+// JSON-NEXT:          },
+// JSON-NEXT:          "inner": [
+// JSON-NEXT:           {
+// JSON-NEXT:            "id": "0x{{.*}}",
+// JSON-NEXT:            "kind": "MemberPointerType",
+// JSON-NEXT:            "type": {
+// JSON-NEXT:             "qualType": "int U::test::*"
+// JSON-NEXT:            },
+// JSON-NEXT:            "isDependent": true,
+// JSON-NEXT:            "isInstantiationDependent": true,
+// JSON-NEXT:            "isData": true,
+// JSON-NEXT:            "inner": [
+// JSON-NEXT:             {
+// JSON-NEXT:              "id": "0x{{.*}}",
+// JSON-NEXT:              "kind": "BuiltinType",
+// JSON-NEXT:              "type": {
+// JSON-NEXT:               "qualType": "int"
+// JSON-NEXT:              }
+// JSON-NEXT:             }
+// JSON-NEXT:            ]
+// JSON-NEXT:           }
+// JSON-NEXT:          ]
+// JSON-NEXT:         },
+// JSON-NEXT:         {
+// JSON-NEXT:          "id": "0x{{.*}}",
+// JSON-NEXT:          "kind": "TypeAliasDecl",
+// JSON-NEXT:          "loc": {
+// JSON-NEXT:           "offset": 5483,
+// JSON-NEXT:           "line": 164,
+// JSON-NEXT:           "col": 11,
+// JSON-NEXT:           "tokLen": 1
+// JSON-NEXT:          },
+// JSON-NEXT:          "range": {
+// JSON-NEXT:           "begin": {
+// JSON-NEXT:            "offset": 5477,
+// JSON-NEXT:            "col": 5,
+// JSON-NEXT:            "tokLen": 5
+// JSON-NEXT:           },
+// JSON-NEXT:           "end": {
+// JSON-NEXT:            "offset": 5511,
+// JSON-NEXT:            "col": 39,
+// JSON-NEXT:            "tokLen": 1
+// JSON-NEXT:           }
+// JSON-NEXT:          },
+// JSON-NEXT:          "name": "Z",
+// JSON-NEXT:          "type": {
+// JSON-NEXT:           "qualType": "int U::template V<int>::*"
+// JSON-NEXT:          },
+// JSON-NEXT:          "inner": [
+// JSON-NEXT:           {
+// JSON-NEXT:            "id": "0x{{.*}}",
+// JSON-NEXT:            "kind": "MemberPointerType",
+// JSON-NEXT:            "type": {
+// JSON-NEXT:             "qualType": "int U::template V<int>::*"
+// JSON-NEXT:            },
+// JSON-NEXT:            "isDependent": true,
+// JSON-NEXT:            "isInstantiationDependent": true,
+// JSON-NEXT:            "isData": true,
+// JSON-NEXT:            "inner": [
+// JSON-NEXT:             {
+// JSON-NEXT:              "id": "0x{{.*}}",
+// JSON-NEXT:              "kind": "DependentTemplateSpecializationType",
+// JSON-NEXT:              "type": {
+// JSON-NEXT:               "qualType": "template V<int>"
+// JSON-NEXT:              },
+// JSON-NEXT:              "isDependent": true,
+// JSON-NEXT:              "isInstantiationDependent": true
+// JSON-NEXT:             },
+// JSON-NEXT:             {
+// JSON-NEXT:              "id": "0x{{.*}}",
+// JSON-NEXT:              "kind": "BuiltinType",
+// JSON-NEXT:              "type": {
+// JSON-NEXT:               "qualType": "int"
+// JSON-NEXT:              }
+// JSON-NEXT:             }
+// JSON-NEXT:            ]
+// JSON-NEXT:           }
+// JSON-NEXT:          ]
+// JSON-NEXT:         }
+// JSON-NEXT:        ]
+// JSON-NEXT:       }
+// JSON-NEXT:      ]
+// JSON-NEXT:     }
+// JSON-NEXT:    ]
+// JSON-NEXT:   },
+// JSON-NEXT:   {
+// JSON-NEXT:    "id": "0x{{.*}}",
+// JSON-NEXT:    "kind": "NamespaceDecl",
+// JSON-NEXT:    "loc": {
+// JSON-NEXT:     "offset": 6409,
+// JSON-NEXT:     "line": 181,
+// JSON-NEXT:     "col": 11,
+// JSON-NEXT:     "tokLen": 19
+// JSON-NEXT:    },
+// JSON-NEXT:    "range": {
+// JSON-NEXT:     "begin": {
+// JSON-NEXT:      "offset": 6399,
+// JSON-NEXT:      "col": 1,
+// JSON-NEXT:      "tokLen": 9
+// JSON-NEXT:     },
+// JSON-NEXT:     "end": {
+// JSON-NEXT:      "offset": 9184,
+// JSON-NEXT:      "line": 221,
+// JSON-NEXT:      "col": 1,
+// JSON-NEXT:      "tokLen": 1
+// JSON-NEXT:     }
+// JSON-NEXT:    },
+// JSON-NEXT:    "name": "TestPartialSpecNTTP",
+// JSON-NEXT:    "inner": [
+// JSON-NEXT:     {
+// JSON-NEXT:      "id": "0x{{.*}}",
+// JSON-NEXT:      "kind": "ClassTemplateDecl",
+// JSON-NEXT:      "loc": {
+// JSON-NEXT:       "offset": 6532,
+// JSON-NEXT:       "line": 183,
+// JSON-NEXT:       "col": 41,
+// JSON-NEXT:       "tokLen": 9
+// JSON-NEXT:      },
+// JSON-NEXT:      "range": {
+// JSON-NEXT:       "begin": {
+// JSON-NEXT:        "offset": 6494,
+// JSON-NEXT:        "col": 3,
+// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:       },
+// JSON-NEXT:       "end": {
+// JSON-NEXT:        "offset": 6543,
+// JSON-NEXT:        "col": 52,
+// JSON-NEXT:        "tokLen": 1
+// JSON-NEXT:       }
+// JSON-NEXT:      },
+// JSON-NEXT:      "name": "Template1",
+// JSON-NEXT:      "inner": [
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "TemplateTypeParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 6510,
+// JSON-NEXT:         "col": 19,
+// JSON-NEXT:         "tokLen": 3
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 6504,
+// JSON-NEXT:          "col": 13,
+// JSON-NEXT:          "tokLen": 5
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 6510,
+// JSON-NEXT:          "col": 19,
+// JSON-NEXT:          "tokLen": 3
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "name": "TA1",
+// JSON-NEXT:        "tagUsed": "class",
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 0
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 6520,
+// JSON-NEXT:         "col": 29,
+// JSON-NEXT:         "tokLen": 3
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 6515,
+// JSON-NEXT:          "col": 24,
+// JSON-NEXT:          "tokLen": 4
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 6520,
+// JSON-NEXT:          "col": 29,
+// JSON-NEXT:          "tokLen": 3
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "name": "TA2",
+// JSON-NEXT:        "type": {
+// JSON-NEXT:         "qualType": "bool"
+// JSON-NEXT:        },
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 1
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "CXXRecordDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 6532,
+// JSON-NEXT:         "col": 41,
+// JSON-NEXT:         "tokLen": 9
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 6525,
+// JSON-NEXT:          "col": 34,
+// JSON-NEXT:          "tokLen": 6
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 6543,
+// JSON-NEXT:          "col": 52,
+// JSON-NEXT:          "tokLen": 1
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "name": "Template1",
+// JSON-NEXT:        "tagUsed": "struct",
+// JSON-NEXT:        "completeDefinition": true,
+// JSON-NEXT:        "definitionData": {
+// JSON-NEXT:         "canConstDefaultInit": true,
+// JSON-NEXT:         "copyAssign": {
+// JSON-NEXT:          "hasConstParam": true,
+// JSON-NEXT:          "implicitHasConstParam": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "copyCtor": {
+// JSON-NEXT:          "hasConstParam": true,
+// JSON-NEXT:          "implicitHasConstParam": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "defaultCtor": {
+// JSON-NEXT:          "defaultedIsConstexpr": true,
+// JSON-NEXT:          "exists": true,
+// JSON-NEXT:          "isConstexpr": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "dtor": {
+// JSON-NEXT:          "irrelevant": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "hasConstexprNonCopyMoveConstructor": true,
+// JSON-NEXT:         "isAggregate": true,
+// JSON-NEXT:         "isEmpty": true,
+// JSON-NEXT:         "isLiteral": true,
+// JSON-NEXT:         "isPOD": true,
+// JSON-NEXT:         "isStandardLayout": true,
+// JSON-NEXT:         "isTrivial": true,
+// JSON-NEXT:         "isTriviallyCopyable": true,
+// JSON-NEXT:         "moveAssign": {
+// JSON-NEXT:          "exists": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "moveCtor": {
+// JSON-NEXT:          "exists": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "inner": [
+// JSON-NEXT:         {
+// JSON-NEXT:          "id": "0x{{.*}}",
+// JSON-NEXT:          "kind": "CXXRecordDecl",
+// JSON-NEXT:          "loc": {
+// JSON-NEXT:           "offset": 6532,
+// JSON-NEXT:           "col": 41,
+// JSON-NEXT:           "tokLen": 9
+// JSON-NEXT:          },
+// JSON-NEXT:          "range": {
+// JSON-NEXT:           "begin": {
+// JSON-NEXT:            "offset": 6525,
+// JSON-NEXT:            "col": 34,
+// JSON-NEXT:            "tokLen": 6
+// JSON-NEXT:           },
+// JSON-NEXT:           "end": {
+// JSON-NEXT:            "offset": 6532,
+// JSON-NEXT:            "col": 41,
+// JSON-NEXT:            "tokLen": 9
+// JSON-NEXT:           }
+// JSON-NEXT:          },
+// JSON-NEXT:          "isImplicit": true,
+// JSON-NEXT:          "name": "Template1",
+// JSON-NEXT:          "tagUsed": "struct"
+// JSON-NEXT:         }
+// JSON-NEXT:        ]
+// JSON-NEXT:       }
+// JSON-NEXT:      ]
+// JSON-NEXT:     },
+// JSON-NEXT:     {
+// JSON-NEXT:      "id": "0x{{.*}}",
+// JSON-NEXT:      "kind": "ClassTemplateDecl",
+// JSON-NEXT:      "loc": {
+// JSON-NEXT:       "offset": 6586,
+// JSON-NEXT:       "line": 184,
+// JSON-NEXT:       "col": 41,
+// JSON-NEXT:       "tokLen": 9
+// JSON-NEXT:      },
+// JSON-NEXT:      "range": {
+// JSON-NEXT:       "begin": {
+// JSON-NEXT:        "offset": 6548,
+// JSON-NEXT:        "col": 3,
+// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:       },
+// JSON-NEXT:       "end": {
+// JSON-NEXT:        "offset": 6597,
+// JSON-NEXT:        "col": 52,
+// JSON-NEXT:        "tokLen": 1
+// JSON-NEXT:       }
+// JSON-NEXT:      },
+// JSON-NEXT:      "name": "Template2",
+// JSON-NEXT:      "inner": [
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "TemplateTypeParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 6564,
+// JSON-NEXT:         "col": 19,
+// JSON-NEXT:         "tokLen": 3
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 6558,
+// JSON-NEXT:          "col": 13,
+// JSON-NEXT:          "tokLen": 5
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 6564,
+// JSON-NEXT:          "col": 19,
+// JSON-NEXT:          "tokLen": 3
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "name": "TB1",
+// JSON-NEXT:        "tagUsed": "class",
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 0
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 6574,
+// JSON-NEXT:         "col": 29,
+// JSON-NEXT:         "tokLen": 3
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 6569,
+// JSON-NEXT:          "col": 24,
+// JSON-NEXT:          "tokLen": 4
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 6574,
+// JSON-NEXT:          "col": 29,
+// JSON-NEXT:          "tokLen": 3
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "name": "TB2",
+// JSON-NEXT:        "type": {
+// JSON-NEXT:         "qualType": "bool"
+// JSON-NEXT:        },
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 1
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "CXXRecordDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 6586,
+// JSON-NEXT:         "col": 41,
+// JSON-NEXT:         "tokLen": 9
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 6579,
+// JSON-NEXT:          "col": 34,
+// JSON-NEXT:          "tokLen": 6
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 6597,
+// JSON-NEXT:          "col": 52,
+// JSON-NEXT:          "tokLen": 1
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "name": "Template2",
+// JSON-NEXT:        "tagUsed": "struct",
+// JSON-NEXT:        "completeDefinition": true,
+// JSON-NEXT:        "definitionData": {
+// JSON-NEXT:         "canConstDefaultInit": true,
+// JSON-NEXT:         "copyAssign": {
+// JSON-NEXT:          "hasConstParam": true,
+// JSON-NEXT:          "implicitHasConstParam": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "copyCtor": {
+// JSON-NEXT:          "hasConstParam": true,
+// JSON-NEXT:          "implicitHasConstParam": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "defaultCtor": {
+// JSON-NEXT:          "defaultedIsConstexpr": true,
+// JSON-NEXT:          "exists": true,
+// JSON-NEXT:          "isConstexpr": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "dtor": {
+// JSON-NEXT:          "irrelevant": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "hasConstexprNonCopyMoveConstructor": true,
+// JSON-NEXT:         "isAggregate": true,
+// JSON-NEXT:         "isEmpty": true,
+// JSON-NEXT:         "isLiteral": true,
+// JSON-NEXT:         "isPOD": true,
+// JSON-NEXT:         "isStandardLayout": true,
+// JSON-NEXT:         "isTrivial": true,
+// JSON-NEXT:         "isTriviallyCopyable": true,
+// JSON-NEXT:         "moveAssign": {
+// JSON-NEXT:          "exists": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         },
+// JSON-NEXT:         "moveCtor": {
+// JSON-NEXT:          "exists": true,
+// JSON-NEXT:          "needsImplicit": true,
+// JSON-NEXT:          "simple": true,
+// JSON-NEXT:          "trivial": true
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "inner": [
+// JSON-NEXT:         {
+// JSON-NEXT:          "id": "0x{{.*}}",
+// JSON-NEXT:          "kind": "CXXRecordDecl",
+// JSON-NEXT:          "loc": {
+// JSON-NEXT:           "offset": 6586,
+// JSON-NEXT:           "col": 41,
+// JSON-NEXT:           "tokLen": 9
+// JSON-NEXT:          },
+// JSON-NEXT:          "range": {
+// JSON-NEXT:           "begin": {
+// JSON-NEXT:            "offset": 6579,
+// JSON-NEXT:            "col": 34,
+// JSON-NEXT:            "tokLen": 6
+// JSON-NEXT:           },
+// JSON-NEXT:           "end": {
+// JSON-NEXT:            "offset": 6586,
+// JSON-NEXT:            "col": 41,
+// JSON-NEXT:            "tokLen": 9
+// JSON-NEXT:           }
+// JSON-NEXT:          },
+// JSON-NEXT:          "isImplicit": true,
+// JSON-NEXT:          "name": "Template2",
+// JSON-NEXT:          "tagUsed": "struct"
+// JSON-NEXT:         }
+// JSON-NEXT:        ]
+// JSON-NEXT:       }
+// JSON-NEXT:      ]
+// JSON-NEXT:     },
+// JSON-NEXT:     {
+// JSON-NEXT:      "id": "0x{{.*}}",
+// JSON-NEXT:      "kind": "ClassTemplatePartialSpecializationDecl",
+// JSON-NEXT:      "loc": {
+// JSON-NEXT:       "offset": 6650,
+// JSON-NEXT:       "line": 187,
+// JSON-NEXT:       "col": 10,
+// JSON-NEXT:       "tokLen": 9
+// JSON-NEXT:      },
+// JSON-NEXT:      "range": {
+// JSON-NEXT:       "begin": {
+// JSON-NEXT:        "offset": 6603,
+// JSON-NEXT:        "line": 186,
+// JSON-NEXT:        "col": 3,
+// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:       },
+// JSON-NEXT:       "end": {
+// JSON-NEXT:        "offset": 6684,
+// JSON-NEXT:        "line": 187,
+// JSON-NEXT:        "col": 44,
+// JSON-NEXT:        "tokLen": 1
+// JSON-NEXT:       }
+// JSON-NEXT:      },
+// JSON-NEXT:      "name": "Template2",
+// JSON-NEXT:      "tagUsed": "struct",
+// JSON-NEXT:      "completeDefinition": true,
+// JSON-NEXT:      "definitionData": {
+// JSON-NEXT:       "canConstDefaultInit": true,
+// JSON-NEXT:       "copyAssign": {
+// JSON-NEXT:        "hasConstParam": true,
+// JSON-NEXT:        "implicitHasConstParam": true,
+// JSON-NEXT:        "needsImplicit": true,
+// JSON-NEXT:        "simple": true,
+// JSON-NEXT:        "trivial": true
+// JSON-NEXT:       },
+// JSON-NEXT:       "copyCtor": {
+// JSON-NEXT:        "hasConstParam": true,
+// JSON-NEXT:        "implicitHasConstParam": true,
+// JSON-NEXT:        "needsImplicit": true,
+// JSON-NEXT:        "simple": true,
+// JSON-NEXT:        "trivial": true
+// JSON-NEXT:       },
+// JSON-NEXT:       "defaultCtor": {
+// JSON-NEXT:        "defaultedIsConstexpr": true,
+// JSON-NEXT:        "exists": true,
+// JSON-NEXT:        "isConstexpr": true,
+// JSON-NEXT:        "needsImplicit": true,
+// JSON-NEXT:        "trivial": true
+// JSON-NEXT:       },
+// JSON-NEXT:       "dtor": {
+// JSON-NEXT:        "irrelevant": true,
+// JSON-NEXT:        "needsImplicit": true,
+// JSON-NEXT:        "simple": true,
+// JSON-NEXT:        "trivial": true
+// JSON-NEXT:       },
+// JSON-NEXT:       "hasConstexprNonCopyMoveConstructor": true,
+// JSON-NEXT:       "isAggregate": true,
+// JSON-NEXT:       "isEmpty": true,
+// JSON-NEXT:       "isLiteral": true,
+// JSON-NEXT:       "isPOD": true,
+// JSON-NEXT:       "isStandardLayout": true,
+// JSON-NEXT:       "isTrivial": true,
+// JSON-NEXT:       "isTriviallyCopyable": true,
+// JSON-NEXT:       "moveAssign": {
+// JSON-NEXT:        "exists": true,
+// JSON-NEXT:        "needsImplicit": true,
+// JSON-NEXT:        "simple": true,
+// JSON-NEXT:        "trivial": true
+// JSON-NEXT:       },
+// JSON-NEXT:       "moveCtor": {
+// JSON-NEXT:        "exists": true,
+// JSON-NEXT:        "needsImplicit": true,
+// JSON-NEXT:        "simple": true,
+// JSON-NEXT:        "trivial": true
+// JSON-NEXT:       }
+// JSON-NEXT:      },
+// JSON-NEXT:      "inner": [
+// JSON-NEXT:       {
+// JSON-NEXT:        "kind": "TemplateArgument",
+// JSON-NEXT:        "type": {
+// JSON-NEXT:         "qualType": "Template1<type-parameter-0-0, value-parameter-0-1>"
+// JSON-NEXT:        },
+// JSON-NEXT:        "inner": [
+// JSON-NEXT:         {
+// JSON-NEXT:          "id": "0x{{.*}}",
+// JSON-NEXT:          "kind": "TemplateSpecializationType",
+// JSON-NEXT:          "type": {
+// JSON-NEXT:           "qualType": "Template1<type-parameter-0-0, value-parameter-0-1>"
+// JSON-NEXT:          },
+// JSON-NEXT:          "isDependent": true,
+// JSON-NEXT:          "isInstantiationDependent": true,
+// JSON-NEXT:          "templateName": "TestPartialSpecNTTP::Template1",
+// JSON-NEXT:          "inner": [
+// JSON-NEXT:           {
+// JSON-NEXT:            "kind": "TemplateArgument",
+// JSON-NEXT:            "type": {
+// JSON-NEXT:             "qualType": "type-parameter-0-0"
+// JSON-NEXT:            },
+// JSON-NEXT:            "inner": [
+// JSON-NEXT:             {
+// JSON-NEXT:              "id": "0x{{.*}}",
+// JSON-NEXT:              "kind": "TemplateTypeParmType",
+// JSON-NEXT:              "type": {
+// JSON-NEXT:               "qualType": "type-parameter-0-0"
+// JSON-NEXT:              },
+// JSON-NEXT:              "isDependent": true,
+// JSON-NEXT:              "isInstantiationDependent": true,
+// JSON-NEXT:              "depth": 0,
+// JSON-NEXT:              "index": 0,
+// JSON-NEXT:              "decl": {
+// JSON-NEXT:               "id": "0x0"
+// JSON-NEXT:              }
+// JSON-NEXT:             }
+// JSON-NEXT:            ]
+// JSON-NEXT:           },
+// JSON-NEXT:           {
+// JSON-NEXT:            "kind": "TemplateArgument",
+// JSON-NEXT:            "isExpr": true,
+// JSON-NEXT:            "isCanonical": true,
+// JSON-NEXT:            "inner": [
+// JSON-NEXT:             {
+// JSON-NEXT:              "id": "0x{{.*}}",
+// JSON-NEXT:              "kind": "DeclRefExpr",
+// JSON-NEXT:              "range": {
+// JSON-NEXT:               "begin": {
+// JSON-NEXT:                "offset": 6520,
+// JSON-NEXT:                "line": 183,
+// JSON-NEXT:                "col": 29,
+// JSON-NEXT:                "tokLen": 3
+// JSON-NEXT:               },
+// JSON-NEXT:               "end": {
+// JSON-NEXT:                "offset": 6520,
+// JSON-NEXT:                "col": 29,
+// JSON-NEXT:                "tokLen": 3
+// JSON-NEXT:               }
+// JSON-NEXT:              },
+// JSON-NEXT:              "type": {
+// JSON-NEXT:               "qualType": "bool"
+// JSON-NEXT:              },
+// JSON-NEXT:              "valueCategory": "prvalue",
+// JSON-NEXT:              "referencedDecl": {
+// JSON-NEXT:               "id": "0x{{.*}}",
+// JSON-NEXT:               "kind": "NonTypeTemplateParmDecl",
+// JSON-NEXT:               "name": "TA2",
+// JSON-NEXT:               "type": {
+// JSON-NEXT:                "qualType": "bool"
+// JSON-NEXT:               }
+// JSON-NEXT:              }
+// JSON-NEXT:             }
+// JSON-NEXT:            ]
+// JSON-NEXT:           }
+// JSON-NEXT:          ]
+// JSON-NEXT:         }
+// JSON-NEXT:        ]
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "kind": "TemplateArgument",
+// JSON-NEXT:        "isExpr": true,
+// JSON-NEXT:        "isCanonical": true,
+// JSON-NEXT:        "inner": [
+// JSON-NEXT:         {
+// JSON-NEXT:          "id": "0x{{.*}}",
+// JSON-NEXT:          "kind": "DeclRefExpr",
+// JSON-NEXT:          "range": {
+// JSON-NEXT:           "begin": {
+// JSON-NEXT:            "offset": 6679,
+// JSON-NEXT:            "line": 187,
+// JSON-NEXT:            "col": 39,
+// JSON-NEXT:            "tokLen": 2
+// JSON-NEXT:           },
+// JSON-NEXT:           "end": {
+// JSON-NEXT:            "offset": 6679,
+// JSON-NEXT:            "col": 39,
+// JSON-NEXT:            "tokLen": 2
+// JSON-NEXT:           }
+// JSON-NEXT:          },
+// JSON-NEXT:          "type": {
+// JSON-NEXT:           "qualType": "bool"
+// JSON-NEXT:          },
+// JSON-NEXT:          "valueCategory": "prvalue",
+// JSON-NEXT:          "referencedDecl": {
+// JSON-NEXT:           "id": "0x{{.*}}",
+// JSON-NEXT:           "kind": "NonTypeTemplateParmDecl",
+// JSON-NEXT:           "name": "U3",
+// JSON-NEXT:           "type": {
+// JSON-NEXT:            "qualType": "bool"
+// JSON-NEXT:           }
+// JSON-NEXT:          }
+// JSON-NEXT:         }
+// JSON-NEXT:        ]
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "TemplateTypeParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 6619,
+// JSON-NEXT:         "line": 186,
+// JSON-NEXT:         "col": 19,
+// JSON-NEXT:         "tokLen": 2
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 6613,
+// JSON-NEXT:          "col": 13,
+// JSON-NEXT:          "tokLen": 5
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 6619,
+// JSON-NEXT:          "col": 19,
+// JSON-NEXT:          "tokLen": 2
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
+// JSON-NEXT:        "name": "U1",
+// JSON-NEXT:        "tagUsed": "class",
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 0
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 6628,
+// JSON-NEXT:         "col": 28,
+// JSON-NEXT:         "tokLen": 2
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 6623,
+// JSON-NEXT:          "col": 23,
+// JSON-NEXT:          "tokLen": 4
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 6628,
+// JSON-NEXT:          "col": 28,
+// JSON-NEXT:          "tokLen": 2
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
+// JSON-NEXT:        "name": "U2",
+// JSON-NEXT:        "type": {
+// JSON-NEXT:         "qualType": "bool"
+// JSON-NEXT:        },
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 1
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 6637,
+// JSON-NEXT:         "col": 37,
+// JSON-NEXT:         "tokLen": 2
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 6632,
+// JSON-NEXT:          "col": 32,
+// JSON-NEXT:          "tokLen": 4
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 6637,
+// JSON-NEXT:          "col": 37,
+// JSON-NEXT:          "tokLen": 2
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
+// JSON-NEXT:        "name": "U3",
+// JSON-NEXT:        "type": {
+// JSON-NEXT:         "qualType": "bool"
+// JSON-NEXT:        },
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 2
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "CXXRecordDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 6650,
+// JSON-NEXT:         "line": 187,
+// JSON-NEXT:         "col": 10,
+// JSON-NEXT:         "tokLen": 9
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 6643,
+// JSON-NEXT:          "col": 3,
+// JSON-NEXT:          "tokLen": 6
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 6650,
+// JSON-NEXT:          "col": 10,
+// JSON-NEXT:          "tokLen": 9
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "isImplicit": true,
+// JSON-NEXT:        "name": "Template2",
+// JSON-NEXT:        "tagUsed": "struct"
+// JSON-NEXT:       }
+// JSON-NEXT:      ]
+// JSON-NEXT:     },
+// JSON-NEXT:     {
+// JSON-NEXT:      "id": "0x{{.*}}",
+// JSON-NEXT:      "kind": "ClassTemplatePartialSpecializationDecl",
+// JSON-NEXT:      "loc": {
+// JSON-NEXT:       "offset": 7925,
+// JSON-NEXT:       "line": 205,
+// JSON-NEXT:       "col": 10,
+// JSON-NEXT:       "tokLen": 9
+// JSON-NEXT:      },
+// JSON-NEXT:      "range": {
+// JSON-NEXT:       "begin": {
+// JSON-NEXT:        "offset": 7875,
+// JSON-NEXT:        "line": 204,
+// JSON-NEXT:        "col": 3,
+// JSON-NEXT:        "tokLen": 8
+// JSON-NEXT:       },
+// JSON-NEXT:       "end": {
+// JSON-NEXT:        "offset": 7959,
+// JSON-NEXT:        "line": 205,
+// JSON-NEXT:        "col": 44,
+// JSON-NEXT:        "tokLen": 1
+// JSON-NEXT:       }
+// JSON-NEXT:      },
+// JSON-NEXT:      "name": "Template2",
+// JSON-NEXT:      "tagUsed": "struct",
+// JSON-NEXT:      "completeDefinition": true,
+// JSON-NEXT:      "definitionData": {
+// JSON-NEXT:       "canConstDefaultInit": true,
+// JSON-NEXT:       "copyAssign": {
+// JSON-NEXT:        "hasConstParam": true,
+// JSON-NEXT:        "implicitHasConstParam": true,
+// JSON-NEXT:        "needsImplicit": true,
+// JSON-NEXT:        "simple": true,
+// JSON-NEXT:        "trivial": true
+// JSON-NEXT:       },
+// JSON-NEXT:       "copyCtor": {
+// JSON-NEXT:        "hasConstParam": true,
+// JSON-NEXT:        "implicitHasConstParam": true,
+// JSON-NEXT:        "needsImplicit": true,
+// JSON-NEXT:        "simple": true,
+// JSON-NEXT:        "trivial": true
+// JSON-NEXT:       },
+// JSON-NEXT:       "defaultCtor": {
+// JSON-NEXT:        "defaultedIsConstexpr": true,
+// JSON-NEXT:        "exists": true,
+// JSON-NEXT:        "isConstexpr": true,
+// JSON-NEXT:        "needsImplicit": true,
+// JSON-NEXT:        "trivial": true
+// JSON-NEXT:       },
+// JSON-NEXT:       "dtor": {
+// JSON-NEXT:        "irrelevant": true,
+// JSON-NEXT:        "needsImplicit": true,
+// JSON-NEXT:        "simple": true,
+// JSON-NEXT:        "trivial": true
+// JSON-NEXT:       },
+// JSON-NEXT:       "hasConstexprNonCopyMoveConstructor": true,
+// JSON-NEXT:       "isAggregate": true,
+// JSON-NEXT:       "isEmpty": true,
+// JSON-NEXT:       "isLiteral": true,
+// JSON-NEXT:       "isPOD": true,
+// JSON-NEXT:       "isStandardLayout": true,
+// JSON-NEXT:       "isTrivial": true,
+// JSON-NEXT:       "isTriviallyCopyable": true,
+// JSON-NEXT:       "moveAssign": {
+// JSON-NEXT:        "exists": true,
+// JSON-NEXT:        "needsImplicit": true,
+// JSON-NEXT:        "simple": true,
+// JSON-NEXT:        "trivial": true
+// JSON-NEXT:       },
+// JSON-NEXT:       "moveCtor": {
+// JSON-NEXT:        "exists": true,
+// JSON-NEXT:        "needsImplicit": true,
+// JSON-NEXT:        "simple": true,
+// JSON-NEXT:        "trivial": true
+// JSON-NEXT:       }
+// JSON-NEXT:      },
+// JSON-NEXT:      "inner": [
+// JSON-NEXT:       {
+// JSON-NEXT:        "kind": "TemplateArgument",
+// JSON-NEXT:        "type": {
+// JSON-NEXT:         "qualType": "Template1<type-parameter-0-0, value-parameter-0-2>"
+// JSON-NEXT:        },
+// JSON-NEXT:        "inner": [
+// JSON-NEXT:         {
+// JSON-NEXT:          "id": "0x{{.*}}",
+// JSON-NEXT:          "kind": "TemplateSpecializationType",
+// JSON-NEXT:          "type": {
+// JSON-NEXT:           "qualType": "Template1<type-parameter-0-0, value-parameter-0-2>"
+// JSON-NEXT:          },
+// JSON-NEXT:          "isDependent": true,
+// JSON-NEXT:          "isInstantiationDependent": true,
+// JSON-NEXT:          "templateName": "TestPartialSpecNTTP::Template1",
+// JSON-NEXT:          "inner": [
+// JSON-NEXT:           {
+// JSON-NEXT:            "kind": "TemplateArgument",
+// JSON-NEXT:            "type": {
+// JSON-NEXT:             "qualType": "type-parameter-0-0"
+// JSON-NEXT:            },
+// JSON-NEXT:            "inner": [
+// JSON-NEXT:             {
+// JSON-NEXT:              "id": "0x{{.*}}",
+// JSON-NEXT:              "kind": "TemplateTypeParmType",
+// JSON-NEXT:              "type": {
+// JSON-NEXT:               "qualType": "type-parameter-0-0"
+// JSON-NEXT:              },
+// JSON-NEXT:              "isDependent": true,
+// JSON-NEXT:              "isInstantiationDependent": true,
+// JSON-NEXT:              "depth": 0,
+// JSON-NEXT:              "index": 0,
+// JSON-NEXT:              "decl": {
+// JSON-NEXT:               "id": "0x0"
+// JSON-NEXT:              }
+// JSON-NEXT:             }
+// JSON-NEXT:            ]
+// JSON-NEXT:           },
+// JSON-NEXT:           {
+// JSON-NEXT:            "kind": "TemplateArgument",
+// JSON-NEXT:            "isExpr": true,
+// JSON-NEXT:            "isCanonical": true,
+// JSON-NEXT:            "inner": [
+// JSON-NEXT:             {
+// JSON-NEXT:              "id": "0x{{.*}}",
+// JSON-NEXT:              "kind": "DeclRefExpr",
+// JSON-NEXT:              "range": {
+// JSON-NEXT:               "begin": {
+// JSON-NEXT:                "offset": 7949,
+// JSON-NEXT:                "col": 34,
+// JSON-NEXT:                "tokLen": 2
+// JSON-NEXT:               },
+// JSON-NEXT:               "end": {
+// JSON-NEXT:                "offset": 7949,
+// JSON-NEXT:                "col": 34,
+// JSON-NEXT:                "tokLen": 2
+// JSON-NEXT:               }
+// JSON-NEXT:              },
+// JSON-NEXT:              "type": {
+// JSON-NEXT:               "qualType": "bool"
+// JSON-NEXT:              },
+// JSON-NEXT:              "valueCategory": "prvalue",
+// JSON-NEXT:              "referencedDecl": {
+// JSON-NEXT:               "id": "0x{{.*}}",
+// JSON-NEXT:               "kind": "NonTypeTemplateParmDecl",
+// JSON-NEXT:               "name": "U2",
+// JSON-NEXT:               "type": {
+// JSON-NEXT:                "qualType": "bool"
+// JSON-NEXT:               }
+// JSON-NEXT:              }
+// JSON-NEXT:             }
+// JSON-NEXT:            ]
+// JSON-NEXT:           }
+// JSON-NEXT:          ]
+// JSON-NEXT:         }
+// JSON-NEXT:        ]
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "kind": "TemplateArgument",
+// JSON-NEXT:        "isExpr": true,
+// JSON-NEXT:        "isCanonical": true,
+// JSON-NEXT:        "inner": [
+// JSON-NEXT:         {
+// JSON-NEXT:          "id": "0x{{.*}}",
+// JSON-NEXT:          "kind": "DeclRefExpr",
+// JSON-NEXT:          "range": {
+// JSON-NEXT:           "begin": {
+// JSON-NEXT:            "offset": 7954,
+// JSON-NEXT:            "col": 39,
+// JSON-NEXT:            "tokLen": 2
+// JSON-NEXT:           },
+// JSON-NEXT:           "end": {
+// JSON-NEXT:            "offset": 7954,
+// JSON-NEXT:            "col": 39,
+// JSON-NEXT:            "tokLen": 2
+// JSON-NEXT:           }
+// JSON-NEXT:          },
+// JSON-NEXT:          "type": {
+// JSON-NEXT:           "qualType": "bool"
+// JSON-NEXT:          },
+// JSON-NEXT:          "valueCategory": "prvalue",
+// JSON-NEXT:          "referencedDecl": {
+// JSON-NEXT:           "id": "0x{{.*}}",
+// JSON-NEXT:           "kind": "NonTypeTemplateParmDecl",
+// JSON-NEXT:           "name": "U3",
+// JSON-NEXT:           "type": {
+// JSON-NEXT:            "qualType": "bool"
+// JSON-NEXT:           }
+// JSON-NEXT:          }
+// JSON-NEXT:         }
+// JSON-NEXT:        ]
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "TemplateTypeParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 7894,
+// JSON-NEXT:         "line": 204,
+// JSON-NEXT:         "col": 22,
+// JSON-NEXT:         "tokLen": 2
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 7885,
+// JSON-NEXT:          "col": 13,
+// JSON-NEXT:          "tokLen": 8
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 7894,
+// JSON-NEXT:          "col": 22,
+// JSON-NEXT:          "tokLen": 2
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
+// JSON-NEXT:        "name": "U1",
+// JSON-NEXT:        "tagUsed": "typename",
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 0
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 7903,
+// JSON-NEXT:         "col": 31,
+// JSON-NEXT:         "tokLen": 2
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 7898,
+// JSON-NEXT:          "col": 26,
+// JSON-NEXT:          "tokLen": 4
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 7903,
+// JSON-NEXT:          "col": 31,
+// JSON-NEXT:          "tokLen": 2
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
+// JSON-NEXT:        "name": "U3",
+// JSON-NEXT:        "type": {
+// JSON-NEXT:         "qualType": "bool"
+// JSON-NEXT:        },
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 1
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "NonTypeTemplateParmDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 7912,
+// JSON-NEXT:         "col": 40,
+// JSON-NEXT:         "tokLen": 2
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 7907,
+// JSON-NEXT:          "col": 35,
+// JSON-NEXT:          "tokLen": 4
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 7912,
+// JSON-NEXT:          "col": 40,
+// JSON-NEXT:          "tokLen": 2
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "isReferenced": true,
+// JSON-NEXT:        "name": "U2",
+// JSON-NEXT:        "type": {
+// JSON-NEXT:         "qualType": "bool"
+// JSON-NEXT:        },
+// JSON-NEXT:        "depth": 0,
+// JSON-NEXT:        "index": 2
+// JSON-NEXT:       },
+// JSON-NEXT:       {
+// JSON-NEXT:        "id": "0x{{.*}}",
+// JSON-NEXT:        "kind": "CXXRecordDecl",
+// JSON-NEXT:        "loc": {
+// JSON-NEXT:         "offset": 7925,
+// JSON-NEXT:         "line": 205,
+// JSON-NEXT:         "col": 10,
+// JSON-NEXT:         "tokLen": 9
+// JSON-NEXT:        },
+// JSON-NEXT:        "range": {
+// JSON-NEXT:         "begin": {
+// JSON-NEXT:          "offset": 7918,
+// JSON-NEXT:          "col": 3,
+// JSON-NEXT:          "tokLen": 6
+// JSON-NEXT:         },
+// JSON-NEXT:         "end": {
+// JSON-NEXT:          "offset": 7925,
+// JSON-NEXT:          "col": 10,
+// JSON-NEXT:          "tokLen": 9
+// JSON-NEXT:         }
+// JSON-NEXT:        },
+// JSON-NEXT:        "isImplicit": true,
+// JSON-NEXT:        "name": "Template2",
 // JSON-NEXT:        "tagUsed": "struct"
 // JSON-NEXT:       }
 // JSON-NEXT:      ]

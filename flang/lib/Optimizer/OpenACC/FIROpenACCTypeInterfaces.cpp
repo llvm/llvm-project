@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -24,6 +25,7 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace fir::acc {
 
@@ -186,6 +188,77 @@ OpenACCMappableModel<fir::SequenceType>::generateAccBounds(
                                                mlir::acc::DataBoundsType>(
           firBuilder, loc, exv, info);
     }
+
+    if (mlir::isa<hlfir::DeclareOp, fir::DeclareOp>(varPtr.getDefiningOp())) {
+      mlir::Value zero =
+          firBuilder.createIntegerConstant(loc, builder.getIndexType(), 0);
+      mlir::Value one =
+          firBuilder.createIntegerConstant(loc, builder.getIndexType(), 1);
+
+      mlir::Value shape;
+      if (auto declareOp =
+              mlir::dyn_cast_if_present<fir::DeclareOp>(varPtr.getDefiningOp()))
+        shape = declareOp.getShape();
+      else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
+                   varPtr.getDefiningOp()))
+        shape = declareOp.getShape();
+
+      const bool strideIncludeLowerExtent = true;
+
+      llvm::SmallVector<mlir::Value> accBounds;
+      if (auto shapeOp =
+              mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp())) {
+        mlir::Value cummulativeExtent = one;
+        for (auto extent : shapeOp.getExtents()) {
+          mlir::Value upperbound =
+              builder.create<mlir::arith::SubIOp>(loc, extent, one);
+          mlir::Value stride = one;
+          if (strideIncludeLowerExtent) {
+            stride = cummulativeExtent;
+            cummulativeExtent = builder.create<mlir::arith::MulIOp>(
+                loc, cummulativeExtent, extent);
+          }
+          auto accBound = builder.create<mlir::acc::DataBoundsOp>(
+              loc, mlir::acc::DataBoundsType::get(builder.getContext()),
+              /*lowerbound=*/zero, /*upperbound=*/upperbound,
+              /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
+              /*startIdx=*/one);
+          accBounds.push_back(accBound);
+        }
+      } else if (auto shapeShiftOp =
+                     mlir::dyn_cast_if_present<fir::ShapeShiftOp>(
+                         shape.getDefiningOp())) {
+        mlir::Value lowerbound;
+        mlir::Value cummulativeExtent = one;
+        for (auto [idx, val] : llvm::enumerate(shapeShiftOp.getPairs())) {
+          if (idx % 2 == 0) {
+            lowerbound = val;
+          } else {
+            mlir::Value extent = val;
+            mlir::Value upperbound =
+                builder.create<mlir::arith::SubIOp>(loc, extent, one);
+            upperbound = builder.create<mlir::arith::AddIOp>(loc, lowerbound,
+                                                             upperbound);
+            mlir::Value stride = one;
+            if (strideIncludeLowerExtent) {
+              stride = cummulativeExtent;
+              cummulativeExtent = builder.create<mlir::arith::MulIOp>(
+                  loc, cummulativeExtent, extent);
+            }
+            auto accBound = builder.create<mlir::acc::DataBoundsOp>(
+                loc, mlir::acc::DataBoundsType::get(builder.getContext()),
+                /*lowerbound=*/zero, /*upperbound=*/upperbound,
+                /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
+                /*startIdx=*/lowerbound);
+            accBounds.push_back(accBound);
+          }
+        }
+      }
+
+      if (!accBounds.empty())
+        return accBounds;
+    }
+
     assert(false && "array with unknown dimension expected to have descriptor");
     return {};
   }
@@ -222,6 +295,147 @@ OpenACCMappableModel<fir::BaseBoxType>::generateAccBounds(
   // Box references are not arrays - thus generating acc.bounds does not make
   // sense.
   return {};
+}
+
+static bool isScalarLike(mlir::Type type) {
+  return fir::isa_trivial(type) || fir::isa_ref_type(type);
+}
+
+static bool isArrayLike(mlir::Type type) {
+  return mlir::isa<fir::SequenceType>(type);
+}
+
+static bool isCompositeLike(mlir::Type type) {
+  return mlir::isa<fir::RecordType, fir::ClassType, mlir::TupleType>(type);
+}
+
+template <>
+mlir::acc::VariableTypeCategory
+OpenACCMappableModel<fir::SequenceType>::getTypeCategory(
+    mlir::Type type, mlir::Value var) const {
+  return mlir::acc::VariableTypeCategory::array;
+}
+
+template <>
+mlir::acc::VariableTypeCategory
+OpenACCMappableModel<fir::BaseBoxType>::getTypeCategory(mlir::Type type,
+                                                        mlir::Value var) const {
+
+  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
+
+  // If the type enclosed by the box is a mappable type, then have it
+  // provide the type category.
+  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
+    return mappableTy.getTypeCategory(var);
+
+  // For all arrays, despite whether they are allocatable, pointer, assumed,
+  // etc, we'd like to categorize them as "array".
+  if (isArrayLike(eleTy))
+    return mlir::acc::VariableTypeCategory::array;
+
+  // We got here because we don't have an array nor a mappable type. At this
+  // point, we know we have a type that fits the "aggregate" definition since it
+  // is a type with a descriptor. Try to refine it by checking if it matches the
+  // "composite" definition.
+  if (isCompositeLike(eleTy))
+    return mlir::acc::VariableTypeCategory::composite;
+
+  // Even if we have a scalar type - simply because it is wrapped in a box
+  // we want to categorize it as "nonscalar". Anything else would've been
+  // non-scalar anyway.
+  return mlir::acc::VariableTypeCategory::nonscalar;
+}
+
+static mlir::TypedValue<mlir::acc::PointerLikeType>
+getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
+  // If there is no defining op - the unwrapped reference is the base one.
+  mlir::Operation *op = varPtr.getDefiningOp();
+  if (!op)
+    return varPtr;
+
+  // Look to find if this value originates from an interior pointer
+  // calculation op.
+  mlir::Value baseRef =
+      llvm::TypeSwitch<mlir::Operation *, mlir::Value>(op)
+          .Case<hlfir::DesignateOp>([&](auto op) {
+            // Get the base object.
+            return op.getMemref();
+          })
+          .Case<fir::ArrayCoorOp, fir::cg::XArrayCoorOp>([&](auto op) {
+            // Get the base array on which the coordinate is being applied.
+            return op.getMemref();
+          })
+          .Case<fir::CoordinateOp>([&](auto op) {
+            // For coordinate operation which is applied on derived type
+            // object, get the base object.
+            return op.getRef();
+          })
+          .Default([&](mlir::Operation *) { return varPtr; });
+
+  return mlir::cast<mlir::TypedValue<mlir::acc::PointerLikeType>>(baseRef);
+}
+
+static mlir::acc::VariableTypeCategory
+categorizePointee(mlir::Type pointer,
+                  mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
+                  mlir::Type varType) {
+  // FIR uses operations to compute interior pointers.
+  // So for example, an array element or composite field access to a float
+  // value would both be represented as !fir.ref<f32>. We do not want to treat
+  // such a reference as a scalar. Thus unwrap interior pointer calculations.
+  auto baseRef = getBaseRef(varPtr);
+  mlir::Type eleTy = baseRef.getType().getElementType();
+
+  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
+    return mappableTy.getTypeCategory(varPtr);
+
+  if (isScalarLike(eleTy))
+    return mlir::acc::VariableTypeCategory::scalar;
+  if (isArrayLike(eleTy))
+    return mlir::acc::VariableTypeCategory::array;
+  if (isCompositeLike(eleTy))
+    return mlir::acc::VariableTypeCategory::composite;
+  if (mlir::isa<fir::CharacterType, mlir::FunctionType>(eleTy))
+    return mlir::acc::VariableTypeCategory::nonscalar;
+  // "pointers" - in the sense of raw address point-of-view, are considered
+  // scalars. However
+  if (mlir::isa<fir::LLVMPointerType>(eleTy))
+    return mlir::acc::VariableTypeCategory::scalar;
+
+  // Without further checking, this type cannot be categorized.
+  return mlir::acc::VariableTypeCategory::uncategorized;
+}
+
+template <>
+mlir::acc::VariableTypeCategory
+OpenACCPointerLikeModel<fir::ReferenceType>::getPointeeTypeCategory(
+    mlir::Type pointer, mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
+    mlir::Type varType) const {
+  return categorizePointee(pointer, varPtr, varType);
+}
+
+template <>
+mlir::acc::VariableTypeCategory
+OpenACCPointerLikeModel<fir::PointerType>::getPointeeTypeCategory(
+    mlir::Type pointer, mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
+    mlir::Type varType) const {
+  return categorizePointee(pointer, varPtr, varType);
+}
+
+template <>
+mlir::acc::VariableTypeCategory
+OpenACCPointerLikeModel<fir::HeapType>::getPointeeTypeCategory(
+    mlir::Type pointer, mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
+    mlir::Type varType) const {
+  return categorizePointee(pointer, varPtr, varType);
+}
+
+template <>
+mlir::acc::VariableTypeCategory
+OpenACCPointerLikeModel<fir::LLVMPointerType>::getPointeeTypeCategory(
+    mlir::Type pointer, mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
+    mlir::Type varType) const {
+  return categorizePointee(pointer, varPtr, varType);
 }
 
 } // namespace fir::acc

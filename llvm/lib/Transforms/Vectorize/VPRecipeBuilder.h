@@ -90,6 +90,10 @@ class VPRecipeBuilder {
   /// A mapping of partial reduction exit instructions to their scaling factor.
   DenseMap<const Instruction *, unsigned> ScaledReductionMap;
 
+  /// Loop versioning instance for getting noalias metadata guaranteed by
+  /// runtime checks.
+  LoopVersioning *LVer;
+
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
   /// Range. The function should not be called for memory instructions or calls.
@@ -155,9 +159,10 @@ public:
                   const TargetTransformInfo *TTI,
                   LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM,
-                  PredicatedScalarEvolution &PSE, VPBuilder &Builder)
+                  PredicatedScalarEvolution &PSE, VPBuilder &Builder,
+                  LoopVersioning *LVer)
       : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
-        CM(CM), PSE(PSE), Builder(Builder) {}
+        CM(CM), PSE(PSE), Builder(Builder), LVer(LVer) {}
 
   std::optional<unsigned> getScalingForReduction(const Instruction *ExitInst) {
     auto It = ScaledReductionMap.find(ExitInst);
@@ -178,7 +183,8 @@ public:
   /// Create and return a partial reduction recipe for a reduction instruction
   /// along with binary operation and reduction phi operands.
   VPRecipeBase *tryToCreatePartialReduction(Instruction *Reduction,
-                                            ArrayRef<VPValue *> Operands);
+                                            ArrayRef<VPValue *> Operands,
+                                            unsigned ScaleFactor);
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {
@@ -224,15 +230,6 @@ public:
   VPReplicateRecipe *handleReplication(Instruction *I,
                                        ArrayRef<VPValue *> Operands,
                                        VFRange &Range);
-
-  /// Add the incoming values from the backedge to reduction & first-order
-  /// recurrence cross-iteration phis.
-  void fixHeaderPhis();
-
-  /// Returns a range mapping the values of the range \p Operands to their
-  /// corresponding VPValues.
-  iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
-  mapToVPValues(User::op_range Operands);
 
   VPValue *getVPValueOrAddLiveIn(Value *V) {
     if (auto *I = dyn_cast<Instruction>(V)) {

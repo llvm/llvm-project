@@ -357,7 +357,7 @@ public:
   virtual bool CanProvideValue();
 
   // Subclasses must implement the functions below.
-  virtual std::optional<uint64_t> GetByteSize() = 0;
+  virtual llvm::Expected<uint64_t> GetByteSize() = 0;
 
   virtual lldb::ValueType GetValueType() const = 0;
 
@@ -498,7 +498,7 @@ public:
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                                      bool can_create = true);
 
-  virtual size_t GetIndexOfChildWithName(llvm::StringRef name);
+  virtual llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name);
 
   llvm::Expected<uint32_t> GetNumChildren(uint32_t max = UINT32_MAX);
   /// Like \c GetNumChildren but returns 0 on error.  You probably
@@ -865,17 +865,18 @@ public:
 
   virtual void SetLanguageFlags(uint64_t flags) { m_language_flags = flags; }
 
-  /// Returns the size of the local buffer if it's available.
+  /// Returns the local buffer that this ValueObject points to if it's
+  /// available.
   /// \return
-  ///     The size of the local buffer if this value object's value points to a
-  ///     host address, and if that size can be determined. Otherwise, returns
-  ///     LLDB_INVALID_ADDRESS.
+  ///     The local buffer if this value object's value points to a
+  ///     host address, and if that buffer can be determined. Otherwise, returns
+  ///     an empty ArrayRef.
   ///
   /// TODO: Because a ValueObject's Value can point to any arbitrary memory
-  /// location, it is possible that the size of the local buffer can't be
-  /// determined at all. See the comment in Value::m_value for a more thorough
-  /// explanation of why that is.
-  uint64_t GetLocalBufferSize();
+  /// location, it is possible that we can't find what what buffer we're
+  /// pointing to, and thus also can't know its size. See the comment in
+  /// Value::m_value for a more thorough explanation of why that is.
+  llvm::ArrayRef<uint8_t> GetLocalBuffer() const;
 
 protected:
   typedef ClusterManager<ValueObject> ValueObjectManager;

@@ -398,7 +398,7 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
   // Check if I has any output/flow/anti dependences with instructions from \p
   // StartInst to \p EndInst.
   if (llvm::any_of(InstsToCheck, [&DI, &I](Instruction *CurInst) {
-        auto DepResult = DI->depends(&I, CurInst, true);
+        auto DepResult = DI->depends(&I, CurInst);
         if (DepResult && (DepResult->isOutput() || DepResult->isFlow() ||
                           DepResult->isAnti()))
           return true;
@@ -464,8 +464,7 @@ bool llvm::nonStrictlyPostDominate(const BasicBlock *ThisBlock,
   SmallPtrSet<const BasicBlock *, 8> Visited;
   WorkList.push_back(ThisBlock);
   while (!WorkList.empty()) {
-    const BasicBlock *CurBlock = WorkList.back();
-    WorkList.pop_back();
+    const BasicBlock *CurBlock = WorkList.pop_back_val();
     Visited.insert(CurBlock);
     if (PDT->dominates(CurBlock, OtherBlock))
       return true;

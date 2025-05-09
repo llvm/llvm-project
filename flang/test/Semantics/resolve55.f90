@@ -81,7 +81,7 @@ end subroutine s6
 
 subroutine s7()
 ! Cannot have a coarray
-  integer, codimension[*] :: coarray_var
+  integer, codimension[*], save :: coarray_var
 !ERROR: Coarray 'coarray_var' not allowed in a LOCAL locality-spec
   do concurrent(i=1:5) local(coarray_var)
   end do

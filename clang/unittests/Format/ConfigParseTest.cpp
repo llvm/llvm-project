@@ -168,6 +168,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortNamespacesOnASingleLine);
   CHECK_PARSE_BOOL(BinPackArguments);
+  CHECK_PARSE_BOOL(BinPackLongBracedList);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
   CHECK_PARSE_BOOL(BreakBeforeTemplateCloser);
@@ -203,6 +204,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpacesInContainerLiterals);
   CHECK_PARSE_BOOL(SpaceAfterCStyleCast);
   CHECK_PARSE_BOOL(SpaceAfterTemplateKeyword);
+  CHECK_PARSE_BOOL(SpaceAfterOperatorKeyword);
   CHECK_PARSE_BOOL(SpaceAfterLogicalNot);
   CHECK_PARSE_BOOL(SpaceBeforeAssignmentOperators);
   CHECK_PARSE_BOOL(SpaceBeforeCaseColon);
@@ -264,9 +266,9 @@ TEST(ConfigParseTest, ParsesConfigurationIntegers) {
   Style.Language = FormatStyle::LK_Cpp;
 
   CHECK_PARSE_INT(AccessModifierOffset);
+  CHECK_PARSE_INT(BracedInitializerIndentWidth);
   CHECK_PARSE_INT(PPIndentWidth);
 
-  CHECK_PARSE_UNSIGNED(BracedInitializerIndentWidth);
   CHECK_PARSE_UNSIGNED(ColumnLimit);
   CHECK_PARSE_UNSIGNED(ConstructorInitializerIndentWidth);
   CHECK_PARSE_UNSIGNED(ContinuationIndentWidth);
@@ -294,6 +296,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_Cpp;
   CHECK_PARSE("CommentPragmas: '// abc$'", CommentPragmas, "// abc$");
+  CHECK_PARSE("OneLineFormatOffRegex: // ab$", OneLineFormatOffRegex, "// ab$");
 
   Style.QualifierAlignment = FormatStyle::QAS_Right;
   CHECK_PARSE("QualifierAlignment: Leave", QualifierAlignment,
@@ -518,6 +521,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               EmptyLineBeforeAccessModifier, FormatStyle::ELBAMS_LogicalBlock);
   CHECK_PARSE("EmptyLineBeforeAccessModifier: Always",
               EmptyLineBeforeAccessModifier, FormatStyle::ELBAMS_Always);
+
+  Style.EnumTrailingComma = FormatStyle::ETC_Insert;
+  CHECK_PARSE("EnumTrailingComma: Leave", EnumTrailingComma,
+              FormatStyle::ETC_Leave);
+  CHECK_PARSE("EnumTrailingComma: Insert", EnumTrailingComma,
+              FormatStyle::ETC_Insert);
+  CHECK_PARSE("EnumTrailingComma: Remove", EnumTrailingComma,
+              FormatStyle::ETC_Remove);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
   CHECK_PARSE("AlignAfterOpenBracket: Align", AlignAfterOpenBracket,
@@ -908,6 +919,11 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   Style.AttributeMacros.clear();
   CHECK_PARSE("BasedOnStyle: LLVM", AttributeMacros,
               std::vector<std::string>{"__capability"});
+  CHECK_PARSE(
+      "BasedOnStyle: Google", AttributeMacros,
+      std::vector<std::string>({"__capability", "absl_nonnull", "absl_nullable",
+                                "absl_nullability_unknown"}));
+  Style.AttributeMacros.clear();
   CHECK_PARSE("AttributeMacros: [attr1, attr2]", AttributeMacros,
               std::vector<std::string>({"attr1", "attr2"}));
 
@@ -1224,6 +1240,26 @@ TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
               IndentWidth, 56u);
 }
 
+TEST(ConfigParseTest, AllowCppForC) {
+  FormatStyle Style = {};
+  Style.Language = FormatStyle::LK_C;
+  EXPECT_EQ(parseConfiguration("Language: Cpp", &Style), ParseError::Success);
+
+  CHECK_PARSE("---\n"
+              "IndentWidth: 4\n"
+              "---\n"
+              "Language: Cpp\n"
+              "IndentWidth: 8\n",
+              IndentWidth, 8u);
+
+  EXPECT_EQ(parseConfiguration("---\n"
+                               "Language: ObjC\n"
+                               "---\n"
+                               "Language: Cpp\n",
+                               &Style),
+            ParseError::Success);
+}
+
 TEST(ConfigParseTest, UsesLanguageForBasedOnStyle) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_JavaScript;
@@ -1440,8 +1476,10 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_EQ(*Style9, SubSubStyle);
 
   // Test 9.8: use inheritance from a file without BasedOnStyle
-  ASSERT_TRUE(FS.addFile("/e/withoutbase/.clang-format", 0,
-                         llvm::MemoryBuffer::getMemBuffer("ColumnLimit: 123")));
+  ASSERT_TRUE(FS.addFile(
+      "/e/withoutbase/.clang-format", 0,
+      llvm::MemoryBuffer::getMemBuffer("BracedInitializerIndentWidth: 2\n"
+                                       "ColumnLimit: 123")));
   ASSERT_TRUE(
       FS.addFile("/e/withoutbase/sub/.clang-format", 0,
                  llvm::MemoryBuffer::getMemBuffer(
@@ -1451,6 +1489,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
+    Style.BracedInitializerIndentWidth = 2;
     Style.ColumnLimit = 123;
     return Style;
   }());
@@ -1459,6 +1498,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
+    Style.BracedInitializerIndentWidth = 2;
     Style.ColumnLimit = 123;
     Style.IndentWidth = 7;
     return Style;

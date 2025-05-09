@@ -191,7 +191,7 @@ unsigned StackMaps::getNextMetaArgIdx(const MachineInstr *MI, unsigned CurIdx) {
 }
 
 /// Go up the super-register chain until we hit a valid dwarf register number.
-static unsigned getDwarfRegNum(unsigned Reg, const TargetRegisterInfo *TRI) {
+static unsigned getDwarfRegNum(MCRegister Reg, const TargetRegisterInfo *TRI) {
   int RegNum;
   for (MCPhysReg SR : TRI->superregs_inclusive(Reg)) {
     RegNum = TRI->getDwarfRegNum(SR, false);

@@ -280,7 +280,7 @@ private:
     if (Reg.isVirtual())
       return Reg.virtRegIndex() + NumRegUnits;
     assert(Reg < NumRegUnits);
-    return Reg;
+    return Reg.id();
   }
 
   Register getRegFromSparseIndex(unsigned SparseIndex) const {

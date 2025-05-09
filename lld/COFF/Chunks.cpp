@@ -61,6 +61,16 @@ SectionChunk::SectionChunk(ObjFile *f, const coff_section *h, Kind k)
     live = true;
 }
 
+MachineTypes SectionChunk::getMachine() const {
+  MachineTypes machine = file->getMachineType();
+  // On ARM64EC, the IMAGE_SCN_GPREL flag is repurposed to indicate that section
+  // code is x86_64. This enables embedding x86_64 code within ARM64EC object
+  // files. MSVC uses this for export thunks in .exp files.
+  if (isArm64EC(machine) && (header->Characteristics & IMAGE_SCN_GPREL))
+    machine = AMD64;
+  return machine;
+}
+
 // SectionChunk is one of the most frequently allocated classes, so it is
 // important to keep it as compact as possible. As of this writing, the number
 // below is the size of this class on x64 platforms.
@@ -570,14 +580,14 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
   // to match the value in the EC load config, which is expected to be
   // a relocatable pointer to the __chpe_metadata symbol.
   COFFLinkerContext &ctx = file->symtab.ctx;
-  if (ctx.hybridSymtab && ctx.symtab.loadConfigSym &&
-      ctx.symtab.loadConfigSym->getChunk() == this &&
-      ctx.hybridSymtab->loadConfigSym &&
-      ctx.symtab.loadConfigSize >=
+  if (ctx.hybridSymtab && ctx.hybridSymtab->loadConfigSym &&
+      ctx.hybridSymtab->loadConfigSym->getChunk() == this &&
+      ctx.symtab.loadConfigSym &&
+      ctx.hybridSymtab->loadConfigSize >=
           offsetof(coff_load_configuration64, CHPEMetadataPointer) +
               sizeof(coff_load_configuration64::CHPEMetadataPointer))
     res->emplace_back(
-        ctx.symtab.loadConfigSym->getRVA() +
+        ctx.hybridSymtab->loadConfigSym->getRVA() +
             offsetof(coff_load_configuration64, CHPEMetadataPointer),
         IMAGE_REL_BASED_DIR64);
 }
@@ -1070,15 +1080,19 @@ void MergeChunk::writeTo(uint8_t *buf) const {
 }
 
 // MinGW specific.
-size_t AbsolutePointerChunk::getSize() const { return ctx.config.wordsize; }
+size_t AbsolutePointerChunk::getSize() const {
+  return symtab.ctx.config.wordsize;
+}
 
 void AbsolutePointerChunk::writeTo(uint8_t *buf) const {
-  if (ctx.config.is64()) {
+  if (symtab.ctx.config.is64()) {
     write64le(buf, value);
   } else {
     write32le(buf, value);
   }
 }
+
+MachineTypes AbsolutePointerChunk::getMachine() const { return symtab.machine; }
 
 void ECExportThunkChunk::writeTo(uint8_t *buf) const {
   memcpy(buf, ECExportThunkCode, sizeof(ECExportThunkCode));

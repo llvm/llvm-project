@@ -152,8 +152,7 @@ define float @float_fmin_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:  .LBB2_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
 ; LA64F-NEXT:    # Child Loop BB2_3 Depth 2
-; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64F-NEXT:    fmin.s $fa2, $fa2, $fa1
+; LA64F-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64F-NEXT:  .LBB2_3: # %atomicrmw.start
@@ -185,8 +184,7 @@ define float @float_fmin_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:  .LBB2_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
 ; LA64D-NEXT:    # Child Loop BB2_3 Depth 2
-; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64D-NEXT:    fmin.s $fa2, $fa2, $fa1
+; LA64D-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64D-NEXT:  .LBB2_3: # %atomicrmw.start
@@ -224,8 +222,7 @@ define float @float_fmax_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:  .LBB3_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
 ; LA64F-NEXT:    # Child Loop BB3_3 Depth 2
-; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64F-NEXT:    fmax.s $fa2, $fa2, $fa1
+; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64F-NEXT:  .LBB3_3: # %atomicrmw.start
@@ -257,8 +254,7 @@ define float @float_fmax_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:  .LBB3_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
 ; LA64D-NEXT:    # Child Loop BB3_3 Depth 2
-; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64D-NEXT:    fmax.s $fa2, $fa2, $fa1
+; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64D-NEXT:  .LBB3_3: # %atomicrmw.start
@@ -301,7 +297,8 @@ define double @double_fadd_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(__adddf3)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -310,7 +307,8 @@ define double @double_fadd_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 2
 ; LA64F-NEXT:    ori $a5, $zero, 2
 ; LA64F-NEXT:    move $a1, $fp
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB4_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -342,7 +340,8 @@ define double @double_fadd_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 2
 ; LA64D-NEXT:    ori $a5, $zero, 2
 ; LA64D-NEXT:    move $a1, $fp
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB4_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -370,7 +369,8 @@ define double @double_fsub_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(__adddf3)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -379,7 +379,8 @@ define double @double_fsub_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 2
 ; LA64F-NEXT:    ori $a5, $zero, 2
 ; LA64F-NEXT:    move $a1, $fp
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB5_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -411,7 +412,8 @@ define double @double_fsub_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 2
 ; LA64D-NEXT:    ori $a5, $zero, 2
 ; LA64D-NEXT:    move $a1, $fp
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB5_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -439,7 +441,8 @@ define double @double_fmin_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(fmin)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmin)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -448,7 +451,8 @@ define double @double_fmin_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 2
 ; LA64F-NEXT:    ori $a5, $zero, 2
 ; LA64F-NEXT:    move $a1, $fp
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB6_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -470,9 +474,8 @@ define double @double_fmin_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB6_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
-; LA64D-NEXT:    vldi $vr2, -912
-; LA64D-NEXT:    fmin.d $fa1, $fa1, $fa2
+; LA64D-NEXT:    vldi $vr1, -912
+; LA64D-NEXT:    fmin.d $fa1, $fa0, $fa1
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
 ; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    ori $a0, $zero, 8
@@ -481,7 +484,8 @@ define double @double_fmin_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 2
 ; LA64D-NEXT:    ori $a5, $zero, 2
 ; LA64D-NEXT:    move $a1, $fp
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB6_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -509,7 +513,8 @@ define double @double_fmax_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(fmax)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmax)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -518,7 +523,8 @@ define double @double_fmax_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 2
 ; LA64F-NEXT:    ori $a5, $zero, 2
 ; LA64F-NEXT:    move $a1, $fp
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB7_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -540,9 +546,8 @@ define double @double_fmax_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB7_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
-; LA64D-NEXT:    vldi $vr2, -912
-; LA64D-NEXT:    fmax.d $fa1, $fa1, $fa2
+; LA64D-NEXT:    vldi $vr1, -912
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa1
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
 ; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    ori $a0, $zero, 8
@@ -551,7 +556,8 @@ define double @double_fmax_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 2
 ; LA64D-NEXT:    ori $a5, $zero, 2
 ; LA64D-NEXT:    move $a1, $fp
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB7_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -713,8 +719,7 @@ define float @float_fmin_release(ptr %p) nounwind {
 ; LA64F-NEXT:  .LBB10_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
 ; LA64F-NEXT:    # Child Loop BB10_3 Depth 2
-; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64F-NEXT:    fmin.s $fa2, $fa2, $fa1
+; LA64F-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64F-NEXT:  .LBB10_3: # %atomicrmw.start
@@ -746,8 +751,7 @@ define float @float_fmin_release(ptr %p) nounwind {
 ; LA64D-NEXT:  .LBB10_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
 ; LA64D-NEXT:    # Child Loop BB10_3 Depth 2
-; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64D-NEXT:    fmin.s $fa2, $fa2, $fa1
+; LA64D-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64D-NEXT:  .LBB10_3: # %atomicrmw.start
@@ -785,8 +789,7 @@ define float @float_fmax_release(ptr %p) nounwind {
 ; LA64F-NEXT:  .LBB11_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
 ; LA64F-NEXT:    # Child Loop BB11_3 Depth 2
-; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64F-NEXT:    fmax.s $fa2, $fa2, $fa1
+; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64F-NEXT:  .LBB11_3: # %atomicrmw.start
@@ -818,8 +821,7 @@ define float @float_fmax_release(ptr %p) nounwind {
 ; LA64D-NEXT:  .LBB11_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
 ; LA64D-NEXT:    # Child Loop BB11_3 Depth 2
-; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64D-NEXT:    fmax.s $fa2, $fa2, $fa1
+; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64D-NEXT:  .LBB11_3: # %atomicrmw.start
@@ -862,7 +864,8 @@ define double @double_fadd_release(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(__adddf3)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -871,7 +874,8 @@ define double @double_fadd_release(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 3
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a5, $zero
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB12_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -903,7 +907,8 @@ define double @double_fadd_release(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 3
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a5, $zero
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB12_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -931,7 +936,8 @@ define double @double_fsub_release(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(__adddf3)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -940,7 +946,8 @@ define double @double_fsub_release(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 3
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a5, $zero
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB13_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -972,7 +979,8 @@ define double @double_fsub_release(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 3
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a5, $zero
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB13_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -1000,7 +1008,8 @@ define double @double_fmin_release(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(fmin)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmin)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -1009,7 +1018,8 @@ define double @double_fmin_release(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 3
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a5, $zero
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB14_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -1031,9 +1041,8 @@ define double @double_fmin_release(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB14_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
-; LA64D-NEXT:    vldi $vr2, -912
-; LA64D-NEXT:    fmin.d $fa1, $fa1, $fa2
+; LA64D-NEXT:    vldi $vr1, -912
+; LA64D-NEXT:    fmin.d $fa1, $fa0, $fa1
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
 ; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    ori $a0, $zero, 8
@@ -1042,7 +1051,8 @@ define double @double_fmin_release(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 3
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a5, $zero
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB14_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -1070,7 +1080,8 @@ define double @double_fmax_release(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(fmax)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmax)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -1079,7 +1090,8 @@ define double @double_fmax_release(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 3
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a5, $zero
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB15_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -1101,9 +1113,8 @@ define double @double_fmax_release(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB15_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
-; LA64D-NEXT:    vldi $vr2, -912
-; LA64D-NEXT:    fmax.d $fa1, $fa1, $fa2
+; LA64D-NEXT:    vldi $vr1, -912
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa1
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
 ; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    ori $a0, $zero, 8
@@ -1112,7 +1123,8 @@ define double @double_fmax_release(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 3
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a5, $zero
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB15_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -1274,8 +1286,7 @@ define float @float_fmin_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:  .LBB18_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
 ; LA64F-NEXT:    # Child Loop BB18_3 Depth 2
-; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64F-NEXT:    fmin.s $fa2, $fa2, $fa1
+; LA64F-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64F-NEXT:  .LBB18_3: # %atomicrmw.start
@@ -1307,8 +1318,7 @@ define float @float_fmin_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:  .LBB18_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
 ; LA64D-NEXT:    # Child Loop BB18_3 Depth 2
-; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64D-NEXT:    fmin.s $fa2, $fa2, $fa1
+; LA64D-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64D-NEXT:  .LBB18_3: # %atomicrmw.start
@@ -1346,8 +1356,7 @@ define float @float_fmax_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:  .LBB19_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
 ; LA64F-NEXT:    # Child Loop BB19_3 Depth 2
-; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64F-NEXT:    fmax.s $fa2, $fa2, $fa1
+; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64F-NEXT:  .LBB19_3: # %atomicrmw.start
@@ -1379,8 +1388,7 @@ define float @float_fmax_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:  .LBB19_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
 ; LA64D-NEXT:    # Child Loop BB19_3 Depth 2
-; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64D-NEXT:    fmax.s $fa2, $fa2, $fa1
+; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64D-NEXT:  .LBB19_3: # %atomicrmw.start
@@ -1423,7 +1431,8 @@ define double @double_fadd_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(__adddf3)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -1432,7 +1441,8 @@ define double @double_fadd_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 4
 ; LA64F-NEXT:    ori $a5, $zero, 2
 ; LA64F-NEXT:    move $a1, $fp
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB20_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -1464,7 +1474,8 @@ define double @double_fadd_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 4
 ; LA64D-NEXT:    ori $a5, $zero, 2
 ; LA64D-NEXT:    move $a1, $fp
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB20_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -1492,7 +1503,8 @@ define double @double_fsub_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(__adddf3)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -1501,7 +1513,8 @@ define double @double_fsub_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 4
 ; LA64F-NEXT:    ori $a5, $zero, 2
 ; LA64F-NEXT:    move $a1, $fp
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB21_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -1533,7 +1546,8 @@ define double @double_fsub_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 4
 ; LA64D-NEXT:    ori $a5, $zero, 2
 ; LA64D-NEXT:    move $a1, $fp
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB21_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -1561,7 +1575,8 @@ define double @double_fmin_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(fmin)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmin)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -1570,7 +1585,8 @@ define double @double_fmin_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 4
 ; LA64F-NEXT:    ori $a5, $zero, 2
 ; LA64F-NEXT:    move $a1, $fp
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB22_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -1592,9 +1608,8 @@ define double @double_fmin_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB22_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
-; LA64D-NEXT:    vldi $vr2, -912
-; LA64D-NEXT:    fmin.d $fa1, $fa1, $fa2
+; LA64D-NEXT:    vldi $vr1, -912
+; LA64D-NEXT:    fmin.d $fa1, $fa0, $fa1
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
 ; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    ori $a0, $zero, 8
@@ -1603,7 +1618,8 @@ define double @double_fmin_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 4
 ; LA64D-NEXT:    ori $a5, $zero, 2
 ; LA64D-NEXT:    move $a1, $fp
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB22_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -1631,7 +1647,8 @@ define double @double_fmax_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(fmax)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmax)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -1640,7 +1657,8 @@ define double @double_fmax_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 4
 ; LA64F-NEXT:    ori $a5, $zero, 2
 ; LA64F-NEXT:    move $a1, $fp
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB23_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -1662,9 +1680,8 @@ define double @double_fmax_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB23_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
-; LA64D-NEXT:    vldi $vr2, -912
-; LA64D-NEXT:    fmax.d $fa1, $fa1, $fa2
+; LA64D-NEXT:    vldi $vr1, -912
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa1
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
 ; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    ori $a0, $zero, 8
@@ -1673,7 +1690,8 @@ define double @double_fmax_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 4
 ; LA64D-NEXT:    ori $a5, $zero, 2
 ; LA64D-NEXT:    move $a1, $fp
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB23_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -1835,8 +1853,7 @@ define float @float_fmin_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:  .LBB26_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
 ; LA64F-NEXT:    # Child Loop BB26_3 Depth 2
-; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64F-NEXT:    fmin.s $fa2, $fa2, $fa1
+; LA64F-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64F-NEXT:  .LBB26_3: # %atomicrmw.start
@@ -1868,8 +1885,7 @@ define float @float_fmin_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:  .LBB26_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
 ; LA64D-NEXT:    # Child Loop BB26_3 Depth 2
-; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64D-NEXT:    fmin.s $fa2, $fa2, $fa1
+; LA64D-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64D-NEXT:  .LBB26_3: # %atomicrmw.start
@@ -1907,8 +1923,7 @@ define float @float_fmax_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:  .LBB27_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
 ; LA64F-NEXT:    # Child Loop BB27_3 Depth 2
-; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64F-NEXT:    fmax.s $fa2, $fa2, $fa1
+; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64F-NEXT:  .LBB27_3: # %atomicrmw.start
@@ -1940,8 +1955,7 @@ define float @float_fmax_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:  .LBB27_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
 ; LA64D-NEXT:    # Child Loop BB27_3 Depth 2
-; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64D-NEXT:    fmax.s $fa2, $fa2, $fa1
+; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64D-NEXT:  .LBB27_3: # %atomicrmw.start
@@ -1984,7 +1998,8 @@ define double @double_fadd_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(__adddf3)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -1993,7 +2008,8 @@ define double @double_fadd_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 5
 ; LA64F-NEXT:    ori $a5, $zero, 5
 ; LA64F-NEXT:    move $a1, $fp
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB28_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2025,7 +2041,8 @@ define double @double_fadd_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 5
 ; LA64D-NEXT:    ori $a5, $zero, 5
 ; LA64D-NEXT:    move $a1, $fp
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB28_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2053,7 +2070,8 @@ define double @double_fsub_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(__adddf3)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -2062,7 +2080,8 @@ define double @double_fsub_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 5
 ; LA64F-NEXT:    ori $a5, $zero, 5
 ; LA64F-NEXT:    move $a1, $fp
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB29_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2094,7 +2113,8 @@ define double @double_fsub_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 5
 ; LA64D-NEXT:    ori $a5, $zero, 5
 ; LA64D-NEXT:    move $a1, $fp
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB29_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2122,7 +2142,8 @@ define double @double_fmin_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(fmin)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmin)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -2131,7 +2152,8 @@ define double @double_fmin_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 5
 ; LA64F-NEXT:    ori $a5, $zero, 5
 ; LA64F-NEXT:    move $a1, $fp
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB30_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2153,9 +2175,8 @@ define double @double_fmin_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB30_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
-; LA64D-NEXT:    vldi $vr2, -912
-; LA64D-NEXT:    fmin.d $fa1, $fa1, $fa2
+; LA64D-NEXT:    vldi $vr1, -912
+; LA64D-NEXT:    fmin.d $fa1, $fa0, $fa1
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
 ; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    ori $a0, $zero, 8
@@ -2164,7 +2185,8 @@ define double @double_fmin_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 5
 ; LA64D-NEXT:    ori $a5, $zero, 5
 ; LA64D-NEXT:    move $a1, $fp
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB30_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2192,7 +2214,8 @@ define double @double_fmax_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(fmax)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmax)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -2201,7 +2224,8 @@ define double @double_fmax_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    ori $a4, $zero, 5
 ; LA64F-NEXT:    ori $a5, $zero, 5
 ; LA64F-NEXT:    move $a1, $fp
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB31_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2223,9 +2247,8 @@ define double @double_fmax_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB31_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
-; LA64D-NEXT:    vldi $vr2, -912
-; LA64D-NEXT:    fmax.d $fa1, $fa1, $fa2
+; LA64D-NEXT:    vldi $vr1, -912
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa1
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
 ; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    ori $a0, $zero, 8
@@ -2234,7 +2257,8 @@ define double @double_fmax_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    ori $a4, $zero, 5
 ; LA64D-NEXT:    ori $a5, $zero, 5
 ; LA64D-NEXT:    move $a1, $fp
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB31_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2396,8 +2420,7 @@ define float @float_fmin_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:  .LBB34_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
 ; LA64F-NEXT:    # Child Loop BB34_3 Depth 2
-; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64F-NEXT:    fmin.s $fa2, $fa2, $fa1
+; LA64F-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64F-NEXT:  .LBB34_3: # %atomicrmw.start
@@ -2429,8 +2452,7 @@ define float @float_fmin_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:  .LBB34_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
 ; LA64D-NEXT:    # Child Loop BB34_3 Depth 2
-; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64D-NEXT:    fmin.s $fa2, $fa2, $fa1
+; LA64D-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64D-NEXT:  .LBB34_3: # %atomicrmw.start
@@ -2468,8 +2490,7 @@ define float @float_fmax_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:  .LBB35_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
 ; LA64F-NEXT:    # Child Loop BB35_3 Depth 2
-; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64F-NEXT:    fmax.s $fa2, $fa2, $fa1
+; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64F-NEXT:  .LBB35_3: # %atomicrmw.start
@@ -2501,8 +2522,7 @@ define float @float_fmax_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:  .LBB35_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
 ; LA64D-NEXT:    # Child Loop BB35_3 Depth 2
-; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa0
-; LA64D-NEXT:    fmax.s $fa2, $fa2, $fa1
+; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
 ; LA64D-NEXT:  .LBB35_3: # %atomicrmw.start
@@ -2545,7 +2565,8 @@ define double @double_fadd_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(__adddf3)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -2554,7 +2575,8 @@ define double @double_fadd_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a4, $zero
 ; LA64F-NEXT:    move $a5, $zero
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB36_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2586,7 +2608,8 @@ define double @double_fadd_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a4, $zero
 ; LA64D-NEXT:    move $a5, $zero
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB36_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2614,7 +2637,8 @@ define double @double_fsub_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(__adddf3)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -2623,7 +2647,8 @@ define double @double_fsub_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a4, $zero
 ; LA64F-NEXT:    move $a5, $zero
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB37_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2655,7 +2680,8 @@ define double @double_fsub_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a4, $zero
 ; LA64D-NEXT:    move $a5, $zero
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB37_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2683,7 +2709,8 @@ define double @double_fmin_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(fmin)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmin)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -2692,7 +2719,8 @@ define double @double_fmin_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a4, $zero
 ; LA64F-NEXT:    move $a5, $zero
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB38_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2714,9 +2742,8 @@ define double @double_fmin_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB38_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
-; LA64D-NEXT:    vldi $vr2, -912
-; LA64D-NEXT:    fmin.d $fa1, $fa1, $fa2
+; LA64D-NEXT:    vldi $vr1, -912
+; LA64D-NEXT:    fmin.d $fa1, $fa0, $fa1
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
 ; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    ori $a0, $zero, 8
@@ -2725,7 +2752,8 @@ define double @double_fmin_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a4, $zero
 ; LA64D-NEXT:    move $a5, $zero
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB38_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2753,7 +2781,8 @@ define double @double_fmax_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
-; LA64F-NEXT:    bl %plt(fmax)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(fmax)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $s1, $sp, 8
 ; LA64F-NEXT:    st.d $a0, $sp, 0
 ; LA64F-NEXT:    ori $a0, $zero, 8
@@ -2762,7 +2791,8 @@ define double @double_fmax_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    move $a4, $zero
 ; LA64F-NEXT:    move $a5, $zero
-; LA64F-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $s1, $sp, 8
 ; LA64F-NEXT:    beqz $a0, .LBB39_1
 ; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
@@ -2784,9 +2814,8 @@ define double @double_fmax_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB39_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Inner Loop Header: Depth=1
-; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa0
-; LA64D-NEXT:    vldi $vr2, -912
-; LA64D-NEXT:    fmax.d $fa1, $fa1, $fa2
+; LA64D-NEXT:    vldi $vr1, -912
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa1
 ; LA64D-NEXT:    fst.d $fa0, $sp, 8
 ; LA64D-NEXT:    fst.d $fa1, $sp, 0
 ; LA64D-NEXT:    ori $a0, $zero, 8
@@ -2795,7 +2824,8 @@ define double @double_fmax_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    move $a1, $fp
 ; LA64D-NEXT:    move $a4, $zero
 ; LA64D-NEXT:    move $a5, $zero
-; LA64D-NEXT:    bl %plt(__atomic_compare_exchange)
+; LA64D-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange)
+; LA64D-NEXT:    jirl $ra, $ra, 0
 ; LA64D-NEXT:    fld.d $fa0, $sp, 8
 ; LA64D-NEXT:    beqz $a0, .LBB39_1
 ; LA64D-NEXT:  # %bb.2: # %atomicrmw.end

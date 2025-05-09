@@ -280,11 +280,11 @@ MatchingSubsets::populateSubsetOpsAtIterArg(LoopLikeOpInterface loopLike,
       if (auto insertionOp =
               dyn_cast<SubsetInsertionOpInterface>(use.getOwner())) {
         // Current implementation expects that the insertionOp implement
-        // the destinationStyleOpInterface as well. Abort if that tha is not
-        // the case
-        if (!isa<DestinationStyleOpInterface>(use.getOwner())) {
+        // the DestinationStyleOpInterface and with pure tensor semantics
+        // as well. Abort if that is not the case.
+        auto dstOp = dyn_cast<DestinationStyleOpInterface>(use.getOwner());
+        if (!dstOp || !dstOp.hasPureTensorSemantics())
           return failure();
-        }
 
         // The value must be used as a destination. (In case of a source, the
         // entire tensor would be read, which would prevent any hoisting.)

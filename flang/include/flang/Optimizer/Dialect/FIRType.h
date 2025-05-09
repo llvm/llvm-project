@@ -53,6 +53,9 @@ public:
   /// Is this the box for an assumed rank?
   bool isAssumedRank() const;
 
+  /// Is this a box for a pointer?
+  bool isPointer() const;
+
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
   BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;
@@ -218,6 +221,10 @@ inline bool isa_char_string(mlir::Type t) {
 /// (since they may hold one), and are not considered to be unknown size.
 bool isa_unknown_size_box(mlir::Type t);
 
+/// Returns true iff `t` is a type capable of representing volatility and has
+/// the volatile attribute set.
+bool isa_volatile_type(mlir::Type t);
+
 /// Returns true iff `t` is a fir.char type and has an unknown length.
 inline bool characterWithDynamicLen(mlir::Type t) {
   if (auto charTy = mlir::dyn_cast<fir::CharacterType>(t))
@@ -275,6 +282,13 @@ inline mlir::Type unwrapPassByRefType(mlir::Type t) {
     return eleTy;
   return t;
 }
+
+/// Extracts the innermost type, T, **potentially** wrapped inside:
+///   <fir.[ref|ptr|heap] <fir.[ref|ptr|heap|box] <fir.array<T>>>
+///
+/// Any element absent from the above pattern does not affect the returned
+/// value: T.
+mlir::Type getFortranElementType(mlir::Type ty);
 
 /// Unwrap either a sequence or a boxed sequence type, returning the element
 /// type of the sequence type.
@@ -443,6 +457,10 @@ inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
   return fir::BoxType::get(eleTy);
 }
 
+/// Re-create the given type with the given volatility, if this is a type
+/// that can represent volatility.
+mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile);
+
 /// Return the elementType where intrinsic types are replaced with none for
 /// unlimited polymorphic entities.
 ///
@@ -463,6 +481,10 @@ inline mlir::Type updateTypeForUnlimitedPolymorphic(mlir::Type ty) {
     return mlir::NoneType::get(ty.getContext());
   return ty;
 }
+
+/// Re-create the given type with the given volatility, if this is a type
+/// that can represent volatility.
+mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile);
 
 /// Replace the element type of \p type by \p newElementType, preserving
 /// all other layers of the type (fir.ref/ptr/heap/array/box/class).
@@ -486,6 +508,13 @@ inline bool isBoxAddressOrValue(mlir::Type t) {
 inline bool isBoxProcAddressType(mlir::Type t) {
   t = fir::dyn_cast_ptrEleTy(t);
   return t && mlir::isa<fir::BoxProcType>(t);
+}
+
+inline bool isRefOfConstantSizeAggregateType(mlir::Type t) {
+  t = fir::dyn_cast_ptrEleTy(t);
+  return t &&
+         mlir::isa<fir::CharacterType, fir::RecordType, fir::SequenceType>(t) &&
+         !hasDynamicSize(t);
 }
 
 /// Return a string representation of `ty`.

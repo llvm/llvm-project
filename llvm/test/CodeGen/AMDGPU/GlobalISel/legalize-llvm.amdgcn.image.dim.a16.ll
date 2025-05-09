@@ -4890,7 +4890,7 @@ define amdgpu_ps <4 x float> @load_1d_tfe(<8 x i32> inreg %rsrc, <2 x i16> %coor
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[DEF1]](s16)
   ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR]](<8 x s32>), 1, 0, 3 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
-  ; GFX9-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GFX9-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -4920,7 +4920,7 @@ define amdgpu_ps <4 x float> @load_1d_tfe(<8 x i32> inreg %rsrc, <2 x i16> %coor
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[DEF1]](s16)
   ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR]](<8 x s32>), 1, 0, 1 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX10NSA-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
-  ; GFX10NSA-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GFX10NSA-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX10NSA-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX10NSA-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -4950,7 +4950,7 @@ define amdgpu_ps <4 x float> @load_1d_tfe(<8 x i32> inreg %rsrc, <2 x i16> %coor
   ; GFX12-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[DEF1]](s16)
   ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR]](<8 x s32>), 1, 0, 1 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
-  ; GFX12-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GFX12-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX12-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX12-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -4961,7 +4961,7 @@ main_body:
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.load.1d.sl_v4f32i32s.i16(i32 15, i16 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %data = extractvalue { <4 x float>, i32 } %v, 0
   %tfe = extractvalue { <4 x float>, i32 } %v, 1
-  store i32 %tfe, ptr addrspace(1) undef
+  store i32 %tfe, ptr addrspace(1) poison
   ret <4 x float> %data
 }
 
@@ -4992,7 +4992,7 @@ define amdgpu_ps <4 x float> @load_2d_tfe(<8 x i32> inreg %rsrc, <2 x i16> %coor
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 15, [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 3 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
-  ; GFX9-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GFX9-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -5025,7 +5025,7 @@ define amdgpu_ps <4 x float> @load_2d_tfe(<8 x i32> inreg %rsrc, <2 x i16> %coor
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 15, [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 1 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX10NSA-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
-  ; GFX10NSA-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GFX10NSA-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX10NSA-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX10NSA-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -5058,7 +5058,7 @@ define amdgpu_ps <4 x float> @load_2d_tfe(<8 x i32> inreg %rsrc, <2 x i16> %coor
   ; GFX12-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 15, [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 1 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
-  ; GFX12-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GFX12-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX12-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX12-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -5070,7 +5070,7 @@ main_body:
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.load.2d.sl_v4f32i32s.i16(i32 15, i16 %s, i16 %t, <8 x i32> %rsrc, i32 1, i32 0)
   %data = extractvalue { <4 x float>, i32 } %v, 0
   %tfe = extractvalue { <4 x float>, i32 } %v, 1
-  store i32 %tfe, ptr addrspace(1) undef
+  store i32 %tfe, ptr addrspace(1) poison
   ret <4 x float> %data
 }
 
@@ -5108,7 +5108,7 @@ define amdgpu_ps <4 x float> @load_3d_tfe(<8 x i32> inreg %rsrc, <2 x i16> %coor
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
   ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.3d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 3 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
-  ; GFX9-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GFX9-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -5147,7 +5147,7 @@ define amdgpu_ps <4 x float> @load_3d_tfe(<8 x i32> inreg %rsrc, <2 x i16> %coor
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF1]](s16)
   ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.3d), 15, [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 1 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX10NSA-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
-  ; GFX10NSA-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GFX10NSA-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX10NSA-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX10NSA-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -5186,7 +5186,7 @@ define amdgpu_ps <4 x float> @load_3d_tfe(<8 x i32> inreg %rsrc, <2 x i16> %coor
   ; GFX12-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF1]](s16)
   ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.3d), 15, [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 1 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
-  ; GFX12-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GFX12-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX12-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX12-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -5199,7 +5199,7 @@ main_body:
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.load.3d.sl_v4f32i32s.i16(i32 15, i16 %s, i16 %t, i16 %r, <8 x i32> %rsrc, i32 1, i32 0)
   %data = extractvalue { <4 x float>, i32 } %v, 0
   %tfe = extractvalue { <4 x float>, i32 } %v, 1
-  store i32 %tfe, ptr addrspace(1) undef
+  store i32 %tfe, ptr addrspace(1) poison
   ret <4 x float> %data
 }
 
@@ -5239,7 +5239,7 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, <2 x i
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
   ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2darraymsaa), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 3 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
-  ; GFX9-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GFX9-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -5280,7 +5280,7 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, <2 x i
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[TRUNC3]](s16)
   ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2darraymsaa), 15, [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 1 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX10NSA-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
-  ; GFX10NSA-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GFX10NSA-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX10NSA-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX10NSA-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -5321,7 +5321,7 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, <2 x i
   ; GFX12-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[TRUNC3]](s16)
   ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2darraymsaa), 15, [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 1 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
-  ; GFX12-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV4]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GFX12-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GFX12-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GFX12-NEXT:   $vgpr2 = COPY [[UV2]](s32)
@@ -5335,7 +5335,7 @@ main_body:
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.load.2darraymsaa.sl_v4f32i32s.i16(i32 15, i16 %s, i16 %t, i16 %slice, i16 %fragid, <8 x i32> %rsrc, i32 1, i32 0)
   %data = extractvalue { <4 x float>, i32 } %v, 0
   %tfe = extractvalue { <4 x float>, i32 } %v, 1
-  store i32 %tfe, ptr addrspace(1) undef
+  store i32 %tfe, ptr addrspace(1) poison
   ret <4 x float> %data
 }
 

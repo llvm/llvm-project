@@ -87,6 +87,11 @@ subroutine acc_serial
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }
 
+  !$acc serial device_type(nvidia) wait
+  !$acc end serial
+
+! CHECK: acc.serial wait([#acc.device_type<nvidia>])
+
   !$acc serial wait(1)
   !$acc end serial
 
@@ -148,7 +153,7 @@ subroutine acc_serial
   !$acc serial self(ifCondition)
   !$acc end serial
 
-! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#1 : (!fir.ref<!fir.logical<4>>) -> i1
+! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#0 : (!fir.ref<!fir.logical<4>>) -> i1
 ! CHECK:      acc.serial self(%[[SELF2]]) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
@@ -227,6 +232,9 @@ subroutine acc_serial
 ! CHECK:      acc.serial dataOperands(%[[NO_CREATE_A]], %[[NO_CREATE_B]], %[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
+! CHECK: acc.delete accPtr(%[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_create_zero>, name = "c"}
+! CHECK: acc.delete accPtr(%[[NO_CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "a"}
+! CHECK: acc.delete accPtr(%[[NO_CREATE_B]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "b"}
 
   !$acc serial present(a, b, c)
   !$acc end serial
@@ -237,6 +245,9 @@ subroutine acc_serial
 ! CHECK:      acc.serial dataOperands(%[[PRESENT_A]], %[[PRESENT_B]], %[[PRESENT_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
+! CHECK: acc.delete accPtr(%[[PRESENT_A]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
+! CHECK: acc.delete accPtr(%[[PRESENT_B]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "b"}
+! CHECK: acc.delete accPtr(%[[PRESENT_C]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "c"}
 
   !$acc serial deviceptr(a) deviceptr(c)
   !$acc end serial

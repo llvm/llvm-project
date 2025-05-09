@@ -89,6 +89,7 @@ class LLDB_API SBMemoryRegionInfoList;
 class LLDB_API SBModule;
 class LLDB_API SBModuleSpec;
 class LLDB_API SBModuleSpecList;
+class LLDB_API SBMutex;
 class LLDB_API SBPlatform;
 class LLDB_API SBPlatformConnectOptions;
 class LLDB_API SBPlatformShellCommand;
@@ -144,7 +145,7 @@ typedef bool (*SBBreakpointHitCallback)(void *baton, lldb::SBProcess &process,
 typedef void (*SBDebuggerDestroyCallback)(lldb::user_id_t debugger_id,
                                           void *baton);
 
-typedef CommandReturnObjectCallbackResult (*SBCommandPrintCallback)(
+typedef lldb::CommandReturnObjectCallbackResult (*SBCommandPrintCallback)(
     lldb::SBCommandReturnObject &result, void *baton);
 
 typedef lldb::SBError (*SBPlatformLocateModuleCallback)(

@@ -246,12 +246,14 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
     bool AllUndef = true;
     for (auto [BB, Succ0, Succ1] : Incoming) {
       Value *V = PoisonValue::get(Phi->getType());
-      if (BB == Out) {
-        V = NewPhi;
-      } else if (Phi->getBasicBlockIndex(BB) != -1) {
+      if  (Phi->getBasicBlockIndex(BB) != -1) {
         V = Phi->removeIncomingValue(BB, false);
+        if (BB == Out) {
+          V = NewPhi;
+        }
         AllUndef &= isa<UndefValue>(V);
       }
+
       NewPhi->addIncoming(V, BB);
     }
     assert(NewPhi->getNumIncomingValues() == Incoming.size());
@@ -270,7 +272,7 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
   }
 }
 
-BasicBlock *ControlFlowHub::finalize(
+std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
     DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
     const StringRef Prefix, std::optional<unsigned> MaxControlFlowBooleans) {
 #ifndef NDEBUG
@@ -289,7 +291,7 @@ BasicBlock *ControlFlowHub::finalize(
   }
 
   if (Outgoing.size() < 2)
-    return Outgoing.front();
+    return {Outgoing.front(), false};
 
   SmallVector<DominatorTree::UpdateType, 16> Updates;
   if (DTU) {
@@ -338,5 +340,5 @@ BasicBlock *ControlFlowHub::finalize(
         Inst->eraseFromParent();
   }
 
-  return FirstGuardBlock;
+  return {FirstGuardBlock, true};
 }

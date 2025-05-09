@@ -472,11 +472,32 @@ func.func @circular_mapping() {
 
 // -----
 
-func.func @test_1_to_n_block_signature_conversion() {
-  "test.duplicate_block_args"() ({
+// CHECK-LABEL: func @test_duplicate_block_arg()
+//       CHECK:   test.convert_block_args  is_legal duplicate {
+//       CHECK:   ^{{.*}}(%[[arg0:.*]]: i64, %[[arg1:.*]]: i64):
+//       CHECK:     "test.valid"(%[[arg0]], %[[arg1]])
+//       CHECK:   }
+func.func @test_duplicate_block_arg() {
+  test.convert_block_args duplicate {
   ^bb0(%arg0: i64):
     "test.repetitive_1_to_n_consumer"(%arg0) : (i64) -> ()
-  }) {} : () -> ()
+  } : () -> ()
+  "test.return"() : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: func @test_remap_block_arg()
+//       CHECK:      %[[repl:.*]] = "test.legal_op"() : () -> i32
+//       CHECK:      test.convert_block_args %[[repl]]  is_legal replace_with_operand {
+//       CHECK-NEXT:   "test.valid"(%[[repl]], %[[repl]])
+//       CHECK:      }
+func.func @test_remap_block_arg() {
+  %0 = "test.legal_op"() : () -> (i32)
+  test.convert_block_args %0 replace_with_operand {
+  ^bb0(%arg0: i32):
+    "test.repetitive_1_to_n_consumer"(%arg0) : (i32) -> ()
+  } : (i32) -> ()
   "test.return"() : () -> ()
 }
 

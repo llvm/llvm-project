@@ -762,7 +762,7 @@ struct MachineFunction {
 
   bool CallsEHReturn = false;
   bool CallsUnwindInit = false;
-  bool HasEHCatchret = false;
+  bool HasEHContTarget = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
   bool IsOutlined = false;
@@ -810,7 +810,7 @@ template <> struct MappingTraits<MachineFunction> {
 
     YamlIO.mapOptional("callsEHReturn", MF.CallsEHReturn, false);
     YamlIO.mapOptional("callsUnwindInit", MF.CallsUnwindInit, false);
-    YamlIO.mapOptional("hasEHCatchret", MF.HasEHCatchret, false);
+    YamlIO.mapOptional("hasEHContTarget", MF.HasEHContTarget, false);
     YamlIO.mapOptional("hasEHScopes", MF.HasEHScopes, false);
     YamlIO.mapOptional("hasEHFunclets", MF.HasEHFunclets, false);
     YamlIO.mapOptional("isOutlined", MF.IsOutlined, false);

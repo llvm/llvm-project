@@ -567,7 +567,6 @@ void CombineRuleOperandTypeChecker::getInstEqClasses(
 
 CombineRuleOperandTypeChecker::TypeEquivalenceClasses
 CombineRuleOperandTypeChecker::getRuleEqClasses() const {
-  StringMap<unsigned> OpNameToEqClassIdx;
   TypeEquivalenceClasses TECs;
 
   if (DebugTypeInfer)
@@ -581,9 +580,9 @@ CombineRuleOperandTypeChecker::getRuleEqClasses() const {
 
   if (DebugTypeInfer) {
     errs() << "Final Type Equivalence Classes: ";
-    for (auto ClassIt = TECs.begin(); ClassIt != TECs.end(); ++ClassIt) {
+    for (const auto &Class : TECs) {
       // only print non-empty classes.
-      if (auto MembIt = TECs.member_begin(ClassIt);
+      if (auto MembIt = TECs.member_begin(*Class);
           MembIt != TECs.member_end()) {
         errs() << '[';
         StringRef Sep = "";
@@ -798,17 +797,45 @@ bool CombineRuleBuilder::parseAll() {
   if (!parseDefs(*RuleDef.getValueAsDag("Defs")))
     return false;
 
-  if (!Parser.parsePatternList(
-          *RuleDef.getValueAsDag("Match"),
-          [this](auto Pat) { return addMatchPattern(std::move(Pat)); }, "match",
-          (RuleDef.getName() + "_match").str()))
-    return false;
+  const DagInit &Act0 = *RuleDef.getValueAsDag("Action0");
+  const DagInit &Act1 = *RuleDef.getValueAsDag("Action1");
 
-  if (!Parser.parsePatternList(
-          *RuleDef.getValueAsDag("Apply"),
-          [this](auto Pat) { return addApplyPattern(std::move(Pat)); }, "apply",
-          (RuleDef.getName() + "_apply").str()))
+  StringRef Act0Op = Act0.getOperatorAsDef(RuleDef.getLoc())->getName();
+  StringRef Act1Op = Act1.getOperatorAsDef(RuleDef.getLoc())->getName();
+
+  if (Act0Op == "match" && Act1Op == "apply") {
+    if (!Parser.parsePatternList(
+            Act0, [this](auto Pat) { return addMatchPattern(std::move(Pat)); },
+            "match", (RuleDef.getName() + "_match").str()))
+      return false;
+
+    if (!Parser.parsePatternList(
+            Act1, [this](auto Pat) { return addApplyPattern(std::move(Pat)); },
+            "apply", (RuleDef.getName() + "_apply").str()))
+      return false;
+
+  } else if (Act0Op == "combine" && Act1Op == "empty_action") {
+    // combine: everything is a "match" except C++ code which is an apply.
+    const auto AddCombinePat = [this](std::unique_ptr<Pattern> Pat) {
+      if (isa<CXXPattern>(Pat.get()))
+        return addApplyPattern(std::move(Pat));
+      return addMatchPattern(std::move(Pat));
+    };
+
+    if (!Parser.parsePatternList(Act0, AddCombinePat, "combine",
+                                 (RuleDef.getName() + "_combine").str()))
+      return false;
+
+    if (MatchPats.empty() || ApplyPats.empty()) {
+      PrintError("'combine' action needs at least one pattern to match, and "
+                 "C++ code to apply");
+      return false;
+    }
+  } else {
+    PrintError("expected both a 'match' and 'apply' action in combine rule, "
+               "or a single 'combine' action");
     return false;
+  }
 
   if (!buildRuleOperandsTable() || !typecheckPatterns() || !findRoots() ||
       !checkSemantics() || !buildPermutationsToEmit())
@@ -1340,6 +1367,8 @@ bool CombineRuleBuilder::checkSemantics() {
     }
   }
 
+  // TODO: Diagnose uses of MatchDatas if the Rule doesn't have C++ on both the
+  //       match and apply. It's useless in such cases.
   if (!hasOnlyCXXApplyPatterns() && !MatchDatas.empty()) {
     PrintError(MatchDataClassName +
                " can only be used if 'apply' in entirely written in C++");

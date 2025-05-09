@@ -519,7 +519,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDirectiveOrDeclaration(
   // 'using namespace' means this is a using-directive.
   if (Tok.is(tok::kw_namespace)) {
     // Template parameters are always an error here.
-    if (TemplateInfo.Kind) {
+    if (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate) {
       SourceRange R = TemplateInfo.getSourceRange();
       Diag(UsingLoc, diag::err_templated_using_directive_declaration)
           << 0 /* directive */ << R << FixItHint::CreateRemoval(R);
@@ -724,7 +724,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
 
     DiagnoseCXX11AttributeExtension(PrefixAttrs);
 
-    if (TemplateInfo.Kind) {
+    if (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate) {
       SourceRange R = TemplateInfo.getSourceRange();
       Diag(UsingLoc, diag::err_templated_using_directive_declaration)
           << 1 /* declaration */ << R << FixItHint::CreateRemoval(R);
@@ -860,7 +860,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
   // Diagnose an attempt to declare a templated using-declaration.
   // In C++11, alias-declarations can be templates:
   //   template <...> using id = type;
-  if (TemplateInfo.Kind) {
+  if (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate) {
     SourceRange R = TemplateInfo.getSourceRange();
     Diag(UsingLoc, diag::err_templated_using_directive_declaration)
         << 1 /* declaration */ << R << FixItHint::CreateRemoval(R);
@@ -939,12 +939,12 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
 
   // Type alias templates cannot be specialized.
   int SpecKind = -1;
-  if (TemplateInfo.Kind == ParsedTemplateInfo::Template &&
+  if (TemplateInfo.Kind == ParsedTemplateKind::Template &&
       D.Name.getKind() == UnqualifiedIdKind::IK_TemplateId)
     SpecKind = 0;
-  if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization)
+  if (TemplateInfo.Kind == ParsedTemplateKind::ExplicitSpecialization)
     SpecKind = 1;
-  if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation)
+  if (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation)
     SpecKind = 2;
   if (SpecKind != -1) {
     SourceRange Range;
@@ -980,7 +980,7 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
   Decl *DeclFromDeclSpec = nullptr;
   TypeResult TypeAlias =
       ParseTypeName(nullptr,
-                    TemplateInfo.Kind ? DeclaratorContext::AliasTemplate
+                    TemplateInfo.Kind != ParsedTemplateKind::NonTemplate ? DeclaratorContext::AliasTemplate
                                       : DeclaratorContext::AliasDecl,
                     AS, &DeclFromDeclSpec, &Attrs);
   if (OwnedType)
@@ -1745,7 +1745,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   //   The usual access checking rules do not apply to names in a declaration
   //   of an explicit instantiation or explicit specialization...
   const bool shouldDelayDiagsInTag =
-      (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate);
+      (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate);
   SuppressAccessChecks diagsFromTag(*this, shouldDelayDiagsInTag);
 
   ParsedAttributes attrs(AttrFactory);
@@ -1902,7 +1902,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                                                SourceRange TemplateArgRange,
                                                bool KnownUndeclared) {
     Diag(NameLoc, diag::err_explicit_spec_non_template)
-        << (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation)
+        << (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation)
         << TagTokKind << Name << TemplateArgRange << KnownUndeclared;
 
     // Strip off the last template parameter list if it was empty, since
@@ -1912,12 +1912,12 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         TemplateParams->pop_back();
       } else {
         TemplateParams = nullptr;
-        TemplateInfo.Kind = ParsedTemplateInfo::NonTemplate;
+        TemplateInfo.Kind = ParsedTemplateKind::NonTemplate;
       }
-    } else if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation) {
+    } else if (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation) {
       // Pretend this is just a forward declaration.
       TemplateParams = nullptr;
-      TemplateInfo.Kind = ParsedTemplateInfo::NonTemplate;
+      TemplateInfo.Kind = ParsedTemplateKind::NonTemplate;
       TemplateInfo.TemplateLoc = SourceLocation();
       TemplateInfo.ExternLoc = SourceLocation();
     }
@@ -2027,7 +2027,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
            (DSC != DeclSpecContext::DSC_association &&
             getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||
            (isClassCompatibleKeyword() &&
-            (NextToken().is(tok::l_brace) || NextToken().is(tok::colon)))) {
+            (NextToken().is(tok::l_brace) || NextToken().is(tok::colon) ||
+             isClassCompatibleKeyword(NextToken())))) {
     if (DS.isFriendSpecified()) {
       // C++ [class.friend]p2:
       //   A class shall not be defined in a friend declaration.
@@ -2046,15 +2047,15 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
              (NextToken().is(tok::l_square) ||
               NextToken().is(tok::kw_alignas) ||
               NextToken().isRegularKeywordAttribute() ||
-              isCXX11VirtSpecifier(NextToken()) != VirtSpecifiers::VS_None)) {
+              isCXX11VirtSpecifier(NextToken()) != VirtSpecifiers::VS_None ||
+              isCXX2CTriviallyRelocatableKeyword())) {
     // We can't tell if this is a definition or reference
     // until we skipped the 'final' and C++11 attribute specifiers.
     TentativeParsingAction PA(*this);
 
     // Skip the 'final', abstract'... keywords.
-    while (isClassCompatibleKeyword()) {
+    while (isClassCompatibleKeyword())
       ConsumeToken();
-    }
 
     // Skip C++11 attribute specifiers.
     while (true) {
@@ -2159,7 +2160,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                                        TemplateId->NumArgs);
     if (TemplateId->isInvalid()) {
       // Can't build the declaration.
-    } else if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation &&
+    } else if (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation &&
                TUK == TagUseKind::Declaration) {
       // This is an explicit instantiation of a class template.
       ProhibitCXX11Attributes(attrs, diag::err_attributes_not_allowed,
@@ -2178,7 +2179,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       // We diagnose this error in ActOnClassTemplateSpecialization.
     } else if (TUK == TagUseKind::Reference ||
                (TUK == TagUseKind::Friend &&
-                TemplateInfo.Kind == ParsedTemplateInfo::NonTemplate)) {
+                TemplateInfo.Kind == ParsedTemplateKind::NonTemplate)) {
       ProhibitCXX11Attributes(attrs, diag::err_attributes_not_allowed,
                               diag::err_keyword_not_allowed,
                               /*DiagnoseEmptyAttrs=*/true);
@@ -2190,7 +2191,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       // This is an explicit specialization or a class template
       // partial specialization.
       TemplateParameterLists FakedParamLists;
-      if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation) {
+      if (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation) {
         // This looks like an explicit instantiation, because we have
         // something like
         //
@@ -2235,7 +2236,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                                  TemplateParams ? TemplateParams->size() : 0),
           &SkipBody);
     }
-  } else if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation &&
+  } else if (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation &&
              TUK == TagUseKind::Declaration) {
     // Explicit instantiation of a member of a class template
     // specialization, e.g.,
@@ -2248,7 +2249,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         getCurScope(), TemplateInfo.ExternLoc, TemplateInfo.TemplateLoc,
         TagType, StartLoc, SS, Name, NameLoc, attrs);
   } else if (TUK == TagUseKind::Friend &&
-             TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate) {
+             TemplateInfo.Kind != ParsedTemplateKind::NonTemplate) {
     ProhibitCXX11Attributes(attrs, diag::err_attributes_not_allowed,
                             diag::err_keyword_not_allowed,
                             /*DiagnoseEmptyAttrs=*/true);
@@ -2284,7 +2285,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                               /* DiagnoseEmptyAttrs=*/true);
 
     if (TUK == TagUseKind::Definition &&
-        TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation) {
+        TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation) {
       // If the declarator-id is not a template-id, issue a diagnostic and
       // recover by ignoring the 'template' keyword.
       Diag(Tok, diag::err_template_defn_explicit_instantiation)
@@ -2329,7 +2330,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   if (shouldDelayDiagsInTag) {
     diagsFromTag.done();
     if (TUK == TagUseKind::Reference &&
-        TemplateInfo.Kind == ParsedTemplateInfo::Template)
+        TemplateInfo.Kind == ParsedTemplateKind::Template)
       diagsFromTag.redelay();
   }
 
@@ -2350,7 +2351,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       // Parse the definition body.
       ParseStructUnionBody(StartLoc, TagType, cast<RecordDecl>(D));
       if (SkipBody.CheckSameAsPrevious &&
-          !Actions.ActOnDuplicateDefinition(TagOrTempResult.get(), SkipBody)) {
+          !Actions.ActOnDuplicateDefinition(getCurScope(),
+                                            TagOrTempResult.get(), SkipBody)) {
         DS.SetTypeSpecError();
         return;
       }
@@ -2394,7 +2396,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   // C, since definitions are not permitted in this context in C++.
   if (TUK == TagUseKind::Definition &&
       (getLangOpts().CPlusPlus || !isTypeSpecifier(DSC)) &&
-      (TemplateInfo.Kind || !isValidAfterTypeSpecifier(false))) {
+      (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate || !isValidAfterTypeSpecifier(false))) {
     if (Tok.isNot(tok::semi)) {
       const PrintingPolicy &PPol = Actions.getASTContext().getPrintingPolicy();
       ExpectAndConsume(tok::semi, diag::err_expected_after,
@@ -2490,6 +2492,9 @@ BaseResult Parser::ParseBaseSpecifier(Decl *ClassDecl) {
 
     IsVirtual = true;
   }
+
+  if (getLangOpts().HLSL && IsVirtual)
+    Diag(Tok.getLocation(), diag::err_hlsl_virtual_inheritance);
 
   CheckMisplacedCXX11Attribute(Attributes, StartLoc);
 
@@ -2692,14 +2697,74 @@ bool Parser::isCXX11FinalKeyword() const {
          Specifier == VirtSpecifiers::VS_Sealed;
 }
 
+bool Parser::isCXX2CTriviallyRelocatableKeyword(Token Tok) const {
+  if (!getLangOpts().CPlusPlus || Tok.isNot(tok::identifier))
+    return false;
+  if (!Ident_trivially_relocatable_if_eligible)
+    Ident_trivially_relocatable_if_eligible =
+        &PP.getIdentifierTable().get("trivially_relocatable_if_eligible");
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+  return II == Ident_trivially_relocatable_if_eligible;
+}
+
+bool Parser::isCXX2CTriviallyRelocatableKeyword() const {
+  return isCXX2CTriviallyRelocatableKeyword(Tok);
+}
+
+void Parser::ParseCXX2CTriviallyRelocatableSpecifier(SourceLocation &TRS) {
+  assert(isCXX2CTriviallyRelocatableKeyword() &&
+         "expected a trivially_relocatable specifier");
+
+  Diag(Tok.getLocation(), getLangOpts().CPlusPlus26
+                              ? diag::warn_relocatable_keyword
+                              : diag::ext_relocatable_keyword)
+      << /*relocatable*/ 0;
+
+  TRS = ConsumeToken();
+}
+
+bool Parser::isCXX2CReplaceableKeyword(Token Tok) const {
+  if (!getLangOpts().CPlusPlus || Tok.isNot(tok::identifier))
+    return false;
+  if (!Ident_replaceable_if_eligible)
+    Ident_replaceable_if_eligible =
+        &PP.getIdentifierTable().get("replaceable_if_eligible");
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+  return II == Ident_replaceable_if_eligible;
+}
+
+bool Parser::isCXX2CReplaceableKeyword() const {
+  return isCXX2CReplaceableKeyword(Tok);
+}
+
+void Parser::ParseCXX2CReplaceableSpecifier(SourceLocation &MRS) {
+  assert(isCXX2CReplaceableKeyword() &&
+         "expected a replaceable_if_eligible specifier");
+
+  Diag(Tok.getLocation(), getLangOpts().CPlusPlus26
+                              ? diag::warn_relocatable_keyword
+                              : diag::ext_relocatable_keyword)
+      << /*replaceable*/ 1;
+
+  MRS = ConsumeToken();
+}
+
 /// isClassCompatibleKeyword - Determine whether the next token is a C++11
-/// 'final' or Microsoft 'sealed' or 'abstract' contextual keywords.
-bool Parser::isClassCompatibleKeyword() const {
-  VirtSpecifiers::Specifier Specifier = isCXX11VirtSpecifier();
+/// 'final', a C++26 'trivially_relocatable_if_eligible',
+/// 'replaceable_if_eligible', or Microsoft 'sealed' or 'abstract' contextual
+/// keyword.
+bool Parser::isClassCompatibleKeyword(Token Tok) const {
+  if (isCXX2CTriviallyRelocatableKeyword(Tok) || isCXX2CReplaceableKeyword(Tok))
+    return true;
+  VirtSpecifiers::Specifier Specifier = isCXX11VirtSpecifier(Tok);
   return Specifier == VirtSpecifiers::VS_Final ||
          Specifier == VirtSpecifiers::VS_GNU_Final ||
          Specifier == VirtSpecifiers::VS_Sealed ||
          Specifier == VirtSpecifiers::VS_Abstract;
+}
+
+bool Parser::isClassCompatibleKeyword() const {
+  return isClassCompatibleKeyword(Tok);
 }
 
 /// Parse a C++ member-declarator up to, but not including, the optional
@@ -2798,7 +2863,7 @@ void Parser::MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(
   // GNU-style and C++11 attributes are not allowed here, but they will be
   // handled by the caller.  Diagnose everything else.
   ParseTypeQualifierListOpt(
-      DS, AR_NoAttributesParsed, false,
+      DS, AR_NoAttributesParsed, /*AtomicOrPtrauthAllowed=*/false,
       /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
         Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D, &VS);
       }));
@@ -2920,7 +2985,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
 
   // Access declarations.
   bool MalformedTypeSpec = false;
-  if (!TemplateInfo.Kind &&
+  if (TemplateInfo.Kind == ParsedTemplateKind::NonTemplate &&
       Tok.isOneOf(tok::identifier, tok::coloncolon, tok::kw___super)) {
     if (TryAnnotateCXXScopeToken())
       MalformedTypeSpec = true;
@@ -2973,7 +3038,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
 
   // static_assert-declaration. A templated static_assert declaration is
   // diagnosed in Parser::ParseDeclarationAfterTemplate.
-  if (!TemplateInfo.Kind &&
+  if (TemplateInfo.Kind == ParsedTemplateKind::NonTemplate &&
       Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
     SourceLocation DeclEnd;
     return DeclGroupPtrTy::make(
@@ -3031,10 +3096,23 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   }
 
   ParsedAttributes DeclSpecAttrs(AttrFactory);
-  MaybeParseMicrosoftAttributes(DeclSpecAttrs);
-
   // Hold late-parsed attributes so we can attach a Decl to them later.
   LateParsedAttrList CommonLateParsedAttrs;
+
+  while (MaybeParseCXX11Attributes(DeclAttrs) ||
+         MaybeParseGNUAttributes(DeclSpecAttrs, &CommonLateParsedAttrs) ||
+         MaybeParseMicrosoftAttributes(DeclSpecAttrs))
+    ;
+
+  SourceLocation DeclStart;
+  if (DeclAttrs.Range.isValid()) {
+    DeclStart = DeclSpecAttrs.Range.isInvalid()
+                    ? DeclAttrs.Range.getBegin()
+                    : std::min(DeclAttrs.Range.getBegin(),
+                               DeclSpecAttrs.Range.getBegin());
+  } else {
+    DeclStart = DeclSpecAttrs.Range.getBegin();
+  }
 
   // decl-specifier-seq:
   // Parse the common declaration-specifiers piece.
@@ -3050,8 +3128,8 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   // This disables the access checking rules for member function template
   // explicit instantiation and explicit specialization.
   bool IsTemplateSpecOrInst =
-      (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation ||
-       TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
+      (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation ||
+       TemplateInfo.Kind == ParsedTemplateKind::ExplicitSpecialization);
   SuppressAccessChecks diagsFromTag(*this, IsTemplateSpecOrInst);
 
   ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DeclSpecContext::DSC_class,
@@ -3063,10 +3141,13 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   // Turn off colon protection that was set for declspec.
   X.restore();
 
+  if (DeclStart.isValid())
+    DS.SetRangeStart(DeclStart);
+
   // If we had a free-standing type definition with a missing semicolon, we
   // may get this far before the problem becomes obvious.
   if (DS.hasTagDefinition() &&
-      TemplateInfo.Kind == ParsedTemplateInfo::NonTemplate &&
+      TemplateInfo.Kind == ParsedTemplateKind::NonTemplate &&
       DiagnoseMissingSemiAfterTagDefinition(DS, AS, DeclSpecContext::DSC_class,
                                             &CommonLateParsedAttrs))
     return nullptr;
@@ -3291,7 +3372,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
 
       // Consume the ';' - it's optional unless we have a delete or default
       if (Tok.is(tok::semi))
-        ConsumeExtraSemi(AfterMemberFunctionDefinition);
+        ConsumeExtraSemi(ExtraSemiKind::AfterMemberFunctionDefinition);
 
       return DeclGroupPtrTy::make(DeclGroupRef(FunDecl));
     }
@@ -3320,7 +3401,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
                  DeclaratorInfo.getDeclSpec().getStorageClassSpec() !=
                      DeclSpec::SCS_typedef &&
                  !DS.isFriendSpecified() &&
-                 TemplateInfo.Kind == ParsedTemplateInfo::NonTemplate) {
+                 TemplateInfo.Kind == ParsedTemplateKind::NonTemplate) {
         // It's a default member initializer.
         if (BitfieldSize.get())
           Diag(Tok, getLangOpts().CPlusPlus20
@@ -3465,7 +3546,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
     //   In a template-declaration, explicit specialization, or explicit
     //   instantiation the init-declarator-list in the declaration shall
     //   contain at most one declarator.
-    if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
+    if (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
         DeclaratorInfo.isFirstDeclarator()) {
       Diag(CommaLoc, diag::err_multiple_template_declarators)
           << TemplateInfo.Kind;
@@ -3580,21 +3661,19 @@ void Parser::SkipCXXMemberSpecification(SourceLocation RecordLoc,
                                         SourceLocation AttrFixitLoc,
                                         unsigned TagType, Decl *TagDecl) {
   // Skip the optional 'final' keyword.
-  if (getLangOpts().CPlusPlus && Tok.is(tok::identifier)) {
-    assert(isCXX11FinalKeyword() && "not a class definition");
+  while (isClassCompatibleKeyword())
     ConsumeToken();
 
-    // Diagnose any C++11 attributes after 'final' keyword.
-    // We deliberately discard these attributes.
-    ParsedAttributes Attrs(AttrFactory);
-    CheckMisplacedCXX11Attribute(Attrs, AttrFixitLoc);
+  // Diagnose any C++11 attributes after 'final' keyword.
+  // We deliberately discard these attributes.
+  ParsedAttributes Attrs(AttrFactory);
+  CheckMisplacedCXX11Attribute(Attrs, AttrFixitLoc);
 
-    // This can only happen if we had malformed misplaced attributes;
-    // we only get called if there is a colon or left-brace after the
-    // attributes.
-    if (Tok.isNot(tok::colon) && Tok.isNot(tok::l_brace))
-      return;
-  }
+  // This can only happen if we had malformed misplaced attributes;
+  // we only get called if there is a colon or left-brace after the
+  // attributes.
+  if (Tok.isNot(tok::colon) && Tok.isNot(tok::l_brace))
+    return;
 
   // Skip the base clauses. This requires actually parsing them, because
   // otherwise we can't be sure where they end (a left brace may appear
@@ -3645,7 +3724,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
 
   case tok::semi:
     // Check for extraneous top-level semicolon.
-    ConsumeExtraSemi(InsideStruct, TagType);
+    ConsumeExtraSemi(ExtraSemiKind::InsideStruct, TagType);
     return nullptr;
 
     // Handle pragmas that can appear as member declarations.
@@ -3728,7 +3807,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(
         AS, AccessAttrs, /*Delayed=*/true, TagType, TagDecl);
   case tok::annot_pragma_openacc:
-    return ParseOpenACCDirectiveDecl();
+    return ParseOpenACCDirectiveDecl(AS, AccessAttrs, TagType, TagDecl);
 
   default:
     if (tok::isPragmaAnnotation(Tok.getKind())) {
@@ -3808,13 +3887,38 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   SourceLocation AbstractLoc;
   bool IsFinalSpelledSealed = false;
   bool IsAbstract = false;
+  SourceLocation TriviallyRelocatable;
+  SourceLocation Replaceable;
 
   // Parse the optional 'final' keyword.
   if (getLangOpts().CPlusPlus && Tok.is(tok::identifier)) {
     while (true) {
       VirtSpecifiers::Specifier Specifier = isCXX11VirtSpecifier(Tok);
-      if (Specifier == VirtSpecifiers::VS_None)
+      if (Specifier == VirtSpecifiers::VS_None) {
+        if (isCXX2CTriviallyRelocatableKeyword(Tok)) {
+          if (TriviallyRelocatable.isValid()) {
+            auto Skipped = Tok;
+            ConsumeToken();
+            Diag(Skipped, diag::err_duplicate_class_relocation_specifier)
+                << /*trivial_relocatable*/ 0 << TriviallyRelocatable;
+          } else {
+            ParseCXX2CTriviallyRelocatableSpecifier(TriviallyRelocatable);
+          }
+          continue;
+        }
+        if (isCXX2CReplaceableKeyword(Tok)) {
+          if (Replaceable.isValid()) {
+            auto Skipped = Tok;
+            ConsumeToken();
+            Diag(Skipped, diag::err_duplicate_class_relocation_specifier)
+                << /*replaceable*/ 1 << Replaceable;
+          } else {
+            ParseCXX2CReplaceableSpecifier(Replaceable);
+          }
+          continue;
+        }
         break;
+      }
       if (isCXX11FinalKeyword()) {
         if (FinalLoc.isValid()) {
           auto Skipped = ConsumeToken();
@@ -3850,7 +3954,8 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
       else if (Specifier == VirtSpecifiers::VS_GNU_Final)
         Diag(FinalLoc, diag::ext_warn_gnu_final);
     }
-    assert((FinalLoc.isValid() || AbstractLoc.isValid()) &&
+    assert((FinalLoc.isValid() || AbstractLoc.isValid() ||
+            TriviallyRelocatable.isValid() || Replaceable.isValid()) &&
            "not a class definition");
 
     // Parse any C++11 attributes after 'final' keyword.
@@ -3923,9 +4028,9 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   T.consumeOpen();
 
   if (TagDecl)
-    Actions.ActOnStartCXXMemberDeclarations(getCurScope(), TagDecl, FinalLoc,
-                                            IsFinalSpelledSealed, IsAbstract,
-                                            T.getOpenLocation());
+    Actions.ActOnStartCXXMemberDeclarations(
+        getCurScope(), TagDecl, FinalLoc, IsFinalSpelledSealed, IsAbstract,
+        TriviallyRelocatable, Replaceable, T.getOpenLocation());
 
   // C++ 11p3: Members of a class defined with the keyword class are private
   // by default. Members of a class defined with the keywords struct or union
@@ -5093,7 +5198,7 @@ void Parser::DiagnoseAndSkipCXX11Attributes() {
 SourceLocation Parser::SkipCXX11Attributes() {
   SourceLocation EndLoc;
 
-  if (!isCXX11AttributeSpecifier())
+  if (isCXX11AttributeSpecifier() == CXX11AttributeKind::NotAttributeSpecifier)
     return EndLoc;
 
   do {
@@ -5115,7 +5220,8 @@ SourceLocation Parser::SkipCXX11Attributes() {
         T.skipToEnd();
       EndLoc = T.getCloseLocation();
     }
-  } while (isCXX11AttributeSpecifier());
+  } while (isCXX11AttributeSpecifier() !=
+           CXX11AttributeKind::NotAttributeSpecifier);
 
   return EndLoc;
 }
@@ -5285,17 +5391,17 @@ void Parser::ParseMicrosoftIfExistsClassDeclaration(
   }
 
   switch (Result.Behavior) {
-  case IEB_Parse:
+  case IfExistsBehavior::Parse:
     // Parse the declarations below.
     break;
 
-  case IEB_Dependent:
+  case IfExistsBehavior::Dependent:
     Diag(Result.KeywordLoc, diag::warn_microsoft_dependent_exists)
         << Result.IsIfExists;
     // Fall through to skip.
     [[fallthrough]];
 
-  case IEB_Skip:
+  case IfExistsBehavior::Skip:
     Braces.skipToEnd();
     return;
   }
@@ -5309,7 +5415,7 @@ void Parser::ParseMicrosoftIfExistsClassDeclaration(
 
     // Check for extraneous top-level semicolon.
     if (Tok.is(tok::semi)) {
-      ConsumeExtraSemi(InsideStruct, TagType);
+      ConsumeExtraSemi(ExtraSemiKind::InsideStruct, TagType);
       continue;
     }
 

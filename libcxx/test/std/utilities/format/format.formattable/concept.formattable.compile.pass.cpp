@@ -154,8 +154,8 @@ void test_P1361() {
 #  if !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB) && !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) &&                           \
       !defined(TEST_HAS_NO_FILESYSTEM)
   assert_is_formattable<std::chrono::utc_time<std::chrono::microseconds>, CharT>();
-  //assert_is_formattable<std::chrono::tai_time<std::chrono::microseconds>, CharT>();
-  //assert_is_formattable<std::chrono::gps_time<std::chrono::microseconds>, CharT>();
+  assert_is_formattable<std::chrono::tai_time<std::chrono::microseconds>, CharT>();
+  assert_is_formattable<std::chrono::gps_time<std::chrono::microseconds>, CharT>();
 
 #  endif // !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB) && !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) &&
          // !defined(TEST_HAS_NO_FILESYSTEM)
@@ -188,8 +188,10 @@ void test_P1361() {
   assert_is_formattable<std::chrono::sys_info, CharT>();
   assert_is_formattable<std::chrono::local_info, CharT>();
 
-  //assert_is_formattable<std::chrono::zoned_time, CharT>();
-#  endif // !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB)
+#    if !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) && !defined(TEST_HAS_NO_FILESYSTEM)
+  assert_is_formattable<std::chrono::zoned_time<std::chrono::microseconds>, CharT>();
+#    endif // !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) && !defined(TEST_HAS_NO_FILESYSTEM)
+#  endif   // !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB)
 
 #endif // TEST_HAS_NO_LOCALIZATION
 }
@@ -290,6 +292,21 @@ void test_LWG3631() {
   assert_is_not_formattable<std::pair<volatile int, int>, CharT>();
   assert_is_not_formattable<std::pair<int, volatile int>, CharT>();
   assert_is_not_formattable<std::pair<volatile int, volatile int>, CharT>();
+}
+
+void test_LWG3944() {
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  assert_is_not_formattable<char*, wchar_t>();
+  assert_is_not_formattable<const char*, wchar_t>();
+  assert_is_not_formattable<char[42], wchar_t>();
+  assert_is_not_formattable<std::string, wchar_t>();
+  assert_is_not_formattable<std::string_view, wchar_t>();
+
+  assert_is_formattable<std::vector<char>, wchar_t>();
+  assert_is_formattable<std::set<char>, wchar_t>();
+  assert_is_formattable<std::map<char, char>, wchar_t>();
+  assert_is_formattable<std::tuple<char>, wchar_t>();
+#endif
 }
 
 class c {
@@ -417,6 +434,7 @@ void test() {
   test_P1636<CharT>();
   test_P2286<CharT>();
   test_LWG3631<CharT>();
+  test_LWG3944();
   test_abstract_class<CharT>();
   test_disabled<CharT>();
 }

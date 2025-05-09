@@ -15,3 +15,4 @@ add_lldb_unittest(LLDBPlatformTests
   )
 
 add_subdirectory(Android)
+add_subdirectory(gdb-server)

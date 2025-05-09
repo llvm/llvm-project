@@ -437,7 +437,9 @@
 // RUN:     /d1import_no_registry \
 // RUN:     /d1nodatetime \
 // RUN:     /d2FH4 \
+// RUN:     /d2TrimInlines \
 // RUN:     /docname \
+// RUN:     /dynamicdeopt \
 // RUN:     /experimental:external \
 // RUN:     /experimental:module \
 // RUN:     /experimental:preprocessor \
@@ -738,10 +740,15 @@
 // RUN:     -fno-modules-search-all \
 // RUN:     -fimplicit-modules \
 // RUN:     -fno-implicit-modules \
+// RUN:     -fstrict-overflow \
+// RUN:     -fno-strict-overflow \
 // RUN:     -ftrivial-auto-var-init=zero \
 // RUN:     -fwrapv \
 // RUN:     -fno-wrapv \
+// RUN:     -fwrapv-pointer \
+// RUN:     -fno-wrapv-pointer \
 // RUN:     --version \
+// RUN:     --warning-suppression-mappings=foo \
 // RUN:     -Werror /Zs -- %s 2>&1
 
 // Accept clang options under the /clang: flag.
@@ -812,5 +819,8 @@
 
 // RUN: %clang_cl -vctoolsdir "" /arm64EC /c -target x86_64-pc-windows-msvc  -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC_OVERRIDE %s
 // ARM64EC_OVERRIDE: warning: /arm64EC has been overridden by specified target: x86_64-pc-windows-msvc; option ignored
+
+// RUN: %clang_cl /d2epilogunwind /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWIND
+// EPILOGUNWIND: -fwinx64-eh-unwindv2
 
 void f(void) { }

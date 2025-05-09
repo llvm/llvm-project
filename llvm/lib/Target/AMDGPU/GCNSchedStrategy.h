@@ -14,7 +14,9 @@
 #define LLVM_LIB_TARGET_AMDGPU_GCNSCHEDSTRATEGY_H
 
 #include "GCNRegPressure.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 
 namespace llvm {
@@ -208,11 +210,16 @@ public:
 
   // Retrieve the LiveReg for a given RegionIdx
   GCNRPTracker::LiveRegSet &getLiveRegsForRegionIdx(unsigned RegionIdx) {
-    assert(IdxToInstruction.find(RegionIdx) != IdxToInstruction.end());
+    assert(IdxToInstruction.contains(RegionIdx));
     MachineInstr *Key = IdxToInstruction[RegionIdx];
     return RegionLiveRegMap[Key];
   }
 };
+
+/// A region's boundaries i.e. a pair of instruction bundle iterators. The lower
+/// boundary is inclusive, the upper boundary is exclusive.
+using RegionBoundaries =
+    std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>;
 
 class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class GCNSchedStage;
@@ -234,8 +241,7 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   unsigned MinOccupancy;
 
   // Vector of regions recorder for later rescheduling
-  SmallVector<std::pair<MachineBasicBlock::iterator,
-                        MachineBasicBlock::iterator>, 32> Regions;
+  SmallVector<RegionBoundaries, 32> Regions;
 
   // Records if a region is not yet scheduled, or schedule has been reverted,
   // or we generally desire to reschedule it.
@@ -286,12 +292,13 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Compute and cache live-ins and pressure for all regions in block.
   void computeBlockPressure(unsigned RegionIdx, const MachineBasicBlock *MBB);
 
-  // Update region boundaries when removing MI or inserting NewMI before MI.
-  void updateRegionBoundaries(
-      SmallVectorImpl<std::pair<MachineBasicBlock::iterator,
-                                MachineBasicBlock::iterator>> &RegionBoundaries,
-      MachineBasicBlock::iterator MI, MachineInstr *NewMI,
-      bool Removing = false);
+  /// If necessary, updates a region's boundaries following insertion ( \p NewMI
+  /// != nullptr) or removal ( \p NewMI == nullptr) of a \p MI in the region.
+  /// For an MI removal, this must be called before the MI is actually erased
+  /// from its parent MBB.
+  void updateRegionBoundaries(RegionBoundaries &RegionBounds,
+                              MachineBasicBlock::iterator MI,
+                              MachineInstr *NewMI);
 
   void runSchedStages();
 
@@ -431,30 +438,73 @@ public:
       : GCNSchedStage(StageID, DAG) {}
 };
 
+/// Attempts to reduce function spilling or, if there is no spilling, to
+/// increase function occupancy by one with respect to ArchVGPR usage by sinking
+/// trivially rematerializable instructions to their use. When the stage
+/// estimates reducing spilling or increasing occupancy is possible, as few
+/// instructions as possible are rematerialized to reduce potential negative
+/// effects on function latency.
+///
+/// TODO: We should extend this to work on SGPRs and AGPRs as well.
 class PreRARematStage : public GCNSchedStage {
 private:
-  // Each region at MinOccupancy will have their own list of trivially
-  // rematerializable instructions we can remat to reduce RP. The list maps an
-  // instruction to the position we should remat before, usually the MI using
-  // the rematerializable instruction.
-  MapVector<unsigned, MapVector<MachineInstr *, MachineInstr *>>
-      RematerializableInsts;
+  /// Useful information about a rematerializable instruction.
+  struct RematInstruction {
+    /// Single use of the rematerializable instruction's defined register,
+    /// located in a different block.
+    MachineInstr *UseMI;
+    /// Rematerialized version of \p DefMI, set in
+    /// PreRARematStage::rematerialize. Used for reverting rematerializations.
+    MachineInstr *RematMI;
+    /// Set of regions in which the rematerializable instruction's defined
+    /// register is a live-in.
+    SmallDenseSet<unsigned, 4> LiveInRegions;
 
-  // Map a trivially rematerializable def to a list of regions at MinOccupancy
-  // that has the defined reg as a live-in.
-  DenseMap<MachineInstr *, SmallVector<unsigned, 4>> RematDefToLiveInRegions;
+    RematInstruction(MachineInstr *UseMI) : UseMI(UseMI) {}
+  };
 
-  // Collect all trivially rematerializable VGPR instructions with a single def
-  // and single use outside the defining block into RematerializableInsts.
-  void collectRematerializableInstructions();
+  /// Maps all MIs to their parent region. MI terminators are considered to be
+  /// outside the region they delimitate, and as such are not stored in the map.
+  DenseMap<MachineInstr *, unsigned> MIRegion;
+  /// Parent MBB to each region, in region order.
+  SmallVector<MachineBasicBlock *> RegionBB;
+  /// Collects instructions to rematerialize.
+  MapVector<MachineInstr *, RematInstruction> Rematerializations;
+  /// Collects regions whose live-ins or register pressure will change due to
+  /// rematerializations.
+  DenseMap<unsigned, GCNRegPressure> ImpactedRegions;
+  /// In case we need to rollback rematerializations, save lane masks for all
+  /// rematerialized registers in all regions in which they are live-ins.
+  DenseMap<std::pair<unsigned, Register>, LaneBitmask> RegMasks;
+  /// Target occupancy the stage estimates is reachable through
+  /// rematerialization. Greater than or equal to the pre-stage min occupancy.
+  unsigned TargetOcc;
+  /// Achieved occupancy *only* through rematerializations (pre-rescheduling).
+  /// Smaller than or equal to the target occupancy.
+  unsigned AchievedOcc;
+  /// Whether the stage is attempting to increase occupancy in the abscence of
+  /// spilling.
+  bool IncreaseOccupancy;
 
+  /// Returns whether remat can reduce spilling or increase function occupancy
+  /// by 1 through rematerialization. If it can do one, collects instructions in
+  /// PreRARematStage::Rematerializations and sets the target occupancy in
+  /// PreRARematStage::TargetOccupancy.
+  bool canIncreaseOccupancyOrReduceSpill();
+
+  /// Whether the MI is trivially rematerializable and does not have any virtual
+  /// register use.
   bool isTriviallyReMaterializable(const MachineInstr &MI);
 
-  // TODO: Should also attempt to reduce RP of SGPRs and AGPRs
-  // Attempt to reduce RP of VGPR by sinking trivially rematerializable
-  // instructions. Returns true if we were able to sink instruction(s).
-  bool sinkTriviallyRematInsts(const GCNSubtarget &ST,
-                               const TargetInstrInfo *TII);
+  /// Rematerializes all instructions in PreRARematStage::Rematerializations
+  /// and stores the achieved occupancy after remat in
+  /// PreRARematStage::AchievedOcc.
+  void rematerialize();
+
+  /// If remat alone did not increase occupancy to the target one, rollbacks all
+  /// rematerializations and resets live-ins/RP in all regions impacted by the
+  /// stage to their pre-stage values.
+  void finalizeGCNSchedStage() override;
 
   /// \p Returns true if all the uses in \p InstToRemat defined at \p
   /// OriginalIdx are live at \p RematIdx. This only checks liveness of virtual

@@ -290,9 +290,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
   auto type_sp = dwarf->MakeType(
-      die.GetID(), pcm_type_sp->GetName(), pcm_type_sp->GetByteSize(nullptr),
-      nullptr, LLDB_INVALID_UID, Type::eEncodingInvalid,
-      &pcm_type_sp->GetDeclaration(), type, Type::ResolveState::Forward,
+      die.GetID(), pcm_type_sp->GetName(),
+      llvm::expectedToOptional(pcm_type_sp->GetByteSize(nullptr)), nullptr,
+      LLDB_INVALID_UID, Type::eEncodingInvalid, &pcm_type_sp->GetDeclaration(),
+      type, Type::ResolveState::Forward,
       TypePayloadClang(GetOwningClangModule(die)));
   clang::TagDecl *tag_decl = TypeSystemClang::GetAsTagDecl(type);
   if (tag_decl) {
@@ -491,6 +492,10 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       break;
     case DW_AT_reference:
       ref_qual = clang::RQ_LValue;
+      break;
+    case DW_AT_APPLE_enum_kind:
+      enum_kind = static_cast<clang::EnumExtensibilityAttr::Kind>(
+          form_value.Unsigned());
       break;
     }
   }
@@ -1001,9 +1006,10 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
   }
 
   CompilerType clang_type = m_ast.CreateEnumerationType(
-      attrs.name.GetStringRef(), GetClangDeclContextContainingDIE(def_die, nullptr),
+      attrs.name.GetStringRef(),
+      GetClangDeclContextContainingDIE(def_die, nullptr),
       GetOwningClangModule(def_die), attrs.decl, enumerator_clang_type,
-      attrs.is_scoped_enum);
+      attrs.is_scoped_enum, attrs.enum_kind);
   TypeSP type_sp =
       dwarf->MakeType(def_die.GetID(), attrs.name, attrs.byte_size, nullptr,
                       attrs.type.Reference().GetID(), Type::eEncodingIsUID,
@@ -1060,7 +1066,7 @@ ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
 }
 
 bool DWARFASTParserClang::ParseObjCMethod(
-    const ObjCLanguage::MethodName &objc_method, const DWARFDIE &die,
+    const ObjCLanguage::ObjCMethodName &objc_method, const DWARFDIE &die,
     CompilerType clang_type, const ParsedDWARFTypeAttributes &attrs,
     bool is_variadic) {
   SymbolFileDWARF *dwarf = die.GetDWARF();
@@ -1312,9 +1318,9 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   if (attrs.name) {
     bool type_handled = false;
     if (tag == DW_TAG_subprogram || tag == DW_TAG_inlined_subroutine) {
-      if (std::optional<const ObjCLanguage::MethodName> objc_method =
-              ObjCLanguage::MethodName::Create(attrs.name.GetStringRef(),
-                                               true)) {
+      if (std::optional<const ObjCLanguage::ObjCMethodName> objc_method =
+              ObjCLanguage::ObjCMethodName::Create(attrs.name.GetStringRef(),
+                                                   true)) {
         type_handled =
             ParseObjCMethod(*objc_method, die, clang_type, attrs, is_variadic);
       } else if (is_cxx_method) {
@@ -1458,7 +1464,8 @@ DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
     bit_stride = array_info->bit_stride;
   }
   if (byte_stride == 0 && bit_stride == 0)
-    byte_stride = element_type->GetByteSize(nullptr).value_or(0);
+    byte_stride = llvm::expectedToOptional(element_type->GetByteSize(nullptr))
+                      .value_or(0);
   CompilerType array_element_type = element_type->GetForwardCompilerType();
   TypeSystemClang::RequireCompleteType(array_element_type);
 
@@ -1510,7 +1517,7 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
       class_clang_type, pointee_clang_type);
 
   if (std::optional<uint64_t> clang_type_size =
-          clang_type.GetByteSize(nullptr)) {
+          llvm::expectedToOptional(clang_type.GetByteSize(nullptr))) {
     return dwarf->MakeType(die.GetID(), attrs.name, *clang_type_size, nullptr,
                            LLDB_INVALID_UID, Type::eEncodingIsUID, nullptr,
                            clang_type, Type::ResolveState::Forward);
@@ -1830,7 +1837,8 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
 
   ClangASTMetadata metadata;
   metadata.SetUserID(die.GetID());
-  metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
+  if (!attrs.is_forward_declaration)
+    metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
 
   TypeSystemClang::TemplateParameterInfos template_param_infos;
   if (ParseTemplateParameterInfos(die, template_param_infos)) {
@@ -1968,6 +1976,34 @@ private:
   ClangASTMetadata m_metadata;
 };
 
+static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
+                                                 CompilerType clang_type,
+                                                 uint64_t value) {
+  std::optional<uint64_t> bit_width =
+      llvm::expectedToOptional(clang_type.GetBitSize(nullptr));
+  if (!bit_width)
+    return std::nullopt;
+
+  bool is_signed = false;
+  const bool is_integral = clang_type.IsIntegerOrEnumerationType(is_signed);
+
+  llvm::APSInt apint(*bit_width, !is_signed);
+  apint = value;
+
+  if (is_integral)
+    return clang::APValue(apint);
+
+  uint32_t count;
+  bool is_complex;
+  // FIXME: we currently support a limited set of floating point types.
+  // E.g., 16-bit floats are not supported.
+  if (!clang_type.IsFloatingPointType(count, is_complex))
+    return std::nullopt;
+
+  return clang::APValue(llvm::APFloat(
+      ast.getFloatTypeSemantics(ClangUtil::GetQualType(clang_type)), apint));
+}
+
 bool DWARFASTParserClang::ParseTemplateDIE(
     const DWARFDIE &die,
     TypeSystemClang::TemplateParameterInfos &template_param_infos) {
@@ -2045,28 +2081,26 @@ bool DWARFASTParserClang::ParseTemplateDIE(
       clang_type = m_ast.GetBasicType(eBasicTypeVoid);
 
     if (!is_template_template_argument) {
-      bool is_signed = false;
-      // Get the signed value for any integer or enumeration if available
-      clang_type.IsIntegerOrEnumerationType(is_signed);
 
       if (name && !name[0])
         name = nullptr;
 
       if (tag == DW_TAG_template_value_parameter && uval64_valid) {
-        std::optional<uint64_t> size = clang_type.GetBitSize(nullptr);
-        if (!size)
-          return false;
-        llvm::APInt apint(*size, uval64, is_signed);
-        template_param_infos.InsertArg(
-            name, clang::TemplateArgument(ast, llvm::APSInt(apint, !is_signed),
-                                          ClangUtil::GetQualType(clang_type),
-                                          is_default_template_arg));
-      } else {
-        template_param_infos.InsertArg(
-            name, clang::TemplateArgument(ClangUtil::GetQualType(clang_type),
-                                          /*isNullPtr*/ false,
-                                          is_default_template_arg));
+        if (auto value = MakeAPValue(ast, clang_type, uval64)) {
+          template_param_infos.InsertArg(
+              name, clang::TemplateArgument(
+                        ast, ClangUtil::GetQualType(clang_type),
+                        std::move(*value), is_default_template_arg));
+          return true;
+        }
       }
+
+      // We get here if this is a type-template parameter or we couldn't create
+      // a non-type template parameter.
+      template_param_infos.InsertArg(
+          name, clang::TemplateArgument(ClangUtil::GetQualType(clang_type),
+                                        /*isNullPtr*/ false,
+                                        is_default_template_arg));
     } else {
       auto *tplt_type = m_ast.CreateTemplateTemplateParmDecl(template_name);
       template_param_infos.InsertArg(
@@ -2216,9 +2250,10 @@ bool DWARFASTParserClang::CompleteEnumType(const DWARFDIE &die,
 
   if (TypeSystemClang::StartTagDeclarationDefinition(clang_type)) {
     if (die.HasChildren())
-      ParseChildEnumerators(clang_type,
-                            clang_type.IsEnumerationIntegerTypeSigned(),
-                            type->GetByteSize(nullptr).value_or(0), die);
+      ParseChildEnumerators(
+          clang_type, clang_type.IsEnumerationIntegerTypeSigned(),
+          llvm::expectedToOptional(type->GetByteSize(nullptr)).value_or(0),
+          die);
 
     TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
   }
@@ -2719,16 +2754,16 @@ PropertyAttributes::PropertyAttributes(const DWARFDIE &die) {
   // Check if the property getter/setter were provided as full names.
   // We want basenames, so we extract them.
   if (prop_getter_name && prop_getter_name[0] == '-') {
-    std::optional<const ObjCLanguage::MethodName> prop_getter_method =
-        ObjCLanguage::MethodName::Create(prop_getter_name, true);
+    std::optional<const ObjCLanguage::ObjCMethodName> prop_getter_method =
+        ObjCLanguage::ObjCMethodName::Create(prop_getter_name, true);
     if (prop_getter_method)
       prop_getter_name =
           ConstString(prop_getter_method->GetSelector()).GetCString();
   }
 
   if (prop_setter_name && prop_setter_name[0] == '-') {
-    std::optional<const ObjCLanguage::MethodName> prop_setter_method =
-        ObjCLanguage::MethodName::Create(prop_setter_name, true);
+    std::optional<const ObjCLanguage::ObjCMethodName> prop_setter_method =
+        ObjCLanguage::ObjCMethodName::Create(prop_setter_name, true);
     if (prop_setter_method)
       prop_setter_name =
           ConstString(prop_setter_method->GetSelector()).GetCString();
@@ -2951,7 +2986,7 @@ void DWARFASTParserClang::ParseSingleMember(
     } else {
       auto byte_size = attrs.byte_size;
       if (!byte_size)
-        byte_size = member_type->GetByteSize(nullptr);
+        byte_size = llvm::expectedToOptional(member_type->GetByteSize(nullptr));
 
       ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
       if (objfile->GetByteOrder() == eByteOrderLittle) {
@@ -3012,7 +3047,7 @@ void DWARFASTParserClang::ParseSingleMember(
     // TODO: we shouldn't silently ignore the bit_size if we fail
     //       to GetByteSize.
     if (std::optional<uint64_t> clang_type_size =
-            member_type->GetByteSize(nullptr)) {
+            llvm::expectedToOptional(member_type->GetByteSize(nullptr))) {
       this_field_info.bit_size = *clang_type_size * character_width;
     }
 
@@ -3821,7 +3856,9 @@ void DWARFASTParserClang::ParseRustVariantPart(
       m_ast.AddFieldToRecordType(
           field_type, "$discr$", discriminant_type->GetFullCompilerType(),
           lldb::eAccessPublic, variants.discriminant().byte_offset);
-      offset += discriminant_type->GetByteSize(nullptr).value_or(0);
+      offset +=
+          llvm::expectedToOptional(discriminant_type->GetByteSize(nullptr))
+              .value_or(0);
     }
 
     m_ast.AddFieldToRecordType(field_type, "value",

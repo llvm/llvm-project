@@ -183,6 +183,8 @@ private:
   bool verifyCopy(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                   StringRef &ErrInfo) const;
 
+  bool resultDependsOnExec(const MachineInstr &MI) const;
+
 protected:
   /// If the specific machine instruction is a instruction that moves/copies
   /// value from one register to another register return destination and source
@@ -190,9 +192,9 @@ protected:
   std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
 
-  bool swapSourceModifiers(MachineInstr &MI,
-                           MachineOperand &Src0, unsigned Src0OpName,
-                           MachineOperand &Src1, unsigned Src1OpName) const;
+  bool swapSourceModifiers(MachineInstr &MI, MachineOperand &Src0,
+                           AMDGPU::OpName Src0OpName, MachineOperand &Src1,
+                           AMDGPU::OpName Src1OpName) const;
   bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
                      const MachineOperand *fromMO, unsigned toIdx,
                      const MachineOperand *toMO) const;
@@ -263,13 +265,9 @@ public:
                                int64_t Offset1, unsigned NumLoads) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
-
-  void materializeImmediate(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI, const DebugLoc &DL,
-                            Register DestReg, int64_t Value) const;
 
   const TargetRegisterClass *getPreferredSelectRegClass(
                                unsigned Size) const;
@@ -281,6 +279,9 @@ public:
   Register insertEQ(MachineBasicBlock *MBB,
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
                     Register SrcReg, int Value)  const;
+
+  bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
+                               int64_t &ImmVal) const override;
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
@@ -402,6 +403,15 @@ public:
 
   void removeModOperands(MachineInstr &MI) const;
 
+  /// Return the extracted immediate value in a subregister use from a constant
+  /// materialized in a super register.
+  ///
+  /// e.g. %imm = S_MOV_B64 K[0:63]
+  ///      USE %imm.sub1
+  /// This will return K[32:63]
+  static std::optional<int64_t> extractSubregFromImm(int64_t ImmVal,
+                                                     unsigned SubRegIndex);
+
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
 
@@ -439,7 +449,7 @@ public:
   }
 
   static bool isVMEM(const MachineInstr &MI) {
-    return isMUBUF(MI) || isMTBUF(MI) || isImage(MI);
+    return isMUBUF(MI) || isMTBUF(MI) || isImage(MI) || isFLAT(MI);
   }
 
   bool isVMEM(uint16_t Opcode) const {
@@ -655,6 +665,20 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
+  static bool isBlockLoadStore(uint16_t Opcode) {
+    switch (Opcode) {
+    case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
+    case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE:
+    case AMDGPU::SCRATCH_STORE_BLOCK_SADDR:
+    case AMDGPU::SCRATCH_LOAD_BLOCK_SADDR:
+    case AMDGPU::SCRATCH_STORE_BLOCK_SVS:
+    case AMDGPU::SCRATCH_LOAD_BLOCK_SVS:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   static bool isEXP(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::EXP;
   }
@@ -839,6 +863,10 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
 
+  bool isXDL(const MachineInstr &MI) const;
+
+  static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
+
   static bool isLDSDIR(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::LDSDIR;
   }
@@ -947,11 +975,6 @@ public:
 
   bool isBarrier(unsigned Opcode) const {
     return isBarrierStart(Opcode) || Opcode == AMDGPU::S_BARRIER_WAIT ||
-           Opcode == AMDGPU::S_BARRIER_INIT_M0 ||
-           Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
-           Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
-           Opcode == AMDGPU::S_BARRIER_LEAVE ||
-           Opcode == AMDGPU::S_BARRIER_LEAVE_IMM ||
            Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
@@ -977,6 +1000,12 @@ public:
   }
 
   bool isIGLP(const MachineInstr &MI) const { return isIGLP(MI.getOpcode()); }
+
+  // Return true if the instruction is mutually exclusive with all non-IGLP DAG
+  // mutations, requiring all other mutations to be disabled.
+  bool isIGLPMutationOnly(unsigned Opcode) const {
+    return Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
+  }
 
   static unsigned getNonSoftWaitcntOpcode(unsigned Opcode) {
     switch (Opcode) {
@@ -1067,7 +1096,13 @@ public:
   // Some operands like FrameIndexes could resolve to an inline immediate value
   // that will not require an additional 4-bytes; this function assumes that it
   // will.
-  bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const;
+  bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const {
+    assert(!MO.isReg() && "isInlineConstant called on register operand!");
+    if (!MO.isImm())
+      return false;
+    return isInlineConstant(MO.getImm(), OperandType);
+  }
+  bool isInlineConstant(int64_t ImmVal, uint8_t OperandType) const;
 
   bool isInlineConstant(const MachineOperand &MO,
                         const MCOperandInfo &OpInfo) const {
@@ -1095,7 +1130,7 @@ public:
   }
 
   bool isInlineConstant(const MachineInstr &MI, unsigned OpIdx,
-                        const MachineOperand &MO) const {
+                        int64_t ImmVal) const {
     if (OpIdx >= MI.getDesc().NumOperands)
       return false;
 
@@ -1105,10 +1140,15 @@ public:
 
       uint8_t OpType = (Size == 8) ?
         AMDGPU::OPERAND_REG_IMM_INT64 : AMDGPU::OPERAND_REG_IMM_INT32;
-      return isInlineConstant(MO, OpType);
+      return isInlineConstant(ImmVal, OpType);
     }
 
-    return isInlineConstant(MO, MI.getDesc().operands()[OpIdx].OperandType);
+    return isInlineConstant(ImmVal, MI.getDesc().operands()[OpIdx].OperandType);
+  }
+
+  bool isInlineConstant(const MachineInstr &MI, unsigned OpIdx,
+                        const MachineOperand &MO) const {
+    return isInlineConstant(MI, OpIdx, MO.getImm());
   }
 
   bool isInlineConstant(const MachineOperand &MO) const {
@@ -1137,8 +1177,7 @@ public:
   ///  e.g. src[012]_mod, omod, clamp.
   bool hasModifiers(unsigned Opcode) const;
 
-  bool hasModifiersSet(const MachineInstr &MI,
-                       unsigned OpName) const;
+  bool hasModifiersSet(const MachineInstr &MI, AMDGPU::OpName OpName) const;
   bool hasAnyModifiersSet(const MachineInstr &MI) const;
 
   bool canShrink(const MachineInstr &MI,
@@ -1262,6 +1301,10 @@ public:
   /// was moved to VGPR. \returns true if succeeded.
   bool moveFlatAddrToVGPR(MachineInstr &Inst) const;
 
+  /// Fix operands in Inst to fix 16bit SALU to VALU lowering.
+  void legalizeOperandsVALUt16(MachineInstr &Inst,
+                               MachineRegisterInfo &MRI) const;
+
   /// Replace the instructions opcode with the equivalent VALU
   /// opcode.  This function will also move the users of MachineInstruntions
   /// in the \p WorkList to the VALU if necessary. If present, \p MDT is
@@ -1294,17 +1337,19 @@ public:
   /// Returns the operand named \p Op.  If \p MI does not have an
   /// operand named \c Op, this function returns nullptr.
   LLVM_READONLY
-  MachineOperand *getNamedOperand(MachineInstr &MI, unsigned OperandName) const;
+  MachineOperand *getNamedOperand(MachineInstr &MI,
+                                  AMDGPU::OpName OperandName) const;
 
   LLVM_READONLY
   const MachineOperand *getNamedOperand(const MachineInstr &MI,
-                                        unsigned OpName) const {
-    return getNamedOperand(const_cast<MachineInstr &>(MI), OpName);
+                                        AMDGPU::OpName OperandName) const {
+    return getNamedOperand(const_cast<MachineInstr &>(MI), OperandName);
   }
 
   /// Get required immediate operand
-  int64_t getNamedImmOperand(const MachineInstr &MI, unsigned OpName) const {
-    int Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), OpName);
+  int64_t getNamedImmOperand(const MachineInstr &MI,
+                             AMDGPU::OpName OperandName) const {
+    int Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), OperandName);
     return MI.getOperand(Idx).getImm();
   }
 
@@ -1461,7 +1506,7 @@ public:
   // Enforce operand's \p OpName even alignment if required by target.
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.
-  void enforceOperandRCAlignment(MachineInstr &MI, unsigned OpName) const;
+  void enforceOperandRCAlignment(MachineInstr &MI, AMDGPU::OpName OpName) const;
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class

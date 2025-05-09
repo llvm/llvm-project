@@ -44,6 +44,9 @@ write_lit_config("lit_site_cfg") {
   output = clang_lit_site_cfg_file
   dir = get_path_info(output, "dir")
   extra_values = [
+    "BUILD_SHARED_LIBS=0",
+    "LLVM_LINK_LLVM_DYLIB=0",
+    "CLANG_LINK_CLANG_DYLIB=0",
     "LLVM_WITH_Z3=0",
     "CLANG_BUILD_EXAMPLES=0",
     "CLANG_BUILT_STANDALONE=0",
@@ -67,7 +70,7 @@ write_lit_config("lit_site_cfg") {
     "ENABLE_SHARED=0",
     "LLVM_EXTERNAL_LIT=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
-    "LLVM_INCLUDE_SPIRV_TOOLS_TESTS=",
+    "LLVM_INCLUDE_SPIRV_TOOLS_TESTS=0",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOL_LLVM_DRIVER_BUILD=0",  # FIXME: Add actual support for this.
     "LLVM_USE_SANITIZER=",
@@ -184,6 +187,7 @@ group("test") {
     "//llvm/tools/llvm-dis",
     "//llvm/tools/llvm-dwarfdump",
     "//llvm/tools/llvm-ifs",
+    "//llvm/tools/llvm-link",
     "//llvm/tools/llvm-lto",
     "//llvm/tools/llvm-lto2",
     "//llvm/tools/llvm-modextract",

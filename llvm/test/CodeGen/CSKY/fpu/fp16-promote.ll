@@ -33,7 +33,7 @@ define float @test_fpextend_float(ptr %p) nounwind {
 ; CHECK-FPUV2-NEXT:  # %bb.1:
 ; CHECK-FPUV2-NEXT:    .p2align 2, 0x0
 ; CHECK-FPUV2-NEXT:  .LCPI1_0:
-; CHECK-FPUV2-NEXT:    .long __gnu_h2f_ieee
+; CHECK-FPUV2-NEXT:    .long __extendhfsf2
 ;
 ; CHECK-FPUV3-LABEL: test_fpextend_float:
 ; CHECK-FPUV3:       # %bb.0:
@@ -48,7 +48,7 @@ define float @test_fpextend_float(ptr %p) nounwind {
 ; CHECK-FPUV3-NEXT:  # %bb.1:
 ; CHECK-FPUV3-NEXT:    .p2align 2, 0x0
 ; CHECK-FPUV3-NEXT:  .LCPI1_0:
-; CHECK-FPUV3-NEXT:    .long __gnu_h2f_ieee
+; CHECK-FPUV3-NEXT:    .long __extendhfsf2
   %a = load half, ptr %p
   %r = fpext half %a to float
   ret float %r
@@ -69,7 +69,7 @@ define double @test_fpextend_double(ptr %p) nounwind {
 ; CHECK-FPUV2-NEXT:  # %bb.1:
 ; CHECK-FPUV2-NEXT:    .p2align 2, 0x0
 ; CHECK-FPUV2-NEXT:  .LCPI2_0:
-; CHECK-FPUV2-NEXT:    .long __gnu_h2f_ieee
+; CHECK-FPUV2-NEXT:    .long __extendhfsf2
 ;
 ; CHECK-FPUV3-LABEL: test_fpextend_double:
 ; CHECK-FPUV3:       # %bb.0:
@@ -85,7 +85,7 @@ define double @test_fpextend_double(ptr %p) nounwind {
 ; CHECK-FPUV3-NEXT:  # %bb.1:
 ; CHECK-FPUV3-NEXT:    .p2align 2, 0x0
 ; CHECK-FPUV3-NEXT:  .LCPI2_0:
-; CHECK-FPUV3-NEXT:    .long __gnu_h2f_ieee
+; CHECK-FPUV3-NEXT:    .long __extendhfsf2
   %a = load half, ptr %p
   %r = fpext half %a to double
   ret double %r
@@ -108,7 +108,7 @@ define void @test_fptrunc_float(float %f, ptr %p) nounwind {
 ; CHECK-FPUV2-NEXT:  # %bb.1:
 ; CHECK-FPUV2-NEXT:    .p2align 2, 0x0
 ; CHECK-FPUV2-NEXT:  .LCPI3_0:
-; CHECK-FPUV2-NEXT:    .long __gnu_f2h_ieee
+; CHECK-FPUV2-NEXT:    .long __truncsfhf2
 ;
 ; CHECK-FPUV3-LABEL: test_fptrunc_float:
 ; CHECK-FPUV3:       # %bb.0:
@@ -126,7 +126,7 @@ define void @test_fptrunc_float(float %f, ptr %p) nounwind {
 ; CHECK-FPUV3-NEXT:  # %bb.1:
 ; CHECK-FPUV3-NEXT:    .p2align 2, 0x0
 ; CHECK-FPUV3-NEXT:  .LCPI3_0:
-; CHECK-FPUV3-NEXT:    .long __gnu_f2h_ieee
+; CHECK-FPUV3-NEXT:    .long __truncsfhf2
   %a = fptrunc float %f to half
   store half %a, ptr %p
   ret void
@@ -201,9 +201,9 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; CHECK-FPUV2-NEXT:  # %bb.1:
 ; CHECK-FPUV2-NEXT:    .p2align 2, 0x0
 ; CHECK-FPUV2-NEXT:  .LCPI5_0:
-; CHECK-FPUV2-NEXT:    .long __gnu_h2f_ieee
+; CHECK-FPUV2-NEXT:    .long __extendhfsf2
 ; CHECK-FPUV2-NEXT:  .LCPI5_1:
-; CHECK-FPUV2-NEXT:    .long __gnu_f2h_ieee
+; CHECK-FPUV2-NEXT:    .long __truncsfhf2
 ;
 ; CHECK-FPUV3-LABEL: test_fadd:
 ; CHECK-FPUV3:       # %bb.0:
@@ -232,9 +232,9 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; CHECK-FPUV3-NEXT:  # %bb.1:
 ; CHECK-FPUV3-NEXT:    .p2align 2, 0x0
 ; CHECK-FPUV3-NEXT:  .LCPI5_0:
-; CHECK-FPUV3-NEXT:    .long __gnu_h2f_ieee
+; CHECK-FPUV3-NEXT:    .long __extendhfsf2
 ; CHECK-FPUV3-NEXT:  .LCPI5_1:
-; CHECK-FPUV3-NEXT:    .long __gnu_f2h_ieee
+; CHECK-FPUV3-NEXT:    .long __truncsfhf2
   %a = load half, ptr %p
   %b = load half, ptr %q
   %r = fadd half %a, %b
@@ -270,9 +270,9 @@ define void @test_fmul(ptr %p, ptr %q) nounwind {
 ; CHECK-FPUV2-NEXT:  # %bb.1:
 ; CHECK-FPUV2-NEXT:    .p2align 2, 0x0
 ; CHECK-FPUV2-NEXT:  .LCPI6_0:
-; CHECK-FPUV2-NEXT:    .long __gnu_h2f_ieee
+; CHECK-FPUV2-NEXT:    .long __extendhfsf2
 ; CHECK-FPUV2-NEXT:  .LCPI6_1:
-; CHECK-FPUV2-NEXT:    .long __gnu_f2h_ieee
+; CHECK-FPUV2-NEXT:    .long __truncsfhf2
 ;
 ; CHECK-FPUV3-LABEL: test_fmul:
 ; CHECK-FPUV3:       # %bb.0:
@@ -301,9 +301,9 @@ define void @test_fmul(ptr %p, ptr %q) nounwind {
 ; CHECK-FPUV3-NEXT:  # %bb.1:
 ; CHECK-FPUV3-NEXT:    .p2align 2, 0x0
 ; CHECK-FPUV3-NEXT:  .LCPI6_0:
-; CHECK-FPUV3-NEXT:    .long __gnu_h2f_ieee
+; CHECK-FPUV3-NEXT:    .long __extendhfsf2
 ; CHECK-FPUV3-NEXT:  .LCPI6_1:
-; CHECK-FPUV3-NEXT:    .long __gnu_f2h_ieee
+; CHECK-FPUV3-NEXT:    .long __truncsfhf2
   %a = load half, ptr %p
   %b = load half, ptr %q
   %r = fmul half %a, %b

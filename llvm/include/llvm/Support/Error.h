@@ -16,7 +16,6 @@
 #include "llvm-c/Error.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/abi-breaking.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -680,22 +679,22 @@ private:
 
   storage_type *getStorage() {
     assert(!HasError && "Cannot get value when an error exists!");
-    return reinterpret_cast<storage_type *>(&TStorage);
+    return &TStorage;
   }
 
   const storage_type *getStorage() const {
     assert(!HasError && "Cannot get value when an error exists!");
-    return reinterpret_cast<const storage_type *>(&TStorage);
+    return &TStorage;
   }
 
   error_type *getErrorStorage() {
     assert(HasError && "Cannot get error when a value exists!");
-    return reinterpret_cast<error_type *>(&ErrorStorage);
+    return &ErrorStorage;
   }
 
   const error_type *getErrorStorage() const {
     assert(HasError && "Cannot get error when a value exists!");
-    return reinterpret_cast<const error_type *>(&ErrorStorage);
+    return &ErrorStorage;
   }
 
   // Used by ExpectedAsOutParameter to reset the checked flag.
@@ -727,8 +726,8 @@ private:
   }
 
   union {
-    AlignedCharArrayUnion<storage_type> TStorage;
-    AlignedCharArrayUnion<error_type> ErrorStorage;
+    storage_type TStorage;
+    error_type ErrorStorage;
   };
   bool HasError : 1;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -736,9 +735,16 @@ private:
 #endif
 };
 
-/// Report a serious error, calling any installed error handler. See
-/// ErrorHandling.h.
+/// @deprecated Use reportFatalInternalError() or reportFatalUsageError()
+/// instead.
 [[noreturn]] void report_fatal_error(Error Err, bool gen_crash_diag = true);
+
+/// Report a fatal error that indicates a bug in LLVM.
+/// See ErrorHandling.h for details.
+[[noreturn]] void reportFatalInternalError(Error Err);
+/// Report a fatal error that does not indicate a bug in LLVM.
+/// See ErrorHandling.h for details.
+[[noreturn]] void reportFatalUsageError(Error Err);
 
 /// Report a fatal error if Err is a failure value.
 ///

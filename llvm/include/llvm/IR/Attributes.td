@@ -291,7 +291,7 @@ def SExt : EnumAttr<"signext", IntersectPreserve, [ParamAttr, RetAttr]>;
 
 /// Alignment of stack for function (3 bits)  stored as log2 of alignment with
 /// +1 bias 0 means unaligned (different from alignstack=(1)).
-def StackAlignment : IntAttr<"alignstack", IntersectPreserve, [FnAttr, ParamAttr]>;
+def StackAlignment : IntAttr<"alignstack", IntersectPreserve, [FnAttr, ParamAttr, RetAttr]>;
 
 /// Function can be speculated.
 def Speculatable : EnumAttr<"speculatable", IntersectAnd, [FnAttr]>;

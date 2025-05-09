@@ -35,7 +35,7 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
         It is default to `Global`.
     2. `array_length`: It describes how many horizontally consecutive blocks
         will be loaded by a hardware load instruction. If the TensorDesc shape
-        is 8x16, with array_length = 2. The loaded block shape will be acctually
+        is 8x16, with array_length = 2. The loaded block shape will be actually
         8x32. Its default value is 1.
     3. `boundary_check`: It is used to indicates the hardware whether to do
         out-of-boundary check. The default value is true.
@@ -59,19 +59,29 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
 
 def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scatter_tdesc_attr"> {
   let summary = [{a composite attribute for `TensorDescType`}];
-  let description = [{`ScatterTensorDesc` (or `scatter_tdesc_attr`) is a composite
-    attribute defined for `TensorDescType` for describing following
-    properties of a `TensorDesc`.
+  let description = [{
+    `ScatterTensorDesc` is a composite attribute defined for `TensorDescType`
+    for describing following properties of a `TensorDesc`:
+
     1. `memory_space`: It describes where the data block described by the
         TensorDesc is located, `Global` device memory or `Shared` local memory.
         It is default to `Global`.
-    2.  `chunk_size`: indicates number of continious elements accessed for each
+
+    2.  `chunk_size`: indicates number of contiguous elements accessed for each
         offset, default is 1. It is used with `scattered` attr only.
   }];
 
   let parameters = (ins
-    OptionalParameter<"MemorySpaceAttr">: $memory_space,
-    OptionalParameter<"IntegerAttr", "1">: $chunk_size
+    DefaultValuedParameter<
+      "MemorySpaceAttr",
+      "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
+      "Data memory location"
+    >: $memory_space,
+    DefaultValuedParameter<
+      "IntegerAttr",
+      "IntegerAttr::get(IntegerType::get($_ctxt, 64), 1)",
+      "Number of contiguous elements"
+    >: $chunk_size
   );
 
   let builders = [
@@ -80,6 +90,8 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
       CArg<"int", "1">: $chunk_size
     )>
   ];
+
+  let genVerifyDecl = 1;
  }
 
 //===----------------------------------------------------------------------===//
@@ -142,33 +154,159 @@ def XeGPU_FenceScopeAttr:
     let assemblyFormat = "$value";
 }
 
-def XeGPU_SGMapAttr : XeGPUAttr<"SGMap", "sg_map"> {
+def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
   let summary = [{
-    Describes the mapping between work item (WI) and the 2D tensor specified by the tensor descriptor.
+    Describes the data distribution to subgroups and work-items for a tensor
+    specified by the tensor descriptor.
   }];
   let description = [{
-    To distribute the XeGPU operation to work items, the tensor_desc must be specified with the sg_map
-    attribute at the tensor description creation time.
-    Within the `sg_map`, `wi_layout` specifies the layout of work items,
-    describing the mapping of work items to the tensor.
-    wi_layout[0] x wi_layout[1] must be equal to the total number of work items within a subgroup.
-    `wi_data` specifies the minimum number of data elements assigned to each work item for a single distribution.
+    XeGPU operations use `LayoutAttr` to define how data is distributed across subgroups and work-items.
+    This attribute is specified in tensor descriptors during tensor description creation. `LayoutAttr`
+    includes the following parameters:
 
-    E.g., #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>
-    In this example, the subgroup has 16 work items in wi_layout=[1, 16],
-    each accessing 1 element as specified by wi_data=[1, 1].
+    * `sg_layout`: Specifies the total number of subgroups and their layout within a workgroup.
+      It is mandatory for workgroup-level programming. Its presence implies workgroup-level code.
+    * `sg_data`: Defines the data size accessed per subgroup. It is optionally used with `sg_layout`
+      for workgroup-level programming. When it is left empty, the size accessed per subgroup can be
+      derived from the tensor shape and `sg_layout` using the formula:
+      `sg_data[i] = tensor_shape[i] / sg_layout[i]`.
+    * `inst_data`: Specifies the data size that is processed by an instruction. It is optionally
+      used with lane_layout. When it is left empty, the data size per instruction is equivalent to
+      the sg_data for workgroup-level programming or equivalent to tensor shape for subgroup-level
+      programming.
+    * `lane_layout` : Specifies the total number of work-items and their arrangement within a subgroup.
+      It is mandatory for subgroup-level programming and optional for workgroup-level programming.
+    * `lane_data` : Specifies the shape of the tensor fragment that each lane accesses. It defines a single,
+      minimal distribution unit. Processing the entire tensor may require one or more distribution units per
+      hardware instruction.
+    * `order`: Specifies the dimension order used to linearize n-dimensional sg_layout and lane_layout to
+      1-dimensional layout. The first dimension in the order list is the fastest-changing dimension. If it
+      is not present, the default value is [1, 0].
 
-    `wi_data[0] * wi_data[1]` can be greater than 1, meaning that each work item operates on multiple elements,
-    which is eventually lowered to "SIMT-flavor" vector, like SPIR-V vector or llvm vector, or packed to a storage data type.
-    The multiple elements indicated by `wi_data` can only be from one dimension and must be contiguous in the memory along either dimension.
+    Examples:
+
+    1. Subgroup level layout:
+    ```mlir
+    #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>
+    ```
+    In this example, there are 16 work-items per subgroup, and is organized as
+    [[0, 1, 2, .., 7],[8, 9, .., 15]]. The distribution unit is 1x1.
+
+    2. Subgroup level layout with order:
+    ```mlir
+    #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1], order = [0, 1]>
+    ```
+    In this example, there are 16 work-items per subgroup, and is organized as
+    [[0, 2, 4, ..., 14], [1, 3, 5, ..., 15]]. The distribution unit is 1x1.
+
+    3. Subgroup level layout with inst_data
+    ```mlir
+    #xegpu.layout<inst_data = [8, 16], lane_layout = [2, 8], lane_data = [2, 2]>
+    ```
+    In this example, the original problem size is partitioned into smaller subproblems of dimensions [8, 16],
+    which are then distributed among 16 work-items arranged as [[0, 1, 2, ..., 7], [8, 9, ..., 15]]. Each
+    work-item is assigned four 2x2 blocks in a round-robin manner.
+
+    4. Workgroup level layout:
+    ```mlir
+    #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [2, 8], lane_data = [1, 1]>
+    ```
+    In this example, the layout represents a workgroup distribution. A workgroup consists of 8 subgroups
+    arranged as [[0, 1, 2, 3], [4, 5, 6, 7]]. Each subgroup accesses a 16x16 block per instruction, which
+    is further distributed to 16 work items which is organized as [[0, 1, 2, .., 7],[8, 9, .., 15]].
+
+    5. Workgroup level layout with order:
+    ```mlir
+    #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [2, 8], lane_data = [1, 1], order = [0, 1]>
+    ```
+    In this example, the layout represents a workgroup distribution. A workgroup consists of 8 subgroups
+    arranged as [[0, 2, 4, 6], [1, 3, 5, 7]]. Each subgroup accesses a 16x16 block per instruction, which
+    is further distributed to 16 work items which is organized as [[0, 2, 4, ..., 14], [1, 3, 5, ..., 15]].
+
+    6. Workgroup level layout with inst_data:
+    ```mlir
+    #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], inst_data = [8, 16], lane_layout = [2, 8], lane_data = [1, 1]>
+    ```
+    This example is similar to the previous ones, but the `inst_data` parameter divides `sg_data` into two instructions,
+    each processing an 8x16 block. These blocks are further distributed across 16 work-items with a distribution unit of 1x1.
+    Unlike the 2x2 distribution unit in example 3, which results in accessing contiguous 2x2 blocks, the 1x1 distribution
+    unit may result in non-contiguous access.
   }];
+
   let parameters = (ins
-    ArrayRefParameter<"uint32_t">:$wi_layout,
-    ArrayRefParameter<"uint32_t">:$wi_data
+    OptionalParameter<"DenseI32ArrayAttr">: $sg_layout,
+    OptionalParameter<"DenseI32ArrayAttr">: $sg_data,
+    OptionalParameter<"DenseI32ArrayAttr">: $inst_data,
+    OptionalParameter<"DenseI32ArrayAttr">: $lane_layout,
+    OptionalParameter<"DenseI32ArrayAttr">: $lane_data,
+    OptionalParameter<"DenseI32ArrayAttr">: $order
   );
 
+  let builders = [
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
+                     "llvm::ArrayRef<int32_t>": $lane_data),
+      [{
+        auto sg_layout = DenseI32ArrayAttr();
+        auto sg_data = DenseI32ArrayAttr();
+        auto inst_data = DenseI32ArrayAttr();
+        auto order = DenseI32ArrayAttr();
+        return $_get($_ctxt, sg_layout, sg_data, inst_data,
+                     DenseI32ArrayAttr::get($_ctxt, lane_layout),
+                     DenseI32ArrayAttr::get($_ctxt, lane_data), order);
+      }]>,
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
+                     "llvm::ArrayRef<int32_t>": $lane_data,
+                     "llvm::ArrayRef<int32_t>": $order),
+      [{
+        return $_get($_ctxt,
+                     /*sg_layout =*/ nullptr,
+                     /*sg_data   =*/ nullptr,
+                     /*inst_data =*/ nullptr,
+                     DenseI32ArrayAttr::get($_ctxt, lane_layout),
+                     DenseI32ArrayAttr::get($_ctxt, lane_data),
+                     DenseI32ArrayAttr::get($_ctxt, order));
+      }]>,
+    AttrBuilder<(ins "DenseI32ArrayAttr": $lane_layout,
+                     "DenseI32ArrayAttr": $lane_data,
+                     "DenseI32ArrayAttr": $order),
+      [{
+        return $_get($_ctxt, /*sg_layout =*/ nullptr, /*sg_data =*/ nullptr,
+                  /*inst_data =*/ nullptr, lane_layout, lane_data, order);
+      }]>
+  ];
 
-  let hasCustomAssemblyFormat = 1;
+  let extraClassDeclaration = [{
+    bool isWgLayout() {
+      return getSgLayout() != nullptr;
+    }
+
+    bool isSgLayout() {
+      return !isWgLayout();
+    }
+
+    int64_t getRank() {
+      if (auto attr = getSgLayout())
+        return attr.size();
+      if (auto attr = getInstData())
+        return attr.size();
+      if (auto attr = getLaneLayout())
+        return attr.size();
+      return 0;
+    }
+
+    LayoutAttr dropSgLayoutAndData() {
+      return LayoutAttr::get(getContext(), nullptr, nullptr, getInstData(),
+                             getLaneLayout(), getLaneData(), getOrder());
+    }
+
+    LayoutAttr dropInstData() {
+      return LayoutAttr::get(getContext(), getSgLayout(), getSgData(), nullptr,
+                             getLaneLayout(), getLaneData(), getOrder());
+    }
+
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
   let genVerifyDecl = 1;
 }
 

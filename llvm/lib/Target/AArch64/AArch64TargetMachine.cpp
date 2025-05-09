@@ -230,44 +230,47 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   RegisterTargetMachine<AArch64leTargetMachine> Z(getTheARM64Target());
   RegisterTargetMachine<AArch64leTargetMachine> W(getTheARM64_32Target());
   RegisterTargetMachine<AArch64leTargetMachine> V(getTheAArch64_32Target());
-  auto PR = PassRegistry::getPassRegistry();
-  initializeGlobalISel(*PR);
-  initializeAArch64A53Fix835769Pass(*PR);
-  initializeAArch64A57FPLoadBalancingPass(*PR);
-  initializeAArch64AdvSIMDScalarPass(*PR);
-  initializeAArch64BranchTargetsPass(*PR);
-  initializeAArch64CollectLOHPass(*PR);
-  initializeAArch64CompressJumpTablesPass(*PR);
-  initializeAArch64ConditionalComparesPass(*PR);
-  initializeAArch64ConditionOptimizerPass(*PR);
-  initializeAArch64DeadRegisterDefinitionsPass(*PR);
-  initializeAArch64ExpandPseudoPass(*PR);
-  initializeAArch64LoadStoreOptPass(*PR);
-  initializeAArch64MIPeepholeOptPass(*PR);
-  initializeAArch64SIMDInstrOptPass(*PR);
-  initializeAArch64O0PreLegalizerCombinerPass(*PR);
-  initializeAArch64PreLegalizerCombinerPass(*PR);
-  initializeAArch64PointerAuthPass(*PR);
-  initializeAArch64PostCoalescerPass(*PR);
-  initializeAArch64PostLegalizerCombinerPass(*PR);
-  initializeAArch64PostLegalizerLoweringPass(*PR);
-  initializeAArch64PostSelectOptimizePass(*PR);
-  initializeAArch64PromoteConstantPass(*PR);
-  initializeAArch64RedundantCopyEliminationPass(*PR);
-  initializeAArch64StorePairSuppressPass(*PR);
-  initializeFalkorHWPFFixPass(*PR);
-  initializeFalkorMarkStridedAccessesLegacyPass(*PR);
-  initializeLDTLSCleanupPass(*PR);
-  initializeKCFIPass(*PR);
-  initializeSMEABIPass(*PR);
-  initializeSMEPeepholeOptPass(*PR);
-  initializeSVEIntrinsicOptsPass(*PR);
-  initializeAArch64SpeculationHardeningPass(*PR);
-  initializeAArch64SLSHardeningPass(*PR);
-  initializeAArch64StackTaggingPass(*PR);
-  initializeAArch64StackTaggingPreRAPass(*PR);
-  initializeAArch64LowerHomogeneousPrologEpilogPass(*PR);
-  initializeAArch64DAGToDAGISelLegacyPass(*PR);
+  auto &PR = *PassRegistry::getPassRegistry();
+  initializeGlobalISel(PR);
+  initializeAArch64A53Fix835769Pass(PR);
+  initializeAArch64A57FPLoadBalancingPass(PR);
+  initializeAArch64AdvSIMDScalarPass(PR);
+  initializeAArch64AsmPrinterPass(PR);
+  initializeAArch64BranchTargetsPass(PR);
+  initializeAArch64CollectLOHPass(PR);
+  initializeAArch64CompressJumpTablesPass(PR);
+  initializeAArch64ConditionalComparesPass(PR);
+  initializeAArch64ConditionOptimizerPass(PR);
+  initializeAArch64DeadRegisterDefinitionsPass(PR);
+  initializeAArch64ExpandPseudoPass(PR);
+  initializeAArch64LoadStoreOptPass(PR);
+  initializeAArch64MIPeepholeOptPass(PR);
+  initializeAArch64SIMDInstrOptPass(PR);
+  initializeAArch64O0PreLegalizerCombinerPass(PR);
+  initializeAArch64PreLegalizerCombinerPass(PR);
+  initializeAArch64PointerAuthPass(PR);
+  initializeAArch64PostCoalescerPass(PR);
+  initializeAArch64PostLegalizerCombinerPass(PR);
+  initializeAArch64PostLegalizerLoweringPass(PR);
+  initializeAArch64PostSelectOptimizePass(PR);
+  initializeAArch64PromoteConstantPass(PR);
+  initializeAArch64RedundantCopyEliminationPass(PR);
+  initializeAArch64StorePairSuppressPass(PR);
+  initializeFalkorHWPFFixPass(PR);
+  initializeFalkorMarkStridedAccessesLegacyPass(PR);
+  initializeLDTLSCleanupPass(PR);
+  initializeKCFIPass(PR);
+  initializeSMEABIPass(PR);
+  initializeSMEPeepholeOptPass(PR);
+  initializeSVEIntrinsicOptsPass(PR);
+  initializeAArch64SpeculationHardeningPass(PR);
+  initializeAArch64SLSHardeningPass(PR);
+  initializeAArch64StackTaggingPass(PR);
+  initializeAArch64StackTaggingPreRAPass(PR);
+  initializeAArch64LowerHomogeneousPrologEpilogPass(PR);
+  initializeAArch64DAGToDAGISelLegacyPass(PR);
+  initializeAArch64CondBrTuningPass(PR);
+  initializeAArch64Arm64ECCallLoweringPass(PR);
 }
 
 void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
@@ -332,8 +335,9 @@ getEffectiveAArch64CodeModel(const Triple &TT,
         *CM != CodeModel::Large) {
       report_fatal_error(
           "Only small, tiny and large code models are allowed on AArch64");
-    } else if (*CM == CodeModel::Tiny && !TT.isOSBinFormatELF())
+    } else if (*CM == CodeModel::Tiny && !TT.isOSBinFormatELF()) {
       report_fatal_error("tiny code model is only supported on ELF");
+    }
     return *CM;
   }
   // The default MCJIT memory managers make no guarantees about where they can
@@ -579,7 +583,7 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 TargetTransformInfo
 AArch64TargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(AArch64TTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<AArch64TTIImpl>(this, F));
 }
 
 TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {
@@ -869,7 +873,7 @@ void AArch64PassConfig::addPreEmitPass() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardCatchretPass());
+    addPass(createEHContGuardTargetsPass());
   }
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableCollectLOH &&

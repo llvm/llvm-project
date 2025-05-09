@@ -339,6 +339,7 @@ module ieee_arithmetic
 #define IEEE_IS_FINITE_R(XKIND) \
   elemental logical function ieee_is_finite_a##XKIND(x); \
     real(XKIND), intent(in) :: x; \
+    !dir$ ignore_tkr(d) x; \
   end function ieee_is_finite_a##XKIND;
   interface ieee_is_finite
     SPECIFICS_R(IEEE_IS_FINITE_R)

@@ -139,9 +139,11 @@ public:
 
   // Map from node id to Node.
   DenseMap<unsigned, Node> nodes;
-  // Map from node id to list of input edges.
+  // Map from node id to list of input edges. The absence of an entry for a key
+  // is also equivalent to the absence of any edges.
   DenseMap<unsigned, SmallVector<Edge, 2>> inEdges;
-  // Map from node id to list of output edges.
+  // Map from node id to list of output edges. The absence of an entry for a
+  // node is also equivalent to the absence of any edges.
   DenseMap<unsigned, SmallVector<Edge, 2>> outEdges;
   // Map from memref to a count on the dependence edges associated with that
   // memref.
@@ -156,10 +158,21 @@ public:
   bool init();
 
   // Returns the graph node for 'id'.
-  Node *getNode(unsigned id);
+  const Node *getNode(unsigned id) const;
+  Node *getNode(unsigned id) {
+    return const_cast<Node *>(
+        static_cast<const MemRefDependenceGraph *>(this)->getNode(id));
+  }
+
+  // Returns true if the graph has node with ID `id`.
+  bool hasNode(unsigned id) const { return nodes.contains(id); }
 
   // Returns the graph node for 'forOp'.
-  Node *getForOpNode(AffineForOp forOp);
+  const Node *getForOpNode(AffineForOp forOp) const;
+  Node *getForOpNode(AffineForOp forOp) {
+    return const_cast<Node *>(
+        static_cast<const MemRefDependenceGraph *>(this)->getForOpNode(forOp));
+  }
 
   // Adds a node with 'op' to the graph and returns its unique identifier.
   unsigned addNode(Operation *op);
@@ -169,12 +182,12 @@ public:
 
   // Returns true if node 'id' writes to any memref which escapes (or is an
   // argument to) the block. Returns false otherwise.
-  bool writesToLiveInOrEscapingMemrefs(unsigned id);
+  bool writesToLiveInOrEscapingMemrefs(unsigned id) const;
 
   // Returns true iff there is an edge from node 'srcId' to node 'dstId' which
   // is for 'value' if non-null, or for any value otherwise. Returns false
   // otherwise.
-  bool hasEdge(unsigned srcId, unsigned dstId, Value value = nullptr);
+  bool hasEdge(unsigned srcId, unsigned dstId, Value value = nullptr) const;
 
   // Adds an edge from node 'srcId' to node 'dstId' for 'value'.
   void addEdge(unsigned srcId, unsigned dstId, Value value);
@@ -185,23 +198,25 @@ public:
   // Returns true if there is a path in the dependence graph from node 'srcId'
   // to node 'dstId'. Returns false otherwise. `srcId`, `dstId`, and the
   // operations that the edges connected are expected to be from the same block.
-  bool hasDependencePath(unsigned srcId, unsigned dstId);
+  bool hasDependencePath(unsigned srcId, unsigned dstId) const;
 
   // Returns the input edge count for node 'id' and 'memref' from src nodes
   // which access 'memref' with a store operation.
-  unsigned getIncomingMemRefAccesses(unsigned id, Value memref);
+  unsigned getIncomingMemRefAccesses(unsigned id, Value memref) const;
 
   // Returns the output edge count for node 'id' and 'memref' (if non-null),
   // otherwise returns the total output edge count from node 'id'.
-  unsigned getOutEdgeCount(unsigned id, Value memref = nullptr);
+  unsigned getOutEdgeCount(unsigned id, Value memref = nullptr) const;
 
   /// Return all nodes which define SSA values used in node 'id'.
-  void gatherDefiningNodes(unsigned id, DenseSet<unsigned> &definingNodes);
+  void gatherDefiningNodes(unsigned id,
+                           DenseSet<unsigned> &definingNodes) const;
 
   // Computes and returns an insertion point operation, before which the
   // the fused <srcId, dstId> loop nest can be inserted while preserving
   // dependences. Returns nullptr if no such insertion point is found.
-  Operation *getFusedLoopNestInsertionPoint(unsigned srcId, unsigned dstId);
+  Operation *getFusedLoopNestInsertionPoint(unsigned srcId,
+                                            unsigned dstId) const;
 
   // Updates edge mappings from node 'srcId' to node 'dstId' after fusing them,
   // taking into account that:
@@ -401,10 +416,10 @@ private:
 //      %v = affine.load %0[%i1] : memref<100xf32>    // 'depSinkAccess'
 //    }
 //
-void getComputationSliceState(Operation *depSourceOp, Operation *depSinkOp,
-                              FlatAffineValueConstraints *dependenceConstraints,
-                              unsigned loopDepth, bool isBackwardSlice,
-                              ComputationSliceState *sliceState);
+void getComputationSliceState(
+    Operation *depSourceOp, Operation *depSinkOp,
+    const FlatAffineValueConstraints &dependenceConstraints, unsigned loopDepth,
+    bool isBackwardSlice, ComputationSliceState *sliceState);
 
 /// Return the number of iterations for the `slicetripCountMap` provided.
 uint64_t getSliceIterationCount(
@@ -485,6 +500,8 @@ struct MemRefRegion {
   ///    to slice operands (which correspond to symbols).
   /// If 'addMemRefDimBounds' is true, constant upper/lower bounds
   /// [0, memref.getDimSize(i)) are added for each MemRef dimension 'i'.
+  /// If `dropLocalVars` is true, all local variables in `cst` are projected
+  /// out.
   ///
   ///  For example, the memref region for this operation at loopDepth = 1 will
   ///  be:
@@ -498,9 +515,14 @@ struct MemRefRegion {
   ///   {memref = %A, write = false, {%i <= m0 <= %i + 7} }
   /// The last field is a 2-d FlatAffineValueConstraints symbolic in %i.
   ///
+  /// If `dropOuterIVs` is true, project out any IVs other than those among
+  /// `loopDepth` surrounding IVs, which would be symbols. If `dropOuterIVs`
+  /// is false, the IVs would be turned into local variables instead of being
+  /// projected out.
   LogicalResult compute(Operation *op, unsigned loopDepth,
                         const ComputationSliceState *sliceState = nullptr,
-                        bool addMemRefDimBounds = true);
+                        bool addMemRefDimBounds = true,
+                        bool dropLocalVars = true, bool dropOuterIVs = true);
 
   FlatAffineValueConstraints *getConstraints() { return &cst; }
   const FlatAffineValueConstraints *getConstraints() const { return &cst; }
@@ -515,30 +537,17 @@ struct MemRefRegion {
   /// corresponding dimension-wise bounds major to minor. The number of elements
   /// and all the dimension-wise bounds are guaranteed to be non-negative. We
   /// use int64_t instead of uint64_t since index types can be at most
-  /// int64_t. `lbs` are set to the lower bounds for each of the rank
-  /// dimensions, and lbDivisors contains the corresponding denominators for
-  /// floorDivs.
+  /// int64_t. `lbs` are set to the lower bound maps for each of the rank
+  /// dimensions where each of these maps is purely symbolic in the constraints
+  /// set's symbols.
   std::optional<int64_t> getConstantBoundingSizeAndShape(
       SmallVectorImpl<int64_t> *shape = nullptr,
-      std::vector<SmallVector<int64_t, 4>> *lbs = nullptr,
-      SmallVectorImpl<int64_t> *lbDivisors = nullptr) const;
+      SmallVectorImpl<AffineMap> *lbs = nullptr) const;
 
   /// Gets the lower and upper bound map for the dimensional variable at
   /// `pos`.
   void getLowerAndUpperBound(unsigned pos, AffineMap &lbMap,
                              AffineMap &ubMap) const;
-
-  /// A wrapper around FlatAffineValueConstraints::getConstantBoundOnDimSize().
-  /// 'pos' corresponds to the position of the memref shape's dimension (major
-  /// to minor) which matches 1:1 with the dimensional variable positions in
-  /// 'cst'.
-  std::optional<int64_t>
-  getConstantBoundOnDimSize(unsigned pos,
-                            SmallVectorImpl<int64_t> *lb = nullptr,
-                            int64_t *lbFloorDivisor = nullptr) const {
-    assert(pos < getRank() && "invalid position");
-    return cst.getConstantBoundOnDimSize64(pos, lb);
-  }
 
   /// Returns the size of this MemRefRegion in bytes.
   std::optional<int64_t> getRegionSize();
@@ -609,6 +618,14 @@ unsigned getInnermostCommonLoopDepth(
 FailureOr<AffineValueMap>
 simplifyConstrainedMinMaxOp(Operation *op,
                             FlatAffineValueConstraints constraints);
+
+/// Find the innermost common `Block` of `a` and `b` in the affine scope
+/// that `a` and `b` are part of. Return nullptr if they belong to different
+/// affine scopes. Also, return nullptr if they do not have a common `Block`
+/// ancestor (for eg., when they are part of the `then` and `else` regions
+/// of an op that itself starts an affine scope.
+mlir::Block *findInnermostCommonBlockInScope(mlir::Operation *a,
+                                             mlir::Operation *b);
 
 } // namespace affine
 } // namespace mlir

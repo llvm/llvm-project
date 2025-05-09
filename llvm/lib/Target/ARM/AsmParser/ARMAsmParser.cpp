@@ -288,6 +288,10 @@ class ARMAsmParser : public MCTargetAsmParser {
 
   SmallVector<MCInst, 4> PendingConditionalInsts;
 
+  void onEndOfFile() override {
+    flushPendingInstructions(getParser().getStreamer());
+  }
+
   void flushPendingInstructions(MCStreamer &Out) override {
     if (!inImplicitITBlock()) {
       assert(PendingConditionalInsts.size() == 0);
@@ -451,7 +455,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   bool parseMemory(OperandVector &);
   bool parseOperand(OperandVector &, StringRef Mnemonic);
   bool parseImmExpr(int64_t &Out);
-  bool parsePrefix(ARMMCExpr::VariantKind &RefKind);
+  bool parsePrefix(ARMMCExpr::Specifier &);
   bool parseMemRegOffsetShift(ARM_AM::ShiftOpc &ShiftType,
                               unsigned &ShiftAmount);
   bool parseLiteralValues(unsigned Size, SMLoc L);
@@ -744,9 +748,6 @@ public:
                         SMLoc IDLoc, OperandVector &Operands);
   void ReportNearMisses(SmallVectorImpl<NearMissInfo> &NearMisses, SMLoc IDLoc,
                         OperandVector &Operands);
-
-  MCSymbolRefExpr::VariantKind
-  getVariantKindForName(StringRef Name) const override;
 
   void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override;
 
@@ -1327,8 +1328,8 @@ public:
       // We want to avoid matching :upper16: and :lower16: as we want these
       // expressions to match in isImm0_65535Expr()
       const ARMMCExpr *ARM16Expr = dyn_cast<ARMMCExpr>(getImm());
-      return (!ARM16Expr || (ARM16Expr->getKind() != ARMMCExpr::VK_ARM_HI16 &&
-                             ARM16Expr->getKind() != ARMMCExpr::VK_ARM_LO16));
+      return (!ARM16Expr || (ARM16Expr->getSpecifier() != ARMMCExpr::VK_HI16 &&
+                             ARM16Expr->getSpecifier() != ARMMCExpr::VK_LO16));
     }
     if (!isImm()) return false;
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
@@ -6424,16 +6425,15 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     // ":upper8_15:", expression prefixes
     // FIXME: Check it's an expression prefix,
     // e.g. (FOO - :lower16:BAR) isn't legal.
-    ARMMCExpr::VariantKind RefKind;
-    if (parsePrefix(RefKind))
+    ARMMCExpr::Specifier Spec;
+    if (parsePrefix(Spec))
       return true;
 
     const MCExpr *SubExprVal;
     if (getParser().parseExpression(SubExprVal))
       return true;
 
-    const MCExpr *ExprVal = ARMMCExpr::create(RefKind, SubExprVal,
-                                              getContext());
+    const MCExpr *ExprVal = ARMMCExpr::create(Spec, SubExprVal, getContext());
     E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
     Operands.push_back(ARMOperand::CreateImm(ExprVal, S, E, *this));
     return false;
@@ -6472,9 +6472,9 @@ bool ARMAsmParser::parseImmExpr(int64_t &Out) {
 // parsePrefix - Parse ARM 16-bit relocations expression prefixes, i.e.
 // :lower16: and :upper16: and Thumb 8-bit relocation expression prefixes, i.e.
 // :upper8_15:, :upper0_7:, :lower8_15: and :lower0_7:
-bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
+bool ARMAsmParser::parsePrefix(ARMMCExpr::Specifier &Spec) {
   MCAsmParser &Parser = getParser();
-  RefKind = ARMMCExpr::VK_ARM_None;
+  Spec = ARMMCExpr::VK_None;
 
   // consume an optional '#' (GNU compatibility)
   if (getLexer().is(AsmToken::Hash))
@@ -6496,15 +6496,15 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
   };
   static const struct PrefixEntry {
     const char *Spelling;
-    ARMMCExpr::VariantKind VariantKind;
+    ARMMCExpr::Specifier Spec;
     uint8_t SupportedFormats;
   } PrefixEntries[] = {
-      {"upper16", ARMMCExpr::VK_ARM_HI16, COFF | ELF | MACHO},
-      {"lower16", ARMMCExpr::VK_ARM_LO16, COFF | ELF | MACHO},
-      {"upper8_15", ARMMCExpr::VK_ARM_HI_8_15, ELF},
-      {"upper0_7", ARMMCExpr::VK_ARM_HI_0_7, ELF},
-      {"lower8_15", ARMMCExpr::VK_ARM_LO_8_15, ELF},
-      {"lower0_7", ARMMCExpr::VK_ARM_LO_0_7, ELF},
+      {"upper16", ARMMCExpr::VK_HI16, COFF | ELF | MACHO},
+      {"lower16", ARMMCExpr::VK_LO16, COFF | ELF | MACHO},
+      {"upper8_15", ARMMCExpr::VK_HI_8_15, ELF},
+      {"upper0_7", ARMMCExpr::VK_HI_0_7, ELF},
+      {"lower8_15", ARMMCExpr::VK_LO_8_15, ELF},
+      {"lower0_7", ARMMCExpr::VK_LO_0_7, ELF},
   };
 
   StringRef IDVal = Parser.getTok().getIdentifier();
@@ -6546,7 +6546,7 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
     return true;
   }
 
-  RefKind = Prefix->VariantKind;
+  Spec = Prefix->Spec;
   Parser.Lex();
 
   if (getLexer().isNot(AsmToken::Colon)) {
@@ -6881,10 +6881,10 @@ static bool isThumbI8Relocation(MCParsedAsmOperand &MCOp) {
   if (!E)
     return false;
   const ARMMCExpr *ARM16Expr = dyn_cast<ARMMCExpr>(E);
-  if (ARM16Expr && (ARM16Expr->getKind() == ARMMCExpr::VK_ARM_HI_8_15 ||
-                    ARM16Expr->getKind() == ARMMCExpr::VK_ARM_HI_0_7 ||
-                    ARM16Expr->getKind() == ARMMCExpr::VK_ARM_LO_8_15 ||
-                    ARM16Expr->getKind() == ARMMCExpr::VK_ARM_LO_0_7))
+  if (ARM16Expr && (ARM16Expr->getSpecifier() == ARMMCExpr::VK_HI_8_15 ||
+                    ARM16Expr->getSpecifier() == ARMMCExpr::VK_HI_0_7 ||
+                    ARM16Expr->getSpecifier() == ARMMCExpr::VK_LO_8_15 ||
+                    ARM16Expr->getSpecifier() == ARMMCExpr::VK_LO_0_7))
     return true;
   return false;
 }
@@ -6982,7 +6982,7 @@ void ARMAsmParser::fixupGNULDRDAlias(StringRef Mnemonic,
   }
   if (Op2.getReg() == ARM::PC)
     return;
-  unsigned PairedReg = GPR.getRegister(RtEncoding + 1);
+  MCRegister PairedReg = GPR.getRegister(RtEncoding + 1);
   if (!PairedReg || PairedReg == ARM::PC ||
       (PairedReg == ARM::SP && !hasV8Ops()))
     return;
@@ -8288,8 +8288,8 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
     if (!E) break;
     const ARMMCExpr *ARM16Expr = dyn_cast<ARMMCExpr>(E);
-    if (!ARM16Expr || (ARM16Expr->getKind() != ARMMCExpr::VK_ARM_HI16 &&
-                       ARM16Expr->getKind() != ARMMCExpr::VK_ARM_LO16))
+    if (!ARM16Expr || (ARM16Expr->getSpecifier() != ARMMCExpr::VK_HI16 &&
+                       ARM16Expr->getSpecifier() != ARMMCExpr::VK_LO16))
       return Error(
           Op.getStartLoc(),
           "immediate expression for mov requires :lower16: or :upper16");
@@ -9065,7 +9065,6 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
       Out.emitLabel(Dot);
       const MCExpr *OpExpr = Inst.getOperand(2).getExpr();
       const MCExpr *InstPC = MCSymbolRefExpr::create(Dot,
-                                                     MCSymbolRefExpr::VK_None,
                                                      getContext());
       const MCExpr *Const8 = MCConstantExpr::create(8, getContext());
       const MCExpr *ReadPC = MCBinaryExpr::createAdd(InstPC, Const8,
@@ -11673,37 +11672,6 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
   return false;
 }
 
-MCSymbolRefExpr::VariantKind
-ARMAsmParser::getVariantKindForName(StringRef Name) const {
-  return StringSwitch<MCSymbolRefExpr::VariantKind>(Name.lower())
-      .Case("funcdesc", MCSymbolRefExpr::VK_FUNCDESC)
-      .Case("got", MCSymbolRefExpr::VK_GOT)
-      .Case("got_prel", MCSymbolRefExpr::VK_ARM_GOT_PREL)
-      .Case("gotfuncdesc", MCSymbolRefExpr::VK_GOTFUNCDESC)
-      .Case("gotoff", MCSymbolRefExpr::VK_GOTOFF)
-      .Case("gotofffuncdesc", MCSymbolRefExpr::VK_GOTOFFFUNCDESC)
-      .Case("gottpoff", MCSymbolRefExpr::VK_GOTTPOFF)
-      .Case("gottpoff_fdpic", MCSymbolRefExpr::VK_GOTTPOFF_FDPIC)
-      .Case("imgrel", MCSymbolRefExpr::VK_COFF_IMGREL32)
-      .Case("none", MCSymbolRefExpr::VK_ARM_NONE)
-      .Case("plt", MCSymbolRefExpr::VK_PLT)
-      .Case("prel31", MCSymbolRefExpr::VK_ARM_PREL31)
-      .Case("sbrel", MCSymbolRefExpr::VK_ARM_SBREL)
-      .Case("secrel32", MCSymbolRefExpr::VK_SECREL)
-      .Case("target1", MCSymbolRefExpr::VK_ARM_TARGET1)
-      .Case("target2", MCSymbolRefExpr::VK_ARM_TARGET2)
-      .Case("tlscall", MCSymbolRefExpr::VK_TLSCALL)
-      .Case("tlsdesc", MCSymbolRefExpr::VK_TLSDESC)
-      .Case("tlsgd", MCSymbolRefExpr::VK_TLSGD)
-      .Case("tlsgd_fdpic", MCSymbolRefExpr::VK_TLSGD_FDPIC)
-      .Case("tlsld", MCSymbolRefExpr::VK_TLSLD)
-      .Case("tlsldm", MCSymbolRefExpr::VK_TLSLDM)
-      .Case("tlsldm_fdpic", MCSymbolRefExpr::VK_TLSLDM_FDPIC)
-      .Case("tlsldo", MCSymbolRefExpr::VK_ARM_TLSLDO)
-      .Case("tpoff", MCSymbolRefExpr::VK_TPOFF)
-      .Default(MCSymbolRefExpr::VK_Invalid);
-}
-
 void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
   // We need to flush the current implicit IT block on a label, because it is
   // not legal to branch into an IT block.
@@ -11712,7 +11680,7 @@ void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
 
 void ARMAsmParser::onLabelParsed(MCSymbol *Symbol) {
   if (NextSymbolIsThumb) {
-    getParser().getStreamer().emitThumbFunc(Symbol);
+    getTargetStreamer().emitThumbFunc(Symbol);
     NextSymbolIsThumb = false;
   }
 }
@@ -11732,7 +11700,7 @@ bool ARMAsmParser::parseDirectiveThumbFunc(SMLoc L) {
         Parser.getTok().is(AsmToken::String)) {
       MCSymbol *Func = getParser().getContext().getOrCreateSymbol(
           Parser.getTok().getIdentifier());
-      getParser().getStreamer().emitThumbFunc(Func);
+      getTargetStreamer().emitThumbFunc(Func);
       Parser.Lex();
       if (parseEOL())
         return true;
@@ -11878,7 +11846,6 @@ bool ARMAsmParser::parseDirectiveArch(SMLoc L) {
     return Error(L, "Unknown arch name");
 
   bool WasThumb = isThumb();
-  Triple T;
   MCSubtargetInfo &STI = copySTI();
   STI.setDefaultFeatures("", /*TuneCPU*/ "",
                          ("+" + ARM::getArchName(ID)).str());
@@ -12468,9 +12435,9 @@ bool ARMAsmParser::parseDirectiveTLSDescSeq(SMLoc L) {
   if (getLexer().isNot(AsmToken::Identifier))
     return TokError("expected variable after '.tlsdescseq' directive");
 
-  const MCSymbolRefExpr *SRE =
-    MCSymbolRefExpr::create(Parser.getTok().getIdentifier(),
-                            MCSymbolRefExpr::VK_ARM_TLSDESCSEQ, getContext());
+  auto *Sym = getContext().getOrCreateSymbol(Parser.getTok().getIdentifier());
+  const auto *SRE =
+      MCSymbolRefExpr::create(Sym, ARMMCExpr::VK_TLSDESCSEQ, getContext());
   Lex();
 
   if (parseEOL())
@@ -13002,7 +12969,7 @@ bool ARMAsmParser::enableArchExtFeature(StringRef Name, SMLoc &ExtLoc) {
       {ARM::AEK_CRYPTO,
        {Feature_HasV8Bit},
        {ARM::FeatureCrypto, ARM::FeatureNEON, ARM::FeatureFPARMv8}},
-      {(ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP),
+      {(ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP),
        {Feature_HasV8_1MMainlineBit},
        {ARM::HasMVEFloatOps}},
       {ARM::AEK_FP,

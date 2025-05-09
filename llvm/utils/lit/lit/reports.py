@@ -286,7 +286,7 @@ class TimeTraceReport(Report):
 
         json_data = {"traceEvents": events}
 
-        json.dump(json_data, time_trace_file, indent=2, sort_keys=True)
+        json.dump(json_data, file, indent=2, sort_keys=True)
 
     def _get_test_event(self, test, first_start_time):
         test_name = test.getFullName()

@@ -576,7 +576,9 @@ def FeatureSME_MOP4: ExtensionWithMArch<"sme-mop4", "SME_MOP4", "FEAT_SME_MOP4",
 def FeatureSME_TMOP: ExtensionWithMArch<"sme-tmop", "SME_TMOP", "FEAT_SME_TMOP",
   "Enable SME Structured sparsity outer product instructions.", [FeatureSME2]>;
 
-//===----------------------------------------------------------------------===//
+def FeatureSSVE_FEXPA : ExtensionWithMArch<"ssve-fexpa", "SSVE_FEXPA", "FEAT_SSVE_FEXPA",
+  "Enable SVE FEXPA instruction in Streaming SVE mode", [FeatureSME2]>;
+
 //  Other Features
 //===----------------------------------------------------------------------===//
 
@@ -634,6 +636,11 @@ def FeatureStrictAlign : SubtargetFeature<"strict-align",
                                           "RequiresStrictAlign", "true",
                                           "Disallow all unaligned memory "
                                           "access">;
+
+def FeatureExecuteOnly : SubtargetFeature<"execute-only",
+                                          "GenExecuteOnly", "true",
+                                          "Enable the generation of "
+                                          "execute only code.">;
 
 foreach i = {1-7,9-15,18,20-28} in
     def FeatureReserveX#i : SubtargetFeature<"reserve-x"#i, "ReserveXRegister["#i#"]", "true",
@@ -812,6 +819,11 @@ def FeatureUseFixedOverScalableIfEqualCost : SubtargetFeature<"use-fixed-over-sc
 // For performance reasons we prefer to use ldapr to ldapur on certain cores.
 def FeatureAvoidLDAPUR : SubtargetFeature<"avoid-ldapur", "AvoidLDAPUR", "true",
   "Prefer add+ldapr to offset ldapur">;
+
+// Some INC/DEC forms have better latency and throughput than ADDVL.
+def FeatureDisableFastIncVL : SubtargetFeature<"disable-fast-inc-vl",
+                                               "HasDisableFastIncVL", "true",
+                                               "Do not prefer INC/DEC, ALL, { 1, 2, 4 } over ADDVL">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.

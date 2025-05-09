@@ -60,7 +60,7 @@ class LangOptions;
 class MacroDefinitionRecord;
 class MacroInfo;
 class Module;
-class InMemoryModuleCache;
+class ModuleCache;
 class ModuleFileExtension;
 class ModuleFileExtensionWriter;
 class NamedDecl;
@@ -74,6 +74,10 @@ class Stmt;
 class StoredDeclsList;
 class SwitchCase;
 class Token;
+
+namespace serialization {
+enum class DeclUpdateKind;
+} // namespace serialization
 
 namespace SrcMgr {
 class FileInfo;
@@ -117,7 +121,7 @@ private:
   const SmallVectorImpl<char> &Buffer;
 
   /// The PCM manager which manages memory buffers for pcm files.
-  InMemoryModuleCache &ModuleCache;
+  ModuleCache &ModCache;
 
   /// The preprocessor we're writing.
   Preprocessor *PP = nullptr;
@@ -370,12 +374,11 @@ private:
   ///
   /// Only meaningful for standard C++ named modules. See the comments in
   /// createSignatureForNamedModule() for details.
-  llvm::DenseSet<Module *> TouchedTopLevelModules;
+  llvm::SetVector<Module *> TouchedTopLevelModules;
 
   /// An update to a Decl.
   class DeclUpdate {
-    /// A DeclUpdateKind.
-    unsigned Kind;
+    serialization::DeclUpdateKind Kind;
     union {
       const Decl *Dcl;
       void *Type;
@@ -386,18 +389,21 @@ private:
     };
 
   public:
-    DeclUpdate(unsigned Kind) : Kind(Kind), Dcl(nullptr) {}
-    DeclUpdate(unsigned Kind, const Decl *Dcl) : Kind(Kind), Dcl(Dcl) {}
-    DeclUpdate(unsigned Kind, QualType Type)
+    DeclUpdate(serialization::DeclUpdateKind Kind) : Kind(Kind), Dcl(nullptr) {}
+    DeclUpdate(serialization::DeclUpdateKind Kind, const Decl *Dcl)
+        : Kind(Kind), Dcl(Dcl) {}
+    DeclUpdate(serialization::DeclUpdateKind Kind, QualType Type)
         : Kind(Kind), Type(Type.getAsOpaquePtr()) {}
-    DeclUpdate(unsigned Kind, SourceLocation Loc)
+    DeclUpdate(serialization::DeclUpdateKind Kind, SourceLocation Loc)
         : Kind(Kind), Loc(Loc.getRawEncoding()) {}
-    DeclUpdate(unsigned Kind, unsigned Val) : Kind(Kind), Val(Val) {}
-    DeclUpdate(unsigned Kind, Module *M) : Kind(Kind), Mod(M) {}
-    DeclUpdate(unsigned Kind, const Attr *Attribute)
-          : Kind(Kind), Attribute(Attribute) {}
+    DeclUpdate(serialization::DeclUpdateKind Kind, unsigned Val)
+        : Kind(Kind), Val(Val) {}
+    DeclUpdate(serialization::DeclUpdateKind Kind, Module *M)
+        : Kind(Kind), Mod(M) {}
+    DeclUpdate(serialization::DeclUpdateKind Kind, const Attr *Attribute)
+        : Kind(Kind), Attribute(Attribute) {}
 
-    unsigned getKind() const { return Kind; }
+    serialization::DeclUpdateKind getKind() const { return Kind; }
     const Decl *getDecl() const { return Dcl; }
     QualType getType() const { return QualType::getFromOpaquePtr(Type); }
 
@@ -571,7 +577,7 @@ private:
   std::pair<ASTFileSignature, ASTFileSignature> createSignature() const;
   ASTFileSignature createSignatureForNamedModule() const;
 
-  void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
+  void WriteInputFiles(SourceManager &SourceMgr);
   void WriteSourceManagerBlock(SourceManager &SourceMgr);
   void WritePreprocessor(const Preprocessor &PP, bool IsModule);
   void WriteHeaderSearch(const HeaderSearch &HS);
@@ -682,7 +688,7 @@ public:
   /// Create a new precompiled header writer that outputs to
   /// the given bitstream.
   ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
-            InMemoryModuleCache &ModuleCache,
+            ModuleCache &ModCache,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
             bool IncludeTimestamps = true, bool BuildingImplicitModule = false,
             bool GeneratingReducedBMI = false);
@@ -750,9 +756,6 @@ public:
 
   /// Get the unique number used to refer to the given macro.
   serialization::MacroID getMacroRef(MacroInfo *MI, const IdentifierInfo *Name);
-
-  /// Determine the ID of an already-emitted macro.
-  serialization::MacroID getMacroID(MacroInfo *MI);
 
   uint32_t getMacroDirectivesOffset(const IdentifierInfo *Name);
 
@@ -989,9 +992,8 @@ protected:
   virtual Module *getEmittingModule(ASTContext &Ctx);
 
 public:
-  PCHGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-               StringRef OutputFile, StringRef isysroot,
-               std::shared_ptr<PCHBuffer> Buffer,
+  PCHGenerator(Preprocessor &PP, ModuleCache &ModCache, StringRef OutputFile,
+               StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
                bool BuildingImplicitModule = false,
@@ -1013,14 +1015,14 @@ class CXX20ModulesGenerator : public PCHGenerator {
 protected:
   virtual Module *getEmittingModule(ASTContext &Ctx) override;
 
-  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+  CXX20ModulesGenerator(Preprocessor &PP, ModuleCache &ModCache,
                         StringRef OutputFile, bool GeneratingReducedBMI,
                         bool AllowASTWithErrors);
 
 public:
-  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+  CXX20ModulesGenerator(Preprocessor &PP, ModuleCache &ModCache,
                         StringRef OutputFile, bool AllowASTWithErrors = false)
-      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
+      : CXX20ModulesGenerator(PP, ModCache, OutputFile,
                               /*GeneratingReducedBMI=*/false,
                               AllowASTWithErrors) {}
 
@@ -1031,9 +1033,9 @@ class ReducedBMIGenerator : public CXX20ModulesGenerator {
   void anchor() override;
 
 public:
-  ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+  ReducedBMIGenerator(Preprocessor &PP, ModuleCache &ModCache,
                       StringRef OutputFile, bool AllowASTWithErrors = false)
-      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
+      : CXX20ModulesGenerator(PP, ModCache, OutputFile,
                               /*GeneratingReducedBMI=*/true,
                               AllowASTWithErrors) {}
 };

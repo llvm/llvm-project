@@ -9,6 +9,7 @@ load("@build_bazel_apple_support//rules:apple_genrule.bzl", "apple_genrule")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
 load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
+load("//mlir:build_defs.bzl", "cc_headers_only")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
@@ -130,7 +131,7 @@ expand_template(
         "${LLDB_BUG_REPORT_URL}": "",
     } | select({
         "@platforms//os:macos": {
-            "#cmakedefine HAVE_LIBCOMPRESSION": "#define HAVE_LIBCOMPRESSION",
+            "#cmakedefine01 HAVE_LIBCOMPRESSION": "#define HAVE_LIBCOMPRESSION 1",
             "#cmakedefine01 HAVE_NR_PROCESS_VM_READV": "#define HAVE_NR_PROCESS_VM_READV 0",
             "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 0",
             "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 0",
@@ -139,7 +140,7 @@ expand_template(
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 0",
         },
         "@platforms//os:linux": {
-            "#cmakedefine HAVE_LIBCOMPRESSION": "/* #undef HAVE_LIBCOMPRESSION */",
+            "#cmakedefine01 HAVE_LIBCOMPRESSION": "#define HAVE_LIBCOMPRESSION 0",
             "#cmakedefine01 HAVE_NR_PROCESS_VM_READV": "#define HAVE_NR_PROCESS_VM_READV 1",
             "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 1",
             "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 1",
@@ -285,6 +286,7 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         "//llvm:Support",
+        "//llvm:Telemetry",
     ],
 )
 
@@ -331,16 +333,10 @@ cc_library(
 gentbl_cc_library(
     name = "InterpreterProperties",
     strip_include_prefix = "source/Interpreter",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "source/Interpreter/InterpreterProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "source/Interpreter/InterpreterPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "source/Interpreter/InterpreterProperties.inc": ["-gen-lldb-property-defs"],
+        "source/Interpreter/InterpreterPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = ":lldb-tblgen",
     td_file = "source/Interpreter/InterpreterProperties.td",
     deps = [":CoreTdFiles"],
@@ -394,6 +390,7 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         "//llvm:Support",
+        "//llvm:Telemetry",
     ],
 )
 
@@ -405,12 +402,7 @@ td_library(
 gentbl_cc_library(
     name = "CommandOptions",
     strip_include_prefix = "source/Commands",
-    tbl_outs = [
-        (
-            ["-gen-lldb-option-defs"],
-            "source/Commands/CommandOptions.inc",
-        ),
-    ],
+    tbl_outs = {"source/Commands/CommandOptions.inc": ["-gen-lldb-option-defs"]},
     tblgen = ":lldb-tblgen",
     td_file = "source/Commands/Options.td",
     deps = [":CommandsTdFiles"],
@@ -494,10 +486,8 @@ cc_library(
 
 objc_library(
     name = "HostMacOSXObjCXX",
-    srcs = glob([
-        "source/Host/macosx/objcxx/*.mm",
-    ]),
     copts = OBJCPP_COPTS,
+    non_arc_srcs = glob(["source/Host/macosx/objcxx/*.mm"]),
     tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
@@ -583,6 +573,11 @@ cc_library(
     }),
 )
 
+cc_headers_only(
+    name = "HostHeaders",
+    src = ":Host",
+)
+
 td_library(
     name = "CoreTdFiles",
     srcs = glob([
@@ -594,16 +589,10 @@ td_library(
 gentbl_cc_library(
     name = "CoreProperties",
     strip_include_prefix = "source/Core",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "source/Core/CoreProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "source/Core/CorePropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "source/Core/CoreProperties.inc": ["-gen-lldb-property-defs"],
+        "source/Core/CorePropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = ":lldb-tblgen",
     td_file = "source/Core/CoreProperties.td",
     deps = [":CoreTdFiles"],
@@ -634,14 +623,18 @@ cc_library(
 
 cc_library(
     name = "Core",
-    srcs = glob([
-        "source/Core/**/*.cpp",
-        "source/ValueObject/**/*.cpp",  # This should be its own library.
-    ]),
-    hdrs = glob([
-        "include/lldb/Core/**/*.h",
-        "include/lldb/ValueObject/**/*.h",  # This should be its own library.
-    ]),
+    srcs = glob(
+        [
+            "source/Core/**/*.cpp",
+            "source/ValueObject/**/*.cpp",  # This should be its own library.
+        ],
+    ),
+    hdrs = glob(
+        [
+            "include/lldb/Core/**/*.h",
+            "include/lldb/ValueObject/**/*.h",  # This should be its own library.
+        ],
+    ),
     includes = ["include"],
     deps = [
         ":BreakpointHeaders",
@@ -655,28 +648,26 @@ cc_library(
         ":SymbolHeaders",
         ":TargetHeaders",
         ":Utility",
+        ":Version",
         "//clang:driver",
         "//lldb/source/Plugins:PluginCPlusPlusLanguageHeaders",
         "//lldb/source/Plugins:PluginObjCLanguageHeaders",
+        "//llvm:BinaryFormat",
         "//llvm:Demangle",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:Telemetry",
+        "//llvm:config",
     ],
 )
 
 gentbl_cc_library(
     name = "TargetProperties",
     strip_include_prefix = "source/Target",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "source/Target/TargetProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "source/Target/TargetPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "source/Target/TargetProperties.inc": ["-gen-lldb-property-defs"],
+        "source/Target/TargetPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = ":lldb-tblgen",
     td_file = "source/Target/TargetProperties.td",
     deps = [":CoreTdFiles"],
@@ -823,10 +814,7 @@ cc_import(
 gentbl_cc_library(
     name = "lldb_options_inc_gen",
     strip_include_prefix = ".",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "Options.inc",
-    )],
+    tbl_outs = {"Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "tools/driver/Options.td",
     deps = ["//llvm:OptParserTdFiles"],
@@ -848,7 +836,8 @@ cc_binary(
     ]),
     deps = [
         ":APIHeaders",
-        ":Host",
+        ":HostHeaders",
+        ":UtilityHeaders",
         ":liblldb.wrapper",
         ":lldb_options_inc_gen",
         "//llvm:Option",
@@ -871,8 +860,8 @@ cc_library(
 
 objc_library(
     name = "DebugServerMacOSX",
-    srcs = glob(["tools/debugserver/source/MacOSX/*.mm"]),
     copts = OBJCPP_COPTS,
+    non_arc_srcs = glob(["tools/debugserver/source/MacOSX/*.mm"]),
     tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
@@ -972,10 +961,7 @@ cc_binary(
 gentbl_cc_library(
     name = "lldb_server_opts_gen",
     strip_include_prefix = ".",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "LLGSOptions.inc",
-    )],
+    tbl_outs = {"LLGSOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "tools/lldb-server/LLGSOptions.td",
     deps = ["//llvm:OptParserTdFiles"],
@@ -1042,10 +1028,7 @@ expand_template(
 gentbl_cc_library(
     name = "lldb_dap_opts_gen",
     strip_include_prefix = "tools/lldb-dap",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/lldb-dap/Options.inc",
-    )],
+    tbl_outs = {"tools/lldb-dap/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "tools/lldb-dap/Options.td",
     deps = ["//llvm:OptParserTdFiles"],
@@ -1054,12 +1037,13 @@ gentbl_cc_library(
 cc_binary(
     name = "lldb-dap",
     srcs = glob([
-        "tools/lldb-dap/*.cpp",
-        "tools/lldb-dap/*.h",
+        "tools/lldb-dap/**/*.cpp",
+        "tools/lldb-dap/**/*.h",
     ]),
     additional_linker_inputs = [
         ":lldb-dap-plist",
     ],
+    includes = ["tools/lldb-dap"],
     linkopts = select({
         "@platforms//os:macos": [
             "-Wl,-sectcreate,__TEXT,__info_plist,$(location :lldb-dap-plist)",

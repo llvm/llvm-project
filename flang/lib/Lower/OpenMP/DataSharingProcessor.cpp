@@ -67,6 +67,8 @@ void DataSharingProcessor::processStep1(
 
 void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
   // 'sections' lastprivate is handled by genOMP()
+  if (mlir::isa<mlir::omp::SectionOp>(op))
+    return;
   if (!mlir::isa<mlir::omp::SectionsOp>(op)) {
     mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
     copyLastPrivatize(op);
@@ -166,7 +168,7 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
 
   if (needInitClone()) {
     Fortran::lower::initializeCloneAtRuntime(converter, *sym, symTable);
-    mightHaveReadHostSym = true;
+    mightHaveReadHostSym.insert(sym);
   }
 }
 
@@ -222,7 +224,7 @@ bool DataSharingProcessor::needBarrier() {
   for (const semantics::Symbol *sym : allPrivatizedSymbols) {
     if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
         (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
-         mightHaveReadHostSym))
+         mightHaveReadHostSym.contains(sym)))
       return true;
   }
   return false;
@@ -257,6 +259,11 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     return;
 
   if (mlir::isa<mlir::omp::WsloopOp>(op) || mlir::isa<mlir::omp::SimdOp>(op)) {
+    mlir::omp::LoopRelatedClauseOps result;
+    llvm::SmallVector<const semantics::Symbol *> iv;
+    collectLoopRelatedInfo(converter, converter.getCurrentLocation(), eval,
+                           clauses, result, iv);
+
     // Update the original variable just before exiting the worksharing
     // loop. Conversion as follows:
     //
@@ -280,9 +287,8 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     mlir::Value cmpOp;
     llvm::SmallVector<mlir::Value> vs;
     vs.reserve(loopOp.getIVs().size());
-    for (auto [iv, ub, step] :
-         llvm::zip_equal(loopOp.getIVs(), loopOp.getLoopUpperBounds(),
-                         loopOp.getLoopSteps())) {
+    for (auto [iv, ub, step] : llvm::zip_equal(
+             loopOp.getIVs(), result.loopUpperBounds, result.loopSteps)) {
       // v = iv + step
       // cmp = step < 0 ? v < ub : v > ub
       mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);
@@ -307,8 +313,10 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
     firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     for (auto [v, loopIV] : llvm::zip_equal(vs, loopIVs)) {
-      assert(loopIV && "loopIV was not set");
-      firOpBuilder.createStoreWithConvert(loc, v, loopIV);
+      hlfir::Entity loopIVEntity{loopIV};
+      loopIVEntity =
+          hlfir::derefPointersAndAllocatables(loc, firOpBuilder, loopIVEntity);
+      firOpBuilder.create<hlfir::AssignOp>(loc, v, loopIVEntity);
     }
     lastPrivIP = firOpBuilder.saveInsertionPoint();
   } else if (mlir::isa<mlir::omp::SectionsOp>(op)) {
@@ -508,6 +516,8 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
 
   lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
   assert(hsb && "Host symbol box not found");
+  hlfir::Entity entity{hsb.getAddr()};
+  bool cannotHaveNonDefaultLowerBounds = !entity.mayHaveNonDefaultLowerBounds();
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
   std::string privatizerName = sym->name().ToString() + ".privatizer";
@@ -528,7 +538,6 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
   // an alloca for a fir.array type there. Get around this by boxing all
   // arrays.
   if (mlir::isa<fir::SequenceType>(allocType)) {
-    hlfir::Entity entity{hsb.getAddr()};
     entity = genVariableBox(symLoc, firOpBuilder, entity);
     privVal = entity.getBase();
     allocType = privVal.getType();
@@ -590,11 +599,11 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
           result.getDeallocRegion(),
           isFirstPrivate ? DeclOperationKind::FirstPrivate
                          : DeclOperationKind::Private,
-          sym);
+          sym, cannotHaveNonDefaultLowerBounds);
       // TODO: currently there are false positives from dead uses of the mold
       // arg
-      if (!result.getInitMoldArg().getUses().empty())
-        mightHaveReadHostSym = true;
+      if (result.initReadsFromMold())
+        mightHaveReadHostSym.insert(sym);
     }
 
     // Populate the `copy` region if this is a `firstprivate`.

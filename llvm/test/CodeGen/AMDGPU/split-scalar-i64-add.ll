@@ -15,7 +15,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() readnone
 ; SI: v_addc_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc
 define amdgpu_kernel void @imp_def_vcc_split_i64_add_0(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %s.val) {
   %v.val = load volatile i32, ptr addrspace(1) %in
-  %vec.0 = insertelement <2 x i32> undef, i32 %s.val, i32 0
+  %vec.0 = insertelement <2 x i32> poison, i32 %s.val, i32 0
   %vec.1 = insertelement <2 x i32> %vec.0, i32 %v.val, i32 1
   %bc = bitcast <2 x i32> %vec.1 to i64
   %add = add i64 %bc, 399
@@ -27,7 +27,7 @@ define amdgpu_kernel void @imp_def_vcc_split_i64_add_0(ptr addrspace(1) %out, pt
 ; SI: s_add_u32 {{s[0-9]+}}, {{s[0-9]+}}, 0x18f
 ; SI: s_addc_u32 {{s[0-9]+}}, 0xf423f, 0
 define amdgpu_kernel void @s_imp_def_vcc_split_i64_add_0(ptr addrspace(1) %out, i32 %val) {
-  %vec.0 = insertelement <2 x i32> undef, i32 %val, i32 0
+  %vec.0 = insertelement <2 x i32> poison, i32 %val, i32 0
   %vec.1 = insertelement <2 x i32> %vec.0, i32 999999, i32 1
   %bc = bitcast <2 x i32> %vec.1 to i64
   %add = add i64 %bc, 399
@@ -40,7 +40,7 @@ define amdgpu_kernel void @s_imp_def_vcc_split_i64_add_0(ptr addrspace(1) %out, 
 ; SI: v_addc_u32
 define amdgpu_kernel void @imp_def_vcc_split_i64_add_1(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val0, i64 %val1) {
   %v.val = load volatile i32, ptr addrspace(1) %in
-  %vec.0 = insertelement <2 x i32> undef, i32 %val0, i32 0
+  %vec.0 = insertelement <2 x i32> poison, i32 %val0, i32 0
   %vec.1 = insertelement <2 x i32> %vec.0, i32 %v.val, i32 1
   %bc = bitcast <2 x i32> %vec.1 to i64
   %add = add i64 %bc, %val1
@@ -52,7 +52,7 @@ define amdgpu_kernel void @imp_def_vcc_split_i64_add_1(ptr addrspace(1) %out, pt
 ; SI: s_add_u32 {{s[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
 ; SI: s_addc_u32 {{s[0-9]+}}, 0x1869f, {{s[0-9]+}}
 define amdgpu_kernel void @s_imp_def_vcc_split_i64_add_1(ptr addrspace(1) %out, i32 %val0, i64 %val1) {
-  %vec.0 = insertelement <2 x i32> undef, i32 %val0, i32 0
+  %vec.0 = insertelement <2 x i32> poison, i32 %val0, i32 0
   %vec.1 = insertelement <2 x i32> %vec.0, i32 99999, i32 1
   %bc = bitcast <2 x i32> %vec.1 to i64
   %add = add i64 %bc, %val1
@@ -68,7 +68,7 @@ define amdgpu_kernel void @imp_def_vcc_split_i64_add_2(ptr addrspace(1) %out, pt
   %tid = call i32 @llvm.amdgcn.workitem.id.x() readnone
   %gep = getelementptr i32, ptr addrspace(1) %in, i32 %tid
   %load = load i32, ptr addrspace(1) %gep
-  %vec.0 = insertelement <2 x i32> undef, i32 %val0, i32 0
+  %vec.0 = insertelement <2 x i32> poison, i32 %val0, i32 0
   %vec.1 = insertelement <2 x i32> %vec.0, i32 %load, i32 1
   %bc = bitcast <2 x i32> %vec.1 to i64
   %add = add i64 %bc, %val1

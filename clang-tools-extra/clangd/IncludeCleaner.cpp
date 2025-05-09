@@ -345,8 +345,9 @@ include_cleaner::Includes convertIncludes(const ParsedAST &AST) {
     // which is based on FileManager::getCanonicalName(ParentDir).
     auto FE = SM.getFileManager().getFileRef(Inc.Resolved);
     if (!FE) {
-      elog("IncludeCleaner: Failed to get an entry for resolved path {0}: {1}",
-           Inc.Resolved, FE.takeError());
+      elog("IncludeCleaner: Failed to get an entry for resolved path '{0}' "
+           "from include {1} : {2}",
+           Inc.Resolved, Inc.Written, FE.takeError());
       continue;
     }
     TransformedInc.Resolved = *FE;

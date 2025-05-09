@@ -23,10 +23,14 @@ if(CLANG_PLUGIN_SUPPORT)
   set(support_plugins SUPPORT_PLUGINS)
 endif()
 
+set(CLANG_BOLT_ALLOWLIST INSTRUMENT PERF LBR)
 set(CLANG_BOLT OFF CACHE STRING "Apply BOLT optimization to Clang. \
-  May be specified as Instrument or Perf or LBR to use a particular profiling \
+May be specified as one of ${CLANG_BOLT_ALLOWLIST} to use a particular profiling \
   mechanism.")
 string(TOUPPER "${CLANG_BOLT}" CLANG_BOLT)
+if (CLANG_BOLT AND NOT CLANG_BOLT IN_LIST CLANG_BOLT_ALLOWLIST)
+    message(FATAL_ERROR "Specified CLANG_BOLT value '${CLANG_BOLT}' is not one of ${CLANG_BOLT_ALLOWLIST}.")
+endif()
 
 if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
   set(CLANG_BOLT_DEPS clear-bolt-fdata llvm-bolt llvm-readobj)
@@ -44,8 +48,7 @@ add_clang_tool(clang
   DEPENDS
   intrinsics_gen
   # These generated headers are included transitively.
-  ARMTargetParserTableGen
-  AArch64TargetParserTableGen
+  target_parser_gen
   ${support_plugins}
   ${CLANG_BOLT_DEPS}
   GENERATE_DRIVER
@@ -164,6 +167,28 @@ if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
   )
   set(LIT_COMMAND "${lit_base_dir}/${lit_file_name}")
 
+  set(CLANG_BOLT_INPUTS $<TARGET_FILE:clang>)
+  set(CLANG_INSTRUMENTED_OUTPUTS ${CLANG_INSTRUMENTED})
+
+  # Add in dynamically linked libraries, if needs be. Currently only supported
+  # on Linux because it relies on LD_PRELOAD for instrumentation.
+  if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if (CLANG_LINK_CLANG_DYLIB)
+     set(CLANG_CPP_BOLT_INSTRUMENTED "clang-cxx-bolt.inst" CACHE STRING
+       "Name of BOLT-instrumented Clang library")
+     set(CLANG_CPP_INSTRUMENTED ${LLVM_RUNTIME_OUTPUT_INTDIR}/${CLANG_CPP_BOLT_INSTRUMENTED})
+     list(APPEND CLANG_BOLT_INPUTS $<TARGET_FILE:clang-cpp>)
+     list(APPEND CLANG_INSTRUMENTED_OUTPUTS ${CLANG_CPP_INSTRUMENTED})
+    endif()
+    if (LLVM_LINK_LLVM_DYLIB)
+      set(LLVM_BOLT_INSTRUMENTED "LLVM-bolt.inst" CACHE STRING
+        "Name of BOLT-instrumented LLVM library")
+      set(LLVM_INSTRUMENTED ${LLVM_RUNTIME_OUTPUT_INTDIR}/${LLVM_BOLT_INSTRUMENTED})
+      list(APPEND CLANG_BOLT_INPUTS $<TARGET_FILE:LLVM>)
+      list(APPEND CLANG_INSTRUMENTED_OUTPUTS ${LLVM_INSTRUMENTED})
+    endif()
+  endif()
+
   # This POST_BUILD command is executed unconditionally even if the clang target
   # is already built.  We need to wrap the whole bolt optimization process in
   # a single python wrapper, so that we can first check if the binary has
@@ -172,15 +197,15 @@ if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
     TARGET clang POST_BUILD
     COMMAND  "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/../../utils/perf-training/perf-helper.py
              bolt-optimize
-	     --method ${CLANG_BOLT}
-	     --input $<TARGET_FILE:clang>
-	     --instrumented-output ${CLANG_INSTRUMENTED}
-	     --fdata ${BOLT_FDATA}
-	     --perf-training-binary-dir ${PERF_TRAINING_BINARY_DIR}
-	     --readelf $<TARGET_FILE:llvm-readobj>
-	     --bolt $<TARGET_FILE:llvm-bolt>
-	     --lit "${LIT_COMMAND}"
-	     --merge-fdata $<TARGET_FILE:merge-fdata>
+             --method ${CLANG_BOLT}
+             --input "${CLANG_BOLT_INPUTS}"
+             --instrumented-output "${CLANG_INSTRUMENTED_OUTPUTS}"
+             --fdata ${BOLT_FDATA}
+             --perf-training-binary-dir ${PERF_TRAINING_BINARY_DIR}
+             --readelf $<TARGET_FILE:llvm-readobj>
+             --bolt $<TARGET_FILE:llvm-bolt>
+             --lit "${LIT_COMMAND}"
+             --merge-fdata $<TARGET_FILE:merge-fdata>
     COMMENT "Optimizing Clang with BOLT"
     USES_TERMINAL
     VERBATIM

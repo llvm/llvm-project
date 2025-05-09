@@ -1269,6 +1269,7 @@ __OMP_TRAIT_PROPERTY(device, arch, x86_64)
 __OMP_TRAIT_PROPERTY(device, arch, amdgcn)
 __OMP_TRAIT_PROPERTY(device, arch, nvptx)
 __OMP_TRAIT_PROPERTY(device, arch, nvptx64)
+__OMP_TRAIT_PROPERTY(device, arch, spirv64)
 
 __OMP_TRAIT_SET(target_device)
 
@@ -1301,6 +1302,7 @@ __OMP_TRAIT_PROPERTY(target_device, arch, x86_64)
 __OMP_TRAIT_PROPERTY(target_device, arch, amdgcn)
 __OMP_TRAIT_PROPERTY(target_device, arch, nvptx)
 __OMP_TRAIT_PROPERTY(target_device, arch, nvptx64)
+__OMP_TRAIT_PROPERTY(target_device, arch, spirv64)
 
 __OMP_TRAIT_SET(implementation)
 

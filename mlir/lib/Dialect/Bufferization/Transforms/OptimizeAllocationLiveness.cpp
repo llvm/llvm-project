@@ -17,7 +17,10 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "optimize-allocation-liveness"
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
@@ -25,7 +28,7 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_OPTIMIZEALLOCATIONLIVENESS
+#define GEN_PASS_DEF_OPTIMIZEALLOCATIONLIVENESSPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -88,8 +91,21 @@ static bool hasMemoryAllocEffect(MemoryEffectOpInterface memEffectOp) {
   return false;
 }
 
+/// Extracts OpResult's with Allocate effects from given op
+static SmallVector<OpResult>
+collectAllocations(MemoryEffectOpInterface allocOp) {
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  allocOp.getEffects(effects);
+  SmallVector<OpResult> allocResults;
+  for (const MemoryEffects::EffectInstance &it : effects)
+    if (isa<MemoryEffects::Allocate>(it.getEffect()))
+      if (auto val = it.getValue(); val && val.getDefiningOp() == allocOp)
+        allocResults.push_back(cast<OpResult>(val));
+  return allocResults;
+}
+
 struct OptimizeAllocationLiveness
-    : public bufferization::impl::OptimizeAllocationLivenessBase<
+    : public bufferization::impl::OptimizeAllocationLivenessPassBase<
           OptimizeAllocationLiveness> {
 public:
   OptimizeAllocationLiveness() = default;
@@ -109,7 +125,15 @@ public:
       auto allocOp = memEffectOp;
       LDBG("Checking alloc op: " << allocOp);
 
-      auto deallocOp = findUserWithFreeSideEffect(allocOp->getResult(0));
+      SmallVector<OpResult> allocationResults = collectAllocations(allocOp);
+      // Multiple allocations from a single op are not considered here yet.
+      if (allocationResults.size() != 1)
+        return WalkResult::advance();
+
+      OpResult allocResult = allocationResults[0];
+      LDBG("On allocation result: " << allocResult);
+
+      auto *deallocOp = findUserWithFreeSideEffect(allocResult);
       if (!deallocOp || (deallocOp->getBlock() != allocOp->getBlock())) {
         // The pass handles allocations that have a single dealloc op in the
         // same block. We also should not hoist the dealloc op out of
@@ -119,9 +143,9 @@ public:
 
       Operation *lastUser = nullptr;
       const BufferViewFlowAnalysis::ValueSetT &deps =
-          analysis.resolve(allocOp->getResult(0));
+          analysis.resolve(allocResult);
       for (auto dep : llvm::make_early_inc_range(deps)) {
-        for (auto user : dep.getUsers()) {
+        for (auto *user : dep.getUsers()) {
           // We are looking for a non dealloc op user.
           // check if user is the dealloc op itself.
           if (user == deallocOp)
@@ -150,12 +174,3 @@ public:
 };
 
 } // end anonymous namespace
-
-//===----------------------------------------------------------------------===//
-// OptimizeAllocatinliveness construction
-//===----------------------------------------------------------------------===//
-
-std::unique_ptr<Pass>
-mlir::bufferization::createOptimizeAllocationLivenessPass() {
-  return std::make_unique<OptimizeAllocationLiveness>();
-}

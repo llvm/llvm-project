@@ -1,6 +1,6 @@
 // REQUIRES: x86_64-target-arch
 // REQUIRES: !windows
-// RUN: %clang -Wno-constant-conversion -Wno-array-bounds -Wno-division-by-zero -Wno-shift-negative-value -Wno-shift-count-negative -Wno-int-to-pointer-cast -O0 -fsanitize=array-bounds,float-cast-overflow,implicit-integer-sign-change,implicit-signed-integer-truncation,implicit-unsigned-integer-truncation,integer-divide-by-zero,pointer-overflow,shift-base,shift-exponent,signed-integer-overflow,unsigned-integer-overflow,unsigned-shift-base,vla-bound %s -o %t1 && %run %t1 2>&1 | FileCheck %s
+// RUN: %clang -Wno-constant-conversion -Wno-array-bounds -Wno-division-by-zero -Wno-shift-negative-value -Wno-shift-count-negative -Wno-int-to-pointer-cast -O0 -fsanitize=array-bounds,float-cast-overflow,implicit-integer-sign-change,implicit-signed-integer-truncation,implicit-unsigned-integer-truncation,integer-divide-by-zero,pointer-overflow,shift-base,shift-exponent,signed-integer-overflow,unsigned-integer-overflow,unsigned-shift-base,vla-bound -fsanitize-address-use-after-return=never %s -o %t1 && %run %t1 2>&1 | FileCheck %s
 
 #include <stdint.h>
 #include <stdio.h>

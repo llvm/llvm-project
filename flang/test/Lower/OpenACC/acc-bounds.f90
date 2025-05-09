@@ -182,4 +182,19 @@ contains
 ! CHECK: %[[NOCREATE:.*]] = acc.nocreate varPtr(%[[DECL_A]]#1 : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xf32>> {name = "a(1:n)"}
 ! CHECK: acc.data dataOperands(%[[NOCREATE]] : !fir.ref<!fir.array<?xf32>>) {
 
+  subroutine acc_explicit_shape_3d(arr)
+    real :: arr(1000,100,10)
+    !$acc data copyin(arr(:1000,:100,:10))
+    !$acc end data
+  end subroutine
+
+! Test that the stride is cummulative of the lower extents
+! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_explicit_shape_3d(
+! CHECK-SAME: %[[ARR:.*]]: !fir.ref<!fir.array<1000x100x10xf32>> {fir.bindc_name = "arr"}) {
+! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%c0 : index) upperbound(%c999 : index) extent(%c1000 : index) stride(%c1{{.*}} : index) startIdx(%c1 : index)
+! CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%c0 : index) upperbound(%c99 : index) extent(%c100 : index) stride(%c1000{{.*}} : index) startIdx(%c1 : index)
+! CHECK: %[[BOUND3:.*]] = acc.bounds lowerbound(%c0 : index) upperbound(%c9 : index) extent(%c10 : index) stride(%c100000{{.*}} : index) startIdx(%c1 : index)
+! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.array<1000x100x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]], %[[BOUND3]]) -> !fir.ref<!fir.array<1000x100x10xf32>> {name = "arr(:1000,:100,:10)"}
+! CHECK: acc.data dataOperands(%[[COPYIN]] : !fir.ref<!fir.array<1000x100x10xf32>>) {
+
 end module

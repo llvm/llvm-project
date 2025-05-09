@@ -136,13 +136,15 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
-    const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-    if (!FD)
+    auto *Fn = dyn_cast<llvm::Function>(GV);
+    if (!Fn)
       return;
 
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
     TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
 
-    if (const auto *TA = FD->getAttr<TargetAttr>()) {
+    if (FD && FD->hasAttr<TargetAttr>()) {
+      const auto *TA = FD->getAttr<TargetAttr>();
       ParsedTargetAttr Attr =
           CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
@@ -152,7 +154,6 @@ public:
         assert(Error.empty());
       }
     }
-    auto *Fn = cast<llvm::Function>(GV);
     setBranchProtectionFnAttributes(BPI, *Fn);
   }
 
@@ -327,7 +328,8 @@ ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty, unsigned &NSRN,
     return ABIArgInfo::getDirect(ResType);
   }
 
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
@@ -335,7 +337,8 @@ ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
     const SmallVectorImpl<llvm::Type *> &UnpaddedCoerceToSeq, unsigned &NSRN,
     unsigned &NPRN) const {
   if (!IsNamedArg || NSRN + NVec > 8 || NPRN + NPred > 4)
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
   NSRN += NVec;
   NPRN += NPred;
 
@@ -375,7 +378,8 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
-        return getNaturalAlignIndirect(Ty, false);
+        return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                       false);
 
     if (Ty->isVectorType())
       NSRN = std::min(NSRN + 1, 8u);
@@ -411,8 +415,9 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   // Structures with either a non-trivial destructor or a non-trivial
   // copy constructor are always indirect.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/RAA ==
-                                     CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(
+        Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   // Empty records:
@@ -489,7 +494,8 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
                           : llvm::ArrayType::get(BaseTy, Size / Alignment));
   }
 
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
@@ -507,7 +513,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
 
   // Large vector types should be returned via memory.
   if (RetTy->isVectorType() && getContext().getTypeSize(RetTy) > 128)
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 
   if (!passAsAggregateType(RetTy)) {
     // Treat an enum type as its underlying type.
@@ -516,7 +522,8 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
 
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
-        return getNaturalAlignIndirect(RetTy);
+        return getNaturalAlignIndirect(RetTy,
+                                       getDataLayout().getAllocaAddrSpace());
 
     return (isPromotableIntegerTypeForABI(RetTy) && isDarwinPCS()
                 ? ABIArgInfo::getExtend(RetTy)
@@ -575,7 +582,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
     return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), Size));
   }
 
-  return getNaturalAlignIndirect(RetTy);
+  return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 }
 
 /// isIllegalVectorType - check whether the vector type is legal for AArch64.
@@ -693,7 +700,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
       return false;
 
     for (uint64_t I = 0; I < NElt; ++I)
-      llvm::copy(EltCoerceToSeq, std::back_inserter(CoerceToSeq));
+      llvm::append_range(CoerceToSeq, EltCoerceToSeq);
 
     NVec += NElt * NV;
     NPred += NElt * NP;
@@ -757,7 +764,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
     return false;
 
   bool isPredicate;
-  switch (Ty->getAs<BuiltinType>()->getKind()) {
+  switch (Ty->castAs<BuiltinType>()->getKind()) {
 #define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
   case BuiltinType::Id:                                                        \
     isPredicate = false;                                                       \
@@ -812,7 +819,7 @@ void AArch64ABIInfo::flattenType(
     flattenType(AT->getElementType(), EltFlattened);
 
     for (uint64_t I = 0; I < NElt; ++I)
-      llvm::copy(EltFlattened, std::back_inserter(Flattened));
+      llvm::append_range(Flattened, EltFlattened);
     return;
   }
 
@@ -843,7 +850,7 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
 
   llvm::Type *BaseTy = CGF.ConvertType(Ty);
   if (IsIndirect)
-    BaseTy = llvm::PointerType::getUnqual(BaseTy);
+    BaseTy = llvm::PointerType::getUnqual(BaseTy->getContext());
   else if (AI.getCoerceToType())
     BaseTy = AI.getCoerceToType();
 
@@ -961,7 +968,7 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
   if (IsIndirect) {
     // If it's been passed indirectly (actually a struct), whatever we find from
     // stored registers or on the stack will actually be a struct **.
-    MemTy = llvm::PointerType::getUnqual(MemTy);
+    MemTy = llvm::PointerType::getUnqual(MemTy->getContext());
   }
 
   const Type *Base = nullptr;

@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=loop-rotate -verify-memoryssa < %s | FileCheck %s --implicit-check-not=dbg.value
-; RUN: opt -S -passes=loop-rotate -verify-memoryssa < %s --try-experimental-debuginfo-iterators | FileCheck %s --implicit-check-not=dbg.value
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone

@@ -648,7 +648,7 @@ bool RISCVOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
       // We're looking for the sext.w pattern ADDIW rd, rs1, 0.
-      if (!RISCV::isSEXT_W(MI))
+      if (!RISCVInstrInfo::isSEXT_W(MI))
         continue;
 
       Register SrcReg = MI.getOperand(1).getReg();

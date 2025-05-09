@@ -14,10 +14,12 @@
 #include <__algorithm/fill_n.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/max.h>
+#include <__algorithm/rotate.h>
 #include <__assert>
 #include <__bit_reference>
 #include <__config>
 #include <__functional/unary_function.h>
+#include <__fwd/bit_reference.h> // TODO: This is a workaround for https://github.com/llvm/llvm-project/issues/131814
 #include <__fwd/functional.h>
 #include <__fwd/vector.h>
 #include <__iterator/distance.h>
@@ -73,38 +75,38 @@ struct __has_storage_type<vector<bool, _Allocator> > {
 };
 
 template <class _Allocator>
-class _LIBCPP_TEMPLATE_VIS vector<bool, _Allocator> {
+class vector<bool, _Allocator> {
 public:
-  typedef vector __self;
-  typedef bool value_type;
-  typedef _Allocator allocator_type;
-  typedef allocator_traits<allocator_type> __alloc_traits;
-  typedef typename __alloc_traits::size_type size_type;
-  typedef typename __alloc_traits::difference_type difference_type;
-  typedef size_type __storage_type;
-  typedef __bit_iterator<vector, false> pointer;
-  typedef __bit_iterator<vector, true> const_pointer;
-  typedef pointer iterator;
-  typedef const_pointer const_iterator;
-  typedef std::reverse_iterator<iterator> reverse_iterator;
-  typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+  using __self _LIBCPP_NODEBUG         = vector;
+  using value_type                     = bool;
+  using allocator_type                 = _Allocator;
+  using __alloc_traits _LIBCPP_NODEBUG = allocator_traits<allocator_type>;
+  using size_type                      = typename __alloc_traits::size_type;
+  using difference_type                = typename __alloc_traits::difference_type;
+  using __storage_type _LIBCPP_NODEBUG = size_type;
+  using pointer                        = __bit_iterator<vector, false>;
+  using const_pointer                  = __bit_iterator<vector, true>;
+  using iterator                       = pointer;
+  using const_iterator                 = const_pointer;
+  using reverse_iterator               = std::reverse_iterator<iterator>;
+  using const_reverse_iterator         = std::reverse_iterator<const_iterator>;
 
 private:
-  typedef __rebind_alloc<__alloc_traits, __storage_type> __storage_allocator;
-  typedef allocator_traits<__storage_allocator> __storage_traits;
-  typedef typename __storage_traits::pointer __storage_pointer;
-  typedef typename __storage_traits::const_pointer __const_storage_pointer;
+  using __storage_allocator _LIBCPP_NODEBUG     = __rebind_alloc<__alloc_traits, __storage_type>;
+  using __storage_traits _LIBCPP_NODEBUG        = allocator_traits<__storage_allocator>;
+  using __storage_pointer _LIBCPP_NODEBUG       = typename __storage_traits::pointer;
+  using __const_storage_pointer _LIBCPP_NODEBUG = typename __storage_traits::const_pointer;
 
   __storage_pointer __begin_;
   size_type __size_;
   _LIBCPP_COMPRESSED_PAIR(size_type, __cap_, __storage_allocator, __alloc_);
 
 public:
-  typedef __bit_reference<vector> reference;
+  using reference = __bit_reference<vector>;
 #ifdef _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
   using const_reference = bool;
 #else
-  typedef __bit_const_reference<vector> const_reference;
+  using const_reference = __bit_const_reference<vector>;
 #endif
 
 private:
@@ -445,7 +447,7 @@ private:
   //  Postcondition:  size() == 0
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vallocate(size_type __n) {
     if (__n > max_size())
-      __throw_length_error();
+      this->__throw_length_error();
     auto __allocation = std::__allocate_at_least(__alloc_, __external_cap_to_internal(__n));
     __begin_          = __allocation.ptr;
     __size_           = 0;
@@ -517,7 +519,7 @@ private:
   friend class __bit_iterator<vector, false>;
   friend class __bit_iterator<vector, true>;
   friend struct __bit_array<vector>;
-  friend struct _LIBCPP_TEMPLATE_VIS hash<vector>;
+  friend struct hash<vector>;
 };
 
 template <class _Allocator>
@@ -547,7 +549,7 @@ vector<bool, _Allocator>::__recommend(size_type __new_size) const {
   const size_type __cap = capacity();
   if (__cap >= __ms / 2)
     return __ms;
-  return std::max(2 * __cap, __align_it(__new_size));
+  return std::max<size_type>(2 * __cap, __align_it(__new_size));
 }
 
 //  Default constructs __n objects starting at __end_
@@ -1107,8 +1109,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 size_t vector<bool, _Allocator>::__hash_code() con
 }
 
 template <class _Allocator>
-struct _LIBCPP_TEMPLATE_VIS hash<vector<bool, _Allocator> >
-    : public __unary_function<vector<bool, _Allocator>, size_t> {
+struct hash<vector<bool, _Allocator> > : public __unary_function<vector<bool, _Allocator>, size_t> {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_t
   operator()(const vector<bool, _Allocator>& __vec) const _NOEXCEPT {
     return __vec.__hash_code();

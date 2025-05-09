@@ -22,12 +22,12 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/BlockCounter.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/FunctionSummary.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/WorkList.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -43,14 +43,12 @@ using namespace ento;
 
 #define DEBUG_TYPE "CoreEngine"
 
-STATISTIC(NumSteps,
-            "The # of steps executed.");
-STATISTIC(NumSTUSteps, "The # of STU steps executed.");
-STATISTIC(NumCTUSteps, "The # of CTU steps executed.");
-STATISTIC(NumReachedMaxSteps,
-            "The # of times we reached the max number of steps.");
-STATISTIC(NumPathsExplored,
-            "The # of paths explored by the analyzer.");
+STAT_COUNTER(NumSteps, "The # of steps executed.");
+STAT_COUNTER(NumSTUSteps, "The # of STU steps executed.");
+STAT_COUNTER(NumCTUSteps, "The # of CTU steps executed.");
+ALWAYS_ENABLED_STATISTIC(NumReachedMaxSteps,
+                         "The # of times we reached the max number of steps.");
+STAT_COUNTER(NumPathsExplored, "The # of paths explored by the analyzer.");
 
 //===----------------------------------------------------------------------===//
 // Core analysis engine.
@@ -183,7 +181,7 @@ bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned MaxSteps,
 
 static std::string timeTraceScopeName(const ProgramPoint &Loc) {
   if (llvm::timeTraceProfilerEnabled()) {
-    return llvm::formatv("Loc {0}",
+    return llvm::formatv("dispatchWorkItem {0}",
                          ProgramPoint::getProgramPointKindName(Loc.getKind()))
         .str();
   }
@@ -201,14 +199,15 @@ static llvm::TimeTraceMetadata timeTraceMetadata(const ExplodedNode *Pred,
   }
   auto SLoc = Loc.getSourceLocation();
   if (!SLoc)
-    return llvm::TimeTraceMetadata{Detail, ""};
+    return llvm::TimeTraceMetadata{std::move(Detail), ""};
   const auto &SM = Pred->getLocationContext()
                        ->getAnalysisDeclContext()
                        ->getASTContext()
                        .getSourceManager();
   auto Line = SM.getPresumedLineNumber(*SLoc);
   auto Fname = SM.getFilename(*SLoc);
-  return llvm::TimeTraceMetadata{Detail, Fname.str(), static_cast<int>(Line)};
+  return llvm::TimeTraceMetadata{std::move(Detail), Fname.str(),
+                                 static_cast<int>(Line)};
 }
 
 void CoreEngine::dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,

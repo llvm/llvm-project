@@ -13,11 +13,8 @@
 // The reason why we need to do this:
 // 1. When tracking register pressure, we don't track physical registers.
 // 2. We have a RegisterClass for mask register (which is `VMV0`), but we don't
-//    use it in most RVV pseudos (only used in inline asm constraint and add/sub
-//    with carry instructions). Instead, we use physical register V0 directly
-//    and insert a `$v0 = COPY ...` before the use. And, there is a fundamental
-//    issue in register allocator when handling RegisterClass with only one
-//    physical register, so we can't simply replace V0 with VMV0.
+//    use it by the time we reach scheduling. Instead, we use physical
+//    register V0 directly and insert a `$v0 = COPY ...` before the use.
 // 3. For mask producers, we are using VR RegisterClass (we can allocate V0-V31
 //    to it). So if V0 is not available, there are still 31 available registers
 //    out there.
@@ -43,66 +40,24 @@
 
 namespace llvm {
 
-static inline bool isVectorMaskProducer(const MachineInstr *MI) {
-  switch (RISCV::getRVVMCOpcode(MI->getOpcode())) {
-  // Vector Mask Instructions
-  case RISCV::VMAND_MM:
-  case RISCV::VMNAND_MM:
-  case RISCV::VMANDN_MM:
-  case RISCV::VMXOR_MM:
-  case RISCV::VMOR_MM:
-  case RISCV::VMNOR_MM:
-  case RISCV::VMORN_MM:
-  case RISCV::VMXNOR_MM:
-  case RISCV::VMSBF_M:
-  case RISCV::VMSIF_M:
-  case RISCV::VMSOF_M:
-  // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
-  case RISCV::VMADC_VV:
-  case RISCV::VMADC_VX:
-  case RISCV::VMADC_VI:
-  case RISCV::VMADC_VVM:
-  case RISCV::VMADC_VXM:
-  case RISCV::VMADC_VIM:
-  case RISCV::VMSBC_VV:
-  case RISCV::VMSBC_VX:
-  case RISCV::VMSBC_VVM:
-  case RISCV::VMSBC_VXM:
-  // Vector Integer Compare Instructions
-  case RISCV::VMSEQ_VV:
-  case RISCV::VMSEQ_VX:
-  case RISCV::VMSEQ_VI:
-  case RISCV::VMSNE_VV:
-  case RISCV::VMSNE_VX:
-  case RISCV::VMSNE_VI:
-  case RISCV::VMSLT_VV:
-  case RISCV::VMSLT_VX:
-  case RISCV::VMSLTU_VV:
-  case RISCV::VMSLTU_VX:
-  case RISCV::VMSLE_VV:
-  case RISCV::VMSLE_VX:
-  case RISCV::VMSLE_VI:
-  case RISCV::VMSLEU_VV:
-  case RISCV::VMSLEU_VX:
-  case RISCV::VMSLEU_VI:
-  case RISCV::VMSGTU_VX:
-  case RISCV::VMSGTU_VI:
-  case RISCV::VMSGT_VX:
-  case RISCV::VMSGT_VI:
-  // Vector Floating-Point Compare Instructions
-  case RISCV::VMFEQ_VV:
-  case RISCV::VMFEQ_VF:
-  case RISCV::VMFNE_VV:
-  case RISCV::VMFNE_VF:
-  case RISCV::VMFLT_VV:
-  case RISCV::VMFLT_VF:
-  case RISCV::VMFLE_VV:
-  case RISCV::VMFLE_VF:
-  case RISCV::VMFGT_VF:
-  case RISCV::VMFGE_VF:
-    return true;
-  }
-  return false;
+static bool isCopyToV0(const MachineInstr &MI) {
+  return MI.isCopy() && MI.getOperand(0).getReg() == RISCV::V0 &&
+         MI.getOperand(1).getReg().isVirtual() &&
+         MI.getOperand(1).getSubReg() == RISCV::NoSubRegister;
+}
+
+static bool isSoleUseCopyToV0(SUnit &SU) {
+  if (SU.Succs.size() != 1)
+    return false;
+  SDep &Dep = SU.Succs[0];
+  // Ignore dependencies other than data or strong ordering.
+  if (Dep.isWeak())
+    return false;
+
+  SUnit &DepSU = *Dep.getSUnit();
+  if (DepSU.isBoundaryNode())
+    return false;
+  return isCopyToV0(*DepSU.getInstr());
 }
 
 class RISCVVectorMaskDAGMutation : public ScheduleDAGMutation {
@@ -119,11 +74,11 @@ public:
       if (MI->findRegisterUseOperand(RISCV::V0, TRI))
         NearestUseV0SU = &SU;
 
-      if (NearestUseV0SU && NearestUseV0SU != &SU && isVectorMaskProducer(MI) &&
+      if (NearestUseV0SU && NearestUseV0SU != &SU && isSoleUseCopyToV0(SU) &&
           // For LMUL=8 cases, there will be more possibilities to spill.
           // FIXME: We should use RegPressureTracker to do fine-grained
           // controls.
-          RISCVII::getLMul(MI->getDesc().TSFlags) != RISCVII::LMUL_8)
+          RISCVII::getLMul(MI->getDesc().TSFlags) != RISCVVType::LMUL_8)
         DAG->addEdge(&SU, SDep(NearestUseV0SU, SDep::Artificial));
     }
   }

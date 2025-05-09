@@ -15,8 +15,8 @@ define ptr @test(ptr %0, ptr %args_gep) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[ARG26]], i64 17
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[ARG1]], i64 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[ARG1]], i64 12
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4, !noalias [[META0:![0-9]+]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i32>, ptr [[TMP6]], align 8, !noalias [[META0]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i32>, ptr [[TMP6]], align 8, !noalias [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4, !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <16 x i32> <i32 poison, i32 poison, i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>

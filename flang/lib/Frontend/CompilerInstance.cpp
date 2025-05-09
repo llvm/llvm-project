@@ -162,8 +162,6 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
   allSources->set_encoding(invoc.getFortranOpts().encoding);
   if (!setUpTargetMachine())
     return false;
-  // Create the semantics context
-  semaContext = invoc.getSemanticsCtx(*allCookedSources, getTargetMachine());
   // Set options controlling lowering to FIR.
   invoc.setLoweringOptions();
 
@@ -373,7 +371,7 @@ bool CompilerInstance::setUpTargetMachine() {
   tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
 
   targetMachine.reset(theTarget->createTargetMachine(
-      theTriple, /*CPU=*/targetOpts.cpu,
+      llvm::Triple(theTriple), /*CPU=*/targetOpts.cpu,
       /*Features=*/featuresStr, /*Options=*/tOpts,
       /*Reloc::Model=*/CGOpts.getRelocationModel(),
       /*CodeModel::Model=*/cm, OptLevel));

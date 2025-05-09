@@ -472,6 +472,14 @@ public:
     return LLVM_LIKELY(Type == T_Array) ? &as<json::Array>() : nullptr;
   }
 
+  void print(llvm::raw_ostream &OS) const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const {
+    print(llvm::dbgs());
+    llvm::dbgs() << '\n';
+  }
+#endif // !NDEBUG || LLVM_ENABLE_DUMP
+
 private:
   void destroy();
   void copyFrom(const Value &M);
@@ -766,6 +774,14 @@ inline bool fromJSON(const Value &E, bool &Out, Path P) {
     return true;
   }
   P.report("expected boolean");
+  return false;
+}
+inline bool fromJSON(const Value &E, unsigned int &Out, Path P) {
+  if (auto S = E.getAsInteger()) {
+    Out = *S;
+    return true;
+  }
+  P.report("expected integer");
   return false;
 }
 inline bool fromJSON(const Value &E, uint64_t &Out, Path P) {

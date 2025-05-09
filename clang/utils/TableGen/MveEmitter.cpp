@@ -209,9 +209,7 @@ public:
       Name = "const " + Name;
     return Name + " *";
   }
-  std::string llvmName() const override {
-    return "llvm::PointerType::getUnqual(" + Pointee->llvmName() + ")";
-  }
+  std::string llvmName() const override { return "Builder.getPtrTy()"; }
   const Type *getPointeeType() const { return Pointee; }
 
   static bool classof(const Type *T) {
@@ -755,7 +753,7 @@ public:
     OS << "})";
   }
   void morePrerequisites(std::vector<Ptr> &output) const override {
-    output.insert(output.end(), Args.begin(), Args.end());
+    llvm::append_range(output, Args);
   }
 };
 
@@ -1631,17 +1629,10 @@ void EmitterBase::EmitBuiltinCG(raw_ostream &OS) {
       for (const auto &OI : kv.second)
         key.push_back(OI.ParamValues[i]);
 
-      auto Found = ParamNumberMap.find(key);
-      if (Found != ParamNumberMap.end()) {
-        // Yes, an existing parameter variable can be reused for this.
-        ParamNumbers.push_back(Found->second);
-        continue;
-      }
-
-      // No, we need a new parameter variable.
-      int ExistingIndex = ParamNumberMap.size();
-      ParamNumberMap[key] = ExistingIndex;
-      ParamNumbers.push_back(ExistingIndex);
+      // Obtain a new parameter variable if we don't have one.
+      int ParamNum =
+          ParamNumberMap.try_emplace(key, ParamNumberMap.size()).first->second;
+      ParamNumbers.push_back(ParamNum);
     }
 
     // Now we're ready to do the pass 2 code generation, which will emit the

@@ -2,9 +2,9 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,FUNC %s
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=FUNC %s
 
-@local_memory.local_mem = internal unnamed_addr addrspace(3) global [128 x i32] undef, align 4
+@local_memory.local_mem = internal unnamed_addr addrspace(3) global [128 x i32] poison, align 4
 
-@lds = addrspace(3) global [512 x i32] undef, align 4
+@lds = addrspace(3) global [512 x i32] poison, align 4
 
 ; On SI we need to make sure that the base offset is a register and
 ; not an immediate.

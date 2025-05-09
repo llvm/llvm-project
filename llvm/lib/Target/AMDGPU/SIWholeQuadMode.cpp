@@ -777,11 +777,19 @@ void SIWholeQuadMode::splitBlock(MachineInstr *TermMI) {
   case AMDGPU::S_MOV_B64:
     NewOpcode = AMDGPU::S_MOV_B64_term;
     break;
-  default:
+  case AMDGPU::S_ANDN2_B32:
+    NewOpcode = AMDGPU::S_ANDN2_B32_term;
     break;
+  case AMDGPU::S_ANDN2_B64:
+    NewOpcode = AMDGPU::S_ANDN2_B64_term;
+    break;
+  default:
+    llvm_unreachable("Unexpected instruction");
   }
-  if (NewOpcode)
-    TermMI->setDesc(TII->get(NewOpcode));
+
+  // These terminators fallthrough to the next block, no need to add an
+  // unconditional branch to the next block (SplitBB).
+  TermMI->setDesc(TII->get(NewOpcode));
 
   if (SplitBB != BB) {
     // Update dominator trees
@@ -796,12 +804,6 @@ void SIWholeQuadMode::splitBlock(MachineInstr *TermMI) {
       MDT->applyUpdates(DTUpdates);
     if (PDT)
       PDT->applyUpdates(DTUpdates);
-
-    // Link blocks
-    MachineInstr *MI =
-        BuildMI(*BB, BB->end(), DebugLoc(), TII->get(AMDGPU::S_BRANCH))
-            .addMBB(SplitBB);
-    LIS->InsertMachineInstrInMaps(*MI);
   }
 }
 
@@ -910,19 +912,16 @@ MachineInstr *SIWholeQuadMode::lowerKillF32(MachineInstr &MI) {
       BuildMI(MBB, MI, DL, TII->get(AndN2Opc), Exec).addReg(Exec).addReg(VCC);
 
   assert(MBB.succ_size() == 1);
-  MachineInstr *NewTerm = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_BRANCH))
-                              .addMBB(*MBB.succ_begin());
 
   // Update live intervals
   LIS->ReplaceMachineInstrInMaps(MI, *VcmpMI);
   MBB.remove(&MI);
 
   LIS->InsertMachineInstrInMaps(*MaskUpdateMI);
-  LIS->InsertMachineInstrInMaps(*ExecMaskMI);
   LIS->InsertMachineInstrInMaps(*EarlyTermMI);
-  LIS->InsertMachineInstrInMaps(*NewTerm);
+  LIS->InsertMachineInstrInMaps(*ExecMaskMI);
 
-  return NewTerm;
+  return ExecMaskMI;
 }
 
 MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
@@ -949,17 +948,17 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
                          .addReg(Exec);
     } else {
       // Static: kill does nothing
-      MachineInstr *NewTerm = nullptr;
-      if (MI.getOpcode() == AMDGPU::SI_DEMOTE_I1) {
+      bool IsLastTerminator = std::next(MI.getIterator()) == MBB.end();
+      if (!IsLastTerminator) {
         LIS->RemoveMachineInstrFromMaps(MI);
       } else {
-        assert(MBB.succ_size() == 1);
-        NewTerm = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_BRANCH))
-                      .addMBB(*MBB.succ_begin());
+        assert(MBB.succ_size() == 1 && MI.getOpcode() != AMDGPU::SI_DEMOTE_I1);
+        MachineInstr *NewTerm = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_BRANCH))
+                                    .addMBB(*MBB.succ_begin());
         LIS->ReplaceMachineInstrInMaps(MI, *NewTerm);
       }
       MBB.remove(&MI);
-      return NewTerm;
+      return nullptr;
     }
   } else {
     if (!KillVal) {
@@ -1760,9 +1759,10 @@ bool SIWholeQuadMode::run(MachineFunction &MF) {
   for (MachineInstr *MI : SetInactiveInstrs) {
     if (LowerToCopyInstrs.contains(MI))
       continue;
-    if (Instructions[MI].MarkedStates & StateStrict) {
-      Instructions[MI].Needs |= StateStrictWWM;
-      Instructions[MI].Disabled &= ~StateStrictWWM;
+    auto &Info = Instructions[MI];
+    if (Info.MarkedStates & StateStrict) {
+      Info.Needs |= StateStrictWWM;
+      Info.Disabled &= ~StateStrictWWM;
       Blocks[MI->getParent()].Needs |= StateStrictWWM;
     } else {
       LLVM_DEBUG(dbgs() << "Has no WWM marking: " << *MI);

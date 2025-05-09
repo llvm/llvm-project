@@ -591,6 +591,7 @@ class TargetRegisterClass;
                                  bool IsSRA) const;
     SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
 
     /// isEligibleForTailCallOptimization - Check whether the call is eligible
     /// for tail call optimization.
@@ -705,7 +706,12 @@ class TargetRegisterClass;
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize) const override;
 
+    bool isLegalICmpImmediate(int64_t Imm) const override;
+    bool isLegalAddImmediate(int64_t Imm) const override;
+
     unsigned getJumpTableEncoding() const override;
+    SDValue getPICJumpTableRelocBase(SDValue Table,
+                                     SelectionDAG &DAG) const override;
     bool useSoftFloat() const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {

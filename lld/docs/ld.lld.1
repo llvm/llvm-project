@@ -91,7 +91,7 @@ Bind default visibility defined function symbols locally for
 .It Fl Bsymbolic-non-weak-functions
 Bind default visibility defined STB_GLOBAL function symbols locally for
 .Fl shared.
-.It Fl --be8
+.It Fl -be8
 Write a Big Endian ELF File using BE8 format(AArch32 only)
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
@@ -493,6 +493,10 @@ If
 .Fl -use-android-relr-tags
 is specified, use SHT_ANDROID_RELR instead of SHT_RELR.
 .Pp
+.It Fl -package-metadata
+Emit a percent-encoded string to the
+.Cm .note.package
+section. For example, %25 decodes to a single %.
 .It Fl -pic-veneer
 Always generate position independent thunks.
 .It Fl -pie , Fl -pic-executable
@@ -751,6 +755,8 @@ Report unresolved symbols as warnings.
 Force load of all members in a static library.
 .It Fl -why-extract Ns = Ns Ar file
 Print to a file about why archive members are extracted.
+.It Fl -why-live Ns = Ns Ar glob
+Report a chain of references preventing garbage collection for each symbol matching the glob.
 .It Fl -wrap Ns = Ns Ar symbol
 Redirect
 .Ar symbol
