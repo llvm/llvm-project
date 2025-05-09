@@ -5975,9 +5975,15 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
                                         Definition->hasAttr<MSConstexprAttr>())))
     return true;
 
-  if (Info.getLangOpts().CPlusPlus11) {
-    const FunctionDecl *DiagDecl = Definition ? Definition : Declaration;
+  const FunctionDecl *DiagDecl = Definition ? Definition : Declaration;  
+  if (CallLoc.isMacroID() && (DiagDecl->getName() == "__assert_rtn" ||
+                              DiagDecl->getName() == "__assert_fail" ||
+                              DiagDecl->getName() == "_wassert")) {
+    Info.FFDiag(CallLoc, diag::note_constexpr_assert_failed);
+    return false;
+  }
 
+  if (Info.getLangOpts().CPlusPlus11) {
     // If this function is not constexpr because it is an inherited
     // non-constexpr constructor, diagnose that directly.
     auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
