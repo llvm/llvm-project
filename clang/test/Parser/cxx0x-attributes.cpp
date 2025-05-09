@@ -72,6 +72,30 @@ namespace test_misplacement {
 [[]] enum  E2 { }; //expected-error{{misplaced attributes}}
 }
 
+__attribute__(()) alignas(int) int xx; // expected-none
+__attribute__(()) alignas(int) [[]] int yy; // expected-none
+[[]] __attribute__(()) alignas(int) int zz; // expected-none
+alignas(int) [[]] __attribute__(()) int aa; // expected-none
+[[]] alignas(int)  __attribute__(()) int bb; // expected-none
+__attribute__(()) [[]] alignas(int) int cc; // expected-none
+
+class C1 {
+  __attribute__(()) alignas(int) int x; // expected-none
+  __attribute__(()) alignas(int) [[]] int y; // expected-none
+  [[]] __attribute__(()) alignas(int) int z; // expected-none
+  alignas(int) [[]] __attribute__(()) int a; // expected-none
+  [[]] alignas(int)  __attribute__(()) int b; // expected-none
+  __attribute__(()) [[]] alignas(int) int c; // expected-none
+};
+
+void fn_with_decl() {
+  __attribute__(()) alignas(int) int x; // expected-none
+  __attribute__(()) alignas(int) [[]] int y; // expected-none
+  [[]] __attribute__(()) alignas(int) int z; // expected-none
+  alignas(int) [[]] __attribute__(()) int a; // expected-none
+  [[]] alignas(int)  __attribute__(()) int b; // expected-none
+  __attribute__(()) [[]] alignas(int) int c; // expected-none
+}
 // Checks attributes placed at wrong syntactic locations of class specifiers.
 class [[]] [[]]
   attr_after_class_name_decl [[]] [[]]; // expected-error {{an attribute list cannot appear here}}
