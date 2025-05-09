@@ -1979,7 +1979,7 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     for (const Decl *VD : DefaultCBufferDecls) {
       const HLSLResourceBindingAttr *RBA =
           VD->getAttr<HLSLResourceBindingAttr>();
-      if (RBA && !RBA->isImplicit() &&
+      if (RBA && RBA->hasRegisterSlot() &&
           RBA->getRegisterType() == HLSLResourceBindingAttr::RegisterType::C) {
         DefaultCBuffer->setHasValidPackoffset(true);
         break;
@@ -3290,7 +3290,7 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   uint32_t SpaceNo = 0;
   HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
   if (RBA) {
-    if (!RBA->isImplicit())
+    if (RBA->hasRegisterSlot())
       RegisterSlot = RBA->getSlotNumber();
     SpaceNo = RBA->getSpaceNumber();
   }
@@ -3388,7 +3388,7 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
   bool HasBinding = false;
   for (Attr *A : VD->attrs()) {
     HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
-    if (!RBA || RBA->isImplicit())
+    if (!RBA || !RBA->hasRegisterSlot())
       continue;
     HasBinding = true;
 

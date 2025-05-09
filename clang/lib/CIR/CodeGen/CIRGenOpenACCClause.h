@@ -12,6 +12,7 @@
 
 #include <type_traits>
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 namespace clang {
 // Simple type-trait to see if the first template arg is one of the list, so we
@@ -22,9 +23,25 @@ constexpr bool isOneOfTypes =
 template <typename ToTest, typename T>
 constexpr bool isOneOfTypes<ToTest, T> = std::is_same_v<ToTest, T>;
 
+// Holds information for emitting clauses for a combined construct. We
+// instantiate the clause emitter with this type so that it can use
+// if-constexpr to specially handle these.
+template <typename CompOpTy> struct CombinedConstructClauseInfo {
+  using ComputeOpTy = CompOpTy;
+  ComputeOpTy computeOp;
+  mlir::acc::LoopOp loopOp;
+};
+
+template <typename ToTest> constexpr bool isCombinedType = false;
+template <typename T>
+constexpr bool isCombinedType<CombinedConstructClauseInfo<T>> = true;
+
 template <typename OpTy>
 class OpenACCClauseCIREmitter final
     : public OpenACCClauseVisitor<OpenACCClauseCIREmitter<OpTy>> {
+  // Necessary for combined constructs.
+  template <typename FriendOpTy> friend class OpenACCClauseCIREmitter;
+
   OpTy &operation;
   CIRGen::CIRGenFunction &cgf;
   CIRGen::CIRGenBuilderTy &builder;
@@ -82,6 +99,17 @@ class OpenACCClauseCIREmitter final
     return conversionOp.getResult(0);
   }
 
+  mlir::Value createConstantInt(mlir::Location loc, unsigned width,
+                                int64_t value) {
+    mlir::IntegerType ty = mlir::IntegerType::get(
+        &cgf.getMLIRContext(), width,
+        mlir::IntegerType::SignednessSemantics::Signless);
+    auto constOp = builder.create<mlir::arith::ConstantOp>(
+        loc, builder.getIntegerAttr(ty, value));
+
+    return constOp.getResult();
+  }
+
   mlir::acc::DeviceType decodeDeviceType(const IdentifierInfo *ii) {
     // '*' case leaves no identifier-info, just a nullptr.
     if (!ii)
@@ -93,6 +121,38 @@ class OpenACCClauseCIREmitter final
         .CasesLower("nvidia", "acc_device_nvidia",
                     mlir::acc::DeviceType::Nvidia)
         .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
+  }
+
+  mlir::acc::GangArgType decodeGangType(OpenACCGangKind gk) {
+    switch (gk) {
+    case OpenACCGangKind::Num:
+      return mlir::acc::GangArgType::Num;
+    case OpenACCGangKind::Dim:
+      return mlir::acc::GangArgType::Dim;
+    case OpenACCGangKind::Static:
+      return mlir::acc::GangArgType::Static;
+    }
+    llvm_unreachable("unknown gang kind");
+  }
+
+  template <typename U = void,
+            typename = std::enable_if_t<isCombinedType<OpTy>, U>>
+  void applyToLoopOp(const OpenACCClause &c) {
+    // TODO OpenACC: we have to set the insertion scope here correctly still.
+    OpenACCClauseCIREmitter<mlir::acc::LoopOp> loopEmitter{
+        operation.loopOp, cgf, builder, dirKind, dirLoc};
+    loopEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
+    loopEmitter.Visit(&c);
+  }
+
+  template <typename U = void,
+            typename = std::enable_if_t<isCombinedType<OpTy>, U>>
+  void applyToComputeOp(const OpenACCClause &c) {
+    // TODO OpenACC: we have to set the insertion scope here correctly still.
+    OpenACCClauseCIREmitter<typename OpTy::ComputeOpTy> computeEmitter{
+        operation.computeOp, cgf, builder, dirKind, dirLoc};
+    computeEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
+    computeEmitter.Visit(&c);
   }
 
 public:
@@ -121,10 +181,10 @@ public:
       case OpenACCDefaultClauseKind::Invalid:
         break;
       }
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitDefaultClause");
     }
   }
 
@@ -151,9 +211,12 @@ public:
       // Nothing to do here, these constructs don't have any IR for these, as
       // they just modify the other clauses IR.  So setting of
       // `lastDeviceTypeValues` (done above) is all we need.
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Nothing to do here either, combined constructs are just going to use
+      // 'lastDeviceTypeValues' to set the value for the child visitor.
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. update, data, routine, combined constructs remain.
+      // unreachable. update, data, routine constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -310,9 +373,11 @@ public:
   void VisitSeqClause(const OpenACCSeqClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
       operation.addSeq(builder.getContext(), lastDeviceTypeValues);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine, Combined constructs remain.
+      // unreachable. Routine construct remains.
       return clauseNotImplemented(clause);
     }
   }
@@ -320,9 +385,11 @@ public:
   void VisitAutoClause(const OpenACCAutoClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
       operation.addAuto(builder.getContext(), lastDeviceTypeValues);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine, Combined constructs remain.
+      // unreachable. Routine, construct remains.
       return clauseNotImplemented(clause);
     }
   }
@@ -330,9 +397,123 @@ public:
   void VisitIndependentClause(const OpenACCIndependentClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
       operation.addIndependent(builder.getContext(), lastDeviceTypeValues);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine, Combined constructs remain.
+      // unreachable. Routine construct remains.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitCollapseClause(const OpenACCCollapseClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      llvm::APInt value =
+          clause.getIntExpr()->EvaluateKnownConstInt(cgf.cgm.getASTContext());
+
+      value = value.sextOrTrunc(64);
+      operation.setCollapseForDeviceTypes(builder.getContext(),
+                                          lastDeviceTypeValues, value);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitTileClause(const OpenACCTileClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      llvm::SmallVector<mlir::Value> values;
+
+      for (const Expr *e : clause.getSizeExprs()) {
+        mlir::Location exprLoc = cgf.cgm.getLoc(e->getBeginLoc());
+
+        // We represent the * as -1.  Additionally, this is a constant, so we
+        // can always just emit it as 64 bits to avoid having to do any more
+        // work to determine signedness or size.
+        if (isa<OpenACCAsteriskSizeExpr>(e)) {
+          values.push_back(createConstantInt(exprLoc, 64, -1));
+        } else {
+          llvm::APInt curValue =
+              e->EvaluateKnownConstInt(cgf.cgm.getASTContext());
+          values.push_back(createConstantInt(
+              exprLoc, 64, curValue.sextOrTrunc(64).getSExtValue()));
+        }
+      }
+
+      operation.setTileForDeviceTypes(builder.getContext(),
+                                      lastDeviceTypeValues, values);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitWorkerClause(const OpenACCWorkerClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      if (clause.hasIntExpr())
+        operation.addWorkerNumOperand(builder.getContext(),
+                                      createIntExpr(clause.getIntExpr()),
+                                      lastDeviceTypeValues);
+      else
+        operation.addEmptyWorker(builder.getContext(), lastDeviceTypeValues);
+
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitVectorClause(const OpenACCVectorClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      if (clause.hasIntExpr())
+        operation.addVectorOperand(builder.getContext(),
+                                   createIntExpr(clause.getIntExpr()),
+                                   lastDeviceTypeValues);
+      else
+        operation.addEmptyVector(builder.getContext(), lastDeviceTypeValues);
+
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitGangClause(const OpenACCGangClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      if (clause.getNumExprs() == 0) {
+        operation.addEmptyGang(builder.getContext(), lastDeviceTypeValues);
+      } else {
+        llvm::SmallVector<mlir::Value> values;
+        llvm::SmallVector<mlir::acc::GangArgType> argTypes;
+        for (unsigned i : llvm::index_range(0u, clause.getNumExprs())) {
+          auto [kind, expr] = clause.getExpr(i);
+          mlir::Location exprLoc = cgf.cgm.getLoc(expr->getBeginLoc());
+          argTypes.push_back(decodeGangType(kind));
+          if (kind == OpenACCGangKind::Dim) {
+            llvm::APInt curValue =
+                expr->EvaluateKnownConstInt(cgf.cgm.getASTContext());
+            // The value is 1, 2, or 3, but the type isn't necessarily smaller
+            // than 64.
+            curValue = curValue.sextOrTrunc(64);
+            values.push_back(
+                createConstantInt(exprLoc, 64, curValue.getSExtValue()));
+          } else if (isa<OpenACCAsteriskSizeExpr>(expr)) {
+            values.push_back(createConstantInt(exprLoc, 64, -1));
+          } else {
+            values.push_back(createIntExpr(expr));
+          }
+        }
+
+        operation.addGangOperands(builder.getContext(), lastDeviceTypeValues,
+                                  argTypes, values);
+      }
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }

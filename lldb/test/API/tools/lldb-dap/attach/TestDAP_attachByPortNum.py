@@ -18,17 +18,18 @@ import sys
 import socket
 
 
-@skip
+@skip("https://github.com/llvm/llvm-project/issues/138803")
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
     default_timeout = 20
 
     def set_and_hit_breakpoint(self, continueToExit=True):
+        self.dap_server.wait_for_stopped()
+
         source = "main.c"
-        main_source_path = os.path.join(os.getcwd(), source)
-        breakpoint1_line = line_number(main_source_path, "// breakpoint 1")
+        breakpoint1_line = line_number(source, "// breakpoint 1")
         lines = [breakpoint1_line]
         # Set breakpoint in the thread function so we can step the threads
-        breakpoint_ids = self.set_source_breakpoints(main_source_path, lines)
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
         self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )

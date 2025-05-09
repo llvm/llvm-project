@@ -86,6 +86,8 @@ public:
                        // to use with PGO.
     ProfileIRInstr,    // IR level PGO instrumentation in LLVM.
     ProfileCSIRInstr, // IR level PGO context sensitive instrumentation in LLVM.
+    ProfileIRSampleColdCov, // IR level sample pgo based cold function coverage
+                            // instrumentation in LLVM.
   };
 
   enum EmbedBitcodeKind {
@@ -398,6 +400,10 @@ public:
   /// for the given fraction of PGO counters will be excluded from sanitization
   /// (0.0 [default] to skip none, 1.0 to skip all).
   SanitizerMaskCutoffs SanitizeSkipHotCutoffs;
+
+  /// Set of sanitizer checks, for which the instrumentation will be annotated
+  /// with extra debug info.
+  SanitizerSet SanitizeAnnotateDebugInfo;
 
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;

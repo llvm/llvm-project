@@ -254,7 +254,7 @@ CodeGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
 }
 
 static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
-                                               bool IsWindows) {
+                                               bool IsTargetDefaultMSABI) {
   // Set the appropriate calling convention for the Function.
   if (D->hasAttr<StdCallAttr>())
     return CC_X86StdCall;
@@ -290,10 +290,10 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
     return CC_IntelOclBicc;
 
   if (D->hasAttr<MSABIAttr>())
-    return IsWindows ? CC_C : CC_Win64;
+    return IsTargetDefaultMSABI ? CC_C : CC_Win64;
 
   if (D->hasAttr<SysVABIAttr>())
-    return IsWindows ? CC_X86_64SysV : CC_C;
+    return IsTargetDefaultMSABI ? CC_X86_64SysV : CC_C;
 
   if (D->hasAttr<PreserveMostAttr>())
     return CC_PreserveMost;
@@ -581,8 +581,11 @@ CodeGenTypes::arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
   }
 
   FunctionType::ExtInfo einfo;
-  bool IsWindows = getContext().getTargetInfo().getTriple().isOSWindows();
-  einfo = einfo.withCallingConv(getCallingConventionForDecl(MD, IsWindows));
+  bool IsTargetDefaultMSABI =
+      getContext().getTargetInfo().getTriple().isOSWindows() ||
+      getContext().getTargetInfo().getTriple().isUEFI();
+  einfo = einfo.withCallingConv(
+      getCallingConventionForDecl(MD, IsTargetDefaultMSABI));
 
   if (getContext().getLangOpts().ObjCAutoRefCount &&
       MD->hasAttr<NSReturnsRetainedAttr>())
@@ -672,10 +675,10 @@ arrangeFreeFunctionLikeCall(CodeGenTypes &CGT, CodeGenModule &CGM,
       addExtParameterInfosForCall(paramInfos, proto, numExtraRequiredArgs,
                                   args.size());
 
-    // If we don't have a prototype at all, but we're supposed to
-    // explicitly use the variadic convention for unprototyped calls,
-    // treat all of the arguments as required but preserve the nominal
-    // possibility of variadics.
+  // If we don't have a prototype at all, but we're supposed to
+  // explicitly use the variadic convention for unprototyped calls,
+  // treat all of the arguments as required but preserve the nominal
+  // possibility of variadics.
   } else if (CGM.getTargetCodeGenInfo().isNoProtoCallVariadic(
                  args, cast<FunctionNoProtoType>(fnType))) {
     required = RequiredArgs(args.size());
@@ -4061,7 +4064,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
     if (results.size() == 1) {
       RV = results[0];
 
-      // Otherwise, we need to make a first-class aggregate.
+    // Otherwise, we need to make a first-class aggregate.
     } else {
       // Construct a return type that lacks padding elements.
       llvm::Type *returnType = RetAI.getUnpaddedCoerceAndExpandType();
@@ -4200,11 +4203,11 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
   if (type->isReferenceType()) {
     args.add(RValue::get(Builder.CreateLoad(local)), type);
 
-    // In ARC, move out of consumed arguments so that the release cleanup
-    // entered by StartFunction doesn't cause an over-release.  This isn't
-    // optimal -O0 code generation, but it should get cleaned up when
-    // optimization is enabled.  This also assumes that delegate calls are
-    // performed exactly once for a set of arguments, but that should be safe.
+  // In ARC, move out of consumed arguments so that the release cleanup
+  // entered by StartFunction doesn't cause an over-release.  This isn't
+  // optimal -O0 code generation, but it should get cleaned up when
+  // optimization is enabled.  This also assumes that delegate calls are
+  // performed exactly once for a set of arguments, but that should be safe.
   } else if (getLangOpts().ObjCAutoRefCount &&
              param->hasAttr<NSConsumedAttr>() && type->isObjCRetainableType()) {
     llvm::Value *ptr = Builder.CreateLoad(local);
@@ -4213,8 +4216,8 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
     Builder.CreateStore(null, local);
     args.add(RValue::get(ptr), type);
 
-    // For the most part, we just need to load the alloca, except that
-    // aggregate r-values are actually pointers to temporaries.
+  // For the most part, we just need to load the alloca, except that
+  // aggregate r-values are actually pointers to temporaries.
   } else {
     args.add(convertTempToRValue(local, type, loc), type);
   }
@@ -4306,7 +4309,7 @@ static void emitWriteback(CodeGenFunction &CGF,
     // Release the old value.
     CGF.EmitARCRelease(oldValue, srcLV.isARCPreciseLifetime());
 
-    // Otherwise, we can just do a normal lvalue store.
+  // Otherwise, we can just do a normal lvalue store.
   } else {
     CGF.EmitStoreThroughLValue(RValue::get(value), srcLV);
   }
@@ -4347,7 +4350,7 @@ static void emitWritebackArg(CodeGenFunction &CGF, CallArgList &args,
   if (const Expr *lvExpr = maybeGetUnaryAddrOfOperand(CRE->getSubExpr())) {
     srcLV = CGF.EmitLValue(lvExpr);
 
-    // Otherwise, just emit it as a scalar.
+  // Otherwise, just emit it as a scalar.
   } else {
     Address srcAddr = CGF.EmitPointerWithAlignment(CRE->getSubExpr());
 
@@ -5242,12 +5245,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       if (SRetPtr.getAddressSpace() != RetAI.getIndirectAddrSpace()) {
         llvm::Value *V = SRetPtr.getBasePointer();
         LangAS SAS = getLangASFromTargetAS(SRetPtr.getAddressSpace());
-        LangAS DAS = getLangASFromTargetAS(RetAI.getIndirectAddrSpace());
         llvm::Type *Ty = llvm::PointerType::get(getLLVMContext(),
                                                 RetAI.getIndirectAddrSpace());
 
         SRetPtr = SRetPtr.withPointer(
-            getTargetHooks().performAddrSpaceCast(*this, V, SAS, DAS, Ty, true),
+            getTargetHooks().performAddrSpaceCast(*this, V, SAS, Ty, true),
             SRetPtr.isKnownNonNull());
       }
       IRCallArgs[IRFunctionArgs.getSRetArgNo()] =
@@ -5366,7 +5368,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           NeedCopy = true;
         } else if (I->hasLValue()) {
           auto LV = I->getKnownLValue();
-          auto AS = LV.getAddressSpace();
 
           bool isByValOrRef =
               ArgInfo.isIndirectAliased() || ArgInfo.getIndirectByVal();
@@ -5375,17 +5376,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
               (LV.getAlignment() < getContext().getTypeAlignInChars(I->Ty))) {
             NeedCopy = true;
           }
-          if (!getLangOpts().OpenCL) {
-            if ((isByValOrRef && (AS != LangAS::Default &&
-                                  AS != CGM.getASTAllocaAddressSpace()))) {
-              NeedCopy = true;
-            }
-          }
-          // For OpenCL even if RV is located in default or alloca address space
-          // we don't want to perform address space cast for it.
-          else if ((isByValOrRef && Addr.getType()->getAddressSpace() !=
-                                        IRFuncTy->getParamType(FirstIRArg)
-                                            ->getPointerAddressSpace())) {
+
+          if (isByValOrRef && Addr.getType()->getAddressSpace() !=
+                                  ArgInfo.getIndirectAddrSpace()) {
             NeedCopy = true;
           }
         }
@@ -5393,12 +5386,15 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         if (!NeedCopy) {
           // Skip the extra memcpy call.
           llvm::Value *V = getAsNaturalPointerTo(Addr, I->Ty);
-          auto *T = llvm::PointerType::get(
-              CGM.getLLVMContext(), CGM.getDataLayout().getAllocaAddrSpace());
+          auto *T = llvm::PointerType::get(CGM.getLLVMContext(),
+                                           ArgInfo.getIndirectAddrSpace());
 
+          // FIXME: This should not depend on the language address spaces, and
+          // only the contextual values. If the address space mismatches, see if
+          // we can look through a cast to a compatible address space value,
+          // otherwise emit a copy.
           llvm::Value *Val = getTargetHooks().performAddrSpaceCast(
-              *this, V, LangAS::Default, CGM.getASTAllocaAddressSpace(), T,
-              true);
+              *this, V, I->Ty.getAddressSpace(), T, true);
           if (ArgHasMaybeUndefAttr)
             Val = Builder.CreateFreeze(Val);
           IRCallArgs[FirstIRArg] = Val;
@@ -5487,12 +5483,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         if (FirstIRArg < IRFuncTy->getNumParams() &&
             V->getType() != IRFuncTy->getParamType(FirstIRArg)) {
           assert(V->getType()->isPointerTy() && "Only pointers can mismatch!");
-          auto FormalAS = CallInfo.arguments()[ArgNo]
-                              .type.getQualifiers()
-                              .getAddressSpace();
           auto ActualAS = I->Ty.getAddressSpace();
           V = getTargetHooks().performAddrSpaceCast(
-              *this, V, ActualAS, FormalAS, IRFuncTy->getParamType(FirstIRArg));
+              *this, V, ActualAS, IRFuncTy->getParamType(FirstIRArg));
         }
 
         if (ArgHasMaybeUndefAttr)
