@@ -162,6 +162,11 @@ protected:
                             msgpack::ArrayDocNode Args) override;
   void emitKernelAttrs(const AMDGPUTargetMachine &TM, const Function &Func,
                        msgpack::MapDocNode Kern) override;
+  virtual void emitHiddenKernelArg(
+      const DataLayout &DL, Type *ArgTy, Align Alignment, StringRef ArgName,
+      unsigned &Offset, msgpack::ArrayDocNode Args,
+      KernArgPreload::HiddenArg HiddenArg = KernArgPreload::END_HIDDEN_ARGS,
+      const AMDGPUFunctionArgInfo *ArgInfo = nullptr);
 
 public:
   MetadataStreamerMsgPackV5() = default;
@@ -171,18 +176,14 @@ public:
 class MetadataStreamerMsgPackV6 final : public MetadataStreamerMsgPackV5 {
 protected:
   void emitVersion() override;
-  void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
-                            msgpack::ArrayDocNode Args) override;
   void emitKernelArg(const Argument &Arg, unsigned &Offset,
                      msgpack::ArrayDocNode Args,
                      const MachineFunction &MF) override;
-
-  void emitHiddenKernelArgWithPreload(const DataLayout &DL, Type *ArgTy,
-                                      Align Alignment,
-                                      KernArgPreload::HiddenArg HiddenArg,
-                                      StringRef ArgName, unsigned &Offset,
-                                      msgpack::ArrayDocNode Args,
-                                      const AMDGPUFunctionArgInfo &ArgInfo);
+  void emitHiddenKernelArg(
+      const DataLayout &DL, Type *ArgTy, Align Alignment, StringRef ArgName,
+      unsigned &Offset, msgpack::ArrayDocNode Args,
+      KernArgPreload::HiddenArg HiddenArg = KernArgPreload::END_HIDDEN_ARGS,
+      const AMDGPUFunctionArgInfo *ArgInfo = nullptr) override;
 
 public:
   MetadataStreamerMsgPackV6() = default;
