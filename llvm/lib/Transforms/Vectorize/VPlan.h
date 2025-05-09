@@ -2630,7 +2630,7 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
   bool IsNonNeg = false;
 
   /// The scalar type after extending.
-  Type *ResultTy;
+  Type *ResultTy = nullptr;
 
   /// For cloning VPMulAccumulateReductionRecipe.
   VPMulAccumulateReductionRecipe(VPMulAccumulateReductionRecipe *MulAcc)
@@ -2706,11 +2706,7 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  Type *getResultType() const {
-    assert(isExtended() && "Only support getResultType when this recipe "
-                           "is implicitly extend.");
-    return ResultTy;
-  }
+  Type *getResultType() const { return ResultTy; }
 
   /// The first vector value to be extended and reduced.
   VPValue *getVecOp0() const { return getOperand(1); }
