@@ -2400,8 +2400,7 @@ bool Type::hasUnsignedIntegerRepresentation() const {
 
 bool Type::isFloatingType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
-    return BT->getKind() >= BuiltinType::Half &&
-           BT->getKind() <= BuiltinType::Ibm128;
+    return BT->isFloatingPoint();
   if (const auto *CT = dyn_cast<ComplexType>(CanonicalType))
     return CT->getElementType()->isFloatingType();
   return false;
