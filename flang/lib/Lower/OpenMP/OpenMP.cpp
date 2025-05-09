@@ -1696,17 +1696,19 @@ static void genTaskgroupClauses(
 
 static void genTaskloopClauses(lower::AbstractConverter &converter,
                                semantics::SemanticsContext &semaCtx,
+                               lower::StatementContext &stmtCtx,
                                const List<Clause> &clauses, mlir::Location loc,
                                mlir::omp::TaskloopOperands &clauseOps) {
 
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processGrainsize(stmtCtx, clauseOps);
+  cp.processNumTasks(stmtCtx, clauseOps);
 
   cp.processTODO<clause::Allocate, clause::Collapse, clause::Default,
-                 clause::Final, clause::Grainsize, clause::If,
-                 clause::InReduction, clause::Lastprivate, clause::Mergeable,
-                 clause::Nogroup, clause::NumTasks, clause::Priority,
-                 clause::Reduction, clause::Shared, clause::Untied>(
-      loc, llvm::omp::Directive::OMPD_taskloop);
+                 clause::Final, clause::If, clause::InReduction,
+                 clause::Lastprivate, clause::Mergeable, clause::Nogroup,
+                 clause::Priority, clause::Reduction, clause::Shared,
+                 clause::Untied>(loc, llvm::omp::Directive::OMPD_taskloop);
 }
 
 static void genTaskwaitClauses(lower::AbstractConverter &converter,
@@ -2236,7 +2238,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
       fir::factory::AddrAndBoundsInfo info =
           Fortran::lower::getDataOperandBaseAddr(
-              converter, firOpBuilder, sym, converter.getCurrentLocation());
+              converter, firOpBuilder, sym.GetUltimate(),
+              converter.getCurrentLocation());
       llvm::SmallVector<mlir::Value> bounds =
           fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
                                              mlir::omp::MapBoundsType>(
@@ -3192,12 +3195,12 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
 static mlir::omp::TaskloopOp genStandaloneTaskloop(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item) {
+    lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
+    lower::pft::Evaluation &eval, mlir::Location loc,
+    const ConstructQueue &queue, ConstructQueue::const_iterator item) {
   mlir::omp::TaskloopOperands taskloopClauseOps;
-  genTaskloopClauses(converter, semaCtx, item->clauses, loc, taskloopClauseOps);
-
+  genTaskloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
+                     taskloopClauseOps);
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            enableDelayedPrivatization, symTable);
@@ -3664,8 +3667,8 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
         genTaskgroupOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_taskloop:
-    newOp = genStandaloneTaskloop(converter, symTable, semaCtx, eval, loc,
-                                  queue, item);
+    newOp = genStandaloneTaskloop(converter, symTable, stmtCtx, semaCtx, eval,
+                                  loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_taskwait:
     newOp = genTaskwaitOp(converter, symTable, semaCtx, eval, loc, queue, item);
@@ -3679,9 +3682,11 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
                        item);
     break;
   case llvm::omp::Directive::OMPD_tile:
-  case llvm::omp::Directive::OMPD_unroll:
+  case llvm::omp::Directive::OMPD_unroll: {
+    unsigned version = semaCtx.langOptions().OpenMPVersion;
     TODO(loc, "Unhandled loop directive (" +
-                  llvm::omp::getOpenMPDirectiveName(dir) + ")");
+                  llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
+  }
   // case llvm::omp::Directive::OMPD_workdistribute:
   case llvm::omp::Directive::OMPD_workshare:
     newOp = genWorkshareOp(converter, symTable, stmtCtx, semaCtx, eval, loc,
