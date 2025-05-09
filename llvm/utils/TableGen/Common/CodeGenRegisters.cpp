@@ -437,6 +437,11 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
   // Technically, we could do better by identifying maximal cliques in the ad
   // hoc graph, but cliques larger than 2 are extremely rare anyway (I've never
   // seen one), so we don't bother with the added complexity.
+  //
+  // Create a RegUnit for leaf register that uniquely defines it, which has
+  // explicit alias registers.
+  if (RegUnits.empty() && !ExplicitAliases.empty())
+    RegUnits.set(RegBank.newRegUnit(this));
   for (CodeGenRegister *AR : ExplicitAliases) {
     // Only visit each edge once.
     if (AR->SubRegsComplete)
@@ -447,9 +452,7 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
     RegUnits.set(SharedUnit);
     AR->RegUnits.set(SharedUnit);
 
-    // Create a RegUnit that now corresponds uniquely to each of the both
-    // alias leaf register nodes.
-    RegUnits.set(RegBank.newRegUnit(this));
+    // Create a RegUnit that uniquely defines the alias leaf register nodes.
     AR->RegUnits.set(RegBank.newRegUnit(AR));
   }
 
