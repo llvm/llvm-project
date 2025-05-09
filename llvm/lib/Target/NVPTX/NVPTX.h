@@ -190,12 +190,7 @@ enum AddressSpace : AddressSpaceUnderlyingType {
 };
 
 namespace PTXLdStInstCode {
-enum FromType {
-  Unsigned = 0,
-  Signed,
-  Float,
-  Untyped
-};
+enum FromType { Unsigned = 0, Signed, Float, Untyped };
 } // namespace PTXLdStInstCode
 
 /// PTXCvtMode - Conversion code enumeration
