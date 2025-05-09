@@ -48,6 +48,7 @@
 #include "RvalueReferenceParamNotMovedCheck.h"
 #include "SlicingCheck.h"
 #include "SpecialMemberFunctionsCheck.h"
+#include "UseEnumClassCheck.h"
 #include "VirtualClassDestructorCheck.h"
 
 namespace clang::tidy {
@@ -59,6 +60,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidCapturingLambdaCoroutinesCheck>(
         "cppcoreguidelines-avoid-capturing-lambda-coroutines");
+    CheckFactories.registerCheck<UseEnumClassCheck>(
+        "cppcoreguidelines-use-enum-class");
     CheckFactories.registerCheck<modernize::AvoidCArraysCheck>(
         "cppcoreguidelines-avoid-c-arrays");
     CheckFactories.registerCheck<AvoidConstOrRefDataMembersCheck>(

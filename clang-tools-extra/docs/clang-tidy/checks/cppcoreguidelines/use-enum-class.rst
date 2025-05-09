@@ -1,6 +1,6 @@
-.. title:: clang-tidy - modernize-use-enum-class
+.. title:: clang-tidy - cppcoreguidelines-use-enum-class
 
-modernize-use-enum-class
+cppcoreguidelines-use-enum-class
 =============================
 
 Scoped enums (enum class) should be preferred over unscoped enums:
