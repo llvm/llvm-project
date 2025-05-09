@@ -86,8 +86,9 @@ for input features and the ``TensorSpec`` of the output (e.g.
 a 0-based indexing array-like container. Given a ``TensorSpec`` at index "I" in
 the input list, that has a name "N", shape "D1 x D2x ... Dn", and scalar type
 "T", the implementer must:
+
 - set up a contiguous buffer sized ``sizeof(T) * D1 * D2 * ... * Dn``. This
-  buffer's lifetime must be the same as the lifetime of the implementer object; 
+  buffer's lifetime must be the same as the lifetime of the implementer object.
 - call ``MLModelRunner::setUpBufferForTensor`` passing I, the ``TensorSpec``,
   and the buffer above.
 
