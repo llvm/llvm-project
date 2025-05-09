@@ -5,14 +5,14 @@
 ; of discriminants, and where both refer to a DIE that is not a child
 ; of the variant.
 
-; CHECK: DW_AT_name [DW_FORM_strp]  ({{.*}} = "Discr")
+; CHECK: DW_AT_name [DW_FORM_str{{[a-z]+}}]  ({{.*}} = "Discr")
 ; CHECK: DW_TAG_variant_part
 ;   CHECK-NOT: TAG
 ;     CHECK: DW_AT_discr [DW_FORM_ref4] (cu + {{0x[0-9a-fA-F]+}} => {[[OFFSET:0x[0-9a-fA-F]+]]})
 ;     CHECK: DW_TAG_variant
 ;       CHECK: DW_AT_discr_list [DW_FORM_block1] (<0x05> 00 17 01 61 6c )
 ;       CHECK: DW_TAG_member
-;         CHECK: DW_AT_name [DW_FORM_strp]  ({{.*}} = "var0")
+;         CHECK: DW_AT_name [DW_FORM_str{{[a-z]+}}]  ({{.*}} = "var0")
 ;         CHECK: DW_AT_type
 ;         CHECK: DW_AT_alignment
 ;         CHECK: DW_AT_data_member_location [DW_FORM_data1]	(0x00)
