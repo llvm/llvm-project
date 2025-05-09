@@ -861,9 +861,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasIEEEMinMax()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
-    setOperationAction({ISD::FMINIMUM, ISD::FMAXIMUM},
-                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
-                       Custom);
   } else {
     // FIXME: For nnan fmaximum, emit the fmaximum3 instead of fmaxnum
     if (Subtarget->hasMinimum3Maximum3F32())
@@ -876,6 +873,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       if (!Subtarget->hasMinimum3Maximum3F16())
         setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Custom);
     }
+  }
+
+  if (Subtarget->hasVOP3PInsts()) {
+    // We want to break these into v2f16 pieces, not scalarize.
+    setOperationAction({ISD::FMINIMUM, ISD::FMAXIMUM},
+                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
+                       Custom);
   }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
