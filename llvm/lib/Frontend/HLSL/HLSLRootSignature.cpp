@@ -17,8 +17,8 @@ namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
-static void dumpRegType(raw_ostream &OS, RegisterType Type) {
-  switch (Type) {
+static raw_ostream &operator<<(raw_ostream &OS, const Register &Reg) {
+  switch (Reg.ViewType) {
   case RegisterType::BReg:
     OS << "b";
     break;
@@ -32,14 +32,12 @@ static void dumpRegType(raw_ostream &OS, RegisterType Type) {
     OS << "s";
     break;
   }
+  OS << Reg.Number;
+  return OS;
 }
 
-void Register::dump(raw_ostream &OS) const {
-  dumpRegType(OS, ViewType);
-  OS << Number;
-}
-
-static void dumpVisibility(raw_ostream &OS, ShaderVisibility Visibility) {
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const ShaderVisibility &Visibility) {
   switch (Visibility) {
   case ShaderVisibility::All:
     OS << "All";
@@ -66,16 +64,16 @@ static void dumpVisibility(raw_ostream &OS, ShaderVisibility Visibility) {
     OS << "Mesh";
     break;
   }
+
+  return OS;
 }
 
 void DescriptorTable::dump(raw_ostream &OS) const {
   OS << "DescriptorTable(numClauses = " << NumClauses;
-  OS << ", visibility = ";
-  dumpVisibility(OS, Visibility);
-  OS << ")";
+  OS << ", visibility = " << Visibility << ")";
 }
 
-static void dumpClauseType(raw_ostream &OS, ClauseType Type) {
+static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
   switch (Type) {
   case ClauseType::CBuffer:
     OS << "CBV";
@@ -90,33 +88,12 @@ static void dumpClauseType(raw_ostream &OS, ClauseType Type) {
     OS << "Sampler";
     break;
   }
+
+  return OS;
 }
 
-static void dumpDescriptorRangeFlag(raw_ostream &OS, unsigned Bit) {
-  switch (static_cast<DescriptorRangeFlags>(Bit)) {
-  case DescriptorRangeFlags::DescriptorsVolatile:
-    OS << "DescriptorsVolatile";
-    break;
-  case DescriptorRangeFlags::DataVolatile:
-    OS << "DataVolatile";
-    break;
-  case DescriptorRangeFlags::DataStaticWhileSetAtExecute:
-    OS << "DataStaticWhileSetAtExecute";
-    break;
-  case DescriptorRangeFlags::DataStatic:
-    OS << "DataStatic";
-    break;
-  case DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks:
-    OS << "DescriptorsStaticKeepingBufferBoundsChecks";
-    break;
-  default:
-    OS << "invalid: " << Bit;
-    break;
-  }
-}
-
-static void dumpDescriptorRangeFlags(raw_ostream &OS,
-                                     DescriptorRangeFlags Flags) {
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const DescriptorRangeFlags &Flags) {
   bool FlagSet = false;
   unsigned Remaining = llvm::to_underlying(Flags);
   while (Remaining) {
@@ -124,19 +101,41 @@ static void dumpDescriptorRangeFlags(raw_ostream &OS,
     if (Remaining & Bit) {
       if (FlagSet)
         OS << " | ";
-      dumpDescriptorRangeFlag(OS, Bit);
+
+      switch (static_cast<DescriptorRangeFlags>(Bit)) {
+      case DescriptorRangeFlags::DescriptorsVolatile:
+        OS << "DescriptorsVolatile";
+        break;
+      case DescriptorRangeFlags::DataVolatile:
+        OS << "DataVolatile";
+        break;
+      case DescriptorRangeFlags::DataStaticWhileSetAtExecute:
+        OS << "DataStaticWhileSetAtExecute";
+        break;
+      case DescriptorRangeFlags::DataStatic:
+        OS << "DataStatic";
+        break;
+      case DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks:
+        OS << "DescriptorsStaticKeepingBufferBoundsChecks";
+        break;
+      default:
+        OS << "invalid: " << Bit;
+        break;
+      }
+
       FlagSet = true;
     }
     Remaining &= ~Bit;
   }
+
   if (!FlagSet)
     OS << "None";
+
+  return OS;
 }
 
 void DescriptorTableClause::dump(raw_ostream &OS) const {
-  dumpClauseType(OS, Type);
-  OS << "(";
-  Reg.dump(OS);
+  OS << Type << "(" << Reg;
   OS << ", numDescriptors = " << NumDescriptors;
   OS << ", space = " << Space;
   OS << ", offset = ";
@@ -144,9 +143,7 @@ void DescriptorTableClause::dump(raw_ostream &OS) const {
     OS << "DescriptorTableOffsetAppend";
   else
     OS << Offset;
-  OS << ", flags = ";
-  dumpDescriptorRangeFlags(OS, Flags);
-  OS << ")";
+  OS << ", flags = " << Flags << ")";
 }
 
 } // namespace rootsig
