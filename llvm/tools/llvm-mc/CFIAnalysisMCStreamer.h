@@ -6,15 +6,18 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include <cstdio>
+#include <memory>
 #include <optional>
 
 namespace llvm {
 
 class CFIAnalysisMCStreamer : public MCStreamer {
   MCInstrInfo const &MCII;
+  std::unique_ptr<MCInstrAnalysis> MCIA;
 
   struct CFIDirectivesState {
     int FrameIndex; // TODO remove it, no need for it
@@ -86,9 +89,10 @@ class CFIAnalysisMCStreamer : public MCStreamer {
   }
 
 public:
-  CFIAnalysisMCStreamer(MCContext &Context, const MCInstrInfo &MCII)
-      : MCStreamer(Context), MCII(MCII), LastCFIDirectivesState(),
-        LastInstruction(std::nullopt) {
+  CFIAnalysisMCStreamer(MCContext &Context, const MCInstrInfo &MCII,
+                        std::unique_ptr<MCInstrAnalysis> MCIA)
+      : MCStreamer(Context), MCII(MCII), MCIA(std::move(MCIA)),
+        LastCFIDirectivesState(), LastInstruction(std::nullopt) {
     FrameIndices.push_back(-1);
   }
 
@@ -125,7 +129,7 @@ public:
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override {
     feedCFIA();
     FrameIndices.push_back(getNumFrameInfos());
-    CFIAs.emplace_back(getContext(), MCII);
+    CFIAs.emplace_back(getContext(), MCII, MCIA.get());
     LastInstruction = std::nullopt;
     LastDwarfFrameInfo = std::nullopt;
     LastCFIDirectivesState.FrameIndex = FrameIndices.back();

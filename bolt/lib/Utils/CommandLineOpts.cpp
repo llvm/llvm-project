@@ -146,7 +146,7 @@ cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
                    cl::cat(BoltCategory));
 
 cl::opt<std::string>
-OutputFilename("o",
+OutputFilename("ooo",
   cl::desc("<output file>"),
   cl::Optional,
   cl::cat(BoltOutputCategory));
