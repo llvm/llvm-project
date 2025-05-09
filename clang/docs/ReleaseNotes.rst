@@ -1128,6 +1128,7 @@ OpenMP Support
 - Fixed mapping of arrays of structs containing nested structs with user defined
   mappers, by using compiler-generated default mappers for the outer structs for
   such maps.
+- Added support for 'omp fuse' directive.
 
 Improvements
 ^^^^^^^^^^^^
