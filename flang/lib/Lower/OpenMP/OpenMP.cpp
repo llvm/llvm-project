@@ -3754,11 +3754,9 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
                        item);
     break;
   case llvm::omp::Directive::OMPD_tile:
-  case llvm::omp::Directive::OMPD_unroll: {
-    unsigned version = semaCtx.langOptions().OpenMPVersion;
+  case llvm::omp::Directive::OMPD_unroll:
     TODO(loc, "Unhandled loop directive (" +
-                  llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
-  }
+                  llvm::omp::getOpenMPDirectiveName(dir) + ")");
   // case llvm::omp::Directive::OMPD_workdistribute:
   case llvm::omp::Directive::OMPD_workshare:
     newOp = genWorkshareOp(converter, symTable, stmtCtx, semaCtx, eval, loc,

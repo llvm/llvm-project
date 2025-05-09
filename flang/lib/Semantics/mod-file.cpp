@@ -50,7 +50,7 @@ static void CollectSymbols(
     const Scope &, SymbolVector &, SymbolVector &, SourceOrderedSymbolSet &);
 static void PutPassName(llvm::raw_ostream &, const std::optional<SourceName> &);
 static void PutInit(llvm::raw_ostream &, const Symbol &, const MaybeExpr &,
-    const parser::Expr *, SemanticsContext &);
+    const parser::Expr *);
 static void PutInit(llvm::raw_ostream &, const MaybeIntExpr &);
 static void PutBound(llvm::raw_ostream &, const Bound &);
 static void PutShapeSpec(llvm::raw_ostream &, const ShapeSpec &);
@@ -605,7 +605,7 @@ void ModFileWriter::PutDECStructure(
         }
         decls_ << ref->name();
         PutShape(decls_, object->shape(), '(', ')');
-        PutInit(decls_, *ref, object->init(), nullptr, context_);
+        PutInit(decls_, *ref, object->init(), nullptr);
         emittedDECFields_.insert(*ref);
       } else if (any) {
         break; // any later use of this structure will use RECORD/str/
@@ -944,8 +944,7 @@ void ModFileWriter::PutObjectEntity(
       getSymbolAttrsToWrite(symbol));
   PutShape(os, details.shape(), '(', ')');
   PutShape(os, details.coshape(), '[', ']');
-  PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit(),
-      context_);
+  PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit());
   os << '\n';
   if (auto tkr{GetIgnoreTKR(symbol)}; !tkr.empty()) {
     os << "!dir$ ignore_tkr(";
@@ -1037,11 +1036,11 @@ void ModFileWriter::PutTypeParam(llvm::raw_ostream &os, const Symbol &symbol) {
 }
 
 void PutInit(llvm::raw_ostream &os, const Symbol &symbol, const MaybeExpr &init,
-    const parser::Expr *unanalyzed, SemanticsContext &context) {
+    const parser::Expr *unanalyzed) {
   if (IsNamedConstant(symbol) || symbol.owner().IsDerivedType()) {
     const char *assign{symbol.attrs().test(Attr::POINTER) ? "=>" : "="};
     if (unanalyzed) {
-      parser::Unparse(os << assign, *unanalyzed, context.langOptions());
+      parser::Unparse(os << assign, *unanalyzed);
     } else if (init) {
       init->AsFortran(os << assign);
     }
