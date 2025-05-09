@@ -1322,10 +1322,10 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
         std::nullopt, NVPTX::INT_PTX_LDU_G_v4f32_ELE, std::nullopt);
     break;
   case NVPTXISD::LoadV8:
-    Opcode = pickOpcodeForVT(
-        EltVT.getSimpleVT().SimpleTy, std::nullopt, std::nullopt,
-        NVPTX::INT_PTX_LDG_G_v8i32_ELE, std::nullopt, NVPTX::INT_PTX_LDG_G_v8f32_ELE,
-        std::nullopt);
+    Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy, std::nullopt,
+                             std::nullopt, NVPTX::INT_PTX_LDG_G_v8i32_ELE,
+                             std::nullopt, NVPTX::INT_PTX_LDG_G_v8f32_ELE,
+                             std::nullopt);
     break;
   }
   if (!Opcode)
