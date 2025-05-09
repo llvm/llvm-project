@@ -102,6 +102,8 @@ public:
     assert(!hasLV && !isUsed);
     return rv;
   }
+
+  bool isAggregate() const { return hasLV || rv.isAggregate(); }
 };
 
 class CallArgList : public llvm::SmallVector<CallArg, 8> {
