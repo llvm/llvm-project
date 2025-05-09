@@ -18,20 +18,10 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_builtin(__add_rvalue_reference)
+#if __has_builtin(__add_rvalue_reference) && __GNUC__ < 15
 
-#  if defined(_LIBCPP_COMPILER_GCC)
-template <class _Tp>
-struct __add_rvalue_reference_gcc {
-  using type = __add_rvalue_reference(_Tp);
-};
-
-template <class _Tp>
-using __add_rvalue_reference_t _LIBCPP_NODEBUG = typename __add_rvalue_reference_gcc<_Tp>::type;
-#  else
 template <class _Tp>
 using __add_rvalue_reference_t _LIBCPP_NODEBUG = __add_rvalue_reference(_Tp);
-#  endif //  defined(_LIBCPP_COMPILER_GCC)
 
 #else
 

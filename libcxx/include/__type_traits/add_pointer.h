@@ -20,20 +20,10 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if !defined(_LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS) && __has_builtin(__add_pointer)
+#if !defined(_LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS) && __has_builtin(__add_pointer) && __GNUC__ < 15
 
-#  if defined(_LIBCPP_COMPILER_GCC)
-template <class _Tp>
-struct __add_pointer_gcc {
-  using type = __add_pointer(_Tp);
-};
-
-template <class _Tp>
-using __add_pointer_t _LIBCPP_NODEBUG = typename __add_pointer_gcc<_Tp>::type;
-#  else
 template <class _Tp>
 using __add_pointer_t _LIBCPP_NODEBUG = __add_pointer(_Tp);
-#  endif //  defined(_LIBCPP_COMPILER_GCC)
 
 #else
 template <class _Tp, bool = __is_referenceable_v<_Tp> || is_void<_Tp>::value>
