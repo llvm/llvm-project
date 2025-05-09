@@ -80,8 +80,6 @@ add_libc_unittest(
     localtime_test.cpp
   HDRS
     TmHelper.h
-  CXX_STANDARD
-    20
   DEPENDS
     .time_utils.h
 )
@@ -94,8 +92,6 @@ add_libc_unittest(
     localtime_r_test.cpp
   HDRS
     TmHelper.h
-  CXX_STANDARD
-    20
   DEPENDS
     .time_utils.h
 )
