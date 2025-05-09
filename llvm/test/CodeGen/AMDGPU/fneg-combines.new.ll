@@ -1382,6 +1382,1168 @@ define <2 x float> @v_fneg_maxnum_multi_use_maxnum_f32_no_ieee(float %a, float %
 }
 
 ; --------------------------------------------------------------------------------
+; fminimum tests
+; --------------------------------------------------------------------------------
+
+define float @v_fneg_minimum_f32_ieee(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_minimum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e64 v2, -v0, -v1
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float %a, float %b)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_minimum_f32_no_ieee(float %a, float %b) #4 {
+; GCN-LABEL: v_fneg_minimum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e64 v2, -v0, -v1
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float %a, float %b)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_self_minimum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_self_minimum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float %a, float %a)
+  %min.fneg = fneg float %min
+  ret float %min.fneg
+}
+
+define float @v_fneg_self_minimum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_self_minimum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float %a, float %a)
+  %min.fneg = fneg float %min
+  ret float %min.fneg
+}
+
+define float @v_fneg_posk_minimum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_posk_minimum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e64 v1, -v0, -4.0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float 4.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_posk_minimum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_posk_minimum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e64 v1, -v0, -4.0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float 4.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_negk_minimum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_negk_minimum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e64 v1, -v0, 4.0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float -4.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_negk_minimum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_negk_minimum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e64 v1, -v0, 4.0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float -4.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_0_minimum_f32(float %a) #0 {
+; GCN-LABEL: v_fneg_0_minimum_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e32 v0, 0, v0
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call nnan float @llvm.minimum.f32(float 0.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_neg0_minimum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_neg0_minimum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e64 v1, -v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float -0.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_inv2pi_minimum_f32(float %a) #0 {
+; SI-LABEL: v_fneg_inv2pi_minimum_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xbe22f983
+; SI-NEXT:    v_max_f32_e64 v1, -v0, s4
+; SI-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; SI-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_inv2pi_minimum_f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_min_f32_e32 v1, 0.15915494, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; VI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; VI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float 0x3FC45F3060000000, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_neg_inv2pi_minimum_f32(float %a) #0 {
+; SI-LABEL: v_fneg_neg_inv2pi_minimum_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x3e22f983
+; SI-NEXT:    v_max_f32_e64 v1, -v0, s4
+; SI-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; SI-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_neg_inv2pi_minimum_f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_max_f32_e64 v1, -v0, 0.15915494
+; VI-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; VI-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float 0xBFC45F3060000000, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define half @v_fneg_inv2pi_minimum_f16(half %a) #0 {
+; SI-LABEL: v_fneg_inv2pi_minimum_f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_cvt_f16_f32_e64 v0, -v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_max_f32_e32 v2, 0xbe230000, v0
+; SI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; SI-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_inv2pi_minimum_f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_min_f16_e32 v1, 0.15915494, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x7e00
+; VI-NEXT:    v_cmp_o_f16_e32 vcc, v0, v0
+; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; VI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call half @llvm.minimum.f16(half 0xH3118, half %a)
+  %fneg = fneg half %min
+  ret half %fneg
+}
+
+define half @v_fneg_neg_inv2pi_minimum_f16(half %a) #0 {
+; SI-LABEL: v_fneg_neg_inv2pi_minimum_f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_cvt_f16_f32_e64 v0, -v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_max_f32_e32 v2, 0x3e230000, v0
+; SI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; SI-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_neg_inv2pi_minimum_f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_max_f16_e64 v1, -v0, 0.15915494
+; VI-NEXT:    v_mov_b32_e32 v2, 0x7e00
+; VI-NEXT:    v_cmp_o_f16_e64 vcc, -v0, -v0
+; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call half @llvm.minimum.f16(half 0xHB118, half %a)
+  %fneg = fneg half %min
+  ret half %fneg
+}
+
+define double @v_fneg_inv2pi_minimum_f64(double %a) #0 {
+; SI-LABEL: v_fneg_inv2pi_minimum_f64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x6dc9c882
+; SI-NEXT:    s_mov_b32 s5, 0xbfc45f30
+; SI-NEXT:    v_max_f64 v[2:3], -v[0:1], s[4:5]
+; SI-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[0:1]
+; SI-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
+; SI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_inv2pi_minimum_f64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_min_f64 v[2:3], v[0:1], 0.15915494309189532
+; VI-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v1, 0xfff80000
+; VI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
+; VI-NEXT:    v_cndmask_b32_e64 v1, -v3, v1, vcc
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call double @llvm.minimum.f64(double 0x3fc45f306dc9c882, double %a)
+  %fneg = fneg double %min
+  ret double %fneg
+}
+
+define double @v_fneg_neg_inv2pi_minimum_f64(double %a) #0 {
+; SI-LABEL: v_fneg_neg_inv2pi_minimum_f64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x6dc9c882
+; SI-NEXT:    s_mov_b32 s5, 0x3fc45f30
+; SI-NEXT:    v_max_f64 v[2:3], -v[0:1], s[4:5]
+; SI-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[0:1]
+; SI-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
+; SI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_neg_inv2pi_minimum_f64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_max_f64 v[2:3], -v[0:1], 0.15915494309189532
+; VI-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
+; VI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
+; VI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call double @llvm.minimum.f64(double 0xbfc45f306dc9c882, double %a)
+  %fneg = fneg double %min
+  ret double %fneg
+}
+
+define float @v_fneg_neg0_minimum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_neg0_minimum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e64 v1, -v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float -0.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_0_minimum_foldable_use_f32_ieee(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_0_minimum_foldable_use_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e32 v2, 0, v0
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float 0.0, float %a)
+  %fneg = fneg float %min
+  %mul = fmul float %fneg, %b
+  ret float %mul
+}
+
+define float @v_fneg_inv2pi_minimum_foldable_use_f32(float %a, float %b) #0 {
+; SI-LABEL: v_fneg_inv2pi_minimum_foldable_use_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0xbe22f983
+; SI-NEXT:    v_max_f32_e64 v2, -v0, s4
+; SI-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; SI-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; SI-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; SI-NEXT:    v_mul_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_inv2pi_minimum_foldable_use_f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_min_f32_e32 v2, 0.15915494, v0
+; VI-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; VI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; VI-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float 0x3FC45F3060000000, float %a)
+  %fneg = fneg float %min
+  %mul = fmul float %fneg, %b
+  ret float %mul
+}
+
+define float @v_fneg_0_minimum_foldable_use_f32_no_ieee(float %a, float %b) #4 {
+; GCN-LABEL: v_fneg_0_minimum_foldable_use_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e32 v2, 0, v0
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float 0.0, float %a)
+  %fneg = fneg float %min
+  %mul = fmul float %fneg, %b
+  ret float %mul
+}
+
+define { float, float } @v_fneg_minimum_multi_use_minimum_f32_ieee(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_minimum_multi_use_minimum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e64 v2, -v0, -v1
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; GCN-NEXT:    v_mul_f32_e32 v1, -4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float %a, float %b)
+  %fneg = fneg float %min
+  %use1 = fmul float %min, 4.0
+  %insert.0 = insertvalue { float, float } poison, float %fneg, 0
+  %insert.1 = insertvalue { float, float } %insert.0, float %use1, 1
+  ret { float, float } %insert.1
+}
+
+define <2 x float> @v_fneg_minimum_multi_use_minimum_f32_no_ieee(float %a, float %b) #4 {
+; GCN-LABEL: v_fneg_minimum_multi_use_minimum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e64 v2, -v0, -v1
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; GCN-NEXT:    v_mul_f32_e32 v1, -4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimum.f32(float %a, float %b)
+  %fneg = fneg float %min
+  %use1 = fmul float %min, 4.0
+  %ins0 = insertelement <2 x float> poison, float %fneg, i32 0
+  %ins1 = insertelement <2 x float> %ins0, float %use1, i32 1
+  ret <2 x float> %ins1
+}
+
+; --------------------------------------------------------------------------------
+; fmaximum tests
+; --------------------------------------------------------------------------------
+
+define float @v_fneg_maximum_f32_ieee(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_maximum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e64 v2, -v0, -v1
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float %a, float %b)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_maximum_f32_no_ieee(float %a, float %b) #4 {
+; GCN-LABEL: v_fneg_maximum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e64 v2, -v0, -v1
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float %a, float %b)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_self_maximum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_self_maximum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float %a, float %a)
+  %max.fneg = fneg float %max
+  ret float %max.fneg
+}
+
+define float @v_fneg_self_maximum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_self_maximum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float %a, float %a)
+  %max.fneg = fneg float %max
+  ret float %max.fneg
+}
+
+define float @v_fneg_posk_maximum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_posk_maximum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e64 v1, -v0, -4.0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float 4.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_posk_maximum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_posk_maximum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e64 v1, -v0, -4.0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float 4.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_negk_maximum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_negk_maximum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e64 v1, -v0, 4.0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float -4.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_negk_maximum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_negk_maximum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e64 v1, -v0, 4.0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float -4.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_0_maximum_f32(float %a) #0 {
+; GCN-LABEL: v_fneg_0_maximum_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e32 v0, 0, v0
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call nnan float @llvm.maximum.f32(float 0.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_neg0_maximum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_neg0_maximum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e64 v1, -v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float -0.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_neg0_maximum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_neg0_maximum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e64 v1, -v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float -0.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_0_maximum_foldable_use_f32_ieee(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_0_maximum_foldable_use_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e32 v2, 0, v0
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float 0.0, float %a)
+  %fneg = fneg float %max
+  %mul = fmul float %fneg, %b
+  ret float %mul
+}
+
+define float @v_fneg_0_maximum_foldable_use_f32_no_ieee(float %a, float %b) #4 {
+; GCN-LABEL: v_fneg_0_maximum_foldable_use_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e32 v2, 0, v0
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float 0.0, float %a)
+  %fneg = fneg float %max
+  %mul = fmul float %fneg, %b
+  ret float %mul
+}
+
+define { float, float } @v_fneg_maximum_multi_use_maximum_f32_ieee(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_maximum_multi_use_maximum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e64 v2, -v0, -v1
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; GCN-NEXT:    v_mul_f32_e32 v1, -4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float %a, float %b)
+  %fneg = fneg float %max
+  %use1 = fmul float %max, 4.0
+  %insert.0 = insertvalue { float, float } poison, float %fneg, 0
+  %insert.1 = insertvalue { float, float } %insert.0, float %use1, 1
+  ret { float, float } %insert.1
+}
+
+define <2 x float> @v_fneg_maximum_multi_use_maximum_f32_no_ieee(float %a, float %b) #4 {
+; GCN-LABEL: v_fneg_maximum_multi_use_maximum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e64 v2, -v0, -v1
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
+; GCN-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; GCN-NEXT:    v_mul_f32_e32 v1, -4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximum.f32(float %a, float %b)
+  %fneg = fneg float %max
+  %use1 = fmul float %max, 4.0
+  %ins0 = insertelement <2 x float> poison, float %fneg, i32 0
+  %ins1 = insertelement <2 x float> %ins0, float %use1, i32 1
+  ret <2 x float> %ins1
+}
+
+; --------------------------------------------------------------------------------
+; fminimumnum tests
+; --------------------------------------------------------------------------------
+
+define float @v_fneg_minimumnum_f32_ieee(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_minimumnum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v1, -1.0, v1
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float %a, float %b)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_minimumnum_f32_no_ieee(float %a, float %b) #4 {
+; GCN-LABEL: v_fneg_minimumnum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v1, -1.0, v1
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float %a, float %b)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_self_minimumnum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_self_minimumnum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float %a, float %a)
+  %min.fneg = fneg float %min
+  ret float %min.fneg
+}
+
+define float @v_fneg_self_minimumnum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_self_minimumnum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float %a, float %a)
+  %min.fneg = fneg float %min
+  ret float %min.fneg
+}
+
+define float @v_fneg_posk_minimumnum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_posk_minimumnum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, -4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float 4.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_posk_minimumnum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_posk_minimumnum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, -4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float 4.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_negk_minimumnum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_negk_minimumnum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float -4.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_negk_minimumnum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_negk_minimumnum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float -4.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_0_minimumnum_f32(float %a) #0 {
+; GCN-LABEL: v_fneg_0_minimumnum_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_min_f32_e32 v0, 0, v0
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call nnan float @llvm.minimumnum.f32(float 0.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_neg0_minimumnum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_neg0_minimumnum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, 0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float -0.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_inv2pi_minimumnum_f32(float %a) #0 {
+; SI-LABEL: v_fneg_inv2pi_minimumnum_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; SI-NEXT:    v_max_f32_e32 v0, 0xbe22f983, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_inv2pi_minimumnum_f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; VI-NEXT:    v_min_f32_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float 0x3FC45F3060000000, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_neg_inv2pi_minimumnum_f32(float %a) #0 {
+; SI-LABEL: v_fneg_neg_inv2pi_minimumnum_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; SI-NEXT:    v_max_f32_e32 v0, 0x3e22f983, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_neg_inv2pi_minimumnum_f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; VI-NEXT:    v_max_f32_e32 v0, 0.15915494, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float 0xBFC45F3060000000, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define half @v_fneg_inv2pi_minimumnum_f16(half %a) #0 {
+; SI-LABEL: v_fneg_inv2pi_minimumnum_f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e64 v0, -v0
+; SI-NEXT:    v_max_f32_e32 v0, 0xbe230000, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_inv2pi_minimumnum_f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-NEXT:    v_min_f16_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call half @llvm.minimumnum.f16(half 0xH3118, half %a)
+  %fneg = fneg half %min
+  ret half %fneg
+}
+
+define half @v_fneg_neg_inv2pi_minimumnum_f16(half %a) #0 {
+; SI-LABEL: v_fneg_neg_inv2pi_minimumnum_f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e64 v0, -v0
+; SI-NEXT:    v_max_f32_e32 v0, 0x3e230000, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_neg_inv2pi_minimumnum_f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_max_f16_e64 v0, -v0, -v0
+; VI-NEXT:    v_max_f16_e32 v0, 0.15915494, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call half @llvm.minimumnum.f16(half 0xHB118, half %a)
+  %fneg = fneg half %min
+  ret half %fneg
+}
+
+define double @v_fneg_inv2pi_minimumnum_f64(double %a) #0 {
+; SI-LABEL: v_fneg_inv2pi_minimumnum_f64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; SI-NEXT:    s_mov_b32 s4, 0x6dc9c882
+; SI-NEXT:    s_mov_b32 s5, 0xbfc45f30
+; SI-NEXT:    v_max_f64 v[0:1], -v[0:1], s[4:5]
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_inv2pi_minimumnum_f64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; VI-NEXT:    v_min_f64 v[0:1], v[0:1], 0.15915494309189532
+; VI-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call double @llvm.minimumnum.f64(double 0x3fc45f306dc9c882, double %a)
+  %fneg = fneg double %min
+  ret double %fneg
+}
+
+define double @v_fneg_neg_inv2pi_minimumnum_f64(double %a) #0 {
+; SI-LABEL: v_fneg_neg_inv2pi_minimumnum_f64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; SI-NEXT:    s_mov_b32 s4, 0x6dc9c882
+; SI-NEXT:    s_mov_b32 s5, 0x3fc45f30
+; SI-NEXT:    v_max_f64 v[0:1], -v[0:1], s[4:5]
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_neg_inv2pi_minimumnum_f64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; VI-NEXT:    v_max_f64 v[0:1], -v[0:1], 0.15915494309189532
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call double @llvm.minimumnum.f64(double 0xbfc45f306dc9c882, double %a)
+  %fneg = fneg double %min
+  ret double %fneg
+}
+
+define float @v_fneg_neg0_minimumnum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_neg0_minimumnum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, 0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float -0.0, float %a)
+  %fneg = fneg float %min
+  ret float %fneg
+}
+
+define float @v_fneg_0_minimumnum_foldable_use_f32_ieee(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_0_minimumnum_foldable_use_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_min_f32_e32 v0, 0, v0
+; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float 0.0, float %a)
+  %fneg = fneg float %min
+  %mul = fmul float %fneg, %b
+  ret float %mul
+}
+
+define float @v_fneg_inv2pi_minimumnum_foldable_use_f32(float %a, float %b) #0 {
+; SI-LABEL: v_fneg_inv2pi_minimumnum_foldable_use_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; SI-NEXT:    v_max_f32_e32 v0, 0xbe22f983, v0
+; SI-NEXT:    v_mul_f32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_inv2pi_minimumnum_foldable_use_f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; VI-NEXT:    v_min_f32_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float 0x3FC45F3060000000, float %a)
+  %fneg = fneg float %min
+  %mul = fmul float %fneg, %b
+  ret float %mul
+}
+
+define float @v_fneg_0_minimumnum_foldable_use_f32_no_ieee(float %a, float %b) #4 {
+; GCN-LABEL: v_fneg_0_minimumnum_foldable_use_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_min_f32_e32 v0, 0, v0
+; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float 0.0, float %a)
+  %fneg = fneg float %min
+  %mul = fmul float %fneg, %b
+  ret float %mul
+}
+
+define { float, float } @v_fneg_minimumnum_multi_use_minimumnum_f32_ieee(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_minimumnum_multi_use_minimumnum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_max_f32_e64 v0, -v0, -v1
+; GCN-NEXT:    v_mul_f32_e32 v1, -4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float %a, float %b)
+  %fneg = fneg float %min
+  %use1 = fmul float %min, 4.0
+  %insert.0 = insertvalue { float, float } poison, float %fneg, 0
+  %insert.1 = insertvalue { float, float } %insert.0, float %use1, 1
+  ret { float, float } %insert.1
+}
+
+define <2 x float> @v_fneg_minimumnum_multi_use_minimumnum_f32_no_ieee(float %a, float %b) #4 {
+; GCN-LABEL: v_fneg_minimumnum_multi_use_minimumnum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_max_f32_e64 v0, -v0, -v1
+; GCN-NEXT:    v_mul_f32_e32 v1, -4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %min = call float @llvm.minimumnum.f32(float %a, float %b)
+  %fneg = fneg float %min
+  %use1 = fmul float %min, 4.0
+  %ins0 = insertelement <2 x float> poison, float %fneg, i32 0
+  %ins1 = insertelement <2 x float> %ins0, float %use1, i32 1
+  ret <2 x float> %ins1
+}
+
+; --------------------------------------------------------------------------------
+; fmaximumnum tests
+; --------------------------------------------------------------------------------
+
+define float @v_fneg_maximumnum_f32_ieee(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_maximumnum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v1, -1.0, v1
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float %a, float %b)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_maximumnum_f32_no_ieee(float %a, float %b) #4 {
+; GCN-LABEL: v_fneg_maximumnum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v1, -1.0, v1
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float %a, float %b)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_self_maximumnum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_self_maximumnum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_min_f32_e32 v0, v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float %a, float %a)
+  %max.fneg = fneg float %max
+  ret float %max.fneg
+}
+
+define float @v_fneg_self_maximumnum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_self_maximumnum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_min_f32_e32 v0, v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float %a, float %a)
+  %max.fneg = fneg float %max
+  ret float %max.fneg
+}
+
+define float @v_fneg_posk_maximumnum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_posk_maximumnum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_min_f32_e32 v0, -4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float 4.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_posk_maximumnum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_posk_maximumnum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_min_f32_e32 v0, -4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float 4.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_negk_maximumnum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_negk_maximumnum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_min_f32_e32 v0, 4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float -4.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_negk_maximumnum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_negk_maximumnum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_min_f32_e32 v0, 4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float -4.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_0_maximumnum_f32(float %a) #0 {
+; GCN-LABEL: v_fneg_0_maximumnum_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_max_f32_e32 v0, 0, v0
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call nnan float @llvm.maximumnum.f32(float 0.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_neg0_maximumnum_f32_ieee(float %a) #0 {
+; GCN-LABEL: v_fneg_neg0_maximumnum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_min_f32_e32 v0, 0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float -0.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_neg0_maximumnum_f32_no_ieee(float %a) #4 {
+; GCN-LABEL: v_fneg_neg0_maximumnum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
+; GCN-NEXT:    v_min_f32_e32 v0, 0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float -0.0, float %a)
+  %fneg = fneg float %max
+  ret float %fneg
+}
+
+define float @v_fneg_0_maximumnum_foldable_use_f32_ieee(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_0_maximumnum_foldable_use_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, 0, v0
+; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float 0.0, float %a)
+  %fneg = fneg float %max
+  %mul = fmul float %fneg, %b
+  ret float %mul
+}
+
+define float @v_fneg_0_maximumnum_foldable_use_f32_no_ieee(float %a, float %b) #4 {
+; GCN-LABEL: v_fneg_0_maximumnum_foldable_use_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_max_f32_e32 v0, 0, v0
+; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float 0.0, float %a)
+  %fneg = fneg float %max
+  %mul = fmul float %fneg, %b
+  ret float %mul
+}
+
+define { float, float } @v_fneg_maximumnum_multi_use_maximumnum_f32_ieee(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_maximumnum_multi_use_maximumnum_f32_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_min_f32_e64 v0, -v0, -v1
+; GCN-NEXT:    v_mul_f32_e32 v1, -4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float %a, float %b)
+  %fneg = fneg float %max
+  %use1 = fmul float %max, 4.0
+  %insert.0 = insertvalue { float, float } poison, float %fneg, 0
+  %insert.1 = insertvalue { float, float } %insert.0, float %use1, 1
+  ret { float, float } %insert.1
+}
+
+define <2 x float> @v_fneg_maximumnum_multi_use_maximumnum_f32_no_ieee(float %a, float %b) #4 {
+; GCN-LABEL: v_fneg_maximumnum_multi_use_maximumnum_f32_no_ieee:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GCN-NEXT:    v_min_f32_e64 v0, -v0, -v1
+; GCN-NEXT:    v_mul_f32_e32 v1, -4.0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float %a, float %b)
+  %fneg = fneg float %max
+  %use1 = fmul float %max, 4.0
+  %ins0 = insertelement <2 x float> poison, float %fneg, i32 0
+  %ins1 = insertelement <2 x float> %ins0, float %use1, i32 1
+  ret <2 x float> %ins1
+}
+
+; --------------------------------------------------------------------------------
 ; fma tests
 ; --------------------------------------------------------------------------------
 
@@ -2383,12 +3545,12 @@ define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, flo
 ; SI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; SI-NEXT:    s_cbranch_execz .LBB118_2
+; SI-NEXT:    s_cbranch_execz .LBB192_2
 ; SI-NEXT:  ; %bb.1: ; %if
 ; SI-NEXT:    v_mul_f32_e64 v3, -v2, v4
 ; SI-NEXT:    flat_store_dword v[0:1], v3
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:  .LBB118_2: ; %endif
+; SI-NEXT:  .LBB192_2: ; %endif
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    flat_store_dword v[0:1], v2
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -2404,12 +3566,12 @@ define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, flo
 ; VI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; VI-NEXT:    s_cbranch_execz .LBB118_2
+; VI-NEXT:    s_cbranch_execz .LBB192_2
 ; VI-NEXT:  ; %bb.1: ; %if
 ; VI-NEXT:    v_mul_f32_e64 v3, -v2, v4
 ; VI-NEXT:    flat_store_dword v[0:1], v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:  .LBB118_2: ; %endif
+; VI-NEXT:  .LBB192_2: ; %endif
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
