@@ -36,7 +36,7 @@ namespace tensor {
 using namespace mlir;
 
 static Value getTensorOperand(vector::TransferReadOp op) {
-  return op.getSource();
+  return op.getBase();
 }
 
 static Value getTensorOperand(tensor::InsertSliceOp op) {
