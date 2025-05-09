@@ -121,6 +121,7 @@ void ManualDWARFIndex::Index() {
       units_to_index.size());
   for_each_unit([&clear_cu_dies](size_t, size_t idx, DWARFUnit *unit) {
     clear_cu_dies[idx] = unit->ExtractDIEsScoped();
+    ckear_cu_duex[idx].reset();
   });
 
   // Now index all DWARF unit in parallel.
