@@ -319,4 +319,86 @@ extern "C" void acc_combined(int N) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
 
+#pragma acc parallel loop gang
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT: acc.parallel combined(loop) {
+  // CHECK-NEXT: acc.loop combined(parallel) gang {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+#pragma acc parallel loop gang device_type(nvidia) gang
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT: acc.parallel combined(loop) {
+  // CHECK-NEXT: acc.loop combined(parallel) gang([#acc.device_type<none>, #acc.device_type<nvidia>]) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+#pragma acc parallel loop gang(dim:1) device_type(nvidia) gang(dim:2)
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT: acc.parallel combined(loop) {
+  // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
+  // CHECK-NEXT: %[[TWO_CONST:.*]] = arith.constant 2 : i64
+  // CHECK-NEXT: acc.loop combined(parallel) gang({dim=%[[ONE_CONST]] : i64}, {dim=%[[TWO_CONST]] : i64} [#acc.device_type<nvidia>]) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+#pragma acc parallel loop gang(static:N, dim: 1) device_type(nvidia, radeon) gang(static:*, dim : 2)
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT: acc.parallel combined(loop) {
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
+  // CHECK-NEXT: %[[STAR_CONST:.*]] = arith.constant -1 : i64
+  // CHECK-NEXT: %[[TWO_CONST:.*]] = arith.constant 2 : i64
+  // CHECK-NEXT: acc.loop combined(parallel) gang({static=%[[N_CONV]] : si32, dim=%[[ONE_CONST]] : i64}, {static=%[[STAR_CONST]] : i64, dim=%[[TWO_CONST]] : i64} [#acc.device_type<nvidia>], {static=%[[STAR_CONST]] : i64, dim=%[[TWO_CONST]] : i64} [#acc.device_type<radeon>]) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc kernels loop gang(num:N) device_type(nvidia, radeon) gang(num:N)
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT: acc.kernels combined(loop) {
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[N_LOAD2:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_CONV2:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD2]] : !s32i to si32
+  // CHECK-NEXT: acc.loop combined(kernels) gang({num=%[[N_CONV]] : si32}, {num=%[[N_CONV2]] : si32} [#acc.device_type<nvidia>], {num=%[[N_CONV2]] : si32} [#acc.device_type<radeon>]) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+#pragma acc kernels loop gang(static:N) device_type(nvidia) gang(static:*)
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT: acc.kernels combined(loop) {
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[STAR_CONST:.*]] = arith.constant -1 : i64
+  // CHECK-NEXT: acc.loop combined(kernels) gang({static=%[[N_CONV]] : si32}, {static=%[[STAR_CONST]] : i64} [#acc.device_type<nvidia>]) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+#pragma acc kernels loop gang(static:N, num: N + 1) device_type(nvidia) gang(static:*, num : N + 2)
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK-NEXT: acc.kernels combined(loop) {
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[N_LOAD2:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[CIR_ONE_CONST:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT: %[[N_PLUS_ONE:.*]] = cir.binop(add, %[[N_LOAD2]], %[[CIR_ONE_CONST]]) nsw : !s32i
+  // CHECK-NEXT: %[[N_PLUS_ONE_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_PLUS_ONE]] : !s32i to si32
+  // CHECK-NEXT: %[[STAR_CONST:.*]] = arith.constant -1 : i64
+  // CHECK-NEXT: %[[N_LOAD3:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[CIR_TWO_CONST:.*]] = cir.const #cir.int<2> : !s32i
+  // CHECK-NEXT: %[[N_PLUS_TWO:.*]] = cir.binop(add, %[[N_LOAD3]], %[[CIR_TWO_CONST]]) nsw : !s32i
+  // CHECK-NEXT: %[[N_PLUS_TWO_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_PLUS_TWO]] : !s32i to si32
+  // CHECK-NEXT: acc.loop combined(kernels) gang({static=%[[N_CONV]] : si32, num=%[[N_PLUS_ONE_CONV]] : si32}, {static=%[[STAR_CONST]] : i64, num=%[[N_PLUS_TWO_CONV]] : si32} [#acc.device_type<nvidia>]) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
 }
