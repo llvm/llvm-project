@@ -167,8 +167,6 @@ struct DAP {
   lldb::SBTarget target;
   Variables variables;
   lldb::SBBroadcaster broadcaster;
-  std::thread event_thread;
-  std::thread progress_event_thread;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
@@ -188,7 +186,7 @@ struct DAP {
   // shutting down the entire adapter. When we're restarting, we keep the id of
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
-  bool configuration_done_sent;
+  bool configuration_done;
   llvm::StringMap<std::unique_ptr<BaseRequestHandler>> request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
@@ -250,6 +248,8 @@ struct DAP {
 
   /// Configures the debug adapter for launching/attaching.
   void SetConfiguration(const protocol::Configuration &confing, bool is_attach);
+
+  void SetConfigurationDone();
 
   /// Configure source maps based on the current `DAPConfiguration`.
   void ConfigureSourceMaps();
@@ -416,9 +416,23 @@ struct DAP {
 
   lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
 
+  void StartEventThread();
+  void StartProgressEventThread();
+
 private:
-  std::mutex m_queue_mutex;
+  /// Event threads.
+  /// @{
+  void EventThread();
+  void ProgressEventThread();
+
+  std::thread event_thread;
+  std::thread progress_event_thread;
+  /// @}
+
+  /// Queue for all incoming messages.
   std::deque<protocol::Message> m_queue;
+  std::deque<protocol::Message> m_pending_queue;
+  std::mutex m_queue_mutex;
   std::condition_variable m_queue_cv;
 
   std::mutex m_cancelled_requests_mutex;

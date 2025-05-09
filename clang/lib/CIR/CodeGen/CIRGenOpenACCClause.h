@@ -12,6 +12,7 @@
 
 #include <type_traits>
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 namespace clang {
 // Simple type-trait to see if the first template arg is one of the list, so we
@@ -82,6 +83,17 @@ class OpenACCClauseCIREmitter final
     return conversionOp.getResult(0);
   }
 
+  mlir::Value createConstantInt(mlir::Location loc, unsigned width,
+                                int64_t value) {
+    mlir::IntegerType ty = mlir::IntegerType::get(
+        &cgf.getMLIRContext(), width,
+        mlir::IntegerType::SignednessSemantics::Signless);
+    auto constOp = builder.create<mlir::arith::ConstantOp>(
+        loc, builder.getIntegerAttr(ty, value));
+
+    return constOp.getResult();
+  }
+
   mlir::acc::DeviceType decodeDeviceType(const IdentifierInfo *ii) {
     // '*' case leaves no identifier-info, just a nullptr.
     if (!ii)
@@ -93,6 +105,18 @@ class OpenACCClauseCIREmitter final
         .CasesLower("nvidia", "acc_device_nvidia",
                     mlir::acc::DeviceType::Nvidia)
         .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
+  }
+
+  mlir::acc::GangArgType decodeGangType(OpenACCGangKind gk) {
+    switch (gk) {
+    case OpenACCGangKind::Num:
+      return mlir::acc::GangArgType::Num;
+    case OpenACCGangKind::Dim:
+      return mlir::acc::GangArgType::Dim;
+    case OpenACCGangKind::Static:
+      return mlir::acc::GangArgType::Static;
+    }
+    llvm_unreachable("unknown gang kind");
   }
 
 public:
@@ -333,6 +357,118 @@ public:
     } else {
       // TODO: When we've implemented this for everything, switch this to an
       // unreachable. Routine, Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitCollapseClause(const OpenACCCollapseClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      llvm::APInt value =
+          clause.getIntExpr()->EvaluateKnownConstInt(cgf.cgm.getASTContext());
+
+      value = value.sextOrTrunc(64);
+      operation.setCollapseForDeviceTypes(builder.getContext(),
+                                          lastDeviceTypeValues, value);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitTileClause(const OpenACCTileClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      llvm::SmallVector<mlir::Value> values;
+
+      for (const Expr *e : clause.getSizeExprs()) {
+        mlir::Location exprLoc = cgf.cgm.getLoc(e->getBeginLoc());
+
+        // We represent the * as -1.  Additionally, this is a constant, so we
+        // can always just emit it as 64 bits to avoid having to do any more
+        // work to determine signedness or size.
+        if (isa<OpenACCAsteriskSizeExpr>(e)) {
+          values.push_back(createConstantInt(exprLoc, 64, -1));
+        } else {
+          llvm::APInt curValue =
+              e->EvaluateKnownConstInt(cgf.cgm.getASTContext());
+          values.push_back(createConstantInt(
+              exprLoc, 64, curValue.sextOrTrunc(64).getSExtValue()));
+        }
+      }
+
+      operation.setTileForDeviceTypes(builder.getContext(),
+                                      lastDeviceTypeValues, values);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitWorkerClause(const OpenACCWorkerClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      if (clause.hasIntExpr())
+        operation.addWorkerNumOperand(builder.getContext(),
+                                      createIntExpr(clause.getIntExpr()),
+                                      lastDeviceTypeValues);
+      else
+        operation.addEmptyWorker(builder.getContext(), lastDeviceTypeValues);
+
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitVectorClause(const OpenACCVectorClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      if (clause.hasIntExpr())
+        operation.addVectorOperand(builder.getContext(),
+                                   createIntExpr(clause.getIntExpr()),
+                                   lastDeviceTypeValues);
+      else
+        operation.addEmptyVector(builder.getContext(), lastDeviceTypeValues);
+
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitGangClause(const OpenACCGangClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      if (clause.getNumExprs() == 0) {
+        operation.addEmptyGang(builder.getContext(), lastDeviceTypeValues);
+      } else {
+        llvm::SmallVector<mlir::Value> values;
+        llvm::SmallVector<mlir::acc::GangArgType> argTypes;
+        for (unsigned i : llvm::index_range(0u, clause.getNumExprs())) {
+          auto [kind, expr] = clause.getExpr(i);
+          mlir::Location exprLoc = cgf.cgm.getLoc(expr->getBeginLoc());
+          argTypes.push_back(decodeGangType(kind));
+          if (kind == OpenACCGangKind::Dim) {
+            llvm::APInt curValue =
+                expr->EvaluateKnownConstInt(cgf.cgm.getASTContext());
+            // The value is 1, 2, or 3, but the type isn't necessarily smaller
+            // than 64.
+            curValue = curValue.sextOrTrunc(64);
+            values.push_back(
+                createConstantInt(exprLoc, 64, curValue.getSExtValue()));
+          } else if (isa<OpenACCAsteriskSizeExpr>(expr)) {
+            values.push_back(createConstantInt(exprLoc, 64, -1));
+          } else {
+            values.push_back(createIntExpr(expr));
+          }
+        }
+
+        operation.addGangOperands(builder.getContext(), lastDeviceTypeValues,
+                                  argTypes, values);
+      }
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
