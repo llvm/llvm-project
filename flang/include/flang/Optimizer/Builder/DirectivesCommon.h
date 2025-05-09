@@ -243,6 +243,17 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
   return bounds;
 }
 
+/// Checks if an argument is optional based on the fortran attributes
+/// that are tied to it.
+inline bool isOptionalArgument(mlir::Operation *op) {
+  if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(op))
+    if (declareOp.getFortranAttrs() &&
+        bitEnumContainsAny(*declareOp.getFortranAttrs(),
+                           fir::FortranVariableFlagsEnum::optional))
+      return true;
+  return false;
+}
+
 template <typename BoundsOp, typename BoundsType>
 llvm::SmallVector<mlir::Value>
 genImplicitBoundsOps(fir::FirOpBuilder &builder, AddrAndBoundsInfo &info,
