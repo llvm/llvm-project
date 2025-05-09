@@ -2436,7 +2436,7 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
       // Don't let is_stmts float past instructions from different source atoms.
       if (BuoyAtom && BuoyAtom != Group) {
         Buoy = &MI;
-        BuoyAtom = MI.getDebugLoc()->getAtomGroup();
+        BuoyAtom = Group;
       }
 
       auto &[CandidateRank, CandidateInsts] =
