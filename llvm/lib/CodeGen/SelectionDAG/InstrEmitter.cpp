@@ -882,7 +882,8 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
     // Avoid copy like instructions: they don't define values, only move them.
     // Leave a virtual-register reference until it can be fixed up later, to
     // find the underlying value definition.
-    if (DefMI->isCopyLike() || TII->isCopyInstr(*DefMI)) {
+    if (DefMI->isCopyLike() || TII->isCopyInstr(*DefMI) ||
+        (Expr->holdsNewElements() && DefMI->isRegSequence())) {
       AddVRegOp(VReg);
       continue;
     }

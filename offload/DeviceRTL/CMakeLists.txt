@@ -188,6 +188,7 @@ function(compileDeviceRTLLibrary target_name target_triple)
   add_library(omptarget.${target_name}.all_objs OBJECT IMPORTED)
   set_property(TARGET omptarget.${target_name}.all_objs APPEND PROPERTY IMPORTED_OBJECTS
                ${LIBOMPTARGET_LLVM_LIBRARY_INTDIR}/libomptarget-${target_name}.bc)
+  add_dependencies(omptarget.${target_name}.all_objs libomptarget-${target_name})
 
   # Archive all the object files generated above into a static library
   add_library(omptarget.${target_name} STATIC)

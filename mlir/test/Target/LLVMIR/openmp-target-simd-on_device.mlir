@@ -1,6 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-// XFAIL: *
-module attributes {omp.is_target_device = true} {
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   omp.private {type = private} @simd_privatizer : !llvm.ptr init {
   ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     omp.yield(%arg0 : !llvm.ptr)
@@ -9,8 +9,8 @@ module attributes {omp.is_target_device = true} {
   llvm.func @test_target_simd() {
     omp.target {
       %5 = llvm.mlir.constant(1 : i32) : i32
-      %x = llvm.alloca %5 x i32 {bindc_name = "x"} : (i32) -> !llvm.ptr
-      omp.simd private(@simd_privatizer %x -> %arg1 : !llvm.ptr) {
+      %x = llvm.alloca %5 x i32 {bindc_name = "x"} : (i32) -> !llvm.ptr<5>
+      omp.simd private(@simd_privatizer %x -> %arg1 : !llvm.ptr<5>) {
         omp.loop_nest (%arg2) : i32 = (%5) to (%5) inclusive step (%5) {
           omp.yield
         }

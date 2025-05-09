@@ -321,10 +321,6 @@ struct VPTransformState {
 
     CFGState(DominatorTree *DT)
         : DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy) {}
-
-    /// Returns the BasicBlock* mapped to the pre-header of the loop region
-    /// containing \p R.
-    BasicBlock *getPreheaderBBFor(VPRecipeBase *R);
   } CFG;
 
   /// Hold a pointer to LoopInfo to register new basic blocks in the loop.

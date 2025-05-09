@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenACC enter data directive.
 
 ! RUN: bbc -fopenacc -emit-hlfir --openacc-unwrap-fir-box=true --openacc-generate-default-bounds=true %s -o - | FileCheck %s
-! XFAIL: *
+
 subroutine acc_enter_data
   integer :: async = 1
   real, dimension(10, 10) :: a, b, c
@@ -808,11 +808,12 @@ subroutine acc_enter_data_single_array_element()
 !CHECK:           %[[VAL_42:.*]] = arith.constant 1 : index
 !CHECK:           %[[VAL_43:.*]] = arith.constant 1 : index
 !CHECK:           %[[VAL_44:.*]] = arith.subi %[[VAL_43]], %[[VAL_38]]#0 : index
-!CHECK:           %[[VAL_45:.*]] = acc.bounds lowerbound(%[[VAL_44]] : index) upperbound(%[[VAL_44]] : index) extent(%[[VAL_42]] : index) stride(%[[VAL_42]] : index) startIdx(%[[VAL_38]]#0 : index)
-!CHECK:           %[[VAL_46:.*]] = arith.constant 2 : index
-!CHECK:           %[[VAL_47:.*]] = arith.subi %[[VAL_46]], %[[VAL_40]]#0 : index
-!CHECK:           %[[VAL_48:.*]] = acc.bounds lowerbound(%[[VAL_47]] : index) upperbound(%[[VAL_47]] : index) extent(%[[VAL_42]] : index) stride(%[[VAL_42]] : index) startIdx(%[[VAL_40]]#0 : index)
-!CHECK:           %[[CREATE:.*]] = acc.create varPtr(%[[VAL_41]] : !fir.heap<!fir.array<?x?xf32>>) bounds(%[[VAL_45]], %[[VAL_48]]) -> !fir.heap<!fir.array<?x?xf32>> {name = "e(2_8)%a(1,2)", structured = false}
+!CHECK:           %[[VAL_45:.*]] = arith.muli %[[VAL_38]]#1, %[[VAL_42]] : index
+!CHECK:           %[[VAL_46:.*]] = acc.bounds lowerbound(%[[VAL_44]] : index) upperbound(%[[VAL_44]] : index) extent(%[[VAL_38]]#1 : index) stride(%[[VAL_42]] : index) startIdx(%[[VAL_38]]#0 : index)
+!CHECK:           %[[VAL_47:.*]] = arith.constant 2 : index
+!CHECK:           %[[VAL_48:.*]] = arith.subi %[[VAL_47]], %[[VAL_40]]#0 : index
+!CHECK:           %[[VAL_49:.*]] = acc.bounds lowerbound(%[[VAL_48]] : index) upperbound(%[[VAL_48]] : index) extent(%[[VAL_40]]#1 : index) stride(%[[VAL_45]] : index) startIdx(%[[VAL_40]]#0 : index)
+!CHECK:           %[[CREATE:.*]] = acc.create varPtr(%[[VAL_41]] : !fir.heap<!fir.array<?x?xf32>>) bounds(%[[VAL_46]], %[[VAL_49]]) -> !fir.heap<!fir.array<?x?xf32>> {name = "e(2_8)%a(1,2)", structured = false}
 !CHECK:           acc.enter_data dataOperands(%[[CREATE]] : !fir.heap<!fir.array<?x?xf32>>)
 
 end subroutine

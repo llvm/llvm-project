@@ -130,15 +130,15 @@ end
 
 ! CHECK-LABEL: c.func @_QPrename_sub
 subroutine rename_sub
-  use mmm, bbb => aaa
+  use mmm, zzz => aaa
   rrr = 3.
   ! CHECK:     %[[V_4:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput
   ! CHECK:     %[[V_5:[0-9]+]] = fir.address_of(@_QMmmmNaaa) : !fir.ref<tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>>
   ! CHECK:     %[[V_6:[0-9]+]] = fir.convert %[[V_5]] : (!fir.ref<tuple<!fir.ref<i8>, i64, !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>, !fir.ref<none>>>) -> !fir.ref<tuple<>>
   ! CHECK:     %[[V_7:[0-9]+]] = fir.call @_FortranAioOutputNamelist(%[[V_4]], %[[V_6]]) fastmath<contract> : (!fir.ref<i8>, !fir.ref<tuple<>>) -> i1
   ! CHECK:     %[[V_8:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_4]]) fastmath<contract> : (!fir.ref<i8>) -> i32
-  write(*,bbb)
+  write(*,zzz)
 end
 
-! CHECK-NOT:   bbb
+! CHECK-NOT:   zzz
 ! CHECK:       fir.string_lit "aaa\00"(4) : !fir.char<1,4>

@@ -2787,16 +2787,16 @@ LogicalResult TaskgroupOp::verify() {
 void TaskloopOp::build(OpBuilder &builder, OperationState &state,
                        const TaskloopOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: privateVars, privateSyms.
   TaskloopOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
                     clauses.final, clauses.grainsizeMod, clauses.grainsize,
                     clauses.ifExpr, clauses.inReductionVars,
                     makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
                     makeArrayAttr(ctx, clauses.inReductionSyms),
                     clauses.mergeable, clauses.nogroup, clauses.numTasksMod,
-                    clauses.numTasks, clauses.priority, /*private_vars=*/{},
-                    /*private_syms=*/nullptr, clauses.reductionMod,
-                    clauses.reductionVars,
+                    clauses.numTasks, clauses.priority,
+                    /*private_vars=*/clauses.privateVars,
+                    /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
+                    clauses.reductionMod, clauses.reductionVars,
                     makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                     makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
 }
@@ -3219,7 +3219,8 @@ LogicalResult CancelOp::verify() {
     }
   }
   if ((cct == ClauseCancellationConstructType::Taskgroup) &&
-      !mlir::isa<omp::TaskOp>(structuralParent)) {
+      (!mlir::isa<omp::TaskOp>(structuralParent) &&
+       !mlir::isa<omp::TaskloopOp>(structuralParent->getParentOp()))) {
     return emitOpError() << "cancel taskgroup must appear "
                          << "inside a task region";
   }

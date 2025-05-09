@@ -1,6 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-// needs flang to be default
-// XFAIL: *
+
 // A small condensed version of a problem requiring constant alloca raising in
 // Target Region Entries for user injected code, found in an issue in the Flang
 // compiler. Certain LLVM IR optimisation passes will perform runtime breaking 
@@ -36,7 +35,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   llvm.func @_ExternalCall(!llvm.ptr, !llvm.ptr) -> !llvm.struct<()>
 }
 
-// CHECK:      define weak_odr protected amdgpu_kernel void @{{.*}}QQmain_l{{.*}}({{.*}}, {{.*}}) #{{[0-9]+}} {
+// CHECK:      define weak_odr protected amdgpu_kernel void @{{.*}}QQmain_l{{.*}}({{.*}}, {{.*}}) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:  %[[MOVED_ALLOCA1:.*]] = alloca { ptr }, align 8
 // CHECK-NEXT:  %[[MOVED_ALLOCA2:.*]] = alloca i32, i64 1, align 4

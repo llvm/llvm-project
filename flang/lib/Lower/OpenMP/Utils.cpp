@@ -27,6 +27,7 @@
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
+#include <flang/Support/OpenMP-utils.h>
 #include <llvm/Support/CommandLine.h>
 #include <mlir/Analysis/TopologicalSortUtils.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
@@ -122,38 +123,6 @@ void gatherFuncAndVarSyms(
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause) {
   for (const Object &object : objects)
     symbolAndClause.emplace_back(clause, *object.sym());
-}
-
-mlir::omp::MapInfoOp
-createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value baseAddr, mlir::Value varPtrPtr,
-                llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
-                llvm::ArrayRef<mlir::Value> members,
-                mlir::ArrayAttr membersIndex, uint64_t mapType,
-                mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
-  if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
-    baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
-    retTy = baseAddr.getType();
-  }
-
-  mlir::TypeAttr varType = mlir::TypeAttr::get(
-      llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
-
-  // For types with unknown extents such as <2x?xi32> we discard the incomplete
-  // type info and only retain the base type. The correct dimensions are later
-  // recovered through the bounds info.
-  if (auto seqType = llvm::dyn_cast<fir::SequenceType>(varType.getValue()))
-    if (seqType.hasDynamicExtents())
-      varType = mlir::TypeAttr::get(seqType.getEleTy());
-
-  mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
-      loc, retTy, baseAddr, varType,
-      builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
-      builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
-      varPtrPtr, members, membersIndex, bounds, mapperId,
-      builder.getStringAttr(name), builder.getBoolAttr(partialMap));
-  return op;
 }
 
 // This function gathers the individual omp::Object's that make up a
@@ -414,7 +383,7 @@ mlir::Value createParentSymAndGenIntermediateMaps(
 
         // Create a map for the intermediate member and insert it and it's
         // indices into the parentMemberIndices list to track it.
-        mlir::omp::MapInfoOp mapOp = createMapInfoOp(
+        mlir::omp::MapInfoOp mapOp = Fortran::common::openmp::createMapInfoOp(
             firOpBuilder, clauseLocation, curValue,
             /*varPtrPtr=*/mlir::Value{}, asFortran,
             /*bounds=*/interimBounds,
@@ -574,7 +543,7 @@ void insertChildMapInfoIntoParent(
               converter.getCurrentLocation(), asFortran, bounds,
               treatIndexAsSection);
 
-      mlir::omp::MapInfoOp mapOp = createMapInfoOp(
+      mlir::omp::MapInfoOp mapOp = Fortran::common::openmp::createMapInfoOp(
           firOpBuilder, info.rawInput.getLoc(), info.rawInput,
           /*varPtrPtr=*/mlir::Value(), asFortran.str(), bounds, members,
           firOpBuilder.create2DI64ArrayAttr(

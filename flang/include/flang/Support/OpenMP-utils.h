@@ -9,8 +9,11 @@
 #ifndef FORTRAN_SUPPORT_OPENMP_UTILS_H_
 #define FORTRAN_SUPPORT_OPENMP_UTILS_H_
 
+#include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Semantics/symbol.h"
 
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Value.h"
 
@@ -72,6 +75,14 @@ struct EntryBlockArgs {
 /// \param [in]  region - Empty region in which to create the entry block.
 mlir::Block *genEntryBlock(
     mlir::OpBuilder &builder, const EntryBlockArgs &args, mlir::Region &region);
+
+mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
+    mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
+    llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
+    llvm::ArrayRef<mlir::Value> members, mlir::ArrayAttr membersIndex,
+    uint64_t mapType, mlir::omp::VariableCaptureKind mapCaptureType,
+    mlir::Type retTy, bool partialMap = false,
+    mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
 } // namespace Fortran::common::openmp
 
 #endif // FORTRAN_SUPPORT_OPENMP_UTILS_H_

@@ -268,6 +268,7 @@ class DynamicValueTestCase(TestBase):
         self.assertLess(contained_b_addr, contained_b_static_addr)
 
     @no_debug_info_test
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
     def test_from_forward_decl(self):
         """Test fetching C++ dynamic values forward-declared types. It's
         imperative that this is a separate test so that we don't end up parsing

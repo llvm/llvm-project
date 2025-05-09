@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
+#include "flang/Support/OpenMP-utils.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -42,41 +43,6 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 namespace internal {
-// TODO The following 2 functions are copied from "flang/Lower/OpenMP/Utils.h".
-// This duplication is temporary until we find a solution for a shared location
-// for these utils that does not introduce circular CMake deps.
-mlir::omp::MapInfoOp createMapInfoOp(
-    mlir::OpBuilder &builder, mlir::Location loc, mlir::Value baseAddr,
-    mlir::Value varPtrPtr, std::string name, llvm::ArrayRef<mlir::Value> bounds,
-    llvm::ArrayRef<mlir::Value> members, mlir::ArrayAttr membersIndex,
-    uint64_t mapType, mlir::omp::VariableCaptureKind mapCaptureType,
-    mlir::Type retTy, bool partialMap = false,
-    mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr()) {
-  if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
-    baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
-    retTy = baseAddr.getType();
-  }
-
-  mlir::TypeAttr varType = mlir::TypeAttr::get(
-      llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
-
-  // For types with unknown extents such as <2x?xi32> we discard the incomplete
-  // type info and only retain the base type. The correct dimensions are later
-  // recovered through the bounds info.
-  if (auto seqType = llvm::dyn_cast<fir::SequenceType>(varType.getValue()))
-    if (seqType.hasDynamicExtents())
-      varType = mlir::TypeAttr::get(seqType.getEleTy());
-
-  mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
-      loc, retTy, baseAddr, varType,
-      builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
-      builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
-      varPtrPtr, members, membersIndex, bounds, mapperId,
-      builder.getStringAttr(name), builder.getBoolAttr(partialMap));
-
-  return op;
-}
-
 mlir::Value mapTemporaryValue(fir::FirOpBuilder &builder,
                               mlir::omp::TargetOp targetOp, mlir::Value val,
                               llvm::StringRef name) {
@@ -87,7 +53,7 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &builder,
 
   llvm::SmallVector<mlir::Value> bounds;
   builder.setInsertionPoint(targetOp);
-  mlir::Value mapOp = createMapInfoOp(
+  mlir::Value mapOp = Fortran::common::openmp::createMapInfoOp(
       builder, copyVal.getLoc(), copyVal,
       /*varPtrPtr=*/mlir::Value{}, name.str(), bounds,
       /*members=*/llvm::SmallVector<mlir::Value>{},
@@ -649,7 +615,7 @@ private:
     llvm::SmallVector<mlir::Value> boundsOps;
     genBoundsOps(builder, liveIn, rawAddr, boundsOps);
 
-    return Fortran::lower::omp::internal::createMapInfoOp(
+    return Fortran::common::openmp::createMapInfoOp(
         builder, liveIn.getLoc(), rawAddr,
         /*varPtrPtr=*/{}, name.str(), boundsOps,
         /*members=*/{},

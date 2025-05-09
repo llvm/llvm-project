@@ -18,10 +18,9 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias %arg_in_0, ptr addrspace
 ; CHECK-ORIG-OPS-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-ORIG-OPS-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-ORIG-OPS-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-ORIG-OPS-NEXT:  .Ltmp0:
+; CHECK-ORIG-OPS-NEXT:    ;DEBUG_VALUE: foo:i <- 2
 ; CHECK-ORIG-OPS-NEXT:    s_clause 0x1
 ; CHECK-ORIG-OPS-NEXT:    s_load_dword s4, s[0:1], 0x0
-; CHECK-ORIG-OPS-NEXT:    ;DEBUG_VALUE: foo:i <- 2
 ; CHECK-ORIG-OPS-NEXT:    s_load_dword s0, s[0:1], 0x8
 ; CHECK-ORIG-OPS-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-ORIG-OPS-NEXT:    v_mov_b32_e32 v3, s4
@@ -29,7 +28,6 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias %arg_in_0, ptr addrspace
 ; CHECK-ORIG-OPS-NEXT:    global_store_dword v2, v3, s[2:3]
 ; CHECK-ORIG-OPS-NEXT:    global_store_dword v[0:1], v4, off
 ; CHECK-ORIG-OPS-NEXT:    s_endpgm
-; CHECK-ORIG-OPS-NEXT:  .Ltmp1:
 ;
 ; CHECK-USER-OPS-LABEL: foo:
 ; CHECK-USER-OPS:       .Lfunc_begin0:
@@ -46,10 +44,9 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias %arg_in_0, ptr addrspace
 ; CHECK-USER-OPS-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-USER-OPS-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-USER-OPS-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-USER-OPS-NEXT:  .Ltmp0:
+; CHECK-USER-OPS-NEXT:    ;DEBUG_VALUE: foo:i <- 2
 ; CHECK-USER-OPS-NEXT:    s_clause 0x1
 ; CHECK-USER-OPS-NEXT:    s_load_dword s4, s[0:1], 0x0
-; CHECK-USER-OPS-NEXT:    ;DEBUG_VALUE: foo:i <- 2
 ; CHECK-USER-OPS-NEXT:    s_load_dword s0, s[0:1], 0x8
 ; CHECK-USER-OPS-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-USER-OPS-NEXT:    v_mov_b32_e32 v3, s4
@@ -57,7 +54,6 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias %arg_in_0, ptr addrspace
 ; CHECK-USER-OPS-NEXT:    global_store_dword v2, v3, s[2:3]
 ; CHECK-USER-OPS-NEXT:    global_store_dword v[0:1], v4, off
 ; CHECK-USER-OPS-NEXT:    s_endpgm
-; CHECK-USER-OPS-NEXT:  .Ltmp1:
   %arg_in_1 = getelementptr i8, ptr addrspace(1) %arg_in_0, i64 8
   %load0 = load float, ptr addrspace(1) %arg_in_0
   store float %load0, ptr addrspace(1) %arg_out

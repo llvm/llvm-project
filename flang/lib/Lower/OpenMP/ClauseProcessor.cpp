@@ -12,12 +12,13 @@
 
 #include "ClauseProcessor.h"
 
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/OpenMP/Utils.h"
-#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/OpenMP-utils.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 
@@ -1096,7 +1097,7 @@ void ClauseProcessor::processMapObjects(
     auto location = mlir::NameLoc::get(
         mlir::StringAttr::get(firOpBuilder.getContext(), asFortran.str()),
         baseOp.getLoc());
-    mlir::omp::MapInfoOp mapOp = createMapInfoOp(
+    mlir::omp::MapInfoOp mapOp = Fortran::common::openmp::createMapInfoOp(
         firOpBuilder, location, baseOp,
         /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
         /*members=*/{}, /*membersIndex=*/mlir::ArrayAttr{},

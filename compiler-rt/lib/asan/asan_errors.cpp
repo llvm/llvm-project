@@ -779,14 +779,14 @@ static uptr ScanForMagicUp(uptr start, uptr hi, uptr magic0, uptr magic1) {
 
 void ErrorNonSelfAMDGPU::PrintMallocStack() {
   // Facts about asan malloc on device
-  const uptr magic = 0xfedcba1ee1abcdefULL;
+  const uptr magic = static_cast<uptr>(0xfedcba1ee1abcdefULL);
   const uptr offset = 32;
   const uptr min_chunk_size = 96;
   const uptr min_alloc_size = 48;
 
   Decorator d;
   HeapAddressDescription addr_description;
-  
+
   if (GetHeapAddressInformation(device_address[0], access_size,
               &addr_description) &&
       addr_description.chunk_access.chunk_size >= min_chunk_size) {

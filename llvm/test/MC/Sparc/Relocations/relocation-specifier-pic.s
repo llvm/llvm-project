@@ -1,6 +1,6 @@
+## Test relocation specifiers with different behaviors with non-PIC and PIC.
 ! RUN: llvm-mc %s -triple=sparcv9 --position-independent -filetype=obj | llvm-readobj -r - | FileCheck --check-prefix=PIC %s
 ! RUN: llvm-mc %s -triple=sparcv9 -filetype=obj | llvm-readobj -r - | FileCheck --check-prefix=NOPIC %s
-
 
 ! PIC:      .rela.text {
 ! PIC-NEXT:   0x{{[0-9,A-F]+}} R_SPARC_PC22 _GLOBAL_OFFSET_TABLE_ 0x4

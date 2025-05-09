@@ -607,6 +607,13 @@ private:
   // load/store is enabled.
   IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
 
+  // AMDGPUWaveTransform pass depends on MachineUniformityInfo computed in SSA
+  // form. Currently, there is no better way than adding MFI field as a placeholder
+  // for UA so that analysis can be computed during AMDGPUPreWaveTransform and reused in
+  // AMDGPUWaveTransform.
+  // TODO-WAVETRANSFORM: This is a workaround until we have a better solution.
+  MachineUniformityInfo *MUI = nullptr;  
+
 private:
   Register VGPRForAGPRCopy;
 
