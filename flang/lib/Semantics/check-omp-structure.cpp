@@ -4446,6 +4446,15 @@ CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Collapse, OMPC_collapse)
 CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Safelen, OMPC_safelen)
 CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Simdlen, OMPC_simdlen)
 
+void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
+  context_.Say(GetContext().clauseSource,
+      "LOOPRANGE clause is not implemented yet"_err_en_US,
+      ContextDirectiveAsFortran());
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::FreeAgent &x) {
+  context_.Say(GetContext().clauseSource,
+      "FREE_AGENT clause is not implemented yet"_err_en_US,
 // Restrictions specific to each clause are implemented apart from the
 // generalized restrictions.
 
