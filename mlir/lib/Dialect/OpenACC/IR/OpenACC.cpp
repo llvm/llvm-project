@@ -2748,6 +2748,52 @@ void acc::LoopOp::addEmptyWorker(
                                                    effectiveDeviceTypes));
 }
 
+void acc::LoopOp::addEmptyGang(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setGangAttr(addDeviceTypeAffectedOperandHelper(context, getGangAttr(),
+                                                 effectiveDeviceTypes));
+}
+
+void acc::LoopOp::addGangOperands(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+    llvm::ArrayRef<GangArgType> argTypes, mlir::ValueRange values) {
+  llvm::SmallVector<int32_t> segments;
+  if (std::optional<ArrayRef<int32_t>> existingSegments =
+          getGangOperandsSegments())
+    llvm::copy(*existingSegments, std::back_inserter(segments));
+
+  unsigned beforeCount = segments.size();
+
+  setGangOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getGangOperandsDeviceTypeAttr(), effectiveDeviceTypes, values,
+      getGangOperandsMutable(), segments));
+
+  setGangOperandsSegments(segments);
+
+  // This is a bit of extra work to make sure we update the 'types' correctly by
+  // adding to the types collection the correct number of times. We could
+  // potentially add something similar to the
+  // addDeviceTypeAffectedOperandHelper, but it seems that would be pretty
+  // excessive for a one-off case.
+  unsigned numAdded = segments.size() - beforeCount;
+
+  if (numAdded > 0) {
+    llvm::SmallVector<mlir::Attribute> gangTypes;
+    if (getGangOperandsArgTypeAttr())
+      llvm::copy(getGangOperandsArgTypeAttr(), std::back_inserter(gangTypes));
+
+    for (auto i : llvm::index_range(0u, numAdded)) {
+      llvm::transform(argTypes, std::back_inserter(gangTypes),
+                      [=](mlir::acc::GangArgType gangTy) {
+                        return mlir::acc::GangArgTypeAttr::get(context, gangTy);
+                      });
+      (void)i;
+    }
+
+    setGangOperandsArgTypeAttr(mlir::ArrayAttr::get(context, gangTypes));
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // DataOp
 //===----------------------------------------------------------------------===//

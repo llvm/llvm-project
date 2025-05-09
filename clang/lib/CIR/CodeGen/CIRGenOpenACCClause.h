@@ -107,6 +107,18 @@ class OpenACCClauseCIREmitter final
         .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
   }
 
+  mlir::acc::GangArgType decodeGangType(OpenACCGangKind gk) {
+    switch (gk) {
+    case OpenACCGangKind::Num:
+      return mlir::acc::GangArgType::Num;
+    case OpenACCGangKind::Dim:
+      return mlir::acc::GangArgType::Dim;
+    case OpenACCGangKind::Static:
+      return mlir::acc::GangArgType::Static;
+    }
+    llvm_unreachable("unknown gang kind");
+  }
+
 public:
   OpenACCClauseCIREmitter(OpTy &operation, CIRGen::CIRGenFunction &cgf,
                           CIRGen::CIRGenBuilderTy &builder,
@@ -418,6 +430,42 @@ public:
       else
         operation.addEmptyVector(builder.getContext(), lastDeviceTypeValues);
 
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitGangClause(const OpenACCGangClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
+      if (clause.getNumExprs() == 0) {
+        operation.addEmptyGang(builder.getContext(), lastDeviceTypeValues);
+      } else {
+        llvm::SmallVector<mlir::Value> values;
+        llvm::SmallVector<mlir::acc::GangArgType> argTypes;
+        for (unsigned i : llvm::index_range(0u, clause.getNumExprs())) {
+          auto [kind, expr] = clause.getExpr(i);
+          mlir::Location exprLoc = cgf.cgm.getLoc(expr->getBeginLoc());
+          argTypes.push_back(decodeGangType(kind));
+          if (kind == OpenACCGangKind::Dim) {
+            llvm::APInt curValue =
+                expr->EvaluateKnownConstInt(cgf.cgm.getASTContext());
+            // The value is 1, 2, or 3, but the type isn't necessarily smaller
+            // than 64.
+            curValue = curValue.sextOrTrunc(64);
+            values.push_back(
+                createConstantInt(exprLoc, 64, curValue.getSExtValue()));
+          } else if (isa<OpenACCAsteriskSizeExpr>(expr)) {
+            values.push_back(createConstantInt(exprLoc, 64, -1));
+          } else {
+            values.push_back(createIntExpr(expr));
+          }
+        }
+
+        operation.addGangOperands(builder.getContext(), lastDeviceTypeValues,
+                                  argTypes, values);
+      }
     } else {
       // TODO: When we've implemented this for everything, switch this to an
       // unreachable. Combined constructs remain.
