@@ -2460,12 +2460,9 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
     R->eraseFromParent();
 }
 
-void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
-                                                 VPBasicBlock *EarlyExitVPBB,
-                                                 VPlan &Plan,
-                                                 VPBasicBlock *HeaderVPBB,
-                                                 VPBasicBlock *LatchVPBB,
-                                                 VFRange &Range) {
+void VPlanTransforms::handleUncountableEarlyExit(
+    VPBasicBlock *EarlyExitingVPBB, VPBasicBlock *EarlyExitVPBB, VPlan &Plan,
+    VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VFRange &Range) {
   using namespace llvm::VPlanPatternMatch;
 
   VPBlockBase *MiddleVPBB = LatchVPBB->getSuccessors()[0];
