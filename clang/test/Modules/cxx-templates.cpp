@@ -43,7 +43,7 @@ void g() {
 
   template_param_kinds_2<Tmpl_T_C>(); // expected-error {{no matching function for call}}
   // expected-note@Inputs/cxx-templates-a.h:11 {{candidate}}
-  // expected-note@Inputs/cxx-templates-a.h:11 {{too many template arguments for class template 'Tmpl_T_C'}}
+  // expected-note@Inputs/cxx-templates-a.h:11 {{non-type parameter of template template parameter cannot be narrowed from type 'int' to 'char'}}
   // expected-note@Inputs/cxx-templates-b.h:11 {{candidate}}
 
   template_param_kinds_2<Tmpl_T_I_I>(); // expected-error {{ambiguous}}
