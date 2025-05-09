@@ -12202,6 +12202,11 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
   LLVM_DEBUG(llvm::dbgs() << "The number of elements to initialize: "
                           << NumEltsToInit << ".\n");
 
+  if (!Info.CheckArraySize(ExprToVisit->getExprLoc(),
+                           CAT->getNumAddressingBits(Info.Ctx), NumEltsToInit,
+                           /*Diag=*/true))
+    return false;
+
   Result = APValue(APValue::UninitArray(), NumEltsToInit, NumElts);
 
   // If the array was previously zero-initialized, preserve the
@@ -12332,6 +12337,9 @@ bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
 
   if (const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(Type)) {
     unsigned FinalSize = CAT->getZExtSize();
+
+    if (!CheckArraySize(Info, CAT, E->getExprLoc()))
+      return false;
 
     // Preserve the array filler if we had prior zero-initialization.
     APValue Filler =
