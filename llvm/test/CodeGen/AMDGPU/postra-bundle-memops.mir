@@ -57,12 +57,12 @@ body:             |
     ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 $vgpr0, $vgpr2_vgpr3, undef $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: }
     ; GCN-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit undef $vgpr4_vgpr5_vgpr6_vgpr7, implicit undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, implicit $exec {
-    ; GCN-NEXT:   $vgpr2 = IMAGE_LOAD_V1_V4 undef $vgpr4_vgpr5_vgpr6_vgpr7, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
-    ; GCN-NEXT:   $vgpr3 = IMAGE_LOAD_V1_V4 undef $vgpr4_vgpr5_vgpr6_vgpr7, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
+    ; GCN-NEXT:   $vgpr2 = IMAGE_LOAD_V1_V4_R1 undef $vgpr4_vgpr5_vgpr6_vgpr7, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
+    ; GCN-NEXT:   $vgpr3 = IMAGE_LOAD_V1_V4_R1 undef $vgpr4_vgpr5_vgpr6_vgpr7, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
     ; GCN-NEXT: }
     ; GCN-NEXT: BUNDLE implicit undef $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1, implicit undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, implicit $exec {
-    ; GCN-NEXT:   IMAGE_STORE_V4_V2 undef $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr0_vgpr1, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
-    ; GCN-NEXT:   IMAGE_STORE_V4_V2 undef $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr0_vgpr1, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
+    ; GCN-NEXT:   IMAGE_STORE_V4_V2_R1 undef $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr0_vgpr1, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
+    ; GCN-NEXT:   IMAGE_STORE_V4_V2_R1 undef $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr0_vgpr1, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
     ; GCN-NEXT: }
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71 = S_LOAD_DWORDX8_IMM undef $sgpr10_sgpr11, 464, 0
@@ -102,10 +102,10 @@ body:             |
     $vgpr3 = BUFFER_LOAD_DWORD_OFFEN $vgpr1, undef $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr2, 0, 0, 0, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 $vgpr0, $vgpr2_vgpr3,  undef $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
     BUFFER_STORE_DWORD_ADDR64 $vgpr0, $vgpr2_vgpr3,  undef $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
-    $vgpr2 = IMAGE_LOAD_V1_V4 undef $vgpr4_vgpr5_vgpr6_vgpr7, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
-    $vgpr3 = IMAGE_LOAD_V1_V4 undef $vgpr4_vgpr5_vgpr6_vgpr7, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
-    IMAGE_STORE_V4_V2 undef $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr0_vgpr1, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
-    IMAGE_STORE_V4_V2 undef $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr0_vgpr1, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
+    $vgpr2 = IMAGE_LOAD_V1_V4_R1 undef $vgpr4_vgpr5_vgpr6_vgpr7, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
+    $vgpr3 = IMAGE_LOAD_V1_V4_R1 undef $vgpr4_vgpr5_vgpr6_vgpr7, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
+    IMAGE_STORE_V4_V2_R1 undef $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr0_vgpr1, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
+    IMAGE_STORE_V4_V2_R1 undef $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr0_vgpr1, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
     S_NOP 0
     $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71 = S_LOAD_DWORDX8_IMM undef $sgpr10_sgpr11, 464, 0
     $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75 = S_LOAD_DWORDX8_IMM undef $sgpr10_sgpr11, 128, 0
