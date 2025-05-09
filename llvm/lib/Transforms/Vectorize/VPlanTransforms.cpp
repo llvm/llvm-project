@@ -2462,7 +2462,6 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
 
 void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
                                                  VPBasicBlock *EarlyExitVPBB,
-
                                                  VPlan &Plan,
                                                  VPBasicBlock *HeaderVPBB,
                                                  VPBasicBlock *LatchVPBB,
@@ -2471,13 +2470,13 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
 
   VPBlockBase *MiddleVPBB = LatchVPBB->getSuccessors()[0];
   if (!EarlyExitVPBB->getSinglePredecessor() &&
-      EarlyExitVPBB->getPredecessors()[0] != MiddleVPBB) {
+      EarlyExitVPBB->getPredecessors()[1] == MiddleVPBB) {
     assert(EarlyExitVPBB->getNumPredecessors() == 2 &&
-           EarlyExitVPBB->getPredecessors()[1] == MiddleVPBB &&
-           "unsupported earl exit VPBB");
+           EarlyExitVPBB->getPredecessors()[0] == EarlyExitingVPBB &&
+           "unsupported early exit VPBB");
     // Early exit operand should always be last phi operand. If EarlyExitVPBB
-    // has two predecessors and MiddleVPBB isn't the first, swap the operands of
-    // the phis.
+    // has two predecessors and EarlyExitingVPBB is the first, swap the operands
+    // of the phis.
     for (VPRecipeBase &R : EarlyExitVPBB->phis())
       cast<VPIRPhi>(&R)->swapOperands();
   }
@@ -2492,11 +2491,9 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
   auto *CondToEarlyExit = TrueSucc == EarlyExitVPBB
                               ? CondOfEarlyExitingVPBB
                               : Builder.createNot(CondOfEarlyExitingVPBB);
-  EarlyExitingVPBB->getTerminator()->eraseFromParent();
-  VPBlockUtils::disconnectBlocks(EarlyExitingVPBB, EarlyExitVPBB);
 
   // Split the middle block and have it conditionally branch to the early exit
-  // block if EarlyExitTaken.
+  // block if CondToEarlyExit.
   VPValue *IsEarlyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {CondToEarlyExit});
   VPBasicBlock *NewMiddle = Plan.createVPBasicBlock("middle.split");

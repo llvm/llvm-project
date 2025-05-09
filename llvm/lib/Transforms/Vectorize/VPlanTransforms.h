@@ -69,7 +69,7 @@ struct VPlanTransforms {
                                       PredicatedScalarEvolution &PSE,
                                       bool RequiresScalarEpilogueCheck,
                                       bool TailFolded, Loop *TheLoop,
-                                      DebugLoc IVDL, bool HandleUncountableExit,
+                                      DebugLoc IVDL, bool HasUncountableExit,
                                       VFRange &Range);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
@@ -177,9 +177,9 @@ struct VPlanTransforms {
   /// Update \p Plan to account for the uncountable early exit from \p
   /// EarlyExitingVPBB to \p EarlyExitVPBB by
   ///  * updating the condition exiting the vector loop to include the early
-  ///    exit conditions
+  ///    exit condition,
   ///  * splitting the original middle block to branch to the early exit block
-  ///    if taken.
+  ///    conditionally - according to the early exit condition.
   static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
                                          VPBasicBlock *EarlyExitVPBB,
                                          VPlan &Plan, VPBasicBlock *HeaderVPBB,

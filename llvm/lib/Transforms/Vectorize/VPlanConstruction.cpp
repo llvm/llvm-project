@@ -491,36 +491,31 @@ void VPlanTransforms::prepareForVectorization(
                         cast<VPBasicBlock>(LatchVPB), InductionTy, IVDL);
 
   [[maybe_unused]] bool HandledUncountableEarlyExit = false;
-  // Handle the remaining early exits, either by converting the plan to one only
-  // exiting via the latch or by disconnecting all early exiting edges and
-  // requiring a scalar epilogue.
+  // Disconnect all early exits from the loop leaving it with a single exit from
+  // the latch. Early exits that are countable are left for a scalar epilog. The
+  // condition of uncountable early exits (currently at most one is supported)
+  // is fused into the latch exit, and used to branch from middle block to the
+  // early exit destination.
   for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
     for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
       if (Pred == MiddleVPBB)
         continue;
-
       if (HasUncountableEarlyExit) {
         assert(!HandledUncountableEarlyExit &&
                "can handle exactly one uncountable early exit");
-        // Convert VPlans with early exits to a form exiting only via the latch
-        // here, including adjusting the exit condition of the latch.
         handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
                                    cast<VPBasicBlock>(HeaderVPB),
                                    cast<VPBasicBlock>(LatchVPB), Range);
         HandledUncountableEarlyExit = true;
-        continue;
       }
 
-      // Otherwise all early exits must be countable and we require at least one
-      // iteration in the scalar epilogue. Disconnect all edges to exit blocks
-      // other than from the middle block.
       cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
       VPBlockUtils::disconnectBlocks(Pred, EB);
     }
   }
 
   assert((!HasUncountableEarlyExit || HandledUncountableEarlyExit) &&
-         "did not handle uncountable early exit");
+         "missed an uncountable exit that must be handled");
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
