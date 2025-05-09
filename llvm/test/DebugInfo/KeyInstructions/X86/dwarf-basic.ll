@@ -6,6 +6,18 @@
 ; RUN: | llvm-dwarfdump - --debug-line \
 ; RUN: | FileCheck %s --check-prefix=DBG
 
+;; 1. int f(int a) {
+;; 2.   int x = a + 1;
+;; 3.   return x;
+;; 4. }
+;; 5. int g(int b) {
+;; 6.   return f(b);
+;; 7. }
+;;
+;; Both functions contain 2 instructions in unique atom groups. In f we see
+;; groups 1 and 3, and in g we see {!18, 1} and 1. All of these instructions
+;; should get is_stmt.
+
 ; OBJ: 0000000000000000 <_Z1fi>:
 ; OBJ-NEXT: 0: leal    0x1(%rdi), %eax
 ; OBJ-NEXT: 3: retq
@@ -19,18 +31,6 @@
 ; DBG-NEXT: 0x0000000000000003      3      0      0   0             0       0  is_stmt
 ; DBG-NEXT: 0x0000000000000010      2      0      0   0             0       0  is_stmt prologue_end
 ; DBG-NEXT: 0x0000000000000013      6      0      0   0             0       0  is_stmt
-
-;; 1. int f(int a) {
-;; 2.   int x = a + 1;
-;; 3.   return x;
-;; 4. }
-;; 5. int g(int b) { 
-;; 6.   return f(b);
-;; 7. }
-;;
-;; Both functions contain 2 instructions in unique atom groups. In f we see
-;; groups 1 and 3, and in g we see {!18, 1} and 1. All of these instructions
-;; should get is_stmt.
 
 target triple = "x86_64-unknown-linux-gnu"
 

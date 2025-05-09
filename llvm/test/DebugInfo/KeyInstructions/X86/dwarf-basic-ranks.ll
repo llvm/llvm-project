@@ -6,6 +6,18 @@
 ; RUN: | llvm-dwarfdump - --debug-line \
 ; RUN: | FileCheck %s --check-prefix=DBG
 
+;; 1. [[gnu::nodebug]] void prologue_end();
+;; 2.
+;; 3. int f(int *a, int b, int c) {
+;; 4.   prologue_end();
+;; 5.   *a =
+;; 6.     b + c;
+;; 7.   return *a;
+;; 8. }
+;;
+;; The add and store are in the same group (1). The add (line 6) has lower
+;; precedence (rank 2) so should not get is_stmt applied.
+
 ; OBJ: 0000000000000000 <_Z1fPiii>:
 ; OBJ-NEXT:  0: pushq   %rbp
 ; OBJ-NEXT:  1: pushq   %r14
@@ -31,17 +43,6 @@
 ; DBG-NEXT: 0x0000000000000017      7      0      0   0             0       0  epilogue_begin
 ; DBG-NEXT: 0x000000000000001c      7      0      0   0             0       0  end_sequence
 
-;; 1. [[gnu::nodebug]] void prologue_end();
-;; 2.
-;; 3. int f(int *a, int b, int c) {
-;; 4.   prologue_end();
-;; 5.   *a = 
-;; 6.     b + c;
-;; 7.   return *a;
-;; 8. }
-
-;; The add and store are in the same goup (1). The add (line 6) has lower
-;; precedence (rank 2) so should not get is_stmt applied.
 target triple = "x86_64-unknown-linux-gnu"
 
 define hidden noundef i32 @_Z1fPiii(ptr %a, i32 %b, i32 %c) local_unnamed_addr !dbg !11 {
