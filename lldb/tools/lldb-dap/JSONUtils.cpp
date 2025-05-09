@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "JSONUtils.h"
-#include "BreakpointBase.h"
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
@@ -354,70 +353,6 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
   return llvm::json::Value(std::move(object));
 }
 
-// "Breakpoint": {
-//   "type": "object",
-//   "description": "Information about a Breakpoint created in setBreakpoints
-//                   or setFunctionBreakpoints.",
-//   "properties": {
-//     "id": {
-//       "type": "integer",
-//       "description": "An optional unique identifier for the breakpoint."
-//     },
-//     "verified": {
-//       "type": "boolean",
-//       "description": "If true breakpoint could be set (but not necessarily
-//                       at the desired location)."
-//     },
-//     "message": {
-//       "type": "string",
-//       "description": "An optional message about the state of the breakpoint.
-//                       This is shown to the user and can be used to explain
-//                       why a breakpoint could not be verified."
-//     },
-//     "source": {
-//       "$ref": "#/definitions/Source",
-//       "description": "The source where the breakpoint is located."
-//     },
-//     "line": {
-//       "type": "integer",
-//       "description": "The start line of the actual range covered by the
-//                       breakpoint."
-//     },
-//     "column": {
-//       "type": "integer",
-//       "description": "An optional start column of the actual range covered
-//                       by the breakpoint."
-//     },
-//     "endLine": {
-//       "type": "integer",
-//       "description": "An optional end line of the actual range covered by
-//                       the breakpoint."
-//     },
-//     "endColumn": {
-//       "type": "integer",
-//       "description": "An optional end column of the actual range covered by
-//                       the breakpoint. If no end line is given, then the end
-//                       column is assumed to be in the start line."
-//     }
-//   },
-//   "required": [ "verified" ]
-// }
-llvm::json::Value CreateBreakpoint(BreakpointBase *bp,
-                                   std::optional<llvm::StringRef> request_path,
-                                   std::optional<uint32_t> request_line,
-                                   std::optional<uint32_t> request_column) {
-  llvm::json::Object object;
-  if (request_path)
-    object.try_emplace("source", CreateSource(*request_path));
-  bp->CreateJsonObject(object);
-  // We try to add request_line as a fallback
-  if (request_line)
-    object.try_emplace("line", *request_line);
-  if (request_column)
-    object.try_emplace("column", *request_column);
-  return llvm::json::Value(std::move(object));
-}
-
 static uint64_t GetDebugInfoSizeInSection(lldb::SBSection section) {
   uint64_t debug_info_size = 0;
   llvm::StringRef section_name(section.GetName());
@@ -506,12 +441,6 @@ llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module) {
   return llvm::json::Value(std::move(object));
 }
 
-void AppendBreakpoint(BreakpointBase *bp, llvm::json::Array &breakpoints,
-                      std::optional<llvm::StringRef> request_path,
-                      std::optional<uint32_t> request_line) {
-  breakpoints.emplace_back(CreateBreakpoint(bp, request_path, request_line));
-}
-
 // "Event": {
 //   "allOf": [ { "$ref": "#/definitions/ProtocolMessage" }, {
 //     "type": "object",
@@ -567,96 +496,30 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
   return filter;
 }
 
-// "Source": {
-//   "type": "object",
-//   "description": "A Source is a descriptor for source code. It is returned
-//                   from the debug adapter as part of a StackFrame and it is
-//                   used by clients when specifying breakpoints.",
-//   "properties": {
-//     "name": {
-//       "type": "string",
-//       "description": "The short name of the source. Every source returned
-//                       from the debug adapter has a name. When sending a
-//                       source to the debug adapter this name is optional."
-//     },
-//     "path": {
-//       "type": "string",
-//       "description": "The path of the source to be shown in the UI. It is
-//                       only used to locate and load the content of the
-//                       source if no sourceReference is specified (or its
-//                       value is 0)."
-//     },
-//     "sourceReference": {
-//       "type": "number",
-//       "description": "If sourceReference > 0 the contents of the source must
-//                       be retrieved through the SourceRequest (even if a path
-//                       is specified). A sourceReference is only valid for a
-//                       session, so it must not be used to persist a source."
-//     },
-//     "presentationHint": {
-//       "type": "string",
-//       "description": "An optional hint for how to present the source in the
-//                       UI. A value of 'deemphasize' can be used to indicate
-//                       that the source is not available or that it is
-//                       skipped on stepping.",
-//       "enum": [ "normal", "emphasize", "deemphasize" ]
-//     },
-//     "origin": {
-//       "type": "string",
-//       "description": "The (optional) origin of this source: possible values
-//                       'internal module', 'inlined content from source map',
-//                       etc."
-//     },
-//     "sources": {
-//       "type": "array",
-//       "items": {
-//         "$ref": "#/definitions/Source"
-//       },
-//       "description": "An optional list of sources that are related to this
-//                       source. These may be the source that generated this
-//                       source."
-//     },
-//     "adapterData": {
-//       "type":["array","boolean","integer","null","number","object","string"],
-//       "description": "Optional data that a debug adapter might want to loop
-//                       through the client. The client should leave the data
-//                       intact and persist it across sessions. The client
-//                       should not interpret the data."
-//     },
-//     "checksums": {
-//       "type": "array",
-//       "items": {
-//         "$ref": "#/definitions/Checksum"
-//       },
-//       "description": "The checksums associated with this file."
-//     }
-//   }
-// }
-llvm::json::Value CreateSource(const lldb::SBFileSpec &file) {
-  llvm::json::Object object;
+protocol::Source CreateSource(const lldb::SBFileSpec &file) {
+  protocol::Source source;
   if (file.IsValid()) {
     const char *name = file.GetFilename();
     if (name)
-      EmplaceSafeString(object, "name", name);
+      source.name = name;
     char path[PATH_MAX] = "";
     if (file.GetPath(path, sizeof(path)) &&
-        lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
-      EmplaceSafeString(object, "path", std::string(path));
-    }
+        lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX))
+      source.path = path;
   }
-  return llvm::json::Value(std::move(object));
+  return source;
 }
 
-llvm::json::Value CreateSource(const lldb::SBLineEntry &line_entry) {
+protocol::Source CreateSource(const lldb::SBLineEntry &line_entry) {
   return CreateSource(line_entry.GetFileSpec());
 }
 
-llvm::json::Value CreateSource(llvm::StringRef source_path) {
-  llvm::json::Object source;
+protocol::Source CreateSource(llvm::StringRef source_path) {
+  protocol::Source source;
   llvm::StringRef name = llvm::sys::path::filename(source_path);
-  EmplaceSafeString(source, "name", name);
-  EmplaceSafeString(source, "path", source_path);
-  return llvm::json::Value(std::move(source));
+  source.name = name;
+  source.path = source_path;
+  return source;
 }
 
 bool ShouldDisplayAssemblySource(
