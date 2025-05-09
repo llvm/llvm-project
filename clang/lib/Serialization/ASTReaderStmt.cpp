@@ -3616,7 +3616,9 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case STMT_OMP_FUSE_DIRECTIVE: {
       unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
-      S = OMPFuseDirective::CreateEmpty(Context, NumClauses, NumLoops);
+      unsigned NumLoopNests = Record[ASTStmtReader::NumStmtFields + 2];
+      S = OMPFuseDirective::CreateEmpty(Context, NumClauses, NumLoops,
+                                        NumLoopNests);
       break;
     }
 

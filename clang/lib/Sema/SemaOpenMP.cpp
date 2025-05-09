@@ -14326,7 +14326,6 @@ bool SemaOpenMP::checkTransformableLoopSequence(
   // and tries to match the input AST to the canonical loop sequence grammar
   // structure
 
-  auto NLCV = NestedLoopCounterVisitor();
   // Helper functions to validate canonical loop sequence grammar is valid
   auto isLoopSequenceDerivation = [](auto *Child) {
     return isa<ForStmt>(Child) || isa<CXXForRangeStmt>(Child) ||
@@ -14429,7 +14428,7 @@ bool SemaOpenMP::checkTransformableLoopSequence(
 
   // Modularized code for handling regular canonical loops
   auto handleRegularLoop = [&storeLoopStatements, &LoopHelpers, &OriginalInits,
-                            &LoopSeqSize, &NumLoops, Kind, &TmpDSA, &NLCV,
+                            &LoopSeqSize, &NumLoops, Kind, &TmpDSA,
                             this](Stmt *Child) {
     OriginalInits.emplace_back();
     LoopHelpers.emplace_back();
@@ -14442,8 +14441,11 @@ bool SemaOpenMP::checkTransformableLoopSequence(
           << getOpenMPDirectiveName(Kind);
       return false;
     }
+
     storeLoopStatements(Child);
-    NumLoops += NLCV.TraverseStmt(Child);
+    auto NLCV = NestedLoopCounterVisitor();
+    NLCV.TraverseStmt(Child);
+    NumLoops += NLCV.getNestedLoopCount();
     return true;
   };
 
@@ -15769,6 +15771,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
                                                 Stmt *AStmt,
                                                 SourceLocation StartLoc,
                                                 SourceLocation EndLoc) {
+
   ASTContext &Context = getASTContext();
   DeclContext *CurrContext = SemaRef.CurContext;
   Scope *CurScope = SemaRef.getCurScope();
@@ -15785,7 +15788,6 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<SmallVector<Stmt *, 0>> OriginalInits;
 
   unsigned NumLoops;
-  // TODO: Support looprange clause using LoopSeqSize
   unsigned LoopSeqSize;
   if (!checkTransformableLoopSequence(OMPD_fuse, AStmt, LoopSeqSize, NumLoops,
                                       LoopHelpers, LoopStmts, OriginalInits,
@@ -15794,10 +15796,67 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   }
 
   // Defer transformation in dependent contexts
+  // The NumLoopNests argument is set to a placeholder (0)
+  // because a dependent context could prevent determining its true value
   if (CurrContext->isDependentContext()) {
     return OMPFuseDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                    NumLoops, 1, AStmt, nullptr, nullptr);
+                                    NumLoops, 0, AStmt, nullptr, nullptr);
   }
+
+  // Handle clauses, which can be any of the following: [looprange, apply]
+  const OMPLoopRangeClause *LRC =
+      OMPExecutableDirective::getSingleClause<OMPLoopRangeClause>(Clauses);
+
+  // The clause arguments are invalidated if any error arises
+  // such as non-constant or non-positive arguments
+  if (LRC && (!LRC->getFirst() || !LRC->getCount()))
+    return StmtError();
+
+  // Delayed semantic check of LoopRange constraint
+  // Evaluates the loop range arguments and returns the first and count values
+  auto EvaluateLoopRangeArguments = [&Context](Expr *First, Expr *Count,
+                                               uint64_t &FirstVal,
+                                               uint64_t &CountVal) {
+    llvm::APSInt FirstInt = First->EvaluateKnownConstInt(Context);
+    llvm::APSInt CountInt = Count->EvaluateKnownConstInt(Context);
+    FirstVal = FirstInt.getZExtValue();
+    CountVal = CountInt.getZExtValue();
+  };
+
+  // Checks if the loop range is valid
+  auto ValidLoopRange = [](uint64_t FirstVal, uint64_t CountVal,
+                           unsigned NumLoops) -> bool {
+    return FirstVal + CountVal - 1 <= NumLoops;
+  };
+  uint64_t FirstVal = 1, CountVal = 0, LastVal = LoopSeqSize;
+
+  if (LRC) {
+    EvaluateLoopRangeArguments(LRC->getFirst(), LRC->getCount(), FirstVal,
+                               CountVal);
+    if (CountVal == 1)
+      SemaRef.Diag(LRC->getCountLoc(), diag::warn_omp_redundant_fusion)
+          << getOpenMPDirectiveName(OMPD_fuse);
+
+    if (!ValidLoopRange(FirstVal, CountVal, LoopSeqSize)) {
+      SemaRef.Diag(LRC->getFirstLoc(), diag::err_omp_invalid_looprange)
+          << getOpenMPDirectiveName(OMPD_fuse) << (FirstVal + CountVal - 1)
+          << LoopSeqSize;
+      return StmtError();
+    }
+
+    LastVal = FirstVal + CountVal - 1;
+  }
+
+  // Complete fusion generates a single canonical loop nest
+  // However looprange clause generates several loop nests
+  unsigned NumLoopNests = LRC ? LoopSeqSize - CountVal + 1 : 1;
+
+  // Emit a warning for redundant loop fusion when the sequence contains only
+  // one loop.
+  if (LoopSeqSize == 1)
+    SemaRef.Diag(AStmt->getBeginLoc(), diag::warn_omp_redundant_fusion)
+        << getOpenMPDirectiveName(OMPD_fuse);
+
   assert(LoopHelpers.size() == LoopSeqSize &&
          "Expecting loop iteration space dimensionality to match number of "
          "affected loops");
@@ -15811,8 +15870,8 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<Stmt *> PreInits;
 
   // Select the type with the largest bit width among all induction variables
-  QualType IVType = LoopHelpers[0].IterationVarRef->getType();
-  for (unsigned int I = 1; I < LoopSeqSize; ++I) {
+  QualType IVType = LoopHelpers[FirstVal - 1].IterationVarRef->getType();
+  for (unsigned int I = FirstVal; I < LastVal; ++I) {
     QualType CurrentIVType = LoopHelpers[I].IterationVarRef->getType();
     if (Context.getTypeSize(CurrentIVType) > Context.getTypeSize(IVType)) {
       IVType = CurrentIVType;
@@ -15861,20 +15920,21 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
 
   // Process each single loop to generate and collect declarations
   // and statements for all helper expressions
-  for (unsigned int I = 0; I < LoopSeqSize; ++I) {
+  for (unsigned int I = FirstVal - 1, J = 0; I < LastVal; ++I, ++J) {
     addLoopPreInits(Context, LoopHelpers[I], LoopStmts[I], OriginalInits[I],
                     PreInits);
 
-    auto [UBVD, UBDStmt] = CreateHelperVarAndStmt(LoopHelpers[I].UB, "ub", I);
-    auto [LBVD, LBDStmt] = CreateHelperVarAndStmt(LoopHelpers[I].LB, "lb", I);
-    auto [STVD, STDStmt] = CreateHelperVarAndStmt(LoopHelpers[I].ST, "st", I);
+    auto [UBVD, UBDStmt] = CreateHelperVarAndStmt(LoopHelpers[I].UB, "ub", J);
+    auto [LBVD, LBDStmt] = CreateHelperVarAndStmt(LoopHelpers[I].LB, "lb", J);
+    auto [STVD, STDStmt] = CreateHelperVarAndStmt(LoopHelpers[I].ST, "st", J);
     auto [NIVD, NIDStmt] =
-        CreateHelperVarAndStmt(LoopHelpers[I].NumIterations, "ni", I, true);
+        CreateHelperVarAndStmt(LoopHelpers[I].NumIterations, "ni", J, true);
     auto [IVVD, IVDStmt] =
-        CreateHelperVarAndStmt(LoopHelpers[I].IterationVarRef, "iv", I);
+        CreateHelperVarAndStmt(LoopHelpers[I].IterationVarRef, "iv", J);
 
     if (!LBVD || !STVD || !NIVD || !IVVD)
-      return StmtError();
+      assert(LBVD && STVD && NIVD && IVVD &&
+             "OpenMP Fuse Helper variables creation failed");
 
     UBVarDecls.push_back(UBVD);
     LBVarDecls.push_back(LBVD);
@@ -15949,8 +16009,9 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   //   omp.fuse.max = max(omp.temp1, omp.temp0)
 
   ExprResult MaxExpr;
-  for (unsigned I = 0; I < LoopSeqSize; ++I) {
-    DeclRefExpr *NIRef = MakeVarDeclRef(NIVarDecls[I]);
+  // I is the true
+  for (unsigned I = FirstVal - 1, J = 0; I < LastVal; ++I, ++J) {
+    DeclRefExpr *NIRef = MakeVarDeclRef(NIVarDecls[J]);
     QualType NITy = NIRef->getType();
 
     if (MaxExpr.isUnset()) {
@@ -15958,7 +16019,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
       MaxExpr = NIRef;
     } else {
       // Create a new acummulator variable t_i = MaxExpr
-      std::string TempName = (Twine(".omp.temp.") + Twine(I)).str();
+      std::string TempName = (Twine(".omp.temp.") + Twine(J)).str();
       VarDecl *TempDecl =
           buildVarDecl(SemaRef, {}, NITy, TempName, nullptr, nullptr);
       TempDecl->setInit(MaxExpr.get());
@@ -15981,7 +16042,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
       if (!Comparison.isUsable())
         return StmtError();
 
-      DeclRefExpr *NIRef2 = MakeVarDeclRef(NIVarDecls[I]);
+      DeclRefExpr *NIRef2 = MakeVarDeclRef(NIVarDecls[J]);
       // Update MaxExpr using a conditional expression to hold the max value
       MaxExpr = new (Context) ConditionalOperator(
           Comparison.get(), SourceLocation(), TempRef2, SourceLocation(),
@@ -16034,23 +16095,21 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
 
   CompoundStmt *FusedBody = nullptr;
   SmallVector<Stmt *, 4> FusedBodyStmts;
-  for (unsigned I = 0; I < LoopSeqSize; ++I) {
-
+  for (unsigned I = FirstVal - 1, J = 0; I < LastVal; ++I, ++J) {
     // Assingment of the original sub-loop index to compute the logical index
     // IV_k = LB_k + omp.fuse.index * ST_k
-
     ExprResult IdxExpr =
         SemaRef.BuildBinOp(CurScope, SourceLocation(), BO_Mul,
-                           MakeVarDeclRef(STVarDecls[I]), MakeIVRef());
+                           MakeVarDeclRef(STVarDecls[J]), MakeIVRef());
     if (!IdxExpr.isUsable())
       return StmtError();
     IdxExpr = SemaRef.BuildBinOp(CurScope, SourceLocation(), BO_Add,
-                                 MakeVarDeclRef(LBVarDecls[I]), IdxExpr.get());
+                                 MakeVarDeclRef(LBVarDecls[J]), IdxExpr.get());
 
     if (!IdxExpr.isUsable())
       return StmtError();
     IdxExpr = SemaRef.BuildBinOp(CurScope, SourceLocation(), BO_Assign,
-                                 MakeVarDeclRef(IVVarDecls[I]), IdxExpr.get());
+                                 MakeVarDeclRef(IVVarDecls[J]), IdxExpr.get());
     if (!IdxExpr.isUsable())
       return StmtError();
 
@@ -16065,7 +16124,6 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
     Stmt *Body = (isa<ForStmt>(LoopStmts[I]))
                      ? cast<ForStmt>(LoopStmts[I])->getBody()
                      : cast<CXXForRangeStmt>(LoopStmts[I])->getBody();
-
     BodyStmts.push_back(Body);
 
     CompoundStmt *CombinedBody =
@@ -16073,7 +16131,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
                              SourceLocation(), SourceLocation());
     ExprResult Condition =
         SemaRef.BuildBinOp(CurScope, SourceLocation(), BO_LT, MakeIVRef(),
-                           MakeVarDeclRef(NIVarDecls[I]));
+                           MakeVarDeclRef(NIVarDecls[J]));
 
     if (!Condition.isUsable())
       return StmtError();
@@ -16094,8 +16152,26 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
               FusedBody, InitStmt.get()->getBeginLoc(), SourceLocation(),
               IncrExpr.get()->getEndLoc());
 
+  // In the case of looprange, the result of fuse won't simply
+  // be a single loop (ForStmt), but rather a loop sequence
+  // (CompoundStmt) of 3 parts: the pre-fusion loops, the fused loop
+  // and the post-fusion loops, preserving its original order.
+  Stmt *FusionStmt = FusedForStmt;
+  if (LRC) {
+    SmallVector<Stmt *, 4> FinalLoops;
+    // Gather all the pre-fusion loops
+    for (unsigned I = 0; I < FirstVal - 1; ++I)
+      FinalLoops.push_back(LoopStmts[I]);
+    // Gather the fused loop
+    FinalLoops.push_back(FusedForStmt);
+    // Gather all the post-fusion loops
+    for (unsigned I = FirstVal + CountVal - 1; I < LoopSeqSize; ++I)
+      FinalLoops.push_back(LoopStmts[I]);
+    FusionStmt = CompoundStmt::Create(Context, FinalLoops, FPOptionsOverride(),
+                                      SourceLocation(), SourceLocation());
+  }
   return OMPFuseDirective::Create(Context, StartLoc, EndLoc, Clauses, NumLoops,
-                                  1, AStmt, FusedForStmt,
+                                  NumLoopNests, AStmt, FusionStmt,
                                   buildPreInits(Context, PreInits));
 }
 
@@ -17216,6 +17292,31 @@ OMPClause *SemaOpenMP::ActOnOpenMPPartialClause(Expr *FactorExpr,
 
   return OMPPartialClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
                                   FactorExpr);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPLoopRangeClause(
+    Expr *First, Expr *Count, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation FirstLoc, SourceLocation CountLoc, SourceLocation EndLoc) {
+
+  // OpenMP [6.0, Restrictions]
+  // First and Count must be integer expressions with positive value
+  ExprResult FirstVal =
+      VerifyPositiveIntegerConstantInClause(First, OMPC_looprange);
+  if (FirstVal.isInvalid())
+    First = nullptr;
+
+  ExprResult CountVal =
+      VerifyPositiveIntegerConstantInClause(Count, OMPC_looprange);
+  if (CountVal.isInvalid())
+    Count = nullptr;
+
+  // OpenMP [6.0, Restrictions]
+  // first + count - 1 must not evaluate to a value greater than the
+  // loop sequence length of the associated canonical loop sequence.
+  // This check must be performed afterwards due to the delayed
+  // parsing and computation of the associated loop sequence
+  return OMPLoopRangeClause::Create(getASTContext(), StartLoc, LParenLoc,
+                                    FirstLoc, CountLoc, EndLoc, First, Count);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPAlignClause(Expr *A, SourceLocation StartLoc,

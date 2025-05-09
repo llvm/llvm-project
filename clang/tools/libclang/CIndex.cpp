@@ -2417,6 +2417,11 @@ void OMPClauseEnqueue::VisitOMPPartialClause(const OMPPartialClause *C) {
   Visitor->AddStmt(C->getFactor());
 }
 
+void OMPClauseEnqueue::VisitOMPLoopRangeClause(const OMPLoopRangeClause *C) {
+  Visitor->AddStmt(C->getFirst());
+  Visitor->AddStmt(C->getCount());
+}
+
 void OMPClauseEnqueue::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
   Visitor->AddStmt(C->getAllocator());
 }

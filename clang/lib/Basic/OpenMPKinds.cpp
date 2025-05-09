@@ -248,6 +248,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_affinity:
   case OMPC_when:
   case OMPC_append_args:
+  case OMPC_looprange:
     break;
   default:
     break;
@@ -583,6 +584,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_affinity:
   case OMPC_when:
   case OMPC_append_args:
+  case OMPC_looprange:
     break;
   default:
     break;

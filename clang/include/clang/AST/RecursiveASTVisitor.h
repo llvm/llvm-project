@@ -3411,6 +3411,14 @@ bool RecursiveASTVisitor<Derived>::VisitOMPFullClause(OMPFullClause *C) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPLoopRangeClause(
+    OMPLoopRangeClause *C) {
+  TRY_TO(TraverseStmt(C->getFirst()));
+  TRY_TO(TraverseStmt(C->getCount()));
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPPartialClause(OMPPartialClause *C) {
   TRY_TO(TraverseStmt(C->getFactor()));
   return true;
