@@ -2717,7 +2717,8 @@ static void genAtomicUpdateStatement(
     const parser::Expr &assignmentStmtExpr,
     const parser::OmpAtomicClauseList *leftHandClauseList,
     const parser::OmpAtomicClauseList *rightHandClauseList, mlir::Location loc,
-    mlir::Operation *atomicCaptureOp = nullptr) {
+    mlir::Operation *atomicCaptureOp = nullptr,
+    lower::StatementContext *atomicCaptureStmtCtx = nullptr) {
   // Generate `atomic.update` operation for atomic assignment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -2791,15 +2792,24 @@ static void genAtomicUpdateStatement(
       },
       assignmentStmtExpr.u);
   lower::StatementContext nonAtomicStmtCtx;
+  lower::StatementContext *stmtCtxPtr = &nonAtomicStmtCtx;
   if (!nonAtomicSubExprs.empty()) {
     // Generate non atomic part before all the atomic operations.
     auto insertionPoint = firOpBuilder.saveInsertionPoint();
-    if (atomicCaptureOp)
+    if (atomicCaptureOp) {
+      assert(atomicCaptureStmtCtx && "must specify statement context");
       firOpBuilder.setInsertionPoint(atomicCaptureOp);
+      // Any clean-ups associated with the expression lowering
+      // must also be generated outside of the atomic update operation
+      // and after the atomic capture operation.
+      // The atomicCaptureStmtCtx will be finalized at the end
+      // of the atomic capture operation generation.
+      stmtCtxPtr = atomicCaptureStmtCtx;
+    }
     mlir::Value nonAtomicVal;
     for (auto *nonAtomicSubExpr : nonAtomicSubExprs) {
       nonAtomicVal = fir::getBase(converter.genExprValue(
-          currentLocation, *nonAtomicSubExpr, nonAtomicStmtCtx));
+          currentLocation, *nonAtomicSubExpr, *stmtCtxPtr));
       exprValueOverrides.try_emplace(nonAtomicSubExpr, nonAtomicVal);
     }
     if (atomicCaptureOp)
@@ -3099,7 +3109,7 @@ static void genAtomicCapture(lower::AbstractConverter &converter,
       genAtomicUpdateStatement(
           converter, stmt2LHSArg, stmt2VarType, stmt2Var, stmt2Expr,
           /*leftHandClauseList=*/nullptr,
-          /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp);
+          /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp, &stmtCtx);
     } else {
       // Atomic capture construct is of the form [capture-stmt, write-stmt]
       firOpBuilder.setInsertionPoint(atomicCaptureOp);
@@ -3123,7 +3133,7 @@ static void genAtomicCapture(lower::AbstractConverter &converter,
     genAtomicUpdateStatement(
         converter, stmt1LHSArg, stmt1VarType, stmt1Var, stmt1Expr,
         /*leftHandClauseList=*/nullptr,
-        /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp);
+        /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp, &stmtCtx);
     genAtomicCaptureStatement(converter, stmt1LHSArg, stmt2LHSArg,
                               /*leftHandClauseList=*/nullptr,
                               /*rightHandClauseList=*/nullptr, elementType,
@@ -3131,7 +3141,9 @@ static void genAtomicCapture(lower::AbstractConverter &converter,
   }
   firOpBuilder.setInsertionPointToEnd(&block);
   firOpBuilder.create<mlir::omp::TerminatorOp>(loc);
-  firOpBuilder.setInsertionPointToStart(&block);
+  // The clean-ups associated with the statements inside the capture
+  // construct must be generated after the AtomicCaptureOp.
+  firOpBuilder.setInsertionPointAfter(atomicCaptureOp);
 }
 
 //===----------------------------------------------------------------------===//
