@@ -242,12 +242,10 @@ public:
       operation.addVectorLengthOperand(builder.getContext(),
                                        createIntExpr(clause.getIntExpr()),
                                        lastDeviceTypeValues);
-    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::SerialOp>) {
-      llvm_unreachable("vector_length not valid on serial");
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitVectorLengthClause");
     }
   }
 
