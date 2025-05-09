@@ -13151,6 +13151,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case AMDGPUISD::CLAMP:
   case AMDGPUISD::FMED3:
   case AMDGPUISD::FMAX3:
@@ -13315,7 +13317,9 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
   case AMDGPU::G_FMINIMUM:
-  case AMDGPU::G_FMAXIMUM: {
+  case AMDGPU::G_FMAXIMUM:
+  case AMDGPU::G_FMINIMUMNUM:
+  case AMDGPU::G_FMAXIMUMNUM: {
     if (Subtarget->supportsMinMaxDenormModes() ||
         // FIXME: denormalsEnabledForType is broken for dynamic
         denormalsEnabledForType(MRI.getType(Reg), MF))
