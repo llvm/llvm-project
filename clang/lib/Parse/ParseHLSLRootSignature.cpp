@@ -27,6 +27,13 @@ RootSignatureParser::RootSignatureParser(SmallVector<RootElement> &Elements,
 bool RootSignatureParser::parse() {
   // Iterate as many RootElements as possible
   do {
+    if (tryConsumeExpectedToken(TokenKind::kw_RootFlags)) {
+      auto Flags = parseRootFlags();
+      if (!Flags.has_value())
+        return true;
+      Elements.push_back(*Flags);
+    }
+
     if (tryConsumeExpectedToken(TokenKind::kw_RootConstants)) {
       auto Constants = parseRootConstants();
       if (!Constants.has_value())
@@ -45,6 +52,61 @@ bool RootSignatureParser::parse() {
   return consumeExpectedToken(TokenKind::end_of_stream,
                               diag::err_hlsl_unexpected_end_of_params,
                               /*param of=*/TokenKind::kw_RootSignature);
+}
+
+template <typename FlagType>
+static FlagType maybeOrFlag(std::optional<FlagType> Flags, FlagType Flag) {
+  if (!Flags.has_value())
+    return Flag;
+
+  return static_cast<FlagType>(llvm::to_underlying(Flags.value()) |
+                               llvm::to_underlying(Flag));
+}
+
+std::optional<RootFlags> RootSignatureParser::parseRootFlags() {
+  assert(CurToken.TokKind == TokenKind::kw_RootFlags &&
+         "Expects to only be invoked starting at given keyword");
+
+  if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+                           CurToken.TokKind))
+    return std::nullopt;
+
+  std::optional<RootFlags> Flags = RootFlags::None;
+
+  // Handle the edge-case of '0' to specify no flags set
+  if (tryConsumeExpectedToken(TokenKind::int_literal)) {
+    if (!verifyZeroFlag()) {
+      getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_non_zero_flag);
+      return std::nullopt;
+    }
+  } else {
+    // Otherwise, parse as many flags as possible
+    TokenKind Expected[] = {
+#define ROOT_FLAG_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+    };
+
+    do {
+      if (tryConsumeExpectedToken(Expected)) {
+        switch (CurToken.TokKind) {
+#define ROOT_FLAG_ENUM(NAME, LIT)                                              \
+  case TokenKind::en_##NAME:                                                   \
+    Flags = maybeOrFlag<RootFlags>(Flags, RootFlags::NAME);                    \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+        default:
+          llvm_unreachable("Switch for consumed enum token was not provided");
+        }
+      }
+    } while (tryConsumeExpectedToken(TokenKind::pu_or));
+  }
+
+  if (consumeExpectedToken(TokenKind::pu_r_paren,
+                           diag::err_hlsl_unexpected_end_of_params,
+                           /*param of=*/TokenKind::kw_RootFlags))
+    return std::nullopt;
+
+  return Flags;
 }
 
 std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
@@ -467,15 +529,6 @@ RootSignatureParser::parseShaderVisibility() {
   return std::nullopt;
 }
 
-template <typename FlagType>
-static FlagType maybeOrFlag(std::optional<FlagType> Flags, FlagType Flag) {
-  if (!Flags.has_value())
-    return Flag;
-
-  return static_cast<FlagType>(llvm::to_underlying(Flags.value()) |
-                               llvm::to_underlying(Flag));
-}
-
 std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
 RootSignatureParser::parseDescriptorRangeFlags() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
@@ -484,7 +537,7 @@ RootSignatureParser::parseDescriptorRangeFlags() {
   // Handle the edge-case of '0' to specify no flags set
   if (tryConsumeExpectedToken(TokenKind::int_literal)) {
     if (!verifyZeroFlag()) {
-      getDiags().Report(CurToken.TokLoc, diag::err_expected) << "'0'";
+      getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_non_zero_flag);
       return std::nullopt;
     }
     return DescriptorRangeFlags::None;
