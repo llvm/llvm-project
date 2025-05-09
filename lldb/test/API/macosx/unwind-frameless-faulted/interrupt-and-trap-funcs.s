@@ -80,6 +80,7 @@ _trap:
   .cfi_def_cfa sp, 32
   add sp, sp, #32
   .cfi_same_value sp
+  .cfi_def_cfa sp, 0
 
   // jump back to $x23 to resume execution of to_be_interrupted
   br x23
