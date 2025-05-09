@@ -26,8 +26,12 @@ add_entrypoint_object(
     localtime.cpp
   HDRS
     ../localtime.h
-  DEPENDS
-    libc.hdr.time_macros
-    libc.hdr.types.struct_timespec
 )
 
+add_entrypoint_object(
+  localtime_r
+  SRCS
+    localtime_r.cpp
+  HDRS
+    ../localtime.h
+)
