@@ -2018,6 +2018,52 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
       _info.handler = 0;
     }
   }
+#elif defined(_LIBUNWIND_TARGET_AARCH64)
+  if (unwindEntry->Flag != 0) { // Packed unwind info
+    _info.end_ip = _info.start_ip + unwindEntry->FunctionLength * 4;
+    // Only fill in the handler and LSDA if they're stale.
+    if (pc != getLastPC()) {
+      // Packed unwind info doesn't have an exception handler.
+      _info.lsda = 0;
+      _info.handler = 0;
+    }
+  } else {
+    IMAGE_ARM64_RUNTIME_FUNCTION_ENTRY_XDATA *xdata =
+        reinterpret_cast<IMAGE_ARM64_RUNTIME_FUNCTION_ENTRY_XDATA *>(
+            base + unwindEntry->UnwindData);
+    _info.end_ip = _info.start_ip + xdata->FunctionLength * 4;
+    // Only fill in the handler and LSDA if they're stale.
+    if (pc != getLastPC()) {
+      if (xdata->ExceptionDataPresent) {
+        uint32_t offset = 1; // The main xdata
+        uint32_t codeWords = xdata->CodeWords;
+        uint32_t epilogScopes = xdata->EpilogCount;
+        if (xdata->EpilogCount == 0 && xdata->CodeWords == 0) {
+          uint32_t extensionWord = reinterpret_cast<uint32_t *>(xdata)[1];
+          codeWords = (extensionWord >> 16) & 0xff;
+          epilogScopes = extensionWord & 0xffff;
+          offset++;
+        }
+        if (!xdata->EpilogInHeader)
+          offset += epilogScopes;
+        offset += codeWords;
+        uint32_t *exceptionHandlerInfo =
+            reinterpret_cast<uint32_t *>(xdata) + offset;
+        _dispContext.HandlerData = &exceptionHandlerInfo[1];
+        _dispContext.LanguageHandler = reinterpret_cast<EXCEPTION_ROUTINE *>(
+            base + exceptionHandlerInfo[0]);
+        _info.lsda = reinterpret_cast<unw_word_t>(_dispContext.HandlerData);
+        if (exceptionHandlerInfo[0])
+          _info.handler =
+              reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
+        else
+          _info.handler = 0;
+      } else {
+        _info.lsda = 0;
+        _info.handler = 0;
+      }
+    }
+  }
 #endif
   setLastPC(pc);
   return true;
