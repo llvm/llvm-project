@@ -15,8 +15,7 @@ namespace clang::tidy::cppcoreguidelines {
 
 void UseEnumClassCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      traverse(TK_AsIs,
-               enumDecl(unless(isScoped()), unless(hasParent(recordDecl()))))
+      enumDecl(unless(isScoped()), unless(hasParent(recordDecl())))
           .bind("unscoped_enum"),
       this);
 }
