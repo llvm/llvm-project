@@ -69,8 +69,8 @@ static raw_ostream &operator<<(raw_ostream &OS,
 }
 
 void DescriptorTable::dump(raw_ostream &OS) const {
-  OS << "DescriptorTable(numClauses = " << NumClauses;
-  OS << ", visibility = " << Visibility << ")";
+  OS << "DescriptorTable(numClauses = " << NumClauses
+     << ", visibility = " << Visibility << ")";
 }
 
 static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
@@ -135,10 +135,8 @@ static raw_ostream &operator<<(raw_ostream &OS,
 }
 
 void DescriptorTableClause::dump(raw_ostream &OS) const {
-  OS << Type << "(" << Reg;
-  OS << ", numDescriptors = " << NumDescriptors;
-  OS << ", space = " << Space;
-  OS << ", offset = ";
+  OS << Type << "(" << Reg << ", numDescriptors = " << NumDescriptors
+     << ", space = " << Space << ", offset = ";
   if (Offset == DescriptorTableOffsetAppend)
     OS << "DescriptorTableOffsetAppend";
   else
