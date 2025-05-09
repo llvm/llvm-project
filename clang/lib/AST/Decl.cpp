@@ -3367,7 +3367,8 @@ bool FunctionDecl::isMSVCRTEntryPoint() const {
   // semantic analysis for these functions remains the same.
 
   // MSVCRT entry points only exist on MSVCRT targets.
-  if (!TUnit->getASTContext().getTargetInfo().getTriple().isOSMSVCRT())
+  if (!TUnit->getASTContext().getTargetInfo().getTriple().isOSMSVCRT() &&
+      !TUnit->getASTContext().getTargetInfo().getTriple().isUEFI())
     return false;
 
   // Nameless functions like constructors cannot be entry points.
