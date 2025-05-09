@@ -15,6 +15,7 @@
 #define LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 
 #include "llvm/Support/DXILABI.h"
+#include "llvm/Support/raw_ostream.h"
 #include <variant>
 
 namespace llvm {
@@ -83,6 +84,8 @@ struct RootConstants {
 struct DescriptorTable {
   ShaderVisibility Visibility = ShaderVisibility::All;
   uint32_t NumClauses = 0; // The number of clauses in the table
+
+  void dump(raw_ostream &OS) const;
 };
 
 static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
@@ -111,6 +114,8 @@ struct DescriptorTableClause {
       break;
     }
   }
+
+  void dump(raw_ostream &OS) const;
 };
 
 // Models RootElement : RootConstants | DescriptorTable | DescriptorTableClause
