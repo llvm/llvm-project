@@ -68,12 +68,14 @@ defm RI_VUNZIP2B_V : VALU_IV_V<"ri.vunzip2b", 0b011000>;
 }
 
 // These are modeled after the int binop VL nodes
-def ri_vzipeven_vl : SDNode<"RISCVISD::RI_VZIPEVEN_VL", SDT_RISCVIntBinOp_VL>;
-def ri_vzipodd_vl : SDNode<"RISCVISD::RI_VZIPODD_VL", SDT_RISCVIntBinOp_VL>;
-def ri_vzip2a_vl : SDNode<"RISCVISD::RI_VZIP2A_VL", SDT_RISCVIntBinOp_VL>;
-def ri_vzip2b_vl : SDNode<"RISCVISD::RI_VZIP2B_VL", SDT_RISCVIntBinOp_VL>;
-def ri_vunzip2a_vl : SDNode<"RISCVISD::RI_VUNZIP2A_VL", SDT_RISCVIntBinOp_VL>;
-def ri_vunzip2b_vl : SDNode<"RISCVISD::RI_VUNZIP2B_VL", SDT_RISCVIntBinOp_VL>;
+let HasMaskOp = true in {
+  def ri_vzipeven_vl : RVSDNode<"RI_VZIPEVEN_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vzipodd_vl : RVSDNode<"RI_VZIPODD_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vzip2a_vl : RVSDNode<"RI_VZIP2A_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vzip2b_vl : RVSDNode<"RI_VZIP2B_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vunzip2a_vl : RVSDNode<"RI_VUNZIP2A_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vunzip2b_vl : RVSDNode<"RI_VUNZIP2B_VL", SDT_RISCVIntBinOp_VL>;
+}
 
 multiclass RIVPseudoVALU_VV {
   foreach m = MxList in
