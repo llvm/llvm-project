@@ -465,6 +465,8 @@ public:
       else
         operation.addEmptyWorker(builder.getContext(), lastDeviceTypeValues);
 
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
       // unreachable. Combined constructs remain.
@@ -481,6 +483,8 @@ public:
       else
         operation.addEmptyVector(builder.getContext(), lastDeviceTypeValues);
 
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
       // unreachable. Combined constructs remain.
