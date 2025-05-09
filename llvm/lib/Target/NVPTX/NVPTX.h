@@ -196,12 +196,7 @@ enum FromType {
   Float,
   Untyped
 };
-enum VecType {
-  Scalar = 1,
-  V2 = 2,
-  V4 = 4,
-  V8 = 8
-};
+enum VecType { Scalar = 1, V2 = 2, V4 = 4, V8 = 8 };
 } // namespace PTXLdStInstCode
 
 /// PTXCvtMode - Conversion code enumeration
