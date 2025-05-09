@@ -76,23 +76,34 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
 }
 
 /// Return the FuncOp called by `callOp`.
-static FuncOp getCalledFunction(CallOpInterface callOp) {
+static FuncOp getCalledFunction(CallOpInterface callOp,
+                                mlir::SymbolTableCollection &symbolTable) {
   SymbolRefAttr sym =
       llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
   if (!sym)
     return nullptr;
   return dyn_cast_or_null<FuncOp>(
-      SymbolTable::lookupNearestSymbolFrom(callOp, sym));
+      symbolTable.lookupNearestSymbolFrom(callOp, sym));
 }
 
-/// Get FuncAnalysisState.
+/// Get or create FuncAnalysisState.
 static const FuncAnalysisState &
-getFuncAnalysisState(const AnalysisState &state) {
+getOrCreateFuncAnalysisState(const AnalysisState &state) {
   assert(isa<OneShotAnalysisState>(state) && "expected OneShotAnalysisState");
-  auto *result = static_cast<const OneShotAnalysisState &>(state)
-                     .getExtension<FuncAnalysisState>();
-  assert(result && "FuncAnalysisState does not exist");
-  return *result;
+
+  // Unfortunately, at the moment the BufferizableOpInterface methods do provide
+  // a const reference to the AnalysisState class, and the only way to
+  // dynamically add an extension is to const_cast it to a non-const reference.
+  // Should the const qualifier be dropped from the interface?
+  auto &oneShotAnalysisState =
+      static_cast<OneShotAnalysisState &>(const_cast<AnalysisState &>(state));
+
+  auto *result = oneShotAnalysisState.getExtension<FuncAnalysisState>();
+
+  if (result)
+    return *result;
+
+  return oneShotAnalysisState.addExtension<FuncAnalysisState>();
 }
 
 /// Return the state (phase) of analysis of the FuncOp.
@@ -135,14 +146,14 @@ struct CallOpInterface
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
+    const FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
+    FuncOp funcOp = getCalledFunction(callOp, funcState.symbolTable);
     assert(funcOp && "expected CallOp to a FuncOp");
 
     if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
       // FuncOp not analyzed yet. Assume that OpOperand is read.
       return true;
 
-    const FuncAnalysisState &funcState = getFuncAnalysisState(state);
     return funcState.readBbArgs.lookup(funcOp).contains(
         opOperand.getOperandNumber());
   }
@@ -150,14 +161,14 @@ struct CallOpInterface
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
+    const FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
+    FuncOp funcOp = getCalledFunction(callOp, funcState.symbolTable);
     assert(funcOp && "expected CallOp to a FuncOp");
 
     if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
       // FuncOp not analyzed yet. Assume that OpOperand is written.
       return true;
 
-    const FuncAnalysisState &funcState = getFuncAnalysisState(state);
     return funcState.writtenBbArgs.lookup(funcOp).contains(
         opOperand.getOperandNumber());
   }
@@ -165,14 +176,14 @@ struct CallOpInterface
   AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
                                       const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
+    const FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
+    FuncOp funcOp = getCalledFunction(callOp, funcState.symbolTable);
     assert(funcOp && "expected CallOp to a FuncOp");
     if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
       // FuncOp not analyzed yet. Any OpResult may be aliasing.
       return detail::unknownGetAliasingValues(opOperand);
 
     // Get aliasing results from state.
-    const FuncAnalysisState &funcState = getFuncAnalysisState(state);
     auto aliasingReturnVals =
         funcState.aliasingReturnVals.lookup(funcOp).lookup(
             opOperand.getOperandNumber());
@@ -199,7 +210,11 @@ struct CallOpInterface
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 SmallVector<Value> &invocationStack) const {
     auto callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
+
+    // TODO Avoid recomputing the symbol tables every time.
+    mlir::SymbolTableCollection symbolTable;
+
+    FuncOp funcOp = getCalledFunction(callOp, symbolTable);
     assert(funcOp && "expected CallOp to a FuncOp");
 
     // If the callee was already bufferized, we can directly take the type from
@@ -243,7 +258,11 @@ struct CallOpInterface
     // 2. Rewrite tensor operands as memrefs based on type of the already
     //    bufferized callee.
     SmallVector<Value> newOperands;
-    FuncOp funcOp = getCalledFunction(callOp);
+
+    // TODO Avoid recomputing the symbol tables every time.
+    mlir::SymbolTableCollection symbolTable;
+
+    FuncOp funcOp = getCalledFunction(callOp, symbolTable);
     assert(funcOp && "expected CallOp to a FuncOp");
     FunctionType funcType = funcOp.getFunctionType();
 
