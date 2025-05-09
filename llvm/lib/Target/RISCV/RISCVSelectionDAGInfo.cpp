@@ -17,14 +17,3 @@ RISCVSelectionDAGInfo::RISCVSelectionDAGInfo()
     : SelectionDAGGenTargetInfo(RISCVGenSDNodeInfo) {}
 
 RISCVSelectionDAGInfo::~RISCVSelectionDAGInfo() = default;
-
-void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
-                                             const SDNode *N) const {
-  switch (N->getOpcode()) {
-  case RISCVISD::PROBED_ALLOCA:
-    // FIXME: Current examples do not match the SDTypeProfile.
-    // They get "invalid number of results; expected 2, got 1"
-    return;
-  }
-  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
-}
