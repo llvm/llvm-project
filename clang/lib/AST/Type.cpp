@@ -4176,7 +4176,8 @@ PackIndexingType::computeDependence(QualType Pattern, Expr *IndexExpr,
 
 void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
                                const ASTContext &Context) {
-  Profile(ID, Context, getPattern(), getIndexExpr(), isFullySubstituted(), getExpansions());
+  Profile(ID, Context, getPattern(), getIndexExpr(), isFullySubstituted(),
+          getExpansions());
 }
 
 void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
@@ -4186,12 +4187,11 @@ void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
 
   E->Profile(ID, Context, true);
   ID.AddBoolean(FullySubstituted);
-  if(!Expansions.empty()) {
+  if (!Expansions.empty()) {
     ID.AddInteger(Expansions.size());
-    for(QualType T : Expansions)
+    for (QualType T : Expansions)
       T.getCanonicalType().Profile(ID);
-  }
-  else {
+  } else {
     Pattern.Profile(ID);
   }
 }

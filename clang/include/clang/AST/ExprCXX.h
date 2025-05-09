@@ -4547,11 +4547,8 @@ public:
   static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
                                               unsigned NumTransformedExprs);
 
+  // The index expression and all elements of the pack have been substituted.
   bool isFullySubstituted() const { return FullySubstituted; }
-
-  bool isPartiallySubstituted() const {
-    return isValueDependent() && TransformedExpressions;
-  };
 
   /// Determine if the expression was expanded to empty.
   bool expandsToEmptyPack() const {

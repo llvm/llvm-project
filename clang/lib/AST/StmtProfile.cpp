@@ -2293,7 +2293,7 @@ void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
 void StmtProfiler::VisitPackIndexingExpr(const PackIndexingExpr *E) {
   VisitExpr(E->getIndexExpr());
 
-  if (E->isPartiallySubstituted()) {
+  if (E->expandsToEmptyPack() || E->getExpressions().size() != 0) {
     ID.AddInteger(E->getExpressions().size());
     for (const Expr *Sub : E->getExpressions())
       Visit(Sub);
