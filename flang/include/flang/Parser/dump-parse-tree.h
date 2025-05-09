@@ -17,7 +17,6 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Support/Fortran.h"
-#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <type_traits>
@@ -546,8 +545,8 @@ public:
   NODE(parser, OmpBeginSectionsDirective)
   NODE(parser, OmpBlockDirective)
   static std::string GetNodeName(const llvm::omp::Directive &x) {
-    return llvm::Twine("llvm::omp::Directive = ",
-        llvm::omp::getOpenMPDirectiveName(x, llvm::omp::FallbackVersion))
+    return llvm::Twine(
+        "llvm::omp::Directive = ", llvm::omp::getOpenMPDirectiveName(x))
         .str();
   }
   NODE(parser, OmpClause)
