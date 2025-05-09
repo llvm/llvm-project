@@ -6362,6 +6362,14 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
     Params.push_back(Parm);
   }
   OverloadDecl->setParams(Params);
+  // We cannot merge host/device attributes of redeclarations. They have to
+  // be consistent when created.
+  if (Sema->LangOpts.CUDA) {
+    if (FDecl->hasAttr<CUDAHostAttr>())
+      OverloadDecl->addAttr(CUDAHostAttr::CreateImplicit(Context));
+    if (FDecl->hasAttr<CUDADeviceAttr>())
+      OverloadDecl->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+  }
   Sema->mergeDeclAttributes(OverloadDecl, FDecl);
   return OverloadDecl;
 }
@@ -6542,15 +6550,6 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   return Call;
 }
 
-// Any type that could be used to form a callable expression
-static bool MayBeFunctionType(const ASTContext &Context, QualType T) {
-  return T == Context.BoundMemberTy || T == Context.UnknownAnyTy ||
-         T == Context.BuiltinFnTy || T == Context.OverloadTy ||
-         T->isFunctionType() || T->isFunctionReferenceType() ||
-         T->isMemberFunctionPointerType() || T->isFunctionPointerType() ||
-         T->isBlockPointerType() || T->isRecordType();
-}
-
 ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                                MultiExprArg ArgExprs, SourceLocation RParenLoc,
                                Expr *ExecConfig, bool IsExecConfig,
@@ -6603,15 +6602,6 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
         tryImplicitlyCaptureThisIfImplicitMemberFunctionAccessWithDependentArgs(
             *this, dyn_cast<UnresolvedMemberExpr>(Fn->IgnoreParens()),
             Fn->getBeginLoc());
-
-        // If the type of the function itself is not dependent
-        // check that it is a reasonable as a function, as type deduction
-        // later assume the CallExpr has a sensible TYPE.
-        if (!Fn->getType()->isDependentType() &&
-            !MayBeFunctionType(Context, Fn->getType()))
-          return ExprError(
-              Diag(LParenLoc, diag::err_typecheck_call_not_function)
-              << Fn->getType() << Fn->getSourceRange());
 
         return CallExpr::Create(Context, Fn, ArgExprs, Context.DependentTy,
                                 VK_PRValue, RParenLoc, CurFPFeatureOverrides());

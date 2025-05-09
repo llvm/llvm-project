@@ -8010,7 +8010,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(
       Dominator = Dominator->getIDom();
     }
 
-  if (getKnowledgeValidInContext(V, {Attribute::NoUndef}, CtxI, DT, AC))
+  if (AC && getKnowledgeValidInContext(V, {Attribute::NoUndef}, *AC, CtxI, DT))
     return true;
 
   return false;

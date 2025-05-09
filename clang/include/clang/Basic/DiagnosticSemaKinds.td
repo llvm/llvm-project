@@ -51,6 +51,8 @@ defm adl_only_template_id : CXX20Compat<
   "with explicit template arguments is">;
 defm ctad_for_alias_templates
     : CXX20Compat<"class template argument deduction for alias templates is">;
+defm implicit_typename
+    : CXX20Compat<"missing 'typename' prior to dependent type name %0 is">;
 
 // C++23 compatibility with C++20 and earlier.
 defm constexpr_static_var : CXX23Compat<
@@ -5867,16 +5869,8 @@ def ext_typename_missing
 def err_typename_refers_to_using_value_decl : Error<
   "typename specifier refers to a dependent using declaration for a value "
   "%0 in %1">;
-def note_using_value_decl_missing_typename : Note<
-  "add 'typename' to treat this using declaration as a type">;
-def warn_cxx17_compat_implicit_typename : Warning<"use of implicit 'typename' is "
-  "incompatible with C++ standards before C++20">, InGroup<CXX20Compat>,
-  DefaultIgnore;
-def ext_implicit_typename
-    : ExtWarn<"missing 'typename' prior to dependent "
-              "type name %0; implicit 'typename' is a C++20 extension">,
-      InGroup<CXX20>;
-
+def note_using_value_decl_missing_typename
+    : Note<"add 'typename' to treat this using declaration as a type">;
 def err_template_kw_refers_to_non_template : Error<
   "%0%select{| following the 'template' keyword}1 "
   "does not refer to a template">;
@@ -9572,9 +9566,11 @@ def err_incomplete_type_used_in_type_trait_expr : Error<
   "incomplete type %0 used in type trait expression">, NoSFINAE;
 
 // C++20 constinit and require_constant_initialization attribute
-def warn_cxx20_compat_constinit : Warning<
-  "'constinit' specifier is incompatible with C++ standards before C++20">,
-  InGroup<CXX20Compat>, DefaultIgnore;
+def warn_cxx20_compat_constinit
+    : Warning<"'constinit' specifier is incompatible with C++ standards before "
+              "C++20">,
+      InGroup<CXXPre20Compat>,
+      DefaultIgnore;
 def err_constinit_local_variable : Error<
   "local variable cannot be declared 'constinit'">;
 def err_require_constant_init_failed : Error<

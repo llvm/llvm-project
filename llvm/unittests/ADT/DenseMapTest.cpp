@@ -10,6 +10,7 @@
 #include "CountCopyAndMove.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -359,6 +360,51 @@ TYPED_TEST(DenseMapTest, ConstIteratorTest) {
   EXPECT_TRUE(cit == cit2);
 }
 
+TYPED_TEST(DenseMapTest, KeysValuesIterator) {
+  SmallSet<typename TypeParam::key_type, 10> Keys;
+  SmallSet<typename TypeParam::mapped_type, 10> Values;
+  for (int I = 0; I < 10; ++I) {
+    auto K = this->getKey(I);
+    auto V = this->getValue(I);
+    Keys.insert(K);
+    Values.insert(V);
+    this->Map[K] = V;
+  }
+
+  SmallSet<typename TypeParam::key_type, 10> ActualKeys;
+  SmallSet<typename TypeParam::mapped_type, 10> ActualValues;
+  for (auto K : this->Map.keys())
+    ActualKeys.insert(K);
+  for (auto V : this->Map.values())
+    ActualValues.insert(V);
+
+  EXPECT_EQ(Keys, ActualKeys);
+  EXPECT_EQ(Values, ActualValues);
+}
+
+TYPED_TEST(DenseMapTest, ConstKeysValuesIterator) {
+  SmallSet<typename TypeParam::key_type, 10> Keys;
+  SmallSet<typename TypeParam::mapped_type, 10> Values;
+  for (int I = 0; I < 10; ++I) {
+    auto K = this->getKey(I);
+    auto V = this->getValue(I);
+    Keys.insert(K);
+    Values.insert(V);
+    this->Map[K] = V;
+  }
+
+  const TypeParam &ConstMap = this->Map;
+  SmallSet<typename TypeParam::key_type, 10> ActualKeys;
+  SmallSet<typename TypeParam::mapped_type, 10> ActualValues;
+  for (auto K : ConstMap.keys())
+    ActualKeys.insert(K);
+  for (auto V : ConstMap.values())
+    ActualValues.insert(V);
+
+  EXPECT_EQ(Keys, ActualKeys);
+  EXPECT_EQ(Values, ActualValues);
+}
+
 // Test initializer list construction.
 TEST(DenseMapCustomTest, InitializerList) {
   DenseMap<int, int> M({{0, 0}, {0, 1}, {1, 2}});
@@ -545,6 +591,41 @@ TEST(DenseMapCustomTest, InsertOrAssignTest) {
   EXPECT_EQ(1, CountCopyAndMove::MoveAssignments);
 }
 
+TEST(DenseMapCustomTest, EmplaceOrAssign) {
+  DenseMap<int, CountCopyAndMove> Map;
+
+  CountCopyAndMove::ResetCounts();
+  auto Try0 = Map.emplace_or_assign(3, 3);
+  EXPECT_TRUE(Try0.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(0, CountCopyAndMove::TotalMoves());
+  EXPECT_EQ(1, CountCopyAndMove::ValueConstructions);
+
+  CountCopyAndMove::ResetCounts();
+  auto Try1 = Map.emplace_or_assign(3, 4);
+  EXPECT_FALSE(Try1.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(1, CountCopyAndMove::ValueConstructions);
+  EXPECT_EQ(0, CountCopyAndMove::MoveConstructions);
+  EXPECT_EQ(1, CountCopyAndMove::MoveAssignments);
+
+  int Key = 5;
+  CountCopyAndMove::ResetCounts();
+  auto Try2 = Map.emplace_or_assign(Key, 3);
+  EXPECT_TRUE(Try2.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(0, CountCopyAndMove::TotalMoves());
+  EXPECT_EQ(1, CountCopyAndMove::ValueConstructions);
+
+  CountCopyAndMove::ResetCounts();
+  auto Try3 = Map.emplace_or_assign(Key, 4);
+  EXPECT_FALSE(Try3.second);
+  EXPECT_EQ(0, CountCopyAndMove::TotalCopies());
+  EXPECT_EQ(1, CountCopyAndMove::ValueConstructions);
+  EXPECT_EQ(0, CountCopyAndMove::MoveConstructions);
+  EXPECT_EQ(1, CountCopyAndMove::MoveAssignments);
+}
+
 // Make sure DenseMap works with StringRef keys.
 TEST(DenseMapCustomTest, StringRefTest) {
   DenseMap<StringRef, int> M;
@@ -568,6 +649,26 @@ TEST(DenseMapCustomTest, StringRefTest) {
   EXPECT_EQ(42, M.lookup(""));
   EXPECT_EQ(42, M.lookup(StringRef()));
   EXPECT_EQ(42, M.lookup(StringRef("a", 0)));
+}
+
+struct NonDefaultConstructible {
+  unsigned V;
+  NonDefaultConstructible(unsigned V) : V(V) {};
+  bool operator==(const NonDefaultConstructible &Other) const {
+    return V == Other.V;
+  }
+};
+
+TEST(DenseMapCustomTest, LookupOr) {
+  DenseMap<int, NonDefaultConstructible> M;
+
+  M.insert_or_assign(0, 3u);
+  M.insert_or_assign(1, 2u);
+  M.insert_or_assign(1, 0u);
+
+  EXPECT_EQ(M.lookup_or(0, 4u), 3u);
+  EXPECT_EQ(M.lookup_or(1, 4u), 0u);
+  EXPECT_EQ(M.lookup_or(2, 4u), 4u);
 }
 
 // Key traits that allows lookup with either an unsigned or char* key;

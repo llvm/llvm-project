@@ -37,12 +37,12 @@ ensure the proper set of public symbols is exported and visible to clients.
 Annotation Macros
 -----------------
 The distinct DLL import and export annotations required for Windows DLLs
-typically lead developers to define a preprocessor macro for annotating exported
-symbols in header public files. The custom macro resolves to the _export_
-annotation when building the library and the _import_ annotation when building
-the client.
+typically lead developers to define a preprocessor macro for annotating
+exported symbols in header public files. The custom macro resolves to the
+**export** annotation when building the library and the **import** annotation
+when building the client.
 
-We have defined the `LLVM_ABI` macro in `llvm/Support/Compiler.h
+We have defined the ``LLVM_ABI`` macro in `llvm/Support/Compiler.h
 <https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Support/Compiler.h#L152>`__
 for this purpose:
 
@@ -83,8 +83,8 @@ building source that is part of the LLVM shared library (e.g. source under
 symbol from a different LLVM project (such as Clang) it would always resolve to
 ``__declspec(dllimport)`` and the symbol would not be properly exported.
 
-Annotating Symbols
-------------------
+How to Annotate Symbols
+-----------------------
 Functions
 ~~~~~~~~~
 Exported function declarations in header files must be annotated with
@@ -157,10 +157,9 @@ declaration must be annotated with ``LLVM_ABI``.
      static constexpr int initializedConstexprStaticField = 0;
    };
 
-Private methods may also require ``LLVM_ABI`` annotation in certain cases. This
-situation occurs when a method defined in a header calls the private method. The
-private method call may be from within the class, a parent class, or a friend
-class.
+Private methods may also require ``LLVM_ABI`` annotation. This situation occurs
+when a method defined in a header calls the private method. The private method
+call may be from within the class or a friend class or method.
 
 .. code:: cpp
 
@@ -222,7 +221,7 @@ method in a C++ class, it may be annotated for export.
 
 Friend Functions
 ~~~~~~~~~~~~~~~~
-Friend functions declared in a class, struct or union should be annotated with
+Friend functions declared in a class, struct or union must be annotated with
 ``LLVM_ABI_FRIEND`` if the corresponding function declaration is annotated with
 ``LLVM_ABI``. This requirement applies even when the class containing the friend
 declaration is annotated with ``LLVM_ABI``.
@@ -248,24 +247,27 @@ declaration is annotated with ``LLVM_ABI``.
 
 Virtual Table and Type Info
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Classes and structs with exported virtual methods, or child classes that export
-overridden virtual methods, must also export their vtable for ELF and Mach-O
-builds. This can be achieved by annotating the class rather than individual
-class members.
+Classes and structs with exported virtual methods, including child classes that
+export overridden virtual methods, must also export their vtable for ELF and
+Mach-O builds. This can be achieved by annotating the class rather than
+individual class members.
+
+The general rule here is to annotate at the class level if any out-of-line
+method is declared ``virtual`` or ``override``.
 
 .. code:: cpp
 
    #include "llvm/Support/Compiler.h"
 
-   class ParentClass {
+   // Annotating the class exports vtable and type information as well as all
+   // class members.
+   class LLVM_ABI ParentClass {
    public:
      virtual int virtualMethod(int a, int b);
      virtual int anotherVirtualMethod(int a, int b);
      virtual ~ParentClass();
    };
 
-   // Annotating the class exports vtable and type information as well as all
-   // class members.
    class LLVM_ABI ChildClass : public ParentClass {
    public:
      // Inline method override does not require the class be annotated.
@@ -274,29 +276,51 @@ class members.
      }
 
      // Overriding a virtual method from the parent requires the class be
-     // annotated. The parent class may require annotation as well.
+     // annotated.
      int pureVirtualMethod(int a, int b) override;
+
      ~ChildClass();
    };
 
-If annotating a type with ``LLVM_ABI`` causes compilation issues such as those
-described
-`here <https://devblogs.microsoft.com/oldnewthing/20190927-00/?p=102932>`__,
-the class may require modification. Often, explicitly deleting the copy
-constructor and copy assignment operator will resolve the issue.
+.. note::
+
+   If a class is annotated, none of its members may be annotated. If class- and
+   member-level annotations are combined on a class, it will fail compilation on
+   Windows.
+
+Compilation Errors
+++++++++++++++++++
+Annotating a class with ``LLVM_ABI`` causes the compiler to fully instantiate
+the class at compile time. This requires exporting every method that could be
+potentially used by a client even though no existing clients may actually use
+them. This can cause compilation errors that were not previously present.
+
+The most common type of error occurs when the compiler attempts to instantiate
+and export a class' implicit copy constructor and copy assignment operator. If
+the class contains move-only members that cannot be copied (``std::unique_ptr``
+for example), the compiler will fail to instantiate these implicit
+methods.
+
+This problem is easily addressed by explicitly deleting the class' copy
+constructor and copy assignment operator:
 
 .. code:: cpp
 
    #include "llvm/Support/Compiler.h"
 
-   #include <vector>
-
    class LLVM_ABI ExportedClass {
    public:
+     ExportedClass() = default;
+
      // Explicitly delete the copy constructor and assignment operator.
      ExportedClass(ExportedClass const&) = delete;
      ExportedClass& operator=(ExportedClass const&) = delete;
    };
+
+We know this modification is harmless because any clients attempting to use
+these methods already would fail to compile. For a more detailed explanation,
+see `this Microsoft dev blog
+<https://devblogs.microsoft.com/oldnewthing/20190927-00/?p=102932>`__.
 
 Templates
 ~~~~~~~~~
