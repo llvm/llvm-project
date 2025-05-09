@@ -635,9 +635,9 @@ public:
   };
 
   struct BindingSpaces {
-    dxil::ResourceClass ResClass;
+    dxil::ResourceClass RC;
     llvm::SmallVector<RegisterSpace> Spaces;
-    BindingSpaces(dxil::ResourceClass ResClass) : ResClass(ResClass) {}
+    BindingSpaces(dxil::ResourceClass RC) : RC(RC) {}
   };
 
 private:
