@@ -565,11 +565,6 @@ bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
   if (MI.getOperand(1).getReg() != RISCV::NoRegister)
     return false;
 
-  const TargetRegisterClass *RC1 = MRI->getRegClass(MI.getOperand(0).getReg());
-  const TargetRegisterClass *RC2 = MRI->getRegClass(MI.getOperand(2).getReg());
-  if (!RC1->hasSubClassEq(RC2))
-    return false;
-
   // If the input was a pseudo with a policy operand, we can give it a tail
   // agnostic policy if MI's undef tail subsumes the input's.
   MachineInstr *Src = MRI->getVRegDef(MI.getOperand(2).getReg());
@@ -588,6 +583,8 @@ bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
       SrcPolicy.setImm(SrcPolicy.getImm() | RISCVVType::TAIL_AGNOSTIC);
   }
 
+  MRI->constrainRegClass(MI.getOperand(2).getReg(),
+                         MRI->getRegClass(MI.getOperand(0).getReg()));
   MRI->replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(2).getReg());
   MRI->clearKillFlags(MI.getOperand(2).getReg());
   MI.eraseFromParent();
@@ -611,11 +608,6 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   MachineOperand &Passthru = MI.getOperand(1);
 
   if (!MRI->hasOneUse(MI.getOperand(2).getReg()))
-    return false;
-
-  const TargetRegisterClass *RC1 = MRI->getRegClass(MI.getOperand(0).getReg());
-  const TargetRegisterClass *RC2 = MRI->getRegClass(MI.getOperand(2).getReg());
-  if (!RC1->hasSubClassEq(RC2))
     return false;
 
   MachineInstr *Src = MRI->getVRegDef(MI.getOperand(2).getReg());
@@ -663,6 +655,8 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
     Policy |= RISCVVType::TAIL_AGNOSTIC;
   Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc())).setImm(Policy);
 
+  MRI->constrainRegClass(Src->getOperand(0).getReg(),
+                         MRI->getRegClass(MI.getOperand(0).getReg()));
   MRI->replaceRegWith(MI.getOperand(0).getReg(), Src->getOperand(0).getReg());
   MI.eraseFromParent();
 
