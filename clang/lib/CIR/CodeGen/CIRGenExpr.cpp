@@ -430,7 +430,7 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
     return RValue::get(emitLoadOfScalar(lv, loc));
 
   if (lv.isVectorElt()) {
-    auto load =
+    const mlir::Value load =
         builder.createLoad(getLoc(loc), lv.getVectorAddress().getPointer());
     return RValue::get(builder.create<cir::VecExtractOp>(getLoc(loc), load,
                                                          lv.getVectorIdx()));
@@ -683,12 +683,14 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
 
     // Extend or truncate the index type to 32 or 64-bits.
     auto ptrTy = mlir::dyn_cast<cir::PointerType>(idx.getType());
-    if (promote && ptrTy && mlir::isa<cir::IntType>(ptrTy.getPointee()))
+    if (promote && ptrTy && ptrTy.isPtrTo<cir::IntType>())
       cgm.errorNYI(e->getSourceRange(),
                    "emitArraySubscriptExpr: index type cast");
     return idx;
   };
 
+  // If the base is a vector type, then we are forming a vector element
+  // with this subscript.
   if (e->getBase()->getType()->isVectorType() &&
       !isa<ExtVectorElementExpr>(e->getBase())) {
     const mlir::Value idx = emitIdxAfterBase(/*promote=*/false);

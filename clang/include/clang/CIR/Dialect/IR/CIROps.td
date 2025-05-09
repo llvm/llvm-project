@@ -1981,14 +1981,14 @@ def VecInsertOp : CIR_Op<"vec.insert", [Pure,
   let summary = "Insert one element into a vector object";
   let description = [{
     The `cir.vec.insert` operation replaces the element of the given vector at
-    the given index with the given value.  The new vector with the inserted
+    the given index with the given value. The new vector with the inserted
     element is returned.
 
     ```mlir
     %value = cir.const #cir.int<5> : !s32i
     %index = cir.const #cir.int<2> : !s32i
     %vec_tmp = cir.load %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-    %new_vec = cir.vec.insert %index, %vec_tmp[%value : !s32i] : !cir.vector<4 x !s32i>
+    %new_vec = cir.vec.insert %value, %vec_tmp[%index : !s32i] : !cir.vector<4 x !s32i>
     ```
   }];
 
