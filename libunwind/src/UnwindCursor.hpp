@@ -83,6 +83,22 @@ struct UNWIND_INFO {
   uint16_t UnwindCodes[2];
 };
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
+union UNWIND_INFO_ARM {
+  DWORD HeaderData;
+  struct {
+    DWORD FunctionLength : 18;
+    DWORD Version : 2;
+    DWORD ExceptionDataPresent : 1;
+    DWORD EpilogInHeader : 1;
+    DWORD FunctionFragment : 1;
+    DWORD EpilogCount : 5;
+    DWORD CodeWords : 4;
+  };
+};
+#pragma clang diagnostic pop
+
 extern "C" _Unwind_Reason_Code __libunwind_seh_personality(
     int, _Unwind_Action, uint64_t, _Unwind_Exception *,
     struct _Unwind_Context *);
@@ -2018,9 +2034,18 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
       _info.handler = 0;
     }
   }
-#elif defined(_LIBUNWIND_TARGET_AARCH64)
+#elif defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_ARM)
+
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+#define FUNC_LENGTH_UNIT 4
+#define XDATA_TYPE IMAGE_ARM64_RUNTIME_FUNCTION_ENTRY_XDATA
+#else
+#define FUNC_LENGTH_UNIT 2
+#define XDATA_TYPE UNWIND_INFO_ARM
+#endif
   if (unwindEntry->Flag != 0) { // Packed unwind info
-    _info.end_ip = _info.start_ip + unwindEntry->FunctionLength * 4;
+    _info.end_ip =
+        _info.start_ip + unwindEntry->FunctionLength * FUNC_LENGTH_UNIT;
     // Only fill in the handler and LSDA if they're stale.
     if (pc != getLastPC()) {
       // Packed unwind info doesn't have an exception handler.
@@ -2028,10 +2053,9 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
       _info.handler = 0;
     }
   } else {
-    IMAGE_ARM64_RUNTIME_FUNCTION_ENTRY_XDATA *xdata =
-        reinterpret_cast<IMAGE_ARM64_RUNTIME_FUNCTION_ENTRY_XDATA *>(
-            base + unwindEntry->UnwindData);
-    _info.end_ip = _info.start_ip + xdata->FunctionLength * 4;
+    XDATA_TYPE *xdata =
+        reinterpret_cast<XDATA_TYPE *>(base + unwindEntry->UnwindData);
+    _info.end_ip = _info.start_ip + xdata->FunctionLength * FUNC_LENGTH_UNIT;
     // Only fill in the handler and LSDA if they're stale.
     if (pc != getLastPC()) {
       if (xdata->ExceptionDataPresent) {
@@ -2039,6 +2063,7 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
         uint32_t codeWords = xdata->CodeWords;
         uint32_t epilogScopes = xdata->EpilogCount;
         if (xdata->EpilogCount == 0 && xdata->CodeWords == 0) {
+          // The extension word has got the same layout for both ARM and ARM64
           uint32_t extensionWord = reinterpret_cast<uint32_t *>(xdata)[1];
           codeWords = (extensionWord >> 16) & 0xff;
           epilogScopes = extensionWord & 0xffff;
