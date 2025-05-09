@@ -781,7 +781,7 @@ inline bool fromJSON(const Value &E, unsigned int &Out, Path P) {
     Out = *S;
     return true;
   }
-  P.report("expected integer");
+  P.report("expected unsigned integer");
   return false;
 }
 inline bool fromJSON(const Value &E, uint64_t &Out, Path P) {

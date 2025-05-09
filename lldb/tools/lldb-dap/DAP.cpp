@@ -47,6 +47,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstdarg>
+#include <cstdint>
 #include <cstdio>
 #include <fstream>
 #include <future>
@@ -552,15 +553,19 @@ lldb::SBThread DAP::GetLLDBThread(const llvm::json::Object &arguments) {
   return target.GetProcess().GetThreadByID(tid);
 }
 
-lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
-  const uint64_t frame_id =
-      GetInteger<uint64_t>(arguments, "frameId").value_or(UINT64_MAX);
+lldb::SBFrame DAP::GetLLDBFrame(uint64_t frame_id) {
   lldb::SBProcess process = target.GetProcess();
   // Upper 32 bits is the thread index ID
   lldb::SBThread thread =
       process.GetThreadByIndexID(GetLLDBThreadIndexID(frame_id));
   // Lower 32 bits is the frame index
   return thread.GetFrameAtIndex(GetLLDBFrameID(frame_id));
+}
+
+lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
+  const auto frame_id =
+      GetInteger<uint64_t>(arguments, "frameId").value_or(UINT64_MAX);
+  return GetLLDBFrame(frame_id);
 }
 
 llvm::json::Value DAP::CreateTopLevelScopes() {
@@ -1602,7 +1607,7 @@ void DAP::EventThread() {
             // avoids sending paths that should be source mapped. Note that
             // CreateBreakpoint doesn't apply source mapping and certain
             // implementation ignore the source part of this event anyway.
-            llvm::json::Value source_bp = CreateBreakpoint(&bp);
+            llvm::json::Value source_bp = bp.ToProtocolBreakpoint();
             source_bp.getAsObject()->erase("source");
 
             llvm::json::Object body;
