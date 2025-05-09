@@ -115,7 +115,7 @@ class SBSaveCoreOptionsAPICase(TestBase):
         options.SetStyle(lldb.eSaveCoreCustomOnly)
         process = self.get_basic_process()
         memory_range = lldb.SBMemoryRegionInfo()
-        
+
         # Add the memory range of 0x1000-0x1100
         process.GetMemoryRegionInfo(0x1000, memory_range)
         options.AddMemoryRegionToSave(memory_range)
