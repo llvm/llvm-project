@@ -846,7 +846,7 @@ void LogFullErrorReport(const char *buffer) {
 #if !SANITIZER_GO
 #  if SANITIZER_OS_TRACE
    // Log with os_log_error. This will make it into the crash log.
-   if (GetMacosAlignedVersion() >= MacosVersion(10, 10)) {
+   if (GetMacosAlignedVersion() >= MacosVersion(10, 12)) {
      if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
                           sizeof("AddressSanitizer") - 1) == 0)
        os_log_error(OS_LOG_DEFAULT, "Address Sanitizer reported a failure.");
