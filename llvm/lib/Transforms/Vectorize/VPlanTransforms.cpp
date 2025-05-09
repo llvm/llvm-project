@@ -2130,6 +2130,25 @@ void VPlanTransforms::addActiveLaneMask(
     HeaderMask->replaceAllUsesWith(LaneMask);
 }
 
+/// If the header mask is replaced by EVL, peel the \p HeaderMask out of
+/// the blockInMasks.
+static bool replaceHeaderMaskToEVL(VPValue *HeaderMask, VPRecipeBase *R) {
+  using namespace llvm::VPlanPatternMatch;
+  VPValue *EdgeMask;
+  if (!R)
+    return false;
+  if (match(R, m_Binary<VPInstruction::BranchOnCount>(
+                   m_VPInstruction<VPInstruction::AnyOf>(
+                       m_Binary<VPInstruction::LogicalAnd>(
+                           m_Specific(HeaderMask), m_VPValue(EdgeMask))),
+                   m_VPValue()))) {
+
+    cast<VPInstruction>(R->getOperand(0))->setOperand(0, EdgeMask);
+    return true;
+  }
+  return false;
+}
+
 /// Try to optimize a \p CurRecipe masked by \p HeaderMask to a corresponding
 /// EVL-based recipe without the header mask. Returns nullptr if no EVL-based
 /// recipe could be created.
@@ -2246,6 +2265,11 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
+      // If the HeaderMask is replaced by EVL, peel the HeaderMask out of
+      // BlockInMask (logicalAnd(HeaderMask, EdgeMask)) to simplify recipes.
+      if (replaceHeaderMaskToEVL(HeaderMask, CurRecipe))
+        continue;
+
       VPRecipeBase *EVLRecipe =
           optimizeMaskToEVL(HeaderMask, *CurRecipe, TypeInfo, *AllOneMask, EVL);
       if (!EVLRecipe)
