@@ -271,6 +271,73 @@ void foo7() {
 
 }
 
+// PRINT-LABEL: void foo8(
+// DUMP-LABEL: FunctionDecl {{.*}} foo8
+void foo8() {
+    // PRINT: #pragma omp fuse looprange(2,2)
+    // DUMP:  OMPFuseDirective
+    // DUMP: OMPLooprangeClause
+    #pragma omp fuse looprange(2,2)
+    // PRINT: {
+    // DUMP: CompoundStmt       
+    {
+        // PRINT: for (int i = 0; i < 10; i += 2)
+        // DUMP: ForStmt
+        for (int i = 0; i < 10; i += 2)
+            // PRINT: body(i)
+            // DUMP: CallExpr
+            body(i);
+        // PRINT: for (int j = 10; j > 0; --j)
+        // DUMP: ForStmt
+        for (int j = 10; j > 0; --j)
+            // PRINT: body(j)
+            // DUMP: CallExpr
+            body(j);
+        // PRINT: for (int k = 0; k <= 10; ++k)
+        // DUMP: ForStmt
+        for (int k = 0; k <= 10; ++k)
+            // PRINT: body(k)
+            // DUMP: CallExpr
+            body(k);
+
+    }
+
+}
+
+//PRINT-LABEL: void foo9(
+//DUMP-LABEL: FunctionTemplateDecl {{.*}} foo9
+//DUMP-LABEL: NonTypeTemplateParmDecl {{.*}} F
+//DUMP-LABEL: NonTypeTemplateParmDecl {{.*}} C
+template<int F, int C> 
+void foo9() {
+    // PRINT:  #pragma omp fuse looprange(F,C)
+    // DUMP: OMPFuseDirective
+    // DUMP: OMPLooprangeClause
+    #pragma omp fuse looprange(F,C)
+    // PRINT: {
+    // DUMP: CompoundStmt       
+    {
+        // PRINT: for (int i = 0; i < 10; i += 2)
+        // DUMP: ForStmt
+        for (int i = 0; i < 10; i += 2)
+            // PRINT: body(i)
+            // DUMP: CallExpr
+            body(i);
+        // PRINT: for (int j = 10; j > 0; --j)
+        // DUMP: ForStmt
+        for (int j = 10; j > 0; --j)
+            // PRINT: body(j)
+            // DUMP: CallExpr
+            body(j);
+
+    }
+}
+
+// Also test instantiating the template.
+void tfoo9() {
+    foo9<1, 2>();
+}
+
 
 
 
