@@ -815,8 +815,10 @@ void DXILResourceMap::populateCounterDirections(Module &M) {
       for (ResourceInfo *RBInfo : RBInfos) {
         if (RBInfo->CounterDirection == ResourceCounterDirection::Unknown)
           RBInfo->CounterDirection = Direction;
-        else if (RBInfo->CounterDirection != Direction)
+        else if (RBInfo->CounterDirection != Direction) {
           RBInfo->CounterDirection = ResourceCounterDirection::Invalid;
+          HasInvalidDirection = true;
+        }
       }
     }
   }
