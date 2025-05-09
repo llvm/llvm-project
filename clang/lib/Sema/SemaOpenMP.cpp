@@ -14912,7 +14912,8 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   // Determine the unroll factor.
   uint64_t Factor;
   SourceLocation FactorLoc;
-  if (Expr *FactorVal = PartialClause->getFactor()) {
+  if (Expr *FactorVal = PartialClause->getFactor();
+      FactorVal && !FactorVal->containsErrors()) {
     Factor = FactorVal->getIntegerConstantExpr(Context)->getZExtValue();
     FactorLoc = FactorVal->getExprLoc();
   } else {
