@@ -16,7 +16,7 @@ entry:
 loop:                                             ; preds = %backedge, %entry
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %backedge ], !dbg !24
   %arith = sub nsw i32 %x, %iv, !dbg !25
-  #dbg_value(i32 %arith, !13, !DIExpression(), !25)
+    #dbg_value(i32 %arith, !13, !DIExpression(), !25)
   %x_check = icmp slt i32 %arith, 4, !dbg !26
   br i1 %x_check, label %out_of_bounds, label %backedge, !dbg !27
 

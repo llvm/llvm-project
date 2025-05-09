@@ -14,7 +14,7 @@ entry:
 loop:                                             ; preds = %loop, %entry
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ], !dbg !14
   %step.add = add i64 %index, %c1, !dbg !15
-  #dbg_value(i64 %step.add, !11, !DIExpression(), !15)
+    #dbg_value(i64 %step.add, !11, !DIExpression(), !15)
   %index.next = add i64 %step.add, %c2, !dbg !16
   br label %loop, !dbg !17
 }

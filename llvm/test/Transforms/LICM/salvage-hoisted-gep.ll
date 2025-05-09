@@ -16,7 +16,7 @@ loop:                                             ; preds = %loop, %entry
   %val = call i32 @get.i32(), !dbg !18
   %val.ext = zext i32 %val to i64, !dbg !19
   %ptr2 = getelementptr inbounds i8, ptr %ptr, i64 %val.ext, !dbg !20
-  #dbg_value(ptr %ptr2, !14, !DIExpression(), !20)
+    #dbg_value(ptr %ptr2, !14, !DIExpression(), !20)
   %ptr3 = getelementptr i8, ptr %ptr2, i64 %arg.ext, !dbg !21
   call void @use(ptr %ptr3), !dbg !22
   br i1 %c, label %loop, label %exit, !dbg !23
