@@ -84,4 +84,54 @@ extern "C" void acc_combined(int N) {
   // CHECK: acc.terminator
   // CHECK-NEXT: } loc
 
+#pragma acc parallel loop auto
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.parallel combined(loop) {
+  // CHECK: acc.loop combined(parallel) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>]} loc
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+#pragma acc serial loop device_type(nvidia, radeon) auto
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.serial combined(loop) {
+  // CHECK: acc.loop combined(serial) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<nvidia>, #acc.device_type<radeon>]} loc
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+#pragma acc kernels loop auto device_type(nvidia, radeon)
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.kernels combined(loop) {
+  // CHECK: acc.loop combined(kernels) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>]} loc
+  // CHECK: acc.terminator
+  // CHECK-NEXT: } loc
+
+#pragma acc parallel loop independent
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.parallel combined(loop) {
+  // CHECK: acc.loop combined(parallel) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>]} loc
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+#pragma acc serial loop device_type(nvidia, radeon) independent
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.serial combined(loop) {
+  // CHECK: acc.loop combined(serial) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<nvidia>, #acc.device_type<radeon>]} loc
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+#pragma acc kernels loop independent device_type(nvidia, radeon)
+  for(unsigned I = 0; I < N; ++I);
+  // CHECK: acc.kernels combined(loop) {
+  // CHECK: acc.loop combined(kernels) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>]} loc
+  // CHECK: acc.terminator
+  // CHECK-NEXT: } loc
+
 }
