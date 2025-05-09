@@ -56702,31 +56702,81 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (DCI.isBeforeLegalize()) {
+    // Attempt to move shifted index into the address scale, allows further
+    // index truncation below.
+    if (Index.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Scale)) {
+      unsigned BitWidth = Index.getScalarValueSizeInBits();
+      unsigned ScaleAmt = Scale->getAsZExtVal();
+      assert(isPowerOf2_32(ScaleAmt) && "Scale must be a power of 2");
+      unsigned Log2ScaleAmt = Log2_32(ScaleAmt);
+      unsigned MaskBits = BitWidth - Log2ScaleAmt;
+      APInt DemandedBits = APInt::getLowBitsSet(BitWidth, MaskBits);
+      if (TLI.SimplifyDemandedBits(Index, DemandedBits, DCI)) {
+        if (N->getOpcode() != ISD::DELETED_NODE)
+          DCI.AddToWorklist(N);
+        return SDValue(N, 0);
+      }
+      if (auto MinShAmt = DAG.getValidMinimumShiftAmount(Index)) {
+        if (*MinShAmt >= 1 && (*MinShAmt + Log2ScaleAmt) < 4 &&
+            DAG.ComputeNumSignBits(Index.getOperand(0)) > 1) {
+          SDValue ShAmt = Index.getOperand(1);
+          SDValue NewShAmt =
+              DAG.getNode(ISD::SUB, DL, ShAmt.getValueType(), ShAmt,
+                          DAG.getConstant(1, DL, ShAmt.getValueType()));
+          SDValue NewIndex = DAG.getNode(ISD::SHL, DL, Index.getValueType(),
+                                         Index.getOperand(0), NewShAmt);
+          SDValue NewScale =
+              DAG.getConstant(ScaleAmt * 2, DL, Scale.getValueType());
+          return rebuildGatherScatter(GorS, NewIndex, Base, NewScale, DAG);
+        }
+      }
+    }
     unsigned IndexWidth = Index.getScalarValueSizeInBits();
 
     // Shrink indices if they are larger than 32-bits.
     // Only do this before legalize types since v2i64 could become v2i32.
     // FIXME: We could check that the type is legal if we're after legalize
     // types, but then we would need to construct test cases where that happens.
-    if (IndexWidth > 32 && DAG.ComputeNumSignBits(Index) > (IndexWidth - 32)) {
-      EVT NewVT = IndexVT.changeVectorElementType(MVT::i32);
+    // \ComputeNumSignBits value is recomputed for the shift Index
+    if (IndexWidth > 32) {
+      // If the index is a left shift, \ComputeNumSignBits we are recomputing
+      // the number of sign bits from the shifted value. We are trying to enable
+      // the optimization in which we can shrink indices if they are larger than
+      // 32-bits. Using the existing fold techniques implemented below.
+      unsigned ComputeNumSignBits = DAG.ComputeNumSignBits(Index);
+      if (Index.getOpcode() == ISD::SHL) {
+        if (auto MinShAmt = DAG.getValidMinimumShiftAmount(Index)) {
+          if (DAG.ComputeNumSignBits(Index.getOperand(0)) > 1) {
+            ComputeNumSignBits += *MinShAmt;
+          }
+        }
+      }
+      if (ComputeNumSignBits > (IndexWidth - 32)) {
+        EVT NewVT = IndexVT.changeVectorElementType(MVT::i32);
 
-      // FIXME: We could support more than just constant fold, but we need to
-      // careful with costing. A truncate that can be optimized out would be
-      // fine. Otherwise we might only want to create a truncate if it avoids a
-      // split.
-      if (SDValue TruncIndex =
-              DAG.FoldConstantArithmetic(ISD::TRUNCATE, DL, NewVT, Index))
-        return rebuildGatherScatter(GorS, TruncIndex, Base, Scale, DAG);
+        // FIXME: We could support more than just constant fold, but we need to
+        // careful with costing. A truncate that can be optimized out would be
+        // fine. Otherwise we might only want to create a truncate if it avoids
+        // a split.
+        if (SDValue TruncIndex =
+                DAG.FoldConstantArithmetic(ISD::TRUNCATE, DL, NewVT, Index))
+          return rebuildGatherScatter(GorS, TruncIndex, Base, Scale, DAG);
 
-      // Shrink any sign/zero extends from 32 or smaller to larger than 32 if
-      // there are sufficient sign bits. Only do this before legalize types to
-      // avoid creating illegal types in truncate.
-      if ((Index.getOpcode() == ISD::SIGN_EXTEND ||
-           Index.getOpcode() == ISD::ZERO_EXTEND) &&
-          Index.getOperand(0).getScalarValueSizeInBits() <= 32) {
-        Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
-        return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
+        // Shrink any sign/zero extends from 32 or smaller to larger than 32 if
+        // there are sufficient sign bits. Only do this before legalize types to
+        // avoid creating illegal types in truncate.
+        if ((Index.getOpcode() == ISD::SIGN_EXTEND ||
+             Index.getOpcode() == ISD::ZERO_EXTEND) &&
+            Index.getOperand(0).getScalarValueSizeInBits() <= 32) {
+          Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
+          return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
+        }
+
+        // Shrink if we remove an illegal type.
+        if (!TLI.isTypeLegal(Index.getValueType()) && TLI.isTypeLegal(NewVT)) {
+          Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
+          return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
+        }
       }
     }
   }
