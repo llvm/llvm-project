@@ -257,7 +257,7 @@ static void emitMemcpyExpansion(IRBuilder<> &Builder, Value *Dst, Value *Src,
   LLVMContext &Ctx = Builder.getContext();
   const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
 
-  auto GetArrTyFromVal = [](Value *Val) {
+  auto GetArrTyFromVal = [](Value *Val) -> ArrayType * {
     if (auto *Alloca = dyn_cast<AllocaInst>(Val))
       return dyn_cast<ArrayType>(Alloca->getAllocatedType());
     if (auto *GlobalVar = dyn_cast<GlobalVariable>(Val))
