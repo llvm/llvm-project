@@ -1,4 +1,4 @@
-//===-- Double-precision asin function ------------------------------------===//
+//===-- Double-precision acos function ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/asin.h"
+#include "src/math/acos.h"
 #include "asin_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -24,7 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 using DoubleDouble = fputil::DoubleDouble;
 using Float128 = fputil::DyadicFloat<128>;
 
-LLVM_LIBC_FUNCTION(double, asin, (double x)) {
+LLVM_LIBC_FUNCTION(double, acos, (double x)) {
   using FPBits = fputil::FPBits<double>;
 
   FPBits xbits(x);
@@ -32,61 +32,44 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
 
   // |x| < 0.5.
   if (x_exp < FPBits::EXP_BIAS - 1) {
-    // |x| < 2^-26.
-    if (LIBC_UNLIKELY(x_exp < FPBits::EXP_BIAS - 26)) {
-      // When |x| < 2^-26, the relative error of the approximation asin(x) ~ x
-      // is:
-      //   |asin(x) - x| / |asin(x)| < |x^3| / (6|x|)
-      //                             = x^2 / 6
-      //                             < 2^-54
-      //                             < epsilon(1)/2.
-      // So the correctly rounded values of asin(x) are:
-      //   = x + sign(x)*eps(x) if rounding mode = FE_TOWARDZERO,
-      //                        or (rounding mode = FE_UPWARD and x is
-      //                        negative),
-      //   = x otherwise.
-      // To simplify the rounding decision and make it more efficient, we use
-      //   fma(x, 2^-54, x) instead.
-      // Note: to use the formula x + 2^-54*x to decide the correct rounding, we
-      // do need fma(x, 2^-54, x) to prevent underflow caused by 2^-54*x when
-      // |x| < 2^-1022. For targets without FMA instructions, when x is close to
-      // denormal range, we normalize x,
+    // |x| < 2^-55.
+    if (LIBC_UNLIKELY(x_exp < FPBits::EXP_BIAS - 55)) {
+      // When |x| < 2^-55, acos(x) = pi/2
 #if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS)
-      return x;
-#elif defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
-      return fputil::multiply_add(x, 0x1.0p-54, x);
+      return PI_OVER_TWO.hi;
 #else
-      if (xbits.abs().uintval() == 0)
-        return x;
-      // Get sign(x) * min_normal.
-      FPBits eps_bits = FPBits::min_normal();
-      eps_bits.set_sign(xbits.sign());
-      double eps = eps_bits.get_val();
-      double normalize_const = (x_exp == 0) ? eps : 0.0;
-      double scaled_normal =
-          fputil::multiply_add(x + normalize_const, 0x1.0p54, eps);
-      return fputil::multiply_add(scaled_normal, 0x1.0p-54, -normalize_const);
+      // Force the evaluation and prevent constant propagation so that it
+      // is rounded correctly for FE_UPWARD rounding mode.
+      return (xbits.abs().get_val() + 0x1.0p-160) + PI_OVER_TWO.hi;
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     }
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-    return x * asin_eval(x * x);
+    // acos(x) = pi/2 - asin(x)
+    //         = pi/2 - x * P(x^2)
+    double p = asin_eval(x * x);
+    return PI_OVER_TWO.hi + fputil::multiply_add(-x, p, PI_OVER_TWO.lo);
 #else
     unsigned idx;
     DoubleDouble x_sq = fputil::exact_mult(x, x);
     double err = xbits.abs().get_val() * 0x1.0p-51;
     // Polynomial approximation:
     //   p ~ asin(x)/x
-
     DoubleDouble p = asin_eval(x_sq, idx, err);
-    // asin(x) ~ x * (ASIN_COEFFS[idx][0] + p)
+    // asin(x) ~ x * p
     DoubleDouble r0 = fputil::exact_mult(x, p.hi);
-    double r_lo = fputil::multiply_add(x, p.lo, r0.lo);
+    // acos(x) = pi/2 - asin(x)
+    //         ~ pi/2 - x * p
+    //         = pi/2 - x * (p.hi + p.lo)
+    double r_hi = fputil::multiply_add(-x, p.hi, PI_OVER_TWO.hi);
+    // Use Dekker's 2SUM algorithm to compute the lower part.
+    double r_lo = ((PI_OVER_TWO.hi - r_hi) - r0.hi) - r0.lo;
+    r_lo = fputil::multiply_add(-x, p.lo, r_lo + PI_OVER_TWO.lo);
 
     // Ziv's accuracy test.
 
-    double r_upper = r0.hi + (r_lo + err);
-    double r_lower = r0.hi + (r_lo - err);
+    double r_upper = r_hi + (r_lo + err);
+    double r_lower = r_hi + (r_lo - err);
 
     if (LIBC_LIKELY(r_upper == r_lower))
       return r_upper;
@@ -113,7 +96,10 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
     Float128 p_f128 = asin_eval(u, idx);
-    Float128 r = fputil::quick_mul(x_f128, p_f128);
+    // Flip the sign of x_f128 to perform subtraction.
+    x_f128.sign = x_f128.sign.negate();
+    Float128 r =
+        fputil::quick_add(PI_OVER_TWO_F128, fputil::quick_mul(x_f128, p_f128));
 
     return static_cast<double>(r);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
@@ -125,14 +111,13 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
   // Maintaining the sign:
   constexpr double SIGN[2] = {1.0, -1.0};
   double x_sign = SIGN[xbits.is_neg()];
-
   // |x| >= 1
   if (LIBC_UNLIKELY(x_exp >= FPBits::EXP_BIAS)) {
     // x = +-1, asin(x) = +- pi/2
     if (x_abs == 1.0) {
-      // return +- pi/2
-      return fputil::multiply_add(x_sign, PI_OVER_TWO.hi,
-                                  x_sign * PI_OVER_TWO.lo);
+      // x = 1, acos(x) = 0,
+      // x = -1, acos(x) = pi
+      return x == 1.0 ? 0.0 : fputil::multiply_add(-x_sign, PI.hi, PI.lo);
     }
     // |x| > 1, return NaN.
     if (xbits.is_quiet_nan())
@@ -148,26 +133,31 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
 
   // When |x| >= 0.5, we perform range reduction as follow:
   //
-  // Assume further that 0.5 <= x < 1, and let:
-  //   y = asin(x)
+  // When 0.5 <= x < 1, let:
+  //   y = acos(x)
   // We will use the double angle formula:
   //   cos(2y) = 1 - 2 sin^2(y)
   // and the complement angle identity:
-  //   x = sin(y) = cos(pi/2 - y)
-  //              = 1 - 2 sin^2 (pi/4 - y/2)
+  //   x = cos(y) = 1 - 2 sin^2 (y/2)
   // So:
-  //   sin(pi/4 - y/2) = sqrt( (1 - x)/2 )
+  //   sin(y/2) = sqrt( (1 - x)/2 )
   // And hence:
-  //   pi/4 - y/2 = asin( sqrt( (1 - x)/2 ) )
+  //   y/2 = asin( sqrt( (1 - x)/2 ) )
   // Equivalently:
-  //   asin(x) = y = pi/2 - 2 * asin( sqrt( (1 - x)/2 ) )
+  //   acos(x) = y = 2 * asin( sqrt( (1 - x)/2 ) )
   // Let u = (1 - x)/2, then:
-  //   asin(x) = pi/2 - 2 * asin( sqrt(u) )
+  //   acos(x) = 2 * asin( sqrt(u) )
   // Moreover, since 0.5 <= x < 1:
   //   0 < u <= 1/4, and 0 < sqrt(u) <= 0.5,
   // And hence we can reuse the same polynomial approximation of asin(x) when
   // |x| <= 0.5:
-  //   asin(x) ~ pi/2 - 2 * sqrt(u) * P(u),
+  //   acos(x) ~ 2 * sqrt(u) * P(u).
+  //
+  // When -1 < x <= -0.5, we reduce to the previous case using the formula:
+  //   acos(x) = pi - acos(-x)
+  //           = pi - 2 * asin ( sqrt( (1 + x)/2 ) )
+  //           ~ pi - 2 * sqrt(u) * P(u),
+  // where u = (1 - |x|)/2.
 
   // u = (1 - |x|)/2
   double u = fputil::multiply_add(x_abs, -0.5, 0.5);
@@ -176,16 +166,18 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
   //   h = u - v_hi^2 = (sqrt(u) - v_hi) * (sqrt(u) + v_hi)
   // Then:
   //   sqrt(u) = v_hi + h / (sqrt(u) + v_hi)
-  //           ~ v_hi + h / (2 * v_hi)
+  //            ~ v_hi + h / (2 * v_hi)
   // So we can use:
   //   v_lo = h / (2 * v_hi).
-  // Then,
-  //   asin(x) ~ pi/2 - 2*(v_hi + v_lo) * P(u)
   double v_hi = fputil::sqrt<double>(u);
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  constexpr DoubleDouble CONST_TERM[2] = {{0.0, 0.0}, PI};
+  DoubleDouble const_term = CONST_TERM[xbits.is_neg()];
+
   double p = asin_eval(u);
-  double r = x_sign * fputil::multiply_add(-2.0 * v_hi, p, PI_OVER_TWO.hi);
+  double scale = x_sign * 2.0 * v_hi;
+  double r = const_term.hi + fputil::multiply_add(scale, p, const_term.lo);
   return r;
 #else
 
@@ -212,23 +204,21 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
   // Perform computations in double-double arithmetic:
   //   asin(x) = pi/2 - (v_hi + v_lo) * (ASIN_COEFFS[idx][0] + p)
   DoubleDouble r0 = fputil::quick_mult(DoubleDouble{vl, vh}, p);
-  DoubleDouble r = fputil::exact_add(PI_OVER_TWO.hi, -r0.hi);
 
-  double r_lo = PI_OVER_TWO.lo - r0.lo + r.lo;
+  double r_hi, r_lo;
+  if (xbits.is_pos()) {
+    r_hi = r0.hi;
+    r_lo = r0.lo;
+  } else {
+    DoubleDouble r = fputil::exact_add(PI.hi, -r0.hi);
+    r_hi = r.hi;
+    r_lo = (PI.lo - r0.lo) + r.lo;
+  }
 
   // Ziv's accuracy test.
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-  double r_upper = fputil::multiply_add(
-      r.hi, x_sign, fputil::multiply_add(r_lo, x_sign, err));
-  double r_lower = fputil::multiply_add(
-      r.hi, x_sign, fputil::multiply_add(r_lo, x_sign, -err));
-#else
-  r_lo *= x_sign;
-  r.hi *= x_sign;
-  double r_upper = r.hi + (r_lo + err);
-  double r_lower = r.hi + (r_lo - err);
-#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+  double r_upper = r_hi + (r_lo + err);
+  double r_lower = r_hi + (r_lo - err);
 
   if (LIBC_LIKELY(r_upper == r_lower))
     return r_upper;
@@ -268,18 +258,18 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
   // m_v = -(v_hi + v_lo + v_ll).
   Float128 m_v = fputil::quick_add(
       Float128(vh), fputil::quick_add(Float128(vl), Float128(vll)));
-  m_v.sign = Sign::NEG;
+  m_v.sign = xbits.sign();
 
   // Perform computations in Float128:
-  //   asin(x) = pi/2 - (v_hi + v_lo + vll) * P(u).
+  //   acos(x) = (v_hi + v_lo + vll) * P(u)         , when 0.5 <= x < 1,
+  //           = pi - (v_hi + v_lo + vll) * P(u)    , when -1 < x <= -0.5.
   Float128 y_f128(fputil::multiply_add(static_cast<double>(idx), -0x1.0p-6, u));
 
   Float128 p_f128 = asin_eval(y_f128, idx);
-  Float128 r0_f128 = fputil::quick_mul(m_v, p_f128);
-  Float128 r_f128 = fputil::quick_add(PI_OVER_TWO_F128, r0_f128);
+  Float128 r_f128 = fputil::quick_mul(m_v, p_f128);
 
   if (xbits.is_neg())
-    r_f128.sign = Sign::NEG;
+    r_f128 = fputil::quick_add(PI_F128, r_f128);
 
   return static_cast<double>(r_f128);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
