@@ -24502,7 +24502,7 @@ RISCVTargetLowering::emitDynamicProbedAlloc(MachineInstr &MI,
   MachineFunction &MF = *MBB->getParent();
   MachineBasicBlock::iterator MBBI = MI.getIterator();
   DebugLoc DL = MBB->findDebugLoc(MBBI);
-  Register TargetReg = MI.getOperand(1).getReg();
+  Register TargetReg = MI.getOperand(0).getReg();
 
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
   bool IsRV64 = Subtarget.is64Bit();
