@@ -15,7 +15,7 @@ class TestBranchIslandStepping(TestBase):
     @skipUnlessAppleSilicon
     def test_step_in_branch_island(self):
         """Make sure we can step in across a branch island"""
-        self.build(debug_info="dwarf")
+        self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.do_test()
 
