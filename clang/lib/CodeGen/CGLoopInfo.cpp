@@ -200,7 +200,14 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
   LLVMContext &Ctx = Header->getContext();
 
   std::optional<bool> Enabled;
-  if (Attrs.VectorizeEnable == LoopAttributes::Disable)
+
+  // Vectorization is disabled if:
+  // 1) it is disabled explicitly, or
+  // 2) it is implied when vectorize.width is set to 1 and scalable
+  // vectorization is not specified explicitly.
+  if (Attrs.VectorizeEnable == LoopAttributes::Disable ||
+      (Attrs.VectorizeWidth == 1 &&
+       Attrs.VectorizeScalable != LoopAttributes::Enable))
     Enabled = false;
   else if (Attrs.VectorizeEnable != LoopAttributes::Unspecified ||
            Attrs.VectorizePredicateEnable != LoopAttributes::Unspecified ||
@@ -642,9 +649,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
     case LoopHintAttr::Disable:
       switch (Option) {
       case LoopHintAttr::Vectorize:
-        // Disable vectorization by specifying a width of 1.
-        setVectorizeWidth(1);
-        setVectorizeScalable(LoopAttributes::Unspecified);
+        setVectorizeEnable(false);
         break;
       case LoopHintAttr::Interleave:
         // Disable interleaving by speciyfing a count of 1.
