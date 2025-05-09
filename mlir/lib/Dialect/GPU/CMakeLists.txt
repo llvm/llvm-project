@@ -23,7 +23,7 @@ add_mlir_dialect_library(MLIRGPUDialect
   MLIRMemRefDialect
   MLIRSideEffectInterfaces
   MLIRSupport
-  )
+)
 
 add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/AllReduceLowering.cpp
@@ -42,6 +42,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/SPIRVAttachTarget.cpp
   Transforms/SubgroupIdRewriter.cpp
   Transforms/SubgroupReduceLowering.cpp
+  Transforms/ImitateUnsupportedTypes.cpp
 
   OBJECT
 
@@ -76,7 +77,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRROCDLTarget
   MLIRTransformUtils
   MLIRVectorDialect
-  )
+)
 
 add_subdirectory(TransformOps)
 add_subdirectory(Pipelines)

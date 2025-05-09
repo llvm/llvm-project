@@ -258,4 +258,57 @@ def GpuSPIRVAttachTarget: Pass<"spirv-attach-target", ""> {
   ];
 }
 
+def GpuImitateUnsupportedTypes : Pass<"imitate-unsupported-types", "::mlir::ModuleOp"> {
+  let summary = "Imitate unsupported types with supported types of same bitwidth.";
+  let description = [{
+    This pass imitates (bitcast/reinterpret_cast) unsupported types
+    with supported types of same bitwidth. The imitation is done
+    by bitcasting the unspported types to the supported types of same bitwidth.
+    Therefore, the source type and destination type must have the same bitwidth.
+    The imitation is done by using the following operations: arith.bitcast.
+
+    The imitation is often needed when the GPU target (dialect/IR) does not
+    support a certain type but the underlying architecture does. Take SPIR-V for
+    example, it does not support bf16, but an underlying architecture (e.g.,
+    intel pvc gpu) that uses SPIR-V for code-generation does.
+    Therefore, bf16 is neither a valid data type to pass to gpu kernel, nor to
+    be used inside the kernel. To use bf16 data type in a SPIR-V kernel (as a
+    kernel parameter or inside the kernel), bf16 have to be bitcasted (similar
+    to C++ reinterpret_cast) to a supported type (e.g., i16 for Intel GPUs). The
+    SPIR-V kernel can then use the imitated type (i16) in the computation.
+    However, i16 is not the same as bf16 (integer vs float), so the computation
+    can not readily use the imitated type (i16).
+
+    Therefore, this transformation pass is intended to be used in conjuction
+    with other transformation passes such as `EmulateUnsupportedFloats` and
+    `ExtendUnsupportedTypes` that extend the bitwidth of bf16 to f32 and
+    vice-versa.
+
+    Finally, usually, there are instructions available in the target
+    (dialect/IR) that can take advantage of these generated patterns
+    (bf16->i16->f32, f32->bf16->i16), and convert them to the supported
+    types.
+    For example, Intel provides SPIR-V extension ops that can
+    take imitated bf16 (i16) and convert them to f32 and vice-versa.
+    https://github.com/KhronosGroup/SPIRV-Registry/blob/main/extensions/INTEL/SPV_INTEL_bfloat16_conversion.asciidoc
+    https://mlir.llvm.org/docs/Dialects/SPIR-V/#spirvintelconvertbf16tof-spirvintelconvertbf16tofop
+    https://mlir.llvm.org/docs/Dialects/SPIR-V/#spirvintelconvertftobf16-spirvintelconvertftobf16op
+
+  }];
+
+  let options = [
+    ListOption<"sourceTypeStrs", "source-types", "std::string",
+      "MLIR types without type support on a given target">,
+    ListOption<"targetTypeStrs", "target-types", "std::string",
+      "MLIR types to convert the unsupported source types to">,
+  ];
+
+  let dependentDialects = [
+    "::mlir::gpu::GPUDialect",
+    "::mlir::arith::ArithDialect",
+    "::mlir::memref::MemRefDialect"
+    ];
+}
+
+
 #endif // MLIR_DIALECT_GPU_PASSES
