@@ -15,10 +15,6 @@
 
 // Overlay mode
 
-// glibc <unistd.h> header might provide extern inline definitions for few
-// functions, causing external alias errors.  They are guarded by
-// `__USE_EXTERN_INLINES` macro.
-
 #ifndef __NO_INLINE__
 #define __NO_INLINE__ 1
 #define LIBC_SET_NO_INLINE
