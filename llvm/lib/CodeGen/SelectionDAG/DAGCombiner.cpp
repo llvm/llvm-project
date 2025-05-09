@@ -6038,6 +6038,8 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
          HandOpcode == ISD::ANY_EXTEND_VECTOR_INREG) &&
         LegalTypes && !TLI.isTypeDesirableForOp(LogicOpcode, XVT))
       return SDValue();
+    if (!TLI.isDesirableToHoistLogicOpWithExt(N, HandOpcode))
+      return SDValue();
     // logic_op (hand_op X), (hand_op Y) --> hand_op (logic_op X, Y)
     SDNodeFlags LogicFlags;
     LogicFlags.setDisjoint(N->getFlags().hasDisjoint() &&
