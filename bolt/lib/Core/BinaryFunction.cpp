@@ -2448,7 +2448,13 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   recomputeLandingPads();
 
   // Assign CFI information to each BB entry.
-  annotateCFIState();
+  bool SuccessfulAnnotation = annotateCFIState();
+  if (!SuccessfulAnnotation) {
+    BC.errs() << "BOLT-WARNING: failed to annotate CFI state for "
+              << this->getPrintName() << "\n";
+    setIgnored();
+    return createNonFatalBOLTError("");
+  }
 
   // Annotate invoke instructions with GNU_args_size data.
   propagateGnuArgsSizeInfo(AllocatorId);
@@ -2465,7 +2471,11 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
 
   Layout.updateLayoutIndices();
 
-  normalizeCFIState();
+  if (SuccessfulAnnotation)
+    normalizeCFIState();
+  else
+    BC.errs() << "BOLT-WARNING: cannot normalize CFI State for "
+              << this->getPrintName() << "\n";
 
   // Clean-up memory taken by intermediate structures.
   //
@@ -2640,7 +2650,7 @@ uint64_t BinaryFunction::getFunctionScore() const {
   return FunctionScore;
 }
 
-void BinaryFunction::annotateCFIState() {
+bool BinaryFunction::annotateCFIState() {
   assert(CurrentState == State::Disassembled && "unexpected function state");
   assert(!BasicBlocks.empty() && "basic block list should not be empty");
 
@@ -2676,7 +2686,9 @@ void BinaryFunction::annotateCFIState() {
         EffectiveState = State;
         break;
       case MCCFIInstruction::OpRestoreState:
-        assert(!StateStack.empty() && "corrupt CFI stack");
+        if (StateStack.empty()) {
+          return false;
+        }
         EffectiveState = StateStack.top();
         StateStack.pop();
         break;
@@ -2695,6 +2707,7 @@ void BinaryFunction::annotateCFIState() {
     BC.errs() << "BOLT-WARNING: non-empty CFI stack at the end of " << *this
               << '\n';
   }
+  return StateStack.empty();
 }
 
 namespace {
