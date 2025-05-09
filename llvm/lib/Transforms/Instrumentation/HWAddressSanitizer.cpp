@@ -1847,6 +1847,12 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
                                      IsLocal ? GlobalValue::InternalLinkage
                                              : GlobalValue::LinkOnceODRLinkage,
                                      ThunkName, &M);
+    // TODO: think about other attributes as well.
+    if (any_of(P.second, [](const Function *F) {
+          return F->hasFnAttribute("branch-target-enforcement");
+        })) {
+      ThunkFn->addFnAttr("branch-target-enforcement");
+    }
     if (!IsLocal) {
       ThunkFn->setVisibility(GlobalValue::HiddenVisibility);
       ThunkFn->setComdat(M.getOrInsertComdat(ThunkName));

@@ -162,60 +162,20 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
         stridedMetadata.getConstifiedMixedStrides();
     SmallVector<OpFoldResult> sizes = stridedMetadata.getConstifiedMixedSizes();
     OpFoldResult offset = stridedMetadata.getConstifiedMixedOffset();
+    memref::LinearizedMemRefInfo linearizedInfo;
     OpFoldResult linearizedIndices;
-    std::tie(std::ignore, linearizedIndices) =
+    std::tie(linearizedInfo, linearizedIndices) =
         memref::getLinearizedMemRefOffsetAndSize(rewriter, loc, elementBitWidth,
                                                  elementBitWidth, offset, sizes,
                                                  strides, indices);
-
-    // TODO(jerryyin): Fix the getLinearizedMemRefOffsetAndSize() function
-    // Note below doesn't give the correct result for the linearized size.
-    // Value totalSize = getValueOrCreateConstantIndexOp(
-    //    rewriter, loc, linearizedInfo.linearizedSize);
-    // It computes the multiplied sizes of all dimensions instead of taking
-    // the maximum of each dimension size * stride.
-    SmallVector<AffineExpr> productExpressions;
-    unsigned sourceRank = cast<ShapedType>(src.getType()).getRank();
-
-    SmallVector<AffineExpr> symbols(2 * sourceRank);
-    SmallVector<Value> offsetValues;
-    bindSymbolsList(rewriter.getContext(), MutableArrayRef{symbols});
-
-    size_t symbolIndex = 0;
-    for (size_t i = 0; i < sourceRank; ++i) {
-      AffineExpr strideExpr, sizeExpr;
-      OpFoldResult stride = strides[i];
-      OpFoldResult size = sizes[i];
-      if (auto constantStride = getConstantIntValue(stride)) {
-        strideExpr = rewriter.getAffineConstantExpr(*constantStride);
-      } else {
-        strideExpr = symbols[symbolIndex++];
-        offsetValues.push_back(
-            getValueOrCreateConstantIndexOp(rewriter, loc, stride));
-      }
-
-      if (auto constantSize = getConstantIntValue(size)) {
-        sizeExpr = rewriter.getAffineConstantExpr(*constantSize);
-      } else {
-        sizeExpr = symbols[symbolIndex++];
-        offsetValues.push_back(
-            getValueOrCreateConstantIndexOp(rewriter, loc, size));
-      }
-
-      productExpressions.push_back(strideExpr * sizeExpr);
-    }
-
-    AffineMap maxMap = AffineMap::get(
-        /*dimCount=*/0, /*symbolCount=*/symbolIndex, productExpressions,
-        rewriter.getContext());
-    Value totalSize =
-        rewriter.create<affine::AffineMaxOp>(loc, maxMap, offsetValues);
 
     // delta = bufferSize - linearizedOffset
     Value vectorSizeOffset =
         rewriter.create<arith::ConstantIndexOp>(loc, vectorSize);
     Value linearIndex =
         getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices);
+    Value totalSize = getValueOrCreateConstantIndexOp(
+        rewriter, loc, linearizedInfo.linearizedSize);
     Value delta = rewriter.create<arith::SubIOp>(loc, totalSize, linearIndex);
 
     // 1) check if delta < vectorSize

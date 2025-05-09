@@ -360,6 +360,11 @@ private:
   /// True if the function is used for patching code at a fixed address.
   bool IsPatch{false};
 
+  /// True if the original entry point of the function may get called, but the
+  /// original body cannot be executed and needs to be patched with code that
+  /// redirects execution to the new function body.
+  bool NeedsPatch{false};
+
   /// True if the function should not have an associated symbol table entry.
   bool IsAnonymous{false};
 
@@ -1372,6 +1377,9 @@ public:
   /// Return true if this function is used for patching existing code.
   bool isPatch() const { return IsPatch; }
 
+  /// Return true if the function requires a patch.
+  bool needsPatch() const { return NeedsPatch; }
+
   /// Return true if the function should not have associated symbol table entry.
   bool isAnonymous() const { return IsAnonymous; }
 
@@ -1756,6 +1764,9 @@ public:
     assert(isInjected() && "Only injected functions can be used as patches");
     IsPatch = V;
   }
+
+  /// Mark the function for patching.
+  void setNeedsPatch(bool V) { NeedsPatch = V; }
 
   /// Indicate if the function should have a name in the symbol table.
   void setAnonymous(bool V) {
