@@ -4,8 +4,8 @@
 ; RUN: llc -global-isel -mcpu=fiji -mtriple=amdgcn-- -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck %s -check-prefix=GFX8
 ; RUN: llc -global-isel -mcpu=gfx900 -mtriple=amdgcn-- -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck %s -check-prefix=GFX910
 ; RUN: llc -global-isel -mcpu=gfx1010 -mtriple=amdgcn-- -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck %s -check-prefix=GFX910
-; RUN: llc -global-isel -mcpu=gfx1100 -mtriple=amdgcn-- -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck %s -check-prefix=GFX11
-; RUN: llc -global-isel -mcpu=gfx1200 -mtriple=amdgcn-- -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck %s -check-prefix=GFX12
+; RUN: llc -global-isel -mcpu=gfx1100 -mattr=-real-true16 -mtriple=amdgcn-- -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX11
+; RUN: llc -global-isel -mcpu=gfx1200 -mattr=-real-true16 -mtriple=amdgcn-- -stop-after=instruction-select -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GFX12
 
 define amdgpu_ps void @raw_buffer_load_i8_tfe(<4 x i32> inreg %rsrc, ptr addrspace(1) %data_addr, ptr addrspace(1) %tfe_addr) {
   ; GFX67-LABEL: name: raw_buffer_load_i8_tfe
