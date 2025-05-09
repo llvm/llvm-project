@@ -57,8 +57,8 @@ def GPUTargetAttrInterface : AttrInterface<"TargetAttrInterface"> {
 
 def GPUTargetAttrVerifyInterface : AttrInterface<"TargetAttrVerifyInterface"> {
   let description = [{
-    Interface for GPU target attributes that need to verify the target attribute
-    for the given GPU module.
+    Interface for GPU target attributes that verify the target attribute
+    of a given GPU module.
   }];
   let cppNamespace = "::mlir::gpu";
   let methods = [
