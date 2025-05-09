@@ -13,21 +13,30 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
+UseEnumClassCheck::UseEnumClassCheck(StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreUnscopedEnumsInClasses(
+          Options.get("IgnoreUnscopedEnumsInClasses", false)) {}
+
+void UseEnumClassCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreUnscopedEnumsInClasses",
+                IgnoreUnscopedEnumsInClasses);
+}
+
 void UseEnumClassCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      enumDecl(unless(isScoped()), unless(hasParent(recordDecl())))
-          .bind("unscoped_enum"),
-      this);
+  auto EnumDecl =
+      IgnoreUnscopedEnumsInClasses
+          ? enumDecl(unless(isScoped()), unless(hasParent(recordDecl())))
+          : enumDecl(unless(isScoped()));
+  Finder->addMatcher(EnumDecl.bind("unscoped_enum"), this);
 }
 
 void UseEnumClassCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *UnscopedEnum = Result.Nodes.getNodeAs<EnumDecl>("unscoped_enum");
 
   diag(UnscopedEnum->getLocation(),
-       "enum %0 is unscoped, use enum class instead")
+       "enum %0 is unscoped, use 'enum class' instead")
       << UnscopedEnum;
-  diag(UnscopedEnum->getLocation(), "insert 'class'", DiagnosticIDs::Note)
-      << FixItHint::CreateInsertion(UnscopedEnum->getLocation(), "class ");
 }
 
 } // namespace clang::tidy::cppcoreguidelines
