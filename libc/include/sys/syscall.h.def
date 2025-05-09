@@ -2301,6 +2301,10 @@
 #define SYS_utimes __NR_utimes
 #endif
 
+#ifdef __NR_utimensat_time64
+#define SYS_utimensat_time64 __NR_utimensat_time64
+#endif
+
 #ifdef __NR_utrap_install
 #define SYS_utrap_install __NR_utrap_install
 #endif
