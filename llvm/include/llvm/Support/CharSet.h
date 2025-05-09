@@ -28,7 +28,7 @@ namespace llvm {
 template <typename T> class SmallVectorImpl;
 
 namespace details {
-class CharSetConverterImplBase {
+class EncodingConverterImplBase {
 
 private:
   /// Converts a string.
@@ -57,7 +57,7 @@ private:
   virtual void reset() = 0;
 
 public:
-  virtual ~CharSetConverterImplBase() = default;
+  virtual ~EncodingConverterImplBase() = default;
 
   /// Converts a string and resets the converter to the initial state.
   std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result) {
@@ -78,43 +78,44 @@ enum class TextEncoding {
 };
 
 /// Utility class to convert between different character set encodings.
-class CharSetConverter {
-  std::unique_ptr<details::CharSetConverterImplBase> Converter;
+class EncodingConverter {
+  std::unique_ptr<details::EncodingConverterImplBase> Converter;
 
-  CharSetConverter(std::unique_ptr<details::CharSetConverterImplBase> Converter)
+  EncodingConverter(
+      std::unique_ptr<details::EncodingConverterImplBase> Converter)
       : Converter(std::move(Converter)) {}
 
 public:
-  /// Creates a CharSetConverter instance.
+  /// Creates a EncodingConverter instance.
   /// Returns std::errc::invalid_argument in case the requested conversion is
   /// not supported.
   /// \param[in] CSFrom the source character encoding
   /// \param[in] CSTo the target character encoding
-  /// \return a CharSetConverter instance or an error code
-  static ErrorOr<CharSetConverter> create(TextEncoding CSFrom,
-                                          TextEncoding CSTo);
+  /// \return a EncodingConverter instance or an error code
+  static ErrorOr<EncodingConverter> create(TextEncoding CSFrom,
+                                           TextEncoding CSTo);
 
-  /// Creates a CharSetConverter instance.
+  /// Creates a EncodingConverter instance.
   /// Returns std::errc::invalid_argument in case the requested conversion is
   /// not supported.
   /// \param[in] CPFrom name of the source character encoding
   /// \param[in] CPTo name of the target character encoding
-  /// \return a CharSetConverter instance or an error code
-  static ErrorOr<CharSetConverter> create(StringRef CPFrom, StringRef CPTo);
+  /// \return a EncodingConverter instance or an error code
+  static ErrorOr<EncodingConverter> create(StringRef CPFrom, StringRef CPTo);
 
-  CharSetConverter(const CharSetConverter &) = delete;
-  CharSetConverter &operator=(const CharSetConverter &) = delete;
+  EncodingConverter(const EncodingConverter &) = delete;
+  EncodingConverter &operator=(const EncodingConverter &) = delete;
 
-  CharSetConverter(CharSetConverter &&Other)
+  EncodingConverter(EncodingConverter &&Other)
       : Converter(std::move(Other.Converter)) {}
 
-  CharSetConverter &operator=(CharSetConverter &&Other) {
+  EncodingConverter &operator=(EncodingConverter &&Other) {
     if (this != &Other)
       Converter = std::move(Other.Converter);
     return *this;
   }
 
-  ~CharSetConverter() = default;
+  ~EncodingConverter() = default;
 
   /// Converts a string.
   /// \param[in] Source source string

@@ -47,7 +47,7 @@ static void normalizeCharSetName(StringRef CSName,
 }
 
 // Maps the charset name to enum constant if possible.
-static std::optional<TextEncoding> getKnownCharSet(StringRef CSName) {
+static std::optional<TextEncoding> getKnownEncoding(StringRef CSName) {
   SmallString<16> Normalized;
   normalizeCharSetName(CSName, Normalized);
   if (Normalized.equals("utf8"))
@@ -83,11 +83,11 @@ enum ConversionType {
 // aforementioned character sets. The use of tables for conversion is only
 // possible because EBCDIC 1047 is a single-byte, stateless encoding; other
 // character sets are not supported.
-class CharSetConverterTable : public details::CharSetConverterImplBase {
+class EncodingConverterTable : public details::EncodingConverterImplBase {
   const ConversionType ConvType;
 
 public:
-  CharSetConverterTable(ConversionType ConvType) : ConvType(ConvType) {}
+  EncodingConverterTable(ConversionType ConvType) : ConvType(ConvType) {}
 
   std::error_code convertString(StringRef Source,
                                 SmallVectorImpl<char> &Result) override;
@@ -96,8 +96,8 @@ public:
 };
 
 std::error_code
-CharSetConverterTable::convertString(StringRef Source,
-                                     SmallVectorImpl<char> &Result) {
+EncodingConverterTable::convertString(StringRef Source,
+                                      SmallVectorImpl<char> &Result) {
   switch (ConvType) {
   case IBM1047ToUTF8:
     ConverterEBCDIC::convertToUTF8(Source, Result);
@@ -118,13 +118,13 @@ struct UConverterDeleter {
 };
 using UConverterUniquePtr = std::unique_ptr<UConverter, UConverterDeleter>;
 
-class CharSetConverterICU : public details::CharSetConverterImplBase {
+class EncodingConverterICU : public details::EncodingConverterImplBase {
   UConverterUniquePtr FromConvDesc;
   UConverterUniquePtr ToConvDesc;
 
 public:
-  CharSetConverterICU(UConverterUniquePtr FromConverter,
-                      UConverterUniquePtr ToConverter)
+  EncodingConverterICU(UConverterUniquePtr FromConverter,
+                       UConverterUniquePtr ToConverter)
       : FromConvDesc(std::move(FromConverter)),
         ToConvDesc(std::move(ToConverter)) {}
 
@@ -139,8 +139,8 @@ public:
 // insufficient buffer size. In the future, it would better to save the partial
 // result and redo the conversion for the remaining string.
 std::error_code
-CharSetConverterICU::convertString(StringRef Source,
-                                   SmallVectorImpl<char> &Result) {
+EncodingConverterICU::convertString(StringRef Source,
+                                    SmallVectorImpl<char> &Result) {
   // Setup the input in case it has no backing data.
   size_t InputLength = Source.size();
   const char *In = InputLength ? const_cast<char *>(Source.data()) : "";
@@ -185,13 +185,13 @@ CharSetConverterICU::convertString(StringRef Source,
   return std::error_code();
 }
 
-void CharSetConverterICU::reset() {
+void EncodingConverterICU::reset() {
   ucnv_reset(&*FromConvDesc);
   ucnv_reset(&*ToConvDesc);
 }
 
 #elif HAVE_ICONV
-class CharSetConverterIconv : public details::CharSetConverterImplBase {
+class EncodingConverterIconv : public details::EncodingConverterImplBase {
   class UniqueIconvT {
     iconv_t ConvDesc;
 
@@ -218,7 +218,7 @@ class CharSetConverterIconv : public details::CharSetConverterImplBase {
   UniqueIconvT ConvDesc;
 
 public:
-  CharSetConverterIconv(UniqueIconvT ConvDesc)
+  EncodingConverterIconv(UniqueIconvT ConvDesc)
       : ConvDesc(std::move(ConvDesc)) {}
 
   std::error_code convertString(StringRef Source,
@@ -232,8 +232,8 @@ public:
 // insufficient buffer size. In the future, it would better to save the partial
 // result and redo the conversion for the remaining string.
 std::error_code
-CharSetConverterIconv::convertString(StringRef Source,
-                                     SmallVectorImpl<char> &Result) {
+EncodingConverterIconv::convertString(StringRef Source,
+                                      SmallVectorImpl<char> &Result) {
   // Setup the output. We directly write into the SmallVector.
   size_t Capacity = Result.capacity();
   char *Output = static_cast<char *>(Result.data());
@@ -291,38 +291,38 @@ CharSetConverterIconv::convertString(StringRef Source,
   return std::error_code();
 }
 
-void CharSetConverterIconv::reset() {
+void EncodingConverterIconv::reset() {
   iconv(ConvDesc, nullptr, nullptr, nullptr, nullptr);
 }
 
 #endif // HAVE_ICONV
 } // namespace
 
-ErrorOr<CharSetConverter> CharSetConverter::create(TextEncoding CPFrom,
-                                                   TextEncoding CPTo) {
+ErrorOr<EncodingConverter> EncodingConverter::create(TextEncoding CPFrom,
+                                                     TextEncoding CPTo) {
 
   // text encodings should be distinct
-  if(CPFrom == CPTo)
+  if (CPFrom == CPTo)
     return std::make_error_code(std::errc::invalid_argument);
 
   ConversionType Conversion;
   if (CPFrom == TextEncoding::UTF8 && CPTo == TextEncoding::IBM1047)
     Conversion = UTF8ToIBM1047;
-  else if (CPFrom == TextEncoding::IBM1047 &&
-           CPTo == TextEncoding::UTF8)
+  else if (CPFrom == TextEncoding::IBM1047 && CPTo == TextEncoding::UTF8)
     Conversion = IBM1047ToUTF8;
   else
     return std::error_code(errno, std::generic_category());
 
-  return CharSetConverter(std::make_unique<CharSetConverterTable>(Conversion));
+  return EncodingConverter(
+      std::make_unique<EncodingConverterTable>(Conversion));
 }
 
-ErrorOr<CharSetConverter> CharSetConverter::create(StringRef CSFrom,
-                                                   StringRef CSTo) {
-  std::optional<TextEncoding> From = getKnownCharSet(CSFrom);
-  std::optional<TextEncoding> To = getKnownCharSet(CSTo);
+ErrorOr<EncodingConverter> EncodingConverter::create(StringRef CSFrom,
+                                                     StringRef CSTo) {
+  std::optional<TextEncoding> From = getKnownEncoding(CSFrom);
+  std::optional<TextEncoding> To = getKnownEncoding(CSTo);
   if (From && To) {
-    ErrorOr<CharSetConverter> Converter = create(*From, *To);
+    ErrorOr<EncodingConverter> Converter = create(*From, *To);
     if (Converter)
       return Converter;
   }
@@ -336,15 +336,15 @@ ErrorOr<CharSetConverter> CharSetConverter::create(StringRef CSFrom,
   if (U_FAILURE(EC)) {
     return std::error_code(errno, std::generic_category());
   }
-  std::unique_ptr<details::CharSetConverterImplBase> Converter =
-      std::make_unique<CharSetConverterICU>(std::move(FromConvDesc),
-                                            std::move(ToConvDesc));
-  return CharSetConverter(std::move(Converter));
+  std::unique_ptr<details::EncodingConverterImplBase> Converter =
+      std::make_unique<EncodingConverterICU>(std::move(FromConvDesc),
+                                             std::move(ToConvDesc));
+  return EncodingConverter(std::move(Converter));
 #elif HAVE_ICONV
   iconv_t ConvDesc = iconv_open(CSTo.str().c_str(), CSFrom.str().c_str());
   if (ConvDesc == (iconv_t)-1)
     return std::error_code(errno, std::generic_category());
-  return CharSetConverter(std::make_unique<CharSetConverterIconv>(ConvDesc));
+  return EncodingConverter(std::make_unique<EncodingConverterIconv>(ConvDesc));
 #else
   return std::make_error_code(std::errc::invalid_argument);
 #endif
