@@ -20,6 +20,7 @@
 #include "NVPTXRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER
@@ -72,8 +73,9 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
-  bool has256BitMaskedLoadStore() const {
-    return SmVersion >= 100 && PTXVersion >= 88;
+  bool has256BitVectorLoadStore(unsigned AS) const {
+    return SmVersion >= 100 && PTXVersion >= 88 &&
+           AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
   }
   bool hasAtomAddF64() const { return SmVersion >= 60; }
   bool hasAtomScope() const { return SmVersion >= 60; }
