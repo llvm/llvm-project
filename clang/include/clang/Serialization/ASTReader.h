@@ -1108,8 +1108,11 @@ private:
   /// from the current compiler instance.
   bool AllowConfigurationMismatch;
 
-  /// Whether validate system input files.
+  /// Whether to validate system input files.
   bool ValidateSystemInputs;
+
+  /// Whether to force the validation of user input files.
+  bool ForceValidateUserInputs;
 
   /// Whether validate headers and module maps using hash based on contents.
   bool ValidateASTInputFilesContent;
@@ -1785,6 +1788,7 @@ public:
             bool AllowASTWithCompilerErrors = false,
             bool AllowConfigurationMismatch = false,
             bool ValidateSystemInputs = false,
+            bool ForceValidateUserInputs = true,
             bool ValidateASTInputFilesContent = false,
             bool UseGlobalIndex = true,
             std::unique_ptr<llvm::Timer> ReadTimer = {});
