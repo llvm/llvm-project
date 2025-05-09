@@ -348,7 +348,7 @@ private:
   UnorderedSymbolSet isDefined_;
   std::list<ProgramTree> programTrees_;
 
-  // storage for mangled names used in OMP DECLARE REDUCTION.
+  // Storage for mangled names used in OMP DECLARE REDUCTION.
   // use std::list to avoid re-allocating the string when adding
   // more content to the container.
   std::list<std::string> userReductionNames_;

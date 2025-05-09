@@ -3498,7 +3498,7 @@ void OmpStructureChecker::CheckReductionObjects(
 
 static bool CheckSymbolSupportsType(const Scope &scope,
     const parser::CharBlock &name, const DeclTypeSpec &type) {
-  if (const auto &symbol{scope.FindSymbol(name)}) {
+  if (const auto *symbol{scope.FindSymbol(name)}) {
     if (const auto *reductionDetails{
             symbol->detailsIf<UserReductionDetails>()}) {
       return reductionDetails->SupportsType(type);
