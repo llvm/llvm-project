@@ -844,26 +844,26 @@ void LogMessageOnPrintf(const char *str) {
 
 void LogFullErrorReport(const char *buffer) {
 #if !SANITIZER_GO
-#  if SANITIZER_OS_TRACE
-   // Log with os_log_error. This will make it into the crash log.
-   if (GetMacosAlignedVersion() >= MacosVersion(10, 12)) {
-     if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
-                          sizeof("AddressSanitizer") - 1) == 0)
-       os_log_error(OS_LOG_DEFAULT, "Address Sanitizer reported a failure.");
-     else if (internal_strncmp(SanitizerToolName, "UndefinedBehaviorSanitizer",
-                               sizeof("UndefinedBehaviorSanitizer") - 1) == 0)
-     os_log_error(OS_LOG_DEFAULT,
-                  "Undefined Behavior Sanitizer reported a failure.");
-     else if (internal_strncmp(SanitizerToolName, "ThreadSanitizer",
-                               sizeof("ThreadSanitizer") - 1) == 0)
-       os_log_error(OS_LOG_DEFAULT, "Thread Sanitizer reported a failure.");
-     else
-       os_log_error(OS_LOG_DEFAULT, "Sanitizer tool reported a failure.");
+#    if SANITIZER_OS_TRACE
+  // Log with os_log_error. This will make it into the crash log.
+  if (GetMacosAlignedVersion() >= MacosVersion(10, 12)) {
+    if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
+                         sizeof("AddressSanitizer") - 1) == 0)
+      os_log_error(OS_LOG_DEFAULT, "Address Sanitizer reported a failure.");
+    else if (internal_strncmp(SanitizerToolName, "UndefinedBehaviorSanitizer",
+                              sizeof("UndefinedBehaviorSanitizer") - 1) == 0)
+      os_log_error(OS_LOG_DEFAULT,
+                   "Undefined Behavior Sanitizer reported a failure.");
+    else if (internal_strncmp(SanitizerToolName, "ThreadSanitizer",
+                              sizeof("ThreadSanitizer") - 1) == 0)
+      os_log_error(OS_LOG_DEFAULT, "Thread Sanitizer reported a failure.");
+    else
+      os_log_error(OS_LOG_DEFAULT, "Sanitizer tool reported a failure.");
 
-     if (common_flags()->log_to_syslog)
-       os_log_error(OS_LOG_DEFAULT, "Consult syslog for more information.");
-   }
-#  endif // SANITIZER_OS_TRACE
+    if (common_flags()->log_to_syslog)
+      os_log_error(OS_LOG_DEFAULT, "Consult syslog for more information.");
+  }
+#    endif  // SANITIZER_OS_TRACE
 
   // Log to syslog.
   // The logging on OS X may call pthread_create so we need the threading
