@@ -33,7 +33,7 @@ T f1(T t1, U u1, int i1, T** tpp)
   i1 = t1[u1];
   i1 *= t1;
 
-  i1(u1, t1); // expected-error {{called object type 'int' is not a function or function pointer}}
+  i1(u1, t1);
   u1(i1, t1);
 
   U u2 = (T)i1;
@@ -105,6 +105,53 @@ struct constexpr_value {
 template <auto v> constexpr static inline auto c_ = constexpr_value<v>{};
 // expected-note@-1 {{in instantiation of template}}
 auto k = c_<1>; // expected-note {{in instantiation of variable}}
+
+}
+
+namespace GH138731 {
+template <class...>
+using void_t = void;
+template <class...>
+using void_t = void;
+
+template <class T>
+T&& declval();
+
+struct S {
+  S();
+  static int f();
+  static int var;
+};
+
+namespace invoke_detail {
+
+template <typename F>
+struct traits {
+  template <typename... A>
+  using result = decltype(declval<F>()(declval<A>()...));
+};
+
+template <typename F, typename... A>
+using invoke_result_t = typename traits<F>::template result<A...>;
+
+template <typename Void, typename F, typename... A>
+inline constexpr bool is_invocable_v = false;
+
+template <typename F, typename... A>
+inline constexpr bool
+    is_invocable_v<void_t<invoke_result_t<F, A...>>, F, A...> = true;
+
+}
+
+template <typename F, typename... A>
+inline constexpr bool is_invocable_v =
+    invoke_detail::is_invocable_v<void, F, A...>;
+
+static_assert(!is_invocable_v<int>);
+static_assert(!is_invocable_v<int, int>);
+static_assert(!is_invocable_v<S>);
+static_assert(is_invocable_v<decltype(&S::f)>);
+static_assert(!is_invocable_v<decltype(&S::var)>);
 
 }
 
