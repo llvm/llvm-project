@@ -1,3 +1,5 @@
+# Source uses unistd.h.
+# UNSUPPORTED: system-windows
 # RUN: %clang_host -g -O0 %S/Inputs/sigchld.c -o %t.out
 # RUN: %lldb %t.out -b -s %s 2>&1 | FileCheck %s
 
