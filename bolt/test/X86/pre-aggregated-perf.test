@@ -11,10 +11,12 @@ REQUIRES: system-linux
 
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
 RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated.txt -w %t.new \
-RUN:   --show-density \
+RUN:   --show-density --print-heatmap-stats \
 RUN:   --profile-density-threshold=9 --profile-density-cutoff-hot=970000 \
 RUN:   --profile-use-dfs | FileCheck %s --check-prefix=CHECK-P2B
 
+CHECK-P2B: HEATMAP: building heat map
+CHECK-P2B: .text, 0x400680, 0x401232, 100.0000, 4.2553, 0.0426
 CHECK-P2B: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
 CHECK-P2B: BOLT-INFO: Functions with density >= 21.7 account for 97.00% total sample counts.
 

@@ -1997,13 +1997,10 @@ Error RewriteInstance::readSpecialSections() {
   if (ErrorOr<BinarySection &> BATSec =
           BC->getUniqueSectionByName(BoltAddressTranslation::SECTION_NAME)) {
     BC->HasBATSection = true;
-    // Do not read BAT when plotting a heatmap
-    if (!opts::HeatmapMode) {
-      if (std::error_code EC = BAT->parse(BC->outs(), BATSec->getContents())) {
-        BC->errs() << "BOLT-ERROR: failed to parse BOLT address translation "
-                      "table.\n";
-        exit(1);
-      }
+    if (std::error_code EC = BAT->parse(BC->outs(), BATSec->getContents())) {
+      BC->errs() << "BOLT-ERROR: failed to parse BOLT address translation "
+                    "table.\n";
+      exit(1);
     }
   }
 
