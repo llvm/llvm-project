@@ -1115,6 +1115,33 @@ public:
 #endif
 };
 
+/// Helper type to provide functions to access incoming values and blocks for
+/// phi-like recipes.
+class VPPhiAccessors {
+protected:
+  /// Return a VPRecipeBase* to the current object.
+  virtual const VPRecipeBase *getAsRecipe() const = 0;
+
+public:
+  virtual ~VPPhiAccessors() = default;
+
+  /// Returns the incoming VPValue with index \p Idx.
+  VPValue *getIncomingValue(unsigned Idx) const {
+    return getAsRecipe()->getOperand(Idx);
+  }
+
+  /// Returns the incoming block with index \p Idx.
+  const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
+
+  /// Returns the number of incoming values, also number of incoming blocks.
+  unsigned getNumIncoming() const { return getAsRecipe()->getNumOperands(); }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printPhiOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
+#endif
+};
+
 /// A recipe to wrap on original IR instruction not to be modified during
 /// execution, except for PHIs. PHIs are modeled via the VPIRPhi subclass.
 /// Expect PHIs, VPIRInstructions cannot have any operands.
@@ -1179,28 +1206,6 @@ public:
   /// Builder. Must only be used for VPIRInstructions with at least one operand
   /// wrapping a PHINode.
   void extractLastLaneOfFirstOperand(VPBuilder &Builder);
-};
-
-/// Helper type to provide functions to access incoming values and blocks for
-/// phi-like recipes.
-class VPPhiAccessors {
-protected:
-  /// Return a VPRecipeBase* to the current object.
-  virtual const VPRecipeBase *getAsRecipe() const = 0;
-
-public:
-  virtual ~VPPhiAccessors() = default;
-
-  /// Returns the incoming VPValue with index \p Idx.
-  VPValue *getIncomingValue(unsigned Idx) const {
-    return getAsRecipe()->getOperand(Idx);
-  }
-
-  /// Returns the incoming block with index \p Idx.
-  const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
-
-  /// Returns the number of incoming values, also number of incoming blocks.
-  unsigned getNumIncoming() const { return getAsRecipe()->getNumOperands(); }
 };
 
 /// An overlay for VPIRInstructions wrapping PHI nodes enabling convenient use
