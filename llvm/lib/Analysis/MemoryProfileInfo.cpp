@@ -228,26 +228,32 @@ static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
       {buildCallstackMetadata(MIBCallStack, Ctx)});
   MIBPayload.push_back(
       MDString::get(Ctx, getAllocTypeAttributeString(AllocType)));
-  if (!ContextSizeInfo.empty()) {
-    for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
-      TotalBytes += TotalSize;
-      if (AllocType == AllocationType::Cold)
-        ColdBytes += TotalSize;
-      // Only add the context size info as metadata if we need it in the thin
-      // link (currently if reporting of hinted sizes is enabled or we have
-      // specified a threshold for marking allocations cold after cloning).
-      if (MemProfReportHintedSizes || MinClonedColdBytePercent < 100) {
-        auto *FullStackIdMD = ValueAsMetadata::get(
-            ConstantInt::get(Type::getInt64Ty(Ctx), FullStackId));
-        auto *TotalSizeMD = ValueAsMetadata::get(
-            ConstantInt::get(Type::getInt64Ty(Ctx), TotalSize));
-        auto *ContextSizeMD = MDNode::get(Ctx, {FullStackIdMD, TotalSizeMD});
-        MIBPayload.push_back(ContextSizeMD);
-      }
+
+  if (ContextSizeInfo.empty()) {
+    // The profile matcher should have provided context size info if there was a
+    // MinCallsiteColdBytePercent < 100. Here we check >=100 to gracefully
+    // handle a user-provided percent larger than 100.
+    assert(MinCallsiteColdBytePercent >= 100);
+    return MDNode::get(Ctx, MIBPayload);
+  }
+
+  for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
+    TotalBytes += TotalSize;
+    if (AllocType == AllocationType::Cold)
+      ColdBytes += TotalSize;
+    // Only add the context size info as metadata if we need it in the thin
+    // link (currently if reporting of hinted sizes is enabled or we have
+    // specified a threshold for marking allocations cold after cloning).
+    if (MemProfReportHintedSizes || MinClonedColdBytePercent < 100) {
+      auto *FullStackIdMD = ValueAsMetadata::get(
+          ConstantInt::get(Type::getInt64Ty(Ctx), FullStackId));
+      auto *TotalSizeMD = ValueAsMetadata::get(
+          ConstantInt::get(Type::getInt64Ty(Ctx), TotalSize));
+      auto *ContextSizeMD = MDNode::get(Ctx, {FullStackIdMD, TotalSizeMD});
+      MIBPayload.push_back(ContextSizeMD);
     }
   }
-  assert(MinCallsiteColdBytePercent >= 100 ||
-         (!ContextSizeInfo.empty() && TotalBytes > 0));
+  assert(TotalBytes > 0);
   return MDNode::get(Ctx, MIBPayload);
 }
 
@@ -273,8 +279,9 @@ static void saveFilteredNewMIBNodes(std::vector<Metadata *> &NewMIBNodes,
                                     std::vector<Metadata *> &SavedMIBNodes,
                                     unsigned CallerContextLength,
                                     uint64_t TotalBytes, uint64_t ColdBytes) {
-  bool MostlyCold = MinCallsiteColdBytePercent < 100 &&
-                    ColdBytes * 100 >= MinCallsiteColdBytePercent * TotalBytes;
+  const bool MostlyCold =
+      MinCallsiteColdBytePercent < 100 &&
+      ColdBytes * 100 >= MinCallsiteColdBytePercent * TotalBytes;
 
   // In the simplest case, with pruning disabled, keep all the new MIB nodes.
   if (MemProfKeepAllNotColdContexts && !MostlyCold) {
@@ -300,6 +307,9 @@ static void saveFilteredNewMIBNodes(std::vector<Metadata *> &NewMIBNodes,
     }
   };
 
+  // If the cold bytes at the current callsite exceed the given threshold, we
+  // discard all non-cold contexts so do not need any of the later pruning
+  // handling. We can simply copy over all the cold contexts and return early.
   if (MostlyCold) {
     auto NewColdMIBNodes =
         make_filter_range(NewMIBNodes, [&](const Metadata *M) {
@@ -308,7 +318,7 @@ static void saveFilteredNewMIBNodes(std::vector<Metadata *> &NewMIBNodes,
           if (getMIBAllocType(MIBMD) == AllocationType::Cold)
             return true;
           if (MemProfReportHintedSizes) {
-            float PercentCold = ColdBytes * 100.0 / TotalBytes;
+            const float PercentCold = ColdBytes * 100.0 / TotalBytes;
             std::string PercentStr;
             llvm::raw_string_ostream OS(PercentStr);
             OS << format(" for %5.2f%% cold bytes", PercentCold);
