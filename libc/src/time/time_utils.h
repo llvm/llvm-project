@@ -15,7 +15,6 @@
 #include "hdr/types/time_t.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/OSUtil/io.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
@@ -105,9 +104,6 @@ LIBC_INLINE tm *localtime_internal(const time_t *timer, tm *result) {
   }
 
   // TODO(zimirza): implement timezone database
-  write_to_stderr("Timezone database is not currently implemented. The output "
-                  "of this function will currently not take into account for "
-                  "timezone. This will be implemented in a later release.");
 
   return result;
 }
