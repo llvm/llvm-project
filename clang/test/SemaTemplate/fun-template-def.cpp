@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 
 // Tests that dependent expressions are always allowed, whereas non-dependent
@@ -108,9 +109,10 @@ auto k = c_<1>; // expected-note {{in instantiation of variable}}
 
 }
 
+#endif
+#if __cplusplus >= 201702L
+
 namespace GH138731 {
-template <class...>
-using void_t = void;
 template <class...>
 using void_t = void;
 
