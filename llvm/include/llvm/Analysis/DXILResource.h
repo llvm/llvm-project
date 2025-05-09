@@ -671,6 +671,8 @@ public:
     case dxil::ResourceClass::Sampler:
       return SamplerSpaces;
     }
+
+    llvm_unreachable("Invalid resource class");
   }
 
   friend class DXILResourceBindingAnalysis;
