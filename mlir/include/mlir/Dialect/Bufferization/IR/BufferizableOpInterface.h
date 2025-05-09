@@ -302,7 +302,7 @@ struct BufferizationOptions {
                              Value to) const;
 
   /// Specifies whether not bufferizable ops are allowed in the input. If so,
-  /// bufferization.to_memref and bufferization.to_tensor ops are inserted at
+  /// bufferization.to_buffer and bufferization.to_tensor ops are inserted at
   /// the boundaries.
   bool allowUnknownOps = false;
 
@@ -587,7 +587,7 @@ allocateTensorForShapedValue(OpBuilder &b, Location loc, Value shapedValue,
                              bool copy = true);
 
 /// Lookup the buffer for the given value. If the value was not bufferized
-/// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
+/// yet, wrap it in a ToBufferOp. Otherwise, it is the result of a ToTensorOp,
 /// from which the memref operand is returned.
 FailureOr<Value> getBuffer(RewriterBase &rewriter, Value value,
                            const BufferizationOptions &options);

@@ -263,7 +263,7 @@ void LoopEmitter::initializeLoopEmit(
         denseTp = bufferization::getMemRefTypeWithFullyDynamicLayout(rtp);
 
       Value denseVal =
-          builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
+          builder.create<bufferization::ToBufferOp>(loc, denseTp, tensor);
       // Dense outputs need special handling.
       if (isOutput && updater)
         denseVal = updater(builder, loc, denseVal, tensor);
