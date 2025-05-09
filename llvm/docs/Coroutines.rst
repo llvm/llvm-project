@@ -2121,10 +2121,11 @@ Coroutine Transformation Passes
 ===============================
 CoroEarly
 ---------
-The pass CoroEarly lowers coroutine intrinsics that hide the details of the
-structure of the coroutine frame, but, otherwise not needed to be preserved to
-help later coroutine passes. This pass lowers `coro.frame`_, `coro.done`_,
-and `coro.promise`_ intrinsics.
+The CoroEarly pass ensures later middle end passes correctly interpret coroutine 
+semantics and lowers coroutine intrinsics that not needed to be preserved to 
+help later coroutine passes. This pass lowers `coro.promise`_ that outside the 
+coroutine body, `coro.frame`_ and `coro.done`_ intrinsics. It replace uses of 
+promise alloca with `coro.promise`_ intrinsic.
 
 .. _CoroSplit:
 
