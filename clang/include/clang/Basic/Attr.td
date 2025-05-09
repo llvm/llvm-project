@@ -4778,6 +4778,7 @@ def HLSLResourceBinding: InheritableAttr {
       RegisterType RegType;
       std::optional<unsigned> SlotNumber;
       unsigned SpaceNumber;
+      std::optional<unsigned> ImplicitBindingOrderID;
 
   public:
       void setBinding(RegisterType RT, std::optional<unsigned> SlotNum, unsigned SpaceNum) {
@@ -4798,6 +4799,16 @@ def HLSLResourceBinding: InheritableAttr {
       }
       unsigned getSpaceNumber() const {
         return SpaceNumber;
+      }
+      void setImplicitBindingOrderID(uint32_t Value) {
+        ImplicitBindingOrderID = Value;
+      }
+      bool hasImplicitBindingOrderID() const { 
+        return ImplicitBindingOrderID.has_value();
+      }
+      uint32_t getImplicitBindingOrderID() const {
+        assert(hasImplicitBindingOrderID() && "attribute does not have implicit binding order id");
+        return ImplicitBindingOrderID.value();
       }
   }];
 }
