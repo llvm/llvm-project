@@ -1,6 +1,4 @@
-# Source uses unistd.h.
-# UNSUPPORTED: system-windows
-# RUN: %clang_host -g -O0 %S/Inputs/sigchld.c -o %t.out
+# RUN: %clang_host -g -O0 %S/Inputs/cross_platform.c -o %t.out
 # RUN: %lldb %t.out -b -s %s 2>&1 | FileCheck %s
 
 list
@@ -11,12 +9,6 @@ b main
 
 r
 # CHECK: int main()
-
-list
-# CHECK: if (child_pid == 0)
-
-list
-# CHECK: printf("signo = %d\n", SIGCHLD);
 
 list
 # CHECK: return 0;
