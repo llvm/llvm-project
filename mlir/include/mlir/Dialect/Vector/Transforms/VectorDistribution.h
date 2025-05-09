@@ -98,6 +98,10 @@ void populatePropagateWarpVectorDistributionPatterns(
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn,
     PatternBenefit benefit = 1, PatternBenefit readBenefit = 0);
 
+/// Patterns for simplification of WarpExecuteOnLane0Op during distribution.
+void populateWarpSimplificationPatterns(RewritePatternSet &pattern,
+                                        PatternBenefit benefit = 1);
+
 /// Lambda signature to compute a reduction of a distributed value for the given
 /// reduction kind and size.
 using DistributedReductionFn =
