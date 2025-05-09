@@ -20,6 +20,7 @@
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -15502,6 +15503,105 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
+static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
+                                      const SDLoc &DL, uint64_t MulAmt) {
+  EVT VT = N->getValueType(0);
+  const uint64_t BitWidth = VT.getFixedSizeInBits();
+
+  // Find the Non-adjacent form of the multiplier.
+  llvm::SmallVector<std::pair<bool, uint64_t>> Sequence; // {isAdd, shamt}
+  for (uint64_t E = MulAmt, I = 0; E && I < BitWidth; ++I, E >>= 1) {
+    if (E & 1) {
+      bool IsAdd = (E & 3) == 1;
+      Sequence.push_back({IsAdd, I});
+      E -= IsAdd ? 1 : -1;
+    }
+  }
+
+  SDValue Result = DAG.getConstant(0, DL, N->getValueType(0));
+  SDValue N0 = N->getOperand(0);
+
+  for (const auto &Op : Sequence) {
+    SDValue ShiftVal;
+    if (Op.second > 0)
+      ShiftVal =
+          DAG.getNode(ISD::SHL, DL, VT, N0, DAG.getConstant(Op.second, DL, VT));
+    else
+      ShiftVal = N0;
+
+    ISD::NodeType AddSubOp = Op.first ? ISD::ADD : ISD::SUB;
+    Result = DAG.getNode(AddSubOp, DL, VT, Result, ShiftVal);
+  }
+  return Result;
+}
+// Try to expand a multiply to a sequence of shifts and add/subs,
+// for a machine without native mul instruction.
+static SDValue expandMulToBasicOps(SDNode *N, SelectionDAG &DAG,
+                                   uint64_t MulAmt) {
+  EVT VT = N->getValueType(0);
+  const uint64_t BitWidth = VT.getFixedSizeInBits();
+  SDLoc DL(N);
+
+  if (MulAmt == 0)
+    return DAG.getConstant(0, DL, N->getValueType(0));
+
+  // Try to factorize into (2^N) * (2^M_1 +/- 1) * (2^M_2 +/- 1) * ...
+  uint64_t TrailingZeros = llvm::countr_zero(MulAmt);
+  uint64_t E = MulAmt >> TrailingZeros;
+
+  llvm::SmallVector<std::pair<bool, uint64_t>> Factors; // {is_2^M+1, M}
+
+  while (E > 1) {
+    bool Found = false;
+    for (int64_t I = BitWidth - 1; I >= 2; --I) {
+      uint64_t Factor = 1ULL << I;
+
+      if (E % (Factor + 1) == 0) {
+        Factors.push_back({true, I});
+        E /= Factor + 1;
+        Found = true;
+        break;
+      }
+      if (E % (Factor - 1) == 0) {
+        Factors.push_back({false, I});
+        E /= Factor - 1;
+        Found = true;
+        break;
+      }
+    }
+    if (!Found)
+      break;
+  }
+
+  SDValue Result;
+  SDValue N0 = N->getOperand(0);
+
+  bool UseFactorization = !Factors.empty() && (Factors.size() < 5);
+
+  if (UseFactorization) {
+    if (E == 1)
+      Result = N0;
+    else
+      Result = expandMulToNAFSequence(N, DAG, DL, E);
+
+    for (const auto &F : Factors) {
+      SDValue ShiftVal = DAG.getNode(ISD::SHL, DL, VT, Result,
+                                     DAG.getConstant(F.second, DL, VT));
+
+      ISD::NodeType AddSubOp = F.first ? ISD::ADD : ISD::SUB;
+      Result = DAG.getNode(AddSubOp, DL, N->getValueType(0), ShiftVal, Result);
+    }
+
+    if (TrailingZeros > 0)
+      Result = DAG.getNode(ISD::SHL, DL, VT, Result,
+                           DAG.getConstant(TrailingZeros, DL, VT));
+
+    return Result;
+  }
+
+  return expandMulToNAFSequence(N, DAG, DL, MulAmt);
+}
+
 // X * (2^N +/- 2^M) -> (add/sub (shl X, C1), (shl X, C2))
 static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
                                         uint64_t MulAmt) {
@@ -15537,20 +15637,23 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   if (DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
 
-  if (DCI.isBeforeLegalize() || DCI.isCalledByLegalizer())
-    return SDValue();
-
   if (VT != Subtarget.getXLenVT())
     return SDValue();
-
-  const bool HasShlAdd = Subtarget.hasStdExtZba() ||
-                         Subtarget.hasVendorXTHeadBa() ||
-                         Subtarget.hasVendorXAndesPerf();
 
   ConstantSDNode *CNode = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (!CNode)
     return SDValue();
   uint64_t MulAmt = CNode->getZExtValue();
+
+  if (!Subtarget.hasStdExtM() && !Subtarget.hasStdExtZmmul())
+    return expandMulToBasicOps(N, DAG, MulAmt);
+
+  if (DCI.isBeforeLegalize() || DCI.isCalledByLegalizer())
+    return SDValue();
+
+  const bool HasShlAdd = Subtarget.hasStdExtZba() ||
+                         Subtarget.hasVendorXTHeadBa() ||
+                         Subtarget.hasVendorXAndesPerf();
 
   // WARNING: The code below is knowingly incorrect with regards to undef semantics.
   // We're adding additional uses of X here, and in principle, we should be freezing
