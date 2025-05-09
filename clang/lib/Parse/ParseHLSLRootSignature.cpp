@@ -57,6 +57,34 @@ std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
 
   RootConstants Constants;
 
+  auto Params = parseRootConstantParams();
+  if (!Params.has_value())
+    return std::nullopt;
+
+  // Check mandatory parameters where provided
+  if (!Params->Num32BitConstants.has_value()) {
+    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+        << TokenKind::kw_num32BitConstants;
+    return std::nullopt;
+  }
+
+  Constants.Num32BitConstants = Params->Num32BitConstants.value();
+
+  if (!Params->Reg.has_value()) {
+    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+        << TokenKind::bReg;
+    return std::nullopt;
+  }
+
+  Constants.Reg = Params->Reg.value();
+
+  // Fill in optional parameters
+  if (Params->Visibility.has_value())
+    Constants.Visibility = Params->Visibility.value();
+
+  if (Params->Space.has_value())
+    Constants.Space = Params->Space.value();
+
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
                            /*param of=*/TokenKind::kw_RootConstants))
@@ -187,14 +215,89 @@ RootSignatureParser::parseDescriptorTableClause() {
   return Clause;
 }
 
+// Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
+// order and only exactly once. The following methods will parse through as
+// many arguments as possible reporting an error if a duplicate is seen.
+std::optional<RootSignatureParser::ParsedConstantParams>
+RootSignatureParser::parseRootConstantParams() {
+  assert(CurToken.TokKind == TokenKind::pu_l_paren &&
+         "Expects to only be invoked starting at given token");
+
+  ParsedConstantParams Params;
+  do {
+    // `num32BitConstants` `=` POS_INT
+    if (tryConsumeExpectedToken(TokenKind::kw_num32BitConstants)) {
+      if (Params.Num32BitConstants.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Num32BitConstants = parseUIntParam();
+      if (!Num32BitConstants.has_value())
+        return std::nullopt;
+      Params.Num32BitConstants = Num32BitConstants;
+    }
+
+    // `b` POS_INT
+    if (tryConsumeExpectedToken(TokenKind::bReg)) {
+      if (Params.Reg.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+      auto Reg = parseRegister();
+      if (!Reg.has_value())
+        return std::nullopt;
+      Params.Reg = Reg;
+    }
+
+    // `space` `=` POS_INT
+    if (tryConsumeExpectedToken(TokenKind::kw_space)) {
+      if (Params.Space.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Space = parseUIntParam();
+      if (!Space.has_value())
+        return std::nullopt;
+      Params.Space = Space;
+    }
+
+    // `visibility` `=` SHADER_VISIBILITY
+    if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
+      if (Params.Visibility.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Visibility = parseShaderVisibility();
+      if (!Visibility.has_value())
+        return std::nullopt;
+      Params.Visibility = Visibility;
+    }
+  } while (tryConsumeExpectedToken(TokenKind::pu_comma));
+
+  return Params;
+}
+
 std::optional<RootSignatureParser::ParsedClauseParams>
 RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
   assert(CurToken.TokKind == TokenKind::pu_l_paren &&
          "Expects to only be invoked starting at given token");
 
-  // Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
-  // order and only exactly once. Parse through as many arguments as possible
-  // reporting an error if a duplicate is seen.
   ParsedClauseParams Params;
   do {
     // ( `b` | `t` | `u` | `s`) POS_INT

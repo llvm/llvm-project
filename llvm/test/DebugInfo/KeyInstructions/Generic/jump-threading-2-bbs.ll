@@ -2,27 +2,41 @@
 
 ;; Modified from llvm/test/Transforms/JumpThreading/thread-two-bbs.ll
 ;;
-;; JumpThreading duplicates bb.cond2 to thread through bb.file to bb.f2 or exit.
+;; JumpThreading duplicates bb.cond2 to thread through bb.file to bb.file,
+;; bb.f2 or exit.
 ;;
 ;; Check the duplicated instructions get remapped atom groups.
 
 ; CHECK: bb.cond2:
 ; CHECK-NEXT: call void @f1()
 ; CHECK-NEXT: %tobool1 = icmp eq i32 %cond2, 0, !dbg [[G1R2:!.*]]
-; CHECK-NEXT: br i1 %tobool1, label %exit, label %exit, !dbg [[G1R1:!.*]]
+; CHECK-NEXT: br i1 %tobool1, label %bb.file, label %exit, !dbg [[G1R1:!.*]]
 
 ; CHECK: bb.cond2.thread:
-; CHECK-NEXT: %tobool12 = icmp eq i32 %cond2, 0, !dbg [[G2R2:!.*]]
-; CHECK-NEXT: br i1 %tobool12, label %bb.f2, label %exit, !dbg [[G2R1:!.*]]
+; CHECK-NEXT: %tobool12 = icmp eq i32 %cond2, 0, !dbg [[G3R2:!.*]]
+; CHECK-NEXT: br i1 %tobool12, label %bb.f2, label %exit, !dbg [[G3R1:!.*]]
+
+;; After the transform %ptr is null through bb.cond2 and @a through
+;; bb.cond2.thread. Thread bb.cond2.thread->bb.f2 through bb.file.
+;; Check the duplicated store gets a remapped atom group too.
+
+; CHECK: bb.file:
+; CHECK-NEXT: %ptr3 = phi ptr [ null, %bb.cond2 ]
+; CHECK-NEXT: store ptr %ptr3, ptr %p, align 4, !dbg [[G2R1:!.*]]
+
+; CHECK: bb.f2:
+; CHECK-NEXT: store ptr @a, ptr %p, align 4, !dbg [[G4R1:!.*]]
 
 ; CHECK: [[G1R2]] = !DILocation(line: 1, column: 1, scope: ![[#]], atomGroup: 1, atomRank: 2)
 ; CHECK: [[G1R1]] = !DILocation(line: 1, column: 1, scope: ![[#]], atomGroup: 1, atomRank: 1)
-; CHECK: [[G2R2]] = !DILocation(line: 1, column: 1, scope: ![[#]], atomGroup: 2, atomRank: 2)
-; CHECK: [[G2R1]] = !DILocation(line: 1, column: 1, scope: ![[#]], atomGroup: 2, atomRank: 1)
+; CHECK: [[G3R2]] = !DILocation(line: 1, column: 1, scope: ![[#]], atomGroup: 3, atomRank: 2)
+; CHECK: [[G3R1]] = !DILocation(line: 1, column: 1, scope: ![[#]], atomGroup: 3, atomRank: 1)
+; CHECK: [[G2R1]] = !DILocation(line: 2, column: 1, scope: ![[#]], atomGroup: 2, atomRank: 1)
+; CHECK: [[G4R1]] = !DILocation(line: 2, column: 1, scope: ![[#]], atomGroup: 4, atomRank: 1)
 
 @a = global i32 0, align 4
 
-define void @foo(i32 %cond1, i32 %cond2) !dbg !5 {
+define void @foo(i32 %cond1, i32 %cond2, ptr %p) !dbg !5 {
 entry:
   %tobool = icmp eq i32 %cond1, 0
   br i1 %tobool, label %bb.cond2, label %bb.f1
@@ -37,6 +51,7 @@ bb.cond2:                                         ; preds = %bb.f1, %entry
   br i1 %tobool1, label %bb.file, label %exit, !dbg !10
 
 bb.file:                                          ; preds = %bb.cond2
+  store ptr %ptr, ptr %p, align 4, !dbg !11
   %cmp = icmp eq ptr %ptr, null
   br i1 %cmp, label %exit, label %bb.f2
 
@@ -66,3 +81,4 @@ declare void @f2()
 !7 = !{}
 !9 = !DILocation(line: 1, column: 1, scope: !5, atomGroup: 1, atomRank: 2)
 !10 = !DILocation(line: 1, column: 1, scope: !5, atomGroup: 1, atomRank: 1)
+!11 = !DILocation(line: 2, column: 1, scope: !5, atomGroup: 2, atomRank: 1)

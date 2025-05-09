@@ -145,11 +145,11 @@ bool OffloadTargetInfo::operator==(const OffloadTargetInfo &Target) const {
 
 std::string OffloadTargetInfo::str() const {
   std::string NormalizedTriple;
-  // Unfortunately we need some special sauce for AMDGPU because all the runtime
-  // assumes the triple to be "amdgcn-amd-amdhsa-" (empty environment) instead
-  // of "amdgcn-amd-amdhsa-unknown". It's gonna be very tricky to patch
-  // different layers of runtime.
-  if (Triple.isAMDGPU()) {
+  // Unfortunately we need some special sauce for AMDHSA because all the runtime
+  // assumes the triple to be "amdgcn/spirv64-amd-amdhsa-" (empty environment)
+  // instead of "amdgcn/spirv64-amd-amdhsa-unknown". It's gonna be very tricky
+  // to patch different layers of runtime.
+  if (Triple.getOS() == Triple::OSType::AMDHSA) {
     NormalizedTriple = Triple.normalize(Triple::CanonicalForm::THREE_IDENT);
     NormalizedTriple.push_back('-');
   } else {

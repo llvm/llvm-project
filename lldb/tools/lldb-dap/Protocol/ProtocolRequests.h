@@ -23,6 +23,7 @@
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/JSON.h"
@@ -30,6 +31,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace lldb_dap::protocol {
 
@@ -51,7 +53,7 @@ bool fromJSON(const llvm::json::Value &, CancelArguments &, llvm::json::Path);
 
 /// Response to `cancel` request. This is just an acknowledgement, so no body
 /// field is required.
-using CancelResponseBody = VoidResponse;
+using CancelResponse = VoidResponse;
 
 /// Arguments for `disconnect` request.
 struct DisconnectArguments {
@@ -139,15 +141,18 @@ bool fromJSON(const llvm::json::Value &, InitializeRequestArguments &,
               llvm::json::Path);
 
 /// Response to `initialize` request. The capabilities of this debug adapter.
-using InitializeResponseBody = std::optional<Capabilities>;
+using InitializeResponse = std::optional<Capabilities>;
 
 /// DAP Launch and Attach common configurations.
+///
+/// See package.json debuggers > configurationAttributes > launch or attach >
+/// properties for common configurations.
 struct Configuration {
   /// Specify a working directory to use when launching `lldb-dap`. If the debug
   /// information in your executable contains relative paths, this option can be
   /// used so that `lldb-dap` can find source files and object files that have
   /// relative paths.
-  std::optional<std::string> debuggerRoot;
+  std::string debuggerRoot;
 
   /// Enable auto generated summaries for variables when no summaries exist for
   /// a given type. This feature can cause performance delays in large projects
@@ -156,12 +161,19 @@ struct Configuration {
 
   /// If a variable is displayed using a synthetic children, also display the
   /// actual contents of the variable at the end under a [raw] entry. This is
-  /// useful when creating sythetic child plug-ins as it lets you see the actual
-  /// contents of the variable.
+  /// useful when creating synthetic child plug-ins as it lets you see the
+  /// actual contents of the variable.
   bool enableSyntheticChildDebugging = false;
 
   /// Enable language specific extended backtraces.
   bool displayExtendedBacktrace = false;
+
+  /// Stop at the entry point of the program when launching or attaching.
+  bool stopOnEntry = false;
+
+  /// Optional timeout when waiting for the program to `runInTerminal` or
+  /// attach.
+  std::chrono::seconds timeout = std::chrono::seconds(30);
 
   /// The escape prefix to use for executing regular LLDB commands in the Debug
   /// Console, instead of printing variables. Defaults to a backtick. If it's an
@@ -183,7 +195,7 @@ struct Configuration {
 
   /// Specify a source path to remap "./" to allow full paths to be used when
   /// setting breakpoints in binaries that have relative source paths.
-  std::optional<std::string> sourcePath;
+  std::string sourcePath;
 
   /// Specify an array of path re-mappings. Each element in the array must be a
   /// two element array containing a source and destination pathname. Overrides
@@ -219,15 +231,15 @@ struct Configuration {
   ///
   /// *NOTE:* When launching, either `launchCommands` or `program` must be
   /// configured. If both are configured then `launchCommands` takes priority.
-  std::optional<std::string> program;
+  std::string program;
 
   /// Target triple for the program (arch-vendor-os). If not set, inferred from
   /// the binary.
-  std::optional<std::string> targetTriple;
+  std::string targetTriple;
 
   /// Specify name of the platform to use for this target, creating the platform
   /// if necessary.
-  std::optional<std::string> platformName;
+  std::string platformName;
 };
 
 /// lldb-dap specific launch arguments.
@@ -240,6 +252,9 @@ struct LaunchRequestArguments {
   bool noDebug = false;
 
   /// Launch specific operations.
+  ///
+  /// See package.json debuggers > configurationAttributes > launch >
+  /// properties.
   /// @{
 
   /// LLDB commands executed to launch the program.
@@ -250,7 +265,7 @@ struct LaunchRequestArguments {
   std::vector<std::string> launchCommands;
 
   /// The program working directory.
-  std::optional<std::string> cwd;
+  std::string cwd;
 
   /// An array of command line argument strings to be passed to the program
   /// being launched.
@@ -261,8 +276,8 @@ struct LaunchRequestArguments {
   /// with values or just "VAR" for environment variables with no values.
   llvm::StringMap<std::string> env;
 
-  /// If set, then the client stub should detach rather than killing the debugee
-  /// if it loses connection with lldb.
+  /// If set, then the client stub should detach rather than killing the
+  /// debuggee if it loses connection with lldb.
   bool detachOnError = false;
 
   /// Disable ASLR (Address Space Layout Randomization) when launching the
@@ -275,15 +290,9 @@ struct LaunchRequestArguments {
   /// Set whether to shell expand arguments to the process when launching.
   bool shellExpandArguments = false;
 
-  /// Stop at the entry point of the program when launching a process.
-  bool stopOnEntry = false;
-
   /// Launch the program inside an integrated terminal in the IDE. Useful for
   /// debugging interactive command line programs.
   bool runInTerminal = false;
-
-  /// Optional timeout for `runInTerminal` requests.
-  std::chrono::seconds timeout = std::chrono::seconds(30);
 
   /// @}
 };
@@ -292,7 +301,52 @@ bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
 
 /// Response to `launch` request. This is just an acknowledgement, so no body
 /// field is required.
-using LaunchResponseBody = VoidResponse;
+using LaunchResponse = VoidResponse;
+
+#define LLDB_DAP_INVALID_PORT -1
+
+/// lldb-dap specific attach arguments.
+struct AttachRequestArguments {
+  /// Common lldb-dap configuration values for launching/attaching operations.
+  Configuration configuration;
+
+  /// Attach specific operations.
+  ///
+  /// See package.json debuggers > configurationAttributes > attach >
+  /// properties.
+  /// @{
+
+  /// Custom commands that are executed instead of attaching to a process ID or
+  /// to a process by name. These commands may optionally create a new target
+  /// and must perform an attach. A valid process must exist after these
+  /// commands complete or the `"attach"` will fail.
+  std::vector<std::string> attachCommands;
+
+  /// System process ID to attach to.
+  lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
+
+  /// Wait for the process to launch.
+  bool waitFor = false;
+
+  /// TCP/IP port to attach to a remote system. Specifying both pid and port is
+  /// an error.
+  int32_t gdbRemotePort = LLDB_DAP_INVALID_PORT;
+
+  /// The hostname to connect to a remote system. The default hostname being
+  /// used `localhost`.
+  std::string gdbRemoteHostname = "localhost";
+
+  /// Path to the core file to debug.
+  std::string coreFile;
+
+  /// @}
+};
+bool fromJSON(const llvm::json::Value &, AttachRequestArguments &,
+              llvm::json::Path);
+
+/// Response to `attach` request. This is just an acknowledgement, so no body
+/// field is required.
+using AttachResponse = VoidResponse;
 
 /// Arguments for `continue` request.
 struct ContinueArguments {
@@ -467,6 +521,43 @@ bool fromJSON(const llvm::json::Value &, StepOutArguments &, llvm::json::Path);
 /// Response to `stepOut` request. This is just an acknowledgement, so no
 /// body field is required.
 using StepOutResponse = VoidResponse;
+
+/// Arguments for `breakpointLocations` request.
+struct BreakpointLocationsArguments {
+  /// The source location of the breakpoints; either `source.path` or
+  /// `source.sourceReference` must be specified.
+  Source source;
+
+  /// Start line of range to search possible breakpoint locations in. If only
+  /// the line is specified, the request returns all possible locations in that
+  /// line.
+  uint32_t line;
+
+  /// Start position within `line` to search possible breakpoint locations in.
+  /// It is measured in UTF-16 code units and the client capability
+  /// `columnsStartAt1` determines whether it is 0- or 1-based. If no column is
+  /// given, the first position in the start line is assumed.
+  std::optional<uint32_t> column;
+
+  /// End line of range to search possible breakpoint locations in. If no end
+  /// line is given, then the end line is assumed to be the start line.
+  std::optional<uint32_t> endLine;
+
+  /// End position within `endLine` to search possible breakpoint locations in.
+  /// It is measured in UTF-16 code units and the client capability
+  /// `columnsStartAt1` determines whether it is 0- or 1-based. If no end column
+  /// is given, the last position in the end line is assumed.
+  std::optional<uint32_t> endColumn;
+};
+bool fromJSON(const llvm::json::Value &, BreakpointLocationsArguments &,
+              llvm::json::Path);
+
+/// Response to `breakpointLocations` request.
+struct BreakpointLocationsResponseBody {
+  /// Content of the source reference.
+  std::vector<BreakpointLocation> breakpoints;
+};
+llvm::json::Value toJSON(const BreakpointLocationsResponseBody &);
 
 } // namespace lldb_dap::protocol
 

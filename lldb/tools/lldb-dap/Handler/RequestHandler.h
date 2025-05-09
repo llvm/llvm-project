@@ -59,10 +59,6 @@ protected:
   /// FIXME: Move these into the DAP class?
   /// @{
 
-  /// Both attach and launch take a either a sourcePath or sourceMap
-  /// argument (or neither), from which we need to set the target.source-map.
-  void SetSourceMapFromArguments(const llvm::json::Object &arguments) const;
-
   /// Prints a welcome message on the editor if the preprocessor variable
   /// LLDB_DAP_WELCOME_MESSAGE is defined.
   void PrintWelcomeMessage() const;
@@ -172,6 +168,9 @@ class RequestHandler : public BaseRequestHandler {
 
   /// A hook for a request handler to run additional operations after the
   /// request response is sent but before the next request handler.
+  ///
+  /// *NOTE*: PostRun will be invoked even if the `Run` operation returned an
+  /// error.
   virtual void PostRun() const {};
 
   protocol::ErrorResponseBody ToResponse(llvm::Error err) const {
@@ -197,21 +196,28 @@ class RequestHandler : public BaseRequestHandler {
   }
 };
 
-class AttachRequestHandler : public LegacyRequestHandler {
+class AttachRequestHandler
+    : public RequestHandler<protocol::AttachRequestArguments,
+                            protocol::AttachResponse> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "attach"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Error Run(const protocol::AttachRequestArguments &args) const override;
+  void PostRun() const override;
 };
 
-class BreakpointLocationsRequestHandler : public LegacyRequestHandler {
+class BreakpointLocationsRequestHandler
+    : public RequestHandler<
+          protocol::BreakpointLocationsArguments,
+          llvm::Expected<protocol::BreakpointLocationsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "breakpointLocations"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureBreakpointLocationsRequest};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::BreakpointLocationsResponseBody>
+  Run(const protocol::BreakpointLocationsArguments &args) const override;
 };
 
 class CompletionsRequestHandler : public LegacyRequestHandler {
@@ -279,18 +285,18 @@ public:
 
 class InitializeRequestHandler
     : public RequestHandler<protocol::InitializeRequestArguments,
-                            llvm::Expected<protocol::InitializeResponseBody>> {
+                            llvm::Expected<protocol::InitializeResponse>> {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "initialize"; }
-  llvm::Expected<protocol::InitializeResponseBody>
+  llvm::Expected<protocol::InitializeResponse>
   Run(const protocol::InitializeRequestArguments &args) const override;
   void PostRun() const override;
 };
 
 class LaunchRequestHandler
     : public RequestHandler<protocol::LaunchRequestArguments,
-                            protocol::LaunchResponseBody> {
+                            protocol::LaunchResponse> {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "launch"; }
@@ -508,9 +514,8 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class CancelRequestHandler
-    : public RequestHandler<protocol::CancelArguments,
-                            protocol::CancelResponseBody> {
+class CancelRequestHandler : public RequestHandler<protocol::CancelArguments,
+                                                   protocol::CancelResponse> {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "cancel"; }
