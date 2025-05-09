@@ -2,5 +2,5 @@
 
 // check that we quote the output of .safeseh
 
-.safeseh "\\foo"
-// CHECK: .safeseh "\\foo"
+.safeseh "\01foo"
+// CHECK: .safeseh "\01foo"
