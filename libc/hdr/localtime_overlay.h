@@ -17,13 +17,7 @@
 
 // glibc <unistd.h> header might provide extern inline definitions for few
 // functions, causing external alias errors.  They are guarded by
-// `__USE_EXTERN_INLINES` macro.  We temporarily disable `__USE_EXTERN_INLINES`
-// macro by defining `__NO_INLINE__` before including <stdio.h>.
-
-#ifdef __USE_EXTERN_INLINES
-#define LIBC_OLD_USE_EXTERN_INLINES
-#undef __USE_EXTERN_INLINES
-#endif
+// `__USE_EXTERN_INLINES` macro.
 
 #ifndef __NO_INLINE__
 #define __NO_INLINE__ 1
