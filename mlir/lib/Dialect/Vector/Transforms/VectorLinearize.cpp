@@ -143,7 +143,10 @@ static FailureOr<SmallVector<int64_t>> intsFromArrayAttr(ArrayAttr attrs) {
 /// Example: insert a 1x2 vector into a 4x5 vector at position (1,3). The 2
 /// positions written to are (1,3) and (1,4), which have linearized indices 8
 /// and 9. So [8,9] is returned.
-SmallVector<int64_t> static getFlattenedStridedSliceIndices(
+///
+/// The length of the returned vector is equal to the number of elements in
+/// the shape `small` (i.e. the product of dimensions of `small`).
+SmallVector<int64_t> static getStridedSliceInsertionIndices(
     ArrayRef<int64_t> small, ArrayRef<int64_t> large,
     ArrayRef<int64_t> offsets) {
 
@@ -153,8 +156,10 @@ SmallVector<int64_t> static getFlattenedStridedSliceIndices(
   //  offsets  =  2, 3, 0
   //
   // `offsets` has implicit trailing 0s, `small` has implicit leading 1s.
-  assert(large.size() >= small.size());
-  assert(large.size() >= offsets.size());
+  assert((large.size() >= small.size()) &&
+         "rank of 'large' cannot be lower than rank of 'small'");
+  assert((large.size() >= offsets.size()) &&
+         "rank of 'large' cannot be lower than the number of offsets");
   unsigned delta = large.size() - small.size();
   unsigned nOffsets = offsets.size();
   auto getSmall = [&](int64_t i) { return i >= delta ? small[i - delta] : 1; };
@@ -223,10 +228,8 @@ struct LinearizeVectorExtractStridedSlice final
         extractStridedSliceOp.getType());
     assert(flatOutputType && "vector type expected");
 
-    if (!stridesAllOne(extractStridedSliceOp)) {
-      return rewriter.notifyMatchFailure(extractStridedSliceOp,
-                                         "strides other than 1 not supported");
-    }
+    assert(stridesAllOne(extractStridedSliceOp) &&
+           "has extract_strided_slice's verifier not checked strides are 1?");
 
     FailureOr<SmallVector<int64_t>> offsets =
         intsFromArrayAttr(extractStridedSliceOp.getOffsets());
@@ -240,7 +243,7 @@ struct LinearizeVectorExtractStridedSlice final
 
     ArrayRef<int64_t> outputShape = extractStridedSliceOp.getType().getShape();
 
-    SmallVector<int64_t> indices = getFlattenedStridedSliceIndices(
+    SmallVector<int64_t> indices = getStridedSliceInsertionIndices(
         outputShape, inputShape, offsets.value());
 
     Value srcVector = adaptor.getVector();
@@ -287,10 +290,9 @@ struct LinearizeVectorInsertStridedSlice final
                   OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    if (!stridesAllOne(insertStridedSliceOp)) {
-      return rewriter.notifyMatchFailure(insertStridedSliceOp,
-                                         "strides other than 1 not supported");
-    }
+    // See InsertStridedSliceOp's verify method.
+    assert(stridesAllOne(insertStridedSliceOp) &&
+           "has insert_strided_slice's verifier not checked strides are 1?");
 
     VectorType inputType = insertStridedSliceOp.getValueToStore().getType();
     ArrayRef<int64_t> inputShape = inputType.getShape();
@@ -305,10 +307,10 @@ struct LinearizeVectorInsertStridedSlice final
       return rewriter.notifyMatchFailure(insertStridedSliceOp,
                                          "failed to get integer offsets");
     }
-    SmallVector<int64_t> sliceIndices = getFlattenedStridedSliceIndices(
+    SmallVector<int64_t> sliceIndices = getStridedSliceInsertionIndices(
         inputShape, outputShape, offsets.value());
 
-    SmallVector<int64_t> indices(nOutputElements, 0);
+    SmallVector<int64_t> indices(nOutputElements);
     std::iota(indices.begin(), indices.end(), 0);
     for (auto [index, sliceIndex] : llvm::enumerate(sliceIndices)) {
       indices[sliceIndex] = index + nOutputElements;
