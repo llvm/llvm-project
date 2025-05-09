@@ -602,6 +602,8 @@ TRIPLE_ARG_RE = re.compile(r"-m?triple[= ]([^ ]+)")
 MARCH_ARG_RE = re.compile(r"-march[= ]([^ ]+)")
 DEBUG_ONLY_ARG_RE = re.compile(r"-debug-only[= ]([^ ]+)")
 
+IS_DEBUG_RECORD_RE = re.compile(r"^(\s+)#dbg_")
+
 SCRUB_LEADING_WHITESPACE_RE = re.compile(r"^(\s+)")
 SCRUB_WHITESPACE_RE = re.compile(r"(?!^(|  \w))[ \t]+", flags=re.M)
 SCRUB_PRESERVE_LEADING_WHITESPACE_RE = re.compile(r"((?!^)[ \t]*(\S))[ \t]+")
