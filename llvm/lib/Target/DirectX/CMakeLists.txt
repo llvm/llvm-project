@@ -28,6 +28,7 @@ add_llvm_target(DirectXCodeGen
   DXILIntrinsicExpansion.cpp
   DXILOpBuilder.cpp
   DXILOpLowering.cpp
+  DXILPostOptimizationValidation.cpp
   DXILPrepare.cpp
   DXILPrettyPrinter.cpp
   DXILResourceAccess.cpp
