@@ -50,23 +50,20 @@
 ;; not past the call.
 ; DBG-NEXT: 0x0000000000000012      4      0      0   0             0       0  is_stmt
 ; DBG-NEXT: 0x0000000000000017      4      0      0   0             0       0  is_stmt
-; DBG-NEXT: 0x0000000000000019      4      0      0   0             0       0
 
 ;; Test C:
-;; Check that is_stmt floats up from the call to the store.
+;; Check that is_stmt floats up from the call (0x29) to the store (0x1b).
 ; DBG-NEXT: 0x000000000000001b      5      0      0   0             0       0  is_stmt
-; DBG-NEXT: 0x0000000000000029      5      0      0   0             0       0
 
 ;; Test D:
-;; Check the is_stmt is not applied to the lower ranking instruction.
+;; Check the is_stmt is not applied to the lower ranking instruction (0x2e).
 ; DBG-NEXT: 0x000000000000002e      6      0      0   0             0       0
 ; DBG-NEXT: 0x0000000000000035      7      0      0   0             0       0  is_stmt
 
 ;; Test E:
 ;; Check the is_stmt floats up to an instruction in the same group of the same
-;; or lower precedence.
+;; or lower precedence (from call, 0x41, to `store 3`, 0x3a).
 ; DBG-NEXT: 0x000000000000003a      8      0      0   0             0       0  is_stmt
-; DBG-NEXT: 0x0000000000000041      8      0      0   0             0       0
 ; DBG-NEXT: 0x0000000000000046      9      0      0   0             0       0  is_stmt
 
 ; DBG-NEXT: 0x0000000000000052     10      0      0   0             0       0

@@ -2092,7 +2092,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
       (!PrevInstBB ||
        PrevInstBB->getSectionID() == MI->getParent()->getSectionID());
   bool ForceIsStmt = ForceIsStmtInstrs.contains(MI);
-  if (DL == PrevInstLoc && PrevInstInSameSection && !ForceIsStmt) {
+  if (PrevInstInSameSection && !ForceIsStmt && DL.isSameSourceLocation(PrevInstLoc)) {
     // If we have an ongoing unspecified location, nothing to do here.
     if (!DL)
       return;
