@@ -103,8 +103,7 @@ def riscv_add_tprel : SDNode<"RISCVISD::ADD_TPREL",
                                                   SDTCisInt<0>]>>;
 
 def riscv_probed_alloca : SDNode<"RISCVISD::PROBED_ALLOCA",
-                                 SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
-                                                      SDTCisVT<0, i32>]>,
+                                 SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
                                  [SDNPHasChain, SDNPMayStore]>;
 
 //===----------------------------------------------------------------------===//
@@ -1456,17 +1455,17 @@ let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1 in {
 // Probed stack allocation of a constant size, used in function prologues when
 // stack-clash protection is enabled.
 def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
-                               (ins GPR:$scratch),
+                               (ins GPR:$target),
                                []>,
                                Sched<[]>;
 def PROBED_STACKALLOC_RVV : Pseudo<(outs GPR:$sp),
-                               (ins GPR:$scratch),
+                               (ins GPR:$target),
                                []>,
                                Sched<[]>;
 let usesCustomInserter = 1 in
-def PROBED_STACKALLOC_DYN : Pseudo<(outs GPR:$rd),
-                               (ins GPR:$scratch),
-                               [(set GPR:$rd, (riscv_probed_alloca GPR:$scratch))]>,
+def PROBED_STACKALLOC_DYN : Pseudo<(outs),
+                               (ins GPR:$target),
+                               [(riscv_probed_alloca GPR:$target)]>,
                                Sched<[]>;
 }
 

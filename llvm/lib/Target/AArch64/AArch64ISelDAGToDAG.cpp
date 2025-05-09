@@ -4532,7 +4532,9 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // Essentially: rotr (xor(x, y), imm) -> xar (x, y, imm)
   // Rotate by a constant is a funnel shift in IR which is exanded to
@@ -4558,9 +4560,17 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
         !TLI->isAllActivePredicate(*CurDAG, N1.getOperand(0)))
       return false;
 
-    SDValue XOR = N0.getOperand(1);
-    if (XOR.getOpcode() != ISD::XOR || XOR != N1.getOperand(1))
+    if (N0.getOperand(1) != N1.getOperand(1))
       return false;
+
+    SDValue R1, R2;
+    bool IsXOROperand = true;
+    if (N0.getOperand(1).getOpcode() != ISD::XOR) {
+      IsXOROperand = false;
+    } else {
+      R1 = N0.getOperand(1).getOperand(0);
+      R2 = N1.getOperand(1).getOperand(1);
+    }
 
     APInt ShlAmt, ShrAmt;
     if (!ISD::isConstantSplatVector(N0.getOperand(2).getNode(), ShlAmt) ||
@@ -4570,11 +4580,23 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
     if (ShlAmt + ShrAmt != VT.getScalarSizeInBits())
       return false;
 
-    SDLoc DL(N);
+    if (!IsXOROperand) {
+      SDValue Zero = CurDAG->getTargetConstant(0, DL, MVT::i64);
+      SDNode *MOV = CurDAG->getMachineNode(AArch64::MOVIv2d_ns, DL, VT, Zero);
+      SDValue MOVIV = SDValue(MOV, 0);
+
+      SDValue ZSub = CurDAG->getTargetConstant(AArch64::zsub, DL, MVT::i32);
+      SDNode *SubRegToReg = CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, DL,
+                                                   VT, Zero, MOVIV, ZSub);
+
+      R1 = N1->getOperand(1);
+      R2 = SDValue(SubRegToReg, 0);
+    }
+
     SDValue Imm =
         CurDAG->getTargetConstant(ShrAmt.getZExtValue(), DL, MVT::i32);
 
-    SDValue Ops[] = {XOR.getOperand(0), XOR.getOperand(1), Imm};
+    SDValue Ops[] = {R1, R2, Imm};
     if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::Int>(
             VT, {AArch64::XAR_ZZZI_B, AArch64::XAR_ZZZI_H, AArch64::XAR_ZZZI_S,
                  AArch64::XAR_ZZZI_D})) {
@@ -4591,23 +4613,35 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
       N1->getOpcode() != AArch64ISD::VLSHR)
     return false;
 
-  if (N0->getOperand(0) != N1->getOperand(0) ||
-      N1->getOperand(0)->getOpcode() != ISD::XOR)
+  if (N0->getOperand(0) != N1->getOperand(0))
     return false;
 
-  SDValue XOR = N0.getOperand(0);
-  SDValue R1 = XOR.getOperand(0);
-  SDValue R2 = XOR.getOperand(1);
+  SDValue R1, R2;
+  bool IsXOROperand = true;
+  if (N1->getOperand(0)->getOpcode() != ISD::XOR) {
+    IsXOROperand = false;
+  } else {
+    SDValue XOR = N0.getOperand(0);
+    R1 = XOR.getOperand(0);
+    R2 = XOR.getOperand(1);
+  }
 
   unsigned HsAmt = N0.getConstantOperandVal(1);
   unsigned ShAmt = N1.getConstantOperandVal(1);
 
-  SDLoc DL = SDLoc(N0.getOperand(1));
   SDValue Imm = CurDAG->getTargetConstant(
       ShAmt, DL, N0.getOperand(1).getValueType(), false);
 
   if (ShAmt + HsAmt != 64)
     return false;
+
+  if (!IsXOROperand) {
+    SDValue Zero = CurDAG->getTargetConstant(0, DL, MVT::i64);
+    SDNode *MOV = CurDAG->getMachineNode(AArch64::MOVIv2d_ns, DL, VT, Zero);
+    SDValue MOVIV = SDValue(MOV, 0);
+    R1 = N1->getOperand(0);
+    R2 = MOVIV;
+  }
 
   SDValue Ops[] = {R1, R2, Imm};
   CurDAG->SelectNodeTo(N, AArch64::XAR, N0.getValueType(), Ops);

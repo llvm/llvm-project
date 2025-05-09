@@ -9588,8 +9588,9 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
   // TODO: Fix This
+  unsigned OMPVersion = getDerived().getSema().getLangOpts().OpenMP;
   SemaRef.Diag(D->getBeginLoc(), diag::err_omp_instantiation_not_supported)
-      << getOpenMPDirectiveName(D->getDirectiveKind());
+      << getOpenMPDirectiveName(D->getDirectiveKind(), OMPVersion);
   return StmtError();
 }
 

@@ -15,6 +15,7 @@ import re
 # Despite the test program printing correctly. See
 # https://github.com/llvm/llvm-project/issues/137599.
 
+
 class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_default(self):
@@ -55,7 +56,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertFalse(response["success"])
         self.assertTrue(self.get_dict_value(response, ["body", "error", "showUser"]))
         self.assertEqual(
-            "launchCommands and runInTerminal are mutually exclusive",
+            "'launchCommands' and 'runInTerminal' are mutually exclusive",
             self.get_dict_value(response, ["body", "error", "format"]),
         )
 
@@ -357,6 +358,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         terminateCommands = ["expr 4+2"]
         self.build_and_launch(
             program,
+            stopOnEntry=True,
             initCommands=initCommands,
             preRunCommands=preRunCommands,
             postRunCommands=postRunCommands,
@@ -530,6 +532,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         terminateCommands = ["expr 4+2"]
         self.launch(
             program=program,
+            stopOnEntry=True,
             terminateCommands=terminateCommands,
             disconnectAutomatically=False,
         )
@@ -543,6 +546,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         )
         self.verify_commands("terminateCommands", output, terminateCommands)
 
+    @skipIfWindows
     def test_version(self):
         """
         Tests that "initialize" response contains the "version" string the same
