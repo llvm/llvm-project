@@ -77,6 +77,7 @@
 #include "InputFiles.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
+#include "Relocations.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -356,6 +357,52 @@ static SmallVector<Symbol *> getRelocTargetSyms(const InputSection *sec) {
   return getReloc(sec, rel.relas);
 }
 
+// A non-trivial relocation should ideally not be split by Machine outliner
+// but it's not illegal to split it in which case ICF shouldn't fold outlined
+// functions containing these relocations.
+static bool isTrivialRelocationType(uint16_t emachine, RelType type) {
+  if (emachine == EM_AARCH64) {
+    switch (type) {
+    case R_AARCH64_GOT_LD_PREL19:
+    case R_AARCH64_LD64_GOTOFF_LO15:
+    case R_AARCH64_ADR_GOT_PAGE:
+    case R_AARCH64_LD64_GOT_LO12_NC:
+    case R_AARCH64_LD64_GOTPAGE_LO15:
+    case R_AARCH64_TLSIE_MOVW_GOTTPREL_G1:
+    case R_AARCH64_TLSIE_MOVW_GOTTPREL_G0_NC:
+    case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+    case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+    case R_AARCH64_TLSIE_LD_GOTTPREL_PREL19:
+    case R_AARCH64_TLSDESC_LD_PREL19:
+    case R_AARCH64_TLSDESC_ADR_PREL21:
+    case R_AARCH64_TLSDESC_ADR_PAGE21:
+    case R_AARCH64_TLSDESC_LD64_LO12:
+    case R_AARCH64_TLSDESC_ADD_LO12:
+    case R_AARCH64_TLSDESC_OFF_G1:
+    case R_AARCH64_TLSDESC_OFF_G0_NC:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G0:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G0_NC:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G1:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G1_NC:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G2:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G2_NC:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G3:
+    case R_AARCH64_AUTH_GOT_LD_PREL19:
+    case R_AARCH64_AUTH_LD64_GOTOFF_LO15:
+    case R_AARCH64_AUTH_ADR_GOT_PAGE:
+    case R_AARCH64_AUTH_LD64_GOT_LO12_NC:
+    case R_AARCH64_AUTH_LD64_GOTPAGE_LO15:
+    case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
+    case R_AARCH64_AUTH_GOT_ADR_PREL_LO21:
+    case R_AARCH64_AUTH_TLSDESC_ADR_PAGE21:
+    case R_AARCH64_AUTH_TLSDESC_LD64_LO12:
+    case R_AARCH64_AUTH_TLSDESC_ADD_LO12:
+      return false;
+    }
+  }
+  return true;
+}
+
 // Compare two lists of relocations. Returns true if all pairs of
 // relocations point to the same section in terms of ICF.
 template <class ELFT>
@@ -374,6 +421,20 @@ bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
 
     auto *da = cast<Defined>(&sa);
     auto *db = cast<Defined>(&sb);
+
+    // Merging sections here also means that we would mark corresponding
+    // relocation target symbols as equivalent, done later in ICF during section
+    // folding. To preserve correctness for such symbol equivalence (see
+    // GH#129122 for details), we also have to disable section merging here:
+    // 1. We don't merge local symbols into global symbols, or vice-versa. There
+    // are post-icf passes that assert on this behavior.
+    // 2. We also don't merge two local symbols together. There are post-icf
+    // passes that expect to see no duplicates when iterating over local
+    // symbols.
+    if ((da->isGlobal() != db->isGlobal()) &&
+        !isTrivialRelocationType(ctx.arg.emachine,
+                                 rai->getType(ctx.arg.isMips64EL)))
+      return false;
 
     // We already dealt with absolute and non-InputSection symbols in
     // constantEq, and for InputSections we have already checked everything
