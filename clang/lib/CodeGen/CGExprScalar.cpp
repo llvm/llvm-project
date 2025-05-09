@@ -4180,11 +4180,28 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   //   The index is not pointer-sized.
   //   The pointer type is not byte-sized.
   //
-  if (BinaryOperator::isNullPointerArithmeticExtension(CGF.getContext(),
-                                                       op.Opcode,
-                                                       expr->getLHS(),
-                                                       expr->getRHS()))
-    return CGF.Builder.CreateIntToPtr(index, pointer->getType());
+  // Note that we do not suppress the pointer overflow check in this case.
+  if (BinaryOperator::isNullPointerArithmeticExtension(
+          CGF.getContext(), op.Opcode, expr->getLHS(), expr->getRHS())) {
+    Value *Ptr = CGF.Builder.CreateIntToPtr(index, pointer->getType());
+    if (CGF.getLangOpts().PointerOverflowDefined ||
+        !CGF.SanOpts.has(SanitizerKind::PointerOverflow) ||
+        NullPointerIsDefined(CGF.Builder.GetInsertBlock()->getParent(),
+                             PtrTy->getPointerAddressSpace()))
+      return Ptr;
+    // The inbounds GEP of null is valid iff the index is zero.
+    CodeGenFunction::SanitizerScope SanScope(&CGF);
+    Value *IsZeroIndex = CGF.Builder.CreateIsNull(index);
+    llvm::Constant *StaticArgs[] = {
+        CGF.EmitCheckSourceLocation(op.E->getExprLoc())};
+    llvm::Type *IntPtrTy = DL.getIntPtrType(PtrTy);
+    Value *IntPtr = llvm::Constant::getNullValue(IntPtrTy);
+    Value *ComputedGEP = CGF.Builder.CreateZExtOrTrunc(index, IntPtrTy);
+    Value *DynamicArgs[] = {IntPtr, ComputedGEP};
+    CGF.EmitCheck({{IsZeroIndex, SanitizerKind::SO_PointerOverflow}},
+                  SanitizerHandler::PointerOverflow, StaticArgs, DynamicArgs);
+    return Ptr;
+  }
 
   if (width != DL.getIndexTypeSizeInBits(PtrTy)) {
     // Zero-extend or sign-extend the pointer value according to
