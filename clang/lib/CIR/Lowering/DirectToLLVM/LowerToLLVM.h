@@ -64,6 +64,15 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMCallOpLowering : public mlir::OpConversionPattern<cir::CallOp> {
+public:
+  using mlir::OpConversionPattern<cir::CallOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::CallOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override;
+};
+
 class CIRToLLVMAllocaOpLowering
     : public mlir::OpConversionPattern<cir::AllocaOp> {
   mlir::DataLayout const &dataLayout;

@@ -221,7 +221,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<DependentDecltypeType, ASTContext &>
       DependentDecltypeTypes;
 
-  mutable llvm::FoldingSet<PackIndexingType> DependentPackIndexingTypes;
+  mutable llvm::ContextualFoldingSet<PackIndexingType, ASTContext &>
+      DependentPackIndexingTypes;
 
   mutable llvm::FoldingSet<TemplateTypeParmType> TemplateTypeParmTypes;
   mutable llvm::FoldingSet<ObjCTypeParamType> ObjCTypeParamTypes;

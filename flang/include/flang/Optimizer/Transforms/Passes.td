@@ -210,7 +210,8 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
   }];
   let constructor = "::fir::createAddDebugInfoPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect",
+    "mlir::DLTIDialect"
   ];
   let options = [
     Option<"debugLevel", "debug-level",

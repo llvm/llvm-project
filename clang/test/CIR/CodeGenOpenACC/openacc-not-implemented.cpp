@@ -3,11 +3,10 @@
 
 void HelloWorld(int *A, int *B, int *C, int N) {
 
-// expected-error@+2{{ClangIR code gen Not Yet Implemented: OpenACC Combined Construct}}
+// expected-error@+2{{ClangIR code gen Not Yet Implemented: OpenACC Atomic Construct}}
 // expected-error@+1{{ClangIR code gen Not Yet Implemented: statement}}
-#pragma acc parallel loop
-  for (unsigned I = 0; I < N; ++I)
-    A[I] = B[I] + C[I];
+#pragma acc atomic
+  N = N + 1;
 
 // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenACC Declare Construct}}
 #pragma acc declare create(A)

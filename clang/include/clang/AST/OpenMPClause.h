@@ -9575,6 +9575,7 @@ class ConstOMPClauseVisitor :
 class OMPClausePrinter final : public OMPClauseVisitor<OMPClausePrinter> {
   raw_ostream &OS;
   const PrintingPolicy &Policy;
+  unsigned Version;
 
   /// Process clauses with list of variables.
   template <typename T> void VisitOMPClauseList(T *Node, char StartSym);
@@ -9582,8 +9583,9 @@ class OMPClausePrinter final : public OMPClauseVisitor<OMPClausePrinter> {
   template <typename T> void VisitOMPMotionClause(T *Node);
 
 public:
-  OMPClausePrinter(raw_ostream &OS, const PrintingPolicy &Policy)
-      : OS(OS), Policy(Policy) {}
+  OMPClausePrinter(raw_ostream &OS, const PrintingPolicy &Policy,
+                   unsigned OpenMPVersion)
+      : OS(OS), Policy(Policy), Version(OpenMPVersion) {}
 
 #define GEN_CLANG_CLAUSE_CLASS
 #define CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(Class *S);

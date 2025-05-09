@@ -243,8 +243,8 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
   );
 
   let builders = [
-    AttrBuilder<(ins "llvm::ArrayRef<int>": $lane_layout,
-                     "llvm::ArrayRef<int>": $lane_data),
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
+                     "llvm::ArrayRef<int32_t>": $lane_data),
       [{
         auto sg_layout = DenseI32ArrayAttr();
         auto sg_data = DenseI32ArrayAttr();
@@ -253,6 +253,25 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
         return $_get($_ctxt, sg_layout, sg_data, inst_data,
                      DenseI32ArrayAttr::get($_ctxt, lane_layout),
                      DenseI32ArrayAttr::get($_ctxt, lane_data), order);
+      }]>,
+    AttrBuilder<(ins "llvm::ArrayRef<int32_t>": $lane_layout,
+                     "llvm::ArrayRef<int32_t>": $lane_data,
+                     "llvm::ArrayRef<int32_t>": $order),
+      [{
+        return $_get($_ctxt,
+                     /*sg_layout =*/ nullptr,
+                     /*sg_data   =*/ nullptr,
+                     /*inst_data =*/ nullptr,
+                     DenseI32ArrayAttr::get($_ctxt, lane_layout),
+                     DenseI32ArrayAttr::get($_ctxt, lane_data),
+                     DenseI32ArrayAttr::get($_ctxt, order));
+      }]>,
+    AttrBuilder<(ins "DenseI32ArrayAttr": $lane_layout,
+                     "DenseI32ArrayAttr": $lane_data,
+                     "DenseI32ArrayAttr": $order),
+      [{
+        return $_get($_ctxt, /*sg_layout =*/ nullptr, /*sg_data =*/ nullptr,
+                  /*inst_data =*/ nullptr, lane_layout, lane_data, order);
       }]>
   ];
 
@@ -262,7 +281,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
     }
 
     bool isSgLayout() {
-      return getSgLayout() == nullptr && getLaneLayout() != nullptr;
+      return !isWgLayout();
     }
 
     int64_t getRank() {
@@ -274,6 +293,17 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
         return attr.size();
       return 0;
     }
+
+    LayoutAttr dropSgLayoutAndData() {
+      return LayoutAttr::get(getContext(), nullptr, nullptr, getInstData(),
+                             getLaneLayout(), getLaneData(), getOrder());
+    }
+
+    LayoutAttr dropInstData() {
+      return LayoutAttr::get(getContext(), getSgLayout(), getSgData(), nullptr,
+                             getLaneLayout(), getLaneData(), getOrder());
+    }
+
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
