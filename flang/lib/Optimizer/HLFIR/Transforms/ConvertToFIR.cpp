@@ -412,44 +412,13 @@ class DesignateOpConversion
     auto indices = designate.getIndices();
     int i = 0;
     auto attrs = designate.getIsTripletAttr();
-
-    // If the shape specifies a shift and the base is not a box,
-    // then we have to subtract the lower bounds, as long as
-    // fir.array_coor does not support non-default lower bounds
-    // for non-box accesses.
-    llvm::SmallVector<mlir::Value> lbounds;
-    if (shape && !mlir::isa<fir::BaseBoxType>(base.getType()))
-      lbounds = hlfir::getExplicitLboundsFromShape(shape);
-    std::size_t lboundIdx = 0;
     for (auto isTriplet : attrs.asArrayRef()) {
       // Coordinate of the first element are the index and triplets lower
       // bounds.
-      mlir::Value index = indices[i];
-      if (!lbounds.empty()) {
-        assert(lboundIdx < lbounds.size() && "missing lbound");
-        mlir::Type indexType = builder.getIndexType();
-        mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
-        mlir::Value orig = builder.createConvert(loc, indexType, index);
-        mlir::Value lb =
-            builder.createConvert(loc, indexType, lbounds[lboundIdx]);
-        index = builder.create<mlir::arith::SubIOp>(loc, orig, lb);
-        index = builder.create<mlir::arith::AddIOp>(loc, index, one);
-        ++lboundIdx;
-      }
-      firstElementIndices.push_back(index);
+      firstElementIndices.push_back(indices[i]);
       i = i + (isTriplet ? 3 : 1);
     }
 
-    // Remove the shift from the shape, if needed.
-    if (!lbounds.empty()) {
-      mlir::Operation *op = shape.getDefiningOp();
-      if (mlir::isa<fir::ShiftOp>(op))
-        shape = nullptr;
-      else if (auto shiftOp = mlir::dyn_cast<fir::ShapeShiftOp>(op))
-        shape = builder.create<fir::ShapeOp>(loc, shiftOp.getExtents());
-      else
-        TODO(loc, "read fir.shape to get lower bounds");
-    }
     mlir::Type originalDesignateType = designate.getResult().getType();
     const bool isVolatile = fir::isa_volatile_type(originalDesignateType);
     mlir::Type arrayCoorType = fir::ReferenceType::get(baseEleTy, isVolatile);

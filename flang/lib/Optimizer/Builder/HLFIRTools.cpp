@@ -70,8 +70,11 @@ getExplicitExtents(fir::FortranVariableOpInterface var,
   return {};
 }
 
-llvm::SmallVector<mlir::Value>
-hlfir::getExplicitLboundsFromShape(mlir::Value shape) {
+// Return explicit lower bounds from a shape result.
+// Only fir.shape, fir.shift and fir.shape_shift are currently
+// supported as shape.
+static llvm::SmallVector<mlir::Value>
+getExplicitLboundsFromShape(mlir::Value shape) {
   llvm::SmallVector<mlir::Value> result;
   auto *shapeOp = shape.getDefiningOp();
   if (auto s = mlir::dyn_cast_or_null<fir::ShapeOp>(shapeOp)) {
@@ -93,7 +96,7 @@ hlfir::getExplicitLboundsFromShape(mlir::Value shape) {
 static llvm::SmallVector<mlir::Value>
 getExplicitLbounds(fir::FortranVariableOpInterface var) {
   if (mlir::Value shape = var.getShape())
-    return hlfir::getExplicitLboundsFromShape(shape);
+    return getExplicitLboundsFromShape(shape);
   return {};
 }
 
@@ -766,12 +769,18 @@ std::pair<mlir::Value, mlir::Value> hlfir::genVariableFirBaseShapeAndParams(
   //     (!fir.box<!fir.array<?x?x...>>, !fir.box<!fir.array<?x?x...>>)
   // The extended value is an ArrayBoxValue with base being
   // the raw address of the array.
-  if (auto variableInterface = entity.getIfVariableInterface())
+  if (auto variableInterface = entity.getIfVariableInterface()) {
+    mlir::Value shape = variableInterface.getShape();
     if (mlir::isa<fir::BaseBoxType>(fir::getBase(exv).getType()) ||
         !mlir::isa<fir::BaseBoxType>(entity.getType()) ||
-        variableInterface.getShape())
+        // Still use the variable's shape if it is present.
+        // If it only specifies a shift, then we have to create
+        // a shape from the exv.
+        (shape && (shape.getDefiningOp<fir::ShapeShiftOp>() ||
+                   shape.getDefiningOp<fir::ShapeOp>())))
       return {fir::getBase(exv),
               asEmboxShape(loc, builder, exv, variableInterface.getShape())};
+  }
   return {fir::getBase(exv), builder.createShape(loc, exv)};
 }
 

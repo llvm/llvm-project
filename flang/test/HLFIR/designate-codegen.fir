@@ -278,10 +278,5 @@ func.func @_QPtest_contiguous_derived_lbounds(%arg0: !fir.class<!fir.array<?x?x!
 // CHECK:           %[[VAL_12:.*]]:3 = fir.box_dims %[[VAL_9]], %[[VAL_11]] : (!fir.box<!fir.array<?x?x!fir.type<_QMtypesTt2{t1:!fir.type<_QMtypesTt1>,i:i32}>>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_13:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_14:.*]]:3 = fir.box_dims %[[VAL_9]], %[[VAL_13]] : (!fir.box<!fir.array<?x?x!fir.type<_QMtypesTt2{t1:!fir.type<_QMtypesTt1>,i:i32}>>>, index) -> (index, index, index)
-// CHECK:           %[[VAL_15:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_16:.*]] = arith.subi %[[VAL_1]], %[[VAL_1]] : index
-// CHECK:           %[[VAL_17:.*]] = arith.addi %[[VAL_16]], %[[VAL_15]] : index
-// CHECK:           %[[VAL_18:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_19:.*]] = arith.subi %[[VAL_0]], %[[VAL_0]] : index
-// CHECK:           %[[VAL_20:.*]] = arith.addi %[[VAL_19]], %[[VAL_18]] : index
-// CHECK:           %[[VAL_21:.*]] = fir.array_coor %[[VAL_10]] %[[VAL_17]], %[[VAL_20]] : (!fir.ref<!fir.array<?x?x!fir.type<_QMtypesTt2{t1:!fir.type<_QMtypesTt1>,i:i32}>>>, index, index) -> !fir.ref<!fir.type<_QMtypesTt2{t1:!fir.type<_QMtypesTt1>,i:i32}>>
+// CHECK:           %[[VAL_15:.*]] = fir.shape_shift %[[VAL_1]], %[[VAL_12]]#1, %[[VAL_0]], %[[VAL_14]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:           %[[VAL_16:.*]] = fir.array_coor %[[VAL_10]](%[[VAL_15]]) %[[VAL_1]], %[[VAL_0]] : (!fir.ref<!fir.array<?x?x!fir.type<_QMtypesTt2{t1:!fir.type<_QMtypesTt1>,i:i32}>>>, !fir.shapeshift<2>, index, index) -> !fir.ref<!fir.type<_QMtypesTt2{t1:!fir.type<_QMtypesTt1>,i:i32}>>
