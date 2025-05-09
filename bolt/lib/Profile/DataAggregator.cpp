@@ -518,13 +518,12 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   deleteTempFiles();
 
 heatmap:
-  if (opts::HeatmapMode) {
-    if (std::error_code EC = printLBRHeatMap())
-      return errorCodeToError(EC);
-    exit(0);
-  }
+  if (!opts::HeatmapMode)
+    return Error::success();
 
-  return Error::success();
+  if (std::error_code EC = printLBRHeatMap())
+    return errorCodeToError(EC);
+  exit(0);
 }
 
 Error DataAggregator::readProfile(BinaryContext &BC) {
