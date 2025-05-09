@@ -4549,6 +4549,10 @@ public:
 
   bool isFullySubstituted() const { return FullySubstituted; }
 
+  bool isPartiallySubstituted() const {
+    return isValueDependent() && TransformedExpressions;
+  };
+
   /// Determine if the expression was expanded to empty.
   bool expandsToEmptyPack() const {
     return isFullySubstituted() && TransformedExpressions == 0;
@@ -4591,10 +4595,6 @@ public:
   ArrayRef<Expr *> getExpressions() const {
     return {getTrailingObjects<Expr *>(), TransformedExpressions};
   }
-
-  bool isPartiallySubstituted() const {
-    return isValueDependent() && TransformedExpressions;
-  };
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == PackIndexingExprClass;
