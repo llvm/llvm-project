@@ -22,23 +22,37 @@ public:
 #pragma omp declare reduction(sum_reduction:Sum : omp_out += omp_in)           \
     initializer(omp_priv = Sum(0))
 
+#pragma omp declare reduction(sum_pctor_reduction:Sum : omp_out += omp_in)     \
+    initializer(omp_priv = Sum(1)) // non-default ctor
+
 int checkUserDefinedReduction() {
   Sum final_result_udr(0);
+  Sum final_result_udr_pctor(1);
   Sum array_sum[N];
   int error_flag = 0;
   int expected_value = 0;
+  int expected_value_pctor = 0;
   for (int i = 0; i < N; ++i) {
     array_sum[i] = Sum(i);
     expected_value += i; // Calculate expected sum: 0 + 1 + ... + (N-1)
+    expected_value_pctor += i;
   }
-#pragma omp parallel num_threads(4) private(final_result_udr)
+  int num_threads_for_pctor_calc = 4; //  num_threads(4)
+  int priv_initializer_val_pctor = 1; //  initializer(omp_priv = Sum(1))
+  expected_value_pctor +=
+      num_threads_for_pctor_calc + priv_initializer_val_pctor;
+#pragma omp parallel num_threads(4) private(final_result_udr) private(         \
+        final_result_udr_pctor)
   {
-#pragma omp for reduction(sum_reduction : final_result_udr)
+#pragma omp for reduction(sum_reduction : final_result_udr)                    \
+    reduction(sum_pctor_reduction : final_result_udr_pctor)
     for (int i = 0; i < N; ++i) {
       final_result_udr += array_sum[i];
+      final_result_udr_pctor += array_sum[i];
     }
 
-    if (final_result_udr.getValue() != expected_value)
+    if (final_result_udr.getValue() != expected_value ||
+        final_result_udr_pctor.getValue() != expected_value_pctor)
       error_flag += 1;
   }
   return error_flag;
