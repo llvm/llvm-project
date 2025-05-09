@@ -25,7 +25,7 @@ void caller(void (*f)(void)) {
 //.
 // CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 // CHECK: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
-// CHECK: [[DBG7]] = distinct !DISubprogram(name: "caller", scope: [[META8:![0-9]+]], file: [[META8]], line: 25, type: [[META9:![0-9]+]], scopeLine: 25, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META14:![0-9]+]])
+// CHECK: [[DBG7]] = distinct !DISubprogram(name: "caller", scope: [[META8:![0-9]+]], file: [[META8]], line: 22, type: [[META9:![0-9]+]], scopeLine: 22, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META14:![0-9]+]])
 // CHECK: [[META8]] = !DIFile(filename: "{{.*}}cfi-check-fail-debuginfo.c", directory: {{.*}})
 // CHECK: [[META9]] = !DISubroutineType(types: [[META10:![0-9]+]])
 // CHECK: [[META10]] = !{null, [[META11:![0-9]+]]}
@@ -33,13 +33,13 @@ void caller(void (*f)(void)) {
 // CHECK: [[META12]] = !DISubroutineType(types: [[META13:![0-9]+]])
 // CHECK: [[META13]] = !{null}
 // CHECK: [[META14]] = !{[[META15]]}
-// CHECK: [[META15]] = !DILocalVariable(name: "f", arg: 1, scope: [[DBG7]], file: [[META8]], line: 25, type: [[META11]])
+// CHECK: [[META15]] = !DILocalVariable(name: "f", arg: 1, scope: [[DBG7]], file: [[META8]], line: 22, type: [[META11]])
 // CHECK: [[META16]] = !{i64 0, !"_ZTSFvPFvvEE"}
 // CHECK: [[META17]] = !{i64 0, !"_ZTSFvPvE.generalized"}
 // CHECK: [[META18]] = !{i64 0, i64 2451761621477796417}
 // CHECK: [[META19]] = !DILocation(line: 0, scope: [[DBG7]])
-// CHECK: [[DBG20]] = !DILocation(line: 26, column: 3, scope: [[DBG7]])
+// CHECK: [[DBG20]] = !DILocation(line: 23, column: 3, scope: [[DBG7]])
 // CHECK: [[META21]] = !{}
 // CHECK: [[PROF22]] = !{!"branch_weights", i32 1048575, i32 1}
-// CHECK: [[DBG23]] = !DILocation(line: 27, column: 1, scope: [[DBG7]])
+// CHECK: [[DBG23]] = !DILocation(line: 24, column: 1, scope: [[DBG7]])
 //.
