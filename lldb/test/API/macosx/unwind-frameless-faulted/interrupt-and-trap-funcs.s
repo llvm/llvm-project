@@ -5,7 +5,7 @@
 #define ehframe_x23  23
 #define ehframe_pc 32
 
-  .section  __TEXT,__text,regular,pure_instructions
+  .text
 
 //--------------------------------------
 // to_be_interrupted() a frameless function that does a non-ABI
@@ -14,7 +14,6 @@
 // trap() knows to branch back to $x23 when it has finished.
 //--------------------------------------
   .globl  _to_be_interrupted
-  .p2align  2
 _to_be_interrupted:
   .cfi_startproc
 
@@ -45,7 +44,6 @@ L_.return:
 // break_to_debugger().
 //--------------------------------------
   .globl  _trap
-  .p2align  2
 _trap:                                  
   .cfi_startproc
   .cfi_signal_frame
@@ -90,7 +88,6 @@ _trap:
 // break_to_debugger() executes a BRK instruction
 //--------------------------------------
   .globl _break_to_debugger
-  .p2align  2
 _break_to_debugger:                                  
   .cfi_startproc
 
