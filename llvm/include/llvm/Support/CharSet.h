@@ -69,15 +69,13 @@ public:
 } // namespace details
 
 // Names inspired by https://wg21.link/p1885.
-namespace text_encoding {
-enum class id {
+enum class TextEncoding {
   /// UTF-8 character set encoding.
   UTF8,
 
   /// IBM EBCDIC 1047 character set encoding.
   IBM1047
 };
-} // end namespace text_encoding
 
 /// Utility class to convert between different character set encodings.
 class CharSetConverter {
@@ -93,8 +91,8 @@ public:
   /// \param[in] CSFrom the source character encoding
   /// \param[in] CSTo the target character encoding
   /// \return a CharSetConverter instance or an error code
-  static ErrorOr<CharSetConverter> create(text_encoding::id CSFrom,
-                                          text_encoding::id CSTo);
+  static ErrorOr<CharSetConverter> create(TextEncoding CSFrom,
+                                          TextEncoding CSTo);
 
   /// Creates a CharSetConverter instance.
   /// Returns std::errc::invalid_argument in case the requested conversion is

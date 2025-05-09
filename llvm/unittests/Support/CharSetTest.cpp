@@ -59,7 +59,7 @@ TEST(CharSet, FromUTF8) {
   SmallString<64> Dst;
 
   ErrorOr<CharSetConverter> Conv = CharSetConverter::create(
-      text_encoding::id::UTF8, text_encoding::id::IBM1047);
+      TextEncoding::UTF8, TextEncoding::IBM1047);
 
   // Stop test if conversion is not supported.
   if (!Conv) {
@@ -99,7 +99,7 @@ TEST(CharSet, ToUTF8) {
   SmallString<64> Dst;
 
   ErrorOr<CharSetConverter> Conv = CharSetConverter::create(
-      text_encoding::id::IBM1047, text_encoding::id::UTF8);
+      TextEncoding::IBM1047, TextEncoding::UTF8);
 
   // Stop test if conversion is not supported.
   if (!Conv) {

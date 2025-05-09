@@ -22,9 +22,9 @@
 #include <limits>
 #include <system_error>
 
-#ifdef HAVE_ICU
+#if HAVE_ICU
 #include <unicode/ucnv.h>
-#elif defined(HAVE_ICONV)
+#elif HAVE_ICONV
 #include <iconv.h>
 #endif
 
@@ -47,13 +47,13 @@ static void normalizeCharSetName(StringRef CSName,
 }
 
 // Maps the charset name to enum constant if possible.
-static std::optional<text_encoding::id> getKnownCharSet(StringRef CSName) {
+static std::optional<TextEncoding> getKnownCharSet(StringRef CSName) {
   SmallString<16> Normalized;
   normalizeCharSetName(CSName, Normalized);
   if (Normalized.equals("utf8"))
-    return text_encoding::id::UTF8;
+    return TextEncoding::UTF8;
   if (Normalized.equals("ibm1047"))
-    return text_encoding::id::IBM1047;
+    return TextEncoding::IBM1047;
   return std::nullopt;
 }
 
@@ -98,17 +98,18 @@ public:
 std::error_code
 CharSetConverterTable::convertString(StringRef Source,
                                      SmallVectorImpl<char> &Result) {
-  if (ConvType == IBM1047ToUTF8) {
+  switch (ConvType) {
+  case IBM1047ToUTF8:
     ConverterEBCDIC::convertToUTF8(Source, Result);
     return std::error_code();
-  } else if (ConvType == UTF8ToIBM1047) {
+  case UTF8ToIBM1047:
     return ConverterEBCDIC::convertToEBCDIC(Source, Result);
   }
   llvm_unreachable("Invalid ConvType!");
   return std::error_code();
 }
 
-#ifdef HAVE_ICU
+#if HAVE_ICU
 struct UConverterDeleter {
   void operator()(UConverter *Converter) const {
     if (Converter)
@@ -133,6 +134,10 @@ public:
   void reset() override;
 };
 
+// TODO: The current implementation discards the partial result and restarts the
+// conversion from the beginning if there is a conversion error due to
+// insufficient buffer size. In the future, it would better to save the partial
+// result and redo the conversion for the remaining string.
 std::error_code
 CharSetConverterICU::convertString(StringRef Source,
                                    SmallVectorImpl<char> &Result) {
@@ -144,7 +149,7 @@ CharSetConverterICU::convertString(StringRef Source,
   size_t Capacity = Result.capacity();
   size_t OutputLength = Capacity;
   Result.resize_for_overwrite(Capacity);
-  char *Output = static_cast<char *>(Result.data());
+  char *Output;
   UErrorCode EC = U_ZERO_ERROR;
 
   ucnv_setToUCallBack(&*FromConvDesc, UCNV_TO_U_CALLBACK_STOP, NULL, NULL, NULL,
@@ -185,7 +190,7 @@ void CharSetConverterICU::reset() {
   ucnv_reset(&*ToConvDesc);
 }
 
-#elif defined(HAVE_ICONV)
+#elif HAVE_ICONV
 class CharSetConverterIconv : public details::CharSetConverterImplBase {
   class UniqueIconvT {
     iconv_t ConvDesc;
@@ -222,6 +227,10 @@ public:
   void reset() override;
 };
 
+// TODO: The current implementation discards the partial result and restarts the
+// conversion from the beginning if there is a conversion error due to
+// insufficient buffer size. In the future, it would better to save the partial
+// result and redo the conversion for the remaining string.
 std::error_code
 CharSetConverterIconv::convertString(StringRef Source,
                                      SmallVectorImpl<char> &Result) {
@@ -289,35 +298,35 @@ void CharSetConverterIconv::reset() {
 #endif // HAVE_ICONV
 } // namespace
 
-ErrorOr<CharSetConverter> CharSetConverter::create(text_encoding::id CPFrom,
-                                                   text_encoding::id CPTo) {
+ErrorOr<CharSetConverter> CharSetConverter::create(TextEncoding CPFrom,
+                                                   TextEncoding CPTo) {
 
-  assert(CPFrom != CPTo && "Text encodings should be distinct");
+  // text encodings should be distinct
+  if(CPFrom == CPTo)
+    return std::make_error_code(std::errc::invalid_argument);
 
   ConversionType Conversion;
-  if (CPFrom == text_encoding::id::UTF8 && CPTo == text_encoding::id::IBM1047)
+  if (CPFrom == TextEncoding::UTF8 && CPTo == TextEncoding::IBM1047)
     Conversion = UTF8ToIBM1047;
-  else if (CPFrom == text_encoding::id::IBM1047 &&
-           CPTo == text_encoding::id::UTF8)
+  else if (CPFrom == TextEncoding::IBM1047 &&
+           CPTo == TextEncoding::UTF8)
     Conversion = IBM1047ToUTF8;
   else
     return std::error_code(errno, std::generic_category());
 
-  std::unique_ptr<details::CharSetConverterImplBase> Converter =
-      std::make_unique<CharSetConverterTable>(Conversion);
-  return CharSetConverter(std::move(Converter));
+  return CharSetConverter(std::make_unique<CharSetConverterTable>(Conversion));
 }
 
 ErrorOr<CharSetConverter> CharSetConverter::create(StringRef CSFrom,
                                                    StringRef CSTo) {
-  std::optional<text_encoding::id> From = getKnownCharSet(CSFrom);
-  std::optional<text_encoding::id> To = getKnownCharSet(CSTo);
+  std::optional<TextEncoding> From = getKnownCharSet(CSFrom);
+  std::optional<TextEncoding> To = getKnownCharSet(CSTo);
   if (From && To) {
     ErrorOr<CharSetConverter> Converter = create(*From, *To);
     if (Converter)
       return Converter;
   }
-#ifdef HAVE_ICU
+#if HAVE_ICU
   UErrorCode EC = U_ZERO_ERROR;
   UConverterUniquePtr FromConvDesc(ucnv_open(CSFrom.str().c_str(), &EC));
   if (U_FAILURE(EC)) {
@@ -331,13 +340,11 @@ ErrorOr<CharSetConverter> CharSetConverter::create(StringRef CSFrom,
       std::make_unique<CharSetConverterICU>(std::move(FromConvDesc),
                                             std::move(ToConvDesc));
   return CharSetConverter(std::move(Converter));
-#elif defined(HAVE_ICONV)
+#elif HAVE_ICONV
   iconv_t ConvDesc = iconv_open(CSTo.str().c_str(), CSFrom.str().c_str());
   if (ConvDesc == (iconv_t)-1)
     return std::error_code(errno, std::generic_category());
-  std::unique_ptr<details::CharSetConverterImplBase> Converter =
-      std::make_unique<CharSetConverterIconv>(ConvDesc);
-  return CharSetConverter(std::move(Converter));
+  return CharSetConverter(std::make_unique<CharSetConverterIconv>(ConvDesc));
 #else
   return std::make_error_code(std::errc::invalid_argument);
 #endif
