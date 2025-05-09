@@ -14197,42 +14197,43 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeSimdDirective(
 }
 
 // Overloaded base case function
-template <typename T, typename F>
-static bool tryHandleAs(T *t, F &&) {
-    return false; 
+template <typename T, typename F> static bool tryHandleAs(T *t, F &&) {
+  return false;
 }
 
 /**
- * Tries to recursively cast `t` to one of the given types and invokes `f` if successful.
+ * Tries to recursively cast `t` to one of the given types and invokes `f` if
+ * successful.
  *
  * @tparam Class The first type to check.
  * @tparam Rest The remaining types to check.
  * @tparam T The base type of `t`.
- * @tparam F The callable type for the function to invoke upon a successful cast.
+ * @tparam F The callable type for the function to invoke upon a successful
+ * cast.
  * @param t The object to be checked.
  * @param f The function to invoke if `t` matches `Class`.
  * @return `true` if `t` matched any type and `f` was called, otherwise `false`.
  */
 template <typename Class, typename... Rest, typename T, typename F>
 static bool tryHandleAs(T *t, F &&f) {
-    if (Class *c = dyn_cast<Class>(t)) {
-        f(c); 
-        return true;
-    } else {
-        return tryHandleAs<Rest...>(t, std::forward<F>(f));
-    }
+  if (Class *c = dyn_cast<Class>(t)) {
+    f(c);
+    return true;
+  } else {
+    return tryHandleAs<Rest...>(t, std::forward<F>(f));
+  }
 }
 
 // Updates OriginalInits by checking Transform against loop transformation
 // directives and appending their pre-inits if a match is found.
 static void updatePreInits(OMPLoopBasedDirective *Transform,
                            SmallVectorImpl<SmallVector<Stmt *, 0>> &PreInits) {
-    if (!tryHandleAs<OMPTileDirective, OMPUnrollDirective, OMPReverseDirective,
-                     OMPInterchangeDirective, OMPFuseDirective>(
-            Transform, [&PreInits](auto *Dir) {
-              appendFlattenedStmtList(PreInits.back(), Dir->getPreInits());
-            }))
-        llvm_unreachable("Unhandled loop transformation");
+  if (!tryHandleAs<OMPTileDirective, OMPUnrollDirective, OMPReverseDirective,
+                   OMPInterchangeDirective, OMPFuseDirective>(
+          Transform, [&PreInits](auto *Dir) {
+            appendFlattenedStmtList(PreInits.back(), Dir->getPreInits());
+          }))
+    llvm_unreachable("Unhandled loop transformation");
 }
 
 bool SemaOpenMP::checkTransformableLoopNest(
@@ -14310,43 +14311,42 @@ public:
   unsigned getNestedLoopCount() const { return NestedLoopCount; }
 
   bool VisitForStmt(ForStmt *FS) override {
-        ++NestedLoopCount;
-        return true;
+    ++NestedLoopCount;
+    return true;
   }
 
   bool VisitCXXForRangeStmt(CXXForRangeStmt *FRS) override {
-        ++NestedLoopCount;
-        return true;
+    ++NestedLoopCount;
+    return true;
   }
 
   bool TraverseStmt(Stmt *S) override {
-        if (!S)
+    if (!S)
       return true;
 
-        // Skip traversal of all expressions, including special cases like
-        // LambdaExpr, StmtExpr, BlockExpr, and RequiresExpr. These expressions
-        // may contain inner statements (and even loops), but they are not part
-        // of the syntactic body of the surrounding loop structure.
-        //  Therefore must not be counted
-        if (isa<Expr>(S))
+    // Skip traversal of all expressions, including special cases like
+    // LambdaExpr, StmtExpr, BlockExpr, and RequiresExpr. These expressions
+    // may contain inner statements (and even loops), but they are not part
+    // of the syntactic body of the surrounding loop structure.
+    //  Therefore must not be counted
+    if (isa<Expr>(S))
       return true;
 
-        // Only recurse into CompoundStmt (block {}) and loop bodies
-        if (isa<CompoundStmt>(S) || isa<ForStmt>(S) ||
-            isa<CXXForRangeStmt>(S)) {
+    // Only recurse into CompoundStmt (block {}) and loop bodies
+    if (isa<CompoundStmt>(S) || isa<ForStmt>(S) || isa<CXXForRangeStmt>(S)) {
       return DynamicRecursiveASTVisitor::TraverseStmt(S);
-        }
+    }
 
-        // Stop traversal of the rest of statements, that break perfect
-        // loop nesting, such as control flow (IfStmt, SwitchStmt...)
-        return true;
+    // Stop traversal of the rest of statements, that break perfect
+    // loop nesting, such as control flow (IfStmt, SwitchStmt...)
+    return true;
   }
 
   bool TraverseDecl(Decl *D) override {
-        // Stop in the case of finding a declaration, it is not important
-        // in order to find nested loops (Possible CXXRecordDecl, RecordDecl,
-        // FunctionDecl...)
-        return true;
+    // Stop in the case of finding a declaration, it is not important
+    // in order to find nested loops (Possible CXXRecordDecl, RecordDecl,
+    // FunctionDecl...)
+    return true;
   }
 };
 
@@ -14504,15 +14504,14 @@ bool SemaOpenMP::analyzeLoopSequence(
     return isa<OMPLoopTransformationDirective>(Child);
   };
 
-
   // High level grammar validation
   for (auto *Child : LoopSeqStmt->children()) {
 
-        if (!Child)
+    if (!Child)
       continue;
 
-        // Skip over non-loop-sequence statements
-        if (!isLoopSequenceDerivation(Child)) {
+    // Skip over non-loop-sequence statements
+    if (!isLoopSequenceDerivation(Child)) {
       Child = Child->IgnoreContainers();
 
       // Ignore empty compound statement
@@ -14530,9 +14529,9 @@ bool SemaOpenMP::analyzeLoopSequence(
         // Already been treated, skip this children
         continue;
       }
-        }
-        // Regular loop sequence handling
-        if (isLoopSequenceDerivation(Child)) {
+    }
+    // Regular loop sequence handling
+    if (isLoopSequenceDerivation(Child)) {
       if (isLoopGeneratingStmt(Child)) {
         if (!analyzeLoopGeneration(Child)) {
           return false;
@@ -14546,12 +14545,12 @@ bool SemaOpenMP::analyzeLoopSequence(
         // Update the Loop Sequence size by one
         ++LoopSeqSize;
       }
-        } else {
+    } else {
       // Report error for invalid statement inside canonical loop sequence
       Diag(Child->getBeginLoc(), diag::err_omp_not_for)
           << 0 << getOpenMPDirectiveName(Kind);
       return false;
-        }
+    }
   }
   return true;
 }
@@ -14568,9 +14567,9 @@ bool SemaOpenMP::checkTransformableLoopSequence(
 
   // Checks whether the given statement is a compound statement
   if (!isa<CompoundStmt>(AStmt)) {
-        Diag(AStmt->getBeginLoc(), diag::err_omp_not_a_loop_sequence)
-            << getOpenMPDirectiveName(Kind);
-        return false;
+    Diag(AStmt->getBeginLoc(), diag::err_omp_not_a_loop_sequence)
+        << getOpenMPDirectiveName(Kind);
+    return false;
   }
   // Number of top level canonical loop nests observed (And acts as index)
   LoopSeqSize = 0;
@@ -14601,7 +14600,7 @@ bool SemaOpenMP::checkTransformableLoopSequence(
                            OriginalInits, TransformsPreInits,
                            LoopSequencePreInits, LoopCategories, Context,
                            Kind)) {
-        return false;
+    return false;
   }
   if (LoopSeqSize <= 0) {
     Diag(AStmt->getBeginLoc(), diag::err_omp_empty_loop_sequence)
@@ -15315,7 +15314,7 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   Stmt *LoopStmt = nullptr;
   collectLoopStmts(AStmt, {LoopStmt});
 
-  // Determine the PreInit declarations.e
+  // Determine the PreInit declarations.
   SmallVector<Stmt *, 4> PreInits;
   addLoopPreInits(Context, LoopHelper, LoopStmt, OriginalInits[0], PreInits);
 
@@ -15931,13 +15930,18 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
     CountVal = CountInt.getZExtValue();
   };
 
-  // Checks if the loop range is valid
+  // OpenMP [6.0, Restrictions]
+  // first + count - 1 must not evaluate to a value greater than the
+  // loop sequence length of the associated canonical loop sequence.
   auto ValidLoopRange = [](uint64_t FirstVal, uint64_t CountVal,
                            unsigned NumLoops) -> bool {
     return FirstVal + CountVal - 1 <= NumLoops;
   };
   uint64_t FirstVal = 1, CountVal = 0, LastVal = LoopSeqSize;
 
+  // Validates the loop range after evaluating the semantic information
+  // and ensures that the range is valid for the given loop sequence size.
+  // Expressions are evaluated at compile time to obtain constant values.
   if (LRC) {
     EvaluateLoopRangeArguments(LRC->getFirst(), LRC->getCount(), FirstVal,
                                CountVal);
