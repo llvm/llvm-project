@@ -61,7 +61,7 @@ std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
   if (!Params.has_value())
     return std::nullopt;
 
-  // Check mandatory parameters were provided
+  // Check mandatory parameters where provided
   if (!Params->Num32BitConstants.has_value()) {
     getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
         << TokenKind::kw_num32BitConstants;
