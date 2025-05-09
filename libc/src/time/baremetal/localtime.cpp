@@ -10,9 +10,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(struct tm *tm, localtime, (time_t *time)) {
-  (void)time;
-  return NULL;
+LLVM_LIBC_FUNCTION(struct tm *, localtime, (time_t *timer)) {
+  return time_utils::localtime_internal(timer, buf);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
