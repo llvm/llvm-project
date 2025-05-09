@@ -138,10 +138,8 @@ void DefinitionBlockSeparator::separateBlocks(
       assert(Direction >= -1);
       assert(Direction <= 1);
 
-      if (Style.isCSharp() &&
-          Lines[OpeningLineIndex]->First->is(TT_CSharpGenericTypeConstraint)) {
+      if (Lines[OpeningLineIndex]->First->is(TT_CSharpGenericTypeConstraint))
         return true;
-      }
 
       const size_t OperateIndex = OpeningLineIndex + Direction;
       assert(OperateIndex < Lines.size());
