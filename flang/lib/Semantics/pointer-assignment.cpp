@@ -59,6 +59,7 @@ public:
   PointerAssignmentChecker &set_isBoundsRemapping(bool);
   PointerAssignmentChecker &set_isAssumedRank(bool);
   PointerAssignmentChecker &set_pointerComponentLHS(const Symbol *);
+  PointerAssignmentChecker &set_isRHSPointerActualArgument(bool);
   bool CheckLeftHandSide(const SomeExpr &);
   bool Check(const SomeExpr &);
 
@@ -94,6 +95,7 @@ private:
   bool isVolatile_{false};
   bool isBoundsRemapping_{false};
   bool isAssumedRank_{false};
+  bool isRHSPointerActualArgument_{false};
   const Symbol *pointerComponentLHS_{nullptr};
 };
 
@@ -130,6 +132,12 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_isAssumedRank(
 PointerAssignmentChecker &PointerAssignmentChecker::set_pointerComponentLHS(
     const Symbol *symbol) {
   pointerComponentLHS_ = symbol;
+  return *this;
+}
+
+PointerAssignmentChecker &
+PointerAssignmentChecker::set_isRHSPointerActualArgument(bool isPointerActual) {
+  isRHSPointerActualArgument_ = isPointerActual;
   return *this;
 }
 
@@ -221,6 +229,9 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
         Say("CONTIGUOUS pointer may not be associated with a discontiguous target"_err_en_US);
         return false;
       }
+    } else if (isRHSPointerActualArgument_) {
+      Say("CONTIGUOUS pointer dummy argument may not be associated with non-CONTIGUOUS pointer actual argument"_err_en_US);
+      return false;
     } else {
       Warn(common::UsageWarning::PointerToPossibleNoncontiguous,
           "Target of CONTIGUOUS pointer association is not known to be contiguous"_warn_en_US);
@@ -585,12 +596,14 @@ bool CheckStructConstructorPointerComponent(SemanticsContext &context,
 
 bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
     const std::string &description, const DummyDataObject &lhs,
-    const SomeExpr &rhs, const Scope &scope, bool isAssumedRank) {
+    const SomeExpr &rhs, const Scope &scope, bool isAssumedRank,
+    bool isPointerActualArgument) {
   return PointerAssignmentChecker{context, scope, source, description}
       .set_lhsType(common::Clone(lhs.type))
       .set_isContiguous(lhs.attrs.test(DummyDataObject::Attr::Contiguous))
       .set_isVolatile(lhs.attrs.test(DummyDataObject::Attr::Volatile))
       .set_isAssumedRank(isAssumedRank)
+      .set_isRHSPointerActualArgument(isPointerActualArgument)
       .Check(rhs);
 }
 
