@@ -87,7 +87,8 @@ static void DumpDWARFExpr(Stream &s, llvm::ArrayRef<uint8_t> expr, Thread *threa
   if (auto order_and_width = GetByteOrderAndAddrSize(thread)) {
     llvm::DataExtractor data(expr, order_and_width->first == eByteOrderLittle,
                              order_and_width->second);
-    llvm::DWARFExpression E(data, order_and_width->second, llvm::dwarf::DWARF32);
+    llvm::DWARFExpression E(data, order_and_width->second,
+                            llvm::dwarf::DWARF32);
     llvm::DWARFExpressionPrinter::print(&E, s.AsRawOstream(),
                                         llvm::DIDumpOptions(), nullptr);
   } else
