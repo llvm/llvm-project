@@ -34,17 +34,15 @@ class TestUnwindFramelessFaulted(TestBase):
 
         # Instruction step through the binary until we are in a function not
         # listed in correct_frames.
-        while (
-            process.GetState() == lldb.eStateStopped
-            and thread.GetFrameAtIndex(0).name in correct_frames
-        ):
+        frame = thread.GetFrameAtIndex(0)
+        while process.GetState() == lldb.eStateStopped and frame.name in correct_frames:
             starting_index = 0
             if self.TraceOn():
                 self.runCmd("bt")
 
             # Find which index into correct_frames the current stack frame is
             for idx, name in enumerate(correct_frames):
-                if thread.GetFrameAtIndex(0).name == name:
+                if frame.name == name:
                     starting_index = idx
 
             # Test that all frames after the current frame listed in
@@ -54,6 +52,32 @@ class TestUnwindFramelessFaulted(TestBase):
                 self.assertEqual(thread.GetFrameAtIndex(frame_idx).name, expected_frame)
                 frame_idx = frame_idx + 1
 
+            # When we're at our deepest level, test that register passing of x0 and x20
+            # follow the by-hand UnwindPlan rules.  In this test program, we can get x0
+            # in the middle of the stack and we CAN'T get x20. The opposites of the normal
+            # AArch64 SysV ABI.
+            if frame.name == "break_to_debugger":
+                tbi_frame = thread.GetFrameAtIndex(2)
+                self.assertEqual(tbi_frame.name, "to_be_interrupted")
+
+                # The original argument to to_be_interrupted(), 10
+                # Normally can't get x0 mid-stack, but UnwindPlans have special rules to
+                # make this possible.
+                x0_reg = tbi_frame.register["x0"]
+                self.assertTrue(x0_reg.IsValid())
+                self.assertEqual(x0_reg.GetValueAsUnsigned(), 10)
+
+                # The incremented return value from to_be_interrupted(), 11
+                x24_reg = tbi_frame.register["x24"]
+                self.assertTrue(x24_reg.IsValid())
+                self.assertEqual(x24_reg.GetValueAsUnsigned(), 11)
+
+                # x20 can normally be fetched mid-stack, but the UnwindPlan
+                # has a rule saying it can't be fetched.
+                x20_reg = tbi_frame.register["x20"]
+                self.assertTrue(x20_reg.error.fail)
+
             if self.TraceOn():
                 print("StepInstruction")
             thread.StepInstruction(False)
+            frame = thread.GetFrameAtIndex(0)
