@@ -6,6 +6,8 @@
 
 #include "../assembly.h"
 
+#ifdef __ARM_FEATURE_UNALIGNED
+
 //
 //  __arm_sc_memcpy / __arm_sc_memmove
 //
@@ -346,4 +348,6 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memset)
         ret
 END_COMPILERRT_FUNCTION(__arm_sc_memset)
 
-#endif // __aarch64__
+#endif /* defined(__aarch64__) && __ARM_FP != 0 */
+
+#endif /* __ARM_FEATURE_UNALIGNED */
