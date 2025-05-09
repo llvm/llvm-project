@@ -105,3 +105,11 @@ int main(int argc, char **argv) {
 
   return (tmain<int, 5>(argc) + tmain<char, 1>(argv[0][0])); // expected-note {{in instantiation of function template specialization 'tmain<int, 5>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<char, 1>' requested here}}
 }
+
+namespace GH139266 {
+void f(void) {
+#pragma omp distribute dist_schedule(static, 0) // expected-error {[argument to 'dist_schedule' clause must be a strictly positive integer value}}
+  for (int i = 0; i < 10; i++)
+    ;
+}
+} // namespace GH139266
