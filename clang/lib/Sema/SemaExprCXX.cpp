@@ -1769,7 +1769,7 @@ namespace {
       // A function template declaration is only a usual deallocation function
       // if it is a typed delete.
       if (!FD) {
-        if (AllocType.isNull())
+        if (AllocType.isNull() || !S.getLangOpts().CXXTypeAwareAllocators)
           return;
         auto *FTD = dyn_cast<FunctionTemplateDecl>(Found->getUnderlyingDecl());
         if (!FTD)
@@ -1787,7 +1787,7 @@ namespace {
         // type being deallocated, or if the type-identity parameter of the
         // deallocation function does not match the constructed type_identity
         // specialization we reject the declaration.
-        if (AllocType.isNull()) {
+        if (AllocType.isNull() || !S.getLangOpts().CXXTypeAwareAllocators) {
           FD = nullptr;
           return;
         }
