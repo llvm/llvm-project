@@ -8,7 +8,7 @@
 
 // <forward_list>
 
-// void resize(size_type n, const value_type& v);
+// void resize(size_type n, const value_type& v); // constexpr since C++26
 
 #include <forward_list>
 #include <cassert>
@@ -22,7 +22,7 @@
 #  include "container_test_types.h"
 #endif
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef int T;
     typedef std::forward_list<T> C;
@@ -84,7 +84,7 @@ int main(int, char**) {
     assert(*std::next(c.begin(), 4) == 10);
     assert(*std::next(c.begin(), 5) == 10);
   }
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // Test that the allocator's construct method is being used to
     // construct the new elements and that it's called exactly N times.
     typedef std::forward_list<int, ContainerTestAllocator<int, int>> Container;
@@ -97,6 +97,15 @@ int main(int, char**) {
       assert(!cc->unchecked());
     }
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;
