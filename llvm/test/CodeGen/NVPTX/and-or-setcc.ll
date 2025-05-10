@@ -12,8 +12,8 @@ define i1 @and_ord(float %a, float %b) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [and_ord_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [and_ord_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [and_ord_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [and_ord_param_1];
 ; CHECK-NEXT:    setp.num.f32 %p1, %f1, %f2;
 ; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -32,8 +32,8 @@ define i1 @or_uno(float %a, float %b) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [or_uno_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [or_uno_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [or_uno_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [or_uno_param_1];
 ; CHECK-NEXT:    setp.nan.f32 %p1, %f1, %f2;
 ; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
