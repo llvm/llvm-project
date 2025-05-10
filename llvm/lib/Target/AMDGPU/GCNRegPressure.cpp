@@ -549,22 +549,26 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
         if (!S.liveAt(SI)) {
           if (It == LiveRegs.end()) {
             It = LiveRegs.find(MO.getReg());
-            if (It == LiveRegs.end())
+            if (!MRI->isSSA() && It == LiveRegs.end())
               llvm_unreachable("register isn't live");
           }
-          auto PrevMask = It->second;
-          It->second &= ~S.LaneMask;
-          CurPressure.inc(MO.getReg(), PrevMask, It->second, *MRI);
+          if (It != LiveRegs.end()) {
+            auto PrevMask = It->second;
+            It->second &= ~S.LaneMask;
+            CurPressure.inc(MO.getReg(), PrevMask, It->second, *MRI);
+          }
         }
       }
       if (It != LiveRegs.end() && It->second.none())
         LiveRegs.erase(It);
     } else if (!LI.liveAt(SI)) {
       auto It = LiveRegs.find(MO.getReg());
-      if (It == LiveRegs.end())
+      if (!MRI->isSSA() && It == LiveRegs.end())
         llvm_unreachable("register isn't live");
-      CurPressure.inc(MO.getReg(), It->second, LaneBitmask::getNone(), *MRI);
-      LiveRegs.erase(It);
+      if (It != LiveRegs.end()) {
+        CurPressure.inc(MO.getReg(), It->second, LaneBitmask::getNone(), *MRI);
+        LiveRegs.erase(It);
+      }
     }
   }
 
