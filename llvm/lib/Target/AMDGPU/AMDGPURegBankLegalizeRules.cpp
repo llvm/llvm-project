@@ -450,6 +450,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr32}})
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32}});
 
+  addRulesForGOpcs({G_LSHR}, Standard).Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}});
+
+  addRulesForGOpcs({G_UBFX, G_SBFX}, Standard)
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32, Sgpr32}, S_BFE})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr32, Sgpr32}, S_BFE})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32, Vgpr32}, V_BFE});
+
   // Note: we only write S1 rules for G_IMPLICIT_DEF, G_CONSTANT, G_FCONSTANT
   // and G_FREEZE here, rest is trivially regbankselected earlier
   addRulesForGOpcs({G_IMPLICIT_DEF}).Any({{UniS1}, {{Sgpr32Trunc}, {}}});
@@ -628,6 +636,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{}, {Vgpr32, None, Vgpr32, Vgpr32}});
 
   addRulesForIOpcs({amdgcn_readfirstlane})
-      .Any({{UniS32, _, DivS32}, {{}, {Sgpr32, None, Vgpr32}}});
+      .Any({{UniS32, _, DivS32}, {{}, {Sgpr32, None, Vgpr32}}})
+      // this should not exist in the first place, it is from call lowering
+      // readfirstlaning just in case register is not in sgpr.
+      .Any({{UniS32, _, UniS32}, {{}, {Sgpr32, None, Vgpr32}}});
 
 } // end initialize rules
