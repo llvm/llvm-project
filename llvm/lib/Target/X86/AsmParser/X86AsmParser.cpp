@@ -2032,7 +2032,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       const MCExpr *Val;
       if (isParsingMSInlineAsm() || Parser.isParsingMasm()) {
         // MS Dot Operator expression
-        if (Identifier.count('.') &&
+        if (Identifier.contains('.') &&
             (PrevTK == AsmToken::RBrac || PrevTK == AsmToken::RParen)) {
           if (ParseIntelDotOperator(SM, End))
             return true;
