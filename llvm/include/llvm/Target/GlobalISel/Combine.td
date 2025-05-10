@@ -1038,8 +1038,7 @@ def funnel_shift_or_shift_to_funnel_shift_left: GICombineRule<
   (defs root:$root), 
   (match (G_FSHL $out1, $x, $z, $y),
          (G_SHL $out2, $x, $y),
-         (G_OR $root, $out1, $out2),
-         [{ return MRI.hasOneUse(${out2}.getReg()); }]),
+         (G_OR $root, $out1, $out2)),
   (apply (GIReplaceReg $root, $out1))
 >;
 
@@ -1048,8 +1047,7 @@ def funnel_shift_or_shift_to_funnel_shift_right: GICombineRule<
   (defs root:$root), 
   (match (G_FSHR $out1, $z, $x, $y),
          (G_LSHR $out2, $x, $y),
-         (G_OR $root, $out1, $out2),
-         [{ return MRI.hasOneUse(${out2}.getReg()); }]),
+         (G_OR $root, $out1, $out2)),
   (apply (GIReplaceReg $root, $out1))
 >;
 

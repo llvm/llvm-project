@@ -9,8 +9,7 @@ define i16 @test_lshr_i32(i32 %_, i32 %x, i32 %y) {
 ; RV32-NEXT:    not a2, a2
 ; RV32-NEXT:    slli a0, a0, 1
 ; RV32-NEXT:    sll a0, a0, a2
-; RV32-NEXT:    or a2, a1, a1
-; RV32-NEXT:    or a0, a0, a2
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    and a0, a0, a1
 ; RV32-NEXT:    ret
 ;
@@ -20,8 +19,7 @@ define i16 @test_lshr_i32(i32 %_, i32 %x, i32 %y) {
 ; RV64-NEXT:    not a2, a2
 ; RV64-NEXT:    slli a0, a0, 1
 ; RV64-NEXT:    sllw a0, a0, a2
-; RV64-NEXT:    or a2, a1, a1
-; RV64-NEXT:    or a0, a0, a2
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    ret
   %lshr = lshr i32 %x, %y
@@ -54,8 +52,7 @@ define i16 @test_shl_i32(i32 %_, i32 %x, i32 %y) {
 ; RV32-NEXT:    sll a1, a1, a2
 ; RV32-NEXT:    srli a0, a0, 1
 ; RV32-NEXT:    srl a0, a0, a3
-; RV32-NEXT:    or a2, a1, a1
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    and a0, a0, a1
 ; RV32-NEXT:    ret
 ;
@@ -65,8 +62,7 @@ define i16 @test_shl_i32(i32 %_, i32 %x, i32 %y) {
 ; RV64-NEXT:    sllw a1, a1, a2
 ; RV64-NEXT:    srliw a0, a0, 1
 ; RV64-NEXT:    srlw a0, a0, a3
-; RV64-NEXT:    or a2, a1, a1
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    or a0, a1, a0
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    ret
   %fshl = call i32 @llvm.fshl.i32(i32 %x, i32 %_, i32 %y)
