@@ -412,6 +412,9 @@ Improvements to Clang's diagnostics
   the ``-Wc99-designator`` diagnostic group, as they also are about the
   behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
 
+- Fixed a duplicate diagnostic when performing typo correction on function template
+  calls with explicit template arguments. Fixes #GH139226.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
