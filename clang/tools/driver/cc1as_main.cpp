@@ -592,7 +592,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
     Triple T(Opts.Triple);
     Str.reset(TheTarget->createMCObjectStreamer(
         T, Ctx, std::move(MAB), std::move(OW), std::move(CE), *STI));
-    Str.get()->initSections(Opts.NoExecStack, *STI);
+    Str->initSections(Opts.NoExecStack, *STI);
     if (T.isOSBinFormatMachO() && T.isOSDarwin()) {
       Triple *TVT = Opts.DarwinTargetVariantTriple
                         ? &*Opts.DarwinTargetVariantTriple
@@ -607,8 +607,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   if (Opts.EmbedBitcode && Ctx.getObjectFileType() == MCContext::IsMachO) {
     MCSection *AsmLabel = Ctx.getMachOSection(
         "__LLVM", "__asm", MachO::S_REGULAR, 4, SectionKind::getReadOnly());
-    Str.get()->switchSection(AsmLabel);
-    Str.get()->emitZeros(1);
+    Str->switchSection(AsmLabel);
+    Str->emitZeros(1);
   }
 
   // Emit the ptrauth ABI version, if any.
@@ -619,7 +619,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   bool Failed = false;
 
   std::unique_ptr<MCAsmParser> Parser(
-      createMCAsmParser(SrcMgr, Ctx, *Str.get(), *MAI));
+      createMCAsmParser(SrcMgr, Ctx, *Str, *MAI));
 
   // FIXME: init MCTargetOptions from sanitizer flags here.
   std::unique_ptr<MCTargetAsmParser> TAP(
@@ -639,7 +639,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   }
 
   if (!Failed) {
-    Parser->setTargetParser(*TAP.get());
+    Parser->setTargetParser(*TAP);
     Failed = Parser->Run(Opts.NoInitialTextSection);
   }
 
