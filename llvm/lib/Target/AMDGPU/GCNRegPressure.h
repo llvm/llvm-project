@@ -53,20 +53,11 @@ struct GCNRegPressure {
   /// UnifiedVGPRFile
   unsigned getVGPRNum(bool UnifiedVGPRFile) const {
     if (UnifiedVGPRFile) {
-      return Value[AGPR32] ? getUnifiedVGPRNum(Value[VGPR32], Value[AGPR32])
+      return Value[AGPR32] ? alignTo(Value[VGPR32], 4) + Value[AGPR32]
                            : Value[VGPR32] + Value[AGPR32];
     }
     return std::max(Value[VGPR32], Value[AGPR32]);
   }
-
-  /// Returns the aggregated VGPR pressure, assuming \p NumArchVGPRs ArchVGPRs
-  /// and \p NumAGPRs AGPRS, for a target with a unified VGPR file.
-  inline static unsigned getUnifiedVGPRNum(unsigned NumArchVGPRs,
-                                           unsigned NumAGPRs) {
-    return alignTo(NumArchVGPRs, AMDGPU::IsaInfo::getArchVGPRAllocGranule()) +
-           NumAGPRs;
-  }
-
   /// \returns the ArchVGPR32 pressure
   unsigned getArchVGPRNum() const { return Value[VGPR32]; }
   /// \returns the AccVGPR32 pressure

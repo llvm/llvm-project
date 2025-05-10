@@ -71,6 +71,7 @@ private:
   // expected, or, there is a lexing error
 
   /// Root Element parse methods:
+  std::optional<llvm::hlsl::rootsig::RootFlags> parseRootFlags();
   std::optional<llvm::hlsl::rootsig::RootConstants> parseRootConstants();
   std::optional<llvm::hlsl::rootsig::DescriptorTable> parseDescriptorTable();
   std::optional<llvm::hlsl::rootsig::DescriptorTableClause>
@@ -82,6 +83,8 @@ private:
   struct ParsedConstantParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> Num32BitConstants;
+    std::optional<uint32_t> Space;
+    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
   };
   std::optional<ParsedConstantParams> parseRootConstantParams();
 

@@ -335,6 +335,11 @@ enum GlobalValueSummarySymtabCodes {
   // CallStackRadixTreeBuilder class in ProfileData/MemProf.h for format.
   // [n x entry]
   FS_CONTEXT_RADIX_TREE_ARRAY = 32,
+  // Summary of combined index allocation memprof metadata, without context.
+  // [nummib, numver,
+  //  nummib x alloc type,
+  //  numver x version]
+  FS_COMBINED_ALLOC_INFO_NO_CONTEXT = 33,
 };
 
 enum MetadataCodes {

@@ -8379,15 +8379,14 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
     return;
   }
 
-  if (!T->isSignableType() && !T->isDependentType()) {
-    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_nonpointer) << T;
+  if (!T->isSignableType(Ctx) && !T->isDependentType()) {
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_invalid_target) << T;
     Attr.setInvalid();
     return;
   }
 
   if (T.getPointerAuth()) {
-    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_redundant)
-        << T << Attr.getAttrName()->getName();
+    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_redundant) << T;
     Attr.setInvalid();
     return;
   }
@@ -8402,7 +8401,8 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
          "address discriminator arg should be either 0 or 1");
   PointerAuthQualifier Qual = PointerAuthQualifier::Create(
       Key, IsAddressDiscriminated, ExtraDiscriminator,
-      PointerAuthenticationMode::SignAndAuth, false, false);
+      PointerAuthenticationMode::SignAndAuth, /*IsIsaPointer=*/false,
+      /*AuthenticatesNullValues=*/false);
   T = S.Context.getPointerAuthType(T, Qual);
 }
 

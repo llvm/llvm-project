@@ -5571,6 +5571,10 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
     if (ScalarCosts.contains(I))
       continue;
 
+    // Cannot scalarize fixed-order recurrence phis at the moment.
+    if (isa<PHINode>(I) && Legal->isFixedOrderRecurrence(cast<PHINode>(I)))
+      continue;
+
     // Compute the cost of the vector instruction. Note that this cost already
     // includes the scalarization overhead of the predicated instruction.
     InstructionCost VectorCost = getInstructionCost(I, VF);

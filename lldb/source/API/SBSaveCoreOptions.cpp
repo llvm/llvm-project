@@ -114,6 +114,20 @@ void SBSaveCoreOptions::Clear() {
   m_opaque_up->Clear();
 }
 
+uint64_t SBSaveCoreOptions::GetCurrentSizeInBytes(SBError &error) {
+  LLDB_INSTRUMENT_VA(this, error);
+  llvm::Expected<uint64_t> expected_bytes =
+      m_opaque_up->GetCurrentSizeInBytes();
+  if (!expected_bytes) {
+    error =
+        SBError(lldb_private::Status::FromError(expected_bytes.takeError()));
+    return 0;
+  }
+  // Clear the error, so if the clearer uses it we set it to success.
+  error.Clear();
+  return *expected_bytes;
+}
+
 lldb_private::SaveCoreOptions &SBSaveCoreOptions::ref() const {
   return *m_opaque_up.get();
 }
