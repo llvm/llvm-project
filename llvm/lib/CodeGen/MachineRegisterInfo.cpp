@@ -118,8 +118,8 @@ MachineRegisterInfo::constrainRegAttrs(Register Reg,
   return true;
 }
 
-bool
-MachineRegisterInfo::recomputeRegClass(Register Reg) {
+const TargetRegisterClass *
+MachineRegisterInfo::getLargestConstrainedSuperClass(Register Reg) const {
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   const TargetRegisterClass *OldRC = getRegClass(Reg);
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
@@ -127,7 +127,7 @@ MachineRegisterInfo::recomputeRegClass(Register Reg) {
 
   // Stop early if there is no room to grow.
   if (NewRC == OldRC)
-    return false;
+    return NewRC;
 
   // Accumulate constraints from all uses.
   for (MachineOperand &MO : reg_nodbg_operands(Reg)) {
@@ -136,8 +136,16 @@ MachineRegisterInfo::recomputeRegClass(Register Reg) {
     unsigned OpNo = &MO - &MI->getOperand(0);
     NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, TII, TRI);
     if (!NewRC || NewRC == OldRC)
-      return false;
+      return OldRC;
   }
+  return NewRC;
+}
+
+bool MachineRegisterInfo::recomputeRegClass(Register Reg) {
+  const TargetRegisterClass *OldRC = getRegClass(Reg);
+  const TargetRegisterClass *NewRC = getLargestConstrainedSuperClass(Reg);
+  if (NewRC == OldRC)
+    return false;
   setRegClass(Reg, NewRC);
   return true;
 }
