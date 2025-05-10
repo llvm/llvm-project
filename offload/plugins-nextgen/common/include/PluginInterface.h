@@ -356,6 +356,7 @@ struct GenericKernelTy {
     return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC;
   }
   bool isSPMDMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD; }
+  bool isBareMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_BARE; }
 
   /// AMD-only execution modes
   bool isBigJumpLoopMode() const {
@@ -374,7 +375,7 @@ struct GenericKernelTy {
 protected:
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
-    switch (KernelEnvironment.Configuration.ExecMode) {
+    switch (ExecutionMode) {
     case OMP_TGT_EXEC_MODE_BARE:
       return "BARE";
     case OMP_TGT_EXEC_MODE_SPMD:
@@ -440,10 +441,6 @@ private:
                                 uint32_t BlockLimitClause[3],
                                 uint64_t LoopTripCount, uint32_t &NumThreads,
                                 bool IsNumThreadsFromUser) const;
-  /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
-  bool isBareMode() const {
-    return KernelEnvironment.Configuration.ExecMode == OMP_TGT_EXEC_MODE_BARE;
-  }
 
   /// The kernel name.
   const char *Name;
