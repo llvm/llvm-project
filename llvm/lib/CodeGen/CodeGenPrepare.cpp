@@ -5913,6 +5913,9 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   if (SunkAddr) {
     LLVM_DEBUG(dbgs() << "CGP: Reusing nonlocal addrmode: " << AddrMode
                       << " for " << *MemoryInst << "\n");
+    Instruction *AddrInst = dyn_cast<Instruction>(SunkAddr);
+    if (AddrInst && MemoryInst->comesBefore(AddrInst))
+      AddrInst->moveBefore(MemoryInst->getIterator());
     if (SunkAddr->getType() != Addr->getType()) {
       if (SunkAddr->getType()->getPointerAddressSpace() !=
               Addr->getType()->getPointerAddressSpace() &&
