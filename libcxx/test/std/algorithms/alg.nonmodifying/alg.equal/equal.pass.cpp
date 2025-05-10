@@ -20,7 +20,7 @@
 
 // We test the cartesian product, so we sometimes compare differently signed types
 // ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
-// ADDITIONAL_COMPILE_FLAGS(clang-21): -Wno-implicit-unicode-conversion
+// ADDITIONAL_COMPILE_FLAGS(character-conversion-warnings): -Wno-character-conversion
 
 // MSVC warning C4242: 'argument': conversion from 'int' to 'const _Ty', possible loss of data
 // MSVC warning C4244: 'argument': conversion from 'wchar_t' to 'const _Ty', possible loss of data

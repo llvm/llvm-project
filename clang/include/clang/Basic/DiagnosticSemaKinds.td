@@ -4360,25 +4360,25 @@ def warn_address_of_reference_bool_conversion : Warning<
 def warn_impcast_unicode_char_type
     : Warning<"implicit conversion from %0 to %1 may change the meaning of the "
               "represented code unit">,
-      InGroup<ImplicitUnicodeConversion>;
+      InGroup<CharacterConversion>;
 def warn_impcast_unicode_precision
     : Warning<"implicit conversion from %0 to %1 may lose precision and change "
               "the meaning of the represented code unit">,
-      InGroup<ImplicitUnicodeConversion>;
+      InGroup<CharacterConversion>;
 def warn_impcast_unicode_char_type_constant
     : Warning<"implicit conversion from %0 to %1 changes the meaning of the "
               "%select{code unit|codepoint}2 '%3'">,
-      InGroup<ImplicitUnicodeConversion>;
+      InGroup<CharacterConversion>;
 
 def warn_comparison_unicode_mixed_types
     : Warning<"comparing values of different Unicode code unit types %0 and %1 "
               "may compare different codepoints">,
-      InGroup<ImplicitUnicodeConversion>;
+      InGroup<CharacterConversion>;
 
 def warn_comparison_unicode_mixed_types_constant
     : Warning<"comparing values of different Unicode code unit types %0 and %1 "
               "compares unrelated code units '%2' and '%3'">,
-      InGroup<ImplicitUnicodeConversion>;
+      InGroup<CharacterConversion>;
 
 def warn_xor_used_as_pow : Warning<
   "result of '%0' is %1; did you mean exponentiation?">,
@@ -6843,7 +6843,7 @@ def err_counted_by_on_incomplete_type_on_use : Error <
 
 def note_counted_by_consider_completing_pointee_ty : Note<
   "consider providing a complete definition for %0">;
-  
+
 def note_counted_by_consider_using_sized_by : Note<
   "consider using '__sized_by%select{|_or_null}0' instead of "
   "'__counted_by%select{|_or_null}0'">;
@@ -7745,7 +7745,7 @@ def warn_comparison_of_mixed_enum_types_switch : Warning<
 def warn_arith_conv_mixed__unicode_types
     : Warning<"%sub{select_arith_conv_kind}0 "
               "different Unicode character types %1 and %2">,
-      InGroup<ImplicitUnicodeConversion>;
+      InGroup<CharacterConversion>;
 
 def err_typecheck_assign_const : Error<
   "%select{"
