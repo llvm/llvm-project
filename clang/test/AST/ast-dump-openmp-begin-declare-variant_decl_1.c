@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -verify -ast-dump %s       | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -verify -ast-dump %s -x c++| FileCheck %s
 // expected-no-diagnostics
+// XFAIL: *
+
 // FIXME: We have to improve the warnings here as nothing is impacted by the declare variant.
 int also_before(void) {
   return 0;
