@@ -3957,6 +3957,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
     break;
 
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     llvm_unreachable("HLSL doesn't support virtual functions");
   }
 
@@ -4235,6 +4236,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
     break;
 
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     llvm_unreachable("HLSL doesn't support RTTI");
   }
 

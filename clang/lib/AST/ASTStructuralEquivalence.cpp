@@ -1157,6 +1157,23 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
 
+  case Type::HLSLInlineSpirv:
+    if (cast<HLSLInlineSpirvType>(T1)->getOpcode() !=
+            cast<HLSLInlineSpirvType>(T2)->getOpcode() ||
+        cast<HLSLInlineSpirvType>(T1)->getSize() !=
+            cast<HLSLInlineSpirvType>(T2)->getSize() ||
+        cast<HLSLInlineSpirvType>(T1)->getAlignment() !=
+            cast<HLSLInlineSpirvType>(T2)->getAlignment())
+      return false;
+    for (size_t I = 0; I < cast<HLSLInlineSpirvType>(T1)->getOperands().size();
+         I++) {
+      if (cast<HLSLInlineSpirvType>(T1)->getOperands()[I] !=
+          cast<HLSLInlineSpirvType>(T2)->getOperands()[I]) {
+        return false;
+      }
+    }
+    break;
+
   case Type::Paren:
     if (!IsStructurallyEquivalent(Context, cast<ParenType>(T1)->getInnerType(),
                                   cast<ParenType>(T2)->getInnerType()))
