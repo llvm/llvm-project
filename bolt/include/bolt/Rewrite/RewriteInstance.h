@@ -280,6 +280,9 @@ private:
   /// is the expected .plt \p Section entry function size.
   void disassemblePLTSectionX86(BinarySection &Section, uint64_t EntrySize);
 
+  /// Disassemble the X86-specific .plt \p Section header and get header size.
+  uint32_t disassemblePLTHeaderX86(BinarySection &Section, uint64_t EntrySize);
+
   /// Disassemble riscv-specific .plt \p Section auxiliary function
   void disassemblePLTSectionRISCV(BinarySection &Section);
 
