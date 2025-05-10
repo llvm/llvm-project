@@ -4779,7 +4779,8 @@ private:
               "Only one reference to the device resident object is supported");
           auto addr = getSymbolAddress(sym);
           mlir::Value baseValue;
-          if (auto declareOp = llvm::dyn_cast<hlfir::DeclareOp>(addr.getDefiningOp()))
+          if (auto declareOp =
+                  llvm::dyn_cast<hlfir::DeclareOp>(addr.getDefiningOp()))
             baseValue = declareOp.getBase();
           else
             baseValue = addr;
