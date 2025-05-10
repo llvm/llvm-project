@@ -572,7 +572,8 @@ void DataAggregator::processProfile(BinaryContext &BC) {
     if (FuncBranchData *FBD = getBranchData(BF)) {
       BF.markProfiled(BinaryFunction::PF_LBR);
       BF.RawSampleCount = FBD->getNumExecutedBranches();
-    } else if (FuncBasicSampleData *FSD = getFuncSampleData(BF.getNames())) {
+    } else if (FuncBasicSampleData *FSD =
+                   getFuncBasicSampleData(BF.getNames())) {
       BF.markProfiled(BinaryFunction::PF_IP);
       BF.RawSampleCount = FSD->getSamples();
     }
@@ -644,11 +645,11 @@ bool DataAggregator::doBasicSample(BinaryFunction &OrigFunc, uint64_t Address,
   // Attach executed bytes to parent function in case of cold fragment.
   Func.SampleCountInBytes += Count * BlockSize;
 
-  auto I = NamesToSamples.find(Func.getOneName());
-  if (I == NamesToSamples.end()) {
+  auto I = NamesToBasicSamples.find(Func.getOneName());
+  if (I == NamesToBasicSamples.end()) {
     bool Success;
     StringRef LocName = getLocationName(Func, BAT);
-    std::tie(I, Success) = NamesToSamples.insert(std::make_pair(
+    std::tie(I, Success) = NamesToBasicSamples.insert(std::make_pair(
         Func.getOneName(),
         FuncBasicSampleData(LocName, FuncBasicSampleData::ContainerTy())));
   }
@@ -2194,7 +2195,7 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
       OutFile << " " << Entry.getKey();
     OutFile << "\n";
 
-    for (const auto &KV : NamesToSamples) {
+    for (const auto &KV : NamesToBasicSamples) {
       const FuncBasicSampleData &FSD = KV.second;
       for (const BasicSampleInfo &SI : FSD.Data) {
         writeLocation(SI.Loc);

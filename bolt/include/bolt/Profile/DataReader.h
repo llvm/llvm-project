@@ -390,7 +390,7 @@ protected:
   FuncMemData *getMemDataForNames(const std::vector<StringRef> &FuncNames);
 
   FuncBasicSampleData *
-  getFuncSampleData(const std::vector<StringRef> &FuncNames);
+  getFuncBasicSampleData(const std::vector<StringRef> &FuncNames);
 
   /// Return a vector of all FuncBranchData matching the list of names.
   /// Internally use fuzzy matching to match special names like LTO-generated
@@ -433,7 +433,7 @@ protected:
   }
 
   using NamesToBranchesMapTy = std::map<StringRef, FuncBranchData>;
-  using NamesToSamplesMapTy = std::map<StringRef, FuncBasicSampleData>;
+  using NamesToBasicSamplesMapTy = std::map<StringRef, FuncBasicSampleData>;
   using NamesToMemEventsMapTy = std::map<StringRef, FuncMemData>;
   using FuncsToBranchesMapTy =
       std::unordered_map<const BinaryFunction *, FuncBranchData *>;
@@ -496,7 +496,7 @@ protected:
   unsigned Line{0};
   unsigned Col{0};
   NamesToBranchesMapTy NamesToBranches;
-  NamesToSamplesMapTy NamesToSamples;
+  NamesToBasicSamplesMapTy NamesToBasicSamples;
   NamesToMemEventsMapTy NamesToMemEvents;
   FuncsToBranchesMapTy FuncsToBranches;
   FuncsToMemDataMapTy FuncsToMemData;

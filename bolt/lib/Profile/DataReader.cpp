@@ -562,7 +562,7 @@ float DataReader::evaluateProfileData(BinaryFunction &BF,
 }
 
 void DataReader::readBasicSampleData(BinaryFunction &BF) {
-  FuncBasicSampleData *SampleDataOrErr = getFuncSampleData(BF.getNames());
+  FuncBasicSampleData *SampleDataOrErr = getFuncBasicSampleData(BF.getNames());
   if (!SampleDataOrErr)
     return;
 
@@ -1090,10 +1090,10 @@ bool DataReader::hasMemData() {
 
 std::error_code DataReader::parseInNoLBRMode() {
   auto GetOrCreateFuncEntry = [&](StringRef Name) {
-    auto I = NamesToSamples.find(Name);
-    if (I == NamesToSamples.end()) {
+    auto I = NamesToBasicSamples.find(Name);
+    if (I == NamesToBasicSamples.end()) {
       bool Success;
-      std::tie(I, Success) = NamesToSamples.insert(std::make_pair(
+      std::tie(I, Success) = NamesToBasicSamples.insert(std::make_pair(
           Name, FuncBasicSampleData(Name, FuncBasicSampleData::ContainerTy())));
 
       assert(Success && "unexpected result of insert");
@@ -1142,8 +1142,8 @@ std::error_code DataReader::parseInNoLBRMode() {
     I->second.Data.emplace_back(std::move(MI));
   }
 
-  for (auto &FuncSamples : NamesToSamples)
-    llvm::stable_sort(FuncSamples.second.Data);
+  for (auto &FuncBasicSamples : NamesToBasicSamples)
+    llvm::stable_sort(FuncBasicSamples.second.Data);
 
   for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
@@ -1323,7 +1323,7 @@ bool DataReader::mayHaveProfileData(const BinaryFunction &Function) {
   if (getBranchData(Function) || getMemData(Function))
     return true;
 
-  if (getFuncSampleData(Function.getNames()) ||
+  if (getFuncBasicSampleData(Function.getNames()) ||
       getBranchDataForNames(Function.getNames()) ||
       getMemDataForNames(Function.getNames()))
     return true;
@@ -1360,8 +1360,9 @@ DataReader::getMemDataForNames(const std::vector<StringRef> &FuncNames) {
 }
 
 FuncBasicSampleData *
-DataReader::getFuncSampleData(const std::vector<StringRef> &FuncNames) {
-  return fetchMapEntry<NamesToSamplesMapTy>(NamesToSamples, FuncNames);
+DataReader::getFuncBasicSampleData(const std::vector<StringRef> &FuncNames) {
+  return fetchMapEntry<NamesToBasicSamplesMapTy>(NamesToBasicSamples,
+                                                 FuncNames);
 }
 
 std::vector<FuncBranchData *> DataReader::getBranchDataForNamesRegex(
@@ -1401,7 +1402,7 @@ void DataReader::dump() const {
     StringRef Event = I->getKey();
     Diag << "Data was collected with event: " << Event << "\n";
   }
-  for (const auto &KV : NamesToSamples) {
+  for (const auto &KV : NamesToBasicSamples) {
     const StringRef Name = KV.first;
     const FuncBasicSampleData &FSD = KV.second;
     Diag << Name << " samples:\n";
