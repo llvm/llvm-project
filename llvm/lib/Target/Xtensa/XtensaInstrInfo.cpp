@@ -151,11 +151,15 @@ void XtensaInstrInfo::getLoadStoreOpcodes(const TargetRegisterClass *RC,
                                           unsigned &LoadOpcode,
                                           unsigned &StoreOpcode,
                                           int64_t offset) const {
-  assert((RC == &Xtensa::ARRegClass) &&
-         "Unsupported regclass to load or store");
-
-  LoadOpcode = Xtensa::L32I;
-  StoreOpcode = Xtensa::S32I;
+  if (RC == &Xtensa::ARRegClass) {
+    LoadOpcode = Xtensa::L32I;
+    StoreOpcode = Xtensa::S32I;
+  } else if (RC == &Xtensa::FPRRegClass) {
+    LoadOpcode = Xtensa::LSI;
+    StoreOpcode = Xtensa::SSI;
+  } else {
+    llvm_unreachable("Unsupported regclass to load or store");
+  }
 }
 
 void XtensaInstrInfo::loadImmediate(MachineBasicBlock &MBB,
