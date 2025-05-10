@@ -278,7 +278,6 @@ define <2 x i32> @ptrtoaddr_vec(<2 x ptr addrspace(7)> %ptr) {
 }
 
 ;; Check that we extend the offset to i160 instead of reinterpreting all bits.
-;; FIXME: this is not currently correct.
 define i160 @ptrtoaddr_ext(ptr addrspace(7) %ptr) {
 ; CHECK-LABEL: define i160 @ptrtoaddr_ext
 ; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {
