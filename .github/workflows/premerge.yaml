@@ -31,10 +31,21 @@ jobs:
         (github.event_name != 'pull_request' || github.event.action != 'closed')
     runs-on: llvm-premerge-linux-runners
     steps:
+      - name: Seed LLVM repo
+        run: |
+          # Github creates a directory at GITHUB_WORKSPACE by defualt; replace it
+          # with a symlink to our pre-checked-out LLVM repo (this is necessary
+          # since actions/checkout _really wants_ a path inside of
+          # `${GITHUB_WORKSPACE}`
+          rmdir "${GITHUB_WORKSPACE}"
+          ln -s /home/gha/llvm-project "${GITHUB_WORKSPACE}"
       - name: Checkout LLVM
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 2
+          # The `ln`'ed repo is frozen with the docker container; no need to
+          # clean.
+          clean: false
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
         with:
