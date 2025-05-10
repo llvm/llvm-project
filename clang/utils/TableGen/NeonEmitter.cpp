@@ -492,11 +492,8 @@ public:
 
   bool operator<(const Intrinsic &Other) const {
     // Sort lexicographically on a three-tuple (ArchGuard, TargetGuard, Name)
-    if (ArchGuard != Other.ArchGuard)
-      return ArchGuard < Other.ArchGuard;
-    if (TargetGuard != Other.TargetGuard)
-      return TargetGuard < Other.TargetGuard;
-    return Name < Other.Name;
+    return std::tie(ArchGuard, TargetGuard, Name) <
+           std::tie(Other.ArchGuard, Other.TargetGuard, Other.Name);
   }
 
   ClassKind getClassKind(bool UseClassBIfScalar = false) {
