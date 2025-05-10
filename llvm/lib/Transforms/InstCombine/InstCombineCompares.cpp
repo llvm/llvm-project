@@ -3117,7 +3117,8 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstantViaTruthTable(
 
     // Synthesize optimal logic.
     if (auto *Cond =
-            createLogicFromTable(Table, A, B, Builder, BO->hasOneUse()))
+            createLogicFromTable(Table, A, B, Builder, BO->hasOneUse());
+        Cond && Cmp.getType() == Cond->getType())
       return replaceInstUsesWith(Cmp, Cond);
   }
 
