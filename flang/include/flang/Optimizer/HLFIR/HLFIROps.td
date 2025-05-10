@@ -758,6 +758,13 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
     For expressions, this operation is an incentive to re-use the expression
     storage, if any, after the bufferization pass when possible (if the
     expression is not used afterwards).
+
+    For aliasing purposes, hlfir.associate with the source being
+    a trivial FIR value is considered to be a unique allocation
+    that does not alias with anything else. For non-trivial cases
+    it may be a unique allocation or an alias for the source expression
+    storage, so FIR alias analysis will look through it for finding
+    the source.
   }];
 
   let arguments = (ins
