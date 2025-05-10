@@ -492,16 +492,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::PHI: {
-    assert(getParent() ==
-               getParent()->getPlan()->getVectorLoopRegion()->getEntry() &&
-           "VPInstructions with PHI opcodes must be used for header phis only "
-           "at the moment");
-    BasicBlock *VectorPH =
-        State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
-    Value *Start = State.get(getOperand(0), VPLane(0));
-    PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
-    Phi->addIncoming(Start, VectorPH);
-    return Phi;
+    llvm_unreachable("should be handled by VPPhi::execute");
   }
   case Instruction::Select: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
@@ -1130,6 +1121,19 @@ void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
   }
 }
 #endif
+
+void VPPhi::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
+  assert(getParent() ==
+             getParent()->getPlan()->getVectorLoopRegion()->getEntry() &&
+         "VPInstructions with PHI opcodes must be used for header phis only "
+         "at the moment");
+  BasicBlock *VectorPH = State.CFG.VPBB2IRBB.at(getIncomingBlock(0));
+  Value *Start = State.get(getIncomingValue(0), VPLane(0));
+  PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, getName());
+  Phi->addIncoming(Start, VectorPH);
+  State.set(this, Phi, VPLane(0));
+}
 
 VPIRInstruction *VPIRInstruction ::create(Instruction &I) {
   if (auto *Phi = dyn_cast<PHINode>(&I))
