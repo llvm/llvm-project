@@ -193,6 +193,15 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
       return WhyNotDefinableLast(at, scope, flags, dataRef->GetLastSymbol());
     }
   }
+  auto dyType{evaluate::DynamicType::From(ultimate)};
+  const auto *inPure{FindPureProcedureContaining(scope)};
+  if (inPure && !flags.test(DefinabilityFlag::PolymorphicOkInPure) &&
+      flags.test(DefinabilityFlag::PotentialDeallocation) && dyType &&
+      dyType->IsPolymorphic()) {
+    return BlameSymbol(at,
+        "'%s' is a whole polymorphic object in a pure subprogram"_en_US,
+        original);
+  }
   if (flags.test(DefinabilityFlag::PointerDefinition)) {
     if (flags.test(DefinabilityFlag::AcceptAllocatable)) {
       if (!IsAllocatableOrObjectPointer(&ultimate)) {
@@ -210,26 +219,17 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
         "'%s' is an entity with either an EVENT_TYPE or LOCK_TYPE"_en_US,
         original);
   }
-  if (FindPureProcedureContaining(scope)) {
-    if (auto dyType{evaluate::DynamicType::From(ultimate)}) {
-      if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
-        if (dyType->IsPolymorphic()) { // C1596
-          return BlameSymbol(
-              at, "'%s' is polymorphic in a pure subprogram"_en_US, original);
-        }
-      }
-      if (const Symbol * impure{HasImpureFinal(ultimate)}) {
-        return BlameSymbol(at, "'%s' has an impure FINAL procedure '%s'"_en_US,
-            original, impure->name());
-      }
+  if (dyType && inPure) {
+    if (const Symbol * impure{HasImpureFinal(ultimate)}) {
+      return BlameSymbol(at, "'%s' has an impure FINAL procedure '%s'"_en_US,
+          original, impure->name());
+    }
+    if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
       if (const DerivedTypeSpec * derived{GetDerivedTypeSpec(dyType)}) {
-        if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
-          if (auto bad{
-                  FindPolymorphicAllocatablePotentialComponent(*derived)}) {
-            return BlameSymbol(at,
-                "'%s' has polymorphic component '%s' in a pure subprogram"_en_US,
-                original, bad.BuildResultDesignatorName());
-          }
+        if (auto bad{FindPolymorphicAllocatablePotentialComponent(*derived)}) {
+          return BlameSymbol(at,
+              "'%s' has polymorphic component '%s' in a pure subprogram"_en_US,
+              original, bad.BuildResultDesignatorName());
         }
       }
     }
@@ -241,10 +241,10 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
 static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
     const evaluate::DataRef &dataRef) {
+  bool isWholeSymbol{std::holds_alternative<evaluate::SymbolRef>(dataRef.u)};
   auto whyNotBase{
       WhyNotDefinableBase(at, scope, flags, dataRef.GetFirstSymbol(),
-          std::holds_alternative<evaluate::SymbolRef>(dataRef.u),
-          DefinesComponentPointerTarget(dataRef, flags))};
+          isWholeSymbol, DefinesComponentPointerTarget(dataRef, flags))};
   if (!whyNotBase || !whyNotBase->IsFatal()) {
     if (auto whyNotLast{
             WhyNotDefinableLast(at, scope, flags, dataRef.GetLastSymbol())}) {
