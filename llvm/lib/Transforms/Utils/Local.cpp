@@ -3377,6 +3377,11 @@ static void combineMetadata(Instruction *K, const Instruction *J,
           K->setMetadata(Kind,
             MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
         break;
+      case LLVMContext::MD_callee_type:
+        if (!AAOnly)
+          K->setMetadata(Kind, MDNode::getMergedCalleeTypeMetadata(
+                                   K->getContext(), KMD, JMD));
+        break;
       case LLVMContext::MD_preserve_access_index:
         // Preserve !preserve.access.index in K.
         break;
