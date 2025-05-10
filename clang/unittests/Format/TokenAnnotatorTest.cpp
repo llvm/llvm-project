@@ -3792,6 +3792,17 @@ TEST_F(TokenAnnotatorTest, SwitchExpression) {
   EXPECT_TOKEN(Tokens[20], tok::arrow, TT_CaseLabelArrow);
 }
 
+TEST_F(TokenAnnotatorTest, JavaRecord) {
+  auto Tokens = annotate("public record MyRecord() {}",
+                         getLLVMStyle(FormatStyle::LK_Java));
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_ClassHeadName);
+  // Not TT_FunctionDeclarationLParen.
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_RecordLBrace);
+  EXPECT_TOKEN(Tokens[6], tok::r_brace, TT_RecordRBrace);
+}
+
 TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   auto Tokens = annotate("a = b and c;");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
