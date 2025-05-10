@@ -414,8 +414,9 @@ define i64 @disjointormul6(i64 %a, i64 %b) {
 define i64 @addmul10(i64 %a, i64 %b) {
 ; RV64I-LABEL: addmul10:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, 10
-; RV64I-NEXT:    mul a0, a0, a2
+; RV64I-NEXT:    slli a2, a0, 1
+; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -451,8 +452,9 @@ define i64 @addmul12(i64 %a, i64 %b) {
 define i64 @addmul18(i64 %a, i64 %b) {
 ; RV64I-LABEL: addmul18:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, 18
-; RV64I-NEXT:    mul a0, a0, a2
+; RV64I-NEXT:    slli a2, a0, 1
+; RV64I-NEXT:    slli a0, a0, 4
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -469,8 +471,9 @@ define i64 @addmul18(i64 %a, i64 %b) {
 define i64 @addmul20(i64 %a, i64 %b) {
 ; RV64I-LABEL: addmul20:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, 20
-; RV64I-NEXT:    mul a0, a0, a2
+; RV64I-NEXT:    slli a2, a0, 2
+; RV64I-NEXT:    slli a0, a0, 4
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -518,8 +521,9 @@ define i64 @addmul24(i64 %a, i64 %b) {
 define i64 @addmul36(i64 %a, i64 %b) {
 ; RV64I-LABEL: addmul36:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, 36
-; RV64I-NEXT:    mul a0, a0, a2
+; RV64I-NEXT:    slli a2, a0, 2
+; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -536,8 +540,9 @@ define i64 @addmul36(i64 %a, i64 %b) {
 define i64 @addmul40(i64 %a, i64 %b) {
 ; RV64I-LABEL: addmul40:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, 40
-; RV64I-NEXT:    mul a0, a0, a2
+; RV64I-NEXT:    slli a2, a0, 3
+; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -554,8 +559,9 @@ define i64 @addmul40(i64 %a, i64 %b) {
 define i64 @addmul72(i64 %a, i64 %b) {
 ; RV64I-LABEL: addmul72:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, 72
-; RV64I-NEXT:    mul a0, a0, a2
+; RV64I-NEXT:    slli a2, a0, 3
+; RV64I-NEXT:    slli a0, a0, 6
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -915,8 +921,9 @@ define i64 @mul137(i64 %a) {
 define i64 @mul160(i64 %a) {
 ; RV64I-LABEL: mul160:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 160
-; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 5
+; RV64I-NEXT:    slli a0, a0, 7
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mul160:
@@ -931,8 +938,9 @@ define i64 @mul160(i64 %a) {
 define i64 @mul288(i64 %a) {
 ; RV64I-LABEL: mul288:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 288
-; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 5
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mul288:
@@ -947,10 +955,10 @@ define i64 @mul288(i64 %a) {
 define i64 @zext_mul68(i32 signext %a) {
 ; RV64I-LABEL: zext_mul68:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 17
-; RV64I-NEXT:    slli a1, a1, 34
 ; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    mulhu a0, a0, a1
+; RV64I-NEXT:    srli a1, a0, 30
+; RV64I-NEXT:    srli a0, a0, 26
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: zext_mul68:
@@ -985,10 +993,10 @@ define i64 @zext_mul96(i32 signext %a) {
 define i64 @zext_mul160(i32 signext %a) {
 ; RV64I-LABEL: zext_mul160:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 5
-; RV64I-NEXT:    slli a1, a1, 37
 ; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    mulhu a0, a0, a1
+; RV64I-NEXT:    srli a1, a0, 27
+; RV64I-NEXT:    srli a0, a0, 25
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: zext_mul160:
@@ -1004,10 +1012,10 @@ define i64 @zext_mul160(i32 signext %a) {
 define i64 @zext_mul288(i32 signext %a) {
 ; RV64I-LABEL: zext_mul288:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 9
-; RV64I-NEXT:    slli a1, a1, 37
 ; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    mulhu a0, a0, a1
+; RV64I-NEXT:    srli a1, a0, 27
+; RV64I-NEXT:    srli a0, a0, 24
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: zext_mul288:
@@ -1043,9 +1051,9 @@ define i64 @zext_mul12884901888(i32 signext %a) {
 define i64 @zext_mul21474836480(i32 signext %a) {
 ; RV64I-LABEL: zext_mul21474836480:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 5
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 32
+; RV64I-NEXT:    slli a0, a0, 34
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: zext_mul21474836480:
@@ -1062,9 +1070,9 @@ define i64 @zext_mul21474836480(i32 signext %a) {
 define i64 @zext_mul38654705664(i32 signext %a) {
 ; RV64I-LABEL: zext_mul38654705664:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 9
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 32
+; RV64I-NEXT:    slli a0, a0, 35
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: zext_mul38654705664:
@@ -1188,8 +1196,9 @@ define i64 @adduw_imm(i32 signext %0) nounwind {
 define i64 @mul258(i64 %a) {
 ; RV64I-LABEL: mul258:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 258
-; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 1
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mul258:
@@ -1204,8 +1213,9 @@ define i64 @mul258(i64 %a) {
 define i64 @mul260(i64 %a) {
 ; RV64I-LABEL: mul260:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 260
-; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 2
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mul260:
@@ -1220,8 +1230,9 @@ define i64 @mul260(i64 %a) {
 define i64 @mul264(i64 %a) {
 ; RV64I-LABEL: mul264:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 264
-; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 3
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mul264:
@@ -1496,8 +1507,9 @@ define signext i32 @mulw192(i32 signext %a) {
 define signext i32 @mulw320(i32 signext %a) {
 ; RV64I-LABEL: mulw320:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 320
-; RV64I-NEXT:    mulw a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 6
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mulw320:
@@ -1512,8 +1524,9 @@ define signext i32 @mulw320(i32 signext %a) {
 define signext i32 @mulw576(i32 signext %a) {
 ; RV64I-LABEL: mulw576:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 576
-; RV64I-NEXT:    mulw a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 6
+; RV64I-NEXT:    slli a0, a0, 9
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: mulw576:
@@ -2977,8 +2990,9 @@ define i64 @bext_mul132(i32 %1, i32 %2) {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    srlw a0, a0, a1
 ; RV64I-NEXT:    andi a0, a0, 1
-; RV64I-NEXT:    li a1, 132
-; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 2
+; RV64I-NEXT:    slli a0, a0, 7
+; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBANOZBB-LABEL: bext_mul132:
@@ -3015,10 +3029,10 @@ define ptr @gep_lshr_i32(ptr %0, i64 %1) {
 ; RV64I-LABEL: gep_lshr_i32:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    srli a1, a1, 2
-; RV64I-NEXT:    li a2, 5
-; RV64I-NEXT:    slli a2, a2, 36
 ; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    mulhu a1, a1, a2
+; RV64I-NEXT:    srli a2, a1, 28
+; RV64I-NEXT:    srli a1, a1, 26
+; RV64I-NEXT:    add a1, a1, a2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;

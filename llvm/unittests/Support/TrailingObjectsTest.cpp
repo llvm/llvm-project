@@ -26,7 +26,9 @@ protected:
   size_t numTrailingObjects(OverloadToken<short>) const { return NumShorts; }
 
   Class1(ArrayRef<int> ShortArray) : NumShorts(ShortArray.size()) {
-    llvm::copy(ShortArray, getTrailingObjects<short>());
+    // This tests the non-templated getTrailingObjects() that returns a pointer
+    // when using a single trailing type.
+    llvm::copy(ShortArray, getTrailingObjects());
   }
 
 public:
@@ -36,7 +38,8 @@ public:
   }
   void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
-  short get(unsigned Num) const { return getTrailingObjects<short>()[Num]; }
+  // This indexes into the ArrayRef<> returned by `getTrailingObjects`.
+  short get(unsigned Num) const { return getTrailingObjects(NumShorts)[Num]; }
 
   unsigned numShorts() const { return NumShorts; }
 
@@ -128,6 +131,9 @@ TEST(TrailingObjects, OneArg) {
   EXPECT_EQ(C->getTrailingObjects<short>(), reinterpret_cast<short *>(C + 1));
   EXPECT_EQ(C->get(0), 1);
   EXPECT_EQ(C->get(2), 3);
+
+  EXPECT_EQ(C->getTrailingObjects(), C->getTrailingObjects<short>());
+
   delete C;
 }
 

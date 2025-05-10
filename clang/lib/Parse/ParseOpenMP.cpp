@@ -2282,7 +2282,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
         /* ConstructTraits */ ArrayRef<llvm::omp::TraitProperty>(),
         Actions.OpenMP().getOpenMPDeviceNum());
 
-    if (isVariantApplicableInContext(VMI, OMPCtx, /* DeviceSetOnly */ true)) {
+    if (isVariantApplicableInContext(VMI, OMPCtx,
+                                     /*DeviceOrImplementationSetOnly=*/true)) {
       Actions.OpenMP().ActOnOpenMPBeginDeclareVariant(Loc, TI);
       break;
     }

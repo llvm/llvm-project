@@ -103,7 +103,8 @@ private:
   bool buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
                      std::vector<uint64_t> &MIBCallStack,
                      std::vector<Metadata *> &MIBNodes,
-                     bool CalleeHasAmbiguousCallerContext);
+                     bool CalleeHasAmbiguousCallerContext, uint64_t &TotalBytes,
+                     uint64_t &ColdBytes);
 
 public:
   CallStackTrie() = default;

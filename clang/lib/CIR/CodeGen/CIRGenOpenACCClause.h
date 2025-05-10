@@ -138,7 +138,8 @@ class OpenACCClauseCIREmitter final
   template <typename U = void,
             typename = std::enable_if_t<isCombinedType<OpTy>, U>>
   void applyToLoopOp(const OpenACCClause &c) {
-    // TODO OpenACC: we have to set the insertion scope here correctly still.
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    builder.setInsertionPoint(operation.loopOp);
     OpenACCClauseCIREmitter<mlir::acc::LoopOp> loopEmitter{
         operation.loopOp, cgf, builder, dirKind, dirLoc};
     loopEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
@@ -148,7 +149,8 @@ class OpenACCClauseCIREmitter final
   template <typename U = void,
             typename = std::enable_if_t<isCombinedType<OpTy>, U>>
   void applyToComputeOp(const OpenACCClause &c) {
-    // TODO OpenACC: we have to set the insertion scope here correctly still.
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    builder.setInsertionPoint(operation.computeOp);
     OpenACCClauseCIREmitter<typename OpTy::ComputeOpTy> computeEmitter{
         operation.computeOp, cgf, builder, dirKind, dirLoc};
     computeEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
@@ -227,12 +229,10 @@ public:
       operation.addNumWorkersOperand(builder.getContext(),
                                      createIntExpr(clause.getIntExpr()),
                                      lastDeviceTypeValues);
-    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::SerialOp>) {
-      llvm_unreachable("num_workers not valid on serial");
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitNumGangsClause");
     }
   }
 
@@ -242,12 +242,10 @@ public:
       operation.addVectorLengthOperand(builder.getContext(),
                                        createIntExpr(clause.getIntExpr()),
                                        lastDeviceTypeValues);
-    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::SerialOp>) {
-      llvm_unreachable("vector_length not valid on serial");
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitVectorLengthClause");
     }
   }
 
@@ -288,9 +286,11 @@ public:
       } else {
         llvm_unreachable("var-list version of self shouldn't get here");
       }
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. If, combined constructs remain.
+      // unreachable. update construct remains.
       return clauseNotImplemented(clause);
     }
   }
@@ -302,13 +302,15 @@ public:
                                mlir::acc::DataOp, mlir::acc::WaitOp>) {
       operation.getIfCondMutable().append(
           createCondition(clause.getConditionExpr()));
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
       // 'if' applies to most of the constructs, but hold off on lowering them
       // until we can write tests/know what we're doing with codegen to make
       // sure we get it right.
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Enter data, exit data, host_data, update, combined
-      // constructs remain.
+      // unreachable. Enter data, exit data, host_data, update constructs
+      // remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -333,10 +335,10 @@ public:
 
       operation.addNumGangsOperands(builder.getContext(), values,
                                     lastDeviceTypeValues);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitNumGangsClause");
     }
   }
 
@@ -354,9 +356,11 @@ public:
         operation.addWaitOperands(builder.getContext(), clause.hasDevNumExpr(),
                                   values, lastDeviceTypeValues);
       }
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Enter data, exit data, update, Combined constructs remain.
+      // unreachable. Enter data, exit data, update constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -414,10 +418,10 @@ public:
       value = value.sextOrTrunc(64);
       operation.setCollapseForDeviceTypes(builder.getContext(),
                                           lastDeviceTypeValues, value);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitCollapseClause");
     }
   }
 
@@ -443,10 +447,10 @@ public:
 
       operation.setTileForDeviceTypes(builder.getContext(),
                                       lastDeviceTypeValues, values);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitTileClause");
     }
   }
 
@@ -459,6 +463,8 @@ public:
       else
         operation.addEmptyWorker(builder.getContext(), lastDeviceTypeValues);
 
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
       // unreachable. Combined constructs remain.
@@ -475,6 +481,8 @@ public:
       else
         operation.addEmptyVector(builder.getContext(), lastDeviceTypeValues);
 
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
       // unreachable. Combined constructs remain.
@@ -511,10 +519,10 @@ public:
         operation.addGangOperands(builder.getContext(), lastDeviceTypeValues,
                                   argTypes, values);
       }
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitGangClause");
     }
   }
 };

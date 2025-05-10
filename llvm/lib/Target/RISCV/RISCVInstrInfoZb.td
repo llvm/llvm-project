@@ -31,19 +31,32 @@ def SDTIntShiftAddOp : SDTypeProfile<1, 3, [   // shl_add
   SDTCisInt<3>
 ]>;
 
-def riscv_shl_add : SDNode<"RISCVISD::SHL_ADD", SDTIntShiftAddOp>;
-def riscv_clzw    : SDNode<"RISCVISD::CLZW",    SDT_RISCVIntUnaryOpW>;
-def riscv_ctzw    : SDNode<"RISCVISD::CTZW",    SDT_RISCVIntUnaryOpW>;
-def riscv_rolw    : SDNode<"RISCVISD::ROLW",    SDT_RISCVIntBinOpW>;
-def riscv_rorw    : SDNode<"RISCVISD::RORW",    SDT_RISCVIntBinOpW>;
-def riscv_brev8   : SDNode<"RISCVISD::BREV8",   SDTIntUnaryOp>;
-def riscv_orc_b   : SDNode<"RISCVISD::ORC_B",   SDTIntUnaryOp>;
-def riscv_zip     : SDNode<"RISCVISD::ZIP",     SDTIntUnaryOp>;
-def riscv_unzip   : SDNode<"RISCVISD::UNZIP",   SDTIntUnaryOp>;
-def riscv_absw    : SDNode<"RISCVISD::ABSW",    SDTIntUnaryOp>;
-def riscv_clmul   : SDNode<"RISCVISD::CLMUL",   SDTIntBinOp>;
-def riscv_clmulh  : SDNode<"RISCVISD::CLMULH",  SDTIntBinOp>;
-def riscv_clmulr  : SDNode<"RISCVISD::CLMULR",  SDTIntBinOp>;
+def riscv_shl_add : RVSDNode<"SHL_ADD", SDTIntShiftAddOp>;
+
+// RV64IB rotates, directly matching the semantics of the named RISC-V
+// instructions.
+def riscv_rolw    : RVSDNode<"ROLW",    SDT_RISCVIntBinOpW>;
+def riscv_rorw    : RVSDNode<"RORW",    SDT_RISCVIntBinOpW>;
+
+// RV64IZbb bit counting instructions directly matching the semantics of the
+// named RISC-V instructions.
+def riscv_clzw    : RVSDNode<"CLZW",    SDT_RISCVIntUnaryOpW>;
+def riscv_ctzw    : RVSDNode<"CTZW",    SDT_RISCVIntUnaryOpW>;
+
+// brev8, orc.b, zip, and unzip from Zbb and Zbkb. All operands are i32 or
+// XLenVT.
+def riscv_brev8   : RVSDNode<"BREV8",   SDTIntUnaryOp>;
+def riscv_orc_b   : RVSDNode<"ORC_B",   SDTIntUnaryOp>;
+def riscv_zip     : RVSDNode<"ZIP",     SDTIntUnaryOp>;
+def riscv_unzip   : RVSDNode<"UNZIP",   SDTIntUnaryOp>;
+
+// RV64IZbb absolute value for i32. Expanded to (max (negw X), X) during isel.
+def riscv_absw    : RVSDNode<"ABSW",    SDTIntUnaryOp>;
+
+// Scalar cryptography
+def riscv_clmul   : RVSDNode<"CLMUL",   SDTIntBinOp>;
+def riscv_clmulh  : RVSDNode<"CLMULH",  SDTIntBinOp>;
+def riscv_clmulr  : RVSDNode<"CLMULR",  SDTIntBinOp>;
 
 def BCLRXForm : SDNodeXForm<imm, [{
   // Find the lowest 0.

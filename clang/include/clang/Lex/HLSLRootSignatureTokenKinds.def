@@ -27,6 +27,9 @@
 #endif
 
 // Defines the various types of enum
+#ifndef ROOT_FLAG_ENUM
+#define ROOT_FLAG_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
 #ifndef UNBOUNDED_ENUM
 #define UNBOUNDED_ENUM(NAME, LIT) ENUM(NAME, LIT)
 #endif
@@ -74,6 +77,7 @@ PUNCTUATOR(minus,   '-')
 
 // RootElement Keywords:
 KEYWORD(RootSignature) // used only for diagnostic messaging
+KEYWORD(RootFlags)
 KEYWORD(DescriptorTable)
 KEYWORD(RootConstants)
 
@@ -100,6 +104,20 @@ UNBOUNDED_ENUM(unbounded, "unbounded")
 
 // Descriptor Range Offset Enum:
 DESCRIPTOR_RANGE_OFFSET_ENUM(DescriptorRangeOffsetAppend, "DESCRIPTOR_RANGE_OFFSET_APPEND")
+
+// Root Flag Enums:
+ROOT_FLAG_ENUM(AllowInputAssemblerInputLayout, "ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT")
+ROOT_FLAG_ENUM(DenyVertexShaderRootAccess, "DENY_VERTEX_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(DenyHullShaderRootAccess, "DENY_HULL_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(DenyDomainShaderRootAccess, "DENY_DOMAIN_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(DenyGeometryShaderRootAccess, "DENY_GEOMETRY_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(DenyPixelShaderRootAccess, "DENY_PIXEL_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(DenyAmplificationShaderRootAccess, "DENY_AMPLIFICATION_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(DenyMeshShaderRootAccess, "DENY_MESH_SHADER_ROOT_ACCESS")
+ROOT_FLAG_ENUM(AllowStreamOutput, "ALLOW_STREAM_OUTPUT")
+ROOT_FLAG_ENUM(LocalRootSignature, "LOCAL_ROOT_SIGNATURE")
+ROOT_FLAG_ENUM(CBVSRVUAVHeapDirectlyIndexed, "CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED")
+ROOT_FLAG_ENUM(SamplerHeapDirectlyIndexed , "SAMPLER_HEAP_DIRECTLY_INDEXED")
 
 // Root Descriptor Flag Enums:
 ROOT_DESCRIPTOR_FLAG_ENUM(DataVolatile, "DATA_VOLATILE")
@@ -128,6 +146,7 @@ SHADER_VISIBILITY_ENUM(Mesh, "SHADER_VISIBILITY_MESH")
 #undef DESCRIPTOR_RANGE_FLAG_ENUM_OFF
 #undef DESCRIPTOR_RANGE_FLAG_ENUM_ON
 #undef ROOT_DESCRIPTOR_FLAG_ENUM
+#undef ROOT_FLAG_ENUM
 #undef DESCRIPTOR_RANGE_OFFSET_ENUM
 #undef UNBOUNDED_ENUM
 #undef ENUM

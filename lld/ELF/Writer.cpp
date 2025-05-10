@@ -2960,9 +2960,12 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
       if (p->p_type == PT_LOAD)
         last = p.get();
 
-    if (last && (last->p_flags & PF_X))
-      last->p_memsz = last->p_filesz =
-          alignToPowerOf2(last->p_filesz, ctx.arg.maxPageSize);
+    if (last && (last->p_flags & PF_X)) {
+      last->p_filesz = alignToPowerOf2(last->p_filesz, ctx.arg.maxPageSize);
+      // p_memsz might be larger than the aligned p_filesz due to trailing BSS
+      // sections. Don't decrease it.
+      last->p_memsz = std::max(last->p_memsz, last->p_filesz);
+    }
   }
 }
 

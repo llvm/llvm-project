@@ -218,9 +218,9 @@ MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
     // Support escaped \\ and \" as in GNU Assembler. GAS issues a warning for
     // other characters following \\, which we do not implement due to code
     // structure.
-    for (size_t I = 0, E = NameSV.size(); I < E; ++I) {
+    for (size_t I = 0, E = NameSV.size(); I != E; ++I) {
       char C = NameSV[I];
-      if (C == '\\') {
+      if (C == '\\' && I + 1 != E) {
         switch (NameSV[I + 1]) {
         case '"':
         case '\\':

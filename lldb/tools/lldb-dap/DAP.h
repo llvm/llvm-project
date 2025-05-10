@@ -39,6 +39,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
@@ -212,6 +213,13 @@ struct DAP {
   /// The initial thread list upon attaching.
   std::optional<llvm::json::Array> initial_thread_list;
 
+  /// Keep track of all the modules our client knows about: either through the
+  /// modules request or the module events.
+  /// @{
+  std::mutex modules_mutex;
+  llvm::StringSet<> modules;
+  /// @}
+
   /// Creates a new DAP sessions.
   ///
   /// \param[in] log
@@ -275,6 +283,7 @@ struct DAP {
   lldb::SBThread GetLLDBThread(lldb::tid_t id);
   lldb::SBThread GetLLDBThread(const llvm::json::Object &arguments);
 
+  lldb::SBFrame GetLLDBFrame(uint64_t frame_id);
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
 
   llvm::json::Value CreateTopLevelScopes();
