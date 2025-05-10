@@ -366,6 +366,16 @@ The command to obtain the output shown in the example is:
 Initially, we will focus on summary strings, and then describe the Python
 binding mechanism.
 
+Summary Format Matching On Pointers
+----------------------
+
+When a summary format is registered for a type ``T``, lldb will apply this
+format to both ``T`` and ``T*``. -p options could prevent lldb from using this
+format to type ``T*``. When -p options is not given, users can use the -d option
+to specify how many layer of pointers can be dereferenced at most when matching
+the format of type ``T`` (default to 1). It should be noted that the value
+object passed to the summary format won't dereferenced at all.
+
 Summary Strings
 ---------------
 
