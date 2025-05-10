@@ -1034,20 +1034,26 @@ def funnel_shift_overshift: GICombineRule<
 >;
 
 // Transform: fshl x, z, y | shl x, y -> fshl x, z, y
+// Transform: shl x, y | fshl x, z, y  -> fshl x, z, y
+def funnel_shift_or_shift_to_funnel_shift_left_frags : GICombinePatFrag<
+  (outs root: $dst, $out1, $out2), (ins),
+  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)], 
+           (pattern (G_FSHL $out1, $x, $z, $y), (G_SHL $out2, $x, $y), inst))>;
 def funnel_shift_or_shift_to_funnel_shift_left: GICombineRule<
   (defs root:$root), 
-  (match (G_FSHL $out1, $x, $z, $y),
-         (G_SHL $out2, $x, $y),
-         (G_OR $root, $out1, $out2)),
+  (match (funnel_shift_or_shift_to_funnel_shift_left_frags $root, $out1, $out2)),
   (apply (GIReplaceReg $root, $out1))
 >;
 
 // Transform: fshr z, x, y | srl x, y -> fshr z, x, y
+// Transform: srl x, y | fshr z, x, y -> fshr z, x, y
+def funnel_shift_or_shift_to_funnel_shift_right_frags : GICombinePatFrag<
+  (outs root: $dst, $out1, $out2), (ins),
+  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)], 
+           (pattern (G_FSHR $out1, $z, $x, $y), (G_LSHR $out2, $x, $y), inst))>;
 def funnel_shift_or_shift_to_funnel_shift_right: GICombineRule<
   (defs root:$root), 
-  (match (G_FSHR $out1, $z, $x, $y),
-         (G_LSHR $out2, $x, $y),
-         (G_OR $root, $out1, $out2)),
+  (match (funnel_shift_or_shift_to_funnel_shift_right_frags $root, $out1, $out2)), 
   (apply (GIReplaceReg $root, $out1))
 >;
 
