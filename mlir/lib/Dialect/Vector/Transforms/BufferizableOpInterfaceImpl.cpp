@@ -48,7 +48,8 @@ struct TransferReadOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     auto readOp = cast<vector::TransferReadOp>(op);
     assert(isa<TensorType>(readOp.getShapedType()) &&
            "only tensor types expected");
@@ -103,7 +104,8 @@ struct TransferWriteOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     auto writeOp = cast<vector::TransferWriteOp>(op);
     assert(isa<TensorType>(writeOp.getShapedType()) &&
            "only tensor types expected");
@@ -148,7 +150,8 @@ struct GatherOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     auto gatherOp = cast<vector::GatherOp>(op);
     assert(isa<TensorType>(gatherOp.getBaseType()) &&
            "only tensor types expected");
@@ -202,7 +205,8 @@ struct MaskOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     auto maskOp = cast<vector::MaskOp>(op);
 
     // Do not bufferize if the masked op is not bufferizable.
@@ -279,7 +283,8 @@ struct YieldOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     auto yieldOp = cast<vector::YieldOp>(op);
 
     // Only supported as a vector.mask terminator.

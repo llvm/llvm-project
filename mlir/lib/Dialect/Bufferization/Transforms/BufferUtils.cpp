@@ -103,8 +103,9 @@ BufferPlacementTransformationBase::BufferPlacementTransformationBase(
 //===----------------------------------------------------------------------===//
 
 FailureOr<memref::GlobalOp>
-bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment,
-                            Attribute memorySpace) {
+bufferization::getGlobalFor(arith::ConstantOp constantOp,
+                            SymbolTableCollection &symbolTables,
+                            uint64_t alignment, Attribute memorySpace) {
   auto type = cast<RankedTensorType>(constantOp.getType());
   auto moduleOp = constantOp->getParentOfType<ModuleOp>();
   if (!moduleOp)
@@ -127,7 +128,7 @@ bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment,
   // Create a builder without an insertion point. We will insert using the
   // symbol table to guarantee unique names.
   OpBuilder globalBuilder(moduleOp.getContext());
-  SymbolTable symbolTable(moduleOp);
+  SymbolTable &symbolTable = symbolTables.getSymbolTable(moduleOp);
 
   // Create a pretty name.
   SmallString<64> buf;
