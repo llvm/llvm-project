@@ -55,30 +55,49 @@ class TestUnwindFramelessFaulted(TestBase):
                 self.assertEqual(thread.GetFrameAtIndex(frame_idx).name, expected_frame)
                 frame_idx = frame_idx + 1
 
-            # When we're at our deepest level, test that register passing of x0 and x20
-            # follow the by-hand UnwindPlan rules.  In this test program, we can get x0
-            # in the middle of the stack and we CAN'T get x20. The opposites of the normal
-            # AArch64 SysV ABI.
+            # When we're at our deepest level, test that register passing of
+            # x0 and x20 follow the by-hand UnwindPlan rules.
+            # In this test program, we can get x0 in the middle of the stack
+            # and we CAN'T get x20. The opposites of the normal AArch64 SysV
+            # ABI.
             if frame.name == "break_to_debugger":
                 tbi_frame = thread.GetFrameAtIndex(2)
                 self.assertEqual(tbi_frame.name, "to_be_interrupted")
-
                 # The original argument to to_be_interrupted(), 10
-                # Normally can't get x0 mid-stack, but UnwindPlans have special rules to
-                # make this possible.
+                # Normally can't get x0 mid-stack, but UnwindPlans have
+                # special rules to make this possible.
                 x0_reg = tbi_frame.register["x0"]
                 self.assertTrue(x0_reg.IsValid())
                 self.assertEqual(x0_reg.GetValueAsUnsigned(), 10)
-
                 # The incremented return value from to_be_interrupted(), 11
                 x24_reg = tbi_frame.register["x24"]
                 self.assertTrue(x24_reg.IsValid())
                 self.assertEqual(x24_reg.GetValueAsUnsigned(), 11)
-
                 # x20 can normally be fetched mid-stack, but the UnwindPlan
                 # has a rule saying it can't be fetched.
                 x20_reg = tbi_frame.register["x20"]
                 self.assertTrue(x20_reg.error.fail)
+
+                trap_frame = thread.GetFrameAtIndex(1)
+                self.assertEqual(trap_frame.name, "trap")
+                # Confirm that we can fetch x0 from trap() which
+                # is normally not possible w/ SysV AbI, but special
+                # UnwindPlans in use.
+                x0_reg = trap_frame.register["x0"]
+                self.assertTrue(x0_reg.IsValid())
+                self.assertEqual(x0_reg.GetValueAsUnsigned(), 10)
+                x1_reg = trap_frame.register["x1"]
+                self.assertTrue(x1_reg.error.fail)
+
+                main_frame = thread.GetFrameAtIndex(3)
+                self.assertEqual(main_frame.name, "main")
+                # x20 can normally be fetched mid-stack, but the UnwindPlan
+                # has a rule saying it can't be fetched.
+                x20_reg = main_frame.register["x20"]
+                self.assertTrue(x20_reg.error.fail)
+                # x21 can be fetched mid-stack.
+                x21_reg = main_frame.register["x21"]
+                self.assertTrue(x21_reg.error.success)
 
             if self.TraceOn():
                 print("StepInstruction")

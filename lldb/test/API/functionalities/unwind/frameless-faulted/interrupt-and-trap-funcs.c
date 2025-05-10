@@ -1,3 +1,10 @@
+// This is assembly code that needs to be run
+// through the preprocessor, for simplicity of
+// preprocessing it's named .c to start with.
+//
+// clang-format off
+
+
 #define DW_CFA_register 0x9
 #define ehframe_x0  0
 #define ehframe_x20  20
