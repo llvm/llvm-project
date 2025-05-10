@@ -234,7 +234,7 @@ using P = cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccesses;
 llvm::ArrayRef<std::pair<P::FixModes, StringRef>>
 OptionEnumMapping<P::FixModes>::getEnumMapping() {
   static constexpr std::pair<P::FixModes, StringRef> Mapping[] = {
-      {P::None, "None"}, {P::At, "at"}, {P::Function, "function"}};
+      {P::None, "none"}, {P::At, "at"}, {P::Function, "function"}};
   return {Mapping};
 }
 } // namespace clang::tidy
