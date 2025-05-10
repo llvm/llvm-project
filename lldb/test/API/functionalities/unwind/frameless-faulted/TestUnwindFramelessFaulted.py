@@ -38,7 +38,13 @@ class TestUnwindFramelessFaulted(TestBase):
         # Instruction step through the binary until we are in a function not
         # listed in correct_frames.
         frame = thread.GetFrameAtIndex(0)
-        while process.GetState() == lldb.eStateStopped and frame.name in correct_frames:
+        step_count = 0
+        max_step_count = 200
+        while (
+            process.GetState() == lldb.eStateStopped
+            and frame.name in correct_frames
+            and step_count < max_step_count
+        ):
             starting_index = 0
             if self.TraceOn():
                 self.runCmd("bt")
@@ -99,7 +105,18 @@ class TestUnwindFramelessFaulted(TestBase):
                 x21_reg = main_frame.register["x21"]
                 self.assertTrue(x21_reg.error.success)
 
+            # manually move past the BRK instruction in
+            # break_to_debugger().  lldb-server doesn't
+            # advance past the builtin_debugtrap() BRK
+            # instruction.
+            if (
+                thread.GetStopReason() == lldb.eStopReasonException
+                and frame.name == "break_to_debugger"
+            ):
+                frame.SetPC(frame.GetPC() + 4)
+
             if self.TraceOn():
                 print("StepInstruction")
             thread.StepInstruction(False)
             frame = thread.GetFrameAtIndex(0)
+            step_count = step_count + 1
