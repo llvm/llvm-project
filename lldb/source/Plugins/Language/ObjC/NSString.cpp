@@ -296,13 +296,11 @@ bool lldb_private::formatters::NSAttributedStringSummaryProvider(
       "string_ptr", pointer_value, exe_ctx, type));
   if (!child_ptr_sp)
     return false;
-  DataExtractor data;
-  Status error;
-  child_ptr_sp->GetData(data, error);
-  if (error.Fail())
+  auto data = llvm::expectedToOptional(child_ptr_sp->GetData());
+  if (!data)
     return false;
   ValueObjectSP child_sp(child_ptr_sp->CreateValueObjectFromData(
-      "string_data", data, exe_ctx, type));
+      "string_data", *data, exe_ctx, type));
   child_sp->GetValueAsUnsigned(0);
   if (child_sp)
     return NSStringSummaryProvider(*child_sp, stream, options);
