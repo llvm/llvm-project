@@ -212,7 +212,9 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
    * - ``SPV_INTEL_ternary_bitwise_function``
      - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform. 
    * - ``SPV_INTEL_subgroup_matrix_multiply_accumulate``
-     - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix. 
+     - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix.
+   * - ``SPV_INTEL_fpga_dsp_control``
+     - Enables control over whether certain floating-point operations should be implemented using DSP blocks or logic elements on FPGA hardware, allowing fine-tuned optimization of resource usage and performance.
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 

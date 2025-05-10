@@ -920,6 +920,8 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
   } else if (Dec == SPIRV::Decoration::FPMaxErrorDecorationINTEL) {
     Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
+  } else if (Dec == SPIRV::Decoration::MathOpDSPModeINTEL) {
+    Reqs.addExtension(SPIRV::Extension::Extension::SPV_INTEL_fpga_dsp_control);
   }
 }
 
@@ -1975,6 +1977,60 @@ static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
   Register DstReg = I.getOperand(0).getReg();
   buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode, {FMFlags});
 }
+static std::vector<uint32_t>
+getMetaDataValues(std::vector<llvm::MDNode *> &MetaDataList) {
+  std::vector<uint32_t> res;
+  for (auto metaDataNode : MetaDataList) {
+    if (metaDataNode->getNumOperands() > 0) {
+      if (auto *CMD = llvm::dyn_cast<llvm::ConstantAsMetadata>(
+              metaDataNode->getOperand(0))) {
+        if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(CMD->getValue())) {
+          APInt val = CI->getValue();
+          int64_t decVal = val.getZExtValue();
+          res.push_back(decVal);
+        }
+      }
+    }
+  }
+  return res;
+}
+
+static void handleFunctionDecoration(llvm::Module::const_iterator F,
+                                     const SPIRVInstrInfo &TII,
+                                     MachineModuleInfo *MMI,
+                                     const SPIRVSubtarget &ST) {
+
+  MachineFunction *MF = MMI->getMachineFunction(*F);
+  Register Des = Register();
+  MachineInstr *curr = nullptr;
+
+  for (auto &MBB : *MF) {
+    for (auto &MI : MBB) {
+      if (MI.getOpcode() == SPIRV::OpFunction) {
+        if (MI.getNumOperands() > 0 && MI.getOperand(0).isReg()) {
+          Des = MI.getOperand(0).getReg();
+          curr = &MI;
+        }
+      }
+    }
+  }
+
+  // dsp controll
+  if (llvm::MDNode *Node = F->getMetadata("prefer_dsp")) {
+    std::vector<llvm::MDNode *> MetaDataList;
+    MetaDataList.push_back(Node);
+    if (llvm::MDNode *Node = F->getMetadata("propagate_dsp_preference"))
+      MetaDataList.push_back(Node);
+    if (ST.canUseExtension(
+            SPIRV::Extension::Extension::SPV_INTEL_fpga_dsp_control)) {
+      std::vector<uint32_t> params = getMetaDataValues(MetaDataList);
+      if (params.size() == 1)
+        params.push_back(0);
+      buildOpDecorate(Des, *curr, TII, SPIRV::Decoration::MathOpDSPModeINTEL,
+                      params);
+    }
+  }
+}
 
 // Walk all functions and add decorations related to MI flags.
 static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
@@ -1987,6 +2043,7 @@ static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
     for (auto &MBB : *MF)
       for (auto &MI : MBB)
         handleMIFlagDecoration(MI, ST, TII, MAI.Reqs);
+    handleFunctionDecoration(F, TII, MMI, ST);
   }
 }
 
