@@ -225,14 +225,6 @@ set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros
 set(LIBCXX_EXTRA_SITE_DEFINES "" CACHE STRING "Extra defines to add into __config_site")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 
-# C Library options -----------------------------------------------------------
-
-set(LIBCXX_SUPPORTED_C_LIBRARIES system llvm-libc)
-set(LIBCXX_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
-if (NOT "${LIBCXX_LIBC}" IN_LIST LIBCXX_SUPPORTED_C_LIBRARIES)
-  message(FATAL_ERROR "Unsupported C library: '${LIBCXX_LIBC}'. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
-endif()
-
 # ABI Library options ---------------------------------------------------------
 if (MSVC)
   set(LIBCXX_DEFAULT_ABI_LIBRARY "vcruntime")
