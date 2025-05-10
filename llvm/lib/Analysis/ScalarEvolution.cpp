@@ -15867,8 +15867,8 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     }
 
     const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
-      auto I = Map.find(Expr);
-      if (I == Map.end()) {
+      const SCEV *S = Map.lookup(Expr);
+      if (!S) {
         // If we didn't find the extact ZExt expr in the map, check if there's
         // an entry for a smaller ZExt we can use instead.
         Type *Ty = Expr->getType();
@@ -15887,29 +15887,29 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
         return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitZeroExtendExpr(
             Expr);
       }
-      return I->second;
+      return S;
     }
 
     const SCEV *visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
-      auto I = Map.find(Expr);
-      if (I == Map.end())
+      const SCEV *S = Map.lookup(Expr);
+      if (!S)
         return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSignExtendExpr(
             Expr);
-      return I->second;
+      return S;
     }
 
     const SCEV *visitUMinExpr(const SCEVUMinExpr *Expr) {
-      auto I = Map.find(Expr);
-      if (I == Map.end())
+      const SCEV *S = Map.lookup(Expr);
+      if (!S)
         return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitUMinExpr(Expr);
-      return I->second;
+      return S;
     }
 
     const SCEV *visitSMinExpr(const SCEVSMinExpr *Expr) {
-      auto I = Map.find(Expr);
-      if (I == Map.end())
+      const SCEV *S = Map.lookup(Expr);
+      if (!S)
         return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSMinExpr(Expr);
-      return I->second;
+      return S;
     }
 
     const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
