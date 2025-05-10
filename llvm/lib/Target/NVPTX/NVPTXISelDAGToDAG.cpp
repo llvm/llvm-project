@@ -465,10 +465,14 @@ bool NVPTXDAGToDAGISel::tryUNPACK_VECTOR(SDNode *N) {
 bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   SDValue Vector = N->getOperand(0);
 
-  // We only care about 16x2 as it's the only real vector type we
-  // need to deal with.
+  // We only care about packed vector types: 16x2 and 32x2.
   MVT VT = Vector.getSimpleValueType();
-  if (!Isv2x16VT(VT))
+  unsigned NewOpcode = 0;
+  if (Isv2x16VT(VT))
+    NewOpcode = NVPTX::I32toV2I16;
+  else if (VT == MVT::v2f32)
+    NewOpcode = NVPTX::I64toV2F32;
+  else
     return false;
   // Find and record all uses of this vector that extract element 0 or 1.
   SmallVector<SDNode *, 4> E0, E1;
@@ -488,16 +492,19 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
     }
   }
 
-  // There's no point scattering f16x2 if we only ever access one
+  // There's no point scattering f16x2 or f32x2 if we only ever access one
   // element of it.
   if (E0.empty() || E1.empty())
     return false;
 
-  // Merge (f16 extractelt(V, 0), f16 extractelt(V,1))
-  // into f16,f16 SplitF16x2(V)
+  // Merge:
+  //  (f16 extractelt(V, 0), f16 extractelt(V,1))
+  //  -> f16,f16 SplitF16x2(V)
+  //  (f32 extractelt(V, 0), f32 extractelt(V,1))
+  //  -> f32,f32 SplitF32x2(V)
   MVT EltVT = VT.getVectorElementType();
   SDNode *ScatterOp =
-      CurDAG->getMachineNode(NVPTX::I32toV2I16, SDLoc(N), EltVT, EltVT, Vector);
+      CurDAG->getMachineNode(NewOpcode, SDLoc(N), EltVT, EltVT, Vector);
   for (auto *Node : E0)
     ReplaceUses(SDValue(Node, 0), SDValue(ScatterOp, 0));
   for (auto *Node : E1)
@@ -1026,6 +1033,7 @@ pickOpcodeForVT(MVT::SimpleValueType VT, unsigned Opcode_i8,
   case MVT::i32:
     return Opcode_i32;
   case MVT::i64:
+  case MVT::v2f32:
     return Opcode_i64;
   case MVT::f16:
   case MVT::bf16:
@@ -1051,6 +1059,7 @@ static int getLdStRegType(EVT VT) {
     case MVT::bf16:
     case MVT::v2f16:
     case MVT::v2bf16:
+    case MVT::v2f32:
       return NVPTX::PTXLdStInstCode::Untyped;
     default:
       return NVPTX::PTXLdStInstCode::Float;
@@ -1089,20 +1098,27 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   // Float  : ISD::NON_EXTLOAD or ISD::EXTLOAD and the type is float
   MVT SimpleVT = LoadedVT.getSimpleVT();
   MVT ScalarVT = SimpleVT.getScalarType();
-  // Read at least 8 bits (predicates are stored as 8-bit values)
-  unsigned FromTypeWidth = std::max(8U, (unsigned)ScalarVT.getSizeInBits());
-  unsigned int FromType;
 
   // Vector Setting
   unsigned VecType = NVPTX::PTXLdStInstCode::Scalar;
   if (SimpleVT.isVector()) {
-    assert((Isv2x16VT(LoadedVT) || LoadedVT == MVT::v4i8) &&
-           "Unexpected vector type");
-    // v2f16/v2bf16/v2i16 is loaded using ld.b32
-    FromTypeWidth = 32;
+    switch (LoadedVT.getSimpleVT().SimpleTy) {
+    case MVT::v2f16:
+    case MVT::v2bf16:
+    case MVT::v2i16:
+    case MVT::v4i8:
+    case MVT::v2f32:
+      ScalarVT = LoadedVT.getSimpleVT();
+      break;
+    default:
+      llvm_unreachable("Unsupported vector type for non-vector load");
+    }
   }
 
-  if (PlainLoad && (PlainLoad->getExtensionType() == ISD::SEXTLOAD))
+  // Read at least 8 bits (predicates are stored as 8-bit values)
+  unsigned FromTypeWidth = std::max(8U, (unsigned)ScalarVT.getSizeInBits());
+  unsigned int FromType;
+  if (PlainLoad && PlainLoad->getExtensionType() == ISD::SEXTLOAD)
     FromType = NVPTX::PTXLdStInstCode::Signed;
   else
     FromType = getLdStRegType(ScalarVT);
@@ -1142,7 +1158,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   return true;
 }
 
-static bool isSubVectorPackedInI32(EVT EltVT) {
+static bool isSubVectorPackedInInteger(EVT EltVT) {
   // Despite vectors like v8i8, v16i8, v8i16 being within the bit-limit for
   // total load/store size, PTX syntax only supports v2/v4. Thus, we can't use
   // vectorized loads/stores with the actual element type for i8/i16 as that
@@ -1150,7 +1166,9 @@ static bool isSubVectorPackedInI32(EVT EltVT) {
   // In order to load/store such vectors efficiently, in Type Legalization
   // we split the vector into word-sized chunks (v2x16/v4i8). Now, we will
   // lower to PTX as vectors of b32.
-  return Isv2x16VT(EltVT) || EltVT == MVT::v4i8;
+  // We also consider v2f32 as an upsized type, which may be used in packed
+  // (f32x2) instructions.
+  return Isv2x16VT(EltVT) || EltVT == MVT::v4i8 || EltVT == MVT::v2f32;
 }
 
 bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
@@ -1199,9 +1217,24 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     return false;
   }
 
-  if (isSubVectorPackedInI32(EltVT)) {
-    EltVT = MVT::i32;
+  LLVM_DEBUG({
+    dbgs() << "tryLoadVector on " << TLI->getTargetNodeName(N->getOpcode())
+           << ":\n";
+    dbgs() << "  load type: " << MemVT << "\n";
+    dbgs() << "  total load width: " << TotalWidth << " bits\n";
+    dbgs() << "  from type width: " << FromTypeWidth << " bits\n";
+    dbgs() << "  element type: " << EltVT << "\n";
+  });
+
+  if (isSubVectorPackedInInteger(EltVT)) {
+    FromTypeWidth = EltVT.getSizeInBits();
+    EltVT = MVT::getIntegerVT(FromTypeWidth);
     FromType = NVPTX::PTXLdStInstCode::Untyped;
+    LLVM_DEBUG({
+      dbgs() << "  packed integers detected:\n";
+      dbgs() << "    from type width: " << FromTypeWidth << " (new)\n";
+      dbgs() << "    element type: " << EltVT << " (new)\n";
+    });
   }
 
   assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
@@ -1262,17 +1295,39 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     EltVT = MVT::i64;
     NumElts = 2;
   }
+
+  std::optional<unsigned> Opcode;
+
   if (EltVT.isVector()) {
     NumElts = EltVT.getVectorNumElements();
     EltVT = EltVT.getVectorElementType();
     // vectors of 8/16bits type are loaded/stored as multiples of v4i8/v2x16
     // elements.
-    if ((EltVT == MVT::f16 && OrigType == MVT::v2f16) ||
+    if ((EltVT == MVT::f32 && OrigType == MVT::v2f32) ||
+        (EltVT == MVT::f16 && OrigType == MVT::v2f16) ||
         (EltVT == MVT::bf16 && OrigType == MVT::v2bf16) ||
         (EltVT == MVT::i16 && OrigType == MVT::v2i16) ||
         (EltVT == MVT::i8 && OrigType == MVT::v4i8)) {
       assert(NumElts % OrigType.getVectorNumElements() == 0 &&
              "NumElts must be divisible by the number of elts in subvectors");
+      if (N->getOpcode() == ISD::LOAD ||
+          N->getOpcode() == ISD::INTRINSIC_W_CHAIN) {
+        switch (OrigType.getSimpleVT().SimpleTy) {
+        case MVT::v2f32:
+          Opcode = N->getOpcode() == ISD::LOAD ? NVPTX::INT_PTX_LDG_GLOBAL_b64
+                                               : NVPTX::INT_PTX_LDU_GLOBAL_b64;
+          break;
+        case MVT::v2f16:
+        case MVT::v2bf16:
+        case MVT::v2i16:
+        case MVT::v4i8:
+          Opcode = N->getOpcode() == ISD::LOAD ? NVPTX::INT_PTX_LDG_GLOBAL_b32
+                                               : NVPTX::INT_PTX_LDU_GLOBAL_b32;
+          break;
+        default:
+          llvm_unreachable("Unhandled packed vector type");
+        }
+      }
       EltVT = OrigType;
       NumElts /= OrigType.getVectorNumElements();
     }
@@ -1292,50 +1347,51 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   SelectADDR(Op1, Base, Offset);
   SDValue Ops[] = {Base, Offset, Chain};
 
-  std::optional<unsigned> Opcode;
-  switch (N->getOpcode()) {
-  default:
-    return false;
-  case ISD::LOAD:
-    Opcode = pickOpcodeForVT(
-        EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_GLOBAL_i8,
-        NVPTX::INT_PTX_LDG_GLOBAL_i16, NVPTX::INT_PTX_LDG_GLOBAL_i32,
-        NVPTX::INT_PTX_LDG_GLOBAL_i64, NVPTX::INT_PTX_LDG_GLOBAL_f32,
-        NVPTX::INT_PTX_LDG_GLOBAL_f64);
-    break;
-  case ISD::INTRINSIC_W_CHAIN:
-    Opcode = pickOpcodeForVT(
-        EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_GLOBAL_i8,
-        NVPTX::INT_PTX_LDU_GLOBAL_i16, NVPTX::INT_PTX_LDU_GLOBAL_i32,
-        NVPTX::INT_PTX_LDU_GLOBAL_i64, NVPTX::INT_PTX_LDU_GLOBAL_f32,
-        NVPTX::INT_PTX_LDU_GLOBAL_f64);
-    break;
-  case NVPTXISD::LoadV2:
-    Opcode = pickOpcodeForVT(
-        EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v2i8_ELE,
-        NVPTX::INT_PTX_LDG_G_v2i16_ELE, NVPTX::INT_PTX_LDG_G_v2i32_ELE,
-        NVPTX::INT_PTX_LDG_G_v2i64_ELE, NVPTX::INT_PTX_LDG_G_v2f32_ELE,
-        NVPTX::INT_PTX_LDG_G_v2f64_ELE);
-    break;
-  case NVPTXISD::LDUV2:
-    Opcode = pickOpcodeForVT(
-        EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_G_v2i8_ELE,
-        NVPTX::INT_PTX_LDU_G_v2i16_ELE, NVPTX::INT_PTX_LDU_G_v2i32_ELE,
-        NVPTX::INT_PTX_LDU_G_v2i64_ELE, NVPTX::INT_PTX_LDU_G_v2f32_ELE,
-        NVPTX::INT_PTX_LDU_G_v2f64_ELE);
-    break;
-  case NVPTXISD::LoadV4:
-    Opcode = pickOpcodeForVT(
-        EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v4i8_ELE,
-        NVPTX::INT_PTX_LDG_G_v4i16_ELE, NVPTX::INT_PTX_LDG_G_v4i32_ELE,
-        std::nullopt, NVPTX::INT_PTX_LDG_G_v4f32_ELE, std::nullopt);
-    break;
-  case NVPTXISD::LDUV4:
-    Opcode = pickOpcodeForVT(
-        EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_G_v4i8_ELE,
-        NVPTX::INT_PTX_LDU_G_v4i16_ELE, NVPTX::INT_PTX_LDU_G_v4i32_ELE,
-        std::nullopt, NVPTX::INT_PTX_LDU_G_v4f32_ELE, std::nullopt);
-    break;
+  if (!Opcode) {
+    switch (N->getOpcode()) {
+    default:
+      return false;
+    case ISD::LOAD:
+      Opcode = pickOpcodeForVT(
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_GLOBAL_i8,
+          NVPTX::INT_PTX_LDG_GLOBAL_i16, NVPTX::INT_PTX_LDG_GLOBAL_i32,
+          NVPTX::INT_PTX_LDG_GLOBAL_i64, NVPTX::INT_PTX_LDG_GLOBAL_f32,
+          NVPTX::INT_PTX_LDG_GLOBAL_f64);
+      break;
+    case ISD::INTRINSIC_W_CHAIN:
+      Opcode = pickOpcodeForVT(
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_GLOBAL_i8,
+          NVPTX::INT_PTX_LDU_GLOBAL_i16, NVPTX::INT_PTX_LDU_GLOBAL_i32,
+          NVPTX::INT_PTX_LDU_GLOBAL_i64, NVPTX::INT_PTX_LDU_GLOBAL_f32,
+          NVPTX::INT_PTX_LDU_GLOBAL_f64);
+      break;
+    case NVPTXISD::LoadV2:
+      Opcode = pickOpcodeForVT(
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v2i8_ELE,
+          NVPTX::INT_PTX_LDG_G_v2i16_ELE, NVPTX::INT_PTX_LDG_G_v2i32_ELE,
+          NVPTX::INT_PTX_LDG_G_v2i64_ELE, NVPTX::INT_PTX_LDG_G_v2f32_ELE,
+          NVPTX::INT_PTX_LDG_G_v2f64_ELE);
+      break;
+    case NVPTXISD::LDUV2:
+      Opcode = pickOpcodeForVT(
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_G_v2i8_ELE,
+          NVPTX::INT_PTX_LDU_G_v2i16_ELE, NVPTX::INT_PTX_LDU_G_v2i32_ELE,
+          NVPTX::INT_PTX_LDU_G_v2i64_ELE, NVPTX::INT_PTX_LDU_G_v2f32_ELE,
+          NVPTX::INT_PTX_LDU_G_v2f64_ELE);
+      break;
+    case NVPTXISD::LoadV4:
+      Opcode = pickOpcodeForVT(
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDG_G_v4i8_ELE,
+          NVPTX::INT_PTX_LDG_G_v4i16_ELE, NVPTX::INT_PTX_LDG_G_v4i32_ELE,
+          std::nullopt, NVPTX::INT_PTX_LDG_G_v4f32_ELE, std::nullopt);
+      break;
+    case NVPTXISD::LDUV4:
+      Opcode = pickOpcodeForVT(
+          EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_G_v4i8_ELE,
+          NVPTX::INT_PTX_LDU_G_v4i16_ELE, NVPTX::INT_PTX_LDU_G_v4i32_ELE,
+          std::nullopt, NVPTX::INT_PTX_LDU_G_v4f32_ELE, std::nullopt);
+      break;
+    }
   }
   if (!Opcode)
     return false;
@@ -1411,14 +1467,21 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   // Type Setting: toType + toTypeWidth
   // - for integer type, always use 'u'
   MVT ScalarVT = SimpleVT.getScalarType();
-  unsigned ToTypeWidth = ScalarVT.getSizeInBits();
   if (SimpleVT.isVector()) {
-    assert((Isv2x16VT(StoreVT) || StoreVT == MVT::v4i8) &&
-           "Unexpected vector type");
-    // v2x16 is stored using st.b32
-    ToTypeWidth = 32;
+    switch (StoreVT.getSimpleVT().SimpleTy) {
+    case MVT::v2f16:
+    case MVT::v2bf16:
+    case MVT::v2i16:
+    case MVT::v4i8:
+    case MVT::v2f32:
+      ScalarVT = StoreVT.getSimpleVT();
+      break;
+    default:
+      llvm_unreachable("Unsupported vector type for non-vector store");
+    }
   }
 
+  unsigned ToTypeWidth = ScalarVT.getSizeInBits();
   unsigned int ToType = getLdStRegType(ScalarVT);
 
   // Create the machine instruction DAG
@@ -1506,9 +1569,24 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     return false;
   }
 
-  if (isSubVectorPackedInI32(EltVT)) {
-    EltVT = MVT::i32;
+  LLVM_DEBUG({
+    dbgs() << "tryStoreVector on " << TLI->getTargetNodeName(N->getOpcode())
+           << ":\n";
+    dbgs() << "  store type: " << StoreVT << "\n";
+    dbgs() << "  total store width: " << TotalWidth << " bits\n";
+    dbgs() << "  to type width: " << ToTypeWidth << " bits\n";
+    dbgs() << "  element type: " << EltVT << "\n";
+  });
+
+  if (isSubVectorPackedInInteger(EltVT)) {
+    ToTypeWidth = EltVT.getSizeInBits();
+    EltVT = MVT::getIntegerVT(ToTypeWidth);
     ToType = NVPTX::PTXLdStInstCode::Untyped;
+    LLVM_DEBUG({
+      dbgs() << "  packed integers detected:\n";
+      dbgs() << "    to type width: " << ToTypeWidth << " (new)\n";
+      dbgs() << "    element type: " << EltVT << " (new)\n";
+    });
   }
 
   assert(isPowerOf2_32(ToTypeWidth) && ToTypeWidth >= 8 && ToTypeWidth <= 128 &&
