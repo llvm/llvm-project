@@ -32,7 +32,7 @@ _to_be_interrupted:
   add x24, x24, #1
 
 #if defined(__APPLE__)
-  adrp x23, L_.return@PAGE        // put return address in x4
+  adrp x23, L_.return@PAGE        // put return address in x23
   add x23, x23, L_.return@PAGEOFF
 #else
   adrp x23, .L.return
