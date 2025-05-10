@@ -192,7 +192,8 @@ static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
 // Collect "interesting" coroutine intrinsics.
 void coro::Shape::analyze(Function &F,
                           SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-                          SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves) {
+                          SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
+                          SmallVectorImpl<CoroPromiseInst *> &CoroPromises) {
   clear();
 
   bool HasFinalSuspend = false;
@@ -285,6 +286,9 @@ void coro::Shape::analyze(Function &F,
             std::swap(CoroEnds.front(), CoroEnds.back());
           }
         }
+        break;
+      case Intrinsic::coro_promise:
+        CoroPromises.push_back(cast<CoroPromiseInst>(II));
         break;
       }
     }
@@ -477,7 +481,8 @@ void coro::AnyRetconABI::init() {
 
 void coro::Shape::cleanCoroutine(
     SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-    SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves) {
+    SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
+    SmallVectorImpl<CoroPromiseInst *> &CoroPromises) {
   // The coro.frame intrinsic is always lowered to the result of coro.begin.
   for (CoroFrameInst *CF : CoroFrames) {
     CF->replaceAllUsesWith(CoroBegin);
@@ -489,6 +494,11 @@ void coro::Shape::cleanCoroutine(
   for (CoroSaveInst *CoroSave : UnusedCoroSaves)
     CoroSave->eraseFromParent();
   UnusedCoroSaves.clear();
+
+  for (auto *PI : CoroPromises) {
+    PI->replaceAllUsesWith(getPromiseAlloca());
+    PI->eraseFromParent();
+  }
 }
 
 static void propagateCallAttrsFromCallee(CallInst *Call, Function *Callee) {

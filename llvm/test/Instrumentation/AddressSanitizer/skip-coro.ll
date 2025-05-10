@@ -15,8 +15,9 @@ define ptr @foo() #0 {
 entry:
   %__promise = alloca %struct.Promise, align 8
   %0 = call token @llvm.coro.id(i32 16, ptr nonnull %__promise, ptr null, ptr null)
-  %1 = call ptr @llvm.coro.noop()
-  ret ptr %1
+  %1 = call ptr @llvm.coro.begin(token %0, ptr null)
+  %2 = call ptr @llvm.coro.noop()
+  ret ptr %2
 }
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)

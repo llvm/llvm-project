@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "CoroInternal.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -165,6 +166,7 @@ static void setCannotDuplicate(CoroIdInst *CoroId) {
 
 void Lowerer::lowerEarlyIntrinsics(Function &F) {
   CoroIdInst *CoroId = nullptr;
+  CoroBeginInst *CoroBegin = nullptr;
   SmallVector<CoroFreeInst *, 4> CoroFrees;
   bool HasCoroSuspend = false;
   for (Instruction &I : llvm::make_early_inc_range(instructions(F))) {
@@ -175,6 +177,23 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
     switch (CB->getIntrinsicID()) {
       default:
         continue;
+      case Intrinsic::coro_begin:
+      case Intrinsic::coro_begin_custom_abi: {
+        auto CBI = cast<CoroBeginInst>(&I);
+
+        // Ignore coro id's that aren't pre-split.
+        auto Id = dyn_cast<CoroIdInst>(CBI->getId());
+        if (Id && !Id->getInfo().isPreSplit())
+          break;
+
+        if (CoroBegin)
+          report_fatal_error(
+              "coroutine should have exactly one defining @llvm.coro.begin");
+        CBI->addRetAttr(Attribute::NonNull);
+        CBI->addRetAttr(Attribute::NoAlias);
+        CoroBegin = CBI;
+        break;
+      }
       case Intrinsic::coro_free:
         CoroFrees.push_back(cast<CoroFreeInst>(&I));
         break;
@@ -218,21 +237,43 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
       case Intrinsic::coro_destroy:
         lowerResumeOrDestroy(*CB, CoroSubFnInst::DestroyIndex);
         break;
-      case Intrinsic::coro_promise:
-        lowerCoroPromise(cast<CoroPromiseInst>(&I));
+      case Intrinsic::coro_promise: {
+        bool OutsideCoro = CoroBegin == nullptr;
+        if (OutsideCoro)
+          lowerCoroPromise(cast<CoroPromiseInst>(&I));
         break;
+      }
       case Intrinsic::coro_done:
         lowerCoroDone(cast<IntrinsicInst>(&I));
         break;
     }
   }
 
-  // Make sure that all CoroFree reference the coro.id intrinsic.
-  // Token type is not exposed through coroutine C/C++ builtins to plain C, so
-  // we allow specifying none and fixing it up here.
-  if (CoroId)
+  if (CoroId) {
+    // Make sure that all CoroFree reference the coro.id intrinsic.
+    // Token type is not exposed through coroutine C/C++ builtins to plain C, so
+    // we allow specifying none and fixing it up here.
     for (CoroFreeInst *CF : CoroFrees)
       CF->setArgOperand(0, CoroId);
+
+    if (auto *PA = CoroId->getPromise()) {
+      assert(CoroBegin && "Use Switch-Resumed ABI but missing coro.begin");
+
+      Builder.SetInsertPoint(*CoroBegin->getInsertionPointAfterDef());
+
+      auto *Alignment = Builder.getInt32(PA->getAlign().value());
+      auto *FromPromise = Builder.getInt1(false);
+      SmallVector<Value *, 3> Arg{CoroBegin, Alignment, FromPromise};
+      auto *PI =
+          Builder.CreateIntrinsic(Builder.getPtrTy(), Intrinsic::coro_promise,
+                                  Arg, {}, "promise.addr");
+      PA->replaceUsesWithIf(PI, [CoroId](Use &U) {
+        bool IsBitcast = U == U.getUser()->stripPointerCasts();
+        bool IsCoroId = U.getUser() == CoroId;
+        return !IsBitcast && !IsCoroId;
+      });
+    }
+  }
 
   // Coroutine suspention could potentially lead to any argument modified
   // outside of the function, hence arguments should not have noalias
