@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/DemangledNameInfo.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
@@ -104,16 +105,19 @@ bool SymbolContext::DumpStopContext(
 
     if (addr_t file_addr = addr.GetFileAddress();
         file_addr != LLDB_INVALID_ADDRESS) {
-      const addr_t function_offset =
-          file_addr -
-          function->GetAddressRange().GetBaseAddress().GetFileAddress();
+      // Avoiding signed arithmetic due to UB in -INT_MAX.
+      const char sign =
+          file_addr >= function->GetAddress().GetFileAddress() ? '+' : '-';
+      addr_t offset = file_addr - function->GetAddress().GetFileAddress();
+      if (sign == '-')
+        offset = -offset;
       if (!show_function_name) {
         // Print +offset even if offset is 0
         dumped_something = true;
-        s->Printf("+%" PRIu64 ">", function_offset);
-      } else if (function_offset) {
+        s->Format("{0}{1}>", sign, offset);
+      } else if (offset) {
         dumped_something = true;
-        s->Printf(" + %" PRIu64, function_offset);
+        s->Format(" {0} {1}", sign, offset);
       }
     }
 
@@ -318,65 +322,6 @@ uint32_t SymbolContext::GetResolvedMask() const {
   return resolved_mask;
 }
 
-void SymbolContext::Dump(Stream *s, Target *target) const {
-  *s << this << ": ";
-  s->Indent();
-  s->PutCString("SymbolContext");
-  s->IndentMore();
-  s->EOL();
-  s->IndentMore();
-  s->Indent();
-  *s << "Module       = " << module_sp.get() << ' ';
-  if (module_sp)
-    module_sp->GetFileSpec().Dump(s->AsRawOstream());
-  s->EOL();
-  s->Indent();
-  *s << "CompileUnit  = " << comp_unit;
-  if (comp_unit != nullptr)
-    s->Format(" {{{0:x-16}} {1}", comp_unit->GetID(),
-              comp_unit->GetPrimaryFile());
-  s->EOL();
-  s->Indent();
-  *s << "Function     = " << function;
-  if (function != nullptr) {
-    s->Format(" {{{0:x-16}} {1}, address-range = ", function->GetID(),
-              function->GetType()->GetName());
-    function->GetAddressRange().Dump(s, target, Address::DumpStyleLoadAddress,
-                                     Address::DumpStyleModuleWithFileAddress);
-    s->EOL();
-    s->Indent();
-    Type *func_type = function->GetType();
-    if (func_type) {
-      *s << "        Type = ";
-      func_type->Dump(s, false);
-    }
-  }
-  s->EOL();
-  s->Indent();
-  *s << "Block        = " << block;
-  if (block != nullptr)
-    s->Format(" {{{0:x-16}}", block->GetID());
-  s->EOL();
-  s->Indent();
-  *s << "LineEntry    = ";
-  line_entry.Dump(s, target, true, Address::DumpStyleLoadAddress,
-                  Address::DumpStyleModuleWithFileAddress, true);
-  s->EOL();
-  s->Indent();
-  *s << "Symbol       = " << symbol;
-  if (symbol != nullptr && symbol->GetMangled())
-    *s << ' ' << symbol->GetName().AsCString();
-  s->EOL();
-  *s << "Variable     = " << variable;
-  if (variable != nullptr) {
-    s->Format(" {{{0:x-16}} {1}", variable->GetID(),
-              variable->GetType()->GetName());
-    s->EOL();
-  }
-  s->IndentLess();
-  s->IndentLess();
-}
-
 bool lldb_private::operator==(const SymbolContext &lhs,
                               const SymbolContext &rhs) {
   return lhs.function == rhs.function && lhs.symbol == rhs.symbol &&
@@ -411,8 +356,8 @@ bool SymbolContext::GetAddressRange(uint32_t scope, uint32_t range_idx,
   }
 
   if ((scope & eSymbolContextFunction) && (function != nullptr)) {
-    if (range_idx == 0) {
-      range = function->GetAddressRange();
+    if (range_idx < function->GetAddressRanges().size()) {
+      range = function->GetAddressRanges()[range_idx];
       return true;
     }
   }
@@ -428,6 +373,16 @@ bool SymbolContext::GetAddressRange(uint32_t scope, uint32_t range_idx,
   }
   range.Clear();
   return false;
+}
+
+Address SymbolContext::GetFunctionOrSymbolAddress() const {
+  if (function)
+    return function->GetAddress();
+
+  if (symbol)
+    return symbol->GetAddress();
+
+  return Address();
 }
 
 LanguageType SymbolContext::GetLanguage() const {
@@ -700,9 +655,7 @@ LineEntry SymbolContext::GetFunctionStartLineEntry() const {
   }
 
   if (function) {
-    if (function->GetAddressRange()
-            .GetBaseAddress()
-            .CalculateSymbolContextLineEntry(line_entry))
+    if (function->GetAddress().CalculateSymbolContextLineEntry(line_entry))
       return line_entry;
   }
   return LineEntry();
@@ -918,6 +871,38 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
   }
 
   return nullptr; // no error; we just didn't find anything
+}
+
+Mangled SymbolContext::GetPossiblyInlinedFunctionName() const {
+  auto get_mangled = [this]() {
+    if (function)
+      return function->GetMangled();
+
+    if (symbol)
+      return symbol->GetMangled();
+
+    return Mangled{};
+  };
+
+  if (!block)
+    return get_mangled();
+
+  const Block *inline_block = block->GetContainingInlinedBlock();
+  if (!inline_block)
+    return get_mangled();
+
+  const InlineFunctionInfo *inline_info =
+      inline_block->GetInlinedFunctionInfo();
+  if (!inline_info)
+    return get_mangled();
+
+  // If we do have an inlined frame name, return that.
+  if (const Mangled &inline_name = inline_info->GetMangled())
+    return inline_name;
+
+  // Sometimes an inline frame may not have mangling information,
+  // but does have a valid name.
+  return Mangled{inline_info->GetName().AsCString()};
 }
 
 //
@@ -1228,8 +1213,7 @@ bool SymbolContextList::AppendIfUnique(const SymbolContext &sc,
           continue;
 
         if (pos->function) {
-          if (pos->function->GetAddressRange().GetBaseAddress() ==
-              sc.symbol->GetAddressRef()) {
+          if (pos->function->GetAddress() == sc.symbol->GetAddressRef()) {
             // Do we already have a function with this symbol?
             if (pos->symbol == sc.symbol)
               return false;

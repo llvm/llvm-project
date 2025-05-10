@@ -9,6 +9,7 @@
 #include "Writer.h"
 #include "AArch64ErrataFix.h"
 #include "ARMErrataFix.h"
+#include "BPSectionOrderer.h"
 #include "CallGraphSort.h"
 #include "Config.h"
 #include "InputFiles.h"
@@ -63,6 +64,7 @@ private:
   void sortOrphanSections();
   void finalizeSections();
   void checkExecuteOnly();
+  void checkExecuteOnlyReport();
   void setReservedSymbolSections();
 
   SmallVector<std::unique_ptr<PhdrEntry>, 0> createPhdrs(Partition &part);
@@ -149,6 +151,7 @@ static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
   if (!s || s->isDefined() || s->isCommon())
     return nullptr;
 
+  ctx.synthesizedSymbols.push_back(s);
   s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
                           stOther, STT_NOTYPE, val,
                           /*size=*/0, sec});
@@ -282,6 +285,7 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
 static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Demote symbols");
   DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
+  bool maybePreemptible = ctx.sharedFiles.size() || ctx.arg.shared;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (auto *d = dyn_cast<Defined>(sym)) {
       if (d->section && !d->section->isLive())
@@ -297,9 +301,9 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
       }
     }
 
-    sym->isExported = sym->includeInDynsym(ctx);
-    if (ctx.arg.hasDynSymTab)
-      sym->isPreemptible = sym->isExported && computeIsPreemptible(ctx, *sym);
+    if (maybePreemptible)
+      sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
+                           computeIsPreemptible(ctx, *sym);
   }
 }
 
@@ -320,6 +324,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // finalizeSections does that.
   finalizeSections();
   checkExecuteOnly();
+  checkExecuteOnlyReport();
 
   // If --compressed-debug-sections is specified, compress .debug_* sections.
   // Do it right now because it changes the size of output sections.
@@ -381,9 +386,11 @@ template <class ELFT> void Writer<ELFT>::run() {
     if (errCount(ctx))
       return;
 
-    if (auto e = buffer->commit())
-      Err(ctx) << "failed to write output '" << buffer->getPath()
-               << "': " << std::move(e);
+    if (!ctx.e.disableOutput) {
+      if (auto e = buffer->commit())
+        Err(ctx) << "failed to write output '" << buffer->getPath()
+                 << "': " << std::move(e);
+    }
 
     if (!ctx.arg.cmseOutputLib.empty())
       writeARMCmseImportLib<ELFT>(ctx);
@@ -645,7 +652,6 @@ static bool isRelroSection(Ctx &ctx, const OutputSection *sec) {
 enum RankFlags {
   RF_NOT_ADDR_SET = 1 << 27,
   RF_NOT_ALLOC = 1 << 26,
-  RF_HIP_FATBIN = 1 << 19,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
   RF_LARGE_ALT = 1 << 15,
   RF_WRITE = 1 << 14,
@@ -742,15 +748,6 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
   // sections, place non-NOBITS sections first.
   if (osec.type == SHT_NOBITS)
     rank |= RF_BSS;
-
-  // Put HIP fatbin related sections further away to avoid wasting relocation
-  // range to jump over them.  Make sure .hip_fatbin is the furthest.
-  if (osec.name == ".hipFatBinSegment")
-    rank |= RF_HIP_FATBIN;
-  if (osec.name == ".hip_gpubin_handle")
-    rank |= RF_HIP_FATBIN | 2;
-  if (osec.name == ".hip_fatbin")
-    rank |= RF_HIP_FATBIN | RF_WRITE | 3;
 
   // Some architectures have additional ordering restrictions for sections
   // within the same PT_LOAD.
@@ -1080,12 +1077,24 @@ static void maybeShuffle(Ctx &ctx,
   }
 }
 
-// Builds section order for handling --symbol-ordering-file.
+// Return section order within an InputSectionDescription.
+// If both --symbol-ordering-file and call graph profile are present, the order
+// file takes precedence, but the call graph profile is still used for symbols
+// that don't appear in the order file.
 static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   DenseMap<const InputSectionBase *, int> sectionOrder;
-  // Use the rarely used option --call-graph-ordering-file to sort sections.
-  if (!ctx.arg.callGraphProfile.empty())
-    return computeCallGraphProfileOrder(ctx);
+  if (ctx.arg.bpStartupFunctionSort || ctx.arg.bpFunctionOrderForCompression ||
+      ctx.arg.bpDataOrderForCompression) {
+    TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
+    sectionOrder = runBalancedPartitioning(
+        ctx, ctx.arg.bpStartupFunctionSort ? ctx.arg.irpgoProfilePath : "",
+        ctx.arg.bpFunctionOrderForCompression,
+        ctx.arg.bpDataOrderForCompression,
+        ctx.arg.bpCompressionSortStartupFunctions,
+        ctx.arg.bpVerboseSectionOrderer);
+  } else if (!ctx.arg.callGraphProfile.empty()) {
+    sectionOrder = computeCallGraphProfileOrder(ctx);
+  }
 
   if (ctx.arg.symbolOrderingFile.empty())
     return sectionOrder;
@@ -1099,7 +1108,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   // appear in the symbol ordering file have the lowest priority 0.
   // All explicitly mentioned symbols have negative (higher) priorities.
   DenseMap<CachedHashStringRef, SymbolOrderEntry> symbolOrder;
-  int priority = -ctx.arg.symbolOrderingFile.size();
+  int priority = -sectionOrder.size() - ctx.arg.symbolOrderingFile.size();
   for (StringRef s : ctx.arg.symbolOrderingFile)
     symbolOrder.insert({CachedHashStringRef(s), {priority++, false}});
 
@@ -1255,11 +1264,11 @@ static void sortSection(Ctx &ctx, OutputSection &osec,
   }
 }
 
-// If no layout was provided by linker script, we want to apply default
-// sorting for special input sections. This also handles --symbol-ordering-file.
+// Sort sections within each InputSectionDescription.
 template <class ELFT> void Writer<ELFT>::sortInputSections() {
-  // Build the order once since it is expensive.
+  // Assign negative priorities.
   DenseMap<const InputSectionBase *, int> order = buildSectionOrder(ctx);
+  // Assign non-negative priorities due to --shuffle-sections.
   maybeShuffle(ctx, order);
   for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
@@ -1449,6 +1458,40 @@ static void finalizeSynthetic(Ctx &ctx, SyntheticSection *sec) {
   }
 }
 
+static bool canInsertPadding(OutputSection *sec) {
+  StringRef s = sec->name;
+  return s == ".bss" || s == ".data" || s == ".data.rel.ro" || s == ".lbss" ||
+         s == ".ldata" || s == ".lrodata" || s == ".ltext" || s == ".rodata" ||
+         s.starts_with(".text");
+}
+
+static void randomizeSectionPadding(Ctx &ctx) {
+  std::mt19937 g(*ctx.arg.randomizeSectionPadding);
+  PhdrEntry *curPtLoad = nullptr;
+  for (OutputSection *os : ctx.outputSections) {
+    if (!canInsertPadding(os))
+      continue;
+    for (SectionCommand *bc : os->commands) {
+      if (auto *isd = dyn_cast<InputSectionDescription>(bc)) {
+        SmallVector<InputSection *, 0> tmp;
+        if (os->ptLoad != curPtLoad) {
+          tmp.push_back(make<RandomizePaddingSection>(
+              ctx, g() % ctx.arg.maxPageSize, os));
+          curPtLoad = os->ptLoad;
+        }
+        for (InputSection *isec : isd->sections) {
+          // Probability of inserting padding is 1 in 16.
+          if (g() % 16 == 0)
+            tmp.push_back(
+                make<RandomizePaddingSection>(ctx, isec->addralign, os));
+          tmp.push_back(isec);
+        }
+        isd->sections = std::move(tmp);
+      }
+    }
+  }
+}
+
 // We need to generate and finalize the content that depends on the address of
 // InputSections. As the generation of the content may also alter InputSection
 // addresses we must converge to a fixed point. We do that here. See the comment
@@ -1475,6 +1518,9 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   if (ctx.arg.emachine == EM_HEXAGON)
     hexagonTLSSymbolUpdate(ctx);
 
+  if (ctx.arg.randomizeSectionPadding)
+    randomizeSectionPadding(ctx);
+
   uint32_t pass = 0, assignPasses = 0;
   for (;;) {
     bool changed = ctx.target->needsThunks
@@ -1487,8 +1533,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     // With Thunk Size much smaller than branch range we expect to
     // converge quickly; if we get to 30 something has gone wrong.
     if (changed && pass >= 30) {
-      Err(ctx) << (ctx.target->needsThunks ? "thunk creation not converged"
-                                           : "relaxation not converged");
+      Err(ctx) << "address assignment did not converge";
       break;
     }
 
@@ -1805,6 +1850,13 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     }
   }
 
+  // If the previous code block defines any non-hidden symbols (e.g.
+  // __global_pointer$), they may be exported.
+  if (ctx.arg.exportDynamic)
+    for (Symbol *sym : ctx.synthesizedSymbols)
+      if (sym->computeBinding(ctx) != STB_LOCAL)
+        sym->isExported = true;
+
   demoteSymbolsAndComputeIsPreemptible(ctx);
 
   if (ctx.arg.copyRelocs && ctx.arg.discard != DiscardPolicy::None)
@@ -1889,9 +1941,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (ctx.in.symTab)
         ctx.in.symTab->addSymbol(sym);
 
-      // computeBinding might localize a linker-synthesized hidden symbol
-      // (e.g. __global_pointer$) that was considered exported.
-      if (sym->isExported && !sym->isLocal()) {
+      // computeBinding might localize a symbol that was considered exported
+      // but then synthesized as hidden (e.g. _DYNAMIC).
+      if ((sym->isExported || sym->isPreemptible) && !sym->isLocal()) {
         ctx.partitions[sym->partition - 1].dynSymTab->addSymbol(sym);
         if (auto *file = dyn_cast<SharedFile>(sym->file))
           if (file->isNeeded && !sym->isUndefined())
@@ -2126,6 +2178,37 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
                             "data and code";
 }
 
+// Check which input sections of RX output sections don't have the
+// SHF_AARCH64_PURECODE or SHF_ARM_PURECODE flag set.
+template <class ELFT> void Writer<ELFT>::checkExecuteOnlyReport() {
+  if (ctx.arg.zExecuteOnlyReport == ReportPolicy::None)
+    return;
+
+  auto reportUnless = [&](bool cond) -> ELFSyncStream {
+    if (cond)
+      return {ctx, DiagLevel::None};
+    return {ctx, toDiagLevel(ctx.arg.zExecuteOnlyReport)};
+  };
+
+  uint64_t purecodeFlag =
+      ctx.arg.emachine == EM_AARCH64 ? SHF_AARCH64_PURECODE : SHF_ARM_PURECODE;
+  StringRef purecodeFlagName = ctx.arg.emachine == EM_AARCH64
+                                   ? "SHF_AARCH64_PURECODE"
+                                   : "SHF_ARM_PURECODE";
+  SmallVector<InputSection *, 0> storage;
+  for (OutputSection *osec : ctx.outputSections) {
+    if (osec->getPhdrFlags() != (PF_R | PF_X))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      if (isa<SyntheticSection>(sec))
+        continue;
+      reportUnless(sec->flags & purecodeFlag)
+          << "-z execute-only-report: " << sec << " does not have "
+          << purecodeFlagName << " flag set";
+    }
+  }
+}
+
 // The linker is expected to define SECNAME_start and SECNAME_end
 // symbols for a few sections. This function defines them.
 template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
@@ -2296,10 +2379,16 @@ Writer<ELFT>::createPhdrs(Partition &part) {
     // so when hasSectionsCommand, since we cannot introduce the extra alignment
     // needed to create a new LOAD)
     uint64_t newFlags = computeFlags(ctx, sec->getPhdrFlags());
-    // When --no-rosegment is specified, RO and RX sections are compatible.
-    uint32_t incompatible = flags ^ newFlags;
-    if (ctx.arg.singleRoRx && !(newFlags & PF_W))
-      incompatible &= ~PF_X;
+    uint64_t incompatible = flags ^ newFlags;
+    if (!(newFlags & PF_W)) {
+      // When --no-rosegment is specified, RO and RX sections are compatible.
+      if (ctx.arg.singleRoRx)
+        incompatible &= ~PF_X;
+      // When --no-xosegment is specified (the default), XO and RX sections are
+      // compatible.
+      if (ctx.arg.singleXoRx)
+        incompatible &= ~PF_R;
+    }
     if (incompatible)
       load = nullptr;
 
@@ -2367,6 +2456,11 @@ Writer<ELFT>::createPhdrs(Partition &part) {
       perm |= PF_X;
     addHdr(PT_GNU_STACK, perm)->p_memsz = ctx.arg.zStackSize;
   }
+
+  // PT_OPENBSD_NOBTCFI is an OpenBSD-specific header to mark that the
+  // executable is expected to violate branch-target CFI checks.
+  if (ctx.arg.zNoBtCfi)
+    addHdr(PT_OPENBSD_NOBTCFI, PF_X);
 
   // PT_OPENBSD_WXNEEDED is a OpenBSD-specific header to mark the executable
   // is expected to perform W^X violations, such as calling mprotect(2) or
@@ -2866,9 +2960,12 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
       if (p->p_type == PT_LOAD)
         last = p.get();
 
-    if (last && (last->p_flags & PF_X))
-      last->p_memsz = last->p_filesz =
-          alignToPowerOf2(last->p_filesz, ctx.arg.maxPageSize);
+    if (last && (last->p_flags & PF_X)) {
+      last->p_filesz = alignToPowerOf2(last->p_filesz, ctx.arg.maxPageSize);
+      // p_memsz might be larger than the aligned p_filesz due to trailing BSS
+      // sections. Don't decrease it.
+      last->p_memsz = std::max(last->p_memsz, last->p_filesz);
+    }
   }
 }
 

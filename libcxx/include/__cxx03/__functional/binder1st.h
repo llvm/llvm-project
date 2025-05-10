@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_BINDER1ST_H
-#define _LIBCPP___FUNCTIONAL_BINDER1ST_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_BINDER1ST_H
+#define _LIBCPP___CXX03___FUNCTIONAL_BINDER1ST_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/unary_function.h>
@@ -18,8 +18,6 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS)
 
 template <class _Operation>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 binder1st
@@ -47,8 +45,6 @@ bind1st(const _Operation& __op, const _Tp& __x) {
   return binder1st<_Operation>(__op, __x);
 }
 
-#endif // _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS)
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_BINDER1ST_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_BINDER1ST_H

@@ -45,56 +45,88 @@ static constexpr llvm::StringRef kGenericFree = "_mlir_memref_to_llvm_free";
 static constexpr llvm::StringRef kMemRefCopy = "memrefCopy";
 
 /// Generic print function lookupOrCreate helper.
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateFn(Operation *moduleOp,
-                                              StringRef name,
-                                              ArrayRef<Type> paramTypes,
-                                              Type resultType, bool isVarArg) {
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreateFn(OpBuilder &b, Operation *moduleOp, StringRef name,
+                             ArrayRef<Type> paramTypes, Type resultType,
+                             bool isVarArg, bool isReserved) {
   assert(moduleOp->hasTrait<OpTrait::SymbolTable>() &&
          "expected SymbolTable operation");
   auto func = llvm::dyn_cast_or_null<LLVM::LLVMFuncOp>(
       SymbolTable::lookupSymbolIn(moduleOp, name));
-  if (func)
+  auto funcT = LLVMFunctionType::get(resultType, paramTypes, isVarArg);
+  // Assert the signature of the found function is same as expected
+  if (func) {
+    if (funcT != func.getFunctionType()) {
+      if (isReserved) {
+        func.emitError("redefinition of reserved function '")
+            << name << "' of different type " << func.getFunctionType()
+            << " is prohibited";
+      } else {
+        func.emitError("redefinition of function '")
+            << name << "' of different type " << funcT << " is prohibited";
+      }
+      return failure();
+    }
     return func;
-  OpBuilder b(moduleOp->getRegion(0));
+  }
+
+  OpBuilder::InsertionGuard g(b);
+  assert(!moduleOp->getRegion(0).empty() && "expected non-empty region");
+  b.setInsertionPointToStart(&moduleOp->getRegion(0).front());
   return b.create<LLVM::LLVMFuncOp>(
       moduleOp->getLoc(), name,
       LLVM::LLVMFunctionType::get(resultType, paramTypes, isVarArg));
 }
 
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintI64Fn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintI64,
-                          IntegerType::get(moduleOp->getContext(), 64),
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()));
+static FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateReservedFn(OpBuilder &b, Operation *moduleOp, StringRef name,
+                         ArrayRef<Type> paramTypes, Type resultType) {
+  return lookupOrCreateFn(b, moduleOp, name, paramTypes, resultType,
+                          /*isVarArg=*/false, /*isReserved=*/true);
 }
 
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintU64Fn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintU64,
-                          IntegerType::get(moduleOp->getContext(), 64),
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()));
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreatePrintI64Fn(OpBuilder &b, Operation *moduleOp) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kPrintI64, IntegerType::get(moduleOp->getContext(), 64),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
 
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintF16Fn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintF16,
-                          IntegerType::get(moduleOp->getContext(), 16), // bits!
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()));
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreatePrintU64Fn(OpBuilder &b, Operation *moduleOp) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kPrintU64, IntegerType::get(moduleOp->getContext(), 64),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
 
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintBF16Fn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintBF16,
-                          IntegerType::get(moduleOp->getContext(), 16), // bits!
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()));
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreatePrintF16Fn(OpBuilder &b, Operation *moduleOp) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kPrintF16,
+      IntegerType::get(moduleOp->getContext(), 16), // bits!
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
 
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintF32Fn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintF32,
-                          Float32Type::get(moduleOp->getContext()),
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()));
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreatePrintBF16Fn(OpBuilder &b, Operation *moduleOp) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kPrintBF16,
+      IntegerType::get(moduleOp->getContext(), 16), // bits!
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
 
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintF64Fn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintF64,
-                          Float64Type::get(moduleOp->getContext()),
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()));
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreatePrintF32Fn(OpBuilder &b, Operation *moduleOp) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kPrintF32, Float32Type::get(moduleOp->getContext()),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
+}
+
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreatePrintF64Fn(OpBuilder &b, Operation *moduleOp) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kPrintF64, Float64Type::get(moduleOp->getContext()),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
 
 static LLVM::LLVMPointerType getCharPtr(MLIRContext *context) {
@@ -106,76 +138,92 @@ static LLVM::LLVMPointerType getVoidPtr(MLIRContext *context) {
   return getCharPtr(context);
 }
 
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintStringFn(
-    Operation *moduleOp, std::optional<StringRef> runtimeFunctionName) {
-  return lookupOrCreateFn(moduleOp, runtimeFunctionName.value_or(kPrintString),
-                          getCharPtr(moduleOp->getContext()),
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()));
-}
-
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintOpenFn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintOpen, {},
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()));
-}
-
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintCloseFn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintClose, {},
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()));
-}
-
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintCommaFn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintComma, {},
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()));
-}
-
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintNewlineFn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintNewline, {},
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()));
-}
-
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateMallocFn(Operation *moduleOp,
-                                                    Type indexType) {
-  return LLVM::lookupOrCreateFn(moduleOp, kMalloc, indexType,
-                                getVoidPtr(moduleOp->getContext()));
-}
-
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateAlignedAllocFn(Operation *moduleOp,
-                                                          Type indexType) {
-  return LLVM::lookupOrCreateFn(moduleOp, kAlignedAlloc, {indexType, indexType},
-                                getVoidPtr(moduleOp->getContext()));
-}
-
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateFreeFn(Operation *moduleOp) {
-  return LLVM::lookupOrCreateFn(
-      moduleOp, kFree, getVoidPtr(moduleOp->getContext()),
+FailureOr<LLVM::LLVMFuncOp> mlir::LLVM::lookupOrCreatePrintStringFn(
+    OpBuilder &b, Operation *moduleOp,
+    std::optional<StringRef> runtimeFunctionName) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, runtimeFunctionName.value_or(kPrintString),
+      getCharPtr(moduleOp->getContext()),
       LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
 
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateGenericAllocFn(Operation *moduleOp,
-                                                          Type indexType) {
-  return LLVM::lookupOrCreateFn(moduleOp, kGenericAlloc, indexType,
-                                getVoidPtr(moduleOp->getContext()));
-}
-
-LLVM::LLVMFuncOp
-mlir::LLVM::lookupOrCreateGenericAlignedAllocFn(Operation *moduleOp,
-                                                Type indexType) {
-  return LLVM::lookupOrCreateFn(moduleOp, kGenericAlignedAlloc,
-                                {indexType, indexType},
-                                getVoidPtr(moduleOp->getContext()));
-}
-
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateGenericFreeFn(Operation *moduleOp) {
-  return LLVM::lookupOrCreateFn(
-      moduleOp, kGenericFree, getVoidPtr(moduleOp->getContext()),
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreatePrintOpenFn(OpBuilder &b, Operation *moduleOp) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kPrintOpen, {},
       LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
 
-LLVM::LLVMFuncOp
-mlir::LLVM::lookupOrCreateMemRefCopyFn(Operation *moduleOp, Type indexType,
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreatePrintCloseFn(OpBuilder &b, Operation *moduleOp) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kPrintClose, {},
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
+}
+
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreatePrintCommaFn(OpBuilder &b, Operation *moduleOp) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kPrintComma, {},
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
+}
+
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreatePrintNewlineFn(OpBuilder &b, Operation *moduleOp) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kPrintNewline, {},
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
+}
+
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreateMallocFn(OpBuilder &b, Operation *moduleOp,
+                                   Type indexType) {
+  return lookupOrCreateReservedFn(b, moduleOp, kMalloc, indexType,
+                                  getVoidPtr(moduleOp->getContext()));
+}
+
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreateAlignedAllocFn(OpBuilder &b, Operation *moduleOp,
+                                         Type indexType) {
+  return lookupOrCreateReservedFn(b, moduleOp, kAlignedAlloc,
+                                  {indexType, indexType},
+                                  getVoidPtr(moduleOp->getContext()));
+}
+
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreateFreeFn(OpBuilder &b, Operation *moduleOp) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kFree, getVoidPtr(moduleOp->getContext()),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
+}
+
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreateGenericAllocFn(OpBuilder &b, Operation *moduleOp,
+                                         Type indexType) {
+  return lookupOrCreateReservedFn(b, moduleOp, kGenericAlloc, indexType,
+                                  getVoidPtr(moduleOp->getContext()));
+}
+
+FailureOr<LLVM::LLVMFuncOp> mlir::LLVM::lookupOrCreateGenericAlignedAllocFn(
+    OpBuilder &b, Operation *moduleOp, Type indexType) {
+  return lookupOrCreateReservedFn(b, moduleOp, kGenericAlignedAlloc,
+                                  {indexType, indexType},
+                                  getVoidPtr(moduleOp->getContext()));
+}
+
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreateGenericFreeFn(OpBuilder &b, Operation *moduleOp) {
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kGenericFree, getVoidPtr(moduleOp->getContext()),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()));
+}
+
+FailureOr<LLVM::LLVMFuncOp>
+mlir::LLVM::lookupOrCreateMemRefCopyFn(OpBuilder &b, Operation *moduleOp,
+                                       Type indexType,
                                        Type unrankedDescriptorType) {
-  return LLVM::lookupOrCreateFn(
-      moduleOp, kMemRefCopy,
+  return lookupOrCreateReservedFn(
+      b, moduleOp, kMemRefCopy,
       ArrayRef<Type>{indexType, unrankedDescriptorType, unrankedDescriptorType},
       LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }

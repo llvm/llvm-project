@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck %s
 
-@lds0 = addrspace(3) global [512 x float] undef
-@lds1 = addrspace(3) global [256 x float] undef
-@lds2 = addrspace(3) global [4096 x float] undef
-@lds3 = addrspace(3) global [67 x i8] undef
+@lds0 = addrspace(3) global [512 x float] poison
+@lds1 = addrspace(3) global [256 x float] poison
+@lds2 = addrspace(3) global [4096 x float] poison
+@lds3 = addrspace(3) global [67 x i8] poison
 
 @dynamic_shared0 = external addrspace(3) global [0 x float]
 @dynamic_shared1 = external addrspace(3) global [0 x double]

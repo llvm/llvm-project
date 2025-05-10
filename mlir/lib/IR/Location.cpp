@@ -58,11 +58,11 @@ struct FileLineColRangeAttrStorage final
     auto *result = ::new (rawMem) FileLineColRangeAttrStorage(
         std::move(std::get<0>(tblgenKey)), locEnc - 1);
     if (numInArray > 0) {
-      result->startLine = std::get<1>(tblgenKey)[0];
+      ArrayRef<unsigned> elements = std::get<1>(tblgenKey);
+      result->startLine = elements[0];
       // Copy in the element types into the trailing storage.
-      std::uninitialized_copy(std::next(std::get<1>(tblgenKey).begin()),
-                              std::get<1>(tblgenKey).end(),
-                              result->getTrailingObjects<unsigned>());
+      llvm::uninitialized_copy(elements.drop_front(),
+                               result->getTrailingObjects<unsigned>());
     }
     return result;
   }
@@ -177,10 +177,8 @@ unsigned FileLineColLoc::getLine() const { return getStartLine(); }
 
 unsigned FileLineColLoc::getColumn() const { return getStartColumn(); }
 
-bool FileLineColLoc::classof(Attribute attr) {
-  // This could also have been for <= 2. But given this is matching previous
-  // behavior, it is left as is.
-  if (auto range = mlir::dyn_cast<FileLineColRange>(attr))
+bool mlir::isStrictFileLineColLoc(Location loc) {
+  if (auto range = mlir::dyn_cast<FileLineColRange>(loc))
     return range.getImpl()->size() == 2;
   return false;
 }
@@ -221,8 +219,7 @@ Location FusedLoc::get(ArrayRef<Location> locs, Attribute metadata,
       if (fusedLoc.getMetadata() == metadata) {
         // UnknownLoc's have already been removed from FusedLocs so we can
         // simply add all of the internal locations.
-        decomposedLocs.insert(fusedLoc.getLocations().begin(),
-                              fusedLoc.getLocations().end());
+        decomposedLocs.insert_range(fusedLoc.getLocations());
         continue;
       }
     }

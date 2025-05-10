@@ -212,19 +212,21 @@ private:
 int64_t SearchableTableEmitter::getNumericKey(const SearchIndex &Index,
                                               const Record *Rec) {
   assert(Index.Fields.size() == 1);
+  const GenericField &Field = Index.Fields[0];
 
   // To be consistent with compareBy and primaryRepresentation elsewhere,
   // we check for IsInstruction before Enum-- these fields are not exclusive.
-  if (Index.Fields[0].IsInstruction) {
-    const Record *TheDef = Rec->getValueAsDef(Index.Fields[0].Name);
+  if (Field.IsInstruction) {
+    const Record *TheDef = Rec->getValueAsDef(Field.Name);
     return Target->getInstrIntValue(TheDef);
   }
-  if (Index.Fields[0].Enum) {
-    const Record *EnumEntry = Rec->getValueAsDef(Index.Fields[0].Name);
-    return Index.Fields[0].Enum->EntryMap[EnumEntry]->second;
+  if (Field.Enum) {
+    const Record *EnumEntry = Rec->getValueAsDef(Field.Name);
+    return Field.Enum->EntryMap[EnumEntry]->second;
   }
+  assert(isa<BitsRecTy>(Field.RecType) && "unexpected field type");
 
-  return getInt(Rec, Index.Fields[0].Name);
+  return getInt(Rec, Field.Name);
 }
 
 /// Less-than style comparison between \p LHS and \p RHS according to the
@@ -392,37 +394,31 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
     }
   }
 
-  if (IsContiguous) {
+  if (Index.EarlyOut || IsContiguous) {
     const GenericField &Field = Index.Fields[0];
     std::string FirstRepr = primaryRepresentation(
         Index.Loc, Field, IndexRows[0]->getValueInit(Field.Name));
     std::string LastRepr = primaryRepresentation(
         Index.Loc, Field, IndexRows.back()->getValueInit(Field.Name));
-    OS << "  if ((" << Field.Name << " < " << FirstRepr << ") ||\n";
-    OS << "      (" << Field.Name << " > " << LastRepr << "))\n";
-    OS << "    return nullptr;\n";
-    OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
-    OS << "  size_t Idx = " << Index.Fields[0].Name << " - " << FirstRepr
-       << ";\n";
-    OS << "  return ";
-    if (IsPrimary)
-      OS << "&Table[Idx]";
-    else
-      OS << "&" << Table.Name << "[Table[Idx]._index]";
-    OS << ";\n";
-    OS << "}\n";
-    return;
-  }
-
-  if (Index.EarlyOut) {
-    const GenericField &Field = Index.Fields[0];
-    std::string FirstRepr = primaryRepresentation(
-        Index.Loc, Field, IndexRows[0]->getValueInit(Field.Name));
-    std::string LastRepr = primaryRepresentation(
-        Index.Loc, Field, IndexRows.back()->getValueInit(Field.Name));
-    OS << "  if ((" << Field.Name << " < " << FirstRepr << ") ||\n";
-    OS << "      (" << Field.Name << " > " << LastRepr << "))\n";
+    std::string TS =
+        '(' + searchableFieldType(Table, Index, Field, TypeInStaticStruct) +
+        ')';
+    OS << "  if (" << TS << Field.Name << " != std::clamp(" << TS << Field.Name
+       << ", " << TS << FirstRepr << ", " << TS << LastRepr << "))\n";
     OS << "    return nullptr;\n\n";
+
+    if (IsContiguous && !Index.EarlyOut) {
+      OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
+      OS << "  size_t Idx = " << Field.Name << " - " << FirstRepr << ";\n";
+      OS << "  return ";
+      if (IsPrimary)
+        OS << "&Table[Idx]";
+      else
+        OS << "&" << Table.Name << "[Table[Idx]._index]";
+      OS << ";\n";
+      OS << "}\n";
+      return;
+    }
   }
 
   OS << "  struct KeyType {\n";
@@ -642,7 +638,7 @@ void SearchableTableEmitter::collectEnumEntries(
       Value = getInt(EntryRec, ValueField);
 
     Enum.Entries.push_back(std::make_unique<GenericEnum::Entry>(Name, Value));
-    Enum.EntryMap.insert(std::pair(EntryRec, Enum.Entries.back().get()));
+    Enum.EntryMap.try_emplace(EntryRec, Enum.Entries.back().get());
   }
 
   if (ValueField.empty()) {
@@ -705,8 +701,7 @@ void SearchableTableEmitter::collectTableEntries(
   }
 
   SearchIndex Idx;
-  std::copy(Table.Fields.begin(), Table.Fields.end(),
-            std::back_inserter(Idx.Fields));
+  llvm::append_range(Idx.Fields, Table.Fields);
   llvm::sort(Table.Entries, [&](const Record *LHS, const Record *RHS) {
     return compareBy(LHS, RHS, Idx);
   });
@@ -745,7 +740,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
 
     collectEnumEntries(*Enum, NameField, ValueField,
                        Records.getAllDerivedDefinitions(FilterClass));
-    EnumMap.insert(std::pair(EnumRec, Enum.get()));
+    EnumMap.try_emplace(EnumRec, Enum.get());
     Enums.emplace_back(std::move(Enum));
   }
 
@@ -814,7 +809,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
                         });
     }
 
-    TableMap.insert(std::pair(TableRec, Table.get()));
+    TableMap.try_emplace(TableRec, Table.get());
     Tables.emplace_back(std::move(Table));
   }
 
@@ -839,7 +834,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
   const Record *SearchableTable = Records.getClass("SearchableTable");
   for (auto &NameRec : Records.getClasses()) {
     const Record *Class = NameRec.second.get();
-    if (Class->getSuperClasses().size() != 1 ||
+    if (Class->getDirectSuperClasses().size() != 1 ||
         !Class->isSubClassOf(SearchableTable))
       continue;
 

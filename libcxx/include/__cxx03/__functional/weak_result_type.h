@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_WEAK_RESULT_TYPE_H
-#define _LIBCPP___FUNCTIONAL_WEAK_RESULT_TYPE_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_WEAK_RESULT_TYPE_H
+#define _LIBCPP___CXX03___FUNCTIONAL_WEAK_RESULT_TYPE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/binary_function.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__functional/unary_function.h>
 #include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__type_traits/is_same.h>
 #include <__cxx03/__utility/declval.h>
 
@@ -88,9 +88,7 @@ template <class _Tp, bool = __has_result_type<_Tp>::value>
 struct __weak_result_type_imp // bool is true
     : public __maybe_derive_from_unary_function<_Tp>,
       public __maybe_derive_from_binary_function<_Tp> {
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = typename _Tp::result_type;
-#endif
 };
 
 template <class _Tp>
@@ -104,23 +102,17 @@ struct __weak_result_type : public __weak_result_type_imp<_Tp> {};
 
 template <class _Rp>
 struct __weak_result_type<_Rp()> {
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
-#endif
 };
 
 template <class _Rp>
 struct __weak_result_type<_Rp (&)()> {
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
-#endif
 };
 
 template <class _Rp>
 struct __weak_result_type<_Rp (*)()> {
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
-#endif
 };
 
 // 1 argument case
@@ -174,51 +166,37 @@ struct __weak_result_type<_Rp (_Cp::*)(_A1) const volatile> : public __binary_fu
 
 template <class _Rp, class _A1, class _A2, class _A3, class... _A4>
 struct __weak_result_type<_Rp(_A1, _A2, _A3, _A4...)> {
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
-#endif
 };
 
 template <class _Rp, class _A1, class _A2, class _A3, class... _A4>
 struct __weak_result_type<_Rp (&)(_A1, _A2, _A3, _A4...)> {
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
-#endif
 };
 
 template <class _Rp, class _A1, class _A2, class _A3, class... _A4>
 struct __weak_result_type<_Rp (*)(_A1, _A2, _A3, _A4...)> {
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
-#endif
 };
 
 template <class _Rp, class _Cp, class _A1, class _A2, class... _A3>
 struct __weak_result_type<_Rp (_Cp::*)(_A1, _A2, _A3...)> {
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
-#endif
 };
 
 template <class _Rp, class _Cp, class _A1, class _A2, class... _A3>
 struct __weak_result_type<_Rp (_Cp::*)(_A1, _A2, _A3...) const> {
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
-#endif
 };
 
 template <class _Rp, class _Cp, class _A1, class _A2, class... _A3>
 struct __weak_result_type<_Rp (_Cp::*)(_A1, _A2, _A3...) volatile> {
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
-#endif
 };
 
 template <class _Rp, class _Cp, class _A1, class _A2, class... _A3>
 struct __weak_result_type<_Rp (_Cp::*)(_A1, _A2, _A3...) const volatile> {
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   using result_type _LIBCPP_NODEBUG _LIBCPP_DEPRECATED_IN_CXX17 = _Rp;
-#endif
 };
 
 template <class _Tp, class... _Args>
@@ -228,4 +206,4 @@ struct __invoke_return {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_WEAK_RESULT_TYPE_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_WEAK_RESULT_TYPE_H

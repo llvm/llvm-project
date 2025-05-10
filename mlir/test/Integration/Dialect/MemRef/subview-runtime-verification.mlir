@@ -1,11 +1,9 @@
 // RUN: mlir-opt %s -generate-runtime-verification \
+// RUN:     -test-cf-assert \
 // RUN:     -expand-strided-metadata \
 // RUN:     -lower-affine \
-// RUN:     -finalize-memref-to-llvm \
-// RUN:     -test-cf-assert \
-// RUN:     -convert-func-to-llvm \
-// RUN:     -reconcile-unrealized-casts | \
-// RUN: mlir-cpu-runner -e main -entry-point-result=void \
+// RUN:     -convert-to-llvm | \
+// RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
 // RUN: FileCheck %s
 
@@ -41,38 +39,50 @@ func.func @main() {
   %alloca_4 = memref.alloca() : memref<4x4xf32>
   %alloca_4_dyn = memref.cast %alloca_4 : memref<4x4xf32> to memref<?x4xf32>
 
-  // Offset is out-of-bounds
+  // Offset is out-of-bounds and slice runs out-of-bounds
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "memref.subview"
-  // CHECK-NEXT: ^ subview is out-of-bounds of the base memref
+  // CHECK-NEXT: "memref.subview"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>, static_offsets = array<i64: -9223372036854775808, 0>, static_sizes = array<i64: -9223372036854775808, 1>, static_strides = array<i64: -9223372036854775808, 1>}> : (memref<?x4xf32>, index, index, index) -> memref<?xf32, strided<[?], offset: ?>>
+  // CHECK-NEXT: ^ offset 0 is out-of-bounds
+  // CHECK-NEXT: Location: loc({{.*}})
+  //      CHECK: ERROR: Runtime op verification failed
+  // CHECK-NEXT: "memref.subview"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>, static_offsets = array<i64: -9223372036854775808, 0>, static_sizes = array<i64: -9223372036854775808, 1>, static_strides = array<i64: -9223372036854775808, 1>}> : (memref<?x4xf32>, index, index, index) -> memref<?xf32, strided<[?], offset: ?>>
+  // CHECK-NEXT: ^ subview runs out-of-bounds along dimension 0
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @subview_dynamic_rank_reduce(%alloca_4_dyn, %5, %5, %1) : (memref<?x4xf32>, index, index, index) -> ()
 
-  // Offset is out-of-bounds
+  // Offset is out-of-bounds and slice runs out-of-bounds
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "memref.subview"
-  // CHECK-NEXT: ^ subview is out-of-bounds of the base memref
+  // CHECK-NEXT: "memref.subview"(%{{.*}}, %{{.*}}) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>, static_offsets = array<i64: -9223372036854775808>, static_sizes = array<i64: 1>, static_strides = array<i64: 1>}> : (memref<1xf32>, index) -> memref<1xf32, strided<[1], offset: ?>>
+  // CHECK-NEXT: ^ offset 0 is out-of-bounds
+  // CHECK-NEXT: Location: loc({{.*}})
+  //      CHECK: ERROR: Runtime op verification failed
+  // CHECK-NEXT: "memref.subview"(%{{.*}}, %{{.*}}) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>, static_offsets = array<i64: -9223372036854775808>, static_sizes = array<i64: 1>, static_strides = array<i64: 1>}> : (memref<1xf32>, index) -> memref<1xf32, strided<[1], offset: ?>>
+  // CHECK-NEXT: ^ subview runs out-of-bounds along dimension 0
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @subview(%alloca, %1) : (memref<1xf32>, index) -> ()
 
-  // Offset is out-of-bounds
+  // Offset is out-of-bounds and slice runs out-of-bounds
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "memref.subview"
-  // CHECK-NEXT: ^ subview is out-of-bounds of the base memref
+  // CHECK-NEXT: "memref.subview"(%{{.*}}, %{{.*}}) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>, static_offsets = array<i64: -9223372036854775808>, static_sizes = array<i64: 1>, static_strides = array<i64: 1>}> : (memref<1xf32>, index) -> memref<1xf32, strided<[1], offset: ?>>
+  // CHECK-NEXT: ^ offset 0 is out-of-bounds
+  // CHECK-NEXT: Location: loc({{.*}})
+  //      CHECK: ERROR: Runtime op verification failed
+  // CHECK-NEXT: "memref.subview"(%{{.*}}, %{{.*}}) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>, static_offsets = array<i64: -9223372036854775808>, static_sizes = array<i64: 1>, static_strides = array<i64: 1>}> : (memref<1xf32>, index) -> memref<1xf32, strided<[1], offset: ?>>
+  // CHECK-NEXT: ^ subview runs out-of-bounds along dimension 0
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @subview(%alloca, %n1) : (memref<1xf32>, index) -> ()
 
-  // Size is out-of-bounds
+  // Slice runs out-of-bounds due to size
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "memref.subview"
-  // CHECK-NEXT: ^ subview is out-of-bounds of the base memref
+  // CHECK-NEXT: "memref.subview"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>, static_offsets = array<i64: -9223372036854775808, 0>, static_sizes = array<i64: -9223372036854775808, 4>, static_strides = array<i64: -9223372036854775808, 1>}> : (memref<?x4xf32>, index, index, index) -> memref<?x4xf32, strided<[?, 1], offset: ?>>
+  // CHECK-NEXT: ^ subview runs out-of-bounds along dimension 0
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @subview_dynamic(%alloca_4_dyn, %0, %5, %1) : (memref<?x4xf32>, index, index, index) -> ()
 
-  // Stride is out-of-bounds
+  // Slice runs out-of-bounds due to stride
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "memref.subview"
-  // CHECK-NEXT: ^ subview is out-of-bounds of the base memref
+  // CHECK-NEXT: "memref.subview"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>, static_offsets = array<i64: -9223372036854775808, 0>, static_sizes = array<i64: -9223372036854775808, 4>, static_strides = array<i64: -9223372036854775808, 1>}> : (memref<?x4xf32>, index, index, index) -> memref<?x4xf32, strided<[?, 1], offset: ?>>
+  // CHECK-NEXT: ^ subview runs out-of-bounds along dimension 0
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @subview_dynamic(%alloca_4_dyn, %0, %4, %4) : (memref<?x4xf32>, index, index, index) -> ()
 

@@ -191,7 +191,7 @@ unsigned StackMaps::getNextMetaArgIdx(const MachineInstr *MI, unsigned CurIdx) {
 }
 
 /// Go up the super-register chain until we hit a valid dwarf register number.
-static unsigned getDwarfRegNum(unsigned Reg, const TargetRegisterInfo *TRI) {
+static unsigned getDwarfRegNum(MCRegister Reg, const TargetRegisterInfo *TRI) {
   int RegNum;
   for (MCPhysReg SR : TRI->superregs_inclusive(Reg)) {
     RegNum = TRI->getDwarfRegNum(SR, false);
@@ -267,12 +267,6 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     // Skip implicit registers (this includes our scratch registers)
     if (MOI->isImplicit())
       return ++MOI;
-
-    if (MOI->isUndef()) {
-      // Record `undef` register as constant. Use same value as ISel uses.
-      Locs.emplace_back(Location::Constant, sizeof(int64_t), 0, 0xFEFEFEFE);
-      return ++MOI;
-    }
 
     assert(MOI->getReg().isPhysical() &&
            "Virtreg operands should have been rewritten before now.");

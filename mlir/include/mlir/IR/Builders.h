@@ -21,7 +21,6 @@ class UnknownLoc;
 class FileLineColLoc;
 class FileLineColRange;
 class Type;
-class PrimitiveType;
 class IntegerType;
 class FloatType;
 class FunctionType;
@@ -61,17 +60,6 @@ public:
                        Attribute metadata = Attribute());
 
   // Types.
-  FloatType getFloat4E2M1FNType();
-  FloatType getFloat6E2M3FNType();
-  FloatType getFloat6E3M2FNType();
-  FloatType getFloat8E5M2Type();
-  FloatType getFloat8E4M3Type();
-  FloatType getFloat8E4M3FNType();
-  FloatType getFloat8E5M2FNUZType();
-  FloatType getFloat8E4M3FNUZType();
-  FloatType getFloat8E4M3B11FNUZType();
-  FloatType getFloat8E3M4Type();
-  FloatType getFloat8E8M0FNUType();
   FloatType getBF16Type();
   FloatType getF16Type();
   FloatType getTF32Type();
@@ -575,9 +563,13 @@ public:
 
   /// Attempts to fold the given operation and places new results within
   /// `results`. Returns success if the operation was folded, failure otherwise.
-  /// If the fold was in-place, `results` will not be filled.
+  /// If the fold was in-place, `results` will not be filled. Optionally, newly
+  /// materialized constant operations can be returned to the caller.
+  ///
   /// Note: This function does not erase the operation on a successful fold.
-  LogicalResult tryFold(Operation *op, SmallVectorImpl<Value> &results);
+  LogicalResult
+  tryFold(Operation *op, SmallVectorImpl<Value> &results,
+          SmallVectorImpl<Operation *> *materializedConstants = nullptr);
 
   /// Creates a deep copy of the specified operation, remapping any operands
   /// that use values outside of the operation using the map that is provided

@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-include "RISCVInstrFormatsC.td"
-
 //===----------------------------------------------------------------------===//
 // Operand definitions.
 //===----------------------------------------------------------------------===//
@@ -87,10 +85,10 @@ def c_lui_imm : RISCVOp,
   let OperandType = "OPERAND_CLUI_IMM";
   let MCOperandPredicate = [{
     int64_t Imm;
-    if (MCOp.evaluateAsConstantImm(Imm))
-      return (Imm != 0) && (isUInt<5>(Imm) ||
-             (Imm >= 0xfffe0 && Imm <= 0xfffff));
-    return MCOp.isBareSymbolRef();
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return (Imm != 0) && (isUInt<5>(Imm) ||
+           (Imm >= 0xfffe0 && Imm <= 0xfffff));
   }];
 }
 
@@ -140,18 +138,17 @@ def uimm8_lsb000 : RISCVOp,
 }
 
 // A 9-bit signed immediate where the least significant bit is zero.
-def simm9_lsb0 : Operand<OtherVT>,
-                 ImmLeaf<XLenVT, [{return isShiftedInt<8, 1>(Imm);}]> {
-  let ParserMatchClass = SImmAsmOperand<9, "Lsb0">;
+def bare_simm9_lsb0 : Operand<OtherVT>,
+                      ImmLeaf<XLenVT, [{return isShiftedInt<8, 1>(Imm);}]> {
+  let ParserMatchClass = BareSImmNLsb0AsmOperand<9>;
   let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsr1";
-  let DecoderMethod = "decodeSImmOperandAndLsl1<9>";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<9, 1>";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isShiftedInt<8, 1>(Imm);
     return MCOp.isBareSymbolRef();
-
   }];
   let OperandType = "OPERAND_PCREL";
 }
@@ -205,12 +202,12 @@ def simm10_lsb0000nonzero : RISCVOp,
 }
 
 // A 12-bit signed immediate where the least significant bit is zero.
-def simm12_lsb0 : Operand<XLenVT>,
-                  ImmLeaf<XLenVT, [{return isShiftedInt<11, 1>(Imm);}]> {
-  let ParserMatchClass = SImmAsmOperand<12, "Lsb0">;
+def bare_simm12_lsb0 : Operand<OtherVT>,
+                       ImmLeaf<XLenVT, [{return isShiftedInt<11, 1>(Imm);}]> {
+  let ParserMatchClass = BareSImmNLsb0AsmOperand<12>;
   let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsr1";
-  let DecoderMethod = "decodeSImmOperandAndLsl1<12>";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<12, 1>";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -227,10 +224,8 @@ def InsnCDirectiveOpcode : AsmOperandClass {
   let PredicateMethod = "isImm";
 }
 
-def uimm2_opcode : RISCVOp {
+def uimm2_opcode : RISCVUImmOp<2> {
   let ParserMatchClass = InsnCDirectiveOpcode;
-  let DecoderMethod = "decodeUImmOperand<2>";
-  let OperandType = "OPERAND_UIMM2";
 }
 
 //===----------------------------------------------------------------------===//
@@ -239,32 +234,31 @@ def uimm2_opcode : RISCVOp {
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CStackLoad<bits<3> funct3, string OpcodeStr,
-                 RegisterClass cls, DAGOperand opnd>
+                 DAGOperand cls, DAGOperand opnd>
     : RVInst16CI<funct3, 0b10, (outs cls:$rd), (ins SPMem:$rs1, opnd:$imm),
                  OpcodeStr, "$rd, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStackStore<bits<3> funct3, string OpcodeStr,
-                  RegisterClass cls, DAGOperand opnd>
+                  DAGOperand cls, DAGOperand opnd>
     : RVInst16CSS<funct3, 0b10, (outs), (ins cls:$rs2, SPMem:$rs1, opnd:$imm),
                   OpcodeStr, "$rs2, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CLoad_ri<bits<3> funct3, string OpcodeStr,
-               RegisterClass cls, DAGOperand opnd>
+               DAGOperand cls, DAGOperand opnd>
     : RVInst16CL<funct3, 0b00, (outs cls:$rd), (ins GPRCMem:$rs1, opnd:$imm),
                  OpcodeStr, "$rd, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStore_rri<bits<3> funct3, string OpcodeStr,
-                 RegisterClass cls, DAGOperand opnd>
+                 DAGOperand cls, DAGOperand opnd>
     : RVInst16CS<funct3, 0b00, (outs), (ins cls:$rs2,GPRCMem:$rs1, opnd:$imm),
                  OpcodeStr, "$rs2, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class Bcz<bits<3> funct3, string OpcodeStr,
-          RegisterClass cls>
-    : RVInst16CB<funct3, 0b01, (outs), (ins cls:$rs1, simm9_lsb0:$imm),
+class Bcz<bits<3> funct3, string OpcodeStr>
+    : RVInst16CB<funct3, 0b01, (outs), (ins GPRC:$rs1, bare_simm9_lsb0:$imm),
                  OpcodeStr, "$rs1, $imm"> {
   let isBranch = 1;
   let isTerminator = 1;
@@ -276,9 +270,9 @@ class Bcz<bits<3> funct3, string OpcodeStr,
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class Shift_right<bits<2> funct2, string OpcodeStr, RegisterClass cls,
-                  Operand ImmOpnd>
-    : RVInst16CB<0b100, 0b01, (outs cls:$rd), (ins cls:$rs1, ImmOpnd:$imm),
+class Shift_right<bits<2> funct2, string OpcodeStr>
+    : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
+                 (ins GPRC:$rs1, uimmlog2xlennonzero:$imm),
                  OpcodeStr, "$rs1, $imm"> {
   let Constraints = "$rs1 = $rd";
   let Inst{12} = imm{5};
@@ -287,10 +281,9 @@ class Shift_right<bits<2> funct2, string OpcodeStr, RegisterClass cls,
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class CA_ALU<bits<6> funct6, bits<2> funct2, string OpcodeStr,
-             RegisterClass cls>
-    : RVInst16CA<funct6, funct2, 0b01, (outs cls:$rd_wb), (ins cls:$rd, cls:$rs2),
-                 OpcodeStr, "$rd, $rs2"> {
+class CA_ALU<bits<6> funct6, bits<2> funct2, string OpcodeStr>
+    : RVInst16CA<funct6, funct2, 0b01, (outs GPRC:$rd_wb),
+                 (ins GPRC:$rd, GPRC:$rs2), OpcodeStr, "$rd, $rs2"> {
   bits<3> rd;
   let Constraints = "$rd = $rd_wb";
   let Inst{9-7} = rd;
@@ -339,7 +332,7 @@ def C_LW_INX : CLoad_ri<0b010, "c.lw", GPRF32C, uimm7_lsb00>,
   let Inst{5} = imm{6};
 }
 
-let DecoderNamespace = "RISCV32Only_",
+let DecoderNamespace = "RV32Only",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FLW  : CLoad_ri<0b011, "c.flw", FPR32C, uimm7_lsb00>,
              Sched<[WriteFLD32, ReadFMemBase]> {
@@ -382,7 +375,7 @@ def C_SW_INX : CStore_rri<0b110, "c.sw", GPRF32C, uimm7_lsb00>,
   let Inst{5} = imm{6};
 }
 
-let DecoderNamespace = "RISCV32Only_",
+let DecoderNamespace = "RV32Only",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32]  in
 def C_FSW  : CStore_rri<0b111, "c.fsw", FPR32C, uimm7_lsb00>,
              Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]> {
@@ -405,7 +398,6 @@ def C_NOP : RVInst16CI<0b000, 0b01, (outs), (ins), "c.nop", "">,
             Sched<[WriteNop]> {
   let rd = 0;
   let imm = 0;
-  let Inst{6-2} = 0;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -414,7 +406,6 @@ def C_ADDI : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
                         "c.addi", "$rd, $imm">,
              Sched<[WriteIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
-  let Inst{6-2} = imm{4-0};
 }
 
 // Alternate syntax for c.nop. Converted to C_NOP by the assembler.
@@ -424,9 +415,9 @@ def PseudoC_ADDI_NOP : Pseudo<(outs GPRX0:$rd), (ins GPRX0:$rs1, immzero:$imm),
                               [], "c.addi", "$rd, $imm">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1,
-    DecoderNamespace = "RISCV32Only_", Defs = [X1],
+    DecoderNamespace = "RV32Only", Defs = [X1],
     Predicates = [HasStdExtCOrZca, IsRV32]  in
-def C_JAL : RVInst16CJ<0b001, 0b01, (outs), (ins simm12_lsb0:$offset),
+def C_JAL : RVInst16CJ<0b001, 0b01, (outs), (ins bare_simm12_lsb0:$offset),
                        "c.jal", "$offset">, Sched<[WriteJal]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
@@ -436,15 +427,12 @@ def C_ADDIW : RVInst16CI<0b001, 0b01, (outs GPRNoX0:$rd_wb),
                          "c.addiw", "$rd, $imm">,
               Sched<[WriteIALU32, ReadIALU32]> {
   let Constraints = "$rd = $rd_wb";
-  let Inst{6-2} = imm{4-0};
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_LI : RVInst16CI<0b010, 0b01, (outs GPRNoX0:$rd), (ins simm6:$imm),
                       "c.li", "$rd, $imm">,
-           Sched<[WriteIALU]> {
-  let Inst{6-2} = imm{4-0};
-}
+           Sched<[WriteIALU]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_ADDI16SP : RVInst16CI<0b011, 0b01, (outs SP:$rd_wb),
@@ -464,13 +452,11 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_LUI : RVInst16CI<0b011, 0b01, (outs GPRNoX0X2:$rd),
                        (ins c_lui_imm:$imm),
                        "c.lui", "$rd, $imm">,
-            Sched<[WriteIALU]> {
-  let Inst{6-2} = imm{4-0};
-}
+            Sched<[WriteIALU]>;
 
-def C_SRLI : Shift_right<0b00, "c.srli", GPRC, uimmlog2xlennonzero>,
+def C_SRLI : Shift_right<0b00, "c.srli">,
              Sched<[WriteShiftImm, ReadShiftImm]>;
-def C_SRAI : Shift_right<0b01, "c.srai", GPRC, uimmlog2xlennonzero>,
+def C_SRAI : Shift_right<0b01, "c.srai">,
              Sched<[WriteShiftImm, ReadShiftImm]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -483,32 +469,32 @@ def C_ANDI : RVInst16CB<0b100, 0b01, (outs GPRC:$rd), (ins GPRC:$rs1, simm6:$imm
   let Inst{6-2} = imm{4-0};
 }
 
-def C_SUB  : CA_ALU<0b100011, 0b00, "c.sub", GPRC>,
+def C_SUB  : CA_ALU<0b100011, 0b00, "c.sub">,
              Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def C_XOR  : CA_ALU<0b100011, 0b01, "c.xor", GPRC>,
+def C_XOR  : CA_ALU<0b100011, 0b01, "c.xor">,
              Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def C_OR   : CA_ALU<0b100011, 0b10, "c.or" , GPRC>,
+def C_OR   : CA_ALU<0b100011, 0b10, "c.or">,
              Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def C_AND  : CA_ALU<0b100011, 0b11, "c.and", GPRC>,
+def C_AND  : CA_ALU<0b100011, 0b11, "c.and">,
              Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in {
-def C_SUBW : CA_ALU<0b100111, 0b00, "c.subw", GPRC>,
+def C_SUBW : CA_ALU<0b100111, 0b00, "c.subw">,
              Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
-def C_ADDW : CA_ALU<0b100111, 0b01, "c.addw", GPRC>,
+def C_ADDW : CA_ALU<0b100111, 0b01, "c.addw">,
              Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def C_J : RVInst16CJ<0b101, 0b01, (outs), (ins simm12_lsb0:$offset),
+def C_J : RVInst16CJ<0b101, 0b01, (outs), (ins bare_simm12_lsb0:$offset),
                      "c.j", "$offset">, Sched<[WriteJmp]> {
   let isBranch = 1;
   let isTerminator=1;
   let isBarrier=1;
 }
 
-def C_BEQZ : Bcz<0b110, "c.beqz", GPRC>, Sched<[WriteJmp, ReadJmp]>;
-def C_BNEZ : Bcz<0b111, "c.bnez", GPRC>, Sched<[WriteJmp, ReadJmp]>;
+def C_BEQZ : Bcz<0b110, "c.beqz">, Sched<[WriteJmp, ReadJmp]>;
+def C_BNEZ : Bcz<0b111, "c.bnez">, Sched<[WriteJmp, ReadJmp]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
@@ -516,41 +502,35 @@ def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
                         "c.slli", "$rd, $imm">,
              Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rd = $rd_wb";
-  let Inst{6-2} = imm{4-0};
 }
 
 let Predicates = [HasStdExtCOrZcd, HasStdExtD] in
 def C_FLDSP  : CStackLoad<0b001, "c.fldsp", FPR64, uimm9_lsb000>,
                Sched<[WriteFLD64, ReadFMemBase]> {
-  let Inst{6-5} = imm{4-3};
   let Inst{4-2} = imm{8-6};
 }
 
 def C_LWSP : CStackLoad<0b010, "c.lwsp", GPRNoX0, uimm8_lsb00>,
              Sched<[WriteLDW, ReadMemBase]> {
-  let Inst{6-4} = imm{4-2};
   let Inst{3-2} = imm{7-6};
 }
 
 let isCodeGenOnly = 1 in
 def C_LWSP_INX : CStackLoad<0b010, "c.lwsp", GPRF32NoX0, uimm8_lsb00>,
                  Sched<[WriteLDW, ReadMemBase]> {
-  let Inst{6-4} = imm{4-2};
   let Inst{3-2} = imm{7-6};
 }
 
-let DecoderNamespace = "RISCV32Only_",
+let DecoderNamespace = "RV32Only",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FLWSP  : CStackLoad<0b011, "c.flwsp", FPR32, uimm8_lsb00>,
                Sched<[WriteFLD32, ReadFMemBase]> {
-  let Inst{6-4} = imm{4-2};
   let Inst{3-2} = imm{7-6};
 }
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in
 def C_LDSP : CStackLoad<0b011, "c.ldsp", GPRNoX0, uimm9_lsb000>,
              Sched<[WriteLDD, ReadMemBase]> {
-  let Inst{6-5} = imm{4-3};
   let Inst{4-2} = imm{8-6};
 }
 
@@ -587,41 +567,36 @@ def C_ADD : RVInst16CR<0b1001, 0b10, (outs GPRNoX0:$rd),
 let Predicates = [HasStdExtCOrZcd, HasStdExtD] in
 def C_FSDSP  : CStackStore<0b101, "c.fsdsp", FPR64, uimm9_lsb000>,
                Sched<[WriteFST64, ReadFStoreData, ReadFMemBase]> {
-  let Inst{12-10} = imm{5-3};
   let Inst{9-7}   = imm{8-6};
 }
 
 def C_SWSP : CStackStore<0b110, "c.swsp", GPR, uimm8_lsb00>,
              Sched<[WriteSTW, ReadStoreData, ReadMemBase]> {
-  let Inst{12-9} = imm{5-2};
   let Inst{8-7}  = imm{7-6};
 }
 
 let isCodeGenOnly = 1 in
 def C_SWSP_INX : CStackStore<0b110, "c.swsp", GPRF32, uimm8_lsb00>,
                  Sched<[WriteSTW, ReadStoreData, ReadMemBase]> {
-  let Inst{12-9} = imm{5-2};
   let Inst{8-7}  = imm{7-6};
 }
 
-let DecoderNamespace = "RISCV32Only_",
+let DecoderNamespace = "RV32Only",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FSWSP  : CStackStore<0b111, "c.fswsp", FPR32, uimm8_lsb00>,
                Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]> {
-  let Inst{12-9} = imm{5-2};
   let Inst{8-7}  = imm{7-6};
 }
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in
 def C_SDSP : CStackStore<0b111, "c.sdsp", GPR, uimm9_lsb000>,
              Sched<[WriteSTD, ReadStoreData, ReadMemBase]> {
-  let Inst{12-10} = imm{5-3};
   let Inst{9-7}   = imm{8-6};
 }
 
 // The all zeros pattern isn't a valid RISC-V instruction. It's used by GNU
 // binutils as 16-bit instruction known to be unimplemented (i.e., trapping).
-let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0, isTrap = 1 in
 def C_UNIMP : RVInst16<(outs), (ins), "c.unimp", "", [], InstFormatOther>,
               Sched<[]> {
   let Inst{15-0} = 0;
@@ -639,7 +614,6 @@ let Predicates = [HasStdExtCOrZca, HasRVCHints], hasSideEffects = 0, mayLoad = 0
 def C_NOP_HINT : RVInst16CI<0b000, 0b01, (outs), (ins simm6nonzero:$imm),
                             "c.nop", "$imm">, Sched<[WriteNop]> {
   let rd = 0;
-  let Inst{6-2} = imm{4-0};
 }
 
 def C_ADDI_HINT_IMM_ZERO : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
@@ -647,26 +621,23 @@ def C_ADDI_HINT_IMM_ZERO : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
                                       "c.addi", "$rd, $imm">,
                            Sched<[WriteIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
-  let Inst{12} = 0;
-  let Inst{6-2} = 0;
+  let imm = 0;
   let DecoderMethod = "decodeRVCInstrRdRs1ImmZero";
 }
 
 def C_LI_HINT : RVInst16CI<0b010, 0b01, (outs GPRX0:$rd), (ins simm6:$imm),
                            "c.li", "$rd, $imm">,
                 Sched<[WriteIALU]> {
-  let Inst{6-2} = imm{4-0};
   let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdSImm";
+  let DecoderMethod = "decodeRVCInstrRdSImm6";
 }
 
 def C_LUI_HINT : RVInst16CI<0b011, 0b01, (outs GPRX0:$rd),
                             (ins c_lui_imm:$imm),
                             "c.lui", "$rd, $imm">,
                  Sched<[WriteIALU]> {
-  let Inst{6-2} = imm{4-0};
   let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdSImm";
+  let DecoderMethod = "decodeRVCInstrRdCLUIImm";
 }
 
 def C_MV_HINT : RVInst16CR<0b1000, 0b10, (outs GPRX0:$rs1), (ins GPRNoX0:$rs2),
@@ -689,17 +660,15 @@ def C_SLLI_HINT : RVInst16CI<0b000, 0b10, (outs GPRX0:$rd_wb),
                              "c.slli", "$rd, $imm">,
                   Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rd = $rd_wb";
-  let Inst{6-2} = imm{4-0};
   let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdRs1UImm";
+  let DecoderMethod = "decodeRVCInstrRdRs1UImmLog2XLenNonZero";
 }
 
 def C_SLLI64_HINT : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb), (ins GPR:$rd),
                                "c.slli64", "$rd">,
                     Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rd = $rd_wb";
-  let Inst{6-2} = 0;
-  let Inst{12} = 0;
+  let imm = 0;
 }
 
 def C_SRLI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
@@ -746,14 +715,14 @@ let Predicates = [HasStdExtCOrZca] in {
 def : InstAlias<"c.lw $rd, (${rs1})", (C_LW GPRC:$rd, GPRCMem:$rs1, 0)>;
 def : InstAlias<"c.sw $rs2, (${rs1})", (C_SW GPRC:$rs2, GPRCMem:$rs1, 0)>;
 def : InstAlias<"c.lwsp $rd, (${rs1})", (C_LWSP GPRNoX0:$rd, SPMem:$rs1, 0)>;
-def : InstAlias<"c.swsp $rs2, (${rs1})", (C_SWSP GPRNoX0:$rs2, SPMem:$rs1, 0)>;
+def : InstAlias<"c.swsp $rs2, (${rs1})", (C_SWSP GPR:$rs2, SPMem:$rs1, 0)>;
 }
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in {
 def : InstAlias<"c.ld $rd, (${rs1})", (C_LD GPRC:$rd, GPRCMem:$rs1, 0)>;
 def : InstAlias<"c.sd $rs2, (${rs1})", (C_SD GPRC:$rs2, GPRCMem:$rs1, 0)>;
 def : InstAlias<"c.ldsp $rd, (${rs1})", (C_LDSP GPRNoX0:$rd, SPMem:$rs1, 0)>;
-def : InstAlias<"c.sdsp $rs2, (${rs1})", (C_SDSP GPRNoX0:$rs2, SPMem:$rs1, 0)>;
+def : InstAlias<"c.sdsp $rs2, (${rs1})", (C_SDSP GPR:$rs2, SPMem:$rs1, 0)>;
 }
 
 let Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in {
@@ -824,18 +793,12 @@ def InsnCA : DirectiveInsnCA<(outs AnyRegC:$rd), (ins uimm2_opcode:$opcode,
                              "$opcode, $funct6, $funct2, $rd, $rs2">;
 def InsnCB : DirectiveInsnCB<(outs), (ins uimm2_opcode:$opcode, uimm3:$funct3,
                                           AnyRegC:$rs1,
-                                          simm9_lsb0:$imm8),
+                                          bare_simm9_lsb0:$imm8),
                              "$opcode, $funct3, $rs1, $imm8">;
 def InsnCJ : DirectiveInsnCJ<(outs), (ins uimm2_opcode:$opcode,
                                           uimm3:$funct3,
-                                          simm12_lsb0:$imm11),
+                                          bare_simm12_lsb0:$imm11),
                              "$opcode, $funct3, $imm11">;
-def Insn16 : RVInst16<(outs), (ins uimm16:$value), "", "", [], InstFormatOther> {
-  bits<16> value;
-
-  let Inst{15-0} = value;
-  let AsmString = ".insn 0x2, $value";
-}
 }
 
 // Use InstAliases to match these so that we can combine the insn and format
@@ -872,9 +835,9 @@ def : InstAlias<".insn_ca $opcode, $funct6, $funct2, $rd, $rs2",
                         uimm2:$funct2, AnyRegC:$rs2)>;
 def : InstAlias<".insn_cb $opcode, $funct3, $rs1, $imm8",
                 (InsnCB uimm2_opcode:$opcode, uimm3:$funct3, AnyRegC:$rs1,
-                        simm9_lsb0:$imm8)>;
+                        bare_simm9_lsb0:$imm8)>;
 def : InstAlias<".insn_cj $opcode, $funct3, $imm11",
-                (InsnCJ uimm2_opcode:$opcode, uimm3:$funct3, simm12_lsb0:$imm11)>;
+                (InsnCJ uimm2_opcode:$opcode, uimm3:$funct3, bare_simm12_lsb0:$imm11)>;
 }
 
 //===----------------------------------------------------------------------===/i
@@ -946,8 +909,8 @@ def : CompressPat<(ADDI GPRNoX0:$rs1, GPRNoX0:$rs1, simm6nonzero:$imm),
 } // Predicates = [HasStdExtCOrZca]
 
 let Predicates = [HasStdExtCOrZca, IsRV32] in {
-def : CompressPat<(JAL X1, simm12_lsb0:$offset),
-                  (C_JAL simm12_lsb0:$offset)>;
+def : CompressPat<(JAL X1, bare_simm12_lsb0:$offset),
+                  (C_JAL bare_simm12_lsb0:$offset)>;
 } // Predicates = [HasStdExtCOrZca, IsRV32]
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in {
@@ -1001,18 +964,18 @@ def : CompressPat<(ADDW GPRC:$rs1, GPRC:$rs2, GPRC:$rs1),
 } // Predicates = [HasStdExtCOrZca, IsRV64]
 
 let Predicates = [HasStdExtCOrZca] in {
-def : CompressPat<(JAL X0, simm12_lsb0:$offset),
-                  (C_J simm12_lsb0:$offset)>;
-def : CompressPat<(BEQ GPRC:$rs1, X0, simm9_lsb0:$imm),
-                  (C_BEQZ GPRC:$rs1, simm9_lsb0:$imm)>;
+def : CompressPat<(JAL X0, bare_simm12_lsb0:$offset),
+                  (C_J bare_simm12_lsb0:$offset)>;
+def : CompressPat<(BEQ GPRC:$rs1, X0, bare_simm9_lsb0:$imm),
+                  (C_BEQZ GPRC:$rs1, bare_simm9_lsb0:$imm)>;
 let isCompressOnly = true in
-def : CompressPat<(BEQ X0, GPRC:$rs1, simm9_lsb0:$imm),
-                  (C_BEQZ GPRC:$rs1, simm9_lsb0:$imm)>;
-def : CompressPat<(BNE GPRC:$rs1, X0, simm9_lsb0:$imm),
-                  (C_BNEZ GPRC:$rs1, simm9_lsb0:$imm)>;
+def : CompressPat<(BEQ X0, GPRC:$rs1, bare_simm9_lsb0:$imm),
+                  (C_BEQZ GPRC:$rs1, bare_simm9_lsb0:$imm)>;
+def : CompressPat<(BNE GPRC:$rs1, X0, bare_simm9_lsb0:$imm),
+                  (C_BNEZ GPRC:$rs1, bare_simm9_lsb0:$imm)>;
 let isCompressOnly = true in
-def : CompressPat<(BNE X0, GPRC:$rs1, simm9_lsb0:$imm),
-                  (C_BNEZ GPRC:$rs1, simm9_lsb0:$imm)>;
+def : CompressPat<(BNE X0, GPRC:$rs1, bare_simm9_lsb0:$imm),
+                  (C_BNEZ GPRC:$rs1, bare_simm9_lsb0:$imm)>;
 } // Predicates = [HasStdExtCOrZca]
 
 // Quadrant 2

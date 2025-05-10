@@ -48,6 +48,20 @@ int llvm::getNextAvailablePluginDiagnosticKind() {
 
 const char *OptimizationRemarkAnalysis::AlwaysPrint = "";
 
+void DiagnosticInfoGeneric::print(DiagnosticPrinter &DP) const {
+  DP << getMsgStr();
+}
+
+void DiagnosticInfoGenericWithLoc::print(DiagnosticPrinter &DP) const {
+  DP << getLocationStr() << ": " << getMsgStr();
+}
+
+DiagnosticInfoInlineAsm::DiagnosticInfoInlineAsm(uint64_t LocCookie,
+                                                 const Twine &MsgStr,
+                                                 DiagnosticSeverity Severity)
+    : DiagnosticInfo(DK_InlineAsm, Severity), LocCookie(LocCookie),
+      MsgStr(MsgStr) {}
+
 DiagnosticInfoInlineAsm::DiagnosticInfoInlineAsm(const Instruction &I,
                                                  const Twine &MsgStr,
                                                  DiagnosticSeverity Severity)
@@ -64,6 +78,24 @@ void DiagnosticInfoInlineAsm::print(DiagnosticPrinter &DP) const {
   DP << getMsgStr();
   if (getLocCookie())
     DP << " at line " << getLocCookie();
+}
+
+DiagnosticInfoRegAllocFailure::DiagnosticInfoRegAllocFailure(
+    const Twine &MsgStr, const Function &Fn, const DiagnosticLocation &DL,
+    DiagnosticSeverity Severity)
+    : DiagnosticInfoWithLocationBase(DK_RegAllocFailure, Severity, Fn,
+                                     DL.isValid() ? DL : Fn.getSubprogram()),
+      MsgStr(MsgStr) {}
+
+DiagnosticInfoRegAllocFailure::DiagnosticInfoRegAllocFailure(
+    const Twine &MsgStr, const Function &Fn, DiagnosticSeverity Severity)
+    : DiagnosticInfoWithLocationBase(DK_RegAllocFailure, Severity, Fn,
+                                     Fn.getSubprogram()),
+      MsgStr(MsgStr) {}
+
+void DiagnosticInfoRegAllocFailure::print(DiagnosticPrinter &DP) const {
+  DP << getLocationStr() << ": " << MsgStr << " in function '" << getFunction()
+     << '\'';
 }
 
 DiagnosticInfoResourceLimit::DiagnosticInfoResourceLimit(
@@ -411,7 +443,7 @@ std::string DiagnosticInfoOptimizationBase::getMsg() const {
 }
 
 DiagnosticInfoMisExpect::DiagnosticInfoMisExpect(const Instruction *Inst,
-                                                 Twine &Msg)
+                                                 const Twine &Msg)
     : DiagnosticInfoWithLocationBase(DK_MisExpect, DS_Warning,
                                      *Inst->getParent()->getParent(),
                                      Inst->getDebugLoc()),

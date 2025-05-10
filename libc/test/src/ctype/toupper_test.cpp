@@ -11,16 +11,7 @@
 
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcToUpper, SimpleTest) {
-  EXPECT_EQ(LIBC_NAMESPACE::toupper('a'), int('A'));
-  EXPECT_EQ(LIBC_NAMESPACE::toupper('B'), int('B'));
-  EXPECT_EQ(LIBC_NAMESPACE::toupper('3'), int('3'));
-
-  EXPECT_EQ(LIBC_NAMESPACE::toupper(' '), int(' '));
-  EXPECT_EQ(LIBC_NAMESPACE::toupper('?'), int('?'));
-  EXPECT_EQ(LIBC_NAMESPACE::toupper('\0'), int('\0'));
-  EXPECT_EQ(LIBC_NAMESPACE::toupper(-1), int(-1));
-}
+namespace {
 
 // TODO: Merge the ctype tests using this framework.
 // Invariant: UPPER_ARR and LOWER_ARR are both the complete alphabet in the same
@@ -43,6 +34,19 @@ int span_index(int ch, LIBC_NAMESPACE::cpp::span<const char> arr) {
     if (static_cast<int>(arr[i]) == ch)
       return static_cast<int>(i);
   return -1;
+}
+
+} // namespace
+
+TEST(LlvmLibcToUpper, SimpleTest) {
+  EXPECT_EQ(LIBC_NAMESPACE::toupper('a'), int('A'));
+  EXPECT_EQ(LIBC_NAMESPACE::toupper('B'), int('B'));
+  EXPECT_EQ(LIBC_NAMESPACE::toupper('3'), int('3'));
+
+  EXPECT_EQ(LIBC_NAMESPACE::toupper(' '), int(' '));
+  EXPECT_EQ(LIBC_NAMESPACE::toupper('?'), int('?'));
+  EXPECT_EQ(LIBC_NAMESPACE::toupper('\0'), int('\0'));
+  EXPECT_EQ(LIBC_NAMESPACE::toupper(-1), int(-1));
 }
 
 TEST(LlvmLibcToUpper, DefaultLocale) {

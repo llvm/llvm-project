@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VersionTuple.h"
 #include "gtest/gtest.h"
 
@@ -1347,6 +1348,30 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::LLVM, T.getEnvironment());
 
+  T = Triple("spirv64-intel-unknown");
+  EXPECT_EQ(Triple::spirv64, T.getArch());
+  EXPECT_EQ(Triple::Intel, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("aarch64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::aarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
+  T = Triple("x86_64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
+  T = Triple("riscv64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
 }
@@ -1409,6 +1434,132 @@ TEST(TripleTest, Normalization) {
   EXPECT_EQ("unknown-unknown-linux", Triple::normalize("linux"));
 
   EXPECT_EQ("x86_64-unknown-linux-gnu", Triple::normalize("x86_64-gnu-linux"));
+
+  EXPECT_EQ("a-unknown-unknown",
+            Triple::normalize("a", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-unknown",
+            Triple::normalize("a-b", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-c",
+            Triple::normalize("a-b-c", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-c",
+            Triple::normalize("a-b-c-d", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-c",
+            Triple::normalize("a-b-c-d-e", Triple::CanonicalForm::THREE_IDENT));
+
+  EXPECT_EQ("a-unknown-unknown-unknown",
+            Triple::normalize("a", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-unknown-unknown",
+            Triple::normalize("a-b", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-c-unknown",
+            Triple::normalize("a-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-c-d",
+            Triple::normalize("a-b-c-d", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-c-d",
+            Triple::normalize("a-b-c-d-e", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("a-unknown-unknown-unknown-unknown",
+            Triple::normalize("a", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-unknown-unknown-unknown",
+            Triple::normalize("a-b", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-c-unknown-unknown",
+            Triple::normalize("a-b-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-c-d-unknown",
+            Triple::normalize("a-b-c-d", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-c-d-e",
+            Triple::normalize("a-b-c-d-e", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-b-c-unknown",
+            Triple::normalize("i386-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-b-c-unknown-unknown",
+            Triple::normalize("i386-b-c", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-a-c-unknown",
+            Triple::normalize("a-i386-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-a-c-unknown-unknown",
+            Triple::normalize("a-i386-c", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-a-b-unknown",
+            Triple::normalize("a-b-i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-a-b-c",
+            Triple::normalize("a-b-c-i386", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("a-pc-c-unknown",
+            Triple::normalize("a-pc-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-b-c",
+            Triple::normalize("pc-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-pc-b-unknown",
+            Triple::normalize("a-b-pc", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-pc-b-c",
+            Triple::normalize("a-b-c-pc", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("a-b-linux-unknown",
+            Triple::normalize("a-b-linux", Triple::CanonicalForm::FOUR_IDENT));
+  // We lose `-c` here as expected.
+  EXPECT_EQ("unknown-unknown-linux-b",
+            Triple::normalize("linux-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-unknown-linux-c",
+            Triple::normalize("a-linux-c", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("i386-pc-a-unknown",
+            Triple::normalize("a-pc-i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-pc-unknown-unknown",
+            Triple::normalize("-pc-i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-linux-c",
+            Triple::normalize("linux-pc-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-linux-unknown",
+            Triple::normalize("linux-pc-", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("i386-unknown-unknown-unknown",
+            Triple::normalize("i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-unknown-unknown",
+            Triple::normalize("pc", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-unknown-linux-unknown",
+            Triple::normalize("linux", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ(
+      "x86_64-unknown-linux-gnu",
+      Triple::normalize("x86_64-gnu-linux", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("i386-a-b-unknown-unknown",
+            Triple::normalize("a-b-i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("i386-a-b-c-unknown",
+            Triple::normalize("a-b-c-i386", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("a-pc-c-unknown-unknown",
+            Triple::normalize("a-pc-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-b-c-unknown",
+            Triple::normalize("pc-b-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-pc-b-unknown-unknown",
+            Triple::normalize("a-b-pc", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-pc-b-c-unknown",
+            Triple::normalize("a-b-c-pc", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("a-b-linux-unknown-unknown",
+            Triple::normalize("a-b-linux", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-unknown-linux-b-c",
+            Triple::normalize("linux-b-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-unknown-linux-c-unknown",
+            Triple::normalize("a-linux-c", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-pc-a-unknown-unknown",
+            Triple::normalize("a-pc-i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("i386-pc-unknown-unknown-unknown",
+            Triple::normalize("-pc-i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-linux-c-unknown",
+            Triple::normalize("linux-pc-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-linux-unknown-unknown",
+            Triple::normalize("linux-pc-", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-unknown-unknown-unknown-unknown",
+            Triple::normalize("i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-unknown-unknown-unknown",
+            Triple::normalize("pc", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-unknown-linux-unknown-unknown",
+            Triple::normalize("linux", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ(
+      "x86_64-unknown-linux-gnu-unknown",
+      Triple::normalize("x86_64-gnu-linux", Triple::CanonicalForm::FIVE_IDENT));
 
   // Check that normalizing a permutated set of valid components returns a
   // triple with the unpermuted components.
@@ -2439,6 +2590,8 @@ TEST(TripleTest, NormalizeWindows) {
   EXPECT_EQ("i686-unknown-windows-gnu", Triple::normalize("i686-mingw32-w64"));
   EXPECT_EQ("i686-pc-windows-cygnus", Triple::normalize("i686-pc-cygwin"));
   EXPECT_EQ("i686-unknown-windows-cygnus", Triple::normalize("i686-cygwin"));
+  EXPECT_EQ("i686-pc-windows-cygnus", Triple::normalize("i686-pc-msys"));
+  EXPECT_EQ("i686-unknown-windows-cygnus", Triple::normalize("i686-msys"));
 
   EXPECT_EQ("x86_64-pc-windows-msvc", Triple::normalize("x86_64-pc-win32"));
   EXPECT_EQ("x86_64-unknown-windows-msvc", Triple::normalize("x86_64-win32"));
@@ -2448,6 +2601,11 @@ TEST(TripleTest, NormalizeWindows) {
             Triple::normalize("x86_64-pc-mingw32-w64"));
   EXPECT_EQ("x86_64-unknown-windows-gnu",
             Triple::normalize("x86_64-mingw32-w64"));
+  EXPECT_EQ("x86_64-pc-windows-cygnus", Triple::normalize("x86_64-pc-cygwin"));
+  EXPECT_EQ("x86_64-unknown-windows-cygnus",
+            Triple::normalize("x86_64-cygwin"));
+  EXPECT_EQ("x86_64-pc-windows-cygnus", Triple::normalize("x86_64-pc-msys"));
+  EXPECT_EQ("x86_64-unknown-windows-cygnus", Triple::normalize("x86_64-msys"));
 
   EXPECT_EQ("i686-pc-windows-elf", Triple::normalize("i686-pc-win32-elf"));
   EXPECT_EQ("i686-unknown-windows-elf", Triple::normalize("i686-win32-elf"));
@@ -2730,5 +2888,42 @@ TEST(TripleTest, DXILNormaizeWithVersion) {
   EXPECT_EQ("dxil-unknown-unknown-unknown", Triple::normalize("dxil---"));
   EXPECT_EQ("dxilv1.0-pc-shadermodel5.0-compute",
             Triple::normalize("dxil-shadermodel5.0-pc-compute"));
+}
+
+TEST(TripleTest, isCompatibleWith) {
+  struct {
+    const char *A;
+    const char *B;
+    bool Result;
+  } Cases[] = {
+      {"armv7-linux-gnueabihf", "thumbv7-linux-gnueabihf", true},
+      {"armv4-none-unknown-eabi", "thumbv6-unknown-linux-gnueabihf", false},
+      {"x86_64-apple-macosx10.9.0", "x86_64-apple-macosx10.10.0", true},
+      {"x86_64-apple-macosx10.9.0", "i386-apple-macosx10.9.0", false},
+      {"x86_64-apple-macosx10.9.0", "x86_64h-apple-macosx10.9.0", true},
+      {"x86_64-unknown-linux-gnu", "x86_64-unknown-linux-gnu", true},
+      {"x86_64-unknown-linux-gnu", "i386-unknown-linux-gnu", false},
+      {"x86_64-unknown-linux-gnu", "x86_64h-unknown-linux-gnu", true},
+      {"x86_64-pc-windows-gnu", "x86_64-pc-windows-msvc", false},
+      {"x86_64-pc-windows-msvc", "x86_64-pc-windows-msvc-elf", false},
+      {"i686-w64-windows-gnu", "i386-w64-windows-gnu", true},
+      {"x86_64-w64-windows-gnu", "x86_64-pc-windows-gnu", true},
+      {"armv7-w64-windows-gnu", "thumbv7-pc-windows-gnu", true},
+  };
+
+  auto DoTest = [](const char *A, const char *B,
+                   bool Result) -> testing::AssertionResult {
+    if (Triple(A).isCompatibleWith(Triple(B)) != Result) {
+      return testing::AssertionFailure()
+             << llvm::formatv("Triple {0} and {1} were expected to be {2}", A,
+                              B, Result ? "compatible" : "incompatible");
+    }
+    return testing::AssertionSuccess();
+  };
+  for (const auto &C : Cases) {
+    EXPECT_TRUE(DoTest(C.A, C.B, C.Result));
+    // Test that the comparison is commutative.
+    EXPECT_TRUE(DoTest(C.B, C.A, C.Result));
+  }
 }
 } // end anonymous namespace

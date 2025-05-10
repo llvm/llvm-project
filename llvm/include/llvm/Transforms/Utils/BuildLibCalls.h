@@ -93,6 +93,12 @@ namespace llvm {
   Value *emitStrLen(Value *Ptr, IRBuilderBase &B, const DataLayout &DL,
                     const TargetLibraryInfo *TLI);
 
+  /// Emit a call to the wcslen function to the builder, for the specified
+  /// pointer. Ptr is required to be some pointer type, and the return value has
+  /// 'size_t' type.
+  Value *emitWcsLen(Value *Ptr, IRBuilderBase &B, const DataLayout &DL,
+                    const TargetLibraryInfo *TLI);
+
   /// Emit a call to the strdup function to the builder, for the specified
   /// pointer. Ptr is required to be some pointer type, and the return value has
   /// 'i8*' type.
@@ -246,32 +252,32 @@ namespace llvm {
                     const DataLayout &DL, const TargetLibraryInfo *TLI);
 
   /// Emit a call to the malloc function.
-  Value *emitMalloc(Type *RetTy, Value *Num, IRBuilderBase &B,
-                    const DataLayout &DL, const TargetLibraryInfo *TLI);
+  Value *emitMalloc(Value *Num, IRBuilderBase &B, const DataLayout &DL,
+                    const TargetLibraryInfo *TLI);
 
   /// Emit a call to the calloc function.
-  Value *emitCalloc(Type *RetTy, Value *Num, Value *Size, IRBuilderBase &B,
-                    const TargetLibraryInfo &TLI);
+  Value *emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
+                    const TargetLibraryInfo &TLI, unsigned AddrSpace);
 
   /// Emit a call to the hot/cold operator new function.
-  Value *emitHotColdNew(Type *RetTy, Value *Num, IRBuilderBase &B,
+  Value *emitHotColdNew(Value *Num, IRBuilderBase &B,
                         const TargetLibraryInfo *TLI, LibFunc NewFunc,
                         uint8_t HotCold);
-  Value *emitHotColdNewNoThrow(Type *RetTy, Value *Num, Value *NoThrow,
-                               IRBuilderBase &B, const TargetLibraryInfo *TLI,
-                               LibFunc NewFunc, uint8_t HotCold);
-  Value *emitHotColdNewAligned(Type *RetTy, Value *Num, Value *Align,
-                               IRBuilderBase &B, const TargetLibraryInfo *TLI,
-                               LibFunc NewFunc, uint8_t HotCold);
-  Value *emitHotColdNewAlignedNoThrow(Type *RetTy, Value *Num, Value *Align,
-                                      Value *NoThrow, IRBuilderBase &B,
+  Value *emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
+                               const TargetLibraryInfo *TLI, LibFunc NewFunc,
+                               uint8_t HotCold);
+  Value *emitHotColdNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
+                               const TargetLibraryInfo *TLI, LibFunc NewFunc,
+                               uint8_t HotCold);
+  Value *emitHotColdNewAlignedNoThrow(Value *Num, Value *Align, Value *NoThrow,
+                                      IRBuilderBase &B,
                                       const TargetLibraryInfo *TLI,
                                       LibFunc NewFunc, uint8_t HotCold);
-  Value *emitHotColdSizeReturningNew(Type *RetTy, Value *Num, IRBuilderBase &B,
+  Value *emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
                                      const TargetLibraryInfo *TLI,
                                      LibFunc NewFunc, uint8_t HotCold);
-  Value *emitHotColdSizeReturningNewAligned(Type *RetTy, Value *Num,
-                                            Value *Align, IRBuilderBase &B,
+  Value *emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
+                                            IRBuilderBase &B,
                                             const TargetLibraryInfo *TLI,
                                             LibFunc NewFunc, uint8_t HotCold);
 }

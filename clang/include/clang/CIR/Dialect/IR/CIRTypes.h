@@ -16,10 +16,29 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "clang/CIR/Interfaces/CIRFPTypeInterface.h"
+
+namespace cir {
+
+namespace detail {
+struct RecordTypeStorage;
+} // namespace detail
+
+bool isValidFundamentalIntWidth(unsigned width);
+
+bool isFPOrFPVectorTy(mlir::Type);
+
+} // namespace cir
 
 //===----------------------------------------------------------------------===//
 // CIR Dialect Tablegen'd Types
 //===----------------------------------------------------------------------===//
+
+namespace cir {
+
+#include "clang/CIR/Dialect/IR/CIRTypeConstraints.h.inc"
+
+} // namespace cir
 
 #define GET_TYPEDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsTypes.h.inc"

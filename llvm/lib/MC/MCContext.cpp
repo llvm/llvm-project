@@ -212,6 +212,27 @@ MCDataFragment *MCContext::allocInitialFragment(MCSection &Sec) {
 MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
   SmallString<128> NameSV;
   StringRef NameRef = Name.toStringRef(NameSV);
+  if (NameRef.contains('\\')) {
+    NameSV = NameRef;
+    size_t S = 0;
+    // Support escaped \\ and \" as in GNU Assembler. GAS issues a warning for
+    // other characters following \\, which we do not implement due to code
+    // structure.
+    for (size_t I = 0, E = NameSV.size(); I != E; ++I) {
+      char C = NameSV[I];
+      if (C == '\\' && I + 1 != E) {
+        switch (NameSV[I + 1]) {
+        case '"':
+        case '\\':
+          C = NameSV[++I];
+          break;
+        }
+      }
+      NameSV[S++] = C;
+    }
+    NameSV.resize(S);
+    NameRef = NameSV;
+  }
 
   assert(!NameRef.empty() && "Normal symbols cannot be unnamed!");
 
@@ -456,10 +477,10 @@ MCSymbolXCOFF *MCContext::createXCOFFSymbolImpl(const MCSymbolTableEntry *Name,
 
   // Append the hex values of '_' and invalid characters with "_Renamed..";
   // at the same time replace invalid characters with '_'.
-  for (size_t I = 0; I < InvalidName.size(); ++I) {
-    if (!MAI->isAcceptableChar(InvalidName[I]) || InvalidName[I] == '_') {
-      raw_svector_ostream(ValidName).write_hex(InvalidName[I]);
-      InvalidName[I] = '_';
+  for (char &C : InvalidName) {
+    if (!MAI->isAcceptableChar(C) || C == '_') {
+      raw_svector_ostream(ValidName).write_hex(C);
+      C = '_';
     }
   }
 
@@ -636,7 +657,7 @@ void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
                                               unsigned Flags, unsigned UniqueID,
                                               unsigned EntrySize) {
   bool IsMergeable = Flags & ELF::SHF_MERGE;
-  if (UniqueID == GenericSectionID) {
+  if (UniqueID == MCSection::NonUniqueID) {
     ELFSeenGenericMergeableSections.insert(SectionName);
     // Minor performance optimization: avoid hash map lookup in
     // isELFGenericMergeableSection, which will return true for SectionName.
@@ -718,7 +739,7 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
   StringRef CachedName = Iter->first.SectionName;
   MCSymbol *Begin = getOrCreateSectionSymbol<MCSymbolCOFF>(Section);
   MCSectionCOFF *Result = new (COFFAllocator.Allocate()) MCSectionCOFF(
-      CachedName, Characteristics, COMDATSymbol, Selection, Begin);
+      CachedName, Characteristics, COMDATSymbol, Selection, UniqueID, Begin);
   Iter->second = Result;
   auto *F = allocInitialFragment(*Result);
   Begin->setFragment(F);
@@ -727,14 +748,15 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
                                          unsigned Characteristics) {
-  return getCOFFSection(Section, Characteristics, "", 0, GenericSectionID);
+  return getCOFFSection(Section, Characteristics, "", 0,
+                        MCSection::NonUniqueID);
 }
 
 MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
                                                     const MCSymbol *KeySym,
                                                     unsigned UniqueID) {
   // Return the normal section if we don't have to be associative or unique.
-  if (!KeySym && UniqueID == GenericSectionID)
+  if (!KeySym && UniqueID == MCSection::NonUniqueID)
     return Sec;
 
   // If we have a key symbol, make an associative section with the same name and

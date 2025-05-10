@@ -226,7 +226,8 @@ SourceLocation CXXScalarValueInitExpr::getBeginLoc() const {
 
 // CXXNewExpr
 CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
-                       FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
+                       FunctionDecl *OperatorDelete,
+                       const ImplicitAllocationParameters &IAP,
                        bool UsualArrayDeleteWantsSize,
                        ArrayRef<Expr *> PlacementArgs, SourceRange TypeIdParens,
                        std::optional<Expr *> ArraySize,
@@ -245,7 +246,9 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
 
   CXXNewExprBits.IsGlobalNew = IsGlobalNew;
   CXXNewExprBits.IsArray = ArraySize.has_value();
-  CXXNewExprBits.ShouldPassAlignment = ShouldPassAlignment;
+  CXXNewExprBits.ShouldPassAlignment = isAlignedAllocation(IAP.PassAlignment);
+  CXXNewExprBits.ShouldPassTypeIdentity =
+      isTypeAwareAllocation(IAP.PassTypeIdentity);
   CXXNewExprBits.UsualArrayDeleteWantsSize = UsualArrayDeleteWantsSize;
   CXXNewExprBits.HasInitializer = Initializer != nullptr;
   CXXNewExprBits.StoredInitializationStyle =
@@ -290,7 +293,7 @@ CXXNewExpr::CXXNewExpr(EmptyShell Empty, bool IsArray,
 
 CXXNewExpr *CXXNewExpr::Create(
     const ASTContext &Ctx, bool IsGlobalNew, FunctionDecl *OperatorNew,
-    FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
+    FunctionDecl *OperatorDelete, const ImplicitAllocationParameters &IAP,
     bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
     SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
     CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
@@ -304,11 +307,10 @@ CXXNewExpr *CXXNewExpr::Create(
       Ctx.Allocate(totalSizeToAlloc<Stmt *, SourceRange>(
                        IsArray + HasInit + NumPlacementArgs, IsParenTypeId),
                    alignof(CXXNewExpr));
-  return new (Mem)
-      CXXNewExpr(IsGlobalNew, OperatorNew, OperatorDelete, ShouldPassAlignment,
-                 UsualArrayDeleteWantsSize, PlacementArgs, TypeIdParens,
-                 ArraySize, InitializationStyle, Initializer, Ty,
-                 AllocatedTypeInfo, Range, DirectInitRange);
+  return new (Mem) CXXNewExpr(
+      IsGlobalNew, OperatorNew, OperatorDelete, IAP, UsualArrayDeleteWantsSize,
+      PlacementArgs, TypeIdParens, ArraySize, InitializationStyle, Initializer,
+      Ty, AllocatedTypeInfo, Range, DirectInitRange);
 }
 
 CXXNewExpr *CXXNewExpr::CreateEmpty(const ASTContext &Ctx, bool IsArray,
@@ -770,8 +772,8 @@ CXXStaticCastExpr::Create(const ASTContext &C, QualType T, ExprValueKind VK,
   auto *E = new (Buffer) CXXStaticCastExpr(T, VK, K, Op, PathSize, WrittenTy,
                                            FPO, L, RParenLoc, AngleBrackets);
   if (PathSize)
-    std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
-                              E->getTrailingObjects<CXXBaseSpecifier *>());
+    llvm::uninitialized_copy(*BasePath,
+                             E->getTrailingObjects<CXXBaseSpecifier *>());
   return E;
 }
 
@@ -798,8 +800,8 @@ CXXDynamicCastExpr *CXXDynamicCastExpr::Create(const ASTContext &C, QualType T,
       new (Buffer) CXXDynamicCastExpr(T, VK, K, Op, PathSize, WrittenTy, L,
                                       RParenLoc, AngleBrackets);
   if (PathSize)
-    std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
-                              E->getTrailingObjects<CXXBaseSpecifier *>());
+    llvm::uninitialized_copy(*BasePath,
+                             E->getTrailingObjects<CXXBaseSpecifier *>());
   return E;
 }
 
@@ -861,8 +863,8 @@ CXXReinterpretCastExpr::Create(const ASTContext &C, QualType T,
       new (Buffer) CXXReinterpretCastExpr(T, VK, K, Op, PathSize, WrittenTy, L,
                                           RParenLoc, AngleBrackets);
   if (PathSize)
-    std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
-                              E->getTrailingObjects<CXXBaseSpecifier *>());
+    llvm::uninitialized_copy(*BasePath,
+                             E->getTrailingObjects<CXXBaseSpecifier *>());
   return E;
 }
 
@@ -909,8 +911,8 @@ CXXFunctionalCastExpr *CXXFunctionalCastExpr::Create(
   auto *E = new (Buffer)
       CXXFunctionalCastExpr(T, VK, Written, K, Op, PathSize, FPO, L, R);
   if (PathSize)
-    std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
-                              E->getTrailingObjects<CXXBaseSpecifier *>());
+    llvm::uninitialized_copy(*BasePath,
+                             E->getTrailingObjects<CXXBaseSpecifier *>());
   return E;
 }
 
@@ -1402,7 +1404,7 @@ ArrayRef<NamedDecl *> LambdaExpr::getExplicitTemplateParameters() const {
   return Record->getLambdaExplicitTemplateParameters();
 }
 
-Expr *LambdaExpr::getTrailingRequiresClause() const {
+const AssociatedConstraint &LambdaExpr::getTrailingRequiresClause() const {
   return getCallOperator()->getTrailingRequiresClause();
 }
 
@@ -1694,7 +1696,7 @@ SizeOfPackExpr *SizeOfPackExpr::Create(ASTContext &Context,
                                        SourceLocation OperatorLoc,
                                        NamedDecl *Pack, SourceLocation PackLoc,
                                        SourceLocation RParenLoc,
-                                       std::optional<unsigned> Length,
+                                       UnsignedOrNone Length,
                                        ArrayRef<TemplateArgument> PartialArgs) {
   void *Storage =
       Context.Allocate(totalSizeToAlloc<TemplateArgument>(PartialArgs.size()));
@@ -1722,7 +1724,7 @@ PackIndexingExpr *PackIndexingExpr::Create(
   if (Index && FullySubstituted && !SubstitutedExprs.empty())
     Type = SubstitutedExprs[*Index]->getType();
   else
-    Type = Context.DependentTy;
+    Type = PackIdExpr->getType();
 
   void *Storage =
       Context.Allocate(totalSizeToAlloc<Expr *>(SubstitutedExprs.size()));
@@ -1760,10 +1762,12 @@ QualType SubstNonTypeTemplateParmExpr::getParameterType(
 
 SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
     QualType T, ExprValueKind ValueKind, SourceLocation NameLoc,
-    const TemplateArgument &ArgPack, Decl *AssociatedDecl, unsigned Index)
+    const TemplateArgument &ArgPack, Decl *AssociatedDecl, unsigned Index,
+    bool Final)
     : Expr(SubstNonTypeTemplateParmPackExprClass, T, ValueKind, OK_Ordinary),
       AssociatedDecl(AssociatedDecl), Arguments(ArgPack.pack_begin()),
-      NumArguments(ArgPack.pack_size()), Index(Index), NameLoc(NameLoc) {
+      NumArguments(ArgPack.pack_size()), Final(Final), Index(Index),
+      NameLoc(NameLoc) {
   assert(AssociatedDecl != nullptr);
   setDependence(ExprDependence::TypeValueInstantiation |
                 ExprDependence::UnexpandedPack);
@@ -1779,31 +1783,31 @@ TemplateArgument SubstNonTypeTemplateParmPackExpr::getArgumentPack() const {
   return TemplateArgument(llvm::ArrayRef(Arguments, NumArguments));
 }
 
-FunctionParmPackExpr::FunctionParmPackExpr(QualType T, VarDecl *ParamPack,
+FunctionParmPackExpr::FunctionParmPackExpr(QualType T, ValueDecl *ParamPack,
                                            SourceLocation NameLoc,
                                            unsigned NumParams,
-                                           VarDecl *const *Params)
+                                           ValueDecl *const *Params)
     : Expr(FunctionParmPackExprClass, T, VK_LValue, OK_Ordinary),
       ParamPack(ParamPack), NameLoc(NameLoc), NumParameters(NumParams) {
   if (Params)
     std::uninitialized_copy(Params, Params + NumParams,
-                            getTrailingObjects<VarDecl *>());
+                            getTrailingObjects<ValueDecl *>());
   setDependence(ExprDependence::TypeValueInstantiation |
                 ExprDependence::UnexpandedPack);
 }
 
 FunctionParmPackExpr *
 FunctionParmPackExpr::Create(const ASTContext &Context, QualType T,
-                             VarDecl *ParamPack, SourceLocation NameLoc,
-                             ArrayRef<VarDecl *> Params) {
-  return new (Context.Allocate(totalSizeToAlloc<VarDecl *>(Params.size())))
+                             ValueDecl *ParamPack, SourceLocation NameLoc,
+                             ArrayRef<ValueDecl *> Params) {
+  return new (Context.Allocate(totalSizeToAlloc<ValueDecl *>(Params.size())))
       FunctionParmPackExpr(T, ParamPack, NameLoc, Params.size(), Params.data());
 }
 
 FunctionParmPackExpr *
 FunctionParmPackExpr::CreateEmpty(const ASTContext &Context,
                                   unsigned NumParams) {
-  return new (Context.Allocate(totalSizeToAlloc<VarDecl *>(NumParams)))
+  return new (Context.Allocate(totalSizeToAlloc<ValueDecl *>(NumParams)))
       FunctionParmPackExpr(QualType(), nullptr, SourceLocation(), 0, nullptr);
 }
 
@@ -1854,23 +1858,42 @@ bool MaterializeTemporaryExpr::isUsableInConstantExpressions(
 
 TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
                              ArrayRef<TypeSourceInfo *> Args,
-                             SourceLocation RParenLoc, bool Value)
+                             SourceLocation RParenLoc,
+                             std::variant<bool, APValue> Value)
     : Expr(TypeTraitExprClass, T, VK_PRValue, OK_Ordinary), Loc(Loc),
       RParenLoc(RParenLoc) {
   assert(Kind <= TT_Last && "invalid enum value!");
+
   TypeTraitExprBits.Kind = Kind;
   assert(static_cast<unsigned>(Kind) == TypeTraitExprBits.Kind &&
          "TypeTraitExprBits.Kind overflow!");
-  TypeTraitExprBits.Value = Value;
+
+  TypeTraitExprBits.IsBooleanTypeTrait = std::holds_alternative<bool>(Value);
+  if (TypeTraitExprBits.IsBooleanTypeTrait)
+    TypeTraitExprBits.Value = std::get<bool>(Value);
+  else
+    ::new (getTrailingObjects<APValue>())
+        APValue(std::get<APValue>(std::move(Value)));
+
   TypeTraitExprBits.NumArgs = Args.size();
   assert(Args.size() == TypeTraitExprBits.NumArgs &&
          "TypeTraitExprBits.NumArgs overflow!");
-
   auto **ToArgs = getTrailingObjects<TypeSourceInfo *>();
   for (unsigned I = 0, N = Args.size(); I != N; ++I)
     ToArgs[I] = Args[I];
 
   setDependence(computeDependence(this));
+
+  assert((TypeTraitExprBits.IsBooleanTypeTrait || isValueDependent() ||
+          getAPValue().isInt() || getAPValue().isAbsent()) &&
+         "Only int values are supported by clang");
+}
+
+TypeTraitExpr::TypeTraitExpr(EmptyShell Empty, bool IsStoredAsBool)
+    : Expr(TypeTraitExprClass, Empty) {
+  TypeTraitExprBits.IsBooleanTypeTrait = IsStoredAsBool;
+  if (!IsStoredAsBool)
+    ::new (getTrailingObjects<APValue>()) APValue();
 }
 
 TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
@@ -1879,14 +1902,26 @@ TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
                                      ArrayRef<TypeSourceInfo *> Args,
                                      SourceLocation RParenLoc,
                                      bool Value) {
-  void *Mem = C.Allocate(totalSizeToAlloc<TypeSourceInfo *>(Args.size()));
+  void *Mem =
+      C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(0, Args.size()));
+  return new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, Value);
+}
+
+TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
+                                     SourceLocation Loc, TypeTrait Kind,
+                                     ArrayRef<TypeSourceInfo *> Args,
+                                     SourceLocation RParenLoc, APValue Value) {
+  void *Mem =
+      C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(1, Args.size()));
   return new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, Value);
 }
 
 TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
+                                                 bool IsStoredAsBool,
                                                  unsigned NumArgs) {
-  void *Mem = C.Allocate(totalSizeToAlloc<TypeSourceInfo *>(NumArgs));
-  return new (Mem) TypeTraitExpr(EmptyShell());
+  void *Mem = C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(
+      IsStoredAsBool ? 0 : 1, NumArgs));
+  return new (Mem) TypeTraitExpr(EmptyShell(), IsStoredAsBool);
 }
 
 CUDAKernelCallExpr::CUDAKernelCallExpr(Expr *Fn, CallExpr *Config,
@@ -1948,14 +1983,13 @@ CXXParenListInitExpr *CXXParenListInitExpr::CreateEmpty(ASTContext &C,
 }
 
 CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
-                                SourceLocation LParenLoc, Expr *LHS,
-                                BinaryOperatorKind Opcode,
-                                SourceLocation EllipsisLoc, Expr *RHS,
-                                SourceLocation RParenLoc,
-                                std::optional<unsigned> NumExpansions)
+                         SourceLocation LParenLoc, Expr *LHS,
+                         BinaryOperatorKind Opcode, SourceLocation EllipsisLoc,
+                         Expr *RHS, SourceLocation RParenLoc,
+                         UnsignedOrNone NumExpansions)
     : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary), LParenLoc(LParenLoc),
       EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
-      NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
+      NumExpansions(NumExpansions), Opcode(Opcode) {
   // We rely on asserted invariant to distinguish left and right folds.
   assert(((LHS && LHS->containsUnexpandedParameterPack()) !=
           (RHS && RHS->containsUnexpandedParameterPack())) &&

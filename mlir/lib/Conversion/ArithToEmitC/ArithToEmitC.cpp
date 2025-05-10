@@ -13,6 +13,7 @@
 
 #include "mlir/Conversion/ArithToEmitC/ArithToEmitC.h"
 
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/EmitC/Transforms/TypeConversions.h"
@@ -21,6 +22,27 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
+
+namespace {
+/// Implement the interface to convert Arith to EmitC.
+struct ArithToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  using ConvertToEmitCPatternInterface::ConvertToEmitCPatternInterface;
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateArithToEmitCPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertArithToEmitCInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, arith::ArithDialect *dialect) {
+    dialect->addInterfaces<ArithToEmitCDialectInterface>();
+  });
+}
 
 //===----------------------------------------------------------------------===//
 // Conversion Patterns
@@ -733,6 +755,43 @@ public:
   }
 };
 
+// Floating-point to floating-point conversions.
+template <typename CastOp>
+class FpCastOpConversion : public OpConversionPattern<CastOp> {
+public:
+  FpCastOpConversion(const TypeConverter &typeConverter, MLIRContext *context)
+      : OpConversionPattern<CastOp>(typeConverter, context) {}
+
+  LogicalResult
+  matchAndRewrite(CastOp castOp, typename CastOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Vectors in particular are not supported.
+    Type operandType = adaptor.getIn().getType();
+    if (!emitc::isSupportedFloatType(operandType))
+      return rewriter.notifyMatchFailure(castOp,
+                                         "unsupported cast source type");
+    if (auto roundingModeOp =
+            dyn_cast<arith::ArithRoundingModeInterface>(*castOp)) {
+      // Only supporting default rounding mode as of now.
+      if (roundingModeOp.getRoundingModeAttr())
+        return rewriter.notifyMatchFailure(castOp, "unsupported rounding mode");
+    }
+
+    Type dstType = this->getTypeConverter()->convertType(castOp.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(castOp, "type conversion failed");
+
+    if (!emitc::isSupportedFloatType(dstType))
+      return rewriter.notifyMatchFailure(castOp,
+                                         "unsupported cast destination type");
+
+    Value fpCastOperand = adaptor.getIn();
+    rewriter.replaceOpWithNewOp<emitc::CastOp>(castOp, dstType, fpCastOperand);
+
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -778,7 +837,9 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     ItoFCastOpConversion<arith::SIToFPOp>,
     ItoFCastOpConversion<arith::UIToFPOp>,
     FtoICastOpConversion<arith::FPToSIOp>,
-    FtoICastOpConversion<arith::FPToUIOp>
+    FtoICastOpConversion<arith::FPToUIOp>,
+    FpCastOpConversion<arith::ExtFOp>,
+    FpCastOpConversion<arith::TruncFOp>
   >(typeConverter, ctx);
   // clang-format on
 }

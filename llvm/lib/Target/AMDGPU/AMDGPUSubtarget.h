@@ -106,32 +106,54 @@ public:
   /// be converted to integer, violate subtarget's specifications, or are not
   /// compatible with minimum/maximum number of waves limited by flat work group
   /// size, register usage, and/or lds usage.
-  std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const {
-    // Default/requested minimum/maximum flat work group sizes.
-    std::pair<unsigned, unsigned> FlatWorkGroupSizes = getFlatWorkGroupSizes(F);
-    return getWavesPerEU(F, FlatWorkGroupSizes);
-  }
+  std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const;
 
-  /// Overload which uses the specified values for the flat work group sizes,
-  /// rather than querying the function itself. \p FlatWorkGroupSizes Should
-  /// correspond to the function's value for getFlatWorkGroupSizes.
+  /// Overload which uses the specified values for the flat workgroup sizes and
+  /// LDS space rather than querying the function itself. \p FlatWorkGroupSizes
+  /// should correspond to the function's value for getFlatWorkGroupSizes and \p
+  /// LDSBytes to the per-workgroup LDS allocation.
   std::pair<unsigned, unsigned>
-  getWavesPerEU(const Function &F,
-                std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
-  std::pair<unsigned, unsigned> getEffectiveWavesPerEU(
-      std::pair<unsigned, unsigned> WavesPerEU,
-      std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
+  getWavesPerEU(std::pair<unsigned, unsigned> FlatWorkGroupSizes,
+                unsigned LDSBytes, const Function &F) const;
+
+  /// Returns the target minimum/maximum number of waves per EU. This is based
+  /// on the minimum/maximum number of \p RequestedWavesPerEU and further
+  /// limited by the maximum achievable occupancy derived from the range of \p
+  /// FlatWorkGroupSizes and number of \p LDSBytes per workgroup.
+  std::pair<unsigned, unsigned>
+  getEffectiveWavesPerEU(std::pair<unsigned, unsigned> RequestedWavesPerEU,
+                         std::pair<unsigned, unsigned> FlatWorkGroupSizes,
+                         unsigned LDSBytes) const;
 
   /// Return the amount of LDS that can be used that will not restrict the
   /// occupancy lower than WaveCount.
   unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
                                            const Function &) const;
 
-  /// Inverse of getMaxLocalMemWithWaveCount. Return the maximum wavecount if
-  /// the given LDS memory size is the only constraint.
-  unsigned getOccupancyWithLocalMemSize(uint32_t Bytes, const Function &) const;
+  /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
+  /// be achieved when the only function running on a CU is \p F and each
+  /// workgroup running the function requires \p LDSBytes bytes of LDS space.
+  /// This notably depends on the range of allowed flat group sizes for the
+  /// function and hardware characteristics.
+  std::pair<unsigned, unsigned>
+  getOccupancyWithWorkGroupSizes(uint32_t LDSBytes, const Function &F) const {
+    return getOccupancyWithWorkGroupSizes(LDSBytes, getFlatWorkGroupSizes(F));
+  }
 
-  unsigned getOccupancyWithLocalMemSize(const MachineFunction &MF) const;
+  /// Overload which uses the specified values for the flat work group sizes,
+  /// rather than querying the function itself. \p FlatWorkGroupSizes should
+  /// correspond to the function's value for getFlatWorkGroupSizes.
+  std::pair<unsigned, unsigned> getOccupancyWithWorkGroupSizes(
+      uint32_t LDSBytes,
+      std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
+
+  /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
+  /// be achieved when the only function running on a CU is \p MF. This notably
+  /// depends on the range of allowed flat group sizes for the function, the
+  /// amount of per-workgroup LDS space required by the function, and hardware
+  /// characteristics.
+  std::pair<unsigned, unsigned>
+  getOccupancyWithWorkGroupSizes(const MachineFunction &MF) const;
 
   bool isAmdHsaOS() const {
     return TargetTriple.getOS() == Triple::AMDHSA;
@@ -151,9 +173,7 @@ public:
     return isAmdHsaOS() || isMesaKernel(F);
   }
 
-  bool isGCN() const {
-    return TargetTriple.getArch() == Triple::amdgcn;
-  }
+  bool isGCN() const { return TargetTriple.isAMDGCN(); }
 
   bool isGCN3Encoding() const {
     return GCN3Encoding;
@@ -188,9 +208,13 @@ public:
 
   bool hasFP4ConversionScaleInsts() const { return HasFP4ConversionScaleInsts; }
 
-  bool hasFP6BF6ConversionScaleInsts() const { return HasFP6BF6ConversionScaleInsts; }
+  bool hasFP6BF6ConversionScaleInsts() const {
+    return HasFP6BF6ConversionScaleInsts;
+  }
 
-  bool hasF16BF16ToFP6BF6ConversionScaleInsts() const { return HasF16BF16ToFP6BF6ConversionScaleInsts; }
+  bool hasF16BF16ToFP6BF6ConversionScaleInsts() const {
+    return HasF16BF16ToFP6BF6ConversionScaleInsts;
+  }
 
   bool hasCvtPkF16F32Inst() const { return HasCvtPkF16F32Inst; }
 

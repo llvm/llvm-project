@@ -59,8 +59,8 @@ tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 #CHECK:    frame-setup PACM
-#CHECK:    frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
 #CHECK:    frame-setup CFI_INSTRUCTION negate_ra_sign_state_with_pc
+#CHECK:    frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
 #CHECK:    frame-destroy PACM
 #CHECK:    frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
 body:             |

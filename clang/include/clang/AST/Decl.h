@@ -33,6 +33,7 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/UnsignedOrNone.h"
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -77,6 +78,23 @@ class TypeAliasTemplateDecl;
 class UnresolvedSetImpl;
 class VarTemplateDecl;
 enum class ImplicitParamKind;
+
+// Holds a constraint expression along with a pack expansion index, if
+// expanded.
+struct AssociatedConstraint {
+  const Expr *ConstraintExpr = nullptr;
+  UnsignedOrNone ArgPackSubstIndex = std::nullopt;
+
+  constexpr AssociatedConstraint() = default;
+
+  explicit AssociatedConstraint(const Expr *ConstraintExpr,
+                                UnsignedOrNone ArgPackSubstIndex = std::nullopt)
+      : ConstraintExpr(ConstraintExpr), ArgPackSubstIndex(ArgPackSubstIndex) {}
+
+  explicit operator bool() const { return ConstraintExpr != nullptr; }
+
+  bool isNull() const { return !operator bool(); }
+};
 
 /// The top declaration context.
 class TranslationUnitDecl : public Decl,
@@ -698,6 +716,10 @@ public:
     return const_cast<ValueDecl *>(this)->getPotentiallyDecomposedVarDecl();
   }
 
+  /// Determine whether this value is actually a function parameter pack,
+  /// init-capture pack, or structured binding pack
+  bool isParameterPack() const;
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstValue && K <= lastValue; }
@@ -738,7 +760,7 @@ class DeclaratorDecl : public ValueDecl {
   // and constrained function decls.
   struct ExtInfo : public QualifierInfo {
     TypeSourceInfo *TInfo = nullptr;
-    Expr *TrailingRequiresClause = nullptr;
+    AssociatedConstraint TrailingRequiresClause;
   };
 
   llvm::PointerUnion<TypeSourceInfo *, ExtInfo *> DeclInfo;
@@ -747,9 +769,9 @@ class DeclaratorDecl : public ValueDecl {
   /// ignoring outer template declarations.
   SourceLocation InnerLocStart;
 
-  bool hasExtInfo() const { return DeclInfo.is<ExtInfo*>(); }
-  ExtInfo *getExtInfo() { return DeclInfo.get<ExtInfo*>(); }
-  const ExtInfo *getExtInfo() const { return DeclInfo.get<ExtInfo*>(); }
+  bool hasExtInfo() const { return isa<ExtInfo *>(DeclInfo); }
+  ExtInfo *getExtInfo() { return cast<ExtInfo *>(DeclInfo); }
+  const ExtInfo *getExtInfo() const { return cast<ExtInfo *>(DeclInfo); }
 
 protected:
   DeclaratorDecl(Kind DK, DeclContext *DC, SourceLocation L,
@@ -762,9 +784,8 @@ public:
   friend class ASTDeclWriter;
 
   TypeSourceInfo *getTypeSourceInfo() const {
-    return hasExtInfo()
-      ? getExtInfo()->TInfo
-      : DeclInfo.get<TypeSourceInfo*>();
+    return hasExtInfo() ? getExtInfo()->TInfo
+                        : cast<TypeSourceInfo *>(DeclInfo);
   }
 
   void setTypeSourceInfo(TypeSourceInfo *TI) {
@@ -808,17 +829,12 @@ public:
   /// \brief Get the constraint-expression introduced by the trailing
   /// requires-clause in the function/member declaration, or null if no
   /// requires-clause was provided.
-  Expr *getTrailingRequiresClause() {
-    return hasExtInfo() ? getExtInfo()->TrailingRequiresClause
-                        : nullptr;
+  const AssociatedConstraint &getTrailingRequiresClause() const {
+    static constexpr AssociatedConstraint Null;
+    return hasExtInfo() ? getExtInfo()->TrailingRequiresClause : Null;
   }
 
-  const Expr *getTrailingRequiresClause() const {
-    return hasExtInfo() ? getExtInfo()->TrailingRequiresClause
-                        : nullptr;
-  }
-
-  void setTrailingRequiresClause(Expr *TrailingRequiresClause);
+  void setTrailingRequiresClause(const AssociatedConstraint &AC);
 
   unsigned getNumTemplateParameterLists() const {
     return hasExtInfo() ? getExtInfo()->NumTemplParamLists : 0;
@@ -1528,10 +1544,6 @@ public:
     NonParmVarDeclBits.IsInitCapture = IC;
   }
 
-  /// Determine whether this variable is actually a function parameter pack or
-  /// init-capture pack.
-  bool isParameterPack() const;
-
   /// Whether this local extern variable declaration's previous declaration
   /// was declared in the same block scope. Only correct in C++.
   bool isPreviousDeclInSameBlockScope() const {
@@ -2091,7 +2103,7 @@ protected:
                const DeclarationNameInfo &NameInfo, QualType T,
                TypeSourceInfo *TInfo, StorageClass S, bool UsesFPIntrin,
                bool isInlineSpecified, ConstexprSpecKind ConstexprKind,
-               Expr *TrailingRequiresClause = nullptr);
+               const AssociatedConstraint &TrailingRequiresClause);
 
   using redeclarable_base = Redeclarable<FunctionDecl>;
 
@@ -2127,7 +2139,7 @@ public:
          TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin = false,
          bool isInlineSpecified = false, bool hasWrittenPrototype = true,
          ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified,
-         Expr *TrailingRequiresClause = nullptr) {
+         const AssociatedConstraint &TrailingRequiresClause = {}) {
     DeclarationNameInfo NameInfo(N, NLoc);
     return FunctionDecl::Create(C, DC, StartLoc, NameInfo, T, TInfo, SC,
                                 UsesFPIntrin, isInlineSpecified,
@@ -2140,7 +2152,7 @@ public:
          const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
          StorageClass SC, bool UsesFPIntrin, bool isInlineSpecified,
          bool hasWrittenPrototype, ConstexprSpecKind ConstexprKind,
-         Expr *TrailingRequiresClause);
+         const AssociatedConstraint &TrailingRequiresClause);
 
   static FunctionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
@@ -2297,6 +2309,13 @@ public:
   /// State that this templated function will be late parsed.
   void setLateTemplateParsed(bool ILT = true) {
     FunctionDeclBits.IsLateTemplateParsed = ILT;
+  }
+
+  bool isInstantiatedFromMemberTemplate() const {
+    return FunctionDeclBits.IsInstantiatedFromMemberTemplate;
+  }
+  void setInstantiatedFromMemberTemplate(bool Val = true) {
+    FunctionDeclBits.IsInstantiatedFromMemberTemplate = Val;
   }
 
   /// Whether this function is "trivial" in some specialized C++ senses.
@@ -2521,7 +2540,39 @@ public:
   /// If this function is an allocation/deallocation function that takes
   /// the `std::nothrow_t` tag, return true through IsNothrow,
   bool isReplaceableGlobalAllocationFunction(
-      std::optional<unsigned> *AlignmentParam = nullptr,
+      UnsignedOrNone *AlignmentParam = nullptr,
+      bool *IsNothrow = nullptr) const {
+    if (isTypeAwareOperatorNewOrDelete())
+      return false;
+    return isUsableAsGlobalAllocationFunctionInConstantEvaluation(
+        AlignmentParam, IsNothrow);
+  }
+
+  /// Determines whether this function is one of the replaceable global
+  /// allocation functions described in isReplaceableGlobalAllocationFunction,
+  /// or is a function that may be treated as such during constant evaluation.
+  /// This adds support for potentially templated type aware global allocation
+  /// functions of the form:
+  ///    void *operator new(type-identity, std::size_t, std::align_val_t)
+  ///    void *operator new(type-identity, std::size_t, std::align_val_t,
+  ///                       const std::nothrow_t &) noexcept;
+  ///    void *operator new[](type-identity, std::size_t, std::align_val_t)
+  ///    void *operator new[](type-identity, std::size_t, std::align_val_t,
+  ///                         const std::nothrow_t &) noexcept;
+  ///    void operator delete(type-identity, void*, std::size_t,
+  ///                         std::align_val_t) noexcept;
+  ///    void operator delete(type-identity, void*, std::size_t,
+  ///                         std::align_val_t, const std::nothrow_t&) noexcept;
+  ///    void operator delete[](type-identity, void*, std::size_t,
+  ///                         std::align_val_t) noexcept;
+  ///    void operator delete[](type-identity, void*, std::size_t,
+  ///                         std::align_val_t, const std::nothrow_t&) noexcept;
+  /// Where `type-identity` is a specialization of std::type_identity. If the
+  /// declaration is a templated function, it may not include a parameter pack
+  /// in the argument list, the type-identity parameter is required to be
+  /// dependent, and is the only permitted dependent parameter.
+  bool isUsableAsGlobalAllocationFunctionInConstantEvaluation(
+      UnsignedOrNone *AlignmentParam = nullptr,
       bool *IsNothrow = nullptr) const;
 
   /// Determine if this function provides an inline implementation of a builtin.
@@ -2529,6 +2580,20 @@ public:
 
   /// Determine whether this is a destroying operator delete.
   bool isDestroyingOperatorDelete() const;
+  void setIsDestroyingOperatorDelete(bool IsDestroyingDelete);
+
+  /// Count of mandatory parameters for type aware operator new
+  static constexpr unsigned RequiredTypeAwareNewParameterCount =
+      /* type-identity */ 1 + /* size */ 1 + /* alignment */ 1;
+
+  /// Count of mandatory parameters for type aware operator delete
+  static constexpr unsigned RequiredTypeAwareDeleteParameterCount =
+      /* type-identity */ 1 + /* address */ 1 + /* size */ 1 +
+      /* alignment */ 1;
+
+  /// Determine whether this is a type aware operator new or delete.
+  bool isTypeAwareOperatorNewOrDelete() const;
+  void setIsTypeAwareOperatorNewOrDelete(bool IsTypeAwareOperator = true);
 
   /// Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;
@@ -2625,9 +2690,10 @@ public:
   ///
   /// Use this instead of getTrailingRequiresClause for concepts APIs that
   /// accept an ArrayRef of constraint expressions.
-  void getAssociatedConstraints(SmallVectorImpl<const Expr *> &AC) const {
-    if (auto *TRC = getTrailingRequiresClause())
-      AC.push_back(TRC);
+  void
+  getAssociatedConstraints(SmallVectorImpl<AssociatedConstraint> &ACs) const {
+    if (const AssociatedConstraint &AC = getTrailingRequiresClause())
+      ACs.emplace_back(AC);
   }
 
   /// Get the message that indicates why this function was deleted.
@@ -3028,6 +3094,8 @@ public:
   static FunctionDecl *castFromDeclContext(const DeclContext *DC) {
     return static_cast<FunctionDecl *>(const_cast<DeclContext*>(DC));
   }
+
+  bool isReferenceableKernel() const;
 };
 
 /// Represents a member of a struct/union/class.
@@ -3116,8 +3184,20 @@ public:
 
   /// Returns the index of this field within its record,
   /// as appropriate for passing to ASTRecordLayout::getFieldOffset.
-  unsigned getFieldIndex() const;
+  unsigned getFieldIndex() const {
+    const FieldDecl *Canonical = getCanonicalDecl();
+    if (Canonical->CachedFieldIndex == 0) {
+      Canonical->setCachedFieldIndex();
+      assert(Canonical->CachedFieldIndex != 0);
+    }
+    return Canonical->CachedFieldIndex - 1;
+  }
 
+private:
+  /// Set CachedFieldIndex to the index of this field plus one.
+  void setCachedFieldIndex() const;
+
+public:
   /// Determines whether this field is mutable (C++ only).
   bool isMutable() const { return Mutable; }
 
@@ -3143,7 +3223,9 @@ public:
 
   /// Computes the bit width of this field, if this is a bit field.
   /// May not be called on non-bitfields.
-  unsigned getBitWidthValue(const ASTContext &Ctx) const;
+  /// Note that in order to successfully use this function, the bitwidth
+  /// expression must be a ConstantExpr with a valid integer result set.
+  unsigned getBitWidthValue() const;
 
   /// Set the bit-field width for this member.
   // Note: used by some clients (i.e., do not remove it).
@@ -3174,7 +3256,7 @@ public:
   /// Is this a zero-length bit-field? Such bit-fields aren't really bit-fields
   /// at all and instead act as a separator between contiguous runs of other
   /// bit-fields.
-  bool isZeroLengthBitField(const ASTContext &Ctx) const;
+  bool isZeroLengthBitField() const;
 
   /// Determine if this field is a subobject of zero size, that is, either a
   /// zero-length bit-field or a field of empty class type with the
@@ -3458,18 +3540,17 @@ public:
   using redeclarable_base::isFirstDecl;
 
   bool isModed() const {
-    return MaybeModedTInfo.getPointer().is<ModedTInfo *>();
+    return isa<ModedTInfo *>(MaybeModedTInfo.getPointer());
   }
 
   TypeSourceInfo *getTypeSourceInfo() const {
-    return isModed() ? MaybeModedTInfo.getPointer().get<ModedTInfo *>()->first
-                     : MaybeModedTInfo.getPointer().get<TypeSourceInfo *>();
+    return isModed() ? cast<ModedTInfo *>(MaybeModedTInfo.getPointer())->first
+                     : cast<TypeSourceInfo *>(MaybeModedTInfo.getPointer());
   }
 
   QualType getUnderlyingType() const {
-    return isModed() ? MaybeModedTInfo.getPointer().get<ModedTInfo *>()->second
-                     : MaybeModedTInfo.getPointer()
-                           .get<TypeSourceInfo *>()
+    return isModed() ? cast<ModedTInfo *>(MaybeModedTInfo.getPointer())->second
+                     : cast<TypeSourceInfo *>(MaybeModedTInfo.getPointer())
                            ->getType();
   }
 
@@ -3587,10 +3668,10 @@ private:
   /// otherwise, it is a null (TypedefNameDecl) pointer.
   llvm::PointerUnion<TypedefNameDecl *, ExtInfo *> TypedefNameDeclOrQualifier;
 
-  bool hasExtInfo() const { return TypedefNameDeclOrQualifier.is<ExtInfo *>(); }
-  ExtInfo *getExtInfo() { return TypedefNameDeclOrQualifier.get<ExtInfo *>(); }
+  bool hasExtInfo() const { return isa<ExtInfo *>(TypedefNameDeclOrQualifier); }
+  ExtInfo *getExtInfo() { return cast<ExtInfo *>(TypedefNameDeclOrQualifier); }
   const ExtInfo *getExtInfo() const {
-    return TypedefNameDeclOrQualifier.get<ExtInfo *>();
+    return cast<ExtInfo *>(TypedefNameDeclOrQualifier);
   }
 
 protected:
@@ -3793,7 +3874,7 @@ public:
 
   TypedefNameDecl *getTypedefNameForAnonDecl() const {
     return hasExtInfo() ? nullptr
-                        : TypedefNameDeclOrQualifier.get<TypedefNameDecl *>();
+                        : cast<TypedefNameDecl *>(TypedefNameDeclOrQualifier);
   }
 
   void setTypedefNameForAnonDecl(TypedefNameDecl *TDD);
@@ -4009,9 +4090,9 @@ public:
   QualType getIntegerType() const {
     if (!IntegerType)
       return QualType();
-    if (const Type *T = IntegerType.dyn_cast<const Type*>())
+    if (const Type *T = dyn_cast<const Type *>(IntegerType))
       return QualType(T, 0);
-    return IntegerType.get<TypeSourceInfo*>()->getType().getUnqualifiedType();
+    return cast<TypeSourceInfo *>(IntegerType)->getType().getUnqualifiedType();
   }
 
   /// Set the underlying integer type.
@@ -4023,7 +4104,7 @@ public:
   /// Return the type source info for the underlying integer type,
   /// if no type source info exists, return 0.
   TypeSourceInfo *getIntegerTypeSourceInfo() const {
-    return IntegerType.dyn_cast<TypeSourceInfo*>();
+    return dyn_cast_if_present<TypeSourceInfo *>(IntegerType);
   }
 
   /// Retrieve the source range that covers the underlying type if
@@ -4271,6 +4352,14 @@ public:
 
   void setHasNonTrivialToPrimitiveCopyCUnion(bool V) {
     RecordDeclBits.HasNonTrivialToPrimitiveCopyCUnion = V;
+  }
+
+  bool hasUninitializedExplicitInitFields() const {
+    return RecordDeclBits.HasUninitializedExplicitInitFields;
+  }
+
+  void setHasUninitializedExplicitInitFields(bool V) {
+    RecordDeclBits.HasUninitializedExplicitInitFields = V;
   }
 
   /// Determine whether this class can be passed in registers. In C++ mode,
@@ -4668,6 +4757,83 @@ public:
   }
 };
 
+/// Represents a partial function definition.
+///
+/// An outlined function declaration contains the parameters and body of
+/// a function independent of other function definition concerns such
+/// as function name, type, and calling convention. Such declarations may
+/// be used to hold a parameterized and transformed sequence of statements
+/// used to generate a target dependent function definition without losing
+/// association with the original statements. See SYCLKernelCallStmt as an
+/// example.
+class OutlinedFunctionDecl final
+    : public Decl,
+      public DeclContext,
+      private llvm::TrailingObjects<OutlinedFunctionDecl, ImplicitParamDecl *> {
+private:
+  /// The number of parameters to the outlined function.
+  unsigned NumParams;
+
+  /// The body of the outlined function.
+  llvm::PointerIntPair<Stmt *, 1, bool> BodyAndNothrow;
+
+  explicit OutlinedFunctionDecl(DeclContext *DC, unsigned NumParams);
+
+  ImplicitParamDecl *const *getParams() const {
+    return getTrailingObjects<ImplicitParamDecl *>();
+  }
+
+  ImplicitParamDecl **getParams() {
+    return getTrailingObjects<ImplicitParamDecl *>();
+  }
+
+public:
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+  friend TrailingObjects;
+
+  static OutlinedFunctionDecl *Create(ASTContext &C, DeclContext *DC,
+                                      unsigned NumParams);
+  static OutlinedFunctionDecl *
+  CreateDeserialized(ASTContext &C, GlobalDeclID ID, unsigned NumParams);
+
+  Stmt *getBody() const override;
+  void setBody(Stmt *B);
+
+  bool isNothrow() const;
+  void setNothrow(bool Nothrow = true);
+
+  unsigned getNumParams() const { return NumParams; }
+
+  ImplicitParamDecl *getParam(unsigned i) const {
+    assert(i < NumParams);
+    return getParams()[i];
+  }
+  void setParam(unsigned i, ImplicitParamDecl *P) {
+    assert(i < NumParams);
+    getParams()[i] = P;
+  }
+
+  // Range interface to parameters.
+  using parameter_const_iterator = const ImplicitParamDecl *const *;
+  using parameter_const_range = llvm::iterator_range<parameter_const_iterator>;
+  parameter_const_range parameters() const {
+    return {param_begin(), param_end()};
+  }
+  parameter_const_iterator param_begin() const { return getParams(); }
+  parameter_const_iterator param_end() const { return getParams() + NumParams; }
+
+  // Implement isa/cast/dyncast/etc.
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == OutlinedFunction; }
+  static DeclContext *castToDeclContext(const OutlinedFunctionDecl *D) {
+    return static_cast<DeclContext *>(const_cast<OutlinedFunctionDecl *>(D));
+  }
+  static OutlinedFunctionDecl *castFromDeclContext(const DeclContext *DC) {
+    return static_cast<OutlinedFunctionDecl *>(const_cast<DeclContext *>(DC));
+  }
+};
+
 /// Represents the body of a CapturedStmt, and serves as its DeclContext.
 class CapturedDecl final
     : public Decl,
@@ -4935,16 +5101,32 @@ class HLSLBufferDecl final : public NamedDecl, public DeclContext {
   SourceLocation KwLoc;
   /// IsCBuffer - Whether the buffer is a cbuffer (and not a tbuffer).
   bool IsCBuffer;
+  /// HasValidPackoffset - Whether the buffer has valid packoffset annotations
+  //                       on all declarations
+  bool HasValidPackoffset;
+  // LayoutStruct - Layout struct for the buffer
+  CXXRecordDecl *LayoutStruct;
+
+  // For default (implicit) constant buffer, an array of references of global
+  // decls that belong to the buffer. The decls are already parented by the
+  // translation unit context. The array is allocated by the ASTContext
+  // allocator in HLSLBufferDecl::CreateDefaultCBuffer.
+  ArrayRef<Decl *> DefaultBufferDecls;
 
   HLSLBufferDecl(DeclContext *DC, bool CBuffer, SourceLocation KwLoc,
                  IdentifierInfo *ID, SourceLocation IDLoc,
                  SourceLocation LBrace);
+
+  void setDefaultBufferDecls(ArrayRef<Decl *> Decls);
 
 public:
   static HLSLBufferDecl *Create(ASTContext &C, DeclContext *LexicalParent,
                                 bool CBuffer, SourceLocation KwLoc,
                                 IdentifierInfo *ID, SourceLocation IDLoc,
                                 SourceLocation LBrace);
+  static HLSLBufferDecl *
+  CreateDefaultCBuffer(ASTContext &C, DeclContext *LexicalParent,
+                       ArrayRef<Decl *> DefaultCBufferDecls);
   static HLSLBufferDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY {
@@ -4955,6 +5137,10 @@ public:
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
   void setRBraceLoc(SourceLocation L) { RBraceLoc = L; }
   bool isCBuffer() const { return IsCBuffer; }
+  void setHasValidPackoffset(bool PO) { HasValidPackoffset = PO; }
+  bool hasValidPackoffset() const { return HasValidPackoffset; }
+  const CXXRecordDecl *getLayoutStruct() const { return LayoutStruct; }
+  void addLayoutStruct(CXXRecordDecl *LS);
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -4965,6 +5151,28 @@ public:
   static HLSLBufferDecl *castFromDeclContext(const DeclContext *DC) {
     return static_cast<HLSLBufferDecl *>(const_cast<DeclContext *>(DC));
   }
+
+  // Iterator for the buffer decls. For constant buffers explicitly declared
+  // with `cbuffer` keyword this will the list of decls parented by this
+  // HLSLBufferDecl (equal to `decls()`).
+  // For implicit $Globals buffer this will be the list of default buffer
+  // declarations stored in DefaultBufferDecls plus the implicit layout
+  // struct (the only child of HLSLBufferDecl in this case).
+  //
+  // The iterator uses llvm::concat_iterator to concatenate the lists
+  // `decls()` and `DefaultBufferDecls`. For non-default buffers
+  // `DefaultBufferDecls` is always empty.
+  using buffer_decl_iterator =
+      llvm::concat_iterator<Decl *const, SmallVector<Decl *>::const_iterator,
+                            decl_iterator>;
+  using buffer_decl_range = llvm::iterator_range<buffer_decl_iterator>;
+
+  buffer_decl_range buffer_decls() const {
+    return buffer_decl_range(buffer_decls_begin(), buffer_decls_end());
+  }
+  buffer_decl_iterator buffer_decls_begin() const;
+  buffer_decl_iterator buffer_decls_end() const;
+  bool buffer_decls_empty();
 
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
@@ -5041,6 +5249,12 @@ static constexpr StringRef getOpenMPVariantManglingSeparatorStr() {
 /// attribute.
 bool IsArmStreamingFunction(const FunctionDecl *FD,
                             bool IncludeLocallyStreaming);
+
+/// Returns whether the given FunctionDecl has Arm ZA state.
+bool hasArmZAState(const FunctionDecl *FD);
+
+/// Returns whether the given FunctionDecl has Arm ZT0 state.
+bool hasArmZT0State(const FunctionDecl *FD);
 
 } // namespace clang
 

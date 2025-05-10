@@ -659,9 +659,9 @@ define void @test_constant_v4i64_align16(ptr %dst) nounwind {
 ;
 ; AVX512-LABEL: test_constant_v4i64_align16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551614,18446744073709551613]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [18446744073709551614,18446744073709551613]
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [0,18446744073709551615]
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
   store <4 x i64> <i64 0, i64 -1, i64 -2, i64 -3>, ptr %dst, align 16, !nontemporal !1
@@ -687,9 +687,9 @@ define void @test_constant_v8i32_align16(ptr %dst) nounwind {
 ;
 ; AVX512-LABEL: test_constant_v8i32_align16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967292,4294967291,4294967290,4294967289]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967292,4294967291,4294967290,4294967289]
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [0,4294967295,4294967294,4294967293]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [0,4294967295,4294967294,4294967293]
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
   store <8 x i32> <i32 0, i32 -1, i32 -2, i32 -3, i32 -4, i32 -5, i32 -6, i32 -7>, ptr %dst, align 16, !nontemporal !1
@@ -1408,13 +1408,13 @@ define void @test_constant_v8i64_align16(ptr %dst) nounwind {
 ;
 ; AVX512-LABEL: test_constant_v8i64_align16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551614,18446744073709551613]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [18446744073709551614,18446744073709551613]
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [0,18446744073709551615]
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551610,18446744073709551609]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [18446744073709551610,18446744073709551609]
 ; AVX512-NEXT:    vmovntps %xmm0, 48(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [18446744073709551612,18446744073709551611]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [18446744073709551612,18446744073709551611]
 ; AVX512-NEXT:    vmovntps %xmm0, 32(%rdi)
 ; AVX512-NEXT:    retq
   store <8 x i64> <i64 0, i64 -1, i64 -2, i64 -3, i64 -4, i64 -5, i64 -6, i64 -7>, ptr %dst, align 16, !nontemporal !1
@@ -1448,13 +1448,13 @@ define void @test_constant_v16i32_align16(ptr %dst) nounwind {
 ;
 ; AVX512-LABEL: test_constant_v16i32_align16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967292,4294967291,4294967290,4294967289]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967292,4294967291,4294967290,4294967289]
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [0,4294967295,4294967294,4294967293]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [0,4294967295,4294967294,4294967293]
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967284,4294967283,4294967282,4294967281]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967284,4294967283,4294967282,4294967281]
 ; AVX512-NEXT:    vmovntps %xmm0, 48(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967288,4294967287,4294967286,4294967285]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967288,4294967287,4294967286,4294967285]
 ; AVX512-NEXT:    vmovntps %xmm0, 32(%rdi)
 ; AVX512-NEXT:    retq
   store <16 x i32> <i32 0, i32 -1, i32 -2, i32 -3, i32 -4, i32 -5, i32 -6, i32 -7, i32 -8, i32 -9, i32 -10, i32 -11, i32 -12, i32 -13, i32 -14, i32 -15>, ptr %dst, align 16, !nontemporal !1
@@ -1634,9 +1634,9 @@ define void @test_constant_v8i64_align32(ptr %dst) nounwind {
 ;
 ; AVX512-LABEL: test_constant_v8i64_align32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = [18446744073709551612,18446744073709551611,18446744073709551610,18446744073709551609]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [18446744073709551612,18446744073709551611,18446744073709551610,18446744073709551609]
 ; AVX512-NEXT:    vmovntps %ymm0, 32(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = [0,18446744073709551615,18446744073709551614,18446744073709551613]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,18446744073709551615,18446744073709551614,18446744073709551613]
 ; AVX512-NEXT:    vmovntps %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -1668,9 +1668,9 @@ define void @test_constant_v16i32_align32(ptr %dst) nounwind {
 ;
 ; AVX512-LABEL: test_constant_v16i32_align32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967288,4294967287,4294967286,4294967285,4294967284,4294967283,4294967282,4294967281]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [4294967288,4294967287,4294967286,4294967285,4294967284,4294967283,4294967282,4294967281]
 ; AVX512-NEXT:    vmovntps %ymm0, 32(%rdi)
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = [0,4294967295,4294967294,4294967293,4294967292,4294967291,4294967290,4294967289]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [0,4294967295,4294967294,4294967293,4294967292,4294967291,4294967290,4294967289]
 ; AVX512-NEXT:    vmovntps %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

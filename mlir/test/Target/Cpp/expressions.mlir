@@ -70,11 +70,11 @@ func.func @do_not_inline(%arg0: i32, %arg1: i32, %arg2 : i32) -> i32 {
 }
 
 // CPP-DEFAULT:      float parentheses_for_low_precedence(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
-// CPP-DEFAULT-NEXT:   return (float) ([[VAL_1]] + [[VAL_2]] * [[VAL_3]]);
+// CPP-DEFAULT-NEXT:   return (float) (([[VAL_1]] + [[VAL_2]]) * [[VAL_3]]);
 // CPP-DEFAULT-NEXT: }
 
 // CPP-DECLTOP:      float parentheses_for_low_precedence(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
-// CPP-DECLTOP-NEXT:   return (float) ([[VAL_1]] + [[VAL_2]] * [[VAL_3]]);
+// CPP-DECLTOP-NEXT:   return (float) (([[VAL_1]] + [[VAL_2]]) * [[VAL_3]]);
 // CPP-DECLTOP-NEXT: }
 
 func.func @parentheses_for_low_precedence(%arg0: i32, %arg1: i32, %arg2: i32) -> f32 {
@@ -341,4 +341,61 @@ func.func @expression_with_subscript_user(%arg0: !emitc.ptr<!emitc.opaque<"void"
   %res = emitc.subscript %0[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
   %res_load = emitc.load %res : !emitc.lvalue<i32>
   return %res_load : i32
+}
+
+// CPP-DEFAULT: bool expression_with_load(int32_t [[VAL_1:v.+]], int32_t [[VAL_2:v.+]], int32_t* [[VAL_3:v.+]]) {
+// CPP-DEFAULT-NEXT:   int64_t [[VAL_4:v.+]] = 0;
+// CPP-DEFAULT-NEXT:   int32_t [[VAL_5:v.+]] = 42;
+// CPP-DEFAULT-NEXT:   bool [[VAL_6:v.+]] = [[VAL_5]] + [[VAL_2]] < [[VAL_3]][[[VAL_4]]] + [[VAL_1]];
+// CPP-DEFAULT-NEXT:   return [[VAL_6]];
+
+// CPP-DECLTOP: bool expression_with_load(int32_t [[VAL_1:v.+]], int32_t [[VAL_2:v.+]], int32_t* [[VAL_3:v.+]]) {
+// CPP-DECLTOP-NEXT:   int64_t [[VAL_4:v.+]];
+// CPP-DECLTOP-NEXT:   int32_t [[VAL_5:v.+]];
+// CPP-DECLTOP-NEXT:   bool [[VAL_6:v.+]];
+// CPP-DECLTOP-NEXT:   [[VAL_4]] = 0;
+// CPP-DECLTOP-NEXT:   [[VAL_5]] = 42;
+// CPP-DECLTOP-NEXT:   [[VAL_6]] = [[VAL_5]] + [[VAL_2]] < [[VAL_3]][[[VAL_4]]] + [[VAL_1]];
+// CPP-DECLTOP-NEXT:   return [[VAL_6]];
+
+func.func @expression_with_load(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr<i32>) -> i1 {
+  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"42">}> : () -> !emitc.lvalue<i32>
+  %ptr = emitc.subscript %arg2[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
+  %result = emitc.expression : i1 {
+    %a = emitc.load %0 : !emitc.lvalue<i32>
+    %b = emitc.add %a, %arg1 : (i32, i32) -> i32
+    %c = emitc.load %ptr : !emitc.lvalue<i32>
+    %d = emitc.add %c, %arg0 : (i32, i32) -> i32
+    %e = emitc.cmp lt, %b, %d :(i32, i32) -> i1
+    yield %e : i1
+  }
+  return %result : i1
+}
+
+// CPP-DEFAULT: bool expression_with_load_and_call(int32_t* [[VAL_1:v.+]]) {
+// CPP-DEFAULT-NEXT:   int64_t [[VAL_2:v.+]] = 0;
+// CPP-DEFAULT-NEXT:   bool [[VAL_3:v.+]] = [[VAL_1]][[[VAL_2]]] + bar([[VAL_1]][[[VAL_2]]]) < [[VAL_1]][[[VAL_2]]];
+// CPP-DEFAULT-NEXT:   return [[VAL_3]];
+
+// CPP-DECLTOP: bool expression_with_load_and_call(int32_t* [[VAL_1:v.+]]) {
+// CPP-DECLTOP-NEXT:   int64_t [[VAL_2:v.+]];
+// CPP-DECLTOP-NEXT:   bool [[VAL_3:v.+]];
+// CPP-DECLTOP-NEXT:   [[VAL_2]] = 0;
+// CPP-DECLTOP-NEXT:   [[VAL_3]] = [[VAL_1]][[[VAL_2]]] + bar([[VAL_1]][[[VAL_2]]]) < [[VAL_1]][[[VAL_2]]];
+// CPP-DECLTOP-NEXT:   return [[VAL_3]];
+
+func.func @expression_with_load_and_call(%arg0: !emitc.ptr<i32>) -> i1 {
+  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %ptr = emitc.subscript %arg0[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
+  %result = emitc.expression : i1 {
+    %a = emitc.load %ptr : !emitc.lvalue<i32>
+    %b = emitc.load %ptr : !emitc.lvalue<i32>
+    %c = emitc.load %ptr : !emitc.lvalue<i32>
+    %d = emitc.call_opaque "bar" (%a) : (i32) -> (i32)
+    %e = add %c, %d : (i32, i32) -> i32
+    %f = emitc.cmp lt, %e, %b :(i32, i32) -> i1
+    yield %f : i1
+  }
+  return %result : i1
 }

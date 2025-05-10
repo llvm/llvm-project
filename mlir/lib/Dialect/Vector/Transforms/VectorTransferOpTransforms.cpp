@@ -251,7 +251,7 @@ static SmallVector<int64_t> getReducedShape(ArrayRef<OpFoldResult> mixedSizes) {
       continue;
     }
 
-    auto value = cast<IntegerAttr>(size.get<Attribute>()).getValue();
+    auto value = cast<IntegerAttr>(cast<Attribute>(size)).getValue();
     if (value == 1)
       continue;
     reducedShape.push_back(value.getSExtValue());
@@ -265,9 +265,9 @@ static MemRefType dropUnitDims(MemRefType inputType,
                                ArrayRef<OpFoldResult> sizes,
                                ArrayRef<OpFoldResult> strides) {
   auto targetShape = getReducedShape(sizes);
-  Type rankReducedType = memref::SubViewOp::inferRankReducedResultType(
+  MemRefType rankReducedType = memref::SubViewOp::inferRankReducedResultType(
       targetShape, inputType, offsets, sizes, strides);
-  return canonicalizeStridedLayout(cast<MemRefType>(rankReducedType));
+  return rankReducedType.canonicalizeStridedLayout();
 }
 
 /// Creates a rank-reducing memref.subview op that drops unit dims from its
@@ -283,8 +283,8 @@ static Value rankReducingSubviewDroppingUnitDims(PatternRewriter &rewriter,
                                     rewriter.getIndexAttr(1));
   MemRefType resultType = dropUnitDims(inputType, offsets, sizes, strides);
 
-  if (canonicalizeStridedLayout(resultType) ==
-      canonicalizeStridedLayout(inputType))
+  if (resultType.canonicalizeStridedLayout() ==
+      inputType.canonicalizeStridedLayout())
     return input;
   return rewriter.create<memref::SubViewOp>(loc, resultType, input, offsets,
                                             sizes, strides);
@@ -570,8 +570,8 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
   collapsedOffset = affine::makeComposedFoldedAffineApply(
       rewriter, loc, collapsedExpr, collapsedVals);
 
-  if (collapsedOffset.is<Value>()) {
-    indicesAfterCollapsing.push_back(collapsedOffset.get<Value>());
+  if (auto value = dyn_cast<Value>(collapsedOffset)) {
+    indicesAfterCollapsing.push_back(value);
   } else {
     indicesAfterCollapsing.push_back(rewriter.create<arith::ConstantIndexOp>(
         loc, *getConstantIntValue(collapsedOffset)));
@@ -779,10 +779,9 @@ public:
   RewriteScalarExtractOfTransferReadBase(MLIRContext *context,
                                          PatternBenefit benefit,
                                          bool allowMultipleUses)
-      : Base::OpRewritePattern(context, benefit),
-        allowMultipleUses(allowMultipleUses) {}
+      : Base(context, benefit), allowMultipleUses(allowMultipleUses) {}
 
-  LogicalResult match(VectorExtractOp extractOp) const override {
+  LogicalResult match(VectorExtractOp extractOp) const {
     auto xferOp =
         extractOp.getVector().template getDefiningOp<vector::TransferReadOp>();
     if (!xferOp)
@@ -828,8 +827,11 @@ class RewriteScalarExtractElementOfTransferRead
   using RewriteScalarExtractOfTransferReadBase::
       RewriteScalarExtractOfTransferReadBase;
 
-  void rewrite(vector::ExtractElementOp extractOp,
-               PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::ExtractElementOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    if (failed(match(extractOp)))
+      return failure();
+
     // Construct scalar load.
     auto loc = extractOp.getLoc();
     auto xferOp = extractOp.getVector().getDefiningOp<vector::TransferReadOp>();
@@ -841,8 +843,8 @@ class RewriteScalarExtractElementOfTransferRead
       OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
           rewriter, loc, sym0 + sym1,
           {newIndices[newIndices.size() - 1], extractOp.getPosition()});
-      if (ofr.is<Value>()) {
-        newIndices[newIndices.size() - 1] = ofr.get<Value>();
+      if (auto value = dyn_cast<Value>(ofr)) {
+        newIndices[newIndices.size() - 1] = value;
       } else {
         newIndices[newIndices.size() - 1] =
             rewriter.create<arith::ConstantIndexOp>(loc,
@@ -856,6 +858,8 @@ class RewriteScalarExtractElementOfTransferRead
       rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
           extractOp, xferOp.getSource(), newIndices);
     }
+
+    return success();
   }
 };
 
@@ -872,21 +876,24 @@ class RewriteScalarExtractOfTransferRead
   using RewriteScalarExtractOfTransferReadBase::
       RewriteScalarExtractOfTransferReadBase;
 
-  void rewrite(vector::ExtractOp extractOp,
-               PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    if (failed(match(extractOp)))
+      return failure();
+
     // Construct scalar load.
     auto xferOp = extractOp.getVector().getDefiningOp<vector::TransferReadOp>();
     SmallVector<Value> newIndices(xferOp.getIndices().begin(),
                                   xferOp.getIndices().end());
     for (auto [i, pos] : llvm::enumerate(extractOp.getMixedPosition())) {
-      assert(pos.is<Attribute>() && "Unexpected non-constant index");
-      int64_t offset = cast<IntegerAttr>(pos.get<Attribute>()).getInt();
+      assert(isa<Attribute>(pos) && "Unexpected non-constant index");
+      int64_t offset = cast<IntegerAttr>(cast<Attribute>(pos)).getInt();
       int64_t idx = newIndices.size() - extractOp.getNumIndices() + i;
       OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
           rewriter, extractOp.getLoc(),
           rewriter.getAffineSymbolExpr(0) + offset, {newIndices[idx]});
-      if (ofr.is<Value>()) {
-        newIndices[idx] = ofr.get<Value>();
+      if (auto value = dyn_cast<Value>(ofr)) {
+        newIndices[idx] = value;
       } else {
         newIndices[idx] = rewriter.create<arith::ConstantIndexOp>(
             extractOp.getLoc(), *getConstantIntValue(ofr));
@@ -899,6 +906,8 @@ class RewriteScalarExtractOfTransferRead
       rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
           extractOp, xferOp.getSource(), newIndices);
     }
+
+    return success();
   }
 };
 
@@ -920,17 +929,8 @@ class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
     if (!xferOp.getPermutationMap().isMinorIdentity())
       return failure();
     // Only float and integer element types are supported.
-    Value scalar;
-    if (vecType.getRank() == 0) {
-      // vector.extract does not support vector<f32> etc., so use
-      // vector.extractelement instead.
-      scalar = rewriter.create<vector::ExtractElementOp>(xferOp.getLoc(),
-                                                         xferOp.getVector());
-    } else {
-      SmallVector<int64_t> pos(vecType.getRank(), 0);
-      scalar = rewriter.create<vector::ExtractOp>(xferOp.getLoc(),
-                                                  xferOp.getVector(), pos);
-    }
+    Value scalar =
+        rewriter.create<vector::ExtractOp>(xferOp.getLoc(), xferOp.getVector());
     // Construct a scalar store.
     if (isa<MemRefType>(xferOp.getSource().getType())) {
       rewriter.replaceOpWithNewOp<memref::StoreOp>(
@@ -976,7 +976,6 @@ void mlir::vector::populateVectorTransferDropUnitDimsPatterns(
   patterns
       .add<TransferReadDropUnitDimsPattern, TransferWriteDropUnitDimsPattern>(
           patterns.getContext(), benefit);
-  populateShapeCastFoldingPatterns(patterns);
 }
 
 void mlir::vector::populateFlattenVectorTransferPatterns(
@@ -985,6 +984,5 @@ void mlir::vector::populateFlattenVectorTransferPatterns(
   patterns.add<FlattenContiguousRowMajorTransferReadPattern,
                FlattenContiguousRowMajorTransferWritePattern>(
       patterns.getContext(), targetVectorBitwidth, benefit);
-  populateShapeCastFoldingPatterns(patterns, benefit);
   populateDropUnitDimWithShapeCastPatterns(patterns, benefit);
 }

@@ -21,6 +21,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
+#include <iterator>
 
 static constexpr unsigned default_disasm_byte_size = 32;
 static constexpr unsigned default_disasm_num_ins = 4;
@@ -189,6 +190,7 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
     // architecture.  For now GetDisassemblyFlavor is really only valid for x86
     // (and for the llvm assembler plugin, but I'm papering over that since that
     // is the only disassembler plugin we have...
+    // This logic is duplicated in `Handler/DisassembleRequestHandler`.
     if (target->GetArchitecture().GetTriple().getArch() == llvm::Triple::x86 ||
         target->GetArchitecture().GetTriple().getArch() ==
             llvm::Triple::x86_64) {
@@ -236,25 +238,31 @@ CommandObjectDisassemble::CommandObjectDisassemble(
 
 CommandObjectDisassemble::~CommandObjectDisassemble() = default;
 
-llvm::Error CommandObjectDisassemble::CheckRangeSize(const AddressRange &range,
-                                                     llvm::StringRef what) {
+llvm::Expected<std::vector<AddressRange>>
+CommandObjectDisassemble::CheckRangeSize(std::vector<AddressRange> ranges,
+                                         llvm::StringRef what) {
+  addr_t total_range_size = 0;
+  for (const AddressRange &r : ranges)
+    total_range_size += r.GetByteSize();
+
   if (m_options.num_instructions > 0 || m_options.force ||
-      range.GetByteSize() < GetDebugger().GetStopDisassemblyMaxSize())
-    return llvm::Error::success();
+      total_range_size < GetDebugger().GetStopDisassemblyMaxSize())
+    return ranges;
+
   StreamString msg;
   msg << "Not disassembling " << what << " because it is very large ";
-  range.Dump(&msg, &GetTarget(), Address::DumpStyleLoadAddress,
-             Address::DumpStyleFileAddress);
+  for (const AddressRange &r : ranges)
+    r.Dump(&msg, &GetTarget(), Address::DumpStyleLoadAddress,
+           Address::DumpStyleFileAddress);
   msg << ". To disassemble specify an instruction count limit, start/stop "
          "addresses or use the --force option.";
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 msg.GetString());
+  return llvm::createStringError(msg.GetString());
 }
 
 llvm::Expected<std::vector<AddressRange>>
 CommandObjectDisassemble::GetContainingAddressRanges() {
   std::vector<AddressRange> ranges;
-  const auto &get_range = [&](Address addr) {
+  const auto &get_ranges = [&](Address addr) {
     ModuleSP module_sp(addr.GetModule());
     SymbolContext sc;
     bool resolve_tail_call_address = true;
@@ -262,25 +270,27 @@ CommandObjectDisassemble::GetContainingAddressRanges() {
         addr, eSymbolContextEverything, sc, resolve_tail_call_address);
     if (sc.function || sc.symbol) {
       AddressRange range;
-      sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
-                         false, range);
-      ranges.push_back(range);
+      for (uint32_t idx = 0;
+           sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol,
+                              idx, false, range);
+           ++idx)
+        ranges.push_back(range);
     }
   };
 
   Target &target = GetTarget();
-  if (!target.GetSectionLoadList().IsEmpty()) {
+  if (target.HasLoadedSections()) {
     Address symbol_containing_address;
-    if (target.GetSectionLoadList().ResolveLoadAddress(
-            m_options.symbol_containing_addr, symbol_containing_address)) {
-      get_range(symbol_containing_address);
+    if (target.ResolveLoadAddress(m_options.symbol_containing_addr,
+                                  symbol_containing_address)) {
+      get_ranges(symbol_containing_address);
     }
   } else {
     for (lldb::ModuleSP module_sp : target.GetImages().Modules()) {
       Address file_address;
       if (module_sp->ResolveFileAddress(m_options.symbol_containing_addr,
                                         file_address)) {
-        get_range(file_address);
+        get_ranges(file_address);
       }
     }
   }
@@ -292,9 +302,7 @@ CommandObjectDisassemble::GetContainingAddressRanges() {
         m_options.symbol_containing_addr);
   }
 
-  if (llvm::Error err = CheckRangeSize(ranges[0], "the function"))
-    return std::move(err);
-  return ranges;
+  return CheckRangeSize(std::move(ranges), "the function");
 }
 
 llvm::Expected<std::vector<AddressRange>>
@@ -304,29 +312,24 @@ CommandObjectDisassemble::GetCurrentFunctionRanges() {
   if (!frame) {
     if (process) {
       return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          "Cannot disassemble around the current "
-          "function without the process being stopped.\n");
-    } else {
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Cannot disassemble around the current "
-                                     "function without a selected frame: "
-                                     "no currently running process.\n");
+          "Cannot disassemble around the current function without the process "
+          "being stopped.\n");
     }
+    return llvm::createStringError(
+        "Cannot disassemble around the current function without a selected "
+        "frame: no currently running process.\n");
   }
-  SymbolContext sc(
-      frame->GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol));
-  AddressRange range;
+  SymbolContext sc =
+      frame->GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol);
+  std::vector<AddressRange> ranges;
   if (sc.function)
-    range = sc.function->GetAddressRange();
-  else if (sc.symbol && sc.symbol->ValueIsAddress()) {
-    range = {sc.symbol->GetAddress(), sc.symbol->GetByteSize()};
-  } else
-    range = {frame->GetFrameCodeAddress(), default_disasm_byte_size};
+    ranges = sc.function->GetAddressRanges();
+  else if (sc.symbol && sc.symbol->ValueIsAddress())
+    ranges.emplace_back(sc.symbol->GetAddress(), sc.symbol->GetByteSize());
+  else
+    ranges.emplace_back(frame->GetFrameCodeAddress(), default_disasm_byte_size);
 
-  if (llvm::Error err = CheckRangeSize(range, "the current function"))
-    return std::move(err);
-  return std::vector<AddressRange>{range};
+  return CheckRangeSize(std::move(ranges), "the current function");
 }
 
 llvm::Expected<std::vector<AddressRange>>
@@ -372,19 +375,23 @@ CommandObjectDisassemble::GetNameRanges(CommandReturnObject &result) {
 
   std::vector<AddressRange> ranges;
   llvm::Error range_errs = llvm::Error::success();
-  AddressRange range;
   const uint32_t scope =
       eSymbolContextBlock | eSymbolContextFunction | eSymbolContextSymbol;
   const bool use_inline_block_range = true;
   for (SymbolContext sc : sc_list.SymbolContexts()) {
+    std::vector<AddressRange> fn_ranges;
+    AddressRange range;
     for (uint32_t range_idx = 0;
          sc.GetAddressRange(scope, range_idx, use_inline_block_range, range);
-         ++range_idx) {
-      if (llvm::Error err = CheckRangeSize(range, "a range"))
-        range_errs = joinErrors(std::move(range_errs), std::move(err));
-      else
-        ranges.push_back(range);
-    }
+         ++range_idx)
+      fn_ranges.push_back(std::move(range));
+
+    if (llvm::Expected<std::vector<AddressRange>> checked_ranges =
+            CheckRangeSize(std::move(fn_ranges), "a function"))
+      llvm::move(*checked_ranges, std::back_inserter(ranges));
+    else
+      range_errs =
+          joinErrors(std::move(range_errs), checked_ranges.takeError());
   }
   if (ranges.empty()) {
     if (range_errs)

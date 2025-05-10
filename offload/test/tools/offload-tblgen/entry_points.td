@@ -20,7 +20,7 @@ def : Function {
 
 // The validation function should call the implementation function
 // CHECK: FunctionA_val
-// CHECK: return FunctionA_impl(ParamA, ParamB);
+// CHECK: return llvm::offload::FunctionA_impl(ParamA, ParamB);
 
 // CHECK: ol_result_t{{.*}} FunctionA(
 

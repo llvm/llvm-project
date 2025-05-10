@@ -40,21 +40,25 @@ def AffineApplyOp : Affine_Op<"apply", [Pure]> {
   let description = [{
     The `affine.apply` operation applies an [affine mapping](#affine-maps)
     to a list of SSA values, yielding a single SSA value. The number of
-    dimension and symbol arguments to `affine.apply` must be equal to the
+    dimension and symbol operands to `affine.apply` must be equal to the
     respective number of dimensional and symbolic inputs to the affine mapping;
     the affine mapping has to be one-dimensional, and so the `affine.apply`
     operation always returns one value. The input operands and result must all
     have ‘index’ type.
 
+    An operand that is a valid dimension as per the [rules on valid affine
+    dimensions and symbols](#restrictions-on-dimensions-and-symbols)
+    cannot be used as a symbolic operand.
+
     Example:
 
     ```mlir
-    #map10 = affine_map<(d0, d1) -> (d0 floordiv 8 + d1 floordiv 128)>
+    #map = affine_map<(d0, d1) -> (d0 floordiv 8 + d1 floordiv 128)>
     ...
-    %1 = affine.apply #map10 (%s, %t)
+    %1 = affine.apply #map (%s, %t)
 
     // Inline example.
-    %2 = affine.apply affine_map<(i)[s0] -> (i+s0)> (%42)[%n]
+    %2 = affine.apply affine_map<(i)[s0] -> (i + s0)> (%42)[%n]
     ```
   }];
   let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$mapOperands);
@@ -1083,6 +1087,9 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
     %indices_2 = affine.apply #map2()[%linear_index]
     ```
 
+    In other words, `%0:3 = affine.delinearize_index %x into (B, C)` produces
+    `%0 = {%x / (B * C), (%x mod (B * C)) / C, %x mod C}`.
+
     The basis may either contain `N` or `N-1` elements, where `N` is the number of results.
     If there are N basis elements, the first one will not be used during computations,
     but may be used during analysis and canonicalization to eliminate terms from
@@ -1098,7 +1105,12 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
     %0:3 = affine.delinearize_index %linear_index into (244, 244) : index, index
     ```
 
-    Note that, due to the constraints of affine maps, all the basis elements must
+    Note that, for symmetry with `getPaddedBasis()`, if `hasOuterBound` is `true`
+    when one of the `OpFoldResult` builders is called but the first element of the
+    basis is `nullptr`, that first element is ignored and the builder proceeds as if
+    there was no outer bound.
+
+    Due to the constraints of affine maps, all the basis elements must
     be strictly positive. A dynamic basis element being 0 or negative causes
     undefined behavior.
   }];
@@ -1110,7 +1122,7 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
 
   let assemblyFormat = [{
     $linear_index `into`
-    custom<DynamicIndexList>($dynamic_basis, $static_basis, "::mlir::AsmParser::Delimiter::Paren")
+    custom<DynamicIndexList>($dynamic_basis, $static_basis, "{}", "::mlir::AsmParser::Delimiter::Paren")
     attr-dict `:` type($multi_index)
   }];
 
@@ -1136,6 +1148,11 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
     /// Return a vector that contains the basis of the operation, removing
     /// the outer bound if one is present.
     SmallVector<OpFoldResult> getEffectiveBasis();
+
+    /// Return the vector with one basis element per result of the operation. If
+    /// there is no outer bound specified, the leading entry of this result will be
+    /// nullptr.
+    SmallVector<OpFoldResult> getPaddedBasis();
   }];
 
   let hasVerifier = 1;
@@ -1160,6 +1177,9 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     sum(i = 0 to N-1) %idx_i * product(j = i + 1 to N-1) B_j
     ```
 
+    In other words, `%0 = affine.linearize_index [%z, %y, %x] by (Z, Y, X)`
+    gives `%0 = %x + %y * X + %z * X * Y`, or `%0 = %x + X * (%y + Y * (%z))`.
+
     The basis may either have `N` or `N-1` elements, where `N` is the number of
     inputs to linearize_index. If `N` inputs are provided, the first one is not used
     in computation, but may be used during analysis or canonicalization as a bound
@@ -1167,6 +1187,10 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
 
     If all `N` basis elements are provided, the linearize_index operation is said to
     "have an outer bound".
+
+    As a convenience, and for symmetry with `getPaddedBasis()`, ifg the first
+    element of a set of `OpFoldResult`s passed to the builders of this operation is
+    `nullptr`, that element is ignored.
 
     If the `disjoint` property is present, this is an optimization hint that,
     for all `i`, `0 <= %idx_i < B_i` - that is, no index affects any other index,
@@ -1193,13 +1217,13 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
   let arguments = (ins Variadic<Index>:$multi_index,
     Variadic<Index>:$dynamic_basis,
     DenseI64ArrayAttr:$static_basis,
-    UnitProperty:$disjoint);
+    UnitProp:$disjoint);
   let results = (outs Index:$linear_index);
 
   let assemblyFormat = [{
     (`disjoint` $disjoint^)? ` `
     `[` $multi_index `]` `by`
-    custom<DynamicIndexList>($dynamic_basis, $static_basis, "::mlir::AsmParser::Delimiter::Paren")
+    custom<DynamicIndexList>($dynamic_basis, $static_basis, "{}", "::mlir::AsmParser::Delimiter::Paren")
     attr-dict `:` type($linear_index)
   }];
 
@@ -1224,6 +1248,11 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     /// Return a vector that contains the basis of the operation, removing
     /// the outer bound if one is present.
     SmallVector<OpFoldResult> getEffectiveBasis();
+
+    /// Return the vector with one basis element per index operand of the operation.
+    /// If there is no outer bound specified, the leading entry of this basis will be
+    /// nullptr.
+    SmallVector<OpFoldResult> getPaddedBasis();
   }];
 
   let hasVerifier = 1;

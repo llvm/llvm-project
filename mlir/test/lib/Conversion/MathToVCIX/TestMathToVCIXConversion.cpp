@@ -25,7 +25,7 @@ namespace {
 /// according to LLVM's encoding:
 /// https://lists.llvm.org/pipermail/llvm-dev/2020-October/145850.html
 static std::pair<unsigned, VectorType> legalizeVectorType(const Type &type) {
-  VectorType vt = cast<VectorType>(type);
+  VectorType vt = dyn_cast<VectorType>(type);
   // To simplify test pass, avoid multi-dimensional vectors.
   if (!vt || vt.getRank() != 1)
     return {0, nullptr};
@@ -248,7 +248,7 @@ struct TestMathToVCIX
     RewritePatternSet patterns(ctx);
     patterns.add<MathCosToVCIX, MathSinToVCIX, MathTanToVCIX, MathLogToVCIX>(
         ctx);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 

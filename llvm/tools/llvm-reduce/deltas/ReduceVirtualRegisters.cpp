@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceVirtualRegisters.h"
-#include "Delta.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
@@ -33,15 +32,10 @@ static void dropRegisterHintsFromFunction(Oracle &O, MachineFunction &MF) {
   }
 }
 
-static void dropRegisterHintsFromFunctions(Oracle &O,
-                                           ReducerWorkItem &WorkItem) {
+void llvm::reduceVirtualRegisterHintsDeltaPass(Oracle &O,
+                                               ReducerWorkItem &WorkItem) {
   for (const Function &F : WorkItem.getModule()) {
     if (auto *MF = WorkItem.MMI->getMachineFunction(F))
       dropRegisterHintsFromFunction(O, *MF);
   }
-}
-
-void llvm::reduceVirtualRegisterHintsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, dropRegisterHintsFromFunctions,
-               "Reducing virtual register hints from functions");
 }

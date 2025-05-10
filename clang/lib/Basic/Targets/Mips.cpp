@@ -23,14 +23,17 @@ using namespace clang::targets;
 static constexpr int NumBuiltins =
     clang::Mips::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
 #define BUILTIN CLANG_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsMips.def"
-    , {
+    ;
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
 #define BUILTIN CLANG_BUILTIN_ENTRY
 #define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
 #include "clang/Basic/BuiltinsMips.def"
-      });
+});
 
 bool MipsTargetInfo::processorSupportsGPR64() const {
   return llvm::StringSwitch<bool>(CPU)
@@ -44,6 +47,8 @@ bool MipsTargetInfo::processorSupportsGPR64() const {
       .Case("mips64r6", true)
       .Case("octeon", true)
       .Case("octeon+", true)
+      .Case("i6400", true)
+      .Case("i6500", true)
       .Default(false);
 }
 
@@ -51,7 +56,7 @@ static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"mips1"},  {"mips2"},    {"mips3"},    {"mips4"},    {"mips5"},
     {"mips32"}, {"mips32r2"}, {"mips32r3"}, {"mips32r5"}, {"mips32r6"},
     {"mips64"}, {"mips64r2"}, {"mips64r3"}, {"mips64r5"}, {"mips64r6"},
-    {"octeon"}, {"octeon+"}, {"p5600"}};
+    {"octeon"}, {"octeon+"},  {"p5600"},    {"i6400"},    {"i6500"}};
 
 bool MipsTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::is_contained(ValidCPUNames, Name);
@@ -64,12 +69,12 @@ void MipsTargetInfo::fillValidCPUList(
 
 unsigned MipsTargetInfo::getISARev() const {
   return llvm::StringSwitch<unsigned>(getCPU())
-             .Cases("mips32", "mips64", 1)
-             .Cases("mips32r2", "mips64r2", "octeon", "octeon+", 2)
-             .Cases("mips32r3", "mips64r3", 3)
-             .Cases("mips32r5", "mips64r5", 5)
-             .Cases("mips32r6", "mips64r6", 6)
-             .Default(0);
+      .Cases("mips32", "mips64", 1)
+      .Cases("mips32r2", "mips64r2", "octeon", "octeon+", 2)
+      .Cases("mips32r3", "mips64r3", 3)
+      .Cases("mips32r5", "mips64r5", "p5600", 5)
+      .Cases("mips32r6", "mips64r6", 6)
+      .Default(0);
 }
 
 void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -227,9 +232,9 @@ bool MipsTargetInfo::hasFeature(StringRef Feature) const {
       .Default(false);
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-MipsTargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+llvm::SmallVector<Builtin::InfosShard>
+MipsTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
 unsigned MipsTargetInfo::getUnwindWordWidth() const {
@@ -307,4 +312,63 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
   }
 
   return true;
+}
+
+WindowsMipsTargetInfo::WindowsMipsTargetInfo(const llvm::Triple &Triple,
+                                             const TargetOptions &Opts)
+    : WindowsTargetInfo<MipsTargetInfo>(Triple, Opts), Triple(Triple) {}
+
+void WindowsMipsTargetInfo::getVisualStudioDefines(
+    const LangOptions &Opts, MacroBuilder &Builder) const {
+  Builder.defineMacro("_M_MRX000", "4000");
+}
+
+TargetInfo::BuiltinVaListKind
+WindowsMipsTargetInfo::getBuiltinVaListKind() const {
+  return TargetInfo::CharPtrBuiltinVaList;
+}
+
+TargetInfo::CallingConvCheckResult
+WindowsMipsTargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_X86StdCall:
+  case CC_X86ThisCall:
+  case CC_X86FastCall:
+  case CC_X86VectorCall:
+    return CCCR_Ignore;
+  case CC_C:
+  case CC_OpenCLKernel:
+  case CC_PreserveMost:
+  case CC_PreserveAll:
+  case CC_Swift:
+  case CC_SwiftAsync:
+    return CCCR_OK;
+  default:
+    return CCCR_Warning;
+  }
+}
+
+// Windows MIPS, MS (C++) ABI
+MicrosoftMipsTargetInfo::MicrosoftMipsTargetInfo(const llvm::Triple &Triple,
+                                                 const TargetOptions &Opts)
+    : WindowsMipsTargetInfo(Triple, Opts) {
+  TheCXXABI.set(TargetCXXABI::Microsoft);
+}
+
+void MicrosoftMipsTargetInfo::getTargetDefines(const LangOptions &Opts,
+                                               MacroBuilder &Builder) const {
+  WindowsMipsTargetInfo::getTargetDefines(Opts, Builder);
+  WindowsMipsTargetInfo::getVisualStudioDefines(Opts, Builder);
+}
+
+MinGWMipsTargetInfo::MinGWMipsTargetInfo(const llvm::Triple &Triple,
+                                         const TargetOptions &Opts)
+    : WindowsMipsTargetInfo(Triple, Opts) {
+  TheCXXABI.set(TargetCXXABI::GenericMIPS);
+}
+
+void MinGWMipsTargetInfo::getTargetDefines(const LangOptions &Opts,
+                                           MacroBuilder &Builder) const {
+  WindowsMipsTargetInfo::getTargetDefines(Opts, Builder);
+  Builder.defineMacro("_MIPS_");
 }

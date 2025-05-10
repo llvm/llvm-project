@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_UNARY_NEGATE_H
-#define _LIBCPP___FUNCTIONAL_UNARY_NEGATE_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_UNARY_NEGATE_H
+#define _LIBCPP___CXX03___FUNCTIONAL_UNARY_NEGATE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/unary_function.h>
@@ -18,8 +18,6 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS)
 
 template <class _Predicate>
 class _LIBCPP_TEMPLATE_VIS
@@ -41,8 +39,6 @@ not1(const _Predicate& __pred) {
   return unary_negate<_Predicate>(__pred);
 }
 
-#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS)
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_UNARY_NEGATE_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_UNARY_NEGATE_H

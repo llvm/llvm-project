@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_PARTIAL_SUM_H
-#define _LIBCPP___NUMERIC_PARTIAL_SUM_H
+#ifndef _LIBCPP___CXX03___NUMERIC_PARTIAL_SUM_H
+#define _LIBCPP___CXX03___NUMERIC_PARTIAL_SUM_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/iterator_traits.h>
@@ -30,11 +30,7 @@ partial_sum(_InputIterator __first, _InputIterator __last, _OutputIterator __res
     typename iterator_traits<_InputIterator>::value_type __t(*__first);
     *__result = __t;
     for (++__first, (void)++__result; __first != __last; ++__first, (void)++__result) {
-#if _LIBCPP_STD_VER >= 20
-      __t = std::move(__t) + *__first;
-#else
-      __t = __t + *__first;
-#endif
+      __t       = __t + *__first;
       *__result = __t;
     }
   }
@@ -48,11 +44,7 @@ partial_sum(_InputIterator __first, _InputIterator __last, _OutputIterator __res
     typename iterator_traits<_InputIterator>::value_type __t(*__first);
     *__result = __t;
     for (++__first, (void)++__result; __first != __last; ++__first, (void)++__result) {
-#if _LIBCPP_STD_VER >= 20
-      __t = __binary_op(std::move(__t), *__first);
-#else
-      __t = __binary_op(__t, *__first);
-#endif
+      __t       = __binary_op(__t, *__first);
       *__result = __t;
     }
   }
@@ -63,4 +55,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NUMERIC_PARTIAL_SUM_H
+#endif // _LIBCPP___CXX03___NUMERIC_PARTIAL_SUM_H

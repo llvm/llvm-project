@@ -27,8 +27,7 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = add <vscale x 4 x i64> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = mul <vscale x 4 x i64> [[TMP5]], splat (i64 1)
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <vscale x 4 x i64> [[TMP4]], splat (i64 1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP19]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP9]], i64 0

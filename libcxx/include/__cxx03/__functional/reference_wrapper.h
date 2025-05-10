@@ -7,16 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
-#define _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_REFERENCE_WRAPPER_H
+#define _LIBCPP___CXX03___FUNCTIONAL_REFERENCE_WRAPPER_H
 
-#include <__cxx03/__compare/synth_three_way.h>
-#include <__cxx03/__concepts/boolean_testable.h>
 #include <__cxx03/__config>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__functional/weak_result_type.h>
 #include <__cxx03/__memory/addressof.h>
 #include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__type_traits/is_const.h>
 #include <__cxx03/__type_traits/remove_cvref.h>
 #include <__cxx03/__type_traits/void_t.h>
@@ -58,69 +56,10 @@ public:
   // invoke
   template <class... _ArgTypes>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __invoke_of<type&, _ArgTypes...>::type
-  operator()(_ArgTypes&&... __args) const
-#if _LIBCPP_STD_VER >= 17
-      // Since is_nothrow_invocable requires C++17 LWG3764 is not backported
-      // to earlier versions.
-      noexcept(is_nothrow_invocable_v<_Tp&, _ArgTypes...>)
-#endif
-  {
+  operator()(_ArgTypes&&... __args) const {
     return std::__invoke(get(), std::forward<_ArgTypes>(__args)...);
   }
-
-#if _LIBCPP_STD_VER >= 26
-
-  // [refwrap.comparisons], comparisons
-
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, reference_wrapper __y)
-    requires requires {
-      { __x.get() == __y.get() } -> __boolean_testable;
-    }
-  {
-    return __x.get() == __y.get();
-  }
-
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, const _Tp& __y)
-    requires requires {
-      { __x.get() == __y } -> __boolean_testable;
-    }
-  {
-    return __x.get() == __y;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, reference_wrapper<const _Tp> __y)
-    requires(!is_const_v<_Tp>) && requires {
-      { __x.get() == __y.get() } -> __boolean_testable;
-    }
-  {
-    return __x.get() == __y.get();
-  }
-
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper __y)
-    requires requires { std::__synth_three_way(__x.get(), __y.get()); }
-  {
-    return std::__synth_three_way(__x.get(), __y.get());
-  }
-
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, const _Tp& __y)
-    requires requires { std::__synth_three_way(__x.get(), __y); }
-  {
-    return std::__synth_three_way(__x.get(), __y);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper<const _Tp> __y)
-    requires(!is_const_v<_Tp>) && requires { std::__synth_three_way(__x.get(), __y.get()); }
-  {
-    return std::__synth_three_way(__x.get(), __y.get());
-  }
-
-#endif // _LIBCPP_STD_VER >= 26
 };
-
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-reference_wrapper(_Tp&) -> reference_wrapper<_Tp>;
-#endif
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference_wrapper<_Tp> ref(_Tp& __t) _NOEXCEPT {
@@ -151,4 +90,4 @@ void cref(const _Tp&&) = delete;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_REFERENCE_WRAPPER_H

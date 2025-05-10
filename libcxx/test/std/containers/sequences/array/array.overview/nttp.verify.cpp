@@ -61,7 +61,7 @@ using E = test<std::array<NotALiteral, 1>{}>;
 // expected-error@-1 {{non-type template parameter has non-literal type 'std::array<NotALiteral, 1>'}}
 
 using F = test<std::array<std::string, 2>{}>;
-// expected-error@-1 {{type 'std::array<string, 2>' (aka 'std::array<std::string, 2>') of non-type template parameter is not a structural type}}
+// expected-error-re@-1 {{type 'std::array<{{(std::)?}}string, 2>'{{( \(aka 'std::array<std::string, 2>'\))?}} of non-type template parameter is not a structural type}}
 } // namespace test_ctad
 
 namespace test_auto {

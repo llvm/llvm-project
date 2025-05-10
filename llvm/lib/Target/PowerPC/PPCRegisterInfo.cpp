@@ -531,7 +531,7 @@ bool PPCRegisterInfo::requiresVirtualBaseRegisters(
 
 bool PPCRegisterInfo::isCallerPreservedPhysReg(MCRegister PhysReg,
                                                const MachineFunction &MF) const {
-  assert(Register::isPhysicalRegister(PhysReg));
+  assert(PhysReg.isPhysical());
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -625,6 +625,13 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
   return BaseImplRetVal;
 }
 
+const TargetRegisterClass *
+PPCRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
+  if (RC == &PPC::CARRYRCRegClass)
+    return TM.isPPC64() ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
+  return RC;
+}
+
 unsigned PPCRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                               MachineFunction &MF) const {
   const PPCFrameLowering *TFI = getFrameLowering(MF);
@@ -692,21 +699,23 @@ PPCRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
         InflateGPRC++;
     }
 
-    for (const auto *I = RC->getSuperClasses(); *I; ++I) {
-      if (getRegSizeInBits(**I) != getRegSizeInBits(*RC))
+    for (unsigned SuperID : RC->superclasses()) {
+      if (getRegSizeInBits(*getRegClass(SuperID)) != getRegSizeInBits(*RC))
         continue;
 
-      switch ((*I)->getID()) {
+      switch (SuperID) {
       case PPC::VSSRCRegClassID:
-        return Subtarget.hasP8Vector() ? *I : DefaultSuperclass;
+        return Subtarget.hasP8Vector() ? getRegClass(SuperID)
+                                       : DefaultSuperclass;
       case PPC::VSFRCRegClassID:
       case PPC::VSRCRegClassID:
-        return *I;
+        return getRegClass(SuperID);
       case PPC::VSRpRCRegClassID:
-        return Subtarget.pairedVectorMemops() ? *I : DefaultSuperclass;
+        return Subtarget.pairedVectorMemops() ? getRegClass(SuperID)
+                                              : DefaultSuperclass;
       case PPC::ACCRCRegClassID:
       case PPC::UACCRCRegClassID:
-        return Subtarget.hasMMA() ? *I : DefaultSuperclass;
+        return Subtarget.hasMMA() ? getRegClass(SuperID) : DefaultSuperclass;
       }
     }
   }
@@ -1439,7 +1448,7 @@ void PPCRegisterInfo::lowerWACCRestore(MachineBasicBlock::iterator II,
                     FrameIndex, IsLittleEndian ? 0 : 32);
 
   // Kill VSRpReg0, VSRpReg1   (killedRegState::Killed)
-  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTFDMR512), DestReg)
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512), DestReg)
       .addReg(VSRpReg0, RegState::Kill)
       .addReg(VSRpReg1, RegState::Kill);
 

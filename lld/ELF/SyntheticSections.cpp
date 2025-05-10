@@ -590,7 +590,7 @@ SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
   auto eq = [](const FdeData &a, const FdeData &b) {
     return a.pcRel == b.pcRel;
   };
-  ret.erase(std::unique(ret.begin(), ret.end(), eq), ret.end());
+  ret.erase(llvm::unique(ret, eq), ret.end());
 
   return ret;
 }
@@ -670,11 +670,20 @@ void GotSection::addEntry(const Symbol &sym) {
   ctx.symAux.back().gotIdx = numEntries++;
 }
 
+void GotSection::addAuthEntry(const Symbol &sym) {
+  authEntries.push_back({(numEntries - 1) * ctx.arg.wordsize, sym.isFunc()});
+}
+
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
   assert(sym.auxIdx == ctx.symAux.size() - 1);
   ctx.symAux.back().tlsDescIdx = numEntries;
   numEntries += 2;
   return true;
+}
+
+void GotSection::addTlsDescAuthEntry() {
+  authEntries.push_back({(numEntries - 2) * ctx.arg.wordsize, true});
+  authEntries.push_back({(numEntries - 1) * ctx.arg.wordsize, false});
 }
 
 bool GotSection::addDynTlsEntry(const Symbol &sym) {
@@ -732,6 +741,21 @@ void GotSection::writeTo(uint8_t *buf) {
     return;
   ctx.target->writeGotHeader(buf);
   ctx.target->relocateAlloc(*this, buf);
+  for (const AuthEntryInfo &authEntry : authEntries) {
+    // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#default-signing-schema
+    //   Signed GOT entries use the IA key for symbols of type STT_FUNC and the
+    //   DA key for all other symbol types, with the address of the GOT entry as
+    //   the modifier. The static linker must encode the signing schema into the
+    //   GOT slot.
+    //
+    // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#encoding-the-signing-schema
+    //   If address diversity is set and the discriminator
+    //   is 0 then modifier = Place
+    uint8_t *dest = buf + authEntry.offset;
+    uint64_t key = authEntry.isSymbolFunc ? /*IA=*/0b00 : /*DA=*/0b10;
+    uint64_t addrDiversity = 1;
+    write64(ctx, dest, (addrDiversity << 63) | (key << 60));
+  }
 }
 
 static uint64_t getMipsPageAddr(uint64_t addr) {
@@ -2570,6 +2594,11 @@ PltSection::PltSection(Ctx &ctx)
     : SyntheticSection(ctx, ".plt", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR,
                        16),
       headerSize(ctx.target->pltHeaderSize) {
+  // On AArch64, PLT entries only do loads from the .got.plt section, so the
+  // .plt section can be marked with the SHF_AARCH64_PURECODE section flag.
+  if (ctx.arg.emachine == EM_AARCH64)
+    this->flags |= SHF_AARCH64_PURECODE;
+
   // On PowerPC, this section contains lazy symbol resolvers.
   if (ctx.arg.emachine == EM_PPC64) {
     name = ".glink";
@@ -2630,6 +2659,11 @@ void PltSection::addSymbols() {
 IpltSection::IpltSection(Ctx &ctx)
     : SyntheticSection(ctx, ".iplt", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR,
                        16) {
+  // On AArch64, PLT entries only do loads from the .got.plt section, so the
+  // .iplt section can be marked with the SHF_AARCH64_PURECODE section flag.
+  if (ctx.arg.emachine == EM_AARCH64)
+    this->flags |= SHF_AARCH64_PURECODE;
+
   if (ctx.arg.emachine == EM_PPC || ctx.arg.emachine == EM_PPC64) {
     name = ".glink";
     addralign = 4;
@@ -2752,6 +2786,21 @@ bool IBTPltSection::isNeeded() const { return ctx.in.plt->getNumEntries() > 0; }
 RelroPaddingSection::RelroPaddingSection(Ctx &ctx)
     : SyntheticSection(ctx, ".relro_padding", SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
                        1) {}
+
+RandomizePaddingSection::RandomizePaddingSection(Ctx &ctx, uint64_t size,
+                                                 OutputSection *parent)
+    : SyntheticSection(ctx, ".randomize_padding", SHT_PROGBITS, SHF_ALLOC, 1),
+      size(size) {
+  this->parent = parent;
+}
+
+void RandomizePaddingSection::writeTo(uint8_t *buf) {
+  std::array<uint8_t, 4> filler = getParent()->getFiller(ctx);
+  uint8_t *end = buf + size;
+  for (; buf + 4 <= end; buf += 4)
+    memcpy(buf, &filler[0], 4);
+  memcpy(buf, &filler[0], end - buf);
+}
 
 // The string hash function for .gdb_index.
 static uint32_t computeGdbHash(StringRef s) {
@@ -3764,9 +3813,8 @@ VersionTableSection::VersionTableSection(Ctx &ctx)
 }
 
 void VersionTableSection::finalizeContents() {
-  // At the moment of june 2016 GNU docs does not mention that sh_link field
-  // should be set, but Sun docs do. Also readelf relies on this field.
-  getParent()->link = getPartition(ctx).dynSymTab->getParent()->sectionIndex;
+  if (OutputSection *osec = getPartition(ctx).dynSymTab->getParent())
+    getParent()->link = osec->sectionIndex;
 }
 
 size_t VersionTableSection::getSize() const {
@@ -4279,14 +4327,20 @@ InputSection *ThunkSection::getTargetInputSection() const {
 
 bool ThunkSection::assignOffsets() {
   uint64_t off = 0;
+  bool changed = false;
   for (Thunk *t : thunks) {
+    if (t->alignment > addralign) {
+      addralign = t->alignment;
+      changed = true;
+    }
     off = alignToPowerOf2(off, t->alignment);
     t->setOffset(off);
     uint32_t size = t->size();
     t->getThunkTargetSym()->size = size;
     off += size;
   }
-  bool changed = off != size;
+  if (off != size)
+    changed = true;
   size = off;
   return changed;
 }
@@ -4702,7 +4756,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
 
   // Add MIPS-specific sections.
   if (ctx.arg.emachine == EM_MIPS) {
-    if (!ctx.arg.shared && ctx.arg.hasDynSymTab) {
+    if (!ctx.arg.shared && ctx.hasDynsym) {
       ctx.in.mipsRldMap = std::make_unique<MipsRldMapSection>(ctx);
       add(*ctx.in.mipsRldMap);
     }
@@ -4738,8 +4792,8 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
       add(*part.buildId);
     }
 
-    // dynSymTab is always present to simplify sym->includeInDynsym(ctx) in
-    // finalizeSections.
+    // dynSymTab is always present to simplify several finalizeSections
+    // functions.
     part.dynStrTab = std::make_unique<StringTableSection>(ctx, ".dynstr", true);
     part.dynSymTab =
         std::make_unique<SymbolTableSection<ELFT>>(ctx, *part.dynStrTab);
@@ -4765,7 +4819,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
       part.relaDyn = std::make_unique<RelocationSection<ELFT>>(
           ctx, relaDynName, ctx.arg.zCombreloc, threadCount);
 
-    if (ctx.arg.hasDynSymTab) {
+    if (ctx.hasDynsym) {
       add(*part.dynSymTab);
 
       part.verSym = std::make_unique<VersionTableSection>(ctx);

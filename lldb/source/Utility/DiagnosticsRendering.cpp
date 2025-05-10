@@ -20,6 +20,46 @@ lldb::ErrorType DiagnosticError::GetErrorType() const {
   return lldb::eErrorTypeExpression;
 }
 
+StructuredData::ObjectSP Serialize(llvm::ArrayRef<DiagnosticDetail> details) {
+  auto make_array = []() { return std::make_unique<StructuredData::Array>(); };
+  auto make_dict = []() {
+    return std::make_unique<StructuredData::Dictionary>();
+  };
+  auto dict_up = make_dict();
+  dict_up->AddIntegerItem("version", 1u);
+  auto array_up = make_array();
+  for (const DiagnosticDetail &diag : details) {
+    auto detail_up = make_dict();
+    if (auto &sloc = diag.source_location) {
+      auto sloc_up = make_dict();
+      sloc_up->AddStringItem("file", sloc->file.GetPath());
+      sloc_up->AddIntegerItem("line", sloc->line);
+      sloc_up->AddIntegerItem("length", sloc->length);
+      sloc_up->AddBooleanItem("hidden", sloc->hidden);
+      sloc_up->AddBooleanItem("in_user_input", sloc->in_user_input);
+      detail_up->AddItem("source_location", std::move(sloc_up));
+    }
+    llvm::StringRef severity = "unknown";
+    switch (diag.severity) {
+    case lldb::eSeverityError:
+      severity = "error";
+      break;
+    case lldb::eSeverityWarning:
+      severity = "warning";
+      break;
+    case lldb::eSeverityInfo:
+      severity = "note";
+      break;
+    }
+    detail_up->AddStringItem("severity", severity);
+    detail_up->AddStringItem("message", diag.message);
+    detail_up->AddStringItem("rendered", diag.rendered);
+    array_up->AddItem(std::move(detail_up));
+  }
+  dict_up->AddItem("details", std::move(array_up));
+  return dict_up;
+}
+
 static llvm::raw_ostream &PrintSeverity(Stream &stream,
                                         lldb::Severity severity) {
   llvm::HighlightColor color;
@@ -145,9 +185,8 @@ void RenderDiagnosticDetails(Stream &stream,
 
   // Work through each detail in reverse order using the vector/stack.
   bool did_print = false;
-  for (auto detail = remaining_details.rbegin();
-       detail != remaining_details.rend();
-       ++detail, remaining_details.pop_back()) {
+  for (; !remaining_details.empty(); remaining_details.pop_back()) {
+    const auto &detail = remaining_details.back();
     // Get the information to print this detail and remove it from the stack.
     // Print all the lines for all the other messages first.
     stream << std::string(padding, ' ');
@@ -156,7 +195,7 @@ void RenderDiagnosticDetails(Stream &stream,
          llvm::ArrayRef(remaining_details).drop_back(1)) {
       uint16_t column = remaining_detail.source_location->column;
       // Is this a note with the same column as another diagnostic?
-      if (column == detail->source_location->column)
+      if (column == detail.source_location->column)
         continue;
 
       if (column >= x_pos) {
@@ -165,16 +204,16 @@ void RenderDiagnosticDetails(Stream &stream,
       }
     }
 
-    uint16_t column = detail->source_location->column;
+    uint16_t column = detail.source_location->column;
     // Print the line connecting the ^ with the error message.
     if (column >= x_pos)
       stream << std::string(column - x_pos, ' ') << joint << hbar << spacer;
 
     // Print a colorized string based on the message's severity type.
-    PrintSeverity(stream, detail->severity);
+    PrintSeverity(stream, detail.severity);
 
     // Finally, print the message and start a new line.
-    stream << detail->message << '\n';
+    stream << detail.message << '\n';
     did_print = true;
   }
 

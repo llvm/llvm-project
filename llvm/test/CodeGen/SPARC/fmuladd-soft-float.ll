@@ -10,9 +10,9 @@ define float @fmuladd_intrinsic_f32(float %a, float %b, float %c) #0 {
 ; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_register %fp
 ; SOFT-FLOAT-32-NEXT:    .cfi_window_save
 ; SOFT-FLOAT-32-NEXT:    .cfi_register %o7, %i7
-; SOFT-FLOAT-32-NEXT:    mov %i0, %o0
-; SOFT-FLOAT-32-NEXT:    call __mulsf3
 ; SOFT-FLOAT-32-NEXT:    mov %i1, %o1
+; SOFT-FLOAT-32-NEXT:    call __mulsf3
+; SOFT-FLOAT-32-NEXT:    mov %i0, %o0
 ; SOFT-FLOAT-32-NEXT:    call __addsf3
 ; SOFT-FLOAT-32-NEXT:    mov %i2, %o1
 ; SOFT-FLOAT-32-NEXT:    ret
@@ -44,11 +44,11 @@ define double @fmuladd_intrinsic_f64(double %a, double %b, double %c) #0 {
 ; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_register %fp
 ; SOFT-FLOAT-32-NEXT:    .cfi_window_save
 ; SOFT-FLOAT-32-NEXT:    .cfi_register %o7, %i7
-; SOFT-FLOAT-32-NEXT:    mov %i0, %o0
-; SOFT-FLOAT-32-NEXT:    mov %i1, %o1
-; SOFT-FLOAT-32-NEXT:    mov %i2, %o2
-; SOFT-FLOAT-32-NEXT:    call __muldf3
 ; SOFT-FLOAT-32-NEXT:    mov %i3, %o3
+; SOFT-FLOAT-32-NEXT:    mov %i2, %o2
+; SOFT-FLOAT-32-NEXT:    mov %i1, %o1
+; SOFT-FLOAT-32-NEXT:    call __muldf3
+; SOFT-FLOAT-32-NEXT:    mov %i0, %o0
 ; SOFT-FLOAT-32-NEXT:    mov %i4, %o2
 ; SOFT-FLOAT-32-NEXT:    call __adddf3
 ; SOFT-FLOAT-32-NEXT:    mov %i5, %o3
@@ -63,9 +63,9 @@ define double @fmuladd_intrinsic_f64(double %a, double %b, double %c) #0 {
 ; SOFT-FLOAT-64-NEXT:    .cfi_def_cfa_register %fp
 ; SOFT-FLOAT-64-NEXT:    .cfi_window_save
 ; SOFT-FLOAT-64-NEXT:    .cfi_register %o7, %i7
-; SOFT-FLOAT-64-NEXT:    mov %i0, %o0
-; SOFT-FLOAT-64-NEXT:    call __muldf3
 ; SOFT-FLOAT-64-NEXT:    mov %i1, %o1
+; SOFT-FLOAT-64-NEXT:    call __muldf3
+; SOFT-FLOAT-64-NEXT:    mov %i0, %o0
 ; SOFT-FLOAT-64-NEXT:    call __adddf3
 ; SOFT-FLOAT-64-NEXT:    mov %i2, %o1
 ; SOFT-FLOAT-64-NEXT:    ret
@@ -82,9 +82,9 @@ define float @fmuladd_contract_f32(float %a, float %b, float %c) #0 {
 ; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_register %fp
 ; SOFT-FLOAT-32-NEXT:    .cfi_window_save
 ; SOFT-FLOAT-32-NEXT:    .cfi_register %o7, %i7
-; SOFT-FLOAT-32-NEXT:    mov %i0, %o0
-; SOFT-FLOAT-32-NEXT:    call __mulsf3
 ; SOFT-FLOAT-32-NEXT:    mov %i1, %o1
+; SOFT-FLOAT-32-NEXT:    call __mulsf3
+; SOFT-FLOAT-32-NEXT:    mov %i0, %o0
 ; SOFT-FLOAT-32-NEXT:    call __addsf3
 ; SOFT-FLOAT-32-NEXT:    mov %i2, %o1
 ; SOFT-FLOAT-32-NEXT:    ret
@@ -117,11 +117,11 @@ define double @fmuladd_contract_f64(double %a, double %b, double %c) #0 {
 ; SOFT-FLOAT-32-NEXT:    .cfi_def_cfa_register %fp
 ; SOFT-FLOAT-32-NEXT:    .cfi_window_save
 ; SOFT-FLOAT-32-NEXT:    .cfi_register %o7, %i7
-; SOFT-FLOAT-32-NEXT:    mov %i0, %o0
-; SOFT-FLOAT-32-NEXT:    mov %i1, %o1
-; SOFT-FLOAT-32-NEXT:    mov %i2, %o2
-; SOFT-FLOAT-32-NEXT:    call __muldf3
 ; SOFT-FLOAT-32-NEXT:    mov %i3, %o3
+; SOFT-FLOAT-32-NEXT:    mov %i2, %o2
+; SOFT-FLOAT-32-NEXT:    mov %i1, %o1
+; SOFT-FLOAT-32-NEXT:    call __muldf3
+; SOFT-FLOAT-32-NEXT:    mov %i0, %o0
 ; SOFT-FLOAT-32-NEXT:    mov %i4, %o2
 ; SOFT-FLOAT-32-NEXT:    call __adddf3
 ; SOFT-FLOAT-32-NEXT:    mov %i5, %o3
@@ -136,9 +136,9 @@ define double @fmuladd_contract_f64(double %a, double %b, double %c) #0 {
 ; SOFT-FLOAT-64-NEXT:    .cfi_def_cfa_register %fp
 ; SOFT-FLOAT-64-NEXT:    .cfi_window_save
 ; SOFT-FLOAT-64-NEXT:    .cfi_register %o7, %i7
-; SOFT-FLOAT-64-NEXT:    mov %i0, %o0
-; SOFT-FLOAT-64-NEXT:    call __muldf3
 ; SOFT-FLOAT-64-NEXT:    mov %i1, %o1
+; SOFT-FLOAT-64-NEXT:    call __muldf3
+; SOFT-FLOAT-64-NEXT:    mov %i0, %o0
 ; SOFT-FLOAT-64-NEXT:    call __adddf3
 ; SOFT-FLOAT-64-NEXT:    mov %i2, %o1
 ; SOFT-FLOAT-64-NEXT:    ret
@@ -162,10 +162,10 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-32-NEXT:    ld [%fp+112], %l3
 ; SOFT-FLOAT-32-NEXT:    ld [%fp+96], %l4
 ; SOFT-FLOAT-32-NEXT:    ld [%fp+92], %l5
-; SOFT-FLOAT-32-NEXT:    mov %i0, %o0
-; SOFT-FLOAT-32-NEXT:    call __mulsf3
 ; SOFT-FLOAT-32-NEXT:    mov %i4, %o1
-; SOFT-FLOAT-32-NEXT:    mov %o0, %l6
+; SOFT-FLOAT-32-NEXT:    call __mulsf3
+; SOFT-FLOAT-32-NEXT:    mov %i0, %o0
+; SOFT-FLOAT-32-NEXT:    mov %o0, %i0
 ; SOFT-FLOAT-32-NEXT:    mov %i1, %o0
 ; SOFT-FLOAT-32-NEXT:    call __mulsf3
 ; SOFT-FLOAT-32-NEXT:    mov %i5, %o1
@@ -173,26 +173,28 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-32-NEXT:    mov %i2, %o0
 ; SOFT-FLOAT-32-NEXT:    call __mulsf3
 ; SOFT-FLOAT-32-NEXT:    mov %l5, %o1
-; SOFT-FLOAT-32-NEXT:    mov %o0, %i4
+; SOFT-FLOAT-32-NEXT:    mov %o0, %i2
 ; SOFT-FLOAT-32-NEXT:    mov %i3, %o0
 ; SOFT-FLOAT-32-NEXT:    call __mulsf3
 ; SOFT-FLOAT-32-NEXT:    mov %l4, %o1
 ; SOFT-FLOAT-32-NEXT:    call __addsf3
 ; SOFT-FLOAT-32-NEXT:    mov %l3, %o1
 ; SOFT-FLOAT-32-NEXT:    mov %o0, %i3
-; SOFT-FLOAT-32-NEXT:    mov %i4, %o0
+; SOFT-FLOAT-32-NEXT:    mov %i2, %o0
 ; SOFT-FLOAT-32-NEXT:    call __addsf3
 ; SOFT-FLOAT-32-NEXT:    mov %l2, %o1
-; SOFT-FLOAT-32-NEXT:    mov %o0, %i2
+; SOFT-FLOAT-32-NEXT:    mov %o0, %i4
 ; SOFT-FLOAT-32-NEXT:    mov %i1, %o0
 ; SOFT-FLOAT-32-NEXT:    call __addsf3
 ; SOFT-FLOAT-32-NEXT:    mov %l1, %o1
 ; SOFT-FLOAT-32-NEXT:    mov %o0, %i1
-; SOFT-FLOAT-32-NEXT:    mov %l6, %o0
+; SOFT-FLOAT-32-NEXT:    mov %i0, %o0
 ; SOFT-FLOAT-32-NEXT:    call __addsf3
 ; SOFT-FLOAT-32-NEXT:    mov %l0, %o1
+; SOFT-FLOAT-32-NEXT:    ! kill: def $o0 killed $o0 def $o0_o1
+; SOFT-FLOAT-32-NEXT:    mov %o0, %i0
 ; SOFT-FLOAT-32-NEXT:    ret
-; SOFT-FLOAT-32-NEXT:    restore %g0, %o0, %o0
+; SOFT-FLOAT-32-NEXT:    restore %g0, %i4, %o2
 ;
 ; SOFT-FLOAT-64-LABEL: fmuladd_contract_v4f32:
 ; SOFT-FLOAT-64:         .cfi_startproc

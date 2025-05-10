@@ -7,12 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_UNIQUE_PTR_H
-#define _LIBCPP___MEMORY_UNIQUE_PTR_H
+#ifndef _LIBCPP___CXX03___MEMORY_UNIQUE_PTR_H
+#define _LIBCPP___CXX03___MEMORY_UNIQUE_PTR_H
 
-#include <__cxx03/__compare/compare_three_way.h>
-#include <__cxx03/__compare/compare_three_way_result.h>
-#include <__cxx03/__compare/three_way_comparable.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/hash.h>
 #include <__cxx03/__functional/operations.h>
@@ -52,25 +49,10 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_CXX03_LANG
-
-template <class _Ptr>
-struct __is_noexcept_deref_or_void {
-  static constexpr bool value = noexcept(*std::declval<_Ptr>());
-};
-
-template <>
-struct __is_noexcept_deref_or_void<void*> : true_type {};
-#endif
-
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS default_delete {
   static_assert(!is_function<_Tp>::value, "default_delete cannot be instantiated for function types");
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI constexpr default_delete() _NOEXCEPT = default;
-#else
   _LIBCPP_HIDE_FROM_ABI default_delete() {}
-#endif
   template <class _Up, __enable_if_t<is_convertible<_Up*, _Tp*>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 default_delete(const default_delete<_Up>&) _NOEXCEPT {}
 
@@ -88,11 +70,7 @@ private:
   struct _EnableIfConvertible : enable_if<is_convertible<_Up (*)[], _Tp (*)[]>::value> {};
 
 public:
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI constexpr default_delete() _NOEXCEPT = default;
-#else
   _LIBCPP_HIDE_FROM_ABI default_delete() {}
-#endif
 
   template <class _Up>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
@@ -222,11 +200,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(unique_ptr<_Up, _Ep>&& __u) _NOEXCEPT
       : __ptr_(__u.release(), std::forward<_Ep>(__u.get_deleter())) {}
 
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
   template <class _Up,
             __enable_if_t<is_convertible<_Up*, _Tp*>::value && is_same<_Dp, default_delete<_Tp> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI unique_ptr(auto_ptr<_Up>&& __p) _NOEXCEPT : __ptr_(__p.release(), __value_init_tag()) {}
-#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr& operator=(unique_ptr&& __u) _NOEXCEPT {
     reset(__u.release());
@@ -244,19 +220,15 @@ public:
     return *this;
   }
 
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
   template <class _Up,
             __enable_if_t<is_convertible<_Up*, _Tp*>::value && is_same<_Dp, default_delete<_Tp> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI unique_ptr& operator=(auto_ptr<_Up> __p) {
     reset(__p.release());
     return *this;
   }
-#endif
 
-#ifdef _LIBCPP_CXX03_LANG
   unique_ptr(unique_ptr const&)            = delete;
   unique_ptr& operator=(unique_ptr const&) = delete;
-#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 ~unique_ptr() { reset(); }
 
@@ -434,10 +406,8 @@ public:
     return *this;
   }
 
-#ifdef _LIBCPP_CXX03_LANG
   unique_ptr(unique_ptr const&)            = delete;
   unique_ptr& operator=(unique_ptr const&) = delete;
-#endif
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 ~unique_ptr() { reset(); }
@@ -497,12 +467,10 @@ operator==(const unique_ptr<_T1, _D1>& __x, const unique_ptr<_T2, _D2>& __y) {
   return __x.get() == __y.get();
 }
 
-#if _LIBCPP_STD_VER <= 17
 template <class _T1, class _D1, class _T2, class _D2>
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const unique_ptr<_T1, _D1>& __x, const unique_ptr<_T2, _D2>& __y) {
   return !(__x == __y);
 }
-#endif
 
 template <class _T1, class _D1, class _T2, class _D2>
 inline _LIBCPP_HIDE_FROM_ABI bool operator<(const unique_ptr<_T1, _D1>& __x, const unique_ptr<_T2, _D2>& __y) {
@@ -527,23 +495,12 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator>=(const unique_ptr<_T1, _D1>& __x, co
   return !(__x < __y);
 }
 
-#if _LIBCPP_STD_VER >= 20
-template <class _T1, class _D1, class _T2, class _D2>
-  requires three_way_comparable_with<typename unique_ptr<_T1, _D1>::pointer, typename unique_ptr<_T2, _D2>::pointer>
-_LIBCPP_HIDE_FROM_ABI
-compare_three_way_result_t<typename unique_ptr<_T1, _D1>::pointer, typename unique_ptr<_T2, _D2>::pointer>
-operator<=>(const unique_ptr<_T1, _D1>& __x, const unique_ptr<_T2, _D2>& __y) {
-  return compare_three_way()(__x.get(), __y.get());
-}
-#endif
-
 template <class _T1, class _D1>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool
 operator==(const unique_ptr<_T1, _D1>& __x, nullptr_t) _NOEXCEPT {
   return !__x;
 }
 
-#if _LIBCPP_STD_VER <= 17
 template <class _T1, class _D1>
 inline _LIBCPP_HIDE_FROM_ABI bool operator==(nullptr_t, const unique_ptr<_T1, _D1>& __x) _NOEXCEPT {
   return !__x;
@@ -558,7 +515,6 @@ template <class _T1, class _D1>
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(nullptr_t, const unique_ptr<_T1, _D1>& __x) _NOEXCEPT {
   return static_cast<bool>(__x);
 }
-#endif // _LIBCPP_STD_VER <= 17
 
 template <class _T1, class _D1>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool operator<(const unique_ptr<_T1, _D1>& __x, nullptr_t) {
@@ -602,83 +558,13 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool operator>=(nullp
   return !(nullptr < __x);
 }
 
-#if _LIBCPP_STD_VER >= 20
-template <class _T1, class _D1>
-  requires three_way_comparable< typename unique_ptr<_T1, _D1>::pointer>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 compare_three_way_result_t<typename unique_ptr<_T1, _D1>::pointer>
-operator<=>(const unique_ptr<_T1, _D1>& __x, nullptr_t) {
-  return compare_three_way()(__x.get(), static_cast<typename unique_ptr<_T1, _D1>::pointer>(nullptr));
-}
-#endif
-
-#if _LIBCPP_STD_VER >= 14
-
-template <class _Tp>
-struct __unique_if {
-  typedef unique_ptr<_Tp> __unique_single;
-};
-
-template <class _Tp>
-struct __unique_if<_Tp[]> {
-  typedef unique_ptr<_Tp[]> __unique_array_unknown_bound;
-};
-
-template <class _Tp, size_t _Np>
-struct __unique_if<_Tp[_Np]> {
-  typedef void __unique_array_known_bound;
-};
-
-template <class _Tp, class... _Args>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_single
-make_unique(_Args&&... __args) {
-  return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...));
-}
-
-template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_array_unknown_bound
-make_unique(size_t __n) {
-  typedef __remove_extent_t<_Tp> _Up;
-  return unique_ptr<_Tp>(new _Up[__n]());
-}
-
-template <class _Tp, class... _Args>
-typename __unique_if<_Tp>::__unique_array_known_bound make_unique(_Args&&...) = delete;
-
-#endif // _LIBCPP_STD_VER >= 14
-
-#if _LIBCPP_STD_VER >= 20
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_single
-make_unique_for_overwrite() {
-  return unique_ptr<_Tp>(new _Tp);
-}
-
-template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_array_unknown_bound
-make_unique_for_overwrite(size_t __n) {
-  return unique_ptr<_Tp>(new __remove_extent_t<_Tp>[__n]);
-}
-
-template <class _Tp, class... _Args>
-typename __unique_if<_Tp>::__unique_array_known_bound make_unique_for_overwrite(_Args&&...) = delete;
-
-#endif // _LIBCPP_STD_VER >= 20
-
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS hash;
 
 template <class _Tp, class _Dp>
-#ifdef _LIBCPP_CXX03_LANG
-struct _LIBCPP_TEMPLATE_VIS hash<unique_ptr<_Tp, _Dp> >
-#else
-struct _LIBCPP_TEMPLATE_VIS hash<__enable_hash_helper< unique_ptr<_Tp, _Dp>, typename unique_ptr<_Tp, _Dp>::pointer> >
-#endif
-{
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+struct _LIBCPP_TEMPLATE_VIS hash<unique_ptr<_Tp, _Dp> > {
   _LIBCPP_DEPRECATED_IN_CXX17 typedef unique_ptr<_Tp, _Dp> argument_type;
   _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
-#endif
 
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const unique_ptr<_Tp, _Dp>& __ptr) const {
     typedef typename unique_ptr<_Tp, _Dp>::pointer pointer;
@@ -690,4 +576,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_UNIQUE_PTR_H
+#endif // _LIBCPP___CXX03___MEMORY_UNIQUE_PTR_H

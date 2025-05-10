@@ -87,6 +87,12 @@ public:
     StaticVectorLength = ElementCount::getFixed(NewFixedVL);
     return *this;
   }
+
+  /// Get the flags to be applied to created floating point ops.
+  const FastMathFlags &getFastMathFlags() const {
+    return Builder.getFastMathFlags();
+  }
+
   // TODO: setStaticVL(ElementCount) for scalable types.
 
   // Emit a VP intrinsic call that mimics a regular instruction.

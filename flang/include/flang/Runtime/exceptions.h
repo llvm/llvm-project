@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Map Fortran ieee_arithmetic module exceptions to fenv.h exceptions.
+// Support for floating point exceptions and related floating point environment
+// functionality.
 
 #ifndef FORTRAN_RUNTIME_EXCEPTIONS_H_
 #define FORTRAN_RUNTIME_EXCEPTIONS_H_
 
 #include "flang/Runtime/entry-names.h"
 #include <cinttypes>
+#include <cstddef>
 
 namespace Fortran::runtime {
 
@@ -24,9 +26,26 @@ extern "C" {
 // This mapping is done at runtime to support cross compilation.
 std::uint32_t RTNAME(MapException)(std::uint32_t excepts);
 
+// Exception processing functions that call the corresponding libm functions,
+// and also include support for denormal exceptions where available.
+void RTNAME(feclearexcept)(std::uint32_t excepts);
+void RTNAME(feraiseexcept)(std::uint32_t excepts);
+std::uint32_t RTNAME(fetestexcept)(std::uint32_t excepts);
+void RTNAME(fedisableexcept)(std::uint32_t excepts);
+void RTNAME(feenableexcept)(std::uint32_t excepts);
+std::uint32_t RTNAME(fegetexcept)(void);
+
+// Check if the processor has the ability to control whether to halt
+// or continue exeuction when a given exception is raised.
+bool RTNAME(SupportHalting)(uint32_t except);
+
 // Get and set the ieee underflow mode if supported; otherwise nops.
 bool RTNAME(GetUnderflowMode)(void);
 void RTNAME(SetUnderflowMode)(bool flag);
+
+// Get the byte size of ieee_modes_type and ieee_status_type data.
+std::size_t RTNAME(GetModesTypeSize)(void);
+std::size_t RTNAME(GetStatusTypeSize)(void);
 
 } // extern "C"
 } // namespace Fortran::runtime

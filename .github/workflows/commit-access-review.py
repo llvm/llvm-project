@@ -67,39 +67,47 @@ def check_manual_requests(
 ) -> list[str]:
     """
     Return a list of users who have been asked since ``start_date`` if they
-    want to keep their commit access.
+    want to keep their commit access or if they have applied for commit
+    access since ``start_date``
     """
+
     query = """
-        query ($query: String!) {
-          search(query: $query, type: ISSUE, first: 100) {
+        query ($query: String!, $after: String) {
+          search(query: $query, type: ISSUE, first: 100, after: $after) {
             nodes {
               ... on Issue {
-                body
-                comments (first: 100) {
-                  nodes {
-                    author {
-                      login
-                    }
-                  }
+                author {
+                  login
                 }
+                body
               }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
             }
           }
         }
         """
     formatted_start_date = start_date.strftime("%Y-%m-%dT%H:%M:%S")
     variables = {
-        "query": f"type:issue created:>{formatted_start_date} org:llvm repo:llvm-project label:infra:commit-access"
+        "query": f"type:issue created:>{formatted_start_date} org:llvm repo:llvm-project label:infra:commit-access,infra:commit-access-request"
     }
 
-    res_header, res_data = gh._Github__requester.graphql_query(
-        query=query, variables=variables
-    )
-    data = res_data["data"]
+    has_next_page = True
     users = []
-    for issue in data["search"]["nodes"]:
-        users.extend([user[1:] for user in re.findall("@[^ ,\n]+", issue["body"])])
-
+    while has_next_page:
+        res_header, res_data = gh._Github__requester.graphql_query(
+            query=query, variables=variables
+        )
+        data = res_data["data"]
+        for issue in data["search"]["nodes"]:
+            users.extend([user[1:] for user in re.findall("@[^ ,\n]+", issue["body"])])
+            if issue["author"]:
+                users.append(issue["author"]["login"])
+        has_next_page = data["search"]["pageInfo"]["hasNextPage"]
+        if has_next_page:
+            variables["after"] = data["search"]["pageInfo"]["endCursor"]
     return users
 
 

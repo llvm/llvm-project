@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H
-#define _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H
+#ifndef _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_IBM_H
+#define _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_IBM_H
 
 #if defined(__MVS__)
 #  include <__cxx03/__support/ibm/locale_mgmt_zos.h>
@@ -88,7 +88,7 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char
 
   va_list ap_copy;
   // va_copy may not be provided by the C library in C++03 mode.
-#if defined(_LIBCPP_CXX03_LANG) && __has_builtin(__builtin_va_copy)
+#if __has_builtin(__builtin_va_copy)
   __builtin_va_copy(ap_copy, ap);
 #else
   va_copy(ap_copy, ap);
@@ -105,4 +105,4 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char
   return str_size;
 }
 
-#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H
+#endif // _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_IBM_H

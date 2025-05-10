@@ -761,7 +761,6 @@ func.func @omp_distribute(%chunk_size : i32, %data_var : memref<i32>, %arg0 : i3
   return
 }
 
-
 // CHECK-LABEL: omp_target
 func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %device_ptr: memref<i32>, %device_addr: memref<?xi32>, %map1: memref<?xi32>, %map2: memref<?xi32>) -> () {
 
@@ -770,20 +769,22 @@ func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %devic
     "omp.target"(%device, %if_cond, %num_threads) ({
        // CHECK: omp.terminator
        omp.terminator
-    }) {nowait, operandSegmentSizes = array<i32: 0,0,0,1,0,1,0,0,0,0,1>} : ( si32, i1, i32 ) -> ()
+    }) {nowait, operandSegmentSizes = array<i32: 0,0,0,1,0,0,1,0,0,0,0,1>} : ( si32, i1, i32 ) -> ()
 
     // Test with optional map clause.
-    // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
-    // CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
-    // CHECK: omp.target has_device_addr(%[[VAL_5:.*]] : memref<?xi32>) is_device_ptr(%[[VAL_4:.*]] : memref<i32>) map_entries(%[[MAP_A]] -> {{.*}}, %[[MAP_B]] -> {{.*}} : memref<?xi32>, memref<?xi32>) {
+    // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(always, to) capture(ByRef) -> memref<?xi32> {name = ""}
+    // CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
+    // CHECK: %[[MAP_C:.*]] = omp.map.info var_ptr(%[[VAL_3:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+    // CHECK: omp.target is_device_ptr(%[[VAL_4:.*]] : memref<i32>) has_device_addr(%[[MAP_A]] -> {{.*}} : memref<?xi32>) map_entries(%[[MAP_B]] -> {{.*}}, %[[MAP_C]] -> {{.*}} : memref<?xi32>, memref<?xi32>) {
+    %mapv0 = omp.map.info var_ptr(%device_addr : memref<?xi32>, tensor<?xi32>)   map_clauses(always, to) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv1 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv2 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
-    omp.target is_device_ptr(%device_ptr : memref<i32>) has_device_addr(%device_addr : memref<?xi32>) map_entries(%mapv1 -> %arg0, %mapv2 -> %arg1 : memref<?xi32>, memref<?xi32>) {
+    omp.target is_device_ptr(%device_ptr : memref<i32>) has_device_addr(%mapv0 -> %arg0 : memref<?xi32>) map_entries(%mapv1 -> %arg1, %mapv2 -> %arg2 : memref<?xi32>, memref<?xi32>) {
       omp.terminator
     }
-    // CHECK: %[[MAP_C:.*]] = omp.map.info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
-    // CHECK: %[[MAP_D:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(always, from) capture(ByRef) -> memref<?xi32> {name = ""}
-    // CHECK: omp.target map_entries(%[[MAP_C]] -> {{.*}}, %[[MAP_D]] -> {{.*}} : memref<?xi32>, memref<?xi32>) {
+    // CHECK: %[[MAP_D:.*]] = omp.map.info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
+    // CHECK: %[[MAP_E:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(always, from) capture(ByRef) -> memref<?xi32> {name = ""}
+    // CHECK: omp.target map_entries(%[[MAP_D]] -> {{.*}}, %[[MAP_E]] -> {{.*}} : memref<?xi32>, memref<?xi32>) {
     %mapv3 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv4 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>)   map_clauses(always, from) capture(ByRef) -> memref<?xi32> {name = ""}
     omp.target map_entries(%mapv3 -> %arg0, %mapv4 -> %arg1 : memref<?xi32>, memref<?xi32>) {
@@ -825,6 +826,12 @@ func.func @omp_target_data (%if_cond : i1, %device : si32, %device_ptr: memref<i
     %mapv6 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
     omp.target_exit_data if(%if_cond) device(%device : si32) nowait map_entries(%mapv6 : memref<?xi32>)
 
+    // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(ompx_hold, to) capture(ByRef) -> memref<?xi32> {name = ""}
+    // CHECK: omp.target_data map_entries(%[[MAP_A]] : memref<?xi32>)
+    %mapv7 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(ompx_hold, to) capture(ByRef) -> memref<?xi32> {name = ""}
+    omp.target_data map_entries(%mapv7 : memref<?xi32>) {
+      omp.terminator
+    }
     return
 }
 
@@ -879,6 +886,15 @@ cleanup {
   omp.yield
 }
 
+// CHECK: omp.declare_mapper @my_mapper : !llvm.struct<"my_type", (i32)>
+omp.declare_mapper @my_mapper : !llvm.struct<"my_type", (i32)> {
+^bb0(%arg: !llvm.ptr):
+  // CHECK: %[[DECL_MAP_INFO:.*]] = omp.map.info var_ptr(%{{.*}} : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  %decl_map_info = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  // CHECK: omp.declare_mapper.info map_entries(%[[DECL_MAP_INFO]] : !llvm.ptr)
+  omp.declare_mapper.info map_entries(%decl_map_info : !llvm.ptr)
+}
+
 // CHECK-LABEL: func @wsloop_reduction
 func.func @wsloop_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
@@ -895,6 +911,29 @@ func.func @wsloop_reduction(%lb : index, %ub : index, %step : index) {
       // CHECK: llvm.store %[[RES]], %[[PRV]] :  f32, !llvm.ptr
       llvm.store %res, %prv :  f32, !llvm.ptr
       omp.yield
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func @wsloop_inscan_reduction
+func.func @wsloop_inscan_reduction(%lb : index, %ub : index, %step : index) {
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  // CHECK: reduction(mod: inscan, @add_f32 %{{.+}} -> %[[PRV:.+]] : !llvm.ptr)
+  omp.wsloop reduction(mod:inscan, @add_f32 %0 -> %prv : !llvm.ptr) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+       // CHECK: omp.scan inclusive(%{{.*}} : !llvm.ptr)
+       omp.scan inclusive(%prv : !llvm.ptr)
+       omp.yield
+    }
+  }
+  // CHECK: reduction(mod: inscan, @add_f32 %{{.+}} -> %[[PRV:.+]] : !llvm.ptr)
+  omp.wsloop reduction(mod:inscan, @add_f32 %0 -> %prv : !llvm.ptr) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+       // CHECK: omp.scan exclusive(%{{.*}} : !llvm.ptr)
+       omp.scan exclusive(%prv : !llvm.ptr)
+       omp.yield
     }
   }
   return
@@ -2162,6 +2201,90 @@ func.func @omp_cancel_sections() -> () {
   return
 }
 
+func.func @omp_cancel_taskgroup() -> () {
+  omp.taskgroup {
+    omp.task {
+      // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+      omp.cancel cancellation_construct_type(taskgroup)
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_taskloop_cancel_taskgroup(%lb : index, %ub : index, %step : index) {
+  omp.taskloop {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+      omp.cancel cancellation_construct_type(taskgroup)
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+  return
+}
+
+func.func @omp_cancel_parallel_nested(%if_cond : i1) -> () {
+  omp.parallel {
+    scf.if %if_cond {
+      // CHECK: omp.cancel cancellation_construct_type(parallel)
+      omp.cancel cancellation_construct_type(parallel)
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancel_wsloop_nested(%lb : index, %ub : index, %step : index,
+                                    %if_cond : i1) {
+  omp.wsloop {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      scf.if %if_cond {
+        // CHECK: omp.cancel cancellation_construct_type(loop)
+        omp.cancel cancellation_construct_type(loop)
+      }
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+  return
+}
+
+func.func @omp_cancel_sections_nested(%if_cond : i1) -> () {
+  omp.sections {
+    omp.section {
+      scf.if %if_cond {
+        // CHECK: omp.cancel cancellation_construct_type(sections)
+        omp.cancel cancellation_construct_type(sections)
+      }
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancel_taskgroup_nested(%if_cond : i1) -> () {
+  omp.taskgroup {
+    omp.task {
+      scf.if %if_cond {
+        // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+        omp.cancel cancellation_construct_type(taskgroup)
+      }
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
 func.func @omp_cancellationpoint_parallel() -> () {
   omp.parallel {
     // CHECK: omp.cancellation_point cancellation_construct_type(parallel)
@@ -2194,6 +2317,77 @@ func.func @omp_cancellationpoint_sections() -> () {
       omp.cancellation_point cancellation_construct_type(sections)
       // CHECK: omp.cancel cancellation_construct_type(sections)
       omp.cancel cancellation_construct_type(sections)
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_taskgroup() -> () {
+  omp.taskgroup {
+    omp.task {
+      // CHECK: omp.cancellation_point cancellation_construct_type(taskgroup)
+      omp.cancellation_point cancellation_construct_type(taskgroup)
+      // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+      omp.cancel cancellation_construct_type(taskgroup)
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_parallel_nested(%if_cond : i1) -> () {
+  omp.parallel {
+    scf.if %if_cond {
+      // CHECK: omp.cancellation_point cancellation_construct_type(parallel)
+      omp.cancellation_point cancellation_construct_type(parallel)
+    }
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_wsloop_nested(%lb : index, %ub : index, %step : index, %if_cond : i1) {
+  omp.wsloop {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      scf.if %if_cond {
+        // CHECK: omp.cancellation_point cancellation_construct_type(loop)
+        omp.cancellation_point cancellation_construct_type(loop)
+      }
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_sections_nested(%if_cond : i1) -> () {
+  omp.sections {
+    omp.section {
+      scf.if %if_cond {
+        // CHECK: omp.cancellation_point cancellation_construct_type(sections)
+        omp.cancellation_point cancellation_construct_type(sections)
+      }
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_taskgroup_nested(%if_cond : i1) -> () {
+  omp.taskgroup {
+    omp.task {
+      scf.if %if_cond {
+        // CHECK: omp.cancellation_point cancellation_construct_type(taskgroup)
+        omp.cancellation_point cancellation_construct_type(taskgroup)
+      }
       omp.terminator
     }
     // CHECK: omp.terminator
@@ -2385,6 +2579,22 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
     }
   }
 
+  // CHECK: omp.taskloop grainsize(strict, %{{[^:]+}}: i64) {
+  omp.taskloop grainsize(strict, %testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+
+  // CHECK: omp.taskloop num_tasks(strict, %{{[^:]+}}: i64) {
+  omp.taskloop num_tasks(strict, %testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+
   // CHECK: omp.taskloop nogroup {
   omp.taskloop nogroup {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
@@ -2514,13 +2724,13 @@ func.func @omp_targets_with_map_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> ()
   // CHECK: %[[C_12:.*]] = llvm.mlir.constant(2 : index) : i64
   // CHECK: %[[C_13:.*]] = llvm.mlir.constant(2 : index) : i64
   // CHECK: %[[BOUNDS1:.*]] = omp.map.bounds   lower_bound(%[[C_11]] : i64) upper_bound(%[[C_10]] : i64) stride(%[[C_12]] : i64) start_idx(%[[C_13]] : i64)
-  // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByCopy) bounds(%[[BOUNDS1]]) -> !llvm.ptr {name = ""}
+  // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(exit_release_or_enter_alloc) capture(ByCopy) mapper(@my_mapper) bounds(%[[BOUNDS1]]) -> !llvm.ptr {name = ""}
     %6 = llvm.mlir.constant(9 : index) : i64
     %7 = llvm.mlir.constant(1 : index) : i64
     %8 = llvm.mlir.constant(2 : index) : i64
     %9 = llvm.mlir.constant(2 : index) : i64
     %10 = omp.map.bounds   lower_bound(%7 : i64) upper_bound(%6 : i64) stride(%8 : i64) start_idx(%9 : i64)
-    %mapv2 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByCopy) bounds(%10) -> !llvm.ptr {name = ""}
+    %mapv2 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(exit_release_or_enter_alloc) capture(ByCopy) mapper(@my_mapper) bounds(%10) -> !llvm.ptr {name = ""}
 
     // CHECK: omp.target map_entries(%[[MAP0]] -> {{.*}}, %[[MAP1]] -> {{.*}} : !llvm.ptr, !llvm.ptr)
     omp.target map_entries(%mapv1 -> %arg2, %mapv2 -> %arg3 : !llvm.ptr, !llvm.ptr) {
@@ -2662,34 +2872,31 @@ func.func @parallel_op_privatizers(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   return
 }
 
-// CHECK-LABEL: omp.private {type = private} @a.privatizer : !llvm.ptr alloc {
-omp.private {type = private} @a.privatizer : !llvm.ptr alloc {
-// CHECK: ^bb0(%{{.*}}: {{.*}}):
-^bb0(%arg0: !llvm.ptr):
+// CHECK-LABEL: omp.private {type = private} @a.privatizer : !llvm.ptr init {
+omp.private {type = private} @a.privatizer : !llvm.ptr init {
+// CHECK: ^bb0(%{{.*}}: {{.*}}, %{{.*}}: {{.*}}):
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
 }
 
-// CHECK-LABEL: omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-// CHECK: ^bb0(%{{.*}}: {{.*}}):
-^bb0(%arg0: !llvm.ptr):
+// CHECK-LABEL: omp.private {type = private} @x.privatizer : !llvm.ptr init {
+omp.private {type = private} @x.privatizer : !llvm.ptr init {
+// CHECK: ^bb0(%{{.*}}: {{.*}}, %{{.*}}: {{.*}}):
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
+// CHECK: } dealloc {
 } dealloc {
 // CHECK: ^bb0(%{{.*}}: {{.*}}):
 ^bb0(%arg0: !llvm.ptr):
   omp.yield
 }
 
-// CHECK-LABEL: omp.private {type = firstprivate} @y.privatizer : !llvm.ptr alloc {
-omp.private {type = firstprivate} @y.privatizer : !llvm.ptr alloc {
-// CHECK: ^bb0(%{{.*}}: {{.*}}):
-^bb0(%arg0: !llvm.ptr):
-  omp.yield(%arg0 : !llvm.ptr)
-// CHECK: } copy {
-} copy {
+// CHECK-LABEL: omp.private {type = firstprivate} @y.privatizer : !llvm.ptr copy {
+omp.private {type = firstprivate} @y.privatizer : !llvm.ptr copy {
 // CHECK: ^bb0(%{{.*}}: {{.*}}, %{{.*}}: {{.*}}):
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
+// CHECK: } dealloc {
 } dealloc {
 // CHECK: ^bb0(%{{.*}}: {{.*}}):
 ^bb0(%arg0: !llvm.ptr):
@@ -2775,6 +2982,91 @@ func.func @omp_target_private_with_map_idx(%map1: memref<?xi32>, %map2: memref<?
     omp.terminator
   }
 
+  return
+}
+
+func.func @omp_target_host_eval(%x : i32) {
+  // CHECK: omp.target host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
+  // CHECK: omp.teams num_teams( to %[[HOST_ARG]] : i32)
+  // CHECK-SAME: thread_limit(%[[HOST_ARG]] : i32)
+  omp.target host_eval(%x -> %arg0 : i32) {
+    omp.teams num_teams(to %arg0 : i32) thread_limit(%arg0 : i32) {
+      omp.terminator
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.target host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
+  // CHECK: omp.teams {
+  // CHECK: omp.parallel num_threads(%[[HOST_ARG]] : i32) {
+  // CHECK: omp.distribute {
+  // CHECK: omp.wsloop {
+  // CHECK: omp.loop_nest (%{{.*}}) : i32 = (%[[HOST_ARG]]) to (%[[HOST_ARG]]) step (%[[HOST_ARG]]) {
+  omp.target host_eval(%x -> %arg0 : i32) {
+    omp.teams {
+      omp.parallel num_threads(%arg0 : i32) {
+        omp.distribute {
+          omp.wsloop {
+            omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+              omp.yield
+            }
+          } {omp.composite}
+        } {omp.composite}
+        omp.terminator
+      } {omp.composite}
+      omp.terminator
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.target host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
+  // CHECK: omp.parallel num_threads(%[[HOST_ARG]] : i32) {
+  // CHECK: omp.wsloop {
+  // CHECK: omp.loop_nest
+  omp.target host_eval(%x -> %arg0 : i32) {
+    %y = arith.constant 2 : i32
+    omp.parallel num_threads(%arg0 : i32) {
+      omp.wsloop {
+        omp.loop_nest (%iv) : i32 = (%y) to (%y) step (%y) {
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.target host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
+  // CHECK: omp.teams {
+  // CHECK: omp.distribute {
+  // CHECK: omp.loop_nest (%{{.*}}) : i32 = (%[[HOST_ARG]]) to (%[[HOST_ARG]]) step (%[[HOST_ARG]]) {
+  omp.target host_eval(%x -> %arg0 : i32) {
+    omp.teams {
+      omp.distribute {
+        omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.target host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
+  // CHECK: omp.teams {
+  // CHECK: omp.loop {
+  // CHECK: omp.loop_nest (%{{.*}}) : i32 = (%[[HOST_ARG]]) to (%[[HOST_ARG]]) step (%[[HOST_ARG]]) {
+  omp.target host_eval(%x -> %arg0 : i32) {
+    omp.teams {
+      omp.loop {
+        omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
   return
 }
 

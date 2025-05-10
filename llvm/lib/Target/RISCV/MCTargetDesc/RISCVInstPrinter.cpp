@@ -34,6 +34,10 @@ static cl::opt<bool>
               cl::desc("Disable the emission of assembler pseudo instructions"),
               cl::init(false), cl::Hidden);
 
+static cl::opt<bool> EmitX8AsFP("riscv-emit-x8-as-fp",
+                                cl::desc("Emit x8 as fp instead of s0"),
+                                cl::init(false), cl::Hidden);
+
 // Print architectural register names rather than the ABI names (such as x2
 // instead of sp).
 // TODO: Make RISCVInstPrinter::getRegisterName non-static so that this can a
@@ -52,6 +56,11 @@ bool RISCVInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   }
   if (Opt == "numeric") {
     ArchRegNames = true;
+    return true;
+  }
+  if (Opt == "emit-x8-as-fp") {
+    if (!ArchRegNames)
+      EmitX8AsFP = true;
     return true;
   }
 
@@ -78,9 +87,8 @@ void RISCVInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
 }
 
 void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                    const MCSubtargetInfo &STI, raw_ostream &O,
-                                    const char *Modifier) {
-  assert((Modifier == nullptr || Modifier[0] == 0) && "No modifiers supported");
+                                    const MCSubtargetInfo &STI,
+                                    raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNo);
 
   if (MO.isReg()) {
@@ -121,6 +129,8 @@ void RISCVInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
   unsigned Imm = MI->getOperand(OpNo).getImm();
   auto Range = RISCVSysReg::lookupSysRegByEncoding(Imm);
   for (auto &Reg : Range) {
+    if (Reg.IsAltName || Reg.IsDeprecatedName)
+      continue;
     if (Reg.haveRequiredFeatures(STI.getFeatureBits())) {
       markup(O, Markup::Register) << Reg.Name;
       return;
@@ -208,7 +218,7 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   unsigned Imm = MI->getOperand(OpNo).getImm();
   // Print the raw immediate for reserved values: vlmul[2:0]=4, vsew[2:0]=0b1xx,
   // or non-zero in bits 8 and above.
-  if (RISCVVType::getVLMUL(Imm) == RISCVII::VLMUL::LMUL_RESERVED ||
+  if (RISCVVType::getVLMUL(Imm) == RISCVVType::VLMUL::LMUL_RESERVED ||
       RISCVVType::getSEW(Imm) > 64 || (Imm >> 8) != 0) {
     O << formatImm(Imm);
     return;
@@ -220,9 +230,13 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
 // Print a Zcmp RList. If we are printing architectural register names rather
 // than ABI register names, we need to print "{x1, x8-x9, x18-x27}" for all
 // registers. Otherwise, we print "{ra, s0-s11}".
-void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
-                                  const MCSubtargetInfo &STI, raw_ostream &O) {
+void RISCVInstPrinter::printRegList(const MCInst *MI, unsigned OpNo,
+                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
+
+  assert(Imm >= RISCVZC::RLISTENCODE::RA &&
+         Imm <= RISCVZC::RLISTENCODE::RA_S0_S11 && "Invalid Rlist");
+
   O << "{";
   printRegName(O, RISCV::X1);
 
@@ -260,15 +274,15 @@ void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
 
 void RISCVInstPrinter::printRegReg(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
-  const MCOperand &MO = MI->getOperand(OpNo);
+  const MCOperand &OffsetMO = MI->getOperand(OpNo + 1);
 
-  assert(MO.isReg() && "printRegReg can only print register operands");
-  printRegName(O, MO.getReg());
+  assert(OffsetMO.isReg() && "printRegReg can only print register operands");
+  printRegName(O, OffsetMO.getReg());
 
   O << "(";
-  const MCOperand &MO1 = MI->getOperand(OpNo + 1);
-  assert(MO1.isReg() && "printRegReg can only print register operands");
-  printRegName(O, MO1.getReg());
+  const MCOperand &BaseMO = MI->getOperand(OpNo);
+  assert(BaseMO.isReg() && "printRegReg can only print register operands");
+  printRegName(O, BaseMO.getReg());
   O << ")";
 }
 
@@ -279,7 +293,6 @@ void RISCVInstPrinter::printStackAdj(const MCInst *MI, unsigned OpNo,
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
   int64_t StackAdj = 0;
   auto RlistVal = MI->getOperand(0).getImm();
-  assert(RlistVal != 16 && "Incorrect rlist.");
   auto Base = RISCVZC::getStackAdjBase(RlistVal, IsRV64);
   StackAdj = Imm + Base;
   assert((StackAdj >= Base && StackAdj <= Base + 48) &&
@@ -306,6 +319,13 @@ void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
 }
 
 const char *RISCVInstPrinter::getRegisterName(MCRegister Reg) {
+  // When PrintAliases is enabled, and EmitX8AsFP is enabled, x8 will be printed
+  // as fp instead of s0. Note that these similar registers are not replaced:
+  // - X8_H: used for f16 register in zhinx
+  // - X8_W: used for f32 register in zfinx
+  // - X8_X9: used for GPR Pair
+  if (!ArchRegNames && EmitX8AsFP && Reg == RISCV::X8)
+    return "fp";
   return getRegisterName(Reg, ArchRegNames ? RISCV::NoRegAltName
                                            : RISCV::ABIRegAltName);
 }

@@ -29,6 +29,7 @@ const char *BoltRevision =
 namespace opts {
 
 bool HeatmapMode = false;
+bool BinaryAnalysisMode = false;
 
 cl::OptionCategory BoltCategory("BOLT generic options");
 cl::OptionCategory BoltDiffCategory("BOLTDIFF generic options");
@@ -38,6 +39,7 @@ cl::OptionCategory BoltOutputCategory("Output options");
 cl::OptionCategory AggregatorCategory("Data aggregation options");
 cl::OptionCategory BoltInstrCategory("BOLT instrumentation options");
 cl::OptionCategory HeatmapCategory("Heatmap options");
+cl::OptionCategory BinaryAnalysisCategory("BinaryAnalysis options");
 
 cl::opt<unsigned> AlignText("align-text",
                             cl::desc("alignment of .text section"), cl::Hidden,
@@ -60,6 +62,11 @@ cl::opt<unsigned>
                    cl::init(256), cl::Optional, cl::cat(HeatmapCategory));
 
 cl::opt<bool>
+    CompactCodeModel("compact-code-model",
+                     cl::desc("generate code for binaries <128MB on AArch64"),
+                     cl::init(false), cl::cat(BoltCategory));
+
+cl::opt<bool>
 DiffOnly("diff-only",
   cl::desc("stop processing once we have enough to compare two binaries"),
   cl::Hidden,
@@ -77,6 +84,12 @@ cl::opt<bool> EqualizeBBCounts(
     cl::desc("use same count for BBs that should have equivalent count (used "
              "in non-LBR and shrink wrapping)"),
     cl::ZeroOrMore, cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
+
+llvm::cl::opt<bool> ForcePatch(
+    "force-patch",
+    llvm::cl::desc("force patching of original entry points to ensure "
+                   "execution follows only the new/optimized code."),
+    llvm::cl::Hidden, llvm::cl::cat(BoltCategory));
 
 cl::opt<bool> RemoveSymtab("remove-symtab", cl::desc("Remove .symtab section"),
                            cl::cat(BoltCategory));

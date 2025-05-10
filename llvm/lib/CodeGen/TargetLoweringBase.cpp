@@ -312,6 +312,8 @@ RTLIB::Libcall RTLIB::getSINTTOFP(EVT OpVT, EVT RetVT) {
     if (RetVT == MVT::ppcf128)
       return SINTTOFP_I32_PPCF128;
   } else if (OpVT == MVT::i64) {
+    if (RetVT == MVT::bf16)
+      return SINTTOFP_I64_BF16;
     if (RetVT == MVT::f16)
       return SINTTOFP_I64_F16;
     if (RetVT == MVT::f32)
@@ -358,6 +360,8 @@ RTLIB::Libcall RTLIB::getUINTTOFP(EVT OpVT, EVT RetVT) {
     if (RetVT == MVT::ppcf128)
       return UINTTOFP_I32_PPCF128;
   } else if (OpVT == MVT::i64) {
+    if (RetVT == MVT::bf16)
+      return UINTTOFP_I64_BF16;
     if (RetVT == MVT::f16)
       return UINTTOFP_I64_F16;
     if (RetVT == MVT::f32)
@@ -402,9 +406,19 @@ RTLIB::Libcall RTLIB::getFREXP(EVT RetVT) {
                       FREXP_PPCF128);
 }
 
-RTLIB::Libcall RTLIB::getFSINCOS(EVT RetVT) {
+RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
   return getFPLibCall(RetVT, SINCOS_F32, SINCOS_F64, SINCOS_F80, SINCOS_F128,
                       SINCOS_PPCF128);
+}
+
+RTLIB::Libcall RTLIB::getSINCOSPI(EVT RetVT) {
+  return getFPLibCall(RetVT, SINCOSPI_F32, SINCOSPI_F64, SINCOSPI_F80,
+                      SINCOSPI_F128, SINCOSPI_PPCF128);
+}
+
+RTLIB::Libcall RTLIB::getMODF(EVT RetVT) {
+  return getFPLibCall(RetVT, MODF_F32, MODF_F64, MODF_F80, MODF_F128,
+                      MODF_PPCF128);
 }
 
 RTLIB::Libcall RTLIB::getOutlineAtomicHelper(const Libcall (&LC)[5][4],
@@ -654,6 +668,10 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
   RTLIB::initCmpLibcallCCs(CmpLibcallCCs);
 }
 
+// Define the virtual destructor out-of-line to act as a key method to anchor
+// debug info (see coding standards).
+TargetLoweringBase::~TargetLoweringBase() = default;
+
 void TargetLoweringBase::initActions() {
   // All operations default to being supported.
   memset(OpActions, 0, sizeof(OpActions));
@@ -775,9 +793,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::BITREVERSE, ISD::PARITY}, VT, Expand);
 
     // These library functions default to expand.
-    setOperationAction(
-        {ISD::FROUND, ISD::FPOWI, ISD::FLDEXP, ISD::FFREXP, ISD::FSINCOS}, VT,
-        Expand);
+    setOperationAction({ISD::FROUND, ISD::FPOWI, ISD::FLDEXP, ISD::FFREXP,
+                        ISD::FSINCOS, ISD::FSINCOSPI, ISD::FMODF},
+                       VT, Expand);
 
     // These operations default to expand for vector types.
     if (VT.isVector())
@@ -817,6 +835,9 @@ void TargetLoweringBase::initActions() {
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
     setOperationAction(ISD::SDOPC, VT, Expand);
 #include "llvm/IR/VPIntrinsics.def"
+
+    // Masked vector extracts default to expand.
+    setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Expand);
 
     // FP environment operations default to expand.
     setOperationAction(ISD::GET_FPENV, VT, Expand);
@@ -1697,12 +1718,9 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
   }
 }
 
-/// getByValTypeAlignment - Return the desired alignment for ByVal aggregate
-/// function arguments in the caller parameter area.  This is the actual
-/// alignment, not its logarithm.
-uint64_t TargetLoweringBase::getByValTypeAlignment(Type *Ty,
-                                                   const DataLayout &DL) const {
-  return DL.getABITypeAlign(Ty).value();
+Align TargetLoweringBase::getByValTypeAlignment(Type *Ty,
+                                                const DataLayout &DL) const {
+  return DL.getABITypeAlign(Ty);
 }
 
 bool TargetLoweringBase::allowsMemoryAccessForAlignment(
@@ -1753,7 +1771,7 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                                             const DataLayout &DL, LLT Ty,
                                             const MachineMemOperand &MMO,
                                             unsigned *Fast) const {
-  EVT VT = getApproximateEVTForLLT(Ty, DL, Context);
+  EVT VT = getApproximateEVTForLLT(Ty, Context);
   return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(), MMO.getAlign(),
                             MMO.getFlags(), Fast);
 }
@@ -1839,6 +1857,17 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   }
 
   llvm_unreachable("Unknown instruction type encountered!");
+}
+
+int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
+  switch (ID) {
+  case Intrinsic::exp:
+    return ISD::FEXP;
+  case Intrinsic::exp2:
+    return ISD::FEXP2;
+  default:
+    return ISD::DELETED_NODE;
+  }
 }
 
 Value *
@@ -1976,6 +2005,9 @@ void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
 Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
+  if (getTargetMachine().getTargetTriple().isOSOpenBSD()) {
+    return M.getNamedValue("__guard_local");
+  }
   return M.getNamedValue("__stack_chk_guard");
 }
 

@@ -15,8 +15,8 @@
 #ifndef LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -26,6 +26,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
@@ -429,12 +430,12 @@ private:
   Value *foldBooleanAndOr(Value *LHS, Value *RHS, Instruction &I, bool IsAnd,
                           bool IsLogical);
 
+  Value *reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y, Instruction &I,
+                                 bool IsAnd, bool RHSIsLogical);
+
   Instruction *
   canonicalizeConditionalNegationViaMathToSelect(BinaryOperator &i);
 
-  Value *foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS, ICmpInst *RHS,
-                                       Instruction *CxtI, bool IsAnd,
-                                       bool IsLogical = false);
   Value *matchSelectFromAndOr(Value *A, Value *B, Value *C, Value *D,
                               bool InvertFalseVal = false);
   Value *getSelectCondition(Value *A, Value *B, bool ABIsTheSame);
@@ -454,6 +455,13 @@ private:
                                                  bool IsAnd);
 
   Instruction *hoistFNegAboveFMulFDiv(Value *FNegOp, Instruction &FMFSource);
+
+  /// Simplify \p V given that it is known to be non-null.
+  /// Returns the simplified value if possible, otherwise returns nullptr.
+  /// If \p HasDereferenceable is true, the simplification will not perform
+  /// same object checks.
+  Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
+                                unsigned Depth = 0);
 
 public:
   /// Create and insert the idiom we use to indicate a block is unreachable
@@ -600,7 +608,8 @@ public:
   /// Given a binary operator, cast instruction, or select which has a PHI node
   /// as operand #0, see if we can fold the instruction into the PHI (which is
   /// only possible if all operands to the PHI are constants).
-  Instruction *foldOpIntoPhi(Instruction &I, PHINode *PN);
+  Instruction *foldOpIntoPhi(Instruction &I, PHINode *PN,
+                             bool AllowMultipleUses = false);
 
   /// For a binary operator with 2 phi operands, try to hoist the binary
   /// operation before the phi. This can result in fewer instructions in
@@ -652,6 +661,7 @@ public:
   /// folded operation.
   void PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN);
 
+  Value *foldPtrToIntOfGEP(Type *IntTy, Value *Ptr);
   Instruction *foldGEPICmp(GEPOperator *GEPLHS, Value *RHS, CmpPredicate Cond,
                            Instruction &I);
   Instruction *foldSelectICmp(CmpPredicate Pred, SelectInst *SI, Value *RHS,
@@ -784,6 +794,18 @@ public:
   void handlePotentiallyDeadBlocks(SmallVectorImpl<BasicBlock *> &Worklist);
   void handlePotentiallyDeadSuccessors(BasicBlock *BB, BasicBlock *LiveSucc);
   void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
+
+  /// Take the exact integer log2 of the value. If DoFold is true, create the
+  /// actual instructions, otherwise return a non-null dummy value. Return
+  /// nullptr on failure. Note, if DoFold is true the caller must ensure that
+  /// takeLog2 will succeed, otherwise it may create stray instructions.
+  Value *takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero, bool DoFold);
+
+  Value *tryGetLog2(Value *Op, bool AssumeNonZero) {
+    if (takeLog2(Op, /*Depth=*/0, AssumeNonZero, /*DoFold=*/false))
+      return takeLog2(Op, /*Depth=*/0, AssumeNonZero, /*DoFold=*/true);
+    return nullptr;
+  }
 };
 
 class Negator final {

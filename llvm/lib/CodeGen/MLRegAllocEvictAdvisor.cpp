@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "AllocationOrder.h"
-#include "RegAllocEvictionAdvisor.h"
 #include "RegAllocGreedy.h"
 #include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/TensorSpec.h"
+#include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL) || defined(LLVM_HAVE_TFLITE)
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
@@ -42,6 +42,7 @@
 #include <array>
 #include <bitset>
 #include <memory>
+#include <unordered_map>
 
 using namespace llvm;
 
@@ -62,6 +63,12 @@ static cl::opt<std::string> InteractiveChannelBaseName(
         "have the name <regalloc-evict-interactive-channel-base>.in, while the "
         "outgoing name should be "
         "<regalloc-evict-interactive-channel-base>.out"));
+
+static cl::opt<unsigned> MaxEvictionCount(
+    "mlregalloc-max-eviction-count", cl::Hidden,
+    cl::desc("The maximum number of times a live range can be "
+             "evicted before preventing it from being evicted"),
+    cl::init(100));
 
 // Options that only make sense in development mode
 #ifdef LLVM_HAVE_TFLITE
@@ -108,8 +115,8 @@ public:
   /// RegAllocReward analysis usage.
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<RegAllocEvictionAdvisorAnalysis>();
-    AU.addRequired<RegAllocPriorityAdvisorAnalysis>();
+    AU.addRequired<RegAllocEvictionAdvisorAnalysisLegacy>();
+    AU.addRequired<RegAllocPriorityAdvisorAnalysisLegacy>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -358,6 +365,22 @@ private:
 
   using RegID = unsigned;
   mutable DenseMap<RegID, LIFeatureComponents> CachedFeatures;
+
+  mutable std::unordered_map<unsigned, unsigned> VirtRegEvictionCounts;
+
+  void onEviction(Register RegBeingEvicted) const {
+    // If we cannot find the virtual register in the map, we just assume it has
+    // not been evicted before and thus has a value of zero (which is what the
+    // subscript operator returns by default).
+    ++VirtRegEvictionCounts[RegBeingEvicted.id()];
+  }
+
+  unsigned getEvictionCount(Register Reg) const {
+    auto EvictionCountIt = VirtRegEvictionCounts.find(Reg.id());
+    if (EvictionCountIt != VirtRegEvictionCounts.end())
+      return EvictionCountIt->second;
+    return 0;
+  }
 };
 
 #define _DECL_FEATURES(type, name, shape, _)                                   \
@@ -366,11 +389,12 @@ private:
 // ===================================
 // Release (AOT) - specifics
 // ===================================
-class ReleaseModeEvictionAdvisorAnalysis final
-    : public RegAllocEvictionAdvisorAnalysis {
+/// Common provider for legacy and new pass managers.
+class ReleaseModeEvictionAdvisorProvider final
+    : public RegAllocEvictionAdvisorProvider {
 public:
-  ReleaseModeEvictionAdvisorAnalysis()
-      : RegAllocEvictionAdvisorAnalysis(AdvisorMode::Release) {
+  ReleaseModeEvictionAdvisorProvider(LLVMContext &Ctx)
+      : RegAllocEvictionAdvisorProvider(AdvisorMode::Release, Ctx) {
     if (EnableDevelopmentFeatures) {
       InputFeatures = {RA_EVICT_FEATURES_LIST(
           _DECL_FEATURES) RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_DECL_FEATURES)
@@ -380,21 +404,13 @@ public:
     }
   }
   // support for isa<> and dyn_cast.
-  static bool classof(const RegAllocEvictionAdvisorAnalysis *R) {
+  static bool classof(const RegAllocEvictionAdvisorProvider *R) {
     return R->getAdvisorMode() == AdvisorMode::Release;
   }
 
-private:
-  std::vector<TensorSpec> InputFeatures;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
-    RegAllocEvictionAdvisorAnalysis::getAnalysisUsage(AU);
-  }
-
   std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
     if (!Runner) {
       if (InteractiveChannelBaseName.empty())
         Runner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
@@ -405,12 +421,43 @@ private:
             InteractiveChannelBaseName + ".out",
             InteractiveChannelBaseName + ".in");
     }
-    return std::make_unique<MLEvictAdvisor>(
-        MF, RA, Runner.get(),
-        getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI(),
-        getAnalysis<MachineLoopInfoWrapperPass>().getLI());
+    assert(MBFI && Loops &&
+           "Invalid provider state: must have analysis available");
+    return std::make_unique<MLEvictAdvisor>(MF, RA, Runner.get(), *MBFI,
+                                            *Loops);
   }
+
+private:
+  std::vector<TensorSpec> InputFeatures;
   std::unique_ptr<MLModelRunner> Runner;
+};
+
+class ReleaseModeEvictionAdvisorAnalysisLegacy final
+    : public RegAllocEvictionAdvisorAnalysisLegacy {
+public:
+  ReleaseModeEvictionAdvisorAnalysisLegacy()
+      : RegAllocEvictionAdvisorAnalysisLegacy(AdvisorMode::Release) {}
+
+  void logRewardIfNeeded(const MachineFunction &MF,
+                         llvm::function_ref<float()> GetReward) override {
+    // No-op in release mode
+  }
+
+  bool doInitialization(Module &M) override {
+    Provider =
+        std::make_unique<ReleaseModeEvictionAdvisorProvider>(M.getContext());
+    return false;
+  }
+
+  static bool classof(const RegAllocEvictionAdvisorAnalysisLegacy *R) {
+    return R->getAdvisorMode() == AdvisorMode::Release;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    RegAllocEvictionAdvisorAnalysisLegacy::getAnalysisUsage(AU);
+  }
 };
 
 // ===================================
@@ -445,11 +492,11 @@ private:
   Logger *const Log;
 };
 
-class DevelopmentModeEvictionAdvisorAnalysis final
-    : public RegAllocEvictionAdvisorAnalysis {
+class DevelopmentModeEvictionAdvisorProvider final
+    : public RegAllocEvictionAdvisorProvider {
 public:
-  DevelopmentModeEvictionAdvisorAnalysis()
-      : RegAllocEvictionAdvisorAnalysis(AdvisorMode::Development) {
+  DevelopmentModeEvictionAdvisorProvider(LLVMContext &Ctx)
+      : RegAllocEvictionAdvisorProvider(AdvisorMode::Development, Ctx) {
     if (EnableDevelopmentFeatures) {
       InputFeatures = {RA_EVICT_FEATURES_LIST(
           _DECL_FEATURES) RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_DECL_FEATURES)
@@ -469,9 +516,43 @@ public:
           TensorSpec::createSpec<int32_t>("action_step_type", {1}),
           TensorSpec::createSpec<float>("action_reward", {1})};
     }
+    if (ModelUnderTraining.empty() && TrainingLog.empty()) {
+      Ctx.emitError("Regalloc development mode should be requested with at "
+                    "least logging enabled and/or a training model");
+      return;
+    }
+    if (ModelUnderTraining.empty())
+      Runner = std::make_unique<NoInferenceModelRunner>(Ctx, InputFeatures);
+    else
+      Runner = ModelUnderTrainingRunner::createAndEnsureValid(
+          Ctx, ModelUnderTraining, DecisionName, TrainingInputFeatures);
+    if (!Runner) {
+      Ctx.emitError("Regalloc: could not set up the model runner");
+      return;
+    }
+    if (TrainingLog.empty())
+      return;
+    std::error_code EC;
+    auto OS = std::make_unique<raw_fd_ostream>(TrainingLog, EC);
+    if (EC) {
+      Ctx.emitError(EC.message() + ":" + TrainingLog);
+      return;
+    }
+    std::vector<TensorSpec> LFS = InputFeatures;
+    if (auto *MUTR = dyn_cast<ModelUnderTrainingRunner>(Runner.get()))
+      append_range(LFS, MUTR->extraOutputsForLoggingSpecs());
+    // We always log the output; in particular, if we're not evaluating, we
+    // don't have an output spec json file. That's why we handle the
+    // 'normal' output separately.
+    LFS.push_back(DecisionSpec);
+
+    Log = std::make_unique<Logger>(std::move(OS), LFS, Reward,
+                                   /*IncludeReward*/ true);
+    return;
   }
+
   // support for isa<> and dyn_cast.
-  static bool classof(const RegAllocEvictionAdvisorAnalysis *R) {
+  static bool classof(const RegAllocEvictionAdvisorProvider *R) {
     return R->getAdvisorMode() == AdvisorMode::Development;
   }
 
@@ -491,70 +572,57 @@ public:
       Log->logReward<float>(GetReward());
   }
 
-private:
-  std::vector<TensorSpec> InputFeatures;
-  std::vector<TensorSpec> TrainingInputFeatures;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
-    RegAllocEvictionAdvisorAnalysis::getAnalysisUsage(AU);
-  }
-
-  bool doInitialization(Module &M) override {
-    LLVMContext &Ctx = M.getContext();
-    if (ModelUnderTraining.empty() && TrainingLog.empty()) {
-      Ctx.emitError("Regalloc development mode should be requested with at "
-                    "least logging enabled and/or a training model");
-      return false;
-    }
-    if (ModelUnderTraining.empty())
-      Runner = std::make_unique<NoInferenceModelRunner>(Ctx, InputFeatures);
-    else
-      Runner = ModelUnderTrainingRunner::createAndEnsureValid(
-          Ctx, ModelUnderTraining, DecisionName, TrainingInputFeatures);
-    if (!Runner) {
-      Ctx.emitError("Regalloc: could not set up the model runner");
-      return false;
-    }
-    if (TrainingLog.empty())
-      return false;
-    std::error_code EC;
-    auto OS = std::make_unique<raw_fd_ostream>(TrainingLog, EC);
-    if (EC) {
-      M.getContext().emitError(EC.message() + ":" + TrainingLog);
-      return false;
-    }
-    std::vector<TensorSpec> LFS = InputFeatures;
-    if (auto *MUTR = dyn_cast<ModelUnderTrainingRunner>(Runner.get()))
-      append_range(LFS, MUTR->extraOutputsForLoggingSpecs());
-    // We always log the output; in particular, if we're not evaluating, we
-    // don't have an output spec json file. That's why we handle the
-    // 'normal' output separately.
-    LFS.push_back(DecisionSpec);
-
-    Log = std::make_unique<Logger>(std::move(OS), LFS, Reward,
-                                   /*IncludeReward*/ true);
-    return false;
-  }
-
   std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
     if (!Runner)
       return nullptr;
     if (Log)
       Log->switchContext(MF.getName());
+    assert(MBFI && Loops &&
+           "Invalid provider state: must have analysis available");
     return std::make_unique<DevelopmentModeEvictAdvisor>(
-        MF, RA, Runner.get(),
-        getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI(),
-        getAnalysis<MachineLoopInfoWrapperPass>().getLI(), Log.get());
+        MF, RA, Runner.get(), *MBFI, *Loops, Log.get());
   }
+
+private:
+  std::vector<TensorSpec> InputFeatures;
+  std::vector<TensorSpec> TrainingInputFeatures;
 
   std::unique_ptr<MLModelRunner> Runner;
   std::unique_ptr<Logger> Log;
 };
 
-#endif //#ifdef LLVM_HAVE_TFLITE
+class DevelopmentModeEvictionAdvisorAnalysisLegacy final
+    : public RegAllocEvictionAdvisorAnalysisLegacy {
+public:
+  DevelopmentModeEvictionAdvisorAnalysisLegacy()
+      : RegAllocEvictionAdvisorAnalysisLegacy(AdvisorMode::Development) {}
+
+  bool doInitialization(Module &M) override {
+    Provider = std::make_unique<DevelopmentModeEvictionAdvisorProvider>(
+        M.getContext());
+    return false;
+  }
+
+  void logRewardIfNeeded(const MachineFunction &MF,
+                         llvm::function_ref<float()> GetReward) override {
+    Provider->logRewardIfNeeded(MF, GetReward);
+  }
+
+  // support for isa<> and dyn_cast.
+  static bool classof(const RegAllocEvictionAdvisorAnalysisLegacy *R) {
+    return R->getAdvisorMode() == AdvisorMode::Development;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    RegAllocEvictionAdvisorAnalysisLegacy::getAnalysisUsage(AU);
+  }
+};
+
+#endif // #ifdef LLVM_HAVE_TFLITE
 } // namespace
 
 float MLEvictAdvisor::getInitialQueueSize(const MachineFunction &MF) {
@@ -643,8 +711,18 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
            RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
                RegClassInfo.getNumAllocatableRegs(
                    MRI->getRegClass(Intf->reg())));
-      // Only evict older cascades or live ranges without a cascade.
+
       unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
+      // There is a potential that the model could be adversarial and
+      // continually evict live ranges over and over again, leading to a
+      // large amount of compile time being spent in regalloc. If we hit the
+      // threshold, prevent the range from being evicted. We still let the
+      // range through if it is urgent as we are required to produce an
+      // eviction if the candidate is not spillable.
+      if (getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
+        return false;
+
+      // Only evict older cascades or live ranges without a cascade.
       if (Cascade <= IntfCascade) {
         if (!Urgent)
           return false;
@@ -782,11 +860,24 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   // Regs[CandidatePos].second)
   assert(Regs[CandidatePos].second);
   if (CandidatePos == CandidateVirtRegPos) {
+    onEviction(VirtReg.reg());
     assert(!MustFindEviction);
     return MCRegister::NoRegister;
   }
   assert(CandidatePos < ValidPosLimit);
   (void)ValidPosLimit;
+
+  // Update information about how many times the virtual registers being
+  // evicted have been evicted so that we can prevent the model from evicting
+  // the same ranges continually and eating compile time.
+  for (MCRegUnit Unit : TRI->regunits(Regs[CandidatePos].first)) {
+    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
+    const auto &IFIntervals = Q.interferingVRegs(EvictInterferenceCutoff);
+    for (const LiveInterval *Intf : reverse(IFIntervals)) {
+      onEviction(Intf->reg());
+    }
+  }
+
   return Regs[CandidatePos].first;
 }
 
@@ -1078,8 +1169,9 @@ void llvm::extractMBBFrequency(
 // Development mode-specific implementations
 #ifdef LLVM_HAVE_TFLITE
 
-RegAllocEvictionAdvisorAnalysis *llvm::createDevelopmentModeAdvisor() {
-  return new DevelopmentModeEvictionAdvisorAnalysis();
+RegAllocEvictionAdvisorAnalysisLegacy *
+llvm::createDevelopmentModeAdvisorAnalysisLegacy() {
+  return new DevelopmentModeEvictionAdvisorAnalysisLegacy();
 }
 
 int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
@@ -1145,18 +1237,32 @@ bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
     return *CachedReward;
   };
 
-  getAnalysis<RegAllocEvictionAdvisorAnalysis>().logRewardIfNeeded(MF,
-                                                                   GetReward);
-  getAnalysis<RegAllocPriorityAdvisorAnalysis>().logRewardIfNeeded(MF,
-                                                                   GetReward);
+  getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().logRewardIfNeeded(
+      MF, GetReward);
+  getAnalysis<RegAllocPriorityAdvisorAnalysisLegacy>().logRewardIfNeeded(
+      MF, GetReward);
   return false;
 }
 #endif // #ifdef LLVM_HAVE_TFLITE
 
-RegAllocEvictionAdvisorAnalysis *llvm::createReleaseModeAdvisor() {
+RegAllocEvictionAdvisorProvider *
+llvm::createReleaseModeAdvisorProvider(LLVMContext &Ctx) {
+  return new ReleaseModeEvictionAdvisorProvider(Ctx);
+}
+
+RegAllocEvictionAdvisorProvider *
+llvm::createDevelopmentModeAdvisorProvider(LLVMContext &Ctx) {
+#if defined(LLVM_HAVE_TFLITE)
+  return new DevelopmentModeEvictionAdvisorProvider(Ctx);
+#endif
+  return nullptr;
+}
+
+RegAllocEvictionAdvisorAnalysisLegacy *
+llvm::createReleaseModeAdvisorAnalysisLegacy() {
   return llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
                  !InteractiveChannelBaseName.empty()
-             ? new ReleaseModeEvictionAdvisorAnalysis()
+             ? new ReleaseModeEvictionAdvisorAnalysisLegacy()
              : nullptr;
 }
 

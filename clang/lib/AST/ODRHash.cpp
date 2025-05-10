@@ -128,13 +128,22 @@ void ODRHash::AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
     AddDecl(NNS->getAsNamespaceAlias());
     break;
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     AddType(NNS->getAsType());
     break;
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Super:
     break;
   }
+}
+
+void ODRHash::AddDependentTemplateName(const DependentTemplateStorage &Name) {
+  if (NestedNameSpecifier *NNS = Name.getQualifier())
+    AddNestedNameSpecifier(NNS);
+  if (IdentifierOrOverloadedOperator IO = Name.getName();
+      const IdentifierInfo *II = IO.getIdentifier())
+    AddIdentifierInfo(II);
+  else
+    ID.AddInteger(IO.getOperator());
 }
 
 void ODRHash::AddTemplateName(TemplateName Name) {
@@ -153,10 +162,13 @@ void ODRHash::AddTemplateName(TemplateName Name) {
     AddTemplateName(QTN->getUnderlyingTemplate());
     break;
   }
+  case TemplateName::DependentTemplate: {
+    AddDependentTemplateName(*Name.getAsDependentTemplateName());
+    break;
+  }
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:
-  case TemplateName::DependentTemplate:
   case TemplateName::SubstTemplateTemplateParm:
   case TemplateName::SubstTemplateTemplateParmPack:
   case TemplateName::UsingTemplate:
@@ -818,15 +830,20 @@ void ODRHash::AddDecl(const Decl *D) {
 
   AddDeclarationName(ND->getDeclName());
 
-  const auto *Specialization =
-            dyn_cast<ClassTemplateSpecializationDecl>(D);
-  AddBoolean(Specialization);
-  if (Specialization) {
-    const TemplateArgumentList &List = Specialization->getTemplateArgs();
-    ID.AddInteger(List.size());
-    for (const TemplateArgument &TA : List.asArray())
-      AddTemplateArgument(TA);
-  }
+  // If this was a specialization we should take into account its template
+  // arguments. This helps to reduce collisions coming when visiting template
+  // specialization types (eg. when processing type template arguments).
+  ArrayRef<TemplateArgument> Args;
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D))
+    Args = CTSD->getTemplateArgs().asArray();
+  else if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(D))
+    Args = VTSD->getTemplateArgs().asArray();
+  else if (auto *FD = dyn_cast<FunctionDecl>(D))
+    if (FD->getTemplateSpecializationArgs())
+      Args = FD->getTemplateSpecializationArgs()->asArray();
+
+  for (auto &TA : Args)
+    AddTemplateArgument(TA);
 }
 
 namespace {
@@ -1071,7 +1088,7 @@ public:
 
   void VisitMemberPointerType(const MemberPointerType *T) {
     AddQualType(T->getPointeeType());
-    AddType(T->getClass());
+    AddNestedNameSpecifier(T->getQualifier());
     VisitType(T);
   }
 
@@ -1216,8 +1233,7 @@ public:
 
   void VisitDependentTemplateSpecializationType(
       const DependentTemplateSpecializationType *T) {
-    AddIdentifierInfo(T->getIdentifier());
-    AddNestedNameSpecifier(T->getQualifier());
+    Hash.AddDependentTemplateName(T->getDependentTemplateName());
     ID.AddInteger(T->template_arguments().size());
     for (const auto &TA : T->template_arguments()) {
       Hash.AddTemplateArgument(TA);

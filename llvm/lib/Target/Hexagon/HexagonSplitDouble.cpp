@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
@@ -43,13 +44,6 @@
 #define DEBUG_TYPE "hsdr"
 
 using namespace llvm;
-
-namespace llvm {
-
-  FunctionPass *createHexagonSplitDoubleRegs();
-  void initializeHexagonSplitDoubleRegsPass(PassRegistry&);
-
-} // end namespace llvm
 
 static cl::opt<int> MaxHSDR("max-hsdr", cl::Hidden, cl::init(-1),
     cl::desc("Maximum number of split partitions"));
@@ -264,7 +258,7 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
         }
         if (MRI->getRegClass(T) != DoubleRC)
           continue;
-        unsigned u = Register::virtReg2Index(T);
+        unsigned u = T.virtRegIndex();
         if (FixedRegs[u])
           continue;
         LLVM_DEBUG(dbgs() << ' ' << printReg(T, TRI));

@@ -210,7 +210,6 @@ public:
   inline const SDValue &getOperand(unsigned i) const;
   inline uint64_t getConstantOperandVal(unsigned i) const;
   inline const APInt &getConstantOperandAPInt(unsigned i) const;
-  inline bool isTargetMemoryOpcode() const;
   inline bool isTargetOpcode() const;
   inline bool isMachineOpcode() const;
   inline bool isUndef() const;
@@ -309,6 +308,9 @@ public:
 
   /// Get the next SDUse in the use list.
   SDUse *getNext() const { return Next; }
+
+  /// Return the operand # of this use in its user.
+  inline unsigned getOperandNo() const;
 
   /// Convenience function for get().getNode().
   SDNode *getNode() const { return Val.getNode(); }
@@ -419,6 +421,8 @@ public:
 
     PoisonGeneratingFlags = NoUnsignedWrap | NoSignedWrap | Exact | Disjoint |
                             NonNeg | NoNaNs | NoInfs | SameSign,
+    FastMathFlags = NoNaNs | NoInfs | NoSignedZeros | AllowReciprocal |
+                    AllowContract | ApproximateFuncs | AllowReassociation,
   };
 
   /// Default constructor turns off all optimization flags.
@@ -688,24 +692,10 @@ public:
   /// \<target\>ISD namespace).
   bool isTargetOpcode() const { return NodeType >= ISD::BUILTIN_OP_END; }
 
-  /// Test if this node has a target-specific opcode that may raise
-  /// FP exceptions (in the \<target\>ISD namespace and greater than
-  /// FIRST_TARGET_STRICTFP_OPCODE).  Note that all target memory
-  /// opcode are currently automatically considered to possibly raise
-  /// FP exceptions as well.
-  bool isTargetStrictFPOpcode() const {
-    return NodeType >= ISD::FIRST_TARGET_STRICTFP_OPCODE;
+  /// Returns true if the node type is UNDEF or POISON.
+  bool isUndef() const {
+    return NodeType == ISD::UNDEF || NodeType == ISD::POISON;
   }
-
-  /// Test if this node has a target-specific
-  /// memory-referencing opcode (in the \<target\>ISD namespace and
-  /// greater than FIRST_TARGET_MEMORY_OPCODE).
-  bool isTargetMemoryOpcode() const {
-    return NodeType >= ISD::FIRST_TARGET_MEMORY_OPCODE;
-  }
-
-  /// Return true if the type of the node type undefined.
-  bool isUndef() const { return NodeType == ISD::UNDEF; }
 
   /// Test if this node is a memory intrinsic (with valid pointer information).
   bool isMemIntrinsic() const { return SDNodeBits.IsMemIntrinsic; }
@@ -806,9 +796,6 @@ public:
       return !operator==(x);
     }
 
-    /// Return true if this iterator is at the end of uses list.
-    bool atEnd() const { return Op == nullptr; }
-
     // Iterator traversal: forward iteration only.
     use_iterator &operator++() {          // Preincrement
       assert(Op && "Cannot increment end iterator!");
@@ -821,20 +808,49 @@ public:
     }
 
     /// Retrieve a pointer to the current user node.
-    SDNode *operator*() const {
+    SDUse &operator*() const {
       assert(Op && "Cannot dereference end iterator!");
-      return Op->getUser();
+      return *Op;
     }
+
+    SDUse *operator->() const { return &operator*(); }
+  };
+
+  class user_iterator {
+    friend class SDNode;
+    use_iterator UI;
+
+    explicit user_iterator(SDUse *op) : UI(op) {};
+
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = SDNode *;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+    user_iterator() = default;
+
+    bool operator==(const user_iterator &x) const { return UI == x.UI; }
+    bool operator!=(const user_iterator &x) const { return !operator==(x); }
+
+    user_iterator &operator++() { // Preincrement
+      ++UI;
+      return *this;
+    }
+
+    user_iterator operator++(int) { // Postincrement
+      auto tmp = *this;
+      ++*this;
+      return tmp;
+    }
+
+    // Retrieve a pointer to the current User.
+    SDNode *operator*() const { return UI->getUser(); }
 
     SDNode *operator->() const { return operator*(); }
 
-    SDUse &getUse() const { return *Op; }
-
-    /// Retrieve the operand # of this use in its user.
-    unsigned getOperandNo() const {
-      assert(Op && "Cannot dereference end iterator!");
-      return (unsigned)(Op - Op->getUser()->OperandList);
-    }
+    SDUse &getUse() const { return *UI; }
   };
 
   /// Provide iteration support to walk over all uses of an SDNode.
@@ -851,9 +867,35 @@ public:
     return make_range(use_begin(), use_end());
   }
 
+  /// Provide iteration support to walk over all users of an SDNode.
+  user_iterator user_begin() const { return user_iterator(UseList); }
+
+  static user_iterator user_end() { return user_iterator(nullptr); }
+
+  inline iterator_range<user_iterator> users() {
+    return make_range(user_begin(), user_end());
+  }
+  inline iterator_range<user_iterator> users() const {
+    return make_range(user_begin(), user_end());
+  }
+
   /// Return true if there are exactly NUSES uses of the indicated value.
   /// This method ignores uses of other values defined by this operation.
-  bool hasNUsesOfValue(unsigned NUses, unsigned Value) const;
+  bool hasNUsesOfValue(unsigned NUses, unsigned Value) const {
+    assert(Value < getNumValues() && "Bad value!");
+
+    // TODO: Only iterate over uses of a given value of the node
+    for (SDUse &U : uses()) {
+      if (U.getResNo() == Value) {
+        if (NUses == 0)
+          return false;
+        --NUses;
+      }
+    }
+
+    // Found exactly the right number of uses?
+    return NUses == 0;
+  }
 
   /// Return true if there are any use of the indicated value.
   /// This method ignores uses of other values defined by this operation.
@@ -892,10 +934,10 @@ public:
                                    SmallVectorImpl<const SDNode *> &Worklist,
                                    unsigned int MaxSteps = 0,
                                    bool TopologicalPrune = false) {
-    SmallVector<const SDNode *, 8> DeferredNodes;
     if (Visited.count(N))
       return true;
 
+    SmallVector<const SDNode *, 8> DeferredNodes;
     // Node Id's are assigned in three places: As a topological
     // ordering (> 0), during legalization (results in values set to
     // 0), new nodes (set to -1). If N has a topolgical id then we
@@ -965,6 +1007,8 @@ public:
   /// Helper method returns the APInt value of a ConstantSDNode.
   inline const APInt &getAsAPIntVal() const;
 
+  inline std::optional<APInt> bitcastToAPInt() const;
+
   const SDValue &getOperand(unsigned Num) const {
     assert(Num < NumOperands && "Invalid child # of SDNode!");
     return OperandList[Num];
@@ -1010,9 +1054,9 @@ public:
   /// If this node has a glue value with a user, return
   /// the user (there is at most one). Otherwise return NULL.
   SDNode *getGluedUser() const {
-    for (use_iterator UI = use_begin(), UE = use_end(); UI != UE; ++UI)
-      if (UI.getUse().get().getValueType() == MVT::Glue)
-        return *UI;
+    for (SDUse &U : uses())
+      if (U.getValueType() == MVT::Glue)
+        return U.getUser();
     return nullptr;
   }
 
@@ -1214,10 +1258,6 @@ inline bool SDValue::isTargetOpcode() const {
   return Node->isTargetOpcode();
 }
 
-inline bool SDValue::isTargetMemoryOpcode() const {
-  return Node->isTargetMemoryOpcode();
-}
-
 inline bool SDValue::isMachineOpcode() const {
   return Node->isMachineOpcode();
 }
@@ -1259,6 +1299,9 @@ inline void SDValue::dumpr(const SelectionDAG *G) const {
 }
 
 // Define inline functions from the SDUse class.
+inline unsigned SDUse::getOperandNo() const {
+  return this - getUser()->op_begin();
+}
 
 inline void SDUse::set(const SDValue &V) {
   if (Val.getNode()) removeFromList();
@@ -1474,6 +1517,8 @@ public:
     case ISD::ATOMIC_LOAD_FSUB:
     case ISD::ATOMIC_LOAD_FMAX:
     case ISD::ATOMIC_LOAD_FMIN:
+    case ISD::ATOMIC_LOAD_FMAXIMUM:
+    case ISD::ATOMIC_LOAD_FMINIMUM:
     case ISD::ATOMIC_LOAD_UINC_WRAP:
     case ISD::ATOMIC_LOAD_UDEC_WRAP:
     case ISD::ATOMIC_LOAD_USUB_COND:
@@ -1503,15 +1548,13 @@ public:
 /// This is an SDNode representing atomic operations.
 class AtomicSDNode : public MemSDNode {
 public:
-  AtomicSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl, SDVTList VTL,
-               EVT MemVT, MachineMemOperand *MMO)
-    : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
+  AtomicSDNode(unsigned Order, const DebugLoc &dl, unsigned Opc, SDVTList VTL,
+               EVT MemVT, MachineMemOperand *MMO, ISD::LoadExtType ETy)
+      : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
     assert(((Opc != ISD::ATOMIC_LOAD && Opc != ISD::ATOMIC_STORE) ||
             MMO->isAtomic()) && "then why are we using an AtomicSDNode?");
-  }
-
-  void setExtensionType(ISD::LoadExtType ETy) {
-    assert(getOpcode() == ISD::ATOMIC_LOAD && "Only used for atomic loads.");
+    assert((Opc == ISD::ATOMIC_LOAD || ETy == ISD::NON_EXTLOAD) &&
+           "Only atomic load uses ExtTy");
     LoadSDNodeBits.ExtTy = ETy;
   }
 
@@ -1562,6 +1605,8 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_FSUB ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMAX ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMIN ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMAXIMUM ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMINIMUM ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UINC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UDEC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_USUB_COND ||
@@ -1571,10 +1616,10 @@ public:
   }
 };
 
-/// This SDNode is used for target intrinsics that touch
-/// memory and need an associated MachineMemOperand. Its opcode may be
-/// INTRINSIC_VOID, INTRINSIC_W_CHAIN, PREFETCH, or a target-specific opcode
-/// with a value not less than FIRST_TARGET_MEMORY_OPCODE.
+/// This SDNode is used for target intrinsics that touch memory and need
+/// an associated MachineMemOperand. Its opcode may be INTRINSIC_VOID,
+/// INTRINSIC_W_CHAIN, PREFETCH, or a target-specific memory-referencing
+/// opcode (see `SelectionDAGTargetInfo::isTargetMemoryOpcode`).
 class MemIntrinsicSDNode : public MemSDNode {
 public:
   MemIntrinsicSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
@@ -1622,12 +1667,15 @@ public:
     return Mask[Idx];
   }
 
-  bool isSplat() const { return isSplatMask(Mask, getValueType(0)); }
+  bool isSplat() const { return isSplatMask(getMask()); }
 
-  int getSplatIndex() const {
-    assert(isSplat() && "Cannot get splat index for non-splat!");
-    EVT VT = getValueType(0);
-    for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i)
+  int getSplatIndex() const { return getSplatMaskIndex(getMask()); }
+
+  static bool isSplatMask(ArrayRef<int> Mask);
+
+  static int getSplatMaskIndex(ArrayRef<int> Mask) {
+    assert(isSplatMask(Mask) && "Cannot get splat index for non-splat!");
+    for (unsigned i = 0, e = Mask.size(); i != e; ++i)
       if (Mask[i] >= 0)
         return Mask[i];
 
@@ -1635,8 +1683,6 @@ public:
     // are undefined. Return 0 for better potential for callers to simplify.
     return 0;
   }
-
-  static bool isSplatMask(const int *Mask, EVT VT);
 
   /// Change values in a shuffle permute mask assuming
   /// the two vector operands have swapped position.
@@ -1761,6 +1807,14 @@ public:
            N->getOpcode() == ISD::TargetConstantFP;
   }
 };
+
+std::optional<APInt> SDNode::bitcastToAPInt() const {
+  if (auto *CN = dyn_cast<ConstantSDNode>(this))
+    return CN->getAPIntValue();
+  if (auto *CFPN = dyn_cast<ConstantFPSDNode>(this))
+    return CFPN->getValueAPF().bitcastToAPInt();
+  return std::nullopt;
+}
 
 /// Returns true if \p V is a constant integer zero.
 bool isNullConstant(SDValue V);
@@ -2483,9 +2537,6 @@ public:
   /// For integers this is the same as doing a TRUNCATE and storing the result.
   /// For floats, it is the same as doing an FP_ROUND and storing the result.
   bool isTruncatingStore() const { return StoreSDNodeBits.IsTruncating; }
-  void setTruncatingStore(bool Truncating) {
-    StoreSDNodeBits.IsTruncating = Truncating;
-  }
 
   const SDValue &getValue() const { return getOperand(1); }
   const SDValue &getBasePtr() const { return getOperand(2); }
@@ -3238,13 +3289,16 @@ namespace ISD {
   template <typename ConstNodeType>
   bool matchUnaryPredicateImpl(SDValue Op,
                                std::function<bool(ConstNodeType *)> Match,
-                               bool AllowUndefs = false);
+                               bool AllowUndefs = false,
+                               bool AllowTruncation = false);
 
   /// Hook for matching ConstantSDNode predicate
   inline bool matchUnaryPredicate(SDValue Op,
                                   std::function<bool(ConstantSDNode *)> Match,
-                                  bool AllowUndefs = false) {
-    return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs);
+                                  bool AllowUndefs = false,
+                                  bool AllowTruncation = false) {
+    return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs,
+                                                   AllowTruncation);
   }
 
   /// Hook for matching ConstantFPSDNode predicate

@@ -18,7 +18,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/GPU/Transforms/Utils.h"
+#include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -30,8 +30,8 @@
 #include <limits>
 
 namespace mlir {
-#define GEN_PASS_DEF_GPULAUNCHSINKINDEXCOMPUTATIONS
-#define GEN_PASS_DEF_GPUKERNELOUTLINING
+#define GEN_PASS_DEF_GPULAUNCHSINKINDEXCOMPUTATIONSPASS
+#define GEN_PASS_DEF_GPUKERNELOUTLININGPASS
 #include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -266,8 +266,8 @@ gpu::GPUFuncOp mlir::outlineKernelFunc(gpu::LaunchOp launchOp,
                                        StringRef kernelFnName,
                                        llvm::SmallVectorImpl<Value> &operands) {
   DenseSet<Value> inputOperandSet;
-  inputOperandSet.insert(operands.begin(), operands.end());
-  SetVector<Value> operandSet(operands.begin(), operands.end());
+  inputOperandSet.insert_range(operands);
+  SetVector<Value> operandSet(llvm::from_range, operands);
   auto funcOp = outlineKernelFuncImpl(launchOp, kernelFnName, operandSet);
   for (auto operand : operandSet) {
     if (!inputOperandSet.count(operand))
@@ -302,7 +302,7 @@ namespace {
 /// Pass that moves ops which are likely an index computation into gpu.launch
 /// body.
 class GpuLaunchSinkIndexComputationsPass
-    : public impl::GpuLaunchSinkIndexComputationsBase<
+    : public impl::GpuLaunchSinkIndexComputationsPassBase<
           GpuLaunchSinkIndexComputationsPass> {
 public:
   void runOnOperation() override {
@@ -329,17 +329,9 @@ public:
 /// a separate pass. The external functions can then be annotated with the
 /// symbol of the cubin accessor function.
 class GpuKernelOutliningPass
-    : public impl::GpuKernelOutliningBase<GpuKernelOutliningPass> {
+    : public impl::GpuKernelOutliningPassBase<GpuKernelOutliningPass> {
 public:
-  GpuKernelOutliningPass(StringRef dlStr) {
-    if (!dlStr.empty() && !dataLayoutStr.hasValue())
-      dataLayoutStr = dlStr.str();
-  }
-
-  GpuKernelOutliningPass(const GpuKernelOutliningPass &other)
-      : GpuKernelOutliningBase(other), dataLayoutSpec(other.dataLayoutSpec) {
-    dataLayoutStr = other.dataLayoutStr.getValue();
-  }
+  using Base::Base;
 
   LogicalResult initialize(MLIRContext *context) override {
     // Initialize the data layout specification from the data layout string.
@@ -457,21 +449,7 @@ private:
     return kernelModule;
   }
 
-  Option<std::string> dataLayoutStr{
-      *this, "data-layout-str",
-      llvm::cl::desc("String containing the data layout specification to be "
-                     "attached to the GPU kernel module")};
-
   DataLayoutSpecInterface dataLayoutSpec;
 };
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::createGpuLauchSinkIndexComputationsPass() {
-  return std::make_unique<GpuLaunchSinkIndexComputationsPass>();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createGpuKernelOutliningPass(StringRef dataLayoutStr) {
-  return std::make_unique<GpuKernelOutliningPass>(dataLayoutStr);
-}

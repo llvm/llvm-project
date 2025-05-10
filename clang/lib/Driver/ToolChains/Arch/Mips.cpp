@@ -104,6 +104,8 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
                   .Case("mips64r6", "n64")
                   .Case("octeon", "n64")
                   .Case("p5600", "o32")
+                  .Case("i6400", "n64")
+                  .Case("i6500", "n64")
                   .Default("");
   }
 
@@ -366,9 +368,6 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   } else if (mips::shouldUseFPXX(Args, Triple, CPUName, ABIName, FloatABI)) {
     Features.push_back("+fpxx");
     Features.push_back("+nooddspreg");
-  } else if (mips::isFP64ADefault(Triple, CPUName)) {
-    Features.push_back("+fp64");
-    Features.push_back("+nooddspreg");
   } else if (Arg *A = Args.getLastArg(options::OPT_mmsa)) {
     if (A->getOption().matches(options::OPT_mmsa))
       Features.push_back("+fp64");
@@ -465,16 +464,6 @@ bool mips::isNaN2008(const Driver &D, const ArgList &Args,
       .Default(false);
 }
 
-bool mips::isFP64ADefault(const llvm::Triple &Triple, StringRef CPUName) {
-  if (!Triple.isAndroid())
-    return false;
-
-  // Android MIPS32R6 defaults to FP64A.
-  return llvm::StringSwitch<bool>(CPUName)
-      .Case("mips32r6", true)
-      .Default(false);
-}
-
 bool mips::isFPXXDefault(const llvm::Triple &Triple, StringRef CPUName,
                          StringRef ABIName, mips::FloatABI FloatABI) {
   if (ABIName != "32")
@@ -527,5 +516,7 @@ bool mips::supportsIndirectJumpHazardBarrier(StringRef &CPU) {
       .Case("mips64r6", true)
       .Case("octeon", true)
       .Case("p5600", true)
+      .Case("i6400", true)
+      .Case("i6500", true)
       .Default(false);
 }

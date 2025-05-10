@@ -193,7 +193,8 @@ public:
     Mesa,
     SUSE,
     OpenEmbedded,
-    LastVendorType = OpenEmbedded
+    Intel,
+    LastVendorType = Intel
   };
   enum OSType {
     UnknownOS,
@@ -207,6 +208,7 @@ public:
     Linux,
     Lv2, // PS3
     MacOSX,
+    Managarm,
     NetBSD,
     OpenBSD,
     Solaris,
@@ -298,6 +300,7 @@ public:
     Amplification,
     OpenCL,
     OpenHOS,
+    Mlibc,
 
     PAuthTest,
 
@@ -365,14 +368,26 @@ public:
   /// @name Normalization
   /// @{
 
+  /// Canonical form
+  enum class CanonicalForm {
+    ANY = 0,
+    THREE_IDENT = 3, // ARCHITECTURE-VENDOR-OPERATING_SYSTEM
+    FOUR_IDENT = 4,  // ARCHITECTURE-VENDOR-OPERATING_SYSTEM-ENVIRONMENT
+    FIVE_IDENT = 5,  // ARCHITECTURE-VENDOR-OPERATING_SYSTEM-ENVIRONMENT-FORMAT
+  };
+
   /// Turn an arbitrary machine specification into the canonical triple form (or
   /// something sensible that the Triple class understands if nothing better can
   /// reasonably be done).  In particular, it handles the common case in which
-  /// otherwise valid components are in the wrong order.
-  static std::string normalize(StringRef Str);
+  /// otherwise valid components are in the wrong order. \p Form is used to
+  /// specify the output canonical form.
+  static std::string normalize(StringRef Str,
+                               CanonicalForm Form = CanonicalForm::ANY);
 
   /// Return the normalized form of this triple's string.
-  std::string normalize() const { return normalize(Data); }
+  std::string normalize(CanonicalForm Form = CanonicalForm::ANY) const {
+    return normalize(Data, Form);
+  }
 
   /// @}
   /// @name Typed Component Access
@@ -450,6 +465,9 @@ public:
 
   const std::string &getTriple() const { return Data; }
 
+  /// Whether the triple is empty / default constructed.
+  bool empty() const { return Data.empty(); }
+
   /// Get the architecture (first) component of the triple.
   StringRef getArchName() const;
 
@@ -484,6 +502,9 @@ public:
   unsigned getArchPointerBitWidth() const {
     return getArchPointerBitWidth(getArch());
   }
+
+  /// Returns the trampoline size in bytes for this configuration.
+  unsigned getTrampolineSize() const;
 
   /// Test whether the architecture is 64-bit
   ///
@@ -562,6 +583,11 @@ public:
   bool isDriverKit() const { return getOS() == Triple::DriverKit; }
 
   bool isOSzOS() const { return getOS() == Triple::ZOS; }
+
+  /// Is this an Apple MachO triple.
+  bool isAppleMachO() const {
+    return (getVendor() == Triple::Apple) && isOSBinFormatMachO();
+  }
 
   /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, XROS, or DriverKit).
   bool isOSDarwin() const {
@@ -822,6 +848,8 @@ public:
 
   bool isVulkanOS() const { return getOS() == Triple::Vulkan; }
 
+  bool isOSManagarm() const { return getOS() == Triple::Managarm; }
+
   bool isShaderStageEnvironment() const {
     EnvironmentType Env = getEnvironment();
     return Env == Triple::Pixel || Env == Triple::Vertex ||
@@ -845,6 +873,9 @@ public:
            getArch() == Triple::spirv;
   }
 
+  // Tests whether the target is SPIR-V or SPIR.
+  bool isSPIROrSPIRV() const { return isSPIR() || isSPIRV(); }
+
   /// Tests whether the target is SPIR-V Logical
   bool isSPIRVLogical() const {
     return getArch() == Triple::spirv;
@@ -858,9 +889,7 @@ public:
   /// Tests whether the target is AMDGCN
   bool isAMDGCN() const { return getArch() == Triple::amdgcn; }
 
-  bool isAMDGPU() const {
-    return getArch() == Triple::r600 || getArch() == Triple::amdgcn;
-  }
+  bool isAMDGPU() const { return getArch() == Triple::r600 || isAMDGCN(); }
 
   /// Tests whether the target is Thumb (little and big endian).
   bool isThumb() const {
@@ -1096,9 +1125,10 @@ public:
            isWindowsCygwinEnvironment() || isOHOSFamily();
   }
 
-  /// True if the target supports both general-dynamic and TLSDESC, and TLSDESC
-  /// is enabled by default.
-  bool hasDefaultTLSDESC() const { return isAndroid() && isRISCV64(); }
+  /// True if the target uses TLSDESC by default.
+  bool hasDefaultTLSDESC() const {
+    return isAArch64() || (isAndroid() && isRISCV64()) || isOSFuchsia();
+  }
 
   /// Tests whether the target uses -data-sections as default.
   bool hasDefaultDataSections() const {
@@ -1189,6 +1219,9 @@ public:
 
   /// Test whether target triples are compatible.
   bool isCompatibleWith(const Triple &Other) const;
+
+  /// Test whether the target triple is for a GPU.
+  bool isGPU() const { return isSPIRV() || isNVPTX() || isAMDGPU(); }
 
   /// Merge target triples.
   std::string merge(const Triple &Other) const;

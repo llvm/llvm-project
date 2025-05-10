@@ -5,8 +5,11 @@ r3:2=cround(r1:0,#0x0)       // v67, audio
 v3:0.w=vrmpyz(v0.b,r0.b)     // hvxv73, zreg
 v1:0.sf=vadd(v0.bf,v0.bf)    // hvxv73, hvx-ieee-fp
 
-// RUN: llvm-mc --mattr=+v67,+hvxv73,+hvx-qfloat,+hvx-ieee-fp,+zreg,+audio %s \
-// RUN:   -triple=hexagon -filetype=obj --hexagon-add-build-attributes -o %t.o
+// Note that the CPU version should be set with `--mcpu` and not with attributes
+// because attributes are additive.
+// RUN: llvm-mc -triple=hexagon --mcpu=hexagonv67 \
+// RUN:   --mattr=+hvxv73,+hvx-qfloat,+hvx-ieee-fp,+zreg,+audio %s \
+// RUN:   -filetype=obj --hexagon-add-build-attributes -o %t.o
 
 // RUN: llvm-readelf -A %t.o | \
 // RUN:   FileCheck %s --match-full-lines --implicit-check-not={{.}} --check-prefix=READELF
@@ -15,8 +18,9 @@ v1:0.sf=vadd(v0.bf,v0.bf)    // hvxv73, hvx-ieee-fp
 /// without manually passing in features when an attribute section is present.
 // RUN: llvm-objdump -d %t.o | FileCheck %s --check-prefix=OBJDUMP
 
-// RUN: llvm-mc --mattr=+v67,+hvxv73,+hvx-qfloat,+hvx-ieee-fp,+zreg,+audio %s \
-// RUN:   -triple=hexagon -filetype=asm --hexagon-add-build-attributes | \
+// RUN: llvm-mc -triple=hexagon --mcpu=hexagonv67 \
+// RUN:   --mattr=+hvxv73,+hvx-qfloat,+hvx-ieee-fp,+zreg,+audio %s \
+// RUN:   -filetype=asm --hexagon-add-build-attributes | \
 // RUN:     FileCheck %s --match-full-lines --implicit-check-not={{.}} --check-prefix=ASM
 
 //      READELF: BuildAttributes {
@@ -78,7 +82,6 @@ v1:0.sf=vadd(v0.bf,v0.bf)    // hvxv73, hvx-ieee-fp
 // ASM-NEXT: .attribute      8, 1    // Tag_zreg
 // ASM-NEXT: .attribute      9, 1    // Tag_audio
 // ASM-NEXT: .attribute      10, 1   // Tag_cabac
-// ASM-NEXT:        .text
 // ASM-EMPTY:
 // ASM-NEXT:        {
 // ASM-NEXT:                q0 &= vcmp.gt(v0.bf,v0.bf)

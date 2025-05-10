@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STRING_CONSTEXPR_C_FUNCTIONS_H
-#define _LIBCPP___STRING_CONSTEXPR_C_FUNCTIONS_H
+#ifndef _LIBCPP___CXX03___STRING_CONSTEXPR_C_FUNCTIONS_H
+#define _LIBCPP___CXX03___STRING_CONSTEXPR_C_FUNCTIONS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/addressof.h>
@@ -52,10 +52,6 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 size_t __constexpr_st
   // GCC currently doesn't support __builtin_strlen for heap-allocated memory during constant evaluation.
   // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70816
   if (__libcpp_is_constant_evaluated()) {
-#if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_COMPILER_CLANG_BASED)
-    if constexpr (is_same_v<_Tp, char>)
-      return __builtin_strlen(__str);
-#endif
     size_t __i = 0;
     for (; __str[__i] != '\0'; ++__i)
       ;
@@ -133,11 +129,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __constexpr_memchr(_Tp*
                 "Calling memchr on non-trivially equality comparable types is unsafe.");
 
   if (__libcpp_is_constant_evaluated()) {
-// use __builtin_char_memchr to optimize constexpr evaluation if we can
-#if _LIBCPP_STD_VER >= 17 && __has_builtin(__builtin_char_memchr)
-    if constexpr (is_same_v<remove_cv_t<_Tp>, char> && is_same_v<remove_cv_t<_Up>, char>)
-      return __builtin_char_memchr(__str, __value, __count);
-#endif
+    // use __builtin_char_memchr to optimize constexpr evaluation if we can
 
     for (; __count; --__count) {
       if (*__str == __value)
@@ -231,4 +223,4 @@ __constexpr_memmove(_Tp* __dest, _Up* __src, __element_count __n) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___STRING_CONSTEXPR_C_FUNCTIONS_H
+#endif // _LIBCPP___CXX03___STRING_CONSTEXPR_C_FUNCTIONS_H

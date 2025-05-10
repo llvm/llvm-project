@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_RANDOM_DEVICE_H
-#define _LIBCPP___RANDOM_RANDOM_DEVICE_H
+#ifndef _LIBCPP___CXX03___RANDOM_RANDOM_DEVICE_H
+#define _LIBCPP___CXX03___RANDOM_RANDOM_DEVICE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/string>
@@ -54,12 +54,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
 
   // constructors
-#  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI random_device() : random_device("/dev/urandom") {}
-  explicit random_device(const string& __token);
-#  else
   explicit random_device(const string& __token = "/dev/urandom");
-#  endif
   ~random_device();
 
   // generating functions
@@ -78,4 +73,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_RANDOM_DEVICE_H
+#endif // _LIBCPP___CXX03___RANDOM_RANDOM_DEVICE_H

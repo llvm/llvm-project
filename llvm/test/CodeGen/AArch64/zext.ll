@@ -447,7 +447,7 @@ define <3 x i64> @zext_v3i10_v3i64(<3 x i10> %a) {
 ; CHECK-SD-NEXT:    mov w8, #1023 // =0x3ff
 ; CHECK-SD-NEXT:    dup v2.2d, x8
 ; CHECK-SD-NEXT:    mov v0.s[1], w1
-; CHECK-SD-NEXT:    ushll v3.2d, v1.2s, #0
+; CHECK-SD-NEXT:    zip1 v3.2s, v1.2s, v1.2s
 ; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-SD-NEXT:    and v2.8b, v3.8b, v2.8b
@@ -1211,4 +1211,26 @@ define <16 x i64> @zext_v16i10_v16i64(<16 x i10> %a) {
 entry:
   %c = zext <16 x i10> %a to <16 x i64>
   ret <16 x i64> %c
+}
+
+define <2 x i128> @zext_v2i64_v2i128(<2 x i64> %a) {
+; CHECK-SD-LABEL: zext_v2i64_v2i128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov x2, v0.d[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    mov x1, xzr
+; CHECK-SD-NEXT:    mov x3, xzr
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: zext_v2i64_v2i128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    mov x1, xzr
+; CHECK-GI-NEXT:    mov x3, xzr
+; CHECK-GI-NEXT:    fmov x2, d1
+; CHECK-GI-NEXT:    ret
+entry:
+  %c = zext <2 x i64> %a to <2 x i128>
+  ret <2 x i128> %c
 }

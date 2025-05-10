@@ -1900,3 +1900,28 @@ define i1 @masked_icmps_bmask_notmixed_not_subset_notoptimized(i32 %A) {
   %res = and i1 %tst1, %tst2
   ret i1 %res
 }
+
+define i1 @pr120361(i8 %x, i8 %y) {
+; CHECK-LABEL: @pr120361(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp1 = icmp samesign eq i8 %x, -1
+  %cmp2 = icmp ne i8 %x, 0
+  %result = select i1 %cmp2, i1 %cmp1, i1 false
+  ret i1 %result
+}
+
+define i1 @pr120361_v2(i32 %x) {
+; CHECK-LABEL: @pr120361_v2(
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X:%.*]], -113
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[AND2]], 15
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %and1 = and i32 %x, 15
+  %cmp1 = icmp ne i32 %and1, 0
+  %and2 = and i32 %x, -113
+  %cmp2 = icmp samesign eq i32 %and2, 15
+  %and = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %and
+}

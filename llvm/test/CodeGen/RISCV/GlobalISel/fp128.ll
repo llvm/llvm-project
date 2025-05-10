@@ -98,9 +98,8 @@ define fp128 @fneg(fp128 %x) {
 define fp128 @fabs(fp128 %x) {
 ; CHECK-LABEL: fabs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    srli a2, a2, 1
-; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    srli a1, a1, 1
 ; CHECK-NEXT:    ret
   %a = call fp128 @llvm.fabs.f128(fp128 %x)
   ret fp128 %a
@@ -109,11 +108,10 @@ define fp128 @fabs(fp128 %x) {
 define fp128 @fcopysign(fp128 %x, fp128 %y) {
 ; CHECK-LABEL: fcopysign:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    slli a4, a2, 63
-; CHECK-NEXT:    srli a2, a2, 1
-; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    and a3, a3, a4
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    srli a3, a3, 63
+; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    slli a3, a3, 63
 ; CHECK-NEXT:    or a1, a1, a3
 ; CHECK-NEXT:    ret
   %a = call fp128 @llvm.copysign.f128(fp128 %x, fp128 %y)
@@ -126,8 +124,7 @@ define i1 @fcmp(fp128 %x, fp128 %y) nounwind {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    call __eqtf2
-; CHECK-NEXT:    slli a0, a0, 32
-; CHECK-NEXT:    srli a0, a0, 32
+; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -472,7 +469,7 @@ define fp128 @uitofp_i8(i8 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    call __floatunsitf
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -486,9 +483,8 @@ define fp128 @uitofp_i16(i16 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    lui a1, 16
-; CHECK-NEXT:    addiw a1, a1, -1
-; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    slli a0, a0, 48
+; CHECK-NEXT:    srli a0, a0, 48
 ; CHECK-NEXT:    call __floatunsitf
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -535,4 +531,383 @@ define fp128 @uitofp_i128(i128 %x) nounwind {
 ; CHECK-NEXT:    ret
   %a = uitofp i128 %x to fp128
   ret fp128 %a
+}
+
+define fp128 @sqrt(fp128 %a) nounwind {
+; CHECK-LABEL: sqrt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call sqrtl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.sqrt.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @powi(fp128 %a, i32 %b) nounwind {
+; CHECK-LABEL: powi:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sext.w a2, a2
+; CHECK-NEXT:    call __powitf2
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.powi.f128.i32(fp128 %a, i32 %b)
+  ret fp128 %1
+}
+
+define fp128 @sin(fp128 %a) nounwind {
+; CHECK-LABEL: sin:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call sinl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.sin.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @cos(fp128 %a) nounwind {
+; CHECK-LABEL: cos:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call cosl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.cos.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @pow(fp128 %a, fp128 %b) nounwind {
+; CHECK-LABEL: pow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call powl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.pow.f128(fp128 %a, fp128 %b)
+  ret fp128 %1
+}
+
+define fp128 @exp(fp128 %a) nounwind {
+; CHECK-LABEL: exp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call expl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.exp.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @exp2(fp128 %a) nounwind {
+; CHECK-LABEL: exp2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call exp2l
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.exp2.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @exp10(fp128 %a) nounwind {
+; CHECK-LABEL: exp10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call exp10l
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.exp10.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @log(fp128 %a) nounwind {
+; CHECK-LABEL: log:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call logl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.log.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @log10(fp128 %a) nounwind {
+; CHECK-LABEL: log10:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call log10l
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.log10.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @log2(fp128 %a) nounwind {
+; CHECK-LABEL: log2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call log2l
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.log2.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @minnum(fp128 %a, fp128 %b) nounwind {
+; CHECK-LABEL: minnum:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call fminl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.minnum.f128(fp128 %a, fp128 %b)
+  ret fp128 %1
+}
+
+define fp128 @maxnum(fp128 %a, fp128 %b) nounwind {
+; CHECK-LABEL: maxnum:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call fmaxl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.maxnum.f128(fp128 %a, fp128 %b)
+  ret fp128 %1
+}
+
+define fp128 @floor(fp128 %a) nounwind {
+; CHECK-LABEL: floor:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call floorl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.floor.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @ceil(fp128 %a) nounwind {
+; CHECK-LABEL: ceil:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call ceill
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.ceil.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @trunc(fp128 %a) nounwind {
+; CHECK-LABEL: trunc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call truncl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.trunc.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @rint(fp128 %a) nounwind {
+; CHECK-LABEL: rint:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call rintl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.rint.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @nearbyint(fp128 %a) nounwind {
+; CHECK-LABEL: nearbyint:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call nearbyintl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.nearbyint.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @round(fp128 %a) nounwind {
+; CHECK-LABEL: round:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call roundl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.round.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @roundeven(fp128 %a) nounwind {
+; CHECK-LABEL: roundeven:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call roundevenl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.roundeven.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @tan(fp128 %a) nounwind {
+; CHECK-LABEL: tan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call tanl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.tan.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @ldexp_fp128(fp128 %x, i32 %y) nounwind {
+; CHECK-LABEL: ldexp_fp128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sext.w a2, a2
+; CHECK-NEXT:    call ldexpl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %z = call fp128 @llvm.ldexp.f128.i32(fp128 %x, i32 %y)
+  ret fp128 %z
+}
+
+define fp128 @asin(fp128 %a) nounwind {
+; CHECK-LABEL: asin:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call asinl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.asin.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @acos(fp128 %a) nounwind {
+; CHECK-LABEL: acos:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call acosl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.acos.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @atan(fp128 %a) nounwind {
+; CHECK-LABEL: atan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call atanl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.atan.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @atan2(fp128 %a, fp128 %b) nounwind {
+; CHECK-LABEL: atan2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call atan2l
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.atan2.f128(fp128 %a, fp128 %b)
+  ret fp128 %1
+}
+
+define fp128 @sinh(fp128 %a) nounwind {
+; CHECK-LABEL: sinh:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call sinhl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.sinh.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @cosh(fp128 %a) nounwind {
+; CHECK-LABEL: cosh:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call coshl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.cosh.f128(fp128 %a)
+  ret fp128 %1
+}
+
+define fp128 @tanh(fp128 %a) nounwind {
+; CHECK-LABEL: tanh:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    call tanhl
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %1 = call fp128 @llvm.tanh.f128(fp128 %a)
+  ret fp128 %1
 }

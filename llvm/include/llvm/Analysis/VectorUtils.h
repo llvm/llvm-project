@@ -18,6 +18,7 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/VFABIDemangler.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/CheckedArithmetic.h"
 
 namespace llvm {
@@ -127,28 +128,29 @@ namespace Intrinsic {
 typedef unsigned ID;
 }
 
-/// A helper function for converting Scalar types to vector types. If
-/// the incoming type is void, we return void. If the EC represents a
-/// scalar, we return the scalar type.
-inline Type *ToVectorTy(Type *Scalar, ElementCount EC) {
-  if (Scalar->isVoidTy() || Scalar->isMetadataTy() || EC.isScalar())
-    return Scalar;
-  return VectorType::get(Scalar, EC);
-}
-
-inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
-  return ToVectorTy(Scalar, ElementCount::getFixed(VF));
-}
-
 /// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all scalars
 /// for the scalar form of the intrinsic and all vectors (or scalars handled by
 /// isVectorIntrinsicWithScalarOpAtArg) for the vector form of the intrinsic.
+///
+/// Note: isTriviallyVectorizable implies isTriviallyScalarizable.
 bool isTriviallyVectorizable(Intrinsic::ID ID);
 
+/// Identify if the intrinsic is trivially scalarizable.
+/// This method returns true following the same predicates of
+/// isTriviallyVectorizable.
+
+/// Note: There are intrinsics where implementing vectorization for the
+/// intrinsic is redundant, but we want to implement scalarization of the
+/// vector. To prevent the requirement that an intrinsic also implements
+/// vectorization we provide this seperate function.
+bool isTriviallyScalarizable(Intrinsic::ID ID, const TargetTransformInfo *TTI);
+
 /// Identifies if the vector form of the intrinsic has a scalar operand.
-bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
-                                        unsigned ScalarOpdIdx);
+/// \p TTI is used to consider target specific intrinsics, if no target specific
+/// intrinsics will be considered then it is appropriate to pass in nullptr.
+bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID, unsigned ScalarOpdIdx,
+                                        const TargetTransformInfo *TTI);
 
 /// Identifies if the vector form of the intrinsic is overloaded on the type of
 /// the operand at index \p OpdIdx, or on the return type if \p OpdIdx is -1.
@@ -158,9 +160,11 @@ bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
                                             const TargetTransformInfo *TTI);
 
 /// Identifies if the vector form of the intrinsic that returns a struct is
-/// overloaded at the struct element index \p RetIdx.
-bool isVectorIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
-                                                      int RetIdx);
+/// overloaded at the struct element index \p RetIdx. /// \p TTI is used to
+/// consider target specific intrinsics, if no target specific intrinsics
+/// will be considered then it is appropriate to pass in nullptr.
+bool isVectorIntrinsicWithStructReturnOverloadAtField(
+    Intrinsic::ID ID, int RetIdx, const TargetTransformInfo *TTI);
 
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
@@ -199,6 +203,15 @@ bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
                             const APInt &DemandedElts, APInt &DemandedLHS,
                             APInt &DemandedRHS, bool AllowUndefElts = false);
 
+/// Does this shuffle mask represent either one slide shuffle or a pair of
+/// two slide shuffles, combined with a select on some constant vector mask?
+/// A slide is a shuffle mask which shifts some set of elements up or down
+/// the vector, with all other elements being undefined.  An identity shuffle
+/// will be matched a slide by 0.  The output parameter provides the source
+/// (-1 means no source), and slide direction for each slide.
+bool isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
+                       std::array<std::pair<int, int>, 2> &SrcInfo);
+
 /// Replace each shuffle mask index with the scaled sequential indices for an
 /// equivalent mask of narrowed elements. Mask elements that are less than 0
 /// (sentinel values) are repeated in the output mask.
@@ -231,10 +244,17 @@ void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                           SmallVectorImpl<int> &ScaledMask);
 
+/// A variant of the previous method which is specialized for Scale=2, and
+/// treats -1 as undef and allows widening when a wider element is partially
+/// undef in the narrow form of the mask.  This transformation discards
+/// information about which bytes in the original shuffle were undef.
+bool widenShuffleMaskElts(ArrayRef<int> M, SmallVectorImpl<int> &NewMask);
+
 /// Attempt to narrow/widen the \p Mask shuffle mask to the \p NumDstElts target
 /// width. Internally this will call narrowShuffleMaskElts/widenShuffleMaskElts.
-/// This will assert unless NumDstElts is a multiple of Mask.size (or vice-versa).
-/// Returns false on failure, and ScaledMask will be in an undefined state.
+/// This will assert unless NumDstElts is a multiple of Mask.size (or
+/// vice-versa). Returns false on failure, and ScaledMask will be in an
+/// undefined state.
 bool scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
                           SmallVectorImpl<int> &ScaledMask);
 
@@ -259,7 +279,8 @@ void processShuffleMasks(
     ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
-    function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction);
+    function_ref<void(ArrayRef<int>, unsigned, unsigned, bool)>
+        ManyInputsAction);
 
 /// Compute the demanded elements mask of horizontal binary operations. A
 /// horizontal operation combines two adjacent elements in a vector operand.
@@ -331,6 +352,14 @@ MDNode *uniteAccessGroups(MDNode *AccGroups1, MDNode *AccGroups2);
 /// list is empty, returns nullptr.
 MDNode *intersectAccessGroups(const Instruction *Inst1,
                               const Instruction *Inst2);
+
+/// Add metadata from \p Inst to \p Metadata, if it can be preserved after
+/// vectorization. It can be preserved after vectorization if the kind is one of
+/// [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath, MD_nontemporal,
+/// MD_access_group, MD_mmra].
+void getMetadataToPropagate(
+    Instruction *Inst,
+    SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata);
 
 /// Specifically, let Kinds = [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath,
 /// MD_nontemporal, MD_access_group, MD_mmra].
@@ -736,12 +765,11 @@ private:
   /// \returns the newly created interleave group.
   InterleaveGroup<Instruction> *
   createInterleaveGroup(Instruction *Instr, int Stride, Align Alignment) {
-    assert(!InterleaveGroupMap.count(Instr) &&
-           "Already in an interleaved access group");
-    InterleaveGroupMap[Instr] =
-        new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
-    InterleaveGroups.insert(InterleaveGroupMap[Instr]);
-    return InterleaveGroupMap[Instr];
+    auto [It, Inserted] = InterleaveGroupMap.try_emplace(Instr);
+    assert(Inserted && "Already in an interleaved access group");
+    It->second = new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
+    InterleaveGroups.insert(It->second);
+    return It->second;
   }
 
   /// Release the group and remove all the relationships.

@@ -29,11 +29,14 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
 #include <numeric>
@@ -217,6 +220,10 @@ void GPUDialect::initialize() {
   addInterfaces<GPUInlinerInterface>();
   declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
                            TerminatorOp>();
+  declarePromisedInterfaces<
+      ValueBoundsOpInterface, ClusterDimOp, ClusterDimBlocksOp, ClusterIdOp,
+      ClusterBlockIdOp, BlockDimOp, BlockIdOp, GridDimOp, ThreadIdOp, LaneIdOp,
+      SubgroupIdOp, GlobalIdOp, NumSubgroupsOp, SubgroupSizeOp, LaunchOp>();
 }
 
 static std::string getSparseHandleKeyword(SparseHandleKind kind) {
@@ -444,9 +451,7 @@ static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
     return;
   if (asyncTokenType)
     printer << ' ';
-  printer << '[';
-  llvm::interleaveComma(asyncDependencies, printer);
-  printer << ']';
+  printer << llvm::interleaved_array(asyncDependencies);
 }
 
 // GPU Memory attributions functions shared by LaunchOp and GPUFuncOp.
@@ -474,10 +479,11 @@ static void printAttributions(OpAsmPrinter &p, StringRef keyword,
   if (values.empty())
     return;
 
-  p << ' ' << keyword << '(';
-  llvm::interleaveComma(
-      values, p, [&p](BlockArgument v) { p << v << " : " << v.getType(); });
-  p << ')';
+  auto printBlockArg = [](BlockArgument v) {
+    return llvm::formatv("{} : {}", v, v.getType());
+  };
+  p << ' ' << keyword << '('
+    << llvm::interleaved(llvm::map_range(values, printBlockArg)) << ')';
 }
 
 /// Verifies a GPU function memory attribution.
@@ -930,9 +936,6 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, LaunchOp::kNumConfigOperands>
       sizes(LaunchOp::kNumConfigOperands);
 
-  // Actual (data) operands passed to the kernel.
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> dataOperands;
-
   // Region arguments to be created.
   SmallVector<OpAsmParser::UnresolvedOperand, 16> regionArgs(
       LaunchOp::kNumConfigRegionAttributes);
@@ -1306,11 +1309,10 @@ static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
   if (operands.empty())
     return;
   printer << "args(";
-  llvm::interleaveComma(llvm::zip(operands, types), printer,
+  llvm::interleaveComma(llvm::zip_equal(operands, types), printer,
                         [&](const auto &pair) {
-                          printer.printOperand(std::get<0>(pair));
-                          printer << " : ";
-                          printer.printType(std::get<1>(pair));
+                          auto [operand, type] = pair;
+                          printer << operand << " : " << type;
                         });
   printer << ")";
 }
@@ -1462,7 +1464,7 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   auto signatureLocation = parser.getCurrentLocation();
-  if (failed(function_interface_impl::parseFunctionSignature(
+  if (failed(function_interface_impl::parseFunctionSignatureWithArguments(
           parser, /*allowVariadic=*/false, entryArgs, isVariadic, resultTypes,
           resultAttrs)))
     return failure();
@@ -1482,7 +1484,7 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
 
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, result, entryArgs, resultAttrs, getArgAttrsAttrName(result.name),
       getResAttrsAttrName(result.name));
 
@@ -1898,7 +1900,7 @@ LogicalResult SubgroupMmaLoadMatrixOp::verify() {
   auto operand = resMatrixType.getOperand();
   auto srcMemrefType = llvm::cast<MemRefType>(srcType);
 
-  if (!isLastMemrefDimUnitStride(srcMemrefType))
+  if (!srcMemrefType.isLastDimUnitStride())
     return emitError(
         "expected source memref most minor dim must have unit stride");
 
@@ -1918,7 +1920,7 @@ LogicalResult SubgroupMmaStoreMatrixOp::verify() {
   auto srcMatrixType = llvm::cast<gpu::MMAMatrixType>(srcType);
   auto dstMemrefType = llvm::cast<MemRefType>(dstType);
 
-  if (!isLastMemrefDimUnitStride(dstMemrefType))
+  if (!dstMemrefType.isLastDimUnitStride())
     return emitError(
         "expected destination memref most minor dim must have unit stride");
 
@@ -2114,8 +2116,8 @@ LogicalResult ObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 namespace {
-LogicalResult parseObject(AsmParser &odsParser, CompilationTarget &format,
-                          StringAttr &object) {
+ParseResult parseObject(AsmParser &odsParser, CompilationTarget &format,
+                        StringAttr &object) {
   std::optional<CompilationTarget> formatResult;
   StringRef enumKeyword;
   auto loc = odsParser.getCurrentLocation();
@@ -2483,28 +2485,32 @@ KernelMetadataAttr KernelTableAttr::lookup(StringAttr key) const {
 //===----------------------------------------------------------------------===//
 
 TargetOptions::TargetOptions(
-    StringRef toolkitPath, ArrayRef<std::string> linkFiles,
-    StringRef cmdOptions, CompilationTarget compilationTarget,
+    StringRef toolkitPath, ArrayRef<Attribute> librariesToLink,
+    StringRef cmdOptions, StringRef elfSection,
+    CompilationTarget compilationTarget,
     function_ref<SymbolTable *()> getSymbolTableCallback,
     function_ref<void(llvm::Module &)> initialLlvmIRCallback,
     function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
     function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
     function_ref<void(StringRef)> isaCallback)
-    : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
-                    cmdOptions, compilationTarget, getSymbolTableCallback,
-                    initialLlvmIRCallback, linkedLlvmIRCallback,
-                    optimizedLlvmIRCallback, isaCallback) {}
+    : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, librariesToLink,
+                    cmdOptions, elfSection, compilationTarget,
+                    getSymbolTableCallback, initialLlvmIRCallback,
+                    linkedLlvmIRCallback, optimizedLlvmIRCallback,
+                    isaCallback) {}
 
 TargetOptions::TargetOptions(
-    TypeID typeID, StringRef toolkitPath, ArrayRef<std::string> linkFiles,
-    StringRef cmdOptions, CompilationTarget compilationTarget,
+    TypeID typeID, StringRef toolkitPath, ArrayRef<Attribute> librariesToLink,
+    StringRef cmdOptions, StringRef elfSection,
+    CompilationTarget compilationTarget,
     function_ref<SymbolTable *()> getSymbolTableCallback,
     function_ref<void(llvm::Module &)> initialLlvmIRCallback,
     function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
     function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
     function_ref<void(StringRef)> isaCallback)
-    : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
-      cmdOptions(cmdOptions.str()), compilationTarget(compilationTarget),
+    : toolkitPath(toolkitPath.str()), librariesToLink(librariesToLink),
+      cmdOptions(cmdOptions.str()), elfSection(elfSection.str()),
+      compilationTarget(compilationTarget),
       getSymbolTableCallback(getSymbolTableCallback),
       initialLlvmIRCallback(initialLlvmIRCallback),
       linkedLlvmIRCallback(linkedLlvmIRCallback),
@@ -2515,9 +2521,13 @@ TypeID TargetOptions::getTypeID() const { return typeID; }
 
 StringRef TargetOptions::getToolkitPath() const { return toolkitPath; }
 
-ArrayRef<std::string> TargetOptions::getLinkFiles() const { return linkFiles; }
+ArrayRef<Attribute> TargetOptions::getLibrariesToLink() const {
+  return librariesToLink;
+}
 
 StringRef TargetOptions::getCmdOptions() const { return cmdOptions; }
+
+StringRef TargetOptions::getELFSection() const { return elfSection; }
 
 SymbolTable *TargetOptions::getSymbolTable() const {
   return getSymbolTableCallback ? getSymbolTableCallback() : nullptr;
@@ -2551,7 +2561,7 @@ CompilationTarget TargetOptions::getDefaultCompilationTarget() {
 }
 
 std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
-TargetOptions::tokenizeCmdOptions() const {
+TargetOptions::tokenizeCmdOptions(const std::string &cmdOptions) {
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> options;
   llvm::StringSaver stringSaver(options.first);
   StringRef opts = cmdOptions;
@@ -2571,6 +2581,23 @@ TargetOptions::tokenizeCmdOptions() const {
                                    /*MarkEOLs=*/false);
 #endif // _WIN32
   return options;
+}
+
+std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+TargetOptions::tokenizeCmdOptions() const {
+  return tokenizeCmdOptions(cmdOptions);
+}
+
+std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+TargetOptions::tokenizeAndRemoveSuffixCmdOptions(llvm::StringRef startsWith) {
+  size_t startPos = cmdOptions.find(startsWith);
+  if (startPos == std::string::npos)
+    return {llvm::BumpPtrAllocator(), SmallVector<const char *>()};
+
+  auto tokenized =
+      tokenizeCmdOptions(cmdOptions.substr(startPos + startsWith.size()));
+  cmdOptions.resize(startPos);
+  return tokenized;
 }
 
 MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::gpu::TargetOptions)

@@ -7,8 +7,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2OR512VL,AVX2,AVX2-FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2OR512VL,AVX2,AVX2-FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2OR512VL,AVX512VL,AVX512VL-SLOW
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2OR512VL,AVX512VL,AVX512VL-FAST
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512bw,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2OR512VL,AVX512VL,AVX512VL-FAST
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2OR512VL,AVX512VL,AVX512VL-FAST,AVX512VL-FAST-ALL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512bw,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2OR512VL,AVX512VL,AVX512VL-FAST,AVX512VL-FAST-PERLANE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx | FileCheck %s --check-prefixes=AVX,XOP,XOPAVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx2 | FileCheck %s --check-prefixes=AVX,XOP,XOPAVX2
 
@@ -68,13 +68,13 @@ define <8 x i16> @shuffle_v8i16_00000000(<8 x i16> %a, <8 x i16> %b) {
 ; SSE-LABEL: shuffle_v8i16_00000000:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: shuffle_v8i16_00000000:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: shuffle_v8i16_00000000:
@@ -85,7 +85,7 @@ define <8 x i16> @shuffle_v8i16_00000000(<8 x i16> %a, <8 x i16> %b) {
 ; XOPAVX1-LABEL: shuffle_v8i16_00000000:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: shuffle_v8i16_00000000:
@@ -1155,8 +1155,8 @@ define <8 x i16> @shuffle_v8i16_109832ba(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX512VL-FAST-LABEL: shuffle_v8i16_109832ba:
 ; AVX512VL-FAST:       # %bb.0:
-; AVX512VL-FAST-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [1,0,9,8,3,2,11,10]
-; AVX512VL-FAST-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
+; AVX512VL-FAST-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX512VL-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,0,1,6,7,2,3,12,13,8,9,14,15,10,11]
 ; AVX512VL-FAST-NEXT:    retq
 ;
 ; XOP-LABEL: shuffle_v8i16_109832ba:
@@ -1246,11 +1246,18 @@ define <8 x i16> @shuffle_v8i16_0213cedf(<8 x i16> %a, <8 x i16> %b) {
 ; AVX512VL-SLOW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX512VL-SLOW-NEXT:    retq
 ;
-; AVX512VL-FAST-LABEL: shuffle_v8i16_0213cedf:
-; AVX512VL-FAST:       # %bb.0:
-; AVX512VL-FAST-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [0,2,1,3,12,14,13,15]
-; AVX512VL-FAST-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
-; AVX512VL-FAST-NEXT:    retq
+; AVX512VL-FAST-ALL-LABEL: shuffle_v8i16_0213cedf:
+; AVX512VL-FAST-ALL:       # %bb.0:
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [0,2,1,3,12,14,13,15]
+; AVX512VL-FAST-ALL-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
+; AVX512VL-FAST-ALL-NEXT:    retq
+;
+; AVX512VL-FAST-PERLANE-LABEL: shuffle_v8i16_0213cedf:
+; AVX512VL-FAST-PERLANE:       # %bb.0:
+; AVX512VL-FAST-PERLANE-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[8,9,12,13,10,11,14,15,u,u,u,u,u,u,u,u]
+; AVX512VL-FAST-PERLANE-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,1,3,4,5,6,7]
+; AVX512VL-FAST-PERLANE-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512VL-FAST-PERLANE-NEXT:    retq
 ;
 ; XOP-LABEL: shuffle_v8i16_0213cedf:
 ; XOP:       # %bb.0:
@@ -1314,8 +1321,8 @@ define <8 x i16> @shuffle_v8i16_443aXXXX(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX512VL-FAST-LABEL: shuffle_v8i16_443aXXXX:
 ; AVX512VL-FAST:       # %bb.0:
-; AVX512VL-FAST-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [4,4,3,10,4,5,6,7]
-; AVX512VL-FAST-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
+; AVX512VL-FAST-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3,4,5,6,7]
+; AVX512VL-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[8,9,8,9,6,7,4,5,8,9,10,11,12,13,14,15]
 ; AVX512VL-FAST-NEXT:    retq
 ;
 ; XOP-LABEL: shuffle_v8i16_443aXXXX:
@@ -1542,11 +1549,23 @@ define <8 x i16> @shuffle_v8i16_012dcde3(<8 x i16> %a, <8 x i16> %b) {
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,10,11,8,9,10,11,12,13,6,7]
 ; AVX2-NEXT:    retq
 ;
-; AVX512VL-LABEL: shuffle_v8i16_012dcde3:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [0,1,2,13,12,13,14,3]
-; AVX512VL-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
-; AVX512VL-NEXT:    retq
+; AVX512VL-SLOW-LABEL: shuffle_v8i16_012dcde3:
+; AVX512VL-SLOW:       # %bb.0:
+; AVX512VL-SLOW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512VL-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,10,11,8,9,10,11,12,13,6,7]
+; AVX512VL-SLOW-NEXT:    retq
+;
+; AVX512VL-FAST-ALL-LABEL: shuffle_v8i16_012dcde3:
+; AVX512VL-FAST-ALL:       # %bb.0:
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [0,1,2,13,12,13,14,3]
+; AVX512VL-FAST-ALL-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
+; AVX512VL-FAST-ALL-NEXT:    retq
+;
+; AVX512VL-FAST-PERLANE-LABEL: shuffle_v8i16_012dcde3:
+; AVX512VL-FAST-PERLANE:       # %bb.0:
+; AVX512VL-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512VL-FAST-PERLANE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,10,11,8,9,10,11,12,13,6,7]
+; AVX512VL-FAST-PERLANE-NEXT:    retq
 ;
 ; XOP-LABEL: shuffle_v8i16_012dcde3:
 ; XOP:       # %bb.0:
@@ -1645,11 +1664,18 @@ define <8 x i16> @shuffle_v8i16_XXX1X579(<8 x i16> %a, <8 x i16> %b) {
 ; AVX512VL-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6],xmm1[7]
 ; AVX512VL-SLOW-NEXT:    retq
 ;
-; AVX512VL-FAST-LABEL: shuffle_v8i16_XXX1X579:
-; AVX512VL-FAST:       # %bb.0:
-; AVX512VL-FAST-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [1,1,1,1,4,5,7,9]
-; AVX512VL-FAST-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
-; AVX512VL-FAST-NEXT:    retq
+; AVX512VL-FAST-ALL-LABEL: shuffle_v8i16_XXX1X579:
+; AVX512VL-FAST-ALL:       # %bb.0:
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [1,1,1,1,4,5,7,9]
+; AVX512VL-FAST-ALL-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
+; AVX512VL-FAST-ALL-NEXT:    retq
+;
+; AVX512VL-FAST-PERLANE-LABEL: shuffle_v8i16_XXX1X579:
+; AVX512VL-FAST-PERLANE:       # %bb.0:
+; AVX512VL-FAST-PERLANE-NEXT:    vpbroadcastd %xmm1, %xmm1
+; AVX512VL-FAST-PERLANE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,2,3,2,3,2,3,8,9,10,11,14,15,u,u]
+; AVX512VL-FAST-PERLANE-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6],xmm1[7]
+; AVX512VL-FAST-PERLANE-NEXT:    retq
 ;
 ; XOP-LABEL: shuffle_v8i16_XXX1X579:
 ; XOP:       # %bb.0:
@@ -3165,14 +3191,14 @@ define <8 x i16> @insert_dup_mem_v8i16_i32(ptr %ptr) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: insert_dup_mem_v8i16_i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: insert_dup_mem_v8i16_i32:
@@ -3184,7 +3210,7 @@ define <8 x i16> @insert_dup_mem_v8i16_i32(ptr %ptr) {
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: insert_dup_mem_v8i16_i32:
@@ -3204,7 +3230,7 @@ define <8 x i16> @insert_dup_mem_v8i16_sext_i16(ptr %ptr) {
 ; SSE-NEXT:    movzwl (%rdi), %eax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: insert_dup_mem_v8i16_sext_i16:
@@ -3212,7 +3238,7 @@ define <8 x i16> @insert_dup_mem_v8i16_sext_i16(ptr %ptr) {
 ; AVX1-NEXT:    movzwl (%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: insert_dup_mem_v8i16_sext_i16:
@@ -3225,7 +3251,7 @@ define <8 x i16> @insert_dup_mem_v8i16_sext_i16(ptr %ptr) {
 ; XOPAVX1-NEXT:    movzwl (%rdi), %eax
 ; XOPAVX1-NEXT:    vmovd %eax, %xmm0
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: insert_dup_mem_v8i16_sext_i16:
@@ -3245,14 +3271,14 @@ define <8 x i16> @insert_dup_elt1_mem_v8i16_i32(ptr %ptr) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: insert_dup_elt1_mem_v8i16_i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: insert_dup_elt1_mem_v8i16_i32:
@@ -3264,7 +3290,7 @@ define <8 x i16> @insert_dup_elt1_mem_v8i16_i32(ptr %ptr) {
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: insert_dup_elt1_mem_v8i16_i32:
@@ -3283,7 +3309,7 @@ define <8 x i16> @insert_dup_elt3_mem_v8i16_i32(ptr %ptr) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_dup_elt3_mem_v8i16_i32:
@@ -3302,7 +3328,7 @@ define <8 x i16> @insert_dup_elt3_mem_v8i16_i32(ptr %ptr) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vbroadcastss (%rdi), %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: insert_dup_elt3_mem_v8i16_i32:
@@ -3314,7 +3340,7 @@ define <8 x i16> @insert_dup_elt3_mem_v8i16_i32(ptr %ptr) {
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vbroadcastss (%rdi), %xmm0
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: insert_dup_elt3_mem_v8i16_i32:
@@ -3334,7 +3360,7 @@ define <8 x i16> @insert_dup_elt1_mem_v8i16_sext_i16(ptr %ptr) {
 ; SSE-NEXT:    movswl (%rdi), %eax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: insert_dup_elt1_mem_v8i16_sext_i16:
@@ -3342,7 +3368,7 @@ define <8 x i16> @insert_dup_elt1_mem_v8i16_sext_i16(ptr %ptr) {
 ; AVX1-NEXT:    movswl (%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: insert_dup_elt1_mem_v8i16_sext_i16:
@@ -3365,7 +3391,7 @@ define <8 x i16> @insert_dup_elt1_mem_v8i16_sext_i16(ptr %ptr) {
 ; XOPAVX1-NEXT:    movswl (%rdi), %eax
 ; XOPAVX1-NEXT:    vmovd %eax, %xmm0
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: insert_dup_elt1_mem_v8i16_sext_i16:
@@ -3389,7 +3415,7 @@ define <8 x i16> @insert_dup_elt3_mem_v8i16_sext_i16(ptr %ptr) {
 ; SSE2-NEXT:    movswl (%rdi), %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_dup_elt3_mem_v8i16_sext_i16:
@@ -3455,14 +3481,14 @@ define <8 x i16> @insert_dup_mem_v8i16_i64(ptr %ptr) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: insert_dup_mem_v8i16_i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: insert_dup_mem_v8i16_i64:
@@ -3474,7 +3500,7 @@ define <8 x i16> @insert_dup_mem_v8i16_i64(ptr %ptr) {
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: insert_dup_mem_v8i16_i64:
@@ -3493,14 +3519,14 @@ define <8 x i16> @insert_dup_elt1_mem_v8i16_i64(ptr %ptr) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: insert_dup_elt1_mem_v8i16_i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: insert_dup_elt1_mem_v8i16_i64:
@@ -3512,7 +3538,7 @@ define <8 x i16> @insert_dup_elt1_mem_v8i16_i64(ptr %ptr) {
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: insert_dup_elt1_mem_v8i16_i64:
@@ -3531,14 +3557,14 @@ define <8 x i16> @insert_dup_elt3_mem_v8i16_i64(ptr %ptr) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: insert_dup_elt3_mem_v8i16_i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: insert_dup_elt3_mem_v8i16_i64:
@@ -3550,7 +3576,7 @@ define <8 x i16> @insert_dup_elt3_mem_v8i16_i64(ptr %ptr) {
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,3,3,3,4,5,6,7]
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: insert_dup_elt3_mem_v8i16_i64:
@@ -3570,7 +3596,7 @@ define <8 x i16> @insert_dup_elt7_mem_v8i16_i64(ptr %ptr) {
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,7,7,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_dup_elt7_mem_v8i16_i64:
@@ -3589,7 +3615,7 @@ define <8 x i16> @insert_dup_elt7_mem_v8i16_i64(ptr %ptr) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX1-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,7,7,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: insert_dup_elt7_mem_v8i16_i64:
@@ -3601,7 +3627,7 @@ define <8 x i16> @insert_dup_elt7_mem_v8i16_i64(ptr %ptr) {
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; XOPAVX1-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,7,7,7]
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: insert_dup_elt7_mem_v8i16_i64:
@@ -3621,7 +3647,7 @@ define <8 x i16> @insert_dup_mem_v8i16_sext_i16_i64(ptr %ptr) {
 ; SSE-NEXT:    movzwl (%rdi), %eax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: insert_dup_mem_v8i16_sext_i16_i64:
@@ -3629,7 +3655,7 @@ define <8 x i16> @insert_dup_mem_v8i16_sext_i16_i64(ptr %ptr) {
 ; AVX1-NEXT:    movzwl (%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: insert_dup_mem_v8i16_sext_i16_i64:
@@ -3642,7 +3668,7 @@ define <8 x i16> @insert_dup_mem_v8i16_sext_i16_i64(ptr %ptr) {
 ; XOPAVX1-NEXT:    movzwl (%rdi), %eax
 ; XOPAVX1-NEXT:    vmovd %eax, %xmm0
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: insert_dup_mem_v8i16_sext_i16_i64:

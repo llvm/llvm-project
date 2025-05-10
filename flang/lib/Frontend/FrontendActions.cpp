@@ -11,13 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/FrontendActions.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendOptions.h"
-#include "flang/Frontend/PreprocessorOptions.h"
+#include "flang/Frontend/ParserActions.h"
 #include "flang/Lower/Bridge.h"
-#include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Verifier.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
@@ -26,14 +24,9 @@
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "flang/Parser/dump-parse-tree.h"
-#include "flang/Parser/parsing.h"
-#include "flang/Parser/provenance.h"
-#include "flang/Parser/source.h"
-#include "flang/Parser/unparse.h"
 #include "flang/Semantics/runtime-type-info.h"
-#include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Support/default-kinds.h"
 #include "flang/Tools/CrossToolHelpers.h"
 
 #include "mlir/IR/Dialect.h"
@@ -83,6 +76,15 @@ extern cl::opt<bool> PrintPipelinePasses;
 } // namespace llvm
 
 using namespace Fortran::frontend;
+
+constexpr llvm::StringLiteral timingIdParse = "Parse";
+constexpr llvm::StringLiteral timingIdMLIRGen = "MLIR generation";
+constexpr llvm::StringLiteral timingIdMLIRPasses =
+    "MLIR translation/optimization";
+constexpr llvm::StringLiteral timingIdLLVMIRGen = "LLVM IR generation";
+constexpr llvm::StringLiteral timingIdLLVMIRPasses = "LLVM IR optimizations";
+constexpr llvm::StringLiteral timingIdBackend =
+    "Assembly/Object code generation";
 
 // Declare plugin extension function declarations.
 #define HANDLE_EXTENSION(Ext)                                                  \
@@ -149,7 +151,7 @@ bool PrescanAndSemaDebugAction::beginSourceFileAction() {
          (runSemanticChecks() || true) && (generateRtTypeTables() || true);
 }
 
-static void addDependentLibs(mlir::ModuleOp &mlirModule, CompilerInstance &ci) {
+static void addDependentLibs(mlir::ModuleOp mlirModule, CompilerInstance &ci) {
   const std::vector<std::string> &libs =
       ci.getInvocation().getCodeGenOpts().DependentLibs;
   if (libs.empty()) {
@@ -168,65 +170,21 @@ static void addDependentLibs(mlir::ModuleOp &mlirModule, CompilerInstance &ci) {
   }
 }
 
-// Add to MLIR code target specific items which are dependent on target
-// configuration specified by the user.
-// Clang equivalent function: AMDGPUTargetCodeGenInfo::emitTargetGlobals
-static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
-                                       CompilerInstance &ci) {
-  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
-  const llvm::Triple triple(targetOpts.triple);
-  const llvm::StringRef codeObjectVersionGlobalOpName = "__oclc_ABI_version";
-
-  if (!triple.isAMDGPU()) {
-    return;
-  }
-  const CodeGenOptions &codeGenOpts = ci.getInvocation().getCodeGenOpts();
-  if (codeGenOpts.CodeObjectVersion == llvm::CodeObjectVersionKind::COV_None) {
-    return;
-  }
-
-  mlir::IRRewriter builder(mlirModule.getContext());
-  unsigned oclcABIVERsion = codeGenOpts.CodeObjectVersion;
-  auto int32Type = builder.getI32Type();
-
-  std::optional<mlir::LLVM::GlobalOp> originalGV;
-
-  mlirModule.walk([&originalGV, codeObjectVersionGlobalOpName](
-                      mlir::LLVM::GlobalOp globalOp) {
-    if (globalOp.getName() == codeObjectVersionGlobalOpName)
-      originalGV = globalOp;
-  });
-  if (originalGV.has_value()) {
-    mlir::LLVM::GlobalOp originalGVOp = originalGV.value();
-    if (originalGVOp.getLinkage() != mlir::LLVM::Linkage::External) {
-      return;
-    }
-    // Update the variable if it is already present in MLIR but it was marked
-    // as external linkage variable
-    originalGVOp.setLinkage(mlir::LLVM::Linkage::WeakODR);
-    originalGVOp.setValueAttr(
-        builder.getIntegerAttr(int32Type, oclcABIVERsion));
-    originalGVOp.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
-    originalGVOp.setAddrSpace(llvm::AMDGPUAS::CONSTANT_ADDRESS);
-    originalGVOp.setVisibility_(mlir::LLVM::Visibility::Hidden);
-    return;
-  }
-
-  mlir::LLVM::GlobalOp covInfo = builder.create<mlir::LLVM::GlobalOp>(
-      /* Location */ mlirModule.getLoc(), /* Type */ int32Type,
-      /* IsConstant */ true, /* Linkage */ mlir::LLVM::Linkage::WeakODR,
-      /* Name */ codeObjectVersionGlobalOpName,
-      /* Value */ builder.getIntegerAttr(int32Type, oclcABIVERsion));
-  covInfo.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
-  covInfo.setAddrSpace(llvm::AMDGPUAS::CONSTANT_ADDRESS);
-  covInfo.setVisibility_(mlir::LLVM::Visibility::Hidden);
-  builder.setInsertionPointToStart(mlirModule.getBody());
-  builder.insert(covInfo);
-}
-
 bool CodeGenAction::beginSourceFileAction() {
+  // Delete previous LLVM module depending on old context before making a new
+  // one.
+  if (llvmModule)
+    llvmModule.reset(nullptr);
   llvmCtx = std::make_unique<llvm::LLVMContext>();
   CompilerInstance &ci = this->getInstance();
+  mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
+  mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
+
+  // This will provide timing information even when the input is an LLVM IR or
+  // MLIR file. That is fine because those do have to be parsed, so the label
+  // is still accurate.
+  mlir::TimingScope timingScopeParse = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdParse, timingMgr));
 
   // If the input is an LLVM file, just parse it and return.
   if (this->getCurrentInput().getKind().getLanguage() == Language::LLVM_IR) {
@@ -243,13 +201,17 @@ bool CodeGenAction::beginSourceFileAction() {
     return true;
   }
 
+  // Reset MLIR module if it was set before overriding the old context.
+  if (mlirModule)
+    mlirModule = mlir::OwningOpRef<mlir::ModuleOp>(nullptr);
   // Load the MLIR dialects required by Flang
-  mlir::DialectRegistry registry;
-  mlirCtx = std::make_unique<mlir::MLIRContext>(registry);
-  fir::support::registerNonCodegenDialects(registry);
-  fir::support::loadNonCodegenDialects(*mlirCtx);
+  mlirCtx = std::make_unique<mlir::MLIRContext>();
   fir::support::loadDialects(*mlirCtx);
   fir::support::registerLLVMTranslation(*mlirCtx);
+  mlir::DialectRegistry registry;
+  fir::acc::registerOpenACCExtensions(registry);
+  fir::omp::registerOpenMPExtensions(registry);
+  mlirCtx->appendDialectRegistry(registry);
 
   const llvm::TargetMachine &targetMachine = ci.getTargetMachine();
 
@@ -269,7 +231,7 @@ bool CodeGenAction::beginSourceFileAction() {
       return false;
     }
 
-    mlirModule = std::make_unique<mlir::ModuleOp>(module.release());
+    mlirModule = std::move(module);
     const llvm::DataLayout &dl = targetMachine.createDataLayout();
     fir::support::setMLIRDataLayout(*mlirModule, dl);
     return true;
@@ -288,6 +250,10 @@ bool CodeGenAction::beginSourceFileAction() {
   if (!res)
     return res;
 
+  timingScopeParse.stop();
+  mlir::TimingScope timingScopeMLIRGen = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdMLIRGen, timingMgr));
+
   // Create a LoweringBridge
   const common::IntrinsicTypeDefaultKinds &defKinds =
       ci.getSemanticsContext().defaultKinds();
@@ -296,32 +262,31 @@ bool CodeGenAction::beginSourceFileAction() {
   lower::LoweringBridge lb = Fortran::lower::LoweringBridge::create(
       *mlirCtx, ci.getSemanticsContext(), defKinds,
       ci.getSemanticsContext().intrinsics(),
-      ci.getSemanticsContext().targetCharacteristics(),
-      ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
-      kindMap, ci.getInvocation().getLoweringOpts(),
+      ci.getSemanticsContext().targetCharacteristics(), getAllCooked(ci),
+      ci.getInvocation().getTargetOpts().triple, kindMap,
+      ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
       ci.getInvocation().getFrontendOpts().features, targetMachine,
       ci.getInvocation().getTargetOpts(), ci.getInvocation().getCodeGenOpts());
 
-  // Fetch module from lb, so we can set
-  mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
-
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    setOffloadModuleInterfaceAttributes(*mlirModule,
+    setOffloadModuleInterfaceAttributes(lb.getModule(),
                                         ci.getInvocation().getLangOpts());
-    setOpenMPVersionAttribute(*mlirModule,
+    setOpenMPVersionAttribute(lb.getModule(),
                               ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
   // Create a parse tree and lower it to FIR
-  Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
-  lb.lower(parseTree, ci.getSemanticsContext());
+  parseAndLowerTree(ci, lb);
+
+  // Fetch module from lb, so we can set
+  mlirModule = lb.getModuleAndRelease();
 
   // Add target specific items like dependent libraries, target specific
   // constants etc.
   addDependentLibs(*mlirModule, ci);
-  addAMDGPUSpecificMLIRItems(*mlirModule, ci);
+  timingScopeMLIRGen.stop();
 
   // run the default passes.
   mlir::PassManager pm((*mlirModule)->getName(),
@@ -330,20 +295,50 @@ bool CodeGenAction::beginSourceFileAction() {
   // Add OpenMP-related passes
   // WARNING: These passes must be run immediately after the lowering to ensure
   // that the FIR is correct with respect to OpenMP operations/attributes.
-  if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
-          Fortran::common::LanguageFeature::OpenMP)) {
-    bool isDevice = false;
+  bool isOpenMPEnabled =
+      ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenMP);
+
+  fir::OpenMPFIRPassPipelineOpts opts;
+
+  using DoConcurrentMappingKind =
+      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+  opts.doConcurrentMappingKind =
+      ci.getInvocation().getCodeGenOpts().getDoConcurrentMapping();
+
+  if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None &&
+      !isOpenMPEnabled) {
+    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Warning,
+        "OpenMP is required for lowering `do concurrent` loops to OpenMP."
+        "Enable OpenMP using `-fopenmp`."
+        "`do concurrent` loops will be serialized.");
+    ci.getDiagnostics().Report(diagID);
+    opts.doConcurrentMappingKind = DoConcurrentMappingKind::DCMK_None;
+  }
+
+  if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None) {
+    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Warning,
+        "Mapping `do concurrent` to OpenMP is still experimental.");
+    ci.getDiagnostics().Report(diagID);
+  }
+
+  if (isOpenMPEnabled) {
+    opts.isTargetDevice = false;
     if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
             mlirModule->getOperation()))
-      isDevice = offloadMod.getIsTargetDevice();
+      opts.isTargetDevice = offloadMod.getIsTargetDevice();
+
     // WARNING: This pipeline must be run immediately after the lowering to
     // ensure that the FIR is correct with respect to OpenMP operations/
     // attributes.
-    fir::createOpenMPFIRPassPipeline(pm, isDevice);
+    fir::createOpenMPFIRPassPipeline(pm, opts);
   }
 
   pm.enableVerifier(/*verifyPasses=*/true);
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
+  pm.enableTiming(timingScopeMLIRGen);
 
   if (mlir::failed(pm.run(*mlirModule))) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
@@ -352,6 +347,7 @@ bool CodeGenAction::beginSourceFileAction() {
     ci.getDiagnostics().Report(diagID);
     return false;
   }
+  timingScopeMLIRGen.stop();
 
   // Print initial full MLIR module, before lowering or transformations, if
   // -save-temps has been specified.
@@ -407,19 +403,8 @@ void PrintPreprocessedAction::executeAction() {
   std::string buf;
   llvm::raw_string_ostream outForPP{buf};
 
-  // Format or dump the prescanner's output
   CompilerInstance &ci = this->getInstance();
-  if (ci.getInvocation().getPreprocessorOpts().showMacros) {
-    ci.getParsing().EmitPreprocessorMacros(outForPP);
-  } else if (ci.getInvocation().getPreprocessorOpts().noReformat) {
-    ci.getParsing().DumpCookedChars(outForPP);
-  } else {
-    ci.getParsing().EmitPreprocessedSource(
-        outForPP, !ci.getInvocation().getPreprocessorOpts().noLineDirectives);
-  }
-
-  // Print getDiagnostics from the prescanner
-  ci.getParsing().messages().Emit(llvm::errs(), ci.getAllCookedSources());
+  formatOrDumpPrescanner(buf, outForPP, ci);
 
   // If a pre-defined output stream exists, dump the preprocessed content there
   if (!ci.isOutputStreamNull()) {
@@ -439,60 +424,31 @@ void PrintPreprocessedAction::executeAction() {
 }
 
 void DebugDumpProvenanceAction::executeAction() {
-  this->getInstance().getParsing().DumpProvenance(llvm::outs());
+  dumpProvenance(this->getInstance());
 }
 
 void ParseSyntaxOnlyAction::executeAction() {}
 
 void DebugUnparseNoSemaAction::executeAction() {
-  auto &invoc = this->getInstance().getInvocation();
-  auto &parseTree{getInstance().getParsing().parseTree()};
-
-  // TODO: Options should come from CompilerInvocation
-  Unparse(llvm::outs(), *parseTree,
-          /*encoding=*/Fortran::parser::Encoding::UTF_8,
-          /*capitalizeKeywords=*/true, /*backslashEscapes=*/false,
-          /*preStatement=*/nullptr,
-          invoc.getUseAnalyzedObjectsForUnparse() ? &invoc.getAsFortran()
-                                                  : nullptr);
+  debugUnparseNoSema(this->getInstance(), llvm::outs());
 }
 
 void DebugUnparseAction::executeAction() {
-  auto &invoc = this->getInstance().getInvocation();
-  auto &parseTree{getInstance().getParsing().parseTree()};
-
   CompilerInstance &ci = this->getInstance();
   auto os{ci.createDefaultOutputFile(
       /*Binary=*/false, /*InFile=*/getCurrentFileOrBufferName())};
 
-  // TODO: Options should come from CompilerInvocation
-  Unparse(*os, *parseTree,
-          /*encoding=*/Fortran::parser::Encoding::UTF_8,
-          /*capitalizeKeywords=*/true, /*backslashEscapes=*/false,
-          /*preStatement=*/nullptr,
-          invoc.getUseAnalyzedObjectsForUnparse() ? &invoc.getAsFortran()
-                                                  : nullptr);
-
-  // Report fatal semantic errors
+  debugUnparseNoSema(ci, *os);
   reportFatalSemanticErrors();
 }
 
 void DebugUnparseWithSymbolsAction::executeAction() {
-  auto &parseTree{*getInstance().getParsing().parseTree()};
-
-  Fortran::semantics::UnparseWithSymbols(
-      llvm::outs(), parseTree, /*encoding=*/Fortran::parser::Encoding::UTF_8);
-
-  // Report fatal semantic errors
+  debugUnparseWithSymbols(this->getInstance());
   reportFatalSemanticErrors();
 }
 
 void DebugUnparseWithModulesAction::executeAction() {
-  auto &parseTree{*getInstance().getParsing().parseTree()};
-  CompilerInstance &ci{getInstance()};
-  Fortran::semantics::UnparseWithModules(
-      llvm::outs(), ci.getSemantics().context(), parseTree,
-      /*encoding=*/Fortran::parser::Encoding::UTF_8);
+  debugUnparseWithModules(this->getInstance());
   reportFatalSemanticErrors();
 }
 
@@ -516,12 +472,7 @@ void DebugDumpAllAction::executeAction() {
   CompilerInstance &ci = this->getInstance();
 
   // Dump parse tree
-  auto &parseTree{getInstance().getParsing().parseTree()};
-  llvm::outs() << "========================";
-  llvm::outs() << " Flang: parse tree dump ";
-  llvm::outs() << "========================\n";
-  Fortran::parser::DumpTree(llvm::outs(), parseTree,
-                            &ci.getInvocation().getAsFortran());
+  dumpTree(ci);
 
   if (!ci.getRtTyTables().schemata) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
@@ -540,21 +491,11 @@ void DebugDumpAllAction::executeAction() {
 }
 
 void DebugDumpParseTreeNoSemaAction::executeAction() {
-  auto &parseTree{getInstance().getParsing().parseTree()};
-
-  // Dump parse tree
-  Fortran::parser::DumpTree(
-      llvm::outs(), parseTree,
-      &this->getInstance().getInvocation().getAsFortran());
+  dumpTree(this->getInstance());
 }
 
 void DebugDumpParseTreeAction::executeAction() {
-  auto &parseTree{getInstance().getParsing().parseTree()};
-
-  // Dump parse tree
-  Fortran::parser::DumpTree(
-      llvm::outs(), parseTree,
-      &this->getInstance().getInvocation().getAsFortran());
+  dumpTree(this->getInstance());
 
   // Report fatal semantic errors
   reportFatalSemanticErrors();
@@ -562,60 +503,20 @@ void DebugDumpParseTreeAction::executeAction() {
 
 void DebugMeasureParseTreeAction::executeAction() {
   CompilerInstance &ci = this->getInstance();
-
-  // Parse. In case of failure, report and return.
-  ci.getParsing().Parse(llvm::outs());
-
-  if (!ci.getParsing().messages().empty() &&
-      (ci.getInvocation().getWarnAsErr() ||
-       ci.getParsing().messages().AnyFatalError())) {
-    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Could not parse %0");
-    ci.getDiagnostics().Report(diagID) << getCurrentFileOrBufferName();
-
-    ci.getParsing().messages().Emit(llvm::errs(),
-                                    this->getInstance().getAllCookedSources());
-    return;
-  }
-
-  // Report the getDiagnostics from parsing
-  ci.getParsing().messages().Emit(llvm::errs(), ci.getAllCookedSources());
-
-  auto &parseTree{*ci.getParsing().parseTree()};
-
-  // Measure the parse tree
-  MeasurementVisitor visitor;
-  Fortran::parser::Walk(parseTree, visitor);
-  llvm::outs() << "Parse tree comprises " << visitor.objects
-               << " objects and occupies " << visitor.bytes
-               << " total bytes.\n";
+  debugMeasureParseTree(ci, getCurrentFileOrBufferName());
 }
 
 void DebugPreFIRTreeAction::executeAction() {
-  CompilerInstance &ci = this->getInstance();
   // Report and exit if fatal semantic errors are present
   if (reportFatalSemanticErrors()) {
     return;
   }
 
-  auto &parseTree{*ci.getParsing().parseTree()};
-
-  // Dump pre-FIR tree
-  if (auto ast{
-          Fortran::lower::createPFT(parseTree, ci.getSemanticsContext())}) {
-    Fortran::lower::dumpPFT(llvm::outs(), *ast);
-  } else {
-    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Pre FIR Tree is NULL.");
-    ci.getDiagnostics().Report(diagID);
-  }
+  dumpPreFIRTree(this->getInstance());
 }
 
 void DebugDumpParsingLogAction::executeAction() {
-  CompilerInstance &ci = this->getInstance();
-
-  ci.getParsing().Parse(llvm::errs());
-  ci.getParsing().DumpParsingLog(llvm::outs());
+  debugDumpParsingLog(this->getInstance());
 }
 
 void GetDefinitionAction::executeAction() {
@@ -702,8 +603,10 @@ void CodeGenAction::lowerHLFIRToFIR() {
   assert(mlirModule && "The MLIR module has not been generated yet.");
 
   CompilerInstance &ci = this->getInstance();
-  auto opts = ci.getInvocation().getCodeGenOpts();
+  const CodeGenOptions &opts = ci.getInvocation().getCodeGenOpts();
   llvm::OptimizationLevel level = mapToLevel(opts);
+  mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
+  mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
   fir::support::loadDialects(*mlirCtx);
 
@@ -722,6 +625,9 @@ void CodeGenAction::lowerHLFIRToFIR() {
       level);
   (void)mlir::applyPassManagerCLOptions(pm);
 
+  mlir::TimingScope timingScopeMLIRPasses = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdMLIRPasses, timingMgr));
+  pm.enableTiming(timingScopeMLIRPasses);
   if (!mlir::succeeded(pm.run(*mlirModule))) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Lowering to FIR failed");
@@ -806,9 +712,12 @@ void CodeGenAction::generateLLVMIR() {
   assert(mlirModule && "The MLIR module has not been generated yet.");
 
   CompilerInstance &ci = this->getInstance();
-  auto opts = ci.getInvocation().getCodeGenOpts();
-  auto mathOpts = ci.getInvocation().getLoweringOpts().getMathOptions();
+  CompilerInvocation &invoc = ci.getInvocation();
+  const CodeGenOptions &opts = invoc.getCodeGenOpts();
+  const auto &mathOpts = invoc.getLoweringOpts().getMathOptions();
   llvm::OptimizationLevel level = mapToLevel(opts);
+  mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
+  mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
   fir::support::loadDialects(*mlirCtx);
   mlir::DialectRegistry registry;
@@ -836,19 +745,23 @@ void CodeGenAction::generateLLVMIR() {
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
 
-  if (ci.getInvocation().getLoweringOpts().getNSWOnLoopVarInc())
-    config.NSWOnLoopVarInc = true;
+  if (ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
+    config.NSWOnLoopVarInc = false;
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
   (void)mlir::applyPassManagerCLOptions(pm);
 
   // run the pass manager
+  mlir::TimingScope timingScopeMLIRPasses = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdMLIRPasses, timingMgr));
+  pm.enableTiming(timingScopeMLIRPasses);
   if (!mlir::succeeded(pm.run(*mlirModule))) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Lowering to LLVM IR failed");
     ci.getDiagnostics().Report(diagID);
   }
+  timingScopeMLIRPasses.stop();
 
   // Print final MLIR module, just before translation into LLVM IR, if
   // -save-temps has been specified.
@@ -861,6 +774,8 @@ void CodeGenAction::generateLLVMIR() {
   }
 
   // Translate to LLVM IR
+  mlir::TimingScope timingScopeLLVMIRGen = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdLLVMIRGen, timingMgr));
   std::optional<llvm::StringRef> moduleName = mlirModule->getName();
   llvmModule = mlir::translateModuleToLLVMIR(
       *mlirModule, *llvmCtx, moduleName ? *moduleName : "FIRModule");
@@ -880,14 +795,32 @@ void CodeGenAction::generateLLVMIR() {
           static_cast<llvm::PIELevel::Level>(opts.PICLevel));
   }
 
+  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+
   // Set mcmodel level LLVM module flags
   std::optional<llvm::CodeModel::Model> cm = getCodeModel(opts.CodeModel);
   if (cm.has_value()) {
-    const llvm::Triple triple(ci.getInvocation().getTargetOpts().triple);
     llvmModule->setCodeModel(*cm);
     if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
         triple.getArch() == llvm::Triple::x86_64) {
       llvmModule->setLargeDataThreshold(opts.LargeDataThreshold);
+    }
+  }
+
+  if (triple.isRISCV() && !targetOpts.abi.empty())
+    llvmModule->addModuleFlag(
+        llvm::Module::Error, "target-abi",
+        llvm::MDString::get(llvmModule->getContext(), targetOpts.abi));
+
+  if (triple.isAMDGPU() ||
+      (triple.isSPIRV() && triple.getVendor() == llvm::Triple::AMD)) {
+    // Emit amdhsa_code_object_version module flag, which is code object version
+    // times 100.
+    if (opts.CodeObjectVersion != llvm::CodeObjectVersionKind::COV_None) {
+      llvmModule->addModuleFlag(llvm::Module::Error,
+                                "amdhsa_code_object_version",
+                                opts.CodeObjectVersion);
     }
   }
 }
@@ -961,14 +894,18 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
 
   // Run the passes
   codeGenPasses.run(llvmModule);
+
+  // Cleanup
+  delete tlii;
 }
 
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
-  auto opts = getInstance().getInvocation().getCodeGenOpts();
-  auto &diags = getInstance().getDiagnostics();
+  CompilerInstance &ci = getInstance();
+  const CodeGenOptions &opts = ci.getInvocation().getCodeGenOpts();
+  clang::DiagnosticsEngine &diags = ci.getDiagnostics();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
-  llvm::TargetMachine *targetMachine = &getInstance().getTargetMachine();
+  llvm::TargetMachine *targetMachine = &ci.getTargetMachine();
   // Create the analysis managers.
   llvm::LoopAnalysisManager lam;
   llvm::FunctionAnalysisManager fam;
@@ -982,6 +919,13 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::StandardInstrumentations si(llvmModule->getContext(),
                                     opts.DebugPassManager);
   si.registerCallbacks(pic, &mam);
+  if (ci.isTimingEnabled())
+    si.getTimePasses().setOutStream(ci.getTimingStreamLLVM());
+  pto.LoopUnrolling = opts.UnrollLoops;
+  pto.LoopInterleaving = opts.UnrollLoops;
+  pto.LoopVectorization = opts.VectorizeLoop;
+  pto.SLPVectorization = opts.VectorizeSLP;
+
   llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
 
   // Attempt to load pass plugins and register their callbacks with PB.
@@ -1043,6 +987,13 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   // Run the passes.
   mpm.run(*llvmModule, mam);
+
+  // Print the timers to the associated output stream and reset them.
+  if (ci.isTimingEnabled())
+    si.getTimePasses().print();
+
+  // Cleanup
+  delete tlii;
 }
 
 // This class handles optimization remark messages requested if
@@ -1261,8 +1212,11 @@ void CodeGenAction::executeAction() {
 
   clang::DiagnosticsEngine &diags = ci.getDiagnostics();
   const CodeGenOptions &codeGenOpts = ci.getInvocation().getCodeGenOpts();
+  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
   Fortran::lower::LoweringOptions &loweringOpts =
       ci.getInvocation().getLoweringOpts();
+  mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
+  mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
   // If the output stream is a file, generate it and define the corresponding
   // output stream. If a pre-defined output stream is available, we will use
@@ -1308,6 +1262,11 @@ void CodeGenAction::executeAction() {
   if (!llvmModule)
     generateLLVMIR();
 
+  // This will already have been started in generateLLVMIR(). But we need to
+  // continue operating on the module, so we continue timing it.
+  mlir::TimingScope timingScopeLLVMIRGen = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdLLVMIRGen, timingMgr));
+
   // If generating the LLVM module failed, abort! No need for further error
   // reporting since generateLLVMIR() does this already.
   if (!llvmModule)
@@ -1318,10 +1277,12 @@ void CodeGenAction::executeAction() {
   // given on the command-line).
   llvm::TargetMachine &targetMachine = ci.getTargetMachine();
 
-  const std::string &theTriple = targetMachine.getTargetTriple().str();
+  targetMachine.Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
+
+  const llvm::Triple &theTriple = targetMachine.getTargetTriple();
 
   if (llvmModule->getTargetTriple() != theTriple) {
-    diags.Report(clang::diag::warn_fe_override_module) << theTriple;
+    diags.Report(clang::diag::warn_fe_override_module) << theTriple.str();
   }
 
   // Always set the triple and data layout, to make sure they match and are set.
@@ -1337,6 +1298,7 @@ void CodeGenAction::executeAction() {
   // Embed offload objects specified with -fembed-offload-object
   if (!codeGenOpts.OffloadObjects.empty())
     embedOffloadObjects();
+  timingScopeLLVMIRGen.stop();
 
   BackendRemarkConsumer remarkConsumer(diags, codeGenOpts);
 
@@ -1365,7 +1327,10 @@ void CodeGenAction::executeAction() {
   }
 
   // Run LLVM's middle-end (i.e. the optimizer).
+  mlir::TimingScope timingScopeLLVMIRPasses = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdLLVMIRPasses, timingMgr));
   runOptimizationPipeline(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
+  timingScopeLLVMIRPasses.stop();
 
   if (action == BackendActionTy::Backend_EmitLL ||
       action == BackendActionTy::Backend_EmitBC) {
@@ -1374,11 +1339,15 @@ void CodeGenAction::executeAction() {
   }
 
   // Run LLVM's backend and generate either assembly or machine code
+  mlir::TimingScope timingScopeBackend = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdBackend, timingMgr));
   if (action == BackendActionTy::Backend_EmitAssembly ||
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(
         diags, targetMachine, action, *llvmModule, codeGenOpts,
         ci.isOutputStreamNull() ? *os : ci.getOutputStream());
+    if (timingMgr.isEnabled())
+      llvm::reportAndResetTimings(&ci.getTimingStreamCodeGen());
     return;
   }
 }
@@ -1394,17 +1363,7 @@ void InitOnlyAction::executeAction() {
 void PluginParseTreeAction::executeAction() {}
 
 void DebugDumpPFTAction::executeAction() {
-  CompilerInstance &ci = this->getInstance();
-
-  if (auto ast = Fortran::lower::createPFT(*ci.getParsing().parseTree(),
-                                           ci.getSemantics().context())) {
-    Fortran::lower::dumpPFT(llvm::outs(), *ast);
-    return;
-  }
-
-  unsigned diagID = ci.getDiagnostics().getCustomDiagID(
-      clang::DiagnosticsEngine::Error, "Pre FIR Tree is NULL.");
-  ci.getDiagnostics().Report(diagID);
+  dumpPreFIRTree(this->getInstance());
 }
 
 Fortran::parser::Parsing &PluginParseTreeAction::getParsing() {

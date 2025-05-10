@@ -1,4 +1,4 @@
-# RUN: llc %s --run-pass=nvptx-proxyreg-erasure -march=nvptx64 -o - | FileCheck %s
+# RUN: llc %s --run-pass=nvptx-proxyreg-erasure -mtriple=nvptx64 -o - | FileCheck %s
 
 --- |
   ; ModuleID = 'third-party/llvm-project/llvm/test/CodeGen/NVPTX/proxy-reg-erasure-mir.ll'
@@ -25,7 +25,7 @@ tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false

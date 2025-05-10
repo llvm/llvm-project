@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_MEM_FUN_REF_H
-#define _LIBCPP___FUNCTIONAL_MEM_FUN_REF_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_MEM_FUN_REF_H
+#define _LIBCPP___CXX03___FUNCTIONAL_MEM_FUN_REF_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/binary_function.h>
@@ -19,8 +19,6 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS)
 
 template <class _Sp, class _Tp>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 mem_fun_t : public __unary_function<_Tp*, _Sp> {
@@ -139,8 +137,6 @@ mem_fun_ref(_Sp (_Tp::*__f)(_Ap) const) {
   return const_mem_fun1_ref_t<_Sp, _Tp, _Ap>(__f);
 }
 
-#endif // _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS)
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_MEM_FUN_REF_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_MEM_FUN_REF_H

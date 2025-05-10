@@ -134,6 +134,14 @@ class ReadNone<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
+// The return value or argument is in the range [lower, upper),
+// where lower and upper are interpreted as signed integers.
+class Range<AttrIndex idx, int lower, int upper> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+  int Lower = lower;
+  int Upper = upper;
+}
+
 def IntrNoReturn : IntrinsicProperty;
 
 // Applied by default.
@@ -327,6 +335,11 @@ def IIT_I4 : IIT_Int<4, 58>;
 def IIT_AARCH64_SVCOUNT : IIT_VT<aarch64svcount, 59>;
 def IIT_V6 : IIT_Vec<6, 60>;
 def IIT_V10 : IIT_Vec<10, 61>;
+def IIT_ONE_THIRD_VEC_ARG : IIT_Base<62>;
+def IIT_ONE_FIFTH_VEC_ARG : IIT_Base<63>;
+def IIT_ONE_SEVENTH_VEC_ARG : IIT_Base<64>;
+def IIT_V2048: IIT_Vec<2048, 65>;
+def IIT_V4096: IIT_Vec<4096, 66>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -467,6 +480,15 @@ class LLVMVectorElementType<int num> : LLVMMatchType<num, IIT_VEC_ELEMENT>;
 class LLVMHalfElementsVectorType<int num>
   : LLVMMatchType<num, IIT_HALF_VEC_ARG>;
 
+class LLVMOneThirdElementsVectorType<int num>
+  : LLVMMatchType<num, IIT_ONE_THIRD_VEC_ARG>;
+
+class LLVMOneFifthElementsVectorType<int num>
+  : LLVMMatchType<num, IIT_ONE_FIFTH_VEC_ARG>;
+
+class LLVMOneSeventhElementsVectorType<int num>
+  : LLVMMatchType<num, IIT_ONE_SEVENTH_VEC_ARG>;
+
 // Match the type of another intrinsic parameter that is expected to be a
 // vector type (i.e. <N x iM>) but with each element subdivided to
 // form a vector with more elements that are smaller than the original.
@@ -522,6 +544,7 @@ def llvm_v128i1_ty     : LLVMType<v128i1>;   // 128 x i1
 def llvm_v256i1_ty     : LLVMType<v256i1>;   // 256 x i1
 def llvm_v512i1_ty     : LLVMType<v512i1>;   // 512 x i1
 def llvm_v1024i1_ty    : LLVMType<v1024i1>;  //1024 x i1
+def llvm_v4096i1_ty    : LLVMType<v4096i1>;  //4096 x i1
 
 def llvm_v1i8_ty       : LLVMType<v1i8>;     //  1 x i8
 def llvm_v2i8_ty       : LLVMType<v2i8>;     //  2 x i8
@@ -534,25 +557,29 @@ def llvm_v64i8_ty      : LLVMType<v64i8>;    // 64 x i8
 def llvm_v128i8_ty     : LLVMType<v128i8>;   //128 x i8
 def llvm_v256i8_ty     : LLVMType<v256i8>;   //256 x i8
 
-def llvm_v1i16_ty      : LLVMType<v1i16>;    //  1 x i16
-def llvm_v2i16_ty      : LLVMType<v2i16>;    //  2 x i16
-def llvm_v4i16_ty      : LLVMType<v4i16>;    //  4 x i16
-def llvm_v8i16_ty      : LLVMType<v8i16>;    //  8 x i16
-def llvm_v16i16_ty     : LLVMType<v16i16>;   // 16 x i16
-def llvm_v32i16_ty     : LLVMType<v32i16>;   // 32 x i16
-def llvm_v64i16_ty     : LLVMType<v64i16>;   // 64 x i16
-def llvm_v128i16_ty    : LLVMType<v128i16>;  //128 x i16
+def llvm_v1i16_ty      : LLVMType<v1i16>;     //    1 x i16
+def llvm_v2i16_ty      : LLVMType<v2i16>;     //    2 x i16
+def llvm_v4i16_ty      : LLVMType<v4i16>;     //    4 x i16
+def llvm_v8i16_ty      : LLVMType<v8i16>;     //    8 x i16
+def llvm_v16i16_ty     : LLVMType<v16i16>;    //   16 x i16
+def llvm_v32i16_ty     : LLVMType<v32i16>;    //   32 x i16
+def llvm_v64i16_ty     : LLVMType<v64i16>;    //   64 x i16
+def llvm_v128i16_ty    : LLVMType<v128i16>;   //  128 x i16
+def llvm_v4096i16_ty   : LLVMType<v4096i16>;  // 4096 x i16
 
-def llvm_v1i32_ty      : LLVMType<v1i32>;    //  1 x i32
-def llvm_v2i32_ty      : LLVMType<v2i32>;    //  2 x i32
-def llvm_v3i32_ty      : LLVMType<v3i32>;    //  3 x i32
-def llvm_v4i32_ty      : LLVMType<v4i32>;    //  4 x i32
-def llvm_v6i32_ty      : LLVMType<v6i32>;    //  6 x i32
-def llvm_v8i32_ty      : LLVMType<v8i32>;    //  8 x i32
-def llvm_v16i32_ty     : LLVMType<v16i32>;   // 16 x i32
-def llvm_v32i32_ty     : LLVMType<v32i32>;   // 32 x i32
-def llvm_v64i32_ty     : LLVMType<v64i32>;   // 64 x i32
-def llvm_v256i32_ty    : LLVMType<v256i32>;  //256 x i32
+def llvm_v1i32_ty      : LLVMType<v1i32>;     //    1 x i32
+def llvm_v2i32_ty      : LLVMType<v2i32>;     //    2 x i32
+def llvm_v3i32_ty      : LLVMType<v3i32>;     //    3 x i32
+def llvm_v4i32_ty      : LLVMType<v4i32>;     //    4 x i32
+def llvm_v6i32_ty      : LLVMType<v6i32>;     //    6 x i32
+def llvm_v8i32_ty      : LLVMType<v8i32>;     //    8 x i32
+def llvm_v10i32_ty     : LLVMType<v10i32>;    //   10 x i32
+def llvm_v16i32_ty     : LLVMType<v16i32>;    //   16 x i32
+def llvm_v32i32_ty     : LLVMType<v32i32>;    //   32 x i32
+def llvm_v64i32_ty     : LLVMType<v64i32>;    //   64 x i32
+def llvm_v128i32_ty    : LLVMType<v128i32>;   //  128 x i32
+def llvm_v256i32_ty    : LLVMType<v256i32>;   //  256 x i32
+def llvm_v2048i32_ty   : LLVMType<v2048i32>;  // 2048 x i32
 
 def llvm_v1i64_ty      : LLVMType<v1i64>;    //  1 x i64
 def llvm_v2i64_ty      : LLVMType<v2i64>;    //  2 x i64
@@ -563,28 +590,32 @@ def llvm_v32i64_ty     : LLVMType<v32i64>;   // 32 x i64
 
 def llvm_v1i128_ty     : LLVMType<v1i128>;   //  1 x i128
 
-def llvm_v2f16_ty      : LLVMType<v2f16>;    //  2 x half (__fp16)
-def llvm_v4f16_ty      : LLVMType<v4f16>;    //  4 x half (__fp16)
-def llvm_v8f16_ty      : LLVMType<v8f16>;    //  8 x half (__fp16)
-def llvm_v16f16_ty     : LLVMType<v16f16>;   // 16 x half (__fp16)
-def llvm_v32f16_ty     : LLVMType<v32f16>;   // 32 x half (__fp16)
-def llvm_v2bf16_ty     : LLVMType<v2bf16>;   //  2 x bfloat (__bf16)
-def llvm_v4bf16_ty     : LLVMType<v4bf16>;   //  4 x bfloat (__bf16)
-def llvm_v8bf16_ty     : LLVMType<v8bf16>;   //  8 x bfloat (__bf16)
-def llvm_v16bf16_ty    : LLVMType<v16bf16>;  // 16 x bfloat (__bf16)
-def llvm_v32bf16_ty    : LLVMType<v32bf16>;  // 32 x bfloat (__bf16)
-def llvm_v1f32_ty      : LLVMType<v1f32>;    //  1 x float
-def llvm_v2f32_ty      : LLVMType<v2f32>;    //  2 x float
-def llvm_v3f32_ty      : LLVMType<v3f32>;    //  3 x float
-def llvm_v4f32_ty      : LLVMType<v4f32>;    //  4 x float
-def llvm_v8f32_ty      : LLVMType<v8f32>;    //  8 x float
-def llvm_v16f32_ty     : LLVMType<v16f32>;   // 16 x float
-def llvm_v32f32_ty     : LLVMType<v32f32>;   // 32 x float
-def llvm_v1f64_ty      : LLVMType<v1f64>;    //  1 x double
-def llvm_v2f64_ty      : LLVMType<v2f64>;    //  2 x double
-def llvm_v4f64_ty      : LLVMType<v4f64>;    //  4 x double
-def llvm_v8f64_ty      : LLVMType<v8f64>;    //  8 x double
-def llvm_v16f64_ty     : LLVMType<v16f64>;   // 16 x double
+def llvm_v2f16_ty      : LLVMType<v2f16>;       //    2 x half (__fp16)
+def llvm_v4f16_ty      : LLVMType<v4f16>;       //    4 x half (__fp16)
+def llvm_v8f16_ty      : LLVMType<v8f16>;       //    8 x half (__fp16)
+def llvm_v16f16_ty     : LLVMType<v16f16>;      //   16 x half (__fp16)
+def llvm_v32f16_ty     : LLVMType<v32f16>;      //   32 x half (__fp16)
+def llvm_v4096f16_ty   : LLVMType<v4096f16>;    // 4096 x half (__fp16)
+def llvm_v2bf16_ty     : LLVMType<v2bf16>;      //    2 x bfloat (__bf16)
+def llvm_v4bf16_ty     : LLVMType<v4bf16>;      //    4 x bfloat (__bf16)
+def llvm_v8bf16_ty     : LLVMType<v8bf16>;      //    8 x bfloat (__bf16)
+def llvm_v16bf16_ty    : LLVMType<v16bf16>;     //   16 x bfloat (__bf16)
+def llvm_v32bf16_ty    : LLVMType<v32bf16>;     //   32 x bfloat (__bf16)
+def llvm_v4096bf16_ty  : LLVMType<v4096bf16>;   // 4096 x bfloat (__bf16)
+def llvm_v1f32_ty      : LLVMType<v1f32>;       //    1 x float
+def llvm_v2f32_ty      : LLVMType<v2f32>;       //    2 x float
+def llvm_v3f32_ty      : LLVMType<v3f32>;       //    3 x float
+def llvm_v4f32_ty      : LLVMType<v4f32>;       //    4 x float
+def llvm_v8f32_ty      : LLVMType<v8f32>;       //    8 x float
+def llvm_v10f32_ty     : LLVMType<v10f32>;      //   10 x float
+def llvm_v16f32_ty     : LLVMType<v16f32>;      //   16 x float
+def llvm_v32f32_ty     : LLVMType<v32f32>;      //   32 x float
+def llvm_v2048f32_ty     : LLVMType<v2048f32>;  // 2048 x float
+def llvm_v1f64_ty      : LLVMType<v1f64>;       //    1 x double
+def llvm_v2f64_ty      : LLVMType<v2f64>;       //    2 x double
+def llvm_v4f64_ty      : LLVMType<v4f64>;       //    4 x double
+def llvm_v8f64_ty      : LLVMType<v8f64>;       //    8 x double
+def llvm_v16f64_ty     : LLVMType<v16f64>;      //   16 x double
 
 def llvm_vararg_ty     : LLVMType<isVoid>;   // this means vararg here
 
@@ -1010,7 +1041,7 @@ def int_memset_inline
 def int_experimental_memset_pattern
     : Intrinsic<[],
       [llvm_anyptr_ty, // Destination.
-       llvm_anyint_ty, // Pattern value.
+       llvm_any_ty,    // Pattern value.
        llvm_anyint_ty, // Count (number of times to fill value).
        llvm_i1_ty],    // IsVolatile.
       [IntrWriteMem, IntrArgMemOnly, IntrWillReturn, IntrNoFree, IntrNoCallback,
@@ -1062,6 +1093,10 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
   def int_round : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_roundeven    : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_sincos : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
+                             [llvm_anyfloat_ty]>;
+  def int_sincospi : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
+                             [llvm_anyfloat_ty]>;
+  def int_modf : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
                              [llvm_anyfloat_ty]>;
 
   // Truncate a floating point number with a specific rounding mode
@@ -1601,10 +1636,10 @@ def int_umin : DefaultAttrsIntrinsic<
     [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 def int_scmp : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [llvm_anyint_ty, LLVMMatchType<1>],
-    [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+    [IntrNoMem, IntrSpeculatable, IntrWillReturn, Range<RetIndex, -1, 2>]>;
 def int_ucmp : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [llvm_anyint_ty, LLVMMatchType<1>],
-    [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+    [IntrNoMem, IntrSpeculatable, IntrWillReturn, Range<RetIndex, -1, 2>]>;
 
 //===------------------------- Memory Use Markers -------------------------===//
 //
@@ -1655,7 +1690,7 @@ def int_strip_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
 //
 def int_experimental_stackmap : DefaultAttrsIntrinsic<[],
                                   [llvm_i64_ty, llvm_i32_ty, llvm_vararg_ty],
-                                  [Throws]>;
+                                  [Throws, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 def int_experimental_patchpoint_void : Intrinsic<[],
                                                  [llvm_i64_ty, llvm_i32_ty,
                                                   llvm_ptr_ty, llvm_i32_ty,
@@ -1864,7 +1899,8 @@ def int_is_constant : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty],
                                 "llvm.is.constant">;
 
 // Introduce a use of the argument without generating any code.
-def int_fake_use : Intrinsic<[], [llvm_vararg_ty]>;
+def int_fake_use : DefaultAttrsIntrinsic<[], [llvm_vararg_ty],
+  [IntrHasSideEffects, IntrInaccessibleMemOnly, IntrWillReturn]>;
 
 // Intrinsic to mask out bits of a pointer.
 // First argument must be pointer or vector of pointer. This is checked by the
@@ -2725,6 +2761,54 @@ def int_vector_interleave2   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
 
 def int_vector_deinterleave2 : DefaultAttrsIntrinsic<[LLVMHalfElementsVectorType<0>,
                                                       LLVMHalfElementsVectorType<0>],
+                                                     [llvm_anyvector_ty],
+                                                     [IntrNoMem]>;
+
+def int_vector_interleave3   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                     [LLVMOneThirdElementsVectorType<0>,
+                                                      LLVMOneThirdElementsVectorType<0>,
+                                                      LLVMOneThirdElementsVectorType<0>],
+                                                     [IntrNoMem]>;
+
+def int_vector_deinterleave3 : DefaultAttrsIntrinsic<[LLVMOneThirdElementsVectorType<0>,
+                                                      LLVMOneThirdElementsVectorType<0>,
+                                                      LLVMOneThirdElementsVectorType<0>],
+                                                     [llvm_anyvector_ty],
+                                                     [IntrNoMem]>;
+
+def int_vector_interleave5   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                     [LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>],
+                                                     [IntrNoMem]>;
+
+def int_vector_deinterleave5 : DefaultAttrsIntrinsic<[LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>,
+                                                      LLVMOneFifthElementsVectorType<0>],
+                                                     [llvm_anyvector_ty],
+                                                     [IntrNoMem]>;
+
+def int_vector_interleave7   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                     [LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>],
+                                                     [IntrNoMem]>;
+
+def int_vector_deinterleave7 : DefaultAttrsIntrinsic<[LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>,
+                                                      LLVMOneSeventhElementsVectorType<0>],
                                                      [llvm_anyvector_ty],
                                                      [IntrNoMem]>;
 

@@ -19,7 +19,7 @@ define float @test_fcmp_ogt_fadd_select_constant(float %in) {
 define float @test_fcmp_ogt_fadd_select_constant_swapped(float %in) {
 ; CHECK-LABEL: define float @test_fcmp_ogt_fadd_select_constant_swapped(
 ; CHECK-SAME: float [[IN:%.*]]) {
-; CHECK-NEXT:    [[SEL_NEW:%.*]] = call nsz float @llvm.maxnum.f32(float [[IN]], float 0.000000e+00)
+; CHECK-NEXT:    [[SEL_NEW:%.*]] = call nsz float @llvm.minnum.f32(float [[IN]], float 0.000000e+00)
 ; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz float [[SEL_NEW]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[ADD_NEW]]
 ;
@@ -87,7 +87,7 @@ define float @test_fcmp_olt_fadd_select_constant(float %in) {
 define float @test_fcmp_olt_fadd_select_constant_swapped(float %in) {
 ; CHECK-LABEL: define float @test_fcmp_olt_fadd_select_constant_swapped(
 ; CHECK-SAME: float [[IN:%.*]]) {
-; CHECK-NEXT:    [[SEL_NEW:%.*]] = call nsz float @llvm.minnum.f32(float [[IN]], float 0.000000e+00)
+; CHECK-NEXT:    [[SEL_NEW:%.*]] = call nsz float @llvm.maxnum.f32(float [[IN]], float 0.000000e+00)
 ; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz float [[SEL_NEW]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[ADD_NEW]]
 ;
@@ -155,7 +155,7 @@ define float @test_fcmp_oge_fadd_select_constant(float %in) {
 define float @test_fcmp_oge_fadd_select_constant_swapped(float %in) {
 ; CHECK-LABEL: define float @test_fcmp_oge_fadd_select_constant_swapped(
 ; CHECK-SAME: float [[IN:%.*]]) {
-; CHECK-NEXT:    [[SEL_NEW:%.*]] = call nsz float @llvm.maxnum.f32(float [[IN]], float 0.000000e+00)
+; CHECK-NEXT:    [[SEL_NEW:%.*]] = call nsz float @llvm.minnum.f32(float [[IN]], float 0.000000e+00)
 ; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz float [[SEL_NEW]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[ADD_NEW]]
 ;
@@ -223,7 +223,7 @@ define float @test_fcmp_ole_fadd_select_constant(float %in) {
 define float @test_fcmp_ole_fadd_select_constant_swapped(float %in) {
 ; CHECK-LABEL: define float @test_fcmp_ole_fadd_select_constant_swapped(
 ; CHECK-SAME: float [[IN:%.*]]) {
-; CHECK-NEXT:    [[SEL_NEW:%.*]] = call nsz float @llvm.minnum.f32(float [[IN]], float 0.000000e+00)
+; CHECK-NEXT:    [[SEL_NEW:%.*]] = call nsz float @llvm.maxnum.f32(float [[IN]], float 0.000000e+00)
 ; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz float [[SEL_NEW]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[ADD_NEW]]
 ;
@@ -293,7 +293,7 @@ define float @test_fcmp_ugt_fadd_select_constant_swapped(float %in) {
 ; CHECK-LABEL: define float @test_fcmp_ugt_fadd_select_constant_swapped(
 ; CHECK-SAME: float [[IN:%.*]]) {
 ; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp ole float [[IN]], 0.000000e+00
-; CHECK-NEXT:    [[SEL_NEW:%.*]] = select i1 [[CMP1_INV]], float 0.000000e+00, float [[IN]]
+; CHECK-NEXT:    [[SEL_NEW:%.*]] = select i1 [[CMP1_INV]], float [[IN]], float 0.000000e+00
 ; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz float [[SEL_NEW]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[ADD_NEW]]
 ;
@@ -366,7 +366,7 @@ define float @test_fcmp_uge_fadd_select_constant_swapped(float %in) {
 ; CHECK-LABEL: define float @test_fcmp_uge_fadd_select_constant_swapped(
 ; CHECK-SAME: float [[IN:%.*]]) {
 ; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp olt float [[IN]], 0.000000e+00
-; CHECK-NEXT:    [[SEL_NEW:%.*]] = select i1 [[CMP1_INV]], float 0.000000e+00, float [[IN]]
+; CHECK-NEXT:    [[SEL_NEW:%.*]] = select i1 [[CMP1_INV]], float [[IN]], float 0.000000e+00
 ; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz float [[SEL_NEW]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[ADD_NEW]]
 ;
@@ -439,7 +439,7 @@ define float @test_fcmp_ult_fadd_select_constant_swapped(float %in) {
 ; CHECK-LABEL: define float @test_fcmp_ult_fadd_select_constant_swapped(
 ; CHECK-SAME: float [[IN:%.*]]) {
 ; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp oge float [[IN]], 0.000000e+00
-; CHECK-NEXT:    [[SEL_NEW:%.*]] = select i1 [[CMP1_INV]], float 0.000000e+00, float [[IN]]
+; CHECK-NEXT:    [[SEL_NEW:%.*]] = select i1 [[CMP1_INV]], float [[IN]], float 0.000000e+00
 ; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz float [[SEL_NEW]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[ADD_NEW]]
 ;
@@ -512,7 +512,7 @@ define float @test_fcmp_ule_fadd_select_constant_swapped(float %in) {
 ; CHECK-LABEL: define float @test_fcmp_ule_fadd_select_constant_swapped(
 ; CHECK-SAME: float [[IN:%.*]]) {
 ; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp ogt float [[IN]], 0.000000e+00
-; CHECK-NEXT:    [[SEL_NEW:%.*]] = select i1 [[CMP1_INV]], float 0.000000e+00, float [[IN]]
+; CHECK-NEXT:    [[SEL_NEW:%.*]] = select i1 [[CMP1_INV]], float [[IN]], float 0.000000e+00
 ; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd nnan nsz float [[SEL_NEW]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[ADD_NEW]]
 ;
@@ -663,7 +663,7 @@ define float @test_fcmp_ogt_fadd_select_rewrite_flags2(float %in) {
 define float @test_fcmp_ogt_fadd_select_rewrite_and_fastmath(float %in) {
 ; CHECK-LABEL: define float @test_fcmp_ogt_fadd_select_rewrite_and_fastmath(
 ; CHECK-SAME: float [[IN:%.*]]) {
-; CHECK-NEXT:    [[SEL_NEW:%.*]] = call fast float @llvm.maxnum.f32(float [[IN]], float 0.000000e+00)
+; CHECK-NEXT:    [[SEL_NEW:%.*]] = call reassoc nnan nsz arcp contract afn float @llvm.maxnum.f32(float [[IN]], float 0.000000e+00)
 ; CHECK-NEXT:    [[ADD_NEW:%.*]] = fadd fast float [[SEL_NEW]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[ADD_NEW]]
 ;

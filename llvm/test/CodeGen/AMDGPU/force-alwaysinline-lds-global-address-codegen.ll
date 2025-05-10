@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -amdgpu-stress-function-calls -amdgpu-enable-lower-module-lds=false < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -amdgpu-enable-lower-module-lds=false < %s | FileCheck -check-prefix=GCN %s
 
-@lds0 = addrspace(3) global i32 undef, align 4
+@lds0 = addrspace(3) global i32 poison, align 4
 
 ; GCN-NOT: load_lds_simple
 

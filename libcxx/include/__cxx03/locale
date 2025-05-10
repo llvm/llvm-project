@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_LOCALE
-#define _LIBCPP_LOCALE
+#ifndef _LIBCPP___CXX03_LOCALE
+#define _LIBCPP___CXX03_LOCALE
 
 /*
     locale synopsis
@@ -222,7 +222,7 @@ template <class charT> class messages_byname;
 // Most unix variants have catopen.  These are the specific ones that don't.
 #    if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__)
 #      define _LIBCPP_HAS_CATOPEN 1
-#      include <__cxx03/nl_types.h>
+#      include <nl_types.h>
 #    endif
 #  endif
 
@@ -3136,8 +3136,6 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<wchar_t>;
 #  endif
 
-#  if _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT)
-
 template <class _Codecvt,
           class _Elem      = wchar_t,
           class _WideAlloc = allocator<_Elem>,
@@ -3157,19 +3155,11 @@ private:
   size_t __cvtcount_;
 
 public:
-#    ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI wstring_convert() : wstring_convert(new _Codecvt) {}
-  _LIBCPP_HIDE_FROM_ABI explicit wstring_convert(_Codecvt* __pcvt);
-#    else
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXPLICIT_SINCE_CXX14 wstring_convert(_Codecvt* __pcvt = new _Codecvt);
-#    endif
 
   _LIBCPP_HIDE_FROM_ABI wstring_convert(_Codecvt* __pcvt, state_type __state);
   _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
   wstring_convert(const byte_string& __byte_err, const wide_string& __wide_err = wide_string());
-#    ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI wstring_convert(wstring_convert&& __wc);
-#    endif
   _LIBCPP_HIDE_FROM_ABI ~wstring_convert();
 
   wstring_convert(const wstring_convert& __wc)            = delete;
@@ -3213,20 +3203,6 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::wstring_convert(
     : __byte_err_string_(__byte_err), __wide_err_string_(__wide_err), __cvtstate_(), __cvtcount_(0) {
   __cvtptr_ = new _Codecvt;
 }
-
-#    ifndef _LIBCPP_CXX03_LANG
-
-template <class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
-inline wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::wstring_convert(wstring_convert&& __wc)
-    : __byte_err_string_(std::move(__wc.__byte_err_string_)),
-      __wide_err_string_(std::move(__wc.__wide_err_string_)),
-      __cvtptr_(__wc.__cvtptr_),
-      __cvtstate_(__wc.__cvtstate_),
-      __cvtcount_(__wc.__cvtcount_) {
-  __wc.__cvtptr_ = nullptr;
-}
-
-#    endif // _LIBCPP_CXX03_LANG
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
@@ -3380,14 +3356,8 @@ private:
   bool __always_noconv_;
 
 public:
-#    ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI wbuffer_convert() : wbuffer_convert(nullptr) {}
-  explicit _LIBCPP_HIDE_FROM_ABI
-  wbuffer_convert(streambuf* __bytebuf, _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
-#    else
   _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
   wbuffer_convert(streambuf* __bytebuf = nullptr, _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
-#    endif
 
   _LIBCPP_HIDE_FROM_ABI ~wbuffer_convert();
 
@@ -3743,8 +3713,6 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>* wbuffer_convert<_Codecvt, _Elem, _Tr>::__
 
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
-#  endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT)
-
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
@@ -3753,9 +3721,8 @@ _LIBCPP_POP_MACROS
 
 #endif // !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/atomic>
-#  include <__cxx03/concepts>
 #  include <__cxx03/cstdarg>
 #  include <__cxx03/iterator>
 #  include <__cxx03/mutex>
@@ -3764,4 +3731,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/typeinfo>
 #endif
 
-#endif // _LIBCPP_LOCALE
+#endif // _LIBCPP___CXX03_LOCALE

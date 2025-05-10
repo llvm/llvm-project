@@ -59,6 +59,11 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_uptr
     llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
     llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
+    // FIXME(pr/122103): hlsl_private -> PRIVATE is wrong, but at least this
+    // will break loudly.
+    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_private
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_device
 };
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
@@ -74,16 +79,18 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // cuda_constant
     llvm::AMDGPUAS::LOCAL_ADDRESS,    // cuda_shared
     // SYCL address space values for this map are dummy
-    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global
-    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global_device
-    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global_host
-    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_local
-    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_private
-    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr32_sptr
-    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr32_uptr
-    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr64
-    llvm::AMDGPUAS::FLAT_ADDRESS, // hlsl_groupshared
-
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_global
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_global_device
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_global_host
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_local
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_sptr
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_uptr
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // hlsl_private
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // hlsl_device
 };
 } // namespace targets
 } // namespace clang
@@ -91,15 +98,18 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
 static constexpr int NumBuiltins =
     clang::AMDGPU::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
 #define BUILTIN CLANG_BUILTIN_STR_TABLE
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsAMDGPU.def"
-    , {
+    ;
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
 #define BUILTIN CLANG_BUILTIN_ENTRY
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
 #include "clang/Basic/BuiltinsAMDGPU.def"
-      });
+});
 
 const char *const AMDGPUTargetInfo::GCCRegNames[] = {
   "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8",
@@ -244,7 +254,6 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   HasLegalHalfType = true;
   HasFloat16 = true;
   WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
-  AllowAMDGPUUnsafeFPAtomics = Opts.AllowAMDGPUUnsafeFPAtomics;
 
   // Set pointer width and alignment for the generic address space.
   PointerWidth = PointerAlign = getPointerWidthV(LangAS::Default);
@@ -257,7 +266,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   CUMode = !(GPUFeatures & llvm::AMDGPU::FEATURE_WGP);
-  for (auto F : {"image-insts", "gws"})
+  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts"})
     ReadOnlyFeatures.insert(F);
   HalfArgsAndReturns = true;
 }
@@ -269,11 +278,13 @@ void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
   // to OpenCL can be removed from the following line.
   setAddressSpaceMap((Opts.OpenCL && !Opts.OpenCLGenericAddressSpace) ||
                      !isAMDGCN(getTriple()));
+
+  AtomicOpts = AtomicOptions(Opts);
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-AMDGPUTargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+llvm::SmallVector<Builtin::InfosShard>
+AMDGPUTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
 void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -326,7 +337,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     }
   }
 
-  if (AllowAMDGPUUnsafeFPAtomics)
+  if (Opts.AtomicIgnoreDenormalMode)
     Builder.defineMacro("__AMDGCN_UNSAFE_FP_ATOMICS__");
 
   // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be

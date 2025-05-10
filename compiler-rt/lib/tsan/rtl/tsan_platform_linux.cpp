@@ -373,6 +373,12 @@ void InitializePlatformEarly() {
     Printf("FATAL: Found %zd - Supported 39 and 48\n", vmaSize);
     Die();
   }
+#    else
+  if (vmaSize != 48) {
+    Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
+    Printf("FATAL: Found %zd - Supported 48\n", vmaSize);
+    Die();
+  }
 #    endif
 #  endif
 

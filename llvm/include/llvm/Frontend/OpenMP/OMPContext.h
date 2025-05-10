@@ -62,7 +62,7 @@ StringRef getOpenMPContextTraitSetName(TraitSet Kind);
 
 /// Parse \p Str and return the trait set it matches or
 /// TraitSelector::invalid.
-TraitSelector getOpenMPContextTraitSelectorKind(StringRef Str);
+TraitSelector getOpenMPContextTraitSelectorKind(StringRef Str, TraitSet Set);
 
 /// Return the trait selector for which \p Property is a property.
 TraitSelector getOpenMPContextTraitSelectorForProperty(TraitProperty Property);
@@ -139,6 +139,8 @@ struct VariantMatchInfo {
     // the raw string.
     if (Property == TraitProperty::device_isa___ANY)
       ISATraits.push_back(RawString);
+    if (Property == TraitProperty::target_device_isa___ANY)
+      ISATraits.push_back(RawString);
 
     RequiredTraits.set(unsigned(Property));
     if (Set == TraitSet::construct)
@@ -155,7 +157,8 @@ struct VariantMatchInfo {
 /// e.g., device={kind(host)}, and constructs traits which describe the nesting
 /// in OpenMP constructs at the location.
 struct OMPContext {
-  OMPContext(bool IsDeviceCompilation, Triple TargetTriple);
+  OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
+             Triple TargetOffloadTriple, int DeviceNum);
   virtual ~OMPContext() = default;
 
   void addTrait(TraitProperty Property) {
@@ -177,15 +180,16 @@ struct OMPContext {
 };
 
 /// Return true if \p VMI is applicable in \p Ctx, that is, all traits required
-/// by \p VMI are available in the OpenMP context \p Ctx. If \p DeviceSetOnly is
-/// true, only the device selector set, if present, are checked. Note that we
-/// still honor extension traits provided by the user.
+/// by \p VMI are available in the OpenMP context \p Ctx. If
+/// \p DeviceOrImplementationSetOnly is true, only the device and implementation
+/// selector set, if present, are checked. Note that we still honor extension
+/// traits provided by the user.
 bool isVariantApplicableInContext(const VariantMatchInfo &VMI,
                                   const OMPContext &Ctx,
-                                  bool DeviceSetOnly = false);
+                                  bool DeviceOrImplementationSetOnly = false);
 
 /// Return the index (into \p VMIs) of the variant with the highest score
-/// from the ones applicble in \p Ctx. See llvm::isVariantApplicableInContext.
+/// from the ones applicable in \p Ctx. See llvm::isVariantApplicableInContext.
 int getBestVariantMatchForContext(const SmallVectorImpl<VariantMatchInfo> &VMIs,
                                   const OMPContext &Ctx);
 

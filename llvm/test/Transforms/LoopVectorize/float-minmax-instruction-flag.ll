@@ -57,8 +57,7 @@ define float @minloopattr(ptr nocapture readonly %arg) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[ARG]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[ARG]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp olt <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
@@ -82,7 +81,7 @@ define float @minloopattr(ptr nocapture readonly %arg) #0 {
 ; CHECK-NEXT:    [[T6]] = select i1 [[T5]], float [[T2]], float [[T4]]
 ; CHECK-NEXT:    [[T7]] = add i64 [[T1]], 1
 ; CHECK-NEXT:    [[T8:%.*]] = icmp eq i64 [[T7]], 65537
-; CHECK-NEXT:    br i1 [[T8]], label [[OUT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[T8]], label [[OUT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       out:
 ; CHECK-NEXT:    [[T6_LCSSA:%.*]] = phi float [ [[T6]], [[LOOP]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[T6_LCSSA]]

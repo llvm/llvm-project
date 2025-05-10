@@ -109,6 +109,15 @@ void InitializeShadowMemory() {
     ProtectGap(kShadowGap2Beg, kShadowGap2End - kShadowGap2Beg + 1);
     ProtectGap(kShadowGap3Beg, kShadowGap3End - kShadowGap3Beg + 1);
   } else {
+    // ASan's mappings can usually shadow the entire address space, even with
+    // maximum ASLR entropy. However:
+    // - On 32-bit systems, the maximum ASLR entropy (currently up to 16-bits
+    //   == 256MB) is a significant chunk of the address space; reclaiming it
+    //   by disabling ASLR might allow chonky binaries to run.
+    // - On 64-bit systems, some settings (e.g., for Linux, unlimited stack
+    //   size plus 31+ bits of entropy) can lead to an incompatible layout.
+    TryReExecWithoutASLR();
+
     Report(
         "Shadow memory range interleaves with an existing memory mapping. "
         "ASan cannot proceed correctly. ABORTING.\n");

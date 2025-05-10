@@ -6,22 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_ITERATOR_OPERATIONS_H
-#define _LIBCPP___ALGORITHM_ITERATOR_OPERATIONS_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_ITERATOR_OPERATIONS_H
+#define _LIBCPP___CXX03___ALGORITHM_ITERATOR_OPERATIONS_H
 
 #include <__cxx03/__algorithm/iter_swap.h>
-#include <__cxx03/__algorithm/ranges_iterator_concept.h>
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/advance.h>
 #include <__cxx03/__iterator/distance.h>
-#include <__cxx03/__iterator/incrementable_traits.h>
-#include <__cxx03/__iterator/iter_move.h>
-#include <__cxx03/__iterator/iter_swap.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__iterator/next.h>
 #include <__cxx03/__iterator/prev.h>
-#include <__cxx03/__iterator/readable_traits.h>
 #include <__cxx03/__type_traits/enable_if.h>
 #include <__cxx03/__type_traits/is_reference.h>
 #include <__cxx03/__type_traits/is_same.h>
@@ -41,31 +36,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy>
 struct _IterOps;
-
-#if _LIBCPP_STD_VER >= 20
-struct _RangeAlgPolicy {};
-
-template <>
-struct _IterOps<_RangeAlgPolicy> {
-  template <class _Iter>
-  using __value_type = iter_value_t<_Iter>;
-
-  template <class _Iter>
-  using __iterator_category = ranges::__iterator_concept<_Iter>;
-
-  template <class _Iter>
-  using __difference_type = iter_difference_t<_Iter>;
-
-  static constexpr auto advance      = ranges::advance;
-  static constexpr auto distance     = ranges::distance;
-  static constexpr auto __iter_move  = ranges::iter_move;
-  static constexpr auto iter_swap    = ranges::iter_swap;
-  static constexpr auto next         = ranges::next;
-  static constexpr auto prev         = ranges::prev;
-  static constexpr auto __advance_to = ranges::advance;
-};
-
-#endif
 
 struct _ClassicAlgPolicy {};
 
@@ -220,4 +190,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_ITERATOR_OPERATIONS_H
+#endif // _LIBCPP___CXX03___ALGORITHM_ITERATOR_OPERATIONS_H

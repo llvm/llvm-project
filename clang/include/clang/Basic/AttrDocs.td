@@ -62,6 +62,16 @@ def CodeModelDocs : Documentation {
   let Content = [{
 The ``model`` attribute allows overriding the translation unit's
 code model (specified by ``-mcmodel``) for a specific global variable.
+
+On LoongArch, allowed values are "normal", "medium", "extreme".
+
+On x86-64, allowed values are ``"small"`` and ``"large"``. ``"small"`` is
+roughly equivalent to ``-mcmodel=small``, meaning the global is considered
+"small" placed closer to the ``.text`` section relative to "large" globals, and
+to prefer using 32-bit relocations to access the global. ``"large"`` is roughly
+equivalent to ``-mcmodel=large``, meaning the global is considered "large" and
+placed further from the ``.text`` section relative to "small" globals, and
+64-bit relocations must be used to access the global.
   }];
   let Heading = "model";
 }
@@ -121,11 +131,12 @@ def InitPriorityDocs : Documentation {
 In C++, the order in which global variables are initialized across translation
 units is unspecified, unlike the ordering within a single translation unit. The
 ``init_priority`` attribute allows you to specify a relative ordering for the
-initialization of objects declared at namespace scope in C++. The priority is
-given as an integer constant expression between 101 and 65535 (inclusive).
-Priorities outside of that range are reserved for use by the implementation. A
-lower value indicates a higher priority of initialization. Note that only the
-relative ordering of values is important. For example:
+initialization of objects declared at namespace scope in C++ within a single
+linked image on supported platforms. The priority is given as an integer constant
+expression between 101 and 65535 (inclusive). Priorities outside of that range are
+reserved for use by the implementation. A lower value indicates a higher priority
+of initialization. Note that only the relative ordering of values is important.
+For example:
 
 .. code-block:: c++
 
@@ -136,9 +147,15 @@ relative ordering of values is important. For example:
 ``Obj2`` will be initialized *before* ``Obj1`` despite the usual order of
 initialization being the opposite.
 
+Note that this attribute does not control the initialization order of objects
+across final linked image boundaries like shared objects and executables.
+
 On Windows, ``init_seg(compiler)`` is represented with a priority of 200 and
 ``init_seg(library)`` is represented with a priority of 400. ``init_seg(user)``
 uses the default 65535 priority.
+
+On MachO platforms, this attribute also does not control the order of initialization
+across translation units, where it only affects the order within a single TU.
 
 This attribute is only supported for C++ and Objective-C++ and is ignored in
 other language modes. Currently, this attribute is not implemented on z/OS.
@@ -475,11 +492,12 @@ not first appear on a declaration that follows a definition of the function.
 The attribute only appertains to functions and only those that meet the
 following requirements.
 
-* Has a ``void`` return type.
+* Has a non-deduced ``void`` return type.
 * Is not a non-static member function, constructor, or destructor.
 * Is not a C variadic function.
 * Is not a coroutine.
 * Is not defined as deleted or as defaulted.
+* Is not defined with a function try block.
 * Is not declared with the ``constexpr`` or ``consteval`` specifiers.
 * Is not declared with the ``[[noreturn]]`` attribute.
 
@@ -1095,6 +1113,41 @@ template instantiation, so the value for ``T::number`` is known.
   }];
 }
 
+def ExtVectorTypeDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``ext_vector_type(N)`` attribute specifies that a type is a vector with N
+elements, directly mapping to an LLVM vector type. Originally from OpenCL, it
+allows element access the array subscript operator ``[]``, ``sN`` where N is
+a hexadecimal value, or ``x, y, z, w`` for graphics-style indexing.
+This attribute enables efficient SIMD operations and is usable in
+general-purpose code.
+
+.. code-block:: c++
+
+  template <typename T, uint32_t N>
+  constexpr T simd_reduce(T [[clang::ext_vector_type(N)]] v) {
+    static_assert((N & (N - 1)) == 0, "N must be a power of two");
+    if constexpr (N == 1)
+      return v[0];
+    else
+      return simd_reduce<T, N / 2>(v.hi + v.lo);
+  }
+
+The vector type also supports swizzling up to sixteen elements. This can be done
+using the object accessors. The OpenCL documentation lists all of the accepted
+values.
+
+.. code-block:: c++
+
+  using f16_x16 = _Float16 __attribute__((ext_vector_type(16)));
+
+  f16_x16 reverse(f16_x16 v) { return v.sfedcba9876543210; }
+
+See the OpenCL documentation for some more complete examples.
+  }];
+}
+
 def DiagnoseIfDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -1389,6 +1442,82 @@ Query for this attribute with ``__has_attribute(overloadable)``.
   }];
 }
 
+def OwnershipDocs : Documentation {
+  let Heading = "ownership_holds, ownership_returns, ownership_takes (Clang "
+                "Static Analyzer)";
+  let Category = DocCatFunction;
+  let Label = "analyzer-ownership-attrs";
+  let Content = [{
+
+.. note::
+
+  In order for the Clang Static Analyzer to acknowledge these attributes, the
+  ``Optimistic`` config needs to be set to true for the checker
+  ``unix.DynamicMemoryModeling``:
+
+  ``-Xclang -analyzer-config -Xclang unix.DynamicMemoryModeling:Optimistic=true``
+
+These attributes are used by the Clang Static Analyzer's dynamic memory modeling
+facilities to mark custom allocating/deallocating functions.
+
+All 3 attributes' first parameter of type string is the type of the allocation:
+``malloc``, ``new``, etc. to allow for catching :ref:`mismatched deallocation
+<unix-MismatchedDeallocator>` bugs. The allocation type can be any string, e.g.
+a function annotated with
+returning a piece of memory of type ``lasagna`` but freed with a function
+annotated to release ``cheese`` typed memory will result in mismatched
+deallocation warning.
+
+The (currently) only allocation type having special meaning is ``malloc`` --
+the Clang Static Analyzer makes sure that allocating functions annotated with
+``malloc`` are treated like they used the standard ``malloc()``, and can be
+safely deallocated with the standard ``free()``.
+
+* Use ``ownership_returns`` to mark a function as an allocating function. Takes
+  1 parameter to denote the allocation type.
+* Use ``ownership_takes`` to mark a function as a deallocating function. Takes 2
+  parameters: the allocation type, and the index of the parameter that is being
+  deallocated (counting from 1).
+* Use ``ownership_holds`` to mark that a function takes over the ownership of a
+  piece of memory and will free it at some unspecified point in the future. Like
+  ``ownership_takes``, this takes 2 parameters: the allocation type, and the
+  index of the parameter whose ownership will be taken over (counting from 1).
+
+The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
+leak reports (concerning the specified argument); the difference between them
+is that using taken memory is a use-after-free error, while using held memory
+is assumed to be legitimate.
+
+Example:
+
+.. code-block:: c
+
+  // Denotes that my_malloc will return with a dynamically allocated piece of
+  // memory using malloc().
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+
+  // Denotes that my_free will deallocate its parameter using free().
+  void __attribute((ownership_takes(malloc, 1))) my_free(void *);
+
+  // Denotes that my_hold will take over the ownership of its parameter that was
+  // allocated via malloc().
+  void __attribute((ownership_holds(malloc, 1))) my_hold(void *);
+
+Further reading about dynamic memory modeling in the Clang Static Analyzer is
+found in these checker docs:
+:ref:`unix.Malloc <unix-Malloc>`, :ref:`unix.MallocSizeof <unix-MallocSizeof>`,
+:ref:`unix.MismatchedDeallocator <unix-MismatchedDeallocator>`,
+:ref:`cplusplus.NewDelete <cplusplus-NewDelete>`,
+:ref:`cplusplus.NewDeleteLeaks <cplusplus-NewDeleteLeaks>`,
+:ref:`optin.taint.TaintedAlloc <optin-taint-TaintedAlloc>`.
+Mind that many more checkers are affected by dynamic memory modeling changes to
+some extent.
+
+Further reading for other annotations:
+`Source Annotations in the Clang Static Analyzer <https://clang.llvm.org/docs/analyzer/user-docs/Annotations.html>`_.
+  }];
+}
+
 def ObjCMethodFamilyDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -1551,10 +1680,6 @@ translated into the LLVM ``convergent`` attribute, which indicates that the call
 instructions of a function with this attribute cannot be made control-dependent
 on any additional values.
 
-In languages designed for SPMD/SIMT programming model, e.g. OpenCL or CUDA,
-the call instructions of a function with this attribute must be executed by
-all work items or threads in a work group or sub group.
-
 This attribute is different from ``noduplicate`` because it allows duplicating
 function calls if it can be proved that the duplicated function calls are
 not made control-dependent on any additional values, e.g., unrolling a loop
@@ -1574,17 +1699,16 @@ Sample usage:
 def NoConvergentDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-This attribute prevents a function from being treated as convergent, which
-means that optimizations can only move calls to that function to
-control-equivalent blocks. If a statement is marked as ``noconvergent`` and
-contains calls, it also prevents those calls from being treated as convergent.
-In other words, those calls are not restricted to only being moved to
-control-equivalent blocks.
+This attribute prevents a function from being treated as convergent; when a
+function is marked ``noconvergent``, calls to that function are not
+automatically assumed to be convergent, unless such calls are explicitly marked
+as ``convergent``. If a statement is marked as ``noconvergent``, any calls to
+inline ``asm`` in that statement are no longer treated as convergent.
 
 In languages following SPMD/SIMT programming model, e.g., CUDA/HIP, function
-declarations and calls are treated as convergent by default for correctness.
-This ``noconvergent`` attribute is helpful for developers to prevent them from
-being treated as convergent when it's safe.
+declarations and inline asm calls are treated as convergent by default for
+correctness. This ``noconvergent`` attribute is helpful for developers to
+prevent them from being treated as convergent when it's safe.
 
 .. code-block:: c
 
@@ -1593,7 +1717,8 @@ being treated as convergent when it's safe.
 
   __device__ int example(void) {
     float x;
-    [[clang::noconvergent]] x = bar(x);
+    [[clang::noconvergent]] x = bar(x); // no effect on convergence
+    [[clang::noconvergent]] { asm volatile ("nop"); } // the asm call is non-convergent
   }
 
   }];
@@ -1605,6 +1730,55 @@ def NoSplitStackDocs : Documentation {
 The ``no_split_stack`` attribute disables the emission of the split stack
 preamble for a particular function. It has no effect if ``-fsplit-stack``
 is not specified.
+  }];
+}
+
+def ExplicitInitDocs : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+The ``clang::require_explicit_initialization`` attribute indicates that a
+field of an aggregate must be initialized explicitly by the user when an object
+of the aggregate type is constructed. The attribute supports both C and C++,
+but its usage is invalid on non-aggregates.
+
+Note that this attribute is *not* a memory safety feature, and is *not* intended
+to guard against use of uninitialized memory.
+
+Rather, it is intended for use in "parameter-objects", used to simulate,
+for example, the passing of named parameters.
+The attribute generates a warning when explicit initializers for such
+variables are not provided (this occurs regardless of whether any in-class field
+initializers exist):
+
+.. code-block:: c++
+
+  struct Buffer {
+    void *address [[clang::require_explicit_initialization]];
+    size_t length [[clang::require_explicit_initialization]] = 0;
+  };
+
+  struct ArrayIOParams {
+    size_t count [[clang::require_explicit_initialization]];
+    size_t element_size [[clang::require_explicit_initialization]];
+    int flags = 0;
+  };
+
+  size_t ReadArray(FILE *file, struct Buffer buffer,
+                   struct ArrayIOParams params);
+
+  int main() {
+    unsigned int buf[512];
+    ReadArray(stdin, {
+      buf
+      // warning: field 'length' is not explicitly initialized
+    }, {
+      .count = sizeof(buf) / sizeof(*buf),
+      // warning: field 'element_size' is not explicitly initialized
+      // (Note that a missing initializer for 'flags' is not diagnosed, because
+      // the field is not marked as requiring explicit initialization.)
+    });
+  }
+
   }];
 }
 
@@ -1998,6 +2172,34 @@ inferring availability from the pragma:
 
 Also see the documentation for `@available
 <http://clang.llvm.org/docs/LanguageExtensions.html#objective-c-available>`_
+  }];
+}
+
+def PtrAuthDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "__ptrauth";
+  let Content = [{
+The ``__ptrauth`` qualifier allows the programmer to directly control
+how pointers are signed when they are stored in a particular variable.
+This can be used to strengthen the default protections of pointer
+authentication and make it more difficult for an attacker to escalate
+an ability to alter memory into full control of a process.
+
+.. code-block:: c
+
+  #include <ptrauth.h>
+
+  typedef void (*my_callback)(const void*);
+  my_callback __ptrauth(ptrauth_key_process_dependent_code, 1, 0xe27a) callback;
+
+The first argument to ``__ptrauth`` is the name of the signing key.
+Valid key names for the target are defined in ``<ptrauth.h>``.
+
+The second argument to ``__ptrauth`` is a flag (0 or 1) specifying whether
+the object should use address discrimination.
+
+The third argument to ``__ptrauth`` is a 16-bit non-negative integer which
+allows additional discrimination between objects.
   }];
 }
 
@@ -2484,6 +2686,19 @@ The semantics are as follows:
   }];
 }
 
+def ARMInterruptSaveFPDocs : Documentation {
+    let Category = DocCatFunction;
+  let Heading = "interrupt_save_fp (ARM)";
+  let Content = [{
+Clang supports the GNU style ``__attribute__((interrupt_save_fp("TYPE")))``
+on ARM targets. This attribute behaves the same way as the ARM interrupt
+attribute, except the general purpose floating point registers are also saved,
+along with FPEXC and FPSCR. Note, even on M-class CPUs, where the floating
+point context can be automatically saved depending on the FPCCR, the general
+purpose floating point registers will be saved.
+  }];
+}
+
 def BPFPreserveAccessIndexDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -2685,8 +2900,27 @@ targets. This attribute may be attached to a function definition and instructs
 the backend to generate appropriate function entry/exit code so that it can be
 used directly as an interrupt service routine.
 
-Permissible values for this parameter are ``user``, ``supervisor``,
-and ``machine``. If there is no parameter, then it defaults to machine.
+Permissible values for this parameter are ``machine``, ``supervisor``,
+``qci-nest``, ``qci-nonest``, ``SiFive-CLIC-preemptible``, and
+``SiFive-CLIC-stack-swap``. If there is no parameter, then it defaults to
+``machine``.
+
+The ``qci-nest`` and ``qci-nonest`` values require Qualcomm's Xqciint extension
+and are used for Machine-mode Interrupts and Machine-mode Non-maskable
+interrupts. These use the following instructions from Xqciint to save and
+restore interrupt state to the stack -- the ``qci-nest`` value will use
+``qc.c.mienter.nest`` and the ``qci-nonest`` value will use ``qc.c.mienter`` to
+begin the interrupt handler. Both of these will use ``qc.c.mileaveret`` to
+restore the state and return to the previous context.
+
+The ``SiFive-CLIC-preemptible`` and ``SiFive-CLIC-stack-swap`` values are used
+for machine-mode interrupts. For ``SiFive-CLIC-preemptible`` interrupts, the
+values of ``mcause`` and ``mepc`` are saved onto the stack, and interrupts are
+re-enabled. For ``SiFive-CLIC-stack-swap`` interrupts, the stack pointer is
+swapped with ``mscratch`` before its first use and after its last use.
+
+The SiFive CLIC values may be combined with each other and with the ``machine``
+attribute value. Any other combination of different values is not allowed.
 
 Repeated interrupt attribute on the same declaration will cause a warning
 to be emitted. In case of repeated declarations, the last one prevails.
@@ -2696,6 +2930,8 @@ https://gcc.gnu.org/onlinedocs/gcc/RISC-V-Function-Attributes.html
 https://riscv.org/specifications/privileged-isa/
 The RISC-V Instruction Set Manual Volume II: Privileged Architecture
 Version 1.10.
+https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.7
+https://sifive.cdn.prismic.io/sifive/d1984d2b-c9b9-4c91-8de0-d68a5e64fa0f_sifive-interrupt-cookbook-v1p2.pdf
   }];
 }
 
@@ -3743,6 +3979,132 @@ behavior of the program is undefined.
   }];
 }
 
+def FormatMatchesDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+
+The ``format`` attribute is the basis for the enforcement of diagnostics in the
+``-Wformat`` family, but it only handles the case where the format string is
+passed along with the arguments it is going to format. It cannot handle the case
+where the format string and the format arguments are passed separately from each
+other. For instance:
+
+.. code-block:: c
+
+  static const char *first_name;
+  static double todays_temperature;
+  static int wind_speed;
+
+  void say_hi(const char *fmt) {
+    printf(fmt, first_name, todays_temperature);
+        // ^ warning: format string is not a string literal
+    printf(fmt, first_name, wind_speed);
+        // ^ warning: format string is not a string literal
+  }
+
+  int main() {
+    say_hi("hello %s, it is %g degrees outside");
+    say_hi("hello %s, it is %d degrees outside!");
+                          // ^ no diagnostic, but %d cannot format doubles
+  }
+
+In this example, ``fmt`` is expected to format a ``const char *`` and a
+``double``, but these values are not passed to ``say_hi``. Without the
+``format`` attribute (which cannot apply in this case), the -Wformat-nonliteral
+diagnostic unnecessarily triggers in the body of ``say_hi``, and incorrect
+``say_hi`` call sites do not trigger a diagnostic.
+
+To complement the ``format`` attribute, Clang also defines the
+``format_matches`` attribute. Its syntax is similar to the ``format``
+attribute's, but instead of taking the index of the first formatted value
+argument, it takes a C string literal with the expected specifiers:
+
+.. code-block:: c
+
+  static const char *first_name;
+  static double todays_temperature;
+  static int wind_speed;
+
+  __attribute__((__format_matches__(printf, 1, "%s %g")))
+  void say_hi(const char *fmt) {
+    printf(fmt, first_name, todays_temperature); // no dignostic
+    printf(fmt, first_name, wind_speed); // warning: format specifies type 'int' but the argument has type 'double'
+  }
+
+  int main() {
+    say_hi("hello %s, it is %g degrees outside");
+    say_hi("it is %g degrees outside, have a good day %s!");
+    // warning: format specifies 'double' where 'const char *' is required
+    // warning: format specifies 'const char *' where 'double' is required
+  }
+
+The third argument to ``format_matches`` is expected to evaluate to a **C string
+literal** even when the format string would normally be a different type for the
+given flavor, like a ``CFStringRef`` or a ``NSString *``.
+
+The only requirement on the format string literal is that it has specifiers
+that are compatible with the arguments that will be used. It can contain
+arbitrary non-format characters. For instance, for the purposes of compile-time
+validation, ``"%s scored %g%% on her test"`` and ``"%s%g"`` are interchangeable
+as the format string argument. As a means of self-documentation, users may
+prefer the former when it provides a useful example of an expected format
+string.
+
+In the implementation of a function with the ``format_matches`` attribute,
+format verification works as if the format string was identical to the one
+specified in the attribute.
+
+.. code-block:: c
+
+  __attribute__((__format_matches__(printf, 1, "%s %g")))
+  void say_hi(const char *fmt) {
+    printf(fmt, "person", 546);
+                       // ^ warning: format specifies type 'double' but the
+                       //   argument has type 'int'
+    // note: format string is defined here:
+    // __attribute__((__format_matches__(printf, 1, "%s %g")))
+    //                                                  ^~
+  }
+
+
+At the call sites of functions with the ``format_matches`` attribute, format
+verification instead compares the two format strings to evaluate their
+equivalence. Each format flavor defines equivalence between format specifiers.
+Generally speaking, two specifiers are equivalent if they format the same type.
+For instance, in the ``printf`` flavor, ``%2i`` and ``%-0.5d`` are compatible.
+When ``-Wformat-signedness`` is disabled, ``%d`` and ``%u`` are compatible. For
+a negative example, ``%ld`` is incompatible with ``%d``.
+
+Do note the following un-obvious cases:
+
+* Passing ``NULL`` as the format string does not trigger format diagnostics.
+* When the format string is not NULL, it cannot _miss_ specifiers, even in
+  trailing positions. For instance, ``%d`` is not accepted when the required
+  format is ``%d %d %d``.
+* While checks for the ``format`` attribute tolerate sone size mismatches
+  that standard argument promotion renders immaterial (such as formatting an
+  ``int`` with ``%hhd``, which specifies a ``char``-sized integer), checks for
+  ``format_matches`` require specified argument sizes to match exactly.
+* Format strings expecting a variable modifier (such as ``%*s``) are
+  incompatible with format strings that would itemize the variable modifiers
+  (such as ``%i %s``), even if the two specify ABI-compatible argument lists.
+* All pointer specifiers, modifiers aside, are mutually incompatible. For
+  instance, ``%s`` is not compatible with ``%p``, and ``%p`` is not compatible
+  with ``%n``, and ``%hhn`` is incompatible with ``%s``, even if the pointers
+  are ABI-compatible or identical on the selected platform. However, ``%0.5s``
+  is compatible with ``%s``, since the difference only exists in modifier flags.
+  This is not overridable with ``-Wformat-pedantic`` or its inverse, which
+  control similar behavior in ``-Wformat``.
+
+At this time, clang implements ``format_matches`` only for format types in the
+``printf`` family. This includes variants such as Apple's NSString format and
+the FreeBSD ``kprintf``, but excludes ``scanf``. Using a known but unsupported
+format silently fails in order to be compatible with other implementations that
+would support these formats.
+
+  }];
+}
+
 def FlagEnumDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -4697,9 +5059,17 @@ def RestrictDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "malloc";
   let Content = [{
-The ``malloc`` attribute indicates that the function acts like a system memory
-allocation function, returning a pointer to allocated storage disjoint from the
-storage for any other object accessible to the caller.
+The ``malloc`` attribute has two forms with different functionality. The first
+is when it is used without arguments, where it marks that a function acts like
+a system memory allocation function, returning a pointer to allocated storage
+that does not alias storage from any other object accessible to the caller.
+
+The second form is when ``malloc`` takes one or two arguments. The first
+argument names a function that should be associated with this function as its
+deallocation function. When this form is used, it enables the compiler to
+diagnose when the incorrect deallocation function is used with this variable.
+However the associated warning, spelled `-Wmismatched-dealloc` in GCC, is not
+yet implemented in clang.
   }];
 }
 
@@ -5141,6 +5511,7 @@ optimization passes are aware of the following assumptions:
     "omp_no_openmp"
     "omp_no_openmp_routines"
     "omp_no_parallelism"
+    "omp_no_openmp_constructs"
 
 The OpenMP standard defines the meaning of OpenMP assumptions ("omp_XYZ" is
 spelled "XYZ" in the `OpenMP 5.1 Standard`_).
@@ -5936,6 +6307,17 @@ them if they use them.
  }];
 }
 
+def RISCVVLSCCDocs : Documentation {
+ let Category = DocCatCallingConvs;
+ let Heading = "riscv::vls_cc, riscv_vls_cc, clang::riscv_vls_cc";
+ let Content = [{
+The ``riscv_vls_cc`` attribute can be applied to a function. Functions
+declared with this attribute will utilize the standard fixed-length vector
+calling convention variant instead of the default calling convention defined by
+the ABI. This variant aims to pass fixed-length vectors via vector registers,
+if possible, rather than through general-purpose registers.}];
+}
+
 def PreferredNameDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -6168,10 +6550,12 @@ only N==1 is supported.
 def PatchableFunctionEntryDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-``__attribute__((patchable_function_entry(N,M)))`` is used to generate M NOPs
-before the function entry and N-M NOPs after the function entry. This attribute
-takes precedence over the command line option ``-fpatchable-function-entry=N,M``.
-``M`` defaults to 0 if omitted.
+``__attribute__((patchable_function_entry(N,M,Section)))`` is used to generate M
+NOPs before the function entry and N-M NOPs after the function entry, with a record of
+the entry stored in section ``Section``. This attribute takes precedence over the
+command line option ``-fpatchable-function-entry=N,M,Section``. ``M`` defaults to 0
+if omitted.``Section`` defaults  to the ``-fpatchable-function-entry`` section name if
+set, or to ``__patchable_function_entries`` otherwise.
 
 This attribute is only supported on
 aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64 targets.
@@ -7181,9 +7565,11 @@ the field it is attached to, and it may also lead to emission of automatic fix-i
 hints which would help the user replace the use of unsafe functions(/fields) with safe
 alternatives, though the attribute can be used even when the fix can't be automated.
 
-* Attribute attached to functions: The attribute does not suppress
-  ``-Wunsafe-buffer-usage`` inside the function to which it is attached.
-  These warnings still need to be addressed.
+* Attribute attached to functions: The attribute suppresses all
+  ``-Wunsafe-buffer-usage`` warnings within the function it is attached to, as the
+  function is now classified as unsafe. The attribute should be used carefully, as it
+  will silence all unsafe operation warnings inside the function; including any new
+  unsafe operations introduced in the future.
 
   The attribute is warranted even if the only way a function can overflow
   the buffer is by violating the function's preconditions. For example, it
@@ -7559,6 +7945,32 @@ The attributes ``__arm_in(S)``, ``__arm_out(S)``, ``__arm_inout(S)`` and
   }];
 }
 
+def ArmAgnosticDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_agnostic`` keyword applies to prototyped function types and
+affects the function's calling convention for a given state S. This
+attribute allows the user to describe a function that preserves S, without
+requiring the function to share S with its callers and without making
+the assumption that S exists.
+
+If a function has the ``__arm_agnostic(S)`` attribute and calls a function
+without this attribute, then the function's object code will contain code
+to preserve state S. Otherwise, the function's object code will be the same
+as if it did not have the attribute.
+
+The attribute takes string arguments to describe state S. The supported
+states are:
+
+* ``"sme_za_state"`` for state enabled by PSTATE.ZA, such as ZA and ZT0.
+
+The attribute ``__arm_agnostic("sme_za_state")`` cannot be used in conjunction
+with ``__arm_in(S)``, ``__arm_out(S)``, ``__arm_inout(S)`` or
+``__arm_preserves(S)`` where state S describes state enabled by PSTATE.ZA,
+such as "za" or "zt0".
+  }];
+}
+
 def ArmSmeLocallyStreamingDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
   let Content = [{
@@ -7909,6 +8321,21 @@ for details.
   }];
 }
 
+def AtomicDocs : Documentation {
+  let Category = DocCatStmt;
+  let Content = [{
+The ``atomic`` attribute can be applied to *compound statements* to override or
+further specify the default atomic code-generation behavior, especially on
+targets such as AMDGPU. You can annotate compound statements with options
+to modify how atomic instructions inside that statement are emitted at the IR
+level.
+
+For details, see the documentation for `@atomic
+<http://clang.llvm.org/docs/LanguageExtensions.html#extensions-for-controlling-atomic-code-generation>`_
+
+  }];
+}
+
 def ClangRandomizeLayoutDocs : Documentation {
   let Category = DocCatDecl;
   let Heading = "randomize_layout, no_randomize_layout";
@@ -7938,6 +8365,17 @@ otherwise.
 The attribute ``no_randomize_layout``, when attached to a C structure,
 instructs the compiler that this structure should not have its field layout
 randomized.
+  }];
+}
+
+def HLSLSV_GroupThreadIDDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_GroupThreadID`` semantic, when applied to an input parameter, specifies which
+individual thread within a thread group is executing in. This attribute is
+only supported in compute shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupthreadid
   }];
 }
 
@@ -8311,7 +8749,7 @@ that is a pointer to the type with the attribute.
   }
 
 The above example will result in a call to ``bar`` being passed the address of
-`y`` when ``y`` goes out of scope, then a call to ``foo`` being passed the
+``y`` when ``y`` goes out of scope, then a call to ``foo`` being passed the
 address of ``x`` when ``x`` goes out of scope. If two or more variables share
 the same scope, their ``cleanup`` callbacks are invoked in the reverse order
 the variables were declared in. It is not possible to check the return value
@@ -8854,5 +9292,20 @@ def AllocatingDocs : Documentation {
   let Content = [{
 Declares that a function potentially allocates heap memory, and prevents any potential inference
 of ``nonallocating`` by the compiler.
+  }];
+}
+
+def NonStringDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``nonstring`` attribute can be applied to the declaration of a variable or
+a field whose type is a character array to specify that the character array is
+not intended to behave like a null-terminated string. This will silence
+diagnostics with code like:
+
+.. code-block:: c
+
+  char BadStr[3] = "foo"; // No space for the null terminator, diagnosed
+  __attribute__((nonstring)) char NotAStr[3] = "foo"; // Not diagnosed
   }];
 }

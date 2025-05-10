@@ -491,8 +491,47 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
       TC.AddCXXStdlibLibArgs(Args, CmdArgs);
     else if (A.getOption().matches(options::OPT_Z_reserved_lib_cckext))
       TC.AddCCKextLibArgs(Args, CmdArgs);
+    // Do not pass OPT_rpath to linker in AIX
+    else if (A.getOption().matches(options::OPT_rpath) &&
+             TC.getTriple().isOSAIX())
+      continue;
     else
       A.renderAsInput(Args, CmdArgs);
+  }
+  if (const Arg *A = Args.getLastArg(options::OPT_fveclib)) {
+    const llvm::Triple &Triple = TC.getTriple();
+    StringRef V = A->getValue();
+    if (V == "ArmPL" && (Triple.isOSLinux() || Triple.isOSDarwin())) {
+      // To support -fveclib=ArmPL we need to link against libamath. Some of the
+      // libamath functions depend on libm, at the same time, libamath exports
+      // its own implementation of some of the libm functions. These are faster
+      // and potentially less accurate implementations, hence we need to be
+      // careful what is being linked in. Since here we are interested only in
+      // the subset of libamath functions that is covered by the veclib
+      // mappings, we need to prioritize libm functions by putting -lm before
+      // -lamath (and then -lm again, to fulfill libamath requirements).
+      //
+      // Therefore we need to do the following:
+      //
+      // 1. On Linux, link only when actually needed.
+      //
+      // 2. Prefer libm functions over libamath (when no -nostdlib in use).
+      //
+      // 3. Link against libm to resolve libamath dependencies.
+      //
+      if (Triple.isOSLinux()) {
+        CmdArgs.push_back(Args.MakeArgString("--push-state"));
+        CmdArgs.push_back(Args.MakeArgString("--as-needed"));
+      }
+      if (!Args.hasArg(options::OPT_nostdlib))
+        CmdArgs.push_back(Args.MakeArgString("-lm"));
+      CmdArgs.push_back(Args.MakeArgString("-lamath"));
+      if (!Args.hasArg(options::OPT_nostdlib))
+        CmdArgs.push_back(Args.MakeArgString("-lm"));
+      if (Triple.isOSLinux())
+        CmdArgs.push_back(Args.MakeArgString("--pop-state"));
+      addArchSpecificRPath(TC, Args, CmdArgs);
+    }
   }
 }
 
@@ -675,6 +714,11 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
     return loongarch::getLoongArchTargetCPU(Args, T);
+
+  case llvm::Triple::xtensa:
+    if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
+      return A->getValue();
+    return "";
   }
 }
 
@@ -820,12 +864,15 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const llvm::Triple &Triple = ToolChain.getTriple();
   const bool IsOSAIX = Triple.isOSAIX();
   const bool IsAMDGCN = Triple.isAMDGCN();
-  const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
+  StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ);
+  const char *LinkerPath = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
-  const bool IsFatLTO = Args.hasArg(options::OPT_ffat_lto_objects);
+  const bool IsFatLTO = Args.hasFlag(options::OPT_ffat_lto_objects,
+                                     options::OPT_fno_fat_lto_objects, false);
   const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
-  if (llvm::sys::path::filename(Linker) != "ld.lld" &&
-      llvm::sys::path::stem(Linker) != "ld.lld" && !Triple.isOSOpenBSD()) {
+  if (Linker != "lld" && Linker != "lld-link" &&
+      llvm::sys::path::filename(LinkerPath) != "ld.lld" &&
+      llvm::sys::path::stem(LinkerPath) != "ld.lld" && !Triple.isOSOpenBSD()) {
     // Tell the linker to load the plugin. This has to come before
     // AddLinkerInputs as gold requires -plugin and AIX ld requires -bplugin to
     // come before any -plugin-opt/-bplugin_opt that -Wl might forward.
@@ -854,6 +901,17 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     // files
     if (IsFatLTO)
       CmdArgs.push_back("--fat-lto-objects");
+
+    if (Args.hasArg(options::OPT_flto_partitions_EQ)) {
+      int Value = 0;
+      StringRef A = Args.getLastArgValue(options::OPT_flto_partitions_EQ, "8");
+      if (A.getAsInteger(10, Value) || (Value < 1)) {
+        Arg *Arg = Args.getLastArg(options::OPT_flto_partitions_EQ);
+        D.Diag(diag::err_drv_invalid_int_value)
+            << Arg->getAsString(Args) << Arg->getValue();
+      }
+      CmdArgs.push_back(Args.MakeArgString("--lto-partitions=" + A));
+    }
   }
 
   const char *PluginOptPrefix = IsOSAIX ? "-bplugin_opt:" : "-plugin-opt=";
@@ -876,7 +934,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     std::optional<StringRef> OptVal =
         llvm::StringSwitch<std::optional<StringRef>>(ArgVecLib->getValue())
             .Case("Accelerate", "Accelerate")
-            .Case("LIBMVEC", "LIBMVEC-X86")
+            .Case("libmvec", "LIBMVEC")
             .Case("MASSV", "MASSV")
             .Case("SVML", "SVML")
             .Case("SLEEF", "sleefgnuabi")
@@ -1171,6 +1229,10 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (ImplicitMapSyms)
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-implicit-mapsyms"));
+
+  if (Args.hasArg(options::OPT_ftime_report))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
@@ -1188,6 +1250,9 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                                  ArgStringList &CmdArgs) {
   if (!Args.hasFlag(options::OPT_frtlib_add_rpath,
                     options::OPT_fno_rtlib_add_rpath, false))
+    return;
+
+  if (TC.getTriple().isOSAIX()) // TODO: AIX doesn't support -rpath option.
     return;
 
   SmallVector<std::string> CandidateRPaths(TC.getArchSpecificLibPaths());
@@ -1247,9 +1312,6 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
   if (IsOffloadingHost)
     CmdArgs.push_back("-lomptarget");
 
-  if (IsOffloadingHost && !Args.hasArg(options::OPT_nogpulib))
-    CmdArgs.push_back("-lomptarget.devicertl");
-
   addArchSpecificRPath(TC, Args, CmdArgs);
 
   addOpenMPRuntimeLibraryPath(TC, Args, CmdArgs);
@@ -1274,57 +1336,6 @@ void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
                  [](auto TC) { return TC.second->getTripleString(); });
   CmdArgs.push_back(
       Args.MakeArgString(Twine(Targets) + llvm::join(Triples, ",")));
-}
-
-/// Add Fortran runtime libs
-void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
-                                  llvm::opt::ArgStringList &CmdArgs) {
-  // Link FortranRuntime and FortranDecimal
-  // These are handled earlier on Windows by telling the frontend driver to
-  // add the correct libraries to link against as dependents in the object
-  // file.
-  if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    StringRef F128LibName = TC.getDriver().getFlangF128MathLibrary();
-    F128LibName.consume_front_insensitive("lib");
-    if (!F128LibName.empty()) {
-      bool AsNeeded = !TC.getTriple().isOSAIX();
-      CmdArgs.push_back("-lFortranFloat128Math");
-      if (AsNeeded)
-        addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/true);
-      CmdArgs.push_back(Args.MakeArgString("-l" + F128LibName));
-      if (AsNeeded)
-        addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/false);
-    }
-    CmdArgs.push_back("-lFortranRuntime");
-    CmdArgs.push_back("-lFortranDecimal");
-    addArchSpecificRPath(TC, Args, CmdArgs);
-  }
-
-  // libomp needs libatomic for atomic operations if using libgcc
-  if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                   options::OPT_fno_openmp, false)) {
-    Driver::OpenMPRuntimeKind OMPRuntime =
-        TC.getDriver().getOpenMPRuntime(Args);
-    ToolChain::RuntimeLibType RuntimeLib = TC.GetRuntimeLibType(Args);
-    if (OMPRuntime == Driver::OMPRT_OMP && RuntimeLib == ToolChain::RLT_Libgcc)
-      CmdArgs.push_back("-latomic");
-  }
-}
-
-void tools::addFortranRuntimeLibraryPath(const ToolChain &TC,
-                                         const llvm::opt::ArgList &Args,
-                                         ArgStringList &CmdArgs) {
-  // Default to the <driver-path>/../lib directory. This works fine on the
-  // platforms that we have tested so far. We will probably have to re-fine
-  // this in the future. In particular, on some platforms, we may need to use
-  // lib64 instead of lib.
-  SmallString<256> DefaultLibPath =
-      llvm::sys::path::parent_path(TC.getDriver().Dir);
-  llvm::sys::path::append(DefaultLibPath, "lib");
-  if (TC.getTriple().isKnownWindowsMSVCEnvironment())
-    CmdArgs.push_back(Args.MakeArgString("-libpath:" + DefaultLibPath));
-  else
-    CmdArgs.push_back(Args.MakeArgString("-L" + DefaultLibPath));
 }
 
 static void addSanitizerRuntime(const ToolChain &TC, const ArgList &Args,
@@ -1392,20 +1403,22 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   if (TC.getTriple().getOS() != llvm::Triple::RTEMS &&
       !TC.getTriple().isAndroid() && !TC.getTriple().isOHOSFamily()) {
     CmdArgs.push_back("-lpthread");
-    if (!TC.getTriple().isOSOpenBSD())
+    if (!TC.getTriple().isOSOpenBSD() && !TC.getTriple().isOSHaiku())
       CmdArgs.push_back("-lrt");
   }
   CmdArgs.push_back("-lm");
   // There's no libdl on all OSes.
   if (!TC.getTriple().isOSFreeBSD() && !TC.getTriple().isOSNetBSD() &&
-      !TC.getTriple().isOSOpenBSD() &&
+      !TC.getTriple().isOSOpenBSD() && !TC.getTriple().isOSDragonFly() &&
+      !TC.getTriple().isOSHaiku() &&
       TC.getTriple().getOS() != llvm::Triple::RTEMS)
     CmdArgs.push_back("-ldl");
   // Required for backtrace on some OSes
-  if (TC.getTriple().isOSFreeBSD() ||
-      TC.getTriple().isOSNetBSD() ||
-      TC.getTriple().isOSOpenBSD())
+  if (TC.getTriple().isOSFreeBSD() || TC.getTriple().isOSNetBSD() ||
+      TC.getTriple().isOSOpenBSD() || TC.getTriple().isOSDragonFly())
     CmdArgs.push_back("-lexecinfo");
+  if (TC.getTriple().isOSHaiku())
+    CmdArgs.push_back("-lbsd");
   // There is no libresolv on Android, FreeBSD, OpenBSD, etc. On musl
   // libresolv.a, even if exists, is an empty archive to satisfy POSIX -lresolv
   // requirement.
@@ -1421,6 +1434,7 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                          SmallVectorImpl<StringRef> &NonWholeStaticRuntimes,
                          SmallVectorImpl<StringRef> &HelperStaticRuntimes,
                          SmallVectorImpl<StringRef> &RequiredSymbols) {
+  assert(!TC.getTriple().isOSDarwin() && "it's not used by Darwin");
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
   // Collect shared runtimes.
   if (SanArgs.needsSharedRt()) {
@@ -1447,6 +1461,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     }
     if (SanArgs.needsTsanRt())
       SharedRuntimes.push_back("tsan");
+    if (SanArgs.needsTysanRt())
+      SharedRuntimes.push_back("tysan");
     if (SanArgs.needsHwasanRt()) {
       if (SanArgs.needsHwasanAliasesRt())
         SharedRuntimes.push_back("hwasan_aliases");
@@ -1519,13 +1535,13 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("tsan_cxx");
   }
+  if (!SanArgs.needsSharedRt() && SanArgs.needsTysanRt())
+    StaticRuntimes.push_back("tysan");
   if (!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt()) {
     if (SanArgs.requiresMinimalRuntime()) {
       StaticRuntimes.push_back("ubsan_minimal");
     } else {
       StaticRuntimes.push_back("ubsan_standalone");
-      if (SanArgs.linkCXXRuntimes())
-        StaticRuntimes.push_back("ubsan_standalone_cxx");
     }
   }
   if (SanArgs.needsSafeStackRt()) {
@@ -1533,13 +1549,15 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     RequiredSymbols.push_back("__safestack_init");
   }
   if (!(SanArgs.needsSharedRt() && SanArgs.needsUbsanRt())) {
-    if (SanArgs.needsCfiRt())
+    if (SanArgs.needsCfiCrossDsoRt())
       StaticRuntimes.push_back("cfi");
-    if (SanArgs.needsCfiDiagRt()) {
+    if (SanArgs.needsCfiCrossDsoDiagRt())
       StaticRuntimes.push_back("cfi_diag");
-      if (SanArgs.linkCXXRuntimes())
-        StaticRuntimes.push_back("ubsan_standalone_cxx");
-    }
+  }
+  if (SanArgs.linkCXXRuntimes() && !SanArgs.requiresMinimalRuntime() &&
+      ((!SanArgs.needsSharedRt() && SanArgs.needsUbsanCXXRt()) ||
+       SanArgs.needsCfiCrossDsoDiagRt())) {
+    StaticRuntimes.push_back("ubsan_standalone_cxx");
   }
   if (SanArgs.needsStatsRt()) {
     NonWholeStaticRuntimes.push_back("stats");
@@ -1816,18 +1834,6 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   // Android-specific defaults for PIC/PIE
   if (Triple.isAndroid()) {
     switch (Triple.getArch()) {
-    case llvm::Triple::arm:
-    case llvm::Triple::armeb:
-    case llvm::Triple::thumb:
-    case llvm::Triple::thumbeb:
-    case llvm::Triple::aarch64:
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-      PIC = true; // "-fpic"
-      break;
-
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       PIC = true; // "-fPIC"
@@ -1835,6 +1841,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
       break;
 
     default:
+      PIC = true; // "-fpic"
       break;
     }
   }
@@ -2526,11 +2533,11 @@ static void GetSDLFromOffloadArchive(
 
   C.addTempFile(C.getArgs().MakeArgString(OutputLib));
 
-  ArgStringList CmdArgs;
   SmallString<128> DeviceTriple;
   DeviceTriple += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
   DeviceTriple += '-';
-  std::string NormalizedTriple = T.getToolChain().getTriple().normalize();
+  std::string NormalizedTriple = T.getToolChain().getTriple().normalize(
+      llvm::Triple::CanonicalForm::FOUR_IDENT);
   DeviceTriple += NormalizedTriple;
   if (!Target.empty()) {
     DeviceTriple += '-';
@@ -2697,19 +2704,13 @@ void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
       if (Remnant || CodeObjVer < MinCodeObjVer || CodeObjVer > MaxCodeObjVer)
         D.Diag(diag::err_drv_invalid_int_value)
             << CodeObjArg->getAsString(Args) << CodeObjArg->getValue();
-
-      // COV6 is only supported by LLVM at the time of writing this, and it's
-      // expected to take some time before all ROCm components fully
-      // support it. In the meantime, make sure users are aware of this.
-      if (CodeObjVer == 6)
-        D.Diag(diag::warn_drv_amdgpu_cov6);
     }
   }
 }
 
 unsigned tools::getAMDGPUCodeObjectVersion(const Driver &D,
                                            const llvm::opt::ArgList &Args) {
-  unsigned CodeObjVer = 5; // default
+  unsigned CodeObjVer = 6; // default
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args))
     StringRef(CodeObjArg->getValue()).getAsInteger(0, CodeObjVer);
   return CodeObjVer;
@@ -2795,13 +2796,20 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
   for (const auto &LibPath : HostTC.getFilePaths())
     LibraryPaths.emplace_back(LibPath);
 
-  OptSpecifier LibomptargetBCPathOpt =
-      Triple.isAMDGCN() ? options::OPT_libomptarget_amdgpu_bc_path_EQ
-                        : options::OPT_libomptarget_nvptx_bc_path_EQ;
+  // Check the target specific library path for the triple as well.
+  SmallString<128> P(D.Dir);
+  llvm::sys::path::append(P, "..", "lib", Triple.getTriple());
+  LibraryPaths.emplace_back(P);
 
-  StringRef ArchPrefix = Triple.isAMDGCN() ? "amdgpu" : "nvptx";
-  std::string LibOmpTargetName =
-      ("libomptarget-" + ArchPrefix + "-" + BitcodeSuffix + ".bc").str();
+  OptSpecifier LibomptargetBCPathOpt =
+      Triple.isAMDGCN()  ? options::OPT_libomptarget_amdgpu_bc_path_EQ
+      : Triple.isNVPTX() ? options::OPT_libomptarget_nvptx_bc_path_EQ
+                         : options::OPT_libomptarget_spirv_bc_path_EQ;
+
+  StringRef ArchPrefix = Triple.isAMDGCN()  ? "amdgpu"
+                         : Triple.isNVPTX() ? "nvptx"
+                                            : "spirv64";
+  std::string LibOmpTargetName = ("libomptarget-" + ArchPrefix + ".bc").str();
 
   // First check whether user specifies bc library
   if (const Arg *A = DriverArgs.getLastArg(LibomptargetBCPathOpt)) {
@@ -2930,8 +2938,7 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
       Ok = CM == "small" || CM == "medium" ||
            (CM == "large" && Triple.isRISCV64());
     } else if (Triple.getArch() == llvm::Triple::x86_64) {
-      Ok = llvm::is_contained({"small", "kernel", "medium", "large", "tiny"},
-                              CM);
+      Ok = llvm::is_contained({"small", "kernel", "medium", "large"}, CM);
     } else if (Triple.isNVPTX() || Triple.isAMDGPU() || Triple.isSPIRV()) {
       // NVPTX/AMDGPU/SPIRV does not care about the code model and will accept
       // whatever works for the host.
@@ -3055,14 +3062,92 @@ bool tools::shouldRecordCommandLine(const ToolChain &TC,
 
 void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
                                                ArgStringList &CmdArgs) {
-  // -fno-strict-overflow implies -fwrapv if it isn't disabled, but
-  // -fstrict-overflow won't turn off an explicitly enabled -fwrapv.
-  if (Arg *A = Args.getLastArg(options::OPT_fwrapv, options::OPT_fno_wrapv)) {
-    if (A->getOption().matches(options::OPT_fwrapv))
-      CmdArgs.push_back("-fwrapv");
-  } else if (Arg *A = Args.getLastArg(options::OPT_fstrict_overflow,
-                                      options::OPT_fno_strict_overflow)) {
-    if (A->getOption().matches(options::OPT_fno_strict_overflow))
-      CmdArgs.push_back("-fwrapv");
+  bool use_fwrapv = false;
+  bool use_fwrapv_pointer = false;
+  for (const Arg *A : Args.filtered(
+           options::OPT_fstrict_overflow, options::OPT_fno_strict_overflow,
+           options::OPT_fwrapv, options::OPT_fno_wrapv,
+           options::OPT_fwrapv_pointer, options::OPT_fno_wrapv_pointer)) {
+    A->claim();
+    switch (A->getOption().getID()) {
+    case options::OPT_fstrict_overflow:
+      use_fwrapv = false;
+      use_fwrapv_pointer = false;
+      break;
+    case options::OPT_fno_strict_overflow:
+      use_fwrapv = true;
+      use_fwrapv_pointer = true;
+      break;
+    case options::OPT_fwrapv:
+      use_fwrapv = true;
+      break;
+    case options::OPT_fno_wrapv:
+      use_fwrapv = false;
+      break;
+    case options::OPT_fwrapv_pointer:
+      use_fwrapv_pointer = true;
+      break;
+    case options::OPT_fno_wrapv_pointer:
+      use_fwrapv_pointer = false;
+      break;
+    }
   }
+
+  if (use_fwrapv)
+    CmdArgs.push_back("-fwrapv");
+  if (use_fwrapv_pointer)
+    CmdArgs.push_back("-fwrapv-pointer");
+}
+
+/// Vectorize at all optimization levels greater than 1 except for -Oz.
+/// For -Oz the loop vectorizer is disabled, while the slp vectorizer is
+/// enabled.
+bool tools::shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (A->getOption().matches(options::OPT_O4) ||
+        A->getOption().matches(options::OPT_Ofast))
+      return true;
+
+    if (A->getOption().matches(options::OPT_O0))
+      return false;
+
+    assert(A->getOption().matches(options::OPT_O) && "Must have a -O flag");
+
+    // Vectorize -Os.
+    StringRef S(A->getValue());
+    if (S == "s")
+      return true;
+
+    // Don't vectorize -Oz, unless it's the slp vectorizer.
+    if (S == "z")
+      return isSlpVec;
+
+    unsigned OptLevel = 0;
+    if (S.getAsInteger(10, OptLevel))
+      return false;
+
+    return OptLevel > 1;
+  }
+
+  return false;
+}
+
+void tools::handleVectorizeLoopsArgs(const ArgList &Args,
+                                     ArgStringList &CmdArgs) {
+  bool EnableVec = shouldEnableVectorizerAtOLevel(Args, false);
+  OptSpecifier vectorizeAliasOption =
+      EnableVec ? options::OPT_O_Group : options::OPT_fvectorize;
+  if (Args.hasFlag(options::OPT_fvectorize, vectorizeAliasOption,
+                   options::OPT_fno_vectorize, EnableVec))
+    CmdArgs.push_back("-vectorize-loops");
+}
+
+void tools::handleVectorizeSLPArgs(const ArgList &Args,
+                                   ArgStringList &CmdArgs) {
+  bool EnableSLPVec = shouldEnableVectorizerAtOLevel(Args, true);
+  OptSpecifier SLPVectAliasOption =
+      EnableSLPVec ? options::OPT_O_Group : options::OPT_fslp_vectorize;
+  if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
+                   options::OPT_fno_slp_vectorize, EnableSLPVec))
+    CmdArgs.push_back("-vectorize-slp");
 }

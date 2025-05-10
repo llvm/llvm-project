@@ -61,7 +61,7 @@ class Type;
 template <class GraphType> struct GraphTraits;
 template <typename T, unsigned int N> class SmallSetVector;
 template <typename T, typename Enable> struct FoldingSetTrait;
-class AAResults;
+class BatchAAResults;
 class BlockAddress;
 class BlockFrequencyInfo;
 class Constant;
@@ -287,12 +287,14 @@ class SelectionDAG {
   SDDbgInfo *DbgInfo;
 
   using CallSiteInfo = MachineFunction::CallSiteInfo;
+  using CalledGlobalInfo = MachineFunction::CalledGlobalInfo;
 
   struct NodeExtraInfo {
     CallSiteInfo CSInfo;
     MDNode *HeapAllocSite = nullptr;
     MDNode *PCSections = nullptr;
     MDNode *MMRA = nullptr;
+    CalledGlobalInfo CalledGlobal{};
     bool NoMerge = false;
   };
   /// Out-of-line extra information for SDNodes.
@@ -455,6 +457,9 @@ public:
   // Maximum depth for recursive analysis such as computeKnownBits, etc.
   static constexpr unsigned MaxRecursionDepth = 6;
 
+  // Returns the maximum steps for SDNode->hasPredecessor() like searches.
+  static unsigned getHasPredecessorMaxSteps();
+
   explicit SelectionDAG(const TargetMachine &TM, CodeGenOptLevel);
   SelectionDAG(const SelectionDAG &) = delete;
   SelectionDAG &operator=(const SelectionDAG &) = delete;
@@ -597,7 +602,8 @@ public:
   /// certain types of nodes together, or eliminating superfluous nodes.  The
   /// Level argument controls whether Combine is allowed to produce nodes and
   /// types that are illegal on the target.
-  void Combine(CombineLevel Level, AAResults *AA, CodeGenOptLevel OptLevel);
+  void Combine(CombineLevel Level, BatchAAResults *BatchAA,
+               CodeGenOptLevel OptLevel);
 
   /// This transforms the SelectionDAG into a SelectionDAG that
   /// only uses types natively supported by the target.
@@ -867,7 +873,7 @@ public:
   /// for integers, a type wider than) VT's element type.
   SDValue getSplatBuildVector(EVT VT, const SDLoc &DL, SDValue Op) {
     // VerifySDNode (via InsertNode) checks BUILD_VECTOR later.
-    if (Op.getOpcode() == ISD::UNDEF) {
+    if (Op.isUndef()) {
       assert((VT.getVectorElementType() == Op.getValueType() ||
               (VT.isInteger() &&
                VT.getVectorElementType().bitsLE(Op.getValueType()))) &&
@@ -883,7 +889,7 @@ public:
   // Return a splat ISD::SPLAT_VECTOR node, consisting of Op splatted to all
   // elements.
   SDValue getSplatVector(EVT VT, const SDLoc &DL, SDValue Op) {
-    if (Op.getOpcode() == ISD::UNDEF) {
+    if (Op.isUndef()) {
       assert((VT.getVectorElementType() == Op.getValueType() ||
               (VT.isInteger() &&
                VT.getVectorElementType().bitsLE(Op.getValueType()))) &&
@@ -917,6 +923,36 @@ public:
   ///
   /// Example: shuffle A, B, <0,5,2,7> -> shuffle B, A, <4,1,6,3>
   SDValue getCommutedVectorShuffle(const ShuffleVectorSDNode &SV);
+
+  /// Extract element at \p Idx from \p Vec.  See EXTRACT_VECTOR_ELT
+  /// description for result type handling.
+  SDValue getExtractVectorElt(const SDLoc &DL, EVT VT, SDValue Vec,
+                              unsigned Idx) {
+    return getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Vec,
+                   getVectorIdxConstant(Idx, DL));
+  }
+
+  /// Insert \p Elt into \p Vec at offset \p Idx.  See INSERT_VECTOR_ELT
+  /// description for element type handling.
+  SDValue getInsertVectorElt(const SDLoc &DL, SDValue Vec, SDValue Elt,
+                             unsigned Idx) {
+    return getNode(ISD::INSERT_VECTOR_ELT, DL, Vec.getValueType(), Vec, Elt,
+                   getVectorIdxConstant(Idx, DL));
+  }
+
+  /// Insert \p SubVec at the \p Idx element of \p Vec.
+  SDValue getInsertSubvector(const SDLoc &DL, SDValue Vec, SDValue SubVec,
+                             unsigned Idx) {
+    return getNode(ISD::INSERT_SUBVECTOR, DL, Vec.getValueType(), Vec, SubVec,
+                   getVectorIdxConstant(Idx, DL));
+  }
+
+  /// Return the \p VT typed sub-vector of \p Vec at \p Idx
+  SDValue getExtractSubvector(const SDLoc &DL, EVT VT, SDValue Vec,
+                              unsigned Idx) {
+    return getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Vec,
+                   getVectorIdxConstant(Idx, DL));
+  }
 
   /// Convert Op, which must be of float type, to the
   /// float type VT, by either extending or rounding (by truncation).
@@ -1124,6 +1160,9 @@ public:
     return getNode(ISD::UNDEF, SDLoc(), VT);
   }
 
+  /// Return a POISON node. POISON does not have a useful SDLoc.
+  SDValue getPOISON(EVT VT) { return getNode(ISD::POISON, SDLoc(), VT); }
+
   /// Return a node that represents the runtime scaling 'MulImm * RuntimeVL'.
   SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
                     bool ConstantFold = true);
@@ -1197,12 +1236,14 @@ public:
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
    * the tail call optimization decision. */
-  SDValue
-  getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-            SDValue Size, Align Alignment, bool isVol, bool AlwaysInline,
-            const CallInst *CI, std::optional<bool> OverrideTailCall,
-            MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo,
-            const AAMDNodes &AAInfo = AAMDNodes(), AAResults *AA = nullptr);
+  SDValue getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
+                    SDValue Size, Align Alignment, bool isVol,
+                    bool AlwaysInline, const CallInst *CI,
+                    std::optional<bool> OverrideTailCall,
+                    MachinePointerInfo DstPtrInfo,
+                    MachinePointerInfo SrcPtrInfo,
+                    const AAMDNodes &AAInfo = AAMDNodes(),
+                    BatchAAResults *BatchAA = nullptr);
 
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
@@ -1213,7 +1254,7 @@ public:
                      MachinePointerInfo DstPtrInfo,
                      MachinePointerInfo SrcPtrInfo,
                      const AAMDNodes &AAInfo = AAMDNodes(),
-                     AAResults *AA = nullptr);
+                     BatchAAResults *BatchAA = nullptr);
 
   SDValue getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
                     SDValue Size, Align Alignment, bool isVol,
@@ -1314,27 +1355,28 @@ public:
   SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT, SDValue Chain,
                     SDValue Ptr, SDValue Val, MachineMemOperand *MMO);
 
-  /// Gets a node for an atomic op, produces result and chain and
-  /// takes 1 operand.
-  SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT, EVT VT,
-                    SDValue Chain, SDValue Ptr, MachineMemOperand *MMO);
-
   /// Gets a node for an atomic op, produces result and chain and takes N
   /// operands.
   SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                     SDVTList VTList, ArrayRef<SDValue> Ops,
-                    MachineMemOperand *MMO);
+                    MachineMemOperand *MMO,
+                    ISD::LoadExtType ExtType = ISD::NON_EXTLOAD);
+
+  SDValue getAtomicLoad(ISD::LoadExtType ExtType, const SDLoc &dl, EVT MemVT,
+                        EVT VT, SDValue Chain, SDValue Ptr,
+                        MachineMemOperand *MMO);
 
   /// Creates a MemIntrinsicNode that may produce a
   /// result and takes a list of operands. Opcode may be INTRINSIC_VOID,
-  /// INTRINSIC_W_CHAIN, or a target-specific opcode with a value not
-  /// less than FIRST_TARGET_MEMORY_OPCODE.
+  /// INTRINSIC_W_CHAIN, or a target-specific memory-referencing opcode
+  // (see `SelectionDAGTargetInfo::isTargetMemoryOpcode`).
   SDValue getMemIntrinsicNode(
       unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
       EVT MemVT, MachinePointerInfo PtrInfo, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
                                        MachineMemOperand::MOStore,
-      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes());
+      LocationSize Size = LocationSize::precise(0),
+      const AAMDNodes &AAInfo = AAMDNodes());
 
   inline SDValue getMemIntrinsicNode(
       unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
@@ -1342,7 +1384,8 @@ public:
       MaybeAlign Alignment = std::nullopt,
       MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
                                        MachineMemOperand::MOStore,
-      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes()) {
+      LocationSize Size = LocationSize::precise(0),
+      const AAMDNodes &AAInfo = AAMDNodes()) {
     // Ensure that codegen never sees alignment 0
     return getMemIntrinsicNode(Opcode, dl, VTList, Ops, MemVT, PtrInfo,
                                Alignment.value_or(getEVTAlign(MemVT)), Flags,
@@ -1453,6 +1496,9 @@ public:
                         SDValue Ptr, EVT SVT, MachineMemOperand *MMO);
   SDValue getIndexedStore(SDValue OrigStore, const SDLoc &dl, SDValue Base,
                           SDValue Offset, ISD::MemIndexedMode AM);
+  SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
+                   SDValue Offset, EVT SVT, MachineMemOperand *MMO,
+                   ISD::MemIndexedMode AM, bool IsTruncating = false);
 
   SDValue getLoadVP(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
                     const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
@@ -1598,11 +1644,6 @@ public:
   /// Return the specified value casted to
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
-
-  /// Create the DAG equivalent of vector_partial_reduce where Op1 and Op2 are
-  /// its operands and ReducedTY is the intrinsic's return type.
-  SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
-                              SDValue Op2);
 
   /// Expands a node with multiple results to an FP or vector libcall. The
   /// libcall is expected to take all the operands of the \p Node followed by
@@ -1764,7 +1805,7 @@ public:
 
   /// Creates a VReg SDDbgValue node.
   SDDbgValue *getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
-                              unsigned VReg, bool IsIndirect,
+                              Register VReg, bool IsIndirect,
                               const DebugLoc &DL, unsigned O);
 
   /// Creates a SDDbgValue node from a list of locations.
@@ -2137,9 +2178,23 @@ public:
   bool isBaseWithConstantOffset(SDValue Op) const;
 
   /// Test whether the given SDValue (or all elements of it, if it is a
+  /// vector) is known to never be NaN in \p DemandedElts. If \p SNaN is true,
+  /// returns if \p Op is known to never be a signaling NaN (it may still be a
+  /// qNaN).
+  bool isKnownNeverNaN(SDValue Op, const APInt &DemandedElts, bool SNaN = false,
+                       unsigned Depth = 0) const;
+
+  /// Test whether the given SDValue (or all elements of it, if it is a
   /// vector) is known to never be NaN. If \p SNaN is true, returns if \p Op is
   /// known to never be a signaling NaN (it may still be a qNaN).
   bool isKnownNeverNaN(SDValue Op, bool SNaN = false, unsigned Depth = 0) const;
+
+  /// \returns true if \p Op is known to never be a signaling NaN in \p
+  /// DemandedElts.
+  bool isKnownNeverSNaN(SDValue Op, const APInt &DemandedElts,
+                        unsigned Depth = 0) const {
+    return isKnownNeverNaN(Op, DemandedElts, true, Depth);
+  }
 
   /// \returns true if \p Op is known to never be a signaling NaN.
   bool isKnownNeverSNaN(SDValue Op, unsigned Depth = 0) const {
@@ -2370,6 +2425,18 @@ public:
     auto It = SDEI.find(Node);
     return It != SDEI.end() ? It->second.MMRA : nullptr;
   }
+  /// Set CalledGlobal to be associated with Node.
+  void addCalledGlobal(const SDNode *Node, const GlobalValue *GV,
+                       unsigned OpFlags) {
+    SDEI[Node].CalledGlobal = {GV, OpFlags};
+  }
+  /// Return CalledGlobal associated with Node, or a nullopt if none exists.
+  std::optional<CalledGlobalInfo> getCalledGlobal(const SDNode *Node) {
+    auto I = SDEI.find(Node);
+    return I != SDEI.end()
+               ? std::make_optional(std::move(I->second).CalledGlobal)
+               : std::nullopt;
+  }
   /// Set NoMergeSiteInfo to be associated with Node if NoMerge is true.
   void addNoMergeSiteInfo(const SDNode *Node, bool NoMerge) {
     if (NoMerge)
@@ -2430,6 +2497,9 @@ public:
                                 const SDLoc &DLoc);
 
 private:
+#ifndef NDEBUG
+  void verifyNode(SDNode *N) const;
+#endif
   void InsertNode(SDNode *N);
   bool RemoveNodeFromCSEMaps(SDNode *N);
   void AddModifiedNodeToCSEMaps(SDNode *N);

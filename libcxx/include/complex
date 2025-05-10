@@ -256,31 +256,34 @@ template<class T> complex<T> tanh (const complex<T>&);
 
 */
 
-#include <__config>
-#include <__fwd/complex.h>
-#include <__fwd/tuple.h>
-#include <__tuple/tuple_element.h>
-#include <__tuple/tuple_size.h>
-#include <__type_traits/conditional.h>
-#include <__utility/move.h>
-#include <cmath>
-#include <version>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/complex>
+#else
+#  include <__config>
+#  include <__fwd/complex.h>
+#  include <__fwd/tuple.h>
+#  include <__tuple/tuple_element.h>
+#  include <__tuple/tuple_size.h>
+#  include <__type_traits/conditional.h>
+#  include <__utility/move.h>
+#  include <cmath>
+#  include <version>
 
-#if _LIBCPP_HAS_LOCALIZATION
-#  include <sstream> // for std::basic_ostringstream
-#endif
+#  if _LIBCPP_HAS_LOCALIZATION
+#    include <sstream> // for std::basic_ostringstream
+#  endif
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS complex;
+class complex;
 
 template <class _Tp, __enable_if_t<is_floating_point<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
@@ -299,7 +302,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 complex<_Tp>
 operator/(const complex<_Tp>& __x, const complex<_Tp>& __y);
 
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS complex {
+class complex {
 public:
   typedef _Tp value_type;
 
@@ -374,7 +377,7 @@ public:
     return *this;
   }
 
-#if _LIBCPP_STD_VER >= 26
+#  if _LIBCPP_STD_VER >= 26
   template <size_t _Ip, class _Xp>
   friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>&) noexcept;
 
@@ -386,33 +389,33 @@ public:
 
   template <size_t _Ip, class _Xp>
   friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&&) noexcept;
-#endif
+#  endif
 };
 
 template <>
-class _LIBCPP_TEMPLATE_VIS complex<double>;
+class complex<double>;
 template <>
-class _LIBCPP_TEMPLATE_VIS complex<long double>;
+class complex<long double>;
 
 struct __from_builtin_tag {};
 
 template <class _Tp>
-using __complex_t =
+using __complex_t _LIBCPP_NODEBUG =
     __conditional_t<is_same<_Tp, float>::value,
                     _Complex float,
                     __conditional_t<is_same<_Tp, double>::value, _Complex double, _Complex long double> >;
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __complex_t<_Tp> __make_complex(_Tp __re, _Tp __im) {
-#if __has_builtin(__builtin_complex)
+#  if __has_builtin(__builtin_complex)
   return __builtin_complex(__re, __im);
-#else
+#  else
   return __complex_t<_Tp>{__re, __im};
-#endif
+#  endif
 }
 
 template <>
-class _LIBCPP_TEMPLATE_VIS complex<float> {
+class complex<float> {
   float __re_;
   float __im_;
 
@@ -493,7 +496,7 @@ public:
     return *this;
   }
 
-#if _LIBCPP_STD_VER >= 26
+#  if _LIBCPP_STD_VER >= 26
   template <size_t _Ip, class _Xp>
   friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>&) noexcept;
 
@@ -505,11 +508,11 @@ public:
 
   template <size_t _Ip, class _Xp>
   friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&&) noexcept;
-#endif
+#  endif
 };
 
 template <>
-class _LIBCPP_TEMPLATE_VIS complex<double> {
+class complex<double> {
   double __re_;
   double __im_;
 
@@ -593,7 +596,7 @@ public:
     return *this;
   }
 
-#if _LIBCPP_STD_VER >= 26
+#  if _LIBCPP_STD_VER >= 26
   template <size_t _Ip, class _Xp>
   friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>&) noexcept;
 
@@ -605,11 +608,11 @@ public:
 
   template <size_t _Ip, class _Xp>
   friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&&) noexcept;
-#endif
+#  endif
 };
 
 template <>
-class _LIBCPP_TEMPLATE_VIS complex<long double> {
+class complex<long double> {
   long double __re_;
   long double __im_;
 
@@ -694,7 +697,7 @@ public:
     return *this;
   }
 
-#if _LIBCPP_STD_VER >= 26
+#  if _LIBCPP_STD_VER >= 26
   template <size_t _Ip, class _Xp>
   friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>&) noexcept;
 
@@ -706,7 +709,7 @@ public:
 
   template <size_t _Ip, class _Xp>
   friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&&) noexcept;
-#endif
+#  endif
 };
 
 inline _LIBCPP_CONSTEXPR complex<float>::complex(const complex<double>& __c) : __re_(__c.real()), __im_(__c.imag()) {}
@@ -861,7 +864,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator==(const
   return __x.real() == __y && __x.imag() == 0;
 }
 
-#if _LIBCPP_STD_VER <= 17
+#  if _LIBCPP_STD_VER <= 17
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator==(const _Tp& __x, const complex<_Tp>& __y) {
@@ -884,7 +887,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator!=(const
   return !(__x == __y);
 }
 
-#endif
+#  endif
 
 // 26.3.7 values:
 
@@ -1098,21 +1101,20 @@ inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> pow(const complex<_Tp>& __x, const com
 }
 
 template <class _Tp, class _Up, __enable_if_t<is_floating_point<_Tp>::value && is_floating_point<_Up>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI complex<typename __promote<_Tp, _Up>::type>
-pow(const complex<_Tp>& __x, const complex<_Up>& __y) {
-  typedef complex<typename __promote<_Tp, _Up>::type> result_type;
+inline _LIBCPP_HIDE_FROM_ABI complex<__promote_t<_Tp, _Up> > pow(const complex<_Tp>& __x, const complex<_Up>& __y) {
+  typedef complex<__promote_t<_Tp, _Up> > result_type;
   return std::pow(result_type(__x), result_type(__y));
 }
 
 template <class _Tp, class _Up, __enable_if_t<is_floating_point<_Tp>::value && is_arithmetic<_Up>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI complex<typename __promote<_Tp, _Up>::type> pow(const complex<_Tp>& __x, const _Up& __y) {
-  typedef complex<typename __promote<_Tp, _Up>::type> result_type;
+inline _LIBCPP_HIDE_FROM_ABI complex<__promote_t<_Tp, _Up> > pow(const complex<_Tp>& __x, const _Up& __y) {
+  typedef complex<__promote_t<_Tp, _Up> > result_type;
   return std::pow(result_type(__x), result_type(__y));
 }
 
 template <class _Tp, class _Up, __enable_if_t<is_arithmetic<_Tp>::value && is_floating_point<_Up>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI complex<typename __promote<_Tp, _Up>::type> pow(const _Tp& __x, const complex<_Up>& __y) {
-  typedef complex<typename __promote<_Tp, _Up>::type> result_type;
+inline _LIBCPP_HIDE_FROM_ABI complex<__promote_t<_Tp, _Up> > pow(const _Tp& __x, const complex<_Up>& __y) {
+  typedef complex<__promote_t<_Tp, _Up> > result_type;
   return std::pow(result_type(__x), result_type(__y));
 }
 
@@ -1322,7 +1324,7 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> tan(const complex<_Tp>& __x) {
   return complex<_Tp>(__z.imag(), -__z.real());
 }
 
-#if _LIBCPP_HAS_LOCALIZATION
+#  if _LIBCPP_HAS_LOCALIZATION
 template <class _Tp, class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, complex<_Tp>& __x) {
@@ -1379,9 +1381,9 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const complex<_Tp>& __x) {
   __s << '(' << __x.real() << ',' << __x.imag() << ')';
   return __os << __s.str();
 }
-#endif // _LIBCPP_HAS_LOCALIZATION
+#  endif // _LIBCPP_HAS_LOCALIZATION
 
-#if _LIBCPP_STD_VER >= 26
+#  if _LIBCPP_STD_VER >= 26
 
 // [complex.tuple], tuple interface
 
@@ -1391,7 +1393,7 @@ struct tuple_size<complex<_Tp>> : integral_constant<size_t, 2> {};
 template <size_t _Ip, class _Tp>
 struct tuple_element<_Ip, complex<_Tp>> {
   static_assert(_Ip < 2, "Index value is out of range.");
-  using type = _Tp;
+  using type _LIBCPP_NODEBUG = _Tp;
 };
 
 template <size_t _Ip, class _Xp>
@@ -1434,9 +1436,9 @@ _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&& __z) noexce
   }
 }
 
-#endif // _LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 
-#if _LIBCPP_STD_VER >= 14
+#  if _LIBCPP_STD_VER >= 14
 // Literal suffix for complex number literals [complex.literals]
 inline namespace literals {
 inline namespace complex_literals {
@@ -1463,16 +1465,17 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr complex<float> operator""if(unsigned long
 }
 } // namespace complex_literals
 } // namespace literals
-#endif
+#  endif
 
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <iosfwd>
-#  include <stdexcept>
-#  include <type_traits>
-#endif
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#    include <iosfwd>
+#    include <stdexcept>
+#    include <type_traits>
+#  endif
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_COMPLEX

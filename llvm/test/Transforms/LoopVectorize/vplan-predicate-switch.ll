@@ -3,21 +3,24 @@
 
 define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK:      VPlan 'Final VPlan for VF={2},UF={1}' {
+; CHECK-NEXT: Live-in ir<[[VF:.+]]> = VF
 ; CHECK-NEXT: Live-in ir<[[VFxUF:.+]]> = VF * UF
 ; CHECK-NEXT: Live-in ir<[[VTC:%.+]]> = vector-trip-count
-; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
+; CHECK-NEXT: ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV ((-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64))
-; CHECK-NEXT: No successors
+; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: ir-bb<vector.ph>:
+; CHECK-NEXT:   IR %n.mod.vf = urem i64 %0, 2
+; CHECK-NEXT:   IR %n.vec = sub i64 %0, %n.mod.vf
+; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%start> + ir<%n.vec> * ir<1>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     SCALAR-PHI vp<[[CAN_IV:%.+]]> = phi ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, default.2 ]
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, ir<2>
 ; CHECK-NEXT:     EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[WIDE_PTR:%.+]]> = vector-pointer vp<[[PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[WIDE_PTR]]>
@@ -80,23 +83,23 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): ir-bb<middle.block>
+; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<middle.block>:
-; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq vp<[[TC]]>, ir<[[VTC]]>
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<%0>, ir<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:
-; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi ir<%ind.end>, ir<%start>
+; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[END]]>, ir<%start>
 ; CHECK-NEXT: Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
 ; CHECK-NEXT:   IR   %ptr.iv = phi ptr [ %start, %scalar.ph ], [ %ptr.iv.next, %loop.latch ] (extra operand: vp<[[RESUME]]> from ir-bb<scalar.ph>)
 ; CHECK-NEXT:   IR   %l = load i8, ptr %ptr.iv, align 1
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;

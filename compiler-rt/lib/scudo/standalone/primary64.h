@@ -14,11 +14,11 @@
 #include "common.h"
 #include "condition_variable.h"
 #include "list.h"
-#include "local_cache.h"
 #include "mem_map.h"
 #include "memtag.h"
 #include "options.h"
 #include "release.h"
+#include "size_class_allocator.h"
 #include "stats.h"
 #include "string_utils.h"
 #include "thread_annotations.h"
@@ -57,9 +57,12 @@ public:
                 "Group size shouldn't be greater than the region size");
   static const uptr GroupScale = GroupSizeLog - CompactPtrScale;
   typedef SizeClassAllocator64<Config> ThisT;
-  typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef TransferBatch<ThisT> TransferBatchT;
   typedef BatchGroup<ThisT> BatchGroupT;
+  using SizeClassAllocatorT =
+      typename Conditional<Config::getEnableBlockCache(),
+                           SizeClassAllocatorLocalCache<ThisT>,
+                           SizeClassAllocatorNoCache<ThisT>>::type;
 
   // BachClass is used to store internal metadata so it needs to be at least as
   // large as the largest data structure.
@@ -215,15 +218,16 @@ public:
     DCHECK_EQ(BlocksInUse, BatchClassUsedInFreeLists);
   }
 
-  u16 popBlocks(CacheT *C, uptr ClassId, CompactPtrT *ToArray,
-                const u16 MaxBlockCount) {
+  u16 popBlocks(SizeClassAllocatorT *SizeClassAllocator, uptr ClassId,
+                CompactPtrT *ToArray, const u16 MaxBlockCount) {
     DCHECK_LT(ClassId, NumClasses);
     RegionInfo *Region = getRegionInfo(ClassId);
     u16 PopCount = 0;
 
     {
       ScopedLock L(Region->FLLock);
-      PopCount = popBlocksImpl(C, ClassId, Region, ToArray, MaxBlockCount);
+      PopCount = popBlocksImpl(SizeClassAllocator, ClassId, Region, ToArray,
+                               MaxBlockCount);
       if (PopCount != 0U)
         return PopCount;
     }
@@ -231,8 +235,8 @@ public:
     bool ReportRegionExhausted = false;
 
     if (conditionVariableEnabled()) {
-      PopCount = popBlocksWithCV(C, ClassId, Region, ToArray, MaxBlockCount,
-                                 ReportRegionExhausted);
+      PopCount = popBlocksWithCV(SizeClassAllocator, ClassId, Region, ToArray,
+                                 MaxBlockCount, ReportRegionExhausted);
     } else {
       while (true) {
         // When two threads compete for `Region->MMLock`, we only want one of
@@ -241,15 +245,16 @@ public:
         ScopedLock ML(Region->MMLock);
         {
           ScopedLock FL(Region->FLLock);
-          PopCount = popBlocksImpl(C, ClassId, Region, ToArray, MaxBlockCount);
+          PopCount = popBlocksImpl(SizeClassAllocator, ClassId, Region, ToArray,
+                                   MaxBlockCount);
           if (PopCount != 0U)
             return PopCount;
         }
 
         const bool RegionIsExhausted = Region->Exhausted;
         if (!RegionIsExhausted) {
-          PopCount = populateFreeListAndPopBlocks(C, ClassId, Region, ToArray,
-                                                  MaxBlockCount);
+          PopCount = populateFreeListAndPopBlocks(
+              SizeClassAllocator, ClassId, Region, ToArray, MaxBlockCount);
         }
         ReportRegionExhausted = !RegionIsExhausted && Region->Exhausted;
         break;
@@ -270,7 +275,8 @@ public:
   }
 
   // Push the array of free blocks to the designated batch group.
-  void pushBlocks(CacheT *C, uptr ClassId, CompactPtrT *Array, u32 Size) {
+  void pushBlocks(SizeClassAllocatorT *SizeClassAllocator, uptr ClassId,
+                  CompactPtrT *Array, u32 Size) {
     DCHECK_LT(ClassId, NumClasses);
     DCHECK_GT(Size, 0);
 
@@ -305,7 +311,8 @@ public:
 
     {
       ScopedLock L(Region->FLLock);
-      pushBlocksImpl(C, ClassId, Region, Array, Size, SameGroup);
+      pushBlocksImpl(SizeClassAllocator, ClassId, Region, Array, Size,
+                     SameGroup);
       if (conditionVariableEnabled())
         Region->FLLockCV.notifyAll(Region->FLLock);
     }
@@ -530,7 +537,7 @@ private:
 
   struct ReleaseToOsInfo {
     uptr BytesInFreeListAtLastCheckpoint;
-    uptr RangesReleased;
+    uptr NumReleasesAttempted;
     uptr LastReleasedBytes;
     // The minimum size of pushed blocks to trigger page release.
     uptr TryReleaseThreshold;
@@ -697,8 +704,8 @@ private:
       // memory group here.
       BG->CompactPtrGroupBase = 0;
       BG->BytesInBGAtLastCheckpoint = 0;
-      BG->MaxCachedPerBatch =
-          CacheT::getMaxCached(getSizeByClassId(SizeClassMap::BatchClassId));
+      BG->MaxCachedPerBatch = SizeClassAllocatorT::getMaxCached(
+          getSizeByClassId(SizeClassMap::BatchClassId));
 
       Region->FreeListInfo.BlockList.push_front(BG);
     }
@@ -764,18 +771,18 @@ private:
   // that we can get better performance of maintaining sorted property.
   // Use `SameGroup=true` to indicate that all blocks in the array are from the
   // same group then we will skip checking the group id of each block.
-  void pushBlocksImpl(CacheT *C, uptr ClassId, RegionInfo *Region,
-                      CompactPtrT *Array, u32 Size, bool SameGroup = false)
-      REQUIRES(Region->FLLock) {
+  void pushBlocksImpl(SizeClassAllocatorT *SizeClassAllocator, uptr ClassId,
+                      RegionInfo *Region, CompactPtrT *Array, u32 Size,
+                      bool SameGroup = false) REQUIRES(Region->FLLock) {
     DCHECK_NE(ClassId, SizeClassMap::BatchClassId);
     DCHECK_GT(Size, 0U);
 
     auto CreateGroup = [&](uptr CompactPtrGroupBase) {
-      BatchGroupT *BG =
-          reinterpret_cast<BatchGroupT *>(C->getBatchClassBlock());
+      BatchGroupT *BG = reinterpret_cast<BatchGroupT *>(
+          SizeClassAllocator->getBatchClassBlock());
       BG->Batches.clear();
-      TransferBatchT *TB =
-          reinterpret_cast<TransferBatchT *>(C->getBatchClassBlock());
+      TransferBatchT *TB = reinterpret_cast<TransferBatchT *>(
+          SizeClassAllocator->getBatchClassBlock());
       TB->clear();
 
       BG->CompactPtrGroupBase = CompactPtrGroupBase;
@@ -796,8 +803,8 @@ private:
         u16 UnusedSlots =
             static_cast<u16>(BG->MaxCachedPerBatch - CurBatch->getCount());
         if (UnusedSlots == 0) {
-          CurBatch =
-              reinterpret_cast<TransferBatchT *>(C->getBatchClassBlock());
+          CurBatch = reinterpret_cast<TransferBatchT *>(
+              SizeClassAllocator->getBatchClassBlock());
           CurBatch->clear();
           Batches.push_front(CurBatch);
           UnusedSlots = BG->MaxCachedPerBatch;
@@ -871,9 +878,9 @@ private:
     InsertBlocks(Cur, Array + Size - Count, Count);
   }
 
-  u16 popBlocksWithCV(CacheT *C, uptr ClassId, RegionInfo *Region,
-                      CompactPtrT *ToArray, const u16 MaxBlockCount,
-                      bool &ReportRegionExhausted) {
+  u16 popBlocksWithCV(SizeClassAllocatorT *SizeClassAllocator, uptr ClassId,
+                      RegionInfo *Region, CompactPtrT *ToArray,
+                      const u16 MaxBlockCount, bool &ReportRegionExhausted) {
     u16 PopCount = 0;
 
     while (true) {
@@ -895,8 +902,8 @@ private:
 
         const bool RegionIsExhausted = Region->Exhausted;
         if (!RegionIsExhausted) {
-          PopCount = populateFreeListAndPopBlocks(C, ClassId, Region, ToArray,
-                                                  MaxBlockCount);
+          PopCount = populateFreeListAndPopBlocks(
+              SizeClassAllocator, ClassId, Region, ToArray, MaxBlockCount);
         }
         ReportRegionExhausted = !RegionIsExhausted && Region->Exhausted;
 
@@ -924,7 +931,8 @@ private:
       // blocks were used up right after the refillment. Therefore, we have to
       // check if someone is still populating the freelist.
       ScopedLock FL(Region->FLLock);
-      PopCount = popBlocksImpl(C, ClassId, Region, ToArray, MaxBlockCount);
+      PopCount = popBlocksImpl(SizeClassAllocator, ClassId, Region, ToArray,
+                               MaxBlockCount);
       if (PopCount != 0U)
         break;
 
@@ -938,7 +946,8 @@ private:
       // `pushBatchClassBlocks()` and `mergeGroupsToReleaseBack()`.
       Region->FLLockCV.wait(Region->FLLock);
 
-      PopCount = popBlocksImpl(C, ClassId, Region, ToArray, MaxBlockCount);
+      PopCount = popBlocksImpl(SizeClassAllocator, ClassId, Region, ToArray,
+                               MaxBlockCount);
       if (PopCount != 0U)
         break;
     }
@@ -946,9 +955,9 @@ private:
     return PopCount;
   }
 
-  u16 popBlocksImpl(CacheT *C, uptr ClassId, RegionInfo *Region,
-                    CompactPtrT *ToArray, const u16 MaxBlockCount)
-      REQUIRES(Region->FLLock) {
+  u16 popBlocksImpl(SizeClassAllocatorT *SizeClassAllocator, uptr ClassId,
+                    RegionInfo *Region, CompactPtrT *ToArray,
+                    const u16 MaxBlockCount) REQUIRES(Region->FLLock) {
     if (Region->FreeListInfo.BlockList.empty())
       return 0U;
 
@@ -972,11 +981,11 @@ private:
     // So far, instead of always filling blocks to `MaxBlockCount`, we only
     // examine single `TransferBatch` to minimize the time spent in the primary
     // allocator. Besides, the sizes of `TransferBatch` and
-    // `CacheT::getMaxCached()` may also impact the time spent on accessing the
-    // primary allocator.
+    // `SizeClassAllocatorT::getMaxCached()` may also impact the time spent on
+    // accessing the primary allocator.
     // TODO(chiahungduan): Evaluate if we want to always prepare `MaxBlockCount`
     // blocks and/or adjust the size of `TransferBatch` according to
-    // `CacheT::getMaxCached()`.
+    // `SizeClassAllocatorT::getMaxCached()`.
     TransferBatchT *B = Batches.front();
     DCHECK_NE(B, nullptr);
     DCHECK_GT(B->getCount(), 0U);
@@ -996,7 +1005,7 @@ private:
       // deallocate. Read the comment in `pushBatchClassBlocks()` for more
       // details.
       if (ClassId != SizeClassMap::BatchClassId)
-        C->deallocate(SizeClassMap::BatchClassId, B);
+        SizeClassAllocator->deallocate(SizeClassMap::BatchClassId, B);
 
       if (Batches.empty()) {
         BatchGroupT *BG = Region->FreeListInfo.BlockList.front();
@@ -1008,7 +1017,7 @@ private:
         // Which means, once we pop the last TransferBatch, the block is
         // implicitly deallocated.
         if (ClassId != SizeClassMap::BatchClassId)
-          C->deallocate(SizeClassMap::BatchClassId, BG);
+          SizeClassAllocator->deallocate(SizeClassMap::BatchClassId, BG);
       }
     }
 
@@ -1017,11 +1026,10 @@ private:
     return PopCount;
   }
 
-  NOINLINE u16 populateFreeListAndPopBlocks(CacheT *C, uptr ClassId,
-                                            RegionInfo *Region,
-                                            CompactPtrT *ToArray,
-                                            const u16 MaxBlockCount)
-      REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
+  NOINLINE u16 populateFreeListAndPopBlocks(
+      SizeClassAllocatorT *SizeClassAllocator, uptr ClassId, RegionInfo *Region,
+      CompactPtrT *ToArray, const u16 MaxBlockCount) REQUIRES(Region->MMLock)
+      EXCLUDES(Region->FLLock) {
     if (!Config::getEnableContiguousRegions() &&
         !Region->MemMapInfo.MemMap.isAllocated()) {
       ReservedMemoryT ReservedMemory;
@@ -1040,7 +1048,7 @@ private:
 
     DCHECK(Region->MemMapInfo.MemMap.isAllocated());
     const uptr Size = getSizeByClassId(ClassId);
-    const u16 MaxCount = CacheT::getMaxCached(Size);
+    const u16 MaxCount = SizeClassAllocatorT::getMaxCached(Size);
     const uptr RegionBeg = Region->RegionBeg;
     const uptr MappedUser = Region->MemMapInfo.MappedUser;
     const uptr TotalUserBytes =
@@ -1064,7 +1072,7 @@ private:
         return 0U;
       }
       Region->MemMapInfo.MappedUser += MapSize;
-      C->getStats().add(StatMapped, MapSize);
+      SizeClassAllocator->getStats().add(StatMapped, MapSize);
     }
 
     const u32 NumberOfBlocks =
@@ -1092,7 +1100,8 @@ private:
       for (u32 I = 1; I < NumberOfBlocks; I++) {
         if (UNLIKELY(compactPtrGroup(ShuffleArray[I]) != CurGroup)) {
           shuffle(ShuffleArray + I - N, N, &Region->RandState);
-          pushBlocksImpl(C, ClassId, Region, ShuffleArray + I - N, N,
+          pushBlocksImpl(SizeClassAllocator, ClassId, Region,
+                         ShuffleArray + I - N, N,
                          /*SameGroup=*/true);
           N = 1;
           CurGroup = compactPtrGroup(ShuffleArray[I]);
@@ -1102,14 +1111,15 @@ private:
       }
 
       shuffle(ShuffleArray + NumberOfBlocks - N, N, &Region->RandState);
-      pushBlocksImpl(C, ClassId, Region, &ShuffleArray[NumberOfBlocks - N], N,
+      pushBlocksImpl(SizeClassAllocator, ClassId, Region,
+                     &ShuffleArray[NumberOfBlocks - N], N,
                      /*SameGroup=*/true);
     } else {
       pushBatchClassBlocks(Region, ShuffleArray, NumberOfBlocks);
     }
 
-    const u16 PopCount =
-        popBlocksImpl(C, ClassId, Region, ToArray, MaxBlockCount);
+    const u16 PopCount = popBlocksImpl(SizeClassAllocator, ClassId, Region,
+                                       ToArray, MaxBlockCount);
     DCHECK_NE(PopCount, 0U);
 
     // Note that `PushedBlocks` and `PoppedBlocks` are supposed to only record
@@ -1119,7 +1129,7 @@ private:
     Region->FreeListInfo.PushedBlocks -= NumberOfBlocks;
 
     const uptr AllocatedUser = Size * NumberOfBlocks;
-    C->getStats().add(StatFree, AllocatedUser);
+    SizeClassAllocator->getStats().add(StatFree, AllocatedUser);
     Region->MemMapInfo.AllocatedUser += AllocatedUser;
 
     return PopCount;
@@ -1141,17 +1151,18 @@ private:
           BytesInFreeList - Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
     }
     const uptr TotalChunks = Region->MemMapInfo.AllocatedUser / BlockSize;
-    Str->append(
-        "%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
-        "inuse: %6zu total: %6zu releases: %6zu last "
-        "released: %6zuK latest pushed bytes: %6zuK region: 0x%zx (0x%zx)\n",
-        Region->Exhausted ? "E" : " ", ClassId, getSizeByClassId(ClassId),
-        Region->MemMapInfo.MappedUser >> 10, Region->FreeListInfo.PoppedBlocks,
-        Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
-        Region->ReleaseInfo.RangesReleased,
-        Region->ReleaseInfo.LastReleasedBytes >> 10,
-        RegionPushedBytesDelta >> 10, Region->RegionBeg,
-        getRegionBaseByClassId(ClassId));
+    Str->append("%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
+                "inuse: %6zu total: %6zu releases attempted: %6zu last "
+                "released: %6zuK latest pushed bytes: %6zuK region: 0x%zx "
+                "(0x%zx)\n",
+                Region->Exhausted ? "E" : " ", ClassId,
+                getSizeByClassId(ClassId), Region->MemMapInfo.MappedUser >> 10,
+                Region->FreeListInfo.PoppedBlocks,
+                Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
+                Region->ReleaseInfo.NumReleasesAttempted,
+                Region->ReleaseInfo.LastReleasedBytes >> 10,
+                RegionPushedBytesDelta >> 10, Region->RegionBeg,
+                getRegionBaseByClassId(ClassId));
   }
 
   void getRegionFragmentationInfo(RegionInfo *Region, uptr ClassId,
@@ -1296,6 +1307,10 @@ private:
         return 0;
     }
 
+    // The following steps contribute to the majority time spent in page
+    // releasing thus we increment the counter here.
+    ++Region->ReleaseInfo.NumReleasesAttempted;
+
     // Note that we have extracted the `GroupsToRelease` from region freelist.
     // It's safe to let pushBlocks()/popBlocks() access the remaining region
     // freelist. In the steps 3 and 4, we will temporarily release the FLLock
@@ -1322,7 +1337,7 @@ private:
                                             Context.getReleaseOffset());
     auto SkipRegion = [](UNUSED uptr RegionIndex) { return false; };
     releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
-    if (Recorder.getReleasedRangesCount() > 0) {
+    if (Recorder.getReleasedBytes() > 0) {
       // This is the case that we didn't hit the release threshold but it has
       // been past a certain period of time. Thus we try to release some pages
       // and if it does release some additional pages, it's hint that we are
@@ -1342,7 +1357,6 @@ private:
       }
 
       Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint = BytesInFreeList;
-      Region->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
       Region->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
     }
     Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTimeFast();

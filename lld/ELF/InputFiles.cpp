@@ -639,6 +639,13 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       }
       break;
     case EM_AARCH64:
+      // FIXME: BuildAttributes have been implemented in llvm, but not yet in
+      // lld. Remove the section so that it does not accumulate in the output
+      // file. When support is implemented we expect not to output a build
+      // attributes section in files of type ET_EXEC or ET_SHARED, but ld -r
+      // ouptut will need a single merged attributes section.
+      if (sec.sh_type == SHT_AARCH64_ATTRIBUTES)
+        sections[i] = &InputSection::discarded;
       // Producing a static binary with MTE globals is not currently supported,
       // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
       // medatada, and we don't want them to end up in the output file for
@@ -700,13 +707,12 @@ bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
   if (entSize == 0)
     return false;
   if (sec.sh_size % entSize)
-    Fatal(ctx) << this << ":(" << name << "): SHF_MERGE section size ("
-               << uint64_t(sec.sh_size)
-               << ") must be a multiple of sh_entsize (" << entSize << ")";
-
+    ErrAlways(ctx) << this << ":(" << name << "): SHF_MERGE section size ("
+                   << uint64_t(sec.sh_size)
+                   << ") must be a multiple of sh_entsize (" << entSize << ")";
   if (sec.sh_flags & SHF_WRITE)
-    Fatal(ctx) << this << ":(" << name
-               << "): writable SHF_MERGE section is not supported";
+    Err(ctx) << this << ":(" << name
+             << "): writable SHF_MERGE section is not supported";
 
   return true;
 }
@@ -891,9 +897,11 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     InputSectionBase *linkSec = nullptr;
     if (sec.sh_link < size)
       linkSec = this->sections[sec.sh_link];
-    if (!linkSec)
-      Fatal(ctx) << this
-                 << ": invalid sh_link index: " << uint32_t(sec.sh_link);
+    if (!linkSec) {
+      ErrAlways(ctx) << this
+                     << ": invalid sh_link index: " << uint32_t(sec.sh_link);
+      continue;
+    }
 
     // A SHF_LINK_ORDER section is discarded if its linked-to section is
     // discarded.
@@ -910,6 +918,56 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     handleSectionGroup<ELFT>(this->sections, entries);
 }
 
+template <typename ELFT>
+static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
+                                 uint32_t featureAndType,
+                                 ArrayRef<uint8_t> &desc, const uint8_t *base,
+                                 ArrayRef<uint8_t> *data = nullptr) {
+  auto err = [&](const uint8_t *place) -> ELFSyncStream {
+    auto diag = Err(ctx);
+    diag << &f << ":(" << ".note.gnu.property+0x"
+         << Twine::utohexstr(place - base) << "): ";
+    return diag;
+  };
+
+  while (!desc.empty()) {
+    const uint8_t *place = desc.data();
+    if (desc.size() < 8)
+      return void(err(place) << "program property is too short");
+    uint32_t type = read32<ELFT::Endianness>(desc.data());
+    uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
+    desc = desc.slice(8);
+    if (desc.size() < size)
+      return void(err(place) << "program property is too short");
+
+    if (type == featureAndType) {
+      // We found a FEATURE_1_AND field. There may be more than one of these
+      // in a .note.gnu.property section, for a relocatable object we
+      // accumulate the bits set.
+      if (size < 4)
+        return void(err(place) << "FEATURE_1_AND entry is too short");
+      f.andFeatures |= read32<ELFT::Endianness>(desc.data());
+    } else if (ctx.arg.emachine == EM_AARCH64 &&
+               type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
+      ArrayRef<uint8_t> contents = data ? *data : desc;
+      if (!f.aarch64PauthAbiCoreInfo.empty()) {
+        return void(
+            err(contents.data())
+            << "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
+               "not supported");
+      } else if (size != 16) {
+        return void(err(contents.data())
+                    << "GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry "
+                       "is invalid: expected 16 bytes, but got "
+                    << size);
+      }
+      f.aarch64PauthAbiCoreInfo = desc;
+    }
+
+    // Padding is present in the note descriptor, if necessary.
+    desc = desc.slice(alignTo<(ELFT::Is64Bits ? 8 : 4)>(size));
+  }
+}
 // Read the following info from the .note.gnu.property section and write it to
 // the corresponding fields in `ObjFile`:
 // - Feature flags (32 bits) representing x86 or AArch64 features for
@@ -922,17 +980,18 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
   using Elf_Note = typename ELFT::Note;
 
   ArrayRef<uint8_t> data = sec.content();
-  auto reportFatal = [&](const uint8_t *place, const Twine &msg) {
-    Fatal(ctx) << sec.file << ":(" << sec.name << "+0x"
-               << Twine::utohexstr(place - sec.content().data())
-               << "): " << msg;
+  auto err = [&](const uint8_t *place) -> ELFSyncStream {
+    auto diag = Err(ctx);
+    diag << sec.file << ":(" << sec.name << "+0x"
+         << Twine::utohexstr(place - sec.content().data()) << "): ";
+    return diag;
   };
   while (!data.empty()) {
     // Read one NOTE record.
     auto *nhdr = reinterpret_cast<const Elf_Nhdr *>(data.data());
     if (data.size() < sizeof(Elf_Nhdr) ||
         data.size() < nhdr->getSize(sec.addralign))
-      reportFatal(data.data(), "data is too short");
+      return void(err(data.data()) << "data is too short");
 
     Elf_Note note(*nhdr);
     if (nhdr->n_type != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU") {
@@ -946,40 +1005,8 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
 
     // Read a body of a NOTE record, which consists of type-length-value fields.
     ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
-    while (!desc.empty()) {
-      const uint8_t *place = desc.data();
-      if (desc.size() < 8)
-        reportFatal(place, "program property is too short");
-      uint32_t type = read32<ELFT::Endianness>(desc.data());
-      uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
-      desc = desc.slice(8);
-      if (desc.size() < size)
-        reportFatal(place, "program property is too short");
-
-      if (type == featureAndType) {
-        // We found a FEATURE_1_AND field. There may be more than one of these
-        // in a .note.gnu.property section, for a relocatable object we
-        // accumulate the bits set.
-        if (size < 4)
-          reportFatal(place, "FEATURE_1_AND entry is too short");
-        f.andFeatures |= read32<ELFT::Endianness>(desc.data());
-      } else if (ctx.arg.emachine == EM_AARCH64 &&
-                 type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
-        if (!f.aarch64PauthAbiCoreInfo.empty()) {
-          reportFatal(data.data(),
-                      "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
-                      "not supported");
-        } else if (size != 16) {
-          reportFatal(data.data(), "GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry "
-                                   "is invalid: expected 16 bytes, but got " +
-                                       Twine(size));
-        }
-        f.aarch64PauthAbiCoreInfo = desc;
-      }
-
-      // Padding is present in the note descriptor, if necessary.
-      desc = desc.slice(alignTo<(ELFT::Is64Bits ? 8 : 4)>(size));
-    }
+    const uint8_t *base = sec.content().data();
+    parseGnuPropertyNote<ELFT>(ctx, f, featureAndType, desc, base, &data);
 
     // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
     data = data.slice(nhdr->getSize(sec.addralign));
@@ -1025,9 +1052,18 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     // Therefore, we make LLD always add PT_GNU_STACK unless it is
     // explicitly told to do otherwise (by -z execstack). Because the stack
     // executable-ness is controlled solely by command line options,
-    // .note.GNU-stack sections are simply ignored.
-    if (name == ".note.GNU-stack")
+    // .note.GNU-stack sections are, with one exception, ignored. Report
+    // an error if we encounter an executable .note.GNU-stack to force the
+    // user to explicitly request an executable stack.
+    if (name == ".note.GNU-stack") {
+      if ((sec.sh_flags & SHF_EXECINSTR) && !ctx.arg.relocatable &&
+          ctx.arg.zGnustack != GnuStackKind::Exec) {
+        Err(ctx) << this
+                 << ": requires an executable stack, but -z execstack is not "
+                    "specified";
+      }
       return &InputSection::discarded;
+    }
 
     // Object files that use processor features such as Intel Control-Flow
     // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
@@ -1118,8 +1154,8 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     sym->isUsedInRegularObj = true;
     if (LLVM_UNLIKELY(eSym.st_shndx == SHN_COMMON)) {
       if (value == 0 || value >= UINT32_MAX)
-        Fatal(ctx) << this << ": common symbol '" << sym->getName()
-                   << "' has invalid alignment: " << value;
+        Err(ctx) << this << ": common symbol '" << sym->getName()
+                 << "' has invalid alignment: " << value;
       hasCommonSyms = true;
       sym->resolve(ctx, CommonSymbol{ctx, this, StringRef(), binding, stOther,
                                      type, value, size});
@@ -1165,8 +1201,10 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
       secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
     else if (secIdx >= SHN_LORESERVE)
       secIdx = 0;
-    if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      Fatal(ctx) << this << ": invalid section index: " << secIdx;
+    if (LLVM_UNLIKELY(secIdx >= sections.size())) {
+      Err(ctx) << this << ": invalid section index: " << secIdx;
+      secIdx = 0;
+    }
     if (LLVM_UNLIKELY(eSym.getBinding() != STB_LOCAL))
       ErrAlways(ctx) << this << ": non-local symbol (" << i
                      << ") found at index < .symtab's sh_info (" << end << ")";
@@ -1175,9 +1213,12 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
     uint8_t type = eSym.getType();
     if (type == STT_FILE)
       sourceFile = CHECK2(eSym.getName(stringTable), this);
-    if (LLVM_UNLIKELY(stringTable.size() <= eSym.st_name))
-      Fatal(ctx) << this << ": invalid symbol name offset";
-    StringRef name(stringTable.data() + eSym.st_name);
+    unsigned stName = eSym.st_name;
+    if (LLVM_UNLIKELY(stringTable.size() <= stName)) {
+      Err(ctx) << this << ": invalid symbol name offset";
+      stName = 0;
+    }
+    StringRef name(stringTable.data() + stName);
 
     symbols[i] = reinterpret_cast<Symbol *>(locals + i);
     if (eSym.st_shndx == SHN_UNDEF || sec == &InputSection::discarded)
@@ -1228,8 +1269,10 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
         secIdx = 0;
     }
 
-    if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      Fatal(ctx) << this << ": invalid section index: " << secIdx;
+    if (LLVM_UNLIKELY(secIdx >= sections.size())) {
+      Err(ctx) << this << ": invalid section index: " << secIdx;
+      continue;
+    }
     InputSectionBase *sec = sections[secIdx];
     if (sec == &InputSection::discarded) {
       if (sym.traced) {
@@ -1364,16 +1407,22 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
   ArrayRef<uint8_t> data = CHECK2(obj.getSectionContents(*sec), this);
   const uint8_t *verneedBuf = data.begin();
   for (unsigned i = 0; i != sec->sh_info; ++i) {
-    if (verneedBuf + sizeof(typename ELFT::Verneed) > data.end())
-      Fatal(ctx) << this << " has an invalid Verneed";
+    if (verneedBuf + sizeof(typename ELFT::Verneed) > data.end()) {
+      Err(ctx) << this << " has an invalid Verneed";
+      break;
+    }
     auto *vn = reinterpret_cast<const typename ELFT::Verneed *>(verneedBuf);
     const uint8_t *vernauxBuf = verneedBuf + vn->vn_aux;
     for (unsigned j = 0; j != vn->vn_cnt; ++j) {
-      if (vernauxBuf + sizeof(typename ELFT::Vernaux) > data.end())
-        Fatal(ctx) << this << " has an invalid Vernaux";
+      if (vernauxBuf + sizeof(typename ELFT::Vernaux) > data.end()) {
+        Err(ctx) << this << " has an invalid Vernaux";
+        break;
+      }
       auto *aux = reinterpret_cast<const typename ELFT::Vernaux *>(vernauxBuf);
-      if (aux->vna_name >= this->stringTable.size())
-        Fatal(ctx) << this << " has a Vernaux with an invalid vna_name";
+      if (aux->vna_name >= this->stringTable.size()) {
+        Err(ctx) << this << " has a Vernaux with an invalid vna_name";
+        break;
+      }
       uint16_t version = aux->vna_other & VERSYM_VERSION;
       if (version >= verneeds.size())
         verneeds.resize(version + 1);
@@ -1383,6 +1432,28 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
     verneedBuf += vn->vn_next;
   }
   return verneeds;
+}
+
+// Parse PT_GNU_PROPERTY segments in DSO. The process is similar to
+// readGnuProperty, but we don't have the InputSection information.
+template <typename ELFT>
+void SharedFile::parseGnuAndFeatures(const ELFFile<ELFT> &obj) {
+  if (ctx.arg.emachine != EM_AARCH64)
+    return;
+  const uint8_t *base = obj.base();
+  auto phdrs = CHECK2(obj.program_headers(), this);
+  for (auto phdr : phdrs) {
+    if (phdr.p_type != PT_GNU_PROPERTY)
+      continue;
+    typename ELFT::Note note(
+        *reinterpret_cast<const typename ELFT::Nhdr *>(base + phdr.p_offset));
+    if (note.getType() != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU")
+      continue;
+
+    ArrayRef<uint8_t> desc = note.getDesc(phdr.p_align);
+    parseGnuPropertyNote<ELFT>(ctx, *this, GNU_PROPERTY_AARCH64_FEATURE_1_AND,
+                               desc, base);
+  }
 }
 
 // We do not usually care about alignments of data in shared object
@@ -1461,13 +1532,17 @@ template <class ELFT> void SharedFile::parse() {
   for (const Elf_Dyn &dyn : dynamicTags) {
     if (dyn.d_tag == DT_NEEDED) {
       uint64_t val = dyn.getVal();
-      if (val >= this->stringTable.size())
-        Fatal(ctx) << this << ": invalid DT_NEEDED entry";
+      if (val >= this->stringTable.size()) {
+        Err(ctx) << this << ": invalid DT_NEEDED entry";
+        return;
+      }
       dtNeeded.push_back(this->stringTable.data() + val);
     } else if (dyn.d_tag == DT_SONAME) {
       uint64_t val = dyn.getVal();
-      if (val >= this->stringTable.size())
-        Fatal(ctx) << this << ": invalid DT_SONAME entry";
+      if (val >= this->stringTable.size()) {
+        Err(ctx) << this << ": invalid DT_SONAME entry";
+        return;
+      }
       soName = this->stringTable.data() + val;
     }
   }
@@ -1491,6 +1566,7 @@ template <class ELFT> void SharedFile::parse() {
 
   verdefs = parseVerdefs<ELFT>(obj.base(), verdefSec);
   std::vector<uint32_t> verneeds = parseVerneed<ELFT>(obj, verneedSec);
+  parseGnuAndFeatures<ELFT>(obj);
 
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use
@@ -1544,7 +1620,7 @@ template <class ELFT> void SharedFile::parse() {
       }
       Symbol *s = ctx.symtab->addSymbol(
           Undefined{this, name, sym.getBinding(), sym.st_other, sym.getType()});
-      s->exportDynamic = true;
+      s->isExported = true;
       if (sym.getBinding() != STB_WEAK &&
           ctx.arg.unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore)
         requiredSymbols.push_back(s);
@@ -1709,7 +1785,6 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
 }
 
 static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
-                                const std::vector<bool> &keptComdats,
                                 const lto::InputFile::Symbol &objSym,
                                 BitcodeFile &f) {
   uint8_t binding = objSym.isWeak() ? STB_WEAK : STB_GLOBAL;
@@ -1726,8 +1801,7 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
     sym = ctx.symtab->insert(objSym.getName());
   }
 
-  int c = objSym.getComdatIndex();
-  if (objSym.isUndefined() || (c != -1 && !keptComdats[c])) {
+  if (objSym.isUndefined()) {
     Undefined newSym(&f, StringRef(), binding, visibility, type);
     sym->resolve(ctx, newSym);
     sym->referenced = true;
@@ -1743,7 +1817,7 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
                    nullptr);
     // The definition can be omitted if all bitcode definitions satisfy
     // `canBeOmittedFromSymbolTable()` and isUsedInRegularObj is false.
-    // The latter condition is tested in Symbol::includeInDynsym.
+    // The latter condition is tested in parseVersionAndComputeIsPreemptible.
     sym->ltoCanOmit = objSym.canBeOmittedFromSymbolTable() &&
                       (!sym->isDefined() || sym->ltoCanOmit);
     sym->resolve(ctx, newSym);
@@ -1766,10 +1840,10 @@ void BitcodeFile::parse() {
   // ObjFile<ELFT>::initializeSymbols.
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined())
-      createBitcodeSymbol(ctx, symbols[i], keptComdats, irSym, *this);
+      createBitcodeSymbol(ctx, symbols[i], irSym, *this);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (irSym.isUndefined())
-      createBitcodeSymbol(ctx, symbols[i], keptComdats, irSym, *this);
+      createBitcodeSymbol(ctx, symbols[i], irSym, *this);
 
   for (auto l : obj->getDependentLibraries())
     addDependentLibrary(ctx, l, this);

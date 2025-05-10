@@ -9,6 +9,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK:      LV: Scalarizing:  %cmp =
 ; CHECK:      VPlan 'Initial VPlan for VF={8},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
@@ -16,15 +17,17 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %and = and i64 %N, 15
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (zext i4 (trunc i64 %N to i4) to i64)
-; CHECK-NEXT: No successors
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   vp<[[END1:%.+]]> = DERIVED-IV ir<%and> + vp<[[VTC]]> * ir<-1>
+; CHECK-NEXT:   vp<[[END2:%.+]]> = DERIVED-IV ir<%A> + vp<[[VTC]]> * ir<1>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     EMIT vp<[[PADD:%.+]]> = ptradd ir<%A>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VPTR:%.]]> = vector-pointer vp<[[PADD]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VPTR]]>
@@ -43,11 +46,13 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%and>
+; CHECK-NEXT:   EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%A>
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ %and, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:   IR   %p.src = phi ptr [ %A, %entry ], [ %p.src.next, %loop ]
+; CHECK-NEXT:   IR   %iv = phi i64 [ %and, %entry ], [ %iv.next, %loop ] (extra operand: vp<[[RESUME1]]> from scalar.ph)
+; CHECK-NEXT:   IR   %p.src = phi ptr [ %A, %entry ], [ %p.src.next, %loop ] (extra operand: vp<[[RESUME2]]>.1 from scalar.ph)
 ; CHECK:        IR   %cmp = icmp eq i64 %iv.next, 0
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -57,56 +62,51 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ;
 ; CHECK: Executing best plan with VF=8, UF=2
 ; CHECK-NEXT: VPlan 'Final VPlan for VF={8},UF={2}' {
-; CHECK-NEXT: Live-in ir<[[VFxUF:.+]]> = VF * UF
 ; CHECK-NEXT: Live-in ir<[[VTC:%.+]]> = vector-trip-count
-; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
+; CHECK-NEXT: ir<%and> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %and = and i64 %N, 15
-; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (zext i4 (trunc i64 %N to i4) to i64)
-; CHECK-NEXT: No successors
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
-; CHECK-NEXT: Successor(s): vector loop
+; CHECK-NEXT: ir-bb<vector.ph>:
+; CHECK-NEXT:  IR   %n.mod.vf = urem i64 %and, 16
+; CHECK-NEXT:  IR   %n.vec = sub i64 %and, %n.mod.vf
+; CHECK-NEXT:  vp<[[END1:%.+]]> = DERIVED-IV ir<%and> + ir<[[VTC]]> * ir<-1>
+; CHECK-NEXT:  vp<[[END2:%.+]]> = DERIVED-IV ir<%A> + ir<[[VTC]]> * ir<1>
+; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     SCALAR-PHI vp<[[CAN_IV:%.+]]> = phi ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     vp<[[STEPS1:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:     EMIT vp<[[PADD1:%.+]]> = ptradd ir<%A>, vp<[[STEPS1]]>
-; CHECK-NEXT:     vp<[[VPTR1:%.]]> = vector-pointer vp<[[PADD1]]>
-; CHECK-NEXT:     vp<[[VPTR2:%.]]> = vector-pointer vp<[[PADD1]]>, ir<1>
-; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VPTR1]]>
-; CHECK-NEXT:     WIDEN ir<%l>.1 = load vp<[[VPTR2]]>
-; CHECK-NEXT:     WIDEN ir<%add> = add nsw ir<%l>, ir<10>
-; CHECK-NEXT:     WIDEN ir<%add>.1 = add nsw ir<%l>.1, ir<10>
-; CHECK-NEXT:     vp<[[VPTR3:%.+]]> = vector-pointer vp<[[PADD1]]>
-; CHECK-NEXT:     vp<[[VPTR4:%.+]]> = vector-pointer vp<[[PADD1]]>, ir<1>
-; CHECK-NEXT:     WIDEN store vp<[[VPTR3]]>, ir<%add>
-; CHECK-NEXT:     WIDEN store vp<[[VPTR4]]>, ir<%add>.1
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV:%.+]]>, ir<[[VFxUF]]>
-; CHECK-NEXT:     EMIT branch-on-cond ir<true>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): ir-bb<middle.block>
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT vp<[[PADD1:%.+]]> = ptradd ir<%A>, ir<0>
+; CHECK-NEXT:   vp<[[VPTR1:%.]]> = vector-pointer vp<[[PADD1]]>
+; CHECK-NEXT:   vp<[[VPTR2:%.]]> = vector-pointer vp<[[PADD1]]>, ir<1>
+; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[VPTR1]]>
+; CHECK-NEXT:   WIDEN ir<%l>.1 = load vp<[[VPTR2]]>
+; CHECK-NEXT:   WIDEN ir<%add> = add nsw ir<%l>, ir<10>
+; CHECK-NEXT:   WIDEN ir<%add>.1 = add nsw ir<%l>.1, ir<10>
+; CHECK-NEXT:   vp<[[VPTR3:%.+]]> = vector-pointer vp<[[PADD1]]>
+; CHECK-NEXT:   vp<[[VPTR4:%.+]]> = vector-pointer vp<[[PADD1]]>, ir<1>
+; CHECK-NEXT:   WIDEN store vp<[[VPTR3]]>, ir<%add>
+; CHECK-NEXT:   WIDEN store vp<[[VPTR4]]>, ir<%add>.1
+; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<middle.block>:
-; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq vp<[[TC]]>, ir<[[VTC]]>
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq ir<%and>, ir<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:
-; CHECK-NEXT:   EMIT vp<[[RESUME1:%.+]]> = resume-phi ir<%ind.end>, ir<%and>
-; CHECK-NEXT:   EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi ir<%ind.end1>, ir<%A>
+; CHECK-NEXT:   EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%and>
+; CHECK-NEXT:   EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%A>
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
 ; CHECK-NEXT:   IR   %iv = phi i64 [ %and, %scalar.ph ], [ %iv.next, %loop ] (extra operand: vp<[[RESUME1]]> from ir-bb<scalar.ph>)
 ; CHECK-NEXT:   IR   %p.src = phi ptr [ %A, %scalar.ph ], [ %p.src.next, %loop ] (extra operand: vp<[[RESUME2]]>.1 from ir-bb<scalar.ph>)
 ; CHECK:        IR   %cmp = icmp eq i64 %iv.next, 0
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;

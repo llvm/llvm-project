@@ -40,6 +40,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/FPEnv.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -403,9 +404,9 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // important to do this before we enter the return block or return
   // edges will be *really* confused.
   bool HasCleanups = EHStack.stable_begin() != PrologueCleanupDepth;
-  bool HasOnlyLifetimeMarkers =
-      HasCleanups && EHStack.containsOnlyLifetimeMarkers(PrologueCleanupDepth);
-  bool EmitRetDbgLoc = !HasCleanups || HasOnlyLifetimeMarkers;
+  bool HasOnlyNoopCleanups =
+      HasCleanups && EHStack.containsOnlyNoopCleanups(PrologueCleanupDepth);
+  bool EmitRetDbgLoc = !HasCleanups || HasOnlyNoopCleanups;
 
   std::optional<ApplyDebugLocation> OAL;
   if (HasCleanups) {
@@ -550,14 +551,6 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
     CurFn->addFnAttr("min-legal-vector-width",
                      llvm::utostr(LargestVectorWidth));
 
-  // Add vscale_range attribute if appropriate.
-  std::optional<std::pair<unsigned, unsigned>> VScaleRange =
-      getContext().getTargetInfo().getVScaleRange(getLangOpts());
-  if (VScaleRange) {
-    CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
-        getLLVMContext(), VScaleRange->first, VScaleRange->second));
-  }
-
   // If we generated an unreachable return block, delete it now.
   if (ReturnBlock.isValid() && ReturnBlock.getBlock()->use_empty()) {
     Builder.ClearInsertionPoint();
@@ -647,7 +640,7 @@ void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,
         HintQTy->isSignedIntegerType() ||
         (HintEltQTy && HintEltQTy->getElementType()->isSignedIntegerType());
     llvm::Metadata *AttrMDArgs[] = {
-        llvm::ConstantAsMetadata::get(llvm::UndefValue::get(
+        llvm::ConstantAsMetadata::get(llvm::PoisonValue::get(
             CGM.getTypes().ConvertType(A->getTypeHint()))),
         llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
             llvm::IntegerType::get(Context, 32),
@@ -656,18 +649,24 @@ void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,
   }
 
   if (const WorkGroupSizeHintAttr *A = FD->getAttr<WorkGroupSizeHintAttr>()) {
+    auto Eval = [&](Expr *E) {
+      return E->EvaluateKnownConstInt(FD->getASTContext()).getExtValue();
+    };
     llvm::Metadata *AttrMDArgs[] = {
-        llvm::ConstantAsMetadata::get(Builder.getInt32(A->getXDim())),
-        llvm::ConstantAsMetadata::get(Builder.getInt32(A->getYDim())),
-        llvm::ConstantAsMetadata::get(Builder.getInt32(A->getZDim()))};
+        llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getXDim()))),
+        llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getYDim()))),
+        llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getZDim())))};
     Fn->setMetadata("work_group_size_hint", llvm::MDNode::get(Context, AttrMDArgs));
   }
 
   if (const ReqdWorkGroupSizeAttr *A = FD->getAttr<ReqdWorkGroupSizeAttr>()) {
+    auto Eval = [&](Expr *E) {
+      return E->EvaluateKnownConstInt(FD->getASTContext()).getExtValue();
+    };
     llvm::Metadata *AttrMDArgs[] = {
-        llvm::ConstantAsMetadata::get(Builder.getInt32(A->getXDim())),
-        llvm::ConstantAsMetadata::get(Builder.getInt32(A->getYDim())),
-        llvm::ConstantAsMetadata::get(Builder.getInt32(A->getZDim()))};
+        llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getXDim()))),
+        llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getYDim()))),
+        llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getZDim())))};
     Fn->setMetadata("reqd_work_group_size", llvm::MDNode::get(Context, AttrMDArgs));
   }
 
@@ -837,6 +836,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       Fn->addFnAttr(llvm::Attribute::SanitizeMemTag);
     if (SanOpts.has(SanitizerKind::Thread))
       Fn->addFnAttr(llvm::Attribute::SanitizeThread);
+    if (SanOpts.has(SanitizerKind::Type))
+      Fn->addFnAttr(llvm::Attribute::SanitizeType);
     if (SanOpts.has(SanitizerKind::NumericalStability))
       Fn->addFnAttr(llvm::Attribute::SanitizeNumericalStability);
     if (SanOpts.hasOneOf(SanitizerKind::Memory | SanitizerKind::KernelMemory))
@@ -964,18 +965,24 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   unsigned Count, Offset;
+  StringRef Section;
   if (const auto *Attr =
           D ? D->getAttr<PatchableFunctionEntryAttr>() : nullptr) {
     Count = Attr->getCount();
     Offset = Attr->getOffset();
+    Section = Attr->getSection();
   } else {
     Count = CGM.getCodeGenOpts().PatchableFunctionEntryCount;
     Offset = CGM.getCodeGenOpts().PatchableFunctionEntryOffset;
   }
+  if (Section.empty())
+    Section = CGM.getCodeGenOpts().PatchableFunctionEntrySection;
   if (Count && Offset <= Count) {
     Fn->addFnAttr("patchable-function-entry", std::to_string(Count - Offset));
     if (Offset)
       Fn->addFnAttr("patchable-function-prefix", std::to_string(Offset));
+    if (!Section.empty())
+      Fn->addFnAttr("patchable-function-entry-section", Section);
   }
   // Instruct that functions for COFF/CodeView targets should start with a
   // patchable instruction, but only on x86/x64. Don't forward this to ARM/ARM64
@@ -1106,6 +1113,15 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   // "main" doesn't need to zero out call-used registers.
   if (FD && FD->isMain())
     Fn->removeFnAttr("zero-call-used-regs");
+
+  // Add vscale_range attribute if appropriate.
+  std::optional<std::pair<unsigned, unsigned>> VScaleRange =
+      getContext().getTargetInfo().getVScaleRange(
+          getLangOpts(), FD ? IsArmStreamingFunction(FD, true) : false);
+  if (VScaleRange) {
+    CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
+        getLLVMContext(), VScaleRange->first, VScaleRange->second));
+  }
 
   llvm::BasicBlock *EntryBB = createBasicBlock("entry", CurFn);
 
@@ -1530,7 +1546,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     // Initialize helper which will detect jumps which can cause invalid
     // lifetime markers.
     if (ShouldEmitLifetimeMarkers)
-      Bypasses.Init(Body);
+      Bypasses.Init(CGM, Body);
   }
 
   // Emit the standard function prologue.
@@ -1579,6 +1595,26 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     // Implicit copy-assignment gets the same special treatment as implicit
     // copy-constructors.
     emitImplicitAssignmentOperatorBody(Args);
+  } else if (FD->hasAttr<OpenCLKernelAttr>() &&
+             GD.getKernelReferenceKind() == KernelReferenceKind::Kernel) {
+    CallArgList CallArgs;
+    for (unsigned i = 0; i < Args.size(); ++i) {
+      Address ArgAddr = GetAddrOfLocalVar(Args[i]);
+      QualType ArgQualType = Args[i]->getType();
+      RValue ArgRValue = convertTempToRValue(ArgAddr, ArgQualType, Loc);
+      CallArgs.add(ArgRValue, ArgQualType);
+    }
+    GlobalDecl GDStub = GlobalDecl(FD, KernelReferenceKind::Stub);
+    const FunctionType *FT = cast<FunctionType>(FD->getType());
+    CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FT);
+    const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
+        CallArgs, FT, /*ChainCall=*/false);
+    llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FnInfo);
+    llvm::Constant *GDStubFunctionPointer =
+        CGM.getRawFunctionPointer(GDStub, FTy);
+    CGCallee GDStubCallee = CGCallee::forDirect(GDStubFunctionPointer, GDStub);
+    EmitCall(FnInfo, GDStubCallee, ReturnValueSlot(), CallArgs, nullptr, false,
+             Loc);
   } else if (Body) {
     EmitFunctionBody(Body);
   } else
@@ -1598,7 +1634,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     if (SanOpts.has(SanitizerKind::Return)) {
       SanitizerScope SanScope(this);
       llvm::Value *IsFalse = Builder.getFalse();
-      EmitCheck(std::make_pair(IsFalse, SanitizerKind::Return),
+      EmitCheck(std::make_pair(IsFalse, SanitizerKind::SO_Return),
                 SanitizerHandler::MissingReturn,
                 EmitCheckSourceLocation(FD->getLocation()), {});
     } else if (ShouldEmitUnreachable) {
@@ -1613,6 +1649,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   // Emit the standard function epilogue.
   FinishFunction(BodyRange.getEnd());
+
+  PGO.verifyCounterMap();
 
   // If we haven't marked the function nothrow through other means, do
   // a quick pass now to see if we can.
@@ -1736,6 +1774,7 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
   if (!AllowLabels && CodeGenFunction::ContainsLabel(Cond))
     return false;  // Contains a label.
 
+  PGO.markStmtMaybeUsed(Cond);
   ResultInt = Int;
   return true;
 }
@@ -1839,7 +1878,8 @@ void CodeGenFunction::EmitBranchToCounterBlock(
 /// LHS and RHS nodes.
 void CodeGenFunction::EmitBranchOnBoolExpr(
     const Expr *Cond, llvm::BasicBlock *TrueBlock, llvm::BasicBlock *FalseBlock,
-    uint64_t TrueCount, Stmt::Likelihood LH, const Expr *ConditionalOp) {
+    uint64_t TrueCount, Stmt::Likelihood LH, const Expr *ConditionalOp,
+    const VarDecl *ConditionalDecl) {
   Cond = Cond->IgnoreParens();
 
   if (const BinaryOperator *CondBOp = dyn_cast<BinaryOperator>(Cond)) {
@@ -2040,6 +2080,8 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
     CondV = EvaluateExprAsBool(Cond);
   }
 
+  MaybeEmitDeferredVarDeclInit(ConditionalDecl);
+
   // If not at the top of the logical operator nest, update MCDC temp with the
   // boolean result of the evaluated condition.
   if (!MCDCLogOpStack.empty()) {
@@ -2081,7 +2123,30 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
     Weights = createProfileWeights(TrueCount, CurrentCount - TrueCount);
   }
 
-  Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights, Unpredictable);
+  llvm::Instruction *BrInst = Builder.CreateCondBr(CondV, TrueBlock, FalseBlock,
+                                                   Weights, Unpredictable);
+  switch (HLSLControlFlowAttr) {
+  case HLSLControlFlowHintAttr::Microsoft_branch:
+  case HLSLControlFlowHintAttr::Microsoft_flatten: {
+    llvm::MDBuilder MDHelper(CGM.getLLVMContext());
+
+    llvm::ConstantInt *BranchHintConstant =
+        HLSLControlFlowAttr ==
+                HLSLControlFlowHintAttr::Spelling::Microsoft_branch
+            ? llvm::ConstantInt::get(CGM.Int32Ty, 1)
+            : llvm::ConstantInt::get(CGM.Int32Ty, 2);
+
+    SmallVector<llvm::Metadata *, 2> Vals(
+        {MDHelper.createString("hlsl.controlflow.hint"),
+         MDHelper.createConstant(BranchHintConstant)});
+    BrInst->setMetadata("hlsl.controlflow.hint",
+                        llvm::MDNode::get(CGM.getLLVMContext(), Vals));
+    break;
+  }
+  // This is required to avoid warnings during compilation
+  case HLSLControlFlowHintAttr::SpellingNotCalculated:
+    break;
+  }
 }
 
 /// ErrorUnsupported - Print out an error that codegen doesn't support the
@@ -2221,7 +2286,7 @@ llvm::BlockAddress *CodeGenFunction::GetAddrOfLabel(const LabelDecl *L) {
 
   // Make sure the indirect branch includes all of the address-taken blocks.
   IndirectBranch->addDestination(BB);
-  return llvm::BlockAddress::get(CurFn, BB);
+  return llvm::BlockAddress::get(CurFn->getType(), BB);
 }
 
 llvm::BasicBlock *CodeGenFunction::GetIndirectGotoBlock() {
@@ -2479,8 +2544,9 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
             llvm::Constant *StaticArgs[] = {
                 EmitCheckSourceLocation(sizeExpr->getBeginLoc()),
                 EmitCheckTypeDescriptor(SEType)};
-            EmitCheck(std::make_pair(CheckCondition, SanitizerKind::VLABound),
-                      SanitizerHandler::VLABoundNotPositive, StaticArgs, size);
+            EmitCheck(
+                std::make_pair(CheckCondition, SanitizerKind::SO_VLABound),
+                SanitizerHandler::VLABoundNotPositive, StaticArgs, size);
           }
 
           // Always zexting here would be wrong if it weren't
@@ -3131,10 +3197,8 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
     llvm::Constant *StaticData[] = {EmitCheckSourceLocation(Loc),
                                     EmitCheckSourceLocation(SecondaryLoc),
                                     EmitCheckTypeDescriptor(Ty)};
-    llvm::Value *DynamicData[] = {EmitCheckValue(Ptr),
-                                  EmitCheckValue(Alignment),
-                                  EmitCheckValue(OffsetValue)};
-    EmitCheck({std::make_pair(TheCheck, SanitizerKind::Alignment)},
+    llvm::Value *DynamicData[] = {Ptr, Alignment, OffsetValue};
+    EmitCheck({std::make_pair(TheCheck, SanitizerKind::SO_Alignment)},
               SanitizerHandler::AlignmentAssumption, StaticData, DynamicData);
   }
 

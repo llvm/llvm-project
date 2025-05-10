@@ -9,11 +9,10 @@
 // TODO: __builtin_clzg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
 //  refactor this code to exclusively use __builtin_clzg.
 
-#ifndef _LIBCPP___BIT_COUNTL_H
-#define _LIBCPP___BIT_COUNTL_H
+#ifndef _LIBCPP___CXX03___BIT_COUNTL_H
+#define _LIBCPP___CXX03___BIT_COUNTL_H
 
 #include <__cxx03/__bit/rotate.h>
-#include <__cxx03/__concepts/arithmetic.h>
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_unsigned_integer.h>
 #include <__cxx03/limits>
@@ -92,22 +91,8 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _
 #endif // __has_builtin(__builtin_clzg)
 }
 
-#if _LIBCPP_STD_VER >= 20
-
-template <__libcpp_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int countl_zero(_Tp __t) noexcept {
-  return std::__countl_zero(__t);
-}
-
-template <__libcpp_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int countl_one(_Tp __t) noexcept {
-  return __t != numeric_limits<_Tp>::max() ? std::countl_zero(static_cast<_Tp>(~__t)) : numeric_limits<_Tp>::digits;
-}
-
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___BIT_COUNTL_H
+#endif // _LIBCPP___CXX03___BIT_COUNTL_H

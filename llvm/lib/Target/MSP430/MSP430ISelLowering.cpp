@@ -13,6 +13,7 @@
 #include "MSP430ISelLowering.h"
 #include "MSP430.h"
 #include "MSP430MachineFunctionInfo.h"
+#include "MSP430SelectionDAGInfo.h"
 #include "MSP430Subtarget.h"
 #include "MSP430TargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -723,7 +724,8 @@ MSP430TargetLowering::CanLowerReturn(CallingConv::ID CallConv,
                                      MachineFunction &MF,
                                      bool IsVarArg,
                                      const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                     LLVMContext &Context) const {
+                                     LLVMContext &Context,
+                                     const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_MSP430);
@@ -1358,27 +1360,6 @@ bool MSP430TargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
   }
 
   return false;
-}
-
-
-const char *MSP430TargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((MSP430ISD::NodeType)Opcode) {
-  case MSP430ISD::FIRST_NUMBER:       break;
-  case MSP430ISD::RET_GLUE:           return "MSP430ISD::RET_GLUE";
-  case MSP430ISD::RETI_GLUE:          return "MSP430ISD::RETI_GLUE";
-  case MSP430ISD::RRA:                return "MSP430ISD::RRA";
-  case MSP430ISD::RLA:                return "MSP430ISD::RLA";
-  case MSP430ISD::RRC:                return "MSP430ISD::RRC";
-  case MSP430ISD::RRCL:               return "MSP430ISD::RRCL";
-  case MSP430ISD::CALL:               return "MSP430ISD::CALL";
-  case MSP430ISD::Wrapper:            return "MSP430ISD::Wrapper";
-  case MSP430ISD::BR_CC:              return "MSP430ISD::BR_CC";
-  case MSP430ISD::CMP:                return "MSP430ISD::CMP";
-  case MSP430ISD::SETCC:              return "MSP430ISD::SETCC";
-  case MSP430ISD::SELECT_CC:          return "MSP430ISD::SELECT_CC";
-  case MSP430ISD::DADD:               return "MSP430ISD::DADD";
-  }
-  return nullptr;
 }
 
 bool MSP430TargetLowering::isTruncateFree(Type *Ty1,

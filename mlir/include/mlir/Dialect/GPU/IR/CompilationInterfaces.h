@@ -27,6 +27,7 @@ class ModuleTranslation;
 }
 namespace gpu {
 enum class CompilationTarget : uint32_t;
+constexpr StringLiteral elfSectionName = "section";
 
 /// This class indicates that the attribute associated with this trait is a GPU
 /// offloading translation attribute. These kinds of attributes must implement
@@ -50,8 +51,8 @@ public:
   /// obtaining the parent symbol table. The default compilation target is
   /// `Fatbin`.
   TargetOptions(
-      StringRef toolkitPath = {}, ArrayRef<std::string> linkFiles = {},
-      StringRef cmdOptions = {},
+      StringRef toolkitPath = {}, ArrayRef<Attribute> librariesToLink = {},
+      StringRef cmdOptions = {}, StringRef elfSection = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
       function_ref<SymbolTable *()> getSymbolTableCallback = {},
       function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
@@ -65,15 +66,24 @@ public:
   /// Returns the toolkit path.
   StringRef getToolkitPath() const;
 
-  /// Returns the files to link to.
-  ArrayRef<std::string> getLinkFiles() const;
+  /// Returns the LLVM libraries to link to.
+  ArrayRef<Attribute> getLibrariesToLink() const;
 
   /// Returns the command line options.
   StringRef getCmdOptions() const;
 
+  /// Returns the ELF section.
+  StringRef getELFSection() const;
+
   /// Returns a tokenization of the command line options.
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
   tokenizeCmdOptions() const;
+
+  /// Returns a tokenization of the substr of the command line options that
+  /// starts with `startsWith` and ends with end of the command line options and
+  /// consumes it.
+  std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+  tokenizeAndRemoveSuffixCmdOptions(llvm::StringRef startsWith);
 
   /// Returns the compilation target.
   CompilationTarget getCompilationTarget() const;
@@ -104,12 +114,17 @@ public:
   /// Returns the default compilation target: `CompilationTarget::Fatbin`.
   static CompilationTarget getDefaultCompilationTarget();
 
+  /// Returns a tokenization of the command line options.
+  static std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+  tokenizeCmdOptions(const std::string &cmdOptions);
+
 protected:
   /// Derived classes must use this constructor to initialize `typeID` to the
   /// appropiate value: ie. `TargetOptions(TypeID::get<DerivedClass>())`.
   TargetOptions(
       TypeID typeID, StringRef toolkitPath = {},
-      ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
+      ArrayRef<Attribute> librariesToLink = {}, StringRef cmdOptions = {},
+      StringRef elfSection = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
       function_ref<SymbolTable *()> getSymbolTableCallback = {},
       function_ref<void(llvm::Module &)> initialLlvmIRCallback = {},
@@ -121,11 +136,14 @@ protected:
   std::string toolkitPath;
 
   /// List of files to link with the LLVM module.
-  SmallVector<std::string> linkFiles;
+  SmallVector<Attribute> librariesToLink;
 
   /// An optional set of command line options to be used by the compilation
   /// process.
   std::string cmdOptions;
+
+  /// ELF Section where the binary needs to be located
+  std::string elfSection;
 
   /// Compilation process target format.
   CompilationTarget compilationTarget;

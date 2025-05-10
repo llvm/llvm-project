@@ -13,6 +13,7 @@
 #include <__assert>
 #include <__concepts/arithmetic.h>
 #include <__config>
+#include <__memory/addressof.h>
 #include <__utility/cmp.h>
 #include <limits>
 
@@ -29,7 +30,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <__libcpp_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp __add_sat(_Tp __x, _Tp __y) noexcept {
-  if (_Tp __sum; !__builtin_add_overflow(__x, __y, &__sum))
+  if (_Tp __sum; !__builtin_add_overflow(__x, __y, std::addressof(__sum)))
     return __sum;
   // Handle overflow
   if constexpr (__libcpp_unsigned_integer<_Tp>) {
@@ -47,7 +48,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __add_sat(_Tp __x, _Tp __y) noexcept {
 
 template <__libcpp_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp __sub_sat(_Tp __x, _Tp __y) noexcept {
-  if (_Tp __sub; !__builtin_sub_overflow(__x, __y, &__sub))
+  if (_Tp __sub; !__builtin_sub_overflow(__x, __y, std::addressof(__sub)))
     return __sub;
   // Handle overflow
   if constexpr (__libcpp_unsigned_integer<_Tp>) {
@@ -66,7 +67,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __sub_sat(_Tp __x, _Tp __y) noexcept {
 
 template <__libcpp_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp __mul_sat(_Tp __x, _Tp __y) noexcept {
-  if (_Tp __mul; !__builtin_mul_overflow(__x, __y, &__mul))
+  if (_Tp __mul; !__builtin_mul_overflow(__x, __y, std::addressof(__mul)))
     return __mul;
   // Handle overflow
   if constexpr (__libcpp_unsigned_integer<_Tp>) {

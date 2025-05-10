@@ -102,7 +102,7 @@ void llvm::DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs, DomTreeUpdater *DTU,
                             bool KeepOneInputPHIs) {
 #ifndef NDEBUG
   // Make sure that all predecessors of each dead block is also dead.
-  SmallPtrSet<BasicBlock *, 4> Dead(BBs.begin(), BBs.end());
+  SmallPtrSet<BasicBlock *, 4> Dead(llvm::from_range, BBs);
   assert(Dead.size() == BBs.size() && "Duplicating blocks?");
   for (auto *BB : Dead)
     for (BasicBlock *Pred : predecessors(BB))
@@ -165,9 +165,7 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
                           MemorySSAUpdater *MSSAU) {
   // Recursively deleting a PHI may cause multiple PHIs to be deleted
   // or RAUW'd undef, so use an array of WeakTrackingVH for the PHIs to delete.
-  SmallVector<WeakTrackingVH, 8> PHIs;
-  for (PHINode &PN : BB->phis())
-    PHIs.push_back(&PN);
+  SmallVector<WeakTrackingVH, 8> PHIs(llvm::make_pointer_range(BB->phis()));
 
   bool Changed = false;
   for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
@@ -251,8 +249,8 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     assert(!DT && "cannot use both DT and DTU for updates");
     // To avoid processing the same predecessor more than once.
     SmallPtrSet<BasicBlock *, 8> SeenSuccs;
-    SmallPtrSet<BasicBlock *, 2> SuccsOfPredBB(succ_begin(PredBB),
-                                               succ_end(PredBB));
+    SmallPtrSet<BasicBlock *, 2> SuccsOfPredBB(llvm::from_range,
+                                               successors(PredBB));
     Updates.reserve(Updates.size() + 2 * succ_size(BB) + 1);
     // Add insert edges first. Experimentally, for the particular case of two
     // blocks that can be merged, with a single successor and single predecessor
@@ -511,7 +509,7 @@ DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
         continue;
       DebugVariable Key(DVR.getVariable(), std::nullopt,
                         DVR.getDebugLoc()->getInlinedAt());
-      auto VMI = VariableMap.find(Key);
+      auto [VMI, Inserted] = VariableMap.try_emplace(Key);
       // A dbg.assign with no linked instructions can be treated like a
       // dbg.value (i.e. can be deleted).
       bool IsDbgValueKind =
@@ -520,12 +518,12 @@ DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       // Update the map if we found a new value/expression describing the
       // variable, or if the variable wasn't mapped already.
       SmallVector<Value *, 4> Values(DVR.location_ops());
-      if (VMI == VariableMap.end() || VMI->second.first != Values ||
+      if (Inserted || VMI->second.first != Values ||
           VMI->second.second != DVR.getExpression()) {
         if (IsDbgValueKind)
-          VariableMap[Key] = {Values, DVR.getExpression()};
+          VMI->second = {Values, DVR.getExpression()};
         else
-          VariableMap[Key] = {Values, nullptr};
+          VMI->second = {Values, nullptr};
         continue;
       }
       // Don't delete dbg.assign intrinsics that are linked to instructions.
@@ -591,7 +589,7 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
     if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I)) {
       DebugVariable Key(DVI->getVariable(), std::nullopt,
                         DVI->getDebugLoc()->getInlinedAt());
-      auto VMI = VariableMap.find(Key);
+      auto [VMI, Inserted] = VariableMap.try_emplace(Key);
       auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI);
       // A dbg.assign with no linked instructions can be treated like a
       // dbg.value (i.e. can be deleted).
@@ -600,15 +598,15 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       // Update the map if we found a new value/expression describing the
       // variable, or if the variable wasn't mapped already.
       SmallVector<Value *, 4> Values(DVI->getValues());
-      if (VMI == VariableMap.end() || VMI->second.first != Values ||
+      if (Inserted || VMI->second.first != Values ||
           VMI->second.second != DVI->getExpression()) {
         // Use a sentinel value (nullptr) for the DIExpression when we see a
         // linked dbg.assign so that the next debug intrinsic will never match
         // it (i.e. always treat linked dbg.assigns as if they're unique).
         if (IsDbgValueKind)
-          VariableMap[Key] = {Values, DVI->getExpression()};
+          VMI->second = {Values, DVI->getExpression()};
         else
-          VariableMap[Key] = {Values, nullptr};
+          VMI->second = {Values, nullptr};
         continue;
       }
 
@@ -770,11 +768,6 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
       CriticalEdgeSplittingOptions(DT, LI, MSSAU).setPreserveLCSSA();
 
   if ((isCriticalEdge(LatchTerm, SuccNum, Options.MergeIdenticalEdges))) {
-    // If it is a critical edge, and the succesor is an exception block, handle
-    // the split edge logic in this specific function
-    if (Succ->isEHPad())
-      return ehAwareSplitEdge(BB, Succ, nullptr, nullptr, Options, BBName);
-
     // If this is a critical edge, let SplitKnownCriticalEdge do it.
     return SplitKnownCriticalEdge(LatchTerm, SuccNum, Options, BBName);
   }
@@ -836,7 +829,7 @@ BasicBlock *llvm::ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
                                    const CriticalEdgeSplittingOptions &Options,
                                    const Twine &BBName) {
 
-  auto *PadInst = Succ->getFirstNonPHI();
+  auto PadInst = Succ->getFirstNonPHIIt();
   if (!LandingPadReplacement && !PadInst->isEHPad())
     return SplitEdge(BB, Succ, Options.DT, Options.LI, Options.MSSAU, BBName);
 
@@ -886,7 +879,7 @@ BasicBlock *llvm::ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
   if (LandingPadReplacement) {
     auto *NewLP = OriginalPad->clone();
     auto *Terminator = BranchInst::Create(Succ, NewBB);
-    NewLP->insertBefore(Terminator);
+    NewLP->insertBefore(Terminator->getIterator());
     LandingPadReplacement->addIncoming(NewLP, NewBB);
   } else {
     Value *ParentPad = nullptr;
@@ -981,7 +974,7 @@ BasicBlock *llvm::ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
 void llvm::createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
                                       BasicBlock *SplitBB, BasicBlock *DestBB) {
   // SplitBB shouldn't have anything non-trivial in it yet.
-  assert((SplitBB->getFirstNonPHI() == SplitBB->getTerminator() ||
+  assert((&*SplitBB->getFirstNonPHIIt() == SplitBB->getTerminator() ||
           SplitBB->isLandingPad()) &&
          "SplitBB has non-PHI nodes!");
 
@@ -1261,7 +1254,7 @@ static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
                            ArrayRef<BasicBlock *> Preds, BranchInst *BI,
                            bool HasLoopExit) {
   // Otherwise, create a new PHI node in NewBB for each PHI node in OrigBB.
-  SmallPtrSet<BasicBlock *, 16> PredSet(Preds.begin(), Preds.end());
+  SmallPtrSet<BasicBlock *, 16> PredSet(llvm::from_range, Preds);
   for (BasicBlock::iterator I = OrigBB->begin(); isa<PHINode>(I); ) {
     PHINode *PN = cast<PHINode>(I++);
 
@@ -1450,7 +1443,7 @@ static void SplitLandingPadPredecessorsImpl(
 
   // The new block unconditionally branches to the old block.
   BranchInst *BI1 = BranchInst::Create(OrigBB, NewBB1);
-  BI1->setDebugLoc(OrigBB->getFirstNonPHI()->getDebugLoc());
+  BI1->setDebugLoc(OrigBB->getFirstNonPHIIt()->getDebugLoc());
 
   // Move the edges from Preds to point to NewBB1 instead of OrigBB.
   for (BasicBlock *Pred : Preds) {
@@ -1491,7 +1484,7 @@ static void SplitLandingPadPredecessorsImpl(
 
     // The new block unconditionally branches to the old block.
     BranchInst *BI2 = BranchInst::Create(OrigBB, NewBB2);
-    BI2->setDebugLoc(OrigBB->getFirstNonPHI()->getDebugLoc());
+    BI2->setDebugLoc(OrigBB->getFirstNonPHIIt()->getDebugLoc());
 
     // Move the remaining edges from OrigBB to point to NewBB2.
     for (BasicBlock *NewBB2Pred : NewBB2Preds)
@@ -1660,7 +1653,7 @@ void llvm::SplitBlockAndInsertIfThenElse(
   SmallPtrSet<BasicBlock *, 8> UniqueOrigSuccessors;
   BasicBlock *Head = SplitBefore->getParent();
   if (DTU) {
-    UniqueOrigSuccessors.insert(succ_begin(Head), succ_end(Head));
+    UniqueOrigSuccessors.insert_range(successors(Head));
     Updates.reserve(4 + 2 * UniqueOrigSuccessors.size());
   }
 
@@ -1728,8 +1721,9 @@ void llvm::SplitBlockAndInsertIfThenElse(
   }
 }
 
-std::pair<Instruction*, Value*>
-llvm::SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore) {
+std::pair<Instruction *, Value *>
+llvm::SplitBlockAndInsertSimpleForLoop(Value *End,
+                                       BasicBlock::iterator SplitBefore) {
   BasicBlock *LoopPred = SplitBefore->getParent();
   BasicBlock *LoopBody = SplitBlock(SplitBefore->getParent(), SplitBefore);
   BasicBlock *LoopExit = SplitBlock(SplitBefore->getParent(), SplitBefore);
@@ -1752,14 +1746,14 @@ llvm::SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore) {
   IV->addIncoming(ConstantInt::get(Ty, 0), LoopPred);
   IV->addIncoming(IVNext, LoopBody);
 
-  return std::make_pair(LoopBody->getFirstNonPHI(), IV);
+  return std::make_pair(&*LoopBody->getFirstNonPHIIt(), IV);
 }
 
-void llvm::SplitBlockAndInsertForEachLane(ElementCount EC,
-     Type *IndexTy, Instruction *InsertBefore,
-     std::function<void(IRBuilderBase&, Value*)> Func) {
+void llvm::SplitBlockAndInsertForEachLane(
+    ElementCount EC, Type *IndexTy, BasicBlock::iterator InsertBefore,
+    std::function<void(IRBuilderBase &, Value *)> Func) {
 
-  IRBuilder<> IRB(InsertBefore);
+  IRBuilder<> IRB(InsertBefore->getParent(), InsertBefore);
 
   if (EC.isScalable()) {
     Value *NumElements = IRB.CreateElementCount(IndexTy, EC);
@@ -1780,10 +1774,10 @@ void llvm::SplitBlockAndInsertForEachLane(ElementCount EC,
 }
 
 void llvm::SplitBlockAndInsertForEachLane(
-    Value *EVL, Instruction *InsertBefore,
+    Value *EVL, BasicBlock::iterator InsertBefore,
     std::function<void(IRBuilderBase &, Value *)> Func) {
 
-  IRBuilder<> IRB(InsertBefore);
+  IRBuilder<> IRB(InsertBefore->getParent(), InsertBefore);
   Type *Ty = EVL->getType();
 
   if (!isa<ConstantInt>(EVL)) {
@@ -1914,16 +1908,4 @@ bool llvm::hasOnlySimpleTerminator(const Function &F) {
       return false;
   }
   return true;
-}
-
-bool llvm::isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
-                                         const BasicBlock &Dest) {
-  assert(Src.getParent() == Dest.getParent());
-  if (!Src.getParent()->isPresplitCoroutine())
-    return false;
-  if (auto *SW = dyn_cast<SwitchInst>(Src.getTerminator()))
-    if (auto *Intr = dyn_cast<IntrinsicInst>(SW->getCondition()))
-      return Intr->getIntrinsicID() == Intrinsic::coro_suspend &&
-             SW->getDefaultDest() == &Dest;
-  return false;
 }

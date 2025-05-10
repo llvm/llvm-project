@@ -166,25 +166,24 @@ func.func @test_polymorphic(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.bindc_
 // CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_9]], %[[VAL_9]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_8]](%[[VAL_10]]) : (!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>, !fir.shape<2>) -> !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>
 // CHECK:           fir.store %[[VAL_11]] to %[[VAL_4]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
-// CHECK:           %[[VAL_12:.*]] = arith.constant true
 // CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_4]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = ".tmp.array"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>)
 // CHECK:           %[[RANK:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.class<!fir.type<_QMtypesTt>>) -> !fir.box<none>
-// CHECK:           %[[VAL_17:.*]] = fir.call @_FortranAAllocatableApplyMold(%[[VAL_15]], %[[VAL_16]], %[[RANK]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> none
+// CHECK:           fir.call @_FortranAAllocatableApplyMold(%[[VAL_15]], %[[VAL_16]], %[[RANK]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> ()
 // CHECK:           %[[VAL_18:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_19:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_19]] : (index) -> i32
 // CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_18]] : (index) -> i64
 // CHECK:           %[[VAL_23:.*]] = fir.convert %[[EX0]] : (index) -> i64
-// CHECK:           %[[VAL_24:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_23]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+// CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_23]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 // CHECK:           %[[VAL_25:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_26:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_25]] : (index) -> i32
 // CHECK:           %[[VAL_28:.*]] = fir.convert %[[VAL_18]] : (index) -> i64
 // CHECK:           %[[VAL_29:.*]] = fir.convert %[[EX1]] : (index) -> i64
-// CHECK:           %[[VAL_30:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_26]], %[[VAL_27]], %[[VAL_28]], %[[VAL_29]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+// CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_26]], %[[VAL_27]], %[[VAL_28]], %[[VAL_29]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 // CHECK:           %[[VAL_31:.*]] = fir.address_of(@_QQclX
 // CHECK:           %[[VAL_32:.*]] = arith.constant {{.*}} : index
 // CHECK:           %[[VAL_33:.*]] = arith.constant {{.*}} : i32
@@ -192,7 +191,8 @@ func.func @test_polymorphic(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.bindc_
 // CHECK:           %[[VAL_35:.*]] = fir.absent !fir.box<none>
 // CHECK:           %[[VAL_36:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_37:.*]] = fir.convert %[[VAL_31]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:           %[[VAL_38:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_36]], %[[VAL_34]], %[[VAL_35]], %[[VAL_37]], %[[VAL_33]]) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:           %[[VAL_38:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_36]], %{{.*}}, %[[VAL_34]], %[[VAL_35]], %[[VAL_37]], %[[VAL_33]]) : (!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:           %[[VAL_12:.*]] = arith.constant true
 // CHECK:           %[[VAL_39:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_40:.*]] = arith.constant 1 : index
 // CHECK:           fir.do_loop %[[VAL_41:.*]] = %[[VAL_40]] to %[[EX1]] step %[[VAL_40]] unordered {
@@ -250,25 +250,24 @@ func.func @test_polymorphic_expr(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.b
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_10]], %[[VAL_10]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_9]](%[[VAL_11]]) : (!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>, !fir.shape<2>) -> !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>
 // CHECK:           fir.store %[[VAL_12]] to %[[VAL_5]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
-// CHECK:           %[[VAL_13:.*]] = arith.constant true
 // CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_5]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = ".tmp.array"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>)
 // CHECK:           %[[VAL_15:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.class<!fir.type<_QMtypesTt>>) -> !fir.box<none>
-// CHECK:           %[[VAL_18:.*]] = fir.call @_FortranAAllocatableApplyMold(%[[VAL_16]], %[[VAL_17]], %[[VAL_15]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> none
+// CHECK:           fir.call @_FortranAAllocatableApplyMold(%[[VAL_16]], %[[VAL_17]], %[[VAL_15]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> ()
 // CHECK:           %[[VAL_19:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_20:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_20]] : (index) -> i32
 // CHECK:           %[[VAL_23:.*]] = fir.convert %[[VAL_19]] : (index) -> i64
 // CHECK:           %[[VAL_24:.*]] = fir.convert %[[VAL_2]] : (index) -> i64
-// CHECK:           %[[VAL_25:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_21]], %[[VAL_22]], %[[VAL_23]], %[[VAL_24]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+// CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_21]], %[[VAL_22]], %[[VAL_23]], %[[VAL_24]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 // CHECK:           %[[VAL_26:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_28:.*]] = fir.convert %[[VAL_26]] : (index) -> i32
 // CHECK:           %[[VAL_29:.*]] = fir.convert %[[VAL_19]] : (index) -> i64
 // CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_3]] : (index) -> i64
-// CHECK:           %[[VAL_31:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_27]], %[[VAL_28]], %[[VAL_29]], %[[VAL_30]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+// CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_27]], %[[VAL_28]], %[[VAL_29]], %[[VAL_30]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 // CHECK:           %[[VAL_32:.*]] = fir.address_of(@_QQcl
 // CHECK:           %[[VAL_33:.*]] = arith.constant {{.*}} : index
 // CHECK:           %[[VAL_34:.*]] = arith.constant {{.*}} : i32
@@ -276,7 +275,8 @@ func.func @test_polymorphic_expr(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.b
 // CHECK:           %[[VAL_36:.*]] = fir.absent !fir.box<none>
 // CHECK:           %[[VAL_37:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_38:.*]] = fir.convert %[[VAL_32]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:           %[[VAL_39:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_37]], %[[VAL_35]], %[[VAL_36]], %[[VAL_38]], %[[VAL_34]]) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:           %[[VAL_39:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_37]], %{{.*}}, %[[VAL_35]], %[[VAL_36]], %[[VAL_38]], %[[VAL_34]]) : (!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:           %[[VAL_13:.*]] = arith.constant true
 // CHECK:           %[[VAL_40:.*]] = fir.load %[[VAL_14]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_41:.*]] = arith.constant 1 : index
 // CHECK:           fir.do_loop %[[VAL_42:.*]] = %[[VAL_41]] to %[[VAL_3]] step %[[VAL_41]] unordered {
@@ -303,25 +303,24 @@ func.func @test_polymorphic_expr(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.b
 // CHECK:           %[[VAL_60:.*]] = fir.shape %[[VAL_59]], %[[VAL_59]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_61:.*]] = fir.embox %[[VAL_58]](%[[VAL_60]]) : (!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>, !fir.shape<2>) -> !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>
 // CHECK:           fir.store %[[VAL_61]] to %[[VAL_4]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
-// CHECK:           %[[VAL_62:.*]] = arith.constant true
 // CHECK:           %[[VAL_63:.*]]:2 = hlfir.declare %[[VAL_4]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = ".tmp.array"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>)
 // CHECK:           %[[VAL_64:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_65:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_66:.*]] = fir.convert %[[VAL_40]] : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>) -> !fir.box<none>
-// CHECK:           %[[VAL_67:.*]] = fir.call @_FortranAAllocatableApplyMold(%[[VAL_65]], %[[VAL_66]], %[[VAL_64]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> none
+// CHECK:           fir.call @_FortranAAllocatableApplyMold(%[[VAL_65]], %[[VAL_66]], %[[VAL_64]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> ()
 // CHECK:           %[[VAL_68:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_69:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_70:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_71:.*]] = fir.convert %[[VAL_69]] : (index) -> i32
 // CHECK:           %[[VAL_72:.*]] = fir.convert %[[VAL_68]] : (index) -> i64
 // CHECK:           %[[VAL_73:.*]] = fir.convert %[[VAL_2]] : (index) -> i64
-// CHECK:           %[[VAL_74:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_70]], %[[VAL_71]], %[[VAL_72]], %[[VAL_73]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+// CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_70]], %[[VAL_71]], %[[VAL_72]], %[[VAL_73]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 // CHECK:           %[[VAL_75:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_76:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_77:.*]] = fir.convert %[[VAL_75]] : (index) -> i32
 // CHECK:           %[[VAL_78:.*]] = fir.convert %[[VAL_68]] : (index) -> i64
 // CHECK:           %[[VAL_79:.*]] = fir.convert %[[VAL_3]] : (index) -> i64
-// CHECK:           %[[VAL_80:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_76]], %[[VAL_77]], %[[VAL_78]], %[[VAL_79]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+// CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_76]], %[[VAL_77]], %[[VAL_78]], %[[VAL_79]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 // CHECK:           %[[VAL_81:.*]] = fir.address_of(@_QQcl
 // CHECK:           %[[VAL_82:.*]] = arith.constant {{.*}} : index
 // CHECK:           %[[VAL_83:.*]] = arith.constant {{.*}} : i32
@@ -329,7 +328,8 @@ func.func @test_polymorphic_expr(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.b
 // CHECK:           %[[VAL_85:.*]] = fir.absent !fir.box<none>
 // CHECK:           %[[VAL_86:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_87:.*]] = fir.convert %[[VAL_81]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:           %[[VAL_88:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_86]], %[[VAL_84]], %[[VAL_85]], %[[VAL_87]], %[[VAL_83]]) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:           %[[VAL_88:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_86]], %{{.*}}, %[[VAL_84]], %[[VAL_85]], %[[VAL_87]], %[[VAL_83]]) : (!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:           %[[VAL_62:.*]] = arith.constant true
 // CHECK:           %[[VAL_89:.*]] = fir.load %[[VAL_63]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_90:.*]] = arith.constant 1 : index
 // CHECK:           fir.do_loop %[[VAL_91:.*]] = %[[VAL_90]] to %[[VAL_3]] step %[[VAL_90]] unordered {

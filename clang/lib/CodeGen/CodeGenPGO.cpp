@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenPGO.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "CoverageMappingGen.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -163,7 +164,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   /// The function hash.
   PGOHash Hash;
   /// The map of statements to counters.
-  llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
+  llvm::DenseMap<const Stmt *, CounterPair> &CounterMap;
   /// The state of MC/DC Coverage in this function.
   MCDC::State &MCDCState;
   /// Maximum number of supported MC/DC conditions in a boolean expression.
@@ -174,7 +175,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   DiagnosticsEngine &Diag;
 
   MapRegionCounters(PGOHashVersion HashVersion, uint64_t ProfileVersion,
-                    llvm::DenseMap<const Stmt *, unsigned> &CounterMap,
+                    llvm::DenseMap<const Stmt *, CounterPair> &CounterMap,
                     MCDC::State &MCDCState, unsigned MCDCMaxCond,
                     DiagnosticsEngine &Diag)
       : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap),
@@ -1083,7 +1084,7 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
       (CGM.getCodeGenOpts().MCDCCoverage ? CGM.getCodeGenOpts().MCDCMaxConds
                                          : 0);
 
-  RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
+  RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, CounterPair>);
   RegionMCDCState.reset(new MCDC::State);
   MapRegionCounters Walker(HashVersion, ProfileVersion, *RegionCounterMap,
                            *RegionMCDCState, MCDCMaxConditions, CGM.getDiags());
@@ -1185,12 +1186,23 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
   Fn->setEntryCount(FunctionCount);
 }
 
+std::pair<bool, bool> CodeGenPGO::getIsCounterPair(const Stmt *S) const {
+  if (!RegionCounterMap)
+    return {false, false};
+
+  auto I = RegionCounterMap->find(S);
+  if (I == RegionCounterMap->end())
+    return {false, false};
+
+  return {I->second.Executed.hasValue(), I->second.Skipped.hasValue()};
+}
+
 void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
                                            llvm::Value *StepV) {
   if (!RegionCounterMap || !Builder.GetInsertBlock())
     return;
 
-  unsigned Counter = (*RegionCounterMap)[S];
+  unsigned Counter = (*RegionCounterMap)[S].Executed;
 
   // Make sure that pointer to global is passed in with zero addrspace
   // This is relevant during GPU profiling
@@ -1346,6 +1358,9 @@ void CodeGenPGO::setProfileVersion(llvm::Module &M) {
 
     IRLevelVersionVariable->setVisibility(llvm::GlobalValue::HiddenVisibility);
     llvm::Triple TT(M.getTargetTriple());
+    if (TT.isGPU())
+      IRLevelVersionVariable->setVisibility(
+          llvm::GlobalValue::ProtectedVisibility);
     if (TT.supportsCOMDAT()) {
       IRLevelVersionVariable->setLinkage(llvm::GlobalValue::ExternalLinkage);
       IRLevelVersionVariable->setComdat(M.getOrInsertComdat(VarName));
@@ -1497,4 +1512,15 @@ CodeGenFunction::createProfileWeightsForLoop(const Stmt *Cond,
     return nullptr;
   return createProfileWeights(LoopCount,
                               std::max(*CondCount, LoopCount) - LoopCount);
+}
+
+void CodeGenFunction::incrementProfileCounter(const Stmt *S,
+                                              llvm::Value *StepV) {
+  if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
+      !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
+      !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
+    auto AL = ApplyDebugLocation::CreateArtificial(*this);
+    PGO.emitCounterSetOrIncrement(Builder, S, StepV);
+  }
+  PGO.setCurrentStmt(S);
 }

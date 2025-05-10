@@ -1097,8 +1097,6 @@ private:
              bool MatchingInlineAsm = false) {
     MCAsmParser &Parser = getParser();
     if (MatchingInlineAsm) {
-      if (!getLexer().isAtStartOfStatement())
-        Parser.eatToEndOfStatement();
       return false;
     }
     return Parser.Error(L, Msg, Range);
@@ -2034,7 +2032,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       const MCExpr *Val;
       if (isParsingMSInlineAsm() || Parser.isParsingMasm()) {
         // MS Dot Operator expression
-        if (Identifier.count('.') &&
+        if (Identifier.contains('.') &&
             (PrevTK == AsmToken::RBrac || PrevTK == AsmToken::RParen)) {
           if (ParseIntelDotOperator(SM, End))
             return true;
@@ -2116,7 +2114,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         if (IDVal == "f" || IDVal == "b") {
           MCSymbol *Sym =
               getContext().getDirectionalLocalSymbol(IntVal, IDVal == "b");
-          MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
+          auto Variant = X86MCExpr::VK_None;
           const MCExpr *Val =
               MCSymbolRefExpr::create(Sym, Variant, getContext());
           if (IDVal == "b" && Sym->isUndefined())
@@ -2263,7 +2261,7 @@ bool X86AsmParser::ParseIntelInlineAsmIdentifier(
     return false;
   // Create the symbol reference.
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
+  auto Variant = X86MCExpr::VK_None;
   Val = MCSymbolRefExpr::create(Sym, Variant, getParser().getContext());
   return false;
 }
@@ -3306,11 +3304,11 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   if ((PatchedName.starts_with("cmp") || PatchedName.starts_with("vcmp")) &&
       (PatchedName.ends_with("ss") || PatchedName.ends_with("sd") ||
        PatchedName.ends_with("sh") || PatchedName.ends_with("ph") ||
-       PatchedName.ends_with("pbf16") || PatchedName.ends_with("ps") ||
+       PatchedName.ends_with("bf16") || PatchedName.ends_with("ps") ||
        PatchedName.ends_with("pd"))) {
     bool IsVCMP = PatchedName[0] == 'v';
     unsigned CCIdx = IsVCMP ? 4 : 3;
-    unsigned suffixLength = PatchedName.ends_with("pbf16") ? 5 : 2;
+    unsigned suffixLength = PatchedName.ends_with("bf16") ? 5 : 2;
     unsigned CC = StringSwitch<unsigned>(
       PatchedName.slice(CCIdx, PatchedName.size() - suffixLength))
       .Case("eq",       0x00)
@@ -3375,8 +3373,8 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
         PatchedName = "vcmpsh";
       else if (PatchedName.ends_with("ph"))
         PatchedName = "vcmpph";
-      else if (PatchedName.ends_with("pbf16"))
-        PatchedName = "vcmppbf16";
+      else if (PatchedName.ends_with("bf16"))
+        PatchedName = "vcmpbf16";
       else
         llvm_unreachable("Unexpected suffix!");
 

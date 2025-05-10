@@ -5,16 +5,16 @@
 
   rem $4,$5
 # CHECK-NOTRAP: bnez $5, $tmp0            # encoding: [A,A,0xa0,0x14]
-# CHECK-NOTRAP:                           # fixup A - offset: 0, value: ($tmp0)-4, kind: fixup_Mips_PC16
+# CHECK-NOTRAP:                           # fixup A - offset: 0, value: $tmp0-4, kind: fixup_Mips_PC16
 # CHECK-NOTRAP: div $zero, $4, $5         # encoding: [0x1a,0x00,0x85,0x00]
 # CHECK-NOTRAP: break 7                   # encoding: [0x0d,0x00,0x07,0x00]
 # CHECK-NOTRAP: $tmp0
 # CHECK-NOTRAP: addiu $1, $zero, -1       # encoding: [0xff,0xff,0x01,0x24]
 # CHECK-NOTRAP: bne $5, $1, $tmp1         # encoding: [A,A,0xa1,0x14]
-# CHECK-NOTRAP:                           # fixup A - offset: 0, value: ($tmp1)-4, kind: fixup_Mips_PC16
+# CHECK-NOTRAP:                           # fixup A - offset: 0, value: $tmp1-4, kind: fixup_Mips_PC16
 # CHECK-NOTRAP: lui $1, 32768             # encoding: [0x00,0x80,0x01,0x3c]
 # CHECK-NOTRAP: bne $4, $1, $tmp1         # encoding: [A,A,0x81,0x14]
-# CHECK-NOTRAP:                           # fixup A - offset: 0, value: ($tmp1)-4, kind: fixup_Mips_PC16
+# CHECK-NOTRAP:                           # fixup A - offset: 0, value: $tmp1-4, kind: fixup_Mips_PC16
 # CHECK-NOTRAP: nop                       # encoding: [0x00,0x00,0x00,0x00]
 # CHECK-NOTRAP: break 6                   # encoding: [0x0d,0x00,0x06,0x00]
 # CHECK-NOTRAP: $tmp1

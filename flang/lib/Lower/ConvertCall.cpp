@@ -32,6 +32,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/IR/IRMapping.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -326,7 +327,6 @@ Fortran::lower::genCallOpAndResult(
         charFuncPointerLength = charBox->getLen();
     }
   }
-
   const bool isExprCall =
       converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       callSiteType.getNumResults() == 1 &&
@@ -518,7 +518,9 @@ Fortran::lower::genCallOpAndResult(
         // Do not attempt any reboxing here that could break this.
         bool legacyLowering =
             !converter.getLoweringOptions().getLowerToHighLevelFIR();
-        cast = builder.convertWithSemantics(loc, snd, fst,
+        bool isVolatile = fir::isa_volatile_type(snd);
+        cast = builder.createVolatileCast(loc, isVolatile, fst);
+        cast = builder.convertWithSemantics(loc, snd, cast,
                                             callingImplicitInterface,
                                             /*allowRebox=*/legacyLowering);
       }
@@ -587,14 +589,13 @@ Fortran::lower::genCallOpAndResult(
 
     mlir::Value stream; // stream is optional.
     if (caller.getCallDescription().chevrons().size() > 3)
-      stream = builder.createConvert(
-          loc, i32Ty,
-          fir::getBase(converter.genExprValue(
-              caller.getCallDescription().chevrons()[3], stmtCtx)));
+      stream = fir::getBase(converter.genExprAddr(
+          caller.getCallDescription().chevrons()[3], stmtCtx));
 
     builder.create<cuf::KernelLaunchOp>(
         loc, funcType.getResults(), funcSymbolAttr, grid_x, grid_y, grid_z,
-        block_x, block_y, block_z, bytes, stream, operands);
+        block_x, block_y, block_z, bytes, stream, operands,
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr);
     callNumResults = 0;
   } else if (caller.requireDispatchCall()) {
     // Procedure call requiring a dynamic dispatch. Call is created with
@@ -621,7 +622,8 @@ Fortran::lower::genCallOpAndResult(
       dispatch = builder.create<fir::DispatchOp>(
           loc, funcType.getResults(), builder.getStringAttr(procName),
           caller.getInputs()[*passArg], operands,
-          builder.getI32IntegerAttr(*passArg), procAttrs);
+          builder.getI32IntegerAttr(*passArg), /*arg_attrs=*/nullptr,
+          /*res_attrs=*/nullptr, procAttrs);
     } else {
       // NOPASS
       const Fortran::evaluate::Component *component =
@@ -636,7 +638,8 @@ Fortran::lower::genCallOpAndResult(
         passObject = builder.create<fir::LoadOp>(loc, passObject);
       dispatch = builder.create<fir::DispatchOp>(
           loc, funcType.getResults(), builder.getStringAttr(procName),
-          passObject, operands, nullptr, procAttrs);
+          passObject, operands, nullptr, /*arg_attrs=*/nullptr,
+          /*res_attrs=*/nullptr, procAttrs);
     }
     callNumResults = dispatch.getNumResults();
     if (callNumResults != 0)
@@ -644,7 +647,8 @@ Fortran::lower::genCallOpAndResult(
   } else {
     // Standard procedure call with fir.call.
     auto call = builder.create<fir::CallOp>(
-        loc, funcType.getResults(), funcSymbolAttr, operands, procAttrs);
+        loc, funcType.getResults(), funcSymbolAttr, operands,
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs);
 
     callNumResults = call.getNumResults();
     if (callNumResults != 0)
@@ -1131,6 +1135,27 @@ isSimplyContiguous(const Fortran::evaluate::ActualArgument &arg,
          Fortran::evaluate::IsSimplyContiguous(*sym, foldingContext);
 }
 
+static bool isParameterObjectOrSubObject(hlfir::Entity entity) {
+  mlir::Value base = entity;
+  bool foundParameter = false;
+  while (mlir::Operation *op = base ? base.getDefiningOp() : nullptr) {
+    base =
+        llvm::TypeSwitch<mlir::Operation *, mlir::Value>(op)
+            .Case<hlfir::DeclareOp>([&](auto declare) -> mlir::Value {
+              foundParameter |= hlfir::Entity{declare}.isParameter();
+              return foundParameter ? mlir::Value{} : declare.getMemref();
+            })
+            .Case<hlfir::DesignateOp, hlfir::ParentComponentOp, fir::EmboxOp>(
+                [&](auto op) -> mlir::Value { return op.getMemref(); })
+            .Case<fir::ReboxOp>(
+                [&](auto rebox) -> mlir::Value { return rebox.getBox(); })
+            .Case<fir::ConvertOp>(
+                [&](auto convert) -> mlir::Value { return convert.getValue(); })
+            .Default([](mlir::Operation *) -> mlir::Value { return nullptr; });
+  }
+  return foundParameter;
+}
+
 /// When dummy is not ALLOCATABLE, POINTER and is not passed in register,
 /// prepare the actual argument according to the interface. Do as needed:
 /// - address element if this is an array argument in an elemental call.
@@ -1294,8 +1319,9 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         // 'parameter' attribute. Even though the constant expressions
         // are not definable and explicit assignments to them are not
         // possible, we have to create a temporary copies when we pass
-        // them down the call stack.
-        entity.isParameter()) {
+        // them down the call stack because of potential compiler
+        // generated writes in copy-out.
+        isParameterObjectOrSubObject(entity)) {
       // Make a copy in a temporary.
       auto copy = builder.create<hlfir::AsExprOp>(loc, entity);
       mlir::Type storageType = entity.getType();
@@ -1343,7 +1369,10 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // it according to the interface.
   mlir::Value addr;
   if (mlir::isa<fir::BoxCharType>(dummyTypeWithActualRank)) {
-    addr = hlfir::genVariableBoxChar(loc, builder, entity);
+    // Cast the argument to match the volatility of the dummy argument.
+    auto nonVolatileEntity = hlfir::Entity{builder.createVolatileCast(
+        loc, fir::isa_volatile_type(dummyType), entity)};
+    addr = hlfir::genVariableBoxChar(loc, builder, nonVolatileEntity);
   } else if (mlir::isa<fir::BaseBoxType>(dummyTypeWithActualRank)) {
     entity = hlfir::genVariableBox(loc, builder, entity);
     // Ensures the box has the right attributes and that it holds an
@@ -1389,6 +1418,11 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   } else {
     addr = hlfir::genVariableRawAddress(loc, builder, entity);
   }
+
+  // If the volatility of the input type does not match the dummy type,
+  // we need to cast the argument.
+  const bool isToTypeVolatile = fir::isa_volatile_type(dummyTypeWithActualRank);
+  addr = builder.createVolatileCast(loc, isToTypeVolatile, addr);
 
   // For ranked actual passed to assumed-rank dummy, the cast to assumed-rank
   // box is inserted when building the fir.call op. Inserting it here would

@@ -711,7 +711,7 @@ void Writer::scanRelocations() {
 
       // Canonicalize the referent so that later accesses in Writer won't
       // have to worry about it.
-      if (auto *referentIsec = r.referent.dyn_cast<InputSection *>())
+      if (auto *referentIsec = dyn_cast_if_present<InputSection *>(r.referent))
         r.referent = referentIsec->canonical();
 
       if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
@@ -725,7 +725,7 @@ void Writer::scanRelocations() {
           it->referent = referentIsec->canonical();
         continue;
       }
-      if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
+      if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent)) {
         if (auto *undefined = dyn_cast<Undefined>(sym))
           treatUndefinedSymbol(*undefined, isec, r.offset);
         // treatUndefinedSymbol() can replace sym with a DylibSymbol; re-check.
@@ -938,17 +938,20 @@ template <class LP> void Writer::createLoadCommands() {
     }
 
     ordinal = dylibFile->ordinal = dylibOrdinal++;
-    LoadCommandType lcType =
-        dylibFile->forceWeakImport || dylibFile->refState == RefState::Weak
-            ? LC_LOAD_WEAK_DYLIB
-            : LC_LOAD_DYLIB;
+    LoadCommandType lcType = LC_LOAD_DYLIB;
+    if (dylibFile->reexport) {
+      if (dylibFile->forceWeakImport)
+        warn(path::filename(dylibFile->getName()) +
+             " is re-exported so cannot be weak-linked");
+
+      lcType = LC_REEXPORT_DYLIB;
+    } else if (dylibFile->forceWeakImport ||
+               dylibFile->refState == RefState::Weak) {
+      lcType = LC_LOAD_WEAK_DYLIB;
+    }
     in.header->addLoadCommand(make<LCDylib>(lcType, dylibFile->installName,
                                             dylibFile->compatibilityVersion,
                                             dylibFile->currentVersion));
-
-    if (dylibFile->reexport)
-      in.header->addLoadCommand(
-          make<LCDylib>(LC_REEXPORT_DYLIB, dylibFile->installName));
   }
 
   for (const auto &dyldEnv : config->dyldEnvs)
@@ -975,7 +978,7 @@ static void sortSegmentsAndSections() {
   TimeTraceScope timeScope("Sort segments and sections");
   sortOutputSegments();
 
-  DenseMap<const InputSection *, size_t> isecPriorities =
+  DenseMap<const InputSection *, int> isecPriorities =
       priorityBuilder.buildInputSectionPriorities();
 
   uint32_t sectionIndex = 0;
@@ -1008,7 +1011,7 @@ static void sortSegmentsAndSections() {
         if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
           llvm::stable_sort(
               merged->inputs, [&](InputSection *a, InputSection *b) {
-                return isecPriorities.lookup(a) > isecPriorities.lookup(b);
+                return isecPriorities.lookup(a) < isecPriorities.lookup(b);
               });
         }
       }

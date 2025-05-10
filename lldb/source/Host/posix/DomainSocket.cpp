@@ -8,6 +8,9 @@
 
 #include "lldb/Host/posix/DomainSocket.h"
 #include "lldb/Utility/LLDBLog.h"
+#ifdef __linux__
+#include <lldb/Host/linux/AbstractSocket.h>
+#endif
 
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
@@ -19,14 +22,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-#ifdef __ANDROID__
-// Android does not have SUN_LEN
-#ifndef SUN_LEN
-#define SUN_LEN(ptr)                                                           \
-  (offsetof(struct sockaddr_un, sun_path) + strlen((ptr)->sun_path))
-#endif
-#endif // #ifdef __ANDROID__
 
 static const int kDomain = AF_UNIX;
 static const int kType = SOCK_STREAM;
@@ -75,6 +70,12 @@ DomainSocket::DomainSocket(NativeSocket socket,
   m_socket = socket;
 }
 
+DomainSocket::DomainSocket(SocketProtocol protocol, NativeSocket socket,
+                           bool should_close)
+    : Socket(protocol, should_close) {
+  m_socket = socket;
+}
+
 Status DomainSocket::Connect(llvm::StringRef name) {
   sockaddr_un saddr_un;
   socklen_t saddr_un_len;
@@ -86,7 +87,8 @@ Status DomainSocket::Connect(llvm::StringRef name) {
   if (error.Fail())
     return error;
   if (llvm::sys::RetryAfterSignal(-1, ::connect, GetNativeSocket(),
-        (struct sockaddr *)&saddr_un, saddr_un_len) < 0)
+                                  (struct sockaddr *)&saddr_un,
+                                  saddr_un_len) < 0)
     SetLastError(error);
 
   return error;
@@ -181,11 +183,28 @@ std::vector<std::string> DomainSocket::GetListeningConnectionURI() const {
     return {};
 
   struct sockaddr_un addr;
-  bzero(&addr, sizeof(struct sockaddr_un));
+  memset(&addr, 0, sizeof(struct sockaddr_un));
   addr.sun_family = AF_UNIX;
   socklen_t addr_len = sizeof(struct sockaddr_un);
   if (::getsockname(m_socket, (struct sockaddr *)&addr, &addr_len) != 0)
     return {};
 
   return {llvm::formatv("unix-connect://{0}", addr.sun_path)};
+}
+
+llvm::Expected<std::unique_ptr<DomainSocket>>
+DomainSocket::FromBoundNativeSocket(NativeSocket sockfd, bool should_close) {
+  // Check if fd represents domain socket or abstract socket.
+  struct sockaddr_un addr;
+  socklen_t addr_len = sizeof(addr);
+  if (getsockname(sockfd, (struct sockaddr *)&addr, &addr_len) == -1)
+    return llvm::createStringError("not a socket or error occurred");
+  if (addr.sun_family != AF_UNIX)
+    return llvm::createStringError("Bad socket type");
+#ifdef __linux__
+  if (addr_len > offsetof(struct sockaddr_un, sun_path) &&
+      addr.sun_path[0] == '\0')
+    return std::make_unique<AbstractSocket>(sockfd, should_close);
+#endif
+  return std::make_unique<DomainSocket>(sockfd, should_close);
 }

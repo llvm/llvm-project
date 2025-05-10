@@ -75,10 +75,9 @@ static void sortUniqueSymbols(std::vector<Defined *> &syms,
 
   // Remove duplicate symbol pointers
   parallelSort(v, std::less<SortEntry>());
-  auto end = std::unique(v.begin(), v.end(),
-                         [](const SortEntry &a, const SortEntry &b) {
-                           return a.first == b.first;
-                         });
+  auto end = llvm::unique(v, [](const SortEntry &a, const SortEntry &b) {
+    return a.first == b.first;
+  });
   v.erase(end, v.end());
 
   // Sort by RVA then original order
@@ -301,7 +300,7 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
   uint64_t entryAddress = 0;
 
   if (!ctx.config.noEntry) {
-    Defined *entry = dyn_cast_or_null<Defined>(ctx.config.entry);
+    Defined *entry = dyn_cast_or_null<Defined>(ctx.symtab.entry);
     if (entry) {
       Chunk *chunk = entry->getChunk();
       entrySecIndex = chunk->getOutputSectionIdx();
@@ -326,7 +325,7 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
     os << " Exports\n";
     os << "\n";
     os << "  ordinal    name\n\n";
-    for (Export &e : ctx.config.exports) {
+    for (Export &e : ctx.symtab.exports) {
       os << format("  %7d", e.ordinal) << "    " << e.name << "\n";
       if (!e.extName.empty() && e.extName != e.name)
         os << "               exported name: " << e.extName << "\n";

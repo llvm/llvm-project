@@ -853,7 +853,7 @@ define amdgpu_ps <2 x float> @v_fneg_minnum_multi_use_minnum_f32_no_ieee(float %
   %min = call float @llvm.minnum.f32(float %a, float %b)
   %fneg = fneg float %min
   %use1 = fmul float %min, 4.0
-  %ins0 = insertelement <2 x float> undef, float %fneg, i32 0
+  %ins0 = insertelement <2 x float> poison, float %fneg, i32 0
   %ins1 = insertelement <2 x float> %ins0, float %use1, i32 1
   ret <2 x float> %ins1
 }
@@ -1093,7 +1093,7 @@ define amdgpu_ps <2 x float> @v_fneg_maxnum_multi_use_maxnum_f32_no_ieee(float %
   %max = call float @llvm.maxnum.f32(float %a, float %b)
   %fneg = fneg float %max
   %use1 = fmul float %max, 4.0
-  %ins0 = insertelement <2 x float> undef, float %fneg, i32 0
+  %ins0 = insertelement <2 x float> poison, float %fneg, i32 0
   %ins1 = insertelement <2 x float> %ins0, float %use1, i32 1
   ret <2 x float> %ins1
 }
@@ -1538,7 +1538,7 @@ define amdgpu_kernel void @v_fneg_fp_extend_store_use_fneg_f32_to_f64(ptr addrsp
   %fpext = fpext float %fneg.a to double
   %fneg = fsub double -0.000000e+00, %fpext
   store volatile double %fneg, ptr addrspace(1) %out.gep
-  store volatile float %fneg.a, ptr addrspace(1) undef
+  store volatile float %fneg.a, ptr addrspace(1) poison
   ret void
 }
 
@@ -1557,7 +1557,7 @@ define amdgpu_kernel void @v_fneg_multi_use_fp_extend_fneg_f32_to_f64(ptr addrsp
   %fpext = fpext float %a to double
   %fneg = fsub double -0.000000e+00, %fpext
   store volatile double %fneg, ptr addrspace(1) %out.gep
-  store volatile double %fpext, ptr addrspace(1) undef
+  store volatile double %fpext, ptr addrspace(1) poison
   ret void
 }
 
@@ -1665,7 +1665,7 @@ define amdgpu_kernel void @v_fneg_fp_round_store_use_fneg_f64_to_f32(ptr addrspa
   %fpround = fptrunc double %fneg.a to float
   %fneg = fneg float %fpround
   store volatile float %fneg, ptr addrspace(1) %out.gep
-  store volatile double %fneg.a, ptr addrspace(1) undef
+  store volatile double %fneg.a, ptr addrspace(1) poison
   ret void
 }
 
@@ -1687,7 +1687,7 @@ define amdgpu_kernel void @v_fneg_fp_round_multi_use_fneg_f64_to_f32(ptr addrspa
   %fneg = fneg float %fpround
   %use1 = fmul double %fneg.a, %c
   store volatile float %fneg, ptr addrspace(1) %out.gep
-  store volatile double %use1, ptr addrspace(1) undef
+  store volatile double %use1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1759,7 +1759,7 @@ define amdgpu_kernel void @v_fneg_fp_round_store_use_fneg_f32_to_f16(ptr addrspa
   %fpround = fptrunc float %fneg.a to half
   %fneg = fsub half -0.000000e+00, %fpround
   store volatile half %fneg, ptr addrspace(1) %out.gep
-  store volatile float %fneg.a, ptr addrspace(1) undef
+  store volatile float %fneg.a, ptr addrspace(1) poison
   ret void
 }
 
@@ -1780,7 +1780,7 @@ define amdgpu_kernel void @v_fneg_fp_round_multi_use_fneg_f32_to_f16(ptr addrspa
   %fneg = fsub half -0.000000e+00, %fpround
   %use1 = fmul float %fneg.a, %c
   store volatile half %fneg, ptr addrspace(1) %out.gep
-  store volatile float %use1, ptr addrspace(1) undef
+  store volatile float %use1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1837,7 +1837,7 @@ define amdgpu_kernel void @v_fneg_rcp_store_use_fneg_f32(ptr addrspace(1) %out, 
   %rcp = call float @llvm.amdgcn.rcp.f32(float %fneg.a)
   %fneg = fneg float %rcp
   store volatile float %fneg, ptr addrspace(1) %out.gep
-  store volatile float %fneg.a, ptr addrspace(1) undef
+  store volatile float %fneg.a, ptr addrspace(1) poison
   ret void
 }
 
@@ -1858,7 +1858,7 @@ define amdgpu_kernel void @v_fneg_rcp_multi_use_fneg_f32(ptr addrspace(1) %out, 
   %fneg = fneg float %rcp
   %use1 = fmul float %fneg.a, %c
   store volatile float %fneg, ptr addrspace(1) %out.gep
-  store volatile float %use1, ptr addrspace(1) undef
+  store volatile float %use1, ptr addrspace(1) poison
   ret void
 }
 

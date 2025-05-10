@@ -12,7 +12,8 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 poison, i16 poison, i16 poison, i16 0, i16 poison>, i16 [[CALL37]], i32 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[CALL]], i32 5
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 3, i32 5, i32 6, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 poison, i16 poison>, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 3, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 poison, i16 poison>, i16 [[CALL37]], i32 6
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[CALL]], i32 7
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <8 x i16> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret void
 ;
@@ -43,7 +44,8 @@ define void @test1() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 poison, i16 poison, i16 poison, i16 poison, i16 0>, i16 [[CALL]], i32 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[CALL37]], i32 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 7>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 poison, i16 poison>, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 3, i32 4>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 poison, i16 poison>, i16 [[CALL]], i32 6
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[CALL37]], i32 7
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <8 x i16> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret void
 ;

@@ -12,10 +12,12 @@ add_clang_library(clangTidyBugproneModule STATIC
   BoolPointerImplicitConversionCheck.cpp
   BranchCloneCheck.cpp
   BugproneTidyModule.cpp
+  CapturingThisInMemberVariableCheck.cpp
   CastingThroughVoidCheck.cpp
   ChainedComparisonCheck.cpp
   ComparePointerToMemberVirtualFunctionCheck.cpp
   CopyConstructorInitCheck.cpp
+  CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
@@ -27,10 +29,13 @@ add_clang_library(clangTidyBugproneModule STATIC
   ImplicitWideningOfMultiplicationResultCheck.cpp
   InaccurateEraseCheck.cpp
   IncorrectEnableIfCheck.cpp
+  IncorrectEnableSharedFromThisCheck.cpp
+  UnintendedCharOstreamOutputCheck.cpp
   ReturnConstRefFromParameterCheck.cpp
   SuspiciousStringviewDataUsageCheck.cpp
   SwitchMissingDefaultCaseCheck.cpp
   IncDecInConditionsCheck.cpp
+  IncorrectEnableIfCheck.cpp
   IncorrectRoundingsCheck.cpp
   InfiniteLoopCheck.cpp
   IntegerDivisionCheck.cpp
@@ -44,9 +49,10 @@ add_clang_library(clangTidyBugproneModule STATIC
   MultiLevelImplicitPointerConversionCheck.cpp
   MultipleNewInOneExpressionCheck.cpp
   MultipleStatementMacroCheck.cpp
+  NarrowingConversionsCheck.cpp
   NoEscapeCheck.cpp
-  NondeterministicPointerIterationOrderCheck.cpp
   NonZeroEnumToBoolConversionCheck.cpp
+  NondeterministicPointerIterationOrderCheck.cpp
   NotNullTerminatedResultCheck.cpp
   OptionalValueConversionCheck.cpp
   ParentVirtualCallCheck.cpp
@@ -54,6 +60,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   PosixReturnCheck.cpp
   RedundantBranchConditionCheck.cpp
   ReservedIdentifierCheck.cpp
+  ReturnConstRefFromParameterCheck.cpp
   SharedPtrArrayMismatchCheck.cpp
   SignalHandlerCheck.cpp
   SignedCharMisuseCheck.cpp
@@ -74,7 +81,9 @@ add_clang_library(clangTidyBugproneModule STATIC
   SuspiciousReallocUsageCheck.cpp
   SuspiciousSemicolonCheck.cpp
   SuspiciousStringCompareCheck.cpp
+  SuspiciousStringviewDataUsageCheck.cpp
   SwappedArgumentsCheck.cpp
+  SwitchMissingDefaultCaseCheck.cpp
   TaggedUnionMemberCountCheck.cpp
   TerminatingContinueCheck.cpp
   ThrowKeywordMissingCheck.cpp
@@ -85,7 +94,6 @@ add_clang_library(clangTidyBugproneModule STATIC
   UnhandledExceptionAtNewCheck.cpp
   UnhandledSelfAssignmentCheck.cpp
   UniquePtrArrayMismatchCheck.cpp
-  CrtpConstructorAccessibilityCheck.cpp
   UnsafeFunctionsCheck.cpp
   UnusedLocalNonTrivialVariableCheck.cpp
   UnusedRaiiCheck.cpp
@@ -95,7 +103,6 @@ add_clang_library(clangTidyBugproneModule STATIC
 
   LINK_LIBS
   clangTidy
-  clangTidyCppCoreGuidelinesModule
   clangTidyUtils
 
   DEPENDS
@@ -112,6 +119,7 @@ clang_target_link_libraries(clangTidyBugproneModule
   clangASTMatchers
   clangBasic
   clangLex
+  clangSema
   clangTooling
   clangTransformer
   )

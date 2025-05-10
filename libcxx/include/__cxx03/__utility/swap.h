@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_SWAP_H
-#define _LIBCPP___UTILITY_SWAP_H
+#ifndef _LIBCPP___CXX03___UTILITY_SWAP_H
+#define _LIBCPP___CXX03___UTILITY_SWAP_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_assignable.h>
@@ -28,13 +28,8 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_CXX03_LANG
-template <class _Tp>
-using __swap_result_t = __enable_if_t<is_move_constructible<_Tp>::value && is_move_assignable<_Tp>::value>;
-#else
 template <class>
 using __swap_result_t = void;
-#endif
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI __swap_result_t<_Tp> _LIBCPP_CONSTEXPR_SINCE_CXX20 swap(_Tp& __x, _Tp& __y)
@@ -56,4 +51,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___UTILITY_SWAP_H
+#endif // _LIBCPP___CXX03___UTILITY_SWAP_H

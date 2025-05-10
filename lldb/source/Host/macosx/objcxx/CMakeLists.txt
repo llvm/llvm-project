@@ -6,6 +6,7 @@ add_lldb_library(lldbHostMacOSXObjCXX NO_PLUGIN_DEPENDENCIES
   Host.mm
   HostInfoMacOSX.mm
   HostThreadMacOSX.mm
+  MemoryMonitorMacOSX.mm
 
   LINK_LIBS
     lldbUtility

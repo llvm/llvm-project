@@ -54,6 +54,10 @@ Will become:
     Field = std::move(Value);
   }
 
+Because the fix-it needs to change the signature of the function, it may break
+builds if the function is used in multiple translation units or some codes
+depends on funcion signatures.
+
 Options
 -------
 
@@ -65,8 +69,8 @@ Options
 .. option:: AllowedTypes
 
    A semicolon-separated list of names of types allowed to be passed by value.
-   Regular expressions are accepted, e.g. `[Rr]ef(erence)?$` matches every type
-   with suffix `Ref`, `ref`, `Reference` and `reference`. The default is
-   empty. If a name in the list contains the sequence `::` it is matched against
-   the qualified typename (i.e. `namespace::Type`, otherwise it is matched
-   against only the type name (i.e. `Type`).
+   Regular expressions are accepted, e.g. ``[Rr]ef(erence)?$`` matches every
+   type with suffix ``Ref``, ``ref``, ``Reference`` and ``reference``. The
+   default is empty. If a name in the list contains the sequence `::`, it is
+   matched against the qualified type name (i.e. ``namespace::Type``),
+   otherwise it is matched against only the type name (i.e. ``Type``).

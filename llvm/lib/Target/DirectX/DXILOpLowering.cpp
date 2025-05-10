@@ -8,10 +8,11 @@
 
 #include "DXILOpLowering.h"
 #include "DXILConstants.h"
-#include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
+#include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -25,63 +26,24 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "dxil-op-lower"
 
 using namespace llvm;
 using namespace llvm::dxil;
 
-static bool isVectorArgExpansion(Function &F) {
-  switch (F.getIntrinsicID()) {
-  case Intrinsic::dx_dot2:
-  case Intrinsic::dx_dot3:
-  case Intrinsic::dx_dot4:
-    return true;
-  }
-  return false;
-}
-
-static SmallVector<Value *> populateOperands(Value *Arg, IRBuilder<> &Builder) {
-  SmallVector<Value *> ExtractedElements;
-  auto *VecArg = dyn_cast<FixedVectorType>(Arg->getType());
-  for (unsigned I = 0; I < VecArg->getNumElements(); ++I) {
-    Value *Index = ConstantInt::get(Type::getInt32Ty(Arg->getContext()), I);
-    Value *ExtractedElement = Builder.CreateExtractElement(Arg, Index);
-    ExtractedElements.push_back(ExtractedElement);
-  }
-  return ExtractedElements;
-}
-
-static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
-                                             IRBuilder<> &Builder) {
-  // Note: arg[NumOperands-1] is a pointer and is not needed by our flattening.
-  unsigned NumOperands = Orig->getNumOperands() - 1;
-  assert(NumOperands > 0);
-  Value *Arg0 = Orig->getOperand(0);
-  [[maybe_unused]] auto *VecArg0 = dyn_cast<FixedVectorType>(Arg0->getType());
-  assert(VecArg0);
-  SmallVector<Value *> NewOperands = populateOperands(Arg0, Builder);
-  for (unsigned I = 1; I < NumOperands; ++I) {
-    Value *Arg = Orig->getOperand(I);
-    [[maybe_unused]] auto *VecArg = dyn_cast<FixedVectorType>(Arg->getType());
-    assert(VecArg);
-    assert(VecArg0->getElementType() == VecArg->getElementType());
-    assert(VecArg0->getNumElements() == VecArg->getNumElements());
-    auto NextOperandList = populateOperands(Arg, Builder);
-    NewOperands.append(NextOperandList.begin(), NextOperandList.end());
-  }
-  return NewOperands;
-}
-
 namespace {
 class OpLowerer {
   Module &M;
   DXILOpBuilder OpBuilder;
   DXILResourceMap &DRM;
+  DXILResourceTypeMap &DRTM;
   SmallVector<CallInst *> CleanupCasts;
 
 public:
-  OpLowerer(Module &M, DXILResourceMap &DRM) : M(M), OpBuilder(M), DRM(DRM) {}
+  OpLowerer(Module &M, DXILResourceMap &DRM, DXILResourceTypeMap &DRTM)
+      : M(M), OpBuilder(M), DRM(DRM), DRTM(DRTM) {}
 
   /// Replace every call to \c F using \c ReplaceCall, and then erase \c F. If
   /// there is an error replacing a call, we emit a diagnostic and return true.
@@ -115,12 +77,33 @@ public:
     int Value;
   };
 
+  /// Replaces uses of a struct with uses of an equivalent named struct.
+  ///
+  /// DXIL operations that return structs give them well known names, so we need
+  /// to update uses when we switch from an LLVM intrinsic to an op.
+  Error replaceNamedStructUses(CallInst *Intrin, CallInst *DXILOp) {
+    auto *IntrinTy = cast<StructType>(Intrin->getType());
+    auto *DXILOpTy = cast<StructType>(DXILOp->getType());
+    if (!IntrinTy->isLayoutIdentical(DXILOpTy))
+      return make_error<StringError>(
+          "Type mismatch between intrinsic and DXIL op",
+          inconvertibleErrorCode());
+
+    for (Use &U : make_early_inc_range(Intrin->uses()))
+      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser()))
+        EVI->setOperand(0, DXILOp);
+      else if (auto *IVI = dyn_cast<InsertValueInst>(U.getUser()))
+        IVI->setOperand(0, DXILOp);
+      else
+        return make_error<StringError>("DXIL ops that return structs may only "
+                                       "be used by insert- and extractvalue",
+                                       inconvertibleErrorCode());
+    return Error::success();
+  }
+
   [[nodiscard]] bool
   replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
                         ArrayRef<IntrinArgSelect> ArgSelects) {
-    bool IsVectorArgExpansion = isVectorArgExpansion(F);
-    assert(!(IsVectorArgExpansion && ArgSelects.size()) &&
-           "Cann't do vector arg expansion when using arg selects.");
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       OpBuilder.getIRB().SetInsertPoint(CI);
       SmallVector<Value *> Args;
@@ -138,8 +121,6 @@ public:
             break;
           }
         }
-      } else if (IsVectorArgExpansion) {
-        Args = argVectorFlatten(CI, OpBuilder.getIRB());
       } else {
         Args.append(CI->arg_begin(), CI->arg_end());
       }
@@ -149,32 +130,13 @@ public:
       if (Error E = OpCall.takeError())
         return E;
 
-      CI->replaceAllUsesWith(*OpCall);
-      CI->eraseFromParent();
-      return Error::success();
-    });
-  }
-
-  [[nodiscard]] bool replaceFunctionWithNamedStructOp(
-      Function &F, dxil::OpCode DXILOp, Type *NewRetTy,
-      llvm::function_ref<Error(CallInst *CI, CallInst *Op)> ReplaceUses) {
-    bool IsVectorArgExpansion = isVectorArgExpansion(F);
-    return replaceFunction(F, [&](CallInst *CI) -> Error {
-      SmallVector<Value *> Args;
-      OpBuilder.getIRB().SetInsertPoint(CI);
-      if (IsVectorArgExpansion) {
-        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
-        Args.append(NewArgs.begin(), NewArgs.end());
+      if (isa<StructType>(CI->getType())) {
+        if (Error E = replaceNamedStructUses(CI, *OpCall))
+          return E;
       } else
-        Args.append(CI->arg_begin(), CI->arg_end());
+        CI->replaceAllUsesWith(*OpCall);
 
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), NewRetTy);
-      if (Error E = OpCall.takeError())
-        return E;
-      if (Error E = ReplaceUses(CI, *OpCall))
-        return E;
-
+      CI->eraseFromParent();
       return Error::success();
     });
   }
@@ -186,7 +148,7 @@ public:
   /// or defs, and by the end all of the casts will be redundant.
   Value *createTmpHandleCast(Value *V, Type *Ty) {
     CallInst *Cast = OpBuilder.getIRB().CreateIntrinsic(
-        Intrinsic::dx_cast_handle, {Ty, V->getType()}, {V});
+        Intrinsic::dx_resource_casthandle, {Ty, V->getType()}, {V});
     CleanupCasts.push_back(Cast);
     return Cast;
   }
@@ -211,7 +173,7 @@ public:
       // Otherwise, we're the second handle in a pair. Forward the arguments and
       // remove the (second) cast.
       CallInst *Def = cast<CallInst>(Cast->getOperand(0));
-      assert(Def->getIntrinsicID() == Intrinsic::dx_cast_handle &&
+      assert(Def->getIntrinsicID() == Intrinsic::dx_resource_casthandle &&
              "Unbalanced pair of temporary handle casts");
       Cast->replaceAllUsesWith(Def->getOperand(0));
       Cast->eraseFromParent();
@@ -260,7 +222,9 @@ public:
       auto *It = DRM.find(CI);
       assert(It != DRM.end() && "Resource not in map?");
       dxil::ResourceInfo &RI = *It;
+
       const auto &Binding = RI.getBinding();
+      dxil::ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
 
       Value *IndexOp = CI->getArgOperand(3);
       if (Binding.LowerBound != 0)
@@ -268,7 +232,7 @@ public:
                                 ConstantInt::get(Int32Ty, Binding.LowerBound));
 
       std::array<Value *, 4> Args{
-          ConstantInt::get(Int8Ty, llvm::to_underlying(RI.getResourceClass())),
+          ConstantInt::get(Int8Ty, llvm::to_underlying(RC)),
           ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
           CI->getArgOperand(4)};
       Expected<CallInst *> OpCall =
@@ -298,13 +262,16 @@ public:
       dxil::ResourceInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
+      dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
+      dxil::ResourceClass RC = RTI.getResourceClass();
 
       Value *IndexOp = CI->getArgOperand(3);
       if (Binding.LowerBound != 0)
         IndexOp = IRB.CreateAdd(IndexOp,
                                 ConstantInt::get(Int32Ty, Binding.LowerBound));
 
-      std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps();
+      std::pair<uint32_t, uint32_t> Props =
+          RI.getAnnotateProps(*F.getParent(), RTI);
 
       // For `CreateHandleFromBinding` we need the upper bound rather than the
       // size, so we need to be careful about the difference for "unbounded".
@@ -312,8 +279,8 @@ public:
       uint32_t UpperBound = Binding.Size == Unbounded
                                 ? Unbounded
                                 : Binding.LowerBound + Binding.Size - 1;
-      Constant *ResBind = OpBuilder.getResBind(
-          Binding.LowerBound, UpperBound, Binding.Space, RI.getResourceClass());
+      Constant *ResBind = OpBuilder.getResBind(Binding.LowerBound, UpperBound,
+                                               Binding.Space, RC);
       std::array<Value *, 3> BindArgs{ResBind, IndexOp, CI->getArgOperand(4)};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
           OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
@@ -339,33 +306,14 @@ public:
     });
   }
 
-  /// Lower `dx.handle.fromBinding` intrinsics depending on the shader model and
-  /// taking into account binding information from DXILResourceAnalysis.
+  /// Lower `dx.resource.handlefrombinding` intrinsics depending on the shader
+  /// model and taking into account binding information from
+  /// DXILResourceAnalysis.
   bool lowerHandleFromBinding(Function &F) {
-    Triple TT(Triple(M.getTargetTriple()));
+    const Triple &TT = M.getTargetTriple();
     if (TT.getDXILVersion() < VersionTuple(1, 6))
       return lowerToCreateHandle(F);
     return lowerToBindAndAnnotateHandle(F);
-  }
-
-  Error replaceSplitDoubleCallUsages(CallInst *Intrin, CallInst *Op) {
-    for (Use &U : make_early_inc_range(Intrin->uses())) {
-      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
-
-        if (EVI->getNumIndices() != 1)
-          return createStringError(std::errc::invalid_argument,
-                                   "Splitdouble has only 2 elements");
-        EVI->setOperand(0, Op);
-      } else {
-        return make_error<StringError>(
-            "Splitdouble use is not ExtractValueInst",
-            inconvertibleErrorCode());
-      }
-    }
-
-    Intrin->eraseFromParent();
-
-    return Error::success();
   }
 
   /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
@@ -404,8 +352,16 @@ public:
         }
       }
 
-      OldResult = cast<Instruction>(
-          IRB.CreateExtractValue(Op, 0, OldResult->getName()));
+      if (OldResult->use_empty()) {
+        // Only the check bit was used, so we're done here.
+        OldResult->eraseFromParent();
+        return Error::success();
+      }
+
+      assert(OldResult->hasOneUse() &&
+             isa<ExtractValueInst>(*OldResult->user_begin()) &&
+             "Expected only use to be extract of first element");
+      OldResult = cast<Instruction>(*OldResult->user_begin());
       OldTy = ST->getElementType(0);
     }
 
@@ -479,7 +435,7 @@ public:
         if (!Extracts[I])
           Extracts[I] = IRB.CreateExtractValue(Op, I);
 
-      Value *Vec = UndefValue::get(OldTy);
+      Value *Vec = PoisonValue::get(OldTy);
       for (int I = 0, E = N; I != E; ++I)
         Vec = IRB.CreateInsertElement(Vec, Extracts[I], I);
       OldResult->replaceAllUsesWith(Vec);
@@ -523,6 +479,74 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
+    const Triple &TT = M.getTargetTriple();
+    VersionTuple DXILVersion = TT.getDXILVersion();
+    const DataLayout &DL = F.getDataLayout();
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int8Ty = IRB.getInt8Ty();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Type *OldTy = cast<StructType>(CI->getType())->getElementType(0);
+      Type *ScalarTy = OldTy->getScalarType();
+      Type *NewRetTy = OpBuilder.getResRetType(ScalarTy);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index0 = CI->getArgOperand(1);
+      Value *Index1 = CI->getArgOperand(2);
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(OldTy) / DL.getTypeSizeInBits(ScalarTy);
+      Value *Mask = ConstantInt::get(Int8Ty, ~(~0U << NumElements));
+      Value *Align =
+          ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value());
+
+      Expected<CallInst *> OpCall =
+          DXILVersion >= VersionTuple(1, 2)
+              ? OpBuilder.tryCreateOp(OpCode::RawBufferLoad,
+                                      {Handle, Index0, Index1, Mask, Align},
+                                      CI->getName(), NewRetTy)
+              : OpBuilder.tryCreateOp(OpCode::BufferLoad,
+                                      {Handle, Index0, Index1}, CI->getName(),
+                                      NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/true))
+        return E;
+
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerCBufferLoad(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Type *OldTy = cast<StructType>(CI->getType())->getElementType(0);
+      Type *ScalarTy = OldTy->getScalarType();
+      Type *NewRetTy = OpBuilder.getCBufRetType(ScalarTy);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index = CI->getArgOperand(1);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::CBufferLoadLegacy, {Handle, Index}, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceNamedStructUses(CI, *OpCall))
+        return E;
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerUpdateCounter(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -547,7 +571,18 @@ public:
     });
   }
 
-  [[nodiscard]] bool lowerTypedBufferStore(Function &F) {
+  [[nodiscard]] bool lowerGetPointer(Function &F) {
+    // These should have already been handled in DXILResourceAccess, so we can
+    // just clean up the dead prototype.
+    assert(F.user_empty() && "getpointer operations should have been removed");
+    F.eraseFromParent();
+    return false;
+  }
+
+  [[nodiscard]] bool lowerBufferStore(Function &F, bool IsRaw) {
+    const Triple &TT = M.getTargetTriple();
+    VersionTuple DXILVersion = TT.getDXILVersion();
+    const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -558,51 +593,75 @@ public:
       Value *Handle =
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Index0 = CI->getArgOperand(1);
-      Value *Index1 = UndefValue::get(Int32Ty);
-      // For typed stores, the mask must always cover all four elements.
-      Constant *Mask = ConstantInt::get(Int8Ty, 0xF);
+      Value *Index1 = IsRaw ? CI->getArgOperand(2) : UndefValue::get(Int32Ty);
 
-      Value *Data = CI->getArgOperand(2);
-      auto *DataTy = dyn_cast<FixedVectorType>(Data->getType());
-      if (!DataTy || DataTy->getNumElements() != 4)
+      Value *Data = CI->getArgOperand(IsRaw ? 3 : 2);
+      Type *DataTy = Data->getType();
+      Type *ScalarTy = DataTy->getScalarType();
+
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
+      Value *Mask =
+          ConstantInt::get(Int8Ty, IsRaw ? ~(~0U << NumElements) : 15U);
+
+      // TODO: check that we only have vector or scalar...
+      if (NumElements > 4)
         return make_error<StringError>(
-            "typedBufferStore data must be a vector of 4 elements",
+            "Buffer store data must have at most 4 elements",
             inconvertibleErrorCode());
 
-      // Since we're post-scalarizer, we likely have a vector that's constructed
-      // solely for the argument of the store. If so, just use the scalar values
-      // from before they're inserted into the temporary.
       std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
-      auto *IEI = dyn_cast<InsertElementInst>(Data);
-      while (IEI) {
-        auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
-        if (!IndexOp)
-          break;
-        size_t IndexVal = IndexOp->getZExtValue();
-        assert(IndexVal < 4 && "Too many elements for buffer store");
-        DataElements[IndexVal] = IEI->getOperand(1);
-        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+      if (DataTy == ScalarTy)
+        DataElements[0] = Data;
+      else {
+        // Since we're post-scalarizer, if we see a vector here it's likely
+        // constructed solely for the argument of the store. Just use the scalar
+        // values from before they're inserted into the temporary.
+        auto *IEI = dyn_cast<InsertElementInst>(Data);
+        while (IEI) {
+          auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
+          if (!IndexOp)
+            break;
+          size_t IndexVal = IndexOp->getZExtValue();
+          assert(IndexVal < 4 && "Too many elements for buffer store");
+          DataElements[IndexVal] = IEI->getOperand(1);
+          IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+        }
       }
 
       // If for some reason we weren't able to forward the arguments from the
-      // scalarizer artifact, then we need to actually extract elements from the
-      // vector.
-      for (int I = 0, E = 4; I != E; ++I)
+      // scalarizer artifact, then we may need to actually extract elements from
+      // the vector.
+      for (int I = 0, E = NumElements; I < E; ++I)
         if (DataElements[I] == nullptr)
           DataElements[I] =
               IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
 
-      std::array<Value *, 8> Args{
+      // For any elements beyond the length of the vector, we should fill it up
+      // with undef - however, for typed buffers we repeat the first element to
+      // match DXC.
+      for (int I = NumElements, E = 4; I < E; ++I)
+        if (DataElements[I] == nullptr)
+          DataElements[I] = IsRaw ? UndefValue::get(ScalarTy) : DataElements[0];
+
+      dxil::OpCode Op = OpCode::BufferStore;
+      SmallVector<Value *, 9> Args{
           Handle,          Index0,          Index1,          DataElements[0],
           DataElements[1], DataElements[2], DataElements[3], Mask};
+      if (IsRaw && DXILVersion >= VersionTuple(1, 2)) {
+        Op = OpCode::RawBufferStore;
+        // RawBufferStore requires the alignment
+        Args.push_back(
+            ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value()));
+      }
       Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::BufferStore, Args, CI->getName());
+          OpBuilder.tryCreateOp(Op, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
 
       CI->eraseFromParent();
       // Clean up any leftover `insertelement`s
-      IEI = dyn_cast<InsertElementInst>(Data);
+      auto *IEI = dyn_cast<InsertElementInst>(Data);
       while (IEI && IEI->use_empty()) {
         InsertElementInst *Tmp = IEI;
         IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
@@ -680,6 +739,50 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerIsFPClass(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *RetTy = IRB.getInt1Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      SmallVector<Value *> Args;
+      Value *Fl = CI->getArgOperand(0);
+      Args.push_back(Fl);
+
+      dxil::OpCode OpCode;
+      Value *T = CI->getArgOperand(1);
+      auto *TCI = dyn_cast<ConstantInt>(T);
+      switch (TCI->getZExtValue()) {
+      case FPClassTest::fcInf:
+        OpCode = dxil::OpCode::IsInf;
+        break;
+      case FPClassTest::fcNan:
+        OpCode = dxil::OpCode::IsNaN;
+        break;
+      case FPClassTest::fcNormal:
+        OpCode = dxil::OpCode::IsNormal;
+        break;
+      case FPClassTest::fcFinite:
+        OpCode = dxil::OpCode::IsFinite;
+        break;
+      default:
+        SmallString<128> Msg =
+            formatv("Unsupported FPClassTest {0} for DXIL Op Lowering",
+                    TCI->getZExtValue());
+        return make_error<StringError>(Msg, inconvertibleErrorCode());
+      }
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode, Args, CI->getName(), RetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   bool lowerIntrinsics() {
     bool Updated = false;
     bool HasErrors = false;
@@ -689,41 +792,65 @@ public:
         continue;
       Intrinsic::ID ID = F.getIntrinsicID();
       switch (ID) {
-      default:
+      // NOTE: Skip dx_resource_casthandle here. They are
+      // resolved after this loop in cleanupHandleCasts.
+      case Intrinsic::dx_resource_casthandle:
+      // NOTE: llvm.dbg.value is supported as is in DXIL.
+      case Intrinsic::dbg_value:
+      case Intrinsic::lifetime_start:
+      case Intrinsic::lifetime_end:
+      case Intrinsic::not_intrinsic:
+        if (F.use_empty())
+          F.eraseFromParent();
         continue;
+      default:
+        if (F.use_empty())
+          F.eraseFromParent();
+        else {
+          SmallString<128> Msg = formatv(
+              "Unsupported intrinsic {0} for DXIL lowering", F.getName());
+          M.getContext().emitError(Msg);
+          HasErrors |= true;
+        }
+        break;
+
 #define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
     HasErrors |= replaceFunctionWithOp(                                        \
         F, OpCode, ArrayRef<IntrinArgSelect>{__VA_ARGS__});                    \
     break;
 #include "DXILOperation.inc"
-      case Intrinsic::dx_handle_fromBinding:
+      case Intrinsic::dx_resource_handlefrombinding:
         HasErrors |= lowerHandleFromBinding(F);
         break;
-      case Intrinsic::dx_typedBufferLoad:
-        HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/false);
+      case Intrinsic::dx_resource_getpointer:
+        HasErrors |= lowerGetPointer(F);
         break;
-      case Intrinsic::dx_typedBufferLoad_checkbit:
+      case Intrinsic::dx_resource_load_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
         break;
-      case Intrinsic::dx_typedBufferStore:
-        HasErrors |= lowerTypedBufferStore(F);
+      case Intrinsic::dx_resource_store_typedbuffer:
+        HasErrors |= lowerBufferStore(F, /*IsRaw=*/false);
         break;
-      case Intrinsic::dx_bufferUpdateCounter:
+      case Intrinsic::dx_resource_load_rawbuffer:
+        HasErrors |= lowerRawBufferLoad(F);
+        break;
+      case Intrinsic::dx_resource_store_rawbuffer:
+        HasErrors |= lowerBufferStore(F, /*IsRaw=*/true);
+        break;
+      case Intrinsic::dx_resource_load_cbufferrow_2:
+      case Intrinsic::dx_resource_load_cbufferrow_4:
+      case Intrinsic::dx_resource_load_cbufferrow_8:
+        HasErrors |= lowerCBufferLoad(F);
+        break;
+      case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
-        break;
-      // TODO: this can be removed when
-      // https://github.com/llvm/llvm-project/issues/113192 is fixed
-      case Intrinsic::dx_splitdouble:
-        HasErrors |= replaceFunctionWithNamedStructOp(
-            F, OpCode::SplitDouble,
-            OpBuilder.getSplitDoubleType(M.getContext()),
-            [&](CallInst *CI, CallInst *Op) {
-              return replaceSplitDoubleCallUsages(CI, Op);
-            });
         break;
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);
+        break;
+      case Intrinsic::is_fpclass:
+        HasErrors |= lowerIsFPClass(F);
         break;
       }
       Updated = true;
@@ -738,12 +865,15 @@ public:
 
 PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
   DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
+  DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
 
-  bool MadeChanges = OpLowerer(M, DRM).lowerIntrinsics();
+  bool MadeChanges = OpLowerer(M, DRM, DRTM).lowerIntrinsics();
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<DXILResourceAnalysis>();
+  PA.preserve<DXILMetadataAnalysis>();
+  PA.preserve<ShaderFlagsAnalysis>();
   return PA;
 }
 
@@ -753,16 +883,21 @@ public:
   bool runOnModule(Module &M) override {
     DXILResourceMap &DRM =
         getAnalysis<DXILResourceWrapperPass>().getResourceMap();
+    DXILResourceTypeMap &DRTM =
+        getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
-    return OpLowerer(M, DRM).lowerIntrinsics();
+    return OpLowerer(M, DRM, DRTM).lowerIntrinsics();
   }
   StringRef getPassName() const override { return "DXIL Op Lowering"; }
   DXILOpLoweringLegacy() : ModulePass(ID) {}
 
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+    AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
+    AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
+    AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }
 };
 char DXILOpLoweringLegacy::ID = 0;
@@ -770,6 +905,7 @@ char DXILOpLoweringLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering",
                       false, false)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_END(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering", false,
                     false)

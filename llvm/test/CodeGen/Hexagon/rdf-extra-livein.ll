@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -verify-machineinstrs -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -verify-machineinstrs -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 ; Verify that the code compiles successfully.
 ; CHECK: call printf
 

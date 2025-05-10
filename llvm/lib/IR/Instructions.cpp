@@ -376,9 +376,17 @@ FPClassTest CallBase::getParamNoFPClass(unsigned i) const {
 }
 
 std::optional<ConstantRange> CallBase::getRange() const {
-  const Attribute RangeAttr = getRetAttr(llvm::Attribute::Range);
-  if (RangeAttr.isValid())
-    return RangeAttr.getRange();
+  Attribute CallAttr = Attrs.getRetAttr(Attribute::Range);
+  Attribute FnAttr;
+  if (const Function *F = getCalledFunction())
+    FnAttr = F->getRetAttribute(Attribute::Range);
+
+  if (CallAttr.isValid() && FnAttr.isValid())
+    return CallAttr.getRange().intersectWith(FnAttr.getRange());
+  if (CallAttr.isValid())
+    return CallAttr.getRange();
+  if (FnAttr.isValid())
+    return FnAttr.getRange();
   return std::nullopt;
 }
 
@@ -430,6 +438,23 @@ bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
   default:
     return true;
   }
+}
+
+bool CallBase::paramHasNonNullAttr(unsigned ArgNo,
+                                   bool AllowUndefOrPoison) const {
+  assert(getArgOperand(ArgNo)->getType()->isPointerTy() &&
+         "Argument must be a pointer");
+  if (paramHasAttr(ArgNo, Attribute::NonNull) &&
+      (AllowUndefOrPoison || paramHasAttr(ArgNo, Attribute::NoUndef)))
+    return true;
+
+  if (getParamDereferenceableBytes(ArgNo) > 0 &&
+      !NullPointerIsDefined(
+          getCaller(),
+          getArgOperand(ArgNo)->getType()->getPointerAddressSpace()))
+    return true;
+
+  return false;
 }
 
 bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
@@ -592,15 +617,17 @@ bool CallBase::hasReadingOperandBundles() const {
   // Implementation note: this is a conservative implementation of operand
   // bundle semantics, where *any* non-assume operand bundle (other than
   // ptrauth) forces a callsite to be at least readonly.
-  return hasOperandBundlesOtherThan(
-             {LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi}) &&
+  return hasOperandBundlesOtherThan({LLVMContext::OB_ptrauth,
+                                     LLVMContext::OB_kcfi,
+                                     LLVMContext::OB_convergencectrl}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
 bool CallBase::hasClobberingOperandBundles() const {
   return hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
-              LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi}) &&
+              LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi,
+              LLVMContext::OB_convergencectrl}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
@@ -673,6 +700,39 @@ bool CallBase::onlyAccessesInaccessibleMemOrArgMem() const {
 void CallBase::setOnlyAccessesInaccessibleMemOrArgMem() {
   setMemoryEffects(getMemoryEffects() &
                    MemoryEffects::inaccessibleOrArgMemOnly());
+}
+
+CaptureInfo CallBase::getCaptureInfo(unsigned OpNo) const {
+  if (OpNo < arg_size()) {
+    // If the argument is passed byval, the callee does not have access to the
+    // original pointer and thus cannot capture it.
+    if (isByValArgument(OpNo))
+      return CaptureInfo::none();
+
+    CaptureInfo CI = getParamAttributes(OpNo).getCaptureInfo();
+    if (auto *Fn = dyn_cast<Function>(getCalledOperand()))
+      CI &= Fn->getAttributes().getParamAttrs(OpNo).getCaptureInfo();
+    return CI;
+  }
+
+  // deopt operand bundles are captures(none)
+  auto &BOI = getBundleOpInfoForOperand(OpNo);
+  auto OBU = operandBundleFromBundleOpInfo(BOI);
+  return OBU.isDeoptOperandBundle() ? CaptureInfo::none() : CaptureInfo::all();
+}
+
+bool CallBase::hasArgumentWithAdditionalReturnCaptureComponents() const {
+  for (unsigned I = 0, E = arg_size(); I < E; ++I) {
+    if (!getArgOperand(I)->getType()->isPointerTy())
+      continue;
+
+    CaptureInfo CI = getParamAttributes(I).getCaptureInfo();
+    if (auto *Fn = dyn_cast<Function>(getCalledOperand()))
+      CI &= Fn->getAttributes().getParamAttrs(I).getCaptureInfo();
+    if (capturesAnything(CI.getRetComponents() & ~CI.getOtherComponents()))
+      return true;
+  }
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -832,7 +892,7 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
 }
 
 LandingPadInst *InvokeInst::getLandingPadInst() const {
-  return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());
+  return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHIIt());
 }
 
 void InvokeInst::updateProfWeight(uint64_t S, uint64_t T) {
@@ -876,7 +936,7 @@ void CallBrInst::init(FunctionType *FTy, Value *Fn, BasicBlock *Fallthrough,
 
   // Set operands in order of their index to match use-list-order
   // prediction.
-  std::copy(Args.begin(), Args.end(), op_begin());
+  llvm::copy(Args, op_begin());
   NumIndirectDests = IndirectDests.size();
   setDefaultDest(Fallthrough);
   for (unsigned i = 0; i != NumIndirectDests; ++i)
@@ -1214,7 +1274,7 @@ AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
                        Align Align, const Twine &Name,
                        InsertPosition InsertBefore)
-    : UnaryInstruction(PointerType::get(Ty, AddrSpace), Alloca,
+    : UnaryInstruction(PointerType::get(Ty->getContext(), AddrSpace), Alloca,
                        getAISize(Ty->getContext(), ArraySize), InsertBefore),
       AllocatedType(Ty) {
   setAlignment(Align);
@@ -1421,6 +1481,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "fmax";
   case AtomicRMWInst::FMin:
     return "fmin";
+  case AtomicRMWInst::FMaximum:
+    return "fmaximum";
+  case AtomicRMWInst::FMinimum:
+    return "fminimum";
   case AtomicRMWInst::UIncWrap:
     return "uinc_wrap";
   case AtomicRMWInst::UDecWrap:
@@ -2666,8 +2730,7 @@ BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
 
 // Exchange the two operands to this instruction. This instruction is safe to
 // use on any binary instruction and does not modify the semantics of the
-// instruction. If the instruction is order-dependent (SetLT f.e.), the opcode
-// is changed.
+// instruction.
 bool BinaryOperator::swapOperands() {
   if (!isCommutative())
     return true; // Can't commute operands
@@ -3886,33 +3949,49 @@ bool CmpInst::isFalseWhenEqual(Predicate predicate) {
   }
 }
 
-bool CmpInst::isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2) {
+static bool isImpliedTrueByMatchingCmp(CmpPredicate Pred1, CmpPredicate Pred2) {
   // If the predicates match, then we know the first condition implies the
   // second is true.
-  if (Pred1 == Pred2)
+  if (CmpPredicate::getMatching(Pred1, Pred2))
     return true;
+
+  if (Pred1.hasSameSign() && CmpInst::isSigned(Pred2))
+    Pred1 = ICmpInst::getFlippedSignednessPredicate(Pred1);
+  else if (Pred2.hasSameSign() && CmpInst::isSigned(Pred1))
+    Pred2 = ICmpInst::getFlippedSignednessPredicate(Pred2);
 
   switch (Pred1) {
   default:
     break;
-  case ICMP_EQ:
+  case CmpInst::ICMP_EQ:
     // A == B implies A >=u B, A <=u B, A >=s B, and A <=s B are true.
-    return Pred2 == ICMP_UGE || Pred2 == ICMP_ULE || Pred2 == ICMP_SGE ||
-           Pred2 == ICMP_SLE;
-  case ICMP_UGT: // A >u B implies A != B and A >=u B are true.
-    return Pred2 == ICMP_NE || Pred2 == ICMP_UGE;
-  case ICMP_ULT: // A <u B implies A != B and A <=u B are true.
-    return Pred2 == ICMP_NE || Pred2 == ICMP_ULE;
-  case ICMP_SGT: // A >s B implies A != B and A >=s B are true.
-    return Pred2 == ICMP_NE || Pred2 == ICMP_SGE;
-  case ICMP_SLT: // A <s B implies A != B and A <=s B are true.
-    return Pred2 == ICMP_NE || Pred2 == ICMP_SLE;
+    return Pred2 == CmpInst::ICMP_UGE || Pred2 == CmpInst::ICMP_ULE ||
+           Pred2 == CmpInst::ICMP_SGE || Pred2 == CmpInst::ICMP_SLE;
+  case CmpInst::ICMP_UGT: // A >u B implies A != B and A >=u B are true.
+    return Pred2 == CmpInst::ICMP_NE || Pred2 == CmpInst::ICMP_UGE;
+  case CmpInst::ICMP_ULT: // A <u B implies A != B and A <=u B are true.
+    return Pred2 == CmpInst::ICMP_NE || Pred2 == CmpInst::ICMP_ULE;
+  case CmpInst::ICMP_SGT: // A >s B implies A != B and A >=s B are true.
+    return Pred2 == CmpInst::ICMP_NE || Pred2 == CmpInst::ICMP_SGE;
+  case CmpInst::ICMP_SLT: // A <s B implies A != B and A <=s B are true.
+    return Pred2 == CmpInst::ICMP_NE || Pred2 == CmpInst::ICMP_SLE;
   }
   return false;
 }
 
-bool CmpInst::isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2) {
-  return isImpliedTrueByMatchingCmp(Pred1, getInversePredicate(Pred2));
+static bool isImpliedFalseByMatchingCmp(CmpPredicate Pred1,
+                                        CmpPredicate Pred2) {
+  return isImpliedTrueByMatchingCmp(Pred1,
+                                    ICmpInst::getInverseCmpPredicate(Pred2));
+}
+
+std::optional<bool> ICmpInst::isImpliedByMatchingCmp(CmpPredicate Pred1,
+                                                     CmpPredicate Pred2) {
+  if (isImpliedTrueByMatchingCmp(Pred1, Pred2))
+    return true;
+  if (isImpliedFalseByMatchingCmp(Pred1, Pred2))
+    return false;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3923,6 +4002,8 @@ std::optional<CmpPredicate> CmpPredicate::getMatching(CmpPredicate A,
                                                       CmpPredicate B) {
   if (A.Pred == B.Pred)
     return A.HasSameSign == B.HasSameSign ? A : CmpPredicate(A.Pred);
+  if (CmpInst::isFPPredicate(A) || CmpInst::isFPPredicate(B))
+    return {};
   if (A.HasSameSign &&
       A.Pred == ICmpInst::getFlippedSignednessPredicate(B.Pred))
     return B.Pred;
@@ -3930,6 +4011,24 @@ std::optional<CmpPredicate> CmpPredicate::getMatching(CmpPredicate A,
       B.Pred == ICmpInst::getFlippedSignednessPredicate(A.Pred))
     return A.Pred;
   return {};
+}
+
+CmpInst::Predicate CmpPredicate::getPreferredSignedPredicate() const {
+  return HasSameSign ? ICmpInst::getSignedPredicate(Pred) : Pred;
+}
+
+CmpPredicate CmpPredicate::get(const CmpInst *Cmp) {
+  if (auto *ICI = dyn_cast<ICmpInst>(Cmp))
+    return ICI->getCmpPredicate();
+  return Cmp->getPredicate();
+}
+
+CmpPredicate CmpPredicate::getSwapped(CmpPredicate P) {
+  return {CmpInst::getSwappedPredicate(P), P.hasSameSign()};
+}
+
+CmpPredicate CmpPredicate::getSwapped(const CmpInst *Cmp) {
+  return getSwapped(get(Cmp));
 }
 
 //===----------------------------------------------------------------------===//
@@ -4440,6 +4539,27 @@ FuncletPadInst *FuncletPadInst::cloneImpl() const {
 UnreachableInst *UnreachableInst::cloneImpl() const {
   LLVMContext &Context = getContext();
   return new UnreachableInst(Context);
+}
+
+bool UnreachableInst::shouldLowerToTrap(bool TrapUnreachable,
+                                        bool NoTrapAfterNoreturn) const {
+  if (!TrapUnreachable)
+    return false;
+
+  // We may be able to ignore unreachable behind a noreturn call.
+  if (const CallInst *Call = dyn_cast_or_null<CallInst>(getPrevNode());
+      Call && Call->doesNotReturn()) {
+    if (NoTrapAfterNoreturn)
+      return false;
+    // Do not emit an additional trap instruction.
+    if (Call->isNonContinuableTrap())
+      return false;
+  }
+
+  if (getFunction()->hasFnAttribute(Attribute::Naked))
+    return false;
+
+  return true;
 }
 
 FreezeInst *FreezeInst::cloneImpl() const {

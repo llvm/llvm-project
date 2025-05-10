@@ -31,7 +31,7 @@ class AnalysisUsage;
 class LostDebugLocObserver;
 class MachineBasicBlock;
 class BlockFrequencyInfo;
-class GISelKnownBits;
+class GISelValueTracking;
 class MachineFunction;
 class MachineInstr;
 class MachineIRBuilder;
@@ -170,6 +170,10 @@ void reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
 void reportGISelWarning(MachineFunction &MF, const TargetPassConfig &TPC,
                         MachineOptimizationRemarkEmitter &MORE,
                         MachineOptimizationRemarkMissed &R);
+
+/// Returns the inverse opcode of \p MinMaxOpc, which is a generic min/max
+/// opcode like G_SMIN.
+unsigned getInverseGMinMaxOpcode(unsigned MinMaxOpc);
 
 /// If \p VReg is defined by a G_CONSTANT, return the corresponding value.
 std::optional<APInt> getIConstantVRegVal(Register VReg,
@@ -321,13 +325,14 @@ ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
 
 std::optional<SmallVector<APInt>>
 ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
+                 unsigned DstScalarSizeInBits, unsigned ExtOp,
                  const MachineRegisterInfo &MRI);
 
 /// Test if the given value is known to have exactly one bit set. This differs
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
 /// set.
 bool isKnownToBeAPowerOfTwo(Register Val, const MachineRegisterInfo &MRI,
-                            GISelKnownBits *KnownBits = nullptr);
+                            GISelValueTracking *ValueTracking = nullptr);
 
 /// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is true,
 /// this returns if \p Val can be assumed to never be a signaling NaN.
@@ -521,6 +526,13 @@ bool isConstantOrConstantVector(MachineInstr &MI,
 std::optional<APInt>
 isConstantOrConstantSplatVector(MachineInstr &MI,
                                 const MachineRegisterInfo &MRI);
+
+/// Determines if \p MI defines a float constant integer or a splat vector of
+/// float constant integers.
+/// \returns the float constant or std::nullopt.
+std::optional<APFloat>
+isConstantOrConstantSplatVectorFP(MachineInstr &MI,
+                                  const MachineRegisterInfo &MRI);
 
 /// Attempt to match a unary predicate against a scalar/splat constant or every
 /// element of a constant G_BUILD_VECTOR. If \p ConstVal is null, the source

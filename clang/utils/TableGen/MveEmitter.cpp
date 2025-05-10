@@ -209,9 +209,7 @@ public:
       Name = "const " + Name;
     return Name + " *";
   }
-  std::string llvmName() const override {
-    return "llvm::PointerType::getUnqual(" + Pointee->llvmName() + ")";
-  }
+  std::string llvmName() const override { return "Builder.getPtrTy()"; }
   const Type *getPointeeType() const { return Pointee; }
 
   static bool classof(const Type *T) {
@@ -755,7 +753,7 @@ public:
     OS << "})";
   }
   void morePrerequisites(std::vector<Ptr> &output) const override {
-    output.insert(output.end(), Args.begin(), Args.end());
+    llvm::append_range(output, Args);
   }
 };
 
@@ -1631,17 +1629,10 @@ void EmitterBase::EmitBuiltinCG(raw_ostream &OS) {
       for (const auto &OI : kv.second)
         key.push_back(OI.ParamValues[i]);
 
-      auto Found = ParamNumberMap.find(key);
-      if (Found != ParamNumberMap.end()) {
-        // Yes, an existing parameter variable can be reused for this.
-        ParamNumbers.push_back(Found->second);
-        continue;
-      }
-
-      // No, we need a new parameter variable.
-      int ExistingIndex = ParamNumberMap.size();
-      ParamNumberMap[key] = ExistingIndex;
-      ParamNumbers.push_back(ExistingIndex);
+      // Obtain a new parameter variable if we don't have one.
+      int ParamNum =
+          ParamNumberMap.try_emplace(key, ParamNumberMap.size()).first->second;
+      ParamNumbers.push_back(ParamNum);
     }
 
     // Now we're ready to do the pass 2 code generation, which will emit the
@@ -1949,27 +1940,53 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
 }
 
 void MveEmitter::EmitBuiltinDef(raw_ostream &OS) {
-  for (const auto &kv : ACLEIntrinsics) {
-    const ACLEIntrinsic &Int = *kv.second;
-    OS << "BUILTIN(__builtin_arm_mve_" << Int.fullName()
-       << ", \"\", \"n\")\n";
+  llvm::StringToOffsetTable Table;
+  Table.GetOrAddStringOffset("n");
+  Table.GetOrAddStringOffset("nt");
+  Table.GetOrAddStringOffset("ntu");
+  Table.GetOrAddStringOffset("vi.");
+
+  for (const auto &[_, Int] : ACLEIntrinsics)
+    Table.GetOrAddStringOffset(Int->fullName());
+
+  std::map<std::string, ACLEIntrinsic *> ShortNameIntrinsics;
+  for (const auto &[_, Int] : ACLEIntrinsics) {
+    if (!Int->polymorphic())
+      continue;
+
+    StringRef Name = Int->shortName();
+    if (ShortNameIntrinsics.insert({Name.str(), Int.get()}).second)
+      Table.GetOrAddStringOffset(Name);
   }
 
-  std::set<std::string> ShortNamesSeen;
-
-  for (const auto &kv : ACLEIntrinsics) {
-    const ACLEIntrinsic &Int = *kv.second;
-    if (Int.polymorphic()) {
-      StringRef Name = Int.shortName();
-      if (ShortNamesSeen.find(std::string(Name)) == ShortNamesSeen.end()) {
-        OS << "BUILTIN(__builtin_arm_mve_" << Name << ", \"vi.\", \"nt";
-        if (Int.nonEvaluating())
-          OS << "u"; // indicate that this builtin doesn't evaluate its args
-        OS << "\")\n";
-        ShortNamesSeen.insert(std::string(Name));
-      }
-    }
+  OS << "#ifdef GET_MVE_BUILTIN_ENUMERATORS\n";
+  for (const auto &[_, Int] : ACLEIntrinsics) {
+    OS << "  BI__builtin_arm_mve_" << Int->fullName() << ",\n";
   }
+  for (const auto &[Name, _] : ShortNameIntrinsics) {
+    OS << "  BI__builtin_arm_mve_" << Name << ",\n";
+  }
+  OS << "#endif // GET_MVE_BUILTIN_ENUMERATORS\n\n";
+
+  OS << "#ifdef GET_MVE_BUILTIN_STR_TABLE\n";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << "#endif // GET_MVE_BUILTIN_STR_TABLE\n\n";
+
+  OS << "#ifdef GET_MVE_BUILTIN_INFOS\n";
+  for (const auto &[_, Int] : ACLEIntrinsics) {
+    OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+       << Table.GetStringOffset(Int->fullName()) << " /* " << Int->fullName()
+       << " */, " << Table.GetStringOffset("") << ", "
+       << Table.GetStringOffset("n") << " /* n */}},\n";
+  }
+  for (const auto &[Name, Int] : ShortNameIntrinsics) {
+    StringRef Attrs = Int->nonEvaluating() ? "ntu" : "nt";
+    OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+       << Table.GetStringOffset(Name) << " /* " << Name << " */, "
+       << Table.GetStringOffset("vi.") << " /* vi. */, "
+       << Table.GetStringOffset(Attrs) << " /* " << Attrs << " */}},\n";
+  }
+  OS << "#endif // GET_MVE_BUILTIN_INFOS\n\n";
 }
 
 void MveEmitter::EmitBuiltinSema(raw_ostream &OS) {
@@ -2157,13 +2174,31 @@ void CdeEmitter::EmitHeader(raw_ostream &OS) {
 }
 
 void CdeEmitter::EmitBuiltinDef(raw_ostream &OS) {
-  for (const auto &kv : ACLEIntrinsics) {
-    if (kv.second->headerOnly())
-      continue;
-    const ACLEIntrinsic &Int = *kv.second;
-    OS << "BUILTIN(__builtin_arm_cde_" << Int.fullName()
-       << ", \"\", \"ncU\")\n";
-  }
+  llvm::StringToOffsetTable Table;
+  Table.GetOrAddStringOffset("ncU");
+
+  for (const auto &[_, Int] : ACLEIntrinsics)
+    if (!Int->headerOnly())
+      Table.GetOrAddStringOffset(Int->fullName());
+
+  OS << "#ifdef GET_CDE_BUILTIN_ENUMERATORS\n";
+  for (const auto &[_, Int] : ACLEIntrinsics)
+    if (!Int->headerOnly())
+      OS << "  BI__builtin_arm_cde_" << Int->fullName() << ",\n";
+  OS << "#endif // GET_CDE_BUILTIN_ENUMERATORS\n\n";
+
+  OS << "#ifdef GET_CDE_BUILTIN_STR_TABLE\n";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << "#endif // GET_CDE_BUILTIN_STR_TABLE\n\n";
+
+  OS << "#ifdef GET_CDE_BUILTIN_INFOS\n";
+  for (const auto &[_, Int] : ACLEIntrinsics)
+    if (!Int->headerOnly())
+      OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+         << Table.GetStringOffset(Int->fullName()) << " /* " << Int->fullName()
+         << " */, " << Table.GetStringOffset("") << ", "
+         << Table.GetStringOffset("ncU") << " /* ncU */}},\n";
+  OS << "#endif // GET_CDE_BUILTIN_INFOS\n\n";
 }
 
 void CdeEmitter::EmitBuiltinSema(raw_ostream &OS) {

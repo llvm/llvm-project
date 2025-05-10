@@ -31,6 +31,78 @@
 // MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+zks" "-target-feature" "+zksed" "-target-feature" "+zksh" "-target-feature" "+svinval"
 // MCPU-XIANGSHAN-NANHU-SAME: "-target-abi" "lp64d"
 
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=xiangshan-kunminghu | FileCheck -check-prefix=MCPU-XIANGSHAN-KUNMINGHU %s
+// MCPU-XIANGSHAN-KUNMINGHU: "-nostdsysteminc" "-target-cpu" "xiangshan-kunminghu"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+m"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+a"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+f"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+d"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+c"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+b"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+v"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+h"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zic64b" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zicbom" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zicbop" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zicboz" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+ziccamoa" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+ziccif" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zicclsm" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+ziccrse" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zicntr" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zicond" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zicsr" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zihintntl" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zacas" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zawrs" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zfa" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zfh" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zca" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zcb" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zcmop" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zba" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zbb" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zbc"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zbkb" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zbkc" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zbkx" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zbs"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zkn" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zks" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zvbb" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zve64d" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zve64f" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zve64x" 
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zvfh"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zvkb"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zvkt"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+zvl128b"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+sha"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+shcounterenw"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+shgatpa"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+shtvala"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+shvsatpa"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+shvstvala"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+shvstvecd"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+smcsrind"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+smdbltrp"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+smmpm"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+smnpm"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+smrnmi"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+smstateen"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+sscofpmf"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+sscsrind"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+ssdbltrp"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+ssnpm"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+sspm"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+ssstateen"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+ssstrict"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+sstc"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+ssu64xl"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+supm"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+svnapot"
+// MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-abi" "lp64d"
+
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=spacemit-x60 | FileCheck -check-prefix=MCPU-SPACEMIT-X60 %s
 // MCPU-SPACEMIT-X60: "-nostdsysteminc" "-target-cpu" "spacemit-x60"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+m"
@@ -98,6 +170,23 @@
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=rocket-rv64 | FileCheck -check-prefix=MTUNE-ROCKET64 %s
 // MTUNE-ROCKET64: "-tune-cpu" "rocket-rv64"
 
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=mips-p8700 | FileCheck -check-prefix=MTUNE-MIPS-P8700 %s
+// MTUNE-MIPS-P8700: "-tune-cpu" "mips-p8700"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=mips-p8700 | FileCheck -check-prefix=MCPU-MIPS-P8700 %s
+// MCPU-MIPS-P8700: "-target-cpu" "mips-p8700"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+m"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+a"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+f"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+d"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+c"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+zicsr"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+zifencei"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+zaamo"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+zalrsc"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+zba"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+zbb"
+
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr1-base | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR1-BASE %s
 // MTUNE-SYNTACORE-SCR1-BASE: "-tune-cpu" "syntacore-scr1-base"
 
@@ -162,6 +251,7 @@
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl256b"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl32b"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl64b"
+// MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+sscofpmf"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svinval"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svnapot"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svpbmt"
@@ -416,6 +506,19 @@
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvkt"
 // MCPU-SIFIVE-P470-SAME: "-target-abi" "lp64d"
 
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p550 | FileCheck -check-prefix=MCPU-SIFIVE-P550 %s
+// MCPU-SIFIVE-P550: "-nostdsysteminc" "-target-cpu" "sifive-p550"
+// MCPU-SIFIVE-P550-SAME: "-target-feature" "+m"
+// MCPU-SIFIVE-P550-SAME: "-target-feature" "+a"
+// MCPU-SIFIVE-P550-SAME: "-target-feature" "+f"
+// MCPU-SIFIVE-P550-SAME: "-target-feature" "+d"
+// MCPU-SIFIVE-P550-SAME: "-target-feature" "+c"
+// MCPU-SIFIVE-P550-SAME: "-target-feature" "+zicsr"
+// MCPU-SIFIVE-P550-SAME: "-target-feature" "+zifencei"
+// MCPU-SIFIVE-P550-SAME: "-target-feature" "+zba"
+// MCPU-SIFIVE-P550-SAME: "-target-feature" "+zbb"
+// MCPU-SIFIVE-P550-SAME: "-target-abi" "lp64d"
+
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p670 | FileCheck -check-prefix=MCPU-SIFIVE-P670 %s
 // MCPU-SIFIVE-P670: "-target-cpu" "sifive-p670"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+m"
@@ -463,6 +566,11 @@
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvksh"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvkt"
 // MCPU-SIFIVE-P670-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p870 | FileCheck -check-prefix=MCPU-SIFIVE-P870 %s
+// MCPU-SIFIVE-P870: "-target-cpu" "sifive-p870"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-sifive-p870.c`
+// MCPU-SIFIVE-P870-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=rp2350-hazard3 | FileCheck -check-prefix=MCPU-HAZARD3 %s
 // MCPU-HAZARD3: "-target-cpu" "rp2350-hazard3"
@@ -590,3 +698,71 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=syntacore-scr7 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR7 %s
 // MTUNE-SYNTACORE-SCR7: "-tune-cpu" "syntacore-scr7"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=andes-n45 | FileCheck -check-prefix=MCPU-ANDES-N45 %s
+// MCPU-ANDES-N45: "-target-cpu" "andes-n45"
+// MCPU-ANDES-N45-SAME: "-target-feature" "+m"
+// MCPU-ANDES-N45-SAME: "-target-feature" "+a"
+// MCPU-ANDES-N45-SAME: "-target-feature" "+f"
+// MCPU-ANDES-N45-SAME: "-target-feature" "+d"
+// MCPU-ANDES-N45-SAME: "-target-feature" "+c"
+// MCPU-ANDES-N45-SAME: "-target-feature" "+zicsr"
+// MCPU-ANDES-N45-SAME: "-target-feature" "+zifencei"
+// MCPU-ANDES-N45-SAME: "-target-feature" "+zba"
+// MCPU-ANDES-N45-SAME: "-target-feature" "+zbb"
+// MCPU-ANDES-N45-SAME: "-target-feature" "+zbs"
+// MCPU-ANDES-N45-SAME: "-target-abi" "ilp32d"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=andes-n45 | FileCheck -check-prefix=MTUNE-ANDES-N45 %s
+// MTUNE-ANDES-N45: "-tune-cpu" "andes-n45"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=andes-nx45 | FileCheck -check-prefix=MCPU-ANDES-NX45 %s
+// MCPU-ANDES-NX45: "-target-cpu" "andes-nx45"
+// MCPU-ANDES-NX45-SAME: "-target-feature" "+m"
+// MCPU-ANDES-NX45-SAME: "-target-feature" "+a"
+// MCPU-ANDES-NX45-SAME: "-target-feature" "+f"
+// MCPU-ANDES-NX45-SAME: "-target-feature" "+d"
+// MCPU-ANDES-NX45-SAME: "-target-feature" "+c"
+// MCPU-ANDES-NX45-SAME: "-target-feature" "+zicsr"
+// MCPU-ANDES-NX45-SAME: "-target-feature" "+zifencei"
+// MCPU-ANDES-NX45-SAME: "-target-feature" "+zba"
+// MCPU-ANDES-NX45-SAME: "-target-feature" "+zbb"
+// MCPU-ANDES-NX45-SAME: "-target-feature" "+zbs"
+// MCPU-ANDES-NX45-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-nx45 | FileCheck -check-prefix=MTUNE-ANDES-NX45 %s
+// MTUNE-ANDES-NX45: "-tune-cpu" "andes-nx45"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=andes-a45 | FileCheck -check-prefix=MCPU-ANDES-A45 %s
+// MCPU-ANDES-A45: "-target-cpu" "andes-a45"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+m"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+a"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+f"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+d"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+c"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+zicsr"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+zifencei"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+zba"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+zbb"
+// MCPU-ANDES-A45-SAME: "-target-feature" "+zbs"
+// MCPU-ANDES-A45-SAME: "-target-abi" "ilp32d"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=andes-a45 | FileCheck -check-prefix=MTUNE-ANDES-A45 %s
+// MTUNE-ANDES-A45: "-tune-cpu" "andes-a45"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=andes-ax45 | FileCheck -check-prefix=MCPU-ANDES-AX45 %s
+// MCPU-ANDES-AX45: "-target-cpu" "andes-ax45"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+m"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+a"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+f"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+d"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+c"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+zicsr"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+zifencei"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+zba"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+zbb"
+// MCPU-ANDES-AX45-SAME: "-target-feature" "+zbs"
+// MCPU-ANDES-AX45-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-ax45 | FileCheck -check-prefix=MTUNE-ANDES-AX45 %s
+// MTUNE-ANDES-AX45: "-tune-cpu" "andes-ax45"

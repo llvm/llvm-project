@@ -162,6 +162,7 @@ struct Method {
   bool DesignatedInit = false;
   bool Required = false;
   StringRef ResultType;
+  StringRef SwiftReturnOwnership;
 };
 
 typedef std::vector<Method> MethodsSeq;
@@ -196,6 +197,8 @@ template <> struct MappingTraits<Method> {
     IO.mapOptional("DesignatedInit", M.DesignatedInit, false);
     IO.mapOptional("Required", M.Required, false);
     IO.mapOptional("ResultType", M.ResultType, StringRef(""));
+    IO.mapOptional("SwiftReturnOwnership", M.SwiftReturnOwnership,
+                   StringRef(""));
   }
 };
 } // namespace yaml
@@ -291,6 +294,7 @@ struct Function {
   StringRef SwiftName;
   StringRef Type;
   StringRef ResultType;
+  StringRef SwiftReturnOwnership;
 };
 
 typedef std::vector<Function> FunctionsSeq;
@@ -313,6 +317,8 @@ template <> struct MappingTraits<Function> {
     IO.mapOptional("SwiftPrivate", F.SwiftPrivate);
     IO.mapOptional("SwiftName", F.SwiftName, StringRef(""));
     IO.mapOptional("ResultType", F.ResultType, StringRef(""));
+    IO.mapOptional("SwiftReturnOwnership", F.SwiftReturnOwnership,
+                   StringRef(""));
   }
 };
 } // namespace yaml
@@ -454,6 +460,7 @@ struct Tag {
   std::optional<std::string> SwiftImportAs;
   std::optional<std::string> SwiftRetainOp;
   std::optional<std::string> SwiftReleaseOp;
+  std::optional<std::string> SwiftDefaultOwnership;
   std::optional<std::string> SwiftConformance;
   std::optional<EnumExtensibilityKind> EnumExtensibility;
   std::optional<bool> FlagEnum;
@@ -494,6 +501,7 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("SwiftImportAs", T.SwiftImportAs);
     IO.mapOptional("SwiftReleaseOp", T.SwiftReleaseOp);
     IO.mapOptional("SwiftRetainOp", T.SwiftRetainOp);
+    IO.mapOptional("SwiftDefaultOwnership", T.SwiftDefaultOwnership);
     IO.mapOptional("SwiftConformsTo", T.SwiftConformance);
     IO.mapOptional("EnumExtensibility", T.EnumExtensibility);
     IO.mapOptional("FlagEnum", T.FlagEnum);
@@ -825,6 +833,7 @@ public:
       emitError("'FactoryAsInit' is no longer valid; use 'SwiftName' instead");
 
     MI.ResultType = std::string(M.ResultType);
+    MI.SwiftReturnOwnership = std::string(M.SwiftReturnOwnership);
 
     // Translate parameter information.
     convertParams(M.Params, MI, MI.Self);
@@ -950,6 +959,7 @@ public:
     convertNullability(Function.Nullability, Function.NullabilityOfRet, FI,
                        Function.Name);
     FI.ResultType = std::string(Function.ResultType);
+    FI.SwiftReturnOwnership = std::string(Function.SwiftReturnOwnership);
     FI.setRetainCountConvention(Function.RetainCountConvention);
   }
 
@@ -982,6 +992,8 @@ public:
       TI.SwiftReleaseOp = T.SwiftReleaseOp;
     if (T.SwiftConformance)
       TI.SwiftConformance = T.SwiftConformance;
+    if (T.SwiftDefaultOwnership)
+      TI.SwiftDefaultOwnership = T.SwiftDefaultOwnership;
 
     if (T.SwiftCopyable)
       TI.setSwiftCopyable(T.SwiftCopyable);

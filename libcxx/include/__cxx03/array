@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_ARRAY
-#define _LIBCPP_ARRAY
+#ifndef _LIBCPP___CXX03_ARRAY
+#define _LIBCPP___CXX03_ARRAY
 
 /*
     array synopsis
@@ -114,7 +114,6 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__cxx03/__algorithm/equal.h>
 #include <__cxx03/__algorithm/fill_n.h>
 #include <__cxx03/__algorithm/lexicographical_compare.h>
-#include <__cxx03/__algorithm/lexicographical_compare_three_way.h>
 #include <__cxx03/__algorithm/swap_ranges.h>
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
@@ -143,14 +142,6 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 
 // [iterator.range]
 #include <__cxx03/__iterator/access.h>
-#include <__cxx03/__iterator/data.h>
-#include <__cxx03/__iterator/empty.h>
-#include <__cxx03/__iterator/reverse_access.h>
-#include <__cxx03/__iterator/size.h>
-
-// [array.syn]
-#include <__cxx03/compare>
-#include <__cxx03/initializer_list>
 
 // [tuple.helper]
 #include <__cxx03/__tuple/tuple_element.h>
@@ -379,18 +370,11 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0> {
   }
 };
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp, class... _Args, class = enable_if_t<__all<_IsSame<_Tp, _Args>::value...>::value> >
-array(_Tp, _Args...) -> array<_Tp, 1 + sizeof...(_Args)>;
-#endif
-
 template <class _Tp, size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 operator==(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y) {
   return std::equal(__x.begin(), __x.end(), __y.begin());
 }
-
-#if _LIBCPP_STD_VER <= 17
 
 template <class _Tp, size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y) {
@@ -416,16 +400,6 @@ template <class _Tp, size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI bool operator>=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y) {
   return !(__x < __y);
 }
-
-#else // _LIBCPP_STD_VER <= 17
-
-template <class _Tp, size_t _Size>
-_LIBCPP_HIDE_FROM_ABI constexpr __synth_three_way_result<_Tp>
-operator<=>(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y) {
-  return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
-}
-
-#endif // _LIBCPP_STD_VER <= 17
 
 template <class _Tp, size_t _Size, __enable_if_t<_Size == 0 || __is_swappable_v<_Tp>, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(array<_Tp, _Size>& __x, array<_Tp, _Size>& __y)
@@ -466,49 +440,16 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp&& get(const
   return std::move(__a.__elems_[_Ip]);
 }
 
-#if _LIBCPP_STD_VER >= 20
-
-template <typename _Tp, size_t _Size, size_t... _Index>
-_LIBCPP_HIDE_FROM_ABI constexpr array<remove_cv_t<_Tp>, _Size>
-__to_array_lvalue_impl(_Tp (&__arr)[_Size], index_sequence<_Index...>) {
-  return {{__arr[_Index]...}};
-}
-
-template <typename _Tp, size_t _Size, size_t... _Index>
-_LIBCPP_HIDE_FROM_ABI constexpr array<remove_cv_t<_Tp>, _Size>
-__to_array_rvalue_impl(_Tp (&&__arr)[_Size], index_sequence<_Index...>) {
-  return {{std::move(__arr[_Index])...}};
-}
-
-template <typename _Tp, size_t _Size>
-_LIBCPP_HIDE_FROM_ABI constexpr array<remove_cv_t<_Tp>, _Size>
-to_array(_Tp (&__arr)[_Size]) noexcept(is_nothrow_constructible_v<_Tp, _Tp&>) {
-  static_assert(!is_array_v<_Tp>, "[array.creation]/1: to_array does not accept multidimensional arrays.");
-  static_assert(is_constructible_v<_Tp, _Tp&>, "[array.creation]/1: to_array requires copy constructible elements.");
-  return std::__to_array_lvalue_impl(__arr, make_index_sequence<_Size>());
-}
-
-template <typename _Tp, size_t _Size>
-_LIBCPP_HIDE_FROM_ABI constexpr array<remove_cv_t<_Tp>, _Size>
-to_array(_Tp (&&__arr)[_Size]) noexcept(is_nothrow_move_constructible_v<_Tp>) {
-  static_assert(!is_array_v<_Tp>, "[array.creation]/4: to_array does not accept multidimensional arrays.");
-  static_assert(is_move_constructible_v<_Tp>, "[array.creation]/4: to_array requires move constructible elements.");
-  return std::__to_array_rvalue_impl(std::move(__arr), make_index_sequence<_Size>());
-}
-
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/algorithm>
-#  include <__cxx03/concepts>
 #  include <__cxx03/cstdlib>
 #  include <__cxx03/iterator>
 #  include <__cxx03/type_traits>
 #  include <__cxx03/utility>
 #endif
 
-#endif // _LIBCPP_ARRAY
+#endif // _LIBCPP___CXX03_ARRAY

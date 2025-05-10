@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STRING_CHAR_TRAITS_H
-#define _LIBCPP___STRING_CHAR_TRAITS_H
+#ifndef _LIBCPP___CXX03___STRING_CHAR_TRAITS_H
+#define _LIBCPP___CXX03___STRING_CHAR_TRAITS_H
 
 #include <__cxx03/__algorithm/fill_n.h>
 #include <__cxx03/__algorithm/find.h>
@@ -15,7 +15,6 @@
 #include <__cxx03/__algorithm/find_first_of.h>
 #include <__cxx03/__algorithm/min.h>
 #include <__cxx03/__assert>
-#include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/hash.h>
 #include <__cxx03/__functional/identity.h>
@@ -83,9 +82,6 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char> {
   using off_type   = streamoff;
   using pos_type   = streampos;
   using state_type = mbstate_t;
-#if _LIBCPP_STD_VER >= 20
-  using comparison_category = strong_ordering;
-#endif
 
   static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 void
   assign(char_type& __c1, const char_type& __c2) _NOEXCEPT {
@@ -176,9 +172,6 @@ struct __char_traits_base {
   using int_type   = _IntT;
   using off_type   = streamoff;
   using state_type = mbstate_t;
-#if _LIBCPP_STD_VER >= 20
-  using comparison_category = strong_ordering;
-#endif
 
   // There are different aliases for the different char types, but they are all aliases to this type
   using pos_type = fpos<mbstate_t>;
@@ -540,4 +533,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___STRING_CHAR_TRAITS_H
+#endif // _LIBCPP___CXX03___STRING_CHAR_TRAITS_H

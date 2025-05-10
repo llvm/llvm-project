@@ -19,6 +19,8 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/TargetInfo.h"
 
+#include <variant>
+
 using namespace clang;
 using namespace clang::interp;
 
@@ -33,8 +35,9 @@ using namespace clang::interp;
 //    bytes to/from the buffer.
 
 /// Used to iterate over pointer fields.
-using DataFunc = llvm::function_ref<bool(const Pointer &P, PrimType Ty,
-                                         Bits BitOffset, bool PackedBools)>;
+using DataFunc =
+    llvm::function_ref<bool(const Pointer &P, PrimType Ty, Bits BitOffset,
+                            Bits FullBitWidth, bool PackedBools)>;
 
 #define BITCAST_TYPE_SWITCH(Expr, B)                                           \
   do {                                                                         \
@@ -72,11 +75,6 @@ using DataFunc = llvm::function_ref<bool(const Pointer &P, PrimType Ty,
     }                                                                          \
   } while (0)
 
-static void swapBytes(std::byte *M, size_t N) {
-  for (size_t I = 0; I != (N / 2); ++I)
-    std::swap(M[I], M[N - 1 - I]);
-}
-
 /// We use this to recursively iterate over all fields and elements of a pointer
 /// and extract relevant data for a bitcast.
 static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
@@ -85,21 +83,26 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
   assert(FieldDesc);
 
   // Primitives.
-  if (FieldDesc->isPrimitive())
-    return F(P, FieldDesc->getPrimType(), Offset, /*PackedBools=*/false);
+  if (FieldDesc->isPrimitive()) {
+    Bits FullBitWidth =
+        Bits(Ctx.getASTContext().getTypeSize(FieldDesc->getType()));
+    return F(P, FieldDesc->getPrimType(), Offset, FullBitWidth,
+             /*PackedBools=*/false);
+  }
 
   // Primitive arrays.
   if (FieldDesc->isPrimitiveArray()) {
     QualType ElemType = FieldDesc->getElemQualType();
-    size_t ElemSizeInBits = Ctx.getASTContext().getTypeSize(ElemType);
+    Bits ElemSize = Bits(Ctx.getASTContext().getTypeSize(ElemType));
     PrimType ElemT = *Ctx.classify(ElemType);
     // Special case, since the bools here are packed.
-    bool PackedBools = FieldDesc->getType()->isExtVectorBoolType();
+    bool PackedBools =
+        FieldDesc->getType()->isPackedVectorBoolType(Ctx.getASTContext());
     unsigned NumElems = FieldDesc->getNumElems();
     bool Ok = true;
     for (unsigned I = P.getIndex(); I != NumElems; ++I) {
-      Ok = Ok && F(P.atIndex(I), ElemT, Offset, PackedBools);
-      Offset += PackedBools ? 1 : ElemSizeInBits;
+      Ok = Ok && F(P.atIndex(I), ElemT, Offset, ElemSize, PackedBools);
+      Offset += PackedBools ? Bits(1) : ElemSize;
       if (Offset >= BitsToRead)
         break;
     }
@@ -109,10 +112,10 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
   // Composite arrays.
   if (FieldDesc->isCompositeArray()) {
     QualType ElemType = FieldDesc->getElemQualType();
-    size_t ElemSizeInBits = Ctx.getASTContext().getTypeSize(ElemType);
-    for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
+    Bits ElemSize = Bits(Ctx.getASTContext().getTypeSize(ElemType));
+    for (unsigned I = P.getIndex(); I != FieldDesc->getNumElems(); ++I) {
       enumerateData(P.atIndex(I).narrow(), Ctx, Offset, BitsToRead, F);
-      Offset += ElemSizeInBits;
+      Offset += ElemSize;
       if (Offset >= BitsToRead)
         break;
     }
@@ -222,27 +225,56 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
                         IsToType))
     return false;
 
+  if (const auto *VT = T->getAs<VectorType>()) {
+    const ASTContext &ASTCtx = S.getASTContext();
+    QualType EltTy = VT->getElementType();
+    unsigned NElts = VT->getNumElements();
+    unsigned EltSize =
+        VT->isPackedVectorBoolType(ASTCtx) ? 1 : ASTCtx.getTypeSize(EltTy);
+
+    if ((NElts * EltSize) % ASTCtx.getCharWidth() != 0) {
+      // The vector's size in bits is not a multiple of the target's byte size,
+      // so its layout is unspecified. For now, we'll simply treat these cases
+      // as unsupported (this should only be possible with OpenCL bool vectors
+      // whose element count isn't a multiple of the byte size).
+      const Expr *E = S.Current->getExpr(OpPC);
+      S.FFDiag(E, diag::note_constexpr_bit_cast_invalid_vector)
+          << QualType(VT, 0) << EltSize << NElts << ASTCtx.getCharWidth();
+      return false;
+    }
+
+    if (EltTy->isRealFloatingType() &&
+        &ASTCtx.getFloatTypeSemantics(EltTy) == &APFloat::x87DoubleExtended()) {
+      // The layout for x86_fp80 vectors seems to be handled very inconsistently
+      // by both clang and LLVM, so for now we won't allow bit_casts involving
+      // it in a constexpr context.
+      const Expr *E = S.Current->getExpr(OpPC);
+      S.FFDiag(E, diag::note_constexpr_bit_cast_unsupported_type) << EltTy;
+      return false;
+    }
+  }
+
   return true;
 }
 
-static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
-                                BitcastBuffer &Buffer, bool ReturnOnUninit) {
+bool clang::interp::readPointerToBuffer(const Context &Ctx,
+                                        const Pointer &FromPtr,
+                                        BitcastBuffer &Buffer,
+                                        bool ReturnOnUninit) {
   const ASTContext &ASTCtx = Ctx.getASTContext();
   Endian TargetEndianness =
       ASTCtx.getTargetInfo().isLittleEndian() ? Endian::Little : Endian::Big;
 
   return enumeratePointerFields(
       FromPtr, Ctx, Buffer.size(),
-      [&](const Pointer &P, PrimType T, Bits BitOffset,
+      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
           bool PackedBools) -> bool {
-        CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(P.getType());
-        Bits BitWidth = Bits(ASTCtx.toBits(ObjectReprChars));
-        Bits FullBitWidth = BitWidth;
+        Bits BitWidth = FullBitWidth;
 
-        if (const FieldDecl *FD = P.getField(); FD && FD->isBitField()) {
-          BitWidth = Bits(std::min(FD->getBitWidthValue(ASTCtx),
+        if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
+          BitWidth = Bits(std::min(FD->getBitWidthValue(),
                                    (unsigned)FullBitWidth.getQuantity()));
-        } else if (T == PT_Bool && PackedBools)
+        else if (T == PT_Bool && PackedBools)
           BitWidth = Bits(1);
 
         if (BitWidth.isZero())
@@ -261,8 +293,7 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
         }
 
         assert(P.isInitialized());
-        auto Buff =
-            std::make_unique<std::byte[]>(ObjectReprChars.getQuantity());
+        auto Buff = std::make_unique<std::byte[]>(FullBitWidth.roundToBytes());
         // Work around floating point types that contain unused padding bytes.
         // This is really just `long double` on x86, which is the only
         // fundamental type with padding bytes.
@@ -273,8 +304,8 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
           assert(NumBits.isFullByte());
           assert(NumBits.getQuantity() <= FullBitWidth.getQuantity());
           F.bitcastToMemory(Buff.get());
-          // Now, only (maybe) swap the actual size of the float, excluding the
-          // padding bits.
+          // Now, only (maybe) swap the actual size of the float, excluding
+          // the padding bits.
           if (llvm::sys::IsBigEndianHost)
             swapBytes(Buff.get(), NumBits.roundToBytes());
 
@@ -357,11 +388,9 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
       ASTCtx.getTargetInfo().isLittleEndian() ? Endian::Little : Endian::Big;
   bool Success = enumeratePointerFields(
       ToPtr, S.getContext(), Buffer.size(),
-      [&](const Pointer &P, PrimType T, Bits BitOffset,
+      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
           bool PackedBools) -> bool {
         QualType PtrType = P.getType();
-        CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(PtrType);
-        Bits FullBitWidth = Bits(ASTCtx.toBits(ObjectReprChars));
         if (T == PT_Float) {
           const auto &Semantics = ASTCtx.getFloatTypeSemantics(PtrType);
           Bits NumBits = Bits(llvm::APFloatBase::getSizeInBits(Semantics));
@@ -380,7 +409,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
 
         Bits BitWidth;
         if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
-          BitWidth = Bits(std::min(FD->getBitWidthValue(ASTCtx),
+          BitWidth = Bits(std::min(FD->getBitWidthValue(),
                                    (unsigned)FullBitWidth.getQuantity()));
         else if (T == PT_Bool && PackedBools)
           BitWidth = Bits(1);
@@ -421,4 +450,50 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
       });
 
   return Success;
+}
+
+using PrimTypeVariant =
+    std::variant<Pointer, FunctionPointer, MemberPointer, FixedPoint,
+                 Integral<8, false>, Integral<8, true>, Integral<16, false>,
+                 Integral<16, true>, Integral<32, false>, Integral<32, true>,
+                 Integral<64, false>, Integral<64, true>, IntegralAP<true>,
+                 IntegralAP<false>, Boolean, Floating>;
+
+// NB: This implementation isn't exactly ideal, but:
+//   1) We can't just do a bitcast here since we need to be able to
+//      copy pointers.
+//   2) This also needs to handle overlapping regions.
+//   3) We currently have no way of iterating over the fields of a pointer
+//      backwards.
+bool clang::interp::DoMemcpy(InterpState &S, CodePtr OpPC,
+                             const Pointer &SrcPtr, const Pointer &DestPtr,
+                             Bits Size) {
+  assert(SrcPtr.isBlockPointer());
+  assert(DestPtr.isBlockPointer());
+
+  llvm::SmallVector<PrimTypeVariant> Values;
+  enumeratePointerFields(SrcPtr, S.getContext(), Size,
+                         [&](const Pointer &P, PrimType T, Bits BitOffset,
+                             Bits FullBitWidth, bool PackedBools) -> bool {
+                           TYPE_SWITCH(T, { Values.push_back(P.deref<T>()); });
+                           return true;
+                         });
+
+  unsigned ValueIndex = 0;
+  enumeratePointerFields(DestPtr, S.getContext(), Size,
+                         [&](const Pointer &P, PrimType T, Bits BitOffset,
+                             Bits FullBitWidth, bool PackedBools) -> bool {
+                           TYPE_SWITCH(T, {
+                             P.deref<T>() = std::get<T>(Values[ValueIndex]);
+                             P.initialize();
+                           });
+
+                           ++ValueIndex;
+                           return true;
+                         });
+
+  // We should've read all the values into DestPtr.
+  assert(ValueIndex == Values.size());
+
+  return true;
 }

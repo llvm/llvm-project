@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir %t
-// RUN: clang-doc --format=html --output=%t --asset=%S/Inputs/test-assets --executor=standalone %s
+// RUN: clang-doc --format=html --output=%t --asset=%S/Inputs/test-assets --executor=standalone %s --base base_dir
 // RUN: FileCheck %s -input-file=%t/index.html -check-prefix=INDEX
 // RUN: FileCheck %s -input-file=%t/test.css -check-prefix=CSS
 // RUN: FileCheck %s -input-file=%t/test.js -check-prefix=JS

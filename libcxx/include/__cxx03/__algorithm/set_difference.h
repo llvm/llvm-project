@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SET_DIFFERENCE_H
-#define _LIBCPP___ALGORITHM_SET_DIFFERENCE_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_SET_DIFFERENCE_H
+#define _LIBCPP___CXX03___ALGORITHM_SET_DIFFERENCE_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -15,7 +15,6 @@
 #include <__cxx03/__algorithm/iterator_operations.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__type_traits/remove_cvref.h>
 #include <__cxx03/__utility/move.h>
@@ -76,4 +75,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_SET_DIFFERENCE_H
+#endif // _LIBCPP___CXX03___ALGORITHM_SET_DIFFERENCE_H

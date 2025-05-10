@@ -540,7 +540,7 @@ inline void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
 /// SplitBefore.  Returns the first insert point in the loop body, and the
 /// PHINode for the induction variable (i.e. "i" above).
 std::pair<Instruction*, Value*>
-SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore);
+SplitBlockAndInsertSimpleForLoop(Value *End, BasicBlock::iterator SplitBefore);
 
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EC elements.  To simplify porting legacy code, this defaults to
@@ -550,9 +550,9 @@ SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore);
 /// IRBuilder whose insert point is correctly set for instantiating the
 /// given index, and a value which is (at runtime) the index to access.
 /// This index *may* be a constant.
-void SplitBlockAndInsertForEachLane(ElementCount EC, Type *IndexTy,
-    Instruction *InsertBefore,
-    std::function<void(IRBuilderBase&, Value*)> Func);
+void SplitBlockAndInsertForEachLane(
+    ElementCount EC, Type *IndexTy, BasicBlock::iterator InsertBefore,
+    std::function<void(IRBuilderBase &, Value *)> Func);
 
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EVL effective length. EVL is assumed > 0. To simplify porting legacy
@@ -563,7 +563,7 @@ void SplitBlockAndInsertForEachLane(ElementCount EC, Type *IndexTy,
 /// the given index, and a value which is (at runtime) the index to access. This
 /// index *may* be a constant.
 void SplitBlockAndInsertForEachLane(
-    Value *End, Instruction *InsertBefore,
+    Value *End, BasicBlock::iterator InsertBefore,
     std::function<void(IRBuilderBase &, Value *)> Func);
 
 /// Check whether BB is the merge point of a if-region.
@@ -610,24 +610,6 @@ void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
 // br/brcond/unreachable/ret
 bool hasOnlySimpleTerminator(const Function &F);
 
-// Returns true if these basic blocks belong to a presplit coroutine and the
-// edge corresponds to the 'default' case in the switch statement in the
-// pattern:
-//
-// %0 = call i8 @llvm.coro.suspend(token none, i1 false)
-// switch i8 %0, label %suspend [i8 0, label %resume
-//                               i8 1, label %cleanup]
-//
-// i.e. the edge to the `%suspend` BB. This edge is special in that it will
-// be elided by coroutine lowering (coro-split), and the `%suspend` BB needs
-// to be kept as-is. It's not a real CFG edge - post-lowering, it will end
-// up being a `ret`, and it must be thus lowerable to support symmetric
-// transfer. For example:
-//  - this edge is not a loop exit edge if encountered in a loop (and should
-//    be ignored)
-//  - must not be split for PGO instrumentation, for example.
-bool isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
-                                   const BasicBlock &Dest);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_BASICBLOCKUTILS_H

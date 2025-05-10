@@ -258,7 +258,7 @@ public:
       : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind), Size(Val.size()) {
     assert(Size > 0);
     ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
-    std::uninitialized_copy(Val.begin(), Val.end(), TrailingCR);
+    llvm::uninitialized_copy(Val, TrailingCR);
   }
 
   ~ConstantRangeListAttributeImpl() {
@@ -346,6 +346,7 @@ public:
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
   MemoryEffects getMemoryEffects() const;
+  CaptureInfo getCaptureInfo() const;
   FPClassTest getNoFPClass() const;
   std::string getAsString(bool InAttrGrp) const;
   Type *getAttributeType(Attribute::AttrKind Kind) const;

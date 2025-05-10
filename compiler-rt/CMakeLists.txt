@@ -221,7 +221,7 @@ macro(handle_default_cxx_lib var)
     set(${var}_LIBNAME "${CMAKE_MATCH_1}")
     set(${var}_SYSTEM 1)
   elseif (${var} STREQUAL "default")
-    if (APPLE OR CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+    if (APPLE OR CMAKE_SYSTEM_NAME MATCHES "FreeBSD" OR CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
       set(${var}_LIBNAME "libc++")
       set(${var}_SYSTEM 1)
     elseif (FUCHSIA)
@@ -569,6 +569,10 @@ append_list_if(COMPILER_RT_HAS_LIBC c SANITIZER_COMMON_LINK_LIBS)
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
   list(APPEND SANITIZER_COMMON_LINK_LIBS zircon)
 endif()
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Haiku")
+  list(APPEND SANITIZER_COMMON_LINK_LIBS root)
+  list(APPEND SANITIZER_COMMON_LINK_LIBS bsd)
+endif()
 
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
   set(SANITIZER_NO_UNDEFINED_SYMBOLS_DEFAULT ON)
@@ -829,6 +833,13 @@ pythonize_bool(COMPILER_RT_TEST_USE_LLD)
 
 option(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER "Build Compiler RT linked with in LLVM symbolizer" OFF)
 mark_as_advanced(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+
+option(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH "Disable searching for external symbolizer in $PATH" OFF)
+mark_as_advanced(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
+
+if (SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
+  add_compile_definitions(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
+endif()
 
 add_subdirectory(lib)
 

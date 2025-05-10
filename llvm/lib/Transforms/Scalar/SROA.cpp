@@ -43,6 +43,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -83,6 +84,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
+#include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -246,10 +248,11 @@ private:
   bool presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS);
   AllocaInst *rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P);
   bool splitAlloca(AllocaInst &AI, AllocaSlices &AS);
+  bool propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS);
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runOnAlloca(AllocaInst &AI);
   void clobberUse(Use &U);
   bool deleteDeadInstructions(SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
-  bool promoteAllocas(Function &F);
+  bool promoteAllocas();
 };
 
 } // end anonymous namespace
@@ -477,7 +480,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     // noted as slightly offset (in code) from the store. In practice this
     // should have little effect on the debugging experience due to the fact
     // that all the split stores should get the same line number.
-    NewAssign->moveBefore(DbgAssign);
+    NewAssign->moveBefore(DbgAssign->getIterator());
 
     NewAssign->setDebugLoc(DbgAssign->getDebugLoc());
     LLVM_DEBUG(dbgs() << "Created new assign: " << *NewAssign << "\n");
@@ -598,6 +601,7 @@ public:
   /// If this is true, the slices are never fully built and should be
   /// ignored.
   bool isEscaped() const { return PointerEscapingInstr; }
+  bool isEscapedReadOnly() const { return PointerEscapingInstrReadOnly; }
 
   /// Support for iterating over the slices.
   /// @{
@@ -680,6 +684,7 @@ private:
   /// store a pointer to that here and abort trying to form slices of the
   /// alloca. This will be null if the alloca slices are analyzed successfully.
   Instruction *PointerEscapingInstr;
+  Instruction *PointerEscapingInstrReadOnly;
 
   /// The slices of the alloca.
   ///
@@ -1109,8 +1114,10 @@ private:
     assert((!LI.isSimple() || LI.getType()->isSingleValueType()) &&
            "All simple FCA loads should have been pre-split");
 
+    // If there is a load with an unknown offset, we can still perform store
+    // to load forwarding for other known-offset loads.
     if (!IsOffsetKnown)
-      return PI.setAborted(&LI);
+      return PI.setEscapedReadOnly(&LI);
 
     TypeSize Size = DL.getTypeStoreSize(LI.getType());
     if (Size.isScalable())
@@ -1390,6 +1397,19 @@ private:
 
   /// Disable SROA entirely if there are unhandled users of the alloca.
   void visitInstruction(Instruction &I) { PI.setAborted(&I); }
+
+  void visitCallBase(CallBase &CB) {
+    // If the call operand is read-only and only does a read-only or address
+    // capture, then we mark it as EscapedReadOnly.
+    if (CB.isDataOperand(U) &&
+        !capturesFullProvenance(CB.getCaptureInfo(U->getOperandNo())) &&
+        CB.onlyReadsMemory(U->getOperandNo())) {
+      PI.setEscapedReadOnly(&CB);
+      return;
+    }
+
+    Base::visitCallBase(CB);
+  }
 };
 
 AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
@@ -1397,7 +1417,7 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       AI(AI),
 #endif
-      PointerEscapingInstr(nullptr) {
+      PointerEscapingInstr(nullptr), PointerEscapingInstrReadOnly(nullptr) {
   SliceBuilder PB(DL, AI, *this);
   SliceBuilder::PtrInfo PtrI = PB.visitPtr(AI);
   if (PtrI.isEscaped() || PtrI.isAborted()) {
@@ -1408,6 +1428,7 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
     assert(PointerEscapingInstr && "Did not track a bad instruction");
     return;
   }
+  PointerEscapingInstrReadOnly = PtrI.getEscapedReadOnlyInst();
 
   llvm::erase_if(Slices, [](const Slice &S) { return S.isDead(); });
 
@@ -1444,6 +1465,9 @@ void AllocaSlices::print(raw_ostream &OS) const {
        << "  " << *PointerEscapingInstr << "\n";
     return;
   }
+
+  if (PointerEscapingInstrReadOnly)
+    OS << "Escapes into ReadOnly: " << *PointerEscapingInstrReadOnly << "\n";
 
   OS << "Slices of alloca: " << AI << "\n";
   for (const_iterator I = begin(), E = end(); I != E; ++I)
@@ -1821,7 +1845,7 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
       CondMemOp.dropUBImplyingAttrsAndMetadata();
       ++NumLoadsSpeculated;
     }
-    CondMemOp.insertBefore(NewMemOpBB->getTerminator());
+    CondMemOp.insertBefore(NewMemOpBB->getTerminator()->getIterator());
     Value *Ptr = SI.getOperand(1 + SuccIdx);
     CondMemOp.setOperand(I.getPointerOperandIndex(), Ptr);
     if (isa<LoadInst>(I)) {
@@ -3854,7 +3878,7 @@ private:
       for (Instruction *I : FakeUses) {
         IRB.SetInsertPoint(I);
         for (auto *V : Components)
-          IRB.CreateIntrinsic(Intrinsic::fake_use, {}, {V});
+          IRB.CreateIntrinsic(Intrinsic::fake_use, {V});
         I->eraseFromParent();
       }
     }
@@ -4966,8 +4990,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
       // If we have either PHIs or Selects to speculate, add them to those
       // worklists and re-queue the new alloca so that we promote in on the
       // next iteration.
-      for (PHINode *PHIUser : PHIUsers)
-        SpeculatablePHIs.insert(PHIUser);
+      SpeculatablePHIs.insert_range(PHIUsers);
       SelectsToRewrite.reserve(SelectsToRewrite.size() +
                                NewSelectsToRewrite.size());
       for (auto &&KV : llvm::make_range(
@@ -5132,7 +5155,7 @@ insertNewDbgInst(DIBuilder &DIB, DbgDeclareInst *Orig, AllocaInst *NewAddr,
     return;
 
   DIB.insertDeclare(NewAddr, Orig->getVariable(), NewAddrExpr,
-                    Orig->getDebugLoc(), BeforeInst);
+                    Orig->getDebugLoc(), BeforeInst->getIterator());
 }
 
 /// Insert a new dbg.assign.
@@ -5454,6 +5477,99 @@ void SROA::clobberUse(Use &U) {
     }
 }
 
+/// A basic LoadAndStorePromoter that does not remove store nodes.
+class BasicLoadAndStorePromoter : public LoadAndStorePromoter {
+public:
+  BasicLoadAndStorePromoter(ArrayRef<const Instruction *> Insts, SSAUpdater &S,
+                            Type *ZeroType)
+      : LoadAndStorePromoter(Insts, S), ZeroType(ZeroType) {}
+  bool shouldDelete(Instruction *I) const override {
+    return !isa<StoreInst>(I) && !isa<AllocaInst>(I);
+  }
+
+  Value *getValueToUseForAlloca(Instruction *I) const override {
+    return UndefValue::get(ZeroType);
+  }
+
+private:
+  Type *ZeroType;
+};
+
+bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
+  // Look through each "partition", looking for slices with the same start/end
+  // that do not overlap with any before them. The slices are sorted by
+  // increasing beginOffset. We don't use AS.partitions(), as it will use a more
+  // sophisticated algorithm that takes splittable slices into account.
+  LLVM_DEBUG(dbgs() << "Attempting to propagate values on " << AI << "\n");
+  bool AllSameAndValid = true;
+  Type *PartitionType = nullptr;
+  SmallVector<Instruction *> Insts;
+  uint64_t BeginOffset = 0;
+  uint64_t EndOffset = 0;
+
+  auto Flush = [&]() {
+    if (AllSameAndValid && !Insts.empty()) {
+      LLVM_DEBUG(dbgs() << "Propagate values on slice [" << BeginOffset << ", "
+                        << EndOffset << ")\n");
+      SmallVector<PHINode *, 4> NewPHIs;
+      SSAUpdater SSA(&NewPHIs);
+      Insts.push_back(&AI);
+      BasicLoadAndStorePromoter Promoter(Insts, SSA, PartitionType);
+      Promoter.run(Insts);
+    }
+    AllSameAndValid = true;
+    PartitionType = nullptr;
+    Insts.clear();
+  };
+
+  for (Slice &S : AS) {
+    auto *User = cast<Instruction>(S.getUse()->getUser());
+    if (isAssumeLikeIntrinsic(User)) {
+      LLVM_DEBUG({
+        dbgs() << "Ignoring slice: ";
+        AS.print(dbgs(), &S);
+      });
+      continue;
+    }
+    if (S.beginOffset() >= EndOffset) {
+      Flush();
+      BeginOffset = S.beginOffset();
+      EndOffset = S.endOffset();
+    } else if (S.beginOffset() != BeginOffset || S.endOffset() != EndOffset) {
+      if (AllSameAndValid) {
+        LLVM_DEBUG({
+          dbgs() << "Slice does not match range [" << BeginOffset << ", "
+                 << EndOffset << ")";
+          AS.print(dbgs(), &S);
+        });
+        AllSameAndValid = false;
+      }
+      EndOffset = std::max(EndOffset, S.endOffset());
+      continue;
+    }
+
+    if (auto *LI = dyn_cast<LoadInst>(User)) {
+      Type *UserTy = LI->getType();
+      // LoadAndStorePromoter requires all the types to be the same.
+      if (!LI->isSimple() || (PartitionType && UserTy != PartitionType))
+        AllSameAndValid = false;
+      PartitionType = UserTy;
+      Insts.push_back(User);
+    } else if (auto *SI = dyn_cast<StoreInst>(User)) {
+      Type *UserTy = SI->getValueOperand()->getType();
+      if (!SI->isSimple() || (PartitionType && UserTy != PartitionType))
+        AllSameAndValid = false;
+      PartitionType = UserTy;
+      Insts.push_back(User);
+    } else {
+      AllSameAndValid = false;
+    }
+  }
+
+  Flush();
+  return true;
+}
+
 /// Analyze an alloca for SROA.
 ///
 /// This analyzes the alloca to ensure we can reason about it, builds
@@ -5493,6 +5609,11 @@ SROA::runOnAlloca(AllocaInst &AI) {
   LLVM_DEBUG(AS.print(dbgs()));
   if (AS.isEscaped())
     return {Changed, CFGChanged};
+
+  if (AS.isEscapedReadOnly()) {
+    Changed |= propagateStoredValuesToLoads(AI, AS);
+    return {Changed, CFGChanged};
+  }
 
   // Delete all the dead users of this alloca before splitting and rewriting it.
   for (Instruction *DeadUser : AS.getDeadUsers()) {
@@ -5584,7 +5705,7 @@ bool SROA::deleteDeadInstructions(
 /// This attempts to promote whatever allocas have been identified as viable in
 /// the PromotableAllocas list. If that list is empty, there is nothing to do.
 /// This function returns whether any promotion occurred.
-bool SROA::promoteAllocas(Function &F) {
+bool SROA::promoteAllocas() {
   if (PromotableAllocas.empty())
     return false;
 
@@ -5641,7 +5762,7 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
       }
     }
 
-    Changed |= promoteAllocas(F);
+    Changed |= promoteAllocas();
 
     Worklist = PostPromotionWorklist;
     PostPromotionWorklist.clear();

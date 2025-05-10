@@ -64,7 +64,7 @@ public:
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     Status &&error);
 
-  std::optional<uint64_t> GetByteSize() override;
+  llvm::Expected<uint64_t> GetByteSize() override;
 
   lldb::ValueType GetValueType() const override;
 

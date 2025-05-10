@@ -9,6 +9,7 @@
 #include "GPUOpsLowering.h"
 
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
+#include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -18,6 +19,59 @@
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
+
+LLVM::LLVMFuncOp mlir::getOrDefineFunction(gpu::GPUModuleOp moduleOp,
+                                           Location loc, OpBuilder &b,
+                                           StringRef name,
+                                           LLVM::LLVMFunctionType type) {
+  LLVM::LLVMFuncOp ret;
+  if (!(ret = moduleOp.template lookupSymbol<LLVM::LLVMFuncOp>(name))) {
+    OpBuilder::InsertionGuard guard(b);
+    b.setInsertionPointToStart(moduleOp.getBody());
+    ret = b.create<LLVM::LLVMFuncOp>(loc, name, type, LLVM::Linkage::External);
+  }
+  return ret;
+}
+
+static SmallString<16> getUniqueSymbolName(gpu::GPUModuleOp moduleOp,
+                                           StringRef prefix) {
+  // Get a unique global name.
+  unsigned stringNumber = 0;
+  SmallString<16> stringConstName;
+  do {
+    stringConstName.clear();
+    (prefix + Twine(stringNumber++)).toStringRef(stringConstName);
+  } while (moduleOp.lookupSymbol(stringConstName));
+  return stringConstName;
+}
+
+LLVM::GlobalOp
+mlir::getOrCreateStringConstant(OpBuilder &b, Location loc,
+                                gpu::GPUModuleOp moduleOp, Type llvmI8,
+                                StringRef namePrefix, StringRef str,
+                                uint64_t alignment, unsigned addrSpace) {
+  llvm::SmallString<20> nullTermStr(str);
+  nullTermStr.push_back('\0'); // Null terminate for C
+  auto globalType =
+      LLVM::LLVMArrayType::get(llvmI8, nullTermStr.size_in_bytes());
+  StringAttr attr = b.getStringAttr(nullTermStr);
+
+  // Try to find existing global.
+  for (auto globalOp : moduleOp.getOps<LLVM::GlobalOp>())
+    if (globalOp.getGlobalType() == globalType && globalOp.getConstant() &&
+        globalOp.getValueAttr() == attr &&
+        globalOp.getAlignment().value_or(0) == alignment &&
+        globalOp.getAddrSpace() == addrSpace)
+      return globalOp;
+
+  // Not found: create new global.
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleOp.getBody());
+  SmallString<16> name = getUniqueSymbolName(moduleOp, namePrefix);
+  return b.create<LLVM::GlobalOp>(loc, globalType,
+                                  /*isConstant=*/true, LLVM::Linkage::Internal,
+                                  name, attr, alignment, addrSpace);
+}
 
 LogicalResult
 GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
@@ -71,8 +125,12 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     // Perform signature modification
     rewriter.modifyOpInPlace(
         gpuFuncOp, [gpuFuncOp, &argIndices, &argTypes, &argAttrs, &argLocs]() {
-          static_cast<FunctionOpInterface>(gpuFuncOp).insertArguments(
-              argIndices, argTypes, argAttrs, argLocs);
+          LogicalResult inserted =
+              static_cast<FunctionOpInterface>(gpuFuncOp).insertArguments(
+                  argIndices, argTypes, argAttrs, argLocs);
+          (void)inserted;
+          assert(succeeded(inserted) &&
+                 "expected GPU funcs to support inserting any argument");
         });
   } else {
     workgroupBuffers.reserve(gpuFuncOp.getNumWorkgroupAttributions());
@@ -220,7 +278,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         // and canonicalize that away later.
         Value attribution = gpuFuncOp.getWorkgroupAttributions()[idx];
         auto type = cast<MemRefType>(attribution.getType());
-        auto descr = MemRefDescriptor::fromStaticShape(
+        Value descr = MemRefDescriptor::fromStaticShape(
             rewriter, loc, *getTypeConverter(), type, memory);
         signatureConversion.remapInput(numProperArguments + idx, descr);
       }
@@ -249,7 +307,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         alignment = alignAttr.getInt();
       Value allocated = rewriter.create<LLVM::AllocaOp>(
           gpuFuncOp.getLoc(), ptrType, elementType, numElements, alignment);
-      auto descr = MemRefDescriptor::fromStaticShape(
+      Value descr = MemRefDescriptor::fromStaticShape(
           rewriter, loc, *getTypeConverter(), type, allocated);
       signatureConversion.remapInput(
           numProperArguments + numWorkgroupAttributions + idx, descr);
@@ -328,61 +386,6 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   return success();
 }
 
-static SmallString<16> getUniqueFormatGlobalName(gpu::GPUModuleOp moduleOp) {
-  const char formatStringPrefix[] = "printfFormat_";
-  // Get a unique global name.
-  unsigned stringNumber = 0;
-  SmallString<16> stringConstName;
-  do {
-    stringConstName.clear();
-    (formatStringPrefix + Twine(stringNumber++)).toStringRef(stringConstName);
-  } while (moduleOp.lookupSymbol(stringConstName));
-  return stringConstName;
-}
-
-/// Create an global that contains the given format string. If a global with
-/// the same format string exists already in the module, return that global.
-static LLVM::GlobalOp getOrCreateFormatStringConstant(
-    OpBuilder &b, Location loc, gpu::GPUModuleOp moduleOp, Type llvmI8,
-    StringRef str, uint64_t alignment = 0, unsigned addrSpace = 0) {
-  llvm::SmallString<20> formatString(str);
-  formatString.push_back('\0'); // Null terminate for C
-  auto globalType =
-      LLVM::LLVMArrayType::get(llvmI8, formatString.size_in_bytes());
-  StringAttr attr = b.getStringAttr(formatString);
-
-  // Try to find existing global.
-  for (auto globalOp : moduleOp.getOps<LLVM::GlobalOp>())
-    if (globalOp.getGlobalType() == globalType && globalOp.getConstant() &&
-        globalOp.getValueAttr() == attr &&
-        globalOp.getAlignment().value_or(0) == alignment &&
-        globalOp.getAddrSpace() == addrSpace)
-      return globalOp;
-
-  // Not found: create new global.
-  OpBuilder::InsertionGuard guard(b);
-  b.setInsertionPointToStart(moduleOp.getBody());
-  SmallString<16> name = getUniqueFormatGlobalName(moduleOp);
-  return b.create<LLVM::GlobalOp>(loc, globalType,
-                                  /*isConstant=*/true, LLVM::Linkage::Internal,
-                                  name, attr, alignment, addrSpace);
-}
-
-template <typename T>
-static LLVM::LLVMFuncOp getOrDefineFunction(T &moduleOp, const Location loc,
-                                            ConversionPatternRewriter &rewriter,
-                                            StringRef name,
-                                            LLVM::LLVMFunctionType type) {
-  LLVM::LLVMFuncOp ret;
-  if (!(ret = moduleOp.template lookupSymbol<LLVM::LLVMFuncOp>(name))) {
-    ConversionPatternRewriter::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(moduleOp.getBody());
-    ret = rewriter.create<LLVM::LLVMFuncOp>(loc, name, type,
-                                            LLVM::Linkage::External);
-  }
-  return ret;
-}
-
 LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
     gpu::PrintfOp gpuPrintfOp, gpu::PrintfOpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
@@ -420,8 +423,8 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
   Value printfDesc = printfBeginCall.getResult();
 
   // Create the global op or find an existing one.
-  LLVM::GlobalOp global = getOrCreateFormatStringConstant(
-      rewriter, loc, moduleOp, llvmI8, adaptor.getFormat());
+  LLVM::GlobalOp global = getOrCreateStringConstant(
+      rewriter, loc, moduleOp, llvmI8, "printfFormat_", adaptor.getFormat());
 
   // Get a pointer to the format string's first element and pass it to printf()
   Value globalPtr = rewriter.create<LLVM::AddressOfOp>(
@@ -502,9 +505,9 @@ LogicalResult GPUPrintfOpToLLVMCallLowering::matchAndRewrite(
       getOrDefineFunction(moduleOp, loc, rewriter, "printf", printfType);
 
   // Create the global op or find an existing one.
-  LLVM::GlobalOp global = getOrCreateFormatStringConstant(
-      rewriter, loc, moduleOp, llvmI8, adaptor.getFormat(), /*alignment=*/0,
-      addressSpace);
+  LLVM::GlobalOp global = getOrCreateStringConstant(
+      rewriter, loc, moduleOp, llvmI8, "printfFormat_", adaptor.getFormat(),
+      /*alignment=*/0, addressSpace);
 
   // Get a pointer to the format string's first element
   Value globalPtr = rewriter.create<LLVM::AddressOfOp>(
@@ -546,8 +549,8 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
       getOrDefineFunction(moduleOp, loc, rewriter, "vprintf", vprintfType);
 
   // Create the global op or find an existing one.
-  LLVM::GlobalOp global = getOrCreateFormatStringConstant(
-      rewriter, loc, moduleOp, llvmI8, adaptor.getFormat());
+  LLVM::GlobalOp global = getOrCreateStringConstant(
+      rewriter, loc, moduleOp, llvmI8, "printfFormat_", adaptor.getFormat());
 
   // Get a pointer to the format string's first element
   Value globalPtr = rewriter.create<LLVM::AddressOfOp>(loc, global);
@@ -588,24 +591,17 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
   return success();
 }
 
-/// Unrolls op if it's operating on vectors.
-LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
-                                      ConversionPatternRewriter &rewriter,
-                                      const LLVMTypeConverter &converter) {
+/// Helper for impl::scalarizeVectorOp. Scalarizes vectors to elements.
+/// Used either directly (for ops on 1D vectors) or as the callback passed to
+/// detail::handleMultidimensionalVectors (for ops on higher-rank vectors).
+static Value scalarizeVectorOpHelper(Operation *op, ValueRange operands,
+                                     Type llvm1DVectorTy,
+                                     ConversionPatternRewriter &rewriter,
+                                     const LLVMTypeConverter &converter) {
   TypeRange operandTypes(operands);
-  if (llvm::none_of(operandTypes, llvm::IsaPred<VectorType>)) {
-    return rewriter.notifyMatchFailure(op, "expected vector operand");
-  }
-  if (op->getNumRegions() != 0 || op->getNumSuccessors() != 0)
-    return rewriter.notifyMatchFailure(op, "expected no region/successor");
-  if (op->getNumResults() != 1)
-    return rewriter.notifyMatchFailure(op, "expected single result");
-  VectorType vectorType = dyn_cast<VectorType>(op->getResult(0).getType());
-  if (!vectorType)
-    return rewriter.notifyMatchFailure(op, "expected vector result");
-
+  VectorType vectorType = cast<VectorType>(llvm1DVectorTy);
   Location loc = op->getLoc();
-  Value result = rewriter.create<LLVM::UndefOp>(loc, vectorType);
+  Value result = rewriter.create<LLVM::PoisonOp>(loc, vectorType);
   Type indexType = converter.convertType(rewriter.getIndexType());
   StringAttr name = op->getName().getIdentifier();
   Type elementType = vectorType.getElementType();
@@ -623,9 +619,33 @@ LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
     result = rewriter.create<LLVM::InsertElementOp>(
         loc, result, scalarOp->getResult(0), index);
   }
+  return result;
+}
 
-  rewriter.replaceOp(op, result);
-  return success();
+/// Unrolls op to array/vector elements.
+LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
+                                      ConversionPatternRewriter &rewriter,
+                                      const LLVMTypeConverter &converter) {
+  TypeRange operandTypes(operands);
+  if (llvm::any_of(operandTypes, llvm::IsaPred<VectorType>)) {
+    VectorType vectorType =
+        cast<VectorType>(converter.convertType(op->getResultTypes()[0]));
+    rewriter.replaceOp(op, scalarizeVectorOpHelper(op, operands, vectorType,
+                                                   rewriter, converter));
+    return success();
+  }
+
+  if (llvm::any_of(operandTypes, llvm::IsaPred<LLVM::LLVMArrayType>)) {
+    return LLVM::detail::handleMultidimensionalVectors(
+        op, operands, converter,
+        [&](Type llvm1DVectorTy, ValueRange operands) -> Value {
+          return scalarizeVectorOpHelper(op, operands, llvm1DVectorTy, rewriter,
+                                         converter);
+        },
+        rewriter);
+  }
+
+  return rewriter.notifyMatchFailure(op, "no llvm.array or vector to unroll");
 }
 
 static IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
@@ -773,7 +793,7 @@ LogicalResult GPUReturnOpLowering::matchAndRewrite(
     return rewriter.notifyMatchFailure(op, "could not convert result types");
   }
 
-  Value packed = rewriter.create<LLVM::UndefOp>(loc, packedType);
+  Value packed = rewriter.create<LLVM::PoisonOp>(loc, packedType);
   for (auto [idx, operand] : llvm::enumerate(updatedOperands)) {
     packed = rewriter.create<LLVM::InsertValueOp>(loc, packed, operand, idx);
   }

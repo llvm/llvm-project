@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_SUBTRACT_WITH_CARRY_ENGINE_H
-#define _LIBCPP___RANDOM_SUBTRACT_WITH_CARRY_ENGINE_H
+#ifndef _LIBCPP___CXX03___RANDOM_SUBTRACT_WITH_CARRY_ENGINE_H
+#define _LIBCPP___CXX03___RANDOM_SUBTRACT_WITH_CARRY_ENGINE_H
 
 #include <__cxx03/__algorithm/equal.h>
 #include <__cxx03/__algorithm/min.h>
@@ -79,12 +79,7 @@ public:
   static _LIBCPP_CONSTEXPR const result_type default_seed = 19780503u;
 
   // constructors and seeding functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI subtract_with_carry_engine() : subtract_with_carry_engine(default_seed) {}
-  _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(result_type __sd) { seed(__sd); }
-#else
   _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(result_type __sd = default_seed) { seed(__sd); }
-#endif
   template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, subtract_with_carry_engine>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(_Sseq& __q) {
     seed(__q);
@@ -273,4 +268,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_SUBTRACT_WITH_CARRY_ENGINE_H
+#endif // _LIBCPP___CXX03___RANDOM_SUBTRACT_WITH_CARRY_ENGINE_H

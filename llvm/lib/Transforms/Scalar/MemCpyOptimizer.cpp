@@ -341,17 +341,6 @@ static bool writtenBetween(MemorySSA *MSSA, BatchAAResults &AA,
   return !MSSA->dominates(Clobber, Start);
 }
 
-// Update AA metadata
-static void combineAAMetadata(Instruction *ReplInst, Instruction *I) {
-  // FIXME: MD_tbaa_struct and MD_mem_parallel_loop_access should also be
-  // handled here, but combineMetadata doesn't support them yet
-  unsigned KnownIDs[] = {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
-                         LLVMContext::MD_noalias,
-                         LLVMContext::MD_invariant_group,
-                         LLVMContext::MD_access_group};
-  combineMetadata(ReplInst, I, KnownIDs, true);
-}
-
 /// When scanning forward over instructions, we look for some other patterns to
 /// fold away. In particular, this looks for stores to neighboring locations of
 /// memory. If it sees enough consecutive ones, it attempts to merge them
@@ -622,7 +611,7 @@ bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
   // We made it, we need to lift.
   for (auto *I : llvm::reverse(ToLift)) {
     LLVM_DEBUG(dbgs() << "Lifting " << *I << " before " << *P << "\n");
-    I->moveBefore(P);
+    I->moveBefore(P->getIterator());
     assert(MemInsertPoint && "Must have found insert point");
     if (MemoryUseOrDef *MA = MSSA->getMemoryAccess(I)) {
       MSSAU->moveAfter(MA, MemInsertPoint);
@@ -649,17 +638,19 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
       (EnableMemCpyOptWithoutLibcalls ||
        (TLI->has(LibFunc_memcpy) && TLI->has(LibFunc_memmove)))) {
     MemoryLocation LoadLoc = MemoryLocation::get(LI);
-    MemoryUseOrDef *LoadAccess = MSSA->getMemoryAccess(LI),
-                   *StoreAccess = MSSA->getMemoryAccess(SI);
 
-    // We use MSSA to check if an instruction may store to the memory we load
-    // from in between the load and the store. If such an instruction is found,
-    // we try to promote there instead of at the store position.
-    auto *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
-        StoreAccess->getDefiningAccess(), LoadLoc, BAA);
-    Instruction *P = MSSA->dominates(LoadAccess, Clobber)
-                         ? cast<MemoryUseOrDef>(Clobber)->getMemoryInst()
-                         : SI;
+    // We use alias analysis to check if an instruction may store to
+    // the memory we load from in between the load and the store. If
+    // such an instruction is found, we try to promote there instead
+    // of at the store position.
+    // TODO: Can use MSSA for this.
+    Instruction *P = SI;
+    for (auto &I : make_range(++LI->getIterator(), SI->getIterator())) {
+      if (isModSet(BAA.getModRefInfo(&I, LoadLoc))) {
+        P = &I;
+        break;
+      }
+    }
 
     // If we found an instruction that may write to the loaded memory,
     // we can try to promote at this position instead of the store
@@ -979,9 +970,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
       append_range(srcUseList, U->users());
       continue;
     }
-    if (const auto *IT = dyn_cast<IntrinsicInst>(U))
-      if (IT->isLifetimeStartOrEnd())
-        continue;
+    if (isa<LifetimeIntrinsic>(U))
+      continue;
 
     if (U != C && U != cpyLoad) {
       LLVM_DEBUG(dbgs() << "Call slot: Source accessed by " << *U << "\n");
@@ -1006,8 +996,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
     // or src pointer.
     Value *DestObj = getUnderlyingObject(cpyDest);
     if (!isIdentifiedFunctionLocal(DestObj) ||
-        PointerMayBeCapturedBefore(DestObj, /* ReturnCaptures */ true,
-                                   /* StoreCaptures */ true, C, DT,
+        PointerMayBeCapturedBefore(DestObj, /* ReturnCaptures */ true, C, DT,
                                    /* IncludeI */ true))
       return false;
 
@@ -1093,11 +1082,11 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   if (NeedMoveGEP) {
     auto *GEP = dyn_cast<GetElementPtrInst>(cpyDest);
-    GEP->moveBefore(C);
+    GEP->moveBefore(C->getIterator());
   }
 
   if (SkippedLifetimeStart) {
-    SkippedLifetimeStart->moveBefore(C);
+    SkippedLifetimeStart->moveBefore(C->getIterator());
     MSSAU->moveBefore(MSSA->getMemoryAccess(SkippedLifetimeStart),
                       MSSA->getMemoryAccess(C));
   }
@@ -1223,7 +1212,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     // Don't convert llvm.memcpy.inline into memmove because memmove can be
     // lowered as a call, and that is not allowed for llvm.memcpy.inline (and
     // there is no inline version of llvm.memmove)
-    if (isa<MemCpyInlineInst>(M))
+    if (M->isForceInlined())
       return false;
     UseMemMove = true;
   }
@@ -1240,17 +1229,18 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     NewM =
         Builder.CreateMemMove(M->getDest(), M->getDestAlign(), CopySource,
                               CopySourceAlign, M->getLength(), M->isVolatile());
-  else if (isa<MemCpyInlineInst>(M)) {
+  else if (M->isForceInlined())
     // llvm.memcpy may be promoted to llvm.memcpy.inline, but the converse is
     // never allowed since that would allow the latter to be lowered as a call
     // to an external function.
     NewM = Builder.CreateMemCpyInline(M->getDest(), M->getDestAlign(),
                                       CopySource, CopySourceAlign,
                                       M->getLength(), M->isVolatile());
-  } else
-    NewM =
-        Builder.CreateMemCpy(M->getDest(), M->getDestAlign(), CopySource,
-                             CopySourceAlign, M->getLength(), M->isVolatile());
+  else
+    NewM = Builder.CreateMemCpy(M->getDest(), M->getDestAlign(), CopySource,
+                                CopySourceAlign, M->getLength(),
+                                M->isVolatile());
+
   NewM->copyMetadata(*M, LLVMContext::MD_DIAssignID);
 
   assert(isa<MemoryDef>(MSSA->getMemoryAccess(M)));
@@ -1527,14 +1517,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // to remove them.
 
   SmallVector<Instruction *, 4> LifetimeMarkers;
-  SmallSet<Instruction *, 4> NoAliasInstrs;
+  SmallSet<Instruction *, 4> AAMetadataInstrs;
   bool SrcNotDom = false;
-
-  // Recursively track the user and check whether modified alias exist.
-  auto IsDereferenceableOrNull = [](Value *V, const DataLayout &DL) -> bool {
-    bool CanBeNull, CanBeFreed;
-    return V->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
-  };
 
   auto CaptureTrackingWithModRef =
       [&](Instruction *AI,
@@ -1545,8 +1529,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     Worklist.reserve(MaxUsesToExplore);
     SmallSet<const Use *, 20> Visited;
     while (!Worklist.empty()) {
-      Instruction *I = Worklist.back();
-      Worklist.pop_back();
+      Instruction *I = Worklist.pop_back_val();
       for (const Use &U : I->uses()) {
         auto *UI = cast<Instruction>(U.getUser());
         // If any use that isn't dominated by SrcAlloca exists, we move src
@@ -1562,14 +1545,11 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
         }
         if (!Visited.insert(&U).second)
           continue;
-        switch (DetermineUseCaptureKind(U, IsDereferenceableOrNull)) {
-        case UseCaptureKind::MAY_CAPTURE:
+        UseCaptureInfo CI = DetermineUseCaptureKind(U, AI);
+        if (capturesAnything(CI.UseCC))
           return false;
-        case UseCaptureKind::PASSTHROUGH:
-          // Instructions cannot have non-instruction users.
-          Worklist.push_back(UI);
-          continue;
-        case UseCaptureKind::NO_CAPTURE: {
+
+        if (UI->mayReadOrWriteMemory()) {
           if (UI->isLifetimeStartOrEnd()) {
             // We note the locations of these intrinsic calls so that we can
             // delete them later if the optimization succeeds, this is safe
@@ -1582,11 +1562,15 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
               continue;
             }
           }
-          if (UI->hasMetadata(LLVMContext::MD_noalias))
-            NoAliasInstrs.insert(UI);
+          AAMetadataInstrs.insert(UI);
+
           if (!ModRefCallback(UI))
             return false;
         }
+
+        if (capturesAnything(CI.ResultCC)) {
+          Worklist.push_back(UI);
+          continue;
         }
       }
     }
@@ -1688,11 +1672,16 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   }
 
   // As this transformation can cause memory accesses that didn't previously
-  // alias to begin to alias one another, we remove !noalias metadata from any
-  // uses of either alloca. This is conservative, but more precision doesn't
-  // seem worthwhile right now.
-  for (Instruction *I : NoAliasInstrs)
+  // alias to begin to alias one another, we remove !alias.scope, !noalias,
+  // !tbaa and !tbaa_struct metadata from any uses of either alloca.
+  // This is conservative, but more precision doesn't seem worthwhile
+  // right now.
+  for (Instruction *I : AAMetadataInstrs) {
+    I->setMetadata(LLVMContext::MD_alias_scope, nullptr);
     I->setMetadata(LLVMContext::MD_noalias, nullptr);
+    I->setMetadata(LLVMContext::MD_tbaa, nullptr);
+    I->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
+  }
 
   LLVM_DEBUG(dbgs() << "Stack Move: Performed staack-move optimization\n");
   NumStackMove++;
@@ -2021,7 +2010,7 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
   Value *ImmutArg = CB.getArgOperand(ArgNo);
 
   // 1. Ensure passed argument is immutable during call.
-  if (!CB.paramHasAttr(ArgNo, Attribute::NoCapture))
+  if (!CB.doesNotCapture(ArgNo))
     return false;
 
   // We know that the argument is readonly at this point, but the function

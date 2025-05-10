@@ -126,13 +126,8 @@ struct fltSemantics {
   /* Whether this semantics can represent signed values */
   bool hasSignedRepr = true;
 
-  // Returns true if any number described by this semantics can be precisely
-  // represented by the specified semantics. Does not take into account
-  // the value of fltNonfiniteBehavior.
-  bool isRepresentableBy(const fltSemantics &S) const {
-    return maxExponent <= S.maxExponent && minExponent >= S.minExponent &&
-           precision <= S.precision;
-  }
+  /* Whether the sign bit of this semantics is the most significant bit */
+  bool hasSignBitInMSB = true;
 };
 
 static constexpr fltSemantics semIEEEhalf = {15, -14, 11, 16};
@@ -152,9 +147,15 @@ static constexpr fltSemantics semFloat8E4M3B11FNUZ = {
     4, -10, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero};
 static constexpr fltSemantics semFloat8E3M4 = {3, -2, 5, 8};
 static constexpr fltSemantics semFloatTF32 = {127, -126, 11, 19};
-static constexpr fltSemantics semFloat8E8M0FNU = {
-    127,   -127, 1, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::AllOnes,
-    false, false};
+static constexpr fltSemantics semFloat8E8M0FNU = {127,
+                                                  -127,
+                                                  1,
+                                                  8,
+                                                  fltNonfiniteBehavior::NanOnly,
+                                                  fltNanEncoding::AllOnes,
+                                                  false,
+                                                  false,
+                                                  false};
 
 static constexpr fltSemantics semFloat6E3M2FN = {
     4, -2, 3, 6, fltNonfiniteBehavior::FiniteOnly};
@@ -290,6 +291,12 @@ const fltSemantics &APFloatBase::x87DoubleExtended() {
 }
 const fltSemantics &APFloatBase::Bogus() { return semBogus; }
 
+bool APFloatBase::isRepresentableBy(const fltSemantics &A,
+                                    const fltSemantics &B) {
+  return A.maxExponent <= B.maxExponent && A.minExponent >= B.minExponent &&
+         A.precision <= B.precision;
+}
+
 constexpr RoundingMode APFloatBase::rmNearestTiesToEven;
 constexpr RoundingMode APFloatBase::rmTowardPositive;
 constexpr RoundingMode APFloatBase::rmTowardNegative;
@@ -353,6 +360,15 @@ bool APFloatBase::semanticsHasInf(const fltSemantics &semantics) {
 
 bool APFloatBase::semanticsHasNaN(const fltSemantics &semantics) {
   return semantics.nonFiniteBehavior != fltNonfiniteBehavior::FiniteOnly;
+}
+
+bool APFloatBase::isIEEELikeFP(const fltSemantics &semantics) {
+  // Keep in sync with Type::isIEEELikeFPTy
+  return SemanticsToEnum(semantics) <= S_IEEEquad;
+}
+
+bool APFloatBase::hasSignBitInMSB(const fltSemantics &semantics) {
+  return semantics.hasSignBitInMSB;
 }
 
 bool APFloatBase::isRepresentableAsNormalIn(const fltSemantics &Src,
@@ -1654,7 +1670,8 @@ APFloat::opStatus IEEEFloat::normalize(roundingMode rounding_mode,
   /* Before rounding normalize the exponent of fcNormal numbers.  */
   omsb = significandMSB() + 1;
 
-  if (omsb) {
+  // Only skip this `if` if the value is exactly zero.
+  if (omsb || lost_fraction != lfExactlyZero) {
     /* OMSB is numbered from 1.  We want to place it in the integer
        bit numbered PRECISION if possible, with a compensating change in
        the exponent.  */
@@ -1836,7 +1853,7 @@ APFloat::opStatus IEEEFloat::addOrSubtractSpecials(const IEEEFloat &rhs,
 /* Add or subtract two normal numbers.  */
 lostFraction IEEEFloat::addOrSubtractSignificand(const IEEEFloat &rhs,
                                                  bool subtract) {
-  integerPart carry;
+  integerPart carry = 0;
   lostFraction lost_fraction;
   int bits;
 
@@ -1854,11 +1871,13 @@ lostFraction IEEEFloat::addOrSubtractSignificand(const IEEEFloat &rhs,
           "This floating point format does not support signed values");
 
     IEEEFloat temp_rhs(rhs);
+    bool lost_fraction_is_from_rhs = false;
 
     if (bits == 0)
       lost_fraction = lfExactlyZero;
     else if (bits > 0) {
       lost_fraction = temp_rhs.shiftSignificandRight(bits - 1);
+      lost_fraction_is_from_rhs = true;
       shiftSignificandLeft(1);
     } else {
       lost_fraction = shiftSignificandRight(-bits - 1);
@@ -1866,22 +1885,39 @@ lostFraction IEEEFloat::addOrSubtractSignificand(const IEEEFloat &rhs,
     }
 
     // Should we reverse the subtraction.
-    if (compareAbsoluteValue(temp_rhs) == cmpLessThan) {
-      carry = temp_rhs.subtractSignificand
-        (*this, lost_fraction != lfExactlyZero);
+    cmpResult cmp_result = compareAbsoluteValue(temp_rhs);
+    if (cmp_result == cmpLessThan) {
+      bool borrow =
+          lost_fraction != lfExactlyZero && !lost_fraction_is_from_rhs;
+      if (borrow) {
+        // The lost fraction is being subtracted, borrow from the significand
+        // and invert `lost_fraction`.
+        if (lost_fraction == lfLessThanHalf)
+          lost_fraction = lfMoreThanHalf;
+        else if (lost_fraction == lfMoreThanHalf)
+          lost_fraction = lfLessThanHalf;
+      }
+      carry = temp_rhs.subtractSignificand(*this, borrow);
       copySignificand(temp_rhs);
       sign = !sign;
-    } else {
-      carry = subtractSignificand
-        (temp_rhs, lost_fraction != lfExactlyZero);
+    } else if (cmp_result == cmpGreaterThan) {
+      bool borrow = lost_fraction != lfExactlyZero && lost_fraction_is_from_rhs;
+      if (borrow) {
+        // The lost fraction is being subtracted, borrow from the significand
+        // and invert `lost_fraction`.
+        if (lost_fraction == lfLessThanHalf)
+          lost_fraction = lfMoreThanHalf;
+        else if (lost_fraction == lfMoreThanHalf)
+          lost_fraction = lfLessThanHalf;
+      }
+      carry = subtractSignificand(temp_rhs, borrow);
+    } else { // cmpEqual
+      zeroSignificand();
+      if (lost_fraction != lfExactlyZero && lost_fraction_is_from_rhs) {
+        // rhs is slightly larger due to the lost fraction, flip the sign.
+        sign = !sign;
+      }
     }
-
-    /* Invert the lost fraction - it was on the RHS and
-       subtracted.  */
-    if (lost_fraction == lfLessThanHalf)
-      lost_fraction = lfMoreThanHalf;
-    else if (lost_fraction == lfMoreThanHalf)
-      lost_fraction = lfLessThanHalf;
 
     /* The code above is intended to ensure that no borrow is
        necessary.  */
@@ -4873,8 +4909,9 @@ DoubleAPFloat::DoubleAPFloat(const DoubleAPFloat &RHS)
 }
 
 DoubleAPFloat::DoubleAPFloat(DoubleAPFloat &&RHS)
-    : Semantics(RHS.Semantics), Floats(std::move(RHS.Floats)) {
+    : Semantics(RHS.Semantics), Floats(RHS.Floats) {
   RHS.Semantics = &semBogus;
+  RHS.Floats = nullptr;
   assert(Semantics == &semPPCDoubleDouble);
 }
 
@@ -5527,7 +5564,7 @@ APFloat::opStatus APFloat::convertToInteger(APSInt &result,
 double APFloat::convertToDouble() const {
   if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEdouble)
     return getIEEE().convertToDouble();
-  assert(getSemantics().isRepresentableBy(semIEEEdouble) &&
+  assert(isRepresentableBy(getSemantics(), semIEEEdouble) &&
          "Float semantics is not representable by IEEEdouble");
   APFloat Temp = *this;
   bool LosesInfo;
@@ -5541,7 +5578,7 @@ double APFloat::convertToDouble() const {
 float128 APFloat::convertToQuad() const {
   if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEquad)
     return getIEEE().convertToQuad();
-  assert(getSemantics().isRepresentableBy(semIEEEquad) &&
+  assert(isRepresentableBy(getSemantics(), semIEEEquad) &&
          "Float semantics is not representable by IEEEquad");
   APFloat Temp = *this;
   bool LosesInfo;
@@ -5555,7 +5592,7 @@ float128 APFloat::convertToQuad() const {
 float APFloat::convertToFloat() const {
   if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEsingle)
     return getIEEE().convertToFloat();
-  assert(getSemantics().isRepresentableBy(semIEEEsingle) &&
+  assert(isRepresentableBy(getSemantics(), semIEEEsingle) &&
          "Float semantics is not representable by IEEEsingle");
   APFloat Temp = *this;
   bool LosesInfo;

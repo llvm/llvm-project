@@ -22,6 +22,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
@@ -111,6 +112,14 @@ void mlirContextLoadAllAvailableDialects(MlirContext context) {
 void mlirContextSetThreadPool(MlirContext context,
                               MlirLlvmThreadPool threadPool) {
   unwrap(context)->setThreadPool(*unwrap(threadPool));
+}
+
+unsigned mlirContextGetNumThreads(MlirContext context) {
+  return unwrap(context)->getNumThreads();
+}
+
+MlirLlvmThreadPool mlirContextGetThreadPool(MlirContext context) {
+  return wrap(&unwrap(context)->getThreadPool());
 }
 
 //===----------------------------------------------------------------------===//
@@ -217,6 +226,10 @@ void mlirOpPrintingFlagsPrintGenericOpForm(MlirOpPrintingFlags flags) {
   unwrap(flags)->printGenericOpForm();
 }
 
+void mlirOpPrintingFlagsPrintNameLocAsPrefix(MlirOpPrintingFlags flags) {
+  unwrap(flags)->printNameLocAsPrefix();
+}
+
 void mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags) {
   unwrap(flags)->useLocalScope();
 }
@@ -254,7 +267,7 @@ MlirAttribute mlirLocationGetAttribute(MlirLocation location) {
 }
 
 MlirLocation mlirLocationFromAttribute(MlirAttribute attribute) {
-  return wrap(Location(llvm::cast<LocationAttr>(unwrap(attribute))));
+  return wrap(Location(llvm::dyn_cast<LocationAttr>(unwrap(attribute))));
 }
 
 MlirLocation mlirLocationFileLineColGet(MlirContext context,
@@ -264,8 +277,71 @@ MlirLocation mlirLocationFileLineColGet(MlirContext context,
       FileLineColLoc::get(unwrap(context), unwrap(filename), line, col)));
 }
 
+MlirLocation
+mlirLocationFileLineColRangeGet(MlirContext context, MlirStringRef filename,
+                                unsigned startLine, unsigned startCol,
+                                unsigned endLine, unsigned endCol) {
+  return wrap(
+      Location(FileLineColRange::get(unwrap(context), unwrap(filename),
+                                     startLine, startCol, endLine, endCol)));
+}
+
+MlirIdentifier mlirLocationFileLineColRangeGetFilename(MlirLocation location) {
+  return wrap(llvm::dyn_cast<FileLineColRange>(unwrap(location)).getFilename());
+}
+
+int mlirLocationFileLineColRangeGetStartLine(MlirLocation location) {
+  if (auto loc = llvm::dyn_cast<FileLineColRange>(unwrap(location)))
+    return loc.getStartLine();
+  return -1;
+}
+
+int mlirLocationFileLineColRangeGetStartColumn(MlirLocation location) {
+  if (auto loc = llvm::dyn_cast<FileLineColRange>(unwrap(location)))
+    return loc.getStartColumn();
+  return -1;
+}
+
+int mlirLocationFileLineColRangeGetEndLine(MlirLocation location) {
+  if (auto loc = llvm::dyn_cast<FileLineColRange>(unwrap(location)))
+    return loc.getEndLine();
+  return -1;
+}
+
+int mlirLocationFileLineColRangeGetEndColumn(MlirLocation location) {
+  if (auto loc = llvm::dyn_cast<FileLineColRange>(unwrap(location)))
+    return loc.getEndColumn();
+  return -1;
+}
+
+MlirTypeID mlirLocationFileLineColRangeGetTypeID() {
+  return wrap(FileLineColRange::getTypeID());
+}
+
+bool mlirLocationIsAFileLineColRange(MlirLocation location) {
+  return isa<FileLineColRange>(unwrap(location));
+}
+
 MlirLocation mlirLocationCallSiteGet(MlirLocation callee, MlirLocation caller) {
   return wrap(Location(CallSiteLoc::get(unwrap(callee), unwrap(caller))));
+}
+
+MlirLocation mlirLocationCallSiteGetCallee(MlirLocation location) {
+  return wrap(
+      Location(llvm::dyn_cast<CallSiteLoc>(unwrap(location)).getCallee()));
+}
+
+MlirLocation mlirLocationCallSiteGetCaller(MlirLocation location) {
+  return wrap(
+      Location(llvm::dyn_cast<CallSiteLoc>(unwrap(location)).getCaller()));
+}
+
+MlirTypeID mlirLocationCallSiteGetTypeID() {
+  return wrap(CallSiteLoc::getTypeID());
+}
+
+bool mlirLocationIsACallSite(MlirLocation location) {
+  return isa<CallSiteLoc>(unwrap(location));
 }
 
 MlirLocation mlirLocationFusedGet(MlirContext ctx, intptr_t nLocations,
@@ -276,6 +352,30 @@ MlirLocation mlirLocationFusedGet(MlirContext ctx, intptr_t nLocations,
   return wrap(FusedLoc::get(unwrappedLocs, unwrap(metadata), unwrap(ctx)));
 }
 
+unsigned mlirLocationFusedGetNumLocations(MlirLocation location) {
+  if (auto locationsArrRef = llvm::dyn_cast<FusedLoc>(unwrap(location)))
+    return locationsArrRef.getLocations().size();
+  return 0;
+}
+
+void mlirLocationFusedGetLocations(MlirLocation location,
+                                   MlirLocation *locationsCPtr) {
+  if (auto locationsArrRef = llvm::dyn_cast<FusedLoc>(unwrap(location))) {
+    for (auto [i, location] : llvm::enumerate(locationsArrRef.getLocations()))
+      locationsCPtr[i] = wrap(location);
+  }
+}
+
+MlirAttribute mlirLocationFusedGetMetadata(MlirLocation location) {
+  return wrap(llvm::dyn_cast<FusedLoc>(unwrap(location)).getMetadata());
+}
+
+MlirTypeID mlirLocationFusedGetTypeID() { return wrap(FusedLoc::getTypeID()); }
+
+bool mlirLocationIsAFused(MlirLocation location) {
+  return isa<FusedLoc>(unwrap(location));
+}
+
 MlirLocation mlirLocationNameGet(MlirContext context, MlirStringRef name,
                                  MlirLocation childLoc) {
   if (mlirLocationIsNull(childLoc))
@@ -283,6 +383,21 @@ MlirLocation mlirLocationNameGet(MlirContext context, MlirStringRef name,
         Location(NameLoc::get(StringAttr::get(unwrap(context), unwrap(name)))));
   return wrap(Location(NameLoc::get(
       StringAttr::get(unwrap(context), unwrap(name)), unwrap(childLoc))));
+}
+
+MlirIdentifier mlirLocationNameGetName(MlirLocation location) {
+  return wrap((llvm::dyn_cast<NameLoc>(unwrap(location)).getName()));
+}
+
+MlirLocation mlirLocationNameGetChildLoc(MlirLocation location) {
+  return wrap(
+      Location(llvm::dyn_cast<NameLoc>(unwrap(location)).getChildLoc()));
+}
+
+MlirTypeID mlirLocationNameGetTypeID() { return wrap(NameLoc::getTypeID()); }
+
+bool mlirLocationIsAName(MlirLocation location) {
+  return isa<NameLoc>(unwrap(location));
 }
 
 MlirLocation mlirLocationUnknownGet(MlirContext context) {
@@ -314,6 +429,15 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location) {
 MlirModule mlirModuleCreateParse(MlirContext context, MlirStringRef module) {
   OwningOpRef<ModuleOp> owning =
       parseSourceString<ModuleOp>(unwrap(module), unwrap(context));
+  if (!owning)
+    return MlirModule{nullptr};
+  return MlirModule{owning.release().getOperation()};
+}
+
+MlirModule mlirModuleCreateParseFromFile(MlirContext context,
+                                         MlirStringRef fileName) {
+  OwningOpRef<ModuleOp> owning =
+      parseSourceFile<ModuleOp>(unwrap(fileName), unwrap(context));
   if (!owning)
     return MlirModule{nullptr};
   return MlirModule{owning.release().getOperation()};
@@ -952,25 +1076,26 @@ bool mlirValueIsAOpResult(MlirValue value) {
 }
 
 MlirBlock mlirBlockArgumentGetOwner(MlirValue value) {
-  return wrap(llvm::cast<BlockArgument>(unwrap(value)).getOwner());
+  return wrap(llvm::dyn_cast<BlockArgument>(unwrap(value)).getOwner());
 }
 
 intptr_t mlirBlockArgumentGetArgNumber(MlirValue value) {
   return static_cast<intptr_t>(
-      llvm::cast<BlockArgument>(unwrap(value)).getArgNumber());
+      llvm::dyn_cast<BlockArgument>(unwrap(value)).getArgNumber());
 }
 
 void mlirBlockArgumentSetType(MlirValue value, MlirType type) {
-  llvm::cast<BlockArgument>(unwrap(value)).setType(unwrap(type));
+  if (auto blockArg = llvm::dyn_cast<BlockArgument>(unwrap(value)))
+    blockArg.setType(unwrap(type));
 }
 
 MlirOperation mlirOpResultGetOwner(MlirValue value) {
-  return wrap(llvm::cast<OpResult>(unwrap(value)).getOwner());
+  return wrap(llvm::dyn_cast<OpResult>(unwrap(value)).getOwner());
 }
 
 intptr_t mlirOpResultGetResultNumber(MlirValue value) {
   return static_cast<intptr_t>(
-      llvm::cast<OpResult>(unwrap(value)).getResultNumber());
+      llvm::dyn_cast<OpResult>(unwrap(value)).getResultNumber());
 }
 
 MlirType mlirValueGetType(MlirValue value) {
@@ -1022,6 +1147,14 @@ void mlirValueReplaceAllUsesExcept(MlirValue oldValue, MlirValue newValue,
   }
 
   oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptionSet);
+}
+
+MlirLocation mlirValueGetLocation(MlirValue v) {
+  return wrap(unwrap(v).getLoc());
+}
+
+MlirContext mlirValueGetContext(MlirValue v) {
+  return wrap(unwrap(v).getContext());
 }
 
 //===----------------------------------------------------------------------===//

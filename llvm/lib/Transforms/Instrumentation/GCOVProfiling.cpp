@@ -61,7 +61,7 @@ enum : uint32_t {
 };
 
 static cl::opt<std::string> DefaultGCOVVersion("default-gcov-version",
-                                               cl::init("408*"), cl::Hidden,
+                                               cl::init("0000"), cl::Hidden,
                                                cl::ValueRequired);
 
 static cl::opt<bool> AtomicCounter("gcov-atomic-counter", cl::Hidden,
@@ -81,8 +81,8 @@ GCOVOptions GCOVOptions::getDefault() {
   Options.Atomic = AtomicCounter;
 
   if (DefaultGCOVVersion.size() != 4) {
-    llvm::report_fatal_error(Twine("Invalid -default-gcov-version: ") +
-                             DefaultGCOVVersion, /*GenCrashDiag=*/false);
+    reportFatalUsageError(Twine("Invalid -default-gcov-version: ") +
+                          DefaultGCOVVersion);
   }
   memcpy(Options.Version, DefaultGCOVVersion.c_str(), 4);
   return Options;
@@ -154,6 +154,7 @@ private:
   GCOVOptions Options;
   llvm::endianness Endian;
   raw_ostream *os;
+  int Version = 0;
 
   // Checksum, produced by hash of EdgeDestinations
   SmallVector<uint32_t, 4> FileChecksums;
@@ -334,12 +335,9 @@ namespace {
         : GCOVRecord(P), SP(SP), EndLine(EndLine), Ident(Ident),
           Version(Version), EntryBlock(P, 0), ReturnBlock(P, 1) {
       LLVM_DEBUG(dbgs() << "Function: " << getFunctionName(SP) << "\n");
-      bool ExitBlockBeforeBody = Version >= 48;
-      uint32_t i = ExitBlockBeforeBody ? 2 : 1;
+      uint32_t i = 2;
       for (BasicBlock &BB : *F)
         Blocks.insert(std::make_pair(&BB, GCOVBlock(P, i++)));
-      if (!ExitBlockBeforeBody)
-        ReturnBlock.Number = i;
 
       std::string FunctionNameAndLine;
       raw_string_ostream FNLOS(FunctionNameAndLine);
@@ -363,44 +361,28 @@ namespace {
     void writeOut(uint32_t CfgChecksum) {
       write(GCOV_TAG_FUNCTION);
       SmallString<128> Filename = getFilename(SP);
-      uint32_t BlockLen =
-          2 + (Version >= 47) + wordsOfString(getFunctionName(SP));
-      if (Version < 80)
-        BlockLen += wordsOfString(Filename) + 1;
-      else
-        BlockLen += 1 + wordsOfString(Filename) + 3 + (Version >= 90);
+      uint32_t BlockLen = 3 + wordsOfString(getFunctionName(SP));
+      BlockLen += 1 + wordsOfString(Filename) + 4;
 
       write(BlockLen);
       write(Ident);
       write(FuncChecksum);
-      if (Version >= 47)
-        write(CfgChecksum);
+      write(CfgChecksum);
       writeString(getFunctionName(SP));
-      if (Version < 80) {
-        writeString(Filename);
-        write(SP->getLine());
-      } else {
-        write(SP->isArtificial()); // artificial
-        writeString(Filename);
-        write(SP->getLine()); // start_line
-        write(0);             // start_column
-        // EndLine is the last line with !dbg. It is not the } line as in GCC,
-        // but good enough.
-        write(EndLine);
-        if (Version >= 90)
-          write(0); // end_column
-      }
+
+      write(SP->isArtificial()); // artificial
+      writeString(Filename);
+      write(SP->getLine()); // start_line
+      write(0);             // start_column
+      // EndLine is the last line with !dbg. It is not the } line as in GCC,
+      // but good enough.
+      write(EndLine);
+      write(0); // end_column
 
       // Emit count of blocks.
       write(GCOV_TAG_BLOCKS);
-      if (Version < 80) {
-        write(Blocks.size() + 2);
-        for (int i = Blocks.size() + 2; i; --i)
-          write(0);
-      } else {
-        write(1);
-        write(Blocks.size() + 2);
-      }
+      write(1);
+      write(Blocks.size() + 2);
       LLVM_DEBUG(dbgs() << (Blocks.size() + 1) << " blocks\n");
 
       // Emit edges between blocks.
@@ -767,13 +749,17 @@ bool GCOVProfiler::emitProfileNotes(
     function_ref<BlockFrequencyInfo *(Function &F)> GetBFI,
     function_ref<BranchProbabilityInfo *(Function &F)> GetBPI,
     function_ref<const TargetLibraryInfo &(Function &F)> GetTLI) {
-  int Version;
   {
     uint8_t c3 = Options.Version[0];
     uint8_t c2 = Options.Version[1];
     uint8_t c1 = Options.Version[2];
     Version = c3 >= 'A' ? (c3 - 'A') * 100 + (c2 - '0') * 10 + c1 - '0'
                         : (c3 - '0') * 10 + c1 - '0';
+  }
+  // Emit .gcno files that are compatible with GCC 11.1.
+  if (Version < 111) {
+    Version = 111;
+    memcpy(Options.Version, "B11*", 4);
   }
 
   bool EmitGCDA = Options.EmitData;
@@ -918,7 +904,7 @@ bool GCOVProfiler::emitProfileNotes(
         GlobalVariable *Counters = new GlobalVariable(
             *M, CounterTy, false, GlobalValue::InternalLinkage,
             Constant::getNullValue(CounterTy), "__llvm_gcov_ctr");
-        const llvm::Triple &Triple = llvm::Triple(M->getTargetTriple());
+        const llvm::Triple &Triple = M->getTargetTriple();
         if (Triple.getObjectFormat() == llvm::Triple::XCOFF)
           Counters->setSection("__llvm_gcov_ctr_section");
         CountersBySP.emplace_back(Counters, SP);
@@ -973,10 +959,8 @@ bool GCOVProfiler::emitProfileNotes(
         out.write(Tmp, 4);
       }
       write(Stamp);
-      if (Version >= 90)
-        writeString(""); // unuseful current_working_directory
-      if (Version >= 80)
-        write(0); // unuseful has_unexecuted_blocks
+      writeString("."); // unuseful current_working_directory
+      write(0);         // unuseful has_unexecuted_blocks
 
       for (auto &Func : Funcs)
         Func->writeOut(Stamp);
@@ -987,7 +971,7 @@ bool GCOVProfiler::emitProfileNotes(
     }
 
     if (EmitGCDA) {
-      const llvm::Triple &Triple = llvm::Triple(M->getTargetTriple());
+      const llvm::Triple &Triple = M->getTargetTriple();
       if (Triple.getObjectFormat() == llvm::Triple::XCOFF)
         emitModuleInitFunctionPtrs(CountersBySP);
       else
@@ -1028,7 +1012,7 @@ void GCOVProfiler::emitGlobalConstructor(
   IRBuilder<> Builder(BB);
 
   FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
-  auto *PFTy = PointerType::get(FTy, 0);
+  auto *PFTy = PointerType::get(*Ctx, 0);
   FTy = FunctionType::get(Builder.getVoidTy(), {PFTy, PFTy}, false);
 
   // Initialize the environment and register the local writeout, flush and
@@ -1069,7 +1053,7 @@ void GCOVProfiler::emitModuleInitFunctionPtrs(
   CovInitGV->setInitializer(ConstantStruct::get(STy, InitFuncPtrs));
   CovInitGV->setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
   CovInitGV->setSection(getInstrProfSectionName(
-      IPSK_covinit, Triple(M->getTargetTriple()).getObjectFormat()));
+      IPSK_covinit, M->getTargetTriple().getObjectFormat()));
   CovInitGV->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
   CovInitGV->setConstant(true);
 }

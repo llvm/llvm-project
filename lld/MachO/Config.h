@@ -143,6 +143,7 @@ struct Configuration {
   bool timeTraceEnabled = false;
   bool dataConst = false;
   bool dedupStrings = true;
+  bool dedupSymbolStrings = true;
   bool deadStripDuplicates = false;
   bool omitDebugInfo = false;
   bool warnDylibInstallName = false;
@@ -182,6 +183,7 @@ struct Configuration {
   bool deadStripDylibs = false;
   bool demangle = false;
   bool deadStrip = false;
+  bool interposable = false;
   bool errorForArchMismatch = false;
   bool ignoreAutoLink = false;
   // ld64 allows invalid auto link options as long as the link succeeds. LLD
@@ -218,15 +220,17 @@ struct Configuration {
   llvm::StringRef csProfilePath;
   bool pgoWarnMismatch;
   bool warnThinArchiveMissingMembers;
+  bool disableVerify;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;
 
-  llvm::StringRef irpgoProfileSortProfilePath;
-  bool compressionSortStartupFunctions = false;
-  bool functionOrderForCompression = false;
-  bool dataOrderForCompression = false;
-  bool verboseBpSectionOrderer = false;
+  llvm::StringRef irpgoProfilePath;
+  bool bpStartupFunctionSort = false;
+  bool bpCompressionSortStartupFunctions = false;
+  bool bpFunctionOrderForCompression = false;
+  bool bpDataOrderForCompression = false;
+  bool bpVerboseSectionOrderer = false;
 
   SectionRenameMap sectionRenameMap;
   SegmentRenameMap segmentRenameMap;

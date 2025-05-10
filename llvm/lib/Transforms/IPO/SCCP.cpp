@@ -191,8 +191,10 @@ static bool runIPSCCP(
           if (ME == MemoryEffects::unknown())
             return AL;
 
-          ME |= MemoryEffects(IRMemLocation::Other,
-                              ME.getModRef(IRMemLocation::ArgMem));
+          ModRefInfo ArgMemMR = ME.getModRef(IRMemLocation::ArgMem);
+          ME |= MemoryEffects(IRMemLocation::ErrnoMem, ArgMemMR);
+          ME |= MemoryEffects(IRMemLocation::Other, ArgMemMR);
+
           return AL.addFnAttribute(
               F.getContext(),
               Attribute::getWithMemoryEffects(F.getContext(), ME));
@@ -235,11 +237,11 @@ static bool runIPSCCP(
     // nodes in executable blocks we found values for. The function's entry
     // block is not part of BlocksToErase, so we have to handle it separately.
     for (BasicBlock *BB : BlocksToErase) {
-      NumInstRemoved += changeToUnreachable(BB->getFirstNonPHIOrDbg(),
+      NumInstRemoved += changeToUnreachable(&*BB->getFirstNonPHIOrDbg(),
                                             /*PreserveLCSSA=*/false, &DTU);
     }
     if (!Solver.isBlockExecutable(&F.front()))
-      NumInstRemoved += changeToUnreachable(F.front().getFirstNonPHIOrDbg(),
+      NumInstRemoved += changeToUnreachable(&*F.front().getFirstNonPHIOrDbg(),
                                             /*PreserveLCSSA=*/false, &DTU);
 
     BasicBlock *NewUnreachableBB = nullptr;
@@ -316,11 +318,10 @@ static bool runIPSCCP(
     for (Use &U : F->uses()) {
       CallBase *CB = dyn_cast<CallBase>(U.getUser());
       if (!CB) {
-        assert(isa<BlockAddress>(U.getUser()) ||
-               (isa<Constant>(U.getUser()) &&
-                all_of(U.getUser()->users(), [](const User *UserUser) {
-                  return cast<IntrinsicInst>(UserUser)->isAssumeLikeIntrinsic();
-                })));
+        assert(isa<Constant>(U.getUser()) &&
+               all_of(U.getUser()->users(), [](const User *UserUser) {
+                 return cast<IntrinsicInst>(UserUser)->isAssumeLikeIntrinsic();
+               }));
         continue;
       }
 

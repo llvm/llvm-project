@@ -25,7 +25,6 @@ subroutine test2
   l = associated(null(),i)
 end subroutine test2
 ! CHECK-LABEL:   func.func @_QPtest2() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<none>>
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "i", uniq_name = "_QFtest2Ei"}
 ! CHECK:           %[[VAL_2:.*]] = fir.zero_bits !fir.ptr<i32>
 ! CHECK:           %[[VAL_3:.*]] = fir.embox %[[VAL_2]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
@@ -33,16 +32,8 @@ end subroutine test2
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest2Ei"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.logical<4> {bindc_name = "l", uniq_name = "_QFtest2El"}
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFtest2El"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:           %[[VAL_7:.*]] = fir.zero_bits !fir.ptr<none>
-! CHECK:           %[[VAL_8:.*]] = fir.embox %[[VAL_7]] : (!fir.ptr<none>) -> !fir.box<!fir.ptr<none>>
-! CHECK:           fir.store %[[VAL_8]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<none>>>
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = ".tmp.null_box"} : (!fir.ref<!fir.box<!fir.ptr<none>>>) -> (!fir.ref<!fir.box<!fir.ptr<none>>>, !fir.ref<!fir.box<!fir.ptr<none>>>)
-! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_4]]#1 : !fir.ref<!fir.box<!fir.ptr<i32>>>
-! CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_9]]#1 : !fir.ref<!fir.box<!fir.ptr<none>>>
-! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.ptr<none>>) -> !fir.box<none>
-! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_10]] : (!fir.box<!fir.ptr<i32>>) -> !fir.box<none>
-! CHECK:           %[[VAL_14:.*]] = fir.call @_FortranAPointerIsAssociatedWith(%[[VAL_12]], %[[VAL_13]]) fastmath<contract> : (!fir.box<none>, !fir.box<none>) -> i1
-! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (i1) -> !fir.logical<4>
+! CHECK:           %false = arith.constant false
+! CHECK:           %[[VAL_15:.*]] = fir.convert %false : (i1) -> !fir.logical<4>
 ! CHECK:           hlfir.assign %[[VAL_15]] to %[[VAL_6]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:           return
 ! CHECK:         }

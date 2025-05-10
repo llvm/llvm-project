@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
 
 struct MyStruct {
   float4 a;
@@ -18,7 +18,7 @@ struct MyStruct {
 // DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.9" = type { target("dx.RawBuffer", <3 x i32>, 1, 1) }
 // DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.10" = type { target("dx.RawBuffer", <2 x half>, 1, 1) }
 // DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.11" = type { target("dx.RawBuffer", <3 x float>, 1, 1) }
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.12" = type { target("dx.RawBuffer", %struct.MyStruct = type { <4 x float>, <2 x i32>, [8 x i8] }, 1, 1) }
+// DXIL: %struct.MyStruct = type <{ <4 x float>, <2 x i32> }>
 
 RasterizerOrderedStructuredBuffer<int16_t> BufI16;
 RasterizerOrderedStructuredBuffer<uint16_t> BufU16;

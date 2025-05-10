@@ -15,6 +15,7 @@
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/FrontendOptions.h"
 #include "flang/Frontend/FrontendPluginRegistry.h"
+#include "flang/Parser/parsing.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -182,7 +183,7 @@ bool FrontendAction::runSemanticChecks() {
 
   // Transfer any pending non-fatal messages from parsing to semantics
   // so that they are merged and all printed in order.
-  auto &semanticsCtx{ci.getSemanticsContext()};
+  auto &semanticsCtx{ci.createNewSemanticsContext()};
   semanticsCtx.messages().Annex(std::move(ci.getParsing().messages()));
   semanticsCtx.set_debugModuleWriter(ci.getInvocation().getDebugModuleDir());
 
@@ -230,6 +231,19 @@ bool FrontendAction::reportFatalErrors(const char (&message)[N]) {
     instance->getDiagnostics().Report(diagID) << getCurrentFileOrBufferName();
     instance->getParsing().messages().Emit(llvm::errs(),
                                            instance->getAllCookedSources());
+    return true;
+  }
+  if (instance->getParsing().parseTree().has_value() &&
+      !instance->getParsing().consumedWholeFile()) {
+    // Parsing failed without error.
+    const unsigned diagID = instance->getDiagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, message);
+    instance->getDiagnostics().Report(diagID) << getCurrentFileOrBufferName();
+    instance->getParsing().messages().Emit(llvm::errs(),
+                                           instance->getAllCookedSources());
+    instance->getParsing().EmitMessage(
+        llvm::errs(), instance->getParsing().finalRestingPlace(),
+        "parser FAIL (final position)", "error: ", llvm::raw_ostream::RED);
     return true;
   }
   return false;

@@ -29,6 +29,7 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
@@ -37,6 +38,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -63,9 +65,17 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace clang;
 
-static llvm::TimerGroup
-    ClangOffloadBundlerTimerGroup("Clang Offload Bundler Timer Group",
-                                  "Timer group for clang offload bundler");
+namespace {
+struct CreateClangOffloadBundlerTimerGroup {
+  static void *call() {
+    return new TimerGroup("Clang Offload Bundler Timer Group",
+                          "Timer group for clang offload bundler");
+  }
+};
+} // namespace
+static llvm::ManagedStatic<llvm::TimerGroup,
+                           CreateClangOffloadBundlerTimerGroup>
+    ClangOffloadBundlerTimerGroup;
 
 /// Magic string that marks the existence of offloading data.
 #define OFFLOAD_BUNDLER_MAGIC_STR "__CLANG_OFFLOAD_BUNDLE__"
@@ -74,32 +84,27 @@ OffloadTargetInfo::OffloadTargetInfo(const StringRef Target,
                                      const OffloadBundlerConfig &BC)
     : BundlerConfig(BC) {
 
-  // TODO: Add error checking from ClangOffloadBundler.cpp
-  auto TargetFeatures = Target.split(':');
-  auto TripleOrGPU = TargetFeatures.first.rsplit('-');
+  // <kind>-<triple>[-<target id>[:target features]]
+  // <triple> := <arch>-<vendor>-<os>-<env>
+  SmallVector<StringRef, 6> Components;
+  Target.split(Components, '-', /*MaxSplit=*/5);
+  assert((Components.size() == 5 || Components.size() == 6) &&
+         "malformed target string");
 
-  if (clang::StringToOffloadArch(TripleOrGPU.second) !=
-      clang::OffloadArch::UNKNOWN) {
-    auto KindTriple = TripleOrGPU.first.split('-');
-    this->OffloadKind = KindTriple.first;
-
-    // Enforce optional env field to standardize bundles
-    llvm::Triple t = llvm::Triple(KindTriple.second);
-    this->Triple = llvm::Triple(t.getArchName(), t.getVendorName(),
-                                t.getOSName(), t.getEnvironmentName());
-
-    this->TargetID = Target.substr(Target.find(TripleOrGPU.second));
-  } else {
-    auto KindTriple = TargetFeatures.first.split('-');
-    this->OffloadKind = KindTriple.first;
-
-    // Enforce optional env field to standardize bundles
-    llvm::Triple t = llvm::Triple(KindTriple.second);
-    this->Triple = llvm::Triple(t.getArchName(), t.getVendorName(),
-                                t.getOSName(), t.getEnvironmentName());
-
+  StringRef TargetIdWithFeature =
+      Components.size() == 6 ? Components.back() : "";
+  StringRef TargetId = TargetIdWithFeature.split(':').first;
+  if (!TargetId.empty() &&
+      clang::StringToOffloadArch(TargetId) != clang::OffloadArch::UNKNOWN)
+    this->TargetID = TargetIdWithFeature;
+  else
     this->TargetID = "";
-  }
+
+  this->OffloadKind = Components.front();
+  ArrayRef<StringRef> TripleSlice{&Components[1], /*length=*/4};
+  llvm::Triple T = llvm::Triple(llvm::join(TripleSlice, "-"));
+  this->Triple = llvm::Triple(T.getArchName(), T.getVendorName(), T.getOSName(),
+                              T.getEnvironmentName());
 }
 
 bool OffloadTargetInfo::hasHostKind() const {
@@ -139,7 +144,18 @@ bool OffloadTargetInfo::operator==(const OffloadTargetInfo &Target) const {
 }
 
 std::string OffloadTargetInfo::str() const {
-  return Twine(OffloadKind + "-" + Triple.str() + "-" + TargetID).str();
+  std::string NormalizedTriple;
+  // Unfortunately we need some special sauce for AMDHSA because all the runtime
+  // assumes the triple to be "amdgcn/spirv64-amd-amdhsa-" (empty environment)
+  // instead of "amdgcn/spirv64-amd-amdhsa-unknown". It's gonna be very tricky
+  // to patch different layers of runtime.
+  if (Triple.getOS() == Triple::OSType::AMDHSA) {
+    NormalizedTriple = Triple.normalize(Triple::CanonicalForm::THREE_IDENT);
+    NormalizedTriple.push_back('-');
+  } else {
+    NormalizedTriple = Triple.normalize(Triple::CanonicalForm::FOUR_IDENT);
+  }
+  return Twine(OffloadKind + "-" + NormalizedTriple + "-" + TargetID).str();
 }
 
 static StringRef getDeviceFileExtension(StringRef Device,
@@ -926,7 +942,8 @@ CreateFileHandler(MemoryBuffer &FirstInput,
                            "'" + FilesType + "': invalid file type specified");
 }
 
-OffloadBundlerConfig::OffloadBundlerConfig() {
+OffloadBundlerConfig::OffloadBundlerConfig()
+    : CompressedBundleVersion(CompressedOffloadBundle::DefaultVersion) {
   if (llvm::compression::zstd::isAvailable()) {
     CompressionFormat = llvm::compression::Format::Zstd;
     // Compression level 3 is usually sufficient for zstd since long distance
@@ -942,16 +959,13 @@ OffloadBundlerConfig::OffloadBundlerConfig() {
       llvm::sys::Process::GetEnv("OFFLOAD_BUNDLER_IGNORE_ENV_VAR");
   if (IgnoreEnvVarOpt.has_value() && IgnoreEnvVarOpt.value() == "1")
     return;
-
   auto VerboseEnvVarOpt = llvm::sys::Process::GetEnv("OFFLOAD_BUNDLER_VERBOSE");
   if (VerboseEnvVarOpt.has_value())
     Verbose = VerboseEnvVarOpt.value() == "1";
-
   auto CompressEnvVarOpt =
       llvm::sys::Process::GetEnv("OFFLOAD_BUNDLER_COMPRESS");
   if (CompressEnvVarOpt.has_value())
     Compress = CompressEnvVarOpt.value() == "1";
-
   auto CompressionLevelEnvVarOpt =
       llvm::sys::Process::GetEnv("OFFLOAD_BUNDLER_COMPRESSION_LEVEL");
   if (CompressionLevelEnvVarOpt.has_value()) {
@@ -963,6 +977,26 @@ OffloadBundlerConfig::OffloadBundlerConfig() {
       llvm::errs()
           << "Warning: Invalid value for OFFLOAD_BUNDLER_COMPRESSION_LEVEL: "
           << CompressionLevelStr.str() << ". Ignoring it.\n";
+  }
+  auto CompressedBundleFormatVersionOpt =
+      llvm::sys::Process::GetEnv("COMPRESSED_BUNDLE_FORMAT_VERSION");
+  if (CompressedBundleFormatVersionOpt.has_value()) {
+    llvm::StringRef VersionStr = CompressedBundleFormatVersionOpt.value();
+    uint16_t Version;
+    if (!VersionStr.getAsInteger(10, Version)) {
+      if (Version >= 2 && Version <= 3)
+        CompressedBundleVersion = Version;
+      else
+        llvm::errs()
+            << "Warning: Invalid value for COMPRESSED_BUNDLE_FORMAT_VERSION: "
+            << VersionStr.str()
+            << ". Valid values are 2 or 3. Using default version "
+            << CompressedBundleVersion << ".\n";
+    } else
+      llvm::errs()
+          << "Warning: Invalid value for COMPRESSED_BUNDLE_FORMAT_VERSION: "
+          << VersionStr.str() << ". Using default version "
+          << CompressedBundleVersion << ".\n";
   }
 }
 
@@ -980,14 +1014,13 @@ static std::string formatWithCommas(unsigned long long Value) {
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
 CompressedOffloadBundle::compress(llvm::compression::Params P,
                                   const llvm::MemoryBuffer &Input,
-                                  bool Verbose) {
+                                  uint16_t Version, bool Verbose) {
   if (!llvm::compression::zstd::isAvailable() &&
       !llvm::compression::zlib::isAvailable())
     return createStringError(llvm::inconvertibleErrorCode(),
                              "Compression not supported");
-
   llvm::Timer HashTimer("Hash Calculation Timer", "Hash calculation time",
-                        ClangOffloadBundlerTimerGroup);
+                        *ClangOffloadBundlerTimerGroup);
   if (Verbose)
     HashTimer.startTimer();
   llvm::MD5 Hash;
@@ -1002,9 +1035,8 @@ CompressedOffloadBundle::compress(llvm::compression::Params P,
   auto BufferUint8 = llvm::ArrayRef<uint8_t>(
       reinterpret_cast<const uint8_t *>(Input.getBuffer().data()),
       Input.getBuffer().size());
-
   llvm::Timer CompressTimer("Compression Timer", "Compression time",
-                            ClangOffloadBundlerTimerGroup);
+                            *ClangOffloadBundlerTimerGroup);
   if (Verbose)
     CompressTimer.startTimer();
   llvm::compression::compress(P, BufferUint8, CompressedBuffer);
@@ -1012,11 +1044,31 @@ CompressedOffloadBundle::compress(llvm::compression::Params P,
     CompressTimer.stopTimer();
 
   uint16_t CompressionMethod = static_cast<uint16_t>(P.format);
-  uint32_t UncompressedSize = Input.getBuffer().size();
-  uint32_t TotalFileSize = MagicNumber.size() + sizeof(TotalFileSize) +
-                           sizeof(Version) + sizeof(CompressionMethod) +
-                           sizeof(UncompressedSize) + sizeof(TruncatedHash) +
-                           CompressedBuffer.size();
+
+  // Store sizes in 64-bit variables first
+  uint64_t UncompressedSize64 = Input.getBuffer().size();
+  uint64_t TotalFileSize64;
+
+  // Calculate total file size based on version
+  if (Version == 2) {
+    // For V2, ensure the sizes don't exceed 32-bit limit
+    if (UncompressedSize64 > std::numeric_limits<uint32_t>::max())
+      return createStringError(llvm::inconvertibleErrorCode(),
+                               "Uncompressed size exceeds version 2 limit");
+    if ((MagicNumber.size() + sizeof(uint32_t) + sizeof(Version) +
+         sizeof(CompressionMethod) + sizeof(uint32_t) + sizeof(TruncatedHash) +
+         CompressedBuffer.size()) > std::numeric_limits<uint32_t>::max())
+      return createStringError(llvm::inconvertibleErrorCode(),
+                               "Total file size exceeds version 2 limit");
+
+    TotalFileSize64 = MagicNumber.size() + sizeof(uint32_t) + sizeof(Version) +
+                      sizeof(CompressionMethod) + sizeof(uint32_t) +
+                      sizeof(TruncatedHash) + CompressedBuffer.size();
+  } else { // Version 3
+    TotalFileSize64 = MagicNumber.size() + sizeof(uint64_t) + sizeof(Version) +
+                      sizeof(CompressionMethod) + sizeof(uint64_t) +
+                      sizeof(TruncatedHash) + CompressedBuffer.size();
+  }
 
   SmallVector<char, 0> FinalBuffer;
   llvm::raw_svector_ostream OS(FinalBuffer);
@@ -1024,10 +1076,22 @@ CompressedOffloadBundle::compress(llvm::compression::Params P,
   OS.write(reinterpret_cast<const char *>(&Version), sizeof(Version));
   OS.write(reinterpret_cast<const char *>(&CompressionMethod),
            sizeof(CompressionMethod));
-  OS.write(reinterpret_cast<const char *>(&TotalFileSize),
-           sizeof(TotalFileSize));
-  OS.write(reinterpret_cast<const char *>(&UncompressedSize),
-           sizeof(UncompressedSize));
+
+  // Write size fields according to version
+  if (Version == 2) {
+    uint32_t TotalFileSize32 = static_cast<uint32_t>(TotalFileSize64);
+    uint32_t UncompressedSize32 = static_cast<uint32_t>(UncompressedSize64);
+    OS.write(reinterpret_cast<const char *>(&TotalFileSize32),
+             sizeof(TotalFileSize32));
+    OS.write(reinterpret_cast<const char *>(&UncompressedSize32),
+             sizeof(UncompressedSize32));
+  } else { // Version 3
+    OS.write(reinterpret_cast<const char *>(&TotalFileSize64),
+             sizeof(TotalFileSize64));
+    OS.write(reinterpret_cast<const char *>(&UncompressedSize64),
+             sizeof(UncompressedSize64));
+  }
+
   OS.write(reinterpret_cast<const char *>(&TruncatedHash),
            sizeof(TruncatedHash));
   OS.write(reinterpret_cast<const char *>(CompressedBuffer.data()),
@@ -1037,18 +1101,17 @@ CompressedOffloadBundle::compress(llvm::compression::Params P,
     auto MethodUsed =
         P.format == llvm::compression::Format::Zstd ? "zstd" : "zlib";
     double CompressionRate =
-        static_cast<double>(UncompressedSize) / CompressedBuffer.size();
+        static_cast<double>(UncompressedSize64) / CompressedBuffer.size();
     double CompressionTimeSeconds = CompressTimer.getTotalTime().getWallTime();
     double CompressionSpeedMBs =
-        (UncompressedSize / (1024.0 * 1024.0)) / CompressionTimeSeconds;
-
+        (UncompressedSize64 / (1024.0 * 1024.0)) / CompressionTimeSeconds;
     llvm::errs() << "Compressed bundle format version: " << Version << "\n"
                  << "Total file size (including headers): "
-                 << formatWithCommas(TotalFileSize) << " bytes\n"
+                 << formatWithCommas(TotalFileSize64) << " bytes\n"
                  << "Compression method used: " << MethodUsed << "\n"
                  << "Compression level: " << P.level << "\n"
                  << "Binary size before compression: "
-                 << formatWithCommas(UncompressedSize) << " bytes\n"
+                 << formatWithCommas(UncompressedSize64) << " bytes\n"
                  << "Binary size after compression: "
                  << formatWithCommas(CompressedBuffer.size()) << " bytes\n"
                  << "Compression rate: "
@@ -1060,17 +1123,121 @@ CompressedOffloadBundle::compress(llvm::compression::Params P,
                  << "Truncated MD5 hash: "
                  << llvm::format_hex(TruncatedHash, 16) << "\n";
   }
+
   return llvm::MemoryBuffer::getMemBufferCopy(
       llvm::StringRef(FinalBuffer.data(), FinalBuffer.size()));
+}
+
+// Use packed structs to avoid padding, such that the structs map the serialized
+// format.
+LLVM_PACKED_START
+union RawCompressedBundleHeader {
+  struct CommonFields {
+    uint32_t Magic;
+    uint16_t Version;
+    uint16_t Method;
+  };
+
+  struct V1Header {
+    CommonFields Common;
+    uint32_t UncompressedFileSize;
+    uint64_t Hash;
+  };
+
+  struct V2Header {
+    CommonFields Common;
+    uint32_t FileSize;
+    uint32_t UncompressedFileSize;
+    uint64_t Hash;
+  };
+
+  struct V3Header {
+    CommonFields Common;
+    uint64_t FileSize;
+    uint64_t UncompressedFileSize;
+    uint64_t Hash;
+  };
+
+  CommonFields Common;
+  V1Header V1;
+  V2Header V2;
+  V3Header V3;
+};
+LLVM_PACKED_END
+
+// Helper method to get header size based on version
+static size_t getHeaderSize(uint16_t Version) {
+  switch (Version) {
+  case 1:
+    return sizeof(RawCompressedBundleHeader::V1Header);
+  case 2:
+    return sizeof(RawCompressedBundleHeader::V2Header);
+  case 3:
+    return sizeof(RawCompressedBundleHeader::V3Header);
+  default:
+    llvm_unreachable("Unsupported version");
+  }
+}
+
+Expected<CompressedOffloadBundle::CompressedBundleHeader>
+CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
+  assert(Blob.size() >= sizeof(RawCompressedBundleHeader::CommonFields));
+  assert(llvm::identify_magic(Blob) ==
+         llvm::file_magic::offload_bundle_compressed);
+
+  RawCompressedBundleHeader Header;
+  memcpy(&Header, Blob.data(), std::min(Blob.size(), sizeof(Header)));
+
+  CompressedBundleHeader Normalized;
+  Normalized.Version = Header.Common.Version;
+
+  size_t RequiredSize = getHeaderSize(Normalized.Version);
+  if (Blob.size() < RequiredSize)
+    return createStringError(inconvertibleErrorCode(),
+                             "Compressed bundle header size too small");
+
+  switch (Normalized.Version) {
+  case 1:
+    Normalized.UncompressedFileSize = Header.V1.UncompressedFileSize;
+    Normalized.Hash = Header.V1.Hash;
+    break;
+  case 2:
+    Normalized.FileSize = Header.V2.FileSize;
+    Normalized.UncompressedFileSize = Header.V2.UncompressedFileSize;
+    Normalized.Hash = Header.V2.Hash;
+    break;
+  case 3:
+    Normalized.FileSize = Header.V3.FileSize;
+    Normalized.UncompressedFileSize = Header.V3.UncompressedFileSize;
+    Normalized.Hash = Header.V3.Hash;
+    break;
+  default:
+    return createStringError(inconvertibleErrorCode(),
+                             "Unknown compressed bundle version");
+  }
+
+  // Determine compression format
+  switch (Header.Common.Method) {
+  case static_cast<uint16_t>(compression::Format::Zlib):
+  case static_cast<uint16_t>(compression::Format::Zstd):
+    Normalized.CompressionFormat =
+        static_cast<compression::Format>(Header.Common.Method);
+    break;
+  default:
+    return createStringError(inconvertibleErrorCode(),
+                             "Unknown compressing method");
+  }
+
+  return Normalized;
 }
 
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
 CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
                                     bool Verbose) {
-
   StringRef Blob = Input.getBuffer();
 
-  if (Blob.size() < V1HeaderSize)
+  // Check minimum header size (using V1 as it's the smallest)
+  if (Blob.size() < sizeof(RawCompressedBundleHeader::CommonFields))
     return llvm::MemoryBuffer::getMemBufferCopy(Blob);
 
   if (llvm::identify_magic(Blob) !=
@@ -1080,51 +1247,28 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
     return llvm::MemoryBuffer::getMemBufferCopy(Blob);
   }
 
-  size_t CurrentOffset = MagicSize;
+  Expected<CompressedBundleHeader> HeaderOrErr =
+      CompressedBundleHeader::tryParse(Blob);
+  if (!HeaderOrErr)
+    return HeaderOrErr.takeError();
 
-  uint16_t ThisVersion;
-  memcpy(&ThisVersion, Blob.data() + CurrentOffset, sizeof(uint16_t));
-  CurrentOffset += VersionFieldSize;
+  const CompressedBundleHeader &Normalized = *HeaderOrErr;
+  unsigned ThisVersion = Normalized.Version;
+  size_t HeaderSize = getHeaderSize(ThisVersion);
 
-  uint16_t CompressionMethod;
-  memcpy(&CompressionMethod, Blob.data() + CurrentOffset, sizeof(uint16_t));
-  CurrentOffset += MethodFieldSize;
+  llvm::compression::Format CompressionFormat = Normalized.CompressionFormat;
 
-  uint32_t TotalFileSize;
-  if (ThisVersion >= 2) {
-    if (Blob.size() < V2HeaderSize)
-      return createStringError(inconvertibleErrorCode(),
-                               "Compressed bundle header size too small");
-    memcpy(&TotalFileSize, Blob.data() + CurrentOffset, sizeof(uint32_t));
-    CurrentOffset += FileSizeFieldSize;
-  }
-
-  uint32_t UncompressedSize;
-  memcpy(&UncompressedSize, Blob.data() + CurrentOffset, sizeof(uint32_t));
-  CurrentOffset += UncompressedSizeFieldSize;
-
-  uint64_t StoredHash;
-  memcpy(&StoredHash, Blob.data() + CurrentOffset, sizeof(uint64_t));
-  CurrentOffset += HashFieldSize;
-
-  llvm::compression::Format CompressionFormat;
-  if (CompressionMethod ==
-      static_cast<uint16_t>(llvm::compression::Format::Zlib))
-    CompressionFormat = llvm::compression::Format::Zlib;
-  else if (CompressionMethod ==
-           static_cast<uint16_t>(llvm::compression::Format::Zstd))
-    CompressionFormat = llvm::compression::Format::Zstd;
-  else
-    return createStringError(inconvertibleErrorCode(),
-                             "Unknown compressing method");
+  size_t TotalFileSize = Normalized.FileSize.value_or(0);
+  size_t UncompressedSize = Normalized.UncompressedFileSize;
+  auto StoredHash = Normalized.Hash;
 
   llvm::Timer DecompressTimer("Decompression Timer", "Decompression time",
-                              ClangOffloadBundlerTimerGroup);
+                              *ClangOffloadBundlerTimerGroup);
   if (Verbose)
     DecompressTimer.startTimer();
 
   SmallVector<uint8_t, 0> DecompressedData;
-  StringRef CompressedData = Blob.substr(CurrentOffset);
+  StringRef CompressedData = Blob.substr(HeaderSize);
   if (llvm::Error DecompressionError = llvm::compression::decompress(
           CompressionFormat, llvm::arrayRefFromStringRef(CompressedData),
           DecompressedData, UncompressedSize))
@@ -1141,7 +1285,7 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
     // Recalculate MD5 hash for integrity check
     llvm::Timer HashRecalcTimer("Hash Recalculation Timer",
                                 "Hash recalculation time",
-                                ClangOffloadBundlerTimerGroup);
+                                *ClangOffloadBundlerTimerGroup);
     HashRecalcTimer.startTimer();
     llvm::MD5 Hash;
     llvm::MD5::MD5Result Result;
@@ -1372,7 +1516,8 @@ Error OffloadBundler::BundleFiles() {
     auto CompressionResult = CompressedOffloadBundle::compress(
         {BundlerConfig.CompressionFormat, BundlerConfig.CompressionLevel,
          /*zstdEnableLdm=*/true},
-        *BufferMemory, BundlerConfig.Verbose);
+        *BufferMemory, BundlerConfig.CompressedBundleVersion,
+        BundlerConfig.Verbose);
     if (auto Error = CompressionResult.takeError())
       return Error;
 
@@ -1424,6 +1569,9 @@ Error OffloadBundler::UnbundleFiles() {
   StringMap<StringRef> Worklist;
   auto Output = BundlerConfig.OutputFileNames.begin();
   for (auto &Triple : BundlerConfig.TargetNames) {
+    if (!checkOffloadBundleID(Triple))
+      return createStringError(errc::invalid_argument,
+                               "invalid bundle id from bundle config");
     Worklist[Triple] = *Output;
     ++Output;
   }
@@ -1443,6 +1591,9 @@ Error OffloadBundler::UnbundleFiles() {
 
     StringRef CurTriple = **CurTripleOrErr;
     assert(!CurTriple.empty());
+    if (!checkOffloadBundleID(CurTriple))
+      return createStringError(errc::invalid_argument,
+                               "invalid bundle id read from the bundle");
 
     auto Output = Worklist.begin();
     for (auto E = Worklist.end(); Output != E; Output++) {
@@ -1501,6 +1652,8 @@ Error OffloadBundler::UnbundleFiles() {
         return createFileError(E.second, EC);
 
       // If this entry has a host kind, copy the input file to the output file.
+      // We don't need to check E.getKey() here through checkOffloadBundleID
+      // because the entire WorkList has been checked above.
       auto OffloadInfo = OffloadTargetInfo(E.getKey(), BundlerConfig);
       if (OffloadInfo.hasHostKind())
         OutputFile.write(Input.getBufferStart(), Input.getBufferSize());
@@ -1730,6 +1883,10 @@ Error OffloadBundler::UnbundleArchive() {
     // archive.
     while (!CodeObject.empty()) {
       SmallVector<StringRef> CompatibleTargets;
+      if (!checkOffloadBundleID(CodeObject)) {
+        return createStringError(errc::invalid_argument,
+                                 "Invalid bundle id read from code object");
+      }
       auto CodeObjectInfo = OffloadTargetInfo(CodeObject, BundlerConfig);
       if (getCompatibleOffloadTargets(CodeObjectInfo, CompatibleTargets,
                                       BundlerConfig)) {
@@ -1810,4 +1967,12 @@ Error OffloadBundler::UnbundleArchive() {
   }
 
   return Error::success();
+}
+
+bool clang::checkOffloadBundleID(const llvm::StringRef Str) {
+  // <kind>-<triple>[-<target id>[:target features]]
+  // <triple> := <arch>-<vendor>-<os>-<env>
+  SmallVector<StringRef, 6> Components;
+  Str.split(Components, '-', /*MaxSplit=*/5);
+  return Components.size() == 5 || Components.size() == 6;
 }

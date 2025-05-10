@@ -17,6 +17,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 
@@ -159,8 +160,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
       !(FnD && FnD->getAsFunction() &&
         FnD->getAsFunction()->getReturnType()->getContainedAutoType()) &&
       ((Actions.CurContext->isDependentContext() ||
-        (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
-         TemplateInfo.Kind != ParsedTemplateInfo::ExplicitSpecialization)) &&
+        (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
+         TemplateInfo.Kind != ParsedTemplateKind::ExplicitSpecialization)) &&
        !Actions.IsInsideALocalClassWithinATemplateFunction())) {
 
     CachedTokens Toks;
@@ -265,7 +266,7 @@ void Parser::ParseCXXNonStaticMemberInitializer(Decl *VarD) {
     ConsumeAndStoreUntil(tok::r_brace, Toks, /*StopAtSemi=*/true);
   } else {
     // Consume everything up to (but excluding) the comma or semicolon.
-    ConsumeAndStoreInitializer(Toks, CIK_DefaultInitializer);
+    ConsumeAndStoreInitializer(Toks, CachedInitKind::DefaultInitializer);
   }
 
   // Store an artificial EOF token to ensure that we don't run off the end of
@@ -624,14 +625,21 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
 
-  if (Tok.is(tok::kw_try)) {
-    ParseFunctionTryBlock(LM.D, FnScope);
-
+  auto _ = llvm::make_scope_exit([&]() {
     while (Tok.isNot(tok::eof))
       ConsumeAnyToken();
 
     if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
       ConsumeAnyToken();
+
+    if (auto *FD = dyn_cast_or_null<FunctionDecl>(LM.D))
+      if (isa<CXXMethodDecl>(FD) ||
+          FD->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend))
+        Actions.ActOnFinishInlineFunctionDef(FD);
+  });
+
+  if (Tok.is(tok::kw_try)) {
+    ParseFunctionTryBlock(LM.D, FnScope);
     return;
   }
   if (Tok.is(tok::colon)) {
@@ -641,12 +649,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
     if (!Tok.is(tok::l_brace)) {
       FnScope.Exit();
       Actions.ActOnFinishFunctionBody(LM.D, nullptr);
-
-      while (Tok.isNot(tok::eof))
-        ConsumeAnyToken();
-
-      if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
-        ConsumeAnyToken();
       return;
     }
   } else
@@ -660,17 +662,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
          "current template being instantiated!");
 
   ParseFunctionStatementBody(LM.D, FnScope);
-
-  while (Tok.isNot(tok::eof))
-    ConsumeAnyToken();
-
-  if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
-    ConsumeAnyToken();
-
-  if (auto *FD = dyn_cast_or_null<FunctionDecl>(LM.D))
-    if (isa<CXXMethodDecl>(FD) ||
-        FD->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend))
-      Actions.ActOnFinishInlineFunctionDef(FD);
 }
 
 /// ParseLexedMemberInitializers - We finished parsing the member specification
@@ -722,8 +713,7 @@ void Parser::ParseLexedMemberInitializer(LateParsedMemberInitializer &MI) {
   ExprResult Init = ParseCXXMemberInitializer(MI.Field, /*IsFunction=*/false,
                                               EqualLoc);
 
-  Actions.ActOnFinishCXXInClassMemberInitializer(MI.Field, EqualLoc,
-                                                 Init.get());
+  Actions.ActOnFinishCXXInClassMemberInitializer(MI.Field, EqualLoc, Init);
 
   // The next token should be our artificial terminating EOF token.
   if (Tok.isNot(tok::eof)) {
@@ -1248,7 +1238,7 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
         TPResult Result = TPResult::Error;
         ConsumeToken();
         switch (CIK) {
-        case CIK_DefaultInitializer:
+        case CachedInitKind::DefaultInitializer:
           Result = TryParseInitDeclaratorList();
           // If we parsed a complete, ambiguous init-declarator-list, this
           // is only syntactically-valid if it's followed by a semicolon.
@@ -1256,7 +1246,7 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
             Result = TPResult::False;
           break;
 
-        case CIK_DefaultArgument:
+        case CachedInitKind::DefaultArgument:
           bool InvalidAsDeclaration = false;
           Result = TryParseParameterDeclarationClause(
               &InvalidAsDeclaration, /*VersusTemplateArg=*/true);
@@ -1382,7 +1372,7 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
     // and return it.  Otherwise, this is a spurious RHS token, which we
     // consume and pass on to downstream code to diagnose.
     case tok::r_paren:
-      if (CIK == CIK_DefaultArgument)
+      if (CIK == CachedInitKind::DefaultArgument)
         return true; // End of the default argument.
       if (ParenCount && !IsFirstToken)
         return false;
@@ -1416,7 +1406,7 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
       ConsumeStringToken();
       break;
     case tok::semi:
-      if (CIK == CIK_DefaultInitializer)
+      if (CIK == CachedInitKind::DefaultInitializer)
         return true; // End of the default initializer.
       [[fallthrough]];
     default:

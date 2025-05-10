@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_PARTIAL_SORT_COPY_H
-#define _LIBCPP___ALGORITHM_PARTIAL_SORT_COPY_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_PARTIAL_SORT_COPY_H
+#define _LIBCPP___CXX03___ALGORITHM_PARTIAL_SORT_COPY_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -18,8 +18,8 @@
 #include <__cxx03/__algorithm/sort_heap.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__type_traits/is_callable.h>
 #include <__cxx03/__utility/move.h>
 #include <__cxx03/__utility/pair.h>
@@ -103,4 +103,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_PARTIAL_SORT_COPY_H
+#endif // _LIBCPP___CXX03___ALGORITHM_PARTIAL_SORT_COPY_H

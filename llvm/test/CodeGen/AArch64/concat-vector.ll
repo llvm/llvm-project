@@ -480,7 +480,7 @@ define <2 x i64> @concat_high_high_v2i64(<2 x i64> %a_vec, <2 x i64> %b_vec) {
 ;
 ; CHECK-GI-LABEL: concat_high_high_v2i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v0.d[0], v0.d[1]
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[1]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -498,7 +498,7 @@ define <2 x double> @concat_high_high_v2f64(<2 x double> %a_vec, <2 x double> %b
 ;
 ; CHECK-GI-LABEL: concat_high_high_v2f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v0.d[0], v0.d[1]
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[1]
 ; CHECK-GI-NEXT:    ret
 entry:

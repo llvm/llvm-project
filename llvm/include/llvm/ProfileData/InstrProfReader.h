@@ -21,6 +21,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
@@ -704,7 +705,8 @@ private:
   unsigned RadixTreeSize = 0;
 
   Error deserializeV2(const unsigned char *Start, const unsigned char *Ptr);
-  Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr);
+  Error deserializeRadixTreeBased(const unsigned char *Start,
+                                  const unsigned char *Ptr);
 
 public:
   IndexedMemProfReader() = default;

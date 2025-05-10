@@ -543,7 +543,7 @@ define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 ;
 ; AVX512BW-LABEL: v16i1:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpternlogd $96, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 & (xmm1 ^ mem)
 ; AVX512BW-NEXT:    retq
   %z = call <16 x i1> @llvm.usub.sat.v16i1(<16 x i1> %x, <16 x i1> %y)
   ret <16 x i1> %z
@@ -1057,10 +1057,10 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    xorl %edi, %edi
-; SSE-NEXT:    subq {{[0-9]+}}(%rsp), %rsi
+; SSE-NEXT:    subq %r9, %rsi
 ; SSE-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
-; SSE-NEXT:    cmovbq %rdi, %rdx
 ; SSE-NEXT:    cmovbq %rdi, %rsi
+; SSE-NEXT:    cmovbq %rdi, %rdx
 ; SSE-NEXT:    subq {{[0-9]+}}(%rsp), %rcx
 ; SSE-NEXT:    sbbq {{[0-9]+}}(%rsp), %r8
 ; SSE-NEXT:    cmovbq %rdi, %r8
@@ -1075,10 +1075,10 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    xorl %edi, %edi
-; AVX-NEXT:    subq {{[0-9]+}}(%rsp), %rsi
+; AVX-NEXT:    subq %r9, %rsi
 ; AVX-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
-; AVX-NEXT:    cmovbq %rdi, %rdx
 ; AVX-NEXT:    cmovbq %rdi, %rsi
+; AVX-NEXT:    cmovbq %rdi, %rdx
 ; AVX-NEXT:    subq {{[0-9]+}}(%rsp), %rcx
 ; AVX-NEXT:    sbbq {{[0-9]+}}(%rsp), %r8
 ; AVX-NEXT:    cmovbq %rdi, %r8

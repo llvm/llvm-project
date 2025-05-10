@@ -28,14 +28,14 @@ struct _LIBCPP_EXPORTED_FROM_ABI in_place_t {
 inline constexpr in_place_t in_place{};
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS in_place_type_t {
+struct in_place_type_t {
   _LIBCPP_HIDE_FROM_ABI explicit in_place_type_t() = default;
 };
 template <class _Tp>
 inline constexpr in_place_type_t<_Tp> in_place_type{};
 
 template <size_t _Idx>
-struct _LIBCPP_TEMPLATE_VIS in_place_index_t {
+struct in_place_index_t {
   _LIBCPP_HIDE_FROM_ABI explicit in_place_index_t() = default;
 };
 template <size_t _Idx>
@@ -47,7 +47,7 @@ template <class _Tp>
 struct __is_inplace_type_imp<in_place_type_t<_Tp>> : true_type {};
 
 template <class _Tp>
-using __is_inplace_type = __is_inplace_type_imp<__remove_cvref_t<_Tp>>;
+using __is_inplace_type _LIBCPP_NODEBUG = __is_inplace_type_imp<__remove_cvref_t<_Tp>>;
 
 template <class _Tp>
 struct __is_inplace_index_imp : false_type {};
@@ -55,7 +55,7 @@ template <size_t _Idx>
 struct __is_inplace_index_imp<in_place_index_t<_Idx>> : true_type {};
 
 template <class _Tp>
-using __is_inplace_index = __is_inplace_index_imp<__remove_cvref_t<_Tp>>;
+using __is_inplace_index _LIBCPP_NODEBUG = __is_inplace_index_imp<__remove_cvref_t<_Tp>>;
 
 #endif // _LIBCPP_STD_VER >= 17
 

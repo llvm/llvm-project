@@ -72,6 +72,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::atan2:
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::sincos:
+  case Intrinsic::sincospi:
   case Intrinsic::tan:
   case Intrinsic::sinh:
   case Intrinsic::cosh:
@@ -87,6 +89,9 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::maxnum:
   case Intrinsic::minimum:
   case Intrinsic::maximum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum:
+  case Intrinsic::modf:
   case Intrinsic::copysign:
   case Intrinsic::floor:
   case Intrinsic::ceil:
@@ -113,9 +118,41 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   }
 }
 
+bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
+                                   const TargetTransformInfo *TTI) {
+  if (isTriviallyVectorizable(ID))
+    return true;
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isTargetIntrinsicTriviallyScalarizable(ID);
+
+  // TODO: Move frexp to isTriviallyVectorizable.
+  // https://github.com/llvm/llvm-project/issues/112408
+  switch (ID) {
+  case Intrinsic::frexp:
+  case Intrinsic::uadd_with_overflow:
+  case Intrinsic::sadd_with_overflow:
+  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::usub_with_overflow:
+  case Intrinsic::umul_with_overflow:
+  case Intrinsic::smul_with_overflow:
+    return true;
+  }
+  return false;
+}
+
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
-                                              unsigned ScalarOpdIdx) {
+                                              unsigned ScalarOpdIdx,
+                                              const TargetTransformInfo *TTI) {
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
+
+  // Vector predication intrinsics have the EVL as the last operand.
+  if (VPIntrinsic::getVectorLengthParamPos(ID) == ScalarOpdIdx)
+    return true;
+
   switch (ID) {
   case Intrinsic::abs:
   case Intrinsic::vp_abs:
@@ -132,6 +169,8 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
     return (ScalarOpdIdx == 2);
+  case Intrinsic::experimental_vp_splice:
+    return ScalarOpdIdx == 2 || ScalarOpdIdx == 4;
   default:
     return false;
   }
@@ -142,7 +181,10 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   assert(ID != Intrinsic::not_intrinsic && "Not an intrinsic!");
 
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
-    return TTI->isVectorIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
+    return TTI->isTargetIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
+
+  if (VPCastIntrinsic::isVPCast(ID))
+    return OpdIdx == -1 || OpdIdx == 0;
 
   switch (ID) {
   case Intrinsic::fptosi_sat:
@@ -154,6 +196,9 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
     return OpdIdx == -1 || OpdIdx == 0;
+  case Intrinsic::modf:
+  case Intrinsic::sincos:
+  case Intrinsic::sincospi:
   case Intrinsic::is_fpclass:
   case Intrinsic::vp_is_fpclass:
     return OpdIdx == 0;
@@ -164,8 +209,12 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   }
 }
 
-bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
-                                                            int RetIdx) {
+bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(
+    Intrinsic::ID ID, int RetIdx, const TargetTransformInfo *TTI) {
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isTargetIntrinsicWithStructReturnOverloadAtField(ID, RetIdx);
+
   switch (ID) {
   case Intrinsic::frexp:
     return RetIdx == 0 || RetIdx == 1;
@@ -378,6 +427,36 @@ bool llvm::getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
   return true;
 }
 
+bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
+                             std::array<std::pair<int, int>, 2> &SrcInfo) {
+  const int SignalValue = NumElts * 2;
+  SrcInfo[0] = {-1, SignalValue};
+  SrcInfo[1] = {-1, SignalValue};
+  for (auto [i, M] : enumerate(Mask)) {
+    if (M < 0)
+      continue;
+    int Src = M >= (int)NumElts;
+    int Diff = (int)i - (M % NumElts);
+    bool Match = false;
+    for (int j = 0; j < 2; j++) {
+      auto &[SrcE, DiffE] = SrcInfo[j];
+      if (SrcE == -1) {
+        assert(DiffE == SignalValue);
+        SrcE = Src;
+        DiffE = Diff;
+      }
+      if (SrcE == Src && DiffE == Diff) {
+        Match = true;
+        break;
+      }
+    }
+    if (!Match)
+      return false;
+  }
+  // Avoid all undef masks
+  return SrcInfo[0].first != -1;
+}
+
 void llvm::narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                                  SmallVectorImpl<int> &ScaledMask) {
   assert(Scale > 0 && "Unexpected scaling factor");
@@ -450,6 +529,41 @@ bool llvm::widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
   return true;
 }
 
+bool llvm::widenShuffleMaskElts(ArrayRef<int> M,
+                                SmallVectorImpl<int> &NewMask) {
+  unsigned NumElts = M.size();
+  if (NumElts % 2 != 0)
+    return false;
+
+  NewMask.clear();
+  for (unsigned i = 0; i < NumElts; i += 2) {
+    int M0 = M[i];
+    int M1 = M[i + 1];
+
+    // If both elements are undef, new mask is undef too.
+    if (M0 == -1 && M1 == -1) {
+      NewMask.push_back(-1);
+      continue;
+    }
+
+    if (M0 == -1 && M1 != -1 && (M1 % 2) == 1) {
+      NewMask.push_back(M1 / 2);
+      continue;
+    }
+
+    if (M0 != -1 && (M0 % 2) == 0 && ((M0 + 1) == M1 || M1 == -1)) {
+      NewMask.push_back(M0 / 2);
+      continue;
+    }
+
+    NewMask.clear();
+    return false;
+  }
+
+  assert(NewMask.size() == NumElts / 2 && "Incorrect size for mask!");
+  return true;
+}
+
 bool llvm::scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
                                 SmallVectorImpl<int> &ScaledMask) {
   unsigned NumSrcElts = Mask.size();
@@ -493,7 +607,8 @@ void llvm::processShuffleMasks(
     ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
-    function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction) {
+    function_ref<void(ArrayRef<int>, unsigned, unsigned, bool)>
+        ManyInputsAction) {
   SmallVector<SmallVector<SmallVector<int>>> Res(NumOfDestRegs);
   // Try to perform better estimation of the permutation.
   // 1. Split the source/destination vectors into real registers.
@@ -564,6 +679,7 @@ void llvm::processShuffleMasks(
         }
       };
       int SecondIdx;
+      bool NewReg = true;
       do {
         int FirstIdx = -1;
         SecondIdx = -1;
@@ -581,7 +697,8 @@ void llvm::processShuffleMasks(
           SecondIdx = I;
           SecondMask = RegMask;
           CombineMasks(FirstMask, SecondMask);
-          ManyInputsAction(FirstMask, FirstIdx, SecondIdx);
+          ManyInputsAction(FirstMask, FirstIdx, SecondIdx, NewReg);
+          NewReg = false;
           NormalizeMask(FirstMask);
           RegMask.clear();
           SecondMask = FirstMask;
@@ -589,7 +706,8 @@ void llvm::processShuffleMasks(
         }
         if (FirstIdx != SecondIdx && SecondIdx >= 0) {
           CombineMasks(SecondMask, FirstMask);
-          ManyInputsAction(SecondMask, SecondIdx, FirstIdx);
+          ManyInputsAction(SecondMask, SecondIdx, FirstIdx, NewReg);
+          NewReg = false;
           Dest[FirstIdx].clear();
           NormalizeMask(SecondMask);
         }
@@ -636,9 +754,9 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
   // to ensure no extra casts would need to be inserted, so every DAG
   // of connected values must have the same minimum bitwidth.
   EquivalenceClasses<Value *> ECs;
-  SmallVector<Value *, 16> Worklist;
-  SmallPtrSet<Value *, 4> Roots;
-  SmallPtrSet<Value *, 16> Visited;
+  SmallVector<Instruction *, 16> Worklist;
+  SmallPtrSet<Instruction *, 4> Roots;
+  SmallPtrSet<Instruction *, 16> Visited;
   DenseMap<Value *, uint64_t> DBits;
   SmallPtrSet<Instruction *, 4> InstructionSet;
   MapVector<Instruction *, uint64_t> MinBWs;
@@ -672,16 +790,11 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
 
   // Now proceed breadth-first, unioning values together.
   while (!Worklist.empty()) {
-    Value *Val = Worklist.pop_back_val();
-    Value *Leader = ECs.getOrInsertLeaderValue(Val);
+    Instruction *I = Worklist.pop_back_val();
+    Value *Leader = ECs.getOrInsertLeaderValue(I);
 
-    if (!Visited.insert(Val).second)
+    if (!Visited.insert(I).second)
       continue;
-
-    // Non-instructions terminate a chain successfully.
-    if (!isa<Instruction>(Val))
-      continue;
-    Instruction *I = cast<Instruction>(Val);
 
     // If we encounter a type that is larger than 64 bits, we can't represent
     // it so bail out.
@@ -713,13 +826,19 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     if (isa<PHINode>(I))
       continue;
 
+    // Don't modify the types of operands of a call, as doing that would cause a
+    // signature mismatch.
+    if (isa<CallBase>(I))
+      continue;
+
     if (DBits[Leader] == ~0ULL)
       // All bits demanded, no point continuing.
       continue;
 
-    for (Value *O : cast<User>(I)->operands()) {
+    for (Value *O : I->operands()) {
       ECs.unionSets(Leader, O);
-      Worklist.push_back(O);
+      if (auto *OI = dyn_cast<Instruction>(O))
+        Worklist.push_back(OI);
     }
   }
 
@@ -731,9 +850,11 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
       if (U->getType()->isIntegerTy() && DBits.count(U) == 0)
         DBits[ECs.getOrInsertLeaderValue(I.first)] |= ~0ULL;
 
-  for (auto I = ECs.begin(), E = ECs.end(); I != E; ++I) {
+  for (const auto &E : ECs) {
+    if (!E->isLeader())
+      continue;
     uint64_t LeaderDemandedBits = 0;
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end()))
+    for (Value *M : ECs.members(*E))
       LeaderDemandedBits |= DBits[M];
 
     uint64_t MinBW = llvm::bit_width(LeaderDemandedBits);
@@ -745,7 +866,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     // indvars.
     // If we are required to shrink a PHI, abandon this entire equivalence class.
     bool Abort = false;
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end()))
+    for (Value *M : ECs.members(*E))
       if (isa<PHINode>(M) && MinBW < M->getType()->getScalarSizeInBits()) {
         Abort = true;
         break;
@@ -753,12 +874,12 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     if (Abort)
       continue;
 
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end())) {
+    for (Value *M : ECs.members(*E)) {
       auto *MI = dyn_cast<Instruction>(M);
       if (!MI)
         continue;
       Type *Ty = M->getType();
-      if (Roots.count(M))
+      if (Roots.count(MI))
         Ty = MI->getOperand(0)->getType();
 
       if (MinBW >= Ty->getScalarSizeInBits())
@@ -766,7 +887,9 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
 
       // If any of M's operands demand more bits than MinBW then M cannot be
       // performed safely in MinBW.
-      if (any_of(MI->operands(), [&DB, MinBW](Use &U) {
+      auto *Call = dyn_cast<CallBase>(MI);
+      auto Ops = Call ? Call->args() : MI->operands();
+      if (any_of(Ops, [&DB, MinBW](Use &U) {
             auto *CI = dyn_cast<ConstantInt>(U);
             // For constants shift amounts, check if the shift would result in
             // poison.
@@ -870,19 +993,38 @@ MDNode *llvm::intersectAccessGroups(const Instruction *Inst1,
   return MDNode::get(Ctx, Intersection);
 }
 
+/// Add metadata from \p Inst to \p Metadata, if it can be preserved after
+/// vectorization.
+void llvm::getMetadataToPropagate(
+    Instruction *Inst,
+    SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata) {
+  Inst->getAllMetadataOtherThanDebugLoc(Metadata);
+  static const unsigned SupportedIDs[] = {
+      LLVMContext::MD_tbaa,         LLVMContext::MD_alias_scope,
+      LLVMContext::MD_noalias,      LLVMContext::MD_fpmath,
+      LLVMContext::MD_nontemporal,  LLVMContext::MD_invariant_load,
+      LLVMContext::MD_access_group, LLVMContext::MD_mmra};
+
+  // Remove any unsupported metadata kinds from Metadata.
+  for (unsigned Idx = 0; Idx != Metadata.size();) {
+    if (is_contained(SupportedIDs, Metadata[Idx].first)) {
+      ++Idx;
+    } else {
+      // Swap element to end and remove it.
+      std::swap(Metadata[Idx], Metadata.back());
+      Metadata.pop_back();
+    }
+  }
+}
+
 /// \returns \p I after propagating metadata from \p VL.
 Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   if (VL.empty())
     return Inst;
-  Instruction *I0 = cast<Instruction>(VL[0]);
-  SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
-  I0->getAllMetadataOtherThanDebugLoc(Metadata);
+  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+  getMetadataToPropagate(cast<Instruction>(VL[0]), Metadata);
 
-  for (auto Kind : {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
-                    LLVMContext::MD_noalias, LLVMContext::MD_fpmath,
-                    LLVMContext::MD_nontemporal, LLVMContext::MD_invariant_load,
-                    LLVMContext::MD_access_group, LLVMContext::MD_mmra}) {
-    MDNode *MD = I0->getMetadata(Kind);
+  for (auto &[Kind, MD] : Metadata) {
     for (int J = 1, E = VL.size(); MD && J != E; ++J) {
       const Instruction *IJ = cast<Instruction>(VL[J]);
       MDNode *IMD = IJ->getMetadata(Kind);
@@ -1568,9 +1710,7 @@ void InterleaveGroup<InstT>::addMetadata(InstT *NewInst) const {
 namespace llvm {
 template <>
 void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
-  SmallVector<Value *, 4> VL;
-  std::transform(Members.begin(), Members.end(), std::back_inserter(VL),
-                 [](std::pair<int, Instruction *> p) { return p.second; });
+  SmallVector<Value *, 4> VL(make_second_range(Members));
   propagateMetadata(NewInst, VL);
 }
 } // namespace llvm

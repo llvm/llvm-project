@@ -1,0 +1,48 @@
+# Test unwind info for functions which have been split into two or more parts.
+# In particular, check we return the correct set of unwind plans when querying
+# addresses which are in the middle of discontinuous functions.
+
+# REQUIRES: lld, target-x86_64
+
+# RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
+# RUN:   %S/Inputs/basic-block-sections-with-dwarf.s > %t.o
+# RUN: ld.lld %t.o -o %t
+## NB: This minidump exists only as a receptacle for the object file built
+## above. This is a workaround for the fact that "image show-unwind" does not
+## work without a Process object.
+# RUN: yaml2obj %S/Inputs/linux-x86_64.yaml > %t.core
+# RUN: %lldb -c %t.core %t -o "image load --file %t --slide 0" -s %s -o exit | \
+# RUN:   FileCheck --implicit-check-not="UNWIND PLANS" %s
+
+image show-unwind --cached true -n foo
+# CHECK: UNWIND PLANS for {{.*}}`foo
+#
+# CHECK:      eh_frame UnwindPlan:
+# CHECK-NEXT: This UnwindPlan originally sourced from eh_frame CFI
+# CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.
+# CHECK-NEXT: This UnwindPlan is valid at all instruction locations: no.
+# CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
+# CHECK-NEXT: Address range of this UnwindPlan: [{{.*}}.text + 6-0x0000000000000010)[{{.*}}.text + 17-0x000000000000001c)[{{.*}}.text + 44-0x0000000000000037)[{{.*}}.text + 56-0x000000000000003d)
+# CHECK-NEXT: row[0]:    0: CFA=rsp +8 => rip=[CFA-8]
+# CHECK-NEXT: row[1]:    1: CFA=rsp+16 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[2]:   11: CFA=rsp+16 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[3]:   15: CFA=rsp+32 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[4]:   38: CFA=rsp+16 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[5]:   42: CFA=rsp+32 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[6]:   50: CFA=rsp+32 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[7]:   54: CFA=rsp +8 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-EMPTY:
+
+image show-unwind --cached true -n bar
+# CHECK: UNWIND PLANS for {{.*}}`bar
+
+# CHECK:      eh_frame UnwindPlan:
+# CHECK-NEXT: This UnwindPlan originally sourced from eh_frame CFI
+# CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.
+# CHECK-NEXT: This UnwindPlan is valid at all instruction locations: no.
+# CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
+# CHECK-NEXT: Address range of this UnwindPlan: [{{.*}}.text + 28-0x000000000000002c)
+# CHECK-NEXT: row[0]:    0: CFA=rsp +8 => rip=[CFA-8]
+# CHECK-NEXT: row[1]:    4: CFA=rsp+32 => rip=[CFA-8]
+# CHECK-NEXT: row[2]:   15: CFA=rsp +8 => rip=[CFA-8]
+# CHECK-EMPTY:

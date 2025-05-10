@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86FixupKinds.h"
+#include "MCTargetDesc/X86MCExpr.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -32,6 +33,8 @@ public:
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
+  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
+                               unsigned Type) const override;
 };
 
 } // end anonymous namespace
@@ -47,26 +50,21 @@ X86ELFObjectWriter::X86ELFObjectWriter(bool IsELF64, uint8_t OSABI,
 enum X86_64RelType { RT64_NONE, RT64_64, RT64_32, RT64_32S, RT64_16, RT64_8 };
 
 static X86_64RelType getType64(MCFixupKind Kind,
-                               MCSymbolRefExpr::VariantKind &Modifier,
-                               bool &IsPCRel) {
+                               X86MCExpr::Specifier &Specifier, bool &IsPCRel) {
   switch (unsigned(Kind)) {
   default:
     llvm_unreachable("Unimplemented");
   case FK_NONE:
     return RT64_NONE;
-  case X86::reloc_global_offset_table8:
-    Modifier = MCSymbolRefExpr::VK_GOT;
-    IsPCRel = true;
-    return RT64_64;
   case FK_Data_8:
     return RT64_64;
   case X86::reloc_signed_4byte:
   case X86::reloc_signed_4byte_relax:
-    if (Modifier == MCSymbolRefExpr::VK_None && !IsPCRel)
+    if (Specifier == X86MCExpr::VK_None && !IsPCRel)
       return RT64_32S;
     return RT64_32;
   case X86::reloc_global_offset_table:
-    Modifier = MCSymbolRefExpr::VK_GOT;
+    Specifier = X86MCExpr::VK_GOT;
     IsPCRel = true;
     return RT64_32;
   case FK_Data_4:
@@ -77,10 +75,10 @@ static X86_64RelType getType64(MCFixupKind Kind,
   case X86::reloc_riprel_4byte_relax_rex2:
   case X86::reloc_riprel_4byte_movq_load:
   case X86::reloc_riprel_4byte_movq_load_rex2:
-  case X86::reloc_riprel_6byte_relax:
+  case X86::reloc_riprel_4byte_relax_evex:
     return RT64_32;
   case X86::reloc_branch_4byte_pcrel:
-    Modifier = MCSymbolRefExpr::VK_PLT;
+    Specifier = X86MCExpr::VK_PLT;
     return RT64_32;
   case FK_PCRel_2:
   case FK_Data_2:
@@ -104,17 +102,17 @@ static void checkIs64(MCContext &Ctx, SMLoc Loc, X86_64RelType Type) {
 }
 
 static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
-                               MCSymbolRefExpr::VariantKind Modifier,
+                               X86MCExpr::Specifier Specifier,
                                X86_64RelType Type, bool IsPCRel,
                                MCFixupKind Kind) {
-  switch (Modifier) {
+  switch (Specifier) {
   default:
     llvm_unreachable("Unimplemented");
-  case MCSymbolRefExpr::VK_None:
-  case MCSymbolRefExpr::VK_X86_ABS8:
+  case X86MCExpr::VK_None:
+  case X86MCExpr::VK_ABS8:
     switch (Type) {
     case RT64_NONE:
-      if (Modifier == MCSymbolRefExpr::VK_None)
+      if (Specifier == X86MCExpr::VK_None)
         return ELF::R_X86_64_NONE;
       llvm_unreachable("Unimplemented");
     case RT64_64:
@@ -129,7 +127,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
       return IsPCRel ? ELF::R_X86_64_PC8 : ELF::R_X86_64_8;
     }
     llvm_unreachable("unexpected relocation type!");
-  case MCSymbolRefExpr::VK_GOT:
+  case X86MCExpr::VK_GOT:
     switch (Type) {
     case RT64_64:
       return IsPCRel ? ELF::R_X86_64_GOTPC64 : ELF::R_X86_64_GOT64;
@@ -142,12 +140,12 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
       llvm_unreachable("Unimplemented");
     }
     llvm_unreachable("unexpected relocation type!");
-  case MCSymbolRefExpr::VK_GOTOFF:
+  case X86MCExpr::VK_GOTOFF:
     assert(!IsPCRel);
     if (Type != RT64_64)
       Ctx.reportError(Loc, "unsupported relocation type");
     return ELF::R_X86_64_GOTOFF64;
-  case MCSymbolRefExpr::VK_TPOFF:
+  case X86MCExpr::VK_TPOFF:
     assert(!IsPCRel);
     switch (Type) {
     case RT64_64:
@@ -161,7 +159,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
       llvm_unreachable("Unimplemented");
     }
     llvm_unreachable("unexpected relocation type!");
-  case MCSymbolRefExpr::VK_DTPOFF:
+  case X86MCExpr::VK_DTPOFF:
     assert(!IsPCRel);
     switch (Type) {
     case RT64_64:
@@ -175,7 +173,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
       llvm_unreachable("Unimplemented");
     }
     llvm_unreachable("unexpected relocation type!");
-  case MCSymbolRefExpr::VK_SIZE:
+  case X86MCExpr::VK_SIZE:
     assert(!IsPCRel);
     switch (Type) {
     case RT64_64:
@@ -189,30 +187,30 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
       llvm_unreachable("Unimplemented");
     }
     llvm_unreachable("unexpected relocation type!");
-  case MCSymbolRefExpr::VK_TLSCALL:
+  case X86MCExpr::VK_TLSCALL:
     return ELF::R_X86_64_TLSDESC_CALL;
-  case MCSymbolRefExpr::VK_TLSDESC:
+  case X86MCExpr::VK_TLSDESC:
     return ((unsigned)Kind == X86::reloc_riprel_4byte_relax_rex2)
                ? ELF::R_X86_64_CODE_4_GOTPC32_TLSDESC
                : ELF::R_X86_64_GOTPC32_TLSDESC;
-  case MCSymbolRefExpr::VK_TLSGD:
+  case X86MCExpr::VK_TLSGD:
     checkIs32(Ctx, Loc, Type);
     return ELF::R_X86_64_TLSGD;
-  case MCSymbolRefExpr::VK_GOTTPOFF:
+  case X86MCExpr::VK_GOTTPOFF:
     checkIs32(Ctx, Loc, Type);
     if ((unsigned)Kind == X86::reloc_riprel_4byte_movq_load_rex2 ||
         (unsigned)Kind == X86::reloc_riprel_4byte_relax_rex2)
       return ELF::R_X86_64_CODE_4_GOTTPOFF;
-    else if ((unsigned)Kind == X86::reloc_riprel_6byte_relax)
+    else if ((unsigned)Kind == X86::reloc_riprel_4byte_relax_evex)
       return ELF::R_X86_64_CODE_6_GOTTPOFF;
     return ELF::R_X86_64_GOTTPOFF;
-  case MCSymbolRefExpr::VK_TLSLD:
+  case X86MCExpr::VK_TLSLD:
     checkIs32(Ctx, Loc, Type);
     return ELF::R_X86_64_TLSLD;
-  case MCSymbolRefExpr::VK_PLT:
+  case X86MCExpr::VK_PLT:
     checkIs32(Ctx, Loc, Type);
     return ELF::R_X86_64_PLT32;
-  case MCSymbolRefExpr::VK_GOTPCREL:
+  case X86MCExpr::VK_GOTPCREL:
     checkIs32(Ctx, Loc, Type);
     // Older versions of ld.bfd/ld.gold/lld
     // do not support GOTPCRELX/REX_GOTPCRELX/CODE_4_GOTPCRELX,
@@ -230,14 +228,12 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     case X86::reloc_riprel_4byte_relax_rex2:
     case X86::reloc_riprel_4byte_movq_load_rex2:
       return ELF::R_X86_64_CODE_4_GOTPCRELX;
-    case X86::reloc_riprel_6byte_relax:
-      return ELF::R_X86_64_CODE_6_GOTTPOFF;
     }
     llvm_unreachable("unexpected relocation type!");
-  case MCSymbolRefExpr::VK_GOTPCREL_NORELAX:
+  case X86MCExpr::VK_GOTPCREL_NORELAX:
     checkIs32(Ctx, Loc, Type);
     return ELF::R_X86_64_GOTPCREL;
-  case MCSymbolRefExpr::VK_X86_PLTOFF:
+  case X86MCExpr::VK_PLTOFF:
     checkIs64(Ctx, Loc, Type);
     return ELF::R_X86_64_PLTOFF64;
   }
@@ -246,17 +242,17 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
 enum X86_32RelType { RT32_NONE, RT32_32, RT32_16, RT32_8 };
 
 static unsigned getRelocType32(MCContext &Ctx, SMLoc Loc,
-                               MCSymbolRefExpr::VariantKind Modifier,
+                               X86MCExpr::Specifier Specifier,
                                X86_32RelType Type, bool IsPCRel,
                                MCFixupKind Kind) {
-  switch (Modifier) {
+  switch (Specifier) {
   default:
     llvm_unreachable("Unimplemented");
-  case MCSymbolRefExpr::VK_None:
-  case MCSymbolRefExpr::VK_X86_ABS8:
+  case X86MCExpr::VK_None:
+  case X86MCExpr::VK_ABS8:
     switch (Type) {
     case RT32_NONE:
-      if (Modifier == MCSymbolRefExpr::VK_None)
+      if (Specifier == X86MCExpr::VK_None)
         return ELF::R_386_NONE;
       llvm_unreachable("Unimplemented");
     case RT32_32:
@@ -267,7 +263,7 @@ static unsigned getRelocType32(MCContext &Ctx, SMLoc Loc,
       return IsPCRel ? ELF::R_386_PC8 : ELF::R_386_8;
     }
     llvm_unreachable("unexpected relocation type!");
-  case MCSymbolRefExpr::VK_GOT:
+  case X86MCExpr::VK_GOT:
     if (Type != RT32_32)
       break;
     if (IsPCRel)
@@ -280,55 +276,55 @@ static unsigned getRelocType32(MCContext &Ctx, SMLoc Loc,
     return Kind == MCFixupKind(X86::reloc_signed_4byte_relax)
                ? ELF::R_386_GOT32X
                : ELF::R_386_GOT32;
-  case MCSymbolRefExpr::VK_GOTOFF:
+  case X86MCExpr::VK_GOTOFF:
     assert(!IsPCRel);
     if (Type != RT32_32)
       break;
     return ELF::R_386_GOTOFF;
-  case MCSymbolRefExpr::VK_TLSCALL:
+  case X86MCExpr::VK_TLSCALL:
     return ELF::R_386_TLS_DESC_CALL;
-  case MCSymbolRefExpr::VK_TLSDESC:
+  case X86MCExpr::VK_TLSDESC:
     return ELF::R_386_TLS_GOTDESC;
-  case MCSymbolRefExpr::VK_TPOFF:
+  case X86MCExpr::VK_TPOFF:
     if (Type != RT32_32)
       break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_LE_32;
-  case MCSymbolRefExpr::VK_DTPOFF:
+  case X86MCExpr::VK_DTPOFF:
     if (Type != RT32_32)
       break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_LDO_32;
-  case MCSymbolRefExpr::VK_TLSGD:
+  case X86MCExpr::VK_TLSGD:
     if (Type != RT32_32)
       break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_GD;
-  case MCSymbolRefExpr::VK_GOTTPOFF:
+  case X86MCExpr::VK_GOTTPOFF:
     if (Type != RT32_32)
       break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_IE_32;
-  case MCSymbolRefExpr::VK_PLT:
+  case X86MCExpr::VK_PLT:
     if (Type != RT32_32)
       break;
     return ELF::R_386_PLT32;
-  case MCSymbolRefExpr::VK_INDNTPOFF:
+  case X86MCExpr::VK_INDNTPOFF:
     if (Type != RT32_32)
       break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_IE;
-  case MCSymbolRefExpr::VK_NTPOFF:
+  case X86MCExpr::VK_NTPOFF:
     if (Type != RT32_32)
       break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_LE;
-  case MCSymbolRefExpr::VK_GOTNTPOFF:
+  case X86MCExpr::VK_GOTNTPOFF:
     if (Type != RT32_32)
       break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_GOTIE;
-  case MCSymbolRefExpr::VK_TLSLDM:
+  case X86MCExpr::VK_TLSLDM:
     if (Type != RT32_32)
       break;
     assert(!IsPCRel);
@@ -342,12 +338,29 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
   MCFixupKind Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
-  MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
-  X86_64RelType Type = getType64(Kind, Modifier, IsPCRel);
+  auto Specifier = X86MCExpr::Specifier(Target.getSpecifier());
+  switch (Specifier) {
+  case X86MCExpr::VK_GOTTPOFF:
+  case X86MCExpr::VK_INDNTPOFF:
+  case X86MCExpr::VK_NTPOFF:
+  case X86MCExpr::VK_GOTNTPOFF:
+  case X86MCExpr::VK_TLSCALL:
+  case X86MCExpr::VK_TLSDESC:
+  case X86MCExpr::VK_TLSGD:
+  case X86MCExpr::VK_TLSLD:
+  case X86MCExpr::VK_TLSLDM:
+  case X86MCExpr::VK_TPOFF:
+  case X86MCExpr::VK_DTPOFF:
+    if (auto *S = Target.getAddSym())
+      cast<MCSymbolELF>(S)->setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
+
+  X86_64RelType Type = getType64(Kind, Specifier, IsPCRel);
   if (getEMachine() == ELF::EM_X86_64)
-    return getRelocType64(Ctx, Fixup.getLoc(), Modifier, Type, IsPCRel, Kind);
+    return getRelocType64(Ctx, Fixup.getLoc(), Specifier, Type, IsPCRel, Kind);
 
   assert((getEMachine() == ELF::EM_386 || getEMachine() == ELF::EM_IAMCU) &&
          "Unsupported ELF machine type.");
@@ -370,7 +383,21 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     RelType = RT32_8;
     break;
   }
-  return getRelocType32(Ctx, Fixup.getLoc(), Modifier, RelType, IsPCRel, Kind);
+  return getRelocType32(Ctx, Fixup.getLoc(), Specifier, RelType, IsPCRel, Kind);
+}
+
+bool X86ELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
+                                                 const MCSymbol &Sym,
+                                                 unsigned Type) const {
+  switch (V.getSpecifier()) {
+  case X86MCExpr::VK_GOT:
+  case X86MCExpr::VK_PLT:
+  case X86MCExpr::VK_GOTPCREL:
+  case X86MCExpr::VK_GOTPCREL_NORELAX:
+    return true;
+  default:
+    return false;
+  }
 }
 
 std::unique_ptr<MCObjectTargetWriter>

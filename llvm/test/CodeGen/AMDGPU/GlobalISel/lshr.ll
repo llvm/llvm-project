@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,GFX8 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
 
 define i8 @v_lshr_i8(i8 %value, i8 %amount) {
 ; GFX6-LABEL: v_lshr_i8:
@@ -1800,9 +1800,9 @@ define amdgpu_ps i65 @s_lshr_i65_33(i65 inreg %value) {
 ; GCN-NEXT:    s_and_b64 s[2:3], s[2:3], 1
 ; GCN-NEXT:    s_lshr_b32 s0, s1, 1
 ; GCN-NEXT:    s_mov_b32 s1, 0
-; GCN-NEXT:    s_lshl_b64 s[4:5], s[2:3], 31
-; GCN-NEXT:    s_or_b64 s[0:1], s[0:1], s[4:5]
-; GCN-NEXT:    s_lshr_b32 s2, s3, 1
+; GCN-NEXT:    s_lshl_b64 s[2:3], s[2:3], 31
+; GCN-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
+; GCN-NEXT:    s_mov_b32 s2, 0
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_lshr_i65_33:
@@ -1810,9 +1810,9 @@ define amdgpu_ps i65 @s_lshr_i65_33(i65 inreg %value) {
 ; GFX10PLUS-NEXT:    s_and_b64 s[2:3], s[2:3], 1
 ; GFX10PLUS-NEXT:    s_lshr_b32 s0, s1, 1
 ; GFX10PLUS-NEXT:    s_mov_b32 s1, 0
-; GFX10PLUS-NEXT:    s_lshl_b64 s[4:5], s[2:3], 31
-; GFX10PLUS-NEXT:    s_lshr_b32 s2, s3, 1
-; GFX10PLUS-NEXT:    s_or_b64 s[0:1], s[0:1], s[4:5]
+; GFX10PLUS-NEXT:    s_lshl_b64 s[2:3], s[2:3], 31
+; GFX10PLUS-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
+; GFX10PLUS-NEXT:    s_mov_b32 s2, 0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %result = lshr i65 %value, 33
   ret i65 %result

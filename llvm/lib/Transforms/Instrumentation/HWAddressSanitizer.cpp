@@ -192,12 +192,15 @@ static cl::opt<bool>
                    cl::Hidden);
 
 static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
-                                          cl::desc("Hot percentile cuttoff."));
+                                          cl::desc("Hot percentile cutoff."));
 
 static cl::opt<float>
-    ClRandomSkipRate("hwasan-random-rate",
+    ClRandomKeepRate("hwasan-random-rate",
                      cl::desc("Probability value in the range [0.0, 1.0] "
-                              "to keep instrumentation of a function."));
+                              "to keep instrumentation of a function. "
+                              "Note: instrumentation can be skipped randomly "
+                              "OR because of the hot percentile cutoff, if "
+                              "both are supplied."));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
@@ -301,7 +304,7 @@ public:
       : M(M), SSI(SSI) {
     this->Recover = optOr(ClRecover, Recover);
     this->CompileKernel = optOr(ClEnableKhwasan, CompileKernel);
-    this->Rng = ClRandomSkipRate.getNumOccurrences() ? M.createRNG(DEBUG_TYPE)
+    this->Rng = ClRandomKeepRate.getNumOccurrences() ? M.createRNG(DEBUG_TYPE)
                                                      : nullptr;
 
     initializeModule();
@@ -322,7 +325,6 @@ private:
                                           FunctionAnalysisManager &FAM) const;
   void initializeModule();
   void createHwasanCtorComdat();
-  void removeFnAttributes(Function *F);
 
   void initializeCallbacks(Module &M);
 
@@ -348,7 +350,7 @@ private:
   bool ignoreMemIntrinsic(OptimizationRemarkEmitter &ORE, MemIntrinsic *MI);
   void instrumentMemIntrinsic(MemIntrinsic *MI);
   bool instrumentMemAccess(InterestingMemoryOperand &O, DomTreeUpdater &DTU,
-                           LoopInfo *LI);
+                           LoopInfo *LI, const DataLayout &DL);
   bool ignoreAccessWithoutRemark(Instruction *Inst, Value *Ptr);
   bool ignoreAccess(OptimizationRemarkEmitter &ORE, Instruction *Inst,
                     Value *Ptr);
@@ -486,7 +488,7 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
   if (checkIfAlreadyInstrumented(M, "nosanitize_hwaddress"))
     return PreservedAnalyses::all();
   const StackSafetyGlobalInfo *SSI = nullptr;
-  auto TargetTriple = llvm::Triple(M.getTargetTriple());
+  const Triple &TargetTriple = M.getTargetTriple();
   if (shouldUseStackSafetyAnalysis(TargetTriple, Options.DisableOptimization))
     SSI = &MAM.getResult<StackSafetyGlobalAnalysis>(M);
 
@@ -617,55 +619,17 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   appendToCompilerUsed(M, Dummy);
 }
 
-void HWAddressSanitizer::removeFnAttributes(Function *F) {
-  // Remove memory attributes that are invalid with HWASan.
-  // HWASan checks read from shadow, which invalidates memory(argmem: *)
-  // Short granule checks on function arguments read from the argument memory
-  // (last byte of the granule), which invalidates writeonly.
-  //
-  // This is not only true for sanitized functions, because AttrInfer can
-  // infer those attributes on libc functions, which is not true if those
-  // are instrumented (Android) or intercepted.
-  //
-  // We might want to model HWASan shadow memory more opaquely to get rid of
-  // this problem altogether, by hiding the shadow memory write in an
-  // intrinsic, essentially like in the AArch64StackTagging pass. But that's
-  // for another day.
-
-  // The API is weird. `onlyReadsMemory` actually means "does not write", and
-  // `onlyWritesMemory` actually means "does not read". So we reconstruct
-  // "accesses memory" && "does not read" <=> "writes".
-  bool Changed = false;
-  if (!F->doesNotAccessMemory()) {
-    bool WritesMemory = !F->onlyReadsMemory();
-    bool ReadsMemory = !F->onlyWritesMemory();
-    if ((WritesMemory && !ReadsMemory) || F->onlyAccessesArgMemory()) {
-      F->removeFnAttr(Attribute::Memory);
-      Changed = true;
-    }
-  }
-  for (Argument &A : F->args()) {
-    if (A.hasAttribute(Attribute::WriteOnly)) {
-      A.removeAttr(Attribute::WriteOnly);
-      Changed = true;
-    }
-  }
-  if (Changed) {
-    // nobuiltin makes sure later passes don't restore assumptions about
-    // the function.
-    F->addFnAttr(Attribute::NoBuiltin);
-  }
-}
-
 /// Module-level initialization.
 ///
 /// inserts a call to __hwasan_init to the module's constructor list.
 void HWAddressSanitizer::initializeModule() {
   LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
-  TargetTriple = Triple(M.getTargetTriple());
+  TargetTriple = M.getTargetTriple();
 
+  // HWASan may do short granule checks on function arguments read from the
+  // argument memory (last byte of the granule), which invalidates writeonly.
   for (Function &F : M.functions())
-    removeFnAttributes(&F);
+    removeASanIncompatibleFnAttributes(F, /*ReadsArgMem=*/true);
 
   // x86_64 currently has two modes:
   // - Intel LAM (default)
@@ -1043,14 +1007,13 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
         UseShortGranules
             ? Intrinsic::hwasan_check_memaccess_shortgranules_fixedshadow
             : Intrinsic::hwasan_check_memaccess_fixedshadow,
-        {},
         {Ptr, ConstantInt::get(Int32Ty, AccessInfo),
          ConstantInt::get(Int64Ty, Mapping.offset())});
   } else {
     IRB.CreateIntrinsic(
         UseShortGranules ? Intrinsic::hwasan_check_memaccess_shortgranules
                          : Intrinsic::hwasan_check_memaccess,
-        {}, {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+        {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
   }
 }
 
@@ -1163,11 +1126,22 @@ void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
 }
 
 bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O,
-                                             DomTreeUpdater &DTU,
-                                             LoopInfo *LI) {
+                                             DomTreeUpdater &DTU, LoopInfo *LI,
+                                             const DataLayout &DL) {
   Value *Addr = O.getPtr();
 
   LLVM_DEBUG(dbgs() << "Instrumenting: " << O.getInsn() << "\n");
+
+  // If the pointer is statically known to be zero, the tag check will pass
+  // since:
+  // 1) it has a zero tag
+  // 2) the shadow memory corresponding to address 0 is initialized to zero and
+  //    never updated.
+  // We can therefore elide the tag check.
+  llvm::KnownBits Known(DL.getPointerTypeSizeInBits(Addr->getType()));
+  llvm::computeKnownBits(Addr, Known, DL);
+  if (Known.isZero())
+    return false;
 
   if (O.MaybeMask)
     return false; // FIXME
@@ -1507,8 +1481,7 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
 
     AI->replaceUsesWithIf(Replacement, [AICast, AILong](const Use &U) {
       auto *User = U.getUser();
-      return User != AILong && User != AICast &&
-             !memtag::isLifetimeIntrinsic(User);
+      return User != AILong && User != AICast && !isa<LifetimeIntrinsic>(User);
     });
 
     memtag::annotateDebugRecords(Info, retagMask(N));
@@ -1589,9 +1562,9 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
   };
 
   auto SkipRandom = [&]() {
-    if (!ClRandomSkipRate.getNumOccurrences())
+    if (!ClRandomKeepRate.getNumOccurrences())
       return false;
-    std::bernoulli_distribution D(ClRandomSkipRate);
+    std::bernoulli_distribution D(ClRandomKeepRate);
     return !D(*Rng);
   };
 
@@ -1701,8 +1674,9 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   PostDominatorTree *PDT = FAM.getCachedResult<PostDominatorTreeAnalysis>(F);
   LoopInfo *LI = FAM.getCachedResult<LoopAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
+  const DataLayout &DL = F.getDataLayout();
   for (auto &Operand : OperandsToInstrument)
-    instrumentMemAccess(Operand, DTU, LI);
+    instrumentMemAccess(Operand, DTU, LI, DL);
   DTU.flush();
 
   if (ClInstrumentMemIntrinsics && !IntrinToInstrument.empty()) {
@@ -1873,6 +1847,12 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
                                      IsLocal ? GlobalValue::InternalLinkage
                                              : GlobalValue::LinkOnceODRLinkage,
                                      ThunkName, &M);
+    // TODO: think about other attributes as well.
+    if (any_of(P.second, [](const Function *F) {
+          return F->hasFnAttribute("branch-target-enforcement");
+        })) {
+      ThunkFn->addFnAttr("branch-target-enforcement");
+    }
     if (!IsLocal) {
       ThunkFn->setVisibility(GlobalValue::HiddenVisibility);
       ThunkFn->setComdat(M.getOrInsertComdat(ThunkName));

@@ -79,6 +79,19 @@ bb:
   ret i1 %i4
 }
 
+define i1 @cvt_icmp_0_zext_plus_zext_eq_i2(i1 %a, i1 %b) {
+; CHECK-LABEL: @cvt_icmp_0_zext_plus_zext_eq_i2(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a.ext = zext i1 %a to i2
+  %b.ext = zext i1 %b to i2
+  %add = add i2 %a.ext, %b.ext
+  %cmp = icmp eq i2 %add, 0
+  ret i1 %cmp
+}
+
 define i1 @cvt_icmp_1_zext_plus_zext_eq(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @cvt_icmp_1_zext_plus_zext_eq(
 ; CHECK-NEXT:  bb:
@@ -2367,8 +2380,7 @@ define <2 x i1> @icmp_eq_add_non_splat(<2 x i32> %a) {
 
 define <2 x i1> @icmp_eq_add_undef2(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_eq_add_undef2(
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[A:%.*]], splat (i32 5)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[ADD]], <i32 10, i32 undef>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 5, i32 undef>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = add <2 x i32> %a, <i32 5, i32 5>
@@ -2378,8 +2390,7 @@ define <2 x i1> @icmp_eq_add_undef2(<2 x i32> %a) {
 
 define <2 x i1> @icmp_eq_add_non_splat2(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_eq_add_non_splat2(
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[A:%.*]], splat (i32 5)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[ADD]], <i32 10, i32 11>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 5, i32 6>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = add <2 x i32> %a, <i32 5, i32 5>

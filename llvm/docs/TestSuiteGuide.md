@@ -45,8 +45,9 @@ Quickstart
    ```
 
 3. Create a build directory and use CMake to configure the suite. Use the
-   `CMAKE_C_COMPILER` option to specify the compiler to test. Use a cache file
-   to choose a typical build configuration:
+   `CMAKE_C_COMPILER` option to specify the compiler to test (the C++ compiler
+   will be inferred automatically from this). Use a cache file to choose a typical
+   build configuration:
 
    ```bash
    % mkdir test-suite-build
@@ -85,9 +86,15 @@ MicroBenchmarks/XRay microbenchmarks, you need to add `compiler-rt` to your
    PASS: test-suite :: MultiSource/Applications/ALAC/encode/alacconvert-encode.test (2 of 474)
    ...
    ```
-**NOTE!** even in the case you only want to get the compile-time results(code size, llvm stats etc),
-you need to run the test with the above `llvm-lit` command. In that case, the *results.json* file will
-contain compile-time metrics.
+
+```{note}
+  Even when you only want compile-time results you still need to run the test
+  with the above `llvm-lit` command. In this case, the `results.json` file will
+  contain compile time metrics only (code size, llvm stats and so on).
+
+  This mode is enabled by settting `-DTEST_SUITE_RUN_BENCHMARKS=OFF`,
+  more details [here](common_configuration_options).
+```
 
 6. Show and compare result files (optional):
 
@@ -202,6 +209,7 @@ benchmarks. CMake can print a list of them:
 % cmake -LAH
 ```
 
+(common_configuration_options)=
 ### Common Configuration Options
 
 - `CMAKE_C_FLAGS`
@@ -366,6 +374,19 @@ You can find further information in the respective README files such as
 For the SPEC benchmarks you can switch between the `test`, `train` and
 `ref` input datasets via the `TEST_SUITE_RUN_TYPE` configuration option.
 The `train` dataset is used by default.
+
+In addition to SPEC, the multimedia frameworks ffmpeg and dav1d can also
+be hooked up as external projects in the same way. By including them in
+llvm-test-suite, a lot more of potentially vectorizable code gets compiled -
+which can catch compiler bugs merely by triggering code generation asserts.
+Including them also adds small code correctness tests, that compare the
+output of the compiler generated functions against handwritten assembly
+functions. (On x86, building the assembly requires having the nasm tool
+available.) The integration into llvm-test-suite doesn't run the projects'
+full testsuites though. The projects also contain microbenchmarks for
+measuring the performance of some functions. See the `README.md` files in
+the respective `ffmpeg` and `dav1d` directories under
+`llvm-test-suite/External` for further details.
 
 
 Custom Suites

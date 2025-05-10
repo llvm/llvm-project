@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_INDEPENDENT_BITS_ENGINE_H
-#define _LIBCPP___RANDOM_INDEPENDENT_BITS_ENGINE_H
+#ifndef _LIBCPP___CXX03___RANDOM_INDEPENDENT_BITS_ENGINE_H
+#define _LIBCPP___CXX03___RANDOM_INDEPENDENT_BITS_ENGINE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/istream.h>
@@ -57,11 +57,7 @@ private:
   typedef typename _Engine::result_type _Engine_result_type;
   typedef __conditional_t<sizeof(_Engine_result_type) <= sizeof(result_type), result_type, _Engine_result_type>
       _Working_result_type;
-#ifdef _LIBCPP_CXX03_LANG
-  static const _Working_result_type _Rp = _Engine::_Max - _Engine::_Min + _Working_result_type(1);
-#else
-  static _LIBCPP_CONSTEXPR const _Working_result_type _Rp = _Engine::max() - _Engine::min() + _Working_result_type(1);
-#endif
+  static const _Working_result_type _Rp                    = _Engine::_Max - _Engine::_Min + _Working_result_type(1);
   static _LIBCPP_CONSTEXPR const size_t __m                = __log2<_Working_result_type, _Rp>::value;
   static _LIBCPP_CONSTEXPR const size_t __n                = __get_n<_Working_result_type, _Rp, __w, __m>::value;
   static _LIBCPP_CONSTEXPR const size_t __w0               = __w / __n;
@@ -88,9 +84,6 @@ public:
   // constructors and seeding functions
   _LIBCPP_HIDE_FROM_ABI independent_bits_engine() {}
   _LIBCPP_HIDE_FROM_ABI explicit independent_bits_engine(const _Engine& __e) : __e_(__e) {}
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI explicit independent_bits_engine(_Engine&& __e) : __e_(std::move(__e)) {}
-#endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI explicit independent_bits_engine(result_type __sd) : __e_(__sd) {}
   template <
       class _Sseq,
@@ -202,4 +195,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_INDEPENDENT_BITS_ENGINE_H
+#endif // _LIBCPP___CXX03___RANDOM_INDEPENDENT_BITS_ENGINE_H

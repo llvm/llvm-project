@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -verify-machineinstrs < %s | FileCheck %s
 ; CHECK: extractu(r1,#31,#0)
 
 ; In the IR this was an extract of 31 bits starting at position 32 in r1:0.

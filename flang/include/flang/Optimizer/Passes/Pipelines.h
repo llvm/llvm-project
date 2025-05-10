@@ -33,16 +33,16 @@ namespace fir {
 
 using PassConstructor = std::unique_ptr<mlir::Pass>();
 
-template <typename OP>
-void addNestedPassToOps(mlir::PassManager &pm, PassConstructor ctor) {
+template <typename F, typename OP>
+void addNestedPassToOps(mlir::PassManager &pm, F ctor) {
   pm.addNestedPass<OP>(ctor());
 }
 
-template <typename OP, typename... OPS,
+template <typename F, typename OP, typename... OPS,
           typename = std::enable_if_t<sizeof...(OPS) != 0>>
-void addNestedPassToOps(mlir::PassManager &pm, PassConstructor ctor) {
-  addNestedPassToOps<OP>(pm, ctor);
-  addNestedPassToOps<OPS...>(pm, ctor);
+void addNestedPassToOps(mlir::PassManager &pm, F ctor) {
+  addNestedPassToOps<F, OP>(pm, ctor);
+  addNestedPassToOps<F, OPS...>(pm, ctor);
 }
 
 /// Generic for adding a pass to the pass manager if it is not disabled.
@@ -60,11 +60,12 @@ void addNestedPassConditionally(mlir::PassManager &pm,
     pm.addNestedPass<OP>(ctor());
 }
 
-void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm,
-                                          PassConstructor ctor);
+template <typename F>
+void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor);
 
+template <typename F>
 void addNestedPassToAllTopLevelOperationsConditionally(
-    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, PassConstructor ctor);
+    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor);
 
 /// Add MLIR Canonicalizer pass with region simplification disabled.
 /// FIR does not support the promotion of some SSA value to block arguments (or
@@ -127,6 +128,17 @@ void createHLFIRToFIRPassPipeline(
     mlir::PassManager &pm, bool enableOpenMP,
     llvm::OptimizationLevel optLevel = defaultOptLevel);
 
+struct OpenMPFIRPassPipelineOpts {
+  /// Whether code is being generated for a target device rather than the host
+  /// device
+  bool isTargetDevice;
+
+  /// Controls how to map `do concurrent` loops; to device, host, or none at
+  /// all.
+  Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind
+      doConcurrentMappingKind;
+};
+
 /// Create a pass pipeline for handling certain OpenMP transformations needed
 /// prior to FIR lowering.
 ///
@@ -134,9 +146,10 @@ void createHLFIRToFIRPassPipeline(
 /// that the FIR is correct with respect to OpenMP operations/attributes.
 ///
 /// \param pm - MLIR pass manager that will hold the pipeline definition.
-/// \param isTargetDevice - Whether code is being generated for a target device
-/// rather than the host device.
-void createOpenMPFIRPassPipeline(mlir::PassManager &pm, bool isTargetDevice);
+/// \param opts - options to control OpenMP code-gen; see struct docs for more
+/// details.
+void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
+                                 OpenMPFIRPassPipelineOpts opts);
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
 void createDebugPasses(mlir::PassManager &pm,

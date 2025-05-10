@@ -967,14 +967,6 @@ public:
   /// Determine if the predicate is false when comparing a value with itself.
   static bool isFalseWhenEqual(Predicate predicate);
 
-  /// Determine if Pred1 implies Pred2 is true when two compares have matching
-  /// operands.
-  static bool isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2);
-
-  /// Determine if Pred1 implies Pred2 is false when two compares have matching
-  /// operands.
-  static bool isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2);
-
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::ICmp ||
@@ -1023,7 +1015,7 @@ struct OperandBundleUse {
   /// has the attribute A.
   bool operandHasAttr(unsigned Idx, Attribute::AttrKind A) const {
     if (isDeoptOperandBundle())
-      if (A == Attribute::ReadOnly || A == Attribute::NoCapture)
+      if (A == Attribute::ReadOnly)
         return Inputs[Idx]->getType()->isPointerTy();
 
     // Conservative answer:  no operands have any attributes.
@@ -1498,6 +1490,11 @@ public:
     Attrs = Attrs.addRetAttribute(getContext(), Attr);
   }
 
+  /// Adds attributes to the return value.
+  void addRetAttrs(const AttrBuilder &B) {
+    Attrs = Attrs.addRetAttributes(getContext(), B);
+  }
+
   /// Adds the attribute to the indicated argument
   void addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) {
     assert(ArgNo < arg_size() && "Out of bounds");
@@ -1508,6 +1505,12 @@ public:
   void addParamAttr(unsigned ArgNo, Attribute Attr) {
     assert(ArgNo < arg_size() && "Out of bounds");
     Attrs = Attrs.addParamAttribute(getContext(), ArgNo, Attr);
+  }
+
+  /// Adds attributes to the indicated argument
+  void addParamAttrs(unsigned ArgNo, const AttrBuilder &B) {
+    assert(ArgNo < arg_size() && "Out of bounds");
+    Attrs = Attrs.addParamAttributes(getContext(), ArgNo, B);
   }
 
   /// removes the attribute from the list of attributes.
@@ -1599,6 +1602,14 @@ public:
   /// Determine whether the argument or parameter has the given attribute.
   bool paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
+  /// Return true if this argument has the nonnull attribute on either the
+  /// CallBase instruction or the called function. Also returns true if at least
+  /// one byte is known to be dereferenceable and the pointer is in
+  /// addrspace(0). If \p AllowUndefOrPoison is true, respect the semantics of
+  /// nonnull attribute and return true even if the argument can be undef or
+  /// poison.
+  bool paramHasNonNullAttr(unsigned ArgNo, bool AllowUndefOrPoison) const;
+
   /// Get the attribute of a given kind at a position.
   Attribute getAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) const {
     return getAttributes().getAttributeAtIndex(i, Kind);
@@ -1671,12 +1682,20 @@ public:
     return bundleOperandHasAttr(i, Kind);
   }
 
+  /// Return which pointer components this operand may capture.
+  CaptureInfo getCaptureInfo(unsigned OpNo) const;
+
   /// Determine whether this data operand is not captured.
   // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
   // better indicate that this may return a conservative answer.
   bool doesNotCapture(unsigned OpNo) const {
-    return dataOperandHasImpliedAttr(OpNo, Attribute::NoCapture);
+    return capturesNothing(getCaptureInfo(OpNo));
   }
+
+  /// Returns whether the call has an argument that has an attribute like
+  /// captures(ret: address, provenance), where the return capture components
+  /// are not a subset of the other capture components.
+  bool hasArgumentWithAdditionalReturnCaptureComponents() const;
 
   /// Determine whether this argument is passed by value.
   bool isByValArgument(unsigned ArgNo) const {
@@ -1722,6 +1741,11 @@ public:
   // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
   // better indicate that this may return a conservative answer.
   bool onlyReadsMemory(unsigned OpNo) const {
+    // If the argument is passed byval, the callee does not have access to the
+    // original pointer and thus cannot write to it.
+    if (OpNo < arg_size() && isByValArgument(OpNo))
+      return true;
+
     return dataOperandHasImpliedAttr(OpNo, Attribute::ReadOnly) ||
            dataOperandHasImpliedAttr(OpNo, Attribute::ReadNone);
   }

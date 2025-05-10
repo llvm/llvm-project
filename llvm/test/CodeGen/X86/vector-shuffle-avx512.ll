@@ -38,7 +38,7 @@ define <8 x float> @expand1(<4 x float> %a ) {
 ; AVX512F-LABEL: expand1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vmovaps {{.*#+}} ymm1 = [16,0,18,1,20,2,22,3]
+; AVX512F-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [16,0,18,1,20,2,22,3]
 ; AVX512F-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
@@ -114,7 +114,7 @@ define <8 x float> @expand5(<4 x float> %a ) {
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512-FAST-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-FAST-NEXT:    vmovaps {{.*#+}} ymm2 = [8,0,10,0,12,0,14,0]
+; AVX512-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [8,10,12,14]
 ; AVX512-FAST-NEXT:    vpermt2ps %ymm1, %ymm2, %ymm0
 ; AVX512-FAST-NEXT:    ret{{[l|q]}}
 ;
@@ -245,7 +245,7 @@ define <16 x float> @expand12(<8 x float> %a) {
 ; CHECK-LABEL: expand12:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [0,16,2,16,4,16,6,16,0,16,1,16,2,16,3,16]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [0,16,2,16,4,16,6,16,0,16,1,16,2,16,3,16]
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -278,7 +278,7 @@ define <8 x float> @expand14(<4 x float> %a) {
 ; AVX512F-LABEL: expand14:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vmovaps {{.*#+}} ymm1 = [16,17,0,19,1,21,22,23]
+; AVX512F-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [16,17,0,19,1,21,22,23]
 ; AVX512F-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
@@ -300,8 +300,7 @@ define <8 x float> @expand15(<4 x float> %a) {
 ; AVX512-FAST-LABEL: expand15:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512-FAST-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [1,0,0,0,1,0,0,0]
-; AVX512-FAST-NEXT:    # ymm1 = mem[0,1,0,1]
+; AVX512-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,0,1,0]
 ; AVX512-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX512-FAST-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; AVX512-FAST-NEXT:    ret{{[l|q]}}
@@ -481,13 +480,13 @@ define <8 x float> @test_masked_permps_v8f32(ptr %vp, <8 x float> %vec2) {
 ; X86-AVX512-LABEL: test_masked_permps_v8f32:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    vmovaps {{.*#+}} ymm1 = [15,14,11,3,15,14,6,7]
+; X86-AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [15,14,11,3,15,14,6,7]
 ; X86-AVX512-NEXT:    vpermt2ps (%eax), %ymm1, %ymm0
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-AVX512-LABEL: test_masked_permps_v8f32:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vmovaps {{.*#+}} ymm1 = [15,14,11,3,15,14,6,7]
+; X64-AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [15,14,11,3,15,14,6,7]
 ; X64-AVX512-NEXT:    vpermt2ps (%rdi), %ymm1, %ymm0
 ; X64-AVX512-NEXT:    retq
 ;
@@ -496,7 +495,7 @@ define <8 x float> @test_masked_permps_v8f32(ptr %vp, <8 x float> %vec2) {
 ; X86-AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    vmovaps (%eax), %ymm1
-; X86-AVX512F-NEXT:    vmovaps {{.*#+}} ymm2 = [23,22,19,3,23,22,6,7]
+; X86-AVX512F-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [23,22,19,3,23,22,6,7]
 ; X86-AVX512F-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
 ; X86-AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; X86-AVX512F-NEXT:    retl
@@ -505,7 +504,7 @@ define <8 x float> @test_masked_permps_v8f32(ptr %vp, <8 x float> %vec2) {
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; X64-AVX512F-NEXT:    vmovaps (%rdi), %ymm1
-; X64-AVX512F-NEXT:    vmovaps {{.*#+}} ymm2 = [23,22,19,3,23,22,6,7]
+; X64-AVX512F-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [23,22,19,3,23,22,6,7]
 ; X64-AVX512F-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
 ; X64-AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; X64-AVX512F-NEXT:    retq
@@ -519,26 +518,26 @@ define <16 x float> @test_masked_permps_v16f32(ptr %vp, <16 x float> %vec2) {
 ; X86-AVX512-LABEL: test_masked_permps_v16f32:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = [31,29,27,3,30,28,6,7,23,22,19,11,23,13,19,15]
+; X86-AVX512-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [31,29,27,3,30,28,6,7,23,22,19,11,23,13,19,15]
 ; X86-AVX512-NEXT:    vpermt2ps (%eax), %zmm1, %zmm0
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-AVX512-LABEL: test_masked_permps_v16f32:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = [31,29,27,3,30,28,6,7,23,22,19,11,23,13,19,15]
+; X64-AVX512-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [31,29,27,3,30,28,6,7,23,22,19,11,23,13,19,15]
 ; X64-AVX512-NEXT:    vpermt2ps (%rdi), %zmm1, %zmm0
 ; X64-AVX512-NEXT:    retq
 ;
 ; X86-AVX512F-LABEL: test_masked_permps_v16f32:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [31,29,27,3,30,28,6,7,23,22,19,11,23,13,19,15]
+; X86-AVX512F-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [31,29,27,3,30,28,6,7,23,22,19,11,23,13,19,15]
 ; X86-AVX512F-NEXT:    vpermt2ps (%eax), %zmm1, %zmm0
 ; X86-AVX512F-NEXT:    retl
 ;
 ; X64-AVX512F-LABEL: test_masked_permps_v16f32:
 ; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [31,29,27,3,30,28,6,7,23,22,19,11,23,13,19,15]
+; X64-AVX512F-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [31,29,27,3,30,28,6,7,23,22,19,11,23,13,19,15]
 ; X64-AVX512F-NEXT:    vpermt2ps (%rdi), %zmm1, %zmm0
 ; X64-AVX512F-NEXT:    retq
   %vec = load <16 x float>, ptr %vp

@@ -25,6 +25,7 @@
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/RecyclingAllocator.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <cassert>
 #include <cstdint>
@@ -223,17 +224,15 @@ public:
     friend class BasicLayout;
 
   public:
-    Segment()
-        : ContentSize(0), ZeroFillSize(0), Addr(0), WorkingMem(nullptr),
-          NextWorkingMemOffset(0) {}
+    Segment() = default;
     Align Alignment;
-    size_t ContentSize;
-    uint64_t ZeroFillSize;
+    size_t ContentSize = 0;
+    uint64_t ZeroFillSize = 0;
     orc::ExecutorAddr Addr;
     char *WorkingMem = nullptr;
 
   private:
-    size_t NextWorkingMemOffset;
+    size_t NextWorkingMemOffset = 0;
     std::vector<Block *> ContentBlocks, ZeroFillBlocks;
   };
 
@@ -322,14 +321,14 @@ public:
       JITLinkMemoryManager::InFlightAlloc::OnFinalizedFunction;
 
   static void Create(JITLinkMemoryManager &MemMgr,
-                     std::shared_ptr<orc::SymbolStringPool> SSP,
+                     std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
                      const JITLinkDylib *JD, SegmentMap Segments,
                      OnCreatedFunction OnCreated);
 
   static Expected<SimpleSegmentAlloc>
   Create(JITLinkMemoryManager &MemMgr,
-         std::shared_ptr<orc::SymbolStringPool> SSP, const JITLinkDylib *JD,
-         SegmentMap Segments);
+         std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
+         const JITLinkDylib *JD, SegmentMap Segments);
 
   SimpleSegmentAlloc(SimpleSegmentAlloc &&);
   SimpleSegmentAlloc &operator=(SimpleSegmentAlloc &&);

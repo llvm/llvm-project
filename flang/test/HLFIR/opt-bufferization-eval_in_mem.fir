@@ -25,7 +25,7 @@ func.func private @_QPfoo() -> !fir.array<10xf32>
 // CHECK:         %[[VAL_3:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
 // CHECK:         %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %[[VAL_2]] {uniq_name = "_QFtestEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 // CHECK:         %[[VAL_5:.*]] = fir.call @_QPfoo() fastmath<contract> : () -> !fir.array<10xf32>
-// CHECK:         fir.save_result %[[VAL_5]] to %[[VAL_4]]#1(%[[VAL_3]]) : !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>, !fir.shape<1>
+// CHECK:         fir.save_result %[[VAL_5]] to %[[VAL_4]]#0(%[[VAL_3]]) : !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>, !fir.shape<1>
 // CHECK:         return
 // CHECK:       }
 
@@ -48,7 +48,6 @@ func.func @_QPnegative_test_is_target(%arg0: !fir.ref<!fir.array<10xf32>> {fir.b
 }
 // CHECK-LABEL: func.func @_QPnegative_test_is_target(
 // CHECK-SAME:                                        %[[VAL_0:.*]]: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "x", fir.target}) {
-// CHECK:         %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:         %[[VAL_2:.*]] = arith.constant false
 // CHECK:         %[[VAL_3:.*]] = arith.constant 10 : index
 // CHECK:         %[[VAL_4:.*]] = fir.alloca !fir.array<10xf32>
@@ -57,11 +56,7 @@ func.func @_QPnegative_test_is_target(%arg0: !fir.ref<!fir.array<10xf32>> {fir.b
 // CHECK:         %[[VAL_9:.*]] = fir.call @_QPfoo() fastmath<contract> : () -> !fir.array<10xf32>
 // CHECK:         fir.save_result %[[VAL_9]] to %[[VAL_8]]#1{{.*}}
 // CHECK:         %[[VAL_10:.*]] = hlfir.as_expr %[[VAL_8]]#0 move %[[VAL_2]] : (!fir.ref<!fir.array<10xf32>>, i1) -> !hlfir.expr<10xf32>
-// CHECK:         fir.do_loop %[[VAL_11:.*]] = %[[VAL_1]] to %[[VAL_3]] step %[[VAL_1]] unordered {
-// CHECK:           %[[VAL_12:.*]] = hlfir.apply %[[VAL_10]], %[[VAL_11]] : (!hlfir.expr<10xf32>, index) -> f32
-// CHECK:           %[[VAL_13:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_11]])  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
-// CHECK:           hlfir.assign %[[VAL_12]] to %[[VAL_13]] : f32, !fir.ref<f32>
-// CHECK:         }
+// CHECK:         hlfir.assign %[[VAL_10]] to %[[VAL_7]]#0 : !hlfir.expr<10xf32>, !fir.ref<!fir.array<10xf32>>
 // CHECK:         hlfir.destroy %[[VAL_10]] : !hlfir.expr<10xf32>
 // CHECK:         return
 // CHECK:       }

@@ -79,23 +79,6 @@ public:
   operator LocationAttr() const { return impl; }
   LocationAttr *operator->() const { return const_cast<LocationAttr *>(&impl); }
 
-  /// Type casting utilities on the underlying location.
-  template <typename U>
-  [[deprecated("Use mlir::isa<U>() instead")]]
-  bool isa() const {
-    return llvm::isa<U>(*this);
-  }
-  template <typename U>
-  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
-  U dyn_cast() const {
-    return llvm::dyn_cast<U>(*this);
-  }
-  template <typename U>
-  [[deprecated("Use mlir::cast<U>() instead")]]
-  U cast() const {
-    return llvm::cast<U>(*this);
-  }
-
   /// Comparison operators.
   bool operator==(Location rhs) const { return impl == rhs.impl; }
   bool operator!=(Location rhs) const { return !(*this == rhs); }
@@ -177,7 +160,7 @@ public:
 /// column number. This is similar to the type of location that you get from
 /// most source languages.
 ///
-/// FileLineColLoc is a FileLineColRange with exactly one line and column.
+/// FileLineColLoc is a view to FileLineColRange with one line and column.
 class FileLineColLoc : public FileLineColRange {
 public:
   using FileLineColRange::FileLineColRange;
@@ -190,10 +173,11 @@ public:
   StringAttr getFilename() const;
   unsigned getLine() const;
   unsigned getColumn() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(Attribute attr);
 };
+
+/// Returns true iff the given location is a FileLineColRange with exactly one
+/// line and column.
+bool isStrictFileLineColLoc(Location loc);
 
 //===----------------------------------------------------------------------===//
 // OpaqueLoc

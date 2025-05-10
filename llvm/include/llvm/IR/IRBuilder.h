@@ -87,6 +87,28 @@ public:
   }
 };
 
+/// This provides a helper for copying FMF from an instruction or setting
+/// specified flags.
+class FMFSource {
+  std::optional<FastMathFlags> FMF;
+
+public:
+  FMFSource() = default;
+  FMFSource(Instruction *Source) {
+    if (Source)
+      FMF = Source->getFastMathFlags();
+  }
+  FMFSource(FastMathFlags FMF) : FMF(FMF) {}
+  FastMathFlags get(FastMathFlags Default) const {
+    return FMF.value_or(Default);
+  }
+  /// Intersect the FMF from two instructions.
+  static FMFSource intersect(Value *A, Value *B) {
+    return FMFSource(cast<FPMathOperator>(A)->getFastMathFlags() &
+                     cast<FPMathOperator>(B)->getFastMathFlags());
+  }
+};
+
 /// Common base class shared among various IRBuilders.
 class IRBuilderBase {
   /// Pairs of (metadata kind, MDNode *) that should be added to all newly
@@ -832,12 +854,13 @@ public:
                                 Value *Mask = nullptr);
 
   /// Create a call to Masked Expand Load intrinsic
-  CallInst *CreateMaskedExpandLoad(Type *Ty, Value *Ptr, Value *Mask = nullptr,
+  CallInst *CreateMaskedExpandLoad(Type *Ty, Value *Ptr, MaybeAlign Align,
+                                   Value *Mask = nullptr,
                                    Value *PassThru = nullptr,
                                    const Twine &Name = "");
 
   /// Create a call to Masked Compress Store intrinsic
-  CallInst *CreateMaskedCompressStore(Value *Val, Value *Ptr,
+  CallInst *CreateMaskedCompressStore(Value *Val, Value *Ptr, MaybeAlign Align,
                                       Value *Mask = nullptr);
 
   /// Return an all true boolean vector (mask) with \p NumElts lanes.
@@ -958,49 +981,59 @@ public:
   /// Create a call to intrinsic \p ID with 1 operand which is mangled on its
   /// type.
   CallInst *CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
-                                 Instruction *FMFSource = nullptr,
+                                 FMFSource FMFSource = {},
                                  const Twine &Name = "");
 
   /// Create a call to intrinsic \p ID with 2 operands which is mangled on the
   /// first type.
   Value *CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS,
-                               Instruction *FMFSource = nullptr,
+                               FMFSource FMFSource = {},
                                const Twine &Name = "");
 
   /// Create a call to intrinsic \p ID with \p Args, mangled using \p Types. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to
   /// the intrinsic.
   CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Type *> Types,
-                            ArrayRef<Value *> Args,
-                            Instruction *FMFSource = nullptr,
+                            ArrayRef<Value *> Args, FMFSource FMFSource = {},
                             const Twine &Name = "");
 
   /// Create a call to intrinsic \p ID with \p RetTy and \p Args. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to
   /// the intrinsic.
   CallInst *CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
-                            ArrayRef<Value *> Args,
-                            Instruction *FMFSource = nullptr,
+                            ArrayRef<Value *> Args, FMFSource FMFSource = {},
                             const Twine &Name = "");
 
+  /// Create a call to non-overloaded intrinsic \p ID with \p Args. If
+  /// \p FMFSource is provided, copy fast-math-flags from that instruction to
+  /// the intrinsic.
+  CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Args,
+                            FMFSource FMFSource = {}, const Twine &Name = "") {
+    return CreateIntrinsic(ID, /*Types=*/{}, Args, FMFSource, Name);
+  }
+
   /// Create call to the minnum intrinsic.
-  Value *CreateMinNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+  Value *CreateMinNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                      const Twine &Name = "") {
     if (IsFPConstrained) {
       return CreateConstrainedFPUnroundedBinOp(
-          Intrinsic::experimental_constrained_minnum, LHS, RHS, nullptr, Name);
+          Intrinsic::experimental_constrained_minnum, LHS, RHS, FMFSource,
+          Name);
     }
 
-    return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, nullptr, Name);
+    return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, FMFSource, Name);
   }
 
   /// Create call to the maxnum intrinsic.
-  Value *CreateMaxNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+  Value *CreateMaxNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                      const Twine &Name = "") {
     if (IsFPConstrained) {
       return CreateConstrainedFPUnroundedBinOp(
-          Intrinsic::experimental_constrained_maxnum, LHS, RHS, nullptr, Name);
+          Intrinsic::experimental_constrained_maxnum, LHS, RHS, FMFSource,
+          Name);
     }
 
-    return CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS, nullptr, Name);
+    return CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS, FMFSource, Name);
   }
 
   /// Create call to the minimum intrinsic.
@@ -1026,19 +1059,31 @@ public:
   }
 
   /// Create call to the copysign intrinsic.
-  Value *CreateCopySign(Value *LHS, Value *RHS,
-                        Instruction *FMFSource = nullptr,
+  Value *CreateCopySign(Value *LHS, Value *RHS, FMFSource FMFSource = {},
                         const Twine &Name = "") {
     return CreateBinaryIntrinsic(Intrinsic::copysign, LHS, RHS, FMFSource,
                                  Name);
   }
 
   /// Create call to the ldexp intrinsic.
-  Value *CreateLdexp(Value *Src, Value *Exp, Instruction *FMFSource = nullptr,
+  Value *CreateLdexp(Value *Src, Value *Exp, FMFSource FMFSource = {},
                      const Twine &Name = "") {
     assert(!IsFPConstrained && "TODO: Support strictfp");
     return CreateIntrinsic(Intrinsic::ldexp, {Src->getType(), Exp->getType()},
                            {Src, Exp}, FMFSource, Name);
+  }
+
+  /// Create call to the fma intrinsic.
+  Value *CreateFMA(Value *Factor1, Value *Factor2, Value *Summand,
+                   FMFSource FMFSource = {}, const Twine &Name = "") {
+    if (IsFPConstrained) {
+      return CreateConstrainedFPIntrinsic(
+          Intrinsic::experimental_constrained_fma, {Factor1->getType()},
+          {Factor1, Factor2, Summand}, FMFSource, Name);
+    }
+
+    return CreateIntrinsic(Intrinsic::fma, {Factor1->getType()},
+                           {Factor1, Factor2, Summand}, FMFSource, Name);
   }
 
   /// Create a call to the arithmetic_fence intrinsic.
@@ -1056,12 +1101,24 @@ public:
                            Name);
   }
 
+  /// Create a call to the vector.extract intrinsic.
+  CallInst *CreateExtractVector(Type *DstType, Value *SrcVec, uint64_t Idx,
+                                const Twine &Name = "") {
+    return CreateExtractVector(DstType, SrcVec, getInt64(Idx), Name);
+  }
+
   /// Create a call to the vector.insert intrinsic.
   CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
                                Value *Idx, const Twine &Name = "") {
     return CreateIntrinsic(Intrinsic::vector_insert,
                            {DstType, SubVec->getType()}, {SrcVec, SubVec, Idx},
                            nullptr, Name);
+  }
+
+  /// Create a call to the vector.extract intrinsic.
+  CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                               uint64_t Idx, const Twine &Name = "") {
+    return CreateInsertVector(DstType, SrcVec, SubVec, getInt64(Idx), Name);
   }
 
   /// Create a call to llvm.stacksave
@@ -1555,144 +1612,113 @@ public:
 
   Value *CreateFAdd(Value *L, Value *R, const Twine &Name = "",
                     MDNode *FPMD = nullptr) {
-    if (IsFPConstrained)
-      return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fadd,
-                                      L, R, nullptr, Name, FPMD);
-
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FAdd, L, R, FMF))
-      return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFAdd(L, R), FPMD, FMF);
-    return Insert(I, Name);
+    return CreateFAddFMF(L, R, {}, Name, FPMD);
   }
 
-  /// Copy fast-math-flags from an instruction rather than using the builder's
-  /// default FMF.
-  Value *CreateFAddFMF(Value *L, Value *R, Instruction *FMFSource,
-                       const Twine &Name = "") {
+  Value *CreateFAddFMF(Value *L, Value *R, FMFSource FMFSource,
+                       const Twine &Name = "", MDNode *FPMD = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fadd,
-                                      L, R, FMFSource, Name);
+                                      L, R, FMFSource, Name, FPMD);
 
-    FastMathFlags FMF = FMFSource->getFastMathFlags();
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FAdd, L, R, FMF))
+    if (Value *V =
+            Folder.FoldBinOpFMF(Instruction::FAdd, L, R, FMFSource.get(FMF)))
       return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFAdd(L, R), nullptr, FMF);
+    Instruction *I =
+        setFPAttrs(BinaryOperator::CreateFAdd(L, R), FPMD, FMFSource.get(FMF));
     return Insert(I, Name);
   }
 
   Value *CreateFSub(Value *L, Value *R, const Twine &Name = "",
                     MDNode *FPMD = nullptr) {
-    if (IsFPConstrained)
-      return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fsub,
-                                      L, R, nullptr, Name, FPMD);
-
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FSub, L, R, FMF))
-      return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFSub(L, R), FPMD, FMF);
-    return Insert(I, Name);
+    return CreateFSubFMF(L, R, {}, Name, FPMD);
   }
 
-  /// Copy fast-math-flags from an instruction rather than using the builder's
-  /// default FMF.
-  Value *CreateFSubFMF(Value *L, Value *R, Instruction *FMFSource,
-                       const Twine &Name = "") {
+  Value *CreateFSubFMF(Value *L, Value *R, FMFSource FMFSource,
+                       const Twine &Name = "", MDNode *FPMD = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fsub,
-                                      L, R, FMFSource, Name);
+                                      L, R, FMFSource, Name, FPMD);
 
-    FastMathFlags FMF = FMFSource->getFastMathFlags();
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FSub, L, R, FMF))
+    if (Value *V =
+            Folder.FoldBinOpFMF(Instruction::FSub, L, R, FMFSource.get(FMF)))
       return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFSub(L, R), nullptr, FMF);
+    Instruction *I =
+        setFPAttrs(BinaryOperator::CreateFSub(L, R), FPMD, FMFSource.get(FMF));
     return Insert(I, Name);
   }
 
   Value *CreateFMul(Value *L, Value *R, const Twine &Name = "",
                     MDNode *FPMD = nullptr) {
-    if (IsFPConstrained)
-      return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fmul,
-                                      L, R, nullptr, Name, FPMD);
-
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FMul, L, R, FMF))
-      return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFMul(L, R), FPMD, FMF);
-    return Insert(I, Name);
+    return CreateFMulFMF(L, R, {}, Name, FPMD);
   }
 
-  /// Copy fast-math-flags from an instruction rather than using the builder's
-  /// default FMF.
-  Value *CreateFMulFMF(Value *L, Value *R, Instruction *FMFSource,
-                       const Twine &Name = "") {
+  Value *CreateFMulFMF(Value *L, Value *R, FMFSource FMFSource,
+                       const Twine &Name = "", MDNode *FPMD = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fmul,
-                                      L, R, FMFSource, Name);
+                                      L, R, FMFSource, Name, FPMD);
 
-    FastMathFlags FMF = FMFSource->getFastMathFlags();
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FMul, L, R, FMF))
+    if (Value *V =
+            Folder.FoldBinOpFMF(Instruction::FMul, L, R, FMFSource.get(FMF)))
       return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFMul(L, R), nullptr, FMF);
+    Instruction *I =
+        setFPAttrs(BinaryOperator::CreateFMul(L, R), FPMD, FMFSource.get(FMF));
     return Insert(I, Name);
   }
 
   Value *CreateFDiv(Value *L, Value *R, const Twine &Name = "",
                     MDNode *FPMD = nullptr) {
-    if (IsFPConstrained)
-      return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fdiv,
-                                      L, R, nullptr, Name, FPMD);
-
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FDiv, L, R, FMF))
-      return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFDiv(L, R), FPMD, FMF);
-    return Insert(I, Name);
+    return CreateFDivFMF(L, R, {}, Name, FPMD);
   }
 
-  /// Copy fast-math-flags from an instruction rather than using the builder's
-  /// default FMF.
-  Value *CreateFDivFMF(Value *L, Value *R, Instruction *FMFSource,
-                       const Twine &Name = "") {
+  Value *CreateFDivFMF(Value *L, Value *R, FMFSource FMFSource,
+                       const Twine &Name = "", MDNode *FPMD = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_fdiv,
-                                      L, R, FMFSource, Name);
+                                      L, R, FMFSource, Name, FPMD);
 
-    FastMathFlags FMF = FMFSource->getFastMathFlags();
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FDiv, L, R, FMF))
+    if (Value *V =
+            Folder.FoldBinOpFMF(Instruction::FDiv, L, R, FMFSource.get(FMF)))
       return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFDiv(L, R), nullptr, FMF);
+    Instruction *I =
+        setFPAttrs(BinaryOperator::CreateFDiv(L, R), FPMD, FMFSource.get(FMF));
     return Insert(I, Name);
   }
 
   Value *CreateFRem(Value *L, Value *R, const Twine &Name = "",
                     MDNode *FPMD = nullptr) {
-    if (IsFPConstrained)
-      return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_frem,
-                                      L, R, nullptr, Name, FPMD);
-
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FRem, L, R, FMF)) return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFRem(L, R), FPMD, FMF);
-    return Insert(I, Name);
+    return CreateFRemFMF(L, R, {}, Name, FPMD);
   }
 
-  /// Copy fast-math-flags from an instruction rather than using the builder's
-  /// default FMF.
-  Value *CreateFRemFMF(Value *L, Value *R, Instruction *FMFSource,
-                       const Twine &Name = "") {
+  Value *CreateFRemFMF(Value *L, Value *R, FMFSource FMFSource,
+                       const Twine &Name = "", MDNode *FPMD = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPBinOp(Intrinsic::experimental_constrained_frem,
-                                      L, R, FMFSource, Name);
+                                      L, R, FMFSource, Name, FPMD);
 
-    FastMathFlags FMF = FMFSource->getFastMathFlags();
-    if (Value *V = Folder.FoldBinOpFMF(Instruction::FRem, L, R, FMF)) return V;
-    Instruction *I = setFPAttrs(BinaryOperator::CreateFRem(L, R), nullptr, FMF);
+    if (Value *V =
+            Folder.FoldBinOpFMF(Instruction::FRem, L, R, FMFSource.get(FMF)))
+      return V;
+    Instruction *I =
+        setFPAttrs(BinaryOperator::CreateFRem(L, R), FPMD, FMFSource.get(FMF));
     return Insert(I, Name);
   }
 
   Value *CreateBinOp(Instruction::BinaryOps Opc,
                      Value *LHS, Value *RHS, const Twine &Name = "",
                      MDNode *FPMathTag = nullptr) {
-    if (Value *V = Folder.FoldBinOp(Opc, LHS, RHS)) return V;
+    return CreateBinOpFMF(Opc, LHS, RHS, {}, Name, FPMathTag);
+  }
+
+  Value *CreateBinOpFMF(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                        FMFSource FMFSource, const Twine &Name = "",
+                        MDNode *FPMathTag = nullptr) {
+    if (Value *V = Folder.FoldBinOp(Opc, LHS, RHS))
+      return V;
     Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
     if (isa<FPMathOperator>(BinOp))
-      setFPAttrs(BinOp, FPMathTag, FMF);
+      setFPAttrs(BinOp, FPMathTag, FMFSource.get(FMF));
     return Insert(BinOp, Name);
   }
 
@@ -1730,14 +1756,25 @@ public:
     return Accum;
   }
 
+  /// This function is like @ref CreateIntrinsic for constrained fp
+  /// intrinsics. It sets the rounding mode and exception behavior of
+  /// the created intrinsic call according to \p Rounding and \p
+  /// Except and it sets \p FPMathTag as the 'fpmath' metadata, using
+  /// defaults if a value equals nullopt/null.
+  CallInst *CreateConstrainedFPIntrinsic(
+      Intrinsic::ID ID, ArrayRef<Type *> Types, ArrayRef<Value *> Args,
+      FMFSource FMFSource, const Twine &Name, MDNode *FPMathTag = nullptr,
+      std::optional<RoundingMode> Rounding = std::nullopt,
+      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
+
   CallInst *CreateConstrainedFPBinOp(
-      Intrinsic::ID ID, Value *L, Value *R, Instruction *FMFSource = nullptr,
+      Intrinsic::ID ID, Value *L, Value *R, FMFSource FMFSource = {},
       const Twine &Name = "", MDNode *FPMathTag = nullptr,
       std::optional<RoundingMode> Rounding = std::nullopt,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
   CallInst *CreateConstrainedFPUnroundedBinOp(
-      Intrinsic::ID ID, Value *L, Value *R, Instruction *FMFSource = nullptr,
+      Intrinsic::ID ID, Value *L, Value *R, FMFSource FMFSource = {},
       const Twine &Name = "", MDNode *FPMathTag = nullptr,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
@@ -1752,21 +1789,17 @@ public:
 
   Value *CreateFNeg(Value *V, const Twine &Name = "",
                     MDNode *FPMathTag = nullptr) {
-    if (Value *Res = Folder.FoldUnOpFMF(Instruction::FNeg, V, FMF))
-      return Res;
-    return Insert(setFPAttrs(UnaryOperator::CreateFNeg(V), FPMathTag, FMF),
-                  Name);
+    return CreateFNegFMF(V, {}, Name, FPMathTag);
   }
 
-  /// Copy fast-math-flags from an instruction rather than using the builder's
-  /// default FMF.
-  Value *CreateFNegFMF(Value *V, Instruction *FMFSource,
-                       const Twine &Name = "") {
-   FastMathFlags FMF = FMFSource->getFastMathFlags();
-    if (Value *Res = Folder.FoldUnOpFMF(Instruction::FNeg, V, FMF))
+  Value *CreateFNegFMF(Value *V, FMFSource FMFSource, const Twine &Name = "",
+                       MDNode *FPMathTag = nullptr) {
+    if (Value *Res =
+            Folder.FoldUnOpFMF(Instruction::FNeg, V, FMFSource.get(FMF)))
       return Res;
-   return Insert(setFPAttrs(UnaryOperator::CreateFNeg(V), nullptr, FMF),
-                 Name);
+    return Insert(
+        setFPAttrs(UnaryOperator::CreateFNeg(V), FPMathTag, FMFSource.get(FMF)),
+        Name);
   }
 
   Value *CreateNot(Value *V, const Twine &Name = "") {
@@ -2127,19 +2160,31 @@ public:
 
   Value *CreateFPTrunc(Value *V, Type *DestTy, const Twine &Name = "",
                        MDNode *FPMathTag = nullptr) {
+    return CreateFPTruncFMF(V, DestTy, {}, Name, FPMathTag);
+  }
+
+  Value *CreateFPTruncFMF(Value *V, Type *DestTy, FMFSource FMFSource,
+                          const Twine &Name = "", MDNode *FPMathTag = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(
-          Intrinsic::experimental_constrained_fptrunc, V, DestTy, nullptr, Name,
-          FPMathTag);
-    return CreateCast(Instruction::FPTrunc, V, DestTy, Name, FPMathTag);
+          Intrinsic::experimental_constrained_fptrunc, V, DestTy, FMFSource,
+          Name, FPMathTag);
+    return CreateCast(Instruction::FPTrunc, V, DestTy, Name, FPMathTag,
+                      FMFSource);
   }
 
   Value *CreateFPExt(Value *V, Type *DestTy, const Twine &Name = "",
                      MDNode *FPMathTag = nullptr) {
+    return CreateFPExtFMF(V, DestTy, {}, Name, FPMathTag);
+  }
+
+  Value *CreateFPExtFMF(Value *V, Type *DestTy, FMFSource FMFSource,
+                        const Twine &Name = "", MDNode *FPMathTag = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(Intrinsic::experimental_constrained_fpext,
-                                     V, DestTy, nullptr, Name, FPMathTag);
-    return CreateCast(Instruction::FPExt, V, DestTy, Name, FPMathTag);
+                                     V, DestTy, FMFSource, Name, FPMathTag);
+    return CreateCast(Instruction::FPExt, V, DestTy, Name, FPMathTag,
+                      FMFSource);
   }
 
   Value *CreatePtrToInt(Value *V, Type *DestTy,
@@ -2187,14 +2232,15 @@ public:
   }
 
   Value *CreateCast(Instruction::CastOps Op, Value *V, Type *DestTy,
-                    const Twine &Name = "", MDNode *FPMathTag = nullptr) {
+                    const Twine &Name = "", MDNode *FPMathTag = nullptr,
+                    FMFSource FMFSource = {}) {
     if (V->getType() == DestTy)
       return V;
     if (Value *Folded = Folder.FoldCast(Op, V, DestTy))
       return Folded;
     Instruction *Cast = CastInst::Create(Op, V, DestTy);
     if (isa<FPMathOperator>(Cast))
-      setFPAttrs(Cast, FPMathTag, FMF);
+      setFPAttrs(Cast, FPMathTag, FMFSource.get(FMF));
     return Insert(Cast, Name);
   }
 
@@ -2255,9 +2301,8 @@ public:
   }
 
   CallInst *CreateConstrainedFPCast(
-      Intrinsic::ID ID, Value *V, Type *DestTy,
-      Instruction *FMFSource = nullptr, const Twine &Name = "",
-      MDNode *FPMathTag = nullptr,
+      Intrinsic::ID ID, Value *V, Type *DestTy, FMFSource FMFSource = {},
+      const Twine &Name = "", MDNode *FPMathTag = nullptr,
       std::optional<RoundingMode> Rounding = std::nullopt,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
@@ -2265,6 +2310,13 @@ public:
   // compile time error, instead of converting the string to bool for the
   // isSigned parameter.
   Value *CreateIntCast(Value *, Type *, const char *) = delete;
+
+  /// Cast between aggregate types that must have identical structure but may
+  /// differ in their leaf types. The leaf values are recursively extracted,
+  /// casted, and then reinserted into a value of type DestTy. The leaf types
+  /// must be castable using a bitcast or ptrcast, because signedness is
+  /// not specified.
+  Value *CreateAggregateCast(Value *V, Type *DestTy);
 
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Compare Instructions
@@ -2392,7 +2444,16 @@ public:
   // Note that this differs from CreateFCmpS only if IsFPConstrained is true.
   Value *CreateFCmp(CmpInst::Predicate P, Value *LHS, Value *RHS,
                     const Twine &Name = "", MDNode *FPMathTag = nullptr) {
-    return CreateFCmpHelper(P, LHS, RHS, Name, FPMathTag, false);
+    return CreateFCmpHelper(P, LHS, RHS, Name, FPMathTag, {}, false);
+  }
+
+  // Create a quiet floating-point comparison (i.e. one that raises an FP
+  // exception only in the case where an input is a signaling NaN).
+  // Note that this differs from CreateFCmpS only if IsFPConstrained is true.
+  Value *CreateFCmpFMF(CmpInst::Predicate P, Value *LHS, Value *RHS,
+                       FMFSource FMFSource, const Twine &Name = "",
+                       MDNode *FPMathTag = nullptr) {
+    return CreateFCmpHelper(P, LHS, RHS, Name, FPMathTag, FMFSource, false);
   }
 
   Value *CreateCmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
@@ -2407,14 +2468,14 @@ public:
   // Note that this differs from CreateFCmp only if IsFPConstrained is true.
   Value *CreateFCmpS(CmpInst::Predicate P, Value *LHS, Value *RHS,
                      const Twine &Name = "", MDNode *FPMathTag = nullptr) {
-    return CreateFCmpHelper(P, LHS, RHS, Name, FPMathTag, true);
+    return CreateFCmpHelper(P, LHS, RHS, Name, FPMathTag, {}, true);
   }
 
 private:
   // Helper routine to create either a signaling or a quiet FP comparison.
   Value *CreateFCmpHelper(CmpInst::Predicate P, Value *LHS, Value *RHS,
                           const Twine &Name, MDNode *FPMathTag,
-                          bool IsSignaling);
+                          FMFSource FMFSource, bool IsSignaling);
 
 public:
   CallInst *CreateConstrainedFPCmp(
@@ -2436,8 +2497,7 @@ public:
 
 private:
   CallInst *createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
-                             const Twine &Name = "",
-                             Instruction *FMFSource = nullptr,
+                             const Twine &Name = "", FMFSource FMFSource = {},
                              ArrayRef<OperandBundleDef> OpBundles = {});
 
 public:
@@ -2483,6 +2543,9 @@ public:
 
   Value *CreateSelect(Value *C, Value *True, Value *False,
                       const Twine &Name = "", Instruction *MDFrom = nullptr);
+  Value *CreateSelectFMF(Value *C, Value *True, Value *False,
+                         FMFSource FMFSource, const Twine &Name = "",
+                         Instruction *MDFrom = nullptr);
 
   VAArgInst *CreateVAArg(Value *List, Type *Ty, const Twine &Name = "") {
     return Insert(new VAArgInst(List, Ty), Name);
@@ -2676,6 +2739,10 @@ public:
   CallInst *CreateAlignmentAssumption(const DataLayout &DL, Value *PtrValue,
                                       Value *Alignment,
                                       Value *OffsetValue = nullptr);
+
+  /// Create an assume intrinsic call that represents an dereferencable
+  /// assumption on the provided pointer.
+  CallInst *CreateDereferenceableAssumption(Value *PtrValue, Value *SizeValue);
 };
 
 /// This provides a uniform API for creating instructions and inserting
@@ -2700,11 +2767,16 @@ private:
   InserterTy Inserter;
 
 public:
-  IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter = InserterTy(),
+  IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter,
             MDNode *FPMathTag = nullptr,
             ArrayRef<OperandBundleDef> OpBundles = {})
       : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag, OpBundles),
         Folder(Folder), Inserter(Inserter) {}
+
+  IRBuilder(LLVMContext &C, FolderTy Folder, MDNode *FPMathTag = nullptr,
+            ArrayRef<OperandBundleDef> OpBundles = {})
+      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag, OpBundles),
+        Folder(Folder) {}
 
   explicit IRBuilder(LLVMContext &C, MDNode *FPMathTag = nullptr,
                      ArrayRef<OperandBundleDef> OpBundles = {})

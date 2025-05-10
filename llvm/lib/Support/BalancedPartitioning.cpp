@@ -177,7 +177,8 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
   // functions
   for (auto &N : Nodes)
     llvm::erase_if(N.UtilityNodes, [&](auto &UN) {
-      return UtilityNodeIndex[UN] == 1 || UtilityNodeIndex[UN] == NumNodes;
+      unsigned UNI = UtilityNodeIndex[UN];
+      return UNI == 1 || UNI == NumNodes;
     });
 
   // Renumber utility nodes so they can be used to index into Signatures
@@ -305,7 +306,7 @@ void BalancedPartitioning::split(const FunctionNodeRange Nodes,
   unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());
   auto NodesMid = Nodes.begin() + (NumNodes + 1) / 2;
 
-  std::nth_element(Nodes.begin(), NodesMid, Nodes.end(), [](auto &L, auto &R) {
+  llvm::sort(Nodes.begin(), Nodes.end(), [](auto &L, auto &R) {
     return L.InputOrderIndex < R.InputOrderIndex;
   });
 

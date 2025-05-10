@@ -333,9 +333,9 @@ public:
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
     std::enable_if_t<std::is_enum_v<T>, std::optional<T>>
-    get(StringRef LocalName, bool IgnoreCase = false) const {
+    get(StringRef LocalName) const {
       if (std::optional<int64_t> ValueOr =
-              getEnumInt(LocalName, typeEraseMapping<T>(), false, IgnoreCase))
+              getEnumInt(LocalName, typeEraseMapping<T>(), false))
         return static_cast<T>(*ValueOr);
       return std::nullopt;
     }
@@ -353,9 +353,9 @@ public:
     /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
-    std::enable_if_t<std::is_enum_v<T>, T> get(StringRef LocalName, T Default,
-                                               bool IgnoreCase = false) const {
-      return get<T>(LocalName, IgnoreCase).value_or(Default);
+    std::enable_if_t<std::is_enum_v<T>, T> get(StringRef LocalName,
+                                               T Default) const {
+      return get<T>(LocalName).value_or(Default);
     }
 
     /// Read a named option from the ``Context`` and parse it as an
@@ -373,9 +373,9 @@ public:
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
     std::enable_if_t<std::is_enum_v<T>, std::optional<T>>
-    getLocalOrGlobal(StringRef LocalName, bool IgnoreCase = false) const {
+    getLocalOrGlobal(StringRef LocalName) const {
       if (std::optional<int64_t> ValueOr =
-              getEnumInt(LocalName, typeEraseMapping<T>(), true, IgnoreCase))
+              getEnumInt(LocalName, typeEraseMapping<T>(), true))
         return static_cast<T>(*ValueOr);
       return std::nullopt;
     }
@@ -394,10 +394,9 @@ public:
     /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
-    std::enable_if_t<std::is_enum_v<T>, T>
-    getLocalOrGlobal(StringRef LocalName, T Default,
-                     bool IgnoreCase = false) const {
-      return getLocalOrGlobal<T>(LocalName, IgnoreCase).value_or(Default);
+    std::enable_if_t<std::is_enum_v<T>, T> getLocalOrGlobal(StringRef LocalName,
+                                                            T Default) const {
+      return getLocalOrGlobal<T>(LocalName).value_or(Default);
     }
 
     /// Stores an option with the check-local name \p LocalName with
@@ -454,7 +453,7 @@ public:
 
     std::optional<int64_t> getEnumInt(StringRef LocalName,
                                       ArrayRef<NameAndValue> Mapping,
-                                      bool CheckGlobal, bool IgnoreCase) const;
+                                      bool CheckGlobal) const;
 
     template <typename T>
     std::enable_if_t<std::is_enum_v<T>, std::vector<NameAndValue>>

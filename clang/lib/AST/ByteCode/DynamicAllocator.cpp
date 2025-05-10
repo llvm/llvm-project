@@ -54,10 +54,13 @@ Block *DynamicAllocator::allocate(const Expr *Source, PrimType T,
 Block *DynamicAllocator::allocate(const Descriptor *ElementDesc,
                                   size_t NumElements, unsigned EvalID,
                                   Form AllocForm) {
+  assert(ElementDesc->getMetadataSize() == 0);
   // Create a new descriptor for an array of the specified size and
   // element type.
+  // FIXME: Pass proper element type.
   const Descriptor *D = allocateDescriptor(
-      ElementDesc->asExpr(), ElementDesc, Descriptor::InlineDescMD, NumElements,
+      ElementDesc->asExpr(), nullptr, ElementDesc, Descriptor::InlineDescMD,
+      NumElements,
       /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false);
   return allocate(D, EvalID, AllocForm);
 }
@@ -72,6 +75,7 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
   auto *B = new (Memory.get()) Block(EvalID, D, /*isStatic=*/false);
   B->invokeCtor();
 
+  assert(D->getMetadataSize() == sizeof(InlineDescriptor));
   InlineDescriptor *ID = reinterpret_cast<InlineDescriptor *>(B->rawData());
   ID->Desc = D;
   ID->IsActive = true;
@@ -80,6 +84,7 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
   ID->IsFieldMutable = false;
   ID->IsConst = false;
   ID->IsInitialized = false;
+  ID->IsVolatile = false;
 
   B->IsDynamic = true;
 

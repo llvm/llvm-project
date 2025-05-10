@@ -208,6 +208,8 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
 
   // OpenCL and HLSL have half keyword
   Opts.Half = Opts.OpenCL || Opts.HLSL;
+
+  Opts.PreserveVec3Type = Opts.HLSL;
 }
 
 FPOptions FPOptions::defaultWithoutTrailingStorage(const LangOptions &LO) {
@@ -217,7 +219,7 @@ FPOptions FPOptions::defaultWithoutTrailingStorage(const LangOptions &LO) {
 
 FPOptionsOverride FPOptions::getChangesSlow(const FPOptions &Base) const {
   FPOptions::storage_type OverrideMask = 0;
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   if (get##NAME() != Base.get##NAME())                                         \
     OverrideMask |= NAME##Mask;
 #include "clang/Basic/FPOptions.def"
@@ -225,14 +227,14 @@ FPOptionsOverride FPOptions::getChangesSlow(const FPOptions &Base) const {
 }
 
 LLVM_DUMP_METHOD void FPOptions::dump() {
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   llvm::errs() << "\n " #NAME " " << get##NAME();
 #include "clang/Basic/FPOptions.def"
   llvm::errs() << "\n";
 }
 
 LLVM_DUMP_METHOD void FPOptionsOverride::dump() {
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   if (has##NAME##Override())                                                   \
     llvm::errs() << "\n " #NAME " Override is " << get##NAME##Override();
 #include "clang/Basic/FPOptions.def"

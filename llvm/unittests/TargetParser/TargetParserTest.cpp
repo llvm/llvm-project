@@ -10,6 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -506,17 +507,17 @@ INSTANTIATE_TEST_SUITE_P(
                                    "8-M.Mainline"),
         ARMCPUTestParams<uint64_t>(
             "cortex-m55", "armv8.1-m.main", "fp-armv8-fullfp16-d16",
-            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP |
+            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP |
                 ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16,
             "8.1-M.Mainline"),
         ARMCPUTestParams<uint64_t>(
             "cortex-m85", "armv8.1-m.main", "fp-armv8-fullfp16-d16",
-            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP |
+            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP |
                 ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16 | ARM::AEK_PACBTI,
             "8.1-M.Mainline"),
         ARMCPUTestParams<uint64_t>(
             "cortex-m52", "armv8.1-m.main", "fp-armv8-fullfp16-d16",
-            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP |
+            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP |
                 ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16 | ARM::AEK_PACBTI,
             "8.1-M.Mainline"),
         ARMCPUTestParams<uint64_t>("iwmmxt", "iwmmxt", "none", ARM::AEK_NONE,
@@ -800,7 +801,7 @@ TEST(TargetParserTest, ARMArchExtFeature) {
                               {"fp", "nofp", nullptr, nullptr},
                               {"idiv", "noidiv", nullptr, nullptr},
                               {"mp", "nomp", nullptr, nullptr},
-                              {"simd", "nosimd", nullptr, nullptr},
+                              {"simd", "nosimd", "+neon", "-neon"},
                               {"sec", "nosec", nullptr, nullptr},
                               {"virt", "novirt", nullptr, nullptr},
                               {"fp16", "nofp16", "+fullfp16", "-fullfp16"},
@@ -1045,7 +1046,6 @@ TEST(TargetParserTest, ARMPrintSupportedExtensions) {
   EXPECT_EQ(std::string::npos, captured.find("invalid"));
   // Should not include anything that lacks a feature name. Checking a few here
   // but not all as if one is hidden correctly the rest should be.
-  EXPECT_EQ(std::string::npos, captured.find("simd"));
   EXPECT_EQ(std::string::npos, captured.find("maverick"));
   EXPECT_EQ(std::string::npos, captured.find("xscale"));
 }
@@ -1085,6 +1085,7 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64CPUTests, AArch64CPUTestFixture,
     ::testing::Values(AArch64CPUTestParams("cortex-a34", "armv8-a"),
                       AArch64CPUTestParams("cortex-a35", "armv8-a"),
+                      AArch64CPUTestParams("cortex-a320", "armv9.2-a"),
                       AArch64CPUTestParams("cortex-a53", "armv8-a"),
                       AArch64CPUTestParams("cortex-a55", "armv8.2-a"),
                       AArch64CPUTestParams("cortex-a510", "armv9-a"),
@@ -1129,14 +1130,20 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("apple-s4", "armv8.3-a"),
                       AArch64CPUTestParams("apple-s5", "armv8.3-a"),
                       AArch64CPUTestParams("apple-a13", "armv8.4-a"),
+                      AArch64CPUTestParams("apple-s6", "armv8.4-a"),
+                      AArch64CPUTestParams("apple-s7", "armv8.4-a"),
+                      AArch64CPUTestParams("apple-s8", "armv8.4-a"),
                       AArch64CPUTestParams("apple-a14", "armv8.4-a"),
                       AArch64CPUTestParams("apple-m1", "armv8.4-a"),
                       AArch64CPUTestParams("apple-a15", "armv8.6-a"),
                       AArch64CPUTestParams("apple-m2", "armv8.6-a"),
                       AArch64CPUTestParams("apple-a16", "armv8.6-a"),
                       AArch64CPUTestParams("apple-m3", "armv8.6-a"),
+                      AArch64CPUTestParams("apple-s9", "armv8.6-a"),
+                      AArch64CPUTestParams("apple-s10", "armv8.6-a"),
                       AArch64CPUTestParams("apple-a17", "armv8.6-a"),
                       AArch64CPUTestParams("apple-m4", "armv8.7-a"),
+                      AArch64CPUTestParams("apple-a18", "armv8.7-a"),
                       AArch64CPUTestParams("exynos-m3", "armv8-a"),
                       AArch64CPUTestParams("exynos-m4", "armv8.2-a"),
                       AArch64CPUTestParams("exynos-m5", "armv8.2-a"),
@@ -1160,12 +1167,103 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("a64fx", "armv8.2-a"),
                       AArch64CPUTestParams("fujitsu-monaka", "armv9.3-a"),
                       AArch64CPUTestParams("carmel", "armv8.2-a"),
+                      AArch64CPUTestParams("grace", "armv9-a"),
+                      AArch64CPUTestParams("olympus", "armv9.2-a"),
                       AArch64CPUTestParams("saphira", "armv8.4-a"),
                       AArch64CPUTestParams("oryon-1", "armv8.6-a")),
     AArch64CPUTestParams::PrintToStringParamName);
 
+struct AArch64CPUAliasTestParams {
+  AArch64CPUAliasTestParams(std::vector<StringRef> Aliases)
+      : Aliases(Aliases) {}
+
+  friend std::ostream &operator<<(std::ostream &os,
+                                  const AArch64CPUAliasTestParams &params) {
+    raw_os_ostream oss(os);
+    interleave(params.Aliases, oss, ", ");
+    return os;
+  }
+
+  /// Print a gtest-compatible facsimile of the first cpu (the aliasee), to make
+  /// the test's name human-readable.
+  static std::string PrintToStringParamName(
+      const testing::TestParamInfo<AArch64CPUAliasTestParams> &Info) {
+    std::string Name = Info.param.Aliases.front().str();
+    for (char &C : Name)
+      if (!std::isalnum(C))
+        C = '_';
+    return Name;
+  }
+
+  std::vector<StringRef> Aliases;
+};
+
+class AArch64CPUAliasTestFixture
+    : public ::testing::TestWithParam<AArch64CPUAliasTestParams> {};
+
+static std::string aarch64FeaturesFromBits(AArch64::ExtensionBitset BitFlags) {
+  std::vector<StringRef> Flags;
+  bool OK = AArch64::getExtensionFeatures(BitFlags, Flags);
+  assert(OK);
+  (void)OK;
+  std::string S;
+  raw_string_ostream OS(S);
+  interleave(Flags, OS, ", ");
+  return OS.str();
+}
+
+TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
+  AArch64CPUAliasTestParams params = GetParam();
+
+  StringRef MainName = params.Aliases[0];
+  const std::optional<AArch64::CpuInfo> Cpu = AArch64::parseCpu(MainName);
+  const AArch64::ArchInfo &MainAI = Cpu->Arch;
+  AArch64::ExtensionBitset MainFlags = Cpu->getImpliedExtensions();
+
+  for (size_t I = 1, E = params.Aliases.size(); I != E; ++I) {
+    StringRef OtherName = params.Aliases[I];
+    const std::optional<AArch64::CpuInfo> OtherCpu =
+        AArch64::parseCpu(OtherName);
+    const AArch64::ArchInfo &OtherAI = OtherCpu->Arch;
+
+    EXPECT_EQ(MainAI.Version, OtherAI.Version)
+        << MainName << " vs " << OtherName;
+    EXPECT_EQ(MainAI.Name, OtherAI.Name) << MainName << " vs " << OtherName;
+    EXPECT_EQ(MainAI.Profile, OtherAI.Profile)
+        << MainName << " vs " << OtherName;
+    EXPECT_EQ(MainAI.DefaultExts, OtherAI.DefaultExts)
+        << MainName << " vs " << OtherName;
+    EXPECT_EQ(MainAI, OtherAI) << MainName << " vs " << OtherName;
+
+    AArch64::ExtensionBitset OtherFlags = OtherCpu->getImpliedExtensions();
+
+    EXPECT_EQ(MainFlags, OtherFlags) << MainName << " vs " << OtherName;
+
+    EXPECT_EQ(aarch64FeaturesFromBits(MainFlags),
+              aarch64FeaturesFromBits(OtherFlags))
+        << MainName << " vs " << OtherName << "\n        Diff: "
+        << (aarch64FeaturesFromBits(MainFlags ^ OtherFlags));
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    AArch64CPUAliasTests, AArch64CPUAliasTestFixture,
+    ::testing::Values(AArch64CPUAliasTestParams({"neoverse-n2", "cobalt-100"}),
+                      AArch64CPUAliasTestParams({"apple-a7", "cyclone",
+                                                 "apple-a8", "apple-a9"}),
+                      AArch64CPUAliasTestParams({"apple-a12", "apple-s4",
+                                                 "apple-s5"}),
+                      AArch64CPUAliasTestParams({"apple-a13", "apple-s6",
+                                                 "apple-s7", "apple-s8"}),
+                      AArch64CPUAliasTestParams({"apple-a14", "apple-m1"}),
+                      AArch64CPUAliasTestParams({"apple-a15", "apple-m2"}),
+                      AArch64CPUAliasTestParams({"apple-a16", "apple-m3",
+                                                 "apple-s9", "apple-s10"}),
+                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"})),
+    AArch64CPUAliasTestParams::PrintToStringParamName);
+
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 82;
+static constexpr unsigned NumAArch64CPUArchs = 90;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1343,7 +1441,10 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_FPRCVT,       AArch64::AEK_CMPBR,
       AArch64::AEK_LSUI,         AArch64::AEK_OCCMO,
       AArch64::AEK_PCDPHINT,     AArch64::AEK_POPS,
-      AArch64::AEK_SVEAES};
+      AArch64::AEK_SVEAES,       AArch64::AEK_SME_MOP4,
+      AArch64::AEK_SME_TMOP,     AArch64::AEK_SVEBITPERM,
+      AArch64::AEK_SSVE_BITPERM,
+  };
 
   std::vector<StringRef> Features;
 
@@ -1382,7 +1483,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sm4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sha3"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-bitperm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-bitperm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+ssve-bitperm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-aes2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+ssve-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2p1"));
@@ -1448,6 +1551,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+occmo"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pcdphint"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pops"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme-mop4"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme-tmop"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1554,6 +1659,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sve2-sha3", "nosve2-sha3", "+sve2-sha3", "-sve2-sha3"},
       {"sve2p1", "nosve2p1", "+sve2p1", "-sve2p1"},
       {"sve2p2", "nosve2p2", "+sve2p2", "-sve2p2"},
+      {"sve-bitperm", "nosve-bitperm", "+sve-bitperm", "-sve-bitperm"},
+      {"ssve-bitperm", "nossve-bitperm", "+ssve-bitperm", "-ssve-bitperm"},
       {"sve2-bitperm", "nosve2-bitperm", "+sve2-bitperm", "-sve2-bitperm"},
       {"sve-aes2", "nosve-aes2", "+sve-aes2", "-sve-aes2"},
       {"ssve-aes", "nossve-aes", "+ssve-aes", "-ssve-aes"},
@@ -1605,6 +1712,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"occmo", "nooccmo", "+occmo", "-occmo"},
       {"pcdphint", "nopcdphint", "+pcdphint", "-pcdphint"},
       {"pops", "nopops", "+pops", "-pops"},
+      {"sme-mop4", "nosme-mop4", "+sme-mop4", "-sme-mop4"},
+      {"sme-tmop", "nosme-tmop", "+sme-tmop", "-sme-tmop"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -1754,13 +1863,13 @@ AArch64ExtensionDependenciesBaseArchTestParams
 
         // Long dependency chains: sve2-bitperm -> sve2 -> sve -> fp16 -> fp
         {AArch64::ARMV8A,
-         {"nofp", "sve2-bitperm"},
-         {"fp-armv8", "fullfp16", "sve", "sve2", "sve2-bitperm"},
+         {"nofp", "sve2", "sve-bitperm"},
+         {"fp-armv8", "fullfp16", "sve", "sve2", "sve-bitperm"},
          {}},
         {AArch64::ARMV8A,
-         {"sve2-bitperm", "nofp16"},
+         {"sve2", "sve-bitperm", "nofp16"},
          {"fp-armv8"},
-         {"full-fp16", "sve", "sve2", "sve2-bitperm"}},
+         {"full-fp16", "sve", "sve2", "sve-bitperm"}},
 
         // Meaning of +crypto varies with base architecture.
         {AArch64::ARMV8A, {"crypto"}, {"aes", "sha2"}, {}},
@@ -1803,7 +1912,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"nofp", "fprcvt"}, {"fp-armv8", "fprcvt"}, {}},
         {AArch64::ARMV9_6A, {"fprcvt", "nofp"}, {}, {"fp-armv8", "fprcvt"}},
 
-        // simd -> {aes, sha2, sha3, sm4, f8f16mm, f8f32mm}
+        // simd -> {aes, sha2, sha3, sm4, f8f16mm, f8f32mm, faminmax, lut, fp8}
         {AArch64::ARMV8A, {"nosimd", "aes"}, {"neon", "aes"}, {}},
         {AArch64::ARMV8A, {"aes", "nosimd"}, {}, {"neon", "aes"}},
         {AArch64::ARMV8A, {"nosimd", "sha2"}, {"neon", "sha2"}, {}},
@@ -1816,6 +1925,18 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"f8f16mm", "nosimd"}, {}, {"neon", "f8f16mm"}},
         {AArch64::ARMV9_6A, {"nosimd", "f8f32mm"}, {"neon", "f8f32mm"}, {}},
         {AArch64::ARMV9_6A, {"f8f32mm", "nosimd"}, {}, {"neon", "f8f32mm"}},
+        {AArch64::ARMV9_6A, {"faminmax", "nosimd"}, {}, {"neon", "faminmax"}},
+        {AArch64::ARMV9_6A, {"nosimd", "faminmax"}, {"neon", "faminmax"}, {}},
+        {AArch64::ARMV9_6A, {"lut", "nosimd"}, {}, {"neon", "lut"}},
+        {AArch64::ARMV9_6A, {"nosimd", "lut"}, {"neon", "lut"}, {}},
+        {AArch64::ARMV9_6A, {"fp8", "nosimd"}, {}, {"neon", "fp8"}},
+        {AArch64::ARMV9_6A, {"nosimd", "fp8"}, {"neon", "fp8"}, {}},
+
+        // fp8 -> {fp8dot4, fp8dot2}
+        {AArch64::ARMV9_6A, {"nofp8", "fp8dot4"}, {"fp8", "fp8dot4"}, {}},
+        {AArch64::ARMV9_6A, {"fp8dot4", "nofp8"}, {}, {"fp8", "fp8dot4"}},
+        {AArch64::ARMV9_6A, {"nofp8", "fp8dot2"}, {"fp8", "fp8dot2"}, {}},
+        {AArch64::ARMV9_6A, {"fp8dot2", "nofp8"}, {}, {"fp8", "fp8dot2"}},
 
         // simd -> {rdm, dotprod, fcma}
         {AArch64::ARMV8A, {"nosimd", "rdm"}, {"neon", "rdm"}, {}},
@@ -1860,12 +1981,20 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sve2p1", "nosve2"}, {}, {"sve2", "sve2p1"}},
         {AArch64::ARMV8A,
          {"nosve2", "sve2-bitperm"},
-         {"sve2", "sve2-bitperm"},
+         {"sve2", "sve-bitperm"},
          {}},
         {AArch64::ARMV8A,
          {"sve2-bitperm", "nosve2"},
-         {},
-         {"sve2", "sve2-bitperm"}},
+         {"sve"},
+         {"sve-bitperm", "sve2", "sve2-bitperm"}},
+        {AArch64::ARMV8A,
+         {"ssve-bitperm", "nosve-bitperm"},
+         {"sme"},
+         {"ssve-bitperm", "sve-bitperm"}},
+        {AArch64::ARMV8A,
+         {"nosve-bitperm", "ssve-bitperm"},
+         {"sve-bitperm", "sve-bitperm"},
+         {""}},
         {AArch64::ARMV8A, {"nosve2", "sve2-sha3"}, {"sve2", "sve2-sha3"}, {}},
         {AArch64::ARMV8A, {"sve2-sha3", "nosve2"}, {}, {"sve2", "sve2-sha3"}},
         {AArch64::ARMV8A, {"nosve2", "sve2-sm4"}, {"sve2", "sve2-sm4"}, {}},
@@ -1940,7 +2069,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"nosme2p1", "sme2p2"}, {"sme2p2", "sme2p1"}, {}},
         {AArch64::ARMV9_6A, {"sme2p2", "nosme2p1"}, {}, {"sme2p1", "sme2p2"}},
 
-        // fp8 -> {sme-f8f16, sme-f8f32, f8f16mm, f8f32mm}
+        // fp8 -> {sme-f8f16, sme-f8f32, f8f16mm, f8f32mm, fp8dot4, fp8dot2,
+        // ssve-fp8dot4, ssve-fp8dot2}
         {AArch64::ARMV8A, {"nofp8", "sme-f8f16"}, {"fp8", "sme-f8f16"}, {}},
         {AArch64::ARMV8A, {"sme-f8f16", "nofp8"}, {}, {"fp8", "sme-f8f16"}},
         {AArch64::ARMV8A, {"nofp8", "sme-f8f32"}, {"fp8", "sme-f8f32"}, {}},
@@ -1949,6 +2079,26 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"f8f16mm", "nofp8"}, {}, {"fp8", "f8f16mm"}},
         {AArch64::ARMV9_6A, {"nofp8", "f8f32mm"}, {"fp8", "f8f32mm"}, {}},
         {AArch64::ARMV9_6A, {"f8f32mm", "nofp8"}, {}, {"fp8", "f8f32mm"}},
+        {AArch64::ARMV9_6A, {"nofp8", "fp8dot4"}, {"fp8", "fp8dot4"}, {}},
+        {AArch64::ARMV9_6A, {"fp8dot4", "nofp8"}, {}, {"fp8", "fp8dot4"}},
+        {AArch64::ARMV9_6A, {"nofp8", "fp8dot2"}, {"fp8", "fp8dot2"}, {}},
+        {AArch64::ARMV9_6A, {"fp8dot2", "nofp8"}, {}, {"fp8", "fp8dot2"}},
+        {AArch64::ARMV9_6A,
+         {"nofp8", "ssve-fp8dot4"},
+         {"fp8", "ssve-fp8dot4"},
+         {}},
+        {AArch64::ARMV9_6A,
+         {"ssve-fp8dot4", "nofp8"},
+         {},
+         {"fp8", "ssve-fp8dot4"}},
+        {AArch64::ARMV9_6A,
+         {"nofp8", "ssve-fp8dot2"},
+         {"fp8", "ssve-fp8dot2"},
+         {}},
+        {AArch64::ARMV9_6A,
+         {"ssve-fp8dot2", "nofp8"},
+         {},
+         {"fp8", "ssve-fp8dot2"}},
 
         // lse -> lse128
         {AArch64::ARMV8A, {"nolse", "lse128"}, {"lse", "lse128"}, {}},
@@ -1994,7 +2144,15 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A,
          {"sve2", "sve-aes", "nosve2-aes"},
          {"sve2"},
-         {"sve2-aes", "sve-aes"}}};
+         {"sve2-aes", "sve-aes"}},
+
+        // sme-tmop -> sme
+        {AArch64::ARMV8A, {"nosme2", "sme-tmop"}, {"sme2", "sme-tmop"}, {}},
+        {AArch64::ARMV8A, {"sme-tmop", "nosme2"}, {}, {"sme2", "sme-tmop"}},
+
+        // sme-mop4 -> sme
+        {AArch64::ARMV8A, {"nosme", "sme-mop4"}, {"sme", "sme-mop4"}, {}},
+        {AArch64::ARMV8A, {"sme-mop4", "nosme"}, {}, {"sme", "sme-mop4"}}};
 
 INSTANTIATE_TEST_SUITE_P(
     AArch64ExtensionDependenciesBaseArch,
@@ -2015,10 +2173,10 @@ AArch64ExtensionDependenciesBaseCPUTestParams
          {}},
         {"cortex-a520",
          {},
-         {"v9.2a",    "bf16",    "crc",  "dotprod",      "flagm", "fp-armv8",
-          "fullfp16", "fp16fml", "i8mm", "lse",          "mte",   "pauth",
-          "perfmon",  "predres", "ras",  "rcpc",         "rdm",   "sb",
-          "neon",     "ssbs",    "sve",  "sve2-bitperm", "sve2"},
+         {"v9.2a",    "bf16",    "crc",  "dotprod",     "flagm", "fp-armv8",
+          "fullfp16", "fp16fml", "i8mm", "lse",         "mte",   "pauth",
+          "perfmon",  "predres", "ras",  "rcpc",        "rdm",   "sb",
+          "neon",     "ssbs",    "sve",  "sve-bitperm", "sve2"},
          {}},
 
         // Negative modifiers
@@ -2032,5 +2190,55 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64ExtensionDependenciesBaseCPU,
     AArch64ExtensionDependenciesBaseCPUTestFixture,
     ::testing::ValuesIn(AArch64ExtensionDependenciesCPUData));
+
+struct CheckFindSinglePrecisionFpuTest {
+  StringRef Cpu;
+  ARM::ArchKind Arch;
+  StringRef Archext;
+  std::vector<StringRef> Features;
+  ARM::FPUKind Fpu;
+  ARM::FPUKind Output;
+};
+
+TEST(TargetParserTest, checkFindSinglePrecisionFPU) {
+  CheckFindSinglePrecisionFpuTest tests[] = {
+      {"cortex-r4f",
+       ARM::ArchKind::ARMV7R,
+       "nofp.dp",
+       {},
+       ARM::FK_INVALID,
+       ARM::FK_VFPV3XD},
+      {"cortex-r7",
+       ARM::ArchKind::ARMV7R,
+       "nofp.dp",
+       {},
+       ARM::FK_INVALID,
+       ARM::FK_VFPV3XD_FP16},
+      {"cortex-a7",
+       ARM::ArchKind::ARMV7A,
+       "nofp.dp",
+       {},
+       ARM::FK_INVALID,
+       ARM::FK_FPV4_SP_D16},
+      {"cortex-r52",
+       ARM::ArchKind::ARMV8R,
+       "nofp.dp",
+       {},
+       ARM::FK_INVALID,
+       ARM::FK_FPV5_SP_D16},
+      {"cortex-m55",
+       ARM::ArchKind::ARMV8_1MMainline,
+       "nofp.dp",
+       {},
+       ARM::FK_INVALID,
+       ARM::FK_FP_ARMV8_FULLFP16_SP_D16}};
+
+  for (auto X : tests) {
+    ARM::FPUKind FPU = X.Fpu;
+    EXPECT_TRUE(
+        ARM::appendArchExtFeatures(X.Cpu, X.Arch, X.Archext, X.Features, FPU));
+    EXPECT_EQ(FPU, X.Output);
+  }
+}
 
 } // namespace

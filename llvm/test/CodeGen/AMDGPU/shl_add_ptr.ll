@@ -9,8 +9,8 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
-@lds0 = addrspace(3) global [512 x float] undef, align 4
-@lds1 = addrspace(3) global [512 x float] undef, align 4
+@lds0 = addrspace(3) global [512 x float] poison, align 4
+@lds1 = addrspace(3) global [512 x float] poison, align 4
 
 
 ; Make sure the (add tid, 2) << 2 gets folded into the ds's offset as (tid << 2) + 8
@@ -50,7 +50,7 @@ define amdgpu_kernel void @load_shl_base_lds_1(ptr addrspace(1) %out, ptr addrsp
   ret void
 }
 
-@maxlds = addrspace(3) global [65536 x i8] undef, align 4
+@maxlds = addrspace(3) global [65536 x i8] poison, align 4
 
 ; GCN-LABEL: {{^}}load_shl_base_lds_max_offset
 ; GCN: ds_read_u8 v{{[0-9]+}}, v{{[0-9]+}} offset:65535
@@ -102,7 +102,7 @@ define amdgpu_kernel void @store_shl_base_lds_0(ptr addrspace(1) %out, ptr addrs
 ; --------------------------------------------------------------------------------
 ; Atomics.
 
-@lds2 = addrspace(3) global [512 x i32] undef, align 4
+@lds2 = addrspace(3) global [512 x i32] poison, align 4
 
 ; define amdgpu_kernel void @atomic_load_shl_base_lds_0(ptr addrspace(1) %out, ptr addrspace(1) %add_use) #0 {
 ;   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1

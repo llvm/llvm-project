@@ -40,7 +40,7 @@ define <vscale x 16 x i8> @and_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 define <vscale x 16 x i8> @and_b_zero(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: and_b_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.b, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   %res = and <vscale x 16 x i8> %a, zeroinitializer
   ret <vscale x 16 x i8> %res
@@ -96,8 +96,7 @@ define <vscale x 2 x i64> @bic_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %allones = shufflevector <vscale x 2 x i64> insertelement(<vscale x 2 x i64> undef, i64 -1, i32 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
-  %not_b = xor <vscale x 2 x i64> %b, %allones
+  %not_b = xor <vscale x 2 x i64> %b, splat (i64 -1)
   %res = and <vscale x 2 x i64> %a, %not_b
   ret <vscale x 2 x i64> %res
 }
@@ -107,8 +106,7 @@ define <vscale x 4 x i32> @bic_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %allones = shufflevector <vscale x 4 x i32> insertelement(<vscale x 4 x i32> undef, i32 -1, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %not_b = xor <vscale x 4 x i32> %b, %allones
+  %not_b = xor <vscale x 4 x i32> %b, splat (i32 -1)
   %res = and <vscale x 4 x i32> %a, %not_b
   ret <vscale x 4 x i32> %res
 }
@@ -118,8 +116,7 @@ define <vscale x 8 x i16> @bic_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %allones = shufflevector <vscale x 8 x i16> insertelement(<vscale x 8 x i16> undef, i16 -1, i32 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
-  %not_b = xor <vscale x 8 x i16> %b, %allones
+  %not_b = xor <vscale x 8 x i16> %b, splat (i16 -1)
   %res = and <vscale x 8 x i16> %a, %not_b
   ret <vscale x 8 x i16> %res
 }
@@ -129,8 +126,7 @@ define <vscale x 16 x i8> @bic_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %allones = shufflevector <vscale x 16 x i8> insertelement(<vscale x 16 x i8> undef, i8 -1, i32 0), <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
-  %not_b = xor <vscale x 16 x i8> %b, %allones
+  %not_b = xor <vscale x 16 x i8> %b, splat (i8 -1)
   %res = and <vscale x 16 x i8> %a, %not_b
   ret <vscale x 16 x i8> %res
 }
@@ -140,8 +136,7 @@ define <vscale x 1 x i1> @bic_pred_q(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
-  %allones = shufflevector <vscale x 1 x i1> insertelement(<vscale x 1 x i1> undef, i1 true, i32 0), <vscale x 1 x i1> undef, <vscale x 1 x i32> zeroinitializer
-  %not_b = xor <vscale x 1 x i1> %b, %allones
+  %not_b = xor <vscale x 1 x i1> %b, splat (i1 true)
   %res = and <vscale x 1 x i1> %a, %not_b
   ret <vscale x 1 x i1> %res
 }
@@ -151,8 +146,7 @@ define <vscale x 2 x i1> @bic_pred_d(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
-  %allones = shufflevector <vscale x 2 x i1> insertelement(<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
-  %not_b = xor <vscale x 2 x i1> %b, %allones
+  %not_b = xor <vscale x 2 x i1> %b, splat (i1 true)
   %res = and <vscale x 2 x i1> %a, %not_b
   ret <vscale x 2 x i1> %res
 }
@@ -162,8 +156,7 @@ define <vscale x 4 x i1> @bic_pred_s(<vscale x 4 x i1> %a, <vscale x 4 x i1> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
-  %allones = shufflevector <vscale x 4 x i1> insertelement(<vscale x 4 x i1> undef, i1 true, i32 0), <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
-  %not_b = xor <vscale x 4 x i1> %b, %allones
+  %not_b = xor <vscale x 4 x i1> %b, splat (i1 true)
   %res = and <vscale x 4 x i1> %a, %not_b
   ret <vscale x 4 x i1> %res
 }
@@ -173,8 +166,7 @@ define <vscale x 8 x i1> @bic_pred_h(<vscale x 8 x i1> %a, <vscale x 8 x i1> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
-  %allones = shufflevector <vscale x 8 x i1> insertelement(<vscale x 8 x i1> undef, i1 true, i32 0), <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
-  %not_b = xor <vscale x 8 x i1> %b, %allones
+  %not_b = xor <vscale x 8 x i1> %b, splat (i1 true)
   %res = and <vscale x 8 x i1> %a, %not_b
   ret <vscale x 8 x i1> %res
 }
@@ -184,8 +176,7 @@ define <vscale x 16 x i1> @bic_pred_b(<vscale x 16 x i1> %a, <vscale x 16 x i1> 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
-  %allones = shufflevector <vscale x 16 x i1> insertelement(<vscale x 16 x i1> undef, i1 true, i32 0), <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer
-  %not_b = xor <vscale x 16 x i1> %b, %allones
+  %not_b = xor <vscale x 16 x i1> %b, splat (i1 true)
   %res = and <vscale x 16 x i1> %a, %not_b
   ret <vscale x 16 x i1> %res
 }

@@ -55,12 +55,16 @@ extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
 
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
+public:
+  static char ID;
+
+private:
   const RISCVSubtarget *STI;
 
 public:
   explicit RISCVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)) {}
+      : AsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override { return "RISC-V Assembly Printer"; }
 
@@ -112,6 +116,12 @@ private:
   void emitAttributes(const MCSubtargetInfo &SubtargetInfo);
 
   void emitNTLHint(const MachineInstr *MI);
+
+  // XRay Support
+  void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr *MI);
+  void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr *MI);
+  void LowerPATCHABLE_TAIL_CALL(const MachineInstr *MI);
+  void emitSled(const MachineInstr *MI, SledKind Kind);
 
   bool lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
 };
@@ -316,6 +326,22 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return LowerPATCHPOINT(*OutStreamer, SM, *MI);
   case TargetOpcode::STATEPOINT:
     return LowerSTATEPOINT(*OutStreamer, SM, *MI);
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
+    // patchable-function-entry is handled in lowerToMCInst
+    // Therefore, we break out of the switch statement if we encounter it here.
+    const Function &F = MI->getParent()->getParent()->getFunction();
+    if (F.hasFnAttribute("patchable-function-entry"))
+      break;
+
+    LowerPATCHABLE_FUNCTION_ENTER(MI);
+    return;
+  }
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+    LowerPATCHABLE_FUNCTION_EXIT(MI);
+    return;
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
+    LowerPATCHABLE_TAIL_CALL(MI);
+    return;
   }
 
   MCInst OutInst;
@@ -453,9 +479,68 @@ bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   SetupMachineFunction(MF);
   emitFunctionBody();
 
+  // Emit the XRay table
+  emitXRayTable();
+
   if (EmittedOptionArch)
     RTS.emitDirectiveOptionPop();
   return false;
+}
+
+void RISCVAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr *MI) {
+  emitSled(MI, SledKind::FUNCTION_ENTER);
+}
+
+void RISCVAsmPrinter::LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr *MI) {
+  emitSled(MI, SledKind::FUNCTION_EXIT);
+}
+
+void RISCVAsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr *MI) {
+  emitSled(MI, SledKind::TAIL_CALL);
+}
+
+void RISCVAsmPrinter::emitSled(const MachineInstr *MI, SledKind Kind) {
+  // We want to emit the jump instruction and the nops constituting the sled.
+  // The format is as follows:
+  // .Lxray_sled_N
+  //   ALIGN
+  //   J .tmpN
+  //   21 or 33 C.NOP instructions
+  // .tmpN
+
+  // The following variable holds the count of the number of NOPs to be patched
+  // in for XRay instrumentation during compilation.
+  // Note that RV64 and RV32 each has a sled of 68 and 44 bytes, respectively.
+  // Assuming we're using JAL to jump to .tmpN, then we only need
+  // (68 - 4)/2 = 32 NOPs for RV64 and (44 - 4)/2 = 20 for RV32. However, there
+  // is a chance that we'll use C.JAL instead, so an additional NOP is needed.
+  const uint8_t NoopsInSledCount =
+      MI->getParent()->getParent()->getSubtarget<RISCVSubtarget>().is64Bit()
+          ? 33
+          : 21;
+
+  OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
+  auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
+  OutStreamer->emitLabel(CurSled);
+  auto Target = OutContext.createTempSymbol();
+
+  const MCExpr *TargetExpr = MCSymbolRefExpr::create(Target, OutContext);
+
+  // Emit "J bytes" instruction, which jumps over the nop sled to the actual
+  // start of function.
+  EmitToStreamer(
+      *OutStreamer,
+      MCInstBuilder(RISCV::JAL).addReg(RISCV::X0).addExpr(TargetExpr));
+
+  // Emit NOP instructions
+  for (int8_t I = 0; I < NoopsInSledCount; ++I)
+    EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::ADDI)
+                                     .addReg(RISCV::X0)
+                                     .addReg(RISCV::X0)
+                                     .addImm(0));
+
+  OutStreamer->emitLabel(Target);
+  recordSled(CurSled, *MI, Kind, 2);
 }
 
 void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
@@ -540,8 +625,8 @@ void RISCVAsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
                           utostr(AccessInfo) + "_short";
     Sym = OutContext.getOrCreateSymbol(SymName);
   }
-  auto Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, OutContext);
-  auto Expr = RISCVMCExpr::create(Res, RISCVMCExpr::VK_RISCV_CALL, OutContext);
+  auto Res = MCSymbolRefExpr::create(Sym, OutContext);
+  auto Expr = RISCVMCExpr::create(Res, RISCVMCExpr::VK_CALL, OutContext);
 
   EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::PseudoCALL).addExpr(Expr));
 }
@@ -652,8 +737,8 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 
   const MCSymbolRefExpr *HwasanTagMismatchV2Ref =
       MCSymbolRefExpr::create(HwasanTagMismatchV2Sym, OutContext);
-  auto Expr = RISCVMCExpr::create(HwasanTagMismatchV2Ref,
-                                  RISCVMCExpr::VK_RISCV_CALL, OutContext);
+  auto Expr = RISCVMCExpr::create(HwasanTagMismatchV2Ref, RISCVMCExpr::VK_CALL,
+                                  OutContext);
 
   for (auto &P : HwasanMemaccessSymbols) {
     unsigned Reg = std::get<0>(P.first);
@@ -859,69 +944,68 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
                                     const AsmPrinter &AP) {
   MCContext &Ctx = AP.OutContext;
-  RISCVMCExpr::VariantKind Kind;
+  RISCVMCExpr::Specifier Kind;
 
   switch (MO.getTargetFlags()) {
   default:
     llvm_unreachable("Unknown target flag on GV operand");
   case RISCVII::MO_None:
-    Kind = RISCVMCExpr::VK_RISCV_None;
+    Kind = RISCVMCExpr::VK_None;
     break;
   case RISCVII::MO_CALL:
-    Kind = RISCVMCExpr::VK_RISCV_CALL_PLT;
+    Kind = RISCVMCExpr::VK_CALL_PLT;
     break;
   case RISCVII::MO_LO:
-    Kind = RISCVMCExpr::VK_RISCV_LO;
+    Kind = RISCVMCExpr::VK_LO;
     break;
   case RISCVII::MO_HI:
-    Kind = RISCVMCExpr::VK_RISCV_HI;
+    Kind = RISCVMCExpr::VK_HI;
     break;
   case RISCVII::MO_PCREL_LO:
-    Kind = RISCVMCExpr::VK_RISCV_PCREL_LO;
+    Kind = RISCVMCExpr::VK_PCREL_LO;
     break;
   case RISCVII::MO_PCREL_HI:
-    Kind = RISCVMCExpr::VK_RISCV_PCREL_HI;
+    Kind = RISCVMCExpr::VK_PCREL_HI;
     break;
   case RISCVII::MO_GOT_HI:
-    Kind = RISCVMCExpr::VK_RISCV_GOT_HI;
+    Kind = RISCVMCExpr::VK_GOT_HI;
     break;
   case RISCVII::MO_TPREL_LO:
-    Kind = RISCVMCExpr::VK_RISCV_TPREL_LO;
+    Kind = RISCVMCExpr::VK_TPREL_LO;
     break;
   case RISCVII::MO_TPREL_HI:
-    Kind = RISCVMCExpr::VK_RISCV_TPREL_HI;
+    Kind = RISCVMCExpr::VK_TPREL_HI;
     break;
   case RISCVII::MO_TPREL_ADD:
-    Kind = RISCVMCExpr::VK_RISCV_TPREL_ADD;
+    Kind = RISCVMCExpr::VK_TPREL_ADD;
     break;
   case RISCVII::MO_TLS_GOT_HI:
-    Kind = RISCVMCExpr::VK_RISCV_TLS_GOT_HI;
+    Kind = RISCVMCExpr::VK_TLS_GOT_HI;
     break;
   case RISCVII::MO_TLS_GD_HI:
-    Kind = RISCVMCExpr::VK_RISCV_TLS_GD_HI;
+    Kind = RISCVMCExpr::VK_TLS_GD_HI;
     break;
   case RISCVII::MO_TLSDESC_HI:
-    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_HI;
+    Kind = RISCVMCExpr::VK_TLSDESC_HI;
     break;
   case RISCVII::MO_TLSDESC_LOAD_LO:
-    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_LOAD_LO;
+    Kind = RISCVMCExpr::VK_TLSDESC_LOAD_LO;
     break;
   case RISCVII::MO_TLSDESC_ADD_LO:
-    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_ADD_LO;
+    Kind = RISCVMCExpr::VK_TLSDESC_ADD_LO;
     break;
   case RISCVII::MO_TLSDESC_CALL:
-    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_CALL;
+    Kind = RISCVMCExpr::VK_TLSDESC_CALL;
     break;
   }
 
-  const MCExpr *ME =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
+  const MCExpr *ME = MCSymbolRefExpr::create(Sym, Ctx);
 
   if (!MO.isJTI() && !MO.isMBB() && MO.getOffset())
     ME = MCBinaryExpr::createAdd(
         ME, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
-  if (Kind != RISCVMCExpr::VK_RISCV_None)
+  if (Kind != RISCVMCExpr::VK_None)
     ME = RISCVMCExpr::create(ME, Kind, Ctx);
   return MCOperand::createExpr(ME);
 }
@@ -1007,7 +1091,7 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   bool hasVLOutput = RISCV::isFaultFirstLoad(*MI);
   for (unsigned OpNo = 0; OpNo != NumOps; ++OpNo) {
     const MachineOperand &MO = MI->getOperand(OpNo);
-    // Skip vl ouput. It should be the second output.
+    // Skip vl output. It should be the second output.
     if (hasVLOutput && OpNo == 1)
       continue;
 
@@ -1126,8 +1210,12 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
     MCSym = GetExternalSymbolSymbol(Sym);
   }
 
-  const MCExpr *Expr =
-      MCSymbolRefExpr::create(MCSym, MCSymbolRefExpr::VK_None, OutContext);
+  const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, OutContext);
   uint64_t Size = getDataLayout().getTypeAllocSize(RCPV->getType());
   OutStreamer->emitValue(Expr, Size);
 }
+
+char RISCVAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(RISCVAsmPrinter, "riscv-asm-printer", "RISC-V Assembly Printer",
+                false, false)

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_COMPLEX
-#define _LIBCPP_COMPLEX
+#ifndef _LIBCPP___CXX03_COMPLEX
+#define _LIBCPP___CXX03_COMPLEX
 
 /*
     complex synopsis
@@ -373,20 +373,6 @@ public:
     *this = *this / complex(__c.real(), __c.imag());
     return *this;
   }
-
-#if _LIBCPP_STD_VER >= 26
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp&& get(complex<_Xp>&&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp& get(const complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&&) noexcept;
-#endif
 };
 
 template <>
@@ -492,20 +478,6 @@ public:
     *this = *this / complex(__c.real(), __c.imag());
     return *this;
   }
-
-#if _LIBCPP_STD_VER >= 26
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp&& get(complex<_Xp>&&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp& get(const complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&&) noexcept;
-#endif
 };
 
 template <>
@@ -592,20 +564,6 @@ public:
     *this = *this / complex(__c.real(), __c.imag());
     return *this;
   }
-
-#if _LIBCPP_STD_VER >= 26
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp&& get(complex<_Xp>&&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp& get(const complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&&) noexcept;
-#endif
 };
 
 template <>
@@ -693,20 +651,6 @@ public:
     *this = *this / complex(__c.real(), __c.imag());
     return *this;
   }
-
-#if _LIBCPP_STD_VER >= 26
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr _Xp&& get(complex<_Xp>&&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp& get(const complex<_Xp>&) noexcept;
-
-  template <size_t _Ip, class _Xp>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&&) noexcept;
-#endif
 };
 
 inline _LIBCPP_CONSTEXPR complex<float>::complex(const complex<double>& __c) : __re_(__c.real()), __im_(__c.imag()) {}
@@ -861,8 +805,6 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator==(const
   return __x.real() == __y && __x.imag() == 0;
 }
 
-#if _LIBCPP_STD_VER <= 17
-
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator==(const _Tp& __x, const complex<_Tp>& __y) {
   return __x == __y.real() && 0 == __y.imag();
@@ -883,8 +825,6 @@ template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator!=(const _Tp& __x, const complex<_Tp>& __y) {
   return !(__x == __y);
 }
-
-#endif
 
 // 26.3.7 values:
 
@@ -1383,98 +1323,14 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const complex<_Tp>& __x) {
 }
 #endif // !_LIBCPP_HAS_NO_LOCALIZATION
 
-#if _LIBCPP_STD_VER >= 26
-
-// [complex.tuple], tuple interface
-
-template <class _Tp>
-struct tuple_size<complex<_Tp>> : integral_constant<size_t, 2> {};
-
-template <size_t _Ip, class _Tp>
-struct tuple_element<_Ip, complex<_Tp>> {
-  static_assert(_Ip < 2, "Index value is out of range.");
-  using type = _Tp;
-};
-
-template <size_t _Ip, class _Xp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Xp& get(complex<_Xp>& __z) noexcept {
-  static_assert(_Ip < 2, "Index value is out of range.");
-  if constexpr (_Ip == 0) {
-    return __z.__re_;
-  } else {
-    return __z.__im_;
-  }
-}
-
-template <size_t _Ip, class _Xp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Xp&& get(complex<_Xp>&& __z) noexcept {
-  static_assert(_Ip < 2, "Index value is out of range.");
-  if constexpr (_Ip == 0) {
-    return std::move(__z.__re_);
-  } else {
-    return std::move(__z.__im_);
-  }
-}
-
-template <size_t _Ip, class _Xp>
-_LIBCPP_HIDE_FROM_ABI constexpr const _Xp& get(const complex<_Xp>& __z) noexcept {
-  static_assert(_Ip < 2, "Index value is out of range.");
-  if constexpr (_Ip == 0) {
-    return __z.__re_;
-  } else {
-    return __z.__im_;
-  }
-}
-
-template <size_t _Ip, class _Xp>
-_LIBCPP_HIDE_FROM_ABI constexpr const _Xp&& get(const complex<_Xp>&& __z) noexcept {
-  static_assert(_Ip < 2, "Index value is out of range.");
-  if constexpr (_Ip == 0) {
-    return std::move(__z.__re_);
-  } else {
-    return std::move(__z.__im_);
-  }
-}
-
-#endif // _LIBCPP_STD_VER >= 26
-
-#if _LIBCPP_STD_VER >= 14
-// Literal suffix for complex number literals [complex.literals]
-inline namespace literals {
-inline namespace complex_literals {
-_LIBCPP_HIDE_FROM_ABI inline constexpr complex<long double> operator""il(long double __im) { return {0.0l, __im}; }
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr complex<long double> operator""il(unsigned long long __im) {
-  return {0.0l, static_cast<long double>(__im)};
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr complex<double> operator""i(long double __im) {
-  return {0.0, static_cast<double>(__im)};
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr complex<double> operator""i(unsigned long long __im) {
-  return {0.0, static_cast<double>(__im)};
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr complex<float> operator""if(long double __im) {
-  return {0.0f, static_cast<float>(__im)};
-}
-
-_LIBCPP_HIDE_FROM_ABI inline constexpr complex<float> operator""if(unsigned long long __im) {
-  return {0.0f, static_cast<float>(__im)};
-}
-} // namespace complex_literals
-} // namespace literals
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/iosfwd>
 #  include <__cxx03/stdexcept>
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_COMPLEX
+#endif // _LIBCPP___CXX03_COMPLEX

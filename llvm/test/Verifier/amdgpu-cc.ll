@@ -217,26 +217,3 @@ define amdgpu_cs_chain_preserve void @preallocated_cc_amdgpu_cs_chain_preserve(p
 define amdgpu_cs_chain_preserve void @inalloca_cc_amdgpu_cs_chain_preserve(ptr inalloca(i32) %ptr) {
   ret void
 }
-
-declare amdgpu_cs_chain void @amdgpu_cs_chain_call_target()
-declare amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_call_target()
-
-define amdgpu_cs_chain void @cant_call_amdgpu_cs_chain_functions(ptr %f) {
-  ; CHECK: Direct calls to amdgpu_cs_chain/amdgpu_cs_chain_preserve functions not allowed. Please use the @llvm.amdgpu.cs.chain intrinsic instead.
-  ; CHECK-NEXT: call amdgpu_cs_chain
-  call amdgpu_cs_chain void @amdgpu_cs_chain_call_target()
-
-  ; CHECK: Direct calls to amdgpu_cs_chain/amdgpu_cs_chain_preserve functions not allowed. Please use the @llvm.amdgpu.cs.chain intrinsic instead.
-  ; CHECK-NEXT: call amdgpu_cs_chain_preserve
-  call amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_call_target()
-
-  ; CHECK: Direct calls to amdgpu_cs_chain/amdgpu_cs_chain_preserve functions not allowed. Please use the @llvm.amdgpu.cs.chain intrinsic instead.
-  ; CHECK-NEXT: call amdgpu_cs_chain
-  call amdgpu_cs_chain void %f()
-
-  ; CHECK: Direct calls to amdgpu_cs_chain/amdgpu_cs_chain_preserve functions not allowed. Please use the @llvm.amdgpu.cs.chain intrinsic instead.
-  ; CHECK-NEXT: call amdgpu_cs_chain
-  call amdgpu_cs_chain_preserve void %f()
-
-  ret void
-}

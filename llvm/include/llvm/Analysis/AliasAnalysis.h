@@ -521,6 +521,10 @@ public:
   /// the same memory locations.
   ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call);
 
+  /// Return information about whether two instructions may refer to the same
+  /// memory locations.
+  ModRefInfo getModRefInfo(const Instruction *I1, const Instruction *I2);
+
   /// Return information about whether a particular call site modifies
   /// or reads the specified memory location \p MemLoc before instruction \p I
   /// in a BasicBlock.
@@ -600,6 +604,8 @@ public:
   ModRefInfo getModRefInfo(const Instruction *I,
                            const std::optional<MemoryLocation> &OptLoc,
                            AAQueryInfo &AAQIP);
+  ModRefInfo getModRefInfo(const Instruction *I1, const Instruction *I2,
+                           AAQueryInfo &AAQI);
   ModRefInfo callCapturesBefore(const Instruction *I,
                                 const MemoryLocation &MemLoc, DominatorTree *DT,
                                 AAQueryInfo &AAQIP);
@@ -643,6 +649,9 @@ public:
   bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal = false) {
     return isNoModRef(AA.getModRefInfoMask(Loc, AAQI, OrLocal));
   }
+  bool pointsToConstantMemory(const Value *P, bool OrLocal = false) {
+    return pointsToConstantMemory(MemoryLocation::getBeforeOrAfter(P), OrLocal);
+  }
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
                                bool IgnoreLocals = false) {
     return AA.getModRefInfoMask(Loc, AAQI, IgnoreLocals);
@@ -667,6 +676,9 @@ public:
     return alias(MemoryLocation(V1, LocationSize::precise(1)),
                  MemoryLocation(V2, LocationSize::precise(1))) ==
            AliasResult::MustAlias;
+  }
+  bool isNoAlias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
+    return alias(LocA, LocB) == AliasResult::NoAlias;
   }
   ModRefInfo callCapturesBefore(const Instruction *I,
                                 const MemoryLocation &MemLoc,
@@ -875,6 +887,13 @@ bool isIdentifiedObject(const Value *V);
 /// IdentifiedObjects.
 bool isIdentifiedFunctionLocal(const Value *V);
 
+/// Return true if we know V to the base address of the corresponding memory
+/// object.  This implies that any address less than V must be out of bounds
+/// for the underlying object.  Note that just being isIdentifiedObject() is
+/// not enough - For example, a negative offset from a noalias argument or call
+/// can be inbounds w.r.t the actual underlying object.
+bool isBaseOfObject(const Value *V);
+
 /// Returns true if the pointer is one which would have been considered an
 /// escape by isNonEscapingLocalObject.
 bool isEscapeSource(const Value *V);
@@ -993,6 +1012,18 @@ struct ExternalAAWrapperPass : ImmutablePass {
   ExternalAAWrapperPass();
 
   explicit ExternalAAWrapperPass(CallbackT CB);
+
+  /// Returns whether this external AA should run before Basic AA.
+  ///
+  /// By default, external AA passes are run after Basic AA. If this returns
+  /// true, the external AA will be run before Basic AA during alias analysis.
+  ///
+  /// For some targets, we prefer to run the external AA early to improve
+  /// compile time as it has more target-specific information. This is
+  /// particularly useful when the external AA can provide more precise results
+  /// than Basic AA so that Basic AA does not need to spend time recomputing
+  /// them.
+  virtual bool runEarly() { return false; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

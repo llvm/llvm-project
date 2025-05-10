@@ -238,7 +238,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
   else if (!HasScopeSpecifier && Tok.is(tok::identifier) &&
            GetLookAheadToken(1).is(tok::ellipsis) &&
-           GetLookAheadToken(2).is(tok::l_square)) {
+           GetLookAheadToken(2).is(tok::l_square) &&
+           !GetLookAheadToken(3).is(tok::r_square)) {
     SourceLocation Start = Tok.getLocation();
     DeclSpec DS(AttrFactory);
     SourceLocation CCLoc;
@@ -252,6 +253,19 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
     if (Type.isNull())
       return false;
+
+    // C++ [cpp23.dcl.dcl-2]:
+    //   Previously, T...[n] would declare a pack of function parameters.
+    //   T...[n] is now a pack-index-specifier. [...] Valid C++ 2023 code that
+    //   declares a pack of parameters without specifying a declarator-id
+    //   becomes ill-formed.
+    //
+    // However, we still treat it as a pack indexing type because the use case
+    // is fairly rare, to ensure semantic consistency given that we have
+    // backported this feature to pre-C++26 modes.
+    if (!Tok.is(tok::coloncolon) && !getLangOpts().CPlusPlus26 &&
+        getCurScope()->isFunctionDeclarationScope())
+      Diag(Start, diag::warn_pre_cxx26_ambiguous_pack_indexing_type) << Type;
 
     if (!TryConsumeToken(tok::coloncolon, CCLoc)) {
       AnnotateExistingIndexedTypeNamePack(ParsedType::make(Type), Start,
@@ -573,12 +587,12 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
               << II.getName()
               << FixItHint::CreateInsertion(Tok.getLocation(), "template ");
         }
-
-        SourceLocation TemplateNameLoc = ConsumeToken();
+        ConsumeToken();
 
         TemplateNameKind TNK = Actions.ActOnTemplateName(
-            getCurScope(), SS, TemplateNameLoc, TemplateName, ObjectType,
-            EnteringContext, Template, /*AllowInjectedClassName*/ true);
+            getCurScope(), SS, /*TemplateKWLoc=*/SourceLocation(), TemplateName,
+            ObjectType, EnteringContext, Template,
+            /*AllowInjectedClassName=*/true);
         if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
                                     TemplateName, false))
           return true;
@@ -1437,7 +1451,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   // lambda declarator and applies them to the corresponding function operator
   // or operator template declaration. We accept this as a conforming extension
   // in all language modes that support lambdas.
-  if (isCXX11AttributeSpecifier()) {
+  if (isCXX11AttributeSpecifier() !=
+      CXX11AttributeKind::NotAttributeSpecifier) {
     Diag(Tok, getLangOpts().CPlusPlus23
                   ? diag::warn_cxx20_compat_decl_attrs_on_lambda
                   : diag::ext_decl_attrs_on_lambda)
@@ -2189,8 +2204,16 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
     }
 
-    // Parse the expression.
-    ExprResult Expr = ParseExpression(); // expression
+    ExprResult Expr = [&] {
+      EnterExpressionEvaluationContext Eval(
+          Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+          /*LambdaContextDecl=*/nullptr,
+          /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_Other,
+          /*ShouldEnter=*/CK == Sema::ConditionKind::ConstexprIf);
+      // Parse the expression.
+      return ParseExpression(); // expression
+    }();
+
     if (Expr.isInvalid())
       return Sema::ConditionError();
 
@@ -3575,7 +3598,7 @@ Parser::ParseCXXDeleteExpression(bool UseGlobal, SourceLocation Start) {
       return ExprError();
   }
 
-  ExprResult Operand(ParseCastExpression(AnyCastExpr));
+  ExprResult Operand(ParseCastExpression(CastParseKind::AnyCastExpr));
   if (Operand.isInvalid())
     return Operand;
 
@@ -3683,8 +3706,10 @@ ExprResult Parser::ParseRequiresExpression() {
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
           break;
         }
+        // If there's an error consuming the closing bracket, consumeClose()
+        // will handle skipping to the nearest recovery point for us.
         if (ExprBraces.consumeClose())
-          ExprBraces.skipToEnd();
+          break;
 
         concepts::Requirement *Req = nullptr;
         SourceLocation NoexceptLoc;
@@ -4063,7 +4088,8 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
                                          BalancedDelimiterTracker &Tracker,
                                          ColonProtectionRAIIObject &ColonProt) {
   assert(getLangOpts().CPlusPlus && "Should only be called for C++!");
-  assert(ExprType == CastExpr && "Compound literals are not ambiguous!");
+  assert(ExprType == ParenParseOption::CastExpr &&
+         "Compound literals are not ambiguous!");
   assert(isTypeIdInParens() && "Not a type-id!");
 
   ExprResult Result(true);
@@ -4100,7 +4126,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
   }
 
   if (Tok.is(tok::l_brace)) {
-    ParseAs = CompoundLiteral;
+    ParseAs = ParenParseOption::CompoundLiteral;
   } else {
     bool NotCastExpr;
     if (Tok.is(tok::l_paren) && NextToken().is(tok::r_paren)) {
@@ -4110,16 +4136,16 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
       // If it is not a cast-expression, NotCastExpr will be true and no token
       // will be consumed.
       ColonProt.restore();
-      Result = ParseCastExpression(AnyCastExpr,
-                                   false/*isAddressofOperand*/,
-                                   NotCastExpr,
+      Result = ParseCastExpression(CastParseKind::AnyCastExpr,
+                                   false /*isAddressofOperand*/, NotCastExpr,
                                    // type-id has priority.
-                                   IsTypeCast);
+                                   TypeCastState::IsTypeCast);
     }
 
     // If we parsed a cast-expression, it's really a type-id, otherwise it's
     // an expression.
-    ParseAs = NotCastExpr ? SimpleExpr : CastExpr;
+    ParseAs =
+        NotCastExpr ? ParenParseOption::SimpleExpr : ParenParseOption::CastExpr;
   }
 
   // Create a fake EOF to mark end of Toks buffer.
@@ -4140,7 +4166,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
   // as when we entered this function.
   ConsumeAnyToken();
 
-  if (ParseAs >= CompoundLiteral) {
+  if (ParseAs >= ParenParseOption::CompoundLiteral) {
     // Parse the type declarator.
     DeclSpec DS(AttrFactory);
     Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
@@ -4159,8 +4185,8 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
     assert(Tok.is(tok::eof) && Tok.getEofData() == AttrEnd.getEofData());
     ConsumeAnyToken();
 
-    if (ParseAs == CompoundLiteral) {
-      ExprType = CompoundLiteral;
+    if (ParseAs == ParenParseOption::CompoundLiteral) {
+      ExprType = ParenParseOption::CompoundLiteral;
       if (DeclaratorInfo.isInvalidType())
         return ExprError();
 
@@ -4171,7 +4197,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
     }
 
     // We parsed '(' type-id ')' and the thing after it wasn't a '{'.
-    assert(ParseAs == CastExpr);
+    assert(ParseAs == ParenParseOption::CastExpr);
 
     if (DeclaratorInfo.isInvalidType())
       return ExprError();
@@ -4185,9 +4211,9 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
   }
 
   // Not a compound literal, and not followed by a cast-expression.
-  assert(ParseAs == SimpleExpr);
+  assert(ParseAs == ParenParseOption::SimpleExpr);
 
-  ExprType = SimpleExpr;
+  ExprType = ParenParseOption::SimpleExpr;
   Result = ParseExpression();
   if (!Result.isInvalid() && Tok.is(tok::r_paren))
     Result = Actions.ActOnParenExpr(Tracker.getOpenLocation(),

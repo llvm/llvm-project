@@ -1,9 +1,9 @@
-; RUN: llc -march=nvptx64 -stop-before=nvptx-proxyreg-erasure < %s 2>&1 \
-; RUN:   | llc -x mir -march=nvptx64 -start-before=nvptx-proxyreg-erasure 2>&1 \
+; RUN: llc -mtriple=nvptx64 -stop-before=nvptx-proxyreg-erasure < %s 2>&1 \
+; RUN: | llc -x mir -mtriple=nvptx64 -start-before=nvptx-proxyreg-erasure 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=PTX --check-prefix=PTX-WITH
 
-; RUN: llc -march=nvptx64 -stop-before=nvptx-proxyreg-erasure < %s 2>&1 \
-; RUN:   | llc -x mir -march=nvptx64 -start-after=nvptx-proxyreg-erasure 2>&1 \
+; RUN: llc -mtriple=nvptx64 -stop-before=nvptx-proxyreg-erasure < %s 2>&1 \
+; RUN: | llc -x mir -mtriple=nvptx64 -start-after=nvptx-proxyreg-erasure 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=PTX --check-prefix=PTX-WITHOUT
 
 ; Thorough testing of ProxyRegErasure: PTX assembly with and without the pass.
@@ -107,12 +107,12 @@ declare float @callee_f32()
 define  float @check_f32() {
   ; PTX-LABEL: check_f32
   ; PTX-DAG: { // callseq {{[0-9]+}}, {{[0-9]+}}
-  ; PTX-DAG: ld.param.f32 [[LD:%f[0-9]+]], [retval0];
+  ; PTX-DAG: ld.param.b32 [[LD:%f[0-9]+]], [retval0];
   ; PTX-DAG: } // callseq {{[0-9]+}}
 
-  ; PTX-WITHOUT-DAG: mov.f32 [[PROXY:%f[0-9]+]], [[LD]];
-  ; PTX-WITHOUT-DAG: st.param.f32 [func_retval0], [[PROXY]];
-  ; PTX-WITH-DAG:    st.param.f32 [func_retval0], [[LD]];
+  ; PTX-WITHOUT-DAG: mov.b32 [[PROXY:%f[0-9]+]], [[LD]];
+  ; PTX-WITHOUT-DAG: st.param.b32 [func_retval0], [[PROXY]];
+  ; PTX-WITH-DAG:    st.param.b32 [func_retval0], [[LD]];
 
   %ret = call float @callee_f32()
   ret float %ret
@@ -122,12 +122,12 @@ declare double @callee_f64()
 define  double @check_f64() {
   ; PTX-LABEL: check_f64
   ; PTX-DAG: { // callseq {{[0-9]+}}, {{[0-9]+}}
-  ; PTX-DAG: ld.param.f64 [[LD:%fd[0-9]+]], [retval0];
+  ; PTX-DAG: ld.param.b64 [[LD:%fd[0-9]+]], [retval0];
   ; PTX-DAG: } // callseq {{[0-9]+}}
 
-  ; PTX-WITHOUT-DAG: mov.f64 [[PROXY:%fd[0-9]+]], [[LD]];
-  ; PTX-WITHOUT-DAG: st.param.f64 [func_retval0], [[PROXY]];
-  ; PTX-WITH-DAG:    st.param.f64 [func_retval0], [[LD]];
+  ; PTX-WITHOUT-DAG: mov.b64 [[PROXY:%fd[0-9]+]], [[LD]];
+  ; PTX-WITHOUT-DAG: st.param.b64 [func_retval0], [[PROXY]];
+  ; PTX-WITH-DAG:    st.param.b64 [func_retval0], [[LD]];
 
   %ret = call double @callee_f64()
   ret double %ret
@@ -170,13 +170,13 @@ declare <2 x double> @callee_vec_f64()
 define  <2 x double> @check_vec_f64() {
   ; PTX-LABEL: check_vec_f64
   ; PTX-DAG: { // callseq {{[0-9]+}}, {{[0-9]+}}
-  ; PTX-DAG: ld.param.v2.f64 {[[LD0:%fd[0-9]+]], [[LD1:%fd[0-9]+]]}, [retval0];
+  ; PTX-DAG: ld.param.v2.b64 {[[LD0:%fd[0-9]+]], [[LD1:%fd[0-9]+]]}, [retval0];
   ; PTX-DAG: } // callseq {{[0-9]+}}
 
-  ; PTX-WITHOUT-DAG: mov.f64 [[PROXY0:%fd[0-9]+]], [[LD0]];
-  ; PTX-WITHOUT-DAG: mov.f64 [[PROXY1:%fd[0-9]+]], [[LD1]];
-  ; PTX-WITHOUT-DAG: st.param.v2.f64 [func_retval0], {[[PROXY0]], [[PROXY1]]};
-  ; PTX-WITH-DAG:    st.param.v2.f64 [func_retval0], {[[LD0]], [[LD1]]};
+  ; PTX-WITHOUT-DAG: mov.b64 [[PROXY0:%fd[0-9]+]], [[LD0]];
+  ; PTX-WITHOUT-DAG: mov.b64 [[PROXY1:%fd[0-9]+]], [[LD1]];
+  ; PTX-WITHOUT-DAG: st.param.v2.b64 [func_retval0], {[[PROXY0]], [[PROXY1]]};
+  ; PTX-WITH-DAG:    st.param.v2.b64 [func_retval0], {[[LD0]], [[LD1]]};
 
   %ret = call <2 x double> @callee_vec_f64()
   ret <2 x double> %ret

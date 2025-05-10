@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_UNWRAP_ITER_H
-#define _LIBCPP___ALGORITHM_UNWRAP_ITER_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_UNWRAP_ITER_H
+#define _LIBCPP___CXX03___ALGORITHM_UNWRAP_ITER_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/iterator_traits.h>
@@ -65,14 +65,6 @@ __unwrap_iter(_Iter __i) _NOEXCEPT {
   return _Impl::__unwrap(__i);
 }
 
-// Allow input_iterators to be passed to __unwrap_iter (but not __rewrap_iter)
-#if _LIBCPP_STD_VER >= 20
-template <class _Iter, __enable_if_t<!is_copy_constructible<_Iter>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _Iter __unwrap_iter(_Iter __i) noexcept {
-  return __i;
-}
-#endif
-
 template <class _OrigIter, class _Iter, class _Impl = __unwrap_iter_impl<_OrigIter> >
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _OrigIter __rewrap_iter(_OrigIter __orig_iter, _Iter __iter) _NOEXCEPT {
   return _Impl::__rewrap(std::move(__orig_iter), std::move(__iter));
@@ -82,4 +74,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_UNWRAP_ITER_H
+#endif // _LIBCPP___CXX03___ALGORITHM_UNWRAP_ITER_H

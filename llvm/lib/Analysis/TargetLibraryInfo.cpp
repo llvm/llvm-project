@@ -29,7 +29,7 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                           "Accelerate framework"),
                clEnumValN(TargetLibraryInfoImpl::DarwinLibSystemM,
                           "Darwin_libsystem_m", "Darwin libsystem_m"),
-               clEnumValN(TargetLibraryInfoImpl::LIBMVEC_X86, "LIBMVEC-X86",
+               clEnumValN(TargetLibraryInfoImpl::LIBMVEC, "LIBMVEC",
                           "GLIBC Vector Math library"),
                clEnumValN(TargetLibraryInfoImpl::MASSV, "MASSV",
                           "IBM MASS vector library"),
@@ -118,7 +118,7 @@ static bool hasBcmp(const Triple &TT) {
   return TT.isOSFreeBSD() || TT.isOSSolaris();
 }
 
-static bool isCallingConvCCompatible(CallingConv::ID CC, StringRef TT,
+static bool isCallingConvCCompatible(CallingConv::ID CC, const Triple &TT,
                                      FunctionType *FuncTy) {
   switch (CC) {
   default:
@@ -131,7 +131,7 @@ static bool isCallingConvCCompatible(CallingConv::ID CC, StringRef TT,
 
     // The iOS ABI diverges from the standard in some cases, so for now don't
     // try to simplify those calls.
-    if (Triple(TT).isiOS())
+    if (TT.isiOS())
       return false;
 
     if (!FuncTy->getReturnType()->isPointerTy() &&
@@ -1306,21 +1306,21 @@ static const VecDesc VecFuncs_SVML[] = {
 static const VecDesc VecFuncs_SLEEFGNUABI_VF2[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
-  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX},
+  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 };
 static const VecDesc VecFuncs_SLEEFGNUABI_VF4[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
-  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX},
+  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 };
 static const VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 };
@@ -1328,15 +1328,15 @@ static const VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
 static const VecDesc VecFuncs_SLEEFGNUABI_VFScalableRISCV[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 };
 
 static const VecDesc VecFuncs_ArmPL[] = {
 #define TLI_DEFINE_ARMPL_VECFUNCS
-#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_ARMPL_VECFUNCS
 };
@@ -1344,7 +1344,7 @@ static const VecDesc VecFuncs_ArmPL[] = {
 const VecDesc VecFuncs_AMDLIBM[] = {
 #define TLI_DEFINE_AMDLIBM_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_AMDLIBM_VECFUNCS
 };
@@ -1360,8 +1360,15 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     addVectorizableFunctions(VecFuncs_DarwinLibSystemM);
     break;
   }
-  case LIBMVEC_X86: {
-    addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+  case LIBMVEC: {
+    switch (TargetTriple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+      break;
+    }
     break;
   }
   case MASSV: {
@@ -1446,8 +1453,7 @@ TargetLibraryInfoImpl::getVectorMappingInfo(StringRef F, const ElementCount &VF,
 TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,
                                              FunctionAnalysisManager &) {
   if (!BaselineInfoImpl)
-    BaselineInfoImpl =
-        TargetLibraryInfoImpl(Triple(F.getParent()->getTargetTriple()));
+    BaselineInfoImpl = TargetLibraryInfoImpl(F.getParent()->getTargetTriple());
   return TargetLibraryInfo(*BaselineInfoImpl, &F);
 }
 
@@ -1459,36 +1465,27 @@ unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
 }
 
 unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
-  // There is really no guarantee that sizeof(size_t) is equal to sizeof(int*).
-  // If that isn't true then it should be possible to derive the SizeTTy from
-  // the target triple here instead and do an early return.
+  // There is really no guarantee that sizeof(size_t) is equal to the index
+  // size of the default address space. If that isn't true then it should be
+  // possible to derive the SizeTTy from the target triple here instead and do
+  // an early return.
 
-  // Historically LLVM assume that size_t has same size as intptr_t (hence
-  // deriving the size from sizeof(int*) in address space zero). This should
-  // work for most targets. For future consideration: DataLayout also implement
-  // getIndexSizeInBits which might map better to size_t compared to
-  // getPointerSizeInBits. Hard coding address space zero here might be
-  // unfortunate as well. Maybe getDefaultGlobalsAddressSpace() or
-  // getAllocaAddrSpace() is better.
-  unsigned AddressSpace = 0;
-  return M.getDataLayout().getPointerSizeInBits(AddressSpace);
+  // Hard coding address space zero may seem unfortunate, but a number of
+  // configurations of common targets (i386, x86-64 x32, aarch64 x32, possibly
+  // others) have larger-than-size_t index sizes on non-default address spaces,
+  // making this the best default.
+  return M.getDataLayout().getIndexSizeInBits(/*AddressSpace=*/0);
 }
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()
-    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl()) {
-  initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl()) {}
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(const Triple &T)
-    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl(T)) {
-  initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl(T)) {}
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(
     const TargetLibraryInfoImpl &TLIImpl)
-    : ImmutablePass(ID), TLA(TLIImpl) {
-  initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), TLA(TLIImpl) {}
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(
     const TargetLibraryInfo &TLIOther)

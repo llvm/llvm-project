@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_SEED_SEQ_H
-#define _LIBCPP___RANDOM_SEED_SEQ_H
+#ifndef _LIBCPP___CXX03___RANDOM_SEED_SEQ_H
+#define _LIBCPP___CXX03___RANDOM_SEED_SEQ_H
 
 #include <__cxx03/__algorithm/copy.h>
 #include <__cxx03/__algorithm/fill.h>
@@ -16,7 +16,6 @@
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__type_traits/is_unsigned.h>
 #include <__cxx03/cstdint>
-#include <__cxx03/initializer_list>
 #include <__cxx03/vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -35,12 +34,6 @@ public:
 
   // constructors
   _LIBCPP_HIDE_FROM_ABI seed_seq() _NOEXCEPT {}
-#ifndef _LIBCPP_CXX03_LANG
-  template <class _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI seed_seq(initializer_list<_Tp> __il) {
-    __init(__il.begin(), __il.end());
-  }
-#endif // _LIBCPP_CXX03_LANG
 
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI seed_seq(_InputIterator __first, _InputIterator __last) {
@@ -163,4 +156,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_SEED_SEQ_H
+#endif // _LIBCPP___CXX03___RANDOM_SEED_SEQ_H

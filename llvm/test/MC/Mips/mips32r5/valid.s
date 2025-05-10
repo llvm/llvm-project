@@ -116,7 +116,7 @@ a:
         floor.w.s $f8,$f9              # CHECK: floor.w.s $f8, $f9        # encoding: [0x46,0x00,0x4a,0x0f]
                                        # CHECK:                           # <MCInst #{{.*}} FLOOR_W_S
         j         1f                   # CHECK: j $tmp0 # encoding: [0b000010AA,A,A,A]
-                                       # CHECK:         #   fixup A - offset: 0, value: ($tmp0), kind: fixup_Mips_26
+                                       # CHECK:         #   fixup A - offset: 0, value: $tmp0, kind: fixup_Mips_26
         j         a                    # CHECK: j a     # encoding: [0b000010AA,A,A,A]
                                        # CHECK:         #   fixup A - offset: 0, value: a, kind: fixup_Mips_26
         j         1328                 # CHECK: j 1328  # encoding: [0x08,0x00,0x01,0x4c]

@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 | %ptxas-verify %}
 
 declare i32 @get_register()
 
@@ -12,7 +12,7 @@ entry:
 
 ; CHECK-LABEL: test1(
 ; CHECK: setp.eq.s32  %p1, %r1, 1;
-; CHECK: selp.u32     %[[R:.+]], 1, 0, %p1;
+; CHECK: selp.b32     %[[R:.+]], 1, 0, %p1;
 ; CHECK: st.param.b32 [func_retval0], %[[R]];
 
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()

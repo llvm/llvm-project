@@ -23,7 +23,7 @@ using namespace llvm;
 namespace {
 
 std::unique_ptr<TargetMachine> createTargetMachine() {
-  auto TT(Triple::normalize("wasm32-unknown-unknown"));
+  Triple TT("wasm32-unknown-unknown");
   std::string CPU;
   std::string FS;
 
@@ -167,8 +167,8 @@ body: |
   WebAssemblyExceptionInfo WEI;
   MachineDominatorTree MDT;
   MachineDominanceFrontier MDF;
-  MDT.calculate(*MF);
-  MDF.getBase().analyze(MDT.getBase());
+  MDT.recalculate(*MF);
+  MDF.getBase().analyze(MDT);
   WEI.recalculate(*MF, MDT, MDF);
 
   // Exception info structure:
@@ -341,8 +341,8 @@ body: |
   WebAssemblyExceptionInfo WEI;
   MachineDominatorTree MDT;
   MachineDominanceFrontier MDF;
-  MDT.calculate(*MF);
-  MDF.getBase().analyze(MDT.getBase());
+  MDT.recalculate(*MF);
+  MDF.getBase().analyze(MDT);
   WEI.recalculate(*MF, MDT, MDF);
 
   // Exception info structure:

@@ -8,33 +8,34 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @func() {
 ; CHECK-LABEL: func:
 ; CHECK:       # %bb.0: # %bb1
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.3: # %L_30
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1: # %bb56
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_2: # %bb33
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jmp .LBB0_2
+; CHECK-NEXT:  .LBB0_1: # %bb33
+; CHECK-NEXT:   # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    testb   %al, %al
+; CHECK-NEXT:    jne     .LBB0_1
+; CHECK-NEXT:  # %bb.2:                                # %bb35
+; CHECK-NEXT:  #   in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    testb   %al, %al
+; CHECK-NEXT:    jmp     .LBB0_1
 bb1:
-  br i1 undef, label %L_10, label %L_10
+  br i1 poison, label %L_10, label %L_10
 
 L_10:                                             ; preds = %bb1, %bb1
-  br i1 undef, label %L_30, label %bb56
+  br i1 poison, label %L_30, label %bb56
 
 bb56:                                             ; preds = %L_10
   br label %bb33
 
 bb33:                                             ; preds = %bb51, %bb56
   %r111 = load i64, ptr undef, align 8
-  br i1 undef, label %bb51, label %bb35
+  br i1 poison, label %bb51, label %bb35
 
 bb35:                                             ; preds = %bb33
-  br i1 undef, label %L_19, label %bb37
+  br i1 poison, label %L_19, label %bb37
 
 bb37:                                             ; preds = %bb35
   %r128 = and i64 %r111, 576460752303423488
@@ -43,7 +44,7 @@ bb37:                                             ; preds = %bb35
 
 L_19:                                             ; preds = %bb37, %bb35
   %"$V_S25.0" = phi i1 [ %phitmp, %bb37 ], [ true, %bb35 ]
-  br i1 undef, label %bb51, label %bb42
+  br i1 poison, label %bb51, label %bb42
 
 bb42:                                             ; preds = %L_19
   %r136 = select i1 %"$V_S25.0", ptr undef, ptr undef

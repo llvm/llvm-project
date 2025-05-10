@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -37,6 +38,29 @@ module @TestDialectResources attributes {
 #-}
 )";
 
+struct MockOstream final : public raw_ostream {
+  std::unique_ptr<std::byte[]> buffer;
+  size_t size = 0;
+
+  MOCK_METHOD(void, reserveExtraSpace, (uint64_t extraSpace), (override));
+
+  MockOstream() : raw_ostream(true) {}
+  uint64_t current_pos() const override { return pos; }
+
+private:
+  size_t pos = 0;
+
+  void write_impl(const char *ptr, size_t length) override {
+    if (pos + length <= size) {
+      memcpy((void *)(buffer.get() + pos), ptr, length);
+      pos += length;
+    } else {
+      report_fatal_error(
+          "Attempted to write past the end of the fixed size buffer.");
+    }
+  }
+};
+
 TEST(Bytecode, MultiModuleWithResource) {
   MLIRContext context;
   Builder builder(&context);
@@ -45,12 +69,17 @@ TEST(Bytecode, MultiModuleWithResource) {
       parseSourceString<Operation *>(irWithResources, parseConfig);
   ASSERT_TRUE(module);
 
-  // Write the module to bytecode
-  std::string buffer;
-  llvm::raw_string_ostream ostream(buffer);
+  // Write the module to bytecode.
+  MockOstream ostream;
+  EXPECT_CALL(ostream, reserveExtraSpace).WillOnce([&](uint64_t space) {
+    ostream.buffer = std::make_unique<std::byte[]>(space);
+    ostream.size = space;
+  });
   ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
 
   // Create copy of buffer which is aligned to requested resource alignment.
+  std::string buffer((char *)ostream.buffer.get(),
+                     (char *)ostream.buffer.get() + ostream.size);
   constexpr size_t kAlignment = 0x20;
   size_t bufferSize = buffer.size();
   buffer.reserve(bufferSize + kAlignment - 1);
@@ -69,8 +98,8 @@ TEST(Bytecode, MultiModuleWithResource) {
     GTEST_SKIP();
 
   // Try to see if we have a valid resource in the parsed module.
-  auto checkResourceAttribute = [&](Operation *op) {
-    Attribute attr = roundTripModule->getDiscardableAttr("bytecode.test");
+  auto checkResourceAttribute = [](Operation *parsedModule) {
+    Attribute attr = parsedModule->getDiscardableAttr("bytecode.test");
     ASSERT_TRUE(attr);
     auto denseResourceAttr = dyn_cast<DenseI32ResourceElementsAttr>(attr);
     ASSERT_TRUE(denseResourceAttr);

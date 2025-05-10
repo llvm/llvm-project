@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGDebugInfo.h"
 #include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
@@ -286,8 +287,7 @@ public:
   ComplexPairTy EmitComplexBinOpLibCall(StringRef LibCallName,
                                         const BinOpInfo &Op);
 
-  QualType HigherPrecisionTypeForComplexArithmetic(QualType ElementType,
-                                                   bool IsDivOpCode) {
+  QualType HigherPrecisionTypeForComplexArithmetic(QualType ElementType) {
     ASTContext &Ctx = CGF.getContext();
     const QualType HigherElementType =
         Ctx.GetHigherPrecisionFPType(ElementType);
@@ -304,6 +304,10 @@ public:
     // doubles the exponent of SmallerType.LargestFiniteVal)
     if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 <=
         llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
+      if (!Ctx.getTargetInfo().hasLongDoubleType() &&
+          HigherElementType.getCanonicalType().getUnqualifiedType() ==
+              Ctx.LongDoubleTy)
+        return QualType();
       FPHasBeenPromoted = true;
       return Ctx.getComplexType(HigherElementType);
     } else {
@@ -314,7 +318,7 @@ public:
   }
 
   QualType getPromotionType(FPOptionsOverride Features, QualType Ty,
-                            bool IsDivOpCode = false) {
+                            bool IsComplexDivisor) {
     if (auto *CT = Ty->getAs<ComplexType>()) {
       QualType ElementType = CT->getElementType();
       bool IsFloatingType = ElementType->isFloatingType();
@@ -325,10 +329,9 @@ public:
                                      Features.getComplexRangeOverride() ==
                                          CGF.getLangOpts().getComplexRange();
 
-      if (IsDivOpCode && IsFloatingType && IsComplexRangePromoted &&
+      if (IsComplexDivisor && IsFloatingType && IsComplexRangePromoted &&
           (HasNoComplexRangeOverride || HasMatchingComplexRange))
-        return HigherPrecisionTypeForComplexArithmetic(ElementType,
-                                                       IsDivOpCode);
+        return HigherPrecisionTypeForComplexArithmetic(ElementType);
       if (ElementType.UseExcessPrecision(CGF.getContext()))
         return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
     }
@@ -339,9 +342,10 @@ public:
 
 #define HANDLEBINOP(OP)                                                        \
   ComplexPairTy VisitBin##OP(const BinaryOperator *E) {                        \
-    QualType promotionTy = getPromotionType(                                   \
-        E->getStoredFPFeaturesOrDefault(), E->getType(),                       \
-        (E->getOpcode() == BinaryOperatorKind::BO_Div) ? true : false);        \
+    QualType promotionTy =                                                     \
+        getPromotionType(E->getStoredFPFeaturesOrDefault(), E->getType(),      \
+                         (E->getOpcode() == BinaryOperatorKind::BO_Div &&      \
+                          E->getRHS()->getType()->isAnyComplexType()));        \
     ComplexPairTy result = EmitBin##OP(EmitBinOps(E, promotionTy));            \
     if (!promotionTy.isNull())                                                 \
       result = CGF.EmitUnPromotedValue(result, E->getType());                  \
@@ -610,6 +614,8 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
   case CK_HLSLArrayRValue:
+  case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_FloatingRealToComplex:
@@ -637,7 +643,8 @@ ComplexPairTy ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *E,
   QualType promotionTy =
       PromotionType.isNull()
           ? getPromotionType(E->getStoredFPFeaturesOrDefault(),
-                             E->getSubExpr()->getType())
+                             E->getSubExpr()->getType(),
+                             /*IsComplexDivisor=*/false)
           : PromotionType;
   ComplexPairTy result = VisitPlus(E, promotionTy);
   if (!promotionTy.isNull())
@@ -659,7 +666,8 @@ ComplexPairTy ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *E,
   QualType promotionTy =
       PromotionType.isNull()
           ? getPromotionType(E->getStoredFPFeaturesOrDefault(),
-                             E->getSubExpr()->getType())
+                             E->getSubExpr()->getType(),
+                             /*IsComplexDivisor=*/false)
           : PromotionType;
   ComplexPairTy result = VisitMinus(E, promotionTy);
   if (!promotionTy.isNull())
@@ -1211,19 +1219,24 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
   OpInfo.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
   CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, OpInfo.FPFeatures);
 
+  const bool IsComplexDivisor = E->getOpcode() == BO_DivAssign &&
+                                E->getRHS()->getType()->isAnyComplexType();
+
   // Load the RHS and LHS operands.
   // __block variables need to have the rhs evaluated first, plus this should
   // improve codegen a little.
   QualType PromotionTypeCR;
-  PromotionTypeCR = getPromotionType(E->getStoredFPFeaturesOrDefault(),
-                                     E->getComputationResultType());
+  PromotionTypeCR =
+      getPromotionType(E->getStoredFPFeaturesOrDefault(),
+                       E->getComputationResultType(), IsComplexDivisor);
   if (PromotionTypeCR.isNull())
     PromotionTypeCR = E->getComputationResultType();
   OpInfo.Ty = PromotionTypeCR;
   QualType ComplexElementTy =
       OpInfo.Ty->castAs<ComplexType>()->getElementType();
-  QualType PromotionTypeRHS = getPromotionType(
-      E->getStoredFPFeaturesOrDefault(), E->getRHS()->getType());
+  QualType PromotionTypeRHS =
+      getPromotionType(E->getStoredFPFeaturesOrDefault(),
+                       E->getRHS()->getType(), IsComplexDivisor);
 
   // The RHS should have been converted to the computation type.
   if (E->getRHS()->getType()->isRealFloatingType()) {
@@ -1251,8 +1264,9 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
 
   // Load from the l-value and convert it.
   SourceLocation Loc = E->getExprLoc();
-  QualType PromotionTypeLHS = getPromotionType(
-      E->getStoredFPFeaturesOrDefault(), E->getComputationLHSType());
+  QualType PromotionTypeLHS =
+      getPromotionType(E->getStoredFPFeaturesOrDefault(),
+                       E->getComputationLHSType(), IsComplexDivisor);
   if (LHSTy->isAnyComplexType()) {
     ComplexPairTy LHSVal = EmitLoadOfLValue(LHS, Loc);
     if (!PromotionTypeLHS.isNull())

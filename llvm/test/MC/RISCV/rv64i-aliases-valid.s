@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST,CHECK-ASM-NOALIAS %s
 # RUN: llvm-mc %s -triple=riscv64 \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS,CHECK-ASM %s
@@ -192,8 +192,8 @@ li x13, 0xffffffff55555556
 # CHECK-S-OBJ-NEXT: addi t0, t0, -1365
 li x5, -2147485013
 
-# CHECK-INST: addi a0, zero, 1110
-# CHECK-ALIAS: li a0, 1110
+# CHECK-ASM: addi a0, zero, %lo(1193046)
+# CHECK-OBJ: addi a0, zero, %lo(1193046)
 li a0, %lo(0x123456)
 
 # CHECK-OBJ-NOALIAS: addi a0, zero, 0
@@ -484,7 +484,7 @@ sext.b x10, x11
 sext.h x10, x11
 
 # CHECK-INST: andi a0, a1, 255
-# CHECK-ALIAS: andi a0, a1, 255
+# CHECK-ALIAS: zext.b a0, a1
 zext.b x10, x11
 
 # CHECK-EXPAND: slli a0, a1, 48

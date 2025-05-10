@@ -18,7 +18,8 @@
 def SDT_RISCVFLI
     : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVT<1, XLenVT>]>;
 
-def riscv_fli : SDNode<"RISCVISD::FLI", SDT_RISCVFLI>;
+// Zfa fli instruction for constant materialization.
+def riscv_fli : RVSDNode<"FLI", SDT_RISCVFLI>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -30,6 +31,7 @@ def LoadFPImmOperand : AsmOperandClass {
   let ParserMethod = "parseFPImm";
   let RenderMethod = "addFPImmOperands";
   let DiagnosticType = "InvalidLoadFPImm";
+  let DiagnosticString = "operand must be a valid floating-point constant";
 }
 
 def loadfpimm : Operand<XLenVT> {
@@ -43,6 +45,7 @@ def RTZArg : AsmOperandClass {
   let Name = "RTZArg";
   let RenderMethod = "addFRMArgOperands";
   let DiagnosticType = "InvalidRTZArg";
+  let DiagnosticString = "operand must be 'rtz' floating-point rounding mode";
   let ParserMethod = "parseFRMArg";
 }
 

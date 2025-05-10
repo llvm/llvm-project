@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=sparcv9 -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD
-; RUN: llc < %s -march=sparcv9 -disable-sparc-delay-filler -disable-sparc-leaf-proc -mattr=soft-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT
+; RUN: llc < %s -mtriple=sparcv9 -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD
+; RUN: llc < %s -mtriple=sparcv9 -disable-sparc-delay-filler -disable-sparc-leaf-proc -mattr=soft-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT
 
 ; CHECK-LABEL: intarg:
 ; The save/restore frame is not strictly necessary here, but we would need to
@@ -118,12 +118,10 @@ define double @floatarg(float %a0,    ; %f1
 ; SOFT: stx %i2, [%sp+2239]
 ; SOFT: stx %i2, [%sp+2231]
 ; SOFT: stx %i2, [%sp+2223]
-; SOFT: mov  %i2, %o0
-; SOFT: mov  %i1, %o1
-; SOFT: mov  %i1, %o2
-; SOFT: mov  %i1, %o3
-; SOFT: mov  %i2, %o4
-; SOFT: mov  %i2, %o5
+; SOFT: mov %i1, %o2
+; SOFT: mov %i1, %o3
+; SOFT: mov %i2, %o4
+; SOFT: mov %i2, %o5
 ; CHECK: call floatarg
 ; CHECK-NOT: add %sp
 ; CHECK: restore
@@ -174,11 +172,9 @@ define void @mixedarg(i8 %a0,      ; %i0
 
 ; CHECK-LABEL: call_mixedarg:
 ; CHECK: stx %i2, [%sp+2247]
-; SOFT:  stx %i1, [%sp+2239]
 ; CHECK: stx %i0, [%sp+2223]
 ; HARD: fmovd %f2, %f6
 ; HARD: fmovd %f2, %f16
-; SOFT: mov  %i1, %o3
 ; CHECK: call mixedarg
 ; CHECK-NOT: add %sp
 ; CHECK: restore
@@ -262,8 +258,8 @@ define i32 @inreg_if(float inreg %a0, ; %f0
 }
 
 ; CHECK-LABEL: call_inreg_if:
-; HARD: fmovs %f3, %f0
 ; HARD: mov %i2, %o0
+; HARD: fmovs %f3, %f0
 ; SOFT: srl %i2, 0, %i0
 ; SOFT: sllx %i1, 32, %i1
 ; SOFT: or %i1, %i0, %o0

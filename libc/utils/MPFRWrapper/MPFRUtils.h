@@ -21,13 +21,14 @@ namespace testing {
 namespace mpfr {
 
 enum class Operation : int {
-  // Operations with take a single floating point number as input
+  // Operations which take a single floating point number as input
   // and produce a single floating point number as output. The input
   // and output floating point numbers are of the same kind.
   BeginUnaryOperationsSingleOutput,
   Abs,
   Acos,
   Acosh,
+  Acospi,
   Asin,
   Asinh,
   Atan,
@@ -87,10 +88,10 @@ enum class Operation : int {
   EndBinaryOperationsSingleOutput,
 
   // Operations which take two floating point numbers of the same type as
-  // input and produce two outputs. The first output is a floating nubmer of
-  // the same type as the inputs. The second output is af type 'int'.
+  // input and produce two outputs. The first output is a floating point number
+  // of the same type as the inputs. The second output is of type 'int'.
   BeginBinaryOperationsTwoOutputs,
-  RemQuo, // The first output, the floating point output, is the remainder.
+  RemQuo, // The first output(floating point) is the remainder.
   EndBinaryOperationsTwoOutputs,
 
   // Operations which take three floating point nubmers of the same type as

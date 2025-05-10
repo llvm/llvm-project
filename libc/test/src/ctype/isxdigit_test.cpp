@@ -11,17 +11,7 @@
 
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcIsXdigit, SimpleTest) {
-  EXPECT_NE(LIBC_NAMESPACE::isxdigit('a'), 0);
-  EXPECT_NE(LIBC_NAMESPACE::isxdigit('B'), 0);
-  EXPECT_NE(LIBC_NAMESPACE::isxdigit('3'), 0);
-
-  EXPECT_EQ(LIBC_NAMESPACE::isxdigit('z'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isxdigit(' '), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isxdigit('?'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isxdigit('\0'), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::isxdigit(-1), 0);
-}
+namespace {
 
 // TODO: Merge the ctype tests using this framework.
 constexpr char XDIGIT_ARRAY[] = {
@@ -34,6 +24,20 @@ bool in_span(int ch, LIBC_NAMESPACE::cpp::span<const char> arr) {
     if (static_cast<int>(arr[i]) == ch)
       return true;
   return false;
+}
+
+} // namespace
+
+TEST(LlvmLibcIsXdigit, SimpleTest) {
+  EXPECT_NE(LIBC_NAMESPACE::isxdigit('a'), 0);
+  EXPECT_NE(LIBC_NAMESPACE::isxdigit('B'), 0);
+  EXPECT_NE(LIBC_NAMESPACE::isxdigit('3'), 0);
+
+  EXPECT_EQ(LIBC_NAMESPACE::isxdigit('z'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isxdigit(' '), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isxdigit('?'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isxdigit('\0'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::isxdigit(-1), 0);
 }
 
 TEST(LlvmLibcIsXdigit, DefaultLocale) {

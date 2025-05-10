@@ -32,7 +32,9 @@
 namespace llvm {
 
 class BasicBlock;
+class MachineDomTreeUpdater;
 class MachineFunction;
+class MachineLoopInfo;
 class MCSymbol;
 class ModuleSlotTracker;
 class Pass;
@@ -41,6 +43,7 @@ class SlotIndexes;
 class StringRef;
 class raw_ostream;
 class LiveIntervals;
+class LiveVariables;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
@@ -128,7 +131,7 @@ public:
   /// clearly as they both have an integer type.
   struct RegisterMaskPair {
   public:
-    MCPhysReg PhysReg;
+    MCRegister PhysReg;
     LaneBitmask LaneMask;
 
     RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
@@ -202,8 +205,8 @@ private:
   /// LLVM IR.
   bool IsEHScopeEntry = false;
 
-  /// Indicates if this is a target block of a catchret.
-  bool IsEHCatchretTarget = false;
+  /// Indicates if this is a target of Windows EH Continuation Guard.
+  bool IsEHContTarget = false;
 
   /// Indicate that this basic block is the entry block of an EH funclet.
   bool IsEHFuncletEntry = false;
@@ -231,8 +234,8 @@ private:
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
 
-  /// Cached MCSymbol for this block (used if IsEHCatchRetTarget).
-  mutable MCSymbol *CachedEHCatchretMCSymbol = nullptr;
+  /// Cached MCSymbol for this block (used if IsEHContTarget).
+  mutable MCSymbol *CachedEHContMCSymbol = nullptr;
 
   /// Marks the end of the basic block. Used during basic block sections to
   /// calculate the size of the basic block, or the BB section ending with it.
@@ -309,6 +312,15 @@ public:
   /// Return the MachineFunction containing this basic block.
   const MachineFunction *getParent() const { return xParent; }
   MachineFunction *getParent() { return xParent; }
+
+  /// Returns true if the original IR terminator is an `indirectbr`. This
+  /// typically corresponds to a `goto` in C, rather than jump tables.
+  bool terminatorIsComputedGoto() const {
+    return back().isIndirectBranch() &&
+           llvm::all_of(successors(), [](const MachineBasicBlock *Succ) {
+             return Succ->isIRBlockAddressTaken();
+           });
+  }
 
   using instr_iterator = Instructions::iterator;
   using const_instr_iterator = Instructions::const_iterator;
@@ -649,11 +661,11 @@ public:
   /// that used to have a catchpad or cleanuppad instruction in the LLVM IR.
   void setIsEHScopeEntry(bool V = true) { IsEHScopeEntry = V; }
 
-  /// Returns true if this is a target block of a catchret.
-  bool isEHCatchretTarget() const { return IsEHCatchretTarget; }
+  /// Returns true if this is a target of Windows EH Continuation Guard.
+  bool isEHContTarget() const { return IsEHContTarget; }
 
-  /// Indicates if this is a target block of a catchret.
-  void setIsEHCatchretTarget(bool V = true) { IsEHCatchretTarget = V; }
+  /// Indicates if this is a target of Windows EH Continuation Guard.
+  void setIsEHContTarget(bool V = true) { IsEHContTarget = V; }
 
   /// Returns true if this is the entry block of an EH funclet.
   bool isEHFuncletEntry() const { return IsEHFuncletEntry; }
@@ -970,24 +982,36 @@ public:
   ///
   /// This function updates LiveVariables, MachineDominatorTree, and
   /// MachineLoopInfo, as applicable.
+  struct SplitCriticalEdgeAnalyses {
+    LiveIntervals *LIS;
+    SlotIndexes *SI;
+    LiveVariables *LV;
+    MachineLoopInfo *MLI;
+  };
+
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr) {
-    return SplitCriticalEdge(Succ, &P, nullptr, LiveInSets);
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr) {
+    return SplitCriticalEdge(Succ, &P, nullptr, LiveInSets, MDTU);
   }
 
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ,
                     MachineFunctionAnalysisManager &MFAM,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr) {
-    return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets);
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr) {
+    return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets, MDTU);
   }
 
   // Helper method for new pass manager migration.
-  MachineBasicBlock *
-  SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
-                    MachineFunctionAnalysisManager *MFAM,
-                    std::vector<SparseBitVector<>> *LiveInSets);
+  MachineBasicBlock *SplitCriticalEdge(
+      MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
+      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
+
+  MachineBasicBlock *SplitCriticalEdge(
+      MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
+      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
 
   /// Check if the edge between this block and the given successor \p
   /// Succ, can be split. If this returns true a subsequent call to
@@ -1223,8 +1247,8 @@ public:
   /// Return the MCSymbol for this basic block.
   MCSymbol *getSymbol() const;
 
-  /// Return the EHCatchret Symbol for this basic block.
-  MCSymbol *getEHCatchretSymbol() const;
+  /// Return the Windows EH Continuation Symbol for this basic block.
+  MCSymbol *getEHContSymbol() const;
 
   std::optional<uint64_t> getIrrLoopHeaderWeight() const {
     return IrrLoopHeaderWeight;
@@ -1239,6 +1263,9 @@ public:
   /// MachineBranchProbabilityInfo class.
   BranchProbability getSuccProbability(const_succ_iterator Succ) const;
 
+  // Helper function for MIRPrinter.
+  bool canPredictBranchProbabilities() const;
+
 private:
   /// Return probability iterator corresponding to the I successor iterator.
   probability_iterator getProbabilityIterator(succ_iterator I);
@@ -1246,7 +1273,6 @@ private:
   getProbabilityIterator(const_succ_iterator I) const;
 
   friend class MachineBranchProbabilityInfo;
-  friend class MIPrinter;
 
   // Methods used to maintain doubly linked list of blocks...
   friend struct ilist_callback_traits<MachineBasicBlock>;
@@ -1375,6 +1401,12 @@ inline auto successors(const MachineBasicBlock *BB) { return BB->successors(); }
 inline auto predecessors(const MachineBasicBlock *BB) {
   return BB->predecessors();
 }
+inline auto succ_size(const MachineBasicBlock *BB) { return BB->succ_size(); }
+inline auto pred_size(const MachineBasicBlock *BB) { return BB->pred_size(); }
+inline auto succ_begin(const MachineBasicBlock *BB) { return BB->succ_begin(); }
+inline auto pred_begin(const MachineBasicBlock *BB) { return BB->pred_begin(); }
+inline auto succ_end(const MachineBasicBlock *BB) { return BB->succ_end(); }
+inline auto pred_end(const MachineBasicBlock *BB) { return BB->pred_end(); }
 
 /// MachineInstrSpan provides an interface to get an iteration range
 /// containing the instruction it was initialized with, along with all

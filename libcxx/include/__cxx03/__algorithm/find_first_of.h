@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_FIND_FIRST_OF_H
-#define _LIBCPP___ALGORITHM_FIND_FIRST_OF_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_FIND_FIRST_OF_H
+#define _LIBCPP___CXX03___ALGORITHM_FIND_FIRST_OF_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__config>
@@ -52,4 +52,4 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Fo
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_FIND_FIRST_OF_H
+#endif // _LIBCPP___CXX03___ALGORITHM_FIND_FIRST_OF_H

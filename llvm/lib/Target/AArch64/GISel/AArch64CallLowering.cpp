@@ -165,7 +165,7 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA) override {
-    markPhysRegUsed(PhysReg);
+    markRegUsed(PhysReg);
     IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
 
@@ -207,16 +207,16 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
   /// How the physical register gets marked varies between formal
   /// parameters (it's a basic-block live-in), and a call instruction
   /// (it's an implicit-def of the BL).
-  virtual void markPhysRegUsed(MCRegister PhysReg) = 0;
+  virtual void markRegUsed(Register Reg) = 0;
 };
 
 struct FormalArgHandler : public IncomingArgHandler {
   FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
       : IncomingArgHandler(MIRBuilder, MRI) {}
 
-  void markPhysRegUsed(MCRegister PhysReg) override {
-    MIRBuilder.getMRI()->addLiveIn(PhysReg);
-    MIRBuilder.getMBB().addLiveIn(PhysReg);
+  void markRegUsed(Register Reg) override {
+    MIRBuilder.getMRI()->addLiveIn(Reg.asMCReg());
+    MIRBuilder.getMBB().addLiveIn(Reg.asMCReg());
   }
 };
 
@@ -225,8 +225,8 @@ struct CallReturnHandler : public IncomingArgHandler {
                     MachineInstrBuilder MIB)
       : IncomingArgHandler(MIRBuilder, MRI), MIB(MIB) {}
 
-  void markPhysRegUsed(MCRegister PhysReg) override {
-    MIB.addDef(PhysReg, RegState::Implicit);
+  void markRegUsed(Register Reg) override {
+    MIB.addDef(Reg, RegState::Implicit);
   }
 
   MachineInstrBuilder MIB;
@@ -239,7 +239,7 @@ struct ReturnedArgCallReturnHandler : public CallReturnHandler {
                                MachineInstrBuilder MIB)
       : CallReturnHandler(MIRBuilder, MRI, MIB) {}
 
-  void markPhysRegUsed(MCRegister PhysReg) override {}
+  void markRegUsed(Register Reg) override {}
 };
 
 struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
@@ -1363,6 +1363,13 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     // just before the call target.
     Function *ARCFn = *objcarc::getAttachedARCFunction(Info.CB);
     MIB.addGlobalAddress(ARCFn);
+    ++CalleeOpNo;
+
+    // We may or may not need to emit both the marker and the retain/claim call.
+    // Do what the frontend tells us: if the rvmarker module flag is present,
+    // emit the marker.  Always emit the call regardless.
+    // Tell the pseudo expansion using an additional boolean op.
+    MIB.addImm(true);
     ++CalleeOpNo;
   } else if (Info.CFIType) {
     MIB->setCFIType(MF, Info.CFIType->getZExtValue());

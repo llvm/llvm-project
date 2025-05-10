@@ -101,6 +101,16 @@ INITIALIZE_PASS_END(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
 
 char &llvm::SILowerSGPRSpillsLegacyID = SILowerSGPRSpillsLegacy::ID;
 
+static bool isLiveIntoMBB(MCRegister Reg, MachineBasicBlock &MBB,
+                          const TargetRegisterInfo *TRI) {
+  for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R) {
+    if (MBB.isLiveIn(*R)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Insert spill code for the callee-saved registers used in the function.
 static void insertCSRSaves(MachineBasicBlock &SaveBlock,
                            ArrayRef<CalleeSavedInfo> CSI, SlotIndexes *Indexes,
@@ -114,8 +124,6 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
 
   MachineBasicBlock::iterator I = SaveBlock.begin();
   if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
-    const MachineRegisterInfo &MRI = MF.getRegInfo();
-
     for (const CalleeSavedInfo &CS : CSI) {
       // Insert the spill to the stack frame.
       MCRegister Reg = CS.getReg();
@@ -128,7 +136,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       // incoming register value, so don't kill at the spill point. This happens
       // since we pass some special inputs (workgroup IDs) in the callee saved
       // range.
-      const bool IsLiveIn = MRI.isLiveIn(Reg);
+      const bool IsLiveIn = isLiveIntoMBB(Reg, SaveBlock, TRI);
       TII.storeRegToStackSlot(SaveBlock, I, Reg, !IsLiveIn, CS.getFrameIdx(),
                               RC, TRI, Register());
 
@@ -141,6 +149,14 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       if (LIS)
         LIS->removeAllRegUnitsForPhysReg(Reg);
     }
+  } else {
+    // TFI doesn't update Indexes and LIS, so we have to do it separately.
+    if (Indexes)
+      Indexes->repairIndexesInRange(&SaveBlock, SaveBlock.begin(), I);
+
+    if (LIS)
+      for (const CalleeSavedInfo &CS : CSI)
+        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
   }
 }
 
@@ -152,25 +168,18 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *RI = ST.getRegisterInfo();
   // Restore all registers immediately before the return and any
   // terminators that precede it.
   MachineBasicBlock::iterator I = RestoreBlock.getFirstTerminator();
+  const MachineBasicBlock::iterator BeforeRestoresI =
+      I == RestoreBlock.begin() ? I : std::prev(I);
 
   // FIXME: Just emit the readlane/writelane directly
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
-      Register Reg = CI.getReg();
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
-          Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
-
-      TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC, TRI,
-                               Register());
-      assert(I != RestoreBlock.begin() &&
-             "loadRegFromStackSlot didn't insert any code!");
       // Insert in reverse order.  loadRegFromStackSlot can insert
       // multiple instructions.
+      TFI->restoreCalleeSavedRegister(RestoreBlock, I, CI, &TII, TRI);
 
       if (Indexes) {
         MachineInstr &Inst = *std::prev(I);
@@ -178,8 +187,17 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
       }
 
       if (LIS)
-        LIS->removeAllRegUnitsForPhysReg(Reg);
+        LIS->removeAllRegUnitsForPhysReg(CI.getReg());
     }
+  } else {
+    // TFI doesn't update Indexes and LIS, so we have to do it separately.
+    if (Indexes)
+      Indexes->repairIndexesInRange(&RestoreBlock, BeforeRestoresI,
+                                    RestoreBlock.getFirstTerminator());
+
+    if (LIS)
+      for (const CalleeSavedInfo &CS : CSI)
+        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
   }
 }
 
@@ -421,6 +439,13 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
       for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
         if (!TII->isSGPRSpill(MI))
           continue;
+
+        if (MI.getOperand(0).isUndef()) {
+          if (Indexes)
+            Indexes->removeMachineInstrFromMaps(MI);
+          MI.eraseFromParent();
+          continue;
+        }
 
         int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
         assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);

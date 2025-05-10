@@ -134,8 +134,8 @@ def SDTX86Cmpccxadd : SDTypeProfile<1, 4, [SDTCisSameAs<0, 2>,
 def X86MFence : SDNode<"X86ISD::MFENCE", SDTNone, [SDNPHasChain]>;
 
 
-def X86bsf     : SDNode<"X86ISD::BSF",      SDTUnaryArithWithFlags>;
-def X86bsr     : SDNode<"X86ISD::BSR",      SDTUnaryArithWithFlags>;
+def X86bsf     : SDNode<"X86ISD::BSF",      SDTBinaryArithWithFlags>;
+def X86bsr     : SDNode<"X86ISD::BSR",      SDTBinaryArithWithFlags>;
 def X86fshl    : SDNode<"X86ISD::FSHL",     SDTIntShiftDOp>;
 def X86fshr    : SDNode<"X86ISD::FSHR",     SDTIntShiftDOp>;
 
@@ -352,15 +352,18 @@ def X86cmpccxadd : SDNode<"X86ISD::CMPCCXADD", SDTX86Cmpccxadd,
                            SDNPMemOperand]>;
 
 // Define X86-specific addressing mode.
-def addr      : ComplexPattern<iPTR, 5, "selectAddr", [], [SDNPWantParent]>;
+let WantsParent = true in
+def addr      : ComplexPattern<iPTR, 5, "selectAddr">;
+def gi_addr   : GIComplexOperandMatcher<s32, "selectAddr">,
+                GIComplexPatternEquiv<addr>;
 def lea32addr : ComplexPattern<i32, 5, "selectLEAAddr",
                                [add, sub, mul, X86mul_imm, shl, or, xor, frameindex],
                                []>;
-// In 64-bit mode 32-bit LEAs can use RIP-relative addressing.
-def lea64_32addr : ComplexPattern<i32, 5, "selectLEA64_32Addr",
-                                  [add, sub, mul, X86mul_imm, shl, or, xor,
-                                   frameindex, X86WrapperRIP],
-                                  []>;
+// In 64-bit mode 8/16/32-bit LEAs can use RIP-relative addressing.
+def lea64_iaddr : ComplexPattern<iAny, 5, "selectLEA64_Addr",
+                                 [add, sub, mul, X86mul_imm, shl, or, xor,
+                                  frameindex, X86WrapperRIP],
+                                 []>;
 
 def tls32addr : ComplexPattern<i32, 5, "selectTLSADDRAddr",
                                [tglobaltlsaddr], []>;
@@ -378,7 +381,8 @@ def tls64addr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
 def tls64baseaddr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
                                [tglobaltlsaddr], []>;
 
-def vectoraddr : ComplexPattern<iPTR, 5, "selectVectorAddr", [],[SDNPWantParent]>;
+let WantsParent = true in
+def vectoraddr : ComplexPattern<iPTR, 5, "selectVectorAddr">;
 
 // A relocatable immediate is an operand that can be relocated by the linker to
 // an immediate, such as a regular symbol in non-PIC code.
@@ -442,7 +446,11 @@ def i64relocImmSExt32 : PatLeaf<(i64 relocImm), [{
 //
 def imm_su : PatLeaf<(imm), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
-}]>;
+}]> {
+  // TODO : introduce the same check as in SDAG
+  let GISelPredicateCode = [{ return true; }];
+}
+
 def i64immSExt32_su : PatLeaf<(i64immSExt32), [{
     return !shouldAvoidImmediateInstFormsForSize(N);
 }]>;
@@ -498,7 +506,9 @@ def loadi8 : PatFrag<(ops node:$ptr), (i8 (unindexedload node:$ptr)), [{
   ISD::LoadExtType ExtType = LD->getExtensionType();
   return ExtType == ISD::NON_EXTLOAD || ExtType == ISD::EXTLOAD ||
          ExtType == ISD::ZEXTLOAD;
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return isa<GLoad>(MI); }];
+}
 
 // It's always safe to treat a anyext i16 load as a i32 load if the i16 is
 // known to be 32-bit aligned or better. Ditto for i8 to i16.
@@ -510,7 +520,16 @@ def loadi16 : PatFrag<(ops node:$ptr), (i16 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
     return LD->getAlign() >= 2 && LD->isSimple();
   return false;
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    auto &Load = cast<GLoad>(MI);
+    LLT Ty = MRI.getType(Load.getDstReg());
+    // Non extending load has MMO and destination types of the same size
+    if (Load.getMemSizeInBits() == Ty.getSizeInBits())
+       return true;
+    return Load.getAlign() >= 2 && Load.isSimple();
+  }];
+}
 
 def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   LoadSDNode *LD = cast<LoadSDNode>(N);
@@ -520,7 +539,16 @@ def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
     return LD->getAlign() >= 4 && LD->isSimple();
   return false;
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    auto &Load = cast<GLoad>(MI);
+    LLT Ty = MRI.getType(Load.getDstReg());
+    // Non extending load has MMO and destination types of the same size
+    if (Load.getMemSizeInBits() == Ty.getSizeInBits())
+       return true;
+    return Load.getAlign() >= 4 && Load.isSimple();
+  }];
+}
 
 def loadi64  : PatFrag<(ops node:$ptr), (i64 (load node:$ptr))>;
 def loadf16  : PatFrag<(ops node:$ptr), (f16 (load node:$ptr))>;
@@ -683,8 +711,9 @@ def anyext_sdiv : PatFrag<(ops node:$lhs), (anyext node:$lhs),[{
 // register. Truncate can be lowered to EXTRACT_SUBREG. CopyFromReg may
 // be copying from a truncate. AssertSext/AssertZext/AssertAlign aren't saying
 // anything about the upper 32 bits, they're probably just qualifying a
-// CopyFromReg. FREEZE may be coming from a a truncate. Any other 32-bit
-// operation will zero-extend up to 64 bits.
+// CopyFromReg. FREEZE may be coming from a a truncate. BitScan fall through
+// values may not zero the upper bits correctly.
+// Any other 32-bit operation will zero-extend up to 64 bits.
 def def32 : PatLeaf<(i32 GR32:$src), [{
   return N->getOpcode() != ISD::TRUNCATE &&
          N->getOpcode() != TargetOpcode::EXTRACT_SUBREG &&
@@ -692,7 +721,9 @@ def def32 : PatLeaf<(i32 GR32:$src), [{
          N->getOpcode() != ISD::AssertSext &&
          N->getOpcode() != ISD::AssertZext &&
          N->getOpcode() != ISD::AssertAlign &&
-         N->getOpcode() != ISD::FREEZE;
+         N->getOpcode() != ISD::FREEZE &&
+         !((N->getOpcode() == X86ISD::BSF || N->getOpcode() == X86ISD::BSR) &&
+           (!N->getOperand(0).isUndef() && !isa<ConstantSDNode>(N->getOperand(0))));
 }]>;
 
 // Treat an 'or' node is as an 'add' if the or'ed bits are known to be zero.

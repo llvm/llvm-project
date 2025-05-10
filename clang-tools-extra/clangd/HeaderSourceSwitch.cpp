@@ -22,7 +22,9 @@ std::optional<Path> getCorrespondingHeaderOrSource(
     PathRef OriginalFile, llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   llvm::StringRef SourceExtensions[] = {".cpp", ".c", ".cc", ".cxx",
                                         ".c++", ".m", ".mm"};
-  llvm::StringRef HeaderExtensions[] = {".h", ".hh", ".hpp", ".hxx", ".inc"};
+  llvm::StringRef HeaderExtensions[] = {".h",    ".hh",   ".hpp", ".hxx",
+                                        ".inc",  ".cppm", ".ccm", ".cxxm",
+                                        ".c++m", ".ixx"};
 
   llvm::StringRef PathExt = llvm::sys::path::extension(OriginalFile);
 

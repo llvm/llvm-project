@@ -65,6 +65,15 @@ private:
     std::map<uint64_t, CallStackTrieNode *> Callers;
     CallStackTrieNode(AllocationType Type)
         : AllocTypes(static_cast<uint8_t>(Type)) {}
+    void addAllocType(AllocationType AllocType) {
+      AllocTypes |= static_cast<uint8_t>(AllocType);
+    }
+    void removeAllocType(AllocationType AllocType) {
+      AllocTypes &= ~static_cast<uint8_t>(AllocType);
+    }
+    bool hasAllocType(AllocationType AllocType) const {
+      return AllocTypes & static_cast<uint8_t>(AllocType);
+    }
   };
 
   // The node for the allocation at the root.
@@ -85,11 +94,17 @@ private:
   void collectContextSizeInfo(CallStackTrieNode *Node,
                               std::vector<ContextTotalSize> &ContextSizeInfo);
 
+  // Recursively convert hot allocation types to notcold, since we don't
+  // actually do any cloning for hot contexts, to facilitate more aggressive
+  // pruning of contexts.
+  void convertHotToNotCold(CallStackTrieNode *Node);
+
   // Recursive helper to trim contexts and create metadata nodes.
   bool buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
                      std::vector<uint64_t> &MIBCallStack,
                      std::vector<Metadata *> &MIBNodes,
-                     bool CalleeHasAmbiguousCallerContext);
+                     bool CalleeHasAmbiguousCallerContext, uint64_t &TotalBytes,
+                     uint64_t &ColdBytes);
 
 public:
   CallStackTrie() = default;
@@ -117,6 +132,12 @@ public:
   /// which is lower overhead and more direct than maintaining this metadata.
   /// Returns true if memprof metadata attached, false if not (attribute added).
   bool buildAndAttachMIBMetadata(CallBase *CI);
+
+  /// Add an attribute for the given allocation type to the call instruction.
+  /// If hinted by reporting is enabled, a message is emitted with the given
+  /// descriptor used to identify the category of single allocation type.
+  void addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
+                                   StringRef Descriptor);
 };
 
 /// Helper class to iterate through stack ids in both metadata (memprof MIB and
@@ -146,7 +167,7 @@ public:
 
   CallStackIterator begin() const;
   CallStackIterator end() const { return CallStackIterator(N, /*End*/ true); }
-  CallStackIterator beginAfterSharedPrefix(CallStack &Other);
+  CallStackIterator beginAfterSharedPrefix(const CallStack &Other);
   uint64_t back() const;
 
 private:
@@ -184,7 +205,7 @@ CallStack<NodeT, IteratorT>::begin() const {
 
 template <class NodeT, class IteratorT>
 typename CallStack<NodeT, IteratorT>::CallStackIterator
-CallStack<NodeT, IteratorT>::beginAfterSharedPrefix(CallStack &Other) {
+CallStack<NodeT, IteratorT>::beginAfterSharedPrefix(const CallStack &Other) {
   CallStackIterator Cur = begin();
   for (CallStackIterator OtherCur = Other.begin();
        Cur != end() && OtherCur != Other.end(); ++Cur, ++OtherCur)

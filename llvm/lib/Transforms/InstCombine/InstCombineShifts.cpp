@@ -683,7 +683,7 @@ static Value *foldShiftedShift(BinaryOperator *InnerShift, unsigned OuterShAmt,
     Value *And = Builder.CreateAnd(InnerShift->getOperand(0),
                                    ConstantInt::get(ShType, Mask));
     if (auto *AndI = dyn_cast<Instruction>(And)) {
-      AndI->moveBefore(InnerShift);
+      AndI->moveBefore(InnerShift->getIterator());
       AndI->takeName(InnerShift);
     }
     return And;
@@ -991,6 +991,12 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
 
     // shr (shl X, Y), Y
     if (match(I.getOperand(0), m_Shl(m_Value(), m_Specific(I.getOperand(1))))) {
+      I.setIsExact();
+      return true;
+    }
+    // Infer 'exact' flag if shift amount is cttz(x) on the same operand.
+    if (match(I.getOperand(1), m_Intrinsic<Intrinsic::cttz>(
+                                   m_Specific(I.getOperand(0)), m_Value()))) {
       I.setIsExact();
       return true;
     }
@@ -1613,6 +1619,22 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   if (Instruction *Overflow = foldLShrOverflowBit(I))
     return Overflow;
 
+  // Transform ((pow2 << x) >> cttz(pow2 << y)) -> ((1 << x) >> y)
+  Value *Shl0_Op0, *Shl0_Op1, *Shl1_Op1;
+  BinaryOperator *Shl1;
+  if (match(Op0, m_Shl(m_Value(Shl0_Op0), m_Value(Shl0_Op1))) &&
+      match(Op1, m_Intrinsic<Intrinsic::cttz>(m_BinOp(Shl1))) &&
+      match(Shl1, m_Shl(m_Specific(Shl0_Op0), m_Value(Shl1_Op1))) &&
+      isKnownToBeAPowerOfTwo(Shl0_Op0, /*OrZero=*/true, 0, &I)) {
+    auto *Shl0 = cast<BinaryOperator>(Op0);
+    bool HasNUW = Shl0->hasNoUnsignedWrap() && Shl1->hasNoUnsignedWrap();
+    bool HasNSW = Shl0->hasNoSignedWrap() && Shl1->hasNoSignedWrap();
+    if (HasNUW || HasNSW) {
+      Value *NewShl = Builder.CreateShl(ConstantInt::get(Shl1->getType(), 1),
+                                        Shl0_Op1, "", HasNUW, HasNSW);
+      return BinaryOperator::CreateLShr(NewShl, Shl1_Op1);
+    }
+  }
   return nullptr;
 }
 

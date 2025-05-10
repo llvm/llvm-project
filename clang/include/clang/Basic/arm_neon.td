@@ -31,8 +31,8 @@ def OP_MLAL     : Op<(op "+", $p0, (call "vmull", $p1, $p2))>;
 def OP_MULLHi   : Op<(call "vmull", (call "vget_high", $p0),
                                     (call "vget_high", $p1))>;
 def OP_MULLHi_P64 : Op<(call "vmull",
-                         (cast "poly64_t", (call "vget_high", $p0)),
-                         (cast "poly64_t", (call "vget_high", $p1)))>;
+                         (bitcast "poly64_t", (call "vget_high", $p0)),
+                         (bitcast "poly64_t", (call "vget_high", $p1)))>;
 def OP_MULLHi_N : Op<(call "vmull_n", (call "vget_high", $p0), $p1)>;
 def OP_MLALHi   : Op<(call "vmlal", $p0, (call "vget_high", $p1),
                                          (call "vget_high", $p2))>;
@@ -95,11 +95,11 @@ def OP_TRN2     : Op<(shuffle $p0, $p1, (interleave
 def OP_ZIP2     : Op<(shuffle $p0, $p1, (highhalf (interleave mask0, mask1)))>;
 def OP_UZP2     : Op<(shuffle $p0, $p1, (add (decimate (rotl mask0, 1), 2),
                                              (decimate (rotl mask1, 1), 2)))>;
-def OP_EQ       : Op<(cast "R", (op "==", $p0, $p1))>;
-def OP_GE       : Op<(cast "R", (op ">=", $p0, $p1))>;
-def OP_LE       : Op<(cast "R", (op "<=", $p0, $p1))>;
-def OP_GT       : Op<(cast "R", (op ">", $p0, $p1))>;
-def OP_LT       : Op<(cast "R", (op "<", $p0, $p1))>;
+def OP_EQ       : Op<(bitcast "R", (op "==", $p0, $p1))>;
+def OP_GE       : Op<(bitcast "R", (op ">=", $p0, $p1))>;
+def OP_LE       : Op<(bitcast "R", (op "<=", $p0, $p1))>;
+def OP_GT       : Op<(bitcast "R", (op ">", $p0, $p1))>;
+def OP_LT       : Op<(bitcast "R", (op "<", $p0, $p1))>;
 def OP_NEG      : Op<(op "-", $p0)>;
 def OP_NOT      : Op<(op "~", $p0)>;
 def OP_AND      : Op<(op "&", $p0, $p1)>;
@@ -108,20 +108,20 @@ def OP_XOR      : Op<(op "^", $p0, $p1)>;
 def OP_ANDN     : Op<(op "&", $p0, (op "~", $p1))>;
 def OP_ORN      : Op<(op "|", $p0, (op "~", $p1))>;
 def OP_CAST     : LOp<[(save_temp $promote, $p0),
-                       (cast "R", $promote)]>;
+                       (bitcast "R", $promote)]>;
 def OP_HI       : Op<(shuffle $p0, $p0, (highhalf mask0))>;
 def OP_LO       : Op<(shuffle $p0, $p0, (lowhalf mask0))>;
 def OP_CONC     : Op<(shuffle $p0, $p1, (add mask0, mask1))>;
 def OP_DUP      : Op<(dup $p0)>;
 def OP_DUP_LN   : Op<(call_mangled "splat_lane", $p0, $p1)>;
-def OP_SEL      : Op<(cast "R", (op "|",
-                                    (op "&", $p0, (cast $p0, $p1)),
-                                    (op "&", (op "~", $p0), (cast $p0, $p2))))>;
+def OP_SEL      : Op<(bitcast "R", (op "|",
+                                    (op "&", $p0, (bitcast $p0, $p1)),
+                                    (op "&", (op "~", $p0), (bitcast $p0, $p2))))>;
 def OP_REV16    : Op<(shuffle $p0, $p0, (rev 16, mask0))>;
 def OP_REV32    : Op<(shuffle $p0, $p0, (rev 32, mask0))>;
 def OP_REV64    : Op<(shuffle $p0, $p0, (rev 64, mask0))>;
 def OP_XTN      : Op<(call "vcombine", $p0, (call "vmovn", $p1))>;
-def OP_SQXTUN   : Op<(call "vcombine", (cast $p0, "U", $p0),
+def OP_SQXTUN   : Op<(call "vcombine", (bitcast $p0, "U", $p0),
                                        (call "vqmovun", $p1))>;
 def OP_QXTN     : Op<(call "vcombine", $p0, (call "vqmovn", $p1))>;
 def OP_VCVT_NA_HI_F16 : Op<(call "vcombine", $p0, (call "vcvt_f16_f32", $p1))>;
@@ -129,12 +129,12 @@ def OP_VCVT_NA_HI_F32 : Op<(call "vcombine", $p0, (call "vcvt_f32_f64", $p1))>;
 def OP_VCVT_EX_HI_F32 : Op<(call "vcvt_f32_f16", (call "vget_high", $p0))>;
 def OP_VCVT_EX_HI_F64 : Op<(call "vcvt_f64_f32", (call "vget_high", $p0))>;
 def OP_VCVTX_HI : Op<(call "vcombine", $p0, (call "vcvtx_f32", $p1))>;
-def OP_REINT    : Op<(cast "R", $p0)>;
+def OP_REINT    : Op<(bitcast "R", $p0)>;
 def OP_ADDHNHi  : Op<(call "vcombine", $p0, (call "vaddhn", $p1, $p2))>;
 def OP_RADDHNHi : Op<(call "vcombine", $p0, (call "vraddhn", $p1, $p2))>;
 def OP_SUBHNHi  : Op<(call "vcombine", $p0, (call "vsubhn", $p1, $p2))>;
 def OP_RSUBHNHi : Op<(call "vcombine", $p0, (call "vrsubhn", $p1, $p2))>;
-def OP_ABDL     : Op<(cast "R", (call "vmovl", (cast $p0, "U",
+def OP_ABDL     : Op<(bitcast "R", (call "vmovl", (bitcast $p0, "U",
                                                      (call "vabd", $p0, $p1))))>;
 def OP_ABDLHi   : Op<(call "vabdl", (call "vget_high", $p0),
                                     (call "vget_high", $p1))>;
@@ -152,15 +152,15 @@ def OP_QDMLSLHi : Op<(call "vqdmlsl", $p0, (call "vget_high", $p1),
                                            (call "vget_high", $p2))>;
 def OP_QDMLSLHi_N : Op<(call "vqdmlsl_n", $p0, (call "vget_high", $p1), $p2)>;
 def OP_DIV  : Op<(op "/", $p0, $p1)>;
-def OP_LONG_HI : Op<(cast "R", (call (name_replace "_high_", "_"),
+def OP_LONG_HI : Op<(bitcast "R", (call (name_replace "_high_", "_"),
                                                 (call "vget_high", $p0), $p1))>;
-def OP_NARROW_HI : Op<(cast "R", (call "vcombine",
-                                       (cast "R", "H", $p0),
-                                       (cast "R", "H",
+def OP_NARROW_HI : Op<(bitcast "R", (call "vcombine",
+                                       (bitcast "R", "H", $p0),
+                                       (bitcast "R", "H",
                                            (call (name_replace "_high_", "_"),
                                                  $p1, $p2))))>;
 def OP_MOVL_HI  : LOp<[(save_temp $a1, (call "vget_high", $p0)),
-                       (cast "R",
+                       (bitcast "R",
                             (call "vshll_n", $a1, (literal "int32_t", "0")))]>;
 def OP_COPY_LN : Op<(call "vset_lane", (call "vget_lane", $p2, $p3), $p0, $p1)>;
 def OP_SCALAR_MUL_LN : Op<(op "*", $p0, (call "vget_lane", $p1, $p2))>;
@@ -221,18 +221,18 @@ def OP_FMLSL_LN_Hi  : Op<(call "vfmlsl_high", $p0, $p1,
 
 def OP_USDOT_LN
     : Op<(call "vusdot", $p0, $p1,
-          (cast "8", "S", (call_mangled "splat_lane", (bitcast "int32x2_t", $p2), $p3)))>;
+          (bitcast "8", "S", (call_mangled "splat_lane", (bitcast "int32x2_t", $p2), $p3)))>;
 def OP_USDOT_LNQ
     : Op<(call "vusdot", $p0, $p1,
-          (cast "8", "S", (call_mangled "splat_lane", (bitcast "int32x4_t", $p2), $p3)))>;
+          (bitcast "8", "S", (call_mangled "splat_lane", (bitcast "int32x4_t", $p2), $p3)))>;
 
 // sudot splats the second vector and then calls vusdot
 def OP_SUDOT_LN
     : Op<(call "vusdot", $p0,
-          (cast "8", "U", (call_mangled "splat_lane", (bitcast "int32x2_t", $p2), $p3)), $p1)>;
+          (bitcast "8", "U", (call_mangled "splat_lane", (bitcast "int32x2_t", $p2), $p3)), $p1)>;
 def OP_SUDOT_LNQ
     : Op<(call "vusdot", $p0,
-          (cast "8", "U", (call_mangled "splat_lane", (bitcast "int32x4_t", $p2), $p3)), $p1)>;
+          (bitcast "8", "U", (call_mangled "splat_lane", (bitcast "int32x4_t", $p2), $p3)), $p1)>;
 
 def OP_BFDOT_LN
     : Op<(call "vbfdot", $p0, $p1,
@@ -259,16 +259,11 @@ def OP_VCVT_F32_BF16_LO
 def OP_VCVT_F32_BF16_HI
     : Op<(call "vcvt_f32_bf16", (call "vget_high", $p0))>;
 
-def OP_VCVT_BF16_F32_LO_A64
-    : Op<(call "__a64_vcvtq_low_bf16", $p0)>;
-def OP_VCVT_BF16_F32_A64
-    : Op<(call "vget_low", (call "__a64_vcvtq_low_bf16", $p0))>;
-
 def OP_VCVT_BF16_F32_A32
     : Op<(call "__a32_vcvt_bf16", $p0)>;
 
 def OP_VCVT_BF16_F32_LO_A32
-    : Op<(call "vcombine", (cast "bfloat16x4_t", (literal "uint64_t", "0ULL")),
+    : Op<(call "vcombine", (bitcast "bfloat16x4_t", (literal "uint64_t", "0ULL")),
                            (call "__a32_vcvt_bf16", $p0))>;
 def OP_VCVT_BF16_F32_HI_A32
     : Op<(call "vcombine", (call "__a32_vcvt_bf16", $p1),
@@ -929,12 +924,12 @@ def CFMLE  : SOpInst<"vcle", "U..", "lUldQdQlQUl", OP_LE>;
 def CFMGT  : SOpInst<"vcgt", "U..", "lUldQdQlQUl", OP_GT>;
 def CFMLT  : SOpInst<"vclt", "U..", "lUldQdQlQUl", OP_LT>;
 
-def CMEQ  : SInst<"vceqz", "U.",
+def CMEQ  : SInst<"vceqz", "U(.!)",
                   "csilfUcUsUiUlPcPlQcQsQiQlQfQUcQUsQUiQUlQPcdQdQPl">;
-def CMGE  : SInst<"vcgez", "U.", "csilfdQcQsQiQlQfQd">;
-def CMLE  : SInst<"vclez", "U.", "csilfdQcQsQiQlQfQd">;
-def CMGT  : SInst<"vcgtz", "U.", "csilfdQcQsQiQlQfQd">;
-def CMLT  : SInst<"vcltz", "U.", "csilfdQcQsQiQlQfQd">;
+def CMGE  : SInst<"vcgez", "U(.!)", "csilfdQcQsQiQlQfQd">;
+def CMLE  : SInst<"vclez", "U(.!)", "csilfdQcQsQiQlQfQd">;
+def CMGT  : SInst<"vcgtz", "U(.!)", "csilfdQcQsQiQlQfQd">;
+def CMLT  : SInst<"vcltz", "U(.!)", "csilfdQcQsQiQlQfQd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Max/Min Integer
@@ -1304,7 +1299,7 @@ def VQTBX4_A64 : WInst<"vqtbx4", "..(4Q)U", "UccPcQUcQcQPc">;
 // NeonEmitter implicitly takes the cartesian product of the type string with
 // itself during generation so, unlike all other intrinsics, this one should
 // include *all* types, not just additional ones.
-def VVREINTERPRET : REINTERPRET_CROSS_SELF<"csilUcUsUiUlhfdPcPsPlQcQsQiQlQUcQUsQUiQUlQhQfQdQPcQPsQPlQPk"> {
+def VVREINTERPRET : REINTERPRET_CROSS_SELF<"csilUcUsUiUlmhfdPcPsPlQcQsQiQlQUcQUsQUiQUlQmQhQfQdQPcQPsQPlQPk"> {
   let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)";
   let BigEndianSafe = 1;
 }
@@ -1672,11 +1667,11 @@ let TargetGuard = "fullfp16,neon" in {
   // ARMv8.2-A FP16 one-operand vector intrinsics.
 
   // Comparison
-  def CMEQH    : SInst<"vceqz", "U.", "hQh">;
-  def CMGEH    : SInst<"vcgez", "U.", "hQh">;
-  def CMGTH    : SInst<"vcgtz", "U.", "hQh">;
-  def CMLEH    : SInst<"vclez", "U.", "hQh">;
-  def CMLTH    : SInst<"vcltz", "U.", "hQh">;
+  def CMEQH    : SInst<"vceqz", "U(.!)", "hQh">;
+  def CMGEH    : SInst<"vcgez", "U(.!)", "hQh">;
+  def CMGTH    : SInst<"vcgtz", "U(.!)", "hQh">;
+  def CMLEH    : SInst<"vclez", "U(.!)", "hQh">;
+  def CMLTH    : SInst<"vcltz", "U(.!)", "hQh">;
 
   // Vector conversion
   def VCVT_F16     : SInst<"vcvt_f16", "F(.!)",  "sUsQsQUs">;
@@ -2061,10 +2056,9 @@ let ArchGuard = "!defined(__aarch64__) && !defined(__arm64ec__)", TargetGuard = 
 }
 
 let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "bf16,neon" in {
-  def VCVT_LOW_BF16_F32_A64_INTERNAL : WInst<"__a64_vcvtq_low_bf16", "BQ", "Hf">;
-  def VCVT_LOW_BF16_F32_A64 : SOpInst<"vcvt_low_bf16", "BQ", "Qf", OP_VCVT_BF16_F32_LO_A64>;
+  def VCVT_LOW_BF16_F32_A64 : SInst<"vcvt_low_bf16", "BQ", "Qf">;
   def VCVT_HIGH_BF16_F32_A64 : SInst<"vcvt_high_bf16", "BBQ", "Qf">;
-  def VCVT_BF16_F32 : SOpInst<"vcvt_bf16",    "BQ", "f", OP_VCVT_BF16_F32_A64>;
+  def VCVT_BF16_F32 : SInst<"vcvt_bf16", "BQ", "f">;
 
   def COPY_LANE_BF16 : IOpInst<"vcopy_lane", "..I.I", "b", OP_COPY_LN>;
   def COPYQ_LANE_BF16 : IOpInst<"vcopy_lane", "..IqI", "Qb", OP_COPY_LN>;
@@ -2123,6 +2117,72 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
     def VLUTI4_BF_X2_Q   : SInst<"vluti4_laneq_x2", ".2(<U)I", "Qb",
                               [ImmCheck<3, ImmCheck0_3>]>;
   }
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
+  def VBF1CVT_BF16_MF8        : VInst<"vcvt1_bf16_mf8_fpm",      "(QB).V", "m">;
+  def VBF1CVT_LOW_BF16_MF8    : VInst<"vcvt1_low_bf16_mf8_fpm",  "B.V",    "Hm">;
+  def VBF2CVTL_BF16_MF8       : VInst<"vcvt2_bf16_mf8_fpm",      "(QB).V", "m">;
+  def VBF2CVTL_LOW_BF16_MF8   : VInst<"vcvt2_low_bf16_mf8_fpm",  "B.V",    "Hm">;
+  def VBF1CVTL2_HIGH_BF16_MF8 : VInst<"vcvt1_high_bf16_mf8_fpm", "B.V",    "Hm">;
+  def VBF2CVTL2_HIGH_BF16_MF8 : VInst<"vcvt2_high_bf16_mf8_fpm", "B.V",    "Hm">;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
+  def VF1CVT_F16_MF8        : VInst<"vcvt1_f16_mf8_fpm",      "(>QF).V", "m">;
+  def VF1CVT_LOW_F16_MF8    : VInst<"vcvt1_low_f16_mf8_fpm",  "(>F).V",  "Hm">;
+  def VF2CVTL_F16_MF8       : VInst<"vcvt2_f16_mf8_fpm",      "(>QF).V", "m">;
+  def VF2CVTL_LOW_F16_MF8   : VInst<"vcvt2_low_f16_mf8_fpm",  "(>F).V",  "Hm">;
+  def VF1CVTL2_HIGH_F16_MF8 : VInst<"vcvt1_high_f16_mf8_fpm", "(>F).V",  "Hm">;
+  def VF2CVTL2_HIGH_F16_MF8 : VInst<"vcvt2_high_f16_mf8_fpm", "(>F).V",  "Hm">;
+
+  def VCVTN_LOW_F8_F32  : VInst<"vcvt_mf8_f32_fpm",      ".(>>QF)(>>QF)V",  "m">;
+  def VCVTN_HIGH_F8_F32 : VInst<"vcvt_high_mf8_f32_fpm", ".(q)(>>F)(>>F)V", "Hm">;
+  def VCVTN_F8_F16      : VInst<"vcvt_mf8_f16_fpm",      ".(>F)(>F)V",      "mQm">;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8dot2,neon" in {
+  def VDOT_F16_MF8 : VInst<"vdot_f16_mf8_fpm", "(>F)(>F)..V", "mQm">;
+
+  def VDOT_LANE_F16_MF8  : VInst<"vdot_lane_f16_mf8_fpm",  "(>F)(>F)..IV", "m", [ImmCheck<3, ImmCheck0_3, 0>]>;
+  def VDOT_LANEQ_F16_MF8 : VInst<"vdot_laneq_f16_mf8_fpm", "(>F)(>F).QIV", "m", [ImmCheck<3, ImmCheck0_7, 0>]>;
+
+  def VDOTQ_LANE_F16_MF8  : VInst<"vdot_lane_f16_mf8_fpm",  "(>F)(>F).qIV", "Qm", [ImmCheck<3, ImmCheck0_3, 0>]>;
+  def VDOTQ_LANEQ_F16_MF8 : VInst<"vdot_laneq_f16_mf8_fpm", "(>F)(>F)..IV", "Qm", [ImmCheck<3, ImmCheck0_7, 0>]>;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8dot4,neon" in {
+  def VDOT_F32_MF8 : VInst<"vdot_f32_mf8_fpm", "(>>F)(>>F)..V", "mQm">;
+
+  def VDOT_LANE_F32_MF8  : VInst<"vdot_lane_f32_mf8_fpm",  "(>>F)(>>F)..IV", "m", [ImmCheck<3, ImmCheck0_1, 0>]>;
+  def VDOT_LANEQ_F32_MF8 : VInst<"vdot_laneq_f32_mf8_fpm", "(>>F)(>>F).QIV", "m", [ImmCheck<3, ImmCheck0_3, 0>]>;
+
+  def VDOTQ_LANE_F32_MF8  : VInst<"vdot_lane_f32_mf8_fpm",  "(>>F)(>>F).qIV", "Qm", [ImmCheck<3, ImmCheck0_1, 0>]>;
+  def VDOTQ_LANEQ_F32_MF8 : VInst<"vdot_laneq_f32_mf8_fpm", "(>>F)(>>F)..IV", "Qm", [ImmCheck<3, ImmCheck0_3, 0>]>;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8fma,neon" in {
+  def VMLALB_F16_F8 : VInst<"vmlalb_f16_mf8_fpm", "(>F)(>F)..V", "Qm">;
+  def VMLALT_F16_F8 : VInst<"vmlalt_f16_mf8_fpm", "(>F)(>F)..V", "Qm">;
+
+  def VMLALLBB_F32_F8 : VInst<"vmlallbb_f32_mf8_fpm", "(>>F)(>>F)..V", "Qm">;
+  def VMLALLBT_F32_F8 : VInst<"vmlallbt_f32_mf8_fpm", "(>>F)(>>F)..V", "Qm">;
+  def VMLALLTB_F32_F8 : VInst<"vmlalltb_f32_mf8_fpm", "(>>F)(>>F)..V", "Qm">;
+  def VMLALLTT_F32_F8 : VInst<"vmlalltt_f32_mf8_fpm", "(>>F)(>>F)..V", "Qm">;
+
+  def VMLALB_F16_F8_LANE  : VInst<"vmlalb_lane_f16_mf8_fpm",  "(>F)(>F).qIV", "Qm", [ImmCheck<3, ImmCheck0_7,  0>]>;
+  def VMLALB_F16_F8_LANEQ : VInst<"vmlalb_laneq_f16_mf8_fpm", "(>F)(>F)..IV", "Qm", [ImmCheck<3, ImmCheck0_15, 0>]>;
+  def VMLALT_F16_F8_LANE  : VInst<"vmlalt_lane_f16_mf8_fpm",  "(>F)(>F).qIV", "Qm", [ImmCheck<3, ImmCheck0_7,  0>]>;
+  def VMLALT_F16_F8_LANEQ : VInst<"vmlalt_laneq_f16_mf8_fpm", "(>F)(>F)..IV", "Qm", [ImmCheck<3, ImmCheck0_15, 0>]>;
+
+  def VMLALLBB_F32_F8_LANE  : VInst<"vmlallbb_lane_f32_mf8_fpm",  "(>>F)(>>F).qIV", "Qm", [ImmCheck<3, ImmCheck0_7,  0>]>;
+  def VMLALLBB_F32_F8_LANEQ : VInst<"vmlallbb_laneq_f32_mf8_fpm", "(>>F)(>>F)..IV", "Qm", [ImmCheck<3, ImmCheck0_15, 0>]>;
+  def VMLALLBT_F32_F8_LANE  : VInst<"vmlallbt_lane_f32_mf8_fpm",  "(>>F)(>>F).qIV", "Qm", [ImmCheck<3, ImmCheck0_7,  0>]>;
+  def VMLALLBT_F32_F8_LANEQ : VInst<"vmlallbt_laneq_f32_mf8_fpm", "(>>F)(>>F)..IV", "Qm", [ImmCheck<3, ImmCheck0_15, 0>]>;
+  def VMLALLTB_F32_F8_LANE  : VInst<"vmlalltb_lane_f32_mf8_fpm",  "(>>F)(>>F).qIV", "Qm", [ImmCheck<3, ImmCheck0_7,  0>]>;
+  def VMLALLTB_F32_F8_LANEQ : VInst<"vmlalltb_laneq_f32_mf8_fpm", "(>>F)(>>F)..IV", "Qm", [ImmCheck<3, ImmCheck0_15, 0>]>;
+  def VMLALLTT_F32_F8_LANE  : VInst<"vmlalltt_lane_f32_mf8_fpm",  "(>>F)(>>F).qIV", "Qm", [ImmCheck<3, ImmCheck0_7,  0>]>;
+  def VMLALLTT_F32_F8_LANEQ : VInst<"vmlalltt_laneq_f32_mf8_fpm", "(>>F)(>>F)..IV", "Qm", [ImmCheck<3, ImmCheck0_15, 0>]>;
 }
 
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "neon,faminmax" in {

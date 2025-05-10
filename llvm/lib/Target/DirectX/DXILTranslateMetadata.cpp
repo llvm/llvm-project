@@ -7,20 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILTranslateMetadata.h"
-#include "DXILResource.h"
-#include "DXILResourceAnalysis.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
@@ -72,39 +72,30 @@ enum class EntryPropsTag {
 
 } // namespace
 
-static NamedMDNode *emitResourceMetadata(Module &M, const DXILResourceMap &DRM,
-                                         const dxil::Resources &MDResources) {
+static NamedMDNode *emitResourceMetadata(Module &M, DXILResourceMap &DRM,
+                                         DXILResourceTypeMap &DRTM) {
   LLVMContext &Context = M.getContext();
+
+  for (ResourceInfo &RI : DRM)
+    if (!RI.hasSymbol())
+      RI.createSymbol(M, DRTM[RI.getHandleTy()].createElementStruct());
 
   SmallVector<Metadata *> SRVs, UAVs, CBufs, Smps;
   for (const ResourceInfo &RI : DRM.srvs())
-    SRVs.push_back(RI.getAsMetadata(Context));
+    SRVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceInfo &RI : DRM.uavs())
-    UAVs.push_back(RI.getAsMetadata(Context));
+    UAVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceInfo &RI : DRM.cbuffers())
-    CBufs.push_back(RI.getAsMetadata(Context));
+    CBufs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceInfo &RI : DRM.samplers())
-    Smps.push_back(RI.getAsMetadata(Context));
+    Smps.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
 
   Metadata *SRVMD = SRVs.empty() ? nullptr : MDNode::get(Context, SRVs);
   Metadata *UAVMD = UAVs.empty() ? nullptr : MDNode::get(Context, UAVs);
   Metadata *CBufMD = CBufs.empty() ? nullptr : MDNode::get(Context, CBufs);
   Metadata *SmpMD = Smps.empty() ? nullptr : MDNode::get(Context, Smps);
-  bool HasResources = !DRM.empty();
 
-  if (MDResources.hasUAVs()) {
-    assert(!UAVMD && "Old and new UAV representations can't coexist");
-    UAVMD = MDResources.writeUAVs(M);
-    HasResources = true;
-  }
-
-  if (MDResources.hasCBuffers()) {
-    assert(!CBufMD && "Old and new cbuffer representations can't coexist");
-    CBufMD = MDResources.writeCBuffers(M);
-    HasResources = true;
-  }
-
-  if (!HasResources)
+  if (DRM.empty())
     return nullptr;
 
   NamedMDNode *ResourceMD = M.getOrInsertNamedMetadata("dx.resources");
@@ -295,8 +286,40 @@ static MDTuple *emitTopLevelLibraryNode(Module &M, MDNode *RMD,
   return constructEntryMetadata(nullptr, nullptr, RMD, Properties, Ctx);
 }
 
-static void translateMetadata(Module &M, const DXILResourceMap &DRM,
-                              const Resources &MDResources,
+// TODO: We might need to refactor this to be more generic,
+// in case we need more metadata to be replaced.
+static void translateBranchMetadata(Module &M) {
+  for (Function &F : M) {
+    for (BasicBlock &BB : F) {
+      Instruction *BBTerminatorInst = BB.getTerminator();
+
+      MDNode *HlslControlFlowMD =
+          BBTerminatorInst->getMetadata("hlsl.controlflow.hint");
+
+      if (!HlslControlFlowMD)
+        continue;
+
+      assert(HlslControlFlowMD->getNumOperands() == 2 &&
+             "invalid operands for hlsl.controlflow.hint");
+
+      MDBuilder MDHelper(M.getContext());
+      ConstantInt *Op1 =
+          mdconst::extract<ConstantInt>(HlslControlFlowMD->getOperand(1));
+
+      SmallVector<llvm::Metadata *, 2> Vals(
+          ArrayRef<Metadata *>{MDHelper.createString("dx.controlflow.hints"),
+                               MDHelper.createConstant(Op1)});
+
+      MDNode *MDNode = llvm::MDNode::get(M.getContext(), Vals);
+
+      BBTerminatorInst->setMetadata("dx.controlflow.hints", MDNode);
+      BBTerminatorInst->setMetadata("hlsl.controlflow.hint", nullptr);
+    }
+  }
+}
+
+static void translateMetadata(Module &M, DXILResourceMap &DRM,
+                              DXILResourceTypeMap &DRTM,
                               const ModuleShaderFlags &ShaderFlags,
                               const ModuleMetadataInfo &MMDI) {
   LLVMContext &Ctx = M.getContext();
@@ -306,7 +329,7 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
   emitValidatorVersionMD(M, MMDI);
   emitShaderModelVersionMD(M, MMDI);
   emitDXILVersionTupleMD(M, MMDI);
-  NamedMDNode *NamedResourceMD = emitResourceMetadata(M, DRM, MDResources);
+  NamedMDNode *NamedResourceMD = emitResourceMetadata(M, DRM, DRTM);
   auto *ResourceMD =
       (NamedResourceMD != nullptr) ? NamedResourceMD->getOperand(0) : nullptr;
   // FIXME: Add support to construct Signatures
@@ -358,12 +381,13 @@ static void translateMetadata(Module &M, const DXILResourceMap &DRM,
 
 PreservedAnalyses DXILTranslateMetadata::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
-  const DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
-  const dxil::Resources &MDResources = MAM.getResult<DXILResourceMDAnalysis>(M);
+  DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
+  DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
   const ModuleShaderFlags &ShaderFlags = MAM.getResult<ShaderFlagsAnalysis>(M);
   const dxil::ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
 
-  translateMetadata(M, DRM, MDResources, ShaderFlags, MMDI);
+  translateMetadata(M, DRM, DRTM, ShaderFlags, MMDI);
+  translateBranchMetadata(M);
 
   return PreservedAnalyses::all();
 }
@@ -377,26 +401,27 @@ public:
   StringRef getPassName() const override { return "DXIL Translate Metadata"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceWrapperPass>();
-    AU.addRequired<DXILResourceMDWrapper>();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
-    AU.addPreserved<DXILResourceMDWrapper>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
+    AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }
 
   bool runOnModule(Module &M) override {
-    const DXILResourceMap &DRM =
+    DXILResourceMap &DRM =
         getAnalysis<DXILResourceWrapperPass>().getResourceMap();
-    const dxil::Resources &MDResources =
-        getAnalysis<DXILResourceMDWrapper>().getDXILResource();
+    DXILResourceTypeMap &DRTM =
+        getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
     const ModuleShaderFlags &ShaderFlags =
         getAnalysis<ShaderFlagsAnalysisWrapper>().getShaderFlags();
     dxil::ModuleMetadataInfo MMDI =
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-    translateMetadata(M, DRM, MDResources, ShaderFlags, MMDI);
+    translateMetadata(M, DRM, DRTM, ShaderFlags, MMDI);
+    translateBranchMetadata(M);
     return true;
   }
 };
@@ -412,7 +437,6 @@ ModulePass *llvm::createDXILTranslateMetadataLegacyPass() {
 INITIALIZE_PASS_BEGIN(DXILTranslateMetadataLegacy, "dxil-translate-metadata",
                       "DXIL Translate Metadata", false, false)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceMDWrapper)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_END(DXILTranslateMetadataLegacy, "dxil-translate-metadata",

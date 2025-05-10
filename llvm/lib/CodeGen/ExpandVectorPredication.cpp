@@ -121,8 +121,8 @@ static bool maySpeculateLanes(VPIntrinsic &VPI) {
     return false;
   // Fallback to whether the intrinsic is speculatable.
   if (auto IntrID = VPI.getFunctionalIntrinsicID())
-    return Intrinsic::getAttributes(VPI.getContext(), *IntrID)
-        .hasFnAttr(Attribute::AttrKind::Speculatable);
+    return Intrinsic::getFnAttributes(VPI.getContext(), *IntrID)
+        .hasAttribute(Attribute::AttrKind::Speculatable);
   if (auto Opc = VPI.getFunctionalOpcode())
     return isSafeToSpeculativelyExecuteWithOpcode(*Opc, &VPI);
   return false;
@@ -135,17 +135,6 @@ namespace {
 // Expansion pass state at function scope.
 struct CachingVPExpander {
   const TargetTransformInfo &TTI;
-
-  /// \returns A (fixed length) vector with ascending integer indices
-  /// (<0, 1, ..., NumElems-1>).
-  /// \p Builder
-  ///    Used for instruction creation.
-  /// \p LaneTy
-  ///    Integer element type of the result vector.
-  /// \p NumElems
-  ///    Number of vector elements.
-  Value *createStepVector(IRBuilder<> &Builder, Type *LaneTy,
-                          unsigned NumElems);
 
   /// \returns A bitmask that is true where the lane position is less-than \p
   /// EVLParam
@@ -216,17 +205,6 @@ public:
 
 //// CachingVPExpander {
 
-Value *CachingVPExpander::createStepVector(IRBuilder<> &Builder, Type *LaneTy,
-                                           unsigned NumElems) {
-  // TODO add caching
-  SmallVector<Constant *, 16> ConstElems;
-
-  for (unsigned Idx = 0; Idx < NumElems; ++Idx)
-    ConstElems.push_back(ConstantInt::get(LaneTy, Idx, false));
-
-  return ConstantVector::get(ConstElems);
-}
-
 Value *CachingVPExpander::convertEVLToMask(IRBuilder<> &Builder,
                                            Value *EVLParam,
                                            ElementCount ElemCount) {
@@ -245,7 +223,7 @@ Value *CachingVPExpander::convertEVLToMask(IRBuilder<> &Builder,
   Type *LaneTy = EVLParam->getType();
   unsigned NumElems = ElemCount.getFixedValue();
   Value *VLSplat = Builder.CreateVectorSplat(NumElems, EVLParam);
-  Value *IdxVec = createStepVector(Builder, LaneTy, NumElems);
+  Value *IdxVec = Builder.CreateStepVector(VectorType::get(LaneTy, ElemCount));
   return Builder.CreateICmp(CmpInst::ICMP_ULT, IdxVec, VLSplat);
 }
 
@@ -609,6 +587,15 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_umin:
   case Intrinsic::vp_bswap:
   case Intrinsic::vp_bitreverse:
+  case Intrinsic::vp_ctpop:
+  case Intrinsic::vp_ctlz:
+  case Intrinsic::vp_cttz:
+  case Intrinsic::vp_sadd_sat:
+  case Intrinsic::vp_uadd_sat:
+  case Intrinsic::vp_ssub_sat:
+  case Intrinsic::vp_usub_sat:
+  case Intrinsic::vp_fshl:
+  case Intrinsic::vp_fshr:
     return expandPredicationToIntCall(Builder, VPI);
   case Intrinsic::vp_fabs:
   case Intrinsic::vp_sqrt:

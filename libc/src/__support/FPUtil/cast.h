@@ -18,6 +18,9 @@
 
 namespace LIBC_NAMESPACE::fputil {
 
+// TODO: Add optimization for known good targets with fast
+// float to float16 conversion:
+// https://github.com/llvm/llvm-project/issues/133517
 template <typename OutType, typename InType>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
                                            cpp::is_floating_point_v<InType>,

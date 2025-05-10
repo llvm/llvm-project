@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_CONVERTIBLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_CONVERTIBLE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_CONVERTIBLE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_CONVERTIBLE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -21,11 +21,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _T1, class _T2>
 struct _LIBCPP_TEMPLATE_VIS is_convertible : public integral_constant<bool, __is_convertible(_T1, _T2)> {};
 
-#if _LIBCPP_STD_VER >= 17
-template <class _From, class _To>
-inline constexpr bool is_convertible_v = __is_convertible(_From, _To);
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_CONVERTIBLE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_CONVERTIBLE_H

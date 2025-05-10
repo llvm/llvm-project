@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_COMPRESSED_PAIR_H
-#define _LIBCPP___MEMORY_COMPRESSED_PAIR_H
+#ifndef _LIBCPP___CXX03___MEMORY_COMPRESSED_PAIR_H
+#define _LIBCPP___CXX03___MEMORY_COMPRESSED_PAIR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/tuple.h>
@@ -52,13 +52,6 @@ struct __compressed_pair_elem {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(_Up&& __u)
       : __value_(std::forward<_Up>(__u)) {}
 
-#ifndef _LIBCPP_CXX03_LANG
-  template <class... _Args, size_t... _Indices>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 explicit __compressed_pair_elem(
-      piecewise_construct_t, tuple<_Args...> __args, __tuple_indices<_Indices...>)
-      : __value_(std::forward<_Args>(std::get<_Indices>(__args))...) {}
-#endif
-
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference __get() _NOEXCEPT { return __value_; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const_reference __get() const _NOEXCEPT { return __value_; }
 
@@ -80,13 +73,6 @@ struct __compressed_pair_elem<_Tp, _Idx, true> : private _Tp {
   template <class _Up, __enable_if_t<!is_same<__compressed_pair_elem, __decay_t<_Up> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(_Up&& __u)
       : __value_type(std::forward<_Up>(__u)) {}
-
-#ifndef _LIBCPP_CXX03_LANG
-  template <class... _Args, size_t... _Indices>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
-  __compressed_pair_elem(piecewise_construct_t, tuple<_Args...> __args, __tuple_indices<_Indices...>)
-      : __value_type(std::forward<_Args>(std::get<_Indices>(__args))...) {}
-#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference __get() _NOEXCEPT { return *this; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const_reference __get() const _NOEXCEPT { return *this; }
@@ -117,14 +103,6 @@ public:
   template <class _U1, class _U2>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair(_U1&& __t1, _U2&& __t2)
       : _Base1(std::forward<_U1>(__t1)), _Base2(std::forward<_U2>(__t2)) {}
-
-#ifndef _LIBCPP_CXX03_LANG
-  template <class... _Args1, class... _Args2>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 explicit __compressed_pair(
-      piecewise_construct_t __pc, tuple<_Args1...> __first_args, tuple<_Args2...> __second_args)
-      : _Base1(__pc, std::move(__first_args), typename __make_tuple_indices<sizeof...(_Args1)>::type()),
-        _Base2(__pc, std::move(__second_args), typename __make_tuple_indices<sizeof...(_Args2)>::type()) {}
-#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename _Base1::reference first() _NOEXCEPT {
     return static_cast<_Base1&>(*this).__get();
@@ -168,4 +146,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_COMPRESSED_PAIR_H
+#endif // _LIBCPP___CXX03___MEMORY_COMPRESSED_PAIR_H

@@ -423,6 +423,12 @@ let SubtargetPredicate = isGFX11Plus in {
   }
 } // End SubtargetPredicate = isGFX11Plus
 
+let SubtargetPredicate = isGFX12Plus in {
+  let hasSideEffects = 1, Defs = [SCC] in {
+    def S_ALLOC_VGPR : SOP1_0_32 <"s_alloc_vgpr">;
+  }
+} // End SubtargetPredicate = isGFX12Plus
+
 class SOP1_F32_Inst<string opName, SDPatternOperator Op, ValueType vt0=f32,
                     ValueType vt1=vt0> :
   SOP1_32<opName, [(set vt0:$sdst, (UniformUnaryFrag<Op> vt1:$src0))]>;
@@ -470,29 +476,6 @@ def S_BARRIER_SIGNAL_ISFIRST_M0 : SOP1_Pseudo <"s_barrier_signal_isfirst m0", (o
   let isConvergent = 1;
 }
 
-def S_BARRIER_INIT_M0 : SOP1_Pseudo <"s_barrier_init m0", (outs), (ins),
-  "", []>{
-  let SchedRW = [WriteBarrier];
-  let isConvergent = 1;
-}
-
-def S_BARRIER_INIT_IMM : SOP1_Pseudo <"s_barrier_init", (outs),
-  (ins SplitBarrier:$src0), "$src0", []>{
-  let SchedRW = [WriteBarrier];
-  let isConvergent = 1;
-}
-
-def S_BARRIER_JOIN_M0 : SOP1_Pseudo <"s_barrier_join m0", (outs), (ins),
-  "", []>{
-  let SchedRW = [WriteBarrier];
-  let isConvergent = 1;
-}
-
-def S_WAKEUP_BARRIER_M0 : SOP1_Pseudo <"s_wakeup_barrier m0", (outs), (ins),
-  "", []>{
-  let SchedRW = [WriteBarrier];
-  let isConvergent = 1;
-}
 } // End Uses = [M0]
 
 def S_BARRIER_SIGNAL_IMM : SOP1_Pseudo <"s_barrier_signal", (outs),
@@ -508,17 +491,6 @@ def S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_Pseudo <"s_barrier_signal_isfirst", (out
   let isConvergent = 1;
 }
 
-def S_BARRIER_JOIN_IMM : SOP1_Pseudo <"s_barrier_join", (outs),
-  (ins SplitBarrier:$src0), "$src0", []>{
-  let SchedRW = [WriteBarrier];
-  let isConvergent = 1;
-}
-
-def S_WAKEUP_BARRIER_IMM : SOP1_Pseudo <"s_wakeup_barrier", (outs),
-  (ins SplitBarrier:$src0), "$src0", []>{
-  let SchedRW = [WriteBarrier];
-  let isConvergent = 1;
-}
 } // End has_sdst = 0
 
 def S_GET_BARRIER_STATE_IMM : SOP1_Pseudo <"s_get_barrier_state", (outs SSrc_b32:$sdst),
@@ -691,14 +663,16 @@ let SubtargetPredicate = isGFX12Plus in {
   }
 
   // The higher 32-bits of the inputs contain the sign extension bits.
-  def S_MUL_I64_I32_PSEUDO : SPseudoInstSI <
-    (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
-  >;
+  let hasSideEffects = 0 in {
+    def S_MUL_I64_I32_PSEUDO : SPseudoInstSI <
+      (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+    >;
 
-  // The higher 32-bits of the inputs are zero.
-  def S_MUL_U64_U32_PSEUDO : SPseudoInstSI <
-    (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
-  >;
+    // The higher 32-bits of the inputs are zero.
+    def S_MUL_U64_U32_PSEUDO : SPseudoInstSI <
+      (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+    >;
+  }
 
 } // End SubtargetPredicate = isGFX12Plus
 
@@ -898,7 +872,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
       let FixedSize = 1 in
       def S_FMAAK_F32 : SOP2_Pseudo<
         "s_fmaak_f32", (outs SReg_32:$sdst),
-        (ins SSrc_f32_Deferred:$src0, SSrc_f32_Deferred:$src1, KImmFP32:$imm),
+        (ins SSrc_f32:$src0, SSrc_f32:$src1, KImmFP32:$imm),
         "$sdst, $src0, $src1, $imm"
       >;
 
@@ -921,7 +895,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
     let FixedSize = 1 in
     def S_FMAMK_F32 : SOP2_Pseudo<
       "s_fmamk_f32", (outs SReg_32:$sdst),
-      (ins SSrc_f32_Deferred:$src0, KImmFP32:$imm, SSrc_f32_Deferred:$src1),
+      (ins SSrc_f32:$src0, KImmFP32:$imm, SSrc_f32:$src1),
       "$sdst, $src0, $imm, $src1"
     >;
   } // End isReMaterializable = 1
@@ -948,7 +922,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
 
 // On GFX12 MIN/MAX instructions do not read MODE register.
 let SubtargetPredicate = isGFX12Plus, mayRaiseFPException = 1, isCommutable = 1,
-    isReMaterializable = 1, SchedRW = [WriteSFPU] in {
+    isReMaterializable = 1, SchedRW = [WriteSFPU], AddedComplexity = 17 in {
   def S_MINIMUM_F32 : SOP2_F32_Inst<"s_minimum_f32", fminimum>;
   def S_MAXIMUM_F32 : SOP2_F32_Inst<"s_maximum_f32", fmaximum>;
   def S_MINIMUM_F16 : SOP2_F16_Inst<"s_minimum_f16", fminimum>;
@@ -1512,12 +1486,12 @@ def S_ENDPGM_SAVED : SOPP_Pseudo<"s_endpgm_saved", (ins)> {
   let isReturn = 1;
 }
 
-let SubtargetPredicate = isGFX9GFX10 in {
+let SubtargetPredicate = isGFX9GFX10GFX11 in {
   let isBarrier = 1, isReturn = 1, simm16 = 0, fixed_imm = 1 in {
     def S_ENDPGM_ORDERED_PS_DONE :
       SOPP_Pseudo<"s_endpgm_ordered_ps_done", (ins)>;
   } // End isBarrier = 1, isReturn = 1, simm16 = 0, fixed_imm = 1
-} // End SubtargetPredicate = isGFX9GFX10
+} // End SubtargetPredicate = isGFX9GFX10GFX11
 
 let SubtargetPredicate = isGFX10Plus in {
   let isBarrier = 1, isReturn = 1, simm16 = 0, fixed_imm = 1 in {
@@ -1603,17 +1577,6 @@ def S_BARRIER_WAIT : SOPP_Pseudo <"s_barrier_wait", (ins i16imm:$simm16), "$simm
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
 }
-
-def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins)> {
-  let SchedRW = [WriteBarrier];
-  let simm16 = 0;
-  let fixed_imm = 1;
-  let isConvergent = 1;
-  let Defs = [SCC];
-}
-
-def S_BARRIER_LEAVE_IMM : SOPP_Pseudo <"s_barrier_leave",
-    (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_barrier_leave timm:$simm16)]>;
 
 def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
   let SubtargetPredicate = isGFX8Plus;
@@ -1964,6 +1927,20 @@ def : ScalarNot2Pat<S_ORN2_B32, or, v2i16>;
 def : ScalarNot2Pat<S_ORN2_B64, or, v4i16>;
 def : ScalarNot2Pat<S_ORN2_B64, or, v2i32>;
 
+let WaveSizePredicate = isWave32 in {
+def : GCNPat<
+  (i1 (not (or_oneuse i1:$src0, i1:$src1))),
+  (S_NOR_B32 i1:$src0, i1:$src1)
+>;
+}
+
+let WaveSizePredicate = isWave64 in {
+def : GCNPat<
+  (i1 (not (or_oneuse i1:$src0, i1:$src1))),
+  (S_NOR_B64 i1:$src0, i1:$src1)
+>;
+}
+
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
@@ -2090,15 +2067,10 @@ defm S_SENDMSG_RTN_B64            : SOP1_Real_gfx11_gfx12<0x04d>;
 defm S_BARRIER_SIGNAL_M0          : SOP1_M0_Real_gfx12<0x04e>;
 defm S_BARRIER_SIGNAL_ISFIRST_M0  : SOP1_M0_Real_gfx12<0x04f>;
 defm S_GET_BARRIER_STATE_M0       : SOP1_M0_Real_gfx12<0x050>;
-defm S_BARRIER_INIT_M0            : SOP1_M0_Real_gfx12<0x051>;
-defm S_BARRIER_JOIN_M0            : SOP1_M0_Real_gfx12<0x052>;
-defm S_WAKEUP_BARRIER_M0          : SOP1_M0_Real_gfx12<0x057>;
 defm S_BARRIER_SIGNAL_IMM         : SOP1_IMM_Real_gfx12<0x04e>;
 defm S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_IMM_Real_gfx12<0x04f>;
 defm S_GET_BARRIER_STATE_IMM      : SOP1_IMM_Real_gfx12<0x050>;
-defm S_BARRIER_INIT_IMM           : SOP1_IMM_Real_gfx12<0x051>;
-defm S_BARRIER_JOIN_IMM           : SOP1_IMM_Real_gfx12<0x052>;
-defm S_WAKEUP_BARRIER_IMM         : SOP1_IMM_Real_gfx12<0x057>;
+defm S_ALLOC_VGPR                 : SOP1_Real_gfx12<0x053>;
 defm S_SLEEP_VAR                  : SOP1_IMM_Real_gfx12<0x058>;
 
 //===----------------------------------------------------------------------===//
@@ -2575,7 +2547,6 @@ multiclass SOPP_Real_32_gfx12<bits<7> op, string name = !tolower(NAME)> {
 }
 
 defm S_BARRIER_WAIT         : SOPP_Real_32_gfx12<0x014>;
-defm S_BARRIER_LEAVE        : SOPP_Real_32_gfx12<0x015>;
 defm S_WAIT_LOADCNT         : SOPP_Real_32_gfx12<0x040>;
 defm S_WAIT_STORECNT        : SOPP_Real_32_gfx12<0x041>;
 defm S_WAIT_SAMPLECNT       : SOPP_Real_32_gfx12<0x042>;
@@ -2661,6 +2632,7 @@ defm S_CBRANCH_CDBGSYS_OR_USER    : SOPP_Real_With_Relaxation_gfx11<0x029>;
 defm S_CBRANCH_CDBGSYS_AND_USER   : SOPP_Real_With_Relaxation_gfx11<0x02a>;
 defm S_ENDPGM                     : SOPP_Real_32_gfx11_gfx12<0x030>;
 defm S_ENDPGM_SAVED               : SOPP_Real_32_gfx11_gfx12<0x031>;
+defm S_ENDPGM_ORDERED_PS_DONE     : SOPP_Real_32_gfx11<0x032>;
 defm S_WAKEUP                     : SOPP_Real_32_gfx11_gfx12<0x034>;
 defm S_SETPRIO                    : SOPP_Real_32_gfx11_gfx12<0x035>;
 defm S_SENDMSG                    : SOPP_Real_32_gfx11_gfx12<0x036>;

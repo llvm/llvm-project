@@ -18,9 +18,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.toupper
 
     # string.h entrypoints
-    libc.src.string.bcmp
-    libc.src.string.bcopy
-    libc.src.string.bzero
     libc.src.string.memccpy
     libc.src.string.memchr
     libc.src.string.memcmp
@@ -32,7 +29,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.memset
     libc.src.string.stpcpy
     libc.src.string.stpncpy
-    libc.src.string.strcasecmp
     libc.src.string.strcasestr
     libc.src.string.strcat
     libc.src.string.strchr
@@ -43,7 +39,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
-    libc.src.string.strncasecmp
     libc.src.string.strncat
     libc.src.string.strncmp
     libc.src.string.strncpy
@@ -58,6 +53,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     # string.h entrypoints that depend on malloc
     libc.src.string.strdup
     libc.src.string.strndup
+
+    # strings.h entrypoints
+    libc.src.strings.bcmp
+    libc.src.strings.bcopy
+    libc.src.strings.bzero
+    libc.src.strings.strcasecmp
+    libc.src.strings.strncasecmp
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -77,6 +79,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
@@ -98,6 +101,10 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # time.h entrypoints
     libc.src.time.time
+    libc.src.time.clock_getres
+
+    # unistd.h entrypoints
+    libc.src.unistd.getentropy
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -120,12 +127,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
+    libc.src.math.acos
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.cbrt

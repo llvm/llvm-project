@@ -145,8 +145,8 @@ def : VOP3PSatPat<ssubsat, V_PK_SUB_I16>;
 } // End SubtargetPredicate = HasVOP3PInsts
 
 let SubtargetPredicate = HasMinimum3Maximum3PKF16, FPDPRounding = 1 in {
-defm V_PK_MINIMUM3_F16 : VOP3PInst<"v_pk_minimum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>>;
-defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>>;
+defm V_PK_MINIMUM3_F16 : VOP3PInst<"v_pk_minimum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfminimum3>;
+defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfmaximum3>;
 }
 
 // TODO: Make sure we're doing the right thing with denormals. Note
@@ -176,44 +176,6 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                    (f32 (VOP3PMadMixModsExt f16:$src2, i32:$src2_mods)))),
     (mix_inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
               DSTCLAMP.NONE)>;
-
-  def : GCNPat <
-    (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
-                            (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
-                            (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))),
-    (mixlo_inst $src0_modifiers, $src0,
-                $src1_modifiers, $src1,
-                $src2_modifiers, $src2,
-                DSTCLAMP.NONE,
-                (i32 (IMPLICIT_DEF)))
-  >;
-
-  // FIXME: Special case handling for maxhi (especially for clamp)
-  // because dealing with the write to high half of the register is
-  // difficult.
-  def : GCNPat <
-    (build_vector f16:$elt0, (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
-                                                     (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
-                                                     (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers)))))),
-    (v2f16 (mixhi_inst $src0_modifiers, $src0,
-                       $src1_modifiers, $src1,
-                       $src2_modifiers, $src2,
-                       DSTCLAMP.NONE,
-                       VGPR_32:$elt0))
-  >;
-
-  def : GCNPat <
-    (build_vector
-      f16:$elt0,
-      (AMDGPUclamp (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
-                                      (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
-                                      (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))))),
-    (v2f16 (mixhi_inst $src0_modifiers, $src0,
-                       $src1_modifiers, $src1,
-                       $src2_modifiers, $src2,
-                       DSTCLAMP.ENABLE,
-                       VGPR_32:$elt0))
-  >;
 
   def : GCNPat <
     (AMDGPUclamp (build_vector
@@ -253,6 +215,86 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                        DSTCLAMP.NONE,
                        VGPR_32:$elt0))
   >;
+
+  def : GCNPat <
+    (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
+                            (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
+                            (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))),
+    (mixlo_inst $src0_modifiers, $src0,
+                $src1_modifiers, $src1,
+                $src2_modifiers, $src2,
+                DSTCLAMP.NONE,
+                (i32 (IMPLICIT_DEF)))
+  >;
+
+  // FIXME: Special case handling for maxhi (especially for clamp)
+  // because dealing with the write to high half of the register is
+  // difficult.
+  foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+  let True16Predicate = p in {
+
+  def : GCNPat <
+    (build_vector f16:$elt0, (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
+                                                     (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
+                                                     (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers)))))),
+    (v2f16 (mixhi_inst $src0_modifiers, $src0,
+                       $src1_modifiers, $src1,
+                       $src2_modifiers, $src2,
+                       DSTCLAMP.NONE,
+                       VGPR_32:$elt0))
+  >;
+
+  def : GCNPat <
+    (build_vector
+      f16:$elt0,
+      (AMDGPUclamp (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
+                                      (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
+                                      (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))))),
+    (v2f16 (mixhi_inst $src0_modifiers, $src0,
+                       $src1_modifiers, $src1,
+                       $src2_modifiers, $src2,
+                       DSTCLAMP.ENABLE,
+                       VGPR_32:$elt0))
+  >;
+
+  } // end True16Predicate
+
+  let True16Predicate = UseRealTrue16Insts in {
+  def : GCNPat <
+    (build_vector (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
+                            (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
+                            (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))), f16:$elt1),
+    (v2f16 (mixlo_inst $src0_modifiers, $src0,
+                $src1_modifiers, $src1,
+                $src2_modifiers, $src2,
+                DSTCLAMP.NONE,
+                (REG_SEQUENCE VGPR_32, (f16 (IMPLICIT_DEF)), lo16, $elt1, hi16)))
+  >;
+
+  def : GCNPat <
+    (build_vector f16:$elt0, (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
+                                                (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
+                                                (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers)))))),
+    (v2f16 (mixhi_inst $src0_modifiers, $src0,
+                       $src1_modifiers, $src1,
+                       $src2_modifiers, $src2,
+                       DSTCLAMP.NONE,
+                       (REG_SEQUENCE VGPR_32, $elt0, lo16, (f16 (IMPLICIT_DEF)), hi16)))
+  >;
+
+  def : GCNPat <
+    (build_vector
+      f16:$elt0,
+      (AMDGPUclamp (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
+                                      (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
+                                      (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))))),
+    (v2f16 (mixhi_inst $src0_modifiers, $src0,
+                       $src1_modifiers, $src1,
+                       $src2_modifiers, $src2,
+                       DSTCLAMP.ENABLE,
+                       (REG_SEQUENCE VGPR_32, $elt0, lo16, (f16 (IMPLICIT_DEF)), hi16)))
+  >;
+  } // end True16Predicate
 }
 
 class MinimumMaximumByMinimum3Maximum3VOP3P<SDPatternOperator node,
@@ -266,7 +308,8 @@ def : MinimumMaximumByMinimum3Maximum3VOP3P<fminimum, V_PK_MINIMUM3_F16>;
 def : MinimumMaximumByMinimum3Maximum3VOP3P<fmaximum, V_PK_MAXIMUM3_F16>;
 }
 
-let SubtargetPredicate = HasMadMixInsts, OtherPredicates = [NoFP32Denormals] in {
+let SubtargetPredicate = HasMadMixInsts in {
+let OtherPredicates = [NoFP32Denormals] in {
 
 // These are VOP3a-like opcodes which accept no omod.
 // Size of src arguments (16/32) is controlled by op_sel.
@@ -286,7 +329,8 @@ defm V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 }
 
 defm : MadFmaMixPats<fmad, V_MAD_MIX_F32, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
-} // End SubtargetPredicate = HasMadMixInsts, OtherPredicates = [NoFP32Denormals]
+} // OtherPredicates = [NoFP32Denormals]
+} // End SubtargetPredicate = HasMadMixInsts
 
 
 // Essentially the same as the mad_mix versions
@@ -405,16 +449,16 @@ defm V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16",
 
 let OtherPredicates = [HasDot7Insts] in {
 defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot4, 1>;
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot4, 1>;
 defm V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot8, 1>;
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot8, 1>;
 } // End OtherPredicates = [HasDot7Insts]
 
 let OtherPredicates = [HasDot1Insts] in {
 defm V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot4, 1>;
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot4, 1>;
 defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot8, 1>;
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot8, 1>;
 } // End OtherPredicates = [HasDot1Insts]
 
 def DOT2_BF16_Profile
@@ -433,7 +477,7 @@ defm V_DOT2_F32_BF16 : VOP3PInst<"v_dot2_f32_bf16", DOT2_BF16_Profile,
 
 multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
   let IsDOT = 1 in
-  defm NAME : VOP3PInst<OpName, VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>,
+  defm NAME : VOP3PInst<OpName, VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>,
                         null_frag, 1>;
   // Dot-iu instructions consider input as signed if imod neg bits are set. Thus
   // Dot-iu Intrinsics have extra operands and require separate codegen pattern.
@@ -890,7 +934,7 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
         let OtherPredicates = [isGFX90APlus] in
         def _mac_vgprcd_e64 : MAIInst<OpName # "_mac_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
                                       !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
-                              MFMATable<1, "VGPR", NAME # "_vgprcd_e64">;
+                              MFMATable<1, "VGPR", NAME # "_vgprcd_e64", NAME # "_mac_e64">;
       }
     }
   } // End isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1
@@ -1107,7 +1151,7 @@ let isCommutable = 1, isReMaterializable = 1 in {
     defm V_PK_ADD_F32 : VOP3PInst<"v_pk_add_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fadd>;
   } // End SubtargetPredicate = HasPackedFP32Ops
 
-  let SubtargetPredicate = HasPkMovB32 in
+  let SubtargetPredicate = HasPkMovB32, isAsCheapAsAMove = 1 in
   defm V_PK_MOV_B32 : VOP3PInst<"v_pk_mov_b32", VOP3P_Profile<VOP_V2I32_V2I32_V2I32, VOP3_PACKED>>;
 } // End isCommutable = 1, isReMaterializable = 1
 
@@ -1642,7 +1686,7 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12Plus in {
 // Begin Real Encodings
 //===----------------------------------------------------------------------===//
 
-class VOP3P_DPP16<bits<7> op, VOP_DPP_Pseudo ps, int subtarget,
+class VOP3P_DPP16<bits<8> op, VOP_DPP_Pseudo ps, int subtarget,
                   string opName = ps.OpName>
     : VOP3P_DPP<op, opName, ps.Pfl, 1>, SIMCInstr<ps.PseudoInstr, subtarget> {
   let hasSideEffects = ps.hasSideEffects;
@@ -1655,7 +1699,7 @@ class VOP3P_DPP16<bits<7> op, VOP_DPP_Pseudo ps, int subtarget,
   let IsPacked = ps.IsPacked;
 }
 
-class VOP3P_DPP8_Base<bits<7> op, VOP_Pseudo ps, string opName = ps.OpName>
+class VOP3P_DPP8_Base<bits<8> op, VOP_Pseudo ps, string opName = ps.OpName>
     : VOP3P_DPP8<op, opName, ps.Pfl> {
   let hasSideEffects = ps.hasSideEffects;
   let Defs = ps.Defs;
@@ -1670,14 +1714,14 @@ class VOP3P_DPP8_Base<bits<7> op, VOP_Pseudo ps, string opName = ps.OpName>
 // GFX11, GFX12
 //===----------------------------------------------------------------------===//
 
-multiclass VOP3P_Real_Base<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
+multiclass VOP3P_Real_Base<GFXGen Gen, bits<8> op, string backing_ps_name = NAME,
                       string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
   def Gen.Suffix :
     VOP3P_Real_Gen<!cast<VOP3P_Pseudo>(backing_ps_name), Gen, asmName>,
     VOP3Pe_gfx11_gfx12<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl>;
 }
 
-class VOP3PeWmma<bits<7> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
+class VOP3PeWmma<bits<8> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
     : VOP3Pe_gfx11_gfx12<op, P>{
   // opsel
   let Inst{11} = !cond(!eq(WMMAP.IndexType, 0)  : 0,
@@ -1701,7 +1745,7 @@ class VOP3PeWmma<bits<7> op, VOPProfile P, VOP3PWMMA_Profile WMMAP>
   let Inst{15} = !if(WMMAP.IsIU, clamp{0}, 0);
 }
 
-multiclass VOP3P_WMMA_Real_Base<GFXGen Gen, bits<7> op, VOP3PWMMA_Profile WMMAP,
+multiclass VOP3P_WMMA_Real_Base<GFXGen Gen, bits<8> op, VOP3PWMMA_Profile WMMAP,
                                 string backing_ps_name = NAME,
                                 string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
   def Gen.Suffix :
@@ -1709,13 +1753,13 @@ multiclass VOP3P_WMMA_Real_Base<GFXGen Gen, bits<7> op, VOP3PWMMA_Profile WMMAP,
     VOP3PeWmma<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl, WMMAP>;
 }
 
-multiclass VOP3P_Real_WMMA_gfx12 <bits<7> op, VOP3PWMMA_Profile WMMAP> {
+multiclass VOP3P_Real_WMMA_gfx12 <bits<8> op, VOP3PWMMA_Profile WMMAP> {
   let WaveSizePredicate = isWave32, DecoderNamespace = "GFX12" in {
     defm _twoaddr : VOP3P_WMMA_Real_Base <GFX12Gen, op, WMMAP>;
   }
 }
 
-multiclass VOP3P_Real_WMMA_gfx12w64 <bits<7> op, VOP3PWMMA_Profile WMMAP> {
+multiclass VOP3P_Real_WMMA_gfx12w64 <bits<8> op, VOP3PWMMA_Profile WMMAP> {
   let WaveSizePredicate = isWave64, DecoderNamespace = "GFX12W64" in {
     defm _twoaddr : VOP3P_WMMA_Real_Base <GFX12Gen, op, WMMAP>;
   }
@@ -1770,7 +1814,7 @@ defm V_SWMMAC_F32_16X16X32_FP8_BF8_w64 : VOP3P_Real_WMMA_gfx12w64 <0x058, F32_FP
 defm V_SWMMAC_F32_16X16X32_BF8_FP8_w64 : VOP3P_Real_WMMA_gfx12w64 <0x059, F32_FP8BF8_SWMMAC_w64>;
 defm V_SWMMAC_F32_16X16X32_BF8_BF8_w64 : VOP3P_Real_WMMA_gfx12w64 <0x05a, F32_FP8BF8_SWMMAC_w64>;
 
-multiclass VOP3P_Real_with_name<GFXGen Gen, bits<7> op,
+multiclass VOP3P_Real_with_name<GFXGen Gen, bits<8> op,
                           string backing_ps_name = NAME,
                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
   defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
@@ -1784,7 +1828,7 @@ multiclass VOP3P_Real_with_name<GFXGen Gen, bits<7> op,
   }
 }
 
-multiclass VOP3P_Real_dpp<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
+multiclass VOP3P_Real_dpp<GFXGen Gen, bits<8> op, string backing_ps_name = NAME,
                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
   defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
   def _dpp#Gen.Suffix
@@ -1796,7 +1840,7 @@ multiclass VOP3P_Real_dpp<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
   }
 }
 
-multiclass VOP3P_Real_dpp8<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
+multiclass VOP3P_Real_dpp8<GFXGen Gen, bits<8> op, string backing_ps_name = NAME,
                            string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
   defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
   def _dpp8#Gen.Suffix : VOP3P_DPP8_Base<op, ps> {
@@ -1806,7 +1850,7 @@ multiclass VOP3P_Real_dpp8<GFXGen Gen, bits<7> op, string backing_ps_name = NAME
   }
 }
 
-multiclass VOP3P_Realtriple<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
+multiclass VOP3P_Realtriple<GFXGen Gen, bits<8> op, string backing_ps_name = NAME,
                             string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic>
     : VOP3P_Real_Base<Gen, op, backing_ps_name, asmName>,
       VOP3P_Real_dpp<Gen, op, backing_ps_name, asmName>,
@@ -1816,9 +1860,9 @@ multiclass VOP3P_Realtriple<GFXGen Gen, bits<7> op, string backing_ps_name = NAM
 // GFX12
 //===----------------------------------------------------------------------===//
 
-multiclass VOP3P_Real_gfx12<bits<7> op> : VOP3P_Real_Base<GFX12Gen, op>;
+multiclass VOP3P_Real_gfx12<bits<8> op> : VOP3P_Real_Base<GFX12Gen, op>;
 
-multiclass VOP3P_Real_with_name_gfx12<bits<7> op,
+multiclass VOP3P_Real_with_name_gfx12<bits<8> op,
                           string backing_ps_name = NAME,
                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> :
   VOP3P_Real_with_name<GFX12Gen, op, backing_ps_name, asmName>;
@@ -1838,14 +1882,19 @@ defm V_DOT4_F32_BF8_BF8 : VOP3P_Realtriple<GFX12Gen, 0x27>;
 // GFX11
 //===----------------------------------------------------------------------===//
 
-multiclass VOP3P_Real_gfx11_gfx12<bits<7> op> :
+multiclass VOP3P_Real_gfx11_gfx12<bits<8> op> :
    VOP3P_Real_Base<GFX11Gen, op>, VOP3P_Real_Base<GFX12Gen, op>;
 
 defm V_DOT4_I32_IU8  : VOP3P_Real_gfx11_gfx12<0x16>;
 defm V_DOT8_I32_IU4  : VOP3P_Real_gfx11_gfx12<0x18>;
 defm V_DOT2_F32_BF16 : VOP3P_Real_gfx11_gfx12<0x1a>;
 
-multiclass VOP3P_Real_WMMA <bits<7> op> {
+let AssemblerPredicate = isGFX11Plus in {
+  def : AMDGPUMnemonicAlias<"v_dot4_i32_i8", "v_dot4_i32_iu8">;
+  def : AMDGPUMnemonicAlias<"v_dot8_i32_i4", "v_dot8_i32_iu4">;
+}
+
+multiclass VOP3P_Real_WMMA <bits<8> op> {
   let WaveSizePredicate = isWave32, DecoderNamespace = "GFX11" in {
     defm _twoaddr_w32 : VOP3P_Real_Base <GFX11Gen, op>;
   }
@@ -1867,7 +1916,7 @@ defm V_WMMA_I32_16X16X16_IU4   : VOP3P_Real_WMMA <0x045>;
 
 multiclass VOP3P_Real_vi<bits<7> op> {
   def _vi : VOP3P_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
-            VOP3Pe <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
+            VOP3Pe_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
     let AssemblerPredicate = HasVOP3PInsts;
     let DecoderNamespace = "GFX8";
     let VOP3P = 1;
@@ -2071,6 +2120,7 @@ defm V_PK_MUL_F16 : VOP3P_Real_vi <0x10>;
 defm V_PK_MIN_F16 : VOP3P_Real_vi <0x11>;
 defm V_PK_MAX_F16 : VOP3P_Real_vi <0x12>;
 
+defm V_DOT2_F32_BF16 : VOP3P_Real_vi<0x1a>;
 defm V_PK_MINIMUM3_F16 : VOP3P_Real_vi <0x1b>;
 defm V_PK_MAXIMUM3_F16 : VOP3P_Real_vi <0x1c>;
 
@@ -2142,7 +2192,6 @@ defm V_MFMA_F32_16X16X128_F8F6F4 : VOP3P_Real_MFMA_F8F6F4_gfx950_mc <0x2d, "v_mf
 defm V_MFMA_SCALE_F32_16X16X128_F8F6F4 : VOP3PX_Real_ScaledMFMA_F8F6F4_mc <0x2d>;
 defm V_MFMA_F32_32X32X64_F8F6F4  : VOP3P_Real_MFMA_F8F6F4_gfx950_mc <0x2e, "v_mfma_f32_32x32x64_f8f6f4">;
 defm V_MFMA_SCALE_F32_32X32X64_F8F6F4 : VOP3PX_Real_ScaledMFMA_F8F6F4_mc <0x2e>;
-defm V_DOT2_F32_BF16 : VOP3P_Real_vi<0x1a>;
 
 defm V_MFMA_I32_32X32X16I8       : VOP3P_Real_MFMA_gfx940 <0x56, "v_mfma_i32_32x32x16_i8">;
 defm V_MFMA_I32_16X16X32I8       : VOP3P_Real_MFMA_gfx940 <0x57, "v_mfma_i32_16x16x32_i8">;
@@ -2208,19 +2257,19 @@ defm V_PK_MOV_B32 : VOP3P_Real_vi <0x33>;
 //===----------------------------------------------------------------------===//
 
 let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10", VOP3P = 1 in {
-  multiclass VOP3P_Real_gfx10<bits<7> op> {
+  multiclass VOP3P_Real_gfx10<bits<8> op> {
     def _gfx10 : VOP3P_Real<!cast<VOP3P_Pseudo>(NAME), SIEncodingFamily.GFX10>,
                  VOP3Pe_gfx10 <op, !cast<VOP3P_Pseudo>(NAME).Pfl>;
   }
 } // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10", VOP3P = 1
 
-multiclass VOP3P_Real_gfx10_gfx11<bits<7> op> :
+multiclass VOP3P_Real_gfx10_gfx11<bits<8> op> :
   VOP3P_Real_gfx10<op>, VOP3P_Real_Base<GFX11Gen, op>;
 
-multiclass VOP3P_Real_gfx10_gfx11_gfx12<bits<7> op> :
+multiclass VOP3P_Real_gfx10_gfx11_gfx12<bits<8> op> :
   VOP3P_Real_gfx10_gfx11<op>, VOP3P_Real_Base<GFX12Gen, op>;
 
-multiclass VOP3P_Real_gfx10_gfx11_gfx12_Triple<bits<7> op> :
+multiclass VOP3P_Real_gfx10_gfx11_gfx12_Triple<bits<8> op> :
   VOP3P_Real_gfx10<op>, VOP3P_Realtriple<GFX11Gen, op>,
   VOP3P_Realtriple<GFX12Gen, op>;
 

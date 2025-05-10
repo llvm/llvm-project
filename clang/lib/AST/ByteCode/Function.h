@@ -51,6 +51,11 @@ public:
     return llvm::make_range(Descriptors.begin(), Descriptors.end());
   }
 
+  llvm::iterator_range<LocalVectorTy::const_reverse_iterator>
+  locals_reverse() const {
+    return llvm::reverse(Descriptors);
+  }
+
 private:
   /// Object descriptors in this block.
   LocalVectorTy Descriptors;
@@ -80,6 +85,14 @@ using FunctionDeclTy =
 ///
 class Function final {
 public:
+  enum class FunctionKind {
+    Normal,
+    Ctor,
+    Dtor,
+    LambdaStaticInvoker,
+    LambdaCallOperator,
+    CopyOrMoveOperator,
+  };
   using ParamDescriptor = std::pair<PrimType, Descriptor *>;
 
   /// Returns the size of the function's local stack.
@@ -141,17 +154,27 @@ public:
   bool isConstexpr() const { return IsValid || isLambdaStaticInvoker(); }
 
   /// Checks if the function is virtual.
-  bool isVirtual() const;
+  bool isVirtual() const { return Virtual; };
 
   /// Checks if the function is a constructor.
-  bool isConstructor() const {
-    return isa_and_nonnull<CXXConstructorDecl>(
-        dyn_cast<const FunctionDecl *>(Source));
-  }
+  bool isConstructor() const { return Kind == FunctionKind::Ctor; }
   /// Checks if the function is a destructor.
-  bool isDestructor() const {
-    return isa_and_nonnull<CXXDestructorDecl>(
-        dyn_cast<const FunctionDecl *>(Source));
+  bool isDestructor() const { return Kind == FunctionKind::Dtor; }
+  /// Checks if the function is copy or move operator.
+  bool isCopyOrMoveOperator() const {
+    return Kind == FunctionKind::CopyOrMoveOperator;
+  }
+
+  /// Returns whether this function is a lambda static invoker,
+  /// which we generate custom byte code for.
+  bool isLambdaStaticInvoker() const {
+    return Kind == FunctionKind::LambdaStaticInvoker;
+  }
+
+  /// Returns whether this function is the call operator
+  /// of a lambda record decl.
+  bool isLambdaCallOperator() const {
+    return Kind == FunctionKind::LambdaCallOperator;
   }
 
   /// Returns the parent record decl, if any.
@@ -160,24 +183,6 @@ public:
             dyn_cast<const FunctionDecl *>(Source)))
       return MD->getParent();
     return nullptr;
-  }
-
-  /// Returns whether this function is a lambda static invoker,
-  /// which we generate custom byte code for.
-  bool isLambdaStaticInvoker() const {
-    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
-            dyn_cast<const FunctionDecl *>(Source)))
-      return MD->isLambdaStaticInvoker();
-    return false;
-  }
-
-  /// Returns whether this function is the call operator
-  /// of a lambda record decl.
-  bool isLambdaCallOperator() const {
-    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
-            dyn_cast<const FunctionDecl *>(Source)))
-      return clang::isLambdaCallOperator(MD);
-    return false;
   }
 
   /// Checks if the function is fully done compiling.
@@ -193,12 +198,6 @@ public:
 
   bool isVariadic() const { return Variadic; }
 
-  unsigned getBuiltinID() const { return BuiltinID; }
-
-  bool isBuiltin() const { return getBuiltinID() != 0; }
-
-  bool isUnevaluatedBuiltin() const;
-
   unsigned getNumParams() const { return ParamTypes.size(); }
 
   /// Returns the number of parameter this function takes when it's called,
@@ -213,7 +212,7 @@ public:
 
   bool isThisPointerExplicit() const {
     if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
-            Source.dyn_cast<const FunctionDecl *>()))
+            dyn_cast<const FunctionDecl *>(Source)))
       return MD->isExplicitObjectMemberFunction();
     return false;
   }
@@ -232,7 +231,7 @@ private:
            llvm::SmallVectorImpl<PrimType> &&ParamTypes,
            llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
            llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
-           bool HasRVO, unsigned BuiltinID);
+           bool HasRVO, bool IsLambdaStaticInvoker);
 
   /// Sets the code of a function.
   void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
@@ -252,9 +251,12 @@ private:
 private:
   friend class Program;
   friend class ByteCodeEmitter;
+  friend class Context;
 
   /// Program reference.
   Program &P;
+  /// Function Kind.
+  FunctionKind Kind;
   /// Declaration this function was compiled from.
   FunctionDeclTy Source;
   /// Local area size: storage + metadata.
@@ -289,7 +291,7 @@ private:
   bool HasBody = false;
   bool Defined = false;
   bool Variadic = false;
-  unsigned BuiltinID = 0;
+  bool Virtual = false;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

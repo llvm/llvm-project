@@ -22,7 +22,7 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_BUFFERDEALLOCATIONSIMPLIFICATION
+#define GEN_PASS_DEF_BUFFERDEALLOCATIONSIMPLIFICATIONPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -453,7 +453,7 @@ namespace {
 /// into the right positions. Furthermore, it inserts additional clones if
 /// necessary. It uses the algorithm described at the top of the file.
 struct BufferDeallocationSimplificationPass
-    : public bufferization::impl::BufferDeallocationSimplificationBase<
+    : public bufferization::impl::BufferDeallocationSimplificationPassBase<
           BufferDeallocationSimplificationPass> {
   void runOnOperation() override {
     BufferOriginAnalysis analysis(getOperation());
@@ -463,22 +463,17 @@ struct BufferDeallocationSimplificationPass
                  SplitDeallocWhenNotAliasingAnyOther,
                  RetainedMemrefAliasingAlwaysDeallocatedMemref>(&getContext(),
                                                                 analysis);
-    // We don't want that the block structure changes invalidating the
-    // `BufferOriginAnalysis` so we apply the rewrites witha `Normal` level of
-    // region simplification
-    GreedyRewriteConfig config;
-    config.enableRegionSimplification = GreedySimplifyRegionLevel::Normal;
-    populateDeallocOpCanonicalizationPatterns(patterns, &getContext());
 
-    if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns),
-                                            config)))
+    populateDeallocOpCanonicalizationPatterns(patterns, &getContext());
+    // We don't want that the block structure changes invalidating the
+    // `BufferOriginAnalysis` so we apply the rewrites with `Normal` level of
+    // region simplification
+    if (failed(applyPatternsGreedily(
+            getOperation(), std::move(patterns),
+            GreedyRewriteConfig().setRegionSimplificationLevel(
+                GreedySimplifyRegionLevel::Normal))))
       signalPassFailure();
   }
 };
 
 } // namespace
-
-std::unique_ptr<Pass>
-mlir::bufferization::createBufferDeallocationSimplificationPass() {
-  return std::make_unique<BufferDeallocationSimplificationPass>();
-}

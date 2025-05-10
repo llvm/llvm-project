@@ -57,9 +57,7 @@ bool DagLeaf::isNativeCodeCall() const {
 
 bool DagLeaf::isConstantAttr() const { return isSubClassOf("ConstantAttr"); }
 
-bool DagLeaf::isEnumAttrCase() const {
-  return isSubClassOf("EnumAttrCaseInfo");
-}
+bool DagLeaf::isEnumCase() const { return isSubClassOf("EnumCase"); }
 
 bool DagLeaf::isStringAttr() const { return isa<llvm::StringInit>(def); }
 
@@ -74,9 +72,9 @@ ConstantAttr DagLeaf::getAsConstantAttr() const {
   return ConstantAttr(cast<DefInit>(def));
 }
 
-EnumAttrCase DagLeaf::getAsEnumAttrCase() const {
-  assert(isEnumAttrCase() && "the DAG leaf must be an enum attribute case");
-  return EnumAttrCase(cast<DefInit>(def));
+EnumCase DagLeaf::getAsEnumCase() const {
+  assert(isEnumCase() && "the DAG leaf must be an enum attribute case");
+  return EnumCase(cast<DefInit>(def));
 }
 
 std::string DagLeaf::getConditionTemplate() const {
@@ -254,8 +252,7 @@ std::string SymbolInfoMap::SymbolInfo::getVarTypeStr(StringRef name) const {
   switch (kind) {
   case Kind::Attr: {
     if (op)
-      return op->getArg(getArgIndex())
-          .get<NamedAttribute *>()
+      return cast<NamedAttribute *>(op->getArg(getArgIndex()))
           ->attr.getStorageType()
           .str();
     // TODO(suderman): Use a more exact type when available.
@@ -305,7 +302,13 @@ std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
   }
   case Kind::Operand: {
     assert(index < 0);
-    auto *operand = op->getArg(getArgIndex()).get<NamedTypeConstraint *>();
+    auto *operand = cast<NamedTypeConstraint *>(op->getArg(getArgIndex()));
+    if (operand->isOptional()) {
+      auto repl =
+          formatv(fmt, formatv("({0}.empty() ? Value() : *{0}.begin())", name));
+      LLVM_DEBUG(dbgs() << repl << " (OptionalOperand)\n");
+      return std::string(repl);
+    }
     // If this operand is variadic and this SymbolInfo doesn't have a range
     // index, then return the full variadic operand_range. Otherwise, return
     // the value itself.
@@ -447,7 +450,7 @@ bool SymbolInfoMap::bindOpArgument(DagNode node, StringRef symbol,
   }
 
   auto symInfo =
-      op.getArg(argIndex).is<NamedAttribute *>()
+      isa<NamedAttribute *>(op.getArg(argIndex))
           ? SymbolInfo::getAttr(&op, argIndex)
           : SymbolInfo::getOperand(node, &op, argIndex, variadicSubIndex);
 
@@ -777,7 +780,7 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
           verifyBind(infoMap.bindValue(treeArgName), treeArgName);
         } else {
           auto constraint = leaf.getAsConstraint();
-          bool isAttr = leaf.isAttrMatcher() || leaf.isEnumAttrCase() ||
+          bool isAttr = leaf.isAttrMatcher() || leaf.isEnumCase() ||
                         leaf.isConstantAttr() ||
                         constraint.getKind() == Constraint::Kind::CK_Attr;
 

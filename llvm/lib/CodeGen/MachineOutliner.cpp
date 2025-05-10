@@ -1149,8 +1149,8 @@ bool MachineOutliner::outline(
               InstrUseRegs.insert(MOP.getReg());
             }
           }
-          if (MI->isCandidateForCallSiteEntry())
-            MI->getMF()->eraseCallSiteInfo(MI);
+          if (MI->isCandidateForAdditionalCallInfo())
+            MI->getMF()->eraseAdditionalCallInfo(MI);
         }
 
         for (const Register &I : DefRegs)
@@ -1182,7 +1182,7 @@ bool MachineOutliner::outline(
     }
   }
 
-  LLVM_DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n";);
+  LLVM_DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n");
   return OutlinedSomething;
 }
 
@@ -1375,6 +1375,9 @@ void MachineOutliner::emitOutlinedHashTree(Module &M) {
 }
 
 bool MachineOutliner::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
   // Check if there's anything in the module. If it's empty, then there's
   // nothing to outline.
   if (M.empty())

@@ -1,0 +1,119 @@
+===========================================
+Libc++ 21.0.0 (In-Progress) Release Notes
+===========================================
+
+.. contents::
+   :local:
+   :depth: 2
+
+Written by the `Libc++ Team <https://libcxx.llvm.org>`_
+
+.. warning::
+
+   These are in-progress notes for the upcoming libc++ 20.0.0 release.
+   Release notes for previous releases can be found on
+   `the Download Page <https://releases.llvm.org/download.html>`_.
+
+Introduction
+============
+
+This document contains the release notes for the libc++ C++ Standard Library,
+part of the LLVM Compiler Infrastructure, release 20.0.0. Here we describe the
+status of libc++ in some detail, including major improvements from the previous
+release and new feature work. For the general LLVM release notes, see `the LLVM
+documentation <https://llvm.org/docs/ReleaseNotes.html>`_. All LLVM releases may
+be downloaded from the `LLVM releases web site <https://llvm.org/releases/>`_.
+
+For more information about libc++, please see the `Libc++ Web Site
+<https://libcxx.llvm.org>`_ or the `LLVM Web Site <https://llvm.org>`_.
+
+Note that if you are reading this file from a Git checkout or the
+main Libc++ web page, this document applies to the *next* release, not
+the current one. To see the release notes for a specific release, please
+see the `releases page <https://llvm.org/releases/>`_.
+
+What's New in Libc++ 21.0.0?
+==============================
+
+Implemented Papers
+------------------
+
+- N4258: Cleaning-up noexcept in the Library (`Github <https://github.com/llvm/llvm-project/issues/99937>`__)
+- P0767R1: Deprecate POD (`Github <https://github.com/llvm/llvm-project/issues/104013>`__)
+- P1361R2: Integration of chrono with text formatting (`Github <https://github.com/llvm/llvm-project/issues/100014>`__)
+- P2255R2: A type trait to detect reference binding to temporary (implemented the type traits only) (`Github <https://github.com/llvm/llvm-project/issues/105180>`__)
+- P2562R1: ``constexpr`` Stable Sorting (`Github <https://github.com/llvm/llvm-project/issues/105360>`__)
+- P0472R3: Put std::monostate in <utility> (`Github <https://github.com/llvm/llvm-project/issues/127874>`__)
+- P1222R4: A Standard ``flat_set`` (`Github <https://github.com/llvm/llvm-project/issues/105193>`__)
+- P2897R7: ``aligned_accessor``: An mdspan accessor expressing pointer over-alignment (`Github <https://github.com/llvm/llvm-project/issues/118372>`__)
+- P3247R2: Deprecate the notion of trivial types (`Github <https://github.com/llvm/llvm-project/issues/118387>`__)
+
+Improvements and New Features
+-----------------------------
+
+- The ``std::ranges::{copy, copy_n, copy_backward, move, move_backward, rotate}`` algorithms have been optimized for
+  ``std::vector<bool>::iterator``, resulting in a performance improvement of up to 2000x.
+
+- The ``std::ranges::equal`` algorithm has been optimized for ``std::vector<bool>::iterator``, resulting in a performance
+  improvement of up to 188x.
+
+- The ``std::ranges::swap_ranges`` algorithm has been optimized for ``std::vector<bool>::iterator``, resulting in a
+  performance improvement of up to 611x.
+
+- Updated formatting library to Unicode 16.0.0.
+
+- The ``num_put::do_put`` integral overloads have been optimized, resulting in a performance improvement of up to 2.4x.
+
+- The ``std::stable_sort`` algorithm uses radix sort for floating-point types now, which can improve the performance
+  up to 10x, depending on type of sorted elements and the initial state of the sorted array.
+
+- The segmented iterator optimization for ``std::for_each`` has been backported to C++11. Previously it was only available
+  in C++23 and later.
+
+Deprecations and Removals
+-------------------------
+
+- ``std::is_pod`` and ``std::is_pod_v`` are deprecated in C++20 and later.
+
+- ``std::is_trivial`` and ``std::is_trivial_v`` are deprecated in C++26 and later.
+
+- The ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` has been removed, making ``std::__libcpp_verbose_abort``
+  unconditionally ``noexcept``.
+
+- TODO: The non-conforming extension ``packaged_task::result_type`` has been removed in LLVM 21.
+
+Potentially breaking changes
+----------------------------
+
+- The implementation of ``num_put::do_put`` has been replaced to improve the performance, which can lead to different
+  output when printing pointers.
+
+Announcements About Future Releases
+-----------------------------------
+
+LLVM 22
+~~~~~~~
+
+- The status of the C++03 implementation will be frozen after the LLVM 21 release. This means that starting in LLVM 22,
+  non-critical bug fixes may not be back-ported to C++03, including LWG issues. C++03 is a legacy platform, where most
+  projects are no longer actively maintained. To reduce the amount of fixes required to keep such legacy projects
+  compiling with up-to-date toolchains, libc++ will aim to freeze the status of the headers in C++03 mode to avoid
+  unintended breaking changes. See https://discourse.llvm.org/t/rfc-freezing-c-03-headers-in-libc for more details.
+
+  If you are using C++03 in your project, you should consider moving to a newer version of the Standard to get the most
+  out of libc++.
+
+
+ABI Affecting Changes
+---------------------
+
+- When using GCC, the ``std`` namespace is now annotated with ``[[gnu::visibility("default")]]``. This may cause more
+  symbols to be exported from shared libraries when building with ``-fvisibility=hidden``. This also fixes RTTI
+  comparison between shared libraries, since all RTTI has the correct visibility now. There is no behaviour change on
+  Clang.
+
+
+Build System Changes
+--------------------
+
+- TODO

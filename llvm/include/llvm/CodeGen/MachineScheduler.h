@@ -17,7 +17,7 @@
 // scheduled. Targets can override the DAG builder and scheduler without
 // replacing the pass as follows:
 //
-// ScheduleDAGInstrs *<Target>PassConfig::
+// ScheduleDAGInstrs *<Target>TargetMachine::
 // createMachineScheduler(MachineSchedContext *C) {
 //   return new CustomMachineScheduler(C);
 // }
@@ -29,7 +29,7 @@
 // plugin an alternate MachineSchedStrategy. The strategy is responsible for
 // selecting the highest priority node from the list:
 //
-// ScheduleDAGInstrs *<Target>PassConfig::
+// ScheduleDAGInstrs *<Target>TargetMachine::
 // createMachineScheduler(MachineSchedContext *C) {
 //   return new ScheduleDAGMILive(C, CustomStrategy(C));
 // }
@@ -39,7 +39,7 @@
 // can adjust dependencies based on target-specific knowledge or add weak edges
 // to aid heuristics:
 //
-// ScheduleDAGInstrs *<Target>PassConfig::
+// ScheduleDAGInstrs *<Target>TargetMachine::
 // createMachineScheduler(MachineSchedContext *C) {
 //   ScheduleDAGMI *DAG = createGenericSchedLive(C);
 //   DAG->addMutation(new CustomDAGMutation(...));
@@ -98,9 +98,23 @@
 #include <vector>
 
 namespace llvm {
+namespace impl_detail {
+// FIXME: Remove these declarations once RegisterClassInfo is queryable as an
+// analysis.
+class MachineSchedulerImpl;
+class PostMachineSchedulerImpl;
+} // namespace impl_detail
 
-extern cl::opt<bool> ForceTopDown;
-extern cl::opt<bool> ForceBottomUp;
+namespace MISched {
+enum Direction {
+  Unspecified,
+  TopDown,
+  BottomUp,
+  Bidirectional,
+};
+} // namespace MISched
+
+extern cl::opt<MISched::Direction> PreRADirection;
 extern cl::opt<bool> VerifyScheduling;
 #ifndef NDEBUG
 extern cl::opt<bool> ViewMISchedDAGs;
@@ -129,7 +143,7 @@ struct MachineSchedContext {
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;
   const MachineDominatorTree *MDT = nullptr;
-  const TargetPassConfig *PassConfig = nullptr;
+  const TargetMachine *TM = nullptr;
   AAResults *AA = nullptr;
   LiveIntervals *LIS = nullptr;
 
@@ -517,7 +531,7 @@ protected:
 
   void initRegPressure();
 
-  void updatePressureDiffs(ArrayRef<RegisterMaskPair> LiveUses);
+  void updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses);
 
   void updateScheduledPressure(const SUnit *SU,
                                const std::vector<unsigned> &NewMaxPressure);
@@ -1070,9 +1084,24 @@ public:
   /// Represent the type of SchedCandidate found within a single queue.
   /// pickNodeBidirectional depends on these listed by decreasing priority.
   enum CandReason : uint8_t {
-    NoCand, Only1, PhysReg, RegExcess, RegCritical, Stall, Cluster, Weak,
-    RegMax, ResourceReduce, ResourceDemand, BotHeightReduce, BotPathReduce,
-    TopDepthReduce, TopPathReduce, NextDefUse, NodeOrder};
+    NoCand,
+    Only1,
+    PhysReg,
+    RegExcess,
+    RegCritical,
+    Stall,
+    Cluster,
+    Weak,
+    RegMax,
+    ResourceReduce,
+    ResourceDemand,
+    BotHeightReduce,
+    BotPathReduce,
+    TopDepthReduce,
+    TopPathReduce,
+    NodeOrder,
+    FirstValid
+  };
 
 #ifndef NDEBUG
   static const char *getReasonStr(GenericSchedulerBase::CandReason Reason);
@@ -1167,6 +1196,9 @@ protected:
   const MachineSchedContext *Context;
   const TargetSchedModel *SchedModel = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
+  unsigned TopIdx = 0;
+  unsigned BotIdx = 0;
+  unsigned NumRegionInstrs = 0;
 
   MachineSchedPolicy RegionPolicy;
 
@@ -1377,6 +1409,34 @@ std::unique_ptr<ScheduleDAGMutation>
 createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
                                const TargetRegisterInfo *TRI);
 
+class MachineSchedulerPass : public PassInfoMixin<MachineSchedulerPass> {
+  // FIXME: Remove this member once RegisterClassInfo is queryable as an
+  // analysis.
+  std::unique_ptr<impl_detail::MachineSchedulerImpl> Impl;
+  const TargetMachine *TM;
+
+public:
+  MachineSchedulerPass(const TargetMachine *TM);
+  MachineSchedulerPass(MachineSchedulerPass &&Other);
+  ~MachineSchedulerPass();
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class PostMachineSchedulerPass
+    : public PassInfoMixin<PostMachineSchedulerPass> {
+  // FIXME: Remove this member once RegisterClassInfo is queryable as an
+  // analysis.
+  std::unique_ptr<impl_detail::PostMachineSchedulerImpl> Impl;
+  const TargetMachine *TM;
+
+public:
+  PostMachineSchedulerPass(const TargetMachine *TM);
+  PostMachineSchedulerPass(PostMachineSchedulerPass &&Other);
+  ~PostMachineSchedulerPass();
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_MACHINESCHEDULER_H

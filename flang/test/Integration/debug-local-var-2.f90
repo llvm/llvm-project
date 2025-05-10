@@ -1,7 +1,6 @@
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -mllvm --write-experimental-debuginfo=false -o - | FileCheck %s --check-prefixes=BOTH,INTRINSICS
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -mllvm --write-experimental-debuginfo=true -o - | FileCheck %s --check-prefixes=BOTH,RECORDS
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --write-experimental-debuginfo=false -o - | FileCheck --check-prefix=LINEONLY %s
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --write-experimental-debuginfo=true -o - | FileCheck --check-prefix=LINEONLY %s
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -mllvm --experimental-debuginfo-iterators=true -o - | FileCheck %s --check-prefixes=BOTH,RECORDS
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --experimental-debuginfo-iterators=false -o - | FileCheck --check-prefix=LINEONLY %s
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --experimental-debuginfo-iterators=true -o - | FileCheck --check-prefix=LINEONLY %s
 
 ! This tests checks the debug information for local variables in llvm IR.
 
@@ -12,12 +11,6 @@
 ! BOTH-DAG: %[[AL13:.*]] = alloca i8
 ! BOTH-DAG: %[[AL12:.*]] = alloca i64
 ! BOTH-DAG: %[[AL11:.*]] = alloca i32
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL11]], metadata ![[I4:.*]], metadata !DIExpression())
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL12]], metadata ![[I8:.*]], metadata !DIExpression())
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL13]], metadata ![[L1:.*]], metadata !DIExpression())
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL14]], metadata ![[L4:.*]], metadata !DIExpression())
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL15]], metadata ![[R4:.*]], metadata !DIExpression())
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL16]], metadata ![[R8:.*]], metadata !DIExpression())
 ! RECORDS-DAG: #dbg_declare(ptr %[[AL11]], ![[I4:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[AL12]], ![[I8:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[AL13]], ![[L1:.*]], !DIExpression(), !{{.*}})
@@ -27,28 +20,20 @@
 ! BOTH-LABEL: }
 
 ! BOTH-LABEL: define {{.*}}i64 @_QFPfn1
-! BOTH-SAME: (ptr nocapture %[[ARG1:.*]], ptr nocapture %[[ARG2:.*]], ptr nocapture %[[ARG3:.*]])
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG1]], metadata ![[A1:.*]], metadata !DIExpression())
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG2]], metadata ![[B1:.*]], metadata !DIExpression())
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG3]], metadata ![[C1:.*]], metadata !DIExpression())
+! BOTH-SAME: (ptr captures(none) %[[ARG1:.*]], ptr captures(none) %[[ARG2:.*]], ptr captures(none) %[[ARG3:.*]])
 ! RECORDS-DAG: #dbg_declare(ptr %[[ARG1]], ![[A1:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[ARG2]], ![[B1:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[ARG3]], ![[C1:.*]], !DIExpression(), !{{.*}})
 ! BOTH-DAG: %[[AL2:.*]] = alloca i64
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL2]], metadata ![[RES1:.*]], metadata !DIExpression())
 ! RECORDS-DAG: #dbg_declare(ptr %[[AL2]], ![[RES1:.*]], !DIExpression(), !{{.*}})
 ! BOTH-LABEL: }
 
 ! BOTH-LABEL: define {{.*}}i32 @_QFPfn2
-! BOTH-SAME: (ptr nocapture %[[FN2ARG1:.*]], ptr nocapture %[[FN2ARG2:.*]], ptr nocapture %[[FN2ARG3:.*]])
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG1]], metadata ![[A2:.*]], metadata !DIExpression())
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG2]], metadata ![[B2:.*]], metadata !DIExpression())
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG3]], metadata ![[C2:.*]], metadata !DIExpression())
+! BOTH-SAME: (ptr captures(none) %[[FN2ARG1:.*]], ptr captures(none) %[[FN2ARG2:.*]], ptr captures(none) %[[FN2ARG3:.*]])
 ! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG1]], ![[A2:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG2]], ![[B2:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG3]], ![[C2:.*]], !DIExpression(), !{{.*}})
 ! BOTH-DAG: %[[AL3:.*]] = alloca i32
-! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL3]], metadata ![[RES2:.*]], metadata !DIExpression())
 ! RECORDS-DAG: #dbg_declare(ptr %[[AL3]], ![[RES2:.*]], !DIExpression(), !{{.*}})
 ! BOTH-LABEL: }
 
@@ -107,4 +92,4 @@ contains
   end function
 end program
 
-LINEONLY-NOT: DILocalVariable
+! LINEONLY-NOT: DILocalVariable

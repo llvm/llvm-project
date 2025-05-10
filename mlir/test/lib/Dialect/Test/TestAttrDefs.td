@@ -17,6 +17,7 @@
 include "TestDialect.td"
 include "TestEnumDefs.td"
 include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/Dialect/Utils/StructuredOpsUtils.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
@@ -368,6 +369,16 @@ def TestCustomFloatAttr : Test_Attr<"TestCustomFloat"> {
   }];
 }
 
+// Test `struct` with nested `custom` assembly format.
+def TestCustomStructAttr : Test_Attr<"TestCustomStruct"> {
+  let mnemonic = "custom_struct";
+  let parameters = (ins "mlir::StringAttr":$type_str, "int64_t":$value,
+                        OptionalParameter<"mlir::ArrayAttr">:$opt_value);
+  let assemblyFormat = [{
+    `<` struct($type_str, custom<CustomStructAttr>($value), custom<CustomOptStructFieldAttr>($opt_value)) `>`
+  }];
+}
+
 def NestedPolynomialAttr : Test_Attr<"NestedPolynomialAttr"> {
   let mnemonic = "nested_polynomial";
   let parameters = (ins Polynomial_IntPolynomialAttr:$poly);
@@ -384,6 +395,14 @@ def NestedPolynomialAttr2 : Test_Attr<"NestedPolynomialAttr2"> {
   }];
 }
 
+// Test a ptr constant memory space.
+def TestConstMemorySpaceAttr : Test_Attr<"TestConstMemorySpace", [
+    DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+  ]> {
+  let mnemonic = "const_memory_space";
+  let parameters = (ins DefaultValuedParameter<"unsigned", "0">:$addressSpace);
+  let assemblyFormat = "(`<` $addressSpace^ `>`)?";
+}
 
 // Test custom location handling.
 def TestCustomLocationAttr : Test_LocAttr<"TestCustomLocation"> {
@@ -393,6 +412,27 @@ def TestCustomLocationAttr : Test_LocAttr<"TestCustomLocation"> {
   // Choose a silly separator token so we know it's hitting this code path
   // and not another.
   let assemblyFormat = "`<` $file `*` $line `>`";
+}
+
+// Test OpAsmAttrInterface.
+def TestOpAsmAttrInterfaceAttr : Test_Attr<"TestOpAsmAttrInterface",
+    [DeclareAttrInterfaceMethods<OpAsmAttrInterface, ["getAlias"]>]> {
+  let mnemonic = "op_asm_attr_interface";
+  let parameters = (ins "mlir::StringAttr":$value);
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
+}
+
+// Test OpAsmAttrInterface from tablegen genMnemonicAlias option.
+def TestOpAsmAttrInterfaceTablegenDefaultAttr : Test_Attr<"TestOpAsmAttrInterfaceTablegenDefault"> {
+  let mnemonic = "op_asm_attr_interface_tablegen_default";
+  let parameters = (ins "mlir::StringAttr":$value);
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
+
+  let genMnemonicAlias = 1;
 }
 
 #endif // TEST_ATTRDEFS

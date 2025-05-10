@@ -12,7 +12,6 @@
 #include "bolt/Passes/AllocCombiner.h"
 #include "bolt/Passes/AsmDump.h"
 #include "bolt/Passes/CMOVConversion.h"
-#include "bolt/Passes/ContinuityStats.h"
 #include "bolt/Passes/FixRISCVCallsPass.h"
 #include "bolt/Passes/FixRelaxationPass.h"
 #include "bolt/Passes/FrameOptimizer.h"
@@ -27,6 +26,7 @@
 #include "bolt/Passes/MCF.h"
 #include "bolt/Passes/PLTCall.h"
 #include "bolt/Passes/PatchEntries.h"
+#include "bolt/Passes/ProfileQualityStats.h"
 #include "bolt/Passes/RegReAssign.h"
 #include "bolt/Passes/ReorderData.h"
 #include "bolt/Passes/ReorderFunctions.h"
@@ -54,6 +54,9 @@ extern cl::opt<bool> PrintDynoStats;
 extern cl::opt<bool> DumpDotAll;
 extern cl::opt<std::string> AsmDump;
 extern cl::opt<bolt::PLTCall::OptType> PLT;
+extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
+               llvm::bolt::DeprecatedICFNumericOptionParser>
+    ICF;
 
 static cl::opt<bool>
 DynoStatsAll("dyno-stats-all",
@@ -64,9 +67,6 @@ static cl::opt<bool>
     EliminateUnreachable("eliminate-unreachable",
                          cl::desc("eliminate unreachable code"), cl::init(true),
                          cl::cat(BoltOptCategory));
-
-cl::opt<bool> ICF("icf", cl::desc("fold functions with identical code"),
-                  cl::cat(BoltOptCategory));
 
 static cl::opt<bool> JTFootprintReductionFlag(
     "jt-footprint-reduction",
@@ -125,6 +125,11 @@ static cl::opt<bool> PrintJTFootprintReduction(
     "print-after-jt-footprint-reduction",
     cl::desc("print function after jt-footprint-reduction pass"), cl::Hidden,
     cl::cat(BoltOptCategory));
+
+static cl::opt<bool>
+    PrintAdrRelaxation("print-adr-relaxation",
+                       cl::desc("print functions after ADR Relaxation pass"),
+                       cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
     PrintLongJmp("print-longjmp",
@@ -374,7 +379,7 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   if (opts::PrintProfileStats)
     Manager.registerPass(std::make_unique<PrintProfileStats>(NeverPrint));
 
-  Manager.registerPass(std::make_unique<PrintContinuityStats>(NeverPrint));
+  Manager.registerPass(std::make_unique<PrintProfileQualityStats>(NeverPrint));
 
   Manager.registerPass(std::make_unique<ValidateInternalCalls>(NeverPrint));
 
@@ -398,7 +403,7 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
                          opts::StripRepRet);
 
   Manager.registerPass(std::make_unique<IdenticalCodeFolding>(PrintICF),
-                       opts::ICF);
+                       opts::ICF != IdenticalCodeFolding::ICFLevel::None);
 
   Manager.registerPass(
       std::make_unique<SpecializeMemcpy1>(NeverPrint, opts::SpecializeMemcpy1),
@@ -423,7 +428,7 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(std::make_unique<Inliner>(PrintInline));
 
   Manager.registerPass(std::make_unique<IdenticalCodeFolding>(PrintICF),
-                       opts::ICF);
+                       opts::ICF != IdenticalCodeFolding::ICFLevel::None);
 
   Manager.registerPass(std::make_unique<PLTCall>(PrintPLT));
 
@@ -492,8 +497,13 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // memory profiling data.
   Manager.registerPass(std::make_unique<ReorderData>());
 
+  // Patch original function entries
+  if (BC.HasRelocations)
+    Manager.registerPass(std::make_unique<PatchEntries>());
+
   if (BC.isAArch64()) {
-    Manager.registerPass(std::make_unique<ADRRelaxationPass>());
+    Manager.registerPass(
+        std::make_unique<ADRRelaxationPass>(PrintAdrRelaxation));
 
     // Tighten branches according to offset differences between branch and
     // targets. No extra instructions after this pass, otherwise we may have
@@ -517,10 +527,6 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   // Assign each function an output section.
   Manager.registerPass(std::make_unique<AssignSections>());
-
-  // Patch original function entries
-  if (BC.HasRelocations)
-    Manager.registerPass(std::make_unique<PatchEntries>());
 
   // This pass turns tail calls into jumps which makes them invisible to
   // function reordering. It's unsafe to use any CFG or instruction analysis

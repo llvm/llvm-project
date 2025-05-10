@@ -211,7 +211,12 @@ Revert = NamedTuple(
 
 
 def _find_common_parent_commit(git_dir: str, ref_a: str, ref_b: str) -> str:
-    """Finds the closest common parent commit between `ref_a` and `ref_b`."""
+    """Finds the closest common parent commit between `ref_a` and `ref_b`.
+
+    Returns:
+        A SHA. Note that `ref_a` will be returned if `ref_a` is a parent of
+        `ref_b`, and vice-versa.
+    """
     return subprocess.check_output(
         ["git", "-C", git_dir, "merge-base", ref_a, ref_b],
         encoding="utf-8",
@@ -341,16 +346,31 @@ def find_reverts(
                 )
                 continue
 
-            if object_type == "commit":
-                all_reverts.append(Revert(sha, reverted_sha))
+            if object_type != "commit":
+                logging.error(
+                    "%s claims to revert the %s %s, which isn't a commit",
+                    sha,
+                    object_type,
+                    reverted_sha,
+                )
                 continue
 
-            logging.error(
-                "%s claims to revert %s -- which isn't a commit -- %s",
-                sha,
-                object_type,
-                reverted_sha,
-            )
+            # Rarely, reverts will cite SHAs on other branches (e.g., revert
+            # commit says it reverts a commit with SHA ${X}, but ${X} is not a
+            # parent of the revert). This can happen if e.g., the revert has
+            # been mirrored to another branch. Treat them the same as
+            # reverts of non-commits.
+            if _find_common_parent_commit(git_dir, sha, reverted_sha) != reverted_sha:
+                logging.error(
+                    "%s claims to revert %s, which is a commit that is not "
+                    "a parent of the revert",
+                    sha,
+                    reverted_sha,
+                )
+                continue
+
+            all_reverts.append(Revert(sha, reverted_sha))
+
 
     # Since `all_reverts` contains reverts in log order (e.g., newer comes before
     # older), we need to reverse this to keep with our guarantee of older =

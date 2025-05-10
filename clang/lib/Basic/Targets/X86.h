@@ -46,6 +46,9 @@ static const unsigned X86AddrSpaceMap[] = {
     271, // ptr32_uptr
     272, // ptr64
     0,   // hlsl_groupshared
+    0,   // hlsl_constant
+    0,   // hlsl_private
+    0,   // hlsl_device
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -384,7 +387,7 @@ public:
     return CPU != llvm::X86::CK_None;
   }
 
-  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
+  uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool setFPMath(StringRef Name) override;
 
@@ -508,8 +511,7 @@ public:
       MaxAtomicInlineWidth = 64;
   }
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {
@@ -533,6 +535,14 @@ public:
     IntPtrType = SignedLong;
     PtrDiffType = SignedLong;
   }
+};
+
+class LLVM_LIBRARY_VISIBILITY AppleMachOI386TargetInfo
+    : public AppleMachOTargetInfo<X86_32TargetInfo> {
+public:
+  AppleMachOI386TargetInfo(const llvm::Triple &Triple,
+                           const TargetOptions &Opts)
+      : AppleMachOTargetInfo<X86_32TargetInfo>(Triple, Opts) {}
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinI386TargetInfo
@@ -813,8 +823,7 @@ public:
       MaxAtomicInlineWidth = 128;
   }
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {
@@ -828,15 +837,25 @@ class LLVM_LIBRARY_VISIBILITY UEFIX86_64TargetInfo
 public:
   UEFIX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : UEFITargetInfo<X86_64TargetInfo>(Triple, Opts) {
+    // The UEFI spec does not mandate specific C++ ABI, integer widths, or
+    // alignment. We are setting these defaults to match the Windows target as
+    // it is the only way to build EFI applications with Clang/LLVM today. We
+    // intend to offer flexibility by supporting choices that are not default in
+    // Windows target in the future.
     this->TheCXXABI.set(TargetCXXABI::Microsoft);
-    this->MaxTLSAlign = 8192u * this->getCharWidth();
+    LongWidth = LongAlign = 32;
+    DoubleAlign = LongLongAlign = 64;
+    LongDoubleWidth = LongDoubleAlign = 64;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    IntMaxType = SignedLongLong;
+    Int64Type = SignedLongLong;
+    SizeType = UnsignedLongLong;
+    PtrDiffType = SignedLongLong;
+    IntPtrType = SignedLongLong;
+    WCharType = UnsignedShort;
+    WIntType = UnsignedShort;
     this->resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
                           "i64:64-i128:128-f80:128-n8:16:32:64-S128");
-  }
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    getOSDefines(Opts, X86TargetInfo::getTriple(), Builder);
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
@@ -847,6 +866,7 @@ public:
     switch (CC) {
     case CC_C:
     case CC_Win64:
+    case CC_X86_64SysV:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -946,7 +966,6 @@ public:
   CygwinX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_64TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
-    TLSSupported = false;
   }
 
   void getTargetDefines(const LangOptions &Opts,

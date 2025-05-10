@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STRING_VIEW
-#define _LIBCPP_STRING_VIEW
+#ifndef _LIBCPP___CXX03_STRING_VIEW
+#define _LIBCPP___CXX03_STRING_VIEW
 
 // clang-format off
 
@@ -213,16 +213,10 @@ namespace std {
 #include <__cxx03/__fwd/ostream.h>
 #include <__cxx03/__fwd/string_view.h>
 #include <__cxx03/__iterator/bounded_iter.h>
-#include <__cxx03/__iterator/concepts.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__iterator/reverse_iterator.h>
 #include <__cxx03/__iterator/wrap_iter.h>
 #include <__cxx03/__memory/pointer_traits.h>
-#include <__cxx03/__ranges/concepts.h>
-#include <__cxx03/__ranges/data.h>
-#include <__cxx03/__ranges/enable_borrowed_range.h>
-#include <__cxx03/__ranges/enable_view.h>
-#include <__cxx03/__ranges/size.h>
 #include <__cxx03/__string/char_traits.h>
 #include <__cxx03/__type_traits/is_array.h>
 #include <__cxx03/__type_traits/is_convertible.h>
@@ -242,13 +236,6 @@ namespace std {
 
 // [iterator.range]
 #include <__cxx03/__iterator/access.h>
-#include <__cxx03/__iterator/data.h>
-#include <__cxx03/__iterator/empty.h>
-#include <__cxx03/__iterator/reverse_access.h>
-#include <__cxx03/__iterator/size.h>
-
-// [string.view.synop]
-#include <__cxx03/compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -309,45 +296,10 @@ public:
 
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI basic_string_view(const _CharT* __s, size_type __len) _NOEXCEPT
       : __data_(__s),
-        __size_(__len) {
-#if _LIBCPP_STD_VER >= 14
-    // Allocations must fit in `ptrdiff_t` for pointer arithmetic to work. If `__len` exceeds it, the input
-    // range could not have been valid. Most likely the caller underflowed some arithmetic and inadvertently
-    // passed in a negative length.
-    _LIBCPP_ASSERT_VALID_INPUT_RANGE(
-        __len <= static_cast<size_type>(numeric_limits<difference_type>::max()),
-        "string_view::string_view(_CharT *, size_t): length does not fit in difference_type");
-    _LIBCPP_ASSERT_NON_NULL(
-        __len == 0 || __s != nullptr, "string_view::string_view(_CharT *, size_t): received nullptr");
-#endif
-  }
-
-#if _LIBCPP_STD_VER >= 20
-  template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
-    requires(is_same_v<iter_value_t<_It>, _CharT> && !is_convertible_v<_End, size_type>)
-  constexpr _LIBCPP_HIDE_FROM_ABI basic_string_view(_It __begin, _End __end)
-      : __data_(std::to_address(__begin)), __size_(__end - __begin) {
-    _LIBCPP_ASSERT_VALID_INPUT_RANGE(
-        (__end - __begin) >= 0, "std::string_view::string_view(iterator, sentinel) received invalid range");
-  }
-#endif // _LIBCPP_STD_VER >= 20
-
-#if _LIBCPP_STD_VER >= 23
-  template <class _Range>
-    requires(!is_same_v<remove_cvref_t<_Range>, basic_string_view> && ranges::contiguous_range<_Range> &&
-             ranges::sized_range<_Range> && is_same_v<ranges::range_value_t<_Range>, _CharT> &&
-             !is_convertible_v<_Range, const _CharT*> &&
-             (!requires(remove_cvref_t<_Range>& __d) { __d.operator std::basic_string_view<_CharT, _Traits>(); }))
-  constexpr explicit _LIBCPP_HIDE_FROM_ABI basic_string_view(_Range&& __r)
-      : __data_(ranges::data(__r)), __size_(ranges::size(__r)) {}
-#endif // _LIBCPP_STD_VER >= 23
+        __size_(__len) {}
 
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI basic_string_view(const _CharT* __s)
       : __data_(__s), __size_(std::__char_traits_length_checked<_Traits>(__s)) {}
-
-#if _LIBCPP_STD_VER >= 23
-  basic_string_view(nullptr_t) = delete;
-#endif
 
   // [string.view.iterators], iterators
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return cbegin(); }
@@ -639,92 +591,11 @@ public:
         data(), size(), __s, __pos, traits_type::length(__s));
   }
 
-#if _LIBCPP_STD_VER >= 20
-  constexpr _LIBCPP_HIDE_FROM_ABI bool starts_with(basic_string_view __s) const noexcept {
-    return size() >= __s.size() && compare(0, __s.size(), __s) == 0;
-  }
-
-  constexpr _LIBCPP_HIDE_FROM_ABI bool starts_with(value_type __c) const noexcept {
-    return !empty() && _Traits::eq(front(), __c);
-  }
-
-  constexpr _LIBCPP_HIDE_FROM_ABI bool starts_with(const value_type* __s) const noexcept {
-    return starts_with(basic_string_view(__s));
-  }
-
-  constexpr _LIBCPP_HIDE_FROM_ABI bool ends_with(basic_string_view __s) const noexcept {
-    return size() >= __s.size() && compare(size() - __s.size(), npos, __s) == 0;
-  }
-
-  constexpr _LIBCPP_HIDE_FROM_ABI bool ends_with(value_type __c) const noexcept {
-    return !empty() && _Traits::eq(back(), __c);
-  }
-
-  constexpr _LIBCPP_HIDE_FROM_ABI bool ends_with(const value_type* __s) const noexcept {
-    return ends_with(basic_string_view(__s));
-  }
-#endif
-
-#if _LIBCPP_STD_VER >= 23
-  constexpr _LIBCPP_HIDE_FROM_ABI bool contains(basic_string_view __sv) const noexcept { return find(__sv) != npos; }
-
-  constexpr _LIBCPP_HIDE_FROM_ABI bool contains(value_type __c) const noexcept { return find(__c) != npos; }
-
-  constexpr _LIBCPP_HIDE_FROM_ABI bool contains(const value_type* __s) const { return find(__s) != npos; }
-#endif
-
 private:
   const value_type* __data_;
   size_type __size_;
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_string_view);
-
-#if _LIBCPP_STD_VER >= 20
-template <class _CharT, class _Traits>
-inline constexpr bool ranges::enable_view<basic_string_view<_CharT, _Traits>> = true;
-
-template <class _CharT, class _Traits>
-inline constexpr bool ranges::enable_borrowed_range<basic_string_view<_CharT, _Traits> > = true;
-#endif // _LIBCPP_STD_VER >= 20
-
-// [string.view.deduct]
-
-#if _LIBCPP_STD_VER >= 20
-template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
-basic_string_view(_It, _End) -> basic_string_view<iter_value_t<_It>>;
-#endif // _LIBCPP_STD_VER >= 20
-
-#if _LIBCPP_STD_VER >= 23
-template <ranges::contiguous_range _Range>
-basic_string_view(_Range) -> basic_string_view<ranges::range_value_t<_Range>>;
-#endif
-
-// [string.view.comparison]
-
-#if _LIBCPP_STD_VER >= 20
-
-template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI constexpr bool operator==(basic_string_view<_CharT, _Traits> __lhs,
-                                                type_identity_t<basic_string_view<_CharT, _Traits>> __rhs) noexcept {
-  if (__lhs.size() != __rhs.size())
-    return false;
-  return __lhs.compare(__rhs) == 0;
-}
-
-template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(basic_string_view<_CharT, _Traits> __lhs,
-                                                 type_identity_t<basic_string_view<_CharT, _Traits>> __rhs) noexcept {
-  if constexpr (requires { typename _Traits::comparison_category; }) {
-    // [string.view]/4
-    static_assert(
-        __comparison_category<typename _Traits::comparison_category>, "return type is not a comparison category type");
-    return static_cast<typename _Traits::comparison_category>(__lhs.compare(__rhs) <=> 0);
-  } else {
-    return static_cast<weak_ordering>(__lhs.compare(__rhs) <=> 0);
-  }
-}
-
-#else
 
 // operator ==
 
@@ -867,8 +738,6 @@ operator>=(__type_identity_t<basic_string_view<_CharT, _Traits> > __lhs,
   return __lhs.compare(__rhs) >= 0;
 }
 
-#endif //  _LIBCPP_STD_VER >= 20
-
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, basic_string_view<_CharT, _Traits> __str);
@@ -900,49 +769,15 @@ template <>
 struct hash<basic_string_view<wchar_t, char_traits<wchar_t> > > : __string_view_hash<wchar_t> {};
 #endif
 
-#if _LIBCPP_STD_VER >= 14
-inline namespace literals {
-inline namespace string_view_literals {
-inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char> operator""sv(const char* __str, size_t __len) noexcept {
-  return basic_string_view<char>(__str, __len);
-}
-
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<wchar_t>
-operator""sv(const wchar_t* __str, size_t __len) noexcept {
-  return basic_string_view<wchar_t>(__str, __len);
-}
-#  endif
-
-#  ifndef _LIBCPP_HAS_NO_CHAR8_T
-inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char8_t>
-operator""sv(const char8_t* __str, size_t __len) noexcept {
-  return basic_string_view<char8_t>(__str, __len);
-}
-#  endif
-
-inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char16_t>
-operator""sv(const char16_t* __str, size_t __len) noexcept {
-  return basic_string_view<char16_t>(__str, __len);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char32_t>
-operator""sv(const char32_t* __str, size_t __len) noexcept {
-  return basic_string_view<char32_t>(__str, __len);
-}
-} // namespace string_view_literals
-} // namespace literals
-#endif
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/algorithm>
-#  include <__cxx03/concepts>
 #  include <__cxx03/cstdlib>
 #  include <__cxx03/iterator>
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_STRING_VIEW
+#endif // _LIBCPP___CXX03_STRING_VIEW

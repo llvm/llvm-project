@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_DISCARD_BLOCK_ENGINE_H
-#define _LIBCPP___RANDOM_DISCARD_BLOCK_ENGINE_H
+#ifndef _LIBCPP___CXX03___RANDOM_DISCARD_BLOCK_ENGINE_H
+#define _LIBCPP___CXX03___RANDOM_DISCARD_BLOCK_ENGINE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__random/is_seed_sequence.h>
@@ -34,9 +34,6 @@ class _LIBCPP_TEMPLATE_VIS discard_block_engine {
 
   static_assert(0 < __r, "discard_block_engine invalid parameters");
   static_assert(__r <= __p, "discard_block_engine invalid parameters");
-#ifndef _LIBCPP_CXX03_LANG // numeric_limits::max() is not constexpr in C++03
-  static_assert(__r <= numeric_limits<int>::max(), "discard_block_engine invalid parameters");
-#endif
 
 public:
   // types
@@ -46,13 +43,8 @@ public:
   static _LIBCPP_CONSTEXPR const size_t block_size = __p;
   static _LIBCPP_CONSTEXPR const size_t used_block = __r;
 
-#ifdef _LIBCPP_CXX03_LANG
   static const result_type _Min = _Engine::_Min;
   static const result_type _Max = _Engine::_Max;
-#else
-  static constexpr result_type _Min = _Engine::min();
-  static constexpr result_type _Max = _Engine::max();
-#endif
 
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Engine::min(); }
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Engine::max(); }
@@ -60,9 +52,6 @@ public:
   // constructors and seeding functions
   _LIBCPP_HIDE_FROM_ABI discard_block_engine() : __n_(0) {}
   _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(const _Engine& __e) : __e_(__e), __n_(0) {}
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(_Engine&& __e) : __e_(std::move(__e)), __n_(0) {}
-#endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(result_type __sd) : __e_(__sd), __n_(0) {}
   template <
       class _Sseq,
@@ -169,4 +158,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_DISCARD_BLOCK_ENGINE_H
+#endif // _LIBCPP___CXX03___RANDOM_DISCARD_BLOCK_ENGINE_H

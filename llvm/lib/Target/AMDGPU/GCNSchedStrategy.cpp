@@ -754,6 +754,10 @@ GCNScheduleDAGMILive::GCNScheduleDAGMILive(
       StartingOccupancy(MFI.getOccupancy()), MinOccupancy(StartingOccupancy),
       RegionLiveOuts(this, /*IsLiveOut=*/true) {
 
+  // We want regions with a single MI to be scheduled so that we can reason
+  // about them correctly during scheduling stages that move MIs between regions
+  // (e.g., rematerialization).
+  ScheduleSingleMIRegions = true;
   LLVM_DEBUG(dbgs() << "Starting occupancy is " << StartingOccupancy << ".\n");
   if (RelaxedOcc) {
     MinOccupancy = std::min(MFI.getMinAllowedOccupancy(), StartingOccupancy);
@@ -863,6 +867,8 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
       Pressure[CurRegion] = RPTracker.moveMaxPressure();
       if (CurRegion-- == RegionIdx)
         break;
+      auto &Rgn = Regions[CurRegion];
+      NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
     }
     RPTracker.advanceToNext();
     RPTracker.advanceBeforeNext();
@@ -1083,9 +1089,8 @@ bool PreRARematStage::initGCNSchedStage() {
     return false;
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  // Check maximum occupancy
-  if (ST.computeOccupancy(MF.getFunction(), MFI.getLDSSize()) ==
-      DAG.MinOccupancy)
+  // Rematerialization will not help if occupancy is not limited by reg usage.
+  if (ST.getOccupancyWithWorkGroupSizes(MF).second == DAG.MinOccupancy)
     return false;
 
   // FIXME: This pass will invalidate cached MBBLiveIns for regions
@@ -1150,10 +1155,10 @@ bool GCNSchedStage::initGCNRegion() {
   Unsched.reserve(DAG.NumRegionInstrs);
   if (StageID == GCNSchedStageID::OccInitialSchedule ||
       StageID == GCNSchedStageID::ILPInitialSchedule) {
+    const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(DAG.TII);
     for (auto &I : DAG) {
       Unsched.push_back(&I);
-      if (I.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER ||
-          I.getOpcode() == AMDGPU::IGLP_OPT)
+      if (SII->isIGLPMutationOnly(I.getOpcode()))
         DAG.RegionsWithIGLPInstrs[RegionIdx] = true;
     }
   } else {
@@ -1267,8 +1272,8 @@ void GCNSchedStage::checkScheduling() {
     return;
   }
 
-  unsigned TargetOccupancy =
-      std::min(S.getTargetOccupancy(), ST.getOccupancyWithLocalMemSize(MF));
+  unsigned TargetOccupancy = std::min(
+      S.getTargetOccupancy(), ST.getOccupancyWithWorkGroupSizes(MF).second);
   unsigned WavesAfter =
       std::min(TargetOccupancy, PressureAfter.getOccupancy(ST));
   unsigned WavesBefore =
@@ -1444,6 +1449,16 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
   if (WavesAfter < DAG.MinOccupancy)
     return true;
 
+  // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
+  if (ST.isDynamicVGPREnabled()) {
+    unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
+        &ST, PressureBefore.getVGPRNum(false));
+    unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
+        &ST, PressureAfter.getVGPRNum(false));
+    if (BlocksAfter > BlocksBefore)
+      return true;
+  }
+
   return false;
 }
 
@@ -1559,8 +1574,7 @@ void GCNSchedStage::revertScheduling() {
     }
 
     if (MI->getIterator() != DAG.RegionEnd) {
-      DAG.BB->remove(MI);
-      DAG.BB->insert(DAG.RegionEnd, MI);
+      DAG.BB->splice(DAG.RegionEnd, DAG.BB, MI);
       if (!MI->isDebugInstr())
         DAG.LIS->handleMove(*MI, true);
     }
@@ -1611,6 +1625,64 @@ void GCNSchedStage::revertScheduling() {
   DAG.Regions[RegionIdx] = std::pair(DAG.RegionBegin, DAG.RegionEnd);
 }
 
+bool PreRARematStage::allUsesAvailableAt(const MachineInstr *InstToRemat,
+                                         SlotIndex OriginalIdx,
+                                         SlotIndex RematIdx) const {
+
+  LiveIntervals *LIS = DAG.LIS;
+  MachineRegisterInfo &MRI = DAG.MRI;
+  OriginalIdx = OriginalIdx.getRegSlot(true);
+  RematIdx = std::max(RematIdx, RematIdx.getRegSlot(true));
+  for (const MachineOperand &MO : InstToRemat->operands()) {
+    if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
+      continue;
+
+    if (!MO.getReg().isVirtual()) {
+      // Do not attempt to reason about PhysRegs
+      // TODO: better analysis of PhysReg livness
+      if (!DAG.MRI.isConstantPhysReg(MO.getReg()) &&
+          !DAG.TII->isIgnorableUse(MO))
+        return false;
+
+      // Constant PhysRegs and IgnorableUses are okay
+      continue;
+    }
+
+    LiveInterval &LI = LIS->getInterval(MO.getReg());
+    const VNInfo *OVNI = LI.getVNInfoAt(OriginalIdx);
+    assert(OVNI);
+
+    // Don't allow rematerialization immediately after the original def.
+    // It would be incorrect if InstToRemat redefines the register.
+    // See PR14098.
+    if (SlotIndex::isSameInstr(OriginalIdx, RematIdx))
+      return false;
+
+    if (OVNI != LI.getVNInfoAt(RematIdx))
+      return false;
+
+    // Check that subrange is live at RematIdx.
+    if (LI.hasSubRanges()) {
+      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+      unsigned SubReg = MO.getSubReg();
+      LaneBitmask LM = SubReg ? TRI->getSubRegIndexLaneMask(SubReg)
+                              : MRI.getMaxLaneMaskForVReg(MO.getReg());
+      for (LiveInterval::SubRange &SR : LI.subranges()) {
+        if ((SR.LaneMask & LM).none())
+          continue;
+        if (!SR.liveAt(RematIdx))
+          return false;
+
+        // Early exit if all used lanes are checked. No need to continue.
+        LM &= ~SR.LaneMask;
+        if (LM.none())
+          break;
+      }
+    }
+  }
+  return true;
+}
+
 void PreRARematStage::collectRematerializableInstructions() {
   const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(DAG.TRI);
   for (unsigned I = 0, E = DAG.MRI.getNumVirtRegs(); I != E; ++I) {
@@ -1632,6 +1704,47 @@ void PreRARematStage::collectRematerializableInstructions() {
     if (Def->getParent() == UseI->getParent())
       continue;
 
+    bool HasRematDependency = false;
+    // Check if this instruction uses any registers that are planned to be
+    // rematerialized
+    for (auto &RematEntry : RematerializableInsts) {
+      if (find_if(RematEntry.second,
+                  [&Def](std::pair<MachineInstr *, MachineInstr *> &Remat) {
+                    for (MachineOperand &MO : Def->operands()) {
+                      if (!MO.isReg())
+                        continue;
+                      if (MO.getReg() == Remat.first->getOperand(0).getReg())
+                        return true;
+                    }
+                    return false;
+                  }) != RematEntry.second.end()) {
+        HasRematDependency = true;
+        break;
+      }
+    }
+    // Do not rematerialize an instruction if it uses an instruction that we
+    // have designated for rematerialization.
+    // FIXME: Allow for rematerialization chains: this requires 1. updating
+    // remat points to account for uses that are rematerialized, and 2. either
+    // rematerializing the candidates in careful ordering, or deferring the MBB
+    // RP walk until the entire chain has been rematerialized.
+    if (HasRematDependency)
+      continue;
+
+    // Similarly, check if the UseI is planned to be remat.
+    for (auto &RematEntry : RematerializableInsts) {
+      if (find_if(RematEntry.second,
+                  [&UseI](std::pair<MachineInstr *, MachineInstr *> &Remat) {
+                    return Remat.first == UseI;
+                  }) != RematEntry.second.end()) {
+        HasRematDependency = true;
+        break;
+      }
+    }
+
+    if (HasRematDependency)
+      break;
+
     // We are only collecting defs that are defined in another block and are
     // live-through or used inside regions at MinOccupancy. This means that the
     // register must be in the live-in set for the region.
@@ -1640,8 +1753,13 @@ void PreRARematStage::collectRematerializableInstructions() {
       auto It = DAG.LiveIns[I].find(Reg);
       if (It != DAG.LiveIns[I].end() && !It->second.none()) {
         if (DAG.RegionsWithMinOcc[I]) {
-          RematerializableInsts[I][Def] = UseI;
-          AddedToRematList = true;
+          SlotIndex DefIdx = DAG.LIS->getInstructionIndex(*Def);
+          SlotIndex UseIdx =
+              DAG.LIS->getInstructionIndex(*UseI).getRegSlot(true);
+          if (allUsesAvailableAt(Def, DefIdx, UseIdx)) {
+            RematerializableInsts[I][Def] = UseI;
+            AddedToRematList = true;
+          }
         }
 
         // Collect regions with rematerializable reg as live-in to avoid
@@ -1672,7 +1790,7 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
   // Collect only regions that has a rematerializable def as a live-in.
   SmallSet<unsigned, 16> ImpactedRegions;
   for (const auto &It : RematDefToLiveInRegions)
-    ImpactedRegions.insert(It.second.begin(), It.second.end());
+    ImpactedRegions.insert_range(It.second);
 
   // Make copies of register pressure and live-ins cache that will be updated
   // as we rematerialize.
@@ -1715,6 +1833,35 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
       Register DefReg = Def->getOperand(0).getReg();
       TotalSinkableRegs +=
           SIRegisterInfo::getNumCoveredRegs(NewLiveIns[I][DefReg]);
+#ifdef EXPENSIVE_CHECKS
+      // All uses are known to be available / live at the remat point. Thus, the
+      // uses should already be live in to the region.
+      for (MachineOperand &MO : Def->operands()) {
+        if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
+          continue;
+
+        Register UseReg = MO.getReg();
+        if (!UseReg.isVirtual())
+          continue;
+
+        LiveInterval &LI = LIS->getInterval(UseReg);
+        LaneBitmask LM = DAG.MRI.getMaxLaneMaskForVReg(MO.getReg());
+        if (LI.hasSubRanges() && MO.getSubReg())
+          LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
+
+        assert(NewLiveIns[I].contains(UseReg));
+        LaneBitmask LiveInMask = NewLiveIns[I][UseReg];
+        LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
+        // If this register has lanes not covered by the LiveIns, be sure they
+        // do not map to any subrange. ref:
+        // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
+        if (UncoveredLanes.any()) {
+          assert(LI.hasSubRanges());
+          for (LiveInterval::SubRange &SR : LI.subranges())
+            assert((SR.LaneMask & UncoveredLanes).none());
+        }
+      }
+#endif
     }
     int VGPRsAfterSink = VGPRUsage - TotalSinkableRegs;
     unsigned OptimisticOccupancy = ST.getOccupancyWithNumVGPRs(VGPRsAfterSink);
@@ -1730,10 +1877,7 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
       MachineBasicBlock::iterator InsertPos =
           MachineBasicBlock::iterator(It.second);
       Register Reg = Def->getOperand(0).getReg();
-      // Rematerialize MI to its use block. Since we are only rematerializing
-      // instructions that do not have any virtual reg uses, we do not need to
-      // call LiveRangeEdit::allUsesAvailableAt() and
-      // LiveRangeEdit::canRematerializeAt().
+      // Rematerialize MI to its use block.
       TII->reMaterialize(*InsertPos->getParent(), InsertPos, Reg,
                          Def->getOperand(0).getSubReg(), *Def, *DAG.TRI);
       MachineInstr *NewMI = &*std::prev(InsertPos);
@@ -1838,14 +1982,19 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
   return true;
 }
 
-// Copied from MachineLICM
 bool PreRARematStage::isTriviallyReMaterializable(const MachineInstr &MI) {
   if (!DAG.TII->isTriviallyReMaterializable(MI))
     return false;
 
-  for (const MachineOperand &MO : MI.all_uses())
-    if (MO.getReg().isVirtual())
+  for (const MachineOperand &MO : MI.all_uses()) {
+    // We can't remat physreg uses, unless it is a constant or an ignorable
+    // use (e.g. implicit exec use on VALU instructions)
+    if (MO.getReg().isPhysical()) {
+      if (DAG.MRI.isConstantPhysReg(MO.getReg()) || DAG.TII->isIgnorableUse(MO))
+        continue;
       return false;
+    }
+  }
 
   return true;
 }
@@ -1893,9 +2042,9 @@ void GCNScheduleDAGMILive::updateRegionBoundaries(
 }
 
 static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
-  return any_of(*DAG, [](MachineBasicBlock::iterator MI) {
-    unsigned Opc = MI->getOpcode();
-    return Opc == AMDGPU::SCHED_GROUP_BARRIER || Opc == AMDGPU::IGLP_OPT;
+  const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(DAG->TII);
+  return any_of(*DAG, [SII](MachineBasicBlock::iterator MI) {
+    return SII->isIGLPMutationOnly(MI->getOpcode());
   });
 }
 

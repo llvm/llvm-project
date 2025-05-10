@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_ADJACENT_DIFFERENCE_H
-#define _LIBCPP___NUMERIC_ADJACENT_DIFFERENCE_H
+#ifndef _LIBCPP___CXX03___NUMERIC_ADJACENT_DIFFERENCE_H
+#define _LIBCPP___CXX03___NUMERIC_ADJACENT_DIFFERENCE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/iterator_traits.h>
@@ -31,11 +31,7 @@ adjacent_difference(_InputIterator __first, _InputIterator __last, _OutputIterat
     *__result = __acc;
     for (++__first, (void)++__result; __first != __last; ++__first, (void)++__result) {
       typename iterator_traits<_InputIterator>::value_type __val(*__first);
-#if _LIBCPP_STD_VER >= 20
-      *__result = __val - std::move(__acc);
-#else
       *__result = __val - __acc;
-#endif
       __acc = std::move(__val);
     }
   }
@@ -50,11 +46,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator adjacent_dif
     *__result = __acc;
     for (++__first, (void)++__result; __first != __last; ++__first, (void)++__result) {
       typename iterator_traits<_InputIterator>::value_type __val(*__first);
-#if _LIBCPP_STD_VER >= 20
-      *__result = __binary_op(__val, std::move(__acc));
-#else
       *__result = __binary_op(__val, __acc);
-#endif
       __acc = std::move(__val);
     }
   }
@@ -65,4 +57,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NUMERIC_ADJACENT_DIFFERENCE_H
+#endif // _LIBCPP___CXX03___NUMERIC_ADJACENT_DIFFERENCE_H

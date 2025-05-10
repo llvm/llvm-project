@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE
-#define _LIBCPP___LOCALE
+#ifndef _LIBCPP___CXX03___LOCALE
+#define _LIBCPP___CXX03___LOCALE
 
 #include <__cxx03/__config>
 #include <__cxx03/__locale_dir/locale_base_api.h>
@@ -84,9 +84,7 @@ public:
   // locale operations:
   string name() const;
   bool operator==(const locale&) const;
-#if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const locale& __y) const { return !(*this == __y); }
-#endif
   template <class _CharT, class _Traits, class _Allocator>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS bool
   operator()(const basic_string<_CharT, _Traits, _Allocator>&, const basic_string<_CharT, _Traits, _Allocator>&) const;
@@ -1510,4 +1508,4 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___LOCALE
+#endif // _LIBCPP___CXX03___LOCALE

@@ -4,6 +4,9 @@
 LLVM GitHub User Guide
 ======================
 
+.. contents::
+   :local:
+
 Introduction
 ============
 The LLVM Project uses `GitHub <https://github.com/>`_ for
@@ -15,30 +18,11 @@ The LLVM Project uses `GitHub <https://github.com/>`_ for
 This page describes how the LLVM Project users and developers can
 participate in the project using GitHub.
 
-Branches
-========
+Before your first PR
+====================
 
-It is possible to create branches that starts with `users/<username>/`, however this is
-intended to be able to support "stacked" pull-request. Do not create any branches in the
-llvm/llvm-project repository otherwise, please use a fork (see below). User branches that
-aren't associated with a pull-request **will be deleted**.
-
-Using Graphite for stacked Pull Requests
-========================================
-
-`Graphite <https://app.graphite.dev/>`_ is a stacked pull request tool supported
-by the LLVM repo (the other being `reviewable.io <https://reviewable.io>`_).
-
-Graphite will want to create branches under ``llvm/llvm-project`` rather than your
-private fork, so the guidance above, about branch naming, is critical, otherwise
-``gt submit`` (i.e. publish your PRs for review) will fail.
-
-Use ``gt config`` then ``Branch naming settings`` and ``Set a prefix for branch names``.
-Include the last ``/``.
-
-If you didn't do the above and Graphite created non-prefixed branches, a simple way to
-unblock is to rename (``git -m <old name> <new name>``), and then checkout the branch
-and ``gt track``.
+Please ensure that you have set a valid email address in your GitHub account,
+see :ref:`github-email-address`.
 
 Pull Requests
 =============
@@ -50,7 +34,7 @@ documentation refer to `GitHub's documentation <https://docs.github.com/pull-req
 .. note::
    If you are using a Pull Request for purposes other than review
    (eg: precommit CI results, convenient web-based reverts, etc)
-   `skip-precommit-approval <https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`_
+   add the `skip-precommit-approval <https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`_
    label to the PR.
 
 GitHub Tools
@@ -58,8 +42,7 @@ GitHub Tools
 You can interact with GitHub in several ways: via git command line tools,
 the web browser, `GitHub Desktop <https://desktop.github.com/>`_, or the
 `GitHub CLI <https://cli.github.com>`_. This guide will cover the git command line
-tools and the GitHub CLI. The GitHub CLI (`gh`) will be most like the `arc` workflow and
-recommended.
+tools and the GitHub CLI.
 
 Creating Pull Requests
 ----------------------
@@ -144,15 +127,31 @@ Approvals
 Before merging a PR you must have the required approvals. See
 :ref:`lgtm_how_a_patch_is_accepted` for more details.
 
+
 Landing your change
 -------------------
 
-When your PR has been approved you can merge your changes.
+After your PR is approved, ensure that:
 
-If you do not have write permissions for the repository, the merge button in
-GitHub's web interface will be disabled. If this is the case, continue following
-the steps here but ask one of your reviewers to click the merge button on your
-behalf.
+  * The PR title and description describe the final changes. These will be used
+    as the title and message of the final squashed commit. The titles and
+    messages of commits in the PR will **not** be used.
+  * You have set a valid email address in your GitHub account, see :ref:`github-email-address`.
+
+.. note::
+   The LLVM Project monorepo on GitHub is configured to always use "Squash
+   and Merge" as the pull request merge option when using the web interface.
+   With this option, GitHub uses the PR summary as the default commit
+   message.
+
+   Users with write access who can merge PRs have a final opportunity to edit
+   the commit title and message before merging. However, this option is not
+   available to contributors without write access.
+
+At this point, you can merge your changes. If you do not have write permissions
+for the repository, the merge button in GitHub's web interface will be
+disabled. If this is the case, continue following the steps here but ask one of
+your reviewers to click the merge button on your behalf.
 
 If the PR is a single commit, all you need to do is click the merge button in
 GitHub's web interface.
@@ -214,6 +213,131 @@ commonly used first:
   request will understand that you're rebasing just your patches, and display
   this result correctly with a note that a force push did occur.
 
+.. _github_branches:
+
+Branches
+========
+
+It is possible to create branches in `llvm/llvm-project/` that start with
+`users/<username>/`, however this is intended to be able to support "stacked"
+pull-request. Do not create any branches in the `llvm/llvm-project` repository
+otherwise, please use a fork (see above). User branches that aren't
+associated with a pull-request **will be deleted**.
+
+Stacked Pull Requests
+=====================
+
+To separate related changes or to break down a larger PR into smaller, reviewable
+pieces, use "stacked pull requests" — this helps make the review process
+smoother.
+
+.. note::
+   The LLVM Project monorepo on GitHub is configured to always use "Squash and
+   Merge" as the pull request merge option. As a result, each PR results in
+   exactly one commit being merged into the project.
+
+   This means that stacked pull requests are the only available option for
+   landing a series of related changes. In contrast, submitting a PR with
+   multiple commits and merging them as-is (without squashing) is not supported
+   in LLVM.
+
+While GitHub does not natively support stacked pull requests, there are several
+common alternatives.
+
+To illustrate, assume that you are working on two branches in your fork of the
+``llvm/llvm-project`` repository, and you want to eventually merge both into
+``main``:
+
+- `feature_1`, which contains commit `feature_commit_1`
+- `feature_2`, which contains commit `feature_commit_2` and depends on
+  `feature_1` (so it also includes `feature_commit_1`)
+
+Your options are as follows:
+
+#. Use user branches in ``llvm/llvm-project``
+
+   Create user branches in the main repository, as described
+   :ref:`above<github_branches>`. Then:
+
+   - Open a pull request from `users/<username>/feature_1` → `main`
+   - Open another from `users/<username>/feature_2` → `users/<username>/feature_1`
+
+   This approach allows GitHub to display clean, incremental diffs for each PR
+   in the stack, making it much easier for reviewers to see what has changed at
+   each step. Once `feature_1` is merged, GitHub will automatically rebase and
+   re-target your branch `feature_2` to `main`. For more complex stacks, you can
+   perform this step using the web interface.
+
+   This approach requires commit access. See how to obtain it
+   `here <https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access>`_.
+
+#. Two PRs with a dependency note
+
+   Create PR_1 for `feature_1` and PR_2 for `feature_2`. In PR_2, include a
+   note in the PR summary indicating that it depends on PR_1 (e.g.,
+   “Depends on #PR_1”).
+
+   To make review easier, make it clear which commits are part of the base PR
+   and which are new, e.g. "The first N commits are from the base PR". This
+   helps reviewers focus only on the incremental changes.
+
+#. Use a stacked PR tool
+
+   Use tools like SPR or Graphite (described below) to automate managing
+   stacked PRs. These tools are also based on using user branches
+   in ``llvm/llvm-project``.
+
+.. note::
+   When not using user branches, GitHub will not display proper diffs for
+   subsequent PRs in a stack. Instead, it will show a combined diff that
+   includes all commits from earlier PRs.
+
+   As described in the first option above, in such cases it is the PR author’s
+   responsibility to clearly indicate which commits are relevant to the
+   current PR. For example: “The first N commits are from the base PR.”
+
+   You can avoid this issue by using user branches directly in the
+   ``llvm/llvm-project`` repository.
+
+
+Using Graphite for stacked Pull Requests
+----------------------------------------
+
+`Graphite <https://app.graphite.dev/>`_ is a stacked pull request tool supported
+by the LLVM repo (the other being `reviewable.io <https://reviewable.io>`_).
+
+Graphite will want to create branches under ``llvm/llvm-project`` rather than your
+private fork, so the guidance above, about branch naming, is critical, otherwise
+``gt submit`` (i.e. publish your PRs for review) will fail.
+
+Use ``gt config`` then ``Branch naming settings`` and ``Set a prefix for branch names``.
+Include the last ``/``.
+
+If you didn't do the above and Graphite created non-prefixed branches, a simple way to
+unblock is to rename (``git -m <old name> <new name>``), and then checkout the branch
+and ``gt track``.
+
+Pre-merge Continuous Integration (CI)
+-------------------------------------
+
+Multiple checks will be applied on a pull-request, either for linting/formatting
+or some build and tests. None of these are perfect and you will encounter
+false positive, infrastructure failures (unstable or unavailable worker), or
+you will be unlucky and based your change on a broken revision of the main branch.
+
+None of the checks are strictly mandatory: these are tools to help us build a
+better codebase and be more productive (by avoiding issues found post-merge and
+possible reverts). As a developer you're empowered to exercise your judgement
+about bypassing any of the checks when merging code.
+
+The infrastructure can print messages that make it seem like these are mandatory,
+but this is just an artifact of GitHub infrastructure and not a policy of the
+project.
+
+However, please make sure you do not force-merge any changes that have clear
+test failures directly linked to your changes. Our policy is still to keep the
+``main`` branch in a good condition, and introducing failures to be fixed later
+violates that policy.
 
 Problems After Landing Your Change
 ==================================
@@ -416,9 +540,13 @@ Releases
 Backporting Fixes to the Release Branches
 -----------------------------------------
 You can use special comments on issues or pull requests to make backport
-requests for the release branches.  This is done by making a comment containing
-the following command on any issue or pull request that has been added to one
-of the "X.Y.Z Release" milestones.
+requests for the release branches.  To do this, after your pull request has been
+merged:
+
+1. Edit "Milestone" at the right side of the issue or pull request
+   to say "LLVM X.Y Release"
+
+2. Add a comment to it in the following format:
 
 ::
 

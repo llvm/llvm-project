@@ -13,6 +13,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cmath>
@@ -44,8 +45,8 @@ transform::gpu::CopyMappingInfo::CopyMappingInfo(MLIRContext *ctx,
          "only 1,2,3-D copies are supported for now");
 
   LDBG("START CopyMappingInfo, favorPredication: " << favorPredication);
-  LLVM_DEBUG(llvm::interleaveComma(copySizes, DBGS() << "--copy shape: ");
-             llvm::dbgs() << "\n";);
+  LLVM_DEBUG(DBGS() << "--copy shape: " << llvm::interleaved(copySizes)
+                    << "\n");
 
   // Greedily find the largest vector size that can be used to copy the most
   // minor dimension: we are in the business of filling kMaxVectorLoadBitWidth
@@ -63,11 +64,10 @@ transform::gpu::CopyMappingInfo::CopyMappingInfo(MLIRContext *ctx,
   if (status == Status::Invalid)
     return;
 
-  LLVM_DEBUG(llvm::interleaveComma(copySizes, DBGS() << "--copy: ");
-             llvm::dbgs() << "\n"; llvm::interleaveComma(
-                 this->numThreads, DBGS() << "--numThreads: ");
-             llvm::dbgs() << "\n";);
-  LDBG("--vectorSize: " << this->vectorSize);
+  LLVM_DEBUG(DBGS() << "--copy: " << llvm::interleaved(copySizes) << "\n"
+                    << "--numThreads: " << llvm::interleaved(this->numThreads)
+                    << "\n"
+                    << "--vectorSize: " << this->vectorSize << "\n");
   assert(this->numThreads.size() == copySizes.size() &&
          "compute copy mapping expected same number of threads and copy sizes");
 
@@ -158,10 +158,8 @@ static SmallVector<int64_t> maximizeNumThreads(ArrayRef<int64_t> sizes,
     int64_t localBest = factor * product(nestedThreadsPerDim);
     if (localBest > best && localBest <= maxNumThreads) {
       LDBG(indent << "new localBest: " << localBest);
-      LLVM_DEBUG(
-          llvm::interleaveComma(nestedThreadsPerDim,
-                                DBGS() << indent << "nestedThreadsPerDim: ");
-          llvm::dbgs() << "\n";);
+      LDBG(indent << "nestedThreadsPerDim: "
+                  << llvm::interleaved(nestedThreadsPerDim));
       localThreadsPerDim.clear();
       localThreadsPerDim.push_back(factor);
       llvm::append_range(localThreadsPerDim, nestedThreadsPerDim);
@@ -170,10 +168,7 @@ static SmallVector<int64_t> maximizeNumThreads(ArrayRef<int64_t> sizes,
   }
 
   LDBG(indent << "found globalBest: " << best);
-  LLVM_DEBUG(llvm::interleaveComma(localThreadsPerDim,
-                                   DBGS() << indent << "numThreads: ");
-             llvm::dbgs() << "\n";);
-
+  LDBG(indent << "numThreads: " << llvm::interleaved(localThreadsPerDim));
   return localThreadsPerDim;
 }
 
@@ -222,7 +217,7 @@ transform::gpu::CopyMappingInfo::inferNumThreadsImpl(
   // Scale the most minor size to account for the chosen vector size and
   // maximize the number of threads without exceeding the total number of
   // threads.
-  SmallVector<int64_t> scaledSizes{sizes};
+  SmallVector<int64_t> scaledSizes(sizes);
   scaledSizes.back() /= desiredVectorSize;
   if (scaledSizes.back() > totalNumThreads) {
     LDBG("--Too few threads given the required vector size -> FAIL");
@@ -231,10 +226,8 @@ transform::gpu::CopyMappingInfo::inferNumThreadsImpl(
   SmallVector<int64_t> inferredNumThreads =
       maximizeNumThreads(scaledSizes, 0, totalNumThreads);
 
-  LLVM_DEBUG(llvm::interleaveComma(inferredNumThreads,
-                                   DBGS() << "inferred numThreads: ");
-             llvm::dbgs() << "\n";
-             LDBG("computed actualVectorSize: " << desiredVectorSize););
+  LDBG("inferred numThreads: " << llvm::interleaved(inferredNumThreads));
+  LDBG("computed actualVectorSize: " << desiredVectorSize);
 
   // Corner case: we cannot use more threads than available. If the dimension of
   // the copy is so bad it is because higher-level tiling did not do its job, we
@@ -255,13 +248,10 @@ transform::gpu::CopyMappingInfo::inferNumThreadsImpl(
 }
 
 void transform::gpu::CopyMappingInfo::print(llvm::raw_ostream &os) const {
-  os << "MappingInfo{";
-  os << "CopyMappingInfo: ";
-  os << "valid: " << (status != Status::Invalid) << ", ";
-  os << "vectorSize: " << vectorSize << ", ";
-  llvm::interleaveComma(numThreads, os << ", numThreads: {");
-  llvm::interleaveComma(smallestBoundingTileSizes,
-                        os << "}, smallestBoundingTileSizes: {");
-  llvm::interleaveComma(threadMapping, os << "}, threadMapping: {");
-  os << "}}";
+  os << "MappingInfo{"
+     << "CopyMappingInfo: " << "valid: " << (status != Status::Invalid) << ", "
+     << "vectorSize: " << vectorSize << ", numThreads: {"
+     << llvm::interleaved(numThreads) << "}, smallestBoundingTileSizes: {"
+     << llvm::interleaved(smallestBoundingTileSizes) << "}, threadMapping: {"
+     << llvm::interleaved(threadMapping) << "}}";
 }

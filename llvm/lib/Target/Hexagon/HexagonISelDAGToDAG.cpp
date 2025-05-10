@@ -617,7 +617,8 @@ void HexagonDAGToDAGISel::SelectSHL(SDNode *N) {
       if (ConstantSDNode *C2 = dyn_cast<ConstantSDNode>(Shl2_1)) {
         int32_t ValConst = 1 << (ShlConst + C2->getSExtValue());
         if (isInt<9>(-ValConst)) {
-          SDValue Val = CurDAG->getTargetConstant(-ValConst, dl, MVT::i32);
+          SDValue Val =
+              CurDAG->getSignedTargetConstant(-ValConst, dl, MVT::i32);
           SDNode *Result = CurDAG->getMachineNode(Hexagon::M2_mpysmi, dl,
                                                   MVT::i32, Shl2_0, Val);
           ReplaceNode(N, Result);
@@ -1097,7 +1098,7 @@ static bool isMemOPCandidate(SDNode *I, SDNode *U) {
   SDValue S1 = U->getOperand(1);
   SDValue SY = (S0.getNode() == I) ? S1 : S0;
 
-  SDNode *UUse = *U->use_begin();
+  SDNode *UUse = *U->user_begin();
   if (UUse->getNumValues() != 1)
     return false;
 
@@ -1302,8 +1303,8 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
     EVT OpVT = OpI1.getValueType();
     if (!OpVT.isSimple() || OpVT.getSimpleVT() != MVT::i1)
       continue;
-    for (auto I = N->use_begin(), E = N->use_end(); I != E; ++I) {
-      SDNode *U = *I;
+    for (SDUse &Use : N->uses()) {
+      SDNode *U = Use.getUser();
       if (U->getNumValues() != 1)
         continue;
       EVT UVT = U->getValueType(0);
@@ -1316,7 +1317,7 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
         continue;
 
       // Potentially simplifiable operation.
-      unsigned I1N = I.getOperandNo();
+      unsigned I1N = Use.getOperandNo();
       SmallVector<SDValue,2> Ops(U->getNumOperands());
       for (unsigned i = 0, n = U->getNumOperands(); i != n; ++i)
         Ops[i] = U->getOperand(i);
@@ -2021,8 +2022,9 @@ static bool isTargetConstant(const SDValue &V) {
 }
 
 unsigned HexagonDAGToDAGISel::getUsesInFunction(const Value *V) {
-  if (GAUsesInFunction.count(V))
-    return GAUsesInFunction[V];
+  auto [It, Inserted] = GAUsesInFunction.try_emplace(V);
+  if (!Inserted)
+    return It->second;
 
   unsigned Result = 0;
   const Function &CurF = CurDAG->getMachineFunction().getFunction();
@@ -2032,7 +2034,7 @@ unsigned HexagonDAGToDAGISel::getUsesInFunction(const Value *V) {
       ++Result;
   }
 
-  GAUsesInFunction[V] = Result;
+  It->second = Result;
 
   return Result;
 }
@@ -2431,14 +2433,11 @@ void HexagonDAGToDAGISel::rebalanceAddressTrees() {
       Worklist.push_back(N->getOperand(1).getNode());
 
       // Not a root if it has only one use and same opcode as its parent
-      if (N->hasOneUse() && Opcode == N->use_begin()->getOpcode())
+      if (N->hasOneUse() && Opcode == N->user_begin()->getOpcode())
         continue;
 
       // This root node has already been processed
-      if (RootWeights.count(N))
-        continue;
-
-      RootWeights[N] = -1;
+      RootWeights.try_emplace(N, -1);
     }
 
     // Balance node itself

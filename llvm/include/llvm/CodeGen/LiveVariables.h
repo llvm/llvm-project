@@ -135,7 +135,7 @@ private:   // Intermediate data structures
   // register references are presumed dead across basic blocks.
   std::vector<MachineInstr *> PhysRegUse;
 
-  std::vector<SmallVector<unsigned, 4>> PHIVarInfo;
+  std::vector<SmallVector<Register, 4>> PHIVarInfo;
 
   // DistanceMap - Keep track the distance of a MI from the start of the
   // current basic block.
@@ -156,8 +156,8 @@ private:   // Intermediate data structures
 
   void HandlePhysRegUse(Register Reg, MachineInstr &MI);
   void HandlePhysRegDef(Register Reg, MachineInstr *MI,
-                        SmallVectorImpl<unsigned> &Defs);
-  void UpdatePhysRegDefs(MachineInstr &MI, SmallVectorImpl<unsigned> &Defs);
+                        SmallVectorImpl<Register> &Defs);
+  void UpdatePhysRegDefs(MachineInstr &MI, SmallVectorImpl<Register> &Defs);
 
   /// FindLastRefOrPartRef - Return the last reference or partial reference of
   /// the specified register.
@@ -173,7 +173,7 @@ private:   // Intermediate data structures
   /// is coming from.
   void analyzePHINodes(const MachineFunction& Fn);
 
-  void runOnInstr(MachineInstr &MI, SmallVectorImpl<unsigned> &Defs,
+  void runOnInstr(MachineInstr &MI, SmallVectorImpl<Register> &Defs,
                   unsigned NumRegs);
 
   void runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs);

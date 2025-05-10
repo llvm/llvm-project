@@ -798,6 +798,21 @@ static_assert(__builtin_reduce_xor((vector4long){(long long)0x1111111111111111L,
 static_assert(__builtin_reduce_xor((vector4uint){0x11111111U, 0x22222222U, 0x44444444U, 0x88888888U}) == 0xFFFFFFFFU);
 static_assert(__builtin_reduce_xor((vector4ulong){0x1111111111111111UL, 0x2222222222222222UL, 0x4444444444444444UL, 0x8888888888888888UL}) == 0xFFFFFFFFFFFFFFFFUL);
 
+static_assert(__builtin_reduce_min((vector4char){}) == 0);
+static_assert(__builtin_reduce_min((vector4char){(char)0x11, (char)0x22, (char)0x44, (char)0x88}) == (char)0x88);
+static_assert(__builtin_reduce_min((vector4short){(short)0x1111, (short)0x2222, (short)0x4444, (short)0x8888}) == (short)0x8888);
+static_assert(__builtin_reduce_min((vector4int){(int)0x11111111, (int)0x22222222, (int)0x44444444, (int)0x88888888}) == (int)0x88888888);
+static_assert(__builtin_reduce_min((vector4long){(long long)0x1111111111111111L, (long long)0x2222222222222222L, (long long)0x4444444444444444L, (long long)0x8888888888888888L}) == (long long)0x8888888888888888L);
+static_assert(__builtin_reduce_min((vector4uint){0x11111111U, 0x22222222U, 0x44444444U, 0x88888888U}) == 0x11111111U);
+static_assert(__builtin_reduce_min((vector4ulong){0x1111111111111111UL, 0x2222222222222222UL, 0x4444444444444444UL, 0x8888888888888888UL}) == 0x1111111111111111UL);
+static_assert(__builtin_reduce_max((vector4char){}) == 0);
+static_assert(__builtin_reduce_max((vector4char){(char)0x11, (char)0x22, (char)0x44, (char)0x88}) == (char)0x44);
+static_assert(__builtin_reduce_max((vector4short){(short)0x1111, (short)0x2222, (short)0x4444, (short)0x8888}) == (short)0x4444);
+static_assert(__builtin_reduce_max((vector4int){(int)0x11111111, (int)0x22222222, (int)0x44444444, (int)0x88888888}) == (int)0x44444444);
+static_assert(__builtin_reduce_max((vector4long){(long long)0x1111111111111111L, (long long)0x2222222222222222L, (long long)0x4444444444444444L, (long long)0x8888888888888888L}) == (long long)0x4444444444444444L);
+static_assert(__builtin_reduce_max((vector4uint){0x11111111U, 0x22222222U, 0x44444444U, 0x88888888U}) == 0x88888888U);
+static_assert(__builtin_reduce_max((vector4ulong){0x1111111111111111UL, 0x2222222222222222UL, 0x4444444444444444UL, 0x8888888888888888UL}) == 0x8888888888888888UL);
+
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_popcount((vector4char){1, 2, 3, 4})) == (LITTLE_END ? 0x01020101 : 0x01010201));
 static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_popcount((vector4short){0, 0x0F0F, ~0, ~0x0F0F})) == (LITTLE_END ? 0x0008001000080000 : 0x0000000800100008));
 static_assert(__builtin_reduce_add(__builtin_elementwise_popcount((vector4int){1, 2, 3, 4})) == 5);

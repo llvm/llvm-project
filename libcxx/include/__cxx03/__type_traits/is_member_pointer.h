@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_MEMBER_POINTER_H
-#define _LIBCPP___TYPE_TRAITS_IS_MEMBER_POINTER_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_MEMBER_POINTER_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_MEMBER_POINTER_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -27,17 +27,6 @@ struct _LIBCPP_TEMPLATE_VIS is_member_object_pointer : _BoolConstant<__is_member
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_member_function_pointer : _BoolConstant<__is_member_function_pointer(_Tp)> {};
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_member_pointer_v = __is_member_pointer(_Tp);
-
-template <class _Tp>
-inline constexpr bool is_member_object_pointer_v = __is_member_object_pointer(_Tp);
-
-template <class _Tp>
-inline constexpr bool is_member_function_pointer_v = __is_member_function_pointer(_Tp);
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_MEMBER_POINTER_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_MEMBER_POINTER_H

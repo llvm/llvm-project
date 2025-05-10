@@ -8,6 +8,7 @@
 
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -337,6 +338,10 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
     const EvaluateExpressionOptions &options,
     DiagnosticManager &diagnostic_manager, Value &results) {
   lldb::ExpressionResults return_value = lldb::eExpressionSetupError;
+
+  Debugger *debugger =
+      exe_ctx.GetTargetPtr() ? &exe_ctx.GetTargetPtr()->GetDebugger() : nullptr;
+  Progress progress("Calling function", FunctionName(), {}, debugger);
 
   // FunctionCaller::ExecuteFunction execution is always just to get the
   // result. Unless explicitly asked for, ignore breakpoints and unwind on
