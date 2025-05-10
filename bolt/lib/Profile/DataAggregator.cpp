@@ -350,8 +350,6 @@ bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
 }
 
 void DataAggregator::parsePreAggregated() {
-  std::string Error;
-
   ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
       MemoryBuffer::getFileOrSTDIN(Filename);
   if (std::error_code EC = MB.getError()) {
