@@ -309,10 +309,6 @@ unsigned getVGPREncodingGranule(
     const MCSubtargetInfo *STI,
     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
-/// For subtargets with a unified VGPR file and mixed ArchVGPR/AGPR usage,
-/// returns the allocation granule for ArchVGPRs.
-unsigned getArchVGPRAllocGranule();
-
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
 
