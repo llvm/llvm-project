@@ -247,7 +247,7 @@ public:
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(RISCVMCExpr::create(
         MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        RISCVMCExpr::VK_CALL, *Ctx)));
+        ELF::R_RISCV_CALL_PLT, *Ctx)));
   }
 
   void createCall(MCInst &Inst, const MCSymbol *Target,
@@ -445,7 +445,7 @@ public:
     case ELF::R_RISCV_LO12_S:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_LO, Ctx);
     case ELF::R_RISCV_CALL:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_CALL, Ctx);
+      return RISCVMCExpr::create(Expr, ELF::R_RISCV_CALL_PLT, Ctx);
     case ELF::R_RISCV_CALL_PLT:
       return RISCVMCExpr::create(Expr, ELF::R_RISCV_CALL_PLT, Ctx);
     }
@@ -472,7 +472,6 @@ public:
     switch (cast<RISCVMCExpr>(ImmExpr)->getSpecifier()) {
     default:
       return false;
-    case RISCVMCExpr::VK_CALL:
     case ELF::R_RISCV_CALL_PLT:
       return true;
     }
