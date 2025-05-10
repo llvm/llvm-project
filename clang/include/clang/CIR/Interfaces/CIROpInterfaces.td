@@ -21,9 +21,20 @@ let cppNamespace = "::cir" in {
   // The CIRCallOpInterface must be used instead of CallOpInterface when looking
   // at arguments and other bits of CallOp. This creates a level of abstraction
   // that's useful for handling indirect calls and other details.
-  def CIRCallOpInterface : OpInterface<"CIRCallOpInterface", []> {
+  def CIRCallOpInterface : OpInterface<"CIRCallOpInterface", [CallOpInterface]> {
     // Currently we don't have any methods defined in CIRCallOpInterface. We'll
     // add more methods as the upstreaming proceeds.
+    let methods = [
+      InterfaceMethod<
+          "Return the operand at index 'i', accounts for indirect call or "
+          "exception info",
+          "mlir::Value", "getArgOperand",
+          (ins "unsigned":$i)>,
+      InterfaceMethod<
+          "Return the number of operands, accounts for indirect call or "
+          "exception info",
+          "unsigned", "getNumArgOperands", (ins)>,
+    ];
   }
 
   def CIRGlobalValueInterface

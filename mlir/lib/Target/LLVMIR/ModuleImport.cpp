@@ -41,6 +41,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/ModRef.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -554,13 +555,284 @@ static Attribute convertCGProfileModuleFlagValue(ModuleOp mlirModule,
   return ArrayAttr::get(mlirModule->getContext(), cgProfile);
 }
 
+/// Extract a two element `MDTuple` from a `MDOperand`. Emit a warning in case
+/// something else is found.
+static llvm::MDTuple *getTwoElementMDTuple(ModuleOp mlirModule,
+                                           const llvm::Module *llvmModule,
+                                           const llvm::MDOperand &md) {
+  auto *tupleEntry = dyn_cast_or_null<llvm::MDTuple>(md);
+  if (!tupleEntry || tupleEntry->getNumOperands() != 2)
+    emitWarning(mlirModule.getLoc())
+        << "expected 2-element tuple metadata: " << diagMD(md, llvmModule);
+  return tupleEntry;
+}
+
+/// Extract a constant metadata value from a two element tuple (<key, value>).
+/// Return nullptr if requirements are not met. A warning is emitted if the
+/// `matchKey` is different from the tuple's key.
+static llvm::ConstantAsMetadata *getConstantMDFromKeyValueTuple(
+    ModuleOp mlirModule, const llvm::Module *llvmModule,
+    const llvm::MDOperand &md, StringRef matchKey, bool optional = false) {
+  llvm::MDTuple *tupleEntry = getTwoElementMDTuple(mlirModule, llvmModule, md);
+  if (!tupleEntry)
+    return nullptr;
+  auto *keyMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(0));
+  if (!keyMD || keyMD->getString() != matchKey) {
+    if (!optional)
+      emitWarning(mlirModule.getLoc())
+          << "expected '" << matchKey << "' key, but found: "
+          << diagMD(tupleEntry->getOperand(0), llvmModule);
+    return nullptr;
+  }
+
+  return dyn_cast<llvm::ConstantAsMetadata>(tupleEntry->getOperand(1));
+}
+
+/// Extract an integer value from a two element tuple (<key, value>).
+/// Fail if requirements are not met. A warning is emitted if the
+/// found value isn't a LLVM constant integer.
+static FailureOr<uint64_t>
+convertInt64FromKeyValueTuple(ModuleOp mlirModule,
+                              const llvm::Module *llvmModule,
+                              const llvm::MDOperand &md, StringRef matchKey) {
+  llvm::ConstantAsMetadata *valMD =
+      getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md, matchKey);
+  if (!valMD)
+    return failure();
+
+  if (auto *cstInt = dyn_cast<llvm::ConstantInt>(valMD->getValue()))
+    return cstInt->getZExtValue();
+
+  emitWarning(mlirModule.getLoc())
+      << "expected integer metadata value for key '" << matchKey
+      << "': " << diagMD(md, llvmModule);
+  return failure();
+}
+
+static std::optional<ProfileSummaryFormatKind>
+convertProfileSummaryFormat(ModuleOp mlirModule, const llvm::Module *llvmModule,
+                            const llvm::MDOperand &formatMD) {
+  auto *tupleEntry = getTwoElementMDTuple(mlirModule, llvmModule, formatMD);
+  if (!tupleEntry)
+    return std::nullopt;
+
+  llvm::MDString *keyMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(0));
+  if (!keyMD || keyMD->getString() != "ProfileFormat") {
+    emitWarning(mlirModule.getLoc())
+        << "expected 'ProfileFormat' key: "
+        << diagMD(tupleEntry->getOperand(0), llvmModule);
+    return std::nullopt;
+  }
+
+  llvm::MDString *valMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(1));
+  std::optional<ProfileSummaryFormatKind> fmtKind =
+      symbolizeProfileSummaryFormatKind(valMD->getString());
+  if (!fmtKind) {
+    emitWarning(mlirModule.getLoc())
+        << "expected 'SampleProfile', 'InstrProf' or 'CSInstrProf' values, "
+           "but found: "
+        << diagMD(valMD, llvmModule);
+    return std::nullopt;
+  }
+
+  return fmtKind;
+}
+
+static FailureOr<SmallVector<ModuleFlagProfileSummaryDetailedAttr>>
+convertProfileSummaryDetailed(ModuleOp mlirModule,
+                              const llvm::Module *llvmModule,
+                              const llvm::MDOperand &summaryMD) {
+  auto *tupleEntry = getTwoElementMDTuple(mlirModule, llvmModule, summaryMD);
+  if (!tupleEntry)
+    return failure();
+
+  llvm::MDString *keyMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(0));
+  if (!keyMD || keyMD->getString() != "DetailedSummary") {
+    emitWarning(mlirModule.getLoc())
+        << "expected 'DetailedSummary' key: "
+        << diagMD(tupleEntry->getOperand(0), llvmModule);
+    return failure();
+  }
+
+  llvm::MDTuple *entriesMD = dyn_cast<llvm::MDTuple>(tupleEntry->getOperand(1));
+  if (!entriesMD) {
+    emitWarning(mlirModule.getLoc())
+        << "expected tuple value for 'DetailedSummary' key: "
+        << diagMD(tupleEntry->getOperand(1), llvmModule);
+    return failure();
+  }
+
+  SmallVector<ModuleFlagProfileSummaryDetailedAttr> detailedSummary;
+  for (auto &&entry : entriesMD->operands()) {
+    llvm::MDTuple *entryMD = dyn_cast<llvm::MDTuple>(entry);
+    if (!entryMD || entryMD->getNumOperands() != 3) {
+      emitWarning(mlirModule.getLoc())
+          << "'DetailedSummary' entry expects 3 operands: "
+          << diagMD(entry, llvmModule);
+      return failure();
+    }
+
+    auto *op0 = dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(0));
+    auto *op1 = dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(1));
+    auto *op2 = dyn_cast<llvm::ConstantAsMetadata>(entryMD->getOperand(2));
+    if (!op0 || !op1 || !op2) {
+      emitWarning(mlirModule.getLoc())
+          << "expected only integer entries in 'DetailedSummary': "
+          << diagMD(entry, llvmModule);
+      return failure();
+    }
+
+    auto detaildSummaryEntry = ModuleFlagProfileSummaryDetailedAttr::get(
+        mlirModule->getContext(),
+        cast<llvm::ConstantInt>(op0->getValue())->getZExtValue(),
+        cast<llvm::ConstantInt>(op1->getValue())->getZExtValue(),
+        cast<llvm::ConstantInt>(op2->getValue())->getZExtValue());
+    detailedSummary.push_back(detaildSummaryEntry);
+  }
+  return detailedSummary;
+}
+
+static Attribute
+convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
+                                     const llvm::Module *llvmModule,
+                                     llvm::MDTuple *mdTuple) {
+  unsigned profileNumEntries = mdTuple->getNumOperands();
+  if (profileNumEntries < 8) {
+    emitWarning(mlirModule.getLoc())
+        << "expected at 8 entries in 'ProfileSummary': "
+        << diagMD(mdTuple, llvmModule);
+    return nullptr;
+  }
+
+  unsigned summayIdx = 0;
+  auto checkOptionalPosition = [&](const llvm::MDOperand &md,
+                                   StringRef matchKey) -> LogicalResult {
+    // Make sure we won't step over the bound of the array of summary entries.
+    // Since (non-optional) DetailedSummary always comes last, the next entry in
+    // the tuple operand array must exist.
+    if (summayIdx + 1 >= profileNumEntries) {
+      emitWarning(mlirModule.getLoc())
+          << "the last summary entry is '" << matchKey
+          << "', expected 'DetailedSummary': " << diagMD(md, llvmModule);
+      return failure();
+    }
+
+    return success();
+  };
+
+  auto getOptIntValue =
+      [&](const llvm::MDOperand &md,
+          StringRef matchKey) -> FailureOr<std::optional<uint64_t>> {
+    if (!getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md, matchKey,
+                                        /*optional=*/true))
+      return FailureOr<std::optional<uint64_t>>(std::nullopt);
+    if (checkOptionalPosition(md, matchKey).failed())
+      return failure();
+    FailureOr<uint64_t> val =
+        convertInt64FromKeyValueTuple(mlirModule, llvmModule, md, matchKey);
+    if (failed(val))
+      return failure();
+    return val;
+  };
+
+  auto getOptDoubleValue = [&](const llvm::MDOperand &md,
+                               StringRef matchKey) -> FailureOr<FloatAttr> {
+    auto *valMD = getConstantMDFromKeyValueTuple(mlirModule, llvmModule, md,
+                                                 matchKey, /*optional=*/true);
+    if (!valMD)
+      return FloatAttr{};
+    if (auto *cstFP = dyn_cast<llvm::ConstantFP>(valMD->getValue())) {
+      if (checkOptionalPosition(md, matchKey).failed())
+        return failure();
+      return FloatAttr::get(Float64Type::get(mlirModule.getContext()),
+                            cstFP->getValueAPF());
+    }
+    emitWarning(mlirModule.getLoc())
+        << "expected double metadata value for key '" << matchKey
+        << "': " << diagMD(md, llvmModule);
+    return failure();
+  };
+
+  // Build ModuleFlagProfileSummaryAttr by sequentially fetching elements in
+  // a fixed order: format, total count, etc.
+  SmallVector<Attribute> profileSummary;
+  std::optional<ProfileSummaryFormatKind> format = convertProfileSummaryFormat(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++));
+  if (!format.has_value())
+    return nullptr;
+
+  FailureOr<uint64_t> totalCount = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "TotalCount");
+  if (failed(totalCount))
+    return nullptr;
+
+  FailureOr<uint64_t> maxCount = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "MaxCount");
+  if (failed(maxCount))
+    return nullptr;
+
+  FailureOr<uint64_t> maxInternalCount = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++),
+      "MaxInternalCount");
+  if (failed(maxInternalCount))
+    return nullptr;
+
+  FailureOr<uint64_t> maxFunctionCount = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++),
+      "MaxFunctionCount");
+  if (failed(maxFunctionCount))
+    return nullptr;
+
+  FailureOr<uint64_t> numCounts = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "NumCounts");
+  if (failed(numCounts))
+    return nullptr;
+
+  FailureOr<uint64_t> numFunctions = convertInt64FromKeyValueTuple(
+      mlirModule, llvmModule, mdTuple->getOperand(summayIdx++), "NumFunctions");
+  if (failed(numFunctions))
+    return nullptr;
+
+  // Handle optional keys.
+  FailureOr<std::optional<uint64_t>> isPartialProfile =
+      getOptIntValue(mdTuple->getOperand(summayIdx), "IsPartialProfile");
+  if (failed(isPartialProfile))
+    return nullptr;
+  if (isPartialProfile->has_value())
+    summayIdx++;
+
+  FailureOr<FloatAttr> partialProfileRatio =
+      getOptDoubleValue(mdTuple->getOperand(summayIdx), "PartialProfileRatio");
+  if (failed(partialProfileRatio))
+    return nullptr;
+  if (*partialProfileRatio)
+    summayIdx++;
+
+  // Handle detailed summary.
+  FailureOr<SmallVector<ModuleFlagProfileSummaryDetailedAttr>> detailed =
+      convertProfileSummaryDetailed(mlirModule, llvmModule,
+                                    mdTuple->getOperand(summayIdx));
+  if (failed(detailed))
+    return nullptr;
+
+  // Build the final profile summary attribute.
+  return ModuleFlagProfileSummaryAttr::get(
+      mlirModule->getContext(), *format, *totalCount, *maxCount,
+      *maxInternalCount, *maxFunctionCount, *numCounts, *numFunctions,
+      *isPartialProfile, *partialProfileRatio, *detailed);
+}
+
 /// Invoke specific handlers for each known module flag value, returns nullptr
 /// if the key is unknown or unimplemented.
-static Attribute convertModuleFlagValueFromMDTuple(ModuleOp mlirModule,
-                                                   StringRef key,
-                                                   llvm::MDTuple *mdTuple) {
+static Attribute
+convertModuleFlagValueFromMDTuple(ModuleOp mlirModule,
+                                  const llvm::Module *llvmModule, StringRef key,
+                                  llvm::MDTuple *mdTuple) {
   if (key == LLVMDialect::getModuleFlagKeyCGProfileName())
     return convertCGProfileModuleFlagValue(mlirModule, mdTuple);
+  if (key == LLVMDialect::getModuleFlagKeyProfileSummaryName())
+    return convertProfileSummaryModuleFlagValue(mlirModule, llvmModule,
+                                                mdTuple);
   return nullptr;
 }
 
@@ -576,8 +848,8 @@ LogicalResult ModuleImport::convertModuleFlagsMetadata() {
     } else if (auto *mdString = dyn_cast<llvm::MDString>(val)) {
       valAttr = builder.getStringAttr(mdString->getString());
     } else if (auto *mdTuple = dyn_cast<llvm::MDTuple>(val)) {
-      valAttr = convertModuleFlagValueFromMDTuple(mlirModule, key->getString(),
-                                                  mdTuple);
+      valAttr = convertModuleFlagValueFromMDTuple(mlirModule, llvmModule.get(),
+                                                  key->getString(), mdTuple);
     }
 
     if (!valAttr) {
@@ -1721,8 +1993,8 @@ ModuleImport::convertCallOperands(llvm::CallBase *callInst,
 /// Checks if `callType` and `calleeType` are compatible and can be represented
 /// in MLIR.
 static LogicalResult
-verifyFunctionTypeCompatibility(LLVMFunctionType callType,
-                                LLVMFunctionType calleeType) {
+checkFunctionTypeCompatibility(LLVMFunctionType callType,
+                               LLVMFunctionType calleeType) {
   if (callType.getReturnType() != calleeType.getReturnType())
     return failure();
 
@@ -1748,7 +2020,9 @@ verifyFunctionTypeCompatibility(LLVMFunctionType callType,
 }
 
 FailureOr<LLVMFunctionType>
-ModuleImport::convertFunctionType(llvm::CallBase *callInst) {
+ModuleImport::convertFunctionType(llvm::CallBase *callInst,
+                                  bool &isIncompatibleCall) {
+  isIncompatibleCall = false;
   auto castOrFailure = [](Type convertedType) -> FailureOr<LLVMFunctionType> {
     auto funcTy = dyn_cast_or_null<LLVMFunctionType>(convertedType);
     if (!funcTy)
@@ -1771,11 +2045,14 @@ ModuleImport::convertFunctionType(llvm::CallBase *callInst) {
   if (failed(calleeType))
     return failure();
 
-  // Compare the types to avoid constructing illegal call/invoke operations.
-  if (failed(verifyFunctionTypeCompatibility(*callType, *calleeType))) {
+  // Compare the types and notify users via `isIncompatibleCall` if they are not
+  // compatible.
+  if (failed(checkFunctionTypeCompatibility(*callType, *calleeType))) {
+    isIncompatibleCall = true;
     Location loc = translateLoc(callInst->getDebugLoc());
-    return emitError(loc) << "incompatible call and callee types: " << *callType
-                          << " and " << *calleeType;
+    emitWarning(loc) << "incompatible call and callee types: " << *callType
+                     << " and " << *calleeType;
+    return callType;
   }
 
   return calleeType;
@@ -1892,16 +2169,34 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                 /*operand_attrs=*/nullptr)
             .getOperation();
       }
-      FailureOr<LLVMFunctionType> funcTy = convertFunctionType(callInst);
+      bool isIncompatibleCall;
+      FailureOr<LLVMFunctionType> funcTy =
+          convertFunctionType(callInst, isIncompatibleCall);
       if (failed(funcTy))
         return failure();
 
-      FlatSymbolRefAttr callee = convertCalleeName(callInst);
-      auto callOp = builder.create<CallOp>(loc, *funcTy, callee, *operands);
+      FlatSymbolRefAttr callee = nullptr;
+      if (isIncompatibleCall) {
+        // Use an indirect call (in order to represent valid and verifiable LLVM
+        // IR). Build the indirect call by passing an empty `callee` operand and
+        // insert into `operands` to include the indirect call target.
+        FlatSymbolRefAttr calleeSym = convertCalleeName(callInst);
+        Value indirectCallVal = builder.create<LLVM::AddressOfOp>(
+            loc, LLVM::LLVMPointerType::get(context), calleeSym);
+        operands->insert(operands->begin(), indirectCallVal);
+      } else {
+        // Regular direct call using callee name.
+        callee = convertCalleeName(callInst);
+      }
+      CallOp callOp = builder.create<CallOp>(loc, *funcTy, callee, *operands);
+
       if (failed(convertCallAttributes(callInst, callOp)))
         return failure();
-      // Handle parameter and result attributes.
-      convertParameterAttributes(callInst, callOp, builder);
+
+      // Handle parameter and result attributes unless it's an incompatible
+      // call.
+      if (!isIncompatibleCall)
+        convertParameterAttributes(callInst, callOp, builder);
       return callOp.getOperation();
     }();
 
@@ -1966,12 +2261,25 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                                  unwindArgs)))
       return failure();
 
-    FailureOr<LLVMFunctionType> funcTy = convertFunctionType(invokeInst);
+    bool isIncompatibleInvoke;
+    FailureOr<LLVMFunctionType> funcTy =
+        convertFunctionType(invokeInst, isIncompatibleInvoke);
     if (failed(funcTy))
       return failure();
 
-    FlatSymbolRefAttr calleeName = convertCalleeName(invokeInst);
-
+    FlatSymbolRefAttr calleeName = nullptr;
+    if (isIncompatibleInvoke) {
+      // Use an indirect invoke (in order to represent valid and verifiable LLVM
+      // IR). Build the indirect invoke by passing an empty `callee` operand and
+      // insert into `operands` to include the indirect invoke target.
+      FlatSymbolRefAttr calleeSym = convertCalleeName(invokeInst);
+      Value indirectInvokeVal = builder.create<LLVM::AddressOfOp>(
+          loc, LLVM::LLVMPointerType::get(context), calleeSym);
+      operands->insert(operands->begin(), indirectInvokeVal);
+    } else {
+      // Regular direct invoke using callee name.
+      calleeName = convertCalleeName(invokeInst);
+    }
     // Create the invoke operation. Normal destination block arguments will be
     // added later on to handle the case in which the operation result is
     // included in this list.
@@ -1982,8 +2290,10 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     if (failed(convertInvokeAttributes(invokeInst, invokeOp)))
       return failure();
 
-    // Handle parameter and result attributes.
-    convertParameterAttributes(invokeInst, invokeOp, builder);
+    // Handle parameter and result attributes unless it's an incompatible
+    // invoke.
+    if (!isIncompatibleInvoke)
+      convertParameterAttributes(invokeInst, invokeOp, builder);
 
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
@@ -2035,8 +2345,9 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     }
 
     Type type = convertType(inst->getType());
-    auto gepOp = builder.create<GEPOp>(loc, type, sourceElementType, *basePtr,
-                                       indices, gepInst->isInBounds());
+    auto gepOp = builder.create<GEPOp>(
+        loc, type, sourceElementType, *basePtr, indices,
+        static_cast<GEPNoWrapFlags>(gepInst->getNoWrapFlags().getRaw()));
     mapValue(inst, gepOp);
     return success();
   }
@@ -2146,6 +2457,8 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("denormal-fp-math-f32"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
+    StringLiteral("instrument-function-entry"),
+    StringLiteral("instrument-function-exit"),
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
@@ -2300,6 +2613,16 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("approx-func-fp-math");
       attr.isStringAttribute())
     funcOp.setApproxFuncFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("instrument-function-entry");
+      attr.isStringAttribute())
+    funcOp.setInstrumentFunctionEntry(
+        StringAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("instrument-function-exit");
+      attr.isStringAttribute())
+    funcOp.setInstrumentFunctionExit(
+        StringAttr::get(context, attr.getValueAsString()));
 
   if (llvm::Attribute attr = func->getFnAttribute("no-signed-zeros-fp-math");
       attr.isStringAttribute())

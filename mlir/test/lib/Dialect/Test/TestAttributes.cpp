@@ -317,6 +317,49 @@ static ParseResult parseCustomFloatAttr(AsmParser &p, StringAttr &typeStrAttr,
 }
 
 //===----------------------------------------------------------------------===//
+// TestCustomStructAttr
+//===----------------------------------------------------------------------===//
+
+static void printCustomStructAttr(AsmPrinter &p, int64_t value) {
+  if (ShapedType::isDynamic(value)) {
+    p << "?";
+  } else {
+    p.printStrippedAttrOrType(value);
+  }
+}
+
+static ParseResult parseCustomStructAttr(AsmParser &p, int64_t &value) {
+  if (succeeded(p.parseOptionalQuestion())) {
+    value = ShapedType::kDynamic;
+    return success();
+  }
+  return p.parseInteger(value);
+}
+
+static void printCustomOptStructFieldAttr(AsmPrinter &p, ArrayAttr attr) {
+  if (attr && attr.size() == 1 && isa<IntegerAttr>(attr[0])) {
+    p << cast<IntegerAttr>(attr[0]).getInt();
+  } else {
+    p.printStrippedAttrOrType(attr);
+  }
+}
+
+static ParseResult parseCustomOptStructFieldAttr(AsmParser &p,
+                                                 ArrayAttr &attr) {
+  int64_t value;
+  OptionalParseResult result = p.parseOptionalInteger(value);
+  if (result.has_value()) {
+    if (failed(result.value()))
+      return failure();
+    attr = ArrayAttr::get(
+        p.getContext(),
+        {IntegerAttr::get(IntegerType::get(p.getContext(), 64), value)});
+    return success();
+  }
+  return p.parseAttribute(attr);
+}
+
+//===----------------------------------------------------------------------===//
 // TestOpAsmAttrInterfaceAttr
 //===----------------------------------------------------------------------===//
 

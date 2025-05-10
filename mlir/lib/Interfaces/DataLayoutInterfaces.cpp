@@ -402,7 +402,6 @@ static DataLayoutSpecInterface getCombinedDataLayout(Operation *leaf) {
   assert((isa<ModuleOp, DataLayoutOpInterface>(leaf)) &&
          "expected an op with data layout spec");
 
-  SmallVector<DataLayoutOpInterface> opsWithLayout;
   SmallVector<DataLayoutSpecInterface> specs;
   collectParentLayouts(leaf, specs);
 

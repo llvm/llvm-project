@@ -64,6 +64,15 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMCallOpLowering : public mlir::OpConversionPattern<cir::CallOp> {
+public:
+  using mlir::OpConversionPattern<cir::CallOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::CallOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override;
+};
+
 class CIRToLLVMAllocaOpLowering
     : public mlir::OpConversionPattern<cir::AllocaOp> {
   mlir::DataLayout const &dataLayout;
@@ -291,6 +300,26 @@ public:
   mlir::LogicalResult
   matchAndRewrite(cir::StackRestoreOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override;
+};
+
+class CIRToLLVMVecCreateOpLowering
+    : public mlir::OpConversionPattern<cir::VecCreateOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecCreateOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecCreateOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVecExtractOpLowering
+    : public mlir::OpConversionPattern<cir::VecExtractOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecExtractOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecExtractOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
 };
 
 } // namespace direct

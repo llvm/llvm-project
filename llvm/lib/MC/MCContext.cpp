@@ -85,7 +85,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
     Env = IsMachO;
     break;
   case Triple::COFF:
-    if (!TheTriple.isOSWindowsOrUEFI())
+    if (!TheTriple.isOSWindows() && !TheTriple.isUEFI())
       report_fatal_error(
           "Cannot initialize MC for non-Windows COFF object files.");
 
@@ -212,6 +212,27 @@ MCDataFragment *MCContext::allocInitialFragment(MCSection &Sec) {
 MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
   SmallString<128> NameSV;
   StringRef NameRef = Name.toStringRef(NameSV);
+  if (NameRef.contains('\\')) {
+    NameSV = NameRef;
+    size_t S = 0;
+    // Support escaped \\ and \" as in GNU Assembler. GAS issues a warning for
+    // other characters following \\, which we do not implement due to code
+    // structure.
+    for (size_t I = 0, E = NameSV.size(); I != E; ++I) {
+      char C = NameSV[I];
+      if (C == '\\' && I + 1 != E) {
+        switch (NameSV[I + 1]) {
+        case '"':
+        case '\\':
+          C = NameSV[++I];
+          break;
+        }
+      }
+      NameSV[S++] = C;
+    }
+    NameSV.resize(S);
+    NameRef = NameSV;
+  }
 
   assert(!NameRef.empty() && "Normal symbols cannot be unnamed!");
 

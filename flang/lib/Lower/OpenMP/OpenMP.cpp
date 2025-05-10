@@ -662,32 +662,9 @@ static fir::GlobalOp globalInitialization(lower::AbstractConverter &converter,
                                           const semantics::Symbol &sym,
                                           const lower::pft::Variable &var,
                                           mlir::Location currentLocation) {
-  mlir::Type ty = converter.genType(sym);
   std::string globalName = converter.mangleName(sym);
   mlir::StringAttr linkage = firOpBuilder.createInternalLinkage();
-  fir::GlobalOp global =
-      firOpBuilder.createGlobal(currentLocation, ty, globalName, linkage);
-
-  // Create default initialization for non-character scalar.
-  if (semantics::IsAllocatableOrObjectPointer(&sym)) {
-    mlir::Type baseAddrType = mlir::dyn_cast<fir::BoxType>(ty).getEleTy();
-    lower::createGlobalInitialization(
-        firOpBuilder, global, [&](fir::FirOpBuilder &b) {
-          mlir::Value nullAddr =
-              b.createNullConstant(currentLocation, baseAddrType);
-          mlir::Value box =
-              b.create<fir::EmboxOp>(currentLocation, ty, nullAddr);
-          b.create<fir::HasValueOp>(currentLocation, box);
-        });
-  } else {
-    lower::createGlobalInitialization(
-        firOpBuilder, global, [&](fir::FirOpBuilder &b) {
-          mlir::Value undef = b.create<fir::UndefOp>(currentLocation, ty);
-          b.create<fir::HasValueOp>(currentLocation, undef);
-        });
-  }
-
-  return global;
+  return Fortran::lower::defineGlobal(converter, var, globalName, linkage);
 }
 
 // Get the extended value for \p val by extracting additional variable
@@ -1719,13 +1696,14 @@ static void genTargetClauses(
   cp.processNowait(clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
 
-  cp.processTODO<clause::Allocate, clause::Defaultmap, clause::Firstprivate,
-                 clause::InReduction, clause::UsesAllocators>(
-      loc, llvm::omp::Directive::OMPD_target);
+  cp.processTODO<clause::Allocate, clause::Defaultmap, clause::InReduction,
+                 clause::UsesAllocators>(loc,
+                                         llvm::omp::Directive::OMPD_target);
 
   // `target private(..)` is only supported in delayed privatization mode.
   if (!enableDelayedPrivatizationStaging)
-    cp.processTODO<clause::Private>(loc, llvm::omp::Directive::OMPD_target);
+    cp.processTODO<clause::Firstprivate, clause::Private>(
+        loc, llvm::omp::Directive::OMPD_target);
 }
 
 static void genTargetDataClauses(
@@ -1773,34 +1751,51 @@ static void genTargetEnterExitUpdateDataClauses(
   cp.processNowait(clauseOps);
 }
 
-static void genTaskClauses(lower::AbstractConverter &converter,
-                           semantics::SemanticsContext &semaCtx,
-                           lower::SymMap &symTable,
-                           lower::StatementContext &stmtCtx,
-                           const List<Clause> &clauses, mlir::Location loc,
-                           mlir::omp::TaskOperands &clauseOps) {
+static void genTaskClauses(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    lower::SymMap &symTable, lower::StatementContext &stmtCtx,
+    const List<Clause> &clauses, mlir::Location loc,
+    mlir::omp::TaskOperands &clauseOps,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &inReductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
   cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processFinal(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_task, clauseOps);
+  cp.processInReduction(loc, clauseOps, inReductionSyms);
   cp.processMergeable(clauseOps);
   cp.processPriority(stmtCtx, clauseOps);
   cp.processUntied(clauseOps);
   cp.processDetach(clauseOps);
 
-  cp.processTODO<clause::Affinity, clause::InReduction>(
-      loc, llvm::omp::Directive::OMPD_task);
+  cp.processTODO<clause::Affinity>(loc, llvm::omp::Directive::OMPD_task);
 }
 
-static void genTaskgroupClauses(lower::AbstractConverter &converter,
-                                semantics::SemanticsContext &semaCtx,
-                                const List<Clause> &clauses, mlir::Location loc,
-                                mlir::omp::TaskgroupOperands &clauseOps) {
+static void genTaskgroupClauses(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    const List<Clause> &clauses, mlir::Location loc,
+    mlir::omp::TaskgroupOperands &clauseOps,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &taskReductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
-  cp.processTODO<clause::TaskReduction>(loc,
-                                        llvm::omp::Directive::OMPD_taskgroup);
+  cp.processTaskReduction(loc, clauseOps, taskReductionSyms);
+}
+
+static void genTaskloopClauses(lower::AbstractConverter &converter,
+                               semantics::SemanticsContext &semaCtx,
+                               lower::StatementContext &stmtCtx,
+                               const List<Clause> &clauses, mlir::Location loc,
+                               mlir::omp::TaskloopOperands &clauseOps) {
+
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processGrainsize(stmtCtx, clauseOps);
+  cp.processNumTasks(stmtCtx, clauseOps);
+
+  cp.processTODO<clause::Allocate, clause::Collapse, clause::Default,
+                 clause::Final, clause::If, clause::InReduction,
+                 clause::Lastprivate, clause::Mergeable, clause::Nogroup,
+                 clause::Priority, clause::Reduction, clause::Shared,
+                 clause::Untied>(loc, llvm::omp::Directive::OMPD_taskloop);
 }
 
 static void genTaskwaitClauses(lower::AbstractConverter &converter,
@@ -2161,6 +2156,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         OpWithBodyGenInfo(converter, symTable, semaCtx, loc, nestedEval,
                           llvm::omp::Directive::OMPD_section)
             .setClauses(&sectionQueue.begin()->clauses)
+            .setDataSharingProcessor(&dsp)
             .setEntryBlockArgs(&args),
         sectionQueue, sectionQueue.begin());
   }
@@ -2326,7 +2322,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
       fir::factory::AddrAndBoundsInfo info =
           Fortran::lower::getDataOperandBaseAddr(
-              converter, firOpBuilder, sym, converter.getCurrentLocation());
+              converter, firOpBuilder, sym.GetUltimate(),
+              converter.getCurrentLocation());
       llvm::SmallVector<mlir::Value> bounds =
           fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
                                              mlir::omp::MapBoundsType>(
@@ -2480,8 +2477,9 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           mlir::Location loc, const ConstructQueue &queue,
           ConstructQueue::const_iterator item) {
   mlir::omp::TaskOperands clauseOps;
+  llvm::SmallVector<const semantics::Symbol *> inReductionSyms;
   genTaskClauses(converter, semaCtx, symTable, stmtCtx, item->clauses, loc,
-                 clauseOps);
+                 clauseOps, inReductionSyms);
 
   if (!enableDelayedPrivatization)
     return genOpWithBody<mlir::omp::TaskOp>(
@@ -2498,6 +2496,8 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   EntryBlockArgs taskArgs;
   taskArgs.priv.syms = dsp.getDelayedPrivSymbols();
   taskArgs.priv.vars = clauseOps.privateVars;
+  taskArgs.inReduction.syms = inReductionSyms;
+  taskArgs.inReduction.vars = clauseOps.inReductionVars;
 
   return genOpWithBody<mlir::omp::TaskOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
@@ -2515,12 +2515,19 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                const ConstructQueue &queue,
                ConstructQueue::const_iterator item) {
   mlir::omp::TaskgroupOperands clauseOps;
-  genTaskgroupClauses(converter, semaCtx, item->clauses, loc, clauseOps);
+  llvm::SmallVector<const semantics::Symbol *> taskReductionSyms;
+  genTaskgroupClauses(converter, semaCtx, item->clauses, loc, clauseOps,
+                      taskReductionSyms);
+
+  EntryBlockArgs taskgroupArgs;
+  taskgroupArgs.taskReduction.syms = taskReductionSyms;
+  taskgroupArgs.taskReduction.vars = clauseOps.taskReductionVars;
 
   return genOpWithBody<mlir::omp::TaskgroupOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_taskgroup)
-          .setClauses(&item->clauses),
+          .setClauses(&item->clauses)
+          .setEntryBlockArgs(&taskgroupArgs),
       queue, item, clauseOps);
 }
 
@@ -2832,9 +2839,23 @@ static void genAtomicUpdateStatement(
     lower::StatementContext atomicStmtCtx;
     mlir::Value rhsExpr = fir::getBase(converter.genExprValue(
         *semantics::GetExpr(assignmentStmtExpr), atomicStmtCtx));
-    mlir::Value convertResult =
-        firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
-    firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, convertResult);
+    mlir::Type exprType = fir::unwrapRefType(rhsExpr.getType());
+    if (fir::isa_complex(exprType) && !fir::isa_complex(varType)) {
+      // Emit an additional `ExtractValueOp` if the expression is of complex
+      // type
+      auto extract = firOpBuilder.create<fir::ExtractValueOp>(
+          currentLocation,
+          mlir::cast<mlir::ComplexType>(exprType).getElementType(), rhsExpr,
+          firOpBuilder.getArrayAttr(
+              firOpBuilder.getIntegerAttr(firOpBuilder.getIndexType(), 0)));
+      mlir::Value convertResult = firOpBuilder.create<fir::ConvertOp>(
+          currentLocation, varType, extract);
+      firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, convertResult);
+    } else {
+      mlir::Value convertResult =
+          firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
+      firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, convertResult);
+    }
     converter.resetExprOverrides();
   }
   firOpBuilder.setInsertionPointAfter(atomicUpdateOp);
@@ -2864,6 +2885,85 @@ static void genAtomicWrite(lower::AbstractConverter &converter,
                           rightHandClauseList, loc);
 }
 
+/*
+    Emit an implicit cast. Different yet compatible types on
+    omp.atomic.read constitute valid Fortran. The OMPIRBuilder will
+    emit atomic instructions (on primitive types) and `__atomic_load`
+    libcall (on complex type) without explicitly converting
+    between such compatible types. The OMPIRBuilder relies on the
+    frontend to resolve such inconsistencies between `omp.atomic.read `
+    operand types. Similar inconsistencies between operand types in
+    `omp.atomic.write` are resolved through implicit casting by use of typed
+    assignment (i.e. `evaluate::Assignment`). However, use of typed
+    assignment in `omp.atomic.read` (of form `v = x`) leads to an unsafe,
+    non-atomic load of `x` into a temporary `alloca`, followed by an atomic
+    read of form `v = alloca`. Hence, it is needed to perform a custom
+    implicit cast.
+
+    An atomic read of form `v = x` would (without implicit casting)
+    lower to `omp.atomic.read %v = %x : !fir.ref<type1>, !fir.ref<type2>,
+    type2`. This implicit casting will rather generate the following FIR:
+
+         %alloca = fir.alloca type2
+         omp.atomic.read %alloca = %x : !fir.ref<type2>, !fir.ref<type2>, type2
+         %load = fir.load %alloca : !fir.ref<type2>
+         %cvt = fir.convert %load : (type2) -> type1
+         fir.store %cvt to %v : !fir.ref<type1>
+
+    These sequence of operations is thread-safe since each thread allocates
+    the `alloca` in its stack, and performs `%alloca = %x` atomically. Once
+    safely read, each thread performs the implicit cast on the local
+    `alloca`, and writes the final result to `%v`.
+
+/// \param builder              : FirOpBuilder
+/// \param loc                  : Location for FIR generation
+/// \param toAddress            : Address of %v
+/// \param toType               : Type of %v
+/// \param fromType             : Type of %x
+/// \param alloca               : Thread scoped `alloca`
+//				  It is the responsibility of the callee
+//				  to position the `alloca` at `AllocaIP`
+//				  through `builder.getAllocaBlock()`
+*/
+
+static void emitAtomicReadImplicitCast(fir::FirOpBuilder &builder,
+                                       mlir::Location loc,
+                                       mlir::Value toAddress, mlir::Type toType,
+                                       mlir::Type fromType,
+                                       mlir::Value alloca) {
+  auto load = builder.create<fir::LoadOp>(loc, alloca);
+  if (fir::isa_complex(fromType) && !fir::isa_complex(toType)) {
+    // Emit an additional `ExtractValueOp` if `fromAddress` is of complex
+    // type, but `toAddress` is not.
+    auto extract = builder.create<fir::ExtractValueOp>(
+        loc, mlir::cast<mlir::ComplexType>(fromType).getElementType(), load,
+        builder.getArrayAttr(
+            builder.getIntegerAttr(builder.getIndexType(), 0)));
+    auto cvt = builder.create<fir::ConvertOp>(loc, toType, extract);
+    builder.create<fir::StoreOp>(loc, cvt, toAddress);
+  } else if (!fir::isa_complex(fromType) && fir::isa_complex(toType)) {
+    // Emit an additional `InsertValueOp` if `toAddress` is of complex
+    // type, but `fromAddress` is not.
+    mlir::Value undef = builder.create<fir::UndefOp>(loc, toType);
+    mlir::Type complexEleTy =
+        mlir::cast<mlir::ComplexType>(toType).getElementType();
+    mlir::Value cvt = builder.create<fir::ConvertOp>(loc, complexEleTy, load);
+    mlir::Value zero = builder.createRealZeroConstant(loc, complexEleTy);
+    mlir::Value idx0 = builder.create<fir::InsertValueOp>(
+        loc, toType, undef, cvt,
+        builder.getArrayAttr(
+            builder.getIntegerAttr(builder.getIndexType(), 0)));
+    mlir::Value idx1 = builder.create<fir::InsertValueOp>(
+        loc, toType, idx0, zero,
+        builder.getArrayAttr(
+            builder.getIntegerAttr(builder.getIndexType(), 1)));
+    builder.create<fir::StoreOp>(loc, idx1, toAddress);
+  } else {
+    auto cvt = builder.create<fir::ConvertOp>(loc, toType, load);
+    builder.create<fir::StoreOp>(loc, cvt, toAddress);
+  }
+}
+
 /// Processes an atomic construct with read clause.
 static void genAtomicRead(lower::AbstractConverter &converter,
                           const parser::OmpAtomicRead &atomicRead,
@@ -2888,9 +2988,26 @@ static void genAtomicRead(lower::AbstractConverter &converter,
       fir::getBase(converter.genExprAddr(fromExpr, stmtCtx));
   mlir::Value toAddress = fir::getBase(converter.genExprAddr(
       *semantics::GetExpr(assignmentStmtVariable), stmtCtx));
-  genAtomicCaptureStatement(converter, fromAddress, toAddress,
-                            leftHandClauseList, rightHandClauseList,
-                            elementType, loc);
+
+  if (fromAddress.getType() != toAddress.getType()) {
+
+    mlir::Type toType = fir::unwrapRefType(toAddress.getType());
+    mlir::Type fromType = fir::unwrapRefType(fromAddress.getType());
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    auto oldIP = builder.saveInsertionPoint();
+    builder.setInsertionPointToStart(builder.getAllocaBlock());
+    mlir::Value alloca = builder.create<fir::AllocaOp>(
+        loc, fromType); // Thread scope `alloca` to atomically read `%x`.
+    builder.restoreInsertionPoint(oldIP);
+    genAtomicCaptureStatement(converter, fromAddress, alloca,
+                              leftHandClauseList, rightHandClauseList,
+                              elementType, loc);
+    emitAtomicReadImplicitCast(builder, loc, toAddress, toType, fromType,
+                               alloca);
+  } else
+    genAtomicCaptureStatement(converter, fromAddress, toAddress,
+                              leftHandClauseList, rightHandClauseList,
+                              elementType, loc);
 }
 
 /// Processes an atomic construct with update clause.
@@ -2997,10 +3114,31 @@ static void genAtomicCapture(lower::AbstractConverter &converter,
       // Atomic capture construct is of the form [capture-stmt, update-stmt]
       const semantics::SomeExpr &fromExpr = *semantics::GetExpr(stmt1Expr);
       mlir::Type elementType = converter.genType(fromExpr);
-      genAtomicCaptureStatement(converter, stmt2LHSArg, stmt1LHSArg,
-                                /*leftHandClauseList=*/nullptr,
-                                /*rightHandClauseList=*/nullptr, elementType,
-                                loc);
+      if (stmt1VarType != stmt2VarType) {
+        mlir::Value alloca;
+        mlir::Type toType = fir::unwrapRefType(stmt1LHSArg.getType());
+        mlir::Type fromType = fir::unwrapRefType(stmt2LHSArg.getType());
+        {
+          mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+          firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+          alloca = firOpBuilder.create<fir::AllocaOp>(loc, fromType);
+        }
+        genAtomicCaptureStatement(converter, stmt2LHSArg, alloca,
+                                  /*leftHandClauseList=*/nullptr,
+                                  /*rightHandClauseList=*/nullptr, elementType,
+                                  loc);
+        {
+          mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+          firOpBuilder.setInsertionPointAfter(atomicCaptureOp);
+          emitAtomicReadImplicitCast(firOpBuilder, loc, stmt1LHSArg, toType,
+                                     fromType, alloca);
+        }
+      } else {
+        genAtomicCaptureStatement(converter, stmt2LHSArg, stmt1LHSArg,
+                                  /*leftHandClauseList=*/nullptr,
+                                  /*rightHandClauseList=*/nullptr, elementType,
+                                  loc);
+      }
       genAtomicUpdateStatement(
           converter, stmt2LHSArg, stmt2VarType, stmt2Var, stmt2Expr,
           /*leftHandClauseList=*/nullptr,
@@ -3013,10 +3151,32 @@ static void genAtomicCapture(lower::AbstractConverter &converter,
       firOpBuilder.setInsertionPointToStart(&block);
       const semantics::SomeExpr &fromExpr = *semantics::GetExpr(stmt1Expr);
       mlir::Type elementType = converter.genType(fromExpr);
-      genAtomicCaptureStatement(converter, stmt2LHSArg, stmt1LHSArg,
-                                /*leftHandClauseList=*/nullptr,
-                                /*rightHandClauseList=*/nullptr, elementType,
-                                loc);
+
+      if (stmt1VarType != stmt2VarType) {
+        mlir::Value alloca;
+        mlir::Type toType = fir::unwrapRefType(stmt1LHSArg.getType());
+        mlir::Type fromType = fir::unwrapRefType(stmt2LHSArg.getType());
+        {
+          mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+          firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+          alloca = firOpBuilder.create<fir::AllocaOp>(loc, fromType);
+        }
+        genAtomicCaptureStatement(converter, stmt2LHSArg, alloca,
+                                  /*leftHandClauseList=*/nullptr,
+                                  /*rightHandClauseList=*/nullptr, elementType,
+                                  loc);
+        {
+          mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+          firOpBuilder.setInsertionPointAfter(atomicCaptureOp);
+          emitAtomicReadImplicitCast(firOpBuilder, loc, stmt1LHSArg, toType,
+                                     fromType, alloca);
+        }
+      } else {
+        genAtomicCaptureStatement(converter, stmt2LHSArg, stmt1LHSArg,
+                                  /*leftHandClauseList=*/nullptr,
+                                  /*rightHandClauseList=*/nullptr, elementType,
+                                  loc);
+      }
       genAtomicWriteStatement(converter, stmt2LHSArg, stmt2RHSArg,
                               /*leftHandClauseList=*/nullptr,
                               /*rightHandClauseList=*/nullptr, loc);
@@ -3029,10 +3189,34 @@ static void genAtomicCapture(lower::AbstractConverter &converter,
         converter, stmt1LHSArg, stmt1VarType, stmt1Var, stmt1Expr,
         /*leftHandClauseList=*/nullptr,
         /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp);
-    genAtomicCaptureStatement(converter, stmt1LHSArg, stmt2LHSArg,
-                              /*leftHandClauseList=*/nullptr,
-                              /*rightHandClauseList=*/nullptr, elementType,
-                              loc);
+
+    if (stmt1VarType != stmt2VarType) {
+      mlir::Value alloca;
+      mlir::Type toType = fir::unwrapRefType(stmt2LHSArg.getType());
+      mlir::Type fromType = fir::unwrapRefType(stmt1LHSArg.getType());
+
+      {
+        mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+        firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+        alloca = firOpBuilder.create<fir::AllocaOp>(loc, fromType);
+      }
+
+      genAtomicCaptureStatement(converter, stmt1LHSArg, alloca,
+                                /*leftHandClauseList=*/nullptr,
+                                /*rightHandClauseList=*/nullptr, elementType,
+                                loc);
+      {
+        mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+        firOpBuilder.setInsertionPointAfter(atomicCaptureOp);
+        emitAtomicReadImplicitCast(firOpBuilder, loc, stmt2LHSArg, toType,
+                                   fromType, alloca);
+      }
+    } else {
+      genAtomicCaptureStatement(converter, stmt1LHSArg, stmt2LHSArg,
+                                /*leftHandClauseList=*/nullptr,
+                                /*rightHandClauseList=*/nullptr, elementType,
+                                loc);
+    }
   }
   firOpBuilder.setInsertionPointToEnd(&block);
   firOpBuilder.create<mlir::omp::TerminatorOp>(loc);
@@ -3175,11 +3359,33 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
 static mlir::omp::TaskloopOp genStandaloneTaskloop(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item) {
-  TODO(loc, "Taskloop construct");
-  return nullptr;
+    lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
+    lower::pft::Evaluation &eval, mlir::Location loc,
+    const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+  mlir::omp::TaskloopOperands taskloopClauseOps;
+  genTaskloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
+                     taskloopClauseOps);
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           /*shouldCollectPreDeterminedSymbols=*/true,
+                           enableDelayedPrivatization, symTable);
+  dsp.processStep1(&taskloopClauseOps);
+
+  mlir::omp::LoopNestOperands loopNestClauseOps;
+  llvm::SmallVector<const semantics::Symbol *> iv;
+  genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
+                     loopNestClauseOps, iv);
+
+  EntryBlockArgs taskloopArgs;
+  taskloopArgs.priv.syms = dsp.getDelayedPrivSymbols();
+  taskloopArgs.priv.vars = taskloopClauseOps.privateVars;
+
+  auto taskLoopOp = genWrapperOp<mlir::omp::TaskloopOp>(
+      converter, loc, taskloopClauseOps, taskloopArgs);
+
+  genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
+                loopNestClauseOps, iv, {{taskLoopOp, taskloopArgs}},
+                llvm::omp::Directive::OMPD_taskloop, dsp);
+  return taskLoopOp;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3619,8 +3825,8 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
         genTaskgroupOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_taskloop:
-    newOp = genStandaloneTaskloop(converter, symTable, semaCtx, eval, loc,
-                                  queue, item);
+    newOp = genStandaloneTaskloop(converter, symTable, stmtCtx, semaCtx, eval,
+                                  loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_taskwait:
     newOp = genTaskwaitOp(converter, symTable, semaCtx, eval, loc, queue, item);
@@ -3634,9 +3840,11 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
                        item);
     break;
   case llvm::omp::Directive::OMPD_tile:
-  case llvm::omp::Directive::OMPD_unroll:
+  case llvm::omp::Directive::OMPD_unroll: {
+    unsigned version = semaCtx.langOptions().OpenMPVersion;
     TODO(loc, "Unhandled loop directive (" +
-                  llvm::omp::getOpenMPDirectiveName(dir) + ")");
+                  llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
+  }
   // case llvm::omp::Directive::OMPD_workdistribute:
   case llvm::omp::Directive::OMPD_workshare:
     newOp = genWorkshareOp(converter, symTable, stmtCtx, semaCtx, eval, loc,
@@ -3675,6 +3883,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPDeclarativeAssumes &assumesConstruct) {
   TODO(converter.getCurrentLocation(), "OpenMP ASSUMES declaration");
+}
+
+static void
+genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+       semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+       const parser::OmpDeclareVariantDirective &declareVariantDirective) {
+  TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
 }
 
 static void genOMP(

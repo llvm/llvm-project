@@ -21,6 +21,7 @@
 #include "X86TargetMachine.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -37,6 +38,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/CallingConv.h"
@@ -3264,6 +3266,12 @@ bool X86TargetLowering::shouldReduceLoadWidth(
     std::optional<unsigned> ByteOffset) const {
   assert(cast<LoadSDNode>(Load)->isSimple() && "illegal to narrow");
 
+  auto PeekThroughOneUserBitcasts = [](const SDNode *N) {
+    while (N->getOpcode() == ISD::BITCAST && N->hasOneUse())
+      N = *N->user_begin();
+    return N;
+  };
+
   // "ELF Handling for Thread-Local Storage" specifies that R_X86_64_GOTTPOFF
   // relocation target a movq or addq instruction: don't let the load shrink.
   SDValue BasePtr = cast<LoadSDNode>(Load)->getBasePtr();
@@ -3273,24 +3281,46 @@ bool X86TargetLowering::shouldReduceLoadWidth(
 
   // If this is an (1) AVX vector load with (2) multiple uses and (3) all of
   // those uses are extracted directly into a store, then the extract + store
-  // can be store-folded. Therefore, it's probably not worth splitting the load.
+  // can be store-folded, or (4) any use will be used by legal full width
+  // instruction. Then, it's probably not worth splitting the load.
   EVT VT = Load->getValueType(0);
   if ((VT.is256BitVector() || VT.is512BitVector()) &&
       !SDValue(Load, 0).hasOneUse()) {
+    bool FullWidthUse = false;
+    bool AllExtractStores = true;
     for (SDUse &Use : Load->uses()) {
       // Skip uses of the chain value. Result 0 of the node is the load value.
       if (Use.getResNo() != 0)
         continue;
 
-      SDNode *User = Use.getUser();
+      const SDNode *User = PeekThroughOneUserBitcasts(Use.getUser());
 
-      // If this use is not an extract + store, it's probably worth splitting.
-      if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR || !User->hasOneUse() ||
-          User->user_begin()->getOpcode() != ISD::STORE)
-        return true;
+      // If this use is an extract + store, it's probably not worth splitting.
+      if (User->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+          all_of(User->uses(), [&](const SDUse &U) {
+            const SDNode *Inner = PeekThroughOneUserBitcasts(U.getUser());
+            return Inner->getOpcode() == ISD::STORE;
+          }))
+        continue;
+
+      AllExtractStores = false;
+
+      // If any use is a full width legal/target bin op, then assume its legal
+      // and won't split.
+      if (isBinOp(User->getOpcode()) &&
+          (isOperationLegal(User->getOpcode(), User->getValueType(0)) ||
+           User->getOpcode() > ISD::BUILTIN_OP_END))
+        FullWidthUse = true;
     }
-    // All non-chain uses are extract + store.
-    return false;
+
+    if (AllExtractStores)
+      return false;
+
+    // If we have an user that uses the full vector width, then this use is
+    // only worth splitting if the offset isn't 0 (to avoid an
+    // EXTRACT_SUBVECTOR) or we're loading a scalar integer.
+    if (FullWidthUse)
+      return (ByteOffset.value_or(0) > 0) || NewVT.isScalarInteger();
   }
 
   return true;
@@ -8755,6 +8785,52 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op, const SDLoc &DL,
   return LowerShift(Res, Subtarget, DAG);
 }
 
+static bool isShuffleFoldableLoad(SDValue);
+
+/// Attempt to lower a BUILD_VECTOR of scalar values to a shuffle of splats
+/// representing a blend.
+static SDValue lowerBuildVectorAsBlend(BuildVectorSDNode *BVOp, SDLoc const &DL,
+                                       X86Subtarget const &Subtarget,
+                                       SelectionDAG &DAG) {
+  MVT VT = BVOp->getSimpleValueType(0u);
+
+  if (VT != MVT::v4f64)
+    return SDValue();
+
+  // Collect unique operands.
+  auto UniqueOps = SmallSet<SDValue, 16u>();
+  for (SDValue Op : BVOp->ops()) {
+    if (isIntOrFPConstant(Op) || Op.isUndef())
+      return SDValue();
+    UniqueOps.insert(Op);
+  }
+
+  // Candidate BUILD_VECTOR must have 2 unique operands.
+  if (UniqueOps.size() != 2u)
+    return SDValue();
+
+  SDValue Op0 = BVOp->getOperand(0u);
+  UniqueOps.erase(Op0);
+  SDValue Op1 = *UniqueOps.begin();
+
+  if (Subtarget.hasAVX2() || isShuffleFoldableLoad(Op0) ||
+      isShuffleFoldableLoad(Op1)) {
+    // Create shuffle mask.
+    auto const NumElems = VT.getVectorNumElements();
+    SmallVector<int, 16u> Mask(NumElems);
+    for (auto I = 0u; I < NumElems; ++I) {
+      SDValue Op = BVOp->getOperand(I);
+      Mask[I] = Op == Op0 ? I : I + NumElems;
+    }
+    // Create shuffle of splats.
+    SDValue NewOp0 = DAG.getSplatBuildVector(VT, DL, Op0);
+    SDValue NewOp1 = DAG.getSplatBuildVector(VT, DL, Op1);
+    return DAG.getVectorShuffle(VT, DL, NewOp0, NewOp1, Mask);
+  }
+
+  return SDValue();
+}
+
 /// Create a vector constant without a load. SSE/AVX provide the bare minimum
 /// functionality to do this, so it's all zeros, all ones, or some derivation
 /// that is cheap to calculate.
@@ -9217,6 +9293,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return Broadcast;
   if (SDValue BitOp = lowerBuildVectorToBitOp(BV, dl, Subtarget, DAG))
     return BitOp;
+  if (SDValue Blend = lowerBuildVectorAsBlend(BV, dl, Subtarget, DAG))
+    return Blend;
 
   unsigned NumZero = ZeroMask.popcount();
   unsigned NumNonZero = NonZeroMask.popcount();
@@ -21093,7 +21171,6 @@ static SDValue LowerTruncateVecPackWithSignBits(
   // If the upper half of the source is undef, then attempt to split and
   // only truncate the lower half.
   if (DstVT.getSizeInBits() >= 128) {
-    SmallVector<SDValue> LowerOps;
     if (SDValue Lo = isUpperSubvectorUndef(In, DL, DAG)) {
       MVT DstHalfVT = DstVT.getHalfNumVectorElementsVT();
       if (SDValue Res = LowerTruncateVecPackWithSignBits(DstHalfVT, Lo, DL,
@@ -21136,7 +21213,6 @@ static SDValue LowerTruncateVecPack(MVT DstVT, SDValue In, const SDLoc &DL,
   // If the upper half of the source is undef, then attempt to split and
   // only truncate the lower half.
   if (DstVT.getSizeInBits() >= 128) {
-    SmallVector<SDValue> LowerOps;
     if (SDValue Lo = isUpperSubvectorUndef(In, DL, DAG)) {
       MVT DstHalfVT = DstVT.getHalfNumVectorElementsVT();
       if (SDValue Res = LowerTruncateVecPack(DstHalfVT, Lo, DL, Subtarget, DAG))
@@ -54650,12 +54726,19 @@ SDValue X86TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     if (!Flags.hasNoSignedZeros())
       break;
 
+    // Because getCheaperNegatedExpression can delete nodes we need a handle to
+    // keep temporary nodes alive.
+    std::list<HandleSDNode> Handles;
+
     // This is always negatible for free but we might be able to remove some
     // extra operand negations as well.
     SmallVector<SDValue, 4> NewOps(Op.getNumOperands(), SDValue());
-    for (int i = 0; i != 3; ++i)
+    for (int i = 0; i != 3; ++i) {
       NewOps[i] = getCheaperNegatedExpression(
           Op.getOperand(i), DAG, LegalOperations, ForCodeSize, Depth + 1);
+      if (!!NewOps[i])
+        Handles.emplace_back(NewOps[i]);
+    }
 
     bool NegA = !!NewOps[0];
     bool NegB = !!NewOps[1];
@@ -55908,6 +55991,79 @@ static SDValue combineFMADDSUB(SDNode *N, SelectionDAG &DAG,
                      NegN2);
 }
 
+// Try to widen the build vector and bitcast it to the type of zext.
+// This is a special case for the 128-bit vector types. Intention is to remove
+// the zext and replace it with a bitcast the wider type. While lowering
+// the bitcast is removed and extra commutation due to zext is avoided.
+// For example:
+// zext v4i16 ( v4i8 build_vector (x, y, z, w)) -> bitcast v4i16 ( v8i8
+// build_vector (x, 0, y, 0, z, w, 0)
+static SDValue widenBuildVec(SDNode *Extend, SelectionDAG &DAG) {
+
+  if (Extend->getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+
+  EVT ExtendVT = Extend->getValueType(0);
+
+  SDValue BV = Extend->getOperand(0);
+  if (BV.getOpcode() != ISD::BUILD_VECTOR || !BV.hasOneUse())
+    return SDValue();
+
+  if (any_of(BV->op_values(), [](SDValue Op) { return Op.isUndef(); })) {
+    // If the build vector has undef elements, we cannot widen it.
+    // The widening would create a vector with more undef elements, which
+    // is not valid.
+    return SDValue();
+  }
+
+  if (!all_of(BV->op_values(),
+              [](SDValue Op) { return Op.getOpcode() == ISD::LOAD; })) {
+    // If the build vector any element other than \ISD::LOAD, we cannot widen
+    // it.
+    return SDValue();
+  }
+
+  SDLoc dl(BV);
+  EVT VT = BV.getValueType();
+  EVT EltVT = BV.getOperand(0).getValueType();
+  unsigned NumElts = VT.getVectorNumElements();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  if (TLI.getTypeAction(*DAG.getContext(), VT) !=
+      TargetLowering::TypeWidenVector)
+    return SDValue();
+
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  unsigned WidenNumElts = WidenVT.getVectorNumElements();
+
+  SmallVector<SDValue, 16> NewOps(BV->op_begin(), BV->op_end());
+  assert(WidenNumElts >= NumElts && "Shrinking vector instead of widening!");
+  // Fill the new elements with Zero.
+  NewOps.append(WidenNumElts - NumElts, DAG.getConstant(0, dl, EltVT));
+  // Compute the step to place the elements in the right place and control the
+  // iteration.
+  unsigned step = WidenNumElts / NumElts;
+  if (WidenVT.is128BitVector()) {
+    if (step > 1 && Extend->getValueSizeInBits(0) == WidenVT.getSizeInBits()) {
+      for (int i = NumElts - 1, j = WidenNumElts - step; i > 0;
+           i--, j -= step) {
+        SDValue temp = NewOps[i];
+        NewOps[i] = NewOps[j];
+        NewOps[j] = temp;
+      }
+      // Create new build vector with WidenVT and NewOps
+      SDValue NewBV = DAG.getBuildVector(WidenVT, dl, NewOps);
+      // Replace the old build vector with the new one. Bitcast the
+      // new build vector to the type of the zext.
+      SDValue NewBVBitcast = DAG.getBitcast(ExtendVT, NewBV);
+      DAG.ReplaceAllUsesOfValueWith(SDValue(Extend, 0), NewBVBitcast);
+      return NewBV;
+    }
+  }
+  return SDValue();
+}
+
 static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI,
                            const X86Subtarget &Subtarget) {
@@ -55966,6 +56122,9 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
       return concatSubVectors(N00, N01, DAG, dl);
     }
   }
+
+  if (SDValue V = widenBuildVec(N, DAG))
+    return V;
 
   return SDValue();
 }
@@ -59153,6 +59312,14 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
   }
+
+  // Match insertion of subvector load that perfectly aliases a base load.
+  if ((IdxVal % SubVecNumElts) == 0 && ISD::isNormalLoad(Vec.getNode()) &&
+      ISD::isNormalLoad(SubVec.getNode()) &&
+      DAG.areNonVolatileConsecutiveLoads(
+          cast<LoadSDNode>(SubVec), cast<LoadSDNode>(Vec),
+          SubVec.getValueSizeInBits() / 8, IdxVal / SubVecNumElts))
+    return Vec;
 
   return SDValue();
 }

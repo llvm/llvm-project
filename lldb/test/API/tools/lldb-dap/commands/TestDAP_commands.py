@@ -70,12 +70,11 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
         self.do_test_abort_on_error(use_post_run_commands=True)
 
     def test_command_directive_abort_on_error_attach_commands(self):
-        program = self.getBuildArtifact("a.out")
         command_quiet = (
             "settings set target.show-hex-variable-values-with-leading-zeroes false"
         )
         command_abort_on_error = "settings set foo bar"
-        self.build_and_create_debug_adapter()
+        program = self.build_and_create_debug_adapter_for_attach()
         self.attach(
             program,
             attachCommands=["?!" + command_quiet, "!" + command_abort_on_error],

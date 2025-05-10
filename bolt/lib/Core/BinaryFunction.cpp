@@ -65,6 +65,8 @@ extern cl::opt<bool> StrictMode;
 extern cl::opt<bool> UpdateDebugSections;
 extern cl::opt<unsigned> Verbosity;
 
+extern bool BinaryAnalysisMode;
+extern bool HeatmapMode;
 extern bool processAllFunctions();
 
 static cl::opt<bool> CheckEncoding(
@@ -1795,8 +1797,6 @@ bool BinaryFunction::scanExternalRefs() {
     // Create relocation for every fixup.
     for (const MCFixup &Fixup : Fixups) {
       std::optional<Relocation> Rel = BC.MIB->createRelocation(Fixup, *BC.MAB);
-      // Can be skipped in case of overlow during relocation value encoding.
-      Rel->setOptional();
       if (!Rel) {
         Success = false;
         continue;
@@ -1812,6 +1812,17 @@ bool BinaryFunction::scanExternalRefs() {
         Success = false;
         continue;
       }
+
+      if (BC.isAArch64()) {
+        // Allow the relocation to be skipped in case of the overflow during the
+        // relocation value encoding.
+        Rel->setOptional();
+
+        if (!opts::CompactCodeModel)
+          if (BinaryFunction *TargetBF = BC.getFunctionForSymbol(Rel->Symbol))
+            TargetBF->setNeedsPatch(true);
+      }
+
       Rel->Offset += getAddress() - getOriginSection()->getAddress() + Offset;
       FunctionRelocations.push_back(*Rel);
     }
@@ -2760,12 +2771,18 @@ private:
     }
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
-    case MCCFIInstruction::OpNegateRAState:
     case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
       llvm_unreachable("unsupported CFI opcode");
+      break;
+    case MCCFIInstruction::OpNegateRAState:
+      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
+        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
+                         "as produced by '-mbranch-protection=pac-ret') are "
+                         "currently not supported by BOLT.");
+      }
       break;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
@@ -2900,13 +2917,19 @@ struct CFISnapshotDiff : public CFISnapshot {
       return CFAReg == Instr.getRegister() && CFAOffset == Instr.getOffset();
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
-    case MCCFIInstruction::OpNegateRAState:
     case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
       llvm_unreachable("unsupported CFI opcode");
       return false;
+    case MCCFIInstruction::OpNegateRAState:
+      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
+        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
+                         "as produced by '-mbranch-protection=pac-ret') are "
+                         "currently not supported by BOLT.");
+      }
+      break;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -3051,12 +3074,18 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
       break;
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
-    case MCCFIInstruction::OpNegateRAState:
     case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
       llvm_unreachable("unsupported CFI opcode");
+      break;
+    case MCCFIInstruction::OpNegateRAState:
+      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
+        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
+                         "as produced by '-mbranch-protection=pac-ret') are "
+                         "currently not supported by BOLT.");
+      }
       break;
     case MCCFIInstruction::OpGnuArgsSize:
       // do not affect CFI state

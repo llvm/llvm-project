@@ -1192,21 +1192,6 @@ public:
     return true;
   }
 
-  /// Deferred spilling delays the spill insertion of a virtual register
-  /// after every other allocation. By deferring the spilling, it is
-  /// sometimes possible to eliminate that spilling altogether because
-  /// something else could have been eliminated, thus leaving some space
-  /// for the virtual register.
-  /// However, this comes with a compile time impact because it adds one
-  /// more stage to the greedy register allocator.
-  /// This method is used to decide whether \p VirtReg should use the deferred
-  /// spilling stage instead of being spilled right away.
-  virtual bool
-  shouldUseDeferredSpillingForVirtReg(const MachineFunction &MF,
-                                      const LiveInterval &VirtReg) const {
-    return false;
-  }
-
   /// When prioritizing live ranges in register allocation, if this hook returns
   /// true then the AllocationPriority of the register class will be treated as
   /// more important than whether the range is local to a basic block or global.

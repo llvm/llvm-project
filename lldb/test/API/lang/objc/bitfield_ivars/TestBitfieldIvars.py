@@ -42,7 +42,7 @@ class TestBitfieldIvars(TestBase):
 
     # This test is meant to be xfailed, but running the test triggers an ASan
     # issue, so it must be skipped for now.
-    @skipIf
+    @skip
     def testExprWholeObject(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

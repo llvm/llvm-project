@@ -237,8 +237,11 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   assert(insertResult && "isSafeToCovert() should have caught this.");
 
   // Force conversion of non-virtual base classes recursively.
-  if (isa<CXXRecordDecl>(rd)) {
-    cgm.errorNYI(rd->getSourceRange(), "CXXRecordDecl");
+  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
+    if (cxxRecordDecl->getNumBases() > 0) {
+      cgm.errorNYI(rd->getSourceRange(),
+                   "convertRecordDeclType: derived CXXRecordDecl");
+    }
   }
 
   // Layout fields.
@@ -381,6 +384,16 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::LValueReference:
+  case Type::RValueReference: {
+    const ReferenceType *refTy = cast<ReferenceType>(ty);
+    QualType elemTy = refTy->getPointeeType();
+    auto pointeeType = convertTypeForMem(elemTy);
+    resultType = builder.getPointerTo(pointeeType);
+    assert(resultType && "Cannot get pointer type?");
+    break;
+  }
+
   case Type::Pointer: {
     const PointerType *ptrTy = cast<PointerType>(ty);
     QualType elemTy = ptrTy->getPointeeType();
@@ -487,9 +500,9 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
         return true;
   }
 
-  if (t->getAs<RecordType>()) {
-    cgm.errorNYI(SourceLocation(), "isZeroInitializable for RecordType", t);
-    return false;
+  if (const RecordType *rt = t->getAs<RecordType>()) {
+    const RecordDecl *rd = rt->getDecl();
+    return isZeroInitializable(rd);
   }
 
   if (t->getAs<MemberPointerType>()) {
@@ -501,11 +514,18 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   return true;
 }
 
-const CIRGenFunctionInfo &
-CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType) {
+bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
+  return getCIRGenRecordLayout(rd).isZeroInitializable();
+}
+
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
+    CanQualType returnType, llvm::ArrayRef<clang::CanQualType> argTypes) {
+  assert(llvm::all_of(argTypes,
+                      [](CanQualType T) { return T.isCanonicalAsParam(); }));
+
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id, returnType);
+  CIRGenFunctionInfo::Profile(id, returnType, argTypes);
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
@@ -515,28 +535,8 @@ CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType) {
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(returnType);
+  fi = CIRGenFunctionInfo::create(returnType, argTypes);
   functionInfos.InsertNode(fi, insertPos);
-
-  bool inserted = functionsBeingProcessed.insert(fi).second;
-  (void)inserted;
-  assert(inserted && "Are functions being processed recursively?");
-
-  assert(!cir::MissingFeatures::opCallCallConv());
-  getABIInfo().computeInfo(*fi);
-
-  // Loop over all of the computed argument and return value info. If any of
-  // them are direct or extend without a specified coerce type, specify the
-  // default now.
-  cir::ABIArgInfo &retInfo = fi->getReturnInfo();
-  if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
-    retInfo.setCoerceToType(convertType(fi->getReturnType()));
-
-  assert(!cir::MissingFeatures::opCallArgs());
-
-  bool erased = functionsBeingProcessed.erase(fi);
-  (void)erased;
-  assert(erased && "Not in set?");
 
   return *fi;
 }

@@ -2736,7 +2736,7 @@ define i32 @pr47322_more_poisonous_replacement(i32 %arg) {
 ; CHECK-LABEL: @pr47322_more_poisonous_replacement(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
 ; CHECK-NEXT:    [[TRAILING:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[ARG]], i1 true)
-; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[ARG]], [[TRAILING]]
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr exact i32 [[ARG]], [[TRAILING]]
 ; CHECK-NEXT:    [[R1_SROA_0_1:%.*]] = select i1 [[CMP]], i32 0, i32 [[SHIFTED]]
 ; CHECK-NEXT:    ret i32 [[R1_SROA_0_1]]
 ;

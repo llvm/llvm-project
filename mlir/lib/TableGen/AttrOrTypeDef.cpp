@@ -297,10 +297,9 @@ StringRef AttrOrTypeParameter::getCppType() const {
         init->getDef()->getLoc(),
         Twine("Missing `cppType` field in Attribute/Type parameter: ") +
             init->getAsString());
-  llvm::report_fatal_error(
+  llvm::reportFatalUsageError(
       Twine("Missing `cppType` field in Attribute/Type parameter: ") +
-          getDef()->getAsString(),
-      /*gen_crash_diag=*/false);
+      getDef()->getAsString());
 }
 
 StringRef AttrOrTypeParameter::getCppAccessorType() const {
