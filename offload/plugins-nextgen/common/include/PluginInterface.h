@@ -30,6 +30,7 @@
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
+#include "OffloadError.h"
 #include "RPC.h"
 #include "omptarget.h"
 
@@ -1382,10 +1383,34 @@ namespace Plugin {
 /// Plugin::check().
 static inline Error success() { return Error::success(); }
 
-/// Create a string error.
+/// Create an Offload error.
 template <typename... ArgsTy>
-static Error error(const char *ErrFmt, ArgsTy... Args) {
-  return createStringError(inconvertibleErrorCode(), ErrFmt, Args...);
+static Error error(ErrorCode Code, const char *ErrFmt, ArgsTy... Args) {
+  std::string Buffer;
+  raw_string_ostream(Buffer) << format(ErrFmt, Args...);
+  return make_error<OffloadError>(Code, Buffer);
+}
+
+inline Error error(ErrorCode Code, const char *S) {
+  return make_error<OffloadError>(Code, S);
+}
+
+inline Error error(ErrorCode Code, Error &&OtherError, const char *Context) {
+  std::string Buffer{Context};
+  raw_string_ostream buffer(Buffer);
+
+  handleAllErrors(
+      std::move(OtherError),
+      [&](llvm::StringError &Err) {
+        buffer << ": ";
+        buffer << Err.getMessage();
+      },
+      [&](llvm::ErrorInfoBase &Err) {
+        // Non-string error message don't add anything to the offload error's
+        // error message
+      });
+
+  return make_error<OffloadError>(Code, Buffer);
 }
 
 /// Check the plugin-specific error code and return an error or success
