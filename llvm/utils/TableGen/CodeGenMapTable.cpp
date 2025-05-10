@@ -102,9 +102,7 @@ private:
   std::vector<const ListInit *> ValueCols;
 
 public:
-  InstrMap(const Record *MapRec) {
-    Name = std::string(MapRec->getName());
-
+  InstrMap(const Record *MapRec) : Name(MapRec->getName().str()) {
     // FilterClass - It's used to reduce the search space only to the
     // instructions that define the kind of relationship modeled by
     // this InstrMapping object/record.
@@ -133,8 +131,8 @@ public:
 
     // Each instruction map must specify at least one column for it to be valid.
     if (ColValList->empty())
-      PrintFatalError(MapRec->getLoc(), "InstrMapping record `" +
-                                            MapRec->getName() + "' has empty " +
+      PrintFatalError(MapRec->getLoc(), "InstrMapping record `" + Name +
+                                            "' has empty " +
                                             "`ValueCols' field!");
 
     for (const Init *I : ColValList->getValues()) {
@@ -144,7 +142,7 @@ public:
       // elements as the fields in 'ColFields'.
       if (ColI->size() != ColFields->size())
         PrintFatalError(MapRec->getLoc(),
-                        "Record `" + MapRec->getName() +
+                        "Record `" + Name +
                             "', field `ValueCols' entries don't match with " +
                             " the entries in 'ColFields'!");
       ValueCols.push_back(ColI);
@@ -188,7 +186,7 @@ public:
   MapTableEmitter(const CodeGenTarget &Target, const RecordKeeper &Records,
                   const Record *IMRec)
       : Target(Target), InstrMapDesc(IMRec) {
-    const std::string &FilterClass = InstrMapDesc.getFilterClass();
+    StringRef FilterClass = InstrMapDesc.getFilterClass();
     InstrDefs = Records.getAllDerivedDefinitions(FilterClass);
   }
 

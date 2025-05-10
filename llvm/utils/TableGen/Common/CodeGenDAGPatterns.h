@@ -406,7 +406,7 @@ class ScopedName {
 
 public:
   ScopedName(unsigned Scope, StringRef Identifier)
-      : Scope(Scope), Identifier(std::string(Identifier)) {
+      : Scope(Scope), Identifier(Identifier.str()) {
     assert(Scope != 0 &&
            "Scope == 0 is used to indicate predicates without arguments");
   }
@@ -588,7 +588,6 @@ public:
 
   // If true, indicates that GlobalISel-based C++ code was supplied.
   bool hasGISelPredicateCode() const;
-  std::string getGISelPredicateCode() const;
 
 private:
   bool hasPredCode() const;

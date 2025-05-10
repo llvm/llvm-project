@@ -281,8 +281,7 @@ private:
   ///                         If register size does not match OpSize, then
   ///                         register sizes keep their size.
   /// @return               - The operand's type.
-  static OperandType typeFromString(const std::string &s, bool hasREX_W,
-                                    uint8_t OpSize);
+  static OperandType typeFromString(StringRef s, bool hasREX_W, uint8_t OpSize);
 
   /// immediateEncodingFromString - Translates an immediate encoding from the
   ///   string provided in the LLVM tables to an OperandEncoding for use in
@@ -292,28 +291,27 @@ private:
   /// @param OpSize  - Indicates whether this is an OpSize16 instruction.
   ///                  If it is not, then 16-bit immediate operands stay 16-bit.
   /// @return        - The operand's encoding.
-  static OperandEncoding immediateEncodingFromString(const std::string &s,
+  static OperandEncoding immediateEncodingFromString(StringRef s,
                                                      uint8_t OpSize);
 
   /// rmRegisterEncodingFromString - Like immediateEncodingFromString, but
   ///   handles operands that are in the REG field of the ModR/M byte.
-  static OperandEncoding rmRegisterEncodingFromString(const std::string &s,
+  static OperandEncoding rmRegisterEncodingFromString(StringRef s,
                                                       uint8_t OpSize);
 
   /// rmRegisterEncodingFromString - Like immediateEncodingFromString, but
   ///   handles operands that are in the REG field of the ModR/M byte.
-  static OperandEncoding roRegisterEncodingFromString(const std::string &s,
+  static OperandEncoding roRegisterEncodingFromString(StringRef s,
                                                       uint8_t OpSize);
-  static OperandEncoding memoryEncodingFromString(const std::string &s,
-                                                  uint8_t OpSize);
-  static OperandEncoding relocationEncodingFromString(const std::string &s,
+  static OperandEncoding memoryEncodingFromString(StringRef s, uint8_t OpSize);
+  static OperandEncoding relocationEncodingFromString(StringRef s,
                                                       uint8_t OpSize);
-  static OperandEncoding opcodeModifierEncodingFromString(const std::string &s,
+  static OperandEncoding opcodeModifierEncodingFromString(StringRef s,
                                                           uint8_t OpSize);
-  static OperandEncoding vvvvRegisterEncodingFromString(const std::string &s,
+  static OperandEncoding vvvvRegisterEncodingFromString(StringRef s,
                                                         uint8_t OpSize);
-  static OperandEncoding
-  writemaskRegisterEncodingFromString(const std::string &s, uint8_t OpSize);
+  static OperandEncoding writemaskRegisterEncodingFromString(StringRef s,
+                                                             uint8_t OpSize);
 
   /// Adjust the encoding type for an operand based on the instruction.
   void adjustOperandEncoding(OperandEncoding &encoding);
@@ -336,12 +334,10 @@ private:
   /// @param operandMapping       - The operand mapping, which has an entry for
   ///                               each operand that indicates whether it is a
   ///                               duplicate, and of what.
-  void handleOperand(bool optional, unsigned &operandIndex,
-                     unsigned &physicalOperandIndex,
-                     unsigned numPhysicalOperands,
-                     const unsigned *operandMapping,
-                     OperandEncoding (*encodingFromString)(const std::string &,
-                                                           uint8_t OpSize));
+  void handleOperand(
+      bool optional, unsigned &operandIndex, unsigned &physicalOperandIndex,
+      unsigned numPhysicalOperands, const unsigned *operandMapping,
+      OperandEncoding (*encodingFromString)(StringRef, uint8_t OpSize));
 
   /// emitInstructionSpecifier - Loads the instruction specifier for the current
   ///   instruction into a DisassemblerTables.

@@ -121,7 +121,7 @@ struct InstRegexOp : public SetTheory::Operator {
       StringRef PatStr = Original.substr(FirstMeta);
       if (!PatStr.empty()) {
         // For the rest use a python-style prefix match.
-        std::string pat = std::string(PatStr);
+        std::string pat = PatStr.str();
         // Add ^ anchor. If we had one originally, don't need the group.
         if (HadAnchor) {
           pat.insert(0, "^");
@@ -544,7 +544,7 @@ void CodeGenSchedModels::addProcModel(const Record *ProcDef) {
   if (!ProcModelMap.try_emplace(ModelKey, ProcModels.size()).second)
     return;
 
-  std::string Name = std::string(ModelKey->getName());
+  std::string Name = ModelKey->getName().str();
   if (ModelKey->isSubClassOf("SchedMachineModel")) {
     const Record *ItinsDef = ModelKey->getValueAsDef("Itineraries");
     ProcModels.emplace_back(ProcModels.size(), Name, ModelKey, ItinsDef);
@@ -938,7 +938,7 @@ CodeGenSchedModels::createSchedClassName(const Record *ItinClassDef,
                                          ArrayRef<unsigned> OperReads) {
   std::string Name;
   if (ItinClassDef && ItinClassDef->getName() != "NoItinerary")
-    Name = std::string(ItinClassDef->getName());
+    Name = ItinClassDef->getName().str();
   for (unsigned Idx : OperWrites) {
     if (!Name.empty())
       Name += '_';
