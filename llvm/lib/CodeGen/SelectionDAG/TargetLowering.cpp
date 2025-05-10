@@ -2980,7 +2980,8 @@ bool TargetLowering::SimplifyDemandedBits(
     if (Known.isNonNegative())
       return TLO.CombineTo(Op, Op0);
     if (Known.isNegative())
-      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::FNEG, dl, VT, Op0));
+      return TLO.CombineTo(
+          Op, TLO.DAG.getNode(ISD::FNEG, dl, VT, Op0, Op->getFlags()));
 
     Known.Zero |= SignMask;
     Known.One &= ~SignMask;
@@ -2996,13 +2997,9 @@ bool TargetLowering::SimplifyDemandedBits(
       return TLO.CombineTo(Op, Op0);
 
     if (SimplifyDemandedBits(Op0, ~SignMask & DemandedBits, DemandedElts, Known,
-                             TLO, Depth + 1))
-      return true;
-    if (SimplifyDemandedBits(Op1, SignMask, DemandedElts, Known2, TLO,
+                             TLO, Depth + 1) ||
+        SimplifyDemandedBits(Op1, SignMask, DemandedElts, Known2, TLO,
                              Depth + 1))
-      return true;
-
-    if (ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO))
       return true;
 
     if ((Known.isNonNegative() && Known2.isNonNegative()) ||
@@ -3010,7 +3007,8 @@ bool TargetLowering::SimplifyDemandedBits(
       return TLO.CombineTo(Op, Op0);
 
     if (Known2.isNonNegative())
-      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::FABS, dl, VT, Op0));
+      return TLO.CombineTo(
+          Op, TLO.DAG.getNode(ISD::FABS, dl, VT, Op0, Op->getFlags()));
 
     if (Known2.isNegative()) {
       Known.One |= SignMask;
