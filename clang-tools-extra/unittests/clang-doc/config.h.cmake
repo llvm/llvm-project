@@ -1,0 +1,6 @@
+#ifndef CLANG_DOC_CONFIG_H
+#define CLANG_DOC_CONFIG_H
+
+#define CLANG_DOC_TEST_ASSET_DIR "${CLANG_DOC_TEST_ASSET_DIR}"
+
+#endif
