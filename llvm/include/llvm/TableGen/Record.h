@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -244,7 +245,7 @@ public:
   RecordRecTy &operator=(const RecordRecTy &) = delete;
 
   // Do not use sized deallocation due to trailing objects.
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   static bool classof(const RecTy *RT) {
     return RT->getRecTyKind() == RecordRecTyKind;
@@ -598,7 +599,7 @@ public:
   BitsInit &operator=(const BitsInit &) = delete;
 
   // Do not use sized deallocation due to trailing objects.
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   static bool classof(const Init *I) {
     return I->getKind() == IK_BitsInit;
@@ -615,18 +616,8 @@ public:
   convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
   std::optional<int64_t> convertInitializerToInt() const;
 
-  bool isComplete() const override {
-    for (unsigned i = 0; i != getNumBits(); ++i)
-      if (!getBit(i)->isComplete()) return false;
-    return true;
-  }
-
-  bool allInComplete() const {
-    for (unsigned i = 0; i != getNumBits(); ++i)
-      if (getBit(i)->isComplete()) return false;
-    return true;
-  }
-
+  bool isComplete() const override;
+  bool allInComplete() const;
   bool isConcrete() const override;
   std::string getAsString() const override;
 
@@ -773,7 +764,7 @@ public:
   ListInit &operator=(const ListInit &) = delete;
 
   // Do not use sized deallocation due to trailing objects.
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   static bool classof(const Init *I) {
     return I->getKind() == IK_ListInit;
@@ -786,13 +777,13 @@ public:
     return ArrayRef(getTrailingObjects<const Init *>(), NumValues);
   }
 
-  const Init *getElement(unsigned Index) const { return getValues()[Index]; }
+  const Init *getElement(unsigned Idx) const { return getValues()[Idx]; }
 
   const RecTy *getElementType() const {
     return cast<ListRecTy>(getType())->getElementType();
   }
 
-  const Record *getElementAsRecord(unsigned i) const;
+  const Record *getElementAsRecord(unsigned Idx) const;
 
   const Init *convertInitializerTo(const RecTy *Ty) const override;
 
@@ -1059,6 +1050,8 @@ public:
   ArrayRef<const Init *> getVals() const {
     return ArrayRef(getTrailingObjects<const Init *>() + NumConds, NumConds);
   }
+
+  auto getCondAndVals() const { return zip_equal(getConds(), getVals()); }
 
   const Init *Fold(const Record *CurRec) const;
 
@@ -1349,7 +1342,7 @@ public:
   VarDefInit &operator=(const VarDefInit &) = delete;
 
   // Do not use sized deallocation due to trailing objects.
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   static bool classof(const Init *I) {
     return I->getKind() == IK_VarDefInit;
@@ -1457,7 +1450,7 @@ public:
                             ArrayRef<const StringInit *> NameRange);
   static const DagInit *
   get(const Init *V, const StringInit *VN,
-      ArrayRef<std::pair<const Init *, const StringInit *>> Args);
+      ArrayRef<std::pair<const Init *, const StringInit *>> ArgAndNames);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -1493,6 +1486,15 @@ public:
 
   ArrayRef<const StringInit *> getArgNames() const {
     return ArrayRef(getTrailingObjects<const StringInit *>(), NumArgs);
+  }
+
+  // Return a range of std::pair.
+  auto getArgAndNames() const {
+    auto Zip = llvm::zip_equal(getArgs(), getArgNames());
+    using EltTy = decltype(*adl_begin(Zip));
+    return llvm::map_range(Zip, [](const EltTy &E) {
+      return std::make_pair(std::get<0>(E), std::get<1>(E));
+    });
   }
 
   const Init *resolveReferences(Resolver &R) const override;
@@ -1798,12 +1800,11 @@ public:
   }
 
   void removeValue(const Init *Name) {
-    for (unsigned i = 0, e = Values.size(); i != e; ++i)
-      if (Values[i].getNameInit() == Name) {
-        Values.erase(Values.begin()+i);
-        return;
-      }
-    llvm_unreachable("Cannot remove an entry that does not exist!");
+    auto It = llvm::find_if(
+        Values, [Name](const RecordVal &V) { return V.getNameInit() == Name; });
+    if (It == Values.end())
+      llvm_unreachable("Cannot remove an entry that does not exist!");
+    Values.erase(It);
   }
 
   void removeValue(StringRef Name) {
@@ -2123,10 +2124,7 @@ struct LessRecordRegister {
 
     size_t size() { return Parts.size(); }
 
-    std::pair<bool, StringRef> getPart(size_t i) {
-      assert (i < Parts.size() && "Invalid idx!");
-      return Parts[i];
-    }
+    std::pair<bool, StringRef> getPart(size_t Idx) { return Parts[Idx]; }
   };
 
   bool operator()(const Record *Rec1, const Record *Rec2) const {

@@ -294,11 +294,9 @@ std::string RecordRecTy::getAsString() const {
     return getClasses()[0]->getNameInitAsString();
 
   std::string Str = "{";
-  bool First = true;
+  ListSeparator LS;
   for (const Record *R : getClasses()) {
-    if (!First)
-      Str += ", ";
-    First = false;
+    Str += LS;
     Str += R->getNameInitAsString();
   }
   Str += "}";
@@ -520,9 +518,9 @@ const Init *BitsInit::convertInitializerTo(const RecTy *Ty) const {
 
 std::optional<int64_t> BitsInit::convertInitializerToInt() const {
   int64_t Result = 0;
-  for (unsigned i = 0, e = getNumBits(); i != e; ++i)
-    if (auto *Bit = dyn_cast<BitInit>(getBit(i)))
-      Result |= static_cast<int64_t>(Bit->getValue()) << i;
+  for (auto [Idx, InitV] : enumerate(getBits()))
+    if (auto *Bit = dyn_cast<BitInit>(InitV))
+      Result |= static_cast<int64_t>(Bit->getValue()) << Idx;
     else
       return std::nullopt;
   return Result;
@@ -532,27 +530,30 @@ const Init *
 BitsInit::convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
   SmallVector<const Init *, 16> NewBits(Bits.size());
 
-  for (unsigned i = 0, e = Bits.size(); i != e; ++i) {
-    if (Bits[i] >= getNumBits())
+  for (auto [Bit, NewBit] : zip_equal(Bits, NewBits)) {
+    if (Bit >= getNumBits())
       return nullptr;
-    NewBits[i] = getBit(Bits[i]);
+    NewBit = getBit(Bit);
   }
   return BitsInit::get(getRecordKeeper(), NewBits);
 }
 
+bool BitsInit::isComplete() const {
+  return all_of(getBits(), [](const Init *Bit) { return Bit->isComplete(); });
+}
+bool BitsInit::allInComplete() const {
+  return all_of(getBits(), [](const Init *Bit) { return !Bit->isComplete(); });
+}
 bool BitsInit::isConcrete() const {
-  for (unsigned i = 0, e = getNumBits(); i != e; ++i) {
-    if (!getBit(i)->isConcrete())
-      return false;
-  }
-  return true;
+  return all_of(getBits(), [](const Init *Bit) { return Bit->isConcrete(); });
 }
 
 std::string BitsInit::getAsString() const {
   std::string Result = "{ ";
-  for (unsigned i = 0, e = getNumBits(); i != e; ++i) {
-    if (i) Result += ", ";
-    if (const Init *Bit = getBit(e - i - 1))
+  ListSeparator LS;
+  for (const Init *Bit : reverse(getBits())) {
+    Result += LS;
+    if (Bit)
       Result += Bit->getAsString();
     else
       Result += "*";
@@ -569,9 +570,8 @@ const Init *BitsInit::resolveReferences(Resolver &R) const {
   const Init *CachedBitVarRef = nullptr;
   const Init *CachedBitVarResolved = nullptr;
 
-  for (unsigned i = 0, e = getNumBits(); i != e; ++i) {
-    const Init *CurBit = getBit(i);
-    const Init *NewBit = CurBit;
+  for (auto [CurBit, NewBit] : zip_equal(getBits(), NewBits)) {
+    NewBit = CurBit;
 
     if (const auto *CurBitVar = dyn_cast<VarBitInit>(CurBit)) {
       if (CurBitVar->getBitVar() != CachedBitVarRef) {
@@ -587,7 +587,6 @@ const Init *BitsInit::resolveReferences(Resolver &R) const {
 
     if (isa<UnsetInit>(NewBit) && R.keepUnsetBits())
       NewBit = CurBit;
-    NewBits[i] = NewBit;
     Changed |= CurBit != NewBit;
   }
 
@@ -644,12 +643,11 @@ const Init *IntInit::convertInitializerTo(const RecTy *Ty) const {
 const Init *IntInit::convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
   SmallVector<const Init *, 16> NewBits(Bits.size());
 
-  for (unsigned i = 0, e = Bits.size(); i != e; ++i) {
-    if (Bits[i] >= 64)
+  for (auto [Bit, NewBit] : zip_equal(Bits, NewBits)) {
+    if (Bit >= 64)
       return nullptr;
 
-    NewBits[i] =
-        BitInit::get(getRecordKeeper(), Value & (INT64_C(1) << Bits[i]));
+    NewBit = BitInit::get(getRecordKeeper(), Value & (INT64_C(1) << Bit));
   }
   return BitsInit::get(getRecordKeeper(), NewBits);
 }
@@ -751,8 +749,9 @@ const Init *ListInit::convertInitializerTo(const RecTy *Ty) const {
         Elements.push_back(CI);
         if (CI != I)
           Changed = true;
-      } else
+      } else {
         return nullptr;
+      }
 
     if (!Changed)
       return this;
@@ -762,9 +761,8 @@ const Init *ListInit::convertInitializerTo(const RecTy *Ty) const {
   return nullptr;
 }
 
-const Record *ListInit::getElementAsRecord(unsigned i) const {
-  assert(i < NumValues && "List element index out of range!");
-  const auto *DI = dyn_cast<DefInit>(getElement(i));
+const Record *ListInit::getElementAsRecord(unsigned Idx) const {
+  const auto *DI = dyn_cast<DefInit>(getElement(Idx));
   if (!DI)
     PrintFatalError("Expected record in list!");
   return DI->getDef();
@@ -787,27 +785,20 @@ const Init *ListInit::resolveReferences(Resolver &R) const {
 }
 
 bool ListInit::isComplete() const {
-  for (const Init *Element : *this) {
-    if (!Element->isComplete())
-      return false;
-  }
-  return true;
+  return all_of(*this,
+                [](const Init *Element) { return Element->isComplete(); });
 }
 
 bool ListInit::isConcrete() const {
-  for (const Init *Element : *this) {
-    if (!Element->isConcrete())
-      return false;
-  }
-  return true;
+  return all_of(*this,
+                [](const Init *Element) { return Element->isConcrete(); });
 }
 
 std::string ListInit::getAsString() const {
   std::string Result = "[";
-  const char *sep = "";
+  ListSeparator LS;
   for (const Init *Element : *this) {
-    Result += sep;
-    sep = ", ";
+    Result += LS;
     Result += Element->getAsString();
   }
   return Result + "]";
@@ -1125,9 +1116,9 @@ static const StringInit *interleaveStringList(const ListInit *List,
   SmallString<80> Result(Element->getValue());
   StringInit::StringFormat Fmt = StringInit::SF_String;
 
-  for (unsigned I = 1, E = List->size(); I < E; ++I) {
+  for (const Init *Elem : List->getValues().drop_front()) {
     Result.append(Delim->getValue());
-    const auto *Element = dyn_cast<StringInit>(List->getElement(I));
+    const auto *Element = dyn_cast<StringInit>(Elem);
     if (!Element)
       return nullptr;
     Result.append(Element->getValue());
@@ -1147,10 +1138,10 @@ static const StringInit *interleaveIntList(const ListInit *List,
     return nullptr;
   SmallString<80> Result(Element->getAsString());
 
-  for (unsigned I = 1, E = List->size(); I < E; ++I) {
+  for (const Init *Elem : List->getValues().drop_front()) {
     Result.append(Delim->getValue());
     const auto *Element = dyn_cast_or_null<IntInit>(
-        List->getElement(I)->convertInitializerTo(IntRecTy::get(RK)));
+        Elem->convertInitializerTo(IntRecTy::get(RK)));
     if (!Element)
       return nullptr;
     Result.append(Element->getAsString());
@@ -1315,17 +1306,10 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
       if (!Op)
         Op = UnsetInit::get(getRecordKeeper());
 
-      SmallVector<const Init *, 8> Args;
-      SmallVector<const StringInit *, 8> ArgNames;
-      for (unsigned i = 0, e = LHSs->getNumArgs(); i != e; ++i) {
-        Args.push_back(LHSs->getArg(i));
-        ArgNames.push_back(LHSs->getArgName(i));
-      }
-      for (unsigned i = 0, e = RHSs->getNumArgs(); i != e; ++i) {
-        Args.push_back(RHSs->getArg(i));
-        ArgNames.push_back(RHSs->getArgName(i));
-      }
-      return DagInit::get(Op, nullptr, Args, ArgNames);
+      SmallVector<std::pair<const Init *, const StringInit *>, 8> Args;
+      llvm::append_range(Args, LHSs->getArgAndNames());
+      llvm::append_range(Args, RHSs->getArgAndNames());
+      return DagInit::get(Op, nullptr, Args);
     }
     break;
   }
@@ -1422,8 +1406,8 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
     if (!LHSi || !RHSi)
       break;
 
-    auto Start = LHSi->getValue();
-    auto End = RHSi->getValue();
+    int64_t Start = LHSi->getValue();
+    int64_t End = RHSi->getValue();
     SmallVector<const Init *, 8> Args;
     if (getOpcode() == RANGEC) {
       // Closed interval
@@ -1519,15 +1503,8 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
   case SETDAGOP: {
     const auto *Dag = dyn_cast<DagInit>(LHS);
     const auto *Op = dyn_cast<DefInit>(RHS);
-    if (Dag && Op) {
-      SmallVector<const Init *, 8> Args;
-      SmallVector<const StringInit *, 8> ArgNames;
-      for (unsigned i = 0, e = Dag->getNumArgs(); i != e; ++i) {
-        Args.push_back(Dag->getArg(i));
-        ArgNames.push_back(Dag->getArgName(i));
-      }
-      return DagInit::get(Op, nullptr, Args, ArgNames);
-    }
+    if (Dag && Op)
+      return DagInit::get(Op, nullptr, Dag->getArgs(), Dag->getArgNames());
     break;
   }
   case ADD:
@@ -1696,10 +1673,8 @@ static const Init *ForeachDagApply(const Init *LHS, const DagInit *MHSd,
     Change = true;
 
   SmallVector<std::pair<const Init *, const StringInit *>, 8> NewArgs;
-  for (unsigned int i = 0; i < MHSd->getNumArgs(); ++i) {
-    const Init *Arg = MHSd->getArg(i);
+  for (auto [Arg, ArgName] : MHSd->getArgAndNames()) {
     const Init *NewArg;
-    const StringInit *ArgName = MHSd->getArgName(i);
 
     if (const auto *Argd = dyn_cast<DagInit>(Arg))
       NewArg = ForeachDagApply(LHS, Argd, RHS, CurRec);
@@ -1937,9 +1912,9 @@ const Init *TernOpInit::Fold(const Record *CurRec) const {
       assert(*ArgNo < Dag->getNumArgs());
 
       SmallVector<const Init *, 8> Args(Dag->getArgs());
-      SmallVector<const StringInit *, 8> Names(Dag->getArgNames());
       Args[*ArgNo] = RHS;
-      return DagInit::get(Dag->getOperator(), Dag->getName(), Args, Names);
+      return DagInit::get(Dag->getOperator(), Dag->getName(), Args,
+                          Dag->getArgNames());
     }
     break;
   }
@@ -1954,10 +1929,10 @@ const Init *TernOpInit::Fold(const Record *CurRec) const {
 
       assert(*ArgNo < Dag->getNumArgs());
 
-      SmallVector<const Init *, 8> Args(Dag->getArgs());
       SmallVector<const StringInit *, 8> Names(Dag->getArgNames());
       Names[*ArgNo] = dyn_cast<StringInit>(RHS);
-      return DagInit::get(Dag->getOperator(), Dag->getName(), Args, Names);
+      return DagInit::get(Dag->getOperator(), Dag->getName(), Dag->getArgs(),
+                          Names);
     }
     break;
   }
@@ -2546,10 +2521,9 @@ const Init *VarDefInit::Fold() const {
 
 std::string VarDefInit::getAsString() const {
   std::string Result = Class->getNameInitAsString() + "<";
-  const char *sep = "";
+  ListSeparator LS;
   for (const Init *Arg : args()) {
-    Result += sep;
-    sep = ", ";
+    Result += LS;
     Result += Arg->getAsString();
   }
   return Result + ">";
@@ -2648,15 +2622,14 @@ const CondOpInit *CondOpInit::get(ArrayRef<const Init *> Conds,
 
 const Init *CondOpInit::resolveReferences(Resolver &R) const {
   SmallVector<const Init *, 4> NewConds;
-  bool Changed = false;
-  for (const Init *Case : getConds()) {
-    const Init *NewCase = Case->resolveReferences(R);
-    NewConds.push_back(NewCase);
-    Changed |= NewCase != Case;
-  }
-
   SmallVector<const Init *, 4> NewVals;
-  for (const Init *Val : getVals()) {
+
+  bool Changed = false;
+  for (auto [Cond, Val] : getCondAndVals()) {
+    const Init *NewCond = Cond->resolveReferences(R);
+    NewConds.push_back(NewCond);
+    Changed |= NewCond != Cond;
+
     const Init *NewVal = Val->resolveReferences(R);
     NewVals.push_back(NewVal);
     Changed |= NewVal != Val;
@@ -2671,10 +2644,7 @@ const Init *CondOpInit::resolveReferences(Resolver &R) const {
 
 const Init *CondOpInit::Fold(const Record *CurRec) const {
   RecordKeeper &RK = getRecordKeeper();
-  for (unsigned i = 0; i < NumConds; ++i) {
-    const Init *Cond = getCond(i);
-    const Init *Val = getVal(i);
-
+  for (auto [Cond, Val] : getCondAndVals()) {
     if (const auto *CondI = dyn_cast_or_null<IntInit>(
             Cond->convertInitializerTo(IntRecTy::get(RK)))) {
       if (CondI->getValue())
@@ -2692,36 +2662,24 @@ const Init *CondOpInit::Fold(const Record *CurRec) const {
 }
 
 bool CondOpInit::isConcrete() const {
-  for (const Init *Case : getConds())
-    if (!Case->isConcrete())
-      return false;
-
-  for (const Init *Val : getVals())
-    if (!Val->isConcrete())
-      return false;
-
-  return true;
+  return all_of(getCondAndVals(), [](const auto &Pair) {
+    return std::get<0>(Pair)->isConcrete() && std::get<1>(Pair)->isConcrete();
+  });
 }
 
 bool CondOpInit::isComplete() const {
-  for (const Init *Case : getConds())
-    if (!Case->isComplete())
-      return false;
-
-  for (const Init *Val : getVals())
-    if (!Val->isConcrete())
-      return false;
-
-  return true;
+  return all_of(getCondAndVals(), [](const auto &Pair) {
+    return std::get<0>(Pair)->isComplete() && std::get<1>(Pair)->isComplete();
+  });
 }
 
 std::string CondOpInit::getAsString() const {
   std::string Result = "!cond(";
-  for (unsigned i = 0; i < getNumConds(); i++) {
-    Result += getCond(i)->getAsString() + ": ";
-    Result += getVal(i)->getAsString();
-    if (i != getNumConds()-1)
-      Result += ", ";
+  ListSeparator LS;
+  for (auto [Cond, Val] : getCondAndVals()) {
+    Result += LS;
+    Result += Cond->getAsString() + ": ";
+    Result += Val->getAsString();
   }
   return Result + ")";
 }
@@ -2731,20 +2689,15 @@ const Init *CondOpInit::getBit(unsigned Bit) const {
 }
 
 static void ProfileDagInit(FoldingSetNodeID &ID, const Init *V,
-                           const StringInit *VN,
-                           ArrayRef<const Init *> ArgRange,
-                           ArrayRef<const StringInit *> NameRange) {
+                           const StringInit *VN, ArrayRef<const Init *> Args,
+                           ArrayRef<const StringInit *> ArgNames) {
   ID.AddPointer(V);
   ID.AddPointer(VN);
 
-  ArrayRef<const Init *>::iterator Arg = ArgRange.begin();
-  ArrayRef<const StringInit *>::iterator Name = NameRange.begin();
-  while (Arg != ArgRange.end()) {
-    assert(Name != NameRange.end() && "Arg name underflow!");
-    ID.AddPointer(*Arg++);
-    ID.AddPointer(*Name++);
+  for (auto [Arg, Name] : zip_equal(Args, ArgNames)) {
+    ID.AddPointer(Arg);
+    ID.AddPointer(Name);
   }
-  assert(Name == NameRange.end() && "Arg name overflow!");
 }
 
 DagInit::DagInit(const Init *V, const StringInit *VN,
@@ -2779,17 +2732,14 @@ const DagInit *DagInit::get(const Init *V, const StringInit *VN,
   return I;
 }
 
-const DagInit *
-DagInit::get(const Init *V, const StringInit *VN,
-             ArrayRef<std::pair<const Init *, const StringInit *>> args) {
+const DagInit *DagInit::get(
+    const Init *V, const StringInit *VN,
+    ArrayRef<std::pair<const Init *, const StringInit *>> ArgAndNames) {
   SmallVector<const Init *, 8> Args;
   SmallVector<const StringInit *, 8> Names;
 
-  for (const auto &[Arg, Name] : args) {
-    Args.push_back(Arg);
-    Names.push_back(Name);
-  }
-
+  llvm::append_range(Args, make_first_range(ArgAndNames));
+  llvm::append_range(Names, make_second_range(ArgAndNames));
   return DagInit::get(V, VN, Args, Names);
 }
 
@@ -2805,12 +2755,13 @@ const Record *DagInit::getOperatorAsDef(ArrayRef<SMLoc> Loc) const {
 }
 
 std::optional<unsigned> DagInit::getArgNo(StringRef Name) const {
-  for (unsigned i = 0, e = getNumArgs(); i < e; ++i) {
-    const StringInit *ArgName = getArgName(i);
-    if (ArgName && ArgName->getValue() == Name)
-      return i;
-  }
-  return std::nullopt;
+  ArrayRef<const StringInit *> ArgNames = getArgNames();
+  auto It = llvm::find_if(ArgNames, [Name](const StringInit *ArgName) {
+    return ArgName && ArgName->getValue() == Name;
+  });
+  if (It == ArgNames.end())
+    return std::nullopt;
+  return std::distance(ArgNames.begin(), It);
 }
 
 const Init *DagInit::resolveReferences(Resolver &R) const {
@@ -2833,11 +2784,7 @@ const Init *DagInit::resolveReferences(Resolver &R) const {
 bool DagInit::isConcrete() const {
   if (!Val->isConcrete())
     return false;
-  for (const Init *Elt : getArgs()) {
-    if (!Elt->isConcrete())
-      return false;
-  }
-  return true;
+  return all_of(getArgs(), [](const Init *Elt) { return Elt->isConcrete(); });
 }
 
 std::string DagInit::getAsString() const {
@@ -2845,11 +2792,13 @@ std::string DagInit::getAsString() const {
   if (ValName)
     Result += ":" + ValName->getAsUnquotedString();
   if (!arg_empty()) {
-    Result += " " + getArg(0)->getAsString();
-    if (getArgName(0)) Result += ":$" + getArgName(0)->getAsUnquotedString();
-    for (unsigned i = 1, e = getNumArgs(); i != e; ++i) {
-      Result += ", " + getArg(i)->getAsString();
-      if (getArgName(i)) Result += ":$" + getArgName(i)->getAsUnquotedString();
+    Result += " ";
+    ListSeparator LS;
+    for (auto [Arg, Name] : getArgAndNames()) {
+      Result += LS;
+      Result += Arg->getAsString();
+      if (Name)
+        Result += ":$" + Name->getAsUnquotedString();
     }
   }
   return Result + ")";
@@ -2893,24 +2842,26 @@ std::string RecordVal::getPrintType() const {
 }
 
 bool RecordVal::setValue(const Init *V) {
-  if (V) {
-    Value = V->getCastTo(getType());
-    if (Value) {
-      assert(!isa<TypedInit>(Value) ||
-             cast<TypedInit>(Value)->getType()->typeIsA(getType()));
-      if (const auto *BTy = dyn_cast<BitsRecTy>(getType())) {
-        if (!isa<BitsInit>(Value)) {
-          SmallVector<const Init *, 64> Bits;
-          Bits.reserve(BTy->getNumBits());
-          for (unsigned I = 0, E = BTy->getNumBits(); I < E; ++I)
-            Bits.push_back(Value->getBit(I));
-          Value = BitsInit::get(V->getRecordKeeper(), Bits);
-        }
-      }
-    }
-    return Value == nullptr;
+  if (!V) {
+    Value = nullptr;
+    return false;
   }
-  Value = nullptr;
+
+  Value = V->getCastTo(getType());
+  if (!Value)
+    return true;
+
+  assert(!isa<TypedInit>(Value) ||
+         cast<TypedInit>(Value)->getType()->typeIsA(getType()));
+  if (const auto *BTy = dyn_cast<BitsRecTy>(getType())) {
+    if (isa<BitsInit>(Value))
+      return false;
+    SmallVector<const Init *, 64> Bits(BTy->getNumBits());
+    for (unsigned I = 0, E = BTy->getNumBits(); I < E; ++I)
+      Bits[I] = Value->getBit(I);
+    Value = BitsInit::get(V->getRecordKeeper(), Bits);
+  }
+
   return false;
 }
 
@@ -2918,29 +2869,10 @@ bool RecordVal::setValue(const Init *V) {
 // location in the RecordVal.
 bool RecordVal::setValue(const Init *V, SMLoc NewLoc) {
   Loc = NewLoc;
-  if (V) {
-    Value = V->getCastTo(getType());
-    if (Value) {
-      assert(!isa<TypedInit>(Value) ||
-             cast<TypedInit>(Value)->getType()->typeIsA(getType()));
-      if (const auto *BTy = dyn_cast<BitsRecTy>(getType())) {
-        if (!isa<BitsInit>(Value)) {
-          SmallVector<const Init *, 64> Bits;
-          Bits.reserve(BTy->getNumBits());
-          for (unsigned I = 0, E = BTy->getNumBits(); I < E; ++I)
-            Bits.push_back(Value->getBit(I));
-          Value = BitsInit::get(getRecordKeeper(), Bits);
-        }
-      }
-    }
-    return Value == nullptr;
-  }
-  Value = nullptr;
-  return false;
+  return setValue(V);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-#include "llvm/TableGen/Record.h"
 LLVM_DUMP_METHOD void RecordVal::dump() const { errs() << *this; }
 #endif
 
@@ -3035,14 +2967,14 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
   }
 
   // Resolve the assertion expressions.
-  for (auto &Assertion : Assertions) {
+  for (AssertionInfo &Assertion : Assertions) {
     const Init *Value = Assertion.Condition->resolveReferences(R);
     Assertion.Condition = Value;
     Value = Assertion.Message->resolveReferences(R);
     Assertion.Message = Value;
   }
   // Resolve the dump expressions.
-  for (auto &Dump : Dumps) {
+  for (DumpInfo &Dump : Dumps) {
     const Init *Value = Dump.Message->resolveReferences(R);
     Dump.Message = Value;
   }
@@ -3065,12 +2997,11 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   ArrayRef<const Init *> TArgs = R.getTemplateArgs();
   if (!TArgs.empty()) {
     OS << "<";
-    bool NeedComma = false;
+    ListSeparator LS;
     for (const Init *TA : TArgs) {
-      if (NeedComma) OS << ", ";
-      NeedComma = true;
       const RecordVal *RV = R.getValue(TA);
       assert(RV && "Template argument record not found??");
+      OS << LS;
       RV->print(OS, false);
     }
     OS << ">";
@@ -3314,7 +3245,7 @@ void Record::emitRecordDumps() {
   RecordResolver R(*this);
   R.setFinal(true);
 
-  for (const auto &Dump : getDumps()) {
+  for (const DumpInfo &Dump : getDumps()) {
     const Init *Message = Dump.Message->resolveReferences(R);
     dumpMessage(Dump.Loc, Message);
   }
@@ -3342,12 +3273,12 @@ LLVM_DUMP_METHOD void RecordKeeper::dump() const { errs() << *this; }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const RecordKeeper &RK) {
   OS << "------------- Classes -----------------\n";
-  for (const auto &C : RK.getClasses())
-    OS << "class " << *C.second;
+  for (const auto &[_, C] : RK.getClasses())
+    OS << "class " << *C;
 
   OS << "------------- Defs -----------------\n";
-  for (const auto &D : RK.getDefs())
-    OS << "def " << *D.second;
+  for (const auto &[_, D] : RK.getDefs())
+    OS << "def " << *D;
   return OS;
 }
 
@@ -3373,7 +3304,7 @@ RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
   std::vector<const Record *> Defs;
 
   assert(ClassNames.size() > 0 && "At least one class must be passed.");
-  for (const auto &ClassName : ClassNames) {
+  for (StringRef ClassName : ClassNames) {
     const Record *Class = getClass(ClassName);
     if (!Class)
       PrintFatalError("The class '" + ClassName + "' is not defined\n");
