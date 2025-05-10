@@ -2,6 +2,17 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx90a -emit-llvm -o - %s | FileCheck %s
 
+typedef unsigned int v4u32 __attribute__((ext_vector_type(4)));
+
+// CHECK-LABEL: @test_amdgcn_raw_buffer_load_lds(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> [[RSRC:%.*]], ptr addrspace(3) [[LDS:%.*]], i32 1, i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 2, i32 3)
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_raw_buffer_load_lds(v4u32 rsrc, __local void * lds, int offset, int soffset) {
+    __builtin_amdgcn_raw_buffer_load_lds(rsrc, lds, 1, offset, soffset, 2, 3);
+}
+
 // CHECK-LABEL: @test_amdgcn_raw_ptr_buffer_load_lds(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) [[RSRC:%.*]], ptr addrspace(3) [[LDS:%.*]], i32 1, i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 2, i32 3)
@@ -9,4 +20,22 @@
 //
 void test_amdgcn_raw_ptr_buffer_load_lds(__amdgpu_buffer_rsrc_t rsrc, __local void * lds, int offset, int soffset) {
     __builtin_amdgcn_raw_ptr_buffer_load_lds(rsrc, lds, 1, offset, soffset, 2, 3);
+}
+
+// CHECK-LABEL: @test_amdgcn_struct_buffer_load_lds(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.struct.buffer.load.lds(<4 x i32> [[RSRC:%.*]], ptr addrspace(3) [[LDS:%.*]], i32 4, i32 [[VINDEX:%.*]], i32 [[VOFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 2, i32 3)
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_struct_buffer_load_lds(v4u32 rsrc, __local void * lds, int size, int vindex, int voffset, int soffset) {
+    __builtin_amdgcn_struct_buffer_load_lds(rsrc, lds, 4, vindex, voffset, soffset, 2, 3);
+}
+
+// CHECK-LABEL: @test_amdgcn_struct_ptr_buffer_load_lds(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.struct.ptr.buffer.load.lds(ptr addrspace(8) [[RSRC:%.*]], ptr addrspace(3) [[LDS:%.*]], i32 4, i32 [[VINDEX:%.*]], i32 [[VOFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 2, i32 3)
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_struct_ptr_buffer_load_lds(__amdgpu_buffer_rsrc_t rsrc, __local void * lds, int size, int vindex, int voffset, int soffset) {
+    __builtin_amdgcn_struct_ptr_buffer_load_lds(rsrc, lds, 4, vindex, voffset, soffset, 2, 3);
 }
