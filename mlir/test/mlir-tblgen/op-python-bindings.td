@@ -654,3 +654,9 @@ def WithSuccessorsOp : TestOp<"with_successors"> {
 
 // CHECK: def with_successors(successor, successors, *, loc=None, ip=None)
 // CHECK:   return WithSuccessorsOp(successor=successor, successors=successors, loc=loc, ip=ip)
+
+// CHECK: class snake_case(_ods_ir.OpView):
+// CHECK-LABEL: OPERATION_NAME = "test.snake_case"
+def already_snake_case : TestOp<"snake_case"> {}
+// CHECK: def snake_case_(*, loc=None, ip=None)
+// CHECK:   return snake_case(loc=loc, ip=ip)

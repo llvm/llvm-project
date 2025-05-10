@@ -57,11 +57,10 @@ class Tosa_ElementwiseShapeOp<string mnemonic, list<Trait> traits = []>
 // Operator: ConstShape
 //===----------------------------------------------------------------------===//
 def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
-  let summary = "Constant Shape op.";
+  let summary = "Constant Shape operator.";
 
   let description = [{
-    A node containing constant data for use as the input to an shape operation. May
-    hold data only in index data type.
+    A node containing a constant shape.
 
     Example:
 
@@ -71,9 +70,14 @@ def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
     ```
   }];
 
-  let arguments = (ins IndexElementsAttr : $values);
+  let arguments = (ins IndexElementsAttr:$values);
 
-  let results = (outs Tosa_Shape : $output);
+  let results = (outs Tosa_Shape:$output);
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[]>,
+  ];
 
   let hasVerifier = 1;
 }

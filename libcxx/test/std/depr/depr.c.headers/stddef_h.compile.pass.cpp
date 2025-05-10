@@ -43,8 +43,9 @@ static_assert((std::is_same<decltype(nullptr), nullptr_t>::value), "");
 static_assert(sizeof(nullptr_t) == sizeof(void*), "");
 #if TEST_STD_VER >= 11
 #  if TEST_STD_VER >= 20
-// P0767
-static_assert(std::is_trivial<max_align_t>::value, "");
+// P0767R1 and P3247R2
+static_assert(std::is_trivially_copyable<max_align_t>::value, "");
+static_assert(std::is_trivially_default_constructible<max_align_t>::value, "");
 static_assert(std::is_standard_layout<max_align_t>::value, "");
 #  else
 static_assert(std::is_pod<max_align_t>::value, "");

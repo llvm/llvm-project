@@ -260,7 +260,7 @@ auto BPOrderer<D>::computeOrder(
       auto &uns = startupSectionIdxUNs[sectionIdx];
       uns.append(compressionUns);
       llvm::sort(uns);
-      uns.erase(std::unique(uns.begin(), uns.end()), uns.end());
+      uns.erase(llvm::unique(uns), uns.end());
     }
   }
 

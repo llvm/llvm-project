@@ -8,6 +8,11 @@ struct TwoInts {
   int Z, W;
 };
 
+struct IntAndFloat {
+  int A;
+  float B;
+};
+
 struct Doggo {
   int4 LegState;
   int TailState;
@@ -980,4 +985,77 @@ FourFloats case16() {
     float X = 0;
     FourFloats FF = {0, makeTwo(X), 3};
     return FF;
+}
+
+// CHECK-LABEL: Dumping case17
+// CHECK: VarDecl {{.*}} col:15 used Structs 'IntAndFloat[2]' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'IntAndFloat[2]'
+// CHECK-NEXT: InitListExpr {{.*}} 'IntAndFloat'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 2
+// CHECK-NEXT: InitListExpr {{.*}} 'IntAndFloat'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 3
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 4
+
+
+// CHECK: VarDecl {{.*}} col:9 used Floats 'float[8]' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'float[8]'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'int' lvalue .A {{.*}}
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .B {{.*}}
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'int' lvalue .A {{.*}}
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .B {{.*}}
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'int' lvalue .A {{.*}}
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .B {{.*}}
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'int' lvalue .A {{.*}}
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .B {{.*}}
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+float case17() {
+  IntAndFloat Structs[] = {1,2,3,4};
+  float Floats[] = {Structs, Structs};
+  return Floats[7];
 }

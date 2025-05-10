@@ -1498,15 +1498,15 @@ bb:
   br i1 %tmp, label %bb3, label %bb4
 
 bb3:
-  store volatile float 0.0, ptr addrspace(1) undef
+  store volatile float 0.0, ptr addrspace(1) poison
   br label %bb4
 
 bb4:
-  %vgpr = load volatile float, ptr addrspace(1) undef
+  %vgpr = load volatile float, ptr addrspace(1) poison
   %tmp0 = fmul float %sgpr0, 0.5
   %tmp1 = fadd float %tmp0, 42.0
   %tmp2 = fmul float %tmp1, %vgpr
-  store volatile float %tmp2, ptr addrspace(1) undef, align 4
+  store volatile float %tmp2, ptr addrspace(1) poison, align 4
   ret void
 }
 

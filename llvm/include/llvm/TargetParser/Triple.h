@@ -208,6 +208,7 @@ public:
     Linux,
     Lv2, // PS3
     MacOSX,
+    Managarm,
     NetBSD,
     OpenBSD,
     Solaris,
@@ -299,6 +300,7 @@ public:
     Amplification,
     OpenCL,
     OpenHOS,
+    Mlibc,
 
     PAuthTest,
 
@@ -659,9 +661,6 @@ public:
     return getOS() == Triple::Win32;
   }
 
-  /// Tests whether the OS is Windows or UEFI.
-  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
-
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
     return isOSWindows() && getEnvironment() == Triple::MSVC;
@@ -849,6 +848,8 @@ public:
 
   bool isVulkanOS() const { return getOS() == Triple::Vulkan; }
 
+  bool isOSManagarm() const { return getOS() == Triple::Managarm; }
+
   bool isShaderStageEnvironment() const {
     EnvironmentType Env = getEnvironment();
     return Env == Triple::Pixel || Env == Triple::Vertex ||
@@ -888,9 +889,7 @@ public:
   /// Tests whether the target is AMDGCN
   bool isAMDGCN() const { return getArch() == Triple::amdgcn; }
 
-  bool isAMDGPU() const {
-    return getArch() == Triple::r600 || getArch() == Triple::amdgcn;
-  }
+  bool isAMDGPU() const { return getArch() == Triple::r600 || isAMDGCN(); }
 
   /// Tests whether the target is Thumb (little and big endian).
   bool isThumb() const {
@@ -1220,6 +1219,9 @@ public:
 
   /// Test whether target triples are compatible.
   bool isCompatibleWith(const Triple &Other) const;
+
+  /// Test whether the target triple is for a GPU.
+  bool isGPU() const { return isSPIRV() || isNVPTX() || isAMDGPU(); }
 
   /// Merge target triples.
   std::string merge(const Triple &Other) const;

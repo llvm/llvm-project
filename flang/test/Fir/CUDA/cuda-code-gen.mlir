@@ -198,3 +198,9 @@ func.func @_QMm1Psub1(%arg0: !fir.box<!fir.array<?xi32>> {cuf.data_attr = #cuf.c
 
 // CHECK-LABEL: llvm.func @_QMm1Psub1
 // CHECK-COUNT-2: _FortranACUFAllocDescriptor
+
+// -----
+
+fir.global common @_QPshared_static__shared_mem(dense<0> : vector<28xi8>) {alignment = 8 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<28xi8>
+
+// CHECK: llvm.mlir.global common @_QPshared_static__shared_mem(dense<0> : vector<28xi8>) {addr_space = 3 : i32, alignment = 8 : i64} : !llvm.array<28 x i8>

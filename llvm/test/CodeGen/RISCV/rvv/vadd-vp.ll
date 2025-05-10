@@ -1425,32 +1425,15 @@ define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, <v
   ret <vscale x 32 x i32> %v
 }
 
-; FIXME: The upper half of the operation is doing nothing but we don't catch
-; that on RV64; we issue a usubsat(and (vscale x 16), 0xffffffff, vscale x 16)
-; (the "original" %evl is the "and", due to known-bits issues with legalizing
-; the i32 %evl to i64) and this isn't detected as 0.
-; This could be resolved in the future with more detailed KnownBits analysis
-; for ISD::VSCALE.
+; The attribute vscale_range(2,1024) given here can remove the zero_extend for
+; the i32 %evl to i64 on RV64 through KnownBits analysis.
 
-define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx16(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m) {
-; RV32-LABEL: vadd_vi_nxv32i32_evl_nx16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; RV32-NEXT:    vadd.vi v8, v8, -1, v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vadd_vi_nxv32i32_evl_nx16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    srli a0, a0, 2
-; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vslidedown.vx v24, v0, a0
-; RV64-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; RV64-NEXT:    vadd.vi v8, v8, -1, v0.t
-; RV64-NEXT:    vmv1r.v v0, v24
-; RV64-NEXT:    vsetivli zero, 0, e32, m8, ta, ma
-; RV64-NEXT:    vadd.vi v16, v16, -1, v0.t
-; RV64-NEXT:    ret
+define <vscale x 32 x i32> @vadd_vi_nxv32i32_evl_nx16(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m) vscale_range(2,1024) {
+; CHECK-LABEL: vadd_vi_nxv32i32_evl_nx16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vadd.vi v8, v8, -1, v0.t
+; CHECK-NEXT:    ret
   %evl = call i32 @llvm.vscale.i32()
   %evl0 = mul i32 %evl, 16
   %v = call <vscale x 32 x i32> @llvm.vp.add.nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i32> splat (i32 -1), <vscale x 32 x i1> %m, i32 %evl0)

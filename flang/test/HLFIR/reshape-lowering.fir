@@ -26,7 +26,7 @@ func.func @_QPreshape1(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}
 // CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_9]]) dummy_scope %[[VAL_7]] {uniq_name = "_QFreshape1Ey"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_10]]#1(%[[VAL_11]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
+// CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_10]]#0(%[[VAL_11]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
 // CHECK:           %[[VAL_13:.*]] = fir.absent !fir.box<i1>
 // CHECK:           %[[VAL_14:.*]] = fir.absent !fir.box<i1>
 // CHECK:           %[[VAL_15:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
@@ -80,7 +80,7 @@ func.func @_QPreshape2(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_11]]) dummy_scope %[[VAL_8]] {uniq_name = "_QFreshape2Ey"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
 // CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_14:.*]] = fir.embox %[[VAL_12]]#1(%[[VAL_13]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
+// CHECK:           %[[VAL_14:.*]] = fir.embox %[[VAL_12]]#0(%[[VAL_13]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
 // CHECK:           %[[VAL_15:.*]] = fir.absent !fir.box<i1>
 // CHECK:           %[[VAL_16:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
 // CHECK:           %[[VAL_17:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
@@ -133,7 +133,7 @@ func.func @_QPreshape3(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_11]]) dummy_scope %[[VAL_8]] {uniq_name = "_QFreshape3Ey"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
 // CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_14:.*]] = fir.embox %[[VAL_12]]#1(%[[VAL_13]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
+// CHECK:           %[[VAL_14:.*]] = fir.embox %[[VAL_12]]#0(%[[VAL_13]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
 // CHECK:           %[[VAL_15:.*]] = fir.absent !fir.box<i1>
 // CHECK:           %[[VAL_16:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
 // CHECK:           %[[VAL_17:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
@@ -189,7 +189,7 @@ func.func @_QPreshape4(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}
 // CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_13]]) dummy_scope %[[VAL_9]] {uniq_name = "_QFreshape4Ey"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
 // CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_16:.*]] = fir.embox %[[VAL_14]]#1(%[[VAL_15]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
+// CHECK:           %[[VAL_16:.*]] = fir.embox %[[VAL_14]]#0(%[[VAL_15]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
 // CHECK:           %[[VAL_17:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
 // CHECK:           %[[VAL_18:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_19:.*]] = fir.embox %[[VAL_17]](%[[VAL_18]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
@@ -243,7 +243,7 @@ func.func @_QPreshape5(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt>>> {fir
 // CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_9]]) dummy_scope %[[VAL_7]] {uniq_name = "_QFreshape5Ey"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_10]]#1(%[[VAL_11]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
+// CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_10]]#0(%[[VAL_11]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
 // CHECK:           %[[VAL_13:.*]] = fir.absent !fir.box<i1>
 // CHECK:           %[[VAL_14:.*]] = fir.absent !fir.box<i1>
 // CHECK:           %[[VAL_15:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>
@@ -300,7 +300,7 @@ func.func @_QPreshape6(%arg0: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.ty
 // CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_9]]) dummy_scope %[[VAL_7]] {uniq_name = "_QFreshape6Ey"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
 // CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_13:.*]] = fir.embox %[[VAL_10]]#1(%[[VAL_12]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
+// CHECK:           %[[VAL_13:.*]] = fir.embox %[[VAL_10]]#0(%[[VAL_12]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
 // CHECK:           %[[VAL_14:.*]] = fir.absent !fir.box<i1>
 // CHECK:           %[[VAL_15:.*]] = fir.absent !fir.box<i1>
 // CHECK:           %[[VAL_16:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>
@@ -358,7 +358,7 @@ func.func @_QPreshape7(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt>>> {fir
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_11]]) dummy_scope %[[VAL_8]] {uniq_name = "_QFreshape7Ey"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
 // CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_14:.*]] = fir.embox %[[VAL_12]]#1(%[[VAL_13]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
+// CHECK:           %[[VAL_14:.*]] = fir.embox %[[VAL_12]]#0(%[[VAL_13]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
 // CHECK:           %[[VAL_15:.*]] = fir.absent !fir.box<i1>
 // CHECK:           %[[VAL_16:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>
 // CHECK:           %[[VAL_17:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
@@ -418,7 +418,7 @@ func.func @_QPreshape8(%arg0: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.ty
 // CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_11]]) dummy_scope %[[VAL_8]] {uniq_name = "_QFreshape8Ey"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
 // CHECK:           %[[VAL_13:.*]] = fir.load %[[VAL_10]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_14:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_15:.*]] = fir.embox %[[VAL_12]]#1(%[[VAL_14]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
+// CHECK:           %[[VAL_15:.*]] = fir.embox %[[VAL_12]]#0(%[[VAL_14]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<1xi32>>
 // CHECK:           %[[VAL_16:.*]] = fir.absent !fir.box<i1>
 // CHECK:           %[[VAL_17:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>
 // CHECK:           %[[VAL_18:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>

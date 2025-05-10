@@ -6,6 +6,7 @@ module {
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 0
     // CHECK: bitsize = 64
+    // CHECK: default_memory_space = 0
     // CHECK: endianness = ""
     // CHECK: global_memory_space = 0
     // CHECK: index = 64
@@ -18,6 +19,7 @@ module {
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 0
     // CHECK: bitsize = 64
+    // CHECK: default_memory_space = 0
     // CHECK: endianness = ""
     // CHECK: global_memory_space = 0
     // CHECK: index = 64
@@ -30,6 +32,7 @@ module {
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 0
     // CHECK: bitsize = 64
+    // CHECK: default_memory_space = 0
     // CHECK: endianness = ""
     // CHECK: global_memory_space = 0
     // CHECK: index = 64
@@ -50,6 +53,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.ptr<5>, dense<[64, 64, 64]> : vector<3xi64>>,
   #dlti.dl_entry<!llvm.ptr<4>, dense<[32, 64, 64, 24]> : vector<4xi64>>,
   #dlti.dl_entry<"dlti.endianness", "little">,
+  #dlti.dl_entry<"dlti.default_memory_space", 7 : ui64>,
   #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>,
   #dlti.dl_entry<"dlti.global_memory_space", 2 : ui64>,
   #dlti.dl_entry<"dlti.program_memory_space", 3 : ui64>,
@@ -61,6 +65,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // CHECK: alignment = 4
     // CHECK: alloca_memory_space = 5
     // CHECK: bitsize = 32
+    // CHECK: default_memory_space = 7
     // CHECK: endianness = "little"
     // CHECK: global_memory_space = 2
     // CHECK: index = 32
@@ -73,6 +78,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // CHECK: alignment = 4
     // CHECK: alloca_memory_space = 5
     // CHECK: bitsize = 32
+    // CHECK: default_memory_space = 7
     // CHECK: endianness = "little"
     // CHECK: global_memory_space = 2
     // CHECK: index = 32
@@ -84,6 +90,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 5
     // CHECK: bitsize = 64
+    // CHECK: default_memory_space = 7
     // CHECK: endianness = "little"
     // CHECK: global_memory_space = 2
     // CHECK: index = 64
@@ -96,6 +103,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // CHECK: alignment = 8
     // CHECK: alloca_memory_space = 5
     // CHECK: bitsize = 32
+    // CHECK: default_memory_space = 7
     // CHECK: endianness = "little"
     // CHECK: global_memory_space = 2
     // CHECK: index = 24

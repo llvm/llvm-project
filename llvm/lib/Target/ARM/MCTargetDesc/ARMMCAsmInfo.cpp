@@ -11,37 +11,37 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMMCAsmInfo.h"
+#include "MCTargetDesc/ARMMCExpr.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {MCSymbolRefExpr::VK_ARM_GOT_PREL, "GOT_PREL"},
-    {MCSymbolRefExpr::VK_ARM_NONE, "none"},
-    {MCSymbolRefExpr::VK_ARM_PREL31, "prel31"},
-    {MCSymbolRefExpr::VK_ARM_SBREL, "sbrel"},
-    {MCSymbolRefExpr::VK_ARM_TARGET1, "target1"},
-    {MCSymbolRefExpr::VK_ARM_TARGET2, "target2"},
-    {MCSymbolRefExpr::VK_ARM_TLSLDO, "TLSLDO"},
+    {ARMMCExpr::VK_GOT_PREL, "GOT_PREL"},
+    {ARMMCExpr::VK_ARM_NONE, "none"},
+    {ARMMCExpr::VK_PREL31, "prel31"},
+    {ARMMCExpr::VK_SBREL, "sbrel"},
+    {ARMMCExpr::VK_TARGET1, "target1"},
+    {ARMMCExpr::VK_TARGET2, "target2"},
+    {ARMMCExpr::VK_TLSLDO, "TLSLDO"},
     {MCSymbolRefExpr::VK_COFF_IMGREL32, "imgrel"},
-    {MCSymbolRefExpr::VK_FUNCDESC, "FUNCDESC"},
-    {MCSymbolRefExpr::VK_GOT, "GOT"},
-    {MCSymbolRefExpr::VK_GOTFUNCDESC, "GOTFUNCDESC"},
-    {MCSymbolRefExpr::VK_GOTOFF, "GOTOFF"},
-    {MCSymbolRefExpr::VK_GOTOFFFUNCDESC, "GOTOFFFUNCDESC"},
-    {MCSymbolRefExpr::VK_GOTTPOFF, "GOTTPOFF"},
-    {MCSymbolRefExpr::VK_GOTTPOFF_FDPIC, "gottpoff_fdpic"},
-    {MCSymbolRefExpr::VK_PLT, "PLT"},
+    {ARMMCExpr::VK_FUNCDESC, "FUNCDESC"},
+    {ARMMCExpr::VK_GOT, "GOT"},
+    {ARMMCExpr::VK_GOTFUNCDESC, "GOTFUNCDESC"},
+    {ARMMCExpr::VK_GOTOFF, "GOTOFF"},
+    {ARMMCExpr::VK_GOTOFFFUNCDESC, "GOTOFFFUNCDESC"},
+    {ARMMCExpr::VK_GOTTPOFF, "GOTTPOFF"},
+    {ARMMCExpr::VK_GOTTPOFF_FDPIC, "gottpoff_fdpic"},
+    {ARMMCExpr::VK_PLT, "PLT"},
     {MCSymbolRefExpr::VK_SECREL, "SECREL32"},
-    {MCSymbolRefExpr::VK_TLSCALL, "tlscall"},
-    {MCSymbolRefExpr::VK_TLSDESC, "tlsdesc"},
-    {MCSymbolRefExpr::VK_TLSGD, "TLSGD"},
-    {MCSymbolRefExpr::VK_TLSGD_FDPIC, "tlsgd_fdpic"},
-    {MCSymbolRefExpr::VK_TLSLD, "TLSLD"},
-    {MCSymbolRefExpr::VK_TLSLDM, "TLSLDM"},
-    {MCSymbolRefExpr::VK_TLSLDM_FDPIC, "tlsldm_fdpic"},
-    {MCSymbolRefExpr::VK_TPOFF, "TPOFF"},
+    {ARMMCExpr::VK_TLSCALL, "tlscall"},
+    {ARMMCExpr::VK_TLSDESC, "tlsdesc"},
+    {ARMMCExpr::VK_TLSGD, "TLSGD"},
+    {ARMMCExpr::VK_TLSGD_FDPIC, "tlsgd_fdpic"},
+    {ARMMCExpr::VK_TLSLDM, "TLSLDM"},
+    {ARMMCExpr::VK_TLSLDM_FDPIC, "tlsldm_fdpic"},
+    {ARMMCExpr::VK_TPOFF, "TPOFF"},
 };
 
 void ARMMCAsmInfoDarwin::anchor() { }
@@ -101,7 +101,8 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
   }
 
   // foo(plt) instead of foo@plt
-  UseParensForSymbolVariant = true;
+  UseAtForSpecifier = false;
+  UseParensForSpecifier = true;
 
   initializeVariantKinds(variantKindDescs);
 }
@@ -148,7 +149,8 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
-  UseParensForSymbolVariant = true;
+  UseAtForSpecifier = false;
+  UseParensForSpecifier = true;
 
   DwarfRegNumForCFI = false;
 

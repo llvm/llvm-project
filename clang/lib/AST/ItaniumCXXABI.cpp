@@ -110,7 +110,7 @@ struct DenseMapInfo<DecompositionDeclName> {
   }
   static unsigned getHashValue(DecompositionDeclName Key) {
     assert(!isEqual(Key, getEmptyKey()) && !isEqual(Key, getTombstoneKey()));
-    return llvm::hash_combine_range(Key.begin(), Key.end());
+    return llvm::hash_combine_range(Key);
   }
   static bool isEqual(DecompositionDeclName LHS, DecompositionDeclName RHS) {
     if (std::optional<bool> Result =

@@ -1,5 +1,4 @@
 ; RUN: opt -passes=declare-to-assign -S %s -o - | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -passes=declare-to-assign -S %s -o - | FileCheck %s
 
 ;; The variable doesn't fill the whole alloca which has a range of different
 ;; sized stores to it, overlapping (or not) the variable in various ways. Check

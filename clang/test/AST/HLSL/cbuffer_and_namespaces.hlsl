@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -ast-dump -o - %s | FileCheck %s
 
 // CHECK: CXXRecordDecl {{.*}} struct EmptyStruct definition
 struct EmptyStruct {
@@ -7,11 +7,11 @@ struct EmptyStruct {
 // CHECK: NamespaceDecl {{.*}} NS1
 namespace NS1 {
   // CHECK: CXXRecordDecl {{.*}} struct Foo definition
-  struct Foo { 
+  struct Foo {
     float a;
     EmptyStruct es;
   };
-  
+
   // CHECK: CXXRecordDecl {{.*}} struct Bar definition
   struct Bar {
     // CHECK: CXXRecordDecl {{.*}} struct Foo definition
@@ -31,9 +31,8 @@ struct Foo {
   EmptyStruct es;
 };
 
-// CHECK: HLSLBufferDecl {{.*}}  line:37:9 cbuffer CB1
+// CHECK: HLSLBufferDecl {{.*}}  line:[[# @LINE + 2]]:9 cbuffer CB1
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB1 {
   // CHECK: VarDecl {{.*}} foo1 'hlsl_constant Foo'
   Foo foo1;
@@ -57,13 +56,12 @@ struct CB1ExpectedShape {
 _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(CB1ExpectedShape, __cblayout_CB1), "");
 
 namespace NS2 {
-  struct Foo { 
+  struct Foo {
     float d[4];
     EmptyStruct es;
   };
-  // CHECK: HLSLBufferDecl {{.*}} line:67:11 cbuffer CB2
+  // CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 2]]:11 cbuffer CB2
   // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-  // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
   cbuffer CB2 {
     // CHECK: VarDecl {{.*}} foo0 'hlsl_constant ::Foo':'hlsl_constant Foo'
     ::Foo foo0;

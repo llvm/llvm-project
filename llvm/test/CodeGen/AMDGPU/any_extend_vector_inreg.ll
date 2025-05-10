@@ -36,7 +36,7 @@ bb:
   %tmp21 = getelementptr inbounds <8 x i8>, ptr addrspace(1) %arg, i64 4
   %tmp23 = load <16 x i8>, ptr addrspace(1) %tmp21, align 16
   %tmp24 = extractelement <16 x i8> %tmp23, i64 3
-  %tmp1 = insertelement <16 x i8> undef, i8 %tmp3, i32 2
+  %tmp1 = insertelement <16 x i8> poison, i8 %tmp3, i32 2
   %tmp4 = insertelement <16 x i8> %tmp1, i8 0, i32 3
   %tmp5 = insertelement <16 x i8> %tmp4, i8 0, i32 4
   %tmp7 = insertelement <16 x i8> %tmp5, i8 %tmp6, i32 5

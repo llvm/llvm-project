@@ -5,7 +5,8 @@
 // RUN: cp %llvm_src/include/llvm/ProfileData/CtxInstrContextNode.h %t_include/
 //
 // Compile with ctx instrumentation "on". We treat "theRoot" as callgraph root.
-// RUN: %clangxx %s %ctxprofilelib -I%t_include -O2 -o %t.bin -mllvm -profile-context-root=theRoot
+// RUN: %clangxx %s %ctxprofilelib -I%t_include -O2 -o %t.bin -mllvm -profile-context-root=theRoot \
+// RUN:   -mllvm -ctx-prof-skip-callsite-instr=skip_me
 //
 // Run the binary, and observe the profile fetch handler's output.
 // RUN: %t.bin | FileCheck %s
@@ -15,15 +16,20 @@
 #include <iostream>
 
 using namespace llvm::ctx_profile;
+extern "C" void
+__llvm_ctx_profile_start_collection(unsigned AutoDetectDuration = 0);
 extern "C" bool __llvm_ctx_profile_fetch(ProfileWriter &);
 
 // avoid name mangling
 extern "C" {
+__attribute__((noinline)) void skip_me() {}
+
 __attribute__((noinline)) void someFunction(int I) {
   if (I % 2)
     printf("check odd\n");
   else
     printf("check even\n");
+  skip_me();
 }
 
 // block inlining because the pre-inliner otherwise will inline this - it's
@@ -35,11 +41,25 @@ __attribute__((noinline)) void theRoot() {
   for (auto I = 0; I < 2; ++I) {
     someFunction(I);
   }
+  skip_me();
+}
+
+__attribute__((noinline)) void flatFct() {
+  printf("flat check 1\n");
+  someFunction(1);
+#pragma nounroll
+  for (auto I = 0; I < 2; ++I) {
+    someFunction(I);
+  }
 }
 }
 
 // Make sure the program actually ran correctly.
 // CHECK: check 1
+// CHECK-NEXT: check odd
+// CHECK-NEXT: check even
+// CHECK-NEXT: check odd
+// CHECK-NEXT: flat check 1
 // CHECK-NEXT: check odd
 // CHECK-NEXT: check even
 // CHECK-NEXT: check odd
@@ -70,8 +90,31 @@ class TestProfileWriter : public ProfileWriter {
     std::cout << "Exited Context Section" << std::endl;
   }
 
-  void writeContextual(const ContextNode &RootNode) override {
-    printProfile(RootNode, "", "");
+  void writeContextual(const ContextNode &RootNode,
+                       const ContextNode *Unhandled,
+                       uint64_t EntryCount) override {
+    std::cout << "Entering Root " << RootNode.guid()
+              << " with total entry count " << EntryCount << std::endl;
+    for (const auto *P = Unhandled; P; P = P->next())
+      std::cout << "Unhandled GUID: " << P->guid() << " entered "
+                << P->entrycount() << " times" << std::endl;
+    printProfile(RootNode, " ", " ");
+  }
+
+  void startFlatSection() override {
+    std::cout << "Entered Flat Section" << std::endl;
+  }
+
+  void writeFlat(GUID Guid, const uint64_t *Buffer,
+                 size_t BufferSize) override {
+    std::cout << "Flat: " << Guid << " " << Buffer[0];
+    for (size_t I = 1U; I < BufferSize; ++I)
+      std::cout << "," << Buffer[I];
+    std::cout << std::endl;
+  };
+
+  void endFlatSection() override {
+    std::cout << "Exited Flat Section" << std::endl;
   }
 };
 
@@ -85,6 +128,9 @@ class TestProfileWriter : public ProfileWriter {
 // The second context is in the loop. We expect 2 entries and each of the
 // branches would be taken once, so the second counter is 1.
 // CHECK-NEXT: Entered Context Section
+// CHECK-NEXT: Entering Root 8657661246551306189 with total entry count 1
+// skip_me is entered 4 times: 3 via `someFunction`, and once from `theRoot`
+// CHECK-NEXT: Unhandled GUID: 17928815489886282963 entered 4 times
 // CHECK-NEXT: Guid: 8657661246551306189
 // CHECK-NEXT: Entries: 1
 // CHECK-NEXT: 2 counters and 3 callsites
@@ -100,6 +146,13 @@ class TestProfileWriter : public ProfileWriter {
 // CHECK-NEXT:   2 counters and 2 callsites
 // CHECK-NEXT:   Counter values: 2 1
 // CHECK-NEXT: Exited Context Section
+// CHECK-NEXT: Entered Flat Section
+// This is `skip_me`. Entered 3 times via `someFunction`
+// CHECK-NEXT: Flat: 17928815489886282963 3
+// CHECK-NEXT: Flat: 6759619411192316602 3,1
+// This is flatFct (guid: 14569438697463215220)
+// CHECK-NEXT: Flat: 14569438697463215220 1,2
+// CHECK-NEXT: Exited Flat Section
 
 bool profileWriter() {
   TestProfileWriter W;
@@ -107,7 +160,9 @@ bool profileWriter() {
 }
 
 int main(int argc, char **argv) {
+  __llvm_ctx_profile_start_collection();
   theRoot();
+  flatFct();
   // This would be implemented in a specific RPC handler, but here we just call
   // it directly.
   return !profileWriter();

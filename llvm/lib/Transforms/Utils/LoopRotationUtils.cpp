@@ -553,8 +553,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         std::pair<std::pair<hash_code, DILocalVariable *>, DIExpression *>;
     auto makeHash = [](auto *D) -> DbgIntrinsicHash {
       auto VarLocOps = D->location_ops();
-      return {{hash_combine_range(VarLocOps.begin(), VarLocOps.end()),
-               D->getVariable()},
+      return {{hash_combine_range(VarLocOps), D->getVariable()},
               D->getExpression()};
     };
 
@@ -658,6 +657,9 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
       // Otherwise, create a duplicate of the instruction.
       Instruction *C = Inst->clone();
+      if (const DebugLoc &DL = C->getDebugLoc())
+        mapAtomInstance(DL, ValueMap);
+
       C->insertBefore(LoopEntryBranch->getIterator());
 
       ++NumInstrsDuplicated;
@@ -820,10 +822,10 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     if (DT) {
       // The OrigPreheader branches to the NewHeader and Exit now. Then, inform
       // the DT about the removed edge to the OrigHeader (that got removed).
-      SmallVector<DominatorTree::UpdateType, 3> Updates;
-      Updates.push_back({DominatorTree::Insert, OrigPreheader, Exit});
-      Updates.push_back({DominatorTree::Insert, OrigPreheader, NewHeader});
-      Updates.push_back({DominatorTree::Delete, OrigPreheader, OrigHeader});
+      SmallVector<DominatorTree::UpdateType, 3> Updates = {
+          {DominatorTree::Insert, OrigPreheader, Exit},
+          {DominatorTree::Insert, OrigPreheader, NewHeader},
+          {DominatorTree::Delete, OrigPreheader, OrigHeader}};
 
       if (MSSAU) {
         MSSAU->applyUpdates(Updates, *DT, /*UpdateDT=*/true);

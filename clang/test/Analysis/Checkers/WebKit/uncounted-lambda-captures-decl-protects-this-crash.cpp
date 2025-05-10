@@ -28,9 +28,9 @@ struct Obj {
 
   void foo(Foo foo) {
     bar([this](auto baz) {
-      // expected-warning@-1{{Captured raw-pointer 'this' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+      // expected-warning@-1{{Captured raw-pointer 'this' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
       bar([this, foo = *baz, foo2 = !baz](auto&&) {
-        // expected-warning@-1{{Captured raw-pointer 'this' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+        // expected-warning@-1{{Captured raw-pointer 'this' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
         someFunction();
       });
     });

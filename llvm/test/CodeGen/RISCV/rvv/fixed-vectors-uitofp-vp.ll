@@ -345,8 +345,8 @@ define <4 x double> @vuitofp_v4f64_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext
 ; CHECK-LABEL: vuitofp_v4f64_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.xu.v v10, v8, v0.t
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vfwcvt.f.xu.v v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.vp.uitofp.v4f64.v4i32(<4 x i32> %va, <4 x i1> %m, i32 %evl)
   ret <4 x double> %v
@@ -356,8 +356,8 @@ define <4 x double> @vuitofp_v4f64_v4i32_unmasked(<4 x i32> %va, i32 zeroext %ev
 ; CHECK-LABEL: vuitofp_v4f64_v4i32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.xu.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vfwcvt.f.xu.v v8, v10
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.vp.uitofp.v4f64.v4i32(<4 x i32> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x double> %v

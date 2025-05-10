@@ -165,11 +165,11 @@ alignas(16) constexpr DoubleDouble LOG2_R_DD[128] = {
 };
 #else
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 constexpr uint64_t ERR = 64;
 #else
 constexpr uint64_t ERR = 128;
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 // We choose the precision of the high part to be 53 - 24 - 8, so that when
 //   y * (e_x + LOG2_R_DD[i].hi) is exact.
@@ -664,6 +664,12 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   //   |y * log2(x)| = 0 or > 151.
   // Hence x^y will either overflow or underflow if x is not zero.
   if (LIBC_UNLIKELY((y_abs & 0x0007'ffff) == 0) || (y_abs > 0x4f170000)) {
+    // y is signaling NaN
+    if (xbits.is_signaling_nan() || ybits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FloatBits::quiet_nan().get_val();
+    }
+
     // Exceptional exponents.
     if (y == 0.0f)
       return 1.0f;
@@ -736,8 +742,8 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         }
       }
       if (y_abs > 0x4f17'0000) {
+        // if y is NaN
         if (y_abs > 0x7f80'0000) {
-          // y is NaN
           if (x_u == 0x3f80'0000) { // x = 1.0f
             // pow(1, NaN) = 1
             return 1.0f;
@@ -759,6 +765,12 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   // y is finite and non-zero.
   if (LIBC_UNLIKELY(((x_u & 0x801f'ffffU) == 0) || x_u >= 0x7f80'0000U ||
                     x_u < 0x0080'0000U)) {
+    // if x is signaling NaN
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FloatBits::quiet_nan().get_val();
+    }
+
     switch (x_u) {
     case 0x3f80'0000: // x = 1.0f
       return 1.0f;
@@ -851,11 +863,11 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   //   log2(m_x) = log2( (1 + dx) / r )
   //             = log2(1 + dx) - log2(r).
   double dx;
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
   dx = static_cast<double>(fputil::multiply_add(m_x, R[idx_x], -1.0f)); // Exact
 #else
   dx = fputil::multiply_add(static_cast<double>(m_x), RD[idx_x], -1.0); // Exact
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 
   // Degree-5 polynomial approximation:
   //   dx * P(dx) ~ log2(1 + dx)

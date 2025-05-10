@@ -143,105 +143,105 @@ vlse64.v v1, (a1), a2
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      11    9.00    *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      19    17.00   *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      35    33.00   *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      35    33.00   *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      35    33.00   *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      35    33.00   *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      67    65.00   *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      67    65.00   *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      67    65.00   *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      67    65.00   *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      131   129.00  *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      131   129.00  *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      131   129.00  *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      131   128.00  *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      131   128.00  *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      131   128.00  *                   vlse32.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      259   257.00  *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      259   257.00  *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      259   256.00  *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      259   256.00  *                   vlse16.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      515   513.00  *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      515   512.00  *                   vlse8.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      11    9.00    *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      19    17.00   *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      35    33.00   *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      35    33.00   *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      35    33.00   *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      35    33.00   *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      67    65.00   *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      67    65.00   *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      67    65.00   *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      67    65.00   *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      131   129.00  *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      131   129.00  *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      131   129.00  *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      131   128.00  *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      131   128.00  *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      131   128.00  *                   vlse32.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      259   257.00  *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      259   257.00  *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      259   256.00  *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      259   256.00  *                   vlse16.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      11    9.00    *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      19    17.00   *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      35    33.00   *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      35    33.00   *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      35    33.00   *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      35    33.00   *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      67    65.00   *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      67    65.00   *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      67    65.00   *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      67    65.00   *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      131   129.00  *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      131   129.00  *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      131   129.00  *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      131   128.00  *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      131   128.00  *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      131   128.00  *                   vlse32.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      11    9.00    *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      19    17.00   *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      35    33.00   *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      35    33.00   *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      35    33.00   *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      35    33.00   *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      35    32.00   *                   vlse64.v	v1, (a1), a2
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      67    65.00   *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      67    65.00   *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      67    65.00   *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      67    65.00   *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      67    64.00   *                   vlse64.v	v1, (a1), a2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFive7FDiv

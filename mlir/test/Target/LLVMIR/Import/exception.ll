@@ -1,4 +1,4 @@
-; RUN: mlir-translate -import-llvm %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
 
 @_ZTIi = external dso_local constant ptr
 @_ZTIii= external dso_local constant ptr
@@ -148,3 +148,45 @@ exit:
   ; CHECK:    llvm.return
   ret void
 }
+
+; // -----
+
+declare i32 @__gxx_personality_v0(...)
+declare void @foo(ptr)
+
+; CHECK-LABEL: @invokeLandingpad
+define i32 @invokeLandingpad(ptr %addr) personality ptr @__gxx_personality_v0 {
+entry:
+  %1 = alloca i8
+  %zzz = load i32, ptr %addr, align 4
+  invoke void @foo(ptr %1) to label %bb1 unwind label %bb2
+
+bb1:
+  %yyy = load i32, ptr %addr, align 4
+  invoke void @foo(ptr %1) to label %bb3 unwind label %bb2
+
+; CHECK: ^bb{{.*}}(%[[ARG:.*]]: i32):
+bb2:
+  %phi_var = phi i32 [ %zzz, %entry ], [ %yyy, %bb1 ], !dbg !5
+  ; CHECK: llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  ; CHECK-NEXT: llvm.intr.dbg.value #di_local_variable #llvm.di_expression<[DW_OP_LLVM_fragment(64, 64)]> = %[[ARG]] : i32
+  %3 = landingpad { ptr, i32 } cleanup, !dbg !5
+  #dbg_value(i32 %phi_var, !8, !DIExpression(DW_OP_LLVM_fragment, 64, 64), !7)
+  br label %bb3
+
+bb3:
+  ; CHECK: llvm.return %{{[0-9]+}} : i32
+  ret i32 1
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "landingpad.ll", directory: "/")
+!3 = distinct !DISubprogram(name: "instruction_loc", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!4 = distinct !DISubprogram(name: "callee", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!5 = !DILocation(line: 1, column: 2, scope: !3)
+!6 = !DILocation(line: 2, column: 2, scope: !3)
+!7 = !DILocation(line: 7, column: 4, scope: !4, inlinedAt: !6)
+!8 = !DILocalVariable(scope: !4, name: "size")

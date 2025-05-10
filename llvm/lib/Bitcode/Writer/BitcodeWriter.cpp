@@ -99,11 +99,26 @@ static cl::opt<bool> WriteRelBFToSummary(
     "write-relbf-to-summary", cl::Hidden, cl::init(false),
     cl::desc("Write relative block frequency to function summary "));
 
+// Since we only use the context information in the memprof summary records in
+// the LTO backends to do assertion checking, save time and space by only
+// serializing the context for non-NDEBUG builds.
+// TODO: Currently this controls writing context of the allocation info records,
+// which are larger and more expensive, but we should do this for the callsite
+// records as well.
+// FIXME: Convert to a const once this has undergone more sigificant testing.
+static cl::opt<bool>
+    CombinedIndexMemProfContext("combined-index-memprof-context", cl::Hidden,
+#ifdef NDEBUG
+                                cl::init(false),
+#else
+                                cl::init(true),
+#endif
+                                cl::desc(""));
+
 namespace llvm {
 extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
 }
 
-extern bool WriteNewDbgInfoFormatToBitcode;
 extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace {
@@ -323,6 +338,9 @@ private:
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIBasicType(const DIBasicType *N, SmallVectorImpl<uint64_t> &Record,
                         unsigned Abbrev);
+  void writeDIFixedPointType(const DIFixedPointType *N,
+                             SmallVectorImpl<uint64_t> &Record,
+                             unsigned Abbrev);
   void writeDIStringType(const DIStringType *N,
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIDerivedType(const DIDerivedType *N,
@@ -526,10 +544,12 @@ public:
         for (auto Idx : CI.StackIdIndices)
           RecordStackIdReference(Idx);
       }
-      for (auto &AI : FS->allocs())
-        for (auto &MIB : AI.MIBs)
-          for (auto Idx : MIB.StackIdIndices)
-            RecordStackIdReference(Idx);
+      if (CombinedIndexMemProfContext) {
+        for (auto &AI : FS->allocs())
+          for (auto &MIB : AI.MIBs)
+            for (auto Idx : MIB.StackIdIndices)
+              RecordStackIdReference(Idx);
+      }
     });
   }
 
@@ -676,6 +696,10 @@ static unsigned getEncodedRMWOperation(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::FSub: return bitc::RMW_FSUB;
   case AtomicRMWInst::FMax: return bitc::RMW_FMAX;
   case AtomicRMWInst::FMin: return bitc::RMW_FMIN;
+  case AtomicRMWInst::FMaximum:
+    return bitc::RMW_FMAXIMUM;
+  case AtomicRMWInst::FMinimum:
+    return bitc::RMW_FMINIMUM;
   case AtomicRMWInst::UIncWrap:
     return bitc::RMW_UINC_WRAP;
   case AtomicRMWInst::UDecWrap:
@@ -1209,8 +1233,7 @@ void ModuleBitcodeWriter::writeTypeTable() {
       TypeVals.push_back(TET->getNumTypeParameters());
       for (Type *InnerTy : TET->type_params())
         TypeVals.push_back(VE.getTypeID(InnerTy));
-      for (unsigned IntParam : TET->int_params())
-        TypeVals.push_back(IntParam);
+      llvm::append_range(TypeVals, TET->int_params());
       break;
     }
     case Type::TypedPointerTyID:
@@ -1888,6 +1911,35 @@ void ModuleBitcodeWriter::writeDIBasicType(const DIBasicType *N,
   Record.clear();
 }
 
+void ModuleBitcodeWriter::writeDIFixedPointType(
+    const DIFixedPointType *N, SmallVectorImpl<uint64_t> &Record,
+    unsigned Abbrev) {
+  Record.push_back(N->isDistinct());
+  Record.push_back(N->getTag());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
+  Record.push_back(N->getSizeInBits());
+  Record.push_back(N->getAlignInBits());
+  Record.push_back(N->getEncoding());
+  Record.push_back(N->getFlags());
+  Record.push_back(N->getKind());
+  Record.push_back(N->getFactorRaw());
+
+  auto WriteWideInt = [&](const APInt &Value) {
+    // Write an encoded word that holds the number of active words and
+    // the number of bits.
+    uint64_t NumWords = Value.getActiveWords();
+    uint64_t Encoded = (NumWords << 32) | Value.getBitWidth();
+    Record.push_back(Encoded);
+    emitWideAPInt(Record, Value);
+  };
+
+  WriteWideInt(N->getNumeratorRaw());
+  WriteWideInt(N->getDenominatorRaw());
+
+  Stream.EmitRecord(bitc::METADATA_FIXED_POINT_TYPE, Record, Abbrev);
+  Record.clear();
+}
+
 void ModuleBitcodeWriter::writeDIStringType(const DIStringType *N,
                                             SmallVectorImpl<uint64_t> &Record,
                                             unsigned Abbrev) {
@@ -1990,6 +2042,7 @@ void ModuleBitcodeWriter::writeDICompositeType(
   Record.push_back(VE.getMetadataOrNullID(N->getRawSpecification()));
   Record.push_back(
       N->getEnumKind().value_or(dwarf::DW_APPLE_ENUM_KIND_invalid));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawBitStride()));
 
   Stream.EmitRecord(bitc::METADATA_COMPOSITE_TYPE, Record, Abbrev);
   Record.clear();
@@ -2803,7 +2856,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
                cast<ConstantDataSequential>(C)->isString()) {
       const ConstantDataSequential *Str = cast<ConstantDataSequential>(C);
       // Emit constant strings specially.
-      unsigned NumElts = Str->getNumElements();
+      uint64_t NumElts = Str->getNumElements();
       // If this is a null-terminated string, use the denser CSTRING encoding.
       if (Str->isCString()) {
         Code = bitc::CST_CODE_CSTRING;
@@ -2814,7 +2867,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       }
       bool isCStr7 = Code == bitc::CST_CODE_CSTRING;
       bool isCStrChar6 = Code == bitc::CST_CODE_CSTRING;
-      for (unsigned i = 0; i != NumElts; ++i) {
+      for (uint64_t i = 0; i != NumElts; ++i) {
         unsigned char V = Str->getElementAsInteger(i);
         Record.push_back(V);
         isCStr7 &= (V & 128) == 0;
@@ -2831,10 +2884,10 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       Code = bitc::CST_CODE_DATA;
       Type *EltTy = CDS->getElementType();
       if (isa<IntegerType>(EltTy)) {
-        for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i)
+        for (uint64_t i = 0, e = CDS->getNumElements(); i != e; ++i)
           Record.push_back(CDS->getElementAsInteger(i));
       } else {
-        for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i)
+        for (uint64_t i = 0, e = CDS->getNumElements(); i != e; ++i)
           Record.push_back(
               CDS->getElementAsAPFloat(i).bitcastToAPInt().getLimitedValue());
       }
@@ -3457,13 +3510,8 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     pushValueAndType(CI.getCalledOperand(), InstID, Vals); // Callee
 
     // Emit value #'s for the fixed parameters.
-    for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i) {
-      // Check for labels (can happen with asm labels).
-      if (FTy->getParamType(i)->isLabelTy())
-        Vals.push_back(VE.getValueID(CI.getArgOperand(i)));
-      else
-        pushValue(CI.getArgOperand(i), InstID, Vals); // fixed param.
-    }
+    for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i)
+      pushValue(CI.getArgOperand(i), InstID, Vals); // fixed param.
 
     // Emit type/value pairs for varargs params.
     if (FTy->isVarArg()) {
@@ -3678,7 +3726,7 @@ void ModuleBitcodeWriter::writeFunction(
       // they come after the instruction so that it's easy to attach them again
       // when reading the bitcode, even though conceptually the debug locations
       // start "before" the instruction.
-      if (I.hasDbgRecords() && WriteNewDbgInfoFormatToBitcode) {
+      if (I.hasDbgRecords()) {
         /// Try to push the value only (unwrapped), otherwise push the
         /// metadata wrapped value. Returns true if the value was pushed
         /// without the ValueAsMetadata wrapper.
@@ -4302,10 +4350,8 @@ static void writeFunctionHeapProfileRecords(
     }
     for (auto Id : CI.StackIdIndices)
       Record.push_back(GetStackIndex(Id));
-    if (!PerModule) {
-      for (auto V : CI.Clones)
-        Record.push_back(V);
-    }
+    if (!PerModule)
+      llvm::append_range(Record, CI.Clones);
     Stream.EmitRecord(PerModule ? bitc::FS_PERMODULE_CALLSITE_INFO
                                 : bitc::FS_COMBINED_CALLSITE_INFO,
                       Record, CallsiteAbbrev);
@@ -4321,14 +4367,17 @@ static void writeFunctionHeapProfileRecords(
       Record.push_back(AI.Versions.size());
     for (auto &MIB : AI.MIBs) {
       Record.push_back((uint8_t)MIB.AllocType);
-      // Record the index into the radix tree array for this context.
-      assert(CallStackCount <= CallStackPos.size());
-      Record.push_back(CallStackPos[CallStackCount++]);
+      // The per-module summary always needs to include the alloc context, as we
+      // use it during the thin link. For the combined index it is optional (see
+      // comments where CombinedIndexMemProfContext is defined).
+      if (PerModule || CombinedIndexMemProfContext) {
+        // Record the index into the radix tree array for this context.
+        assert(CallStackCount <= CallStackPos.size());
+        Record.push_back(CallStackPos[CallStackCount++]);
+      }
     }
-    if (!PerModule) {
-      for (auto V : AI.Versions)
-        Record.push_back(V);
-    }
+    if (!PerModule)
+      llvm::append_range(Record, AI.Versions);
     assert(AI.ContextSizeInfos.empty() ||
            AI.ContextSizeInfos.size() == AI.MIBs.size());
     // Optionally emit the context size information if it exists.
@@ -4358,8 +4407,11 @@ static void writeFunctionHeapProfileRecords(
       Stream.EmitRecord(bitc::FS_ALLOC_CONTEXT_IDS, ContextIds,
                         ContextIdAbbvId);
     }
-    Stream.EmitRecord(PerModule ? bitc::FS_PERMODULE_ALLOC_INFO
-                                : bitc::FS_COMBINED_ALLOC_INFO,
+    Stream.EmitRecord(PerModule
+                          ? bitc::FS_PERMODULE_ALLOC_INFO
+                          : (CombinedIndexMemProfContext
+                                 ? bitc::FS_COMBINED_ALLOC_INFO
+                                 : bitc::FS_COMBINED_ALLOC_INFO_NO_CONTEXT),
                       Record, AllocAbbrev);
   }
 }
@@ -4821,7 +4873,9 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   unsigned CallsiteAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
   Abbv = std::make_shared<BitCodeAbbrev>();
-  Abbv->Add(BitCodeAbbrevOp(bitc::FS_COMBINED_ALLOC_INFO));
+  Abbv->Add(BitCodeAbbrevOp(CombinedIndexMemProfContext
+                                ? bitc::FS_COMBINED_ALLOC_INFO
+                                : bitc::FS_COMBINED_ALLOC_INFO_NO_CONTEXT));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // nummib
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // numver
   // nummib x (alloc type, context radix tree index),
@@ -4830,13 +4884,6 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned AllocAbbrev = Stream.EmitAbbrev(std::move(Abbv));
-
-  Abbv = std::make_shared<BitCodeAbbrev>();
-  Abbv->Add(BitCodeAbbrevOp(bitc::FS_CONTEXT_RADIX_TREE_ARRAY));
-  // n x entry
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
-  unsigned RadixAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
   auto shouldImportValueAsDecl = [&](GlobalValueSummary *GVS) -> bool {
     if (DecSummaries == nullptr)
@@ -4874,44 +4921,54 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     NameVals.clear();
   };
 
-  // First walk through all the functions and collect the allocation contexts in
-  // their associated summaries, for use in constructing a radix tree of
-  // contexts. Note that we need to do this in the same order as the functions
-  // are processed further below since the call stack positions in the resulting
-  // radix tree array are identified based on this order.
-  MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> CallStacks;
-  forEachSummary([&](GVInfo I, bool IsAliasee) {
-    // Don't collect this when invoked for an aliasee, as it is not needed for
-    // the alias summary. If the aliasee is to be imported, we will invoke this
-    // separately with IsAliasee=false.
-    if (IsAliasee)
-      return;
-    GlobalValueSummary *S = I.second;
-    assert(S);
-    auto *FS = dyn_cast<FunctionSummary>(S);
-    if (!FS)
-      return;
-    collectMemProfCallStacks(
-        FS,
-        /*GetStackIndex*/
-        [&](unsigned I) {
-          // Get the corresponding index into the list of StackIds actually
-          // being written for this combined index (which may be a subset in
-          // the case of distributed indexes).
-          assert(StackIdIndicesToIndex.contains(I));
-          return StackIdIndicesToIndex[I];
-        },
-        CallStacks);
-  });
-  // Finalize the radix tree, write it out, and get the map of positions in the
-  // linearized tree array.
   DenseMap<CallStackId, LinearCallStackId> CallStackPos;
-  if (!CallStacks.empty()) {
-    CallStackPos =
-        writeMemoryProfileRadixTree(std::move(CallStacks), Stream, RadixAbbrev);
+  if (CombinedIndexMemProfContext) {
+    Abbv = std::make_shared<BitCodeAbbrev>();
+    Abbv->Add(BitCodeAbbrevOp(bitc::FS_CONTEXT_RADIX_TREE_ARRAY));
+    // n x entry
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+    unsigned RadixAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
+    // First walk through all the functions and collect the allocation contexts
+    // in their associated summaries, for use in constructing a radix tree of
+    // contexts. Note that we need to do this in the same order as the functions
+    // are processed further below since the call stack positions in the
+    // resulting radix tree array are identified based on this order.
+    MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> CallStacks;
+    forEachSummary([&](GVInfo I, bool IsAliasee) {
+      // Don't collect this when invoked for an aliasee, as it is not needed for
+      // the alias summary. If the aliasee is to be imported, we will invoke
+      // this separately with IsAliasee=false.
+      if (IsAliasee)
+        return;
+      GlobalValueSummary *S = I.second;
+      assert(S);
+      auto *FS = dyn_cast<FunctionSummary>(S);
+      if (!FS)
+        return;
+      collectMemProfCallStacks(
+          FS,
+          /*GetStackIndex*/
+          [&](unsigned I) {
+            // Get the corresponding index into the list of StackIds actually
+            // being written for this combined index (which may be a subset in
+            // the case of distributed indexes).
+            assert(StackIdIndicesToIndex.contains(I));
+            return StackIdIndicesToIndex[I];
+          },
+          CallStacks);
+    });
+    // Finalize the radix tree, write it out, and get the map of positions in
+    // the linearized tree array.
+    if (!CallStacks.empty()) {
+      CallStackPos = writeMemoryProfileRadixTree(std::move(CallStacks), Stream,
+                                                 RadixAbbrev);
+    }
   }
 
-  // Keep track of the current index into the CallStackPos map.
+  // Keep track of the current index into the CallStackPos map. Not used if
+  // CombinedIndexMemProfContext is false.
   CallStackId CallStackCount = 0;
 
   DenseSet<GlobalValue::GUID> DefOrUseGUIDs;
@@ -5064,33 +5121,29 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       getReferencedTypeIds(FS, ReferencedTypeIds);
   }
 
-  if (!Index.cfiFunctionDefs().empty()) {
-    for (auto &S : Index.cfiFunctionDefs()) {
-      if (DefOrUseGUIDs.contains(
-              GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
-        NameVals.push_back(StrtabBuilder.add(S));
-        NameVals.push_back(S.size());
-      }
+  SmallVector<StringRef, 4> Functions;
+  auto EmitCfiFunctions = [&](const CfiFunctionIndex &CfiIndex,
+                              bitc::GlobalValueSummarySymtabCodes Code) {
+    if (CfiIndex.empty())
+      return;
+    for (GlobalValue::GUID GUID : DefOrUseGUIDs) {
+      auto Defs = CfiIndex.forGuid(GUID);
+      llvm::append_range(Functions, Defs);
     }
-    if (!NameVals.empty()) {
-      Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DEFS, NameVals);
-      NameVals.clear();
+    if (Functions.empty())
+      return;
+    llvm::sort(Functions);
+    for (const auto &S : Functions) {
+      NameVals.push_back(StrtabBuilder.add(S));
+      NameVals.push_back(S.size());
     }
-  }
+    Stream.EmitRecord(Code, NameVals);
+    NameVals.clear();
+    Functions.clear();
+  };
 
-  if (!Index.cfiFunctionDecls().empty()) {
-    for (auto &S : Index.cfiFunctionDecls()) {
-      if (DefOrUseGUIDs.contains(
-              GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
-        NameVals.push_back(StrtabBuilder.add(S));
-        NameVals.push_back(S.size());
-      }
-    }
-    if (!NameVals.empty()) {
-      Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DECLS, NameVals);
-      NameVals.clear();
-    }
-  }
+  EmitCfiFunctions(Index.cfiFunctionDefs(), bitc::FS_CFI_FUNCTION_DEFS);
+  EmitCfiFunctions(Index.cfiFunctionDecls(), bitc::FS_CFI_FUNCTION_DECLS);
 
   // Walk the GUIDs that were referenced, and write the
   // corresponding type id records.

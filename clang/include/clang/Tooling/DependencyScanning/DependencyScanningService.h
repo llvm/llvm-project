@@ -10,7 +10,9 @@
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
+#include "clang/Tooling/DependencyScanning/InProcessModuleCache.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/Support/Chrono.h"
 
 namespace clang {
 namespace tooling {
@@ -83,7 +85,9 @@ public:
   DependencyScanningService(
       ScanningMode Mode, ScanningOutputFormat Format,
       ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
-      bool EagerLoadModules = false, bool TraceVFS = false);
+      bool EagerLoadModules = false, bool TraceVFS = false,
+      std::time_t BuildSessionTimestamp =
+          llvm::sys::toTimeT(std::chrono::system_clock::now()));
 
   ScanningMode getMode() const { return Mode; }
 
@@ -99,6 +103,10 @@ public:
     return SharedCache;
   }
 
+  ModuleCacheEntries &getModuleCacheEntries() { return ModCacheEntries; }
+
+  std::time_t getBuildSessionTimestamp() const { return BuildSessionTimestamp; }
+
 private:
   const ScanningMode Mode;
   const ScanningOutputFormat Format;
@@ -110,6 +118,10 @@ private:
   const bool TraceVFS;
   /// The global file system cache.
   DependencyScanningFilesystemSharedCache SharedCache;
+  /// The global module cache entries.
+  ModuleCacheEntries ModCacheEntries;
+  /// The build session timestamp.
+  std::time_t BuildSessionTimestamp;
 };
 
 } // end namespace dependencies

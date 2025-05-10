@@ -41,6 +41,7 @@ class HexagonAsmBackend : public MCAsmBackend {
   uint8_t OSABI;
   StringRef CPU;
   mutable uint64_t relaxedCnt;
+  mutable const MCInst *RelaxedMCB = nullptr;
   std::unique_ptr <MCInstrInfo> MCII;
   std::unique_ptr <MCInst *> RelaxTarget;
   MCInst * Extender;
@@ -82,11 +83,7 @@ public:
     return Result;
   }
 
-  unsigned getNumFixupKinds() const override {
-    return Hexagon::NumTargetFixupKinds;
-  }
-
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[Hexagon::NumTargetFixupKinds] = {
       // This table *must* be in same the order of fixup_* kinds in
       // HexagonFixupKinds.h.
@@ -195,13 +192,14 @@ public:
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(unsigned(Kind - FirstTargetFixupKind) <
+               Hexagon::NumTargetFixupKinds &&
            "Invalid kind!");
     return Infos[Kind - FirstTargetFixupKind];
   }
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target, const uint64_t,
+                             const MCValue &Target,
                              const MCSubtargetInfo *STI) override {
     switch(Fixup.getTargetKind()) {
       default:
@@ -562,17 +560,17 @@ public:
   /// \param Inst - The instruction to test.
   bool mayNeedRelaxation(MCInst const &Inst,
                          const MCSubtargetInfo &STI) const override {
+    RelaxedMCB = &Inst;
     return true;
   }
 
   /// fixupNeedsRelaxation - Target specific predicate for whether a given
   /// fixup requires the associated instruction to be relaxed.
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, bool Resolved,
+                                    const MCFixup &Fixup, const MCValue &,
                                     uint64_t Value,
-                                    const MCRelaxableFragment *DF,
-                                    const bool WasForced) const override {
-    MCInst const &MCB = DF->getInst();
+                                    bool Resolved) const override {
+    MCInst const &MCB = *RelaxedMCB;
     assert(HexagonMCInstrInfo::isBundle(MCB));
 
     *RelaxTarget = nullptr;
@@ -728,6 +726,24 @@ public:
               MCContext &Context = Asm.getContext();
               auto &RF = cast<MCRelaxableFragment>(*Frags[K]);
               auto &Inst = const_cast<MCInst &>(RF.getInst());
+
+              const bool WouldTraverseLabel = llvm::any_of(
+                  Asm.symbols(), [&Asm, &RF, &Inst](MCSymbol const &sym) {
+                    uint64_t Offset = 0;
+                    const bool HasOffset = Asm.getSymbolOffset(sym, Offset);
+                    const unsigned PacketSizeBytes =
+                        HexagonMCInstrInfo::bundleSize(Inst) *
+                        HEXAGON_INSTR_SIZE;
+                    const bool OffsetPastSym =
+                        Offset <= (Asm.getFragmentOffset(RF) + PacketSizeBytes);
+                    return !sym.isVariable() && Offset != 0 && HasOffset &&
+                           OffsetPastSym;
+                  });
+              if (WouldTraverseLabel) {
+                Size = 0;
+                break;
+              }
+
               while (Size > 0 &&
                      HexagonMCInstrInfo::bundleSize(Inst) < MaxPacketSize) {
                 MCInst *Nop = Context.createMCInst();

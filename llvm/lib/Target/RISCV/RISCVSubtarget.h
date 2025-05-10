@@ -354,6 +354,7 @@ public:
   unsigned getMaxPrefetchIterationsAhead() const override {
     return TuneInfo->MaxPrefetchIterationsAhead;
   };
+  bool enableWritePrefetching() const override { return true; }
 
   unsigned getMinimumJumpTableEntries() const;
 

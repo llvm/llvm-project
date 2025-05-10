@@ -201,7 +201,7 @@ struct A {
 
 using mem_ptr_type = int (A::*)(int);
 
-template<mem_ptr_type ptr> // expected-note 2{{template parameter is declared here}}
+template<mem_ptr_type ptr>
 struct C {};
 
 C<&A::f> c;
@@ -1272,3 +1272,31 @@ int main() {
 }
 
 } // namespace GH107175
+
+namespace GH137885 {
+
+template <typename... P> struct A {};
+
+template <int N>
+struct B {
+  consteval B() {}
+
+  template <typename... P> consteval operator A<P...>() const {
+    static_assert(sizeof...(P) == N);
+    return {};
+  }
+};
+
+template <typename T> struct type_identity {
+  using type = T;
+};
+
+template <typename... P>
+void foo(typename type_identity<A<P...>>::type a, P...) {}
+
+void foo() {
+  foo(B<0>());
+  foo(B<5>(), 1, 2, 3, 4, 5);
+}
+
+}

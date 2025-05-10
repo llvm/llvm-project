@@ -80,7 +80,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
         information e.g., memref<?x?xf16>, the strides information has to be explicitly
         passed via the "strides" and "const_strides" argument.
 
-    In SIMT mode, tensor descriptor is augmented with `SGMapAttr` which describes the
+    In SIMT mode, tensor descriptor is augmented with `LayoutAttr` which describes the
     mapping of the tensor descriptor to the work items.
 
     Example 1 (suppose the tensor shape inferred by the compiler is 8x16):
@@ -113,7 +113,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 8 : index
     %1 = xegpu.create_nd_tdesc %0[%c0, %c0] : memref<1024x1024xf32>
-          -> !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+          -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     ```
   }];
 
@@ -142,12 +142,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source,
                    "llvm::ArrayRef<OpFoldResult>": $offsets)>,
 
-    OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType> ": $source,
-                   "llvm::ArrayRef<OpFoldResult>": $offsets,
-                   "llvm::ArrayRef<OpFoldResult>": $shape,
-                   "llvm::ArrayRef<OpFoldResult>": $strides)>,
-
-    OpBuilder<(ins "Type": $tdesc, "TypedValue<IntegerType> ": $source,
+    OpBuilder<(ins "Type": $tdesc, "Value": $source,
                    "llvm::ArrayRef<OpFoldResult>": $offsets,
                    "llvm::ArrayRef<OpFoldResult>": $shape,
                    "llvm::ArrayRef<OpFoldResult>": $strides)>
@@ -306,7 +301,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
     fp32 or fp64. It implies that vnni and transpose cannot exit at the
     same time.
 
-    In SIMT mode, LoadNdOp expects the tensor descriptor to be augmented with `SGMapAttr`
+    In SIMT mode, LoadNdOp expects the tensor descriptor to be augmented with `LayoutAttr`
     which describes the mapping of the tensor to the work items. In this case, result
     vector represents the data to be loaded by each work-item.
 
@@ -323,7 +318,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
       xegpu.load_nd %1 {l1_hint = #xegpu.cache_hint<cached>,
                         l2_hint = #xegpu.cache_hint<uncached>}>
         : !xegpu.tensor_desc<8x16xf32,
-          #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>> -> vector<8x1xf32>
+          #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<8x1xf32>
     ```
 
 
@@ -364,7 +359,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
     of cache, L1, L2 and L3. If hardware does not have a correspoding cache,
     Corresponding cache hint attribute will be masked.
 
-    In SIMT mode, StoreNdOp expects the tensor descriptor to be augmented with `SGMapAttr`
+    In SIMT mode, StoreNdOp expects the tensor descriptor to be augmented with `LayoutAttr`
     which describes the mapping of the tensor to the work items. In this case, input
     vector represents the data to be stored by each work-item.
 
@@ -381,7 +376,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
                              l2_hint = #xegpu.cache_hint<write_back>,
                              l3_hint = #xegpu.cache_hint<write_through>}
                              : vector<8x1xf16>, !xegpu.tensor_desc<8x16xf16,
-                               #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+                               #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     ```
 
 
@@ -409,7 +404,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
 }
 
 def XeGPU_UpdateNdOffsetOp : XeGPU_Op<"update_nd_offset",
-                [AllTypesMatch<["TensorDesc", "result"]>]> {
+                [Pure, AllTypesMatch<["TensorDesc", "result"]>]> {
   let summary = "It updates the offsets for the TensorDesc.";
   let description = [{The op updates the offset of the given TensorDesc.
     The offsets are relative offset to the current position in the number
@@ -422,7 +417,7 @@ def XeGPU_UpdateNdOffsetOp : XeGPU_Op<"update_nd_offset",
   Example 2 (SIMT mode):
   ```
     %2 = xegpu.update_nd_offset %1, [0, 16]:
-      !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+      !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
   ```
   }];
 
@@ -482,7 +477,7 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     the chunk_size if the chunk size is larger than 1.
 
     In SIMT mode, similar to `create_nd_tdesc` the resulting tensor descriptor is augmented
-    with `SGMapAttr` which describes the mapping of the tensor descriptor to the work items.
+    with `LayoutAttr` which describes the mapping of the tensor descriptor to the work items.
     In this case, the first dimension of the tensor descriptor represents the work-items, and
     the second dimension represents the chunk size.
 
@@ -517,7 +512,7 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     %off = arith.constant dense<[0, 16, 32, 64]> : vector<4xindex>
     %1 = xegpu.create_tdesc %0, %off : memref<1024xf32>, vector<4xindex>
           -> TensorDesc<4x8xf32, #xegpu.scattered_tdesc_attr<chunk_size = 8>,
-          #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+          #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>
     ```
   }];
 
@@ -623,7 +618,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
     The mask operand masks out memory access so that it is safe to pass out-of-boundary
     addresses/offsets as long as they are masked. It applies to slots of SIMD lanes.
 
-    In SIMT mode, LoadGatherOp expects the tensor descriptor to be augmented with `SGMapAttr`
+    In SIMT mode, LoadGatherOp expects the tensor descriptor to be augmented with `LayoutAttr`
     which describes the mapping of the tensor to the work items. In this case, result vector
     represents the data to be loaded by each work-item. Each work-item recieves a `chunk_size`
     number of elements.
@@ -653,7 +648,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
                             l2_hint = #xegpu.cache_hint<uncached>,
                             l3_hint = #xegpu.cache_hint<uncached>}
           : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>,
-            !xegpu.sg_map<wi_layout = [16, 1], wi_data = [1, 1]>>
+            !xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>
             vector<16xi1> -> vector<8x1xf32>
   ```
 
@@ -704,7 +699,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
   has transpose effect, which is similar to `load_gather`. Therefore, a transpose attribute is
   introduced on purpose, making sure users are aware of this implicit transformation.
 
-  In SIMT mode, StoreScatterOp expects the tensor descriptor to be augmented with `SGMapAttr`
+  In SIMT mode, StoreScatterOp expects the tensor descriptor to be augmented with `LayoutAttr`
   which describes the mapping of the tensor to the work items. In this case, input vector
   represents the data to be stored by each work-item. Each work-item recieves a `chunk_size`
   number of elements.
@@ -732,7 +727,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
                                  l2_hint = #xegpu.cache_hint<write_back>,
                                  l3_hint = #xegpu.cache_hint<write_through>}
           : vector<8x1xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>,
-            !xegpu.sg_map<wi_layout = [16, 1], wi_data = [1, 1]>> vector<16xi1>
+            !xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>> vector<16xi1>
   ```
 
   }];
@@ -790,7 +785,7 @@ def XeGPU_UpdateOffsetOp: XeGPU_Op<"update_offset",
       %off = arith.constant dense<[32, 32, 32, 32]> : vector<4xindex>
       %2 = xegpu.update_offset %1, %off :
               !xegpu.tensor_desc<4x2xf32, #xegpu.scattered_tdesc_attr<chunk_size=2>,
-              #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>, vector<4xindex>
+              #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>, vector<4xindex>
     ```
   }];
 
@@ -833,16 +828,16 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
     data type, the matrices are `A: vector<8x16xf16>`, `B: vector<16x16xf16>`,
     and `C/D: vector<8x16xf32>`. Besides the matrix size requirements, DPAS
     also requires A and B to be loaded with the required data layout. Specially,
-
     VNNI layout is required for B operand. It is achieved via adding `packed`
     attribute to the `load_nd` operator.  Due to the VNNI transformation, B operands
     can be represented as a 3D vector, with the last dimension representing the VNNI
     factor, which is computed as `32/bit_width_of_elem_type`. Thus, `B: vector<16x16xf16>`
     can be represented as `B: vector<8x16x2xf16>`.
 
-    In SIMT mode, DpasOp expects attributes `sg_map_a`, `sg_map_b`, and `sg_map_c`
-    which descibes the data fragment owned by each work-item w.r.t. the tensor
-    descriptor these data are loaded from.
+    In SIMT code, each work-item from a subgroup holds a data fragment for A, B, C and the result,
+    which are represented as 1D vectors. Please refer to [OpenCL Intel extentions]
+    (https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_matrix_multiply_accumulate.html)
+    for more details about the fragment distribution.
 
     Note: on PVC, the hardware can perform load with VNNI transformation when data
           element type is 16-bit or lower precision, taking 2 or 4 elements from
@@ -850,13 +845,10 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
   }];
 
   let arguments = (ins
-    XeGPU_DpasOpType : $lhs,
-    XeGPU_DpasOpType : $rhs,
-    Optional<XeGPU_Vector2DType>: $acc,
-    OptionalAttr<XeGPU_SGMapAttr>:$sg_map_a,
-    OptionalAttr<XeGPU_SGMapAttr>:$sg_map_b,
-    OptionalAttr<XeGPU_SGMapAttr>:$sg_map_c);
-  let results = (outs XeGPU_Vector2DType: $result);
+    XeGPU_DpasOprType : $lhs,
+    XeGPU_DpasOprType : $rhs,
+    Optional<XeGPU_DpasResType>: $acc);
+  let results = (outs XeGPU_DpasResType: $result);
 
   let extraClassDeclaration = [{
     VectorType getLhsType() {
@@ -875,6 +867,10 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
 
     VectorType getResultType() {
       return getResult().getType();
+    }
+
+    bool hasAcc() {
+      return getAcc() != nullptr;
     }
   }];
 
@@ -977,6 +973,26 @@ def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
                        XeGPU_FenceScopeAttr: $fence_scope);
   let assemblyFormat = [{`memory_kind` `=` `` $memory_kind `,` `fence_scope` `=` `` $fence_scope attr-dict}];
   let extraClassDeclaration = extraBaseClassDeclaration;
+}
+
+def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["source", "result"]>]> {
+    let summary = "Convert the layout of the input operand";
+    let description = [{
+      `convert_layout` adjusts the data distribution across subgroups and/or work-items by modifying
+      the `LayoutAttr`. Both `srcMap` and `resMap` must correspond to the same programming scope, such
+      as workgroup-level (wg) or subgroup-level (sg) code. This operation is not valid once the IR is
+      lowered to WI level because that is the end result of all distributions.
+    }];
+    let arguments = (ins XeGPU_Vector2DType: $source,
+                         XeGPU_LayoutAttr: $srcMap,
+                         XeGPU_LayoutAttr: $resMap
+                         );
+    let results = (outs XeGPU_Vector2DType: $result);
+    let assemblyFormat = [{
+        $source attr-dict `:` type($source)
+    }];
+
+    let hasVerifier = 1;
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD

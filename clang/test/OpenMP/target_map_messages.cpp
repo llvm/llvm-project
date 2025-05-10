@@ -128,6 +128,16 @@ struct SA {
     {}
     #pragma omp target map(always)   // expected-error {{use of undeclared identifier 'always'}}
     {}
+    #pragma omp target map(self, tofrom: c,f)   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
+    {}
+    #pragma omp target map(self, tofrom: c[1:2],f)    // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
+    {}
+    #pragma omp target map(self, tofrom: c,f[1:2])   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
+    {}
+    #pragma omp target map(self, tofrom: c[:],f)   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+    {}
+    #pragma omp target map(self, tofrom: c,f[:])   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}} 
+    {}
     #pragma omp target map(close, tofrom: c,f)
     {}
     #pragma omp target map(close, tofrom: c[1:2],f)
@@ -193,6 +203,8 @@ struct SA {
     #pragma omp target map(close, close, tofrom: a)   // expected-error {{same map type modifier has been specified more than once}}
     {}
     #pragma omp target map(always, close, always, close, tofrom: a)   // expected-error 2 {{same map type modifier has been specified more than once}}
+    {}
+    #pragma omp target map(self, self, tofrom: a)   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}  // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // lt60-error {{same map type modifier has been specified more than once}} // ge60-error {{same map type modifier has been specified more than once}}
     {}
     // ge60-error@+3 {{same map type modifier has been specified more than once}}
     // ge51-error@+2 {{same map type modifier has been specified more than once}}
@@ -723,6 +735,10 @@ T tmain(T argc) {
 // lt60-error@+1 {{missing map type}}
 #pragma omp target data map(tofrom, close: x)
 #pragma omp target data map(close, tofrom: close, tofrom, x)
+  foo();
+
+#pragma omp target data map(self, tofrom: x) // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
+#pragma omp target data map(self: x) // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // lt60-error {{missing map type}}
   foo();
 
 // lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}

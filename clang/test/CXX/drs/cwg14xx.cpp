@@ -57,7 +57,7 @@ namespace cwg1423 { // cwg1423: 11
 
 // cwg1425: na abi
 
-namespace cwg1432 { // cwg1432: 16
+namespace cwg1432 { // cwg1432: 16 open 2022-11-11
 #if __cplusplus >= 201103L
   namespace class_template_partial_spec {
     template<typename T> T declval();
@@ -660,14 +660,14 @@ namespace cwg1487 { // cwg1487: 3.3
 struct A { // #cwg1482-A
   struct B {
     using A::A;
-    // since-cxx11-error@-1 {{using declaration refers into 'A::', which is not a base class of 'B'}}
+    // since-cxx11-error@-1 {{using declaration refers into 'A', which is not a base class of 'B'}}
   };
 
   struct C : A {
   // since-cxx11-error@-1 {{base class has incomplete type}}
   //   since-cxx11-note@#cwg1482-A {{definition of 'cwg1487::A' is not complete until the closing '}'}}
     using A::A;
-    // since-cxx11-error@-1 {{using declaration refers into 'A::', which is not a base class of 'C'}}
+    // since-cxx11-error@-1 {{using declaration refers into 'A', which is not a base class of 'C'}}
   };
 
   struct D;

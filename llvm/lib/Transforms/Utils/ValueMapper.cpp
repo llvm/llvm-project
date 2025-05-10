@@ -37,6 +37,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 #include <limits>
@@ -120,12 +121,12 @@ class Mapper {
   SmallVector<WorklistEntry, 4> Worklist;
   SmallVector<DelayedBasicBlock, 1> DelayedBBs;
   SmallVector<Constant *, 16> AppendingInits;
-  const MetadataSetTy *IdentityMD;
+  const MetadataPredicate *IdentityMD;
 
 public:
   Mapper(ValueToValueMapTy &VM, RemapFlags Flags,
          ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer,
-         const MetadataSetTy *IdentityMD)
+         const MetadataPredicate *IdentityMD)
       : Flags(Flags), TypeMapper(TypeMapper),
         MCs(1, MappingContext(VM, Materializer)), IdentityMD(IdentityMD) {}
 
@@ -904,11 +905,10 @@ std::optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
     return wrapConstantAsMetadata(*CMD, mapValue(CMD->getValue()));
   }
 
-  // Map metadata from IdentityMD on first use. We need to add these nodes to
-  // the mapping as otherwise metadata nodes numbering gets messed up. This is
-  // still economical because the amount of data in IdentityMD may be a lot
-  // larger than what will actually get used.
-  if (IdentityMD && IdentityMD->contains(MD))
+  // Map metadata matching IdentityMD predicate on first use. We need to add
+  // these nodes to the mapping as otherwise metadata nodes numbering gets
+  // messed up.
+  if (IdentityMD && (*IdentityMD)(MD))
     return getVM().MD()[MD] = TrackingMDRef(const_cast<Metadata *>(MD));
 
   assert(isa<MDNode>(MD) && "Expected a metadata node");
@@ -1010,6 +1010,10 @@ void Mapper::remapInstruction(Instruction *I) {
     if (New != Old)
       I->setMetadata(MI.first, New);
   }
+
+  // Remap source location atom instance.
+  if (!(Flags & RF_DoNotRemapAtoms))
+    RemapSourceAtom(I, getVM());
 
   if (!TypeMapper)
     return;
@@ -1211,7 +1215,7 @@ public:
 ValueMapper::ValueMapper(ValueToValueMapTy &VM, RemapFlags Flags,
                          ValueMapTypeRemapper *TypeMapper,
                          ValueMaterializer *Materializer,
-                         const MetadataSetTy *IdentityMD)
+                         const MetadataPredicate *IdentityMD)
     : pImpl(new Mapper(VM, Flags, TypeMapper, Materializer, IdentityMD)) {}
 
 ValueMapper::~ValueMapper() { delete getAsMapper(pImpl); }
@@ -1292,4 +1296,25 @@ void ValueMapper::scheduleMapGlobalIFunc(GlobalIFunc &GI, Constant &Resolver,
 
 void ValueMapper::scheduleRemapFunction(Function &F, unsigned MCID) {
   getAsMapper(pImpl)->scheduleRemapFunction(F, MCID);
+}
+
+void llvm::RemapSourceAtom(Instruction *I, ValueToValueMapTy &VM) {
+  const DebugLoc &DL = I->getDebugLoc();
+  if (!DL)
+    return;
+
+  auto AtomGroup = DL->getAtomGroup();
+  if (!AtomGroup)
+    return;
+
+  auto R = VM.AtomMap.find({DL->getInlinedAt(), AtomGroup});
+  if (R == VM.AtomMap.end())
+    return;
+  AtomGroup = R->second;
+
+  // Remap the atom group and copy all other fields.
+  DILocation *New = DILocation::get(
+      I->getContext(), DL.getLine(), DL.getCol(), DL.getScope(),
+      DL.getInlinedAt(), DL.isImplicitCode(), AtomGroup, DL->getAtomRank());
+  I->setDebugLoc(New);
 }

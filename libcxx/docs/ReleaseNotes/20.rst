@@ -120,8 +120,6 @@ Improvements and New Features
 
 - Added :ref:`hardening mode <hardening>` support for ``forward_list`` and ``bitset``.
 
-- The ``num_get::do_put`` integral overloads have been optimized, resulting in a performance improvement of up to 2.4x.
-
 Deprecations and Removals
 -------------------------
 
@@ -155,14 +153,17 @@ Deprecations and Removals
   headers as an extension and only deprecates them. The ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS`` macro can be defined to
   suppress deprecation for these headers.
 
-- The ``_LIBCPP_DISABLE_AVAILABILITY`` macro that was used to force-disable availability markup has now been removed.
-  Whether availability markup is used by the library is now solely controlled at configuration-time.
-
 - The pointer safety functions ``declare_reachable``, ``declare_no_pointers``, ``undeclare_no_pointers`` and
   ``__undeclare_reachable`` have been removed from the library. These functions were never implemented in a non-trivial
   way, making it very unlikely that any binary depends on them.
 
 - Non-conforming extension ``packaged_task::result_type`` is deprecated. It will be removed in LLVM 21.
+
+- The changes for ``ranges::zip_view`` from `P2165R4 <https://wg21.link/P2165R4>`_ have been implemented. This can
+  lead to code assuming that ``zip_view`` produces ``std::pair`` to stop compiling now that it produces ``std::tuple``.
+  The cases are rare since ``tuple`` and ``pair`` are compatible for the most part, but this can lead to code that
+  was previously accepted now being rejected. This is necessary for libc++ to be conforming, so we don't provide any
+  way to opt-out of that behavior.
 
 Upcoming Deprecations and Removals
 ----------------------------------
@@ -207,3 +208,8 @@ ABI Affecting Changes
 
 - The localization support base API has been reimplemented, leading to different functions being exported from the
   libc++ built library on Windows and Windows-like platforms.
+
+- The changes for ``ranges::zip_view`` from `P2165R4 <https://wg21.link/P2165R4>`_ have been implemented. This changes
+  the element type of ``zip_view`` from a ``std::pair`` to a ``std::tuple`` in some cases. This is technically an ABI
+  break, however since ``zip_view`` is generally not an ABI sensitive type, we don't expect users to encounter any
+  issues and we don't provide a way to change this behavior, which would make libc++ non-conforming.

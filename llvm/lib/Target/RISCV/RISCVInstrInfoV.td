@@ -11,8 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-include "RISCVInstrFormatsV.td"
-
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
@@ -535,7 +533,7 @@ class VALUmVI<bits<6> funct6, string opcodestr, Operand optype = simm5>
                 (ins VR:$vs2, optype:$imm, VMaskCarryInOp:$vm),
                 opcodestr, "$vd, $vs2, $imm, $vm">;
 
-// op vd, vs2, imm, vm
+// op vd, vs2, imm
 class VALUVINoVm<bits<6> funct6, string opcodestr, Operand optype = simm5>
     : RVInstIVI<funct6, (outs VR:$vd),
                 (ins VR:$vs2, optype:$imm),
@@ -1113,10 +1111,8 @@ def VLM_V : VUnitStrideLoadMask<"vlm.v">,
              Sched<[WriteVLDM_WorstCase, ReadVLDX]>;
 def VSM_V : VUnitStrideStoreMask<"vsm.v">,
              Sched<[WriteVSTM_WorstCase, ReadVSTM_WorstCase, ReadVSTX]>;
-def : InstAlias<"vle1.v $vd, (${rs1})",
-                (VLM_V VR:$vd, GPR:$rs1), 0>;
-def : InstAlias<"vse1.v $vs3, (${rs1})",
-                (VSM_V VR:$vs3, GPR:$rs1), 0>;
+def : MnemonicAlias<"vle1.v", "vlm.v">;
+def : MnemonicAlias<"vse1.v", "vsm.v">;
 
 def VS1R_V : VWholeStore<0, "vs1r.v", VR>,
              Sched<[WriteVST1R, ReadVST1R, ReadVSTX]>;
@@ -1127,10 +1123,10 @@ def VS4R_V : VWholeStore<3, "vs4r.v", VRM4>,
 def VS8R_V : VWholeStore<7, "vs8r.v", VRM8>,
              Sched<[WriteVST8R, ReadVST8R, ReadVSTX]>;
 
-def : InstAlias<"vl1r.v $vd, (${rs1})", (VL1RE8_V VR:$vd, GPR:$rs1)>;
-def : InstAlias<"vl2r.v $vd, (${rs1})", (VL2RE8_V VRM2:$vd, GPR:$rs1)>;
-def : InstAlias<"vl4r.v $vd, (${rs1})", (VL4RE8_V VRM4:$vd, GPR:$rs1)>;
-def : InstAlias<"vl8r.v $vd, (${rs1})", (VL8RE8_V VRM8:$vd, GPR:$rs1)>;
+def : InstAlias<"vl1r.v $vd, $rs1", (VL1RE8_V VR:$vd,   GPRMemZeroOffset:$rs1)>;
+def : InstAlias<"vl2r.v $vd, $rs1", (VL2RE8_V VRM2:$vd, GPRMemZeroOffset:$rs1)>;
+def : InstAlias<"vl4r.v $vd, $rs1", (VL4RE8_V VRM4:$vd, GPRMemZeroOffset:$rs1)>;
+def : InstAlias<"vl8r.v $vd, $rs1", (VL8RE8_V VRM8:$vd, GPRMemZeroOffset:$rs1)>;
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructions] in {
@@ -1584,8 +1580,7 @@ defm VFREDMIN : VREDMINMAX_FV_V<"vfredmin", 0b000101>;
 }
 } // RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask
 
-def : InstAlias<"vfredsum.vs $vd, $vs2, $vs1$vm",
-                (VFREDUSUM_VS VR:$vd, VR:$vs2, VR:$vs1, VMaskOp:$vm), 0>;
+def : MnemonicAlias<"vfredsum.vs", "vfredusum.vs">;
 
 // Vector Widening Floating-Point Reduction Instructions
 let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask, DestEEW = EEWSEWx2 in {
@@ -1599,8 +1594,7 @@ defm VFWREDUSUM : VWRED_FV_V<"vfwredusum", 0b110001>;
 }
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask, DestEEW = EEWSEWx2
 
-def : InstAlias<"vfwredsum.vs $vd, $vs2, $vs1$vm",
-                (VFWREDUSUM_VS VR:$vd, VR:$vs2, VR:$vs1, VMaskOp:$vm), 0>;
+def : MnemonicAlias<"vfwredsum.vs", "vfwredusum.vs">;
 } // Predicates = [HasVInstructionsAnyF]
 
 let Predicates = [HasVInstructions] in {
@@ -1625,10 +1619,8 @@ def : InstAlias<"vmset.m $vd",
 def : InstAlias<"vmnot.m $vd, $vs",
                 (VMNAND_MM VR:$vd, VR:$vs, VR:$vs)>;
 
-def : InstAlias<"vmandnot.mm $vd, $vs2, $vs1",
-                (VMANDN_MM VR:$vd, VR:$vs2, VR:$vs1), 0>;
-def : InstAlias<"vmornot.mm $vd, $vs2, $vs1",
-                (VMORN_MM VR:$vd, VR:$vs2, VR:$vs1), 0>;
+def : MnemonicAlias<"vmandnot.mm", "vmandn.mm">;
+def : MnemonicAlias<"vmornot.mm", "vmorn.mm">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
     RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask in {
@@ -1647,8 +1639,7 @@ def VFIRST_M : RVInstV<0b010000, 0b10001, OPMVV, (outs GPR:$vd),
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0, RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask
 
-def : InstAlias<"vpopc.m $vd, $vs2$vm",
-                (VCPOP_M GPR:$vd, VR:$vs2, VMaskOp:$vm), 0>;
+def : MnemonicAlias<"vpopc.m", "vcpop.m">;
 
 let Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsVLMask in {
 

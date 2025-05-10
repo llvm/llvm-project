@@ -57,7 +57,7 @@ jobs:
   setup-variables:
     if: >-
       (github.event_name != 'pull_request' || github.event.action != 'closed')
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       release-version: ${{ steps.vars.outputs.release-version }}
       upload: ${{ steps.vars.outputs.upload }}
@@ -85,6 +85,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # We use ubuntu-22.04 rather than the latest version to make the built
+        # binaries more portable (eg functional aginast older glibc).
         runs-on:
           - ubuntu-22.04
           - ubuntu-22.04-arm

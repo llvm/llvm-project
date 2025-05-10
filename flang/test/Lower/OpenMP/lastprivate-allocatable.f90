@@ -17,7 +17,7 @@
 !                        if this is the last iteration
 ! CHECK:                 fir.if %{{.*}} {
 !                          store loop IV
-! CHECK:                   hlfir.assign %{{.*}} to %[[VAL_18]]#1 : i32, !fir.ref<i32>
+! CHECK:                   hlfir.assign %{{.*}} to %[[VAL_18]]#0 : i32, !fir.ref<i32>
 !                          assign private variable to original copy: realloc
 ! CHECK:                   %[[VAL_23:.*]] = fir.load %[[VAL_16]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:                   %[[VAL_24:.*]] = fir.box_addr %[[VAL_23]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
@@ -48,6 +48,7 @@ end program
 ! CHECK-SAME:         (!fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>)
 ! CHECK:            omp.sections {
 ! CHECK:              omp.section {
+! CHECK:                fir.load
 ! CHECK:                %[[TEMP:.*]] = fir.load %[[A_PRIV:.*]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>
 ! CHECK:                hlfir.assign %[[TEMP]] to %[[A]]#0 realloc : !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>,
 ! CHECK-SAME:             !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>

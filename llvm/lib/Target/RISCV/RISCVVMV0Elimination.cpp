@@ -79,9 +79,6 @@ static bool isVMV0(const MCOperandInfo &MCOI) {
 }
 
 bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
   // Skip if the vector extension is not enabled.
   const RISCVSubtarget *ST = &MF.getSubtarget<RISCVSubtarget>();
   if (!ST->hasVInstructions())

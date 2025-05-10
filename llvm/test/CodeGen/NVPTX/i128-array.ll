@@ -30,12 +30,10 @@ define [2 x i128] @foo2(ptr byval([2 x i128]) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd3, [foo2_param_0+8];
-; CHECK-NEXT:    ld.param.u64 %rd4, [foo2_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd5, [foo2_param_0+24];
-; CHECK-NEXT:    ld.param.u64 %rd6, [foo2_param_0+16];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd3};
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd6, %rd5};
+; CHECK-NEXT:    ld.param.v2.u64 {%rd3, %rd4}, [foo2_param_0];
+; CHECK-NEXT:    ld.param.v2.u64 {%rd5, %rd6}, [foo2_param_0+16];
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd5, %rd6};
 ; CHECK-NEXT:    ret;
   %ptr0 = getelementptr [2 x i128], ptr %a, i64 0, i32 0
   %1 = load i128, i128* %ptr0

@@ -42,7 +42,7 @@ define amdgpu_ps void @s_buffer_load_imm(<4 x i32> inreg %desc) {
 main_body:
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 4, i32 0)
   %bitcast = bitcast i32 %load to float
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float undef, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float poison, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -81,7 +81,7 @@ define amdgpu_ps void @s_buffer_load_index(<4 x i32> inreg %desc, i32 inreg %ind
 main_body:
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 %index, i32 0)
   %bitcast = bitcast i32 %load to float
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float undef, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float poison, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -109,7 +109,7 @@ define amdgpu_ps void @s_buffer_load_index_divergent(<4 x i32> inreg %desc, i32 
 main_body:
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 %index, i32 0)
   %bitcast = bitcast i32 %load to float
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float undef, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float poison, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -154,7 +154,7 @@ main_body:
   %bitcast = bitcast <2 x i32> %load to <2 x float>
   %x = extractelement <2 x float> %bitcast, i32 0
   %y = extractelement <2 x float> %bitcast, i32 1
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -199,7 +199,7 @@ main_body:
   %bitcast = bitcast <2 x i32> %load to <2 x float>
   %x = extractelement <2 x float> %bitcast, i32 0
   %y = extractelement <2 x float> %bitcast, i32 1
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -229,7 +229,7 @@ main_body:
   %bitcast = bitcast <2 x i32> %load to <2 x float>
   %x = extractelement <2 x float> %bitcast, i32 0
   %y = extractelement <2 x float> %bitcast, i32 1
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -279,7 +279,7 @@ main_body:
   %x = extractelement <3 x float> %bitcast, i32 0
   %y = extractelement <3 x float> %bitcast, i32 1
   %z = extractelement <3 x float> %bitcast, i32 2
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float %z, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float %z, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -329,7 +329,7 @@ main_body:
   %x = extractelement <3 x float> %bitcast, i32 0
   %y = extractelement <3 x float> %bitcast, i32 1
   %z = extractelement <3 x float> %bitcast, i32 2
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float %z, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float %z, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -367,7 +367,7 @@ main_body:
   %x = extractelement <3 x float> %bitcast, i32 0
   %y = extractelement <3 x float> %bitcast, i32 1
   %z = extractelement <3 x float> %bitcast, i32 2
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float %z, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float %z, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -563,7 +563,7 @@ main_body:
   %load1 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 8, i32 0)
   %x = bitcast i32 %load0 to float
   %y = bitcast i32 %load1 to float
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %x, float %y, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -763,7 +763,7 @@ bb1:                                              ; preds = %main_body
   %tmp1 = or i32 %tmp, 8
   %load = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 %tmp1, i32 0)
   %bitcast = bitcast i32 %load to float
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float undef, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float poison, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -802,7 +802,7 @@ bb1:                                              ; preds = %main_body
   %load2 = tail call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 %tmp2, i32 0)
   %bitcast = bitcast i32 %load to float
   %bitcast2 = bitcast i32 %load2 to float
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float %bitcast2, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %bitcast, float %bitcast2, float poison, float poison, i1 true, i1 true)
   ret void
 }
 

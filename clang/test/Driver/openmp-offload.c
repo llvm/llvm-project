@@ -218,3 +218,16 @@
 // RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu \
 // RUN:     -foffload-lto=thin %s 2>&1 | FileCheck -check-prefix=CHK-DEVICE-LTO-THIN %s
 // CHK-DEVICE-LTO-THIN: clang-linker-wrapper{{.*}} "--device-compiler=powerpc64le-ibm-linux-gnu=-flto=thin"
+
+//
+// Check forwarding architectures to non-GPU targets
+//
+// RUN:   %clang -### --target=aarch64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=aarch64-unknown-linux-gnu \
+// RUN:     --offload-arch=a64fx %s 2>&1 | FileCheck -check-prefix=CHK-CPU-ARCH-A %s
+// CHK-CPU-ARCH-A: "-cc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-target-cpu" "generic"
+// CHK-CPU-ARCH-A: "-cc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-target-cpu" "a64fx"
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=x86_64-unknown-linux-gnu \
+// RUN:     --offload-arch=znver4 %s 2>&1 | FileCheck -check-prefix=CHK-CPU-ARCH-X %s
+// CHK-CPU-ARCH-X: "-cc1" "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-target-cpu" "x86-64"
+// CHK-CPU-ARCH-X: "-cc1" "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-target-cpu" "znver4"

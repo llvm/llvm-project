@@ -15,10 +15,9 @@
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEFUNCTIONS_H
 
 #include "Delta.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 
 namespace llvm {
-void reduceFunctionsDeltaPass(TestRunner &Test);
+void reduceFunctionsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 } // namespace llvm
 
 #endif

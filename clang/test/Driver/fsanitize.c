@@ -1,3 +1,5 @@
+// * Test -fsanitize-trap */
+
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TRAP
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-trap=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TRAP2
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-undefined-trap-on-error %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-TRAP
@@ -8,6 +10,9 @@
 // CHECK-UNDEFINED-TRAP: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function),?){18}"}}
 // CHECK-UNDEFINED-TRAP: "-fsanitize-trap=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound"
 // CHECK-UNDEFINED-TRAP2: "-fsanitize-trap=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,unreachable,vla-bound"
+
+
+// * Test -fsanitize-merge *
 
 // The trailing -fsanitize-merge takes precedence
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                                                              %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
@@ -61,6 +66,59 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge=signed-integer-overflow -fno-sanitize-merge           -fsanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE5
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge=signed-integer-overflow -fno-sanitize-merge=undefined -fsanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE5
 // CHECK-UNDEFINED-MERGE5: "-fsanitize-merge=alignment,null"
+
+
+// * Test -fsanitize-annotate-debug-info *
+
+// The trailing -fsanitize-annotate-debug-info takes precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-annotate-debug-info                                 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-annotate-debug-info=undefined                       %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-annotate-debug-info                         -fsanitize-annotate-debug-info                                 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-annotate-debug-info                         -fsanitize-annotate-debug-info=undefined                       %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-annotate-debug-info=undefined               -fsanitize-annotate-debug-info                                 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-annotate-debug-info=undefined               -fsanitize-annotate-debug-info=undefined                       %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-annotate-debug-info=signed-integer-overflow -fsanitize-annotate-debug-info                                 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-annotate-debug-info=bool                       -fsanitize-annotate-debug-info=undefined                       %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-annotate-debug-info=undefined -fsanitize-annotate-debug-info=bool %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO
+// CHECK-UNDEFINED-PSEUDO: "-fsanitize-annotate-debug-info=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound"
+
+// The trailing arguments (-fsanitize-annotate-debug-info -fno-sanitize-annotate-debug-info=signed-integer-overflow) take precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-annotate-debug-info           -fno-sanitize-annotate-debug-info=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-annotate-debug-info=undefined -fno-sanitize-annotate-debug-info=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-annotate-debug-info                         -fsanitize-annotate-debug-info           -fno-sanitize-annotate-debug-info=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-annotate-debug-info                         -fsanitize-annotate-debug-info=undefined -fno-sanitize-annotate-debug-info=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-annotate-debug-info=signed-integer-overflow -fsanitize-annotate-debug-info           -fno-sanitize-annotate-debug-info=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO2
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-annotate-debug-info=signed-integer-overflow -fsanitize-annotate-debug-info=undefined -fno-sanitize-annotate-debug-info=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO2
+// CHECK-UNDEFINED-PSEUDO2: "-fsanitize-annotate-debug-info=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,unreachable,vla-bound"
+
+// The trailing -fno-sanitize-annotate-debug-info takes precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                           -fno-sanitize-annotate-debug-info                                    %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                           -fno-sanitize-annotate-debug-info=undefined                          %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                           -fno-sanitize-annotate-debug-info           -fno-sanitize-annotate-debug-info=bool %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                           -fno-sanitize-annotate-debug-info=undefined -fno-sanitize-annotate-debug-info=bool %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-annotate-debug-info           -fno-sanitize-annotate-debug-info                                    %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-annotate-debug-info           -fno-sanitize-annotate-debug-info=undefined                          %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-annotate-debug-info=undefined -fno-sanitize-annotate-debug-info                                    %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-annotate-debug-info=undefined -fno-sanitize-annotate-debug-info=undefined                          %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO3
+// CHECK-UNDEFINED-PSEUDO3: "-fsanitize-annotate-debug-info"
+
+// The trailing arguments (-fsanitize-annotate-debug-info -fno-sanitize-annotate-debug-info=alignment,null) take precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-annotate-debug-info           -fno-sanitize-annotate-debug-info=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                            -fsanitize-annotate-debug-info=undefined -fno-sanitize-annotate-debug-info=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-annotate-debug-info                         -fsanitize-annotate-debug-info           -fno-sanitize-annotate-debug-info=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-annotate-debug-info                         -fsanitize-annotate-debug-info=undefined -fno-sanitize-annotate-debug-info=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-annotate-debug-info=signed-integer-overflow -fsanitize-annotate-debug-info           -fno-sanitize-annotate-debug-info=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO4
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-annotate-debug-info=signed-integer-overflow -fsanitize-annotate-debug-info=undefined -fno-sanitize-annotate-debug-info=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO4
+// CHECK-UNDEFINED-PSEUDO4: "-fsanitize-annotate-debug-info=array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound"
+
+// The trailing arguments (-fno-sanitize-annotate-debug-info -fsanitize-annotate-debug-info=alignment,null) take precedence
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                         -fno-sanitize-annotate-debug-info=undefined -fsanitize-annotate-debug-info=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO5
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-annotate-debug-info                         -fno-sanitize-annotate-debug-info           -fsanitize-annotate-debug-info=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO5
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-annotate-debug-info                         -fno-sanitize-annotate-debug-info=undefined -fsanitize-annotate-debug-info=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO5
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-annotate-debug-info=signed-integer-overflow -fno-sanitize-annotate-debug-info           -fsanitize-annotate-debug-info=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO5
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-annotate-debug-info=signed-integer-overflow -fno-sanitize-annotate-debug-info=undefined -fsanitize-annotate-debug-info=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-PSEUDO5
+// CHECK-UNDEFINED-PSEUDO5: "-fsanitize-annotate-debug-info=alignment,null"
+
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED
 // CHECK-UNDEFINED: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|function|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute),?){18}"}}
@@ -149,7 +207,7 @@
 // CHECK-FSANITIZE-SHIFT-PARTIAL: "-fsanitize=shift-exponent"
 
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=vptr -fsanitize-trap=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-TRAP-UNDEF
-// CHECK-VPTR-TRAP-UNDEF: error: invalid argument '-fsanitize=vptr' not allowed with '-fsanitize-trap=undefined'
+// CHECK-VPTR-TRAP-UNDEF: error: unsupported argument 'vptr' to option '-fsanitize-trap='
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=vptr -fsanitize-undefined-trap-on-error %s -###
 
@@ -951,8 +1009,28 @@
 // CHECK-CFI-MINIMAL: "-fsanitize-trap=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 // CHECK-CFI-MINIMAL: "-fsanitize-minimal-runtime"
 
-// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-trap=cfi-icall -flto -fvisibility=hidden -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-MINIMAL
-// CHECK-CFI-NOTRAP-MINIMAL: error: invalid argument 'fsanitize-minimal-runtime' only allowed with 'fsanitize-trap=cfi'
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -fsanitize-minimal-runtime -fsanitize-recover=cfi -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-RECOVER-MINIMAL
+// CHECK-CFI-RECOVER-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-RECOVER-MINIMAL: "-fsanitize-trap=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-RECOVER-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -fsanitize-minimal-runtime -fno-sanitize-recover=cfi -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-ABORT-MINIMAL
+// CHECK-CFI-ABORT-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-ABORT-MINIMAL: "-fsanitize-trap=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-ABORT-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -fsanitize-minimal-runtime -fno-sanitize-trap=cfi -fsanitize-recover=cfi -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-RECOVER-MINIMAL --
+// CHECK-CFI-NOTRAP-RECOVER-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-NOTRAP-RECOVER-MINIMAL: "-fsanitize-recover=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-NOTRAP-RECOVER-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -fsanitize-minimal-runtime -fno-sanitize-trap=cfi -fno-sanitize-recover=cfi -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-ABORT-MINIMAL
+// CHECK-CFI-NOTRAP-ABORT-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-NOTRAP-ABORT-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-trap=cfi-icall -flto -fvisibility=hidden -fsanitize-minimal-runtime -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-MINIMAL
+// CHECK-CFI-NOTRAP-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+// CHECK-CFI-NOTRAP-MINIMAL: "-fsanitize-trap=cfi-derived-cast,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-trap=cfi-icall -fno-sanitize=cfi-icall -flto -fvisibility=hidden -fsanitize-minimal-runtime -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOICALL-MINIMAL
 // CHECK-CFI-NOICALL-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
@@ -1053,13 +1131,18 @@
 // RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI-TARGET
 // RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=function -fsanitize=kcfi %s -### 2>&1 | FileCheck %s  --check-prefix=CHECK-UBSAN-KCFI-TARGET --check-prefix=CHECK-UBSAN-FUNCTION-TARGET
 // RUN: %clang --target=x86_64-sie-ps5 -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED
-// CHECK-UBSAN-UNDEFINED: "-fsanitize={{((alignment|array-bounds|bool|builtin|enum|float-cast-overflow|integer-divide-by-zero|nonnull-attribute|null|pointer-overflow|return|returns-nonnull-attribute|shift-base|shift-exponent|signed-integer-overflow|unreachable|vla-bound),?){17}"}}
 
 // RUN: not %clang --target=armv6t2-eabi -mexecute-only -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-MEXECUTE-ONLY
 // RUN: not %clang --target=armv6t2-eabi -mpure-code -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-MPURE-CODE
 // RUN: not %clang --target=armv6t2-eabi -mexecute-only -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI-MEXECUTE-ONLY
 // RUN: not %clang --target=armv6t2-eabi -mpure-code -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI-MPURE-CODE
-// RUN: %clang --target=armv6t2-eabi -mexecute-only -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED-VPTR
+// RUN: %clang --target=armv6t2-eabi -mexecute-only -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED
+
+// RUN: not %clang --target=aarch64 -mexecute-only -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-MEXECUTE-ONLY
+// RUN: not %clang --target=aarch64 -mpure-code -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-MPURE-CODE
+// RUN: not %clang --target=aarch64 -mexecute-only -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI-MEXECUTE-ONLY
+// RUN: not %clang --target=aarch64 -mpure-code -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI-MPURE-CODE
+// RUN: %clang --target=aarch64 -mexecute-only -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED
 
 // CHECK-UBSAN-KCFI-TARGET-DAG: error: unsupported option '-fsanitize=kcfi' for target 'x86_64-sie-ps5'
 // CHECK-UBSAN-KCFI-MEXECUTE-ONLY-DAG: error: invalid argument '-fsanitize=kcfi' not allowed with '-mexecute-only'
@@ -1067,7 +1150,7 @@
 // CHECK-UBSAN-FUNCTION-TARGET-DAG: error: unsupported option '-fsanitize=function' for target 'x86_64-sie-ps5'
 // CHECK-UBSAN-FUNCTION-MEXECUTE-ONLY-DAG: error: invalid argument '-fsanitize=function' not allowed with '-mexecute-only'
 // CHECK-UBSAN-FUNCTION-MPURE-CODE-DAG: error: invalid argument '-fsanitize=function' not allowed with '-mpure-code'
-// CHECK-UBSAN-UNDEFINED-VPTR: "-fsanitize={{((alignment|array-bounds|bool|builtin|enum|float-cast-overflow|integer-divide-by-zero|nonnull-attribute|null|pointer-overflow|return|returns-nonnull-attribute|shift-base|shift-exponent|signed-integer-overflow|unreachable|vla-bound),?){17}"}}
+// CHECK-UBSAN-UNDEFINED: "-fsanitize={{((alignment|array-bounds|bool|builtin|enum|float-cast-overflow|integer-divide-by-zero|nonnull-attribute|null|pointer-overflow|return|returns-nonnull-attribute|shift-base|shift-exponent|signed-integer-overflow|unreachable|vla-bound),?){17}"}}
 
 // * Test BareMetal toolchain sanitizer support *
 

@@ -27,7 +27,7 @@ let SchedRW = [WriteLEA] in {
 
   let Predicates = [HasNDD], isCodeGenOnly = 1 in {
     def LEA64_8r : I<0x8D, MRMSrcMem, (outs GR8:$dst), (ins lea64_8mem:$src),
-                     "lea{w}\t{$src|$dst}, {$dst|$src}",
+                     "lea{b}\t{$src|$dst}, {$dst|$src}",
                      [(set GR8:$dst, lea64_iaddr:$src)]>,
                    OpSize16,
                    Requires<[In64BitMode]>;

@@ -44,3 +44,487 @@ vector.body:
 exit:
   ret float %acc
 }
+
+define i32 @vp_reduce_add(ptr %a) {
+; CHECK-LABEL: define i32 @vp_reduce_add(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TRIP_COUNT:%.*]] = phi i64 [ 1024, [[ENTRY:%.*]] ], [ [[REMAINING_TRIP_COUNT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SCALAR_IND:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXT_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x i32> [ insertelement (<vscale x 4 x i32> poison, i32 0, i64 0), [[ENTRY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[EVL:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TRIP_COUNT]], i32 4, i1 true)
+; CHECK-NEXT:    [[EVL2:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[SCALAR_IND]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[ARRAYIDX6]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i32> [[TMP0]], i64 0
+; CHECK-NEXT:    [[RED:%.*]] = tail call i32 @llvm.vp.reduce.add.nxv4i32(i32 [[TMP1]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[REMAINING_TRIP_COUNT]] = sub nuw i64 [[TRIP_COUNT]], [[EVL2]]
+; CHECK-NEXT:    [[NEXT_IND]] = add i64 [[SCALAR_IND]], [[EVL2]]
+; CHECK-NEXT:    [[M:%.*]] = icmp eq i64 [[REMAINING_TRIP_COUNT]], 0
+; CHECK-NEXT:    [[TMP2]] = insertelement <vscale x 4 x i32> poison, i32 [[RED]], i64 0
+; CHECK-NEXT:    br i1 [[M]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ 0, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.add.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_and(ptr %a) {
+; CHECK-LABEL: define i32 @vp_reduce_and(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TRIP_COUNT:%.*]] = phi i64 [ 1024, [[ENTRY:%.*]] ], [ [[REMAINING_TRIP_COUNT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SCALAR_IND:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXT_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x i32> [ insertelement (<vscale x 4 x i32> poison, i32 -2147483648, i64 0), [[ENTRY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[EVL:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TRIP_COUNT]], i32 4, i1 true)
+; CHECK-NEXT:    [[EVL2:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[SCALAR_IND]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[ARRAYIDX6]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i32> [[TMP0]], i64 0
+; CHECK-NEXT:    [[RED:%.*]] = tail call i32 @llvm.vp.reduce.and.nxv4i32(i32 [[TMP1]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[REMAINING_TRIP_COUNT]] = sub nuw i64 [[TRIP_COUNT]], [[EVL2]]
+; CHECK-NEXT:    [[NEXT_IND]] = add i64 [[SCALAR_IND]], [[EVL2]]
+; CHECK-NEXT:    [[M:%.*]] = icmp eq i64 [[REMAINING_TRIP_COUNT]], 0
+; CHECK-NEXT:    [[TMP2]] = insertelement <vscale x 4 x i32> poison, i32 [[RED]], i64 0
+; CHECK-NEXT:    br i1 [[M]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ -2147483648, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.and.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_or(ptr %a) {
+; CHECK-LABEL: define i32 @vp_reduce_or(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TRIP_COUNT:%.*]] = phi i64 [ 1024, [[ENTRY:%.*]] ], [ [[REMAINING_TRIP_COUNT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SCALAR_IND:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXT_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x i32> [ insertelement (<vscale x 4 x i32> poison, i32 0, i64 0), [[ENTRY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[EVL:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TRIP_COUNT]], i32 4, i1 true)
+; CHECK-NEXT:    [[EVL2:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[SCALAR_IND]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[ARRAYIDX6]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i32> [[TMP0]], i64 0
+; CHECK-NEXT:    [[RED:%.*]] = tail call i32 @llvm.vp.reduce.or.nxv4i32(i32 [[TMP1]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[REMAINING_TRIP_COUNT]] = sub nuw i64 [[TRIP_COUNT]], [[EVL2]]
+; CHECK-NEXT:    [[NEXT_IND]] = add i64 [[SCALAR_IND]], [[EVL2]]
+; CHECK-NEXT:    [[M:%.*]] = icmp eq i64 [[REMAINING_TRIP_COUNT]], 0
+; CHECK-NEXT:    [[TMP2]] = insertelement <vscale x 4 x i32> poison, i32 [[RED]], i64 0
+; CHECK-NEXT:    br i1 [[M]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ 0, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.or.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_xor(ptr %a) {
+; CHECK-LABEL: define i32 @vp_reduce_xor(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TRIP_COUNT:%.*]] = phi i64 [ 1024, [[ENTRY:%.*]] ], [ [[REMAINING_TRIP_COUNT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SCALAR_IND:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXT_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x i32> [ insertelement (<vscale x 4 x i32> poison, i32 0, i64 0), [[ENTRY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[EVL:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TRIP_COUNT]], i32 4, i1 true)
+; CHECK-NEXT:    [[EVL2:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[SCALAR_IND]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[ARRAYIDX6]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i32> [[TMP0]], i64 0
+; CHECK-NEXT:    [[RED:%.*]] = tail call i32 @llvm.vp.reduce.xor.nxv4i32(i32 [[TMP1]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[REMAINING_TRIP_COUNT]] = sub nuw i64 [[TRIP_COUNT]], [[EVL2]]
+; CHECK-NEXT:    [[NEXT_IND]] = add i64 [[SCALAR_IND]], [[EVL2]]
+; CHECK-NEXT:    [[M:%.*]] = icmp eq i64 [[REMAINING_TRIP_COUNT]], 0
+; CHECK-NEXT:    [[TMP2]] = insertelement <vscale x 4 x i32> poison, i32 [[RED]], i64 0
+; CHECK-NEXT:    br i1 [[M]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ 0, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.xor.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_smax(ptr %a) {
+; CHECK-LABEL: define i32 @vp_reduce_smax(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TRIP_COUNT:%.*]] = phi i64 [ 1024, [[ENTRY:%.*]] ], [ [[REMAINING_TRIP_COUNT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SCALAR_IND:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXT_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x i32> [ insertelement (<vscale x 4 x i32> poison, i32 -2147483648, i64 0), [[ENTRY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[EVL:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TRIP_COUNT]], i32 4, i1 true)
+; CHECK-NEXT:    [[EVL2:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[SCALAR_IND]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[ARRAYIDX6]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i32> [[TMP0]], i64 0
+; CHECK-NEXT:    [[RED:%.*]] = tail call i32 @llvm.vp.reduce.smax.nxv4i32(i32 [[TMP1]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[REMAINING_TRIP_COUNT]] = sub nuw i64 [[TRIP_COUNT]], [[EVL2]]
+; CHECK-NEXT:    [[NEXT_IND]] = add i64 [[SCALAR_IND]], [[EVL2]]
+; CHECK-NEXT:    [[M:%.*]] = icmp eq i64 [[REMAINING_TRIP_COUNT]], 0
+; CHECK-NEXT:    [[TMP2]] = insertelement <vscale x 4 x i32> poison, i32 [[RED]], i64 0
+; CHECK-NEXT:    br i1 [[M]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ -2147483648, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.smax.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_smin(ptr %a) {
+; CHECK-LABEL: define i32 @vp_reduce_smin(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TRIP_COUNT:%.*]] = phi i64 [ 1024, [[ENTRY:%.*]] ], [ [[REMAINING_TRIP_COUNT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SCALAR_IND:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXT_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x i32> [ insertelement (<vscale x 4 x i32> poison, i32 2147483647, i64 0), [[ENTRY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[EVL:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TRIP_COUNT]], i32 4, i1 true)
+; CHECK-NEXT:    [[EVL2:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[SCALAR_IND]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[ARRAYIDX6]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i32> [[TMP0]], i64 0
+; CHECK-NEXT:    [[RED:%.*]] = tail call i32 @llvm.vp.reduce.smin.nxv4i32(i32 [[TMP1]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[REMAINING_TRIP_COUNT]] = sub nuw i64 [[TRIP_COUNT]], [[EVL2]]
+; CHECK-NEXT:    [[NEXT_IND]] = add i64 [[SCALAR_IND]], [[EVL2]]
+; CHECK-NEXT:    [[M:%.*]] = icmp eq i64 [[REMAINING_TRIP_COUNT]], 0
+; CHECK-NEXT:    [[TMP2]] = insertelement <vscale x 4 x i32> poison, i32 [[RED]], i64 0
+; CHECK-NEXT:    br i1 [[M]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ 2147483647, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.smin.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_umax(ptr %a) {
+; CHECK-LABEL: define i32 @vp_reduce_umax(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TRIP_COUNT:%.*]] = phi i64 [ 1024, [[ENTRY:%.*]] ], [ [[REMAINING_TRIP_COUNT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SCALAR_IND:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXT_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x i32> [ insertelement (<vscale x 4 x i32> poison, i32 0, i64 0), [[ENTRY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[EVL:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TRIP_COUNT]], i32 4, i1 true)
+; CHECK-NEXT:    [[EVL2:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[SCALAR_IND]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[ARRAYIDX6]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i32> [[TMP0]], i64 0
+; CHECK-NEXT:    [[RED:%.*]] = tail call i32 @llvm.vp.reduce.umax.nxv4i32(i32 [[TMP1]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[REMAINING_TRIP_COUNT]] = sub nuw i64 [[TRIP_COUNT]], [[EVL2]]
+; CHECK-NEXT:    [[NEXT_IND]] = add i64 [[SCALAR_IND]], [[EVL2]]
+; CHECK-NEXT:    [[M:%.*]] = icmp eq i64 [[REMAINING_TRIP_COUNT]], 0
+; CHECK-NEXT:    [[TMP2]] = insertelement <vscale x 4 x i32> poison, i32 [[RED]], i64 0
+; CHECK-NEXT:    br i1 [[M]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ 0, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.umax.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define i32 @vp_reduce_umin(ptr %a) {
+; CHECK-LABEL: define i32 @vp_reduce_umin(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TRIP_COUNT:%.*]] = phi i64 [ 1024, [[ENTRY:%.*]] ], [ [[REMAINING_TRIP_COUNT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SCALAR_IND:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXT_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x i32> [ insertelement (<vscale x 4 x i32> poison, i32 -2147483648, i64 0), [[ENTRY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[EVL:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TRIP_COUNT]], i32 4, i1 true)
+; CHECK-NEXT:    [[EVL2:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[SCALAR_IND]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[ARRAYIDX6]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i32> [[TMP0]], i64 0
+; CHECK-NEXT:    [[RED:%.*]] = tail call i32 @llvm.vp.reduce.umin.nxv4i32(i32 [[TMP1]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[REMAINING_TRIP_COUNT]] = sub nuw i64 [[TRIP_COUNT]], [[EVL2]]
+; CHECK-NEXT:    [[NEXT_IND]] = add i64 [[SCALAR_IND]], [[EVL2]]
+; CHECK-NEXT:    [[M:%.*]] = icmp eq i64 [[REMAINING_TRIP_COUNT]], 0
+; CHECK-NEXT:    [[TMP2]] = insertelement <vscale x 4 x i32> poison, i32 [[RED]], i64 0
+; CHECK-NEXT:    br i1 [[M]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi i32 [ -2147483648, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds i32, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call i32 @llvm.vp.reduce.umin.nxv4i32(i32 %red.phi, <vscale x 4 x i32> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret i32 %red
+}
+
+define float @vp_reduce_fadd(ptr %a) {
+; CHECK-LABEL: define float @vp_reduce_fadd(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TRIP_COUNT:%.*]] = phi i64 [ 1024, [[ENTRY:%.*]] ], [ [[REMAINING_TRIP_COUNT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SCALAR_IND:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXT_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> poison, float 0.000000e+00, i64 0), [[ENTRY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[EVL:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TRIP_COUNT]], i32 4, i1 true)
+; CHECK-NEXT:    [[EVL2:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[SCALAR_IND]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = tail call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr [[ARRAYIDX6]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x float> [[TMP0]], i64 0
+; CHECK-NEXT:    [[RED:%.*]] = tail call float @llvm.vp.reduce.fadd.nxv4f32(float [[TMP1]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[REMAINING_TRIP_COUNT]] = sub nuw i64 [[TRIP_COUNT]], [[EVL2]]
+; CHECK-NEXT:    [[NEXT_IND]] = add i64 [[SCALAR_IND]], [[EVL2]]
+; CHECK-NEXT:    [[M:%.*]] = icmp eq i64 [[REMAINING_TRIP_COUNT]], 0
+; CHECK-NEXT:    [[TMP2]] = insertelement <vscale x 4 x float> poison, float [[RED]], i64 0
+; CHECK-NEXT:    br i1 [[M]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret float [[RED]]
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi float [ 0.000000e+00, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds float, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call float @llvm.vp.reduce.fadd.nxv4f32(float %red.phi, <vscale x 4 x float> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret float %red
+}
+
+define float @vp_reduce_fmax(ptr %a) {
+; CHECK-LABEL: define float @vp_reduce_fmax(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TRIP_COUNT:%.*]] = phi i64 [ 1024, [[ENTRY:%.*]] ], [ [[REMAINING_TRIP_COUNT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SCALAR_IND:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXT_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> poison, float 0.000000e+00, i64 0), [[ENTRY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[EVL:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TRIP_COUNT]], i32 4, i1 true)
+; CHECK-NEXT:    [[EVL2:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[SCALAR_IND]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = tail call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr [[ARRAYIDX6]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x float> [[TMP0]], i64 0
+; CHECK-NEXT:    [[RED:%.*]] = tail call float @llvm.vp.reduce.fmax.nxv4f32(float [[TMP1]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[REMAINING_TRIP_COUNT]] = sub nuw i64 [[TRIP_COUNT]], [[EVL2]]
+; CHECK-NEXT:    [[NEXT_IND]] = add i64 [[SCALAR_IND]], [[EVL2]]
+; CHECK-NEXT:    [[M:%.*]] = icmp eq i64 [[REMAINING_TRIP_COUNT]], 0
+; CHECK-NEXT:    [[TMP2]] = insertelement <vscale x 4 x float> poison, float [[RED]], i64 0
+; CHECK-NEXT:    br i1 [[M]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret float [[RED]]
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi float [ 0.000000e+00, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds float, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call float @llvm.vp.reduce.fmax.nxv4f32(float %red.phi, <vscale x 4 x float> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret float %red
+}
+
+define float @vp_reduce_fmin(ptr %a) {
+; CHECK-LABEL: define float @vp_reduce_fmin(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TRIP_COUNT:%.*]] = phi i64 [ 1024, [[ENTRY:%.*]] ], [ [[REMAINING_TRIP_COUNT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SCALAR_IND:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXT_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> poison, float 0.000000e+00, i64 0), [[ENTRY]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[EVL:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[TRIP_COUNT]], i32 4, i1 true)
+; CHECK-NEXT:    [[EVL2:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[SCALAR_IND]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = tail call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr [[ARRAYIDX6]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x float> [[TMP0]], i64 0
+; CHECK-NEXT:    [[RED:%.*]] = tail call float @llvm.vp.reduce.fmin.nxv4f32(float [[TMP1]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[REMAINING_TRIP_COUNT]] = sub nuw i64 [[TRIP_COUNT]], [[EVL2]]
+; CHECK-NEXT:    [[NEXT_IND]] = add i64 [[SCALAR_IND]], [[EVL2]]
+; CHECK-NEXT:    [[M:%.*]] = icmp eq i64 [[REMAINING_TRIP_COUNT]], 0
+; CHECK-NEXT:    [[TMP2]] = insertelement <vscale x 4 x float> poison, float [[RED]], i64 0
+; CHECK-NEXT:    br i1 [[M]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret float [[RED]]
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %trip.count = phi i64 [ 1024, %entry ], [ %remaining.trip.count, %vector.body ]
+  %scalar.ind = phi i64 [ 0, %entry ], [ %next.ind, %vector.body ]
+  %red.phi = phi float [ 0.000000e+00, %entry ], [ %red, %vector.body ]
+  %evl = tail call i32 @llvm.experimental.get.vector.length.i64(i64 %trip.count, i32 4, i1 true)
+  %evl2 = zext i32 %evl to i64
+  %arrayidx6 = getelementptr inbounds float, ptr %a, i64 %scalar.ind
+  %wide.load = tail call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr %arrayidx6, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %red = tail call float @llvm.vp.reduce.fmin.nxv4f32(float %red.phi, <vscale x 4 x float> %wide.load, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %remaining.trip.count = sub nuw i64 %trip.count, %evl2
+  %next.ind = add i64 %scalar.ind, %evl2
+  %m = icmp eq i64 %remaining.trip.count, 0
+  br i1 %m, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret float %red
+}

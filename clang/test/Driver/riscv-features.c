@@ -73,3 +73,15 @@
 
 // ERR-SPLIT-DWARF: error: -gsplit-dwarf{{.*}} is unsupported with RISC-V linker relaxation (-mrelax)
 // SPLIT-DWARF:     "-split-dwarf-file"
+
+// RUN: %clang -mabi=lp64d --target=riscv64-unknown-fuchsia -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=FUCHSIA
+// FUCHSIA: "-target-feature" "+m"
+// FUCHSIA-SAME: "-target-feature" "+a"
+// FUCHSIA-SAME: "-target-feature" "+f"
+// FUCHSIA-SAME: "-target-feature" "+d"
+// FUCHSIA-SAME: "-target-feature" "+c"
+// FUCHSIA-SAME: "-target-feature" "+v"
+// FUCHSIA-SAME: "-target-feature" "+zba"
+// FUCHSIA-SAME: "-target-feature" "+zbb"
+// FUCHSIA-SAME: "-target-feature" "+zbs"
+

@@ -16,7 +16,6 @@
 
 ; CHECK-DAG:        OpEntryPoint GLCompute {{.*}} %[[#LocalInvocationId]]
 ; CHECK-DAG:        OpName %[[#LocalInvocationId]] "__spirv_BuiltInLocalInvocationId"
-; CHECK-DAG:        OpDecorate %[[#LocalInvocationId]] LinkageAttributes "__spirv_BuiltInLocalInvocationId" Import
 ; CHECK-DAG:        OpDecorate %[[#LocalInvocationId]] BuiltIn LocalInvocationId
 
 ; ModuleID = '-'

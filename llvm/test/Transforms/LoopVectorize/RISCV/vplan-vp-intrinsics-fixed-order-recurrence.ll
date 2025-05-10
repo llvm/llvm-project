@@ -19,7 +19,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT: Successor(s): vector.ph
 ; IF-EVL-EMPTY:
 ; IF-EVL: vector.ph:
-; IF-EVL-NEXT:  SCALAR-CAST vp<[[VF32:%[0-9]+]]> = trunc vp<[[VF]]> to i32
+; IF-EVL-NEXT:  EMIT vp<[[VF32:%[0-9]+]]> = trunc vp<[[VF]]> to i32
 ; IF-EVL-NEXT: Successor(s): vector loop
 ; IF-EVL-EMPTY:
 ; IF-EVL: <x1> vector loop: {
@@ -27,7 +27,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<[[FOR_PHI:%.+]]> = phi ir<33>, ir<[[LD:%.+]]>
-; IF-EVL-NEXT:     SCALAR-PHI vp<[[PREV_EVL:%.+]]> = phi vp<[[VF32]]>, vp<[[EVL:%.+]]>
+; IF-EVL-NEXT:     EMIT vp<[[PREV_EVL:%.+]]> = phi [ vp<[[VF32]]>, vector.ph ], [ vp<[[EVL:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT vp<[[AVL:%.+]]> = sub ir<%TC>, vp<[[EVL_PHI]]>
 ; IF-EVL-NEXT:     EMIT vp<[[EVL]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-NEXT:     vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
@@ -39,7 +39,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds nuw ir<%B>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[ADD]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     SCALAR-CAST vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
+; IF-EVL-NEXT:     EMIT vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
 ; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
 ; IF-EVL-NEXT:     EMIT branch-on-count  vp<[[IV_NEXT_EXIT]]>, vp<[[VTC]]>
@@ -48,10 +48,10 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT: Successor(s): middle.block
 ; IF-EVL-EMPTY:
 ; IF-EVL: middle.block:
-; IF-EVL-NEXT:   EMIT vp<[[RESUME_EXTRACT:%.+]]> = extract-from-end ir<[[LD]]>, ir<1>
-; IF-EVL-NEXT:   EMIT branch-on-cond ir<true>
-; IF-EVL-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
+; IF-EVL-NEXT: Successor(s): ir-bb<for.end>
 
+; IF-EVL: Cost of 0 for VF vscale x 4: FIRST-ORDER-RECURRENCE-PHI ir<[[FOR_PHI]]> = phi ir<33>, ir<[[LD]]>
+; IF-EVL: Cost of 4 for VF vscale x 4: WIDEN-INTRINSIC vp<[[SPLICE]]> = call llvm.experimental.vp.splice(ir<[[FOR_PHI]]>, ir<[[LD]]>, ir<-1>, ir<true>, vp<[[PREV_EVL]]>, vp<[[EVL]]>)
 entry:
   br label %for.body
 

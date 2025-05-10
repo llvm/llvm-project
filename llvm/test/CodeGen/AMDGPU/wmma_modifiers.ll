@@ -12,9 +12,9 @@ define amdgpu_cs void @xyz () {
   br label %loop
 loop:
   %ld = load <8 x float>, ptr addrspace(5) null, align 32
-  %in_shuffle = shufflevector <8 x float> %ld, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %wmma = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f32.v16f16(<16 x half> undef, <16 x half> undef, <4 x float> %in_shuffle)
-  %out_shuffle = shufflevector <4 x float> %wmma, <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  %in_shuffle = shufflevector <8 x float> %ld, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %wmma = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f32.v16f16(<16 x half> poison, <16 x half> poison, <4 x float> %in_shuffle)
+  %out_shuffle = shufflevector <4 x float> %wmma, <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x float> %out_shuffle, ptr addrspace(5) null, align 32
   br i1 false, label %.exit, label %loop
 .exit:

@@ -67,6 +67,49 @@ defm RI_VUNZIP2A_V : VALU_IV_V<"ri.vunzip2a", 0b001000>;
 defm RI_VUNZIP2B_V : VALU_IV_V<"ri.vunzip2b", 0b011000>;
 }
 
+// These are modeled after the int binop VL nodes
+let HasMaskOp = true in {
+  def ri_vzipeven_vl : RVSDNode<"RI_VZIPEVEN_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vzipodd_vl : RVSDNode<"RI_VZIPODD_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vzip2a_vl : RVSDNode<"RI_VZIP2A_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vzip2b_vl : RVSDNode<"RI_VZIP2B_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vunzip2a_vl : RVSDNode<"RI_VUNZIP2A_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vunzip2b_vl : RVSDNode<"RI_VUNZIP2B_VL", SDT_RISCVIntBinOp_VL>;
+}
+
+multiclass RIVPseudoVALU_VV {
+  foreach m = MxList in
+    defm "" : VPseudoBinaryV_VV<m, Commutable=0>;
+}
+
+let Predicates = [HasVendorXRivosVizip],
+  Constraints = "@earlyclobber $rd, $rd = $passthru" in {
+defm PseudoRI_VZIPEVEN   : RIVPseudoVALU_VV;
+defm PseudoRI_VZIPODD   : RIVPseudoVALU_VV;
+defm PseudoRI_VZIP2A   : RIVPseudoVALU_VV;
+defm PseudoRI_VZIP2B   : RIVPseudoVALU_VV;
+defm PseudoRI_VUNZIP2A   : RIVPseudoVALU_VV;
+defm PseudoRI_VUNZIP2B   : RIVPseudoVALU_VV;
+}
+
+multiclass RIVPatBinaryVL_VV<SDPatternOperator vop, string instruction_name,
+                              list<VTypeInfo> vtilist = AllIntegerVectors,
+                              bit isSEWAware = false> {
+  foreach vti = vtilist in
+    let Predicates = GetVTypePredicates<vti>.Predicates in
+      def : VPatBinaryVL_V<vop, instruction_name, "VV",
+                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
+                           vti.RegClass, isSEWAware>;
+}
+
+defm : RIVPatBinaryVL_VV<ri_vzipeven_vl, "PseudoRI_VZIPEVEN">;
+defm : RIVPatBinaryVL_VV<ri_vzipodd_vl, "PseudoRI_VZIPODD">;
+defm : RIVPatBinaryVL_VV<ri_vzip2a_vl, "PseudoRI_VZIP2A">;
+defm : RIVPatBinaryVL_VV<ri_vzip2b_vl, "PseudoRI_VZIP2B">;
+defm : RIVPatBinaryVL_VV<ri_vunzip2a_vl, "PseudoRI_VUNZIP2A">;
+defm : RIVPatBinaryVL_VV<ri_vunzip2b_vl, "PseudoRI_VUNZIP2B">;
+
 //===----------------------------------------------------------------------===//
 // XRivosVisni
 //===----------------------------------------------------------------------===//
@@ -87,3 +130,60 @@ def RI_VEXTRACT : CustomRivosXVI<0b010111, OPMVV, (outs GPR:$rd),
                                 (ins VR:$vs2, uimm5:$imm),
                                 "ri.vextract.x.v", "$rd, $vs2, $imm">;
 }
+
+// RI_VEXTRACT matches the semantics of ri.vextract.x.v. The result is always
+// XLenVT sign extended from the vector element size.  VEXTRACT does *not*
+// have a VL operand.
+def ri_vextract : RVSDNode<"RI_VEXTRACT",
+                           SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<1>,
+                                                SDTCisInt<2>,
+                                                SDTCisInt<1>]>>;
+
+// RI_VINSERT_VL matches the semantics of ri.vinsert.v.x. It carries a VL operand.
+def ri_vinsert_vl : RVSDNode<"RI_VINSERT_VL",
+                             SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
+                                                  SDTCisInt<0>,
+                                                  SDTCisVT<2, XLenVT>,
+                                                  SDTCisVT<3, XLenVT>,
+                                                  SDTCisVT<4, XLenVT>]>>;
+
+let Predicates = [HasVendorXRivosVisni], mayLoad = 0, mayStore = 0,
+    hasSideEffects = 0, HasSEWOp = 1 in
+foreach m = MxList in {
+  defvar mx = m.MX;
+  let VLMul = m.value in {
+    let BaseInstr = RI_VEXTRACT in
+    def PseudoRI_VEXTRACT_  # mx :
+      Pseudo<(outs GPR:$rd), (ins m.vrclass:$rs2, uimm5:$idx, ixlenimm:$sew),
+             []>,
+      RISCVVPseudo;
+
+    let HasVLOp = 1, BaseInstr = RI_VINSERT, HasVecPolicyOp = 1,
+        Constraints = "$rd = $rs1" in
+    def PseudoRI_VINSERT_ # mx :
+      Pseudo<(outs m.vrclass:$rd),
+             (ins m.vrclass:$rs1, GPR:$rs2, uimm5:$idx, AVL:$vl,
+                  ixlenimm:$sew, ixlenimm:$policy),
+             []>,
+      RISCVVPseudo;
+  }
+}
+
+
+
+foreach vti = AllIntegerVectors in
+  let Predicates = GetVTypePredicates<vti>.Predicates in {
+    def : Pat<(XLenVT (ri_vextract (vti.Vector vti.RegClass:$vs2), uimm5:$imm)),
+              (!cast<Instruction>("PseudoRI_VEXTRACT_" # vti.LMul.MX)
+               $vs2, uimm5:$imm, vti.Log2SEW)>;
+
+    def : Pat<(vti.Vector (ri_vinsert_vl (vti.Vector vti.RegClass:$merge),
+                                          vti.ScalarRegClass:$rs1,
+                                          uimm5:$imm,
+                                          VLOpFrag,
+                                          (XLenVT timm:$policy))),
+              (!cast<Instruction>("PseudoRI_VINSERT_" # vti.LMul.MX)
+               $merge, vti.ScalarRegClass:$rs1, uimm5:$imm,
+               GPR:$vl, vti.Log2SEW, (XLenVT timm:$policy))>;
+
+  }

@@ -42,7 +42,7 @@ define i32 @test_s_wqm_constant_undef_i32() {
 ; GFX11-NEXT:    s_wqm_b32 s0, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %br = call i32 @llvm.amdgcn.s.wqm.i32(i32 undef)
+  %br = call i32 @llvm.amdgcn.s.wqm.i32(i32 poison)
   ret i32 %br
 }
 

@@ -1329,28 +1329,26 @@ namespace {
 
     void writeTemplateInstantiationArgs(raw_ostream &OS) const override {
       OS << "tempInst" << getUpperName() << ", "
-         << "A->" << getLowerName() << "_size()";
+         << "numTempInst" << getUpperName();
     }
 
     void writeTemplateInstantiation(raw_ostream &OS) const override {
-      OS << "      auto *tempInst" << getUpperName()
-         << " = new (C, 16) " << getType()
-         << "[A->" << getLowerName() << "_size()];\n";
+      OS << "      size_t numTempInst" << getUpperName() << ";\n";
+      OS << "      " << getType() << "*tempInst" << getUpperName() << ";\n";
       OS << "      {\n";
       OS << "        EnterExpressionEvaluationContext "
          << "Unevaluated(S, Sema::ExpressionEvaluationContext::Unevaluated);\n";
-      OS << "        " << getType() << " *TI = tempInst" << getUpperName()
-         << ";\n";
-      OS << "        " << getType() << " *I = A->" << getLowerName()
-         << "_begin();\n";
-      OS << "        " << getType() << " *E = A->" << getLowerName()
-         << "_end();\n";
-      OS << "        for (; I != E; ++I, ++TI) {\n";
-      OS << "          ExprResult Result = S.SubstExpr(*I, TemplateArgs);\n";
-      OS << "          if (Result.isInvalid())\n";
-      OS << "            return nullptr;\n";
-      OS << "          *TI = Result.get();\n";
-      OS << "        }\n";
+      OS << "        ArrayRef<" << getType() << "> ArgsToInstantiate(A->"
+         << getLowerName() << "_begin(), A->" << getLowerName() << "_end());\n";
+      OS << "        SmallVector<" << getType() << ", 4> InstArgs;\n";
+      OS << "        if (S.SubstExprs(ArgsToInstantiate, /*IsCall=*/false, "
+            "TemplateArgs, InstArgs))\n";
+      OS << "          return nullptr;\n";
+      OS << "        numTempInst" << getUpperName() << " = InstArgs.size();\n";
+      OS << "        tempInst" << getUpperName() << " = new (C, 16) "
+         << getType() << "[numTempInst" << getUpperName() << "];\n";
+      OS << "        std::copy(InstArgs.begin(), InstArgs.end(), tempInst"
+         << getUpperName() << ");\n";
       OS << "      }\n";
     }
 
@@ -1526,7 +1524,8 @@ createArgument(const Record &Arg, StringRef Attr,
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.
-    for (const auto &[Base, _] : reverse(Search->getSuperClasses())) {
+    std::vector<const Record *> SCs = Search->getSuperClasses();
+    for (const Record *Base : reverse(SCs)) {
       if ((Ptr = createArgument(Arg, Attr, Base)))
         break;
     }
@@ -1856,17 +1855,16 @@ static LateAttrParseKind getLateAttrParseKind(const Record *Attr) {
   auto *LAPK = Attr->getValueAsDef(LateParsedStr);
 
   // Typecheck the `LateParsed` field.
-  SmallVector<const Record *, 1> SuperClasses;
-  LAPK->getDirectSuperClasses(SuperClasses);
-  if (SuperClasses.size() != 1)
+  if (LAPK->getDirectSuperClasses().size() != 1)
     PrintFatalError(Attr, "Field `" + Twine(LateParsedStr) +
                               "`should only have one super class");
 
-  if (SuperClasses[0]->getName() != LateAttrParseKindStr)
+  const Record *SuperClass = LAPK->getDirectSuperClasses()[0].first;
+  if (SuperClass->getName() != LateAttrParseKindStr)
     PrintFatalError(
         Attr, "Field `" + Twine(LateParsedStr) + "`should only have type `" +
                   Twine(LateAttrParseKindStr) + "` but found type `" +
-                  SuperClasses[0]->getName() + "`");
+                  SuperClass->getName() + "`");
 
   // Get Kind and verify the enum name matches the name in `Attr.td`.
   unsigned Kind = LAPK->getValueAsInt(KindFieldStr);
@@ -2465,8 +2463,8 @@ static void emitStringSwitchCases(std::map<StringRef, FSIVecTy> &Map,
 }
 
 static bool isTypeArgument(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         Arg->getSuperClasses().back().first->getName() == "TypeArgument";
+  return !Arg->getDirectSuperClasses().empty() &&
+         Arg->getDirectSuperClasses().back().first->getName() == "TypeArgument";
 }
 
 /// Emits the first-argument-is-type property for attributes.
@@ -2507,8 +2505,9 @@ static void emitClangAttrArgContextList(const RecordKeeper &Records,
 }
 
 static bool isIdentifierArgument(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
+  return !Arg->getDirectSuperClasses().empty() &&
+         StringSwitch<bool>(
+             Arg->getDirectSuperClasses().back().first->getName())
              .Case("IdentifierArgument", true)
              .Case("EnumArgument", true)
              .Case("VariadicEnumArgument", true)
@@ -2516,33 +2515,35 @@ static bool isIdentifierArgument(const Record *Arg) {
 }
 
 static bool isVariadicIdentifierArgument(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
+  return !Arg->getDirectSuperClasses().empty() &&
+         StringSwitch<bool>(
+             Arg->getDirectSuperClasses().back().first->getName())
              .Case("VariadicIdentifierArgument", true)
              .Case("VariadicParamOrParamIdxArgument", true)
              .Default(false);
 }
 
 static bool isVariadicExprArgument(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
+  return !Arg->getDirectSuperClasses().empty() &&
+         StringSwitch<bool>(
+             Arg->getDirectSuperClasses().back().first->getName())
              .Case("VariadicExprArgument", true)
              .Default(false);
 }
 
 static bool isStringLiteralArgument(const Record *Arg) {
-  if (Arg->getSuperClasses().empty())
+  if (Arg->getDirectSuperClasses().empty())
     return false;
-  StringRef ArgKind = Arg->getSuperClasses().back().first->getName();
+  StringRef ArgKind = Arg->getDirectSuperClasses().back().first->getName();
   if (ArgKind == "EnumArgument")
     return Arg->getValueAsBit("IsString");
   return ArgKind == "StringArgument";
 }
 
 static bool isVariadicStringLiteralArgument(const Record *Arg) {
-  if (Arg->getSuperClasses().empty())
+  if (Arg->getDirectSuperClasses().empty())
     return false;
-  StringRef ArgKind = Arg->getSuperClasses().back().first->getName();
+  StringRef ArgKind = Arg->getDirectSuperClasses().back().first->getName();
   if (ArgKind == "VariadicEnumArgument")
     return Arg->getValueAsBit("IsString");
   return ArgKind == "VariadicStringArgument";
@@ -2631,8 +2632,9 @@ static void emitClangAttrStrictIdentifierArgList(const RecordKeeper &Records,
 }
 
 static bool keywordThisIsaIdentifierInArgument(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
+  return !Arg->getDirectSuperClasses().empty() &&
+         StringSwitch<bool>(
+             Arg->getDirectSuperClasses().back().first->getName())
              .Case("VariadicParamOrParamIdxArgument", true)
              .Default(false);
 }
@@ -2718,11 +2720,11 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     if (!R.getValueAsBit("ASTNode"))
       continue;
 
-    ArrayRef<std::pair<const Record *, SMRange>> Supers = R.getSuperClasses();
+    std::vector<const Record *> Supers = R.getSuperClasses();
     assert(!Supers.empty() && "Forgot to specify a superclass for the attr");
     std::string SuperName;
     bool Inheritable = false;
-    for (const auto &[R, _] : reverse(Supers)) {
+    for (const Record *R : reverse(Supers)) {
       if (R->getName() != "TargetSpecificAttr" &&
           R->getName() != "DeclOrTypeAttr" && SuperName.empty())
         SuperName = R->getName().str();
@@ -3419,10 +3421,10 @@ namespace {
     AttrClass *findSuperClass(const Record *R) const {
       // TableGen flattens the superclass list, so we just need to walk it
       // in reverse.
-      auto SuperClasses = R->getSuperClasses();
-      for (signed i = 0, e = SuperClasses.size(); i != e; ++i) {
-        auto SuperClass = findClassByRecord(SuperClasses[e - i - 1].first);
-        if (SuperClass) return SuperClass;
+      std::vector<const Record *> SuperClasses = R->getSuperClasses();
+      for (const Record *R : reverse(SuperClasses)) {
+        if (AttrClass *SuperClass = findClassByRecord(R))
+          return SuperClass;
       }
       return nullptr;
     }
@@ -3533,6 +3535,11 @@ void EmitClangAttrPCHRead(const RecordKeeper &Records, raw_ostream &OS) {
       DelayedArgs->writePCHReadArgs(OS);
       OS << ");\n";
     }
+
+    if (Attr->getValueAsBit("HasCustomSerialization"))
+      OS << "    read" << R.getName() << "Attr(cast<" << R.getName()
+         << "Attr>(New));\n";
+
     OS << "    break;\n";
     OS << "  }\n";
   }
@@ -3563,6 +3570,10 @@ void EmitClangAttrPCHWrite(const RecordKeeper &Records, raw_ostream &OS) {
 
     for (const auto *Arg : Args)
       createArgument(*Arg, R.getName())->writePCHWrite(OS);
+
+    if (Attr->getValueAsBit("HasCustomSerialization"))
+      OS << "    Record.Add" << R.getName() << "Attr(SA);\n";
+
     OS << "    break;\n";
     OS << "  }\n";
   }
@@ -4551,7 +4562,7 @@ static void GenerateTargetRequirements(const Record &Attr,
         std::vector<StringRef> DA =
             I.second->getValueAsDef("Target")->getValueAsListOfStrings(
                 "Arches");
-        Arches.insert(Arches.end(), DA.begin(), DA.end());
+        llvm::append_range(Arches, DA);
       }
     }
   }
@@ -4627,7 +4638,6 @@ static void GenerateSpellingIndexToSemanticSpelling(const Record &Attr,
   // Generate the enumeration we will use for the mapping.
   SemanticSpellingMap SemanticToSyntacticMap;
   std::string Enum = CreateSemanticSpellings(Spellings, SemanticToSyntacticMap);
-  std::string Name = Attr.getName().str() + "AttrSpellingMap";
 
   OS << "unsigned spellingIndexToSemanticSpelling(";
   OS << "const ParsedAttr &Attr) const override {\n";
@@ -4652,8 +4662,9 @@ static void GenerateHandleDeclAttribute(const Record &Attr, raw_ostream &OS) {
 }
 
 static bool isParamExpr(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
+  return !Arg->getDirectSuperClasses().empty() &&
+         StringSwitch<bool>(
+             Arg->getDirectSuperClasses().back().first->getName())
              .Case("ExprArgument", true)
              .Case("VariadicExprArgument", true)
              .Default(false);
@@ -4776,7 +4787,7 @@ void EmitClangAttrParsedAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
       if (Arg->getValueAsBitOrUnset("Fake", UnusedUnset))
         continue;
       ArgNames.push_back(Arg->getValueAsString("Name").str());
-      for (const auto &[Class, _] : Arg->getSuperClasses()) {
+      for (const Record *Class : Arg->getSuperClasses()) {
         if (Class->getName().starts_with("Variadic")) {
           ArgNames.back().append("...");
           break;
@@ -4932,6 +4943,9 @@ void EmitClangAttrParsedAttrKinds(const RecordKeeper &Records,
           Matches = &Pragma;
         } else if (Variety == "HLSLAnnotation") {
           Matches = &HLSLAnnotation;
+          if (RawSpelling.compare(RawSpelling.lower()) != 0)
+            PrintError(S.getSpellingRecord().getLoc(),
+                       "HLSLAnnotation Attribute must be lower case.");
         }
 
         assert(Matches && "Unsupported spelling variety found");
@@ -5132,6 +5146,14 @@ public:
 
     Spellings[(size_t)Kind].push_back(Name);
   }
+
+  void merge(const SpellingList &Other) {
+    for (size_t Kind = 0; Kind < NumSpellingKinds; ++Kind) {
+      Spellings[Kind].insert(Spellings[Kind].end(),
+                             Other.Spellings[Kind].begin(),
+                             Other.Spellings[Kind].end());
+    }
+  }
 };
 
 class DocumentationData {
@@ -5289,29 +5311,87 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
       return L->getValueAsString("Name") < R->getValueAsString("Name");
     }
   };
-  std::map<const Record *, std::vector<DocumentationData>, CategoryLess>
-      SplitDocs;
+
+  std::map<const Record *, std::map<uint32_t, DocumentationData>, CategoryLess>
+      MergedDocs;
+
+  std::vector<DocumentationData> UndocumentedDocs;
+  const Record *UndocumentedCategory = nullptr;
+
+  // Collect documentation data, grouping by category and heading.
   for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
     const Record &Attr = *A;
     std::vector<const Record *> Docs =
         Attr.getValueAsListOfDefs("Documentation");
+
     for (const auto *D : Docs) {
       const Record &Doc = *D;
       const Record *Category = Doc.getValueAsDef("Category");
       // If the category is "InternalOnly", then there cannot be any other
       // documentation categories (otherwise, the attribute would be
       // emitted into the docs).
-      const StringRef Cat = Category->getValueAsString("Name");
-      bool InternalOnly = Cat == "InternalOnly";
-      if (InternalOnly && Docs.size() > 1)
+      StringRef Cat = Category->getValueAsString("Name");
+      if (Cat == "InternalOnly" && Docs.size() > 1)
         PrintFatalError(Doc.getLoc(),
                         "Attribute is \"InternalOnly\", but has multiple "
                         "documentation categories");
 
-      if (!InternalOnly)
-        SplitDocs[Category].push_back(DocumentationData(
-            Doc, Attr, GetAttributeHeadingAndSpellings(Doc, Attr, Cat)));
+      if (Cat == "InternalOnly")
+        continue;
+
+      // Track the Undocumented category Record for later grouping
+      if (Cat == "Undocumented" && !UndocumentedCategory)
+        UndocumentedCategory = Category;
+
+      // Generate Heading and Spellings.
+      auto HeadingAndSpellings =
+          GetAttributeHeadingAndSpellings(Doc, Attr, Cat);
+
+      // Handle Undocumented category separately - no content merging
+      if (Cat == "Undocumented" && UndocumentedCategory) {
+        UndocumentedDocs.push_back(
+            DocumentationData(Doc, Attr, HeadingAndSpellings));
+        continue;
+      }
+
+      auto &CategoryDocs = MergedDocs[Category];
+
+      std::string key = Doc.getValueAsString("Content").str();
+      uint32_t keyHash = llvm::hash_value(key);
+
+      // If the content already exists, merge the documentation.
+      auto It = CategoryDocs.find(keyHash);
+      if (It != CategoryDocs.end()) {
+        // Merge heading
+        if (It->second.Heading != HeadingAndSpellings.first)
+          It->second.Heading += ", " + HeadingAndSpellings.first;
+        // Merge spellings
+        It->second.SupportedSpellings.merge(HeadingAndSpellings.second);
+        // Merge content
+        It->second.Documentation = &Doc; // Update reference
+      } else {
+        // Create new entry for unique content
+        CategoryDocs.emplace(keyHash,
+                             DocumentationData(Doc, Attr, HeadingAndSpellings));
+      }
     }
+  }
+
+  std::map<const Record *, std::vector<DocumentationData>, CategoryLess>
+      SplitDocs;
+
+  for (auto &CategoryPair : MergedDocs) {
+
+    std::vector<DocumentationData> MD;
+    for (auto &DocPair : CategoryPair.second)
+      MD.push_back(std::move(DocPair.second));
+
+    SplitDocs.emplace(CategoryPair.first, MD);
+  }
+
+  // Append Undocumented category entries
+  if (!UndocumentedDocs.empty() && UndocumentedCategory) {
+    SplitDocs.emplace(UndocumentedCategory, UndocumentedDocs);
   }
 
   // Having split the attributes out based on what documentation goes where,

@@ -63,16 +63,24 @@ static Expected<StringRef> getDynamicStrTab(const ELFFile<ELFT> &Elf) {
   if (!DynamicEntriesOrError)
     return DynamicEntriesOrError.takeError();
 
+  typename ELFT::Xword StringTableSize{0};
+  const uint8_t *MappedAddr = nullptr;
   for (const typename ELFT::Dyn &Dyn : *DynamicEntriesOrError) {
     if (Dyn.d_tag == ELF::DT_STRTAB) {
       auto MappedAddrOrError = Elf.toMappedAddr(Dyn.getPtr());
       if (!MappedAddrOrError)
         return MappedAddrOrError.takeError();
-      return StringRef(reinterpret_cast<const char *>(*MappedAddrOrError));
+      MappedAddr = *MappedAddrOrError;
     }
+    if (Dyn.d_tag == ELF::DT_STRSZ)
+      StringTableSize = Dyn.getVal();
   }
+  if (MappedAddr && StringTableSize)
+    return StringRef(reinterpret_cast<const char *>(MappedAddr),
+                     StringTableSize);
 
-  // If the dynamic segment is not present, we fall back on the sections.
+  // If the dynamic segment is not present, or is missing the important tags, we
+  // fall back on the sections.
   auto SectionsOrError = Elf.sections();
   if (!SectionsOrError)
     return SectionsOrError.takeError();
@@ -221,6 +229,7 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicSection() {
   std::string TagFmt = "  %-" + std::to_string(MaxLen) + "s ";
 
   outs() << "\nDynamic Section:\n";
+
   for (const typename ELFT::Dyn &Dyn : DynamicEntries) {
     if (Dyn.d_tag == ELF::DT_NULL)
       continue;
@@ -235,6 +244,14 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicSection() {
       Expected<StringRef> StrTabOrErr = getDynamicStrTab(Elf);
       if (StrTabOrErr) {
         const char *Data = StrTabOrErr->data();
+        if (Dyn.getVal() >= StrTabOrErr->size()) {
+          reportWarning("invalid string table offset, string table size: 0x" +
+                            Twine::utohexstr(StrTabOrErr->size()),
+                        Obj.getFileName());
+          outs() << format(TagFmt.c_str(), Str.c_str())
+                 << format(Fmt, (uint64_t)Dyn.getVal());
+          continue;
+        }
         outs() << format(TagFmt.c_str(), Str.c_str()) << Data + Dyn.getVal()
                << "\n";
         continue;
@@ -387,12 +404,6 @@ template <class ELFT> void ELFDumper<ELFT>::printSymbolVersion() {
     if (Shdr.sh_type != ELF::SHT_GNU_verneed &&
         Shdr.sh_type != ELF::SHT_GNU_verdef)
       continue;
-
-    ArrayRef<uint8_t> Contents =
-        unwrapOrError(Elf.getSectionContents(Shdr), FileName);
-    const typename ELFT::Shdr *StrTabSec =
-        unwrapOrError(Elf.getSection(Shdr.sh_link), FileName);
-    StringRef StrTab = unwrapOrError(Elf.getStringTable(*StrTabSec), FileName);
 
     if (Shdr.sh_type == ELF::SHT_GNU_verneed) {
       printSymbolVersionDependency(Shdr);

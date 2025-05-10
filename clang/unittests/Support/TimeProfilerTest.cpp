@@ -55,15 +55,17 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
   }
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions(), FS));
-  CompilerInstance Compiler;
-  Compiler.createDiagnostics(Files->getVirtualFileSystem());
-  Compiler.setFileManager(Files.get());
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   std::vector<const char *> Args = {Standard.data(), File.data()};
-  CompilerInvocation::CreateFromArgs(*Invocation, Args,
-                                     Compiler.getDiagnostics());
-  Compiler.setInvocation(std::move(Invocation));
+  auto InvocationDiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
+  auto InvocationDiags =
+      CompilerInstance::createDiagnostics(*FS, InvocationDiagOpts.get());
+  CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
+
+  CompilerInstance Compiler(std::move(Invocation));
+  Compiler.createDiagnostics(Files->getVirtualFileSystem());
+  Compiler.setFileManager(Files.get());
 
   class TestFrontendAction : public ASTFrontendAction {
   private:
@@ -153,6 +155,16 @@ std::string buildTraceGraph(StringRef Json) {
       bool InsideCurrentEvent =
           Event.TimestampBegin >= EventStack.top()->TimestampBegin &&
           Event.TimestampEnd <= EventStack.top()->TimestampEnd;
+
+      // Presumably due to timer rounding, PerformPendingInstantiations often
+      // appear to be within the timer interval of the immediately previous
+      // event group. We always know these events occur at level 1, not level 2,
+      // in our tests, so pop an event in that case.
+      if (InsideCurrentEvent && Event.Name == "PerformPendingInstantiations" &&
+          EventStack.size() == 2) {
+        InsideCurrentEvent = false;
+      }
+
       if (!InsideCurrentEvent)
         EventStack.pop();
       else

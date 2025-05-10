@@ -255,7 +255,7 @@ static inline RT_API_ATTRS void DoMatmul(
     for (int j{0}; j < resRank; ++j) {
       result.GetDimension(j).SetBounds(1, extent[j]);
     }
-    if (int stat{result.Allocate()}) {
+    if (int stat{result.Allocate(kNoAsyncId)}) {
       terminator.Crash(
           "MATMUL: could not allocate memory for result; STAT=%d", stat);
     }
@@ -424,6 +424,7 @@ static inline RT_API_ATTRS void DoMatmul(
 template <bool IS_ALLOCATING, TypeCategory XCAT, int XKIND, TypeCategory YCAT,
     int YKIND>
 struct MatmulHelper {
+  using ResultTy = Fortran::common::optional<std::pair<TypeCategory, int>>;
   using ResultDescriptor =
       std::conditional_t<IS_ALLOCATING, Descriptor, const Descriptor>;
   RT_API_ATTRS void operator()(ResultDescriptor &result, const Descriptor &x,
@@ -439,7 +440,7 @@ struct MatmulHelper {
                      xCatKind->first == TypeCategory::Unsigned) &&
                     (yCatKind->first == TypeCategory::Integer ||
                         yCatKind->first == TypeCategory::Unsigned))));
-    if constexpr (constexpr auto resultType{
+    if constexpr (constexpr ResultTy resultType{
                       GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
       return DoMatmul<IS_ALLOCATING, resultType->first, resultType->second,
           CppTypeFor<XCAT, XKIND>, CppTypeFor<YCAT, YKIND>>(

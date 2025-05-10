@@ -671,6 +671,21 @@ define <8 x i32> @concat_self_v8i32(<4 x i32> %x) {
   ret <8 x i32> %a
 }
 
+define <4 x double> @concat_vpermilvar_v4f64_v2f64(<2 x double> %a0, <2 x double> %a1, <4 x i64> %m) {
+; CHECK-LABEL: concat_vpermilvar_v4f64_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpermilpd %ymm2, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %m0 = shufflevector <4 x i64> %m, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
+  %m1 = shufflevector <4 x i64> %m, <4 x i64> poison, <2 x i32> <i32 2, i32 3>
+  %v0 = tail call noundef <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %a0, <2 x i64> %m0)
+  %v1 = tail call noundef <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %a1, <2 x i64> %m1)
+  %res = shufflevector <2 x double> %v0, <2 x double> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x double> %res
+}
+
 define <16 x i64> @bit_reversal_permutation(<16 x i64> %a0) nounwind {
 ; X86-AVX1-LABEL: bit_reversal_permutation:
 ; X86-AVX1:       # %bb.0:

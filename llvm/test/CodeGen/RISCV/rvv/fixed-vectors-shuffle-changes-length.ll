@@ -212,17 +212,17 @@ define <16 x i1> @v16i1_v8i1(<8 x i1>) {
 define <8 x i32> @v8i32_v4i32(<4 x i32>) {
 ; CHECK-LABEL: v8i32_v4i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    lui a0, %hi(.LCPI5_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI5_0)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
+; CHECK-NEXT:    vle16.v v11, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
-; CHECK-NEXT:    vslidedown.vx v10, v9, a0
+; CHECK-NEXT:    vslidedown.vx v8, v11, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v11, v8, v10
-; CHECK-NEXT:    vrgatherei16.vv v10, v8, v9
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vrgatherei16.vv v9, v10, v8
+; CHECK-NEXT:    vrgatherei16.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %2 = shufflevector <4 x i32> %0, <4 x i32> poison, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 1, i32 2, i32 0, i32 3>
   ret <8 x i32> %2
@@ -275,59 +275,59 @@ define <16 x i32> @v16i32_v4i32(<4 x i32>) {
 define <32 x i32> @v32i32_v4i32(<4 x i32>) {
 ; CHECK-LABEL: v32i32_v4i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m4, ta, ma
+; CHECK-NEXT:    vmv1r.v v16, v8
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    lui a1, 135432
 ; CHECK-NEXT:    addi a1, a1, 1161
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    lui a1, 270865
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 3
+; CHECK-NEXT:    vmv.v.i v8, 3
 ; CHECK-NEXT:    addi a1, a1, 548
-; CHECK-NEXT:    vmerge.vim v10, v10, 2, v0
+; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    lui a1, 100550
 ; CHECK-NEXT:    addi a1, a1, 64
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v10, v10, 0, v0
+; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vsext.vf2 v12, v10
+; CHECK-NEXT:    vsext.vf2 v12, v8
 ; CHECK-NEXT:    vslidedown.vx v20, v12, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v17, v8, v20
+; CHECK-NEXT:    vrgatherei16.vv v9, v16, v20
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v20, v20, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v16, v8, v12
+; CHECK-NEXT:    vrgatherei16.vv v8, v16, v12
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v12, v20, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v18, v8, v20
+; CHECK-NEXT:    vrgatherei16.vv v10, v16, v20
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v12, a1
+; CHECK-NEXT:    vslidedown.vx v20, v12, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v19, v8, v12
+; CHECK-NEXT:    vrgatherei16.vv v11, v16, v12
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v12, v24, a1
+; CHECK-NEXT:    vslidedown.vx v24, v20, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v20, v8, v24
+; CHECK-NEXT:    vrgatherei16.vv v12, v16, v20
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v12, a1
+; CHECK-NEXT:    vslidedown.vx v20, v24, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v21, v8, v12
-; CHECK-NEXT:    vrgatherei16.vv v22, v8, v24
+; CHECK-NEXT:    vrgatherei16.vv v13, v16, v24
+; CHECK-NEXT:    vrgatherei16.vv v14, v16, v20
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v12, v24, a1
+; CHECK-NEXT:    vslidedown.vx v20, v20, a1
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v23, v8, v12
-; CHECK-NEXT:    vmv8r.v v8, v16
+; CHECK-NEXT:    vrgatherei16.vv v15, v16, v20
 ; CHECK-NEXT:    ret
   %2 = shufflevector <4 x i32> %0, <4 x i32> poison, <32 x i32> <i32 2, i32 3, i32 0, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 2, i32 3, i32 0, i32 1, i32 1, i32 2, i32 0, i32 3, i32 1, i32 1, i32 2, i32 0, i32 3, i32 1, i32 2, i32 0, i32 3, i32 1, i32 1, i32 2, i32 0, i32 3>
   ret <32 x i32> %2

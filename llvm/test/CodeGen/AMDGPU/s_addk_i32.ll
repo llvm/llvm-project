@@ -103,7 +103,7 @@ define amdgpu_kernel void @no_s_addk_i32_k0(ptr addrspace(1) %out, i32 %b) #0 {
   ret void
 }
 
-@lds = addrspace(3) global [512 x i32] undef, align 4
+@lds = addrspace(3) global [512 x i32] poison, align 4
 
 ; SI-LABEL: {{^}}commute_s_addk_i32:
 ; SI: s_addk_i32 s{{[0-9]+}}, 0x800{{$}}

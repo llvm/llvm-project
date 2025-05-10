@@ -70,6 +70,14 @@ public:
     return pointerAndKnownNonNull.getPointer();
   }
 
+  mlir::Type getType() const {
+    assert(mlir::cast<cir::PointerType>(
+               pointerAndKnownNonNull.getPointer().getType())
+               .getPointee() == elementType);
+
+    return mlir::cast<cir::PointerType>(getPointer().getType());
+  }
+
   mlir::Type getElementType() const {
     assert(isValid());
     assert(mlir::cast<cir::PointerType>(
@@ -77,6 +85,8 @@ public:
                .getPointee() == elementType);
     return elementType;
   }
+
+  clang::CharUnits getAlignment() const { return alignment; }
 };
 
 } // namespace clang::CIRGen

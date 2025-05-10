@@ -164,7 +164,7 @@ StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
   // Canonicalize the path.  We have to do it textually because we may no longer
   // have access the file in the filesystem.
   // First, replace all slashes with backslashes.
-  std::replace(Filepath.begin(), Filepath.end(), '/', '\\');
+  llvm::replace(Filepath, '/', '\\');
 
   // Remove all "\.\" with "\".
   size_t Cursor = 0;
@@ -1361,7 +1361,7 @@ void CodeViewDebug::calculateRanges(
     }
 
     // We can only handle a register or an offseted load of a register.
-    if (Location->Register == 0 || Location->LoadChain.size() > 1)
+    if (!Location->Register || Location->LoadChain.size() > 1)
       continue;
 
     // Codeview can only express byte-aligned offsets, ensure that we have a

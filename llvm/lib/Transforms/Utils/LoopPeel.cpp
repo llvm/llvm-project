@@ -302,11 +302,8 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
       if (I.mayWriteToMemory())
         return 0;
 
-      auto Iter = LoadUsers.find(&I);
-      if (Iter != LoadUsers.end()) {
-        for (Value *U : I.users())
-          LoadUsers.insert(U);
-      }
+      if (LoadUsers.contains(&I))
+        LoadUsers.insert_range(I.users());
       // Do not look for reads in the header; they can already be hoisted
       // without peeling.
       if (BB == Header)
@@ -315,8 +312,7 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
         Value *Ptr = LI->getPointerOperand();
         if (DT.dominates(BB, Latch) && L.isLoopInvariant(Ptr) &&
             !isDereferenceablePointer(Ptr, LI->getType(), DL, LI, AC, &DT))
-          for (Value *U : I.users())
-            LoadUsers.insert(U);
+          LoadUsers.insert_range(I.users());
       }
     }
   }

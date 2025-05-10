@@ -24,8 +24,10 @@ LLVM_LIBC_FUNCTION(int, vsnprintf,
   internal::ArgList args(vlist); // This holder class allows for easier copying
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
-  printf_core::WriteBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
-  printf_core::Writer writer(&wb);
+  printf_core::WriteBuffer<printf_core::Mode<
+      printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value>
+      wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
+  printf_core::Writer writer(wb);
 
   int ret_val = printf_core::printf_main(&writer, format, args);
   if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.

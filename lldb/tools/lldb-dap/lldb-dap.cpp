@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "DAPLog.h"
 #include "EventHelper.h"
 #include "Handler/RequestHandler.h"
 #include "RunInTerminal.h"
+#include "Transport.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
@@ -29,6 +31,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
@@ -41,11 +44,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
-#include <fstream>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <system_error>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -115,6 +118,7 @@ public:
 static void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<AttachRequestHandler>();
   dap.RegisterRequest<BreakpointLocationsRequestHandler>();
+  dap.RegisterRequest<CancelRequestHandler>();
   dap.RegisterRequest<CompletionsRequestHandler>();
   dap.RegisterRequest<ConfigurationDoneRequestHandler>();
   dap.RegisterRequest<ContinueRequestHandler>();
@@ -172,6 +176,12 @@ EXAMPLES:
 
     lldb-dap -g
 )___";
+}
+
+static void PrintVersion() {
+  llvm::outs() << "lldb-dap: ";
+  llvm::cl::PrintVersionMessage();
+  llvm::outs() << "liblldb: " << lldb::SBDebugger::GetVersionString() << '\n';
 }
 
 // If --launch-target is provided, this instance of lldb-dap becomes a
@@ -279,8 +289,7 @@ validateConnection(llvm::StringRef conn) {
 
 static llvm::Error
 serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
-                std::ofstream *log, llvm::StringRef program_path,
-                const ReplMode default_repl_mode,
+                Log *log, const ReplMode default_repl_mode,
                 const std::vector<std::string> &pre_init_commands) {
   Status status;
   static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
@@ -294,8 +303,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
   }
 
   std::string address = llvm::join(listener->GetListeningConnectionURI(), ", ");
-  if (log)
-    *log << "started with connection listeners " << address << "\n";
+  DAP_LOG(log, "started with connection listeners {0}", address);
 
   llvm::outs() << "Listening for: " << address << "\n";
   // Ensure listening address are flushed for calles to retrieve the resolve
@@ -315,13 +323,8 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                                           &dap_sessions_mutex, &dap_sessions,
                                           &clientCount](
                                              std::unique_ptr<Socket> sock) {
-    std::string name = llvm::formatv("client_{0}", clientCount++).str();
-    if (log) {
-      auto now = std::chrono::duration<double>(
-          std::chrono::system_clock::now().time_since_epoch());
-      *log << llvm::formatv("{0:f9}", now.count()).str()
-           << " client connected: " << name << "\n";
-    }
+    std::string client_name = llvm::formatv("client_{0}", clientCount++).str();
+    DAP_LOG(log, "({0}) client connected", client_name);
 
     lldb::IOObjectSP io(std::move(sock));
 
@@ -329,9 +332,9 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
     // client.
     std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
                         &dap_sessions]() {
-      llvm::set_thread_name(name + ".runloop");
-      DAP dap = DAP(name, program_path, log, io, io, default_repl_mode,
-                    pre_init_commands);
+      llvm::set_thread_name(client_name + ".runloop");
+      Transport transport(client_name, log, io, io);
+      DAP dap(log, default_repl_mode, pre_init_commands, transport);
 
       if (auto Err = dap.ConfigureIO()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -348,16 +351,11 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
 
       if (auto Err = dap.Loop()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                    "DAP session error: ");
+                                    "DAP session (" + client_name +
+                                        ") error: ");
       }
 
-      if (log) {
-        auto now = std::chrono::duration<double>(
-            std::chrono::system_clock::now().time_since_epoch());
-        *log << llvm::formatv("{0:f9}", now.count()).str()
-             << " client closed: " << name << "\n";
-      }
-
+      DAP_LOG(log, "({0}) client disconnected", client_name);
       std::unique_lock<std::mutex> lock(dap_sessions_mutex);
       dap_sessions.erase(io.get());
       std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
@@ -374,19 +372,19 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
     return status.takeError();
   }
 
-  if (log)
-    *log << "lldb-dap server shutdown requested, disconnecting remaining "
-            "clients...\n";
+  DAP_LOG(
+      log,
+      "lldb-dap server shutdown requested, disconnecting remaining clients...");
 
   bool client_failed = false;
   {
     std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
     for (auto [sock, dap] : dap_sessions) {
-      auto error = dap->Disconnect();
-      if (error.Fail()) {
+      if (llvm::Error error = dap->Disconnect()) {
         client_failed = true;
-        llvm::errs() << "DAP client " << dap->name
-                     << " disconnected failed: " << error.GetCString() << "\n";
+        llvm::errs() << "DAP client " << dap->transport.GetClientName()
+                     << " disconnected failed: "
+                     << llvm::toString(std::move(error)) << "\n";
       }
       // Close the socket to ensure the DAP::Loop read finishes.
       sock->Close();
@@ -417,6 +415,7 @@ int main(int argc, char *argv[]) {
 
   llvm::SmallString<256> program_path(argv[0]);
   llvm::sys::fs::make_absolute(program_path);
+  DAP::debug_adapter_path = program_path;
 
   LLDBDAPOptTable T;
   unsigned MAI, MAC;
@@ -425,6 +424,11 @@ int main(int argc, char *argv[]) {
 
   if (input_args.hasArg(OPT_help)) {
     PrintHelp(T, llvm::sys::path::filename(argv[0]));
+    return EXIT_SUCCESS;
+  }
+
+  if (input_args.hasArg(OPT_version)) {
+    PrintVersion();
     return EXIT_SUCCESS;
   }
 
@@ -492,10 +496,17 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-  std::unique_ptr<std::ofstream> log = nullptr;
+  std::unique_ptr<Log> log = nullptr;
   const char *log_file_path = getenv("LLDBDAP_LOG");
-  if (log_file_path)
-    log = std::make_unique<std::ofstream>(log_file_path);
+  if (log_file_path) {
+    std::error_code EC;
+    log = std::make_unique<Log>(log_file_path, EC);
+    if (EC) {
+      llvm::logAllUnhandledErrors(llvm::errorCodeToError(EC), llvm::errs(),
+                                  "Failed to create log file: ");
+      return EXIT_FAILURE;
+    }
+  }
 
   // Initialize LLDB first before we do anything.
   lldb::SBError error = lldb::SBDebugger::InitializeWithErrorHandling();
@@ -509,9 +520,8 @@ int main(int argc, char *argv[]) {
   // Create a memory monitor. This can return nullptr if the host platform is
   // not supported.
   std::unique_ptr<lldb_private::MemoryMonitor> memory_monitor =
-      lldb_private::MemoryMonitor::Create([&]() {
-        if (log)
-          *log << "memory pressure detected\n";
+      lldb_private::MemoryMonitor::Create([log = log.get()]() {
+        DAP_LOG(log, "memory pressure detected");
         lldb::SBDebugger::MemoryPressureDetected();
       });
 
@@ -542,8 +552,8 @@ int main(int argc, char *argv[]) {
     Socket::SocketProtocol protocol;
     std::string name;
     std::tie(protocol, name) = *maybeProtoclAndName;
-    if (auto Err = serveConnection(protocol, name, log.get(), program_path,
-                                   default_repl_mode, pre_init_commands)) {
+    if (auto Err = serveConnection(protocol, name, log.get(), default_repl_mode,
+                                   pre_init_commands)) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                   "Connection failed: ");
       return EXIT_FAILURE;
@@ -572,12 +582,13 @@ int main(int argc, char *argv[]) {
   }
 
   lldb::IOObjectSP input = std::make_shared<NativeFile>(
-      fileno(stdin), File::eOpenOptionReadOnly, true);
+      fileno(stdin), File::eOpenOptionReadOnly, NativeFile::Unowned);
   lldb::IOObjectSP output = std::make_shared<NativeFile>(
-      stdout_fd, File::eOpenOptionWriteOnly, false);
+      stdout_fd, File::eOpenOptionWriteOnly, NativeFile::Unowned);
 
-  DAP dap = DAP("stdin/stdout", program_path, log.get(), std::move(input),
-                std::move(output), default_repl_mode, pre_init_commands);
+  constexpr llvm::StringLiteral client_name = "stdin/stdout";
+  Transport transport(client_name, log.get(), input, output);
+  DAP dap(log.get(), default_repl_mode, pre_init_commands, transport);
 
   // stdout/stderr redirection to the IDE's console
   if (auto Err = dap.ConfigureIO(stdout, stderr)) {
@@ -593,6 +604,8 @@ int main(int argc, char *argv[]) {
     redirection_test();
 
   if (auto Err = dap.Loop()) {
+    DAP_LOG(log.get(), "({0}) DAP session error: {1}", client_name,
+            llvm::toStringWithoutConsuming(Err));
     llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                 "DAP session error: ");
     return EXIT_FAILURE;

@@ -1,4 +1,4 @@
-//===- SeedCollector.cpp  -0000000-----------------------------------------===//
+//===- SeedCollector.cpp  -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -46,7 +46,7 @@ ArrayRef<Instruction *> SeedBundle::getSlice(unsigned StartIdx,
   uint32_t BitCountPowerOfTwo = 0;
   // Can't start a slice with a used instruction.
   assert(!isUsed(StartIdx) && "Expected unused at StartIdx");
-  for (auto S : make_range(Seeds.begin() + StartIdx, Seeds.end())) {
+  for (Instruction *S : drop_begin(Seeds, StartIdx)) {
     // Stop if this instruction is used. This needs to be done before
     // getNumBits() because a "used" instruction may have been erased.
     if (isUsed(StartIdx + NumElements))

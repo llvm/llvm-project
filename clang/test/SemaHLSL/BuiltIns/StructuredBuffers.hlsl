@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify %s
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify %s
 
 typedef vector<float, 3> float3;
 
@@ -8,8 +8,8 @@ StructuredBuffer<float3> Buffer;
 // expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_structured_resource_element_compatible<element_type> class StructuredBuffer {}}}
 StructuredBuffer BufferErr1;
 
-// expected-error@+2 {{missing template argument for template parameter}}
-// expected-note@*:* {{template parameter from hidden source: typename element_type}}
+// expected-error@+2 {{too few template arguments for class template 'StructuredBuffer'}}
+// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_structured_resource_element_compatible<element_type> class StructuredBuffer {}}}
 StructuredBuffer<> BufferErr2;
 
 // test elements of 0 size

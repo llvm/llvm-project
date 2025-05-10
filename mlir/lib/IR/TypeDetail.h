@@ -116,8 +116,7 @@ struct TupleTypeStorage final
     auto *result = ::new (rawMem) TupleTypeStorage(key.size());
 
     // Copy in the element types into the trailing storage.
-    std::uninitialized_copy(key.begin(), key.end(),
-                            result->getTrailingObjects<Type>());
+    llvm::uninitialized_copy(key, result->getTrailingObjects<Type>());
     return result;
   }
 

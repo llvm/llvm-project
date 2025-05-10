@@ -74,3 +74,14 @@ cc_test(
         "//third-party/unittest:gtest_main",
     ],
 )
+
+cc_test(
+    name = "clang_apply_replacements_test",
+    srcs = glob(["clang-apply-replacements/**/*.cpp"]),
+    deps = [
+        "//clang:format",
+        "//clang-tools-extra/clang-apply-replacements:lib",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)

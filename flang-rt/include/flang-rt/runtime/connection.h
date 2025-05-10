@@ -45,19 +45,36 @@ struct ConnectionAttributes {
 };
 
 struct ConnectionState : public ConnectionAttributes {
-  RT_API_ATTRS bool
-  IsAtEOF() const; // true when read has hit EOF or endfile record
-  RT_API_ATTRS bool
-  IsAfterEndfile() const; // true after ENDFILE until repositioned
+  RT_API_ATTRS bool IsAtEOF() const {
+    // true when read has hit EOF or endfile record
+    return endfileRecordNumber && currentRecordNumber >= *endfileRecordNumber;
+  }
+  RT_API_ATTRS bool IsAfterEndfile() const {
+    // true after ENDFILE until repositioned
+    return endfileRecordNumber && currentRecordNumber > *endfileRecordNumber;
+  }
 
   // All positions and measurements are always in units of bytes,
   // not characters.  Multi-byte character encodings are possible in
   // both internal I/O (when the character kind of the variable is 2 or 4)
   // and external formatted I/O (when the encoding is UTF-8).
-  RT_API_ATTRS std::size_t RemainingSpaceInRecord() const;
-  RT_API_ATTRS bool NeedAdvance(std::size_t) const;
-  RT_API_ATTRS void HandleAbsolutePosition(std::int64_t);
-  RT_API_ATTRS void HandleRelativePosition(std::int64_t);
+  RT_API_ATTRS std::size_t RemainingSpaceInRecord() const {
+    auto recl{recordLength.value_or(openRecl.value_or(
+        executionEnvironment.listDirectedOutputLineLengthLimit))};
+    return positionInRecord >= recl ? 0 : recl - positionInRecord;
+  }
+  RT_API_ATTRS bool NeedAdvance(std::size_t width) const {
+    return positionInRecord > 0 && width > RemainingSpaceInRecord();
+  }
+  RT_API_ATTRS void HandleAbsolutePosition(std::int64_t n) {
+    positionInRecord = (n < 0 ? 0 : n) + leftTabLimit.value_or(0);
+  }
+  RT_API_ATTRS void HandleRelativePosition(std::int64_t n) {
+    auto least{leftTabLimit.value_or(0)};
+    auto newPos{positionInRecord + n};
+    positionInRecord = newPos < least ? least : newPos;
+    ;
+  }
 
   RT_API_ATTRS void BeginRecord() {
     positionInRecord = 0;

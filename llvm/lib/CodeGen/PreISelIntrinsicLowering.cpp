@@ -319,7 +319,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       // Only expand llvm.memcpy.inline with non-constant length in this
       // codepath, leaving the current SelectionDAG expansion for constant
       // length memcpy intrinsics undisturbed.
-      auto *Memcpy = cast<MemCpyInlineInst>(Inst);
+      auto *Memcpy = cast<MemCpyInst>(Inst);
       if (isa<ConstantInt>(Memcpy->getLength()))
         break;
 
@@ -367,7 +367,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       // Only expand llvm.memset.inline with non-constant length in this
       // codepath, leaving the current SelectionDAG expansion for constant
       // length memset intrinsics undisturbed.
-      auto *Memset = cast<MemSetInlineInst>(Inst);
+      auto *Memset = cast<MemSetInst>(Inst);
       if (isa<ConstantInt>(Memset->getLength()))
         break;
 
@@ -394,11 +394,12 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       Module *M = Memset->getModule();
       const DataLayout &DL = Memset->getDataLayout();
 
+      Type *DestPtrTy = Memset->getRawDest()->getType();
+      Type *SizeTTy = TLI.getSizeTType(*M);
       StringRef FuncName = "memset_pattern16";
-      FunctionCallee MSP = getOrInsertLibFunc(
-          M, TLI, LibFunc_memset_pattern16, Builder.getVoidTy(),
-          Memset->getRawDest()->getType(), Builder.getPtrTy(),
-          Memset->getLength()->getType());
+      FunctionCallee MSP = getOrInsertLibFunc(M, TLI, LibFunc_memset_pattern16,
+                                              Builder.getVoidTy(), DestPtrTy,
+                                              Builder.getPtrTy(), SizeTTy);
       inferNonMandatoryLibFuncAttrs(M, FuncName, TLI);
 
       // Otherwise we should form a memset_pattern16.  PatternValue is known
@@ -415,9 +416,9 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       GV->setAlignment(Align(16));
       Value *PatternPtr = GV;
       Value *NumBytes = Builder.CreateMul(
-          Builder.getInt64(DL.getTypeSizeInBits(Memset->getValue()->getType()) /
-                           8),
-          Memset->getLength());
+          TLI.getAsSizeT(DL.getTypeAllocSize(Memset->getValue()->getType()),
+                         *M),
+          Builder.CreateZExtOrTrunc(Memset->getLength(), SizeTTy));
       CallInst *MemsetPattern16Call =
           Builder.CreateCall(MSP, {Memset->getRawDest(), PatternPtr, NumBytes});
       MemsetPattern16Call->setAAMetadata(Memset->getAAMetadata());

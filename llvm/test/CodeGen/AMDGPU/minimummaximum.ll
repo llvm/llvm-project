@@ -76,10 +76,7 @@ define amdgpu_ps float @test_maxmin_commuted_f32(float %a, float %b, float %c) {
 define amdgpu_ps half @test_minmax_f16(half %a, half %b, half %c) {
 ; SDAG-TRUE16-LABEL: test_minmax_f16:
 ; SDAG-TRUE16:       ; %bb.0:
-; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
-; SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v0.h, v1.l
+; SDAG-TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v1.l, v2.l
 ; SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; SDAG-FAKE16-LABEL: test_minmax_f16:
@@ -104,10 +101,7 @@ define amdgpu_ps half @test_minmax_f16(half %a, half %b, half %c) {
 define amdgpu_ps half @test_minmax_commuted_f16(half %a, half %b, half %c) {
 ; SDAG-TRUE16-LABEL: test_minmax_commuted_f16:
 ; SDAG-TRUE16:       ; %bb.0:
-; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
-; SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v0.h, v1.l
+; SDAG-TRUE16-NEXT:    v_maximumminimum_f16 v0.l, v0.l, v1.l, v2.l
 ; SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; SDAG-FAKE16-LABEL: test_minmax_commuted_f16:
@@ -132,10 +126,7 @@ define amdgpu_ps half @test_minmax_commuted_f16(half %a, half %b, half %c) {
 define amdgpu_ps half @test_maxmin_commuted_f16(half %a, half %b, half %c) {
 ; SDAG-TRUE16-LABEL: test_maxmin_commuted_f16:
 ; SDAG-TRUE16:       ; %bb.0:
-; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
-; SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-TRUE16-NEXT:    v_minimummaximum_f16 v0.l, v0.l, v0.h, v1.l
+; SDAG-TRUE16-NEXT:    v_minimummaximum_f16 v0.l, v0.l, v1.l, v2.l
 ; SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; SDAG-FAKE16-LABEL: test_maxmin_commuted_f16:

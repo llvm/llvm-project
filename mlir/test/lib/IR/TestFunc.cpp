@@ -45,8 +45,12 @@ struct TestFuncInsertArg
                                    : unknownLoc);
       }
       func->removeAttr("test.insert_args");
-      func.insertArguments(indicesToInsert, typesToInsert, attrsToInsert,
-                           locsToInsert);
+      if (succeeded(func.insertArguments(indicesToInsert, typesToInsert,
+                                         attrsToInsert, locsToInsert)))
+        continue;
+
+      emitError(func->getLoc()) << "failed to insert arguments";
+      return signalPassFailure();
     }
   }
 };
@@ -79,7 +83,12 @@ struct TestFuncInsertResult
                                     : DictionaryAttr::get(&getContext()));
       }
       func->removeAttr("test.insert_results");
-      func.insertResults(indicesToInsert, typesToInsert, attrsToInsert);
+      if (succeeded(func.insertResults(indicesToInsert, typesToInsert,
+                                       attrsToInsert)))
+        continue;
+
+      emitError(func->getLoc()) << "failed to insert results";
+      return signalPassFailure();
     }
   }
 };
@@ -100,7 +109,10 @@ struct TestFuncEraseArg
       for (auto argIndex : llvm::seq<int>(0, func.getNumArguments()))
         if (func.getArgAttr(argIndex, "test.erase_this_arg"))
           indicesToErase.set(argIndex);
-      func.eraseArguments(indicesToErase);
+      if (succeeded(func.eraseArguments(indicesToErase)))
+        continue;
+      emitError(func->getLoc()) << "failed to erase arguments";
+      return signalPassFailure();
     }
   }
 };
@@ -122,7 +134,10 @@ struct TestFuncEraseResult
       for (auto resultIndex : llvm::seq<int>(0, func.getNumResults()))
         if (func.getResultAttr(resultIndex, "test.erase_this_result"))
           indicesToErase.set(resultIndex);
-      func.eraseResults(indicesToErase);
+      if (succeeded(func.eraseResults(indicesToErase)))
+        continue;
+      emitError(func->getLoc()) << "failed to erase results";
+      return signalPassFailure();
     }
   }
 };

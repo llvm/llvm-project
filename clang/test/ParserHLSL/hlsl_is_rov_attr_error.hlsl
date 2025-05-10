@@ -8,7 +8,7 @@ __hlsl_resource_t [[hlsl::is_rov]] res1;
 
 // expected-error@+1{{'is_rov' attribute takes no arguments}}
 __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::is_rov(3)]] res2;
-  
+
 // expected-error@+1{{use of undeclared identifier 'gibberish'}}
 __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::is_rov(gibberish)]] res3;
 

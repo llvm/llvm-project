@@ -65,10 +65,8 @@ FrozenRewritePatternSet::FrozenRewritePatternSet(
     ArrayRef<std::string> enabledPatternLabels)
     : impl(std::make_shared<Impl>()) {
   DenseSet<StringRef> disabledPatterns, enabledPatterns;
-  disabledPatterns.insert(disabledPatternLabels.begin(),
-                          disabledPatternLabels.end());
-  enabledPatterns.insert(enabledPatternLabels.begin(),
-                         enabledPatternLabels.end());
+  disabledPatterns.insert_range(disabledPatternLabels);
+  enabledPatterns.insert_range(enabledPatternLabels);
 
   // Functor used to walk all of the operations registered in the context. This
   // is useful for patterns that get applied to multiple operations, such as

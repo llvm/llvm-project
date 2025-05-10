@@ -69,7 +69,8 @@ extern char **environ;
 
 #include <sys/types.h>
 #if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__FreeBSD__) &&   \
-    !defined(__linux__) && !defined(__FreeBSD_kernel__) && !defined(_AIX)
+    !defined(__linux__) && !defined(__FreeBSD_kernel__) && !defined(_AIX) &&   \
+    !defined(__managarm__)
 #include <sys/statvfs.h>
 #define STATVFS statvfs
 #define FSTATVFS fstatvfs
@@ -78,7 +79,7 @@ extern char **environ;
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <sys/mount.h>
 #include <sys/param.h>
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__managarm__)
 #if defined(HAVE_LINUX_MAGIC_H)
 #include <linux/magic.h>
 #else
@@ -121,10 +122,12 @@ namespace fs {
 
 const file_t kInvalidFile = -1;
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||      \
-    defined(__FreeBSD_kernel__) || defined(__linux__) || defined(__CYGWIN__) || \
-    defined(__DragonFly__) || defined(_AIX) || defined(__GNU__) ||              \
-    (defined(__sun__) && defined(__svr4__) || defined(__HAIKU__))
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
+    defined(__FreeBSD_kernel__) || defined(__linux__) ||                       \
+    defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) ||          \
+    defined(__GNU__) ||                                                        \
+    (defined(__sun__) && defined(__svr4__) || defined(__HAIKU__)) ||           \
+    defined(__managarm__)
 static int test_dir(char ret[PATH_MAX], const char *dir, const char *bin) {
   struct stat sb;
   char fullpath[PATH_MAX];
@@ -245,7 +248,8 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // If we don't have procfs mounted, fall back to argv[0]
   if (getprogpath(exe_path, argv0) != NULL)
     return exe_path;
-#elif defined(__linux__) || defined(__CYGWIN__) || defined(__gnu_hurd__)
+#elif defined(__linux__) || defined(__CYGWIN__) || defined(__gnu_hurd__) ||    \
+    defined(__managarm__)
   char exe_path[PATH_MAX];
   const char *aPath = "/proc/self/exe";
   if (sys::fs::exists(aPath)) {
@@ -472,7 +476,7 @@ std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
 }
 
 static bool is_local_impl(struct STATVFS &Vfs) {
-#if defined(__linux__) || defined(__GNU__)
+#if defined(__linux__) || defined(__GNU__) || defined(__managarm__)
 #ifndef NFS_SUPER_MAGIC
 #define NFS_SUPER_MAGIC 0x6969
 #endif

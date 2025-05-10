@@ -21,10 +21,10 @@ public:
     RegAllocFilterFunc Filter;
     StringRef FilterName;
     Options(RegAllocFilterFunc F = nullptr, StringRef FN = "all")
-        : Filter(F), FilterName(FN) {};
+        : Filter(std::move(F)), FilterName(FN) {};
   };
 
-  RAGreedyPass(Options Opts = Options()) : Opts(Opts) {}
+  RAGreedyPass(Options Opts = Options()) : Opts(std::move(Opts)) {}
   PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
 
   MachineFunctionProperties getRequiredProperties() const {
