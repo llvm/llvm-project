@@ -32,7 +32,7 @@ static_assert(HasOperatorEqual<std::optional<int>, int>);
 static_assert(HasOperatorEqual<std::optional<EqualityComparable>, int>);
 static_assert(HasOperatorEqual<std::optional<EqualityComparable>, EqualityComparable>);
 
-static_assert(!HasOperatorEqual<std::optional<NonComparable>,NonComparable>);
+static_assert(!HasOperatorEqual<std::optional<NonComparable>, NonComparable>);
 static_assert(!HasOperatorEqual<std::optional<EqualityComparable>, NonComparable>);
 
 #endif

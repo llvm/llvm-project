@@ -278,7 +278,6 @@ concept HasOperatorEqual = requires(T1 t1, T2 t2) { t1 == t2; };
 template <typename T1, typename T2 = T1>
 concept HasOperatorGreaterThan = requires(T1 t1, T2 t2) { t1 > t2; };
 
-
 template <typename T1, typename T2 = T1>
 concept HasOperatorGreaterThanEqual = requires(T1 t1, T2 t2) { t1 >= t2; };
 template <typename T1, typename T2 = T1>

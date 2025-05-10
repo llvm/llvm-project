@@ -31,7 +31,6 @@ static_assert(!HasOperatorNotEqual<std::optional<EqualityComparable>, std::optio
 
 #endif
 
-
 using std::optional;
 
 struct X {

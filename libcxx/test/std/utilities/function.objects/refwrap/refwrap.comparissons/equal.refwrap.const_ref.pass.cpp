@@ -25,7 +25,6 @@
 
 // Test SFINAE.
 
-
 static_assert(HasOperatorEqual<std::reference_wrapper<EqualityComparable>>);
 static_assert(HasOperatorEqual<std::reference_wrapper<EqualityComparable>, int>);
 
