@@ -107,6 +107,7 @@ class LVReader {
   LV_OBJECT_ALLOCATOR(ScopeNamespace)
   LV_OBJECT_ALLOCATOR(ScopeRoot)
   LV_OBJECT_ALLOCATOR(ScopeTemplatePack)
+  LV_OBJECT_ALLOCATOR(ScopeModule)
 
   // Symbols allocator.
   LV_OBJECT_ALLOCATOR(Symbol)
@@ -213,6 +214,7 @@ public:
   LV_CREATE_OBJECT(ScopeNamespace)
   LV_CREATE_OBJECT(ScopeRoot)
   LV_CREATE_OBJECT(ScopeTemplatePack)
+  LV_CREATE_OBJECT(ScopeModule)
 
   // Symbols creation.
   LV_CREATE_OBJECT(Symbol)

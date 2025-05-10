@@ -528,6 +528,7 @@ The following options allow printing of scopes that match the given <kind>.
     =TemplatePack: A template pack.
     =TryBlock: An exception try block.
     =Union: A union.
+    =Module: A module.
 
 SYMBOLS
 ^^^^^^^
