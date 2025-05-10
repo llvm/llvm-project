@@ -1209,7 +1209,11 @@ void DwarfDebug::beginModule(Module *M) {
     for (auto *GVE : CUNode->getGlobalVariables()) {
       DIGlobalVariable *GV = GVE->getVariable();
       if (Processed.insert(GV).second)
-        CU.getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
+        // Check if we are dealing with a variable representing a vtable.
+        if (GV->getDisplayName() == "_vtable$" && GV->isDefinition())
+          CU.createGlobalVariableVTableDIE(GV, sortGlobalExprs(GVMap[GV]));
+        else
+          CU.getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
     }
 
     for (auto *Ty : CUNode->getEnumTypes())

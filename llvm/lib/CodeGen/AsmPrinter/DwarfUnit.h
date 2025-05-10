@@ -329,7 +329,8 @@ protected:
   ~DwarfUnit();
 
   /// Create new static data member DIE.
-  DIE *getOrCreateStaticMemberDIE(const DIDerivedType *DT);
+  DIE *getOrCreateStaticMemberDIE(const DIDerivedType *DT,
+                                  bool IsDeclaration = true);
 
   /// Look up the source ID for the given file. If none currently exists,
   /// create a new ID and insert it in the line table.
