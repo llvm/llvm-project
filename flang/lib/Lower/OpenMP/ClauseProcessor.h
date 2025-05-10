@@ -32,6 +32,10 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 
+// Container type for tracking user specified Defaultmaps for a target region
+using DefaultMapsTy = std::map<clause::Defaultmap::VariableCategory,
+                               clause::Defaultmap::ImplicitBehavior>;
+
 /// Class that handles the processing of OpenMP clauses.
 ///
 /// Its `process<ClauseName>()` methods perform MLIR code generation for their
@@ -110,6 +114,8 @@ public:
   bool processCopyin() const;
   bool processCopyprivate(mlir::Location currentLocation,
                           mlir::omp::CopyprivateClauseOps &result) const;
+  bool processDefaultMap(lower::StatementContext &stmtCtx,
+                         DefaultMapsTy &result) const;
   bool processDepend(lower::SymMap &symMap, lower::StatementContext &stmtCtx,
                      mlir::omp::DependClauseOps &result) const;
   bool
