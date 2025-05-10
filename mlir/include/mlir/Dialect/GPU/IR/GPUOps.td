@@ -1998,6 +1998,44 @@ def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
   }];
 }
 
+def GPU_SubgroupMmaRotateOp
+    : GPU_Op<"subgroup_mma_rotate", [Pure, AllTypesMatch<["opA", "opB", "res"]>]> {
+  let summary = "Construct a new mma_matrix by permuting two mma_matrices";
+
+  let description = [{
+    The `gpu.subgroup_mma_rotate` operation rotates data between 2 subgroup
+    matrices.
+
+    This operation takes 2 subgroup matrices with the same type. Use `offset` as
+    the starting position of the first subgroup matrix and append the beginning
+    `offset` of elements in the second subgroup matrix to the end of the result.
+    The result type is the same as the operands. For example, there are 16
+    elements, TA0 to TA15, in a 4x4 subgroup matrix and TB0 to TB15 in the
+    second matrix. When offset is 1, it will use TA1 to TA15 plus TB0 to
+    construct 4x4 result subgroup matrix.
+
+    Example:
+
+    ```mlir
+     %0 = gpu.subgroup_mma_rotate %mma0, %mma1, %c4 :
+          !gpu.mma_matrix<4x4xf32, "AOp">, !gpu.mma_matrix<4x4xf32, "AOp">, i32
+          -> !gpu.mma_matrix<4x4xf32, "AOp">
+    ```
+  }];
+
+  let arguments = (ins Arg<MMAMatrixOf<[SI8, UI8, F16, F32]>>:$opA,
+                       Arg<MMAMatrixOf<[SI8, UI8, F16, F32]>>:$opB,
+                       I32:$offset
+                  );
+
+  let results = (outs GPU_MMAMatrix : $res);
+
+  let assemblyFormat = [{
+    $opA`,` $opB`,` $offset attr-dict `:` type($opA)`,` type($opB)`,` type($offset) `->` type($res)
+  }];
+  let hasVerifier = 1;
+}
+
 //
 // Operation on sparse matrices, called from the host
 // (currently lowers to cuSparse for CUDA only, no ROCM lowering).
