@@ -24,11 +24,11 @@
 #include "test_macros.h"
 // Test SFINAE.
 
-static_assert(HasSpaceshipOperator<std::reference_wrapper<StrongOrder>>);
-static_assert(HasSpaceshipOperator<std::reference_wrapper<WeakOrder>>);
-static_assert(HasSpaceshipOperator<std::reference_wrapper<PartialOrder>>);
+static_assert(HasOperatorSpaceship<std::reference_wrapper<StrongOrder>>);
+static_assert(HasOperatorSpaceship<std::reference_wrapper<WeakOrder>>);
+static_assert(HasOperatorSpaceship<std::reference_wrapper<PartialOrder>>);
 
-static_assert(!HasSpaceshipOperator<std::reference_wrapper<NonComparable>>);
+static_assert(!HasOperatorSpaceship<std::reference_wrapper<NonComparable>>);
 
 // Test comparisons.
 

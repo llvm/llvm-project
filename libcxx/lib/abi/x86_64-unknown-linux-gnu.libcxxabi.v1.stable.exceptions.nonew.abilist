@@ -35,7 +35,6 @@
 {'is_defined': False, 'name': '_ZTVSt13runtime_error', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZTVSt14overflow_error', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZTVSt16invalid_argument', 'size': 0, 'type': 'OBJECT'}
-{'is_defined': False, 'name': '_ZTVSt9exception', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZdaPv', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZdaPvSt11align_val_t', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZdlPv', 'type': 'FUNC'}
@@ -226,7 +225,6 @@
 {'is_defined': True, 'name': '_ZNKSt3__115basic_streambufIwNS_11char_traitsIwEEE6getlocEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE3strEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__115error_condition7messageEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNKSt3__117bad_function_call4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__117moneypunct_bynameIcLb0EE11do_groupingEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__117moneypunct_bynameIcLb0EE13do_neg_formatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__117moneypunct_bynameIcLb0EE13do_pos_formatEv', 'type': 'FUNC'}
@@ -775,7 +773,6 @@
 {'is_defined': True, 'name': '_ZNSt3__112system_errorD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112system_errorD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112system_errorD2Ev', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__113__hash_memoryEPKvm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE11__read_modeEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE12__write_modeEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE4openEPKcj', 'type': 'FUNC'}
