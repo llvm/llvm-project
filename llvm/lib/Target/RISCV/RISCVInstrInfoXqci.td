@@ -1415,7 +1415,7 @@ def : CompressPat<(BEXTI GPRC:$rs1, GPRC:$rs1, uimmlog2xlennonzero:$shamt),
                   (QC_C_BEXTI GPRC:$rs1, uimmlog2xlennonzero:$shamt)>;
 } // Predicates = [HasVendorXqcibm, HasStdExtZbs, IsRV32]
 
-let isCompressOnly = true, inPredicates = [HasVendorXqcilb, IsRV32] in {
+let isCompressOnly = true, Predicates = [HasVendorXqcilb, IsRV32] in {
 def : CompressPat<(QC_E_J bare_simm12_lsb0:$offset),
                   (C_J bare_simm12_lsb0:$offset)>;
 def : CompressPat<(QC_E_JAL bare_simm12_lsb0:$offset),
