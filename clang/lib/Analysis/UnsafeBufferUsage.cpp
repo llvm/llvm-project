@@ -726,12 +726,13 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
   const Expr *Fmt = Call->getArg(FmtArgIdx);
 
   if (auto *SL = dyn_cast<clang::StringLiteral>(Fmt->IgnoreParenImpCasts())) {
+    std::optional<Expr::StringEvalResult> SER;
     StringRef FmtStr;
 
     if (SL->getCharByteWidth() == 1)
       FmtStr = SL->getString();
-    else if (auto EvaledFmtStr = SL->tryEvaluateString(Ctx))
-      FmtStr = *EvaledFmtStr;
+    else if ((SER = SL->tryEvaluateString(Ctx)))
+      FmtStr = SER->getString();
     else
       goto CHECK_UNSAFE_PTR;
 

@@ -3477,8 +3477,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
     if (getDebugInfo()) {
       TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
-          TrapLocation, *E->getArg(0)->tryEvaluateString(getContext()),
-          *E->getArg(1)->tryEvaluateString(getContext()));
+          TrapLocation,
+          E->getArg(0)->tryEvaluateString(getContext())->getString(),
+          E->getArg(1)->tryEvaluateString(getContext())->getString());
     }
     ApplyDebugLocation ApplyTrapDI(*this, TrapLocation);
     // Currently no attempt is made to prevent traps from being merged.
