@@ -682,12 +682,12 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   }
 
   for (StringRef Input :
-       {"rv64i_xqcia0p6", "rv64i_xqciac0p3", "rv64i_xqcibi0p2",
-        "rv64i_xqcibm0p7", "rv64i_xqcicli0p3", "rv64i_xqcicm0p2",
+       {"rv64i_xqcia0p7", "rv64i_xqciac0p3", "rv64i_xqcibi0p2",
+        "rv64i_xqcibm0p8", "rv64i_xqcicli0p3", "rv64i_xqcicm0p2",
         "rv64i_xqcics0p2", "rv64i_xqcicsr0p3", "rv64i_xqciint0p7",
         "rv64i_xqciio0p1", "rv64i_xqcilb0p2", "rv64i_xqcili0p2",
         "rv64i_xqcilia0p2", "rv64i_xqcilo0p3", "rv64i_xqcilsm0p5",
-        "rv64i_xqcisim0p2", "rv64i_xqcisls0p2", "rv64i_xqcisync0p2"}) {
+        "rv64i_xqcisim0p2", "rv64i_xqcisls0p2", "rv64i_xqcisync0p3"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith(" is only supported for 'rv32'"));
@@ -1171,10 +1171,10 @@ Experimental extensions
     ssctr                1.0
     svukte               0.3
     xqccmp               0.1
-    xqcia                0.6
+    xqcia                0.7
     xqciac               0.3
     xqcibi               0.2
-    xqcibm               0.7
+    xqcibm               0.8
     xqcicli              0.3
     xqcicm               0.2
     xqcics               0.2
@@ -1188,7 +1188,7 @@ Experimental extensions
     xqcilsm              0.5
     xqcisim              0.2
     xqcisls              0.2
-    xqcisync             0.2
+    xqcisync             0.3
     xrivosvisni          0.1
     xrivosvizip          0.1
     xsfmclic             0.1

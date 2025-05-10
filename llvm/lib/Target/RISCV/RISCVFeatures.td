@@ -1353,7 +1353,7 @@ def HasVendorXqccmp
                          "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
 
 def FeatureVendorXqcia
-    : RISCVExperimentalExtension<0, 6, "Qualcomm uC Arithmetic Extension">;
+    : RISCVExperimentalExtension<0, 7, "Qualcomm uC Arithmetic Extension">;
 def HasVendorXqcia
     : Predicate<"Subtarget->hasVendorXqcia()">,
       AssemblerPredicate<(all_of FeatureVendorXqcia),
@@ -1376,7 +1376,7 @@ def HasVendorXqcibi
                          "'Xqcibi' (Qualcomm uC Branch Immediate Extension)">;
 
 def FeatureVendorXqcibm
-    : RISCVExperimentalExtension<0, 7, "Qualcomm uC Bit Manipulation Extension",
+    : RISCVExperimentalExtension<0, 8, "Qualcomm uC Bit Manipulation Extension",
                                  [FeatureStdExtZca]>;
 def HasVendorXqcibm
     : Predicate<"Subtarget->hasVendorXqcibm()">,
@@ -1485,7 +1485,7 @@ def HasVendorXqcisls
                          "'Xqcisls' (Qualcomm uC Scaled Load Store Extension)">;
 
 def FeatureVendorXqcisync
-    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Sync Delay Extension",
+    : RISCVExperimentalExtension<0, 3, "Qualcomm uC Sync Delay Extension",
                                  [FeatureStdExtZca]>;
 def HasVendorXqcisync
     : Predicate<"Subtarget->hasVendorXqcisync()">,
