@@ -103,9 +103,7 @@ public:
 
   /// Return a version tuple that contains a different major version but
   /// everything else is the same.
-  VersionTuple withMajorReplaced(unsigned NewMajor) const {
-    return VersionTuple(NewMajor, Minor, Subminor, Build);
-  }
+  VersionTuple withMajorReplaced(unsigned NewMajor) const;
 
   /// Return a version tuple that contains only components that are non-zero.
   VersionTuple normalize() const {
