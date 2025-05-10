@@ -13,6 +13,7 @@
 #define LLVM_UNITTESTS_TRANSFORMS_VECTORIZE_VPLANTESTBASE_H
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
+#include "../lib/Transforms/Vectorize/VPlanHelpers.h"
 #include "../lib/Transforms/Vectorize/VPlanTransforms.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -72,8 +73,9 @@ protected:
     PredicatedScalarEvolution PSE(*SE, *L);
     DenseMap<VPBlockBase *, BasicBlock *> VPB2IRBB;
     auto Plan = VPlanTransforms::buildPlainCFG(L, *LI, VPB2IRBB);
+    VFRange R(ElementCount::getFixed(1), ElementCount::getFixed(2));
     VPlanTransforms::prepareForVectorization(*Plan, IntegerType::get(*Ctx, 64),
-                                             PSE, true, false, L, {});
+                                             PSE, true, false, L, {}, false, R);
     VPlanTransforms::createLoopRegions(*Plan);
     return Plan;
   }
