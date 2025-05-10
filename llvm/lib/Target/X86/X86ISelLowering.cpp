@@ -60860,7 +60860,7 @@ bool X86TargetLowering::ExpandInlineAsm(CallInst *CI) const {
 
     // rorw $$8, ${0:w}  -->  llvm.bswap.i16
     if (CI->getType()->isIntegerTy(16) &&
-        IA->getConstraintString().compare(0, 5, "=r,0,") == 0 &&
+        IA->getConstraintString().starts_with("=r,0,") &&
         (matchAsm(AsmPieces[0], {"rorw", "$$8,", "${0:w}"}) ||
          matchAsm(AsmPieces[0], {"rolw", "$$8,", "${0:w}"}))) {
       AsmPieces.clear();
@@ -60873,7 +60873,7 @@ bool X86TargetLowering::ExpandInlineAsm(CallInst *CI) const {
     break;
   case 3:
     if (CI->getType()->isIntegerTy(32) &&
-        IA->getConstraintString().compare(0, 5, "=r,0,") == 0 &&
+        IA->getConstraintString().starts_with("=r,0,") &&
         matchAsm(AsmPieces[0], {"rorw", "$$8,", "${0:w}"}) &&
         matchAsm(AsmPieces[1], {"rorl", "$$16,", "$0"}) &&
         matchAsm(AsmPieces[2], {"rorw", "$$8,", "${0:w}"})) {
