@@ -523,8 +523,8 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
       if (Found.isAmbiguous()) {
         Found.clear();
       } else if (!Found.empty()) {
-        // Do not erase the typo-corrected result to avoid duplicating the typo
-        // correction in future.
+        // Do not erase the typo-corrected result to avoid duplicated
+        // diagnostics.
         AllowFunctionTemplatesInLookup = true;
         Found.setLookupName(Corrected.getCorrection());
         if (LookupCtx) {

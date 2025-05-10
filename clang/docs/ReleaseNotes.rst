@@ -519,7 +519,7 @@ Improvements to Clang's diagnostics
   The warning message for non-overlapping cases has also been improved (#GH13473).
 
 - Fixed a duplicate diagnostic when performing typo correction on function template
-  calls with explicit template arguments. Fixes #GH139226.
+  calls with explicit template arguments. (#GH139226)
 
 Improvements to Clang's time-trace
 ----------------------------------
