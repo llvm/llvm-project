@@ -17,6 +17,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
@@ -836,8 +837,7 @@ struct TestVectorEmulateMaskedLoadStore final
   }
 };
 
-// TODO: move this code into the user project.
-namespace vendor {
+namespace bit_width_constrained_linearization {
 
 /// Get the set of operand/result types to check for sufficiently
 /// small inner-most dimension size.
@@ -960,7 +960,7 @@ struct TestVectorBitWidthLinearize final
   }
 };
 
-} // namespace vendor
+} // namespace bit_width_constrained_linearization
 
 struct TestVectorLinearize final
     : public PassWrapper<TestVectorLinearize, OperationPass<>> {
@@ -987,6 +987,8 @@ struct TestVectorLinearize final
     vector::populateVectorLinearizeBasePatterns(converter, target, patterns);
     vector::populateVectorLinearizeShuffleLikeOpsPatterns(converter, target,
                                                           patterns);
+    mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
+        converter, patterns, target);
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -1067,7 +1069,8 @@ void registerTestVectorLowerings() {
 
   PassRegistration<TestVectorLinearize>();
 
-  PassRegistration<vendor::TestVectorBitWidthLinearize>();
+  PassRegistration<
+      bit_width_constrained_linearization::TestVectorBitWidthLinearize>();
 
   PassRegistration<TestEliminateVectorMasks>();
 }
