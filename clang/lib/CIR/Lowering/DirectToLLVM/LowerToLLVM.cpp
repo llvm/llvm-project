@@ -1043,12 +1043,11 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   assert(op.getType() == op.getInput().getType() &&
          "Unary operation's operand type and result type are different");
-  mlir::Type type = op.getType();
-  mlir::Type elementType = type;
-  bool isVector = false;
-  assert(!cir::MissingFeatures::vectorType());
-  mlir::Type llvmType = getTypeConverter()->convertType(type);
-  mlir::Location loc = op.getLoc();
+  const mlir::Type type = op.getType();
+  const mlir::Type elementType = elementTypeIfVector(type);
+  const bool isVector = mlir::isa<cir::VectorType>(type);
+  const mlir::Type llvmType = getTypeConverter()->convertType(type);
+  const mlir::Location loc = op.getLoc();
 
   // Integer unary operations: + - ~ ++ --
   if (mlir::isa<cir::IntType>(elementType)) {
@@ -1076,20 +1075,41 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
       rewriter.replaceOp(op, adaptor.getInput());
       return mlir::success();
     case cir::UnaryOpKind::Minus: {
-      assert(!isVector &&
-             "Add vector handling when vector types are supported");
-      mlir::LLVM::ConstantOp zero = rewriter.create<mlir::LLVM::ConstantOp>(
-          loc, llvmType, mlir::IntegerAttr::get(llvmType, 0));
+      mlir::Value zero;
+      if (isVector)
+        zero = rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmType);
+      else
+        zero = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, llvmType, mlir::IntegerAttr::get(llvmType, 0));
       rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(
           op, llvmType, zero, adaptor.getInput(), maybeNSW);
       return mlir::success();
     }
     case cir::UnaryOpKind::Not: {
       // bit-wise compliment operator, implemented as an XOR with -1.
-      assert(!isVector &&
-             "Add vector handling when vector types are supported");
-      mlir::LLVM::ConstantOp minusOne = rewriter.create<mlir::LLVM::ConstantOp>(
-          loc, llvmType, mlir::IntegerAttr::get(llvmType, -1));
+      mlir::Value minusOne;
+      if (isVector) {
+        // Creating a vector object with all -1 values is easier said than
+        // done. It requires a series of insertelement ops.
+        const mlir::Type llvmElementType =
+            getTypeConverter()->convertType(elementType);
+        const mlir::Value minusOneInt = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, llvmElementType, mlir::IntegerAttr::get(llvmElementType, -1));
+        minusOne = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmType);
+
+        const uint64_t numElements =
+            mlir::dyn_cast<cir::VectorType>(type).getSize();
+        for (uint64_t i = 0; i < numElements; ++i) {
+          const mlir::Value indexValue =
+              rewriter.create<mlir::LLVM::ConstantOp>(loc,
+                                                      rewriter.getI64Type(), i);
+          minusOne = rewriter.create<mlir::LLVM::InsertElementOp>(
+              loc, minusOne, minusOneInt, indexValue);
+        }
+      } else {
+        minusOne = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, llvmType, mlir::IntegerAttr::get(llvmType, -1));
+      }
       rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(
           op, llvmType, adaptor.getInput(), minusOne);
       return mlir::success();
