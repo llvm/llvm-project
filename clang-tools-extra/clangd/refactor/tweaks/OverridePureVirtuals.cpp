@@ -17,7 +17,6 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -108,9 +107,11 @@ bool hasAbstractBaseAncestor(const clang::CXXRecordDecl *CurrentDecl) {
   if (!CurrentDecl || !CurrentDecl->getDefinition())
     return false;
 
-  return CurrentDecl->getDefinition()->forallBases(
-      [](const clang::CXXRecordDecl *BaseDefinition) {
-        return BaseDefinition->isAbstract();
+  return llvm::any_of(
+      CurrentDecl->getDefinition()->bases(), [](CXXBaseSpecifier BaseSpec) {
+        const auto *D = BaseSpec.getType()->getAsCXXRecordDecl();
+        const auto *Def = D ? D->getDefinition() : nullptr;
+        return Def && Def->isAbstract();
       });
 }
 
@@ -169,15 +170,16 @@ generateOverridesStringForGroup(std::vector<const CXXMethodDecl *> Methods,
       // Unnamed parameter.
       return TypeStr;
     }
-    return llvm::formatv("{0} {1}", TypeStr, P->getNameAsString()).str();
+    return llvm::formatv("{0} {1}", std::move(TypeStr), P->getNameAsString())
+        .str();
   };
 
   std::string MethodsString;
   for (const auto *Method : Methods) {
     llvm::SmallVector<std::string> ParamsAsString;
     ParamsAsString.reserve(Method->parameters().size());
-    std::transform(Method->param_begin(), Method->param_end(),
-                   std::back_inserter(ParamsAsString), GetParamString);
+    llvm::transform(Method->parameters(), std::back_inserter(ParamsAsString),
+                    GetParamString);
     auto Params = llvm::join(ParamsAsString, ", ");
 
     MethodsString +=
@@ -187,7 +189,7 @@ generateOverridesStringForGroup(std::vector<const CXXMethodDecl *> Methods,
             "    static_assert(false, \"Method `{1}` is not implemented.\");\n"
             "  }\n",
             Method->getReturnType().getAsString(LangOpts),
-            Method->getNameAsString(), Params,
+            Method->getNameAsString(), std::move(Params),
             std::string(Method->isConst() ? "const " : ""))
             .str();
   }
@@ -229,11 +231,9 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
   for (AccessSpecifier AS : AccessOrder) {
     auto *GroupIter = MissingMethodsByAccess.find(AS);
     // Check if there are any missing methods for the current access specifier.
-    if (GroupIter == MissingMethodsByAccess.end() ||
-        GroupIter->second.empty()) {
-      // No methods to override for this access specifier.
+    // No methods to override for this access specifier.
+    if (GroupIter == MissingMethodsByAccess.end() || GroupIter->second.empty())
       continue;
-    }
 
     std::string MethodsGroupString =
         generateOverridesStringForGroup(GroupIter->second, LangOpts);
@@ -281,10 +281,8 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
 
     // Create a replacement to append the new sections.
     tooling::Replacement Rep(SM, AppendLoc, 0, FinalAppendText);
-    if (auto Err = EditReplacements.add(Rep)) {
-      // Handle error if replacement couldn't be added
+    if (auto Err = EditReplacements.add(Rep))
       return llvm::Expected<Tweak::Effect>(std::move(Err));
-    }
   }
 
   if (EditReplacements.empty()) {
