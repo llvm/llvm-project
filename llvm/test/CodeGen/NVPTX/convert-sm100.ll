@@ -14,7 +14,7 @@ define i32 @cvt_rn_satf_tf32_f32(float %f1) {
 ; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rn_satf_tf32_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rn_satf_tf32_f32_param_0];
 ; CHECK-NEXT:    cvt.rn.satfinite.tf32.f32 %r1, %f1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -29,7 +29,7 @@ define i32 @cvt_rn_relu_satf_tf32_f32(float %f1) {
 ; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rn_relu_satf_tf32_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rn_relu_satf_tf32_f32_param_0];
 ; CHECK-NEXT:    cvt.rn.relu.satfinite.tf32.f32 %r1, %f1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -44,7 +44,7 @@ define i32 @cvt_rz_satf_tf32_f32(float %f1) {
 ; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rz_satf_tf32_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rz_satf_tf32_f32_param_0];
 ; CHECK-NEXT:    cvt.rz.satfinite.tf32.f32 %r1, %f1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -59,7 +59,7 @@ define i32 @cvt_rz_relu_satf_tf32_f32(float %f1) {
 ; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rz_relu_satf_tf32_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [cvt_rz_relu_satf_tf32_f32_param_0];
 ; CHECK-NEXT:    cvt.rz.relu.satfinite.tf32.f32 %r1, %f1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;

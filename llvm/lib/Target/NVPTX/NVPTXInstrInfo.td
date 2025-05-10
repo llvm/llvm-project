@@ -2249,11 +2249,11 @@ def LoadParamMemV2I8   : LoadParamV2MemInst<Int16Regs, ".b8">;
 def LoadParamMemV4I32  : LoadParamV4MemInst<Int32Regs, ".b32">;
 def LoadParamMemV4I16  : LoadParamV4MemInst<Int16Regs, ".b16">;
 def LoadParamMemV4I8   : LoadParamV4MemInst<Int16Regs, ".b8">;
-def LoadParamMemF32    : LoadParamMemInst<Float32Regs, ".f32">;
-def LoadParamMemF64    : LoadParamMemInst<Float64Regs, ".f64">;
-def LoadParamMemV2F32  : LoadParamV2MemInst<Float32Regs, ".f32">;
-def LoadParamMemV2F64  : LoadParamV2MemInst<Float64Regs, ".f64">;
-def LoadParamMemV4F32  : LoadParamV4MemInst<Float32Regs, ".f32">;
+def LoadParamMemF32    : LoadParamMemInst<Float32Regs, ".b32">;
+def LoadParamMemF64    : LoadParamMemInst<Float64Regs, ".b64">;
+def LoadParamMemV2F32  : LoadParamV2MemInst<Float32Regs, ".b32">;
+def LoadParamMemV2F64  : LoadParamV2MemInst<Float64Regs, ".b64">;
+def LoadParamMemV4F32  : LoadParamV4MemInst<Float32Regs, ".b32">;
 
 defm StoreParamI64    : StoreParamInst<Int64Regs, i64imm, ".b64">;
 defm StoreParamI32    : StoreParamInst<Int32Regs, i32imm, ".b32">;
@@ -2272,13 +2272,13 @@ defm StoreParamV4I32  : StoreParamV4Inst<Int32Regs, i32imm, ".b32">;
 defm StoreParamV4I16  : StoreParamV4Inst<Int16Regs, i16imm, ".b16">;
 defm StoreParamV4I8   : StoreParamV4Inst<Int16Regs, i8imm,  ".b8">;
 
-defm StoreParamF32    : StoreParamInst<Float32Regs, f32imm, ".f32">;
-defm StoreParamF64    : StoreParamInst<Float64Regs, f64imm, ".f64">;
+defm StoreParamF32    : StoreParamInst<Float32Regs, f32imm, ".b32">;
+defm StoreParamF64    : StoreParamInst<Float64Regs, f64imm, ".b64">;
 
-defm StoreParamV2F32  : StoreParamV2Inst<Float32Regs, f32imm, ".f32">;
-defm StoreParamV2F64  : StoreParamV2Inst<Float64Regs, f64imm, ".f64">;
+defm StoreParamV2F32  : StoreParamV2Inst<Float32Regs, f32imm, ".b32">;
+defm StoreParamV2F64  : StoreParamV2Inst<Float64Regs, f64imm, ".b64">;
 
-defm StoreParamV4F32  : StoreParamV4Inst<Float32Regs, f32imm, ".f32">;
+defm StoreParamV4F32  : StoreParamV4Inst<Float32Regs, f32imm, ".b32">;
 
 def StoreRetvalI64    : StoreRetvalInst<Int64Regs, ".b64">;
 def StoreRetvalI32    : StoreRetvalInst<Int32Regs, ".b32">;
@@ -2294,11 +2294,11 @@ def StoreRetvalV4I32  : StoreRetvalV4Inst<Int32Regs, ".b32">;
 def StoreRetvalV4I16  : StoreRetvalV4Inst<Int16Regs, ".b16">;
 def StoreRetvalV4I8   : StoreRetvalV4Inst<Int16Regs, ".b8">;
 
-def StoreRetvalF64    : StoreRetvalInst<Float64Regs, ".f64">;
-def StoreRetvalF32    : StoreRetvalInst<Float32Regs, ".f32">;
-def StoreRetvalV2F64  : StoreRetvalV2Inst<Float64Regs, ".f64">;
-def StoreRetvalV2F32  : StoreRetvalV2Inst<Float32Regs, ".f32">;
-def StoreRetvalV4F32  : StoreRetvalV4Inst<Float32Regs, ".f32">;
+def StoreRetvalF64    : StoreRetvalInst<Float64Regs, ".b64">;
+def StoreRetvalF32    : StoreRetvalInst<Float32Regs, ".b32">;
+def StoreRetvalV2F64  : StoreRetvalV2Inst<Float64Regs, ".b64">;
+def StoreRetvalV2F32  : StoreRetvalV2Inst<Float32Regs, ".b32">;
+def StoreRetvalV4F32  : StoreRetvalV4Inst<Float32Regs, ".b32">;
 
 def CallArgBeginInst : NVPTXInst<(outs), (ins), "(", [(CallArgBegin)]>;
 def CallArgEndInst1  : NVPTXInst<(outs), (ins), ");", [(CallArgEnd (i32 1))]>;

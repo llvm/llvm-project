@@ -10,11 +10,11 @@ define i128 @foo(ptr %p, ptr %o) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd2, [foo_param_1];
-; CHECK-NEXT:    ld.param.u64 %rd1, [foo_param_0];
-; CHECK-NEXT:    ld.u8 %rd3, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd2, [foo_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [foo_param_0];
+; CHECK-NEXT:    ld.b8 %rd3, [%rd1];
 ; CHECK-NEXT:    mov.b64 %rd4, 0;
-; CHECK-NEXT:    st.v2.u64 [%rd2], {%rd3, %rd4};
+; CHECK-NEXT:    st.v2.b64 [%rd2], {%rd3, %rd4};
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
   %c = load i8, ptr %p, align 1
