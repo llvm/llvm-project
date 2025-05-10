@@ -105,7 +105,7 @@ public:
   }
 
   /// Returns the program. This is only needed for unittests.
-  Program &getProgram() const { return *P.get(); }
+  Program &getProgram() const { return *P; }
 
   unsigned collectBaseOffset(const RecordDecl *BaseDecl,
                              const RecordDecl *DerivedDecl) const;

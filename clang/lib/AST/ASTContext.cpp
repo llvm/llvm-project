@@ -909,13 +909,13 @@ interp::Context &ASTContext::getInterpContext() {
   if (!InterpContext) {
     InterpContext.reset(new interp::Context(*this));
   }
-  return *InterpContext.get();
+  return *InterpContext;
 }
 
 ParentMapContext &ASTContext::getParentMapContext() {
   if (!ParentMapCtx)
     ParentMapCtx.reset(new ParentMapContext(*this));
-  return *ParentMapCtx.get();
+  return *ParentMapCtx;
 }
 
 static bool isAddrSpaceMapManglingEnabled(const TargetInfo &TI,
@@ -13066,7 +13066,7 @@ bool ASTContext::isNearlyEmpty(const CXXRecordDecl *RD) const {
 }
 
 VTableContextBase *ASTContext::getVTableContext() {
-  if (!VTContext.get()) {
+  if (!VTContext) {
     auto ABI = Target->getCXXABI();
     if (ABI.isMicrosoft())
       VTContext.reset(new MicrosoftVTableContext(*this));
