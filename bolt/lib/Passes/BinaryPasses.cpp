@@ -1445,7 +1445,7 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     if (!Function.hasProfile())
       continue;
 
-    uint64_t SampleCount = Function.getRawBranchCount();
+    uint64_t SampleCount = Function.getRawSampleCount();
     TotalSampleCount += SampleCount;
 
     if (Function.hasValidProfile()) {

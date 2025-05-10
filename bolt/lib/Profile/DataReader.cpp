@@ -103,20 +103,20 @@ uint64_t FuncBranchData::getNumExecutedBranches() const {
   return ExecutedBranches;
 }
 
-void SampleInfo::mergeWith(const SampleInfo &SI) { Hits += SI.Hits; }
+void BasicSampleInfo::mergeWith(const BasicSampleInfo &SI) { Hits += SI.Hits; }
 
-void SampleInfo::print(raw_ostream &OS) const {
+void BasicSampleInfo::print(raw_ostream &OS) const {
   OS << Loc.IsSymbol << " " << Loc.Name << " " << Twine::utohexstr(Loc.Offset)
      << " " << Hits << "\n";
 }
 
-uint64_t FuncSampleData::getSamples(uint64_t Start, uint64_t End) const {
+uint64_t FuncBasicSampleData::getSamples(uint64_t Start, uint64_t End) const {
   assert(llvm::is_sorted(Data));
   struct Compare {
-    bool operator()(const SampleInfo &SI, const uint64_t Val) const {
+    bool operator()(const BasicSampleInfo &SI, const uint64_t Val) const {
       return SI.Loc.Offset < Val;
     }
-    bool operator()(const uint64_t Val, const SampleInfo &SI) const {
+    bool operator()(const uint64_t Val, const BasicSampleInfo &SI) const {
       return Val < SI.Loc.Offset;
     }
   };
@@ -128,14 +128,21 @@ uint64_t FuncSampleData::getSamples(uint64_t Start, uint64_t End) const {
   return Result;
 }
 
-void FuncSampleData::bumpCount(uint64_t Offset, uint64_t Count) {
+uint64_t FuncBasicSampleData::getSamples() const {
+  uint64_t Result = 0;
+  for (const BasicSampleInfo &I : Data)
+    Result += I.Hits;
+  return Result;
+}
+
+void FuncBasicSampleData::bumpCount(uint64_t Offset, uint64_t Count) {
   auto Iter = Index.find(Offset);
   if (Iter == Index.end()) {
     Data.emplace_back(Location(true, Name, Offset), Count);
     Index[Offset] = Data.size() - 1;
     return;
   }
-  SampleInfo &SI = Data[Iter->second];
+  BasicSampleInfo &SI = Data[Iter->second];
   SI.Hits += Count;
 }
 
@@ -351,8 +358,8 @@ void DataReader::readProfile(BinaryFunction &BF) {
     return;
 
   if (!hasLBR()) {
-    BF.ProfileFlags = BinaryFunction::PF_SAMPLE;
-    readSampleData(BF);
+    BF.ProfileFlags = BinaryFunction::PF_IP;
+    readBasicSampleData(BF);
     return;
   }
 
@@ -407,12 +414,12 @@ void DataReader::matchProfileData(BinaryFunction &BF) {
   FuncBranchData *FBD = getBranchData(BF);
   if (FBD) {
     BF.ProfileMatchRatio = evaluateProfileData(BF, *FBD);
-    BF.RawBranchCount = FBD->getNumExecutedBranches();
+    BF.RawSampleCount = FBD->getNumExecutedBranches();
     if (BF.ProfileMatchRatio == 1.0f) {
       if (fetchProfileForOtherEntryPoints(BF)) {
         BF.ProfileMatchRatio = evaluateProfileData(BF, *FBD);
         BF.ExecutionCount = FBD->ExecutionCount;
-        BF.RawBranchCount = FBD->getNumExecutedBranches();
+        BF.RawSampleCount = FBD->getNumExecutedBranches();
       }
       return;
     }
@@ -554,8 +561,8 @@ float DataReader::evaluateProfileData(BinaryFunction &BF,
   return MatchRatio;
 }
 
-void DataReader::readSampleData(BinaryFunction &BF) {
-  FuncSampleData *SampleDataOrErr = getFuncSampleData(BF.getNames());
+void DataReader::readBasicSampleData(BinaryFunction &BF) {
+  FuncBasicSampleData *SampleDataOrErr = getFuncSampleData(BF.getNames());
   if (!SampleDataOrErr)
     return;
 
@@ -1006,7 +1013,7 @@ ErrorOr<MemInfo> DataReader::parseMemInfo() {
   return MemInfo(Offset, Addr, CountRes.get());
 }
 
-ErrorOr<SampleInfo> DataReader::parseSampleInfo() {
+ErrorOr<BasicSampleInfo> DataReader::parseSampleInfo() {
   ErrorOr<Location> Res = parseLocation(FieldSeparator);
   if (std::error_code EC = Res.getError())
     return EC;
@@ -1024,7 +1031,7 @@ ErrorOr<SampleInfo> DataReader::parseSampleInfo() {
     return make_error_code(llvm::errc::io_error);
   }
 
-  return SampleInfo(std::move(Address), Occurrences);
+  return BasicSampleInfo(std::move(Address), Occurrences);
 }
 
 ErrorOr<bool> DataReader::maybeParseNoLBRFlag() {
@@ -1087,7 +1094,7 @@ std::error_code DataReader::parseInNoLBRMode() {
     if (I == NamesToSamples.end()) {
       bool Success;
       std::tie(I, Success) = NamesToSamples.insert(std::make_pair(
-          Name, FuncSampleData(Name, FuncSampleData::ContainerTy())));
+          Name, FuncBasicSampleData(Name, FuncBasicSampleData::ContainerTy())));
 
       assert(Success && "unexpected result of insert");
     }
@@ -1106,11 +1113,11 @@ std::error_code DataReader::parseInNoLBRMode() {
   };
 
   while (hasBranchData()) {
-    ErrorOr<SampleInfo> Res = parseSampleInfo();
+    ErrorOr<BasicSampleInfo> Res = parseSampleInfo();
     if (std::error_code EC = Res.getError())
       return EC;
 
-    SampleInfo SI = Res.get();
+    BasicSampleInfo SI = Res.get();
 
     // Ignore samples not involving known locations
     if (!SI.Loc.IsSymbol)
@@ -1352,7 +1359,7 @@ DataReader::getMemDataForNames(const std::vector<StringRef> &FuncNames) {
   return fetchMapEntry<NamesToMemEventsMapTy>(NamesToMemEvents, FuncNames);
 }
 
-FuncSampleData *
+FuncBasicSampleData *
 DataReader::getFuncSampleData(const std::vector<StringRef> &FuncNames) {
   return fetchMapEntry<NamesToSamplesMapTy>(NamesToSamples, FuncNames);
 }
@@ -1396,9 +1403,9 @@ void DataReader::dump() const {
   }
   for (const auto &KV : NamesToSamples) {
     const StringRef Name = KV.first;
-    const FuncSampleData &FSD = KV.second;
+    const FuncBasicSampleData &FSD = KV.second;
     Diag << Name << " samples:\n";
-    for (const SampleInfo &SI : FSD.Data)
+    for (const BasicSampleInfo &SI : FSD.Data)
       Diag << SI.Loc.Name << " " << SI.Loc.Offset << " " << SI.Hits << "\n";
   }
 
