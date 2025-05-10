@@ -241,23 +241,6 @@ generateOverridesStringForGroup(std::vector<const CXXMethodDecl *> Methods,
   return MethodsString;
 }
 
-// Helper to get the string spelling of an AccessSpecifier.
-std::string getAccessSpecifierSpelling(AccessSpecifier AS) {
-  switch (AS) {
-  case AS_public:
-    return "public";
-  case AS_protected:
-    return "protected";
-  case AS_private:
-    return "private";
-  case AS_none:
-    // Should not typically occur for class members.
-    return "";
-  }
-  // Unreachable.
-  return "";
-}
-
 Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
   // The correctness of this tweak heavily relies on the accurate population of
   // these members.
@@ -326,7 +309,7 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
         NewSectionsToAppendText += "\n";
       }
       NewSectionsToAppendText +=
-          getAccessSpecifierSpelling(AS) + ":\n" + MethodsGroupString;
+          getAccessSpelling(AS).str() + ":\n" + MethodsGroupString;
       IsFirstNewSection = false;
     }
   }
