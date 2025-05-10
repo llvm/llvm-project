@@ -754,12 +754,13 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
   }
 
-  // Cases when temporaries might be needed but must not be permitted.
-  bool actualIsContiguous{IsSimplyContiguous(actual, foldingContext)};
-  bool dummyIsAssumedShape{dummy.type.attrs().test(
-      characteristics::TypeAndShape::Attr::AssumedShape)};
   bool dummyIsContiguous{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
+  bool actualIsContiguous{IsSimplyContiguous(actual, foldingContext)};
+
+  // Cases when temporaries might be needed but must not be permitted.
+  bool dummyIsAssumedShape{dummy.type.attrs().test(
+      characteristics::TypeAndShape::Attr::AssumedShape)};
   if ((actualIsAsynchronous || actualIsVolatile) &&
       (dummyIsAsynchronous || dummyIsVolatile) && !dummyIsValue) {
     if (actualCoarrayRef) { // C1538
@@ -834,7 +835,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       if (scope) {
         semantics::CheckPointerAssignment(context, messages.at(), dummyName,
             dummy, actual, *scope,
-            /*isAssumedRank=*/dummyIsAssumedRank);
+            /*isAssumedRank=*/dummyIsAssumedRank, actualIsPointer);
       }
     } else if (!actualIsPointer) {
       messages.Say(
