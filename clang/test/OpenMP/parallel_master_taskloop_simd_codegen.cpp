@@ -648,12 +648,12 @@ struct S {
 // CHECK1-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK1-SAME: () #[[ATTR6]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void @_ZN1SC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
+// CHECK1-NEXT:    call void @_ZN1SC1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
+// CHECK1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -661,12 +661,12 @@ struct S {
 // CHECK1-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
-// CHECK1-NEXT:    call void @_ZN1SC2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK1-NEXT:    call void @_ZN1SC2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
+// CHECK1-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -1460,12 +1460,12 @@ struct S {
 // CHECK2-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK2-SAME: () #[[ATTR6]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    call void @_ZN1SC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
+// CHECK2-NEXT:    call void @_ZN1SC1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
+// CHECK2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -1473,12 +1473,12 @@ struct S {
 // CHECK2-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
 // CHECK2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
-// CHECK2-NEXT:    call void @_ZN1SC2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK2-NEXT:    call void @_ZN1SC2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK2-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
+// CHECK2-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -2327,12 +2327,12 @@ struct S {
 // CHECK3-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK3-SAME: () #[[ATTR6]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    call void @_ZN1SC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
+// CHECK3-NEXT:    call void @_ZN1SC1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK3-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
+// CHECK3-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK3-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -2340,12 +2340,12 @@ struct S {
 // CHECK3-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
 // CHECK3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
-// CHECK3-NEXT:    call void @_ZN1SC2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK3-NEXT:    call void @_ZN1SC2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK3-NEXT:    ret void
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK3-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
+// CHECK3-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR8]] align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK3-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -2775,12 +2775,12 @@ struct S {
 // CHECK5-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK5-SAME: () #[[ATTR2:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK5-NEXT:  entry:
-// CHECK5-NEXT:    call void @_ZN1SC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
+// CHECK5-NEXT:    call void @_ZN1SC1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
 // CHECK5-NEXT:    ret void
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] align 2 {
+// CHECK5-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -2788,12 +2788,12 @@ struct S {
 // CHECK5-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
 // CHECK5-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
-// CHECK5-NEXT:    call void @_ZN1SC2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK5-NEXT:    call void @_ZN1SC2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK5-NEXT:    ret void
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
+// CHECK5-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -3114,12 +3114,12 @@ struct S {
 // CHECK6-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK6-SAME: () #[[ATTR2:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK6-NEXT:  entry:
-// CHECK6-NEXT:    call void @_ZN1SC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
+// CHECK6-NEXT:    call void @_ZN1SC1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
 // CHECK6-NEXT:    ret void
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK6-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] align 2 {
+// CHECK6-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] align 2 {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK6-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -3127,12 +3127,12 @@ struct S {
 // CHECK6-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
 // CHECK6-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK6-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
-// CHECK6-NEXT:    call void @_ZN1SC2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK6-NEXT:    call void @_ZN1SC2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK6-NEXT:    ret void
 //
 //
 // CHECK6-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK6-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
+// CHECK6-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
 // CHECK6-NEXT:  entry:
 // CHECK6-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK6-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -3518,12 +3518,12 @@ struct S {
 // CHECK7-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK7-SAME: () #[[ATTR2:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK7-NEXT:  entry:
-// CHECK7-NEXT:    call void @_ZN1SC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
+// CHECK7-NEXT:    call void @_ZN1SC1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
 // CHECK7-NEXT:    ret void
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK7-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] align 2 {
+// CHECK7-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] align 2 {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK7-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -3531,12 +3531,12 @@ struct S {
 // CHECK7-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
 // CHECK7-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK7-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
-// CHECK7-NEXT:    call void @_ZN1SC2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK7-NEXT:    call void @_ZN1SC2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK7-NEXT:    ret void
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK7-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
+// CHECK7-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK7-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -3922,12 +3922,12 @@ struct S {
 // CHECK8-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK8-SAME: () #[[ATTR2:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK8-NEXT:  entry:
-// CHECK8-NEXT:    call void @_ZN1SC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
+// CHECK8-NEXT:    call void @_ZN1SC1Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) @s, i32 noundef 1)
 // CHECK8-NEXT:    ret void
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@_ZN1SC1Ei
-// CHECK8-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] align 2 {
+// CHECK8-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] align 2 {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK8-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
@@ -3935,12 +3935,12 @@ struct S {
 // CHECK8-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
 // CHECK8-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK8-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C_ADDR]], align 4
-// CHECK8-NEXT:    call void @_ZN1SC2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK8-NEXT:    call void @_ZN1SC2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK8-NEXT:    ret void
 //
 //
 // CHECK8-LABEL: define {{[^@]+}}@_ZN1SC2Ei
-// CHECK8-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
+// CHECK8-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[C:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
 // CHECK8-NEXT:  entry:
 // CHECK8-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK8-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4

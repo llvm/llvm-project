@@ -45,7 +45,7 @@ coroutine ArrayInitCoro() {
     Printy("a"),
     // CHECK:       store i1 true, ptr %cleanup.isactive.reload.addr, align 1
     // CHECK-NEXT:  store ptr %arr.reload.addr, ptr %arrayinit.endOfInit.reload.addr, align 8
-    // CHECK-NEXT:  call void @_ZN6PrintyC1EPKc(ptr noundef nonnull align 8 dereferenceable(8) %arr.reload.addr, ptr noundef @.str)
+    // CHECK-NEXT:  call void @_ZN6PrintyC1EPKc(ptr noalias noundef nonnull align 8 dereferenceable(8) %arr.reload.addr, ptr noundef @.str)
     // CHECK-NEXT:  %arrayinit.element = getelementptr inbounds %struct.Printy, ptr %arr.reload.addr, i64 1
     // CHECK-NEXT:  %arrayinit.element.spill.addr = getelementptr inbounds %_Z13ArrayInitCorov.Frame, ptr %0, i32 0, i32 10
     // CHECK-NEXT:  store ptr %arrayinit.element, ptr %arrayinit.element.spill.addr, align 8

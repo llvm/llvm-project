@@ -15,7 +15,7 @@ struct __attribute__((trivial_abi)) Trivial {
 // CHECK-NEXT:    [[NRVO:%.*]] = alloca i1, align 1
 // CHECK-NEXT:    store i1 false, ptr [[NRVO]], align 1, !dbg [[DBG18:![0-9]+]]
 // CHECK-NEXT:      #dbg_declare(ptr [[RETVAL]], [[META19:![0-9]+]], !DIExpression(), [[META20:![0-9]+]])
-// CHECK-NEXT:    call void @_ZN7TrivialC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[RETVAL]]) #[[ATTR1:[0-9]+]], !dbg [[META20]]
+// CHECK-NEXT:    call void @_ZN7TrivialC1Ev(ptr noalias noundef nonnull align 4 dereferenceable(4) [[RETVAL]]) #[[ATTR1:[0-9]+]], !dbg [[META20]]
 // CHECK-NEXT:    store i1 true, ptr [[NRVO]], align 1, !dbg [[DBG21:![0-9]+]]
 // CHECK-NEXT:    [[NRVO_VAL:%.*]] = load i1, ptr [[NRVO]], align 1, !dbg [[DBG22:![0-9]+]]
 // CHECK-NEXT:    br i1 [[NRVO_VAL]], label [[NRVO_SKIPDTOR:%.*]], label [[NRVO_UNUSED:%.*]], !dbg [[DBG22]]

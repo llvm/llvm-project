@@ -39,7 +39,7 @@ void func_with_indirect_arg(A a) {
 // CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[CLASS_A]], align 4, addrspace(5)
 // CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
 // CHECK-NEXT:    [[AGG_TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[AGG_TMP]] to ptr
-// CHECK-NEXT:    call void @_ZN1AC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]])
+// CHECK-NEXT:    call void @_ZN1AC1Ev(ptr noalias noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]])
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[AGG_TMP_ASCAST]], ptr align 4 [[A_ASCAST]], i64 4, i1 false)
 // CHECK-NEXT:    [[AGG_TMP_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[AGG_TMP_ASCAST]] to ptr addrspace(5)
 // CHECK-NEXT:    call void @_Z22func_with_indirect_arg1A(ptr addrspace(5) noundef [[AGG_TMP_ASCAST_ASCAST]])

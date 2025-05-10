@@ -45,7 +45,7 @@
 // HST-NEXT:    [[TMP15:%.*]] = call i32 @__llvmPopCallConfiguration(ptr [[GRID_DIM]], ptr [[BLOCK_DIM]], ptr [[SHMEM_SIZE]], ptr [[STREAM]])
 // HST-NEXT:    [[TMP16:%.*]] = load i32, ptr [[SHMEM_SIZE]], align 4
 // HST-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[STREAM]], align 4
-// HST-NEXT:    [[CALL:%.*]] = call noundef i32 @llvmLaunchKernel(ptr noundef @_Z18__device_stub__fooisPvS_, ptr noundef byval([[STRUCT_DIM3]]) align 4 [[GRID_DIM]], ptr noundef byval([[STRUCT_DIM3]]) align 4 [[BLOCK_DIM]], ptr noundef [[KERNEL_LAUNCH_PARAMS]], i32 noundef [[TMP16]], ptr noundef [[TMP17]])
+// HST-NEXT:    [[CALL:%.*]] = call noundef i32 @llvmLaunchKernel(ptr noundef @_Z18__device_stub__fooisPvS_, ptr noundef byval([[STRUCT_DIM3]]) align 4 [[GRID_DIM]], ptr noundef byval([[STRUCT_DIM3]]) align 4 [[BLOCK_DIM]], ptr noundef [[KERNEL_LAUNCH_PARAMS]], i32 noundef [[TMP16]], ptr noundef [[TMP17]]) #[[ATTR3:[0-9]+]]
 // HST-NEXT:    br label %[[SETUP_END:.*]]
 // HST:       [[SETUP_END]]:
 // HST-NEXT:    ret void
@@ -72,15 +72,15 @@ __global__ void foo(int, short, void *, void *) {}
 // HST-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_DIM3:%.*]], align 4
 // HST-NEXT:    [[AGG_TMP1:%.*]] = alloca [[STRUCT_DIM3]], align 4
 // HST-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 4
-// HST-NEXT:    call void @_ZN4dim3C1Ejjj(ptr noundef nonnull align 4 dereferenceable(12) [[AGG_TMP]], i32 noundef 3, i32 noundef 1, i32 noundef 1)
-// HST-NEXT:    call void @_ZN4dim3C1Ejjj(ptr noundef nonnull align 4 dereferenceable(12) [[AGG_TMP1]], i32 noundef 7, i32 noundef 1, i32 noundef 1)
-// HST-NEXT:    [[CALL:%.*]] = call i32 @__llvmPushCallConfiguration(ptr noundef byval([[STRUCT_DIM3]]) align 4 [[AGG_TMP]], ptr noundef byval([[STRUCT_DIM3]]) align 4 [[AGG_TMP1]], i32 noundef 0, ptr noundef null)
+// HST-NEXT:    call void @_ZN4dim3C1Ejjj(ptr noalias noundef nonnull align 4 dereferenceable(12) [[AGG_TMP]], i32 noundef 3, i32 noundef 1, i32 noundef 1) #[[ATTR3]]
+// HST-NEXT:    call void @_ZN4dim3C1Ejjj(ptr noalias noundef nonnull align 4 dereferenceable(12) [[AGG_TMP1]], i32 noundef 7, i32 noundef 1, i32 noundef 1) #[[ATTR3]]
+// HST-NEXT:    [[CALL:%.*]] = call i32 @__llvmPushCallConfiguration(ptr noundef byval([[STRUCT_DIM3]]) align 4 [[AGG_TMP]], ptr noundef byval([[STRUCT_DIM3]]) align 4 [[AGG_TMP1]], i32 noundef 0, ptr noundef null) #[[ATTR3]]
 // HST-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[CALL]], 0
 // HST-NEXT:    br i1 [[TOBOOL]], label %[[KCALL_END:.*]], label %[[KCALL_CONFIGOK:.*]]
 // HST:       [[KCALL_CONFIGOK]]:
 // HST-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 4
 // HST-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PTR_ADDR]], align 4
-// HST-NEXT:    call void @_Z18__device_stub__fooisPvS_(i32 noundef 13, i16 noundef signext 1, ptr noundef [[TMP0]], ptr noundef [[TMP1]]) #[[ATTR3:[0-9]+]]
+// HST-NEXT:    call void @_Z18__device_stub__fooisPvS_(i32 noundef 13, i16 noundef signext 1, ptr noundef [[TMP0]], ptr noundef [[TMP1]]) #[[ATTR4:[0-9]+]]
 // HST-NEXT:    br label %[[KCALL_END]]
 // HST:       [[KCALL_END]]:
 // HST-NEXT:    ret void

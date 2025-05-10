@@ -33,18 +33,18 @@ S A;
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @_ZN1SC1Ev(ptr noundef nonnull align 4 dereferenceable(4) addrspacecast (ptr addrspace(1) @A to ptr)) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    call void @_ZN1SC1Ev(ptr noalias noundef nonnull align 4 dereferenceable(4) addrspacecast (ptr addrspace(1) @A to ptr)) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1SC1Ev
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// CHECK-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[THIS_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[THIS_ADDR]] to ptr
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    call void @_ZN1SC2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @_ZN1SC2Ev(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -67,7 +67,7 @@ S A;
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1SC2Ev
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK-SAME: (ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[THIS_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[THIS_ADDR]] to ptr
