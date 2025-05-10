@@ -1348,9 +1348,9 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
       MF->getFunction().getCallingConv() ==
           CallingConv::AArch64_SVE_VectorCall ||
       MF->getInfo<AArch64FunctionInfo>()->isSVECC()) {
-    auto *TS =
-        static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
-    TS->emitDirectiveVariantPCS(CurrentFnSym);
+    if (auto *TS = static_cast<AArch64TargetStreamer *>(
+            OutStreamer->getTargetStreamer()))
+      TS->emitDirectiveVariantPCS(CurrentFnSym);
   }
 
   AsmPrinter::emitFunctionEntryLabel();
