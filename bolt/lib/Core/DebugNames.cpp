@@ -648,8 +648,8 @@ void DWARF5AcceleratorTable::writeEntries() {
         if (const auto Iter = EntryRelativeOffsets.find(*ParentOffset);
             Iter != EntryRelativeOffsets.end()) {
           const uint64_t PatchOffset = Entry->getPatchOffset();
-          uint32_t *Ptr = reinterpret_cast<uint32_t *>(
-              &EntriesBuffer.get()->data()[PatchOffset]);
+          uint32_t *Ptr =
+              reinterpret_cast<uint32_t *>(&EntriesBuffer->data()[PatchOffset]);
           *Ptr = Iter->second;
         } else {
           BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "

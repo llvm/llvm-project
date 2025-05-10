@@ -867,7 +867,7 @@ public:
   /// Returns if BinaryDominatorTree has been constructed for this function.
   bool hasDomTree() const { return BDT != nullptr; }
 
-  BinaryDominatorTree &getDomTree() { return *BDT.get(); }
+  BinaryDominatorTree &getDomTree() { return *BDT; }
 
   /// Constructs DomTree for this function.
   void constructDomTree();
@@ -875,7 +875,7 @@ public:
   /// Returns if loop detection has been run for this function.
   bool hasLoopInfo() const { return BLI != nullptr; }
 
-  const BinaryLoopInfo &getLoopInfo() { return *BLI.get(); }
+  const BinaryLoopInfo &getLoopInfo() { return *BLI; }
 
   bool isLoopFree() {
     if (!hasLoopInfo())
