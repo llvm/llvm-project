@@ -700,6 +700,12 @@ Error RewriteInstance::run() {
   adjustCommandLineOptions();
   discoverFileObjects();
 
+  if (opts::Instrument && opts::AllowPacret) {
+    BC->errs() << "BOLT-ERROR: Instrumenting binaries with pac-ret hardening "
+                  "is not supported.\n";
+    exit(1);
+  }
+
   if (opts::Instrument && !BC->IsStaticExecutable)
     if (Error E = discoverRtFiniAddress())
       return E;
