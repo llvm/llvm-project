@@ -89,14 +89,17 @@ public:
 //
 // TODO: Does this correctly identify floating point operations we care about?
 // For example, we skip phi and load even when they return floating point
-// values.  Should different operations have different weights?
+// values.
+//
+// TODO: Should different operations have different weights?  For example,
+// @llvm.fmuladd.* might be expensive for some targets.
 static Type *getFloatingPointOpType(const Instruction &I) {
   if (const AtomicRMWInst *At = dyn_cast<AtomicRMWInst>(&I)) {
     if (At->isFloatingPointOperation())
       return At->getType();
     return nullptr;
   }
-  if (!I.isBinaryOp() && !I.isUnaryOp())
+  if (!I.isBinaryOp() && !I.isUnaryOp() && !isa<IntrinsicInst>(&I))
     return nullptr;
   Type *Ty = I.getType();
   if (Ty->isFPOrFPVectorTy())
