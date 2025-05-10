@@ -14,8 +14,8 @@ target triple = "nvptx64-nvidia-cuda"
 define ptx_kernel void @foo(i32 %b, i32 %s) {
 ; CHECK-LABEL: .visible .entry foo(
 entry:
-; CHECK: ld.param.u32 [[s:%r[0-9]+]], [foo_param_1];
-; CHECK: ld.param.u32 [[b:%r[0-9]+]], [foo_param_0];
+; CHECK: ld.param.b32 [[s:%r[0-9]+]], [foo_param_1];
+; CHECK: ld.param.b32 [[b:%r[0-9]+]], [foo_param_0];
   %call = tail call zeroext i1 @cond(i32 0)
   br i1 %call, label %if.then, label %for.inc
 
