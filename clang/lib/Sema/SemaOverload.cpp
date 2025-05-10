@@ -1889,7 +1889,14 @@ bool Sema::TryFunctionConversion(QualType FromType, QualType ToType,
   return Changed;
 }
 
-bool Sema::IsFunctionConversion(QualType FromType, QualType ToType) const {
+bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
+                                bool *DiscardingCFIUncheckedCallee,
+                                bool *AddingCFIUncheckedCallee) const {
+  if (DiscardingCFIUncheckedCallee)
+    *DiscardingCFIUncheckedCallee = false;
+  if (AddingCFIUncheckedCallee)
+    *AddingCFIUncheckedCallee = false;
+
   if (Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
 
@@ -1942,6 +1949,21 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType) const {
   if (FromEInfo.getNoReturn() && !ToEInfo.getNoReturn()) {
     FromFn = Context.adjustFunctionType(FromFn, FromEInfo.withNoReturn(false));
     Changed = true;
+  }
+
+  if (FromEInfo.getCFIUncheckedCallee() && !ToEInfo.getCFIUncheckedCallee()) {
+    FromFn = Context.adjustFunctionType(
+        FromFn, FromEInfo.withCFIUncheckedCallee(false));
+    Changed = true;
+    if (DiscardingCFIUncheckedCallee)
+      *DiscardingCFIUncheckedCallee = true;
+  } else if (!FromEInfo.getCFIUncheckedCallee() &&
+             ToEInfo.getCFIUncheckedCallee()) {
+    FromFn = Context.adjustFunctionType(FromFn,
+                                        FromEInfo.withCFIUncheckedCallee(true));
+    Changed = true;
+    if (AddingCFIUncheckedCallee)
+      *AddingCFIUncheckedCallee = true;
   }
 
   // Drop 'noexcept' if not present in target type.
@@ -2510,12 +2532,15 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
 
   SCS.setToType(2, FromType);
 
-  if (CanonFrom == CanonTo)
-    return true;
-
   // If we have not converted the argument type to the parameter type,
   // this is a bad conversion sequence, unless we're resolving an overload in C.
-  if (S.getLangOpts().CPlusPlus || !InOverloadResolution)
+  //
+  // Permit conversions from a function without `cfi_unchecked_callee` to a
+  // function with `cfi_unchecked_callee`.
+  if (CanonFrom == CanonTo || S.AddingCFIUncheckedCallee(CanonFrom, CanonTo))
+    return true;
+
+  if ((S.getLangOpts().CPlusPlus || !InOverloadResolution))
     return false;
 
   ExprResult ER = ExprResult{From};
