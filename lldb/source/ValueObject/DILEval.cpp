@@ -237,13 +237,13 @@ Interpreter::Visit(const IdentifierNode *node) {
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const UnaryOpNode *node) {
   Status error;
-  auto rhs_or_err = Evaluate(node->operand());
+  auto rhs_or_err = Evaluate(node->GetOperand());
   if (!rhs_or_err)
     return rhs_or_err;
 
   lldb::ValueObjectSP rhs = *rhs_or_err;
 
-  switch (node->kind()) {
+  switch (node->GetKind()) {
   case UnaryOpKind::Deref: {
     lldb::ValueObjectSP dynamic_rhs = rhs->GetDynamicValue(m_default_dynamic);
     if (dynamic_rhs)
@@ -270,6 +270,69 @@ Interpreter::Visit(const UnaryOpNode *node) {
   // Unsupported/invalid operation.
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid ast: unexpected binary operator", node->GetLocation());
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const ArraySubscriptNode *node) {
+  auto lhs_or_err = Evaluate(node->GetBase());
+  if (!lhs_or_err) {
+    return lhs_or_err;
+  }
+  lldb::ValueObjectSP base = *lhs_or_err;
+  const llvm::APInt *index = node->GetIndex();
+
+  Status error;
+  if (base->GetCompilerType().IsReferenceType()) {
+    base = base->Dereference(error);
+    if (error.Fail())
+      return error.ToError();
+  }
+
+  // Check to see if 'base' has a synthetic value; if so, try using that.
+  uint64_t child_idx = index->getZExtValue();
+  if (base->HasSyntheticValue()) {
+    lldb::ValueObjectSP synthetic = base->GetSyntheticValue();
+    if (synthetic && synthetic != base) {
+      uint32_t num_children = synthetic->GetNumChildrenIgnoringErrors();
+      // Verify that the 'index' is not out-of-range for the declared type.
+      if (child_idx >= num_children) {
+        auto message = llvm::formatv(
+            "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+            base->GetTypeName().AsCString("<invalid type>"),
+            base->GetName().AsCString());
+        return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                    node->GetLocation());
+      }
+
+      if (static_cast<uint32_t>(child_idx) <
+          synthetic->GetNumChildrenIgnoringErrors()) {
+        lldb::ValueObjectSP child_valobj_sp =
+            synthetic->GetChildAtIndex(child_idx);
+        if (child_valobj_sp) {
+          return child_valobj_sp;
+        }
+      }
+    }
+  }
+
+  auto base_type = base->GetCompilerType();
+  if (!base_type.IsPointerType() && !base_type.IsArrayType())
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "subscripted value is not an array or pointer",
+        node->GetLocation());
+  if (base_type.IsPointerToVoid())
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "subscript of pointer to incomplete type 'void'",
+        node->GetLocation());
+
+  if (base_type.IsArrayType()) {
+    uint32_t num_children = base->GetNumChildrenIgnoringErrors();
+    if (child_idx < num_children)
+      return base->GetChildAtIndex(child_idx);
+  }
+
+  int64_t signed_child_idx = index->getSExtValue();
+  return base->GetSyntheticArrayMember(signed_child_idx, true);
 }
 
 } // namespace lldb_private::dil
