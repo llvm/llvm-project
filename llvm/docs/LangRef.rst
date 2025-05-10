@@ -23914,6 +23914,87 @@ Examples:
       %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %3, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
 
 
+.. _int_experimental_loop_dependence_war_mask:
+.. _int_experimental_loop_dependence_raw_mask:
+
+'``llvm.experimental.loop.dependence.raw.mask.*``' and '``llvm.experimental.loop.dependence.war.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.experimental.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.experimental.loop.dependence.war.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <16 x i1> @llvm.experimental.loop.dependence.raw.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.experimental.loop.dependence.war.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+
+
+Overview:
+"""""""""
+
+Create a mask enabling lanes that do not overlap between two pointers
+across one vector loop iteration.
+
+
+Arguments:
+""""""""""
+
+The first two arguments are pointers and the last argument is an immediate.
+The result is a vector with the i1 element type.
+
+Semantics:
+""""""""""
+
+``%elementSize`` is the size of the accessed elements in bytes.
+The intrinsic will return poison if ``%ptrA`` and ``%ptrB`` are within
+VF * ``%elementSize`` of each other and ``%ptrA`` + VF * ``%elementSize`` wraps.
+The '``llvm.experimental.loop.dependence.war.mask*``' intrinsics are semantically
+equivalent to:
+
+::
+
+      %diff = (%ptrB - %ptrA) / %elementSize
+      %m[i] = (icmp ult i, %diff) || (%diff <= 0)
+
+When the return value is not poison the '``llvm.experimental.loop.dependence.raw.mask.*``'
+intrinsics are semantically equivalent to:
+
+::
+
+      %diff = abs(%ptrB - %ptrA) / %elementSize
+      %m[i] = (icmp ult i, %diff) || (%diff == 0)
+
+where ``%m`` is a vector (mask) of active/inactive lanes with its elements
+indexed by ``i`` (i = 0 to VF - 1),  and ``%ptrA``, ``%ptrB`` are the two ptr
+arguments to ``llvm.experimental.loop.dependence.{raw,war}.mask.*`` and ``%elementSize``
+is the first immediate argument. The ``war`` variant is expected to be used when
+``%ptrB`` is stored to after ``%ptrA`` is read from, otherwise the ``raw`` variant is
+expected to be used.
+
+This can, for example, be emitted by the loop vectorizer in which case
+``%ptrA`` is a pointer that is read from within the loop, and ``%ptrB`` is a
+pointer that is stored to within the loop.
+If the difference between these pointers is less than the vector factor, then
+they overlap (alias) within a loop iteration.
+An example is if ``%ptrA`` is 20 and ``%ptrB`` is 23 with a vector factor of 8,
+then lanes 3, 4, 5, 6 and 7 of the vector loaded from ``%ptrA``
+share addresses with lanes 0, 1, 2, 3, 4 and 5 from the vector stored to at
+``%ptrB``.
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %loop.dependence.mask = call <4 x i1> @llvm.experimental.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
+      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrA, i32 4, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+      [...]
+      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrB, i32 4, <4 x i1> %loop.dependence.mask)
+
 .. _int_experimental_vp_splice:
 
 '``llvm.experimental.vp.splice``' Intrinsic
