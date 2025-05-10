@@ -477,10 +477,10 @@ MCSymbolXCOFF *MCContext::createXCOFFSymbolImpl(const MCSymbolTableEntry *Name,
 
   // Append the hex values of '_' and invalid characters with "_Renamed..";
   // at the same time replace invalid characters with '_'.
-  for (size_t I = 0; I < InvalidName.size(); ++I) {
-    if (!MAI->isAcceptableChar(InvalidName[I]) || InvalidName[I] == '_') {
-      raw_svector_ostream(ValidName).write_hex(InvalidName[I]);
-      InvalidName[I] = '_';
+  for (char &I : InvalidName) {
+    if (!MAI->isAcceptableChar(I) || I == '_') {
+      raw_svector_ostream(ValidName).write_hex(I);
+      I = '_';
     }
   }
 
