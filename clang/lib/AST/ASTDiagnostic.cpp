@@ -2203,9 +2203,10 @@ std::string clang::FormatUTFCodeUnitAsCodepoint(unsigned Value, QualType T) {
       assert(Value <= 0xFFFF && "not a valid UTF-16 code unit");
       return llvm::IsSingleCodeUnitUTF16Codepoint(Value);
     }
+    assert(T->isChar32Type());
     return llvm::IsSingleCodeUnitUTF32Codepoint(Value);
   };
-  llvm::SmallVector<char, 4> Str;
+  llvm::SmallVector<char, 16> Str;
   if (!IsSingleCodeUnitCP(Value, T)) {
     llvm::raw_svector_ostream OS(Str);
     OS << "<" << llvm::format_hex(Value, 1, /*Upper=*/true) << ">";

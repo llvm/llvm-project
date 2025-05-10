@@ -4367,12 +4367,12 @@ def warn_impcast_unicode_precision
       InGroup<CharacterConversion>;
 def warn_impcast_unicode_char_type_constant
     : Warning<"implicit conversion from %0 to %1 changes the meaning of the "
-              "%select{code unit|codepoint}2 '%3'">,
+              "%select{code unit|code point}2 '%3'">,
       InGroup<CharacterConversion>;
 
 def warn_comparison_unicode_mixed_types
     : Warning<"comparing values of different Unicode code unit types %0 and %1 "
-              "may compare different codepoints">,
+              "may compare different code points">,
       InGroup<CharacterConversion>;
 
 def warn_comparison_unicode_mixed_types_constant
@@ -7742,7 +7742,7 @@ def warn_comparison_of_mixed_enum_types_switch : Warning<
   "%diff{ ($ and $)|}0,1">,
   InGroup<EnumCompareSwitch>;
 
-def warn_arith_conv_mixed__unicode_types
+def warn_arith_conv_mixed_unicode_types
     : Warning<"%sub{select_arith_conv_kind}0 "
               "different Unicode character types %1 and %2">,
       InGroup<CharacterConversion>;

@@ -11834,6 +11834,7 @@ static void DiagnoseMixedUnicodeImplicitConversion(Sema &S, const Type *Source,
           return llvm::IsSingleCodeUnitUTF8Codepoint(Value.getExtValue());
         if (T->isChar16Type())
           return llvm::IsSingleCodeUnitUTF16Codepoint(Value.getExtValue());
+        assert(T->isChar32Type());
         return llvm::IsSingleCodeUnitUTF32Codepoint(Value.getExtValue());
       };
 

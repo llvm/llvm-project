@@ -1582,50 +1582,60 @@ static void CheckUnicodeArithmeticConversions(Sema &SemaRef, Expr *LHS,
     if (SemaRef.getASTContext().hasSameType(LHSType, RHSType))
       return;
 
+    auto IsSingleCodeUnitCP = [](const QualType &T, const llvm::APSInt &Value) {
+      if (T->isChar8Type())
+        return llvm::IsSingleCodeUnitUTF8Codepoint(Value.getExtValue());
+      if (T->isChar16Type())
+        return llvm::IsSingleCodeUnitUTF16Codepoint(Value.getExtValue());
+      assert(T->isChar32Type());
+      return llvm::IsSingleCodeUnitUTF32Codepoint(Value.getExtValue());
+    };
+
     Expr::EvalResult LHSRes, RHSRes;
-    bool Success = LHS->EvaluateAsInt(LHSRes, SemaRef.getASTContext(),
-                                      Expr::SE_AllowSideEffects,
-                                      SemaRef.isConstantEvaluatedContext());
-    if (Success)
-      Success = RHS->EvaluateAsInt(RHSRes, SemaRef.getASTContext(),
-                                   Expr::SE_AllowSideEffects,
-                                   SemaRef.isConstantEvaluatedContext());
-    if (Success) {
-      llvm::APSInt LHSValue(32);
-      LHSValue = LHSRes.Val.getInt();
-      llvm::APSInt RHSValue(32);
-      RHSValue = RHSRes.Val.getInt();
+    bool LHSSuccess = LHS->EvaluateAsInt(LHSRes, SemaRef.getASTContext(),
+                                         Expr::SE_AllowSideEffects,
+                                         SemaRef.isConstantEvaluatedContext());
+    bool RHSuccess = RHS->EvaluateAsInt(RHSRes, SemaRef.getASTContext(),
+                                        Expr::SE_AllowSideEffects,
+                                        SemaRef.isConstantEvaluatedContext());
 
-      auto IsSingleCodeUnitCP = [](const QualType &T,
-                                   const llvm::APSInt &Value) {
-        if (T->isChar8Type())
-          return llvm::IsSingleCodeUnitUTF8Codepoint(Value.getExtValue());
-        if (T->isChar16Type())
-          return llvm::IsSingleCodeUnitUTF16Codepoint(Value.getExtValue());
-        return llvm::IsSingleCodeUnitUTF32Codepoint(Value.getExtValue());
-      };
-
-      bool LHSSafe = IsSingleCodeUnitCP(LHSType, LHSValue);
-      bool RHSSafe = IsSingleCodeUnitCP(RHSType, RHSValue);
-      if (LHSSafe && RHSSafe)
+    // Don't warn if the one known value is a representable
+    // in the type of both expressions.
+    if (LHSSuccess != RHSuccess) {
+      Expr::EvalResult &Res = LHSSuccess ? LHSRes : RHSRes;
+      if (IsSingleCodeUnitCP(LHSType, Res.Val.getInt()) &&
+          IsSingleCodeUnitCP(RHSType, Res.Val.getInt()))
         return;
+    }
 
-      SemaRef.Diag(Loc, diag::warn_comparison_unicode_mixed_types_constant)
+    if (!LHSSuccess || !RHSuccess) {
+      SemaRef.Diag(Loc, diag::warn_comparison_unicode_mixed_types)
           << LHS->getSourceRange() << RHS->getSourceRange() << LHSType
-          << RHSType
-          << FormatUTFCodeUnitAsCodepoint(LHSValue.getExtValue(), LHSType)
-          << FormatUTFCodeUnitAsCodepoint(RHSValue.getExtValue(), RHSType);
+          << RHSType;
       return;
     }
-    SemaRef.Diag(Loc, diag::warn_comparison_unicode_mixed_types)
-        << LHS->getSourceRange() << RHS->getSourceRange() << LHSType << RHSType;
+
+    llvm::APSInt LHSValue(32);
+    LHSValue = LHSRes.Val.getInt();
+    llvm::APSInt RHSValue(32);
+    RHSValue = RHSRes.Val.getInt();
+
+    bool LHSSafe = IsSingleCodeUnitCP(LHSType, LHSValue);
+    bool RHSSafe = IsSingleCodeUnitCP(RHSType, RHSValue);
+    if (LHSSafe && RHSSafe)
+      return;
+
+    SemaRef.Diag(Loc, diag::warn_comparison_unicode_mixed_types_constant)
+        << LHS->getSourceRange() << RHS->getSourceRange() << LHSType << RHSType
+        << FormatUTFCodeUnitAsCodepoint(LHSValue.getExtValue(), LHSType)
+        << FormatUTFCodeUnitAsCodepoint(RHSValue.getExtValue(), RHSType);
     return;
   }
 
   if (SemaRef.getASTContext().hasSameType(LHSType, RHSType))
     return;
 
-  SemaRef.Diag(Loc, diag::warn_arith_conv_mixed__unicode_types)
+  SemaRef.Diag(Loc, diag::warn_arith_conv_mixed_unicode_types)
       << LHS->getSourceRange() << RHS->getSourceRange() << ACK << LHSType
       << RHSType;
   return;
