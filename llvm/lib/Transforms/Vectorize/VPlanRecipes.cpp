@@ -2755,8 +2755,15 @@ InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
 
 void VPPredInstPHIRecipe::execute(VPTransformState &State) {
   assert(State.Lane && "Predicated instruction PHI works per instance.");
-  Instruction *ScalarPredInst =
-      cast<Instruction>(State.get(getOperand(0), *State.Lane));
+  Value *ScalarPred = State.get(getOperand(0), *State.Lane);
+  Instruction *ScalarPredInst = dyn_cast<Instruction>(ScalarPred);
+  if (!ScalarPredInst) {
+    if (State.hasScalarValue(this, *State.Lane))
+      State.reset(this, ScalarPred, *State.Lane);
+    else
+      State.set(this, ScalarPred, *State.Lane);
+    return;
+  }
   BasicBlock *PredicatedBB = ScalarPredInst->getParent();
   BasicBlock *PredicatingBB = PredicatedBB->getSinglePredecessor();
   assert(PredicatingBB && "Predicated block has no single predecessor.");

@@ -317,7 +317,13 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     LastLane = 0;
   }
 
-  auto *LastInst = cast<Instruction>(get(Def, LastLane));
+  auto *LastInst = dyn_cast<Instruction>(get(Def, LastLane));
+  if (!LastInst) {
+    Value *VectorValue = GetBroadcastInstrs(ScalarValue);
+    set(Def, VectorValue);
+    return VectorValue;
+  }
+
   // Set the insert point after the last scalarized instruction or after the
   // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
   // will directly follow the scalar definitions.
