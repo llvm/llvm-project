@@ -10,7 +10,7 @@ import os
 class TestUnwindFramelessFaulted(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIf(oslist=no_match([lldbplatformutil.getDarwinOSTriples(), "linux"]))
+    @skipIf(oslist=no_match([lldbplatformutil.getDarwinOSTriples()]))
     @skipIf(archs=no_match(["aarch64", "arm64", "arm64e"]))
     def test_frameless_faulted_unwind(self):
         self.build()
