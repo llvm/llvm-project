@@ -604,6 +604,55 @@ public:
     return true;
   }
 
+  // getRealSucc() gets all successors of \p SuccBlock that can be merged with it
+  // and returns the last one of them (called it real succ of SuccBlock).
+  // For example,
+  //
+  //    div-b0
+  //    /    \
+  //   b1    b2
+  //   |     |
+  //   b3    b4
+  //   |     /
+  //   b5   /
+  //   \   /
+  //    \ /
+  //    b6
+  //
+  // For \p SuccBlock = b1, {b1, b3, b5} can be merged together and this
+  // function returns the last one b5; for \p SuccBlock = b2, {b2, b4} can
+  // be merged and this function returns b4.
+  //
+  // This is necessary as the algorithm of propagating control-divergence
+  // assumes that CFG has been optimized so that (b1,b3,b5) and (b2, b4)
+  // are merged into a single block, respectively.
+  const BlockT* getRealSucc(const BlockT& SuccBlock, const BlockT& Label) {
+    const BlockT *LastBlock = &SuccBlock;
+    if (pred_size(LastBlock) != 1)
+      return LastBlock;
+
+    while (succ_size(LastBlock) == 1) {
+      const BlockT* NextBlock = *succ_begin(LastBlock);
+
+      if (pred_size(NextBlock) != 1)
+        break;
+
+      // NextBlock can be merged into LastBlock
+      const auto *OldLabel = BlockLabels[LastBlock];
+      assert(OldLabel == nullptr);
+
+      LLVM_DEBUG(dbgs() << "labeling (for non real succ) "
+                        << Context.print(LastBlock) << ":\n"
+                        << "\tpushed label: " << Context.print(&Label) << "\n"
+                        << "\told label: " << Context.print(OldLabel) << "\n");
+
+      BlockLabels[LastBlock] = &Label;
+      LastBlock = NextBlock;
+    }
+ 
+    return LastBlock;
+  }
+
   std::unique_ptr<DivergenceDescriptorT> computeJoinPoints() {
     assert(DivDesc);
 
@@ -626,8 +675,9 @@ public:
         LLVM_DEBUG(dbgs() << "\tImmediate divergent cycle exit: "
                           << Context.print(SuccBlock) << "\n");
       }
-      auto SuccIdx = CyclePOT.getIndex(SuccBlock);
-      visitEdge(*SuccBlock, *SuccBlock);
+      const auto* SuccBB = getRealSucc(*SuccBlock, *SuccBlock);
+      auto SuccIdx = CyclePOT.getIndex(SuccBB);
+      visitEdge(*SuccBB, *SuccBlock);
       FloorIdx = std::min<int>(FloorIdx, SuccIdx);
     }
 
@@ -688,9 +738,10 @@ public:
         }
       } else {
         for (const auto *SuccBlock : successors(Block)) {
-          CausedJoin |= visitEdge(*SuccBlock, *Label);
+          const auto* SuccBB = getRealSucc(*SuccBlock, *Label);
+          CausedJoin |= visitEdge(*SuccBB, *Label);
           LoweredFloorIdx =
-              std::min<int>(LoweredFloorIdx, CyclePOT.getIndex(SuccBlock));
+              std::min<int>(LoweredFloorIdx, CyclePOT.getIndex(SuccBB));
         }
       }
 
