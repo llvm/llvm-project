@@ -5,9 +5,6 @@ set(LLVM_TARGET_DEFINITIONS Options.td)
 tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(LLDBDAPOptionsTableGen)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
 add_lldb_library(lldbDAP
   Breakpoint.cpp
   BreakpointBase.cpp
@@ -78,6 +75,9 @@ add_lldb_library(lldbDAP
     Option
     Support
   )
+
+target_include_directories(lldbDAP
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR_DIR})
 
 if(LLDB_DAP_WELCOME_MESSAGE)
   target_compile_definitions(lldbDAP
