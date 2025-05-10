@@ -528,6 +528,9 @@ Improvements to Clang's diagnostics
 - Several compatibility diagnostics that were incorrectly being grouped under
   ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
 
+- Improved the ``-Wtautological-overlap-compare`` diagnostics to warn about overlapping and non-overlapping ranges involving character literals and floating-point literals. 
+  The warning message for non-overlapping cases has also been improved (#GH13473).
+  
 Improvements to Clang's time-trace
 ----------------------------------
 
