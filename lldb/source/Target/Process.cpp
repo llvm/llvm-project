@@ -2763,6 +2763,7 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
   }
 
   if (state == eStateStopped || state == eStateCrashed) {
+    GetTarget().ClearAllLoadedSections();
     DidLaunch();
 
     // Now that we know the process type, update its signal responses from the
@@ -2799,6 +2800,7 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
 }
 
 Status Process::LoadCore() {
+  GetTarget().ClearAllLoadedSections();
   Status error = DoLoadCore();
   if (error.Success()) {
     ListenerSP listener_sp(
@@ -3093,6 +3095,8 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
 void Process::CompleteAttach() {
   Log *log(GetLog(LLDBLog::Process | LLDBLog::Target));
   LLDB_LOGF(log, "Process::%s()", __FUNCTION__);
+
+  GetTarget().ClearAllLoadedSections();
 
   // Let the process subclass figure out at much as it can about the process
   // before we go looking for a dynamic loader plug-in.
