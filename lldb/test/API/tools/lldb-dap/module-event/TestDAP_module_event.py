@@ -7,6 +7,7 @@ import re
 
 
 class TestDAP_module_event(lldbdap_testcase.DAPTestCaseBase):
+    @skipIfWindows
     def test_module_event(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
