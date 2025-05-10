@@ -986,7 +986,7 @@ optional(_Tp) -> optional<_Tp>;
 
 // [optional.relops] Relational operators
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1008,7 +1008,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const optional<_Tp>& __x, const 
   return *__x == *__y;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1030,7 +1030,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(const optional<_Tp>& __x, const 
   return *__x != *__y;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1052,7 +1052,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const optional<_Tp>& __x, const o
   return *__x < *__y;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1074,7 +1074,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const optional<_Tp>& __x, const o
   return *__x > *__y;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1096,7 +1096,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const optional<_Tp>& __x, const 
   return *__x <= *__y;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1205,7 +1205,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const optional<_Tp>&
 
 // [optional.comp.with.t] Comparison with T
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1223,7 +1223,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const optional<_Tp>& __x, const 
   return static_cast<bool>(__x) ? *__x == __v : false;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1241,7 +1241,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const _Tp& __v, const optional<_
   return static_cast<bool>(__x) ? __v == *__x : false;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1259,7 +1259,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(const optional<_Tp>& __x, const 
   return static_cast<bool>(__x) ? *__x != __v : true;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1277,7 +1277,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(const _Tp& __v, const optional<_
   return static_cast<bool>(__x) ? __v != *__x : true;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1295,7 +1295,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const optional<_Tp>& __x, const _
   return static_cast<bool>(__x) ? *__x < __v : true;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1313,7 +1313,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const _Tp& __v, const optional<_U
   return static_cast<bool>(__x) ? __v < *__x : false;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1331,7 +1331,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const optional<_Tp>& __x, const 
   return static_cast<bool>(__x) ? *__x <= __v : true;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1349,7 +1349,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const _Tp& __v, const optional<_
   return static_cast<bool>(__x) ? __v <= *__x : false;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1367,7 +1367,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const optional<_Tp>& __x, const _
   return static_cast<bool>(__x) ? *__x > __v : false;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1385,7 +1385,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const _Tp& __v, const optional<_U
   return static_cast<bool>(__x) ? __v > *__x : true;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
@@ -1403,7 +1403,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator>=(const optional<_Tp>& __x, const 
   return static_cast<bool>(__x) ? *__x >= __v : false;
 }
 
-#    if _LIBCPP_STD_VER < 26
+#    if _LIBCPP_STD_VER >= 26
 template < class _Tp, class _Up>
 #    else
 template <
