@@ -39,7 +39,50 @@
 #include <utility>
 #include <variant>
 
+#include "test_comparisons.h"
 #include "test_macros.h"
+
+#if TEST_STD_VER >= 26
+
+// Test SFINAE.
+
+// ==
+static_assert(HasOperatorEqual<std::variant<int>>);
+static_assert(HasOperatorEqual<std::variant<EqualityComparable>>);
+
+static_assert(!HasOperatorEqual<std::variant<NonComparable>>);
+
+// >
+static_assert(HasOperatorGreaterThan<std::variant<int>>);
+static_assert(HasOperatorGreaterThan<std::variant<ThreeWayComparable>>);
+
+static_assert(!HasOperatorGreaterThan<std::variant<NonComparable>>);
+
+// >=
+static_assert(HasOperatorGreaterThanEqual<std::variant<int>>);
+static_assert(HasOperatorGreaterThanEqual<std::variant<ThreeWayComparable>>);
+
+static_assert(!HasOperatorGreaterThanEqual<std::variant<NonComparable>>);
+
+// <
+static_assert(HasOperatorLessThan<std::variant<int>>);
+static_assert(HasOperatorLessThan<std::variant<ThreeWayComparable>>);
+
+static_assert(!HasOperatorLessThan<std::variant<NonComparable>>);
+
+// <=
+static_assert(HasOperatorLessThanEqual<std::variant<int>>);
+static_assert(HasOperatorLessThanEqual<std::variant<ThreeWayComparable>>);
+
+static_assert(!HasOperatorLessThanEqual<std::variant<NonComparable>>);
+
+// !=
+static_assert(HasOperatorNotEqual<std::variant<int>>);
+static_assert(HasOperatorNotEqual<std::variant<EqualityComparable>>);
+
+static_assert(!HasOperatorNotEqual<std::variant<NonComparable>>);
+
+#endif
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
 struct MakeEmptyT {

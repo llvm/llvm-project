@@ -242,6 +242,7 @@ namespace std {
 #  include <__type_traits/is_assignable.h>
 #  include <__type_traits/is_constructible.h>
 #  include <__type_traits/is_convertible.h>
+#  include <__type_traits/is_core_convertible.h>
 #  include <__type_traits/is_destructible.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
@@ -1453,6 +1454,11 @@ struct __convert_to_bool {
 };
 
 template <class... _Types>
+#    if _LIBCPP_STD_VER >= 26
+  requires(requires(const _Types& __t) {
+    { __t == __t } -> __core_convertible_to<bool>
+  } && ...)
+#    endif
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const variant<_Types...>& __lhs, const variant<_Types...>& __rhs) {
   using __variant_detail::__visitation::__variant;
   if (__lhs.index() != __rhs.index())
@@ -1485,6 +1491,11 @@ operator<=>(const variant<_Types...>& __lhs, const variant<_Types...>& __rhs) {
 #    endif // _LIBCPP_STD_VER >= 20
 
 template <class... _Types>
+#    if _LIBCPP_STD_VER >= 26
+  requires(requires(const _Types& __t) {
+    { __t != __t } -> __core_convertible_to<bool>
+  } && ...)
+#    endif
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(const variant<_Types...>& __lhs, const variant<_Types...>& __rhs) {
   using __variant_detail::__visitation::__variant;
   if (__lhs.index() != __rhs.index())
@@ -1495,6 +1506,11 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(const variant<_Types...>& __lhs,
 }
 
 template <class... _Types>
+#    if _LIBCPP_STD_VER >= 26
+  requires(requires(const _Types& __t) {
+    { __t < __t } -> __core_convertible_to<bool>
+  } && ...)
+#    endif
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const variant<_Types...>& __lhs, const variant<_Types...>& __rhs) {
   using __variant_detail::__visitation::__variant;
   if (__rhs.valueless_by_exception())
@@ -1509,6 +1525,11 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const variant<_Types...>& __lhs, 
 }
 
 template <class... _Types>
+#    if _LIBCPP_STD_VER >= 26
+  requires(requires(const _Types& __t) {
+    { __t > __t } -> __core_convertible_to<bool>
+  } && ...)
+#    endif
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const variant<_Types...>& __lhs, const variant<_Types...>& __rhs) {
   using __variant_detail::__visitation::__variant;
   if (__lhs.valueless_by_exception())
@@ -1523,6 +1544,11 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const variant<_Types...>& __lhs, 
 }
 
 template <class... _Types>
+#    if _LIBCPP_STD_VER >= 26
+  requires(requires(const _Types& __t) {
+    { __t <= __t } -> __core_convertible_to<bool>
+  } && ...)
+#    endif
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const variant<_Types...>& __lhs, const variant<_Types...>& __rhs) {
   using __variant_detail::__visitation::__variant;
   if (__lhs.valueless_by_exception())
@@ -1537,6 +1563,11 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const variant<_Types...>& __lhs,
 }
 
 template <class... _Types>
+#    if _LIBCPP_STD_VER >= 26
+  requires(requires(const _Types& __t) {
+    { __t >= __t } -> __core_convertible_to<bool>
+  } && ...)
+#    endif
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator>=(const variant<_Types...>& __lhs, const variant<_Types...>& __rhs) {
   using __variant_detail::__visitation::__variant;
   if (__rhs.valueless_by_exception())
