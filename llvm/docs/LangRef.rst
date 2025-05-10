@@ -3147,14 +3147,21 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[n]:<size>:<abi>[:<pref>][:<idx>]``
-    This specifies the *size* of a pointer and its ``<abi>`` and
-    ``<pref>``\erred alignments for address space ``n``.
-    The fourth parameter ``<idx>`` is the size of the
-    index that used for address calculation, which must be less than or equal
-    to the pointer size. If not
-    specified, the default index size is equal to the pointer size. All sizes
-    are in bits. The address space, ``n``, is optional, and if not specified,
+``p[n]:<size>:<abi>[:<pref>[:<idx>[:<addr>]]]``
+    This specifies the properties of a pointer in address space ``n``.
+    The ``<size>`` parameter specifies the size of the bitwise representation.
+    For :ref:`non-integral pointers <nointptrtype>` the representation size may
+    be larger than the address width of the underlying address space (e.g. to
+    accommodate additional metadata).
+    The alignment requirements are specified via the ``<abi>`` and
+    ``<pref>``\erred alignments parameters.
+    The fourth parameter ``<idx>`` is the size of the index that used for
+    address calculations such as :ref:`getelementptr <i_getelementptr>`.
+    It must be less than or equal to the pointer size. If not specified, the
+    default index size is equal to the pointer size.
+    The index size also specifies the width of addresses in this address space.
+    All sizes are in bits.
+    The address space, ``n``, is optional, and if not specified,
     denotes the default address space 0. The value of ``n`` must be
     in the range [1,2^24).
 ``i<size>:<abi>[:<pref>]``
@@ -4265,6 +4272,16 @@ address spaces defined in the :ref:`datalayout string<langref_datalayout>`.
 ``addrspace("A")`` will use the alloca address space, ``addrspace("G")``
 the default globals address space and ``addrspace("P")`` the program address
 space.
+
+The representation of pointers can be different for each address space and does
+not necessarily need to be a plain integer address (e.g. for
+:ref:`non-integral pointers <nointptrtype>`). In addition to a representation
+bits size, pointers in each address space also have an index size which defines
+the bitwidth of indexing operations as well as the size of `integer addresses`
+in this address space. For example, CHERI capabilities are twice the size of the
+underlying addresses to accommodate for additional metadata such as bounds and
+permissions: on a 32-bit system the bitwidth of the pointer representation size
+is 64, but the underlying address width remains 32 bits.
 
 The default address space is number zero.
 
