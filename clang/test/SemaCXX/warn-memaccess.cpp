@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wnontrivial-memcall %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify=expected,cxx11 -Wnontrivial-memcall %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++2c -verify=expected,cxx26 -Wnontrivial-memcall %s
 
 extern "C" void *bzero(void *, unsigned);
 extern "C" void *memset(void *, int, unsigned);
@@ -8,6 +9,9 @@ extern "C" void *memcpy(void *s1, const void *s2, unsigned n);
 class TriviallyCopyable {};
 class NonTriviallyCopyable { NonTriviallyCopyable(const NonTriviallyCopyable&);};
 struct Incomplete;
+class Relocatable {
+  virtual void f();
+};
 
 void test_bzero(TriviallyCopyable* tc,
                 NonTriviallyCopyable *ntc,
@@ -82,4 +86,35 @@ void test_memmove(TriviallyCopyable* tc0, TriviallyCopyable* tc1,
 
   // OK
   memmove((void*)ntc0, (void*)ntc1, sizeof(*ntc0));
+}
+
+
+void test_possible_relocation(Relocatable* r, const Relocatable* r2) {
+     // expected-warning@+1 {{calling 'memcpy' with a pointer to a type 'Relocatable' which is trivially relocatable but not trivially copyable; did you mean to call __builtin_trivially_relocate?}}
+     memcpy(r, r, sizeof(*r));
+     // expected-warning@+1 {{calling 'memmove' with a pointer to a type 'Relocatable' which is trivially relocatable but not trivially copyable; did you mean to call __builtin_trivially_relocate?}}
+     memmove(r, r, sizeof(*r));
+
+     // expected-warning@+2{{destination for this 'memcpy' call is a pointer to dynamic class 'Relocatable'}}
+     // expected-note@+1{{explicitly cast the pointer to silence this warning}}
+     memcpy(r, r2, sizeof(*r));
+
+     // expected-warning@+2{{destination for this 'memmove' call is a pointer to dynamic class 'Relocatable'}}
+     // expected-note@+1{{explicitly cast the pointer to silence this warning}}
+     memmove(r, r2, sizeof(*r));
+}
+
+namespace std {
+  using ::memcpy;
+  using ::memmove;
+};
+
+
+void test_possible_relocation_std(Relocatable* r, const Relocatable* r2) {
+     // cxx11-warning@+2 {{calling 'memcpy' with a pointer to a type 'Relocatable' which is trivially relocatable but not trivially copyable; did you mean to call __builtin_trivially_relocate?}}
+     // cxx26-warning@+1 {{calling 'memcpy' with a pointer to a type 'Relocatable' which is trivially relocatable but not trivially copyable; did you mean to call std::trivially_relocate?}}
+     std::memcpy(r, r, sizeof(*r));
+     // cxx11-warning@+2 {{calling 'memmove' with a pointer to a type 'Relocatable' which is trivially relocatable but not trivially copyable; did you mean to call __builtin_trivially_relocate?}}
+     // cxx26-warning@+1 {{calling 'memmove' with a pointer to a type 'Relocatable' which is trivially relocatable but not trivially copyable; did you mean to call std::trivially_relocate?}}
+     std::memmove(r, r, sizeof(*r));
 }
