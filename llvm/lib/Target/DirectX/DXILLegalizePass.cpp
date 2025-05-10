@@ -246,6 +246,61 @@ downcastI64toI32InsertExtractElements(Instruction &I,
   }
 }
 
+static void emitMemcpyExpansion(IRBuilder<> &Builder, Value *Dst, Value *Src,
+                                ConstantInt *Length) {
+
+  uint64_t ByteLength = Length->getZExtValue();
+  if (ByteLength == 0)
+    return;
+
+  LLVMContext &Ctx = Builder.getContext();
+  const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
+
+  auto GetArrTyFromVal = [](Value *Val) -> ArrayType * {
+    assert(isa<AllocaInst>(Val) ||
+           isa<GlobalVariable>(Val) &&
+               "Expected Val to be an Alloca or Global Variable");
+    if (auto *Alloca = dyn_cast<AllocaInst>(Val))
+      return dyn_cast<ArrayType>(Alloca->getAllocatedType());
+    if (auto *GlobalVar = dyn_cast<GlobalVariable>(Val))
+      return dyn_cast<ArrayType>(GlobalVar->getValueType());
+    return nullptr;
+  };
+
+  ArrayType *ArrTy = GetArrTyFromVal(Dst);
+  assert(ArrTy && "Expected Dst of memcpy to be a Pointer to an Array Type");
+  if (auto *DstGlobalVar = dyn_cast<GlobalVariable>(Dst))
+    assert(!DstGlobalVar->isConstant() &&
+           "The Dst of memcpy must not be a constant Global Variable");
+
+  [[maybe_unused]] ArrayType *SrcArrTy = GetArrTyFromVal(Src);
+  assert(SrcArrTy && "Expected Src of memcpy to be a Pointer to an Array Type");
+
+  // This assumption simplifies implementation and covers currently-known
+  // use-cases for DXIL. It may be relaxed in the future if required.
+  assert(ArrTy == SrcArrTy &&
+         "Array Types of Src and Dst in memcpy must match");
+
+  Type *ElemTy = ArrTy->getElementType();
+  uint64_t ElemSize = DL.getTypeStoreSize(ElemTy);
+  assert(ElemSize > 0 && "Size must be set");
+
+  [[maybe_unused]] uint64_t Size = ArrTy->getArrayNumElements();
+  assert(ElemSize * Size >= ByteLength &&
+         "Array size must be at least as large as the memcpy length");
+
+  uint64_t NumElemsToCopy = ByteLength / ElemSize;
+  assert(ByteLength % ElemSize == 0 &&
+         "memcpy length must be divisible by array element type");
+  for (uint64_t I = 0; I < NumElemsToCopy; ++I) {
+    Value *Offset = ConstantInt::get(Type::getInt32Ty(Ctx), I);
+    Value *SrcPtr = Builder.CreateGEP(ElemTy, Src, Offset, "gep");
+    Value *SrcVal = Builder.CreateLoad(ElemTy, SrcPtr);
+    Value *DstPtr = Builder.CreateGEP(ElemTy, Dst, Offset, "gep");
+    Builder.CreateStore(SrcVal, DstPtr);
+  }
+}
+
 static void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
                                 ConstantInt *SizeCI,
                                 DenseMap<Value *, Value *> &ReplacedValues) {
@@ -294,6 +349,30 @@ static void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
     Value *Ptr = Builder.CreateGEP(ElemTy, Dst, Offset, "gep");
     Builder.CreateStore(TypedVal, Ptr);
   }
+}
+
+static void removeMemCpy(Instruction &I,
+                         SmallVectorImpl<Instruction *> &ToRemove,
+                         DenseMap<Value *, Value *> &ReplacedValues) {
+
+  CallInst *CI = dyn_cast<CallInst>(&I);
+  if (!CI)
+    return;
+
+  Intrinsic::ID ID = CI->getIntrinsicID();
+  if (ID != Intrinsic::memcpy)
+    return;
+
+  IRBuilder<> Builder(&I);
+  Value *Dst = CI->getArgOperand(0);
+  Value *Src = CI->getArgOperand(1);
+  ConstantInt *Length = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+  assert(Length && "Expected Length to be a ConstantInt");
+  ConstantInt *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
+  assert(IsVolatile && "Expected IsVolatile to be a ConstantInt");
+  assert(IsVolatile->getZExtValue() == 0 && "Expected IsVolatile to be false");
+  emitMemcpyExpansion(Builder, Dst, Src, Length);
+  ToRemove.push_back(CI);
 }
 
 static void removeMemSet(Instruction &I,
@@ -348,6 +427,7 @@ private:
     LegalizationPipeline.push_back(fixI8UseChain);
     LegalizationPipeline.push_back(downcastI64toI32InsertExtractElements);
     LegalizationPipeline.push_back(legalizeFreeze);
+    LegalizationPipeline.push_back(removeMemCpy);
     LegalizationPipeline.push_back(removeMemSet);
   }
 };
