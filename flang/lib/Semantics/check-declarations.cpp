@@ -1192,7 +1192,7 @@ void CheckHelper::CheckObjectEntity(
           typeName);
     } else if (evaluate::IsAssumedRank(symbol)) {
       SayWithDeclaration(symbol,
-          "Assumed Rank entity of %s type is not supported"_err_en_US,
+          "Assumed rank entity of %s type is not supported"_err_en_US,
           typeName);
     }
   }
@@ -3414,7 +3414,13 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
 bool CheckHelper::CheckDioDummyIsData(
     const Symbol &subp, const Symbol *arg, std::size_t position) {
   if (arg && arg->detailsIf<ObjectEntityDetails>()) {
-    return true;
+    if (evaluate::IsAssumedRank(*arg)) {
+      messages_.Say(arg->name(),
+          "Dummy argument '%s' may not be assumed-rank"_err_en_US, arg->name());
+      return false;
+    } else {
+      return true;
+    }
   } else {
     if (arg) {
       messages_.Say(arg->name(),
@@ -3592,9 +3598,10 @@ void CheckHelper::CheckDioVlistArg(
     CheckDioDummyIsDefaultInteger(subp, *arg);
     CheckDioDummyAttrs(subp, *arg, Attr::INTENT_IN);
     const auto *objectDetails{arg->detailsIf<ObjectEntityDetails>()};
-    if (!objectDetails || !objectDetails->shape().CanBeAssumedShape()) {
+    if (!objectDetails || !objectDetails->shape().CanBeAssumedShape() ||
+        objectDetails->shape().Rank() != 1) {
       messages_.Say(arg->name(),
-          "Dummy argument '%s' of a defined input/output procedure must be assumed shape"_err_en_US,
+          "Dummy argument '%s' of a defined input/output procedure must be assumed shape vector"_err_en_US,
           arg->name());
     }
   }
