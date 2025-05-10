@@ -21,18 +21,19 @@ using namespace ento;
 using llvm::APSInt;
 
 /// Optionally conjure and return a symbol for offset when processing
-/// an expression \p Expression.
+/// \p Elem.
 /// If \p Other is a location, conjure a symbol for \p Symbol
 /// (offset) if it is unknown so that memory arithmetic always
 /// results in an ElementRegion.
 /// \p Count The number of times the current basic block was visited.
-static SVal conjureOffsetSymbolOnLocation(
-    SVal Symbol, SVal Other, Expr* Expression, SValBuilder &svalBuilder,
-    unsigned Count, const LocationContext *LCtx) {
-  QualType Ty = Expression->getType();
+static SVal conjureOffsetSymbolOnLocation(SVal Symbol, SVal Other,
+                                          ConstCFGElementRef Elem, QualType Ty,
+                                          SValBuilder &svalBuilder,
+                                          unsigned Count,
+                                          const LocationContext *LCtx) {
   if (isa<Loc>(Other) && Ty->isIntegralOrEnumerationType() &&
       Symbol.isUnknown()) {
-    return svalBuilder.conjureSymbolVal(Expression, LCtx, Ty, Count);
+    return svalBuilder.conjureSymbolVal(Elem, LCtx, Ty, Count);
   }
   return Symbol;
 }
@@ -65,7 +66,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       // FIXME: Handle structs.
       if (RightV.isUnknown()) {
         unsigned Count = currBldrCtx->blockCount();
-        RightV = svalBuilder.conjureSymbolVal(nullptr, B->getRHS(), LCtx,
+        RightV = svalBuilder.conjureSymbolVal(nullptr, getCFGElementRef(), LCtx,
                                               Count);
       }
       // Simulate the effects of a "store":  bind the value of the RHS
@@ -84,9 +85,11 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
         // SymSymExpr.
         unsigned Count = currBldrCtx->blockCount();
         RightV = conjureOffsetSymbolOnLocation(
-            RightV, LeftV, RHS, svalBuilder, Count, LCtx);
-        LeftV = conjureOffsetSymbolOnLocation(
-            LeftV, RightV, LHS, svalBuilder, Count, LCtx);
+            RightV, LeftV, getCFGElementRef(), RHS->getType(), svalBuilder,
+            Count, LCtx);
+        LeftV = conjureOffsetSymbolOnLocation(LeftV, RightV, getCFGElementRef(),
+                                              LHS->getType(), svalBuilder,
+                                              Count, LCtx);
       }
 
       // Although we don't yet model pointers-to-members, we do need to make
@@ -165,7 +168,8 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
         // The symbolic value is actually for the type of the left-hand side
         // expression, not the computation type, as this is the value the
         // LValue on the LHS will bind to.
-        LHSVal = svalBuilder.conjureSymbolVal(nullptr, B->getRHS(), LCtx, LTy,
+        LHSVal = svalBuilder.conjureSymbolVal(/*symbolTag=*/nullptr,
+                                              getCFGElementRef(), LCtx, LTy,
                                               currBldrCtx->blockCount());
         // However, we need to convert the symbol to the computation type.
         Result = svalBuilder.evalCast(LHSVal, CTy, LTy);
@@ -459,9 +463,9 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         } else {
           // If we don't know if the cast succeeded, conjure a new symbol.
           if (val.isUnknown()) {
-            DefinedOrUnknownSVal NewSym =
-              svalBuilder.conjureSymbolVal(nullptr, CastE, LCtx, resultType,
-                                           currBldrCtx->blockCount());
+            DefinedOrUnknownSVal NewSym = svalBuilder.conjureSymbolVal(
+                /*symbolTag=*/nullptr, getCFGElementRef(), LCtx, resultType,
+                currBldrCtx->blockCount());
             state = state->BindExpr(CastE, LCtx, NewSym);
           } else
             // Else, bind to the derived region value.
@@ -483,9 +487,9 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
 
         // Failed to cast or the result is unknown, fall back to conservative.
         if (val.isUnknown()) {
-          val =
-            svalBuilder.conjureSymbolVal(nullptr, CastE, LCtx, resultType,
-                                         currBldrCtx->blockCount());
+          val = svalBuilder.conjureSymbolVal(
+              /*symbolTag=*/nullptr, getCFGElementRef(), LCtx, resultType,
+              currBldrCtx->blockCount());
         }
         state = state->BindExpr(CastE, LCtx, val);
         Bldr.generateNode(CastE, Pred, state);
@@ -529,7 +533,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         if (CastE->isGLValue())
           resultType = getContext().getPointerType(resultType);
         SVal result = svalBuilder.conjureSymbolVal(
-            /*symbolTag=*/nullptr, CastE, LCtx, resultType,
+            /*symbolTag=*/nullptr, getCFGElementRef(), LCtx, resultType,
             currBldrCtx->blockCount());
         state = state->BindExpr(CastE, LCtx, result);
         Bldr.generateNode(CastE, Pred, state);
@@ -621,8 +625,9 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
             Ty = getContext().getPointerType(Ty);
           }
 
-          InitVal = svalBuilder.conjureSymbolVal(nullptr, InitEx, LC, Ty,
-                                                 currBldrCtx->blockCount());
+          InitVal = svalBuilder.conjureSymbolVal(
+              /*symbolTag=*/nullptr, getCFGElementRef(), LC, Ty,
+              currBldrCtx->blockCount());
         }
 
 
@@ -839,7 +844,7 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
   }
 
   if (!hasValue)
-    V = svalBuilder.conjureSymbolVal(nullptr, Ex, LCtx,
+    V = svalBuilder.conjureSymbolVal(nullptr, getCFGElementRef(), LCtx,
                                      currBldrCtx->blockCount());
 
   // Generate a new node with the binding from the appropriate path.
@@ -1121,9 +1126,9 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
 
     // Conjure a new symbol if necessary to recover precision.
     if (Result.isUnknown()){
-      DefinedOrUnknownSVal SymVal =
-        svalBuilder.conjureSymbolVal(nullptr, U, LCtx,
-                                     currBldrCtx->blockCount());
+      DefinedOrUnknownSVal SymVal = svalBuilder.conjureSymbolVal(
+          /*symbolTag=*/nullptr, getCFGElementRef(), LCtx,
+          currBldrCtx->blockCount());
       Result = SymVal;
 
       // If the value is a location, ++/-- should always preserve

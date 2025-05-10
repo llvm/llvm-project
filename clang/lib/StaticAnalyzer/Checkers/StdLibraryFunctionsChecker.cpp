@@ -619,7 +619,7 @@ class StdLibraryFunctionsChecker
                           const Summary &Summary,
                           CheckerContext &C) const override {
       return errno_modeling::setErrnoStdMustBeChecked(State, C,
-                                                      Call.getOriginExpr());
+                                                      Call.getCFGElementRef());
     }
 
     const std::string describe(CheckerContext &C) const override {
