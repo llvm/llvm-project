@@ -8179,7 +8179,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     }
 
-    case bitc::FS_COMBINED_ALLOC_INFO: {
+    case bitc::FS_COMBINED_ALLOC_INFO:
+    case bitc::FS_COMBINED_ALLOC_INFO_NO_CONTEXT: {
       unsigned I = 0;
       std::vector<MIBInfo> MIBs;
       unsigned NumMIBs = Record[I++];
@@ -8188,7 +8189,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       while (MIBsRead++ < NumMIBs) {
         assert(Record.size() - I >= 2);
         AllocationType AllocType = (AllocationType)Record[I++];
-        auto StackIdList = parseAllocInfoContext(Record, I);
+        SmallVector<unsigned> StackIdList;
+        if (BitCode == bitc::FS_COMBINED_ALLOC_INFO)
+          StackIdList = parseAllocInfoContext(Record, I);
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
       assert(Record.size() - I >= NumVersions);

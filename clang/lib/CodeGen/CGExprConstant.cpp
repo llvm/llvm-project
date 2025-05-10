@@ -2442,6 +2442,10 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
                                  EnablePtrAuthFunctionTypeDiscrimination)
         .tryEmit();
   case APValue::Int:
+    if (PointerAuthQualifier PointerAuth = DestType.getPointerAuth();
+        PointerAuth &&
+        (PointerAuth.authenticatesNullValues() || Value.getInt() != 0))
+      return nullptr;
     return llvm::ConstantInt::get(CGM.getLLVMContext(), Value.getInt());
   case APValue::FixedPoint:
     return llvm::ConstantInt::get(CGM.getLLVMContext(),
