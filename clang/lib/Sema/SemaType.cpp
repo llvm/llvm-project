@@ -5141,12 +5141,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           S.Diag(DeclType.Loc, diag::err_func_returning_qualified_void) << T;
         } else
           diagnoseRedundantReturnTypeQualifiers(S, T, D, chunkIndex);
-
-        // C++2a [dcl.fct]p12:
-        //   A volatile-qualified return type is deprecated
-        if (T.isVolatileQualified() && S.getLangOpts().CPlusPlus20)
-          S.Diag(DeclType.Loc, diag::warn_deprecated_volatile_return) << T;
       }
+
+      // C++2a [dcl.fct]p12:
+      //   A volatile-qualified return type is deprecated
+      if (T.isVolatileQualified() && S.getLangOpts().CPlusPlus20)
+        S.Diag(DeclType.Loc, diag::warn_deprecated_volatile_return) << T;
 
       // Objective-C ARC ownership qualifiers are ignored on the function
       // return type (by type canonicalization). Complain if this attribute
