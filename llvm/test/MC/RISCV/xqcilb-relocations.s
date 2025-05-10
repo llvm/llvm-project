@@ -9,6 +9,8 @@
 
 .text
 
+.option exact
+
 qc.e.j foo
 # RELOC: R_RISCV_CUSTOM195 foo 0x0
 # INSTR: qc.e.j foo
@@ -32,6 +34,8 @@ qc.e.j .L1
 
 qc.e.jal .L1
 # INSTR:qc.e.jal .L1
+
+.option noexact
 
 .L1:
   ret
