@@ -94,7 +94,7 @@ instructions to execute at run time:
   }
 
   $ clang -O1 -g -fopenmp --offload-arch=native test.c -o test \
-        -fprofile-generate
+        -fprofile-generate -Xarch_device -fprofile-update=atomic
 
   $ LLVM_PROFILE_FILE=test.profraw ./test 2 4
   16.000000
@@ -107,3 +107,6 @@ instructions to execute at run time:
   test.c:13:0: in artificial function '__omp_offloading_34_1bc8484_main_l13', FloatingPointOpProfileCount = 0
   test.c:7:9: in function 'test', double 'fmul' ('%9') executed 4 times
   test.c:4:0: in function 'test', FloatingPointOpProfileCount = 4
+
+While ``-Xarch_device -fprofile-update=atomic`` is not required for the simple
+example above, it can be critical while profiling parallel code.
