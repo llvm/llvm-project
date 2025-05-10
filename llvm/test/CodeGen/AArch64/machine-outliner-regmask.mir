@@ -1,0 +1,95 @@
+# RUN: llc -mtriple=aarch64-apple-ios -run-pass=prologepilog -run-pass=machine-outliner %s -o - | FileCheck %s
+--- |
+  declare swiftcc void @bar()
+  declare void @baz(i32, i32, i32) #0
+
+  define void @test_same_regmask() #0 {
+    ret void
+  }
+  define void @test_different_regmasks() #0 {
+    ret void
+  }
+  define void @foo(i32, i32, i32, i32, i32, i32, i32, i32) #0 {
+    ret void
+  }
+
+  attributes #0 = { minsize }
+...
+---
+name:            foo
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    RET undef $lr
+
+
+...
+---
+name:            test_same_regmask
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test_same_regmask
+  ; CHECK:       bb.1:
+  ; CHECK-NEXT:    BL @OUTLINED_FUNCTION_1, csr_aarch64_aapcs
+
+  bb.0:
+    $sp = frame-setup SUBXri $sp, 16, 0
+
+  bb.1:
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    BL @baz, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit-def $sp
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    BL @baz, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit-def $sp
+    $sp = ADDXri $sp, 16, 0
+    RET undef $lr
+
+
+...
+---
+name:            test_different_regmasks
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test_different_regmasks
+  ; CHECK:       bb.1:
+  ; CHECK-NEXT:    BL @OUTLINED_FUNCTION_0, CustomRegMask($fp,$lr,$wzr,$wzr_hi,$xzr,$b8,$b9,$b10,$b11,$b12,$b13,$b14,$b15,$d8,$d9,$d10,$d11,$d12,$d13,$d14,$d15,$h8,$h9,$h10,$h11,$h12,$h13,$h14,$h15,$s8,$s9,$s10,$s11,$s12,$s13,$s14,$s15,$w19,$w20,$w22,$w23,$w24,$w25,$w26,$w27,$w28,$w29,$w30,$x19,$x20,$x22,$x23,$x24,$x25,$x26,$x27,$x28,$b8_hi,$b9_hi,$b10_hi,$b11_hi,$b12_hi,$b13_hi,$b14_hi,$b15_hi,$h8_hi,$h9_hi,$h10_hi,$h11_hi,$h12_hi,$h13_hi,$h14_hi,$h15_hi,$s8_hi,$s9_hi,$s10_hi,$s11_hi,$s12_hi,$s13_hi,$s14_hi,$s15_hi,$w19_hi,$w20_hi,$w22_hi,$w23_hi,$w24_hi,$w25_hi,$w26_hi,$w27_hi,$w28_hi,$w29_hi,$w30_hi,$d8_d9,$d9_d10,$d10_d11,$d11_d12,$d12_d13,$d13_d14,$d14_d15,$d8_d9_d10_d11,$d9_d10_d11_d12,$d10_d11_d12_d13,$d11_d12_d13_d14,$d12_d13_d14_d15,$d8_d9_d10,$d9_d10_d11,$d10_d11_d12,$d11_d12_d13,$d12_d13_d14,$d13_d14_d15,$x22_x23_x24_x25_x26_x27_x28_fp,$w22_w23,$w24_w25,$w26_w27,$w28_w29,$x28_fp,$x22_x23,$x24_x25,$x26_x27)
+
+  bb.0:
+    $sp = frame-setup SUBXri $sp, 16, 0
+
+  bb.1:
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    $w3 = MOVZWi 4, 0
+    $w4 = MOVZWi 5, 0
+    $w5 = MOVZWi 6, 0
+    $w6 = MOVZWi 7, 0
+    $w7 = MOVZWi 8, 0
+    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit killed $w4, implicit killed $w5, implicit killed $w6, implicit killed $w7, implicit-def $sp
+    BL @bar, csr_aarch64_aapcs_swifterror, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    $w3 = MOVZWi 4, 0
+    $w4 = MOVZWi 5, 0
+    $w5 = MOVZWi 6, 0
+    $w6 = MOVZWi 7, 0
+    $w7 = MOVZWi 8, 0
+    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit killed $w4, implicit killed $w5, implicit killed $w6, implicit killed $w7, implicit-def $sp
+    BL @bar, csr_aarch64_aapcs_swifterror, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    $w0 = MOVZWi 1, 0
+    $w1 = MOVZWi 2, 0
+    $w2 = MOVZWi 3, 0
+    $w3 = MOVZWi 4, 0
+    $w4 = MOVZWi 5, 0
+    $w5 = MOVZWi 6, 0
+    $w6 = MOVZWi 7, 0
+    $w7 = MOVZWi 8, 0
+    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $w2, implicit killed $w3, implicit killed $w4, implicit killed $w5, implicit killed $w6, implicit killed $w7, implicit-def $sp
+    BL @bar, csr_aarch64_aapcs_swifterror, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    $sp = ADDXri $sp, 16, 0
+    RET undef $lr
