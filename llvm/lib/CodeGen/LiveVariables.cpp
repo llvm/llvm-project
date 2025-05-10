@@ -215,8 +215,7 @@ void LiveVariables::HandleVirtRegDef(Register Reg, MachineInstr &MI) {
 
 /// FindLastPartialDef - Return the last partial def of the specified register.
 /// Also returns the sub-registers that're defined by the instruction.
-MachineInstr *
-LiveVariables::FindLastPartialDef(Register Reg) {
+MachineInstr *LiveVariables::FindLastPartialDef(Register Reg) {
   unsigned LastDefDist = 0;
   MachineInstr *LastDef = nullptr;
   for (MCPhysReg SubReg : TRI->subregs(Reg)) {
@@ -254,8 +253,8 @@ void LiveVariables::HandlePhysRegUse(Register Reg, MachineInstr &MI) {
     MachineInstr *LastPartialDef = FindLastPartialDef(Reg);
     // If LastPartialDef is NULL, it must be using a livein register.
     if (LastPartialDef) {
-      LastPartialDef->addOperand(MachineOperand::CreateReg(Reg, true/*IsDef*/,
-                                                           true/*IsImp*/));
+      LastPartialDef->addOperand(
+          MachineOperand::CreateReg(Reg, true /*IsDef*/, true /*IsImp*/));
     }
   } else if (LastDef && !PhysRegUse[Reg.id()] &&
              !LastDef->findRegisterDefOperand(Reg, /*TRI=*/nullptr))
