@@ -3147,7 +3147,7 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[n]:<size>:<abi>[:<pref>[:<idx>[:<addr>]]]``
+``p[n]:<size>:<abi>[:<pref>[:<idx>]]``
     This specifies the properties of a pointer in address space ``n``.
     The ``<size>`` parameter specifies the size of the bitwise representation.
     For :ref:`non-integral pointers <nointptrtype>` the representation size may
