@@ -54,7 +54,7 @@ def : Pat<(i32 (MxWrapperPC tblockaddress :$src)), (LEA32q tblockaddress :$src)>
 // instruction selection into a branch sequence.
 //===----------------------------------------------------------------------===//
 
-let usesCustomInserter = 1, Uses = [CCR] in
+let usesCustomInserter = 1, Uses = [CCR, SR] in
 class MxCMove<MxType TYPE>
     : MxPseudo<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$t, TYPE.ROp:$f, i8imm:$cond),
                [(set TYPE.VT:$dst,
@@ -73,7 +73,7 @@ def CMOV32r : MxCMove<MxType32r>;
 // a stack adjustment and the codegen must know that they may modify the stack
 // pointer before prolog-epilog rewriting occurs.
 // Pessimistically assume ADJCALLSTACKDOWN / ADJCALLSTACKUP will become
-// sub / add which can clobber CCR.
+// sub / add which can clobber CCR + SR.
 let Defs = [SP, CCR], Uses = [SP] in {
 
   def ADJCALLSTACKDOWN
