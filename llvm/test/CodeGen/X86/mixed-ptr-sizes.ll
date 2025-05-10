@@ -285,15 +285,15 @@ define void @test_store_sptr32_trunc_i1(ptr addrspace(270) %s, i32 %i) {
 ; CHECK-LABEL: test_store_sptr32_trunc_i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movslq %ecx, %rax
-; CHECK-NEXT:    andl $1, %edx
+; CHECK-NEXT:    andb $1, %dl
 ; CHECK-NEXT:    movb %dl, (%rax)
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: test_store_sptr32_trunc_i1:
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    movslq %ecx, %rax
-; CHECK-O0-NEXT:    andl $1, %edx
 ; CHECK-O0-NEXT:    movb %dl, %cl
+; CHECK-O0-NEXT:    andb $1, %cl
 ; CHECK-O0-NEXT:    movb %cl, (%rax)
 ; CHECK-O0-NEXT:    retq
 entry:

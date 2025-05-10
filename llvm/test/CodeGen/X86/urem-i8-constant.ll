@@ -10,8 +10,9 @@ define i8 @foo(i8 %tmp325) {
 ; CHECK-NEXT:    imull $111, %eax, %ecx
 ; CHECK-NEXT:    shrl $12, %ecx
 ; CHECK-NEXT:    leal (%ecx,%ecx,8), %edx
-; CHECK-NEXT:    leal (%ecx,%edx,4), %ecx
-; CHECK-NEXT:    subb %cl, %al
+; CHECK-NEXT:    shll $2, %edx
+; CHECK-NEXT:    addb %cl, %dl
+; CHECK-NEXT:    subb %dl, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retl
   %t546 = urem i8 %tmp325, 37

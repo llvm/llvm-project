@@ -6,7 +6,7 @@ define i8 @or_lshr_commute0(i8 %x0, i8 %x1, i8 %y, i8 %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    orl %esi, %edi
+; CHECK-NEXT:    orb %sil, %dil
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrb %cl, %dil
 ; CHECK-NEXT:    orb %dil, %al
@@ -178,7 +178,7 @@ define i8 @or_shl_commute1(i8 %x0, i8 %x1, i8 %y, i8 %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    orl %esi, %edi
+; CHECK-NEXT:    orb %sil, %dil
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shlb %cl, %dil
 ; CHECK-NEXT:    orb %dil, %al
@@ -290,7 +290,7 @@ define i8 @xor_lshr_commute0(i8 %x0, i8 %x1, i8 %y, i8 %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    xorl %esi, %edi
+; CHECK-NEXT:    xorb %sil, %dil
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrb %cl, %dil
 ; CHECK-NEXT:    xorb %dil, %al
@@ -462,7 +462,7 @@ define i8 @xor_shl_commute1(i8 %x0, i8 %x1, i8 %y, i8 %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    xorl %esi, %edi
+; CHECK-NEXT:    xorb %sil, %dil
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shlb %cl, %dil
 ; CHECK-NEXT:    xorb %dil, %al
@@ -574,7 +574,7 @@ define i8 @and_lshr_commute0(i8 %x0, i8 %x1, i8 %y, i8 %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    andb %sil, %dil
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrb %cl, %dil
 ; CHECK-NEXT:    andb %dil, %al
@@ -746,7 +746,7 @@ define i8 @and_shl_commute1(i8 %x0, i8 %x1, i8 %y, i8 %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    andb %sil, %dil
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shlb %cl, %dil
 ; CHECK-NEXT:    andb %dil, %al
@@ -902,9 +902,8 @@ define i8 @or_fshl_commute3(i8 %x, i8 %y) {
 ; CHECK-LABEL: or_fshl_commute3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    orl %edi, %esi
 ; CHECK-NEXT:    shlb $5, %sil
-; CHECK-NEXT:    shrb $3, %al
+; CHECK-NEXT:    rolb $5, %al
 ; CHECK-NEXT:    orb %sil, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
@@ -979,10 +978,9 @@ define i16 @or_fshr_commute2(i16 %x, i16 %y) {
 define i8 @or_fshr_commute3(i8 %x, i8 %y) {
 ; CHECK-LABEL: or_fshr_commute3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    shrb $6, %sil
-; CHECK-NEXT:    leal (,%rdi,4), %eax
+; CHECK-NEXT:    rolb $2, %al
 ; CHECK-NEXT:    orb %sil, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq

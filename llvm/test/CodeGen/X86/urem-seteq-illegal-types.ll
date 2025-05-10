@@ -64,9 +64,10 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal (%eax,%eax,2), %ecx
-; X86-NEXT:    leal (%eax,%ecx,4), %eax
-; X86-NEXT:    andb $15, %al
-; X86-NEXT:    cmpb $4, %al
+; X86-NEXT:    shll $2, %ecx
+; X86-NEXT:    addb %al, %cl
+; X86-NEXT:    andb $15, %cl
+; X86-NEXT:    cmpb $4, %cl
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
@@ -74,9 +75,10 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    leal (%rdi,%rdi,2), %eax
-; X64-NEXT:    leal (%rdi,%rax,4), %eax
-; X64-NEXT:    andb $15, %al
-; X64-NEXT:    cmpb $4, %al
+; X64-NEXT:    shll $2, %eax
+; X64-NEXT:    addb %al, %dil
+; X64-NEXT:    andb $15, %dil
+; X64-NEXT:    cmpb $4, %dil
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
   %urem = urem i4 %X, 5

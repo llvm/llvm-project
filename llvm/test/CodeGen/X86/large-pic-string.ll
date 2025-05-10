@@ -12,7 +12,7 @@ define void @pr38385() {
 ; CHECK-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L0$pb, %rcx
 ; CHECK-NEXT:    addq %rax, %rcx
 ; CHECK-NEXT:    movabsq $.L.str@GOTOFF, %rax
-; CHECK-NEXT:    addl %eax, %ecx
+; CHECK-NEXT:    addb %al, %cl
 ; CHECK-NEXT:    movb %cl, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    retq
   %p = alloca i8, align 1

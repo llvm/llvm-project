@@ -308,7 +308,8 @@ define <2 x i16> @vector_trunc_high_bits_undef_or_lhs_alignbit_regression(i32 %a
 ; VI-LABEL: vector_trunc_high_bits_undef_or_lhs_alignbit_regression:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_or_b32_e32 v0, 0xffff0011, v0
+; VI-NEXT:    v_or_b32_e32 v0, 17, v0
+; VI-NEXT:    v_or_b32_e32 v0, 0xffff0000, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
   %lshr = or <2 x i32> %undef.hi.elt, splat (i32 17)
@@ -368,8 +369,7 @@ define <2 x i16> @vector_trunc_high_bits_undef_mul_lhs_alignbit_regression(i32 %
 ; VI-LABEL: vector_trunc_high_bits_undef_mul_lhs_alignbit_regression:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mul_lo_u32 v0, v0, 18
-; VI-NEXT:    v_and_b32_e32 v0, 0xfffe, v0
+; VI-NEXT:    v_mul_lo_u16_e32 v0, 18, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %undef.hi.elt = insertelement <2 x i32> poison, i32 %arg0, i32 0
   %lshr = mul <2 x i32> %undef.hi.elt, splat (i32 18)

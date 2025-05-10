@@ -1894,9 +1894,15 @@ define amdgpu_kernel void @v_icmp_i1_ne0(ptr addrspace(1) %out, i32 %a, i32 %b) 
 ; GFX11-NEXT:    s_cmp_gt_u32 s2, 1
 ; GFX11-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX11-NEXT:    s_cmp_gt_u32 s3, 2
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GFX11-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b64 s[2:3], s[4:5], s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
+; GFX11-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    v_cmp_eq_u32_e64 s[2:3], 1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
@@ -1910,7 +1916,11 @@ define amdgpu_kernel void @v_icmp_i1_ne0(ptr addrspace(1) %out, i32 %a, i32 %b) 
 ; VI-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; VI-NEXT:    s_cmp_gt_u32 s3, 2
 ; VI-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; VI-NEXT:    s_and_b64 s[2:3], s[4:5], s[2:3]
+; VI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; VI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
+; VI-NEXT:    v_and_b32_e32 v0, v0, v1
+; VI-NEXT:    v_and_b32_e32 v0, 1, v0
+; VI-NEXT:    v_cmp_eq_u32_e64 s[2:3], 1, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -1927,7 +1937,11 @@ define amdgpu_kernel void @v_icmp_i1_ne0(ptr addrspace(1) %out, i32 %a, i32 %b) 
 ; GFX9-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX9-NEXT:    s_cmp_gt_u32 s3, 2
 ; GFX9-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX9-NEXT:    s_and_b64 s[2:3], s[4:5], s[2:3]
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
+; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
+; GFX9-NEXT:    v_and_b32_e32 v0, v1, v0
+; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[2:3], 1, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]

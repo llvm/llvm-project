@@ -150,11 +150,13 @@ false:
 define amdgpu_cs i32 @branch_divergent_ballot64_ne_zero_and(i32 %v1, i32 %v2) {
 ; DAGISEL-LABEL: branch_divergent_ballot64_ne_zero_and:
 ; DAGISEL:       ; %bb.0:
-; DAGISEL-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 12, v0
-; DAGISEL-NEXT:    v_cmp_lt_u32_e64 s0, 34, v1
+; DAGISEL-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 34, v1
 ; DAGISEL-NEXT:    s_mov_b32 s1, 0
-; DAGISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
-; DAGISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; DAGISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; DAGISEL-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 12, v0
+; DAGISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; DAGISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; DAGISEL-NEXT:    v_and_b32_e32 v0, 1, v0
 ; DAGISEL-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
 ; DAGISEL-NEXT:    s_cmp_eq_u64 s[0:1], 0
 ; DAGISEL-NEXT:    s_cbranch_scc1 .LBB8_2

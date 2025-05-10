@@ -763,7 +763,7 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; X86-X87-NEXT:    movl %ebx, 8(%ecx)
 ; X86-X87-NEXT:    movl %ebp, 4(%ecx)
 ; X86-X87-NEXT:    movl %eax, (%ecx)
-; X86-X87-NEXT:    andl $15, %edx
+; X86-X87-NEXT:    andb $15, %dl
 ; X86-X87-NEXT:    movb %dl, 12(%ecx)
 ; X86-X87-NEXT:    movl %ecx, %eax
 ; X86-X87-NEXT:    addl $60, %esp
@@ -816,7 +816,7 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    movl %edi, 8(%esi)
 ; X86-SSE-NEXT:    movl %edx, 4(%esi)
 ; X86-SSE-NEXT:    movl %ecx, (%esi)
-; X86-SSE-NEXT:    andl $15, %eax
+; X86-SSE-NEXT:    andb $15, %al
 ; X86-SSE-NEXT:    movb %al, 12(%esi)
 ; X86-SSE-NEXT:    movl %esi, %eax
 ; X86-SSE-NEXT:    addl $44, %esp
@@ -1777,7 +1777,7 @@ define i100 @test_signed_i100_f64(double %f) nounwind {
 ; X86-X87-NEXT:    movl %ebx, 8(%ecx)
 ; X86-X87-NEXT:    movl %ebp, 4(%ecx)
 ; X86-X87-NEXT:    movl %eax, (%ecx)
-; X86-X87-NEXT:    andl $15, %edx
+; X86-X87-NEXT:    andb $15, %dl
 ; X86-X87-NEXT:    movb %dl, 12(%ecx)
 ; X86-X87-NEXT:    movl %ecx, %eax
 ; X86-X87-NEXT:    addl $60, %esp
@@ -1830,7 +1830,7 @@ define i100 @test_signed_i100_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    movl %edi, 8(%esi)
 ; X86-SSE-NEXT:    movl %edx, 4(%esi)
 ; X86-SSE-NEXT:    movl %ecx, (%esi)
-; X86-SSE-NEXT:    andl $15, %eax
+; X86-SSE-NEXT:    andb $15, %al
 ; X86-SSE-NEXT:    movb %al, 12(%esi)
 ; X86-SSE-NEXT:    movl %esi, %eax
 ; X86-SSE-NEXT:    addl $44, %esp
@@ -2957,7 +2957,7 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; X86-X87-NEXT:    movl %ebx, 8(%ecx)
 ; X86-X87-NEXT:    movl %ebp, 4(%ecx)
 ; X86-X87-NEXT:    movl %eax, (%ecx)
-; X86-X87-NEXT:    andl $15, %edx
+; X86-X87-NEXT:    andb $15, %dl
 ; X86-X87-NEXT:    movb %dl, 12(%ecx)
 ; X86-X87-NEXT:    movl %ecx, %eax
 ; X86-X87-NEXT:    addl $60, %esp
@@ -3017,7 +3017,7 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    movl %edi, 8(%esi)
 ; X86-SSE-NEXT:    movl %edx, 4(%esi)
 ; X86-SSE-NEXT:    movl %ecx, (%esi)
-; X86-SSE-NEXT:    andl $15, %eax
+; X86-SSE-NEXT:    andb $15, %al
 ; X86-SSE-NEXT:    movb %al, 12(%esi)
 ; X86-SSE-NEXT:    movl %esi, %eax
 ; X86-SSE-NEXT:    addl $44, %esp
@@ -4288,7 +4288,7 @@ define i100 @test_signed_i100_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:    movl %ebx, 8(%ecx)
 ; X86-X87-NEXT:    movl %ebp, 4(%ecx)
 ; X86-X87-NEXT:    movl %eax, (%ecx)
-; X86-X87-NEXT:    andl $15, %edx
+; X86-X87-NEXT:    andb $15, %dl
 ; X86-X87-NEXT:    movb %dl, 12(%ecx)
 ; X86-X87-NEXT:    movl %ecx, %eax
 ; X86-X87-NEXT:    addl $60, %esp
@@ -4349,7 +4349,7 @@ define i100 @test_signed_i100_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    movl %edi, 8(%esi)
 ; X86-SSE-NEXT:    movl %edx, 4(%esi)
 ; X86-SSE-NEXT:    movl %ecx, (%esi)
-; X86-SSE-NEXT:    andl $15, %eax
+; X86-SSE-NEXT:    andb $15, %al
 ; X86-SSE-NEXT:    movb %al, 12(%esi)
 ; X86-SSE-NEXT:    movl %esi, %eax
 ; X86-SSE-NEXT:    addl $44, %esp

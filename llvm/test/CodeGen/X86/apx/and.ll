@@ -6,14 +6,12 @@
 define i8 @and8rr(i8 noundef %a, i8 noundef %b) {
 ; CHECK-LABEL: and8rr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x21,0xf7]
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    andb %sil, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x20,0xf7]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: and8rr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} andl %esi, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x21,0xf7]
-; NF-NEXT:    # kill: def $al killed $al killed $eax
+; NF-NEXT:    {nf} andb %sil, %dil, %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x20,0xf7]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %and = and i8 %a, %b

@@ -454,9 +454,9 @@ define zeroext i1 @ne_neg1_and_ne_zero(i64 %x) nounwind {
 define zeroext i1 @and_eq(i8 %a, i8 %b, i8 %c, i8 %d) nounwind {
 ; CHECK-LABEL: and_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %esi, %edi
-; CHECK-NEXT:    xorl %ecx, %edx
-; CHECK-NEXT:    orb %dl, %dil
+; CHECK-NEXT:    xorb %sil, %dil
+; CHECK-NEXT:    xorb %cl, %dl
+; CHECK-NEXT:    orb %dil, %dl
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %cmp1 = icmp eq i8 %a, %b
@@ -468,9 +468,9 @@ define zeroext i1 @and_eq(i8 %a, i8 %b, i8 %c, i8 %d) nounwind {
 define zeroext i1 @or_ne(i8 %a, i8 %b, i8 %c, i8 %d) nounwind {
 ; CHECK-LABEL: or_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %esi, %edi
-; CHECK-NEXT:    xorl %ecx, %edx
-; CHECK-NEXT:    orb %dl, %dil
+; CHECK-NEXT:    xorb %sil, %dil
+; CHECK-NEXT:    xorb %cl, %dl
+; CHECK-NEXT:    orb %dil, %dl
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %cmp1 = icmp ne i8 %a, %b

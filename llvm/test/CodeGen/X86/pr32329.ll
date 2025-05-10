@@ -29,33 +29,40 @@ define void @foo() local_unnamed_addr {
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    movsbl var_27, %eax
-; X86-NEXT:    movzwl var_2, %ebx
-; X86-NEXT:    movl var_310, %ecx
-; X86-NEXT:    imull %eax, %ecx
-; X86-NEXT:    addl var_24, %ecx
-; X86-NEXT:    movl $4194303, %esi # imm = 0x3FFFFF
-; X86-NEXT:    andl obj, %esi
+; X86-NEXT:    movl obj, %esi
 ; X86-NEXT:    leal (%esi,%esi), %edx
-; X86-NEXT:    subl %eax, %edx
-; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    subl %ebx, %edi
-; X86-NEXT:    imull %edi, %ecx
+; X86-NEXT:    movzwl var_2, %eax
+; X86-NEXT:    movb var_310, %ch
+; X86-NEXT:    movsbl var_27, %ebx
+; X86-NEXT:    subb %bl, %dl
+; X86-NEXT:    movb %dl, %cl
+; X86-NEXT:    subb %al, %cl
+; X86-NEXT:    movl %eax, %ebp
+; X86-NEXT:    movb %ch, %al
+; X86-NEXT:    mulb %bl
+; X86-NEXT:    addb var_24, %al
+; X86-NEXT:    mulb %cl
+; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    addb $113, %cl
-; X86-NEXT:    movl $9, %ebx
-; X86-NEXT:    xorl %ebp, %ebp
-; X86-NEXT:    shldl %cl, %ebx, %ebp
-; X86-NEXT:    shll %cl, %ebx
+; X86-NEXT:    movl $9, %eax
+; X86-NEXT:    xorl %edi, %edi
+; X86-NEXT:    shldl %cl, %eax, %edi
+; X86-NEXT:    shll %cl, %eax
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    cmovnel %ebx, %ebp
+; X86-NEXT:    cmovnel %eax, %edi
 ; X86-NEXT:    movl $0, %ecx
-; X86-NEXT:    cmovnel %ecx, %ebx
-; X86-NEXT:    cmpl %esi, %edi
-; X86-NEXT:    movl %ebp, var_50+4
-; X86-NEXT:    movl %ebx, var_50
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    andl $4194303, %esi # imm = 0x3FFFFF
+; X86-NEXT:    leal (%esi,%esi), %ecx
+; X86-NEXT:    subl %ebx, %ecx
+; X86-NEXT:    subl %ebp, %ecx
+; X86-NEXT:    cmpl %esi, %ecx
+; X86-NEXT:    movl %edi, var_50+4
+; X86-NEXT:    movl %eax, var_50
 ; X86-NEXT:    setge var_205
-; X86-NEXT:    imull %eax, %edx
-; X86-NEXT:    movb %dl, var_218
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    mulb %bl
+; X86-NEXT:    movb %al, var_218
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
@@ -68,27 +75,33 @@ define void @foo() local_unnamed_addr {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movsbl var_27(%rip), %eax
-; X64-NEXT:    movzwl var_2(%rip), %edx
-; X64-NEXT:    movl var_310(%rip), %ecx
-; X64-NEXT:    imull %eax, %ecx
-; X64-NEXT:    addl var_24(%rip), %ecx
-; X64-NEXT:    movl $4194303, %esi # imm = 0x3FFFFF
-; X64-NEXT:    andl obj(%rip), %esi
-; X64-NEXT:    leal (%rsi,%rsi), %edi
-; X64-NEXT:    subl %eax, %edi
-; X64-NEXT:    movl %edi, %r8d
-; X64-NEXT:    subl %edx, %r8d
-; X64-NEXT:    imull %r8d, %ecx
-; X64-NEXT:    addb $113, %cl
-; X64-NEXT:    movl $9, %edx
+; X64-NEXT:    movl obj(%rip), %esi
+; X64-NEXT:    leal (%rsi,%rsi), %edx
+; X64-NEXT:    movzwl var_2(%rip), %ecx
+; X64-NEXT:    movzwl %cx, %r8d
+; X64-NEXT:    movzbl var_310(%rip), %eax
+; X64-NEXT:    movsbl var_27(%rip), %edi
+; X64-NEXT:    subb %dil, %dl
+; X64-NEXT:    movl %edx, %r9d
+; X64-NEXT:    subb %cl, %r9b
+; X64-NEXT:    mulb %dil
+; X64-NEXT:    addb var_24(%rip), %al
+; X64-NEXT:    mulb %r9b
+; X64-NEXT:    # kill: def $al killed $al def $rax
+; X64-NEXT:    leal 113(%rax), %ecx
+; X64-NEXT:    movl $9, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shlq %cl, %rdx
-; X64-NEXT:    movq %rdx, var_50(%rip)
-; X64-NEXT:    cmpl %esi, %r8d
+; X64-NEXT:    shlq %cl, %rax
+; X64-NEXT:    movq %rax, var_50(%rip)
+; X64-NEXT:    andl $4194303, %esi # imm = 0x3FFFFF
+; X64-NEXT:    leal (%rsi,%rsi), %eax
+; X64-NEXT:    subl %edi, %eax
+; X64-NEXT:    subl %r8d, %eax
+; X64-NEXT:    cmpl %esi, %eax
 ; X64-NEXT:    setge var_205(%rip)
-; X64-NEXT:    imull %eax, %edi
-; X64-NEXT:    movb %dil, var_218(%rip)
+; X64-NEXT:    movl %edx, %eax
+; X64-NEXT:    mulb %dil
+; X64-NEXT:    movb %al, var_218(%rip)
 ; X64-NEXT:    retq
   entry:
   %bf.load = load i32, ptr @obj, align 8

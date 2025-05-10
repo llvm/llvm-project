@@ -15,7 +15,7 @@ define i32 @f32_bzhi(i32 %x, i32 %y) local_unnamed_addr {
 ;
 ; X86-LABEL: f32_bzhi:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bzhil %eax, {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 entry:
@@ -34,7 +34,7 @@ define i32 @f32_bzhi_commute(i32 %x, i32 %y) local_unnamed_addr {
 ;
 ; X86-LABEL: f32_bzhi_commute:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bzhil %eax, {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 entry:
@@ -53,7 +53,7 @@ define i32 @f32_bzhi_partial(i32 %x, i32 %y) local_unnamed_addr {
 ;
 ; X86-LABEL: f32_bzhi_partial:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bzhil %eax, {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 entry:
@@ -72,7 +72,7 @@ define i32 @f32_bzhi_partial_commute(i32 %x, i32 %y) local_unnamed_addr {
 ;
 ; X86-LABEL: f32_bzhi_partial_commute:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bzhil %eax, {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 entry:

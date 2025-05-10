@@ -104,7 +104,7 @@ define i1 @pow2_srl(i32 %x, i32 %y) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    shrl $20, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %yy = and i32 %y, 7

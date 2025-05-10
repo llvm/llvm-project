@@ -1068,10 +1068,10 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %ecx
-; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    orb %al, %cl
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    orl %ecx, %eax
+; SSE2-NEXT:    orb %cl, %al
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je .LBB27_2
 ; SSE2-NEXT:  # %bb.1:
@@ -1088,9 +1088,9 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    pextrd $1, %xmm1, %eax
 ; SSE41-NEXT:    movd %xmm1, %ecx
-; SSE41-NEXT:    orl %eax, %ecx
+; SSE41-NEXT:    orb %al, %cl
 ; SSE41-NEXT:    pextrd $2, %xmm1, %eax
-; SSE41-NEXT:    orl %ecx, %eax
+; SSE41-NEXT:    orb %cl, %al
 ; SSE41-NEXT:    testb $1, %al
 ; SSE41-NEXT:    je .LBB27_2
 ; SSE41-NEXT:  # %bb.1:
@@ -1107,9 +1107,9 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX1OR2-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX1OR2-NEXT:    vmovd %xmm0, %ecx
-; AVX1OR2-NEXT:    orl %eax, %ecx
+; AVX1OR2-NEXT:    orb %al, %cl
 ; AVX1OR2-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX1OR2-NEXT:    orl %ecx, %eax
+; AVX1OR2-NEXT:    orb %cl, %al
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je .LBB27_2
 ; AVX1OR2-NEXT:  # %bb.1:

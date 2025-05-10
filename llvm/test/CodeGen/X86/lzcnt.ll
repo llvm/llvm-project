@@ -13,7 +13,7 @@ define i8 @t1(i8 %x) nounwind  {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    lzcntl %eax, %eax
-; X86-NEXT:    addl $-24, %eax
+; X86-NEXT:    addb $-24, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
@@ -21,7 +21,7 @@ define i8 @t1(i8 %x) nounwind  {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movzbl %dil, %eax
 ; X32-NEXT:    lzcntl %eax, %eax
-; X32-NEXT:    addl $-24, %eax
+; X32-NEXT:    addb $-24, %al
 ; X32-NEXT:    # kill: def $al killed $al killed $eax
 ; X32-NEXT:    retq
 ;
@@ -29,7 +29,7 @@ define i8 @t1(i8 %x) nounwind  {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    lzcntl %eax, %eax
-; X64-NEXT:    addl $-24, %eax
+; X64-NEXT:    addb $-24, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 	%tmp = tail call i8 @llvm.ctlz.i8( i8 %x, i1 false )

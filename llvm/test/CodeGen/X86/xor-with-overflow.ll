@@ -46,8 +46,8 @@ define i8 @xor_i8_rr(i8 zeroext %0, i8 zeroext %1) {
 ;
 ; X64-LABEL: xor_i8_rr:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    xorl %edi, %eax
+; X64-NEXT:    xorb %dil, %sil
+; X64-NEXT:    movzbl %sil, %eax
 ; X64-NEXT:    cmovel %edi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq

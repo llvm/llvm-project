@@ -500,10 +500,12 @@ define amdgpu_kernel void @invert_true_phi_cond_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
 ; GCN-NEXT:  .LBB5_3: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB5_1 Depth=1
-; GCN-NEXT:    s_xor_b64 s[8:9], s[4:5], -1
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[4:5]
+; GCN-NEXT:    v_not_b32_e32 v1, v1
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
 ; GCN-NEXT:    s_add_i32 s6, s6, 1
-; GCN-NEXT:    s_and_b64 s[8:9], exec, s[8:9]
-; GCN-NEXT:    s_or_b64 s[0:1], s[8:9], s[0:1]
+; GCN-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GCN-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; GCN-NEXT:    s_cbranch_execnz .LBB5_1
 ; GCN-NEXT:  ; %bb.4: ; %bb9

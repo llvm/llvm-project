@@ -102,8 +102,9 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
 ; CIGFX89-LABEL: i1_arg_i1_use:
 ; CIGFX89:       ; %bb.0: ; %bb
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CIGFX89-NEXT:    v_not_b32_e32 v0, v0
 ; CIGFX89-NEXT:    v_and_b32_e32 v0, 1, v0
-; CIGFX89-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
+; CIGFX89-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; CIGFX89-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CIGFX89-NEXT:    s_cbranch_execz .LBB3_2
 ; CIGFX89-NEXT:  ; %bb.1: ; %bb1
@@ -119,10 +120,11 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
 ; GFX11-LABEL: i1_arg_i1_use:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    v_not_b32_e32 v0, v0
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cmpx_ne_u32_e32 1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    v_cmpx_eq_u32_e32 1, v0
 ; GFX11-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX11-NEXT:  ; %bb.1: ; %bb1
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0

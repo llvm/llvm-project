@@ -1403,8 +1403,8 @@ def : Pat<(mul i1:$a, imm:$b), (ANDb1ri $a, imm:$b)>;
 // These transformations were once reliably performed by instcombine, but thanks
 // to poison semantics they are no longer safe for LLVM IR, perform them here
 // instead.
-def : Pat<(select i1:$a, i1:$b, 0), (ANDb1rr $a, $b)>;
-def : Pat<(select i1:$a, 1, i1:$b), (ORb1rr $a, $b)>;
+def : Pat<(select Int1Regs:$a, Int1Regs:$b, 0), (ANDb1rr Int1Regs:$a, Int1Regs:$b)>;
+def : Pat<(select Int1Regs:$a, 1, Int1Regs:$b), (ORb1rr Int1Regs:$a, Int1Regs:$b)>;
 
 // Lower logical v2i16/v4i8 ops as bitwise ops on b32.
 foreach vt = [v2i16, v4i8] in {

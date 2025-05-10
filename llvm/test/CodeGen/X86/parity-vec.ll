@@ -16,7 +16,7 @@ define i1 @noncanonical_parity(<16 x i1> %x) {
 ; POPCNT-NEXT:    psllw $7, %xmm0
 ; POPCNT-NEXT:    pmovmskb %xmm0, %eax
 ; POPCNT-NEXT:    popcntl %eax, %eax
-; POPCNT-NEXT:    andl $1, %eax
+; POPCNT-NEXT:    andb $1, %al
 ; POPCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; POPCNT-NEXT:    retq
   %r = call i1 @llvm.vector.reduce.xor.v16i1(<16 x i1> %x)
@@ -36,7 +36,7 @@ define i1 @canonical_parity(<16 x i1> %x) {
 ; POPCNT-NEXT:    psllw $7, %xmm0
 ; POPCNT-NEXT:    pmovmskb %xmm0, %eax
 ; POPCNT-NEXT:    popcntl %eax, %eax
-; POPCNT-NEXT:    andl $1, %eax
+; POPCNT-NEXT:    andb $1, %al
 ; POPCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; POPCNT-NEXT:    retq
   %i1 = bitcast <16 x i1> %x to i16
@@ -65,7 +65,7 @@ define i1 @canonical_parity_noncanonical_pred(<16 x i1> %x) {
 ; NOPOPCNT-NEXT:    andl $3855, %ecx # imm = 0xF0F
 ; NOPOPCNT-NEXT:    movl %ecx, %eax
 ; NOPOPCNT-NEXT:    shrl $8, %eax
-; NOPOPCNT-NEXT:    addl %ecx, %eax
+; NOPOPCNT-NEXT:    addb %cl, %al
 ; NOPOPCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; NOPOPCNT-NEXT:    retq
 ;
@@ -97,8 +97,8 @@ define i1 @noncanonical_nonparity(<16 x i1> %x) {
 ; POPCNT-NEXT:    psllw $7, %xmm0
 ; POPCNT-NEXT:    pmovmskb %xmm0, %eax
 ; POPCNT-NEXT:    popcntl %eax, %eax
-; POPCNT-NEXT:    andl $1, %eax
-; POPCNT-NEXT:    xorb $1, %al
+; POPCNT-NEXT:    notb %al
+; POPCNT-NEXT:    andb $1, %al
 ; POPCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; POPCNT-NEXT:    retq
   %r.inv = call i1 @llvm.vector.reduce.xor.v16i1(<16 x i1> %x)
@@ -142,8 +142,8 @@ define i1 @canonical_nonparity_noncanonical_pred(<16 x i1> %x) {
 ; POPCNT-NEXT:    psllw $7, %xmm0
 ; POPCNT-NEXT:    pmovmskb %xmm0, %eax
 ; POPCNT-NEXT:    popcntl %eax, %eax
-; POPCNT-NEXT:    andl $1, %eax
-; POPCNT-NEXT:    xorb $1, %al
+; POPCNT-NEXT:    notb %al
+; POPCNT-NEXT:    andb $1, %al
 ; POPCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; POPCNT-NEXT:    retq
   %i1 = bitcast <16 x i1> %x to i16

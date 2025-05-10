@@ -318,14 +318,14 @@ define i8 @parity_32_trunc(i32 %x) {
 ; X86-POPCNT-LABEL: parity_32_trunc:
 ; X86-POPCNT:       # %bb.0:
 ; X86-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %eax
-; X86-POPCNT-NEXT:    andl $1, %eax
+; X86-POPCNT-NEXT:    andb $1, %al
 ; X86-POPCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-POPCNT-NEXT:    retl
 ;
 ; X64-POPCNT-LABEL: parity_32_trunc:
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntl %edi, %eax
-; X64-POPCNT-NEXT:    andl $1, %eax
+; X64-POPCNT-NEXT:    andb $1, %al
 ; X64-POPCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-POPCNT-NEXT:    retq
   %1 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -381,9 +381,8 @@ define i16 @parity_16_mask255(i16 %x) {
 define i16 @parity_16_mask15(i16 %x) {
 ; X86-LABEL: parity_16_mask15:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testb $15, %cl
+; X86-NEXT:    testb $15, {{[0-9]+}}(%esp)
 ; X86-NEXT:    setnp %al
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl

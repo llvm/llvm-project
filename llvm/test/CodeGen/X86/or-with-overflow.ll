@@ -46,8 +46,8 @@ define i8 @or_i8_rr(i8 zeroext %0, i8 zeroext %1) {
 ;
 ; X64-LABEL: or_i8_rr:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    orl %edi, %eax
+; X64-NEXT:    orb %dil, %sil
+; X64-NEXT:    movzbl %sil, %eax
 ; X64-NEXT:    cmovel %edi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq

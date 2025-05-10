@@ -162,6 +162,14 @@ public:
            DstTy->getPrimitiveSizeInBits() == 32;
   }
 
+  bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override {
+    // Truncating 64-bit to 32-bit is free in SASS.
+    if (!SrcVT.isScalarInteger() || !DestVT.isScalarInteger())
+      return false;
+    return SrcVT.getFixedSizeInBits() == 64 &&
+           DestVT.getFixedSizeInBits() == 32;
+  }
+
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Ctx,
                          EVT VT) const override {
     if (VT.isVector())

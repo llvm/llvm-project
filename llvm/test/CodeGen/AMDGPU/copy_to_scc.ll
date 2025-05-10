@@ -15,13 +15,15 @@ define amdgpu_kernel void @copy_to_scc(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s2, 0
 ; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GCN-NEXT:    s_xor_b64 s[2:3], s[2:3], vcc
-; GCN-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GCN-NEXT:    s_cselect_b32 s2, 2, 3
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
+; GCN-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 3, 2, vcc
 ; GCN-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GCN-NEXT:    s_endpgm
 entry:                                             ; preds = %1009

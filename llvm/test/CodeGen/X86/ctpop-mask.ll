@@ -148,10 +148,9 @@ define i16 @ctpop_shifted_mask3(i16 %x) nounwind readnone {
 ;
 ; X86-NO-POPCOUNT-LABEL: ctpop_shifted_mask3:
 ; X86-NO-POPCOUNT:       # %bb.0:
-; X86-NO-POPCOUNT-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NO-POPCOUNT-NEXT:    andl $14, %ecx
+; X86-NO-POPCOUNT-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NO-POPCOUNT-NEXT:    andb $14, %cl
 ; X86-NO-POPCOUNT-NEXT:    movl $59796, %eax # imm = 0xE994
-; X86-NO-POPCOUNT-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NO-POPCOUNT-NEXT:    shrl %cl, %eax
 ; X86-NO-POPCOUNT-NEXT:    andl $3, %eax
 ; X86-NO-POPCOUNT-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -160,7 +159,7 @@ define i16 @ctpop_shifted_mask3(i16 %x) nounwind readnone {
 ; X64-NO-POPCOUNT-LABEL: ctpop_shifted_mask3:
 ; X64-NO-POPCOUNT:       # %bb.0:
 ; X64-NO-POPCOUNT-NEXT:    movl %edi, %ecx
-; X64-NO-POPCOUNT-NEXT:    andl $14, %ecx
+; X64-NO-POPCOUNT-NEXT:    andb $14, %cl
 ; X64-NO-POPCOUNT-NEXT:    movl $59796, %eax # imm = 0xE994
 ; X64-NO-POPCOUNT-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NO-POPCOUNT-NEXT:    shrl %cl, %eax
@@ -243,7 +242,7 @@ define i32 @ctpop_shifted_mask4(i32 %x) nounwind readnone {
 ; X64-NO-POPCOUNT:       # %bb.0:
 ; X64-NO-POPCOUNT-NEXT:    movl %edi, %ecx
 ; X64-NO-POPCOUNT-NEXT:    shrl $7, %ecx
-; X64-NO-POPCOUNT-NEXT:    andl $60, %ecx
+; X64-NO-POPCOUNT-NEXT:    andb $60, %cl
 ; X64-NO-POPCOUNT-NEXT:    movabsq $4841987667533046032, %rax # imm = 0x4332322132212110
 ; X64-NO-POPCOUNT-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NO-POPCOUNT-NEXT:    shrq %cl, %rax

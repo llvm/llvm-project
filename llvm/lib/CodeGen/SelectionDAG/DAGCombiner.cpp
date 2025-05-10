@@ -6038,6 +6038,10 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
          HandOpcode == ISD::ANY_EXTEND_VECTOR_INREG) &&
         LegalTypes && !TLI.isTypeDesirableForOp(LogicOpcode, XVT))
       return SDValue();
+    // Prevent an infinite loop if the target prefers the inverse
+    // transformation.
+    if (TLI.isNarrowingProfitable(N, XVT, VT))
+      return SDValue();
     // logic_op (hand_op X), (hand_op Y) --> hand_op (logic_op X, Y)
     SDNodeFlags LogicFlags;
     LogicFlags.setDisjoint(N->getFlags().hasDisjoint() &&
@@ -6050,6 +6054,9 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
 
   // logic_op (truncate x), (truncate y) --> truncate (logic_op x, y)
   if (HandOpcode == ISD::TRUNCATE) {
+    // Don't create a logic op on an illegal type.
+    if (!TLI.isTypeLegal(XVT))
+      return SDValue();
     // If both operands have other uses, this transform would create extra
     // instructions without eliminating anything.
     if (!N0.hasOneUse() && !N1.hasOneUse())
@@ -6061,10 +6068,12 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
     if (LegalOperations && !TLI.isOperationLegal(LogicOpcode, XVT))
       return SDValue();
     // Be extra careful sinking truncate. If it's free, there's no benefit in
-    // widening a binop. Also, don't create a logic op on an illegal type.
+    // widening a binop.
     if (TLI.isZExtFree(VT, XVT) && TLI.isTruncateFree(XVT, VT))
       return SDValue();
-    if (!TLI.isTypeLegal(XVT))
+    // Prevent an infinite loop if the target prefers the inverse
+    // transformation.
+    if (TLI.isNarrowingProfitable(N, XVT, VT))
       return SDValue();
     SDValue Logic = DAG.getNode(LogicOpcode, DL, XVT, X, Y);
     return DAG.getNode(HandOpcode, DL, VT, Logic);
@@ -15919,6 +15928,28 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
                                  DAG, DL);
     }
     break;
+  }
+
+  if (!LegalOperations || TLI.isOperationLegal(N0.getOpcode(), VT)) {
+    switch (N0.getOpcode()) {
+    case ISD::ADD:
+    case ISD::SUB:
+    case ISD::MUL:
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR:
+      if (!N0.hasOneUse() || !VT.isScalarInteger())
+        break;
+      if (!TLI.isNarrowingProfitable(N0.getNode(), SrcVT, VT))
+        break;
+      SDValue NarrowL = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));
+      SDValue NarrowR = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(1));
+      SDValue TruncatedOp =
+          DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR);
+      if (TLI.IsDesirableToPromoteOp(TruncatedOp, SrcVT))
+        break;
+      return TruncatedOp;
+    }
   }
 
   return SDValue();

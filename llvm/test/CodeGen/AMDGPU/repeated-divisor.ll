@@ -311,16 +311,21 @@ define <2 x double> @v_repeat_divisor_f64_x2_arcp(double %x, double %y, double %
 ; GFX6-NEXT:    v_div_scale_f64 v[6:7], s[4:5], v[4:5], v[4:5], 1.0
 ; GFX6-NEXT:    v_rcp_f64_e32 v[8:9], v[6:7]
 ; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v7
+; GFX6-NEXT:    v_cndmask_b32_e64 v14, 0, 1, vcc
 ; GFX6-NEXT:    v_fma_f64 v[10:11], -v[6:7], v[8:9], 1.0
 ; GFX6-NEXT:    v_fma_f64 v[8:9], v[8:9], v[10:11], v[8:9]
 ; GFX6-NEXT:    v_div_scale_f64 v[10:11], s[4:5], 1.0, v[4:5], 1.0
 ; GFX6-NEXT:    v_fma_f64 v[12:13], -v[6:7], v[8:9], 1.0
 ; GFX6-NEXT:    s_mov_b32 s4, 0x3ff00000
 ; GFX6-NEXT:    v_fma_f64 v[8:9], v[8:9], v[12:13], v[8:9]
-; GFX6-NEXT:    v_cmp_eq_u32_e64 s[4:5], s4, v11
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v11
 ; GFX6-NEXT:    v_mul_f64 v[12:13], v[10:11], v[8:9]
-; GFX6-NEXT:    s_xor_b64 vcc, s[4:5], vcc
 ; GFX6-NEXT:    v_fma_f64 v[6:7], -v[6:7], v[12:13], v[10:11]
+; GFX6-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v10, v10, v14
+; GFX6-NEXT:    v_and_b32_e32 v10, 1, v10
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v10
+; GFX6-NEXT:    s_nop 3
 ; GFX6-NEXT:    v_div_fmas_f64 v[6:7], v[6:7], v[8:9], v[12:13]
 ; GFX6-NEXT:    v_div_fixup_f64 v[4:5], v[6:7], v[4:5], 1.0
 ; GFX6-NEXT:    v_mul_f64 v[0:1], v[0:1], v[4:5]

@@ -2009,7 +2009,7 @@ define i32 @split_load(ptr %p) {
 ; CHECK-O3-NEXT:    movq (%rdi), %rax
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    orl %eax, %ecx
+; CHECK-O3-NEXT:    orb %al, %cl
 ; CHECK-O3-NEXT:    movzbl %cl, %eax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, ptr %p unordered, align 8

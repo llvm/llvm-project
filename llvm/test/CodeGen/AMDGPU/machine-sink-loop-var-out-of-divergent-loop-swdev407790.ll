@@ -8,11 +8,12 @@ define void @machinesink_loop_variable_out_of_divergent_loop(i32 %arg, i1 %cmp49
 ; CHECK-LABEL: machinesink_loop_variable_out_of_divergent_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v1, 1, v1
+; CHECK-NEXT:    v_not_b32_e32 v1, v1
 ; CHECK-NEXT:    v_and_b32_e32 v3, 1, v3
 ; CHECK-NEXT:    s_mov_b32 s6, 0
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s4, 1, v1
+; CHECK-NEXT:    v_and_b32_e32 v1, 1, v1
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v3
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s4, 1, v1
 ; CHECK-NEXT:    s_inst_prefetch 0x1
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:    .p2align 6

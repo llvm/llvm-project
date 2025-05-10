@@ -9,15 +9,16 @@ define amdgpu_kernel void @hoge(i1 %c0, i1 %c1, i1 %c2, i1 %c3, i1 %c4) {
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_dword s2, s[4:5], 0x9
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_bitcmp1_b32 s2, 0
-; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    s_and_b64 s[4:5], s[0:1], vcc
-; CHECK-NEXT:    s_and_saveexec_b64 s[0:1], s[4:5]
+; CHECK-NEXT:    v_and_b32_e32 v0, s2, v0
+; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; CHECK-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[0:1]
-; CHECK-NEXT:    s_bitcmp1_b32 s2, 24
+; CHECK-NEXT:    s_not_b32 s0, s2
+; CHECK-NEXT:    s_bitcmp1_b32 s0, 24
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    s_xor_b64 s[0:1], s[0:1], -1
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
 ; CHECK-NEXT:  .LBB0_1: ; %bb25

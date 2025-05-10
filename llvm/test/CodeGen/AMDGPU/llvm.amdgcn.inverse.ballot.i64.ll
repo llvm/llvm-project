@@ -308,10 +308,13 @@ define amdgpu_cs void @inverse_ballot_branch(i64 inreg %s0_1, i64 inreg %s2, ptr
 ;
 ; SDAG_W64-LABEL: inverse_ballot_branch:
 ; SDAG_W64:       ; %bb.0: ; %entry
+; SDAG_W64-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[2:3]
+; SDAG_W64-NEXT:    v_not_b32_e32 v2, v2
+; SDAG_W64-NEXT:    v_and_b32_e32 v2, 1, v2
+; SDAG_W64-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
 ; SDAG_W64-NEXT:    v_mov_b32_e32 v3, s1
 ; SDAG_W64-NEXT:    v_mov_b32_e32 v2, s0
-; SDAG_W64-NEXT:    s_xor_b64 s[4:5], s[2:3], -1
-; SDAG_W64-NEXT:    s_and_saveexec_b64 s[2:3], s[4:5]
+; SDAG_W64-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; SDAG_W64-NEXT:  ; %bb.1: ; %if
 ; SDAG_W64-NEXT:    s_add_u32 s0, s0, 1
 ; SDAG_W64-NEXT:    s_addc_u32 s1, s1, 0
@@ -337,9 +340,12 @@ define amdgpu_cs void @inverse_ballot_branch(i64 inreg %s0_1, i64 inreg %s2, ptr
 ;
 ; SDAG_W32-LABEL: inverse_ballot_branch:
 ; SDAG_W32:       ; %bb.0: ; %entry
+; SDAG_W32-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s2
+; SDAG_W32-NEXT:    v_not_b32_e32 v2, v2
+; SDAG_W32-NEXT:    v_and_b32_e32 v2, 1, v2
+; SDAG_W32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v2
 ; SDAG_W32-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
-; SDAG_W32-NEXT:    s_xor_b32 s3, s2, -1
-; SDAG_W32-NEXT:    s_and_saveexec_b32 s2, s3
+; SDAG_W32-NEXT:    s_and_saveexec_b32 s2, vcc_lo
 ; SDAG_W32-NEXT:  ; %bb.1: ; %if
 ; SDAG_W32-NEXT:    s_add_u32 s0, s0, 1
 ; SDAG_W32-NEXT:    s_addc_u32 s1, s1, 0

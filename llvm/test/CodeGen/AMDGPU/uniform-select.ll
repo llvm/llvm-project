@@ -7,47 +7,51 @@
 define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ; GFX90A-LABEL: test_insert_extract:
 ; GFX90A:       ; %bb.0: ; %entry
-; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX90A-NEXT:    s_mov_b32 s2, 0
-; GFX90A-NEXT:    s_and_b64 vcc, exec, -1
-; GFX90A-NEXT:    s_mov_b32 s3, 0
+; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
 ; GFX90A-NEXT:    s_mov_b32 s4, 0
+; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90A-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX90A-NEXT:    s_mov_b32 s5, 0
 ; GFX90A-NEXT:    s_mov_b32 s6, 0
+; GFX90A-NEXT:    s_mov_b32 s7, 0
 ; GFX90A-NEXT:  .LBB0_1: ; %for.body
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    s_cmp_eq_u32 s1, 1
-; GFX90A-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; GFX90A-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; GFX90A-NEXT:    s_cselect_b32 s7, s4, s3
-; GFX90A-NEXT:    s_cmp_eq_u32 s1, 2
-; GFX90A-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; GFX90A-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; GFX90A-NEXT:    s_cselect_b32 s7, s5, s7
-; GFX90A-NEXT:    s_cmp_eq_u32 s1, 3
-; GFX90A-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; GFX90A-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; GFX90A-NEXT:    s_cselect_b32 s7, s6, s7
-; GFX90A-NEXT:    s_or_b32 s7, s7, s0
-; GFX90A-NEXT:    s_cmp_eq_u32 s1, 1
-; GFX90A-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; GFX90A-NEXT:    s_and_b64 s[10:11], s[8:9], exec
-; GFX90A-NEXT:    s_cselect_b32 s4, s7, s4
-; GFX90A-NEXT:    s_cmp_eq_u32 s1, 3
-; GFX90A-NEXT:    s_cselect_b64 s[10:11], -1, 0
-; GFX90A-NEXT:    s_and_b64 s[12:13], s[10:11], exec
-; GFX90A-NEXT:    s_cselect_b32 s6, s7, s6
-; GFX90A-NEXT:    s_cmp_eq_u32 s1, 2
-; GFX90A-NEXT:    s_cselect_b64 s[12:13], -1, 0
-; GFX90A-NEXT:    s_and_b64 s[14:15], s[12:13], exec
-; GFX90A-NEXT:    s_cselect_b32 s5, s7, s5
-; GFX90A-NEXT:    s_cmp_eq_u32 s1, 0
-; GFX90A-NEXT:    s_cselect_b32 s3, s7, s3
-; GFX90A-NEXT:    s_or_b64 s[8:9], s[12:13], s[8:9]
-; GFX90A-NEXT:    s_or_b64 s[8:9], s[10:11], s[8:9]
-; GFX90A-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; GFX90A-NEXT:    s_cselect_b32 s2, 0, s2
+; GFX90A-NEXT:    s_cmp_eq_u32 s3, 1
+; GFX90A-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX90A-NEXT:    s_cselect_b32 s8, s5, s4
+; GFX90A-NEXT:    s_cmp_eq_u32 s3, 2
+; GFX90A-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX90A-NEXT:    s_cselect_b32 s8, s6, s8
+; GFX90A-NEXT:    s_cmp_eq_u32 s3, 3
+; GFX90A-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX90A-NEXT:    s_cselect_b32 s0, s7, s8
+; GFX90A-NEXT:    s_or_b32 s8, s0, s2
+; GFX90A-NEXT:    s_cmp_eq_u32 s3, 1
+; GFX90A-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX90A-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX90A-NEXT:    s_cselect_b32 s5, s8, s5
+; GFX90A-NEXT:    s_cmp_eq_u32 s3, 3
+; GFX90A-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX90A-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX90A-NEXT:    s_cselect_b32 s7, s8, s7
+; GFX90A-NEXT:    s_cmp_eq_u32 s3, 2
+; GFX90A-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX90A-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s[0:1]
+; GFX90A-NEXT:    v_or_b32_e32 v1, v3, v1
+; GFX90A-NEXT:    v_or_b32_e32 v1, v2, v1
+; GFX90A-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX90A-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX90A-NEXT:    s_cselect_b32 s6, s8, s6
+; GFX90A-NEXT:    s_cmp_eq_u32 s3, 0
+; GFX90A-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v1
+; GFX90A-NEXT:    s_cselect_b32 s4, s8, s4
+; GFX90A-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
 ; GFX90A-NEXT:    s_mov_b64 vcc, vcc
 ; GFX90A-NEXT:    s_cbranch_vccnz .LBB0_1
 ; GFX90A-NEXT:  ; %bb.2: ; %DummyReturnBlock
@@ -55,47 +59,52 @@ define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ;
 ; GFX942-LABEL: test_insert_extract:
 ; GFX942:       ; %bb.0: ; %entry
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX942-NEXT:    s_mov_b32 s2, 0
-; GFX942-NEXT:    s_and_b64 vcc, exec, -1
-; GFX942-NEXT:    s_mov_b32 s3, 0
+; GFX942-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x0
 ; GFX942-NEXT:    s_mov_b32 s4, 0
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX942-NEXT:    s_mov_b32 s5, 0
 ; GFX942-NEXT:    s_mov_b32 s6, 0
+; GFX942-NEXT:    s_mov_b32 s7, 0
 ; GFX942-NEXT:  .LBB0_1: ; %for.body
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_cmp_eq_u32 s1, 1
-; GFX942-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; GFX942-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; GFX942-NEXT:    s_cselect_b32 s7, s4, s3
-; GFX942-NEXT:    s_cmp_eq_u32 s1, 2
-; GFX942-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; GFX942-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; GFX942-NEXT:    s_cselect_b32 s7, s5, s7
-; GFX942-NEXT:    s_cmp_eq_u32 s1, 3
-; GFX942-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; GFX942-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; GFX942-NEXT:    s_cselect_b32 s7, s6, s7
-; GFX942-NEXT:    s_or_b32 s7, s7, s0
-; GFX942-NEXT:    s_cmp_eq_u32 s1, 1
-; GFX942-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; GFX942-NEXT:    s_and_b64 s[10:11], s[8:9], exec
-; GFX942-NEXT:    s_cselect_b32 s4, s7, s4
-; GFX942-NEXT:    s_cmp_eq_u32 s1, 3
-; GFX942-NEXT:    s_cselect_b64 s[10:11], -1, 0
-; GFX942-NEXT:    s_and_b64 s[12:13], s[10:11], exec
-; GFX942-NEXT:    s_cselect_b32 s6, s7, s6
-; GFX942-NEXT:    s_cmp_eq_u32 s1, 2
-; GFX942-NEXT:    s_cselect_b64 s[12:13], -1, 0
-; GFX942-NEXT:    s_and_b64 s[14:15], s[12:13], exec
-; GFX942-NEXT:    s_cselect_b32 s5, s7, s5
-; GFX942-NEXT:    s_cmp_eq_u32 s1, 0
-; GFX942-NEXT:    s_cselect_b32 s3, s7, s3
-; GFX942-NEXT:    s_or_b64 s[8:9], s[12:13], s[8:9]
-; GFX942-NEXT:    s_or_b64 s[8:9], s[10:11], s[8:9]
-; GFX942-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; GFX942-NEXT:    s_cselect_b32 s2, 0, s2
+; GFX942-NEXT:    s_cmp_eq_u32 s3, 1
+; GFX942-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX942-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX942-NEXT:    s_cselect_b32 s8, s5, s4
+; GFX942-NEXT:    s_cmp_eq_u32 s3, 2
+; GFX942-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX942-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX942-NEXT:    s_cselect_b32 s8, s6, s8
+; GFX942-NEXT:    s_cmp_eq_u32 s3, 3
+; GFX942-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX942-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX942-NEXT:    s_cselect_b32 s0, s7, s8
+; GFX942-NEXT:    s_or_b32 s8, s0, s2
+; GFX942-NEXT:    s_cmp_eq_u32 s3, 1
+; GFX942-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX942-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
+; GFX942-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX942-NEXT:    s_cselect_b32 s5, s8, s5
+; GFX942-NEXT:    s_cmp_eq_u32 s3, 3
+; GFX942-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX942-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
+; GFX942-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX942-NEXT:    s_cselect_b32 s7, s8, s7
+; GFX942-NEXT:    s_cmp_eq_u32 s3, 2
+; GFX942-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX942-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s[0:1]
+; GFX942-NEXT:    v_or_b32_e32 v1, v3, v1
+; GFX942-NEXT:    v_or_b32_e32 v1, v2, v1
+; GFX942-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX942-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX942-NEXT:    s_cselect_b32 s6, s8, s6
+; GFX942-NEXT:    s_cmp_eq_u32 s3, 0
+; GFX942-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v1
+; GFX942-NEXT:    s_cselect_b32 s4, s8, s4
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
 ; GFX942-NEXT:    s_mov_b64 vcc, vcc
 ; GFX942-NEXT:    s_cbranch_vccnz .LBB0_1
 ; GFX942-NEXT:  ; %bb.2: ; %DummyReturnBlock
@@ -104,102 +113,115 @@ define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ; GFX1030-LABEL: test_insert_extract:
 ; GFX1030:       ; %bb.0: ; %entry
 ; GFX1030-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1030-NEXT:    s_mov_b32 s2, 0
 ; GFX1030-NEXT:    s_mov_b32 s3, 0
 ; GFX1030-NEXT:    s_mov_b32 s4, 0
 ; GFX1030-NEXT:    s_mov_b32 s5, 0
-; GFX1030-NEXT:    s_mov_b32 s6, 0
-; GFX1030-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX1030-NEXT:    s_inst_prefetch 0x1
 ; GFX1030-NEXT:    .p2align 6
 ; GFX1030-NEXT:  .LBB0_1: ; %for.body
 ; GFX1030-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-NEXT:    s_cmp_eq_u32 s1, 1
+; GFX1030-NEXT:    s_cselect_b32 s6, -1, 0
+; GFX1030-NEXT:    s_and_b32 s6, s6, exec_lo
+; GFX1030-NEXT:    s_cselect_b32 s6, s3, s2
+; GFX1030-NEXT:    s_cmp_eq_u32 s1, 2
 ; GFX1030-NEXT:    s_cselect_b32 s7, -1, 0
 ; GFX1030-NEXT:    s_and_b32 s7, s7, exec_lo
-; GFX1030-NEXT:    s_cselect_b32 s7, s4, s3
-; GFX1030-NEXT:    s_cmp_eq_u32 s1, 2
-; GFX1030-NEXT:    s_cselect_b32 s8, -1, 0
-; GFX1030-NEXT:    s_and_b32 s8, s8, exec_lo
-; GFX1030-NEXT:    s_cselect_b32 s7, s5, s7
+; GFX1030-NEXT:    s_cselect_b32 s6, s4, s6
 ; GFX1030-NEXT:    s_cmp_eq_u32 s1, 3
-; GFX1030-NEXT:    s_cselect_b32 s8, -1, 0
-; GFX1030-NEXT:    s_and_b32 s8, s8, exec_lo
-; GFX1030-NEXT:    s_cselect_b32 s7, s6, s7
-; GFX1030-NEXT:    s_or_b32 s7, s7, s0
-; GFX1030-NEXT:    s_cmp_eq_u32 s1, 1
-; GFX1030-NEXT:    s_cselect_b32 s8, -1, 0
-; GFX1030-NEXT:    s_and_b32 s9, s8, exec_lo
-; GFX1030-NEXT:    s_cselect_b32 s4, s7, s4
-; GFX1030-NEXT:    s_cmp_eq_u32 s1, 3
-; GFX1030-NEXT:    s_cselect_b32 s9, -1, 0
-; GFX1030-NEXT:    s_and_b32 s10, s9, exec_lo
-; GFX1030-NEXT:    s_cselect_b32 s6, s7, s6
-; GFX1030-NEXT:    s_cmp_eq_u32 s1, 2
-; GFX1030-NEXT:    s_cselect_b32 s10, -1, 0
-; GFX1030-NEXT:    s_and_b32 s11, s10, exec_lo
-; GFX1030-NEXT:    s_cselect_b32 s5, s7, s5
-; GFX1030-NEXT:    s_cmp_eq_u32 s1, 0
-; GFX1030-NEXT:    s_cselect_b32 s3, s7, s3
-; GFX1030-NEXT:    s_or_b32 s7, s10, s8
-; GFX1030-NEXT:    s_or_b32 s7, s9, s7
+; GFX1030-NEXT:    s_cselect_b32 s7, -1, 0
 ; GFX1030-NEXT:    s_and_b32 s7, s7, exec_lo
-; GFX1030-NEXT:    s_cselect_b32 s2, 0, s2
+; GFX1030-NEXT:    s_cselect_b32 s6, s5, s6
+; GFX1030-NEXT:    s_or_b32 s6, s6, s0
+; GFX1030-NEXT:    s_cmp_eq_u32 s1, 1
+; GFX1030-NEXT:    s_cselect_b32 s7, -1, 0
+; GFX1030-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s7
+; GFX1030-NEXT:    s_and_b32 s7, s7, exec_lo
+; GFX1030-NEXT:    s_cselect_b32 s3, s6, s3
+; GFX1030-NEXT:    s_cmp_eq_u32 s1, 3
+; GFX1030-NEXT:    s_cselect_b32 s7, -1, 0
+; GFX1030-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s7
+; GFX1030-NEXT:    s_and_b32 s7, s7, exec_lo
+; GFX1030-NEXT:    s_cselect_b32 s5, s6, s5
+; GFX1030-NEXT:    s_cmp_eq_u32 s1, 2
+; GFX1030-NEXT:    s_cselect_b32 s7, -1, 0
+; GFX1030-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s7
+; GFX1030-NEXT:    s_and_b32 s7, s7, exec_lo
+; GFX1030-NEXT:    s_cselect_b32 s4, s6, s4
+; GFX1030-NEXT:    s_cmp_eq_u32 s1, 0
+; GFX1030-NEXT:    v_or_b32_e32 v1, v3, v1
+; GFX1030-NEXT:    s_cselect_b32 s2, s6, s2
+; GFX1030-NEXT:    v_or_b32_e32 v1, v2, v1
+; GFX1030-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX1030-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
+; GFX1030-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc_lo
+; GFX1030-NEXT:    s_mov_b32 vcc_lo, exec_lo
 ; GFX1030-NEXT:    s_cbranch_vccnz .LBB0_1
 ; GFX1030-NEXT:  ; %bb.2: ; %DummyReturnBlock
+; GFX1030-NEXT:    s_inst_prefetch 0x2
 ; GFX1030-NEXT:    s_endpgm
 ;
 ; GFX1100-LABEL: test_insert_extract:
 ; GFX1100:       ; %bb.0: ; %entry
 ; GFX1100-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1100-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1100-NEXT:    s_mov_b32 s2, 0
 ; GFX1100-NEXT:    s_mov_b32 s3, 0
 ; GFX1100-NEXT:    s_mov_b32 s4, 0
 ; GFX1100-NEXT:    s_mov_b32 s5, 0
-; GFX1100-NEXT:    s_mov_b32 s6, 0
-; GFX1100-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; GFX1100-NEXT:    s_set_inst_prefetch_distance 0x1
 ; GFX1100-NEXT:    .p2align 6
 ; GFX1100-NEXT:  .LBB0_1: ; %for.body
 ; GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-NEXT:    s_cmp_eq_u32 s1, 1
+; GFX1100-NEXT:    s_cselect_b32 s6, -1, 0
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; GFX1100-NEXT:    s_and_b32 s6, s6, exec_lo
+; GFX1100-NEXT:    s_cselect_b32 s6, s3, s2
+; GFX1100-NEXT:    s_cmp_eq_u32 s1, 2
 ; GFX1100-NEXT:    s_cselect_b32 s7, -1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1100-NEXT:    s_and_b32 s7, s7, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s7, s4, s3
-; GFX1100-NEXT:    s_cmp_eq_u32 s1, 2
-; GFX1100-NEXT:    s_cselect_b32 s8, -1, 0
-; GFX1100-NEXT:    s_and_b32 s8, s8, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s7, s5, s7
+; GFX1100-NEXT:    s_cselect_b32 s6, s4, s6
 ; GFX1100-NEXT:    s_cmp_eq_u32 s1, 3
-; GFX1100-NEXT:    s_cselect_b32 s8, -1, 0
+; GFX1100-NEXT:    s_cselect_b32 s7, -1, 0
 ; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_and_b32 s8, s8, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s7, s6, s7
-; GFX1100-NEXT:    s_or_b32 s7, s7, s0
-; GFX1100-NEXT:    s_cmp_eq_u32 s1, 1
-; GFX1100-NEXT:    s_cselect_b32 s8, -1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_and_b32 s9, s8, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s4, s7, s4
-; GFX1100-NEXT:    s_cmp_eq_u32 s1, 3
-; GFX1100-NEXT:    s_cselect_b32 s9, -1, 0
-; GFX1100-NEXT:    s_and_b32 s10, s9, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s6, s7, s6
-; GFX1100-NEXT:    s_cmp_eq_u32 s1, 2
-; GFX1100-NEXT:    s_cselect_b32 s10, -1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_and_b32 s11, s10, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s5, s7, s5
-; GFX1100-NEXT:    s_cmp_eq_u32 s1, 0
-; GFX1100-NEXT:    s_cselect_b32 s3, s7, s3
-; GFX1100-NEXT:    s_or_b32 s7, s10, s8
-; GFX1100-NEXT:    s_or_b32 s7, s9, s7
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-NEXT:    s_and_b32 s7, s7, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s2, 0, s2
+; GFX1100-NEXT:    s_cselect_b32 s6, s5, s6
+; GFX1100-NEXT:    s_or_b32 s6, s6, s0
+; GFX1100-NEXT:    s_cmp_eq_u32 s1, 1
+; GFX1100-NEXT:    s_cselect_b32 s7, -1, 0
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
+; GFX1100-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s7
+; GFX1100-NEXT:    s_and_b32 s7, s7, exec_lo
+; GFX1100-NEXT:    s_cselect_b32 s3, s6, s3
+; GFX1100-NEXT:    s_cmp_eq_u32 s1, 3
+; GFX1100-NEXT:    s_cselect_b32 s7, -1, 0
+; GFX1100-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s7
+; GFX1100-NEXT:    s_and_b32 s7, s7, exec_lo
+; GFX1100-NEXT:    s_cselect_b32 s5, s6, s5
+; GFX1100-NEXT:    s_cmp_eq_u32 s1, 2
+; GFX1100-NEXT:    s_cselect_b32 s7, -1, 0
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX1100-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s7
+; GFX1100-NEXT:    s_and_b32 s7, s7, exec_lo
+; GFX1100-NEXT:    s_cselect_b32 s4, s6, s4
+; GFX1100-NEXT:    s_cmp_eq_u32 s1, 0
+; GFX1100-NEXT:    v_or_b32_e32 v1, v3, v1
+; GFX1100-NEXT:    s_cselect_b32 s2, s6, s2
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1100-NEXT:    v_or_b32_e32 v1, v2, v1
+; GFX1100-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1100-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
+; GFX1100-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc_lo
+; GFX1100-NEXT:    s_mov_b32 vcc_lo, exec_lo
 ; GFX1100-NEXT:    s_cbranch_vccnz .LBB0_1
 ; GFX1100-NEXT:  ; %bb.2: ; %DummyReturnBlock
+; GFX1100-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX1100-NEXT:    s_endpgm
 entry:
   %init = insertelement <4 x i32> zeroinitializer, i32 0, i64 0

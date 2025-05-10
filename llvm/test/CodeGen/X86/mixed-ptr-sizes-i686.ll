@@ -359,8 +359,8 @@ define void @test_store_sptr32_trunc_i1(ptr addrspace(270) %s, i32 %i) {
 ; CHECK-LABEL: test_store_sptr32_trunc_i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    andl $1, %ecx
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    andb $1, %cl
 ; CHECK-NEXT:    movb %cl, (%eax)
 ; CHECK-NEXT:    retl
 ;
@@ -368,8 +368,8 @@ define void @test_store_sptr32_trunc_i1(ptr addrspace(270) %s, i32 %i) {
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-O0-NEXT:    andl $1, %ecx
 ; CHECK-O0-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-O0-NEXT:    andb $1, %cl
 ; CHECK-O0-NEXT:    movb %cl, (%eax)
 ; CHECK-O0-NEXT:    retl
 entry:

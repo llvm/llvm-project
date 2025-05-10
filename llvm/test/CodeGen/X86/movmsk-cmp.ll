@@ -3655,11 +3655,11 @@ define i1 @movmsk_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; SSE-NEXT:    shrl $15, %ecx
 ; SSE-NEXT:    movl %eax, %edx
 ; SSE-NEXT:    shrl $8, %edx
-; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    andb $1, %dl
 ; SSE-NEXT:    andl $8, %eax
 ; SSE-NEXT:    shrl $3, %eax
-; SSE-NEXT:    xorl %edx, %eax
-; SSE-NEXT:    andl %ecx, %eax
+; SSE-NEXT:    xorb %dl, %al
+; SSE-NEXT:    andb %cl, %al
 ; SSE-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE-NEXT:    retq
 ;
@@ -3671,11 +3671,11 @@ define i1 @movmsk_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; AVX1OR2-NEXT:    shrl $15, %ecx
 ; AVX1OR2-NEXT:    movl %eax, %edx
 ; AVX1OR2-NEXT:    shrl $8, %edx
-; AVX1OR2-NEXT:    andl $1, %edx
+; AVX1OR2-NEXT:    andb $1, %dl
 ; AVX1OR2-NEXT:    andl $8, %eax
 ; AVX1OR2-NEXT:    shrl $3, %eax
-; AVX1OR2-NEXT:    xorl %edx, %eax
-; AVX1OR2-NEXT:    andl %ecx, %eax
+; AVX1OR2-NEXT:    xorb %dl, %al
+; AVX1OR2-NEXT:    andb %cl, %al
 ; AVX1OR2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX1OR2-NEXT:    retq
 ;
@@ -3685,8 +3685,8 @@ define i1 @movmsk_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; KNL-NEXT:    vpextrb $15, %xmm0, %ecx
 ; KNL-NEXT:    vpextrb $8, %xmm0, %edx
 ; KNL-NEXT:    vpextrb $3, %xmm0, %eax
-; KNL-NEXT:    xorl %edx, %eax
-; KNL-NEXT:    andl %ecx, %eax
+; KNL-NEXT:    xorb %dl, %al
+; KNL-NEXT:    andb %cl, %al
 ; KNL-NEXT:    # kill: def $al killed $al killed $eax
 ; KNL-NEXT:    retq
 ;
@@ -4171,7 +4171,9 @@ define i1 @movmsk_v2i64_var(<2 x i64> %x, <2 x i64> %y, i32 %z) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm0, %xmm1
 ; SSE2-NEXT:    movmskpd %xmm1, %eax
-; SSE2-NEXT:    xorl $3, %eax
+; SSE2-NEXT:    xorb $3, %al
+; Is this being performed by a different transofmrations that's using isNarrowingProfitable()?
+; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    btl %edi, %eax
 ; SSE2-NEXT:    setb %al
 ; SSE2-NEXT:    retq
@@ -4180,7 +4182,8 @@ define i1 @movmsk_v2i64_var(<2 x i64> %x, <2 x i64> %y, i32 %z) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pcmpeqq %xmm1, %xmm0
 ; SSE41-NEXT:    movmskpd %xmm0, %eax
-; SSE41-NEXT:    xorl $3, %eax
+; SSE41-NEXT:    xorb $3, %al
+; SSE41-NEXT:    movzbl %al, %eax
 ; SSE41-NEXT:    btl %edi, %eax
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
@@ -4189,7 +4192,8 @@ define i1 @movmsk_v2i64_var(<2 x i64> %x, <2 x i64> %y, i32 %z) {
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
 ; AVX1OR2-NEXT:    vmovmskpd %xmm0, %eax
-; AVX1OR2-NEXT:    xorl $3, %eax
+; AVX1OR2-NEXT:    xorb $3, %al
+; AVX1OR2-NEXT:    movzbl %al, %eax
 ; AVX1OR2-NEXT:    btl %edi, %eax
 ; AVX1OR2-NEXT:    setb %al
 ; AVX1OR2-NEXT:    retq

@@ -172,9 +172,10 @@ define i1 @snan_f16(half %x) nounwind {
 ; GFX7SELDAG-NEXT:    s_movk_i32 s5, 0x7c00
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v0
-; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e64 s[4:5], s5, v0
-; GFX7SELDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, s5, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: snan_f16:
@@ -462,15 +463,16 @@ define i1 @posnormal_f16(half %x) nounwind {
 ; GFX7SELDAG:       ; %bb.0:
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7SELDAG-NEXT:    s_movk_i32 s6, 0x7800
+; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7800
 ; GFX7SELDAG-NEXT:    v_bfe_i32 v1, v0, 0, 16
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
+; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v1
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX7SELDAG-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e64 s[4:5], -1, v1
-; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e32 vcc, s6, v0
-; GFX7SELDAG-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e32 vcc, s4, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: posnormal_f16:
@@ -547,15 +549,14 @@ define i1 @negnormal_f16(half %x) nounwind {
 ; GFX7SELDAG:       ; %bb.0:
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7SELDAG-NEXT:    s_movk_i32 s6, 0x7800
-; GFX7SELDAG-NEXT:    v_bfe_i32 v1, v0, 0, 16
+; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7800
+; GFX7SELDAG-NEXT:    v_lshrrev_b32_e32 v1, 15, v0
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e64 s[4:5], 0, v1
-; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e32 vcc, s6, v0
-; GFX7SELDAG-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e32 vcc, s4, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: negnormal_f16:
@@ -706,14 +707,13 @@ define i1 @negsubnormal_f16(half %x) nounwind {
 ; GFX7SELDAG:       ; %bb.0:
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7SELDAG-NEXT:    v_bfe_i32 v1, v0, 0, 16
-; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7SELDAG-NEXT:    v_add_i32_e64 v0, s[4:5], -1, v0
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x3ff
-; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v1
-; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e64 s[4:5], s4, v0
-; GFX7SELDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_lshrrev_b32_e32 v1, 15, v0
+; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
+; GFX7SELDAG-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
+; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e32 vcc, s4, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: negsubnormal_f16:
@@ -1002,12 +1002,11 @@ define i1 @negfinite_f16(half %x) nounwind {
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c00
-; GFX7SELDAG-NEXT:    v_bfe_i32 v1, v0, 0, 16
+; GFX7SELDAG-NEXT:    v_lshrrev_b32_e32 v1, 15, v0
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v1
-; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e64 s[4:5], s4, v0
-; GFX7SELDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: negfinite_f16:
@@ -2269,15 +2268,14 @@ define i1 @not_is_plus_normal_f16(half %x) {
 ; GFX7SELDAG:       ; %bb.0:
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7SELDAG-NEXT:    s_movk_i32 s6, 0x77ff
-; GFX7SELDAG-NEXT:    v_bfe_i32 v1, v0, 0, 16
+; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x77ff
+; GFX7SELDAG-NEXT:    v_lshrrev_b32_e32 v1, 15, v0
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e64 s[4:5], 0, v1
-; GFX7SELDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s6, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: not_is_plus_normal_f16:
@@ -2363,15 +2361,16 @@ define i1 @not_is_neg_normal_f16(half %x) {
 ; GFX7SELDAG:       ; %bb.0:
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7SELDAG-NEXT:    s_movk_i32 s6, 0x77ff
+; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x77ff
 ; GFX7SELDAG-NEXT:    v_bfe_i32 v1, v0, 0, 16
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
+; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v1
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX7SELDAG-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e64 s[4:5], -1, v1
-; GFX7SELDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s6, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: not_is_neg_normal_f16:
@@ -2851,18 +2850,19 @@ define i1 @not_ispositive_f16(half %x) {
 ; GFX7SELDAG:       ; %bb.0:
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX7SELDAG-NEXT:    s_movk_i32 s6, 0x7c00
-; GFX7SELDAG-NEXT:    s_mov_b32 s7, 0xfc00
-; GFX7SELDAG-NEXT:    v_bfe_i32 v1, v0, 0, 16
+; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c00
+; GFX7SELDAG-NEXT:    s_mov_b32 s5, 0xfc00
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v2, 0x7fff, v0
-; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v1
-; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e64 s[4:5], s6, v2
-; GFX7SELDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s7, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, s6, v2
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v2
+; GFX7SELDAG-NEXT:    v_lshrrev_b32_e32 v1, 15, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s5, v0
+; GFX7SELDAG-NEXT:    v_and_b32_e32 v1, v3, v1
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v2
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: not_ispositive_f16:
@@ -2941,15 +2941,15 @@ define i1 @isnegative_f16(half %x) {
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c00
-; GFX7SELDAG-NEXT:    s_mov_b32 s6, 0xfc00
-; GFX7SELDAG-NEXT:    v_bfe_i32 v1, v0, 0, 16
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v2, 0x7fff, v0
-; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v1
-; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e64 s[4:5], s4, v2
-; GFX7SELDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v2
+; GFX7SELDAG-NEXT:    s_mov_b32 s4, 0xfc00
+; GFX7SELDAG-NEXT:    v_lshrrev_b32_e32 v1, 15, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v0
+; GFX7SELDAG-NEXT:    v_and_b32_e32 v1, v2, v1
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: isnegative_f16:
@@ -3026,12 +3026,13 @@ define i1 @not_isnegative_f16(half %x) {
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c01
-; GFX7SELDAG-NEXT:    s_movk_i32 s5, 0x7c00
 ; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e32 vcc, s4, v0
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e64 s[4:5], s5, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c00
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: not_isnegative_f16:
@@ -3110,9 +3111,10 @@ define i1 @iszero_or_nan_f16(half %x) {
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c00
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v0
-; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: iszero_or_nan_f16:
@@ -3189,9 +3191,10 @@ define i1 @iszero_or_nan_f_daz(half %x) #0 {
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c00
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v0
-; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: iszero_or_nan_f_daz:
@@ -3268,9 +3271,10 @@ define i1 @iszero_or_nan_f_maybe_daz(half %x) #1 {
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c00
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v0
-; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: iszero_or_nan_f_maybe_daz:
@@ -3347,9 +3351,10 @@ define i1 @not_iszero_or_nan_f16(half %x) {
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c01
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v0
-; GFX7SELDAG-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v0
-; GFX7SELDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: not_iszero_or_nan_f16:
@@ -3435,9 +3440,10 @@ define i1 @not_iszero_or_nan_f_daz(half %x) #0 {
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c01
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v0
-; GFX7SELDAG-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v0
-; GFX7SELDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: not_iszero_or_nan_f_daz:
@@ -3523,9 +3529,10 @@ define i1 @not_iszero_or_nan_f_maybe_daz(half %x) #1 {
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c01
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v0
-; GFX7SELDAG-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v0
-; GFX7SELDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: not_iszero_or_nan_f_maybe_daz:
@@ -3611,9 +3618,10 @@ define i1 @iszero_or_qnan_f16(half %x) {
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7dff
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v0
-; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: iszero_or_qnan_f16:
@@ -3691,11 +3699,13 @@ define i1 @iszero_or_snan_f16(half %x) {
 ; GFX7SELDAG-NEXT:    s_movk_i32 s5, 0x7c00
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v0
-; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e64 s[4:5], s5, v0
-; GFX7SELDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, s5, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    v_and_b32_e32 v1, v2, v1
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: iszero_or_snan_f16:
@@ -3772,23 +3782,27 @@ define i1 @not_iszero_or_qnan_f16(half %x) {
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7e00
-; GFX7SELDAG-NEXT:    s_movk_i32 s8, 0x7c00
+; GFX7SELDAG-NEXT:    s_movk_i32 s5, 0x7c00
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v0
-; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e64 s[4:5], s8, v0
-; GFX7SELDAG-NEXT:    s_and_b64 s[6:7], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_add_i32_e64 v1, s[4:5], -1, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, s5, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s5, v0
+; GFX7SELDAG-NEXT:    v_and_b32_e32 v1, v2, v1
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_add_i32_e32 v3, vcc, -1, v0
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x3ff
-; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s8, v0
-; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e64 s[4:5], s4, v1
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
+; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e32 vcc, s4, v3
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
 ; GFX7SELDAG-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], s[6:7]
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7SELDAG-NEXT:    s_movk_i32 s6, 0x7800
-; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e32 vcc, s6, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7800
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v2, v3, v2
+; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e32 vcc, s4, v0
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v1, v2, v1
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: not_iszero_or_qnan_f16:
@@ -3876,21 +3890,24 @@ define i1 @not_iszero_or_snan_f16(half %x) {
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c00
-; GFX7SELDAG-NEXT:    s_movk_i32 s6, 0x7dff
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v0
-; GFX7SELDAG-NEXT:    v_add_i32_e64 v1, s[4:5], -1, v0
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_add_i32_e32 v2, vcc, -1, v0
 ; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x3ff
-; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e64 s[4:5], s4, v1
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, s6, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
+; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e32 vcc, s4, v2
+; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7dff
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v0
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v1, v2, v1
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX7SELDAG-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7SELDAG-NEXT:    s_movk_i32 s6, 0x7800
-; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e32 vcc, s6, v0
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7800
+; GFX7SELDAG-NEXT:    v_cmp_gt_u32_e32 vcc, s4, v0
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7SELDAG-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7GLISEL-LABEL: not_iszero_or_snan_f16:

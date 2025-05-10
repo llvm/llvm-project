@@ -41,7 +41,7 @@ define <2 x half> @v_test_cvt_v2f64_v2f16(<2 x double> %src) {
 ; GFX950-SDAG-NEXT:    v_and_b32_e32 v6, 7, v4
 ; GFX950-SDAG-NEXT:    v_cmp_lt_i32_e32 vcc, 5, v6
 ; GFX950-SDAG-NEXT:    v_lshrrev_b32_e32 v4, 2, v4
-; GFX950-SDAG-NEXT:    s_mov_b32 s3, 0x8000
+; GFX950-SDAG-NEXT:    s_movk_i32 s3, 0x8000
 ; GFX950-SDAG-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
 ; GFX950-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v6
 ; GFX950-SDAG-NEXT:    s_nop 1
@@ -59,7 +59,7 @@ define <2 x half> @v_test_cvt_v2f64_v2f16(<2 x double> %src) {
 ; GFX950-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v5
 ; GFX950-SDAG-NEXT:    s_nop 1
 ; GFX950-SDAG-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
-; GFX950-SDAG-NEXT:    v_and_or_b32 v0, v1, s3, v0
+; GFX950-SDAG-NEXT:    v_bitop3_b16 v0, v1, v0, s3 bitop3:0xec
 ; GFX950-SDAG-NEXT:    v_and_or_b32 v1, v3, s0, v2
 ; GFX950-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
 ; GFX950-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 8, v3
@@ -100,7 +100,7 @@ define <2 x half> @v_test_cvt_v2f64_v2f16(<2 x double> %src) {
 ; GFX950-SDAG-NEXT:    s_nop 1
 ; GFX950-SDAG-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
 ; GFX950-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
-; GFX950-SDAG-NEXT:    v_and_or_b32 v1, v2, s3, v1
+; GFX950-SDAG-NEXT:    v_bitop3_b16 v1, v2, v1, s3 bitop3:0xec
 ; GFX950-SDAG-NEXT:    v_perm_b32 v0, v1, v0, s0
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;

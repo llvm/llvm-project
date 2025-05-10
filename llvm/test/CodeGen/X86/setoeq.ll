@@ -9,7 +9,7 @@ define zeroext i8 @t(double %x) nounwind readnone {
 ; CHECK-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; CHECK-NEXT:    cmpeqsd %xmm0, %xmm1
 ; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retl
 entry:
@@ -28,7 +28,7 @@ define zeroext i8 @u(double %x) nounwind readnone {
 ; CHECK-NEXT:    cvtdq2pd %xmm1, %xmm1
 ; CHECK-NEXT:    cmpneqsd %xmm0, %xmm1
 ; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retl
 entry:

@@ -4,7 +4,7 @@
 define void @bool_eq(i1 zeroext %a, i1 zeroext %b, ptr nocapture %c) nounwind {
 ; CHECK-LABEL: bool_eq:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %esi, %edi
+; CHECK-NEXT:    cmpb %sil, %dil
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq

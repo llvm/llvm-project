@@ -6,18 +6,17 @@
 define i8 @out8(i8 %x, i8 %y, i8 %mask) {
 ; CHECK-NOBMI-LABEL: out8:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    movl %edx, %eax
-; CHECK-NOBMI-NEXT:    andl %edx, %edi
-; CHECK-NOBMI-NEXT:    notb %al
-; CHECK-NOBMI-NEXT:    andb %sil, %al
-; CHECK-NOBMI-NEXT:    orb %dil, %al
+; CHECK-NOBMI-NEXT:    movl %edi, %eax
+; CHECK-NOBMI-NEXT:    xorb %sil, %al
+; CHECK-NOBMI-NEXT:    andb %dl, %al
+; CHECK-NOBMI-NEXT:    xorb %sil, %al
 ; CHECK-NOBMI-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: out8:
 ; CHECK-BMI:       # %bb.0:
 ; CHECK-BMI-NEXT:    movl %edx, %eax
-; CHECK-BMI-NEXT:    andl %edx, %edi
+; CHECK-BMI-NEXT:    andb %al, %dil
 ; CHECK-BMI-NEXT:    notb %al
 ; CHECK-BMI-NEXT:    andb %sil, %al
 ; CHECK-BMI-NEXT:    orb %dil, %al
@@ -106,17 +105,18 @@ define i8 @in8(i8 %x, i8 %y, i8 %mask) {
 ; CHECK-NOBMI-LABEL: in8:
 ; CHECK-NOBMI:       # %bb.0:
 ; CHECK-NOBMI-NEXT:    movl %edi, %eax
-; CHECK-NOBMI-NEXT:    xorl %esi, %eax
-; CHECK-NOBMI-NEXT:    andl %edx, %eax
-; CHECK-NOBMI-NEXT:    xorl %esi, %eax
+; CHECK-NOBMI-NEXT:    xorb %sil, %al
+; CHECK-NOBMI-NEXT:    andb %dl, %al
+; CHECK-NOBMI-NEXT:    xorb %sil, %al
 ; CHECK-NOBMI-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: in8:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    andnl %esi, %edx, %eax
-; CHECK-BMI-NEXT:    andl %edx, %edi
-; CHECK-BMI-NEXT:    orl %edi, %eax
+; CHECK-BMI-NEXT:    movl %edi, %eax
+; CHECK-BMI-NEXT:    xorb %sil, %al
+; CHECK-BMI-NEXT:    andb %dl, %al
+; CHECK-BMI-NEXT:    xorb %sil, %al
 ; CHECK-BMI-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-BMI-NEXT:    retq
   %n0 = xor i8 %x, %y

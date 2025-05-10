@@ -380,7 +380,7 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    notl %eax
+; AVX2-NEXT:    notb %al
 ; AVX2-NEXT:    vpextrb $8, %xmm1, %edx
 ; AVX2-NEXT:    vpextrb $0, %xmm2, %ecx
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax

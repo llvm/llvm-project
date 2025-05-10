@@ -13,8 +13,8 @@ define i8 @add_and_xor(i8 %x, i8 %y) {
 ;
 ; X64-LABEL: add_and_xor:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    orl %esi, %eax
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    orb %dil, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %xor = xor i8 %x, -1
@@ -79,8 +79,8 @@ define i8 @add_and_xor_commuted1(i8 %x, i8 %y) {
 ;
 ; X64-LABEL: add_and_xor_commuted1:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    orl %esi, %eax
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    orb %dil, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %xor = xor i8 %x, -1
@@ -98,8 +98,8 @@ define i8 @add_and_xor_commuted2(i8 %x, i8 %y) {
 ;
 ; X64-LABEL: add_and_xor_commuted2:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    orl %esi, %eax
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    orb %dil, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %xor = xor i8 %x, -1
@@ -117,8 +117,8 @@ define i8 @add_and_xor_commuted3(i8 %x, i8 %y) {
 ;
 ; X64-LABEL: add_and_xor_commuted3:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    orl %esi, %eax
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    orb %dil, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %xor = xor i8 %x, -1
