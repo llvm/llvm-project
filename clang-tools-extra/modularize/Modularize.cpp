@@ -360,8 +360,6 @@ getModularizeArgumentsAdjuster(DependencyMap &Dependencies) {
     if (int Count = FileDependents.size()) {
       for (int Index = 0; Index < Count; ++Index) {
         NewArgs.push_back("-include");
-        std::string File(std::string("\"") + FileDependents[Index] +
-                         std::string("\""));
         NewArgs.push_back(FileDependents[Index]);
       }
     }
