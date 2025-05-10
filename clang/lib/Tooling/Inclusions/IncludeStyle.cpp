@@ -35,5 +35,11 @@ void ScalarEnumerationTraits<IncludeStyle::MainIncludeCharDiscriminator>::
   IO.enumCase(Value, "Any", IncludeStyle::MICD_Any);
 }
 
+void ScalarEnumerationTraits<IncludeStyle::IncludeSortKeyDiscriminator>::
+    enumeration(IO &IO, IncludeStyle::IncludeSortKeyDiscriminator &Value) {
+  IO.enumCase(Value, "Path", IncludeStyle::ISK_Path);
+  IO.enumCase(Value, "Stem", IncludeStyle::ISK_Stem);
+}
+
 } // namespace yaml
 } // namespace llvm
