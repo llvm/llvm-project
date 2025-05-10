@@ -148,7 +148,7 @@ define amdgpu_kernel void @kernel_lds() {
 
 define internal i16 @mutual_recursion_0(i16 %arg) {
 ; CHECK-LABEL: define internal i16 @mutual_recursion_0(
-; CHECK-SAME: i16 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i16 inreg [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
 ; CHECK-NEXT:    [[RECURSIVE_KERNEL_LDS:%.*]] = getelementptr inbounds [3 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[RECURSIVE_KERNEL_LDS]], align 4
@@ -168,7 +168,7 @@ define internal i16 @mutual_recursion_0(i16 %arg) {
 
 define internal void @mutual_recursion_1(i16 %arg) {
 ; CHECK-LABEL: define internal void @mutual_recursion_1(
-; CHECK-SAME: i16 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i16 inreg [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    call void @mutual_recursion_0(i16 [[ARG]])
 ; CHECK-NEXT:    ret void
 ;
