@@ -1,16 +1,8 @@
 #include "TargetInfo.h"
 #include "ABIInfo.h"
-#include "CIRGenFunctionInfo.h"
-#include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
-
-static bool testIfIsVoidTy(QualType ty) {
-  const auto *builtinTy = ty->getAs<BuiltinType>();
-  return builtinTy && builtinTy->getKind() == BuiltinType::Void;
-}
-
 namespace {
 
 class X8664ABIInfo : public ABIInfo {

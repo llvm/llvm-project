@@ -233,6 +233,19 @@ int f8(int *p) {
 // OGCG:   %[[P2:.*]] = load ptr, ptr %[[P_PTR]], align 8
 // OGCG:   %[[STAR_P:.*]] = load i32, ptr %[[P2]], align 4
 
+
+void f9() {}
+
+//      CIR: cir.func @f9()
+// CIR-NEXT:   cir.return
+
+//      LLVM: define void @f9()
+// LLVM-NEXT:   ret void
+
+//      OGCG: define{{.*}} void @f9()
+// OGCG-NEXT: entry:
+// OGCG-NEXT:   ret void
+
 typedef unsigned long size_type;
 typedef unsigned long _Tp;
 
