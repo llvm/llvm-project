@@ -70,8 +70,9 @@ getExplicitExtents(fir::FortranVariableOpInterface var,
   return {};
 }
 
-// Return explicit lower bounds. For pointers and allocatables, this will not
-// read the lower bounds and instead return an empty vector.
+// Return explicit lower bounds from a shape result.
+// Only fir.shape, fir.shift and fir.shape_shift are currently
+// supported as shape.
 static llvm::SmallVector<mlir::Value>
 getExplicitLboundsFromShape(mlir::Value shape) {
   llvm::SmallVector<mlir::Value> result;
@@ -89,6 +90,9 @@ getExplicitLboundsFromShape(mlir::Value shape) {
   }
   return result;
 }
+
+// Return explicit lower bounds. For pointers and allocatables, this will not
+// read the lower bounds and instead return an empty vector.
 static llvm::SmallVector<mlir::Value>
 getExplicitLbounds(fir::FortranVariableOpInterface var) {
   if (mlir::Value shape = var.getShape())
@@ -753,9 +757,30 @@ std::pair<mlir::Value, mlir::Value> hlfir::genVariableFirBaseShapeAndParams(
   }
   if (entity.isScalar())
     return {fir::getBase(exv), mlir::Value{}};
-  if (auto variableInterface = entity.getIfVariableInterface())
-    return {fir::getBase(exv),
-            asEmboxShape(loc, builder, exv, variableInterface.getShape())};
+
+  // Contiguous variables that are represented with a box
+  // may require the shape to be extracted from the box (i.e. evx),
+  // because they itself may not have shape specified.
+  // This happens during late propagationg of contiguous
+  // attribute, e.g.:
+  // %9:2 = hlfir.declare %6
+  //     {fortran_attrs = #fir.var_attrs<contiguous>} :
+  //     (!fir.box<!fir.array<?x?x...>>) ->
+  //     (!fir.box<!fir.array<?x?x...>>, !fir.box<!fir.array<?x?x...>>)
+  // The extended value is an ArrayBoxValue with base being
+  // the raw address of the array.
+  if (auto variableInterface = entity.getIfVariableInterface()) {
+    mlir::Value shape = variableInterface.getShape();
+    if (mlir::isa<fir::BaseBoxType>(fir::getBase(exv).getType()) ||
+        !mlir::isa<fir::BaseBoxType>(entity.getType()) ||
+        // Still use the variable's shape if it is present.
+        // If it only specifies a shift, then we have to create
+        // a shape from the exv.
+        (shape && (shape.getDefiningOp<fir::ShapeShiftOp>() ||
+                   shape.getDefiningOp<fir::ShapeOp>())))
+      return {fir::getBase(exv),
+              asEmboxShape(loc, builder, exv, variableInterface.getShape())};
+  }
   return {fir::getBase(exv), builder.createShape(loc, exv)};
 }
 
