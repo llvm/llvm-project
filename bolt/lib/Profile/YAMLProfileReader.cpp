@@ -181,7 +181,7 @@ bool YAMLProfileReader::parseFunctionProfile(
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks)
     for (const yaml::bolt::SuccessorInfo &YamlSI : YamlBB.Successors)
       FuncRawBranchCount += YamlSI.Count;
-  BF.setRawBranchCount(FuncRawBranchCount);
+  BF.setRawSampleCount(FuncRawBranchCount);
 
   if (BF.empty())
     return true;
@@ -221,7 +221,7 @@ bool YAMLProfileReader::parseFunctionProfile(
 
     // Basic samples profile (without LBR) does not have branches information
     // and needs a special processing.
-    if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE) {
+    if (YamlBP.Header.Flags & BinaryFunction::PF_IP) {
       if (!YamlBB.EventCount) {
         BB.setExecutionCount(0);
         continue;
@@ -338,7 +338,7 @@ bool YAMLProfileReader::parseFunctionProfile(
     if (BB.getExecutionCount() == BinaryBasicBlock::COUNT_NO_PROFILE)
       BB.setExecutionCount(0);
 
-  if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE)
+  if (YamlBP.Header.Flags & BinaryFunction::PF_IP)
     BF.setExecutionCount(FunctionExecutionCount);
 
   ProfileMatched &= !MismatchedBlocks && !MismatchedCalls && !MismatchedEdges;

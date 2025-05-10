@@ -458,7 +458,7 @@ void EstimateEdgeCounts::runOnFunction(BinaryFunction &BF) {
 Error EstimateEdgeCounts::runOnFunctions(BinaryContext &BC) {
   if (llvm::none_of(llvm::make_second_range(BC.getBinaryFunctions()),
                     [](const BinaryFunction &BF) {
-                      return BF.getProfileFlags() == BinaryFunction::PF_SAMPLE;
+                      return BF.getProfileFlags() == BinaryFunction::PF_IP;
                     }))
     return Error::success();
 
@@ -466,7 +466,7 @@ Error EstimateEdgeCounts::runOnFunctions(BinaryContext &BC) {
     runOnFunction(BF);
   };
   ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
-    return BF.getProfileFlags() != BinaryFunction::PF_SAMPLE;
+    return BF.getProfileFlags() != BinaryFunction::PF_IP;
   };
 
   ParallelUtilities::runOnEachFunction(

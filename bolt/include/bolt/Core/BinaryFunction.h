@@ -143,7 +143,7 @@ public:
   enum {
     PF_NONE = 0,     /// No profile.
     PF_LBR = 1,      /// Profile is based on last branch records.
-    PF_SAMPLE = 2,   /// Non-LBR sample-based profile.
+    PF_IP = 2,       /// Non-LBR sample-based profile.
     PF_MEMEVENT = 4, /// Profile has mem events.
   };
 
@@ -387,7 +387,7 @@ private:
   float ProfileMatchRatio{0.0f};
 
   /// Raw branch count for this function in the profile.
-  uint64_t RawBranchCount{0};
+  uint64_t RawSampleCount{0};
 
   /// Dynamically executed function bytes, used for density computation.
   uint64_t SampleCountInBytes{0};
@@ -1882,11 +1882,11 @@ public:
 
   /// Return the raw profile information about the number of branch
   /// executions corresponding to this function.
-  uint64_t getRawBranchCount() const { return RawBranchCount; }
+  uint64_t getRawSampleCount() const { return RawSampleCount; }
 
   /// Set the profile data about the number of branch executions corresponding
   /// to this function.
-  void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
+  void setRawSampleCount(uint64_t Count) { RawSampleCount = Count; }
 
   /// Return the number of dynamically executed bytes, from raw perf data.
   uint64_t getSampleCountInBytes() const { return SampleCountInBytes; }

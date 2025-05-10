@@ -124,8 +124,8 @@ void mergeProfileHeaders(BinaryProfileHeader &MergedHeader,
   if (!MergedHeader.Flags)
     MergedHeader.Flags = Header.Flags;
 
-  constexpr auto Mask = llvm::bolt::BinaryFunction::PF_LBR |
-                        llvm::bolt::BinaryFunction::PF_SAMPLE;
+  constexpr auto Mask =
+      llvm::bolt::BinaryFunction::PF_LBR | llvm::bolt::BinaryFunction::PF_IP;
   if ((MergedHeader.Flags & Mask) != (Header.Flags & Mask)) {
     errs() << "ERROR: cannot merge LBR profile with non-LBR profile\n";
     exit(1);
