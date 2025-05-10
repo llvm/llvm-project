@@ -5,8 +5,11 @@ define void @csrot_(ptr %0) {
 ; CHECK-LABEL: csrot_:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],mem[1,2,3]
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    xorps %xmm0, %xmm1
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
+; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; CHECK-NEXT:    movlps %xmm0, (%rax)
 ; CHECK-NEXT:    retq
 1:

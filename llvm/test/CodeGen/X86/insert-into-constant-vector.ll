@@ -145,9 +145,9 @@ define <2 x i64> @elt0_v2i64(i64 %x) {
 ;
 ; X64-SSE2-LABEL: elt0_v2i64:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    movq %rdi, %xmm1
-; X64-SSE2-NEXT:    movapd {{.*#+}} xmm0 = [u,1]
-; X64-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X64-SSE2-NEXT:    movq %rdi, %xmm0
+; X64-SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X64-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE4-LABEL: elt0_v2i64:
@@ -218,28 +218,26 @@ define <4 x float> @elt1_v4f32(float %x) {
 define <2 x double> @elt1_v2f64(double %x) {
 ; X86-SSE-LABEL: elt1_v2f64:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [4.2E+1,u]
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; X86-SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: elt1_v2f64:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm1 = [4.2E+1,u]
+; X64-SSE-NEXT:    movsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
 ; X64-SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-SSE-NEXT:    movaps %xmm1, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X86-AVX-LABEL: elt1_v2f64:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = [4.2E+1,4.2E+1]
-; X86-AVX-NEXT:    # xmm0 = mem[0,0]
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; X86-AVX-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-AVX-LABEL: elt1_v2f64:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [4.2E+1,4.2E+1]
-; X64-AVX-NEXT:    # xmm1 = mem[0,0]
+; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
 ; X64-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; X64-AVX-NEXT:    retq
    %ins = insertelement <2 x double> <double 42.0, double 1.0>, double %x, i32 1
@@ -384,7 +382,7 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ; X64-SSE2-LABEL: elt5_v8i64:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movq %rdi, %xmm0
-; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [4,u]
+; X64-SSE2-NEXT:    movq {{.*#+}} xmm2 = [4,0]
 ; X64-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
 ; X64-SSE2-NEXT:    movaps {{.*#+}} xmm0 = [42,1]
 ; X64-SSE2-NEXT:    movaps {{.*#+}} xmm1 = [2,3]
@@ -457,7 +455,7 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 define <8 x double> @elt1_v8f64(double %x) {
 ; X86-SSE-LABEL: elt1_v8f64:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [4.2E+1,u]
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; X86-SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X86-SSE-NEXT:    movaps {{.*#+}} xmm1 = [2.0E+0,3.0E+0]
 ; X86-SSE-NEXT:    movaps {{.*#+}} xmm2 = [4.0E+0,5.0E+0]
@@ -466,7 +464,7 @@ define <8 x double> @elt1_v8f64(double %x) {
 ;
 ; X64-SSE-LABEL: elt1_v8f64:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm4 = [4.2E+1,u]
+; X64-SSE-NEXT:    movsd {{.*#+}} xmm4 = [4.2E+1,0.0E+0]
 ; X64-SSE-NEXT:    movlhps {{.*#+}} xmm4 = xmm4[0],xmm0[0]
 ; X64-SSE-NEXT:    movaps {{.*#+}} xmm1 = [2.0E+0,3.0E+0]
 ; X64-SSE-NEXT:    movaps {{.*#+}} xmm2 = [4.0E+0,5.0E+0]
@@ -476,47 +474,49 @@ define <8 x double> @elt1_v8f64(double %x) {
 ;
 ; X86-AVX1-LABEL: elt1_v8f64:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [4.2E+1,u,2.0E+0,3.0E+0]
-; X86-AVX1-NEXT:    vmovhps {{.*#+}} xmm1 = xmm0[0,1],mem[0,1]
-; X86-AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; X86-AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; X86-AVX1-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; X86-AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],mem[4,5,6,7]
 ; X86-AVX1-NEXT:    vmovaps {{.*#+}} ymm1 = [4.0E+0,5.0E+0,6.0E+0,7.0E+0]
 ; X86-AVX1-NEXT:    retl
 ;
 ; X64-AVX1-LABEL: elt1_v8f64:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovaps {{.*#+}} ymm1 = [4.2E+1,u,2.0E+0,3.0E+0]
+; X64-AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
 ; X64-AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; X64-AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; X64-AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],mem[4,5,6,7]
 ; X64-AVX1-NEXT:    vmovaps {{.*#+}} ymm1 = [4.0E+0,5.0E+0,6.0E+0,7.0E+0]
 ; X64-AVX1-NEXT:    retq
 ;
 ; X86-AVX2-LABEL: elt1_v8f64:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vmovaps {{.*#+}} ymm0 = [4.2E+1,u,2.0E+0,3.0E+0]
-; X86-AVX2-NEXT:    vmovhps {{.*#+}} xmm1 = xmm0[0,1],mem[0,1]
-; X86-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; X86-AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; X86-AVX2-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; X86-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],mem[4,5,6,7]
 ; X86-AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = [4.0E+0,5.0E+0,6.0E+0,7.0E+0]
 ; X86-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: elt1_v8f64:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = [4.2E+1,u,2.0E+0,3.0E+0]
+; X64-AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
 ; X64-AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],mem[4,5,6,7]
 ; X64-AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = [4.0E+0,5.0E+0,6.0E+0,7.0E+0]
 ; X64-AVX2-NEXT:    retq
 ;
 ; X86-AVX512F-LABEL: elt1_v8f64:
 ; X86-AVX512F:       # %bb.0:
-; X86-AVX512F-NEXT:    vmovaps {{.*#+}} zmm0 = [4.2E+1,u,2.0E+0,3.0E+0,4.0E+0,5.0E+0,6.0E+0,7.0E+0]
-; X86-AVX512F-NEXT:    vmovhps {{.*#+}} xmm1 = xmm0[0,1],mem[0,1]
-; X86-AVX512F-NEXT:    vinsertf32x4 $0, %xmm1, %zmm0, %zmm0
+; X86-AVX512F-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; X86-AVX512F-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; X86-AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [4.2E+1,u,2.0E+0,3.0E+0,4.0E+0,5.0E+0,6.0E+0,7.0E+0]
+; X86-AVX512F-NEXT:    vinsertf32x4 $0, %xmm0, %zmm1, %zmm0
 ; X86-AVX512F-NEXT:    retl
 ;
 ; X64-AVX512F-LABEL: elt1_v8f64:
 ; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [4.2E+1,u,2.0E+0,3.0E+0,4.0E+0,5.0E+0,6.0E+0,7.0E+0]
+; X64-AVX512F-NEXT:    vmovsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
 ; X64-AVX512F-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64-AVX512F-NEXT:    vmovaps {{.*#+}} zmm1 = [4.2E+1,u,2.0E+0,3.0E+0,4.0E+0,5.0E+0,6.0E+0,7.0E+0]
 ; X64-AVX512F-NEXT:    vinsertf32x4 $0, %xmm0, %zmm1, %zmm0
 ; X64-AVX512F-NEXT:    retq
    %ins = insertelement <8 x double> <double 42.0, double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0, double 7.0>, double %x, i32 1

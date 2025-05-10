@@ -54,8 +54,9 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ;
 ; XOP-LABEL: test_bitreverse_i8:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovd %edi, %xmm0
-; XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0, %xmm0
+; XOP-NEXT:    vpinsrb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vmovd %edi, %xmm1
+; XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    vmovd %xmm0, %eax
 ; XOP-NEXT:    # kill: def $al killed $al killed $eax
 ; XOP-NEXT:    retq

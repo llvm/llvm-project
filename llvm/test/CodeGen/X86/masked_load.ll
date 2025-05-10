@@ -6791,7 +6791,8 @@ define <8 x double> @mload_constmask_v8f64(ptr %addr, <8 x double> %dst) {
 ; AVX1OR2-LABEL: mload_constmask_v8f64:
 ; AVX1OR2:       ## %bb.0:
 ; AVX1OR2-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4,5],ymm0[6,7]
-; AVX1OR2-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],mem[6,7]
+; AVX1OR2-NEXT:    vbroadcastsd 56(%rdi), %ymm2
+; AVX1OR2-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm2[6,7]
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512F-LABEL: mload_constmask_v8f64:

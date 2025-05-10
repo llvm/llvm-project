@@ -4701,13 +4701,13 @@ define void @mstore_constmask_allones_split(<16 x i64> %trigger, ptr %addr, <16 
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm2
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm3
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm4
+; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm5
 ; SSE2-NEXT:    movq %xmm5, (%rdi)
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm5, 8(%rdi)
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = mem[2,3,2,3]
-; SSE2-NEXT:    movq %xmm5, 24(%rdi)
-; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; SSE2-NEXT:    movq %rcx, 24(%rdi)
 ; SSE2-NEXT:    movq %rax, 32(%rdi)
 ; SSE2-NEXT:    movq %xmm4, 48(%rdi)
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,3,2,3]
@@ -4733,11 +4733,10 @@ define void @mstore_constmask_allones_split(<16 x i64> %trigger, ptr %addr, <16 
 ; SSE4-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
 ; SSE4-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3
 ; SSE4-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm4
-; SSE4-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm5
-; SSE4-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm6
-; SSE4-NEXT:    movups %xmm6, (%rdi)
-; SSE4-NEXT:    palignr {{.*#+}} xmm5 = mem[8,9,10,11,12,13,14,15],xmm5[0,1,2,3,4,5,6,7]
-; SSE4-NEXT:    movdqu %xmm5, 24(%rdi)
+; SSE4-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm5
+; SSE4-NEXT:    movups %xmm5, (%rdi)
+; SSE4-NEXT:    movups {{[0-9]+}}(%rsp), %xmm5
+; SSE4-NEXT:    movups %xmm5, 24(%rdi)
 ; SSE4-NEXT:    movups %xmm4, 48(%rdi)
 ; SSE4-NEXT:    movups %xmm3, 64(%rdi)
 ; SSE4-NEXT:    movups %xmm2, 80(%rdi)

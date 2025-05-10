@@ -761,19 +761,31 @@ define void @vselect_allzeros_LHS_multiple_use_setcc(<4 x i32> %x, <4 x i32> %y,
 ; This test case previously crashed after r363802, r363850, and r363856 due
 ; any_extend_vector_inreg not being handled by the X86 backend.
 define i64 @vselect_any_extend_vector_inreg_crash(ptr %x) {
-; SSE-LABEL: vselect_any_extend_vector_inreg_crash:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    andl $1, %eax
-; SSE-NEXT:    shll $15, %eax
-; SSE-NEXT:    retq
+; SSE2-LABEL: vselect_any_extend_vector_inreg_crash:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movd {{.*#+}} xmm1 = [49,0,0,0]
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    andl $1, %eax
+; SSE2-NEXT:    shll $15, %eax
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: vselect_any_extend_vector_inreg_crash:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE41-NEXT:    pinsrb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE41-NEXT:    movd %xmm1, %eax
+; SSE41-NEXT:    andl $1, %eax
+; SSE41-NEXT:    shll $15, %eax
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: vselect_any_extend_vector_inreg_crash:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    andl $1, %eax
 ; AVX1-NEXT:    shll $15, %eax

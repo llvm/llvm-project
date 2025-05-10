@@ -77,19 +77,15 @@ entry:
 ; FIXME: This could be 'movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]'.
 
 define <2 x double> @test_negative_zero_2(<2 x double> %A) {
-; SSE2-LABEL: test_negative_zero_2:
-; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[0],mem[1]
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: test_negative_zero_2:
-; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
-; SSE41-NEXT:    retq
+; SSE-LABEL: test_negative_zero_2:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_negative_zero_2:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX-NEXT:    retq
 entry:
   %0 = extractelement <2 x double> %A, i32 0

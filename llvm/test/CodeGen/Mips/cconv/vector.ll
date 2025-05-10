@@ -5513,28 +5513,28 @@ define float @mixed_i8(<2 x float> %a, i8 %b, <2 x float> %c) {
 ; MIPS32R5-NEXT:    jr $ra
 ; MIPS32R5-NEXT:    nop
 ;
-; MIPS64R5-LABEL: mixed_i8:
-; MIPS64R5:       # %bb.0: # %entry
-; MIPS64R5-NEXT:    daddiu $sp, $sp, -48
-; MIPS64R5-NEXT:    .cfi_def_cfa_offset 48
-; MIPS64R5-NEXT:    sll $1, $5, 0
-; MIPS64R5-NEXT:    andi $1, $1, 255
-; MIPS64R5-NEXT:    mtc1 $1, $f0
-; MIPS64R5-NEXT:    cvt.s.w $f0, $f0
-; MIPS64R5-NEXT:    swc1 $f0, 36($sp)
-; MIPS64R5-NEXT:    swc1 $f0, 32($sp)
-; MIPS64R5-NEXT:    sd $4, 0($sp)
-; MIPS64R5-NEXT:    ld.w $w0, 0($sp)
-; MIPS64R5-NEXT:    ld.w $w1, 32($sp)
-; MIPS64R5-NEXT:    fadd.w $w0, $w1, $w0
-; MIPS64R5-NEXT:    sd $6, 16($sp)
-; MIPS64R5-NEXT:    ld.w $w1, 16($sp)
-; MIPS64R5-NEXT:    fadd.w $w0, $w0, $w1
-; MIPS64R5-NEXT:    splati.w $w1, $w0[1]
-; MIPS64R5-NEXT:    add.s $f0, $f0, $f1
-; MIPS64R5-NEXT:    daddiu $sp, $sp, 48
-; MIPS64R5-NEXT:    jr $ra
-; MIPS64R5-NEXT:    nop
+; MIPS64R5EB-LABEL: mixed_i8:
+; MIPS64R5EB:       # %bb.0: # %entry
+; MIPS64R5EB-NEXT:    daddiu $sp, $sp, -48
+; MIPS64R5EB-NEXT:    .cfi_def_cfa_offset 48
+; MIPS64R5EB-NEXT:    sll $1, $5, 0
+; MIPS64R5EB-NEXT:    andi $1, $1, 255
+; MIPS64R5EB-NEXT:    mtc1 $1, $f0
+; MIPS64R5EB-NEXT:    cvt.s.w $f0, $f0
+; MIPS64R5EB-NEXT:    swc1 $f0, 36($sp)
+; MIPS64R5EB-NEXT:    swc1 $f0, 32($sp)
+; MIPS64R5EB-NEXT:    insert.d $w0[0], $4
+; MIPS64R5EB-NEXT:    shf.w $w0, $w0, 177
+; MIPS64R5EB-NEXT:    ld.w $w1, 32($sp)
+; MIPS64R5EB-NEXT:    fadd.w $w0, $w1, $w0
+; MIPS64R5EB-NEXT:    insert.d $w1[0], $6
+; MIPS64R5EB-NEXT:    shf.w $w1, $w1, 177
+; MIPS64R5EB-NEXT:    fadd.w $w0, $w0, $w1
+; MIPS64R5EB-NEXT:    splati.w $w1, $w0[1]
+; MIPS64R5EB-NEXT:    add.s $f0, $f0, $f1
+; MIPS64R5EB-NEXT:    daddiu $sp, $sp, 48
+; MIPS64R5EB-NEXT:    jr $ra
+; MIPS64R5EB-NEXT:    nop
 ;
 ; MIPS64EL-LABEL: mixed_i8:
 ; MIPS64EL:       # %bb.0: # %entry
@@ -5559,6 +5559,27 @@ define float @mixed_i8(<2 x float> %a, i8 %b, <2 x float> %c) {
 ; MIPS64EL-NEXT:    add.s $f0, $f1, $f0
 ; MIPS64EL-NEXT:    jr $ra
 ; MIPS64EL-NEXT:    nop
+;
+; MIPS64R5EL-LABEL: mixed_i8:
+; MIPS64R5EL:       # %bb.0: # %entry
+; MIPS64R5EL-NEXT:    daddiu $sp, $sp, -48
+; MIPS64R5EL-NEXT:    .cfi_def_cfa_offset 48
+; MIPS64R5EL-NEXT:    sll $1, $5, 0
+; MIPS64R5EL-NEXT:    andi $1, $1, 255
+; MIPS64R5EL-NEXT:    mtc1 $1, $f0
+; MIPS64R5EL-NEXT:    cvt.s.w $f0, $f0
+; MIPS64R5EL-NEXT:    swc1 $f0, 36($sp)
+; MIPS64R5EL-NEXT:    swc1 $f0, 32($sp)
+; MIPS64R5EL-NEXT:    insert.d $w0[0], $4
+; MIPS64R5EL-NEXT:    ld.w $w1, 32($sp)
+; MIPS64R5EL-NEXT:    fadd.w $w0, $w1, $w0
+; MIPS64R5EL-NEXT:    insert.d $w1[0], $6
+; MIPS64R5EL-NEXT:    fadd.w $w0, $w0, $w1
+; MIPS64R5EL-NEXT:    splati.w $w1, $w0[1]
+; MIPS64R5EL-NEXT:    add.s $f0, $f0, $f1
+; MIPS64R5EL-NEXT:    daddiu $sp, $sp, 48
+; MIPS64R5EL-NEXT:    jr $ra
+; MIPS64R5EL-NEXT:    nop
 entry:
   %0 = zext i8 %b to i32
   %1 = uitofp i32 %0 to float

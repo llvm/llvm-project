@@ -8,9 +8,10 @@
 define i32 @foo(ptr %descs, i32 %num, i32 %cw) local_unnamed_addr #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr d16, [r0, #32]
+; CHECK-NEXT:    add r0, r0, #32
+; CHECK-NEXT:    vld1.32 {d16[1]}, [r0:32]
 ; CHECK-NEXT:    vadd.i32 d16, d16, d16
-; CHECK-NEXT:    vmov.32 r0, d16[0]
+; CHECK-NEXT:    vmov.32 r0, d16[1]
 ; CHECK-NEXT:    bx lr
 entry:
   %wide.vec = load <16 x i32>, ptr %descs, align 4

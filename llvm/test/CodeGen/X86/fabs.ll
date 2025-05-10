@@ -21,7 +21,8 @@ define float @test1(float %X) {
 ;
 ; X64-LABEL: test1:
 ; X64:       # %bb.0:
-; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    andps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %Y = call float @fabsf(float %X) readnone
   ret float %Y

@@ -1260,7 +1260,8 @@ define fp128 @TestTruncCopysign(fp128 %x, i32 %n) nounwind {
 ; X64-SSE-NEXT:    pushq %rax
 ; X64-SSE-NEXT:    callq __trunctfdf2@PLT
 ; X64-SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-SSE-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-NEXT:    movsd {{.*#+}} xmm1 = [+Inf,0.0E+0]
+; X64-SSE-NEXT:    orps %xmm1, %xmm0
 ; X64-SSE-NEXT:    callq __extenddftf2@PLT
 ; X64-SSE-NEXT:    addq $8, %rsp
 ; X64-SSE-NEXT:  .LBB26_2: # %cleanup

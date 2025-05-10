@@ -317,24 +317,28 @@ define void @test16(ptr nocapture readonly %sums, i32 signext %delta, i32 signex
 ; P9BE-AIX32-LABEL: test16:
 ; P9BE-AIX32:       # %bb.0: # %entry
 ; P9BE-AIX32-NEXT:    slwi 4, 4, 1
-; P9BE-AIX32-NEXT:    li 6, 0
 ; P9BE-AIX32-NEXT:    lhzux 4, 3, 4
 ; P9BE-AIX32-NEXT:    lhz 3, 16(3)
-; P9BE-AIX32-NEXT:    sth 6, -64(1)
-; P9BE-AIX32-NEXT:    lxv 2, -64(1)
 ; P9BE-AIX32-NEXT:    sth 4, -48(1)
-; P9BE-AIX32-NEXT:    lxv 4, -48(1)
 ; P9BE-AIX32-NEXT:    sth 3, -32(1)
+; P9BE-AIX32-NEXT:    li 3, 0
+; P9BE-AIX32-NEXT:    sth 3, -64(1)
+; P9BE-AIX32-NEXT:    lwz 3, -32(1)
+; P9BE-AIX32-NEXT:    lxv 3, -64(1)
+; P9BE-AIX32-NEXT:    mtfprwz 0, 3
+; P9BE-AIX32-NEXT:    lwz 3, -48(1)
+; P9BE-AIX32-NEXT:    xxinsertw 2, 0, 0
+; P9BE-AIX32-NEXT:    mtfprwz 0, 3
 ; P9BE-AIX32-NEXT:    lwz 3, L..C3(2) # %const.0
-; P9BE-AIX32-NEXT:    lxv 3, -32(1)
-; P9BE-AIX32-NEXT:    vmrghh 4, 2, 4
+; P9BE-AIX32-NEXT:    vmrghh 2, 3, 2
+; P9BE-AIX32-NEXT:    xxinsertw 4, 0, 0
+; P9BE-AIX32-NEXT:    vmrghh 4, 3, 4
+; P9BE-AIX32-NEXT:    vsplth 3, 3, 0
 ; P9BE-AIX32-NEXT:    lxv 0, 0(3)
-; P9BE-AIX32-NEXT:    vmrghh 3, 2, 3
-; P9BE-AIX32-NEXT:    vsplth 2, 2, 0
-; P9BE-AIX32-NEXT:    xxmrghw 2, 2, 4
-; P9BE-AIX32-NEXT:    xxperm 3, 2, 0
-; P9BE-AIX32-NEXT:    xxspltw 2, 3, 1
-; P9BE-AIX32-NEXT:    vadduwm 2, 3, 2
+; P9BE-AIX32-NEXT:    xxmrghw 3, 3, 4
+; P9BE-AIX32-NEXT:    xxperm 2, 3, 0
+; P9BE-AIX32-NEXT:    xxspltw 3, 2, 1
+; P9BE-AIX32-NEXT:    vadduwm 2, 2, 3
 ; P9BE-AIX32-NEXT:    stxv 2, -16(1)
 ; P9BE-AIX32-NEXT:    lwz 3, -16(1)
 ; P9BE-AIX32-NEXT:    cmpw 3, 5

@@ -1105,16 +1105,11 @@ define <2 x i64> @testSplati64_1(ptr nocapture readonly %ptr) #0 {
 ;
 ; CHECK-NOVSX-LABEL: testSplati64_1:
 ; CHECK-NOVSX:       # %bb.0: # %entry
-; CHECK-NOVSX-NEXT:    ld r4, 8(r3)
-; CHECK-NOVSX-NEXT:    std r4, -8(r1)
-; CHECK-NOVSX-NEXT:    ld r3, 0(r3)
+; CHECK-NOVSX-NEXT:    ld r3, 8(r3)
+; CHECK-NOVSX-NEXT:    std r3, -8(r1)
 ; CHECK-NOVSX-NEXT:    std r3, -16(r1)
 ; CHECK-NOVSX-NEXT:    addi r3, r1, -16
 ; CHECK-NOVSX-NEXT:    lvx v2, 0, r3
-; CHECK-NOVSX-NEXT:    addis r3, r2, .LCPI21_0@toc@ha
-; CHECK-NOVSX-NEXT:    addi r3, r3, .LCPI21_0@toc@l
-; CHECK-NOVSX-NEXT:    lvx v3, 0, r3
-; CHECK-NOVSX-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-NOVSX-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: testSplati64_1:

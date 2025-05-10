@@ -71,18 +71,12 @@ define half @extractelement_v8f16(<8 x half> %op1) {
 define half @extractelement_v16f16(ptr %a) {
 ; CHECK-LABEL: extractelement_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    mov z0.h, z0.h[7]
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    ldr h0, [x0, #30]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extractelement_v16f16:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    ldr q0, [x0, #16]
-; NONEON-NOSVE-NEXT:    str q0, [sp, #-16]!
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
-; NONEON-NOSVE-NEXT:    ldr h0, [sp, #14]
-; NONEON-NOSVE-NEXT:    add sp, sp, #16
+; NONEON-NOSVE-NEXT:    ldr h0, [x0, #30]
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
   %r = extractelement <16 x half> %op1, i64 15
@@ -131,18 +125,12 @@ define float @extractelement_v4f32(<4 x float> %op1) {
 define float @extractelement_v8f32(ptr %a) {
 ; CHECK-LABEL: extractelement_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    mov z0.s, z0.s[3]
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    ldr s0, [x0, #28]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extractelement_v8f32:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    ldr q0, [x0, #16]
-; NONEON-NOSVE-NEXT:    str q0, [sp, #-16]!
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #12]
-; NONEON-NOSVE-NEXT:    add sp, sp, #16
+; NONEON-NOSVE-NEXT:    ldr s0, [x0, #28]
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
   %r = extractelement <8 x float> %op1, i64 7
@@ -182,18 +170,12 @@ define double @extractelement_v2f64(<2 x double> %op1) {
 define double @extractelement_v4f64(ptr %a) {
 ; CHECK-LABEL: extractelement_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    mov z0.d, z0.d[1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ldr d0, [x0, #24]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extractelement_v4f64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    ldr q0, [x0, #16]
-; NONEON-NOSVE-NEXT:    str q0, [sp, #-16]!
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    add sp, sp, #16
+; NONEON-NOSVE-NEXT:    ldr d0, [x0, #24]
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x double>, ptr %a
   %r = extractelement <4 x double> %op1, i64 3

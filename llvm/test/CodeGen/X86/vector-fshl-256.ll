@@ -999,17 +999,19 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; AVX1-LABEL: splatvar_funnnel_v16i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [15,0]
-; AVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
-; AVX1-NEXT:    vpsrlw $1, %xmm5, %xmm5
-; AVX1-NEXT:    vpsrlw %xmm4, %xmm5, %xmm5
-; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpsllw %xmm2, %xmm3, %xmm3
-; AVX1-NEXT:    vpor %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vpsllw %xmm4, %xmm5, %xmm5
+; AVX1-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm6
+; AVX1-NEXT:    vpand %xmm6, %xmm2, %xmm2
+; AVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpsrlw $1, %xmm3, %xmm3
+; AVX1-NEXT:    vpsrlw %xmm2, %xmm3, %xmm3
+; AVX1-NEXT:    vpor %xmm3, %xmm5, %xmm3
+; AVX1-NEXT:    vpsllw %xmm4, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrlw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
@@ -1087,17 +1089,19 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i
 ; XOPAVX1-LABEL: splatvar_funnnel_v16i16:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [15,0]
-; XOPAVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm4
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
-; XOPAVX1-NEXT:    vpsrlw $1, %xmm5, %xmm5
-; XOPAVX1-NEXT:    vpsrlw %xmm4, %xmm5, %xmm5
-; XOPAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; XOPAVX1-NEXT:    vpsllw %xmm2, %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpor %xmm5, %xmm3, %xmm3
+; XOPAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; XOPAVX1-NEXT:    vpsllw %xmm4, %xmm5, %xmm5
+; XOPAVX1-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm6
+; XOPAVX1-NEXT:    vpand %xmm6, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; XOPAVX1-NEXT:    vpsrlw $1, %xmm3, %xmm3
+; XOPAVX1-NEXT:    vpsrlw %xmm2, %xmm3, %xmm3
+; XOPAVX1-NEXT:    vpor %xmm3, %xmm5, %xmm3
+; XOPAVX1-NEXT:    vpsllw %xmm4, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpsrlw %xmm4, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpsrlw %xmm2, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; XOPAVX1-NEXT:    retq
