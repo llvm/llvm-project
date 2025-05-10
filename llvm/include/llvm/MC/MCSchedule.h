@@ -123,7 +123,7 @@ struct MCSchedClassDesc {
   static const unsigned short VariantNumMicroOps = InvalidNumMicroOps - 1;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  const char* Name;
+  unsigned NameOffset;
 #endif
   uint16_t NumMicroOps : 13;
   uint16_t BeginGroup : 1;

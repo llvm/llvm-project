@@ -69,7 +69,7 @@ protected: // Can only create subclasses...
                       const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
                       const MCReadAdvanceEntry *RA, const InstrStage *IS,
-                      const unsigned *OC, const unsigned *FP);
+                      const unsigned *OC, const unsigned *FP, StringTable NT);
 
 public:
   // AntiDepBreakMode - Type of anti-dependence breaking that should

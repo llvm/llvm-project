@@ -19,9 +19,10 @@ TargetSubtargetInfo::TargetSubtargetInfo(
     ArrayRef<StringRef> PN, ArrayRef<SubtargetFeatureKV> PF,
     ArrayRef<SubtargetSubTypeKV> PD, const MCWriteProcResEntry *WPR,
     const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
-    const InstrStage *IS, const unsigned *OC, const unsigned *FP)
-    : MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD, WPR, WL, RA, IS, OC,
-                      FP) {}
+    const InstrStage *IS, const unsigned *OC, const unsigned *FP,
+    StringTable NT)
+    : MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD, WPR, WL, RA, IS, OC, FP,
+                      NT) {}
 
 TargetSubtargetInfo::~TargetSubtargetInfo() = default;
 
