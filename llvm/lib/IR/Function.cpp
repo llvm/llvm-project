@@ -495,6 +495,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
       NumArgs(Ty->getNumParams()), IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
   assert(FunctionType::isValidReturnType(getReturnType()) &&
          "invalid return type");
+  BasicBlocks.setListOwner(this);
   setGlobalObjectSubClassData(0);
 
   // We only need a symbol table for a function if the context keeps value names

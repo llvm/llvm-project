@@ -75,6 +75,10 @@ Module::Module(StringRef MID, LLVMContext &C)
       ModuleID(std::string(MID)), SourceFileName(std::string(MID)),
       IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
   Context.addModule(this);
+  GlobalList.setListOwner(this);
+  FunctionList.setListOwner(this);
+  AliasList.setListOwner(this);
+  IFuncList.setListOwner(this);
 }
 
 Module &Module::operator=(Module &&Other) {
