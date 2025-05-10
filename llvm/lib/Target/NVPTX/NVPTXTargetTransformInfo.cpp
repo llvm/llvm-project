@@ -591,6 +591,13 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   return nullptr;
 }
 
+unsigned NVPTXTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
+  // 256 bit loads/stores are currently only supported for global address space
+  if (ST->has256BitVectorLoadStore(AddrSpace))
+    return 256;
+  return 128;
+}
+
 unsigned NVPTXTTIImpl::getAssumedAddrSpace(const Value *V) const {
   if (isa<AllocaInst>(V))
     return ADDRESS_SPACE_LOCAL;
