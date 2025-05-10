@@ -28,6 +28,10 @@ namespace mlir {
 /// with attribute with value `0`.
 bool isZeroIndex(OpFoldResult v);
 
+/// Return true if `v` is an IntegerAttr with value `1` of a ConstantIndexOp
+/// with attribute with value `1`.
+bool isOneIndex(OpFoldResult v);
+
 /// Represents a range (offset, size, and stride) where each element of the
 /// triple may be dynamic or static.
 struct Range {

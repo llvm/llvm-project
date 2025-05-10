@@ -141,7 +141,7 @@ struct LinearizeVectorExtractStridedSlice final
     ArrayAttr offsets = extractOp.getOffsets();
     ArrayAttr sizes = extractOp.getSizes();
     ArrayAttr strides = extractOp.getStrides();
-    if (!isConstantIntValue(strides[0], 1))
+    if (!isOneIndex(strides[0]))
       return rewriter.notifyMatchFailure(
           extractOp, "Strided slice with stride != 1 is not supported.");
     Value srcVector = adaptor.getVector();
