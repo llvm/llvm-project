@@ -115,48 +115,6 @@ public:
 };
 } // anonymous namespace
 
-static void RegisterRequestCallbacks(DAP &dap) {
-  dap.RegisterRequest<AttachRequestHandler>();
-  dap.RegisterRequest<BreakpointLocationsRequestHandler>();
-  dap.RegisterRequest<CancelRequestHandler>();
-  dap.RegisterRequest<CompletionsRequestHandler>();
-  dap.RegisterRequest<ConfigurationDoneRequestHandler>();
-  dap.RegisterRequest<ContinueRequestHandler>();
-  dap.RegisterRequest<DataBreakpointInfoRequestHandler>();
-  dap.RegisterRequest<DisassembleRequestHandler>();
-  dap.RegisterRequest<DisconnectRequestHandler>();
-  dap.RegisterRequest<EvaluateRequestHandler>();
-  dap.RegisterRequest<ExceptionInfoRequestHandler>();
-  dap.RegisterRequest<InitializeRequestHandler>();
-  dap.RegisterRequest<LaunchRequestHandler>();
-  dap.RegisterRequest<LocationsRequestHandler>();
-  dap.RegisterRequest<NextRequestHandler>();
-  dap.RegisterRequest<PauseRequestHandler>();
-  dap.RegisterRequest<ReadMemoryRequestHandler>();
-  dap.RegisterRequest<RestartRequestHandler>();
-  dap.RegisterRequest<ScopesRequestHandler>();
-  dap.RegisterRequest<SetBreakpointsRequestHandler>();
-  dap.RegisterRequest<SetDataBreakpointsRequestHandler>();
-  dap.RegisterRequest<SetExceptionBreakpointsRequestHandler>();
-  dap.RegisterRequest<SetFunctionBreakpointsRequestHandler>();
-  dap.RegisterRequest<SetInstructionBreakpointsRequestHandler>();
-  dap.RegisterRequest<SetVariableRequestHandler>();
-  dap.RegisterRequest<SourceRequestHandler>();
-  dap.RegisterRequest<StackTraceRequestHandler>();
-  dap.RegisterRequest<StepInRequestHandler>();
-  dap.RegisterRequest<StepInTargetsRequestHandler>();
-  dap.RegisterRequest<StepOutRequestHandler>();
-  dap.RegisterRequest<ThreadsRequestHandler>();
-  dap.RegisterRequest<VariablesRequestHandler>();
-
-  // Custom requests
-  dap.RegisterRequest<CompileUnitsRequestHandler>();
-  dap.RegisterRequest<ModulesRequestHandler>();
-
-  // Testing requests
-  dap.RegisterRequest<TestGetTargetBreakpointsRequestHandler>();
-}
-
 static void PrintHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " options";
   table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB DAP", false);
@@ -341,8 +299,6 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                                     "Failed to configure stdout redirect: ");
         return;
       }
-
-      RegisterRequestCallbacks(dap);
 
       {
         std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
@@ -596,8 +552,6 @@ int main(int argc, char *argv[]) {
                                 "Failed to configure stdout redirect: ");
     return EXIT_FAILURE;
   }
-
-  RegisterRequestCallbacks(dap);
 
   // used only by TestVSCode_redirection_to_console.py
   if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
