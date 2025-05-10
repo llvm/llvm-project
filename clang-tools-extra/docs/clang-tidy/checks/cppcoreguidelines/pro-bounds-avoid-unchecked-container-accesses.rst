@@ -41,7 +41,7 @@ Options
 
 .. option:: FixMode
 
-    Determines what fixes are suggested. Either `None` (default), `at` (use 
+    Determines what fixes are suggested. Either `none` (default), `at` (use 
     ``a.at(index)`` if a fitting function exists) or `function` (use a 
     function ``f(a, index)``).
 
