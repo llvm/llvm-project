@@ -3537,6 +3537,9 @@ private:
                                              DeclarationName &Name,
                                              AccessSpecifier AS = AS_none);
 
+  /// Parses 'omp begin declare variant' directive.
+  bool ParseOpenMPDeclareBeginVariantDirective(SourceLocation Loc);
+
   /// Tries to parse cast part of OpenMP array shaping operation:
   /// '[' expression ']' { '[' expression ']' } ')'.
   bool tryParseOpenMPArrayShapingCastPart();
