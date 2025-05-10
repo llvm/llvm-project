@@ -1264,8 +1264,8 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   else {
     // The case when there is no scavenged register needs special handling.
 
-    // Pick s11 because it doesn't make a difference.
-    TmpGPR = RISCV::X27;
+    // Pick s11(or s1 for rve) because it doesn't make a difference.
+    TmpGPR = STI.hasStdExtE() ? RISCV::X9 : RISCV::X27;
 
     int FrameIndex = RVFI->getBranchRelaxationScratchFrameIndex();
     if (FrameIndex == -1)
