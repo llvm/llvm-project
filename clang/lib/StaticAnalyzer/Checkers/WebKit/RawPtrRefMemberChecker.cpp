@@ -85,21 +85,31 @@ public:
     if (shouldSkipDecl(RD))
       return;
 
-    for (auto *Member : RD->fields()) {
-      auto QT = Member->getType();
-      const Type *MemberType = QT.getTypePtrOrNull();
-      if (!MemberType)
-        continue;
+    for (auto *Member : RD->fields())
+      visitMember(Member, RD);
+  }
 
+  void visitMember(const FieldDecl *Member, const RecordDecl *RD) const {
+    auto QT = Member->getType();
+    const Type *MemberType = QT.getTypePtrOrNull();
+
+    while (MemberType) {
       auto IsUnsafePtr = isUnsafePtr(QT);
-      if (!IsUnsafePtr || !*IsUnsafePtr)
-        continue;
-
-      if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl())
-        reportBug(Member, MemberType, MemberCXXRD, RD);
-      else if (auto *ObjCDecl = getObjCDecl(MemberType))
-        reportBug(Member, MemberType, ObjCDecl, RD);
+      if (IsUnsafePtr && *IsUnsafePtr)
+        break;
+      if (!MemberType->isPointerType())
+        return;
+      QT = MemberType->getPointeeType();
+      MemberType = QT.getTypePtrOrNull();
     }
+
+    if (!MemberType)
+      return;
+
+    if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl())
+      reportBug(Member, MemberType, MemberCXXRD, RD);
+    else if (auto *ObjCDecl = getObjCDecl(MemberType))
+      reportBug(Member, MemberType, ObjCDecl, RD);
   }
 
   ObjCInterfaceDecl *getObjCDecl(const Type *TypePtr) const {
@@ -191,8 +201,8 @@ public:
       return true;
 
     const auto Kind = RD->getTagKind();
-    // FIMXE: Should we check union members too?
-    if (Kind != TagTypeKind::Struct && Kind != TagTypeKind::Class)
+    if (Kind != TagTypeKind::Struct && Kind != TagTypeKind::Class &&
+        Kind != TagTypeKind::Union)
       return true;
 
     // Ignore CXXRecords that come from system headers.
@@ -229,7 +239,10 @@ public:
     printQuotedName(Os, Member);
     Os << " in ";
     printQuotedQualifiedName(Os, ClassCXXRD);
-    Os << " is a ";
+    if (Member->getType().getTypePtrOrNull() == MemberType)
+      Os << " is a ";
+    else
+      Os << " contains a ";
     if (printPointer(Os, MemberType) == PrintDeclKind::Pointer) {
       auto Typedef = MemberType->getAs<TypedefType>();
       assert(Typedef);
