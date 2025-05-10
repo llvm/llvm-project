@@ -9,7 +9,6 @@
 
 #ifndef _LIBCPP___ALGORITHM_FOR_EACH_H
 #define _LIBCPP___ALGORITHM_FOR_EACH_H
-
 #include <__algorithm/for_each_segment.h>
 #include <__config>
 #include <__iterator/segmented_iterator.h>
