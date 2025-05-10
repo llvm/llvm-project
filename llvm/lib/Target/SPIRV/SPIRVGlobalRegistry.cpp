@@ -1530,6 +1530,371 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeDeviceEvent(
   return NewMI;
 }
 
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeVmeImageINTEL(
+    MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_avc(SPIRV::SpecialTypeKind::STK_AvcVmeImage);
+
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::Groups);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::SubgroupAvcMotionEstimationINTEL);
+  }
+
+  const MachineInstr *NewMI =
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypeVmeImageINTEL)
+            .addDef(createTypeVReg(MIRBuilder));
+      });
+
+  add(Key, NewMI);
+  return NewMI;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeAvcMcePayloadINTEL(
+    MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_avc(SPIRV::SpecialTypeKind::STK_AvcMcePayload);
+
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::Groups);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::SubgroupAvcMotionEstimationINTEL);
+  }
+  const MachineInstr *NewMI =
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypeAvcMcePayloadINTEL)
+            .addDef(createTypeVReg(MIRBuilder));
+      });
+  add(Key, NewMI);
+  return NewMI;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeAvcImePayloadINTEL(
+    MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_avc(SPIRV::SpecialTypeKind::STK_AvcImePayload);
+
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::Groups);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::SubgroupAvcMotionEstimationINTEL);
+  }
+  const MachineInstr *NewMI =
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypeAvcImePayloadINTEL)
+            .addDef(createTypeVReg(MIRBuilder));
+      });
+  add(Key, NewMI);
+  return NewMI;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeAvcRefPayloadINTEL(
+    MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_avc(SPIRV::SpecialTypeKind::STK_AvcRefPayload);
+
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::Groups);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::SubgroupAvcMotionEstimationINTEL);
+  }
+  const MachineInstr *NewMI =
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypeAvcRefPayloadINTEL)
+            .addDef(createTypeVReg(MIRBuilder));
+      });
+  add(Key, NewMI);
+  return NewMI;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeAvcSicPayloadINTEL(
+    MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_avc(SPIRV::SpecialTypeKind::STK_AvcSicPayload);
+
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::Groups);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::SubgroupAvcMotionEstimationINTEL);
+  }
+  const MachineInstr *NewMI =
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypeAvcSicPayloadINTEL)
+            .addDef(createTypeVReg(MIRBuilder));
+      });
+  add(Key, NewMI);
+  return NewMI;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeAvcMceResultINTEL(
+    MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_avc(SPIRV::SpecialTypeKind::STK_AvcMceResult);
+
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::Groups);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::SubgroupAvcMotionEstimationINTEL);
+  }
+  const MachineInstr *NewMI =
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypeAvcMceResultINTEL)
+            .addDef(createTypeVReg(MIRBuilder));
+      });
+  add(Key, NewMI);
+  return NewMI;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeAvcImeResultINTEL(
+    MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_avc(SPIRV::SpecialTypeKind::STK_AvcImeResult);
+
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::Groups);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::SubgroupAvcMotionEstimationINTEL);
+  }
+  const MachineInstr *NewMI =
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypeAvcImeResultINTEL)
+            .addDef(createTypeVReg(MIRBuilder));
+      });
+  add(Key, NewMI);
+  return NewMI;
+}
+
+SPIRVType *
+SPIRVGlobalRegistry::getOrCreateOpTypeAvcImeResultSingleReferenceStreamoutINTEL(
+    MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_avc(
+      SPIRV::SpecialTypeKind::STK_AvcImeResultSingleReferenceStreamout);
+
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::Groups);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::SubgroupAvcMotionEstimationINTEL);
+  }
+  const MachineInstr *NewMI =
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder
+            .buildInstr(SPIRV::OpTypeAvcImeResultSingleReferenceStreamoutINTEL)
+            .addDef(createTypeVReg(MIRBuilder));
+      });
+  add(Key, NewMI);
+  return NewMI;
+}
+
+SPIRVType *
+SPIRVGlobalRegistry::getOrCreateOpTypeAvcImeResultDualReferenceStreamoutINTEL(
+    MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_avc(
+      SPIRV::SpecialTypeKind::STK_AvcImeResultDualReferenceStreamout);
+
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::Groups);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::SubgroupAvcMotionEstimationINTEL);
+  }
+  const MachineInstr *NewMI =
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder
+            .buildInstr(SPIRV::OpTypeAvcImeResultDualReferenceStreamoutINTEL)
+            .addDef(createTypeVReg(MIRBuilder));
+      });
+  add(Key, NewMI);
+  return NewMI;
+}
+
+SPIRVType *
+SPIRVGlobalRegistry::getOrCreateOpTypeAvcImeSingleReferenceStreaminINTEL(
+    MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_avc(
+      SPIRV::SpecialTypeKind::STK_AvcImeSingleReferenceStreamin);
+
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::Groups);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::SubgroupAvcMotionEstimationINTEL);
+  }
+  const MachineInstr *NewMI =
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder
+            .buildInstr(SPIRV::OpTypeAvcImeSingleReferenceStreaminINTEL)
+            .addDef(createTypeVReg(MIRBuilder));
+      });
+  add(Key, NewMI);
+  return NewMI;
+}
+
+SPIRVType *
+SPIRVGlobalRegistry::getOrCreateOpTypeAvcImeDualReferenceStreaminINTEL(
+    MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_avc(
+      SPIRV::SpecialTypeKind::STK_AvcImeDualReferenceStreamin);
+
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::Groups);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::SubgroupAvcMotionEstimationINTEL);
+  }
+  const MachineInstr *NewMI =
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder
+            .buildInstr(SPIRV::OpTypeAvcImeDualReferenceStreaminINTEL)
+            .addDef(createTypeVReg(MIRBuilder));
+      });
+  add(Key, NewMI);
+  return NewMI;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeAvcRefResultINTEL(
+    MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_avc(SPIRV::SpecialTypeKind::STK_AvcRefResult);
+
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::Groups);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::SubgroupAvcMotionEstimationINTEL);
+  }
+  const MachineInstr *NewMI =
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypeAvcRefResultINTEL)
+            .addDef(createTypeVReg(MIRBuilder));
+      });
+  add(Key, NewMI);
+  return NewMI;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeAvcSicResultINTEL(
+    MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_avc(SPIRV::SpecialTypeKind::STK_AvcSicResult);
+
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_device_side_avc_motion_estimation);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::Groups);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::SubgroupAvcMotionEstimationINTEL);
+  }
+  const MachineInstr *NewMI =
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypeAvcSicResultINTEL)
+            .addDef(createTypeVReg(MIRBuilder));
+      });
+  add(Key, NewMI);
+  return NewMI;
+}
+
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeSampledImage(
     SPIRVType *ImageType, MachineIRBuilder &MIRBuilder) {
   auto Key = SPIRV::irhandle_sampled_image(

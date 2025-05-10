@@ -104,6 +104,10 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
               SrcMI->setDesc(STI.getInstrInfo()->get(SPIRV::OpConstantNull));
               SrcMI->addOperand(MachineOperand::CreateReg(
                   GR->getSPIRVTypeID(ExtType), false));
+
+              // ensure OpConstantNull operation has a register class
+              MRI.setRegClass(SrcMI->getOperand(0).getReg(),
+                              &SPIRV::iIDRegClass);
             }
           }
         } else {
@@ -1074,7 +1078,6 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   insertSpirvDecorations(MF, GR, MIB);
   insertInlineAsm(MF, GR, ST, MIB);
   selectOpBitcasts(MF, GR, MIB);
-
   return true;
 }
 
