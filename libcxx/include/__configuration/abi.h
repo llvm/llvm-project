@@ -57,6 +57,8 @@
 // Use the smallest possible integer type to represent the index of the variant.
 // Previously libc++ used "unsigned int" exclusively.
 #  define _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
+// Allow to reuse tail padding after the index of the variant with [[no_unique_address]] attribute.
+#  define _LIBCPP_ABI_VARIANT_NO_UNIQUE_ADDRESS_OPTIMIZATION
 // Unstable attempt to provide a more optimized std::function
 #  define _LIBCPP_ABI_OPTIMIZED_FUNCTION
 // All the regex constants must be distinct and nonzero.
