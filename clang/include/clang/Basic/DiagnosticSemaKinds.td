@@ -11527,7 +11527,7 @@ def note_omp_collapse_ordered_expr : Note<
 def err_omp_negative_expression_in_clause : Error<
   "argument to '%0' clause must be a %select{non-negative|strictly positive}1 integer value">;
 def err_omp_large_expression_in_clause : Error<
-  "argument to '%0' clause cannot have more than 64 bits size">;
+  "argument to '%0' clause cannot have more than 64 bits">;
 def err_omp_not_integral : Error<
   "expression must have integral or unscoped enumeration "
   "type, not %0">;
