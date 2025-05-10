@@ -21,8 +21,8 @@
 #include <cassert>
 #include <concepts>
 
-#include "test_macros.h"
 #include "test_comparisons.h"
+#include "test_macros.h"
 
 #if TEST_STD_VER >= 26
 
