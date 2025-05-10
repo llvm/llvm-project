@@ -27,6 +27,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -48,6 +49,7 @@ STATISTIC(NumVecCmpBO, "Number of vector compare + binop formed");
 STATISTIC(NumShufOfBitcast, "Number of shuffles moved after bitcast");
 STATISTIC(NumScalarBO, "Number of scalar binops formed");
 STATISTIC(NumScalarCmp, "Number of scalar compares formed");
+STATISTIC(NumScalarIntrinsic, "Number of scalar intrinsic calls formed");
 
 static cl::opt<bool> DisableVectorCombine(
     "disable-vector-combine", cl::init(false), cl::Hidden,
@@ -1016,21 +1018,27 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   return true;
 }
 
-/// Match a vector binop or compare instruction with at least one inserted
-/// scalar operand and convert to scalar binop/cmp followed by insertelement.
+/// Match a vector binop, compare or binop-like intrinsic with at least one
+/// inserted scalar operand and convert to scalar binop/cmp/intrinsic followed
+/// by insertelement.
 bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
-  CmpPredicate Pred = CmpInst::BAD_ICMP_PREDICATE;
-  Value *Ins0, *Ins1;
-  if (!match(&I, m_BinOp(m_Value(Ins0), m_Value(Ins1))) &&
-      !match(&I, m_Cmp(Pred, m_Value(Ins0), m_Value(Ins1))))
+  // TODO: Allow unary operators
+  if (!isa<BinaryOperator, CmpInst, IntrinsicInst>(I))
     return false;
+
+  // TODO: Allow intrinsics with different argument types
+  // TODO: Allow intrinsics with scalar arguments
+  if (auto *II = dyn_cast<IntrinsicInst>(&I))
+    if (!isTriviallyVectorizable(II->getIntrinsicID()) ||
+        !all_of(II->args(),
+                [&II](Value *Arg) { return Arg->getType() == II->getType(); }))
+      return false;
 
   // Do not convert the vector condition of a vector select into a scalar
   // condition. That may cause problems for codegen because of differences in
   // boolean formats and register-file transfers.
   // TODO: Can we account for that in the cost model?
-  bool IsCmp = Pred != CmpInst::Predicate::BAD_ICMP_PREDICATE;
-  if (IsCmp)
+  if (isa<CmpInst>(I))
     for (User *U : I.users())
       if (match(U, m_Select(m_Specific(&I), m_Value(), m_Value())))
         return false;
@@ -1041,70 +1049,84 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
   // vec_op (inselt VecC0, V0, Index), VecC1
   // vec_op (inselt VecC0, V0, Index), (inselt VecC1, V1, Index)
   // TODO: Deal with mismatched index constants and variable indexes?
-  Constant *VecC0 = nullptr, *VecC1 = nullptr;
-  Value *V0 = nullptr, *V1 = nullptr;
-  uint64_t Index0 = 0, Index1 = 0;
-  if (!match(Ins0, m_InsertElt(m_Constant(VecC0), m_Value(V0),
-                               m_ConstantInt(Index0))) &&
-      !match(Ins0, m_Constant(VecC0)))
-    return false;
-  if (!match(Ins1, m_InsertElt(m_Constant(VecC1), m_Value(V1),
-                               m_ConstantInt(Index1))) &&
-      !match(Ins1, m_Constant(VecC1)))
+  SmallVector<Value *> VecCs, ScalarOps;
+  std::optional<uint64_t> Index;
+
+  auto Ops = isa<IntrinsicInst>(I) ? cast<IntrinsicInst>(I).args()
+                                   : I.operand_values();
+  for (Value *Op : Ops) {
+    Constant *VecC;
+    Value *V;
+    uint64_t InsIdx = 0;
+    VectorType *OpTy = cast<VectorType>(Op->getType());
+    if (match(Op, m_InsertElt(m_Constant(VecC), m_Value(V),
+                              m_ConstantInt(InsIdx)))) {
+      // Bail if any inserts are out of bounds.
+      if (OpTy->getElementCount().getKnownMinValue() <= InsIdx)
+        return false;
+      // All inserts must have the same index.
+      if (!Index)
+        Index = InsIdx;
+      else if (InsIdx != *Index)
+        return false;
+      VecCs.push_back(VecC);
+      ScalarOps.push_back(V);
+    } else if (match(Op, m_Constant(VecC))) {
+      VecCs.push_back(VecC);
+      ScalarOps.push_back(nullptr);
+    } else {
+      return false;
+    }
+  }
+
+  // Bail if all operands are constant.
+  if (!Index.has_value())
     return false;
 
-  bool IsConst0 = !V0;
-  bool IsConst1 = !V1;
-  if (IsConst0 && IsConst1)
-    return false;
-  if (!IsConst0 && !IsConst1 && Index0 != Index1)
-    return false;
-
-  auto *VecTy0 = cast<VectorType>(Ins0->getType());
-  auto *VecTy1 = cast<VectorType>(Ins1->getType());
-  if (VecTy0->getElementCount().getKnownMinValue() <= Index0 ||
-      VecTy1->getElementCount().getKnownMinValue() <= Index1)
-    return false;
-
-  // Bail for single insertion if it is a load.
-  // TODO: Handle this once getVectorInstrCost can cost for load/stores.
-  auto *I0 = dyn_cast_or_null<Instruction>(V0);
-  auto *I1 = dyn_cast_or_null<Instruction>(V1);
-  if ((IsConst0 && I1 && I1->mayReadFromMemory()) ||
-      (IsConst1 && I0 && I0->mayReadFromMemory()))
-    return false;
-
-  uint64_t Index = IsConst0 ? Index1 : Index0;
-  Type *ScalarTy = IsConst0 ? V1->getType() : V0->getType();
-  Type *VecTy = I.getType();
+  VectorType *VecTy = cast<VectorType>(I.getType());
+  Type *ScalarTy = VecTy->getScalarType();
   assert(VecTy->isVectorTy() &&
-         (IsConst0 || IsConst1 || V0->getType() == V1->getType()) &&
          (ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
           ScalarTy->isPointerTy()) &&
          "Unexpected types for insert element into binop or cmp");
 
   unsigned Opcode = I.getOpcode();
   InstructionCost ScalarOpCost, VectorOpCost;
-  if (IsCmp) {
+  if (isa<CmpInst>(I)) {
     CmpInst::Predicate Pred = cast<CmpInst>(I).getPredicate();
     ScalarOpCost = TTI.getCmpSelInstrCost(
         Opcode, ScalarTy, CmpInst::makeCmpResultType(ScalarTy), Pred, CostKind);
     VectorOpCost = TTI.getCmpSelInstrCost(
         Opcode, VecTy, CmpInst::makeCmpResultType(VecTy), Pred, CostKind);
-  } else {
+  } else if (isa<BinaryOperator>(I)) {
     ScalarOpCost = TTI.getArithmeticInstrCost(Opcode, ScalarTy, CostKind);
     VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy, CostKind);
+  } else {
+    auto *II = cast<IntrinsicInst>(&I);
+    IntrinsicCostAttributes ScalarICA(
+        II->getIntrinsicID(), ScalarTy,
+        SmallVector<Type *>(II->arg_size(), ScalarTy));
+    ScalarOpCost = TTI.getIntrinsicInstrCost(ScalarICA, CostKind);
+    IntrinsicCostAttributes VectorICA(
+        II->getIntrinsicID(), VecTy,
+        SmallVector<Type *>(II->arg_size(), VecTy));
+    VectorOpCost = TTI.getIntrinsicInstrCost(VectorICA, CostKind);
   }
 
   // Get cost estimate for the insert element. This cost will factor into
   // both sequences.
-  InstructionCost InsertCost = TTI.getVectorInstrCost(
-      Instruction::InsertElement, VecTy, CostKind, Index);
-  InstructionCost OldCost =
-      (IsConst0 ? 0 : InsertCost) + (IsConst1 ? 0 : InsertCost) + VectorOpCost;
-  InstructionCost NewCost = ScalarOpCost + InsertCost +
-                            (IsConst0 ? 0 : !Ins0->hasOneUse() * InsertCost) +
-                            (IsConst1 ? 0 : !Ins1->hasOneUse() * InsertCost);
+  InstructionCost OldCost = VectorOpCost;
+  InstructionCost NewCost =
+      ScalarOpCost + TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
+                                            CostKind, *Index);
+  for (auto [Op, VecC, Scalar] : zip(Ops, VecCs, ScalarOps)) {
+    if (!Scalar)
+      continue;
+    InstructionCost InsertCost = TTI.getVectorInstrCost(
+        Instruction::InsertElement, VecTy, CostKind, *Index, VecC, Scalar);
+    OldCost += InsertCost;
+    NewCost += !Op->hasOneUse() * InsertCost;
+  }
 
   // We want to scalarize unless the vector variant actually has lower cost.
   if (OldCost < NewCost || !NewCost.isValid())
@@ -1112,20 +1134,28 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
 
   // vec_op (inselt VecC0, V0, Index), (inselt VecC1, V1, Index) -->
   // inselt NewVecC, (scalar_op V0, V1), Index
-  if (IsCmp)
+  if (isa<CmpInst>(I))
     ++NumScalarCmp;
-  else
+  else if (isa<BinaryOperator>(I))
     ++NumScalarBO;
+  else if (isa<IntrinsicInst>(I))
+    ++NumScalarIntrinsic;
 
   // For constant cases, extract the scalar element, this should constant fold.
-  if (IsConst0)
-    V0 = ConstantExpr::getExtractElement(VecC0, Builder.getInt64(Index));
-  if (IsConst1)
-    V1 = ConstantExpr::getExtractElement(VecC1, Builder.getInt64(Index));
+  for (auto [OpIdx, Scalar, VecC] : enumerate(ScalarOps, VecCs))
+    if (!Scalar)
+      ScalarOps[OpIdx] = ConstantExpr::getExtractElement(
+          cast<Constant>(VecC), Builder.getInt64(*Index));
 
-  Value *Scalar =
-      IsCmp ? Builder.CreateCmp(Pred, V0, V1)
-            : Builder.CreateBinOp((Instruction::BinaryOps)Opcode, V0, V1);
+  Value *Scalar;
+  if (auto *CI = dyn_cast<CmpInst>(&I))
+    Scalar = Builder.CreateCmp(CI->getPredicate(), ScalarOps[0], ScalarOps[1]);
+  else if (isa<BinaryOperator>(I))
+    Scalar = Builder.CreateBinOp((Instruction::BinaryOps)Opcode, ScalarOps[0],
+                                 ScalarOps[1]);
+  else
+    Scalar = Builder.CreateIntrinsic(
+        ScalarTy, cast<IntrinsicInst>(I).getIntrinsicID(), ScalarOps);
 
   Scalar->setName(I.getName() + ".scalar");
 
@@ -1135,10 +1165,15 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
     ScalarInst->copyIRFlags(&I);
 
   // Fold the vector constants in the original vectors into a new base vector.
-  Value *NewVecC =
-      IsCmp ? Builder.CreateCmp(Pred, VecC0, VecC1)
-            : Builder.CreateBinOp((Instruction::BinaryOps)Opcode, VecC0, VecC1);
-  Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, Index);
+  Value *NewVecC;
+  if (auto *CI = dyn_cast<CmpInst>(&I))
+    NewVecC = Builder.CreateCmp(CI->getPredicate(), VecCs[0], VecCs[1]);
+  else if (isa<BinaryOperator>(I))
+    NewVecC = Builder.CreateNAryOp(Opcode, VecCs);
+  else
+    NewVecC = Builder.CreateIntrinsic(
+        VecTy, cast<IntrinsicInst>(I).getIntrinsicID(), VecCs);
+  Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, *Index);
   replaceValue(I, *Insert);
   return true;
 }
