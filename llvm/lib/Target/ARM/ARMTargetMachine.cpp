@@ -184,9 +184,8 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   // Integer registers are 32 bits.
   Ret += "-n32";
 
-  // The stack is 128 bit aligned on NaCl, 64 bit aligned on AAPCS and 32 bit
-  // aligned everywhere else.
-  if (TT.isOSNaCl() || ABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16)
+  // The stack is 64 bit aligned on AAPCS and 32 bit aligned everywhere else.
+  if (ABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16)
     Ret += "-S128";
   else if (ABI == ARMBaseTargetMachine::ARM_ABI_AAPCS)
     Ret += "-S64";
