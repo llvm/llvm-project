@@ -12,6 +12,16 @@
 #define ehframe_x23  23
 #define ehframe_pc 32
 
+#if defined(__APPLE__)
+#define TO_BE_INTERRUPTED _to_be_interrupted
+#define TRAP _trap
+#define BREAK_TO_DEBUGGER _break_to_debugger
+#else
+#define TO_BE_INTERRUPTED to_be_interrupted
+#define TRAP trap
+#define BREAK_TO_DEBUGGER break_to_debugger
+#endif
+
   .text
 //--------------------------------------
 // to_be_interrupted() a frameless function that does a non-ABI
@@ -19,8 +29,8 @@
 // Before it branches to trap(), put the return address in x23.
 // trap() knows to branch back to $x23 when it has finished.
 //--------------------------------------
-  .globl  _to_be_interrupted
-_to_be_interrupted:
+  .globl  TO_BE_INTERRUPTED
+TO_BE_INTERRUPTED:
   .cfi_startproc
 
   // This is a garbage entry to ensure that eh_frame is emitted.
@@ -39,7 +49,7 @@ _to_be_interrupted:
   add  x23, x23, :lo12:.L.return
 #endif
 
-  b _trap                     // branch to trap handler, fake async interrupt
+  b TRAP                     // branch to trap handler, fake async interrupt
 
 #if defined(__APPLE__)
 L_.return:
@@ -58,8 +68,8 @@ L_.return:
 // "interrupted" stack frame (it's in x23), then calls
 // break_to_debugger().
 //--------------------------------------
-  .globl  _trap
-_trap:                                  
+  .globl  TRAP
+TRAP:
   .cfi_startproc
   .cfi_signal_frame
 
@@ -85,7 +95,7 @@ _trap:
   .cfi_offset w30, -8
   .cfi_offset w29, -16
 
-  bl _break_to_debugger
+  bl BREAK_TO_DEBUGGER
 
   ldp x29, x30, [sp, #16]
   .cfi_same_value x29
@@ -102,8 +112,8 @@ _trap:
 //--------------------------------------
 // break_to_debugger() executes a BRK instruction
 //--------------------------------------
-  .globl _break_to_debugger
-_break_to_debugger:                                  
+  .globl BREAK_TO_DEBUGGER
+BREAK_TO_DEBUGGER:
   .cfi_startproc
 
   // For fun, mark x0 as unmodified so the caller can
