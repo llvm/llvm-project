@@ -267,16 +267,19 @@ const char
     ClangTidyOptionsProvider::OptionsSourceTypeConfigCommandLineOption[] =
         "command-line option '-config'";
 
-ClangTidyOptions
+llvm::ErrorOr<ClangTidyOptions>
 ClangTidyOptionsProvider::getOptions(llvm::StringRef FileName) {
   ClangTidyOptions Result;
   unsigned Priority = 0;
-  for (auto &Source : getRawOptions(FileName))
+  llvm::ErrorOr<std::vector<OptionsSource>> Options = getRawOptions(FileName);
+  if (!Options)
+    return Options.getError();
+  for (auto &Source : *Options)
     Result.mergeWith(Source.first, ++Priority);
   return Result;
 }
 
-std::vector<OptionsSource>
+llvm::ErrorOr<std::vector<OptionsSource>>
 DefaultOptionsProvider::getRawOptions(llvm::StringRef FileName) {
   std::vector<OptionsSource> Result;
   Result.emplace_back(DefaultOptions, OptionsSourceTypeDefaultBinary);
@@ -292,10 +295,12 @@ ConfigOptionsProvider::ConfigOptionsProvider(
                               std::move(OverrideOptions), std::move(FS)),
       ConfigOptions(std::move(ConfigOptions)) {}
 
-std::vector<OptionsSource>
+llvm::ErrorOr<std::vector<OptionsSource>>
 ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
-  std::vector<OptionsSource> RawOptions =
+  llvm::ErrorOr<std::vector<OptionsSource>> RawOptions =
       DefaultOptionsProvider::getRawOptions(FileName);
+  if (!RawOptions)
+    return RawOptions;
   if (ConfigOptions.InheritParentConfig.value_or(false)) {
     LLVM_DEBUG(llvm::dbgs()
                << "Getting options for file " << FileName << "...\n");
@@ -303,13 +308,13 @@ ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
     llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
         getNormalizedAbsolutePath(FileName);
     if (AbsoluteFilePath) {
-      addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
+      addRawFileOptions(AbsoluteFilePath->str(), *RawOptions);
     }
   }
-  RawOptions.emplace_back(ConfigOptions,
-                          OptionsSourceTypeConfigCommandLineOption);
-  RawOptions.emplace_back(OverrideOptions,
-                          OptionsSourceTypeCheckCommandLineOption);
+  RawOptions->emplace_back(ConfigOptions,
+                           OptionsSourceTypeConfigCommandLineOption);
+  RawOptions->emplace_back(OverrideOptions,
+                           OptionsSourceTypeCheckCommandLineOption);
   return RawOptions;
 }
 
@@ -345,21 +350,21 @@ FileOptionsBaseProvider::getNormalizedAbsolutePath(llvm::StringRef Path) {
   return NormalizedAbsolutePath;
 }
 
-void FileOptionsBaseProvider::addRawFileOptions(
+std::error_code FileOptionsBaseProvider::addRawFileOptions(
     llvm::StringRef AbsolutePath, std::vector<OptionsSource> &CurOptions) {
   auto CurSize = CurOptions.size();
   // Look for a suitable configuration file in all parent directories of the
   // file. Start with the immediate parent directory and move up.
   StringRef RootPath = llvm::sys::path::parent_path(AbsolutePath);
   auto MemorizedConfigFile =
-      [this, &RootPath](StringRef CurrentPath) -> std::optional<OptionsSource> {
+      [this, &RootPath](StringRef CurrentPath) -> llvm::ErrorOr<OptionsSource> {
     const auto Iter = CachedOptions.Memorized.find(CurrentPath);
     if (Iter != CachedOptions.Memorized.end())
       return CachedOptions.Storage[Iter->second];
-    std::optional<OptionsSource> OptionsSource = tryReadConfigFile(CurrentPath);
+    llvm::ErrorOr<OptionsSource> OptionsSource = tryReadConfigFile(CurrentPath);
     if (OptionsSource) {
       const size_t Index = CachedOptions.Storage.size();
-      CachedOptions.Storage.emplace_back(OptionsSource.value());
+      CachedOptions.Storage.emplace_back(*OptionsSource);
       while (RootPath != CurrentPath) {
         LLVM_DEBUG(llvm::dbgs()
                    << "Caching configuration for path " << RootPath << ".\n");
@@ -373,16 +378,21 @@ void FileOptionsBaseProvider::addRawFileOptions(
   };
   for (StringRef CurrentPath = RootPath; !CurrentPath.empty();
        CurrentPath = llvm::sys::path::parent_path(CurrentPath)) {
-    if (std::optional<OptionsSource> Result =
-            MemorizedConfigFile(CurrentPath)) {
-      CurOptions.emplace_back(Result.value());
+    llvm::ErrorOr<OptionsSource> Result = MemorizedConfigFile(CurrentPath);
+
+    if (Result) {
+      CurOptions.emplace_back(*Result);
       if (!Result->first.InheritParentConfig.value_or(false))
         break;
+    } else if (Result.getError() != llvm::errc::no_such_file_or_directory) {
+      return Result.getError();
     }
   }
   // Reverse order of file configs because closer configs should have higher
   // priority.
   std::reverse(CurOptions.begin() + CurSize, CurOptions.end());
+
+  return {};
 }
 
 FileOptionsProvider::FileOptionsProvider(
@@ -404,7 +414,7 @@ FileOptionsProvider::FileOptionsProvider(
 // FIXME: This method has some common logic with clang::format::getStyle().
 // Consider pulling out common bits to a findParentFileWithName function or
 // similar.
-std::vector<OptionsSource>
+llvm::ErrorOr<std::vector<OptionsSource>>
 FileOptionsProvider::getRawOptions(StringRef FileName) {
   LLVM_DEBUG(llvm::dbgs() << "Getting options for file " << FileName
                           << "...\n");
@@ -412,19 +422,23 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
   llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
       getNormalizedAbsolutePath(FileName);
   if (!AbsoluteFilePath)
-    return {};
+    return std::vector<OptionsSource>{};
 
-  std::vector<OptionsSource> RawOptions =
+  llvm::ErrorOr<std::vector<OptionsSource>> RawOptions =
       DefaultOptionsProvider::getRawOptions(AbsoluteFilePath->str());
-  addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
+  std::error_code Err = addRawFileOptions(AbsoluteFilePath->str(), *RawOptions);
+
+  if (Err)
+    return Err;
+
   OptionsSource CommandLineOptions(OverrideOptions,
                                    OptionsSourceTypeCheckCommandLineOption);
 
-  RawOptions.push_back(CommandLineOptions);
+  RawOptions->push_back(CommandLineOptions);
   return RawOptions;
 }
 
-std::optional<OptionsSource>
+llvm::ErrorOr<OptionsSource>
 FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
   assert(!Directory.empty());
 
@@ -433,7 +447,7 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
   if (!DirectoryStatus || !DirectoryStatus->isDirectory()) {
     llvm::errs() << "Error reading configuration from " << Directory
                  << ": directory doesn't exist.\n";
-    return std::nullopt;
+    return make_error_code(llvm::errc::not_a_directory);
   }
 
   for (const ConfigFileHandler &ConfigHandler : ConfigHandlers) {
@@ -464,11 +478,11 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
       if (ParsedOptions.getError())
         llvm::errs() << "Error parsing " << ConfigFile << ": "
                      << ParsedOptions.getError().message() << "\n";
-      continue;
+      return ParsedOptions.getError();
     }
     return OptionsSource(*ParsedOptions, std::string(ConfigFile));
   }
-  return std::nullopt;
+  return make_error_code(llvm::errc::no_such_file_or_directory);
 }
 
 /// Parses -line-filter option and stores it to the \c Options.
