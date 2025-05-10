@@ -6,7 +6,6 @@
 #define ehframe_pc 32
 
   .text
-
 //--------------------------------------
 // to_be_interrupted() a frameless function that does a non-ABI
 // function call to trap(), simulating an async signal/interrup/exception/fault.
@@ -25,12 +24,21 @@ _to_be_interrupted:
   mov x24, x0
   add x24, x24, #1
 
-  adrp x23, L_.return@PAGE        ; put return address in x4
+#if defined(__APPLE__)
+  adrp x23, L_.return@PAGE        // put return address in x4
   add x23, x23, L_.return@PAGEOFF
+#else
+  adrp x23, .L.return
+  add  x23, x23, :lo12:.L.return
+#endif
 
-  b _trap                     ; branch to trap handler, fake async interrupt
+  b _trap                     // branch to trap handler, fake async interrupt
 
+#if defined(__APPLE__)
 L_.return:
+#else
+.L.return:
+#endif
   mov x0, x24
   ret
   .cfi_endproc
@@ -95,7 +103,7 @@ _break_to_debugger:
   // retrieve the value if it wants.
   .cfi_same_value ehframe_x0
 
-  brk #0xf000   ;; __builtin_debugtrap aarch64 instruction
+  brk #0xf000   // __builtin_debugtrap aarch64 instruction
 
   ret
   .cfi_endproc
