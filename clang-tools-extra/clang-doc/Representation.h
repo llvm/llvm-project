@@ -363,6 +363,9 @@ struct FunctionInfo : public SymbolInfo {
   // specializations.
   SmallString<16> FullName;
 
+  // Function Prototype
+  SmallString<256> Prototype;
+
   // When present, this function is a template or specialization.
   std::optional<TemplateInfo> Template;
 };
