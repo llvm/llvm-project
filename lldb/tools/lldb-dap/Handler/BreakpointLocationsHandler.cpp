@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
-#include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "RequestHandler.h"
 #include <vector>
 
@@ -19,19 +19,50 @@ namespace lldb_dap {
 llvm::Expected<protocol::BreakpointLocationsResponseBody>
 BreakpointLocationsRequestHandler::Run(
     const protocol::BreakpointLocationsArguments &args) const {
-  std::string path = args.source.path.value_or("");
   uint32_t start_line = args.line;
   uint32_t start_column = args.column.value_or(LLDB_INVALID_COLUMN_NUMBER);
   uint32_t end_line = args.endLine.value_or(start_line);
   uint32_t end_column =
       args.endColumn.value_or(std::numeric_limits<uint32_t>::max());
 
+  // Find all relevant lines & columns
+  llvm::SmallVector<std::pair<uint32_t, uint32_t>, 8> locations;
+  if (args.source.sourceReference) {
+    AddAssemblyBreakpointLocations(locations, *args.source.sourceReference,
+                                   start_line, end_line);
+  } else {
+    std::string path = args.source.path.value_or("");
+    AddSourceBreakpointLocations(locations, std::move(path), start_line,
+                                 start_column, end_line, end_column);
+  }
+
+  // The line entries are sorted by addresses, but we must return the list
+  // ordered by line / column position.
+  std::sort(locations.begin(), locations.end());
+  locations.erase(llvm::unique(locations), locations.end());
+
+  std::vector<protocol::BreakpointLocation> breakpoint_locations;
+  for (auto &l : locations) {
+    protocol::BreakpointLocation lc;
+    lc.line = l.first;
+    lc.column = l.second;
+    breakpoint_locations.push_back(std::move(lc));
+  }
+
+  return protocol::BreakpointLocationsResponseBody{
+      /*breakpoints=*/std::move(breakpoint_locations)};
+}
+
+template <unsigned N>
+void BreakpointLocationsRequestHandler::AddSourceBreakpointLocations(
+    llvm::SmallVector<std::pair<uint32_t, uint32_t>, N> &locations,
+    std::string path, uint32_t start_line, uint32_t start_column,
+    uint32_t end_line, uint32_t end_column) const {
+
   lldb::SBFileSpec file_spec(path.c_str(), true);
   lldb::SBSymbolContextList compile_units =
       dap.target.FindCompileUnits(file_spec);
 
-  // Find all relevant lines & columns
-  llvm::SmallVector<std::pair<uint32_t, uint32_t>, 8> locations;
   for (uint32_t c_idx = 0, c_limit = compile_units.GetSize(); c_idx < c_limit;
        ++c_idx) {
     const lldb::SBCompileUnit &compile_unit =
@@ -71,22 +102,34 @@ BreakpointLocationsRequestHandler::Run(
       locations.emplace_back(line, column);
     }
   }
+}
 
-  // The line entries are sorted by addresses, but we must return the list
-  // ordered by line / column position.
-  std::sort(locations.begin(), locations.end());
-  locations.erase(llvm::unique(locations), locations.end());
+template <unsigned N>
+void BreakpointLocationsRequestHandler::AddAssemblyBreakpointLocations(
+    llvm::SmallVector<std::pair<uint32_t, uint32_t>, N> &locations,
+    int64_t sourceReference, uint32_t start_line, uint32_t end_line) const {
+  lldb::SBProcess process = dap.target.GetProcess();
+  lldb::SBThread thread =
+      process.GetThreadByIndexID(GetLLDBThreadIndexID(sourceReference));
+  lldb::SBFrame frame = thread.GetFrameAtIndex(GetLLDBFrameID(sourceReference));
 
-  std::vector<protocol::BreakpointLocation> breakpoint_locations;
-  for (auto &l : locations) {
-    protocol::BreakpointLocation lc;
-    lc.line = l.first;
-    lc.column = l.second;
-    breakpoint_locations.push_back(std::move(lc));
+  if (!frame.IsValid())
+    return;
+
+  lldb::SBSymbol symbol = frame.GetSymbol();
+  if (symbol.IsValid()) {
+    lldb::SBInstructionList insts = symbol.GetInstructions(dap.target);
+    for (uint32_t i = start_line - 1; i < insts.GetSize() && i < (end_line - 1);
+         ++i) {
+      locations.emplace_back(i, 0);
+    }
+  } else {
+    for (uint32_t i = start_line - 1;
+         i < dap.number_of_assembly_lines_for_nodebug && i < (end_line - 1);
+         ++i) {
+      locations.emplace_back(i, 0);
+    }
   }
-
-  return protocol::BreakpointLocationsResponseBody{
-      /*breakpoints=*/std::move(breakpoint_locations)};
 }
 
 } // namespace lldb_dap
