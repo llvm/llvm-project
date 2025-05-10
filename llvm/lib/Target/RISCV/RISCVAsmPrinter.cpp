@@ -55,12 +55,16 @@ extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
 
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
+public:
+  static char ID;
+
+private:
   const RISCVSubtarget *STI;
 
 public:
   explicit RISCVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)) {}
+      : AsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override { return "RISC-V Assembly Printer"; }
 
@@ -622,7 +626,7 @@ void RISCVAsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
     Sym = OutContext.getOrCreateSymbol(SymName);
   }
   auto Res = MCSymbolRefExpr::create(Sym, OutContext);
-  auto Expr = RISCVMCExpr::create(Res, RISCVMCExpr::VK_CALL, OutContext);
+  auto Expr = RISCVMCExpr::create(Res, ELF::R_RISCV_CALL_PLT, OutContext);
 
   EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::PseudoCALL).addExpr(Expr));
 }
@@ -733,7 +737,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 
   const MCSymbolRefExpr *HwasanTagMismatchV2Ref =
       MCSymbolRefExpr::create(HwasanTagMismatchV2Sym, OutContext);
-  auto Expr = RISCVMCExpr::create(HwasanTagMismatchV2Ref, RISCVMCExpr::VK_CALL,
+  auto Expr = RISCVMCExpr::create(HwasanTagMismatchV2Ref, ELF::R_RISCV_CALL_PLT,
                                   OutContext);
 
   for (auto &P : HwasanMemaccessSymbols) {
@@ -1210,3 +1214,8 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
   uint64_t Size = getDataLayout().getTypeAllocSize(RCPV->getType());
   OutStreamer->emitValue(Expr, Size);
 }
+
+char RISCVAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(RISCVAsmPrinter, "riscv-asm-printer", "RISC-V Assembly Printer",
+                false, false)

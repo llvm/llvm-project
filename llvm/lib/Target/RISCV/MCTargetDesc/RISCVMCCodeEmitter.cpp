@@ -624,10 +624,6 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
     case ELF::R_RISCV_TPREL_HI20:
       RelaxCandidate = true;
       break;
-    case RISCVMCExpr::VK_CALL:
-      FixupKind = RISCV::fixup_riscv_call;
-      RelaxCandidate = true;
-      break;
     case ELF::R_RISCV_CALL_PLT:
       FixupKind = RISCV::fixup_riscv_call_plt;
       RelaxCandidate = true;

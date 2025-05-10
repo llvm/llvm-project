@@ -24,12 +24,16 @@ class StringRef;
 class RISCVMCExpr : public MCTargetExpr {
 public:
   using Specifier = uint16_t;
+  // Specifiers mapping to relocation types below FirstTargetFixupKind are
+  // encoded literally, with these exceptions:
   enum {
     VK_None,
+    // Specifiers mapping to distinct relocation types.
     VK_LO = FirstTargetFixupKind,
     VK_PCREL_LO,
     VK_TPREL_LO,
-    VK_CALL,
+    // Vendor-specific relocation types might conflict across vendors.
+    // Refer to them using Specifier constants.
     VK_QC_ABS20,
   };
 

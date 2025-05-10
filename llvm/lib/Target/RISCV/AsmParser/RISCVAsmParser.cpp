@@ -583,7 +583,7 @@ public:
 
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
-           (VK == RISCVMCExpr::VK_CALL || VK == ELF::R_RISCV_CALL_PLT);
+           VK == ELF::R_RISCV_CALL_PLT;
   }
 
   bool isPseudoJumpSymbol() const {
@@ -594,7 +594,7 @@ public:
 
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
-           VK == RISCVMCExpr::VK_CALL;
+           VK == ELF::R_RISCV_CALL_PLT;
   }
 
   bool isTPRelAddSymbol() const {
@@ -2187,7 +2187,7 @@ ParseStatus RISCVAsmParser::parsePseudoJumpSymbol(OperandVector &Operands) {
   if (Res->getKind() != MCExpr::ExprKind::SymbolRef)
     return Error(S, "operand must be a valid jump target");
 
-  Res = RISCVMCExpr::create(Res, RISCVMCExpr::VK_CALL, getContext());
+  Res = RISCVMCExpr::create(Res, ELF::R_RISCV_CALL_PLT, getContext());
   Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
   return ParseStatus::Success;
 }

@@ -360,8 +360,6 @@ getModularizeArgumentsAdjuster(DependencyMap &Dependencies) {
     if (int Count = FileDependents.size()) {
       for (int Index = 0; Index < Count; ++Index) {
         NewArgs.push_back("-include");
-        std::string File(std::string("\"") + FileDependents[Index] +
-                         std::string("\""));
         NewArgs.push_back(FileDependents[Index]);
       }
     }
@@ -381,11 +379,11 @@ getModularizeArgumentsAdjuster(DependencyMap &Dependencies) {
 // somewhere into Tooling/ in mainline
 struct Location {
   OptionalFileEntryRef File;
-  unsigned Line, Column;
+  unsigned Line = 0, Column = 0;
 
-  Location() : File(), Line(), Column() {}
+  Location() = default;
 
-  Location(SourceManager &SM, SourceLocation Loc) : File(), Line(), Column() {
+  Location(SourceManager &SM, SourceLocation Loc) {
     Loc = SM.getExpansionLoc(Loc);
     if (Loc.isInvalid())
       return;

@@ -34,7 +34,7 @@ const RISCVMCExpr *RISCVMCExpr::create(const MCExpr *Expr, Specifier S,
 
 void RISCVMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   Specifier S = getSpecifier();
-  bool HasVariant = S != VK_None && S != VK_CALL && S != ELF::R_RISCV_CALL_PLT;
+  bool HasVariant = S != VK_None && S != ELF::R_RISCV_CALL_PLT;
 
   if (HasVariant)
     OS << '%' << getSpecifierName(S) << '(';
@@ -158,8 +158,6 @@ StringRef RISCVMCExpr::getSpecifierName(Specifier S) {
     return "tlsdesc_call";
   case ELF::R_RISCV_TLS_GD_HI20:
     return "tls_gd_pcrel_hi";
-  case VK_CALL:
-    return "call";
   case ELF::R_RISCV_CALL_PLT:
     return "call_plt";
   case ELF::R_RISCV_32_PCREL:
