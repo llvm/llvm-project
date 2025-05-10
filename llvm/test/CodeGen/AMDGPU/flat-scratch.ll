@@ -4139,8 +4139,7 @@ define void @store_load_i64_aligned(ptr addrspace(5) nocapture %arg) {
 ; GFX942-LABEL: store_load_i64_aligned:
 ; GFX942:       ; %bb.0: ; %bb
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v2, 15
-; GFX942-NEXT:    v_mov_b32_e32 v3, 0
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], 15
 ; GFX942-NEXT:    scratch_store_dwordx2 v0, v[2:3], off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v0, off sc0 sc1
@@ -4250,8 +4249,7 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX942-LABEL: store_load_i64_unaligned:
 ; GFX942:       ; %bb.0: ; %bb
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v2, 15
-; GFX942-NEXT:    v_mov_b32_e32 v3, 0
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], 15
 ; GFX942-NEXT:    scratch_store_dwordx2 v0, v[2:3], off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    scratch_load_dwordx2 v[0:1], v0, off sc0 sc1
@@ -5010,10 +5008,8 @@ define amdgpu_ps void @large_offset() {
 ;
 ; GFX942-LABEL: large_offset:
 ; GFX942:       ; %bb.0: ; %bb
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v1, v0
-; GFX942-NEXT:    v_mov_b32_e32 v2, v0
-; GFX942-NEXT:    v_mov_b32_e32 v3, v0
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], 0
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX942-NEXT:    scratch_store_dwordx4 off, v[0:3], off offset:3024 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    scratch_load_dwordx4 v[0:3], off, off offset:3024 sc0 sc1
