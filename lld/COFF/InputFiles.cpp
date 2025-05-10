@@ -226,8 +226,19 @@ lld::coff::getArchiveMembers(COFFLinkerContext &ctx, Archive *file) {
   return v;
 }
 
-ObjFile::ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj, bool lazy)
-    : InputFile(symtab, ObjectKind, coffObj->getMemoryBufferRef(), lazy),
+void CmdLineArchive::parse() {
+  for (InputFile *f : files) {
+    if (auto *o = dyn_cast<ObjFile>(f))
+      o->parseLazy();
+    else if (auto *b = dyn_cast<BitcodeFile>(f))
+      b->parseLazy();
+  }
+}
+
+void CmdLineArchive::addInputFile(InputFile *f) { files.push_back(f); }
+
+ObjFile::ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj)
+    : InputFile(symtab, ObjectKind, coffObj->getMemoryBufferRef()),
       coffObj(coffObj) {}
 
 ObjFile *ObjFile::create(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy) {
@@ -241,8 +252,7 @@ ObjFile *ObjFile::create(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy) {
     Fatal(ctx) << m.getBufferIdentifier() << " is not a COFF file";
 
   bin->release();
-  return make<ObjFile>(ctx.getSymtab(MachineTypes(obj->getMachine())), obj,
-                       lazy);
+  return make<ObjFile>(ctx.getSymtab(MachineTypes(obj->getMachine())), obj);
 }
 
 void ObjFile::parseLazy() {
@@ -257,8 +267,6 @@ void ObjFile::parseLazy() {
     if (coffSym.isAbsolute() && ignoredSymbolName(name))
       continue;
     symtab.addLazyObject(this, name);
-    if (!lazy)
-      return;
     i += coffSym.getNumberOfAuxSymbols();
   }
 }
@@ -299,6 +307,8 @@ void ObjFile::initializeECThunks() {
 }
 
 void ObjFile::parse() {
+  symtab.ctx.objFileInstances.push_back(this);
+
   // Read section and symbol tables.
   initializeChunks();
   initializeSymbols();
@@ -1201,6 +1211,8 @@ ImportThunkChunk *ImportFile::makeImportThunk() {
 }
 
 void ImportFile::parse() {
+  symtab.ctx.importFileInstances.push_back(this);
+
   const auto *hdr =
       reinterpret_cast<const coff_import_header *>(mb.getBufferStart());
 
@@ -1307,14 +1319,14 @@ void ImportFile::parse() {
 }
 
 BitcodeFile::BitcodeFile(SymbolTable &symtab, MemoryBufferRef mb,
-                         std::unique_ptr<lto::InputFile> &o, bool lazy)
-    : InputFile(symtab, BitcodeKind, mb, lazy) {
+                         std::unique_ptr<lto::InputFile> &o)
+    : InputFile(symtab, BitcodeKind, mb) {
   obj.swap(o);
 }
 
 BitcodeFile *BitcodeFile::create(COFFLinkerContext &ctx, MemoryBufferRef mb,
                                  StringRef archiveName,
-                                 uint64_t offsetInArchive, bool lazy) {
+                                 uint64_t offsetInArchive) {
   std::string path = mb.getBufferIdentifier().str();
   if (ctx.config.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(mb.getBufferIdentifier(),
@@ -1335,13 +1347,18 @@ BitcodeFile *BitcodeFile::create(COFFLinkerContext &ctx, MemoryBufferRef mb,
                                                utostr(offsetInArchive)));
 
   std::unique_ptr<lto::InputFile> obj = check(lto::InputFile::create(mbref));
-  return make<BitcodeFile>(ctx.getSymtab(getMachineType(obj.get())), mb, obj,
-                           lazy);
+  return make<BitcodeFile>(ctx.getSymtab(getMachineType(obj.get())), mb, obj);
 }
 
 BitcodeFile::~BitcodeFile() = default;
 
 void BitcodeFile::parse() {
+  if (symtab.ctx.driver.ltoCompilationDone) {
+    Err(symtab.ctx) << "LTO object file " << toString(this)
+                    << " linked in after doing LTO compilation.";
+  }
+  symtab.bitcodeFileInstances.push_back(this);
+
   llvm::StringSaver &saver = lld::saver();
 
   std::vector<std::pair<Symbol *, bool>> comdat(obj->getComdatTable().size());
@@ -1406,11 +1423,8 @@ void BitcodeFile::parse() {
 
 void BitcodeFile::parseLazy() {
   for (const lto::InputFile::Symbol &sym : obj->symbols())
-    if (!sym.isUndefined()) {
+    if (!sym.isUndefined())
       symtab.addLazyObject(this, sym.getName());
-      if (!lazy)
-        return;
-    }
 }
 
 MachineTypes BitcodeFile::getMachineType(const llvm::lto::InputFile *obj) {
