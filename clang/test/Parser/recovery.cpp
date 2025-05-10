@@ -226,7 +226,7 @@ void k() {
 namespace GH136254 {
 
 void call() {
-  [a(42, )]() {} (); // expected-error {{expected expression}}
+  [a(42, )]() {} (); // expected-error {{expected expression}} expected-error {{invalid initializer type for lambda capture}}
 
   int *b = new int(42, ); // expected-error {{expected expression}}
 
