@@ -190,7 +190,59 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {}
 
 bool ObjectFileXCOFF::IsStripped() { return false; }
 
-void ObjectFileXCOFF::CreateSections(SectionList &unified_section_list) {}
+void ObjectFileXCOFF::CreateSections(SectionList &unified_section_list) {
+  if (m_sections_up)
+    return;
+
+  m_sections_up = std::make_unique<SectionList>();
+  ModuleSP module_sp(GetModule());
+
+  if (!module_sp)
+    return;
+
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+
+  const auto &sections = m_binary->sections64();
+  int idx = 0;
+  for (size_t i = 0; i < sections.size(); ++i) {
+    const llvm::object::XCOFFSectionHeader64 &section = sections[i];
+
+    ConstString const_sect_name(section.Name);
+
+    SectionType section_type = lldb::eSectionTypeOther;
+    if (section.Flags & XCOFF::STYP_TEXT)
+      section_type = eSectionTypeCode;
+    else if (section.Flags & XCOFF::STYP_DATA)
+      section_type = eSectionTypeData;
+    else if (section.Flags & XCOFF::STYP_BSS)
+      section_type = eSectionTypeZeroFill;
+    else if (section.Flags & XCOFF::STYP_DWARF) {
+      section_type = llvm::StringSwitch<SectionType>(section.Name)
+                         .Case(".dwinfo", eSectionTypeDWARFDebugInfo)
+                         .Case(".dwline", eSectionTypeDWARFDebugLine)
+                         .Case(".dwabrev", eSectionTypeDWARFDebugAbbrev)
+                         .Default(eSectionTypeInvalid);
+
+      if (section_type == eSectionTypeInvalid)
+        section_type = lldb::eSectionTypeOther;
+    }
+
+    SectionSP section_sp(new Section(
+        module_sp, this, ++idx, const_sect_name, section_type,
+        section.VirtualAddress, section.SectionSize,
+        section.FileOffsetToRawData, section.SectionSize, 0, section.Flags));
+
+    uint32_t permissions = ePermissionsReadable;
+    if (section.Flags & (XCOFF::STYP_DATA | XCOFF::STYP_BSS))
+      permissions |= ePermissionsWritable;
+    if (section.Flags & XCOFF::STYP_TEXT)
+      permissions |= ePermissionsExecutable;
+
+    section_sp->SetPermissions(permissions);
+    m_sections_up->AddSection(section_sp);
+    unified_section_list.AddSection(section_sp);
+  }
+}
 
 void ObjectFileXCOFF::Dump(Stream *s) {}
 
