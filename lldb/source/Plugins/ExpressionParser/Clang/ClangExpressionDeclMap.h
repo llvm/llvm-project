@@ -345,7 +345,7 @@ private:
 
   /// Activate parser-specific variables
   void EnableParserVars() {
-    if (!m_parser_vars.get())
+    if (!m_parser_vars)
       m_parser_vars = std::make_unique<ParserVars>();
   }
 
@@ -372,7 +372,7 @@ private:
 
   /// Activate struct variables
   void EnableStructVars() {
-    if (!m_struct_vars.get())
+    if (!m_struct_vars)
       m_struct_vars.reset(new struct StructVars);
   }
 
