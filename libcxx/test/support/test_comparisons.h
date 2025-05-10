@@ -268,10 +268,6 @@ struct PartialOrder {
   }
 };
 
-#endif // TEST_STD_VER >= 20
-
-#if TEST_STD_VER >= 23
-
 template <typename T1, typename T2 = T1>
 concept HasOperatorEqual = requires(T1 t1, T2 t2) { t1 == t2; };
 
@@ -336,6 +332,6 @@ static_assert(HasOperatorLessThanEqual<ThreeWayComparable>);
 static_assert(HasOperatorNotEqual<ThreeWayComparable>);
 static_assert(HasOperatorSpaceship<ThreeWayComparable>);
 
-#endif // TEST_STD_VER >= 26
+#endif // TEST_STD_VER >= 20
 
 #endif // TEST_COMPARISONS_H
