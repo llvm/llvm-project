@@ -90,13 +90,7 @@ struct BranchInfo {
   }
 
   bool operator<(const BranchInfo &RHS) const {
-    if (From < RHS.From)
-      return true;
-
-    if (From == RHS.From)
-      return (To < RHS.To);
-
-    return false;
+    return std::tie(From, To) < std::tie(RHS.From, RHS.To);
   }
 
   /// Merges branch and misprediction counts of \p BI with those of this object.
