@@ -59,13 +59,14 @@ uintptr_t GetCurrentProcess(void);
 // specified range.
 
 void __clear_cache(void *start, void *end) {
-#if __i386__ || __x86_64__ || defined(_M_IX86) || defined(_M_X64)
+#if defined(_WIN32) &&                                                         \
+    (defined(__arm__) || defined(__aarch64__) || defined(__arm64ec__))
+  FlushInstructionCache(GetCurrentProcess(), start, end - start);
+#elif __i386__ || __x86_64__ || defined(_M_IX86) || defined(_M_X64)
 // Intel processors have a unified instruction and data cache
 // so there is nothing to do
 #elif defined(__s390__)
 // no-op
-#elif defined(_WIN32) && (defined(__arm__) || defined(__aarch64__))
-  FlushInstructionCache(GetCurrentProcess(), start, end - start);
 #elif defined(__arm__) && !defined(__APPLE__)
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
   struct arm_sync_icache_args arg;
@@ -122,7 +123,7 @@ void __clear_cache(void *start, void *end) {
     compilerrt_abort();
 #endif
   }
-#elif defined(__aarch64__) && !defined(__APPLE__)
+#elif (defined(__aarch64__) || defined(__arm64ec__)) && !defined(__APPLE__)
   uint64_t xstart = (uint64_t)(uintptr_t)start;
   uint64_t xend = (uint64_t)(uintptr_t)end;
 
