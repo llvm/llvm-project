@@ -1524,6 +1524,12 @@ enum NodeType {
   // Operands: Mask
   VECTOR_FIND_LAST_ACTIVE,
 
+  // Creates a mask representing active and inactive
+  // vector lanes, active while base < trip count.
+  // Operands: Base, Trip Count
+  // Output: Mask
+  GET_ACTIVE_LANE_MASK,
+
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address
   // Outputs: Output Chain

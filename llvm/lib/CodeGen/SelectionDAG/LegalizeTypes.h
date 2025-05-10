@@ -379,6 +379,7 @@ private:
   SDValue PromoteIntRes_IS_FPCLASS(SDNode *N);
   SDValue PromoteIntRes_PATCHPOINT(SDNode *N);
   SDValue PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
+  SDValue PromoteIntRes_GET_ACTIVE_LANE_MASK(SDNode *N);
   SDValue PromoteIntRes_PARTIAL_REDUCE_MLA(SDNode *N);
 
   // Integer Operand Promotion.
