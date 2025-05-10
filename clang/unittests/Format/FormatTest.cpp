@@ -13962,6 +13962,8 @@ TEST_F(FormatTest, IncorrectCodeUnbalancedBraces) {
   verifyNoCrash("struct Foo {\n"
                 "  operator foo(bar\n"
                 "};");
+  verifyNoCrash("decltype( {\n"
+                "  {");
 }
 
 TEST_F(FormatTest, IncorrectUnbalancedBracesInMacrosWithUnicode) {
