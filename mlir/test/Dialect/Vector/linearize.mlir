@@ -345,3 +345,20 @@ func.func @linearize_scalable_vector_splat(%arg0: i32) -> vector<4x[2]xi32> {
   %0 = vector.splat %arg0 : vector<4x[2]xi32>
   return %0 : vector<4x[2]xi32>
 }
+
+// -----
+
+// CHECK-LABEL: linearize_create_mask
+// CHECK-SAME: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) -> vector<1x16xi1>
+func.func @linearize_create_mask(%arg0 : index, %arg1 : index) -> vector<1x16xi1> {
+  
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[ARG0]], %[[C0]] : index
+  // CHECK: %[[INDEXCAST:.*]] = arith.index_cast %[[CMP]] : i1 to index
+  // CHECK: %[[MULI:.*]] = arith.muli %[[INDEXCAST]], %[[ARG1]] : index
+  // CHECK: %[[MASK_1D:.*]] = vector.create_mask %[[MULI]] : vector<16xi1>
+  // CHECK: %[[CAST:.*]] = vector.shape_cast %[[MASK_1D]] : vector<16xi1> to vector<1x16xi1>
+  // CHECK: return %[[CAST]] : vector<1x16xi1>
+  %0 = vector.create_mask %arg0, %arg1 : vector<1x16xi1>
+  return %0 : vector<1x16xi1>
+}
