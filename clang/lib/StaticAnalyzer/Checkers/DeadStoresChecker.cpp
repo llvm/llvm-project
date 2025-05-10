@@ -157,9 +157,9 @@ public:
       return true;
     // Lazily construct the set that records which VarDecls are in
     // EH code.
-    if (!InEH.get()) {
+    if (!InEH) {
       InEH.reset(new llvm::DenseSet<const VarDecl *>());
-      EHCodeVisitor V(*InEH.get());
+      EHCodeVisitor V(*InEH);
       V.TraverseStmt(AC->getBody());
     }
     // Treat all VarDecls that occur in EH code as being "always live"
@@ -196,7 +196,7 @@ public:
 
     // Compute reachable blocks within the CFG for trivial cases
     // where a bogus dead store can be reported because itself is unreachable.
-    if (!reachableCode.get()) {
+    if (!reachableCode) {
       reachableCode.reset(new ReachableCode(cfg));
       reachableCode->computeReachableBlocks();
     }
