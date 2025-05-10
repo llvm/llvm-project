@@ -484,83 +484,87 @@ public:
 
 } // end eval namespace
 
-class CheckerBase : public ProgramPointTag {
-  /// A single checker class (i.e. a subclass of `CheckerBase`) can implement
-  /// multiple user-facing checkers that have separate names and can be enabled
-  /// separately, but are backed by the same singleton checker object.
-  SmallVector<std::optional<CheckerNameRef>, 1> RegisteredNames;
-
-  friend class ::clang::ento::CheckerManager;
+/// A `CheckerFrontend` instance is what the user recognizes as "one checker":
+/// it has a public canonical name (injected from the `CheckerManager`), can be
+/// enabled or disabled, can have associated checker options and can be printed
+/// as the "source" of bug reports.
+/// The singleton instance of a simple `Checker<...>` is-a `CheckerFrontend`
+/// (for historical reasons, to preserve old straightforward code), while the
+/// singleton instance of a `CheckerFamily<...>` class owns multiple
+/// `CheckerFrontend` instances as data members.
+/// Modeling checkers that are hidden from the user but can be enabled or
+/// disabled separately (as dependencies of other checkers) are also considered
+/// to be `CheckerFrontend`s.
+class CheckerFrontend {
+  /// The `Name` is nullopt if and only if the checker is disabled.
+  std::optional<CheckerNameRef> Name;
 
 public:
-  CheckerNameRef getName(CheckerPartIdx Idx = DefaultPart) const {
-    assert(Idx < RegisteredNames.size() && "Checker part index is too large!");
-    std::optional<CheckerNameRef> Name = RegisteredNames[Idx];
-    assert(Name && "Requested checker part is not registered!");
-    return *Name;
+  void enable(CheckerManager &Mgr) {
+    assert(!Name && "Checker part registered twice!");
+    Name = Mgr.getCurrentCheckerName();
   }
+  bool isEnabled() const { return static_cast<bool>(Name); }
+  CheckerNameRef getName() const { return *Name; }
+};
 
-  bool isPartEnabled(CheckerPartIdx Idx) const {
-    return Idx < RegisteredNames.size() && RegisteredNames[Idx].has_value();
-  }
-
-  void registerCheckerPart(CheckerPartIdx Idx, CheckerNameRef Name) {
-    // Paranoia: notice if e.g. UINT_MAX is passed as a checker part index.
-    assert(Idx < 256 && "Checker part identifiers should be small integers.");
-
-    if (Idx >= RegisteredNames.size())
-      RegisteredNames.resize(Idx + 1, std::nullopt);
-
-    assert(!RegisteredNames[Idx] && "Repeated registration of checker a part!");
-    RegisteredNames[Idx] = Name;
-  }
-
-  StringRef getTagDescription() const override {
-    // When the ExplodedGraph is dumped for debugging (in DOT format), this
-    // method is called to attach a description to nodes created by this
-    // checker _class_. Ideally this should be recognizable identifier of the
-    // whole class, but for this debugging purpose it's sufficient to use the
-    // name of the first registered checker part.
-    for (const auto &OptName : RegisteredNames)
-      if (OptName)
-        return *OptName;
-
-    return "Unregistered checker";
-  }
-
+/// `CheckerBackend` is an abstract base class that serves as the common
+/// ancestor of all the `Checker<...>` and `CheckerFamily<...>` classes which
+/// can create `ExplodedNode`s (by acting as a `ProgramPointTag`) and can be
+/// registered to handle various checker callbacks. (Moreover the debug
+/// callback `printState` is also introduced here.)
+class CheckerBackend : public ProgramPointTag {
+public:
   /// Debug state dump callback, see CheckerManager::runCheckersForPrintState.
   /// Default implementation does nothing.
   virtual void printState(raw_ostream &Out, ProgramStateRef State,
                           const char *NL, const char *Sep) const;
 };
 
-/// Dump checker name to stream.
-raw_ostream& operator<<(raw_ostream &Out, const CheckerBase &Checker);
-
-/// Tag that can use a checker name as a message provider
-/// (see SimpleProgramPointTag).
-class CheckerProgramPointTag : public SimpleProgramPointTag {
+/// The non-templated common ancestor of all the simple `Checker<...>` classes.
+class CheckerBase : public CheckerFrontend, public CheckerBackend {
 public:
-  CheckerProgramPointTag(StringRef CheckerName, StringRef Msg);
-  CheckerProgramPointTag(const CheckerBase *Checker, StringRef Msg);
+  /// Attached to nodes created by this checker class when the ExplodedGraph is
+  /// dumped for debugging.
+  StringRef getTagDescription() const override;
 };
 
-template <typename CHECK1, typename... CHECKs>
-class Checker : public CHECK1, public CHECKs..., public CheckerBase {
+// Template magic to implement the static method `_register()` which registers
+// the `Checker` or `CheckerFamily` for all the implemented callbacks.
+template <typename CHECKER, typename CHECK1, typename... CHECKs>
+static void registerImpl(CHECKER *Chk, CheckerManager &Mgr) {
+  CHECK1::_register(Chk, Mgr);
+  registerImpl<CHECKER, CHECKs...>(Chk, Mgr);
+}
+
+template <typename CHECKER>
+static void registerImpl(CHECKER *Chk, CheckerManager &Mgr) {}
+
+/// Simple checker classes that implement one frontend (i.e. checker name)
+/// should derive from this template and specify all the implemented callbacks
+/// (i.e. classes like `check::PreStmt` or `eval::Call`) as template arguments
+/// of `Checker`.
+template <typename... CHECKs>
+class Checker : public CheckerBase, public CHECKs... {
 public:
   template <typename CHECKER>
-  static void _register(CHECKER *checker, CheckerManager &mgr) {
-    CHECK1::_register(checker, mgr);
-    Checker<CHECKs...>::_register(checker, mgr);
+  static void _register(CHECKER *Chk, CheckerManager &Mgr) {
+    registerImpl<CHECKER, CHECKs...>(Chk, Mgr);
   }
 };
 
-template <typename CHECK1>
-class Checker<CHECK1> : public CHECK1, public CheckerBase {
+/// Checker families (where a single backend class implements multiple related
+/// frontends) should derive from this template, specify all the implemented
+/// callbacks (i.e. classes like `check::PreStmt` or `eval::Call`) as template
+/// arguments of `FamilyChecker` and implement the pure virtual method
+/// `StringRef getTagDescription()` which is inherited from `ProgramPointTag`
+/// and should return a string identifying the class for debugging purposes.
+template <typename... CHECKs>
+class CheckerFamily : public CheckerBackend, public CHECKs... {
 public:
   template <typename CHECKER>
-  static void _register(CHECKER *checker, CheckerManager &mgr) {
-    CHECK1::_register(checker, mgr);
+  static void _register(CHECKER *Chk, CheckerManager &Mgr) {
+    registerImpl<CHECKER, CHECKs...>(Chk, Mgr);
   }
 };
 
@@ -579,6 +583,20 @@ public:
   void dispatchEvent(const EVENT &event) const {
     Mgr->_dispatchEvent(event);
   }
+};
+
+/// Tag that can use a checker name as a message provider
+/// (see SimpleProgramPointTag).
+/// FIXME: This is a cargo cult class which is copied into several checkers but
+/// does not provide anything useful.
+/// The only added functionality provided by this class (compared to
+/// SimpleProgramPointTag) is that it composes the tag description string from
+/// two arguments -- but tag descriptions only appear in debug output so there
+/// is no reason to bother with this.
+class CheckerProgramPointTag : public SimpleProgramPointTag {
+public:
+  CheckerProgramPointTag(StringRef CheckerName, StringRef Msg);
+  CheckerProgramPointTag(const CheckerBase *Checker, StringRef Msg);
 };
 
 /// We dereferenced a location that may be null.
