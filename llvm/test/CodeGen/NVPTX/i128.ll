@@ -10,8 +10,8 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    .reg .b64 %rd<127>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %_udiv-special-cases
-; CHECK-NEXT:    ld.param.v2.u64 {%rd45, %rd46}, [srem_i128_param_0];
-; CHECK-NEXT:    ld.param.v2.u64 {%rd49, %rd50}, [srem_i128_param_1];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd45, %rd46}, [srem_i128_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd49, %rd50}, [srem_i128_param_1];
 ; CHECK-NEXT:    shr.s64 %rd2, %rd46, 63;
 ; CHECK-NEXT:    sub.cc.s64 %rd51, 0, %rd45;
 ; CHECK-NEXT:    subc.cc.s64 %rd52, 0, %rd46;
@@ -151,8 +151,8 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    .reg .b64 %rd<113>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %_udiv-special-cases
-; CHECK-NEXT:    ld.param.v2.u64 {%rd41, %rd42}, [urem_i128_param_0];
-; CHECK-NEXT:    ld.param.v2.u64 {%rd3, %rd4}, [urem_i128_param_1];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd41, %rd42}, [urem_i128_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [urem_i128_param_1];
 ; CHECK-NEXT:    or.b64 %rd45, %rd3, %rd4;
 ; CHECK-NEXT:    setp.eq.s64 %p1, %rd45, 0;
 ; CHECK-NEXT:    or.b64 %rd46, %rd41, %rd42;
@@ -275,7 +275,7 @@ define i128 @srem_i128_pow2k(i128 %lhs) {
 ; CHECK-NEXT:    .reg .b64 %rd<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [srem_i128_pow2k_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [srem_i128_pow2k_param_0];
 ; CHECK-NEXT:    shr.s64 %rd3, %rd2, 63;
 ; CHECK-NEXT:    shr.u64 %rd4, %rd3, 31;
 ; CHECK-NEXT:    add.cc.s64 %rd5, %rd1, %rd4;
@@ -295,7 +295,7 @@ define i128 @urem_i128_pow2k(i128 %lhs) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [urem_i128_pow2k_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [urem_i128_pow2k_param_0];
 ; CHECK-NEXT:    and.b64 %rd3, %rd1, 8589934591;
 ; CHECK-NEXT:    mov.b64 %rd4, 0;
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
@@ -312,8 +312,8 @@ define i128 @sdiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    .reg .b64 %rd<122>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %_udiv-special-cases
-; CHECK-NEXT:    ld.param.v2.u64 {%rd45, %rd46}, [sdiv_i128_param_0];
-; CHECK-NEXT:    ld.param.v2.u64 {%rd49, %rd50}, [sdiv_i128_param_1];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd45, %rd46}, [sdiv_i128_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd49, %rd50}, [sdiv_i128_param_1];
 ; CHECK-NEXT:    sub.cc.s64 %rd51, 0, %rd45;
 ; CHECK-NEXT:    subc.cc.s64 %rd52, 0, %rd46;
 ; CHECK-NEXT:    setp.lt.s64 %p1, %rd46, 0;
@@ -448,8 +448,8 @@ define i128 @udiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    .reg .b64 %rd<107>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %_udiv-special-cases
-; CHECK-NEXT:    ld.param.v2.u64 {%rd41, %rd42}, [udiv_i128_param_0];
-; CHECK-NEXT:    ld.param.v2.u64 {%rd43, %rd44}, [udiv_i128_param_1];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd41, %rd42}, [udiv_i128_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd43, %rd44}, [udiv_i128_param_1];
 ; CHECK-NEXT:    or.b64 %rd45, %rd43, %rd44;
 ; CHECK-NEXT:    setp.eq.s64 %p1, %rd45, 0;
 ; CHECK-NEXT:    or.b64 %rd46, %rd41, %rd42;
@@ -566,7 +566,7 @@ define i128 @sdiv_i128_pow2k(i128 %lhs) {
 ; CHECK-NEXT:    .reg .b64 %rd<11>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [sdiv_i128_pow2k_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [sdiv_i128_pow2k_param_0];
 ; CHECK-NEXT:    shr.s64 %rd3, %rd2, 63;
 ; CHECK-NEXT:    shr.u64 %rd4, %rd3, 31;
 ; CHECK-NEXT:    add.cc.s64 %rd5, %rd1, %rd4;
@@ -587,7 +587,7 @@ define i128 @udiv_i128_pow2k(i128 %lhs) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [udiv_i128_pow2k_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [udiv_i128_pow2k_param_0];
 ; CHECK-NEXT:    shl.b64 %rd3, %rd2, 31;
 ; CHECK-NEXT:    shr.u64 %rd4, %rd1, 33;
 ; CHECK-NEXT:    or.b64 %rd5, %rd4, %rd3;
@@ -604,8 +604,8 @@ define i128 @add_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [add_i128_param_0];
-; CHECK-NEXT:    ld.param.v2.u64 {%rd3, %rd4}, [add_i128_param_1];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [add_i128_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd3, %rd4}, [add_i128_param_1];
 ; CHECK-NEXT:    add.cc.s64 %rd5, %rd1, %rd3;
 ; CHECK-NEXT:    addc.cc.s64 %rd6, %rd2, %rd4;
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd5, %rd6};
