@@ -20,7 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _OutputIterator1, class _OutputIterator2, class _Predicate>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_OutputIterator1, _OutputIterator2> partition_copy(
+_LIBCPP_HIDE_FROM_ABI pair<_OutputIterator1, _OutputIterator2> partition_copy(
     _InputIterator __first,
     _InputIterator __last,
     _OutputIterator1 __out_true,
