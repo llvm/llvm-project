@@ -10,7 +10,7 @@ int main() {
   c = to_be_interrupted(c);
 #else
   c = _to_be_interrupted(c);
- #endif
+#endif
 
   return c;
 }
