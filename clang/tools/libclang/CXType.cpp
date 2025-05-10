@@ -731,8 +731,8 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
       TCALLINGCONV(RISCVVLSCall_32768);
       TCALLINGCONV(RISCVVLSCall_65536);
     case CC_SpirFunction: return CXCallingConv_Unexposed;
-    case CC_AMDGPUKernelCall: return CXCallingConv_Unexposed;
-    case CC_OpenCLKernel: return CXCallingConv_Unexposed;
+    case CC_DeviceKernel:
+      return CXCallingConv_Unexposed;
       break;
     }
 #undef TCALLINGCONV

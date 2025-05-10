@@ -263,7 +263,7 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
   if (M.getLangOpts().OpenCL) {
     // Use OpenCL function attributes to check for kernel functions
     // By default, all functions are device functions
-    if (FD->hasAttr<OpenCLKernelAttr>()) {
+    if (FD->hasAttr<DeviceKernelAttr>()) {
       // OpenCL __kernel functions get kernel metadata
       // Create !{<func-ref>, metadata !"kernel", i32 1} node
       F->setCallingConv(llvm::CallingConv::PTX_Kernel);
@@ -292,7 +292,7 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
   }
 
   // Attach kernel metadata directly if compiling for NVPTX.
-  if (FD->hasAttr<NVPTXKernelAttr>()) {
+  if (FD->hasAttr<DeviceKernelAttr>()) {
     F->setCallingConv(llvm::CallingConv::PTX_Kernel);
   }
 }
