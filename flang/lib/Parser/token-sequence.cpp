@@ -305,6 +305,46 @@ TokenSequence &TokenSequence::ClipComment(
   return *this;
 }
 
+TokenSequence &TokenSequence::RemoveRedundantCompilerDirectives(
+    const Prescanner &prescanner) {
+  // When the toekn sqeuence is "<compiler directive> <clause1>  <compiler
+  // directive> <clause2>" convert it to "<compiler directive> <clause1>
+  // <clause2>"
+  std::size_t tokens{SizeInTokens()};
+  TokenSequence result;
+  bool firstDirective{true};
+  for (std::size_t j{0}; j < tokens; ++j) {
+    CharBlock tok{TokenAt(j)};
+    bool isSentinel{false};
+    std::size_t blanks{tok.CountLeadingBlanks()};
+    if (blanks < tok.size() && tok[blanks] == '!') {
+      // Retain active compiler directive sentinels (e.g. "!dir$", "!$omp")
+      for (std::size_t k{j + 1}; k < tokens && tok.size() <= blanks + 5; ++k) {
+        if (tok.begin() + tok.size() == TokenAt(k).begin()) {
+          tok.ExtendToCover(TokenAt(k));
+        } else {
+          break;
+        }
+      }
+    }
+    if (tok.size() > blanks + 5) {
+      isSentinel =
+          prescanner.IsCompilerDirectiveSentinel(&tok[blanks + 1]).has_value();
+    }
+    if (isSentinel &&
+        !firstDirective) { // skip the directives if not the first one
+      j++;
+    } else {
+      result.Put(*this, j);
+    }
+    if (isSentinel && firstDirective) {
+      firstDirective = false;
+    }
+  }
+  swap(result);
+  return *this;
+}
+
 void TokenSequence::Emit(CookedSource &cooked) const {
   if (auto n{char_.size()}) {
     cooked.Put(&char_[0], n);
