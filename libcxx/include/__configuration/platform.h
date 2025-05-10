@@ -20,7 +20,7 @@
 #  define _LIBCPP_OBJECT_FORMAT_ELF 1
 #elif defined(__MACH__)
 #  define _LIBCPP_OBJECT_FORMAT_MACHO 1
-#elif defined(_WIN32)
+#elif defined(_WIN32) || defined(__UEFI__)
 #  define _LIBCPP_OBJECT_FORMAT_COFF 1
 #elif defined(__wasm__)
 #  define _LIBCPP_OBJECT_FORMAT_WASM 1
