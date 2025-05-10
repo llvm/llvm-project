@@ -266,10 +266,6 @@ static cl::opt<bool> FlattenedProfileUsed(
     cl::desc("Indicate the sample profile being used is flattened, i.e., "
              "no inline hierarchy exists in the profile"));
 
-static cl::opt<bool>
-    EnableMatrix("enable-matrix", cl::init(false), cl::Hidden,
-                 cl::desc("Enable lowering of the matrix intrinsics"));
-
 static cl::opt<bool> EnableConstraintElimination(
     "enable-constraint-elimination", cl::init(true), cl::Hidden,
     cl::desc(
@@ -1516,10 +1512,10 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   OptimizePM.addPass(Float2IntPass());
   OptimizePM.addPass(LowerConstantIntrinsicsPass());
 
-  if (EnableMatrix) {
-    OptimizePM.addPass(LowerMatrixIntrinsicsPass());
-    OptimizePM.addPass(EarlyCSEPass());
-  }
+  OptimizePM.addPass(LowerMatrixIntrinsicsPass());
+  ExtraFunctionPassManager<ShouldRunExtraMatrixPasses> ExtraPasses;
+  ExtraPasses.addPass(EarlyCSEPass());
+  OptimizePM.addPass(std::move(ExtraPasses));
 
   // CHR pass should only be applied with the profile information.
   // The check is to check the profile summary information in CHR.
@@ -2253,9 +2249,8 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   if (PTO.MergeFunctions)
     MPM.addPass(MergeFunctionsPass());
 
-  if (EnableMatrix)
-    MPM.addPass(
-        createModuleToFunctionPassAdaptor(LowerMatrixIntrinsicsPass(true)));
+  MPM.addPass(
+      createModuleToFunctionPassAdaptor(LowerMatrixIntrinsicsPass(true)));
 
   if (!CGSCCOptimizerLateEPCallbacks.empty()) {
     CGSCCPassManager CGPM;

@@ -151,6 +151,7 @@
 ; CHECK-O-NEXT: Running pass: RecomputeGlobalsAAPass
 ; CHECK-O-NEXT: Running pass: Float2IntPass
 ; CHECK-O-NEXT: Running pass: LowerConstantIntrinsicsPass
+; CHECK-O-NEXT: Running pass: LowerMatrixIntrinsicsPass
 ; CHECK-O3-NEXT: Running pass: ControlHeightReductionPass
 ; CHECK-O3-NEXT: Running analysis: RegionInfoAnalysis
 ; CHECK-O3-NEXT: Running analysis: DominanceFrontierAnalysis
