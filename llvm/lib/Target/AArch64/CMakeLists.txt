@@ -86,6 +86,7 @@ add_llvm_target(AArch64CodeGen
   AArch64TargetMachine.cpp
   AArch64TargetObjectFile.cpp
   AArch64TargetTransformInfo.cpp
+  AArch64WinFixupBufferSecurityCheck.cpp
   SMEABIPass.cpp
   SMEPeepholeOpt.cpp
   SVEIntrinsicOpts.cpp
