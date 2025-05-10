@@ -1143,6 +1143,21 @@ public:
 #endif
 };
 
+struct VPPhi : public VPInstruction, public VPPhiAccessors {
+  VPPhi(ArrayRef<VPValue *> Operands, DebugLoc DL, const Twine &Name = "")
+      : VPInstruction(Instruction::PHI, Operands, DL, Name) {}
+
+  static inline bool classof(const VPRecipeBase *U) {
+    auto *R = dyn_cast<VPInstruction>(U);
+    return R && R->getOpcode() == Instruction::PHI;
+  }
+
+  void execute(VPTransformState &State) override;
+
+protected:
+  const VPRecipeBase *getAsRecipe() const override { return this; }
+};
+
 /// A recipe to wrap on original IR instruction not to be modified during
 /// execution, except for PHIs. PHIs are modeled via the VPIRPhi subclass.
 /// Expect PHIs, VPIRInstructions cannot have any operands.
