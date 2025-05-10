@@ -15,7 +15,7 @@
 
 #include <initializer_list>
 
-#if !__has_warning("-Winvalid-specialization")
+#if !__has_warning("-Winvalid-specializations")
 // expected-no-diagnostics
 #else
 

@@ -953,6 +953,7 @@
 {'is_defined': True, 'name': '_ZNSt3__113shared_futureIvED1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__113shared_futureIvED2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__113shared_futureIvEaSERKS1_', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__113__hash_memoryEPKvm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__114__num_get_base10__get_baseERNS_8ios_baseE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__114__num_get_base5__srcE', 'size': 33, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__114__num_put_base12__format_intEPcPKcbj', 'type': 'FUNC'}
@@ -1155,6 +1156,7 @@
 {'is_defined': True, 'name': '_ZNSt3__117bad_function_callD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117bad_function_callD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117bad_function_callD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt3__117bad_function_call4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117iostream_categoryEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIcLb0EE4initEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIcLb1EE4initEPKc', 'type': 'FUNC'}
@@ -1964,8 +1966,6 @@
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDiEE', 'size': 96, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDsEE', 'size': 96, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IwEE', 'size': 96, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt3__120__time_get_c_storageIcEE', 'size': 72, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt3__120__time_get_c_storageIwEE', 'size': 72, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr15memory_resourceE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr25monotonic_buffer_resourceE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr26synchronized_pool_resourceE', 'size': 56, 'type': 'OBJECT'}
