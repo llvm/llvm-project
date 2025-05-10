@@ -3046,6 +3046,7 @@ CastInst *CastInst::Create(Instruction::CastOps op, Value *S, Type *Ty,
   case SIToFP:        return new SIToFPInst        (S, Ty, Name, InsertBefore);
   case FPToUI:        return new FPToUIInst        (S, Ty, Name, InsertBefore);
   case FPToSI:        return new FPToSIInst        (S, Ty, Name, InsertBefore);
+  case PtrToAddr:     return new PtrToAddrInst     (S, Ty, Name, InsertBefore);
   case PtrToInt:      return new PtrToIntInst      (S, Ty, Name, InsertBefore);
   case IntToPtr:      return new IntToPtrInst      (S, Ty, Name, InsertBefore);
   case BitCast:
@@ -3347,6 +3348,7 @@ CastInst::castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy) {
   case Instruction::FPToSI:
     return SrcTy->isFPOrFPVectorTy() && DstTy->isIntOrIntVectorTy() &&
            SrcEC == DstEC;
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
     if (SrcEC != DstEC)
       return false;
@@ -3454,11 +3456,19 @@ FPToSIInst::FPToSIInst(Value *S, Type *Ty, const Twine &Name,
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal FPToSI");
 }
 
-PtrToIntInst::PtrToIntInst(Value *S, Type *Ty, const Twine &Name,
+PtrToIntInst::PtrToIntInst(unsigned Op, Value *S, Type *Ty, const Twine &Name,
                            InsertPosition InsertBefore)
-    : CastInst(Ty, PtrToInt, S, Name, InsertBefore) {
+    : CastInst(Ty, Op, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal PtrToInt");
 }
+
+PtrToIntInst::PtrToIntInst(Value *S, Type *Ty, const Twine &Name,
+                           InsertPosition InsertBefore)
+    : PtrToIntInst(PtrToInt, S, Ty, Name, InsertBefore) {}
+
+PtrToAddrInst::PtrToAddrInst(Value *S, Type *Ty, const Twine &Name,
+                             InsertPosition InsertBefore)
+    : PtrToIntInst(PtrToAddr, S, Ty, Name, InsertBefore) {}
 
 IntToPtrInst::IntToPtrInst(Value *S, Type *Ty, const Twine &Name,
                            InsertPosition InsertBefore)
@@ -4425,6 +4435,10 @@ FPToSIInst *FPToSIInst::cloneImpl() const {
 
 PtrToIntInst *PtrToIntInst::cloneImpl() const {
   return new PtrToIntInst(getOperand(0), getType());
+}
+
+PtrToAddrInst *PtrToAddrInst::cloneImpl() const {
+  return new PtrToAddrInst(getOperand(0), getType());
 }
 
 IntToPtrInst *IntToPtrInst::cloneImpl() const {

@@ -255,6 +255,54 @@ define i32 @ptrtoint_offset(ptr addrspace(7) %ptr) {
   ret i32 %ret
 }
 
+define i32 @ptrtoaddr(ptr addrspace(7) %ptr) {
+; CHECK-LABEL: define i32 @ptrtoaddr
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
+; CHECK-NEXT:    [[RET:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %ret = ptrtoaddr ptr addrspace(7) %ptr to i32
+  ret i32 %ret
+}
+
+define <2 x i32> @ptrtoaddr_vec(<2 x ptr addrspace(7)> %ptr) {
+; CHECK-LABEL: define <2 x i32> @ptrtoaddr_vec
+; CHECK-SAME: ({ <2 x ptr addrspace(8)>, <2 x i32> } [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[PTR]], 0
+; CHECK-NEXT:    [[RET:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[PTR]], 1
+; CHECK-NEXT:    ret <2 x i32> [[RET]]
+;
+  %ret = ptrtoaddr <2 x ptr addrspace(7)> %ptr to <2 x i32>
+  ret <2 x i32> %ret
+}
+
+;; Check that we extend the offset to i160 instead of reinterpreting all bits.
+;; FIXME: this is not currently correct.
+define i160 @ptrtoaddr_ext(ptr addrspace(7) %ptr) {
+; CHECK-LABEL: define i160 @ptrtoaddr_ext
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
+; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    [[RET:%.*]] = zext i32 [[PTR_OFF]] to i160
+; CHECK-NEXT:    ret i160 [[RET]]
+;
+  %ret = ptrtoaddr ptr addrspace(7) %ptr to i160
+  ret i160 %ret
+}
+
+define i16 @ptrtoaddr_trunc(ptr addrspace(7) %ptr) {
+; CHECK-LABEL: define i16 @ptrtoaddr_trunc
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
+; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[PTR_OFF]] to i16
+; CHECK-NEXT:    ret i16 [[RET]]
+;
+  %ret = ptrtoaddr ptr addrspace(7) %ptr to i16
+  ret i16 %ret
+}
+
 define ptr addrspace(7) @inttoptr(i160 %v) {
 ; CHECK-LABEL: define { ptr addrspace(8), i32 } @inttoptr
 ; CHECK-SAME: (i160 [[V:%.*]]) #[[ATTR0]] {
