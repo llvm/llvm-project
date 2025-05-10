@@ -734,7 +734,8 @@ class TargetRegisterInfo;
     /// Makes a DFS traversal and mark all nodes affected by the edge insertion.
     /// These nodes will later get new topological indexes by means of the Shift
     /// method.
-    void DFS(const SUnit *SU, int UpperBound, bool& HasLoop);
+    void DFS(const SUnit *SU, int UpperBound, bool &HasLoop,
+             std::optional<SDep::Kind> OnlyDepKind = std::nullopt);
 
     /// Reassigns topological indexes for the nodes in the DAG to
     /// preserve the topological ordering.
@@ -767,7 +768,9 @@ class TargetRegisterInfo;
                                  bool &Success);
 
     /// Checks if \p SU is reachable from \p TargetSU.
-    bool IsReachable(const SUnit *SU, const SUnit *TargetSU);
+    /// If OnlyDepKind is given, consider only dependencies of this kind.
+    bool IsReachable(const SUnit *SU, const SUnit *TargetSU,
+                     std::optional<SDep::Kind> OnlyDepKind = std::nullopt);
 
     /// Returns true if addPred(TargetSU, SU) creates a cycle.
     bool WillCreateCycle(SUnit *TargetSU, SUnit *SU);

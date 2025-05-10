@@ -287,8 +287,10 @@ namespace llvm {
     }
 
     /// IsReachable - Checks if SU is reachable from TargetSU.
-    bool IsReachable(SUnit *SU, SUnit *TargetSU) {
-      return Topo.IsReachable(SU, TargetSU);
+    /// If OnlyDepKind is given, only dependencies of this kind are considered.
+    bool IsReachable(SUnit *SU, SUnit *TargetSU,
+                     std::optional<SDep::Kind> OnlyDepKind = std::nullopt) {
+      return Topo.IsReachable(SU, TargetSU, OnlyDepKind);
     }
 
     /// Whether regions with a single MI should be scheduled.
