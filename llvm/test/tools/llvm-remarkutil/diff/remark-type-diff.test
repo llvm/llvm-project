@@ -1,0 +1,16 @@
+RUN: llvm-remarkutil diff %p/Inputs/remarks-passed.yaml %p/Inputs/remarks-missed.yaml --parser=yaml | FileCheck %s
+
+; CHECK-LABEL: File A: {{.*}}/Inputs/remarks-passed.yaml
+; CHECK: File B: {{.*}}/Inputs/remarks-missed.yaml
+; CHECK: ----------
+; CHECK: path/to/anno.c:func0  Ln: 1 Col: 2
+; CHECK: --- Has the same header ---
+; CHECK: Name: RemarkName
+; CHECK: FunctionName: func0
+; CHECK: PassName: Pass
+; CHECK: Only at A >>>>
+; CHECK: Type: Passed
+; CHECK: =====
+; CHECK: Only at B <<<<
+; CHECK: Type: Missed
+; CHECK: =====

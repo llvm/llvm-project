@@ -1,0 +1,57 @@
+RUN: llvm-remarkutil diff %p/Inputs/1-loc-2-args.yaml %p/Inputs/1-loc-2-args-3.yaml --parser=yaml | FileCheck %s 
+RUN: llvm-remarkutil diff %p/Inputs/1-loc-2-args.yaml %p/Inputs/1-loc-2-args-3.yaml --parser=yaml --only-show-different-remarks | FileCheck %s 
+RUN: llvm-remarkutil diff %p/Inputs/1-loc-2-args.yaml %p/Inputs/1-loc-2-args-3.yaml --parser=yaml --only-show-a | FileCheck %s --check-prefix ONLYA
+RUN: llvm-remarkutil diff %p/Inputs/1-loc-2-args.yaml %p/Inputs/1-loc-2-args-3.yaml --parser=yaml --only-show-b | FileCheck %s --check-prefix ONLYB
+
+; CHECK-LABEL: File A: {{.*}}/Inputs/1-loc-2-args.yaml
+; CHECK: File B: {{.*}}/Inputs/1-loc-2-args-3.yaml
+; CHECK: ----------
+; CHECK: path/to/anno.c:func0  Ln: 1 Col: 2
+; CHECK: Only at A >>>>
+; CHECK: Name: RemarkName
+; CHECK: FunctionName: func0
+; CHECK: PassName: Pass
+; CHECK: Type: Analysis
+; CHECK: Args:
+; CHECK: 	String: 1
+; CHECK: 	String: Info
+; CHECK: =====
+; CHECK: ----------
+; CHECK: path/to/anno2.c:func0  Ln: 1 Col: 2
+; CHECK: Only at B <<<<
+; CHECK: Name: RemarkName
+; CHECK: FunctionName: func0
+; CHECK: PassName: Pass
+; CHECK: Type: Analysis
+; CHECK: Args:
+; CHECK: 	String: 2
+; CHECK: 	String: Info
+; CHECK: =====
+
+; ONLYA: File A: {{.*}}/Inputs/1-loc-2-args.yaml
+; ONLYA: File B: {{.*}}/Inputs/1-loc-2-args-3.yaml
+; ONLYA: ----------
+; ONLYA: path/to/anno.c:func0  Ln: 1 Col: 2
+; ONLYA: Only at A >>>>
+; ONLYA: Name: RemarkName
+; ONLYA: FunctionName: func0
+; ONLYA: PassName: Pass
+; ONLYA: Type: Analysis
+; ONLYA: Args:
+; ONLYA:         String: 1
+; ONLYA:         String: Info
+; ONLYA: =====
+
+; ONLYB: File A: {{.*}}/Inputs/1-loc-2-args.yaml
+; ONLYB: File B: {{.*}}/Inputs/1-loc-2-args-3.yaml
+; ONLYB: ----------
+; ONLYB: path/to/anno2.c:func0  Ln: 1 Col: 2
+; ONLYB: Only at B <<<<
+; ONLYB: Name: RemarkName
+; ONLYB: FunctionName: func0
+; ONLYB: PassName: Pass
+; ONLYB: Type: Analysis
+; ONLYB: Args:
+; ONLYB:         String: 2
+; ONLYB:         String: Info
+; ONLYB: =====
