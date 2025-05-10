@@ -5,33 +5,252 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define void @broadcast() {
 ; CHECK-LABEL: 'broadcast'
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v7 = shufflevector <2 x i8> undef, <2 x i8> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8 = shufflevector <4 x i8> undef, <4 x i8> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v9 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v10 = shufflevector <16 x i8> undef, <16 x i8> undef, <16 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v11 = shufflevector <2 x i16> undef, <2 x i16> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v12 = shufflevector <4 x i16> undef, <4 x i16> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v13 = shufflevector <8 x i16> undef, <8 x i16> undef, <8 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v14 = shufflevector <2 x i32> undef, <2 x i32> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v15 = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v17 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v1i8 = shufflevector <1 x i8> undef, <1 x i8> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2i8 = shufflevector <2 x i8> undef, <2 x i8> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v1i16 = shufflevector <1 x i16> undef, <1 x i16> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2i16 = shufflevector <2 x i16> undef, <2 x i16> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v1i32 = shufflevector <1 x i32> undef, <1 x i32> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2i32 = shufflevector <2 x i32> undef, <2 x i32> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v1i64 = shufflevector <1 x i64> undef, <1 x i64> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2i64 = shufflevector <2 x i64> undef, <2 x i64> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v1i128 = shufflevector <1 x i128> undef, <1 x i128> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2i128 = shufflevector <2 x i128> undef, <2 x i128> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v1f16 = shufflevector <1 x half> undef, <1 x half> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = shufflevector <2 x half> undef, <2 x half> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = shufflevector <4 x half> undef, <4 x half> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = shufflevector <8 x half> undef, <8 x half> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v16f16 = shufflevector <16 x half> undef, <16 x half> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v1bf16 = shufflevector <1 x bfloat> undef, <1 x bfloat> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v2bf16 = shufflevector <2 x bfloat> undef, <2 x bfloat> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4bf16 = shufflevector <4 x bfloat> undef, <4 x bfloat> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:14 SizeLat:14 for: %v8bf16 = shufflevector <8 x bfloat> undef, <8 x bfloat> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:14 Lat:28 SizeLat:28 for: %v16bf16 = shufflevector <16 x bfloat> undef, <16 x bfloat> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v1f32 = shufflevector <1 x float> undef, <1 x float> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f32 = shufflevector <8 x float> undef, <8 x float> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v1f64 = shufflevector <1 x double> undef, <1 x double> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = shufflevector <2 x double> undef, <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f64 = shufflevector <4 x double> undef, <4 x double> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-  %v7 = shufflevector <2 x i8> undef, <2 x i8>undef, <2 x i32> zeroinitializer
-  %v8 = shufflevector <4 x i8> undef, <4 x i8>undef, <4 x i32> zeroinitializer
-  %v9 = shufflevector <8 x i8> undef, <8 x i8>undef, <8 x i32> zeroinitializer
-  %v10 = shufflevector <16 x i8> undef, <16 x i8>undef, <16 x i32> zeroinitializer
+  %v1i8 = shufflevector <1 x i8> undef, <1 x i8> undef, <1 x i32> zeroinitializer
+  %v2i8 = shufflevector <2 x i8> undef, <2 x i8> undef, <2 x i32> zeroinitializer
+  %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <4 x i32> zeroinitializer
+  %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> zeroinitializer
+  %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <16 x i32> zeroinitializer
+  %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <32 x i32> zeroinitializer
 
-  %v11 = shufflevector <2 x i16> undef, <2 x i16>undef, <2 x i32> zeroinitializer
-  %v12 = shufflevector <4 x i16> undef, <4 x i16>undef, <4 x i32> zeroinitializer
-  %v13 = shufflevector <8 x i16> undef, <8 x i16>undef, <8 x i32> zeroinitializer
+  %v1i16 = shufflevector <1 x i16> undef, <1 x i16> undef, <1 x i32> zeroinitializer
+  %v2i16 = shufflevector <2 x i16> undef, <2 x i16> undef, <2 x i32> zeroinitializer
+  %v4i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <4 x i32> zeroinitializer
+  %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <8 x i32> zeroinitializer
+  %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> zeroinitializer
 
-  %v14 = shufflevector <2 x i32> undef, <2 x i32>undef, <2 x i32> zeroinitializer
-  %v15 = shufflevector <4 x i32> undef, <4 x i32>undef, <4 x i32> zeroinitializer
+  %v1i32 = shufflevector <1 x i32> undef, <1 x i32> undef, <1 x i32> zeroinitializer
+  %v2i32 = shufflevector <2 x i32> undef, <2 x i32> undef, <2 x i32> zeroinitializer
+  %v4i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> zeroinitializer
+  %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> zeroinitializer
 
-  %v16 = shufflevector <2 x float> undef, <2 x float>undef, <2 x i32> zeroinitializer
-  %v17 = shufflevector <4 x float> undef, <4 x float>undef, <4 x i32> zeroinitializer
+  %v1i64 = shufflevector <1 x i64> undef, <1 x i64> undef, <1 x i32> zeroinitializer
+  %v2i64 = shufflevector <2 x i64> undef, <2 x i64> undef, <2 x i32> zeroinitializer
+  %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <4 x i32> zeroinitializer
+
+  %v1i128 = shufflevector <1 x i128> undef, <1 x i128> undef, <1 x i32> zeroinitializer
+  %v2i128 = shufflevector <2 x i128> undef, <2 x i128> undef, <2 x i32> zeroinitializer
+
+  %v1f16 = shufflevector <1 x half> undef, <1 x half> undef, <1 x i32> zeroinitializer
+  %v2f16 = shufflevector <2 x half> undef, <2 x half> undef, <2 x i32> zeroinitializer
+  %v4f16 = shufflevector <4 x half> undef, <4 x half> undef, <4 x i32> zeroinitializer
+  %v8f16 = shufflevector <8 x half> undef, <8 x half> undef, <8 x i32> zeroinitializer
+  %v16f16 = shufflevector <16 x half> undef, <16 x half> undef, <16 x i32> zeroinitializer
+
+  %v1bf16 = shufflevector <1 x bfloat> undef, <1 x bfloat> undef, <1 x i32> zeroinitializer
+  %v2bf16 = shufflevector <2 x bfloat> undef, <2 x bfloat> undef, <2 x i32> zeroinitializer
+  %v4bf16 = shufflevector <4 x bfloat> undef, <4 x bfloat> undef, <4 x i32> zeroinitializer
+  %v8bf16 = shufflevector <8 x bfloat> undef, <8 x bfloat> undef, <8 x i32> zeroinitializer
+  %v16bf16 = shufflevector <16 x bfloat> undef, <16 x bfloat> undef, <16 x i32> zeroinitializer
+
+  %v1f32 = shufflevector <1 x float> undef, <1 x float> undef, <1 x i32> zeroinitializer
+  %v2f32 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> zeroinitializer
+  %v4f32 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> zeroinitializer
+  %v8f32 = shufflevector <8 x float> undef, <8 x float> undef, <8 x i32> zeroinitializer
+
+  %v1f64 = shufflevector <1 x double> undef, <1 x double> undef, <1 x i32> zeroinitializer
+  %v2f64 = shufflevector <2 x double> undef, <2 x double> undef, <2 x i32> zeroinitializer
+  %v4f64 = shufflevector <4 x double> undef, <4 x double> undef, <4 x i32> zeroinitializer
+
+  ret void
+}
+
+define void @broadcast_half() {
+; CHECK-LABEL: 'broadcast_half'
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2i8 = shufflevector <2 x i8> undef, <2 x i8> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2i16 = shufflevector <2 x i16> undef, <2 x i16> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2i32 = shufflevector <2 x i32> undef, <2 x i32> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2i64 = shufflevector <2 x i64> undef, <2 x i64> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2i128 = shufflevector <2 x i128> undef, <2 x i128> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2f16 = shufflevector <2 x half> undef, <2 x half> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = shufflevector <4 x half> undef, <4 x half> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = shufflevector <8 x half> undef, <8 x half> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16f16 = shufflevector <16 x half> undef, <16 x half> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2bf16 = shufflevector <2 x bfloat> undef, <2 x bfloat> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4bf16 = shufflevector <4 x bfloat> undef, <4 x bfloat> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:14 SizeLat:14 for: %v8bf16 = shufflevector <8 x bfloat> undef, <8 x bfloat> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:14 SizeLat:14 for: %v16bf16 = shufflevector <16 x bfloat> undef, <16 x bfloat> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2f32 = shufflevector <2 x float> undef, <2 x float> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = shufflevector <4 x float> undef, <4 x float> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8f32 = shufflevector <8 x float> undef, <8 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2f64 = shufflevector <2 x double> undef, <2 x double> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f64 = shufflevector <4 x double> undef, <4 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %v2i8 = shufflevector <2 x i8> undef, <2 x i8> undef, <1 x i32> zeroinitializer
+  %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <2 x i32> zeroinitializer
+  %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <4 x i32> zeroinitializer
+  %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <8 x i32> zeroinitializer
+  %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <16 x i32> zeroinitializer
+
+  %v2i16 = shufflevector <2 x i16> undef, <2 x i16> undef, <1 x i32> zeroinitializer
+  %v4i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <2 x i32> zeroinitializer
+  %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <4 x i32> zeroinitializer
+  %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <8 x i32> zeroinitializer
+
+  %v2i32 = shufflevector <2 x i32> undef, <2 x i32> undef, <1 x i32> zeroinitializer
+  %v4i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <2 x i32> zeroinitializer
+  %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <4 x i32> zeroinitializer
+
+  %v2i64 = shufflevector <2 x i64> undef, <2 x i64> undef, <1 x i32> zeroinitializer
+  %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <2 x i32> zeroinitializer
+
+  %v2i128 = shufflevector <2 x i128> undef, <2 x i128> undef, <1 x i32> zeroinitializer
+
+  %v2f16 = shufflevector <2 x half> undef, <2 x half> undef, <1 x i32> zeroinitializer
+  %v4f16 = shufflevector <4 x half> undef, <4 x half> undef, <2 x i32> zeroinitializer
+  %v8f16 = shufflevector <8 x half> undef, <8 x half> undef, <4 x i32> zeroinitializer
+  %v16f16 = shufflevector <16 x half> undef, <16 x half> undef, <8 x i32> zeroinitializer
+
+  %v2bf16 = shufflevector <2 x bfloat> undef, <2 x bfloat> undef, <1 x i32> zeroinitializer
+  %v4bf16 = shufflevector <4 x bfloat> undef, <4 x bfloat> undef, <2 x i32> zeroinitializer
+  %v8bf16 = shufflevector <8 x bfloat> undef, <8 x bfloat> undef, <4 x i32> zeroinitializer
+  %v16bf16 = shufflevector <16 x bfloat> undef, <16 x bfloat> undef, <8 x i32> zeroinitializer
+
+  %v2f32 = shufflevector <2 x float> undef, <2 x float> undef, <1 x i32> zeroinitializer
+  %v4f32 = shufflevector <4 x float> undef, <4 x float> undef, <2 x i32> zeroinitializer
+  %v8f32 = shufflevector <8 x float> undef, <8 x float> undef, <4 x i32> zeroinitializer
+
+  %v2f64 = shufflevector <2 x double> undef, <2 x double> undef, <1 x i32> zeroinitializer
+  %v4f64 = shufflevector <4 x double> undef, <4 x double> undef, <2 x i32> zeroinitializer
+
+  ret void
+}
+
+define void @broadcast_double() {
+; CHECK-LABEL: 'broadcast_double'
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:3 Lat:6 SizeLat:6 for: %v1i8 = shufflevector <1 x i8> undef, <1 x i8> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2i8 = shufflevector <2 x i8> undef, <2 x i8> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:3 Lat:6 SizeLat:6 for: %v1i16 = shufflevector <1 x i16> undef, <1 x i16> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2i16 = shufflevector <2 x i16> undef, <2 x i16> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:3 Lat:6 SizeLat:6 for: %v1i32 = shufflevector <1 x i32> undef, <1 x i32> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2i32 = shufflevector <2 x i32> undef, <2 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:3 Lat:6 SizeLat:6 for: %v1i64 = shufflevector <1 x i64> undef, <1 x i64> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2i64 = shufflevector <2 x i64> undef, <2 x i64> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:3 Lat:6 SizeLat:6 for: %v1i128 = shufflevector <1 x i128> undef, <1 x i128> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2i128 = shufflevector <2 x i128> undef, <2 x i128> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v1f16 = shufflevector <1 x half> undef, <1 x half> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = shufflevector <2 x half> undef, <2 x half> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f16 = shufflevector <4 x half> undef, <4 x half> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8f16 = shufflevector <8 x half> undef, <8 x half> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v16f16 = shufflevector <16 x half> undef, <16 x half> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v1bf16 = shufflevector <1 x bfloat> undef, <1 x bfloat> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2bf16 = shufflevector <2 x bfloat> undef, <2 x bfloat> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:14 SizeLat:14 for: %v4bf16 = shufflevector <4 x bfloat> undef, <4 x bfloat> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:14 Lat:28 SizeLat:28 for: %v8bf16 = shufflevector <8 x bfloat> undef, <8 x bfloat> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:28 Lat:56 SizeLat:56 for: %v16bf16 = shufflevector <16 x bfloat> undef, <16 x bfloat> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v1f32 = shufflevector <1 x float> undef, <1 x float> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f32 = shufflevector <2 x float> undef, <2 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4f32 = shufflevector <4 x float> undef, <4 x float> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v8f32 = shufflevector <8 x float> undef, <8 x float> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v1f64 = shufflevector <1 x double> undef, <1 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2f64 = shufflevector <2 x double> undef, <2 x double> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v4f64 = shufflevector <4 x double> undef, <4 x double> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %v1i8 = shufflevector <1 x i8> undef, <1 x i8> undef, <2 x i32> zeroinitializer
+  %v2i8 = shufflevector <2 x i8> undef, <2 x i8> undef, <4 x i32> zeroinitializer
+  %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <8 x i32> zeroinitializer
+  %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <16 x i32> zeroinitializer
+  %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <32 x i32> zeroinitializer
+  %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <64 x i32> zeroinitializer
+
+  %v1i16 = shufflevector <1 x i16> undef, <1 x i16> undef, <2 x i32> zeroinitializer
+  %v2i16 = shufflevector <2 x i16> undef, <2 x i16> undef, <4 x i32> zeroinitializer
+  %v4i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <8 x i32> zeroinitializer
+  %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <16 x i32> zeroinitializer
+  %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <32 x i32> zeroinitializer
+
+  %v1i32 = shufflevector <1 x i32> undef, <1 x i32> undef, <2 x i32> zeroinitializer
+  %v2i32 = shufflevector <2 x i32> undef, <2 x i32> undef, <4 x i32> zeroinitializer
+  %v4i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <8 x i32> zeroinitializer
+  %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <16 x i32> zeroinitializer
+
+  %v1i64 = shufflevector <1 x i64> undef, <1 x i64> undef, <2 x i32> zeroinitializer
+  %v2i64 = shufflevector <2 x i64> undef, <2 x i64> undef, <4 x i32> zeroinitializer
+  %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <8 x i32> zeroinitializer
+
+  %v1i128 = shufflevector <1 x i128> undef, <1 x i128> undef, <2 x i32> zeroinitializer
+  %v2i128 = shufflevector <2 x i128> undef, <2 x i128> undef, <4 x i32> zeroinitializer
+
+  %v1f16 = shufflevector <1 x half> undef, <1 x half> undef, <2 x i32> zeroinitializer
+  %v2f16 = shufflevector <2 x half> undef, <2 x half> undef, <4 x i32> zeroinitializer
+  %v4f16 = shufflevector <4 x half> undef, <4 x half> undef, <8 x i32> zeroinitializer
+  %v8f16 = shufflevector <8 x half> undef, <8 x half> undef, <16 x i32> zeroinitializer
+  %v16f16 = shufflevector <16 x half> undef, <16 x half> undef, <32 x i32> zeroinitializer
+
+  %v1bf16 = shufflevector <1 x bfloat> undef, <1 x bfloat> undef, <2 x i32> zeroinitializer
+  %v2bf16 = shufflevector <2 x bfloat> undef, <2 x bfloat> undef, <4 x i32> zeroinitializer
+  %v4bf16 = shufflevector <4 x bfloat> undef, <4 x bfloat> undef, <8 x i32> zeroinitializer
+  %v8bf16 = shufflevector <8 x bfloat> undef, <8 x bfloat> undef, <16 x i32> zeroinitializer
+  %v16bf16 = shufflevector <16 x bfloat> undef, <16 x bfloat> undef, <32 x i32> zeroinitializer
+
+  %v1f32 = shufflevector <1 x float> undef, <1 x float> undef, <2 x i32> zeroinitializer
+  %v2f32 = shufflevector <2 x float> undef, <2 x float> undef, <4 x i32> zeroinitializer
+  %v4f32 = shufflevector <4 x float> undef, <4 x float> undef, <8 x i32> zeroinitializer
+  %v8f32 = shufflevector <8 x float> undef, <8 x float> undef, <16 x i32> zeroinitializer
+
+  %v1f64 = shufflevector <1 x double> undef, <1 x double> undef, <2 x i32> zeroinitializer
+  %v2f64 = shufflevector <2 x double> undef, <2 x double> undef, <4 x i32> zeroinitializer
+  %v4f64 = shufflevector <4 x double> undef, <4 x double> undef, <8 x i32> zeroinitializer
 
   ret void
 }
