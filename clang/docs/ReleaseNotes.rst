@@ -1267,6 +1267,8 @@ RISC-V Support
 - The option ``-mcmodel=large`` for the large code model is supported.
 - Bump RVV intrinsic to version 1.0, the spec: https://github.com/riscv-non-isa/rvv-intrinsic-doc/releases/tag/v1.0.0-rc4
 
+- `Zicsr` / `Zifencei` are allowed to be duplicated in the presence of `g` in `-march`.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug about overriding a constexpr pure-virtual member function with a non-constexpr virtual member function which causes compilation failure when including standard C++ header `format`.
