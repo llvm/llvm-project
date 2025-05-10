@@ -39,6 +39,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
@@ -211,6 +212,13 @@ struct DAP {
 
   /// The initial thread list upon attaching.
   std::optional<llvm::json::Array> initial_thread_list;
+
+  /// Keep track of all the modules our client knows about: either through the
+  /// modules request or the module events.
+  /// @{
+  std::mutex modules_mutex;
+  llvm::StringSet<> modules;
+  /// @}
 
   /// Creates a new DAP sessions.
   ///
