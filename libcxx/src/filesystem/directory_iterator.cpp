@@ -25,6 +25,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 using detail::ErrorHandler;
 
@@ -319,4 +320,5 @@ bool recursive_directory_iterator::__try_recursion(error_code* ec) {
   return false;
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM
