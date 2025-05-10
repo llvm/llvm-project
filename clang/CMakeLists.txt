@@ -68,6 +68,10 @@ if(CLANG_BUILT_STANDALONE)
   option(CLANG_ENABLE_BOOTSTRAP "Generate the clang bootstrap target" OFF)
   option(LLVM_ENABLE_LIBXML2 "Use libxml2 if available." ON)
 
+  separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+  add_definitions(${LLVM_DEFINITIONS_LIST})
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LLVM_DEFINITIONS_LIST})
+
   include(AddLLVM)
   include(TableGen)
   include(HandleLLVMOptions)
