@@ -52,19 +52,28 @@ OpFoldResult FromPtrOp::fold(FoldAdaptor adaptor) {
   // %val = ptr.from_ptr %ptr (metadata %mda)? : ptr -> type
   // To:
   // %val -> %v
-  auto toPtr = dyn_cast_or_null<ToPtrOp>(getPtr().getDefiningOp());
-  // Cannot fold if it's not a `to_ptr` op or the initial and final types are
-  // different.
-  if (!toPtr || toPtr.getPtr().getType() != getType())
-    return nullptr;
-  Value md = getMetadata();
-  if (!md)
-    return toPtr.getPtr();
-  // Fold if the metadata can be verified to be equal.
-  if (auto mdOp = dyn_cast_or_null<GetMetadataOp>(md.getDefiningOp());
-      mdOp && mdOp.getPtr() == toPtr.getPtr())
-    return toPtr.getPtr();
-  return nullptr;
+  Value ptrLike;
+  FromPtrOp fromPtr = *this;
+  while (fromPtr != nullptr) {
+    auto toPtr = dyn_cast_or_null<ToPtrOp>(fromPtr.getPtr().getDefiningOp());
+    // Cannot fold if it's not a `to_ptr` op or the initial and final types are
+    // different.
+    if (!toPtr || toPtr.getPtr().getType() != fromPtr.getType())
+      return ptrLike;
+    Value md = fromPtr.getMetadata();
+    // If there's no metadata in the op, either the cast never requires metadata
+    // or the op has the trivial metadata flag set, therefore fold.
+    if (!md)
+      ptrLike = toPtr.getPtr();
+    // Fold if the metadata can be verified to be equal.
+    else if (auto mdOp = dyn_cast_or_null<GetMetadataOp>(md.getDefiningOp());
+             mdOp && mdOp.getPtr() == toPtr.getPtr())
+      ptrLike = toPtr.getPtr();
+    // Check for a sequence of casts.
+    fromPtr = dyn_cast_or_null<FromPtrOp>(ptrLike ? ptrLike.getDefiningOp()
+                                                  : nullptr);
+  }
+  return ptrLike;
 }
 
 LogicalResult FromPtrOp::verify() {
@@ -113,11 +122,18 @@ OpFoldResult ToPtrOp::fold(FoldAdaptor adaptor) {
   // %ptr = ptr.to_ptr %val : type -> ptr
   // To:
   // %ptr -> %p
-  auto fromPtr = dyn_cast_or_null<FromPtrOp>(getPtr().getDefiningOp());
-  // Cannot fold if it's not a `from_ptr` op.
-  if (!fromPtr)
-    return nullptr;
-  return fromPtr.getPtr();
+  Value ptr;
+  ToPtrOp toPtr = *this;
+  while (toPtr != nullptr) {
+    auto fromPtr = dyn_cast_or_null<FromPtrOp>(toPtr.getPtr().getDefiningOp());
+    // Cannot fold if it's not a `from_ptr` op.
+    if (!fromPtr)
+      return ptr;
+    ptr = fromPtr.getPtr();
+    // Check for chains of casts.
+    toPtr = dyn_cast_or_null<ToPtrOp>(ptr.getDefiningOp());
+  }
+  return ptr;
 }
 
 LogicalResult ToPtrOp::verify() {
