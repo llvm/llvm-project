@@ -2237,8 +2237,6 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
             if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
               RunSignatureHelp();
             LHS = ExprError();
-          } else if (!HasError && HasTrailingComma) {
-            Diag(Tok, diag::err_expected_expression);
           } else if (LHS.isInvalid()) {
             for (auto &E : ArgExprs)
               Actions.CorrectDelayedTyposInExpr(E);
@@ -3738,7 +3736,6 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     if (Tok.is(tok::r_paren)) {
       if (HasTrailingComma)
         *HasTrailingComma = true;
-      break;
     }
   }
   if (SawError) {
