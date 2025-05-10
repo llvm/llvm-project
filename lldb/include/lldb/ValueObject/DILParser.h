@@ -84,6 +84,7 @@ private:
 
   ASTNodeUP ParseExpression();
   ASTNodeUP ParseUnaryExpression();
+  ASTNodeUP ParsePostfixExpression();
   ASTNodeUP ParsePrimaryExpression();
 
   std::string ParseNestedNameSpecifier();

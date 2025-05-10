@@ -5,13 +5,17 @@
 
 expression = unary_expression ;
 
-unary_expression = unary_operator expression
-                 | primary_expression ;
+unary_expression = postfix_expression
+                 | unary_operator expression ;
 
 unary_operator = "*" | "&" ;
 
+postfix_expresson = primary_expression
+                  | postfix_expression "." id_expression
+                  | postfix_expression "->" id_expression ;
+
 primary_expression = id_expression
-                   | "(" expression ")";
+                   | "(" expression ")"  ;
 
 id_expression = unqualified_id
               | qualified_id

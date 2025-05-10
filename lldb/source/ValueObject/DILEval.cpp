@@ -272,4 +272,66 @@ Interpreter::Visit(const UnaryOpNode *node) {
       m_expr, "invalid ast: unexpected binary operator", node->GetLocation());
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const MemberOfNode *node) {
+  Status error;
+  auto base_or_err = Evaluate(node->GetBase());
+  if (!base_or_err) {
+    return base_or_err;
+  }
+  lldb::ValueObjectSP base = *base_or_err;
+
+  // Perform basic type checking.
+  CompilerType base_type = base->GetCompilerType();
+  // When using an arrow, make sure the base is a pointer or array type.
+  // When using a period, make sure the base type is NOT a pointer type.
+  if (node->GetIsArrow() && !base_type.IsPointerType() &&
+      !base_type.IsArrayType()) {
+    lldb::ValueObjectSP deref_sp = base->Dereference(error);
+    if (error.Success()) {
+      base = deref_sp;
+      base_type = deref_sp->GetCompilerType().GetPointerType();
+    } else {
+      std::string errMsg =
+          llvm::formatv("member reference type {0} is not a pointer; "
+                        "did you mean to use '.'?",
+                        base_type.TypeDescription());
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+    }
+  } else if (!node->GetIsArrow() && base_type.IsPointerType()) {
+    std::string errMsg =
+        llvm::formatv("member reference type {0} is a pointer; "
+                      "did you mean to use '->'?",
+                      base_type.TypeDescription());
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+  }
+
+  // User specified array->elem; need to get to element[0] to look for fields.
+  if (node->GetIsArrow() && base_type.IsArrayType())
+    base = base->GetChildAtIndex(0);
+
+  // Now look for the member with the specified name.
+  lldb::ValueObjectSP field_obj =
+      base->GetChildMemberWithName(llvm::StringRef(node->GetFieldName()));
+  if (field_obj && field_obj->GetName().GetString() == node->GetFieldName()) {
+    if (field_obj->GetCompilerType().IsReferenceType()) {
+      lldb::ValueObjectSP tmp_obj = field_obj->Dereference(error);
+      if (error.Fail())
+        return error.ToError();
+      return tmp_obj;
+    }
+    return field_obj;
+  }
+
+  if (node->GetIsArrow() && base_type.IsPointerType())
+    base_type = base_type.GetPointeeType();
+  std::string errMsg =
+      llvm::formatv("no member named '{0}' in {1}", node->GetFieldName(),
+                    base_type.GetFullyUnqualifiedType().TypeDescription());
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
+}
+
 } // namespace lldb_private::dil
