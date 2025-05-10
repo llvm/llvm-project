@@ -67,7 +67,7 @@ public:
 
   /// Build plain CFG for TheLoop  and connects it to Plan's entry.
   std::unique_ptr<VPlan>
-  buildPlainCFG(DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB);
+  buildPlainCFG(DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB);
 };
 } // anonymous namespace
 
@@ -243,7 +243,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 
 // Main interface to build the plain CFG.
 std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
-    DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB) {
+    DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB) {
   VPIRBasicBlock *Entry = cast<VPIRBasicBlock>(Plan->getEntry());
   BB2VPBB[Entry->getIRBasicBlock()] = Entry;
   for (VPIRBasicBlock *ExitVPBB : Plan->getExitBlocks())
@@ -343,7 +343,7 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
 
 std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(
     Loop *TheLoop, LoopInfo &LI,
-    DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB) {
+    DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB) {
   PlainCFGBuilder Builder(TheLoop, &LI);
   return Builder.buildPlainCFG(VPB2IRBB);
 }

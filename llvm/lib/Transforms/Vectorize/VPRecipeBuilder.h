@@ -90,6 +90,10 @@ class VPRecipeBuilder {
   /// A mapping of partial reduction exit instructions to their scaling factor.
   DenseMap<const Instruction *, unsigned> ScaledReductionMap;
 
+  /// A mapping from VP blocks to IR blocks, used temporarily while migrating
+  /// away from IR references.
+  const DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB;
+
   /// Loop versioning instance for getting noalias metadata guaranteed by
   /// runtime checks.
   LoopVersioning *LVer;
@@ -160,9 +164,10 @@ public:
                   LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM,
                   PredicatedScalarEvolution &PSE, VPBuilder &Builder,
+                  const DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB,
                   LoopVersioning *LVer)
       : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
-        CM(CM), PSE(PSE), Builder(Builder), LVer(LVer) {}
+        CM(CM), PSE(PSE), Builder(Builder), VPB2IRBB(VPB2IRBB), LVer(LVer) {}
 
   std::optional<unsigned> getScalingForReduction(const Instruction *ExitInst) {
     auto It = ScaledReductionMap.find(ExitInst);
@@ -199,7 +204,15 @@ public:
   /// A helper function that computes the predicate of the block BB, assuming
   /// that the header block of the loop is set to True or the loop mask when
   /// tail folding.
+  void createBlockInMask(const VPBasicBlock *VPBB) {
+    return createBlockInMask(VPB2IRBB.lookup(VPBB));
+  }
   void createBlockInMask(BasicBlock *BB);
+
+  /// Returns the *entry* mask for the block \p VPBB.
+  VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
+    return getBlockInMask(VPB2IRBB.lookup(VPBB));
+  }
 
   /// Returns the *entry* mask for the block \p BB.
   VPValue *getBlockInMask(BasicBlock *BB) const;
@@ -213,6 +226,9 @@ public:
 
   /// A helper that returns the previously computed predicate of the edge
   /// between SRC and DST.
+  VPValue *getEdgeMask(const VPBasicBlock *Src, const VPBasicBlock *Dst) const {
+    return getEdgeMask(VPB2IRBB.lookup(Src), VPB2IRBB.lookup(Dst));
+  }
   VPValue *getEdgeMask(BasicBlock *Src, BasicBlock *Dst) const;
 
   /// Return the recipe created for given ingredient.
