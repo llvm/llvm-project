@@ -1127,6 +1127,7 @@ R"(All available -march extensions for RISC-V
     svnapot              1.0
     svpbmt               1.0
     svvptc               1.0
+    xandesperf           5.0
     xcvalu               1.0
     xcvbi                1.0
     xcvbitmanip          1.0

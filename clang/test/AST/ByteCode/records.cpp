@@ -1819,3 +1819,14 @@ namespace GlobalDtor {
     a.~A(); // both-note {{cannot modify an object that is visible outside}}
   }
 }
+
+namespace NullDtor {
+  struct S {};
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+     S *s = nullptr;
+     s->~S(); // both-note 2{{destruction of dereferenced null pointer is not allowed in a constant expression}}
+     return 10;
+  }
+  static_assert(foo() == 10, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{in call to}}
+}

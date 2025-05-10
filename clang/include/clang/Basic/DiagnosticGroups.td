@@ -103,10 +103,12 @@ def AnonEnumEnumConversion : DiagGroup<"anon-enum-enum-conversion",
                                    [DeprecatedAnonEnumEnumConversion]>;
 def EnumEnumConversion : DiagGroup<"enum-enum-conversion",
                                    [DeprecatedEnumEnumConversion]>;
+def ImplicitEnumEnumCast : DiagGroup<"implicit-enum-enum-cast">;
 def EnumFloatConversion : DiagGroup<"enum-float-conversion",
                                     [DeprecatedEnumFloatConversion]>;
 def EnumConversion : DiagGroup<"enum-conversion",
                                [EnumEnumConversion,
+                                ImplicitEnumEnumCast,
                                 EnumFloatConversion,
                                 EnumCompareConditional]>;
 def DeprecatedOFast : DiagGroup<"deprecated-ofast">;
@@ -154,10 +156,34 @@ def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
 def C99Compat : DiagGroup<"c99-compat">;
 def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
-def DefaultConstInitUnsafe : DiagGroup<"default-const-init-unsafe">;
-def DefaultConstInit : DiagGroup<"default-const-init", [DefaultConstInitUnsafe]>;
+
+def CppKeywordInC : DiagGroup<"c++-keyword">;
+def DuplicateDeclSpecifier : DiagGroup<"duplicate-decl-specifier">;
+def InitStringTooLongMissingNonString :
+  DiagGroup<"unterminated-string-initialization">;
+def InitStringTooLongForCpp :
+  DiagGroup<"c++-unterminated-string-initialization">;
+def HiddenCppDecl : DiagGroup<"c++-hidden-decl">;
+def DefaultConstInitFieldUnsafe : DiagGroup<"default-const-init-field-unsafe">;
+def DefaultConstInitVarUnsafe : DiagGroup<"default-const-init-var-unsafe">;
+def DefaultConstInitUnsafe : DiagGroup<"default-const-init-unsafe",
+                                       [DefaultConstInitFieldUnsafe,
+                                        DefaultConstInitVarUnsafe]>;
+def DefaultConstInitField : DiagGroup<"default-const-init-field">;
+def DefaultConstInitVar : DiagGroup<"default-const-init-var">;
+def DefaultConstInit : DiagGroup<"default-const-init",
+                                 [DefaultConstInitField, DefaultConstInitVar,
+                                  DefaultConstInitUnsafe]>;
 def ImplicitVoidPtrCast : DiagGroup<"implicit-void-ptr-cast">;
-def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit]>;
+def ImplicitIntToEnumCast : DiagGroup<"implicit-int-enum-cast",
+                                      [ImplicitEnumEnumCast]>;
+def JumpBypassesInit : DiagGroup<"jump-misses-init">;
+def TentativeDefnCompat : DiagGroup<"tentative-definition-compat">;
+def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit,
+                                        ImplicitIntToEnumCast, HiddenCppDecl,
+                                        InitStringTooLongForCpp, CppKeywordInC,
+                                        TentativeDefnCompat, JumpBypassesInit,
+                                        DuplicateDeclSpecifier]>;
 
 def ExternCCompat : DiagGroup<"extern-c-compat">;
 def KeywordCompat : DiagGroup<"keyword-compat">;
@@ -595,6 +621,7 @@ def ModuleImport : DiagGroup<"module-import">;
 def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def ModuleIncludeDirectiveTranslation : DiagGroup<"module-include-translation">;
+def ModuleMap : DiagGroup<"module-map">;
 def RoundTripCC1Args : DiagGroup<"round-trip-cc1-args">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
@@ -803,7 +830,6 @@ def TautologicalCompare : DiagGroup<"tautological-compare",
                                      TautologicalObjCBoolCompare,
                                      TautologicalNegationCompare]>;
 def HeaderHygiene : DiagGroup<"header-hygiene">;
-def DuplicateDeclSpecifier : DiagGroup<"duplicate-decl-specifier">;
 def CompareDistinctPointerType : DiagGroup<"compare-distinct-pointer-types">;
 def GNUUnionCast : DiagGroup<"gnu-union-cast">;
 def GNUVariableSizedTypeNotAtEnd : DiagGroup<"gnu-variable-sized-type-not-at-end">;
@@ -1137,6 +1163,7 @@ def Extra : DiagGroup<"extra", [
     StringConcatation,
     FUseLdPath,
     CastFunctionTypeMismatch,
+    InitStringTooLongMissingNonString,
   ]>;
 
 def Most : DiagGroup<"most", [

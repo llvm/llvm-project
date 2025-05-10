@@ -2709,7 +2709,6 @@ static SDValue LowerTcgen05St(SDValue Op, SelectionDAG &DAG) {
 static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDValue Intrin = N->getOperand(1);
-  SDLoc DL(N);
 
   // Get the intrinsic ID
   unsigned IntrinNo = cast<ConstantSDNode>(Intrin.getNode())->getZExtValue();
@@ -3191,20 +3190,25 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue
 NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
-  SDNode *N = Op.getNode();
+  MemSDNode *N = cast<MemSDNode>(Op.getNode());
   SDValue Val = N->getOperand(1);
   SDLoc DL(N);
-  EVT ValVT = Val.getValueType();
+  const EVT ValVT = Val.getValueType();
+  const EVT MemVT = N->getMemoryVT();
+
+  // If we're truncating as part of the store, avoid lowering to a StoreV node.
+  // TODO: consider relaxing this restriction.
+  if (ValVT != MemVT)
+    return SDValue();
 
   const auto NumEltsAndEltVT = getVectorLoweringShape(ValVT);
   if (!NumEltsAndEltVT)
     return SDValue();
   const auto [NumElts, EltVT] = NumEltsAndEltVT.value();
 
-  MemSDNode *MemSD = cast<MemSDNode>(N);
   const DataLayout &TD = DAG.getDataLayout();
 
-  Align Alignment = MemSD->getAlign();
+  Align Alignment = N->getAlign();
   Align PrefAlign = TD.getPrefTypeAlign(ValVT.getTypeForEVT(*DAG.getContext()));
   if (Alignment < PrefAlign) {
     // This store is not sufficiently aligned, so bail out and let this vector
@@ -3267,7 +3271,7 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue NewSt =
       DAG.getMemIntrinsicNode(Opcode, DL, DAG.getVTList(MVT::Other), Ops,
-                              MemSD->getMemoryVT(), MemSD->getMemOperand());
+                              N->getMemoryVT(), N->getMemOperand());
 
   // return DCI.CombineTo(N, NewSt, true);
   return NewSt;
@@ -5762,20 +5766,23 @@ static void ReplaceBITCAST(SDNode *Node, SelectionDAG &DAG,
 /// ReplaceVectorLoad - Convert vector loads into multi-output scalar loads.
 static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
                               SmallVectorImpl<SDValue> &Results) {
-  const EVT ResVT = N->getValueType(0);
-  SDLoc DL(N);
+  LoadSDNode *LD = cast<LoadSDNode>(N);
+  const EVT ResVT = LD->getValueType(0);
+  const EVT MemVT = LD->getMemoryVT();
+
+  // If we're doing sign/zero extension as part of the load, avoid lowering to
+  // a LoadV node. TODO: consider relaxing this restriction.
+  if (ResVT != MemVT)
+    return;
 
   const auto NumEltsAndEltVT = getVectorLoweringShape(ResVT);
   if (!NumEltsAndEltVT)
     return;
   const auto [NumElts, EltVT] = NumEltsAndEltVT.value();
 
-  LoadSDNode *LD = cast<LoadSDNode>(N);
-
   Align Alignment = LD->getAlign();
   const auto &TD = DAG.getDataLayout();
-  Align PrefAlign =
-      TD.getPrefTypeAlign(LD->getMemoryVT().getTypeForEVT(*DAG.getContext()));
+  Align PrefAlign = TD.getPrefTypeAlign(MemVT.getTypeForEVT(*DAG.getContext()));
   if (Alignment < PrefAlign) {
     // This load is not sufficiently aligned, so bail out and let this vector
     // load be scalarized.  Note that we may still be able to emit smaller
@@ -5806,9 +5813,10 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
     break;
   }
   }
+  SDLoc DL(LD);
 
   // Copy regular operands
-  SmallVector<SDValue, 8> OtherOps(N->ops());
+  SmallVector<SDValue, 8> OtherOps(LD->ops());
 
   // The select routine does not have access to the LoadSDNode instance, so
   // pass along the extension information
@@ -5893,7 +5901,6 @@ static void ReplaceTcgen05Ld(SDNode *N, SelectionDAG &DAG,
   SDValue BuildVector = DAG.getNode(ISD::BUILD_VECTOR, DL, ResVT, ScalarRes);
   Results.push_back(BuildVector); // Build Vector
   Results.push_back(Chain);       // Chain
-  return;
 }
 
 static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,

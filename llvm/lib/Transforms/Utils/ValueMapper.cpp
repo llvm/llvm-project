@@ -37,6 +37,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 #include <limits>
@@ -1010,6 +1011,10 @@ void Mapper::remapInstruction(Instruction *I) {
       I->setMetadata(MI.first, New);
   }
 
+  // Remap source location atom instance.
+  if (!(Flags & RF_DoNotRemapAtoms))
+    RemapSourceAtom(I, getVM());
+
   if (!TypeMapper)
     return;
 
@@ -1291,4 +1296,25 @@ void ValueMapper::scheduleMapGlobalIFunc(GlobalIFunc &GI, Constant &Resolver,
 
 void ValueMapper::scheduleRemapFunction(Function &F, unsigned MCID) {
   getAsMapper(pImpl)->scheduleRemapFunction(F, MCID);
+}
+
+void llvm::RemapSourceAtom(Instruction *I, ValueToValueMapTy &VM) {
+  const DebugLoc &DL = I->getDebugLoc();
+  if (!DL)
+    return;
+
+  auto AtomGroup = DL->getAtomGroup();
+  if (!AtomGroup)
+    return;
+
+  auto R = VM.AtomMap.find({DL->getInlinedAt(), AtomGroup});
+  if (R == VM.AtomMap.end())
+    return;
+  AtomGroup = R->second;
+
+  // Remap the atom group and copy all other fields.
+  DILocation *New = DILocation::get(
+      I->getContext(), DL.getLine(), DL.getCol(), DL.getScope(),
+      DL.getInlinedAt(), DL.isImplicitCode(), AtomGroup, DL->getAtomRank());
+  I->setDebugLoc(New);
 }

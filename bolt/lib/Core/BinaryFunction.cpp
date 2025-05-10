@@ -65,6 +65,8 @@ extern cl::opt<bool> StrictMode;
 extern cl::opt<bool> UpdateDebugSections;
 extern cl::opt<unsigned> Verbosity;
 
+extern bool BinaryAnalysisMode;
+extern bool HeatmapMode;
 extern bool processAllFunctions();
 
 static cl::opt<bool> CheckEncoding(
@@ -471,7 +473,7 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Image       : 0x" << Twine::utohexstr(getImageAddress());
   if (ExecutionCount != COUNT_NO_PROFILE) {
     OS << "\n  Exec Count  : " << ExecutionCount;
-    OS << "\n  Branch Count: " << RawSampleCount;
+    OS << "\n  Branch Count: " << RawBranchCount;
     OS << "\n  Profile Acc : " << format("%.1f%%", ProfileMatchRatio * 100.0f);
   }
 
@@ -2760,12 +2762,18 @@ private:
     }
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
-    case MCCFIInstruction::OpNegateRAState:
     case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
       llvm_unreachable("unsupported CFI opcode");
+      break;
+    case MCCFIInstruction::OpNegateRAState:
+      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
+        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
+                         "as produced by '-mbranch-protection=pac-ret') are "
+                         "currently not supported by BOLT.");
+      }
       break;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
@@ -2900,13 +2908,19 @@ struct CFISnapshotDiff : public CFISnapshot {
       return CFAReg == Instr.getRegister() && CFAOffset == Instr.getOffset();
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
-    case MCCFIInstruction::OpNegateRAState:
     case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
       llvm_unreachable("unsupported CFI opcode");
       return false;
+    case MCCFIInstruction::OpNegateRAState:
+      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
+        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
+                         "as produced by '-mbranch-protection=pac-ret') are "
+                         "currently not supported by BOLT.");
+      }
+      break;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -3051,12 +3065,18 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
       break;
     case MCCFIInstruction::OpAdjustCfaOffset:
     case MCCFIInstruction::OpWindowSave:
-    case MCCFIInstruction::OpNegateRAState:
     case MCCFIInstruction::OpNegateRAStateWithPC:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
       llvm_unreachable("unsupported CFI opcode");
+      break;
+    case MCCFIInstruction::OpNegateRAState:
+      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
+        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
+                         "as produced by '-mbranch-protection=pac-ret') are "
+                         "currently not supported by BOLT.");
+      }
       break;
     case MCCFIInstruction::OpGnuArgsSize:
       // do not affect CFI state

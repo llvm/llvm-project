@@ -185,6 +185,14 @@ public:
   }
   bool isInt(mlir::Type i) { return mlir::isa<cir::IntType>(i); }
 
+  //
+  // Constant creation helpers
+  // -------------------------
+  //
+  cir::ConstantOp getSInt32(int32_t c, mlir::Location loc) {
+    return getConstantInt(loc, getSInt32Ty(), c);
+  }
+
   // Creates constant nullptr for pointer type ty.
   cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
     assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());

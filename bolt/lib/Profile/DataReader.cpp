@@ -414,12 +414,12 @@ void DataReader::matchProfileData(BinaryFunction &BF) {
   FuncBranchData *FBD = getBranchData(BF);
   if (FBD) {
     BF.ProfileMatchRatio = evaluateProfileData(BF, *FBD);
-    BF.RawSampleCount = FBD->getNumExecutedBranches();
+    BF.RawBranchCount = FBD->getNumExecutedBranches();
     if (BF.ProfileMatchRatio == 1.0f) {
       if (fetchProfileForOtherEntryPoints(BF)) {
         BF.ProfileMatchRatio = evaluateProfileData(BF, *FBD);
         BF.ExecutionCount = FBD->ExecutionCount;
-        BF.RawSampleCount = FBD->getNumExecutedBranches();
+        BF.RawBranchCount = FBD->getNumExecutedBranches();
       }
       return;
     }

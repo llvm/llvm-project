@@ -7201,20 +7201,19 @@ bool llvm::isNotCrossLaneOperation(const Instruction *I) {
          !isa<CallBase, BitCastInst, ExtractElementInst>(I);
 }
 
-bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
-                                        const Instruction *CtxI,
-                                        AssumptionCache *AC,
-                                        const DominatorTree *DT,
-                                        const TargetLibraryInfo *TLI,
-                                        bool UseVariableInfo) {
+bool llvm::isSafeToSpeculativelyExecute(
+    const Instruction *Inst, const Instruction *CtxI, AssumptionCache *AC,
+    const DominatorTree *DT, const TargetLibraryInfo *TLI, bool UseVariableInfo,
+    bool IgnoreUBImplyingAttrs) {
   return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI,
-                                                AC, DT, TLI, UseVariableInfo);
+                                                AC, DT, TLI, UseVariableInfo,
+                                                IgnoreUBImplyingAttrs);
 }
 
 bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI,
     AssumptionCache *AC, const DominatorTree *DT, const TargetLibraryInfo *TLI,
-    bool UseVariableInfo) {
+    bool UseVariableInfo, bool IgnoreUBImplyingAttrs) {
 #ifndef NDEBUG
   if (Inst->getOpcode() != Opcode) {
     // Check that the operands are actually compatible with the Opcode override.
@@ -7287,7 +7286,11 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
 
     // The called function could have undefined behavior or side-effects, even
     // if marked readnone nounwind.
-    return Callee && Callee->isSpeculatable();
+    if (!Callee || !Callee->isSpeculatable())
+      return false;
+    // Since the operands may be changed after hoisting, undefined behavior may
+    // be triggered by some UB-implying attributes.
+    return IgnoreUBImplyingAttrs || !CI->hasUBImplyingAttrs();
   }
   case Instruction::VAArg:
   case Instruction::Alloca:
@@ -7720,6 +7723,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
       case Intrinsic::maxnum:
       case Intrinsic::minimum:
       case Intrinsic::maximum:
+      case Intrinsic::minimumnum:
+      case Intrinsic::maximumnum:
       case Intrinsic::is_fpclass:
       case Intrinsic::ldexp:
       case Intrinsic::frexp:

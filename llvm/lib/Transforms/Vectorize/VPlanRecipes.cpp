@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
@@ -287,12 +288,12 @@ InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   std::optional<unsigned> Opcode = std::nullopt;
-  VPValue *BinOp = getOperand(0);
+  VPValue *BinOp = getOperand(1);
 
   // If the partial reduction is predicated, a select will be operand 0 rather
   // than the binary op
   using namespace llvm::VPlanPatternMatch;
-  if (match(getOperand(0), m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
+  if (match(getOperand(1), m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
     BinOp = BinOp->getDefiningRecipe()->getOperand(1);
 
   // If BinOp is a negation, use the side effect of match to assign the actual
@@ -337,8 +338,8 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
   assert(getOpcode() == Instruction::Add &&
          "Unhandled partial reduction opcode");
 
-  Value *BinOpVal = State.get(getOperand(0));
-  Value *PhiVal = State.get(getOperand(1));
+  Value *BinOpVal = State.get(getOperand(1));
+  Value *PhiVal = State.get(getOperand(0));
   assert(PhiVal && BinOpVal && "Phi and Mul must be set");
 
   Type *RetTy = PhiVal->getType();
@@ -494,7 +495,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
                getParent()->getPlan()->getVectorLoopRegion()->getEntry() &&
            "VPInstructions with PHI opcodes must be used for header phis only "
            "at the moment");
-    BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+    BasicBlock *VectorPH =
+        State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
     Value *Start = State.get(getOperand(0), VPLane(0));
     PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
     Phi->addIncoming(Start, VectorPH);
@@ -1333,15 +1335,6 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   for (const auto &[Idx, Op] : enumerate(operands())) {
     auto *V = Op->getUnderlyingValue();
     if (!V) {
-      // Push all the VP Intrinsic's ops into the Argments even if is nullptr.
-      // Some VP Intrinsic's cost will assert the number of parameters.
-      // Mainly appears in the following two scenarios:
-      // 1. EVL Op is nullptr
-      // 2. The Argmunt of the VP Intrinsic is also the VP Intrinsic
-      if (VPIntrinsic::isVPIntrinsic(VectorIntrinsicID)) {
-        Arguments.push_back(V);
-        continue;
-      }
       if (auto *UI = dyn_cast_or_null<CallBase>(getUnderlyingValue())) {
         Arguments.push_back(UI->getArgOperand(Idx));
         continue;
@@ -1373,10 +1366,11 @@ StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
 
 bool VPWidenIntrinsicRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  // Vector predication intrinsics only demand the the first lane the last
-  // operand (the EVL operand).
-  return VPIntrinsic::isVPIntrinsic(VectorIntrinsicID) &&
-         Op == getOperand(getNumOperands() - 1);
+  return all_of(enumerate(operands()), [this, &Op](const auto &X) {
+    auto [Idx, V] = X;
+    return V != Op || isVectorIntrinsicWithScalarOpAtArg(getVectorIntrinsicID(),
+                                                         Idx, nullptr);
+  });
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1900,8 +1894,6 @@ static Value *getStepVector(Value *Val, Value *Step,
          "Induction Step must be an integer or FP");
   assert(Step->getType() == STy && "Step has wrong type");
 
-  SmallVector<Constant *, 8> Indices;
-
   // Create a vector of consecutive numbers from zero to VF.
   VectorType *InitVecValVTy = ValVTy;
   if (STy->isFloatingPointTy()) {
@@ -1965,7 +1957,8 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 
   // Construct the initial value of the vector IV in the vector loop preheader
   auto CurrIP = Builder.saveIP();
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
   Builder.SetInsertPoint(VectorPH->getTerminator());
   if (isa<TruncInst>(EntryVal)) {
     assert(Start->getType()->isIntegerTy() &&
@@ -2134,7 +2127,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
           Builder.CreateMul(StartIdx0, ConstantInt::get(StartIdx0->getType(),
                                                         getUnrollPart(*this)));
     }
-    StartIdx0 = Builder.CreateTrunc(StartIdx0, IntStepTy);
+    StartIdx0 = Builder.CreateSExtOrTrunc(StartIdx0, IntStepTy);
   }
 
   if (!FirstLaneOnly && State.VF.isScalable()) {
@@ -2556,6 +2549,107 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   O << ")";
 }
 #endif
+
+/// A helper function to scalarize a single Instruction in the innermost loop.
+/// Generates a sequence of scalar instances for lane \p Lane. Uses the VPValue
+/// operands from \p RepRecipe instead of \p Instr's operands.
+static void scalarizeInstruction(const Instruction *Instr,
+                                 VPReplicateRecipe *RepRecipe,
+                                 const VPLane &Lane, VPTransformState &State) {
+  assert((!Instr->getType()->isAggregateType() ||
+          canVectorizeTy(Instr->getType())) &&
+         "Expected vectorizable or non-aggregate type.");
+
+  // Does this instruction return a value ?
+  bool IsVoidRetTy = Instr->getType()->isVoidTy();
+
+  Instruction *Cloned = Instr->clone();
+  if (!IsVoidRetTy) {
+    Cloned->setName(Instr->getName() + ".cloned");
+#if !defined(NDEBUG)
+    // Verify that VPlan type inference results agree with the type of the
+    // generated values.
+    assert(State.TypeAnalysis.inferScalarType(RepRecipe) == Cloned->getType() &&
+           "inferred type and type from generated instructions do not match");
+#endif
+  }
+
+  RepRecipe->applyFlags(*Cloned);
+
+  if (auto DL = RepRecipe->getDebugLoc())
+    State.setDebugLocFrom(DL);
+
+  // Replace the operands of the cloned instructions with their scalar
+  // equivalents in the new loop.
+  for (const auto &I : enumerate(RepRecipe->operands())) {
+    auto InputLane = Lane;
+    VPValue *Operand = I.value();
+    if (vputils::isUniformAfterVectorization(Operand))
+      InputLane = VPLane::getFirstLane();
+    Cloned->setOperand(I.index(), State.get(Operand, InputLane));
+  }
+  State.addNewMetadata(Cloned, Instr);
+
+  // Place the cloned scalar in the new loop.
+  State.Builder.Insert(Cloned);
+
+  State.set(RepRecipe, Cloned, Lane);
+
+  // If we just cloned a new assumption, add it the assumption cache.
+  if (auto *II = dyn_cast<AssumeInst>(Cloned))
+    State.AC->registerAssumption(II);
+
+  assert(
+      (RepRecipe->getParent()->getParent() ||
+       !RepRecipe->getParent()->getPlan()->getVectorLoopRegion() ||
+       all_of(RepRecipe->operands(),
+              [](VPValue *Op) { return Op->isDefinedOutsideLoopRegions(); })) &&
+      "Expected a recipe is either within a region or all of its operands "
+      "are defined outside the vectorized region.");
+}
+
+void VPReplicateRecipe::execute(VPTransformState &State) {
+  Instruction *UI = getUnderlyingInstr();
+  if (State.Lane) { // Generate a single instance.
+    assert((State.VF.isScalar() || !isUniform()) &&
+           "uniform recipe shouldn't be predicated");
+    assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
+    scalarizeInstruction(UI, this, *State.Lane, State);
+    // Insert scalar instance packing it into a vector.
+    if (State.VF.isVector() && shouldPack()) {
+      // If we're constructing lane 0, initialize to start from poison.
+      if (State.Lane->isFirstLane()) {
+        assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
+        Value *Poison =
+            PoisonValue::get(VectorType::get(UI->getType(), State.VF));
+        State.set(this, Poison);
+      }
+      State.packScalarIntoVectorizedValue(this, *State.Lane);
+    }
+    return;
+  }
+
+  if (IsUniform) {
+    // Uniform within VL means we need to generate lane 0.
+    scalarizeInstruction(UI, this, VPLane(0), State);
+    return;
+  }
+
+  // A store of a loop varying value to a uniform address only needs the last
+  // copy of the store.
+  if (isa<StoreInst>(UI) &&
+      vputils::isUniformAfterVectorization(getOperand(1))) {
+    auto Lane = VPLane::getLastLaneForVF(State.VF);
+    scalarizeInstruction(UI, this, VPLane(Lane), State);
+    return;
+  }
+
+  // Generate scalar instances for all VF lanes.
+  assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
+  const unsigned EndLane = State.VF.getKnownMinValue();
+  for (unsigned Lane = 0; Lane < EndLane; ++Lane)
+    scalarizeInstruction(UI, this, VPLane(Lane), State);
+}
 
 bool VPReplicateRecipe::shouldPack() const {
   // Find if the recipe is used by a widened recipe via an intervening
@@ -3415,7 +3509,8 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   Value *ScalarStartValue = getStartValue()->getLiveInIRValue();
   Type *ScStValueType = ScalarStartValue->getType();
 
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
   PHINode *NewPointerPhi = nullptr;
   if (CurrentPart == 0) {
     IRBuilder<>::InsertPointGuard Guard(State.Builder);
@@ -3556,7 +3651,8 @@ void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
                     ? VectorInit->getType()
                     : VectorType::get(VectorInit->getType(), State.VF);
 
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
   if (State.VF.isVector()) {
     auto *IdxTy = Builder.getInt32Ty();
     auto *One = ConstantInt::get(IdxTy, 1);
@@ -3624,7 +3720,8 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   Phi->insertBefore(HeaderBB->getFirstInsertionPt());
   State.set(this, Phi, IsInLoop);
 
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
 
   Value *Iden = nullptr;
   RecurKind RK = RdxDesc.getRecurrenceKind();
@@ -3694,27 +3791,6 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPBasicBlock *VPWidenPHIRecipe::getIncomingBlock(unsigned I) {
-  VPBasicBlock *Parent = getParent();
-  VPBlockBase *Pred = nullptr;
-  if (Parent->getNumPredecessors() > 0) {
-    Pred = Parent->getPredecessors()[I];
-  } else {
-    auto *Region = Parent->getParent();
-    assert(Region && !Region->isReplicator() && Region->getEntry() == Parent &&
-           "must be in the entry block of a non-replicate region");
-    assert(
-        I < 2 && getNumOperands() == 2 &&
-        "when placed in an entry block, only 2 incoming blocks are available");
-
-    // I ==  0 selects the predecessor of the region, I == 1 selects the region
-    // itself whose exiting block feeds the phi across the backedge.
-    Pred = I == 0 ? Region->getSinglePredecessor() : Region;
-  }
-
-  return Pred->getExitingBasicBlock();
-}
-
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   assert(EnableVPlanNativePath &&
          "Non-native vplans are not expected to have VPWidenPHIRecipes.");
@@ -3739,7 +3815,8 @@ void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 // TODO: It would be good to use the existing VPWidenPHIRecipe instead and
 // remove VPActiveLaneMaskPHIRecipe.
 void VPActiveLaneMaskPHIRecipe::execute(VPTransformState &State) {
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  BasicBlock *VectorPH =
+      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
   Value *StartMask = State.get(getOperand(0));
   PHINode *Phi =
       State.Builder.CreatePHI(StartMask->getType(), 2, "active.lane.mask");

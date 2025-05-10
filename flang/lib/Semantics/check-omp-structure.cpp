@@ -867,8 +867,6 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
   //  The only OpenMP constructs that can be encountered during execution of
   // a simd region are the `atomic` construct, the `loop` construct, the `simd`
   // construct and the `ordered` construct with the `simd` clause.
-  // TODO:  Expand the check to include `LOOP` construct as well when it is
-  // supported.
 
   // Check if the parent context has the SIMD clause
   // Please note that we use GetContext() instead of GetContextParent()
@@ -911,14 +909,15 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
               }
             }
           },
-          // Allowing SIMD construct
+          // Allowing SIMD and loop construct
           [&](const parser::OpenMPLoopConstruct &c) {
             const auto &beginLoopDir{
                 std::get<parser::OmpBeginLoopDirective>(c.t)};
             const auto &beginDir{
                 std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
             if ((beginDir.v == llvm::omp::Directive::OMPD_simd) ||
-                (beginDir.v == llvm::omp::Directive::OMPD_do_simd)) {
+                (beginDir.v == llvm::omp::Directive::OMPD_do_simd) ||
+                (beginDir.v == llvm::omp::Directive::OMPD_loop)) {
               eligibleSIMD = true;
             }
           },
@@ -4572,10 +4571,18 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Update &x) {
   llvm::omp::Directive dir{GetContext().directive};
   unsigned version{context_.langOptions().OpenMPVersion};
 
-  auto *depType{std::get_if<parser::OmpDependenceType>(&x.v.u)};
-  auto *taskType{std::get_if<parser::OmpTaskDependenceType>(&x.v.u)};
-  assert(((depType == nullptr) != (taskType == nullptr)) &&
-      "Unexpected alternative in update clause");
+  const parser::OmpDependenceType *depType{nullptr};
+  const parser::OmpTaskDependenceType *taskType{nullptr};
+  if (auto &maybeUpdate{x.v}) {
+    depType = std::get_if<parser::OmpDependenceType>(&maybeUpdate->u);
+    taskType = std::get_if<parser::OmpTaskDependenceType>(&maybeUpdate->u);
+  }
+
+  if (!depType && !taskType) {
+    assert(dir == llvm::omp::Directive::OMPD_atomic &&
+        "Unexpected alternative in update clause");
+    return;
+  }
 
   if (depType) {
     CheckDependenceType(depType->v);

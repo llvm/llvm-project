@@ -27,6 +27,7 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <functional>
 
@@ -51,7 +52,7 @@ static unsigned typeToAddressSpace(const Type *Ty) {
   if (auto *ExtTy = dyn_cast<TargetExtType>(Ty);
       ExtTy && isTypedPointerWrapper(ExtTy))
     return ExtTy->getIntParameter(0);
-  report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
+  reportFatalInternalError("Unable to convert LLVM type to SPIRVType");
 }
 
 #ifndef NDEBUG
@@ -175,7 +176,8 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-    if (ST.canUseExtension(
+    if ((!isPowerOf2_32(Width) || Width < 8) &&
+        ST.canUseExtension(
             SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers)) {
       MIRBuilder.buildInstr(SPIRV::OpExtension)
           .addImm(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers);

@@ -31,6 +31,7 @@
 #include "flang/Optimizer/Builder/Runtime/Pointer.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <optional>
 
@@ -203,18 +204,45 @@ private:
         !partInfo.resultShape)
       partInfo.resultShape =
           hlfir::genShape(getLoc(), getBuilder(), *partInfo.base);
+
+    // Enable volatility on the designatory type if it has the VOLATILE
+    // attribute or if the base is volatile.
+    bool isVolatile = false;
+
+    // Check if this should be a volatile reference
+    if constexpr (std::is_same_v<std::decay_t<T>,
+                                 Fortran::evaluate::SymbolRef>) {
+      if (designatorNode.get().GetUltimate().attrs().test(
+              Fortran::semantics::Attr::VOLATILE))
+        isVolatile = true;
+    } else if constexpr (std::is_same_v<std::decay_t<T>,
+                                        Fortran::evaluate::ArrayRef>) {
+      if (designatorNode.base().GetLastSymbol().attrs().test(
+              Fortran::semantics::Attr::VOLATILE))
+        isVolatile = true;
+    } else if constexpr (std::is_same_v<std::decay_t<T>,
+                                        Fortran::evaluate::Component>) {
+      if (designatorNode.GetLastSymbol().attrs().test(
+              Fortran::semantics::Attr::VOLATILE))
+        isVolatile = true;
+    }
+
     // Dynamic type of polymorphic base must be kept if the designator is
     // polymorphic.
     if (isPolymorphic(designatorNode))
-      return fir::ClassType::get(resultValueType);
+      return fir::ClassType::get(resultValueType, isVolatile);
+
     // Character scalar with dynamic length needs a fir.boxchar to hold the
     // designator length.
     auto charType = mlir::dyn_cast<fir::CharacterType>(resultValueType);
     if (charType && charType.hasDynamicLen())
       return fir::BoxCharType::get(charType.getContext(), charType.getFKind());
 
-    // When volatile is enabled, enable volatility on the designatory type.
-    const bool isVolatile = false;
+    // Check if the base type is volatile
+    if (partInfo.base.has_value()) {
+      mlir::Type baseType = partInfo.base.value().getType();
+      isVolatile = isVolatile || fir::isa_volatile_type(baseType);
+    }
 
     // Arrays with non default lower bounds or dynamic length or dynamic extent
     // need a fir.box to hold the dynamic or lower bound information.
@@ -440,7 +468,10 @@ private:
     // hlfir.designate result will be a pointer/allocatable.
     PartInfo partInfo;
     mlir::Type componentType = visitComponentImpl(component, partInfo).second;
-    mlir::Type designatorType = fir::ReferenceType::get(componentType);
+    const auto isVolatile =
+        fir::isa_volatile_type(partInfo.base.value().getBase().getType());
+    mlir::Type designatorType =
+        fir::ReferenceType::get(componentType, isVolatile);
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(getBuilder().getContext(),
                                                   component.GetLastSymbol());
@@ -2119,4 +2150,49 @@ Fortran::lower::convertVectorSubscriptedExprToElementalAddr(
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
   return HlfirDesignatorBuilder(loc, converter, symMap, stmtCtx)
       .convertVectorSubscriptedExprToElementalAddr(designatorExpr);
+}
+
+hlfir::Entity Fortran::lower::genVectorSubscriptedDesignatorFirstElementAddress(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  // Get a hlfir.elemental_addr op describing the address of the value
+  // indexed from the original array.
+  // Note: the hlfir.elemental_addr op verifier requires it to be inside
+  // of a hlfir.region_assign op. This operation is never seen by the
+  // verifier because it is immediately inlined.
+  hlfir::ElementalAddrOp addrOp = convertVectorSubscriptedExprToElementalAddr(
+      loc, converter, expr, symMap, stmtCtx);
+  if (!addrOp.getCleanup().empty())
+    TODO(converter.getCurrentLocation(),
+         "Vector subscript requring a cleanup region");
+
+  // hlfir.elemental_addr doesn't have a normal lowering because it
+  // can't return a value. Instead we need to inline it here using
+  // values for the first element. Similar to hlfir::inlineElementalOp.
+
+  mlir::Value one = builder.createIntegerConstant(
+      converter.getCurrentLocation(), builder.getIndexType(), 1);
+  mlir::SmallVector<mlir::Value> oneBasedIndices;
+  oneBasedIndices.resize(addrOp.getIndices().size(), one);
+
+  mlir::IRMapping mapper;
+  mapper.map(addrOp.getIndices(), oneBasedIndices);
+  assert(addrOp.getElementalRegion().hasOneBlock());
+  mlir::Operation *newOp;
+  for (mlir::Operation &op : addrOp.getElementalRegion().back().getOperations())
+    newOp = builder.clone(op, mapper);
+  auto yield = mlir::cast<hlfir::YieldOp>(newOp);
+
+  addrOp->erase();
+
+  if (!yield.getCleanup().empty())
+    TODO(converter.getCurrentLocation(),
+         "Vector subscript requring element cleanup");
+
+  hlfir::Entity result{yield.getEntity()};
+  yield->erase();
+  return result;
 }

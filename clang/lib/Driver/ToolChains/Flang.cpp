@@ -128,7 +128,8 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_std_EQ, options::OPT_W_Joined,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
                    options::OPT_funderscoring, options::OPT_fno_underscoring,
-                   options::OPT_funsigned, options::OPT_fno_unsigned});
+                   options::OPT_funsigned, options::OPT_fno_unsigned,
+                   options::OPT_finstrument_functions});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
   if (Args.hasArg(options::OPT_gN_Group)) {
@@ -159,7 +160,7 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   for (const auto &arg :
        Args.getAllArgValues(options::OPT_frepack_arrays_contiguity_EQ))
-    if (arg.compare("whole") != 0 && arg.compare("innermost") != 0) {
+    if (arg != "whole" && arg != "innermost") {
       getToolChain().getDriver().Diag(diag::err_drv_unsupported_option_argument)
           << "-frepack-arrays-contiguity=" << arg;
     }
@@ -483,7 +484,7 @@ void Flang::addTargetOptions(const ArgList &Args,
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
-    } else if (Name == "LIBMVEC-X86") {
+    } else if (Name == "libmvec") {
       if (Triple.getArch() != llvm::Triple::x86 &&
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)

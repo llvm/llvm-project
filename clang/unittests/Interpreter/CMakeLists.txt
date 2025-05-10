@@ -1,4 +1,4 @@
-add_clang_unittest(ClangReplInterpreterTests
+add_distinct_clang_unittest(ClangReplInterpreterTests
   IncrementalCompilerBuilderTest.cpp
   IncrementalProcessingTest.cpp
   InterpreterTest.cpp
