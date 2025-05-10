@@ -1,20 +1,14 @@
-if(APPLE)
-  configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/lldb-dap-Info.plist.in
-    ${CMAKE_CURRENT_BINARY_DIR}/lldb-dap-Info.plist
-    )
-  # Inline info plist in binary (use target_link_options for this as soon as CMake 3.13 is available)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_BINARY_DIR}/lldb-dap-Info.plist")
-endif()
-
 # We need to include the llvm components we depend on manually, as liblldb does
 # not re-export those.
 set(LLVM_LINK_COMPONENTS Support)
 set(LLVM_TARGET_DEFINITIONS Options.td)
 tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(LLDBDAPOptionsTableGen)
-add_lldb_tool(lldb-dap
-  lldb-dap.cpp
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+add_lldb_library(lldbDAP
   Breakpoint.cpp
   BreakpointBase.cpp
   DAP.cpp
@@ -85,10 +79,8 @@ add_lldb_tool(lldb-dap
     Support
   )
 
-target_include_directories(lldb-dap PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
 if(LLDB_DAP_WELCOME_MESSAGE)
-  target_compile_definitions(lldb-dap
+  target_compile_definitions(lldbDAP
     PRIVATE
     -DLLDB_DAP_WELCOME_MESSAGE=\"${LLDB_DAP_WELCOME_MESSAGE}\")
 endif()
@@ -105,3 +97,5 @@ if(LLDB_BUILD_FRAMEWORK)
       "@loader_path/../../Library/PrivateFrameworks"
   )
 endif()
+
+add_subdirectory(tool)
