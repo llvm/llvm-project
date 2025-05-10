@@ -4224,6 +4224,13 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   if (I->getOperand(OpIdx)->getType()->isMetadataTy())
     return false;
 
+  // swifterror pointers can only be used by a load, store, or as a swifterror
+  // argument; swifterror pointers are not allowed to be used in select or phi
+  // instructions.
+  if (OpIdx < I->getNumOperands())
+    if (I->getOperand(OpIdx)->isSwiftError())
+      return false;
+
   // Early exit.
   if (!isa<Constant, InlineAsm>(I->getOperand(OpIdx)))
     return true;
