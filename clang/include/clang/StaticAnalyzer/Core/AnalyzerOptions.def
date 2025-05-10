@@ -414,6 +414,19 @@ ANALYZER_OPTION(
     "any target.",
     true)
 
+ANALYZER_OPTION(
+    bool, InlineFunctionsWithAmbiguousLoops, "inline-functions-with-ambiguous-loops",
+    "If disabled (the default), the analyzer puts functions on a \"do not "
+    "inline this\" list if it finds an execution path within that function "
+    "that may potentially perform 'analyzer-max-loop' (= 4 by default) "
+    "iterations in a loop. (Note that functions that _definitely_ reach the "
+    "loop limit on some execution path are currently marked as \"do not "
+    "inline\" even if this option is enabled.) Enabling this option "
+    "eliminates this (somewhat arbitrary) restriction from the analysis "
+    "scope, which increases the analysis runtime (on average by ~10%, but "
+    "a few translation units may see much larger slowdowns).",
+    false)
+
 //===----------------------------------------------------------------------===//
 // Unsigned analyzer options.
 //===----------------------------------------------------------------------===//
