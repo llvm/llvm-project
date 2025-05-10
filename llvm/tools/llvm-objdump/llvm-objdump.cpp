@@ -2533,16 +2533,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         if (InlineRelocs && Obj.getArch() != Triple::hexagon) {
           while (findRel()) {
             // When --adjust-vma is used, update the address printed.
-            if (RelCur->getSymbol() != Obj.symbol_end()) {
-              Expected<section_iterator> SymSI =
-                  RelCur->getSymbol()->getSection();
-              if (SymSI && *SymSI != Obj.section_end() &&
-                  shouldAdjustVA(**SymSI))
-                RelOffset += AdjustVMA;
-            }
-
             printRelocation(FOS, Obj.getFileName(), *RelCur,
-                            SectionAddr + RelOffset, Is64Bits);
+                            SectionAddr + RelOffset + VMAAdjustment, Is64Bits);
             LVP.printAfterOtherLine(FOS, true);
             ++RelCur;
           }
