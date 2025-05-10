@@ -357,11 +357,9 @@ getModularizeArgumentsAdjuster(DependencyMap &Dependencies) {
     std::string InputFile = findInputFile(Args);
     DependentsVector &FileDependents = Dependencies[InputFile];
     CommandLineArguments NewArgs(Args);
-    if (int Count = FileDependents.size()) {
-      for (int Index = 0; Index < Count; ++Index) {
-        NewArgs.push_back("-include");
-        NewArgs.push_back(FileDependents[Index]);
-      }
+    for (const std::string &Dep : FileDependents) {
+      NewArgs.push_back("-include");
+      NewArgs.push_back(Dep);
     }
     // Ignore warnings.  (Insert after "clang_tool" at beginning.)
     NewArgs.insert(NewArgs.begin() + 1, "-w");
