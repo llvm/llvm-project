@@ -1484,7 +1484,9 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(MachineIRBuilder &B,
   Register DstReg = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(DstReg);
 
+  const LLT S64 = LLT::scalar(64);
   const LLT S32 = LLT::scalar(32);
+  const LLT S16 = LLT::scalar(16);
 
   unsigned FirstOpnd = isa<GIntrinsic>(MI) ? 2 : 1;
   Register SrcReg = MI.getOperand(FirstOpnd).getReg();
@@ -1494,6 +1496,18 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(MachineIRBuilder &B,
   const RegisterBank *DstBank =
     OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
   if (DstBank == &AMDGPU::VGPRRegBank) {
+    if (Ty == S16) {
+      ApplyRegBankMapping ApplyBank(B, *this, MRI, &AMDGPU::VGPRRegBank);
+      B.setInsertPt(B.getMBB(), MI);
+      LegalizerHelper Helper(B.getMF(), ApplyBank, B);
+
+      Helper.widenScalarDst(MI, S32);
+      Helper.widenScalarSrc(MI, S32, 1, AMDGPU::G_ANYEXT);
+      Helper.widenScalarSrc(MI, S32, 2, AMDGPU::G_ZEXT);
+      Helper.widenScalarSrc(MI, S32, 3, AMDGPU::G_ZEXT);
+      return true;
+    }
+
     if (Ty == S32)
       return true;
 
@@ -1553,6 +1567,11 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(MachineIRBuilder &B,
 
   ApplyRegBankMapping ApplyBank(B, *this, MRI, &AMDGPU::SGPRRegBank);
 
+  if (Ty == S16) {
+    OffsetReg = B.buildAnyExtOrTrunc(S32, OffsetReg).getReg(0);
+    WidthReg = B.buildAnyExtOrTrunc(S32, WidthReg).getReg(0);
+  }
+
   // Ensure the high bits are clear to insert the offset.
   auto OffsetMask = B.buildConstant(S32, maskTrailingOnes<unsigned>(6));
   auto ClampOffset = B.buildAnd(S32, OffsetReg, OffsetMask);
@@ -1567,12 +1586,20 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(MachineIRBuilder &B,
 
   // TODO: It might be worth using a pseudo here to avoid scc clobber and
   // register class constraints.
-  unsigned Opc = Ty == S32 ? (Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32) :
-                             (Signed ? AMDGPU::S_BFE_I64 : AMDGPU::S_BFE_U64);
+  unsigned Opc = (Ty != S64) ? (Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32)
+                             : (Signed ? AMDGPU::S_BFE_I64 : AMDGPU::S_BFE_U64);
 
-  auto MIB = B.buildInstr(Opc, {DstReg}, {SrcReg, MergedInputs});
+  Register BFEDst = DstReg;
+  if (Ty == S16) {
+    BFEDst = MRI.createGenericVirtualRegister(S32);
+    MRI.setRegBank(BFEDst, AMDGPU::SGPRRegBank);
+  }
+  auto MIB = B.buildInstr(Opc, {BFEDst}, {SrcReg, MergedInputs});
   if (!constrainSelectedInstRegOperands(*MIB, *TII, *TRI, *this))
     llvm_unreachable("failed to constrain BFE");
+
+  if (BFEDst != DstReg)
+    B.buildZExtOrTrunc(DstReg, BFEDst);
 
   MI.eraseFromParent();
   return true;
