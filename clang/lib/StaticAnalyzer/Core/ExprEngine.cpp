@@ -4060,7 +4060,7 @@ std::string ExprEngine::DumpGraph(ArrayRef<const ExplodedNode *> Nodes,
                                   StringRef Filename) {
   std::unique_ptr<ExplodedGraph> TrimmedG(G.trim(Nodes));
 
-  if (!TrimmedG.get()) {
+  if (!TrimmedG) {
     llvm::errs() << "warning: Trimmed ExplodedGraph is empty.\n";
     return "";
   }
