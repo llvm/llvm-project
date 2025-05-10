@@ -23,9 +23,25 @@ constexpr bool isOneOfTypes =
 template <typename ToTest, typename T>
 constexpr bool isOneOfTypes<ToTest, T> = std::is_same_v<ToTest, T>;
 
+// Holds information for emitting clauses for a combined construct. We
+// instantiate the clause emitter with this type so that it can use
+// if-constexpr to specially handle these.
+template <typename CompOpTy> struct CombinedConstructClauseInfo {
+  using ComputeOpTy = CompOpTy;
+  ComputeOpTy computeOp;
+  mlir::acc::LoopOp loopOp;
+};
+
+template <typename ToTest> constexpr bool isCombinedType = false;
+template <typename T>
+constexpr bool isCombinedType<CombinedConstructClauseInfo<T>> = true;
+
 template <typename OpTy>
 class OpenACCClauseCIREmitter final
     : public OpenACCClauseVisitor<OpenACCClauseCIREmitter<OpTy>> {
+  // Necessary for combined constructs.
+  template <typename FriendOpTy> friend class OpenACCClauseCIREmitter;
+
   OpTy &operation;
   CIRGen::CIRGenFunction &cgf;
   CIRGen::CIRGenBuilderTy &builder;
@@ -119,6 +135,28 @@ class OpenACCClauseCIREmitter final
     llvm_unreachable("unknown gang kind");
   }
 
+  template <typename U = void,
+            typename = std::enable_if_t<isCombinedType<OpTy>, U>>
+  void applyToLoopOp(const OpenACCClause &c) {
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    builder.setInsertionPoint(operation.loopOp);
+    OpenACCClauseCIREmitter<mlir::acc::LoopOp> loopEmitter{
+        operation.loopOp, cgf, builder, dirKind, dirLoc};
+    loopEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
+    loopEmitter.Visit(&c);
+  }
+
+  template <typename U = void,
+            typename = std::enable_if_t<isCombinedType<OpTy>, U>>
+  void applyToComputeOp(const OpenACCClause &c) {
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    builder.setInsertionPoint(operation.computeOp);
+    OpenACCClauseCIREmitter<typename OpTy::ComputeOpTy> computeEmitter{
+        operation.computeOp, cgf, builder, dirKind, dirLoc};
+    computeEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
+    computeEmitter.Visit(&c);
+  }
+
 public:
   OpenACCClauseCIREmitter(OpTy &operation, CIRGen::CIRGenFunction &cgf,
                           CIRGen::CIRGenBuilderTy &builder,
@@ -145,10 +183,10 @@ public:
       case OpenACCDefaultClauseKind::Invalid:
         break;
       }
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitDefaultClause");
     }
   }
 
@@ -175,9 +213,12 @@ public:
       // Nothing to do here, these constructs don't have any IR for these, as
       // they just modify the other clauses IR.  So setting of
       // `lastDeviceTypeValues` (done above) is all we need.
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Nothing to do here either, combined constructs are just going to use
+      // 'lastDeviceTypeValues' to set the value for the child visitor.
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. update, data, routine, combined constructs remain.
+      // unreachable. update, data, routine constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -249,9 +290,11 @@ public:
       } else {
         llvm_unreachable("var-list version of self shouldn't get here");
       }
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. If, combined constructs remain.
+      // unreachable. update construct remains.
       return clauseNotImplemented(clause);
     }
   }
@@ -263,13 +306,15 @@ public:
                                mlir::acc::DataOp, mlir::acc::WaitOp>) {
       operation.getIfCondMutable().append(
           createCondition(clause.getConditionExpr()));
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
       // 'if' applies to most of the constructs, but hold off on lowering them
       // until we can write tests/know what we're doing with codegen to make
       // sure we get it right.
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Enter data, exit data, host_data, update, combined
-      // constructs remain.
+      // unreachable. Enter data, exit data, host_data, update constructs
+      // remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -334,9 +379,11 @@ public:
   void VisitSeqClause(const OpenACCSeqClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
       operation.addSeq(builder.getContext(), lastDeviceTypeValues);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine, Combined constructs remain.
+      // unreachable. Routine construct remains.
       return clauseNotImplemented(clause);
     }
   }
@@ -344,9 +391,11 @@ public:
   void VisitAutoClause(const OpenACCAutoClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
       operation.addAuto(builder.getContext(), lastDeviceTypeValues);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine, Combined constructs remain.
+      // unreachable. Routine, construct remains.
       return clauseNotImplemented(clause);
     }
   }
@@ -354,9 +403,11 @@ public:
   void VisitIndependentClause(const OpenACCIndependentClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::LoopOp>) {
       operation.addIndependent(builder.getContext(), lastDeviceTypeValues);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine, Combined constructs remain.
+      // unreachable. Routine construct remains.
       return clauseNotImplemented(clause);
     }
   }
@@ -369,10 +420,10 @@ public:
       value = value.sextOrTrunc(64);
       operation.setCollapseForDeviceTypes(builder.getContext(),
                                           lastDeviceTypeValues, value);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitCollapseClause");
     }
   }
 
@@ -398,10 +449,10 @@ public:
 
       operation.setTileForDeviceTypes(builder.getContext(),
                                       lastDeviceTypeValues, values);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitTileClause");
     }
   }
 
