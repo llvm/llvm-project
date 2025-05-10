@@ -521,6 +521,10 @@ Improvements to Clang's diagnostics
 - Fixed a duplicate diagnostic when performing typo correction on function template
   calls with explicit template arguments. (#GH139226)
 
+- A new ``-Wcharacter-conversion`` warns where comparing or implicitly converting
+  between different Unicode character types (``char8_t``, ``char16_t``, ``char32_t``).
+  This warning only triggers in C++ as these types are aliases in C. (#GH138526)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
