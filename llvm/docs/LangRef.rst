@@ -12396,12 +12396,15 @@ Semantics:
 """"""""""
 
 The '``ptrtoint``' instruction converts ``value`` to integer type
-``ty2`` by interpreting the pointer value as an integer and either
-truncating or zero extending that value to the size of the integer type.
+``ty2`` by interpreting the all pointer representation bits as an integer
+(equivalent to a ``bitcast``) and either truncating or zero extending that value
+to the size of the integer type.
 If ``value`` is smaller than ``ty2`` then a zero extension is done. If
 ``value`` is larger than ``ty2`` then a truncation is done. If they are
 the same size, then nothing is done (*no-op cast*) other than a type
 change.
+The ``ptrtoint`` always :ref:`captures address and provenance <pointercapture>`
+of the pointer argument.
 
 Example:
 """"""""
@@ -12456,6 +12459,9 @@ of the integer ``value``. If ``value`` is larger than the size of a
 pointer then a truncation is done. If ``value`` is smaller than the size
 of a pointer then a zero extension is done. If they are the same size,
 nothing is done (*no-op cast*).
+The behavior is equivalent to a ``bitcast``, however, the resulting value is not
+guaranteed to be dereferenceable (e.g. if the result type is a
+:ref:`non-integral pointers <nointptrtype>`).
 
 Example:
 """"""""
