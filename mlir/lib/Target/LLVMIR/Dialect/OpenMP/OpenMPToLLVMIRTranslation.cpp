@@ -2617,7 +2617,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                                                 loopInfo->getLastIter());
     if (failed(handleError(afterBarrierIP, *loopOp)))
       return failure();
-    builder.restoreIP(*afterBarrierIP);
     for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
       linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
                                            index);
