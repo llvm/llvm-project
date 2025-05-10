@@ -2102,8 +2102,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   for (VectorSlice &S : Slices) {
     const auto ValName = "largephi.insertslice" + std::to_string(NameSuffix++);
     if (S.NumElts > 1)
-      Vec =
-          B.CreateInsertVector(FVT, Vec, S.NewPHI, B.getInt64(S.Idx), ValName);
+      Vec = B.CreateInsertVector(FVT, Vec, S.NewPHI, S.Idx, ValName);
     else
       Vec = B.CreateInsertElement(Vec, S.NewPHI, S.Idx, ValName);
   }
@@ -2128,6 +2127,11 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
 
   // Check nonnull arguments.
   if (const auto *Arg = dyn_cast<Argument>(V); Arg && Arg->hasNonNullAttr())
+    return true;
+
+  // Check nonnull loads.
+  if (const auto *Load = dyn_cast<LoadInst>(V);
+      Load && Load->hasMetadata(LLVMContext::MD_nonnull))
     return true;
 
   // getUnderlyingObject may have looked through another addrspacecast, although

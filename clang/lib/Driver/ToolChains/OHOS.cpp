@@ -303,7 +303,6 @@ ToolChain::path_list OHOS::getRuntimePaths() const {
 
   // Third try the effective triple.
   P.assign(D.ResourceDir);
-  std::string SysRoot = computeSysRoot();
   llvm::sys::path::append(P, "lib", getMultiarchTriple(Triple),
                           SelectedMultilib.gccSuffix());
   Paths.push_back(P.c_str());

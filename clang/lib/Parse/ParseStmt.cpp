@@ -235,6 +235,9 @@ Retry:
   }
 
   default: {
+    if (getLangOpts().CPlusPlus && MaybeParseCXX11Attributes(CXX11Attrs, true))
+      goto Retry;
+
     bool HaveAttrs = !CXX11Attrs.empty() || !GNUAttrs.empty();
     auto IsStmtAttr = [](ParsedAttr &Attr) { return Attr.isStmtAttr(); };
     bool AllAttrsAreStmtAttrs = llvm::all_of(CXX11Attrs, IsStmtAttr) &&
@@ -260,11 +263,11 @@ Retry:
                                 GNUAttrs);
       }
       if (CXX11Attrs.Range.getBegin().isValid()) {
-        // The caller must guarantee that the CXX11Attrs appear before the
-        // GNUAttrs, and we rely on that here.
-        assert(GNUAttrs.Range.getBegin().isInvalid() ||
-               GNUAttrs.Range.getBegin() > CXX11Attrs.Range.getBegin());
-        DeclStart = CXX11Attrs.Range.getBegin();
+        // Order of C++11 and GNU attributes is may be arbitrary.
+        DeclStart = GNUAttrs.Range.getBegin().isInvalid()
+                        ? CXX11Attrs.Range.getBegin()
+                        : std::min(CXX11Attrs.Range.getBegin(),
+                                   GNUAttrs.Range.getBegin());
       } else if (GNUAttrs.Range.getBegin().isValid())
         DeclStart = GNUAttrs.Range.getBegin();
       return Actions.ActOnDeclStmt(Decl, DeclStart, DeclEnd);
@@ -526,10 +529,14 @@ Retry:
     return ParsePragmaLoopHint(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs);
 
   case tok::annot_pragma_dump:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaDump();
     return StmtEmpty();
 
   case tok::annot_pragma_attribute:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
     HandlePragmaAttribute();
     return StmtEmpty();
   }
@@ -2825,7 +2832,7 @@ void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
   // This is not the same behavior as Visual C++, which don't treat this as a
   // compound statement, but for Clang's type checking we can't have anything
   // inside these braces escaping to the surrounding code.
-  if (Result.Behavior == IEB_Dependent) {
+  if (Result.Behavior == IfExistsBehavior::Dependent) {
     if (!Tok.is(tok::l_brace)) {
       Diag(Tok, diag::err_expected) << tok::l_brace;
       return;
@@ -2852,14 +2859,14 @@ void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
   }
 
   switch (Result.Behavior) {
-  case IEB_Parse:
+  case IfExistsBehavior::Parse:
     // Parse the statements below.
     break;
 
-  case IEB_Dependent:
+  case IfExistsBehavior::Dependent:
     llvm_unreachable("Dependent case handled above");
 
-  case IEB_Skip:
+  case IfExistsBehavior::Skip:
     Braces.skipToEnd();
     return;
   }

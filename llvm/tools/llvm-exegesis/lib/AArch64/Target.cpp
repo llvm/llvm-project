@@ -21,6 +21,15 @@
 #ifndef PR_PAC_APIAKEY
 #define PR_PAC_APIAKEY (1UL << 0)
 #endif
+#ifndef PR_PAC_APIBKEY
+#define PR_PAC_APIBKEY (1UL << 1)
+#endif
+#ifndef PR_PAC_APDAKEY
+#define PR_PAC_APDAKEY (1UL << 2)
+#endif
+#ifndef PR_PAC_APDBKEY
+#define PR_PAC_APDBKEY (1UL << 3)
+#endif
 #endif
 
 #define GET_AVAILABLE_OPCODE_CHECKER

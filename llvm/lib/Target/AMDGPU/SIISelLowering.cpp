@@ -861,9 +861,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasIEEEMinMax()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
-    setOperationAction({ISD::FMINIMUM, ISD::FMAXIMUM},
-                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
-                       Custom);
   } else {
     // FIXME: For nnan fmaximum, emit the fmaximum3 instead of fmaxnum
     if (Subtarget->hasMinimum3Maximum3F32())
@@ -876,6 +873,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       if (!Subtarget->hasMinimum3Maximum3F16())
         setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Custom);
     }
+  }
+
+  if (Subtarget->hasVOP3PInsts()) {
+    // We want to break these into v2f16 pieces, not scalarize.
+    setOperationAction({ISD::FMINIMUM, ISD::FMAXIMUM},
+                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
+                       Custom);
   }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
@@ -930,6 +934,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FMAXNUM_IEEE,
                        ISD::FMINIMUM,
                        ISD::FMAXIMUM,
+                       ISD::FMINIMUMNUM,
+                       ISD::FMAXIMUMNUM,
                        ISD::FMA,
                        ISD::SMIN,
                        ISD::SMAX,
@@ -3235,7 +3241,6 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   // CCValAssign - represent the assignment of the return value to a location.
   SmallVector<CCValAssign, 48> RVLocs;
-  SmallVector<ISD::OutputArg, 48> Splits;
 
   // CCState - Info about the registers and stack slots.
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
@@ -4513,7 +4518,7 @@ Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
 MachineBasicBlock *
 SITargetLowering::splitKillBlock(MachineInstr &MI,
                                  MachineBasicBlock *BB) const {
-  MachineBasicBlock *SplitBB = BB->splitAt(MI, false /*UpdateLiveIns*/);
+  MachineBasicBlock *SplitBB = BB->splitAt(MI, /*UpdateLiveIns=*/true);
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   MI.setDesc(TII->getKillTerminatorFromPseudo(MI.getOpcode()));
   return SplitBB;
@@ -6629,6 +6634,11 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(LoadVal);
       return;
     }
+    case Intrinsic::amdgcn_dead: {
+      for (unsigned I = 0, E = N->getNumValues(); I < E; ++I)
+        Results.push_back(DAG.getPOISON(N->getValueType(I)));
+      return;
+    }
     }
     break;
   }
@@ -6899,7 +6909,17 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     if (Op.getOpcode() != ISD::FP_ROUND)
       return Op;
 
-    SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
+    if (!Subtarget->has16BitInsts()) {
+      SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
+      return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
+    }
+    if (getTargetMachine().Options.UnsafeFPMath) {
+      SDValue Flags = Op.getOperand(1);
+      SDValue Src32 = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, Src, Flags);
+      return DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, Src32, Flags);
+    }
+    SDValue FpToFp16 = LowerF64ToF16Safe(Src, DL, DAG);
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
     return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
   }
@@ -8699,7 +8719,7 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
     LoadVT = MVT::getVectorVT(LoadVT.getScalarType(), 4);
   }
 
-  SDVTList VTList = DAG.getVTList({LoadVT, MVT::Glue});
+  SDVTList VTList = DAG.getVTList({LoadVT, MVT::Other});
 
   // Use the alignment to ensure that the required offsets will fit into the
   // immediate offsets.
@@ -9114,6 +9134,12 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_mov_dpp8:
   case Intrinsic::amdgcn_update_dpp:
     return lowerLaneOp(*this, Op.getNode(), DAG);
+  case Intrinsic::amdgcn_dead: {
+    SmallVector<SDValue, 8> Poisons;
+    for (const EVT ValTy : Op.getNode()->values())
+      Poisons.push_back(DAG.getPOISON(ValTy));
+    return DAG.getMergeValues(Poisons, SDLoc(Op));
+  }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))
@@ -11174,9 +11200,10 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
       const SDValue DisableDenormValue = getSPDenormModeValue(
           FP_DENORM_FLUSH_IN_FLUSH_OUT, DAG, Info, Subtarget);
 
+      SDVTList BindParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
       DisableDenorm =
-          DAG.getNode(AMDGPUISD::DENORM_MODE, SL, MVT::Other, Fma4.getValue(1),
-                      DisableDenormValue, Fma4.getValue(2))
+          DAG.getNode(AMDGPUISD::DENORM_MODE, SL, BindParamVTs,
+                      Fma4.getValue(1), DisableDenormValue, Fma4.getValue(2))
               .getNode();
     } else {
       assert(HasDynamicDenormals == (bool)SavedDenormMode);
@@ -11808,7 +11835,6 @@ static unsigned getBasePtrIndex(const MemSDNode *N) {
 SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
                                                   DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
-  SDLoc SL(N);
 
   unsigned PtrIdx = getBasePtrIndex(N);
   SDValue Ptr = N->getOperand(PtrIdx);
@@ -13125,6 +13151,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case AMDGPUISD::CLAMP:
   case AMDGPUISD::FMED3:
   case AMDGPUISD::FMAX3:
@@ -13289,7 +13317,9 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
   case AMDGPU::G_FMINIMUM:
-  case AMDGPU::G_FMAXIMUM: {
+  case AMDGPU::G_FMAXIMUM:
+  case AMDGPU::G_FMINIMUMNUM:
+  case AMDGPU::G_FMAXIMUMNUM: {
     if (Subtarget->supportsMinMaxDenormModes() ||
         // FIXME: denormalsEnabledForType is broken for dynamic
         denormalsEnabledForType(MRI.getType(Reg), MF))
@@ -13459,6 +13489,7 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   switch (Opc) {
   case ISD::FMAXNUM:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMAXIMUMNUM:
     return AMDGPUISD::FMAX3;
   case ISD::FMAXIMUM:
     return AMDGPUISD::FMAXIMUM3;
@@ -13468,6 +13499,7 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
     return AMDGPUISD::UMAX3;
   case ISD::FMINNUM:
   case ISD::FMINNUM_IEEE:
+  case ISD::FMINIMUMNUM:
     return AMDGPUISD::FMIN3;
   case ISD::FMINIMUM:
     return AMDGPUISD::FMINIMUM3;
@@ -13589,6 +13621,8 @@ static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
   case ISD::FMAXNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case AMDGPUISD::FMIN_LEGACY:
   case AMDGPUISD::FMAX_LEGACY:
     return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16());
@@ -15294,6 +15328,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::FMINIMUMNUM:
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:

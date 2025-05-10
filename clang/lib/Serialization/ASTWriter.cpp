@@ -5394,7 +5394,7 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
   if (WritingModule && PPRef.getHeaderSearchInfo()
                            .getHeaderSearchOpts()
                            .ModulesValidateOncePerBuildSession)
-    updateModuleTimestamp(OutputFile);
+    ModCache.updateModuleTimestamp(OutputFile);
 
   if (ShouldCacheASTInMemory) {
     // Construct MemoryBuffer and update buffer manager.
@@ -5599,7 +5599,6 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   // Writing all of the tentative definitions in this file, in
   // TentativeDefinitions order.  Generally, this record will be empty for
   // headers.
-  RecordData TentativeDefinitions;
   AddLazyVectorDecls(*this, SemaRef.TentativeDefinitions);
 
   // Writing all of the file scoped decls in this file.

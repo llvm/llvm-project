@@ -1388,6 +1388,9 @@ public:
       case 'v':
         m_verbose = true;
         break;
+      case 'd':
+        m_dump = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -1397,6 +1400,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_verbose = false;
+      m_dump = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -1405,6 +1409,7 @@ public:
 
     // Instance variables to hold the values for command options.
     bool m_verbose = false;
+    bool m_dump = false;
   };
 
 protected:
@@ -1457,6 +1462,14 @@ protected:
         strm.EOL();
         strm.PutCString("Extended Crash Information:\n");
         crash_info_sp->GetDescription(strm);
+      }
+    }
+
+    if (m_options.m_dump) {
+      StateType state = process->GetState();
+      if (state == eStateStopped) {
+        ProcessModID process_mod_id = process->GetModID();
+        process_mod_id.Dump(result.GetOutputStream());
       }
     }
   }

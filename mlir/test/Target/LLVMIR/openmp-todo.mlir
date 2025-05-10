@@ -26,52 +26,6 @@ llvm.func @atomic_hint(%v : !llvm.ptr, %x : !llvm.ptr, %expr : i32) {
 
 // -----
 
-llvm.func @cancel_wsloop(%lb : i32, %ub : i32, %step: i32) {
-  // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
-  omp.wsloop {
-    // expected-error@below {{LLVM Translation failed for operation: omp.loop_nest}}
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      // expected-error@below {{not yet implemented: Unhandled clause cancel directive construct type not yet supported in omp.cancel operation}}
-      // expected-error@below {{LLVM Translation failed for operation: omp.cancel}}
-      omp.cancel cancellation_construct_type(loop)
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @cancel_taskgroup() {
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
-  omp.taskgroup {
-    // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-    omp.task {
-      // expected-error@below {{not yet implemented: Unhandled clause cancel directive construct type not yet supported in omp.cancel operation}}
-      // expected-error@below {{LLVM Translation failed for operation: omp.cancel}}
-      omp.cancel cancellation_construct_type(taskgroup)
-      omp.terminator
-    }
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @cancellation_point() {
-  // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
-  omp.parallel {
-    // expected-error@below {{not yet implemented: omp.cancellation_point}}
-    // expected-error@below {{LLVM Translation failed for operation: omp.cancellation_point}}
-    omp.cancellation_point cancellation_construct_type(parallel)
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @do_simd(%lb : i32, %ub : i32, %step : i32) {
   omp.wsloop {
     // expected-warning@below {{simd information on composite construct discarded}}
@@ -180,19 +134,6 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause linear in omp.simd operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
   omp.simd linear(%x = %step : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @simd_nontemporal(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause nontemporal in omp.simd operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
-  omp.simd nontemporal(%x : !llvm.ptr) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }

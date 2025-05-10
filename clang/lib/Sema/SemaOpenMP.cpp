@@ -60,6 +60,8 @@ static const Expr *checkMapClauseExpressionBase(
     OMPClauseMappableExprCommon::MappableExprComponentList &CurComponents,
     OpenMPClauseKind CKind, OpenMPDirectiveKind DKind, bool NoDiagnose);
 
+static std::string getOpenMPClauseNameForDiag(OpenMPClauseKind C);
+
 namespace {
 /// Default data sharing attributes, which can be applied to directive.
 enum DefaultDataSharingAttributes {
@@ -680,10 +682,10 @@ public:
           if (CNew->getClauseKind() == CPrev->getClauseKind()) {
             SemaRef.Diag(CNew->getBeginLoc(),
                          diag::err_omp_requires_clause_redeclaration)
-                << getOpenMPClauseName(CNew->getClauseKind());
+                << getOpenMPClauseNameForDiag(CNew->getClauseKind());
             SemaRef.Diag(CPrev->getBeginLoc(),
                          diag::note_omp_requires_previous_clause)
-                << getOpenMPClauseName(CPrev->getClauseKind());
+                << getOpenMPClauseNameForDiag(CPrev->getClauseKind());
             IsDuplicate = true;
           }
         }
@@ -1264,6 +1266,12 @@ static ValueDecl *getCanonicalDecl(ValueDecl *D) {
       getCanonicalDecl(const_cast<const ValueDecl *>(D)));
 }
 
+static std::string getOpenMPClauseNameForDiag(OpenMPClauseKind C) {
+  if (C == OMPC_threadprivate)
+    return getOpenMPClauseName(C).str() + " or thread local";
+  return getOpenMPClauseName(C).str();
+}
+
 DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
                                           ValueDecl *D) const {
   D = getCanonicalDecl(D);
@@ -1704,7 +1712,7 @@ static bool rejectConstNotMutableType(Sema &SemaRef, const ValueDecl *D,
     unsigned Diag = ListItemNotVar ? diag::err_omp_const_list_item
                     : IsClassType  ? diag::err_omp_const_not_mutable_variable
                                    : diag::err_omp_const_variable;
-    SemaRef.Diag(ELoc, Diag) << getOpenMPClauseName(CKind);
+    SemaRef.Diag(ELoc, Diag) << getOpenMPClauseNameForDiag(CKind);
     if (!ListItemNotVar && D) {
       const VarDecl *VD = dyn_cast<VarDecl>(D);
       bool IsDecl = !VD || VD->isThisDeclarationADefinition(Context) ==
@@ -3061,6 +3069,7 @@ ExprResult SemaOpenMP::ActOnOpenMPIdExpression(Scope *CurScope,
                                                const DeclarationNameInfo &Id,
                                                OpenMPDirectiveKind Kind) {
   ASTContext &Context = getASTContext();
+  unsigned OMPVersion = getLangOpts().OpenMP;
   LookupResult Lookup(SemaRef, Id, Sema::LookupOrdinaryName);
   SemaRef.LookupParsedName(Lookup, CurScope, &ScopeSpec,
                            /*ObjectType=*/QualType(),
@@ -3074,7 +3083,7 @@ ExprResult SemaOpenMP::ActOnOpenMPIdExpression(Scope *CurScope,
     VarDeclFilterCCC CCC(SemaRef);
     if (TypoCorrection Corrected =
             SemaRef.CorrectTypo(Id, Sema::LookupOrdinaryName, CurScope, nullptr,
-                                CCC, Sema::CTK_ErrorRecovery)) {
+                                CCC, CorrectTypoKind::ErrorRecovery)) {
       SemaRef.diagnoseTypo(
           Corrected,
           SemaRef.PDiag(Lookup.empty() ? diag::err_undeclared_var_use_suggest
@@ -3098,7 +3107,7 @@ ExprResult SemaOpenMP::ActOnOpenMPIdExpression(Scope *CurScope,
   //   Variables must be file-scope, namespace-scope, or static block-scope.
   if (Kind == OMPD_threadprivate && !VD->hasGlobalStorage()) {
     Diag(Id.getLoc(), diag::err_omp_global_var_arg)
-        << getOpenMPDirectiveName(Kind) << !VD->isStaticLocal();
+        << getOpenMPDirectiveName(Kind, OMPVersion) << !VD->isStaticLocal();
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -3115,7 +3124,7 @@ ExprResult SemaOpenMP::ActOnOpenMPIdExpression(Scope *CurScope,
   if (CanonicalVD->getDeclContext()->isTranslationUnit() &&
       !SemaRef.getCurLexicalContext()->isTranslationUnit()) {
     Diag(Id.getLoc(), diag::err_omp_var_scope)
-        << getOpenMPDirectiveName(Kind) << VD;
+        << getOpenMPDirectiveName(Kind, OMPVersion) << VD;
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -3130,7 +3139,7 @@ ExprResult SemaOpenMP::ActOnOpenMPIdExpression(Scope *CurScope,
   if (CanonicalVD->isStaticDataMember() &&
       !CanonicalVD->getDeclContext()->Equals(SemaRef.getCurLexicalContext())) {
     Diag(Id.getLoc(), diag::err_omp_var_scope)
-        << getOpenMPDirectiveName(Kind) << VD;
+        << getOpenMPDirectiveName(Kind, OMPVersion) << VD;
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -3147,7 +3156,7 @@ ExprResult SemaOpenMP::ActOnOpenMPIdExpression(Scope *CurScope,
        !SemaRef.getCurLexicalContext()->Encloses(
            CanonicalVD->getDeclContext()))) {
     Diag(Id.getLoc(), diag::err_omp_var_scope)
-        << getOpenMPDirectiveName(Kind) << VD;
+        << getOpenMPDirectiveName(Kind, OMPVersion) << VD;
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -3161,7 +3170,7 @@ ExprResult SemaOpenMP::ActOnOpenMPIdExpression(Scope *CurScope,
   if (CanonicalVD->isLocalVarDecl() && CurScope &&
       !SemaRef.isDeclInScope(ND, SemaRef.getCurLexicalContext(), CurScope)) {
     Diag(Id.getLoc(), diag::err_omp_var_scope)
-        << getOpenMPDirectiveName(Kind) << VD;
+        << getOpenMPDirectiveName(Kind, OMPVersion) << VD;
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -3176,7 +3185,7 @@ ExprResult SemaOpenMP::ActOnOpenMPIdExpression(Scope *CurScope,
   if (Kind == OMPD_threadprivate && VD->isUsed() &&
       !DSAStack->isThreadPrivate(VD)) {
     Diag(Id.getLoc(), diag::err_omp_var_used)
-        << getOpenMPDirectiveName(Kind) << VD;
+        << getOpenMPDirectiveName(Kind, OMPVersion) << VD;
     return ExprError();
   }
 
@@ -3258,8 +3267,10 @@ SemaOpenMP::CheckOMPThreadPrivateDecl(SourceLocation Loc,
     // OpenMP [2.9.2, Restrictions, C/C++, p.10]
     //   A threadprivate variable must not have a reference type.
     if (VD->getType()->isReferenceType()) {
+      unsigned OMPVersion = getLangOpts().OpenMP;
       Diag(ILoc, diag::err_omp_ref_type_arg)
-          << getOpenMPDirectiveName(OMPD_threadprivate) << VD->getType();
+          << getOpenMPDirectiveName(OMPD_threadprivate, OMPVersion)
+          << VD->getType();
       bool IsDecl =
           VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
       Diag(VD->getLocation(),
@@ -3505,10 +3516,12 @@ void SemaOpenMP::ActOnOpenMPAssumesDirective(SourceLocation Loc,
                                              OpenMPDirectiveKind DKind,
                                              ArrayRef<std::string> Assumptions,
                                              bool SkippedClauses) {
-  if (!SkippedClauses && Assumptions.empty())
+  if (!SkippedClauses && Assumptions.empty()) {
+    unsigned OMPVersion = getLangOpts().OpenMP;
     Diag(Loc, diag::err_omp_no_clause_for_directive)
         << llvm::omp::getAllAssumeClauseOptions()
-        << llvm::omp::getOpenMPDirectiveName(DKind);
+        << llvm::omp::getOpenMPDirectiveName(DKind, OMPVersion);
+  }
 
   auto *AA =
       OMPAssumeAttr::Create(getASTContext(), llvm::join(Assumptions, ","), Loc);
@@ -3587,7 +3600,7 @@ SemaOpenMP::CheckOMPRequiresDecl(SourceLocation Loc,
           isa<OMPReverseOffloadClause>(CNew) ||
           isa<OMPDynamicAllocatorsClause>(CNew)) {
         Diag(Loc, diag::err_omp_directive_before_requires)
-            << "target" << getOpenMPClauseName(CNew->getClauseKind());
+            << "target" << getOpenMPClauseNameForDiag(CNew->getClauseKind());
         for (SourceLocation TargetLoc : TargetLocations) {
           Diag(TargetLoc, diag::note_omp_requires_encountered_directive)
               << "target";
@@ -3595,7 +3608,7 @@ SemaOpenMP::CheckOMPRequiresDecl(SourceLocation Loc,
       } else if (!AtomicLoc.isInvalid() &&
                  isa<OMPAtomicDefaultMemOrderClause>(CNew)) {
         Diag(Loc, diag::err_omp_directive_before_requires)
-            << "atomic" << getOpenMPClauseName(CNew->getClauseKind());
+            << "atomic" << getOpenMPClauseNameForDiag(CNew->getClauseKind());
         Diag(AtomicLoc, diag::note_omp_requires_encountered_directive)
             << "atomic";
       }
@@ -3614,7 +3627,7 @@ static void reportOriginalDsa(Sema &SemaRef, const DSAStackTy *Stack,
                               bool IsLoopIterVar) {
   if (DVar.RefExpr) {
     SemaRef.Diag(DVar.RefExpr->getExprLoc(), diag::note_omp_explicit_dsa)
-        << getOpenMPClauseName(DVar.CKind);
+        << getOpenMPClauseNameForDiag(DVar.CKind);
     return;
   }
   enum {
@@ -3656,12 +3669,13 @@ static void reportOriginalDsa(Sema &SemaRef, const DSAStackTy *Stack,
     Reason = PDSA_LocalVarPrivate;
   }
   if (Reason != PDSA_Implicit) {
+    unsigned OMPVersion = SemaRef.getLangOpts().OpenMP;
     SemaRef.Diag(ReportLoc, diag::note_omp_predetermined_dsa)
         << Reason << ReportHint
-        << getOpenMPDirectiveName(Stack->getCurrentDirective());
+        << getOpenMPDirectiveName(Stack->getCurrentDirective(), OMPVersion);
   } else if (DVar.ImplicitDSALoc.isValid()) {
     SemaRef.Diag(DVar.ImplicitDSALoc, diag::note_omp_implicit_dsa)
-        << getOpenMPClauseName(DVar.CKind);
+        << getOpenMPClauseNameForDiag(DVar.CKind);
   }
 }
 
@@ -4566,7 +4580,7 @@ static bool checkOrderedOrderSpecified(Sema &S,
   if (Ordered && Order) {
     S.Diag(Order->getKindKwLoc(),
            diag::err_omp_simple_clause_incompatible_with_ordered)
-        << getOpenMPClauseName(OMPC_order)
+        << getOpenMPClauseNameForDiag(OMPC_order)
         << getOpenMPSimpleClauseTypeName(OMPC_order, OMPC_ORDER_concurrent)
         << SourceRange(Order->getBeginLoc(), Order->getEndLoc());
     S.Diag(Ordered->getBeginLoc(), diag::note_omp_ordered_param)
@@ -4654,7 +4668,7 @@ StmtResult SemaOpenMP::ActOnOpenMPRegionEnd(StmtResult S,
              ? SC->getFirstScheduleModifierLoc()
              : SC->getSecondScheduleModifierLoc(),
          diag::err_omp_simple_clause_incompatible_with_ordered)
-        << getOpenMPClauseName(OMPC_schedule)
+        << getOpenMPClauseNameForDiag(OMPC_schedule)
         << getOpenMPSimpleClauseTypeName(OMPC_schedule,
                                          OMPC_SCHEDULE_MODIFIER_nonmonotonic)
         << SourceRange(OC->getBeginLoc(), OC->getEndLoc());
@@ -4675,8 +4689,9 @@ StmtResult SemaOpenMP::ActOnOpenMPRegionEnd(StmtResult S,
   if (isOpenMPWorksharingDirective(DSAStack->getCurrentDirective()) &&
       isOpenMPSimdDirective(DSAStack->getCurrentDirective()) && OC &&
       OC->getNumForLoops()) {
+    unsigned OMPVersion = getLangOpts().OpenMP;
     Diag(OC->getBeginLoc(), diag::err_omp_ordered_simd)
-        << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
+        << getOpenMPDirectiveName(DSAStack->getCurrentDirective(), OMPVersion);
     ErrorFound = true;
   }
   if (ErrorFound) {
@@ -4756,8 +4771,9 @@ static bool checkCancelRegion(Sema &SemaRef, OpenMPDirectiveKind CurrentRegion,
       CancelRegion == OMPD_sections || CancelRegion == OMPD_taskgroup)
     return false;
 
+  unsigned OMPVersion = SemaRef.getLangOpts().OpenMP;
   SemaRef.Diag(StartLoc, diag::err_omp_wrong_cancel_region)
-      << getOpenMPDirectiveName(CancelRegion);
+      << getOpenMPDirectiveName(CancelRegion, OMPVersion);
   return true;
 }
 
@@ -4788,17 +4804,18 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
   ArrayRef<OpenMPDirectiveKind> ParentLOC =
       getLeafOrCompositeConstructs(ParentRegion, LeafOrComposite);
   OpenMPDirectiveKind EnclosingConstruct = ParentLOC.back();
+  unsigned OMPVersion = SemaRef.getLangOpts().OpenMP;
 
-  if (SemaRef.LangOpts.OpenMP >= 50 && Stack->isParentOrderConcurrent() &&
+  if (OMPVersion >= 50 && Stack->isParentOrderConcurrent() &&
       !isOpenMPOrderConcurrentNestableDirective(CurrentRegion,
                                                 SemaRef.LangOpts)) {
     SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_order)
-        << getOpenMPDirectiveName(CurrentRegion);
+        << getOpenMPDirectiveName(CurrentRegion, OMPVersion);
     return true;
   }
   if (isOpenMPSimdDirective(ParentRegion) &&
-      ((SemaRef.LangOpts.OpenMP <= 45 && CurrentRegion != OMPD_ordered) ||
-       (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion != OMPD_ordered &&
+      ((OMPVersion <= 45 && CurrentRegion != OMPD_ordered) ||
+       (OMPVersion >= 50 && CurrentRegion != OMPD_ordered &&
         CurrentRegion != OMPD_simd && CurrentRegion != OMPD_atomic &&
         CurrentRegion != OMPD_scan))) {
     // OpenMP [2.16, Nesting of Regions]
@@ -4816,7 +4833,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     SemaRef.Diag(StartLoc, (CurrentRegion != OMPD_simd)
                                ? diag::err_omp_prohibited_region_simd
                                : diag::warn_omp_nesting_simd)
-        << (SemaRef.LangOpts.OpenMP >= 50 ? 1 : 0);
+        << (OMPVersion >= 50 ? 1 : 0);
     return CurrentRegion != OMPD_simd;
   }
   if (EnclosingConstruct == OMPD_atomic) {
@@ -4833,7 +4850,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     if (EnclosingConstruct != OMPD_sections) {
       SemaRef.Diag(StartLoc, diag::err_omp_orphaned_section_directive)
           << (ParentRegion != OMPD_unknown)
-          << getOpenMPDirectiveName(ParentRegion);
+          << getOpenMPDirectiveName(ParentRegion, OMPVersion);
       return true;
     }
     return false;
@@ -4848,14 +4865,14 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     return false;
   // Checks needed for mapping "loop" construct. Please check mapLoopConstruct
   // for a detailed explanation
-  if (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion == OMPD_loop &&
+  if (OMPVersion >= 50 && CurrentRegion == OMPD_loop &&
       (BindKind == OMPC_BIND_parallel || BindKind == OMPC_BIND_teams) &&
       (isOpenMPWorksharingDirective(ParentRegion) ||
        EnclosingConstruct == OMPD_loop)) {
     int ErrorMsgNumber = (BindKind == OMPC_BIND_parallel) ? 1 : 4;
     SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region)
-        << true << getOpenMPDirectiveName(ParentRegion) << ErrorMsgNumber
-        << getOpenMPDirectiveName(CurrentRegion);
+        << true << getOpenMPDirectiveName(ParentRegion, OMPVersion)
+        << ErrorMsgNumber << getOpenMPDirectiveName(CurrentRegion, OMPVersion);
     return true;
   }
   if (CurrentRegion == OMPD_cancellation_point ||
@@ -4873,9 +4890,9 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // construct-type-clause.
     ArrayRef<OpenMPDirectiveKind> Leafs = getLeafConstructsOrSelf(ParentRegion);
     if (CancelRegion == OMPD_taskgroup) {
-      NestingProhibited = EnclosingConstruct != OMPD_task &&
-                          (SemaRef.getLangOpts().OpenMP < 50 ||
-                           EnclosingConstruct != OMPD_taskloop);
+      NestingProhibited =
+          EnclosingConstruct != OMPD_task &&
+          (OMPVersion < 50 || EnclosingConstruct != OMPD_taskloop);
     } else if (CancelRegion == OMPD_sections) {
       NestingProhibited = EnclosingConstruct != OMPD_section &&
                           EnclosingConstruct != OMPD_sections;
@@ -4961,13 +4978,13 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // If specified, a teams construct must be contained within a target
     // construct.
     NestingProhibited =
-        (SemaRef.LangOpts.OpenMP <= 45 && EnclosingConstruct != OMPD_target) ||
-        (SemaRef.LangOpts.OpenMP >= 50 && EnclosingConstruct != OMPD_unknown &&
+        (OMPVersion <= 45 && EnclosingConstruct != OMPD_target) ||
+        (OMPVersion >= 50 && EnclosingConstruct != OMPD_unknown &&
          EnclosingConstruct != OMPD_target);
     OrphanSeen = ParentRegion == OMPD_unknown;
     Recommend = ShouldBeInTargetRegion;
   } else if (CurrentRegion == OMPD_scan) {
-    if (SemaRef.LangOpts.OpenMP >= 50) {
+    if (OMPVersion >= 50) {
       // OpenMP spec 5.0 and 5.1 require scan to be directly enclosed by for,
       // simd, or for simd. This has to take into account combined directives.
       // In 5.2 this seems to be implied by the fact that the specified
@@ -5037,11 +5054,11 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
   if (NestingProhibited) {
     if (OrphanSeen) {
       SemaRef.Diag(StartLoc, diag::err_omp_orphaned_device_directive)
-          << getOpenMPDirectiveName(CurrentRegion) << Recommend;
+          << getOpenMPDirectiveName(CurrentRegion, OMPVersion) << Recommend;
     } else {
       SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region)
-          << CloseNesting << getOpenMPDirectiveName(OffendingRegion)
-          << Recommend << getOpenMPDirectiveName(CurrentRegion);
+          << CloseNesting << getOpenMPDirectiveName(OffendingRegion, OMPVersion)
+          << Recommend << getOpenMPDirectiveName(CurrentRegion, OMPVersion);
     }
     return true;
   }
@@ -5060,6 +5077,7 @@ static bool checkIfClauses(Sema &S, OpenMPDirectiveKind Kind,
   llvm::IndexedMap<const OMPIfClause *, Kind2Unsigned> FoundNameModifiers;
   FoundNameModifiers.resize(llvm::omp::Directive_enumSize + 1);
   SmallVector<SourceLocation, 4> NameModifierLoc;
+  unsigned OMPVersion = S.getLangOpts().OpenMP;
   for (const OMPClause *C : Clauses) {
     if (const auto *IC = dyn_cast_or_null<OMPIfClause>(C)) {
       // At most one if clause without a directive-name-modifier can appear on
@@ -5068,8 +5086,9 @@ static bool checkIfClauses(Sema &S, OpenMPDirectiveKind Kind,
       auto &FNM = FoundNameModifiers[CurNM];
       if (FNM) {
         S.Diag(C->getBeginLoc(), diag::err_omp_more_one_clause)
-            << getOpenMPDirectiveName(Kind) << getOpenMPClauseName(OMPC_if)
-            << (CurNM != OMPD_unknown) << getOpenMPDirectiveName(CurNM);
+            << getOpenMPDirectiveName(Kind, OMPVersion)
+            << getOpenMPClauseNameForDiag(OMPC_if) << (CurNM != OMPD_unknown)
+            << getOpenMPDirectiveName(CurNM, OMPVersion);
         ErrorFound = true;
       } else if (CurNM != OMPD_unknown) {
         NameModifierLoc.push_back(IC->getNameModifierLoc());
@@ -5085,7 +5104,8 @@ static bool checkIfClauses(Sema &S, OpenMPDirectiveKind Kind,
       if (!llvm::is_contained(AllowedNameModifiers, CurNM)) {
         S.Diag(IC->getNameModifierLoc(),
                diag::err_omp_wrong_if_directive_name_modifier)
-            << getOpenMPDirectiveName(CurNM) << getOpenMPDirectiveName(Kind);
+            << getOpenMPDirectiveName(CurNM, OMPVersion)
+            << getOpenMPDirectiveName(Kind, OMPVersion);
         ErrorFound = true;
       }
     }
@@ -5107,7 +5127,7 @@ static bool checkIfClauses(Sema &S, OpenMPDirectiveKind Kind,
         OpenMPDirectiveKind NM = AllowedNameModifiers[Cnt];
         if (!FoundNameModifiers[NM]) {
           Values += "'";
-          Values += getOpenMPDirectiveName(NM);
+          Values += getOpenMPDirectiveName(NM, OMPVersion);
           Values += "'";
           if (AllowedCnt + 2 == TotalAllowedNum)
             Values += " or ";
@@ -5311,9 +5331,10 @@ static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
     if (AllocatorKind == OMPAllocateDeclAttr::OMPThreadMemAlloc &&
         (isOpenMPTaskingDirective(Stack->getCurrentDirective()) ||
          isOpenMPTargetExecutionDirective(Stack->getCurrentDirective()))) {
+      unsigned OMPVersion = S.getLangOpts().OpenMP;
       S.Diag(AC->getAllocator()->getExprLoc(),
              diag::warn_omp_allocate_thread_on_task_target_directive)
-          << getOpenMPDirectiveName(Stack->getCurrentDirective());
+          << getOpenMPDirectiveName(Stack->getCurrentDirective(), OMPVersion);
     }
     for (Expr *E : AC->varlist()) {
       SourceLocation ELoc;
@@ -5546,7 +5567,7 @@ static CapturedStmt *buildLoopVarFunc(Sema &Actions, QualType LoopVarTy,
   // it in every iteration, capture it by value before it is modified.
   VarDecl *StartVar = cast<VarDecl>(StartExpr->getDecl());
   bool Invalid = Actions.tryCaptureVariable(StartVar, {},
-                                            Sema::TryCapture_ExplicitByVal, {});
+                                            TryCaptureKind::ExplicitByVal, {});
   (void)Invalid;
   assert(!Invalid && "Expecting capture-by-value to work.");
 
@@ -5768,7 +5789,6 @@ processImplicitMapsWithDefaultMappers(Sema &S, DSAStackTy *Stack,
   // Check for the default mapper for data members.
   if (S.getLangOpts().OpenMP < 50)
     return;
-  SmallVector<OMPClause *, 4> ImplicitMaps;
   for (int Cnt = 0, EndCnt = Clauses.size(); Cnt < EndCnt; ++Cnt) {
     auto *C = dyn_cast<OMPMapClause>(Clauses[Cnt]);
     if (!C)
@@ -6755,10 +6775,10 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareSimdDirective(
           auto [It, Inserted] = AlignedArgs.try_emplace(CanonPVD, E);
           if (!Inserted) {
             Diag(E->getExprLoc(), diag::err_omp_used_in_clause_twice)
-                << 1 << getOpenMPClauseName(OMPC_aligned)
+                << 1 << getOpenMPClauseNameForDiag(OMPC_aligned)
                 << E->getSourceRange();
             Diag(It->second->getExprLoc(), diag::note_omp_explicit_dsa)
-                << getOpenMPClauseName(OMPC_aligned);
+                << getOpenMPClauseNameForDiag(OMPC_aligned);
             continue;
           }
           QualType QTy = PVD->getType()
@@ -6777,9 +6797,10 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareSimdDirective(
     if (isa<CXXThisExpr>(E)) {
       if (AlignedThis) {
         Diag(E->getExprLoc(), diag::err_omp_used_in_clause_twice)
-            << 2 << getOpenMPClauseName(OMPC_aligned) << E->getSourceRange();
+            << 2 << getOpenMPClauseNameForDiag(OMPC_aligned)
+            << E->getSourceRange();
         Diag(AlignedThis->getExprLoc(), diag::note_omp_explicit_dsa)
-            << getOpenMPClauseName(OMPC_aligned);
+            << getOpenMPClauseNameForDiag(OMPC_aligned);
       }
       AlignedThis = E;
       continue;
@@ -6824,20 +6845,22 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareSimdDirective(
           // A list-item cannot appear in more than one linear clause.
           if (auto It = LinearArgs.find(CanonPVD); It != LinearArgs.end()) {
             Diag(E->getExprLoc(), diag::err_omp_wrong_dsa)
-                << getOpenMPClauseName(OMPC_linear)
-                << getOpenMPClauseName(OMPC_linear) << E->getSourceRange();
+                << getOpenMPClauseNameForDiag(OMPC_linear)
+                << getOpenMPClauseNameForDiag(OMPC_linear)
+                << E->getSourceRange();
             Diag(It->second->getExprLoc(), diag::note_omp_explicit_dsa)
-                << getOpenMPClauseName(OMPC_linear);
+                << getOpenMPClauseNameForDiag(OMPC_linear);
             continue;
           }
           // Each argument can appear in at most one uniform or linear clause.
           if (auto It = UniformedArgs.find(CanonPVD);
               It != UniformedArgs.end()) {
             Diag(E->getExprLoc(), diag::err_omp_wrong_dsa)
-                << getOpenMPClauseName(OMPC_linear)
-                << getOpenMPClauseName(OMPC_uniform) << E->getSourceRange();
+                << getOpenMPClauseNameForDiag(OMPC_linear)
+                << getOpenMPClauseNameForDiag(OMPC_uniform)
+                << E->getSourceRange();
             Diag(It->second->getExprLoc(), diag::note_omp_explicit_dsa)
-                << getOpenMPClauseName(OMPC_uniform);
+                << getOpenMPClauseNameForDiag(OMPC_uniform);
             continue;
           }
           LinearArgs[CanonPVD] = E;
@@ -6854,12 +6877,13 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareSimdDirective(
     if (isa<CXXThisExpr>(E)) {
       if (UniformedLinearThis) {
         Diag(E->getExprLoc(), diag::err_omp_wrong_dsa)
-            << getOpenMPClauseName(OMPC_linear)
-            << getOpenMPClauseName(IsUniformedThis ? OMPC_uniform : OMPC_linear)
+            << getOpenMPClauseNameForDiag(OMPC_linear)
+            << getOpenMPClauseNameForDiag(IsUniformedThis ? OMPC_uniform
+                                                          : OMPC_linear)
             << E->getSourceRange();
         Diag(UniformedLinearThis->getExprLoc(), diag::note_omp_explicit_dsa)
-            << getOpenMPClauseName(IsUniformedThis ? OMPC_uniform
-                                                   : OMPC_linear);
+            << getOpenMPClauseNameForDiag(IsUniformedThis ? OMPC_uniform
+                                                          : OMPC_linear);
         continue;
       }
       UniformedLinearThis = E;
@@ -6909,7 +6933,7 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareSimdDirective(
       if (NewStep)
         NewStep = SemaRef
                       .VerifyIntegerConstantExpression(
-                          NewStep, /*FIXME*/ Sema::AllowFold)
+                          NewStep, /*FIXME*/ AllowFoldKind::Allow)
                       .get();
     }
     NewSteps.push_back(NewStep);
@@ -7549,10 +7573,10 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
             llvm::omp::TraitProperty::construct_dispatch_dispatch)) {
       if (!AllAdjustArgs.empty())
         Diag(AdjustArgsLoc, diag::err_omp_clause_requires_dispatch_construct)
-            << getOpenMPClauseName(OMPC_adjust_args);
+            << getOpenMPClauseNameForDiag(OMPC_adjust_args);
       if (!AppendArgs.empty())
         Diag(AppendArgsLoc, diag::err_omp_clause_requires_dispatch_construct)
-            << getOpenMPClauseName(OMPC_append_args);
+            << getOpenMPClauseNameForDiag(OMPC_append_args);
       return;
     }
   }
@@ -9126,9 +9150,11 @@ void SemaOpenMP::ActOnOpenMPLoopInitialization(SourceLocation ForLoc,
             !isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
             DVar.CKind != OMPC_private && DVar.CKind != OMPC_lastprivate)) &&
           (DVar.CKind != OMPC_private || DVar.RefExpr)) {
+        unsigned OMPVersion = getLangOpts().OpenMP;
         Diag(Init->getBeginLoc(), diag::err_omp_loop_var_dsa)
-            << getOpenMPClauseName(DVar.CKind) << getOpenMPDirectiveName(DKind)
-            << getOpenMPClauseName(PredeterminedCKind);
+            << getOpenMPClauseNameForDiag(DVar.CKind)
+            << getOpenMPDirectiveName(DKind, OMPVersion)
+            << getOpenMPClauseNameForDiag(PredeterminedCKind);
         if (DVar.RefExpr == nullptr)
           DVar.CKind = PredeterminedCKind;
         reportOriginalDsa(SemaRef, DSAStack, D, DVar, /*IsLoopIterVar=*/true);
@@ -9182,9 +9208,10 @@ static bool checkOpenMPIterationSpace(
   auto *CXXFor = dyn_cast_or_null<CXXForRangeStmt>(S);
   // Ranged for is supported only in OpenMP 5.0.
   if (!For && (SemaRef.LangOpts.OpenMP <= 45 || !CXXFor)) {
+    unsigned OMPVersion = SemaRef.getLangOpts().OpenMP;
     SemaRef.Diag(S->getBeginLoc(), diag::err_omp_not_for)
         << (CollapseLoopCountExpr != nullptr || OrderedLoopCountExpr != nullptr)
-        << getOpenMPDirectiveName(DKind) << TotalNestedLoopCount
+        << getOpenMPDirectiveName(DKind, OMPVersion) << TotalNestedLoopCount
         << (CurrentNestedLoopCount > 0) << CurrentNestedLoopCount;
     if (TotalNestedLoopCount > 1) {
       if (CollapseLoopCountExpr && OrderedLoopCountExpr)
@@ -10469,6 +10496,7 @@ static bool checkSectionsDirective(Sema &SemaRef, OpenMPDirectiveKind DKind,
     return true;
 
   assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
+  unsigned OMPVersion = SemaRef.getLangOpts().OpenMP;
   auto BaseStmt = AStmt;
   while (auto *CS = dyn_cast_or_null<CapturedStmt>(BaseStmt))
     BaseStmt = CS->getCapturedStmt();
@@ -10483,7 +10511,7 @@ static bool checkSectionsDirective(Sema &SemaRef, OpenMPDirectiveKind DKind,
         if (SectionStmt)
           SemaRef.Diag(SectionStmt->getBeginLoc(),
                        diag::err_omp_sections_substmt_not_section)
-              << getOpenMPDirectiveName(DKind);
+              << getOpenMPDirectiveName(DKind, OMPVersion);
         return true;
       }
       cast<OMPSectionDirective>(SectionStmt)
@@ -10491,7 +10519,7 @@ static bool checkSectionsDirective(Sema &SemaRef, OpenMPDirectiveKind DKind,
     }
   } else {
     SemaRef.Diag(AStmt->getBeginLoc(), diag::err_omp_sections_not_compound_stmt)
-        << getOpenMPDirectiveName(DKind);
+        << getOpenMPDirectiveName(DKind, OMPVersion);
     return true;
   }
   return false;
@@ -10596,8 +10624,9 @@ static bool checkGenericLoopLastprivate(Sema &S, ArrayRef<OMPClause *> Clauses,
         if (ValueDecl *D = Res.first) {
           auto &&Info = Stack->isLoopControlVariable(D);
           if (!Info.first) {
+            unsigned OMPVersion = S.getLangOpts().OpenMP;
             S.Diag(ELoc, diag::err_omp_lastprivate_loop_var_non_loop_iteration)
-                << getOpenMPDirectiveName(K);
+                << getOpenMPDirectiveName(K, OMPVersion);
             ErrorFound = true;
           }
         }
@@ -10984,10 +11013,10 @@ static bool checkMutuallyExclusiveClauses(
         PrevClause = C;
       } else if (PrevClause->getClauseKind() != C->getClauseKind()) {
         S.Diag(C->getBeginLoc(), diag::err_omp_clauses_mutually_exclusive)
-            << getOpenMPClauseName(C->getClauseKind())
-            << getOpenMPClauseName(PrevClause->getClauseKind());
+            << getOpenMPClauseNameForDiag(C->getClauseKind())
+            << getOpenMPClauseNameForDiag(PrevClause->getClauseKind());
         S.Diag(PrevClause->getBeginLoc(), diag::note_omp_previous_clause)
-            << getOpenMPClauseName(PrevClause->getClauseKind());
+            << getOpenMPClauseNameForDiag(PrevClause->getClauseKind());
         ErrorFound = true;
       }
     }
@@ -11101,6 +11130,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFlushDirective(ArrayRef<OMPClause *> Clauses,
     else
       OrderClause = C;
   }
+  unsigned OMPVersion = getLangOpts().OpenMP;
   OpenMPClauseKind MemOrderKind = OMPC_unknown;
   SourceLocation MemOrderLoc;
   for (const OMPClause *C : Clauses) {
@@ -11110,10 +11140,10 @@ StmtResult SemaOpenMP::ActOnOpenMPFlushDirective(ArrayRef<OMPClause *> Clauses,
         C->getClauseKind() == OMPC_seq_cst /*OpenMP 5.1*/) {
       if (MemOrderKind != OMPC_unknown) {
         Diag(C->getBeginLoc(), diag::err_omp_several_mem_order_clauses)
-            << getOpenMPDirectiveName(OMPD_flush) << 1
+            << getOpenMPDirectiveName(OMPD_flush, OMPVersion) << 1
             << SourceRange(C->getBeginLoc(), C->getEndLoc());
         Diag(MemOrderLoc, diag::note_omp_previous_mem_order_clause)
-            << getOpenMPClauseName(MemOrderKind);
+            << getOpenMPClauseNameForDiag(MemOrderKind);
       } else {
         MemOrderKind = C->getClauseKind();
         MemOrderLoc = C->getBeginLoc();
@@ -11122,9 +11152,9 @@ StmtResult SemaOpenMP::ActOnOpenMPFlushDirective(ArrayRef<OMPClause *> Clauses,
   }
   if (FC && OrderClause) {
     Diag(FC->getLParenLoc(), diag::err_omp_flush_order_clause_and_list)
-        << getOpenMPClauseName(OrderClause->getClauseKind());
+        << getOpenMPClauseNameForDiag(OrderClause->getClauseKind());
     Diag(OrderClause->getBeginLoc(), diag::note_omp_flush_order_clause_here)
-        << getOpenMPClauseName(OrderClause->getClauseKind());
+        << getOpenMPClauseNameForDiag(OrderClause->getClauseKind());
     return StmtError();
   }
   return OMPFlushDirective::Create(getASTContext(), StartLoc, EndLoc, Clauses);
@@ -11165,9 +11195,11 @@ StmtResult SemaOpenMP::ActOnOpenMPScanDirective(ArrayRef<OMPClause *> Clauses,
   if (Scope *S = DSAStack->getCurScope()) {
     Scope *ParentS = S->getParent();
     if (!ParentS || ParentS->getParent() != ParentS->getBreakParent() ||
-        !ParentS->getBreakParent()->isOpenMPLoopScope())
+        !ParentS->getBreakParent()->isOpenMPLoopScope()) {
+      unsigned OMPVersion = getLangOpts().OpenMP;
       return StmtError(Diag(StartLoc, diag::err_omp_orphaned_device_directive)
-                       << getOpenMPDirectiveName(OMPD_scan) << 5);
+                       << getOpenMPDirectiveName(OMPD_scan, OMPVersion) << 5);
+    }
   }
   // Check that only one instance of scan directives is used in the same outer
   // region.
@@ -11205,9 +11237,11 @@ SemaOpenMP::ActOnOpenMPOrderedDirective(ArrayRef<OMPClause *> Clauses,
       if ((DC && DC->getDependencyKind() == OMPC_DEPEND_source) ||
           (DOC && (ODK.isSource(DOC)))) {
         if ((DC && DependSourceClause) || (DOC && DoacrossSourceClause)) {
+          unsigned OMPVersion = getLangOpts().OpenMP;
           Diag(C->getBeginLoc(), diag::err_omp_more_one_clause)
-              << getOpenMPDirectiveName(OMPD_ordered)
-              << getOpenMPClauseName(DC ? OMPC_depend : OMPC_doacross) << 2;
+              << getOpenMPDirectiveName(OMPD_ordered, OMPVersion)
+              << getOpenMPClauseNameForDiag(DC ? OMPC_depend : OMPC_doacross)
+              << 2;
           ErrorFound = true;
         } else {
           if (DC)
@@ -11250,15 +11284,17 @@ SemaOpenMP::ActOnOpenMPOrderedDirective(ArrayRef<OMPClause *> Clauses,
     SourceLocation Loc =
         DependFound ? DependFound->getBeginLoc() : DoacrossFound->getBeginLoc();
     Diag(Loc, diag::err_omp_depend_clause_thread_simd)
-        << getOpenMPClauseName(DependFound ? OMPC_depend : OMPC_doacross)
-        << getOpenMPClauseName(TC ? TC->getClauseKind() : SC->getClauseKind());
+        << getOpenMPClauseNameForDiag(DependFound ? OMPC_depend : OMPC_doacross)
+        << getOpenMPClauseNameForDiag(TC ? TC->getClauseKind()
+                                         : SC->getClauseKind());
     ErrorFound = true;
   } else if ((DependFound || DoacrossFound) &&
              !DSAStack->getParentOrderedRegionParam().first) {
     SourceLocation Loc =
         DependFound ? DependFound->getBeginLoc() : DoacrossFound->getBeginLoc();
     Diag(Loc, diag::err_omp_ordered_directive_without_param)
-        << getOpenMPClauseName(DependFound ? OMPC_depend : OMPC_doacross);
+        << getOpenMPClauseNameForDiag(DependFound ? OMPC_depend
+                                                  : OMPC_doacross);
     ErrorFound = true;
   } else if (TC || Clauses.empty()) {
     if (const Expr *Param = DSAStack->getParentOrderedRegionParam().first) {
@@ -12358,6 +12394,7 @@ StmtResult SemaOpenMP::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
                                                   SourceLocation StartLoc,
                                                   SourceLocation EndLoc) {
   ASTContext &Context = getASTContext();
+  unsigned OMPVersion = getLangOpts().OpenMP;
   // Register location of the first atomic directive.
   DSAStack->addAtomicDirectiveLoc(StartLoc);
   if (!AStmt)
@@ -12387,7 +12424,7 @@ StmtResult SemaOpenMP::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
         Diag(C->getBeginLoc(), diag::err_omp_atomic_several_clauses)
             << SourceRange(C->getBeginLoc(), C->getEndLoc());
         Diag(AtomicKindLoc, diag::note_omp_previous_mem_order_clause)
-            << getOpenMPClauseName(AtomicKind);
+            << getOpenMPClauseNameForDiag(AtomicKind);
       } else {
         AtomicKind = C->getClauseKind();
         AtomicKindLoc = C->getBeginLoc();
@@ -12395,7 +12432,7 @@ StmtResult SemaOpenMP::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
           Diag(C->getBeginLoc(), diag::err_omp_atomic_several_clauses)
               << SourceRange(C->getBeginLoc(), C->getEndLoc());
           Diag(AtomicKindLoc, diag::note_omp_previous_mem_order_clause)
-              << getOpenMPClauseName(AtomicKind);
+              << getOpenMPClauseNameForDiag(AtomicKind);
         }
       }
       break;
@@ -12404,7 +12441,7 @@ StmtResult SemaOpenMP::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
     case OMPC_fail: {
       if (!EncounteredAtomicKinds.contains(OMPC_compare)) {
         Diag(C->getBeginLoc(), diag::err_omp_atomic_no_compare)
-            << getOpenMPClauseName(C->getClauseKind())
+            << getOpenMPClauseNameForDiag(C->getClauseKind())
             << SourceRange(C->getBeginLoc(), C->getEndLoc());
         return StmtError();
       }
@@ -12417,10 +12454,10 @@ StmtResult SemaOpenMP::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
     case OMPC_relaxed: {
       if (MemOrderKind != OMPC_unknown) {
         Diag(C->getBeginLoc(), diag::err_omp_several_mem_order_clauses)
-            << getOpenMPDirectiveName(OMPD_atomic) << 0
+            << getOpenMPDirectiveName(OMPD_atomic, OMPVersion) << 0
             << SourceRange(C->getBeginLoc(), C->getEndLoc());
         Diag(MemOrderLoc, diag::note_omp_previous_mem_order_clause)
-            << getOpenMPClauseName(MemOrderKind);
+            << getOpenMPClauseNameForDiag(MemOrderKind);
       } else {
         MemOrderKind = C->getClauseKind();
         MemOrderLoc = C->getBeginLoc();
@@ -12456,11 +12493,11 @@ StmtResult SemaOpenMP::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
     if (AtomicKind == OMPC_unknown)
       Loc = StartLoc;
     Diag(Loc, diag::err_omp_atomic_incompatible_mem_order_clause)
-        << getOpenMPClauseName(AtomicKind)
+        << getOpenMPClauseNameForDiag(AtomicKind)
         << (AtomicKind == OMPC_unknown ? 1 : 0)
-        << getOpenMPClauseName(MemOrderKind);
+        << getOpenMPClauseNameForDiag(MemOrderKind);
     Diag(MemOrderLoc, diag::note_omp_previous_mem_order_clause)
-        << getOpenMPClauseName(MemOrderKind);
+        << getOpenMPClauseNameForDiag(MemOrderKind);
   }
 
   Stmt *Body = AStmt;
@@ -13075,8 +13112,9 @@ SemaOpenMP::ActOnOpenMPTargetDataDirective(ArrayRef<OMPClause *> Clauses,
       Expected = "'map' or 'use_device_ptr'";
     else
       Expected = "'map', 'use_device_ptr', or 'use_device_addr'";
+    unsigned OMPVersion = getLangOpts().OpenMP;
     Diag(StartLoc, diag::err_omp_no_clause_for_directive)
-        << Expected << getOpenMPDirectiveName(OMPD_target_data);
+        << Expected << getOpenMPDirectiveName(OMPD_target_data, OMPVersion);
     return StmtError();
   }
 
@@ -13097,8 +13135,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetEnterDataDirective(
   // OpenMP [2.10.2, Restrictions, p. 99]
   // At least one map clause must appear on the directive.
   if (!hasClauses(Clauses, OMPC_map)) {
+    unsigned OMPVersion = getLangOpts().OpenMP;
     Diag(StartLoc, diag::err_omp_no_clause_for_directive)
-        << "'map'" << getOpenMPDirectiveName(OMPD_target_enter_data);
+        << "'map'"
+        << getOpenMPDirectiveName(OMPD_target_enter_data, OMPVersion);
     return StmtError();
   }
 
@@ -13117,8 +13157,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetExitDataDirective(
   // OpenMP [2.10.3, Restrictions, p. 102]
   // At least one map clause must appear on the directive.
   if (!hasClauses(Clauses, OMPC_map)) {
+    unsigned OMPVersion = getLangOpts().OpenMP;
     Diag(StartLoc, diag::err_omp_no_clause_for_directive)
-        << "'map'" << getOpenMPDirectiveName(OMPD_target_exit_data);
+        << "'map'" << getOpenMPDirectiveName(OMPD_target_exit_data, OMPVersion);
     return StmtError();
   }
 
@@ -13161,7 +13202,7 @@ static bool checkNumExprsInClause(SemaBase &SemaRef,
   auto VarList = C->getVarRefs();
   if (VarList.size() > MaxNum) {
     SemaRef.Diag(VarList[MaxNum]->getBeginLoc(), Diag)
-        << getOpenMPClauseName(C->getClauseKind());
+        << getOpenMPClauseNameForDiag(C->getClauseKind());
     return false;
   }
   return true;
@@ -14312,6 +14353,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   auto MakeDimTileSize = [&SemaRef = this->SemaRef, &CopyTransformer, &Context,
                           SizesClause, CurScope](int I) -> Expr * {
     Expr *DimTileSizeExpr = SizesClause->getSizesRefs()[I];
+
+    if (DimTileSizeExpr->containsErrors())
+      return nullptr;
+
     if (isa<ConstantExpr>(DimTileSizeExpr))
       return AssertSuccess(CopyTransformer.TransformExpr(DimTileSizeExpr));
 
@@ -14381,10 +14426,13 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
 
     // For cond-expression:
     //   .tile.iv < min(.floor.iv + DimTileSize, NumIterations)
+    Expr *DimTileSize = MakeDimTileSize(I);
+    if (!DimTileSize)
+      return StmtError();
     ExprResult EndOfTile = SemaRef.BuildBinOp(
         CurScope, LoopHelper.Cond->getExprLoc(), BO_Add,
         makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
-        MakeDimTileSize(I));
+        DimTileSize);
     if (!EndOfTile.isUsable())
       return StmtError();
     ExprResult IsPartialTile =
@@ -14466,10 +14514,13 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
       return StmtError();
 
     // For incr-statement: .floor.iv += DimTileSize
+    Expr *DimTileSize = MakeDimTileSize(I);
+    if (!DimTileSize)
+      return StmtError();
     ExprResult IncrStmt = SemaRef.BuildBinOp(
         CurScope, LoopHelper.Inc->getExprLoc(), BO_AddAssign,
         makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
-        MakeDimTileSize(I));
+        DimTileSize);
     if (!IncrStmt.isUsable())
       return StmtError();
 
@@ -14861,7 +14912,8 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   // Determine the unroll factor.
   uint64_t Factor;
   SourceLocation FactorLoc;
-  if (Expr *FactorVal = PartialClause->getFactor()) {
+  if (Expr *FactorVal = PartialClause->getFactor();
+      FactorVal && !FactorVal->containsErrors()) {
     Factor = FactorVal->getIntegerConstantExpr(Context)->getZExtValue();
     FactorLoc = FactorVal->getExprLoc();
   } else {
@@ -14884,8 +14936,6 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   std::string OrigVarName = OrigVar->getNameInfo().getAsString();
   std::string OuterIVName = (Twine(".unrolled.iv.") + OrigVarName).str();
   std::string InnerIVName = (Twine(".unroll_inner.iv.") + OrigVarName).str();
-  std::string InnerTripCountName =
-      (Twine(".unroll_inner.tripcount.") + OrigVarName).str();
 
   // Create the iteration variable for the unrolled loop.
   VarDecl *OuterIVDecl =
@@ -15300,9 +15350,7 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
 
     assert(LoopHelper.Counters.size() == 1 &&
            "Single-dimensional loop iteration space expected");
-    auto *OrigCntVar = cast<DeclRefExpr>(LoopHelper.Counters.front());
 
-    std::string OrigVarName = OrigCntVar->getNameInfo().getAsString();
     addLoopPreInits(Context, LoopHelper, LoopStmts[I], OriginalInits[I],
                     PreInits);
   }
@@ -15796,7 +15844,7 @@ isNonNegativeIntegerValue(Expr *&ValExpr, Sema &SemaRef, OpenMPClauseKind CKind,
           !((!StrictlyPositive && Result->isNonNegative()) ||
             (StrictlyPositive && Result->isStrictlyPositive()))) {
         SemaRef.Diag(Loc, diag::err_omp_negative_expression_in_clause)
-            << getOpenMPClauseName(CKind) << (StrictlyPositive ? 1 : 0)
+            << getOpenMPClauseNameForDiag(CKind) << (StrictlyPositive ? 1 : 0)
             << ValExpr->getSourceRange();
         return false;
       }
@@ -15866,10 +15914,11 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
       }
     } Diagnoser;
     ICE = SemaRef.VerifyIntegerConstantExpression(E, &Result, Diagnoser,
-                                                  Sema::AllowFold);
+                                                  AllowFoldKind::Allow);
   } else {
-    ICE = SemaRef.VerifyIntegerConstantExpression(E, &Result,
-                                                  /*FIXME*/ Sema::AllowFold);
+    ICE =
+        SemaRef.VerifyIntegerConstantExpression(E, &Result,
+                                                /*FIXME*/ AllowFoldKind::Allow);
   }
   if (ICE.isInvalid())
     return ExprError();
@@ -15877,7 +15926,7 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
   if ((StrictlyPositive && !Result.isStrictlyPositive()) ||
       (!StrictlyPositive && !Result.isNonNegative())) {
     Diag(E->getExprLoc(), diag::err_omp_negative_expression_in_clause)
-        << getOpenMPClauseName(CKind) << (StrictlyPositive ? 1 : 0)
+        << getOpenMPClauseNameForDiag(CKind) << (StrictlyPositive ? 1 : 0)
         << E->getSourceRange();
     return ExprError();
   }
@@ -16227,7 +16276,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPDefaultClause(DefaultKind Kind,
     Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
         << getListOfPossibleValues(OMPC_default, /*First=*/0,
                                    /*Last=*/unsigned(OMP_DEFAULT_unknown))
-        << getOpenMPClauseName(OMPC_default);
+        << getOpenMPClauseNameForDiag(OMPC_default);
     return nullptr;
   }
 
@@ -16266,7 +16315,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPProcBindClause(ProcBindKind Kind,
                                                 ? OMP_PROC_BIND_primary
                                                 : OMP_PROC_BIND_spread) +
                                        1)
-        << getOpenMPClauseName(OMPC_proc_bind);
+        << getOpenMPClauseNameForDiag(OMPC_proc_bind);
     return nullptr;
   }
   if (Kind == OMP_PROC_BIND_primary && getLangOpts().OpenMP < 51)
@@ -16275,7 +16324,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPProcBindClause(ProcBindKind Kind,
                                    /*First=*/unsigned(OMP_PROC_BIND_master),
                                    /*Last=*/
                                    unsigned(OMP_PROC_BIND_spread) + 1)
-        << getOpenMPClauseName(OMPC_proc_bind);
+        << getOpenMPClauseNameForDiag(OMPC_proc_bind);
   return new (getASTContext())
       OMPProcBindClause(Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);
 }
@@ -16288,7 +16337,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPAtomicDefaultMemOrderClause(
         << getListOfPossibleValues(
                OMPC_atomic_default_mem_order, /*First=*/0,
                /*Last=*/OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown)
-        << getOpenMPClauseName(OMPC_atomic_default_mem_order);
+        << getOpenMPClauseNameForDiag(OMPC_atomic_default_mem_order);
     return nullptr;
   }
   return new (getASTContext()) OMPAtomicDefaultMemOrderClause(
@@ -16304,7 +16353,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPAtClause(OpenMPAtClauseKind Kind,
     Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
         << getListOfPossibleValues(OMPC_at, /*First=*/0,
                                    /*Last=*/OMPC_AT_unknown)
-        << getOpenMPClauseName(OMPC_at);
+        << getOpenMPClauseNameForDiag(OMPC_at);
     return nullptr;
   }
   return new (getASTContext())
@@ -16320,7 +16369,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSeverityClause(OpenMPSeverityClauseKind Kind,
     Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
         << getListOfPossibleValues(OMPC_severity, /*First=*/0,
                                    /*Last=*/OMPC_SEVERITY_unknown)
-        << getOpenMPClauseName(OMPC_severity);
+        << getOpenMPClauseNameForDiag(OMPC_severity);
     return nullptr;
   }
   return new (getASTContext())
@@ -16334,7 +16383,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
   assert(ME && "NULL expr in Message clause");
   if (!isa<StringLiteral>(ME)) {
     Diag(ME->getBeginLoc(), diag::warn_clause_expected_string)
-        << getOpenMPClauseName(OMPC_message);
+        << getOpenMPClauseNameForDiag(OMPC_message);
     return nullptr;
   }
   return new (getASTContext())
@@ -16356,7 +16405,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPOrderClause(
         << getListOfPossibleValues(OMPC_order,
                                    /*First=*/0,
                                    /*Last=*/OMPC_ORDER_unknown)
-        << getOpenMPClauseName(OMPC_order);
+        << getOpenMPClauseNameForDiag(OMPC_order);
     return nullptr;
   }
   if (getLangOpts().OpenMP >= 51 && Modifier == OMPC_ORDER_MODIFIER_unknown &&
@@ -16365,7 +16414,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPOrderClause(
         << getListOfPossibleValues(OMPC_order,
                                    /*First=*/OMPC_ORDER_MODIFIER_unknown + 1,
                                    /*Last=*/OMPC_ORDER_MODIFIER_last)
-        << getOpenMPClauseName(OMPC_order);
+        << getOpenMPClauseNameForDiag(OMPC_order);
   } else if (getLangOpts().OpenMP >= 50) {
     DSAStack->setRegionHasOrderConcurrent(/*HasOrderConcurrent=*/true);
     if (DSAStack->getCurScope()) {
@@ -16394,7 +16443,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPUpdateClause(OpenMPDependClauseKind Kind,
     Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
         << getListOfPossibleValues(OMPC_depend, /*First=*/0,
                                    /*Last=*/OMPC_DEPEND_unknown, Except)
-        << getOpenMPClauseName(OMPC_update);
+        << getOpenMPClauseNameForDiag(OMPC_update);
     return nullptr;
   }
   return OMPUpdateClause::Create(getASTContext(), StartLoc, LParenLoc,
@@ -16470,7 +16519,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,
 
     llvm::APSInt PermVal;
     ExprResult PermEvalExpr = SemaRef.VerifyIntegerConstantExpression(
-        PermExpr, &PermVal, Sema::AllowFold);
+        PermExpr, &PermVal, AllowFoldKind::Allow);
     bool IsValid = PermEvalExpr.isUsable();
     if (IsValid)
       PermExpr = PermEvalExpr.get();
@@ -16689,7 +16738,7 @@ static bool checkScheduleModifiers(Sema &S, OpenMPScheduleClauseModifier M1,
                                    /*First=*/OMPC_SCHEDULE_MODIFIER_unknown + 1,
                                    /*Last=*/OMPC_SCHEDULE_MODIFIER_last,
                                    Excluded)
-        << getOpenMPClauseName(OMPC_schedule);
+        << getOpenMPClauseNameForDiag(OMPC_schedule);
     return true;
   }
   return false;
@@ -16728,7 +16777,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPScheduleClause(
                                        /*Last=*/OMPC_SCHEDULE_unknown);
     }
     Diag(KindLoc, diag::err_omp_unexpected_clause_value)
-        << Values << getOpenMPClauseName(OMPC_schedule);
+        << Values << getOpenMPClauseNameForDiag(OMPC_schedule);
     return nullptr;
   }
   // OpenMP, 2.7.1, Loop Construct, Restrictions
@@ -17084,9 +17133,10 @@ SemaOpenMP::ActOnOpenMPInteropDirective(ArrayRef<OMPClause *> Clauses,
   // OpenMP 5.1 [2.15.1, interop Construct, Restrictions]
   // At least one action-clause must appear on a directive.
   if (!hasClauses(Clauses, OMPC_init, OMPC_use, OMPC_destroy, OMPC_nowait)) {
+    unsigned OMPVersion = getLangOpts().OpenMP;
     StringRef Expected = "'init', 'use', 'destroy', or 'nowait'";
     Diag(StartLoc, diag::err_omp_no_clause_for_directive)
-        << Expected << getOpenMPDirectiveName(OMPD_interop);
+        << Expected << getOpenMPDirectiveName(OMPD_interop, OMPVersion);
     return StmtError();
   }
 
@@ -17253,9 +17303,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPDestroyClause(Expr *InteropVar,
                                                 SourceLocation EndLoc) {
   if (!InteropVar && getLangOpts().OpenMP >= 52 &&
       DSAStack->getCurrentDirective() == OMPD_depobj) {
+    unsigned OMPVersion = getLangOpts().OpenMP;
     Diag(StartLoc, diag::err_omp_expected_clause_argument)
-        << getOpenMPClauseName(OMPC_destroy)
-        << getOpenMPDirectiveName(OMPD_depobj);
+        << getOpenMPClauseNameForDiag(OMPC_destroy)
+        << getOpenMPDirectiveName(OMPD_depobj, OMPVersion);
     return nullptr;
   }
   if (InteropVar &&
@@ -17597,6 +17648,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
                                                 SourceLocation EndLoc) {
   SmallVector<Expr *, 8> Vars;
   SmallVector<Expr *, 8> PrivateCopies;
+  unsigned OMPVersion = getLangOpts().OpenMP;
   bool IsImplicitClause =
       StartLoc.isInvalid() && LParenLoc.isInvalid() && EndLoc.isInvalid();
   for (Expr *RefExpr : VarList) {
@@ -17645,8 +17697,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     //  the variable's predetermined data-sharing attributes.
     DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(D, /*FromParent=*/false);
     if (DVar.CKind != OMPC_unknown && DVar.CKind != OMPC_private) {
-      Diag(ELoc, diag::err_omp_wrong_dsa) << getOpenMPClauseName(DVar.CKind)
-                                          << getOpenMPClauseName(OMPC_private);
+      Diag(ELoc, diag::err_omp_wrong_dsa)
+          << getOpenMPClauseNameForDiag(DVar.CKind)
+          << getOpenMPClauseNameForDiag(OMPC_private);
       reportOriginalDsa(SemaRef, DSAStack, D, DVar);
       continue;
     }
@@ -17656,8 +17709,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     if (!Type->isAnyPointerType() && Type->isVariablyModifiedType() &&
         isOpenMPTaskingDirective(CurrDir)) {
       Diag(ELoc, diag::err_omp_variably_modified_type_not_supported)
-          << getOpenMPClauseName(OMPC_private) << Type
-          << getOpenMPDirectiveName(CurrDir);
+          << getOpenMPClauseNameForDiag(OMPC_private) << Type
+          << getOpenMPDirectiveName(CurrDir, OMPVersion);
       bool IsDecl = !VD || VD->isThisDeclarationADefinition(getASTContext()) ==
                                VarDecl::DeclarationOnly;
       Diag(D->getLocation(),
@@ -17686,9 +17739,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
                 return true;
               })) {
         Diag(ELoc, diag::err_omp_variable_in_given_clause_and_dsa)
-            << getOpenMPClauseName(OMPC_private)
-            << getOpenMPClauseName(ConflictKind)
-            << getOpenMPDirectiveName(CurrDir);
+            << getOpenMPClauseNameForDiag(OMPC_private)
+            << getOpenMPClauseNameForDiag(ConflictKind)
+            << getOpenMPDirectiveName(CurrDir, OMPVersion);
         reportOriginalDsa(SemaRef, DSAStack, D, DVar);
         continue;
       }
@@ -17750,6 +17803,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
   bool IsImplicitClause =
       StartLoc.isInvalid() && LParenLoc.isInvalid() && EndLoc.isInvalid();
   SourceLocation ImplicitClauseLoc = DSAStack->getConstructLoc();
+  unsigned OMPVersion = getLangOpts().OpenMP;
 
   for (Expr *RefExpr : VarList) {
     assert(RefExpr && "NULL expr in OpenMP firstprivate clause.");
@@ -17806,8 +17860,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
            DVar.CKind != OMPC_lastprivate) &&
           DVar.RefExpr) {
         Diag(ELoc, diag::err_omp_wrong_dsa)
-            << getOpenMPClauseName(DVar.CKind)
-            << getOpenMPClauseName(OMPC_firstprivate);
+            << getOpenMPClauseNameForDiag(DVar.CKind)
+            << getOpenMPClauseNameForDiag(OMPC_firstprivate);
         reportOriginalDsa(SemaRef, DSAStack, D, DVar);
         continue;
       }
@@ -17826,8 +17880,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
       if (!(IsConstant || (VD && VD->isStaticDataMember())) && !DVar.RefExpr &&
           DVar.CKind != OMPC_unknown && DVar.CKind != OMPC_shared) {
         Diag(ELoc, diag::err_omp_wrong_dsa)
-            << getOpenMPClauseName(DVar.CKind)
-            << getOpenMPClauseName(OMPC_firstprivate);
+            << getOpenMPClauseNameForDiag(DVar.CKind)
+            << getOpenMPClauseNameForDiag(OMPC_firstprivate);
         reportOriginalDsa(SemaRef, DSAStack, D, DVar);
         continue;
       }
@@ -17857,8 +17911,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
              isOpenMPTeamsDirective(DVar.DKind) ||
              DVar.DKind == OMPD_unknown)) {
           Diag(ELoc, diag::err_omp_required_access)
-              << getOpenMPClauseName(OMPC_firstprivate)
-              << getOpenMPClauseName(OMPC_shared);
+              << getOpenMPClauseNameForDiag(OMPC_firstprivate)
+              << getOpenMPClauseNameForDiag(OMPC_shared);
           reportOriginalDsa(SemaRef, DSAStack, D, DVar);
           continue;
         }
@@ -17891,7 +17945,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
              isOpenMPWorksharingDirective(DVar.DKind) ||
              isOpenMPTeamsDirective(DVar.DKind))) {
           Diag(ELoc, diag::err_omp_parallel_reduction_in_task_firstprivate)
-              << getOpenMPDirectiveName(DVar.DKind);
+              << getOpenMPDirectiveName(DVar.DKind, OMPVersion);
           reportOriginalDsa(SemaRef, DSAStack, D, DVar);
           continue;
         }
@@ -17918,9 +17972,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
                   return true;
                 })) {
           Diag(ELoc, diag::err_omp_variable_in_given_clause_and_dsa)
-              << getOpenMPClauseName(OMPC_firstprivate)
-              << getOpenMPClauseName(ConflictKind)
-              << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
+              << getOpenMPClauseNameForDiag(OMPC_firstprivate)
+              << getOpenMPClauseNameForDiag(ConflictKind)
+              << getOpenMPDirectiveName(DSAStack->getCurrentDirective(),
+                                        OMPVersion);
           reportOriginalDsa(SemaRef, DSAStack, D, DVar);
           continue;
         }
@@ -17931,8 +17986,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
     if (!Type->isAnyPointerType() && Type->isVariablyModifiedType() &&
         isOpenMPTaskingDirective(DSAStack->getCurrentDirective())) {
       Diag(ELoc, diag::err_omp_variably_modified_type_not_supported)
-          << getOpenMPClauseName(OMPC_firstprivate) << Type
-          << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
+          << getOpenMPClauseNameForDiag(OMPC_firstprivate) << Type
+          << getOpenMPDirectiveName(DSAStack->getCurrentDirective(),
+                                    OMPVersion);
       bool IsDecl = !VD || VD->isThisDeclarationADefinition(getASTContext()) ==
                                VarDecl::DeclarationOnly;
       Diag(D->getLocation(),
@@ -18037,7 +18093,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPLastprivateClause(
     Diag(LPKindLoc, diag::err_omp_unexpected_clause_value)
         << getListOfPossibleValues(OMPC_lastprivate, /*First=*/0,
                                    /*Last=*/OMPC_LASTPRIVATE_unknown)
-        << getOpenMPClauseName(OMPC_lastprivate);
+        << getOpenMPClauseNameForDiag(OMPC_lastprivate);
     return nullptr;
   }
 
@@ -18114,8 +18170,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPLastprivateClause(
          DVar.CKind != OMPC_firstprivate) &&
         (DVar.CKind != OMPC_private || DVar.RefExpr != nullptr)) {
       Diag(ELoc, diag::err_omp_wrong_dsa)
-          << getOpenMPClauseName(DVar.CKind)
-          << getOpenMPClauseName(OMPC_lastprivate);
+          << getOpenMPClauseNameForDiag(DVar.CKind)
+          << getOpenMPClauseNameForDiag(OMPC_lastprivate);
       reportOriginalDsa(SemaRef, DSAStack, D, DVar);
       continue;
     }
@@ -18133,8 +18189,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPLastprivateClause(
       DVar = DSAStack->getImplicitDSA(D, true);
       if (DVar.CKind != OMPC_shared) {
         Diag(ELoc, diag::err_omp_required_access)
-            << getOpenMPClauseName(OMPC_lastprivate)
-            << getOpenMPClauseName(OMPC_shared);
+            << getOpenMPClauseNameForDiag(OMPC_lastprivate)
+            << getOpenMPClauseNameForDiag(OMPC_shared);
         reportOriginalDsa(SemaRef, DSAStack, D, DVar);
         continue;
       }
@@ -18242,8 +18298,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPSharedClause(ArrayRef<Expr *> VarList,
     DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(D, /*FromParent=*/false);
     if (DVar.CKind != OMPC_unknown && DVar.CKind != OMPC_shared &&
         DVar.RefExpr) {
-      Diag(ELoc, diag::err_omp_wrong_dsa) << getOpenMPClauseName(DVar.CKind)
-                                          << getOpenMPClauseName(OMPC_shared);
+      Diag(ELoc, diag::err_omp_wrong_dsa)
+          << getOpenMPClauseNameForDiag(DVar.CKind)
+          << getOpenMPClauseNameForDiag(OMPC_shared);
       reportOriginalDsa(SemaRef, DSAStack, D, DVar);
       continue;
     }
@@ -18908,7 +18965,7 @@ static bool actOnOMPReductionKindClause(
           DSARefChecker Check(Stack);
           if (Check.Visit(VDDef->getInit())) {
             S.Diag(ELoc, diag::err_omp_reduction_ref_type_arg)
-                << getOpenMPClauseName(ClauseKind) << ERange;
+                << getOpenMPClauseNameForDiag(ClauseKind) << ERange;
             S.Diag(VDDef->getLocation(), diag::note_defined_here) << VDDef;
             continue;
           }
@@ -18929,15 +18986,15 @@ static bool actOnOMPReductionKindClause(
       DSAStackTy::DSAVarData DVar = Stack->getTopDSA(D, /*FromParent=*/false);
       if (DVar.CKind == OMPC_reduction) {
         S.Diag(ELoc, diag::err_omp_once_referenced)
-            << getOpenMPClauseName(ClauseKind);
+            << getOpenMPClauseNameForDiag(ClauseKind);
         if (DVar.RefExpr)
           S.Diag(DVar.RefExpr->getExprLoc(), diag::note_omp_referenced);
         continue;
       }
       if (DVar.CKind != OMPC_unknown) {
         S.Diag(ELoc, diag::err_omp_wrong_dsa)
-            << getOpenMPClauseName(DVar.CKind)
-            << getOpenMPClauseName(OMPC_reduction);
+            << getOpenMPClauseNameForDiag(DVar.CKind)
+            << getOpenMPClauseNameForDiag(OMPC_reduction);
         reportOriginalDsa(S, Stack, D, DVar);
         continue;
       }
@@ -18974,8 +19031,8 @@ static bool actOnOMPReductionKindClause(
         DVar = Stack->getImplicitDSA(D, true);
         if (DVar.CKind != OMPC_shared) {
           S.Diag(ELoc, diag::err_omp_required_access)
-              << getOpenMPClauseName(OMPC_reduction)
-              << getOpenMPClauseName(OMPC_shared);
+              << getOpenMPClauseNameForDiag(OMPC_reduction)
+              << getOpenMPClauseNameForDiag(OMPC_shared);
           reportOriginalDsa(S, Stack, D, DVar);
           continue;
         }
@@ -18986,8 +19043,8 @@ static bool actOnOMPReductionKindClause(
       DSAStackTy::DSAVarData DVar = Stack->getTopDSA(D, /*FromParent=*/false);
       if (DVar.CKind == OMPC_threadprivate) {
         S.Diag(ELoc, diag::err_omp_wrong_dsa)
-            << getOpenMPClauseName(DVar.CKind)
-            << getOpenMPClauseName(OMPC_reduction);
+            << getOpenMPClauseNameForDiag(DVar.CKind)
+            << getOpenMPClauseNameForDiag(OMPC_reduction);
         reportOriginalDsa(S, Stack, D, DVar);
         continue;
       }
@@ -19033,7 +19090,8 @@ static bool actOnOMPReductionKindClause(
           !(Type->isScalarType() ||
             (S.getLangOpts().CPlusPlus && Type->isArithmeticType()))) {
         S.Diag(ELoc, diag::err_omp_clause_not_arithmetic_type_arg)
-            << getOpenMPClauseName(ClauseKind) << S.getLangOpts().CPlusPlus;
+            << getOpenMPClauseNameForDiag(ClauseKind)
+            << S.getLangOpts().CPlusPlus;
         if (!ASE && !OASE) {
           bool IsDecl = !VD || VD->isThisDeclarationADefinition(Context) ==
                                    VarDecl::DeclarationOnly;
@@ -19046,7 +19104,7 @@ static bool actOnOMPReductionKindClause(
       if ((BOK == BO_OrAssign || BOK == BO_AndAssign || BOK == BO_XorAssign) &&
           !S.getLangOpts().CPlusPlus && Type->isFloatingType()) {
         S.Diag(ELoc, diag::err_omp_clause_floating_type_arg)
-            << getOpenMPClauseName(ClauseKind);
+            << getOpenMPClauseNameForDiag(ClauseKind);
         if (!ASE && !OASE) {
           bool IsDecl = !VD || VD->isThisDeclarationADefinition(Context) ==
                                    VarDecl::DeclarationOnly;
@@ -19485,7 +19543,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPReductionClause(
     Diag(LParenLoc, diag::err_omp_unexpected_clause_value)
         << getListOfPossibleValues(OMPC_reduction, /*First=*/0,
                                    /*Last=*/OMPC_REDUCTION_unknown)
-        << getOpenMPClauseName(OMPC_reduction);
+        << getOpenMPClauseNameForDiag(OMPC_reduction);
     return nullptr;
   }
   // OpenMP 5.0, 2.19.5.4 reduction Clause, Restrictions
@@ -19657,8 +19715,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
     //  other data-sharing attribute clause.
     DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(D, /*FromParent=*/false);
     if (DVar.RefExpr) {
-      Diag(ELoc, diag::err_omp_wrong_dsa) << getOpenMPClauseName(DVar.CKind)
-                                          << getOpenMPClauseName(OMPC_linear);
+      Diag(ELoc, diag::err_omp_wrong_dsa)
+          << getOpenMPClauseNameForDiag(DVar.CKind)
+          << getOpenMPClauseNameForDiag(OMPC_linear);
       reportOriginalDsa(SemaRef, DSAStack, D, DVar);
       continue;
     }
@@ -19901,9 +19960,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPAlignedClause(
     // A list-item cannot appear in more than one aligned clause.
     if (const Expr *PrevRef = DSAStack->addUniqueAligned(D, SimpleRefExpr)) {
       Diag(ELoc, diag::err_omp_used_in_clause_twice)
-          << 0 << getOpenMPClauseName(OMPC_aligned) << ERange;
+          << 0 << getOpenMPClauseNameForDiag(OMPC_aligned) << ERange;
       Diag(PrevRef->getExprLoc(), diag::note_omp_explicit_dsa)
-          << getOpenMPClauseName(OMPC_aligned);
+          << getOpenMPClauseNameForDiag(OMPC_aligned);
       continue;
     }
 
@@ -19982,9 +20041,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyinClause(ArrayRef<Expr *> VarList,
     // OpenMP [2.14.4.1, Restrictions, C/C++, p.1]
     //  A list item that appears in a copyin clause must be threadprivate.
     if (!DSAStack->isThreadPrivate(VD)) {
+      unsigned OMPVersion = getLangOpts().OpenMP;
       Diag(ELoc, diag::err_omp_required_access)
-          << getOpenMPClauseName(OMPC_copyin)
-          << getOpenMPDirectiveName(OMPD_threadprivate);
+          << getOpenMPClauseNameForDiag(OMPC_copyin)
+          << getOpenMPDirectiveName(OMPD_threadprivate, OMPVersion);
       continue;
     }
 
@@ -20068,8 +20128,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
       if (DVar.CKind != OMPC_unknown && DVar.CKind != OMPC_copyprivate &&
           DVar.RefExpr) {
         Diag(ELoc, diag::err_omp_wrong_dsa)
-            << getOpenMPClauseName(DVar.CKind)
-            << getOpenMPClauseName(OMPC_copyprivate);
+            << getOpenMPClauseNameForDiag(DVar.CKind)
+            << getOpenMPClauseNameForDiag(OMPC_copyprivate);
         reportOriginalDsa(SemaRef, DSAStack, D, DVar);
         continue;
       }
@@ -20081,7 +20141,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
         DVar = DSAStack->getImplicitDSA(D, false);
         if (DVar.CKind == OMPC_shared) {
           Diag(ELoc, diag::err_omp_required_access)
-              << getOpenMPClauseName(OMPC_copyprivate)
+              << getOpenMPClauseNameForDiag(OMPC_copyprivate)
               << "threadprivate or private in the enclosing context";
           reportOriginalDsa(SemaRef, DSAStack, D, DVar);
           continue;
@@ -20091,9 +20151,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
 
     // Variably modified types are not supported.
     if (!Type->isAnyPointerType() && Type->isVariablyModifiedType()) {
+      unsigned OMPVersion = getLangOpts().OpenMP;
       Diag(ELoc, diag::err_omp_variably_modified_type_not_supported)
-          << getOpenMPClauseName(OMPC_copyprivate) << Type
-          << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
+          << getOpenMPClauseNameForDiag(OMPC_copyprivate) << Type
+          << getOpenMPDirectiveName(DSAStack->getCurrentDirective(),
+                                    OMPVersion);
       bool IsDecl = !VD || VD->isThisDeclarationADefinition(getASTContext()) ==
                                VarDecl::DeclarationOnly;
       Diag(D->getLocation(),
@@ -20342,7 +20404,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPDependClause(
   if (DSAStack->getCurrentDirective() == OMPD_ordered &&
       DepKind != OMPC_DEPEND_source && DepKind != OMPC_DEPEND_sink) {
     Diag(DepLoc, diag::err_omp_unexpected_clause_value)
-        << "'source' or 'sink'" << getOpenMPClauseName(OMPC_depend);
+        << "'source' or 'sink'" << getOpenMPClauseNameForDiag(OMPC_depend);
     return nullptr;
   }
   if (DSAStack->getCurrentDirective() == OMPD_taskwait &&
@@ -20372,7 +20434,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPDependClause(
         << Expected + getListOfPossibleValues(OMPC_depend, /*First=*/0,
                                               /*Last=*/OMPC_DEPEND_unknown,
                                               Except)
-        << getOpenMPClauseName(OMPC_depend);
+        << getOpenMPClauseNameForDiag(OMPC_depend);
     return nullptr;
   }
   if (DepModifier &&
@@ -20538,7 +20600,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPDeviceClause(
     std::string Values =
         getListOfPossibleValues(OMPC_device, /*First=*/0, OMPC_DEVICE_unknown);
     Diag(ModifierLoc, diag::err_omp_unexpected_clause_value)
-        << Values << getOpenMPClauseName(OMPC_device);
+        << Values << getOpenMPClauseNameForDiag(OMPC_device);
     ErrorFound = true;
   }
 
@@ -20744,7 +20806,7 @@ class MapBaseChecker final : public StmtVisitor<MapBaseChecker, bool> {
           << ERange;
     } else {
       SemaRef.Diag(ELoc, diag::err_omp_non_lvalue_in_map_or_motion_clauses)
-          << getOpenMPClauseName(CKind) << ERange;
+          << getOpenMPClauseNameForDiag(CKind) << ERange;
     }
   }
 
@@ -20792,7 +20854,7 @@ public:
     if (FD->isBitField()) {
       if (!NoDiagnose) {
         SemaRef.Diag(ELoc, diag::err_omp_bit_fields_forbidden_in_clause)
-            << ME->getSourceRange() << getOpenMPClauseName(CKind);
+            << ME->getSourceRange() << getOpenMPClauseNameForDiag(CKind);
         return false;
       }
       if (RelevantExpr)
@@ -21665,6 +21727,7 @@ static void checkMappableExpressionList(
   // We only expect mappable expressions in 'to', 'from', and 'map' clauses.
   assert((CKind == OMPC_map || CKind == OMPC_to || CKind == OMPC_from) &&
          "Unexpected clause kind with mappable expressions!");
+  unsigned OMPVersion = SemaRef.getLangOpts().OpenMP;
 
   // If the identifier of user-defined mapper is not specified, it is "default".
   // We do not change the actual name in this clause to distinguish whether a
@@ -21733,7 +21796,7 @@ static void checkMappableExpressionList(
             << RE->getSourceRange();
       } else {
         SemaRef.Diag(ELoc, diag::err_omp_non_lvalue_in_map_or_motion_clauses)
-            << getOpenMPClauseName(CKind) << RE->getSourceRange();
+            << getOpenMPClauseNameForDiag(CKind) << RE->getSourceRange();
       }
       continue;
     }
@@ -21795,7 +21858,7 @@ static void checkMappableExpressionList(
         continue;
       DSAStackTy::DSAVarData DVar = DSAS->getTopDSA(VD, /*FromParent=*/false);
       SemaRef.Diag(ELoc, diag::err_omp_threadprivate_in_clause)
-          << getOpenMPClauseName(CKind);
+          << getOpenMPClauseNameForDiag(CKind);
       reportOriginalDsa(SemaRef, DSAS, VD, DVar);
       continue;
     }
@@ -21869,7 +21932,7 @@ static void checkMappableExpressionList(
         SemaRef.Diag(StartLoc, diag::err_omp_invalid_map_type_for_directive)
             << (IsMapTypeImplicit ? 1 : 0)
             << getOpenMPSimpleClauseTypeName(OMPC_map, MapType)
-            << getOpenMPDirectiveName(DKind);
+            << getOpenMPDirectiveName(DKind, OMPVersion);
         continue;
       }
 
@@ -21884,7 +21947,7 @@ static void checkMappableExpressionList(
         SemaRef.Diag(StartLoc, diag::err_omp_invalid_map_type_for_directive)
             << (IsMapTypeImplicit ? 1 : 0)
             << getOpenMPSimpleClauseTypeName(OMPC_map, MapType)
-            << getOpenMPDirectiveName(DKind);
+            << getOpenMPDirectiveName(DKind, OMPVersion);
         continue;
       }
 
@@ -21899,7 +21962,7 @@ static void checkMappableExpressionList(
                      diag::err_omp_invalid_map_type_modifier_for_directive)
             << getOpenMPSimpleClauseTypeName(OMPC_map,
                                              OMPC_MAP_MODIFIER_ompx_hold)
-            << getOpenMPDirectiveName(DKind);
+            << getOpenMPDirectiveName(DKind, OMPVersion);
         continue;
       }
 
@@ -21914,7 +21977,7 @@ static void checkMappableExpressionList(
         SemaRef.Diag(StartLoc, diag::err_omp_invalid_map_type_for_directive)
             << (IsMapTypeImplicit ? 1 : 0)
             << getOpenMPSimpleClauseTypeName(OMPC_map, MapType)
-            << getOpenMPDirectiveName(DKind);
+            << getOpenMPDirectiveName(DKind, OMPVersion);
         continue;
       }
 
@@ -21932,9 +21995,10 @@ static void checkMappableExpressionList(
         DSAStackTy::DSAVarData DVar = DSAS->getTopDSA(VD, /*FromParent=*/false);
         if (isOpenMPPrivate(DVar.CKind)) {
           SemaRef.Diag(ELoc, diag::err_omp_variable_in_given_clause_and_dsa)
-              << getOpenMPClauseName(DVar.CKind)
-              << getOpenMPClauseName(OMPC_map)
-              << getOpenMPDirectiveName(DSAS->getCurrentDirective());
+              << getOpenMPClauseNameForDiag(DVar.CKind)
+              << getOpenMPClauseNameForDiag(OMPC_map)
+              << getOpenMPDirectiveName(DSAS->getCurrentDirective(),
+                                        OMPVersion);
           reportOriginalDsa(SemaRef, DSAS, CurDeclaration, DVar);
           continue;
         }
@@ -22556,7 +22620,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPGrainsizeClause(
     std::string Values = getListOfPossibleValues(OMPC_grainsize, /*First=*/0,
                                                  OMPC_GRAINSIZE_unknown);
     Diag(ModifierLoc, diag::err_omp_unexpected_clause_value)
-        << Values << getOpenMPClauseName(OMPC_grainsize);
+        << Values << getOpenMPClauseNameForDiag(OMPC_grainsize);
     return nullptr;
   }
 
@@ -22590,7 +22654,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPNumTasksClause(
     std::string Values = getListOfPossibleValues(OMPC_num_tasks, /*First=*/0,
                                                  OMPC_NUMTASKS_unknown);
     Diag(ModifierLoc, diag::err_omp_unexpected_clause_value)
-        << Values << getOpenMPClauseName(OMPC_num_tasks);
+        << Values << getOpenMPClauseNameForDiag(OMPC_num_tasks);
     return nullptr;
   }
 
@@ -22681,8 +22745,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPDetachClause(Expr *Evt,
     if (DVar.CKind != OMPC_unknown && DVar.CKind != OMPC_firstprivate &&
         DVar.RefExpr) {
       Diag(Evt->getExprLoc(), diag::err_omp_wrong_dsa)
-          << getOpenMPClauseName(DVar.CKind)
-          << getOpenMPClauseName(OMPC_firstprivate);
+          << getOpenMPClauseNameForDiag(DVar.CKind)
+          << getOpenMPClauseNameForDiag(OMPC_firstprivate);
       reportOriginalDsa(SemaRef, DSAStack, VD, DVar);
       return nullptr;
     }
@@ -22702,7 +22766,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPDistScheduleClause(
     Values += getOpenMPSimpleClauseTypeName(OMPC_dist_schedule, 0);
     Values += "'";
     Diag(KindLoc, diag::err_omp_unexpected_clause_value)
-        << Values << getOpenMPClauseName(OMPC_dist_schedule);
+        << Values << getOpenMPClauseNameForDiag(OMPC_dist_schedule);
     return nullptr;
   }
   Expr *ValExpr = ChunkSize;
@@ -22726,7 +22790,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPDistScheduleClause(
               ValExpr->getIntegerConstantExpr(getASTContext())) {
         if (Result->isSigned() && !Result->isStrictlyPositive()) {
           Diag(ChunkSizeLoc, diag::err_omp_negative_expression_in_clause)
-              << "dist_schedule" << ChunkSize->getSourceRange();
+              << "dist_schedule" << /*strictly positive*/ 1
+              << ChunkSize->getSourceRange();
           return nullptr;
         }
       } else if (getOpenMPCaptureRegionForClause(
@@ -22767,7 +22832,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPDefaultmapClause(
       }
       Value += "'";
       Diag(Loc, diag::err_omp_unexpected_clause_value)
-          << Value << getOpenMPClauseName(OMPC_defaultmap);
+          << Value << getOpenMPClauseNameForDiag(OMPC_defaultmap);
       return nullptr;
     }
   } else {
@@ -22783,15 +22848,15 @@ OMPClause *SemaOpenMP::ActOnOpenMPDefaultmapClause(
                                   "'firstprivate', 'none', 'default'";
         if (!isDefaultmapKind && isDefaultmapModifier) {
           Diag(KindLoc, diag::err_omp_unexpected_clause_value)
-              << KindValue << getOpenMPClauseName(OMPC_defaultmap);
+              << KindValue << getOpenMPClauseNameForDiag(OMPC_defaultmap);
         } else if (isDefaultmapKind && !isDefaultmapModifier) {
           Diag(MLoc, diag::err_omp_unexpected_clause_value)
-              << ModifierValue << getOpenMPClauseName(OMPC_defaultmap);
+              << ModifierValue << getOpenMPClauseNameForDiag(OMPC_defaultmap);
         } else {
           Diag(MLoc, diag::err_omp_unexpected_clause_value)
-              << ModifierValue << getOpenMPClauseName(OMPC_defaultmap);
+              << ModifierValue << getOpenMPClauseNameForDiag(OMPC_defaultmap);
           Diag(KindLoc, diag::err_omp_unexpected_clause_value)
-              << KindValue << getOpenMPClauseName(OMPC_defaultmap);
+              << KindValue << getOpenMPClauseNameForDiag(OMPC_defaultmap);
         }
       } else {
         StringRef ModifierValue =
@@ -22799,15 +22864,15 @@ OMPClause *SemaOpenMP::ActOnOpenMPDefaultmapClause(
             "'firstprivate', 'none', 'default', 'present'";
         if (!isDefaultmapKind && isDefaultmapModifier) {
           Diag(KindLoc, diag::err_omp_unexpected_clause_value)
-              << KindValue << getOpenMPClauseName(OMPC_defaultmap);
+              << KindValue << getOpenMPClauseNameForDiag(OMPC_defaultmap);
         } else if (isDefaultmapKind && !isDefaultmapModifier) {
           Diag(MLoc, diag::err_omp_unexpected_clause_value)
-              << ModifierValue << getOpenMPClauseName(OMPC_defaultmap);
+              << ModifierValue << getOpenMPClauseNameForDiag(OMPC_defaultmap);
         } else {
           Diag(MLoc, diag::err_omp_unexpected_clause_value)
-              << ModifierValue << getOpenMPClauseName(OMPC_defaultmap);
+              << ModifierValue << getOpenMPClauseNameForDiag(OMPC_defaultmap);
           Diag(KindLoc, diag::err_omp_unexpected_clause_value)
-              << KindValue << getOpenMPClauseName(OMPC_defaultmap);
+              << KindValue << getOpenMPClauseNameForDiag(OMPC_defaultmap);
         }
       }
       return nullptr;
@@ -22873,8 +22938,9 @@ void SemaOpenMP::DiagnoseUnterminatedOpenMPDeclareTarget() {
   if (DeclareTargetNesting.empty())
     return;
   DeclareTargetContextInfo &DTCI = DeclareTargetNesting.back();
+  unsigned OMPVersion = getLangOpts().OpenMP;
   Diag(DTCI.Loc, diag::warn_omp_unterminated_declare_target)
-      << getOpenMPDirectiveName(DTCI.Kind);
+      << getOpenMPDirectiveName(DTCI.Kind, OMPVersion);
 }
 
 NamedDecl *SemaOpenMP::lookupOpenMPDeclareTargetName(
@@ -22892,7 +22958,7 @@ NamedDecl *SemaOpenMP::lookupOpenMPDeclareTargetName(
     VarOrFuncDeclFilterCCC CCC(SemaRef);
     if (TypoCorrection Corrected =
             SemaRef.CorrectTypo(Id, Sema::LookupOrdinaryName, CurScope, nullptr,
-                                CCC, Sema::CTK_ErrorRecovery)) {
+                                CCC, CorrectTypoKind::ErrorRecovery)) {
       SemaRef.diagnoseTypo(Corrected,
                            SemaRef.PDiag(diag::err_undeclared_var_use_suggest)
                                << Id.getName());
@@ -23389,10 +23455,12 @@ SemaOpenMP::ActOnOpenMPIsDevicePtrClause(ArrayRef<Expr *> VarList,
     // sharing attribute.
     DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(D, /*FromParent=*/false);
     if (isOpenMPPrivate(DVar.CKind)) {
+      unsigned OMPVersion = getLangOpts().OpenMP;
       Diag(ELoc, diag::err_omp_variable_in_given_clause_and_dsa)
-          << getOpenMPClauseName(DVar.CKind)
-          << getOpenMPClauseName(OMPC_is_device_ptr)
-          << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
+          << getOpenMPClauseNameForDiag(DVar.CKind)
+          << getOpenMPClauseNameForDiag(OMPC_is_device_ptr)
+          << getOpenMPDirectiveName(DSAStack->getCurrentDirective(),
+                                    OMPVersion);
       reportOriginalDsa(SemaRef, DSAStack, D, DVar);
       continue;
     }
@@ -23465,10 +23533,12 @@ SemaOpenMP::ActOnOpenMPHasDeviceAddrClause(ArrayRef<Expr *> VarList,
     // sharing attribute.
     DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(D, /*FromParent=*/false);
     if (isOpenMPPrivate(DVar.CKind)) {
+      unsigned OMPVersion = getLangOpts().OpenMP;
       Diag(ELoc, diag::err_omp_variable_in_given_clause_and_dsa)
-          << getOpenMPClauseName(DVar.CKind)
-          << getOpenMPClauseName(OMPC_has_device_addr)
-          << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
+          << getOpenMPClauseNameForDiag(DVar.CKind)
+          << getOpenMPClauseNameForDiag(OMPC_has_device_addr)
+          << getOpenMPDirectiveName(DSAStack->getCurrentDirective(),
+                                    OMPVersion);
       reportOriginalDsa(SemaRef, DSAStack, D, DVar);
       continue;
     }
@@ -23643,9 +23713,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPNontemporalClause(ArrayRef<Expr *> VarList,
     if (const Expr *PrevRef =
             DSAStack->addUniqueNontemporal(D, SimpleRefExpr)) {
       Diag(ELoc, diag::err_omp_used_in_clause_twice)
-          << 0 << getOpenMPClauseName(OMPC_nontemporal) << ERange;
+          << 0 << getOpenMPClauseNameForDiag(OMPC_nontemporal) << ERange;
       Diag(PrevRef->getExprLoc(), diag::note_omp_explicit_dsa)
-          << getOpenMPClauseName(OMPC_nontemporal);
+          << getOpenMPClauseNameForDiag(OMPC_nontemporal);
       continue;
     }
 
@@ -23955,7 +24025,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPBindClause(OpenMPBindClauseKind Kind,
     Diag(KindLoc, diag::err_omp_unexpected_clause_value)
         << getListOfPossibleValues(OMPC_bind, /*First=*/0,
                                    /*Last=*/unsigned(OMPC_BIND_unknown))
-        << getOpenMPClauseName(OMPC_bind);
+        << getOpenMPClauseNameForDiag(OMPC_bind);
     return nullptr;
   }
 
@@ -24002,7 +24072,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPDoacrossClause(
       DepType != OMPC_DOACROSS_sink_omp_cur_iteration &&
       DepType != OMPC_DOACROSS_source_omp_cur_iteration) {
     Diag(DepLoc, diag::err_omp_unexpected_clause_value)
-        << "'source' or 'sink'" << getOpenMPClauseName(OMPC_doacross);
+        << "'source' or 'sink'" << getOpenMPClauseNameForDiag(OMPC_doacross);
     return nullptr;
   }
 

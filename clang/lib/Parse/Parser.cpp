@@ -226,7 +226,7 @@ void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {
 
   if (Kind != ExtraSemiKind::AfterMemberFunctionDefinition || HadMultipleSemis)
     Diag(StartLoc, diag::ext_extra_semi)
-        << llvm::to_underlying(Kind)
+        << Kind
         << DeclSpec::getSpecifierName(
                TST, Actions.getASTContext().getPrintingPolicy())
         << FixItHint::CreateRemoval(SourceRange(StartLoc, EndLoc));
@@ -537,6 +537,8 @@ void Parser::Initialize() {
   Ident_sealed = nullptr;
   Ident_abstract = nullptr;
   Ident_override = nullptr;
+  Ident_trivially_relocatable_if_eligible = nullptr;
+  Ident_replaceable_if_eligible = nullptr;
   Ident_GNU_final = nullptr;
   Ident_import = nullptr;
   Ident_module = nullptr;
@@ -1712,7 +1714,7 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
     }
   } else if (!ForAsmLabel && getLangOpts().CPlusPlus11 &&
              Tok.is(tok::l_paren)) {
-    ParenParseOption ExprType = SimpleExpr;
+    ParenParseOption ExprType = ParenParseOption::SimpleExpr;
     SourceLocation RParenLoc;
     ParsedType CastTy;
 
@@ -1862,7 +1864,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
   // double-check before committing to that interpretation. C++20 requires that
   // we interpret this as a template-id if it can be, but if it can't be, then
   // this is an error recovery case.
-  if (Classification.getKind() == Sema::NC_UndeclaredTemplate &&
+  if (Classification.getKind() == NameClassificationKind::UndeclaredTemplate &&
       isTemplateArgumentList(1) == TPResult::False) {
     // It's not a template-id; re-classify without the '<' as a hint.
     Token FakeNext = Next;
@@ -1873,10 +1875,10 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
   }
 
   switch (Classification.getKind()) {
-  case Sema::NC_Error:
+  case NameClassificationKind::Error:
     return AnnotatedNameKind::Error;
 
-  case Sema::NC_Keyword:
+  case NameClassificationKind::Keyword:
     // The identifier was typo-corrected to a keyword.
     Tok.setIdentifierInfo(Name);
     Tok.setKind(Name->getTokenID());
@@ -1886,11 +1888,11 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
     // We've "annotated" this as a keyword.
     return AnnotatedNameKind::Success;
 
-  case Sema::NC_Unknown:
+  case NameClassificationKind::Unknown:
     // It's not something we know about. Leave it unannotated.
     break;
 
-  case Sema::NC_Type: {
+  case NameClassificationKind::Type: {
     if (TryAltiVecVectorToken())
       // vector has been found as a type id when altivec is enabled but
       // this is followed by a declaration specifier so this is really the
@@ -1927,7 +1929,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
     return AnnotatedNameKind::Success;
   }
 
-  case Sema::NC_OverloadSet:
+  case NameClassificationKind::OverloadSet:
     Tok.setKind(tok::annot_overload_set);
     setExprAnnotation(Tok, Classification.getExpression());
     Tok.setAnnotationEndLoc(NameLoc);
@@ -1936,7 +1938,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
     PP.AnnotateCachedTokens(Tok);
     return AnnotatedNameKind::Success;
 
-  case Sema::NC_NonType:
+  case NameClassificationKind::NonType:
     if (TryAltiVecVectorToken())
       // vector has been found as a non-type id when altivec is enabled but
       // this is followed by a declaration specifier so this is really the
@@ -1951,9 +1953,10 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
       AnnotateScopeToken(SS, !WasScopeAnnotation);
     return AnnotatedNameKind::Success;
 
-  case Sema::NC_UndeclaredNonType:
-  case Sema::NC_DependentNonType:
-    Tok.setKind(Classification.getKind() == Sema::NC_UndeclaredNonType
+  case NameClassificationKind::UndeclaredNonType:
+  case NameClassificationKind::DependentNonType:
+    Tok.setKind(Classification.getKind() ==
+                        NameClassificationKind::UndeclaredNonType
                     ? tok::annot_non_type_undeclared
                     : tok::annot_non_type_dependent);
     setIdentifierAnnotation(Tok, Name);
@@ -1964,7 +1967,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
       AnnotateScopeToken(SS, !WasScopeAnnotation);
     return AnnotatedNameKind::Success;
 
-  case Sema::NC_TypeTemplate:
+  case NameClassificationKind::TypeTemplate:
     if (Next.isNot(tok::less)) {
       // This may be a type template being used as a template template argument.
       if (SS.isNotEmpty())
@@ -1972,11 +1975,12 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
       return AnnotatedNameKind::TemplateName;
     }
     [[fallthrough]];
-  case Sema::NC_Concept:
-  case Sema::NC_VarTemplate:
-  case Sema::NC_FunctionTemplate:
-  case Sema::NC_UndeclaredTemplate: {
-    bool IsConceptName = Classification.getKind() == Sema::NC_Concept;
+  case NameClassificationKind::Concept:
+  case NameClassificationKind::VarTemplate:
+  case NameClassificationKind::FunctionTemplate:
+  case NameClassificationKind::UndeclaredTemplate: {
+    bool IsConceptName =
+        Classification.getKind() == NameClassificationKind::Concept;
     // We have a template name followed by '<'. Consume the identifier token so
     // we reach the '<' and annotate it.
     if (Next.is(tok::less))
@@ -2434,19 +2438,21 @@ bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
   switch (Actions.CheckMicrosoftIfExistsSymbol(getCurScope(), Result.KeywordLoc,
                                                Result.IsIfExists, Result.SS,
                                                Result.Name)) {
-  case Sema::IER_Exists:
-    Result.Behavior = Result.IsIfExists ? IEB_Parse : IEB_Skip;
+  case IfExistsResult::Exists:
+    Result.Behavior =
+        Result.IsIfExists ? IfExistsBehavior::Parse : IfExistsBehavior::Skip;
     break;
 
-  case Sema::IER_DoesNotExist:
-    Result.Behavior = !Result.IsIfExists ? IEB_Parse : IEB_Skip;
+  case IfExistsResult::DoesNotExist:
+    Result.Behavior =
+        !Result.IsIfExists ? IfExistsBehavior::Parse : IfExistsBehavior::Skip;
     break;
 
-  case Sema::IER_Dependent:
-    Result.Behavior = IEB_Dependent;
+  case IfExistsResult::Dependent:
+    Result.Behavior = IfExistsBehavior::Dependent;
     break;
 
-  case Sema::IER_Error:
+  case IfExistsResult::Error:
     return true;
   }
 
@@ -2465,14 +2471,14 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
   }
 
   switch (Result.Behavior) {
-  case IEB_Parse:
+  case IfExistsBehavior::Parse:
     // Parse declarations below.
     break;
 
-  case IEB_Dependent:
+  case IfExistsBehavior::Dependent:
     llvm_unreachable("Cannot have a dependent external declaration");
 
-  case IEB_Skip:
+  case IfExistsBehavior::Skip:
     Braces.skipToEnd();
     return;
   }

@@ -739,6 +739,50 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerIsFPClass(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *RetTy = IRB.getInt1Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      SmallVector<Value *> Args;
+      Value *Fl = CI->getArgOperand(0);
+      Args.push_back(Fl);
+
+      dxil::OpCode OpCode;
+      Value *T = CI->getArgOperand(1);
+      auto *TCI = dyn_cast<ConstantInt>(T);
+      switch (TCI->getZExtValue()) {
+      case FPClassTest::fcInf:
+        OpCode = dxil::OpCode::IsInf;
+        break;
+      case FPClassTest::fcNan:
+        OpCode = dxil::OpCode::IsNaN;
+        break;
+      case FPClassTest::fcNormal:
+        OpCode = dxil::OpCode::IsNormal;
+        break;
+      case FPClassTest::fcFinite:
+        OpCode = dxil::OpCode::IsFinite;
+        break;
+      default:
+        SmallString<128> Msg =
+            formatv("Unsupported FPClassTest {0} for DXIL Op Lowering",
+                    TCI->getZExtValue());
+        return make_error<StringError>(Msg, inconvertibleErrorCode());
+      }
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode, Args, CI->getName(), RetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   bool lowerIntrinsics() {
     bool Updated = false;
     bool HasErrors = false;
@@ -756,14 +800,20 @@ public:
       case Intrinsic::lifetime_start:
       case Intrinsic::lifetime_end:
       case Intrinsic::not_intrinsic:
+        if (F.use_empty())
+          F.eraseFromParent();
         continue;
-      default: {
-        SmallString<128> Msg =
-            formatv("Unsupported intrinsic {0} for DXIL lowering", F.getName());
-        M.getContext().emitError(Msg);
-        HasErrors |= true;
+      default:
+        if (F.use_empty())
+          F.eraseFromParent();
+        else {
+          SmallString<128> Msg = formatv(
+              "Unsupported intrinsic {0} for DXIL lowering", F.getName());
+          M.getContext().emitError(Msg);
+          HasErrors |= true;
+        }
         break;
-      }
+
 #define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
     HasErrors |= replaceFunctionWithOp(                                        \
@@ -798,6 +848,9 @@ public:
         break;
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);
+        break;
+      case Intrinsic::is_fpclass:
+        HasErrors |= lowerIsFPClass(F);
         break;
       }
       Updated = true;

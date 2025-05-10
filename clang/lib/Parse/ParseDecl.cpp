@@ -1879,15 +1879,15 @@ bool Parser::DiagnoseProhibitedCXX11Attribute() {
   assert(Tok.is(tok::l_square) && NextToken().is(tok::l_square));
 
   switch (isCXX11AttributeSpecifier(/*Disambiguate*/true)) {
-  case CAK_NotAttributeSpecifier:
+  case CXX11AttributeKind::NotAttributeSpecifier:
     // No diagnostic: we're in Obj-C++11 and this is not actually an attribute.
     return false;
 
-  case CAK_InvalidAttributeSpecifier:
+  case CXX11AttributeKind::InvalidAttributeSpecifier:
     Diag(Tok.getLocation(), diag::err_l_square_l_square_not_attribute);
     return false;
 
-  case CAK_AttributeSpecifier:
+  case CXX11AttributeKind::AttributeSpecifier:
     // Parse and discard the attributes.
     SourceLocation BeginLoc = ConsumeBracket();
     ConsumeBracket();
@@ -2578,7 +2578,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     if (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
         D.isFirstDeclarator()) {
       Diag(CommaLoc, diag::err_multiple_template_declarators)
-          << llvm::to_underlying(TemplateInfo.Kind);
+          << TemplateInfo.Kind;
     }
 
     // Parse the next declarator.
@@ -3570,28 +3570,28 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
           getCurScope(), SS, Name, AfterScope.getLocation(), Next,
           /*CCC=*/nullptr);
       switch (Classification.getKind()) {
-      case Sema::NC_Error:
+      case NameClassificationKind::Error:
         SkipMalformedDecl();
         return true;
 
-      case Sema::NC_Keyword:
+      case NameClassificationKind::Keyword:
         llvm_unreachable("typo correction is not possible here");
 
-      case Sema::NC_Type:
-      case Sema::NC_TypeTemplate:
-      case Sema::NC_UndeclaredNonType:
-      case Sema::NC_UndeclaredTemplate:
+      case NameClassificationKind::Type:
+      case NameClassificationKind::TypeTemplate:
+      case NameClassificationKind::UndeclaredNonType:
+      case NameClassificationKind::UndeclaredTemplate:
         // Not a previously-declared non-type entity.
         MightBeDeclarator = false;
         break;
 
-      case Sema::NC_Unknown:
-      case Sema::NC_NonType:
-      case Sema::NC_DependentNonType:
-      case Sema::NC_OverloadSet:
-      case Sema::NC_VarTemplate:
-      case Sema::NC_FunctionTemplate:
-      case Sema::NC_Concept:
+      case NameClassificationKind::Unknown:
+      case NameClassificationKind::NonType:
+      case NameClassificationKind::DependentNonType:
+      case NameClassificationKind::OverloadSet:
+      case NameClassificationKind::VarTemplate:
+      case NameClassificationKind::FunctionTemplate:
+      case NameClassificationKind::Concept:
         // Might be a redeclaration of a prior entity.
         break;
       }
@@ -5697,7 +5697,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
   if (Tok.is(tok::l_brace) && TUK == TagUseKind::Definition) {
     Decl *D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagDecl;
-    ParseEnumBody(StartLoc, D);
+    ParseEnumBody(StartLoc, D, &SkipBody);
     if (SkipBody.CheckSameAsPrevious &&
         !Actions.ActOnDuplicateDefinition(getCurScope(), TagDecl, SkipBody)) {
       DS.SetTypeSpecError();
@@ -5722,7 +5722,8 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 ///       enumeration-constant:
 ///         identifier
 ///
-void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
+void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl,
+                           SkipBodyInfo *SkipBody) {
   // Enter the scope of the enum body and start the definition.
   ParseScope EnumScope(this, Scope::DeclScope | Scope::EnumScope);
   Actions.ActOnTagStartDefinition(getCurScope(), EnumDecl);
@@ -5780,7 +5781,7 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
     // Install the enumerator constant into EnumDecl.
     Decl *EnumConstDecl = Actions.ActOnEnumConstant(
         getCurScope(), EnumDecl, LastEnumConstDecl, IdentLoc, Ident, attrs,
-        EqualLoc, AssignedVal.get());
+        EqualLoc, AssignedVal.get(), SkipBody);
     EnumAvailabilityDiags.back().done();
 
     EnumConstantDecls.push_back(EnumConstDecl);
@@ -6393,7 +6394,8 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
   // attribute on the first constructor parameter.
   if (getLangOpts().CPlusPlus11 &&
       isCXX11AttributeSpecifier(/*Disambiguate*/ false,
-                                /*OuterMightBeMessageSend*/ true)) {
+                                /*OuterMightBeMessageSend*/ true) !=
+          CXX11AttributeKind::NotAttributeSpecifier) {
     return true;
   }
 
@@ -6509,7 +6511,7 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 /// Note: vendor can be GNU, MS, etc and can be explicitly controlled via
 /// AttrRequirements bitmask values.
 void Parser::ParseTypeQualifierListOpt(
-    DeclSpec &DS, unsigned AttrReqs, bool AtomicAllowed,
+    DeclSpec &DS, unsigned AttrReqs, bool AtomicOrPtrauthAllowed,
     bool IdentifierRequired,
     std::optional<llvm::function_ref<void()>> CodeCompletionHandler) {
   if ((AttrReqs & AR_CXX11AttributesParsed) &&
@@ -6549,7 +6551,7 @@ void Parser::ParseTypeQualifierListOpt(
                                  getLangOpts());
       break;
     case tok::kw__Atomic:
-      if (!AtomicAllowed)
+      if (!AtomicOrPtrauthAllowed)
         goto DoneWithTypeQuals;
       diagnoseUseOfC11Keyword(Tok);
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_atomic, Loc, PrevSpec, DiagID,
@@ -6582,6 +6584,8 @@ void Parser::ParseTypeQualifierListOpt(
 
     // __ptrauth qualifier.
     case tok::kw___ptrauth:
+      if (!AtomicOrPtrauthAllowed)
+        goto DoneWithTypeQuals;
       ParsePtrauthQualifier(DS.getAttributes());
       EndLoc = PrevTokLocation;
       continue;
@@ -6858,7 +6862,8 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
                     ((D.getContext() != DeclaratorContext::CXXNew)
                          ? AR_GNUAttributesParsed
                          : AR_GNUAttributesParsedAndRejected);
-    ParseTypeQualifierListOpt(DS, Reqs, true, !D.mayOmitIdentifier());
+    ParseTypeQualifierListOpt(DS, Reqs, /*AtomicOrPtrauthAllowed=*/true,
+                              !D.mayOmitIdentifier());
     D.ExtendWithDeclSpec(DS);
 
     // Recursively parse the declarator.
@@ -7365,7 +7370,7 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
   BalancedDelimiterTracker T(*this, tok::l_square);
   T.consumeOpen();
 
-  if (isCXX11AttributeSpecifier())
+  if (isCXX11AttributeSpecifier() != CXX11AttributeKind::NotAttributeSpecifier)
     DiagnoseAndSkipCXX11Attributes();
 
   // If this doesn't look like a structured binding, maybe it's a misplaced
@@ -7403,7 +7408,8 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
       }
     }
 
-    if (isCXX11AttributeSpecifier())
+    if (isCXX11AttributeSpecifier() !=
+        CXX11AttributeKind::NotAttributeSpecifier)
       DiagnoseAndSkipCXX11Attributes();
 
     SourceLocation EllipsisLoc;
@@ -7438,7 +7444,8 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
     }
 
     ParsedAttributes Attrs(AttrFactory);
-    if (isCXX11AttributeSpecifier()) {
+    if (isCXX11AttributeSpecifier() !=
+        CXX11AttributeKind::NotAttributeSpecifier) {
       Diag(Tok, getLangOpts().CPlusPlus26
                     ? diag::warn_cxx23_compat_decl_attrs_on_binding
                     : diag::ext_decl_attrs_on_binding);
@@ -7527,7 +7534,9 @@ void Parser::ParseParenDeclarator(Declarator &D) {
               NextToken().is(tok::r_paren)) || // C++ int(...)
              isDeclarationSpecifier(
                  ImplicitTypenameContext::No) || // 'int(int)' is a function.
-             isCXX11AttributeSpecifier()) { // 'int([[]]int)' is a function.
+             isCXX11AttributeSpecifier() !=
+                 CXX11AttributeKind::NotAttributeSpecifier) { // 'int([[]]int)'
+                                                              // is a function.
     // This handles C99 6.7.5.3p11: in "typedef int X; void foo(X)", X is
     // considered to be a type, not a K&R identifier-list.
     isGrouping = false;
@@ -7719,7 +7728,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       // Parse cv-qualifier-seq[opt].
       ParseTypeQualifierListOpt(
           DS, AR_NoAttributesParsed,
-          /*AtomicAllowed*/ false,
+          /*AtomicOrPtrauthAllowed=*/false,
           /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
             Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D);
           }));
