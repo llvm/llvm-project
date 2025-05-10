@@ -2296,6 +2296,15 @@ static bool generateExtendedBitOpsInst(const SPIRV::IncomingCall *Call,
   return buildExtendedBitOpsInst(Call, Opcode, MIRBuilder, GR);
 }
 
+static bool generateSubgroup2DBlockInst(const SPIRV::IncomingCall *Call,
+                                        MachineIRBuilder &MIRBuilder,
+                                        SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+  return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
+}
+
 static bool generateBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
                                            MachineIRBuilder &MIRBuilder,
                                            SPIRVGlobalRegistry *GR) {
@@ -2902,6 +2911,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
   case SPIRV::TernaryBitwiseINTEL:
     return generateTernaryBitwiseFunctionINTELInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::Subgroup2DBlock:
+    return generateSubgroup2DBlockInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }
