@@ -1154,12 +1154,6 @@ struct VPPhi : public VPInstruction, public VPPhiAccessors {
 
   void execute(VPTransformState &State) override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
 protected:
   const VPRecipeBase *getAsRecipe() const override { return this; }
 };
