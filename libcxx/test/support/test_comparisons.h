@@ -279,16 +279,16 @@ template <typename T1, typename T2 = T1>
 concept HasOperatorNotEqual = requires(T1 t1, T2 t2) { t1 != t2; };
 
 template <typename T1, typename T2 = T1>
-concept HasOperatorLessThen = requires(T1 t1, T2 t2) { t1 < t2; };
+concept HasOperatorLessThan = requires(T1 t1, T2 t2) { t1 < t2; };
 
 template <typename T1, typename T2 = T1>
-concept HasOperatorGreaterThen = requires(T1 t1, T2 t2) { t1 > t2; };
+concept HasOperatorGreaterThan = requires(T1 t1, T2 t2) { t1 > t2; };
 
 template <typename T1, typename T2 = T1>
-concept HasOperatorLessThenEqual = requires(T1 t1, T2 t2) { t1 <= t2; };
+concept HasOperatorLessThanEqual = requires(T1 t1, T2 t2) { t1 <= t2; };
 
 template <typename T1, typename T2 = T1>
-concept HasOperatorGreaterThenEqual = requires(T1 t1, T2 t2) { t1 >= t2; };
+concept HasOperatorGreaterThanEqual = requires(T1 t1, T2 t2) { t1 >= t2; };
 
 template <typename T1, typename T2 = T1>
 concept HasOperatorSpaceship = requires(T1 t1, T2 t2) { t1 <=> t2; };
@@ -300,8 +300,8 @@ concept CanCompareWithSpaceship = HasOperatorSpaceship<T1, T2> && requires(T1 t1
 
 template <typename T1, typename T2 = T1>
 concept CanCompare =
-    HasOperatorEqual<T1, T2> && HasOperatorNotEqual<T1, T2> && HasOperatorLessThen<T1, T2> &&
-    HasOperatorGreaterThen<T1, T2> && HasOperatorLessThenEqual<T1, T2> && HasOperatorGreaterThenEqual<T1, T2>;
+    HasOperatorEqual<T1, T2> && HasOperatorNotEqual<T1, T2> && HasOperatorLessThan<T1, T2> &&
+    HasOperatorGreaterThan<T1, T2> && HasOperatorLessThanEqual<T1, T2> && HasOperatorGreaterThanEqual<T1, T2>;
 
 struct NonComparable {};
 
@@ -319,56 +319,25 @@ private:
 };
 static_assert(std::equality_comparable<EqualityComparable>);
 
-// class NotEqualityComparable {
-// public:
-//   constexpr NotEqualityComparable(int value) : value_{value} {};
+class ThreeWayComparable {
+public:
+  constexpr ThreeWayComparable(int value) : value_{value} {};
 
-//   friend constexpr bool operator!=(const NotEqualityComparable&, const NotEqualityComparable&) noexcept = default;
-
-// private:
-//   int value_;
-// };
-// static_assert(!std::equality_comparable<NotEqualityComparable>);
-
-// class LessThanComparable {
-// public:
-//   constexpr LessThanComparable(int value) : value_{value} {};
-
-//   friend constexpr bool operator<(const LessThanComparable&, const LessThanComparable&) noexcept = default;
-
-// private:
-//   int value_;
-// };
-
-// class GreaterThanComparable {
-// public:
-//   constexpr GreaterThanComparable(int value) : value_{value} {};
-
-//   friend constexpr bool operator>(const GreaterThanComparable&, const GreaterThanComparable&) noexcept = default;
-
-// private:
-//   int value_;
-// };
-
-// class LessThanEqualComparable {
-// public:
-//   constexpr LessThanEqualComparable(int value) : value_{value} {};
-
-//   friend constexpr bool operator<=(const LessThanEqualComparable&, const LessThanEqualComparable&) noexcept = default;
-
-// private:
-//   int value_;
-// };
-// class GreaterThanEqualComparable {
-// public:
-//   constexpr GreaterThanEqualComparable(int value) : value_{value} {};
-
-//   friend constexpr bool
-//   operator>=(const GreaterThanEqualComparable&, const GreaterThanEqualComparable&) noexcept = default;
-
-// private:
-//   int value_;
-// };
+  friend constexpr std::strong_ordering operator<=>(const ThreeWayComparable&, const ThreeWayComparable&) noexcept = default;
+  friend constexpr bool operator==(const ThreeWayComparable&, const ThreeWayComparable&) noexcept = default;
+private:
+  int value_;
+};
+static_assert(std::equality_comparable<ThreeWayComparable>);
+static_assert(HasOperatorEqual<ThreeWayComparable>);
+static_assert(HasOperatorNotEqual<ThreeWayComparable>);
+static_assert(HasOperatorLessThan<ThreeWayComparable>);
+static_assert(HasOperatorGreaterThan<ThreeWayComparable>);
+static_assert(HasOperatorLessThanEqual<ThreeWayComparable>);
+static_assert(HasOperatorGreaterThanEqual<ThreeWayComparable>);
+static_assert(HasOperatorSpaceship<ThreeWayComparable>);
+static_assert(CanCompare<ThreeWayComparable>);
+static_assert(CanCompareWithSpaceship<ThreeWayComparable>);
 
 #endif // TEST_STD_VER >= 26
 

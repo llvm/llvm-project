@@ -1342,7 +1342,7 @@ template <
 _LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const _Tp& __v, const optional<_Up>& __x)
 #    if _LIBCPP_STD_VER >= 26
   requires(!__is_std_optional<_Tp>::value) && requires {
-    { __v <= __x } -> __core_convertible_to<bool>;
+    { __v <= *__x } -> __core_convertible_to<bool>;
   }
 #    endif
 {

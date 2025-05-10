@@ -14,7 +14,29 @@
 
 #include <optional>
 
+#include "test_comparisons.h"
 #include "test_macros.h"
+
+#if TEST_STD_VER >= 26
+
+// Test SFINAE.
+
+static_assert(HasOperatorEqual<int, std::optional<int>>);
+static_assert(HasOperatorEqual<int, std::optional<EqualityComparable>>);
+static_assert(HasOperatorEqual<EqualityComparable, std::optional<EqualityComparable>>);
+
+static_assert(!HasOperatorEqual<NonComparable, std::optional<NonComparable>>);
+static_assert(!HasOperatorEqual<NonComparable, std::optional<EqualityComparable>>);
+
+
+static_assert(HasOperatorEqual<std::optional<int>, int>);
+static_assert(HasOperatorEqual<std::optional<EqualityComparable>, int>);
+static_assert(HasOperatorEqual<std::optional<EqualityComparable>, EqualityComparable>);
+
+static_assert(!HasOperatorEqual<std::optional<NonComparable>,NonComparable>);
+static_assert(!HasOperatorEqual<std::optional<EqualityComparable>, NonComparable>);
+
+#endif
 
 using std::optional;
 
