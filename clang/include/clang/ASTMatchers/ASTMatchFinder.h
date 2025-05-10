@@ -139,6 +139,13 @@ public:
     ///
     /// It prints a report after match.
     std::optional<Profiling> CheckProfiling;
+
+    /// Whether to traverse a Decl. This is relevant for clang modules, as they
+    /// are imported into the AST, but are actually part of a different TU.
+    /// It can result in hundreds of milliseconds of additional time to also
+    /// traverse the AST of these modules, and often for no benefit, as they
+    /// are frequently already traversed in their own TU.
+    std::optional<llvm::function_ref<bool(const Decl &)>> ShouldTraverseDecl;
   };
 
   MatchFinder(MatchFinderOptions Options = MatchFinderOptions());
