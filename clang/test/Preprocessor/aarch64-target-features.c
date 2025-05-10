@@ -94,19 +94,28 @@
 // CHECK-FEAT-CRYPTO-8_4: __ARM_FEATURE_SM4 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-AES %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+aes+noaes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-NOAES %s
 // CHECK-FEAT-AES: __ARM_FEATURE_AES 1
+// CHECK-FEAT-NOAES-NOT: __ARM_FEATURE_AES 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sha2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-SHA2 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sha2+nosha2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-NOSHA2 %s
 // CHECK-FEAT-SHA2: __ARM_FEATURE_SHA2 1
+// CHECK-FEAT-NOSHA2-NOT: __ARM_FEATURE_SHA2 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sha3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-SHA3 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sha3+nosha3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-NOSHA3 %s
 // CHECK-FEAT-SHA3: __ARM_FEATURE_SHA2 1
 // CHECK-FEAT-SHA3: __ARM_FEATURE_SHA3 1
 // CHECK-FEAT-SHA3: __ARM_FEATURE_SHA512 1
+// CHECK-FEAT-NOSHA3-NOT: __ARM_FEATURE_SHA3 1
+// CHECK-FEAT-NOSHA3-NOT: __ARM_FEATURE_SHA512 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sm4 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-SM4 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sm4+nosm4 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-FEAT-NOSM4 %s
 // CHECK-FEAT-SM4: __ARM_FEATURE_SM3 1
 // CHECK-FEAT-SM4: __ARM_FEATURE_SM4 1
+// CHECK-FEAT-NOSM4-NOT: __ARM_FEATURE_SM4 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.5-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-8_5 %s
 // CHECK-8_5: __ARM_FEATURE_FRINT 1
@@ -120,7 +129,9 @@
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+crc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8.1-a+nocrc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOCRC %s
 // CHECK-CRC32: __ARM_FEATURE_CRC32 1
+// CHECK-NOCRC-NOT: __ARM_FEATURE_CRC32 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -fno-math-errno -fno-signed-zeros\
 // RUN:        -fno-trapping-math -fassociative-math -freciprocal-math -fapprox-func\
@@ -216,6 +227,8 @@
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.5-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.6-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+nosve -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSVE %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+nosve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSVE2 %s
 // CHECK-SVE2: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-SVE2: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
 // CHECK-SVE2: __ARM_FEATURE_SVE 1
@@ -223,6 +236,9 @@
 // CHECK-SVE2: __ARM_NEON 1
 // CHECK-SVE2: __ARM_NEON_FP 0xE
 // CHECK-SVE2: __ARM_NEON_SVE_BRIDGE 1
+// CHECK-NOSVE-NOT: __ARM_FEATURE_SVE 1
+// CHECK-NOSVE-NOT: __ARM_FEATURE_SVE2 1
+// CHECK-NOSVE2-NOT: __ARM_FEATURE_SVE2 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+nosimd -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NONEON %s
 // CHECK-NONEON-NOT: __ARM_FEATURE_SVE 1
@@ -239,15 +255,22 @@
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-aes+nosve2-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES-REV %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2+sve-aes+nosve2-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES-REV %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2+sve-aes+nosve-aes -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2AES-REV %s
 // CHECK-SVE2AES-REV: __ARM_FEATURE_SVE2 1
 // CHECK-SVE2AES-REV-NOT: __ARM_FEATURE_SVE2_AES 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-sha3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2SHA3 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-sha3+nosve2-sha3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSVE2SHA3 %s
 // CHECK-SVE2SHA3: __ARM_FEATURE_SVE2_SHA3 1
+// CHECK-NOSVE2SHA3-NOT: __ARM_FEATURE_SVE2_SHA3 1
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-sm4 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2SM4 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-sm4+nosve2-sm4 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSVE2SM4 %s
 // CHECK-SVE2SM4: __ARM_FEATURE_SVE2_SM4 1
+// CHECK-NOSVE2SM4-NOT: __ARM_FEATURE_SVE2_SM4 1
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve-bitperm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVEBITPERM %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve-bitperm+nosve-bitperm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSVEBITPERM %s
 // CHECK-SVEBITPERM: __ARM_FEATURE_SVE2_BITPERM 1
+// CHECK-NOSVEBITPERM-NOT: __ARM_FEATURE_SVE2_BITPERM 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-bitperm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2BITPERM %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve-bitperm+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2BITPERM %s
@@ -255,6 +278,7 @@
 // CHECK-SVE2BITPERM: __ARM_FEATURE_SVE2_BITPERM 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2p1 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2p1 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2p1+nosve2p1 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSVE2p1 %s
 // CHECK-SVE2p1: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-SVE2p1: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
 // CHECK-SVE2p1: __ARM_FEATURE_SVE2 1
@@ -262,12 +286,15 @@
 // CHECK-SVE2p1: __ARM_NEON 1
 // CHECK-SVE2p1: __ARM_NEON_FP 0xE
 // CHECK-SVE2p1: __ARM_NEON_SVE_BRIDGE 1
+// CHECK-NOSVE2p1-NOT: __ARM_FEATURE_SVE2p1 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.2a+dotprod -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-DOTPROD %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.4a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-DOTPROD %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.4a+nodotprod -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NODOTPROD %s
 // CHECK-DOTPROD: __ARM_FEATURE_DOTPROD 1
 // CHECK-DOTPROD: __ARM_NEON 1
 // CHECK-DOTPROD: __ARM_NEON_FP 0xE
+// CHECK-NODOTPROD-NOT: __ARM_FEATURE_DOTPROD 1
 
 // On ARMv8.2-A and above, +fp16fml implies +fp16.
 // On ARMv8.4-A and above, +fp16 implies +fp16fml.
@@ -569,18 +596,24 @@
 // ================== Check Armv8.5-A random number generation extension.
 // RUN: %clang -target aarch64-none-elf -march=armv8.5-a+rng -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-RNG %s
 // RUN: %clang -target aarch64-none-elf -march=armv8.5-a -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-RNG %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.5-a+rng+norng -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-RNG %s
 // CHECK-RNG: __ARM_FEATURE_RNG 1
 // CHECK-NO-RNG-NOT: __ARM_FEATURE_RNG 1
 
 // ================== Check BFloat16 Extensions.
 // RUN: %clang -target aarch64-none-elf -march=armv8.6-a+bf16 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-BFLOAT %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.6-a+nobf16 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NOBFLOAT %s
 // CHECK-BFLOAT: __ARM_BF16_FORMAT_ALTERNATIVE 1
 // CHECK-BFLOAT: __ARM_FEATURE_BF16 1
 // CHECK-BFLOAT: __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1
+// CHECK-NOBFLOAT-NOT: __ARM_BF16_FORMAT_ALTERNATIVE 1
+// CHECK-NOBFLOAT-NOT: __ARM_FEATURE_BF16 1
+// CHECK-NOBFLOAT-NOT: __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1
 
 // ================== Check Armv8.7-A LS64 extension.
 // RUN: %clang -target aarch64-none-elf -march=armv8.7-a+ls64 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-LS64 %s
 // RUN: %clang -target aarch64-none-elf -march=armv8.7-a      -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-LS64 %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.7-a+ls64+nols64 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-LS64 %s
 // CHECK-LS64: __ARM_FEATURE_LS64 1
 // CHECK-NO-LS64-NOT: __ARM_FEATURE_LS64 1
 
@@ -599,7 +632,10 @@
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+lse -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.1-a+nolse -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOLSE %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8.1-a+nolse -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOLSE %s
 // CHECK-LSE: __ARM_FEATURE_ATOMICS 1
+// CHECK-NOLSE-NOT: __ARM_FEATURE_ATOMICS 1
 
 // ================== Check Armv8.8-A/Armv9.3-A memcpy and memset acceleration instructions (MOPS)
 // RUN: %clang -target aarch64-none-elf -march=armv8.7-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s

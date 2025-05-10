@@ -914,183 +914,8 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
 
 bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                              DiagnosticsEngine &Diags) {
+  // The first round, address the ARM version initially.
   for (const auto &Feature : Features) {
-    if (Feature == "-fp-armv8")
-      HasNoFP = true;
-    if (Feature == "-neon")
-      HasNoNeon = true;
-    if (Feature == "-sve")
-      HasNoSVE = true;
-
-    if (Feature == "+neon" || Feature == "+fp-armv8")
-      FPU |= NeonMode;
-    if (Feature == "+jscvt") {
-      HasJSCVT = true;
-      FPU |= NeonMode;
-    }
-    if (Feature == "+fcma") {
-      HasFCMA = true;
-      FPU |= NeonMode;
-    }
-
-    if (Feature == "+sve") {
-      FPU |= NeonMode;
-      FPU |= SveMode;
-      HasFullFP16 = true;
-    }
-    if (Feature == "+sve2") {
-      FPU |= NeonMode;
-      FPU |= SveMode;
-      HasFullFP16 = true;
-      HasSVE2 = true;
-    }
-    if (Feature == "+sve2p1") {
-      FPU |= NeonMode;
-      FPU |= SveMode;
-      HasFullFP16 = true;
-      HasSVE2 = true;
-      HasSVE2p1 = true;
-    }
-    if (Feature == "+sve-aes") {
-      FPU |= NeonMode;
-      HasFullFP16 = true;
-      HasSVEAES = true;
-    }
-    if (Feature == "+sve2-sha3") {
-      FPU |= NeonMode;
-      FPU |= SveMode;
-      HasFullFP16 = true;
-      HasSVE2 = true;
-      HasSVE2SHA3 = true;
-    }
-    if (Feature == "+sve2-sm4") {
-      FPU |= NeonMode;
-      FPU |= SveMode;
-      HasFullFP16 = true;
-      HasSVE2 = true;
-      HasSVE2SM4 = true;
-    }
-    if (Feature == "+sve-b16b16")
-      HasSVEB16B16 = true;
-    if (Feature == "+sve-bitperm") {
-      FPU |= NeonMode;
-      HasFullFP16 = true;
-      HasSVEBitPerm = true;
-    }
-    if (Feature == "+f32mm") {
-      FPU |= NeonMode;
-      FPU |= SveMode;
-      HasFullFP16 = true;
-      HasMatmulFP32 = true;
-    }
-    if (Feature == "+f64mm") {
-      FPU |= NeonMode;
-      FPU |= SveMode;
-      HasFullFP16 = true;
-      HasMatmulFP64 = true;
-    }
-    if (Feature == "+sme") {
-      HasSME = true;
-      HasBFloat16 = true;
-      HasFullFP16 = true;
-    }
-    if (Feature == "+sme2") {
-      HasSME = true;
-      HasSME2 = true;
-      HasBFloat16 = true;
-      HasFullFP16 = true;
-    }
-    if (Feature == "+sme2p1") {
-      HasSME = true;
-      HasSME2 = true;
-      HasSME2p1 = true;
-      HasBFloat16 = true;
-      HasFullFP16 = true;
-    }
-    if (Feature == "+sme-f64f64") {
-      HasSME = true;
-      HasSMEF64F64 = true;
-      HasBFloat16 = true;
-      HasFullFP16 = true;
-    }
-    if (Feature == "+sme-i16i64") {
-      HasSME = true;
-      HasSMEI16I64 = true;
-      HasBFloat16 = true;
-      HasFullFP16 = true;
-    }
-    if (Feature == "+sme-fa64") {
-      FPU |= NeonMode;
-      FPU |= SveMode;
-      HasSME = true;
-      HasSVE2 = true;
-      HasSMEFA64 = true;
-    }
-    if (Feature == "+sme-f16f16") {
-      HasSME = true;
-      HasSME2 = true;
-      HasBFloat16 = true;
-      HasFullFP16 = true;
-      HasSMEF16F16 = true;
-    }
-    if (Feature == "+sme-b16b16") {
-      HasSME = true;
-      HasSME2 = true;
-      HasBFloat16 = true;
-      HasFullFP16 = true;
-      HasSVEB16B16 = true;
-      HasSMEB16B16 = true;
-    }
-    if (Feature == "+sb")
-      HasSB = true;
-    if (Feature == "+predres")
-      HasPredRes = true;
-    if (Feature == "+ssbs")
-      HasSSBS = true;
-    if (Feature == "+bti")
-      HasBTI = true;
-    if (Feature == "+wfxt")
-      HasWFxT = true;
-    if (Feature == "-fmv")
-      HasFMV = false;
-    if (Feature == "+crc")
-      HasCRC = true;
-    if (Feature == "+rcpc")
-      HasRCPC = true;
-    if (Feature == "+aes") {
-      FPU |= NeonMode;
-      HasAES = true;
-    }
-    if (Feature == "+sha2") {
-      FPU |= NeonMode;
-      HasSHA2 = true;
-    }
-    if (Feature == "+sha3") {
-      FPU |= NeonMode;
-      HasSHA2 = true;
-      HasSHA3 = true;
-    }
-    if (Feature == "+rdm") {
-      FPU |= NeonMode;
-      HasRDM = true;
-    }
-    if (Feature == "+dit")
-      HasDIT = true;
-    if (Feature == "+cccp")
-      HasCCPP = true;
-    if (Feature == "+ccdp") {
-      HasCCPP = true;
-      HasCCDP = true;
-    }
-    if (Feature == "+fptoint")
-      HasFRInt3264 = true;
-    if (Feature == "+sm4") {
-      FPU |= NeonMode;
-      HasSM4 = true;
-    }
-    if (Feature == "+strict-align")
-      HasUnalignedAccess = false;
-
     // All predecessor archs are added but select the latest one for ArchKind.
     if (Feature == "+v8a" && ArchInfo->Version < llvm::AArch64::ARMV8A.Version)
       ArchInfo = &llvm::AArch64::ARMV8A;
@@ -1143,14 +968,235 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       ArchInfo = &llvm::AArch64::ARMV9_6A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
+  }
+
+  setDataLayout();
+  setArchFeatures();
+
+  // The second round, address each feature.
+  for (const auto &Feature : Features) {
+    if (Feature == "-fp-armv8")
+      HasNoFP = true;
+    if (Feature == "-neon")
+      HasNoNeon = true;
+    if (Feature == "-sve")
+      HasNoSVE = true;
+
+    if (Feature == "+neon" || Feature == "+fp-armv8")
+      FPU |= NeonMode;
+    if (Feature == "+jscvt") {
+      HasJSCVT = true;
+      FPU |= NeonMode;
+    }
+    if (Feature == "+fcma") {
+      HasFCMA = true;
+      FPU |= NeonMode;
+    }
+
+    if (Feature == "+sve") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasFullFP16 = true;
+    }
+    if (Feature == "+sve2") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasFullFP16 = true;
+      HasSVE2 = true;
+    }
+    if (Feature == "-sve2")
+      HasSVE2 = false;
+    if (Feature == "+sve2p1") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasFullFP16 = true;
+      HasSVE2 = true;
+      HasSVE2p1 = true;
+    }
+    if (Feature == "-sve2p1")
+      HasSVE2p1 = false;
+    if (Feature == "+sve-aes") {
+      FPU |= NeonMode;
+      HasFullFP16 = true;
+      HasSVEAES = true;
+    }
+    if (Feature == "+sve2-sha3") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasFullFP16 = true;
+      HasSVE2 = true;
+      HasSVE2SHA3 = true;
+    }
+    if (Feature == "+sve2-sm4") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasFullFP16 = true;
+      HasSVE2 = true;
+      HasSVE2SM4 = true;
+    }
+    if (Feature == "+sve-b16b16")
+      HasSVEB16B16 = true;
+    if (Feature == "+sve-bitperm") {
+      FPU |= NeonMode;
+      HasFullFP16 = true;
+      HasSVEBitPerm = true;
+    }
+    if (Feature == "+f32mm") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasFullFP16 = true;
+      HasMatmulFP32 = true;
+    }
+    if (Feature == "+f64mm") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasFullFP16 = true;
+      HasMatmulFP64 = true;
+    }
+    if (Feature == "+sme") {
+      HasSME = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+    }
+    if (Feature == "-sme")
+      HasSME = false;
+    if (Feature == "+sme2") {
+      HasSME = true;
+      HasSME2 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+    }
+    if (Feature == "-sme2")
+      HasSME2 = false;
+    if (Feature == "+sme2p1") {
+      HasSME = true;
+      HasSME2 = true;
+      HasSME2p1 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+    }
+    if (Feature == "-sme2p1")
+      HasSME2p1 = false;
+    if (Feature == "+sme-f64f64") {
+      HasSME = true;
+      HasSMEF64F64 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+    }
+    if (Feature == "+sme-i16i64") {
+      HasSME = true;
+      HasSMEI16I64 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+    }
+    if (Feature == "+sme-fa64") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasSME = true;
+      HasSVE2 = true;
+      HasSMEFA64 = true;
+    }
+    if (Feature == "+sme-f16f16") {
+      HasSME = true;
+      HasSME2 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+      HasSMEF16F16 = true;
+    }
+    if (Feature == "+sme-b16b16") {
+      HasSME = true;
+      HasSME2 = true;
+      HasBFloat16 = true;
+      HasFullFP16 = true;
+      HasSVEB16B16 = true;
+      HasSMEB16B16 = true;
+    }
+    if (Feature == "+sb")
+      HasSB = true;
+    if (Feature == "-sb")
+      HasSB = false;
+    if (Feature == "+predres")
+      HasPredRes = true;
+    if (Feature == "-predres")
+      HasPredRes = false;
+    if (Feature == "+ssbs")
+      HasSSBS = true;
+    if (Feature == "-ssbs")
+      HasSSBS = false;
+    if (Feature == "+bti")
+      HasBTI = true;
+    if (Feature == "-bti")
+      HasBTI = false;
+    if (Feature == "+wfxt")
+      HasWFxT = true;
+    if (Feature == "-wfxt")
+      HasWFxT = false;
+    if (Feature == "-fmv")
+      HasFMV = false;
+    if (Feature == "+crc")
+      HasCRC = true;
+    if (Feature == "-crc")
+      HasCRC = false;
+    if (Feature == "+rcpc")
+      HasRCPC = true;
+    if (Feature == "-rcpc")
+      HasRCPC = false;
+    if (Feature == "+aes") {
+      FPU |= NeonMode;
+      HasAES = true;
+    }
+    if (Feature == "+sha2") {
+      FPU |= NeonMode;
+      HasSHA2 = true;
+    }
+    if (Feature == "+sha3") {
+      FPU |= NeonMode;
+      HasSHA2 = true;
+      HasSHA3 = true;
+    }
+    if (Feature == "+rdm") {
+      FPU |= NeonMode;
+      HasRDM = true;
+    }
+    if (Feature == "-rdm")
+      HasRDM = false;
+    if (Feature == "+dit")
+      HasDIT = true;
+    if (Feature == "-dit")
+      HasDIT = false;
+    if (Feature == "+cccp")
+      HasCCPP = true;
+    if (Feature == "-cccp")
+      HasCCPP = false;
+    if (Feature == "+ccdp") {
+      HasCCPP = true;
+      HasCCDP = true;
+    }
+    if (Feature == "-ccdp")
+      HasCCDP = false;
+    if (Feature == "+fptoint")
+      HasFRInt3264 = true;
+    if (Feature == "-fptoint")
+      HasFRInt3264 = false;
+    if (Feature == "+sm4") {
+      FPU |= NeonMode;
+      HasSM4 = true;
+    }
+    if (Feature == "+strict-align")
+      HasUnalignedAccess = false;
+
     if (Feature == "+fullfp16") {
       FPU |= NeonMode;
       HasFullFP16 = true;
     }
+    if (Feature == "-fullfp16")
+      HasFullFP16 = false;
     if (Feature == "+dotprod") {
       FPU |= NeonMode;
       HasDotProd = true;
     }
+    if (Feature == "-dotprod")
+      HasDotProd = false;
     if (Feature == "+fp16fml") {
       FPU |= NeonMode;
       HasFullFP16 = true;
@@ -1164,20 +1210,30 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasPAuth = true;
     if (Feature == "+i8mm")
       HasMatMul = true;
+    if (Feature == "-i8mm")
+      HasMatMul = false;
     if (Feature == "+bf16")
       HasBFloat16 = true;
+    if (Feature == "-bf16")
+      HasBFloat16 = false;
     if (Feature == "+lse")
       HasLSE = true;
+    if (Feature == "-lse")
+      HasLSE = false;
     if (Feature == "+ls64")
       HasLS64 = true;
     if (Feature == "+rand")
       HasRandGen = true;
     if (Feature == "+flagm")
       HasFlagM = true;
+    if (Feature == "-flagm")
+      HasFlagM = false;
     if (Feature == "+altnzcv") {
       HasFlagM = true;
       HasAlternativeNZCV = true;
     }
+    if (Feature == "-altnzcv")
+      HasAlternativeNZCV = false;
     if (Feature == "+mops")
       HasMOPS = true;
     if (Feature == "+d128")
@@ -1191,17 +1247,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasPAuth = true;
     }
   }
-
-  // Check features that are manually disabled by command line options.
-  // This needs to be checked after architecture-related features are handled,
-  // making sure they are properly disabled when required.
-  for (const auto &Feature : Features) {
-    if (Feature == "-d128")
-      HasD128 = false;
-  }
-
-  setDataLayout();
-  setArchFeatures();
 
   if (HasNoFP) {
     FPU &= ~FPUMode;
