@@ -12,8 +12,9 @@ define amdgpu_kernel void @preload_ptr_kernarg_header(ptr inreg %arg) {
 ; ASM-NEXT:    s_branch .LBB0_0
 ; ASM-NEXT:    .p2align 8
 ; ASM-NEXT:  .LBB0_0:
+; ASM-NEXT:    v_mov_b32_e32 v2, 0
 ; ASM-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; ASM-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
+; ASM-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; ASM-NEXT:    s_endpgm
     store ptr %arg, ptr %arg
     ret void
@@ -29,9 +30,9 @@ define amdgpu_kernel void @preload_i32_kernarg_header(ptr inreg %arg, i32 inreg 
 ; ASM-NEXT:    s_branch .LBB1_0
 ; ASM-NEXT:    .p2align 8
 ; ASM-NEXT:  .LBB1_0:
-; ASM-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; ASM-NEXT:    v_mov_b32_e32 v2, s10
-; ASM-NEXT:    flat_store_dword v[0:1], v2
+; ASM-NEXT:    v_mov_b32_e32 v0, 0
+; ASM-NEXT:    v_mov_b32_e32 v1, s10
+; ASM-NEXT:    global_store_dword v0, v1, s[8:9]
 ; ASM-NEXT:    s_endpgm
     store i32 %arg1, ptr %arg
     ret void

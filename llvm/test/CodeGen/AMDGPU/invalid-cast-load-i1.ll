@@ -6,8 +6,6 @@ define amdgpu_kernel void @load_idx_idy(ptr addrspace(4) %disp, ptr %g) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dword s6, s[4:5], 0x4
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
-; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_lshr_b32 s4, s6, 16
@@ -15,11 +13,9 @@ define amdgpu_kernel void @load_idx_idy(ptr addrspace(4) %disp, ptr %g) {
 ; CHECK-NEXT:    s_lshl_b64 s[4:5], s[4:5], 6
 ; CHECK-NEXT:    s_add_u32 s0, s0, s4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, s5
-; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:4
-; CHECK-NEXT:    v_mov_b32_e32 v0, s2
-; CHECK-NEXT:    v_mov_b32_e32 v1, s3
+; CHECK-NEXT:    global_load_ubyte v1, v0, s[0:1] offset:4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[0:1], v2
+; CHECK-NEXT:    global_store_byte v0, v1, s[2:3]
 ; CHECK-NEXT:    s_endpgm
 entry:
   %disp1 = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
