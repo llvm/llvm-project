@@ -1190,8 +1190,6 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
   return IsWave32 ? 8 : 4;
 }
 
-unsigned getArchVGPRAllocGranule() { return 4; }
-
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
