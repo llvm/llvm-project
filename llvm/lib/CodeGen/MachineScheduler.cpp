@@ -1054,8 +1054,36 @@ void ScheduleDAGMI::moveInstruction(
   BB->splice(InsertPos, BB, MI);
 
   // Update LiveIntervals
-  if (LIS)
+  if (LIS) {
     LIS->handleMove(*MI, /*UpdateFlags=*/true);
+
+    // Mark the move instruction definition as undef if needed, clear isUndef
+    // from the following instruction.
+    for (MachineOperand &MO : MI->operands()) {
+      if (MO.isReg() && MO.isDef() && MO.getSubReg() != 0) {
+        SlotIndex Index = LIS->getInstructionIndex(*MI);
+        LiveInterval &LI = LIS->getInterval(MO.getReg());
+        // If the regsiter isn't live prior to the SubReg def and not already
+        // marked as Undef, add Undef flag.
+        if (!LI.liveAt(Index) && !MO.isUndef()) {
+          MO.setIsUndef(true);
+          LiveRange::iterator NextSeg = std::next(LI.find(Index));
+          if (NextSeg != LI.end() && NextSeg->valno) {
+            if (MachineInstr *NextMI =
+                    LIS->getInstructionFromIndex(NextSeg->valno->def)) {
+              // Remove Undef flag from the next def of this register in the
+              // LiveInterval since the moved instruction already marks the
+              // SubReg's as Undef
+              if (MachineOperand *NextMO =
+                      NextMI->findRegisterDefOperand(MO.getReg(), TRI)) {
+                NextMO->setIsUndef(false);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   // Recede RegionBegin if an instruction moves above the first.
   if (RegionBegin == InsertPos)
