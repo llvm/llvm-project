@@ -124,7 +124,7 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; AVX-NEXT:    fldt 16(%rbp)
 ; AVX-NEXT:    fld %st(0)
 ; AVX-NEXT:    fisttpl -4(%rbp)
-; AVX-NEXT:    vcvtsi2sdl -4(%rbp), %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sdl -4(%rbp), %xmm15, %xmm0
 ; AVX-NEXT:    vmovsd %xmm0, -48(%rbp)
 ; AVX-NEXT:    vmovsd %xmm0, -24(%rbp)
 ; AVX-NEXT:    fsubl -24(%rbp)
@@ -132,7 +132,7 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; AVX-NEXT:    fmul %st, %st(1)
 ; AVX-NEXT:    fld %st(1)
 ; AVX-NEXT:    fisttpl -8(%rbp)
-; AVX-NEXT:    vcvtsi2sdl -8(%rbp), %xmm1, %xmm0
+; AVX-NEXT:    vcvtsi2sdl -8(%rbp), %xmm15, %xmm0
 ; AVX-NEXT:    vmovsd %xmm0, -40(%rbp)
 ; AVX-NEXT:    vmovsd %xmm0, -16(%rbp)
 ; AVX-NEXT:    fxch %st(1)
