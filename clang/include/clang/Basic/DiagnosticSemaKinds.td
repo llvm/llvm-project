@@ -1048,20 +1048,14 @@ def err_ptrauth_extra_discriminator_invalid : Error<
 // __ptrauth qualifier options string
 def note_ptrauth_evaluating_options
     : Note<"options parameter evaluated to '%0'">;
-def err_ptrauth_invalid_option : Error<"'%0' options parameter %1">;
+def err_ptrauth_invalid_option : Error<"'__ptrauth' options parameter %0">;
 def err_ptrauth_unknown_authentication_option
-    : Error<"unknown '%0' authentication option '%1'">;
+    : Error<"unknown '__ptrauth' authentication option '%0'">;
 def err_ptrauth_repeated_authentication_option
-    : Error<"repeated '%0' authentication %select{mode|option}1%select{, prior "
-            "mode was '%3'| '%2'}1">;
-def note_ptrauth_previous_authentication_option
-    : Note<"previous '%0' authentication %select{mode|option}1">;
-def err_ptrauth_unexpected_option_end
-    : Error<"unexpected end of options parameter for %0">;
-def err_ptrauth_option_unexpected_token
-    : Error<"unexpected character '%0' in '%1' options">;
+    : Error<"repeated '__ptrauth' authentication %select{mode|option}0%select{, prior "
+            "mode was '%2'| '%1'}0">;
 def err_ptrauth_option_missing_comma
-    : Error<"missing comma after '%1' option in '%0' qualifier">;
+    : Error<"missing comma after '%0' option in '__ptrauth' qualifier">;
 
 /// main()
 // static main() is not an error in C, just in C++.

@@ -8352,7 +8352,6 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
                                    const ParsedAttr &Attr, Sema &S) {
   assert((Attr.getNumArgs() > 0 && Attr.getNumArgs() <= 4) &&
          "__ptrauth qualifier takes between 1 and 4 arguments");
-  StringRef AttrName = Attr.getAttrName()->getName();
   Expr *KeyArg = Attr.getArgAsExpr(0);
   Expr *IsAddressDiscriminatedArg =
       Attr.getNumArgs() >= 2 ? Attr.getArgAsExpr(1) : nullptr;
@@ -8400,8 +8399,7 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
     };
     auto DiagnoseInvalidOptionsParameter = [&](llvm::StringRef Reason) {
       S.Diag(AuthenticationOptionsRange.getBegin(),
-             diag::err_ptrauth_invalid_option)
-          << AttrName << Reason;
+             diag::err_ptrauth_invalid_option) << Reason;
       Attr.setInvalid();
       IsInvalid = true;
       ReportEvaluationOfExpressionIfNeeded();
@@ -8460,7 +8458,7 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
             std::is_same_v<decltype(Value), PointerAuthenticationMode>;
         S.Diag(AuthenticationOptionsRange.getBegin(),
                diag::err_ptrauth_repeated_authentication_option)
-            << AttrName << !IsAuthenticationMode << OptionString
+            << !IsAuthenticationMode << OptionString
             << (LastOption ? *LastOption : "");
         return false;
       };
@@ -8496,11 +8494,11 @@ static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
                   StringRef LeadingOption = Option.slice(0, WhitespaceIndex);
                   S.Diag(AuthenticationOptionsRange.getBegin(),
                          diag::err_ptrauth_option_missing_comma)
-                      << AttrName << LeadingOption;
+                        << LeadingOption;
                 } else {
                   S.Diag(AuthenticationOptionsRange.getBegin(),
                          diag::err_ptrauth_unknown_authentication_option)
-                      << AttrName << Option;
+                      << Option;
                 }
                 return false;
               });
