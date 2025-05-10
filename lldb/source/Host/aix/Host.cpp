@@ -13,6 +13,7 @@
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/BinaryFormat/XCOFF.h"
+#include <dirent.h>
 #include <sys/proc.h>
 #include <sys/procfs.h>
 
@@ -39,6 +40,14 @@ static ProcessInstanceInfo::timespec convert(pr_timestruc64_t t) {
   ts.tv_sec = t.tv_sec;
   ts.tv_usec = t.tv_nsec / 1000; // nanos to micros
   return ts;
+}
+
+static bool IsDirNumeric(const char *dname) {
+  for (; *dname; dname++) {
+    if (!isdigit(*dname))
+      return false;
+  }
+  return true;
 }
 
 static bool GetStatusInfo(::pid_t pid, ProcessInstanceInfo &processInfo,
@@ -133,7 +142,45 @@ static bool GetProcessAndStatInfo(::pid_t pid,
 
 uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &process_infos) {
-  return 0;
+  static const char procdir[] = "/proc/";
+
+  DIR *dirproc = opendir(procdir);
+  if (dirproc) {
+    struct dirent *direntry = nullptr;
+    const uid_t our_uid = getuid();
+    const lldb::pid_t our_pid = getpid();
+    bool all_users = match_info.GetMatchAllUsers();
+
+    while ((direntry = readdir(dirproc)) != nullptr) {
+      if (!IsDirNumeric(direntry->d_name))
+        continue;
+
+      lldb::pid_t pid = atoi(direntry->d_name);
+      // Skip this process.
+      if (pid == our_pid)
+        continue;
+
+      ProcessState State;
+      ProcessInstanceInfo process_info;
+      if (!GetProcessAndStatInfo(pid, process_info, State))
+        continue;
+
+      if (State == ProcessState::Zombie ||
+          State == ProcessState::TracedOrStopped)
+        continue;
+
+      // Check for user match if we're not matching all users and not running
+      // as root.
+      if (!all_users && (our_uid != 0) && (process_info.GetUserID() != our_uid))
+        continue;
+
+      if (match_info.Matches(process_info)) {
+        process_infos.push_back(process_info);
+      }
+    }
+    closedir(dirproc);
+  }
+  return process_infos.size();
 }
 
 bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
