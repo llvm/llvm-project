@@ -77,6 +77,22 @@ static void suppressEGPRRegClass(MachineFunction &MF, MachineInstr &MI,
   const X86RegisterInfo *RI = ST.getRegisterInfo();
   const TargetRegisterClass *NewRC = RI->constrainRegClassToNonRex2(RC);
   MRI->setRegClass(Reg, NewRC);
+
+    for (MachineInstr &Use : MRI->use_instructions(Reg)) {
+    switch (Use.getOpcode()) {
+      case X86::PHI: {
+        Register DstReg = Use.getOperand(0).getReg();
+        if (!DstReg.isVirtual()) {
+          assert(!X86II::isApxExtendedReg(DstReg) && "APX EGPR is used unexpectedly.");
+          return;
+        }
+        const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
+        const TargetRegisterClass *NewDstRC = RI->constrainRegClassToNonRex2(DstRC);
+        MRI->setRegClass(DstReg, NewDstRC);
+        break;
+      }
+    }
+  }
 }
 
 static bool handleInstructionWithEGPR(MachineFunction &MF,

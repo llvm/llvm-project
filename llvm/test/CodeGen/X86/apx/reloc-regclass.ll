@@ -5,6 +5,8 @@
 ; RUN: llvm-objdump --no-print-imm-hex -dr %t.o | FileCheck %s --check-prefixes=APXREL,CHECK
 
 
+; All tests are used to check no R_X86_64_CODE_4_GOTPCRELX relocation type
+; emitted if APX features is disabled for relocation.
 ; The first 2 tests are used to check if the register class is not
 ; updated/recomputed by register allocator. It's originally updated to non-rex2
 ; register class by "Suppress APX for relocation" pass.
@@ -15,7 +17,7 @@
 ; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar-0x4
 ; NOAPXREL: movq    (%rip), %rdi
 ; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar-0x4
-; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX
+; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar-0x4
 
 @gvar = external global [20000 x i8]
 
@@ -62,13 +64,13 @@ afterloop.41:                                     ; preds = %ifmerge.2
 
 declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immarg)
 
-; Will update after R_X86_64_CODE_6_GOTPCRELX is supported.
+; TODO: update after R_X86_64_CODE_6_GOTPCRELX is supported.
 ; CHECK-LABEL: test_regclass_not_updated_by_regalloc_2
 ; APXREL: {nf} addq (%rip), %r16, %rcx
 ; APXREL-NEXT: R_X86_64_GOTPCREL gvar2-0x4
 ; NOAPXREL: addq    (%rip), %rbx
 ; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar2-0x4
-; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX
+; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar2-0x4
 
 @gvar2 = external constant [8 x [8 x i32]]
 
@@ -136,14 +138,14 @@ declare <8 x i32> @llvm.x86.avx2.maskload.d.256(ptr, <8 x i32>)
 ; instruction are not folded to ADD64rm_ND with relocation. The later will emit
 ; APX relocation which is not recognized by the builtin linker on released OS.
 
-; CHECK-LABEL: test_no_mem_fold
-; NOAPXREL: movq (%rip), %rbx
+; CHECK-LABEL: test_mem_fold
+; NOAPXREL: movq (%rip), %r12
 ; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar3-0x4
-; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX
+; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar3-0x4
 
 @gvar3 = external global [40000 x i8]
 
-define void @test_no_mem_fold(i32 %fetch.1644, i32 %sub.1142, i32 %mul.455, ptr %dval1, ptr %j1, ptr %j2, <4 x i1> %0, i1 %condloop.41.not, i32 %fetch.1646, i32 %fetch.1647, i32 %sub.1108, i64 %int_sext16, i64 %sub.1114, i1 %condloop.45.not.not, <4 x i1> %1) {
+define void @test_mem_fold(i32 %fetch.1644, i32 %sub.1142, i32 %mul.455, ptr %dval1, ptr %j1, ptr %j2, <4 x i1> %0, i1 %condloop.41.not, i32 %fetch.1646, i32 %fetch.1647, i32 %sub.1108, i64 %int_sext16, i64 %sub.1114, i1 %condloop.45.not.not, <4 x i1> %1) {
 alloca_28:
   br label %ifmerge.52
 
@@ -185,3 +187,82 @@ ifmerge.2:                                        ; preds = %loop.45
 
 declare <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr>, i32 immarg, <4 x i1>, <4 x double>)
 declare void @llvm.masked.scatter.v4f64.v4p0(<4 x double>, <4 x ptr>, i32 immarg, <4 x i1>)
+
+
+; The test is to check no R_X86_64_CODE_4_GOTPCRELX relocation emitted when the
+; register in operand 0 of instruction with relocation is used in the PHI
+; instruction. In PHI elimination pass, PHI instruction is eliminated by
+; inserting COPY instruction. And in the late pass (Machine Copy Propagation
+; pass), the COPY instruction may be optimized and the register in operand 0 of
+; instruction with relocation may be replaced with EGPR.
+
+
+; CHECK-LABEL: test_phi_uses
+; APXREL: addq (%rip), %r16
+; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar4-0x4
+; APXREL: movq (%rip), %r17
+; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar5-0x4
+; APXREL: movq (%rip), %r18
+; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar6-0x4
+; APXREL: movq (%rip), %r19
+; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar7-0x4
+; APXREL: movq (%rip), %r22
+; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar8-0x4
+; APXREL: movq (%rip), %r23
+; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar9-0x4
+; APXREL: movq (%rip), %r24
+; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar10-0x4
+; NOAPXREL: movq (%rip), %r15
+; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar5-0x4
+; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar5-0x4
+
+@gvar4 = external global [33 x [33 x double]]
+@gvar5 = external global [33 x [33 x float]]
+@gvar6 = external global [33 x [33 x float]]
+@gvar7 = external global [33 x [33 x float]]
+@gvar8 = external global [33 x [33 x float]]
+@gvar9 = external global [33 x [33 x float]]
+@gvar10 = external global [33 x [33 x float]]
+
+define void @test_phi_uses(i64 %i1.i64.0, ptr %0, ptr %1, ptr %2, ptr %3, ptr %in0, ptr %4, ptr %5, i1 %cmp.144) #0 {
+alloca_15:
+  br label %loop.253
+
+loop.253:                                         ; preds = %loop.1500, %alloca_15
+  %i1.i64.01 = phi i64 [ 0, %alloca_15 ], [ %6, %loop.1500 ]
+  %6 = add i64 %i1.i64.01, 1
+  br label %loop.254
+
+loop.254:                                         ; preds = %loop.254, %loop.253
+  %i2.i64.02 = phi i64 [ %13, %loop.254 ], [ 0, %loop.253 ]
+  %7 = getelementptr [33 x [33 x float]], ptr @gvar10, i64 0, i64 %i2.i64.02, i64 %i1.i64.01
+  %gepload368 = load float, ptr %7, align 4
+  store double 0.000000e+00, ptr %0, align 8
+  %8 = getelementptr [33 x [33 x float]], ptr @gvar9, i64 0, i64 %i2.i64.02, i64 %i1.i64.01
+  %gepload369 = load float, ptr %8, align 4
+  store double 0.000000e+00, ptr %1, align 8
+  %9 = getelementptr [33 x [33 x float]], ptr @gvar8, i64 0, i64 %i2.i64.02, i64 %i1.i64.01
+  %gepload371 = load float, ptr %9, align 4
+  store double 0.000000e+00, ptr %2, align 8
+  %10 = getelementptr [33 x [33 x float]], ptr @gvar7, i64 0, i64 %i2.i64.02, i64 %i1.i64.01
+  %gepload373 = load float, ptr %10, align 4
+  %11 = getelementptr [33 x [33 x double]], ptr @gvar4, i64 0, i64 %i2.i64.02, i64 %i1.i64.0
+  store double 0.000000e+00, ptr %11, align 8
+  %12 = getelementptr [33 x [33 x float]], ptr @gvar6, i64 0, i64 %i2.i64.02, i64 %i1.i64.01
+  %gepload375 = load float, ptr %12, align 4
+  store double 0.000000e+00, ptr %3, align 8
+  store double 0.000000e+00, ptr %5, align 8
+  %13 = add i64 %i2.i64.02, 1
+  store double 0.000000e+00, ptr %in0, align 8
+  store double 0.000000e+00, ptr %4, align 8
+  %14 = getelementptr [33 x [33 x float]], ptr @gvar5, i64 0, i64 %i2.i64.02, i64 %i1.i64.01
+  %gepload392 = load float, ptr %14, align 4
+  br i1 %cmp.144, label %loop.1500, label %loop.254
+
+loop.1500:                                        ; preds = %loop.254
+  %15 = getelementptr [33 x [33 x float]], ptr @gvar5, i64 0, i64 0, i64 %i1.i64.0
+  %gepload444 = load float, ptr %15, align 4
+  %16 = fpext float %gepload444 to double
+  store double %16, ptr null, align 8
+  br label %loop.253
+}
