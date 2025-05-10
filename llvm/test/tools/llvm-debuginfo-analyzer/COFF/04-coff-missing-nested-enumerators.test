@@ -37,6 +37,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-46466.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 15.0.0 {{.*}}'
+; ONE-NEXT: [002]               {Language} 'Cpp'
 ; ONE-NEXT: [002]               {Variable} extern 'S' -> 'Struct'
 ; ONE-NEXT: [002]     1         {Struct} 'Struct'
 ; ONE-NEXT: [003]                 {Member} public 'U' -> 'Union'
@@ -50,6 +51,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-46466.cpp'
 ; ONE-NEXT: [002]               {Producer} 'Microsoft (R) Optimizing Compiler'
+; ONE-NEXT: [002]               {Language} 'Cpp'
 ; ONE-NEXT: [002]               {Variable} extern 'S' -> 'Struct'
 ; ONE-NEXT: [002]     1         {Struct} 'Struct'
 ; ONE-NEXT: [003]                 {Member} public 'U' -> 'Union'
