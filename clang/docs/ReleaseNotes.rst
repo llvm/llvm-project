@@ -509,6 +509,9 @@ Improvements to Clang's diagnostics
 - Clang now prints the namespace for an attribute, if any,
   when emitting an unknown attribute diagnostic.
 
+- ``-Wvolatile`` now warns about volatile-qualified class return types
+  as well as volatile-qualified scalar return types. Fixes #GH133380
+
 - Several compatibility diagnostics that were incorrectly being grouped under
   ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
 
@@ -921,7 +924,8 @@ Improvements
 ^^^^^^^^^^^^
 
 Additional Information
-======================
+
+===================
 
 A wide variety of additional information is available on the `Clang web
 page <https://clang.llvm.org/>`_. The web page contains versions of the
