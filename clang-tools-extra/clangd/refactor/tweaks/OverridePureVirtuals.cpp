@@ -58,17 +58,16 @@ getAllUniquePureVirtualsFromBaseHierarchy(
   llvm::SmallVector<const clang::CXXMethodDecl *> AllPureVirtualsInHierarchy;
   llvm::DenseSet<const clang::CXXMethodDecl *> CanonicalPureVirtualsSeen;
 
-  if (!CurrentDeclDef || !CurrentDeclDef->getDefinition()) {
+  if (!CurrentDeclDef || !CurrentDeclDef->getDefinition())
     return AllPureVirtualsInHierarchy;
-  }
+
   const clang::CXXRecordDecl *Def = CurrentDeclDef->getDefinition();
 
   Def->forallBases([&](const clang::CXXRecordDecl *BaseDefinition) {
     for (const clang::CXXMethodDecl *Method : BaseDefinition->methods()) {
       if (Method->isPureVirtual() &&
-          CanonicalPureVirtualsSeen.insert(Method->getCanonicalDecl()).second) {
+          CanonicalPureVirtualsSeen.insert(Method->getCanonicalDecl()).second)
         AllPureVirtualsInHierarchy.emplace_back(Method);
-      }
     }
     return true; // Continue iterating through all bases
   });
@@ -96,9 +95,8 @@ llvm::MapVector<AccessSpecifier, SourceLocation>
 getSpecifierLocations(const CXXRecordDecl *D) {
   llvm::MapVector<AccessSpecifier, SourceLocation> Locs;
   for (auto *DeclNode : D->decls()) {
-    if (const auto *ASD = llvm::dyn_cast<AccessSpecDecl>(DeclNode)) {
+    if (const auto *ASD = llvm::dyn_cast<AccessSpecDecl>(DeclNode))
       Locs[ASD->getAccess()] = ASD->getColonLoc();
-    }
   }
   return Locs;
 }
@@ -166,10 +164,10 @@ generateOverridesStringForGroup(std::vector<const CXXMethodDecl *> Methods,
                                 const LangOptions &LangOpts) {
   const auto GetParamString = [&LangOpts](const ParmVarDecl *P) {
     std::string TypeStr = P->getType().getAsString(LangOpts);
-    if (P->getNameAsString().empty()) {
-      // Unnamed parameter.
+    // Unnamed parameter.
+    if (P->getNameAsString().empty())
       return TypeStr;
-    }
+
     return llvm::formatv("{0} {1}", std::move(TypeStr), P->getNameAsString())
         .str();
   };
@@ -250,17 +248,15 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
       // InsertionText.
       std::string InsertionText = "\n" + MethodsGroupString;
       tooling::Replacement Rep(SM, InsertLoc, 0, InsertionText);
-      if (auto Err = EditReplacements.add(Rep)) {
-        // Handle error if replacement couldn't be added (e.g. overlaps)
+      if (auto Err = EditReplacements.add(Rep))
         return llvm::Expected<Tweak::Effect>(std::move(Err));
-      }
     } else {
       // Access specifier section does not exist in the class.
       // These methods will be grouped into NewSectionsToAppendText and added
       // towards the end of the class definition.
-      if (!IsFirstNewSection) {
+      if (!IsFirstNewSection)
         NewSectionsToAppendText += "\n";
-      }
+
       NewSectionsToAppendText +=
           getAccessSpelling(AS).str() + ":\n" + MethodsGroupString;
       IsFirstNewSection = false;
