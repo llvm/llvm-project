@@ -9648,6 +9648,13 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
                 DSAStackTy &DSA,
                 SemaOpenMP::VarsWithInheritedDSAType &VarsWithImplicitDSA,
                 OMPLoopBasedDirective::HelperExprs &Built) {
+  // If either of the loop expressions exist and contain errors, we bail out
+  // early because diagnostics have already been emitted and we can't reliably
+  // check more about the loop.
+  if ((CollapseLoopCountExpr && CollapseLoopCountExpr->containsErrors()) ||
+      (OrderedLoopCountExpr && OrderedLoopCountExpr->containsErrors()))
+    return 0;
+
   unsigned NestedLoopCount = 1;
   bool SupportsNonPerfectlyNested = (SemaRef.LangOpts.OpenMP >= 50) &&
                                     !isOpenMPLoopTransformationDirective(DKind);
