@@ -389,6 +389,15 @@ public:
   }
   llvm::Expected<protocol::SetBreakpointsResponseBody>
   Run(const protocol::SetBreakpointsArguments &args) const override;
+
+  std::vector<protocol::Breakpoint> SetSourceBreakpoints(
+      const std::string &path,
+      const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints)
+      const;
+  std::vector<protocol::Breakpoint> SetAssemblyBreakpoints(
+      int64_t sourceReference,
+      const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints)
+      const;
 };
 
 class SetExceptionBreakpointsRequestHandler : public LegacyRequestHandler {

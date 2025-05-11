@@ -13,7 +13,9 @@
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBMutex.h"
+#include "lldb/API/SBSymbol.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
@@ -40,6 +42,26 @@ void SourceBreakpoint::SetBreakpoint(const llvm::StringRef source_path) {
   lldb::SBFileSpecList module_list;
   m_bp = m_dap.target.BreakpointCreateByLocation(
       source_path.str().c_str(), m_line, m_column, 0, module_list);
+  if (!m_log_message.empty())
+    SetLogMessage();
+  Breakpoint::SetBreakpoint();
+}
+
+void SourceBreakpoint::SetBreakpoint(lldb::SBSymbol &symbol) {
+  lldb::SBMutex lock = m_dap.GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
+  if (m_line == 0)
+    return;
+
+  lldb::SBInstructionList inst_list =
+      m_dap.target.ReadInstructions(symbol.GetStartAddress(), m_line);
+  if (inst_list.GetSize() < m_line)
+    return;
+  lldb::SBAddress address =
+      inst_list.GetInstructionAtIndex(m_line - 1).GetAddress();
+
+  m_bp = m_dap.target.BreakpointCreateBySBAddress(address);
   if (!m_log_message.empty())
     SetLogMessage();
   Breakpoint::SetBreakpoint();

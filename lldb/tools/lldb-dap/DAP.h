@@ -169,6 +169,7 @@ struct DAP {
   Variables variables;
   lldb::SBBroadcaster broadcaster;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
+  llvm::DenseMap<int64_t, SourceBreakpointMap> assembly_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
   std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;

@@ -9,8 +9,11 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
+#include <cstdint>
+#include <utility>
 #include <vector>
 
 namespace lldb_dap {
@@ -23,15 +26,30 @@ llvm::Expected<protocol::SetBreakpointsResponseBody>
 SetBreakpointsRequestHandler::Run(
     const protocol::SetBreakpointsArguments &args) const {
   const auto &source = args.source;
-  const auto path = source.path.value_or("");
+  std::vector<protocol::Breakpoint> response_breakpoints;
+  if (source.sourceReference)
+    response_breakpoints = SetAssemblyBreakpoints(
+        source.sourceReference.value(), args.breakpoints);
+  else if (source.path)
+    response_breakpoints =
+        SetSourceBreakpoints(source.path.value(), args.breakpoints);
+
+  return protocol::SetBreakpointsResponseBody{std::move(response_breakpoints)};
+}
+
+std::vector<protocol::Breakpoint>
+SetBreakpointsRequestHandler::SetSourceBreakpoints(
+    const std::string &path,
+    const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints)
+    const {
   std::vector<protocol::Breakpoint> response_breakpoints;
 
   // Decode the source breakpoint infos for this "setBreakpoints" request
   SourceBreakpointMap request_bps;
   // "breakpoints" may be unset, in which case we treat it the same as being set
   // to an empty array.
-  if (args.breakpoints) {
-    for (const auto &bp : *args.breakpoints) {
+  if (breakpoints) {
+    for (const auto &bp : *breakpoints) {
       SourceBreakpoint src_bp(dap, bp);
       std::pair<uint32_t, uint32_t> bp_pos(src_bp.GetLine(),
                                            src_bp.GetColumn());
@@ -73,7 +91,71 @@ SetBreakpointsRequestHandler::Run(
     }
   }
 
-  return protocol::SetBreakpointsResponseBody{std::move(response_breakpoints)};
+  return response_breakpoints;
+}
+
+std::vector<protocol::Breakpoint>
+SetBreakpointsRequestHandler::SetAssemblyBreakpoints(
+    int64_t sourceReference,
+    const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints)
+    const {
+  std::vector<protocol::Breakpoint> response_breakpoints;
+
+  lldb::SBProcess process = dap.target.GetProcess();
+  lldb::SBThread thread =
+      process.GetThreadByIndexID(GetLLDBThreadIndexID(sourceReference));
+  lldb::SBFrame frame = thread.GetFrameAtIndex(GetLLDBFrameID(sourceReference));
+
+  if (!frame.IsValid())
+    return response_breakpoints;
+
+  lldb::SBSymbol symbol = frame.GetSymbol();
+  if (!symbol.IsValid())
+    return response_breakpoints; // Not yet supporting breakpoints in assembly
+                                 // without a valid symbol
+
+  SourceBreakpointMap request_bps;
+  if (breakpoints) {
+    for (const auto &bp : *breakpoints) {
+      SourceBreakpoint src_bp(dap, bp);
+      std::pair<uint32_t, uint32_t> bp_pos(src_bp.GetLine(), 0);
+      request_bps.try_emplace(bp_pos, src_bp);
+      const auto [iv, inserted] =
+          dap.assembly_breakpoints[sourceReference].try_emplace(bp_pos, src_bp);
+      // We check if this breakpoint already exists to update it
+      if (inserted)
+        iv->getSecond().SetBreakpoint(symbol);
+      else
+        iv->getSecond().UpdateBreakpoint(src_bp);
+
+      protocol::Breakpoint response_bp = iv->getSecond().ToProtocolBreakpoint();
+      protocol::Source source;
+      source.sourceReference = sourceReference;
+      source.name = symbol.GetName();
+      response_bp.source = std::move(source);
+
+      if (!response_bp.line)
+        response_bp.line = src_bp.GetLine();
+      if (!response_bp.column)
+        response_bp.column = src_bp.GetColumn();
+      response_breakpoints.push_back(response_bp);
+    }
+  }
+
+  // Delete existing breakpoints for this sourceReference that are not in the
+  // request_bps set.
+  auto old_src_bp_pos = dap.assembly_breakpoints.find(sourceReference);
+  if (old_src_bp_pos != dap.assembly_breakpoints.end()) {
+    for (auto &old_bp : old_src_bp_pos->second) {
+      auto request_pos = request_bps.find(old_bp.first);
+      if (request_pos == request_bps.end()) {
+        dap.target.BreakpointDelete(old_bp.second.GetID());
+        old_src_bp_pos->second.erase(old_bp.first);
+      }
+    }
+  }
+
+  return response_breakpoints;
 }
 
 } // namespace lldb_dap
