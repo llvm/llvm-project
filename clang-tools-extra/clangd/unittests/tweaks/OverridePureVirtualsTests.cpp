@@ -29,6 +29,21 @@ class ^C : public B {};
 )cpp");
 }
 
+TEST_F(OverridePureVirtualsTest, UnavailableWhenOverriden) {
+  EXPECT_UNAVAILABLE(
+      R"cpp(
+class B {
+public:
+  virtual void foo() = 0;
+};
+
+class ^D : public B {
+public:
+  void foo() override;
+};
+)cpp");
+}
+
 TEST_F(OverridePureVirtualsTest, Availability) {
   EXPECT_AVAILABLE(R"cpp(
 class Base {

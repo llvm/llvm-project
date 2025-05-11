@@ -126,8 +126,8 @@ bool OverridePureVirtuals::prepare(const Selection &Sel) {
   // From now on, we should work with the definition.
   CurrentDeclDef = CurrentDeclDef->getDefinition();
 
-  // Only offer for polymorphic classes with abstract bases.
-  return CurrentDeclDef->isPolymorphic() &&
+  // Only offer for abstract classes with abstract bases.
+  return CurrentDeclDef->isAbstract() &&
          hasAbstractBaseAncestor(CurrentDeclDef);
 }
 
