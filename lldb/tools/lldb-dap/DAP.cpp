@@ -106,16 +106,6 @@ static uint64_t GetUintFromStructuredData(lldb::SBStructuredData &data,
   return keyValue.GetUnsignedIntegerValue();
 }
 
-static llvm::StringRef GetModuleEventReason(uint32_t event_mask) {
-  if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded)
-    return "new";
-  if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded)
-    return "removed";
-  assert(event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded ||
-         event_mask & lldb::SBTarget::eBroadcastBitSymbolsChanged);
-  return "changed";
-}
-
 /// Return string with first character capitalized.
 static std::string capitalize(llvm::StringRef str) {
   if (str.empty())
@@ -136,6 +126,7 @@ DAP::DAP(Log *log, const ReplMode default_repl_mode,
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
       reverse_request_seq(0), repl_mode(default_repl_mode) {
   configuration.preInitCommands = std::move(pre_init_commands);
+  RegisterRequests();
 }
 
 DAP::~DAP() = default;
@@ -1571,18 +1562,41 @@ void DAP::EventThread() {
             event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded ||
             event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded ||
             event_mask & lldb::SBTarget::eBroadcastBitSymbolsChanged) {
-          llvm::StringRef reason = GetModuleEventReason(event_mask);
           const uint32_t num_modules =
               lldb::SBTarget::GetNumModulesFromEvent(event);
+          std::lock_guard<std::mutex> guard(modules_mutex);
           for (uint32_t i = 0; i < num_modules; ++i) {
             lldb::SBModule module =
                 lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
             if (!module.IsValid())
               continue;
+            llvm::StringRef module_id = module.GetUUIDString();
+            if (module_id.empty())
+              continue;
+
+            llvm::StringRef reason;
+            bool id_only = false;
+            if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded) {
+              modules.insert(module_id);
+              reason = "new";
+            } else {
+              // If this is a module we've never told the client about, don't
+              // send an event.
+              if (!modules.contains(module_id))
+                continue;
+
+              if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded) {
+                modules.erase(module_id);
+                reason = "removed";
+                id_only = true;
+              } else {
+                reason = "changed";
+              }
+            }
 
             llvm::json::Object body;
             body.try_emplace("reason", reason);
-            body.try_emplace("module", CreateModule(target, module));
+            body.try_emplace("module", CreateModule(target, module, id_only));
             llvm::json::Object module_event = CreateEventObject("module");
             module_event.try_emplace("body", std::move(body));
             SendJSON(llvm::json::Value(std::move(module_event)));
@@ -1637,6 +1651,48 @@ void DAP::EventThread() {
       }
     }
   }
+}
+
+void DAP::RegisterRequests() {
+  RegisterRequest<AttachRequestHandler>();
+  RegisterRequest<BreakpointLocationsRequestHandler>();
+  RegisterRequest<CancelRequestHandler>();
+  RegisterRequest<CompletionsRequestHandler>();
+  RegisterRequest<ConfigurationDoneRequestHandler>();
+  RegisterRequest<ContinueRequestHandler>();
+  RegisterRequest<DataBreakpointInfoRequestHandler>();
+  RegisterRequest<DisassembleRequestHandler>();
+  RegisterRequest<DisconnectRequestHandler>();
+  RegisterRequest<EvaluateRequestHandler>();
+  RegisterRequest<ExceptionInfoRequestHandler>();
+  RegisterRequest<InitializeRequestHandler>();
+  RegisterRequest<LaunchRequestHandler>();
+  RegisterRequest<LocationsRequestHandler>();
+  RegisterRequest<NextRequestHandler>();
+  RegisterRequest<PauseRequestHandler>();
+  RegisterRequest<ReadMemoryRequestHandler>();
+  RegisterRequest<RestartRequestHandler>();
+  RegisterRequest<ScopesRequestHandler>();
+  RegisterRequest<SetBreakpointsRequestHandler>();
+  RegisterRequest<SetDataBreakpointsRequestHandler>();
+  RegisterRequest<SetExceptionBreakpointsRequestHandler>();
+  RegisterRequest<SetFunctionBreakpointsRequestHandler>();
+  RegisterRequest<SetInstructionBreakpointsRequestHandler>();
+  RegisterRequest<SetVariableRequestHandler>();
+  RegisterRequest<SourceRequestHandler>();
+  RegisterRequest<StackTraceRequestHandler>();
+  RegisterRequest<StepInRequestHandler>();
+  RegisterRequest<StepInTargetsRequestHandler>();
+  RegisterRequest<StepOutRequestHandler>();
+  RegisterRequest<ThreadsRequestHandler>();
+  RegisterRequest<VariablesRequestHandler>();
+
+  // Custom requests
+  RegisterRequest<CompileUnitsRequestHandler>();
+  RegisterRequest<ModulesRequestHandler>();
+
+  // Testing requests
+  RegisterRequest<TestGetTargetBreakpointsRequestHandler>();
 }
 
 } // namespace lldb_dap
