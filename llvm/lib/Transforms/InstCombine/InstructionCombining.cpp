@@ -2271,6 +2271,27 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     }
   }
 
+  // Similar to the combine above, but handles the case for scalable vectors
+  // where both shuffle(V1, 0) and C are splats.
+  //
+  // Op(shuffle(V1, 0), (splat C)) -> shuffle(Op(V1, (splat C)), 0)
+  if (isa<ScalableVectorType>(Inst.getType()) &&
+      match(&Inst, m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Poison(),
+                                                m_ZeroMask())),
+                             m_ImmConstant(C)))) {
+    if (Constant *Splat = C->getSplatValue()) {
+      bool ConstOp1 = isa<Constant>(RHS);
+      VectorType *V1Ty = cast<VectorType>(V1->getType());
+      Constant *NewC = ConstantVector::getSplat(V1Ty->getElementCount(), Splat);
+
+      Value *NewLHS = ConstOp1 ? V1 : NewC;
+      Value *NewRHS = ConstOp1 ? NewC : V1;
+      VectorType *VTy = cast<VectorType>(Inst.getType());
+      SmallVector<int> Mask(VTy->getElementCount().getKnownMinValue(), 0);
+      return createBinOpShuffle(NewLHS, NewRHS, Mask);
+    }
+  }
+
   // Try to reassociate to sink a splat shuffle after a binary operation.
   if (Inst.isAssociative() && Inst.isCommutative()) {
     // Canonicalize shuffle operand as LHS.
