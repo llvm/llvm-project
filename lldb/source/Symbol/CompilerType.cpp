@@ -1023,7 +1023,7 @@ bool CompilerType::IsMeaninglessWithoutDynamicResolution() const {
 // doesn't descend into the children, but only looks one level deep and name
 // matches can include base class names.
 
-uint32_t
+llvm::Expected<uint32_t>
 CompilerType::GetIndexOfChildWithName(llvm::StringRef name,
                                       bool omit_empty_base_classes) const {
   if (IsValid() && !name.empty()) {
@@ -1031,7 +1031,8 @@ CompilerType::GetIndexOfChildWithName(llvm::StringRef name,
       return type_system_sp->GetIndexOfChildWithName(m_type, name,
                                                      omit_empty_base_classes);
   }
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.str().c_str());
 }
 
 // Dumping types

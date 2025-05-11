@@ -36,6 +36,12 @@ def XeGPU_Dialect : Dialect {
 
     let useDefaultTypePrinterParser = true;
     let useDefaultAttributePrinterParser = true;
+
+    let extraClassDeclaration = [{
+      /// Checks if the given shape can be evenly distributed based on the layout
+      /// and data factors provided by the LayoutAttr.
+      static bool isEvenlyDistributable(llvm::ArrayRef<int64_t> shape, xegpu::LayoutAttr attr);
+    }];
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUDIALECT_TD

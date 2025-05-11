@@ -4,9 +4,6 @@
 ; RUN: llc -mtriple riscv64-unknown-elf -mattr=+experimental-xsfmclic -o - %s \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefix=RV64
 
-;; These are failing to verify.
-; XFAIL: *
-
 ; Test Handling of the SiFive-CLIC interrupt attributes.
 ;
 ; "stack-swap" means that sp should be swapped into `sf.mscratchcsw`

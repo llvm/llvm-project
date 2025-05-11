@@ -66,37 +66,37 @@ void uses() {
 #pragma acc kernels device_type(*) nohost
   while(1);
   // expected-error@+2{{OpenACC clause 'default' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) default(none)
   while(1);
   // expected-error@+2{{OpenACC clause 'if' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) if(1)
   while(1);
   // expected-error@+2{{OpenACC clause 'self' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) self
   while(1);
 
   int Var;
   int *VarPtr;
   // expected-error@+2{{OpenACC clause 'copy' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) copy(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'pcopy' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) pcopy(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'present_or_copy' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) present_or_copy(Var)
   while(1);
   // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) use_device(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'attach' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) attach(Var)
   while(1);
   // expected-error@+1{{OpenACC 'delete' clause is not valid on 'kernels' directive}}
@@ -109,14 +109,14 @@ void uses() {
 #pragma acc kernels device_type(*) device(VarPtr)
   while(1);
   // expected-error@+2{{OpenACC clause 'deviceptr' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) deviceptr(VarPtr)
   while(1);
   // expected-error@+1{{OpenACC 'device_resident' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*)  device_resident(VarPtr)
   while(1);
   // expected-error@+2{{OpenACC clause 'firstprivate' may not follow a 'device_type' clause in a 'parallel' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc parallel device_type(*) firstprivate(Var)
   while(1);
   // expected-error@+1{{OpenACC 'host' clause is not valid on 'kernels' directive}}
@@ -126,55 +126,55 @@ void uses() {
 #pragma acc kernels device_type(*) link(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'no_create' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) no_create(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'present' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) present(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'private' may not follow a 'device_type' clause in a 'parallel' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc parallel device_type(*) private(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'copyout' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) copyout(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'pcopyout' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) pcopyout(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'present_or_copyout' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) present_or_copyout(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'copyin' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) copyin(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'pcopyin' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) pcopyin(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'present_or_copyin' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) present_or_copyin(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'create' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) create(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'pcreate' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) pcreate(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'present_or_create' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels device_type(*) present_or_create(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'reduction' may not follow a 'device_type' clause in a 'serial' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc serial device_type(*) reduction(+:Var)
   while(1);
   // expected-error@+1{{OpenACC 'collapse' clause is not valid on 'kernels' directive}}

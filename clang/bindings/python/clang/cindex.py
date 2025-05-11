@@ -71,8 +71,10 @@ from enum import Enum
 from typing import (
     Any,
     Callable,
+    cast as Tcast,
     Generic,
     Optional,
+    Sequence,
     Type as TType,
     TypeVar,
     TYPE_CHECKING,
@@ -314,6 +316,8 @@ class SourceLocation(Structure):
         return conf.lib.clang_Location_isInSystemHeader(self)  # type: ignore [no-any-return]
 
     def __eq__(self, other):
+        if not isinstance(other, SourceLocation):
+            return False
         return conf.lib.clang_equalLocations(self, other)  # type: ignore [no-any-return]
 
     def __ne__(self, other):
@@ -372,6 +376,8 @@ class SourceRange(Structure):
         return conf.lib.clang_getRangeEnd(self)  # type: ignore [no-any-return]
 
     def __eq__(self, other):
+        if not isinstance(other, SourceRange):
+            return False
         return conf.lib.clang_equalRanges(self, other)  # type: ignore [no-any-return]
 
     def __ne__(self, other):
@@ -1556,6 +1562,8 @@ class Cursor(Structure):
         return cursor
 
     def __eq__(self, other):
+        if not isinstance(other, Cursor):
+            return False
         return conf.lib.clang_equalCursors(self, other)  # type: ignore [no-any-return]
 
     def __ne__(self, other):
@@ -1746,7 +1754,7 @@ class Cursor(Structure):
 
     def get_usr(self):
         """Return the Unified Symbol Resolution (USR) for the entity referenced
-        by the given cursor (or None).
+        by the given cursor.
 
         A Unified Symbol Resolution (USR) is a string that identifies a
         particular entity (function, class, variable, etc.) within a
@@ -2776,7 +2784,7 @@ class Type(Structure):
         return _CXString.from_result(conf.lib.clang_getTypePrettyPrinted(self, policy))
 
     def __eq__(self, other):
-        if type(other) != type(self):
+        if not isinstance(other, Type):
             return False
 
         return conf.lib.clang_equalTypes(self, other)  # type: ignore [no-any-return]
@@ -2886,10 +2894,9 @@ class CompletionChunk:
     def string(self):
         res = conf.lib.clang_getCompletionChunkCompletionString(self.cs, self.key)
 
-        if res:
-            return CompletionString(res)
-        else:
-            None
+        if not res:
+            return None
+        return CompletionString(res)
 
     def isKindOptional(self):
         return self.__kindNumber == 0
@@ -2955,6 +2962,13 @@ class CompletionString(ClangObject):
             raise IndexError
         return CompletionChunk(self.obj, key)
 
+    if TYPE_CHECKING:
+        # Defining __getitem__ and __len__ is enough to make an iterable
+        # but the typechecker doesn't understand that.
+        def __iter__(self):
+            for i in range(len(self)):
+                yield self[i]
+
     @property
     def priority(self):
         return conf.lib.clang_getCompletionPriority(self.obj)  # type: ignore [no-any-return]
@@ -2966,11 +2980,7 @@ class CompletionString(ClangObject):
 
     @property
     def briefComment(self):
-        if conf.function_exists("clang_getCompletionBriefComment"):
-            return _CXString.from_result(
-                conf.lib.clang_getCompletionBriefComment(self.obj)
-            )
-        return _CXString()
+        return _CXString.from_result(conf.lib.clang_getCompletionBriefComment(self.obj))
 
     def __repr__(self):
         return (
@@ -3155,8 +3165,8 @@ class TranslationUnit(ClangObject):
         a list via args. These can be used to specify include paths, warnings,
         etc. e.g. ["-Wall", "-I/path/to/include"].
 
-        In-memory file content can be provided via unsaved_files. This is an
-        iterable of 2-tuples. The first element is the filename (str or
+        In-memory file content can be provided via unsaved_files. This is a
+        list of 2-tuples. The first element is the filename (str or
         PathLike). The second element defines the content. Content can be
         provided as str source code or as file objects (anything with a read()
         method). If a file object is being used, content will be read until EOF
@@ -3328,6 +3338,7 @@ class TranslationUnit(ClangObject):
         start_location, end_location = locations
 
         if hasattr(start_location, "__len__"):
+            start_location = Tcast(Sequence[int], start_location)
             start_location = SourceLocation.from_position(
                 self, f, start_location[0], start_location[1]
             )
@@ -3335,6 +3346,7 @@ class TranslationUnit(ClangObject):
             start_location = SourceLocation.from_offset(self, f, start_location)
 
         if hasattr(end_location, "__len__"):
+            end_location = Tcast(Sequence[int], end_location)
             end_location = SourceLocation.from_position(
                 self, f, end_location[0], end_location[1]
             )
@@ -3464,6 +3476,8 @@ class TranslationUnit(ClangObject):
         2-tuple of SourceLocation or as a SourceRange. If both are defined,
         behavior is undefined.
         """
+        if locations is None and extent is None:
+            raise TypeError("get_tokens() requires at least one argument")
         if locations is not None:
             extent = SourceRange(start=locations[0], end=locations[1])
 
@@ -3510,11 +3524,11 @@ class File(ClangObject):
     @staticmethod
     def from_result(res, arg):
         assert isinstance(res, c_object_p)
-        res = File(res)
+        file = File(res)
 
         # Copy a reference to the TranslationUnit to prevent premature GC.
-        res._tu = arg._tu
-        return res
+        file._tu = arg._tu
+        return file
 
 
 class FileInclusion:
@@ -3593,7 +3607,7 @@ class CompileCommand:
     def arguments(self):
         """
         Get an iterable object providing each argument in the
-        command line for the compiler invocation as a _CXString.
+        command line for the compiler invocation as a string.
 
         Invariant : the first argument is the compiler executable
         """
@@ -4245,14 +4259,6 @@ class Config:
             raise LibclangError(msg)
 
         return library
-
-    def function_exists(self, name: str) -> bool:
-        try:
-            getattr(self.lib, name)
-        except AttributeError:
-            return False
-
-        return True
 
 
 conf = Config()

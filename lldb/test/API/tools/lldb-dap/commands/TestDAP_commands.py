@@ -5,7 +5,8 @@ import lldbdap_testcase
 from lldbsuite.test import lldbtest, lldbutil
 from lldbsuite.test.decorators import *
 
-
+# DAP tests are flakey, see https://github.com/llvm/llvm-project/issues/137660.
+@skip
 class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
     def test_command_directive_quiet_on_success(self):
         program = self.getBuildArtifact("a.out")

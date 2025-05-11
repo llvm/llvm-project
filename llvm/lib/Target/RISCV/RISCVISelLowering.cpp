@@ -6053,23 +6053,30 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
     LHSIndices =
         convertToScalableVector(IndexContainerVT, LHSIndices, DAG, Subtarget);
+    // At m1 and less, there's no point trying any of the high LMUL splitting
+    // techniques.  TODO: Should we reconsider this for DLEN < VLEN?
+    if (NumElts <= MinVLMAX) {
+      SDValue Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
+                                   DAG.getUNDEF(ContainerVT), TrueMask, VL);
+      return convertFromScalableVector(VT, Gather, DAG, Subtarget);
+    }
 
-    SDValue Gather;
-    if (NumElts > MinVLMAX && isLocalRepeatingShuffle(Mask, MinVLMAX)) {
-      // If we have a locally repeating mask, then we can reuse the first
-      // register in the index register group for all registers within the
-      // source register group.  TODO: This generalizes to m2, and m4.
-      const MVT M1VT = getLMUL1VT(ContainerVT);
-      EVT SubIndexVT = M1VT.changeVectorElementType(IndexVT.getScalarType());
+    const MVT M1VT = getLMUL1VT(ContainerVT);
+    EVT SubIndexVT = M1VT.changeVectorElementType(IndexVT.getScalarType());
+    auto [InnerTrueMask, InnerVL] =
+        getDefaultScalableVLOps(M1VT, DL, DAG, Subtarget);
+    int N =
+        ContainerVT.getVectorMinNumElements() / M1VT.getVectorMinNumElements();
+    assert(isPowerOf2_32(N) && N <= 8);
+
+    // If we have a locally repeating mask, then we can reuse the first
+    // register in the index register group for all registers within the
+    // source register group.  TODO: This generalizes to m2, and m4.
+    if (isLocalRepeatingShuffle(Mask, MinVLMAX)) {
       SDValue SubIndex =
           DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubIndexVT, LHSIndices,
                       DAG.getVectorIdxConstant(0, DL));
-      auto [InnerTrueMask, InnerVL] =
-          getDefaultScalableVLOps(M1VT, DL, DAG, Subtarget);
-      int N = ContainerVT.getVectorMinNumElements() /
-              M1VT.getVectorMinNumElements();
-      assert(isPowerOf2_32(N) && N <= 8);
-      Gather = DAG.getUNDEF(ContainerVT);
+      SDValue Gather = DAG.getUNDEF(ContainerVT);
       for (int i = 0; i < N; i++) {
         SDValue SubIdx =
             DAG.getVectorIdxConstant(M1VT.getVectorMinNumElements() * i, DL);
@@ -6081,21 +6088,17 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         Gather = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Gather,
                              SubVec, SubIdx);
       }
-    } else if (NumElts > MinVLMAX && isLowSourceShuffle(Mask, MinVLMAX) &&
-               isSpanSplatShuffle(Mask, MinVLMAX)) {
-      // If we have a shuffle which only uses the first register in our source
-      // register group, and repeats the same index across all spans, we can
-      // use a single vrgather (and possibly some register moves).
-      // TODO: This can be generalized for m2 or m4, or for any shuffle for
-      // which we can do a linear number of shuffles to form an m1 which
-      // contains all the output elements.
-      const MVT M1VT = getLMUL1VT(ContainerVT);
-      EVT SubIndexVT = M1VT.changeVectorElementType(IndexVT.getScalarType());
-      auto [InnerTrueMask, InnerVL] =
-          getDefaultScalableVLOps(M1VT, DL, DAG, Subtarget);
-      int N = ContainerVT.getVectorMinNumElements() /
-              M1VT.getVectorMinNumElements();
-      assert(isPowerOf2_32(N) && N <= 8);
+      return convertFromScalableVector(VT, Gather, DAG, Subtarget);
+    }
+
+    // If we have a shuffle which only uses the first register in our source
+    // register group, and repeats the same index across all spans, we can
+    // use a single vrgather (and possibly some register moves).
+    // TODO: This can be generalized for m2 or m4, or for any shuffle for
+    // which we can do a linear number of shuffles to form an m1 which
+    // contains all the output elements.
+    if (isLowSourceShuffle(Mask, MinVLMAX) &&
+        isSpanSplatShuffle(Mask, MinVLMAX)) {
       SDValue SubV1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, V1,
                                   DAG.getVectorIdxConstant(0, DL));
       SDValue SubIndex =
@@ -6103,32 +6106,27 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                       DAG.getVectorIdxConstant(0, DL));
       SDValue SubVec = DAG.getNode(GatherVVOpc, DL, M1VT, SubV1, SubIndex,
                                    DAG.getUNDEF(M1VT), InnerTrueMask, InnerVL);
-      Gather = DAG.getUNDEF(ContainerVT);
+      SDValue Gather = DAG.getUNDEF(ContainerVT);
       for (int i = 0; i < N; i++) {
         SDValue SubIdx =
             DAG.getVectorIdxConstant(M1VT.getVectorMinNumElements() * i, DL);
         Gather = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Gather,
                              SubVec, SubIdx);
       }
-    } else if (NumElts > MinVLMAX && isLowSourceShuffle(Mask, MinVLMAX)) {
-      // If we have a shuffle which only uses the first register in our
-      // source register group, we can do a linear number of m1 vrgathers
-      // reusing the same source register (but with different indices)
-      // TODO: This can be generalized for m2 or m4, or for any shuffle
-      // for which we can do a vslidedown followed by this expansion.
-      const MVT M1VT = getLMUL1VT(ContainerVT);
-      EVT SubIndexVT = M1VT.changeVectorElementType(IndexVT.getScalarType());
-      auto [InnerTrueMask, InnerVL] =
-          getDefaultScalableVLOps(M1VT, DL, DAG, Subtarget);
-      int N = ContainerVT.getVectorMinNumElements() /
-              M1VT.getVectorMinNumElements();
-      assert(isPowerOf2_32(N) && N <= 8);
-      Gather = DAG.getUNDEF(ContainerVT);
+      return convertFromScalableVector(VT, Gather, DAG, Subtarget);
+    }
+
+    // If we have a shuffle which only uses the first register in our
+    // source register group, we can do a linear number of m1 vrgathers
+    // reusing the same source register (but with different indices)
+    // TODO: This can be generalized for m2 or m4, or for any shuffle
+    // for which we can do a vslidedown followed by this expansion.
+    if (isLowSourceShuffle(Mask, MinVLMAX)) {
       SDValue SlideAmt =
           DAG.getElementCount(DL, XLenVT, M1VT.getVectorElementCount());
-      SDValue SubV1 =
-          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, V1,
-                      DAG.getVectorIdxConstant(0, DL));
+      SDValue SubV1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, V1,
+                                  DAG.getVectorIdxConstant(0, DL));
+      SDValue Gather = DAG.getUNDEF(ContainerVT);
       for (int i = 0; i < N; i++) {
         if (i != 0)
           LHSIndices = getVSlidedown(DAG, Subtarget, DL, IndexContainerVT,
@@ -6145,10 +6143,13 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         Gather = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Gather,
                              SubVec, SubIdx);
       }
-    } else {
-      Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
-                           DAG.getUNDEF(ContainerVT), TrueMask, VL);
+      return convertFromScalableVector(VT, Gather, DAG, Subtarget);
     }
+
+    // Fallback to generic vrgather if we can't find anything better.
+    // On many machines, this will be O(LMUL^2)
+    SDValue Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
+                                 DAG.getUNDEF(ContainerVT), TrueMask, VL);
     return convertFromScalableVector(VT, Gather, DAG, Subtarget);
   }
 
@@ -20574,23 +20575,6 @@ static MachineBasicBlock *emitBuildPairF64Pseudo(MachineInstr &MI,
   return BB;
 }
 
-static bool isSelectPseudo(MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    return false;
-  case RISCV::Select_GPR_Using_CC_GPR:
-  case RISCV::Select_GPR_Using_CC_Imm:
-  case RISCV::Select_FPR16_Using_CC_GPR:
-  case RISCV::Select_FPR16INX_Using_CC_GPR:
-  case RISCV::Select_FPR32_Using_CC_GPR:
-  case RISCV::Select_FPR32INX_Using_CC_GPR:
-  case RISCV::Select_FPR64_Using_CC_GPR:
-  case RISCV::Select_FPR64INX_Using_CC_GPR:
-  case RISCV::Select_FPR64IN32X_Using_CC_GPR:
-    return true;
-  }
-}
-
 static MachineBasicBlock *emitQuietFCMP(MachineInstr &MI, MachineBasicBlock *BB,
                                         unsigned RelOpcode, unsigned EqOpcode,
                                         const RISCVSubtarget &Subtarget) {
@@ -20786,7 +20770,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
        SequenceMBBI != E; ++SequenceMBBI) {
     if (SequenceMBBI->isDebugInstr())
       continue;
-    if (isSelectPseudo(*SequenceMBBI)) {
+    if (RISCVInstrInfo::isSelectPseudo(*SequenceMBBI)) {
       if (SequenceMBBI->getOperand(1).getReg() != LHS ||
           !SequenceMBBI->getOperand(2).isReg() ||
           SequenceMBBI->getOperand(2).getReg() != RHS ||
@@ -20863,7 +20847,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   auto InsertionPoint = TailMBB->begin();
   while (SelectMBBI != SelectEnd) {
     auto Next = std::next(SelectMBBI);
-    if (isSelectPseudo(*SelectMBBI)) {
+    if (RISCVInstrInfo::isSelectPseudo(*SelectMBBI)) {
       // %Result = phi [ %TrueValue, HeadMBB ], [ %FalseValue, IfFalseMBB ]
       BuildMI(*TailMBB, InsertionPoint, SelectMBBI->getDebugLoc(),
               TII.get(RISCV::PHI), SelectMBBI->getOperand(0).getReg())
@@ -22532,7 +22516,10 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
       break;
     case 'R':
-      return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
+      if (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
+          (VT == MVT::i128 && Subtarget.is64Bit()))
+        return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
+      break;
     default:
       break;
     }
@@ -22574,7 +22561,9 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     if (!VT.isVector())
       return std::make_pair(0U, &RISCV::GPRCRegClass);
   } else if (Constraint == "cR") {
-    return std::make_pair(0U, &RISCV::GPRPairCRegClass);
+    if (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
+        (VT == MVT::i128 && Subtarget.is64Bit()))
+      return std::make_pair(0U, &RISCV::GPRPairCRegClass);
   } else if (Constraint == "cf") {
     if (VT == MVT::f16) {
       if (Subtarget.hasStdExtZfhmin())

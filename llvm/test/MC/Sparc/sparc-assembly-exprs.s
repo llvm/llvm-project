@@ -1,4 +1,4 @@
-! RUN: llvm-mc %s -triple=sparc   -show-encoding | FileCheck %s
+! RUN: llvm-mc %s -triple=sparc -show-encoding | FileCheck %s
 ! RUN: llvm-mc %s -triple=sparc -filetype=obj | llvm-objdump -r -d - | FileCheck %s --check-prefix=OBJDUMP
 
         ! CHECK: mov 1033, %o1  ! encoding: [0x92,0x10,0x24,0x09]
@@ -7,12 +7,12 @@
         mov      ((12+3)<<2), %o2
 
         ! CHECK:   ba      symStart+4           ! encoding: [0x10,0b10AAAAAA,A,A]
-        ! OBJDUMP: ba    1
+        ! OBJDUMP: ba    0x1
 symStart:
         b        symStart + 4
 
         ! CHECK:   mov     symEnd-symStart, %g1 ! encoding: [0x82,0x10,0b001AAAAA,A]
-        ! OBJDUMP: mov	   24, %g1
+        ! OBJDUMP: mov	   0x18, %g1
         mov      symEnd - symStart, %g1
 
         ! CHECK:   sethi %hi(sym+10), %g2       ! encoding: [0x05,0b00AAAAAA,A,A]

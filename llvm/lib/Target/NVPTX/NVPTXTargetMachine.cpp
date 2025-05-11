@@ -112,6 +112,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXAAWrapperPassPass(PR);
   initializeNVPTXExternalAAWrapperPass(PR);
   initializeNVPTXPeepholePass(PR);
+  initializeNVPTXTagInvariantLoadLegacyPassPass(PR);
 }
 
 static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
@@ -395,6 +396,7 @@ void NVPTXPassConfig::addIRPasses() {
     if (!DisableLoadStoreVectorizer)
       addPass(createLoadStoreVectorizerPass());
     addPass(createSROAPass());
+    addPass(createNVPTXTagInvariantLoadsPass());
   }
 
   if (ST.hasPTXASUnreachableBug()) {

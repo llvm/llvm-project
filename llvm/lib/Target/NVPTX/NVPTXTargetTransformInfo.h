@@ -112,7 +112,8 @@ public:
 
   InstructionCost getScalarizationOverhead(
       VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) const override {
+      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+      ArrayRef<Value *> VL = {}) const override {
     if (!InTy->getElementCount().isFixed())
       return InstructionCost::getInvalid();
 
@@ -141,7 +142,8 @@ public:
       Insert = false;
     }
     return Cost + BaseT::getScalarizationOverhead(InTy, DemandedElts, Insert,
-                                                  Extract, CostKind, VL);
+                                                  Extract, CostKind,
+                                                  ForPoisonSrc, VL);
   }
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,

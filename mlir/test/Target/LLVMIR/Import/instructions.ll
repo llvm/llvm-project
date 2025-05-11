@@ -471,11 +471,15 @@ define void @atomic_rmw(ptr %ptr1, i32 %val1, ptr %ptr2, float %val2) {
   %18 = atomicrmw usub_cond ptr %ptr1, i32 %val1 acquire
   ; CHECK:  llvm.atomicrmw usub_sat %[[PTR1]], %[[VAL1]] acquire
   %19 = atomicrmw usub_sat ptr %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw fmaximum %[[PTR2]], %[[VAL2]] acquire
+  %20 = atomicrmw fmaximum ptr %ptr2, float %val2 acquire
+  ; CHECK:  llvm.atomicrmw fminimum %[[PTR2]], %[[VAL2]] acquire
+  %21 = atomicrmw fminimum ptr %ptr2, float %val2 acquire
 
   ; CHECK:  llvm.atomicrmw volatile
   ; CHECK-SAME:  syncscope("singlethread")
   ; CHECK-SAME:  {alignment = 8 : i64}
-  %20 = atomicrmw volatile udec_wrap ptr %ptr1, i32 %val1 syncscope("singlethread") acquire, align 8
+  %22 = atomicrmw volatile udec_wrap ptr %ptr1, i32 %val1 syncscope("singlethread") acquire, align 8
   ret void
 }
 
@@ -552,6 +556,25 @@ define void @gep_static_idx(ptr %ptr) {
   ; CHECK: %[[IDX:.+]] = llvm.mlir.constant(7 : i32)
   ; CHECK: llvm.getelementptr inbounds %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
   %1 = getelementptr inbounds float, ptr %ptr, i32 7
+  ret void
+}
+
+; // -----
+
+; CHECK-LABEL: @gep_no_wrap_flags
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define void @gep_no_wrap_flags(ptr %ptr) {
+  ; CHECK: %[[IDX:.+]] = llvm.mlir.constant(7 : i32)
+  ; CHECK: llvm.getelementptr inbounds %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %1 = getelementptr inbounds float, ptr %ptr, i32 7
+  ; CHECK: llvm.getelementptr nusw %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %2 = getelementptr nusw float, ptr %ptr, i32 7
+  ; CHECK: llvm.getelementptr nuw %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %3 = getelementptr nuw float, ptr %ptr, i32 7
+  ; CHECK: llvm.getelementptr nusw|nuw %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %4 = getelementptr nusw nuw float, ptr %ptr, i32 7
+  ; CHECK: llvm.getelementptr inbounds|nuw %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+  %5 = getelementptr inbounds nuw float, ptr %ptr, i32 7
   ret void
 }
 

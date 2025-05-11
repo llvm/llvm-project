@@ -5977,7 +5977,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // We turn strict aliasing off by default if we're Windows MSVC since MSVC
   // doesn't do any TBAA.
   if (!Args.hasFlag(options::OPT_fstrict_aliasing, StrictAliasingAliasOption,
-                    options::OPT_fno_strict_aliasing, !IsWindowsMSVC))
+                    options::OPT_fno_strict_aliasing,
+                    !IsWindowsMSVC && !IsUEFI))
     CmdArgs.push_back("-relaxed-aliasing");
   if (Args.hasFlag(options::OPT_fno_pointer_tbaa, options::OPT_fpointer_tbaa,
                    false))
@@ -7011,6 +7012,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fdiagnostics_parseable_fixits);
   Args.AddLastArg(CmdArgs, options::OPT_ftime_report);
   Args.AddLastArg(CmdArgs, options::OPT_ftime_report_EQ);
+  Args.AddLastArg(CmdArgs, options::OPT_ftime_report_json);
   Args.AddLastArg(CmdArgs, options::OPT_ftrapv);
   Args.AddLastArg(CmdArgs, options::OPT_malign_double);
   Args.AddLastArg(CmdArgs, options::OPT_fno_temp_file);
@@ -9281,6 +9283,12 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       for (StringRef Arg : LinkerArgs)
         CmdArgs.push_back(Args.MakeArgString(
             "--device-linker=" + TC->getTripleString() + "=" + Arg));
+
+      // Enable internalization for AMDGPU.
+      if (TC->getTriple().isAMDGPU())
+        CmdArgs.push_back(
+            Args.MakeArgString("--device-linker=" + TC->getTripleString() +
+                               "=-plugin-opt=-amdgpu-internalize-symbols"));
 
       // Forward the LTO mode relying on the Driver's parsing.
       if (C.getDriver().getOffloadLTOMode() == LTOK_Full)

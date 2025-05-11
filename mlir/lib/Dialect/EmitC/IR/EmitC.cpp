@@ -1044,7 +1044,9 @@ Type emitc::ArrayType::parse(AsmParser &parser) {
 
   // Check that array is formed from allowed types.
   if (!isValidElementType(elementType))
-    return parser.emitError(typeLoc, "invalid array element type"), Type();
+    return parser.emitError(typeLoc, "invalid array element type '")
+               << elementType << "'",
+           Type();
   if (parser.parseGreater())
     return Type();
   return parser.getChecked<ArrayType>(dimensions, elementType);

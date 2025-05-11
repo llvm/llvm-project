@@ -90,8 +90,8 @@ bool DINodeAttr::classof(Attribute attr) {
 
 bool DIScopeAttr::classof(Attribute attr) {
   return llvm::isa<DICommonBlockAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                   DIFileAttr, DILocalScopeAttr, DIModuleAttr, DINamespaceAttr>(
-      attr);
+                   DIDerivedTypeAttr, DIFileAttr, DILocalScopeAttr,
+                   DIModuleAttr, DINamespaceAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
