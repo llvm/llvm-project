@@ -395,13 +395,18 @@ static std::string ConvertDebugInfoSizeToString(uint64_t debug_info) {
   return oss.str();
 }
 
-llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module) {
+llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
+                               bool id_only) {
   llvm::json::Object object;
   if (!target.IsValid() || !module.IsValid())
     return llvm::json::Value(std::move(object));
 
   const char *uuid = module.GetUUIDString();
   object.try_emplace("id", uuid ? std::string(uuid) : std::string(""));
+
+  if (id_only)
+    return llvm::json::Value(std::move(object));
+
   object.try_emplace("name", std::string(module.GetFileSpec().GetFilename()));
   char module_path_arr[PATH_MAX];
   module.GetFileSpec().GetPath(module_path_arr, sizeof(module_path_arr));

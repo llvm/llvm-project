@@ -420,6 +420,19 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::Enum: {
+    // TODO(cir): Implement updateCompletedType for enums.
+    assert(!cir::MissingFeatures::updateCompletedType());
+    const EnumDecl *ED = cast<EnumType>(ty)->getDecl();
+    if (auto integerType = ED->getIntegerType(); !integerType.isNull())
+      return convertType(integerType);
+    // Return a placeholder 'i32' type.  This can be changed later when the
+    // type is defined (see UpdateCompletedType), but is likely to be the
+    // "right" answer.
+    resultType = cgm.UInt32Ty;
+    break;
+  }
+
   case Type::FunctionNoProto:
   case Type::FunctionProto:
     resultType = convertFunctionTypeInternal(type);
