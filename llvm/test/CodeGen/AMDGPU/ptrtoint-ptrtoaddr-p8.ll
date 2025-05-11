@@ -32,8 +32,9 @@ define <2 x i64> @ptrtoaddr_vec(<2 x ptr addrspace(8)> %ptr) {
 ; CHECK-LABEL: ptrtoaddr_vec:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v3, v5
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v4
+; CHECK-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; CHECK-NEXT:    v_and_b32_e32 v3, 0xffff, v5
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %ret = ptrtoaddr <2 x ptr addrspace(8)> %ptr to <2 x i64>
   ret <2 x i64> %ret
@@ -57,6 +58,9 @@ define i128 @ptrtoaddr_ext(ptr addrspace(8) %ptr) {
 ; CHECK-LABEL: ptrtoaddr_ext:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %ret = ptrtoaddr ptr addrspace(8) %ptr to i128
   ret i128 %ret

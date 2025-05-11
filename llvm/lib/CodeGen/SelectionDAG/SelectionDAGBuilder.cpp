@@ -3878,7 +3878,18 @@ void SelectionDAGBuilder::visitSIToFP(const User &I) {
 }
 
 void SelectionDAGBuilder::visitPtrToAddr(const User &I) {
-  visitPtrToInt(I);
+  const auto &TLI = DAG.getTargetLoweringInfo();
+  const DataLayout &DL = DAG.getDataLayout();
+  LLVMContext &Ctx = *DAG.getContext();
+  // ptrtoaddr is equivalent to a truncate of ptrtoint to address/index width
+  SDValue N = getValue(I.getOperand(0));
+  Type *PtrTy = I.getOperand(0)->getType();
+  EVT AddrVT = EVT::getIntegerVT(Ctx, DL.getPointerAddressSizeInBits(PtrTy));
+  if (auto *VTy = dyn_cast<VectorType>(PtrTy))
+    AddrVT = EVT::getVectorVT(Ctx, AddrVT, VTy->getElementCount());
+  N = DAG.getPtrExtOrTrunc(N, getCurSDLoc(), AddrVT);
+  N = DAG.getZExtOrTrunc(N, getCurSDLoc(), TLI.getValueType(DL, I.getType()));
+  setValue(&I, N);
 }
 
 void SelectionDAGBuilder::visitPtrToInt(const User &I) {
