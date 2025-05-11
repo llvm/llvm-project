@@ -18,7 +18,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <string>
-#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -39,7 +38,7 @@ private:
   const CXXRecordDecl *CurrentDeclDef = nullptr;
   // Stores pure virtual methods that need overriding, grouped by their original
   // access specifier.
-  llvm::MapVector<AccessSpecifier, std::vector<const CXXMethodDecl *>>
+  llvm::MapVector<AccessSpecifier, llvm::SmallVector<const CXXMethodDecl *>>
       MissingMethodsByAccess;
   // Stores the source locations of existing access specifiers in CurrentDecl.
   llvm::MapVector<AccessSpecifier, SourceLocation> AccessSpecifierLocations;
@@ -159,9 +158,9 @@ void OverridePureVirtuals::collectMissingPureVirtuals(const Selection &Sel) {
 }
 
 // Free function to generate the string for a group of method overrides.
-std::string
-generateOverridesStringForGroup(std::vector<const CXXMethodDecl *> Methods,
-                                const LangOptions &LangOpts) {
+std::string generateOverridesStringForGroup(
+    llvm::SmallVector<const CXXMethodDecl *> Methods,
+    const LangOptions &LangOpts) {
   const auto GetParamString = [&LangOpts](const ParmVarDecl *P) {
     std::string TypeStr = P->getType().getAsString(LangOpts);
     // Unnamed parameter.
