@@ -3264,6 +3264,12 @@ bool X86TargetLowering::shouldReduceLoadWidth(
     std::optional<unsigned> ByteOffset) const {
   assert(cast<LoadSDNode>(Load)->isSimple() && "illegal to narrow");
 
+  auto PeekThroughOneUserBitcasts = [](const SDNode *N) {
+    while (N->getOpcode() == ISD::BITCAST && N->hasOneUse())
+      N = *N->user_begin();
+    return N;
+  };
+
   // "ELF Handling for Thread-Local Storage" specifies that R_X86_64_GOTTPOFF
   // relocation target a movq or addq instruction: don't let the load shrink.
   SDValue BasePtr = cast<LoadSDNode>(Load)->getBasePtr();
@@ -3273,24 +3279,46 @@ bool X86TargetLowering::shouldReduceLoadWidth(
 
   // If this is an (1) AVX vector load with (2) multiple uses and (3) all of
   // those uses are extracted directly into a store, then the extract + store
-  // can be store-folded. Therefore, it's probably not worth splitting the load.
+  // can be store-folded, or (4) any use will be used by legal full width
+  // instruction. Then, it's probably not worth splitting the load.
   EVT VT = Load->getValueType(0);
   if ((VT.is256BitVector() || VT.is512BitVector()) &&
       !SDValue(Load, 0).hasOneUse()) {
+    bool FullWidthUse = false;
+    bool AllExtractStores = true;
     for (SDUse &Use : Load->uses()) {
       // Skip uses of the chain value. Result 0 of the node is the load value.
       if (Use.getResNo() != 0)
         continue;
 
-      SDNode *User = Use.getUser();
+      const SDNode *User = PeekThroughOneUserBitcasts(Use.getUser());
 
-      // If this use is not an extract + store, it's probably worth splitting.
-      if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR || !User->hasOneUse() ||
-          User->user_begin()->getOpcode() != ISD::STORE)
-        return true;
+      // If this use is an extract + store, it's probably not worth splitting.
+      if (User->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+          all_of(User->uses(), [&](const SDUse &U) {
+            const SDNode *Inner = PeekThroughOneUserBitcasts(U.getUser());
+            return Inner->getOpcode() == ISD::STORE;
+          }))
+        continue;
+
+      AllExtractStores = false;
+
+      // If any use is a full width legal/target bin op, then assume its legal
+      // and won't split.
+      if (isBinOp(User->getOpcode()) &&
+          (isOperationLegal(User->getOpcode(), User->getValueType(0)) ||
+           User->getOpcode() > ISD::BUILTIN_OP_END))
+        FullWidthUse = true;
     }
-    // All non-chain uses are extract + store.
-    return false;
+
+    if (AllExtractStores)
+      return false;
+
+    // If we have an user that uses the full vector width, then this use is
+    // only worth splitting if the offset isn't 0 (to avoid an
+    // EXTRACT_SUBVECTOR) or we're loading a scalar integer.
+    if (FullWidthUse)
+      return (ByteOffset.value_or(0) > 0) || NewVT.isScalarInteger();
   }
 
   return true;
@@ -59153,6 +59181,14 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
   }
+
+  // Match insertion of subvector load that perfectly aliases a base load.
+  if ((IdxVal % SubVecNumElts) == 0 && ISD::isNormalLoad(Vec.getNode()) &&
+      ISD::isNormalLoad(SubVec.getNode()) &&
+      DAG.areNonVolatileConsecutiveLoads(
+          cast<LoadSDNode>(SubVec), cast<LoadSDNode>(Vec),
+          SubVec.getValueSizeInBits() / 8, IdxVal / SubVecNumElts))
+    return Vec;
 
   return SDValue();
 }

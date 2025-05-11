@@ -13,5 +13,5 @@
         ! ...and that fixups are applied to the correct bytes.
 
         ! CHECK: ba .BB0      ! encoding: [A,A,0b10AAAAAA,0x10]
-        ! CHECK-OBJ: 4: ff ff bf 10  ba 4194303
+        ! CHECK-OBJ: 4: ff ff bf 10  ba 0x3fffff
         ba .BB0

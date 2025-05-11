@@ -67,20 +67,18 @@
 using namespace clang;
 
 CompilerInstance::CompilerInstance(
+    std::shared_ptr<CompilerInvocation> Invocation,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     ModuleCache *ModCache)
     : ModuleLoader(/*BuildingModule=*/ModCache),
-      Invocation(new CompilerInvocation()),
+      Invocation(std::move(Invocation)),
       ModCache(ModCache ? ModCache : createCrossProcessModuleCache()),
-      ThePCHContainerOperations(std::move(PCHContainerOps)) {}
+      ThePCHContainerOperations(std::move(PCHContainerOps)) {
+  assert(this->Invocation && "Invocation must not be null");
+}
 
 CompilerInstance::~CompilerInstance() {
   assert(OutputFiles.empty() && "Still output files in flight?");
-}
-
-void CompilerInstance::setInvocation(
-    std::shared_ptr<CompilerInvocation> Value) {
-  Invocation = std::move(Value);
 }
 
 bool CompilerInstance::shouldBuildGlobalModuleIndex() const {
@@ -1210,11 +1208,10 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   // CompilerInstance::CompilerInstance is responsible for finalizing the
   // buffers to prevent use-after-frees.
   auto InstancePtr = std::make_unique<CompilerInstance>(
-      getPCHContainerOperations(), &getModuleCache());
+      std::move(Invocation), getPCHContainerOperations(), &getModuleCache());
   auto &Instance = *InstancePtr;
 
-  auto &Inv = *Invocation;
-  Instance.setInvocation(std::move(Invocation));
+  auto &Inv = Instance.getInvocation();
 
   if (ThreadSafeConfig) {
     Instance.createFileManager(ThreadSafeConfig->getVFS());
@@ -1257,10 +1254,14 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
     Instance.GetDependencyDirectives =
         GetDependencyDirectives->cloneFor(Instance.getFileManager());
 
-  // If we're collecting module dependencies, we need to share a collector
-  // between all of the module CompilerInstances. Other than that, we don't
-  // want to produce any dependency output from the module build.
-  Instance.setModuleDepCollector(getModuleDepCollector());
+  if (ThreadSafeConfig) {
+    Instance.setModuleDepCollector(ThreadSafeConfig->getModuleDepCollector());
+  } else {
+    // If we're collecting module dependencies, we need to share a collector
+    // between all of the module CompilerInstances. Other than that, we don't
+    // want to produce any dependency output from the module build.
+    Instance.setModuleDepCollector(getModuleDepCollector());
+  }
   Inv.getDependencyOutputOpts() = DependencyOutputOptions();
 
   return InstancePtr;
@@ -1285,7 +1286,7 @@ bool CompilerInstance::compileModule(SourceLocation ImportLoc,
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
-  bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnThread(
+  bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnNewStack(
       [&]() {
         GenerateModuleFromModuleMapAction Action;
         Instance.ExecuteAction(Action);

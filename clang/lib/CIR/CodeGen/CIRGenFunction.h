@@ -63,6 +63,9 @@ public:
   /// declarations.
   DeclMapTy localDeclMap;
 
+  /// The type of the condition for the emitting switch statement.
+  llvm::SmallVector<mlir::Type, 2> condTypeStack;
+
   clang::ASTContext &getContext() const { return cgm.getASTContext(); }
 
   CIRGenBuilderTy &getBuilder() { return builder; }
@@ -91,6 +94,10 @@ public:
 
   static bool hasScalarEvaluationKind(clang::QualType type) {
     return getEvaluationKind(type) == cir::TEK_Scalar;
+  }
+
+  static bool hasAggregateEvaluationKind(clang::QualType type) {
+    return getEvaluationKind(type) == cir::TEK_Aggregate;
   }
 
   CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
@@ -161,6 +168,17 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
+  // an ObjCMethodDecl.
+  struct PrototypeWrapper {
+    llvm::PointerUnion<const clang::FunctionProtoType *,
+                       const clang::ObjCMethodDecl *>
+        p;
+
+    PrototypeWrapper(const clang::FunctionProtoType *ft) : p(ft) {}
+    PrototypeWrapper(const clang::ObjCMethodDecl *md) : p(md) {}
+  };
+
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
@@ -169,6 +187,23 @@ public:
   public:
     AbstractCallee() : calleeDecl(nullptr) {}
     AbstractCallee(const clang::FunctionDecl *fd) : calleeDecl(fd) {}
+
+    bool hasFunctionDecl() const {
+      return llvm::isa_and_nonnull<clang::FunctionDecl>(calleeDecl);
+    }
+
+    unsigned getNumParams() const {
+      if (const auto *fd = llvm::dyn_cast<clang::FunctionDecl>(calleeDecl))
+        return fd->getNumParams();
+      return llvm::cast<clang::ObjCMethodDecl>(calleeDecl)->param_size();
+    }
+
+    const clang::ParmVarDecl *getParamDecl(unsigned I) const {
+      if (const auto *fd = llvm::dyn_cast<clang::FunctionDecl>(calleeDecl))
+        return fd->getParamDecl(I);
+      return *(llvm::cast<clang::ObjCMethodDecl>(calleeDecl)->param_begin() +
+               I);
+    }
   };
 
   void finishFunction(SourceLocation endLoc);
@@ -444,7 +479,13 @@ public:
   /// should be returned.
   RValue emitAnyExpr(const clang::Expr *e);
 
+  /// Similarly to emitAnyExpr(), however, the result will always be accessible
+  /// even if no aggregate location is provided.
+  RValue emitAnyExprToTemp(const clang::Expr *e);
+
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
+
+  Address emitArrayToPointerDecay(const Expr *array);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
 
@@ -462,14 +503,37 @@ public:
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
-                  cir::CIRCallOpInterface *callOp, mlir::Location loc);
+                  const CallArgList &args, cir::CIRCallOpInterface *callOp,
+                  mlir::Location loc);
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
                   const clang::CallExpr *e, ReturnValueSlot returnValue);
+  void emitCallArg(CallArgList &args, const clang::Expr *e,
+                   clang::QualType argType);
+  void emitCallArgs(
+      CallArgList &args, PrototypeWrapper prototype,
+      llvm::iterator_range<clang::CallExpr::const_arg_iterator> argRange,
+      AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0);
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
   CIRGenCallee emitCallee(const clang::Expr *e);
 
+  template <typename T>
+  mlir::LogicalResult emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
+                                             mlir::ArrayAttr value,
+                                             cir::CaseOpKind kind,
+                                             bool buildingTopLevelCase);
+
+  mlir::LogicalResult emitCaseStmt(const clang::CaseStmt &s,
+                                   mlir::Type condType,
+                                   bool buildingTopLevelCase);
+
+  LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
+
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
+
+  mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
+                                          llvm::ArrayRef<const Attr *> attrs);
+
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
@@ -545,6 +609,11 @@ public:
   /// returning the rvalue.
   RValue emitLoadOfLValue(LValue lv, SourceLocation loc);
 
+  Address emitLoadOfReference(LValue refLVal, mlir::Location loc,
+                              LValueBaseInfo *pointeeBaseInfo);
+  LValue emitLoadOfReferenceLValue(Address refAddr, mlir::Location loc,
+                                   QualType refTy, AlignmentSource source);
+
   /// EmitLoadOfScalar - Load a scalar value from an address, taking
   /// care to appropriately convert from the memory representation to
   /// the LLVM value representation.  The l-value must be a simple
@@ -572,6 +641,9 @@ public:
   Address emitPointerWithAlignment(const clang::Expr *expr,
                                    LValueBaseInfo *baseInfo);
 
+  /// Emits a reference binding to the passed in expression.
+  RValue emitReferenceBindingToExpr(const Expr *e);
+
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
   /// Emit a conversion from the specified type to the specified destination
@@ -594,6 +666,11 @@ public:
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
+
+  mlir::LogicalResult emitSwitchBody(const clang::Stmt *s);
+  mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
+                                     bool buildingTopLevelCase);
+  mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
 
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.

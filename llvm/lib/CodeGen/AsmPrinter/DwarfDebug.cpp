@@ -2098,6 +2098,10 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   }
 
   if (!DL) {
+    // FIXME: We could assert that `DL.getKind() != DebugLocKind::Temporary`
+    // here, or otherwise record any temporary DebugLocs seen to ensure that
+    // transient compiler-generated instructions aren't leaking their DLs to
+    // other instructions.
     // We have an unspecified location, which might want to be line 0.
     // If we have already emitted a line-0 record, don't repeat it.
     if (LastAsmLine == 0)

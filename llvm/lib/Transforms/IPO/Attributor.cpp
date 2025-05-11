@@ -1936,9 +1936,6 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
       LLVM_DEBUG(dbgs() << "[Attributor] Function " << Fn.getName()
                         << " has non call site use " << *U.get() << " in "
                         << *U.getUser() << "\n");
-      // BlockAddress users are allowed.
-      if (isa<BlockAddress>(U.getUser()))
-        continue;
       return false;
     }
 
@@ -3060,14 +3057,6 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     // function right into the new function, leaving the old rotting hulk of the
     // function empty.
     NewFn->splice(NewFn->begin(), OldFn);
-
-    // Fixup block addresses to reference new function.
-    SmallVector<BlockAddress *, 8u> BlockAddresses;
-    for (User *U : OldFn->users())
-      if (auto *BA = dyn_cast<BlockAddress>(U))
-        BlockAddresses.push_back(BA);
-    for (auto *BA : BlockAddresses)
-      BA->replaceAllUsesWith(BlockAddress::get(NewFn, BA->getBasicBlock()));
 
     // Set of all "call-like" instructions that invoke the old function mapped
     // to their new replacements.

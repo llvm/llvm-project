@@ -3435,6 +3435,12 @@ bool IRTranslator::translateAtomicRMW(const User &U,
   case AtomicRMWInst::FMin:
     Opcode = TargetOpcode::G_ATOMICRMW_FMIN;
     break;
+  case AtomicRMWInst::FMaximum:
+    Opcode = TargetOpcode::G_ATOMICRMW_FMAXIMUM;
+    break;
+  case AtomicRMWInst::FMinimum:
+    Opcode = TargetOpcode::G_ATOMICRMW_FMINIMUM;
+    break;
   case AtomicRMWInst::UIncWrap:
     Opcode = TargetOpcode::G_ATOMICRMW_UINC_WRAP;
     break;
@@ -3591,9 +3597,8 @@ void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
   // A dbg.declare describes the address of a source variable, so lower it
   // into an indirect DBG_VALUE.
   MIRBuilder.setDebugLoc(DL);
-  MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address),
-                                   Variable, Expression);
-  return;
+  MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address), Variable,
+                                   Expression);
 }
 
 void IRTranslator::translateDbgInfo(const Instruction &Inst,

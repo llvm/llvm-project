@@ -615,8 +615,9 @@ mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
 void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,
                                                mlir::Value val,
                                                mlir::Value addr) {
-  mlir::Value cast =
-      createConvert(loc, fir::unwrapRefType(addr.getType()), val);
+  mlir::Type unwrapedRefType = fir::unwrapRefType(addr.getType());
+  val = createVolatileCast(loc, fir::isa_volatile_type(unwrapedRefType), val);
+  mlir::Value cast = createConvert(loc, unwrapedRefType, val);
   create<fir::StoreOp>(loc, cast, addr);
 }
 

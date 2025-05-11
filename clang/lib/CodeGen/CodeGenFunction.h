@@ -869,6 +869,9 @@ public:
       }
       CGM.setAtomicOpts(AO);
     }
+
+    CGAtomicOptionsRAII(const CGAtomicOptionsRAII &) = delete;
+    CGAtomicOptionsRAII &operator=(const CGAtomicOptionsRAII &) = delete;
     ~CGAtomicOptionsRAII() { CGM.setAtomicOpts(SavedAtomicOpts); }
 
   private:
