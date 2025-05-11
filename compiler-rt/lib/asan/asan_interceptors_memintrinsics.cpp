@@ -22,6 +22,13 @@
 
 using namespace __asan;
 
+// AIX does not intercept memcpy, so we have to use internal_memcpy.
+#if !SANITIZER_AIX
+#  define ASAN_MEMCPY_RETURN(to, from, size) REAL(memcpy)(to, from, size)
+#else
+#  define ASAN_MEMCPY_RETURN(to, from, size) internal_memcpy(to, from, size)
+#endif
+
 // memcpy is called during __asan_init() from the internals of printf(...).
 // We do not treat memcpy with to==from as a bug.
 // See http://llvm.org/bugs/show_bug.cgi?id=11763.
@@ -36,7 +43,7 @@ using namespace __asan;
     } else if (UNLIKELY(!AsanInited())) {                     \
       return internal_memcpy(to, from, size);                 \
     }                                                         \
-    return REAL(memcpy)(to, from, size);                      \
+    return ASAN_MEMCPY_RETURN(to, from, size);                \
   } while (0)
 
 // memset is called inside Printf.
