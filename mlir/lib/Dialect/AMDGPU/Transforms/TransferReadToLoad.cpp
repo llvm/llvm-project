@@ -63,10 +63,10 @@ static LogicalResult transferPreconditions(
     return rewriter.notifyMatchFailure(xferOp, "not a memref source");
 
   Attribute addrSpace = memRefType.getMemorySpace();
-  if (!addrSpace || !dyn_cast<amdgpu::AddressSpaceAttr>(addrSpace))
+  if (!isa_and_nonnull<amdgpu::AddressSpaceAttr>(addrSpace))
     return rewriter.notifyMatchFailure(xferOp, "no address space");
 
-  if (dyn_cast<amdgpu::AddressSpaceAttr>(addrSpace).getValue() !=
+  if (isa<amdgpu::AddressSpaceAttr>(addrSpace).getValue() !=
       amdgpu::AddressSpace::FatRawBuffer)
     return rewriter.notifyMatchFailure(xferOp, "not in buffer address space");
 
