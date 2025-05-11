@@ -41,6 +41,7 @@ LLVM and API reference documentation.
    PDB/index
    PointerAuth
    ScudoHardenedAllocator
+   MLGO
    MemoryModelRelaxationAnnotations
    MemTagSanitizer
    Security

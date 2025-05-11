@@ -924,6 +924,36 @@ public:
   /// Example: shuffle A, B, <0,5,2,7> -> shuffle B, A, <4,1,6,3>
   SDValue getCommutedVectorShuffle(const ShuffleVectorSDNode &SV);
 
+  /// Extract element at \p Idx from \p Vec.  See EXTRACT_VECTOR_ELT
+  /// description for result type handling.
+  SDValue getExtractVectorElt(const SDLoc &DL, EVT VT, SDValue Vec,
+                              unsigned Idx) {
+    return getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Vec,
+                   getVectorIdxConstant(Idx, DL));
+  }
+
+  /// Insert \p Elt into \p Vec at offset \p Idx.  See INSERT_VECTOR_ELT
+  /// description for element type handling.
+  SDValue getInsertVectorElt(const SDLoc &DL, SDValue Vec, SDValue Elt,
+                             unsigned Idx) {
+    return getNode(ISD::INSERT_VECTOR_ELT, DL, Vec.getValueType(), Vec, Elt,
+                   getVectorIdxConstant(Idx, DL));
+  }
+
+  /// Insert \p SubVec at the \p Idx element of \p Vec.
+  SDValue getInsertSubvector(const SDLoc &DL, SDValue Vec, SDValue SubVec,
+                             unsigned Idx) {
+    return getNode(ISD::INSERT_SUBVECTOR, DL, Vec.getValueType(), Vec, SubVec,
+                   getVectorIdxConstant(Idx, DL));
+  }
+
+  /// Return the \p VT typed sub-vector of \p Vec at \p Idx
+  SDValue getExtractSubvector(const SDLoc &DL, EVT VT, SDValue Vec,
+                              unsigned Idx) {
+    return getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Vec,
+                   getVectorIdxConstant(Idx, DL));
+  }
+
   /// Convert Op, which must be of float type, to the
   /// float type VT, by either extending or rounding (by truncation).
   SDValue getFPExtendOrRound(SDValue Op, const SDLoc &DL, EVT VT);

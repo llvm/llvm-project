@@ -1169,8 +1169,8 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
       return -1;
 
     const unsigned Size = C->getValue().getZExtValue();
-    const Align DstAlign = *MC->getDestAlign();
-    const Align SrcAlign = *MC->getSourceAlign();
+    const Align DstAlign = MC->getDestAlign().valueOrOne();
+    const Align SrcAlign = MC->getSourceAlign().valueOrOne();
 
     MOp = MemOp::Copy(Size, /*DstAlignCanChange*/ false, DstAlign, SrcAlign,
                       /*IsVolatile*/ false);
@@ -1184,7 +1184,7 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
       return -1;
 
     const unsigned Size = C->getValue().getZExtValue();
-    const Align DstAlign = *MS->getDestAlign();
+    const Align DstAlign = MS->getDestAlign().valueOrOne();
 
     MOp = MemOp::Set(Size, /*DstAlignCanChange*/ false, DstAlign,
                      /*IsZeroMemset*/ false, /*IsVolatile*/ false);

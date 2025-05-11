@@ -334,12 +334,15 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
 
   OS << "Section Name, Begin Address, End Address, Percentage Hotness, "
      << "Utilization Pct, Partition Score\n";
+  const uint64_t MappedCounts = NumTotalCounts - UnmappedHotness;
   for (const auto [Name, Begin, End] : TextSections) {
     const float Hotness = 1. * SectionHotness[Name] / NumTotalCounts;
+    const float MappedHotness =
+        MappedCounts ? 1. * SectionHotness[Name] / MappedCounts : 0;
     const uint64_t NumBuckets =
         End / BucketSize + !!(End % BucketSize) - Begin / BucketSize;
     const float Utilization = 1. * BucketUtilization[Name] / NumBuckets;
-    const float PartitionScore = Hotness * Utilization;
+    const float PartitionScore = MappedHotness * Utilization;
     OS << formatv("{0}, {1:x}, {2:x}, {3:f4}, {4:f4}, {5:f4}\n", Name, Begin,
                   End, 100. * Hotness, 100. * Utilization, PartitionScore);
   }
