@@ -321,4 +321,12 @@ def : Pat<(i64 (sext (i32 (bitconvert f32:$src)))), (MOVSTOSW $src)>;
 def : Pat<(f32 (bitconvert i32:$src)), (MOVWTOS $src)>;
 def : Pat<(i64 (bitconvert f64:$src)), (MOVDTOX $src)>;
 def : Pat<(f64 (bitconvert i64:$src)), (MOVXTOD $src)>;
+
+// OP-then-neg FP operations.
+// TODO handle equivalent patterns like `rs1*-rs2`.
+def : Pat<(f32 (fneg (fadd f32:$rs1, f32:$rs2))), (FNADDS $rs1, $rs2)>;
+def : Pat<(f64 (fneg (fadd f64:$rs1, f64:$rs2))), (FNADDD $rs1, $rs2)>;
+def : Pat<(f32 (fneg (fmul f32:$rs1, f32:$rs2))), (FNMULS $rs1, $rs2)>;
+def : Pat<(f64 (fneg (fmul f64:$rs1, f64:$rs2))), (FNMULD $rs1, $rs2)>;
+def : Pat<(f64 (fneg (fmul (fpextend f32:$rs1), (fpextend f32:$rs2)))), (FNSMULD $rs1, $rs2)>;
 } // Predicates = [HasVIS3]

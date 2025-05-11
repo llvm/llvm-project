@@ -43,4 +43,58 @@ cir.func @vec_double_test() {
 // CHECK:  cir.return
 // CHECK: }
 
+cir.func @local_vector_create_test() {
+    %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<2> : !s32i
+    %3 = cir.const #cir.int<3> : !s32i
+    %4 = cir.const #cir.int<4> : !s32i
+    %5 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    cir.store %5, %0 : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+    cir.return
+}
+
+// CHECK: cir.func @local_vector_create_test() {
+// CHECK:   %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
+// CHECK:   %1 = cir.const #cir.int<1> : !s32i
+// CHECK:   %2 = cir.const #cir.int<2> : !s32i
+// CHECK:   %3 = cir.const #cir.int<3> : !s32i
+// CHECK:   %4 = cir.const #cir.int<4> : !s32i
+// CHECK:   %5 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CHECK:   cir.store %5, %0 : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @vector_extract_element_test() {
+    %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["d", init]
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
+    %2 = cir.const #cir.int<1> : !s32i
+    %3 = cir.const #cir.int<2> : !s32i
+    %4 = cir.const #cir.int<3> : !s32i
+    %5 = cir.const #cir.int<4> : !s32i
+    %6 = cir.vec.create(%2, %3, %4, %5 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    cir.store %6, %0 : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+    %7 = cir.load %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+    %8 = cir.const #cir.int<1> : !s32i
+    %9 = cir.vec.extract %7[%8 : !s32i] : !cir.vector<4 x !s32i>
+    cir.store %9, %1 : !s32i, !cir.ptr<!s32i>
+    cir.return
+}
+
+// CHECK: cir.func @vector_extract_element_test() {
+// CHECK:    %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["d", init]
+// CHECK:    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
+// CHECK:    %2 = cir.const #cir.int<1> : !s32i
+// CHECK:    %3 = cir.const #cir.int<2> : !s32i
+// CHECK:    %4 = cir.const #cir.int<3> : !s32i
+// CHECK:    %5 = cir.const #cir.int<4> : !s32i
+// CHECK:    %6 = cir.vec.create(%2, %3, %4, %5 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CHECK:    cir.store %6, %0 : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK:    %7 = cir.load %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CHECK:    %8 = cir.const #cir.int<1> : !s32i
+// CHECK:    %9 = cir.vec.extract %7[%8 : !s32i] : !cir.vector<4 x !s32i>
+// CHECK:    cir.store %9, %1 : !s32i, !cir.ptr<!s32i>
+// CHECK:    cir.return
+// CHECK: }
+
 }

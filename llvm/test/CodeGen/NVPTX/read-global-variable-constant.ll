@@ -10,21 +10,21 @@
 
 ; CHECK-LABEL: test_gv_float()
 define float @test_gv_float() {
-; CHECK: ld.global.nc.f32
+; CHECK: ld.global.nc.b32
   %v = load float, ptr @gv_float
   ret float %v
 }
 
 ; CHECK-LABEL: test_gv_float2()
 define <2 x float> @test_gv_float2() {
-; CHECK: ld.global.nc.v2.f32
+; CHECK: ld.global.nc.v2.b32
   %v = load <2 x float>, ptr @gv_float2
   ret <2 x float> %v
 }
 
 ; CHECK-LABEL: test_gv_float4()
 define <4 x float> @test_gv_float4() {
-; CHECK: ld.global.nc.v4.f32
+; CHECK: ld.global.nc.v4.b32
   %v = load <4 x float>, ptr @gv_float4
   ret <4 x float> %v
 }

@@ -3659,7 +3659,6 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
 std::optional<LexEmbedParametersResult>
 Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
   LexEmbedParametersResult Result{};
-  SmallVector<Token, 2> ParameterTokens;
   tok::TokenKind EndTokenKind = ForHasEmbed ? tok::r_paren : tok::eod;
 
   auto DiagMismatchedBracesAndSkipToEOD =

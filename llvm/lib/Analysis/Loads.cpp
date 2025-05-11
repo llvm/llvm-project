@@ -174,14 +174,14 @@ static bool isDereferenceableAndAlignedPointer(
   // information for values that cannot be freed in the function.
   // TODO: More precisely check if the pointer can be freed between assumption
   // and use.
-  if (CtxI && !V->canBeFreed()) {
+  if (CtxI && AC && !V->canBeFreed()) {
     /// Look through assumes to see if both dereferencability and alignment can
     /// be proven by an assume if needed.
     RetainedKnowledge AlignRK;
     RetainedKnowledge DerefRK;
     bool IsAligned = V->getPointerAlignment(DL) >= Alignment;
     if (getKnowledgeForValue(
-            V, {Attribute::Dereferenceable, Attribute::Alignment}, AC,
+            V, {Attribute::Dereferenceable, Attribute::Alignment}, *AC,
             [&](RetainedKnowledge RK, Instruction *Assume, auto) {
               if (!isValidAssumeForContext(Assume, CtxI, DT))
                 return false;

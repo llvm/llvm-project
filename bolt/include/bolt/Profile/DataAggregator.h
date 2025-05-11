@@ -197,10 +197,6 @@ private:
 
   BoltAddressTranslation *BAT{nullptr};
 
-  /// Whether pre-aggregated profile needs to convert branch profile into call
-  /// to continuation fallthrough profile.
-  bool NeedsConvertRetProfileToCallCont{false};
-
   /// Update function execution profile with a recorded trace.
   /// A trace is region of code executed between two LBR entries supplied in
   /// execution order.
@@ -261,7 +257,8 @@ private:
 
   /// Semantic actions - parser hooks to interpret parsed perf samples
   /// Register a sample (non-LBR mode), i.e. a new hit at \p Address
-  bool doSample(BinaryFunction &Func, const uint64_t Address, uint64_t Count);
+  bool doBasicSample(BinaryFunction &Func, const uint64_t Address,
+                     uint64_t Count);
 
   /// Register an intraprocedural branch \p Branch.
   bool doIntraBranch(BinaryFunction &Func, uint64_t From, uint64_t To,

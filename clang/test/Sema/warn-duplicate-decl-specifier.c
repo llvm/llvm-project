@@ -15,3 +15,5 @@ __attribute__((address_space(1)))
 __attribute__((address_space(1))) // expected-warning {{multiple identical address spaces specified for type}}
 int j = 12;
 
+volatile const volatile const int x = 1; // expected-warning {{duplicate 'const' declaration specifier}} \
+                                            expected-warning {{duplicate 'volatile' declaration specifier}}
