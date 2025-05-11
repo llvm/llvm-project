@@ -7245,6 +7245,17 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr))
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
+        // C99 6.5.2.5
+        //  "If the compound literal occurs outside the body of a function, the
+        //  initializer list shall consist of constant expressions."
+        if (!Init->isTypeDependent() && !Init->isValueDependent() &&
+            !Init->getType()->isDependentType())
+          if (!Init->isConstantInitializer(Context, false)) {
+            Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
+                << Init->getSourceBitField();
+            return ExprError();
+          }
+
         ILE->setInit(i, ConstantExpr::Create(Context, Init));
       }
 
