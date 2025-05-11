@@ -1347,8 +1347,9 @@ void AsmMatcherInfo::buildRegisterClasses(
       CI->ClassName = RC.getName();
       CI->Name = "MCK_" + RC.getName();
       CI->ValueName = RC.getName();
-    } else
+    } else {
       CI->ValueName = CI->ValueName + "," + RC.getName();
+    }
 
     const Init *DiagnosticType = Def->getValueInit("DiagnosticType");
     if (const StringInit *SI = dyn_cast<StringInit>(DiagnosticType))
@@ -1379,8 +1380,9 @@ void AsmMatcherInfo::buildRegisterClasses(
       CI->ClassName = std::string(Rec->getName());
       CI->Name = "MCK_" + Rec->getName().str();
       CI->ValueName = std::string(Rec->getName());
-    } else
+    } else {
       CI->ValueName = CI->ValueName + "," + Rec->getName().str();
+    }
   }
 }
 
@@ -1663,13 +1665,14 @@ void AsmMatcherInfo::buildInfo() {
         // Add the alias to the matchables list.
         NewMatchables.push_back(std::move(AliasII));
       }
-    } else
+    } else {
       // FIXME: The tied operands checking is not yet integrated with the
       // framework for reporting multiple near misses. To prevent invalid
       // formats from being matched with an alias if a tied-operands check
       // would otherwise have disallowed it, we just disallow such constructs
       // in TableGen completely.
       II->buildAliasResultOperands(!ReportMultipleNearMisses);
+    }
   }
   if (!NewMatchables.empty())
     Matchables.insert(Matchables.end(),
@@ -2303,9 +2306,10 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
          << utostr(std::get<2>(KV.first)) << " },\n";
     }
     OS << "};\n\n";
-  } else
+  } else {
     OS << "static const uint8_t TiedAsmOperandTable[][3] = "
           "{ /* empty  */ {0, 0, 0} };\n\n";
+  }
 
   OS << "namespace {\n";
 
@@ -2503,8 +2507,9 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
       OS << "      return " << Info.Target.getName() << "AsmParser::Match_"
          << CI.DiagnosticType << ";\n";
       OS << "    break;\n";
-    } else
+    } else {
       OS << "    break;\n";
+    }
     OS << "  }\n";
   }
   OS << "  } // end switch (Kind)\n\n";

@@ -444,15 +444,16 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     int64_t Lower = R->getValueAsInt("Lower");
     int64_t Upper = R->getValueAsInt("Upper");
     addArgAttribute(ArgNo, Range, Lower, Upper);
-  } else
+  } else {
     llvm_unreachable("Unknown property!");
+  }
 }
 
 bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
   if (ParamIdx >= IS.ParamTys.size())
     return false;
-  return (IS.ParamTys[ParamIdx]->isSubClassOf("LLVMQualPointerType") ||
-          IS.ParamTys[ParamIdx]->isSubClassOf("LLVMAnyPointerType"));
+  return IS.ParamTys[ParamIdx]->isSubClassOf("LLVMQualPointerType") ||
+         IS.ParamTys[ParamIdx]->isSubClassOf("LLVMAnyPointerType");
 }
 
 bool CodeGenIntrinsic::isParamImmArg(unsigned ParamIdx) const {
@@ -461,8 +462,7 @@ bool CodeGenIntrinsic::isParamImmArg(unsigned ParamIdx) const {
   if (ParamIdx >= ArgumentAttributes.size())
     return false;
   ArgAttribute Val{ImmArg, 0, 0};
-  return std::binary_search(ArgumentAttributes[ParamIdx].begin(),
-                            ArgumentAttributes[ParamIdx].end(), Val);
+  return llvm::binary_search(ArgumentAttributes[ParamIdx], Val);
 }
 
 void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V,

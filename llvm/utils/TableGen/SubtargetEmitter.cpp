@@ -2085,8 +2085,9 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   if (SchedModels.hasItineraries()) {
     OS << Target << "Stages, " << Target << "OperandCycles, " << Target
        << "ForwardingPaths";
-  } else
+  } else {
     OS << "nullptr, nullptr, nullptr";
+  }
   OS << ");\n}\n\n";
 
   OS << "} // end namespace llvm\n\n";
@@ -2216,8 +2217,9 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   if (SchedModels.hasItineraries()) {
     OS << Target << "Stages, " << Target << "OperandCycles, " << Target
        << "ForwardingPaths";
-  } else
+  } else {
     OS << "nullptr, nullptr, nullptr";
+  }
   OS << ") {}\n\n";
 
   emitSchedModelHelpers(ClassName, OS);

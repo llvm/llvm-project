@@ -134,8 +134,9 @@ PatternParser::parseInstructionPattern(const Init &Arg, StringRef Name) {
                  getDagWithOperatorOfSubClass(Arg, BuiltinPattern::ClassName)) {
     Pat = std::make_unique<BuiltinPattern>(*BP->getOperatorAsDef(DiagLoc),
                                            insertStrRef(Name));
-  } else
+  } else {
     return nullptr;
+  }
 
   for (unsigned K = 0; K < DagPat->getNumArgs(); ++K) {
     const Init *Arg = DagPat->getArg(K);

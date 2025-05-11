@@ -2016,8 +2016,9 @@ void CodeGenSchedModels::collectRWResources(unsigned RWIdx, bool IsRead,
     if (Alias->getValueInit("SchedModel")->isComplete()) {
       AliasProcIndices.push_back(
           getProcModel(Alias->getValueAsDef("SchedModel")).Index);
-    } else
+    } else {
       AliasProcIndices = ProcIndices;
+    }
     const CodeGenSchedRW &AliasRW = getSchedRW(Alias->getValueAsDef("AliasRW"));
     assert(AliasRW.IsRead == IsRead && "cannot alias reads to writes");
 
