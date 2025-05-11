@@ -47,6 +47,22 @@ def HasVIS2 : Predicate<"Subtarget->isVIS2()">,
 def HasVIS3 : Predicate<"Subtarget->isVIS3()">,
              AssemblerPredicate<(all_of FeatureVIS3)>;
 
+// HasUA2005 - This is true when the target processor has UA 2005 extensions.
+def HasUA2005 : Predicate<"Subtarget->isUA2005()">,
+                AssemblerPredicate<(all_of FeatureUA2005)>;
+
+// HasUA2007 - This is true when the target processor has UA 2007 extensions.
+def HasUA2007 : Predicate<"Subtarget->isUA2007()">,
+                AssemblerPredicate<(all_of FeatureUA2007)>;
+
+// HasOSA2011 - This is true when the target processor has OSA 2011 extensions.
+def HasOSA2011 : Predicate<"Subtarget->isOSA2011()">,
+                AssemblerPredicate<(all_of FeatureOSA2011)>;
+
+// HasCrypto - This is true when the target processor has cryptographic extensions.
+def HasCrypto : Predicate<"Subtarget->isCrypto()">,
+                AssemblerPredicate<(all_of FeatureCrypto)>;
+
 // HasHardQuad - This is true when the target processor supports quad floating
 // point instructions.
 def HasHardQuad : Predicate<"Subtarget->hasHardQuad()">;
@@ -84,6 +100,8 @@ def UseDeprecatedInsts : Predicate<"Subtarget->useV8DeprecatedInsts()">;
 
 // FIXME these should have AsmOperandClass.
 def uimm3 : PatLeaf<(imm), [{ return isUInt<3>(N->getZExtValue()); }]>;
+
+def simm5  : PatLeaf<(imm), [{ return isInt<5>(N->getSExtValue()); }]>;
 
 def simm10  : PatLeaf<(imm), [{ return isInt<10>(N->getSExtValue()); }]>;
 
@@ -223,6 +241,10 @@ def bprtarget16 : Operand<OtherVT> {
   let EncoderMethod = "getBranchOnRegTargetOpValue";
 }
 
+def cbtarget : Operand<OtherVT> {
+  let EncoderMethod = "getCompareAndBranchTargetOpValue";
+}
+
 def SparcCallTargetAsmOperand : AsmOperandClass {
   let Name = "CallTarget";
   let ParserMethod = "parseCallTarget";
@@ -232,6 +254,12 @@ def calltarget : Operand<i32> {
   let EncoderMethod = "getCallTargetOpValue";
   let DecoderMethod = "DecodeCall";
   let ParserMatchClass = SparcCallTargetAsmOperand;
+}
+
+def simm5Op : Operand<iPTR> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let DecoderMethod = "DecodeSIMM5";
+  let EncoderMethod = "getSImm5OpValue";
 }
 
 def simm13Op : Operand<iPTR> {
@@ -1020,10 +1048,10 @@ class CPBranchSPA<dag ins, string asmstr, list<dag> pattern>
 
 } // let isBranch = 1, isTerminator = 1, hasDelaySlot = 1
 
-def CBCOND  : CPBranchSP<(ins brtarget:$imm22, CCOp:$cond),
+def CPBCOND  : CPBranchSP<(ins brtarget:$imm22, CCOp:$cond),
                           "cb$cond $imm22",
                           [(SPbrfcc bb:$imm22, imm:$cond)]>;
-def CBCONDA : CPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
+def CPBCONDA : CPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
                            "cb$cond,a $imm22", []>;
 
 // Section B.24 - Call and Link Instruction, p. 125
@@ -1968,4 +1996,6 @@ def : Pat<(build_vector (i32 IntRegs:$a1), (i32 IntRegs:$a2)),
 
 include "SparcInstr64Bit.td"
 include "SparcInstrVIS.td"
+include "SparcInstrUAOSA.td"
+include "SparcInstrCrypto.td"
 include "SparcInstrAliases.td"
