@@ -197,6 +197,8 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
     } else if (const auto *Interchange =
                    dyn_cast<OMPInterchangeDirective>(&S)) {
       PreInits = Interchange->getPreInits();
+    } else if (const auto *Fuse = dyn_cast<OMPFuseDirective>(&S)) {
+      PreInits = Fuse->getPreInits();
     } else {
       llvm_unreachable("Unknown loop-based directive kind.");
     }
@@ -2915,6 +2917,12 @@ void CodeGenFunction::EmitOMPInterchangeDirective(
     const OMPInterchangeDirective &S) {
   // Emit the de-sugared statement.
   OMPTransformDirectiveScopeRAII InterchangeScope(*this, &S);
+  EmitStmt(S.getTransformedStmt());
+}
+
+void CodeGenFunction::EmitOMPFuseDirective(const OMPFuseDirective &S) {
+  // Emit the de-sugared statement
+  OMPTransformDirectiveScopeRAII FuseScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
 }
 
