@@ -22,10 +22,8 @@ int val[] = {1, 2, 3};
 
 bool flag = false;
 
-// Forward declaration
 template<std::size_t N> struct Iter;
 
-// Iterator class
 template<std::size_t N>
 struct Iter {
     using value_type = int;
@@ -38,43 +36,35 @@ struct Iter {
 private:
     int* ptr_ = nullptr;
 
-    // Allow cross-template access to ptr_
     template<std::size_t M> friend struct Iter;
 
 public:
-    // Constructors
     Iter() = default;
     Iter(int* ptr) : ptr_(ptr) {}
     Iter(const Iter&) = default;
     Iter(Iter&& other) noexcept : ptr_(other.ptr_) {}
 
-    // Cross-template constructor
     template<std::size_t M>
     Iter(const Iter<M>& other) : ptr_(other.ptr_) {}
 
-    // Assignment operators
     Iter& operator=(const Iter&) = default;
     Iter& operator=(Iter&& other) noexcept {
         ptr_ = other.ptr_;
         return *this;
     }
 
-    // Dereference and access
     reference operator*() const { return *ptr_; }
     pointer operator->() const { return ptr_; }
     reference operator[](difference_type n) const { return ptr_[n]; }
 
-    // Increment and decrement
     Iter& operator++() { ++ptr_; return *this; }
     Iter operator++(int) { auto tmp = *this; ++*this; return tmp; }
     Iter& operator--() { --ptr_; return *this; }
     Iter operator--(int) { auto tmp = *this; --*this; return tmp; }
 
-    // Arithmetic operations
     Iter& operator+=(difference_type n) { ptr_ += n; return *this; }
     Iter& operator-=(difference_type n) { ptr_ -= n; return *this; }
 
-    // Declare friend operators (no inline definition)
     template<std::size_t X>
     friend Iter<X> operator+(Iter<X> it, difference_type n);
 
@@ -87,7 +77,6 @@ public:
     template<std::size_t X, std::size_t Y>
     friend difference_type operator-(Iter<X> a, Iter<Y> b);
 
-    // Comparison operators
     friend bool operator==(Iter a, Iter b) = default;
     friend bool operator<(Iter a, Iter b) { return a.ptr_ < b.ptr_; }
     friend bool operator>(Iter a, Iter b) { return a.ptr_ > b.ptr_; }
@@ -95,7 +84,6 @@ public:
     friend bool operator>=(Iter a, Iter b) { return a.ptr_ >= b.ptr_; }
 };
 
-// Define operators outside the class
 template<std::size_t X>
 inline Iter<X> operator+(Iter<X> it, std::ptrdiff_t n) {
     return Iter<X>(it.ptr_ + n);
