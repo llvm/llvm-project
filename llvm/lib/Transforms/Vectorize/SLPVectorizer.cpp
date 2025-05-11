@@ -10451,6 +10451,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       case TreeEntry::NeedToGather:
         llvm_unreachable("Unexpected loads state.");
       }
+      if (!CurrentOrder.empty() && State != TreeEntry::ScatterVectorize) {
+        assert(Operands.size() == 1 && "Expected a single operand only");
+        SmallVector<int> Mask;
+        inversePermutation(CurrentOrder, Mask);
+        reorderScalars(Operands.front(), Mask);
+      }
       TE->setOperands(Operands);
       if (State == TreeEntry::ScatterVectorize)
         buildTreeRec(PointerOps, Depth + 1, {TE, 0});

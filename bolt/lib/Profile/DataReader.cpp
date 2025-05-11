@@ -128,6 +128,13 @@ uint64_t FuncSampleData::getSamples(uint64_t Start, uint64_t End) const {
   return Result;
 }
 
+uint64_t FuncSampleData::getSamples() const {
+  uint64_t Result = 0;
+  for (const SampleInfo &I : Data)
+    Result += I.Hits;
+  return Result;
+}
+
 void FuncSampleData::bumpCount(uint64_t Offset, uint64_t Count) {
   auto Iter = Index.find(Offset);
   if (Iter == Index.end()) {
@@ -1028,9 +1035,8 @@ ErrorOr<SampleInfo> DataReader::parseSampleInfo() {
 }
 
 ErrorOr<bool> DataReader::maybeParseNoLBRFlag() {
-  if (ParsingBuf.size() < 6 || ParsingBuf.substr(0, 6) != "no_lbr")
+  if (!ParsingBuf.consume_front("no_lbr"))
     return false;
-  ParsingBuf = ParsingBuf.drop_front(6);
   Col += 6;
 
   if (ParsingBuf.size() > 0 && ParsingBuf[0] == ' ')
@@ -1051,9 +1057,8 @@ ErrorOr<bool> DataReader::maybeParseNoLBRFlag() {
 }
 
 ErrorOr<bool> DataReader::maybeParseBATFlag() {
-  if (ParsingBuf.size() < 16 || ParsingBuf.substr(0, 16) != "boltedcollection")
+  if (!ParsingBuf.consume_front("boltedcollection"))
     return false;
-  ParsingBuf = ParsingBuf.drop_front(16);
   Col += 16;
 
   if (!checkAndConsumeNewLine()) {
