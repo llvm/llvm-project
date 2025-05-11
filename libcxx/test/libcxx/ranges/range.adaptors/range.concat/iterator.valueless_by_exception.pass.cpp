@@ -237,4 +237,26 @@ int main() {
           "valueless by exception");
     }
   }
+
+  {
+    //valueless by exception test constructor
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag = true;
+    try {
+        iter1 = std::move(iter2);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [&] {
+            std::ranges::iterator_t<const decltype(cv)> it3(iter1);
+            (void)it3;
+          }(),
+          "valueless by exception");
+    }
+  }
 }
