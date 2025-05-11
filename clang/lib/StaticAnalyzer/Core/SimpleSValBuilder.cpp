@@ -270,7 +270,7 @@ static bool isWithinConstantOverflowBounds(llvm::APSInt I) {
   assert(!AT.isUnsigned() &&
          "This only works with signed integers!");
 
-  llvm::APSInt Max = AT.getMaxValue() / AT.getValue(4), Min = -Max;
+  llvm::APSInt Max = AT.getMaxValue() / AT.getValue(4);
   return (I <= Max) && (I >= -Max);
 }
 

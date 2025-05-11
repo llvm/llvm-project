@@ -41,6 +41,7 @@
 #include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
@@ -4417,7 +4418,7 @@ class SizeOfPackExpr final
     assert((!Length || PartialArgs.empty()) &&
            "have partial args for non-dependent sizeof... expression");
     auto *Args = getTrailingObjects<TemplateArgument>();
-    std::uninitialized_copy(PartialArgs.begin(), PartialArgs.end(), Args);
+    llvm::uninitialized_copy(PartialArgs, Args);
     setDependence(Length ? ExprDependence::None
                          : ExprDependence::ValueInstantiation);
   }
@@ -4522,8 +4523,7 @@ class PackIndexingExpr final
         FullySubstituted(FullySubstituted) {
 
     auto *Exprs = getTrailingObjects<Expr *>();
-    std::uninitialized_copy(SubstitutedExprs.begin(), SubstitutedExprs.end(),
-                            Exprs);
+    llvm::uninitialized_copy(SubstitutedExprs, Exprs);
 
     setDependence(computeDependence(this));
     if (!isInstantiationDependent())
@@ -4547,6 +4547,7 @@ public:
   static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
                                               unsigned NumTransformedExprs);
 
+  // The index expression and all elements of the pack have been substituted.
   bool isFullySubstituted() const { return FullySubstituted; }
 
   /// Determine if the expression was expanded to empty.
@@ -5124,8 +5125,8 @@ public:
 
   void updateDependence() { setDependence(computeDependence(this)); }
 
-  ArrayRef<Expr *> getInitExprs() {
-    return ArrayRef(getTrailingObjects<Expr *>(), NumExprs);
+  MutableArrayRef<Expr *> getInitExprs() {
+    return MutableArrayRef(getTrailingObjects<Expr *>(), NumExprs);
   }
 
   const ArrayRef<Expr *> getInitExprs() const {

@@ -703,7 +703,6 @@ TEST(ParseFixedCompilationDatabase, HandlesArgv0) {
     Database->getCompileCommands("source");
   ASSERT_EQ(1ul, Result.size());
   ASSERT_EQ(".", Result[0].Directory);
-  std::vector<std::string> Expected;
   ASSERT_THAT(Result[0].CommandLine,
               ElementsAre(EndsWith("clang-tool"), "source"));
   EXPECT_EQ(2, Argc);

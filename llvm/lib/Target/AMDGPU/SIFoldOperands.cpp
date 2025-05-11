@@ -439,8 +439,7 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(FoldCandidate &Fold) const {
       }
 
       // This check is only useful for integer instructions
-      if (OpType == AMDGPU::OPERAND_REG_IMM_V2INT16 ||
-          OpType == AMDGPU::OPERAND_REG_INLINE_AC_V2INT16) {
+      if (OpType == AMDGPU::OPERAND_REG_IMM_V2INT16) {
         if (AMDGPU::isInlinableLiteralV216(Lo << 16, OpType)) {
           Mod.setImm(NewModVal | SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1);
           Old.ChangeToImmediate(static_cast<uint32_t>(Lo) << 16);
@@ -1171,8 +1170,14 @@ void SIFoldOperandsImpl::foldOperand(
 
         if (OpToFold.isImm())
           UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
-        else
+        else if (OpToFold.isFI())
           UseMI->getOperand(1).ChangeToFrameIndex(OpToFold.getIndex());
+        else {
+          assert(OpToFold.isGlobal());
+          UseMI->getOperand(1).ChangeToGA(OpToFold.getGlobal(),
+                                          OpToFold.getOffset(),
+                                          OpToFold.getTargetFlags());
+        }
         UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
         return;
       }

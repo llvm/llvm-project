@@ -2,7 +2,7 @@
 
 // Test assumed shape array with variable lower bound.
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func private @_QFPfn(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}) attributes {} {
     %c23_i32 = arith.constant 23 : i32
     %c6_i32 = arith.constant 6 : i32

@@ -140,26 +140,6 @@ typedef fpos<mbstate_t> u8streampos;
 typedef fpos<mbstate_t> u16streampos;
 typedef fpos<mbstate_t> u32streampos;
 
-#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
-
-template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = allocator<_CharT>>
-class basic_syncbuf;
-
-using syncbuf = basic_syncbuf<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-using wsyncbuf = basic_syncbuf<wchar_t>;
-#  endif
-
-template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = allocator<_CharT>>
-class basic_osyncstream;
-
-using osyncstream = basic_osyncstream<char>;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-using wosyncstream = basic_osyncstream<wchar_t>;
-#  endif
-
-#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
-
 template <class _CharT, class _Traits>
 class __save_flags {
   typedef basic_ios<_CharT, _Traits> __stream_type;

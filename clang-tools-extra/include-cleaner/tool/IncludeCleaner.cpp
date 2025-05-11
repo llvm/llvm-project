@@ -344,7 +344,6 @@ mapInputsToAbsPaths(clang::tooling::CompilationDatabase &CDB,
     }
     for (const auto &Cmd : Cmds) {
       llvm::SmallString<256> CDBPath(Cmd.Filename);
-      std::string Directory(Cmd.Directory);
       llvm::sys::fs::make_absolute(Cmd.Directory, CDBPath);
       CDBToAbsPaths[std::string(CDBPath)] = std::string(AbsPath);
     }
