@@ -11,6 +11,7 @@
 
 #include "llvm/MC/MCFixup.h"
 
+// clang-format off
 namespace llvm {
   namespace Sparc {
     enum Fixups {
@@ -27,6 +28,9 @@ namespace llvm {
 
       /// fixup_sparc_bpr  - 16-bit fixup for bpr
       fixup_sparc_br16,
+
+      /// fixup_sparc_br10  - 10-bit fixup for cbcond
+      fixup_sparc_br10,
 
       /// fixup_sparc_13 - 13-bit fixup
       fixup_sparc_13,
@@ -83,5 +87,5 @@ namespace llvm {
     };
   }
 }
-
+// clang-format on
 #endif

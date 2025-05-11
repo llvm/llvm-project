@@ -72,6 +72,9 @@ public:
   unsigned getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
+  unsigned getSImm5OpValue(const MCInst &MI, unsigned OpNo,
+                           SmallVectorImpl<MCFixup> &Fixups,
+                           const MCSubtargetInfo &STI) const;
   unsigned getSImm13OpValue(const MCInst &MI, unsigned OpNo,
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &STI) const;
@@ -81,6 +84,9 @@ public:
   unsigned getBranchOnRegTargetOpValue(const MCInst &MI, unsigned OpNo,
                                        SmallVectorImpl<MCFixup> &Fixups,
                                        const MCSubtargetInfo &STI) const;
+  unsigned getCompareAndBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
+                                            SmallVectorImpl<MCFixup> &Fixups,
+                                            const MCSubtargetInfo &STI) const;
 };
 
 } // end anonymous namespace
@@ -139,6 +145,26 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
 
   llvm_unreachable("Unhandled expression!");
   return 0;
+}
+
+unsigned SparcMCCodeEmitter::getSImm5OpValue(const MCInst &MI, unsigned OpNo,
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  if (MO.isImm())
+    return MO.getImm();
+
+  assert(MO.isExpr() &&
+         "getSImm5OpValue expects only expressions or an immediate");
+
+  const MCExpr *Expr = MO.getExpr();
+
+  // Constant value, no fixup is needed
+  if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr))
+    return CE->getValue();
+
+  llvm_unreachable("simm5 operands can only be used with constants!");
 }
 
 unsigned
@@ -232,6 +258,19 @@ getBranchOnRegTargetOpValue(const MCInst &MI, unsigned OpNo,
 
   Fixups.push_back(
       MCFixup::create(0, MO.getExpr(), (MCFixupKind)Sparc::fixup_sparc_br16));
+
+  return 0;
+}
+
+unsigned SparcMCCodeEmitter::getCompareAndBranchTargetOpValue(
+    const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isReg() || MO.isImm())
+    return getMachineOpValue(MI, MO, Fixups, STI);
+
+  Fixups.push_back(
+      MCFixup::create(0, MO.getExpr(), (MCFixupKind)Sparc::fixup_sparc_br10));
 
   return 0;
 }

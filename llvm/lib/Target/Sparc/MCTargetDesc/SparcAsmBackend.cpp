@@ -50,6 +50,15 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
     return (d16hi << 20) | d16lo;
   }
 
+  case Sparc::fixup_sparc_br10: {
+    // 7.17 Compare and Branch
+    // Inst{20-19} = d10hi;
+    // Inst{12-5}  = d10lo;
+    unsigned d10hi = (Value >> 10) & 0x3;
+    unsigned d10lo = (Value >> 2) & 0xff;
+    return (d10hi << 19) | (d10lo << 5);
+  }
+
   case Sparc::fixup_sparc_hix22:
     return (~Value >> 10) & 0x3fffff;
 
@@ -138,11 +147,13 @@ namespace {
 
     MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
       const static MCFixupKindInfo InfosBE[Sparc::NumTargetFixupKinds] = {
+          // clang-format off
         // name                    offset bits  flags
         { "fixup_sparc_call30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br22",      10,     22,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br19",      13,     19,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br16",       0,     32,  MCFixupKindInfo::FKF_IsPCRel },
+        { "fixup_sparc_br10",       0,     32,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_13",        19,     13,  0 },
         { "fixup_sparc_hi22",      10,     22,  0 },
         { "fixup_sparc_lo10",      22,     10,  0 },
@@ -160,14 +171,17 @@ namespace {
         { "fixup_sparc_gotdata_hix22",  0,  0,  0 },
         { "fixup_sparc_gotdata_lox10",  0,  0,  0 },
         { "fixup_sparc_gotdata_op",     0,  0,  0 },
+          // clang-format on
       };
 
       const static MCFixupKindInfo InfosLE[Sparc::NumTargetFixupKinds] = {
+          // clang-format off
         // name                    offset bits  flags
         { "fixup_sparc_call30",     0,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br22",       0,     22,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br19",       0,     19,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br16",      32,      0,  MCFixupKindInfo::FKF_IsPCRel },
+        { "fixup_sparc_br10",      32,      0,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_13",         0,     13,  0 },
         { "fixup_sparc_hi22",       0,     22,  0 },
         { "fixup_sparc_lo10",       0,     10,  0 },
@@ -185,6 +199,7 @@ namespace {
         { "fixup_sparc_gotdata_hix22",  0,  0,  0 },
         { "fixup_sparc_gotdata_lox10",  0,  0,  0 },
         { "fixup_sparc_gotdata_op",     0,  0,  0 },
+          // clang-format on
       };
 
       // Fixup kinds from .reloc directive are like R_SPARC_NONE. They do
