@@ -18,190 +18,235 @@
 #include "double_move_tracker.h"
 #include "test_iterators.h"
 
-int globalArray[8] = {0, 1, 2, 3, 4, 5, 6, 7};
-bool already_moved = false;
+int val[] = {1, 2, 3};
 
-template <class It, class ItTraits = It >
-class ThrowOnMoveIterator {
-  using Traits = std::iterator_traits<ItTraits>;
-  It it_;
-  support::double_move_tracker tracker_;
+bool flag = false;
 
-  template <class U, class T>
-  friend class ThrowOnMoveIterator;
+// Forward declaration
+template<std::size_t N> struct Iter;
+
+// Iterator class
+template<std::size_t N>
+struct Iter {
+    using value_type = int;
+    using difference_type = std::ptrdiff_t;
+    using reference = int&;
+    using pointer = int*;
+    using iterator_category = std::random_access_iterator_tag;
+    using iterator_concept = std::random_access_iterator_tag;
+
+private:
+    int* ptr_ = nullptr;
+
+    // Allow cross-template access to ptr_
+    template<std::size_t M> friend struct Iter;
 
 public:
-  using iterator_category = std::input_iterator_tag;
-  using value_type        = typename Traits::value_type;
-  using difference_type   = typename Traits::difference_type;
-  using pointer           = It;
-  using reference          = typename Traits::reference;
+    // Constructors
+    Iter() = default;
+    Iter(int* ptr) : ptr_(ptr) {}
+    Iter(const Iter&) = default;
+    Iter(Iter&& other) noexcept : ptr_(other.ptr_) {}
 
-  constexpr ThrowOnMoveIterator() {}
+    // Cross-template constructor
+    template<std::size_t M>
+    Iter(const Iter<M>& other) : ptr_(other.ptr_) {}
 
-  constexpr ThrowOnMoveIterator(It it) : it_(it) {}
-
-  template <class U, class T>
-  constexpr ThrowOnMoveIterator(const ThrowOnMoveIterator<U, T>& u) : it_(u.it_), tracker_(u.tracker_) {}
-
-  constexpr ThrowOnMoveIterator(const ThrowOnMoveIterator&) {}
-
-  constexpr ThrowOnMoveIterator(ThrowOnMoveIterator&&) {
-    std::cout << "moved ctor called with: " << already_moved << std::endl;
-    if (!already_moved) {
-      already_moved = true;
-      throw std::runtime_error("Move failed in iter");
+    // Assignment operators
+    Iter& operator=(const Iter&) = default;
+    Iter& operator=(Iter&& other) noexcept {
+        ptr_ = other.ptr_;
+        return *this;
     }
-  }
 
-  ThrowOnMoveIterator& operator=(ThrowOnMoveIterator&&) {
-    if (!already_moved) {
-      already_moved = true;
-      throw std::runtime_error("Move assignment failed in iter");
-    }
-    return *this;
-  }
+    // Dereference and access
+    reference operator*() const { return *ptr_; }
+    pointer operator->() const { return ptr_; }
+    reference operator[](difference_type n) const { return ptr_[n]; }
 
-  constexpr reference operator*() const { return *it_; }
+    // Increment and decrement
+    Iter& operator++() { ++ptr_; return *this; }
+    Iter operator++(int) { auto tmp = *this; ++*this; return tmp; }
+    Iter& operator--() { --ptr_; return *this; }
+    Iter operator--(int) { auto tmp = *this; --*this; return tmp; }
 
-  constexpr ThrowOnMoveIterator& operator++() {
-    ++it_;
-    return *this;
-  }
-  constexpr ThrowOnMoveIterator operator++(int) { return ThrowOnMoveIterator(it_++); }
+    // Arithmetic operations
+    Iter& operator+=(difference_type n) { ptr_ += n; return *this; }
+    Iter& operator-=(difference_type n) { ptr_ -= n; return *this; }
 
-  friend constexpr bool operator==(const ThrowOnMoveIterator& x, const ThrowOnMoveIterator& y) {
-    return x.it_ == y.it_;
-  }
-  friend constexpr bool operator!=(const ThrowOnMoveIterator& x, const ThrowOnMoveIterator& y) {
-    return x.it_ != y.it_;
-  }
+    // Declare friend operators (no inline definition)
+    template<std::size_t X>
+    friend Iter<X> operator+(Iter<X> it, difference_type n);
 
-  friend constexpr It base(const ThrowOnMoveIterator& i) { return i.it_; }
+    template<std::size_t X>
+    friend Iter<X> operator+(difference_type n, Iter<X> it);
 
-  template <class T>
-  void operator,(T const&) = delete;
+    template<std::size_t X>
+    friend Iter<X> operator-(Iter<X> it, difference_type n);
+
+    template<std::size_t X, std::size_t Y>
+    friend difference_type operator-(Iter<X> a, Iter<Y> b);
+
+    // Comparison operators
+    friend bool operator==(Iter a, Iter b) = default;
+    friend bool operator<(Iter a, Iter b) { return a.ptr_ < b.ptr_; }
+    friend bool operator>(Iter a, Iter b) { return a.ptr_ > b.ptr_; }
+    friend bool operator<=(Iter a, Iter b) { return a.ptr_ <= b.ptr_; }
+    friend bool operator>=(Iter a, Iter b) { return a.ptr_ >= b.ptr_; }
 };
 
-template <class T>
-struct BufferView : std::ranges::view_base {
-  T* buffer_;
-  std::size_t size_;
+// Define operators outside the class
+template<std::size_t X>
+inline Iter<X> operator+(Iter<X> it, std::ptrdiff_t n) {
+    return Iter<X>(it.ptr_ + n);
+}
 
-  template <std::size_t N>
-  constexpr BufferView(T (&b)[N]) : buffer_(b), size_(N) {}
+template<std::size_t X>
+inline Iter<X> operator+(std::ptrdiff_t n, Iter<X> it) {
+    return Iter<X>(it.ptr_ + n);
+}
+
+template<std::size_t X>
+inline Iter<X> operator-(Iter<X> it, std::ptrdiff_t n) {
+    return Iter<X>(it.ptr_ - n);
+}
+
+template<std::size_t X, std::size_t Y>
+inline std::ptrdiff_t operator-(Iter<X> a, Iter<Y> b) {
+    return a.ptr_ - b.ptr_;
+}
+
+template<std::size_t N>
+struct Range : std::ranges::view_base {
+    using iterator = Iter<N>;
+    using const_iterator = Iter<N>;
+
+    int* data_;
+    std::size_t size_;
+
+    Range() : data_(val), size_(4) {}
+
+    Range(int* data, std::size_t size) : data_(data), size_(size) {}
+
+    iterator begin() { return iterator(data_); }
+    iterator end() { return iterator(data_ + size_); }
+
+    const_iterator begin() const { return const_iterator(data_); }
+    const_iterator end() const { return const_iterator(data_ + size_); }
+
+    std::size_t size() const { return size_; }
 };
 
-using IntBufferView = BufferView<int>;
-
-template <bool Simple>
-struct Common : IntBufferView {
-  using IntBufferView::IntBufferView;
-  using Iter      = ThrowOnMoveIterator<int*>;
-  using ConstIter = ThrowOnMoveIterator<const int*>;
-  using Sent      = sentinel_wrapper<Iter>;
-  using ConstSent = sentinel_wrapper<ConstIter>;
-
-  constexpr Iter begin()
-    requires(!Simple)
-  {
-    return Iter{buffer_};
-  }
-  constexpr const ConstIter begin() const { return ConstIter{buffer_}; }
-  constexpr Sent end()
-    requires(!Simple)
-  {
-    return Sent(buffer_ + size_);
-  }
-  constexpr ConstSent end() const { return ConstSent(buffer_ + size_); }
-};
-
-using SimpleCommon    = Common<true>;
-using NonSimpleCommon = Common<false>;
+static_assert(std::ranges::range<Range<0>>);
+static_assert(std::ranges::sized_range<Range<0>>);
 
 int main() {
+
   {
-    int buffer[3]  = {1, 2, 3};
-    int buffer2[3] = {1, 2, 3};
-    NonSimpleCommon view(buffer);
-    NonSimpleCommon view2(buffer2);
-    std::ranges::concat_view v(view, view2);
-    std::ranges::iterator_t<std::ranges::concat_view<decltype(view), decltype(view2)>> it1;
+    //valueless by exception test operator*
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag = true;
     try {
-      it1 = v.begin();
+        iter1 = std::move(iter2);
     } catch (...) {
-      std::cout << "hit catch" << std::endl;
-      //ASSERT_SAME_TYPE(std::ranges::iterator_t<const decltype(v)>, int);
-      std::ranges::iterator_t<const decltype(v)> it2(it1);
+      auto f = std::ranges::distance(r1);
+      (void)f;
       TEST_LIBCPP_ASSERT_FAILURE(
           [=] {
-            std::ranges::iterator_t<const decltype(v)> it2(it1);
-            (void)it2;
+            *iter1;
           }(),
           "valueless by exception");
     }
   }
-  /*
+
   {
     //valueless by exception test operator==
-    ThrowingRange<int*> throwing{3, 5};
-    auto concatView_2 = std::views::concat(throwing);
-    decltype(concatView_2.begin()) it1{};
-    decltype(concatView_2.begin()) it2{};
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    auto iter3 = cv.begin();
+    flag = true;
     try {
-      it1 = concatView_2.begin();
+        iter1 = std::move(iter2);
     } catch (...) {
-      std::cout << "Catch is hit" << std::endl;
-      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(it1 == it2); }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [=] {
+            (void)(iter1 == iter3);
+          }(),
+          "valueless by exception");
     }
   }
 
   {
     //valueless by exception test operator--
-    std::ranges::concat_view<ThrowOnCopyView> concatView_2;
-    std::ranges::iterator_t<std::ranges::concat_view<ThrowOnCopyView>> it1;
-    try {
-      it1 = concatView_2.begin();
-    } catch (...) {
-      std::cout << "Catch is hit" << std::endl;
-      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)--*it1; }(), "valueless by exception");
-    }
-  }
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
 
-  {
-    //valueless by exception test operator*
-    std::ranges::concat_view<ThrowOnCopyView> concatView_2;
-    std::ranges::iterator_t<std::ranges::concat_view<ThrowOnCopyView>> it1;
+    auto cv = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag = true;
     try {
-      it1 = concatView_2.begin();
+        iter1 = std::move(iter2);
     } catch (...) {
-      std::cout << "Catch is hit" << std::endl;
-      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)*it1; }(), "valueless by exception");
+      //ASSERT_SAME_TYPE(decltype(iter1), int);
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [&] {
+            iter1--;
+          }(),
+          "valueless by exception");
     }
   }
 
   {
     //valueless by exception test operator++
-    std::ranges::concat_view<ThrowOnCopyView> concatView_2;
-    std::ranges::iterator_t<std::ranges::concat_view<ThrowOnCopyView>> it1;
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag = true;
     try {
-      it1 = concatView_2.begin();
+        iter1 = std::move(iter2);
     } catch (...) {
-      std::cout << "Catch is hit" << std::endl;
-      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)++*it1; }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [&] {
+            ++iter1;
+          }(),
+          "valueless by exception");
     }
   }
 
   {
     //valueless by exception test operator+=
-    std::ranges::concat_view<ThrowOnCopyView> concatView_2;
-    std::ranges::iterator_t<std::ranges::concat_view<ThrowOnCopyView>> it1;
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag = true;
     try {
-      it1 = concatView_2.begin();
+        iter1 = std::move(iter2);
     } catch (...) {
-      std::cout << "Catch is hit" << std::endl;
-      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(it1 += 1); }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE(
+          [&] {
+            iter1 += 1;
+          }(),
+          "valueless by exception");
     }
   }
-  */
 }

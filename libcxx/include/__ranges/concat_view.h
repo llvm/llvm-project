@@ -309,7 +309,7 @@ public:
       if (__offset >= __steps) {
         std::get<_Idx>(__it_) -= static_cast<__underlying_diff_type>(__steps);
       } else {
-        auto __prev_size = ranges::__distance(std::get<_Idx - 1>(__parent_->__views_));
+        auto __prev_size = ranges::distance(std::get<_Idx - 1>(__parent_->__views_));
         __it_.template emplace<_Idx - 1>(ranges::begin(std::get<_Idx - 1>(__parent_->__views_)) + __prev_size);
         __advance_bwd<_Idx - 1>(__prev_size, __steps - __offset);
       }
