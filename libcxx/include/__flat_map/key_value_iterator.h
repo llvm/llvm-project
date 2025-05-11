@@ -14,6 +14,7 @@
 #include <__concepts/convertible_to.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/product_iterator.h>
 #include <__memory/addressof.h>
 #include <__type_traits/conditional.h>
 #include <__utility/move.h>
@@ -56,6 +57,8 @@ private:
 
   template <class, class, class, bool>
   friend struct __key_value_iterator;
+
+  friend struct __product_iterator_traits<__key_value_iterator>;
 
 public:
   using iterator_concept = random_access_iterator_tag;
@@ -178,6 +181,23 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 friend difference_type
   operator-(const __key_value_iterator& __x, const __key_value_iterator& __y) {
     return difference_type(__x.__key_iter_ - __y.__key_iter_);
+  }
+};
+
+template <class _Owner, class _KeyContainer, class _MappedContainer, bool _Const>
+struct __product_iterator_traits<__key_value_iterator<_Owner, _KeyContainer, _MappedContainer, _Const>> {
+  static constexpr size_t __size = 2;
+
+  template <size_t _N>
+  _LIBCPP_HIDE_FROM_ABI static auto
+  __get_iterator_element(__key_value_iterator<_Owner, _KeyContainer, _MappedContainer, _Const> __it)
+    requires(_N == 0 || _N == 1)
+  {
+    if constexpr (_N == 0) {
+      return __it.__key_iter_;
+    } else {
+      return __it.__mapped_iter_;
+    }
   }
 };
 

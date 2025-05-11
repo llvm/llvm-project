@@ -23,6 +23,7 @@
 #include <__iterator/iter_move.h>
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/product_iterator.h>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
@@ -251,6 +252,10 @@ class zip_view<_Views...>::__iterator : public __zip_view_iterator_category_base
 
   friend class zip_view<_Views...>;
 
+  using __is_zip_view_iterator _LIBCPP_NODEBUG = true_type;
+
+  friend struct __product_iterator_traits<__iterator>;
+
 public:
   using iterator_concept = decltype(ranges::__get_zip_view_iterator_tag<_Const, _Views...>());
   using value_type       = tuple<range_value_t<__maybe_const<_Const, _Views>>...>;
@@ -467,6 +472,18 @@ inline constexpr auto zip = __zip::__fn{};
 } // namespace __cpo
 } // namespace views
 } // namespace ranges
+
+template <class _Iter>
+  requires _Iter::__is_zip_view_iterator::value
+struct __product_iterator_traits<_Iter> {
+  static constexpr size_t __size = tuple_size<decltype(std::declval<_Iter>().__current_)>::value;
+
+  template <size_t _N>
+    requires(_N < __size)
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __get_iterator_element(_Iter __it) {
+    return std::get<_N>(__it.__current_);
+  }
+};
 
 #endif // _LIBCPP_STD_VER >= 23
 
