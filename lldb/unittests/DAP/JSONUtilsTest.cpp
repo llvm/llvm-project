@@ -9,7 +9,9 @@
 #include "JSONUtils.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBTarget.h"
+#include "llvm/Support/JSON.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 using namespace lldb;
@@ -82,6 +84,59 @@ TEST(JSONUtilsTest, GetBoolean_Pointer) {
 
   result = GetBoolean(nullptr, "key");
   EXPECT_FALSE(result.has_value());
+}
+
+TEST(JSONUtilsTest, GetInteger_Ref) {
+  json::Object obj;
+  obj.try_emplace("key", 123);
+
+  auto result = GetInteger<int>(obj, "key");
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result.value(), 123);
+
+  result = GetInteger<int>(obj, "nonexistent_key");
+  EXPECT_FALSE(result.has_value());
+
+  obj.try_emplace("key_float", 123.45);
+  result = GetInteger<int>(obj, "key_float");
+  EXPECT_FALSE(result.has_value());
+
+  obj.try_emplace("key_string", "123");
+  result = GetInteger<int>(obj, "key_string");
+  EXPECT_FALSE(result.has_value());
+}
+
+TEST(JSONUtilsTest, GetInteger_Pointer) {
+  json::Object obj;
+  obj.try_emplace("key", 456);
+
+  auto result = GetInteger<int>(&obj, "key");
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result.value(), 456);
+
+  result = GetInteger<int>(nullptr, "key");
+  EXPECT_FALSE(result.has_value());
+
+  obj.try_emplace("key_invalid", "not_an_integer");
+  result = GetInteger<int>(&obj, "key_invalid");
+  EXPECT_FALSE(result.has_value());
+}
+
+TEST(JSONUtilsTest, GetInteger_DifferentTypes) {
+  json::Object obj;
+  obj.try_emplace("key", 789);
+
+  auto result = GetInteger<int64_t>(obj, "key");
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result.value(), 789);
+
+  result = GetInteger<uint32_t>(obj, "key");
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result.value(), 789U);
+
+  result = GetInteger<int16_t>(obj, "key");
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result.value(), static_cast<int16_t>(789));
 }
 
 TEST(JSONUtilsTest, CreateModule) {
