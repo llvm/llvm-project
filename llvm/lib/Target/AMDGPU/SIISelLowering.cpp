@@ -880,18 +880,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FMINIMUM, ISD::FMAXIMUM},
                        {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
                        Custom);
-  } else {
-    // FIXME: For nnan fmaximum, emit the fmaximum3 instead of fmaxnum
-    if (Subtarget->hasMinimum3Maximum3F32())
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Legal);
-
-    if (Subtarget->hasMinimum3Maximum3PKF16()) {
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::v2f16, Legal);
-
-      // If only the vector form is available, we need to widen to a vector.
-      if (!Subtarget->hasMinimum3Maximum3F16())
-        setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Custom);
-    }
   }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
