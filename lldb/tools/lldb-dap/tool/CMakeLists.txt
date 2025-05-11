@@ -1,18 +1,18 @@
-if(APPLE)
-  configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/lldb-dap-Info.plist.in
-    ${CMAKE_CURRENT_BINARY_DIR}/lldb-dap-Info.plist
-    )
-  # Inline info plist in binary (use target_link_options for this as soon as CMake 3.13 is available)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_BINARY_DIR}/lldb-dap-Info.plist")
-endif()
-
 add_lldb_tool(lldb-dap
   lldb-dap.cpp
 
   LINK_LIBS
     lldbDAP
   )
+
+if(APPLE)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/lldb-dap-Info.plist.in
+    ${CMAKE_CURRENT_BINARY_DIR}/lldb-dap-Info.plist
+    )
+  target_link_options(lldb-dap
+    PRIVATE LINKER:-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_BINARY_DIR}/lldb-dap-Info.plist)
+endif()
 
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.

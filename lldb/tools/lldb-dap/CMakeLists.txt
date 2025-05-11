@@ -77,7 +77,7 @@ add_lldb_library(lldbDAP
   )
 
 target_include_directories(lldbDAP
-  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR_DIR})
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 if(LLDB_DAP_WELCOME_MESSAGE)
   target_compile_definitions(lldbDAP
