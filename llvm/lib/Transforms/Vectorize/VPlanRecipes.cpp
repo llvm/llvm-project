@@ -2711,6 +2711,40 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
   // transform, avoid computing their cost multiple times for now.
   Ctx.SkipCostComputation.insert(UI);
+
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  Type *ResultTy = Ctx.Types.inferScalarType(this);
+  switch (UI->getOpcode()) {
+  case Instruction::GetElementPtr:
+    // We mark this instruction as zero-cost because the cost of GEPs in
+    // vectorized code depends on whether the corresponding memory instruction
+    // is scalarized or not. Therefore, we handle GEPs with the memory
+    // instruction cost.
+    return 0;
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::Mul:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FRem:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor: {
+    auto Op2Info = Ctx.getOperandInfo(getOperand(1));
+    SmallVector<const Value *, 4> Operands(UI->operand_values());
+    return Ctx.TTI.getArithmeticInstrCost(
+               UI->getOpcode(), ResultTy, CostKind,
+               {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+               Op2Info, Operands, UI, &Ctx.TLI) *
+           (isUniform() ? 1 : VF.getKnownMinValue());
+  }
+  }
+
   return Ctx.getLegacyCost(UI, VF);
 }
 
