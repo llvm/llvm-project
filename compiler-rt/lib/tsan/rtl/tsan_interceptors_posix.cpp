@@ -559,6 +559,7 @@ static void SetJmp(ThreadState *thr, uptr sp) {
   buf->shadow_stack_pos = thr->shadow_stack_pos;
   ThreadSignalContext *sctx = SigCtx(thr);
   buf->int_signal_send = sctx ? sctx->int_signal_send : 0;
+  buf->oldset_stack_size = sctx ? sctx->oldset.Size() : 0;
   buf->in_blocking_func = atomic_load(&thr->in_blocking_func, memory_order_relaxed);
   buf->in_signal_handler = atomic_load(&thr->in_signal_handler,
       memory_order_relaxed);
@@ -575,8 +576,11 @@ static void LongJmp(ThreadState *thr, uptr *env) {
       while (thr->shadow_stack_pos > buf->shadow_stack_pos)
         FuncExit(thr);
       ThreadSignalContext *sctx = SigCtx(thr);
-      if (sctx)
+      if (sctx) {
         sctx->int_signal_send = buf->int_signal_send;
+        while (sctx->oldset.Size() > buf->oldset_stack_size)
+          sctx->oldset.PopBack();
+      }
       atomic_store(&thr->in_blocking_func, buf->in_blocking_func,
           memory_order_relaxed);
       atomic_store(&thr->in_signal_handler, buf->in_signal_handler,
