@@ -1376,16 +1376,17 @@ mlir::LogicalResult CIRToLLVMShiftOpLowering::matchAndRewrite(
   auto cirValTy = mlir::dyn_cast<cir::IntType>(op.getValue().getType());
 
   // Operands could also be vector type
-  assert(!cir::MissingFeatures::vectorType());
+  auto cirAmtVTy = mlir::dyn_cast<cir::VectorType>(op.getAmount().getType());
+  auto cirValVTy = mlir::dyn_cast<cir::VectorType>(op.getValue().getType());
   mlir::Type llvmTy = getTypeConverter()->convertType(op.getType());
   mlir::Value amt = adaptor.getAmount();
   mlir::Value val = adaptor.getValue();
 
-  // TODO(cir): Assert for vector types
-  assert((cirValTy && cirAmtTy) &&
+  assert(((cirValTy && cirAmtTy) || (cirAmtVTy && cirValVTy)) &&
          "shift input type must be integer or vector type, otherwise NYI");
 
-  assert((cirValTy == op.getType()) && "inconsistent operands' types NYI");
+  assert((cirValTy == op.getType() || cirValVTy == op.getType()) &&
+         "inconsistent operands' types NYI");
 
   // Ensure shift amount is the same type as the value. Some undefined
   // behavior might occur in the casts below as per [C99 6.5.7.3].
@@ -1399,8 +1400,10 @@ mlir::LogicalResult CIRToLLVMShiftOpLowering::matchAndRewrite(
   if (op.getIsShiftleft()) {
     rewriter.replaceOpWithNewOp<mlir::LLVM::ShlOp>(op, llvmTy, val, amt);
   } else {
-    assert(!cir::MissingFeatures::vectorType());
-    bool isUnsigned = !cirValTy.isSigned();
+    const bool isUnsigned =
+        cirValTy
+            ? !cirValTy.isSigned()
+            : !mlir::cast<cir::IntType>(cirValVTy.getElementType()).isSigned();
     if (isUnsigned)
       rewriter.replaceOpWithNewOp<mlir::LLVM::LShrOp>(op, llvmTy, val, amt);
     else
