@@ -4266,8 +4266,9 @@ void ElementwiseOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
     result = helper.buildTernaryFn(kind.ternaryFn, block.getArgument(0),
                                    block.getArgument(1), block.getArgument(2));
 
-  } else
+  } else {
     assert(false && "found unhandled category in elemwise");
+  }
 
   yields.push_back(result);
   helper.yieldOutputs(yields);
