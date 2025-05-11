@@ -4632,18 +4632,38 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
   SDValue Imm = CurDAG->getTargetConstant(
       ShAmt, DL, N0.getOperand(1).getValueType(), false);
 
-  if (ShAmt + HsAmt != 64)
+  if (ShAmt + HsAmt != VT.getScalarSizeInBits())
     return false;
 
+  bool UseSVE2Instr = false;
   if (!IsXOROperand) {
+    if (VT.getVectorElementType() != MVT::i64 && Subtarget->hasSVE2())
+      UseSVE2Instr = true;
+
     SDValue Zero = CurDAG->getTargetConstant(0, DL, MVT::i64);
     SDNode *MOV = CurDAG->getMachineNode(AArch64::MOVIv2d_ns, DL, VT, Zero);
     SDValue MOVIV = SDValue(MOV, 0);
+
     R1 = N1->getOperand(0);
-    R2 = MOVIV;
+    if (UseSVE2Instr) {
+      SDValue ZSub = CurDAG->getTargetConstant(AArch64::zsub, DL, MVT::i32);
+      SDNode *SubRegToReg = CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, DL,
+                                                   VT, Zero, MOVIV, ZSub);
+      R2 = SDValue(SubRegToReg, 0);
+    } else {
+      R2 = MOVIV;
+    }
   }
 
   SDValue Ops[] = {R1, R2, Imm};
+  if (UseSVE2Instr) {
+    if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::Int>(
+            VT, {AArch64::XAR_ZZZI_B, AArch64::XAR_ZZZI_H, AArch64::XAR_ZZZI_S,
+                 AArch64::XAR_ZZZI_D})) {
+      CurDAG->SelectNodeTo(N, Opc, VT, Ops);
+      return true;
+    }
+  }
   CurDAG->SelectNodeTo(N, AArch64::XAR, N0.getValueType(), Ops);
 
   return true;
