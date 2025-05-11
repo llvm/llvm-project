@@ -509,8 +509,17 @@ Improvements to Clang's diagnostics
 - Clang now prints the namespace for an attribute, if any,
   when emitting an unknown attribute diagnostic.
 
+- ``-Wvolatile`` now warns about volatile-qualified class return types
+  as well as volatile-qualified scalar return types. Fixes #GH133380
+
 - Several compatibility diagnostics that were incorrectly being grouped under
   ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
+
+- Improved the ``-Wtautological-overlap-compare`` diagnostics to warn about overlapping and non-overlapping ranges involving character literals and floating-point literals. 
+  The warning message for non-overlapping cases has also been improved (#GH13473).
+
+- Fixed a duplicate diagnostic when performing typo correction on function template
+  calls with explicit template arguments. (#GH139226)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -680,6 +689,8 @@ Bug Fixes to C++ Support
 - Improved parser recovery of invalid requirement expressions. In turn, this
   fixes crashes from follow-on processing of the invalid requirement. (#GH138820)
 - Fixed the handling of pack indexing types in the constraints of a member function redeclaration. (#GH138255)
+- Clang now correctly parses arbitrary order of ``[[]]``, ``__attribute__`` and ``alignas`` attributes for declarations (#GH133107)
+- Fixed a crash when forming an invalid function type in a dependent context. (#GH138657) (#GH115725) (#GH68852)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -916,7 +927,8 @@ Improvements
 ^^^^^^^^^^^^
 
 Additional Information
-======================
+
+===================
 
 A wide variety of additional information is available on the `Clang web
 page <https://clang.llvm.org/>`_. The web page contains versions of the

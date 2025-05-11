@@ -15,7 +15,6 @@
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
-#include "lldb/API/SBError.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -349,15 +348,19 @@ public:
   llvm::Error Run(const protocol::StepOutArguments &args) const override;
 };
 
-class SetBreakpointsRequestHandler : public LegacyRequestHandler {
+class SetBreakpointsRequestHandler
+    : public RequestHandler<
+          protocol::SetBreakpointsArguments,
+          llvm::Expected<protocol::SetBreakpointsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "setBreakpoints"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureConditionalBreakpoints,
             protocol::eAdapterFeatureHitConditionalBreakpoints};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::SetBreakpointsResponseBody>
+  Run(const protocol::SetBreakpointsArguments &args) const override;
 };
 
 class SetExceptionBreakpointsRequestHandler : public LegacyRequestHandler {
@@ -370,43 +373,59 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class SetFunctionBreakpointsRequestHandler : public LegacyRequestHandler {
+class SetFunctionBreakpointsRequestHandler
+    : public RequestHandler<
+          protocol::SetFunctionBreakpointsArguments,
+          llvm::Expected<protocol::SetFunctionBreakpointsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "setFunctionBreakpoints"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureFunctionBreakpoints};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::SetFunctionBreakpointsResponseBody>
+  Run(const protocol::SetFunctionBreakpointsArguments &args) const override;
 };
 
-class DataBreakpointInfoRequestHandler : public LegacyRequestHandler {
+class DataBreakpointInfoRequestHandler
+    : public RequestHandler<
+          protocol::DataBreakpointInfoArguments,
+          llvm::Expected<protocol::DataBreakpointInfoResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "dataBreakpointInfo"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::DataBreakpointInfoResponseBody>
+  Run(const protocol::DataBreakpointInfoArguments &args) const override;
 };
 
-class SetDataBreakpointsRequestHandler : public LegacyRequestHandler {
+class SetDataBreakpointsRequestHandler
+    : public RequestHandler<
+          protocol::SetDataBreakpointsArguments,
+          llvm::Expected<protocol::SetDataBreakpointsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "setDataBreakpoints"; }
-  void operator()(const llvm::json::Object &request) const override;
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureDataBreakpoints};
   }
+  llvm::Expected<protocol::SetDataBreakpointsResponseBody>
+  Run(const protocol::SetDataBreakpointsArguments &args) const override;
 };
 
-class SetInstructionBreakpointsRequestHandler : public LegacyRequestHandler {
+class SetInstructionBreakpointsRequestHandler
+    : public RequestHandler<
+          protocol::SetInstructionBreakpointsArguments,
+          llvm::Expected<protocol::SetInstructionBreakpointsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() {
     return "setInstructionBreakpoints";
   }
-  void operator()(const llvm::json::Object &request) const override;
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureInstructionBreakpoints};
   }
+  llvm::Expected<protocol::SetInstructionBreakpointsResponseBody>
+  Run(const protocol::SetInstructionBreakpointsArguments &args) const override;
 };
 
 class CompileUnitsRequestHandler : public LegacyRequestHandler {
