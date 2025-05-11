@@ -132,10 +132,8 @@ class DebugCommunication(object):
         self.exit_status = None
         self.initialize_body = None
         self.thread_stop_reasons = {}
-        self.breakpoint_events = []
         self.progress_events = []
         self.reverse_requests = []
-        self.module_events = []
         self.sequence = 1
         self.threads = None
         self.recv_thread.start()
@@ -244,23 +242,11 @@ class DebugCommunication(object):
                 self._process_stopped()
                 tid = body["threadId"]
                 self.thread_stop_reasons[tid] = body
-            elif event == "breakpoint":
-                # Breakpoint events come in when a breakpoint has locations
-                # added or removed. Keep track of them so we can look for them
-                # in tests.
-                self.breakpoint_events.append(packet)
-                # no need to add 'breakpoint' event packets to our packets list
-                return keepGoing
             elif event.startswith("progress"):
                 # Progress events come in as 'progressStart', 'progressUpdate',
                 # and 'progressEnd' events. Keep these around in case test
                 # cases want to verify them.
                 self.progress_events.append(packet)
-            elif event == "module":
-                # Module events indicate that some information about a module has changed.
-                self.module_events.append(packet)
-                # no need to add 'module' event packets to our packets list
-                return keepGoing
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":
@@ -411,6 +397,15 @@ class DebugCommunication(object):
         if exited:
             self.threads = []
         return stopped_events
+
+    def wait_for_breakpoint_events(self, timeout=None):
+        breakpoint_events = []
+        while True:
+            event = self.wait_for_event("breakpoint", timeout=timeout)
+            if not event:
+                break
+            breakpoint_events.append(event)
+        return breakpoint_events
 
     def wait_for_exited(self):
         event_dict = self.wait_for_event("exited")
@@ -591,6 +586,7 @@ class DebugCommunication(object):
         attachCommands=None,
         terminateCommands=None,
         coreFile=None,
+        stopOnAttach=True,
         postRunCommands=None,
         sourceMap=None,
         gdbRemotePort=None,
@@ -620,6 +616,8 @@ class DebugCommunication(object):
             args_dict["attachCommands"] = attachCommands
         if coreFile:
             args_dict["coreFile"] = coreFile
+        if stopOnAttach:
+            args_dict["stopOnEntry"] = stopOnAttach
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
         if sourceMap:
@@ -632,7 +630,7 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
 
         if response["success"]:
-            self.wait_for_events(["process", "initialized"])
+            self.wait_for_event("process")
         return response
 
     def request_breakpointLocations(
@@ -666,10 +664,6 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
         if response:
             self.configuration_done_sent = True
-            # Client requests the baseline of currently existing threads after
-            # a successful launch or attach.
-            # Kick off the threads request that follows
-            self.request_threads()
         return response
 
     def _process_stopped(self):
@@ -887,7 +881,7 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
 
         if response["success"]:
-            self.wait_for_events(["process", "initialized"])
+            self.wait_for_event("process")
         return response
 
     def request_next(self, threadId, granularity="statement"):
@@ -1325,6 +1319,26 @@ def attach_options_specified(options):
 
 def run_vscode(dbg, args, options):
     dbg.request_initialize(options.sourceInitFile)
+
+    if options.sourceBreakpoints:
+        source_to_lines = {}
+        for file_line in options.sourceBreakpoints:
+            (path, line) = file_line.split(":")
+            if len(path) == 0 or len(line) == 0:
+                print('error: invalid source with line "%s"' % (file_line))
+
+            else:
+                if path in source_to_lines:
+                    source_to_lines[path].append(int(line))
+                else:
+                    source_to_lines[path] = [int(line)]
+        for source in source_to_lines:
+            dbg.request_setBreakpoints(source, source_to_lines[source])
+    if options.funcBreakpoints:
+        dbg.request_setFunctionBreakpoints(options.funcBreakpoints)
+
+    dbg.request_configurationDone()
+
     if attach_options_specified(options):
         response = dbg.request_attach(
             program=options.program,
@@ -1353,23 +1367,6 @@ def run_vscode(dbg, args, options):
         )
 
     if response["success"]:
-        if options.sourceBreakpoints:
-            source_to_lines = {}
-            for file_line in options.sourceBreakpoints:
-                (path, line) = file_line.split(":")
-                if len(path) == 0 or len(line) == 0:
-                    print('error: invalid source with line "%s"' % (file_line))
-
-                else:
-                    if path in source_to_lines:
-                        source_to_lines[path].append(int(line))
-                    else:
-                        source_to_lines[path] = [int(line)]
-            for source in source_to_lines:
-                dbg.request_setBreakpoints(source, source_to_lines[source])
-        if options.funcBreakpoints:
-            dbg.request_setFunctionBreakpoints(options.funcBreakpoints)
-        dbg.request_configurationDone()
         dbg.wait_for_stopped()
     else:
         if "message" in response:

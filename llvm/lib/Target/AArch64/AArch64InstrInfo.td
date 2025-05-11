@@ -754,10 +754,11 @@ def AArch64authtcret: SDNode<"AArch64ISD::AUTH_TC_RETURN",
 
 def AArch64authcall_rvmarker : SDNode<"AArch64ISD::AUTH_CALL_RVMARKER",
                                  SDTypeProfile<0, -1, [SDTCisPtrTy<0>,
-                                                       SDTCisPtrTy<1>,
-                                                       SDTCisVT<2, i32>,
-                                                       SDTCisVT<3, i64>,
-                                                       SDTCisVT<4, i64>]>,
+                                                       SDTCisVT<1, i32>,
+                                                       SDTCisPtrTy<2>,
+                                                       SDTCisVT<3, i32>,
+                                                       SDTCisVT<4, i64>,
+                                                       SDTCisVT<5, i64>]>,
                                  [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                   SDNPVariadic]>;
 
@@ -1052,9 +1053,9 @@ def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 1,
 // have no common bits.
 def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
                          [(add node:$lhs, node:$rhs), (or node:$lhs, node:$rhs)],[{
-   if (N->getOpcode() == ISD::ADD)
+   if (Op.getOpcode() == ISD::ADD)
      return true;
-   return CurDAG->isADDLike(SDValue(N,0));
+   return CurDAG->isADDLike(Op);
 }]> {
   let GISelPredicateCode = [{
      return mi_match(MI, MRI, m_GAddLike(m_Reg(), m_Reg()));
@@ -1896,9 +1897,9 @@ let Predicates = [HasPAuth] in {
   }
 
   def BLRA_RVMARKER : Pseudo<
-        (outs), (ins i64imm:$rvfunc, GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
-                     GPR64:$AddrDisc),
-        [(AArch64authcall_rvmarker tglobaladdr:$rvfunc,
+        (outs), (ins i64imm:$rvfunc, i32imm:$withmarker, GPR64noip:$Rn,
+                     i32imm:$Key, i64imm:$Disc, GPR64:$AddrDisc),
+        [(AArch64authcall_rvmarker tglobaladdr:$rvfunc, timm:$withmarker,
                                    GPR64noip:$Rn, timm:$Key, timm:$Disc,
                                    GPR64:$AddrDisc)]>, Sched<[]> {
     let isCodeGenOnly = 1;
@@ -3293,8 +3294,9 @@ def : Pat<(AArch64call GPR64noip:$Rn),
           (BLRNoIP GPR64noip:$Rn)>,
       Requires<[SLSBLRMitigation]>;
 
-def : Pat<(AArch64call_rvmarker (i64 tglobaladdr:$rvfunc), GPR64:$Rn),
-          (BLR_RVMARKER tglobaladdr:$rvfunc, GPR64:$Rn)>,
+def : Pat<(AArch64call_rvmarker (i64 tglobaladdr:$rvfunc),
+                                (i32 timm:$withmarker), GPR64:$Rn),
+          (BLR_RVMARKER tglobaladdr:$rvfunc, timm:$withmarker, GPR64:$Rn)>,
       Requires<[NoSLSBLRMitigation]>;
 
 def : Pat<(AArch64call_bti GPR64:$Rn),
@@ -8512,6 +8514,26 @@ def : InstAlias<"uxtl2.2d $dst, $src1",
 def : InstAlias<"uxtl2 $dst.2d, $src1.4s",
                 (USHLLv4i32_shift V128:$dst, V128:$src1, 0)>;
 }
+
+// fpextend from bf16 to f32 is just a shift left by 16
+let Predicates = [HasNEON] in {
+def : Pat<(f32 (any_fpextend (bf16 FPR16:$Rn))),
+          (f32 (EXTRACT_SUBREG
+            (v4i32 (SHLLv4i16 (v4i16 (SUBREG_TO_REG (i64 0), (bf16 FPR16:$Rn), hsub)))),
+            ssub))>;
+def : Pat<(v4f32 (any_fpextend (v4bf16 V64:$Rn))),
+          (SHLLv4i16 V64:$Rn)>;
+def : Pat<(v4f32 (any_fpextend (extract_high_v8bf16 (v8bf16 V128:$Rn)))),
+          (SHLLv8i16 V128:$Rn)>;
+}
+// Fallback pattern for when we don't have NEON
+def : Pat<(f32 (any_fpextend (bf16 FPR16:$Rn))),
+          (f32 (COPY_TO_REGCLASS
+            (i32 (UBFMWri (COPY_TO_REGCLASS
+                            (f32 (SUBREG_TO_REG (i32 0), (bf16 FPR16:$Rn), hsub)),
+                            GPR32),
+                          (i64 16), (i64 15))),
+            FPR32))>;
 
 def abs_f16 :
   OutPatFrag<(ops node:$Rn),

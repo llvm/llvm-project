@@ -3455,7 +3455,6 @@ void PragmaSTDC_FENV_ROUNDHandler::HandlePragma(Preprocessor &PP,
                                                 PragmaIntroducer Introducer,
                                                 Token &Tok) {
   Token PragmaName = Tok;
-  SmallVector<Token, 1> TokenList;
   if (!PP.getTargetInfo().hasStrictFP() && !PP.getLangOpts().ExpStrictFP) {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_fp_ignored)
         << PragmaName.getIdentifierInfo()->getName();

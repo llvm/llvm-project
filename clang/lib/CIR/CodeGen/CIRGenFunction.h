@@ -96,6 +96,10 @@ public:
     return getEvaluationKind(type) == cir::TEK_Scalar;
   }
 
+  static bool hasAggregateEvaluationKind(clang::QualType type) {
+    return getEvaluationKind(type) == cir::TEK_Aggregate;
+  }
+
   CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                  bool suppressNewContext = false);
   ~CIRGenFunction();
@@ -164,6 +168,17 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
+  // an ObjCMethodDecl.
+  struct PrototypeWrapper {
+    llvm::PointerUnion<const clang::FunctionProtoType *,
+                       const clang::ObjCMethodDecl *>
+        p;
+
+    PrototypeWrapper(const clang::FunctionProtoType *ft) : p(ft) {}
+    PrototypeWrapper(const clang::ObjCMethodDecl *md) : p(md) {}
+  };
+
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
@@ -172,6 +187,23 @@ public:
   public:
     AbstractCallee() : calleeDecl(nullptr) {}
     AbstractCallee(const clang::FunctionDecl *fd) : calleeDecl(fd) {}
+
+    bool hasFunctionDecl() const {
+      return llvm::isa_and_nonnull<clang::FunctionDecl>(calleeDecl);
+    }
+
+    unsigned getNumParams() const {
+      if (const auto *fd = llvm::dyn_cast<clang::FunctionDecl>(calleeDecl))
+        return fd->getNumParams();
+      return llvm::cast<clang::ObjCMethodDecl>(calleeDecl)->param_size();
+    }
+
+    const clang::ParmVarDecl *getParamDecl(unsigned I) const {
+      if (const auto *fd = llvm::dyn_cast<clang::FunctionDecl>(calleeDecl))
+        return fd->getParamDecl(I);
+      return *(llvm::cast<clang::ObjCMethodDecl>(calleeDecl)->param_begin() +
+               I);
+    }
   };
 
   void finishFunction(SourceLocation endLoc);
@@ -447,6 +479,10 @@ public:
   /// should be returned.
   RValue emitAnyExpr(const clang::Expr *e);
 
+  /// Similarly to emitAnyExpr(), however, the result will always be accessible
+  /// even if no aggregate location is provided.
+  RValue emitAnyExprToTemp(const clang::Expr *e);
+
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
   Address emitArrayToPointerDecay(const Expr *array);
@@ -467,9 +503,16 @@ public:
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
-                  cir::CIRCallOpInterface *callOp, mlir::Location loc);
+                  const CallArgList &args, cir::CIRCallOpInterface *callOp,
+                  mlir::Location loc);
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
                   const clang::CallExpr *e, ReturnValueSlot returnValue);
+  void emitCallArg(CallArgList &args, const clang::Expr *e,
+                   clang::QualType argType);
+  void emitCallArgs(
+      CallArgList &args, PrototypeWrapper prototype,
+      llvm::iterator_range<clang::CallExpr::const_arg_iterator> argRange,
+      AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0);
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
   CIRGenCallee emitCallee(const clang::Expr *e);
@@ -537,6 +580,10 @@ public:
   void emitDecl(const clang::Decl &d);
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
+
+  mlir::LogicalResult emitDefaultStmt(const clang::DefaultStmt &s,
+                                      mlir::Type condType,
+                                      bool buildingTopLevelCase);
 
   /// Emit an `if` on a boolean condition to the specified blocks.
   /// FIXME: Based on the condition, this might try to simplify the codegen of
@@ -670,6 +717,12 @@ private:
       mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
       SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
       const Stmt *associatedStmt);
+
+  template <typename Op, typename TermOp>
+  mlir::LogicalResult emitOpenACCOpCombinedConstruct(
+      mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
+      SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
+      const Stmt *loopStmt);
 
 public:
   mlir::LogicalResult

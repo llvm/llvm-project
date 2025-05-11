@@ -220,7 +220,7 @@ void RTDEF(Findloc)(Descriptor &result, const Descriptor &x,
       CFI_attribute_allocatable);
   result.GetDimension(0).SetBounds(1, extent[0]);
   Terminator terminator{source, line};
-  if (int stat{result.Allocate(kNoAsyncObject)}) {
+  if (int stat{result.Allocate(kNoAsyncId)}) {
     terminator.Crash(
         "FINDLOC: could not allocate memory for result; STAT=%d", stat);
   }

@@ -542,8 +542,7 @@ private:
       : Value(Ty, SubclassID), Opcode(Info.Opcode), Flags(Info.Flags),
         NumOperands(OpIDs.size()), BlockAddressBB(Info.BlockAddressBB),
         SrcElemTy(Info.SrcElemTy), InRange(Info.InRange) {
-    std::uninitialized_copy(OpIDs.begin(), OpIDs.end(),
-                            getTrailingObjects<unsigned>());
+    llvm::uninitialized_copy(OpIDs, getTrailingObjects<unsigned>());
   }
 
   BitcodeConstant &operator=(const BitcodeConstant &) = delete;
@@ -1653,7 +1652,7 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
               FwdBBs[BBID] = BasicBlock::Create(Context);
             BB = FwdBBs[BBID];
           }
-          C = BlockAddress::get(Fn, BB);
+          C = BlockAddress::get(Fn->getType(), BB);
           break;
         }
         case BitcodeConstant::ConstantStructOpcode: {
@@ -3860,6 +3859,10 @@ Error BitcodeReader::parseUseLists() {
         V = FunctionBBs[ID];
       } else
         V = ValueList[ID];
+
+      if (!V->hasUseList())
+        break;
+
       unsigned NumUses = 0;
       SmallDenseMap<const Use *, unsigned, 16> Order;
       for (const Use &U : V->materialized_uses()) {
@@ -3996,8 +3999,6 @@ Error BitcodeReader::rememberAndSkipFunctionBodies() {
   // An old bitcode file with the symbol table at the end would have
   // finished the parse greedily.
   assert(SeenValueSymbolTable);
-
-  SmallVector<uint64_t, 64> Record;
 
   while (true) {
     Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
@@ -6021,7 +6022,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
               FunctionType::get(FTy->getReturnType(), ArgTys, FTy->isVarArg());
 
           // Update constraint string to use label constraints.
-          std::string Constraints = IA->getConstraintString();
+          std::string Constraints = IA->getConstraintString().str();
           unsigned ArgNo = 0;
           size_t Pos = 0;
           for (const auto &CI : ConstraintInfo) {
@@ -8177,7 +8178,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     }
 
-    case bitc::FS_COMBINED_ALLOC_INFO: {
+    case bitc::FS_COMBINED_ALLOC_INFO:
+    case bitc::FS_COMBINED_ALLOC_INFO_NO_CONTEXT: {
       unsigned I = 0;
       std::vector<MIBInfo> MIBs;
       unsigned NumMIBs = Record[I++];
@@ -8186,7 +8188,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       while (MIBsRead++ < NumMIBs) {
         assert(Record.size() - I >= 2);
         AllocationType AllocType = (AllocationType)Record[I++];
-        auto StackIdList = parseAllocInfoContext(Record, I);
+        SmallVector<unsigned> StackIdList;
+        if (BitCode == bitc::FS_COMBINED_ALLOC_INFO)
+          StackIdList = parseAllocInfoContext(Record, I);
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
       assert(Record.size() - I >= NumVersions);

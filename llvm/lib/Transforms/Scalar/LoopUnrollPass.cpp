@@ -946,8 +946,8 @@ bool llvm::computeUnrollCount(
   // case it's not permitted to also specify an explicit unroll count.
   if (PP.PeelCount) {
     if (UnrollCount.getNumOccurrences() > 0) {
-      report_fatal_error("Cannot specify both explicit peel count and "
-                         "explicit unroll count", /*GenCrashDiag=*/false);
+      reportFatalUsageError("Cannot specify both explicit peel count and "
+                            "explicit unroll count");
     }
     UP.Count = 1;
     UP.Runtime = false;

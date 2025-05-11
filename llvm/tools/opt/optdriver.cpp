@@ -450,7 +450,7 @@ extern "C" int optMain(
   PassPlugins.setCallback([&](const std::string &PluginPath) {
     auto Plugin = PassPlugin::Load(PluginPath);
     if (!Plugin)
-      report_fatal_error(Plugin.takeError(), /*gen_crash_diag=*/false);
+      reportFatalUsageError(Plugin.takeError());
     PluginList.emplace_back(Plugin.get());
   });
 

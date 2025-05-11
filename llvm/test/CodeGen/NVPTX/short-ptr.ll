@@ -22,9 +22,9 @@ declare void @use(i8 %arg);
 ; CHECK-DEFAULT-32: .param .b32 test1_param_0
 ; CHECK-SHORT-LOCAL: .param .b32 test1_param_0
 define void @test1(ptr addrspace(5) %local) {
-  ; CHECK-DEFAULT: ld.param.u64 %rd{{.*}}, [test1_param_0];
-  ; CHECK-DEFAULT-32:  ld.param.u32 %r{{.*}}, [test1_param_0];
-  ; CHECK-SHORT-LOCAL: ld.param.u32 %r{{.*}}, [test1_param_0];
+  ; CHECK-DEFAULT: ld.param.b64 %rd{{.*}}, [test1_param_0];
+  ; CHECK-DEFAULT-32:  ld.param.b32 %r{{.*}}, [test1_param_0];
+  ; CHECK-SHORT-LOCAL: ld.param.b32 %r{{.*}}, [test1_param_0];
   %v = load i8, ptr addrspace(5) %local
   call void @use(i8 %v)
   ret void

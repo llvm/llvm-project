@@ -350,8 +350,6 @@ bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
 }
 
 void DataAggregator::parsePreAggregated() {
-  std::string Error;
-
   ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
       MemoryBuffer::getFileOrSTDIN(Filename);
   if (std::error_code EC = MB.getError()) {
@@ -499,12 +497,15 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   filterBinaryMMapInfo();
   prepareToParse("events", MainEventsPPI, ErrorCallback);
 
-  if (opts::BasicAggregation ? parseBasicEvents() : parseBranchEvents())
+  if ((!opts::BasicAggregation && parseBranchEvents()) ||
+      (opts::BasicAggregation && parseBasicEvents()))
     errs() << "PERF2BOLT: failed to parse samples\n";
 
   if (opts::HeatmapMode) {
-    if (std::error_code EC = printLBRHeatMap())
-      return errorCodeToError(EC);
+    if (std::error_code EC = printLBRHeatMap()) {
+      errs() << "ERROR: failed to print heat map: " << EC.message() << '\n';
+      exit(1);
+    }
     exit(0);
   }
 
@@ -569,8 +570,9 @@ void DataAggregator::processProfile(BinaryContext &BC) {
     if (FuncBranchData *FBD = getBranchData(BF)) {
       BF.markProfiled(BinaryFunction::PF_LBR);
       BF.RawSampleCount = FBD->getNumExecutedBranches();
-    } else if (FuncSampleData *FSD = getFuncSampleData(BF.getNames())) {
-      BF.markProfiled(BinaryFunction::PF_SAMPLE);
+    } else if (FuncBasicSampleData *FSD =
+                   getFuncBasicSampleData(BF.getNames())) {
+      BF.markProfiled(BinaryFunction::PF_IP);
       BF.RawSampleCount = FSD->getSamples();
     }
   }
@@ -626,8 +628,8 @@ StringRef DataAggregator::getLocationName(const BinaryFunction &Func,
   return OrigFunc->getOneName();
 }
 
-bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
-                              uint64_t Count) {
+bool DataAggregator::doBasicSample(BinaryFunction &OrigFunc, uint64_t Address,
+                                   uint64_t Count) {
   // To record executed bytes, use basic block size as is regardless of BAT.
   uint64_t BlockSize = 0;
   if (BinaryBasicBlock *BB = OrigFunc.getBasicBlockContainingOffset(
@@ -641,13 +643,13 @@ bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
   // Attach executed bytes to parent function in case of cold fragment.
   Func.SampleCountInBytes += Count * BlockSize;
 
-  auto I = NamesToSamples.find(Func.getOneName());
-  if (I == NamesToSamples.end()) {
+  auto I = NamesToBasicSamples.find(Func.getOneName());
+  if (I == NamesToBasicSamples.end()) {
     bool Success;
     StringRef LocName = getLocationName(Func, BAT);
-    std::tie(I, Success) = NamesToSamples.insert(
-        std::make_pair(Func.getOneName(),
-                       FuncSampleData(LocName, FuncSampleData::ContainerTy())));
+    std::tie(I, Success) = NamesToBasicSamples.insert(std::make_pair(
+        Func.getOneName(),
+        FuncBasicSampleData(LocName, FuncBasicSampleData::ContainerTy())));
   }
 
   Address -= Func.getAddress();
@@ -724,23 +726,6 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                : isReturn(Func.disassembleInstructionAtOffset(Offset));
   };
 
-  // Returns whether \p Offset in \p Func may be a call continuation excluding
-  // entry points and landing pads.
-  auto checkCallCont = [&](const BinaryFunction &Func, const uint64_t Offset) {
-    // No call continuation at a function start.
-    if (!Offset)
-      return false;
-
-    // FIXME: support BAT case where the function might be in empty state
-    // (split fragments declared non-simple).
-    if (!Func.hasCFG())
-      return false;
-
-    // The offset should not be an entry point or a landing pad.
-    const BinaryBasicBlock *ContBB = Func.getBasicBlockAtOffset(Offset);
-    return ContBB && !ContBB->isEntryPoint() && !ContBB->isLandingPad();
-  };
-
   // Mutates \p Addr to an offset into the containing function, performing BAT
   // offset translation and parent lookup.
   //
@@ -753,8 +738,7 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
 
     Addr -= Func->getAddress();
 
-    bool IsRetOrCallCont =
-        IsFrom ? checkReturn(*Func, Addr) : checkCallCont(*Func, Addr);
+    bool IsRet = IsFrom && checkReturn(*Func, Addr);
 
     if (BAT)
       Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
@@ -765,24 +749,16 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
       NumColdSamples += Count;
 
     if (!ParentFunc)
-      return std::pair{Func, IsRetOrCallCont};
+      return std::pair{Func, IsRet};
 
-    return std::pair{ParentFunc, IsRetOrCallCont};
+    return std::pair{ParentFunc, IsRet};
   };
 
-  uint64_t ToOrig = To;
   auto [FromFunc, IsReturn] = handleAddress(From, /*IsFrom*/ true);
-  auto [ToFunc, IsCallCont] = handleAddress(To, /*IsFrom*/ false);
+  auto [ToFunc, _] = handleAddress(To, /*IsFrom*/ false);
   if (!FromFunc && !ToFunc)
     return false;
 
-  // Record call to continuation trace.
-  if (NeedsConvertRetProfileToCallCont && FromFunc != ToFunc &&
-      (IsReturn || IsCallCont)) {
-    LBREntry First{ToOrig - 1, ToOrig - 1, false};
-    LBREntry Second{ToOrig, ToOrig, false};
-    return doTrace(First, Second, Count);
-  }
   // Ignore returns.
   if (IsReturn)
     return true;
@@ -1239,21 +1215,14 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   ErrorOr<StringRef> TypeOrErr = parseString(FieldSeparator);
   if (std::error_code EC = TypeOrErr.getError())
     return EC;
-  // Pre-aggregated profile with branches and fallthroughs needs to convert
-  // return profile into call to continuation fall-through.
-  auto Type = AggregatedLBREntry::BRANCH;
-  if (TypeOrErr.get() == "B") {
-    NeedsConvertRetProfileToCallCont = true;
+  auto Type = AggregatedLBREntry::TRACE;
+  if (LLVM_LIKELY(TypeOrErr.get() == "T")) {
+  } else if (TypeOrErr.get() == "B") {
     Type = AggregatedLBREntry::BRANCH;
   } else if (TypeOrErr.get() == "F") {
-    NeedsConvertRetProfileToCallCont = true;
     Type = AggregatedLBREntry::FT;
   } else if (TypeOrErr.get() == "f") {
-    NeedsConvertRetProfileToCallCont = true;
     Type = AggregatedLBREntry::FT_EXTERNAL_ORIGIN;
-  } else if (TypeOrErr.get() == "T") {
-    // Trace is expanded into B and [Ff]
-    Type = AggregatedLBREntry::TRACE;
   } else {
     reportError("expected T, B, F or f");
     return make_error_code(llvm::errc::io_error);
@@ -1353,12 +1322,14 @@ std::error_code DataAggregator::printLBRHeatMap() {
 
   outs() << "HEATMAP: building heat map...\n";
 
+  // Register basic samples and perf LBR addresses not covered by fallthroughs.
   for (const auto &[PC, Hits] : BasicSamples)
     HM.registerAddress(PC, Hits);
   for (const auto &LBR : FallthroughLBRs) {
     const Trace &Trace = LBR.first;
     const FTInfo &Info = LBR.second;
-    HM.registerAddressRange(Trace.From, Trace.To, Info.InternCount);
+    HM.registerAddressRange(Trace.From, Trace.To,
+                            Info.InternCount + Info.ExternCount);
   }
 
   if (HM.getNumInvalidRanges())
@@ -1441,6 +1412,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     }
     NextLBR = &LBR;
 
+    // Record branches outside binary functions for heatmap.
     if (opts::HeatmapMode) {
       TakenBranchInfo &Info = BranchLBRs[Trace(LBR.From, LBR.To)];
       ++Info.TakenCount;
@@ -1454,6 +1426,8 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
   }
+  // Record LBR addresses not covered by fallthroughs (bottom-of-stack source
+  // and top-of-stack target) as basic samples for heatmap.
   if (opts::HeatmapMode && !Sample.LBR.empty()) {
     ++BasicSamples[Sample.LBR.front().To];
     ++BasicSamples[Sample.LBR.back().From];
@@ -1661,7 +1635,7 @@ void DataAggregator::processBasicEvents() {
       continue;
     }
 
-    doSample(*Func, PC, HitCount);
+    doBasicSample(*Func, PC, HitCount);
   }
 
   printBasicSamplesDiagnostics(OutOfRangeSamples);
@@ -2191,9 +2165,9 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
       OutFile << " " << Entry.getKey();
     OutFile << "\n";
 
-    for (const auto &KV : NamesToSamples) {
-      const FuncSampleData &FSD = KV.second;
-      for (const SampleInfo &SI : FSD.Data) {
+    for (const auto &KV : NamesToBasicSamples) {
+      const FuncBasicSampleData &FSD = KV.second;
+      for (const BasicSampleInfo &SI : FSD.Data) {
         writeLocation(SI.Loc);
         OutFile << SI.Hits << "\n";
         ++BranchValues;
@@ -2266,8 +2240,8 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
   for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames)
     EventNamesOS << LS << EventEntry.first().str();
 
-  BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
-                                           : BinaryFunction::PF_LBR;
+  BP.Header.Flags =
+      opts::BasicAggregation ? BinaryFunction::PF_IP : BinaryFunction::PF_LBR;
 
   // Add probe inline tree nodes.
   YAMLProfileWriter::InlineTreeDesc InlineTree;

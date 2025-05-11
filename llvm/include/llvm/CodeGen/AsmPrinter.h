@@ -240,7 +240,8 @@ private:
   bool DbgInfoAvailable = false;
 
 protected:
-  explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
+  AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer,
+             char &ID = AsmPrinter::ID);
 
 public:
   ~AsmPrinter() override;
@@ -810,6 +811,17 @@ public:
                      codeview::JumpTableEntrySize>
   getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
                            const MCSymbol *BranchLabel) const;
+
+  //===------------------------------------------------------------------===//
+  // COFF Helper Routines
+  //===------------------------------------------------------------------===//
+
+  /// Emits symbols and data to allow functions marked with the
+  /// loader-replaceable attribute to be replaceable.
+  void emitCOFFReplaceableFunctionData(Module &M);
+
+  /// Emits the @feat.00 symbol indicating the features enabled in this module.
+  void emitCOFFFeatureSymbol(Module &M);
 
   //===------------------------------------------------------------------===//
   // Inline Asm Support
