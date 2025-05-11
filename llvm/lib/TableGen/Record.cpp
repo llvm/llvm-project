@@ -240,8 +240,7 @@ static void ProfileRecordRecTy(FoldingSetNodeID &ID,
 
 RecordRecTy::RecordRecTy(RecordKeeper &RK, ArrayRef<const Record *> Classes)
     : RecTy(RecordRecTyKind, RK), NumClasses(Classes.size()) {
-  std::uninitialized_copy(Classes.begin(), Classes.end(),
-                          getTrailingObjects<const Record *>());
+  llvm::uninitialized_copy(Classes, getTrailingObjects<const Record *>());
 }
 
 const RecordRecTy *RecordRecTy::get(RecordKeeper &RK,
@@ -474,8 +473,7 @@ static void ProfileBitsInit(FoldingSetNodeID &ID,
 BitsInit::BitsInit(RecordKeeper &RK, ArrayRef<const Init *> Bits)
     : TypedInit(IK_BitsInit, BitsRecTy::get(RK, Bits.size())),
       NumBits(Bits.size()) {
-  std::uninitialized_copy(Bits.begin(), Bits.end(),
-                          getTrailingObjects<const Init *>());
+  llvm::uninitialized_copy(Bits, getTrailingObjects<const Init *>());
 }
 
 BitsInit *BitsInit::get(RecordKeeper &RK, ArrayRef<const Init *> Bits) {
@@ -708,8 +706,7 @@ static void ProfileListInit(FoldingSetNodeID &ID, ArrayRef<const Init *> Range,
 ListInit::ListInit(ArrayRef<const Init *> Elements, const RecTy *EltTy)
     : TypedInit(IK_ListInit, ListRecTy::get(EltTy)),
       NumValues(Elements.size()) {
-  std::uninitialized_copy(Elements.begin(), Elements.end(),
-                          getTrailingObjects<const Init *>());
+  llvm::uninitialized_copy(Elements, getTrailingObjects<const Init *>());
 }
 
 const ListInit *ListInit::get(ArrayRef<const Init *> Elements,
@@ -2435,8 +2432,7 @@ VarDefInit::VarDefInit(SMLoc Loc, const Record *Class,
                        ArrayRef<const ArgumentInit *> Args)
     : TypedInit(IK_VarDefInit, RecordRecTy::get(Class)), Loc(Loc), Class(Class),
       NumArgs(Args.size()) {
-  std::uninitialized_copy(Args.begin(), Args.end(),
-                          getTrailingObjects<const ArgumentInit *>());
+  llvm::uninitialized_copy(Args, getTrailingObjects<const ArgumentInit *>());
 }
 
 const VarDefInit *VarDefInit::get(SMLoc Loc, const Record *Class,
@@ -2621,9 +2617,8 @@ CondOpInit::CondOpInit(ArrayRef<const Init *> Conds,
                        ArrayRef<const Init *> Values, const RecTy *Type)
     : TypedInit(IK_CondOpInit, Type), NumConds(Conds.size()), ValType(Type) {
   auto *TrailingObjects = getTrailingObjects<const Init *>();
-  std::uninitialized_copy(Conds.begin(), Conds.end(), TrailingObjects);
-  std::uninitialized_copy(Values.begin(), Values.end(),
-                          TrailingObjects + NumConds);
+  llvm::uninitialized_copy(Conds, TrailingObjects);
+  llvm::uninitialized_copy(Values, TrailingObjects + NumConds);
 }
 
 void CondOpInit::Profile(FoldingSetNodeID &ID) const {
@@ -2757,10 +2752,8 @@ DagInit::DagInit(const Init *V, const StringInit *VN,
                  ArrayRef<const StringInit *> ArgNames)
     : TypedInit(IK_DagInit, DagRecTy::get(V->getRecordKeeper())), Val(V),
       ValName(VN), NumArgs(Args.size()) {
-  std::uninitialized_copy(Args.begin(), Args.end(),
-                          getTrailingObjects<const Init *>());
-  std::uninitialized_copy(ArgNames.begin(), ArgNames.end(),
-                          getTrailingObjects<const StringInit *>());
+  llvm::uninitialized_copy(Args, getTrailingObjects<const Init *>());
+  llvm::uninitialized_copy(ArgNames, getTrailingObjects<const StringInit *>());
 }
 
 const DagInit *DagInit::get(const Init *V, const StringInit *VN,
