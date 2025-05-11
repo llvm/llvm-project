@@ -142,7 +142,7 @@ class AllocLikeOp<string mnemonic,
 // AssumeAlignmentOp
 //===----------------------------------------------------------------------===//
 
-def AssumeAlignmentOp : MemRef_Op<"assume_alignment"> {
+def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [NoMemoryEffect]> {
   let summary =
       "assertion that gives alignment information to the input memref";
   let description = [{
