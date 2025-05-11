@@ -161,8 +161,8 @@ requiring no out of tree build-time dependencies.
 
 - ``InteractiveModelRunner``. This is intended for training scenarios where the
   training algorithm drives compilation. This model runner has no special
-  dependencies, and relies on I/O pipes to communicate with a separate process
-- presumably a python training algorithm. We do not envision using this in a
+  dependencies, and relies on I/O pipes to communicate with a separate process,
+  presumably a python training algorithm. We do not envision using this in a
   production environment.
 
 Note that training leaves it to the training infrastructure to handle
