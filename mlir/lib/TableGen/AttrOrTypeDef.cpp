@@ -205,6 +205,10 @@ std::optional<StringRef> AttrOrTypeDef::getExtraDefs() const {
   return value.empty() ? std::optional<StringRef>() : value;
 }
 
+bool AttrOrTypeDef::genMnemonicAlias() const {
+  return def->getValueAsBit("genMnemonicAlias");
+}
+
 ArrayRef<SMLoc> AttrOrTypeDef::getLoc() const { return def->getLoc(); }
 
 bool AttrOrTypeDef::skipDefaultBuilders() const {

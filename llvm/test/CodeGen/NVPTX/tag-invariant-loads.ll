@@ -18,12 +18,12 @@ define ptx_kernel void @basic(ptr noalias readonly %a, ptr %out) {
 ; PTX-NEXT:    .reg .b32 %f<2>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u32 %r1, [basic_param_0];
+; PTX-NEXT:    ld.param.b32 %r1, [basic_param_0];
 ; PTX-NEXT:    cvta.to.global.u32 %r2, %r1;
-; PTX-NEXT:    ld.param.u32 %r3, [basic_param_1];
+; PTX-NEXT:    ld.param.b32 %r3, [basic_param_1];
 ; PTX-NEXT:    cvta.to.global.u32 %r4, %r3;
-; PTX-NEXT:    ld.global.nc.f32 %f1, [%r2];
-; PTX-NEXT:    st.global.f32 [%r4], %f1;
+; PTX-NEXT:    ld.global.nc.b32 %f1, [%r2];
+; PTX-NEXT:    st.global.b32 [%r4], %f1;
 ; PTX-NEXT:    ret;
   %a_global = addrspacecast ptr %a to ptr addrspace(1)
   %val = load float, ptr addrspace(1) %a_global
@@ -47,18 +47,18 @@ define ptx_kernel void @select(ptr noalias readonly %a, ptr noalias readonly %b,
 ; PTX-NEXT:    .reg .b32 %r<9>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u8 %rs1, [select_param_2];
+; PTX-NEXT:    ld.param.b8 %rs1, [select_param_2];
 ; PTX-NEXT:    and.b16 %rs2, %rs1, 1;
 ; PTX-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; PTX-NEXT:    ld.param.u32 %r1, [select_param_0];
+; PTX-NEXT:    ld.param.b32 %r1, [select_param_0];
 ; PTX-NEXT:    cvta.to.global.u32 %r2, %r1;
-; PTX-NEXT:    ld.param.u32 %r3, [select_param_1];
+; PTX-NEXT:    ld.param.b32 %r3, [select_param_1];
 ; PTX-NEXT:    cvta.to.global.u32 %r4, %r3;
-; PTX-NEXT:    ld.param.u32 %r5, [select_param_3];
+; PTX-NEXT:    ld.param.b32 %r5, [select_param_3];
 ; PTX-NEXT:    cvta.to.global.u32 %r6, %r5;
 ; PTX-NEXT:    selp.b32 %r7, %r2, %r4, %p1;
-; PTX-NEXT:    ld.global.nc.u32 %r8, [%r7];
-; PTX-NEXT:    st.global.u32 [%r6], %r8;
+; PTX-NEXT:    ld.global.nc.b32 %r8, [%r7];
+; PTX-NEXT:    st.global.b32 [%r6], %r8;
 ; PTX-NEXT:    ret;
   %select = select i1 %c, ptr %a, ptr %b
   %select_global = addrspacecast ptr %select to ptr addrspace(1)
@@ -81,11 +81,11 @@ define void @not_kernel(ptr noalias readonly %a, ptr %out) {
 ; PTX-NEXT:    .reg .b32 %f<2>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u32 %r1, [not_kernel_param_0];
+; PTX-NEXT:    ld.param.b32 %r1, [not_kernel_param_0];
 ; PTX-NEXT:    cvta.to.global.u32 %r2, %r1;
-; PTX-NEXT:    ld.param.u32 %r3, [not_kernel_param_1];
-; PTX-NEXT:    ld.global.f32 %f1, [%r2];
-; PTX-NEXT:    st.f32 [%r3], %f1;
+; PTX-NEXT:    ld.param.b32 %r3, [not_kernel_param_1];
+; PTX-NEXT:    ld.global.b32 %f1, [%r2];
+; PTX-NEXT:    st.b32 [%r3], %f1;
 ; PTX-NEXT:    ret;
   %a_global = addrspacecast ptr %a to ptr addrspace(1)
   %val = load float, ptr addrspace(1) %a_global
@@ -114,17 +114,17 @@ define ptx_kernel void @global_load(ptr noalias readonly %a, i1 %c, ptr %out) {
 ; PTX-NEXT:    .reg .b64 %rd<2>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u8 %rs1, [global_load_param_1];
+; PTX-NEXT:    ld.param.b8 %rs1, [global_load_param_1];
 ; PTX-NEXT:    and.b16 %rs2, %rs1, 1;
 ; PTX-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; PTX-NEXT:    ld.param.u32 %r1, [global_load_param_0];
+; PTX-NEXT:    ld.param.b32 %r1, [global_load_param_0];
 ; PTX-NEXT:    cvta.to.global.u32 %r2, %r1;
-; PTX-NEXT:    ld.param.u32 %r3, [global_load_param_2];
+; PTX-NEXT:    ld.param.b32 %r3, [global_load_param_2];
 ; PTX-NEXT:    cvta.to.global.u32 %r4, %r3;
 ; PTX-NEXT:    mov.b32 %r5, G;
 ; PTX-NEXT:    selp.b32 %r6, %r5, %r2, %p1;
-; PTX-NEXT:    ld.global.nc.u64 %rd1, [%r6];
-; PTX-NEXT:    st.global.u64 [%r4], %rd1;
+; PTX-NEXT:    ld.global.nc.b64 %rd1, [%r6];
+; PTX-NEXT:    st.global.b64 [%r4], %rd1;
 ; PTX-NEXT:    ret;
   %g_global = addrspacecast ptr @G to ptr addrspace(1)
   %a_global = addrspacecast ptr %a to ptr addrspace(1)
