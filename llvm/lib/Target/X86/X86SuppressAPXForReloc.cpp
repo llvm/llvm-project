@@ -167,7 +167,8 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
         int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
                       X86II::getOperandBias(MI.getDesc());
         const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
-        if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
+        if (MO.getTargetFlags() == X86II::MO_GOTTPOFF ||
+            MO.getTargetFlags() == X86II::MO_GOTPCREL) {
           LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                             << MI);
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
