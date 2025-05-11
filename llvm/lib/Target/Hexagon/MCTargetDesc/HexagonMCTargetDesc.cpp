@@ -644,9 +644,8 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
 void Hexagon_MC::addArchSubtarget(MCSubtargetInfo const *STI, StringRef FS) {
   assert(STI != nullptr);
   if (STI->getCPU().contains("t")) {
-    auto ArchSTI = createHexagonMCSubtargetInfo(
-        STI->getTargetTriple(),
-        STI->getCPU().substr(0, STI->getCPU().size() - 1), FS);
+    auto ArchSTI = createHexagonMCSubtargetInfo(STI->getTargetTriple(),
+                                                STI->getCPU().drop_back(), FS);
     std::lock_guard<std::mutex> Lock(ArchSubtargetMutex);
     ArchSubtarget[std::string(STI->getCPU())] =
         std::unique_ptr<MCSubtargetInfo const>(ArchSTI);
