@@ -182,6 +182,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-narrowing-conversions
+  <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing
+  false positive from analysis of a conditional expression in C.
+
 - Improved :doc:`bugprone-crtp-constructor-accessibility
   <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check by fixing
   false positives on deleted constructors that cannot be used to construct
