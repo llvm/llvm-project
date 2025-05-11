@@ -93,7 +93,7 @@ struct __last_view : __last_view<_Views...> {};
 
 template <class _View>
 struct __last_view<_View> {
-  using type = _View;
+  using type _LIBCPP_NODEBUG = _View;
 };
 
 template <class _Ref, class _RRef, class _It>
