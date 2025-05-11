@@ -78,6 +78,12 @@ static void suppressEGPRRegClass(MachineRegisterInfo *MRI, MachineInstr &MI,
   MRI->setRegClass(Reg, NewRC);
 }
 
+// Suppress EGPR in operand 0 of PHI instruction to avoid APX relocation types
+// emitted. If the register in operand 0 of instruction with relocation is used
+// in the PHI instruction, it may be replaced with operand 0 of PHI instruction
+// (maybe EGPR) after PHI elimination and Machine Copy Propagation pass. That
+// may lead to emit APX relocation types which may break the backward
+// compatibility with builtin linkers on existing OS.
 static void suppressEGPRRegClassInRegUses(MachineRegisterInfo *MRI,
                                           const X86Subtarget &ST,
                                           Register Reg) {
