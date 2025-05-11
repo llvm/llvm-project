@@ -22,8 +22,8 @@ struct Symbolizer {
   __attribute__((noinline)) ~Symbolizer() { Symbolize(); }
 };
 
-// NODEMANGLE: in _ZN10SymbolizerD2Ev
-// CHECK: in Symbolizer::~Symbolizer
+// NODEMANGLE: in {{\.?_ZN10SymbolizerD2Ev}}
+// CHECK: in {{\.?Symbolizer::~Symbolizer}}
 int main() {
   Symbolizer();
   return 0;
