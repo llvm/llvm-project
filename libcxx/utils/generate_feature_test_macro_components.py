@@ -415,8 +415,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_constrained_equality",
-            "values": {"c++26": 202403}, # P2944R3: Comparisons for reference_wrapper
-            "headers": ["optional", "tuple", "utility", "variant"],
+            "values": {
+                # "c++26": 202403,  # P2944R3: Comparisons for reference_wrapper
+                "c++26": 202411,  # P3379R0: Constrain std::expected equality operators
+            },
+            "headers": ["expected", "optional", "tuple", "utility", "variant"],
             "unimplemented": True,
         },
         {
