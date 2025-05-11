@@ -157,8 +157,7 @@ enum A a;
 enum B : int;
 enum B b;
 
-// CHECK:   cir.global external @b = #cir.int<0> : !u32i
-
+// CHECK:   cir.global external @b = #cir.int<0> : !s32i
 
 enum C : int {
   C_one,
@@ -166,9 +165,9 @@ enum C : int {
 };
 enum C c;
 
-// CHECK:   cir.global external @c = #cir.int<0> : !u32i
+// CHECK:   cir.global external @c = #cir.int<0> : !s32i
 
 enum class D : int;
 enum D d;
 
-// CHECK:   cir.global external @d = #cir.int<0> : !u32i
+// CHECK:   cir.global external @d = #cir.int<0> : !s32i
