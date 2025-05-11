@@ -13,6 +13,7 @@
 #include <__compare/three_way_comparable.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/product_iterator.h>
 #include <__memory/addressof.h>
