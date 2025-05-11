@@ -707,7 +707,7 @@ template <typename AnalysisT, typename... Args>
 AnalysisT *DataFlowSolver::load(Args &&...args) {
   childAnalyses.emplace_back(new AnalysisT(*this, std::forward<Args>(args)...));
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  childAnalyses.back().get()->debugName = llvm::getTypeName<AnalysisT>();
+  childAnalyses.back()->debugName = llvm::getTypeName<AnalysisT>();
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
   return static_cast<AnalysisT *>(childAnalyses.back().get());
 }

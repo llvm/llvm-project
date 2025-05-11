@@ -62,6 +62,11 @@ cl::opt<unsigned>
                    cl::init(256), cl::Optional, cl::cat(HeatmapCategory));
 
 cl::opt<bool>
+    CompactCodeModel("compact-code-model",
+                     cl::desc("generate code for binaries <128MB on AArch64"),
+                     cl::init(false), cl::cat(BoltCategory));
+
+cl::opt<bool>
 DiffOnly("diff-only",
   cl::desc("stop processing once we have enough to compare two binaries"),
   cl::Hidden,
