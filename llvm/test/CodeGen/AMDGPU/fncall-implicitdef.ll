@@ -8,14 +8,14 @@ define amdgpu_ps <4 x float> @caller(ptr %ptr) {
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:    s_getpc_b64 s[4:5]
+; CHECK-NEXT:    s_add_u32 s4, s4, fn@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s5, s5, fn@rel32@hi+12
 ; CHECK-NEXT:    s_mov_b64 s[8:9], 36
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_mov_b32 s3, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, fn@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, fn@rel32@hi+12
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CHECK-NEXT:    ; return to shader part epilog
   %L = load i32, ptr %ptr, align 4
