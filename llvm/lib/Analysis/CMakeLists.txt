@@ -78,6 +78,7 @@ add_llvm_component_library(LLVMAnalysis
   GlobalsModRef.cpp
   GuardUtils.cpp
   HeatUtils.cpp
+  IR2VecAnalysis.cpp
   IRSimilarityIdentifier.cpp
   IVDescriptors.cpp
   IVUsers.cpp
