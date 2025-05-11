@@ -258,8 +258,7 @@ createFullPartialLinalgCopy(RewriterBase &b, vector::TransferReadOp xferOp,
       [&](OpBuilder &b, Location loc) {
         Value res = castToCompatibleMemRefType(b, memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
-        viewAndIndices.insert(viewAndIndices.end(), xferOp.getIndices().begin(),
-                              xferOp.getIndices().end());
+        llvm::append_range(viewAndIndices, xferOp.getIndices());
         b.create<scf::YieldOp>(loc, viewAndIndices);
       },
       [&](OpBuilder &b, Location loc) {
@@ -312,8 +311,7 @@ static scf::IfOp createFullPartialVectorTransferRead(
       [&](OpBuilder &b, Location loc) {
         Value res = castToCompatibleMemRefType(b, memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
-        viewAndIndices.insert(viewAndIndices.end(), xferOp.getIndices().begin(),
-                              xferOp.getIndices().end());
+        llvm::append_range(viewAndIndices, xferOp.getIndices());
         b.create<scf::YieldOp>(loc, viewAndIndices);
       },
       [&](OpBuilder &b, Location loc) {
@@ -362,9 +360,7 @@ getLocationToWriteFullVec(RewriterBase &b, vector::TransferWriteOp xferOp,
             Value res =
                 castToCompatibleMemRefType(b, memref, compatibleMemRefType);
             scf::ValueVector viewAndIndices{res};
-            viewAndIndices.insert(viewAndIndices.end(),
-                                  xferOp.getIndices().begin(),
-                                  xferOp.getIndices().end());
+            llvm::append_range(viewAndIndices, xferOp.getIndices());
             b.create<scf::YieldOp>(loc, viewAndIndices);
           },
           [&](OpBuilder &b, Location loc) {

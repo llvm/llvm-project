@@ -63,3 +63,59 @@ for.body:                                         ; preds = %for.body, %entry
 for.exit:                        ; preds = %for.body
   ret i32 %add
 }
+
+; Test to ensure that we don't crash when evaluating an extend from a type
+; that is not a factor of the target type.
+define i40 @partial_reduce_not_known_factor(i32 %a, i32 %b, i16 %N) {
+; CHECK-LABEL: define i40 @partial_reduce_not_known_factor(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i16 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i16 [[SMAX]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[TMP0]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[B]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[N_VEC]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i32> [[BROADCAST_SPLAT2]] to <2 x i40>
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <2 x i32> [[BROADCAST_SPLAT]] to <2 x i40>
+; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i40> [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i40> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <2 x i40> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP6]] = or <2 x i40> [[VEC_PHI]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8]] = or <2 x i40> [[VEC_PHI3]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <2 x i40> [[TMP8]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call i40 @llvm.vector.reduce.or.v2i40(<2 x i40> [[BIN_RDX]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+entry:
+  br label %for.body
+
+for.body:
+  %red = phi i40 [ 0, %entry ], [ %1, %for.body ]
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %for.body ]
+  %resize = sext i32 %a to i40
+  %resize4 = sext i32 %b to i40
+  %0 = or i40 %resize4, %resize
+  %1 = or i40 %red, %0
+  %iv.next = add i16 %iv, 1
+  %cmp = icmp slt i16 %iv, %N
+  br i1 %cmp, label %for.body, label %exit
+
+exit:
+  %result.lcssa = phi i40 [ %1, %for.body ]
+  ret i40 %result.lcssa
+}

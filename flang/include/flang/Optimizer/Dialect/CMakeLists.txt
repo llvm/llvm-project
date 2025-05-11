@@ -1,4 +1,5 @@
 add_subdirectory(CUF)
+add_subdirectory(FIRCG)
 
 # This replicates part of the add_mlir_dialect cmake function from MLIR that
 # cannot be used her because it expects to be run inside MLIR directory which
@@ -27,6 +28,11 @@ mlir_tablegen(FortranVariableInterface.cpp.inc -gen-op-interface-defs)
 set(LLVM_TARGET_DEFINITIONS FirAliasTagOpInterface.td)
 mlir_tablegen(FirAliasTagOpInterface.h.inc -gen-op-interface-decls)
 mlir_tablegen(FirAliasTagOpInterface.cpp.inc -gen-op-interface-defs)
+
+set(LLVM_TARGET_DEFINITIONS SafeTempArrayCopyAttrInterface.td)
+mlir_tablegen(SafeTempArrayCopyAttrInterface.h.inc -gen-attr-interface-decls)
+mlir_tablegen(SafeTempArrayCopyAttrInterface.cpp.inc -gen-attr-interface-defs)
+add_public_tablegen_target(FIRSafeTempArrayCopyAttrInterfaceIncGen)
 
 set(LLVM_TARGET_DEFINITIONS CanonicalizationPatterns.td)
 mlir_tablegen(CanonicalizationPatterns.inc -gen-rewriters)

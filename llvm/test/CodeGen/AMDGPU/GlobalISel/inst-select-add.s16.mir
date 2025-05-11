@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX6 %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX6 %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX10 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX11 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefixes=GFX11 %s
 
 # Note: 16-bit instructions generally produce a 0 result in the high 16-bits on GFX8 and GFX9 and preserve high 16 bits on GFX10+
 

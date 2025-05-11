@@ -376,43 +376,39 @@ define void @test_revv8i16v8i16(ptr %a, ptr %b, ptr %c) #1 {
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ldr q0, [x1]
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    orr x9, x8, #0x1e
-; CHECK-NEXT:    orr x10, x8, #0x1c
+; CHECK-NEXT:    ldr q5, [x0]
+; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    st1 { v0.h }[4], [x9]
-; CHECK-NEXT:    orr x9, x8, #0x18
-; CHECK-NEXT:    st1 { v0.h }[7], [x9]
-; CHECK-NEXT:    orr x9, x8, #0xe
-; CHECK-NEXT:    st1 { v1.h }[4], [x9]
-; CHECK-NEXT:    orr x9, x8, #0xc
-; CHECK-NEXT:    st1 { v1.h }[5], [x9]
-; CHECK-NEXT:    orr x9, x8, #0x8
-; CHECK-NEXT:    st1 { v0.h }[5], [x10]
-; CHECK-NEXT:    orr x10, x8, #0x10
-; CHECK-NEXT:    st1 { v1.h }[7], [x9]
-; CHECK-NEXT:    orr x9, x8, #0x4
-; CHECK-NEXT:    st1 { v0.h }[3], [x10]
-; CHECK-NEXT:    mov w10, #26 // =0x1a
-; CHECK-NEXT:    st1 { v1.h }[1], [x9]
-; CHECK-NEXT:    orr x9, x8, #0x2
-; CHECK-NEXT:    st1 { v1.h }[2], [x9]
-; CHECK-NEXT:    orr x9, x8, x10
-; CHECK-NEXT:    mov w10, #20 // =0x14
-; CHECK-NEXT:    st1 { v0.h }[6], [x9]
-; CHECK-NEXT:    orr x9, x8, x10
-; CHECK-NEXT:    mov w10, #18 // =0x12
-; CHECK-NEXT:    st1 { v0.h }[1], [x9]
-; CHECK-NEXT:    orr x9, x8, x10
-; CHECK-NEXT:    st1 { v0.h }[2], [x9]
-; CHECK-NEXT:    mov w9, #10 // =0xa
-; CHECK-NEXT:    orr x9, x8, x9
-; CHECK-NEXT:    st1 { v1.h }[3], [x8]
-; CHECK-NEXT:    st1 { v1.h }[6], [x9]
+; CHECK-NEXT:    mov h1, v0.h[4]
+; CHECK-NEXT:    mov h2, v0.h[5]
+; CHECK-NEXT:    mov h3, v0.h[6]
+; CHECK-NEXT:    mov h4, v0.h[7]
 ; CHECK-NEXT:    str h0, [sp, #22]
-; CHECK-NEXT:    str h1, [sp, #6]
+; CHECK-NEXT:    st1 { v5.h }[3], [x8]
+; CHECK-NEXT:    str h5, [sp, #6]
+; CHECK-NEXT:    str h1, [sp, #30]
+; CHECK-NEXT:    mov h1, v0.h[1]
+; CHECK-NEXT:    str h2, [sp, #28]
+; CHECK-NEXT:    mov h2, v0.h[2]
+; CHECK-NEXT:    mov h0, v0.h[3]
+; CHECK-NEXT:    str h3, [sp, #26]
+; CHECK-NEXT:    mov h3, v5.h[2]
+; CHECK-NEXT:    str h4, [sp, #24]
+; CHECK-NEXT:    str h1, [sp, #20]
+; CHECK-NEXT:    mov h1, v5.h[4]
+; CHECK-NEXT:    str h2, [sp, #18]
+; CHECK-NEXT:    mov h2, v5.h[5]
+; CHECK-NEXT:    str h0, [sp, #16]
+; CHECK-NEXT:    mov h0, v5.h[6]
+; CHECK-NEXT:    str h3, [sp, #2]
+; CHECK-NEXT:    str h1, [sp, #14]
+; CHECK-NEXT:    mov h1, v5.h[7]
+; CHECK-NEXT:    str h2, [sp, #12]
+; CHECK-NEXT:    mov h2, v5.h[1]
+; CHECK-NEXT:    str h0, [sp, #10]
+; CHECK-NEXT:    str h1, [sp, #8]
+; CHECK-NEXT:    str h2, [sp, #4]
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    mov sp, x29

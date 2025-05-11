@@ -336,10 +336,6 @@ compatible with the LLVM dialect:
     vector type compatible with the LLVM dialect;
 -   `llvm::ElementCount LLVM::getVectorNumElements(Type)` - returns the number
     of elements in any vector type compatible with the LLVM dialect;
--   `Type LLVM::getFixedVectorType(Type, unsigned)` - gets a fixed vector type
-    with the given element type and size; the resulting type is either a
-    built-in or an LLVM dialect vector type depending on which one supports the
-    given element type.
 
 #### Examples of Compatible Vector Types
 

@@ -45,7 +45,8 @@ struct VersionBase {
 };
 
 template <typename VersionType>
-bool operator==(const VersionType &self, const VersionType &other) {
+bool operator==(const VersionBase<VersionType> &self,
+                const VersionBase<VersionType> &other) {
   return self.major == other.major && self.minor == other.minor;
 }
 

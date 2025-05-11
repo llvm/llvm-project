@@ -305,6 +305,86 @@ func.func @self_copy(%arg0 : memref<2x3x?x4xf32>) {
 }
 
 // -----
+
+// CHECK: func @fold_linalg_index_tensor_static
+func.func @fold_linalg_index_tensor_static(%0: tensor<4x16xi32>, %1: tensor<1x16xi32>,
+                                           %2: tensor<4x1xi32>) -> tensor<4x1xi32> {
+// CHECK-NEXT: linalg.generic
+// CHECK:        %[[IDX_0:.+]] = linalg.index 0 : index
+// CHECK-NOT:    linalg.index 1
+// CHECK:        %[[IDX_2:.+]] = linalg.index 2 : index
+// CHECK:        %[[ADD:.+]] = arith.addi %[[IDX_0]], %[[IDX_2]]
+// CHECK:        %[[CAST:.+]] = arith.index_cast %[[ADD]]
+// CHECK:        linalg.yield %[[CAST]]
+  %res = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                                          affine_map<(d0, d1, d2) -> (d1, d2)>,
+                                          affine_map<(d0, d1, d2) -> (d0, d1)>],
+                         iterator_types = ["parallel", "parallel", "reduction"]}
+    ins(%0, %1 : tensor<4x16xi32>, tensor<1x16xi32>)
+    outs(%2 : tensor<4x1xi32>) {
+      ^bb0(%lhs: i32, %rhs: i32, %out: i32):
+        %idx0 = linalg.index 0 : index
+        %idx1 = linalg.index 1 : index
+        %idx2 = linalg.index 2 : index
+        %add0 = arith.addi %idx0, %idx1 : index
+        %add1 = arith.addi %add0, %idx2 : index
+        %int = arith.index_cast %add1 : index to i32
+        linalg.yield %int : i32
+    } -> tensor<4x1xi32>
+  return %res : tensor<4x1xi32>
+}
+
+// -----
+
+// CHECK: func @fold_linalg_index_tensor_dynamic
+func.func @fold_linalg_index_tensor_dynamic(%0: tensor<?x1xi32>,
+                                            %1: tensor<?x1xi32>) -> tensor<?x1xi32> {
+// CHECK-NEXT: linalg.generic
+// CHECK:        %[[IDX_0:.+]] = linalg.index 0 : index
+// CHECK-NOT:    linalg.index 1
+// CHECK:        %[[CAST:.+]] = arith.index_cast %[[IDX_0]]
+// CHECK:        linalg.yield %[[CAST]]
+  %res = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d1, d1)>],
+                         iterator_types = ["parallel", "parallel"]}
+    ins(%0 : tensor<?x1xi32>)
+    outs(%1 : tensor<?x1xi32>) {
+      ^bb0(%lhs: i32, %out: i32):
+        %idx0 = linalg.index 0 : index
+        %idx1 = linalg.index 1 : index
+        %add = arith.addi %idx0, %idx1 : index
+        %int = arith.index_cast %add : index to i32
+        linalg.yield %int : i32
+    } -> tensor<?x1xi32>
+  return %res : tensor<?x1xi32>
+}
+
+// -----
+
+// CHECK: func @fold_linalg_index_memref
+func.func @fold_linalg_index_memref(%0: memref<1x?xi32>, %1: memref<1x?xi32>) {
+// CHECK-NEXT: linalg.generic
+// CHECK-NOT:    linalg.index 0
+// CHECK:        %[[IDX_1:.+]] = linalg.index 1 : index
+// CHECK:        %[[CAST:.+]] = arith.index_cast %[[IDX_1]]
+// CHECK:        linalg.yield %[[CAST]]
+  linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                   affine_map<(d0, d1) -> (d1, d1)>],
+                  iterator_types = ["parallel", "parallel"]}
+    ins(%0 : memref<1x?xi32>)
+    outs(%1 : memref<1x?xi32>) {
+      ^bb0(%lhs: i32, %out: i32):
+        %idx0 = linalg.index 0 : index
+        %idx1 = linalg.index 1 : index
+        %add = arith.addi %idx0, %idx1 : index
+        %int = arith.index_cast %add : index to i32
+        linalg.yield %int : i32
+    }
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_fill_reshape()
 func.func @fold_fill_reshape() -> tensor<6x4xf32> {
   %zero = arith.constant 0.0 : f32

@@ -103,7 +103,7 @@ CodeGenTargetMachineImpl::CodeGenTargetMachineImpl(
 
 TargetTransformInfo
 CodeGenTargetMachineImpl::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(BasicTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<BasicTTIImpl>(this, F));
 }
 
 /// addPassesToX helper drives creation and initialization of TargetPassConfig.
@@ -162,10 +162,10 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
 
   switch (FileType) {
   case CodeGenFileType::AssemblyFile: {
-    MCInstPrinter *InstPrinter = getTarget().createMCInstPrinter(
+    std::unique_ptr<MCInstPrinter> InstPrinter(getTarget().createMCInstPrinter(
         getTargetTriple(),
         Options.MCOptions.OutputAsmVariant.value_or(MAI.getAssemblerDialect()),
-        MAI, MII, MRI);
+        MAI, MII, MRI));
     for (StringRef Opt : Options.MCOptions.InstPrinterOptions)
       if (!InstPrinter->applyTargetSpecificCLOption(Opt))
         return createStringError("invalid InstPrinter option '" + Opt + "'");
@@ -179,7 +179,8 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
         getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(Out);
     MCStreamer *S = getTarget().createAsmStreamer(
-        Context, std::move(FOut), InstPrinter, std::move(MCE), std::move(MAB));
+        Context, std::move(FOut), std::move(InstPrinter), std::move(MCE),
+        std::move(MAB));
     AsmStreamer.reset(S);
     break;
   }

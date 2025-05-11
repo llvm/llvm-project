@@ -754,8 +754,7 @@ std::vector<ClangTidyError> ClangTidyDiagnosticConsumer::take() {
   finalizeLastError();
 
   llvm::stable_sort(Errors, LessClangTidyError());
-  Errors.erase(std::unique(Errors.begin(), Errors.end(), EqualClangTidyError()),
-               Errors.end());
+  Errors.erase(llvm::unique(Errors, EqualClangTidyError()), Errors.end());
   if (RemoveIncompatibleErrors)
     removeIncompatibleErrors();
   return std::move(Errors);

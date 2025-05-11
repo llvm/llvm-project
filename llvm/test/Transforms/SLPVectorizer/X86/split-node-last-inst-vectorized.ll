@@ -6,20 +6,19 @@ define void @test(ptr %0, <8 x i8> %1) {
 ; CHECK-SAME: ptr [[TMP0:%.*]], <8 x i8> [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i64 13436
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i64 13444
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP0]], i64 13544
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i64 13536
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i64 13437
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <8 x i8>, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 3, i32 4, i32 5, i32 0, i32 7>
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i8> [[TMP7]], i8 [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> poison, i8 [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i8> [[TMP12]], i8 [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i8> [[TMP9]], <8 x i8> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i8> [[TMP8]], <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP12:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v8i8(<16 x i8> [[TMP11]], <8 x i8> [[TMP10]], i64 8)
-; CHECK-NEXT:    [[TMP13:%.*]] = load <8 x i8>, ptr [[TMP6]], align 1
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <8 x i8> [[TMP13]], <8 x i8> poison, <8 x i32> <i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP15:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v8i8(<16 x i8> poison, <8 x i8> [[TMP7]], i64 0)
-; CHECK-NEXT:    [[TMP16:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v8i8(<16 x i8> [[TMP15]], <8 x i8> [[TMP14]], i64 8)
-; CHECK-NEXT:    [[TMP17:%.*]] = or <16 x i8> [[TMP16]], [[TMP12]]
-; CHECK-NEXT:    store <16 x i8> [[TMP17]], ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = or <8 x i8> [[TMP10]], [[TMP7]]
+; CHECK-NEXT:    store <8 x i8> [[TMP13]], ptr [[TMP11]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 3, i32 4, i32 5, i32 0, i32 7>
+; CHECK-NEXT:    [[TMP15:%.*]] = or <8 x i8> [[TMP7]], [[TMP14]]
+; CHECK-NEXT:    store <8 x i8> [[TMP15]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %3 = load i8, ptr %0, align 2

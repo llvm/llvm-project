@@ -1641,7 +1641,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses8) {
         CGU.initialize(CG, C, AM, UR);
         ASSERT_NO_FATAL_FAILURE(CGU.replaceFunctionWith(*FnF, *FnewF));
         ASSERT_TRUE(FnF->isDeclaration());
-        ASSERT_EQ(FnF->getNumUses(), 0U);
+        ASSERT_TRUE(FnF->use_empty());
       }));
 
   ModulePassManager MPM;

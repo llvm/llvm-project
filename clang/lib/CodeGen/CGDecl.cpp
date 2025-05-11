@@ -299,7 +299,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   llvm::Constant *Addr = GV;
   if (AS != ExpectedAS) {
     Addr = getTargetCodeGenInfo().performAddrSpaceCast(
-        *this, GV, AS, ExpectedAS,
+        *this, GV, AS,
         llvm::PointerType::get(getLLVMContext(),
                                getContext().getTargetAddressSpace(ExpectedAS)));
   }
@@ -776,11 +776,17 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
                                      LValue lvalue, bool capturedByInit) {
   Qualifiers::ObjCLifetime lifetime = lvalue.getObjCLifetime();
   if (!lifetime) {
-    llvm::Value *value = EmitScalarExpr(init);
+    llvm::Value *Value;
+    if (PointerAuthQualifier PtrAuth = lvalue.getQuals().getPointerAuth()) {
+      Value = EmitPointerAuthQualify(PtrAuth, init, lvalue.getAddress());
+      lvalue.getQuals().removePointerAuth();
+    } else {
+      Value = EmitScalarExpr(init);
+    }
     if (capturedByInit)
       drillIntoBlockVariable(*this, lvalue, cast<VarDecl>(D));
-    EmitNullabilityCheck(lvalue, value, init->getExprLoc());
-    EmitStoreThroughLValue(RValue::get(value), lvalue, true);
+    EmitNullabilityCheck(lvalue, Value, init->getExprLoc());
+    EmitStoreThroughLValue(RValue::get(Value), lvalue, true);
     return;
   }
 
@@ -1582,7 +1588,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       // Create the alloca.  Note that we set the name separately from
       // building the instruction so that it's there even in no-asserts
       // builds.
-      address = CreateTempAlloca(allocaTy, allocaAlignment, D.getName(),
+      address = CreateTempAlloca(allocaTy, Ty.getAddressSpace(),
+                                 allocaAlignment, D.getName(),
                                  /*ArraySize=*/nullptr, &AllocaAddr);
 
       // Don't emit lifetime markers for MSVC catch parameters. The lifetime of
@@ -2265,11 +2272,18 @@ void CodeGenFunction::pushDestroy(QualType::DestructionKind dtorKind,
               cleanupKind & EHCleanup);
 }
 
+void CodeGenFunction::pushLifetimeExtendedDestroy(
+    QualType::DestructionKind dtorKind, Address addr, QualType type) {
+  CleanupKind cleanupKind = getCleanupKind(dtorKind);
+  pushLifetimeExtendedDestroy(cleanupKind, addr, type, getDestroyer(dtorKind),
+                              cleanupKind & EHCleanup);
+}
+
 void CodeGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
                                   QualType type, Destroyer *destroyer,
                                   bool useEHCleanupForArray) {
-  pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type,
-                                     destroyer, useEHCleanupForArray);
+  pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer,
+                                     useEHCleanupForArray);
 }
 
 // Pushes a destroy and defers its deactivation until its
@@ -2691,10 +2705,9 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
              CGM.getDataLayout().getAllocaAddrSpace());
       auto DestAS = getContext().getTargetAddressSpace(DestLangAS);
       auto *T = llvm::PointerType::get(getLLVMContext(), DestAS);
-      DeclPtr =
-          DeclPtr.withPointer(getTargetHooks().performAddrSpaceCast(
-                                  *this, V, SrcLangAS, DestLangAS, T, true),
-                              DeclPtr.isKnownNonNull());
+      DeclPtr = DeclPtr.withPointer(
+          getTargetHooks().performAddrSpaceCast(*this, V, SrcLangAS, T, true),
+          DeclPtr.isKnownNonNull());
     }
 
     // Push a destructor cleanup for this parameter if the ABI requires it.

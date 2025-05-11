@@ -671,8 +671,11 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
   ASTContext &Context = getASTContext();
   TemplateName Name = Context.getQualifiedTemplateName(
       /*NNS=*/nullptr, /*TemplateKeyword=*/false, TemplateName(this));
-  CommonPtr->InjectedClassNameType = Context.getTemplateSpecializationType(
-      Name, getTemplateParameters()->getInjectedTemplateArgs(Context));
+  auto TemplateArgs = getTemplateParameters()->getInjectedTemplateArgs(Context);
+  CommonPtr->InjectedClassNameType =
+      Context.getTemplateSpecializationType(Name,
+                                            /*SpecifiedArgs=*/TemplateArgs,
+                                            /*CanonicalArgs=*/std::nullopt);
   return CommonPtr->InjectedClassNameType;
 }
 
@@ -881,9 +884,8 @@ TemplateTemplateParmDecl::TemplateTemplateParmDecl(
     : TemplateDecl(TemplateTemplateParm, DC, L, Id, Params),
       TemplateParmPosition(D, P), Typename(Typename), ParameterPack(true),
       ExpandedParameterPack(true), NumExpandedParams(Expansions.size()) {
-  if (!Expansions.empty())
-    std::uninitialized_copy(Expansions.begin(), Expansions.end(),
-                            getTrailingObjects<TemplateParameterList *>());
+  llvm::uninitialized_copy(Expansions,
+                           getTrailingObjects<TemplateParameterList *>());
 }
 
 TemplateTemplateParmDecl *
@@ -941,8 +943,7 @@ void TemplateTemplateParmDecl::setDefaultArgument(
 //===----------------------------------------------------------------------===//
 TemplateArgumentList::TemplateArgumentList(ArrayRef<TemplateArgument> Args)
     : NumArguments(Args.size()) {
-  std::uninitialized_copy(Args.begin(), Args.end(),
-                          getTrailingObjects<TemplateArgument>());
+  llvm::uninitialized_copy(Args, getTrailingObjects<TemplateArgument>());
 }
 
 TemplateArgumentList *
@@ -1169,8 +1170,7 @@ ImplicitConceptSpecializationDecl::CreateDeserialized(
 void ImplicitConceptSpecializationDecl::setTemplateArguments(
     ArrayRef<TemplateArgument> Converted) {
   assert(Converted.size() == NumTemplateArgs);
-  std::uninitialized_copy(Converted.begin(), Converted.end(),
-                          getTrailingObjects<TemplateArgument>());
+  llvm::uninitialized_copy(Converted, getTrailingObjects<TemplateArgument>());
 }
 
 //===----------------------------------------------------------------------===//

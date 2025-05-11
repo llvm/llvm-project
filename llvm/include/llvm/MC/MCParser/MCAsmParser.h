@@ -308,7 +308,7 @@ public:
   /// on error.
   /// \return - False on success.
   virtual bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
-                                AsmTypeInfo *TypeInfo) = 0;
+                                AsmTypeInfo *TypeInfo = nullptr) = 0;
 
   /// Parse an arbitrary expression, assuming that an initial '(' has
   /// already been consumed.

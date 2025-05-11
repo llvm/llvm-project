@@ -297,23 +297,21 @@ define <16 x i8> @trunc_shuffle_v64i8_01_05_09_13_17_21_25_29_33_37_41_45_49_53_
 ;
 ; AVX512BW-LABEL: trunc_shuffle_v64i8_01_05_09_13_17_21_25_29_33_37_41_45_49_53_57_62:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,4,16,21]
-; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm2 = ymm2[1,5,9,13,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,17,21,25,30,u,u,u,u,u,u,u,u]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[1,5,9,13,u,u,u,u,u,u,u,u,u,u,u,u,17,21,25,29,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX512BW-NEXT:    vpermt2d %zmm2, %zmm1, %zmm0
+; AVX512BW-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,4,8,13]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[1,5,9,13,u,u,u,u,u,u,u,u,u,u,u,u,17,21,25,29,u,u,u,u,u,u,u,u,u,u,u,u,33,37,41,45,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,49,53,57,62,u,u,u,u,u,u,u,u]
+; AVX512BW-NEXT:    vpermd %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: trunc_shuffle_v64i8_01_05_09_13_17_21_25_29_33_37_41_45_49_53_57_62:
 ; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,4,8,13]
+; AVX512BWVL-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [8,12,0,5]
 ; AVX512BWVL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; AVX512BWVL-NEXT:    vpshufb {{.*#+}} ymm2 = ymm2[1,5,9,13,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,17,21,25,30,u,u,u,u,u,u,u,u]
-; AVX512BWVL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[1,5,9,13,u,u,u,u,u,u,u,u,u,u,u,u,17,21,25,29,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX512BWVL-NEXT:    vpermt2d %ymm2, %ymm1, %ymm0
-; AVX512BWVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512BWVL-NEXT:    vinserti64x4 $1, %ymm0, %zmm2, %zmm0
+; AVX512BWVL-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[1,5,9,13,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,17,21,25,30,u,u,u,u,u,u,u,u,33,37,41,45,u,u,u,u,u,u,u,u,u,u,u,u,49,53,57,61,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512BWVL-NEXT:    vpermd %zmm0, %zmm1, %zmm0
+; AVX512BWVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
 ;

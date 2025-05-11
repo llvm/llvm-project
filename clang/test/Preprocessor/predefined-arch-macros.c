@@ -4394,6 +4394,9 @@
 // RUN: %clang -march=arch15 -E -dM %s -o - 2>&1 \
 // RUN:     -target s390x-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ARCH15
+// RUN: %clang -march=z17 -E -dM %s -o - 2>&1 \
+// RUN:     -target s390x-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ARCH15
 // CHECK_SYSTEMZ_ARCH15: #define __ARCH__ 15
 // CHECK_SYSTEMZ_ARCH15: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 // CHECK_SYSTEMZ_ARCH15: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1

@@ -147,7 +147,7 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __constrain_hash(size_t __h, size_t __bc) {
 }
 
 inline _LIBCPP_HIDE_FROM_ABI size_t __next_hash_pow2(size_t __n) {
-  return __n < 2 ? __n : (size_t(1) << (numeric_limits<size_t>::digits - __libcpp_clz(__n - 1)));
+  return __n < 2 ? __n : (size_t(1) << (numeric_limits<size_t>::digits - std::__countl_zero(__n - 1)));
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
