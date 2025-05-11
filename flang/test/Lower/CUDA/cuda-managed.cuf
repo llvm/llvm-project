@@ -1,0 +1,24 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+subroutine testr2(N1,N2)
+  real(4), managed :: ai4(N1,N2)
+  real(4), allocatable :: bRefi4(:)
+
+  integer :: i1, i2
+
+  do i2 = 1, N2
+    do i1 = 1, N1
+      ai4(i1,i2) = i1 + N1*(i2-1)
+    enddo
+  enddo
+
+  allocate(bRefi4 (N1))
+  do i1 = 1, N1
+    bRefi4(i1) = (ai4(i1,1)+ai4(i1,N2))*N2/2
+  enddo
+  deallocate(bRefi4)
+
+end subroutine
+
+!CHECK-LABEL: func.func @_QPtestr2
+!CHECK: %{{.*}} = cuf.alloc !fir.array<?x?xf32>, %{{.*}}, %{{.*}} : index, index {bindc_name = "ai4", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtestr2Eai4"} -> !fir.ref<!fir.array<?x?xf32>>
