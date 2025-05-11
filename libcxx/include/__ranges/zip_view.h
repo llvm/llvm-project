@@ -478,10 +478,10 @@ template <class _Iter>
 struct __product_iterator_traits<_Iter> {
   static constexpr size_t __size = tuple_size<decltype(std::declval<_Iter>().__current_)>::value;
 
-  template <size_t _N>
-    requires(_N < __size)
+  template <size_t _Nth>
+    requires(_Nth < __size)
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __get_iterator_element(_Iter __it) {
-    return std::get<_N>(__it.__current_);
+    return std::get<_Nth>(__it.__current_);
   }
 };
 

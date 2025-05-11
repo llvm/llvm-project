@@ -188,12 +188,12 @@ template <class _Owner, class _KeyContainer, class _MappedContainer, bool _Const
 struct __product_iterator_traits<__key_value_iterator<_Owner, _KeyContainer, _MappedContainer, _Const>> {
   static constexpr size_t __size = 2;
 
-  template <size_t _N>
+  template <size_t _Nth>
   _LIBCPP_HIDE_FROM_ABI static auto
   __get_iterator_element(__key_value_iterator<_Owner, _KeyContainer, _MappedContainer, _Const> __it)
-    requires(_N == 0 || _N == 1)
+    requires(_Nth <= 1)
   {
-    if constexpr (_N == 0) {
+    if constexpr (_Nth == 0) {
       return __it.__key_iter_;
     } else {
       return __it.__mapped_iter_;

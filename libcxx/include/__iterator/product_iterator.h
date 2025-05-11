@@ -28,6 +28,7 @@
 #include <__cstddef/size_t.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
+#include <__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -56,12 +57,12 @@ template <class _Tp, size_t _Size, class = void>
 struct __is_product_iterator_of_size : false_type {};
 
 template <class _Tp, size_t _Size>
-struct __is_product_iterator_of_size<_Tp, _Size, __enable_if_t<__product_iterator_traits<_Tp>::__size == _Size>>
+struct __is_product_iterator_of_size<_Tp, _Size, __enable_if_t<__product_iterator_traits<_Tp>::__size == _Size> >
     : true_type {};
 
-template <class _Iterator, size_t _N>
-using __product_iterator_element_t =
-    decltype(__product_iterator_traits<_Iterator>::__get_iterator_element<_N>(declval<_Iterator>()));
+template <class _Iterator, size_t _Nth>
+using __product_iterator_element_t _LIBCPP_NODEBUG =
+    decltype(__product_iterator_traits<_Iterator>::__get_iterator_element<_Nth>(std::declval<_Iterator>()));
 
 _LIBCPP_END_NAMESPACE_STD
 
