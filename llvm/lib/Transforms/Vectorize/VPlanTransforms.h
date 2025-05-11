@@ -176,8 +176,8 @@ struct VPlanTransforms {
 
   /// Update \p Plan to account for the uncountable early exit from \p
   /// EarlyExitingVPBB to \p EarlyExitVPBB by
-  ///  * updating the condition exiting the vector loop to include the early
-  ///    exit condition,
+  ///  * updating the condition exiting the loop via the latch to include the
+  ///    early exit condition,
   ///  * splitting the original middle block to branch to the early exit block
   ///    conditionally - according to the early exit condition.
   static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
