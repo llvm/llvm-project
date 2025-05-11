@@ -130,6 +130,7 @@
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/CountVisits.h"
@@ -791,6 +792,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 void PassBuilder::addRequiredLTOPreLinkPasses(ModulePassManager &MPM) {
   MPM.addPass(CanonicalizeAliasesPass());
   MPM.addPass(NameAnonGlobalPass());
+  MPM.addPass(AssignGUIDPass());
 }
 
 void PassBuilder::addPreInlinerPasses(ModulePassManager &MPM,
@@ -1076,6 +1078,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   ModulePassManager MPM;
 
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPostLink) {
+    MPM.addPass(NameAnonGlobalPass());
+    MPM.addPass(AssignGUIDPass());
+  }
+
   // Place pseudo probe instrumentation as the first pass of the pipeline to
   // minimize the impact of optimization changes.
   if (PGOOpt && PGOOpt->PseudoProbeForProfiling &&
@@ -1239,8 +1246,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // In pre-link, we just want the instrumented IR. We use the contextual
     // profile in the post-thinlink phase.
     // The instrumentation will be removed in post-thinlink after IPO.
-    // FIXME(mtrofin): move AssignGUIDPass if there is agreement to use this
-    // mechanism for GUIDs.
     MPM.addPass(AssignGUIDPass());
     if (IsCtxProfUse) {
       MPM.addPass(PGOCtxProfFlatteningPass(/*IsPreThinlink=*/true));

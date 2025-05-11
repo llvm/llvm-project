@@ -181,7 +181,7 @@ PreservedAnalyses PGOCtxProfFlatteningPass::run(Module &M,
            "Function has unreacheable basic blocks. The expectation was that "
            "DCE was run before.");
 
-    auto It = FlattenedProfile.find(AssignGUIDPass::getGUID(F));
+    auto It = FlattenedProfile.find(F.getGUID());
     // If this function didn't appear in the contextual profile, it's cold.
     if (It == FlattenedProfile.end())
       clearColdFunctionProfile(F);

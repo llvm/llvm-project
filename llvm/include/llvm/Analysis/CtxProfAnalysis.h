@@ -46,9 +46,6 @@ class PGOContextualProfile {
   // we'll need when we maintain the profiles during IPO transformations.
   std::map<GlobalValue::GUID, FunctionInfo> FuncInfo;
 
-  /// Get the GUID of this Function if it's defined in this module.
-  GlobalValue::GUID getDefinedFunctionGUID(const Function &F) const;
-
   // This is meant to be constructed from CtxProfAnalysis, which will also set
   // its state piecemeal.
   PGOContextualProfile() = default;
@@ -67,9 +64,7 @@ public:
 
   bool isInSpecializedModule() const;
 
-  bool isFunctionKnown(const Function &F) const {
-    return getDefinedFunctionGUID(F) != 0;
-  }
+  bool isFunctionKnown(const Function &F) const { return F.getGUID() != 0; }
 
   StringRef getFunctionName(GlobalValue::GUID GUID) const {
     auto It = FuncInfo.find(GUID);
@@ -80,22 +75,22 @@ public:
 
   uint32_t getNumCounters(const Function &F) const {
     assert(isFunctionKnown(F));
-    return FuncInfo.find(getDefinedFunctionGUID(F))->second.NextCounterIndex;
+    return FuncInfo.find(F.getGUID())->second.NextCounterIndex;
   }
 
   uint32_t getNumCallsites(const Function &F) const {
     assert(isFunctionKnown(F));
-    return FuncInfo.find(getDefinedFunctionGUID(F))->second.NextCallsiteIndex;
+    return FuncInfo.find(F.getGUID())->second.NextCallsiteIndex;
   }
 
   uint32_t allocateNextCounterIndex(const Function &F) {
     assert(isFunctionKnown(F));
-    return FuncInfo.find(getDefinedFunctionGUID(F))->second.NextCounterIndex++;
+    return FuncInfo.find(F.getGUID())->second.NextCounterIndex++;
   }
 
   uint32_t allocateNextCallsiteIndex(const Function &F) {
     assert(isFunctionKnown(F));
-    return FuncInfo.find(getDefinedFunctionGUID(F))->second.NextCallsiteIndex++;
+    return FuncInfo.find(F.getGUID())->second.NextCallsiteIndex++;
   }
 
   using ConstVisitor = function_ref<void(const PGOCtxProfContext &)>;
@@ -183,27 +178,6 @@ public:
                                 SmallVectorImpl<uint64_t> &Profile,
                                 uint64_t &MaxCount) const;
   ~ProfileAnnotator();
-};
-
-/// Assign a GUID to functions as metadata. GUID calculation takes linkage into
-/// account, which may change especially through and after thinlto. By
-/// pre-computing and assigning as metadata, this mechanism is resilient to such
-/// changes (as well as name changes e.g. suffix ".llvm." additions).
-
-// FIXME(mtrofin): we can generalize this mechanism to calculate a GUID early in
-// the pass pipeline, associate it with any Global Value, and then use it for
-// PGO and ThinLTO.
-// At that point, this should be moved elsewhere.
-class AssignGUIDPass : public PassInfoMixin<AssignGUIDPass> {
-public:
-  explicit AssignGUIDPass() = default;
-
-  /// Assign a GUID *if* one is not already assign, as a function metadata named
-  /// `GUIDMetadataName`.
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-  static const char *GUIDMetadataName;
-  // This should become GlobalValue::getGUID
-  static uint64_t getGUID(const Function &F);
 };
 
 } // namespace llvm
