@@ -3647,6 +3647,13 @@ def fir_DoConcurrentOp : fir_Op<"do_concurrent",
   let hasVerifier = 1;
 }
 
+def fir_LocalSpecifier {
+  dag arguments = (ins
+    Variadic<AnyType>:$local_vars,
+    OptionalAttr<SymbolRefArrayAttr>:$local_syms
+  );
+}
+
 def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
     [AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopLikeOpInterface,
                                                          ["getLoopInductionVars"]>,
@@ -3700,7 +3707,7 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
       LLVM.
   }];
 
-  let arguments = (ins
+  defvar opArgs = (ins
     Variadic<Index>:$lowerBound,
     Variadic<Index>:$upperBound,
     Variadic<Index>:$step,
@@ -3709,15 +3716,39 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
     OptionalAttr<LoopAnnotationAttr>:$loopAnnotation
   );
 
+  let arguments = !con(opArgs, fir_LocalSpecifier.arguments);
+
   let regions = (region SizedRegion<1>:$region);
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
+    unsigned getNumInductionVars() { return getLowerBound().size(); }
+
+    unsigned getNumLocalOperands() { return getLocalVars().size(); }
+
+    mlir::Block::BlockArgListType getInductionVars() {
+      return getBody()->getArguments().slice(0, getNumInductionVars());
+    }
+
+    mlir::Block::BlockArgListType getRegionLocalArgs() {
+      return getBody()->getArguments().slice(getNumInductionVars(),
+                                             getNumLocalOperands());
+    }
+
+    /// Number of operands controlling the loop
+    unsigned getNumControlOperands() { return getLowerBound().size() * 3; }
+
     // Get Number of reduction operands
     unsigned getNumReduceOperands() {
       return getReduceOperands().size();
+    }
+
+    mlir::Operation::operand_range getLocalOperands() {
+      return getOperands()
+          .slice(getNumControlOperands() + getNumReduceOperands(),
+                 getNumLocalOperands());
     }
   }];
 }

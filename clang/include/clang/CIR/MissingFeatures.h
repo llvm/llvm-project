@@ -104,12 +104,18 @@ struct MissingFeatures {
   static bool opCallExtParameterInfo() { return false; }
   static bool opCallCIRGenFuncInfoParamInfo() { return false; }
   static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
+  static bool opCallLandingPad() { return false; }
+  static bool opCallContinueBlock() { return false; }
 
   // ScopeOp handling
   static bool opScopeCleanupRegion() { return false; }
 
   // Unary operator handling
   static bool opUnaryPromotionType() { return false; }
+
+  // SwitchOp handling
+  static bool foldCascadingCases() { return false; }
+  static bool foldRangeCase() { return false; }
 
   // Clang early optimizations or things defered to LLVM lowering.
   static bool mayHaveIntegerOverflow() { return false; }
@@ -173,10 +179,10 @@ struct MissingFeatures {
   static bool msabi() { return false; }
   static bool typeChecks() { return false; }
   static bool lambdaFieldToName() { return false; }
+  static bool updateCompletedType() { return false; }
   static bool targetSpecificCXXABI() { return false; }
   static bool moduleNameHash() { return false; }
   static bool setDSOLocal() { return false; }
-  static bool foldCaseStmt() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
   static bool cudaSupport() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
@@ -206,7 +212,6 @@ struct MissingFeatures {
   static bool labelOp() { return false; }
   static bool ptrDiffOp() { return false; }
   static bool ptrStrideOp() { return false; }
-  static bool selectOp() { return false; }
   static bool switchOp() { return false; }
   static bool ternaryOp() { return false; }
   static bool tryOp() { return false; }

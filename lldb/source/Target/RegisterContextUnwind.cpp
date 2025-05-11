@@ -279,7 +279,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
       call_site_unwind_plan = func_unwinders_sp->GetUnwindPlanAtCallSite(
           process->GetTarget(), m_thread);
 
-    if (call_site_unwind_plan.get() != nullptr) {
+    if (call_site_unwind_plan != nullptr) {
       m_fallback_unwind_plan_sp = call_site_unwind_plan;
       if (TryFallbackUnwindPlan())
         cfa_status = true;
@@ -868,13 +868,11 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
 
     // Even with -fomit-frame-pointer, we can try eh_frame to get back on
     // track.
-    DWARFCallFrameInfo *eh_frame =
-        pc_module_sp->GetUnwindTable().GetEHFrameInfo();
-    if (eh_frame) {
-      auto unwind_plan_sp =
-          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (eh_frame->GetUnwindPlan(m_current_pc, *unwind_plan_sp))
-        return unwind_plan_sp;
+    if (DWARFCallFrameInfo *eh_frame =
+            pc_module_sp->GetUnwindTable().GetEHFrameInfo()) {
+      if (std::unique_ptr<UnwindPlan> plan_up =
+              eh_frame->GetUnwindPlan(m_current_pc))
+        return plan_up;
     }
 
     ArmUnwindInfo *arm_exidx =
@@ -1345,9 +1343,9 @@ RegisterContextUnwind::SavedLocationForRegister(
         // value instead of the Return Address register.
         // If $pc is not available, fall back to the RA reg.
         UnwindPlan::Row::AbstractRegisterLocation scratch;
-        if (m_frame_type == eTrapHandlerFrame &&
-            active_row->GetRegisterInfo
-              (pc_regnum.GetAsKind (unwindplan_registerkind), scratch)) {
+        if (m_frame_type == eTrapHandlerFrame && active_row &&
+            active_row->GetRegisterInfo(
+                pc_regnum.GetAsKind(unwindplan_registerkind), scratch)) {
           UnwindLogMsg("Providing pc register instead of rewriting to "
                        "RA reg because this is a trap handler and there is "
                        "a location for the saved pc register value.");
@@ -1377,7 +1375,7 @@ RegisterContextUnwind::SavedLocationForRegister(
         }
       }
 
-      if (regnum.IsValid() &&
+      if (regnum.IsValid() && active_row &&
           active_row->GetRegisterInfo(regnum.GetAsKind(unwindplan_registerkind),
                                       unwindplan_regloc)) {
         have_unwindplan_regloc = true;
@@ -1724,10 +1722,10 @@ RegisterContextUnwind::SavedLocationForRegister(
 // tricky frame and our usual techniques can continue to be used.
 
 bool RegisterContextUnwind::TryFallbackUnwindPlan() {
-  if (m_fallback_unwind_plan_sp.get() == nullptr)
+  if (m_fallback_unwind_plan_sp == nullptr)
     return false;
 
-  if (m_full_unwind_plan_sp.get() == nullptr)
+  if (m_full_unwind_plan_sp == nullptr)
     return false;
 
   if (m_full_unwind_plan_sp.get() == m_fallback_unwind_plan_sp.get() ||
@@ -1775,7 +1773,7 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
   // fallback UnwindPlan. We checked if m_fallback_unwind_plan_sp was nullptr
   // at the top -- the only way it became nullptr since then is via
   // SavedLocationForRegister().
-  if (m_fallback_unwind_plan_sp.get() == nullptr)
+  if (m_fallback_unwind_plan_sp == nullptr)
     return true;
 
   // Switch the full UnwindPlan to be the fallback UnwindPlan.  If we decide
@@ -1864,10 +1862,10 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
 }
 
 bool RegisterContextUnwind::ForceSwitchToFallbackUnwindPlan() {
-  if (m_fallback_unwind_plan_sp.get() == nullptr)
+  if (m_fallback_unwind_plan_sp == nullptr)
     return false;
 
-  if (m_full_unwind_plan_sp.get() == nullptr)
+  if (m_full_unwind_plan_sp == nullptr)
     return false;
 
   if (m_full_unwind_plan_sp.get() == m_fallback_unwind_plan_sp.get() ||
