@@ -647,6 +647,10 @@ public:
   /// @name Apple ToolChain Implementation
   /// {
 
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
+
   RuntimeLibType GetRuntimeLibType(const llvm::opt::ArgList &Args) const override;
 
   void AddLinkRuntimeLibArgs(const llvm::opt::ArgList &Args,

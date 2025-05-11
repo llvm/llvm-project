@@ -19,6 +19,7 @@ def get_subprocess(root_process, process_name):
 
     self.assertTrue(False, "No subprocess with name %s found" % process_name)
 
+
 class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
     def check_lldb_command(
         self, lldb_command, contains_string, assert_msg, command_escape_prefix="`"
@@ -52,7 +53,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         character.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(program, stopOnEntry=True)
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         lines = [breakpoint1_line]
@@ -81,7 +82,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
 
     def test_custom_escape_prefix(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, commandEscapePrefix="::")
+        self.build_and_launch(program, stopOnEntry=True, commandEscapePrefix="::")
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         breakpoint_ids = self.set_source_breakpoints(source, [breakpoint1_line])
@@ -96,7 +97,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
 
     def test_empty_escape_prefix(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, commandEscapePrefix="")
+        self.build_and_launch(program, stopOnEntry=True, commandEscapePrefix="")
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         breakpoint_ids = self.set_source_breakpoints(source, [breakpoint1_line])
@@ -113,7 +114,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
     def test_exit_status_message_sigterm(self):
         source = "main.cpp"
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, commandEscapePrefix="")
+        self.build_and_launch(program, stopOnEntry=True, commandEscapePrefix="")
         breakpoint1_line = line_number(source, "// breakpoint 1")
         breakpoint_ids = self.set_source_breakpoints(source, [breakpoint1_line])
         self.continue_to_breakpoints(breakpoint_ids)

@@ -1044,21 +1044,6 @@ pickOpcodeForVT(MVT::SimpleValueType VT, unsigned Opcode_i8,
   }
 }
 
-static int getLdStRegType(EVT VT) {
-  if (VT.isFloatingPoint())
-    switch (VT.getSimpleVT().SimpleTy) {
-    case MVT::f16:
-    case MVT::bf16:
-    case MVT::v2f16:
-    case MVT::v2bf16:
-      return NVPTX::PTXLdStInstCode::Untyped;
-    default:
-      return NVPTX::PTXLdStInstCode::Float;
-    }
-  else
-    return NVPTX::PTXLdStInstCode::Unsigned;
-}
-
 bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   MemSDNode *LD = cast<MemSDNode>(N);
   assert(LD->readMem() && "Expected load");
@@ -1088,24 +1073,14 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   //          type is integer
   // Float  : ISD::NON_EXTLOAD or ISD::EXTLOAD and the type is float
   MVT SimpleVT = LoadedVT.getSimpleVT();
-  MVT ScalarVT = SimpleVT.getScalarType();
   // Read at least 8 bits (predicates are stored as 8-bit values)
-  unsigned FromTypeWidth = std::max(8U, (unsigned)ScalarVT.getSizeInBits());
-  unsigned int FromType;
+  unsigned FromTypeWidth = std::max(8U, (unsigned)SimpleVT.getSizeInBits());
 
   // Vector Setting
-  unsigned VecType = NVPTX::PTXLdStInstCode::Scalar;
-  if (SimpleVT.isVector()) {
-    assert((Isv2x16VT(LoadedVT) || LoadedVT == MVT::v4i8) &&
-           "Unexpected vector type");
-    // v2f16/v2bf16/v2i16 is loaded using ld.b32
-    FromTypeWidth = 32;
-  }
-
-  if (PlainLoad && (PlainLoad->getExtensionType() == ISD::SEXTLOAD))
-    FromType = NVPTX::PTXLdStInstCode::Signed;
-  else
-    FromType = getLdStRegType(ScalarVT);
+  unsigned int FromType =
+      (PlainLoad && (PlainLoad->getExtensionType() == ISD::SEXTLOAD))
+          ? NVPTX::PTXLdStInstCode::Signed
+          : NVPTX::PTXLdStInstCode::Untyped;
 
   assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
          FromTypeWidth <= 128 && "Invalid width for load");
@@ -1116,7 +1091,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   SDValue Ops[] = {getI32Imm(Ordering, DL),
                    getI32Imm(Scope, DL),
                    getI32Imm(CodeAddrSpace, DL),
-                   getI32Imm(VecType, DL),
+                   getI32Imm(NVPTX::PTXLdStInstCode::Scalar, DL),
                    getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
                    Base,
@@ -1182,7 +1157,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   unsigned ExtensionType = N->getConstantOperandVal(N->getNumOperands() - 1);
   unsigned FromType = (ExtensionType == ISD::SEXTLOAD)
                           ? NVPTX::PTXLdStInstCode::Signed
-                          : getLdStRegType(MemVT.getScalarType());
+                          : NVPTX::PTXLdStInstCode::Untyped;
 
   unsigned VecType;
   unsigned FromTypeWidth;
@@ -1200,8 +1175,8 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   }
 
   if (isSubVectorPackedInI32(EltVT)) {
+    assert(ExtensionType == ISD::NON_EXTLOAD);
     EltVT = MVT::i32;
-    FromType = NVPTX::PTXLdStInstCode::Untyped;
   }
 
   assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
@@ -1405,21 +1380,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
 
   // Vector Setting
-  MVT SimpleVT = StoreVT.getSimpleVT();
-  unsigned VecType = NVPTX::PTXLdStInstCode::Scalar;
-
-  // Type Setting: toType + toTypeWidth
-  // - for integer type, always use 'u'
-  MVT ScalarVT = SimpleVT.getScalarType();
-  unsigned ToTypeWidth = ScalarVT.getSizeInBits();
-  if (SimpleVT.isVector()) {
-    assert((Isv2x16VT(StoreVT) || StoreVT == MVT::v4i8) &&
-           "Unexpected vector type");
-    // v2x16 is stored using st.b32
-    ToTypeWidth = 32;
-  }
-
-  unsigned int ToType = getLdStRegType(ScalarVT);
+  const unsigned ToTypeWidth = StoreVT.getSimpleVT().getSizeInBits();
 
   // Create the machine instruction DAG
   SDValue Value = PlainStore ? PlainStore->getValue() : AtomicStore->getVal();
@@ -1434,8 +1395,8 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
                    getI32Imm(Ordering, DL),
                    getI32Imm(Scope, DL),
                    getI32Imm(CodeAddrSpace, DL),
-                   getI32Imm(VecType, DL),
-                   getI32Imm(ToType, DL),
+                   getI32Imm(NVPTX::PTXLdStInstCode::Scalar, DL),
+                   getI32Imm(NVPTX::PTXLdStInstCode::Untyped, DL),
                    getI32Imm(ToTypeWidth, DL),
                    Base,
                    Offset,
@@ -1481,7 +1442,6 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   // Type Setting: toType + toTypeWidth
   // - for integer type, always use 'u'
   const unsigned TotalWidth = StoreVT.getSimpleVT().getSizeInBits();
-  unsigned ToType = getLdStRegType(StoreVT.getSimpleVT().getScalarType());
 
   SmallVector<SDValue, 12> Ops;
   SDValue N2;
@@ -1508,7 +1468,6 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 
   if (isSubVectorPackedInI32(EltVT)) {
     EltVT = MVT::i32;
-    ToType = NVPTX::PTXLdStInstCode::Untyped;
   }
 
   assert(isPowerOf2_32(ToTypeWidth) && ToTypeWidth >= 8 && ToTypeWidth <= 128 &&
@@ -1519,8 +1478,8 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 
   Ops.append({getI32Imm(Ordering, DL), getI32Imm(Scope, DL),
               getI32Imm(CodeAddrSpace, DL), getI32Imm(VecType, DL),
-              getI32Imm(ToType, DL), getI32Imm(ToTypeWidth, DL), Base, Offset,
-              Chain});
+              getI32Imm(NVPTX::PTXLdStInstCode::Untyped, DL),
+              getI32Imm(ToTypeWidth, DL), Base, Offset, Chain});
 
   std::optional<unsigned> Opcode;
   switch (N->getOpcode()) {
