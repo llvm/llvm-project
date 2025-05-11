@@ -103,20 +103,20 @@ uint64_t FuncBranchData::getNumExecutedBranches() const {
   return ExecutedBranches;
 }
 
-void SampleInfo::mergeWith(const SampleInfo &SI) { Hits += SI.Hits; }
+void BasicSampleInfo::mergeWith(const BasicSampleInfo &SI) { Hits += SI.Hits; }
 
-void SampleInfo::print(raw_ostream &OS) const {
+void BasicSampleInfo::print(raw_ostream &OS) const {
   OS << Loc.IsSymbol << " " << Loc.Name << " " << Twine::utohexstr(Loc.Offset)
      << " " << Hits << "\n";
 }
 
-uint64_t FuncSampleData::getSamples(uint64_t Start, uint64_t End) const {
+uint64_t FuncBasicSampleData::getSamples(uint64_t Start, uint64_t End) const {
   assert(llvm::is_sorted(Data));
   struct Compare {
-    bool operator()(const SampleInfo &SI, const uint64_t Val) const {
+    bool operator()(const BasicSampleInfo &SI, const uint64_t Val) const {
       return SI.Loc.Offset < Val;
     }
-    bool operator()(const uint64_t Val, const SampleInfo &SI) const {
+    bool operator()(const uint64_t Val, const BasicSampleInfo &SI) const {
       return Val < SI.Loc.Offset;
     }
   };
@@ -128,21 +128,21 @@ uint64_t FuncSampleData::getSamples(uint64_t Start, uint64_t End) const {
   return Result;
 }
 
-uint64_t FuncSampleData::getSamples() const {
+uint64_t FuncBasicSampleData::getSamples() const {
   uint64_t Result = 0;
-  for (const SampleInfo &I : Data)
+  for (const BasicSampleInfo &I : Data)
     Result += I.Hits;
   return Result;
 }
 
-void FuncSampleData::bumpCount(uint64_t Offset, uint64_t Count) {
+void FuncBasicSampleData::bumpCount(uint64_t Offset, uint64_t Count) {
   auto Iter = Index.find(Offset);
   if (Iter == Index.end()) {
     Data.emplace_back(Location(true, Name, Offset), Count);
     Index[Offset] = Data.size() - 1;
     return;
   }
-  SampleInfo &SI = Data[Iter->second];
+  BasicSampleInfo &SI = Data[Iter->second];
   SI.Hits += Count;
 }
 
@@ -358,8 +358,8 @@ void DataReader::readProfile(BinaryFunction &BF) {
     return;
 
   if (!hasLBR()) {
-    BF.ProfileFlags = BinaryFunction::PF_SAMPLE;
-    readSampleData(BF);
+    BF.ProfileFlags = BinaryFunction::PF_IP;
+    readBasicSampleData(BF);
     return;
   }
 
@@ -561,8 +561,8 @@ float DataReader::evaluateProfileData(BinaryFunction &BF,
   return MatchRatio;
 }
 
-void DataReader::readSampleData(BinaryFunction &BF) {
-  FuncSampleData *SampleDataOrErr = getFuncSampleData(BF.getNames());
+void DataReader::readBasicSampleData(BinaryFunction &BF) {
+  FuncBasicSampleData *SampleDataOrErr = getFuncBasicSampleData(BF.getNames());
   if (!SampleDataOrErr)
     return;
 
@@ -1013,7 +1013,7 @@ ErrorOr<MemInfo> DataReader::parseMemInfo() {
   return MemInfo(Offset, Addr, CountRes.get());
 }
 
-ErrorOr<SampleInfo> DataReader::parseSampleInfo() {
+ErrorOr<BasicSampleInfo> DataReader::parseSampleInfo() {
   ErrorOr<Location> Res = parseLocation(FieldSeparator);
   if (std::error_code EC = Res.getError())
     return EC;
@@ -1031,7 +1031,7 @@ ErrorOr<SampleInfo> DataReader::parseSampleInfo() {
     return make_error_code(llvm::errc::io_error);
   }
 
-  return SampleInfo(std::move(Address), Occurrences);
+  return BasicSampleInfo(std::move(Address), Occurrences);
 }
 
 ErrorOr<bool> DataReader::maybeParseNoLBRFlag() {
@@ -1090,11 +1090,11 @@ bool DataReader::hasMemData() {
 
 std::error_code DataReader::parseInNoLBRMode() {
   auto GetOrCreateFuncEntry = [&](StringRef Name) {
-    auto I = NamesToSamples.find(Name);
-    if (I == NamesToSamples.end()) {
+    auto I = NamesToBasicSamples.find(Name);
+    if (I == NamesToBasicSamples.end()) {
       bool Success;
-      std::tie(I, Success) = NamesToSamples.insert(std::make_pair(
-          Name, FuncSampleData(Name, FuncSampleData::ContainerTy())));
+      std::tie(I, Success) = NamesToBasicSamples.insert(std::make_pair(
+          Name, FuncBasicSampleData(Name, FuncBasicSampleData::ContainerTy())));
 
       assert(Success && "unexpected result of insert");
     }
@@ -1113,11 +1113,11 @@ std::error_code DataReader::parseInNoLBRMode() {
   };
 
   while (hasBranchData()) {
-    ErrorOr<SampleInfo> Res = parseSampleInfo();
+    ErrorOr<BasicSampleInfo> Res = parseSampleInfo();
     if (std::error_code EC = Res.getError())
       return EC;
 
-    SampleInfo SI = Res.get();
+    BasicSampleInfo SI = Res.get();
 
     // Ignore samples not involving known locations
     if (!SI.Loc.IsSymbol)
@@ -1142,8 +1142,8 @@ std::error_code DataReader::parseInNoLBRMode() {
     I->second.Data.emplace_back(std::move(MI));
   }
 
-  for (auto &FuncSamples : NamesToSamples)
-    llvm::stable_sort(FuncSamples.second.Data);
+  for (auto &FuncBasicSamples : NamesToBasicSamples)
+    llvm::stable_sort(FuncBasicSamples.second.Data);
 
   for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
@@ -1323,7 +1323,7 @@ bool DataReader::mayHaveProfileData(const BinaryFunction &Function) {
   if (getBranchData(Function) || getMemData(Function))
     return true;
 
-  if (getFuncSampleData(Function.getNames()) ||
+  if (getFuncBasicSampleData(Function.getNames()) ||
       getBranchDataForNames(Function.getNames()) ||
       getMemDataForNames(Function.getNames()))
     return true;
@@ -1359,9 +1359,10 @@ DataReader::getMemDataForNames(const std::vector<StringRef> &FuncNames) {
   return fetchMapEntry<NamesToMemEventsMapTy>(NamesToMemEvents, FuncNames);
 }
 
-FuncSampleData *
-DataReader::getFuncSampleData(const std::vector<StringRef> &FuncNames) {
-  return fetchMapEntry<NamesToSamplesMapTy>(NamesToSamples, FuncNames);
+FuncBasicSampleData *
+DataReader::getFuncBasicSampleData(const std::vector<StringRef> &FuncNames) {
+  return fetchMapEntry<NamesToBasicSamplesMapTy>(NamesToBasicSamples,
+                                                 FuncNames);
 }
 
 std::vector<FuncBranchData *> DataReader::getBranchDataForNamesRegex(
@@ -1401,11 +1402,11 @@ void DataReader::dump() const {
     StringRef Event = I->getKey();
     Diag << "Data was collected with event: " << Event << "\n";
   }
-  for (const auto &KV : NamesToSamples) {
+  for (const auto &KV : NamesToBasicSamples) {
     const StringRef Name = KV.first;
-    const FuncSampleData &FSD = KV.second;
+    const FuncBasicSampleData &FSD = KV.second;
     Diag << Name << " samples:\n";
-    for (const SampleInfo &SI : FSD.Data)
+    for (const BasicSampleInfo &SI : FSD.Data)
       Diag << SI.Loc.Name << " " << SI.Loc.Offset << " " << SI.Hits << "\n";
   }
 
