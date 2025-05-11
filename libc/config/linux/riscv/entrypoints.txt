@@ -371,8 +371,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.uio.readv
 
     # sys/time.h entrypoints
-    # libc.src.sys.time.setitimer
-    # libc.src.sys.time.getitimer
+    libc.src.sys.time.setitimer
+    libc.src.sys.time.getitimer
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
