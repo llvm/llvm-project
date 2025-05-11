@@ -131,7 +131,7 @@ def FPR32INX : RegisterOperand<GPRF32> {
 // The DAGOperand can be unset if the predicates are not enough to define it.
 class ExtInfo<string suffix, string space, list<Predicate> predicates,
               ValueType primaryvt, DAGOperand primaryty, DAGOperand f32ty,
-              DAGOperand f64ty, DAGOperand f16ty> {
+              DAGOperand f64ty, DAGOperand f16ty, DAGOperand f128ty> {
   list<Predicate> Predicates = predicates;
   string Suffix = suffix;
   string Space = space;
@@ -139,12 +139,14 @@ class ExtInfo<string suffix, string space, list<Predicate> predicates,
   DAGOperand F16Ty = f16ty;
   DAGOperand F32Ty = f32ty;
   DAGOperand F64Ty = f64ty;
+  DAGOperand F128Ty = f128ty;
   ValueType PrimaryVT = primaryvt;
 }
 
-def FExt       : ExtInfo<"", "", [HasStdExtF], f32, FPR32, FPR32, ?, ?>;
+def FExt     : ExtInfo<"", "", [HasStdExtF], f32, FPR32, FPR32, ?, ?, ?>;
 
-def ZfinxExt   : ExtInfo<"_INX", "Zfinx", [HasStdExtZfinx], f32, FPR32INX, FPR32INX, ?, ?>;
+def ZfinxExt : ExtInfo<"_INX", "Zfinx", [HasStdExtZfinx], f32, FPR32INX,
+                       FPR32INX, ?, ?, ?>;
 
 defvar FExts   = [FExt, ZfinxExt];
 

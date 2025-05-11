@@ -1272,6 +1272,11 @@ static MCRegister convertFPR64ToFPR32(MCRegister Reg) {
   return Reg - RISCV::F0_D + RISCV::F0_F;
 }
 
+static MCRegister convertFPR64ToFPR128(MCRegister Reg) {
+  assert(Reg >= RISCV::F0_D && Reg <= RISCV::F31_D && "Invalid register");
+  return Reg - RISCV::F0_D + RISCV::F0_Q;
+}
+
 static MCRegister convertVRToVRMx(const MCRegisterInfo &RI, MCRegister Reg,
                                   unsigned Kind) {
   unsigned RegClassID;
@@ -1300,6 +1305,10 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(Reg);
   bool IsRegVR = RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg);
 
+  if (IsRegFPR64 && Kind == MCK_FPR128) {
+    Op.Reg.RegNum = convertFPR64ToFPR128(Reg);
+    return Match_Success;
+  }
   // As the parser couldn't differentiate an FPR32 from an FPR64, coerce the
   // register from FPR64 to FPR32 or FPR64C to FPR32C if necessary.
   if ((IsRegFPR64 && Kind == MCK_FPR32) ||
