@@ -83,8 +83,8 @@ public:
   ///
   FunctionType *getFunctionType() const;
 
-  const std::string &getAsmString() const { return AsmString; }
-  const std::string &getConstraintString() const { return Constraints; }
+  StringRef getAsmString() const { return AsmString; }
+  StringRef getConstraintString() const { return Constraints; }
   void collectAsmStrs(SmallVectorImpl<StringRef> &AsmStrs) const;
 
   /// This static method can be used by the parser to check to see if the
