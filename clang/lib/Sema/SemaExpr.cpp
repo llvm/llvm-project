@@ -6362,6 +6362,14 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
     Params.push_back(Parm);
   }
   OverloadDecl->setParams(Params);
+  // We cannot merge host/device attributes of redeclarations. They have to
+  // be consistent when created.
+  if (Sema->LangOpts.CUDA) {
+    if (FDecl->hasAttr<CUDAHostAttr>())
+      OverloadDecl->addAttr(CUDAHostAttr::CreateImplicit(Context));
+    if (FDecl->hasAttr<CUDADeviceAttr>())
+      OverloadDecl->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+  }
   Sema->mergeDeclAttributes(OverloadDecl, FDecl);
   return OverloadDecl;
 }
@@ -6543,12 +6551,20 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 }
 
 // Any type that could be used to form a callable expression
-static bool MayBeFunctionType(const ASTContext &Context, QualType T) {
-  return T == Context.BoundMemberTy || T == Context.UnknownAnyTy ||
-         T == Context.BuiltinFnTy || T == Context.OverloadTy ||
-         T->isFunctionType() || T->isFunctionReferenceType() ||
-         T->isMemberFunctionPointerType() || T->isFunctionPointerType() ||
-         T->isBlockPointerType() || T->isRecordType();
+static bool MayBeFunctionType(const ASTContext &Context, const Expr *E) {
+  QualType T = E->getType();
+  if (T->isDependentType())
+    return true;
+
+  if (T == Context.BoundMemberTy || T == Context.UnknownAnyTy ||
+      T == Context.BuiltinFnTy || T == Context.OverloadTy ||
+      T->isFunctionType() || T->isFunctionReferenceType() ||
+      T->isMemberFunctionPointerType() || T->isFunctionPointerType() ||
+      T->isBlockPointerType() || T->isRecordType())
+    return true;
+
+  return isa<CallExpr, DeclRefExpr, MemberExpr, CXXPseudoDestructorExpr,
+             OverloadExpr, UnresolvedMemberExpr, UnaryOperator>(E);
 }
 
 ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
@@ -6607,8 +6623,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
         // If the type of the function itself is not dependent
         // check that it is a reasonable as a function, as type deduction
         // later assume the CallExpr has a sensible TYPE.
-        if (!Fn->getType()->isDependentType() &&
-            !MayBeFunctionType(Context, Fn->getType()))
+        if (!MayBeFunctionType(Context, Fn))
           return ExprError(
               Diag(LParenLoc, diag::err_typecheck_call_not_function)
               << Fn->getType() << Fn->getSourceRange());
@@ -9116,7 +9131,7 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
           diag::warn_typecheck_convert_incompatible_function_pointer_strict,
           Loc) &&
       RHSType->isFunctionPointerType() && LHSType->isFunctionPointerType() &&
-      !S.IsFunctionConversion(RHSType, LHSType, RHSType))
+      !S.TryFunctionConversion(RHSType, LHSType, RHSType))
     return AssignConvertType::IncompatibleFunctionPointerStrict;
 
   // C99 6.5.16.1p1 (constraint 3): both operands are pointers to qualified or
@@ -9180,8 +9195,7 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
       return AssignConvertType::IncompatibleFunctionPointer;
     return AssignConvertType::IncompatiblePointer;
   }
-  if (!S.getLangOpts().CPlusPlus &&
-      S.IsFunctionConversion(ltrans, rtrans, ltrans))
+  if (!S.getLangOpts().CPlusPlus && S.IsFunctionConversion(ltrans, rtrans))
     return AssignConvertType::IncompatibleFunctionPointer;
   if (IsInvalidCmseNSCallConversion(S, ltrans, rtrans))
     return AssignConvertType::IncompatibleFunctionPointer;

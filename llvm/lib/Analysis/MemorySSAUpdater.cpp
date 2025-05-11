@@ -1119,6 +1119,9 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
     if (auto DefsList = MSSA->getWritableBlockDefs(BlockWithDefsToReplace)) {
       for (auto &DefToReplaceUses : *DefsList) {
         BasicBlock *DominatingBlock = DefToReplaceUses.getBlock();
+        // We defer resetting optimized accesses until all uses are replaced, to
+        // avoid invalidating the iterator.
+        SmallVector<MemoryUseOrDef *, 4> ResetOptimized;
         for (Use &U : llvm::make_early_inc_range(DefToReplaceUses.uses())) {
           MemoryAccess *Usr = cast<MemoryAccess>(U.getUser());
           if (MemoryPhi *UsrPhi = dyn_cast<MemoryPhi>(Usr)) {
@@ -1135,10 +1138,13 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
                 assert(IDom && "Block must have a valid IDom.");
                 U.set(GetLastDef(IDom->getBlock()));
               }
-              cast<MemoryUseOrDef>(Usr)->resetOptimized();
+              ResetOptimized.push_back(cast<MemoryUseOrDef>(Usr));
             }
           }
         }
+
+        for (auto *Usr : ResetOptimized)
+          Usr->resetOptimized();
       }
     }
   }

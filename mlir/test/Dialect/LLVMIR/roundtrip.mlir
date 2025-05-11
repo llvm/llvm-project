@@ -1042,3 +1042,6 @@ llvm.func @llvm.aarch64.neon.st3.v8i8.p0(vector<8xi8>, vector<8xi8>, vector<8xi8
 
 // CHECK-LABEL: llvm.func @callintrin_voidret
 // CHECK-NEXT: llvm.call_intrinsic "llvm.aarch64.neon.st3.v8i8.p0"(%arg0, %arg1, %arg2, %arg3) : (vector<8xi8>, vector<8xi8>, vector<8xi8>, !llvm.ptr) -> ()
+
+llvm.mlir.global internal thread_local unnamed_addr @myglobal(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+// CHECK: llvm.mlir.global internal thread_local unnamed_addr @myglobal(-1 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
