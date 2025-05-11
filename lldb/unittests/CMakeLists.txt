@@ -48,13 +48,13 @@ endfunction()
 
 add_subdirectory(TestingSupport)
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-  # FIXME: APITests.exe is not a valid googletest binary.
+  # FIXME: Tests linking against libLLDB don't work on Windows.
   add_subdirectory(API)
+  add_subdirectory(DAP)
 endif()
 add_subdirectory(Breakpoint)
 add_subdirectory(Callback)
 add_subdirectory(Core)
-add_subdirectory(DAP)
 add_subdirectory(DataFormatter)
 add_subdirectory(Disassembler)
 add_subdirectory(Editline)
