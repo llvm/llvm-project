@@ -3317,7 +3317,7 @@ struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
     return const_cast<VPPhiAccessors *>([R]() -> const VPPhiAccessors * {
       switch (R->getVPDefID()) {
       case VPDef::VPInstructionSC:
-      return cast <VPPhi>(R);
+        return cast<VPPhi>(R);
       case VPDef::VPIRInstructionSC:
         return cast<VPIRPhi>(R);
       case VPDef::VPWidenPHISC:
