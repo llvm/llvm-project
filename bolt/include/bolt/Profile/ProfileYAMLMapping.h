@@ -231,7 +231,7 @@ LLVM_YAML_STRONG_TYPEDEF(uint16_t, PROFILE_PF)
 template <> struct ScalarBitSetTraits<PROFILE_PF> {
   static void bitset(IO &io, PROFILE_PF &value) {
     io.bitSetCase(value, "lbr", BinaryFunction::PF_LBR);
-    io.bitSetCase(value, "sample", BinaryFunction::PF_SAMPLE);
+    io.bitSetCase(value, "sample", BinaryFunction::PF_IP);
     io.bitSetCase(value, "memevent", BinaryFunction::PF_MEMEVENT);
   }
 };

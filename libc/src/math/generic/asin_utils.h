@@ -25,6 +25,8 @@ namespace {
 using DoubleDouble = fputil::DoubleDouble;
 using Float128 = fputil::DyadicFloat<128>;
 
+constexpr DoubleDouble PI = {0x1.1a62633145c07p-53, 0x1.921fb54442d18p1};
+
 constexpr DoubleDouble PI_OVER_TWO = {0x1.1a62633145c07p-54,
                                       0x1.921fb54442d18p0};
 
@@ -172,7 +174,8 @@ LIBC_INLINE DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
   double y_hi = multiply_add(k, -0x1.0p-5, u.hi); // Exact
   DoubleDouble y = fputil::exact_add(y_hi, u.lo);
   double y2 = y.hi * y.hi;
-  err *= y2 + 0x1.0p-30;
+  // Add double-double errors in addition to the relative errors from y2.
+  err = fputil::multiply_add(err, y2, 0x1.0p-102);
   DoubleDouble c0 = fputil::quick_mult(
       y, DoubleDouble{ASIN_COEFFS[idx][3], ASIN_COEFFS[idx][2]});
   double c1 = multiply_add(y.hi, ASIN_COEFFS[idx][5], ASIN_COEFFS[idx][4]);
@@ -547,6 +550,9 @@ constexpr Float128 ASIN_COEFFS_F128[17][16] = {
 
 constexpr Float128 PI_OVER_TWO_F128 = {
     Sign::POS, -127, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
+
+constexpr Float128 PI_F128 = {Sign::POS, -126,
+                              0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
 
 LIBC_INLINE Float128 asin_eval(const Float128 &u, unsigned idx) {
   return fputil::polyeval(u, ASIN_COEFFS_F128[idx][0], ASIN_COEFFS_F128[idx][1],

@@ -357,13 +357,9 @@ getModularizeArgumentsAdjuster(DependencyMap &Dependencies) {
     std::string InputFile = findInputFile(Args);
     DependentsVector &FileDependents = Dependencies[InputFile];
     CommandLineArguments NewArgs(Args);
-    if (int Count = FileDependents.size()) {
-      for (int Index = 0; Index < Count; ++Index) {
-        NewArgs.push_back("-include");
-        std::string File(std::string("\"") + FileDependents[Index] +
-                         std::string("\""));
-        NewArgs.push_back(FileDependents[Index]);
-      }
+    for (const std::string &Dep : FileDependents) {
+      NewArgs.push_back("-include");
+      NewArgs.push_back(Dep);
     }
     // Ignore warnings.  (Insert after "clang_tool" at beginning.)
     NewArgs.insert(NewArgs.begin() + 1, "-w");
@@ -381,11 +377,11 @@ getModularizeArgumentsAdjuster(DependencyMap &Dependencies) {
 // somewhere into Tooling/ in mainline
 struct Location {
   OptionalFileEntryRef File;
-  unsigned Line, Column;
+  unsigned Line = 0, Column = 0;
 
-  Location() : File(), Line(), Column() {}
+  Location() = default;
 
-  Location(SourceManager &SM, SourceLocation Loc) : File(), Line(), Column() {
+  Location(SourceManager &SM, SourceLocation Loc) {
     Loc = SM.getExpansionLoc(Loc);
     if (Loc.isInvalid())
       return;

@@ -10,7 +10,7 @@
 
 ; CHECK-LABEL: foo
 define void @foo(ptr %a) {
-; CHECK: ld.v2.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}}
+; CHECK: ld.v2.b32 {%f{{[0-9]+}}, %f{{[0-9]+}}}
   %t1 = load <2 x float>, ptr %a
   %t2 = fmul <2 x float> %t1, %t1
   store <2 x float> %t2, ptr %a
@@ -19,7 +19,7 @@ define void @foo(ptr %a) {
 
 ; CHECK-LABEL: foo2
 define void @foo2(ptr %a) {
-; CHECK: ld.v4.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
+; CHECK: ld.v4.b32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
   %t1 = load <4 x float>, ptr %a
   %t2 = fmul <4 x float> %t1, %t1
   store <4 x float> %t2, ptr %a
@@ -28,8 +28,8 @@ define void @foo2(ptr %a) {
 
 ; CHECK-LABEL: foo3
 define void @foo3(ptr %a) {
-; CHECK: ld.v4.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
-; CHECK-NEXT: ld.v4.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
+; CHECK: ld.v4.b32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
+; CHECK-NEXT: ld.v4.b32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
   %t1 = load <8 x float>, ptr %a
   %t2 = fmul <8 x float> %t1, %t1
   store <8 x float> %t2, ptr %a
@@ -40,7 +40,7 @@ define void @foo3(ptr %a) {
 
 ; CHECK-LABEL: foo4
 define void @foo4(ptr %a) {
-; CHECK: ld.v2.u32 {%r{{[0-9]+}}, %r{{[0-9]+}}}
+; CHECK: ld.v2.b32 {%r{{[0-9]+}}, %r{{[0-9]+}}}
   %t1 = load <2 x i32>, ptr %a
   %t2 = mul <2 x i32> %t1, %t1
   store <2 x i32> %t2, ptr %a
@@ -49,7 +49,7 @@ define void @foo4(ptr %a) {
 
 ; CHECK-LABEL: foo5
 define void @foo5(ptr %a) {
-; CHECK: ld.v4.u32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
+; CHECK: ld.v4.b32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
   %t1 = load <4 x i32>, ptr %a
   %t2 = mul <4 x i32> %t1, %t1
   store <4 x i32> %t2, ptr %a
@@ -58,8 +58,8 @@ define void @foo5(ptr %a) {
 
 ; CHECK-LABEL: foo6
 define void @foo6(ptr %a) {
-; CHECK: ld.v4.u32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
-; CHECK-NEXT: ld.v4.u32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
+; CHECK: ld.v4.b32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
+; CHECK-NEXT: ld.v4.b32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
   %t1 = load <8 x i32>, ptr %a
   %t2 = mul <8 x i32> %t1, %t1
   store <8 x i32> %t2, ptr %a
@@ -86,7 +86,7 @@ define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(1342177
   %t11 = zext i32 %t10 to i64
   %t20 = zext i32 %t2 to i64
   %t27 = getelementptr inbounds [1024 x [131072 x i8]], ptr %alloc0, i64 0, i64 %t20, i64 %t9
-; CHECK: ld.v2.u8
+; CHECK: ld.v2.b8
   %t28 = load i8, ptr %t27, align 2
   %t31 = getelementptr inbounds [1024 x [131072 x i8]], ptr %alloc0, i64 0, i64 %t20, i64 %t11
   %t32 = load i8, ptr %t31, align 1
@@ -114,8 +114,8 @@ define void @extv8f16_global_a16(ptr addrspace(1) noalias readonly align 16 %dst
 ; CHECK: cvt.f32.f16 %f{{.*}}, %rs
 ; CHECK: cvt.f32.f16 %f{{.*}}, %rs
   %ext = fpext <8 x half> %v to <8 x float>
-; CHECK: st.global.v4.f32
-; CHECK: st.global.v4.f32
+; CHECK: st.global.v4.b32
+; CHECK: st.global.v4.b32
   store <8 x float> %ext, ptr addrspace(1) %dst, align 16
   ret void
 }
@@ -140,8 +140,8 @@ define void @extv8f16_global_a4(ptr addrspace(1) noalias readonly align 16 %dst,
 ; CHECK: cvt.f32.f16 %f{{.*}}, %rs
 ; CHECK: cvt.f32.f16 %f{{.*}}, %rs
   %ext = fpext <8 x half> %v to <8 x float>
-; CHECK: st.global.v4.f32
-; CHECK: st.global.v4.f32
+; CHECK: st.global.v4.b32
+; CHECK: st.global.v4.b32
   store <8 x float> %ext, ptr addrspace(1) %dst, align 16
   ret void
 }
@@ -164,8 +164,8 @@ define void @extv8f16_generic_a16(ptr noalias readonly align 16 %dst, ptr noalia
 ; CHECK: cvt.f32.f16 %f{{.*}}, %rs
 ; CHECK: cvt.f32.f16 %f{{.*}}, %rs
   %ext = fpext <8 x half> %v to <8 x float>
-; CHECK: st.v4.f32
-; CHECK: st.v4.f32
+; CHECK: st.v4.b32
+; CHECK: st.v4.b32
   store <8 x float> %ext, ptr %dst, align 16
   ret void
 }
@@ -190,8 +190,8 @@ define void @extv8f16_generic_a4(ptr noalias readonly align 16 %dst, ptr noalias
 ; CHECK: cvt.f32.f16 %f{{.*}}, %rs
 ; CHECK: cvt.f32.f16 %f{{.*}}, %rs
   %ext = fpext <8 x half> %v to <8 x float>
-; CHECK: st.v4.f32
-; CHECK: st.v4.f32
+; CHECK: st.v4.b32
+; CHECK: st.v4.b32
   store <8 x float> %ext, ptr %dst, align 16
   ret void
 }

@@ -601,7 +601,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
 
   std::unique_ptr<llvm::MCStreamer> Str(createNullStreamer(Ctx));
   std::unique_ptr<llvm::MCAsmParser> Parser(
-      createMCAsmParser(TempSrcMgr, Ctx, *Str.get(), *MAI));
+      createMCAsmParser(TempSrcMgr, Ctx, *Str, *MAI));
 
   std::unique_ptr<llvm::MCTargetAsmParser> TargetParser(
       TheTarget->createMCAsmParser(*STI, *Parser, *MII, MCOptions));
@@ -617,7 +617,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
 
   // Change to the Intel dialect.
   Parser->setAssemblerDialect(1);
-  Parser->setTargetParser(*TargetParser.get());
+  Parser->setTargetParser(*TargetParser);
   Parser->setParsingMSInlineAsm(true);
   TargetParser->setParsingMSInlineAsm(true);
 

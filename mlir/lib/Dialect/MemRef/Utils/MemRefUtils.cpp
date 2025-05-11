@@ -66,7 +66,6 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
   SmallVector<AffineExpr> symbols(2 * sourceRank);
   bindSymbolsList(builder.getContext(), MutableArrayRef{symbols});
   AffineExpr addMulMap = builder.getAffineConstantExpr(0);
-  AffineExpr mulMap = builder.getAffineConstantExpr(1);
 
   SmallVector<OpFoldResult> offsetValues(2 * sourceRank);
 
@@ -75,18 +74,28 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     addMulMap = addMulMap + symbols[offsetIdx] * symbols[offsetIdx + 1];
     offsetValues[offsetIdx] = indicesVec[i];
     offsetValues[offsetIdx + 1] = strides[i];
-
-    mulMap = mulMap * symbols[i];
   }
-
   // Adjust linearizedIndices and size by the scale factor (dstBits / srcBits).
   int64_t scaler = dstBits / srcBits;
-  mulMap = mulMap.floorDiv(scaler);
-
   OpFoldResult linearizedIndices = affine::makeComposedFoldedAffineApply(
       builder, loc, addMulMap.floorDiv(scaler), offsetValues);
+
+  size_t symbolIndex = 0;
+  SmallVector<OpFoldResult> values;
+  SmallVector<AffineExpr> productExpressions;
+  for (unsigned i = 0; i < sourceRank; ++i) {
+    AffineExpr strideExpr = symbols[symbolIndex++];
+    values.push_back(strides[i]);
+    AffineExpr sizeExpr = symbols[symbolIndex++];
+    values.push_back(sizes[i]);
+
+    productExpressions.push_back((strideExpr * sizeExpr).floorDiv(scaler));
+  }
+  AffineMap maxMap = AffineMap::get(
+      /*dimCount=*/0, /*symbolCount=*/symbolIndex, productExpressions,
+      builder.getContext());
   OpFoldResult linearizedSize =
-      affine::makeComposedFoldedAffineApply(builder, loc, mulMap, sizes);
+      affine::makeComposedFoldedAffineMax(builder, loc, maxMap, values);
 
   // Adjust baseOffset by the scale factor (dstBits / srcBits).
   AffineExpr s0;
