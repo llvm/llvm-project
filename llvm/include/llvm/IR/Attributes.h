@@ -156,6 +156,7 @@ public:
   static Attribute getWithAllocSizeArgs(
       LLVMContext &Context, unsigned ElemSizeArg,
       const std::optional<unsigned> &NumElemsArg);
+  static Attribute getWithAllocKind(LLVMContext &Context, AllocFnKind Kind);
   static Attribute getWithVScaleRangeArgs(LLVMContext &Context,
                                           unsigned MinValue, unsigned MaxValue);
   static Attribute getWithByValType(LLVMContext &Context, Type *Ty);
