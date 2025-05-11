@@ -20,6 +20,7 @@
 
 #include "llvm/Support/MathExtras.h"
 #include <limits>
+#include <tuple>
 
 namespace llvm {
 
@@ -191,9 +192,7 @@ public:
   /// the states are valid and users can test for validity of the cost
   /// explicitly.
   bool operator<(const InstructionCost &RHS) const {
-    if (State != RHS.State)
-      return State < RHS.State;
-    return Value < RHS.Value;
+    return std::tie(State, Value) < std::tie(RHS.State, RHS.Value);
   }
 
   bool operator==(const InstructionCost &RHS) const {

@@ -32,46 +32,67 @@ def SDT_AVRSelectCC
 // AVR Specific Node Definitions
 //===----------------------------------------------------------------------===//
 
+// Return from subroutine.
 def AVRretglue : SDNode<"AVRISD::RET_GLUE", SDTNone,
                         [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+// Return from ISR.
 def AVRretiglue : SDNode<"AVRISD::RETI_GLUE", SDTNone,
                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
 
 def AVRcallseq_start : SDNode<"ISD::CALLSEQ_START", SDT_AVRCallSeqStart,
                               [SDNPHasChain, SDNPOutGlue]>;
 def AVRcallseq_end : SDNode<"ISD::CALLSEQ_END", SDT_AVRCallSeqEnd,
                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+// Represents an abstract call instruction,
+// which includes a bunch of information.
 def AVRcall : SDNode<"AVRISD::CALL", SDT_AVRCall,
                      [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
 
+// A wrapper node for TargetConstantPool,
+// TargetExternalSymbol, and TargetGlobalAddress.
 def AVRWrapper : SDNode<"AVRISD::WRAPPER", SDT_AVRWrapper>;
 
+// AVR conditional branches. Operand 0 is the chain operand, operand 1
+// is the block to branch if condition is true, operand 2 is the
+// condition code, and operand 3 is the flag operand produced by a CMP
+// or TEST instruction.
 def AVRbrcond
     : SDNode<"AVRISD::BRCOND", SDT_AVRBrcond, [SDNPHasChain, SDNPInGlue]>;
+
+// Compare instruction.
 def AVRcmp : SDNode<"AVRISD::CMP", SDT_AVRCmp, [SDNPOutGlue]>;
+
+// Compare with carry instruction.
 def AVRcmpc : SDNode<"AVRISD::CMPC", SDT_AVRCmp, [SDNPInGlue, SDNPOutGlue]>;
+
+// Test for zero or minus instruction.
 def AVRtst : SDNode<"AVRISD::TST", SDT_AVRTst, [SDNPOutGlue]>;
+
+// Operand 0 and operand 1 are selection variable, operand 2
+// is condition code and operand 3 is flag operand.
 def AVRselectcc : SDNode<"AVRISD::SELECT_CC", SDT_AVRSelectCC, [SDNPInGlue]>;
 
 // Shift nodes.
-def AVRlsl : SDNode<"AVRISD::LSL", SDTIntUnaryOp>;
-def AVRlsr : SDNode<"AVRISD::LSR", SDTIntUnaryOp>;
-def AVRrol : SDNode<"AVRISD::ROL", SDTIntUnaryOp>;
-def AVRror : SDNode<"AVRISD::ROR", SDTIntUnaryOp>;
-def AVRasr : SDNode<"AVRISD::ASR", SDTIntUnaryOp>;
-def AVRlslhi : SDNode<"AVRISD::LSLHI", SDTIntUnaryOp>;
-def AVRlsrlo : SDNode<"AVRISD::LSRLO", SDTIntUnaryOp>;
-def AVRasrlo : SDNode<"AVRISD::ASRLO", SDTIntUnaryOp>;
-def AVRlslbn : SDNode<"AVRISD::LSLBN", SDTIntBinOp>;
-def AVRlsrbn : SDNode<"AVRISD::LSRBN", SDTIntBinOp>;
-def AVRasrbn : SDNode<"AVRISD::ASRBN", SDTIntBinOp>;
-def AVRlslwn : SDNode<"AVRISD::LSLWN", SDTIntBinOp>;
-def AVRlsrwn : SDNode<"AVRISD::LSRWN", SDTIntBinOp>;
-def AVRasrwn : SDNode<"AVRISD::ASRWN", SDTIntBinOp>;
-def AVRlslw : SDNode<"AVRISD::LSLW", SDTIntShiftPairOp>;
-def AVRlsrw : SDNode<"AVRISD::LSRW", SDTIntShiftPairOp>;
-def AVRasrw : SDNode<"AVRISD::ASRW", SDTIntShiftPairOp>;
+def AVRlsl : SDNode<"AVRISD::LSL", SDTIntUnaryOp>;       // Logical shift left.
+def AVRlsr : SDNode<"AVRISD::LSR", SDTIntUnaryOp>;       // Logical shift right.
+def AVRrol : SDNode<"AVRISD::ROL", SDTIntUnaryOp>;       // Bit rotate left.
+def AVRror : SDNode<"AVRISD::ROR", SDTIntUnaryOp>;       // Bit rotate right.
+def AVRasr : SDNode<"AVRISD::ASR", SDTIntUnaryOp>;       // Arithmetic shift right.
+def AVRlslhi : SDNode<"AVRISD::LSLHI", SDTIntUnaryOp>;   // Higher 8-bit of word logical shift left.
+def AVRlsrlo : SDNode<"AVRISD::LSRLO", SDTIntUnaryOp>;   // Lower 8-bit of word logical shift right.
+def AVRasrlo : SDNode<"AVRISD::ASRLO", SDTIntUnaryOp>;   // Lower 8-bit of word arithmetic shift right.
+def AVRlslbn : SDNode<"AVRISD::LSLBN", SDTIntBinOp>;     // Byte logical shift left N bits.
+def AVRlsrbn : SDNode<"AVRISD::LSRBN", SDTIntBinOp>;     // Byte logical shift right N bits.
+def AVRasrbn : SDNode<"AVRISD::ASRBN", SDTIntBinOp>;     // Byte arithmetic shift right N bits.
+def AVRlslwn : SDNode<"AVRISD::LSLWN", SDTIntBinOp>;     // Higher 8-bit of word logical shift left.
+def AVRlsrwn : SDNode<"AVRISD::LSRWN", SDTIntBinOp>;     // Word logical shift right N bits.
+def AVRasrwn : SDNode<"AVRISD::ASRWN", SDTIntBinOp>;     // Word arithmetic shift right N bits.
+def AVRlslw : SDNode<"AVRISD::LSLW", SDTIntShiftPairOp>; // Wide logical shift left.
+def AVRlsrw : SDNode<"AVRISD::LSRW", SDTIntShiftPairOp>; // Wide logical shift right.
+def AVRasrw : SDNode<"AVRISD::ASRW", SDTIntShiftPairOp>; // Wide arithmetic shift right.
 
 // Pseudo shift nodes for non-constant shift amounts.
 def AVRlslLoop : SDNode<"AVRISD::LSLLOOP", SDTIntShiftOp>;
