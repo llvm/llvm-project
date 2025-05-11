@@ -60829,7 +60829,7 @@ static bool clobbersFlagRegisters(const SmallVector<StringRef, 4> &AsmPieces) {
 bool X86TargetLowering::ExpandInlineAsm(CallInst *CI) const {
   InlineAsm *IA = cast<InlineAsm>(CI->getCalledOperand());
 
-  const std::string &AsmStr = IA->getAsmString();
+  StringRef AsmStr = IA->getAsmString();
 
   IntegerType *Ty = dyn_cast<IntegerType>(CI->getType());
   if (!Ty || Ty->getBitWidth() % 16 != 0)
