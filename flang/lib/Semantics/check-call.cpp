@@ -1016,7 +1016,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     }
     if (dummyDataAttr == common::CUDADataAttr::Device &&
-        (dummyIsAssumedShape || dummyIsAssumedRank)) {
+        (dummyIsAssumedShape || dummyIsAssumedRank) &&
+        !dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
       if (auto contig{evaluate::IsContiguous(actual, foldingContext,
               /*namedConstantSectionsAreContiguous=*/true,
               /*firstDimensionStride1=*/true)}) {
