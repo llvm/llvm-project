@@ -494,19 +494,8 @@ public:
     return Column == Other.Column;
   }
   bool operator<(const PPItemKey &Other) const {
-    if (Name < Other.Name)
-      return true;
-    else if (Name > Other.Name)
-      return false;
-    if (File < Other.File)
-      return true;
-    else if (File > Other.File)
-      return false;
-    if (Line < Other.Line)
-      return true;
-    else if (Line > Other.Line)
-      return false;
-    return Column < Other.Column;
+    return std::tie(Name, File, Line, Column) <
+           std::tie(Other.Name, Other.File, Other.Line, Other.Column);
   }
   StringHandle Name;
   HeaderHandle File;
