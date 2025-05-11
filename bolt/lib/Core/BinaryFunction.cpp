@@ -473,7 +473,7 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Image       : 0x" << Twine::utohexstr(getImageAddress());
   if (ExecutionCount != COUNT_NO_PROFILE) {
     OS << "\n  Exec Count  : " << ExecutionCount;
-    OS << "\n  Branch Count: " << RawSampleCount;
+    OS << "\n  Sample Count: " << RawSampleCount;
     OS << "\n  Profile Acc : " << format("%.1f%%", ProfileMatchRatio * 100.0f);
   }
 
@@ -1797,8 +1797,6 @@ bool BinaryFunction::scanExternalRefs() {
     // Create relocation for every fixup.
     for (const MCFixup &Fixup : Fixups) {
       std::optional<Relocation> Rel = BC.MIB->createRelocation(Fixup, *BC.MAB);
-      // Can be skipped in case of overlow during relocation value encoding.
-      Rel->setOptional();
       if (!Rel) {
         Success = false;
         continue;
@@ -1814,6 +1812,17 @@ bool BinaryFunction::scanExternalRefs() {
         Success = false;
         continue;
       }
+
+      if (BC.isAArch64()) {
+        // Allow the relocation to be skipped in case of the overflow during the
+        // relocation value encoding.
+        Rel->setOptional();
+
+        if (!opts::CompactCodeModel)
+          if (BinaryFunction *TargetBF = BC.getFunctionForSymbol(Rel->Symbol))
+            TargetBF->setNeedsPatch(true);
+      }
+
       Rel->Offset += getAddress() - getOriginSection()->getAddress() + Offset;
       FunctionRelocations.push_back(*Rel);
     }

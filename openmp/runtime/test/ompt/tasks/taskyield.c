@@ -45,8 +45,8 @@ int main()
   
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_implicit_task_begin: parallel_id={{[0-9]+}}, task_id=[[IMPLICIT_TASK_ID:[0-9]+]], team_size={{[0-9]+}}, thread_num={{[0-9]+}}
 
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id={{[0-9]+}}, parent_task_frame.exit={{0x[0-f]+}}, parent_task_frame.reenter={{0x[0-f]+}}, new_task_id=[[WORKER_TASK:[0-9]+]], codeptr_ra={{0x[0-f]+}}, task_type=ompt_task_explicit=4, has_dependences=no
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id={{[0-9]+}}, parent_task_frame.exit={{0x[0-f]+}}, parent_task_frame.reenter={{0x[0-f]+}}, new_task_id=[[MAIN_TASK:[0-9]+]], codeptr_ra={{0x[0-f]+}}, task_type=ompt_task_explicit=4, has_dependences=no
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id={{[0-9]+}}, parent_task_frame.exit={{(0x)?[0-f]+}}, parent_task_frame.reenter={{(0x)?[0-f]+}}, new_task_id=[[WORKER_TASK:[0-9]+]], codeptr_ra={{(0x)?[0-f]+}}, task_type=ompt_task_explicit=4, has_dependences=no
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id={{[0-9]+}}, parent_task_frame.exit={{(0x)?[0-f]+}}, parent_task_frame.reenter={{(0x)?[0-f]+}}, new_task_id=[[MAIN_TASK:[0-9]+]], codeptr_ra={{(0x)?[0-f]+}}, task_type=ompt_task_explicit=4, has_dependences=no
 
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_schedule: first_task_id=[[IMPLICIT_TASK_ID]], second_task_id=[[MAIN_TASK]], prior_task_status=ompt_task_yield=2
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_schedule: first_task_id=[[MAIN_TASK]], second_task_id=[[IMPLICIT_TASK_ID]], prior_task_status=ompt_task_complete=1

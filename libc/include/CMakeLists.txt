@@ -741,7 +741,6 @@ add_header_macro(
 add_header_macro(
   uefi
   ../libc/include/Uefi.yaml
-  Uefi.h.def
   Uefi.h
   DEPENDS
     .llvm_libc_common_h
