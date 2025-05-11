@@ -484,7 +484,7 @@ template <class InternT, class ExternT>
 void utf8_to_utf16_in_ok(const std::codecvt<InternT, ExternT, mbstate_t>& cvt) {
   // UTF-8 string of 1-byte CP, 2-byte CP, 3-byte CP and 4-byte CP
   const unsigned char input[] = "b\u0448\uAAAA\U0010AAAA";
-  const InternT expected[]    = {0x61, 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
+  const InternT expected[]    = {0x62, 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
   static_assert(array_size(input) == 11, "");
   static_assert(array_size(expected) == 6, "");
 
@@ -549,7 +549,7 @@ template <class InternT, class ExternT>
 void utf8_to_utf16_in_partial(const std::codecvt<InternT, ExternT, mbstate_t>& cvt) {
   // UTF-8 string of 1-byte CP, 2-byte CP, 3-byte CP and 4-byte CP
   const unsigned char input[] = "b\u0448\uAAAA\U0010AAAA";
-  const InternT expected[]    = {0x61, 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
+  const InternT expected[]    = {0x62, 0x0448, 0xAAAA, 0xDBEA, 0xDEAA, 0};
   static_assert(array_size(input) == 11, "");
   static_assert(array_size(expected) == 6, "");
 
@@ -618,7 +618,7 @@ template <class InternT, class ExternT>
 void utf8_to_utf16_in_error(const std::codecvt<InternT, ExternT, mbstate_t>& cvt) {
   // UTF-8 string of 1-byte CP, 2-byte CP, 3-byte CP, 4-byte CP
   const unsigned char input[] = "b\u0448\uD700\U0010AAAA";
-  const InternT expected[]    = {0x61, 0x0448, 0xD700, 0xDBEA, 0xDEAA, 0};
+  const InternT expected[]    = {0x62, 0x0448, 0xD700, 0xDBEA, 0xDEAA, 0};
   static_assert(array_size(input) == 11, "");
   static_assert(array_size(expected) == 6, "");
 
