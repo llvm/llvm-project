@@ -3877,6 +3877,23 @@ void SelectionDAGBuilder::visitSIToFP(const User &I) {
   setValue(&I, DAG.getNode(ISD::SINT_TO_FP, getCurSDLoc(), DestVT, N));
 }
 
+void SelectionDAGBuilder::visitPtrToAddr(const User &I) {
+  const auto &TLI = DAG.getTargetLoweringInfo();
+  const DataLayout &DL = DAG.getDataLayout();
+  LLVMContext &Ctx = *DAG.getContext();
+  // ptrtoaddr is equivalent to a truncate of ptrtoint to address/index width
+  SDValue N = getValue(I.getOperand(0));
+  Type *PtrTy = I.getOperand(0)->getType();
+  EVT AddrVT = EVT::getIntegerVT(Ctx, DL.getPointerAddressSizeInBits(PtrTy));
+  if (auto *VTy = dyn_cast<VectorType>(PtrTy)) {
+    Type *EltTy = VTy->getElementType();
+    AddrVT = EVT::getVectorVT(Ctx, AddrVT, VTy->getElementCount());
+  }
+  N = DAG.getPtrExtOrTrunc(N, getCurSDLoc(), AddrVT);
+  N = DAG.getZExtOrTrunc(N, getCurSDLoc(), TLI.getValueType(DL, I.getType()));
+  setValue(&I, N);
+}
+
 void SelectionDAGBuilder::visitPtrToInt(const User &I) {
   // What to do depends on the size of the integer and the size of the pointer.
   // We can either truncate, zero extend, or no-op, accordingly.
@@ -7966,17 +7983,26 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
     // On arm64_32, pointers are 32 bits when stored in memory, but
     // zero-extended to 64 bits when in registers.  Thus the mask is 32 bits to
-    // match the index type, but the pointer is 64 bits, so the the mask must be
+    // match the index type, but the pointer is 64 bits, so the mask must be
     // zero-extended up to 64 bits to match the pointer.
     EVT PtrVT =
         TLI.getValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
     EVT MemVT =
         TLI.getMemValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
     assert(PtrVT == Ptr.getValueType());
-    assert(MemVT == Mask.getValueType());
-    if (MemVT != PtrVT)
+    if (Mask.getValueType().getFixedSizeInBits() < MemVT.getFixedSizeInBits()) {
+      // For AMDGPU buffer descriptors the mask is 48 bits, but the pointer is
+      // 128-bit, so we have to pad the mask with ones for unused bits.
+      auto HighOnes =
+          DAG.getNode(ISD::SHL, sdl, PtrVT, DAG.getAllOnesConstant(sdl, PtrVT),
+                      DAG.getConstant(Mask.getValueType().getFixedSizeInBits(),
+                                      sdl, PtrVT));
+      Mask = DAG.getNode(ISD::OR, sdl, PtrVT,
+                         DAG.getZExtOrTrunc(Mask, sdl, PtrVT), HighOnes);
+    } else if (Mask.getValueType() != PtrVT)
       Mask = DAG.getPtrExtOrTrunc(Mask, sdl, PtrVT);
 
+    assert(Mask.getValueType() == PtrVT);
     setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr, Mask));
     return;
   }
