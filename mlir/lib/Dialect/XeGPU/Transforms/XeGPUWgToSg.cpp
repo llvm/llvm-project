@@ -34,11 +34,10 @@ using namespace mlir;
 namespace {
 
 // clang-format off
-/// This pattern transform the CreateNdDescOp to create a subgroup descriptor
+/// This pattern transforms the CreateNdDescOp to create a subgroup descriptor
 /// from a workgroup descriptor. It replaces the offsets and sizes with
 /// appropriate values for the subgroup.
-/// It uses round-robin distribution to create the subgroup descriptor.
-
+/// It uses round-robin assignment to distribute the work to the subgroups.
 /// Following create_nd_desc operation:,
 ///    %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<24x24xf32>
 ///       -> !xegpu.tensor_desc<24x24xf32, #xegpu.layout<sg_layout = [4, 4],
@@ -47,7 +46,7 @@ namespace {
 ///    %tdesc = xegpu.create_nd_tdesc %src[off1, off2] : memref<24x24xf32> ->
 ///           !xegpu.tensor_desc<2x2xf32, #xegpu.layout<lane_layout = [2, 2], lane_data = [1, 1]>>
 ///
-/// The sg_layout and sg_data are dropped from the layout attribute as they are no longer needed.
+/// The sg_layout and sg_data attributes are dropped after the pass as they are no longer needed.
 ///
 /// 24x24 matrix distribution example:
 /// sg_layout = [4, 4], sg_data = [2, 2]
@@ -72,7 +71,6 @@ namespace {
 ///
 /// Since the 24x24 matrix is divided into 8x8 distribution units, there will be 9
 /// distribution units (3x3) in total. Hence the 9 subgroup level operations.
-/// Each 8x8 matrix within the 24x24 matrix is called a distribution unit.
 // clang-format on
 struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
@@ -110,7 +108,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     return rewriter.create<arith::ConstantIndexOp>(loc, value);
   }
 
-  // Calculate global offset for each subgroup
+  // Calculate offset for each subgroup
   SmallVector<OpFoldResult>
   calculateGlobalOffsets(ConversionPatternRewriter &rewriter, Location loc,
                          const SmallVector<Value> &originalOffsets,
@@ -122,13 +120,11 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     Value constOffsetY =
         createConstantIndex(rewriter, loc, distUnitBaseAddr[1]);
 
-    // Compute offsets within entire tile
     Value offsetX =
         rewriter.createOrFold<index::AddOp>(loc, localOffset[0], constOffsetX);
     Value offsetY =
         rewriter.createOrFold<index::AddOp>(loc, localOffset[1], constOffsetY);
 
-    // Add to global offsets
     size_t lastDimIndex = originalOffsets.size() - 1;
     size_t secondLastDimIndex = lastDimIndex - 1;
 
@@ -137,7 +133,6 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     Value globalOffsetY = rewriter.createOrFold<index::AddOp>(
         loc, originalOffsets[lastDimIndex], offsetY);
 
-    // Create final offset list
     SmallVector<OpFoldResult> globalOffsets(originalOffsets.begin(),
                                             originalOffsets.end());
     globalOffsets[secondLastDimIndex] = globalOffsetX;
@@ -172,7 +167,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       sgDataDim[i] = createConstantIndex(rewriter, loc, sgShape[i]);
     }
 
-    // Delinearize the 1D subgroup id into nd coordinates
+    // Delinearize the 1D subgroup id into 2d
     SmallVector<Value> sgIds = delinearizeSubgroupId(
         rewriter, loc, linearSgId, sgLayoutDim[0], sgLayoutDim[1]);
 
@@ -207,8 +202,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
   }
 };
 
-/// This pattern transforms the LoadNdOp to load from a subgroup descriptor
-/// It creates a LoadNdOp op to load the new subgroup src tensor descriptors.
+/// This pattern transforms the LoadNdOp to load subgroup data.
 struct WgToSgLoadNdOp : public OpConversionPattern<xegpu::LoadNdOp> {
   using OpConversionPattern<xegpu::LoadNdOp>::OpConversionPattern;
   LogicalResult
@@ -310,7 +304,22 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
       }
     }
     rewriter.replaceOpWithMultiple(op, {newDpasOps});
-    return mlir::success();
+    return success();
+  }
+};
+
+/// This pattern transforms the PrefetchNdOp to prefetch the subgroup data.
+struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
+  using OpConversionPattern<xegpu::PrefetchNdOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::PrefetchNdOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    for (auto src : adaptor.getTensorDesc()) {
+      rewriter.create<xegpu::PrefetchNdOp>(op.getLoc(), TypeRange(), src,
+                                           op->getAttrs());
+    }
+    rewriter.eraseOp(op);
+    return success();
   }
 };
 
@@ -320,7 +329,8 @@ namespace mlir {
 namespace xegpu {
 void populateXeGPUWgToSgPatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp,
-               WgToSgUpdateNdOffsetOp, WgToSgDpasOp>(patterns.getContext());
+               WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp>(
+      patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -345,6 +355,8 @@ void XeGPUWgToSgPass::runOnOperation() {
       return storeOp.getTensorDescType();
     if (auto updateOp = dyn_cast<xegpu::UpdateNdOffsetOp>(op))
       return updateOp.getType();
+    if (auto prefetchOp = dyn_cast<xegpu::PrefetchNdOp>(op))
+      return prefetchOp.getTensorDescType();
     return xegpu::TensorDescType();
   };
 
@@ -353,12 +365,12 @@ void XeGPUWgToSgPass::runOnOperation() {
   };
 
   target.addDynamicallyLegalOp<xegpu::CreateNdDescOp, xegpu::LoadNdOp,
-                               xegpu::StoreNdOp, xegpu::UpdateNdOffsetOp>(
-      [=](Operation *op) -> bool {
-        auto tdescTy = getTensorDescType(op);
-        auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(tdescTy.getLayout());
-        return isLegal(layout);
-      });
+                               xegpu::StoreNdOp, xegpu::UpdateNdOffsetOp,
+                               xegpu::PrefetchNdOp>([=](Operation *op) -> bool {
+    auto tdescTy = getTensorDescType(op);
+    auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(tdescTy.getLayout());
+    return isLegal(layout);
+  });
 
   target.addDynamicallyLegalOp<xegpu::DpasOp>([=](xegpu::DpasOp op) -> bool {
     auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
