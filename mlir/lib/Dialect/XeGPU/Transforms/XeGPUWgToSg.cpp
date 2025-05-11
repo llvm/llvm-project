@@ -83,12 +83,11 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     auto dynamicOffsets = op.getOffsets();
 
     for (size_t i = 0, j = 0; i != staticOffsets.size(); i++) {
-      if (ShapedType::isDynamic(staticOffsets[i])) {
+      if (ShapedType::isDynamic(staticOffsets[i]))
         offsets.push_back(dynamicOffsets[j++]);
-      } else {
+      else
         offsets.push_back(rewriter.create<arith::ConstantIndexOp>(
             op.getLoc(), staticOffsets[i]));
-      }
     }
     return offsets;
   }
@@ -314,10 +313,9 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   LogicalResult
   matchAndRewrite(xegpu::PrefetchNdOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    for (auto src : adaptor.getTensorDesc()) {
+    for (auto src : adaptor.getTensorDesc())
       rewriter.create<xegpu::PrefetchNdOp>(op.getLoc(), TypeRange(), src,
                                            op->getAttrs());
-    }
     rewriter.eraseOp(op);
     return success();
   }
