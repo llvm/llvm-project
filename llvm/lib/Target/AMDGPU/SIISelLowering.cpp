@@ -4387,17 +4387,15 @@ SDValue SITargetLowering::lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op.getOpcode() == ISD::STRICT_FP_EXTEND;
   SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = Src.getValueType();
-  EVT DstVT = Op.getValueType();
 
-  if (SrcVT.getScalarType() != MVT::bf16 ||
-      // TODO: Is v_cvt_f32_bf16 useful in any way?
-      (false && Subtarget->hasBF16ConversionInsts() && DstVT == MVT::f32))
+  if (SrcVT.getScalarType() != MVT::bf16)
     return Op;
 
   SDLoc SL(Op);
   SDValue BitCast =
       DAG.getNode(ISD::BITCAST, SL, SrcVT.changeTypeToInteger(), Src);
 
+  EVT DstVT = Op.getValueType();
   if (IsStrict)
     llvm_unreachable("Need STRICT_BF16_TO_FP");
 
