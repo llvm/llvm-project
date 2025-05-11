@@ -568,13 +568,13 @@ public:
             __it_x.template __apply_at_index<tuple_size_v<decltype(__x.__parent_->__views_)>>(
                 __ix, [&](auto __index_constant_x) {
                   constexpr size_t __index_x = __index_constant_x.value;
-                  auto __dx = ranges::__distance(ranges::begin(std::get<__index_x>(__x.__parent_->__views_)), __it_x);
+                  auto __dx = ranges::distance(ranges::begin(std::get<__index_x>(__x.__parent_->__views_)), __it_x);
 
                   __it_y.template __apply_at_index<tuple_size_v<decltype(__y.__parent_->__views_)>>(
                       __iy, [&](auto __index_constant_y) {
                         constexpr size_t __index_y = __index_constant_y.value;
                         auto __dy =
-                            ranges::__distance(ranges::begin(std::get<__index_y>(__y.__parent_->__views_)), __it_y);
+                            ranges::distance(ranges::begin(std::get<__index_y>(__y.__parent_->__views_)), __it_y);
                         difference_type __s = 0;
                         for (size_t __idx = __index_y + 1; __idx < __index_x; __idx++) {
                           __s += ranges::size(std::get<__idx>(__x.__parent_->__views_));
@@ -615,7 +615,7 @@ public:
           __it_x.template __apply_at_index<tuple_size_v<decltype(__x.__parent_->__views_)>>(
               __ix, [&](auto __index_constant) {
                 constexpr size_t __index_x = __index_constant.value;
-                auto __dx = ranges::__distance(ranges::begin(std::get<__index_x>(__x.__parent_->__views_)), __it_x);
+                auto __dx = ranges::distance(ranges::begin(std::get<__index_x>(__x.__parent_->__views_)), __it_x);
 
                 difference_type __s = 0;
                 for (size_t __idx = 0; __idx < __index_x; __idx++) {
