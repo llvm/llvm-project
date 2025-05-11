@@ -1,4 +1,4 @@
-//===--- AddPureVirtualOverride.cpp ------------------------------*- C++-*-===//
+//===--- OverridePureVirtuals.cpp --------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -68,7 +68,8 @@ getAllUniquePureVirtualsFromBaseHierarchy(
           CanonicalPureVirtualsSeen.insert(Method->getCanonicalDecl()).second)
         AllPureVirtualsInHierarchy.emplace_back(Method);
     }
-    return true; // Continue iterating through all bases
+    // Continue iterating through all bases.
+    return true;
   });
 
   return AllPureVirtualsInHierarchy;
@@ -207,8 +208,8 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
   const auto &LangOpts = Sel.AST->getLangOpts();
 
   tooling::Replacements EditReplacements;
-  // Stores text for new access specifier sections // that are not already
-  // present in the class.
+  // Stores text for new access specifier sections that are not already present
+  // in the class.
   // Example:
   //  public:    // ...
   //  protected: // ...

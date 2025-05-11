@@ -1,4 +1,4 @@
-//===-- AddPureVirtualOverrideTest.cpp --------------------------*- C++ -*-===//
+//===-- OverridePureVirtualsTests.cpp ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,23 +13,23 @@ namespace clang {
 namespace clangd {
 namespace {
 
-class OverridePureVirtualsTest : public TweakTest {
+class OverridePureVirtualsTests : public TweakTest {
 protected:
-  OverridePureVirtualsTest() : TweakTest("OverridePureVirtuals") {}
+  OverridePureVirtualsTests() : TweakTest("OverridePureVirtuals") {}
 };
 
-TEST_F(OverridePureVirtualsTest, MinimalUnavailable) {
+TEST_F(OverridePureVirtualsTests, MinimalUnavailable) {
   EXPECT_UNAVAILABLE("class ^C {};");
 }
 
-TEST_F(OverridePureVirtualsTest, MinimalAvailable) {
+TEST_F(OverridePureVirtualsTests, MinimalAvailable) {
   EXPECT_AVAILABLE(R"cpp(
 class B { public: virtual void Foo() = 0; };
 class ^C : public B {};
 )cpp");
 }
 
-TEST_F(OverridePureVirtualsTest, UnavailableWhenOverriden) {
+TEST_F(OverridePureVirtualsTests, UnavailableWhenOverriden) {
   EXPECT_UNAVAILABLE(
       R"cpp(
 class B {
@@ -44,7 +44,7 @@ public:
 )cpp");
 }
 
-TEST_F(OverridePureVirtualsTest, Availability) {
+TEST_F(OverridePureVirtualsTests, Availability) {
   EXPECT_AVAILABLE(R"cpp(
 class Base {
 public:
@@ -74,7 +74,7 @@ void F1() override;
 )cpp");
 }
 
-TEST_F(OverridePureVirtualsTest, EmptyDerivedClass) {
+TEST_F(OverridePureVirtualsTests, EmptyDerivedClass) {
   const char *Before = R"cpp(
 class Base {
 public:
@@ -109,7 +109,7 @@ public:
   EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
 }
 
-TEST_F(OverridePureVirtualsTest, SingleBaseClassPartiallyImplemented) {
+TEST_F(OverridePureVirtualsTests, SingleBaseClassPartiallyImplemented) {
   auto Applied = apply(
       R"cpp(
 class Base {
@@ -146,7 +146,7 @@ public:
   EXPECT_EQ(Applied, Expected) << "Applied result:\n" << Applied;
 }
 
-TEST_F(OverridePureVirtualsTest, MultipleDirectBaseClasses) {
+TEST_F(OverridePureVirtualsTests, MultipleDirectBaseClasses) {
   const char *Before = R"cpp(
 class Base1 {
 public:
@@ -187,7 +187,7 @@ protected:
   EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
 }
 
-TEST_F(OverridePureVirtualsTest, UnnamedParametersInBase) {
+TEST_F(OverridePureVirtualsTests, UnnamedParametersInBase) {
   const char *Before = R"cpp(
 struct S {};
 class Base {
@@ -217,7 +217,7 @@ public:
   EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
 }
 
-TEST_F(OverridePureVirtualsTest, DiamondInheritance) {
+TEST_F(OverridePureVirtualsTests, DiamondInheritance) {
   const char *Before = R"cpp(
 class Top {
 public:
@@ -248,7 +248,7 @@ public:
   EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
 }
 
-TEST_F(OverridePureVirtualsTest, MixedAccessSpecifiers) {
+TEST_F(OverridePureVirtualsTests, MixedAccessSpecifiers) {
   const char *Before = R"cpp(
 class Base {
 public:
@@ -298,7 +298,7 @@ protected:
   EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
 }
 
-TEST_F(OverridePureVirtualsTest, OutOfOrderMixedAccessSpecifiers) {
+TEST_F(OverridePureVirtualsTests, OutOfOrderMixedAccessSpecifiers) {
   const char *Before = R"cpp(
 class Base {
 public:
@@ -351,7 +351,7 @@ public:
   EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
 }
 
-TEST_F(OverridePureVirtualsTest, MultiAccessSpecifiersOverride) {
+TEST_F(OverridePureVirtualsTests, MultiAccessSpecifiersOverride) {
   constexpr auto Before = R"cpp(
 class Base {
 public:
@@ -389,7 +389,7 @@ protected:
   EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
 }
 
-TEST_F(OverridePureVirtualsTest, AccessSpecifierAlreadyExisting) {
+TEST_F(OverridePureVirtualsTests, AccessSpecifierAlreadyExisting) {
   const char *Before = R"cpp(
 class Base {
 public:
