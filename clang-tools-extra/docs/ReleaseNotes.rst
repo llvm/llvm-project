@@ -201,6 +201,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/avoid-goto>` check by adding the option
   `IgnoreMacros` to ignore ``goto`` labels defined in macros.
 
+- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
+  fixing false negatives when pointer arithmetic was used through type aliases.
+
 - Improved :doc:`cppcoreguidelines-special-member-functions
   <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check by
   adding the option `IgnoreMacros` to ignore classes defined in macros.
