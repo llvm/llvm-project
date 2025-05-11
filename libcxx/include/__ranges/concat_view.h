@@ -44,7 +44,6 @@
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_nothrow_convertible.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/maybe_const.h>
