@@ -17,6 +17,7 @@
 
 #include "Inputs/system-header-simulator-cxx.h"
 #include "Inputs/system-header-simulator-objc.h"
+#include "Inputs/system-header-simulator.h"
 
 typedef __typeof__(sizeof(int)) size_t;
 extern "C" void *malloc(size_t);
@@ -85,4 +86,12 @@ void testStandardPlacementNewAfterDelete() {
   int *p = new int;
   delete p;
   p = new (p) int; // newdelete-warning{{Use of memory after it is freed}}
+}
+
+void testGetLine(FILE *f) {
+  char *buffer = (char *)malloc(10);
+  char *old = buffer;
+  size_t n = 0;
+  getline(&buffer, &n, f);
+  int a = *old; // no-warn
 }
