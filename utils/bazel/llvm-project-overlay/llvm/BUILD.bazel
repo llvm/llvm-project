@@ -2170,6 +2170,7 @@ llvm_target_lib_list = [lib for lib in [
             "lib/Target/AVR/AVRGenMCCodeEmitter.inc": ["-gen-emitter"],
             "lib/Target/AVR/AVRGenInstrInfo.inc": ["-gen-instr-info"],
             "lib/Target/AVR/AVRGenRegisterInfo.inc": ["-gen-register-info"],
+            "lib/Target/AVR/AVRGenSDNodeInfo.inc": ["-gen-sd-node-info"],
             "lib/Target/AVR/AVRGenSubtargetInfo.inc": ["-gen-subtarget"],
         },
     },
