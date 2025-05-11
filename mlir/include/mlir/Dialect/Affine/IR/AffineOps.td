@@ -1153,6 +1153,10 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
     /// there is no outer bound specified, the leading entry of this result will be
     /// nullptr.
     SmallVector<OpFoldResult> getPaddedBasis();
+
+    /// Returns true if the result of this operation can be used as dimension id
+    /// within 'region', i.e., for all its uses with `region`.
+    bool isValidDim(Region *region);
   }];
 
   let hasVerifier = 1;
@@ -1253,6 +1257,10 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     /// If there is no outer bound specified, the leading entry of this basis will be
     /// nullptr.
     SmallVector<OpFoldResult> getPaddedBasis();
+
+    /// Returns true if the result of this operation can be used as dimension id
+    /// within 'region', i.e., for all its uses with `region`.
+    bool isValidDim(Region *region);
   }];
 
   let hasVerifier = 1;
