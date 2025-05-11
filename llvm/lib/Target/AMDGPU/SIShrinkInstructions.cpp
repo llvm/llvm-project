@@ -568,8 +568,10 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
 
   if (NewImm != 0) {
     if (Dest->getReg().isVirtual() && SrcReg->isReg()) {
-      MRI->setRegAllocationHint(Dest->getReg(), 0, SrcReg->getReg());
-      MRI->setRegAllocationHint(SrcReg->getReg(), 0, Dest->getReg());
+      if (SrcReg->getSubReg() == 0) { // get worse result with subreg. FIXME
+        MRI->setSimpleHint(Dest->getReg(), AMDGPU::FLAT_SCR);
+        MRI->setSimpleHint(SrcReg->getReg(), AMDGPU::FLAT_SCR);
+      }
       return true;
     }
 

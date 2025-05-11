@@ -1546,30 +1546,30 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ;
 ; VI-LABEL: v_cttz_i16_sel_eq_neg1:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_add_u32 s4, s2, 1
-; VI-NEXT:    s_addc_u32 s5, s3, 0
-; VI-NEXT:    v_mov_b32_e32 v2, s4
-; VI-NEXT:    v_mov_b32_e32 v0, s2
-; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    s_add_u32 s0, s6, 1
+; VI-NEXT:    s_addc_u32 s1, s7, 0
+; VI-NEXT:    v_mov_b32_e32 v3, s1
+; VI-NEXT:    v_mov_b32_e32 v0, s6
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s7
 ; VI-NEXT:    flat_load_ubyte v2, v[2:3]
 ; VI-NEXT:    flat_load_ubyte v0, v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(1)
-; VI-NEXT:    v_readfirstlane_b32 s2, v2
+; VI-NEXT:    v_readfirstlane_b32 s0, v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_readfirstlane_b32 s3, v0
-; VI-NEXT:    s_lshl_b32 s2, s2, 8
-; VI-NEXT:    s_or_b32 s2, s2, s3
-; VI-NEXT:    s_or_b32 s3, s2, 0x10000
-; VI-NEXT:    s_and_b32 s2, s2, 0xffff
-; VI-NEXT:    s_ff1_i32_b32 s3, s3
-; VI-NEXT:    s_cmp_lg_u32 s2, 0
-; VI-NEXT:    s_cselect_b32 s2, s3, 0xffff
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    v_mov_b32_e32 v2, s2
+; VI-NEXT:    v_readfirstlane_b32 s1, v0
+; VI-NEXT:    s_lshl_b32 s0, s0, 8
+; VI-NEXT:    s_or_b32 s0, s0, s1
+; VI-NEXT:    s_or_b32 s1, s0, 0x10000
+; VI-NEXT:    s_and_b32 s0, s0, 0xffff
+; VI-NEXT:    s_ff1_i32_b32 s1, s1
+; VI-NEXT:    s_cmp_lg_u32 s0, 0
+; VI-NEXT:    s_cselect_b32 s0, s1, 0xffff
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
