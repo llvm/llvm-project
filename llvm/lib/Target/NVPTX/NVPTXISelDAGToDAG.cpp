@@ -66,8 +66,9 @@ bool NVPTXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 
-int NVPTXDAGToDAGISel::getDivF32Level() const {
-  return Subtarget->getTargetLowering()->getDivF32Level();
+NVPTX::DivPrecisionLevel
+NVPTXDAGToDAGISel::getDivF32Level(const SDNode *N) const {
+  return Subtarget->getTargetLowering()->getDivF32Level(*MF, *N);
 }
 
 bool NVPTXDAGToDAGISel::usePrecSqrtF32() const {

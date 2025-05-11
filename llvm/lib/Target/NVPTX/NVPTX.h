@@ -263,7 +263,14 @@ enum PrmtMode {
   RC16,
 };
 }
-}
+
+enum class DivPrecisionLevel : unsigned {
+  Approx = 0,
+  Full = 1,
+  IEEE754 = 2,
+};
+
+} // namespace NVPTX
 void initializeNVPTXDAGToDAGISelLegacyPass(PassRegistry &);
 } // namespace llvm
 

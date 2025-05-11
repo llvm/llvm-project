@@ -43,7 +43,7 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   // If true, generate mul.wide from sext and mul
   bool doMulWide;
 
-  int getDivF32Level() const;
+  NVPTX::DivPrecisionLevel getDivF32Level(const SDNode *N) const;
   bool usePrecSqrtF32() const;
   bool useF32FTZ() const;
   bool allowFMA() const;
