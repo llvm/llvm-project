@@ -751,8 +751,9 @@ const Init *ListInit::convertInitializerTo(const RecTy *Ty) const {
         Elements.push_back(CI);
         if (CI != I)
           Changed = true;
-      } else
+      } else {
         return nullptr;
+      }
 
     if (!Changed)
       return this;
