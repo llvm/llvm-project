@@ -1500,8 +1500,7 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
   if (MIA)
     MIA->resetState();
 
-  Labels.clear();
-  unsigned LabelCount = 0;
+  std::set<uint64_t> Targets;
   Start += SectionAddr;
   End += SectionAddr;
   const bool isXCOFF = STI->getTargetTriple().isOSBinFormatXCOFF();
@@ -1521,13 +1520,13 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
         uint64_t Target;
         bool TargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
         if (TargetKnown && (Target >= Start && Target < End) &&
-            !Labels.count(Target)) {
+            !Targets.count(Target)) {
           // On PowerPC and AIX, a function call is encoded as a branch to 0.
           // On other PowerPC platforms (ELF), a function call is encoded as
           // a branch to self. Do not add a label for these cases.
           if (!(isPPC &&
                 ((Target == 0 && isXCOFF) || (Target == Index && !isXCOFF))))
-            Labels[Target] = ("L" + Twine(LabelCount++)).str();
+            Targets.insert(Target);
         }
         MIA->updateState(Inst, Index);
       } else
@@ -1535,6 +1534,10 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
     }
     Index += Size;
   }
+
+  Labels.clear();
+  for (auto [Idx, Target] : enumerate(Targets))
+    Labels[Target] = ("L" + Twine(Idx)).str();
 }
 
 // Create an MCSymbolizer for the target and add it to the MCDisassembler.
@@ -2533,16 +2536,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         if (InlineRelocs && Obj.getArch() != Triple::hexagon) {
           while (findRel()) {
             // When --adjust-vma is used, update the address printed.
-            if (RelCur->getSymbol() != Obj.symbol_end()) {
-              Expected<section_iterator> SymSI =
-                  RelCur->getSymbol()->getSection();
-              if (SymSI && *SymSI != Obj.section_end() &&
-                  shouldAdjustVA(**SymSI))
-                RelOffset += AdjustVMA;
-            }
-
             printRelocation(FOS, Obj.getFileName(), *RelCur,
-                            SectionAddr + RelOffset, Is64Bits);
+                            SectionAddr + RelOffset + VMAAdjustment, Is64Bits);
             LVP.printAfterOtherLine(FOS, true);
             ++RelCur;
           }

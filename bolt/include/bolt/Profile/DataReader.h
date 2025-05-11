@@ -90,13 +90,7 @@ struct BranchInfo {
   }
 
   bool operator<(const BranchInfo &RHS) const {
-    if (From < RHS.From)
-      return true;
-
-    if (From == RHS.From)
-      return (To < RHS.To);
-
-    return false;
+    return std::tie(From, To) < std::tie(RHS.From, RHS.To);
   }
 
   /// Merges branch and misprediction counts of \p BI with those of this object.
@@ -251,6 +245,9 @@ struct FuncSampleData {
 
   /// Get the number of samples recorded in [Start, End)
   uint64_t getSamples(uint64_t Start, uint64_t End) const;
+
+  /// Returns the total number of samples recorded in this function.
+  uint64_t getSamples() const;
 
   /// Aggregation helper
   DenseMap<uint64_t, size_t> Index;

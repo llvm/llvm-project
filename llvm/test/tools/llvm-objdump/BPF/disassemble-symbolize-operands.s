@@ -15,10 +15,10 @@ main:
         exit
 
 # CHECK:      <main>:
-# CHECK-NEXT: <L1>:
-# CHECK-NEXT: 	if r1 > 0x2a goto +0x2 <L0>
+# CHECK-NEXT: <L0>:
+# CHECK-NEXT: 	if r1 > 0x2a goto +0x2 <L1>
 # CHECK-NEXT: 	r1 -= 0xa
 # CHECK-NEXT: 	goto -0x3 <main>
-# CHECK-NEXT: <L0>:
+# CHECK-NEXT: <L1>:
 # CHECK-NEXT: 	r0 = 0x0
 # CHECK-NEXT: 	exit
