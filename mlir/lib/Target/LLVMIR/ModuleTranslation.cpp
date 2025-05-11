@@ -296,8 +296,7 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       return failure();
   }
   StringRef layoutSpec(llvmDataLayout);
-  if (layoutSpec.starts_with("-"))
-    layoutSpec = layoutSpec.drop_front();
+  layoutSpec.consume_front("-");
 
   return llvm::DataLayout(layoutSpec);
 }
