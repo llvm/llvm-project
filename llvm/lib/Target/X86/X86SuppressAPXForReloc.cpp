@@ -65,9 +65,8 @@ FunctionPass *llvm::createX86SuppressAPXForRelocationPass() {
   return new X86SuppressAPXForRelocationPass();
 }
 
-static void suppressEGPRRegClass(MachineFunction &MF, MachineInstr &MI,
+static void suppressEGPRRegClass(MachineRegisterInfo *MRI, MachineInstr &MI,
                                  const X86Subtarget &ST, unsigned int OpNum) {
-  MachineRegisterInfo *MRI = &MF.getRegInfo();
   Register Reg = MI.getOperand(OpNum).getReg();
   if (!Reg.isVirtual()) {
     assert(!X86II::isApxExtendedReg(Reg) && "APX EGPR is used unexpectedly.");
@@ -77,22 +76,14 @@ static void suppressEGPRRegClass(MachineFunction &MF, MachineInstr &MI,
   const X86RegisterInfo *RI = ST.getRegisterInfo();
   const TargetRegisterClass *NewRC = RI->constrainRegClassToNonRex2(RC);
   MRI->setRegClass(Reg, NewRC);
+}
 
-    for (MachineInstr &Use : MRI->use_instructions(Reg)) {
-    switch (Use.getOpcode()) {
-      case X86::PHI: {
-        Register DstReg = Use.getOperand(0).getReg();
-        if (!DstReg.isVirtual()) {
-          assert(!X86II::isApxExtendedReg(DstReg) && "APX EGPR is used unexpectedly.");
-          return;
-        }
-        const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
-        const TargetRegisterClass *NewDstRC = RI->constrainRegClassToNonRex2(DstRC);
-        MRI->setRegClass(DstReg, NewDstRC);
-        break;
-      }
-    }
-  }
+static void suppressEGPRRegClassInRegUses(MachineRegisterInfo *MRI,
+                                          const X86Subtarget &ST,
+                                          Register Reg) {
+  for (MachineInstr &Use : MRI->use_instructions(Reg))
+    if (Use.getOpcode() == X86::PHI)
+      suppressEGPRRegClass(MRI, Use, ST, 0);
 }
 
 static bool handleInstructionWithEGPR(MachineFunction &MF,
@@ -100,6 +91,7 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
   if (!ST.hasEGPR())
     return false;
 
+  MachineRegisterInfo *MRI = &MF.getRegInfo();
   auto suppressEGPRInInstrWithReloc = [&](MachineInstr &MI,
                                           ArrayRef<unsigned> OpNoArray) {
     int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
@@ -110,7 +102,7 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
       LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                         << MI);
       for (unsigned OpNo : OpNoArray)
-        suppressEGPRRegClass(MF, MI, ST, OpNo);
+        suppressEGPRRegClass(MRI, MI, ST, OpNo);
       LLVM_DEBUG(dbgs() << "to:\n  " << MI << "\n");
     }
   };
@@ -133,6 +125,7 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
       case X86::MOV32rm:
       case X86::MOV64rm: {
         suppressEGPRInInstrWithReloc(MI, {0});
+        suppressEGPRRegClassInRegUses(MRI, ST, MI.getOperand(0).getReg());
         break;
       }
       case X86::ADC32rm:
@@ -150,6 +143,7 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
       case X86::SUB64rm:
       case X86::XOR64rm: {
         suppressEGPRInInstrWithReloc(MI, {0, 1});
+        suppressEGPRRegClassInRegUses(MRI, ST, MI.getOperand(0).getReg());
         break;
       }
       }
@@ -195,7 +189,8 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
           MI.getOperand(1).setReg(Reg);
           const MCInstrDesc &NewDesc = TII->get(X86::ADD64rm);
           MI.setDesc(NewDesc);
-          suppressEGPRRegClass(MF, MI, ST, 0);
+          suppressEGPRRegClass(MRI, MI, ST, 0);
+          suppressEGPRRegClassInRegUses(MRI, ST, MI.getOperand(0).getReg());
           MI.tieOperands(0, 1);
           LLVM_DEBUG(dbgs() << "to:\n  " << *CopyMIB << "\n");
           LLVM_DEBUG(dbgs() << "  " << MI << "\n");
@@ -208,7 +203,8 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
         if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
           LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                             << MI);
-          suppressEGPRRegClass(MF, MI, ST, 0);
+          suppressEGPRRegClass(MRI, MI, ST, 0);
+          suppressEGPRRegClassInRegUses(MRI, ST, MI.getOperand(0).getReg());
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
           [[maybe_unused]] MachineInstrBuilder CopyMIB =
               BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),

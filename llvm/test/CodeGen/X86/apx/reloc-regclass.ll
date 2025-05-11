@@ -139,7 +139,7 @@ declare <8 x i32> @llvm.x86.avx2.maskload.d.256(ptr, <8 x i32>)
 ; APX relocation which is not recognized by the builtin linker on released OS.
 
 ; CHECK-LABEL: test_mem_fold
-; NOAPXREL: movq (%rip), %r12
+; NOAPXREL: movq (%rip), %rbx
 ; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar3-0x4
 ; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar3-0x4
 
