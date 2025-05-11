@@ -16,7 +16,7 @@ union U { int a, b; } u;
 int n; // expected-note 1+{{here}}
 
 // pointers to subobjects
-template<int *> struct IntPtr {}; // expected-note 2{{template parameter is declared here}}
+template<int *> struct IntPtr {};
 using IPn = IntPtr<&n + 1>;
 using IPn = IntPtr<&n + 1>;
 
@@ -30,7 +30,7 @@ using IP3 = IntPtr<s.n + 3>;
 
 using IP5 = IntPtr<&s.n[5]>; // expected-error {{not a constant expression}} expected-note {{cannot refer to element 5 of array of 3 elements}}
 
-template<int &> struct IntRef {}; // expected-note 4{{template parameter is declared here}}
+template<int &> struct IntRef {};
 using IRn = IntRef<*(&n + 1)>; // expected-error {{not a constant expression}} expected-note {{dereferenced pointer past the end of 'n'}}
 using IRn = IntRef<*(&n + 1)>; // expected-error {{not a constant expression}} expected-note {{dereferenced pointer past the end of 'n'}}
 
@@ -72,20 +72,20 @@ namespace ClassNTTP {
   static_assert(&id<A{1,3}> != &id<a>);
 
   int k = id<1>; // expected-error {{no viable conversion from 'int' to 'A'}}
-                 // expected-note@#ClassNTTP1 {{template parameter is declared here}}
+                 // expected-note@#ClassNTTP1 {{passing argument to parameter 'a' here}}
 
   struct B {
     constexpr B() {}
     constexpr B(int) = delete; // expected-note {{here}}
   };
-  template<B> struct Q {}; // expected-note {{template parameter is declared here}}
+  template<B> struct Q {}; // expected-note {{passing argument to parameter here}}
   Q<1> q; // expected-error {{conversion function from 'int' to 'B' invokes a deleted function}}
 
   struct C {
     constexpr C() {}
     C(const C&) = delete; // expected-note {{here}}
   };
-  template<C> struct R {}; // expected-note {{template parameter is declared here}}
+  template<C> struct R {}; // expected-note {{passing argument to parameter here}}
   constexpr C c;
   R<c> r; // expected-error {{call to deleted constructor}}
 }
@@ -228,7 +228,7 @@ namespace UnnamedBitfield {
   //
   // FIXME: We shouldn't track a value for unnamed bit-fields, nor number
   // them when computing field indexes.
-  template <A> struct X {}; // expected-note {{template parameter is declared here}}
+  template <A> struct X {};
   constexpr A a;
   using T = X<a>;
   using T = X<A{}>;
@@ -238,7 +238,7 @@ namespace UnnamedBitfield {
 }
 
 namespace Temporary {
-  template<const int &> struct A {}; // expected-note 6{{template parameter is declared here}}
+  template<const int &> struct A {}; // expected-note {{template parameter is declared here}}
   A<0> a0; // expected-error {{conversion from 'int' to 'const int &' in converted constant expression would bind reference to a temporary}}
 
   A<(const int&)1> a1; // expected-error {{reference to temporary object is not allowed in a template argument}}
@@ -254,18 +254,18 @@ namespace Temporary {
   X &&x = X{};
   A<x.a[3]> a5; // expected-error {{reference to subobject of temporary object}}
 
-  template<const int*> struct B {}; // expected-note 3{{template parameter is declared here}}
+  template<const int*> struct B {};
   B<&(int&)(int&&)0> b0; // expected-error {{pointer to temporary object}}
   B<&r3> b3; // expected-error {{pointer to temporary object}}
   B<&x.a[3]> b5; // expected-error {{pointer to subobject of temporary object}}
 
   struct C { const int *p[2]; };
-  template<C> struct D {}; // expected-note {{template parameter is declared here}}
+  template<C> struct D {};
   D<C{nullptr, &r3}> d; // expected-error {{pointer to temporary object}}
 }
 
 namespace StringLiteral {
-  template<decltype(auto)> struct Y {}; // expected-note 6{{template parameter is declared here}}
+  template<decltype(auto)> struct Y {};
   Y<&"hello"> y1; // expected-error {{pointer to string literal}}
   Y<"hello"> y2; // expected-error {{reference to string literal}}
   Y<+"hello"> y3; // expected-error {{pointer to subobject of string literal}}
@@ -278,7 +278,7 @@ namespace StringLiteral {
 }
 
 namespace TypeInfo {
-  template<decltype(auto)> struct Y {}; // expected-note 4{{template parameter is declared here}}
+  template<decltype(auto)> struct Y {};
   Y<&typeid(int)> y1; // expected-error {{pointer to type_info object}}
   Y<typeid(int)> y2; // expected-error {{reference to type_info object}}
 
@@ -289,7 +289,7 @@ namespace TypeInfo {
 }
 
 namespace Predefined {
-  template<decltype(auto)> struct Y {}; // expected-note 7{{template parameter is declared here}}
+  template<decltype(auto)> struct Y {};
 
   struct A { const char *p; };
   struct B { const char &r; };

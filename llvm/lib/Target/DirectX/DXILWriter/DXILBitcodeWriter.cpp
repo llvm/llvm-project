@@ -237,6 +237,11 @@ private:
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIBasicType(const DIBasicType *N, SmallVectorImpl<uint64_t> &Record,
                         unsigned Abbrev);
+  void writeDIFixedPointType(const DIFixedPointType *N,
+                             SmallVectorImpl<uint64_t> &Record,
+                             unsigned Abbrev) {
+    llvm_unreachable("DXIL cannot contain DIFixedPointType Nodes");
+  }
   void writeDIStringType(const DIStringType *N,
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
     llvm_unreachable("DXIL cannot contain DIStringType Nodes");
@@ -1974,7 +1979,7 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       Record.append(AsmStr.begin(), AsmStr.end());
 
       // Add the constraint string.
-      const std::string &ConstraintStr = IA->getConstraintString();
+      StringRef ConstraintStr = IA->getConstraintString();
       Record.push_back(ConstraintStr.size());
       Record.append(ConstraintStr.begin(), ConstraintStr.end());
       Stream.EmitRecord(bitc::CST_CODE_INLINEASM, Record);

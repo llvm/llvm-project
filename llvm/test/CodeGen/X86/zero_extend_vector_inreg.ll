@@ -6173,9 +6173,9 @@ define void @vec512_v64i8_to_v4i128_factor16(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX512F-FAST:       # %bb.0:
 ; AVX512F-FAST-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512F-FAST-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
-; AVX512F-FAST-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
-; AVX512F-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,u,u,u,u,u,u,u,3,u,u,u,u,u,u,u]
-; AVX512F-FAST-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [8,9,9,0,0,1,1,3]
+; AVX512F-FAST-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[2,u,u,u,u,u,u,u,3,u,u,u,u,u,u,u]
+; AVX512F-FAST-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; AVX512F-FAST-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,0,1,0,8,0,9,0]
 ; AVX512F-FAST-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
 ; AVX512F-FAST-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = [255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX512F-FAST-NEXT:    # zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
@@ -6209,9 +6209,9 @@ define void @vec512_v64i8_to_v4i128_factor16(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX512BW-FAST:       # %bb.0:
 ; AVX512BW-FAST-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
-; AVX512BW-FAST-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
-; AVX512BW-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,u,u,u,u,u,u,u,3,u,u,u,u,u,u,u]
-; AVX512BW-FAST-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [8,9,9,0,0,1,1,3]
+; AVX512BW-FAST-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[2,u,u,u,u,u,u,u,3,u,u,u,u,u,u,u]
+; AVX512BW-FAST-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-FAST-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,0,1,0,8,0,9,0]
 ; AVX512BW-FAST-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
 ; AVX512BW-FAST-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = [255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX512BW-FAST-NEXT:    # zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]

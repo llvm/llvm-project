@@ -108,6 +108,7 @@ The NVPTX back-end uses the following address space mapping:
    3             Shared
    4             Constant
    5             Local
+   7             Shared Cluster
    ============= ======================
 
 Every global variable and pointer type is assigned to one of these address
@@ -306,8 +307,87 @@ If the given pointer in the generic address space refers to memory which falls
 within the state space of the intrinsic (and therefore could be safely address
 space casted to this space), 1 is returned, otherwise 0 is returned.
 
+'``llvm.nvvm.mapa.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare ptr @llvm.nvvm.mapa(ptr %p, i32 %rank)
+    declare ptr addrspace(7) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3) %p, i32 %rank)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.mapa.*``' intrinsics map a shared memory pointer ``p`` of another CTA with ``%rank`` to the current CTA.
+The ``llvm.nvvm.mapa`` form expects a generic pointer to shared memory and returns a generic pointer to shared cluster memory.
+The ``llvm.nvvm.mapa.shared.cluster`` form expects a pointer to shared memory and returns a pointer to shared cluster memory.
+They corresponds directly to the ``mapa`` and ``mapa.shared.cluster`` PTX instructions.
+
+Semantics:
+""""""""""
+
+If the given pointer in the generic address space refers to memory which falls
+within the state space of the intrinsic (and therefore could be safely address
+space casted to this space), 1 is returned, otherwise 0 is returned.
+
 Arithmetic Intrinsics
 ---------------------
+
+'``llvm.nvvm.fabs.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare float @llvm.nvvm.fabs.f32(float %a)
+    declare double @llvm.nvvm.fabs.f64(double %a)
+    declare half @llvm.nvvm.fabs.f16(half %a)
+    declare <2 x half> @llvm.nvvm.fabs.v2f16(<2 x half> %a)
+    declare bfloat @llvm.nvvm.fabs.bf16(bfloat %a)
+    declare <2 x bfloat> @llvm.nvvm.fabs.v2bf16(<2 x bfloat> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fabs.*``' intrinsics return the absolute value of the operand.
+
+Semantics:
+""""""""""
+
+Unlike, '``llvm.fabs.*``', these intrinsics do not perfectly preserve NaN
+values. Instead, a NaN input yeilds an unspecified NaN output.
+
+
+'``llvm.nvvm.fabs.ftz.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare float @llvm.nvvm.fabs.ftz.f32(float %a)
+    declare half @llvm.nvvm.fabs.ftz.f16(half %a)
+    declare <2 x half> @llvm.nvvm.fabs.ftz.v2f16(<2 x half> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fabs.ftz.*``' intrinsics return the absolute value of the
+operand, flushing subnormals to sign preserving zero.
+
+Semantics:
+""""""""""
+
+Before the absolute value is taken, the input is flushed to sign preserving
+zero if it is a subnormal. In addtion, unlike '``llvm.fabs.*``', a NaN input
+yields an unspecified NaN output.
+
 
 '``llvm.nvvm.idp2a.[us].[us]``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -488,6 +568,62 @@ to left-shift the found bit into the most-significant bit position, otherwise
 the result is the shift amount needed to right-shift the found bit into the
 least-significant bit position. 0xffffffff is returned if no 1 bit is found.
 
+'``llvm.nvvm.{zext,sext}.{wrap,clamp}``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.zext.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.zext.clamp(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.sext.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.sext.clamp(i32 %a, i32 %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.{zext,sext}.{wrap,clamp}``' family of intrinsics extracts the
+low bits of the input value, and zero- or sign-extends them back to the original
+width.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.{zext,sext}.{wrap,clamp}``' family of intrinsics returns
+extension of N lowest bits of operand %a. For the '``wrap``' variants, N is the
+value of operand %b modulo 32. For the '``clamp``' variants, N is the value of
+operand %b clamped to the range [0, 32]. The N lowest bits are then
+zero-extended the case of the '``zext``' variants, or sign-extended the case of
+the '``sext``' variants. If N is 0, the result is 0.
+
+'``llvm.nvvm.bmsk.{wrap,clamp}``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.bmsk.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.bmsk.clamp(i32 %a, i32 %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.bmsk.{wrap,clamp}``' family of intrinsics creates a bit mask
+given a starting bit position and a bit width.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.bmsk.{wrap,clamp}``' family of intrinsics returns a value with
+all bits set to 0 except for %b bits starting at bit position %a. For the
+'``wrap``' variants, the values of %a and %b modulo 32 are used. For the
+'``clamp``' variants, the values of %a and %b are clamped to the range [0, 32],
+which in practice is equivalent to using them as is.
+
 TMA family of Intrinsics
 ------------------------
 
@@ -499,7 +635,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(7) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
 
 Overview:
 """""""""
@@ -563,7 +699,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(3) %src, i32 %size)
+  declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(7) %dst, ptr addrspace(3) %mbar, ptr addrspace(3) %src, i32 %size)
 
 Overview:
 """""""""
@@ -718,7 +854,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(..., i32 %d0, i32 %d1, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
@@ -1445,6 +1581,38 @@ The last argument `i1 %unpack` is a compile-time constant which when set, indica
 
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st>`__.
+
+Store Intrinsics
+----------------
+
+'``llvm.nvvm.st.bulk.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.st.bulk(ptr addrspace(1) %dst, i64 %size, i64 immarg %initval)
+  declare void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %dst, i64 %size, i64 immarg %initval)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.st.bulk.*``' intrinsics initialize a region of shared memory 
+starting from the location specified by the destination address operand `%dst`.
+
+The integer operand `%size` specifies the amount of memory to be initialized in 
+terms of number of bytes and must be a multiple of 8. Otherwise, the behavior 
+is undefined.
+
+The integer immediate operand `%initval` specifies the initialization value for 
+the memory locations. The only numeric value allowed is 0.
+
+The ``@llvm.nvvm.st.bulk.shared.cta`` and ``@llvm.nvvm.st.bulk`` intrinsics are 
+similar but the latter uses generic addressing (see `Generic Addressing <https://docs.nvidia.com/cuda/parallel-thread-execution/#generic-addressing>`__).
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk>`__.
 
 Other Intrinsics
 ----------------

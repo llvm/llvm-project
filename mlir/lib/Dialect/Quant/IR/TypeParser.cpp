@@ -159,38 +159,173 @@ static Type parseAnyType(DialectAsmParser &parser) {
       typeFlags, storageType, expressedType, storageTypeMin, storageTypeMax);
 }
 
-static ParseResult parseQuantParams(DialectAsmParser &parser, double &scale,
-                                    int64_t &zeroPoint) {
-  // scale[:zeroPoint]?
-  // scale.
-  if (parser.parseFloat(scale))
-    return failure();
+/// Checks if the given scale value is within the valid range of the expressed
+/// type. The `expressedType` argument is the floating-point type used for
+/// expressing the quantized values, and `scale` is the double value to check.
+LogicalResult
+isScaleInExpressedTypeRange(function_ref<InFlightDiagnostic()> emitError,
+                            Type expressedType, double scale) {
+  auto floatType = cast<FloatType>(expressedType);
+  double minScale =
+      APFloat::getSmallest(floatType.getFloatSemantics()).convertToDouble();
+  double maxScale =
+      APFloat::getLargest(floatType.getFloatSemantics()).convertToDouble();
+  if (scale < minScale || scale > maxScale)
+    return emitError() << "scale " << scale << " out of expressed type range ["
+                       << minScale << ", " << maxScale << "]";
+  return success();
+}
 
-  // zero point.
+/// Parses a quantization parameter, which is either a scale value (float) or a
+/// scale-zero point pair (float:integer). `expressedType`, expressing the type
+/// of scale values, is used to validate the scale. The parsed scale and zero
+/// point (if any) are stored in `scale` and `zeroPoint`.
+static ParseResult parseQuantParams(DialectAsmParser &parser,
+                                    Type expressedType, double &scale,
+                                    int64_t &zeroPoint) {
+
+  if (parser.parseFloat(scale)) {
+    return failure();
+  }
+
+  if (failed(isScaleInExpressedTypeRange(
+          [&]() { return parser.emitError(parser.getCurrentLocation()); },
+          expressedType, scale))) {
+    return failure();
+  }
+
   zeroPoint = 0;
   if (failed(parser.parseOptionalColon())) {
-    // Default zero point.
     return success();
   }
 
   return parser.parseInteger(zeroPoint);
 }
 
+/// Parses block size information for sub-channel quantization, assuming the
+/// leading '{' has already been parsed. The block size information is provided
+/// as a comma-separated list of "Axis:BlockSize" pairs, terminated by a '}'.
+///
+/// The parsed axis indices are stored in `quantizedDimensions`, and the
+/// corresponding block sizes are stored in `blockSizes`.
+static ParseResult
+parseBlockSizeInfoUntilRBrace(DialectAsmParser &parser,
+                              SmallVectorImpl<int32_t> &quantizedDimensions,
+                              SmallVectorImpl<int64_t> &blockSizes) {
+  // Empty block-sizes info.
+  if (succeeded(parser.parseOptionalRBrace())) {
+    return success();
+  }
+
+  auto parseBlockSizeElements = [&]() -> ParseResult {
+    quantizedDimensions.resize(quantizedDimensions.size() + 1);
+    blockSizes.resize(blockSizes.size() + 1);
+    if (parser.parseInteger(quantizedDimensions.back()) ||
+        parser.parseColon() || parser.parseInteger(blockSizes.back()))
+      return failure();
+    return success();
+  };
+
+  if (parser.parseCommaSeparatedList(parseBlockSizeElements) ||
+      parser.parseRBrace()) {
+    return failure();
+  }
+
+  return success();
+}
+
+/// Parses a bracketed list of quantization parameters, returning the dimensions
+/// of the parsed sub-tensors in `dims`. The dimension of the list is prepended
+/// to the dimensions of the sub-tensors. This function assumes that the initial
+/// left brace has already been parsed. For example:
+///
+///   parseQuantParamListUntilRBrace(1.0:1, 2.0:4, 3.0:4}) -> Success,
+///       dims = [3], scales = [1.0, 2.0, 3.0], zeroPoints = [1, 4, 4]
+///
+///   parseQuantParamListUntilRBrace({1.0, 2.0}, {3.0:1, 4.0:9}}) -> Success,
+///       dims = [2, 2], scales = [1.0, 2.0, 3.0, 4.0], zeroPoints = [0, 0, 1,
+///       9]
+///
+/// This function expects all sub-tensors to have the same rank.
+static ParseResult
+parseQuantParamListUntilRBrace(DialectAsmParser &parser, Type expressedType,
+                               SmallVectorImpl<double> &scales,
+                               SmallVectorImpl<int64_t> &zeroPoints,
+                               SmallVectorImpl<int64_t> &dims) {
+  auto checkDims = [&](const SmallVectorImpl<int64_t> &prevDims,
+                       const SmallVectorImpl<int64_t> &newDims) -> ParseResult {
+    if (prevDims == newDims)
+      return success();
+    return parser.emitError(parser.getCurrentLocation())
+           << "tensor literal is invalid; ranks are not consistent "
+              "between elements";
+  };
+
+  bool first = true;
+  SmallVector<int64_t, 4> newDims;
+  unsigned size = 0;
+
+  auto parseOneElement = [&]() -> ParseResult {
+    SmallVector<int64_t, 4> thisDims;
+    if (succeeded(parser.parseOptionalLBrace())) {
+      if (parseQuantParamListUntilRBrace(parser, expressedType, scales,
+                                         zeroPoints, thisDims))
+        return failure();
+    } else {
+      zeroPoints.resize(zeroPoints.size() + 1);
+      scales.resize(scales.size() + 1);
+      if (parseQuantParams(parser, expressedType, scales.back(),
+                           zeroPoints.back())) {
+        return failure();
+      }
+    }
+    ++size;
+    if (!first)
+      return checkDims(newDims, thisDims);
+    newDims = thisDims;
+    first = false;
+    return success();
+  };
+
+  if (parser.parseCommaSeparatedList(parseOneElement) || parser.parseRBrace()) {
+    return failure();
+  }
+
+  // Return the sublists' dimensions with 'size' prepended.
+  dims.clear();
+  dims.push_back(size);
+  dims.append(newDims.begin(), newDims.end());
+
+  return success();
+}
+
 /// Parses a UniformQuantizedType.
 ///
 ///   uniform_type ::= uniform_per_layer
 ///                  | uniform_per_axis
+///                  | uniform_sub_channel
 ///   uniform_per_layer ::= `uniform<` storage-spec expressed-type-spec
 ///                          `,` scale-zero `>`
 ///   uniform_per_axis ::= `uniform<` storage-spec expressed-type-spec
-///                        axis-spec `,` scale-zero-list `>`
+///                        axis-spec `,` `{` scale-zero-list `}` `>`
+///   uniform_sub_channel ::= `uniform<` storage-spec expressed-type-spec
+///                        block-size-info `,` scale-zero-tensor `>`
 ///   storage-spec ::= storage-type (`<` storage-range `>`)?
 ///   storage-range ::= integer-literal `:` integer-literal
 ///   storage-type ::= (`i` | `u`) integer-literal
 ///   expressed-type-spec ::= `:` `f` integer-literal
 ///   axis-spec ::= `:` integer-literal
-///   scale-zero ::= float-literal `:` integer-literal
-///   scale-zero-list ::= `{` scale-zero (`,` scale-zero)* `}`
+///   scale-zero ::= scale (`:` zero-point)?
+///   scale ::= float-literal
+///   zero-point ::= integer-literal
+///   scale-zero-list ::= scale-zero (`,` scale-zero)*
+///   block-size-info ::= `{` `}` | `{` axis-block `:` (`,` axis-block)* `}`
+///   axis-block ::= axis-spec `:` block-size-spec
+///   block-size-spec ::= integer-literal
+///   scale-zero-tensor ::= scale-zero-dense-exp | scale-zero-list
+///   scale-zero-dense-exp ::= `{`
+///     scale-zero-tensor (`,` scale-zero-tensor)*
+///   `}`
 static Type parseUniformType(DialectAsmParser &parser) {
   IntegerType storageType;
   FloatType expressedType;
@@ -198,7 +333,9 @@ static Type parseUniformType(DialectAsmParser &parser) {
   int64_t storageTypeMin;
   int64_t storageTypeMax;
   bool isPerAxis = false;
-  int32_t quantizedDimension;
+  bool isSubChannel = false;
+  SmallVector<int32_t, 1> quantizedDimensions;
+  SmallVector<int64_t, 1> blockSizes;
   SmallVector<double, 1> scales;
   SmallVector<int64_t, 1> zeroPoints;
 
@@ -228,11 +365,22 @@ static Type parseUniformType(DialectAsmParser &parser) {
     return nullptr;
   }
 
-  // Optionally parse quantized dimension for per-axis quantization.
+  // Optionally parse quantized dimension for per-axis or sub-channel
+  // quantization.
   if (succeeded(parser.parseOptionalColon())) {
-    if (parser.parseInteger(quantizedDimension))
-      return nullptr;
-    isPerAxis = true;
+    if (succeeded(parser.parseOptionalLBrace())) {
+      isSubChannel = true;
+      if (parseBlockSizeInfoUntilRBrace(parser, quantizedDimensions,
+                                        blockSizes)) {
+        return nullptr;
+      }
+    } else {
+      isPerAxis = true;
+      quantizedDimensions.resize(1);
+      if (parser.parseInteger(quantizedDimensions.back())) {
+        return nullptr;
+      }
+    }
   }
 
   // Comma leading into range_spec.
@@ -240,26 +388,21 @@ static Type parseUniformType(DialectAsmParser &parser) {
     return nullptr;
   }
 
-  // Parameter specification.
-  // For per-axis, ranges are in a {} delimitted list.
-  if (isPerAxis) {
-    if (parser.parseLBrace()) {
-      return nullptr;
-    }
-  }
-
-  // Parse scales/zeroPoints.
-  SMLoc scaleZPLoc = parser.getCurrentLocation();
-  do {
-    scales.resize(scales.size() + 1);
+  // Quantization parameter (scales/zeroPoints) specification.
+  bool isPerTensor = !isPerAxis && !isSubChannel;
+  SmallVector<int64_t> dims;
+  if (isPerTensor) {
     zeroPoints.resize(zeroPoints.size() + 1);
-    if (parseQuantParams(parser, scales.back(), zeroPoints.back())) {
+    scales.resize(scales.size() + 1);
+    if (parseQuantParams(parser, expressedType, scales.back(),
+                         zeroPoints.back())) {
       return nullptr;
     }
-  } while (isPerAxis && succeeded(parser.parseOptionalComma()));
 
-  if (isPerAxis) {
-    if (parser.parseRBrace()) {
+  } else {
+    if (parser.parseLBrace() ||
+        parseQuantParamListUntilRBrace(parser, expressedType, scales,
+                                       zeroPoints, dims)) {
       return nullptr;
     }
   }
@@ -268,19 +411,30 @@ static Type parseUniformType(DialectAsmParser &parser) {
     return nullptr;
   }
 
-  if (!isPerAxis && scales.size() > 1) {
-    return (parser.emitError(scaleZPLoc,
-                             "multiple scales/zeroPoints provided, but "
-                             "quantizedDimension wasn't specified"),
-            nullptr);
-  }
-
   if (isPerAxis) {
-    ArrayRef<double> scalesRef(scales.begin(), scales.end());
-    ArrayRef<int64_t> zeroPointsRef(zeroPoints.begin(), zeroPoints.end());
     return parser.getChecked<UniformQuantizedPerAxisType>(
+        typeFlags, storageType, expressedType, scales, zeroPoints,
+        quantizedDimensions[0], storageTypeMin, storageTypeMax);
+  } else if (isSubChannel) {
+    SmallVector<APFloat> apFloatScales =
+        llvm::to_vector(llvm::map_range(scales, [&](double scale) -> APFloat {
+          APFloat apFloatScale(scale);
+          bool unused;
+          apFloatScale.convert(expressedType.getFloatSemantics(),
+                               APFloat::rmNearestTiesToEven, &unused);
+          return apFloatScale;
+        }));
+    SmallVector<APInt> apIntZeroPoints = llvm::to_vector(
+        llvm::map_range(zeroPoints, [&](int64_t zeroPoint) -> APInt {
+          return APInt(storageType.getIntOrFloatBitWidth(), zeroPoint);
+        }));
+    auto scalesRef = mlir::DenseElementsAttr::get(
+        RankedTensorType::get(dims, expressedType), apFloatScales);
+    auto zeroPointsRef = mlir::DenseElementsAttr::get(
+        RankedTensorType::get(dims, storageType), apIntZeroPoints);
+    return parser.getChecked<UniformQuantizedSubChannelType>(
         typeFlags, storageType, expressedType, scalesRef, zeroPointsRef,
-        quantizedDimension, storageTypeMin, storageTypeMax);
+        quantizedDimensions, blockSizes, storageTypeMin, storageTypeMax);
   }
 
   return parser.getChecked<UniformQuantizedType>(
@@ -360,6 +514,17 @@ static void printQuantParams(double scale, int64_t zeroPoint,
   }
 }
 
+static void
+printBlockSizeInfo(ArrayRef<std::pair<int32_t, int64_t>> blockSizeInfo,
+                   DialectAsmPrinter &out) {
+  out << "{";
+  llvm::interleaveComma(
+      llvm::seq<size_t>(0, blockSizeInfo.size()), out, [&](size_t index) {
+        out << blockSizeInfo[index].first << ":" << blockSizeInfo[index].second;
+      });
+  out << "}";
+}
+
 /// Helper that prints a AnyQuantizedType.
 static void printAnyQuantizedType(AnyQuantizedType type,
                                   DialectAsmPrinter &out) {
@@ -405,6 +570,74 @@ static void printUniformQuantizedPerAxisType(UniformQuantizedPerAxisType type,
   out << "}>";
 }
 
+/// Prints quantization parameters as a nested list of `scale`[:`zero_point`]
+/// elements.  The nesting corresponds to the `shape` dimensions.
+///
+/// Elements are delimited by commas, and the inner dimensions are enclosed in
+/// braces.  `zero_point` is only printed if it is non-zero.  For example:
+///
+///   printDenseQuantizationParameters(scales=[1.0, 2.0, 3.0, 4.0],
+///                                   zeroPoints=[0, 0, 1, 9],
+///                                   shape=[2, 2])
+///
+///   would print:
+///
+///     {{1.0, 2.0}, {3.0:1, 4.0:9}}
+void printDenseQuantizationParameters(ArrayRef<APFloat> scales,
+                                      ArrayRef<APInt> zeroPoints,
+                                      ArrayRef<int64_t> shape,
+                                      DialectAsmPrinter &out) {
+  int64_t rank = shape.size();
+  SmallVector<unsigned, 4> counter(rank, 0);
+  unsigned openBrackets = 0;
+
+  auto incrementCounterAndDelimit = [&]() {
+    ++counter[rank - 1];
+    for (unsigned i = rank - 1; i > 0; --i) {
+      if (counter[i] >= shape[i]) {
+        counter[i] = 0;
+        ++counter[i - 1];
+        --openBrackets;
+        out << '}';
+      }
+    }
+  };
+
+  for (unsigned idx = 0, e = scales.size(); idx < e; ++idx) {
+    if (idx != 0)
+      out << ", ";
+    while (openBrackets++ < rank)
+      out << '{';
+    openBrackets = rank;
+    out << scales[idx];
+    if (zeroPoints[idx] != 0) {
+      out << ":" << zeroPoints[idx];
+    }
+    incrementCounterAndDelimit();
+  }
+  while (openBrackets-- > 0)
+    out << '}';
+}
+
+/// Helper that prints a UniformQuantizedSubChannelType.
+static void
+printUniformQuantizedSubChannelType(UniformQuantizedSubChannelType type,
+                                    DialectAsmPrinter &out) {
+  out << "uniform<";
+  printStorageType(type, out);
+  out << ":" << type.getExpressedType() << ":";
+  printBlockSizeInfo(type.getBlockSizeInfo(), out);
+  out << ", ";
+
+  auto scalesItr = type.getScales().getValues<APFloat>();
+  auto zeroPointsItr = type.getZeroPoints().getValues<APInt>();
+  SmallVector<APFloat> scales(scalesItr.begin(), scalesItr.end());
+  SmallVector<APInt> zeroPoints(zeroPointsItr.begin(), zeroPointsItr.end());
+  printDenseQuantizationParameters(scales, zeroPoints,
+                                   type.getScales().getType().getShape(), out);
+  out << ">";
+}
+
 /// Helper that prints a CalibratedQuantizedType.
 static void printCalibratedQuantizedType(CalibratedQuantizedType type,
                                          DialectAsmPrinter &out) {
@@ -421,6 +654,9 @@ void QuantDialect::printType(Type type, DialectAsmPrinter &os) const {
     printUniformQuantizedType(uniformType, os);
   else if (auto perAxisType = llvm::dyn_cast<UniformQuantizedPerAxisType>(type))
     printUniformQuantizedPerAxisType(perAxisType, os);
+  else if (auto perAxisType =
+               llvm::dyn_cast<UniformQuantizedSubChannelType>(type))
+    printUniformQuantizedSubChannelType(perAxisType, os);
   else if (auto calibratedType = llvm::dyn_cast<CalibratedQuantizedType>(type))
     printCalibratedQuantizedType(calibratedType, os);
   else

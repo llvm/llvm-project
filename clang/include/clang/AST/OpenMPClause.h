@@ -1656,6 +1656,49 @@ public:
   }
 };
 
+/// This represents 'self_maps' clause in the '#pragma omp requires'
+/// directive.
+///
+/// \code
+/// #pragma omp requires self_maps
+/// \endcode
+/// In this example directive '#pragma omp requires' has 'self_maps'
+/// clause.
+class OMPSelfMapsClause final : public OMPClause {
+public:
+  friend class OMPClauseReader;
+  /// Build 'self_maps' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPSelfMapsClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_self_maps, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPSelfMapsClause()
+      : OMPClause(llvm::omp::OMPC_self_maps, SourceLocation(),
+                  SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_self_maps;
+  }
+};
+
 /// This represents 'at' clause in the '#pragma omp error' directive
 ///
 /// \code
@@ -3658,13 +3701,17 @@ public:
 class OMPReductionClause final
     : public OMPVarListClause<OMPReductionClause>,
       public OMPClauseWithPostUpdate,
-      private llvm::TrailingObjects<OMPReductionClause, Expr *> {
+      private llvm::TrailingObjects<OMPReductionClause, Expr *, bool> {
   friend class OMPClauseReader;
   friend OMPVarListClause;
   friend TrailingObjects;
 
   /// Reduction modifier.
   OpenMPReductionClauseModifier Modifier = OMPC_REDUCTION_unknown;
+
+  /// Original Sharing  modifier.
+  OpenMPOriginalSharingModifier OriginalSharingModifier =
+      OMPC_ORIGINAL_SHARING_default;
 
   /// Reduction modifier location.
   SourceLocation ModifierLoc;
@@ -3691,12 +3738,14 @@ class OMPReductionClause final
   OMPReductionClause(SourceLocation StartLoc, SourceLocation LParenLoc,
                      SourceLocation ModifierLoc, SourceLocation ColonLoc,
                      SourceLocation EndLoc,
-                     OpenMPReductionClauseModifier Modifier, unsigned N,
-                     NestedNameSpecifierLoc QualifierLoc,
+                     OpenMPReductionClauseModifier Modifier,
+                     OpenMPOriginalSharingModifier OriginalSharingModifier,
+                     unsigned N, NestedNameSpecifierLoc QualifierLoc,
                      const DeclarationNameInfo &NameInfo)
       : OMPVarListClause<OMPReductionClause>(llvm::omp::OMPC_reduction,
                                              StartLoc, LParenLoc, EndLoc, N),
         OMPClauseWithPostUpdate(this), Modifier(Modifier),
+        OriginalSharingModifier(OriginalSharingModifier),
         ModifierLoc(ModifierLoc), ColonLoc(ColonLoc),
         QualifierLoc(QualifierLoc), NameInfo(NameInfo) {}
 
@@ -3711,6 +3760,11 @@ class OMPReductionClause final
 
   /// Sets reduction modifier.
   void setModifier(OpenMPReductionClauseModifier M) { Modifier = M; }
+
+  /// Sets Original Sharing  modifier.
+  void setOriginalSharingModifier(OpenMPOriginalSharingModifier M) {
+    OriginalSharingModifier = M;
+  }
 
   /// Sets location of the modifier.
   void setModifierLoc(SourceLocation Loc) { ModifierLoc = Loc; }
@@ -3756,6 +3810,31 @@ class OMPReductionClause final
   /// Also, variables in these expressions are used for proper initialization of
   /// reduction copies.
   void setRHSExprs(ArrayRef<Expr *> RHSExprs);
+
+  /// Set the list private reduction flags
+  void setPrivateVariableReductionFlags(ArrayRef<bool> Flags) {
+    assert(Flags.size() == varlist_size() &&
+           "Number of private flags does not match vars");
+    llvm::copy(Flags, getTrailingObjects<bool>());
+  }
+
+  /// Get the list of help private variable reduction flags
+  MutableArrayRef<bool> getPrivateVariableReductionFlags() {
+    return MutableArrayRef(getTrailingObjects<bool>(), varlist_size());
+  }
+  ArrayRef<bool> getPrivateVariableReductionFlags() const {
+    return ArrayRef(getTrailingObjects<bool>(), varlist_size());
+  }
+
+  /// Returns the number of Expr* objects in trailing storage
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return varlist_size() * (Modifier == OMPC_REDUCTION_inscan ? 8 : 5);
+  }
+
+  /// Returns the number of bool flags in trailing storage
+  size_t numTrailingObjects(OverloadToken<bool>) const {
+    return varlist_size();
+  }
 
   /// Get the list of helper destination expressions.
   MutableArrayRef<Expr *> getRHSExprs() {
@@ -3854,6 +3933,7 @@ public:
   /// region with this clause.
   /// \param PostUpdate Expression that must be executed after exit from the
   /// OpenMP region with this clause.
+  /// \param IsPrivateVarReduction array for private variable reduction flags
   static OMPReductionClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          SourceLocation ModifierLoc, SourceLocation ColonLoc,
@@ -3863,7 +3943,8 @@ public:
          ArrayRef<Expr *> LHSExprs, ArrayRef<Expr *> RHSExprs,
          ArrayRef<Expr *> ReductionOps, ArrayRef<Expr *> CopyOps,
          ArrayRef<Expr *> CopyArrayTemps, ArrayRef<Expr *> CopyArrayElems,
-         Stmt *PreInit, Expr *PostUpdate);
+         Stmt *PreInit, Expr *PostUpdate, ArrayRef<bool> IsPrivateVarReduction,
+         OpenMPOriginalSharingModifier OriginalSharingModifier);
 
   /// Creates an empty clause with the place for \a N variables.
   ///
@@ -3876,6 +3957,11 @@ public:
 
   /// Returns modifier.
   OpenMPReductionClauseModifier getModifier() const { return Modifier; }
+
+  /// Returns Original Sharing Modifier.
+  OpenMPOriginalSharingModifier getOriginalSharingModifier() const {
+    return OriginalSharingModifier;
+  }
 
   /// Returns modifier location.
   SourceLocation getModifierLoc() const { return ModifierLoc; }
@@ -3894,6 +3980,11 @@ public:
   using helper_expr_range = llvm::iterator_range<helper_expr_iterator>;
   using helper_expr_const_range =
       llvm::iterator_range<helper_expr_const_iterator>;
+  using helper_flag_iterator = MutableArrayRef<bool>::iterator;
+  using helper_flag_const_iterator = ArrayRef<bool>::iterator;
+  using helper_flag_range = llvm::iterator_range<helper_flag_iterator>;
+  using helper_flag_const_range =
+      llvm::iterator_range<helper_flag_const_iterator>;
 
   helper_expr_const_range privates() const {
     return helper_expr_const_range(getPrivates().begin(), getPrivates().end());
@@ -3917,6 +4008,16 @@ public:
 
   helper_expr_range rhs_exprs() {
     return helper_expr_range(getRHSExprs().begin(), getRHSExprs().end());
+  }
+
+  helper_flag_const_range private_var_reduction_flags() const {
+    return helper_flag_const_range(getPrivateVariableReductionFlags().begin(),
+                                   getPrivateVariableReductionFlags().end());
+  }
+
+  helper_flag_range private_var_reduction_flags() {
+    return helper_flag_range(getPrivateVariableReductionFlags().begin(),
+                             getPrivateVariableReductionFlags().end());
   }
 
   helper_expr_const_range reduction_ops() const {
@@ -6349,7 +6450,8 @@ private:
   OpenMPMapModifierKind MapTypeModifiers[NumberOfOMPMapClauseModifiers] = {
       OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
       OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
-      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown};
+      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
+      OMPC_MAP_MODIFIER_unknown};
 
   /// Location of map-type-modifiers for the 'map' clause.
   SourceLocation MapTypeModifiersLoc[NumberOfOMPMapClauseModifiers];
@@ -9373,6 +9475,7 @@ class ConstOMPClauseVisitor :
 class OMPClausePrinter final : public OMPClauseVisitor<OMPClausePrinter> {
   raw_ostream &OS;
   const PrintingPolicy &Policy;
+  unsigned Version;
 
   /// Process clauses with list of variables.
   template <typename T> void VisitOMPClauseList(T *Node, char StartSym);
@@ -9380,8 +9483,9 @@ class OMPClausePrinter final : public OMPClauseVisitor<OMPClausePrinter> {
   template <typename T> void VisitOMPMotionClause(T *Node);
 
 public:
-  OMPClausePrinter(raw_ostream &OS, const PrintingPolicy &Policy)
-      : OS(OS), Policy(Policy) {}
+  OMPClausePrinter(raw_ostream &OS, const PrintingPolicy &Policy,
+                   unsigned OpenMPVersion)
+      : OS(OS), Policy(Policy), Version(OpenMPVersion) {}
 
 #define GEN_CLANG_CLAUSE_CLASS
 #define CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(Class *S);

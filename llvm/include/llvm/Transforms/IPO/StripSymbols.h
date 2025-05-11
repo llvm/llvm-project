@@ -42,6 +42,10 @@ struct StripDeadDebugInfoPass : PassInfoMixin<StripDeadDebugInfoPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+struct StripDeadCGProfilePass : PassInfoMixin<StripDeadCGProfilePass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_STRIPSYMBOLS_H

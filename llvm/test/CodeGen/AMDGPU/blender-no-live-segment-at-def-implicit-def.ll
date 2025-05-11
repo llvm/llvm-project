@@ -15,7 +15,7 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_mov_b32 s12, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_lg_u32 s52, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_8
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_9
 ; CHECK-NEXT:  ; %bb.1: ; %if.end13.i.i
 ; CHECK-NEXT:    s_cmp_eq_u32 s54, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_4
@@ -26,36 +26,36 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s12
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_5
 ; CHECK-NEXT:  ; %bb.3:
-; CHECK-NEXT:    s_mov_b32 s48, 0
-; CHECK-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s12
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_6
-; CHECK-NEXT:    s_branch .LBB0_7
+; CHECK-NEXT:    s_mov_b32 s18, 0
+; CHECK-NEXT:    s_branch .LBB0_6
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    s_mov_b32 s14, s12
 ; CHECK-NEXT:    s_mov_b32 s15, s12
 ; CHECK-NEXT:    s_mov_b32 s13, s12
 ; CHECK-NEXT:    s_mov_b64 s[50:51], s[14:15]
 ; CHECK-NEXT:    s_mov_b64 s[48:49], s[12:13]
-; CHECK-NEXT:    s_branch .LBB0_7
+; CHECK-NEXT:    s_branch .LBB0_8
 ; CHECK-NEXT:  .LBB0_5: ; %if.then263.i.i
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 s12, s53, 0
-; CHECK-NEXT:    s_mov_b32 s48, 1.0
+; CHECK-NEXT:    s_mov_b32 s18, 1.0
 ; CHECK-NEXT:    s_mov_b32 s17, 0x7fc00000
+; CHECK-NEXT:  .LBB0_6: ; %Flow
+; CHECK-NEXT:    s_mov_b32 s48, 1.0
+; CHECK-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s12
 ; CHECK-NEXT:    s_mov_b32 s49, s48
 ; CHECK-NEXT:    s_mov_b32 s50, s48
 ; CHECK-NEXT:    s_mov_b32 s51, s48
-; CHECK-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s12
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_7
-; CHECK-NEXT:  .LBB0_6: ; %if.end273.i.i
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_8
+; CHECK-NEXT:  ; %bb.7: ; %if.end273.i.i
 ; CHECK-NEXT:    s_add_u32 s12, s8, 40
 ; CHECK-NEXT:    s_addc_u32 s13, s9, 0
-; CHECK-NEXT:    s_getpc_b64 s[18:19]
-; CHECK-NEXT:    s_add_u32 s18, s18, _Z3dotDv3_fS_@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s19, s19, _Z3dotDv3_fS_@gotpcrel32@hi+12
+; CHECK-NEXT:    s_getpc_b64 s[20:21]
+; CHECK-NEXT:    s_add_u32 s20, s20, _Z3dotDv3_fS_@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s21, s21, _Z3dotDv3_fS_@gotpcrel32@hi+12
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[18:19], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[20:21], s[20:21], 0x0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 10, v1
-; CHECK-NEXT:    v_add_f32_e64 v1, s17, s48
+; CHECK-NEXT:    v_add_f32_e64 v1, s17, s18
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[8:9]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[12:13]
 ; CHECK-NEXT:    s_mov_b32 s12, s14
@@ -67,18 +67,18 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_mov_b32 s14, s16
 ; CHECK-NEXT:    s_mov_b32 s48, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[20:21]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[34:35]
 ; CHECK-NEXT:    s_mov_b32 s49, s48
 ; CHECK-NEXT:    s_mov_b32 s50, s48
 ; CHECK-NEXT:    s_mov_b32 s51, s48
-; CHECK-NEXT:  .LBB0_7: ; %if.end294.i.i
+; CHECK-NEXT:  .LBB0_8: ; %if.end294.i.i
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:12
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:8
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; CHECK-NEXT:  .LBB0_8: ; %kernel_direct_lighting.exit
+; CHECK-NEXT:  .LBB0_9: ; %kernel_direct_lighting.exit
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x20
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s48
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
@@ -126,5 +126,3 @@ kernel_direct_lighting.exit:                      ; preds = %if.end294.i.i, %ent
 
 declare float @_Z3dotDv3_fS_(<3 x float>)
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

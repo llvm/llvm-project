@@ -2,8 +2,8 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=bonaire -verify-machineinstrs < %s | FileCheck %s
 ; TODO: Replace with existing DAG tests
 
-@lds_512_4 = internal unnamed_addr addrspace(3) global [128 x i32] undef, align 4
-@lds_4_8 = addrspace(3) global i32 undef, align 8
+@lds_512_4 = internal unnamed_addr addrspace(3) global [128 x i32] poison, align 4
+@lds_4_8 = addrspace(3) global i32 poison, align 8
 
 define amdgpu_kernel void @use_lds_globals(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
 ; CHECK-LABEL: use_lds_globals:
@@ -11,13 +11,16 @@ define amdgpu_kernel void @use_lds_globals(ptr addrspace(1) %out, ptr addrspace(
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 4
 ; CHECK-NEXT:    s_mov_b32 m0, -1
+; CHECK-NEXT:    s_add_i32 s12, s12, s17
 ; CHECK-NEXT:    ds_read_b32 v2, v0
-; CHECK-NEXT:    v_mov_b32_e32 v3, 9
+; CHECK-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_add_u32 s0, s0, 4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1
+; CHECK-NEXT:    v_mov_b32_e32 v3, 9
 ; CHECK-NEXT:    flat_store_dword v[0:1], v2
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x200
 ; CHECK-NEXT:    ds_write_b32 v0, v3

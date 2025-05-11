@@ -376,3 +376,18 @@ constexpr int N = [] // expected-error {{must be initialized by a constant expre
     return s.a[0];
 }();
 #endif
+
+namespace MemMove {
+  constexpr int foo() {
+    int *a = std::allocator<int>{}.allocate(1);
+    new(a) int{123};
+
+    int b;
+    __builtin_memmove(&b, a, sizeof(int));
+
+    std::allocator<int>{}.deallocate(a);
+    return b;
+  }
+
+  static_assert(foo() == 123);
+}

@@ -91,13 +91,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-
-  FunctionPass *createHexagonEarlyIfConversion();
-  void initializeHexagonEarlyIfConversionPass(PassRegistry& Registry);
-
-} // end namespace llvm
-
 static cl::opt<bool> EnableHexagonBP("enable-hexagon-br-prob", cl::Hidden,
   cl::init(true), cl::desc("Enable branch probability info"));
 static cl::opt<unsigned> SizeLimit("eif-limit", cl::init(6), cl::Hidden,

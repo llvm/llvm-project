@@ -571,7 +571,7 @@ public:
   bool onlyWritesMemory() const;
   void setOnlyWritesMemory();
 
-  /// Determine if the call can access memmory only using pointers based
+  /// Determine if the call can access memory only using pointers based
   /// on its arguments.
   bool onlyAccessesArgMemory() const;
   void setOnlyAccessesArgMemory();
@@ -1047,6 +1047,14 @@ private:
   }
   void setValueSubclassDataBit(unsigned Bit, bool On);
 };
+
+namespace CallingConv {
+
+// TODO: Need similar function for support of argument in position. General
+// version on FunctionType + Attributes + CallingConv::ID?
+LLVM_READNONE
+bool supportsNonVoidReturnType(CallingConv::ID CC);
+} // namespace CallingConv
 
 /// Check whether null pointer dereferencing is considered undefined behavior
 /// for a given function or an address space.

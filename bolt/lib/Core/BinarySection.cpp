@@ -12,6 +12,7 @@
 
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
@@ -22,8 +23,8 @@ using namespace llvm;
 using namespace bolt;
 
 namespace opts {
-extern cl::opt<bool> PrintRelocations;
 extern cl::opt<bool> HotData;
+extern cl::opt<bool> PrintRelocations;
 } // namespace opts
 
 uint64_t BinarySection::Count = 0;
@@ -174,11 +175,20 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
     OS.pwrite(Patch.Bytes.data(), Patch.Bytes.size(),
               SectionFileOffset + Patch.Offset);
 
+  uint64_t SkippedPendingRelocations = 0;
   for (Relocation &Reloc : PendingRelocations) {
     uint64_t Value = Reloc.Addend;
     if (Reloc.Symbol)
       Value += Resolver(Reloc.Symbol);
 
+    // Safely skip any optional pending relocation that cannot be encoded.
+    if (Reloc.isOptional() &&
+        !Relocation::canEncodeValue(Reloc.Type, Value,
+                                    SectionAddress + Reloc.Offset)) {
+
+      ++SkippedPendingRelocations;
+      continue;
+    }
     Value = Relocation::encodeValue(Reloc.Type, Value,
                                     SectionAddress + Reloc.Offset);
 
@@ -197,6 +207,11 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
   }
 
   clearList(PendingRelocations);
+
+  if (SkippedPendingRelocations > 0 && opts::Verbosity >= 1) {
+    BC.outs() << "BOLT-INFO: skipped " << SkippedPendingRelocations
+              << " out-of-range optional relocations\n";
+  }
 }
 
 BinarySection::~BinarySection() { updateContents(nullptr, 0); }

@@ -121,15 +121,6 @@ void addOpenMPHostOffloadingArgs(const Compilation &C, const JobAction &JA,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
 
-/// Adds Fortran runtime libraries to \p CmdArgs.
-void addFortranRuntimeLibs(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                           llvm::opt::ArgStringList &CmdArgs);
-
-/// Adds the path for the Fortran runtime libraries to \p CmdArgs.
-void addFortranRuntimeLibraryPath(const ToolChain &TC,
-                                  const llvm::opt::ArgList &Args,
-                                  llvm::opt::ArgStringList &CmdArgs);
-
 void addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
                           const llvm::opt::ArgList &Args,
                           llvm::opt::ArgStringList &CmdArgs);
@@ -267,6 +258,14 @@ void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
 
 bool shouldEnableVectorizerAtOLevel(const llvm::opt::ArgList &Args,
                                     bool isSlpVec);
+
+/// Enable -fvectorize based on the optimization level selected.
+void handleVectorizeLoopsArgs(const llvm::opt::ArgList &Args,
+                              llvm::opt::ArgStringList &CmdArgs);
+
+/// Enable -fslp-vectorize based on the optimization level selected.
+void handleVectorizeSLPArgs(const llvm::opt::ArgList &Args,
+                            llvm::opt::ArgStringList &CmdArgs);
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang

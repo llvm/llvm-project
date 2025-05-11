@@ -241,7 +241,8 @@ void LandingPadInliningInfo::forwardResume(
   BasicBlock *Dest = getInnerResumeDest();
   BasicBlock *Src = RI->getParent();
 
-  BranchInst::Create(Dest, Src);
+  auto *BI = BranchInst::Create(Dest, Src);
+  BI->setDebugLoc(RI->getDebugLoc());
 
   // Update the PHIs in the destination. They were inserted in an order which
   // makes this work.
@@ -1245,8 +1246,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         SmallVector<const Value *, 4> Objects;
         getUnderlyingObjects(V, Objects, /* LI = */ nullptr);
 
-        for (const Value *O : Objects)
-          ObjSet.insert(O);
+        ObjSet.insert_range(Objects);
       }
 
       // Figure out if we're derived from anything that is not a noalias
@@ -1382,7 +1382,8 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
   // behavior was just using a poison value.
   static const Attribute::AttrKind ExactAttrsToPropagate[] = {
       Attribute::Dereferenceable, Attribute::DereferenceableOrNull,
-      Attribute::NonNull, Attribute::Alignment, Attribute::Range};
+      Attribute::NonNull,         Attribute::NoFPClass,
+      Attribute::Alignment,       Attribute::Range};
 
   for (unsigned I = 0, E = CB.arg_size(); I < E; ++I) {
     ValidObjParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
@@ -1464,6 +1465,10 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
               NewAB.addRangeAttr(CombinedRange);
             }
           }
+
+          if (FPClassTest ExistingNoFP = AL.getParamNoFPClass(I))
+            NewAB.addNoFPClassAttr(ExistingNoFP | NewAB.getNoFPClass());
+
           AL = AL.addParamAttributes(Context, I, NewAB);
         } else if (NewInnerCB->getArgOperand(I)->getType()->isPointerTy()) {
           // Check if the underlying value for the parameter is an argument.
@@ -1675,7 +1680,7 @@ static void AddAlignmentAssumptions(CallBase &CB, InlineFunctionInfo &IFI) {
   Function *CalledFunc = CB.getCalledFunction();
   for (Argument &Arg : CalledFunc->args()) {
     if (!Arg.getType()->isPointerTy() || Arg.hasPassPointeeByValueCopyAttr() ||
-        Arg.hasNUses(0))
+        Arg.use_empty())
       continue;
     MaybeAlign Alignment = Arg.getParamAlign();
     if (!Alignment)
@@ -1698,7 +1703,8 @@ static void AddAlignmentAssumptions(CallBase &CB, InlineFunctionInfo &IFI) {
 }
 
 static void HandleByValArgumentInit(Type *ByValType, Value *Dst, Value *Src,
-                                    Module *M, BasicBlock *InsertBlock,
+                                    MaybeAlign SrcAlign, Module *M,
+                                    BasicBlock *InsertBlock,
                                     InlineFunctionInfo &IFI,
                                     Function *CalledFunc) {
   IRBuilder<> Builder(InsertBlock, InsertBlock->begin());
@@ -1706,11 +1712,10 @@ static void HandleByValArgumentInit(Type *ByValType, Value *Dst, Value *Src,
   Value *Size =
       Builder.getInt64(M->getDataLayout().getTypeStoreSize(ByValType));
 
-  // Always generate a memcpy of alignment 1 here because we don't know
-  // the alignment of the src pointer.  Other optimizations can infer
-  // better alignment.
-  CallInst *CI = Builder.CreateMemCpy(Dst, /*DstAlign*/ Align(1), Src,
-                                      /*SrcAlign*/ Align(1), Size);
+  Align DstAlign = Dst->getPointerAlignment(M->getDataLayout());
+
+  // Generate a memcpy with the correct alignments.
+  CallInst *CI = Builder.CreateMemCpy(Dst, DstAlign, Src, SrcAlign, Size);
 
   // The verifier requires that all calls of debug-info-bearing functions
   // from debug-info-bearing functions have a debug location (for inlining
@@ -1814,16 +1819,23 @@ static DebugLoc inlineDebugLoc(DebugLoc OrigDL, DILocation *InlinedAt,
                                DenseMap<const MDNode *, MDNode *> &IANodes) {
   auto IA = DebugLoc::appendInlinedAt(OrigDL, InlinedAt, Ctx, IANodes);
   return DILocation::get(Ctx, OrigDL.getLine(), OrigDL.getCol(),
-                         OrigDL.getScope(), IA);
+                         OrigDL.getScope(), IA, OrigDL.isImplicitCode(),
+                         OrigDL->getAtomGroup(), OrigDL->getAtomRank());
 }
 
 /// Update inlined instructions' line numbers to
 /// to encode location where these instructions are inlined.
 static void fixupLineNumbers(Function *Fn, Function::iterator FI,
                              Instruction *TheCall, bool CalleeHasDebugInfo) {
-  const DebugLoc &TheCallDL = TheCall->getDebugLoc();
-  if (!TheCallDL)
+  if (!TheCall->getDebugLoc())
     return;
+
+  // Don't propagate the source location atom from the call to inlined nodebug
+  // instructions, and avoid putting it in the InlinedAt field of inlined
+  // not-nodebug instructions. FIXME: Possibly worth transferring/generating
+  // an atom for the returned value, otherwise we miss stepping on inlined
+  // nodebug functions (which is different to existing behaviour).
+  DebugLoc TheCallDL = TheCall->getDebugLoc()->getWithoutAtom();
 
   auto &Ctx = Fn->getContext();
   DILocation *InlinedAtNode = TheCallDL;
@@ -2149,7 +2161,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
 
       if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
         if (II->getIntrinsicID() != Intrinsic::objc_autoreleaseReturnValue ||
-            !II->hasNUses(0) ||
+            !II->use_empty() ||
             objcarc::GetRCIdentityRoot(II->getOperand(0)) != RetOpnd)
           break;
 
@@ -2160,7 +2172,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
         //   call.
         if (IsUnsafeClaimRV) {
           Builder.SetInsertPoint(II);
-          Builder.CreateIntrinsic(Intrinsic::objc_release, {}, RetOpnd);
+          Builder.CreateIntrinsic(Intrinsic::objc_release, RetOpnd);
         }
         II->eraseFromParent();
         InsertRetainCall = false;
@@ -2194,7 +2206,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       // matching autoreleaseRV or an annotated call in the callee. Emit a call
       // to objc_retain.
       Builder.SetInsertPoint(RI);
-      Builder.CreateIntrinsic(Intrinsic::objc_retain, {}, RetOpnd);
+      Builder.CreateIntrinsic(Intrinsic::objc_retain, RetOpnd);
     }
   }
 }
@@ -2357,7 +2369,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                         AAResults *CalleeAAR,
                                         bool InsertLifetime,
                                         Function *ForwardVarArgsTo) {
-  if (CtxProf.contexts().empty())
+  if (!CtxProf.isInSpecializedModule())
     return InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
                           ForwardVarArgsTo);
 
@@ -2624,9 +2636,12 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     struct ByValInit {
       Value *Dst;
       Value *Src;
+      MaybeAlign SrcAlign;
       Type *Ty;
     };
-    // Keep a list of pair (dst, src) to emit byval initializations.
+    // Keep a list of tuples (dst, src, src_align) to emit byval
+    // initializations. Src Alignment is only available though the callbase,
+    // therefore has to be saved.
     SmallVector<ByValInit, 4> ByValInits;
 
     // When inlining a function that contains noalias scope metadata,
@@ -2656,8 +2671,9 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                         &CB, CalledFunc, IFI,
                                         CalledFunc->getParamAlign(ArgNo));
         if (ActualArg != *AI)
-          ByValInits.push_back(
-              {ActualArg, (Value *)*AI, CB.getParamByValType(ArgNo)});
+          ByValInits.push_back({ActualArg, (Value *)*AI,
+                                CB.getParamAlign(ArgNo),
+                                CB.getParamByValType(ArgNo)});
       }
 
       VMap[&*I] = ActualArg;
@@ -2707,8 +2723,9 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Inject byval arguments initialization.
     for (ByValInit &Init : ByValInits)
-      HandleByValArgumentInit(Init.Ty, Init.Dst, Init.Src, Caller->getParent(),
-                              &*FirstNewBlock, IFI, CalledFunc);
+      HandleByValArgumentInit(Init.Ty, Init.Dst, Init.Src, Init.SrcAlign,
+                              Caller->getParent(), &*FirstNewBlock, IFI,
+                              CalledFunc);
 
     std::optional<OperandBundleUse> ParentDeopt =
         CB.getOperandBundle(LLVMContext::OB_deopt);

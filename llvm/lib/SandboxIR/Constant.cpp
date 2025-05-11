@@ -174,6 +174,28 @@ StructType *ConstantStruct::getTypeForElements(Context &Ctx,
   return StructType::get(Ctx, EltTypes, Packed);
 }
 
+Constant *ConstantVector::get(ArrayRef<Constant *> V) {
+  assert(!V.empty() && "Expected non-empty V!");
+  auto &Ctx = V[0]->getContext();
+  SmallVector<llvm::Constant *, 8> LLVMV;
+  LLVMV.reserve(V.size());
+  for (auto *Elm : V)
+    LLVMV.push_back(cast<llvm::Constant>(Elm->Val));
+  return Ctx.getOrCreateConstant(llvm::ConstantVector::get(LLVMV));
+}
+
+Constant *ConstantVector::getSplat(ElementCount EC, Constant *Elt) {
+  auto *LLVMElt = cast<llvm::Constant>(Elt->Val);
+  auto &Ctx = Elt->getContext();
+  return Ctx.getOrCreateConstant(llvm::ConstantVector::getSplat(EC, LLVMElt));
+}
+
+Constant *ConstantVector::getSplatValue(bool AllowPoison) const {
+  auto *LLVMSplatValue = cast_or_null<llvm::Constant>(
+      cast<llvm::ConstantVector>(Val)->getSplatValue(AllowPoison));
+  return LLVMSplatValue ? Ctx.getOrCreateConstant(LLVMSplatValue) : nullptr;
+}
+
 ConstantAggregateZero *ConstantAggregateZero::get(Type *Ty) {
   auto *LLVMC = llvm::ConstantAggregateZero::get(Ty->LLVMTy);
   return cast<ConstantAggregateZero>(
@@ -302,7 +324,7 @@ template class GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
 template class GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
                                  llvm::GlobalValue>;
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 // These are needed for SandboxIRTest when building with LLVM_BUILD_LLVM_DYLIB
 template LLVM_EXPORT_TEMPLATE GlobalIFunc &
 GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,

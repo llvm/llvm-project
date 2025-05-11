@@ -275,26 +275,26 @@ void X86InstrMappingEmitter::emitNFTransformTable(
     const Record *Rec = Inst->TheDef;
     if (!isInteresting(Rec))
       continue;
-    std::string Name = Rec->getName().str();
-    auto Pos = Name.find("_NF");
-    if (Pos == std::string::npos)
+    StringRef Name = Rec->getName();
+    if (Name.contains("_NF"))
       continue;
 
-    if (auto *NewRec = Records.getDef(Name.erase(Pos, 3))) {
+    if (auto *NewRec = Name.consume_back("_ND")
+                           ? Records.getDef(Name.str() + "_NF_ND")
+                           : Records.getDef(Name.str() + "_NF")) {
 #ifndef NDEBUG
       auto ClobberEFLAGS = [](const Record *R) {
         return llvm::any_of(
             R->getValueAsListOfDefs("Defs"),
             [](const Record *Def) { return Def->getName() == "EFLAGS"; });
       };
-      if (ClobberEFLAGS(Rec))
+      if (ClobberEFLAGS(NewRec))
         report_fatal_error("EFLAGS should not be clobbered by " +
-                           Rec->getName());
-      if (!ClobberEFLAGS(NewRec))
-        report_fatal_error("EFLAGS should be clobbered by " +
                            NewRec->getName());
+      if (!ClobberEFLAGS(Rec))
+        report_fatal_error("EFLAGS should be clobbered by " + Rec->getName());
 #endif
-      Table.emplace_back(&Target.getInstruction(NewRec), Inst);
+      Table.emplace_back(Inst, &Target.getInstruction(NewRec));
     }
   }
   printTable(Table, "X86NFTransformTable", "GET_X86_NF_TRANSFORM_TABLE", OS);

@@ -33,7 +33,7 @@ def Canonicalizer : Pass<"canonicalize"> {
     Option<"topDownProcessingEnabled", "top-down", "bool",
            /*default=*/"true",
            "Seed the worklist in general top-down order">,
-    Option<"enableRegionSimplification", "region-simplify", "mlir::GreedySimplifyRegionLevel",
+    Option<"regionSimplifyLevel", "region-simplify", "mlir::GreedySimplifyRegionLevel",
            /*default=*/"mlir::GreedySimplifyRegionLevel::Normal",
            "Perform control flow optimizations to the region tree",
              [{::llvm::cl::values(

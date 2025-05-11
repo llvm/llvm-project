@@ -263,7 +263,7 @@ LIBC_INLINE void store_aligned(ValueType value, Ptr dst) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
   constexpr size_t SHIFT = sizeof(T) * 8;
   if constexpr (Endian::IS_LITTLE) {
-    store<T>(assume_aligned<sizeof(T)>(dst), value & ~T(0));
+    store<T>(assume_aligned<sizeof(T)>(dst), T(value & T(~0)));
     if constexpr (sizeof...(TS) > 0)
       store_aligned<ValueType, TS...>(value >> SHIFT, dst + sizeof(T));
   } else if constexpr (Endian::IS_BIG) {
@@ -297,7 +297,7 @@ LIBC_INLINE void adjust(ptrdiff_t offset, T1 *__restrict &p1,
                         T2 *__restrict &p2, size_t &count) {
   p1 += offset;
   p2 += offset;
-  count -= offset;
+  count -= static_cast<size_t>(offset);
 }
 
 // Advances p1 and p2 so p1 gets aligned to the next SIZE bytes boundary
@@ -306,7 +306,8 @@ LIBC_INLINE void adjust(ptrdiff_t offset, T1 *__restrict &p1,
 template <size_t SIZE, typename T1, typename T2>
 void align_p1_to_next_boundary(T1 *__restrict &p1, T2 *__restrict &p2,
                                size_t &count) {
-  adjust(distance_to_next_aligned<SIZE>(p1), p1, p2, count);
+  adjust(static_cast<ptrdiff_t>(distance_to_next_aligned<SIZE>(p1)), p1, p2,
+         count);
   p1 = assume_aligned<SIZE>(p1);
 }
 

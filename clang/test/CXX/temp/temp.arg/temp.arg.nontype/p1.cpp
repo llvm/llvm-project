@@ -31,16 +31,16 @@ namespace non_type_tmpl_param {
 //      omitted if the name refers to a function or array and shall be omitted
 //      if the corresopnding template-parameter is a reference; or
 namespace addr_of_obj_or_func {
-  template <int* p> struct X0 { }; // expected-note 5{{here}} cxx17-note 2{{here}}
+  template <int* p> struct X0 { }; // expected-note 5{{here}}
 #if __cplusplus >= 201103L
   // precxx17-note@-2 2{{template parameter is declared here}}
 #endif
 
-  template <int (*fp)(int)> struct X1 { }; // cxx17-note {{here}} precxx17-note{{here}}
+  template <int (*fp)(int)> struct X1 { }; // cxx17-note {{here}}
 #if __cplusplus <= 199711L
   // precxx17-note@-2 {{here}}
 #endif
-  template <int &p> struct X2 { }; // expected-note 5{{here}}
+  template <int &p> struct X2 { }; // expected-note 4{{here}}
   template <const int &p> struct X2k { }; // expected-note {{here}}
   template <int (&fp)(int)> struct X3 { }; // expected-note 4{{here}}
 
@@ -169,7 +169,7 @@ namespace addr_of_obj_or_func {
 
     struct Local { static int f() {} }; // precxx17-note {{here}}
     X1<&Local::f> x1_no_linkage; // precxx17-error {{non-type template argument refers to function 'f' that does not have linkage}} cxx17-error {{value of type 'int (*)()' is not implicitly convertible to 'int (*)(int)'}}
-    X0<&S::NonStaticMember> x0_non_static; // precxx17-error {{non-static data member}} cxx17-error {{value of type 'int addr_of_obj_or_func::S::*' is not implicitly convertible to 'int *'}}
+    X0<&S::NonStaticMember> x0_non_static; // precxx17-error {{non-static data member}} cxx17-error {{value of type 'int S::*' is not implicitly convertible to 'int *'}}
   }
 }
 
@@ -180,7 +180,6 @@ namespace addr_of_obj_or_func {
 
 namespace bad_args {
   template <int* N> struct X0 { }; // precxx17-note 4{{template parameter is declared here}}
-                                   // cxx17-note@-1 3{{template parameter is declared here}}
   int i = 42;
   X0<&i + 2> x0a; // precxx17-error{{non-type template argument does not refer to any declaration}} \
                      cxx17-error {{non-type template argument is not a constant expression}} \

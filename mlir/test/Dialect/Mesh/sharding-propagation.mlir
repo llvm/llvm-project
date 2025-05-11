@@ -77,7 +77,7 @@ func.func @element_wise_on_graph_input(%arg0: tensor<8x16xf32>) -> tensor<8x16xf
 
 // CHECK-LABEL: func.func @arrow_structure
 // CHECK-SAME:    %[[ARG:.*]]: tensor<8x16xf32>
-func.func @arrow_structure(%arg0: tensor<8x16xf32>) -> (tensor<8x16xf32>, tensor<8x16xf32>) {
+func.func @arrow_structure(%arg0: tensor<8x16xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> (tensor<8x16xf32>, tensor<8x16xf32>) {
   // CHECK-NEXT:  %[[S1:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}0], [1]] : !mesh.sharding
   // CHECK-NEXT:  %[[V1:.*]] = mesh.shard %[[ARG]] to %[[S1]] annotate_for_users  : tensor<8x16xf32>
   // CHECK-NEXT:  %[[V2:.*]] = tosa.tanh %[[V1]]
@@ -85,12 +85,15 @@ func.func @arrow_structure(%arg0: tensor<8x16xf32>) -> (tensor<8x16xf32>, tensor
   %0 = tosa.tanh %arg0 : (tensor<8x16xf32>) -> tensor<8x16xf32>
   // CHECK-NEXT:  %[[V4:.*]] = mesh.shard %[[V3]] to %[[S1]] annotate_for_users  : tensor<8x16xf32>
   // CHECK-NEXT:  %[[V5:.*]] = tosa.abs %[[V4]]
- // CHECK-NEXT:   %[[V6:.*]] = mesh.shard %[[V5]] to %[[S1]]  : tensor<8x16xf32>
-  %1 = tosa.abs %0 : (tensor<8x16xf32>) -> tensor<8x16xf32>
-  // CHECK-NEXT:  %[[V7:.*]] = tosa.negate %[[V4]]
+  // CHECK-NEXT:  %[[V6:.*]] = mesh.shard %[[V5]] to %[[S1]]  : tensor<8x16xf32>
+  %1 = tosa.abs %0: (tensor<8x16xf32>) -> tensor<8x16xf32>
+  // CHECK-NEXT:  %[[S3:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}]] : !mesh.sharding
+  // CHECK-NEXT:  %[[ZP1:.*]] = mesh.shard %arg1 to %[[S3]] annotate_for_users : tensor<1xf32>
+  // CHECK-NEXT:  %[[ZP2:.*]] = mesh.shard %arg2 to %[[S3]] annotate_for_users : tensor<1xf32>
+  // CHECK-NEXT:  %[[V7:.*]] = tosa.negate %[[V4]], %[[ZP1]], %[[ZP2]]
   // CHECK-NEXT:  %[[S8:.*]] = mesh.sharding @mesh_2d split_axes = {{\[\[}}0], [1]] : !mesh.sharding
   // CHECK-NEXT:  %[[V8:.*]] = mesh.shard %[[V7]] to %[[S8]]  : tensor<8x16xf32>
-  %2 = tosa.negate %0 : (tensor<8x16xf32>) -> tensor<8x16xf32>
+  %2 = tosa.negate %0, %arg1, %arg2 : (tensor<8x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<8x16xf32>
   %s3 = mesh.sharding @mesh_2d split_axes = [[0], [1]] : !mesh.sharding
   %3 = mesh.shard %2 to %s3  : tensor<8x16xf32>
   // CHECK-NEXT: return %[[V6]], %[[V8]]

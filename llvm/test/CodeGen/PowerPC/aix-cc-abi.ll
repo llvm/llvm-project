@@ -1213,14 +1213,14 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
 ; ASM32PWR4-NEXT:    addc 3, 3, 6
 ; ASM32PWR4-NEXT:    addze 6, 7
 ; ASM32PWR4-NEXT:    addc 3, 3, 9
-; ASM32PWR4-NEXT:    lwz 5, 84(1)
+; ASM32PWR4-NEXT:    lwz 7, 84(1)
 ; ASM32PWR4-NEXT:    addze 6, 6
 ; ASM32PWR4-NEXT:    addc 3, 3, 31
-; ASM32PWR4-NEXT:    lwz 7, 80(1)
+; ASM32PWR4-NEXT:    lwz 5, 80(1)
 ; ASM32PWR4-NEXT:    adde 6, 6, 30
-; ASM32PWR4-NEXT:    addc 3, 3, 5
+; ASM32PWR4-NEXT:    addc 3, 3, 7
 ; ASM32PWR4-NEXT:    lbz 8, 91(1)
-; ASM32PWR4-NEXT:    adde 5, 6, 7
+; ASM32PWR4-NEXT:    adde 5, 6, 5
 ; ASM32PWR4-NEXT:    addc 3, 3, 8
 ; ASM32PWR4-NEXT:    lbz 6, 103(1)
 ; ASM32PWR4-NEXT:    addze 5, 5

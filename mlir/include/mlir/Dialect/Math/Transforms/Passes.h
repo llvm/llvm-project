@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_MATH_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_MATH_TRANSFORMS_PASSES_H_
 
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -52,12 +53,14 @@ void populatePolynomialApproximateErfcPattern(RewritePatternSet &patterns);
 // Adds patterns to convert to f32 around math functions for which `predicate`
 // returns true.
 void populateMathF32ExpansionPatterns(
-    RewritePatternSet &patterns, llvm::function_ref<bool(StringRef)> predicate);
+    RewritePatternSet &patterns, llvm::function_ref<bool(StringRef)> predicate,
+    PatternBenefit = 1);
 
 // Adds patterns to enable polynomial approximations for math functions for
 // which `predicate` returns true.
 void populateMathPolynomialApproximationPatterns(
-    RewritePatternSet &patterns, llvm::function_ref<bool(StringRef)> predicate);
+    RewritePatternSet &patterns, llvm::function_ref<bool(StringRef)> predicate,
+    PatternBenefit = 1);
 
 // Legacy. Calls both populateMathF32ExpansionPatterns and
 // populateMathPolynomialApproximationPatterns with predicates enabling a

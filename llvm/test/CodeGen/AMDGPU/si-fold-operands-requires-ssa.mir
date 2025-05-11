@@ -1,0 +1,17 @@
+# REQUIRES: asserts
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-fold-operands -filetype=null %s 2>&1 | FileCheck -check-prefixes=ERR-LEGACY,ERR %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx900 -passes=si-fold-operands -filetype=null %s 2>&1 | FileCheck -check-prefixes=ERR-NPM,ERR %s
+
+# ERR-LEGACY: MachineFunctionProperties required by SI Fold Operands pass are not met by function not_ssa.
+# ERR-NPM: MachineFunctionProperties required by SIFoldOperandsPass pass are not met by function not_ssa.
+# ERR-NEXT: Required properties: IsSSA
+# ERR-NEXT: Current properties: NoPHIs
+---
+name:            not_ssa
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    %0:vgpr_32 = COPY $vgpr0
+    %0:vgpr_32 = COPY $vgpr1
+
+...

@@ -290,6 +290,20 @@ testing::AssertionResult notMatchesWithOpenMP51(const Twine &Code,
 }
 
 template <typename T>
+testing::AssertionResult matchesWithFixedpoint(const std::string &Code,
+                                               const T &AMatcher) {
+  return matchesConditionally(Code, AMatcher, true, {"-ffixed-point"},
+                              FileContentMappings(), "input.c");
+}
+
+template <typename T>
+testing::AssertionResult notMatchesWithFixedpoint(const std::string &Code,
+                                                  const T &AMatcher) {
+  return matchesConditionally(Code, AMatcher, false, {"-ffixed-point"},
+                              FileContentMappings(), "input.c");
+}
+
+template <typename T>
 testing::AssertionResult matchAndVerifyResultConditionally(
     const Twine &Code, const T &AMatcher,
     std::unique_ptr<BoundNodesCallback> FindResultVerifier, bool ExpectResult,
@@ -325,7 +339,7 @@ testing::AssertionResult matchAndVerifyResultConditionally(
   SmallString<256> Buffer;
   std::unique_ptr<ASTUnit> AST(buildASTFromCodeWithArgs(
       Code.toStringRef(Buffer), CompileArgs, Filename));
-  if (!AST.get())
+  if (!AST)
     return testing::AssertionFailure()
            << "Parsing error in \"" << Code << "\" while building AST";
   Finder.matchAST(AST->getASTContext());

@@ -96,10 +96,9 @@ inline llvm::hash_code computeHash(const TestProperties &prop) {
   // We hash `b` which is a float using its underlying array of char:
   unsigned char const *p = reinterpret_cast<unsigned char const *>(&prop.b);
   ArrayRef<unsigned char> bBytes{p, sizeof(prop.b)};
-  return llvm::hash_combine(
-      prop.a, llvm::hash_combine_range(bBytes.begin(), bBytes.end()),
-      llvm::hash_combine_range(prop.array.begin(), prop.array.end()),
-      StringRef(*prop.label));
+  return llvm::hash_combine(prop.a, llvm::hash_combine_range(bBytes),
+                            llvm::hash_combine_range(prop.array),
+                            StringRef(*prop.label));
 }
 
 /// A custom operation for the purpose of showcasing how to use "properties".

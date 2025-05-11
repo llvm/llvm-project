@@ -293,4 +293,4 @@ TypeInfoPointer
 
 ``TypeInfoPointer`` tracks two types: the type assigned to
 ``std::type_info`` and the type which was passed to ``typeinfo``.
-It is part of the taged union in ``Pointer``.
+It is part of the tagged union in ``Pointer``.

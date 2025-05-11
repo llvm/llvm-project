@@ -167,6 +167,14 @@ module m
     !CHECK: error: IBITS() must have POS+LEN (>=33) no greater than 32
     print *, ibits(0, 33, n)
   end
+  subroutine s15
+    use ieee_arithmetic, only: ieee_flag_type, ieee_underflow, ieee_support_flag
+    type(ieee_flag_type) :: f1 = ieee_underflow, f2
+    !CHECK: portability: specification expression refers to local object 'f1' (initialized and saved)
+    integer ok(merge(kind(1),-1,ieee_support_flag(f1, x)))
+    !CHECK: error: Invalid specification expression: reference to local entity 'f2'
+    integer bad(merge(kind(1),-1,ieee_support_flag(f2, x)))
+  end
   subroutine warnings
     use ieee_arithmetic, only: ieee_scalb
     real, parameter :: ok1 = scale(0.0, 99999) ! 0.0

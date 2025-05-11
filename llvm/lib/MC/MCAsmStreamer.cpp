@@ -74,10 +74,11 @@ class MCAsmStreamer final : public MCStreamer {
 
 public:
   MCAsmStreamer(MCContext &Context, std::unique_ptr<formatted_raw_ostream> os,
-                MCInstPrinter *printer, std::unique_ptr<MCCodeEmitter> emitter,
+                std::unique_ptr<MCInstPrinter> printer,
+                std::unique_ptr<MCCodeEmitter> emitter,
                 std::unique_ptr<MCAsmBackend> asmbackend)
       : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
-        MAI(Context.getAsmInfo()), InstPrinter(printer),
+        MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
         Assembler(std::make_unique<MCAssembler>(
             Context, std::move(asmbackend), std::move(emitter),
             (asmbackend) ? asmbackend->createObjectWriter(NullStream)
@@ -294,8 +295,8 @@ public:
                                unsigned CUID = 0) override;
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,
                              unsigned Flags, unsigned Isa,
-                             unsigned Discriminator,
-                             StringRef FileName) override;
+                             unsigned Discriminator, StringRef FileName,
+                             StringRef Location = {}) override;
   virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
 
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
@@ -390,6 +391,8 @@ public:
   void emitWinCFIEndProlog(SMLoc Loc) override;
   void emitWinCFIBeginEpilogue(SMLoc Loc) override;
   void emitWinCFIEndEpilogue(SMLoc Loc) override;
+  void emitWinCFIUnwindV2Start(SMLoc Loc) override;
+  void emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) override;
 
   void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                         SMLoc Loc) override;
@@ -1688,7 +1691,8 @@ void MCAsmStreamer::emitDwarfFile0Directive(
 void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                           unsigned Column, unsigned Flags,
                                           unsigned Isa, unsigned Discriminator,
-                                          StringRef FileName) {
+                                          StringRef FileName,
+                                          StringRef Comment) {
   // If target doesn't support .loc/.file directive, we need to record the lines
   // same way like we do in object mode.
   if (MAI->isAIX()) {
@@ -1696,7 +1700,7 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
     // first one gets a line entry.
     MCDwarfLineEntry::make(this, getCurrentSectionOnly());
     this->MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,
-                                            Discriminator, FileName);
+                                            Discriminator, FileName, Comment);
     return;
   }
 
@@ -1727,12 +1731,15 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
 
   if (IsVerboseAsm) {
     OS.PadToColumn(MAI->getCommentColumn());
-    OS << MAI->getCommentString() << ' ' << FileName << ':'
-       << Line << ':' << Column;
+    OS << MAI->getCommentString() << ' ';
+    if (Comment.empty())
+      OS << FileName << ':' << Line << ':' << Column;
+    else
+      OS << Comment;
   }
   EmitEOL();
   this->MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,
-                                          Discriminator, FileName);
+                                          Discriminator, FileName, Comment);
 }
 
 void MCAsmStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
@@ -2300,6 +2307,20 @@ void MCAsmStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
   EmitEOL();
 }
 
+void MCAsmStreamer::emitWinCFIUnwindV2Start(SMLoc Loc) {
+  MCStreamer::emitWinCFIUnwindV2Start(Loc);
+
+  OS << "\t.seh_unwindv2start";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) {
+  MCStreamer::emitWinCFIUnwindVersion(Version, Loc);
+
+  OS << "\t.seh_unwindversion " << (unsigned)Version;
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
                                        const MCSymbolRefExpr *To,
                                        uint64_t Count) {
@@ -2333,7 +2354,7 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
   for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
     MCFixup &F = Fixups[i];
-    const MCFixupKindInfo &Info =
+    MCFixupKindInfo Info =
         getAssembler().getBackend().getFixupKindInfo(F.getKind());
     for (unsigned j = 0; j != Info.TargetSize; ++j) {
       unsigned Index = F.getOffset() * 8 + Info.TargetOffset + j;
@@ -2394,12 +2415,16 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
   for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
     MCFixup &F = Fixups[i];
-    const MCFixupKindInfo &Info =
-        getAssembler().getBackend().getFixupKindInfo(F.getKind());
     OS << "  fixup " << char('A' + i) << " - "
        << "offset: " << F.getOffset() << ", value: ";
     F.getValue()->print(OS, MAI);
-    OS << ", kind: " << Info.Name << "\n";
+    auto Kind = F.getKind();
+    if (mc::isRelocation(Kind))
+      OS << ", relocation type: " << Kind;
+    else
+      OS << ", kind: "
+         << getAssembler().getBackend().getFixupKindInfo(Kind).Name;
+    OS << '\n';
   }
 }
 
@@ -2645,9 +2670,9 @@ void MCAsmStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
 
 MCStreamer *llvm::createAsmStreamer(MCContext &Context,
                                     std::unique_ptr<formatted_raw_ostream> OS,
-                                    MCInstPrinter *IP,
-                                    std::unique_ptr<MCCodeEmitter> &&CE,
-                                    std::unique_ptr<MCAsmBackend> &&MAB) {
-  return new MCAsmStreamer(Context, std::move(OS), IP, std::move(CE),
+                                    std::unique_ptr<MCInstPrinter> IP,
+                                    std::unique_ptr<MCCodeEmitter> CE,
+                                    std::unique_ptr<MCAsmBackend> MAB) {
+  return new MCAsmStreamer(Context, std::move(OS), std::move(IP), std::move(CE),
                            std::move(MAB));
 }

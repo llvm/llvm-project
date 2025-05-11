@@ -92,7 +92,8 @@ updateFuncOp(func::FuncOp func,
   }
 
   // Erase the results.
-  func.eraseResults(erasedResultIndices);
+  if (failed(func.eraseResults(erasedResultIndices)))
+    return failure();
 
   // Add the new arguments to the entry block if the function is not external.
   if (func.isExternal())

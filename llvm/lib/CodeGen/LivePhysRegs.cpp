@@ -338,3 +338,27 @@ void llvm::computeAndAddLiveIns(LivePhysRegs &LiveRegs,
   computeLiveIns(LiveRegs, MBB);
   addLiveIns(MBB, LiveRegs);
 }
+
+// Returns true if `Reg` is used after this iterator in the rest of the
+// basic block or any successors of the basic block.
+bool llvm::isPhysRegUsedAfter(Register Reg, MachineBasicBlock::iterator MBI) {
+  assert(Reg.isPhysical() && "Apply to physical register only");
+
+  MachineBasicBlock *MBB = MBI->getParent();
+  // Scan forward through BB for a use/def of Reg
+  for (const MachineInstr &MI : llvm::make_range(std::next(MBI), MBB->end())) {
+    if (MI.readsRegister(Reg, /*TRI=*/nullptr))
+      return true;
+    // If we found a def, we can stop searching.
+    if (MI.definesRegister(Reg, /*TRI=*/nullptr))
+      return false;
+  }
+
+  // If we hit the end of the block, check whether Reg is live into a
+  //  successor.
+  for (MachineBasicBlock *Succ : MBB->successors())
+    if (Succ->isLiveIn(Reg))
+      return true;
+
+  return false;
+}

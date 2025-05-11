@@ -1947,7 +1947,10 @@ bool MipsFastISel::selectDivRem(const Instruction *I, unsigned ISDOpcode) {
     return false;
 
   emitInst(DivOpc).addReg(Src0Reg).addReg(Src1Reg);
-  emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
+  if (!isa<ConstantInt>(I->getOperand(1)) ||
+      dyn_cast<ConstantInt>(I->getOperand(1))->isZero()) {
+    emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
+  }
 
   Register ResultReg = createResultReg(&Mips::GPR32RegClass);
   if (!ResultReg)

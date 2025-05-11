@@ -180,10 +180,10 @@ void VariablesRequestHandler::operator()(
           return_var_ref = dap.variables.InsertVariable(stop_return_value,
                                                         /*is_permanent=*/false);
         }
-        variables.emplace_back(
-            CreateVariable(renamed_return_value, return_var_ref, hex,
-                           dap.enable_auto_variable_summaries,
-                           dap.enable_synthetic_child_debugging, false));
+        variables.emplace_back(CreateVariable(
+            renamed_return_value, return_var_ref, hex,
+            dap.configuration.enableAutoVariableSummaries,
+            dap.configuration.enableSyntheticChildDebugging, false));
       }
     }
 
@@ -197,8 +197,8 @@ void VariablesRequestHandler::operator()(
       int64_t var_ref =
           dap.variables.InsertVariable(variable, /*is_permanent=*/false);
       variables.emplace_back(CreateVariable(
-          variable, var_ref, hex, dap.enable_auto_variable_summaries,
-          dap.enable_synthetic_child_debugging,
+          variable, var_ref, hex, dap.configuration.enableAutoVariableSummaries,
+          dap.configuration.enableSyntheticChildDebugging,
           variable_name_counts[GetNonNullVariableName(variable)] > 1));
     }
   } else {
@@ -214,8 +214,8 @@ void VariablesRequestHandler::operator()(
             dap.variables.IsPermanentVariableReference(variablesReference);
         int64_t var_ref = dap.variables.InsertVariable(child, is_permanent);
         variables.emplace_back(CreateVariable(
-            child, var_ref, hex, dap.enable_auto_variable_summaries,
-            dap.enable_synthetic_child_debugging,
+            child, var_ref, hex, dap.configuration.enableAutoVariableSummaries,
+            dap.configuration.enableSyntheticChildDebugging,
             /*is_name_duplicated=*/false, custom_name));
       };
       const int64_t num_children = variable.GetNumChildren();
@@ -228,8 +228,8 @@ void VariablesRequestHandler::operator()(
       // "[raw]" child that can be used to inspect the raw version of a
       // synthetic member. That eliminates the need for the user to go to the
       // debug console and type `frame var <variable> to get these values.
-      if (dap.enable_synthetic_child_debugging && variable.IsSynthetic() &&
-          i == num_children)
+      if (dap.configuration.enableSyntheticChildDebugging &&
+          variable.IsSynthetic() && i == num_children)
         addChild(variable.GetNonSyntheticValue(), "[raw]");
     }
   }

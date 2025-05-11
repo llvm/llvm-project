@@ -181,6 +181,7 @@ public:
   MPFRNumber abs() const;
   MPFRNumber acos() const;
   MPFRNumber acosh() const;
+  MPFRNumber acospi() const;
   MPFRNumber add(const MPFRNumber &b) const;
   MPFRNumber asin() const;
   MPFRNumber asinh() const;

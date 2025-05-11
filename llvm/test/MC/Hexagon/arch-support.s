@@ -11,6 +11,9 @@
 # RUN: llvm-mc -triple=hexagon -mv75 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V75 %s
 # RUN: llvm-mc -triple=hexagon -mv79 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V79 %s
 
+## Check which arch version llvm-mc sets when the user does not provide one.
+# RUN: llvm-mc -triple=hexagon -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-DEFAULT %s
+
 # RUN: llvm-mc -triple=hexagon -mv5 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
 # RUN: llvm-mc -triple=hexagon -mv55 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
 # RUN: llvm-mc -triple=hexagon -mv60 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
@@ -38,5 +41,6 @@ r1 = r1
 # CHECK-V73: Flags:{{.*}}0x73
 # CHECK-V75: Flags:{{.*}}0x75
 # CHECK-V79: Flags:{{.*}}0x79
+# CHECK-DEFAULT: Flags:{{.*}}0x68
 
 # CHECK-OBJDUMP: { r1 = r1 }

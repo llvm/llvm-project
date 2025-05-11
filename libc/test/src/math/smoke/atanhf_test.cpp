@@ -21,7 +21,8 @@ using LlvmLibcAtanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
-
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::atanhf(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
   // TODO: Strengthen errno,exception checks and remove these assert macros
   // after new matchers/test fixtures are added, see:
   // https://github.com/llvm/llvm-project/issues/90653

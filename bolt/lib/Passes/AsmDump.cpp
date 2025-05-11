@@ -134,16 +134,17 @@ void dumpFunction(const BinaryFunction &BF) {
   std::unique_ptr<MCAsmBackend> MAB(
       BC.TheTarget->createMCAsmBackend(*BC.STI, *BC.MRI, MCTargetOptions()));
   int AsmPrinterVariant = BC.AsmInfo->getAssemblerDialect();
-  MCInstPrinter *InstructionPrinter(BC.TheTarget->createMCInstPrinter(
-      *BC.TheTriple, AsmPrinterVariant, *BC.AsmInfo, *BC.MII, *BC.MRI));
+  std::unique_ptr<MCInstPrinter> InstructionPrinter(
+      BC.TheTarget->createMCInstPrinter(*BC.TheTriple, AsmPrinterVariant,
+                                        *BC.AsmInfo, *BC.MII, *BC.MRI));
   auto FOut = std::make_unique<formatted_raw_ostream>(OS);
   FOut->SetUnbuffered();
-  std::unique_ptr<MCStreamer> AsmStreamer(
-      createAsmStreamer(*LocalCtx, std::move(FOut), InstructionPrinter,
-                        std::move(MCEInstance.MCE), std::move(MAB)));
+  std::unique_ptr<MCStreamer> AsmStreamer(createAsmStreamer(
+      *LocalCtx, std::move(FOut), std::move(InstructionPrinter),
+      std::move(MCEInstance.MCE), std::move(MAB)));
   AsmStreamer->initSections(true, *BC.STI);
   std::unique_ptr<TargetMachine> TM(BC.TheTarget->createTargetMachine(
-      BC.TripleName, "", "", TargetOptions(), std::nullopt));
+      *BC.TheTriple, "", "", TargetOptions(), std::nullopt));
   std::unique_ptr<AsmPrinter> MAP(
       BC.TheTarget->createAsmPrinter(*TM, std::move(AsmStreamer)));
 
@@ -174,7 +175,7 @@ void dumpFunction(const BinaryFunction &BF) {
       // Dump pseudo instructions (CFI)
       if (BC.MIB->isPseudo(Instr)) {
         if (BC.MIB->isCFI(Instr))
-          dumpCFI(BF, Instr, *MAP.get());
+          dumpCFI(BF, Instr, *MAP);
         continue;
       }
 
@@ -226,7 +227,7 @@ void dumpFunction(const BinaryFunction &BF) {
   OS << "# Jump tables\n";
   // Print all jump tables.
   for (auto &JTI : BF.jumpTables())
-    dumpJumpTableSymbols(OS, JTI.second, *MAP.get(), LastSection);
+    dumpJumpTableSymbols(OS, JTI.second, *MAP, LastSection);
 
   OS << "# BinaryData\n";
   // Print data references.

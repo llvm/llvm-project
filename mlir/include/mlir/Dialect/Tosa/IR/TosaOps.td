@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the operation set for the TOSA dialect as defined in
-// the TOSA specfication (https://developer.mlplatform.org/w/tosa/).
+// the TOSA specfication (https://www.mlplatform.org/tosa/tosa_spec.html).
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,7 +25,7 @@ include "mlir/Dialect/Tosa/IR/TosaTypesBase.td"
 include "mlir/Dialect/Tosa/IR/TosaOpBase.td"
 
 //===----------------------------------------------------------------------===//
-// Operator Class: Tensor Data Engine Operators.
+// Operator Class: Tensor Operators.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -41,7 +41,7 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor: $input,
+    Tosa_TensorAtLeast1D: $input,
     I32Attr: $axis,
     DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
@@ -107,6 +107,7 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
     LogicalResult verifyOutputZeroPoint(int64_t zp);
   }];
 
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
@@ -114,7 +115,7 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
 // Operator: conv2d
 //===----------------------------------------------------------------------===//
 def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
-  let summary = "2D Convolution Operator";
+  let summary = "2D Convolution operator.";
 
   let description = [{
     Performs a 2D convolution over the given tensor input, using the weight
@@ -124,7 +125,7 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
 
   let arguments = (ins
     Tosa_Tensor4D:$input,
-    TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
+    Tosa_Tensor4D:$weight,
     Tosa_Tensor1D:$bias,
     Tosa_ScalarIntOrFloatTensor:$input_zp,
     Tosa_ScalarIntOrFloatTensor:$weight_zp,
@@ -153,6 +154,8 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
   }];
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
+
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
@@ -160,7 +163,7 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
 // Operator: conv3d
 //===----------------------------------------------------------------------===//
 def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
-  let summary = "3D Convolution operator";
+  let summary = "3D Convolution operator.";
 
   let description = [{
     Performs a 3D convolution over the given input tensor. Implementations
@@ -169,7 +172,7 @@ def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
 
   let arguments = (ins
     Tosa_Tensor5D:$input,
-    TosaTensorRankOf<[Tosa_Weight], [5]>:$weight,
+    Tosa_Tensor5D:$weight,
     Tosa_Tensor1D:$bias,
     Tosa_ScalarIntOrFloatTensor:$input_zp,
     Tosa_ScalarIntOrFloatTensor:$weight_zp,
@@ -205,7 +208,7 @@ def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
 // Operator: depthwise_conv2d
 //===----------------------------------------------------------------------===//
 def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
-  let summary = "Depthwise 2D Convolution operator";
+  let summary = "Depthwise 2D Convolution operator.";
 
   let description = [{
     Performs 2D convolutions separately over each channel of the given tensor
@@ -215,7 +218,7 @@ def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
 
   let arguments = (ins
     Tosa_Tensor4D:$input,
-    TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
+    Tosa_Tensor4D:$weight,
     Tosa_Tensor1D:$bias,
     Tosa_ScalarIntOrFloatTensor:$input_zp,
     Tosa_ScalarIntOrFloatTensor:$weight_zp,
@@ -244,6 +247,8 @@ def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
   }];
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
+
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
@@ -266,7 +271,7 @@ def Tosa_FFT2dOp : Tosa_InferShapedTypeOp<"fft2d", [
     Example:
 
     ```mlir
-     %out_real, %out_imag = tosa.fft2d %in_real, %in_imag : (tensor<8x9xf32>, tensor<8x9xf32>) -> (tensor<8x9xf32>, tensor<8x9xf32>)
+     %output_real, %output_imag = tosa.fft2d %input_real, %input_imag : (tensor<8x9xf32>, tensor<8x9xf32>) -> (tensor<8x9xf32>, tensor<8x9xf32>)
     ```
   }];
 
@@ -300,12 +305,10 @@ def Tosa_FFT2dOp : Tosa_InferShapedTypeOp<"fft2d", [
 // Operator: matmul
 //===----------------------------------------------------------------------===//
 def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
-  let summary = "Matrix multiplication with bias";
+  let summary = "Matrix multiplication operator.";
 
   let description = [{
-    Performs a two dimensional matrix multiplication. This allows both inputs to
-    be activations, rather than reserving weights as an attribute in the
-    FULLY_CONNECTED operator.
+    Performs two dimensional matrix multiplications.
   }];
 
   let arguments = (ins
@@ -391,12 +394,12 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
     Example:
 
     ```mlir
-     %real, %imag = tosa.rfft2d %in : (tensor<8x16xf32>) -> (tensor<8x9xf32>, tensor<8x9xf32>)
+     %ouput_real, %output_imag = tosa.rfft2d %input_real : (tensor<8x16xf32>) -> (tensor<8x9xf32>, tensor<8x9xf32>)
     ```
   }];
 
   let arguments = (ins
-    Tosa_Tensor3D:$input,
+    Tosa_Tensor3D:$input_real,
     DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
@@ -411,7 +414,7 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
   ];
 
   let assemblyFormat = [{
-    $input attr-dict `:` `(` type($input) `)` `->` `(` type($output_real) `,` type($output_imag) `)`
+    $input_real attr-dict `:` `(` type($input_real) `)` `->` `(` type($output_real) `,` type($output_imag) `)`
   }];
 
   let hasVerifier = 1;
@@ -431,7 +434,7 @@ def Tosa_TransposeConv2DOp : Tosa_ConvOp<"transpose_conv2d"> {
 
   let arguments = (ins
     Tosa_Tensor4D:$input,
-    TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
+    Tosa_Tensor4D:$weight,
     Tosa_Tensor1D:$bias,
     Tosa_ScalarIntOrFloatTensor:$input_zp,
     Tosa_ScalarIntOrFloatTensor:$weight_zp,
@@ -501,73 +504,10 @@ def Tosa_ClampOp : Tosa_ElementwiseUnaryOp<"clamp"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Operator: sigmoid
-//===----------------------------------------------------------------------===//
-def Tosa_SigmoidOp : Tosa_ElementwiseUnaryOp<"sigmoid"> {
-  let summary = "Computes elementwise sigmoid of input.";
-
-  let description = [{
-    Applies the sigmoid logistic function to each element of the input tensor:
-    $ sigmoid(x) = \frac{1}{1 + e^{-x}} $.
-
-    For quantized integer data types, the TABLE operator should be used instead.
-    Each implementation may choose an appropriate TABLE given the scale and zero
-    point of the input data. Eight or sixteen bit precision tables may be used
-    based on the input tensor to the sigmoid function. The sigmoid table has 513
-    entries each of 16-bit precision and covering the input range -16.0 to +16.0
-    in steps of 1/16.
-  }];
-
-  let arguments = (ins
-    Tosa_Tensor:$input
-  );
-
-  let results = (outs
-    Tosa_Tensor:$output
-  );
-
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
-  ];
-}
-
-//===----------------------------------------------------------------------===//
-// Operator: tanh
-//===----------------------------------------------------------------------===//
-def Tosa_TanhOp : Tosa_ElementwiseUnaryOp<"tanh"> {
-  let summary = "Computes elementwise hyperbolic tangent of input";
-
-  let description = [{
-    Parameterized hyperbolic tangent: $ tanh(x) = \frac{1 - e^{-2x}}{1 + e^{-2x}} $.
-
-    For quantized integer data types, the TABLE operator should be used instead.
-    Each implementation may choose an appropriate TABLE given the scale and zero
-    point of the input data. Eight or sixteen bit precision tables may be used
-    based on the input tensor to the tanh function. The tanh_table has 513
-    entries each of 16-bit precision and covering the input range -8.0 to +8.0
-    in steps of 1/32.
-  }];
-
-  let arguments = (ins
-    Tosa_Tensor:$input
-  );
-
-  let results = (outs
-    Tosa_Tensor:$output
-  );
-
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
-  ];
-}
-
-//===----------------------------------------------------------------------===//
 // Operator: erf
 //===----------------------------------------------------------------------===//
 def Tosa_ErfOp : Tosa_ElementwiseUnaryOp<"erf"> {
-  let summary = "Computes gauss error function of input";
+  let summary = "Computes gauss error function of input.";
 
   let description = [{
     Gauss error function: $ erf(x) = \frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^2} dt $
@@ -593,8 +533,66 @@ def Tosa_ErfOp : Tosa_ElementwiseUnaryOp<"erf"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Operator Class: Elementwise unary/binary/ternary operators.
-// Operator Subclass: Elementwise binary ops.
+// Operator: sigmoid
+//===----------------------------------------------------------------------===//
+def Tosa_SigmoidOp : Tosa_ElementwiseUnaryOp<"sigmoid"> {
+  let summary = "Computes elementwise sigmoid of input.";
+
+  let description = [{
+    Applies the sigmoid logistic function to each element of the input tensor:
+    $ sigmoid(x) = \frac{1}{1 + e^{-x}} $.
+
+    For quantized integer data types, the TABLE operator should be used instead.
+    Each implementation may choose an appropriate TABLE given the scale and zero
+    point of the input data. Eight or sixteen bit precision tables may be used
+    based on the input tensor to the sigmoid function.
+  }];
+
+  let arguments = (ins
+    Tosa_Tensor:$input
+  );
+
+  let results = (outs
+    Tosa_Tensor:$output
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_BF16]>,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: tanh
+//===----------------------------------------------------------------------===//
+def Tosa_TanhOp : Tosa_ElementwiseUnaryOp<"tanh"> {
+  let summary = "Computes elementwise hyperbolic tangent of input.";
+
+  let description = [{
+    Parameterized hyperbolic tangent: $ tanh(x) = \frac{1 - e^{-2x}}{1 + e^{-2x}} $.
+
+    For quantized integer data types, the TABLE operator should be used instead.
+    Each implementation may choose an appropriate TABLE given the scale and zero
+    point of the input data. Eight or sixteen bit precision tables may be used
+    based on the input tensor to the tanh function.
+  }];
+
+  let arguments = (ins
+    Tosa_Tensor:$input
+  );
+
+  let results = (outs
+    Tosa_Tensor:$output
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_BF16]>,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// Operator Class: Elementwise Binary Operators.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -603,7 +601,7 @@ def Tosa_ErfOp : Tosa_ElementwiseUnaryOp<"erf"> {
 def Tosa_AddOp : Tosa_ElementwiseOp<"add", [
     Commutative,
     SameOperandsAndResultElementType]> {
-  let summary = "Elementwise addition operator";
+  let summary = "Elementwise addition operator.";
 
   let description = [{
     Elementwise addition of input1 and input2. Axis of size 1 will be broadcast,
@@ -613,10 +611,10 @@ def Tosa_AddOp : Tosa_ElementwiseOp<"add", [
 
     ```mlir
     // Elementwise addition.
-    %out = tosa.add %in1, %in2 : tensor<12x6xf32>, tensor<12x6xf32> -> tensor<12x6xf32>
+    %out = tosa.add %input1, %input2 : tensor<12x6xf32>, tensor<12x6xf32> -> tensor<12x6xf32>
 
     // Elementwise addition with broadcasting.
-    %out = tosa.add %in1, %in2 : tensor<12x6xsi32>, tensor<1x1xsi32> -> tensor<12x6xsi32>
+    %out = tosa.add %input1, %input2 : tensor<12x6xsi32>, tensor<1x1xsi32> -> tensor<12x6xsi32>
     ```
   }];
 
@@ -642,7 +640,7 @@ def Tosa_AddOp : Tosa_ElementwiseOp<"add", [
 //===----------------------------------------------------------------------===//
 def Tosa_ArithmeticRightShiftOp : Tosa_ElementwiseOp<"arithmetic_right_shift",
     [SameOperandsAndResultElementType]> {
-  let summary = "Elementwise Arithmetic Right Shift";
+  let summary = "Elementwise Arithmetic Right Shift.";
 
   let description = [{
     Elementwise arithmetic right shift of input1 by the amount specified in
@@ -672,7 +670,7 @@ def Tosa_ArithmeticRightShiftOp : Tosa_ElementwiseOp<"arithmetic_right_shift",
 def Tosa_BitwiseAndOp : Tosa_ElementwiseOp<"bitwise_and", [
     Commutative,
     SameOperandsAndResultElementType]> {
-  let summary = "Bitwise AND operator";
+  let summary = "Bitwise AND operator.";
 
   let description = [{
     Elementwise bitwise AND of input1 and input2. Axis of size 1
@@ -700,7 +698,7 @@ def Tosa_BitwiseAndOp : Tosa_ElementwiseOp<"bitwise_and", [
 def Tosa_BitwiseOrOp : Tosa_ElementwiseOp<"bitwise_or", [
     Commutative,
     SameOperandsAndResultElementType]> {
-  let summary = "Bitwise OR operator";
+  let summary = "Bitwise OR operator.";
 
   let description = [{
     Elementwise bitwise OR of input1 and input2. Axis of size 1 will be
@@ -728,7 +726,7 @@ def Tosa_BitwiseOrOp : Tosa_ElementwiseOp<"bitwise_or", [
 def Tosa_BitwiseXorOp : Tosa_ElementwiseOp<"bitwise_xor", [
     Commutative,
     SameOperandsAndResultElementType]> {
-  let summary = "Bitwise XOR operator";
+  let summary = "Bitwise XOR operator.";
 
   let description = [{
     Elementwise bitwise XOR of input1 and input2. Axis of size 1 will be
@@ -751,16 +749,17 @@ def Tosa_BitwiseXorOp : Tosa_ElementwiseOp<"bitwise_xor", [
 }
 
 //===----------------------------------------------------------------------===//
-// Operator: int_div
+// Operator: intdiv
 //===----------------------------------------------------------------------===//
-def Tosa_IntDivOp : Tosa_ElementwiseOp<"int_div", [SameOperandsAndResultElementType]> {
-  let summary = "Integer divide operator";
+def Tosa_IntDivOp : Tosa_ElementwiseOp<"intdiv", [SameOperandsAndResultElementType]> {
+  let summary = "Integer divide operator.";
 
   let description = [{
-    Elementwise integer divide operator of input1 by input2. The result of the divide
-    is truncated towards zero. Expected use is for operations on non-scaled integers.
-    Floating point divide should use RECIPROCAL and MUL. Quantized integer divide
-    should use TABLE (for 1/x) and MUL.
+    Elementwise integer divide of input1 by input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match. The result of the
+    divide is truncated towards zero. Expected use is for operations on
+    non-scaled integers. Floating point divide should use RECIPROCAL and MUL.
+    Quantized integer divide should use TABLE (for 1/x) and MUL.
   }];
 
   let arguments = (ins
@@ -786,7 +785,7 @@ def Tosa_IntDivOp : Tosa_ElementwiseOp<"int_div", [SameOperandsAndResultElementT
 def Tosa_LogicalAndOp : Tosa_ElementwiseOp<"logical_and", [
     Commutative,
     SameOperandsAndResultElementType]> {
-  let summary = "Returns the truth value of x AND y element-wise.";
+  let summary = "Returns the truth value of input1 AND input2 element-wise.";
 
   let description = [{
     Elementwise logical AND of input1 and input2. Axis of size 1 will be
@@ -799,11 +798,11 @@ def Tosa_LogicalAndOp : Tosa_ElementwiseOp<"logical_and", [
   );
 
   let results = (outs
-    Tosa_I1Tensor:$z
+    Tosa_I1Tensor:$output
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -813,11 +812,12 @@ def Tosa_LogicalAndOp : Tosa_ElementwiseOp<"logical_and", [
 //===----------------------------------------------------------------------===//
 def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift",
     [SameOperandsAndResultElementType]> {
-  let summary = "Elementwise Logical Left Shift";
+  let summary = "Elementwise Logical Left Shift.";
 
   let description = [{
-    Elementwise left shift of input1 and input2. Axis of size 1 will be
-    broadcast, as necessary. Rank of input tensors must match.
+    Elementwise logical left-shift of input1 by the amount specified in input2.
+    Axis of size 1 will be broadcast, as necessary.
+    Rank of input tensors must match.
   }];
 
   let arguments = (ins
@@ -830,7 +830,7 @@ def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift",
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -840,7 +840,7 @@ def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift",
 //===----------------------------------------------------------------------===//
 def Tosa_LogicalRightShiftOp : Tosa_ElementwiseOp<"logical_right_shift",
     [SameOperandsAndResultElementType]> {
-  let summary = "Elementwise Logical Right Shift";
+  let summary = "Elementwise Logical Right Shift.";
 
   let description = [{
     Elementwise logical right shift of input1 by the amount specified in input2.
@@ -858,7 +858,7 @@ def Tosa_LogicalRightShiftOp : Tosa_ElementwiseOp<"logical_right_shift",
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -882,11 +882,11 @@ def Tosa_LogicalOrOp : Tosa_ElementwiseOp<"logical_or", [
   );
 
   let results = (outs
-    Tosa_I1Tensor:$z
+    Tosa_I1Tensor:$output
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -897,7 +897,7 @@ def Tosa_LogicalOrOp : Tosa_ElementwiseOp<"logical_or", [
 def Tosa_LogicalXorOp : Tosa_ElementwiseOp<"logical_xor", [
     Commutative,
     SameOperandsAndResultElementType]> {
-  let summary = "Returns the truth value of x XOR y element-wise.";
+  let summary = "Returns the truth value of input1 XOR input2 element-wise.";
 
   let description = [{
     Elementwise logical XOR of input1 and input2. Axis of size 1 will be
@@ -910,11 +910,11 @@ def Tosa_LogicalXorOp : Tosa_ElementwiseOp<"logical_xor", [
   );
 
   let results = (outs
-    Tosa_I1Tensor:$z
+    Tosa_I1Tensor:$output
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -925,7 +925,7 @@ def Tosa_LogicalXorOp : Tosa_ElementwiseOp<"logical_xor", [
 def Tosa_MaximumOp : Tosa_ElementwiseOp<"maximum", [
     Commutative,
     SameOperandsAndResultElementType]> {
-  let summary = "Elementwise Maximum";
+  let summary = "Elementwise Maximum.";
 
   let description = [{
     Elementwise max of input1 and input2. Axis of size 1 will be broadcast, as
@@ -954,7 +954,7 @@ def Tosa_MaximumOp : Tosa_ElementwiseOp<"maximum", [
 def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
     Commutative,
     SameOperandsAndResultElementType]> {
-  let summary = "Elementwise Minimum";
+  let summary = "Elementwise Minimum.";
 
   let description = [{
     Elementwise minimum of input1 and input2. Axis of size 1
@@ -977,11 +977,6 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
   ];
 }
 
-def MulOperandsAndResultElementType :
-  NativeOpTrait<"MulOperandsAndResultElementType"> {
-  let cppNamespace = "mlir::OpTrait::tosa";
-}
-
 //===----------------------------------------------------------------------===//
 // Operator: mul
 //===----------------------------------------------------------------------===//
@@ -990,7 +985,7 @@ def Tosa_MulOp : Tosa_Op<"mul", [
                               ["inferReturnTypeComponents"]>,
     Commutative,
     Pure]> {
-  let summary = "Multiplication operator";
+  let summary = "Multiplication operator.";
 
   let description = [{
     Elementwise multiplication (Hadamard product) of input1 and input2.
@@ -1028,7 +1023,7 @@ def Tosa_PowOp : Tosa_ElementwiseOp<"pow", [SameOperandsAndResultElementType]> {
   let summary = "Computes the power of one value to another.";
 
   let description = [{
-    Elementwise input1 raised to the power of input2.
+    Elementwise input1 value raised to the power of input2.
     Axis of size 1 will be broadcast, as necessary. Rank of input tensors must
     match.
   }];
@@ -1052,7 +1047,7 @@ def Tosa_PowOp : Tosa_ElementwiseOp<"pow", [SameOperandsAndResultElementType]> {
 // Operator: sub
 //===----------------------------------------------------------------------===//
 def Tosa_SubOp : Tosa_ElementwiseOp<"sub", [SameOperandsAndResultElementType]> {
-  let summary = "Elementwise subtraction operator";
+  let summary = "Elementwise subtraction operator.";
 
   let description = [{
     Elementwise subtraction of input1 and input2. Axis of size 1 will be
@@ -1080,7 +1075,7 @@ def Tosa_SubOp : Tosa_ElementwiseOp<"sub", [SameOperandsAndResultElementType]> {
 // Operator: table
 //===----------------------------------------------------------------------===//
 def Tosa_TableOp : Tosa_InferShapedTypeOp<"table"> {
-  let summary = "Table lookup op";
+  let summary = "Table lookup operator.";
 
   let description = [{
     Table lookup operation. For int8_t TABLE operation, perform a 256 entry
@@ -1110,7 +1105,7 @@ def Tosa_TableOp : Tosa_InferShapedTypeOp<"table"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_INT16]>,
   ];
 
   let assemblyFormat = [{
@@ -1121,15 +1116,14 @@ def Tosa_TableOp : Tosa_InferShapedTypeOp<"table"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Operator Class: Elementwise unary/binary/ternary operators.
-// Operator Subclass: Elementwise unary ops.
+// Operator Class: Elementwise Unary Operators.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
 // Operator: abs
 //===----------------------------------------------------------------------===//
 def Tosa_AbsOp : Tosa_ElementwiseUnaryOp<"abs"> {
-  let summary = "Elementwise abs op";
+  let summary = "Elementwise abs operator.";
 
   let description = [{
     Elementwise absolute value operation.
@@ -1137,7 +1131,7 @@ def Tosa_AbsOp : Tosa_ElementwiseUnaryOp<"abs"> {
     Example:
 
     ```mlir
-    %out = tosa.abs(%in) : (tensor<21x3xf32>) -> tensor<21x3xf32>
+    %output = tosa.abs(%input1) : (tensor<21x3xf32>) -> tensor<21x3xf32>
     ```
   }];
 
@@ -1161,7 +1155,7 @@ def Tosa_AbsOp : Tosa_ElementwiseUnaryOp<"abs"> {
 // Operator: bitwise_not
 //===----------------------------------------------------------------------===//
 def Tosa_BitwiseNotOp : Tosa_ElementwiseUnaryOp<"bitwise_not"> {
-  let summary = "Bitwise NOT operator";
+  let summary = "Bitwise NOT operator.";
 
   let description = [{
     Elementwise bitwise NOT of input tensor.
@@ -1185,10 +1179,10 @@ def Tosa_BitwiseNotOp : Tosa_ElementwiseUnaryOp<"bitwise_not"> {
 // Operator: ceil
 //===----------------------------------------------------------------------===//
 def Tosa_CeilOp : Tosa_ElementwiseUnaryOp<"ceil"> {
-  let summary = "Elementwise ceil op";
+  let summary = "Elementwise ceil operator.";
 
   let description = [{
-    Elementwise ceiling operation
+    Elementwise ceiling operation.
   }];
 
   let arguments = (ins
@@ -1209,10 +1203,10 @@ def Tosa_CeilOp : Tosa_ElementwiseUnaryOp<"ceil"> {
 // Operator: clz
 //===----------------------------------------------------------------------===//
 def Tosa_ClzOp : Tosa_ElementwiseUnaryOp<"clz"> {
-  let summary = "Elementwise count leading zero op";
+  let summary = "Elementwise count leading zero operator.";
 
   let description = [{
-    Elementwise count leading zeros operation
+    Elementwise count leading zeros operation.
   }];
 
   let arguments = (ins
@@ -1233,7 +1227,7 @@ def Tosa_ClzOp : Tosa_ElementwiseUnaryOp<"clz"> {
 // Operator: cos
 //===----------------------------------------------------------------------===//
 def Tosa_CosOp : Tosa_ElementwiseUnaryOp<"cos"> {
-  let summary = "Elementwise cos op";
+  let summary = "Elementwise cos operator.";
 
   let description = [{
     Elementwise cosine operation for values given in radians.
@@ -1257,7 +1251,7 @@ def Tosa_CosOp : Tosa_ElementwiseUnaryOp<"cos"> {
 // Operator: exp
 //===----------------------------------------------------------------------===//
 def Tosa_ExpOp : Tosa_ElementwiseUnaryOp<"exp"> {
-  let summary = "Elementwise exp op";
+  let summary = "Elementwise exp operator.";
 
   let description = [{
     Elementwise e to the x operation
@@ -1283,7 +1277,7 @@ def Tosa_ExpOp : Tosa_ElementwiseUnaryOp<"exp"> {
 // Operator: floor
 //===----------------------------------------------------------------------===//
 def Tosa_FloorOp : Tosa_ElementwiseUnaryOp<"floor"> {
-  let summary = "Elementwise floor op";
+  let summary = "Elementwise floor operator.";
 
   let description = [{
     Elementwise floor operation.
@@ -1307,7 +1301,7 @@ def Tosa_FloorOp : Tosa_ElementwiseUnaryOp<"floor"> {
 // Operator: log
 //===----------------------------------------------------------------------===//
 def Tosa_LogOp : Tosa_ElementwiseUnaryOp<"log"> {
-  let summary = "Elementwise log op";
+  let summary = "Elementwise log operator.";
 
   let description = [{
     Elementwise natural logarithm operation
@@ -1333,7 +1327,7 @@ def Tosa_LogOp : Tosa_ElementwiseUnaryOp<"log"> {
 // Operator: logical_not
 //===----------------------------------------------------------------------===//
 def Tosa_LogicalNotOp : Tosa_ElementwiseUnaryOp<"logical_not"> {
-  let summary = "Returns the truth value of NOT x element-wise.";
+  let summary = "Returns the truth value of NOT input1 element-wise.";
 
   let description = [{
     Elementwise logical NOT of input.
@@ -1356,8 +1350,10 @@ def Tosa_LogicalNotOp : Tosa_ElementwiseUnaryOp<"logical_not"> {
 //===----------------------------------------------------------------------===//
 // Operator: negate
 //===----------------------------------------------------------------------===//
-def Tosa_NegateOp : Tosa_ElementwiseUnaryOp<"negate"> {
-  let summary = "Elementwise negate op";
+def Tosa_NegateOp : Tosa_InferShapedTypeOp<"negate", [
+    TosaElementwiseOperator,
+    Pure]> {
+  let summary = "Elementwise negate operator.";
 
   let description = [{
     Elementwise negation operation.
@@ -1365,8 +1361,8 @@ def Tosa_NegateOp : Tosa_ElementwiseUnaryOp<"negate"> {
 
   let arguments = (ins
       Tosa_Tensor:$input1,
-      OptionalAttr<I32Attr>:$input1_zp,
-      OptionalAttr<I32Attr>:$output_zp
+      Tosa_ScalarIntOrFloatTensor:$input1_zp,
+      Tosa_ScalarIntOrFloatTensor:$output_zp
   );
 
   let results = (outs
@@ -1378,16 +1374,27 @@ def Tosa_NegateOp : Tosa_ElementwiseUnaryOp<"negate"> {
     Extension<[Tosa_EXT_BF16]>,
   ];
 
-  let builders = [Tosa_UnaryOpQuantInfoBuilder];
+  let builders = [Tosa_NegateOpQuantInfoBuilder];
+
+  let extraClassDeclaration = [{
+    FailureOr<int64_t> getInput1ZeroPoint();
+    FailureOr<int64_t> getOutputZeroPoint();
+    LogicalResult verifyInput1ZeroPoint(int64_t zp);
+    LogicalResult verifyOutputZeroPoint(int64_t zp);
+  }];
 
   let hasFolder = 1;
+  let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
 // Operator: reciprocal
 //===----------------------------------------------------------------------===//
 def Tosa_ReciprocalOp : Tosa_ElementwiseUnaryOp<"reciprocal"> {
-  let summary = "Elementwise reciprocal op";
+  let summary = "Elementwise reciprocal operator.";
 
   let description = [{
     Elementwise reciprocal operation. For integer operation, a TABLE should be
@@ -1423,7 +1430,7 @@ def Tosa_ReciprocalOp : Tosa_ElementwiseUnaryOp<"reciprocal"> {
 // Operator: rsqrt
 //===----------------------------------------------------------------------===//
 def Tosa_RsqrtOp : Tosa_ElementwiseUnaryOp<"rsqrt"> {
-  let summary = "Elementwise 1/sqrt op";
+  let summary = "Elementwise 1/sqrt operator.";
 
   let description = [{
     Elementwise reciprocal square root operation. For integer operation, a TABLE
@@ -1448,7 +1455,7 @@ def Tosa_RsqrtOp : Tosa_ElementwiseUnaryOp<"rsqrt"> {
 // Operator: sin
 //===----------------------------------------------------------------------===//
 def Tosa_SinOp : Tosa_ElementwiseUnaryOp<"sin"> {
-  let summary = "Elementwise sin op";
+  let summary = "Elementwise sin operator.";
 
   let description = [{
     Elementwise sine operation for values given in radians.
@@ -1469,15 +1476,14 @@ def Tosa_SinOp : Tosa_ElementwiseUnaryOp<"sin"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Operator Class: Elementwise unary/binary/ternary operators.
-// Operator Subclass: Elementwise ternary ops.
+// Operator Class: Elementwise Unary Operators.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
 // Operator: select
 //===----------------------------------------------------------------------===//
 def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
-  let summary = "Elementwise select operator";
+  let summary = "Elementwise select operator.";
 
   let description = [{
     Elementwise select of the output based on a condition.
@@ -1509,7 +1515,7 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Operator Class: Logical Operations.
+// Operator Class: Comparison Operators.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -1519,10 +1525,10 @@ def Tosa_EqualOp : Tosa_ElementwiseOp<"equal", [
     InferTensorType,
     Commutative,
     SameOperandsElementType]> {
-  let summary = "Returns the truth value of (x == y) element-wise.";
+  let summary = "Returns the truth value of (input1 == input2) element-wise.";
 
   let description = [{
-     Elementwise comparison operation
+     Elementwise comparison operation.
   }];
 
   let arguments = (ins
@@ -1552,10 +1558,10 @@ def Tosa_EqualOp : Tosa_ElementwiseOp<"equal", [
 // Operator: greater
 //===----------------------------------------------------------------------===//
 def Tosa_GreaterOp : Tosa_ElementwiseOp<"greater", [SameOperandsElementType]> {
-  let summary = "Returns the truth value of (x > y) element-wise.";
+  let summary = "Returns the truth value of (input1 > input2) element-wise.";
 
   let description = [{
-    Elementwise greater than comparison operation
+    Elementwise greater than comparison operation.
   }];
 
   let arguments = (ins
@@ -1580,10 +1586,10 @@ def Tosa_GreaterOp : Tosa_ElementwiseOp<"greater", [SameOperandsElementType]> {
 //===----------------------------------------------------------------------===//
 def Tosa_GreaterEqualOp : Tosa_ElementwiseOp<"greater_equal",
     [SameOperandsElementType]> {
-  let summary = "Returns the truth value of (x >= y) element-wise.";
+  let summary = "Returns the truth value of (input1 >= input2) element-wise.";
 
   let description = [{
-    Elementwise comparison operation
+    Elementwise comparison operation.
   }];
 
   let arguments = (ins
@@ -1604,26 +1610,26 @@ def Tosa_GreaterEqualOp : Tosa_ElementwiseOp<"greater_equal",
 }
 
 //===----------------------------------------------------------------------===//
-// Operator Class: Reduction Ops.
+// Operator Class: Reduction Operators.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
 // Operator: reduce_all
 //===----------------------------------------------------------------------===//
 def Tosa_ReduceAllOp : Tosa_InferTensorTypeOp<"reduce_all"> {
-  let summary = "Reduce All operator";
+  let summary = "Reduce All operator.";
 
   let description = [{
-    Reduce a tensor along the given axis with a logical AND operation
+    Reduce a tensor along the given axis with a logical AND operation.
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1650,19 +1656,19 @@ def Tosa_ReduceAllOp : Tosa_InferTensorTypeOp<"reduce_all"> {
 // Operator: reduce_any
 //===----------------------------------------------------------------------===//
 def Tosa_ReduceAnyOp : Tosa_InferTensorTypeOp<"reduce_any"> {
-  let summary = "Reduce Any operator";
+  let summary = "Reduce Any operator.";
 
   let description = [{
-    Reduce a tensor along the given axis with a logical OR operation
+    Reduce a tensor along the given axis with a logical OR operation.
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1689,20 +1695,20 @@ def Tosa_ReduceAnyOp : Tosa_InferTensorTypeOp<"reduce_any"> {
 // Operator: reduce_max
 //===----------------------------------------------------------------------===//
 def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
-  let summary = "Reduce Max operator";
+  let summary = "Reduce Max operator.";
 
   let description = [{
-    Reduce a tensor along the given axis with a maximum operation
+    Reduce a tensor along the given axis with a maximum operation.
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis,
     DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1720,8 +1726,7 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
 
     /// Return the max of the two integer operands
     static inline APInt calcOneElement(APInt leftOperand, APInt rightOperand) {
-      const llvm::APInt subtractRes = leftOperand - rightOperand;
-      return (!subtractRes.isNegative()) ? leftOperand : rightOperand;
+      return (leftOperand.sge(rightOperand)) ? leftOperand : rightOperand;
     }
   }];
 }
@@ -1730,20 +1735,20 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
 // Operator: reduce_min
 //===----------------------------------------------------------------------===//
 def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
-  let summary = "Reduce Min operator";
+  let summary = "Reduce Min operator.";
 
   let description = [{
-    Reduce a tensor along the given axis with a minimum operation
+    Reduce a tensor along the given axis with a minimum operation.
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis,
     DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1761,8 +1766,7 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
 
     /// Return the min of the two integer operands
     static inline APInt calcOneElement(APInt leftOperand, APInt rightOperand) {
-      const llvm::APInt subtractRes = leftOperand - rightOperand;
-      return (!subtractRes.isNegative()) ? rightOperand : leftOperand;
+      return (leftOperand.sle(rightOperand)) ? leftOperand : rightOperand;
     }
   }];
 }
@@ -1771,19 +1775,19 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
 // Operator: reduce_prod
 //===----------------------------------------------------------------------===//
 def Tosa_ReduceProductOp : Tosa_InferTensorTypeOp<"reduce_product"> {
-  let summary = "Reduce Product operator";
+  let summary = "Reduce Product operator.";
 
   let description = [{
     Reduce a tensor along the given axis by computing the product of the axis.
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1810,19 +1814,19 @@ def Tosa_ReduceProductOp : Tosa_InferTensorTypeOp<"reduce_product"> {
 // Operator: reduce_sum
 //===----------------------------------------------------------------------===//
 def Tosa_ReduceSumOp : Tosa_InferTensorTypeOp<"reduce_sum"> {
-  let summary = "Reduce Sum operator";
+  let summary = "Reduce Sum operator.";
 
   let description = [{
     Reduce a tensor along the given axis by computing the sum of the axis.
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1846,7 +1850,7 @@ def Tosa_ReduceSumOp : Tosa_InferTensorTypeOp<"reduce_sum"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Operator Class: Data Layout / Memory Reinterpretation.
+// Operator Class: Data Layout.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -1856,22 +1860,22 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat"> {
   let summary = "Concatenates tensors along one dimension.";
 
   let description = [{
-    Concatenate a variadic amount of tensors along a given axis. No data
-    conversion happens during a concat operation.
+    Concatenate a list of tensors along a given axis.
+    No data conversion happens during a concat operation.
   }];
 
   let arguments = (ins
-    Variadic<Tosa_Tensor>:$input1,
+    Variadic<Tosa_TensorAtLeast1D>:$input1,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT16]>,
   ];
 
   let hasCanonicalizer = 1;
@@ -1899,26 +1903,28 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
     Example:
 
     ```mlir
-    %0 = tosa.const_shape { value = dense<[1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
-    tosa.pad %arg0, %0 : (tensor<1x2xf32>, !tosa.shape<4>)  -> (tensor<4x9xf32>)
+    %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
+    %padding = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
+    tosa.pad %arg0, %padding, %pad_const: (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>)  -> (tensor<4x9xf32>)
     ```
 
     Example 2:
 
     ```mlir
-    %0 = tosa.const_shape { value = dense<[-1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
-    tosa.pad %arg0, %0 : (tensor<1x2xf32>, !tosa.shape<4>)  -> (tensor<?x9xf32>)
+    %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
+    %padding = tosa.const_shape {values = dense<[-1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
+    tosa.pad %arg0, %padding, %pad_const : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>)  -> (tensor<?x9xf32>)
     ```
   }];
 
   let arguments = (ins
-    Tosa_RankedTensor:$input1,
+    Tosa_TensorAtLeast1D:$input1,
     Tosa_Shape:$padding,
     Tosa_ScalarTensor:$pad_const
   );
 
   let results = (outs
-    Tosa_RankedTensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1936,7 +1942,7 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
 // Operator: reshape
 //===----------------------------------------------------------------------===//
 def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape"> {
-  let summary = "Reshape operator";
+  let summary = "Reshape operator.";
 
   let description = [{
     Returns a tensor with the same type/values as the input, with a new shape
@@ -1976,7 +1982,7 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape"> {
 def Tosa_ReverseOp: Tosa_Op<"reverse", [
     DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                               ["inferReturnTypeComponents"]>, Pure]> {
-  let summary = "Reverse operator";
+  let summary = "Reverse operator.";
 
   let description = [{
     Returns a tensor with the same type/values as the input, with the data
@@ -1985,12 +1991,12 @@ def Tosa_ReverseOp: Tosa_Op<"reverse", [
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input1,
+    Tosa_TensorAtLeast1D:$input1,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -2008,22 +2014,22 @@ def Tosa_ReverseOp: Tosa_Op<"reverse", [
 // Operator: slice
 //===----------------------------------------------------------------------===//
 def Tosa_SliceOp : Tosa_InferShapedTypeOp<"slice"> {
-  let summary = "Slice operator";
+  let summary = "Slice operator.";
 
   let description = [{
-    Extracts a slice of the input1 on the given axis, beginning at the
-    start coordinates, and extending for size elements in each direction.  No
-    data conversion happens during a slice operation.
+    Extracts a slice of input1, beginning at the start coordinates,
+    and extending for size elements in each direction.
+    No data conversion happens during a slice operation.
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input1,
+    Tosa_TensorAtLeast1D:$input1,
     Tosa_Shape:$start,
     Tosa_Shape:$size
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -2040,18 +2046,18 @@ def Tosa_SliceOp : Tosa_InferShapedTypeOp<"slice"> {
 // Operator: tile
 //===----------------------------------------------------------------------===//
 def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
-  let summary = "Tile operator";
+  let summary = "Tile operator.";
 
   let description = [{
-    Replicates input1 multiplies times along each dimension.
+    Replicates input1 multiples times along each dimension.
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input1,
+    Tosa_TensorAtLeast1D:$input1,
     Tosa_Shape:$multiples);
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -2073,7 +2079,7 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
 def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
                 [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
                  AllElementTypesMatch<["input1", "output"]>]> {
-  let summary = "Transpose operator";
+  let summary = "Transpose operator.";
 
   let description = [{
     Permutes the dimensions of the input tensor input1 based on the perms
@@ -2082,12 +2088,12 @@ def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input1,
+    Tosa_TensorAtLeast1D:$input1,
     DenseI32ArrayAttr:$perms
   );
 
   let results = (
-    outs Tosa_Tensor:$output
+    outs Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -2101,14 +2107,14 @@ def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
 }
 
 //===----------------------------------------------------------------------===//
-// Operator Class: Scatter/gather Operations.
+// Operator Class: Scatter/Gather Operators.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
 // Operator: gather
 //===----------------------------------------------------------------------===//
 def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather"> {
-  let summary = "Gather operation,";
+  let summary = "Gather operation.";
 
   let description = [{
     Generate a tensor for which each element in the output is a subtensor of the
@@ -2138,7 +2144,7 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather"> {
 // Operator: scatter
 //===----------------------------------------------------------------------===//
 def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter"> {
-  let summary = "Scatter operation,";
+  let summary = "Scatter operation.";
 
   let description = [{
     The values_out tensor is set to the values_in tensor with data modified as
@@ -2170,14 +2176,14 @@ def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Operator Class: Image Frontend Functions.
+// Operator Class: Image Operators.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
 // Operator: resize
 //===----------------------------------------------------------------------===//
 def Tosa_ResizeOp : Tosa_InferShapedTypeOp<"resize"> {
-  let summary = "Resize operation, supports various resize/upsample modes";
+  let summary = "Resize operation, supports various resize/upsample modes.";
 
   let description = [{
     Resizes a tensor. Resize is only allowed in the H and W dimensions.
@@ -2202,7 +2208,7 @@ def Tosa_ResizeOp : Tosa_InferShapedTypeOp<"resize"> {
     position (IH - 1,IW - 1).
 
     The limit MAX_SCALE is applied to each scale ratio after reduction of the
-    ratio. Individual scale numerator and denominaor values are allowed to be
+    ratio. Individual scale numerator and denominator values are allowed to be
     larger than MAX_SCALE.
   }];
 
@@ -2238,12 +2244,12 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure,
       DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                               ["inferReturnTypeComponents"]>]> {
 
-  let summary = "Cast operation";
+  let summary = "Cast operation.";
 
   let description = [{
     Casts a tensor from one data type to another.
     * This table is showing the supported conversions from the TOSA Specification.
-    * The MLIR dialect here can be used to represent other conversions. 
+    * The MLIR dialect here can be used to represent other conversions.
 
     | Mode                     | Input   | Output  |
     |--------------------------|---------|---------|
@@ -2305,7 +2311,7 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure,
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
@@ -2317,25 +2323,39 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure,
 // Operator: rescale
 //===----------------------------------------------------------------------===//
 def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
-  let summary = "Tosa rescale operator";
+  let summary = "Tosa rescale operator.";
 
   let description = [{
-    Rescale quantized values into a new domain. Supported rescalings are:
+    RESCALE is defined using an integer multiply, add, and shift.
+
+    Rescale supports two precisions of multiplier: 16-bit and 32-bit. The 32-bit multiplier
+    version supports two rounding modes to enable simpler lowering of existing frameworks
+    that use two stage rounding. All arithmetic is designed so that it does not overflow a
+    64-bit accumulator and that the result fits in 32 bits. In particular, a 48-bit value
+    cannot be scaled with the 32-bit multiplier because the accumulator would need to have
+    80 bits.
+
+    The shift and value range are limited to allow a variety of implementations. The limit
+    of 62 on shift allows the shift to be decomposed as two right shifts of 31.
+
+    Supported rescalings:
+    * This table is showing the supported conversions from the TOSA Specification.
+    * The MLIR dialect here can be used to represent other conversions.
 
     | Mode                   | Input | Output | Unsigned input | Unsigned output |
     |------------------------|-------|--------|----------------|-----------------|
-    | signed 8 to 8          | int8  | int8   |  false         |  false          |
-    | signed 8 to 16         | int8  | int16  |  false         |  false          |
-    | signed 8 to 32         | int8  | int32  |  false         |  false          |
-    | signed 16 to 8         | int16 | int8   |  false         |  false          |
     | signed 16 to 16        | int16 | int16  |  false         |  false          |
     | signed 16 to 32        | int16 | int32  |  false         |  false          |
-    | signed 32 to 8         | int32 | int8   |  false         |  false          |
+    | signed 16 to 8         | int16 | int8   |  false         |  false          |
     | signed 32 to 16        | int32 | int16  |  false         |  false          |
     | signed 32 to 32        | int32 | int32  |  false         |  false          |
-    | signed 48 to 8         | int48 | int8   |  false         |  false          |
+    | signed 32 to 8         | int32 | int8   |  false         |  false          |
+    | signed 8 to 16         | int8  | int16  |  false         |  false          |
+    | signed 8 to 32         | int8  | int32  |  false         |  false          |
+    | signed 8 to 8          | int8  | int8   |  false         |  false          |
     | signed 48 to 16        | int48 | int16  |  false         |  false          |
     | signed 48 to 32        | int48 | int32  |  false         |  false          |
+    | signed 48 to 8         | int48 | int8   |  false         |  false          |
     | unsigned 8 to signed 8 | uint8 | int8   |  true          |  false          |
     | signed 8 to unsigned 8 | int8  | uint8  |  false         |  true           |
   }];
@@ -2344,10 +2364,10 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
     Tosa_Tensor:$input,
     Tosa_1DInt16Or32Tensor:$multiplier,
     Tosa_1DInt8Tensor:$shift,
-    I32Attr:$input_zp,
-    I32Attr:$output_zp,
+    Tosa_ScalarIntOrFloatTensor:$input_zp,
+    Tosa_ScalarIntOrFloatTensor:$output_zp,
     BoolAttr:$scale32,
-    BoolAttr:$double_round,
+    Tosa_RoundingTypeAttr:$rounding_mode,
     BoolAttr:$per_channel,
     BoolAttr: $input_unsigned,
     BoolAttr: $output_unsigned
@@ -2362,13 +2382,20 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
     Extension<[Tosa_EXT_INT16]>,
   ];
 
+  let extraClassDeclaration = [{
+    FailureOr<int64_t> getInputZeroPoint();
+    FailureOr<int64_t> getOutputZeroPoint();
+    LogicalResult verifyInputZeroPoint(int64_t zp);
+    LogicalResult verifyOutputZeroPoint(int64_t zp);
+  }];
+
   let hasVerifier = 1;
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
-// Operator Class: Data Node Ops.
+// Operator Class: Data Nodes.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -2377,7 +2404,7 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
 def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, Pure,
                                      AllShapesMatch<["values", "output"]>,
                                      FirstAttrDerivedResultType]> {
-  let summary = "Constant op.";
+  let summary = "Constant operator.";
 
   let description = [{
     A node containing constant data for use as the input to an operation. May
@@ -2414,10 +2441,9 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, Pure,
 def Tosa_IdentityOp: Tosa_Op<"identity", [Pure,
       DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                               ["inferReturnTypeComponents"]>]> {
-  let summary = "Identity operator";
+  let summary = "Identity operator.";
   let description = [{
-    Returns a tensor with the same shape, size, type
-    and content as the input.
+    Returns a tensor with the same shape, type, and contents as the input.
   }];
 
   let arguments = (ins
@@ -2502,14 +2528,11 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
 //===----------------------------------------------------------------------===//
 // Operator: cond_if
 //===----------------------------------------------------------------------===//
-//===----------------------------------------------------------------------===//
-// Further described in docs/Rationale/RationaleTOSADialect.md .
-//===----------------------------------------------------------------------===//
 def Tosa_IfOp : Tosa_Op<"cond_if",
        [InferShapedTypeOpAdaptor,
        SingleBlockImplicitTerminator<"YieldOp">,
        RecursiveMemoryEffects]> {
-  let summary = "Conditional if operator";
+  let summary = "Conditional if operator.";
 
   let description = [{
     Evaluates a Boolean condition and then takes one of two distinct execution
@@ -2536,13 +2559,11 @@ def Tosa_IfOp : Tosa_Op<"cond_if",
   );
 
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
 // Operator: while_loop
-//===----------------------------------------------------------------------===//
-//===----------------------------------------------------------------------===//
-// Further described in docs/Rationale/RationaleTOSADialect.md .
 //===----------------------------------------------------------------------===//
 def Tosa_WhileOp : Tosa_Op<"while_loop", [
        DeclareOpInterfaceMethods<LoopLikeOpInterface>,
@@ -2552,8 +2573,8 @@ def Tosa_WhileOp : Tosa_Op<"while_loop", [
   let summary = "output = input; While (Cond(output)) {output = Body(output)}";
 
   let description = [{
-    Generates and evaluates a Bool condition and either executes a loop body or
-    exits to another control point. This action is performed repeatedly after
+    Generates and evaluates a Boolean condition and either executes a loop body
+    or exits the loop. This action is performed repeatedly after
     updating and re-evaluating the Boolean condition every iteration. This
     implements the semantic foreach or while iterative loop structure.
   }];
@@ -2577,6 +2598,7 @@ def Tosa_WhileOp : Tosa_Op<"while_loop", [
   );
 
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 include "mlir/Dialect/Tosa/IR/TosaUtilOps.td"

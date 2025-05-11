@@ -67,7 +67,8 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_NoRegs_SaveList;
   if (MF->getFunction().hasFnAttribute("interrupt")) {
     if (Subtarget.hasStdExtD())
-      return CSR_XLEN_F64_Interrupt_SaveList;
+      return Subtarget.hasStdExtE() ? CSR_XLEN_F64_Interrupt_RVE_SaveList
+                                    : CSR_XLEN_F64_Interrupt_SaveList;
     if (Subtarget.hasStdExtF())
       return Subtarget.hasStdExtE() ? CSR_XLEN_F32_Interrupt_RVE_SaveList
                                     : CSR_XLEN_F32_Interrupt_SaveList;
@@ -194,7 +195,7 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     if (auto VLEN = ST.getRealVLen()) {
       // 1. Multiply the number of v-slots by the (constant) length of register
       const int64_t VLENB = *VLEN / 8;
-      assert(Offset.getScalable() % (RISCV::RVVBitsPerBlock / 8) == 0 &&
+      assert(Offset.getScalable() % RISCV::RVVBytesPerBlock == 0 &&
              "Reserve the stack by the multiple of one vector size.");
       const int64_t NumOfVReg = Offset.getScalable() / 8;
       const int64_t FixedOffset = NumOfVReg * VLENB;
@@ -221,26 +222,53 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
 
     assert(ScalableValue > 0 && "There is no need to get VLEN scaled value.");
-    assert(ScalableValue % (RISCV::RVVBitsPerBlock / 8) == 0 &&
+    assert(ScalableValue % RISCV::RVVBytesPerBlock == 0 &&
            "Reserve the stack by the multiple of one vector size.");
-    assert(isInt<32>(ScalableValue / (RISCV::RVVBitsPerBlock / 8)) &&
+    assert(isInt<32>(ScalableValue / RISCV::RVVBytesPerBlock) &&
            "Expect the number of vector registers within 32-bits.");
-    uint32_t NumOfVReg = ScalableValue / (RISCV::RVVBitsPerBlock / 8);
-    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), ScratchReg)
-        .setMIFlag(Flag);
-
-    if (ScalableAdjOpc == RISCV::ADD && ST.hasStdExtZba() &&
-        (NumOfVReg == 2 || NumOfVReg == 4 || NumOfVReg == 8)) {
-      unsigned Opc = NumOfVReg == 2 ? RISCV::SH1ADD :
-        (NumOfVReg == 4 ? RISCV::SH2ADD : RISCV::SH3ADD);
-      BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
-          .addReg(ScratchReg, RegState::Kill).addReg(SrcReg)
+    uint32_t NumOfVReg = ScalableValue / RISCV::RVVBytesPerBlock;
+    // Only use vsetvli rather than vlenb if adjusting in the prologue or
+    // epilogue, otherwise it may disturb the VTYPE and VL status.
+    bool IsPrologueOrEpilogue =
+        Flag == MachineInstr::FrameSetup || Flag == MachineInstr::FrameDestroy;
+    bool UseVsetvliRatherThanVlenb =
+        IsPrologueOrEpilogue && ST.preferVsetvliOverReadVLENB();
+    if (UseVsetvliRatherThanVlenb && (NumOfVReg == 1 || NumOfVReg == 2 ||
+                                      NumOfVReg == 4 || NumOfVReg == 8)) {
+      BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENBViaVSETVLIX0),
+              ScratchReg)
+          .addImm(NumOfVReg)
+          .setMIFlag(Flag);
+      BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
+          .addReg(SrcReg)
+          .addReg(ScratchReg, RegState::Kill)
           .setMIFlag(Flag);
     } else {
-      TII->mulImm(MF, MBB, II, DL, ScratchReg, NumOfVReg, Flag);
-      BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
-          .addReg(SrcReg).addReg(ScratchReg, RegState::Kill)
-          .setMIFlag(Flag);
+      if (UseVsetvliRatherThanVlenb)
+        BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENBViaVSETVLIX0),
+                ScratchReg)
+            .addImm(1)
+            .setMIFlag(Flag);
+      else
+        BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), ScratchReg)
+            .setMIFlag(Flag);
+
+      if (ScalableAdjOpc == RISCV::ADD && ST.hasStdExtZba() &&
+          (NumOfVReg == 2 || NumOfVReg == 4 || NumOfVReg == 8)) {
+        unsigned Opc = NumOfVReg == 2
+                           ? RISCV::SH1ADD
+                           : (NumOfVReg == 4 ? RISCV::SH2ADD : RISCV::SH3ADD);
+        BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
+            .addReg(ScratchReg, RegState::Kill)
+            .addReg(SrcReg)
+            .setMIFlag(Flag);
+      } else {
+        TII->mulImm(MF, MBB, II, DL, ScratchReg, NumOfVReg, Flag);
+        BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
+            .addReg(SrcReg)
+            .addReg(ScratchReg, RegState::Kill)
+            .setMIFlag(Flag);
+      }
     }
     SrcReg = DestReg;
     KillSrcReg = true;
@@ -379,6 +407,12 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
   Register Base = II->getOperand(1).getReg();
   bool IsBaseKill = II->getOperand(1).isKill();
   Register NewBase = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+
+  auto *OldMMO = *(II->memoperands_begin());
+  LocationSize OldLoc = OldMMO->getSize();
+  assert(OldLoc.isPrecise() && OldLoc.getValue().isKnownMultipleOf(NF));
+  TypeSize NewSize = OldLoc.getValue().divideCoefficientBy(NF);
+  auto *NewMMO = MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(), NewSize);
   for (unsigned I = 0; I < NF; ++I) {
     // Adding implicit-use of super register to describe we are using part of
     // super register, that prevents machine verifier complaining when part of
@@ -387,7 +421,7 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
     BuildMI(MBB, II, DL, TII->get(Opcode))
         .addReg(TRI->getSubReg(SrcReg, SubRegIdx + I))
         .addReg(Base, getKillRegState(I == NF - 1))
-        .addMemOperand(*(II->memoperands_begin()))
+        .addMemOperand(NewMMO)
         .addReg(SrcReg, RegState::Implicit);
     if (I != NF - 1)
       BuildMI(MBB, II, DL, TII->get(RISCV::ADD), NewBase)
@@ -456,11 +490,16 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
   Register Base = II->getOperand(1).getReg();
   bool IsBaseKill = II->getOperand(1).isKill();
   Register NewBase = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  auto *OldMMO = *(II->memoperands_begin());
+  LocationSize OldLoc = OldMMO->getSize();
+  assert(OldLoc.isPrecise() && OldLoc.getValue().isKnownMultipleOf(NF));
+  TypeSize NewSize = OldLoc.getValue().divideCoefficientBy(NF);
+  auto *NewMMO = MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(), NewSize);
   for (unsigned I = 0; I < NF; ++I) {
     BuildMI(MBB, II, DL, TII->get(Opcode),
             TRI->getSubReg(DestReg, SubRegIdx + I))
         .addReg(Base, getKillRegState(I == NF - 1))
-        .addMemOperand(*(II->memoperands_begin()));
+        .addMemOperand(NewMMO);
     if (I != NF - 1)
       BuildMI(MBB, II, DL, TII->get(RISCV::ADD), NewBase)
           .addReg(Base, getKillRegState(I != 0 || IsBaseKill))
@@ -808,6 +847,11 @@ RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
                  !DisableCostPerUse
              ? 1
              : 0;
+}
+
+float RISCVRegisterInfo::getSpillWeightScaleFactor(
+    const TargetRegisterClass *RC) const {
+  return getRegClassWeight(RC).RegWeight;
 }
 
 // Add two address hints to improve chances of being able to use a compressed

@@ -46,7 +46,7 @@ class CSKYTargetStreamer : public MCTargetStreamer {
 public:
   typedef struct {
     const MCSymbol *sym;
-    CSKYMCExpr::VariantKind kind;
+    CSKYMCExpr::Specifier kind;
   } SymbolIndex;
 
 protected:
@@ -76,10 +76,10 @@ public:
 
 template <> struct DenseMapInfo<CSKYTargetStreamer::SymbolIndex> {
   static inline CSKYTargetStreamer::SymbolIndex getEmptyKey() {
-    return {nullptr, CSKYMCExpr::VK_CSKY_Invalid};
+    return {nullptr, CSKYMCExpr::VK_Invalid};
   }
   static inline CSKYTargetStreamer::SymbolIndex getTombstoneKey() {
-    return {nullptr, CSKYMCExpr::VK_CSKY_Invalid};
+    return {nullptr, CSKYMCExpr::VK_Invalid};
   }
   static unsigned getHashValue(const CSKYTargetStreamer::SymbolIndex &V) {
     return hash_combine(DenseMapInfo<const MCSymbol *>::getHashValue(V.sym),

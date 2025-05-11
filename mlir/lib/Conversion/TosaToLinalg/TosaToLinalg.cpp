@@ -82,16 +82,6 @@ materializeBinaryNanCheckIfRequired(OpTy op, PatternRewriter &rewriter,
                                           rhsOrResult);
 }
 
-template <typename T>
-static arith::ConstantOp
-createConstFromIntAttribute(Operation *op, const std::string &attrName,
-                            Type requiredAttrType, OpBuilder &rewriter) {
-  auto castedN = static_cast<T>(
-      cast<IntegerAttr>(op->getAttr(attrName)).getValue().getSExtValue());
-  return rewriter.create<arith::ConstantOp>(
-      op->getLoc(), IntegerAttr::get(requiredAttrType, castedN));
-}
-
 static Value createLinalgBodyCalculationForElementwiseOp(
     Operation *op, ValueRange args, ArrayRef<Type> resultTypes,
     ConversionPatternRewriter &rewriter) {
@@ -137,14 +127,14 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   // tosa::MulOp
   if (isa<tosa::MulOp>(op)) {
-    auto shift_val = cast<tosa::MulOp>(op).getShift();
-    DenseElementsAttr shift_elem;
-    if (!shift_val.getImpl() ||
-        !matchPattern(shift_val, m_Constant(&shift_elem))) {
+    auto shiftVal = cast<tosa::MulOp>(op).getShift();
+    DenseElementsAttr shiftElem;
+    if (!matchPattern(shiftVal, m_Constant(&shiftElem))) {
       (void)rewriter.notifyMatchFailure(op, "shift value of mul not found");
+      return nullptr;
     }
 
-    int32_t shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+    int32_t shift = shiftElem.getValues<IntegerAttr>()[0].getInt();
 
     if (isa<FloatType>(elementTy)) {
       if (shift != 0) {
@@ -170,7 +160,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
         auto result = rewriter.create<tosa::ApplyScaleOp>(
             loc, rewriter.getI32Type(), a, b, shiftConst,
-            rewriter.getBoolAttr(false));
+            rewriter.getStringAttr("SINGLE_ROUND"));
 
         if (elementTy.isInteger(32))
           return result;
@@ -193,18 +183,29 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   // tosa::NegateOp
   if (isa<tosa::NegateOp>(op)) {
+    auto negate = cast<tosa::NegateOp>(op);
+
+    FailureOr<int64_t> maybeInZp = negate.getInput1ZeroPoint();
+    if (failed(maybeInZp)) {
+      (void)rewriter.notifyMatchFailure(
+          op, "input1 zero point cannot be statically determined");
+      return nullptr;
+    }
+
+    FailureOr<int64_t> maybeOutZp = negate.getOutputZeroPoint();
+    if (failed(maybeOutZp)) {
+      (void)rewriter.notifyMatchFailure(
+          op, "output zero point cannot be statically determined");
+      return nullptr;
+    }
+
+    int64_t inZp = *maybeInZp;
+    int64_t outZp = *maybeOutZp;
+
     if (isa<FloatType>(elementTy))
-      return rewriter.create<arith::NegFOp>(loc, resultTypes, args);
+      return rewriter.create<arith::NegFOp>(loc, resultTypes, args[0]);
 
     if (isa<IntegerType>(elementTy)) {
-      auto inputZpAttr = cast<tosa::NegateOp>(op).getInput1ZpAttr();
-      auto outputZpAttr = cast<tosa::NegateOp>(op).getOutputZpAttr();
-
-      const int64_t inZp =
-          inputZpAttr ? inputZpAttr.getValue().getSExtValue() : 0;
-      const int64_t outZp =
-          outputZpAttr ? outputZpAttr.getValue().getSExtValue() : 0;
-
       if (!inZp && !outZp) {
         auto constant = rewriter.create<arith::ConstantOp>(
             loc, IntegerAttr::get(elementTy, 0));
@@ -701,50 +702,6 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   return nullptr;
 }
 
-static Value expandRank(PatternRewriter &rewriter, Location loc, Value tensor,
-                        int64_t rank) {
-  // No need to expand if we are already at the desired rank
-  auto tensorType = dyn_cast<RankedTensorType>(tensor.getType());
-  assert(tensorType && "expected a ranked tensor type");
-  int64_t tensorRank = tensorType.getRank();
-  int64_t numExtraDims = rank - tensorRank;
-  assert(numExtraDims >= 0 && "cannot expand tensor to a lower rank");
-  if (!numExtraDims)
-    return tensor;
-
-  // Compute reassociation indices
-  SmallVector<ReassociationIndices> reassociationIndices(tensorRank);
-  int64_t index = 0;
-  if (tensorRank != 0) {
-    for (index = 0; index <= numExtraDims; index++)
-      reassociationIndices[0].push_back(index);
-    for (size_t position = 1; position < reassociationIndices.size();
-         position++)
-      reassociationIndices[position].push_back(index++);
-  }
-
-  // Compute result type
-  SmallVector<int64_t> resultShape;
-  for (index = 0; index < numExtraDims; index++)
-    resultShape.push_back(1);
-  for (auto size : tensorType.getShape())
-    resultShape.push_back(size);
-  auto resultType =
-      RankedTensorType::get(resultShape, tensorType.getElementType());
-
-  // Emit 'tensor.expand_shape' op
-  return rewriter.create<tensor::ExpandShapeOp>(loc, resultType, tensor,
-                                                reassociationIndices);
-}
-
-static SmallVector<Value> expandInputRanks(PatternRewriter &rewriter,
-                                           Location loc, ValueRange operands,
-                                           int64_t rank) {
-  return llvm::map_to_vector(operands, [&](Value operand) {
-    return expandRank(rewriter, loc, operand, rank);
-  });
-}
-
 using IndexPool = DenseMap<int64_t, Value>;
 
 // Emit an 'arith.constant' op for the given index if it has not been created
@@ -1026,6 +983,17 @@ emitElementwiseComputation(ConversionPatternRewriter &rewriter, Location loc,
   return success();
 }
 
+static ValueRange getBroadcastableOperands(Operation *operation,
+                                           ValueRange operands) {
+  // Shift cannot broadcast
+  if (isa<tosa::MulOp>(operation))
+    return operands.take_front(2);
+  // Input1_zp and output_zp cannot broadcast
+  if (isa<tosa::NegateOp>(operation))
+    return operands.take_front(1);
+  return operands;
+}
+
 static LogicalResult
 elementwiseMatchAndRewriteHelper(Operation *operation, ValueRange operands,
                                  ConversionPatternRewriter &rewriter,
@@ -1042,19 +1010,12 @@ elementwiseMatchAndRewriteHelper(Operation *operation, ValueRange operands,
   // Lower operation
   IndexPool indexPool;
   auto loc = operation->getLoc();
-  auto rank =
-      cast<RankedTensorType>(operation->getResultTypes().front()).getRank();
-  // For the mul op we need to avoid expanding the rank of the optional shift
-  // input.
-  auto operandsToExpand =
-      isa<tosa::MulOp>(operation) ? operands.take_front(2) : operands;
-
-  auto expandedOperands =
-      expandInputRanks(rewriter, loc, operandsToExpand, rank);
+  auto operandsToBroadcast = getBroadcastableOperands(operation, operands);
   auto [targetShape, masterOperands] =
-      computeTargetShape(rewriter, loc, indexPool, expandedOperands);
-  auto broadcastOperands = broadcastDynamicDimensions(
-      rewriter, loc, indexPool, expandedOperands, targetShape, masterOperands);
+      computeTargetShape(rewriter, loc, indexPool, operandsToBroadcast);
+  auto broadcastOperands =
+      broadcastDynamicDimensions(rewriter, loc, indexPool, operandsToBroadcast,
+                                 targetShape, masterOperands);
   return emitElementwiseComputation(rewriter, loc, operation, broadcastOperands,
                                     targetShape, converter);
 }
@@ -1166,8 +1127,11 @@ template <typename OpTy>
 static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
                                                  PatternRewriter &rewriter) {
   auto loc = op->getLoc();
-  auto inputTy = cast<ShapedType>(op->getOperand(0).getType());
-  auto resultTy = cast<ShapedType>(op->getResult(0).getType());
+  auto inputTy = dyn_cast<RankedTensorType>(op->getOperand(0).getType());
+  auto resultTy = dyn_cast<RankedTensorType>(op->getResult(0).getType());
+  if (!inputTy || !resultTy)
+    return rewriter.notifyMatchFailure(op, "unranked tensors not supported");
+
   auto elementTy = resultTy.getElementType();
   Value input = op->getOperand(0);
 
@@ -1374,7 +1338,11 @@ public:
     unsigned rank = inputTy.getRank();
 
     // This is an illegal configuration. terminate and log an error
-    if (op.getDoubleRound() && !op.getScale32())
+    if (op.getRoundingMode() == "INEXACT_ROUND")
+      return rewriter.notifyMatchFailure(
+          op, "tosa.rescale with rounding mode = 'INEXACT_ROUND' is not "
+              "currently supported");
+    if (op.getRoundingMode() == "DOUBLE_ROUND" && !op.getScale32())
       return rewriter.notifyMatchFailure(
           op, "tosa.rescale requires scale32 for double_round to be true");
 
@@ -1418,9 +1386,13 @@ public:
 
     // Double round only occurs if shift is greater than 31, check that this
     // is ever true.
+
     bool doubleRound =
-        op.getDoubleRound() &&
+        op.getRoundingMode() == "DOUBLE_ROUND" &&
         llvm::any_of(shiftValues, [](int32_t v) { return v > 31; });
+    StringAttr roundingMode = doubleRound
+                                  ? rewriter.getStringAttr("DOUBLE_ROUND")
+                                  : rewriter.getStringAttr("SINGLE_ROUND");
 
     SmallVector<AffineMap> indexingMaps = {
         rewriter.getMultiDimIdentityMap(rank)};
@@ -1486,16 +1458,35 @@ public:
           Value value = blockArgs[0];
           Type valueTy = value.getType();
 
-          // For now we do all of our math in 64-bit. This is not optimal but
-          // should be correct for now, consider computing correct bit depth
-          // later.
-          int32_t inBitwidth = valueTy.getIntOrFloatBitWidth() > 32 ? 48 : 32;
+          FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+          if (failed(maybeIZp)) {
+            (void)rewriter.notifyMatchFailure(
+                op, "input zero point cannot be statically determined");
+            return;
+          }
 
-          auto inputZp = createConstFromIntAttribute<int32_t>(
-              op, "input_zp", nestedBuilder.getIntegerType(inBitwidth),
-              nestedBuilder);
-          auto outputZp = createConstFromIntAttribute<int32_t>(
-              op, "output_zp", nestedBuilder.getI32Type(), nestedBuilder);
+          const int32_t inBitwidth = valueTy.getIntOrFloatBitWidth();
+          // Extend zeropoint for sub-32bits widths.
+          const int32_t inAttrBitwidth = inBitwidth > 32 ? inBitwidth : 32;
+          auto inputZp = nestedBuilder.create<arith::ConstantOp>(
+              loc, IntegerAttr::get(rewriter.getIntegerType(inAttrBitwidth),
+                                    *maybeIZp));
+
+          FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
+          if (failed(maybeOZp)) {
+            (void)rewriter.notifyMatchFailure(
+                op, "output zero point cannot be statically determined");
+            return;
+          };
+
+          IntegerType outIntType =
+              cast<IntegerType>(blockArgs.back().getType());
+          unsigned outBitWidth = outIntType.getWidth();
+          const int32_t outAttrBitwidth = 32;
+          assert(outBitWidth <= 32 && "Unexpected output zeropoint bitwidth");
+          auto outputZp = nestedBuilder.create<arith::ConstantOp>(
+              loc, IntegerAttr::get(rewriter.getIntegerType(outAttrBitwidth),
+                                    *maybeOZp));
 
           Value multiplier = multiplierConstant ? multiplierConstant
                                                 : blockArgs[multiplierArg];
@@ -1516,17 +1507,13 @@ public:
 
           value = nestedBuilder.create<tosa::ApplyScaleOp>(
               loc, nestedBuilder.getI32Type(), value, multiplier, shift,
-              nestedBuilder.getBoolAttr(doubleRound));
+              roundingMode);
 
           // Move to the new zero-point.
           value =
               nestedBuilder.create<arith::AddIOp>(nestedLoc, value, outputZp);
 
           // Saturate to the output size.
-          IntegerType outIntType =
-              cast<IntegerType>(blockArgs.back().getType());
-          unsigned outBitWidth = outIntType.getWidth();
-
           int32_t intMin = APInt::getSignedMinValue(outBitWidth).getSExtValue();
           int32_t intMax = APInt::getSignedMaxValue(outBitWidth).getSExtValue();
 
@@ -2289,8 +2276,22 @@ public:
 
           Value predicate;
           if (isa<FloatType>(inElementTy)) {
-            predicate = rewriter.create<arith::CmpFOp>(
-                nestedLoc, arith::CmpFPredicate::OGT, newValue, oldValue);
+            if (argmaxOp.getNanMode() == "IGNORE") {
+              // Only update index & max value for non NaN values. If all
+              // values are NaNs, the initial index will be return which is 0.
+              predicate = rewriter.create<arith::CmpFOp>(
+                  nestedLoc, arith::CmpFPredicate::OGT, newValue, oldValue);
+            } else {
+              // Update max value if either of the following is true:
+              // - new value is bigger
+              // - cur max is not NaN and new value is NaN
+              Value gt = rewriter.create<arith::CmpFOp>(
+                  nestedLoc, arith::CmpFPredicate::UGT, newValue, oldValue);
+              Value oldNonNaN = rewriter.create<arith::CmpFOp>(
+                  nestedLoc, arith::CmpFPredicate::ORD, oldValue, oldValue);
+              predicate = rewriter.create<arith::AndIOp>(
+                  nestedLoc, rewriter.getI1Type(), gt, oldNonNaN);
+            }
           } else if (isa<IntegerType>(inElementTy)) {
             predicate = rewriter.create<arith::CmpIOp>(
                 nestedLoc, arith::CmpIPredicate::sgt, newValue, oldValue);
@@ -2303,28 +2304,6 @@ public:
               nestedLoc, predicate, newValue, oldValue);
           auto resultIndex = rewriter.create<arith::SelectOp>(
               nestedLoc, predicate, newIndex, oldIndex);
-
-          // Check if we need to materialize compare and select for the given
-          // NaN propagation mode.
-
-          // "PROPAGATE" matches the default NaN propagation mode of the arith
-          // dialect so no compare and select is required.
-          //
-          // In the case "IGNORE" we check if the current argument is NaN and
-          // select the old index and value otherwise take the updated index and
-          // value.
-          if (const auto nanMode = argmaxOp.getNanMode();
-              isa<FloatType>(inElementTy) && nanMode == "IGNORE") {
-            // Unordered comparison of NaN against itself will always return
-            // true.
-            Value isNaN = rewriter.create<arith::CmpFOp>(
-                argmaxOp.getLoc(), arith::CmpFPredicate::UNO, newValue,
-                newValue);
-            resultMax = rewriter.create<arith::SelectOp>(nestedLoc, isNaN,
-                                                         oldValue, resultMax);
-            resultIndex = rewriter.create<arith::SelectOp>(
-                nestedLoc, isNaN, oldIndex, resultIndex);
-          }
           nestedBuilder.create<linalg::YieldOp>(
               nestedLoc, ValueRange({resultIndex, resultMax}));
         });
@@ -2347,11 +2326,9 @@ public:
     auto input = adaptor.getOperands()[0];
     auto indices = adaptor.getOperands()[1];
 
-    auto valuesTy =
-        dyn_cast_or_null<RankedTensorType>(op.getValues().getType());
-    auto resultTy = cast<ShapedType>(op.getType());
-
-    if (!valuesTy)
+    auto valuesTy = dyn_cast<RankedTensorType>(op.getValues().getType());
+    auto resultTy = dyn_cast<RankedTensorType>(op.getType());
+    if (!valuesTy || !resultTy)
       return rewriter.notifyMatchFailure(op, "unranked tensors not supported");
 
     auto dynamicDims = inferDynamicDimsForGather(
@@ -2614,7 +2591,7 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
     }
 
     auto loc = rfft2d.getLoc();
-    auto input = rfft2d.getInput();
+    auto input = rfft2d.getInputReal();
     auto elementType =
         dyn_cast<FloatType>(cast<ShapedType>(input.getType()).getElementType());
     if (!elementType)

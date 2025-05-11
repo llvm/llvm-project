@@ -2224,6 +2224,96 @@ protected:
     return ClassSymbol;
   }
 
+  void GenerateDirectMethodPrologue(
+      CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+      const ObjCContainerDecl *CD) override {
+    auto &Builder = CGF.Builder;
+    bool ReceiverCanBeNull = true;
+    auto selfAddr = CGF.GetAddrOfLocalVar(OMD->getSelfDecl());
+    auto selfValue = Builder.CreateLoad(selfAddr);
+
+    // Generate:
+    //
+    // /* for class methods only to force class lazy initialization */
+    // self = [self self];
+    //
+    // /* unless the receiver is never NULL */
+    // if (self == nil) {
+    //     return (ReturnType){ };
+    // }
+    //
+    // _cmd = @selector(...)
+    // ...
+
+    if (OMD->isClassMethod()) {
+      const ObjCInterfaceDecl *OID = cast<ObjCInterfaceDecl>(CD);
+      assert(
+          OID &&
+          "GenerateDirectMethod() should be called with the Class Interface");
+      Selector SelfSel = GetNullarySelector("self", CGM.getContext());
+      auto ResultType = CGF.getContext().getObjCIdType();
+      RValue result;
+      CallArgList Args;
+
+      // TODO: If this method is inlined, the caller might know that `self` is
+      // already initialized; for example, it might be an ordinary Objective-C
+      // method which always receives an initialized `self`, or it might have
+      // just forced initialization on its own.
+      //
+      // We should find a way to eliminate this unnecessary initialization in
+      // such cases in LLVM.
+      result = GeneratePossiblySpecializedMessageSend(
+          CGF, ReturnValueSlot(), ResultType, SelfSel, selfValue, Args, OID,
+          nullptr, true);
+      Builder.CreateStore(result.getScalarVal(), selfAddr);
+
+      // Nullable `Class` expressions cannot be messaged with a direct method
+      // so the only reason why the receive can be null would be because
+      // of weak linking.
+      ReceiverCanBeNull = isWeakLinkedClass(OID);
+    }
+
+    if (ReceiverCanBeNull) {
+      llvm::BasicBlock *SelfIsNilBlock =
+          CGF.createBasicBlock("objc_direct_method.self_is_nil");
+      llvm::BasicBlock *ContBlock =
+          CGF.createBasicBlock("objc_direct_method.cont");
+
+      // if (self == nil) {
+      auto selfTy = cast<llvm::PointerType>(selfValue->getType());
+      auto Zero = llvm::ConstantPointerNull::get(selfTy);
+
+      llvm::MDBuilder MDHelper(CGM.getLLVMContext());
+      Builder.CreateCondBr(Builder.CreateICmpEQ(selfValue, Zero),
+                           SelfIsNilBlock, ContBlock,
+                           MDHelper.createUnlikelyBranchWeights());
+
+      CGF.EmitBlock(SelfIsNilBlock);
+
+      //   return (ReturnType){ };
+      auto retTy = OMD->getReturnType();
+      Builder.SetInsertPoint(SelfIsNilBlock);
+      if (!retTy->isVoidType()) {
+        CGF.EmitNullInitialization(CGF.ReturnValue, retTy);
+      }
+      CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
+      // }
+
+      // rest of the body
+      CGF.EmitBlock(ContBlock);
+      Builder.SetInsertPoint(ContBlock);
+    }
+
+    // only synthesize _cmd if it's referenced
+    if (OMD->getCmdDecl()->isUsed()) {
+      // `_cmd` is not a parameter to direct methods, so storage must be
+      // explicitly declared for it.
+      CGF.EmitVarDecl(*OMD->getCmdDecl());
+      Builder.CreateStore(GetSelector(CGF, OMD),
+                          CGF.GetAddrOfLocalVar(OMD->getCmdDecl()));
+    }
+  }
+
 public:
   CGObjCObjFW(CodeGenModule &Mod): CGObjCGNU(Mod, 9, 3) {
     // IMP objc_msg_lookup(id, SEL);
@@ -3737,8 +3827,6 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   } else {
     SuperClass = llvm::ConstantPointerNull::get(PtrToInt8Ty);
   }
-  // Empty vector used to construct empty method lists
-  SmallVector<llvm::Constant*, 1>  empty;
   // Generate the method and instance variable lists
   llvm::Constant *MethodList = GenerateMethodList(ClassName, "",
       InstanceMethods, false);

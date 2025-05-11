@@ -37,6 +37,7 @@ username for an individual isn't available, the brackets will be empty.
 
 * Abhay Kanhere (Apple) [@AbhayKanhere]
 * Ahmed Bougacha (Apple) [@ahmedbougacha]
+* Andras Gemes (HighTec EDV Systeme) [@gemesa]
 * Artur Pilipenko (Azul Systems Inc) []
 * Boovaragavan Dasarathan (Nvidia) [@mrragava]
 * Dimitry Andric (individual; FreeBSD) [@DimitryAndric]
@@ -44,6 +45,7 @@ username for an individual isn't available, the brackets will be empty.
 * George Burgess IV (Google) [@gburgessiv]
 * Josh Stone (Red Hat; Rust) [@cuviper]
 * Kristof Beyls (ARM) [@kbeyls]
+* Mario Cupelli (HighTec EDV Systeme) [@mariocup]
 * Matthew Riley (Google) [@mmdriley]
 * Matthew Voss (Sony) [@ormris]
 * Nikhil Gupta (Nvidia) []

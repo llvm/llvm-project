@@ -354,6 +354,7 @@ struct APFloatBase {
   static bool semanticsHasInf(const fltSemantics &);
   static bool semanticsHasNaN(const fltSemantics &);
   static bool isIEEELikeFP(const fltSemantics &);
+  static bool hasSignBitInMSB(const fltSemantics &);
 
   // Returns true if any number described by \p Src can be precisely represented
   // by a normal (not subnormal) value in \p Dst.
@@ -791,6 +792,8 @@ private:
 
   /// Sign bit of the number.
   unsigned int sign : 1;
+
+  friend class IEEEFloatUnitTestHelper;
 };
 
 hash_code hash_value(const IEEEFloat &Arg);
@@ -1462,7 +1465,6 @@ public:
   bool isSmallest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isSmallest()); }
   bool isLargest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isLargest()); }
   bool isInteger() const { APFLOAT_DISPATCH_ON_SEMANTICS(isInteger()); }
-  bool isIEEE() const { return usesLayout<IEEEFloat>(getSemantics()); }
 
   bool isSmallestNormalized() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(isSmallestNormalized());

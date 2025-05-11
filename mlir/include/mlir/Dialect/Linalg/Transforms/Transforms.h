@@ -356,7 +356,7 @@ struct LinalgPromotionOptions {
   std::optional<DenseSet<unsigned>> operandsToPromote;
   LinalgPromotionOptions &setOperandsToPromote(ArrayRef<int64_t> operands) {
     operandsToPromote = DenseSet<unsigned>();
-    operandsToPromote->insert(operands.begin(), operands.end());
+    operandsToPromote->insert_range(operands);
     return *this;
   }
   /// If ith element of `useFullTiles` is true the full view should be used
@@ -1709,6 +1709,10 @@ void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
 /// There is no equivalent named op to convert to. Many such cases exist.
 void populateLinalgGenericOpsSpecializationPatterns(
     RewritePatternSet &patterns);
+
+/// Populates `patterns` with patterns that fold operations like
+/// `linalg.transform` into elementwise op map.
+void populateLinalgFoldIntoElementwisePatterns(RewritePatternSet &patterns);
 
 /// Linalg decompose convolutions patterns
 

@@ -52,7 +52,7 @@ define hidden <4 x float> @split_v4f32_multi_arg(<4 x float> %arg0, <2 x float> 
 ; GCN:         .cfi_endproc
   call void @llvm.dbg.value(metadata <4 x float> %arg0, metadata !29, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !31
   call void @llvm.dbg.value(metadata <2 x float> %arg1, metadata !30, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !31
-  %tmp = shufflevector <2 x float> %arg1, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>, !dbg !32
+  %tmp = shufflevector <2 x float> %arg1, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>, !dbg !32
   %add = fadd <4 x float> %tmp, %arg0, !dbg !33
   ret <4 x float> %add, !dbg !34
 }

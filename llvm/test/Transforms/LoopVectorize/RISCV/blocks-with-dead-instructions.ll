@@ -651,16 +651,15 @@ define void @empty_block_with_phi_1(ptr %src, i64 %N) #0 {
 ; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 8 x i32> poison, i32 1, i32 [[TMP8]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <vscale x 8 x i32> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ zeroinitializer, %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i16, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i16>, ptr [[TMP11]], align 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <vscale x 8 x i16> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 8 x i1> [[TMP12]], <vscale x 8 x i16> splat (i16 99), <vscale x 8 x i16> [[WIDE_LOAD]]
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[PREDPHI]], ptr [[TMP11]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP9]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -740,16 +739,15 @@ define void @empty_block_with_phi_2(ptr %src, i64 %N) #0 {
 ; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 8 x i32> poison, i32 1, i32 [[TMP8]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <vscale x 8 x i32> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ zeroinitializer, %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i16, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i16>, ptr [[TMP11]], align 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <vscale x 8 x i16> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 8 x i1> [[TMP12]], <vscale x 8 x i16> [[WIDE_LOAD]], <vscale x 8 x i16> splat (i16 99)
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[PREDPHI]], ptr [[TMP11]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP9]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

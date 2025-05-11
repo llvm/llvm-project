@@ -197,10 +197,6 @@ private:
 
   BoltAddressTranslation *BAT{nullptr};
 
-  /// Whether pre-aggregated profile needs to convert branch profile into call
-  /// to continuation fallthrough profile.
-  bool NeedsConvertRetProfileToCallCont{false};
-
   /// Update function execution profile with a recorded trace.
   /// A trace is region of code executed between two LBR entries supplied in
   /// execution order.
@@ -223,7 +219,8 @@ private:
   bool recordExit(BinaryFunction &BF, uint64_t From, bool Mispred,
                   uint64_t Count = 1) const;
 
-  /// Aggregation statistics
+  /// Branch stacks aggregation statistics
+  uint64_t NumTraces{0};
   uint64_t NumInvalidTraces{0};
   uint64_t NumLongRangeTraces{0};
   /// Specifies how many samples were recorded in cold areas if we are dealing
@@ -231,6 +228,7 @@ private:
   /// for the source of the branch to avoid counting cold activity twice (one
   /// for source and another for destination).
   uint64_t NumColdSamples{0};
+  uint64_t NumTotalSamples{0};
 
   /// Looks into system PATH for Linux Perf and set up the aggregator to use it
   void findPerfExecutable();
@@ -327,8 +325,8 @@ private:
   /// Parse a single LBR entry as output by perf script -Fbrstack
   ErrorOr<LBREntry> parseLBREntry();
 
-  /// Parse LBR sample, returns the number of traces.
-  uint64_t parseLBRSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
+  /// Parse LBR sample.
+  void parseLBRSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
 
   /// Parse and pre-aggregate branch events.
   std::error_code parseBranchEvents();
@@ -486,6 +484,13 @@ private:
   void dump(const LBREntry &LBR) const;
   void dump(const PerfBranchSample &Sample) const;
   void dump(const PerfMemSample &Sample) const;
+
+  /// Profile diagnostics print methods
+  void printColdSamplesDiagnostic() const;
+  void printLongRangeTracesDiagnostic() const;
+  void printBranchSamplesDiagnostics() const;
+  void printBasicSamplesDiagnostics(uint64_t OutOfRangeSamples) const;
+  void printBranchStacksDiagnostics(uint64_t IgnoredSamples) const;
 
 public:
   /// If perf.data was collected without build ids, the buildid-list may contain

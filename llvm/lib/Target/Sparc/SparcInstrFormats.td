@@ -201,6 +201,21 @@ class F3_3c<bits<2> opVal, bits<6> op3val, bits<9> opfval, dag outs, dag ins,
   let Inst{4-0}  = rs2;
 }
 
+// SIAM instruction
+class F3_3_siam<bits<2> opVal, bits<6> op3val, bits<9> opfval, dag outs, dag ins,
+           string asmstr, list<dag> pattern, InstrItinClass itin = NoItinerary>
+   : F3<outs, ins, asmstr, pattern, itin> {
+  bits<3> mode;
+
+  let op         = opVal;
+  let op3        = op3val;
+  let rd         = 0;
+  let rs1        = 0;
+  let Inst{13-5} = opfval;   // fp opcode
+  let Inst{4-3}  = 0;
+  let Inst{2-0}  = mode;
+}
+
 // Shift by register rs2.
 class F3_Sr<bits<2> opVal, bits<6> op3val, bit xVal, dag outs, dag ins,
             string asmstr, list<dag> pattern, InstrItinClass itin = IIC_iu_instr>

@@ -28,7 +28,7 @@ class D2 : public B {
   using B::E;
   using B::e;
   using B::x;
-  using C::g; // expected-error{{using declaration refers into 'C::', which is not a base class of 'D2'}}
+  using C::g; // expected-error{{using declaration refers into 'C', which is not a base class of 'D2'}}
 
   // These are valid in C++98 but not in C++11.
   using D::f2;
@@ -36,10 +36,10 @@ class D2 : public B {
   using D::e2;
   using D::x2;
 #if __cplusplus >= 201103L
-  // expected-error@-5 {{using declaration refers into 'D::', which is not a base class of 'D2'}}
-  // expected-error@-5 {{using declaration refers into 'D::', which is not a base class of 'D2'}}
-  // expected-error@-5 {{using declaration refers into 'D::', which is not a base class of 'D2'}}
-  // expected-error@-5 {{using declaration refers into 'D::', which is not a base class of 'D2'}}
+  // expected-error@-5 {{using declaration refers into 'D', which is not a base class of 'D2'}}
+  // expected-error@-5 {{using declaration refers into 'D', which is not a base class of 'D2'}}
+  // expected-error@-5 {{using declaration refers into 'D', which is not a base class of 'D2'}}
+  // expected-error@-5 {{using declaration refers into 'D', which is not a base class of 'D2'}}
 #endif
 
   using B::EC;

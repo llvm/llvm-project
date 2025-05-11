@@ -91,8 +91,11 @@ struct MatchBuilder {
 
   auto matchMathCall(const StringRef FunctionName,
                      const Matcher<clang::Expr> ArgumentMatcher) const {
+    auto HasAnyPrecisionName = hasAnyName(
+        FunctionName, (FunctionName + "l").str(),
+        (FunctionName + "f").str()); // Support long double(l) and float(f).
     return expr(ignoreParenAndFloatingCasting(
-        callExpr(callee(functionDecl(hasName(FunctionName),
+        callExpr(callee(functionDecl(HasAnyPrecisionName,
                                      hasParameter(0, hasType(isArithmetic())))),
                  hasArgument(0, ArgumentMatcher))));
   }
@@ -412,9 +415,7 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  llvm::sort(MatchedLiterals, [](const auto &LHS, const auto &RHS) {
-    return std::get<1>(LHS) < std::get<1>(RHS);
-  });
+  llvm::sort(MatchedLiterals, llvm::less_second());
 
   const auto &[Constant, Diff, Node] = MatchedLiterals.front();
 

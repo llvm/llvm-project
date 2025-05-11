@@ -177,43 +177,6 @@ public:
     return llvm::expectedToOptional(getDirectoryRef(DirName, CacheFailure));
   }
 
-  /// Lookup, cache, and verify the specified directory (real or
-  /// virtual).
-  ///
-  /// This function is deprecated and will be removed at some point in the
-  /// future, new clients should use
-  ///  \c getDirectoryRef.
-  ///
-  /// This returns a \c std::error_code if there was an error reading the
-  /// directory. If there is no error, the DirectoryEntry is guaranteed to be
-  /// non-NULL.
-  ///
-  /// \param CacheFailure If true and the file does not exist, we'll cache
-  /// the failure to find this file.
-  LLVM_DEPRECATED("Functions returning DirectoryEntry are deprecated.",
-                  "getOptionalDirectoryRef()")
-  llvm::ErrorOr<const DirectoryEntry *>
-  getDirectory(StringRef DirName, bool CacheFailure = true);
-
-  /// Lookup, cache, and verify the specified file (real or
-  /// virtual).
-  ///
-  /// This function is deprecated and will be removed at some point in the
-  /// future, new clients should use
-  ///  \c getFileRef.
-  ///
-  /// This returns a \c std::error_code if there was an error loading the file.
-  /// If there is no error, the FileEntry is guaranteed to be non-NULL.
-  ///
-  /// \param OpenFile if true and the file exists, it will be opened.
-  ///
-  /// \param CacheFailure If true and the file does not exist, we'll cache
-  /// the failure to find this file.
-  LLVM_DEPRECATED("Functions returning FileEntry are deprecated.",
-                  "getOptionalFileRef()")
-  llvm::ErrorOr<const FileEntry *>
-  getFile(StringRef Filename, bool OpenFile = false, bool CacheFailure = true);
-
   /// Lookup, cache, and verify the specified file (real or virtual). Return the
   /// reference to the file entry together with the exact path that was used to
   /// access a file by a particular call to getFileRef. If the underlying VFS is

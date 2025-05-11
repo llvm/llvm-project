@@ -24,12 +24,12 @@ the spirit in which it's intended - a guide to make it easier to communicate
 and participate in the community.
 
 This code of conduct applies to all spaces managed by the LLVM project or The
-LLVM Foundation. This includes IRC and Discord channels, mailing lists, bug
-trackers, LLVM events such as the developer meetings and socials, and any other
-forums created by the project that the community uses for communication. It
-applies to all of your communication and conduct in these spaces, including
-emails, chats, things you say, slides, videos, posters, signs, or even t-shirts
-you display in these spaces.
+LLVM Foundation. This includes Discord channels, mailing lists, bug trackers,
+LLVM events such as the developer meetings and socials, and any other forums
+created by the project that the community uses for communication. It applies to
+all of your communication and conduct in these spaces, including emails, chats,
+things you say, slides, videos, posters, signs, or even t-shirts you display in
+these spaces.
 
 In rare cases, violations of this code outside of these spaces may affect a 
 person’s ability to participate within these spaces. Important examples 
@@ -159,13 +159,13 @@ following
 
 The current committee members are:
 
-* Kit Barton (kbarton\@llvm.org)
+* Aaron Ballman (aaron.ballman\@llvm.org)
 * Kristof Beyls (kristof.beyls\@llvm.org)
-* Stella Stamenova (sstamenova\@llvm.org)
 * David Blaikie (dblaikie\@llvm.org)
-* Mike Edwards (medwards\@llvm.org)
+* Jonas Devlieghere (jdevlieghere\@llvm.org)
 * Cyndy Ishida (cishida\@llvm.org)
 * Tanya Lattner (tanyalattner\@llvm.org)
+* Stella Stamenova (sstamenova\@llvm.org)
 
 
 Transparency Reports

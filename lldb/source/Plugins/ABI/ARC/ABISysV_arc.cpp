@@ -560,16 +560,16 @@ ValueObjectSP ABISysV_arc::GetReturnValueObjectImpl(Thread &thread,
 }
 
 UnwindPlanSP ABISysV_arc::CreateFunctionEntryUnwindPlan() {
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value.
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf::sp, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf::sp, 0);
 
   // The previous PC is in the BLINK, all other registers are the same.
-  row->SetRegisterLocationToRegister(dwarf::pc, dwarf::blink, true);
+  row.SetRegisterLocationToRegister(dwarf::pc, dwarf::blink, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("arc at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;

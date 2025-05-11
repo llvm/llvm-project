@@ -56,6 +56,8 @@ public:
   // 'Unique' clauses: They can appear at most once in the clause list.
   bool processBare(mlir::omp::BareClauseOps &result) const;
   bool processBind(mlir::omp::BindClauseOps &result) const;
+  bool processCancelDirectiveName(
+      mlir::omp::CancelDirectiveNameClauseOps &result) const;
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
                   mlir::omp::LoopRelatedClauseOps &result,
@@ -71,14 +73,19 @@ public:
                      mlir::omp::FilterClauseOps &result) const;
   bool processFinal(lower::StatementContext &stmtCtx,
                     mlir::omp::FinalClauseOps &result) const;
+  bool processGrainsize(lower::StatementContext &stmtCtx,
+                        mlir::omp::GrainsizeClauseOps &result) const;
   bool processHasDeviceAddr(
+      lower::StatementContext &stmtCtx,
       mlir::omp::HasDeviceAddrClauseOps &result,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceSyms) const;
   bool processHint(mlir::omp::HintClauseOps &result) const;
   bool processInclusive(mlir::Location currentLocation,
                         mlir::omp::InclusiveClauseOps &result) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
+  bool processNumTasks(lower::StatementContext &stmtCtx,
+                       mlir::omp::NumTasksClauseOps &result) const;
   bool processNumTeams(lower::StatementContext &stmtCtx,
                        mlir::omp::NumTeamsClauseOps &result) const;
   bool processNumThreads(lower::StatementContext &stmtCtx,
@@ -103,11 +110,15 @@ public:
   bool processCopyin() const;
   bool processCopyprivate(mlir::Location currentLocation,
                           mlir::omp::CopyprivateClauseOps &result) const;
-  bool processDepend(mlir::omp::DependClauseOps &result) const;
+  bool processDepend(lower::SymMap &symMap, lower::StatementContext &stmtCtx,
+                     mlir::omp::DependClauseOps &result) const;
   bool
   processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
                  mlir::omp::IfClauseOps &result) const;
+  bool processInReduction(
+      mlir::Location currentLocation, mlir::omp::InReductionClauseOps &result,
+      llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const;
   bool processIsDevicePtr(
       mlir::omp::IsDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
@@ -129,6 +140,9 @@ public:
   bool processReduction(
       mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) const;
+  bool processTaskReduction(
+      mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
+      llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const;
   bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processUseDeviceAddr(
       lower::StatementContext &stmtCtx,
@@ -186,9 +200,11 @@ void ClauseProcessor::processTODO(mlir::Location currentLocation,
   auto checkUnhandledClause = [&](llvm::omp::Clause id, const auto *x) {
     if (!x)
       return;
+    unsigned version = semaCtx.langOptions().OpenMPVersion;
     TODO(currentLocation,
          "Unhandled clause " + llvm::omp::getOpenMPClauseName(id).upper() +
-             " in " + llvm::omp::getOpenMPDirectiveName(directive).upper() +
+             " in " +
+             llvm::omp::getOpenMPDirectiveName(directive, version).upper() +
              " construct");
   };
 

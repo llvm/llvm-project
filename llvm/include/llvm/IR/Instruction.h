@@ -585,6 +585,10 @@ public:
   /// This should be used when speculating instructions.
   void dropUBImplyingAttrsAndMetadata();
 
+  /// Return true if this instruction has UB-implying attributes
+  /// that can cause immediate undefined behavior.
+  bool hasUBImplyingAttrs() const LLVM_READONLY;
+
   /// Determine whether the exact flag is set.
   bool isExact() const LLVM_READONLY;
 

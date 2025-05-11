@@ -315,11 +315,12 @@ LogicalResult mlir::affine::affineForOpBodySkew(AffineForOp forOp,
         // Simplify/canonicalize the affine.for.
         RewritePatternSet patterns(res.getContext());
         AffineForOp::getCanonicalizationPatterns(patterns, res.getContext());
-        GreedyRewriteConfig config;
-        config.strictMode = GreedyRewriteStrictness::ExistingOps;
         bool erased;
-        (void)applyOpPatternsGreedily(res.getOperation(), std::move(patterns),
-                                      config, /*changed=*/nullptr, &erased);
+        (void)applyOpPatternsGreedily(
+            res.getOperation(), std::move(patterns),
+            GreedyRewriteConfig().setStrictness(
+                GreedyRewriteStrictness::ExistingAndNewOps),
+            /*changed=*/nullptr, &erased);
         if (!erased && !prologue)
           prologue = res;
         if (!erased)
@@ -1604,10 +1605,8 @@ SmallVector<AffineForOp, 8> mlir::affine::tile(ArrayRef<AffineForOp> forOps,
                                                ArrayRef<uint64_t> sizes,
                                                AffineForOp target) {
   SmallVector<AffineForOp, 8> res;
-  for (auto loops : tile(forOps, sizes, ArrayRef<AffineForOp>(target))) {
-    assert(loops.size() == 1);
-    res.push_back(loops[0]);
-  }
+  for (auto loops : tile(forOps, sizes, ArrayRef<AffineForOp>(target)))
+    res.push_back(llvm::getSingleElement(loops));
   return res;
 }
 
@@ -1774,23 +1773,37 @@ findHighestBlockForPlacement(const MemRefRegion &region, Block &block,
   SmallVector<Value, 4> symbols;
   cst->getValues(cst->getNumDimVars(), cst->getNumDimAndSymbolVars(), &symbols);
 
-  SmallVector<AffineForOp, 4> enclosingFors;
-  getAffineForIVs(*block.begin(), &enclosingFors);
+  SmallVector<Operation *, 4> enclosingAffineOps;
+  getEnclosingAffineOps(*block.begin(), &enclosingAffineOps);
   // Walk up loop parents till we find an IV on which this region is
-  // symbolic/variant.
-  auto it = enclosingFors.rbegin();
-  for (auto e = enclosingFors.rend(); it != e; ++it) {
+  // symbolic/variant or we hit `hoistGuard`.
+  auto it = enclosingAffineOps.rbegin();
+  AffineForOp lastInvariantFor;
+  for (auto e = enclosingAffineOps.rend(); it != e; ++it) {
+    Operation *enclosingOp = *it;
+    // We can't hoist past the definition of the memref being copied.
+    Value memref = region.memref;
+    if (!memref.getParentRegion()->isAncestor(enclosingOp->getParentRegion())) {
+      LLVM_DEBUG(
+          llvm::dbgs()
+          << "memref definition will end up not dominating hoist location\n");
+      break;
+    }
+
+    auto affineFor = dyn_cast<AffineForOp>(enclosingOp);
+    if (!affineFor)
+      break;
     // TODO: also need to be checking this for regions symbols that
     // aren't loop IVs, whether we are within their resp. defs' dominance scope.
-    if (llvm::is_contained(symbols, it->getInductionVar()))
+    if (llvm::is_contained(symbols, affineFor.getInductionVar()))
       break;
+    lastInvariantFor = affineFor;
   }
 
-  if (it != enclosingFors.rbegin()) {
-    auto lastInvariantIV = *std::prev(it);
-    *copyInPlacementStart = Block::iterator(lastInvariantIV.getOperation());
+  if (it != enclosingAffineOps.rbegin()) {
+    *copyInPlacementStart = Block::iterator(lastInvariantFor);
     *copyOutPlacementStart = std::next(*copyInPlacementStart);
-    *copyPlacementBlock = lastInvariantIV->getBlock();
+    *copyPlacementBlock = lastInvariantFor->getBlock();
   } else {
     *copyInPlacementStart = begin;
     *copyOutPlacementStart = end;
@@ -2048,7 +2061,7 @@ static LogicalResult generateCopy(
 
     // Set copy start location for this dimension in the lower memory space
     // memref.
-    if (auto caf = lbs[d].isSingleConstant()) {
+    if (lbs[d].isSingleConstant()) {
       auto indexVal = lbs[d].getSingleConstantResult();
       if (indexVal == 0) {
         memIndices.push_back(zeroIndex);

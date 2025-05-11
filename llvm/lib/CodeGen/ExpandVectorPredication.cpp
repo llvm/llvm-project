@@ -121,8 +121,8 @@ static bool maySpeculateLanes(VPIntrinsic &VPI) {
     return false;
   // Fallback to whether the intrinsic is speculatable.
   if (auto IntrID = VPI.getFunctionalIntrinsicID())
-    return Intrinsic::getAttributes(VPI.getContext(), *IntrID)
-        .hasFnAttr(Attribute::AttrKind::Speculatable);
+    return Intrinsic::getFnAttributes(VPI.getContext(), *IntrID)
+        .hasAttribute(Attribute::AttrKind::Speculatable);
   if (auto Opc = VPI.getFunctionalOpcode())
     return isSafeToSpeculativelyExecuteWithOpcode(*Opc, &VPI);
   return false;

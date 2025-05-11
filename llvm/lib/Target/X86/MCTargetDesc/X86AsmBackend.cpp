@@ -9,6 +9,7 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86FixupKinds.h"
+#include "MCTargetDesc/X86MCExpr.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -163,17 +164,10 @@ public:
                             const MCSubtargetInfo &STI);
   void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst);
 
-  unsigned getNumFixupKinds() const override {
-    return X86::NumTargetFixupKinds;
-  }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target, const uint64_t Value,
-                             const MCSubtargetInfo *STI) override;
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -183,8 +177,9 @@ public:
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value) const override;
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                    const MCFixup &, const MCValue &, uint64_t,
+                                    bool) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
@@ -364,7 +359,7 @@ static bool hasVariantSymbol(const MCInst &MI) {
       continue;
     const MCExpr &Expr = *Operand.getExpr();
     if (Expr.getKind() == MCExpr::SymbolRef &&
-        cast<MCSymbolRefExpr>(Expr).getKind() != MCSymbolRefExpr::VK_None)
+        getSpecifier(cast<MCSymbolRefExpr>(&Expr)) != X86MCExpr::VK_None)
       return true;
   }
   return false;
@@ -625,7 +620,7 @@ std::optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
   return MCAsmBackend::getFixupKind(Name);
 }
 
-const MCFixupKindInfo &X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[X86::NumTargetFixupKinds] = {
       // clang-format off
       {"reloc_riprel_4byte", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
@@ -644,23 +639,16 @@ const MCFixupKindInfo &X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   // Fixup kinds from .reloc directive are like R_386_NONE/R_X86_64_NONE. They
   // do not require any extra processing.
-  if (Kind >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < X86::NumTargetFixupKinds &&
          "Invalid kind!");
   assert(Infos[Kind - FirstTargetFixupKind].Name && "Empty fixup name!");
   return Infos[Kind - FirstTargetFixupKind];
-}
-
-bool X86AsmBackend::shouldForceRelocation(const MCAssembler &,
-                                          const MCFixup &Fixup, const MCValue &,
-                                          const uint64_t,
-                                          const MCSubtargetInfo *STI) {
-  return Fixup.getKind() >= FirstLiteralRelocationKind;
 }
 
 static unsigned getFixupKindSize(unsigned Kind) {
@@ -700,21 +688,19 @@ static unsigned getFixupKindSize(unsigned Kind) {
 }
 
 void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               MutableArrayRef<char> Data,
+                               const MCValue &, MutableArrayRef<char> Data,
                                uint64_t Value, bool IsResolved,
                                const MCSubtargetInfo *STI) const {
-  unsigned Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
+  auto Kind = Fixup.getKind();
+  if (mc::isRelocation(Kind))
     return;
   unsigned Size = getFixupKindSize(Kind);
 
   assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
 
   int64_t SignedValue = static_cast<int64_t>(Value);
-  if ((Target.isAbsolute() || IsResolved) &&
-      getFixupKindInfo(Fixup.getKind()).Flags &
-      MCFixupKindInfo::FKF_IsPCRel) {
+  if (IsResolved &&
+      getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel) {
     // check that PC relative fixup fits into the fixup size.
     if (Size > 0 && !isIntN(Size * 8, SignedValue))
       Asm.getContext().reportError(
@@ -743,10 +729,23 @@ bool X86AsmBackend::mayNeedRelaxation(const MCInst &MI,
           MI.getOperand(MI.getNumOperands() - 1 - SkipOperands).isExpr());
 }
 
-bool X86AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                         uint64_t Value) const {
-  // Relax if the value is too big for a (signed) i8.
-  return !isInt<8>(Value);
+bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                                 const MCFixup &Fixup,
+                                                 const MCValue &Target,
+                                                 uint64_t Value,
+                                                 bool Resolved) const {
+  // If resolved, relax if the value is too big for a (signed) i8.
+  //
+  // Currently, `jmp local@plt` relaxes JMP even if the offset is small,
+  // different from gas.
+  if (Resolved)
+    return !isInt<8>(Value) || Target.getSpecifier();
+
+  // Otherwise, relax unless there is a @ABS8 specifier.
+  if (Fixup.getKind() == FK_Data_1 && Target.getAddSym() &&
+      Target.getSpecifier() == X86MCExpr::VK_ABS8)
+    return false;
+  return true;
 }
 
 // FIXME: Can tblgen help at all here to verify there aren't other instructions
@@ -1177,8 +1176,8 @@ class DarwinX86AsmBackend : public X86AsmBackend {
   unsigned StackDivide;                  ///< Amount to adjust stack size by.
 protected:
   /// Size of a "push" instruction for the given register.
-  unsigned PushInstrSize(unsigned Reg) const {
-    switch (Reg) {
+  unsigned PushInstrSize(MCRegister Reg) const {
+    switch (Reg.id()) {
       case X86::EBX:
       case X86::ECX:
       case X86::EDX:

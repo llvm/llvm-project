@@ -1,13 +1,19 @@
 # RUN: rm -rf %t && mkdir %t
 # RUN: yaml2obj %s -o %t/original
 # RUN: llvm-strip --strip-all %t/original -o %t/stripped
-# RUN: llvm-readobj --macho-segment %t/stripped | FileCheck %s
+# RUN: llvm-readobj --macho-segment --section-headers %t/stripped | FileCheck %s
+
+# CHECK-LABEL: Sections [
+# CHECK:      Index: 0
+# CHECK-NEXT: Name: __text
+# CHECK-NEXT: Segment: __TEXT
+# CHECK:      Offset: 16384
 
 # CHECK-LABEL: Name: __PAGEZERO
-# CHECK:       fileoff: 16384
+# CHECK:       fileoff: 0
 
 # CHECK-LABEL: Name: __TEXT
-# CHECK:       fileoff: 16384
+# CHECK:       fileoff: 0
 
 # The YAML below is the following code
 # int main(int argc, char **argv) { return 0; }

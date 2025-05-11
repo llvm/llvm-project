@@ -17,8 +17,7 @@ define void @iv.4_used_as_vector_and_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i64> [[STEP_ADD_2]], splat (i64 4)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 8
@@ -109,8 +108,7 @@ define void @iv.4_used_as_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 8
@@ -119,7 +117,7 @@ define void @iv.4_used_as_first_lane(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i64>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i64>, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD]], splat (i64 128)
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD1]], splat (i64 128)
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD2]], splat (i64 128)

@@ -34,6 +34,10 @@ extern "C" {
 // Predicate: is the storage described by a Descriptor contiguous in memory?
 bool RTDECL(IsContiguous)(const Descriptor &);
 
+// Predicate: is the storage described by a Descriptor contiguous in memory
+// up to the given dimension?
+bool RTDECL(IsContiguousUpTo)(const Descriptor &, int);
+
 // Predicate: is this descriptor describing an assumed-size array?
 bool RTDECL(IsAssumedSize)(const Descriptor &);
 

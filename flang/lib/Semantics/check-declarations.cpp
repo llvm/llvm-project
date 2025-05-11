@@ -363,7 +363,10 @@ void CheckHelper::Check(const Symbol &symbol) {
       // are not pertinent to the characteristics of the procedure.
       // Restrictions on entities in pure procedure interfaces don't need
       // enforcement.
-    } else if (!FindCommonBlockContaining(symbol) && IsSaved(symbol)) {
+    } else if (symbol.has<AssocEntityDetails>() ||
+        FindCommonBlockContaining(symbol)) {
+      // can look like they have SAVE but are fine in PURE
+    } else if (IsSaved(symbol)) {
       if (IsInitialized(symbol)) {
         messages_.Say(
             "A pure subprogram may not initialize a variable"_err_en_US);
@@ -960,7 +963,18 @@ void CheckHelper::CheckObjectEntity(
         "'%s' is a data object and may not be EXTERNAL"_err_en_US,
         symbol.name());
   }
-
+  if (symbol.test(Symbol::Flag::CrayPointee)) {
+    // NB, IsSaved was too smart here.
+    if (details.init()) {
+      messages_.Say(
+          "Cray pointee '%s' may not be initialized"_err_en_US, symbol.name());
+    }
+    if (symbol.attrs().test(Attr::SAVE)) {
+      messages_.Say(
+          "Cray pointee '%s' may not have the SAVE attribute"_err_en_US,
+          symbol.name());
+    }
+  }
   if (derived) {
     bool isUnsavedLocal{
         isLocalVariable && !IsAllocatable(symbol) && !IsSaved(symbol)};
@@ -3486,7 +3500,7 @@ void CheckHelper::CheckDioDummyIsDefaultInteger(
 }
 
 void CheckHelper::CheckDioDummyIsScalar(const Symbol &subp, const Symbol &arg) {
-  if (arg.Rank() > 0 || arg.Corank() > 0) {
+  if (arg.Rank() > 0) {
     messages_.Say(arg.name(),
         "Dummy argument '%s' of a defined input/output procedure must be a scalar"_err_en_US,
         arg.name());
@@ -3643,6 +3657,13 @@ void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
       CheckDioArgCount(*specificSubp, ioKind, dummyArgs.size());
       int argCount{0};
       for (auto *arg : dummyArgs) {
+        if (arg && arg->Corank() > 0) {
+          evaluate::AttachDeclaration(
+              messages_.Say(arg->name(),
+                  "Dummy argument '%s' of defined input/output procedure '%s' may not be a coarray"_err_en_US,
+                  arg->name(), ultimate.name()),
+              *arg);
+        }
         switch (argCount++) {
         case 0:
           // dtv-type-spec, INTENT(INOUT) :: dtv
@@ -3709,6 +3730,20 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
       messages_.Say(
           "'%s' has a type %s with a deferred type parameter but is neither an allocatable nor an object pointer"_err_en_US,
           symbol.name(), dyType->AsFortran());
+    }
+    if (!symbol.has<ObjectEntityDetails>()) {
+      if (const DerivedTypeSpec *
+          derived{evaluate::GetDerivedTypeSpec(*dyType)}) {
+        if (IsEventTypeOrLockType(derived)) {
+          messages_.Say(
+              "Entity '%s' with EVENT_TYPE or LOCK_TYPE must be an object"_err_en_US,
+              symbol.name());
+        } else if (auto iter{FindEventOrLockPotentialComponent(*derived)}) {
+          messages_.Say(
+              "Entity '%s' with EVENT_TYPE or LOCK_TYPE potential subobject component '%s' must be an object"_err_en_US,
+              symbol.name(), iter.BuildResultDesignatorName());
+        }
+      }
     }
   }
 }

@@ -101,8 +101,7 @@ struct WmmaConstantOpToSPIRVLowering final
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaConstantMatrixOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    assert(adaptor.getOperands().size() == 1);
-    Value cst = adaptor.getOperands().front();
+    Value cst = llvm::getSingleElement(adaptor.getOperands());
     auto coopType = getTypeConverter()->convertType(op.getType());
     if (!coopType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
@@ -181,8 +180,7 @@ struct WmmaElementwiseOpToSPIRVScalarMulLowering final
                                          "splat is not a composite construct");
     }
 
-    assert(cc.getConstituents().size() == 1);
-    scalar = cc.getConstituents().front();
+    scalar = llvm::getSingleElement(cc.getConstituents());
 
     auto coopType = getTypeConverter()->convertType(op.getType());
     if (!coopType)

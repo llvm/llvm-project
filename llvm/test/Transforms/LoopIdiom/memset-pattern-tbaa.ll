@@ -116,7 +116,7 @@ for.body:
 !21 = !{!22, !20, i64 0}
 !22 = !{!"B", !20, i64 0}
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"double", [[META2:![0-9]+]], i64 0}

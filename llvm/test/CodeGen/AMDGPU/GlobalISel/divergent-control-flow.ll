@@ -22,7 +22,7 @@ entry:
   br i1 %c, label %if.true, label %endif
 
 if.true:
-  %val = load volatile i32, ptr addrspace(1) undef
+  %val = load volatile i32, ptr addrspace(1) poison
   br label %endif
 
 endif:
@@ -53,7 +53,7 @@ endif:
   ret i32 %v
 
 if.true:
-  %val = load volatile i32, ptr addrspace(1) undef
+  %val = load volatile i32, ptr addrspace(1) poison
   br label %endif
 }
 
@@ -78,7 +78,7 @@ entry:
   br i1 %c, label %if.true, label %endif
 
 if.true:
-  %val = load volatile i32, ptr addrspace(1) undef
+  %val = load volatile i32, ptr addrspace(1) poison
   br label %endif
 
 endif:
@@ -110,7 +110,7 @@ entry:
   br i1 %c, label %if.true, label %endif
 
 if.true:
-  %val = load volatile i32, ptr addrspace(1) undef
+  %val = load volatile i32, ptr addrspace(1) poison
   br label %endif
 
 endif:
@@ -183,7 +183,7 @@ bb8:
   br i1 %tmp10, label %bb11, label %bb12
 
 bb11:
-  store float 4.0, ptr addrspace(5) undef, align 4
+  store float 4.0, ptr addrspace(5) poison, align 4
   br label %bb12
 
 bb12:
@@ -199,33 +199,31 @@ define amdgpu_kernel void @break_loop(i32 %arg) {
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_subrev_u32_e32 v0, s0, v0
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
-; CHECK-NEXT:    s_branch .LBB5_3
-; CHECK-NEXT:  .LBB5_1: ; %bb4
-; CHECK-NEXT:    ; in Loop: Header=BB5_3 Depth=1
-; CHECK-NEXT:    global_load_dword v2, v[0:1], off glc
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
-; CHECK-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v2
-; CHECK-NEXT:    s_and_b64 s[4:5], exec, vcc
-; CHECK-NEXT:    s_or_b64 s[2:3], s[2:3], s[4:5]
-; CHECK-NEXT:  .LBB5_2: ; %Flow
-; CHECK-NEXT:    ; in Loop: Header=BB5_3 Depth=1
+; CHECK-NEXT:    s_branch .LBB5_2
+; CHECK-NEXT:  .LBB5_1: ; %Flow
+; CHECK-NEXT:    ; in Loop: Header=BB5_2 Depth=1
 ; CHECK-NEXT:    s_and_b64 s[4:5], exec, s[2:3]
 ; CHECK-NEXT:    s_or_b64 s[0:1], s[4:5], s[0:1]
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_execz .LBB5_5
-; CHECK-NEXT:  .LBB5_3: ; %bb1
+; CHECK-NEXT:    s_cbranch_execz .LBB5_4
+; CHECK-NEXT:  .LBB5_2: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_add_u32_e32 v1, 1, v1
 ; CHECK-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
 ; CHECK-NEXT:    s_and_b64 s[4:5], exec, -1
 ; CHECK-NEXT:    v_cmp_le_i32_e32 vcc, 0, v1
 ; CHECK-NEXT:    s_or_b64 s[2:3], s[2:3], s[4:5]
-; CHECK-NEXT:    s_cbranch_vccz .LBB5_1
-; CHECK-NEXT:  ; %bb.4: ; in Loop: Header=BB5_3 Depth=1
-; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    s_branch .LBB5_2
-; CHECK-NEXT:  .LBB5_5: ; %bb9
+; CHECK-NEXT:    s_cbranch_vccnz .LBB5_1
+; CHECK-NEXT:  ; %bb.3: ; %bb4
+; CHECK-NEXT:    ; in Loop: Header=BB5_2 Depth=1
+; CHECK-NEXT:    global_load_dword v2, v[0:1], off glc
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
+; CHECK-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v2
+; CHECK-NEXT:    s_and_b64 s[4:5], exec, vcc
+; CHECK-NEXT:    s_or_b64 s[2:3], s[2:3], s[4:5]
+; CHECK-NEXT:    s_branch .LBB5_1
+; CHECK-NEXT:  .LBB5_4: ; %bb9
 ; CHECK-NEXT:    s_endpgm
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
@@ -233,13 +231,13 @@ bb:
   br label %bb1
 
 bb1:
-  %lsr.iv = phi i32 [ undef, %bb ], [ %lsr.iv.next, %bb4 ]
+  %lsr.iv = phi i32 [ poison, %bb ], [ %lsr.iv.next, %bb4 ]
   %lsr.iv.next = add i32 %lsr.iv, 1
   %cmp0 = icmp slt i32 %lsr.iv.next, 0
   br i1 %cmp0, label %bb4, label %bb9
 
 bb4:
-  %load = load volatile i32, ptr addrspace(1) undef, align 4
+  %load = load volatile i32, ptr addrspace(1) poison, align 4
   %cmp1 = icmp slt i32 %tmp, %load
   br i1 %cmp1, label %bb1, label %bb9
 

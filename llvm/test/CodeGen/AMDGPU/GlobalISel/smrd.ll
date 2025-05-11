@@ -12,7 +12,7 @@ define amdgpu_kernel void @smrd0(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 1
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -24,7 +24,7 @@ define amdgpu_kernel void @smrd1(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 255
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -39,7 +39,7 @@ define amdgpu_kernel void @smrd2(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 256
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -54,7 +54,7 @@ define amdgpu_kernel void @smrd3(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 4294967296 ; 2 ^ 32
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -70,7 +70,7 @@ define amdgpu_kernel void @smrd4(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 262143
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -84,7 +84,7 @@ define amdgpu_kernel void @smrd5(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 262144
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 

@@ -13,6 +13,15 @@
 #include "src/string/memcpy.h"
 #include "test/UnitTest/Test.h"
 
+asm(R"(
+.globl _end, __llvm_libc_heap_limit
+
+.bss
+_end:
+  .fill 1024
+__llvm_libc_heap_limit:
+)");
+
 using LIBC_NAMESPACE::Block;
 using LIBC_NAMESPACE::freelist_heap;
 using LIBC_NAMESPACE::FreeListHeap;

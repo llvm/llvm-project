@@ -321,7 +321,7 @@ bool MergeFunctionsPass::runOnModule(Module &M) {
   SmallVector<GlobalValue *, 4> UsedV;
   collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
   collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
-  MF.getUsed().insert(UsedV.begin(), UsedV.end());
+  MF.getUsed().insert_range(UsedV);
   return MF.run(M);
 }
 
@@ -509,33 +509,6 @@ void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
       U.set(New);
     }
   }
-}
-
-// Helper for writeThunk,
-// Selects proper bitcast operation,
-// but a bit simpler then CastInst::getCastOpcode.
-static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
-  Type *SrcTy = V->getType();
-  if (SrcTy->isStructTy()) {
-    assert(DestTy->isStructTy());
-    assert(SrcTy->getStructNumElements() == DestTy->getStructNumElements());
-    Value *Result = PoisonValue::get(DestTy);
-    for (unsigned int I = 0, E = SrcTy->getStructNumElements(); I < E; ++I) {
-      Value *Element =
-          createCast(Builder, Builder.CreateExtractValue(V, ArrayRef(I)),
-                     DestTy->getStructElementType(I));
-
-      Result = Builder.CreateInsertValue(Result, Element, ArrayRef(I));
-    }
-    return Result;
-  }
-  assert(!DestTy->isStructTy());
-  if (SrcTy->isIntegerTy() && DestTy->isPointerTy())
-    return Builder.CreateIntToPtr(V, DestTy);
-  else if (SrcTy->isPointerTy() && DestTy->isIntegerTy())
-    return Builder.CreatePtrToInt(V, DestTy);
-  else
-    return Builder.CreateBitCast(V, DestTy);
 }
 
 // Erase the instructions in PDIUnrelatedWL as they are unrelated to the
@@ -789,7 +762,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   unsigned i = 0;
   FunctionType *FFTy = F->getFunctionType();
   for (Argument &AI : H->args()) {
-    Args.push_back(createCast(Builder, &AI, FFTy->getParamType(i)));
+    Args.push_back(Builder.CreateAggregateCast(&AI, FFTy->getParamType(i)));
     ++i;
   }
 
@@ -804,7 +777,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   if (H->getReturnType()->isVoidTy()) {
     RI = Builder.CreateRetVoid();
   } else {
-    RI = Builder.CreateRet(createCast(Builder, CI, H->getReturnType()));
+    RI = Builder.CreateRet(Builder.CreateAggregateCast(CI, H->getReturnType()));
   }
 
   if (MergeFunctionsPDI) {
@@ -923,6 +896,8 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
                                       F->getAddressSpace(), "", F->getParent());
     NewF->copyAttributesFrom(F);
     NewF->takeName(F);
+    NewF->setComdat(F->getComdat());
+    F->setComdat(nullptr);
     NewF->IsNewDbgInfoFormat = F->IsNewDbgInfoFormat;
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(F, NewF, "type");

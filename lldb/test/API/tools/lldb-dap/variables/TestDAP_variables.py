@@ -313,10 +313,20 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         # Set a variable value whose name is synthetic, like a variable index
         # and verify the value by reading it
-        self.dap_server.request_setVariable(varRef, "[0]", 100)
+        variable_value = 100
+        response = self.dap_server.request_setVariable(varRef, "[0]", variable_value)
+        # Verify dap sent the correct response
+        verify_response = {
+            "type": "int",
+            "value": str(variable_value),
+            "variablesReference": 0,
+        }
+        for key, value in verify_response.items():
+            self.assertEqual(value, response["body"][key])
+
         response = self.dap_server.request_variables(varRef, start=0, count=1)
         self.verify_variables(
-            make_buffer_verify_dict(0, 1, 100), response["body"]["variables"]
+            make_buffer_verify_dict(0, 1, variable_value), response["body"]["variables"]
         )
 
         # Set a variable value whose name is a real child value, like "pt.x"
@@ -401,16 +411,19 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         self.verify_variables(verify_locals, locals)
 
+    @skipIfWindows
     def test_scopes_variables_setVariable_evaluate(self):
         self.do_test_scopes_variables_setVariable_evaluate(
             enableAutoVariableSummaries=False
         )
 
+    @skipIfWindows
     def test_scopes_variables_setVariable_evaluate_with_descriptive_summaries(self):
         self.do_test_scopes_variables_setVariable_evaluate(
             enableAutoVariableSummaries=True
         )
 
+    @skipIfWindows
     def do_test_scopes_and_evaluate_expansion(self, enableAutoVariableSummaries: bool):
         """
         Tests the evaluated expression expands successfully after "scopes" packets
@@ -663,6 +676,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         ]["variables"]
         self.verify_variables(verify_children, children)
 
+    @skipIfWindows
     def test_return_variables(self):
         """
         Test the stepping out of a function with return value show the variable correctly.
@@ -710,6 +724,10 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
                 self.verify_variables(verify_locals, local_variables, varref_dict)
                 break
+
+        self.assertFalse(
+            self.dap_server.request_setVariable(1, "(Return Value)", 20)["success"]
+        )
 
     @skipIfWindows
     def test_indexedVariables(self):

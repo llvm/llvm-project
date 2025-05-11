@@ -59,7 +59,7 @@ TEST(TemporaryStack, ValueStackBasic) {
   Descriptor &outputDesc2{testDescriptorStorage[2].descriptor()};
   inputDesc.Establish(code, elementBytes, descriptorPtr, rank, extent);
 
-  inputDesc.Allocate();
+  inputDesc.Allocate(kNoAsyncId);
   ASSERT_EQ(inputDesc.IsAllocated(), true);
   uint32_t *inputData = static_cast<uint32_t *>(inputDesc.raw().base_addr);
   for (std::size_t i = 0; i < inputDesc.Elements(); ++i) {
@@ -123,7 +123,7 @@ TEST(TemporaryStack, ValueStackMultiSize) {
       boxDims.extent = extent[dim];
       boxDims.sm = elementBytes;
     }
-    desc->Allocate();
+    desc->Allocate(kNoAsyncId);
 
     // fill the array with some data to test
     for (uint32_t i = 0; i < desc->Elements(); ++i) {

@@ -144,7 +144,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
 #if TEST_STD_VER >= 11
   // We can't test unique_ptr in constant evaluation before C++23 as it's constexpr only since C++23.
-  if (TEST_STD_VER >= 23 || !TEST_IS_CONSTANT_EVALUATED)
+  if (TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED)
     types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), TestUniquePtr());
 #endif
 

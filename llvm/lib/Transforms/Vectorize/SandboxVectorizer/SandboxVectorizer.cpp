@@ -11,9 +11,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
-#include <regex>
 
 using namespace llvm;
 
@@ -92,8 +92,9 @@ bool SandboxVectorizerPass::allowFile(const std::string &SrcFilePath) {
     if (FileNameToMatch.empty())
       return false;
     // Note: This only runs when debugging so its OK not to reuse the regex.
-    std::regex FileNameRegex(std::string(".*") + FileNameToMatch);
-    if (std::regex_match(SrcFilePath, FileNameRegex))
+    Regex FileNameRegex(".*" + FileNameToMatch + "$");
+    assert(FileNameRegex.isValid() && "Bad regex!");
+    if (FileNameRegex.match(SrcFilePath))
       return true;
   } while (DelimPos != std::string::npos);
   return false;

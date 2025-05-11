@@ -9,6 +9,9 @@
 // UNSUPPORTED: no-threads
 // REQUIRES: c++03 || c++11 || c++14 || c++17 || c++20
 
+// No diagnostic gets emitted when we build with modules.
+// XFAIL: clang-modules-build
+
 // This test ensures that we issue a reasonable diagnostic when including <atomic> after
 // <stdatomic.h> has been included. Before C++23, this otherwise leads to obscure errors
 // because <atomic> may try to redefine things defined by <stdatomic.h>.

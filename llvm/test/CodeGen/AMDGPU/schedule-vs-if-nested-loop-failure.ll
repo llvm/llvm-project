@@ -96,12 +96,12 @@ ENDIF:                                            ; preds = %main_body, %Flow2
   %74 = extractelement <4 x float> %73, i32 3
   %75 = fmul float %74, %16
   %76 = fadd float %75, %60
-  %77 = insertelement <4 x float> undef, float %64, i32 0
+  %77 = insertelement <4 x float> poison, float %64, i32 0
   %78 = insertelement <4 x float> %77, float %68, i32 1
   %79 = insertelement <4 x float> %78, float %72, i32 2
   %80 = insertelement <4 x float> %79, float %76, i32 3
   call void @llvm.amdgcn.s.barrier()
-  %81 = insertelement <4 x float> undef, float %temp.0, i32 0
+  %81 = insertelement <4 x float> poison, float %temp.0, i32 0
   %82 = insertelement <4 x float> %81, float %temp1.0, i32 1
   %83 = insertelement <4 x float> %82, float %temp2.0, i32 2
   %84 = insertelement <4 x float> %83, float %temp3.0, i32 3
