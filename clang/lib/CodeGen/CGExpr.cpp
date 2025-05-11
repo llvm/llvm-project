@@ -108,10 +108,6 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, LangAS DestLangAS,
   if (AllocaAddr)
     *AllocaAddr = Alloca;
   llvm::Value *V = Alloca.getPointer();
-  assert((!getLangOpts().OpenCL ||
-          CGM.getTarget().getTargetAddressSpace(getASTAllocaAddressSpace()) ==
-              CGM.getTarget().getTargetAddressSpace(LangAS::opencl_private)) &&
-         "For OpenCL allocas must allocate in the private address space!");
   // Alloca always returns a pointer in alloca address space, which may
   // be different from the type defined by the language. For example,
   // in C++ the auto variables are in the default address space. Therefore
