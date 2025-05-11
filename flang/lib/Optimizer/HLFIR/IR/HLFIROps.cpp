@@ -207,29 +207,37 @@ static bool hasExplicitLowerBounds(mlir::Value shape) {
          mlir::isa<fir::ShapeShiftType, fir::ShiftType>(shape.getType());
 }
 
-static std::pair<mlir::Type, mlir::Value> updateDeclareInputTypeWithVolatility(
-    mlir::Type inputType, mlir::Value memref, mlir::OpBuilder &builder,
-    fir::FortranVariableFlagsAttr fortran_attrs) {
-  if (fortran_attrs &&
-      bitEnumContainsAny(fortran_attrs.getFlags(),
-                         fir::FortranVariableFlagsEnum::fortran_volatile)) {
-    const bool isPointer = bitEnumContainsAny(
-        fortran_attrs.getFlags(), fir::FortranVariableFlagsEnum::pointer);
-    auto updateType = [&](auto t) {
-      using FIRT = decltype(t);
-      // A volatile pointer's pointee is volatile.
-      auto elementType = t.getEleTy();
-      const bool elementTypeIsVolatile =
-          isPointer || fir::isa_volatile_type(elementType);
-      auto newEleTy =
-          fir::updateTypeWithVolatility(elementType, elementTypeIsVolatile);
-      inputType = FIRT::get(newEleTy, true);
-    };
-    llvm::TypeSwitch<mlir::Type>(inputType)
-        .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>(updateType);
-    memref =
-        builder.create<fir::VolatileCastOp>(memref.getLoc(), inputType, memref);
+static std::pair<mlir::Type, mlir::Value>
+updateDeclaredInputTypeWithVolatility(mlir::Type inputType, mlir::Value memref,
+                                      mlir::OpBuilder &builder,
+                                      fir::FortranVariableFlagsEnum flags) {
+  if (!bitEnumContainsAny(flags,
+                          fir::FortranVariableFlagsEnum::fortran_volatile)) {
+    return std::make_pair(inputType, memref);
   }
+
+  // A volatile pointer's pointee is volatile.
+  const bool isPointer =
+      bitEnumContainsAny(flags, fir::FortranVariableFlagsEnum::pointer);
+  // An allocatable's inner type's volatility matches that of the reference.
+  const bool isAllocatable =
+      bitEnumContainsAny(flags, fir::FortranVariableFlagsEnum::allocatable);
+
+  auto updateType = [&](auto t) {
+    using FIRT = decltype(t);
+    auto elementType = t.getEleTy();
+    const bool elementTypeIsBox = mlir::isa<fir::BaseBoxType>(elementType);
+    const bool elementTypeIsVolatile = isPointer || isAllocatable ||
+                                       elementTypeIsBox ||
+                                       fir::isa_volatile_type(elementType);
+    auto newEleTy =
+        fir::updateTypeWithVolatility(elementType, elementTypeIsVolatile);
+    inputType = FIRT::get(newEleTy, true);
+  };
+  llvm::TypeSwitch<mlir::Type>(inputType)
+      .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>(updateType);
+  memref =
+      builder.create<fir::VolatileCastOp>(memref.getLoc(), inputType, memref);
   return std::make_pair(inputType, memref);
 }
 
@@ -243,8 +251,11 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
-  std::tie(inputType, memref) = updateDeclareInputTypeWithVolatility(
-      inputType, memref, builder, fortran_attrs);
+  if (fortran_attrs) {
+    const auto flags = fortran_attrs.getFlags();
+    std::tie(inputType, memref) = updateDeclaredInputTypeWithVolatility(
+        inputType, memref, builder, flags);
+  }
   mlir::Type hlfirVariableType =
       getHLFIRVariableType(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, inputType}, memref, shape,
