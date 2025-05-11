@@ -2394,10 +2394,26 @@ void VPlanTransforms::createInterleaveGroups(
 
 void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
                                                Type &CanonicalIVTy) {
+  // Replace loop regions with explicity CFG.
+  SmallVector<VPRegionBlock *> LoopRegions;
+  for (VPRegionBlock *R : VPBlockUtils::blocksOnly<VPRegionBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    if (!R->isReplicator())
+      LoopRegions.push_back(R);
+  }
+  for (VPRegionBlock *R : LoopRegions) {
+    VPBlockBase *Header = R->getEntry();
+    VPBlockBase *Latch = R->getExiting();
+    R->removeRegion();
+    // Add explicit backedge.
+    VPBlockUtils::connectBlocks(Latch, Header);
+  }
+
   using namespace llvm::VPlanPatternMatch;
 
   VPTypeAnalysis TypeInfo(&CanonicalIVTy);
   SmallVector<VPRecipeBase *> ToRemove;
+
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
