@@ -801,8 +801,9 @@ void TestReflectBoundsOp::inferResultRanges(
     unsigned bitwidth = intTy.getWidth();
     sIntTy = b.getIntegerType(bitwidth, /*isSigned=*/true);
     uIntTy = b.getIntegerType(bitwidth, /*isSigned=*/false);
-  } else
+  } else {
     sIntTy = uIntTy = type;
+  }
 
   setUminAttr(b.getIntegerAttr(uIntTy, range.umin()));
   setUmaxAttr(b.getIntegerAttr(uIntTy, range.umax()));

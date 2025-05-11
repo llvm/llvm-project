@@ -149,7 +149,7 @@ func.func @one_unused(%cond: i1) -> (index) {
 // CHECK:             call @side_effect() : () -> ()
 // CHECK:             [[C1:%.*]] = "test.value1"
 // CHECK:             scf.yield [[C1]] : index
-// CHECK:           } else
+// CHECK:           } else {
 // CHECK:             [[C3:%.*]] = "test.value3"
 // CHECK:             scf.yield [[C3]] : index
 // CHECK:           }
@@ -185,12 +185,12 @@ func.func @nested_unused(%cond1: i1, %cond2: i1) -> (index) {
 // CHECK:               call @side_effect() : () -> ()
 // CHECK:               [[C1:%.*]] = "test.value1"
 // CHECK:               scf.yield [[C1]] : index
-// CHECK:             } else
+// CHECK:             } else {
 // CHECK:               [[C3:%.*]] = "test.value3"
 // CHECK:               scf.yield [[C3]] : index
 // CHECK:             }
 // CHECK:             scf.yield [[V1]] : index
-// CHECK:           } else
+// CHECK:           } else {
 // CHECK:             [[C1_2:%.*]] = "test.value1_2"
 // CHECK:             scf.yield [[C1_2]] : index
 // CHECK:           }
@@ -215,7 +215,7 @@ func.func @all_unused(%cond: i1) {
 // CHECK-LABEL:   func @all_unused
 // CHECK:           scf.if %{{.*}} {
 // CHECK:             call @side_effect() : () -> ()
-// CHECK:           } else
+// CHECK:           } else {
 // CHECK:             call @side_effect() : () -> ()
 // CHECK:           }
 // CHECK:           return
