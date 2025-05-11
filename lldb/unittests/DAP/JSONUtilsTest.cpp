@@ -149,3 +149,47 @@ TEST(JSONUtilsTest, CreateModule) {
   ASSERT_NE(object, nullptr);
   EXPECT_EQ(object->size(), 0UL);
 }
+
+TEST(JSONUtilsTest, GetStrings_EmptyArray) {
+  llvm::json::Object obj;
+  obj.try_emplace("key", llvm::json::Array());
+  auto result = GetStrings(&obj, "key");
+  EXPECT_TRUE(result.empty());
+}
+
+TEST(JSONUtilsTest, GetStrings_NullKey) {
+  llvm::json::Object obj;
+  auto result = GetStrings(&obj, "nonexistent_key");
+  EXPECT_TRUE(result.empty());
+}
+
+TEST(JSONUtilsTest, GetStrings_StringValues) {
+  llvm::json::Object obj;
+  llvm::json::Array arr{"value1", "value2", "value3"};
+  obj.try_emplace("key", std::move(arr));
+  auto result = GetStrings(&obj, "key");
+  ASSERT_EQ(result.size(), 3UL);
+  EXPECT_EQ(result[0], "value1");
+  EXPECT_EQ(result[1], "value2");
+  EXPECT_EQ(result[2], "value3");
+}
+
+TEST(JSONUtilsTest, GetStrings_MixedValues) {
+  llvm::json::Object obj;
+  llvm::json::Array arr{"string", 42, true, nullptr};
+  obj.try_emplace("key", std::move(arr));
+  auto result = GetStrings(&obj, "key");
+  ASSERT_EQ(result.size(), 3UL);
+  EXPECT_EQ(result[0], "string");
+  EXPECT_EQ(result[1], "42");
+  EXPECT_EQ(result[2], "true");
+}
+
+TEST(JSONUtilsTest, GetStrings_NestedArray) {
+  llvm::json::Object obj;
+  llvm::json::Array nested_array{"string", llvm::json::Array{"nested"}};
+  obj.try_emplace("key", std::move(nested_array));
+  auto result = GetStrings(&obj, "key");
+  ASSERT_EQ(result.size(), 1UL);
+  EXPECT_EQ(result[0], "string");
+}
