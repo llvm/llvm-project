@@ -1135,7 +1135,14 @@ public:
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
   /// Returns the number of incoming values, also number of incoming blocks.
-  unsigned getNumIncoming() const { return getAsRecipe()->getNumOperands(); }
+  /// Note that at the moment, VPWidenIntOrFpInductionRecipes only have a single
+  /// incoming value, its start value.
+  unsigned getNumIncoming() const {
+    const VPRecipeBase *R = getAsRecipe();
+    return R->getVPDefID() == VPDef::VPWidenIntOrFpInductionSC
+               ? 1
+               : getAsRecipe()->getNumOperands();
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

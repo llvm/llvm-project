@@ -235,10 +235,6 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         if (isa<VPPredInstPHIRecipe>(UI))
           continue;
 
-        if (auto *VPI = dyn_cast<VPInstruction>(UI)) {
-          if (VPI->getOpcode() == Instruction::PHI)
-            continue;
-        }
         // If the user is in the same block, check it comes after R in
         // the block.
         if (UserVPBB == VPBB) {
