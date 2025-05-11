@@ -4881,6 +4881,9 @@ protected:
   /// Clone an identical PtrToIntInst.
   PtrToIntInst *cloneImpl() const;
 
+  PtrToIntInst(unsigned Op, Value *S, Type *Ty, const Twine &NameStr,
+               InsertPosition InsertBefore);
+
 public:
   /// Constructor with insert-before-instruction semantics
   PtrToIntInst(Value *S,                  ///< The value to be converted
@@ -4904,12 +4907,42 @@ public:
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
-    return I->getOpcode() == PtrToInt;
+    return I->getOpcode() == PtrToInt || I->getOpcode() == PtrToAddr;
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 };
+
+/// This class represents a cast from a pointer to an address (non-capturing
+/// ptrtoint). Inherits from PtrToIntInst since it is a less restrictive version
+/// of ptrtoint, so treating it as ptrtoint is conservatively correct.
+class PtrToAddrInst : public PtrToIntInst {
+protected:
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+
+  /// Clone an identical PtrToIntInst.
+  PtrToAddrInst *cloneImpl() const;
+
+public:
+  /// Constructor with insert-before-instruction semantics
+  PtrToAddrInst(Value *S,                  ///< The value to be converted
+                Type *Ty,                  ///< The type to convert to
+                const Twine &NameStr = "", ///< A name for the new instruction
+                InsertPosition InsertBefore =
+                    nullptr ///< Where to insert the new instruction
+  );
+
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Instruction *I) {
+    return I->getOpcode() == PtrToAddr;
+  }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
 
 //===----------------------------------------------------------------------===//
 //                             BitCastInst Class
