@@ -4632,22 +4632,55 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
   SDValue Imm = CurDAG->getTargetConstant(
       ShAmt, DL, N0.getOperand(1).getValueType(), false);
 
-  if (ShAmt + HsAmt != 64)
+  unsigned VTSizeInBits =
+      (Subtarget->hasSVE2() ? VT.getScalarSizeInBits() : 64);
+  if (ShAmt + HsAmt != VTSizeInBits)
     return false;
+
+  // We have Neon SHA3 XAR operation for v2i64 but for types
+  // v4i32, v8i16, v16i8 we can use SVE operations when SVE2-SHA3
+  // is available.
+  EVT SVT = MVT::v2i64;
+  switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::v4i32:
+    SVT = MVT::nxv4i32;
+    break;
+  case MVT::v8i16:
+    SVT = MVT::nxv8i16;
+    break;
+  case MVT::v16i8:
+    SVT = MVT::nxv16i8;
+    break;
+  default:
+    if (!(VT == MVT::v2i64 || VT == MVT::v1i64))
+      return false;
+    break;
+  }
 
   if (!IsXOROperand) {
     SDValue Zero = CurDAG->getTargetConstant(0, DL, MVT::i64);
-    SDNode *MOV =
-        CurDAG->getMachineNode(AArch64::MOVIv2d_ns, DL, MVT::v2i64, Zero);
+    SDNode *MOV = CurDAG->getMachineNode(AArch64::MOVIv2d_ns, DL, SVT, Zero);
     SDValue MOVIV = SDValue(MOV, 0);
+
     R1 = N1->getOperand(0);
     R2 = MOVIV;
   }
 
+  if (SVT != VT && VT != MVT::v1i64) {
+    SDValue Undef =
+        SDValue(CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, SVT), 0);
+    SDValue ZSub = CurDAG->getTargetConstant(AArch64::zsub, DL, MVT::i32);
+
+    R1 = SDValue(CurDAG->getMachineNode(AArch64::INSERT_SUBREG, DL, SVT, Undef,
+                                        R1, ZSub),
+                 0);
+    R2 = SDValue(CurDAG->getMachineNode(AArch64::INSERT_SUBREG, DL, SVT, Undef,
+                                        R2, ZSub),
+                 0);
+  }
+
   // If the input is a v1i64, widen to a v2i64 to use XAR.
-  assert((VT == MVT::v1i64 || VT == MVT::v2i64) && "Unexpected XAR type!");
   if (VT == MVT::v1i64) {
-    EVT SVT = MVT::v2i64;
     SDValue Undef =
         SDValue(CurDAG->getMachineNode(AArch64::IMPLICIT_DEF, DL, SVT), 0);
     SDValue DSub = CurDAG->getTargetConstant(AArch64::dsub, DL, MVT::i32);
@@ -4661,12 +4694,28 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
   }
 
   SDValue Ops[] = {R1, R2, Imm};
-  SDNode *XAR = CurDAG->getMachineNode(AArch64::XAR, DL, MVT::v2i64, Ops);
+  SDNode *XAR = nullptr;
+
+  if (SVT != VT && VT != MVT::v1i64) {
+    if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::Int>(
+            SVT, {AArch64::XAR_ZZZI_B, AArch64::XAR_ZZZI_H, AArch64::XAR_ZZZI_S,
+                  AArch64::XAR_ZZZI_D}))
+      XAR = CurDAG->getMachineNode(Opc, DL, VT, Ops);
+  } else {
+    XAR = CurDAG->getMachineNode(AArch64::XAR, DL, MVT::v2i64, Ops);
+  }
+
+  if (!XAR)
+    return false;
 
   if (VT == MVT::v1i64) {
     SDValue DSub = CurDAG->getTargetConstant(AArch64::dsub, DL, MVT::i32);
     XAR = CurDAG->getMachineNode(AArch64::EXTRACT_SUBREG, DL, VT,
                                  SDValue(XAR, 0), DSub);
+  } else if (SVT != VT) {
+    SDValue ZSub = CurDAG->getTargetConstant(AArch64::zsub, DL, MVT::i32);
+    XAR = CurDAG->getMachineNode(AArch64::EXTRACT_SUBREG, DL, VT,
+                                 SDValue(XAR, 0), ZSub);
   }
   ReplaceNode(N, XAR);
   return true;
