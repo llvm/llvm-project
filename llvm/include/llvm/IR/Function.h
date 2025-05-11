@@ -811,6 +811,10 @@ private:
     return &Function::BasicBlocks;
   }
 
+  static size_t getSublistOffset(BasicBlock *) {
+    return offsetof(Function, BasicBlocks);
+  }
+
 public:
   const BasicBlock       &getEntryBlock() const   { return front(); }
         BasicBlock       &getEntryBlock()         { return front(); }

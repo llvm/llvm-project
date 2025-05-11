@@ -25,6 +25,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalIFunc.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -609,6 +610,9 @@ private:
   static GlobalListType Module::*getSublistAccess(GlobalVariable*) {
     return &Module::GlobalList;
   }
+  static size_t getSublistOffset(GlobalVariable *) {
+    return offsetof(Module, GlobalList);
+  }
   friend class llvm::SymbolTableListTraits<llvm::GlobalVariable>;
 
 public:
@@ -618,6 +622,9 @@ public:
   FunctionListType       &getFunctionList()           { return FunctionList; }
   static FunctionListType Module::*getSublistAccess(Function*) {
     return &Module::FunctionList;
+  }
+  static size_t getSublistOffset(Function *) {
+    return offsetof(Module, FunctionList);
   }
 
   /// Detach \p Alias from the list but don't delete it.
@@ -658,6 +665,9 @@ private: // Please use functions like insertAlias(), removeAlias() etc.
   static AliasListType Module::*getSublistAccess(GlobalAlias*) {
     return &Module::AliasList;
   }
+  static size_t getSublistOffset(GlobalAlias *) {
+    return offsetof(Module, AliasList);
+  }
   friend class llvm::SymbolTableListTraits<llvm::GlobalAlias>;
 
   /// Get the Module's list of ifuncs (constant).
@@ -667,6 +677,9 @@ private: // Please use functions like insertAlias(), removeAlias() etc.
 
   static IFuncListType Module::*getSublistAccess(GlobalIFunc*) {
     return &Module::IFuncList;
+  }
+  static size_t getSublistOffset(GlobalIFunc *) {
+    return offsetof(Module, IFuncList);
   }
   friend class llvm::SymbolTableListTraits<llvm::GlobalIFunc>;
 
