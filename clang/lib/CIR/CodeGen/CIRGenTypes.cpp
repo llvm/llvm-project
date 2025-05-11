@@ -422,7 +422,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   case Type::Enum: {
     // TODO(cir): Implement updateCompletedType for enums.
-    assert(!cir.MissingFeatures::updateCompletedType());
+    assert(!cir::MissingFeatures::updateCompletedType());
     const EnumDecl *ED = cast<EnumType>(ty)->getDecl();
     if (auto integerType = ED->getIntegerType(); !integerType.isNull())
 	      return convertType(integerType);
