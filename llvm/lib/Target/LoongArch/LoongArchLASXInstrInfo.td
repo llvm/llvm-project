@@ -1729,6 +1729,10 @@ def : Pat<(loongarch_vshuf4i v8i32:$xj, immZExt8:$ui8),
         (XVSHUF4I_W v8i32:$xj, immZExt8:$ui8)>;
 def : Pat<(loongarch_vshuf4i v8f32:$xj, immZExt8:$ui8),
         (XVSHUF4I_W v8f32:$xj, immZExt8:$ui8)>;
+def : Pat<(loongarch_vshuf4i_d v4i64:$xj, v4i64:$xk, immZExt8:$ui8),
+          (XVSHUF4I_D v4i64:$xj, v4i64:$xk, immZExt8:$ui8)>;
+def : Pat<(loongarch_vshuf4i_d v4f64:$xj, v4f64:$xk, immZExt8:$ui8),
+          (XVSHUF4I_D v4f64:$xj, v4f64:$xk, immZExt8:$ui8)>;
 
 // XVREPL128VEI_{B/H/W/D}
 def : Pat<(loongarch_vreplvei v32i8:$xj, immZExt4:$ui4),

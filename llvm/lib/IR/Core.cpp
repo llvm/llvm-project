@@ -529,11 +529,10 @@ const char *LLVMGetInlineAsmAsmString(LLVMValueRef InlineAsmVal, size_t *Len) {
 const char *LLVMGetInlineAsmConstraintString(LLVMValueRef InlineAsmVal,
                                              size_t *Len) {
   Value *Val = unwrap<Value>(InlineAsmVal);
-  const std::string &ConstraintString =
-      cast<InlineAsm>(Val)->getConstraintString();
+  StringRef ConstraintString = cast<InlineAsm>(Val)->getConstraintString();
 
-  *Len = ConstraintString.length();
-  return ConstraintString.c_str();
+  *Len = ConstraintString.size();
+  return ConstraintString.data();
 }
 
 LLVMInlineAsmDialect LLVMGetInlineAsmDialect(LLVMValueRef InlineAsmVal) {

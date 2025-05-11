@@ -1786,6 +1786,14 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
     OutStreamer->emitWinCFIEndEpilogue();
     break;
 
+  case X86::SEH_UnwindV2Start:
+    OutStreamer->emitWinCFIUnwindV2Start();
+    break;
+
+  case X86::SEH_UnwindVersion:
+    OutStreamer->emitWinCFIUnwindVersion(MI->getOperand(0).getImm());
+    break;
+
   default:
     llvm_unreachable("expected SEH_ instruction");
   }
@@ -2428,6 +2436,8 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::SEH_PushFrame:
   case X86::SEH_EndPrologue:
   case X86::SEH_EndEpilogue:
+  case X86::SEH_UnwindV2Start:
+  case X86::SEH_UnwindVersion:
     EmitSEHInstruction(MI);
     return;
 
