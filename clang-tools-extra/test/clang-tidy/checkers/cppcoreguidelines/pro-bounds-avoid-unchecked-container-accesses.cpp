@@ -1,17 +1,32 @@
-// RUN: %check_clang_tidy -std=c++2b -check-suffix=DEFAULT %s \
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17,c++20 -check-suffix=DEFAULT %s \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses %t -- \
 // RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.ExcludeClasses: "::ExcludedClass1;::ExcludedClass2"}}'
 
-// RUN: %check_clang_tidy -std=c++2b -check-suffix=AT %s \
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17,c++20 -check-suffix=AT %s \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses %t -- \
 // RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.ExcludeClasses: "::ExcludedClass1;::ExcludedClass2", \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixMode: at}}'
 
-// RUN: %check_clang_tidy -std=c++2b -check-suffix=FUNC %s \
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17,c++20 -check-suffix=FUNC %s \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses %t -- \
 // RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.ExcludeClasses: "::ExcludedClass1;::ExcludedClass2", \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixMode: function, \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixFunction: "f"}}'
+
+// RUN: %check_clang_tidy -std=c++23 -check-suffixes=DEFAULT,DEFAULT-CXX-23 %s \
+// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses %t -- \
+// RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.ExcludeClasses: "::ExcludedClass1;::ExcludedClass2"}}' -- -DCXX_23=1
+
+// RUN: %check_clang_tidy -std=c++23 -check-suffixes=AT,AT-CXX-23 %s \
+// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses %t -- \
+// RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.ExcludeClasses: "::ExcludedClass1;::ExcludedClass2", \
+// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixMode: at}}' -- -DCXX_23=1 
+
+// RUN: %check_clang_tidy -std=c++23 -check-suffixes=FUNC,FUNC-CXX-23 %s \
+// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses %t -- \
+// RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.ExcludeClasses: "::ExcludedClass1;::ExcludedClass2", \
+// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixMode: function, \
+// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixFunction: "f"}}' -- -DCXX_23=1 
 
 namespace std {
   template<typename T, unsigned size>
@@ -19,9 +34,11 @@ namespace std {
     T operator[](unsigned i) {
       return T{1};
     }
+#ifdef CXX_23
     T operator[]() {
       return T{1};
     }
+#endif
     T at(unsigned i) {
       return T{1};
     }
@@ -96,10 +113,12 @@ auto b = a[0];
 // CHECK-FIXES-AT: auto b = a.at(0);
 // CHECK-FIXES-FUNC: auto b = f(a, 0);
 
+#ifdef CXX_23
 auto b23 = a[];
-// CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:13: warning: possibly unsafe 'operator[]', consider bounds-safe alternatives [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
-// CHECK-FIXES-AT: auto b23 = a.at();
-// CHECK-FIXES-FUNC: auto b23 = f(a);
+// CHECK-MESSAGES-DEFAULT-CXX-23: :[[@LINE-1]]:13: warning: possibly unsafe 'operator[]', consider bounds-safe alternatives [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+// CHECK-FIXES-AT-CXX-23: auto b23 = a.at();
+// CHECK-FIXES-FUNC-CXX-23: auto b23 = f(a);
+#endif
 
 
 auto c = a[1+1];
@@ -129,16 +148,18 @@ auto fd = a.operator[](1);
 // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:11: warning: possibly unsafe 'operator[]', consider bounds-safe alternatives [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
 // CHECK-FIXES-AT: auto fd = a.at(1);
 // CHECK-FIXES-FUNC: auto fd = f(a, 1);
-//
+
+#ifdef CXX_23
 auto fa23 = (&a)->operator[]();
-// CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:13: warning: possibly unsafe 'operator[]', consider bounds-safe alternatives [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
-// CHECK-FIXES-AT: auto fa23 = (&a)->at();
-// CHECK-FIXES-FUNC: auto fa23 = f(*(&a));
+// CHECK-MESSAGES-DEFAULT-CXX-23: :[[@LINE-1]]:13: warning: possibly unsafe 'operator[]', consider bounds-safe alternatives [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+// CHECK-FIXES-AT-CXX-23: auto fa23 = (&a)->at();
+// CHECK-FIXES-FUNC-CXX-23: auto fa23 = f(*(&a));
 
 auto fd23 = a.operator[]();
-// CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:13: warning: possibly unsafe 'operator[]', consider bounds-safe alternatives [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
-// CHECK-FIXES-AT: auto fd23 = a.at();
-// CHECK-FIXES-FUNC: auto fd23 = f(a);
+// CHECK-MESSAGES-DEFAULT-CXX-23: :[[@LINE-1]]:13: warning: possibly unsafe 'operator[]', consider bounds-safe alternatives [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
+// CHECK-FIXES-AT-CXX-23: auto fd23 = a.at();
+// CHECK-FIXES-FUNC-CXX-23: auto fd23 = f(a);
+#endif
 
 auto g = a.at(0);
 
