@@ -3885,10 +3885,8 @@ void SelectionDAGBuilder::visitPtrToAddr(const User &I) {
   SDValue N = getValue(I.getOperand(0));
   Type *PtrTy = I.getOperand(0)->getType();
   EVT AddrVT = EVT::getIntegerVT(Ctx, DL.getPointerAddressSizeInBits(PtrTy));
-  if (auto *VTy = dyn_cast<VectorType>(PtrTy)) {
-    Type *EltTy = VTy->getElementType();
+  if (auto *VTy = dyn_cast<VectorType>(PtrTy))
     AddrVT = EVT::getVectorVT(Ctx, AddrVT, VTy->getElementCount());
-  }
   N = DAG.getPtrExtOrTrunc(N, getCurSDLoc(), AddrVT);
   N = DAG.getZExtOrTrunc(N, getCurSDLoc(), TLI.getValueType(DL, I.getType()));
   setValue(&I, N);
