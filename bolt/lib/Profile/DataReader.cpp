@@ -128,6 +128,13 @@ uint64_t FuncSampleData::getSamples(uint64_t Start, uint64_t End) const {
   return Result;
 }
 
+uint64_t FuncSampleData::getSamples() const {
+  uint64_t Result = 0;
+  for (const SampleInfo &I : Data)
+    Result += I.Hits;
+  return Result;
+}
+
 void FuncSampleData::bumpCount(uint64_t Offset, uint64_t Count) {
   auto Iter = Index.find(Offset);
   if (Iter == Index.end()) {
