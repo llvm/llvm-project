@@ -15867,49 +15867,45 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     }
 
     const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
-      const SCEV *S = Map.lookup(Expr);
-      if (!S) {
-        // If we didn't find the extact ZExt expr in the map, check if there's
-        // an entry for a smaller ZExt we can use instead.
-        Type *Ty = Expr->getType();
-        const SCEV *Op = Expr->getOperand(0);
-        unsigned Bitwidth = Ty->getScalarSizeInBits() / 2;
-        while (Bitwidth % 8 == 0 && Bitwidth >= 8 &&
-               Bitwidth > Op->getType()->getScalarSizeInBits()) {
-          Type *NarrowTy = IntegerType::get(SE.getContext(), Bitwidth);
-          auto *NarrowExt = SE.getZeroExtendExpr(Op, NarrowTy);
-          auto I = Map.find(NarrowExt);
-          if (I != Map.end())
-            return SE.getZeroExtendExpr(I->second, Ty);
-          Bitwidth = Bitwidth / 2;
-        }
+      if (const SCEV *S = Map.lookup(Expr))
+        return S;
 
-        return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitZeroExtendExpr(
-            Expr);
+      // If we didn't find the extact ZExt expr in the map, check if there's
+      // an entry for a smaller ZExt we can use instead.
+      Type *Ty = Expr->getType();
+      const SCEV *Op = Expr->getOperand(0);
+      unsigned Bitwidth = Ty->getScalarSizeInBits() / 2;
+      while (Bitwidth % 8 == 0 && Bitwidth >= 8 &&
+             Bitwidth > Op->getType()->getScalarSizeInBits()) {
+        Type *NarrowTy = IntegerType::get(SE.getContext(), Bitwidth);
+        auto *NarrowExt = SE.getZeroExtendExpr(Op, NarrowTy);
+        auto I = Map.find(NarrowExt);
+        if (I != Map.end())
+          return SE.getZeroExtendExpr(I->second, Ty);
+        Bitwidth = Bitwidth / 2;
       }
-      return S;
+
+      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitZeroExtendExpr(
+          Expr);
     }
 
     const SCEV *visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
-      const SCEV *S = Map.lookup(Expr);
-      if (!S)
-        return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSignExtendExpr(
-            Expr);
-      return S;
+      if (const SCEV *S = Map.lookup(Expr))
+        return S;
+      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSignExtendExpr(
+          Expr);
     }
 
     const SCEV *visitUMinExpr(const SCEVUMinExpr *Expr) {
-      const SCEV *S = Map.lookup(Expr);
-      if (!S)
-        return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitUMinExpr(Expr);
-      return S;
+      if (const SCEV *S = Map.lookup(Expr))
+        return S;
+      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitUMinExpr(Expr);
     }
 
     const SCEV *visitSMinExpr(const SCEVSMinExpr *Expr) {
-      const SCEV *S = Map.lookup(Expr);
-      if (!S)
-        return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSMinExpr(Expr);
-      return S;
+      if (const SCEV *S = Map.lookup(Expr))
+        return S;
+      return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSMinExpr(Expr);
     }
 
     const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
