@@ -27,15 +27,15 @@ defvar QExtsRV64 = [QExt];
 let Predicates = [HasStdExtQ] in {
   let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
   def FLQ : RVInstI<0b100, OPC_LOAD_FP, (outs FPR128:$rd),
-              (ins GPRMem:$rs1, simm12:$imm12),
-              "flq", "$rd, ${imm12}(${rs1})">;
+                    (ins GPRMem:$rs1, simm12:$imm12), "flq",
+                    "$rd, ${imm12}(${rs1})">;
   // Operands for stores are in the order srcreg, base, offset rather than
   // reflecting the order these fields are specified in the instruction
   // encoding.
   let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
   def FSQ : RVInstS<0b100, OPC_STORE_FP, (outs),
-              (ins FPR128:$rs2, GPRMem:$rs1, simm12:$imm12),
-              "fsq", "$rs2, ${imm12}(${rs1})">;
+                    (ins FPR128:$rs2, GPRMem:$rs1, simm12:$imm12), "fsq",
+                    "$rs2, ${imm12}(${rs1})">;
 } // Predicates = [HasStdExtQ]
 
 foreach Ext = QExts in {
@@ -93,11 +93,11 @@ foreach Ext = QExts in {
 
   let mayRaiseFPException = 0 in 
   defm FCVT_Q_W  : FPUnaryOp_r_frmlegacy_m<0b1101011, 0b00000, Ext,
-                                     Ext.PrimaryTy, GPR, "fcvt.q.w">;
+                                           Ext.PrimaryTy, GPR, "fcvt.q.w">;
 
   let mayRaiseFPException = 0 in 
   defm FCVT_Q_WU : FPUnaryOp_r_frmlegacy_m<0b1101011, 0b00001, Ext,
-                                     Ext.PrimaryTy, GPR, "fcvt.q.wu">;
+                                           Ext.PrimaryTy, GPR, "fcvt.q.wu">;
 } // foreach Ext = QExts
 
 foreach Ext = QExtsRV64 in {
@@ -108,12 +108,14 @@ foreach Ext = QExtsRV64 in {
                                      Ext.PrimaryTy, "fcvt.lu.q", [IsRV64]>;
 
   let mayRaiseFPException = 0 in 
-  defm FCVT_Q_L : FPUnaryOp_r_frmlegacy_m<0b1101011, 0b00010, Ext, Ext.PrimaryTy, 
-                                    GPR, "fcvt.q.l", [IsRV64]>;
+  defm FCVT_Q_L : FPUnaryOp_r_frmlegacy_m<0b1101011, 0b00010, Ext,
+                                          Ext.PrimaryTy, GPR, "fcvt.q.l",
+                                          [IsRV64]>;
 
   let mayRaiseFPException = 0 in 
-  defm FCVT_Q_LU : FPUnaryOp_r_frmlegacy_m<0b1101011, 0b00011, Ext, Ext.PrimaryTy, 
-                                     GPR, "fcvt.q.lu", [IsRV64]>;
+  defm FCVT_Q_LU : FPUnaryOp_r_frmlegacy_m<0b1101011, 0b00011, Ext,
+                                           Ext.PrimaryTy, GPR, "fcvt.q.lu",
+                                           [IsRV64]>;
 } // foreach Ext = QExtsRV64
 
 //===----------------------------------------------------------------------===//
@@ -140,12 +142,4 @@ let Predicates = [HasStdExtQ] in {
 
   def PseudoFLQ : PseudoFloatLoad<"flq", FPR128>;
   def PseudoFSQ : PseudoStore<"fsq", FPR128>;
-} // Predicates = [HasStdExtQ]
-
-let Predicates = [HasStdExtQ] in {
-/// Loads
-def : LdPat<load, FLQ, f128>;
-
-/// Stores
-def : StPat<store, FSQ, FPR128, f128>;
 } // Predicates = [HasStdExtQ]

@@ -198,9 +198,6 @@ public:
   bool useLoadStorePairs() const;
   bool useCCMovInsn() const;
   unsigned getFLen() const {
-    if (HasStdExtQ)
-      return 128;
-
     if (HasStdExtD)
       return 64;
 
