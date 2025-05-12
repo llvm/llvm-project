@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CppGenUtilities.h"
 #include "DialectGenUtilities.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
@@ -109,6 +110,7 @@ tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
 /// {1}: The dialect namespace.
 /// {2}: The dialect parent class.
 static const char *const dialectDeclBeginStr = R"(
+{3}
 class {0} : public ::mlir::{2} {
   explicit {0}(::mlir::MLIRContext *context);
 
@@ -245,8 +247,11 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
     std::string cppName = dialect.getCppClassName();
     StringRef superClassName =
         dialect.isExtensible() ? "ExtensibleDialect" : "Dialect";
+
+    std::string comments = tblgen::emitSummaryAndDescComments(
+        dialect.getSummary(), dialect.getDescription());
     os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
-                        superClassName);
+                        superClassName, comments);
 
     // If the dialect requested the default attribute printer and parser, emit
     // the declarations for the hooks.
