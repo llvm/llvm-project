@@ -51,11 +51,11 @@ define amdgpu_ps float @test_softwqm1(i32 inreg %idx0, i32 inreg %idx1) {
 ; CHECK-LABEL: test_softwqm1:
 ; CHECK:       ; %bb.0: ; %main_body
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s1
-; CHECK-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 idxen
-; CHECK-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 idxen
+; CHECK-NEXT:    v_mov_b32_e32 v1, s1
+; CHECK-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 idxen
+; CHECK-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_add_f32_e32 v1, v1, v2
+; CHECK-NEXT:    v_add_f32_e32 v1, v2, v1
 ; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 idxen
 ; CHECK-NEXT:    v_add_f32_e32 v0, v1, v1
 ; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
@@ -79,11 +79,11 @@ define amdgpu_ps float @test_softwqm2(i32 inreg %idx0, i32 inreg %idx1) {
 ; CHECK-NEXT:    s_mov_b64 s[2:3], exec
 ; CHECK-NEXT:    s_wqm_b64 exec, exec
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s1
-; CHECK-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 idxen
-; CHECK-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 idxen
+; CHECK-NEXT:    v_mov_b32_e32 v1, s1
+; CHECK-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 idxen
+; CHECK-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_add_f32_e32 v1, v1, v2
+; CHECK-NEXT:    v_add_f32_e32 v1, v2, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v1
 ; CHECK-NEXT:    v_add_f32_e32 v1, v1, v1
 ; CHECK-NEXT:    s_and_b64 exec, exec, s[2:3]

@@ -7,15 +7,15 @@ define void @extracted_values(ptr %ret_struct, ptr addrspace(3) %arg0, ptr addrs
 ; CHECK-LABEL: extracted_values:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b32 v3, v3
 ; CHECK-NEXT:    ds_read_b32 v4, v4
-; CHECK-NEXT:    ds_read_b32 v2, v2
 ; CHECK-NEXT:    ds_read_b32 v5, v5
-; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
+; CHECK-NEXT:    ds_read_b32 v3, v3
+; CHECK-NEXT:    ds_read_b32 v2, v2
+; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
 ; CHECK-NEXT:    v_sub_f16_sdwa v6, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; CHECK-NEXT:    v_sub_f16_sdwa v3, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_sub_f16_sdwa v7, v2, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; CHECK-NEXT:    v_sub_f16_sdwa v3, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; CHECK-NEXT:    v_sub_f16_sdwa v2, v5, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; CHECK-NEXT:    v_add_f16_e32 v4, v6, v7
 ; CHECK-NEXT:    v_add_f16_e32 v2, v3, v2

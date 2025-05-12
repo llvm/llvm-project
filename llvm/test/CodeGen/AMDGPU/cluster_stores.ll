@@ -366,6 +366,7 @@ define amdgpu_ps void @no_cluster_image_load(<8 x i32> inreg %src1, <8 x i32> in
 ; GFX11-LABEL: no_cluster_image_load:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    v_mov_b32_e32 v6, 0
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    image_load_mip v[2:5], [v0, v1, v6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX11-NEXT:    image_load_mip v[6:9], [v0, v1, v6], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)

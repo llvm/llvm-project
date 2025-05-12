@@ -1974,8 +1974,8 @@ define amdgpu_kernel void @test_f32_interp(ptr addrspace(1) %out,
 ; SI-NOFMA-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
 ; SI-NOFMA-NEXT:    s_mov_b32 s11, 0xf000
 ; SI-NOFMA-NEXT:    s_mov_b32 s10, -1
-; SI-NOFMA-NEXT:    s_mov_b32 s14, s10
-; SI-NOFMA-NEXT:    s_mov_b32 s15, s11
+; SI-NOFMA-NEXT:    s_mov_b32 s18, s10
+; SI-NOFMA-NEXT:    s_mov_b32 s19, s11
 ; SI-NOFMA-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NOFMA-NEXT:    s_mov_b32 s16, s4
 ; SI-NOFMA-NEXT:    s_mov_b32 s17, s5
@@ -1983,22 +1983,21 @@ define amdgpu_kernel void @test_f32_interp(ptr addrspace(1) %out,
 ; SI-NOFMA-NEXT:    s_mov_b32 s5, s7
 ; SI-NOFMA-NEXT:    s_mov_b32 s6, s10
 ; SI-NOFMA-NEXT:    s_mov_b32 s7, s11
+; SI-NOFMA-NEXT:    buffer_load_dword v0, off, s[16:19], 0
+; SI-NOFMA-NEXT:    buffer_load_dword v1, off, s[4:7], 0
+; SI-NOFMA-NEXT:    s_mov_b32 s14, s10
 ; SI-NOFMA-NEXT:    s_mov_b32 s12, s2
 ; SI-NOFMA-NEXT:    s_mov_b32 s13, s3
-; SI-NOFMA-NEXT:    s_mov_b32 s18, s10
-; SI-NOFMA-NEXT:    s_mov_b32 s19, s11
-; SI-NOFMA-NEXT:    buffer_load_dword v0, off, s[4:7], 0
-; SI-NOFMA-NEXT:    buffer_load_dword v1, off, s[16:19], 0
+; SI-NOFMA-NEXT:    s_mov_b32 s15, s11
 ; SI-NOFMA-NEXT:    buffer_load_dword v2, off, s[12:15], 0
 ; SI-NOFMA-NEXT:    s_mov_b32 s8, s0
 ; SI-NOFMA-NEXT:    s_mov_b32 s9, s1
-; SI-NOFMA-NEXT:    s_waitcnt vmcnt(2)
-; SI-NOFMA-NEXT:    v_sub_f32_e32 v3, 1.0, v0
 ; SI-NOFMA-NEXT:    s_waitcnt vmcnt(1)
-; SI-NOFMA-NEXT:    v_mul_f32_e32 v1, v1, v3
+; SI-NOFMA-NEXT:    v_sub_f32_e32 v3, 1.0, v1
+; SI-NOFMA-NEXT:    v_mul_f32_e32 v0, v0, v3
 ; SI-NOFMA-NEXT:    s_waitcnt vmcnt(0)
-; SI-NOFMA-NEXT:    v_mac_f32_e32 v1, v2, v0
-; SI-NOFMA-NEXT:    buffer_store_dword v1, off, s[8:11], 0
+; SI-NOFMA-NEXT:    v_mac_f32_e32 v0, v2, v1
+; SI-NOFMA-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; SI-NOFMA-NEXT:    s_endpgm
 ;
 ; SI-FMA-LABEL: test_f32_interp:

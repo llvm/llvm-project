@@ -10,11 +10,13 @@ define amdgpu_cs void @mixed_vmem_types(i32 inreg %globalTable, i32 inreg %perSh
 ; GFX11-NEXT:    s_mov_b32 s0, s3
 ; GFX11-NEXT:    s_mov_b32 s3, s5
 ; GFX11-NEXT:    s_mov_b32 s1, s5
+; GFX11-NEXT:    s_clause 0x2
 ; GFX11-NEXT:    s_load_b256 s[20:27], s[2:3], 0x40
 ; GFX11-NEXT:    s_load_b512 s[4:19], s[0:1], 0x0
 ; GFX11-NEXT:    s_load_b512 s[36:51], s[2:3], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0xbc00bc00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_load_b32 v1, off, s[20:23], 0
 ; GFX11-NEXT:    buffer_load_b32 v2, off, s[16:19], 0
 ; GFX11-NEXT:    image_sample_lz v3, v0, s[8:15], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
@@ -48,10 +50,12 @@ define amdgpu_cs void @mixed_vmem_types(i32 inreg %globalTable, i32 inreg %perSh
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0xbc00bc00
 ; GFX12-NEXT:    s_mov_b32 s3, s5
 ; GFX12-NEXT:    s_mov_b32 s1, s5
+; GFX12-NEXT:    s_clause 0x2
 ; GFX12-NEXT:    s_load_b256 s[20:27], s[2:3], 0x40
 ; GFX12-NEXT:    s_load_b512 s[4:19], s[0:1], 0x0
 ; GFX12-NEXT:    s_load_b512 s[36:51], s[2:3], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_clause 0x4
 ; GFX12-NEXT:    buffer_load_b32 v1, off, s[20:23], null
 ; GFX12-NEXT:    buffer_load_b32 v2, off, s[16:19], null
 ; GFX12-NEXT:    image_sample_lz v3, v0, s[8:15], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
@@ -85,11 +89,12 @@ define amdgpu_cs void @mixed_vmem_types(i32 inreg %globalTable, i32 inreg %perSh
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, 0xbc00bc00
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, s21
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, s21
+; GFX12-GISEL-NEXT:    s_clause 0x2
 ; GFX12-GISEL-NEXT:    s_load_b512 s[4:19], s[0:1], 0x0
-; GFX12-GISEL-NEXT:    s_clause 0x1
 ; GFX12-GISEL-NEXT:    s_load_b256 s[20:27], s[2:3], 0x40
 ; GFX12-GISEL-NEXT:    s_load_b512 s[36:51], s[2:3], 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_clause 0x4
 ; GFX12-GISEL-NEXT:    image_sample_lz v1, v0, s[8:15], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
 ; GFX12-GISEL-NEXT:    buffer_load_b32 v2, off, s[16:19], null
 ; GFX12-GISEL-NEXT:    buffer_load_b32 v3, off, s[20:23], null

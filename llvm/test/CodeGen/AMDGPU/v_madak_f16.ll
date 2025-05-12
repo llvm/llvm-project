@@ -67,6 +67,7 @@ define amdgpu_kernel void @madak_f16(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -92,6 +93,7 @@ define amdgpu_kernel void @madak_f16(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_u16 v0, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_u16 v1, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -223,6 +225,7 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_add_f16_e32 v1.l, 0x4900, v0.h
 ; GFX11-TRUE16-NEXT:    v_add_f16_e32 v0.l, 0x4900, v0.l
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_store_b16 v1, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
@@ -260,6 +263,7 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_add_f16_e32 v1, 0x4900, v1
 ; GFX11-FAKE16-NEXT:    v_add_f16_e32 v0, 0x4900, v0
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_store_b16 v1, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
 ; GFX11-FAKE16-NEXT:    s_endpgm

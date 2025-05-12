@@ -295,16 +295,16 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
 ; GFX8V4-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8V4-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8V4-NEXT:    flat_load_ubyte v0, v[0:1] glc
+; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX8V4-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8V4-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8V4-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8V4-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; GFX8V4-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX8V4-NEXT:    v_mov_b32_e32 v2, s10
-; GFX8V4-NEXT:    v_mov_b32_e32 v3, s11
 ; GFX8V4-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8V4-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8V4-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8V4-NEXT:    v_mov_b32_e32 v3, s11
 ; GFX8V4-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX8V4-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8V4-NEXT:    s_endpgm
@@ -320,16 +320,16 @@ define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
 ; GFX8V5-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8V5-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8V5-NEXT:    flat_load_ubyte v0, v[0:1] glc
+; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX8V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8V5-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8V5-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8V5-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX8V5-NEXT:    v_mov_b32_e32 v2, s10
-; GFX8V5-NEXT:    v_mov_b32_e32 v3, s11
 ; GFX8V5-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8V5-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8V5-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8V5-NEXT:    v_mov_b32_e32 v3, s11
 ; GFX8V5-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX8V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8V5-NEXT:    s_endpgm

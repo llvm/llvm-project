@@ -52,23 +52,24 @@ define amdgpu_kernel void @indirect_lds_id(ptr addrspace(1) %out) !llvm.amdgcn.l
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    s_mov_b32 s13, s15
 ; GCN-NEXT:    s_mov_b32 s12, s14
-; GCN-NEXT:    s_load_dwordx2 s[18:19], s[8:9], 0x0
-; GCN-NEXT:    s_add_u32 s8, s8, 8
+; GCN-NEXT:    s_add_u32 s18, s8, 8
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GCN-NEXT:    s_addc_u32 s9, s9, 0
+; GCN-NEXT:    s_addc_u32 s19, s9, 0
 ; GCN-NEXT:    s_getpc_b64 s[14:15]
 ; GCN-NEXT:    s_add_u32 s14, s14, function_lds_id@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s15, s15, function_lds_id@gotpcrel32@hi+12
-; GCN-NEXT:    s_load_dwordx2 s[20:21], s[14:15], 0x0
+; GCN-NEXT:    s_load_dwordx2 s[20:21], s[8:9], 0x0
+; GCN-NEXT:    s_load_dwordx2 s[22:23], s[14:15], 0x0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GCN-NEXT:    s_mov_b32 s15, 21
+; GCN-NEXT:    s_mov_b64 s[8:9], s[18:19]
 ; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s18
-; GCN-NEXT:    v_mov_b32_e32 v1, s19
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[20:21]
+; GCN-NEXT:    v_mov_b32_e32 v0, s20
+; GCN-NEXT:    v_mov_b32_e32 v1, s21
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[22:23]
 ; GCN-NEXT:    s_endpgm
   call void @function_lds_id(ptr addrspace(1) %out)
   ret void

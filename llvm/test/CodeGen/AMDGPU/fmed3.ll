@@ -8124,6 +8124,7 @@ define amdgpu_kernel void @one_non_inline_constant(ptr addrspace(1) %out, ptr ad
 ; GFX11-NEXT:    v_add_f32_e32 v1, 0x41800000, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_med3_f32 v2, v2, 1.0, 0x41800000
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b32 v0, v2, s[0:1]
 ; GFX11-NEXT:    global_store_b32 v[0:1], v1, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -8305,6 +8306,7 @@ define amdgpu_kernel void @two_non_inline_constant_multi_use(ptr addrspace(1) %o
 ; GFX11-SDAG-NEXT:    v_add_f32_e32 v1, 0x41000000, v1
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_med3_f32 v2, v2, s2, 0x41800000
+; GFX11-SDAG-NEXT:    s_clause 0x1
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1]
 ; GFX11-SDAG-NEXT:    global_store_b32 v[0:1], v3, off dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -8326,6 +8328,7 @@ define amdgpu_kernel void @two_non_inline_constant_multi_use(ptr addrspace(1) %o
 ; GFX11-GISEL-NEXT:    v_med3_f32 v2, v3, 0x41000000, v2
 ; GFX11-GISEL-NEXT:    v_add_f32_e32 v3, 0x41800000, v1
 ; GFX11-GISEL-NEXT:    v_add_f32_e32 v1, 0x41000000, v1
+; GFX11-GISEL-NEXT:    s_clause 0x1
 ; GFX11-GISEL-NEXT:    global_store_b32 v0, v2, s[0:1]
 ; GFX11-GISEL-NEXT:    global_store_b32 v[0:1], v3, off dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0

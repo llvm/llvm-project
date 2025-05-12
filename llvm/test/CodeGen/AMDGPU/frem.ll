@@ -337,21 +337,21 @@ define amdgpu_kernel void @fast_frem_f16(ptr addrspace(1) %out, ptr addrspace(1)
 ; CI-NEXT:    s_mov_b32 s11, 0xf000
 ; CI-NEXT:    s_mov_b32 s10, -1
 ; CI-NEXT:    s_mov_b32 s6, s10
-; CI-NEXT:    s_mov_b32 s7, s11
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    buffer_load_ushort v1, off, s[4:7], 0 offset:8
 ; CI-NEXT:    s_mov_b32 s8, s0
 ; CI-NEXT:    s_mov_b32 s9, s1
 ; CI-NEXT:    s_mov_b32 s0, s2
 ; CI-NEXT:    s_mov_b32 s1, s3
 ; CI-NEXT:    s_mov_b32 s2, s10
 ; CI-NEXT:    s_mov_b32 s3, s11
+; CI-NEXT:    s_mov_b32 s7, s11
 ; CI-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
+; CI-NEXT:    buffer_load_ushort v1, off, s[4:7], 0 offset:8
 ; CI-NEXT:    s_waitcnt vmcnt(1)
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; CI-NEXT:    v_rcp_f32_e32 v2, v1
-; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; CI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; CI-NEXT:    v_trunc_f32_e32 v2, v2
 ; CI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -522,21 +522,21 @@ define amdgpu_kernel void @unsafe_frem_f16(ptr addrspace(1) %out, ptr addrspace(
 ; CI-NEXT:    s_mov_b32 s11, 0xf000
 ; CI-NEXT:    s_mov_b32 s10, -1
 ; CI-NEXT:    s_mov_b32 s6, s10
-; CI-NEXT:    s_mov_b32 s7, s11
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    buffer_load_ushort v1, off, s[4:7], 0 offset:8
 ; CI-NEXT:    s_mov_b32 s8, s0
 ; CI-NEXT:    s_mov_b32 s9, s1
 ; CI-NEXT:    s_mov_b32 s0, s2
 ; CI-NEXT:    s_mov_b32 s1, s3
 ; CI-NEXT:    s_mov_b32 s2, s10
 ; CI-NEXT:    s_mov_b32 s3, s11
+; CI-NEXT:    s_mov_b32 s7, s11
 ; CI-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
+; CI-NEXT:    buffer_load_ushort v1, off, s[4:7], 0 offset:8
 ; CI-NEXT:    s_waitcnt vmcnt(1)
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; CI-NEXT:    v_rcp_f32_e32 v2, v1
-; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; CI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; CI-NEXT:    v_trunc_f32_e32 v2, v2
 ; CI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -2596,16 +2596,16 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_addc_u32 s1, s5, 0
 ; VI-NEXT:    v_mov_b32_e32 v5, s1
-; VI-NEXT:    v_mov_b32_e32 v4, s0
-; VI-NEXT:    flat_load_dwordx2 v[4:5], v[4:5]
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
+; VI-NEXT:    v_mov_b32_e32 v4, s0
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[2:3]
+; VI-NEXT:    flat_load_dwordx2 v[4:5], v[4:5]
 ; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v8, 16, v5
 ; VI-NEXT:    v_cvt_f32_f16_e32 v9, v8
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
 ; VI-NEXT:    v_cvt_f32_f16_e32 v7, v6
 ; VI-NEXT:    v_rcp_f32_e32 v10, v9
 ; VI-NEXT:    v_mul_f32_e32 v11, v7, v10

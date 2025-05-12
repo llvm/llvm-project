@@ -5577,12 +5577,13 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_i32 s22, s32, 8
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v0, s21 :: v_dual_mov_b32 v1, s20
+; GFX11-NEXT:    v_dual_mov_b32 v0, s20 :: v_dual_mov_b32 v1, s21
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s19
 ; GFX11-NEXT:    s_add_i32 s19, s32, 4
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s40 :: v_dual_mov_b32 v7, s43
-; GFX11-NEXT:    scratch_store_b32 off, v0, s22
-; GFX11-NEXT:    scratch_store_b32 off, v1, s19
+; GFX11-NEXT:    s_clause 0x2
+; GFX11-NEXT:    scratch_store_b32 off, v0, s19
+; GFX11-NEXT:    scratch_store_b32 off, v1, s22
 ; GFX11-NEXT:    scratch_store_b32 off, v2, s32
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s36 :: v_dual_mov_b32 v3, s39
 ; GFX11-NEXT:    v_dual_mov_b32 v1, s37 :: v_dual_mov_b32 v2, s38
@@ -6062,6 +6063,7 @@ define void @stack_12xv3i32() #0 {
 ; GFX11-NEXT:    s_add_i32 s32, s32, 16
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX11-NEXT:    s_add_i32 s0, s32, 16
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
 ; GFX11-NEXT:    scratch_store_b32 off, v4, s0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, 0
@@ -6403,6 +6405,7 @@ define void @stack_12xv3f32() #0 {
 ; GFX11-NEXT:    s_add_i32 s32, s32, 16
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX11-NEXT:    s_add_i32 s0, s32, 16
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
 ; GFX11-NEXT:    scratch_store_b32 off, v4, s0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
@@ -6773,6 +6776,7 @@ define void @stack_8xv5i32() #0 {
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_store_b32 off, v8, s0
 ; GFX11-NEXT:    scratch_store_b128 off, v[4:7], s1
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v3, 0
@@ -7147,6 +7151,7 @@ define void @stack_8xv5f32() #0 {
 ; GFX11-NEXT:    s_add_i32 s0, s32, 32
 ; GFX11-NEXT:    s_add_i32 s1, s32, 16
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
+; GFX11-NEXT:    s_clause 0x2
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
 ; GFX11-NEXT:    scratch_store_b32 off, v8, s0
 ; GFX11-NEXT:    scratch_store_b128 off, v[4:7], s1

@@ -9,10 +9,11 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
 ; GFX11-NEXT:    s_mov_b32 m0, s4
 ; GFX11-NEXT:    s_getpc_b64 s[4:5]
 ; GFX11-NEXT:    s_mov_b32 s0, s1
-; GFX11-NEXT:    s_mov_b32 s6, s3
 ; GFX11-NEXT:    s_mov_b32 s1, s5
+; GFX11-NEXT:    s_mov_b32 s6, s3
 ; GFX11-NEXT:    s_mov_b32 s3, s5
 ; GFX11-NEXT:    s_mov_b32 s7, s5
+; GFX11-NEXT:    s_clause 0x2
 ; GFX11-NEXT:    s_load_b128 s[12:15], s[0:1], 0x0
 ; GFX11-NEXT:    s_load_b128 s[8:11], s[2:3], 0x0
 ; GFX11-NEXT:    s_load_b256 s[0:7], s[6:7], 0x0

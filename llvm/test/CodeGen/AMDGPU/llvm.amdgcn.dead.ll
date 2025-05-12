@@ -74,6 +74,9 @@ define i32 @dead_i32(i1 %cond, i32 %x, ptr addrspace(1) %ptr1) #0 {
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_alu 0xfffe
 ; ASM-GISEL-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; ASM-DAG:       ; %bb.0: ; %entry
+; ASM-DAG:       ; %bb.0: ; %entry
+; ASM-DAG:       ; %bb.0: ; %entry
 entry:
   %dead = call i32 @llvm.amdgcn.dead.i32()
   br i1 %cond, label %if.then, label %if.end
@@ -221,6 +224,9 @@ define %trivial_types @dead_struct(i1 %cond, %trivial_types %x, ptr addrspace(1)
 ; ASM-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v12, v13 :: v_dual_mov_b32 v13, v14
 ; ASM-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v14, v15 :: v_dual_mov_b32 v15, v16
 ; ASM-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; ASM-DAG:       ; %bb.0: ; %entry
+; ASM-DAG:       ; %bb.0: ; %entry
+; ASM-DAG:       ; %bb.0: ; %entry
 ; ASM-GISEL-LABEL: dead_struct:
 ; ASM-GISEL:       ; %bb.0: ; %entry
 ; ASM-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -294,10 +300,10 @@ define [32 x i32] @dead_array(i1 %cond, [32 x i32] %x, ptr addrspace(1) %ptr1, i
 ; ASM-DAG-NEXT:    v_dual_mov_b32 v32, v30 :: v_dual_mov_b32 v33, v0
 ; ASM-DAG-NEXT:    v_mov_b32_e32 v0, v1
 ; ASM-DAG-NEXT:    s_clause 0x4
-; ASM-DAG-NEXT:    scratch_load_b32 v35, off, s32 offset:12
 ; ASM-DAG-NEXT:    scratch_load_b32 v34, off, s32 offset:8
 ; ASM-DAG-NEXT:    scratch_load_b32 v31, off, s32 offset:4
 ; ASM-DAG-NEXT:    scratch_load_b32 v30, off, s32
+; ASM-DAG-NEXT:    scratch_load_b32 v35, off, s32 offset:12
 ; ASM-DAG-NEXT:    scratch_load_b32 v1, off, s32 offset:16
 ; ASM-DAG-NEXT:    s_mov_b32 s0, exec_lo
 ; ASM-DAG-NEXT:    v_and_b32_e32 v33, 1, v33
@@ -515,6 +521,9 @@ define [32 x i32] @dead_array(i1 %cond, [32 x i32] %x, ptr addrspace(1) %ptr1, i
 ; ASM-GISEL-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; ASM-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; ASM-DAG:       ; %bb.0: ; %entry
+; ASM-DAG:       ; %bb.0: ; %entry
+; ASM-DAG:       ; %bb.0: ; %entry
 ; ASM-GISEL-LABEL: dead_array:
 ; ASM-GISEL:       ; %bb.0: ; %entry
 ; ASM-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0

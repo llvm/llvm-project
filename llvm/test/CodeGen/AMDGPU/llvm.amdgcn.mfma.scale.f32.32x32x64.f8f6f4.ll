@@ -17,8 +17,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__cbsz0__blgp0(<8 x 
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4_0_0__cbsz0__blgp0:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -114,8 +114,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_1_1__cbsz1__blgp1(<8 x 
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4_1_1__cbsz1__blgp1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -211,8 +211,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_2_2__cbsz1__blgp1(<8 x 
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4_2_2__cbsz1__blgp1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -308,8 +308,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_3_3__cbsz1__blgp1(<8 x 
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4_3_3__cbsz1__blgp1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -405,8 +405,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_3__cbsz1__blgp1(<8 x 
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4_0_3__cbsz1__blgp1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -502,8 +502,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_3_0__cbsz1__blgp1(<8 x 
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4_3_0__cbsz1__blgp1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -599,8 +599,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_2_3__cbsz1__blgp1(<8 x 
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4_2_3__cbsz1__blgp1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -696,8 +696,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_3_2__cbsz1__blgp1(<8 x 
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4_3_2__cbsz1__blgp1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -845,8 +845,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__cbsz0__blgp1(<8 x 
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4_0_0__cbsz0__blgp1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -1294,8 +1294,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__cbsz1__blgp0(<8 x 
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4_0_0__cbsz1__blgp0:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -1442,8 +1442,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__cbsz1__blgp1(<8 x 
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4_0_0__cbsz1__blgp1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -5332,8 +5332,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp8__v8i32_fp6(
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp8__v8i32_fp6:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -5429,8 +5429,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp6__v8i32_fp8(
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp6__v8i32_fp8:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -5526,8 +5526,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp6__v8i32_fp6(
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp6__v8i32_fp6:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -5670,8 +5670,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp8__v8i32_fp4(
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp8__v8i32_fp4:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -5767,8 +5767,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp4__v8i32_fp8(
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp4__v8i32_fp8:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17
@@ -5966,8 +5966,8 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp4__v8i32_fp4(
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp4__v8i32_fp4:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; SDAG-NEXT:    scratch_load_dword a15, off, s32
 ; SDAG-NEXT:    scratch_load_dword v32, off, s32 offset:4
 ; SDAG-NEXT:    v_accvgpr_write_b32 a0, v16
 ; SDAG-NEXT:    v_accvgpr_write_b32 a1, v17

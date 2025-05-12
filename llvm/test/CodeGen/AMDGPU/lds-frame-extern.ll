@@ -126,6 +126,7 @@ define amdgpu_kernel void @module_1_kernel_normal_extern_normal(i32 %idx) {
 ; CHECK-NEXT:    s_add_u32 s18, s18, use_module@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s19, s19, use_module@gotpcrel32@hi+12
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    s_load_dwordx2 s[20:21], s[18:19], 0x0
 ; CHECK-NEXT:    s_load_dword s17, s[8:9], 0x0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
@@ -192,6 +193,7 @@ define amdgpu_kernel void @module_1_kernel_overalign_extern_normal(i32 %idx) {
 ; CHECK-NEXT:    s_add_u32 s18, s18, use_module@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s19, s19, use_module@gotpcrel32@hi+12
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    s_load_dwordx2 s[20:21], s[18:19], 0x0
 ; CHECK-NEXT:    s_load_dword s17, s[8:9], 0x0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
@@ -258,6 +260,7 @@ define amdgpu_kernel void @module_1_kernel_normal_extern_overalign(i32 %idx) {
 ; CHECK-NEXT:    s_add_u32 s18, s18, use_module@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s19, s19, use_module@gotpcrel32@hi+12
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    s_load_dwordx2 s[20:21], s[18:19], 0x0
 ; CHECK-NEXT:    s_load_dword s17, s[8:9], 0x0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
@@ -324,6 +327,7 @@ define amdgpu_kernel void @module_1_kernel_overalign_extern_overalign(i32 %idx) 
 ; CHECK-NEXT:    s_add_u32 s18, s18, use_module@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s19, s19, use_module@gotpcrel32@hi+12
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    s_load_dwordx2 s[20:21], s[18:19], 0x0
 ; CHECK-NEXT:    s_load_dword s17, s[8:9], 0x0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1

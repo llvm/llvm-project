@@ -33,6 +33,7 @@ define hidden void @shuffle3744(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
 ; GFX10-LABEL: shuffle3744:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -116,6 +117,7 @@ define hidden void @shuffle1004(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
 ; GFX10-LABEL: shuffle1004:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -147,6 +149,7 @@ define hidden void @shuffle7533(ptr addrspace(0) %in0, ptr addrspace(0) %in1, pt
 ; GFX10-LABEL: shuffle7533:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    flat_load_dword v6, v[0:1]
 ; GFX10-NEXT:    flat_load_dword v7, v[2:3]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -295,6 +298,7 @@ define hidden void @shuffle3546(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
 ; GFX10-LABEL: shuffle3546:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -564,6 +568,7 @@ define hidden void @addUsesOr(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %
 ; GFX10-LABEL: addUsesOr:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -613,6 +618,7 @@ define amdgpu_kernel void @shuffle8i8(ptr addrspace(1) %in0, ptr addrspace(1) %i
 ; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
 ; GFX10-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -688,6 +694,7 @@ define hidden void @add(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %elt, p
 ; GFX10-LABEL: add:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -744,6 +751,7 @@ define hidden void @add_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %el
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -794,6 +802,7 @@ define hidden void @add_store(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %
 ; GFX10-LABEL: add_store:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -853,6 +862,7 @@ define hidden void @add_store_div_16(ptr addrspace(1) %in0, ptr addrspace(1) %in
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -921,6 +931,7 @@ define hidden void @add_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -991,6 +1002,7 @@ define hidden void @and_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[2:3], off
 ; GFX10-NEXT:    global_load_dword v9, v[0:1], off
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 2
@@ -1129,6 +1141,7 @@ define hidden void @bc_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -1178,6 +1191,7 @@ define hidden void @eve_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v5, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -1231,6 +1245,7 @@ define hidden void @ive_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v9
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v9, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v10, v[2:3], off
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 16
@@ -1298,6 +1313,7 @@ define hidden void @lhsr_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 26
@@ -1367,6 +1383,7 @@ define hidden void @mul_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -1437,6 +1454,7 @@ define hidden void @or_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[2:3], off
 ; GFX10-NEXT:    global_load_dword v9, v[0:1], off
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 16
@@ -1501,33 +1519,34 @@ define hidden void @sdiv_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_and_b32_e32 v4, 0x3ff, v31
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 2, v4
-; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
-; GFX10-NEXT:    global_load_dword v4, v[2:3], off
-; GFX10-NEXT:    global_load_dword v9, v[0:1], off
+; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    global_load_dword v4, v[0:1], off
+; GFX10-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_cvt_f32_i32_sdwa v1, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; GFX10-NEXT:    v_cvt_f32_i32_sdwa v10, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
+; GFX10-NEXT:    v_cvt_f32_i32_sdwa v2, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_cvt_f32_i32_sdwa v2, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
-; GFX10-NEXT:    v_cvt_f32_i32_sdwa v12, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
-; GFX10-NEXT:    v_cvt_f32_i32_sdwa v14, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
+; GFX10-NEXT:    v_cvt_f32_i32_sdwa v1, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; GFX10-NEXT:    v_cvt_f32_i32_sdwa v10, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
+; GFX10-NEXT:    v_cvt_f32_i32_sdwa v12, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
+; GFX10-NEXT:    v_cvt_f32_i32_sdwa v14, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
+; GFX10-NEXT:    v_cvt_f32_i32_sdwa v19, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
 ; GFX10-NEXT:    v_rcp_iflag_f32_e32 v15, v1
 ; GFX10-NEXT:    v_rcp_iflag_f32_e32 v16, v10
-; GFX10-NEXT:    v_cvt_f32_i32_sdwa v19, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
 ; GFX10-NEXT:    v_rcp_iflag_f32_e32 v17, v12
-; GFX10-NEXT:    v_xor_b32_sdwa v0, sext(v9), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_0
+; GFX10-NEXT:    v_xor_b32_sdwa v0, sext(v4), sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_0
 ; GFX10-NEXT:    v_rcp_iflag_f32_e32 v18, v14
-; GFX10-NEXT:    v_xor_b32_sdwa v3, sext(v9), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_1
-; GFX10-NEXT:    v_xor_b32_sdwa v11, sext(v9), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
-; GFX10-NEXT:    v_xor_b32_sdwa v13, sext(v4), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_3
+; GFX10-NEXT:    v_xor_b32_sdwa v3, sext(v4), sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_1
+; GFX10-NEXT:    v_xor_b32_sdwa v11, sext(v4), sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
+; GFX10-NEXT:    v_xor_b32_sdwa v13, sext(v9), sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_3
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v0, 30, v0
 ; GFX10-NEXT:    v_mul_f32_e32 v15, v2, v15
 ; GFX10-NEXT:    v_mul_f32_e32 v16, v19, v16
-; GFX10-NEXT:    v_ashrrev_i32_e32 v3, 30, v3
 ; GFX10-NEXT:    v_mul_f32_e32 v17, v2, v17
+; GFX10-NEXT:    v_ashrrev_i32_e32 v3, 30, v3
 ; GFX10-NEXT:    v_or_b32_e32 v0, 1, v0
 ; GFX10-NEXT:    v_trunc_f32_e32 v15, v15
 ; GFX10-NEXT:    v_trunc_f32_e32 v16, v16
@@ -1562,7 +1581,7 @@ define hidden void @sdiv_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    v_add_nc_u32_sdwa v3, v18, v3 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-NEXT:    v_or_b32_sdwa v1, v2, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX10-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX10-NEXT:    v_perm_b32 v1, v9, v4, 0x60706
+; GFX10-NEXT:    v_perm_b32 v1, v4, v9, 0x60706
 ; GFX10-NEXT:    global_store_dword v[5:6], v0, off
 ; GFX10-NEXT:    global_store_dword v[7:8], v1, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -1576,26 +1595,26 @@ define hidden void @sdiv_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v4
 ; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX9-NEXT:    global_load_dword v4, v[2:3], off
-; GFX9-NEXT:    global_load_dword v9, v[0:1], off
+; GFX9-NEXT:    global_load_dword v4, v[0:1], off
+; GFX9-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX9-NEXT:    s_mov_b32 s4, 0x60706
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_cvt_f32_i32_sdwa v2, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; GFX9-NEXT:    v_cvt_f32_i32_sdwa v12, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
+; GFX9-NEXT:    v_cvt_f32_i32_sdwa v3, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_perm_b32 v0, v9, v4, s4
-; GFX9-NEXT:    v_xor_b32_sdwa v1, sext(v9), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_0
-; GFX9-NEXT:    v_cvt_f32_i32_sdwa v3, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
-; GFX9-NEXT:    v_xor_b32_sdwa v10, sext(v9), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_1
-; GFX9-NEXT:    v_cvt_f32_i32_sdwa v11, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
-; GFX9-NEXT:    v_xor_b32_sdwa v9, sext(v9), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
-; GFX9-NEXT:    v_cvt_f32_i32_sdwa v13, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
-; GFX9-NEXT:    v_xor_b32_sdwa v14, sext(v4), sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_3
-; GFX9-NEXT:    v_cvt_f32_i32_sdwa v4, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
+; GFX9-NEXT:    v_cvt_f32_i32_sdwa v2, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; GFX9-NEXT:    v_cvt_f32_i32_sdwa v12, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
+; GFX9-NEXT:    v_perm_b32 v0, v4, v9, s4
+; GFX9-NEXT:    v_xor_b32_sdwa v1, sext(v4), sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_0
+; GFX9-NEXT:    v_xor_b32_sdwa v10, sext(v4), sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_1
+; GFX9-NEXT:    v_cvt_f32_i32_sdwa v11, sext(v4) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
+; GFX9-NEXT:    v_xor_b32_sdwa v4, sext(v4), sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
+; GFX9-NEXT:    v_cvt_f32_i32_sdwa v13, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
+; GFX9-NEXT:    v_xor_b32_sdwa v14, sext(v9), sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_3
+; GFX9-NEXT:    v_cvt_f32_i32_sdwa v9, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v15, v2
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v16, v12
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v17, v13
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v18, v4
+; GFX9-NEXT:    v_rcp_iflag_f32_e32 v18, v9
 ; GFX9-NEXT:    v_mul_f32_e32 v15, v3, v15
 ; GFX9-NEXT:    v_mul_f32_e32 v16, v11, v16
 ; GFX9-NEXT:    v_trunc_f32_e32 v15, v15
@@ -1610,23 +1629,23 @@ define hidden void @sdiv_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX9-NEXT:    v_trunc_f32_e32 v18, v18
 ; GFX9-NEXT:    v_mad_f32 v11, -v16, v12, v11
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v19|, |v2|
-; GFX9-NEXT:    v_ashrrev_i32_e32 v9, 30, v9
+; GFX9-NEXT:    v_ashrrev_i32_e32 v4, 30, v4
 ; GFX9-NEXT:    v_or_b32_e32 v10, 1, v10
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v15, v15
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v16, v16
 ; GFX9-NEXT:    v_mad_f32 v3, -v17, v13, v3
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v17, v17
-; GFX9-NEXT:    v_mad_f32 v2, -v18, v4, v2
+; GFX9-NEXT:    v_mad_f32 v2, -v18, v9, v2
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v18, v18
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v11|, |v12|
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v14, 30, v14
-; GFX9-NEXT:    v_or_b32_e32 v9, 1, v9
+; GFX9-NEXT:    v_or_b32_e32 v4, 1, v4
 ; GFX9-NEXT:    v_cndmask_b32_e32 v10, 0, v10, vcc
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, |v13|
 ; GFX9-NEXT:    v_or_b32_e32 v14, 1, v14
-; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v9, vcc
-; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v2|, |v4|
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v4, vcc
+; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v2|, |v9|
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, 0, v14, vcc
 ; GFX9-NEXT:    v_add_u32_e32 v1, v15, v1
 ; GFX9-NEXT:    v_add_u32_sdwa v4, v16, v10 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
@@ -1662,6 +1681,7 @@ define hidden void @sext_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[2:3], off
 ; GFX10-NEXT:    global_load_dword v9, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -1726,6 +1746,7 @@ define hidden void @shl_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -1795,6 +1816,7 @@ define hidden void @sitofp_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -1858,6 +1880,7 @@ define hidden void @srem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[2:3], off
 ; GFX10-NEXT:    global_load_dword v9, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -2037,6 +2060,7 @@ define hidden void @sub_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v2, v[2:3], off
 ; GFX10-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -2106,6 +2130,7 @@ define hidden void @sv_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v5, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -2153,6 +2178,7 @@ define hidden void @trunc_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 1
@@ -2223,6 +2249,7 @@ define hidden void @udiv(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %elt, 
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v2, v[2:3], off
 ; GFX10-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -2280,45 +2307,45 @@ define hidden void @udiv(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %elt, 
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v4
 ; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX9-NEXT:    global_load_dword v4, v[2:3], off
-; GFX9-NEXT:    global_load_dword v9, v[0:1], off
+; GFX9-NEXT:    global_load_dword v4, v[0:1], off
+; GFX9-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX9-NEXT:    s_mov_b32 s4, 0x40207
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v2, v4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v11, v2
-; GFX9-NEXT:    v_cvt_f32_ubyte1_e32 v3, v4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v12, v3
+; GFX9-NEXT:    v_cvt_f32_ubyte3_e32 v1, v4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cvt_f32_ubyte3_e32 v1, v9
-; GFX9-NEXT:    v_cvt_f32_ubyte2_e32 v10, v4
+; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v2, v9
+; GFX9-NEXT:    v_rcp_iflag_f32_e32 v11, v2
+; GFX9-NEXT:    v_cvt_f32_ubyte1_e32 v3, v9
+; GFX9-NEXT:    v_rcp_iflag_f32_e32 v12, v3
+; GFX9-NEXT:    v_cvt_f32_ubyte2_e32 v10, v9
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v13, v10
 ; GFX9-NEXT:    v_mul_f32_e32 v11, v1, v11
-; GFX9-NEXT:    v_perm_b32 v0, v9, v4, s4
-; GFX9-NEXT:    v_cvt_f32_ubyte3_e32 v4, v4
+; GFX9-NEXT:    v_perm_b32 v0, v4, v9, s4
+; GFX9-NEXT:    v_cvt_f32_ubyte3_e32 v9, v9
 ; GFX9-NEXT:    v_trunc_f32_e32 v11, v11
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v14, v4
+; GFX9-NEXT:    v_rcp_iflag_f32_e32 v14, v9
 ; GFX9-NEXT:    v_mul_f32_e32 v12, v10, v12
 ; GFX9-NEXT:    v_mad_f32 v1, -v11, v2, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v11, v11
-; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v9, v9
+; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v4, v4
 ; GFX9-NEXT:    v_trunc_f32_e32 v12, v12
-; GFX9-NEXT:    v_mul_f32_e32 v13, v9, v13
+; GFX9-NEXT:    v_mul_f32_e32 v13, v4, v13
 ; GFX9-NEXT:    v_mad_f32 v15, -v12, v3, v10
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v12, v12
 ; GFX9-NEXT:    v_trunc_f32_e32 v13, v13
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v1|, v2
 ; GFX9-NEXT:    v_mul_f32_e32 v14, v2, v14
-; GFX9-NEXT:    v_mad_f32 v9, -v13, v10, v9
+; GFX9-NEXT:    v_mad_f32 v4, -v13, v10, v4
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v13, v13
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v11, vcc
 ; GFX9-NEXT:    v_trunc_f32_e32 v14, v14
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v15|, v3
-; GFX9-NEXT:    v_mad_f32 v16, -v14, v4, v2
+; GFX9-NEXT:    v_mad_f32 v16, -v14, v9, v2
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v14, v14
 ; GFX9-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v12, vcc
-; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v9|, v10
+; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v4|, v10
 ; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v13, vcc
-; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v16|, v4
+; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v16|, v9
 ; GFX9-NEXT:    v_addc_co_u32_e32 v4, vcc, 0, v14, vcc
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v2, 8, v2
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v4, 8, v4
@@ -2352,6 +2379,7 @@ define hidden void @uitofp_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[2:3], off
 ; GFX10-NEXT:    global_load_dword v9, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -2411,6 +2439,7 @@ define hidden void @urem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v2, v[2:3], off
 ; GFX10-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -2556,6 +2585,7 @@ define hidden void @xor_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffffff00
@@ -2631,6 +2661,7 @@ define hidden void @zext_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0xff
@@ -2724,6 +2755,7 @@ define hidden void @extract3744(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
 ; GFX10-LABEL: extract3744:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -2768,6 +2800,7 @@ define hidden void @extract_perm_3744(ptr addrspace(1) %in0, ptr addrspace(1) %i
 ; GFX10-LABEL: extract_perm_3744:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -2801,6 +2834,7 @@ define hidden void @extract1347_v2i16(ptr addrspace(1) %in0, ptr addrspace(1) %i
 ; GFX10-LABEL: extract1347_v2i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -2858,6 +2892,7 @@ define hidden void @fshri16_8(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr 
 ; GFX10-LABEL: fshri16_8:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -2898,6 +2933,7 @@ define hidden void @fshri16_16(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX10-LABEL: fshri16_16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -2938,6 +2974,7 @@ define hidden void @fshri16_24(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX10-LABEL: fshri16_24:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -2978,6 +3015,7 @@ define hidden void @fshri16_32(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX10-LABEL: fshri16_32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -3018,6 +3056,7 @@ define hidden void @fshri16_88(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX10-LABEL: fshri16_88:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -3060,6 +3099,7 @@ define hidden void @fshli16_1347(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 ; GFX10-LABEL: fshli16_1347:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -3100,6 +3140,7 @@ define hidden void @fshli16_16(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX10-LABEL: fshli16_16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -3140,6 +3181,7 @@ define hidden void @fshli16_24(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX10-LABEL: fshli16_24:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -3180,6 +3222,7 @@ define hidden void @fshli16_32(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX10-LABEL: fshli16_32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -3220,6 +3263,7 @@ define hidden void @fshli16_88(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr
 ; GFX10-LABEL: fshli16_88:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v7, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -3260,6 +3304,7 @@ define hidden void @shlbase(ptr addrspace(1) %in0, ptr addrspace(1) %in1, ptr ad
 ; GFX10-LABEL: shlbase:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v7, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v8, v[2:3], off
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, 16, v6
@@ -3321,6 +3366,7 @@ define hidden void @extractbase(ptr addrspace(1) %in0, ptr addrspace(1) %in1, pt
 ; GFX10-LABEL: extractbase:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v7, v[0:1], off
 ; GFX10-NEXT:    global_load_dword v8, v[2:3], off
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 3, v6
@@ -3379,6 +3425,7 @@ define hidden void @extract_hilo(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 ; GFX10-LABEL: extract_hilo:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[2:3], off
 ; GFX10-NEXT:    global_load_dword v7, v[0:1], off offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -3421,6 +3468,7 @@ define hidden void @extract_lohi(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 ; GFX10-LABEL: extract_lohi:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[2:3], off offset:4
 ; GFX10-NEXT:    global_load_dword v7, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -3463,6 +3511,7 @@ define hidden void @extract_hihi(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 ; GFX10-LABEL: extract_hihi:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dword v6, v[2:3], off offset:4
 ; GFX10-NEXT:    global_load_dword v7, v[0:1], off offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -3584,6 +3633,7 @@ define hidden void @extract_3src(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 ; GFX10-LABEL: extract_3src:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dwordx2 v[6:7], v[0:1], off
 ; GFX10-NEXT:    global_load_dword v8, v[2:3], off offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)

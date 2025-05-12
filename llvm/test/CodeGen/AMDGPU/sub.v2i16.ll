@@ -97,19 +97,17 @@ define amdgpu_kernel void @v_test_sub_v2i16(ptr addrspace(1) %out, ptr addrspace
 define amdgpu_kernel void @s_test_sub_v2i16(ptr addrspace(1) %out, ptr addrspace(4) %in0, ptr addrspace(4) %in1) #1 {
 ; GFX9-LABEL: s_test_sub_v2i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-NEXT:    s_mov_b32 s7, 0xf000
-; GFX9-NEXT:    s_mov_b32 s6, -1
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dword s10, s[8:9], 0x0
-; GFX9-NEXT:    s_load_dword s11, s[2:3], 0x0
-; GFX9-NEXT:    s_mov_b32 s4, s0
-; GFX9-NEXT:    s_mov_b32 s5, s1
+; GFX9-NEXT:    s_load_dword s4, s[2:3], 0x0
+; GFX9-NEXT:    s_load_dword s5, s[6:7], 0x0
+; GFX9-NEXT:    s_mov_b32 s3, 0xf000
+; GFX9-NEXT:    s_mov_b32 s2, -1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s10
-; GFX9-NEXT:    v_pk_sub_i16 v0, s11, v0
-; GFX9-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s5
+; GFX9-NEXT:    v_pk_sub_i16 v0, s4, v0
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;
 ; VI-LABEL: s_test_sub_v2i16:
@@ -139,6 +137,7 @@ define amdgpu_kernel void @s_test_sub_v2i16(ptr addrspace(1) %out, ptr addrspace
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dword s4, s[2:3], 0x0
 ; GFX10-NEXT:    s_load_dword s5, s[6:7], 0x0
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
@@ -154,6 +153,7 @@ define amdgpu_kernel void @s_test_sub_v2i16(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX11-NEXT:    s_load_b32 s4, s[4:5], 0x0
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000

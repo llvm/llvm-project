@@ -109,6 +109,7 @@ define <2 x half> @chain_hi_to_lo_private_different_bases(ptr addrspace(5) %base
 ; FLATSCR_GFX10-LABEL: chain_hi_to_lo_private_different_bases:
 ; FLATSCR_GFX10:       ; %bb.0: ; %bb
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR_GFX10-NEXT:    s_clause 0x1
 ; FLATSCR_GFX10-NEXT:    scratch_load_ushort v0, v0, off
 ; FLATSCR_GFX10-NEXT:    scratch_load_short_d16_hi v0, v1, off
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -125,6 +126,7 @@ define <2 x half> @chain_hi_to_lo_private_different_bases(ptr addrspace(5) %base
 ; GFX11-FAKE16-LABEL: chain_hi_to_lo_private_different_bases:
 ; GFX11-FAKE16:       ; %bb.0: ; %bb
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    scratch_load_u16 v0, v0, off
 ; GFX11-FAKE16-NEXT:    scratch_load_d16_hi_b16 v0, v1, off
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -372,6 +374,7 @@ define <2 x half> @chain_hi_to_lo_global_different_bases(ptr addrspace(1) %base_
 ; GFX10-LABEL: chain_hi_to_lo_global_different_bases:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_ushort v0, v[0:1], off
 ; GFX10-NEXT:    global_load_short_d16_hi v0, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -388,6 +391,7 @@ define <2 x half> @chain_hi_to_lo_global_different_bases(ptr addrspace(1) %base_
 ; GFX11-FAKE16-LABEL: chain_hi_to_lo_global_different_bases:
 ; GFX11-FAKE16:       ; %bb.0: ; %bb
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    global_load_u16 v0, v[0:1], off
 ; GFX11-FAKE16-NEXT:    global_load_d16_hi_b16 v0, v[2:3], off
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)

@@ -15791,6 +15791,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_inreg() #0 {
 ; GFX11-NEXT:    v_writelane_b32 v40, s25, 21
 ; GFX11-NEXT:    s_mov_b32 s24, s40
 ; GFX11-NEXT:    s_mov_b32 s25, s41
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_store_b64 off, v[4:5], s2
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
 ; GFX11-NEXT:    v_writelane_b32 v40, s26, 22
@@ -16232,6 +16233,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) #0 {
 ; GFX11-NEXT:    s_mov_b32 s25, s41
 ; GFX11-NEXT:    v_writelane_b32 v40, s26, 22
 ; GFX11-NEXT:    s_mov_b32 s26, s42
+; GFX11-NEXT:    s_clause 0x2
 ; GFX11-NEXT:    scratch_store_b32 off, v6, s2
 ; GFX11-NEXT:    scratch_store_b64 off, v[4:5], s3
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
@@ -16960,6 +16962,7 @@ define amdgpu_gfx void @stack_8xv5i32() #0 {
 ; GFX11-NEXT:    s_add_i32 s32, s32, 16
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX11-NEXT:    s_add_i32 s0, s32, 16
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
 ; GFX11-NEXT:    scratch_store_b128 off, v[4:7], s0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
@@ -17248,6 +17251,7 @@ define amdgpu_gfx void @stack_8xv5f32() #0 {
 ; GFX11-NEXT:    s_add_i32 s32, s32, 16
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX11-NEXT:    s_add_i32 s0, s32, 16
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
 ; GFX11-NEXT:    scratch_store_b128 off, v[4:7], s0
 ; GFX11-NEXT:    v_mov_b32_e32 v6, 1.0
