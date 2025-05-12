@@ -18,8 +18,8 @@ let CompleteModel = 0 in {
 
 // Inst_B didn't have the resoures, and it is invalid.
 // CHECK: SchedModel_ASchedClasses[] = {
-// CHECK: {DBGFIELD("Inst_A")             1
-// CHECK-NEXT: {DBGFIELD("Inst_B")             8191
+// CHECK: {DBGFIELD(19 /* Inst_A */) 1
+// CHECK-NEXT: {DBGFIELD(26 /* Inst_B */) 8191
 let SchedModel = SchedModel_A in {
   def Write_A : SchedWriteRes<[]>;
   def : InstRW<[Write_A], (instrs Inst_A)>;
@@ -27,16 +27,16 @@ let SchedModel = SchedModel_A in {
 
 // Inst_A didn't have the resoures, and it is invalid.
 // CHECK: SchedModel_BSchedClasses[] = {
-// CHECK: {DBGFIELD("Inst_A")             8191
-// CHECK-NEXT: {DBGFIELD("Inst_B")             1 
+// CHECK: {DBGFIELD(19 /* Inst_A */) 8191
+// CHECK-NEXT: {DBGFIELD(26 /* Inst_B */) 1
 let SchedModel = SchedModel_B in {
   def Write_B: SchedWriteRes<[]>; 
   def : InstRW<[Write_B], (instrs Inst_B)>;
 }
 
 // CHECK: SchedModel_CSchedClasses[] = {
-// CHECK: {DBGFIELD("Inst_A")             1
-// CHECK-NEXT: {DBGFIELD("Inst_B")             1
+// CHECK: {DBGFIELD(19 /* Inst_A */) 1
+// CHECK-NEXT: {DBGFIELD(26 /* Inst_B */) 1
 let SchedModel = SchedModel_C in {
   def Write_C: SchedWriteRes<[]>; 
   def : InstRW<[Write_C], (instrs Inst_A, Inst_B)>;

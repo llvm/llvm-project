@@ -29,6 +29,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <algorithm>
@@ -1458,6 +1459,7 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
   OS << "}; // " << Target << "ReadAdvanceTable\n";
 
   // Emit a SchedClass table for each processor.
+  StringToOffsetTable NameTable;
   for (const auto &[Idx, Proc] : enumerate(SchedModels.procModels())) {
     if (!Proc.hasInstrSchedModel())
       continue;
@@ -1474,14 +1476,17 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
     // name and position.
     assert(SchedModels.getSchedClass(0).Name == "NoInstrModel" &&
            "invalid class not first");
-    OS << "  {DBGFIELD(\"InvalidSchedClass\")  "
+    unsigned NameOffset = NameTable.GetOrAddStringOffset("InvalidSchedClass");
+    OS << "  {DBGFIELD(" << NameOffset << " /* InvalidSchedClass */)  "
        << MCSchedClassDesc::InvalidNumMicroOps
        << ", false, false, false, 0, 0,  0, 0,  0, 0},\n";
 
     for (unsigned SCIdx = 1, SCEnd = SCTab.size(); SCIdx != SCEnd; ++SCIdx) {
       MCSchedClassDesc &MCDesc = SCTab[SCIdx];
       const CodeGenSchedClass &SchedClass = SchedModels.getSchedClass(SCIdx);
-      OS << "  {DBGFIELD(\"" << SchedClass.Name << "\") ";
+      NameOffset = NameTable.GetOrAddStringOffset(SchedClass.Name);
+      OS << "  {DBGFIELD(" << NameOffset << " /* " << SchedClass.Name
+         << " */) ";
       if (SchedClass.Name.size() < 18)
         OS.indent(18 - SchedClass.Name.size());
       OS << MCDesc.NumMicroOps << ", " << (MCDesc.BeginGroup ? "true" : "false")
@@ -1496,6 +1501,14 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
     }
     OS << "}; // " << Proc.ModelName << "SchedClasses\n";
   }
+
+  OS << "\n#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)\n";
+  NameTable.EmitStringTableDef(OS, Target + "NameTable", /*Indent=*/"",
+                               "extern");
+  OS << "\n#else\n";
+  OS << "\nextern constexpr llvm::StringTable " << Target
+     << "NameTable = \"\";\n";
+  OS << "\n#endif\n";
 }
 
 void SubtargetEmitter::emitProcessorModels(raw_ostream &OS) {
@@ -1980,9 +1993,9 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "    const MCWriteProcResEntry *WPR,\n"
      << "    const MCWriteLatencyEntry *WL,\n"
      << "    const MCReadAdvanceEntry *RA, const InstrStage *IS,\n"
-     << "    const unsigned *OC, const unsigned *FP) :\n"
+     << "    const unsigned *OC, const unsigned *FP, StringTable NT) :\n"
      << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD,\n"
-     << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
+     << "                      WPR, WL, RA, IS, OC, FP, NT) { }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
      << "      unsigned CPUID) const override {\n"
@@ -2087,7 +2100,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
        << "ForwardingPaths";
   } else
     OS << "nullptr, nullptr, nullptr";
-  OS << ");\n}\n\n";
+  OS << ", " << Target << "NameTable);\n}\n\n";
 
   OS << "} // end namespace llvm\n\n";
 
@@ -2187,6 +2200,8 @@ void SubtargetEmitter::run(raw_ostream &OS) {
     OS << "extern const unsigned " << Target << "ForwardingPaths[];\n";
   }
 
+  OS << "extern const llvm::StringTable " << Target << "NameTable;\n";
+
   OS << ClassName << "::" << ClassName << "(const Triple &TT, StringRef CPU, "
      << "StringRef TuneCPU, StringRef FS)\n";
 
@@ -2218,7 +2233,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
        << "ForwardingPaths";
   } else
     OS << "nullptr, nullptr, nullptr";
-  OS << ") {}\n\n";
+  OS << ", " << Target << "NameTable) {}\n\n";
 
   emitSchedModelHelpers(ClassName, OS);
   emitHwModeCheck(ClassName, OS);
