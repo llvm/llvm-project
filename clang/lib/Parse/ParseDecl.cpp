@@ -6123,7 +6123,7 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 }
 
 void Parser::ParseTypeQualifierListOpt(
-    DeclSpec &DS, unsigned AttrReqs, bool AtomicAllowed,
+    DeclSpec &DS, unsigned AttrReqs, bool AtomicOrPtrauthAllowed,
     bool IdentifierRequired,
     std::optional<llvm::function_ref<void()>> CodeCompletionHandler) {
   if ((AttrReqs & AR_CXX11AttributesParsed) &&
@@ -6163,7 +6163,7 @@ void Parser::ParseTypeQualifierListOpt(
                                  getLangOpts());
       break;
     case tok::kw__Atomic:
-      if (!AtomicAllowed)
+      if (!AtomicOrPtrauthAllowed)
         goto DoneWithTypeQuals;
       diagnoseUseOfC11Keyword(Tok);
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_atomic, Loc, PrevSpec, DiagID,
@@ -6196,6 +6196,8 @@ void Parser::ParseTypeQualifierListOpt(
 
     // __ptrauth qualifier.
     case tok::kw___ptrauth:
+      if (!AtomicOrPtrauthAllowed)
+        goto DoneWithTypeQuals;
       ParsePtrauthQualifier(DS.getAttributes());
       EndLoc = PrevTokLocation;
       continue;
@@ -6446,7 +6448,8 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
                     ((D.getContext() != DeclaratorContext::CXXNew)
                          ? AR_GNUAttributesParsed
                          : AR_GNUAttributesParsedAndRejected);
-    ParseTypeQualifierListOpt(DS, Reqs, true, !D.mayOmitIdentifier());
+    ParseTypeQualifierListOpt(DS, Reqs, /*AtomicOrPtrauthAllowed=*/true,
+                              !D.mayOmitIdentifier());
     D.ExtendWithDeclSpec(DS);
 
     // Recursively parse the declarator.
@@ -7232,7 +7235,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       // Parse cv-qualifier-seq[opt].
       ParseTypeQualifierListOpt(
           DS, AR_NoAttributesParsed,
-          /*AtomicAllowed*/ false,
+          /*AtomicOrPtrauthAllowed=*/false,
           /*IdentifierRequired=*/false, llvm::function_ref<void()>([&]() {
             Actions.CodeCompletion().CodeCompleteFunctionQualifiers(DS, D);
           }));

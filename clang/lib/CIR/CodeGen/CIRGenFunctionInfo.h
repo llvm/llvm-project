@@ -16,7 +16,6 @@
 #define LLVM_CLANG_CIR_CIRGENFUNCTIONINFO_H
 
 #include "clang/AST/CanonicalType.h"
-#include "clang/CIR/ABIArgInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/TrailingObjects.h"
 
@@ -24,7 +23,6 @@ namespace clang::CIRGen {
 
 struct CIRGenFunctionInfoArgInfo {
   CanQualType type;
-  cir::ABIArgInfo info;
 };
 
 class CIRGenFunctionInfo final
@@ -77,11 +75,6 @@ public:
   unsigned arg_size() const { return numArgs; }
 
   CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
-
-  cir::ABIArgInfo &getReturnInfo() { return getArgsBuffer()[0].info; }
-  const cir::ABIArgInfo &getReturnInfo() const {
-    return getArgsBuffer()[0].info;
-  }
 };
 
 } // namespace clang::CIRGen

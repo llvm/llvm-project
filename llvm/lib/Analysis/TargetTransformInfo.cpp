@@ -1395,9 +1395,8 @@ bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
   return TTIImpl->preferAlternateOpcodeVectorization();
 }
 
-bool TargetTransformInfo::preferPredicatedReductionSelect(unsigned Opcode,
-                                                          Type *Ty) const {
-  return TTIImpl->preferPredicatedReductionSelect(Opcode, Ty);
+bool TargetTransformInfo::preferPredicatedReductionSelect() const {
+  return TTIImpl->preferPredicatedReductionSelect();
 }
 
 bool TargetTransformInfo::preferEpilogueVectorization() const {

@@ -151,53 +151,57 @@ DWARFCallFrameInfo::DWARFCallFrameInfo(ObjectFile &objfile,
                                        SectionSP &section_sp, Type type)
     : m_objfile(objfile), m_section_sp(section_sp), m_type(type) {}
 
-bool DWARFCallFrameInfo::GetUnwindPlan(const Address &addr,
-                                       UnwindPlan &unwind_plan) {
-  return GetUnwindPlan(AddressRange(addr, 1), unwind_plan);
+std::unique_ptr<UnwindPlan>
+DWARFCallFrameInfo::GetUnwindPlan(const Address &addr) {
+  return GetUnwindPlan({AddressRange(addr, 1)}, addr);
 }
 
-bool DWARFCallFrameInfo::GetUnwindPlan(const AddressRange &range,
-                                       UnwindPlan &unwind_plan) {
+std::unique_ptr<UnwindPlan>
+DWARFCallFrameInfo::GetUnwindPlan(llvm::ArrayRef<AddressRange> ranges,
+                                  const Address &addr) {
   FDEEntryMap::Entry fde_entry;
-  Address addr = range.GetBaseAddress();
 
   // Make sure that the Address we're searching for is the same object file as
   // this DWARFCallFrameInfo, we only store File offsets in m_fde_index.
   ModuleSP module_sp = addr.GetModule();
   if (module_sp.get() == nullptr || module_sp->GetObjectFile() == nullptr ||
       module_sp->GetObjectFile() != &m_objfile)
-    return false;
+    return nullptr;
 
-  std::optional<FDEEntryMap::Entry> entry = GetFirstFDEEntryInRange(range);
-  if (!entry)
-    return false;
+  std::vector<AddressRange> valid_ranges;
 
-  std::optional<FDE> fde = ParseFDE(entry->data, addr);
-  if (!fde)
-    return false;
-
-  unwind_plan.SetSourceName(m_type == EH ? "eh_frame CFI" : "DWARF CFI");
+  auto result = std::make_unique<UnwindPlan>(GetRegisterKind());
+  result->SetSourceName(m_type == EH ? "eh_frame CFI" : "DWARF CFI");
   // In theory the debug_frame info should be valid at all call sites
   // ("asynchronous unwind info" as it is sometimes called) but in practice
   // gcc et al all emit call frame info for the prologue and call sites, but
   // not for the epilogue or all the other locations during the function
   // reliably.
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolYes);
-  unwind_plan.SetRegisterKind(GetRegisterKind());
-
-  unwind_plan.SetPlanValidAddressRanges({fde->range});
-  unwind_plan.SetUnwindPlanForSignalTrap(fde->for_signal_trap ? eLazyBoolYes
-                                                              : eLazyBoolNo);
-  unwind_plan.SetReturnAddressRegister(fde->return_addr_reg_num);
-  int64_t slide =
-      fde->range.GetBaseAddress().GetFileAddress() - addr.GetFileAddress();
-  for (UnwindPlan::Row &row : fde->rows) {
-    row.SlideOffset(slide);
-    unwind_plan.AppendRow(std::move(row));
+  result->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  result->SetSourcedFromCompiler(eLazyBoolYes);
+  result->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  for (const AddressRange &range : ranges) {
+    std::optional<FDEEntryMap::Entry> entry = GetFirstFDEEntryInRange(range);
+    if (!entry)
+      continue;
+    std::optional<FDE> fde = ParseFDE(entry->data, addr);
+    if (!fde)
+      continue;
+    int64_t slide =
+        fde->range.GetBaseAddress().GetFileAddress() - addr.GetFileAddress();
+    valid_ranges.push_back(std::move(fde->range));
+    if (fde->for_signal_trap)
+      result->SetUnwindPlanForSignalTrap(eLazyBoolYes);
+    result->SetReturnAddressRegister(fde->return_addr_reg_num);
+    for (UnwindPlan::Row &row : fde->rows) {
+      row.SlideOffset(slide);
+      result->AppendRow(std::move(row));
+    }
   }
-
-  return true;
+  result->SetPlanValidAddressRanges(std::move(valid_ranges));
+  if (result->GetRowCount() == 0)
+    return nullptr;
+  return result;
 }
 
 bool DWARFCallFrameInfo::GetAddressRange(Address addr, AddressRange &range) {

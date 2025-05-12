@@ -6592,7 +6592,6 @@ struct VarArgPowerPC64Helper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
-    Triple TargetTriple(F.getParent()->getTargetTriple());
     for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
@@ -6625,7 +6624,6 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
     unsigned VAArgBase;
-    Triple TargetTriple(F.getParent()->getTargetTriple());
     // Parameter save area is 8 bytes from frame pointer in PPC32
     VAArgBase = 8;
     unsigned VAArgOffset = VAArgBase;
@@ -6730,7 +6728,6 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
 
     // Instrument va_start.
     // Copy va_list shadow from the backup copy of the TLS contents.
-    Triple TargetTriple(F.getParent()->getTargetTriple());
     for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);

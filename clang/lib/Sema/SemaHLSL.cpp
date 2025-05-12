@@ -1979,7 +1979,7 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     for (const Decl *VD : DefaultCBufferDecls) {
       const HLSLResourceBindingAttr *RBA =
           VD->getAttr<HLSLResourceBindingAttr>();
-      if (RBA && !RBA->isImplicit() &&
+      if (RBA && RBA->hasRegisterSlot() &&
           RBA->getRegisterType() == HLSLResourceBindingAttr::RegisterType::C) {
         DefaultCBuffer->setHasValidPackoffset(true);
         break;
@@ -3271,7 +3271,7 @@ static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
 
 static bool initGlobalResourceDecl(Sema &S, VarDecl *VD) {
   HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
-  if (!RBA || RBA->isImplicit())
+  if (!RBA || !RBA->hasRegisterSlot())
     // FIXME: add support for implicit binding (llvm/llvm-project#110722)
     return false;
 
@@ -3356,7 +3356,7 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
   bool HasBinding = false;
   for (Attr *A : VD->attrs()) {
     HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
-    if (!RBA || RBA->isImplicit())
+    if (!RBA || !RBA->hasRegisterSlot())
       continue;
     HasBinding = true;
 

@@ -695,27 +695,31 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   if (!A->getIntroduced().empty() &&
       EnclosingVersion < A->getIntroduced()) {
     IdentifierInfo *IIEnv = A->getEnvironment();
-    StringRef TargetEnv =
-        Context.getTargetInfo().getTriple().getEnvironmentName();
-    StringRef EnvName = llvm::Triple::getEnvironmentTypeName(
-        Context.getTargetInfo().getTriple().getEnvironment());
-    // Matching environment or no environment on attribute
-    if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
+    auto &Triple = Context.getTargetInfo().getTriple();
+    StringRef TargetEnv = Triple.getEnvironmentName();
+    StringRef EnvName =
+        llvm::Triple::getEnvironmentTypeName(Triple.getEnvironment());
+    // Matching environment or no environment on attribute.
+    if (!IIEnv || (Triple.hasEnvironment() && IIEnv->getName() == TargetEnv)) {
       if (Message) {
         Message->clear();
         llvm::raw_string_ostream Out(*Message);
         VersionTuple VTI(A->getIntroduced());
-        Out << "introduced in " << PrettyPlatformName << " " << VTI << " "
-            << EnvName << HintMessage;
+        Out << "introduced in " << PrettyPlatformName << " " << VTI;
+        if (Triple.hasEnvironment())
+          Out << " " << EnvName;
+        Out << HintMessage;
       }
     }
-    // Non-matching environment or no environment on target
+    // Non-matching environment or no environment on target.
     else {
       if (Message) {
         Message->clear();
         llvm::raw_string_ostream Out(*Message);
-        Out << "not available on " << PrettyPlatformName << " " << EnvName
-            << HintMessage;
+        Out << "not available on " << PrettyPlatformName;
+        if (Triple.hasEnvironment())
+          Out << " " << EnvName;
+        Out << HintMessage;
       }
     }
 
@@ -2149,8 +2153,7 @@ void DeclContext::makeDeclVisibleInContextImpl(NamedDecl *D, bool Internal) {
   // have already checked the external source.
   if (!Internal)
     if (ExternalASTSource *Source = getParentASTContext().getExternalSource())
-      if (hasExternalVisibleStorage() &&
-          Map->find(D->getDeclName()) == Map->end())
+      if (hasExternalVisibleStorage() && !Map->contains(D->getDeclName()))
         Source->FindExternalVisibleDeclsByName(this, D->getDeclName(),
                                                D->getDeclContext());
 

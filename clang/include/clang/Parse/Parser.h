@@ -2274,13 +2274,16 @@ private:
     return false;
   }
 
-  void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
+  bool MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
+    bool AttrsParsed = false;
     if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&
         Tok.is(tok::l_square)) {
       ParsedAttributes AttrsWithRange(AttrFactory);
       ParseMicrosoftAttributes(AttrsWithRange);
+      AttrsParsed = !AttrsWithRange.empty();
       Attrs.takeAllFrom(AttrsWithRange);
     }
+    return AttrsParsed;
   }
 
   bool MaybeParseMicrosoftDeclSpecs(ParsedAttributes &Attrs) {
@@ -3582,6 +3585,19 @@ private:
   ///         'public'
   /// \endverbatim
   AccessSpecifier getAccessSpecifierIfPresent() const;
+
+  bool isCXX2CTriviallyRelocatableKeyword(Token Tok) const;
+  bool isCXX2CTriviallyRelocatableKeyword() const;
+  void ParseCXX2CTriviallyRelocatableSpecifier(SourceLocation &TRS);
+
+  bool isCXX2CReplaceableKeyword(Token Tok) const;
+  bool isCXX2CReplaceableKeyword() const;
+  void ParseCXX2CReplaceableSpecifier(SourceLocation &MRS);
+
+  /// 'final', a C++26 'trivially_relocatable_if_eligible',
+  /// 'replaceable_if_eligible', or Microsoft 'sealed' or 'abstract' contextual
+  /// keyword.
+  bool isClassCompatibleKeyword(Token Tok) const;
 
   ///@}
 
