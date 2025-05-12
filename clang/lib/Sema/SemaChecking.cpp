@@ -52,6 +52,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h" // TODO: Extract static functions to fix layering.
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
@@ -9679,18 +9680,14 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
         !DestPointeeTy.isTriviallyCopyableType(getASTContext()) &&
         SemaRef.IsCXXTriviallyRelocatableType(DestPointeeTy)) {
 
-      bool SuggestStd = getLangOpts().CPlusPlus26 && getStdNamespace();
-      if (const Decl *D = Call->getReferencedDeclOfCallee();
-          D && !D->isInStdNamespace())
-        SuggestStd = false;
-
-      StringRef Replacement = SuggestStd ? "std::trivially_relocate"
-                                         : "__builtin_trivially_relocate";
+      bool SuggestReplacement =
+          getLangOpts().CPlusPlus26 ||
+          getPreprocessor().isMacroDefined("__cpp_lib_trivially_relocatable");
 
       DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
                           PDiag(diag::warn_cxxstruct_memaccess_relocatable)
                               << Call->getCallee()->getSourceRange() << FnName
-                              << DestPointeeTy << Replacement);
+                              << DestPointeeTy << SuggestReplacement);
       return;
     }
   }

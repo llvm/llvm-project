@@ -855,9 +855,10 @@ def warn_cxxstruct_memaccess : Warning<
   InGroup<NonTrivialMemcall>;
 
 def warn_cxxstruct_memaccess_relocatable
-    : Warning<"calling %0 with a pointer to a type %1 which is trivially "
-              "relocatable "
-              "but not trivially copyable; did you mean to call %2?">,
+    : Warning<
+          "calling %0 with a pointer to a type %1 which is trivially "
+          "relocatable but not trivially copyable"
+          "%select{|; did you mean to call 'std::trivially_relocate'?}2">,
       InGroup<NonTrivialMemcall>;
 
 def note_nontrivial_field : Note<
