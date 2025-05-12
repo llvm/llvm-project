@@ -451,13 +451,13 @@ class SymbolizationLoop(object):
             self.dsym_hint_producer = dsym_hint_producer
             self.system = os.uname()[0]
             if self.system not in [
-                 "Linux",
-                 "Darwin",
-                 "FreeBSD",
-                 "NetBSD",
-                 "SunOS",
-                 "AIX",
-             ]:
+                "Linux",
+                "Darwin",
+                "FreeBSD",
+                "NetBSD",
+                "SunOS",
+                "AIX",
+            ]:
                 raise Exception("Unknown system")
             self.llvm_symbolizers = {}
             self.last_llvm_symbolizer = None
