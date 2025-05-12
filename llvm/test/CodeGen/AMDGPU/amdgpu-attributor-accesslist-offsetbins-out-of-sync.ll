@@ -8,7 +8,7 @@
 
 define internal fastcc void @foo(ptr %kg) {
 ; CHECK-LABEL: define internal fastcc void @foo(
-; CHECK-SAME: ptr [[KG:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr inreg [[KG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CLOSURE_I25_I:%.*]] = getelementptr i8, ptr [[KG]], i64 336
 ; CHECK-NEXT:    [[NUM_CLOSURE_I26_I:%.*]] = getelementptr i8, ptr [[KG]], i64 276

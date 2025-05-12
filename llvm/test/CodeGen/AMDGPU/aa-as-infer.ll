@@ -90,7 +90,7 @@ define void @call_volatile_load_store_as_4(ptr addrspace(4) %p1, ptr addrspace(4
 
 define internal void @can_infer_cmpxchg(ptr %word) {
 ; CHECK-LABEL: define internal void @can_infer_cmpxchg(
-; CHECK-SAME: ptr [[WORD:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr inreg [[WORD:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[CMPXCHG_0:%.*]] = cmpxchg ptr addrspace(1) [[TMP1]], i32 0, i32 4 monotonic monotonic, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
@@ -144,7 +144,7 @@ define internal void @can_not_infer_cmpxchg(ptr %word) {
 
 define internal void @can_infer_atomicrmw(ptr %word) {
 ; CHECK-LABEL: define internal void @can_infer_atomicrmw(
-; CHECK-SAME: ptr [[WORD:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr inreg [[WORD:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[ATOMICRMW_XCHG:%.*]] = atomicrmw xchg ptr addrspace(1) [[TMP1]], i32 12 monotonic, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[WORD]] to ptr addrspace(1)
