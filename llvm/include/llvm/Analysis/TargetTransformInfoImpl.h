@@ -1091,6 +1091,8 @@ public:
 
   virtual bool preferEpilogueVectorization() const { return true; }
 
+  virtual bool preferFlattenControlFlow() const { return true; }
+
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const {
     return true;
   }

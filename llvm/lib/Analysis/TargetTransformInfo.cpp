@@ -371,6 +371,10 @@ bool TargetTransformInfo::preferPredicateOverEpilogue(
   return TTIImpl->preferPredicateOverEpilogue(TFI);
 }
 
+bool TargetTransformInfo::preferFlattenControlFlow() const {
+  return TTIImpl->preferFlattenControlFlow();
+}
+
 TailFoldingStyle TargetTransformInfo::getPreferredTailFoldingStyle(
     bool IVUpdateMayOverflow) const {
   return TTIImpl->getPreferredTailFoldingStyle(IVUpdateMayOverflow);
