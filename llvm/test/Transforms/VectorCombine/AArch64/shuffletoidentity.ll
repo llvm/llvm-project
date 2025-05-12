@@ -262,8 +262,10 @@ define <8 x half> @splatandidentity(<8 x half> %a, <8 x half> %b) {
 
 define <8 x half> @splattwice(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: @splattwice(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x half> [[B:%.*]], <8 x half> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[AS:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BS:%.*]] = shufflevector <8 x half> [[B:%.*]], <8 x half> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x half> [[AS]], <4 x half> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x half> [[BS]], <4 x half> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <8 x half> [[R]]
 ;
