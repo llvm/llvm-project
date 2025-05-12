@@ -2481,10 +2481,10 @@ MemRefType CollapseShapeOp::computeCollapsedType(
                          srcType.getMemorySpace());
 }
 
-// This method handles groups of dimensions where at least one dimension is dynamic.
-// For each such group, it computes the combined size by multiplying all the sizes
-// of the dimensions in that group. These computed sizes are then used to describe
-// the resulting shape after collapsing.
+// This method handles groups of dimensions where at least one dimension is
+// dynamic. For each such group, it computes the combined size by multiplying
+// all the sizes of the dimensions in that group. These computed sizes are then
+// used to describe the resulting shape after collapsing.
 LogicalResult CollapseShapeOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedResultShapes) {
   SmallVector<ReassociationIndices, 4> reassociationArray =
