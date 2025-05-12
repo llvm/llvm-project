@@ -30,7 +30,7 @@ define void @test(i32 %control1, i32 %control2, i32 %target, i32 %reg.4.val, ptr
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[REG_24_VAL]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 4
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT2]]
@@ -39,9 +39,8 @@ define void @test(i32 %control1, i32 %control2, i32 %target, i32 %reg.4.val, ptr
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i64> [[TMP6]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i64> [[WIDE_LOAD3]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[TMP2]], i32 4
-; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP9]], ptr [[TMP2]], i32 8, <4 x i1> [[TMP7]])
-; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP10]], ptr [[TMP12]], i32 8, <4 x i1> [[TMP8]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP9]], ptr align 8 [[TMP2]], <4 x i1> [[TMP7]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP10]], ptr align 8 [[TMP4]], <4 x i1> [[TMP8]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
