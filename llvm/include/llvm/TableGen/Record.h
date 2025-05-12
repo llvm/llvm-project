@@ -745,9 +745,7 @@ public:
       return "[{" + Value.str() + "}]";
   }
 
-  std::string getAsUnquotedString() const override {
-    return std::string(Value);
-  }
+  std::string getAsUnquotedString() const override { return Value.str(); }
 
   const Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off string");
