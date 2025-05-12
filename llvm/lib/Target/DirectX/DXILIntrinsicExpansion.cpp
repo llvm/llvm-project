@@ -70,6 +70,15 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
     return true;
+  case Intrinsic::dx_resource_load_typedbuffer: // want to transform double and
+                                                // double2
+    return F.getReturnType()
+        ->getStructElementType(0)
+        ->getScalarType()
+        ->isDoubleTy();
+  case Intrinsic::dx_resource_store_typedbuffer: // want to transform double and
+                                                 // double2
+    return F.getFunctionType()->getParamType(2)->getScalarType()->isDoubleTy();
   }
   return false;
 }
@@ -532,6 +541,80 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, PiOver180);
 }
 
+static void expandTypedBufferLoadIntrinsic(CallInst *Orig) {
+  IRBuilder<> Builder(Orig);
+
+  unsigned ExtractNum =
+      Orig->getType()->getStructElementType(0)->isVectorTy() ? 4 : 2;
+  Type *Ty = VectorType::get(Builder.getInt32Ty(), ExtractNum, false);
+
+  Type *LoadType = StructType::get(Ty, Builder.getInt1Ty());
+  auto *X =
+      Builder.CreateIntrinsic(LoadType, Intrinsic::dx_resource_load_typedbuffer,
+                              {Orig->getOperand(0), Orig->getOperand(1)});
+
+  // create new extract value
+  Value *Extract = Builder.CreateExtractValue(X, {0});
+
+  SmallVector<Value *> ExtractElements;
+  for (unsigned I = 0; I < ExtractNum; ++I)
+    ExtractElements.push_back(
+        Builder.CreateExtractElement(Extract, (uint64_t)I));
+
+  // combine into double(s)
+  Value *Result =
+      PoisonValue::get(VectorType::get(Builder.getDoubleTy(), 2, false));
+  for (unsigned I = 0; I < ExtractNum; I += 2) {
+    Value *Dbl =
+        Builder.CreateIntrinsic(Builder.getDoubleTy(), Intrinsic::dx_asdouble,
+                                {ExtractElements[I], ExtractElements[I + 1]});
+    if (ExtractNum == 4)
+      Result = Builder.CreateInsertElement(Result, Dbl, (uint64_t)I / 2);
+    else
+      Result = Dbl;
+  }
+
+  assert(Orig->hasOneUser() && "TypedBufferLoad is expected to have one user");
+  auto *U = Orig->user_back();
+  auto *OldExtract = dyn_cast<ExtractValueInst>(U);
+  if (!OldExtract)
+    llvm_unreachable("TypedBufferLoad's only users should be ExtractValueInst");
+  OldExtract->replaceAllUsesWith(Result);
+  OldExtract->eraseFromParent();
+}
+
+void expandTypedBufferStoreIntrinsic(CallInst *Orig) {
+  IRBuilder<> Builder(Orig);
+
+  unsigned ExtractNum =
+      Orig->getFunctionType()->getParamType(2)->isVectorTy() ? 4 : 2;
+  Type *SplitElementTy = Builder.getInt32Ty();
+  SmallVector<int> Mask = {0, 1};
+  if (ExtractNum == 4) {
+    SplitElementTy = VectorType::get(SplitElementTy, 2, false);
+    Mask = {0, 2, 1, 3};
+  }
+
+  // split our double(s)
+  auto *SplitTy = llvm::StructType::get(SplitElementTy, SplitElementTy);
+  Value *Split = Builder.CreateIntrinsic(SplitTy, Intrinsic::dx_splitdouble,
+                                         Orig->getOperand(2));
+  // create our vector
+  Value *LowBits = Builder.CreateExtractValue(Split, 0);
+  Value *HighBits = Builder.CreateExtractValue(Split, 1);
+  Value *Val;
+  if (ExtractNum == 2) {
+    Val = PoisonValue::get(VectorType::get(SplitElementTy, 2, false));
+    Val = Builder.CreateInsertElement(Val, LowBits, (uint64_t)0);
+    Val = Builder.CreateInsertElement(Val, HighBits, 1);
+  } else
+    Val = Builder.CreateShuffleVector(LowBits, HighBits, {0, 2, 1, 3});
+
+  Builder.CreateIntrinsic(Builder.getVoidTy(),
+                          Intrinsic::dx_resource_store_typedbuffer,
+                          {Orig->getOperand(0), Orig->getOperand(1), Val});
+}
+
 static Intrinsic::ID getMaxForClamp(Intrinsic::ID ClampIntrinsic) {
   if (ClampIntrinsic == Intrinsic::dx_uclamp)
     return Intrinsic::umax;
@@ -660,6 +743,14 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_radians:
     Result = expandRadiansIntrinsic(Orig);
     break;
+  case Intrinsic::dx_resource_load_typedbuffer:
+    expandTypedBufferLoadIntrinsic(Orig);
+    Orig->eraseFromParent();
+    return true;
+  case Intrinsic::dx_resource_store_typedbuffer:
+    expandTypedBufferStoreIntrinsic(Orig);
+    Orig->eraseFromParent();
+    return true;
   case Intrinsic::usub_sat:
     Result = expandUsubSat(Orig);
     break;
