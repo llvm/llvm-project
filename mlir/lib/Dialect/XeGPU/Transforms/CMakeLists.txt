@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRXeGPUTransforms
   XeGPUFoldAliasOps.cpp
   XeGPUSubgroupDistribute.cpp
+  XeGPUUnroll.cpp
   XeGPUWgToSg.cpp
 
   ADDITIONAL_HEADER_DIRS
