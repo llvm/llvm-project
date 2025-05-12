@@ -1401,14 +1401,15 @@ def ShiftOp : CIR_Op<"shift", [Pure]> {
     The `cir.shift` operation performs a bitwise shift, either to the left or to
     the right, based on the first operand. The second operand specifies the
     value to be shifted, and the third operand determines the number of
-    positions by which the shift is applied, they must be either all vector of
+    positions by which the shift is applied, They must be either all vector of
     integer type, or all integer type. If they are vectors, each vector element of
     the shift target is shifted by the corresponding shift amount in
     the shift amount vector.
 
     ```mlir
     %res = cir.shift(left, %lhs : !u64i, %amount : !s32i) -> !u64i
-    %new_vec = cir.shift(left, %lhs : !cir.vector<2 x !s32i>, %rhs : !cir.vector<2 x !s32i>) -> !cir.vector<2 x !s32i>
+    %new_vec = cir.shift(left, %lhs : !cir.vector<2 x !s32i>, %rhs :
+        !cir.vector<2 x !s32i>) -> !cir.vector<2 x !s32i>
     ```
   }];
 
