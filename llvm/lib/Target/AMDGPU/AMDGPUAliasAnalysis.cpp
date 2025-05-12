@@ -11,6 +11,7 @@
 
 #include "AMDGPUAliasAnalysis.h"
 #include "AMDGPU.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instructions.h"
 
@@ -112,5 +113,14 @@ ModRefInfo AMDGPUAAResult::getModRefInfoMask(const MemoryLocation &Loc,
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
     return ModRefInfo::NoModRef;
 
+  // A `readonly noalias` function argument normally only gets a `Ref` mask.
+  // However,, if the calling convention of the function is one intended for
+  // program entry points, we know that such an argument will be invariant
+  // over the life of the program.
+  if (auto* Arg = dyn_cast<Argument>(Base)) {
+    const Function *F = Arg->getParent();
+    if (AMDGPU::isKernelCC(F) && Arg->hasNoAliasAttr() && Arg->onlyReadsMemory())
+      return ModRefInfo::NoModRef;
+  }
   return ModRefInfo::ModRef;
 }

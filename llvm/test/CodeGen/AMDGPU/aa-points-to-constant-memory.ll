@@ -110,3 +110,19 @@ define amdgpu_kernel void @nonconst_gv_constant_as() {
   store i32 0, ptr addrspace(4) @global_nonconstant_constant_as
   ret void
 }
+
+define amdgpu_kernel void @constant_kernel_args(ptr addrspace(1) readonly noalias inreg %x) {
+; CHECK-LABEL: @constant_kernel_args(
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr addrspace(1) %x
+  ret void
+}
+
+define amdgpu_cs void @constant_cs_args(ptr addrspace(1) readonly noalias %x) {
+; CHECK-LABEL: @constant_cs_args(
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr addrspace(1) %x
+  ret void
+}
