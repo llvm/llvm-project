@@ -72,6 +72,30 @@ define i64 @g_64(i64 %a) {
   ret i64 %b
 }
 
+declare <16 x i3> @llvm.bitreverse.v16i3(<16 x i3>) readnone
+
+define <16 x i3> @g_vec_16x3(<16 x i3> %a) {
+; CHECK-LABEL: g_vec_16x3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    ushr v0.16b, v0.16b, #5
+; CHECK-NEXT:    ret
+  %b = call <16 x i3> @llvm.bitreverse.v16i3(<16 x i3> %a)
+  ret <16 x i3> %b
+}
+
+declare <16 x i4> @llvm.bitreverse.v16i4(<16 x i4>) readnone
+
+define <16 x i4> @g_vec_16x4(<16 x i4> %a) {
+; CHECK-LABEL: g_vec_16x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    ushr v0.16b, v0.16b, #4
+; CHECK-NEXT:    ret
+  %b = call <16 x i4> @llvm.bitreverse.v16i4(<16 x i4> %a)
+  ret <16 x i4> %b
+}
+
 declare <8 x i8> @llvm.bitreverse.v8i8(<8 x i8>) readnone
 
 define <8 x i8> @g_vec(<8 x i8> %a) {

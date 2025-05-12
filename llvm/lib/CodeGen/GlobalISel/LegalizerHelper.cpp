@@ -8993,8 +8993,8 @@ LegalizerHelper::lowerBitreverse(MachineInstr &MI) {
     LLT VTy = LLT::fixed_vector(VSize / 8, 8);
 
     if (LI.isLegal({TargetOpcode::G_BITREVERSE, {VTy, VTy}})) {
-      // If bitreverse is legal for i8 vector of the same size, then handle
-      // with bswap and cast to i8 vector types.
+      // If bitreverse is legal for i8 vector of the same size, then cast
+      // to i8 vector type.
       // e.g. v4s32 -> v16s8
       auto BSWAP = MIRBuilder.buildBSwap(SrcTy, Src);
       auto Cast = MIRBuilder.buildBitcast(VTy, BSWAP);
