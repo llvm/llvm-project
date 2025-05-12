@@ -203,6 +203,19 @@ def batch_matmul(
     )
 
 
+def batch_reduce_matmul(
+    *ins: Union[Operation, OpView, Value],
+    outs: Sequence[Union[Operation, OpView, Value]],
+    indexing_maps: Optional[Sequence[AffineMapAttr]] = None,
+    cast: Optional[Union[TypeFn, Attribute]] = None,
+):
+    return _get_op_result_or_op_results(
+        _create_matmul_like_op(
+            BatchReduceMatmulOp, *ins, outs=outs, indexing_maps=indexing_maps, cast=cast
+        )
+    )
+
+
 def contract(
     *ins: Union[Operation, OpView, Value],
     outs: Sequence[Union[Operation, OpView, Value]],
