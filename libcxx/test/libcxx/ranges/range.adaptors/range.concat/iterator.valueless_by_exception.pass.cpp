@@ -8,7 +8,8 @@
 
 // REQUIRES: has-unix-headers
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: no-exceptions
+// UNSUPPORTED: no-exceptions, libcpp-hardening-mode=none
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <iostream>
 #include <ranges>
