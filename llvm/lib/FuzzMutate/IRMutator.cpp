@@ -391,6 +391,7 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
                                          BasicBlock::iterator InsertPt) {
     StringRef Name = isRetVoid ? nullptr : "C";
     CallInst *Call = CallInst::Create(FTy, F, Srcs, Name, InsertPt);
+    Call->setCallingConv(F->getCallingConv());
     // Don't return this call inst if it return void as it can't be sinked.
     return isRetVoid ? nullptr : Call;
   };
