@@ -494,7 +494,7 @@ define amdgpu_ps float @amdgpu_ps_attr_fmed3_x_y_snan1_f32(float %x, float %y) #
 define float @fmed3_qnan0_x_y_f32_strictfp(float %x, float %y) #2 {
 ; CHECK-LABEL: define float @fmed3_qnan0_x_y_f32_strictfp(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float 0x7FF8000000000000, float [[X]], float [[Y]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF8000000000000, float %x, float %y) strictfp
@@ -504,7 +504,7 @@ define float @fmed3_qnan0_x_y_f32_strictfp(float %x, float %y) #2 {
 define float @fmed3_x_qnan0_y_f32_strictfp(float %x, float %y) #2 {
 ; CHECK-LABEL: define float @fmed3_x_qnan0_y_f32_strictfp(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float 0x7FF8000000000000, float [[Y]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float 0x7FF8000000000000, float %y) strictfp
@@ -514,7 +514,7 @@ define float @fmed3_x_qnan0_y_f32_strictfp(float %x, float %y) #2 {
 define float @fmed3_x_y_qnan0_f32_strictfp(float %x, float %y) #2 {
 ; CHECK-LABEL: define float @fmed3_x_y_qnan0_f32_strictfp(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float 0x7FF8000000000000) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0x7FF8000000000000) strictfp
@@ -524,7 +524,7 @@ define float @fmed3_x_y_qnan0_f32_strictfp(float %x, float %y) #2 {
 define float @fmed3_snan1_x_y_f32_strictfp(float %x, float %y) #2 {
 ; CHECK-LABEL: define float @fmed3_snan1_x_y_f32_strictfp(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float 0x7FF4000000000000, float [[X]], float [[Y]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF4000000000000, float %x, float %y) strictfp
@@ -534,7 +534,7 @@ define float @fmed3_snan1_x_y_f32_strictfp(float %x, float %y) #2 {
 define float @fmed3_x_snan1_y_f32_strictfp(float %x, float %y) #2 {
 ; CHECK-LABEL: define float @fmed3_x_snan1_y_f32_strictfp(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float 0x7FF4000000000000, float [[Y]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float 0x7FF4000000000000, float %y) strictfp
@@ -544,7 +544,7 @@ define float @fmed3_x_snan1_y_f32_strictfp(float %x, float %y) #2 {
 define float @fmed3_x_y_snan1_f32_strictfp(float %x, float %y) #2 {
 ; CHECK-LABEL: define float @fmed3_x_y_snan1_f32_strictfp(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float 0x7FF4000000000000) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0x7FF4000000000000) strictfp
