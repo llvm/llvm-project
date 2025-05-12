@@ -1529,7 +1529,7 @@ public:
     return Filename == "<scratch space>";
   }
 
-  /// Returns whether \p Loc is located in a built-ins or command line sources.
+  /// Returns whether \p Loc is located in a built-in or command line source.
   bool isInPredefinedFile(SourceLocation Loc) const {
     PresumedLoc Presumed = getPresumedLoc(Loc);
     if (Presumed.isInvalid())
