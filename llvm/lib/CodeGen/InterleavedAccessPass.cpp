@@ -660,7 +660,7 @@ getVectorInterleaveFactor(IntrinsicInst *II, SmallVectorImpl<Value *> &Operands,
   }
 
   const unsigned Factor = Operands.size();
-  // Currently we only recognize factors of 2, 3, 5 and 7.
+  // Currently we only recognize factors of 3, 5, 7, and powers of 2.
   // FIXME: should we assert here instead?
   if (Factor <= 1 ||
       (!isPowerOf2_32(Factor) && Factor != getIntrinsicFactor(II)))
@@ -737,7 +737,7 @@ getVectorDeinterleaveFactor(IntrinsicInst *II,
   }
 
   const unsigned Factor = Results.size();
-  // Currently we only recognize factors of 2, 3, 5 and 7.
+  // Currently we only recognize factors of 3, 5, 7, and powers of 2.
   // FIXME: should we assert here instead?
   if (Factor <= 1 ||
       (!isPowerOf2_32(Factor) && Factor != getIntrinsicFactor(II)))
