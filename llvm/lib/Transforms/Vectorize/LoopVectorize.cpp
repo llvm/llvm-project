@@ -8956,8 +8956,10 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
   Instruction *Instr = R->getUnderlyingInstr();
   SmallVector<VPValue *, 4> Operands(R->operands());
   if (auto *PhiR = dyn_cast<VPWidenPHIRecipe>(R)) {
+    VPBasicBlock *Parent = PhiR->getParent();
+    VPRegionBlock *LoopRegionOf = Parent->getEnclosingLoopRegion();
     // Handle phis in non-header blocks.
-    if (PhiR->getParent()->getNumPredecessors() != 0)
+    if (!LoopRegionOf || LoopRegionOf->getEntry() != Parent)
       return tryToBlend(PhiR);
 
     auto *Phi = cast<PHINode>(R->getUnderlyingInstr());
