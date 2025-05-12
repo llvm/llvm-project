@@ -1212,8 +1212,8 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   ErrorOr<StringRef> TypeOrErr = parseString(FieldSeparator);
   if (std::error_code EC = TypeOrErr.getError())
     return EC;
-  enum TType { TRACE, BRANCH, FT, FT_EXTERNAL_ORIGIN, INVALID };
-  auto Type = StringSwitch<TType>(TypeOrErr.get())
+  enum AggregatedLBREntry { TRACE, BRANCH, FT, FT_EXTERNAL_ORIGIN, INVALID };
+  auto Type = StringSwitch<AggregatedLBREntry>(TypeOrErr.get())
                   .Case("T", TRACE)
                   .Case("B", BRANCH)
                   .Case("F", FT)
@@ -1237,7 +1237,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     return EC;
 
   ErrorOr<Location> TraceFtEnd = std::error_code();
-  if (Type == TRACE) {
+  if (Type == AggregatedLBREntry::TRACE) {
     while (checkAndConsumeFS()) {
     }
     TraceFtEnd = parseLocationOrOffset();
@@ -1247,12 +1247,13 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
 
   while (checkAndConsumeFS()) {
   }
-  ErrorOr<int64_t> Frequency = parseNumberField(FieldSeparator, Type != BRANCH);
+  ErrorOr<int64_t> Frequency =
+      parseNumberField(FieldSeparator, Type != AggregatedLBREntry::BRANCH);
   if (std::error_code EC = Frequency.getError())
     return EC;
 
   uint64_t Mispreds = 0;
-  if (Type == BRANCH) {
+  if (Type == AggregatedLBREntry::BRANCH) {
     while (checkAndConsumeFS()) {
     }
     ErrorOr<int64_t> MispredsOrErr = parseNumberField(FieldSeparator, true);
