@@ -374,7 +374,8 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     return T->isMetadataTy() || T->isTokenTy();
   };
   if (!F || IsUnsupportedTy(F->getReturnType()) ||
-      any_of(F->getFunctionType()->params(), IsUnsupportedTy)) {
+      any_of(F->getFunctionType()->params(), IsUnsupportedTy) ||
+      !isCallableCC(F->getCallingConv())) {
     F = IB.createFunctionDeclaration(*M);
   }
 
