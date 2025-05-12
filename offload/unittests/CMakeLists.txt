@@ -1,9 +1,8 @@
-add_custom_target(LibomptUnitTests)
-set_target_properties(LibomptUnitTests PROPERTIES FOLDER "Tests/UnitTests")
+add_custom_target(OffloadUnitTests)
+set_target_properties(OffloadUnitTests PROPERTIES FOLDER "Tests/UnitTests")
 
-function(add_libompt_unittest test_dirname)
-  add_unittest(LibomptUnitTests ${test_dirname} ${ARGN})
+function(add_offload_unittest test_dirname)
+  add_unittest(OffloadUnitTests ${test_dirname} ${ARGN})
 endfunction()
 
-# add_subdirectory(Plugins)
 add_subdirectory(OffloadAPI)

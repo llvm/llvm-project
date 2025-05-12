@@ -333,6 +333,30 @@ unsigned SubtargetEmitter::cpuNames(raw_ostream &OS) {
   return Names.size();
 }
 
+static void checkDuplicateCPUFeatures(StringRef CPUName,
+                                      ArrayRef<const Record *> Features,
+                                      ArrayRef<const Record *> TuneFeatures) {
+  // We have made sure each SubtargetFeature Record has a unique name, so we can
+  // simply use pointer sets here.
+  SmallPtrSet<const Record *, 8> FeatureSet, TuneFeatureSet;
+  for (const auto *FeatureRec : Features) {
+    if (!FeatureSet.insert(FeatureRec).second)
+      PrintWarning("Processor " + CPUName + " contains duplicate feature '" +
+                   FeatureRec->getValueAsString("Name") + "'");
+  }
+
+  for (const auto *TuneFeatureRec : TuneFeatures) {
+    if (!TuneFeatureSet.insert(TuneFeatureRec).second)
+      PrintWarning("Processor " + CPUName +
+                   " contains duplicate tune feature '" +
+                   TuneFeatureRec->getValueAsString("Name") + "'");
+    if (FeatureSet.contains(TuneFeatureRec))
+      PrintWarning("Processor " + CPUName + " has '" +
+                   TuneFeatureRec->getValueAsString("Name") +
+                   "' in both feature and tune feature sets");
+  }
+}
+
 //
 // CPUKeyValues - Emit data of all the subtarget processors.  Used by command
 // line.
@@ -359,6 +383,10 @@ unsigned SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
     ConstRecVec FeatureList = Processor->getValueAsListOfDefs("Features");
     ConstRecVec TuneFeatureList =
         Processor->getValueAsListOfDefs("TuneFeatures");
+
+    // Warn the user if there are duplicate processor features or tune
+    // features.
+    checkDuplicateCPUFeatures(Name, FeatureList, TuneFeatureList);
 
     // Emit as "{ "cpu", "description", 0, { f1 , f2 , ... fn } },".
     OS << " { "
@@ -2057,8 +2085,9 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   if (SchedModels.hasItineraries()) {
     OS << Target << "Stages, " << Target << "OperandCycles, " << Target
        << "ForwardingPaths";
-  } else
+  } else {
     OS << "nullptr, nullptr, nullptr";
+  }
   OS << ");\n}\n\n";
 
   OS << "} // end namespace llvm\n\n";
@@ -2188,8 +2217,9 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   if (SchedModels.hasItineraries()) {
     OS << Target << "Stages, " << Target << "OperandCycles, " << Target
        << "ForwardingPaths";
-  } else
+  } else {
     OS << "nullptr, nullptr, nullptr";
+  }
   OS << ") {}\n\n";
 
   emitSchedModelHelpers(ClassName, OS);

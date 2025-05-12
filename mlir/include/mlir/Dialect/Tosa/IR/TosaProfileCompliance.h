@@ -81,7 +81,8 @@ private:
   // Base
   template <typename T>
   LogicalResult populateProfileInfo(T op) {
-    op->emitOpError() << "profile requirement for this op has not been defined";
+    return op->emitOpError()
+           << "profile requirement for this op has not been defined";
   }
   // For conv2d, conv3d, transpose_conv2d, and depthwise_conv2d.
   template <typename T>

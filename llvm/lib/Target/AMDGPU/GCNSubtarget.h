@@ -193,6 +193,7 @@ protected:
   bool SupportsSRAMECC = false;
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
+  bool HasVMemToLDSLoad = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
@@ -257,8 +258,11 @@ protected:
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
+  bool HasLshlAddU64Inst = false;
+  bool HasPointSampleAccel = false;
 
   bool RequiresCOV6 = false;
+  bool UseBlockVGPROpsForCSR = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1140,7 +1144,7 @@ public:
 
   bool hasMovB64() const { return GFX940Insts; }
 
-  bool hasLshlAddB64() const { return GFX940Insts; }
+  bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
@@ -1274,6 +1278,8 @@ public:
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
+  bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
+
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
   bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
@@ -1318,6 +1324,8 @@ public:
     return hasGFX950Insts();
   }
 
+  bool hasVMemToLDSLoad() const { return HasVMemToLDSLoad; }
+
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
   bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
@@ -1358,6 +1366,8 @@ public:
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
+
+  bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that

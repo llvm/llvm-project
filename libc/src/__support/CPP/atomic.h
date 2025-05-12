@@ -40,6 +40,28 @@ enum class MemoryScope : int {
 #endif
 };
 
+namespace impl {
+LIBC_INLINE constexpr int order(MemoryOrder mem_ord) {
+  return static_cast<int>(mem_ord);
+}
+
+LIBC_INLINE constexpr int scope(MemoryScope mem_scope) {
+  return static_cast<int>(mem_scope);
+}
+
+template <class T> LIBC_INLINE T *addressof(T &ref) {
+  return __builtin_addressof(ref);
+}
+
+LIBC_INLINE constexpr int infer_failure_order(MemoryOrder mem_ord) {
+  if (mem_ord == MemoryOrder::RELEASE)
+    return order(MemoryOrder::RELAXED);
+  if (mem_ord == MemoryOrder::ACQ_REL)
+    return order(MemoryOrder::ACQUIRE);
+  return order(mem_ord);
+}
+} // namespace impl
+
 template <typename T> struct Atomic {
   static_assert(is_trivially_copyable_v<T> && is_copy_constructible_v<T> &&
                     is_move_constructible_v<T> && is_copy_assignable_v<T> &&
@@ -54,15 +76,6 @@ template <typename T> struct Atomic {
 
 private:
   // type conversion helper to avoid long c++ style casts
-  LIBC_INLINE static int order(MemoryOrder mem_ord) {
-    return static_cast<int>(mem_ord);
-  }
-
-  LIBC_INLINE static int scope(MemoryScope mem_scope) {
-    return static_cast<int>(mem_scope);
-  }
-
-  LIBC_INLINE static T *addressof(T &ref) { return __builtin_addressof(ref); }
 
   // Require types that are 1, 2, 4, 8, or 16 bytes in length to be aligned to
   // at least their size to be potentially used lock-free.
@@ -84,7 +97,7 @@ public:
 
   LIBC_INLINE constexpr Atomic() = default;
 
-  // Intializes the value without using atomic operations.
+  // Initializes the value without using atomic operations.
   LIBC_INLINE constexpr Atomic(value_type v) : val(v) {}
 
   LIBC_INLINE Atomic(const Atomic &) = delete;
@@ -98,10 +111,11 @@ public:
        [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
     T res;
 #if __has_builtin(__scoped_atomic_load)
-    __scoped_atomic_load(addressof(val), addressof(res), order(mem_ord),
-                         scope(mem_scope));
+    __scoped_atomic_load(impl::addressof(val), impl::addressof(res),
+                         impl::order(mem_ord), impl::scope(mem_scope));
 #else
-    __atomic_load(addressof(val), addressof(res), order(mem_ord));
+    __atomic_load(impl::addressof(val), impl::addressof(res),
+                  impl::order(mem_ord));
 #endif
     return res;
   }
@@ -116,10 +130,11 @@ public:
   store(T rhs, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
         [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
 #if __has_builtin(__scoped_atomic_store)
-    __scoped_atomic_store(addressof(val), addressof(rhs), order(mem_ord),
-                          scope(mem_scope));
+    __scoped_atomic_store(impl::addressof(val), impl::addressof(rhs),
+                          impl::order(mem_ord), impl::scope(mem_scope));
 #else
-    __atomic_store(addressof(val), addressof(rhs), order(mem_ord));
+    __atomic_store(impl::addressof(val), impl::addressof(rhs),
+                   impl::order(mem_ord));
 #endif
   }
 
@@ -127,9 +142,10 @@ public:
   LIBC_INLINE bool compare_exchange_strong(
       T &expected, T desired, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
       [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
-    return __atomic_compare_exchange(addressof(val), addressof(expected),
-                                     addressof(desired), false, order(mem_ord),
-                                     order(mem_ord));
+    return __atomic_compare_exchange(
+        impl::addressof(val), impl::addressof(expected),
+        impl::addressof(desired), false, impl::order(mem_ord),
+        impl::infer_failure_order(mem_ord));
   }
 
   // Atomic compare exchange (separate success and failure memory orders)
@@ -138,17 +154,19 @@ public:
       MemoryOrder failure_order,
       [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
     return __atomic_compare_exchange(
-        addressof(val), addressof(expected), addressof(desired), false,
-        order(success_order), order(failure_order));
+        impl::addressof(val), impl::addressof(expected),
+        impl::addressof(desired), false, impl::order(success_order),
+        impl::order(failure_order));
   }
 
   // Atomic compare exchange (weak version)
   LIBC_INLINE bool compare_exchange_weak(
       T &expected, T desired, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
       [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
-    return __atomic_compare_exchange(addressof(val), addressof(expected),
-                                     addressof(desired), true, order(mem_ord),
-                                     order(mem_ord));
+    return __atomic_compare_exchange(
+        impl::addressof(val), impl::addressof(expected),
+        impl::addressof(desired), true, impl::order(mem_ord),
+        impl::infer_failure_order(mem_ord));
   }
 
   // Atomic compare exchange (weak version with separate success and failure
@@ -158,8 +176,9 @@ public:
       MemoryOrder failure_order,
       [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
     return __atomic_compare_exchange(
-        addressof(val), addressof(expected), addressof(desired), true,
-        order(success_order), order(failure_order));
+        impl::addressof(val), impl::addressof(expected),
+        impl::addressof(desired), true, impl::order(success_order),
+        impl::order(failure_order));
   }
 
   LIBC_INLINE T
@@ -167,11 +186,12 @@ public:
            [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
     T ret;
 #if __has_builtin(__scoped_atomic_exchange)
-    __scoped_atomic_exchange(addressof(val), addressof(desired), addressof(ret),
-                             order(mem_ord), scope(mem_scope));
+    __scoped_atomic_exchange(impl::addressof(val), impl::addressof(desired),
+                             impl::addressof(ret), impl::order(mem_ord),
+                             impl::scope(mem_scope));
 #else
-    __atomic_exchange(addressof(val), addressof(desired), addressof(ret),
-                      order(mem_ord));
+    __atomic_exchange(impl::addressof(val), impl::addressof(desired),
+                      impl::addressof(ret), impl::order(mem_ord));
 #endif
     return ret;
   }
@@ -181,10 +201,12 @@ public:
             [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
     static_assert(cpp::is_integral_v<T>, "T must be an integral type.");
 #if __has_builtin(__scoped_atomic_fetch_add)
-    return __scoped_atomic_fetch_add(addressof(val), increment, order(mem_ord),
-                                     scope(mem_scope));
+    return __scoped_atomic_fetch_add(impl::addressof(val), increment,
+                                     impl::order(mem_ord),
+                                     impl::scope(mem_scope));
 #else
-    return __atomic_fetch_add(addressof(val), increment, order(mem_ord));
+    return __atomic_fetch_add(impl::addressof(val), increment,
+                              impl::order(mem_ord));
 #endif
   }
 
@@ -193,10 +215,11 @@ public:
            [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
     static_assert(cpp::is_integral_v<T>, "T must be an integral type.");
 #if __has_builtin(__scoped_atomic_fetch_or)
-    return __scoped_atomic_fetch_or(addressof(val), mask, order(mem_ord),
-                                    scope(mem_scope));
+    return __scoped_atomic_fetch_or(impl::addressof(val), mask,
+                                    impl::order(mem_ord),
+                                    impl::scope(mem_scope));
 #else
-    return __atomic_fetch_or(addressof(val), mask, order(mem_ord));
+    return __atomic_fetch_or(impl::addressof(val), mask, impl::order(mem_ord));
 #endif
   }
 
@@ -205,10 +228,11 @@ public:
             [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
     static_assert(cpp::is_integral_v<T>, "T must be an integral type.");
 #if __has_builtin(__scoped_atomic_fetch_and)
-    return __scoped_atomic_fetch_and(addressof(val), mask, order(mem_ord),
-                                     scope(mem_scope));
+    return __scoped_atomic_fetch_and(impl::addressof(val), mask,
+                                     impl::order(mem_ord),
+                                     impl::scope(mem_scope));
 #else
-    return __atomic_fetch_and(addressof(val), mask, order(mem_ord));
+    return __atomic_fetch_and(impl::addressof(val), mask, impl::order(mem_ord));
 #endif
   }
 
@@ -217,10 +241,12 @@ public:
             [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
     static_assert(cpp::is_integral_v<T>, "T must be an integral type.");
 #if __has_builtin(__scoped_atomic_fetch_sub)
-    return __scoped_atomic_fetch_sub(addressof(val), decrement, order(mem_ord),
-                                     scope(mem_scope));
+    return __scoped_atomic_fetch_sub(impl::addressof(val), decrement,
+                                     impl::order(mem_ord),
+                                     impl::scope(mem_scope));
 #else
-    return __atomic_fetch_sub(addressof(val), decrement, order(mem_ord));
+    return __atomic_fetch_sub(impl::addressof(val), decrement,
+                              impl::order(mem_ord));
 #endif
   }
 
@@ -244,14 +270,6 @@ template <typename T> struct AtomicRef {
 private:
   T *ptr;
 
-  LIBC_INLINE static int order(MemoryOrder mem_ord) {
-    return static_cast<int>(mem_ord);
-  }
-
-  LIBC_INLINE static int scope(MemoryScope mem_scope) {
-    return static_cast<int>(mem_scope);
-  }
-
 public:
   // Constructor from T reference
   LIBC_INLINE explicit constexpr AtomicRef(T &obj) : ptr(&obj) {}
@@ -270,9 +288,10 @@ public:
        [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) const {
     T res;
 #if __has_builtin(__scoped_atomic_load)
-    __scoped_atomic_load(ptr, &res, order(mem_ord), scope(mem_scope));
+    __scoped_atomic_load(ptr, &res, impl::order(mem_ord),
+                         impl::scope(mem_scope));
 #else
-    __atomic_load(ptr, &res, order(mem_ord));
+    __atomic_load(ptr, &res, impl::order(mem_ord));
 #endif
     return res;
   }
@@ -287,9 +306,10 @@ public:
   store(T rhs, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
         [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) const {
 #if __has_builtin(__scoped_atomic_store)
-    __scoped_atomic_store(ptr, &rhs, order(mem_ord), scope(mem_scope));
+    __scoped_atomic_store(ptr, &rhs, impl::order(mem_ord),
+                          impl::scope(mem_scope));
 #else
-    __atomic_store(ptr, &rhs, order(mem_ord));
+    __atomic_store(ptr, &rhs, impl::order(mem_ord));
 #endif
   }
 
@@ -298,7 +318,8 @@ public:
       T &expected, T desired, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
       [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) const {
     return __atomic_compare_exchange(ptr, &expected, &desired, false,
-                                     order(mem_ord), order(mem_ord));
+                                     impl::order(mem_ord),
+                                     impl::infer_failure_order(mem_ord));
   }
 
   // Atomic compare exchange (strong, separate success/failure memory orders)
@@ -307,8 +328,8 @@ public:
       MemoryOrder failure_order,
       [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) const {
     return __atomic_compare_exchange(ptr, &expected, &desired, false,
-                                     order(success_order),
-                                     order(failure_order));
+                                     impl::order(success_order),
+                                     impl::order(failure_order));
   }
 
   // Atomic exchange
@@ -317,10 +338,10 @@ public:
            [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) const {
     T ret;
 #if __has_builtin(__scoped_atomic_exchange)
-    __scoped_atomic_exchange(ptr, &desired, &ret, order(mem_ord),
-                             scope(mem_scope));
+    __scoped_atomic_exchange(ptr, &desired, &ret, impl::order(mem_ord),
+                             impl::scope(mem_scope));
 #else
-    __atomic_exchange(ptr, &desired, &ret, order(mem_ord));
+    __atomic_exchange(ptr, &desired, &ret, impl::order(mem_ord));
 #endif
     return ret;
   }
@@ -330,10 +351,10 @@ public:
       [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) const {
     static_assert(cpp::is_integral_v<T>, "T must be an integral type.");
 #if __has_builtin(__scoped_atomic_fetch_add)
-    return __scoped_atomic_fetch_add(ptr, increment, order(mem_ord),
-                                     scope(mem_scope));
+    return __scoped_atomic_fetch_add(ptr, increment, impl::order(mem_ord),
+                                     impl::scope(mem_scope));
 #else
-    return __atomic_fetch_add(ptr, increment, order(mem_ord));
+    return __atomic_fetch_add(ptr, increment, impl::order(mem_ord));
 #endif
   }
 
@@ -342,10 +363,10 @@ public:
            [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) const {
     static_assert(cpp::is_integral_v<T>, "T must be an integral type.");
 #if __has_builtin(__scoped_atomic_fetch_or)
-    return __scoped_atomic_fetch_or(ptr, mask, order(mem_ord),
-                                    scope(mem_scope));
+    return __scoped_atomic_fetch_or(ptr, mask, impl::order(mem_ord),
+                                    impl::scope(mem_scope));
 #else
-    return __atomic_fetch_or(ptr, mask, order(mem_ord));
+    return __atomic_fetch_or(ptr, mask, impl::order(mem_ord));
 #endif
   }
 
@@ -354,10 +375,10 @@ public:
       [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) const {
     static_assert(cpp::is_integral_v<T>, "T must be an integral type.");
 #if __has_builtin(__scoped_atomic_fetch_and)
-    return __scoped_atomic_fetch_and(ptr, mask, order(mem_ord),
-                                     scope(mem_scope));
+    return __scoped_atomic_fetch_and(ptr, mask, impl::order(mem_ord),
+                                     impl::scope(mem_scope));
 #else
-    return __atomic_fetch_and(ptr, mask, order(mem_ord));
+    return __atomic_fetch_and(ptr, mask, impl::order(mem_ord));
 #endif
   }
 
@@ -366,10 +387,10 @@ public:
       [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) const {
     static_assert(cpp::is_integral_v<T>, "T must be an integral type.");
 #if __has_builtin(__scoped_atomic_fetch_sub)
-    return __scoped_atomic_fetch_sub(ptr, decrement, order(mem_ord),
-                                     scope(mem_scope));
+    return __scoped_atomic_fetch_sub(ptr, decrement, impl::order(mem_ord),
+                                     impl::scope(mem_scope));
 #else
-    return __atomic_fetch_sub(ptr, decrement, order(mem_ord));
+    return __atomic_fetch_sub(ptr, decrement, impl::order(mem_ord));
 #endif
   }
 };
@@ -402,7 +423,6 @@ LIBC_INLINE void atomic_signal_fence([[maybe_unused]] MemoryOrder mem_ord) {
   asm volatile("" ::: "memory");
 #endif
 }
-
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL
 

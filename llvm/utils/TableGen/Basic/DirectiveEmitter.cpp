@@ -244,8 +244,13 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "LLVM_ABI Directive get" << DirLang.getName()
      << "DirectiveKind(llvm::StringRef Str);\n";
   OS << "\n";
+  // For OpenMP the signature is
+  //   getOpenMPDirectiveName(Directive D, unsigned V)
   OS << "LLVM_ABI llvm::StringRef get" << DirLang.getName()
-     << "DirectiveName(Directive D);\n";
+     << "DirectiveName(Directive D";
+  if (DirLang.getCppNamespace() == "omp")
+    OS << ", unsigned = 0";
+  OS << ");\n";
   OS << "\n";
   OS << "LLVM_ABI Clause get" << DirLang.getName()
      << "ClauseKind(llvm::StringRef Str);\n";
@@ -280,18 +285,18 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
 static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
                             StringRef Enum, const DirectiveLanguage &DirLang,
                             StringRef Prefix) {
+  // For OpenMP the "Directive" signature is
+  //   getOpenMPDirectiveName(Directive D, unsigned V)
   OS << "\n";
   OS << "llvm::StringRef llvm::" << DirLang.getCppNamespace() << "::get"
-     << DirLang.getName() << Enum << "Name(" << Enum << " Kind) {\n";
+     << DirLang.getName() << Enum << "Name(" << Enum << " Kind";
+  if (DirLang.getCppNamespace() == "omp" && Enum == "Directive")
+    OS << ", unsigned";
+  OS << ") {\n";
   OS << "  switch (Kind) {\n";
   for (const BaseRecord Rec : Records) {
     OS << "    case " << Prefix << Rec.getFormattedName() << ":\n";
-    OS << "      return \"";
-    if (Rec.getAlternativeName().empty())
-      OS << Rec.getName();
-    else
-      OS << Rec.getAlternativeName();
-    OS << "\";\n";
+    OS << "      return \"" << Rec.getName() << "\";\n";
   }
   OS << "  }\n"; // switch
   OS << "  llvm_unreachable(\"Invalid " << DirLang.getName() << " " << Enum
@@ -759,10 +764,25 @@ static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
   OS << "}\n";
 }
 
+namespace {
+enum class DirectiveClauseFE { Flang, Clang };
+
+StringRef getFESpelling(DirectiveClauseFE FE) {
+  switch (FE) {
+  case DirectiveClauseFE::Flang:
+    return "flang";
+  case DirectiveClauseFE::Clang:
+    return "clang";
+  }
+  llvm_unreachable("unknown FE kind");
+}
+} // namespace
+
 // Generate a simple enum set with the give clauses.
 static void generateClauseSet(ArrayRef<const Record *> Clauses, raw_ostream &OS,
                               StringRef ClauseSetPrefix, const Directive &Dir,
-                              const DirectiveLanguage &DirLang) {
+                              const DirectiveLanguage &DirLang,
+                              DirectiveClauseFE FE) {
 
   OS << "\n";
   OS << "  static " << DirLang.getClauseEnumSetClass() << " " << ClauseSetPrefix
@@ -770,21 +790,35 @@ static void generateClauseSet(ArrayRef<const Record *> Clauses, raw_ostream &OS,
 
   for (const auto &C : Clauses) {
     VersionedClause VerClause(C);
-    OS << "    llvm::" << DirLang.getCppNamespace()
-       << "::Clause::" << DirLang.getClausePrefix()
-       << VerClause.getClause().getFormattedName() << ",\n";
+    if (FE == DirectiveClauseFE::Flang) {
+      OS << "    llvm::" << DirLang.getCppNamespace()
+         << "::Clause::" << DirLang.getClausePrefix()
+         << VerClause.getClause().getFormattedName() << ",\n";
+    } else {
+      assert(FE == DirectiveClauseFE::Clang);
+      assert(DirLang.getName() == "OpenACC");
+      OS << "   clang::OpenACCClauseKind::"
+         << VerClause.getClause().getClangAccSpelling() << ",\n";
+    }
   }
   OS << "  };\n";
 }
 
 // Generate an enum set for the 4 kinds of clauses linked to a directive.
 static void generateDirectiveClauseSets(const DirectiveLanguage &DirLang,
-                                        raw_ostream &OS) {
+                                        DirectiveClauseFE FE, raw_ostream &OS) {
 
-  IfDefScope Scope("GEN_FLANG_DIRECTIVE_CLAUSE_SETS", OS);
+  std::string IfDefName{"GEN_"};
+  IfDefName += getFESpelling(FE).upper();
+  IfDefName += "_DIRECTIVE_CLAUSE_SETS";
+  IfDefScope Scope(IfDefName, OS);
 
   OS << "\n";
-  OS << "namespace llvm {\n";
+  // The namespace has to be different for clang vs flang, as 2 structs with the
+  // same name but different layout is UB.  So just put the 'clang' on in the
+  // clang namespace.
+  OS << "namespace " << (FE == DirectiveClauseFE::Flang ? "llvm" : "clang")
+     << " {\n";
 
   // Open namespaces defined in the directive language.
   SmallVector<StringRef, 2> Namespaces;
@@ -797,13 +831,13 @@ static void generateDirectiveClauseSets(const DirectiveLanguage &DirLang,
     OS << "  // Sets for " << Dir.getName() << "\n";
 
     generateClauseSet(Dir.getAllowedClauses(), OS, "allowedClauses_", Dir,
-                      DirLang);
+                      DirLang, FE);
     generateClauseSet(Dir.getAllowedOnceClauses(), OS, "allowedOnceClauses_",
-                      Dir, DirLang);
+                      Dir, DirLang, FE);
     generateClauseSet(Dir.getAllowedExclusiveClauses(), OS,
-                      "allowedExclusiveClauses_", Dir, DirLang);
+                      "allowedExclusiveClauses_", Dir, DirLang, FE);
     generateClauseSet(Dir.getRequiredClauses(), OS, "requiredClauses_", Dir,
-                      DirLang);
+                      DirLang, FE);
   }
 
   // Closing namespaces
@@ -817,27 +851,46 @@ static void generateDirectiveClauseSets(const DirectiveLanguage &DirLang,
 // The struct holds the 4 sets of enumeration for the 4 kinds of clauses
 // allowances (allowed, allowed once, allowed exclusive and required).
 static void generateDirectiveClauseMap(const DirectiveLanguage &DirLang,
-                                       raw_ostream &OS) {
-
-  IfDefScope Scope("GEN_FLANG_DIRECTIVE_CLAUSE_MAP", OS);
+                                       DirectiveClauseFE FE, raw_ostream &OS) {
+  std::string IfDefName{"GEN_"};
+  IfDefName += getFESpelling(FE).upper();
+  IfDefName += "_DIRECTIVE_CLAUSE_MAP";
+  IfDefScope Scope(IfDefName, OS);
 
   OS << "\n";
   OS << "{\n";
 
+  // The namespace has to be different for clang vs flang, as 2 structs with the
+  // same name but different layout is UB.  So just put the 'clang' on in the
+  // clang namespace.
+  StringRef TopLevelNS = (FE == DirectiveClauseFE::Flang ? "llvm" : "clang");
+
   for (const Directive Dir : DirLang.getDirectives()) {
-    OS << "  {llvm::" << DirLang.getCppNamespace()
-       << "::Directive::" << DirLang.getDirectivePrefix()
-       << Dir.getFormattedName() << ",\n";
+    OS << "  {";
+    if (FE == DirectiveClauseFE::Flang) {
+      OS << TopLevelNS << "::" << DirLang.getCppNamespace()
+         << "::Directive::" << DirLang.getDirectivePrefix()
+         << Dir.getFormattedName() << ",\n";
+    } else {
+      assert(FE == DirectiveClauseFE::Clang);
+      assert(DirLang.getName() == "OpenACC");
+      OS << "clang::OpenACCDirectiveKind::" << Dir.getClangAccSpelling()
+         << ",\n";
+    }
+
     OS << "    {\n";
-    OS << "      llvm::" << DirLang.getCppNamespace() << "::allowedClauses_"
-       << DirLang.getDirectivePrefix() << Dir.getFormattedName() << ",\n";
-    OS << "      llvm::" << DirLang.getCppNamespace() << "::allowedOnceClauses_"
-       << DirLang.getDirectivePrefix() << Dir.getFormattedName() << ",\n";
-    OS << "      llvm::" << DirLang.getCppNamespace()
+    OS << "      " << TopLevelNS << "::" << DirLang.getCppNamespace()
+       << "::allowedClauses_" << DirLang.getDirectivePrefix()
+       << Dir.getFormattedName() << ",\n";
+    OS << "      " << TopLevelNS << "::" << DirLang.getCppNamespace()
+       << "::allowedOnceClauses_" << DirLang.getDirectivePrefix()
+       << Dir.getFormattedName() << ",\n";
+    OS << "      " << TopLevelNS << "::" << DirLang.getCppNamespace()
        << "::allowedExclusiveClauses_" << DirLang.getDirectivePrefix()
        << Dir.getFormattedName() << ",\n";
-    OS << "      llvm::" << DirLang.getCppNamespace() << "::requiredClauses_"
-       << DirLang.getDirectivePrefix() << Dir.getFormattedName() << ",\n";
+    OS << "      " << TopLevelNS << "::" << DirLang.getCppNamespace()
+       << "::requiredClauses_" << DirLang.getDirectivePrefix()
+       << Dir.getFormattedName() << ",\n";
     OS << "    }\n";
     OS << "  },\n";
   }
@@ -912,6 +965,8 @@ static void generateFlangClauseUnparse(const DirectiveLanguage &DirLang,
   OS << "\n";
 
   for (const Clause Clause : DirLang.getClauses()) {
+    if (Clause.skipFlangUnparser())
+      continue;
     if (!Clause.getFlangClass().empty()) {
       if (Clause.isValueOptional() && Clause.getDefaultValue().empty()) {
         OS << "void Unparse(const " << DirLang.getFlangClauseBaseClass()
@@ -1074,11 +1129,22 @@ static void generateFlangClausesParser(const DirectiveLanguage &DirLang,
 
 // Generate the implementation section for the enumeration in the directive
 // language
+static void emitDirectivesClangImpl(const DirectiveLanguage &DirLang,
+                                    raw_ostream &OS) {
+  // Currently we only have work to do for OpenACC, so skip otherwise.
+  if (DirLang.getName() != "OpenACC")
+    return;
+
+  generateDirectiveClauseSets(DirLang, DirectiveClauseFE::Clang, OS);
+  generateDirectiveClauseMap(DirLang, DirectiveClauseFE::Clang, OS);
+}
+// Generate the implementation section for the enumeration in the directive
+// language
 static void emitDirectivesFlangImpl(const DirectiveLanguage &DirLang,
                                     raw_ostream &OS) {
-  generateDirectiveClauseSets(DirLang, OS);
+  generateDirectiveClauseSets(DirLang, DirectiveClauseFE::Flang, OS);
 
-  generateDirectiveClauseMap(DirLang, OS);
+  generateDirectiveClauseMap(DirLang, DirectiveClauseFE::Flang, OS);
 
   generateFlangClauseParserClass(DirLang, OS);
 
@@ -1210,6 +1276,8 @@ static void emitDirectivesImpl(const RecordKeeper &Records, raw_ostream &OS) {
     return;
 
   emitDirectivesFlangImpl(DirLang, OS);
+
+  emitDirectivesClangImpl(DirLang, OS);
 
   generateClauseClassMacro(DirLang, OS);
 

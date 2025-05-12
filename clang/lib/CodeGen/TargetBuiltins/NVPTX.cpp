@@ -10,14 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ABIInfo.h"
 #include "CGBuiltin.h"
-#include "CodeGenFunction.h"
-#include "CodeGenModule.h"
-#include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
 using namespace clang;
@@ -487,21 +481,11 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
                                    AtomicOrdering::SequentiallyConsistent);
   }
 
-  case NVPTX::BI__nvvm_atom_inc_gen_ui: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
-    Value *Val = EmitScalarExpr(E->getArg(1));
-    Function *FnALI32 =
-        CGM.getIntrinsic(Intrinsic::nvvm_atomic_load_inc_32, Ptr->getType());
-    return Builder.CreateCall(FnALI32, {Ptr, Val});
-  }
+  case NVPTX::BI__nvvm_atom_inc_gen_ui:
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UIncWrap, E);
 
-  case NVPTX::BI__nvvm_atom_dec_gen_ui: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
-    Value *Val = EmitScalarExpr(E->getArg(1));
-    Function *FnALD32 =
-        CGM.getIntrinsic(Intrinsic::nvvm_atomic_load_dec_32, Ptr->getType());
-    return Builder.CreateCall(FnALD32, {Ptr, Val});
-  }
+  case NVPTX::BI__nvvm_atom_dec_gen_ui:
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UDecWrap, E);
 
   case NVPTX::BI__nvvm_ldg_c:
   case NVPTX::BI__nvvm_ldg_sc:
@@ -1050,6 +1034,21 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_fmin_xorsign_abs_f16x2:
     return MakeHalfType(Intrinsic::nvvm_fmin_xorsign_abs_f16x2, BuiltinID, E,
                         *this);
+  case NVPTX::BI__nvvm_fabs_f:
+  case NVPTX::BI__nvvm_abs_bf16:
+  case NVPTX::BI__nvvm_abs_bf16x2:
+  case NVPTX::BI__nvvm_fabs_f16:
+  case NVPTX::BI__nvvm_fabs_f16x2:
+    return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_fabs,
+                                        EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_fabs_ftz_f:
+  case NVPTX::BI__nvvm_fabs_ftz_f16:
+  case NVPTX::BI__nvvm_fabs_ftz_f16x2:
+    return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_fabs_ftz,
+                                        EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_fabs_d:
+    return Builder.CreateUnaryIntrinsic(Intrinsic::fabs,
+                                        EmitScalarExpr(E->getArg(0)));
   case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_h2:
     return MakeHalfType(Intrinsic::not_intrinsic, BuiltinID, E, *this);

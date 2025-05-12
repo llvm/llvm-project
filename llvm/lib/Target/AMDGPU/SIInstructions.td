@@ -231,7 +231,7 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
   let mayStore = 0;
 }
 
-let usesCustomInserter = 1 in {
+let usesCustomInserter = 1, hasSideEffects = 0 in {
 let WaveSizePredicate = isWave32 in
 def S_INVERSE_BALLOT_U32 : SPseudoInstSI<
   (outs SReg_32:$sdst), (ins SSrc_b32:$mask),
@@ -243,7 +243,7 @@ def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
   (outs SReg_64:$sdst), (ins SSrc_b64:$mask),
   [(set i1:$sdst, (int_amdgcn_inverse_ballot i64:$mask))]
 >;
-} // End usesCustomInserter = 1
+} // End usesCustomInserter = 1, hasSideEffects = 0
 
 let WaveSizePredicate = isWave32 in
   def : GCNPat <
@@ -338,21 +338,23 @@ def S_SUB_U64_PSEUDO : SPseudoInstSI <
   [(set SReg_64:$sdst, (UniformBinFrag<sub> i64:$src0, i64:$src1))]
 >;
 
-def S_ADD_CO_PSEUDO : SPseudoInstSI <
-  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
->;
+let hasSideEffects = 0 in {
+  def S_ADD_CO_PSEUDO : SPseudoInstSI <
+    (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
+  >;
 
-def S_SUB_CO_PSEUDO : SPseudoInstSI <
-  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
->;
+  def S_SUB_CO_PSEUDO : SPseudoInstSI <
+    (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
+  >;
 
-def S_UADDO_PSEUDO : SPseudoInstSI <
-  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
->;
+  def S_UADDO_PSEUDO : SPseudoInstSI <
+    (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
+  >;
 
-def S_USUBO_PSEUDO : SPseudoInstSI <
-  (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
->;
+  def S_USUBO_PSEUDO : SPseudoInstSI <
+    (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
+  >;
+}
 
 let OtherPredicates = [HasShaderCyclesHiLoRegisters] in
 def GET_SHADERCYCLESHILO : SPseudoInstSI<
@@ -1023,13 +1025,16 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
 // UsesTmp adds to the total size of an expanded spill in this case.
-multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
+multiclass SI_SPILL_VGPR <RegisterClass vgpr_class,
+                          bit UsesTmp = 0, bit HasMask = 0> {
   let UseNamedOperandTable = 1, Spill = 1, VALU = 1,
        SchedRW = [WriteVMEM] in {
     def _SAVE : VPseudoInstSI <
       (outs),
-      (ins vgpr_class:$vdata, i32imm:$vaddr,
-           SReg_32:$soffset, i32imm:$offset)> {
+      !con(
+        (ins vgpr_class:$vdata, i32imm:$vaddr,
+             SReg_32:$soffset, i32imm:$offset),
+        !if(HasMask, (ins SReg_32:$mask), (ins)))> {
       let mayStore = 1;
       let mayLoad = 0;
       // (2 * 4) + (8 * num_subregs) bytes maximum
@@ -1040,8 +1045,10 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
 
     def _RESTORE : VPseudoInstSI <
       (outs vgpr_class:$vdata),
-      (ins i32imm:$vaddr,
-           SReg_32:$soffset, i32imm:$offset)> {
+      !con(
+        (ins i32imm:$vaddr,
+             SReg_32:$soffset, i32imm:$offset),
+        !if(HasMask, (ins SReg_32:$mask), (ins)))> {
       let mayStore = 0;
       let mayLoad = 1;
 
@@ -1068,6 +1075,12 @@ defm SI_SPILL_V352 : SI_SPILL_VGPR <VReg_352>;
 defm SI_SPILL_V384 : SI_SPILL_VGPR <VReg_384>;
 defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512>;
 defm SI_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024>;
+
+let Defs = [M0] in {
+  // Spills a block of 32 VGPRs. M0 will contain a mask describing which
+  // registers in the block need to be transferred.
+  defm SI_BLOCK_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024, 0, 1>;
+}
 
 defm SI_SPILL_A32  : SI_SPILL_VGPR <AGPR_32, 1>;
 defm SI_SPILL_A64  : SI_SPILL_VGPR <AReg_64, 1>;
@@ -2257,16 +2270,18 @@ def : GCNPat <
 
 // FIXME: Remove VGPRImm. Should be inferrable from register bank.
 
-foreach vt = [i32, p3, p5, p6, p2] in {
-  def : GCNPat <
-    (VGPRImm<(vt imm)>:$imm),
-    (V_MOV_B32_e32 imm:$imm)
-  >;
+foreach vt = Reg32Types.types in {
+  if !and(!not(vt.isVector), !not(vt.isFP)) then {
+    def : GCNPat <
+      (VGPRImm<(vt imm)>:$imm),
+      (V_MOV_B32_e32 imm:$imm)
+    >;
 
-  def : GCNPat <
-    (vt imm:$imm),
-    (S_MOV_B32 imm:$imm)
-  >;
+    def : GCNPat <
+      (vt imm:$imm),
+      (S_MOV_B32 imm:$imm)
+    >;
+  }
 }
 
 // FIXME: The register bank of the frame index should depend on the
@@ -2424,6 +2439,12 @@ def : GCNPat <(i1 imm:$imm),
               (S_MOV_B32 imm:$imm)> {
   let WaveSizePredicate = isWave32;
 }
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <
+  (i32 (DivergentBinFrag<srl> VGPR_32:$src, (i32 16))),
+  (REG_SEQUENCE VGPR_32, (i16 (EXTRACT_SUBREG $src, hi16)), lo16, (V_MOV_B16_t16_e64 0, (i16 0x0000), 0), hi16)
+>;
 
 /********** ================== **********/
 /********** Intrinsic Patterns **********/
@@ -3117,6 +3138,17 @@ def IMMBitSelConst : SDNodeXForm<imm, [{
 // v_cmp_ne_u32_e64 $a, 0, $a
 
 // Handle the VALU case.
+def : GCNPat <
+  (i1 (xor (i1 (DivergentUnaryFrag<HasOneUseUnaryOp<trunc>> i32:$a)), -1)),
+  (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 1), i32:$a), (i32 1))
+>;
+
+def : GCNPat <
+  (i1 (xor (i1 (DivergentUnaryFrag<HasOneUseUnaryOp<trunc>> i64:$a)), -1)),
+  (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 1),
+  (i32 (EXTRACT_SUBREG $a, sub0))), (i32 1))
+>;
+
 def : GCNPat <
   (i1 (DivergentUnaryFrag<trunc> (i32 (srl i32:$a, (i32 imm:$b))))),
   (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 (IMMBitSelConst $b)), $a),
@@ -3831,7 +3863,7 @@ def : AMDGPUPat <
 >;
 
 def uint5Bits : PatLeaf<(i32 VGPR_32:$width), [{
-  return CurDAG->computeKnownBits(SDValue(N, 0)).countMaxActiveBits() <= 5;
+  return CurDAG->computeKnownBits(Op).countMaxActiveBits() <= 5;
 }]>;
 
 // x & (-1 >> (bitwidth - y))
@@ -4478,9 +4510,3 @@ def V_ILLEGAL : Enc32, InstSI<(outs), (ins), "v_illegal"> {
   let hasSideEffects = 1;
   let SubtargetPredicate = isGFX10Plus;
 }
-
-// FIXME: Would be nice if we could set the register class for the destination
-// register too.
-def IMP_DEF_FROM_INTRINSIC: Pat<
-  (i32 (int_amdgcn_dead)), (IMPLICIT_DEF)>;
-

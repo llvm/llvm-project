@@ -47,6 +47,8 @@ static const LangASMap FakeAddrSpaceMap = {
     11, // ptr32_uptr
     12, // ptr64
     13, // hlsl_groupshared
+    14, // hlsl_constant
+    15, // hlsl_private
     20, // wasm_funcref
 };
 
