@@ -495,12 +495,12 @@ static_assert(C<int, 0,1,2,3,4>::VALUEARRAY[0] == 0, "");
 
 namespace appear_in_its_own_init {
 template <class T>
-auto GH51347 = GH51347<T>; // expected-error {{variable template 'GH51347' declared with deduced type 'auto' cannot appear in its own initializer}}
+auto GH51347 = GH51347<T>;
 
 template <class T, class... Ts>
 auto a = [] {
   using U = T;
-  a<U, Ts...>; // expected-error {{variable template 'a' declared with deduced type 'auto' cannot appear in its own initializer}}
+  a<U, Ts...>;
 };
 
 template <int...> int b;

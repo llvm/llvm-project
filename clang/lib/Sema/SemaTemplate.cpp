@@ -4382,6 +4382,8 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
       return Context.isSameTemplateArgument(Arg1, Arg2);
     };
 
+// Workaround for GH139067 / https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120190
+#if 0
     if (VarDecl *Var = Template->getTemplatedDecl();
         ParsingInitForAutoVars.count(Var) &&
         llvm::equal(
@@ -4393,6 +4395,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
           << diag::ParsingInitFor::VarTemplate << Var << Var->getType();
       return true;
     }
+#endif
 
     SmallVector<VarTemplatePartialSpecializationDecl *, 4> PartialSpecs;
     Template->getPartialSpecializations(PartialSpecs);
