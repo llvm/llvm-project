@@ -26,6 +26,10 @@ using namespace sys;
 
 namespace {
 
+struct checkMPROTECT : private llvm::sys::Memory {
+  static bool check() { return execProtectionChangeNeedsNewMapping(); }
+};
+
 bool IsMPROTECT() {
 #if defined(__NetBSD__)
   int mib[3];
@@ -43,7 +47,7 @@ bool IsMPROTECT() {
 #elif (defined(__APPLE__) && defined(__aarch64__)) || defined(__OpenBSD__)
   return true;
 #else
-  return false;
+  return checkMPROTECT::check();
 #endif
 }
 
@@ -298,6 +302,32 @@ TEST_P(MappedMemoryTest, EnabledWrite) {
   EXPECT_EQ(4, *x);
   EXPECT_FALSE(Memory::releaseMappedMemory(M4));
   EXPECT_FALSE(Memory::releaseMappedMemory(M2));
+}
+
+TEST_P(MappedMemoryTest, MakeExecutable) {
+  // This test applies only to readable and writeable combinations
+  if (Flags && !((Flags & Memory::MF_READ) && (Flags & Memory::MF_WRITE)))
+    GTEST_SKIP();
+  CHECK_UNSUPPORTED();
+
+  std::error_code EC;
+  MemoryBlock M = Memory::allocateMappedMemory(sizeof(int), nullptr, Flags, EC);
+  EXPECT_EQ(std::error_code(), EC);
+
+  EXPECT_NE((void *)nullptr, M.base());
+  EXPECT_LE(sizeof(int), M.allocatedSize());
+
+  int *x = (int *)M.base();
+  *x = 0xcc;
+
+  EXPECT_EQ(0xcc, *x);
+
+  Flags ^= Memory::MF_WRITE;
+  Flags |= Memory::MF_EXEC;
+
+  EXPECT_EQ(std::error_code(), Memory::protectMappedMemory(M, Flags));
+  EXPECT_EQ(0xcc, *x);
+  EXPECT_FALSE(Memory::releaseMappedMemory(M));
 }
 
 TEST_P(MappedMemoryTest, SuccessiveNear) {
