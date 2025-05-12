@@ -188,7 +188,7 @@ rewriteIncludes(const llvm::ArrayRef<const char *> &Args, size_t Idx,
     StringRef FlagRef(Args[Idx + NumArgs - 1]);
     assert((FlagRef.starts_with("-F") || FlagRef.starts_with("-I")) &&
            "Expecting -I or -F");
-    StringRef Inc = FlagRef.slice(2, StringRef::npos);
+    StringRef Inc = FlagRef.substr(2);
     if (getAbsPath(Inc, NewInc)) {
       SmallString<128> NewArg(FlagRef.slice(0, 2));
       NewArg += NewInc;
