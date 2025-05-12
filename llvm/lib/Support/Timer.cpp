@@ -531,7 +531,7 @@ public:
                " time order"),
       cl::init(true), cl::Hidden};
   cl::opt<unsigned> MinPrintTime{
-      "min-print-time",
+      "timer-min-print-time",
       cl::desc("Minimum time in seconds for a timer to be printed"),
       cl::init(0)};
 
