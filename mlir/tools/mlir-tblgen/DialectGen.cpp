@@ -109,6 +109,7 @@ tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
 /// {0}: The name of the dialect class.
 /// {1}: The dialect namespace.
 /// {2}: The dialect parent class.
+/// {3}: The summary and description comments.
 static const char *const dialectDeclBeginStr = R"(
 {3}
 class {0} : public ::mlir::{2} {
