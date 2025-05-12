@@ -128,6 +128,7 @@ static lto::Config createConfig(Ctx &ctx) {
   c.StatsFile = std::string(ctx.arg.optStatsFilename);
 
   c.SampleProfile = std::string(ctx.arg.ltoSampleProfile);
+  c.PropellerProfile = std::string(ctx.arg.ltoPropellerProfile);
   for (StringRef pluginFn : ctx.arg.passPlugins)
     c.PassPlugins.push_back(std::string(pluginFn));
   c.DebugPassManager = ctx.arg.ltoDebugPassManager;
