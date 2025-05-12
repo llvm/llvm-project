@@ -1881,8 +1881,15 @@ ExprResult Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   return PerformImplicitConversion(From, ToType, ICS, Action);
 }
 
-bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
-                                QualType &ResultTy) {
+bool Sema::TryFunctionConversion(QualType FromType, QualType ToType,
+                                 QualType &ResultTy) const {
+  bool Changed = IsFunctionConversion(FromType, ToType);
+  if (Changed)
+    ResultTy = ToType;
+  return Changed;
+}
+
+bool Sema::IsFunctionConversion(QualType FromType, QualType ToType) const {
   if (Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
 
@@ -1993,7 +2000,6 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
   assert(QualType(FromFn, 0).isCanonical());
   if (QualType(FromFn, 0) != CanTo) return false;
 
-  ResultTy = ToType;
   return true;
 }
 
@@ -2232,11 +2238,10 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
       // we can sometimes resolve &foo<int> regardless of ToType, so check
       // if the type matches (identity) or we are converting to bool
       if (!S.Context.hasSameUnqualifiedType(
-                      S.ExtractUnqualifiedFunctionType(ToType), FromType)) {
-        QualType resultTy;
+              S.ExtractUnqualifiedFunctionType(ToType), FromType)) {
         // if the function type matches except for [[noreturn]], it's ok
         if (!S.IsFunctionConversion(FromType,
-              S.ExtractUnqualifiedFunctionType(ToType), resultTy))
+                                    S.ExtractUnqualifiedFunctionType(ToType)))
           // otherwise, only a boolean conversion is standard
           if (!ToType->isBooleanType())
             return false;
@@ -2476,7 +2481,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   // The third conversion can be a function pointer conversion or a
   // qualification conversion (C++ [conv.fctptr], [conv.qual]).
   bool ObjCLifetimeConversion;
-  if (S.IsFunctionConversion(FromType, ToType, FromType)) {
+  if (S.TryFunctionConversion(FromType, ToType, FromType)) {
     // Function pointer conversions (removing 'noexcept') including removal of
     // 'noreturn' (Clang extension).
     SCS.Third = ICK_Function_Conversion;
@@ -5033,7 +5038,6 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
   // Check for standard conversions we can apply to pointers: derived-to-base
   // conversions, ObjC pointer conversions, and function pointer conversions.
   // (Qualification conversions are checked last.)
-  QualType ConvertedT2;
   if (UnqualT1 == UnqualT2) {
     // Nothing to do.
   } else if (isCompleteType(Loc, OrigT2) &&
@@ -5044,7 +5048,7 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
            Context.canBindObjCObjectType(UnqualT1, UnqualT2))
     Conv |= ReferenceConversions::ObjC;
   else if (UnqualT2->isFunctionType() &&
-           IsFunctionConversion(UnqualT2, UnqualT1, ConvertedT2)) {
+           IsFunctionConversion(UnqualT2, UnqualT1)) {
     Conv |= ReferenceConversions::Function;
     // No need to check qualifiers; function types don't have them.
     return Ref_Compatible;
@@ -13426,9 +13430,8 @@ public:
 
 private:
   bool candidateHasExactlyCorrectType(const FunctionDecl *FD) {
-    QualType Discard;
     return Context.hasSameUnqualifiedType(TargetFunctionType, FD->getType()) ||
-           S.IsFunctionConversion(FD->getType(), TargetFunctionType, Discard);
+           S.IsFunctionConversion(FD->getType(), TargetFunctionType);
   }
 
   /// \return true if A is considered a better overload candidate for the

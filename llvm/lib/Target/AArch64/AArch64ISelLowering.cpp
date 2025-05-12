@@ -1758,10 +1758,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     for (auto Opcode :
          {ISD::FCEIL, ISD::FDIV, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT,
-          ISD::FROUND, ISD::FROUNDEVEN, ISD::FSQRT, ISD::FTRUNC}) {
+          ISD::FROUND, ISD::FROUNDEVEN, ISD::FSQRT, ISD::FTRUNC, ISD::SETCC}) {
       setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
       setOperationPromotedToType(Opcode, MVT::nxv4bf16, MVT::nxv4f32);
-      setOperationAction(Opcode, MVT::nxv8bf16, Expand);
+      setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
     }
 
     if (!Subtarget->hasSVEB16B16()) {
@@ -1769,7 +1769,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                           ISD::FMINIMUM, ISD::FMINNUM, ISD::FMUL, ISD::FSUB}) {
         setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
         setOperationPromotedToType(Opcode, MVT::nxv4bf16, MVT::nxv4f32);
-        setOperationAction(Opcode, MVT::nxv8bf16, Expand);
+        setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
       }
     }
 
@@ -5725,8 +5725,8 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
 
 static inline SDValue getPTrue(SelectionDAG &DAG, SDLoc DL, EVT VT,
                                int Pattern) {
-  if (VT == MVT::nxv1i1 && Pattern == AArch64SVEPredPattern::all)
-    return DAG.getConstant(1, DL, MVT::nxv1i1);
+  if (Pattern == AArch64SVEPredPattern::all)
+    return DAG.getConstant(1, DL, VT);
   return DAG.getNode(AArch64ISD::PTRUE, DL, VT,
                      DAG.getTargetConstant(Pattern, DL, MVT::i32));
 }
@@ -9543,6 +9543,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Function *ARCFn = *objcarc::getAttachedARCFunction(CLI.CB);
     auto GA = DAG.getTargetGlobalAddress(ARCFn, DL, PtrVT);
     Ops.insert(Ops.begin() + 1, GA);
+
+    // We may or may not need to emit both the marker and the retain/claim call.
+    // Do what the frontend tells us: if the rvmarker module flag is present,
+    // emit the marker.  Always emit the call regardless.
+    // Tell the pseudo expansion using an additional boolean op.
+    SDValue DoEmitMarker = DAG.getTargetConstant(true, DL, MVT::i32);
+    Ops.insert(Ops.begin() + 2, DoEmitMarker);
   } else if (CallConv == CallingConv::ARM64EC_Thunk_X64) {
     Opc = AArch64ISD::CALL_ARM64EC_TO_X64;
   } else if (GuardWithBTI) {
@@ -21990,6 +21997,30 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
   return DAG.getNode(TopOpcode, DL, AccVT, BottomNode, ExtOp);
 }
 
+static SDValue combineSVEBitSel(unsigned IID, SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Op2 = N->getOperand(2);
+  SDValue Op3 = N->getOperand(3);
+
+  switch (IID) {
+  default:
+    llvm_unreachable("Called with wrong intrinsic!");
+  case Intrinsic::aarch64_sve_bsl:
+    return DAG.getNode(AArch64ISD::BSP, DL, VT, Op3, Op1, Op2);
+  case Intrinsic::aarch64_sve_bsl1n:
+    return DAG.getNode(AArch64ISD::BSP, DL, VT, Op3, DAG.getNOT(DL, Op1, VT),
+                       Op2);
+  case Intrinsic::aarch64_sve_bsl2n:
+    return DAG.getNode(AArch64ISD::BSP, DL, VT, Op3, Op1,
+                       DAG.getNOT(DL, Op2, VT));
+  case Intrinsic::aarch64_sve_nbsl:
+    return DAG.getNOT(DL, DAG.getNode(AArch64ISD::BSP, DL, VT, Op3, Op1, Op2),
+                      VT);
+  }
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -22312,6 +22343,11 @@ static SDValue performIntrinsicCombine(SDNode *N,
                     AArch64CC::LAST_ACTIVE);
   case Intrinsic::aarch64_sve_whilelo:
     return tryCombineWhileLo(N, DCI, Subtarget);
+  case Intrinsic::aarch64_sve_bsl:
+  case Intrinsic::aarch64_sve_bsl1n:
+  case Intrinsic::aarch64_sve_bsl2n:
+  case Intrinsic::aarch64_sve_nbsl:
+    return combineSVEBitSel(IID, N, DAG);
   }
   return SDValue();
 }
@@ -25023,7 +25059,7 @@ static SDValue foldCSELofLASTB(SDNode *Op, SelectionDAG &DAG) {
   if (AnyPred.getOpcode() == AArch64ISD::REINTERPRET_CAST)
     AnyPred = AnyPred.getOperand(0);
 
-  if (TruePred != AnyPred && TruePred.getOpcode() != AArch64ISD::PTRUE)
+  if (TruePred != AnyPred && !isAllActivePredicate(DAG, TruePred))
     return SDValue();
 
   SDValue LastB = Op->getOperand(0);
@@ -28561,7 +28597,7 @@ static EVT getContainerForFixedLengthVector(SelectionDAG &DAG, EVT VT) {
   }
 }
 
-// Return a PTRUE with active lanes corresponding to the extent of VT.
+// Return a predicate with active lanes corresponding to the extent of VT.
 static SDValue getPredicateForFixedLengthVector(SelectionDAG &DAG, SDLoc &DL,
                                                 EVT VT) {
   assert(VT.isFixedLengthVector() &&

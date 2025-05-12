@@ -374,9 +374,8 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   // Macro names with reserved identifiers are accepted if built-in or passed
   // through the command line (the later may be present if -dD was used to
   // generate the preprocessed file).
-  bool IsBuiltinOrCmd = SourceMgr.isWrittenInBuiltinFile(MacroNameLoc) ||
-                        SourceMgr.isWrittenInCommandLineFile(MacroNameLoc);
-  if (!IsBuiltinOrCmd && !SourceMgr.isInSystemHeader(MacroNameLoc)) {
+  if (!SourceMgr.isInPredefinedFile(MacroNameLoc) &&
+      !SourceMgr.isInSystemHeader(MacroNameLoc)) {
     MacroDiag D = MD_NoWarn;
     if (isDefineUndef == MU_Define) {
       D = shouldWarnOnMacroDef(*this, II);
@@ -1706,8 +1705,7 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     // If a filename was present, read any flags that are present.
     if (ReadLineMarkerFlags(IsFileEntry, IsFileExit, FileKind, *this))
       return;
-    if (!SourceMgr.isWrittenInBuiltinFile(DigitTok.getLocation()) &&
-        !SourceMgr.isWrittenInCommandLineFile(DigitTok.getLocation()))
+    if (!SourceMgr.isInPredefinedFile(DigitTok.getLocation()))
       Diag(StrTok, diag::ext_pp_gnu_line_directive);
 
     // Exiting to an empty string means pop to the including file, so leave
