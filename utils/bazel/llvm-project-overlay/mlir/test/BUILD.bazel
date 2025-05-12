@@ -1159,3 +1159,19 @@ cc_library(
         "//mlir:Transforms",
     ],
 )
+
+cc_library(
+    name = "TestXeGPU",
+    srcs = glob(["lib/Dialect/XeGPU/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//mlir:GPUDialect",
+        "//mlir:IR",
+        "//mlir:MemRefDialect",
+        "//mlir:Pass",
+        "//mlir:TransformUtils",
+        "//mlir:VectorTransforms",
+        "//mlir:XeGPUDialect",
+        "//mlir:XeGPUTransforms",
+    ],
+)
