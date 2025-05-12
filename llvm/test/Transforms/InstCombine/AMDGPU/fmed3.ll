@@ -578,6 +578,40 @@ define float @fmed3_x_y_poison_f32_strictfp(float %x, float %y) #2 {
   ret float %med3
 }
 
+; --------------------------------------------------------------------
+; llvm.amdgcn.fmed3 with flags
+; --------------------------------------------------------------------
+
+define float @fmed3_qnan0_x_y_f32_flags(float %x, float %y) #1 {
+; IEEE1-LABEL: define float @fmed3_qnan0_x_y_f32_flags(
+; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call ninf nsz float @llvm.minnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+  %med3 = call nsz ninf float @llvm.amdgcn.fmed3.f32(float 0x7FF8000000000000, float %x, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_qnan0_y_f32_flags(float %x, float %y) #1 {
+; IEEE1-LABEL: define float @fmed3_x_qnan0_y_f32_flags(
+; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call ninf nsz float @llvm.minnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+  %med3 = call nsz ninf float @llvm.amdgcn.fmed3.f32(float %x, float 0x7FF8000000000000, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_y_qnan0_f32_flags(float %x, float %y) #1 {
+; IEEE1-LABEL: define float @fmed3_x_y_qnan0_f32_flags(
+; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call ninf nsz float @llvm.minnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+  %med3 = call nsz ninf float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0x7FF8000000000000)
+  ret float %med3
+}
+
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #1 = { nounwind "amdgpu-ieee"="true" }
 attributes #2 = { nounwind strictfp "amdgpu-ieee"="true" }
