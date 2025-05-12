@@ -184,9 +184,11 @@ struct VPlanTransforms {
                                          VPRecipeBuilder &RecipeBuilder,
                                          VFRange &Range);
 
-  /// Lower abstract recipes to concrete ones, that can be codegen'd and replace
-  /// loop regions with explicit CFG. Use \p CanonicalIVTy as type for all
-  /// un-typed live-ins in VPTypeAnalysis.
+  /// Replace loop regions with explicit CFG.
+  static void disolveLoopRegions(VPlan &Plan);
+
+  /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
+  /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void convertToConcreteRecipes(VPlan &Plan, Type &CanonicalIVTy);
 
   /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p

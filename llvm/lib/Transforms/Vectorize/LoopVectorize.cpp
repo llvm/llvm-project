@@ -2760,15 +2760,6 @@ LoopVectorizationCostModel::getVectorIntrinsicCost(CallInst *CI,
   return TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
 }
 
-static VPBasicBlock *getHeaderForMainVectorLoop(VPlan &Plan,
-                                                VPDominatorTree &VPDT) {
-  return find_singleton<VPBasicBlock>(
-      vp_depth_first_shallow(Plan.getEntry()), [&VPDT](VPBlockBase *VPB, bool) {
-        auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
-        return VPBB && VPBB->isHeader(VPDT) ? VPBB : nullptr;
-      });
-}
-
 void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   // Fix widened non-induction PHIs by setting up the PHI operands.
   if (EnableVPlanNativePath)
@@ -2787,10 +2778,10 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   PSE.getSE()->forgetLoop(OrigLoop);
   PSE.getSE()->forgetBlockAndLoopDispositions();
 
-  // Don't apply optimizations below when no vector loop remains, as they all
+  // Don't apply optimizations below when no (vector) loop remains, as they all
   // require one at the moment.
   VPBasicBlock *HeaderVPBB =
-      getHeaderForMainVectorLoop(*State.Plan, State.VPDT);
+      vputils::getTopLevelVectorLoopHeader(*State.Plan, State.VPDT);
   if (!HeaderVPBB)
     return;
 
@@ -7811,6 +7802,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   VPBasicBlock *MiddleVPBB =
       BestVPlan.getVectorLoopRegion() ? BestVPlan.getMiddleBlock() : nullptr;
+  VPlanTransforms::disolveLoopRegions(BestVPlan);
   VPlanTransforms::convertToConcreteRecipes(BestVPlan,
                                             *Legal->getWidestInductionType());
 
@@ -7906,7 +7898,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // 2.6. Maintain Loop Hints
   // Keep all loop hints from the original loop on the vector loop (we'll
   // replace the vectorizer-specific hints below).
-  VPBasicBlock *HeaderVPBB = getHeaderForMainVectorLoop(BestVPlan, State.VPDT);
+  VPBasicBlock *HeaderVPBB =
+      vputils::getTopLevelVectorLoopHeader(BestVPlan, State.VPDT);
   if (HeaderVPBB) {
     MDNode *OrigLoopID = OrigLoop->getLoopID();
 

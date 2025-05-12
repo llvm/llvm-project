@@ -1623,9 +1623,8 @@ static void licm(VPlan &Plan) {
       // TODO: Relax checks in the future, e.g. we could also hoist reads, if
       // their memory location is not modified in the vector loop.
       if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi() ||
-          any_of(R.operands(), [](VPValue *Op) {
-            return !Op->isDefinedOutsideLoopRegions();
-          }))
+          any_of(R.operands(),
+                 [](VPValue *Op) { return !Op->isDefinedOutsideLoop(); }))
         continue;
       R.moveBefore(*Preheader, Preheader->end());
     }
@@ -2392,8 +2391,7 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
-void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
-                                               Type &CanonicalIVTy) {
+void VPlanTransforms::disolveLoopRegions(VPlan &Plan) {
   // Replace loop regions with explicity CFG.
   SmallVector<VPRegionBlock *> LoopRegions;
   for (VPRegionBlock *R : VPBlockUtils::blocksOnly<VPRegionBlock>(
@@ -2401,19 +2399,16 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
     if (!R->isReplicator())
       LoopRegions.push_back(R);
   }
-  for (VPRegionBlock *R : LoopRegions) {
-    VPBlockBase *Header = R->getEntry();
-    VPBlockBase *Latch = R->getExiting();
+  for (VPRegionBlock *R : LoopRegions)
     R->removeRegion();
-    // Add explicit backedge.
-    VPBlockUtils::connectBlocks(Latch, Header);
-  }
+}
 
+void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
+                                               Type &CanonicalIVTy) {
   using namespace llvm::VPlanPatternMatch;
 
   VPTypeAnalysis TypeInfo(&CanonicalIVTy);
   SmallVector<VPRecipeBase *> ToRemove;
-
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {

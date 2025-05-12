@@ -1589,9 +1589,7 @@ struct VPWidenSelectRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
     return getOperand(0);
   }
 
-  bool isInvariantCond() const {
-    return getCond()->isDefinedOutsideLoopRegions();
-  }
+  bool isInvariantCond() const { return getCond()->isDefinedOutsideLoop(); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
@@ -1604,17 +1602,16 @@ struct VPWidenSelectRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 /// A recipe for handling GEP instructions.
 class VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   bool isPointerLoopInvariant() const {
-    return getOperand(0)->isDefinedOutsideLoopRegions();
+    return getOperand(0)->isDefinedOutsideLoop();
   }
 
   bool isIndexLoopInvariant(unsigned I) const {
-    return getOperand(I + 1)->isDefinedOutsideLoopRegions();
+    return getOperand(I + 1)->isDefinedOutsideLoop();
   }
 
   bool areAllOperandsInvariant() const {
-    return all_of(operands(), [](VPValue *Op) {
-      return Op->isDefinedOutsideLoopRegions();
-    });
+    return all_of(operands(),
+                  [](VPValue *Op) { return Op->isDefinedOutsideLoop(); });
   }
 
 public:
@@ -3414,9 +3411,6 @@ public:
   /// the first predecessor is the single predecessor of a region, and the
   /// second predecessor is the exiting block of the region.
   const VPBasicBlock *getCFGPredecessor(unsigned Idx) const;
-
-  /// Returns true if the block is a loop header in a plain-CFG VPlan.
-  bool isHeader(const VPDominatorTree &VPDT) const;
 
 protected:
   /// Execute the recipes in the IR basic block \p BB.

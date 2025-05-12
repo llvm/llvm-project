@@ -576,8 +576,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::BranchOnCond: {
     Value *Cond = State.get(getOperand(0), VPLane(0));
     // Replace the temporary unreachable terminator with a new conditional
-    // branch, hooking it up to backward destination for exiting blocks now and
-    // to forward destination(s) later when they are created.
+    // branch, hooking it up to backward destination (header) for latch blocks
+    // now to forward destination(s) later when they are created.
     BranchInst *CondBr =
         Builder.CreateCondBr(Cond, Builder.GetInsertBlock(), nullptr);
     CondBr->setSuccessor(0, nullptr);
@@ -600,10 +600,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     VPBasicBlock *Header = cast<VPBasicBlock>(getParent()->getSuccessors()[1]);
 
     // Replace the temporary unreachable terminator with a new conditional
-    // branch, hooking it up to backward destination (the header) now and to the
-    // forward destination (the exit/middle block) later when it is created.
-    // Note that CreateCondBr expects a valid BB as first argument, so we need
-    // to set it to nullptr later.
+    // branch, hooking it up to backward destination (the header) for latch
+    // blocks now forward destination (the exit/middle block) later when it is
+    // created. Note that CreateCondBr expects a valid BB as first argument, so
+    // we need to set it to nullptr later.
     BranchInst *CondBr = Builder.CreateCondBr(Cond, Builder.GetInsertBlock(),
                                               State.CFG.VPBB2IRBB[Header]);
     CondBr->setSuccessor(0, nullptr);
@@ -1560,7 +1560,7 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
 InstructionCost VPWidenSelectRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {
   SelectInst *SI = cast<SelectInst>(getUnderlyingValue());
-  bool ScalarCond = getOperand(0)->isDefinedOutsideLoopRegions();
+  bool ScalarCond = getOperand(0)->isDefinedOutsideLoop();
   Type *ScalarTy = Ctx.Types.inferScalarType(this);
   Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
 
@@ -1784,7 +1784,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
       RHSInfo = Ctx.TTI.getOperandInfo(RHS->getLiveInIRValue());
 
     if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
-        getOperand(1)->isDefinedOutsideLoopRegions())
+        getOperand(1)->isDefinedOutsideLoop())
       RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
@@ -2634,13 +2634,12 @@ static void scalarizeInstruction(const Instruction *Instr,
   if (auto *II = dyn_cast<AssumeInst>(Cloned))
     State.AC->registerAssumption(II);
 
-  assert(
-      (RepRecipe->getParent()->getParent() ||
-       !RepRecipe->getParent()->getPlan()->getVectorLoopRegion() ||
-       all_of(RepRecipe->operands(),
-              [](VPValue *Op) { return Op->isDefinedOutsideLoopRegions(); })) &&
-      "Expected a recipe is either within a region or all of its operands "
-      "are defined outside the vectorized region.");
+  assert((RepRecipe->getParent()->getParent() ||
+          !RepRecipe->getParent()->getPlan()->getVectorLoopRegion() ||
+          all_of(RepRecipe->operands(),
+                 [](VPValue *Op) { return Op->isDefinedOutsideLoop(); })) &&
+         "Expected a recipe is either within a region or all of its operands "
+         "are defined outside the vectorized region.");
 }
 
 void VPReplicateRecipe::execute(VPTransformState &State) {

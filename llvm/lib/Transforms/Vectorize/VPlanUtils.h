@@ -94,6 +94,8 @@ bool isHeaderMask(const VPValue *V, VPlan &Plan);
 /// VPDerivedIV or VPCanonicalIVPHI).
 bool isUniformAcrossVFsAndUFs(VPValue *V);
 
+/// Returns the header block of the top-level vector loop, if one exists.
+VPBasicBlock *getTopLevelVectorLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//
@@ -240,6 +242,9 @@ public:
     VPBlockUtils::connectBlocks(From, BlockPtr, -1, SuccIdx);
     VPBlockUtils::connectBlocks(BlockPtr, To, PredIx, -1);
   }
+
+  /// Returns true if \p VPB is a loop header.
+  static bool isHeader(const VPBlockBase *VPBB, const VPDominatorTree &VPDT);
 };
 
 } // namespace llvm

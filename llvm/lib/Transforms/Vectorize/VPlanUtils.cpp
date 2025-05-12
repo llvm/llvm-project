@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanUtils.h"
+#include "VPlanCFG.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -87,7 +88,7 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
     return true;
 
   VPRecipeBase *R = V->getDefiningRecipe();
-  if (R && V->isDefinedOutsideLoopRegions()) {
+  if (R && V->isDefinedOutsideLoop()) {
     if (match(V->getDefiningRecipe(),
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
                   m_VPValue())))
@@ -123,4 +124,13 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
                                           // unless proven otherwise.
         return false;
       });
+}
+
+VPBasicBlock *vputils::getTopLevelVectorLoopHeader(VPlan &Plan,
+                                                   VPDominatorTree &VPDT) {
+  auto DepthFirst = vp_depth_first_shallow(Plan.getEntry());
+  auto I = find_if(DepthFirst, [&VPDT](VPBlockBase *VPB) {
+    return VPBlockUtils::isHeader(VPB, VPDT);
+  });
+  return I == DepthFirst.end() ? nullptr : cast<VPBasicBlock>(*I);
 }
