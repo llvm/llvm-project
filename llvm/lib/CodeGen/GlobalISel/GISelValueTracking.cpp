@@ -864,6 +864,16 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       return TyBits - 1; // Every always-zero bit is a sign bit.
     break;
   }
+  case TargetOpcode::G_ASHR: {
+    Register Src1 = MI.getOperand(1).getReg();
+    Register Src2 = MI.getOperand(2).getReg();
+    LLT SrcTy = MRI.getType(Src1);
+    FirstAnswer = computeNumSignBits(Src1, DemandedElts, Depth + 1);
+    if (auto C = getIConstantSplatVal(Src2, MRI))
+      FirstAnswer = std::max<uint64_t>(FirstAnswer + C->getZExtValue(),
+                                       SrcTy.getScalarSizeInBits());
+    break;
+  }
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
   case TargetOpcode::G_INTRINSIC_CONVERGENT:
