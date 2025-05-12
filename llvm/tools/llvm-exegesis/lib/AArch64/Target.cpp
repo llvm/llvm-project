@@ -214,7 +214,6 @@ private:
 
     if (isPointerAuth(Opcode)) {
 #if defined(__aarch64__) && defined(__linux__)
-
       // For some systems with existing PAC keys set, it is better to
       // check the existing state of the key before setting it.
       // For systems without PAC, this is a No-op but with PAC, it is
