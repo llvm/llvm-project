@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
- 
-#define __CLC_FUNC log2
-#define __FLOAT_ONLY
-#define __CLC_BODY <half_native_unary.inc>
-#include <clc/math/gentype.inc>
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_half_divide(__CLC_GENTYPE x,
+                                                       __CLC_GENTYPE y) {
+  return x / y;
+}
