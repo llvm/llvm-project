@@ -1214,9 +1214,9 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
                         NVPTX::LDV_f32_v4, NVPTX::LDV_f64_v4);
     break;
   case NVPTXISD::LoadV8:
-    Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy, std::nullopt,
-                             std::nullopt, NVPTX::LDV_i32_v8, std::nullopt,
-                             NVPTX::LDV_f32_v8, std::nullopt);
+    Opcode = pickOpcodeForVT(
+        EltVT.getSimpleVT().SimpleTy, {/*no i8_v8*/}, {/*no i16_v8*/},
+        NVPTX::LDV_i32_v8, {/*no i64_v8*/}, NVPTX::LDV_f32_v8, {/*no f64_v8*/});
     break;
   }
   if (!Opcode)
@@ -1319,13 +1319,13 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     Opcode = pickOpcodeForVT(
         EltVT.getSimpleVT().SimpleTy, NVPTX::INT_PTX_LDU_G_v4i8_ELE,
         NVPTX::INT_PTX_LDU_G_v4i16_ELE, NVPTX::INT_PTX_LDU_G_v4i32_ELE,
-        std::nullopt, NVPTX::INT_PTX_LDU_G_v4f32_ELE, std::nullopt);
+        {/*no v4i64*/}, NVPTX::INT_PTX_LDU_G_v4f32_ELE, {/*no v4f64*/});
     break;
   case NVPTXISD::LoadV8:
-    Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy, std::nullopt,
-                             std::nullopt, NVPTX::INT_PTX_LDG_G_v8i32_ELE,
-                             std::nullopt, NVPTX::INT_PTX_LDG_G_v8f32_ELE,
-                             std::nullopt);
+    Opcode = pickOpcodeForVT(
+        EltVT.getSimpleVT().SimpleTy, {/*no i8_v8*/}, {/*no i16_v8*/},
+        NVPTX::INT_PTX_LDG_G_v8i32_ELE, {/*no i64_v8*/},
+        NVPTX::INT_PTX_LDG_G_v8f32_ELE, {/*no f64_v8*/});
     break;
   }
   if (!Opcode)
@@ -1497,9 +1497,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
                         NVPTX::STV_f32_v4, NVPTX::STV_f64_v4);
     break;
   case NVPTXISD::StoreV8:
-    Opcode = pickOpcodeForVT(EltVT.getSimpleVT().SimpleTy, std::nullopt,
-                             std::nullopt, NVPTX::STV_i32_v8, std::nullopt,
-                             NVPTX::STV_f32_v8, std::nullopt);
+    Opcode = pickOpcodeForVT(
+        EltVT.getSimpleVT().SimpleTy, {/*no i8_v8*/}, {/*no i16_v8*/},
+        NVPTX::STV_i32_v8, {/*no i64_v8*/}, NVPTX::STV_f32_v8, {/*no f64_v8*/});
     break;
   }
 
@@ -1559,10 +1559,10 @@ bool NVPTXDAGToDAGISel::tryLoadParam(SDNode *Node) {
                         NVPTX::LoadParamMemV2F64);
     break;
   case 4:
-    Opcode =
-        pickOpcodeForVT(MemVT.getSimpleVT().SimpleTy, NVPTX::LoadParamMemV4I8,
-                        NVPTX::LoadParamMemV4I16, NVPTX::LoadParamMemV4I32,
-                        std::nullopt, NVPTX::LoadParamMemV4F32, std::nullopt);
+    Opcode = pickOpcodeForVT(MemVT.getSimpleVT().SimpleTy,
+                             NVPTX::LoadParamMemV4I8, NVPTX::LoadParamMemV4I16,
+                             NVPTX::LoadParamMemV4I32, {/*no V4I64*/},
+                             NVPTX::LoadParamMemV4F32, {/*no V4F64*/});
     break;
   }
   if (!Opcode)
@@ -1653,8 +1653,8 @@ bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
   case 4:
     Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
                              NVPTX::StoreRetvalV4I8, NVPTX::StoreRetvalV4I16,
-                             NVPTX::StoreRetvalV4I32, std::nullopt,
-                             NVPTX::StoreRetvalV4F32, std::nullopt);
+                             NVPTX::StoreRetvalV4I32, {/*no V4I64*/},
+                             NVPTX::StoreRetvalV4F32, {/*no V4F64*/});
     break;
   }
   if (!Opcode)
