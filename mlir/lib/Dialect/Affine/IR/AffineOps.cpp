@@ -328,10 +328,11 @@ bool mlir::affine::isValidDim(Value value, Region *region) {
   // Affine apply operation is ok if all of its operands are ok.
   if (auto applyOp = dyn_cast<AffineApplyOp>(op))
     return applyOp.isValidDim(region);
-  if (auto delinearizeOp = dyn_cast<AffineDelinearizeIndexOp>(op))
-    return delinearizeOp.isValidDim(region);
-  if (auto linearizeOp = dyn_cast<AffineLinearizeIndexOp>(op))
-    return linearizeOp.isValidDim(region);
+  // delinearize_index and linearize_index are special forms of apply
+  // and so are valid dimensions if all their arguments are valid dimensions.
+  if (isa<AffineDelinearizeIndexOp, AffineLinearizeIndexOp>(op))
+    return llvm::all_of(op->getOperands(),
+                        [&](Value arg) { return ::isValidDim(arg, region); });
   // The dim op is okay if its operand memref/tensor is defined at the top
   // level.
   if (auto dimOp = dyn_cast<ShapedDimOpInterface>(op))
@@ -4642,14 +4643,6 @@ void AffineDelinearizeIndexOp::build(OpBuilder &odsBuilder,
         hasOuterBound);
 }
 
-// The result of the affine apply operation can be used as a dimension id if all
-// its operands are valid dimension ids with the parent operation of `region`
-// defining the polyhedral scope for symbols.
-bool AffineDelinearizeIndexOp::isValidDim(Region *region) {
-  return llvm::all_of(getOperands(),
-                      [&](Value op) { return ::isValidDim(op, region); });
-}
-
 void AffineDelinearizeIndexOp::build(OpBuilder &odsBuilder,
                                      OperationState &odsState,
                                      Value linearIndex, ArrayRef<int64_t> basis,
@@ -5035,14 +5028,6 @@ LogicalResult AffineLinearizeIndexOp::verify() {
         "incorrect fold/rewrite");
 
   return success();
-}
-
-// The result of the affine apply operation can be used as a dimension id if all
-// its operands are valid dimension ids with the parent operation of `region`
-// defining the polyhedral scope for symbols.
-bool AffineLinearizeIndexOp::isValidDim(Region *region) {
-  return llvm::all_of(getOperands(),
-                      [&](Value op) { return ::isValidDim(op, region); });
 }
 
 OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
