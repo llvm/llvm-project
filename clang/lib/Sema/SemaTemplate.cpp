@@ -4383,6 +4383,11 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
     };
 
     if (VarDecl *Var = Template->getTemplatedDecl();
+        // Skipping std::format_kind in libstdc++ is a hack for
+        // GH139067 / https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120190
+        !(Var->getName() == "format_kind" &&
+          Var->getDeclContext()->isStdNamespace() &&
+          PP.isMacroDefined("__GLIBCXX__")) &&
         ParsingInitForAutoVars.count(Var) &&
         llvm::equal(
             CTAI.CanonicalConverted,
