@@ -24573,9 +24573,11 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     if (CC == ISD::SETOEQ || CC == ISD::SETUNE) {
       auto NewCC = (CC == ISD::SETOEQ) ? X86::COND_E : (X86::COND_NE);
       assert(Op0.getSimpleValueType() != MVT::bf16 && "Unsupported Type");
-      if (Op0.getSimpleValueType() != MVT::f80)
-        return getSETCC(
+      if (Op0.getSimpleValueType() != MVT::f80) {
+        SDValue Res = getSETCC(
             NewCC, DAG.getNode(X86ISD::UCOMX, dl, MVT::i32, Op0, Op1), dl, DAG);
+        return IsStrict ? DAG.getMergeValues({Res, Chain}, dl) : Res;
+      }
     }
   }
   // Handle floating point.
@@ -60829,7 +60831,7 @@ static bool clobbersFlagRegisters(const SmallVector<StringRef, 4> &AsmPieces) {
 bool X86TargetLowering::ExpandInlineAsm(CallInst *CI) const {
   InlineAsm *IA = cast<InlineAsm>(CI->getCalledOperand());
 
-  const std::string &AsmStr = IA->getAsmString();
+  StringRef AsmStr = IA->getAsmString();
 
   IntegerType *Ty = dyn_cast<IntegerType>(CI->getType());
   if (!Ty || Ty->getBitWidth() % 16 != 0)
