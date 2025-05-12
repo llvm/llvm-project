@@ -3619,6 +3619,13 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     if (Reg == BasePointerReg)
       SavedRegs.set(Reg);
 
+    // Don't save manually reserved registers set through +reserve-x#i,
+    // even for callee-saved registers, as per GCC's behavior.
+    if (RegInfo->isUserReservedReg(MF, Reg)) {
+      SavedRegs.reset(Reg);
+      continue;
+    }
+
     bool RegUsed = SavedRegs.test(Reg);
     unsigned PairedReg = AArch64::NoRegister;
     const bool RegIsGPR64 = AArch64::GPR64RegClass.contains(Reg);
