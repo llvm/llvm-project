@@ -155,6 +155,7 @@ public:
 
   /// Checks if the function is virtual.
   bool isVirtual() const { return Virtual; };
+  bool isImmediate() const { return Immediate; }
 
   /// Checks if the function is a constructor.
   bool isConstructor() const { return Kind == FunctionKind::Ctor; }
@@ -292,6 +293,7 @@ private:
   bool Defined = false;
   bool Variadic = false;
   bool Virtual = false;
+  bool Immediate = false;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
