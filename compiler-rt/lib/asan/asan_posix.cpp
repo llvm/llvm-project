@@ -14,7 +14,11 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_POSIX
 
+// tid_t is also defined in AIX header /usr/include/sys/types.h which is
+// included by system pthread.h
+#  define tid_t tid_t_temp
 #  include <pthread.h>
+#  undef tid_t
 #  include <signal.h>
 #  include <stdlib.h>
 #  include <sys/resource.h>
@@ -180,7 +184,7 @@ static void AfterFork(bool fork_child) {
 
 void InstallAtForkHandler() {
 #  if SANITIZER_SOLARIS || SANITIZER_NETBSD || SANITIZER_APPLE || \
-      (SANITIZER_LINUX && SANITIZER_SPARC) || SANITIZER_HAIKU
+      (SANITIZER_LINUX && SANITIZER_SPARC) || SANITIZER_HAIKU || SANITIZER_AIX
   // While other Linux targets use clone in internal_fork which doesn't
   // trigger pthread_atfork handlers, Linux/sparc64 uses __fork, causing a
   // hang.

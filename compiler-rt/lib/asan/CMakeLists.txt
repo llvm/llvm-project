@@ -1,6 +1,7 @@
 # Build for the AddressSanitizer runtime support library.
 
 set(ASAN_SOURCES
+  asan_aix.cpp
   asan_allocator.cpp
   asan_activation.cpp
   asan_debugging.cpp
