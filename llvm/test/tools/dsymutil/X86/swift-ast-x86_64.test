@@ -25,7 +25,10 @@ READOBJ: Name:{{.*}}__swift_ast
 READOBJ: |SWIFTMODULE DATA|
 READOBJ-NEXT: |.|
 
+Check that the __swift_ast section is emitted last.
+DWARFDUMP: SECTION
 DWARFDUMP: __swift_ast
+DWARFDUMP-NOT: __
 
 RUN: dsymutil -s %T/swift-ast.dSYM/Contents/Resources/DWARF/swift-ast.macho.x86_64 | FileCheck %s --check-prefix=NAST
 NAST-NOT: N_AST
