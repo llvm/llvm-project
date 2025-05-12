@@ -9,7 +9,6 @@
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "CoroInternal.h"
 #include "llvm/IR/DIBuilder.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -264,9 +263,8 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
       auto *Alignment = Builder.getInt32(PA->getAlign().value());
       auto *FromPromise = Builder.getInt1(false);
       SmallVector<Value *, 3> Arg{CoroBegin, Alignment, FromPromise};
-      auto *PI =
-          Builder.CreateIntrinsic(Builder.getPtrTy(), Intrinsic::coro_promise,
-                                  Arg, {}, "promise.addr");
+      auto *PI = Builder.CreateIntrinsic(
+          Builder.getPtrTy(), Intrinsic::coro_promise, Arg, {}, "promise.addr");
       PA->replaceUsesWithIf(PI, [CoroId](Use &U) {
         bool IsBitcast = U == U.getUser()->stripPointerCasts();
         bool IsCoroId = U.getUser() == CoroId;
