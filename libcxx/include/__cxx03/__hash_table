@@ -108,23 +108,12 @@ struct __hash_node : public __hash_node_base< __rebind_pointer_t<_VoidPtr, __has
 
   // We allow starting the lifetime of nodes without initializing the value held by the node,
   // since that is handled by the hash table itself in order to be allocator-aware.
-#ifndef _LIBCPP_CXX03_LANG
-
-private:
-  union {
-    _Tp __value_;
-  };
-
-public:
-  _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() { return __value_; }
-#else
 
 private:
   _ALIGNAS_TYPE(_Tp) char __buffer_[sizeof(_Tp)];
 
 public:
   _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() { return *std::__launder(reinterpret_cast<_Tp*>(&__buffer_)); }
-#endif
 
   _LIBCPP_HIDE_FROM_ABI explicit __hash_node(__next_pointer __next, size_t __hash) : _Base(__next), __hash_(__hash) {}
   _LIBCPP_HIDE_FROM_ABI ~__hash_node() {}
@@ -618,35 +607,14 @@ public:
   friend class __hash_map_node_destructor;
 };
 
-#if _LIBCPP_STD_VER >= 17
-template <class _NodeType, class _Alloc>
-struct __generic_container_node_destructor;
-
-template <class _Tp, class _VoidPtr, class _Alloc>
-struct __generic_container_node_destructor<__hash_node<_Tp, _VoidPtr>, _Alloc> : __hash_node_destructor<_Alloc> {
-  using __hash_node_destructor<_Alloc>::__hash_node_destructor;
-};
-#endif
-
 template <class _Key, class _Hash, class _Equal>
 struct __enforce_unordered_container_requirements {
-#ifndef _LIBCPP_CXX03_LANG
-  static_assert(__check_hash_requirements<_Key, _Hash>::value,
-                "the specified hash does not meet the Hash requirements");
-  static_assert(is_copy_constructible<_Equal>::value, "the specified comparator is required to be copy constructible");
-#endif
   typedef int type;
 };
 
 template <class _Key, class _Hash, class _Equal>
-#ifndef _LIBCPP_CXX03_LANG
-_LIBCPP_DIAGNOSE_WARNING(!__invokable<_Equal const&, _Key const&, _Key const&>::value,
-                         "the specified comparator type does not provide a viable const call operator")
-_LIBCPP_DIAGNOSE_WARNING(!__invokable<_Hash const&, _Key const&>::value,
-                         "the specified hash functor does not provide a viable const call operator")
-#endif
-    typename __enforce_unordered_container_requirements<_Key, _Hash, _Equal>::type
-    __diagnose_unordered_container_requirements(int);
+typename __enforce_unordered_container_requirements<_Key, _Hash, _Equal>::type
+__diagnose_unordered_container_requirements(int);
 
 // This dummy overload is used so that the compiler won't emit a spurious
 // "no matching function for call to __diagnose_unordered_xxx" diagnostic
@@ -848,27 +816,6 @@ public:
     return __emplace_unique_key_args(_NodeTypes::__get_key(__x), __x);
   }
 
-#if _LIBCPP_STD_VER >= 17
-  template <class _NodeHandle, class _InsertReturnType>
-  _LIBCPP_HIDE_FROM_ABI _InsertReturnType __node_handle_insert_unique(_NodeHandle&& __nh);
-  template <class _NodeHandle>
-  _LIBCPP_HIDE_FROM_ABI iterator __node_handle_insert_unique(const_iterator __hint, _NodeHandle&& __nh);
-  template <class _Table>
-  _LIBCPP_HIDE_FROM_ABI void __node_handle_merge_unique(_Table& __source);
-
-  template <class _NodeHandle>
-  _LIBCPP_HIDE_FROM_ABI iterator __node_handle_insert_multi(_NodeHandle&& __nh);
-  template <class _NodeHandle>
-  _LIBCPP_HIDE_FROM_ABI iterator __node_handle_insert_multi(const_iterator __hint, _NodeHandle&& __nh);
-  template <class _Table>
-  _LIBCPP_HIDE_FROM_ABI void __node_handle_merge_multi(_Table& __source);
-
-  template <class _NodeHandle>
-  _LIBCPP_HIDE_FROM_ABI _NodeHandle __node_handle_extract(key_type const& __key);
-  template <class _NodeHandle>
-  _LIBCPP_HIDE_FROM_ABI _NodeHandle __node_handle_extract(const_iterator __it);
-#endif
-
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI void __rehash_unique(size_type __n) { __rehash<true>(__n); }
   _LIBCPP_HIDE_FROM_ABI void __rehash_multi(size_type __n) { __rehash<false>(__n); }
@@ -925,14 +872,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> __equal_range_multi(const _Key& __k) const;
 
   _LIBCPP_HIDE_FROM_ABI void swap(__hash_table& __u)
-#if _LIBCPP_STD_VER <= 11
       _NOEXCEPT_(__is_nothrow_swappable_v<hasher>&& __is_nothrow_swappable_v<key_equal> &&
                  (!allocator_traits<__pointer_allocator>::propagate_on_container_swap::value ||
                   __is_nothrow_swappable_v<__pointer_allocator>) &&
                  (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>));
-#else
-      _NOEXCEPT_(__is_nothrow_swappable_v<hasher>&& __is_nothrow_swappable_v<key_equal>);
-#endif
 
   _LIBCPP_HIDE_FROM_ABI size_type max_bucket_count() const _NOEXCEPT { return max_size(); }
   _LIBCPP_HIDE_FROM_ABI size_type bucket_size(size_type __n) const;
@@ -1097,10 +1040,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u, const
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::~__hash_table() {
-#if defined(_LIBCPP_CXX03_LANG)
   static_assert(is_copy_constructible<key_equal>::value, "Predicate must be copy-constructible.");
   static_assert(is_copy_constructible<hasher>::value, "Hasher must be copy-constructible.");
-#endif
 
   __deallocate_node(__p1_.first().__next_);
 }
@@ -1579,104 +1520,6 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_hint_multi(const_iterator __
   return __r;
 }
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _NodeHandle, class _InsertReturnType>
-_LIBCPP_HIDE_FROM_ABI _InsertReturnType
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_unique(_NodeHandle&& __nh) {
-  if (__nh.empty())
-    return _InsertReturnType{end(), false, _NodeHandle()};
-  pair<iterator, bool> __result = __node_insert_unique(__nh.__ptr_);
-  if (__result.second)
-    __nh.__release_ptr();
-  return _InsertReturnType{__result.first, __result.second, std::move(__nh)};
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _NodeHandle>
-_LIBCPP_HIDE_FROM_ABI typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_unique(const_iterator, _NodeHandle&& __nh) {
-  if (__nh.empty())
-    return end();
-  pair<iterator, bool> __result = __node_insert_unique(__nh.__ptr_);
-  if (__result.second)
-    __nh.__release_ptr();
-  return __result.first;
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _NodeHandle>
-_LIBCPP_HIDE_FROM_ABI _NodeHandle
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_extract(key_type const& __key) {
-  iterator __i = find(__key);
-  if (__i == end())
-    return _NodeHandle();
-  return __node_handle_extract<_NodeHandle>(__i);
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _NodeHandle>
-_LIBCPP_HIDE_FROM_ABI _NodeHandle __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_extract(const_iterator __p) {
-  allocator_type __alloc(__node_alloc());
-  return _NodeHandle(remove(__p).release(), __alloc);
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _Table>
-_LIBCPP_HIDE_FROM_ABI void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_merge_unique(_Table& __source) {
-  static_assert(is_same<__node, typename _Table::__node>::value, "");
-
-  for (typename _Table::iterator __it = __source.begin(); __it != __source.end();) {
-    __node_pointer __src_ptr       = __it.__node_->__upcast();
-    size_t __hash                  = hash_function()(__src_ptr->__get_value());
-    __next_pointer __existing_node = __node_insert_unique_prepare(__hash, __src_ptr->__get_value());
-    auto __prev_iter               = __it++;
-    if (__existing_node == nullptr) {
-      (void)__source.remove(__prev_iter).release();
-      __src_ptr->__hash_ = __hash;
-      __node_insert_unique_perform(__src_ptr);
-    }
-  }
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _NodeHandle>
-_LIBCPP_HIDE_FROM_ABI typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_multi(_NodeHandle&& __nh) {
-  if (__nh.empty())
-    return end();
-  iterator __result = __node_insert_multi(__nh.__ptr_);
-  __nh.__release_ptr();
-  return __result;
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _NodeHandle>
-_LIBCPP_HIDE_FROM_ABI typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_multi(const_iterator __hint, _NodeHandle&& __nh) {
-  if (__nh.empty())
-    return end();
-  iterator __result = __node_insert_multi(__hint, __nh.__ptr_);
-  __nh.__release_ptr();
-  return __result;
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _Table>
-_LIBCPP_HIDE_FROM_ABI void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_merge_multi(_Table& __source) {
-  static_assert(is_same<typename _Table::__node, __node>::value, "");
-
-  for (typename _Table::iterator __it = __source.begin(); __it != __source.end();) {
-    __node_pointer __src_ptr = __it.__node_->__upcast();
-    size_t __src_hash        = hash_function()(__src_ptr->__get_value());
-    __next_pointer __pn      = __node_insert_multi_prepare(__src_hash, __src_ptr->__get_value());
-    (void)__source.remove(__it++).release();
-    __src_ptr->__hash_ = __src_hash;
-    __node_insert_multi_perform(__src_ptr, __pn);
-  }
-}
-#endif // _LIBCPP_STD_VER >= 17
-
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <bool _UniqueKeys>
 void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __n) _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
@@ -1981,15 +1824,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__equal_range_multi(const _Key& __k) c
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
-#if _LIBCPP_STD_VER <= 11
     _NOEXCEPT_(__is_nothrow_swappable_v<hasher>&& __is_nothrow_swappable_v<key_equal> &&
                (!allocator_traits<__pointer_allocator>::propagate_on_container_swap::value ||
                 __is_nothrow_swappable_v<__pointer_allocator>) &&
-               (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>))
-#else
-    _NOEXCEPT_(__is_nothrow_swappable_v<hasher>&& __is_nothrow_swappable_v<key_equal>)
-#endif
-{
+               (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)) {
   _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
       __node_traits::propagate_on_container_swap::value || this->__node_alloc() == __u.__node_alloc(),
       "unordered container::swap: Either propagate_on_container_swap "

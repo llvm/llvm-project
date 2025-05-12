@@ -17291,6 +17291,12 @@ TEST_F(FormatTest, CalculatesOriginalColumn) {
                "         comment */");
 }
 
+TEST_F(FormatTest, SpaceAfterOperatorKeyword) {
+  auto SpaceAfterOperatorKeyword = getLLVMStyle();
+  SpaceAfterOperatorKeyword.SpaceAfterOperatorKeyword = true;
+  verifyFormat("bool operator ++(int a);", SpaceAfterOperatorKeyword);
+}
+
 TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   FormatStyle NoSpace = getLLVMStyle();
   NoSpace.SpaceBeforeParens = FormatStyle::SBPO_Never;

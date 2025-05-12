@@ -483,8 +483,6 @@ static LogicalResult generateLoopNestUsingForallOp(
   assert(loopRanges.size() == tileSizes.size() &&
          "expected as many tile sizes as loop ranges");
   OpBuilder::InsertionGuard guard(rewriter);
-  SmallVector<OpFoldResult> offsets(loopRanges.size()),
-      sizes(loopRanges.size());
 
   std::optional<ArrayAttr> mappingAttr;
   if (!mappingVector.empty())
@@ -865,7 +863,6 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop(
 static LogicalResult addInitOperandsToLoopNest(
     RewriterBase &rewriter, MutableArrayRef<LoopLikeOpInterface> loops,
     ValueRange newInitValues, YieldTiledValuesFn getNewTiledYieldsFn) {
-  SmallVector<scf::ForOp> newLoops;
   if (loops.empty())
     return success();
   OpBuilder::InsertionGuard g(rewriter);
@@ -1535,7 +1532,6 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
 
   // 1. First tile the consumer.
   SetVector<Operation *> fusedProducers, tiledAndFusedOps;
-  llvm::SmallDenseMap<Value, size_t> origProducerToLoopResultNum;
 
   FailureOr<scf::SCFTilingResult> tilingResult =
       tileUsingSCF(rewriter, consumer, options.tilingOptions);

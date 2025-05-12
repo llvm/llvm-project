@@ -15,6 +15,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Frontend/ASTUnit.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 using namespace clang::index;
@@ -409,7 +410,7 @@ const char *ScratchAlloc::toCStr(StringRef Str) {
 
 const char *ScratchAlloc::copyCStr(StringRef Str) {
   char *buf = IdxCtx.StrScratch.Allocate<char>(Str.size() + 1);
-  std::uninitialized_copy(Str.begin(), Str.end(), buf);
+  llvm::uninitialized_copy(Str, buf);
   buf[Str.size()] = '\0';
   return buf;
 }

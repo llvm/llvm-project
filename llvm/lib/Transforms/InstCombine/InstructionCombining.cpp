@@ -1831,7 +1831,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     // Handle some cases that can't be fully simplified, but where we know that
     // the two instructions will fold into one.
     auto WillFold = [&]() {
-      if (!InVal->hasOneUser())
+      if (!InVal->hasUseList() || !InVal->hasOneUser())
         return false;
 
       // icmp of ucmp/scmp with constant will fold to icmp.
@@ -5645,13 +5645,12 @@ static bool combineInstructionsOverFunction(
 
     MadeIRChange = true;
     if (Iteration > Opts.MaxIterations) {
-      report_fatal_error(
+      reportFatalUsageError(
           "Instruction Combining on " + Twine(F.getName()) +
-              " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
-              " iterations. " +
-              "Use 'instcombine<no-verify-fixpoint>' or function attribute "
-              "'instcombine-no-verify-fixpoint' to suppress this error.",
-          /*GenCrashDiag=*/false);
+          " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
+          " iterations. " +
+          "Use 'instcombine<no-verify-fixpoint>' or function attribute "
+          "'instcombine-no-verify-fixpoint' to suppress this error.");
     }
   }
 

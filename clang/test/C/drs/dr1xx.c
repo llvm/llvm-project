@@ -107,7 +107,7 @@ void dr103_2(struct S s) {} /* expected-warning {{declaration of 'struct S' will
                                expected-note {{forward declaration of 'struct S'}} */
 void dr103_3(struct S s);               /* expected-warning {{declaration of 'struct S' will not be visible outside of this function}}
                                            expected-note {{previous declaration is here}} */
-void dr103_3(struct S { int a; } s) { } /* expected-warning {{declaration of 'struct S' will not be visible outside of this function}}
+void dr103_3(struct S { int a; } s) { } /* untilc23-warning {{declaration of 'struct S' will not be visible outside of this function}}
                                            expected-error {{conflicting types for 'dr103_3'}} */
 void dr103_4(struct S s1, struct S { int a; } s2); /* expected-warning {{declaration of 'struct S' will not be visible outside of this function}} */
 

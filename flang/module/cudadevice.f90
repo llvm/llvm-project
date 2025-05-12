@@ -17,9 +17,8 @@ implicit none
 
   ! Synchronization Functions
 
-  interface
-    attributes(device) subroutine syncthreads()
-    end subroutine
+  interface syncthreads
+    procedure :: syncthreads
   end interface
 
   interface
@@ -1613,5 +1612,10 @@ implicit none
     attributes(device,host) logical function on_device() bind(c)
     end function
   end interface
+
+contains
+
+  attributes(device) subroutine syncthreads()
+  end subroutine
 
 end module
