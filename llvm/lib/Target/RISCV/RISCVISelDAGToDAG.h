@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVISELDAGTODAG_H
 
 #include "RISCV.h"
+#include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/KnownBits.h"
