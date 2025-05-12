@@ -1802,7 +1802,7 @@ void OpEmitter::genPropertiesSupportForBytecode(
       writePropertiesMethod << tgfmt(writeBytecodeSegmentSizeLegacy, &fmtCtxt);
     }
     if (const auto *namedProperty =
-            attrOrProp.dyn_cast<const NamedProperty *>()) {
+            dyn_cast<const NamedProperty *>(attrOrProp)) {
       StringRef name = namedProperty->name;
       readPropertiesMethod << formatv(
           R"(
@@ -1828,7 +1828,7 @@ void OpEmitter::genPropertiesSupportForBytecode(
           name, tgfmt(namedProperty->prop.getWriteToMlirBytecodeCall(), &fctx));
       continue;
     }
-    const auto *namedAttr = attrOrProp.dyn_cast<const AttributeMetadata *>();
+    const auto *namedAttr = dyn_cast<const AttributeMetadata *>(attrOrProp);
     StringRef name = namedAttr->attrName;
     if (namedAttr->isRequired) {
       readPropertiesMethod << formatv(R"(
@@ -2090,7 +2090,6 @@ void OpEmitter::genOptionalAttrRemovers() {
   // Generate methods for removing optional attributes, instead of having to
   // use the string interface. Enables better compile time verification.
   auto emitRemoveAttr = [&](StringRef name, bool useProperties) {
-    auto upperInitial = name.take_front().upper();
     auto *method = opClass.addInlineMethod("::mlir::Attribute",
                                            op.getRemoverName(name) + "Attr");
     if (!method)
@@ -3570,8 +3569,7 @@ void OpEmitter::genOpInterfaceMethods(const tblgen::InterfaceTrait *opTrait) {
   // Get the set of methods that should always be declared.
   auto alwaysDeclaredMethodsVec = opTrait->getAlwaysDeclaredMethods();
   llvm::StringSet<> alwaysDeclaredMethods;
-  alwaysDeclaredMethods.insert(alwaysDeclaredMethodsVec.begin(),
-                               alwaysDeclaredMethodsVec.end());
+  alwaysDeclaredMethods.insert_range(alwaysDeclaredMethodsVec);
 
   for (const InterfaceMethod &method : interface.getMethods()) {
     // Don't declare if the method has a body.

@@ -55,12 +55,16 @@ extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
 
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
+public:
+  static char ID;
+
+private:
   const RISCVSubtarget *STI;
 
 public:
   explicit RISCVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)) {}
+      : AsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override { return "RISC-V Assembly Printer"; }
 
@@ -940,7 +944,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
                                     const AsmPrinter &AP) {
   MCContext &Ctx = AP.OutContext;
-  RISCVMCExpr::VariantKind Kind;
+  RISCVMCExpr::Specifier Kind;
 
   switch (MO.getTargetFlags()) {
   default:
@@ -1210,3 +1214,8 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
   uint64_t Size = getDataLayout().getTypeAllocSize(RCPV->getType());
   OutStreamer->emitValue(Expr, Size);
 }
+
+char RISCVAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(RISCVAsmPrinter, "riscv-asm-printer", "RISC-V Assembly Printer",
+                false, false)

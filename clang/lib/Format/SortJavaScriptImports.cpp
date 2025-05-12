@@ -276,8 +276,7 @@ private:
       }
       stable_sort(SortChunk);
       mergeModuleReferences(SortChunk);
-      ReferencesSorted.insert(ReferencesSorted.end(), SortChunk.begin(),
-                              SortChunk.end());
+      llvm::append_range(ReferencesSorted, SortChunk);
     }
     return ReferencesSorted;
   }

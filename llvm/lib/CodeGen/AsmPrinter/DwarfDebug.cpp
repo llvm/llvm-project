@@ -694,8 +694,7 @@ static void interpretValues(const MachineInstr *CurMI,
         for (auto &FwdReg : ForwardedRegWorklist)
           if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
             Defs.insert(FwdReg.first);
-        for (MCRegUnit Unit : TRI.regunits(MO.getReg()))
-          NewClobberedRegUnits.insert(Unit);
+        NewClobberedRegUnits.insert_range(TRI.regunits(MO.getReg()));
       }
     }
   };
@@ -706,8 +705,7 @@ static void interpretValues(const MachineInstr *CurMI,
   getForwardingRegsDefinedByMI(*CurMI, FwdRegDefs);
   if (FwdRegDefs.empty()) {
     // Any definitions by this instruction will clobber earlier reg movements.
-    ClobberedRegUnits.insert(NewClobberedRegUnits.begin(),
-                             NewClobberedRegUnits.end());
+    ClobberedRegUnits.insert_range(NewClobberedRegUnits);
     return;
   }
 
@@ -756,8 +754,7 @@ static void interpretValues(const MachineInstr *CurMI,
     ForwardedRegWorklist.erase(ParamFwdReg);
 
   // Any definitions by this instruction will clobber earlier reg movements.
-  ClobberedRegUnits.insert(NewClobberedRegUnits.begin(),
-                           NewClobberedRegUnits.end());
+  ClobberedRegUnits.insert_range(NewClobberedRegUnits);
 
   // Now that we are done handling this instruction, add items from the
   // temporary worklist to the real one.
@@ -1265,6 +1262,7 @@ void DwarfDebug::finalizeModuleInfo() {
     auto &TheCU = *P.second;
     if (TheCU.getCUNode()->isDebugDirectivesOnly())
       continue;
+    TheCU.attachLexicalScopesAbstractOrigins();
     // Emit DW_AT_containing_type attribute to connect types with their
     // vtable holding type.
     TheCU.constructContainingTypeDIEs();
@@ -2100,6 +2098,10 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   }
 
   if (!DL) {
+    // FIXME: We could assert that `DL.getKind() != DebugLocKind::Temporary`
+    // here, or otherwise record any temporary DebugLocs seen to ensure that
+    // transient compiler-generated instructions aren't leaking their DLs to
+    // other instructions.
     // We have an unspecified location, which might want to be line 0.
     // If we have already emitted a line-0 record, don't repeat it.
     if (LastAsmLine == 0)
@@ -2382,8 +2384,7 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
       continue;
     for (auto &MI : MBB) {
       if (MI.getDebugLoc() && MI.getDebugLoc()->getLine()) {
-        for (auto *Pred : MBB.predecessors())
-          PredMBBsToExamine.insert(Pred);
+        PredMBBsToExamine.insert_range(MBB.predecessors());
         PotentialIsStmtMBBInstrs.insert({&MBB, &MI});
         break;
       }
@@ -3938,7 +3939,7 @@ DwarfDebug::getMD5AsBytes(const DIFile *File) const {
   // An MD5 checksum is 16 bytes.
   std::string ChecksumString = fromHex(Checksum->Value);
   MD5::MD5Result CKMem;
-  std::copy(ChecksumString.begin(), ChecksumString.end(), CKMem.data());
+  llvm::copy(ChecksumString, CKMem.data());
   return CKMem;
 }
 

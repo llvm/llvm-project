@@ -140,6 +140,7 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::TransposeOp op) {
 template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::GatherOp op) {
   addValue(op.getValues());
+  addValue(op.getIndices());
   addValue(op.getOutput());
   return success();
 }
@@ -147,6 +148,7 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::GatherOp op) {
 template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::ScatterOp op) {
   addValue(op.getValuesIn());
+  addValue(op.getIndices());
   addValue(op.getInput());
   addValue(op.getValuesOut());
   return success();
@@ -225,6 +227,12 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableOp op) {
 }
 
 template <>
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableWriteOp op) {
+  addValue(op.getInput1());
+  return success();
+}
+
+template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::IfOp op) {
   addValue(op.getCondition());
   return success();
@@ -278,6 +286,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(Rescale)
   POPULATE_PROFILE_INFO_CUSTOM(MatMul)
   POPULATE_PROFILE_INFO_CUSTOM(Variable)
+  POPULATE_PROFILE_INFO_CUSTOM(VariableWrite)
   POPULATE_PROFILE_INFO_CUSTOM(If)
   POPULATE_PROFILE_INFO_CUSTOM(While)
 
@@ -332,7 +341,6 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_COMMON(Reverse)
   POPULATE_PROFILE_INFO_COMMON(Identity)
   POPULATE_PROFILE_INFO_COMMON(VariableRead)
-  POPULATE_PROFILE_INFO_COMMON(VariableWrite)
 
   // Type Invariant Extension, a capability extension that is independent
   // of the data type, meaning any compatible type can be used. No type
@@ -348,6 +356,19 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 template <typename T>
+FailureOr<SmallVector<T>>
+TosaProfileCompliance::getOperatorDefinition(Operation *op,
+                                             CheckCondition &condition) {
+  const std::string opName = op->getName().getStringRef().str();
+  const auto complianceMap = getProfileComplianceMap<T>();
+  const auto it = complianceMap.find(opName);
+  if (it == complianceMap.end())
+    return {};
+
+  return findMatchedProfile<T>(op, it->second, condition);
+}
+
+template <typename T>
 LogicalResult TosaProfileCompliance::checkProfileOrExtension(
     Operation *op, const tosa::TargetEnv &targetEnv,
     const SmallVector<ArrayRef<T>> &specRequiredModeSet) {
@@ -356,11 +377,9 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
   if (specRequiredModeSet.size() == 0)
     return success();
 
-  auto opName = op->getName().getStringRef().str();
-  auto compMap = getProfileComplianceMap<T>();
-  auto it = compMap.find(opName);
-
-  if (it == compMap.end()) {
+  CheckCondition condition = CheckCondition::invalid;
+  const auto maybeOpRequiredMode = getOperatorDefinition<T>(op, condition);
+  if (failed(maybeOpRequiredMode)) {
     // Operators such as control-flow and shape ops do not have an operand type
     // restriction. When the profile compliance information of operation is not
     // found, confirm if the target have enabled the profile required from the
@@ -381,12 +400,9 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
     return failure();
   }
 
-  CheckCondition condition = CheckCondition::invalid;
-  // Find the profiles or extensions requirement according to the signature of
-  // type of the operand list.
-  SmallVector<T> opRequiredMode =
-      findMatchedProfile<T>(op, it->second, condition);
-
+  // Find the required profiles or extensions according to the operand type
+  // combination.
+  const auto opRequiredMode = maybeOpRequiredMode.value();
   if (opRequiredMode.size() == 0) {
     // No matched restriction found.
     return success();
@@ -466,6 +482,17 @@ TosaProfileCompliance::checkExtension(Operation *op,
   return success();
 }
 
+LogicalResult TosaProfileCompliance::checkInvalid(Operation *op) {
+  CheckCondition condition = CheckCondition::invalid;
+  const auto maybeProfDef = getOperatorDefinition<Profile>(op, condition);
+  const auto maybeExtDef = getOperatorDefinition<Extension>(op, condition);
+  if (!failed(maybeProfDef) && !failed(maybeExtDef) &&
+      !maybeProfDef.value().size() && !maybeExtDef.value().size())
+    return failure();
+
+  return success();
+}
+
 // Find the profiles or extensions requirement according to the signature of
 // type of the operand list.
 template <typename T>
@@ -483,7 +510,6 @@ SmallVector<T> TosaProfileCompliance::findMatchedProfile(
 
   for (size_t i = 0; i < compInfo.size(); i++) {
     SmallVector<SmallVector<TypeInfo>> sets = compInfo[i].operandTypeInfoSet;
-
     for (SmallVector<TypeInfo> expected : sets) {
       assert(present.size() == expected.size() &&
              "the entries for profile-based compliance do not match between "
@@ -532,8 +558,7 @@ SmallVector<StringRef> TosaProfileCompliance::stringifyProfile(
 
   for (const auto &profiles : profileSet) {
     auto tempStrings = stringifyProfile<T>(profiles);
-    debugStrings.insert(debugStrings.end(), tempStrings.begin(),
-                        tempStrings.end());
+    llvm::append_range(debugStrings, tempStrings);
   }
 
   return debugStrings;

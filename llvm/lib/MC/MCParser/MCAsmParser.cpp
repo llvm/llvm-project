@@ -27,7 +27,9 @@ cl::opt<unsigned> AsmMacroMaxNestingDepth(
     cl::desc("The maximum nesting depth allowed for assembly macros."));
 }
 
-MCAsmParser::MCAsmParser() = default;
+MCAsmParser::MCAsmParser(MCContext &Ctx, MCStreamer &Out, SourceMgr &SM,
+                         const MCAsmInfo &MAI)
+    : Ctx(Ctx), Out(Out), SrcMgr(SM), MAI(MAI), Lexer(MAI) {}
 
 MCAsmParser::~MCAsmParser() = default;
 

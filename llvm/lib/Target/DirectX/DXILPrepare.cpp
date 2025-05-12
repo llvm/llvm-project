@@ -161,6 +161,15 @@ class DXILPrepareModule : public ModulePass {
                          Builder.getPtrTy(PtrTy->getAddressSpace())));
   }
 
+  static std::array<unsigned, 6> getCompatibleInstructionMDs(llvm::Module &M) {
+    return {M.getMDKindID("dx.nonuniform"),
+            M.getMDKindID("dx.controlflow.hints"),
+            M.getMDKindID("dx.precise"),
+            llvm::LLVMContext::MD_range,
+            llvm::LLVMContext::MD_alias_scope,
+            llvm::LLVMContext::MD_noalias};
+  }
+
 public:
   bool runOnModule(Module &M) override {
     PointerTypeMap PointerTypes = PointerTypeAnalysis::run(M);
@@ -176,6 +185,9 @@ public:
     VersionTuple ValVer = MetadataInfo.ValidatorVersion;
     bool SkipValidation = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
 
+    // construct allowlist of valid metadata node kinds
+    std::array<unsigned, 6> DXILCompatibleMDs = getCompatibleInstructionMDs(M);
+
     for (auto &F : M.functions()) {
       F.removeFnAttrs(AttrMask);
       F.removeRetAttrs(AttrMask);
@@ -189,6 +201,9 @@ public:
       for (auto &BB : F) {
         IRBuilder<> Builder(&BB);
         for (auto &I : make_early_inc_range(BB)) {
+
+          I.dropUnknownNonDebugMetadata(DXILCompatibleMDs);
+
           if (I.getOpcode() == Instruction::FNeg) {
             Builder.SetInsertPoint(&I);
             Value *In = I.getOperand(0);
@@ -248,7 +263,7 @@ public:
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
-    AU.addPreserved<DXILResourceBindingWrapperPass>();
+    AU.addPreserved<DXILResourceWrapperPass>();
   }
   static char ID; // Pass identification.
 };

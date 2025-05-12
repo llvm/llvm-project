@@ -179,7 +179,7 @@ static void visitRegisterBankClasses(
     const CodeGenRegBank &RegisterClassHierarchy,
     const CodeGenRegisterClass *RC, const Twine &Kind,
     std::function<void(const CodeGenRegisterClass *, StringRef)> VisitFn,
-    SmallPtrSetImpl<const CodeGenRegisterClass *> &VisitedRCs) {
+    DenseSet<const CodeGenRegisterClass *> &VisitedRCs) {
 
   // Make sure we only visit each class once to avoid infinite loops.
   if (!VisitedRCs.insert(RC).second)
@@ -390,7 +390,7 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
   Timer.startTimer("Analyze records");
   std::vector<RegisterBank> Banks;
   for (const auto &V : Records.getAllDerivedDefinitions("RegisterBank")) {
-    SmallPtrSet<const CodeGenRegisterClass *, 8> VisitedRCs;
+    DenseSet<const CodeGenRegisterClass *> VisitedRCs;
     RegisterBank Bank(*V, CGH.getNumModeIds());
 
     for (const CodeGenRegisterClass *RC :

@@ -69,10 +69,7 @@ INITIALIZE_PASS_END(BranchProbabilityInfoWrapperPass, "branch-prob",
                     "Branch Probability Analysis", false, true)
 
 BranchProbabilityInfoWrapperPass::BranchProbabilityInfoWrapperPass()
-    : FunctionPass(ID) {
-  initializeBranchProbabilityInfoWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : FunctionPass(ID) {}
 
 char BranchProbabilityInfoWrapperPass::ID = 0;
 
@@ -669,7 +666,6 @@ BranchProbabilityInfo::getEstimatedEdgeWeight(const LoopEdge &Edge) const {
 template <class IterT>
 std::optional<uint32_t> BranchProbabilityInfo::getMaxEstimatedEdgeWeight(
     const LoopBlock &SrcLoopBB, iterator_range<IterT> Successors) const {
-  SmallVector<uint32_t, 4> Weights;
   std::optional<uint32_t> MaxWeight;
   for (const BasicBlock *DstBB : Successors) {
     const LoopBlock DstLoopBB = getLoopBlock(DstBB);

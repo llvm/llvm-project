@@ -409,7 +409,6 @@ MeshSharding getSharding(OpResult result, const ShardingOption &shardingOption,
 
   // process the split axes
   for (auto it : llvm::enumerate(map.getResults())) {
-    SmallVector<MeshAxis> tmp_axes;
     AffineExpr expr = it.value();
     // `expr` must be an `AffineDimExpr` because `map` is verified by
     // isProjectedPermutation
@@ -716,8 +715,8 @@ void mesh::spmdizeTriviallyShardableOperation(
   // Set the result types to the sharded counterparts.
   for (auto [oldResult, newResult, sharding] :
        llvm::zip_equal(op.getResults(), newOp->getResults(), resultShardings)) {
-    newResult.setType(
-        shardType(newResult.getType(),
-                  getMesh(&op, sharding.getMeshAttr(), symbolTable), sharding));
+    newResult.setType(shardType(
+        newResult.getType(),
+        getMeshOrNull(&op, sharding.getMeshAttr(), symbolTable), sharding));
   }
 }

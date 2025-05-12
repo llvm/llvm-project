@@ -16,6 +16,7 @@ class TestFormat_Op<string fmt, list<Trait> traits = []>
 
 //===----------------------------------------------------------------------===//
 // custom
+//===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: CustomStringLiteralA::parse
 // CHECK: parseFoo({{.*}}, parser.getBuilder().getI1Type())

@@ -40,13 +40,13 @@ program acc_atomic_update_test
         a = a + b 
 
 !CHECK: {{.*}} = arith.constant 1 : i32
-!CHECK: acc.atomic.update %[[Y_DECL]]#1 : !fir.ref<i32> {
+!CHECK: acc.atomic.update %[[Y_DECL]]#0 : !fir.ref<i32> {
 !CHECK:  ^bb0(%[[ARG:.*]]: i32):
 !CHECK:    %[[RESULT:.*]] = arith.addi %[[ARG]], {{.*}} : i32
 !CHECK:    acc.yield %[[RESULT]] : i32
 !CHECK:  }
 !CHECK:  %[[LOADED_X:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
-!CHECK:  acc.atomic.update %[[Z_DECL]]#1 : !fir.ref<i32> {
+!CHECK:  acc.atomic.update %[[Z_DECL]]#0 : !fir.ref<i32> {
 !CHECK:  ^bb0(%[[ARG:.*]]: i32):
 !CHECK:    %[[RESULT:.*]] = arith.muli %[[LOADED_X]], %[[ARG]] : i32
 !CHECK:    acc.yield %[[RESULT]] : i32
@@ -57,7 +57,7 @@ program acc_atomic_update_test
         z = x * z 
 
 !CHECK:  %[[C1_VAL:.*]] = arith.constant 1 : i32
-!CHECK:  acc.atomic.update %[[I1_DECL]]#1 : !fir.ref<i8> {
+!CHECK:  acc.atomic.update %[[I1_DECL]]#0 : !fir.ref<i8> {
 !CHECK:  ^bb0(%[[VAL:.*]]: i8):
 !CHECK:    %[[CVT_VAL:.*]] = fir.convert %[[VAL]] : (i8) -> i32
 !CHECK:    %[[ADD_VAL:.*]] = arith.addi %[[CVT_VAL]], %[[C1_VAL]] : i32

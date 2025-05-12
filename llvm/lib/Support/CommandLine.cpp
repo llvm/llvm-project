@@ -726,7 +726,7 @@ static Option *getOptionPred(StringRef Name, size_t &Length,
   // characters in it (so that the next iteration will not be the empty
   // string.
   while (OMI == OptionsMap.end() && Name.size() > 1) {
-    Name = Name.substr(0, Name.size() - 1); // Chop off the last character.
+    Name = Name.drop_back();
     OMI = OptionsMap.find(Name);
     if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
       OMI = OptionsMap.end();
@@ -2435,8 +2435,8 @@ protected:
 
     // Collect registered option categories into vector in preparation for
     // sorting.
-    for (OptionCategory *Category : GlobalParser->RegisteredOptionCategories)
-      SortedCategories.push_back(Category);
+    llvm::append_range(SortedCategories,
+                       GlobalParser->RegisteredOptionCategories);
 
     // Sort the different option categories alphabetically.
     assert(SortedCategories.size() > 0 && "No option categories registered!");

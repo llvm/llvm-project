@@ -584,7 +584,7 @@ getExprOpValue(const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
     const MipsMCExpr *MipsExpr = cast<MipsMCExpr>(Expr);
 
     Mips::Fixups FixupKind = Mips::Fixups(0);
-    switch (MipsExpr->getKind()) {
+    switch (MipsExpr->getSpecifier()) {
     case MipsMCExpr::MEK_None:
     case MipsMCExpr::MEK_Special:
       llvm_unreachable("Unhandled fixup kind!");

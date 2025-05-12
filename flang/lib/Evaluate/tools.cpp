@@ -8,6 +8,7 @@
 
 #include "flang/Evaluate/tools.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Parser/message.h"
@@ -1349,7 +1350,7 @@ template <TypeCategory TO, TypeCategory FROM>
 static std::optional<Expr<SomeType>> DataConstantConversionHelper(
     FoldingContext &context, const DynamicType &toType,
     const Expr<SomeType> &expr) {
-  if (!IsValidKindOfIntrinsicType(FROM, toType.kind())) {
+  if (!common::IsValidKindOfIntrinsicType(FROM, toType.kind())) {
     return std::nullopt;
   }
   DynamicType sizedType{FROM, toType.kind()};
