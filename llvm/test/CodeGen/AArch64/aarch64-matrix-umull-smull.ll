@@ -834,30 +834,18 @@ define void @sink_v4i64_1(ptr %p, ptr %d, i64 %n, <2 x i32> %a) {
 ; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-GI-NEXT:    mov x8, xzr
 ; CHECK-GI-NEXT:    dup v0.2d, v0.d[1]
-; CHECK-GI-NEXT:    mov x9, v0.d[1]
-; CHECK-GI-NEXT:    fmov x10, d0
+; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-GI-NEXT:  .LBB7_1: // %loop
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    subs x2, x2, #8
 ; CHECK-GI-NEXT:    add x8, x8, #8
-; CHECK-GI-NEXT:    sshll v1.2d, v0.2s, #0
-; CHECK-GI-NEXT:    sshll2 v0.2d, v0.4s, #0
-; CHECK-GI-NEXT:    fmov x11, d1
-; CHECK-GI-NEXT:    mov x12, v1.d[1]
-; CHECK-GI-NEXT:    fmov x13, d0
-; CHECK-GI-NEXT:    mov x14, v0.d[1]
-; CHECK-GI-NEXT:    mul x11, x11, x10
-; CHECK-GI-NEXT:    mul x13, x13, x10
-; CHECK-GI-NEXT:    mul x12, x12, x9
-; CHECK-GI-NEXT:    mov v0.d[0], x11
-; CHECK-GI-NEXT:    mul x11, x14, x9
-; CHECK-GI-NEXT:    mov v1.d[0], x13
-; CHECK-GI-NEXT:    mov v0.d[1], x12
-; CHECK-GI-NEXT:    mov v1.d[1], x11
-; CHECK-GI-NEXT:    shrn v0.2s, v0.2d, #15
-; CHECK-GI-NEXT:    shrn2 v0.4s, v1.2d, #15
-; CHECK-GI-NEXT:    str q0, [x0], #32
+; CHECK-GI-NEXT:    mov d2, v1.d[1]
+; CHECK-GI-NEXT:    smull v1.2d, v1.2s, v0.2s
+; CHECK-GI-NEXT:    smull v2.2d, v2.2s, v0.2s
+; CHECK-GI-NEXT:    shrn v1.2s, v1.2d, #15
+; CHECK-GI-NEXT:    shrn2 v1.4s, v2.2d, #15
+; CHECK-GI-NEXT:    str q1, [x0], #32
 ; CHECK-GI-NEXT:    b.ne .LBB7_1
 ; CHECK-GI-NEXT:  // %bb.2: // %exit
 ; CHECK-GI-NEXT:    ret
@@ -971,18 +959,19 @@ define void @sink_v16s16_8(ptr %p, ptr %d, i64 %n, <16 x i8> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sshll2 v0.8h, v0.16b, #0
 ; CHECK-GI-NEXT:    mov x8, xzr
+; CHECK-GI-NEXT:    dup v0.8h, v0.h[2]
+; CHECK-GI-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-GI-NEXT:  .LBB9_1: // %loop
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    subs x2, x2, #8
 ; CHECK-GI-NEXT:    add x8, x8, #8
-; CHECK-GI-NEXT:    sshll v2.8h, v1.8b, #0
-; CHECK-GI-NEXT:    sshll2 v1.8h, v1.16b, #0
-; CHECK-GI-NEXT:    mul v2.8h, v2.8h, v0.h[2]
-; CHECK-GI-NEXT:    mul v1.8h, v1.8h, v0.h[2]
-; CHECK-GI-NEXT:    sshr v2.8h, v2.8h, #15
+; CHECK-GI-NEXT:    mov d2, v1.d[1]
+; CHECK-GI-NEXT:    smull v1.8h, v1.8b, v0.8b
+; CHECK-GI-NEXT:    smull v2.8h, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    sshr v1.8h, v1.8h, #15
-; CHECK-GI-NEXT:    uzp1 v1.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    sshr v2.8h, v2.8h, #15
+; CHECK-GI-NEXT:    uzp1 v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    str q1, [x0], #32
 ; CHECK-GI-NEXT:    b.ne .LBB9_1
 ; CHECK-GI-NEXT:  // %bb.2: // %exit

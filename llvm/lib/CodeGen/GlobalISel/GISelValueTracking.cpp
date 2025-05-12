@@ -874,6 +874,30 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
                                        SrcTy.getScalarSizeInBits());
     break;
   }
+  case TargetOpcode::G_SHUFFLE_VECTOR: {
+    // Collect the minimum number of sign bits that are shared by every vector
+    // element referenced by the shuffle.
+    APInt DemandedLHS, DemandedRHS;
+    unsigned NumElts = MRI.getType(MI.getOperand(1).getReg()).getNumElements();
+    if (!getShuffleDemandedElts(NumElts, MI.getOperand(3).getShuffleMask(),
+                                DemandedElts, DemandedLHS, DemandedRHS))
+      return 1;
+
+    unsigned Tmp = std::numeric_limits<unsigned>::max();
+    if (!!DemandedLHS)
+      Tmp =
+          computeNumSignBits(MI.getOperand(1).getReg(), DemandedLHS, Depth + 1);
+    if (!!DemandedRHS) {
+      unsigned Tmp2 =
+          computeNumSignBits(MI.getOperand(2).getReg(), DemandedRHS, Depth + 1);
+      Tmp = std::min(Tmp, Tmp2);
+    }
+    // If we don't know anything, early out and try computeKnownBits fall-back.
+    if (Tmp == 1)
+      break;
+    assert(Tmp <= TyBits && "Failed to determine minimum sign bits");
+    return Tmp;
+  }
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
   case TargetOpcode::G_INTRINSIC_CONVERGENT:

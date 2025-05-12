@@ -400,9 +400,10 @@ define <8 x i16> @missing_insert(<8 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: missing_insert:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ext v1.16b, v0.16b, v0.16b, #4
-; CHECK-GI-NEXT:    mul v0.8h, v1.8h, v0.8h
+; CHECK-GI-NEXT:    sshll v1.8h, v0.8b, #0
+; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #4
+; CHECK-GI-NEXT:    xtn v1.8b, v1.8h
+; CHECK-GI-NEXT:    smull v0.8h, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
 entry:
   %ext.b = sext <8 x i8> %b to <8 x i16>
@@ -421,10 +422,10 @@ define <8 x i16> @shufsext_v8i8_v8i16(<8 x i8> %src, <8 x i8> %b) {
 ; CHECK-GI-LABEL: shufsext_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
 ; CHECK-GI-NEXT:    rev64 v0.8h, v0.8h
 ; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    xtn v0.8b, v0.8h
+; CHECK-GI-NEXT:    smull v0.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 entry:
   %in = sext <8 x i8> %src to <8 x i16>
@@ -444,16 +445,9 @@ define <2 x i64> @shufsext_v2i32_v2i64(<2 x i32> %src, <2 x i32> %b) {
 ; CHECK-GI-LABEL: shufsext_v2i32_v2i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-GI-NEXT:    sshll v1.2d, v1.2s, #0
 ; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    mov x11, v1.d[1]
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    mov x10, v0.d[1]
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    mul x9, x10, x11
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    mov v0.d[1], x9
+; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    ret
 entry:
   %in = sext <2 x i32> %src to <2 x i64>
@@ -496,16 +490,9 @@ define <2 x i64> @shufzext_v2i32_v2i64(<2 x i32> %src, <2 x i32> %b) {
 ; CHECK-GI-LABEL: shufzext_v2i32_v2i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-GI-NEXT:    sshll v1.2d, v1.2s, #0
 ; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    mov x11, v1.d[1]
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    mov x10, v0.d[1]
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    mul x9, x10, x11
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    mov v0.d[1], x9
+; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-GI-NEXT:    ret
 entry:
   %in = sext <2 x i32> %src to <2 x i64>
