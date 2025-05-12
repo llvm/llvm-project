@@ -66,10 +66,8 @@ subnormal_config.cl
 ../../generic/lib/math/rootn.cl
 ../../generic/lib/math/sin.cl
 ../../generic/lib/math/sincos.cl
-../../generic/lib/math/sincos_helpers.cl
 ../../generic/lib/math/sinh.cl
 ../../generic/lib/math/sinpi.cl
-../../generic/lib/math/tables.cl
 ../../generic/lib/math/tan.cl
 ../../generic/lib/math/tanh.cl
 ../../generic/lib/math/tanpi.cl
