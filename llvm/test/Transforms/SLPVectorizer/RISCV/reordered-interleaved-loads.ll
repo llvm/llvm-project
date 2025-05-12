@@ -10,48 +10,53 @@ define i1 @test(i32 %conv15.12, i16 %0, ptr %1, i16 %2, i16 %3, i16 %4, i16 %5, 
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i16, ptr @h, align 2
-; CHECK-NEXT:    [[TMP9:%.*]] = load <16 x i16>, ptr getelementptr inbounds nuw (i8, ptr @h, i64 6), align 2
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <16 x i16> [[TMP9]], <16 x i16> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i16> poison, i16 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x i16> [[TMP11]], i16 [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x i16> [[TMP12]], i16 [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i16> [[TMP13]], i16 [[TMP3]], i32 3
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i16> [[TMP14]], i16 [[TMP2]], i32 4
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x i16> [[TMP15]], i16 [[TMP0]], i32 6
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <8 x i16> [[TMP16]], i16 [[TMP8]], i32 5
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <8 x i16> [[TMP17]], i16 [[TMP7]], i32 7
-; CHECK-NEXT:    [[TMP19:%.*]] = sext <8 x i16> [[TMP18]] to <8 x i32>
-; CHECK-NEXT:    [[TMP20:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[TMP19]], <8 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP21:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> [[TMP18]], <4 x i16> [[TMP10]], i64 0)
-; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq <8 x i16> [[TMP21]], zeroinitializer
-; CHECK-NEXT:    [[TMP23:%.*]] = select <8 x i1> [[TMP22]], <8 x i32> splat (i32 8), <8 x i32> [[TMP19]]
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <8 x i32> [[TMP19]], i32 [[CONV15_1_4]], i32 0
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <8 x i32> [[TMP24]], i32 [[CONV15_1_3]], i32 1
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <8 x i32> [[TMP25]], i32 [[CONV15_12]], i32 7
-; CHECK-NEXT:    [[TMP27:%.*]] = xor <8 x i32> [[TMP23]], [[TMP26]]
-; CHECK-NEXT:    [[TMP28:%.*]] = icmp sgt <8 x i32> [[TMP20]], [[TMP27]]
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <8 x i1> [[TMP28]], i32 7
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i16> [[TMP9]], i16 [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i16> [[TMP10]], i16 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i16> [[TMP11]], i16 [[TMP7]], i32 3
+; CHECK-NEXT:    [[TMP13:%.*]] = sext <4 x i16> [[TMP12]] to <4 x i32>
+; CHECK-NEXT:    [[TMP14:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP13]], <4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq <4 x i16> [[TMP12]], zeroinitializer
+; CHECK-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP15]], <4 x i32> splat (i32 8), <4 x i32> [[TMP13]]
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[CONV15_12]], i32 3
+; CHECK-NEXT:    [[TMP18:%.*]] = xor <4 x i32> [[TMP16]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp sgt <4 x i32> [[TMP14]], [[TMP18]]
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i1> [[TMP19]], i32 3
 ; CHECK-NEXT:    [[CONV30_18:%.*]] = zext i1 [[TMP29]] to i16
 ; CHECK-NEXT:    store i16 [[CONV30_18]], ptr @a, align 2
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <8 x i1> [[TMP28]], i32 6
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i1> [[TMP19]], i32 2
 ; CHECK-NEXT:    [[CONV30_219:%.*]] = zext i1 [[TMP30]] to i16
 ; CHECK-NEXT:    store i16 [[CONV30_219]], ptr @a, align 2
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <8 x i1> [[TMP28]], i32 5
+; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i1> [[TMP19]], i32 1
 ; CHECK-NEXT:    [[CONV30_330:%.*]] = zext i1 [[TMP31]] to i16
 ; CHECK-NEXT:    store i16 [[CONV30_330]], ptr @a, align 2
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <8 x i1> [[TMP28]], i32 4
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i1> [[TMP19]], i32 0
 ; CHECK-NEXT:    [[CONV30_4:%.*]] = zext i1 [[TMP32]] to i16
 ; CHECK-NEXT:    store i16 [[CONV30_4]], ptr @a, align 2
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i1> [[TMP28]], i32 3
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i16> poison, i16 [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x i16> [[TMP24]], i16 [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i16> [[TMP25]], i16 [[TMP5]], i32 2
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i16> [[TMP26]], i16 [[TMP6]], i32 3
+; CHECK-NEXT:    [[TMP28:%.*]] = sext <4 x i16> [[TMP27]] to <4 x i32>
+; CHECK-NEXT:    [[TMP38:%.*]] = load <16 x i16>, ptr getelementptr inbounds nuw (i8, ptr @h, i64 6), align 2
+; CHECK-NEXT:    [[TMP39:%.*]] = shufflevector <16 x i16> [[TMP38]], <16 x i16> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+; CHECK-NEXT:    [[TMP40:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP28]], <4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP41:%.*]] = icmp eq <4 x i16> [[TMP39]], zeroinitializer
+; CHECK-NEXT:    [[TMP42:%.*]] = select <4 x i1> [[TMP41]], <4 x i32> splat (i32 8), <4 x i32> [[TMP28]]
+; CHECK-NEXT:    [[TMP43:%.*]] = insertelement <4 x i32> [[TMP28]], i32 [[CONV15_1_3]], i32 2
+; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <4 x i32> [[TMP43]], i32 [[CONV15_1_4]], i32 3
+; CHECK-NEXT:    [[TMP45:%.*]] = xor <4 x i32> [[TMP42]], [[TMP44]]
+; CHECK-NEXT:    [[TMP37:%.*]] = icmp sgt <4 x i32> [[TMP40]], [[TMP45]]
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i1> [[TMP37]], i32 0
 ; CHECK-NEXT:    [[CONV30_1_1:%.*]] = zext i1 [[TMP33]] to i16
 ; CHECK-NEXT:    store i16 [[CONV30_1_1]], ptr @a, align 2
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i1> [[TMP28]], i32 2
+; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i1> [[TMP37]], i32 1
 ; CHECK-NEXT:    [[CONV30_1_2:%.*]] = zext i1 [[TMP34]] to i16
 ; CHECK-NEXT:    store i16 [[CONV30_1_2]], ptr @a, align 2
-; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <8 x i1> [[TMP28]], i32 1
+; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <4 x i1> [[TMP37]], i32 2
 ; CHECK-NEXT:    [[CONV30_1_3:%.*]] = zext i1 [[TMP35]] to i16
 ; CHECK-NEXT:    store i16 [[CONV30_1_3]], ptr @a, align 2
-; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <8 x i1> [[TMP28]], i32 0
+; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i1> [[TMP37]], i32 3
 ; CHECK-NEXT:    ret i1 [[TMP36]]
 ;
 entry:
