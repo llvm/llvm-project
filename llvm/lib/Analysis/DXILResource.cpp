@@ -23,6 +23,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <climits>
 #include <cstdint>
+#include <optional>
 
 #define DEBUG_TYPE "dxil-resource"
 
@@ -998,7 +999,7 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
   }
 }
 
-// returns false if binding could not be found in given space
+// returns std::nulopt if binding could not be found in given space
 std::optional<uint32_t>
 DXILResourceBindingInfo::findAvailableBinding(dxil::ResourceClass RC,
                                               uint32_t Space, int32_t Size) {
@@ -1023,34 +1024,35 @@ std::optional<uint32_t>
 DXILResourceBindingInfo::RegisterSpace::findAvailableBinding(int32_t Size) {
   assert((Size == -1 || Size > 0) && "invalid size");
 
-  std::optional<uint32_t> RegSlot;
   if (FreeRanges.empty())
-    return RegSlot;
+    return std::nullopt;
 
   // unbounded array
   if (Size == -1) {
     BindingRange &Last = FreeRanges.back();
     if (Last.UpperBound != UINT32_MAX)
       // this space is already occupied by an unbounded array
-      return false;
-    RegSlot = Last.LowerBound;
+      return std::nullopt;
+    uint32_t RegSlot = Last.LowerBound;
     FreeRanges.pop_back();
-  } else {
-    // single resource or fixed-size array
-    for (BindingRange &R : FreeRanges) {
-      // compare the size as uint64_t to prevent overflow for range (0,
-      // UINT32_MAX)
-      if ((uint64_t)R.UpperBound - R.LowerBound + 1 < (uint64_t)Size)
-        continue;
-      RegSlot = R.LowerBound;
-      // This might create a range where (LowerBound == UpperBound + 1). When
-      // that happens, the next time this function is called the range will
-      // skipped over by the check above (at this point Size is always > 0).
-      R.LowerBound += Size;
-      break;
-    }
+    return RegSlot;
   }
-  return RegSlot;
+
+  // single resource or fixed-size array
+  for (BindingRange &R : FreeRanges) {
+    // compare the size as uint64_t to prevent overflow for range (0,
+    // UINT32_MAX)
+    if ((uint64_t)R.UpperBound - R.LowerBound + 1 < (uint64_t)Size)
+      continue;
+    uint32_t RegSlot = R.LowerBound;
+    // This might create a range where (LowerBound == UpperBound + 1). When
+    // that happens, the next time this function is called the range will
+    // skipped over by the check above (at this point Size is always > 0).
+    R.LowerBound += Size;
+    return RegSlot;
+  }
+
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
