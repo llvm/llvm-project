@@ -635,14 +635,14 @@ namespace llvm {
 namespace yaml {
 
 // Struct representing one save/restore point in the
-// 'savePoint' / 'restorePoint' list. One point consist of machine basic block
+// 'savePoint' / 'restorePoint' list. One point consists of machine basic block
 // name and list of saved/restored in this basic block registers. There are
 // two forms of Save/Restore point representation:
 // 1. Without explicit register enumeration:
 //      savePoint:       '%bb.n'
 //      restorePoint:    '%bb.n'
-// supported for backward compatibility (in this case we assume that all
-// CalleeSavedRegisters are splilled/restored in these points)
+// in this case we assume that all CalleeSavedRegisters
+// are splilled/restored in these points
 // 2. With explicit register:
 //  savePoint:
 //    - point:           '%bb.1'

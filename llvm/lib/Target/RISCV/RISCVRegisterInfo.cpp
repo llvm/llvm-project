@@ -584,11 +584,14 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       assert(It != CSI.end() &&
              "Did't find CalleeSavedInfo for CalleeSaved FrameIndex");
 
+      assert(!(MI.mayLoad() && MI.mayStore()) && "Instruction with frame index operand may load and store simultaneously!");
+
       if (MI.mayStore())
         SpilledIn = MFI.findSpilledIn(*It);
-
       else if (MI.mayLoad())
         RestoredIn = MFI.findRestoredIn(*It);
+      else
+        llvm_unreachable("Instruction with frame index operand neither loads nor stores!");
 
       bool SpilledRestoredInPrologEpilog = true;
       // If we didn't managed to find NCD (NCPD) for the list of Save (Restore)

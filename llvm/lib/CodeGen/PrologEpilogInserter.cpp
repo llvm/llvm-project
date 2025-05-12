@@ -717,7 +717,7 @@ static void fillCSInfoPerBB(MachineFrameInfo &MFI,
             return CSI.getReg() == RTI.first;
           }) != std::end(GCSIV))
         continue;
-      for (auto BB : PrologEpilogBlocks) {
+      for (MachineBasicBlock *BB : PrologEpilogBlocks) {
         if (auto Entry = Inner.find(BB); Entry != Inner.end()) {
           auto &CSI = Entry->second;
           CSI.push_back(*RTI.second);
