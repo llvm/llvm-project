@@ -307,6 +307,8 @@ class StructurizeCFG {
 
   RegionNode *PrevNode;
 
+  void reorderIfElseBlock(BasicBlock *BB, unsigned Idx);
+
   void orderNodes();
 
   void analyzeLoops(RegionNode *N);
@@ -409,6 +411,31 @@ public:
 
 } // end anonymous namespace
 
+/// Helper function for heuristics to order if else block
+/// Checks whether an instruction is potential vector copy instruction, if so,
+/// checks if the operands are from different BB. if so, returns True.
+// Then there's a possibility of coelescing without interference when ordered
+// first.
+static bool hasAffectingInstructions(Instruction *I, BasicBlock *BB) {
+
+  if (!I || I->getParent() != BB)
+    return true;
+
+  // If the instruction is not a poterntial copy instructoin, return true.
+  if (!isa<ExtractElementInst>(*I) && !isa<ExtractValueInst>(*I))
+    return false;
+
+  // Check if any operands are instructions defined in the same block.
+  for (unsigned i = 0, e = I->getNumOperands(); i < e; ++i) {
+    if (auto *OpI = dyn_cast<Instruction>(I->getOperand(i))) {
+      if (OpI->getParent() == BB)
+        return false;
+    }
+  }
+
+  return true;
+}
+
 char StructurizeCFGLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(StructurizeCFGLegacyPass, "structurizecfg",
@@ -418,6 +445,58 @@ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
 INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
                     "Structurize the CFG", false, false)
+
+/// Then and Else block order in SCC is arbitrary. But based on the
+/// order, after structurization there are cases where there might be extra 
+/// VGPR copies due to interference during register coelescing.
+///  eg:- incoming phi values from Else block contains only vgpr copies and
+///  incoming phis in Then block has are some modification for the vgprs.
+/// after structurization, there would be interference when coelesing when Then
+/// block is ordered first. But those copies can be coelesced when Else is
+/// ordered first.
+///
+/// This function checks the incoming phi values in the merge block and
+/// orders based on the following heuristics  of Then and Else block. Checks
+/// whether an incoming phi can be potential copy instructions and if so 
+/// checks whether copy within the block or not. 
+/// Increases score if its a potential copy from outside the block. 
+/// the higher scored block is ordered first.
+void StructurizeCFG::reorderIfElseBlock(BasicBlock *BB, unsigned Idx) {
+  BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator());
+
+  if (Term && Term->isConditional()) {
+    BasicBlock *ThenBB = Term->getSuccessor(0);
+    BasicBlock *ElseBB = Term->getSuccessor(1);
+    BasicBlock *ThenSucc = ThenBB->getSingleSuccessor();
+
+    if (BB == ThenBB->getSinglePredecessor() &&
+        (ThenBB->getSinglePredecessor() == ElseBB->getSinglePredecessor()) &&
+        (ThenSucc && ThenSucc == ElseBB->getSingleSuccessor())) {
+      unsigned ThenScore = 0, ElseScore = 0;
+
+      for (PHINode &Phi : ThenSucc->phis()) {
+        Value *ThenVal = Phi.getIncomingValueForBlock(ThenBB);
+        Value *ElseVal = Phi.getIncomingValueForBlock(ElseBB);
+
+        if (auto *Inst = dyn_cast<Instruction>(ThenVal))
+          ThenScore += hasAffectingInstructions(Inst, ThenBB);
+        if (auto *Inst = dyn_cast<Instruction>(ElseVal))
+          ElseScore += hasAffectingInstructions(Inst, ElseBB);
+      }
+
+      if (ThenScore != ElseScore) {
+        if (ThenScore < ElseScore)
+          std::swap(ThenBB, ElseBB);
+
+        // reorder the last two inserted elements in Order
+        if (Idx >= 2 && Order[Idx - 1]->getEntry() == ElseBB &&
+            Order[Idx - 2]->getEntry() == ThenBB) {
+          std::swap(Order[Idx - 1], Order[Idx - 2]);
+        }
+      }
+    }
+  }
+}
 
 /// Build up the general order of nodes, by performing a topological sort of the
 /// parent region's nodes, while ensuring that there is no outer cycle node
@@ -452,6 +531,7 @@ void StructurizeCFG::orderNodes() {
       // Add the SCC nodes to the Order array.
       for (const auto &N : SCC) {
         assert(I < E && "SCC size mismatch!");
+        reorderIfElseBlock(N.first->getEntry(), I);
         Order[I++] = N.first;
       }
     }
