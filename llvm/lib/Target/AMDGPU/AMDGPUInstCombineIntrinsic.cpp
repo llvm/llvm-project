@@ -59,6 +59,28 @@ static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
   return maxnum(Src0, Src1);
 }
 
+enum class KnownIEEEMode { Unknown, On, Off };
+
+/// Return KnownIEEEMode::On if we know if the use context can assume
+/// "amdgpu-ieee"="true" and KnownIEEEMode::Off if we can assume
+/// "amdgpu-ieee"="false".
+static KnownIEEEMode fpenvIEEEMode(const Instruction &I,
+                                   const GCNSubtarget &ST) {
+  if (!ST.hasIEEEMode()) // Only mode on gfx12
+    return KnownIEEEMode::On;
+
+  const Function *F = I.getFunction();
+  if (!F)
+    return KnownIEEEMode::Unknown;
+
+  Attribute IEEEAttr = F->getFnAttribute("amdgpu-ieee");
+  if (IEEEAttr.isValid())
+    return IEEEAttr.getValueAsBool() ? KnownIEEEMode::On : KnownIEEEMode::Off;
+
+  return AMDGPU::isShader(F->getCallingConv()) ? KnownIEEEMode::Off
+                                               : KnownIEEEMode::On;
+}
+
 // Check if a value can be converted to a 16-bit value without losing
 // precision.
 // The value is expected to be either a float (IsFloat = true) or an unsigned
@@ -843,9 +865,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
   case Intrinsic::amdgcn_fmed3: {
-    // Note this does not preserve proper sNaN behavior if IEEE-mode is enabled
-    // for the shader.
-
     Value *Src0 = II.getArgOperand(0);
     Value *Src1 = II.getArgOperand(1);
     Value *Src2 = II.getArgOperand(2);
@@ -858,16 +877,85 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (II.isStrictFP())
       break;
 
+    // med3 with a nan input acts like
+    // v_min_f32(v_min_f32(s0, s1), s2)
+    //
+    // Signalingness is ignored with ieee=0, so we fold to
+    // minimumnum/maximumnum. With ieee=1, the v_min_f32 acts like llvm.minnum
+    // with signaling nan handling. With ieee=0, like llvm.minimumnum except a
+    // returned signaling nan will not be quieted.
+
+    // ieee=1
+    // s0 snan: s2
+    // s1 snan: s2
+    // s2 snan: qnan
+
+    // s0 qnan: min(s1, s2)
+    // s1 qnan: min(s0, s2)
+    // s2 qnan: min(s0, s1)
+
+    // ieee=0
+    // s0 _nan: min(s1, s2)
+    // s1 _nan: min(s0, s2)
+    // s2 _nan: min(s0, s1)
+
     // Checking for NaN before canonicalization provides better fidelity when
     // mapping other operations onto fmed3 since the order of operands is
     // unchanged.
     Value *V = nullptr;
-    if (match(Src0, PatternMatch::m_NaN()) || isa<UndefValue>(Src0)) {
-      V = IC.Builder.CreateMinNum(Src1, Src2);
-    } else if (match(Src1, PatternMatch::m_NaN()) || isa<UndefValue>(Src1)) {
-      V = IC.Builder.CreateMinNum(Src0, Src2);
-    } else if (match(Src2, PatternMatch::m_NaN()) || isa<UndefValue>(Src2)) {
-      V = IC.Builder.CreateMinNum(Src0, Src1);
+    const APFloat *ConstSrc0 = nullptr;
+    const APFloat *ConstSrc1 = nullptr;
+    const APFloat *ConstSrc2 = nullptr;
+
+    // TODO: Also can fold to 2 operands with infinities.
+    if ((match(Src0, m_APFloat(ConstSrc0)) && ConstSrc0->isNaN()) ||
+        isa<UndefValue>(Src0)) {
+      switch (fpenvIEEEMode(II, *ST)) {
+      case KnownIEEEMode::On:
+        // TODO: If Src2 is snan, does it need quieting?
+        if (ConstSrc0 && ConstSrc0->isSignaling())
+          return IC.replaceInstUsesWith(II, Src2);
+        V = IC.Builder.CreateMinNum(Src1, Src2);
+        break;
+      case KnownIEEEMode::Off:
+        V = IC.Builder.CreateMinimumNum(Src1, Src2);
+        break;
+      case KnownIEEEMode::Unknown:
+        break;
+      }
+    } else if ((match(Src1, m_APFloat(ConstSrc1)) && ConstSrc1->isNaN()) ||
+               isa<UndefValue>(Src1)) {
+      switch (fpenvIEEEMode(II, *ST)) {
+      case KnownIEEEMode::On:
+        // TODO: If Src2 is snan, does it need quieting?
+        if (ConstSrc1 && ConstSrc1->isSignaling())
+          return IC.replaceInstUsesWith(II, Src2);
+
+        V = IC.Builder.CreateMinNum(Src0, Src2);
+        break;
+      case KnownIEEEMode::Off:
+        V = IC.Builder.CreateMinimumNum(Src0, Src2);
+        break;
+      case KnownIEEEMode::Unknown:
+        break;
+      }
+    } else if ((match(Src2, m_APFloat(ConstSrc2)) && ConstSrc2->isNaN()) ||
+               isa<UndefValue>(Src2)) {
+      switch (fpenvIEEEMode(II, *ST)) {
+      case KnownIEEEMode::On:
+        if (ConstSrc2 && ConstSrc2->isSignaling()) {
+          auto *Quieted = ConstantFP::get(II.getType(), ConstSrc2->makeQuiet());
+          return IC.replaceInstUsesWith(II, Quieted);
+        }
+
+        V = IC.Builder.CreateMinNum(Src0, Src1);
+        break;
+      case KnownIEEEMode::Off:
+        V = IC.Builder.CreateMaximumNum(Src0, Src1);
+        break;
+      case KnownIEEEMode::Unknown:
+        break;
+      }
     }
 
     if (V) {
