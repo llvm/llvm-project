@@ -382,9 +382,9 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   // Loop through all of the timing data, printing it out.
   for (const PrintRecord &Record : llvm::reverse(TimersToPrint)) {
     if (const TimeRecord &TR = Record.Time;
-        TR.getUserTime() >= minPrintTime() ||
-        TR.getSystemTime() >= minPrintTime() ||
-        TR.getWallTime() >= minPrintTime()) {
+        TR.getUserTime() > minPrintTime() ||
+        TR.getSystemTime() > minPrintTime() ||
+        TR.getWallTime() > minPrintTime()) {
       Record.Time.print(Total, OS);
       OS << Record.Description << '\n';
     }
@@ -459,31 +459,19 @@ const char *TimerGroup::printJSONValues(raw_ostream &OS, const char *delim) {
   prepareToPrintList(false);
   for (const PrintRecord &R : TimersToPrint) {
     const TimeRecord &T = R.Time;
-    if (double Value = T.getWallTime(); Value >= minPrintTime()) {
-      OS << delim;
-      printJSONValue(OS, R, ".wall", Value);
-      delim = ",\n";
-    }
-    if (double Value = T.getWallTime(); Value >= minPrintTime()) {
-      OS << delim;
-      printJSONValue(OS, R, ".user", T.getUserTime());
-      delim = ",\n";
-    }
-    if (double Value = T.getWallTime(); Value >= minPrintTime()) {
-      OS << delim;
-      printJSONValue(OS, R, ".sys", T.getSystemTime());
-      delim = ",\n";
-    }
-    if (T.getMemUsed()) {
-      OS << delim;
-      printJSONValue(OS, R, ".mem", T.getMemUsed());
-      delim = ",\n";
-    }
-    if (T.getInstructionsExecuted()) {
-      OS << delim;
-      printJSONValue(OS, R, ".instr", T.getInstructionsExecuted());
-      delim = ",\n";
-    }
+    auto MaybePrintJSON = [&](double Value, const char *suffix,
+                              double Threshold) {
+      if (Value > Threshold) {
+        OS << delim;
+        printJSONValue(OS, R, suffix, Value);
+        delim = ",\n";
+      }
+    };
+    MaybePrintJSON(T.getWallTime(), ".wall", minPrintTime());
+    MaybePrintJSON(T.getUserTime(), ".user", minPrintTime());
+    MaybePrintJSON(T.getSystemTime(), ".sys", minPrintTime());
+    MaybePrintJSON(T.getMemUsed(), ".mem", 0);
+    MaybePrintJSON(T.getInstructionsExecuted(), ".instr", 0);
   }
   TimersToPrint.clear();
   return delim;
