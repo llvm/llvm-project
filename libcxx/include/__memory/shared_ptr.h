@@ -268,14 +268,14 @@ struct __raw_pointer_compatible_with : is_convertible<_Yp*, _Tp*> {};
 #endif // _LIBCPP_STD_VER >= 17
 
 template <class _Ptr, class = void>
-struct __is_deletable : false_type {};
+inline const bool __is_deletable_v = false;
 template <class _Ptr>
-struct __is_deletable<_Ptr, decltype(delete std::declval<_Ptr>())> : true_type {};
+inline const bool __is_deletable_v<_Ptr, decltype(delete std::declval<_Ptr>())> = true;
 
 template <class _Ptr, class = void>
-struct __is_array_deletable : false_type {};
+inline const bool __is_array_deletable_v = false;
 template <class _Ptr>
-struct __is_array_deletable<_Ptr, decltype(delete[] std::declval<_Ptr>())> : true_type {};
+inline const bool __is_array_deletable_v<_Ptr, decltype(delete[] std::declval<_Ptr>())> = true;
 
 template <class _Dp, class _Pt, class = decltype(std::declval<_Dp>()(std::declval<_Pt>()))>
 true_type __well_formed_deleter_test(int);
@@ -328,16 +328,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR shared_ptr(nullptr_t) _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
 
   template <class _Yp,
-            __enable_if_t< _And< __raw_pointer_compatible_with<_Yp, _Tp>
+            __enable_if_t<__raw_pointer_compatible_with<_Yp, _Tp>::value
   // In C++03 we get errors when trying to do SFINAE with the
   // delete operator, so we always pretend that it's deletable.
   // The same happens on GCC.
 #if !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_COMPILER_GCC)
-                                 ,
-                                 _If<is_array<_Tp>::value, __is_array_deletable<_Yp*>, __is_deletable<_Yp*> >
+                              && (is_array<_Tp>::value ? __is_array_deletable_v<_Yp*> : __is_deletable_v<_Yp*>)
 #endif
-                                 >::value,
-                           int> = 0>
+                              ,
+                          int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit shared_ptr(_Yp* __p) : __ptr_(__p) {
     unique_ptr<_Yp> __hold(__p);
     typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;

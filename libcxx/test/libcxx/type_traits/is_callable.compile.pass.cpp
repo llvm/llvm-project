@@ -22,10 +22,9 @@ struct ArgumentFunctor {
   bool operator()(int, int);
 };
 
-static_assert(std::__is_callable<Functor>::value, "");
-static_assert(std::__is_callable<decltype(func)>::value, "");
-static_assert(!std::__is_callable<NotFunctor>::value, "");
-static_assert(!std::__is_callable<NotFunctor,
-                                  decltype(&NotFunctor::compare)>::value, "");
-static_assert(std::__is_callable<ArgumentFunctor, int, int>::value, "");
-static_assert(!std::__is_callable<ArgumentFunctor, int>::value, "");
+static_assert(std::__is_callable_v<Functor>, "");
+static_assert(std::__is_callable_v<decltype(func)>, "");
+static_assert(!std::__is_callable_v<NotFunctor>, "");
+static_assert(!std::__is_callable_v<NotFunctor, decltype(&NotFunctor::compare)>, "");
+static_assert(std::__is_callable_v<ArgumentFunctor, int, int>, "");
+static_assert(!std::__is_callable_v<ArgumentFunctor, int>, "");

@@ -172,7 +172,7 @@ public:
 #else
   _LIBCPP_HIDE_FROM_ABI explicit mersenne_twister_engine(result_type __sd = default_seed) { seed(__sd); }
 #endif
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, mersenne_twister_engine>::value, int> = 0>
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, mersenne_twister_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit mersenne_twister_engine(_Sseq& __q) {
     seed(__q);
   }
@@ -182,7 +182,7 @@ public:
       __x_[__i] = (__f * (__x_[__i - 1] ^ __rshift<__w - 2>(__x_[__i - 1])) + __i) & _Max;
     __i_ = 0;
   }
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, mersenne_twister_engine>::value, int> = 0>
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, mersenne_twister_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
     __seed(__q, integral_constant<unsigned, 1 + (__w - 1) / 32>());
   }

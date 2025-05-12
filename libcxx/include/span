@@ -203,14 +203,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #  if _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
-struct __is_std_span : false_type {};
+inline constexpr bool __is_std_span_v = false;
 
 template <class _Tp, size_t _Sz>
-struct __is_std_span<span<_Tp, _Sz>> : true_type {};
+inline constexpr bool __is_std_span_v<span<_Tp, _Sz>> = true;
 
 template <class _Range, class _ElementType>
 concept __span_compatible_range =
-    !__is_std_span<remove_cvref_t<_Range>>::value &&                //
+    !__is_std_span_v<remove_cvref_t<_Range>> &&                     //
     ranges::contiguous_range<_Range> &&                             //
     ranges::sized_range<_Range> &&                                  //
     (ranges::borrowed_range<_Range> || is_const_v<_ElementType>) && //
