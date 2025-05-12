@@ -414,14 +414,14 @@ public:
 /// Helper function for heuristics to order if else block
 /// Checks whether an instruction is potential vector copy instruction, if so,
 /// checks if the operands are from different BB. if so, returns True.
-// Then there's a possibility of coelescing without interference when ordered
+// Then there's a possibility of coalescing without interference when ordered
 // first.
 static bool hasAffectingInstructions(Instruction *I, BasicBlock *BB) {
 
-  if (!I || I->getParent() != BB)
+  if (I->getParent() != BB)
     return true;
 
-  // If the instruction is not a poterntial copy instructoin, return true.
+  // If the instruction is not a poterntial copy instruction, return true.
   if (!isa<ExtractElementInst>(*I) && !isa<ExtractValueInst>(*I))
     return false;
 
@@ -448,53 +448,56 @@ INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
 
 /// Then and Else block order in SCC is arbitrary. But based on the
 /// order, after structurization there are cases where there might be extra
-/// VGPR copies due to interference during register coelescing.
+/// VGPR copies due to interference during register coalescing.
 ///  eg:- incoming phi values from Else block contains only vgpr copies and
 ///  incoming phis in Then block has are some modification for the vgprs.
-/// after structurization, there would be interference when coelesing when Then
-/// block is ordered first. But those copies can be coelesced when Else is
+/// after structurization, there would be interference when coalesing when Then
+/// block is ordered first. But those copies can be coalesced when Else is
 /// ordered first.
 ///
 /// This function checks the incoming phi values in the merge block and
 /// orders based on the following heuristics  of Then and Else block. Checks
 /// whether an incoming phi can be potential copy instructions and if so
-/// checks whether copy within the block or not. 
-/// Increases score if its a potential copy from outside the block. 
+/// checks whether copy within the block or not.
+/// Increases score if its a potential copy from outside the block.
 /// the higher scored block is ordered first.
 void StructurizeCFG::reorderIfElseBlock(BasicBlock *BB, unsigned Idx) {
   BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator());
 
-  if (Term && Term->isConditional()) {
-    BasicBlock *ThenBB = Term->getSuccessor(0);
-    BasicBlock *ElseBB = Term->getSuccessor(1);
-    BasicBlock *ThenSucc = ThenBB->getSingleSuccessor();
+  if (!Term || !(Term->isConditional()))
+    return;
 
-    if (BB == ThenBB->getSinglePredecessor() &&
-        (ThenBB->getSinglePredecessor() == ElseBB->getSinglePredecessor()) &&
-        (ThenSucc && ThenSucc == ElseBB->getSingleSuccessor())) {
-      unsigned ThenScore = 0, ElseScore = 0;
+  BasicBlock *ThenBB = Term->getSuccessor(0);
+  BasicBlock *ElseBB = Term->getSuccessor(1);
+  BasicBlock *ThenSucc = ThenBB->getSingleSuccessor();
 
-      for (PHINode &Phi : ThenSucc->phis()) {
-        Value *ThenVal = Phi.getIncomingValueForBlock(ThenBB);
-        Value *ElseVal = Phi.getIncomingValueForBlock(ElseBB);
+  if (BB != ThenBB->getSinglePredecessor() || !ThenSucc ||
+      (ThenBB->getSinglePredecessor() != ElseBB->getSinglePredecessor()) ||
+      ThenSucc != ElseBB->getSingleSuccessor())
+    return;
 
-        if (auto *Inst = dyn_cast<Instruction>(ThenVal))
-          ThenScore += hasAffectingInstructions(Inst, ThenBB);
-        if (auto *Inst = dyn_cast<Instruction>(ElseVal))
-          ElseScore += hasAffectingInstructions(Inst, ElseBB);
-      }
+  unsigned ThenScore = 0, ElseScore = 0;
 
-      if (ThenScore != ElseScore) {
-        if (ThenScore < ElseScore)
-          std::swap(ThenBB, ElseBB);
+  for (PHINode &Phi : ThenSucc->phis()) {
+    Value *ThenVal = Phi.getIncomingValueForBlock(ThenBB);
+    Value *ElseVal = Phi.getIncomingValueForBlock(ElseBB);
 
-        // reorder the last two inserted elements in Order
-        if (Idx >= 2 && Order[Idx - 1]->getEntry() == ElseBB &&
-            Order[Idx - 2]->getEntry() == ThenBB) {
-          std::swap(Order[Idx - 1], Order[Idx - 2]);
-        }
-      }
-    }
+    if (auto *Inst = dyn_cast<Instruction>(ThenVal))
+      ThenScore += hasAffectingInstructions(Inst, ThenBB);
+    if (auto *Inst = dyn_cast<Instruction>(ElseVal))
+      ElseScore += hasAffectingInstructions(Inst, ElseBB);
+  }
+
+  if (ThenScore == ElseScore)
+    return;
+
+  if (ThenScore < ElseScore)
+    std::swap(ThenBB, ElseBB);
+
+  // reorder the last two inserted elements in Order
+  if (Idx >= 2 && Order[Idx - 1]->getEntry() == ElseBB &&
+      Order[Idx - 2]->getEntry() == ThenBB) {
+    std::swap(Order[Idx - 1], Order[Idx - 2]);
   }
 }
 
