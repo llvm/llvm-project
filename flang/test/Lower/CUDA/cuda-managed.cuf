@@ -21,4 +21,7 @@ subroutine testr2(N1,N2)
 end subroutine
 
 !CHECK-LABEL: func.func @_QPtestr2
-!CHECK: %{{.*}} = cuf.alloc !fir.array<?x?xf32>, %{{.*}}, %{{.*}} : index, index {bindc_name = "ai4", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtestr2Eai4"} -> !fir.ref<!fir.array<?x?xf32>>
+!CHECK: %[[ALLOC:.*]] = cuf.alloc !fir.array<?x?xf32>, %{{.*}}, %{{.*}} : index, index {bindc_name = "ai4", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtestr2Eai4"} -> !fir.ref<!fir.array<?x?xf32>>
+!CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {data_attr = #cuf.cuda<managed>, uniq_name = "_QFtestr2Eai4"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+!CHECK: %[[DEST:.*]] = hlfir.designate %[[DECLARE]]#0 (%{{.*}}, %{{.*}}) : (!fir.box<!fir.array<?x?xf32>>, i64, i64) -> !fir.ref<f32>
+!CHECK: cuf.data_transfer %{{.*}}#0 to %[[DEST]] {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<f32>, !fir.ref<f32>
