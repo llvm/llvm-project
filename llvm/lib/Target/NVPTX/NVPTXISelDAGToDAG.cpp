@@ -1461,8 +1461,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 
   unsigned NumElts = getLoadStoreVectorNumElts(N);
   SmallVector<SDValue, 16> Ops;
-  for (unsigned I : llvm::seq(NumElts))
-    Ops.append({N->getOperand(I + 1)});
+  // Append the operands from 1 to NumElts, inclusive
+  const SDUse *FirstStoredVal = N->ops().begin() + 1;
+  Ops.append(FirstStoredVal, FirstStoredVal + NumElts);
   SDValue N2 = N->getOperand(NumElts + 1);
   unsigned ToTypeWidth = TotalWidth / NumElts;
 
