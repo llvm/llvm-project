@@ -13,6 +13,9 @@
 namespace mlir {
 
 class VectorType;
+class OpOperand;
+class OpResult;
+
 namespace xegpu {
 class LayoutAttr;
 class TensorDescType;
@@ -49,6 +52,18 @@ FailureOr<VectorType> getDistributedVectorType(xegpu::TensorDescType tdescTy);
 /// to a given LayoutAttr.
 FailureOr<VectorType> getDistributedVectorType(VectorType originalType,
                                                LayoutAttr layout);
+
+/// Retrieves the LayoutAttr associated with a given Value. For TensorDescType
+/// values, the LayoutAttr is extracted from the TensorDescType itself. For
+/// other values, it is obtained from the attributes of the defining operation.
+/// Returns nullptr if no LayoutAttr is found.
+LayoutAttr getLayoutAttr(Value value);
+
+/// Retrieves the name for the LayoutAttr associated with a given OpOperand.
+std::string getLayoutName(OpOperand &opr);
+
+/// Retrieves the name for the LayoutAttr associated with a given OpResult.
+std::string getLayoutName(OpResult res);
 
 } // namespace xegpu
 

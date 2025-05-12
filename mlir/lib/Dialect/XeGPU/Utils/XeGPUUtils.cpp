@@ -12,6 +12,8 @@
 
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/IR/Operation.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
 
@@ -83,3 +85,41 @@ mlir::xegpu::getDistributedVectorType(VectorType originalType,
       /*memory_space=*/xegpu::MemorySpace::Global, layout);
   return xegpu::getDistributedVectorType(helperTdescTy);
 }
+
+xegpu::LayoutAttr xegpu::getLayoutAttr(Value value) {
+  if (!value)
+    return LayoutAttr();
+
+  if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(value.getType()))
+    return tdescTy.getLayoutAttr();
+
+  if (auto result = dyn_cast<OpResult>(value)) {
+    Operation *defOp = result.getDefiningOp();
+    assert(defOp && "result must have a defining op");
+    std::string layoutName = getLayoutName(result);
+    if (defOp->hasAttr(layoutName))
+      return defOp->getAttrOfType<xegpu::LayoutAttr>(layoutName);
+  }
+
+  if (auto arg = dyn_cast<BlockArgument>(value)) {
+    auto parentOp = arg.getOwner()->getParentOp();
+    if (auto funcOp = dyn_cast<FuncOp>(parentOp)) {
+      std::string layoutName = getLayoutName(arg);
+      if (funcOp->hasAttr(layoutName))
+        return funcOp->getAttrOfType<xegpu::LayoutAttr>(layoutName);
+    }
+  }
+
+  return nullptr;
+}
+
+std::string xegpu::getLayoutName(OpOperand &opr) {
+  const StringRef prefix("layout_operand_");
+  return llvm::formatv("{0}{1}", prefix, opr.getOperandNumber()).str();
+}
+
+std::string xegpu::getLayoutName(OpResult res) {
+  const StringRef prefix = "layout_result_";
+  return llvm::formatv("{0}{1}", prefix, res.getResultNumber()).str();
+}
+
