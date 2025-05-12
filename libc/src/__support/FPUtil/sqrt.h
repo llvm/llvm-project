@@ -35,6 +35,14 @@ template <> LIBC_INLINE double sqrt<double>(double x) {
 }
 #endif // LIBC_TARGET_CPU_HAS_FPU_DOUBLE
 
+// Use 80-bit long double instruction on x86.
+// https://godbolt.org/z/oWEaj6hxK
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+template <> LIBC_INLINE long double sqrt<long double>(long double x) {
+  return __builtin_elementwise_sqrt(x);
+}
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 

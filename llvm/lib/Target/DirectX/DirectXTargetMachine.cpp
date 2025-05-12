@@ -19,6 +19,7 @@
 #include "DXILIntrinsicExpansion.h"
 #include "DXILLegalizePass.h"
 #include "DXILOpLowering.h"
+#include "DXILPostOptimizationValidation.h"
 #include "DXILPrettyPrinter.h"
 #include "DXILResourceAccess.h"
 #include "DXILRootSignature.h"
@@ -63,6 +64,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeDXILOpLoweringLegacyPass(*PR);
   initializeDXILResourceAccessLegacyPass(*PR);
   initializeDXILTranslateMetadataLegacyPass(*PR);
+  initializeDXILPostOptimizationValidationLegacyPass(*PR);
   initializeShaderFlagsAnalysisWrapperPass(*PR);
   initializeRootSignatureAnalysisWrapperPass(*PR);
   initializeDXILFinalizeLinkageLegacyPass(*PR);
@@ -110,6 +112,7 @@ public:
     addPass(createDXILForwardHandleAccessesLegacyPass());
     addPass(createDXILLegalizeLegacyPass());
     addPass(createDXILTranslateMetadataLegacyPass());
+    addPass(createDXILPostOptimizationValidationLegacyPass());
     addPass(createDXILOpLoweringLegacyPass());
     addPass(createDXILPrepareModulePass());
   }

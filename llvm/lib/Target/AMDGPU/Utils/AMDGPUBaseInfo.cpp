@@ -1190,8 +1190,6 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
   return IsWave32 ? 8 : 4;
 }
 
-unsigned getArchVGPRAllocGranule() { return 4; }
-
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
@@ -2512,10 +2510,8 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   unsigned OpType = Desc.operands()[OpNo].OperandType;
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
-  case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
-  case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
