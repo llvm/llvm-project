@@ -247,9 +247,8 @@ void DiagnosticRenderer::emitImportStackRecursively(FullSourceLoc Loc,
 void DiagnosticRenderer::emitModuleBuildStack(const SourceManager &SM) {
   ModuleBuildStack Stack = SM.getModuleBuildStack();
   for (const auto &I : Stack) {
-    emitBuildingModuleLocation(I.second, I.second.getPresumedLoc(
-                                              DiagOpts.ShowPresumedLoc),
-                               I.first);
+    emitBuildingModuleLocation(
+        I.second, I.second.getPresumedLoc(DiagOpts.ShowPresumedLoc), I.first);
   }
 }
 

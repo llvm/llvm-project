@@ -690,10 +690,10 @@ namespace {
                                bool Complain) override {
       Out.indent(2) << "Diagnostic options:\n";
 #define DIAGOPT(Name, Bits, Default) DUMP_BOOLEAN(DiagOpts.Name, #Name);
-#define ENUM_DIAGOPT(Name, Type, Bits, Default) \
-      Out.indent(4) << #Name << ": " << DiagOpts.get##Name() << "\n";
-#define VALUE_DIAGOPT(Name, Bits, Default) \
-      Out.indent(4) << #Name << ": " << DiagOpts.Name << "\n";
+#define ENUM_DIAGOPT(Name, Type, Bits, Default)                              \
+    Out.indent(4) << #Name << ": " << DiagOpts.get##Name() << "\n";
+#define VALUE_DIAGOPT(Name, Bits, Default)                                   \
+    Out.indent(4) << #Name << ": " << DiagOpts.Name << "\n";
 #include "clang/Basic/DiagnosticOptions.def"
 
       Out.indent(4) << "Diagnostic flags:\n";

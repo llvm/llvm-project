@@ -193,8 +193,7 @@ bool ChainedASTReaderListener::ReadTargetOptions(
 }
 
 bool ChainedASTReaderListener::ReadDiagnosticOptions(
-    DiagnosticOptions &DiagOpts, StringRef ModuleFilename,
-    bool Complain) {
+    DiagnosticOptions &DiagOpts, StringRef ModuleFilename, bool Complain) {
   return First->ReadDiagnosticOptions(DiagOpts, ModuleFilename, Complain) ||
          Second->ReadDiagnosticOptions(DiagOpts, ModuleFilename, Complain);
 }
@@ -6425,7 +6424,7 @@ bool ASTReader::ParseDiagnosticOptions(const RecordData &Record,
   DiagnosticOptions DiagOpts;
   unsigned Idx = 0;
 #define DIAGOPT(Name, Bits, Default) DiagOpts.Name = Record[Idx++];
-#define ENUM_DIAGOPT(Name, Type, Bits, Default) \
+#define ENUM_DIAGOPT(Name, Type, Bits, Default)                                \
   DiagOpts.set##Name(static_cast<Type>(Record[Idx++]));
 #include "clang/Basic/DiagnosticOptions.def"
 

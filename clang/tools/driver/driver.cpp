@@ -327,8 +327,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   // actions.
   DiagOpts->DiagnosticSuppressionMappingsFile.clear();
 
-  TextDiagnosticPrinter *DiagClient
-    = new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
   FixupDiagPrefixExeName(DiagClient, ProgName);
 
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());

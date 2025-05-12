@@ -49,8 +49,7 @@ ModularizeUtilities::ModularizeUtilities(std::vector<std::string> &InputPaths,
       // Init clang stuff needed for loading the module map and preprocessing.
       LangOpts(new LangOptions()), DiagIDs(new DiagnosticIDs()),
       DC(llvm::errs(), DiagnosticOpts),
-      Diagnostics(
-          new DiagnosticsEngine(DiagIDs, DiagnosticOpts, &DC, false)),
+      Diagnostics(new DiagnosticsEngine(DiagIDs, DiagnosticOpts, &DC, false)),
       TargetOpts(new ModuleMapTargetOptions()),
       Target(TargetInfo::CreateTargetInfo(*Diagnostics, *TargetOpts)),
       FileMgr(new FileManager(FileSystemOpts)),

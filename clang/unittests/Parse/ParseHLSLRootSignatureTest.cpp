@@ -67,8 +67,7 @@ class ParseHLSLRootSignatureTest : public ::testing::Test {
 protected:
   ParseHLSLRootSignatureTest()
       : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
-        Consumer(new ExpectedDiagConsumer()),
-        Diags(DiagID, DiagOpts, Consumer),
+        Consumer(new ExpectedDiagConsumer()), Diags(DiagID, DiagOpts, Consumer),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     // This is an arbitrarily chosen target triple to create the target info.
     TargetOpts->Triple = "dxil";

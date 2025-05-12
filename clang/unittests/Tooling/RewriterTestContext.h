@@ -60,7 +60,7 @@ class RewriterTestContext {
      // FIXME: To make these tests truly in-memory, we need to overlay the
      // builtin headers.
      OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  }
+   }
 
   ~RewriterTestContext() {}
 

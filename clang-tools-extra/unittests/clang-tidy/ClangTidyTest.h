@@ -97,8 +97,7 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
       ClangTidyGlobalOptions(), Options));
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
   auto DiagOpts = std::make_unique<DiagnosticOptions>();
-  DiagnosticsEngine DE(new DiagnosticIDs(), *DiagOpts,
-                       &DiagConsumer, false);
+  DiagnosticsEngine DE(new DiagnosticIDs(), *DiagOpts, &DiagConsumer, false);
   Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
 
   std::vector<std::string> Args(1, "clang-tidy");

@@ -998,8 +998,7 @@ static void highlightRange(const LineRange &R, const SourceColumnMap &Map,
   std::fill(CaretLine.begin() + StartColNo, CaretLine.begin() + EndColNo, '~');
 }
 
-static std::string buildFixItInsertionLine(FileID FID,
-                                           unsigned LineNo,
+static std::string buildFixItInsertionLine(FileID FID, unsigned LineNo,
                                            const SourceColumnMap &map,
                                            ArrayRef<FixItHint> Hints,
                                            const SourceManager &SM,
@@ -1398,8 +1397,8 @@ void TextDiagnostic::emitSnippetAndCaret(
       CaretLine[Col] = '^';
     }
 
-    std::string FixItInsertionLine = buildFixItInsertionLine(
-        FID, LineNo, sourceColMap, Hints, SM, DiagOpts);
+    std::string FixItInsertionLine =
+        buildFixItInsertionLine(FID, LineNo, sourceColMap, Hints, SM, DiagOpts);
 
     // If the source line is too long for our terminal, select only the
     // "interesting" source region within that line.

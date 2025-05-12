@@ -42,8 +42,8 @@ int RefactoringTool::runAndSave(FrontendActionFactory *ActionFactory) {
   DiagnosticOptions DiagOpts;
   TextDiagnosticPrinter DiagnosticPrinter(llvm::errs(), DiagOpts);
   DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()),
-      DiagOpts, &DiagnosticPrinter, false);
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts,
+      &DiagnosticPrinter, false);
   SourceManager Sources(Diagnostics, getFiles());
   Rewriter Rewrite(Sources, DefaultLangOptions);
 

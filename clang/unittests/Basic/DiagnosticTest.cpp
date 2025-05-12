@@ -47,8 +47,7 @@ using testing::IsEmpty;
 // Check that DiagnosticErrorTrap works with SuppressAllDiagnostics.
 TEST(DiagnosticTest, suppressAndTrap) {
   DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diags(new DiagnosticIDs(),
-                          DiagOpts,
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts,
                           new IgnoringDiagConsumer());
   Diags.setSuppressAllDiagnostics(true);
 
@@ -79,8 +78,7 @@ TEST(DiagnosticTest, suppressAndTrap) {
 TEST(DiagnosticTest, fatalsAsError) {
   for (unsigned FatalsAsError = 0; FatalsAsError != 2; ++FatalsAsError) {
     DiagnosticOptions DiagOpts;
-    DiagnosticsEngine Diags(new DiagnosticIDs(),
-                            DiagOpts,
+    DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts,
                             new IgnoringDiagConsumer());
     Diags.setFatalsAsError(FatalsAsError);
 

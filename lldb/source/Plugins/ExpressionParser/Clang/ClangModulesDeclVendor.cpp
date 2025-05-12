@@ -711,8 +711,8 @@ ClangModulesDeclVendor::Create(Target &target) {
       clang::CreateAndPopulateDiagOpts(compiler_invocation_argument_cstrs);
   llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine =
       clang::CompilerInstance::createDiagnostics(
-          *FileSystem::Instance().GetVirtualFileSystem(),
-          *diag_options_up, new StoringDiagnosticConsumer);
+          *FileSystem::Instance().GetVirtualFileSystem(), *diag_options_up,
+          new StoringDiagnosticConsumer);
 
   Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOG(log, "ClangModulesDeclVendor's compiler flags {0:$[ ]}",
@@ -772,8 +772,7 @@ ClangModulesDeclVendor::Create(Target &target) {
   while (!parser->ParseTopLevelDecl(parsed, ImportState))
     ;
 
-  return new ClangModulesDeclVendorImpl(std::move(diag_options_up),
-                                        std::move(diagnostics_engine),
-                                        std::move(invocation),
-                                        std::move(instance), std::move(parser));
+  return new ClangModulesDeclVendorImpl(
+      std::move(diag_options_up), std::move(diagnostics_engine),
+      std::move(invocation), std::move(instance), std::move(parser));
 }

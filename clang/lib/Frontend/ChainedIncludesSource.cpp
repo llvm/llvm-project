@@ -117,7 +117,7 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
     CInvok->getFrontendOpts().Inputs.push_back(InputFile);
 
     TextDiagnosticPrinter *DiagClient =
-      new TextDiagnosticPrinter(llvm::errs(), CI.getDiagnosticOpts());
+        new TextDiagnosticPrinter(llvm::errs(), CI.getDiagnosticOpts());
     IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
         new DiagnosticsEngine(DiagID, CI.getDiagnosticOpts(), DiagClient));

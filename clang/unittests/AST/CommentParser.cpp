@@ -33,12 +33,9 @@ const bool MY_DEBUG = true;
 class CommentParserTest : public ::testing::Test {
 protected:
   CommentParserTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      Traits(Allocator, CommentOptions()) {
-  }
+      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
+        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), Traits(Allocator, CommentOptions()) {}
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;

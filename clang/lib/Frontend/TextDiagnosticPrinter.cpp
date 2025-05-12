@@ -24,9 +24,7 @@ using namespace clang;
 TextDiagnosticPrinter::TextDiagnosticPrinter(raw_ostream &os,
                                              DiagnosticOptions &DiagOpts,
                                              bool _OwnsOutputStream)
-  : OS(os), DiagOpts(DiagOpts),
-    OwnsOutputStream(_OwnsOutputStream) {
-}
+    : OS(os), DiagOpts(DiagOpts), OwnsOutputStream(_OwnsOutputStream) {}
 
 TextDiagnosticPrinter::~TextDiagnosticPrinter() {
   if (OwnsOutputStream)

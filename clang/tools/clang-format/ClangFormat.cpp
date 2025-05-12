@@ -242,8 +242,7 @@ static bool fillRanges(MemoryBuffer *Code,
   FileManager Files(FileSystemOptions(), InMemoryFileSystem);
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-      DiagOpts);
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts);
   SourceManager Sources(Diagnostics, Files);
   FileID ID = createInMemoryFile("<irrelevant>", *Code, Sources, Files,
                                  InMemoryFileSystem.get());

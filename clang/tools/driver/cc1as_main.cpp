@@ -659,8 +659,8 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // Construct our diagnostic client.
   DiagnosticOptions DiagOpts;
-  TextDiagnosticPrinter *DiagClient
-    = new TextDiagnosticPrinter(errs(), DiagOpts);
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(errs(), DiagOpts);
   DiagClient->setPrefix("clang -cc1as");
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
   DiagnosticsEngine Diags(DiagID, DiagOpts, DiagClient);

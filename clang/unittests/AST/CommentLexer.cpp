@@ -27,12 +27,9 @@ namespace {
 class CommentLexerTest : public ::testing::Test {
 protected:
   CommentLexerTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      Traits(Allocator, CommentOptions()) {
-  }
+      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
+        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), Traits(Allocator, CommentOptions()) {}
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;

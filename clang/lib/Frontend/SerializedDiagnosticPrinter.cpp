@@ -58,7 +58,7 @@ class SDiagsRenderer : public DiagnosticNoteRenderer {
 public:
   SDiagsRenderer(SDiagsWriter &Writer, const LangOptions &LangOpts,
                  DiagnosticOptions &DiagOpts)
-    : DiagnosticNoteRenderer(LangOpts, DiagOpts), Writer(Writer) {}
+      : DiagnosticNoteRenderer(LangOpts, DiagOpts), Writer(Writer) {}
 
   ~SDiagsRenderer() override {}
 
@@ -295,9 +295,11 @@ private:
 
 namespace clang {
 namespace serialized_diags {
-std::unique_ptr<DiagnosticConsumer>
-create(StringRef OutputFile, DiagnosticOptions &DiagOpts, bool MergeChildRecords) {
-  return std::make_unique<SDiagsWriter>(OutputFile, DiagOpts, MergeChildRecords);
+std::unique_ptr<DiagnosticConsumer> create(StringRef OutputFile,
+                                           DiagnosticOptions &DiagOpts,
+                                           bool MergeChildRecords) {
+  return std::make_unique<SDiagsWriter>(OutputFile, DiagOpts,
+                                        MergeChildRecords);
 }
 
 } // end namespace serialized_diags
@@ -755,10 +757,9 @@ DiagnosticsEngine *SDiagsWriter::getMetaDiags() {
   //    normally not be used.
   if (!State->MetaDiagnostics) {
     IntrusiveRefCntPtr<DiagnosticIDs> IDs(new DiagnosticIDs());
-    auto Client =
-        new TextDiagnosticPrinter(llvm::errs(), State->DiagOpts);
-    State->MetaDiagnostics = std::make_unique<DiagnosticsEngine>(
-        IDs, State->DiagOpts, Client);
+    auto Client = new TextDiagnosticPrinter(llvm::errs(), State->DiagOpts);
+    State->MetaDiagnostics =
+        std::make_unique<DiagnosticsEngine>(IDs, State->DiagOpts, Client);
   }
   return State->MetaDiagnostics.get();
 }

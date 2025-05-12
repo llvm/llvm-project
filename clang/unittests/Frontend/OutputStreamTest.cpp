@@ -62,9 +62,9 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamShared) {
 
   Compiler.setOutputStream(std::make_unique<raw_null_ostream>());
   DiagnosticOptions DiagOpts;
-  Compiler.createDiagnostics(
-      *llvm::vfs::getRealFileSystem(),
-      new TextDiagnosticPrinter(llvm::nulls(), DiagOpts), true);
+  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                             new TextDiagnosticPrinter(llvm::nulls(), DiagOpts),
+                             true);
   Compiler.setVerboseOutputStream(VerboseStream);
 
   bool Success = ExecuteCompilerInvocation(&Compiler);

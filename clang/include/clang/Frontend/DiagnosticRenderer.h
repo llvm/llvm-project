@@ -68,8 +68,7 @@ protected:
   /// which change the amount of information displayed.
   DiagnosticsEngine::Level LastLevel = DiagnosticsEngine::Ignored;
 
-  DiagnosticRenderer(const LangOptions &LangOpts,
-                     DiagnosticOptions &DiagOpts);
+  DiagnosticRenderer(const LangOptions &LangOpts, DiagnosticOptions &DiagOpts);
 
   virtual ~DiagnosticRenderer();
 

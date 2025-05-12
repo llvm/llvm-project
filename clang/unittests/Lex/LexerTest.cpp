@@ -41,12 +41,9 @@ using testing::ElementsAre;
 class LexerTest : public ::testing::Test {
 protected:
   LexerTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      TargetOpts(new TargetOptions)
-  {
+      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
+        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }

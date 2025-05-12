@@ -770,9 +770,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
 
     // The AST unit populates its own diagnostics engine rather than ours.
-    IntrusiveRefCntPtr<DiagnosticsEngine> ASTDiags(
-        new DiagnosticsEngine(Diags->getDiagnosticIDs(),
-                              Diags->getDiagnosticOptions()));
+    IntrusiveRefCntPtr<DiagnosticsEngine> ASTDiags(new DiagnosticsEngine(
+        Diags->getDiagnosticIDs(), Diags->getDiagnosticOptions()));
     ASTDiags->setClient(Diags->getClient(), /*OwnsClient*/false);
 
     // FIXME: What if the input is a memory buffer?

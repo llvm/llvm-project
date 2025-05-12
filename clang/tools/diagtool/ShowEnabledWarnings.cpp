@@ -67,8 +67,7 @@ createDiagnostics(unsigned int argc, char **argv) {
   Args.push_back("diagtool");
   Args.append(argv, argv + argc);
   CreateInvocationOptions CIOpts;
-  CIOpts.Diags =
-      new DiagnosticsEngine(DiagIDs, DiagOpts, DiagsBuffer);
+  CIOpts.Diags = new DiagnosticsEngine(DiagIDs, DiagOpts, DiagsBuffer);
   std::unique_ptr<CompilerInvocation> Invocation =
       createInvocation(Args, CIOpts);
   if (!Invocation)

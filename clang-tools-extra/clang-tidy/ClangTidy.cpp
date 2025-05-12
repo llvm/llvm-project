@@ -558,8 +558,8 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
 
   ClangTidyDiagnosticConsumer DiagConsumer(Context, nullptr, true, ApplyAnyFix);
   auto DiagOpts = std::make_unique<DiagnosticOptions>();
-  DiagnosticsEngine DE(new DiagnosticIDs(), *DiagOpts,
-                       &DiagConsumer, /*ShouldOwnClient=*/false);
+  DiagnosticsEngine DE(new DiagnosticIDs(), *DiagOpts, &DiagConsumer,
+                       /*ShouldOwnClient=*/false);
   Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
   Tool.setDiagnosticConsumer(&DiagConsumer);
 

@@ -257,7 +257,7 @@ struct AllocatedCXCodeCompleteResults : public CXCodeCompleteResults {
   SmallVector<std::unique_ptr<CXStoredDiagnostic>, 8> DiagnosticsWrappers;
 
   DiagnosticOptions DiagOpts;
-  
+
   /// Diag object
   IntrusiveRefCntPtr<DiagnosticsEngine> Diag;
   
@@ -369,7 +369,7 @@ AllocatedCXCodeCompleteResults::AllocatedCXCodeCompleteResults(
     fprintf(stderr, "+++ %u completion results\n",
             ++CodeCompletionResultObjects);
 }
-  
+
 AllocatedCXCodeCompleteResults::~AllocatedCXCodeCompleteResults() {
   delete [] Results;
 
