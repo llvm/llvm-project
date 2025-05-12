@@ -285,7 +285,8 @@ protected:
 
       FunctionPassManager FPM;
       FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-      FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
+      // Since this is the last pass in the pipeline, we can clear all analyses
+      FPM.addPass(FreeAllAnalysesPass());
       if (this->PB.AddInCGSCCOrder) {
         MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
             createCGSCCToFunctionPassAdaptor(std::move(FPM))));
