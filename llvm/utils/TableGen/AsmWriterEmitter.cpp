@@ -660,8 +660,9 @@ void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
   if (hasAltNames) {
     for (const Record *R : AltNameIndices)
       emitRegisterNameString(O, R->getName(), Registers);
-  } else
+  } else {
     emitRegisterNameString(O, "", Registers);
+  }
 
   if (hasAltNames) {
     O << "  switch(AltIdx) {\n"
@@ -969,8 +970,9 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
               if (!Rec->isValueUnset("MCOperandPredicate")) {
                 MCOpPredicates.push_back(Rec);
                 Entry = MCOpPredicates.size();
-              } else
+              } else {
                 break; // No conditions on this operand at all
+              }
             }
             IAP.addCond(
                 std::string(formatv("AliasPatternCond::K_Custom, {}", Entry)));
