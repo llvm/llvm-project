@@ -196,20 +196,13 @@ DWARFUnit::ScopedExtractDIEs::ScopedExtractDIEs(DWARFUnit &cu) : m_cu(&cu) {
 DWARFUnit::ScopedExtractDIEs::~ScopedExtractDIEs() {
   if (!m_cu)
     return;
-  {
-    llvm::sys::ScopedLock lock(m_cu->m_die_array_scoped_mutex);
-    --m_cu->m_die_array_scoped_count;
-    if (m_cu->m_die_array_scoped_count == 0)
-      return;
+  llvm::sys::ScopedLock lock(m_cu->m_die_array_scoped_mutex);
+  --m_cu->m_die_array_scoped_count;
+  if (m_cu->m_die_array_scoped_count == 0 && m_clear_dies &&
+      !m_cu->m_cancel_scopes) {
+    llvm::sys::ScopedWriter lock(m_cu->m_die_array_mutex);
+    m_cu->ClearDIEsRWLocked();
   }
-  if (!m_clear_dies || m_cu->m_cancel_scopes)
-    return;
-  // Be sure no other ScopedExtractDIEs is running anymore.
-  llvm::sys::ScopedLock lock_scoped(m_cu->m_die_array_scoped_mutex);
-  llvm::sys::ScopedWriter lock(m_cu->m_die_array_mutex);
-  if (m_cu->m_cancel_scopes)
-    return;
-  m_cu->ClearDIEsRWLocked();
 }
 
 DWARFUnit::ScopedExtractDIEs::ScopedExtractDIEs(ScopedExtractDIEs &&rhs)
