@@ -378,16 +378,34 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
         IITDescriptor::get(IITDescriptor::OneThirdVecArgument, ArgInfo));
     return;
   }
+  case IIT_ONE_FOURTH_VEC_ARG: {
+    unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    OutputTable.push_back(
+        IITDescriptor::get(IITDescriptor::OneFourthVecArgument, ArgInfo));
+    return;
+  }
   case IIT_ONE_FIFTH_VEC_ARG: {
     unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::OneFifthVecArgument, ArgInfo));
     return;
   }
+  case IIT_ONE_SIXTH_VEC_ARG: {
+    unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    OutputTable.push_back(
+        IITDescriptor::get(IITDescriptor::OneSixthVecArgument, ArgInfo));
+    return;
+  }
   case IIT_ONE_SEVENTH_VEC_ARG: {
     unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::OneSeventhVecArgument, ArgInfo));
+    return;
+  }
+  case IIT_ONE_EIGHTH_VEC_ARG: {
+    unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    OutputTable.push_back(
+        IITDescriptor::get(IITDescriptor::OneEighthVecArgument, ArgInfo));
     return;
   }
   case IIT_SAME_VEC_WIDTH_ARG: {
@@ -584,11 +602,14 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return VectorType::getHalfElementsVectorType(
         cast<VectorType>(Tys[D.getArgumentNumber()]));
   case IITDescriptor::OneThirdVecArgument:
+  case IITDescriptor::OneFourthVecArgument:
   case IITDescriptor::OneFifthVecArgument:
+  case IITDescriptor::OneSixthVecArgument:
   case IITDescriptor::OneSeventhVecArgument:
+  case IITDescriptor::OneEighthVecArgument:
     return VectorType::getOneNthElementsVectorType(
         cast<VectorType>(Tys[D.getArgumentNumber()]),
-        3 + (D.Kind - IITDescriptor::OneThirdVecArgument) * 2);
+        3 + (D.Kind - IITDescriptor::OneThirdVecArgument));
   case IITDescriptor::SameVecWidthArgument: {
     Type *EltTy = DecodeFixedType(Infos, Tys, Context);
     Type *Ty = Tys[D.getArgumentNumber()];
@@ -974,15 +995,18 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
            VectorType::getHalfElementsVectorType(
                cast<VectorType>(ArgTys[D.getArgumentNumber()])) != Ty;
   case IITDescriptor::OneThirdVecArgument:
+  case IITDescriptor::OneFourthVecArgument:
   case IITDescriptor::OneFifthVecArgument:
+  case IITDescriptor::OneSixthVecArgument:
   case IITDescriptor::OneSeventhVecArgument:
+  case IITDescriptor::OneEighthVecArgument:
     // If this is a forward reference, defer the check for later.
     if (D.getArgumentNumber() >= ArgTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
     return !isa<VectorType>(ArgTys[D.getArgumentNumber()]) ||
            VectorType::getOneNthElementsVectorType(
                cast<VectorType>(ArgTys[D.getArgumentNumber()]),
-               3 + (D.Kind - IITDescriptor::OneThirdVecArgument) * 2) != Ty;
+               3 + (D.Kind - IITDescriptor::OneThirdVecArgument)) != Ty;
   case IITDescriptor::SameVecWidthArgument: {
     if (D.getArgumentNumber() >= ArgTys.size()) {
       // Defer check and subsequent check for the vector element type.

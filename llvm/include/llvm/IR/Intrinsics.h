@@ -153,8 +153,11 @@ namespace Intrinsic {
       TruncArgument,
       HalfVecArgument,
       OneThirdVecArgument,
+      OneFourthVecArgument,
       OneFifthVecArgument,
+      OneSixthVecArgument,
       OneSeventhVecArgument,
+      OneEighthVecArgument,
       SameVecWidthArgument,
       VecOfAnyPtrsToElt,
       VecElementArgument,
@@ -167,8 +170,11 @@ namespace Intrinsic {
     } Kind;
 
     // These three have to be contiguous.
-    static_assert(OneFifthVecArgument == OneThirdVecArgument + 1 &&
-                  OneSeventhVecArgument == OneFifthVecArgument + 1);
+    static_assert(OneFourthVecArgument == OneThirdVecArgument + 1 &&
+                  OneFifthVecArgument == OneFourthVecArgument + 1 &&
+                  OneSixthVecArgument == OneFifthVecArgument + 1 &&
+                  OneSeventhVecArgument == OneSixthVecArgument + 1 &&
+                  OneEighthVecArgument == OneSeventhVecArgument + 1);
     union {
       unsigned Integer_Width;
       unsigned Float_Width;
@@ -188,19 +194,23 @@ namespace Intrinsic {
     unsigned getArgumentNumber() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == OneThirdVecArgument || Kind == OneFifthVecArgument ||
-             Kind == OneSeventhVecArgument || Kind == SameVecWidthArgument ||
-             Kind == VecElementArgument || Kind == Subdivide2Argument ||
-             Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
+             Kind == OneThirdVecArgument || Kind == OneFourthVecArgument ||
+             Kind == OneFifthVecArgument || Kind == OneSixthVecArgument ||
+             Kind == OneSeventhVecArgument || Kind == OneEighthVecArgument ||
+             Kind == SameVecWidthArgument || Kind == VecElementArgument ||
+             Kind == Subdivide2Argument || Kind == Subdivide4Argument ||
+             Kind == VecOfBitcastsToInt);
       return Argument_Info >> 3;
     }
     ArgKind getArgumentKind() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == OneThirdVecArgument || Kind == OneFifthVecArgument ||
-             Kind == OneSeventhVecArgument || Kind == SameVecWidthArgument ||
-             Kind == VecElementArgument || Kind == Subdivide2Argument ||
-             Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
+             Kind == OneThirdVecArgument || Kind == OneFourthVecArgument ||
+             Kind == OneFifthVecArgument || Kind == OneSixthVecArgument ||
+             Kind == OneSeventhVecArgument || Kind == OneEighthVecArgument ||
+             Kind == SameVecWidthArgument || Kind == VecElementArgument ||
+             Kind == Subdivide2Argument || Kind == Subdivide4Argument ||
+             Kind == VecOfBitcastsToInt);
       return (ArgKind)(Argument_Info & 7);
     }
 
