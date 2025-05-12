@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_DECLARE_SINCOS(ADDRSPACE, TYPE) \
-  _CLC_OVERLOAD _CLC_DEF TYPE sincos (TYPE x, ADDRSPACE TYPE * cosval) { \
-    *cosval = cos(x); \
-    return sin(x); \
+#define __CLC_DECLARE_SINCOS(ADDRSPACE, TYPE)                                  \
+  _CLC_OVERLOAD _CLC_DEF TYPE __clc_sincos(TYPE x, ADDRSPACE TYPE *cosval) {   \
+    *cosval = __clc_cos(x);                                                    \
+    return __clc_sin(x);                                                       \
   }
 
 __CLC_DECLARE_SINCOS(global, __CLC_GENTYPE)

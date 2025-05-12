@@ -55,7 +55,6 @@ math/fma.cl
 ../../generic/lib/math/log2.cl
 ../../generic/lib/math/logb.cl
 ../../generic/lib/math/modf.cl
-../../generic/lib/math/tables.cl
 ../../generic/lib/math/pow.cl
 ../../generic/lib/math/pown.cl
 ../../generic/lib/math/powr.cl
@@ -64,7 +63,6 @@ math/fma.cl
 ../../generic/lib/math/rootn.cl
 ../../generic/lib/math/sin.cl
 ../../generic/lib/math/sincos.cl
-../../generic/lib/math/sincos_helpers.cl
 ../../generic/lib/math/sinh.cl
 ../../generic/lib/math/sinpi.cl
 ../../generic/lib/math/clc_tan.cl
