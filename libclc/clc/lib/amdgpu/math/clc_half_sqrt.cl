@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
- 
-#define __CLC_FUNC log
+#include <clc/math/clc_native_sqrt.h>
+
+#define __CLC_FUNC sqrt
 #define __FLOAT_ONLY
-#define __CLC_BODY <half_native_unary.inc>
+#define __CLC_BODY <clc_half_native_unary.inc>
 #include <clc/math/gentype.inc>
