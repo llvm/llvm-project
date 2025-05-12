@@ -2242,6 +2242,9 @@ include "RISCVInstrInfoZclsd.td"
 // Short Forward Branch
 include "RISCVInstrInfoSFB.td"
 
+// Zihintpause extensions
+include "RISCVInstrInfoZihintpause.td"
+
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
