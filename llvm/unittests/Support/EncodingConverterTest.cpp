@@ -1,4 +1,4 @@
-//===- unittests/Support/CharSetTest.cpp - Charset conversion tests -------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/CharSet.h"
+#include "llvm/Support/EncodingConverter.h"
 #include "llvm/ADT/SmallString.h"
 #include "gtest/gtest.h"
 using namespace llvm;
@@ -53,7 +53,7 @@ static const char EarthIBM939[] =
 static const char EarthUTFExtraPartial[] =
     "\x45\x61\x72\x74\x68\xe5\x9c\xb0\xe7\x90\x83\xe5";
 
-TEST(CharSet, FromUTF8) {
+TEST(Encoding, FromUTF8) {
   // Hello string.
   StringRef Src(HelloA);
   SmallString<64> Dst;
@@ -93,7 +93,7 @@ TEST(CharSet, FromUTF8) {
   EXPECT_EQ(EC, std::errc::illegal_byte_sequence);
 }
 
-TEST(CharSet, ToUTF8) {
+TEST(Encoding, ToUTF8) {
   // Hello string.
   StringRef Src(HelloE);
   SmallString<64> Dst;
@@ -128,7 +128,7 @@ TEST(CharSet, ToUTF8) {
   EXPECT_STREQ(AccentUTF, static_cast<std::string>(Dst).c_str());
 }
 
-TEST(CharSet, RoundTrip) {
+TEST(Encoding, RoundTrip) {
   ErrorOr<EncodingConverter> ConvToUTF16 =
       EncodingConverter::create("IBM-1047", "UTF-16");
   // Stop test if conversion is not supported (no underlying iconv support).
@@ -170,7 +170,7 @@ TEST(CharSet, RoundTrip) {
   EXPECT_STREQ(SrcStr, static_cast<std::string>(Dst3Str).c_str());
 }
 
-TEST(CharSet, ShiftState2022) {
+TEST(Encoding, ShiftState2022) {
   // Earth string.
   StringRef Src(EarthUTF);
   SmallString<8> Dst;
@@ -190,7 +190,7 @@ TEST(CharSet, ShiftState2022) {
   EXPECT_STREQ(EarthISO2022, static_cast<std::string>(Dst).c_str());
 }
 
-TEST(CharSet, ShiftState2022Partial) {
+TEST(Encoding, InvalidInput) {
   // Earth string.
   StringRef Src(EarthUTFExtraPartial);
   SmallString<8> Dst;
@@ -204,12 +204,12 @@ TEST(CharSet, ShiftState2022Partial) {
     return;
   }
 
-  // Check that the string is properly converted.
+  // Check that the string failed to convert.
   std::error_code EC = ConvTo2022->convert(Src, Dst);
   EXPECT_TRUE(EC);
 }
 
-TEST(CharSet, ShiftStateIBM939) {
+TEST(Encoding, ShiftStateIBM939) {
   // Earth string.
   StringRef Src(EarthUTF);
   SmallString<64> Dst;

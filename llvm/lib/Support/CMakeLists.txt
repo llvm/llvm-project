@@ -162,7 +162,6 @@ add_llvm_component_library(LLVMSupport
   CachePruning.cpp
   Caching.cpp
   circular_raw_ostream.cpp
-  CharSet.cpp
   Chrono.cpp
   COM.cpp
   CodeGenCoverage.cpp
@@ -187,6 +186,7 @@ add_llvm_component_library(LLVMSupport
   ELFAttributes.cpp
   ELFAttrParserCompact.cpp
   ELFAttrParserExtended.cpp
+  EncodingConverter.cpp
   Error.cpp
   ErrorHandling.cpp
   ExponentialBackoff.cpp

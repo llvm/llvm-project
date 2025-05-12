@@ -20,7 +20,6 @@ add_llvm_unittest(SupportTests
   CrashRecoveryTest.cpp
   Caching.cpp
   Casting.cpp
-  CharSetTest.cpp
   CheckedArithmeticTest.cpp
   Chrono.cpp
   CommandLineTest.cpp
@@ -40,6 +39,7 @@ add_llvm_unittest(SupportTests
   ErrnoTest.cpp
   ErrorOrTest.cpp
   ErrorTest.cpp
+  EncodingConverterTest.cpp
   ExponentialBackoffTest.cpp
   ExtensibleRTTITest.cpp
   FileCollectorTest.cpp

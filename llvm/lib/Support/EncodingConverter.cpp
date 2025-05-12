@@ -1,4 +1,4 @@
-//===-- CharSet.cpp - Characters sets conversion class ------------*- C++ -*-=//
+//===-- EncodingConverter.cpp - Encoding conversion class ---------*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,11 +8,11 @@
 ///
 /// \file
 /// This file provides utility classes to convert between different character
-/// set encodings.
+/// encodings.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/CharSet.h"
+#include "llvm/Support/EncodingConverter.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -46,10 +46,10 @@ static void normalizeCharSetName(StringRef CSName,
   }
 }
 
-// Maps the charset name to enum constant if possible.
-static std::optional<TextEncoding> getKnownEncoding(StringRef CSName) {
+// Maps the encoding name to enum constant if possible.
+static std::optional<TextEncoding> getKnownEncoding(StringRef Name) {
   SmallString<16> Normalized;
-  normalizeCharSetName(CSName, Normalized);
+  normalizeCharSetName(Name, Normalized);
   if (Normalized.equals("utf8"))
     return TextEncoding::UTF8;
   if (Normalized.equals("ibm1047"))
@@ -63,9 +63,8 @@ HandleOverflow(size_t &Capacity, char *&Output, size_t &OutputLength,
   // No space left in output buffer. Double the size of the underlying
   // memory in the SmallVectorImpl, adjust pointer and length and continue
   // the conversion.
-  Capacity = (Capacity < std::numeric_limits<size_t>::max() / 2)
-                 ? 2 * Capacity
-                 : std::numeric_limits<size_t>::max();
+  Capacity =
+      (Capacity < Result.max_size() / 2) ? 2 * Capacity : Result.max_size();
   Result.resize(0);
   Result.resize_for_overwrite(Capacity);
   Output = static_cast<char *>(Result.data());
@@ -80,9 +79,9 @@ enum ConversionType {
 
 // Support conversion between EBCDIC 1047 and UTF-8. This class uses
 // built-in translation tables that allow for translation between the
-// aforementioned character sets. The use of tables for conversion is only
+// aforementioned encodings. The use of tables for conversion is only
 // possible because EBCDIC 1047 is a single-byte, stateless encoding; other
-// character sets are not supported.
+// encodings are not supported.
 class EncodingConverterTable : public details::EncodingConverterImplBase {
   const ConversionType ConvType;
 
@@ -169,8 +168,7 @@ EncodingConverterICU::convertString(StringRef Source,
                    /*pivotLimit=*/NULL, /*reset=*/true,
                    /*flush=*/true, &EC);
     if (U_FAILURE(EC)) {
-      if (EC == U_BUFFER_OVERFLOW_ERROR &&
-          Capacity < std::numeric_limits<size_t>::max()) {
+      if (EC == U_BUFFER_OVERFLOW_ERROR && Capacity < Result.max_size()) {
         HandleOverflow(Capacity, Output, OutputLength, Result);
         continue;
       }
@@ -246,7 +244,7 @@ EncodingConverterIconv::convertString(StringRef Source,
                       this](size_t Ret) {
     if (Ret == static_cast<size_t>(-1)) {
       // An error occured. Check if we can gracefully handle it.
-      if (errno == E2BIG && Capacity < std::numeric_limits<size_t>::max()) {
+      if (errno == E2BIG && Capacity < Result.max_size()) {
         HandleOverflow(Capacity, Output, OutputLength, Result);
         // Reset converter
         iconv(ConvDesc, nullptr, nullptr, nullptr, nullptr);
@@ -301,7 +299,7 @@ void EncodingConverterIconv::reset() {
 ErrorOr<EncodingConverter> EncodingConverter::create(TextEncoding CPFrom,
                                                      TextEncoding CPTo) {
 
-  // text encodings should be distinct
+  // Text encodings should be distinct.
   if (CPFrom == CPTo)
     return std::make_error_code(std::errc::invalid_argument);
 
@@ -317,22 +315,22 @@ ErrorOr<EncodingConverter> EncodingConverter::create(TextEncoding CPFrom,
       std::make_unique<EncodingConverterTable>(Conversion));
 }
 
-ErrorOr<EncodingConverter> EncodingConverter::create(StringRef CSFrom,
-                                                     StringRef CSTo) {
-  std::optional<TextEncoding> From = getKnownEncoding(CSFrom);
-  std::optional<TextEncoding> To = getKnownEncoding(CSTo);
-  if (From && To) {
-    ErrorOr<EncodingConverter> Converter = create(*From, *To);
+ErrorOr<EncodingConverter> EncodingConverter::create(StringRef From,
+                                                     StringRef To) {
+  std::optional<TextEncoding> FromEncoding = getKnownEncoding(From);
+  std::optional<TextEncoding> ToEncoding = getKnownEncoding(To);
+  if (FromEncoding && ToEncoding) {
+    ErrorOr<EncodingConverter> Converter = create(*FromEncoding, *ToEncoding);
     if (Converter)
       return Converter;
   }
 #if HAVE_ICU
   UErrorCode EC = U_ZERO_ERROR;
-  UConverterUniquePtr FromConvDesc(ucnv_open(CSFrom.str().c_str(), &EC));
+  UConverterUniquePtr FromConvDesc(ucnv_open(From.str().c_str(), &EC));
   if (U_FAILURE(EC)) {
     return std::error_code(errno, std::generic_category());
   }
-  UConverterUniquePtr ToConvDesc(ucnv_open(CSTo.str().c_str(), &EC));
+  UConverterUniquePtr ToConvDesc(ucnv_open(To.str().c_str(), &EC));
   if (U_FAILURE(EC)) {
     return std::error_code(errno, std::generic_category());
   }
@@ -341,7 +339,7 @@ ErrorOr<EncodingConverter> EncodingConverter::create(StringRef CSFrom,
                                              std::move(ToConvDesc));
   return EncodingConverter(std::move(Converter));
 #elif HAVE_ICONV
-  iconv_t ConvDesc = iconv_open(CSTo.str().c_str(), CSFrom.str().c_str());
+  iconv_t ConvDesc = iconv_open(To.str().c_str(), From.str().c_str());
   if (ConvDesc == (iconv_t)-1)
     return std::error_code(errno, std::generic_category());
   return EncodingConverter(std::make_unique<EncodingConverterIconv>(ConvDesc));

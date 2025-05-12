@@ -1,4 +1,4 @@
-//===-- CharSet.h - Characters set conversion class ---------------*- C++ -*-=//
+//===-- EncodingConverter.h - Encoding conversion class -----------*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_CHARSET_H
-#define LLVM_SUPPORT_CHARSET_H
+#ifndef LLVM_SUPPORT_ENCODING_CONVERTER_H
+#define LLVM_SUPPORT_ENCODING_CONVERTER_H
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -44,8 +44,8 @@ private:
   ///   - std::errc::invalid_argument: The input contains an incomplete
   ///     multibyte sequence.
   ///
-  /// If the destination charset is a stateful character set, the shift state
-  /// will be set to the initial state.
+  /// If the destination encoding is stateful, the shift state will be set
+  /// to the initial state.
   ///
   /// In case of an error, the result string contains the successfully converted
   /// part of the input string.
@@ -77,7 +77,7 @@ enum class TextEncoding {
   IBM1047
 };
 
-/// Utility class to convert between different character set encodings.
+/// Utility class to convert between different character encodings.
 class EncodingConverter {
   std::unique_ptr<details::EncodingConverterImplBase> Converter;
 
@@ -89,19 +89,18 @@ public:
   /// Creates a EncodingConverter instance.
   /// Returns std::errc::invalid_argument in case the requested conversion is
   /// not supported.
-  /// \param[in] CSFrom the source character encoding
-  /// \param[in] CSTo the target character encoding
+  /// \param[in] From the source character encoding
+  /// \param[in] To the target character encoding
   /// \return a EncodingConverter instance or an error code
-  static ErrorOr<EncodingConverter> create(TextEncoding CSFrom,
-                                           TextEncoding CSTo);
+  static ErrorOr<EncodingConverter> create(TextEncoding From, TextEncoding To);
 
   /// Creates a EncodingConverter instance.
   /// Returns std::errc::invalid_argument in case the requested conversion is
   /// not supported.
-  /// \param[in] CPFrom name of the source character encoding
-  /// \param[in] CPTo name of the target character encoding
+  /// \param[in] From name of the source character encoding
+  /// \param[in] To name of the target character encoding
   /// \return a EncodingConverter instance or an error code
-  static ErrorOr<EncodingConverter> create(StringRef CPFrom, StringRef CPTo);
+  static ErrorOr<EncodingConverter> create(StringRef From, StringRef To);
 
   EncodingConverter(const EncodingConverter &) = delete;
   EncodingConverter &operator=(const EncodingConverter &) = delete;
