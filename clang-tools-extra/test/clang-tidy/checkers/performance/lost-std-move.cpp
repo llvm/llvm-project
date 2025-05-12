@@ -106,3 +106,9 @@ void f_cycle4()
     f(ptr);
   } while (*ptr);
 }
+
+int f_multiple_usages()
+{
+  std::shared_ptr<int> ptr;
+  return f(ptr) + f(ptr);
+}
