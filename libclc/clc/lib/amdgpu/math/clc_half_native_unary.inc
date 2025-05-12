@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_half_powr.h>
+#include <clc/utils.h>
 
-#define __FLOAT_ONLY
-#define FUNCTION half_powr
-#define __CLC_BODY <clc/shared/binary_def.inc>
+#define __CLC_HALF_FUNC(x) __CLC_CONCAT(__clc_half_, x)
+#define __CLC_NATIVE_FUNC(x) __CLC_CONCAT(__clc_native_, x)
 
-#include <clc/math/gentype.inc>
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE
+__CLC_HALF_FUNC(__CLC_FUNC)(__CLC_GENTYPE val) {
+  return __CLC_NATIVE_FUNC(__CLC_FUNC)(val);
+}
+
+#undef __CLC_NATIVE_FUNC
+#undef __CLC_HALF_FUNC

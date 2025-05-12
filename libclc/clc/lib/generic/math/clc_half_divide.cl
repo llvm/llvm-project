@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_half_powr.h>
+#include <clc/internal/clc.h>
 
 #define __FLOAT_ONLY
-#define FUNCTION half_powr
-#define __CLC_BODY <clc/shared/binary_def.inc>
+#define __CLC_BODY <clc_half_divide.inc>
 
 #include <clc/math/gentype.inc>

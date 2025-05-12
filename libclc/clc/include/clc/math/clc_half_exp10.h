@@ -6,11 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_half_powr.h>
+#ifndef __CLC_MATH_CLC_HALF_EXP10_H__
+#define __CLC_MATH_CLC_HALF_EXP10_H__
 
 #define __FLOAT_ONLY
-#define FUNCTION half_powr
-#define __CLC_BODY <clc/shared/binary_def.inc>
+#define __CLC_FUNCTION __clc_half_exp10
+#define __CLC_BODY <clc/shared/unary_decl.inc>
 
 #include <clc/math/gentype.inc>
+
+#undef __CLC_FUNCTION
+#undef __FLOAT_ONLY
+
+#endif // __CLC_MATH_CLC_HALF_EXP10_H__
