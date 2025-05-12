@@ -11400,6 +11400,21 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       DiagnoseUseOfDecl(OperatorDelete, Loc);
       MarkFunctionReferenced(Loc, OperatorDelete);
       Destructor->setOperatorDelete(OperatorDelete, ThisArg);
+
+      if (isa<CXXMethodDecl>(OperatorDelete) &&
+          Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+        // In Microsoft ABI whenever a class has a defined operator delete,
+        // scalar deleting destructors check the 3rd bit of the implicit
+        // parameter and if it is set, then, global operator delete must be
+        // called instead of class-specific one. Find and save global operator
+        // for that case. Do not diagnose because even if we fail to find the
+        // operator, it won't be possible to compile and execute the code that
+        // requires it.
+        FunctionDecl *GlobalOperatorDelete =
+            FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
+                                                  /*LookForGlobal*/ true);
+        Destructor->setOperatorGlobalDelete(GlobalOperatorDelete);
+      }
     }
   }
 
