@@ -603,12 +603,12 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
                  CommandLineArgs.begin(),
                  [](auto &&CmdPart) { return CmdPart.c_str(); });
 
-  auto *DiagClient = new ForwardingDiagnosticConsumer{CI.getDiagnosticClient()};
   auto DiagOpts = std::make_shared<DiagnosticOptions>(CI.getDiagnosticOpts());
+  auto *DiagClient = new ForwardingDiagnosticConsumer{CI.getDiagnosticClient()};
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID{
       CI.getDiagnostics().getDiagnosticIDs()};
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine{DiagID, CI.getDiagnosticOpts(), DiagClient});
+      new DiagnosticsEngine{DiagID, *DiagOpts, DiagClient});
 
   return ASTUnit::LoadFromCommandLine(CommandLineArgs.begin(),
                                       (CommandLineArgs.end()),
