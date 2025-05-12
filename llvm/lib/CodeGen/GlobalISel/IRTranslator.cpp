@@ -3032,16 +3032,13 @@ bool IRTranslator::translateCallBr(const User &U,
   const CallBrInst &I = cast<CallBrInst>(U);
   MachineBasicBlock *CallBrMBB = &MIRBuilder.getMBB();
 
-  if (I.isInlineAsm()) {
-    // FIXME: inline asm not yet supported
-    if (!translateInlineAsm(I, MIRBuilder))
-      return false;
-  } else if (I.getIntrinsicID() != Intrinsic::not_intrinsic) {
-    if (!translateTargetIntrinsic(I, I.getIntrinsicID(), MIRBuilder))
-      return false;
-  } else {
+  // FIXME: inline asm not yet supported
+  if (I.isInlineAsm())
     return false;
-  }
+  if (I.getIntrinsicID() == Intrinsic::not_intrinsic)
+    return false;
+  if (!translateTargetIntrinsic(I, I.getIntrinsicID(), MIRBuilder))
+    return false;
 
   // Retrieve successors.
   SmallPtrSet<BasicBlock *, 8> Dests;
