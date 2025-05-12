@@ -1221,7 +1221,7 @@ public:
       case LookupResultKind::FoundOverloaded:
       case LookupResultKind::FoundUnresolvedValue: {
         NamedDecl *SomeDecl = Result.getRepresentativeDecl();
-        Sema::NonTagKind NTK = SemaRef.getNonTagTypeDeclKind(SomeDecl, Kind);
+        NonTagKind NTK = SemaRef.getNonTagTypeDeclKind(SomeDecl, Kind);
         SemaRef.Diag(IdLoc, diag::err_tag_reference_non_tag)
             << SomeDecl << NTK << Kind;
         SemaRef.Diag(SomeDecl->getLocation(), diag::note_declared_at);
@@ -3099,6 +3099,15 @@ public:
     return getSema().ActOnParenListExpr(LParenLoc, RParenLoc, SubExprs);
   }
 
+  ExprResult RebuildCXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,
+                                         unsigned NumUserSpecifiedExprs,
+                                         SourceLocation InitLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation RParenLoc) {
+    return getSema().ActOnCXXParenListInitExpr(Args, T, NumUserSpecifiedExprs,
+                                               InitLoc, LParenLoc, RParenLoc);
+  }
+
   /// Build a new address-of-label expression.
   ///
   /// By default, performs semantic analysis, using the name of the label
@@ -3315,6 +3324,11 @@ public:
       return getSema().BuildCXXTypeConstructExpr(
           TInfo, LParenLoc, MultiExprArg(PLE->getExprs(), PLE->getNumExprs()),
           RParenLoc, ListInitialization);
+
+    if (auto *PLE = dyn_cast<CXXParenListInitExpr>(Sub))
+      return getSema().BuildCXXTypeConstructExpr(
+          TInfo, LParenLoc, PLE->getInitExprs(), RParenLoc, ListInitialization);
+
     return getSema().BuildCXXTypeConstructExpr(TInfo, LParenLoc,
                                                MultiExprArg(&Sub, 1), RParenLoc,
                                                ListInitialization);
@@ -5291,12 +5305,14 @@ QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
   PointerAuthQualifier LocalPointerAuth = Quals.getPointerAuth();
   if (LocalPointerAuth.isPresent()) {
     if (T.getPointerAuth().isPresent()) {
-      SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_redundant)
-          << TL.getType() << "__ptrauth";
+      SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_redundant) << TL.getType();
       return QualType();
-    } else if (!T->isSignableType() && !T->isDependentType()) {
-      SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_nonpointer) << T;
-      return QualType();
+    }
+    if (!T->isDependentType()) {
+      if (!T->isSignableType(SemaRef.getASTContext())) {
+        SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_invalid_target) << T;
+        return QualType();
+      }
     }
   }
   // C++ [dcl.fct]p7:
@@ -7509,7 +7525,7 @@ TreeTransform<Derived>::TransformElaboratedType(TypeLocBuilder &TLB,
               Template.getAsTemplateDecl())) {
         SemaRef.Diag(TL.getNamedTypeLoc().getBeginLoc(),
                      diag::err_tag_reference_non_tag)
-            << TAT << Sema::NTK_TypeAliasTemplate
+            << TAT << NonTagKind::TypeAliasTemplate
             << ElaboratedType::getTagTypeKindForKeyword(T->getKeyword());
         SemaRef.Diag(TAT->getLocation(), diag::note_declared_at);
       }
@@ -9292,23 +9308,23 @@ TreeTransform<Derived>::TransformMSDependentExistsStmt(
   SS.Adopt(QualifierLoc);
   bool Dependent = false;
   switch (getSema().CheckMicrosoftIfExistsSymbol(/*S=*/nullptr, SS, NameInfo)) {
-  case Sema::IER_Exists:
+  case IfExistsResult::Exists:
     if (S->isIfExists())
       break;
 
     return new (getSema().Context) NullStmt(S->getKeywordLoc());
 
-  case Sema::IER_DoesNotExist:
+  case IfExistsResult::DoesNotExist:
     if (S->isIfNotExists())
       break;
 
     return new (getSema().Context) NullStmt(S->getKeywordLoc());
 
-  case Sema::IER_Dependent:
+  case IfExistsResult::Dependent:
     Dependent = true;
     break;
 
-  case Sema::IER_Error:
+  case IfExistsResult::Error:
     return StmtError();
   }
 
@@ -9567,8 +9583,9 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
   // TODO: Fix This
+  unsigned OMPVersion = getDerived().getSema().getLangOpts().OpenMP;
   SemaRef.Diag(D->getBeginLoc(), diag::err_omp_instantiation_not_supported)
-      << getOpenMPDirectiveName(D->getDirectiveKind());
+      << getOpenMPDirectiveName(D->getDirectiveKind(), OMPVersion);
   return StmtError();
 }
 
@@ -15577,11 +15594,10 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     assert(C->capturesVariable() && "unexpected kind of lambda capture");
 
     // Determine the capture kind for Sema.
-    Sema::TryCaptureKind Kind
-      = C->isImplicit()? Sema::TryCapture_Implicit
-                       : C->getCaptureKind() == LCK_ByCopy
-                           ? Sema::TryCapture_ExplicitByVal
-                           : Sema::TryCapture_ExplicitByRef;
+    TryCaptureKind Kind = C->isImplicit() ? TryCaptureKind::Implicit
+                          : C->getCaptureKind() == LCK_ByCopy
+                              ? TryCaptureKind::ExplicitByVal
+                              : TryCaptureKind::ExplicitByRef;
     SourceLocation EllipsisLoc;
     if (C->isPackExpansion()) {
       UnexpandedParameterPack Unexpanded(C->getCapturedVar(), C->getLocation());
@@ -16488,12 +16504,21 @@ ExprResult
 TreeTransform<Derived>::TransformCXXParenListInitExpr(CXXParenListInitExpr *E) {
   SmallVector<Expr *, 4> TransformedInits;
   ArrayRef<Expr *> InitExprs = E->getInitExprs();
-  if (TransformExprs(InitExprs.data(), InitExprs.size(), true,
-                     TransformedInits))
+
+  QualType T = getDerived().TransformType(E->getType());
+
+  bool ArgChanged = false;
+
+  if (getDerived().TransformExprs(InitExprs.data(), InitExprs.size(), true,
+                                  TransformedInits, &ArgChanged))
     return ExprError();
 
-  return getDerived().RebuildParenListExpr(E->getBeginLoc(), TransformedInits,
-                                           E->getEndLoc());
+  if (!getDerived().AlwaysRebuild() && !ArgChanged && T == E->getType())
+    return E;
+
+  return getDerived().RebuildCXXParenListInitExpr(
+      TransformedInits, T, E->getUserSpecifiedInitExprs().size(),
+      E->getInitLoc(), E->getBeginLoc(), E->getEndLoc());
 }
 
 template<typename Derived>

@@ -537,6 +537,8 @@ void Parser::Initialize() {
   Ident_sealed = nullptr;
   Ident_abstract = nullptr;
   Ident_override = nullptr;
+  Ident_trivially_relocatable_if_eligible = nullptr;
+  Ident_replaceable_if_eligible = nullptr;
   Ident_GNU_final = nullptr;
   Ident_import = nullptr;
   Ident_module = nullptr;
@@ -2436,21 +2438,21 @@ bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
   switch (Actions.CheckMicrosoftIfExistsSymbol(getCurScope(), Result.KeywordLoc,
                                                Result.IsIfExists, Result.SS,
                                                Result.Name)) {
-  case Sema::IER_Exists:
+  case IfExistsResult::Exists:
     Result.Behavior =
         Result.IsIfExists ? IfExistsBehavior::Parse : IfExistsBehavior::Skip;
     break;
 
-  case Sema::IER_DoesNotExist:
+  case IfExistsResult::DoesNotExist:
     Result.Behavior =
         !Result.IsIfExists ? IfExistsBehavior::Parse : IfExistsBehavior::Skip;
     break;
 
-  case Sema::IER_Dependent:
+  case IfExistsResult::Dependent:
     Result.Behavior = IfExistsBehavior::Dependent;
     break;
 
-  case Sema::IER_Error:
+  case IfExistsResult::Error:
     return true;
   }
 

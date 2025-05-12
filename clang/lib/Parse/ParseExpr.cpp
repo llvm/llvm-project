@@ -2796,12 +2796,12 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
   }
   case tok::kw___builtin_offsetof: {
     SourceLocation TypeLoc = Tok.getLocation();
-    auto OOK = Sema::OffsetOfKind::OOK_Builtin;
+    auto OOK = OffsetOfKind::Builtin;
     if (Tok.getLocation().isMacroID()) {
       StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
           Tok.getLocation(), PP.getSourceManager(), getLangOpts());
       if (MacroName == "offsetof")
-        OOK = Sema::OffsetOfKind::OOK_Macro;
+        OOK = OffsetOfKind::Macro;
     }
     TypeResult Ty;
     {

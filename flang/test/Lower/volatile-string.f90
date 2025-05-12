@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc --strict-fir-volatile-verifier %s -o - | FileCheck %s
 program p
   character(3), volatile :: string = 'foo'
   character(3)           :: nonvolatile_string
