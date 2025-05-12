@@ -151,7 +151,7 @@ def ntl_store : RISCVBuiltin<"void(...)">;
 // Zihintpause extension.
 //===----------------------------------------------------------------------===//
 let Features = "zihintpause" in {
-def pause : RISCVBuiltin<"void(...)">;
+def pause : RISCVBuiltin<"void()">;
 } // Features = "zihintpause"
 
 //===----------------------------------------------------------------------===//
