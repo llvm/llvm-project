@@ -65,6 +65,8 @@ enum ColumnType : unsigned {
   eColumnTypeBoolean,
   eColumnTypeTimestamp
 };
+bool fromJSON(const llvm::json::Value &, ColumnType &, llvm::json::Path);
+llvm::json::Value toJSON(const ColumnType &);
 
 /// A ColumnDescriptor specifies what module attribute to show in a column of
 /// the modules view, how to format it, and what the column’s label should be.
@@ -89,6 +91,7 @@ struct ColumnDescriptor {
   /// Width of this column in characters (hint only).
   std::optional<int> width;
 };
+bool fromJSON(const llvm::json::Value &, ColumnDescriptor &, llvm::json::Path);
 llvm::json::Value toJSON(const ColumnDescriptor &);
 
 /// Names of checksum algorithms that may be supported by a debug adapter.
@@ -114,6 +117,8 @@ enum BreakpointModeApplicability : unsigned {
   /// In `InstructionBreakpoint`'s.
   eBreakpointModeApplicabilityInstruction
 };
+bool fromJSON(const llvm::json::Value &, BreakpointModeApplicability &,
+              llvm::json::Path);
 llvm::json::Value toJSON(const BreakpointModeApplicability &);
 
 /// A `BreakpointMode` is provided as a option when setting breakpoints on
@@ -133,6 +138,7 @@ struct BreakpointMode {
   /// Describes one or more type of breakpoint this mode applies to.
   std::vector<BreakpointModeApplicability> appliesTo;
 };
+bool fromJSON(const llvm::json::Value &, BreakpointMode &, llvm::json::Path);
 llvm::json::Value toJSON(const BreakpointMode &);
 
 /// Debug Adapter Features flags supported by lldb-dap.
@@ -364,6 +370,7 @@ enum class BreakpointReason : unsigned {
   /// adapter does not believe it can be verified without intervention.
   eBreakpointReasonFailed,
 };
+bool fromJSON(const llvm::json::Value &, BreakpointReason &, llvm::json::Path);
 llvm::json::Value toJSON(const BreakpointReason &);
 
 /// Information about a breakpoint created in `setBreakpoints`,
@@ -415,6 +422,7 @@ struct Breakpoint {
   /// should omit this property.
   std::optional<BreakpointReason> reason;
 };
+bool fromJSON(const llvm::json::Value &, Breakpoint &, llvm::json::Path);
 llvm::json::Value toJSON(const Breakpoint &);
 
 /// Properties of a breakpoint or logpoint passed to the `setBreakpoints`
