@@ -489,12 +489,17 @@ void DwarfDebug::addSubprogramNames(
   if (SP->getName() != "")
     addAccelName(Unit, NameTableKind, SP->getName(), Die);
 
+  // We drop the mangling escape prefix when emitting the DW_AT_linkage_name. So
+  // ensure we don't include it when inserting into the accelerator tables.
+  llvm::StringRef LinkageName =
+      GlobalValue::dropLLVMManglingEscape(SP->getLinkageName());
+
   // If the linkage name is different than the name, go ahead and output that as
   // well into the name table. Only do that if we are going to actually emit
   // that name.
-  if (SP->getLinkageName() != "" && SP->getName() != SP->getLinkageName() &&
+  if (LinkageName != "" && SP->getName() != LinkageName &&
       (useAllLinkageNames() || InfoHolder.getAbstractScopeDIEs().lookup(SP)))
-    addAccelName(Unit, NameTableKind, SP->getLinkageName(), Die);
+    addAccelName(Unit, NameTableKind, LinkageName, Die);
 
   // If this is an Objective-C selector name add it to the ObjC accelerator
   // too.
