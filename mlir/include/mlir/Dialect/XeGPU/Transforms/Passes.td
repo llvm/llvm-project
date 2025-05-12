@@ -38,4 +38,16 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
   ];
 }
 
+def XeGPUInstructionlize: Pass<"xegpu-instructionlize"> {
+  let summary = "Instructionlize XeGPU ops";
+  let description = [{
+    The pass unrolls XeGPU ops working on large shapes into ops working on small shapes
+    (given by the inst_data in the layout attr), such that each of them can be dispatch
+    into a hardware instruction.
+  }];
+  let dependentDialects = [
+      "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect"
+  ];
+}
+
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD
