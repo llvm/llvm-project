@@ -11,12 +11,7 @@
 ; CHECK-NOT: {{.*}}Bad machine code: Virtual register defs don't dominate all uses
 ; CHECK: {{.*}}v_cndmask_b32_e32{{.*}}vcc_lo
 
-; ModuleID = 'test.ll'
-source_filename = "test.ll"
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
-target triple = "amdgcn-amd-amdhsa"
-
-define amdgpu_kernel void @quux(i32 %arg, i1 %arg1, i1 %arg2) #0 {
+define amdgpu_kernel void @quux(i32 %arg, i1 %arg1, i1 %arg2) {
 bb:
   br i1 %arg1, label %bb9, label %bb3
 
@@ -43,9 +38,3 @@ bb9:                                              ; preds = %bb3, %bb
   store i8 %extractelement, ptr addrspace(1) null, align 1
   ret void
 }
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x() #1
-
-attributes #0 = { "target-cpu"="gfx1030" }
-attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx1030" }
