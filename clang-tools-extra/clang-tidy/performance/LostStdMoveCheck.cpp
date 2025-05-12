@@ -24,6 +24,9 @@ void LostStdMoveCheck::registerMatchers(MatchFinder *Finder) {
   auto returnParent =
       hasParent(expr(hasParent(cxxConstructExpr(hasParent(returnStmt())))));
 
+  auto outermostExpr = expr(unless(hasParent(expr())));
+  auto leafStatement = stmt(outermostExpr, unless(hasDescendant(outermostExpr)));
+
   Finder->addMatcher(
       declRefExpr(
           // not "return x;"
@@ -45,6 +48,8 @@ void LostStdMoveCheck::registerMatchers(MatchFinder *Finder) {
           // only non-X&
           unless(hasDeclaration(
               varDecl(hasType(qualType(lValueReferenceType()))))),
+
+	  hasAncestor(leafStatement.bind("leaf_statement")),
 
           hasDeclaration(
               varDecl(hasAncestor(functionDecl().bind("func"))).bind("decl")),
@@ -71,11 +76,19 @@ const Expr *LostStdMoveCheck::getLastVarUsage(const VarDecl &Var,
   return LastExpr;
 }
 
+template <typename Node>
+void extractNodesByIdTo(ArrayRef<BoundNodes> Matches, StringRef ID,
+                        llvm::SmallPtrSet<const Node *, 16> &Nodes) {
+  for (const auto &Match : Matches)
+    Nodes.insert(Match.getNodeAs<Node>(ID));
+}
+
 void LostStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<VarDecl>("decl");
   const auto *MatchedFunc = Result.Nodes.getNodeAs<FunctionDecl>("func");
   const auto *MatchedUse = Result.Nodes.getNodeAs<Expr>("use");
   const auto *MatchedUseCall = Result.Nodes.getNodeAs<CallExpr>("use_parent");
+  const auto *MatchedLeafStatement = Result.Nodes.getNodeAs<Stmt>("leaf_statement");
 
   if (MatchedUseCall)
     return;
@@ -87,6 +100,15 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (LastUsage->getBeginLoc() > MatchedUse->getBeginLoc()) {
     // "use" is not the last reference to x
+    return;
+  }
+
+  // Calculate X usage count in the statement
+  llvm::SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
+  auto Matches = match(findAll(declRefExpr(to(varDecl(equalsNode(MatchedDecl)))).bind("ref")), *MatchedLeafStatement, *Result.Context);
+  extractNodesByIdTo(Matches, "ref", DeclRefs);
+  if (DeclRefs.size() > 1) {
+    // Unspecified order of evaluation, e.g. f(x, x)
     return;
   }
 
