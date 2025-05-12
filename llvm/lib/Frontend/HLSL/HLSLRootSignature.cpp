@@ -220,15 +220,16 @@ MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
 MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
   IRBuilder<> B(Ctx);
-  return MDNode::get(Ctx, {
-    ClauseTypeToName(Ctx, Clause.Type),
-    ConstantAsMetadata::get(B.getInt32(Clause.NumDescriptors)),
-    ConstantAsMetadata::get(B.getInt32(Clause.Reg.Number)),
-    ConstantAsMetadata::get(B.getInt32(Clause.Space)),
-    ConstantAsMetadata::get(B.getInt32(Clause.Offset)),
-    ConstantAsMetadata::get(
-      B.getInt32(llvm::to_underlying(Clause.Flags))),
-  });
+  return MDNode::get(
+      Ctx, {
+               ClauseTypeToName(Ctx, Clause.Type),
+               ConstantAsMetadata::get(B.getInt32(Clause.NumDescriptors)),
+               ConstantAsMetadata::get(B.getInt32(Clause.Reg.Number)),
+               ConstantAsMetadata::get(B.getInt32(Clause.Space)),
+               ConstantAsMetadata::get(B.getInt32(Clause.Offset)),
+               ConstantAsMetadata::get(
+                   B.getInt32(llvm::to_underlying(Clause.Flags))),
+           });
 }
 
 } // namespace rootsig
