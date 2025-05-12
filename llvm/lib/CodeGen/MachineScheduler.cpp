@@ -21,6 +21,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -49,6 +50,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Pass.h"
@@ -109,6 +111,21 @@ static cl::opt<bool>
 cl::opt<bool> VerifyScheduling(
     "verify-misched", cl::Hidden,
     cl::desc("Verify machine instrs before and after machine scheduling"));
+
+// Heuristics for skipping pre-RA machine scheduling for large functions,
+// containing (handwritten) intrinsic vector-code.
+cl::opt<unsigned> LargeFunctionThreshold(
+    "misched-large-func-threshold", cl::Hidden, cl::init(2800),
+    cl::desc("The minimum number of IR instructions in a large (hand-written) "
+             "intrinsic vector code function"));
+cl::opt<unsigned> NbOfIntrinsicsThreshold(
+    "misched-intrinsics-threshold", cl::Hidden, cl::init(425),
+    cl::desc("The minimum number of intrinsic instructions in a large "
+             "(hand-written) intrinsic vector code function"));
+cl::opt<unsigned> VectorCodeDensityPercentageThreshold(
+    "misched-vector-density-threshold", cl::Hidden, cl::init(70),
+    cl::desc("Minimum percentage of vector instructions compared to scalar in "
+             "a large (hand-written) intrinsic vector code function"));
 
 #ifndef NDEBUG
 cl::opt<bool> ViewMISchedDAGs(
@@ -319,6 +336,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(MachineSchedulerLegacy, DEBUG_TYPE,
                     "Machine Instruction Scheduler", false, false)
 
@@ -336,6 +354,7 @@ void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
+  AU.addRequired<TargetTransformInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -555,6 +574,47 @@ bool MachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
       return false;
   } else if (!MF.getSubtarget().enableMachineScheduler()) {
     return false;
+  }
+
+  // Try to recognise large hand-written instrinc vector code, and skip the
+  // machine scheduler for this function if the target and TTI hook are okay
+  // with this.
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  const MCSchedModel &SchedModel = STI.getSchedModel();
+  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(MF.getFunction());
+
+  if (TTI.skipPreRASchedLargeVecFunc()) {
+    uint64_t InstructionCount = 0;
+    uint64_t IntrinsicCount = 0;
+    uint64_t VectorTypeCount = 0;
+    for (auto &BB : MF.getFunction()) {
+      for (Instruction &I : BB) {
+       InstructionCount++;
+       if (isa<IntrinsicInst>(I))
+         IntrinsicCount++;
+       Type *T = I.getType();
+       if (T && T->isVectorTy())
+         VectorTypeCount++;
+      }
+    }
+
+    unsigned VecDensity = (VectorTypeCount / (double) InstructionCount) * 100;
+
+    LLVM_DEBUG(dbgs() << "Instruction count: " << InstructionCount << ", ";
+               dbgs() << "threshold: " << LargeFunctionThreshold << "\n";
+               dbgs() << "Intrinsic count: " << IntrinsicCount << ", ";
+               dbgs() << "threshold: " << NbOfIntrinsicsThreshold << "\n";
+               dbgs() << "Vector density: " << VecDensity << ", ";
+               dbgs() << "threshold: " << VectorCodeDensityPercentageThreshold
+                      << "\n";);
+
+    if (InstructionCount > LargeFunctionThreshold &&
+        IntrinsicCount > NbOfIntrinsicsThreshold &&
+        VecDensity > VectorCodeDensityPercentageThreshold) {
+      LLVM_DEBUG(
+          dbgs() << "Skipping MISched for very vector and intrinsic heavy code");
+      return false;
+    }
   }
 
   LLVM_DEBUG(dbgs() << "Before MISched:\n"; MF.print(dbgs()));

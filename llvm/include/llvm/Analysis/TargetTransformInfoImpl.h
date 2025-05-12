@@ -499,6 +499,8 @@ public:
 
   virtual bool enableInterleavedAccessVectorization() const { return false; }
 
+  virtual bool skipPreRASchedLargeVecFunc() const { return false; }
+
   virtual bool enableMaskedInterleavedAccessVectorization() const {
     return false;
   }

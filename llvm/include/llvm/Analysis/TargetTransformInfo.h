@@ -1019,6 +1019,10 @@ public:
   /// Enable matching of interleaved access groups.
   bool enableInterleavedAccessVectorization() const;
 
+  /// Disable the machine scheduler for a large function with a lot of
+  /// (hand-written) vector code and intrinsics.
+  bool skipPreRASchedLargeVecFunc() const;
+
   /// Enable matching of interleaved access groups that contain predicated
   /// accesses or gaps and therefore vectorized using masked
   /// vector loads/stores.

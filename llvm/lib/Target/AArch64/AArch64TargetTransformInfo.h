@@ -118,6 +118,10 @@ public:
 
   bool enableInterleavedAccessVectorization() const override { return true; }
 
+  bool skipPreRASchedLargeVecFunc() const override {
+    return ST->enableSkipPreRASchedLargeVecFunc();
+  }
+
   bool enableMaskedInterleavedAccessVectorization() const override {
     return ST->hasSVE();
   }
