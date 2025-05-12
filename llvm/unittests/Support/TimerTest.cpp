@@ -92,15 +92,15 @@ TEST(Timer, MinTimerFlag) {
   Timer T1("T1", "T1");
   Timer T2("T2", "T2");
 
-  minPrintTime().setValue(2);
+  minPrintTime().setValue(1);
 
   T1.startTimer();
   T2.startTimer();
 
-  SleepMS(1000);
+  SleepMS(500);
   T1.stopTimer();
 
-  SleepMS(2000);
+  SleepMS(600);
   T2.stopTimer();
 
   TimerGroup::printAll(llvm::errs());
