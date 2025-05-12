@@ -486,6 +486,9 @@ private:
   bool translatePtrToInt(const User &U, MachineIRBuilder &MIRBuilder) {
     return translateCast(TargetOpcode::G_PTRTOINT, U, MIRBuilder);
   }
+  bool translatePtrToAddr(const User &U, MachineIRBuilder &MIRBuilder) {
+    return translatePtrToInt(U, MIRBuilder);
+  }
   bool translateTrunc(const User &U, MachineIRBuilder &MIRBuilder) {
     return translateCast(TargetOpcode::G_TRUNC, U, MIRBuilder);
   }
