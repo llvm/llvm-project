@@ -1872,17 +1872,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // 8to64
     setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv16i8, Custom);
 
-    if (Subtarget->hasMatMulInt8()) {
-      // USDOT
-      setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i64, Custom);
+    // USDOT
+    if (Subtarget->hasMatMulInt8())
       setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i32, Custom);
-      setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv4i64, Custom);
-      setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv8i32, Custom);
-      setPartialReduceMLAAction(MVT::nxv8i16, MVT::nxv16i16, Custom);
-      setPartialReduceMLAAction(MVT::nxv16i8, MVT::nxv32i8, Custom);
-
-      setOperationAction(ISD::PARTIAL_REDUCE_UMLA, MVT::nxv16i32, Custom);
-    }
   }
 
   // Handle operations that are only available in non-streaming SVE mode.
@@ -7755,8 +7747,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerFLDEXP(Op, DAG);
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return LowerVECTOR_HISTOGRAM(Op, DAG);
-  case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_UMLA:
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }

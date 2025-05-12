@@ -925,8 +925,18 @@ SDValue DAGTypeLegalizer::CreateStackStoreLoad(SDValue Op,
 bool DAGTypeLegalizer::CustomLowerNode(SDNode *N, EVT VT, bool LegalizeResult) {
   // See if the target wants to custom lower this node.
   unsigned Opcode = N->getOpcode();
-  if (TLI.getOperationAction(Opcode, VT) != TargetLowering::Custom)
-    return false;
+  bool IsPRMLAOpcode =
+      Opcode == ISD::PARTIAL_REDUCE_UMLA || Opcode == ISD::PARTIAL_REDUCE_SMLA;
+
+  if (IsPRMLAOpcode) {
+    if (TLI.getPartialReduceMLAAction(N->getValueType(0),
+                                      N->getOperand(1).getValueType()) !=
+        TargetLowering::Custom)
+      return false;
+  } else {
+    if (TLI.getOperationAction(Opcode, VT) != TargetLowering::Custom)
+      return false;
+  }
 
   SmallVector<SDValue, 8> Results;
   if (LegalizeResult)
