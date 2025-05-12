@@ -296,6 +296,14 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
   if (NumUAVs > 8)
     CombinedSFMask.Max64UAVs = true;
 
+  // Set the Shader Feature Info flags related to low-precision datatypes
+  if (CombinedSFMask.LowPrecisionPresent) {
+    if (CombinedSFMask.UseNativeLowPrecision)
+      CombinedSFMask.NativeLowPrecision = true;
+    else
+      CombinedSFMask.MinimumPrecision = true;
+  }
+
   CombinedSFMask.UAVsAtEveryStage = hasUAVsAtEveryStage(DRM, MMDI);
 }
 
