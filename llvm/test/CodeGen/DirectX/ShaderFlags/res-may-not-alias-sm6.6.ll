@@ -10,7 +10,7 @@ target triple = "dxil-pc-shadermodel6.6-library"
 ; CHECK-NEXT: Shader Flags Value: 0x00000010
 
 ; CHECK: Note: extra DXIL module flags:
-; CHECK:       Raw and Structured buffers
+; CHECK:       Raw and structured buffers
 ; CHECK-NOT:   Any UAV may not alias any other UAV
 ;
 
@@ -33,5 +33,8 @@ define float @loadSRV() #0 {
   %val = extractvalue { float, i1 } %load, 0
   ret float %val
 }
+
+!dx.valver = !{!0}
+!0 = !{i32 1, i32 8}
 
 attributes #0 = { convergent norecurse nounwind "hlsl.export"}

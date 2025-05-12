@@ -293,7 +293,7 @@ static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
 
   // Enable interrupts.
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRSI))
-      .addReg(RISCV::X0)
+      .addReg(RISCV::X0, RegState::Define)
       .addImm(RISCVSysReg::mstatus)
       .addImm(8)
       .setMIFlag(MachineInstr::FrameSetup);
@@ -315,7 +315,7 @@ static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
 
   // Disable interrupts.
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRCI))
-      .addReg(RISCV::X0)
+      .addReg(RISCV::X0, RegState::Define)
       .addImm(RISCVSysReg::mstatus)
       .addImm(8)
       .setMIFlag(MachineInstr::FrameSetup);
@@ -324,12 +324,12 @@ static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
   // in the function, they have already been restored once, so now have the
   // value stored in `emitSiFiveCLICPreemptibleSaves`.
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
-      .addReg(RISCV::X0)
+      .addReg(RISCV::X0, RegState::Define)
       .addImm(RISCVSysReg::mepc)
       .addReg(RISCV::X9, RegState::Kill)
       .setMIFlag(MachineInstr::FrameSetup);
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
-      .addReg(RISCV::X0)
+      .addReg(RISCV::X0, RegState::Define)
       .addImm(RISCVSysReg::mcause)
       .addReg(RISCV::X8, RegState::Kill)
       .setMIFlag(MachineInstr::FrameSetup);

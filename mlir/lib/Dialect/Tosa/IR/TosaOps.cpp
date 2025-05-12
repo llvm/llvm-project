@@ -562,6 +562,109 @@ static LogicalResult verifyConvOpErrorIf(T op) {
   return success();
 }
 
+// Verify whether same type and shape of the given two types.
+static LogicalResult errorIfTypeOrShapeMismatch(Operation *op, Type type1,
+                                                StringRef name1, Type type2,
+                                                StringRef name2) {
+  auto shapeType1 = dyn_cast<ShapedType>(type1);
+  auto shapeType2 = dyn_cast<ShapedType>(type2);
+  if (!shapeType1 || !shapeType2)
+    return failure();
+
+  auto elemType1 = shapeType1.getElementType();
+  auto elemType2 = shapeType2.getElementType();
+  if (elemType1 != elemType2)
+    return op->emitOpError()
+           << "require same element type for " << name1 << " (" << elemType1
+           << ") and " << name2 << " (" << elemType2 << ")";
+
+  if (failed(verifyCompatibleShape(type1, type2)))
+    return op->emitOpError()
+           << "require same shapes for " << name1 << " (" << type1 << ") and "
+           << name2 << " (" << type2 << ")";
+
+  return success();
+}
+
+// Verify whether same length, type, and shape of the given two tensor lists.
+static LogicalResult errorIfTypeOrShapeMismatch(Operation *op, ValueRange list1,
+                                                StringRef name1,
+                                                ValueRange list2,
+                                                StringRef name2) {
+  if (list1.size() != list2.size())
+    return op->emitOpError()
+           << "require same number of values in " << name1 << " ("
+           << list1.size() << ") and " << name2 << " (" << list2.size() << ")";
+
+  for (auto [type1, type2] :
+       llvm::zip_equal(list1.getTypes(), list2.getTypes())) {
+    if (errorIfTypeOrShapeMismatch(op, type1, name1, type2, name2).failed())
+      return failure();
+  }
+
+  return success();
+}
+
+static inline LogicalResult errorIfShapeNotSizeOne(Operation *op, Type type) {
+  ShapeAdaptor shapeAdaptor(type);
+  if (!shapeAdaptor.hasRank() || !shapeAdaptor.hasStaticShape())
+    return success();
+
+  return shapeAdaptor.getNumElements() == 1 ? success() : failure();
+}
+
+// Returns the first declaration point prior to this operation or failure if
+// not found.
+static FailureOr<tosa::VariableOp> findVariableDecl(Operation *op,
+                                                    StringRef symName) {
+  ModuleOp module = op->getParentOfType<ModuleOp>();
+  tosa::VariableOp varOp = nullptr;
+
+  // TODO: Adopt SymbolTable trait to Varible ops.
+  // Currently, the variable's definition point is searched via walk(),
+  // starting from the top-level ModuleOp and stopping at the point of use. Once
+  // TOSA control flow and variable extensions reach the complete state, may
+  // leverage MLIR's Symbol Table functionality to look up symbol and enhance
+  // the search to a TOSA specific graph traversal over the IR structure.
+  module.walk([&](Operation *tempOp) {
+    // Reach this op itself.
+    if (tempOp == op) {
+      return WalkResult::interrupt();
+    }
+
+    if (auto tosaOp = dyn_cast<tosa::VariableOp>(tempOp)) {
+      if (symName == tosaOp.getName()) {
+        varOp = tosaOp;
+        return WalkResult::interrupt();
+      }
+    }
+
+    return WalkResult::advance();
+  });
+
+  if (varOp)
+    return varOp;
+
+  return failure();
+}
+
+template <typename T>
+static LogicalResult verifyVariableOpErrorIf(T op, Type type, StringRef name) {
+  StringRef symName = op.getName();
+  FailureOr<tosa::VariableOp> varOp = findVariableDecl(op, symName);
+  if (failed(varOp))
+    return op->emitOpError("'")
+           << symName << "' has not been declared by 'tosa.variable'";
+
+  // Verify type and shape
+  Type varType = cast<tosa::VariableOp>(varOp.value()).getType();
+  if (errorIfTypeOrShapeMismatch(op, type, name, varType, "the input tensor")
+          .failed())
+    return failure();
+
+  return success();
+}
+
 // verify that inType and outType have same element types
 template <typename T>
 static LogicalResult verifySameElementTypes(T op, Type inType, Type outType) {
@@ -2013,10 +2116,9 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
 }
 
 // return failure if val is not a constant
-// set zp to -1 if val is non-zero float or  val is not integer nor float
+// set zp to -1 if val is non-zero float or val is not integer nor float
 // otherwise set zp to val's constant value
-template <typename T>
-static FailureOr<int64_t> getZeroPoint(T op, Value val) {
+static FailureOr<int64_t> getZeroPoint(Value val, bool signExtend) {
   ElementsAttr zpAttr;
   if (!matchPattern(val, m_Constant(&zpAttr))) {
     return failure();
@@ -2033,7 +2135,10 @@ static FailureOr<int64_t> getZeroPoint(T op, Value val) {
   }
 
   if (llvm::isa<IntegerType>(zpElemType)) {
-    return zpAttr.getValues<APInt>()[0].getSExtValue();
+    if (signExtend)
+      return zpAttr.getValues<APInt>()[0].getSExtValue();
+    else
+      return zpAttr.getValues<APInt>()[0].getZExtValue();
   }
 
   // return non-zero value to trigger error check
@@ -2073,8 +2178,7 @@ static LogicalResult verifyZeroPoint(tosa::RescaleOp op, Value zpVal,
       return op.emitOpError()
              << "expect " << tensorName << "_zp of 0, got " << zp;
     }
-    if (zpElemType.isInteger(16) && tensorUnsigned &&
-        zp != static_cast<int16_t>(32768)) {
+    if (zpElemType.isInteger(16) && tensorUnsigned && zp != 32768) {
       return op.emitOpError() << "expect " << tensorName
                               << "_zp of 0 or 32768 for unsigned int16 "
                               << tensorName << ", got " << zp;
@@ -2084,30 +2188,30 @@ static LogicalResult verifyZeroPoint(tosa::RescaleOp op, Value zpVal,
   return success();
 }
 
-#define ZERO_POINT_HELPER(OP, OPERAND_NAME)                                    \
+#define ZERO_POINT_HELPER(OP, OPERAND_NAME, SIGN_EXTEND)                       \
   FailureOr<int64_t> tosa::OP::get##OPERAND_NAME##ZeroPoint() {                \
-    return getZeroPoint(*this, get##OPERAND_NAME##Zp());                       \
+    return getZeroPoint(get##OPERAND_NAME##Zp(), SIGN_EXTEND);                 \
   }                                                                            \
   LogicalResult tosa::OP::verify##OPERAND_NAME##ZeroPoint(int64_t zp) {        \
     return verifyZeroPoint(*this, get##OPERAND_NAME##Zp(), zp, #OPERAND_NAME); \
   }
 
-ZERO_POINT_HELPER(Conv2DOp, Input)
-ZERO_POINT_HELPER(Conv2DOp, Weight)
-ZERO_POINT_HELPER(Conv3DOp, Input)
-ZERO_POINT_HELPER(Conv3DOp, Weight)
-ZERO_POINT_HELPER(DepthwiseConv2DOp, Input)
-ZERO_POINT_HELPER(DepthwiseConv2DOp, Weight)
-ZERO_POINT_HELPER(TransposeConv2DOp, Input)
-ZERO_POINT_HELPER(TransposeConv2DOp, Weight)
-ZERO_POINT_HELPER(AvgPool2dOp, Input)
-ZERO_POINT_HELPER(AvgPool2dOp, Output)
-ZERO_POINT_HELPER(MatMulOp, A)
-ZERO_POINT_HELPER(MatMulOp, B)
-ZERO_POINT_HELPER(NegateOp, Input1)
-ZERO_POINT_HELPER(NegateOp, Output)
-ZERO_POINT_HELPER(RescaleOp, Input)
-ZERO_POINT_HELPER(RescaleOp, Output)
+ZERO_POINT_HELPER(Conv2DOp, Input, true)
+ZERO_POINT_HELPER(Conv2DOp, Weight, true)
+ZERO_POINT_HELPER(Conv3DOp, Input, true)
+ZERO_POINT_HELPER(Conv3DOp, Weight, true)
+ZERO_POINT_HELPER(DepthwiseConv2DOp, Input, true)
+ZERO_POINT_HELPER(DepthwiseConv2DOp, Weight, true)
+ZERO_POINT_HELPER(TransposeConv2DOp, Input, true)
+ZERO_POINT_HELPER(TransposeConv2DOp, Weight, true)
+ZERO_POINT_HELPER(AvgPool2dOp, Input, true)
+ZERO_POINT_HELPER(AvgPool2dOp, Output, true)
+ZERO_POINT_HELPER(MatMulOp, A, true)
+ZERO_POINT_HELPER(MatMulOp, B, true)
+ZERO_POINT_HELPER(NegateOp, Input1, true)
+ZERO_POINT_HELPER(NegateOp, Output, true)
+ZERO_POINT_HELPER(RescaleOp, Input, !getInputUnsigned())
+ZERO_POINT_HELPER(RescaleOp, Output, !getOutputUnsigned())
 #undef ZERO_POINT_HELPER
 
 LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
@@ -3473,6 +3577,84 @@ void IfOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict((*this)->getAttrs());
 }
 
+LogicalResult IfOp::verify() {
+  if (errorIfTypeOrShapeMismatch(*this, getThenGraph().front().getArguments(),
+                                 "'then_graph' arguments", getInputList(),
+                                 "'input_list'")
+          .failed())
+    return failure();
+
+  if (errorIfTypeOrShapeMismatch(*this, getElseGraph().front().getArguments(),
+                                 "'else_graph' arguments", getInputList(),
+                                 "'input_list'")
+          .failed())
+    return failure();
+
+  auto thenYield = cast<tosa::YieldOp>(getThenGraph().front().getTerminator());
+  if (errorIfTypeOrShapeMismatch(*this, thenYield.getInputs(),
+                                 "'then_graph' results", getOutputList(),
+                                 "'output_list'")
+          .failed())
+    return failure();
+
+  auto elseYield = cast<tosa::YieldOp>(getElseGraph().front().getTerminator());
+  if (errorIfTypeOrShapeMismatch(*this, elseYield.getInputs(),
+                                 "'else_graph' results", getOutputList(),
+                                 "'output_list'")
+          .failed())
+    return failure();
+
+  auto condType = getCondition().getType();
+  if (errorIfShapeNotSizeOne(*this, condType).failed())
+    return emitOpError() << "'condition' must be a size 1 tensor, got "
+                         << condType;
+
+  return success();
+}
+
+LogicalResult WhileOp::verify() {
+  if (errorIfTypeOrShapeMismatch(*this, getInputList(), "'input_list'",
+                                 getOutputList(), "'output_list'")
+          .failed())
+    return failure();
+
+  if (errorIfTypeOrShapeMismatch(*this, getCondGraph().front().getArguments(),
+                                 "'cond_graph' arguments", getInputList(),
+                                 "'input_list'")
+          .failed())
+    return failure();
+
+  if (errorIfTypeOrShapeMismatch(*this, getBodyGraph().front().getArguments(),
+                                 "'body_graph' arguments", getInputList(),
+                                 "'input_list'")
+          .failed())
+    return failure();
+
+  auto bodyYield = cast<tosa::YieldOp>(getBodyGraph().front().getTerminator());
+  if (errorIfTypeOrShapeMismatch(*this, bodyYield.getInputs(),
+                                 "'body_graph' results", getInputList(),
+                                 "'input_list'")
+          .failed())
+    return failure();
+
+  // Condition block output must be a single element tensor with a single bool
+  // value.
+  auto condYield = cast<tosa::YieldOp>(getCondGraph().front().getTerminator());
+  if (condYield.getInputs().size() != 1)
+    return emitOpError() << "require 'cond_graph' only have one result";
+
+  auto condOutType = condYield.getInputs()[0].getType();
+  if (errorIfShapeNotSizeOne(*this, condOutType).failed())
+    return emitOpError() << "'cond_graph' result must be a size 1 tensor, got "
+                         << condOutType;
+
+  if (!getElementTypeOrSelf(condOutType).isInteger(1))
+    return emitOpError() << "'cond_graph' result must be a boolean tensor, got "
+                         << condOutType;
+
+  return success();
+}
+
 LogicalResult ReverseOp::verify() {
   if (verifySameElementTypes(*this, /* inType = */ getInput1().getType(),
                              /* outType = */ getOutput().getType())
@@ -3527,6 +3709,32 @@ LogicalResult tosa::SelectOp::verify() {
     return emitOpError("expect element type of bool for input1, got ")
            << predicateElementType;
   }
+
+  return success();
+}
+
+LogicalResult tosa::VariableOp::verify() {
+  StringRef symName = getName();
+  FailureOr<tosa::VariableOp> varOp = findVariableDecl(*this, symName);
+  if (succeeded(varOp))
+    return emitOpError("illegal to have multiple declaration of '")
+           << symName << "'";
+
+  return success();
+}
+
+LogicalResult tosa::VariableReadOp::verify() {
+  if (verifyVariableOpErrorIf(*this, getOutput1().getType(), "'output1'")
+          .failed())
+    return failure();
+
+  return success();
+}
+
+LogicalResult tosa::VariableWriteOp::verify() {
+  if (verifyVariableOpErrorIf(*this, getInput1().getType(), "'input1'")
+          .failed())
+    return failure();
 
   return success();
 }

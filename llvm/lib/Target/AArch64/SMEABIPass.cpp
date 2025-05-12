@@ -30,9 +30,7 @@ using namespace llvm;
 namespace {
 struct SMEABI : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
-  SMEABI() : FunctionPass(ID) {
-    initializeSMEABIPass(*PassRegistry::getPassRegistry());
-  }
+  SMEABI() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
 

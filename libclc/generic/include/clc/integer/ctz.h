@@ -13,7 +13,6 @@
 
 #include <clc/integer/gentype.inc>
 
-#undef __CLC_BODY
 #undef __CLC_FUNCTION
 
 #endif // __OPENCL_C_VERSION__ >= CL_VERSION_2_0

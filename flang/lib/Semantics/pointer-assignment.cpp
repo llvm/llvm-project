@@ -329,7 +329,6 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
             " shape"_err_en_US;
     } else if (rhsType->corank() > 0 &&
         (isVolatile_ != last->attrs().test(Attr::VOLATILE))) { // C1020
-      // TODO: what if A is VOLATILE in A%B%C?  need a better test here
       if (isVolatile_) {
         msg = "Pointer may not be VOLATILE when target is a"
               " non-VOLATILE coarray"_err_en_US;
@@ -360,6 +359,20 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
     } else {
       Say(std::get<MessageFormattedText>(*msg));
     }
+  }
+
+  // Show warnings after errors
+
+  // 8.5.20(3) A pointer should have the VOLATILE attribute if its target has
+  // the VOLATILE attribute
+  // 8.5.20(4) If an object has the VOLATILE attribute, then all of its
+  // subobjects also have the VOLATILE attribute.
+  if (!isVolatile_ && base->attrs().test(Attr::VOLATILE)) {
+    Warn(common::UsageWarning::NonVolatilePointerToVolatile,
+        "VOLATILE target associated with non-VOLATILE pointer"_warn_en_US);
+  }
+
+  if (msg) {
     return false;
   } else {
     context_.NoteDefinedSymbol(*base);
@@ -555,6 +568,12 @@ bool CheckPointerAssignment(SemanticsContext &context, const SomeExpr &lhs,
     return false; // error was reported
   }
   PointerAssignmentChecker checker{context, scope, *pointer};
+  const Symbol *base{GetFirstSymbol(lhs)};
+  if (base) {
+    // 8.5.20(4) If an object has the VOLATILE attribute, then all of its
+    // subobjects also have the VOLATILE attribute.
+    checker.set_isVolatile(base->attrs().test(Attr::VOLATILE));
+  }
   checker.set_isBoundsRemapping(isBoundsRemapping);
   checker.set_isAssumedRank(isAssumedRank);
   bool lhsOk{checker.CheckLeftHandSide(lhs)};

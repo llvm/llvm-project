@@ -26,13 +26,12 @@
 
 namespace lldb_dap {
 
-SourceBreakpoint::SourceBreakpoint(DAP &dap, const llvm::json::Object &obj)
-    : Breakpoint(dap, obj),
-      m_log_message(GetString(obj, "logMessage").value_or("").str()),
-      m_line(
-          GetInteger<uint64_t>(obj, "line").value_or(LLDB_INVALID_LINE_NUMBER)),
-      m_column(GetInteger<uint64_t>(obj, "column")
-                   .value_or(LLDB_INVALID_COLUMN_NUMBER)) {}
+SourceBreakpoint::SourceBreakpoint(DAP &dap,
+                                   const protocol::SourceBreakpoint &breakpoint)
+    : Breakpoint(dap, breakpoint.condition, breakpoint.hitCondition),
+      m_log_message(breakpoint.logMessage.value_or("")),
+      m_line(breakpoint.line),
+      m_column(breakpoint.column.value_or(LLDB_INVALID_COLUMN_NUMBER)) {}
 
 void SourceBreakpoint::SetBreakpoint(const llvm::StringRef source_path) {
   lldb::SBMutex lock = m_dap.GetAPIMutex();

@@ -1100,6 +1100,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ObjCSpaceAfterProperty", Style.ObjCSpaceAfterProperty);
     IO.mapOptional("ObjCSpaceBeforeProtocolList",
                    Style.ObjCSpaceBeforeProtocolList);
+    IO.mapOptional("OneLineFormatOffRegex", Style.OneLineFormatOffRegex);
     IO.mapOptional("PackConstructorInitializers",
                    Style.PackConstructorInitializers);
     IO.mapOptional("PenaltyBreakAssignment", Style.PenaltyBreakAssignment);
@@ -1151,6 +1152,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("SortUsingDeclarations", Style.SortUsingDeclarations);
     IO.mapOptional("SpaceAfterCStyleCast", Style.SpaceAfterCStyleCast);
     IO.mapOptional("SpaceAfterLogicalNot", Style.SpaceAfterLogicalNot);
+    IO.mapOptional("SpaceAfterOperatorKeyword",
+                   Style.SpaceAfterOperatorKeyword);
     IO.mapOptional("SpaceAfterTemplateKeyword",
                    Style.SpaceAfterTemplateKeyword);
     IO.mapOptional("SpaceAroundPointerQualifiers",
@@ -1638,6 +1641,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
   LLVMStyle.SpaceAfterCStyleCast = false;
   LLVMStyle.SpaceAfterLogicalNot = false;
+  LLVMStyle.SpaceAfterOperatorKeyword = false;
   LLVMStyle.SpaceAfterTemplateKeyword = true;
   LLVMStyle.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Default;
   LLVMStyle.SpaceBeforeAssignmentOperators = true;
