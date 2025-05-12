@@ -261,7 +261,7 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
       BufDecl->getAttr<HLSLResourceBindingAttr>();
   // FIXME: handle implicit binding if no binding attribute is found
   // (llvm/llvm-project#110722)
-  if (RBA)
+  if (RBA && RBA->hasRegisterSlot())
     initializeBufferFromBinding(CGM, BufGV, RBA->getSlotNumber(),
                                 RBA->getSpaceNumber());
 }
@@ -446,7 +446,6 @@ static void gatherFunctions(SmallVectorImpl<Function *> &Fns, llvm::Module &M,
   // HLSL neither supports priorities or COMDat values, so we will check those
   // in an assert but not handle them.
 
-  llvm::SmallVector<Function *> CtorFns;
   for (const auto &Ctor : CA->operands()) {
     if (isa<ConstantAggregateZero>(Ctor))
       continue;

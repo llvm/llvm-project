@@ -439,8 +439,7 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(FoldCandidate &Fold) const {
       }
 
       // This check is only useful for integer instructions
-      if (OpType == AMDGPU::OPERAND_REG_IMM_V2INT16 ||
-          OpType == AMDGPU::OPERAND_REG_INLINE_AC_V2INT16) {
+      if (OpType == AMDGPU::OPERAND_REG_IMM_V2INT16) {
         if (AMDGPU::isInlinableLiteralV216(Lo << 16, OpType)) {
           Mod.setImm(NewModVal | SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1);
           Old.ChangeToImmediate(static_cast<uint32_t>(Lo) << 16);
@@ -1067,6 +1066,16 @@ void SIFoldOperandsImpl::foldOperand(
     if (MovOp == AMDGPU::COPY)
       return;
 
+    // Fold if the destination register class of the MOV instruction (ResRC)
+    // is a superclass of (or equal to) the destination register class of the
+    // COPY (DestRC). If this condition fails, folding would be illegal.
+    const MCInstrDesc &MovDesc = TII->get(MovOp);
+    assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
+    const TargetRegisterClass *ResRC =
+        TRI->getRegClass(MovDesc.operands()[0].RegClass);
+    if (!DestRC->hasSuperClassEq(ResRC))
+      return;
+
     MachineInstr::mop_iterator ImpOpI = UseMI->implicit_operands().begin();
     MachineInstr::mop_iterator ImpOpE = UseMI->implicit_operands().end();
     while (ImpOpI != ImpOpE) {
@@ -1161,8 +1170,14 @@ void SIFoldOperandsImpl::foldOperand(
 
         if (OpToFold.isImm())
           UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
-        else
+        else if (OpToFold.isFI())
           UseMI->getOperand(1).ChangeToFrameIndex(OpToFold.getIndex());
+        else {
+          assert(OpToFold.isGlobal());
+          UseMI->getOperand(1).ChangeToGA(OpToFold.getGlobal(),
+                                          OpToFold.getOffset(),
+                                          OpToFold.getTargetFlags());
+        }
         UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
         return;
       }
@@ -1619,7 +1634,6 @@ bool SIFoldOperandsImpl::foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const {
 
   MachineInstrBuilder B(*MBB.getParent(), CopyMI);
   DenseMap<TargetInstrInfo::RegSubRegPair, Register> VGPRCopies;
-  SmallSetVector<TargetInstrInfo::RegSubRegPair, 32> SeenInputs;
 
   const TargetRegisterClass *UseRC =
       MRI->getRegClass(CopyMI->getOperand(1).getReg());

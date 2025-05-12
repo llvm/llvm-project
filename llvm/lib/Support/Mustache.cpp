@@ -110,6 +110,8 @@ public:
   size_t Indentation;
 };
 
+using EscapeMap = DenseMap<char, std::string>;
+
 class ASTNode {
 public:
   enum Type {
@@ -123,16 +125,14 @@ public:
   };
 
   ASTNode(llvm::StringMap<AstPtr> &Partials, llvm::StringMap<Lambda> &Lambdas,
-          llvm::StringMap<SectionLambda> &SectionLambdas,
-          llvm::DenseMap<char, std::string> &Escapes)
+          llvm::StringMap<SectionLambda> &SectionLambdas, EscapeMap &Escapes)
       : Partials(Partials), Lambdas(Lambdas), SectionLambdas(SectionLambdas),
         Escapes(Escapes), Ty(Type::Root), Parent(nullptr),
         ParentContext(nullptr) {}
 
   ASTNode(std::string Body, ASTNode *Parent, llvm::StringMap<AstPtr> &Partials,
           llvm::StringMap<Lambda> &Lambdas,
-          llvm::StringMap<SectionLambda> &SectionLambdas,
-          llvm::DenseMap<char, std::string> &Escapes)
+          llvm::StringMap<SectionLambda> &SectionLambdas, EscapeMap &Escapes)
       : Partials(Partials), Lambdas(Lambdas), SectionLambdas(SectionLambdas),
         Escapes(Escapes), Ty(Type::Text), Body(std::move(Body)), Parent(Parent),
         ParentContext(nullptr) {}
@@ -140,8 +140,7 @@ public:
   // Constructor for Section/InvertSection/Variable/UnescapeVariable Nodes
   ASTNode(Type Ty, Accessor Accessor, ASTNode *Parent,
           llvm::StringMap<AstPtr> &Partials, llvm::StringMap<Lambda> &Lambdas,
-          llvm::StringMap<SectionLambda> &SectionLambdas,
-          llvm::DenseMap<char, std::string> &Escapes)
+          llvm::StringMap<SectionLambda> &SectionLambdas, EscapeMap &Escapes)
       : Partials(Partials), Lambdas(Lambdas), SectionLambdas(SectionLambdas),
         Escapes(Escapes), Ty(Ty), Parent(Parent),
         AccessorValue(std::move(Accessor)), ParentContext(nullptr) {}
@@ -171,7 +170,7 @@ private:
   StringMap<AstPtr> &Partials;
   StringMap<Lambda> &Lambdas;
   StringMap<SectionLambda> &SectionLambdas;
-  DenseMap<char, std::string> &Escapes;
+  EscapeMap &Escapes;
   Type Ty;
   size_t Indentation = 0;
   std::string RawBody;
@@ -187,7 +186,7 @@ private:
 AstPtr createRootNode(llvm::StringMap<AstPtr> &Partials,
                       llvm::StringMap<Lambda> &Lambdas,
                       llvm::StringMap<SectionLambda> &SectionLambdas,
-                      llvm::DenseMap<char, std::string> &Escapes) {
+                      EscapeMap &Escapes) {
   return std::make_unique<ASTNode>(Partials, Lambdas, SectionLambdas, Escapes);
 }
 
@@ -195,7 +194,7 @@ AstPtr createNode(ASTNode::Type T, Accessor A, ASTNode *Parent,
                   llvm::StringMap<AstPtr> &Partials,
                   llvm::StringMap<Lambda> &Lambdas,
                   llvm::StringMap<SectionLambda> &SectionLambdas,
-                  llvm::DenseMap<char, std::string> &Escapes) {
+                  EscapeMap &Escapes) {
   return std::make_unique<ASTNode>(T, std::move(A), Parent, Partials, Lambdas,
                                    SectionLambdas, Escapes);
 }
@@ -204,7 +203,7 @@ AstPtr createTextNode(std::string Body, ASTNode *Parent,
                       llvm::StringMap<AstPtr> &Partials,
                       llvm::StringMap<Lambda> &Lambdas,
                       llvm::StringMap<SectionLambda> &SectionLambdas,
-                      llvm::DenseMap<char, std::string> &Escapes) {
+                      EscapeMap &Escapes) {
   return std::make_unique<ASTNode>(std::move(Body), Parent, Partials, Lambdas,
                                    SectionLambdas, Escapes);
 }
@@ -374,7 +373,7 @@ SmallVector<Token> tokenize(StringRef Template) {
 class EscapeStringStream : public raw_ostream {
 public:
   explicit EscapeStringStream(llvm::raw_ostream &WrappedStream,
-                              DenseMap<char, std::string> &Escape)
+                              EscapeMap &Escape)
       : Escape(Escape), WrappedStream(WrappedStream) {
     SetUnbuffered();
   }
@@ -394,7 +393,7 @@ protected:
   uint64_t current_pos() const override { return WrappedStream.tell(); }
 
 private:
-  DenseMap<char, std::string> &Escape;
+  EscapeMap &Escape;
   llvm::raw_ostream &WrappedStream;
 };
 
@@ -433,13 +432,13 @@ public:
   AstPtr parse(llvm::StringMap<AstPtr> &Partials,
                llvm::StringMap<Lambda> &Lambdas,
                llvm::StringMap<SectionLambda> &SectionLambdas,
-               llvm::DenseMap<char, std::string> &Escapes);
+               EscapeMap &Escapes);
 
 private:
   void parseMustache(ASTNode *Parent, llvm::StringMap<AstPtr> &Partials,
                      llvm::StringMap<Lambda> &Lambdas,
                      llvm::StringMap<SectionLambda> &SectionLambdas,
-                     llvm::DenseMap<char, std::string> &Escapes);
+                     EscapeMap &Escapes);
 
   SmallVector<Token> Tokens;
   size_t CurrentPtr;
@@ -449,7 +448,7 @@ private:
 AstPtr Parser::parse(llvm::StringMap<AstPtr> &Partials,
                      llvm::StringMap<Lambda> &Lambdas,
                      llvm::StringMap<SectionLambda> &SectionLambdas,
-                     llvm::DenseMap<char, std::string> &Escapes) {
+                     EscapeMap &Escapes) {
   Tokens = tokenize(TemplateStr);
   CurrentPtr = 0;
   AstPtr RootNode = createRootNode(Partials, Lambdas, SectionLambdas, Escapes);
@@ -460,7 +459,7 @@ AstPtr Parser::parse(llvm::StringMap<AstPtr> &Partials,
 void Parser::parseMustache(ASTNode *Parent, llvm::StringMap<AstPtr> &Partials,
                            llvm::StringMap<Lambda> &Lambdas,
                            llvm::StringMap<SectionLambda> &SectionLambdas,
-                           llvm::DenseMap<char, std::string> &Escapes) {
+                           EscapeMap &Escapes) {
 
   while (CurrentPtr < Tokens.size()) {
     Token CurrentToken = Tokens[CurrentPtr];
@@ -619,8 +618,7 @@ void ASTNode::render(const json::Value &Data, raw_ostream &OS) {
     return;
   }
   case InvertSection: {
-    bool IsLambda =
-        SectionLambdas.find(AccessorValue[0]) != SectionLambdas.end();
+    bool IsLambda = SectionLambdas.contains(AccessorValue[0]);
     if (!isFalsey(Context) || IsLambda)
       return;
     renderChild(Context, OS);
@@ -707,7 +705,6 @@ void ASTNode::renderSectionLambdas(const json::Value &Contexts,
   Parser P = Parser(LambdaStr);
   AstPtr LambdaNode = P.parse(Partials, Lambdas, SectionLambdas, Escapes);
   LambdaNode->render(Contexts, OS);
-  return;
 }
 
 void Template::render(const json::Value &Data, llvm::raw_ostream &OS) {
@@ -726,19 +723,17 @@ void Template::registerLambda(std::string Name, SectionLambda L) {
   SectionLambdas[Name] = L;
 }
 
-void Template::overrideEscapeCharacters(DenseMap<char, std::string> E) {
-  Escapes = std::move(E);
-}
+void Template::overrideEscapeCharacters(EscapeMap E) { Escapes = std::move(E); }
 
 Template::Template(StringRef TemplateStr) {
   Parser P = Parser(TemplateStr);
   Tree = P.parse(Partials, Lambdas, SectionLambdas, Escapes);
   // The default behavior is to escape html entities.
-  DenseMap<char, std::string> HtmlEntities = {{'&', "&amp;"},
-                                              {'<', "&lt;"},
-                                              {'>', "&gt;"},
-                                              {'"', "&quot;"},
-                                              {'\'', "&#39;"}};
+  const EscapeMap HtmlEntities = {{'&', "&amp;"},
+                                  {'<', "&lt;"},
+                                  {'>', "&gt;"},
+                                  {'"', "&quot;"},
+                                  {'\'', "&#39;"}};
   overrideEscapeCharacters(HtmlEntities);
 }
 

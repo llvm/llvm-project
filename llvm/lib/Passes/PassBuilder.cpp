@@ -1505,7 +1505,7 @@ Expected<bool> parseMachineBlockPlacementPassOptions(StringRef Params) {
           inconvertibleErrorCode());
   }
   return AllowTailMerge;
-};
+}
 
 Expected<bool> parseVirtRegRewriterPassOptions(StringRef Params) {
   bool ClearVirtRegs = true;

@@ -23,8 +23,7 @@ TEST_F(LibclangParseTest, InstallAbortingLLVMFatalErrorHandler) {
                "");
 }
 
-// FIXME: Re-enable after Mac-AArch64 signpost crash issues are debugged.
-TEST_F(LibclangParseTest, DISABLED_UninstallAbortingLLVMFatalErrorHandler) {
+TEST_F(LibclangParseTest, UninstallAbortingLLVMFatalErrorHandler) {
   clang_toggleCrashRecovery(0);
   clang_install_aborting_llvm_fatal_error_handler();
   clang_uninstall_llvm_fatal_error_handler();

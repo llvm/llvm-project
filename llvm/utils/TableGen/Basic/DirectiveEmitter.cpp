@@ -244,8 +244,13 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "LLVM_ABI Directive get" << DirLang.getName()
      << "DirectiveKind(llvm::StringRef Str);\n";
   OS << "\n";
+  // For OpenMP the signature is
+  //   getOpenMPDirectiveName(Directive D, unsigned V)
   OS << "LLVM_ABI llvm::StringRef get" << DirLang.getName()
-     << "DirectiveName(Directive D);\n";
+     << "DirectiveName(Directive D";
+  if (DirLang.getCppNamespace() == "omp")
+    OS << ", unsigned = 0";
+  OS << ");\n";
   OS << "\n";
   OS << "LLVM_ABI Clause get" << DirLang.getName()
      << "ClauseKind(llvm::StringRef Str);\n";
@@ -280,18 +285,18 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
 static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
                             StringRef Enum, const DirectiveLanguage &DirLang,
                             StringRef Prefix) {
+  // For OpenMP the "Directive" signature is
+  //   getOpenMPDirectiveName(Directive D, unsigned V)
   OS << "\n";
   OS << "llvm::StringRef llvm::" << DirLang.getCppNamespace() << "::get"
-     << DirLang.getName() << Enum << "Name(" << Enum << " Kind) {\n";
+     << DirLang.getName() << Enum << "Name(" << Enum << " Kind";
+  if (DirLang.getCppNamespace() == "omp" && Enum == "Directive")
+    OS << ", unsigned";
+  OS << ") {\n";
   OS << "  switch (Kind) {\n";
   for (const BaseRecord Rec : Records) {
     OS << "    case " << Prefix << Rec.getFormattedName() << ":\n";
-    OS << "      return \"";
-    if (Rec.getAlternativeName().empty())
-      OS << Rec.getName();
-    else
-      OS << Rec.getAlternativeName();
-    OS << "\";\n";
+    OS << "      return \"" << Rec.getName() << "\";\n";
   }
   OS << "  }\n"; // switch
   OS << "  llvm_unreachable(\"Invalid " << DirLang.getName() << " " << Enum

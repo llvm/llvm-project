@@ -13,6 +13,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <functional>
@@ -174,16 +175,22 @@ static void upcastI8AllocasAndUses(Instruction &I,
 
   Type *SmallestType = nullptr;
 
-  // Gather all cast targets
   for (User *U : AI->users()) {
     auto *Load = dyn_cast<LoadInst>(U);
     if (!Load)
       continue;
     for (User *LU : Load->users()) {
-      auto *Cast = dyn_cast<CastInst>(LU);
-      if (!Cast)
+      Type *Ty = nullptr;
+      if (auto *Cast = dyn_cast<CastInst>(LU))
+        Ty = Cast->getType();
+      if (CallInst *CI = dyn_cast<CallInst>(LU)) {
+        if (CI->getIntrinsicID() == Intrinsic::memset)
+          Ty = Type::getInt32Ty(CI->getContext());
+      }
+
+      if (!Ty)
         continue;
-      Type *Ty = Cast->getType();
+
       if (!SmallestType ||
           Ty->getPrimitiveSizeInBits() < SmallestType->getPrimitiveSizeInBits())
         SmallestType = Ty;
@@ -239,6 +246,77 @@ downcastI64toI32InsertExtractElements(Instruction &I,
   }
 }
 
+static void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
+                                ConstantInt *SizeCI,
+                                DenseMap<Value *, Value *> &ReplacedValues) {
+  LLVMContext &Ctx = Builder.getContext();
+  [[maybe_unused]] const DataLayout &DL =
+      Builder.GetInsertBlock()->getModule()->getDataLayout();
+  [[maybe_unused]] uint64_t OrigSize = SizeCI->getZExtValue();
+
+  AllocaInst *Alloca = dyn_cast<AllocaInst>(Dst);
+
+  assert(Alloca && "Expected memset on an Alloca");
+  assert(OrigSize == Alloca->getAllocationSize(DL)->getFixedValue() &&
+         "Expected for memset size to match DataLayout size");
+
+  Type *AllocatedTy = Alloca->getAllocatedType();
+  ArrayType *ArrTy = dyn_cast<ArrayType>(AllocatedTy);
+  assert(ArrTy && "Expected Alloca for an Array Type");
+
+  Type *ElemTy = ArrTy->getElementType();
+  uint64_t Size = ArrTy->getArrayNumElements();
+
+  [[maybe_unused]] uint64_t ElemSize = DL.getTypeStoreSize(ElemTy);
+
+  assert(ElemSize > 0 && "Size must be set");
+  assert(OrigSize == ElemSize * Size && "Size in bytes must match");
+
+  Value *TypedVal = Val;
+
+  if (Val->getType() != ElemTy) {
+    if (ReplacedValues[Val]) {
+      // Note for i8 replacements if we know them we should use them.
+      // Further if this is a constant ReplacedValues will return null
+      // so we will stick to TypedVal = Val
+      TypedVal = ReplacedValues[Val];
+
+    } else {
+      // This case Val is a ConstantInt so the cast folds away.
+      // However if we don't do the cast the store below ends up being
+      // an i8.
+      TypedVal = Builder.CreateIntCast(Val, ElemTy, false);
+    }
+  }
+
+  for (uint64_t I = 0; I < Size; ++I) {
+    Value *Offset = ConstantInt::get(Type::getInt32Ty(Ctx), I);
+    Value *Ptr = Builder.CreateGEP(ElemTy, Dst, Offset, "gep");
+    Builder.CreateStore(TypedVal, Ptr);
+  }
+}
+
+static void removeMemSet(Instruction &I,
+                         SmallVectorImpl<Instruction *> &ToRemove,
+                         DenseMap<Value *, Value *> &ReplacedValues) {
+
+  CallInst *CI = dyn_cast<CallInst>(&I);
+  if (!CI)
+    return;
+
+  Intrinsic::ID ID = CI->getIntrinsicID();
+  if (ID != Intrinsic::memset)
+    return;
+
+  IRBuilder<> Builder(&I);
+  Value *Dst = CI->getArgOperand(0);
+  Value *Val = CI->getArgOperand(1);
+  ConstantInt *Size = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+  assert(Size && "Expected Size to be a ConstantInt");
+  emitMemsetExpansion(Builder, Dst, Val, Size, ReplacedValues);
+  ToRemove.push_back(CI);
+}
+
 namespace {
 class DXILLegalizationPipeline {
 
@@ -270,6 +348,7 @@ private:
     LegalizationPipeline.push_back(fixI8UseChain);
     LegalizationPipeline.push_back(downcastI64toI32InsertExtractElements);
     LegalizationPipeline.push_back(legalizeFreeze);
+    LegalizationPipeline.push_back(removeMemSet);
   }
 };
 
