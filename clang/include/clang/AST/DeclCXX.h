@@ -3296,7 +3296,7 @@ class LifetimeExtendedTemporaryDecl final
 
   mutable APValue *Value = nullptr;
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
   LifetimeExtendedTemporaryDecl(Expr *Temp, ValueDecl *EDecl, unsigned Mangling)
       : Decl(Decl::LifetimeExtendedTemporary, EDecl->getDeclContext(),
