@@ -2,8 +2,8 @@
 ; RUN: opt -S -structurizecfg %s -o - | FileCheck %s
 ; RUN: opt -S -passes=structurizecfg %s -o - | FileCheck %s
 
-define amdgpu_kernel void @test_extractelement_1(<4 x i32> %vec, i1 %cond, ptr %ptr) {
-; CHECK-LABEL: define amdgpu_kernel void @test_extractelement_1(
+define void @test_extractelement_1(<4 x i32> %vec, i1 %cond, ptr %ptr) {
+; CHECK-LABEL: define void @test_extractelement_1(
 ; CHECK-SAME: <4 x i32> [[VEC:%.*]], i1 [[COND:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[COND_INV:%.*]] = xor i1 [[COND]], true
@@ -42,8 +42,8 @@ merge:
   ret void
 }
 
-define amdgpu_kernel void @test_extractelement_2(<4 x i32> %vec, i1 %cond, ptr %ptr) {
-; CHECK-LABEL: define amdgpu_kernel void @test_extractelement_2(
+define void @test_extractelement_2(<4 x i32> %vec, i1 %cond, ptr %ptr) {
+; CHECK-LABEL: define void @test_extractelement_2(
 ; CHECK-SAME: <4 x i32> [[VEC:%.*]], i1 [[COND:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[COND_INV:%.*]] = xor i1 [[COND]], true
@@ -87,8 +87,8 @@ merge:
 }
 
 %pair = type { i32, i32 }
-define amdgpu_kernel void @test_extractvalue(ptr %ptr, i1 %cond) {
-; CHECK-LABEL: define amdgpu_kernel void @test_extractvalue(
+define void @test_extractvalue(ptr %ptr, i1 %cond) {
+; CHECK-LABEL: define void @test_extractvalue(
 ; CHECK-SAME: ptr [[PTR:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[LOAD_THEN:%.*]] = load [[PAIR:%.*]], ptr [[PTR]], align 4
