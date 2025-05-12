@@ -1,15 +1,15 @@
 ; RUN: llc %s -march=amdgcn -mcpu=gfx1030 -o - 2>&1 | FileCheck %s
-; XFAIL: *
 
-; V_CNDMASK_B32_e64 gets converted to V_CNDMASK_B32_e32, but the
-; expected conversion to SDWA does not occur.  FIXME This leads to a
+; In this test, V_CNDMASK_B32_e64 gets converted to V_CNDMASK_B32_e32,
+; but the expected conversion to SDWA does not occur.  This led to a
 ; compilation error, because the use of $vcc in the resulting
-; instruction must be fixed to $vcc_lo for wave32. This only happens
+; instruction must be fixed to $vcc_lo for wave32 which only happened
 ; after the full conversion to SDWA.
 
 
 ; CHECK-NOT: {{.*}}V_CNDMASK_B32_e32{{.*}}$vcc
 ; CHECK-NOT: {{.*}}Bad machine code: Virtual register defs don't dominate all uses
+; CHECK: {{.*}}v_cndmask_b32_e32{{.*}}vcc_lo
 
 ; ModuleID = 'test.ll'
 source_filename = "test.ll"
