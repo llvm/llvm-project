@@ -158,12 +158,11 @@ const SCEV *llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 
   // If there is an entry in the map return the SCEV of the pointer with the
   // symbolic stride replaced by one.
-  DenseMap<Value *, const SCEV *>::const_iterator SI = PtrToStride.find(Ptr);
-  if (SI == PtrToStride.end())
+  const SCEV *StrideSCEV = PtrToStride.lookup(Ptr);
+  if (!StrideSCEV)
     // For a non-symbolic stride, just return the original expression.
     return OrigSCEV;
 
-  const SCEV *StrideSCEV = SI->second;
   // Note: This assert is both overly strong and overly weak.  The actual
   // invariant here is that StrideSCEV should be loop invariant.  The only
   // such invariant strides we happen to speculate right now are unknowns

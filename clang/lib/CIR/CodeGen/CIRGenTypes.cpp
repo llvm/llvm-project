@@ -420,6 +420,19 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::Enum: {
+    // TODO(cir): Implement updateCompletedType for enums.
+    assert(!cir::MissingFeatures::updateCompletedType());
+    const EnumDecl *ED = cast<EnumType>(ty)->getDecl();
+    if (auto integerType = ED->getIntegerType(); !integerType.isNull())
+      return convertType(integerType);
+    // Return a placeholder 'i32' type.  This can be changed later when the
+    // type is defined (see UpdateCompletedType), but is likely to be the
+    // "right" answer.
+    resultType = cgm.UInt32Ty;
+    break;
+  }
+
   case Type::FunctionNoProto:
   case Type::FunctionProto:
     resultType = convertFunctionTypeInternal(type);
@@ -537,28 +550,6 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   // Construction the function info. We co-allocate the ArgInfos.
   fi = CIRGenFunctionInfo::create(returnType, argTypes);
   functionInfos.InsertNode(fi, insertPos);
-
-  bool inserted = functionsBeingProcessed.insert(fi).second;
-  (void)inserted;
-  assert(inserted && "Are functions being processed recursively?");
-
-  assert(!cir::MissingFeatures::opCallCallConv());
-  getABIInfo().computeInfo(*fi);
-
-  // Loop over all of the computed argument and return value info. If any of
-  // them are direct or extend without a specified coerce type, specify the
-  // default now.
-  cir::ABIArgInfo &retInfo = fi->getReturnInfo();
-  if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
-    retInfo.setCoerceToType(convertType(fi->getReturnType()));
-
-  for (CIRGenFunctionInfoArgInfo &i : fi->arguments())
-    if (i.info.canHaveCoerceToType() && i.info.getCoerceToType() == nullptr)
-      i.info.setCoerceToType(convertType(i.type));
-
-  bool erased = functionsBeingProcessed.erase(fi);
-  (void)erased;
-  assert(erased && "Not in set?");
 
   return *fi;
 }

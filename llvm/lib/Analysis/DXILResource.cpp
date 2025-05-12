@@ -816,8 +816,10 @@ void DXILResourceMap::populateCounterDirections(Module &M) {
       for (ResourceInfo *RBInfo : RBInfos) {
         if (RBInfo->CounterDirection == ResourceCounterDirection::Unknown)
           RBInfo->CounterDirection = Direction;
-        else if (RBInfo->CounterDirection != Direction)
+        else if (RBInfo->CounterDirection != Direction) {
           RBInfo->CounterDirection = ResourceCounterDirection::Invalid;
+          HasInvalidDirection = true;
+        }
       }
     }
   }
@@ -954,9 +956,7 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
   // for each binding type and used spaces. Bindings are sorted by resource
   // class, space, and lower bound register slot.
   BindingSpaces *BS = &SRVSpaces;
-  for (unsigned I = 0, E = Bindings.size(); I != E; ++I) {
-    Binding &B = Bindings[I];
-
+  for (const Binding &B : Bindings) {
     if (BS->RC != B.RC)
       // move to the next resource class spaces
       BS = &getBindingSpaces(B.RC);
