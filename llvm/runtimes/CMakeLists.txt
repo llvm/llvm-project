@@ -285,6 +285,7 @@ function(runtime_default_target)
                                                 CUDA CMAKE_CUDA # For runtimes that may look for the CUDA compiler and/or SDK (libc, offload, flang-rt)
                                                 FFI # offload uses libffi
                                                 FLANG_RUNTIME # Shared between Flang and Flang-RT
+                                                LLVM_ENABLE_LIBCXX # Needed for C++ unit tests to link correctly
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
                                          ${test_targets}
