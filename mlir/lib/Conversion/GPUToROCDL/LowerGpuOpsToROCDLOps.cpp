@@ -27,6 +27,7 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -318,6 +319,7 @@ struct LowerGpuOpsToROCDLOpsPass final
     {
       RewritePatternSet patterns(ctx);
       populateGpuRewritePatterns(patterns);
+      populateGpuPromoteShuffleToAMDGPUPatterns(patterns);
       (void)applyPatternsGreedily(m, std::move(patterns));
     }
 
