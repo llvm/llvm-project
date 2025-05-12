@@ -226,21 +226,20 @@ class ElementwiseOp_(ElementwiseOp):
         inputs,
         outputs,
         kind,
-        indexing_maps=None,
         *,
+        indexing_maps=None,
         loc=None,
         ip=None,
     ):
         if indexing_maps is None:
             inputs = [_get_op_result_or_value(in_) for in_ in inputs]
-            num_args = len(inputs)
             for in0, in1 in zip(inputs[:-1], inputs[1:]):
                 assert in0.type == in1.type
-            if outputs:
-                outputs = [_get_op_result_or_value(out) for out in outputs]
-                num_args += 1
-                assert inputs[0].type == outputs[0].type
-            indexing_maps = [ir.AffineMap.get_identity(inputs[0].type.rank)] * num_args
+            output = _get_op_result_or_value(outputs[0])
+            assert inputs[0].type == output.type
+            num_args = len(inputs) + 1
+            indexing_maps = [AffineMap.get_identity(output.type.rank)] * num_args
+
         super().__init__(
             result_tensors=result_tensors,
             inputs=inputs,
@@ -262,8 +261,8 @@ def elementwise(
     indexing_maps: Optional[Sequence[AffineMapAttr]] = None,
 ):
     ins = [_get_op_result_or_value(input) for input in ins]
-    if len(outs) > 1:
-        raise ValueError(f"{outs=} must have length at most 1.")
+    if len(outs) != 1:
+        raise ValueError(f"{outs=} must have length 1.")
     init = _get_op_result_or_value(outs[0])
     result_types = [init.type] if isinstance(init.type, RankedTensorType) else []
 
