@@ -83,6 +83,7 @@
 #include "SwappedArgumentsCheck.h"
 #include "SwitchMissingDefaultCaseCheck.h"
 #include "TaggedUnionMemberCountCheck.h"
+#include "TaxiAsyncUseAfterFreeCheck.h"
 #include "TerminatingContinueCheck.h"
 #include "ThrowKeywordMissingCheck.h"
 #include "TooSmallLoopVariableCheck.h"
@@ -151,6 +152,8 @@ public:
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
         "bugprone-incorrect-enable-shared-from-this");
+    CheckFactories.registerCheck<TaxiAsyncUseAfterFreeCheck>(
+        "bugprone-taxi-async-use-after-free");
     CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(

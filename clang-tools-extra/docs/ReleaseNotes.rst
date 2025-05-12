@@ -124,6 +124,11 @@ New checks
   pointer and store it as class members without handle the copy and move
   constructors and the assignments.
 
+- New :doc:`bugprone-taxi-async-use-after-free
+  <clang-tidy/checks/bugprone/taxi-async-use-after-free>` check.
+
+  Use-after-free for engine::Async.
+
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 

@@ -30,6 +30,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   InaccurateEraseCheck.cpp
   IncorrectEnableIfCheck.cpp
   IncorrectEnableSharedFromThisCheck.cpp
+  TaxiAsyncUseAfterFreeCheck.cpp
   UnintendedCharOstreamOutputCheck.cpp
   ReturnConstRefFromParameterCheck.cpp
   SuspiciousStringviewDataUsageCheck.cpp
