@@ -540,9 +540,9 @@ static void initializeBufferFromBinding(CodeGenModule &CGM,
                                         llvm::GlobalVariable *GV,
                                         HLSLResourceBindingAttr *RBA) {
   llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
-  auto *False = llvm::ConstantInt::get(Int1Ty, false);
-  auto *Zero = llvm::ConstantInt::get(CGM.IntTy, 0);
-  auto *One = llvm::ConstantInt::get(CGM.IntTy, 1);
+  auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
+  auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
+  auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
   auto *Space =
       llvm::ConstantInt::get(CGM.IntTy, RBA ? RBA->getSpaceNumber() : 0);
 
@@ -550,13 +550,15 @@ static void initializeBufferFromBinding(CodeGenModule &CGM,
     auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
     Intrinsic::ID Intr =
         CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
-    initializeBuffer(CGM, GV, Intr, {Space, RegSlot, One, Zero, False});
+    initializeBuffer(CGM, GV, Intr,
+                     {Space, RegSlot, RangeSize, Index, NonUniform});
   } else {
     auto *OrderID =
         llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
     Intrinsic::ID Intr =
         CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
-    initializeBuffer(CGM, GV, Intr, {OrderID, Space, One, Zero, False});
+    initializeBuffer(CGM, GV, Intr,
+                     {OrderID, Space, RangeSize, Index, NonUniform});
   }
 }
 
