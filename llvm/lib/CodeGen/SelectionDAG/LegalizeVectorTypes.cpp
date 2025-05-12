@@ -4341,12 +4341,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   GetSplitVector(N->getOperand(isStrict ? 1 : 0), Lo0, Hi0);
   GetSplitVector(N->getOperand(isStrict ? 2 : 1), Lo1, Hi1);
 
-  auto PartEltCnt = Lo0.getValueType().getVectorElementCount();
-
   EVT VT = N->getValueType(0);
-  EVT PartResVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
-  assert(PartResVT.getVectorElementCount() == PartEltCnt &&
-         "Expected an equal split!");
+  EVT PartResVT = Lo0.getValueType().changeElementType(VT.getScalarType());
 
   if (Opc == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
