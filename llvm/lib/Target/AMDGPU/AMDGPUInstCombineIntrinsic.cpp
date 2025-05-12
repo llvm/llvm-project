@@ -855,6 +855,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         return IC.replaceInstUsesWith(II, Src);
     }
 
+    if (II.isStrictFP())
+      break;
+
     // Checking for NaN before canonicalization provides better fidelity when
     // mapping other operations onto fmed3 since the order of operands is
     // unchanged.
