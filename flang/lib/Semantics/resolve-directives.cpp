@@ -409,6 +409,19 @@ public:
   }
   void Post(const parser::OpenMPDepobjConstruct &) { PopContext(); }
 
+  bool Pre(const parser::OpenMPFlushConstruct &x) {
+    PushContext(x.source, llvm::omp::Directive::OMPD_flush);
+    for (auto &arg : x.v.Arguments().v) {
+      if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
+        if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
+          ResolveOmpObject(*object, Symbol::Flag::OmpDependObject);
+        }
+      }
+    }
+    return true;
+  }
+  void Post(const parser::OpenMPFlushConstruct &) { PopContext(); }
+
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
     using Flags = WithOmpDeclarative::RequiresFlags;
     using Requires = WithOmpDeclarative::RequiresFlag;
