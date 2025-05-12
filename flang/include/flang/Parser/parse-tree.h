@@ -4149,8 +4149,8 @@ struct OmpDefaultClause {
 //    PRESENT                                       // since 5.1
 struct OmpDefaultmapClause {
   TUPLE_CLASS_BOILERPLATE(OmpDefaultmapClause);
-  ENUM_CLASS(
-      ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None, Default)
+  ENUM_CLASS(ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None,
+      Default, Present)
   MODIFIER_BOILERPLATE(OmpVariableCategory);
   std::tuple<ImplicitBehavior, MODIFIERS()> t;
 };
