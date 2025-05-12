@@ -75,7 +75,7 @@ void test10(void) __attribute__((noreturn));
 
 void test10(void) {
   __asm__("int3");
-  __builtin_unreachable();
+  __builtin_unreachable(1, 2, 3, 6, 7);
 
   // No warning about falling off the end of a noreturn function.
 }
