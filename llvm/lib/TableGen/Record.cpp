@@ -1788,22 +1788,21 @@ const Init *TernOpInit::Fold(const Record *CurRec) const {
       return Val->getDefInit();
     }
     if (LHSv && MHSv && RHSv) {
-      std::string Val = std::string(RHSv->getName());
+      std::string Val = RHSv->getName().str();
       if (LHSv->getAsString() == RHSv->getAsString())
-        Val = std::string(MHSv->getName());
+        Val = MHSv->getName().str();
       return VarInit::get(Val, getType());
     }
     if (LHSs && MHSs && RHSs) {
-      std::string Val = std::string(RHSs->getValue());
+      std::string Val = RHSs->getValue().str();
 
       std::string::size_type found;
       std::string::size_type idx = 0;
       while (true) {
-        found = Val.find(std::string(LHSs->getValue()), idx);
+        found = Val.find(LHSs->getValue().str(), idx);
         if (found == std::string::npos)
           break;
-        Val.replace(found, LHSs->getValue().size(),
-                    std::string(MHSs->getValue()));
+        Val.replace(found, LHSs->getValue().size(), MHSs->getValue().str());
         idx = found + MHSs->getValue().size();
       }
 
@@ -2418,7 +2417,7 @@ const RecTy *DefInit::getFieldType(const StringInit *FieldName) const {
   return nullptr;
 }
 
-std::string DefInit::getAsString() const { return std::string(Def->getName()); }
+std::string DefInit::getAsString() const { return Def->getName().str(); }
 
 static void ProfileVarDefInit(FoldingSetNodeID &ID, const Record *Class,
                               ArrayRef<const ArgumentInit *> Args) {
