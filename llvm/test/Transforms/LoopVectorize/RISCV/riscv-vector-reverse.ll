@@ -126,12 +126,15 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV(REG): At #2 Interval # 2
 ; CHECK-NEXT:  LV(REG): At #3 Interval # 2
 ; CHECK-NEXT:  LV(REG): At #4 Interval # 2
-; CHECK-NEXT:  LV(REG): At #5 Interval # 3
+; CHECK-NEXT:  LV(REG): At #5 Interval # 2
 ; CHECK-NEXT:  LV(REG): At #6 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #7 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #8 Interval # 3
-; CHECK-NEXT:  LV(REG): At #9 Interval # 2
+; CHECK-NEXT:  LV(REG): At #9 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #10 Interval # 3
+; CHECK-NEXT:  LV(REG): At #11 Interval # 3
+; CHECK-NEXT:  LV(REG): At #12 Interval # 2
+; CHECK-NEXT:  LV(REG): At #13 Interval # 2
 ; CHECK-NEXT:  LV(REG): VF = vscale x 4
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
@@ -194,7 +197,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = phi ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
 ; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
 ; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
@@ -374,12 +377,15 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV(REG): At #2 Interval # 2
 ; CHECK-NEXT:  LV(REG): At #3 Interval # 2
 ; CHECK-NEXT:  LV(REG): At #4 Interval # 2
-; CHECK-NEXT:  LV(REG): At #5 Interval # 3
+; CHECK-NEXT:  LV(REG): At #5 Interval # 2
 ; CHECK-NEXT:  LV(REG): At #6 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #7 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #8 Interval # 3
-; CHECK-NEXT:  LV(REG): At #9 Interval # 2
+; CHECK-NEXT:  LV(REG): At #9 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #10 Interval # 3
+; CHECK-NEXT:  LV(REG): At #11 Interval # 3
+; CHECK-NEXT:  LV(REG): At #12 Interval # 2
+; CHECK-NEXT:  LV(REG): At #13 Interval # 2
 ; CHECK-NEXT:  LV(REG): VF = vscale x 4
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
@@ -442,7 +448,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = phi ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
 ; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
 ; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>

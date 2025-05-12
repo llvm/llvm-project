@@ -226,11 +226,11 @@ TEST(HasDeclaration, HasDeclarationOfEnumType) {
 }
 
 TEST(HasDeclaration, HasGetDeclTraitTest) {
-  static_assert(internal::has_getDecl<TypedefType>::value,
+  static_assert(internal::has_getDecl<TypedefType>,
                 "Expected TypedefType to have a getDecl.");
-  static_assert(internal::has_getDecl<RecordType>::value,
+  static_assert(internal::has_getDecl<RecordType>,
                 "Expected RecordType to have a getDecl.");
-  static_assert(!internal::has_getDecl<TemplateSpecializationType>::value,
+  static_assert(!internal::has_getDecl<TemplateSpecializationType>,
                 "Expected TemplateSpecializationType to *not* have a getDecl.");
 }
 

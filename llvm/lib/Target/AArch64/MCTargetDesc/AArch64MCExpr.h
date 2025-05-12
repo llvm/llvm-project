@@ -25,6 +25,7 @@ class AArch64MCExpr : public MCTargetExpr {
 public:
   enum Specifier : uint16_t {
     // clang-format off
+    None          = 0,
     // Symbol locations specifying (roughly speaking) what calculation should be
     // performed to construct the final address for the relocated
     // symbol. E.g. direct, via the GOT, ...
@@ -119,6 +120,20 @@ public:
     VK_TLSDESC_AUTH_PAGE = VK_TLSDESC_AUTH | VK_PAGE,
     VK_SECREL_LO12       = VK_SECREL       | VK_PAGEOFF,
     VK_SECREL_HI12       = VK_SECREL       | VK_HI12,
+
+    // ELF relocation specifiers in data directives:
+    VK_PLT          = 0x400,
+    VK_GOTPCREL,
+
+    // Mach-O @ relocation specifiers:
+    M_GOT,
+    M_GOTPAGE,
+    M_GOTPAGEOFF,
+    M_PAGE,
+    M_PAGEOFF,
+    M_TLVP,
+    M_TLVPPAGE,
+    M_TLVPPAGEOFF,
 
     VK_INVALID  = 0xfff
     // clang-format on
