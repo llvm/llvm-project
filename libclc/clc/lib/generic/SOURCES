@@ -95,6 +95,7 @@ math/clc_sinpi.cl
 math/clc_sqrt.cl
 math/clc_sw_fma.cl
 math/clc_tables.cl
+math/clc_tan.cl
 math/clc_tanh.cl
 math/clc_tanpi.cl
 math/clc_tgamma.cl
