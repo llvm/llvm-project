@@ -57,8 +57,9 @@ public:
     CI->getFileSystemOpts().WorkingDir = *VFS->getCurrentWorkingDirectory();
     CI->getTargetOpts().Triple = "i386-unknown-linux-gnu";
 
+    DiagnosticOptions DiagOpts;
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-        CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions,
+        CompilerInstance::createDiagnostics(*VFS, DiagOpts,
                                             new DiagnosticConsumer));
 
     FileManager *FileMgr = new FileManager(CI->getFileSystemOpts(), VFS);

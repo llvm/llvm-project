@@ -480,9 +480,10 @@ static CXErrorCode clang_indexSourceFile_Impl(
     CaptureDiag = new CaptureDiagnosticConsumer();
 
   // Configure the diagnostics.
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          new DiagnosticOptions, CaptureDiag,
+                                          DiagOpts, CaptureDiag,
                                           /*ShouldOwnClient=*/true));
 
   // Recover resources if we crash before exiting this function.

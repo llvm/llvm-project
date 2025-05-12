@@ -30,6 +30,7 @@ protected:
   int FD;
   llvm::SmallString<256> InputFileName;
   std::unique_ptr<ToolOutputFile> input_file;
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
   std::shared_ptr<CompilerInvocation> CInvok;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
@@ -43,7 +44,7 @@ protected:
     const char *Args[] = {"clang", "-xc++", InputFileName.c_str()};
 
     auto VFS = llvm::vfs::getRealFileSystem();
-    Diags = CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions());
+    Diags = CompilerInstance::createDiagnostics(*VFS, DiagOpts);
 
     CreateInvocationOptions CIOpts;
     CIOpts.Diags = Diags;
@@ -137,7 +138,7 @@ TEST_F(ASTUnitTest, ModuleTextualHeader) {
   const char *Args[] = {"clang", "test.cpp", "-fmodule-map-file=m.modulemap",
                         "-fmodule-name=M"};
   Diags =
-      CompilerInstance::createDiagnostics(*InMemoryFs, new DiagnosticOptions());
+      CompilerInstance::createDiagnostics(*InMemoryFs, DiagOpts);
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
   CInvok = createInvocation(Args, std::move(CIOpts));
@@ -166,7 +167,7 @@ TEST_F(ASTUnitTest, LoadFromCommandLineEarlyError) {
   const char *Args[] = {"clang", "-target", "foobar", InputFileName.c_str()};
 
   auto Diags = CompilerInstance::createDiagnostics(
-      *llvm::vfs::getRealFileSystem(), new DiagnosticOptions());
+      *llvm::vfs::getRealFileSystem(), DiagOpts);
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
@@ -194,7 +195,7 @@ TEST_F(ASTUnitTest, LoadFromCommandLineWorkingDirectory) {
                         InputFileName.c_str()};
 
   auto Diags = CompilerInstance::createDiagnostics(
-      *llvm::vfs::getRealFileSystem(), new DiagnosticOptions());
+      *llvm::vfs::getRealFileSystem(), DiagOpts);
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 

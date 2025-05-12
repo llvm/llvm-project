@@ -35,7 +35,7 @@ protected:
   CommentParserTest()
     : FileMgr(FileMgrOpts),
       DiagID(new DiagnosticIDs()),
-      Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
+      Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
       SourceMgr(Diags, FileMgr),
       Traits(Allocator, CommentOptions()) {
   }
@@ -43,6 +43,7 @@ protected:
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   llvm::BumpPtrAllocator Allocator;
