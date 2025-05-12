@@ -264,6 +264,12 @@ infrastructure are described first, followed by tool-specific sections.
   offered when an argument covers only part of a macro expansion, as it then
   has no source text of its own.
 
+- Improved {doc}`performance-use-std-move
+  <clang-tidy/checks/performance/use-std-move>` to detect nontrivial copy
+  construction on the last use of an automatic variable, in addition to copy
+  assignment, track aliases and restored values, insert `<utility>` for fixes,
+  and support the `AllowedTypes` and `IncludeStyle` options.
+
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
   fixing a crash when checking a const-qualified method declared with the

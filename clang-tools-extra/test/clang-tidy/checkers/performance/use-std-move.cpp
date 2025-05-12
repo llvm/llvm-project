@@ -59,7 +59,7 @@ void NonProfitableNonTrivialMoveAssignPointer(NonTrivialMoveAssign*& target, Non
 void ConvertibleNonTrivialMoveAssignFromLValue(NonTrivialMoveAssign& target, NonTrivialMoveAssign&& source) {
   // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
-  // CHECK-FIXES: target = std::move(source);
+  // CHECK-FIXES: target = source;
 }
 
 // Check moving already moved values
@@ -129,8 +129,9 @@ void ConvertibleNonTrivialMoveAssignShadowed(NoMoveAssign& target, NonTrivialMov
 
 #define ASSIGN(x, y) x = y
 void ConvertibleNonTrivialMoveAssignWithinMacro(NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
-  // No message expected, assignment within a macro.
   ASSIGN(target, source);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'source' could be moved here [performance-use-std-move]
+  // CHECK-FIXES: ASSIGN(target, source);
 }
 
 template<class T>
@@ -239,9 +240,10 @@ void NonConvertibleNonTrivialMoveAssignRValue(NonTrivialMoveAssign& target, NonT
   target = source;
 }
 
-void NonProfitableTrivialMoveAssign(TrivialMoveAssign& target, TrivialMoveAssign source) {
-  // No message expected, moving is possible but pedantic.
+void ConvertibleTrivialMoveAssign(TrivialMoveAssign& target, TrivialMoveAssign source) {
   target = source;
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'source' could be moved here [performance-use-std-move]
+  // CHECK-FIXES: target = std::move(source);
 }
 
 // Check moving in presence of control flow or use
