@@ -237,9 +237,7 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
         lowerResumeOrDestroy(*CB, CoroSubFnInst::DestroyIndex);
         break;
       case Intrinsic::coro_promise: {
-        bool OutsideCoro = CoroBegin == nullptr;
-        if (OutsideCoro)
-          lowerCoroPromise(cast<CoroPromiseInst>(&I));
+        lowerCoroPromise(cast<CoroPromiseInst>(&I));
         break;
       }
       case Intrinsic::coro_done:

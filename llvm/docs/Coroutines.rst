@@ -2123,9 +2123,9 @@ CoroEarly
 ---------
 The CoroEarly pass ensures later middle end passes correctly interpret coroutine 
 semantics and lowers coroutine intrinsics that not needed to be preserved to 
-help later coroutine passes. This pass lowers `coro.promise`_ that outside the 
-coroutine body, `coro.frame`_ and `coro.done`_ intrinsics. It replace uses of 
-promise alloca with `coro.promise`_ intrinsic.
+help later coroutine passes. This pass lowers `coro.promise`_, `coro.frame`_ and 
+`coro.done`_ intrinsics. Afterwards, it replace uses of promise alloca with 
+`coro.promise`_ intrinsic.
 
 .. _CoroSplit:
 
