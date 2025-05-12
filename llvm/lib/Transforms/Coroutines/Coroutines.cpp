@@ -495,8 +495,10 @@ void coro::Shape::cleanCoroutine(
     CoroSave->eraseFromParent();
   UnusedCoroSaves.clear();
 
+  auto *AI = getPromiseAlloca();
   for (auto *PI : CoroPromises) {
-    PI->replaceAllUsesWith(getPromiseAlloca());
+    PI->replaceAllUsesWith(PI->isFromPromise() ? cast<Value>(CoroBegin)
+                                               : cast<Value>(AI));
     PI->eraseFromParent();
   }
 }
