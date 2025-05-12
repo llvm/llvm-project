@@ -203,7 +203,8 @@ void ObjectFileXCOFF::CreateSections(SectionList &unified_section_list) {
   std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
   int idx = 0;
-  for (const llvm::object::XCOFFSectionHeader64 &section : m_binary->sections64()) {
+  for (const llvm::object::XCOFFSectionHeader64 &section :
+       m_binary->sections64()) {
 
     ConstString const_sect_name(section.Name);
 
