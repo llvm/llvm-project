@@ -47,12 +47,18 @@ bool InterfaceMethod::isStatic() const {
 // Return the body for this method if it has one.
 std::optional<StringRef> InterfaceMethod::getBody() const {
   auto value = def->getValueAsString("body");
+  // Trim leading and trailing spaces from the default implementation.
+  if (!value.empty())
+    value = value.trim();
   return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the default implementation for this method if it has one.
 std::optional<StringRef> InterfaceMethod::getDefaultImplementation() const {
   auto value = def->getValueAsString("defaultBody");
+  // Trim leading and trailing spaces from the default implementation.
+  if (!value.empty())
+    value = value.trim();
   return value.empty() ? std::optional<StringRef>() : value;
 }
 
