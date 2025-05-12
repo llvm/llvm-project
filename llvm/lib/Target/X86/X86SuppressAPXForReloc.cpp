@@ -91,11 +91,9 @@ static void suppressEGPRRegClassInRegAndUses(MachineRegisterInfo *MRI,
                                              unsigned int OpNum) {
   suppressEGPRRegClass(MRI, MI, ST, OpNum);
   Register Reg = MI.getOperand(OpNum).getReg();
-  for (MachineInstr &Use : MRI->use_instructions(Reg)) {
-    const unsigned UseOpNum = 0;
-    if (Use.getOperand(UseOpNum).isReg())
-      suppressEGPRRegClass(MRI, Use, ST, UseOpNum);
-  }
+  for (MachineInstr &Use : MRI->use_instructions(Reg))
+    if (Use.getOpcode() == X86::PHI)
+      suppressEGPRRegClass(MRI, Use, ST, 0);
 }
 
 static bool handleInstructionWithEGPR(MachineFunction &MF,

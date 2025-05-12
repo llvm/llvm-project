@@ -15,9 +15,9 @@
 ; CHECK-LABEL: test_regclass_not_updated_by_regalloc_1
 ; APXREL: movq    (%rip), %r16
 ; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar-0x4
+; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar-0x4
 ; NOAPXREL: movq    (%rip), %rdi
 ; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar-0x4
-; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar-0x4
 
 @gvar = external global [20000 x i8]
 
@@ -68,9 +68,9 @@ declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immar
 ; CHECK-LABEL: test_regclass_not_updated_by_regalloc_2
 ; APXREL: {nf} addq (%rip), %r16, %rcx
 ; APXREL-NEXT: R_X86_64_GOTPCREL gvar2-0x4
+; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar2-0x4
 ; NOAPXREL: addq    (%rip), %rbx
 ; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar2-0x4
-; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar2-0x4
 
 @gvar2 = external constant [8 x [8 x i32]]
 
@@ -139,9 +139,9 @@ declare <8 x i32> @llvm.x86.avx2.maskload.d.256(ptr, <8 x i32>)
 ; APX relocation which is not recognized by the builtin linker on released OS.
 
 ; CHECK-LABEL: test_mem_fold
+; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar3-0x4
 ; NOAPXREL: movq (%rip), %rbx
 ; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar3-0x4
-; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar3-0x4
 
 @gvar3 = external global [40000 x i8]
 
@@ -212,9 +212,10 @@ declare void @llvm.masked.scatter.v4f64.v4p0(<4 x double>, <4 x ptr>, i32 immarg
 ; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar9-0x4
 ; APXREL: movq (%rip), %r24
 ; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar10-0x4
+; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar5-0x4
 ; NOAPXREL: movq (%rip), %r15
 ; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar5-0x4
-; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar5-0x4
+
 
 @gvar4 = external global [33 x [33 x double]]
 @gvar5 = external global [33 x [33 x float]]
