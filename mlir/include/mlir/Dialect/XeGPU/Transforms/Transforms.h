@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 
-#include "mlir/Transforms/DialectConversion.h"
-
 namespace mlir {
 class RewritePatternSet;
 
@@ -20,8 +18,7 @@ namespace xegpu {
 void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU SIMT distribution into `patterns`.
 void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
-void populateXeGPUWgToSgPatterns(RewritePatternSet &patterns,
-                                 ConversionTarget &target);
+void populateXeGPUWgToSgPatterns(RewritePatternSet &patterns);
 
 } // namespace xegpu
 } // namespace mlir

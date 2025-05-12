@@ -147,6 +147,8 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     MLIRContext *ctx = op.getContext();
     xegpu::TensorDescType tdescTy = op.getType();
     auto layout = dyn_cast<xegpu::LayoutAttr>(tdescTy.getLayout());
+    if (!layout)
+      return failure();
     Type elemTy = tdescTy.getElementType();
     ArrayRef<int64_t> wgShape = tdescTy.getShape();
     ArrayRef<int64_t> sgShape =
@@ -154,6 +156,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     ArrayRef<int64_t> sgLayout =
         llvm::to_vector_of<int64_t>(layout.getSgLayout().asArrayRef());
 
+    // TODO : Handle order attribute
     // Get the subgroup ID
     auto linearSgId = rewriter.create<gpu::SubgroupIdOp>(loc, nullptr);
 
