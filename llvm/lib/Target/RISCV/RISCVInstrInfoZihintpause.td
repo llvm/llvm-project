@@ -5,6 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 
+//===----------------------------------------------------------------------===//
+//
+// This file describes the RISC-V instructions from the standard Pause Hint
+// extension (Zihintpause).
+//
+//===----------------------------------------------------------------------===//
+
 let Predicates = [HasStdExtZihintpause] in {
   def : Pat<(int_riscv_pause), (FENCE 0x1, 0x0)>;
 }

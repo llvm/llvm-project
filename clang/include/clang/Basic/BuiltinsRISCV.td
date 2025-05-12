@@ -152,7 +152,7 @@ def ntl_store : RISCVBuiltin<"void(...)">;
 //===----------------------------------------------------------------------===//
 let Features = "zihintpause" in {
 def pause : RISCVBuiltin<"void(...)">;
-} // Features = "zihintntl"
+} // Features = "zihintpause"
 
 //===----------------------------------------------------------------------===//
 // XCV extensions.
