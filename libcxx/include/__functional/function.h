@@ -843,8 +843,7 @@ class function<_Rp(_ArgTypes...)>
   struct __callable;
   template <class _Fp>
   struct __callable<_Fp, true> {
-    static const bool value =
-        is_void<_Rp>::value || __is_core_convertible<__invoke_result_t<_Fp, _ArgTypes...>, _Rp>::value;
+    static const bool value = is_void<_Rp>::value || __is_core_convertible_v<__invoke_result_t<_Fp, _ArgTypes...>, _Rp>;
   };
   template <class _Fp>
   struct __callable<_Fp, false> {
