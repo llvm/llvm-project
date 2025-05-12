@@ -456,7 +456,7 @@ public:
   void mangleName(GlobalDecl GD);
   void mangleType(QualType T);
   void mangleCXXRecordDecl(const CXXRecordDecl *Record,
-                           bool IsManglingVTable = false);
+                           bool DontAddSubstitutionForCompat = false);
   void mangleLambdaSig(const CXXRecordDecl *Lambda);
   void mangleModuleNamePrefix(StringRef Name, bool IsPartition = false);
   void mangleVendorQualifier(StringRef Name);
@@ -3104,14 +3104,13 @@ void CXXNameMangler::mangleType(QualType T) {
 }
 
 void CXXNameMangler::mangleCXXRecordDecl(const CXXRecordDecl *Record,
-                                         bool IsManglingVTable) {
+                                         bool DontAddSubstitutionForCompat) {
   if (mangleSubstitution(Record))
     return;
   mangleName(Record);
-  // If we are mangling vtables, return early without adding the record to the
-  // dictionary of substitution candidates to maintain compatibility with older
-  // ABIs.
-  if (IsManglingVTable && isCompatibleWith(LangOptions::ClangABI::Ver19))
+  // Return early without adding the record to the dictionary of substitution
+  // candidates to maintain compatibility with older ABIs.
+  if (DontAddSubstitutionForCompat)
     return;
   addSubstitution(Record);
 }
@@ -7506,7 +7505,7 @@ void ItaniumMangleContextImpl::mangleCXXVTable(const CXXRecordDecl *RD,
   // <special-name> ::= TV <type>  # virtual table
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTV";
-  Mangler.mangleCXXRecordDecl(RD, /*IsManglingVTable=*/true);
+  Mangler.mangleCXXRecordDecl(RD);
 }
 
 void ItaniumMangleContextImpl::mangleCXXVTT(const CXXRecordDecl *RD,
@@ -7514,7 +7513,7 @@ void ItaniumMangleContextImpl::mangleCXXVTT(const CXXRecordDecl *RD,
   // <special-name> ::= TT <type>  # VTT structure
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTT";
-  Mangler.mangleCXXRecordDecl(RD, /*IsManglingVTable=*/true);
+  Mangler.mangleCXXRecordDecl(RD);
 }
 
 void ItaniumMangleContextImpl::mangleCXXCtorVTable(const CXXRecordDecl *RD,
@@ -7524,10 +7523,13 @@ void ItaniumMangleContextImpl::mangleCXXCtorVTable(const CXXRecordDecl *RD,
   // <special-name> ::= TC <type> <offset number> _ <base type>
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTC";
-  Mangler.mangleCXXRecordDecl(RD, /*IsManglingVTable=*/true);
+  bool CompatibilityForV19 =
+      getASTContext().getLangOpts().getClangABICompat() <=
+      LangOptions::ClangABI::Ver19;
+  Mangler.mangleCXXRecordDecl(RD, CompatibilityForV19);
   Mangler.getStream() << Offset;
   Mangler.getStream() << '_';
-  Mangler.mangleCXXRecordDecl(Type, /*IsManglingVTable=*/true);
+  Mangler.mangleCXXRecordDecl(Type);
 }
 
 void ItaniumMangleContextImpl::mangleCXXRTTI(QualType Ty, raw_ostream &Out) {
