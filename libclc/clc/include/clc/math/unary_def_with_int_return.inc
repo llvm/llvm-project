@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION ilogb
-#define __CLC_BODY <clc/math/unary_decl_with_int_return.inc>
+#include <clc/utils.h>
 
-#include <clc/math/gentype.inc>
+#ifndef __CLC_FUNCTION
+#define __CLC_FUNCTION(x) __CLC_CONCAT(__clc_, x)
+#endif
 
-#undef __CLC_FUNCTION
+_CLC_OVERLOAD _CLC_DEF __CLC_INTN FUNCTION(__CLC_GENTYPE a) {
+  return __CLC_FUNCTION(FUNCTION)(a);
+}
