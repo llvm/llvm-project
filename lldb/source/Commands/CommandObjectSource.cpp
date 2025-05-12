@@ -1117,14 +1117,17 @@ protected:
             num_matches += matching_modules.ResolveSymbolContextForFilePath(
                 filename, start_line, check_inlines,
                 SymbolContextItem(eSymbolContextModule |
-                                  eSymbolContextCompUnit),
+                                  eSymbolContextCompUnit |
+                                  eSymbolContextLineEntry),
                 sc_list);
           }
         }
       } else {
         num_matches = target.GetImages().ResolveSymbolContextForFilePath(
             filename, start_line, check_inlines,
-            eSymbolContextModule | eSymbolContextCompUnit, sc_list);
+            eSymbolContextModule | eSymbolContextCompUnit |
+                eSymbolContextLineEntry,
+            sc_list);
       }
 
       if (num_matches == 0) {
@@ -1174,33 +1177,10 @@ protected:
 
           // Headers aren't always in the DWARF but if they have
           // executable code (eg., inlined-functions) then the callsite's
-          // file(s) will be found. So if a header was requested and we got a
-          // primary file (ie., something with a different name), then look thru
-          // its support file(s) for the header.
-          lldb::SupportFileSP found_file_sp =
-              sc.comp_unit->GetPrimarySupportFile();
-
-          if (!llvm::StringRef(found_file_sp->GetSpecOnly().GetPath())
-                   .ends_with(filename)) {
-            int support_matches_count = 0;
-            for (auto &file : sc.comp_unit->GetSupportFiles()) {
-              if (llvm::StringRef(file->GetSpecOnly().GetPath())
-                      .ends_with(filename)) {
-                found_file_sp = file;
-                ++support_matches_count;
-              }
-            }
-            if (support_matches_count == 0) {
-              result.AppendErrorWithFormat(
-                  "No file found for requested file: \"%s.\"\n", filename);
-              return;
-            } else if (support_matches_count > 1) {
-              result.AppendErrorWithFormat(
-                  "Multiple files found for requested file: \"%s.\"\n",
-                  filename);
-              return;
-            }
-          }
+          // file(s) will be found and assigned to
+          // sc.comp_unit->GetPrimarySupportFile, which is NOT what we want to
+          // print. Instead, we want to print the one from the line entry.
+          lldb::SupportFileSP found_file_sp = sc.line_entry.file_sp;
 
           target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
               found_file_sp, m_options.start_line, column, 0,

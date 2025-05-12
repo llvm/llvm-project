@@ -17,7 +17,7 @@
 # CHECK-INLINED: 3   	void f(int x);
 # CHECK-INLINED: 4   	
 # CHECK-INLINED: 5   	inline void g(int x) {
-# CHECK-INLINED: 6   	  *ptr = x; // should raise a SIGILL
+# CHECK-INLINED: 6   	  *ptr = x; // should crash here
 # CHECK-INLINED: 7   	}
 
 # CHECK-NO-INLINED: error: Could not find source file "foo.h".
