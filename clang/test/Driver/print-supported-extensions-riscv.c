@@ -10,6 +10,7 @@
 // CHECK-NEXT:     a                    2.1       'A' (Atomic Instructions)
 // CHECK-NEXT:     f                    2.2       'F' (Single-Precision Floating-Point)
 // CHECK-NEXT:     d                    2.2       'D' (Double-Precision Floating-Point)
+// CHECK-NEXT:     q                    2.2       'Q' (Quad-Precision Floating-Point)
 // CHECK-NEXT:     c                    2.0       'C' (Compressed Instructions)
 // CHECK-NEXT:     b                    1.0       'B' (the collection of the Zba, Zbb, Zbs extensions)
 // CHECK-NEXT:     v                    1.0       'V' (Vector Extension for Application Processors)
