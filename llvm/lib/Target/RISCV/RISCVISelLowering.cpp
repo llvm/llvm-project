@@ -14516,8 +14516,8 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
 //          (SLLI (SH*ADD x, y), c0), if c1-c0 equals to [1|2|3].
 static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
-  // Perform this optimization only in the zba extension.
-  if (!Subtarget.hasStdExtZba())
+  // Perform this optimization only in the zba/xandesperf extension.
+  if (!Subtarget.hasStdExtZba() && !Subtarget.hasVendorXAndesPerf())
     return SDValue();
 
   // Skip for vector types and larger types.
@@ -15407,6 +15407,30 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
+// X * (2^N +/- 2^M) -> (add/sub (shl X, C1), (shl X, C2))
+static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
+                                        uint64_t MulAmt) {
+  uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
+  ISD::NodeType Op;
+  uint64_t ShiftAmt1;
+  if (isPowerOf2_64(MulAmt + MulAmtLowBit)) {
+    Op = ISD::SUB;
+    ShiftAmt1 = MulAmt + MulAmtLowBit;
+  } else if (isPowerOf2_64(MulAmt - MulAmtLowBit)) {
+    Op = ISD::ADD;
+    ShiftAmt1 = MulAmt - MulAmtLowBit;
+  } else {
+    return SDValue();
+  }
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                               DAG.getConstant(Log2_64(ShiftAmt1), DL, VT));
+  SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                               DAG.getConstant(Log2_64(MulAmtLowBit), DL, VT));
+  return DAG.getNode(Op, DL, VT, Shift1, Shift2);
+}
+
 // Try to expand a scalar multiply to a faster sequence.
 static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
                          TargetLowering::DAGCombinerInfo &DCI,
@@ -15424,8 +15448,9 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   if (VT != Subtarget.getXLenVT())
     return SDValue();
 
-  const bool HasShlAdd =
-      Subtarget.hasStdExtZba() || Subtarget.hasVendorXTHeadBa();
+  const bool HasShlAdd = Subtarget.hasStdExtZba() ||
+                         Subtarget.hasVendorXTHeadBa() ||
+                         Subtarget.hasVendorXAndesPerf();
 
   ConstantSDNode *CNode = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (!CNode)
@@ -15540,22 +15565,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
         return DAG.getNode(ISD::SUB, DL, VT, Shift1, Mul359);
       }
     }
-  }
 
-  // 2^N - 2^M -> (sub (shl X, C1), (shl X, C2))
-  uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
-  if (isPowerOf2_64(MulAmt + MulAmtLowBit)) {
-    uint64_t ShiftAmt1 = MulAmt + MulAmtLowBit;
-    SDLoc DL(N);
-    SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                 DAG.getConstant(Log2_64(ShiftAmt1), DL, VT));
-    SDValue Shift2 =
-        DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                    DAG.getConstant(Log2_64(MulAmtLowBit), DL, VT));
-    return DAG.getNode(ISD::SUB, DL, VT, Shift1, Shift2);
-  }
-
-  if (HasShlAdd) {
     for (uint64_t Divisor : {3, 5, 9}) {
       if (MulAmt % Divisor != 0)
         continue;
@@ -15580,6 +15590,9 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
       }
     }
   }
+
+  if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt))
+    return V;
 
   return SDValue();
 }

@@ -92,6 +92,7 @@ public:
     /// The function pointer alignment is a multiple of the function alignment.
     MultipleOfFunctionAlign,
   };
+
 private:
   bool BigEndian = false;
 
@@ -325,11 +326,11 @@ public:
   Align getPointerPrefAlignment(unsigned AS = 0) const;
 
   /// The pointer representation size in bytes, rounded up to a whole number of
-  /// bytes. The difference between this function and getPointerAddressSize() is
-  /// this one returns the size of the entire pointer type (this includes
+  /// bytes. The difference between this function and getAddressSize() is that
+  /// this one returns the size of the entire pointer representation (including
   /// metadata bits for fat pointers) and the latter only returns the number of
   /// address bits.
-  /// \sa DataLayout::getPointerAddressSizeInBits
+  /// \sa DataLayout::getAddressSizeInBits
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
   unsigned getPointerSize(unsigned AS = 0) const;
@@ -341,8 +342,8 @@ public:
   /// only 64 are used to represent the address and the remaining ones are used
   /// for metadata such as bounds and access permissions. In this case
   /// getPointerSize() returns 16, but getIndexSize() returns 8.
-  /// To help with code understanding, the alias getPointerAddressSize() can be
-  /// used instead of getIndexSize() to clarify that an address width is needed.
+  /// To help with code understanding, the alias getAddressSize() can be used
+  /// instead of getIndexSize() to clarify that an address width is needed.
   unsigned getIndexSize(unsigned AS) const;
 
   /// The integral size of a pointer in a given address space in bytes, which
@@ -353,8 +354,8 @@ public:
   /// 48-bit addresses and 32-bit offsets indexing), there is currently no need
   /// to differentiate these properties in LLVM.
   /// \sa DataLayout::getIndexSize
-  /// \sa DataLayout::getPointerAddressSizeInBits
-  unsigned getPointerAddressSize(unsigned AS) const { return getIndexSize(AS); }
+  /// \sa DataLayout::getAddressSizeInBits
+  unsigned getAddressSize(unsigned AS) const { return getIndexSize(AS); }
 
   /// Return the address spaces containing non-integral pointers.  Pointers in
   /// this address space don't have a well-defined bitwise representation.
@@ -383,7 +384,7 @@ public:
   /// The size in bits of the pointer representation in a given address space.
   /// This is not necessarily the same as the integer address of a pointer (e.g.
   /// for fat pointers).
-  /// \sa DataLayout::getPointerAddressSizeInBits()
+  /// \sa DataLayout::getAddressSizeInBits()
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
   unsigned getPointerSizeInBits(unsigned AS = 0) const {
@@ -393,7 +394,7 @@ public:
   /// The size in bits of indices used for address calculation in getelementptr
   /// and for addresses in the given AS. See getIndexSize() for more
   /// information.
-  /// \sa DataLayout::getPointerAddressSizeInBits()
+  /// \sa DataLayout::getAddressSizeInBits()
   unsigned getIndexSizeInBits(unsigned AS) const {
     return getPointerSpec(AS).IndexBitWidth;
   }
@@ -403,7 +404,7 @@ public:
   /// target that requires these two properties to have different values. See
   /// getIndexSize() for more information.
   /// \sa DataLayout::getIndexSizeInBits()
-  unsigned getPointerAddressSizeInBits(unsigned AS) const {
+  unsigned getAddressSizeInBits(unsigned AS) const {
     return getIndexSizeInBits(AS);
   }
 
@@ -416,14 +417,14 @@ public:
 
   /// The size in bits of the index used in GEP calculation for this type.
   /// The function should be called with pointer or vector of pointers type.
-  /// This is defined to return the same value as getPointerAddressSizeInBits(),
+  /// This is defined to return the same value as getAddressSizeInBits(),
   /// but separate functions exist for code clarity.
   unsigned getIndexTypeSizeInBits(Type *Ty) const;
 
   /// The size in bits of an address for this type.
   /// This is defined to return the same value as getIndexTypeSizeInBits(),
   /// but separate functions exist for code clarity.
-  unsigned getPointerAddressSizeInBits(Type *Ty) const {
+  unsigned getAddressSizeInBits(Type *Ty) const {
     return getIndexTypeSizeInBits(Ty);
   }
 
@@ -561,15 +562,21 @@ public:
   /// are set.
   unsigned getLargestLegalIntTypeSizeInBits() const;
 
-  /// Returns the type of a GEP index in AddressSpace.
+  /// Returns the type of a GEP index in \p AddressSpace.
   /// If it was not specified explicitly, it will be the integer type of the
   /// pointer width - IntPtrType.
   IntegerType *getIndexType(LLVMContext &C, unsigned AddressSpace) const;
+  /// Returns the type of an address in \p AddressSpace
+  IntegerType *getAddressType(LLVMContext &C, unsigned AddressSpace) const {
+    return getIndexType(C, AddressSpace);
+  }
 
   /// Returns the type of a GEP index.
   /// If it was not specified explicitly, it will be the integer type of the
   /// pointer width - IntPtrType.
   Type *getIndexType(Type *PtrTy) const;
+  /// Returns the type of an address in \p AddressSpace
+  Type *getAddressType(Type *PtrTy) const { return getIndexType(PtrTy); }
 
   /// Returns the offset from the beginning of the type for the specified
   /// indices.

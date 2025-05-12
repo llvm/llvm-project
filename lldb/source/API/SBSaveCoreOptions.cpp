@@ -129,5 +129,5 @@ uint64_t SBSaveCoreOptions::GetCurrentSizeInBytes(SBError &error) {
 }
 
 lldb_private::SaveCoreOptions &SBSaveCoreOptions::ref() const {
-  return *m_opaque_up.get();
+  return *m_opaque_up;
 }
