@@ -981,14 +981,14 @@ static void genLoopVars(
 }
 
 static clause::Defaultmap::ImplicitBehavior
-getDefaultmapIfPresent(DefaultMapsTy &defaultMaps, mlir::Type varType) {
+getDefaultmapIfPresent(const DefaultMapsTy &defaultMaps, mlir::Type varType) {
   using DefMap = clause::Defaultmap;
 
   if (defaultMaps.empty())
     return DefMap::ImplicitBehavior::Default;
 
   if (llvm::is_contained(defaultMaps, DefMap::VariableCategory::All))
-    return defaultMaps[DefMap::VariableCategory::All];
+    return defaultMaps.at(DefMap::VariableCategory::All);
 
   // NOTE: Unsure if complex and/or vector falls into a scalar type
   // or aggregate, but the current default implicit behaviour is to
@@ -997,19 +997,19 @@ getDefaultmapIfPresent(DefaultMapsTy &defaultMaps, mlir::Type varType) {
   if ((fir::isa_trivial(varType) || fir::isa_char(varType) ||
        fir::isa_builtin_cptr_type(varType)) &&
       llvm::is_contained(defaultMaps, DefMap::VariableCategory::Scalar))
-    return defaultMaps[DefMap::VariableCategory::Scalar];
+    return defaultMaps.at(DefMap::VariableCategory::Scalar);
 
   if (fir::isPointerType(varType) &&
       llvm::is_contained(defaultMaps, DefMap::VariableCategory::Pointer))
-    return defaultMaps[DefMap::VariableCategory::Pointer];
+    return defaultMaps.at(DefMap::VariableCategory::Pointer);
 
   if (fir::isAllocatableType(varType) &&
       llvm::is_contained(defaultMaps, DefMap::VariableCategory::Allocatable))
-    return defaultMaps[DefMap::VariableCategory::Allocatable];
+    return defaultMaps.at(DefMap::VariableCategory::Allocatable);
 
   if (fir::isa_aggregate(varType) &&
       llvm::is_contained(defaultMaps, DefMap::VariableCategory::Aggregate))
-    return defaultMaps[DefMap::VariableCategory::Aggregate];
+    return defaultMaps.at(DefMap::VariableCategory::Aggregate);
 
   return DefMap::ImplicitBehavior::Default;
 }
@@ -1018,7 +1018,7 @@ static std::pair<llvm::omp::OpenMPOffloadMappingFlags,
                  mlir::omp::VariableCaptureKind>
 getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
                           lower::AbstractConverter &converter,
-                          DefaultMapsTy &defaultMaps, mlir::Type varType,
+                          const DefaultMapsTy &defaultMaps, mlir::Type varType,
                           mlir::Location loc, const semantics::Symbol &sym) {
   using DefMap = clause::Defaultmap;
   // Check if a value of type `type` can be passed to the kernel by value.
