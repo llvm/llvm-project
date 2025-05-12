@@ -660,9 +660,9 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
     StrOS << printMBBReference(*MBBEntry.first);
     Entry.Point = StrOS.str().str();
     Str.clear();
-    for (auto &Reg : MBBEntry.second) {
-      if (Reg.getReg() != MCRegister::NoRegister) {
-        StrOS << printReg(Reg.getReg(), TRI);
+    for (const CalleeSavedInfo &Info : MBBEntry.second) {
+      if (Info.getReg()) {
+        StrOS << printReg(Info.getReg(), TRI);
         Entry.Registers.push_back(StrOS.str().str());
         Str.clear();
       }
