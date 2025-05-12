@@ -684,8 +684,6 @@ Bug Fixes to C++ Support
 - Fixed an assertion when trying to constant-fold various builtins when the argument
   referred to a reference to an incomplete type. (#GH129397)
 - Fixed a crash when a cast involved a parenthesized aggregate initialization in dependent context. (#GH72880)
-- No longer crashes when instantiating invalid variable template specialization
-  whose type depends on itself. (#GH51347), (#GH55872)
 - Improved parser recovery of invalid requirement expressions. In turn, this
   fixes crashes from follow-on processing of the invalid requirement. (#GH138820)
 - Fixed the handling of pack indexing types in the constraints of a member function redeclaration. (#GH138255)
