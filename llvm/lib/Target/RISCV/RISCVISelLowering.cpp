@@ -18395,7 +18395,6 @@ static SDValue performVECTOR_SHUFFLECombine(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
                                const RISCVSubtarget &Subtarget) {
-
   assert(N->getOpcode() == RISCVISD::ADD_VL || N->getOpcode() == ISD::ADD);
 
   if (N->getValueType(0).isFixedLengthVector())
@@ -18504,7 +18503,7 @@ static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
 
   SDValue AccumOp = DotOp.getOperand(2);
   bool IsNullAdd = ISD::isConstantSplatVectorAllZeros(AccumOp.getNode());
-  // Peak through fixed to scalable
+  // Peek through fixed to scalable
   if (!IsNullAdd && AccumOp.getOpcode() == ISD::INSERT_SUBVECTOR &&
       AccumOp.getOperand(0).isUndef())
     IsNullAdd =
