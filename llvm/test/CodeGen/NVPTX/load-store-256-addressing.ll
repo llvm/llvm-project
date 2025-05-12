@@ -81,8 +81,8 @@ define void @avar_i32() {
 ; PTX-NEXT:    .reg .b32 %r<9>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.global.v8.u32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [globalin];
-; PTX-NEXT:    st.global.v8.u32 [globalout], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
+; PTX-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [globalin];
+; PTX-NEXT:    st.global.v8.b32 [globalout], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; PTX-NEXT:    ret;
   %load = load <8 x i32>, ptr addrspace(1) @globalin
   store <8 x i32> %load, ptr addrspace(1) @globalout
@@ -95,8 +95,8 @@ define void @avar_i64() {
 ; PTX-NEXT:    .reg .b64 %rd<5>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.global.v4.u64 {%rd1, %rd2, %rd3, %rd4}, [globalin];
-; PTX-NEXT:    st.global.v4.u64 [globalout], {%rd1, %rd2, %rd3, %rd4};
+; PTX-NEXT:    ld.global.v4.b64 {%rd1, %rd2, %rd3, %rd4}, [globalin];
+; PTX-NEXT:    st.global.v4.b64 [globalout], {%rd1, %rd2, %rd3, %rd4};
 ; PTX-NEXT:    ret;
   %load = load <4 x i64>, ptr addrspace(1) @globalin
   store <4 x i64> %load, ptr addrspace(1) @globalout
@@ -109,8 +109,8 @@ define void @avar_float() {
 ; PTX-NEXT:    .reg .b32 %f<9>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.global.v8.f32 {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8}, [globalin];
-; PTX-NEXT:    st.global.v8.f32 [globalout], {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8};
+; PTX-NEXT:    ld.global.v8.b32 {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8}, [globalin];
+; PTX-NEXT:    st.global.v8.b32 [globalout], {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8};
 ; PTX-NEXT:    ret;
   %load = load <8 x float>, ptr addrspace(1) @globalin
   store <8 x float> %load, ptr addrspace(1) @globalout
@@ -123,8 +123,8 @@ define void @avar_double() {
 ; PTX-NEXT:    .reg .b64 %fd<5>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.global.v4.f64 {%fd1, %fd2, %fd3, %fd4}, [globalin];
-; PTX-NEXT:    st.global.v4.f64 [globalout], {%fd1, %fd2, %fd3, %fd4};
+; PTX-NEXT:    ld.global.v4.b64 {%fd1, %fd2, %fd3, %fd4}, [globalin];
+; PTX-NEXT:    st.global.v4.b64 [globalout], {%fd1, %fd2, %fd3, %fd4};
 ; PTX-NEXT:    ret;
   %load = load <4 x double>, ptr addrspace(1) @globalin
   store <4 x double> %load, ptr addrspace(1) @globalout
@@ -201,8 +201,8 @@ define void @asi_i32() {
 ; PTX-NEXT:    .reg .b32 %r<9>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.global.v8.u32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [globalin+32];
-; PTX-NEXT:    st.global.v8.u32 [globalout+32], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
+; PTX-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [globalin+32];
+; PTX-NEXT:    st.global.v8.b32 [globalout+32], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; PTX-NEXT:    ret;
   %in.offset = getelementptr inbounds i8, ptr addrspace(1) @globalin, i32 32
   %load = load <8 x i32>, ptr addrspace(1) %in.offset
@@ -217,8 +217,8 @@ define void @asi_i64() {
 ; PTX-NEXT:    .reg .b64 %rd<5>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.global.v4.u64 {%rd1, %rd2, %rd3, %rd4}, [globalin+32];
-; PTX-NEXT:    st.global.v4.u64 [globalout+32], {%rd1, %rd2, %rd3, %rd4};
+; PTX-NEXT:    ld.global.v4.b64 {%rd1, %rd2, %rd3, %rd4}, [globalin+32];
+; PTX-NEXT:    st.global.v4.b64 [globalout+32], {%rd1, %rd2, %rd3, %rd4};
 ; PTX-NEXT:    ret;
   %in.offset = getelementptr inbounds i8, ptr addrspace(1) @globalin, i32 32
   %load = load <4 x i64>, ptr addrspace(1) %in.offset
@@ -233,8 +233,8 @@ define void @asi_float() {
 ; PTX-NEXT:    .reg .b32 %f<9>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.global.v8.f32 {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8}, [globalin+32];
-; PTX-NEXT:    st.global.v8.f32 [globalout+32], {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8};
+; PTX-NEXT:    ld.global.v8.b32 {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8}, [globalin+32];
+; PTX-NEXT:    st.global.v8.b32 [globalout+32], {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8};
 ; PTX-NEXT:    ret;
   %in.offset = getelementptr inbounds i8, ptr addrspace(1) @globalin, i32 32
   %load = load <8 x float>, ptr addrspace(1) %in.offset
@@ -249,8 +249,8 @@ define void @asi_double() {
 ; PTX-NEXT:    .reg .b64 %fd<5>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.global.v4.f64 {%fd1, %fd2, %fd3, %fd4}, [globalin+32];
-; PTX-NEXT:    st.global.v4.f64 [globalout+32], {%fd1, %fd2, %fd3, %fd4};
+; PTX-NEXT:    ld.global.v4.b64 {%fd1, %fd2, %fd3, %fd4}, [globalin+32];
+; PTX-NEXT:    st.global.v4.b64 [globalout+32], {%fd1, %fd2, %fd3, %fd4};
 ; PTX-NEXT:    ret;
   %in.offset = getelementptr inbounds i8, ptr addrspace(1) @globalin, i32 32
   %load = load <4 x double>, ptr addrspace(1) %in.offset
@@ -266,9 +266,9 @@ define void @areg_64_i8(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [areg_64_i8_param_0];
+; PTX-NEXT:    ld.param.b64 %rd1, [areg_64_i8_param_0];
 ; PTX-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; PTX-NEXT:    ld.param.u64 %rd2, [areg_64_i8_param_1];
+; PTX-NEXT:    ld.param.b64 %rd2, [areg_64_i8_param_1];
 ; PTX-NEXT:    st.global.v8.b32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; PTX-NEXT:    ret;
   %load = load <32 x i8>, ptr addrspace(1) %in
@@ -282,9 +282,9 @@ define void @areg_64_i16(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [areg_64_i16_param_0];
+; PTX-NEXT:    ld.param.b64 %rd1, [areg_64_i16_param_0];
 ; PTX-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; PTX-NEXT:    ld.param.u64 %rd2, [areg_64_i16_param_1];
+; PTX-NEXT:    ld.param.b64 %rd2, [areg_64_i16_param_1];
 ; PTX-NEXT:    st.global.v8.b32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; PTX-NEXT:    ret;
   %load = load <16 x i16>, ptr addrspace(1) %in
@@ -298,9 +298,9 @@ define void @areg_64_half(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [areg_64_half_param_0];
+; PTX-NEXT:    ld.param.b64 %rd1, [areg_64_half_param_0];
 ; PTX-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; PTX-NEXT:    ld.param.u64 %rd2, [areg_64_half_param_1];
+; PTX-NEXT:    ld.param.b64 %rd2, [areg_64_half_param_1];
 ; PTX-NEXT:    st.global.v8.b32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; PTX-NEXT:    ret;
   %load = load <16 x half>, ptr addrspace(1) %in
@@ -314,9 +314,9 @@ define void @areg_64_bfloat(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [areg_64_bfloat_param_0];
+; PTX-NEXT:    ld.param.b64 %rd1, [areg_64_bfloat_param_0];
 ; PTX-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; PTX-NEXT:    ld.param.u64 %rd2, [areg_64_bfloat_param_1];
+; PTX-NEXT:    ld.param.b64 %rd2, [areg_64_bfloat_param_1];
 ; PTX-NEXT:    st.global.v8.b32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; PTX-NEXT:    ret;
   %load = load <16 x bfloat>, ptr addrspace(1) %in
@@ -331,10 +331,10 @@ define void @areg_64_i32(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [areg_64_i32_param_0];
-; PTX-NEXT:    ld.global.v8.u32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; PTX-NEXT:    ld.param.u64 %rd2, [areg_64_i32_param_1];
-; PTX-NEXT:    st.global.v8.u32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
+; PTX-NEXT:    ld.param.b64 %rd1, [areg_64_i32_param_0];
+; PTX-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
+; PTX-NEXT:    ld.param.b64 %rd2, [areg_64_i32_param_1];
+; PTX-NEXT:    st.global.v8.b32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; PTX-NEXT:    ret;
   %load = load <8 x i32>, ptr addrspace(1) %in
   store <8 x i32> %load, ptr addrspace(1) %out
@@ -347,10 +347,10 @@ define void @areg_64_i64(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<7>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [areg_64_i64_param_0];
-; PTX-NEXT:    ld.global.v4.u64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
-; PTX-NEXT:    ld.param.u64 %rd6, [areg_64_i64_param_1];
-; PTX-NEXT:    st.global.v4.u64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
+; PTX-NEXT:    ld.param.b64 %rd1, [areg_64_i64_param_0];
+; PTX-NEXT:    ld.global.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
+; PTX-NEXT:    ld.param.b64 %rd6, [areg_64_i64_param_1];
+; PTX-NEXT:    st.global.v4.b64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
 ; PTX-NEXT:    ret;
   %load = load <4 x i64>, ptr addrspace(1) %in
   store <4 x i64> %load, ptr addrspace(1) %out
@@ -364,10 +364,10 @@ define void @areg_64_float(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [areg_64_float_param_0];
-; PTX-NEXT:    ld.global.v8.f32 {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8}, [%rd1];
-; PTX-NEXT:    ld.param.u64 %rd2, [areg_64_float_param_1];
-; PTX-NEXT:    st.global.v8.f32 [%rd2], {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8};
+; PTX-NEXT:    ld.param.b64 %rd1, [areg_64_float_param_0];
+; PTX-NEXT:    ld.global.v8.b32 {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8}, [%rd1];
+; PTX-NEXT:    ld.param.b64 %rd2, [areg_64_float_param_1];
+; PTX-NEXT:    st.global.v8.b32 [%rd2], {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8};
 ; PTX-NEXT:    ret;
   %load = load <8 x float>, ptr addrspace(1) %in
   store <8 x float> %load, ptr addrspace(1) %out
@@ -381,10 +381,10 @@ define void @areg_64_double(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %fd<5>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [areg_64_double_param_0];
-; PTX-NEXT:    ld.global.v4.f64 {%fd1, %fd2, %fd3, %fd4}, [%rd1];
-; PTX-NEXT:    ld.param.u64 %rd2, [areg_64_double_param_1];
-; PTX-NEXT:    st.global.v4.f64 [%rd2], {%fd1, %fd2, %fd3, %fd4};
+; PTX-NEXT:    ld.param.b64 %rd1, [areg_64_double_param_0];
+; PTX-NEXT:    ld.global.v4.b64 {%fd1, %fd2, %fd3, %fd4}, [%rd1];
+; PTX-NEXT:    ld.param.b64 %rd2, [areg_64_double_param_1];
+; PTX-NEXT:    st.global.v4.b64 [%rd2], {%fd1, %fd2, %fd3, %fd4};
 ; PTX-NEXT:    ret;
   %load = load <4 x double>, ptr addrspace(1) %in
   store <4 x double> %load, ptr addrspace(1) %out
@@ -398,8 +398,8 @@ define void @ari_64_i8(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [ari_64_i8_param_0];
-; PTX-NEXT:    ld.param.u64 %rd2, [ari_64_i8_param_1];
+; PTX-NEXT:    ld.param.b64 %rd1, [ari_64_i8_param_0];
+; PTX-NEXT:    ld.param.b64 %rd2, [ari_64_i8_param_1];
 ; PTX-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1+32];
 ; PTX-NEXT:    st.global.v8.b32 [%rd2+32], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; PTX-NEXT:    ret;
@@ -417,8 +417,8 @@ define void @ari_64_i16(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [ari_64_i16_param_0];
-; PTX-NEXT:    ld.param.u64 %rd2, [ari_64_i16_param_1];
+; PTX-NEXT:    ld.param.b64 %rd1, [ari_64_i16_param_0];
+; PTX-NEXT:    ld.param.b64 %rd2, [ari_64_i16_param_1];
 ; PTX-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1+32];
 ; PTX-NEXT:    st.global.v8.b32 [%rd2+32], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; PTX-NEXT:    ret;
@@ -436,8 +436,8 @@ define void @ari_64_half(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [ari_64_half_param_0];
-; PTX-NEXT:    ld.param.u64 %rd2, [ari_64_half_param_1];
+; PTX-NEXT:    ld.param.b64 %rd1, [ari_64_half_param_0];
+; PTX-NEXT:    ld.param.b64 %rd2, [ari_64_half_param_1];
 ; PTX-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1+32];
 ; PTX-NEXT:    st.global.v8.b32 [%rd2+32], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; PTX-NEXT:    ret;
@@ -455,8 +455,8 @@ define void @ari_64_bfloat(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [ari_64_bfloat_param_0];
-; PTX-NEXT:    ld.param.u64 %rd2, [ari_64_bfloat_param_1];
+; PTX-NEXT:    ld.param.b64 %rd1, [ari_64_bfloat_param_0];
+; PTX-NEXT:    ld.param.b64 %rd2, [ari_64_bfloat_param_1];
 ; PTX-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1+32];
 ; PTX-NEXT:    st.global.v8.b32 [%rd2+32], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; PTX-NEXT:    ret;
@@ -474,10 +474,10 @@ define void @ari_64_i32(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [ari_64_i32_param_0];
-; PTX-NEXT:    ld.param.u64 %rd2, [ari_64_i32_param_1];
-; PTX-NEXT:    ld.global.v8.u32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1+32];
-; PTX-NEXT:    st.global.v8.u32 [%rd2+32], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
+; PTX-NEXT:    ld.param.b64 %rd1, [ari_64_i32_param_0];
+; PTX-NEXT:    ld.param.b64 %rd2, [ari_64_i32_param_1];
+; PTX-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1+32];
+; PTX-NEXT:    st.global.v8.b32 [%rd2+32], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; PTX-NEXT:    ret;
   %in.offset = getelementptr inbounds i8, ptr addrspace(1) %in, i32 32
   %load = load <8 x i32>, ptr addrspace(1) %in.offset
@@ -492,10 +492,10 @@ define void @ari_64_i64(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<7>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [ari_64_i64_param_0];
-; PTX-NEXT:    ld.param.u64 %rd2, [ari_64_i64_param_1];
-; PTX-NEXT:    ld.global.v4.u64 {%rd3, %rd4, %rd5, %rd6}, [%rd1+32];
-; PTX-NEXT:    st.global.v4.u64 [%rd2+32], {%rd3, %rd4, %rd5, %rd6};
+; PTX-NEXT:    ld.param.b64 %rd1, [ari_64_i64_param_0];
+; PTX-NEXT:    ld.param.b64 %rd2, [ari_64_i64_param_1];
+; PTX-NEXT:    ld.global.v4.b64 {%rd3, %rd4, %rd5, %rd6}, [%rd1+32];
+; PTX-NEXT:    st.global.v4.b64 [%rd2+32], {%rd3, %rd4, %rd5, %rd6};
 ; PTX-NEXT:    ret;
   %in.offset = getelementptr inbounds i8, ptr addrspace(1) %in, i32 32
   %load = load <4 x i64>, ptr addrspace(1) %in.offset
@@ -511,10 +511,10 @@ define void @ari_64_float(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [ari_64_float_param_0];
-; PTX-NEXT:    ld.param.u64 %rd2, [ari_64_float_param_1];
-; PTX-NEXT:    ld.global.v8.f32 {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8}, [%rd1+32];
-; PTX-NEXT:    st.global.v8.f32 [%rd2+32], {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8};
+; PTX-NEXT:    ld.param.b64 %rd1, [ari_64_float_param_0];
+; PTX-NEXT:    ld.param.b64 %rd2, [ari_64_float_param_1];
+; PTX-NEXT:    ld.global.v8.b32 {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8}, [%rd1+32];
+; PTX-NEXT:    st.global.v8.b32 [%rd2+32], {%f1, %f2, %f3, %f4, %f5, %f6, %f7, %f8};
 ; PTX-NEXT:    ret;
   %in.offset = getelementptr inbounds i8, ptr addrspace(1) %in, i32 32
   %load = load <8 x float>, ptr addrspace(1) %in.offset
@@ -530,10 +530,10 @@ define void @ari_64_double(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; PTX-NEXT:    .reg .b64 %fd<5>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    ld.param.u64 %rd1, [ari_64_double_param_0];
-; PTX-NEXT:    ld.param.u64 %rd2, [ari_64_double_param_1];
-; PTX-NEXT:    ld.global.v4.f64 {%fd1, %fd2, %fd3, %fd4}, [%rd1+32];
-; PTX-NEXT:    st.global.v4.f64 [%rd2+32], {%fd1, %fd2, %fd3, %fd4};
+; PTX-NEXT:    ld.param.b64 %rd1, [ari_64_double_param_0];
+; PTX-NEXT:    ld.param.b64 %rd2, [ari_64_double_param_1];
+; PTX-NEXT:    ld.global.v4.b64 {%fd1, %fd2, %fd3, %fd4}, [%rd1+32];
+; PTX-NEXT:    st.global.v4.b64 [%rd2+32], {%fd1, %fd2, %fd3, %fd4};
 ; PTX-NEXT:    ret;
   %in.offset = getelementptr inbounds i8, ptr addrspace(1) %in, i32 32
   %load = load <4 x double>, ptr addrspace(1) %in.offset
