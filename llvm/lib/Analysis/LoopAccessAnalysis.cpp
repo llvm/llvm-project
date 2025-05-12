@@ -1585,6 +1585,8 @@ std::optional<int> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
     OffsetB = OffsetB.sextOrTrunc(IdxWidth);
 
     OffsetB -= OffsetA;
+    if (OffsetB.getSignificantBits() > sizeof(int) * 8)
+      return std::nullopt;
     Val = OffsetB.getSExtValue();
   } else {
     // Otherwise compute the distance with SCEV between the base pointers.
@@ -1593,6 +1595,8 @@ std::optional<int> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
     std::optional<APInt> Diff =
         SE.computeConstantDifference(PtrSCEVB, PtrSCEVA);
     if (!Diff)
+      return std::nullopt;
+    if (Diff->getSignificantBits() > sizeof(int) * 8)
       return std::nullopt;
     Val = Diff->getSExtValue();
   }
