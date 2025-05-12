@@ -243,7 +243,7 @@ Changes in existing checks
   diagnosing designated initializers for ``std::array`` initializations.
 
 - Improved :doc:`modernize-use-ranges
-  <clang-tidy/checks/modernize/use-ranges>` check by updating suppress
+  <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
   warnings logic for ``nullptr`` in ``std::find``.
 
 - Improved :doc:`modernize-use-starts-ends-with
