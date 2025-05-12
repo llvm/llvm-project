@@ -64,7 +64,6 @@
 //
 // CHECK-ROOT:      tree
 // CHECK-ROOT-SAME:             /^objroot/test/CAS/{{$}}
-// CHECK-ROOT-NEXT: tree {{.*}} /^sdk/Library/Frameworks/{{$}}
 // CHECK-ROOT-NEXT: file {{.*}} /^source/depscan-prefix-map.c{{$}}
 // CHECK-ROOT-NEXT: file {{.*}} /^toolchain/usr/lib/clang/1000/include/stdarg.h{{$}}
 
