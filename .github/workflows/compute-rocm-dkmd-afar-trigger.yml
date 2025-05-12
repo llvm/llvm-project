@@ -8,8 +8,9 @@ on:
 
 jobs:
   trigger_jenkins:
-    runs-on: self-hosted
-    
+    runs-on: 
+      group: compiler-generic-runners
+      
     steps:    
     - name: Set environment variable for container image
       run: |
