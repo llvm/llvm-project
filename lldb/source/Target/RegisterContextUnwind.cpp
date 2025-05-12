@@ -248,6 +248,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     active_row =
         m_full_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
     row_register_kind = m_full_unwind_plan_sp->GetRegisterKind();
+    PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
     if (active_row && log) {
       StreamString active_row_strm;
       active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(), &m_thread,
@@ -279,7 +280,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
       call_site_unwind_plan = func_unwinders_sp->GetUnwindPlanAtCallSite(
           process->GetTarget(), m_thread);
 
-    if (call_site_unwind_plan != nullptr) {
+    if (call_site_unwind_plan.get() != nullptr) {
       m_fallback_unwind_plan_sp = call_site_unwind_plan;
       if (TryFallbackUnwindPlan())
         cfa_status = true;
@@ -1375,6 +1376,7 @@ RegisterContextUnwind::SavedLocationForRegister(
         }
       }
 
+      // Check if the active_row has a register location listed.
       if (regnum.IsValid() && active_row &&
           active_row->GetRegisterInfo(regnum.GetAsKind(unwindplan_registerkind),
                                       unwindplan_regloc)) {
@@ -1388,11 +1390,10 @@ RegisterContextUnwind::SavedLocationForRegister(
       // This is frame 0 and we're retrieving the PC and it's saved in a Return
       // Address register and it hasn't been saved anywhere yet -- that is,
       // it's still live in the actual register. Handle this specially.
-
       if (!have_unwindplan_regloc && return_address_reg.IsValid() &&
-          IsFrameZero()) {
-        if (return_address_reg.GetAsKind(eRegisterKindLLDB) !=
-            LLDB_INVALID_REGNUM) {
+          return_address_reg.GetAsKind(eRegisterKindLLDB) !=
+              LLDB_INVALID_REGNUM) {
+        if (IsFrameZero()) {
           lldb_private::UnwindLLDB::ConcreteRegisterLocation new_regloc;
           new_regloc.type = UnwindLLDB::ConcreteRegisterLocation::
               eRegisterInLiveRegisterContext;
@@ -1406,6 +1407,17 @@ RegisterContextUnwind::SavedLocationForRegister(
                        return_address_reg.GetAsKind(eRegisterKindLLDB),
                        return_address_reg.GetAsKind(eRegisterKindLLDB));
           return UnwindLLDB::RegisterSearchResult::eRegisterFound;
+        } else if (BehavesLikeZerothFrame()) {
+          // This function was interrupted asynchronously -- it faulted,
+          // an async interrupt, a timer fired, a debugger expression etc.
+          // The caller's pc is in the Return Address register, but the
+          // UnwindPlan for this function may have no location rule for
+          // the RA reg.
+          // This means that the caller's return address is in the RA reg
+          // when the function was interrupted--descend down one stack frame
+          // to retrieve it from the trap handler's saved context.
+          unwindplan_regloc.SetSame();
+          have_unwindplan_regloc = true;
         }
       }
 
@@ -1722,10 +1734,10 @@ RegisterContextUnwind::SavedLocationForRegister(
 // tricky frame and our usual techniques can continue to be used.
 
 bool RegisterContextUnwind::TryFallbackUnwindPlan() {
-  if (m_fallback_unwind_plan_sp == nullptr)
+  if (m_fallback_unwind_plan_sp.get() == nullptr)
     return false;
 
-  if (m_full_unwind_plan_sp == nullptr)
+  if (m_full_unwind_plan_sp.get() == nullptr)
     return false;
 
   if (m_full_unwind_plan_sp.get() == m_fallback_unwind_plan_sp.get() ||
@@ -1773,7 +1785,7 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
   // fallback UnwindPlan. We checked if m_fallback_unwind_plan_sp was nullptr
   // at the top -- the only way it became nullptr since then is via
   // SavedLocationForRegister().
-  if (m_fallback_unwind_plan_sp == nullptr)
+  if (m_fallback_unwind_plan_sp.get() == nullptr)
     return true;
 
   // Switch the full UnwindPlan to be the fallback UnwindPlan.  If we decide
@@ -1862,10 +1874,10 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
 }
 
 bool RegisterContextUnwind::ForceSwitchToFallbackUnwindPlan() {
-  if (m_fallback_unwind_plan_sp == nullptr)
+  if (m_fallback_unwind_plan_sp.get() == nullptr)
     return false;
 
-  if (m_full_unwind_plan_sp == nullptr)
+  if (m_full_unwind_plan_sp.get() == nullptr)
     return false;
 
   if (m_full_unwind_plan_sp.get() == m_fallback_unwind_plan_sp.get() ||
@@ -1922,6 +1934,7 @@ void RegisterContextUnwind::PropagateTrapHandlerFlagFromUnwindPlan(
   }
 
   m_frame_type = eTrapHandlerFrame;
+  UnwindLogMsg("This frame is marked as a trap handler via its UnwindPlan");
 
   if (m_current_offset_backed_up_one != m_current_offset) {
     // We backed up the pc by 1 to compute the symbol context, but
