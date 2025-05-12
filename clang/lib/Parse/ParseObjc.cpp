@@ -23,6 +23,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -1176,7 +1177,8 @@ bool Parser::isTokIdentifier_in() const {
   // valid tokens following an 'in'; such as an identifier, unary operators,
   // '[' etc.
   return (getLangOpts().ObjC && Tok.is(tok::identifier) &&
-          Tok.getIdentifierInfo() == ObjCTypeQuals[objc_in]);
+          Tok.getIdentifierInfo() ==
+              ObjCTypeQuals[llvm::to_underlying(ObjCTypeQual::in)]);
 }
 
 /// ParseObjCTypeQualifierList - This routine parses the objective-c's type
@@ -1215,34 +1217,47 @@ void Parser::ParseObjCTypeQualifierList(ObjCDeclSpec &DS,
       return;
 
     const IdentifierInfo *II = Tok.getIdentifierInfo();
-    for (unsigned i = 0; i != objc_NumQuals; ++i) {
-      if (II != ObjCTypeQuals[i] ||
-          NextToken().is(tok::less) ||
-          NextToken().is(tok::coloncolon))
+    for (unsigned i = 0; i != llvm::to_underlying(ObjCTypeQual::NumQuals);
+         ++i) {
+      ObjCTypeQual TQ = static_cast<ObjCTypeQual>(i);
+      if (II != ObjCTypeQuals[llvm::to_underlying(TQ)] ||
+          NextToken().is(tok::less) || NextToken().is(tok::coloncolon))
         continue;
 
       ObjCDeclSpec::ObjCDeclQualifier Qual;
       NullabilityKind Nullability;
-      switch (i) {
+      switch (TQ) {
       default: llvm_unreachable("Unknown decl qualifier");
-      case objc_in:     Qual = ObjCDeclSpec::DQ_In; break;
-      case objc_out:    Qual = ObjCDeclSpec::DQ_Out; break;
-      case objc_inout:  Qual = ObjCDeclSpec::DQ_Inout; break;
-      case objc_oneway: Qual = ObjCDeclSpec::DQ_Oneway; break;
-      case objc_bycopy: Qual = ObjCDeclSpec::DQ_Bycopy; break;
-      case objc_byref:  Qual = ObjCDeclSpec::DQ_Byref; break;
+      case ObjCTypeQual::in:
+        Qual = ObjCDeclSpec::DQ_In;
+        break;
+      case ObjCTypeQual::out:
+        Qual = ObjCDeclSpec::DQ_Out;
+        break;
+      case ObjCTypeQual::inout:
+        Qual = ObjCDeclSpec::DQ_Inout;
+        break;
+      case ObjCTypeQual::oneway:
+        Qual = ObjCDeclSpec::DQ_Oneway;
+        break;
+      case ObjCTypeQual::bycopy:
+        Qual = ObjCDeclSpec::DQ_Bycopy;
+        break;
+      case ObjCTypeQual::byref:
+        Qual = ObjCDeclSpec::DQ_Byref;
+        break;
 
-      case objc_nonnull:
+      case ObjCTypeQual::nonnull:
         Qual = ObjCDeclSpec::DQ_CSNullability;
         Nullability = NullabilityKind::NonNull;
         break;
 
-      case objc_nullable:
+      case ObjCTypeQual::nullable:
         Qual = ObjCDeclSpec::DQ_CSNullability;
         Nullability = NullabilityKind::Nullable;
         break;
 
-      case objc_null_unspecified:
+      case ObjCTypeQual::null_unspecified:
         Qual = ObjCDeclSpec::DQ_CSNullability;
         Nullability = NullabilityKind::Unspecified;
         break;
@@ -1972,7 +1987,7 @@ void Parser::ParseObjCClassInstanceVariables(ObjCContainerDecl *interfaceDecl,
 
     // Check for extraneous top-level semicolon.
     if (Tok.is(tok::semi)) {
-      ConsumeExtraSemi(InstanceVariableList);
+      ConsumeExtraSemi(ExtraSemiKind::InstanceVariableList);
       continue;
     }
 

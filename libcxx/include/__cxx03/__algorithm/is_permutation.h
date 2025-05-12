@@ -33,18 +33,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class = void>
 struct _ConstTimeDistance : false_type {};
 
-#if _LIBCPP_STD_VER >= 20
-
-template <class _Iter1, class _Sent1, class _Iter2, class _Sent2>
-struct _ConstTimeDistance<_Iter1,
-                          _Sent1,
-                          _Iter2,
-                          _Sent2,
-                          __enable_if_t< sized_sentinel_for<_Sent1, _Iter1> && sized_sentinel_for<_Sent2, _Iter2> >>
-    : true_type {};
-
-#else
-
 template <class _Iter1, class _Iter2>
 struct _ConstTimeDistance<
     _Iter1,
@@ -54,8 +42,6 @@ struct _ConstTimeDistance<
     __enable_if_t< is_same<typename iterator_traits<_Iter1>::iterator_category, random_access_iterator_tag>::value &&
                    is_same<typename iterator_traits<_Iter2>::iterator_category, random_access_iterator_tag>::value > >
     : true_type {};
-
-#endif // _LIBCPP_STD_VER >= 20
 
 // Internal functions
 
@@ -260,45 +246,6 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 boo
 is_permutation(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2) {
   return std::is_permutation(__first1, __last1, __first2, __equal_to());
 }
-
-#if _LIBCPP_STD_VER >= 14
-
-// 2+2 iterators
-template <class _ForwardIterator1, class _ForwardIterator2>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool is_permutation(
-    _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2, _ForwardIterator2 __last2) {
-  return std::__is_permutation<_ClassicAlgPolicy>(
-      std::move(__first1),
-      std::move(__last1),
-      std::move(__first2),
-      std::move(__last2),
-      __equal_to(),
-      __identity(),
-      __identity());
-}
-
-// 2+2 iterators, predicate
-template <class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool is_permutation(
-    _ForwardIterator1 __first1,
-    _ForwardIterator1 __last1,
-    _ForwardIterator2 __first2,
-    _ForwardIterator2 __last2,
-    _BinaryPredicate __pred) {
-  static_assert(__is_callable<_BinaryPredicate, decltype(*__first1), decltype(*__first2)>::value,
-                "The predicate has to be callable");
-
-  return std::__is_permutation<_ClassicAlgPolicy>(
-      std::move(__first1),
-      std::move(__last1),
-      std::move(__first2),
-      std::move(__last2),
-      __pred,
-      __identity(),
-      __identity());
-}
-
-#endif // _LIBCPP_STD_VER >= 14
 
 _LIBCPP_END_NAMESPACE_STD
 

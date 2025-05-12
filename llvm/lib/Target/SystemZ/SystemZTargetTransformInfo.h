@@ -90,7 +90,8 @@ public:
   bool LSRWithInstrQueries() const override { return true; }
   InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) const override;
+      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+      ArrayRef<Value *> VL = {}) const override;
   bool supportsEfficientVectorElementLoadStore() const override { return true; }
   bool enableInterleavedAccessVectorization() const override { return true; }
 
@@ -122,8 +123,8 @@ public:
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override;
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override;
   bool isFoldableLoad(const LoadInst *Ld,
                       const Instruction *&FoldedValue) const;
   InstructionCost getMemoryOpCost(

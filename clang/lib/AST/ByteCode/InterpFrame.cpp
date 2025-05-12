@@ -107,7 +107,18 @@ void InterpFrame::destroy(unsigned Idx) {
 template <typename T>
 static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
                   QualType Ty) {
-  V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+  if constexpr (std::is_same_v<Pointer, T>) {
+    if (Ty->isPointerOrReferenceType())
+      V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+    else {
+      if (std::optional<APValue> RValue = V.toRValue(ASTCtx, Ty))
+        RValue->printPretty(OS, ASTCtx, Ty);
+      else
+        OS << "...";
+    }
+  } else {
+    V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+  }
 }
 
 static bool shouldSkipInBacktrace(const Function *F) {

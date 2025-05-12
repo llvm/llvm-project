@@ -2202,21 +2202,19 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v2.l
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v4, v3.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v3.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v2.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_rcp_f32_e32 v4, v4
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v7, v6.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_rcp_f32_e32 v7, v7
 ; GFX11-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-TRUE16-NEXT:    v_mul_f32_e32 v0, v0, v4
-; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v7, -v5, v0, v6 op_sel_hi:[1,0,1]
+; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v5, -v3, v0, v2 op_sel_hi:[1,0,1]
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_fmac_f32_e32 v0, v7, v4
-; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v5, -v5, v0, v6 op_sel_hi:[1,0,1]
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
+; GFX11-TRUE16-NEXT:    v_fmac_f32_e32 v0, v5, v4
+; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v5, -v3, v0, v2 op_sel_hi:[1,0,1]
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v7, v6.l
-; GFX11-TRUE16-NEXT:    v_rcp_f32_e32 v7, v7
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mul_f32_e32 v4, v5, v4
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v4, 0xff800000, v4
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
@@ -2226,27 +2224,26 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v5, v4.l
 ; GFX11-TRUE16-NEXT:    v_div_fixup_f16 v0.l, v0.l, v3.l, v2.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_mul_f32_e32 v5, v5, v7
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_trunc_f16_e32 v0.l, v0.l
-; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v8, -v3, v5, v2 op_sel:[1,0,1] op_sel_hi:[1,0,1]
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v8, -v3, v5, v2 op_sel:[1,0,1] op_sel_hi:[1,0,1]
 ; GFX11-TRUE16-NEXT:    v_fma_f16 v0.l, -v0.l, v3.l, v2.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_fmac_f32_e32 v5, v8, v7
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_fma_mix_f32 v2, -v3, v5, v2 op_sel:[1,0,1] op_sel_hi:[1,0,1]
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mul_f32_e32 v2, v2, v7
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff800000, v2
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_add_f32_e32 v2, v2, v5
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v2
-; GFX11-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v0.h, v6.l, v4.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_div_fixup_f16 v0.h, v0.h, v6.l, v4.l
 ; GFX11-TRUE16-NEXT:    v_trunc_f16_e32 v0.h, v0.h
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_fma_f16 v0.h, -v0.h, v6.l, v4.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm

@@ -40,6 +40,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/ROCDLAttachTarget.cpp
   Transforms/ShuffleRewriter.cpp
   Transforms/SPIRVAttachTarget.cpp
+  Transforms/SubgroupIdRewriter.cpp
   Transforms/SubgroupReduceLowering.cpp
 
   OBJECT

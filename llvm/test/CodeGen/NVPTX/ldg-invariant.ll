@@ -12,8 +12,8 @@ define i32 @ld_global(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [ld_global_param_0];
-; CHECK-NEXT:    ld.global.nc.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [ld_global_param_0];
+; CHECK-NEXT:    ld.global.nc.b32 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %a = load i32, ptr addrspace(1) %ptr, !invariant.load !0
@@ -31,8 +31,8 @@ define half @ld_global_v2f16(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [ld_global_v2f16_param_0];
-; CHECK-NEXT:    ld.global.nc.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [ld_global_v2f16_param_0];
+; CHECK-NEXT:    ld.global.nc.b32 %r1, [%rd1];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NEXT:    cvt.f32.f16 %f1, %rs2;
 ; CHECK-NEXT:    cvt.f32.f16 %f2, %rs1;
@@ -58,8 +58,8 @@ define half @ld_global_v4f16(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [ld_global_v4f16_param_0];
-; CHECK-NEXT:    ld.global.nc.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [ld_global_v4f16_param_0];
+; CHECK-NEXT:    ld.global.nc.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
 ; CHECK-NEXT:    cvt.f32.f16 %f1, %rs2;
 ; CHECK-NEXT:    cvt.f32.f16 %f2, %rs1;
 ; CHECK-NEXT:    add.rn.f32 %f3, %f2, %f1;
@@ -96,8 +96,8 @@ define half @ld_global_v8f16(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [ld_global_v8f16_param_0];
-; CHECK-NEXT:    ld.global.nc.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [ld_global_v8f16_param_0];
+; CHECK-NEXT:    ld.global.nc.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {%rs1, tmp}, %r3; }
 ; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {%rs2, tmp}, %r4; }
 ; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {%rs3, tmp}, %r1; }
@@ -135,8 +135,8 @@ define i8 @ld_global_v8i8(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [ld_global_v8i8_param_0];
-; CHECK-NEXT:    ld.global.nc.v2.u32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [ld_global_v8i8_param_0];
+; CHECK-NEXT:    ld.global.nc.v2.b32 {%r1, %r2}, [%rd1];
 ; CHECK-NEXT:    bfe.u32 %r3, %r2, 16, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
 ; CHECK-NEXT:    bfe.u32 %r4, %r2, 0, 8;
@@ -171,8 +171,8 @@ define i8 @ld_global_v16i8(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [ld_global_v16i8_param_0];
-; CHECK-NEXT:    ld.global.nc.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [ld_global_v16i8_param_0];
+; CHECK-NEXT:    ld.global.nc.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    bfe.u32 %r5, %r4, 16, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs1, %r5;
 ; CHECK-NEXT:    bfe.u32 %r6, %r4, 0, 8;
@@ -226,8 +226,8 @@ define i32 @ld_global_v2i32(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [ld_global_v2i32_param_0];
-; CHECK-NEXT:    ld.global.nc.v2.u32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [ld_global_v2i32_param_0];
+; CHECK-NEXT:    ld.global.nc.v2.b32 {%r1, %r2}, [%rd1];
 ; CHECK-NEXT:    add.s32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
@@ -245,8 +245,8 @@ define i32 @ld_global_v4i32(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [ld_global_v4i32_param_0];
-; CHECK-NEXT:    ld.global.nc.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [ld_global_v4i32_param_0];
+; CHECK-NEXT:    ld.global.nc.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    add.s32 %r5, %r1, %r2;
 ; CHECK-NEXT:    add.s32 %r6, %r3, %r4;
 ; CHECK-NEXT:    add.s32 %r7, %r5, %r6;
@@ -270,8 +270,8 @@ define i32 @ld_not_invariant(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [ld_not_invariant_param_0];
-; CHECK-NEXT:    ld.global.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [ld_not_invariant_param_0];
+; CHECK-NEXT:    ld.global.b32 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %a = load i32, ptr addrspace(1) %ptr
@@ -285,8 +285,8 @@ define i32 @ld_not_global_addrspace(ptr addrspace(0) %ptr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [ld_not_global_addrspace_param_0];
-; CHECK-NEXT:    ld.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [ld_not_global_addrspace_param_0];
+; CHECK-NEXT:    ld.b32 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %a = load i32, ptr addrspace(0) %ptr

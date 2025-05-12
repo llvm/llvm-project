@@ -67,15 +67,6 @@ enum NodeType {
   /// poisoned the assertion will not be true for that value.
   AssertAlign,
 
-  /// AssertNoFPClass - These nodes record if a register contains a float
-  /// value that is known to be not some type.
-  /// This node takes two operands.  The first is the node that is known
-  /// never to be some float types; the second is a constant value with
-  /// the value of FPClassTest (casted to uint32_t).
-  /// NOTE: In case of the source value (or any vector element value) is
-  /// poisoned the assertion will not be true for that value.
-  AssertNoFPClass,
-
   /// Various leaf nodes.
   BasicBlock,
   VALUETYPE,
@@ -1376,6 +1367,8 @@ enum NodeType {
   ATOMIC_LOAD_FSUB,
   ATOMIC_LOAD_FMAX,
   ATOMIC_LOAD_FMIN,
+  ATOMIC_LOAD_FMAXIMUM,
+  ATOMIC_LOAD_FMINIMUM,
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
   ATOMIC_LOAD_USUB_COND,

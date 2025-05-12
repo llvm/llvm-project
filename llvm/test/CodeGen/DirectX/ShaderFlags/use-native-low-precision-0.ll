@@ -10,7 +10,7 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ;CHECK-NEXT: ;
 ;CHECK-NEXT: ; Note: shader requires additional functionality:
 ;CHECK-NEXT: ; Note: extra DXIL module flags:
-;CHECK-NEXT: ;       D3D11_1_SB_GLOBAL_FLAG_ENABLE_MINIMUM_PRECISION
+;CHECK-NEXT: ;       Low-precision data types
 ;CHECK-NOT:  ;       Native 16bit types enabled
 ;CHECK-NEXT: ;
 ;CHECK-NEXT: ; Shader Flags for Module Functions

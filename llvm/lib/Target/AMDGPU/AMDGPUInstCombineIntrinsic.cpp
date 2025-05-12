@@ -906,8 +906,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         if (const ConstantFP *C2 = dyn_cast<ConstantFP>(Src2)) {
           APFloat Result = fmed3AMDGCN(C0->getValueAPF(), C1->getValueAPF(),
                                        C2->getValueAPF());
-          return IC.replaceInstUsesWith(
-              II, ConstantFP::get(IC.Builder.getContext(), Result));
+          return IC.replaceInstUsesWith(II,
+                                        ConstantFP::get(II.getType(), Result));
         }
       }
     }
@@ -1440,14 +1440,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (Src0Ty->getNumElements() > Src0NumElts) {
       Src0 = IC.Builder.CreateExtractVector(
           FixedVectorType::get(Src0Ty->getElementType(), Src0NumElts), Src0,
-          IC.Builder.getInt64(0));
+          uint64_t(0));
       MadeChange = true;
     }
 
     if (Src1Ty->getNumElements() > Src1NumElts) {
       Src1 = IC.Builder.CreateExtractVector(
           FixedVectorType::get(Src1Ty->getElementType(), Src1NumElts), Src1,
-          IC.Builder.getInt64(0));
+          uint64_t(0));
       MadeChange = true;
     }
 

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/TrailingObjects.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -23,19 +25,21 @@ class Class1 final : protected TrailingObjects<Class1, short> {
 protected:
   size_t numTrailingObjects(OverloadToken<short>) const { return NumShorts; }
 
-  Class1(int *ShortArray, unsigned NumShorts) : NumShorts(NumShorts) {
-    std::uninitialized_copy(ShortArray, ShortArray + NumShorts,
-                            getTrailingObjects<short>());
+  Class1(ArrayRef<int> ShortArray) : NumShorts(ShortArray.size()) {
+    // This tests the non-templated getTrailingObjects() that returns a pointer
+    // when using a single trailing type.
+    llvm::copy(ShortArray, getTrailingObjects());
   }
 
 public:
-  static Class1 *create(int *ShortArray, unsigned NumShorts) {
-    void *Mem = ::operator new(totalSizeToAlloc<short>(NumShorts));
-    return new (Mem) Class1(ShortArray, NumShorts);
+  static Class1 *create(ArrayRef<int> ShortArray) {
+    void *Mem = ::operator new(totalSizeToAlloc<short>(ShortArray.size()));
+    return new (Mem) Class1(ShortArray);
   }
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
-  short get(unsigned Num) const { return getTrailingObjects<short>()[Num]; }
+  // This indexes into the ArrayRef<> returned by `getTrailingObjects`.
+  short get(unsigned Num) const { return getTrailingObjects(NumShorts)[Num]; }
 
   unsigned numShorts() const { return NumShorts; }
 
@@ -81,7 +85,7 @@ public:
       *C->getTrailingObjects<double>() = D;
     return C;
   }
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   short getShort() const {
     if (!HasShort)
@@ -106,7 +110,7 @@ public:
 
 TEST(TrailingObjects, OneArg) {
   int arr[] = {1, 2, 3};
-  Class1 *C = Class1::create(arr, 3);
+  Class1 *C = Class1::create(arr);
   EXPECT_EQ(sizeof(Class1), sizeof(unsigned));
   EXPECT_EQ(Class1::additionalSizeToAlloc<short>(1), sizeof(short));
   EXPECT_EQ(Class1::additionalSizeToAlloc<short>(3), sizeof(short) * 3);
@@ -127,6 +131,9 @@ TEST(TrailingObjects, OneArg) {
   EXPECT_EQ(C->getTrailingObjects<short>(), reinterpret_cast<short *>(C + 1));
   EXPECT_EQ(C->get(0), 1);
   EXPECT_EQ(C->get(2), 3);
+
+  EXPECT_EQ(C->getTrailingObjects(), C->getTrailingObjects<short>());
+
   delete C;
 }
 

@@ -106,6 +106,8 @@ A complete list of currently supported format string variables is listed below:
 | ``function.return-right``                         | The return type to the right of the demangled function name of the current function. This depends on the frame's language. In ``void ns::foo(int)`` there is no ``function.return-right`` so this would correspond to an empty string. However, in some cases, particularly for functions   |
 |                                                   | returning function pointers, part of the return type is to the right of the function name. E.g., for ``void (*ns::func(float))(int)`` the ``function.return-left`` would be ``void (*`` and the ``function.return-right`` would be ``)(int)``.                                              |
 +---------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| ``function.suffix``                               | Any suffix added to the demangled function name of the current function. This depends on the frame's language. E.g., for C++ the suffix for ``void ns::foo(int) (.cold)`` is '(.cold).                                                                                                      |
++---------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``function.mangled-name``                         | The mangled name of the current function or symbol.                                                                                                                                                                                                                                         |
 +---------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``function.pc-offset``                            | The program counter offset within the current function or symbol                                                                                                                                                                                                                            |
@@ -329,6 +331,7 @@ The function names displayed in backtraces/``frame info``/``thread info`` are th
 - ``${function.formatted-arguments}``
 - ``${function.qualifiers}``
 - ``${function.return-right}``
+- ``${function.suffix}``
 
 Each language plugin decides how to handle these variables. For C++, LLDB uses these variables to dictate how function names are formatted. This can be customized using the ``plugin.cplusplus.display.function-name-format`` LLDB setting.
 
@@ -336,19 +339,19 @@ E.g., the following setting would reconstruct the entire function name (and is L
 
 ::
 
-    (lldb) settings set plugin.cplusplus.dislpay.function-name-format "${function.return-left}${function.scope}${function.basename}${function.template-arguments}${function.formatted-arguments}${function.qualifiers}${function.return-right}"
+    (lldb) settings set plugin.cplusplus.dislpay.function-name-format "${function.return-left}${function.scope}${function.basename}${function.template-arguments}${function.formatted-arguments}${function.qualifiers}${function.return-right}${function.suffix}"
 
-If a user wanted to omit the return type and template arguments of C++ function names one could do:
+If a user wanted to only print the name and arguments of a C++ function one could do:
 
 ::
 
-    (lldb) settings set plugin.cplusplus.dislpay.function-name-format "${function.scope}${function.basename}${function.formatted-arguments}${function.qualifiers}"
+    (lldb) settings set plugin.cplusplus.dislpay.function-name-format "${function.scope}${function.basename}${function.formatted-arguments}"
 
 
 Then the following would highlight just the basename in green:
 
 ::
 
-    (lldb) settings set plugin.cplusplus.dislpay.function-name-format "${function.scope}${ansi.fg.yellow}${function.basename}${ansi.normal}${function.formatted-arguments}${function.qualifiers}"
+    (lldb) settings set plugin.cplusplus.dislpay.function-name-format "${function.scope}${ansi.fg.yellow}${function.basename}${ansi.normal}${function.formatted-arguments}"
 
 The ``${function.name-with-args}`` by default asks the language plugin whether it supports a language-specific ``function-name-format`` (e.g., the ``plugin.cplusplus.display.function-name-format`` for C++), and if it does, uses it. Otherwise it will display the demangled function name.
