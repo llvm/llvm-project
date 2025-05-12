@@ -10,8 +10,6 @@
 #include "src/__support/macros/config.h"
 #include "src/setjmp/setjmp_impl.h"
 
-
-
 namespace LIBC_NAMESPACE_DECL {
 
 [[gnu::naked]] LLVM_LIBC_FUNCTION(int, setjmp, ([[maybe_unused]] jmp_buf buf)) {
