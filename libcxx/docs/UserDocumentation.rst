@@ -7,11 +7,11 @@ User documentation
 .. contents::
   :local:
 
-This page contains information about for users of libc++:
-how to use libc++ if it is not the default library used by the toolchain,
-and what configuration knobs are available if libc++ is used by the toolchain.
-This page is aimed at users of libc++, whereas a separate page contains documentation
-aimed at vendors who build and ship libc++ as part of their toolchain.
+This page contains information for users of libc++: how to use libc++ if it is not
+the default library used by the toolchain, and what configuration knobs are available
+if libc++ is used by the toolchain. This page is aimed at users of libc++, whereas a
+separate page contains documentation aimed at vendors who build and ship libc++
+as part of their toolchain.
 
 
 Using a different version of the C++ Standard
@@ -236,8 +236,8 @@ C++26 Specific Configuration Macros
 Libc++ Extensions
 =================
 
-This section documents various extensions to the C++ standard library
-provided by libc++ and any information regarding how to use them.
+This section documents various extensions provided by libc++
+and any information regarding how to use them.
 
 Extended integral type support
 ------------------------------
