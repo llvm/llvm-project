@@ -383,9 +383,9 @@ SmallVector<RuntimePointerCheck, 4> RuntimePointerChecking::generateChecks() {
 }
 
 void RuntimePointerChecking::generateChecks(
-    MemoryDepChecker::DepCandidates &DependentAccesses, bool UseDependencies) {
+    MemoryDepChecker::DepCandidates &DepCands, bool UseDependencies) {
   assert(Checks.empty() && "Checks is not empty");
-  groupChecks(DependentAccesses, UseDependencies);
+  groupChecks(DepCands, UseDependencies);
   Checks = generateChecks();
 }
 
@@ -448,14 +448,14 @@ bool RuntimeCheckingPtrGroup::addPointer(unsigned Index, const SCEV *Start,
 }
 
 void RuntimePointerChecking::groupChecks(
-    MemoryDepChecker::DepCandidates &DependentAccesses, bool UseDependencies) {
+    MemoryDepChecker::DepCandidates &DepCands, bool UseDependencies) {
   // We build the groups from dependency candidates equivalence classes
   // because:
   //    - We know that pointers in the same equivalence class share
   //      the same underlying object and therefore there is a chance
   //      that we can compare pointers
   //    - We wouldn't be able to merge two pointers for which we need
-  //      to emit a memcheck. The classes in DependentAccesses are already
+  //      to emit a memcheck. The classes in DepCands are already
   //      conveniently built such that no two pointers in the same
   //      class need checking against each other.
 
@@ -523,12 +523,12 @@ void RuntimePointerChecking::groupChecks(
 
     SmallVector<RuntimeCheckingPtrGroup, 2> Groups;
 
-    // Because DependentAccesses is constructed by visiting accesses in the
-    // order in which they appear in alias sets (which is deterministic) and the
+    // Because DepCands is constructed by visiting accesses in the order in
+    // which they appear in alias sets (which is deterministic) and the
     // iteration order within an equivalence class member is only dependent on
     // the order in which unions and insertions are performed on the
     // equivalence class, the iteration order is deterministic.
-    for (auto M : DependentAccesses.members(Access)) {
+    for (auto M : DepCands.members(Access)) {
       auto PointerI = PositionMap.find(M.getPointer());
       assert(PointerI != PositionMap.end() &&
              "pointer in equivalence class not found in PositionMap");
@@ -643,8 +643,8 @@ public:
                  MemoryDepChecker::DepCandidates &DA,
                  PredicatedScalarEvolution &PSE,
                  SmallPtrSetImpl<MDNode *> &LoopAliasScopes)
-      : TheLoop(TheLoop), BAA(*AA), AST(BAA), LI(LI), DependentAccesses(DA),
-        PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
+      : TheLoop(TheLoop), BAA(*AA), AST(BAA), LI(LI), DepCands(DA), PSE(PSE),
+        LoopAliasScopes(LoopAliasScopes) {
     // We're analyzing dependences across loop iterations.
     BAA.enableCrossIterationMode();
   }
@@ -769,7 +769,7 @@ private:
   /// Sets of potentially dependent accesses - members of one set share an
   /// underlying pointer. The set "CheckDeps" identfies which sets really need a
   /// dependence check.
-  MemoryDepChecker::DepCandidates &DependentAccesses;
+  MemoryDepChecker::DepCandidates &DepCands;
 
   /// Initial processing of memory accesses determined that we may need
   /// to add memchecks.  Perform the analysis to determine the necessary checks.
@@ -1160,7 +1160,7 @@ bool AccessAnalysis::createCheckForAccess(
     unsigned DepId;
 
     if (isDependencyCheckNeeded()) {
-      Value *Leader = DependentAccesses.getLeaderValue(Access).getPointer();
+      Value *Leader = DepCands.getLeaderValue(Access).getPointer();
       unsigned &LeaderId = DepSetId[Leader];
       if (!LeaderId)
         LeaderId = RunningDepId++;
@@ -1230,7 +1230,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
                      [this](const Value *Ptr) {
                        MemAccessInfo AccessWrite(const_cast<Value *>(Ptr),
                                                  true);
-                       return !DependentAccesses.contains(AccessWrite);
+                       return !DepCands.contains(AccessWrite);
                      })) &&
              "Can only skip updating CanDoRT below, if all entries in AS "
              "are reads or there is at most 1 entry");
@@ -1315,7 +1315,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
   }
 
   if (MayNeedRTCheck && CanDoRT)
-    RtCheck.generateChecks(DependentAccesses, IsDepCheckNeeded);
+    RtCheck.generateChecks(DepCands, IsDepCheckNeeded);
 
   LLVM_DEBUG(dbgs() << "LAA: We need to do " << RtCheck.getNumberOfChecks()
                     << " pointer comparisons.\n");
@@ -1399,7 +1399,7 @@ void AccessAnalysis::processMemAccesses() {
                  "Alias-set pointer not in the access set?");
 
           MemAccessInfo Access(Ptr, IsWrite);
-          DependentAccesses.insert(Access);
+          DepCands.insert(Access);
 
           // Memorize read-only pointers for later processing and skip them in
           // the first round (they need to be checked after we have seen all
@@ -1446,7 +1446,7 @@ void AccessAnalysis::processMemAccesses() {
                  cast<PointerType>(Ptr->getType())->getAddressSpace()},
                 Access);
             if (!Inserted) {
-              DependentAccesses.unionSets(Access, It->second);
+              DepCands.unionSets(Access, It->second);
               It->second = Access;
             }
 
@@ -2250,7 +2250,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   return Dependence::BackwardVectorizable;
 }
 
-bool MemoryDepChecker::areDepsSafe(const DepCandidates &DependentAccesses,
+bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
                                    const MemAccessInfoList &CheckDeps) {
 
   MinDepDistBytes = -1;
@@ -2261,9 +2261,9 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DependentAccesses,
 
     // Check accesses within this set.
     EquivalenceClasses<MemAccessInfo>::member_iterator AI =
-        DependentAccesses.findLeader(CurAccess);
+        DepCands.findLeader(CurAccess);
     EquivalenceClasses<MemAccessInfo>::member_iterator AE =
-        DependentAccesses.member_end();
+        DepCands.member_end();
 
     // Check every access pair.
     while (AI != AE) {
@@ -2528,9 +2528,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     return true;
   }
 
-  MemoryDepChecker::DepCandidates DependentAccesses;
-  AccessAnalysis Accesses(TheLoop, AA, LI, DependentAccesses, *PSE,
-                          LoopAliasScopes);
+  MemoryDepChecker::DepCandidates DepCands;
+  AccessAnalysis Accesses(TheLoop, AA, LI, DepCands, *PSE, LoopAliasScopes);
 
   // Holds the analyzed pointers. We don't want to call getUnderlyingObjects
   // multiple times on the same object. If the ptr is accessed twice, once
@@ -2652,8 +2651,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   bool DepsAreSafe = true;
   if (Accesses.isDependencyCheckNeeded()) {
     LLVM_DEBUG(dbgs() << "LAA: Checking memory dependencies\n");
-    DepsAreSafe = DepChecker->areDepsSafe(DependentAccesses,
-                                          Accesses.getDependenciesToCheck());
+    DepsAreSafe =
+        DepChecker->areDepsSafe(DepCands, Accesses.getDependenciesToCheck());
 
     if (!DepsAreSafe && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
