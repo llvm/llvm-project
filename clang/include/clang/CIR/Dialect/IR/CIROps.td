@@ -1970,6 +1970,42 @@ def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// VecInsertOp
+//===----------------------------------------------------------------------===//
+
+def VecInsertOp : CIR_Op<"vec.insert", [Pure,
+  TypesMatchWith<"argument type matches vector element type", "vec", "value",
+                 "cast<VectorType>($_self).getElementType()">,
+  AllTypesMatch<["result", "vec"]>]> {
+
+  let summary = "Insert one element into a vector object";
+  let description = [{
+    The `cir.vec.insert` operation produces a new vector by replacing
+    the element of the input vector at `index` with `value`.
+
+    ```mlir
+    %value = cir.const #cir.int<5> : !s32i
+    %index = cir.const #cir.int<2> : !s32i
+    %vec_tmp = cir.load %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+    %new_vec = cir.vec.insert %value, %vec_tmp[%index : !s32i] : !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VectorType:$vec,
+    AnyType:$value,
+    CIR_AnyFundamentalIntType:$index
+  );
+
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    $value `,` $vec `[` $index `:` type($index) `]` attr-dict `:`
+    qualified(type($vec))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // VecExtractOp
 //===----------------------------------------------------------------------===//
 
