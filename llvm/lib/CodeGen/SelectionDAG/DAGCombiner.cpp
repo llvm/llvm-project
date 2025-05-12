@@ -10981,13 +10981,11 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
                               m_OneUse(m_Shl(m_AllOf(m_Value(ZExtY),
                                                      m_Opc(ISD::ZERO_EXTEND)),
                                              m_Specific(N1))))))) {
-    unsigned NumLeadingZeros =
-        ZExtY.getValueType().getScalarSizeInBits() -
-        ZExtY.getOperand(0).getValueType().getScalarSizeInBits();
-    if (N1C->getZExtValue() <= NumLeadingZeros) {
+    unsigned NumLeadingZeros = ZExtY.getScalarValueSizeInBits() -
+                               ZExtY.getOperand(0).getScalarValueSizeInBits();
+    if (N1C->getZExtValue() <= NumLeadingZeros)
       return DAG.getNode(N0.getOpcode(), SDLoc(N0), VT,
                          DAG.getNode(ISD::SRL, SDLoc(N0), VT, X, N1), ZExtY);
-    }
   }
 
   // fold operands of srl based on knowledge that the low bits are not
