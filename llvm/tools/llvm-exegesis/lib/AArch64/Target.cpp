@@ -200,9 +200,10 @@ private:
     PM.add(createAArch64ExpandPseudoPass());
   }
 
-  static long prctl_wrapper(int op, long arg2 = 0, long arg3 = 0, long arg4 = 0,
-                            long arg5 = 0) {
-    return prctl(op, arg2, arg3, arg4, arg5);
+  // Converts variadic arguments to `long` and passes zeros for the unused
+  // arg2-arg5, as tested by the Linux kernel.
+  static long prctl_wrapper(int op, long arg2 = 0, long arg3 = 0) {
+    return prctl(op, arg2, arg3, /*arg4=*/0L, /*arg5=*/0L);
   }
 
   const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
