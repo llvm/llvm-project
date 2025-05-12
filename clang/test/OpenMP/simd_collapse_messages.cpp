@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
   return tmain<int, char, 1, 0>(argc, argv);
 }
 
-namespace GH138493
+namespace GH138493 {
 void f(void) {
   // This would previously crash when processing an invalid expression as an
   // argument to collapse.
