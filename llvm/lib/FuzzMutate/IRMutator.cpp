@@ -374,7 +374,8 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     return T->isMetadataTy() || T->isTokenTy();
   };
   if (!F || IsUnsupportedTy(F->getReturnType()) ||
-      any_of(F->getFunctionType()->params(), IsUnsupportedTy)) {
+      any_of(F->getFunctionType()->params(), IsUnsupportedTy) ||
+      !isCallableCC(F->getCallingConv())) {
     F = IB.createFunctionDeclaration(*M);
   }
 
@@ -390,6 +391,7 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
                                          BasicBlock::iterator InsertPt) {
     StringRef Name = isRetVoid ? nullptr : "C";
     CallInst *Call = CallInst::Create(FTy, F, Srcs, Name, InsertPt);
+    Call->setCallingConv(F->getCallingConv());
     // Don't return this call inst if it return void as it can't be sinked.
     return isRetVoid ? nullptr : Call;
   };

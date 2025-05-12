@@ -124,8 +124,9 @@ static bool haveNoReadsAfterWriteExceptSameIndex(
                   OperationEquivalence::Flags::IgnoreLocations)) {
             return WalkResult::interrupt();
           }
-        } else
+        } else {
           return WalkResult::interrupt();
+        }
       }
     }
     return WalkResult::advance();

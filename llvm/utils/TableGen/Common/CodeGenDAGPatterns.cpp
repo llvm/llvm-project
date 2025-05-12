@@ -2405,8 +2405,9 @@ TreePatternNode::getComplexPatternInfo(const CodeGenDAGPatterns &CGP) const {
     if (!DI)
       return nullptr;
     Rec = DI->getDef();
-  } else
+  } else {
     Rec = getOperator();
+  }
 
   if (!Rec->isSubClassOf("ComplexPattern"))
     return nullptr;
