@@ -288,6 +288,17 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Use the QC_E_ADDI instruction from the Xqcilia extension that can take a
+  // signed 26-bit immediate. Avoid anything which can be done with a single lui
+  // as it might be compressible.
+  if (ST.hasVendorXqcilia() && isInt<26>(Val) && (Val & 0xFFF) != 0) {
+    BuildMI(MBB, II, DL, TII->get(RISCV::QC_E_ADDI), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrcReg))
+        .addImm(Val)
+        .setMIFlag(Flag);
+    return;
+  }
+
   // Try to split the offset across two ADDIs. We need to keep the intermediate
   // result aligned after each ADDI.  We need to determine the maximum value we
   // can put in each ADDI. In the negative direction, we can use -2048 which is
