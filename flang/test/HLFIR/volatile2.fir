@@ -1,4 +1,4 @@
-// RUN: fir-opt %s --bufferize-hlfir --convert-hlfir-to-fir | FileCheck %s
+// RUN: fir-opt --strict-fir-volatile-verifier %s --bufferize-hlfir --convert-hlfir-to-fir | FileCheck %s
 func.func private @_QFPa() -> i32 attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
   %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFFaEa"}
   %1 = fir.volatile_cast %0 : (!fir.ref<i32>) -> !fir.ref<i32, volatile>

@@ -268,19 +268,17 @@ define <8 x i32> @PR46393(<8 x i16> %a0, i8 %a1) {
 define i64 @PR55050() {
 ; X86-LABEL: PR55050:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testb %dl, %dl
+; X86-NEXT:    testb %al, %al
 ; X86-NEXT:    jne .LBB15_2
 ; X86-NEXT:  # %bb.1: # %if
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:  .LBB15_2: # %exit
+; X86-NEXT:    movl    %eax, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR55050:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq

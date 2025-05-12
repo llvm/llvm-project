@@ -100,13 +100,11 @@ CodeGenFunction::CreateTempAllocaWithoutCast(llvm::Type *Ty, CharUnits Align,
   return RawAddress(Alloca, Ty, Align, KnownNonNull);
 }
 
-/// CreateTempAlloca - This creates a alloca and inserts it into the entry
-/// block. The alloca is casted to default address space if necessary.
-RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
-                                             const Twine &Name,
+RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, LangAS DestLangAS,
+                                             CharUnits Align, const Twine &Name,
                                              llvm::Value *ArraySize,
                                              RawAddress *AllocaAddr) {
-  auto Alloca = CreateTempAllocaWithoutCast(Ty, Align, Name, ArraySize);
+  RawAddress Alloca = CreateTempAllocaWithoutCast(Ty, Align, Name, ArraySize);
   if (AllocaAddr)
     *AllocaAddr = Alloca;
   llvm::Value *V = Alloca.getPointer();
@@ -114,8 +112,9 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
   // be different from the type defined by the language. For example,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
-  if (getASTAllocaAddressSpace() != LangAS::Default) {
-    auto DestAddrSpace = getContext().getTargetAddressSpace(LangAS::Default);
+
+  unsigned DestAddrSpace = getContext().getTargetAddressSpace(DestLangAS);
+  if (DestAddrSpace != Alloca.getAddressSpace()) {
     llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
     // When ArraySize is nullptr, alloca is inserted at AllocaInsertPt,
     // otherwise alloca is inserted at the current insertion point of the
@@ -123,8 +122,8 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
     if (!ArraySize)
       Builder.SetInsertPoint(getPostAllocaInsertPoint());
     V = getTargetHooks().performAddrSpaceCast(
-        *this, V, getASTAllocaAddressSpace(), LangAS::Default,
-        Builder.getPtrTy(DestAddrSpace), /*non-null*/ true);
+        *this, V, getASTAllocaAddressSpace(), Builder.getPtrTy(DestAddrSpace),
+        /*IsNonNull=*/true);
   }
 
   return RawAddress(V, Ty, Align, KnownNonNull);
@@ -467,7 +466,7 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         llvm::Constant *C = GV;
         if (AS != LangAS::Default)
           C = TCG.performAddrSpaceCast(
-              CGF.CGM, GV, AS, LangAS::Default,
+              CGF.CGM, GV, AS,
               llvm::PointerType::get(
                   CGF.getLLVMContext(),
                   CGF.getContext().getTargetAddressSpace(LangAS::Default)));
@@ -1228,7 +1227,11 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   SanitizerScope SanScope(this);
 
   llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
-  if (ClArrayBoundsPseudoFn && CheckDI) {
+  auto CheckKind = SanitizerKind::SO_ArrayBounds;
+  // TODO: deprecate ClArrayBoundsPseudoFn
+  if ((ClArrayBoundsPseudoFn ||
+       CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(CheckKind)) &&
+      CheckDI) {
     CheckDI = getDebugInfo()->CreateSyntheticInlineAt(
         Builder.getCurrentDebugLocation(), "__ubsan_check_array_bounds");
   }
@@ -1245,8 +1248,8 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   };
   llvm::Value *Check = Accessed ? Builder.CreateICmpULT(IndexVal, BoundVal)
                                 : Builder.CreateICmpULE(IndexVal, BoundVal);
-  EmitCheck(std::make_pair(Check, SanitizerKind::SO_ArrayBounds),
-            SanitizerHandler::OutOfBounds, StaticData, Index);
+  EmitCheck(std::make_pair(Check, CheckKind), SanitizerHandler::OutOfBounds,
+            StaticData, Index);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
@@ -1920,7 +1923,7 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
 llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
   llvm::APInt Min, End;
   if (!getRangeForType(*this, Ty, Min, End, CGM.getCodeGenOpts().StrictEnums,
-                       Ty->hasBooleanRepresentation()))
+                       Ty->hasBooleanRepresentation() && !Ty->isVectorType()))
     return nullptr;
 
   llvm::MDBuilder MDHelper(getLLVMContext());
@@ -1948,7 +1951,7 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
   if (!HasBoolCheck && !HasEnumCheck)
     return false;
 
-  bool IsBool = Ty->hasBooleanRepresentation() ||
+  bool IsBool = (Ty->hasBooleanRepresentation() && !Ty->isVectorType()) ||
                 NSAPI(CGM.getContext()).isObjCBOOLType(Ty);
   bool NeedsBoolCheck = HasBoolCheck && IsBool;
   bool NeedsEnumCheck = HasEnumCheck && Ty->getAs<EnumType>();
@@ -2068,11 +2071,8 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
 /// by ConvertType) to its load/store type (as returned by
 /// convertTypeForLoadStore).
 llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
-  if (Ty->hasBooleanRepresentation() || Ty->isBitIntType()) {
-    llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
-    bool Signed = Ty->isSignedIntegerOrEnumerationType();
-    return Builder.CreateIntCast(Value, StoreTy, Signed, "storedv");
-  }
+  if (auto *AtomicTy = Ty->getAs<AtomicType>())
+    Ty = AtomicTy->getValueType();
 
   if (Ty->isExtVectorBoolType()) {
     llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
@@ -2088,6 +2088,12 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
     Value = Builder.CreateBitCast(Value, StoreTy);
   }
 
+  if (Ty->hasBooleanRepresentation() || Ty->isBitIntType()) {
+    llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
+    bool Signed = Ty->isSignedIntegerOrEnumerationType();
+    return Builder.CreateIntCast(Value, StoreTy, Signed, "storedv");
+  }
+
   return Value;
 }
 
@@ -2095,6 +2101,9 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
 /// by convertTypeForLoadStore) to its primary IR type (as returned
 /// by ConvertType).
 llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
+  if (auto *AtomicTy = Ty->getAs<AtomicType>())
+    Ty = AtomicTy->getValueType();
+
   if (Ty->isPackedVectorBoolType(getContext())) {
     const auto *RawIntTy = Value->getType();
 
@@ -3287,8 +3296,8 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     if (AS != T.getAddressSpace()) {
       auto TargetAS = getContext().getTargetAddressSpace(T.getAddressSpace());
       auto PtrTy = llvm::PointerType::get(CGM.getLLVMContext(), TargetAS);
-      auto ASC = getTargetHooks().performAddrSpaceCast(
-          CGM, ATPO.getPointer(), AS, T.getAddressSpace(), PtrTy);
+      auto ASC = getTargetHooks().performAddrSpaceCast(CGM, ATPO.getPointer(),
+                                                       AS, PtrTy);
       ATPO = ConstantAddress(ASC, ATPO.getElementType(), ATPO.getAlignment());
     }
 
@@ -3379,8 +3388,7 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
   auto SL = E->getFunctionName();
   assert(SL != nullptr && "No StringLiteral name in PredefinedExpr");
   StringRef FnName = CurFn->getName();
-  if (FnName.starts_with("\01"))
-    FnName = FnName.substr(1);
+  FnName.consume_front("\01");
   StringRef NameItems[] = {
       PredefinedExpr::getIdentKindName(E->getIdentKind()), FnName};
   std::string GVName = llvm::join(NameItems, NameItems + 2, ".");
@@ -3917,7 +3925,11 @@ void CodeGenFunction::EmitCfiCheckFail() {
   // Data == nullptr means the calling module has trap behaviour for this check.
   llvm::Value *DataIsNotNullPtr =
       Builder.CreateICmpNE(Data, llvm::ConstantPointerNull::get(Int8PtrTy));
-  EmitTrapCheck(DataIsNotNullPtr, SanitizerHandler::CFICheckFail);
+  // TODO: since there is no data, we don't know the CheckKind, and therefore
+  // cannot inspect CGM.getCodeGenOpts().SanitizeMergeHandlers. We default to
+  // NoMerge = false. Users can disable merging by disabling optimization.
+  EmitTrapCheck(DataIsNotNullPtr, SanitizerHandler::CFICheckFail,
+                /*NoMerge=*/false);
 
   llvm::StructType *SourceLocationTy =
       llvm::StructType::get(VoidPtrTy, Int32Ty, Int32Ty);
@@ -3945,8 +3957,6 @@ void CodeGenFunction::EmitCfiCheckFail() {
       {CFITCK_UnrelatedCast, SanitizerKind::SO_CFIUnrelatedCast},
       {CFITCK_ICall, SanitizerKind::SO_CFIICall}};
 
-  SmallVector<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>, 5>
-      Checks;
   for (auto CheckKindOrdinalPair : CheckKinds) {
     int Kind = CheckKindOrdinalPair.first;
     SanitizerKind::SanitizerOrdinal Ordinal = CheckKindOrdinalPair.second;
@@ -3956,7 +3966,11 @@ void CodeGenFunction::EmitCfiCheckFail() {
       EmitCheck(std::make_pair(Cond, Ordinal), SanitizerHandler::CFICheckFail,
                 {}, {Data, Addr, ValidVtable});
     else
-      EmitTrapCheck(Cond, SanitizerHandler::CFICheckFail);
+      // TODO: we can't rely on CGM.getCodeGenOpts().SanitizeMergeHandlers.
+      // Although the compiler allows SanitizeMergeHandlers to be set
+      // independently of CGM.getLangOpts().Sanitize, Driver/SanitizerArgs.cpp
+      // requires that SanitizeMergeHandlers is a subset of Sanitize.
+      EmitTrapCheck(Cond, SanitizerHandler::CFICheckFail, /*NoMerge=*/false);
   }
 
   FinishFunction();
@@ -5550,8 +5564,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
     QualType DestTy = getContext().getPointerType(E->getType());
     llvm::Value *V = getTargetHooks().performAddrSpaceCast(
         *this, LV.getPointer(*this),
-        E->getSubExpr()->getType().getAddressSpace(),
-        E->getType().getAddressSpace(), ConvertType(DestTy));
+        E->getSubExpr()->getType().getAddressSpace(), ConvertType(DestTy));
     return MakeAddrLValue(Address(V, ConvertTypeForMem(E->getType()),
                                   LV.getAddress().getAlignment()),
                           E->getType(), LV.getBaseInfo(), LV.getTBAAInfo());

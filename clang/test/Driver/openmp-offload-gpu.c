@@ -324,18 +324,18 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBRARY %s
 
-// CHECK-LTO-LIBRARY: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
+// CHECK-LTO-LIBRARY: --device-linker={{.*}}=-lomp{{.*}}-lomptarget{{.*}}
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:     --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-LTO-LIBRARY %s
 
-// CHECK-NO-LTO-LIBRARY: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
+// CHECK-NO-LTO-LIBRARY: --device-linker={{.*}}=-lomp{{.*}}-lomptarget{{.*}}
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-NO-LIBRARY %s
 
-// CHECK-NO-LIBRARY-NOT: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
+// CHECK-NO-LIBRARY-NOT: --device-linker={{.*}}=-lomp{{.*}}-lomptarget{{.*}}
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
 // RUN:     -Xoffload-linker a -Xoffload-linker-nvptx64-nvidia-cuda b -Xoffload-linker-nvptx64 c \
@@ -388,6 +388,7 @@
 // THINLTO-GFX906: --device-compiler=amdgcn-amd-amdhsa=-flto=thin
 // THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-force-import-all
 // THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-avail-extern-to-local
+// THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-amdgpu-internalize-symbols
 //
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:     --offload-arch=sm_52 -foffload-lto=thin -nogpulib -nogpuinc %s 2>&1 \

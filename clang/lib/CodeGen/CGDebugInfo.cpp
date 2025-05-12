@@ -850,6 +850,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 
       bool Fractional = false;
       unsigned LMUL;
+      unsigned NFIELDS = Info.NumVectors;
       unsigned FixedSize = ElementCount * SEW;
       if (Info.ElementType == CGM.getContext().BoolTy) {
         // Mask type only occupies one vector register.
@@ -862,7 +863,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
         LMUL = FixedSize / 64;
       }
 
-      // Element count = (VLENB / SEW) x LMUL
+      // Element count = (VLENB / SEW) x LMUL x NFIELDS
       SmallVector<uint64_t, 12> Expr(
           // The DW_OP_bregx operation has two operands: a register which is
           // specified by an unsigned LEB128 number, followed by a signed LEB128
@@ -877,6 +878,9 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
         Expr.push_back(llvm::dwarf::DW_OP_div);
       else
         Expr.push_back(llvm::dwarf::DW_OP_mul);
+      // NFIELDS multiplier
+      if (NFIELDS > 1)
+        Expr.append({llvm::dwarf::DW_OP_constu, NFIELDS, llvm::dwarf::DW_OP_mul});
       // Element max index = count - 1
       Expr.append({llvm::dwarf::DW_OP_constu, 1, llvm::dwarf::DW_OP_minus});
 
@@ -2018,17 +2022,8 @@ CGDebugInfo::getOrCreateMethodType(const CXXMethodDecl *Method,
   return getOrCreateInstanceMethodType(ThisType, Func, Unit);
 }
 
-llvm::DISubroutineType *CGDebugInfo::getOrCreateMethodTypeForDestructor(
-    const CXXMethodDecl *Method, llvm::DIFile *Unit, QualType FNType) {
-  const FunctionProtoType *Func = FNType->getAs<FunctionProtoType>();
-  // skip the first param since it is also this
-  return getOrCreateInstanceMethodType(Method->getThisType(), Func, Unit, true);
-}
-
-llvm::DISubroutineType *
-CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
-                                           const FunctionProtoType *Func,
-                                           llvm::DIFile *Unit, bool SkipFirst) {
+llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
+    QualType ThisPtr, const FunctionProtoType *Func, llvm::DIFile *Unit) {
   FunctionProtoType::ExtProtoInfo EPI = Func->getExtProtoInfo();
   Qualifiers &Qc = EPI.TypeQuals;
   Qc.removeConst();
@@ -2068,7 +2063,7 @@ CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
   }
 
   // Copy rest of the arguments.
-  for (unsigned i = (SkipFirst ? 2 : 1), e = Args.size(); i != e; ++i)
+  for (unsigned i = 1, e = Args.size(); i != e; ++i)
     Elts.push_back(Args[i]);
 
   // Attach FlagObjectPointer to the explicit "this" parameter.
@@ -4381,12 +4376,6 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
     // subprogram DIE will miss DW_AT_decl_file and DW_AT_decl_line fields.
     return DBuilder.createSubroutineType(DBuilder.getOrCreateTypeArray({}));
 
-  if (const auto *Method = dyn_cast<CXXDestructorDecl>(D)) {
-    // Read method type from 'FnType' because 'D.getType()' does not cover
-    // implicit arguments for destructors.
-    return getOrCreateMethodTypeForDestructor(Method, F, FnType);
-  }
-
   if (const auto *Method = dyn_cast<CXXMethodDecl>(D))
     return getOrCreateMethodType(Method, F);
 
@@ -4511,8 +4500,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
 
     Flags |= llvm::DINode::FlagPrototyped;
   }
-  if (Name.starts_with("\01"))
-    Name = Name.substr(1);
+  Name.consume_front("\01");
 
   assert((!D || !isa<VarDecl>(D) ||
           GD.getDynamicInitKind() != DynamicInitKind::NoStub) &&
@@ -4601,8 +4589,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   } else {
     llvm_unreachable("not a function or ObjC method");
   }
-  if (!Name.empty() && Name[0] == '\01')
-    Name = Name.substr(1);
+  Name.consume_front("\01");
 
   if (D->isImplicit()) {
     Flags |= llvm::DINode::FlagArtificial;

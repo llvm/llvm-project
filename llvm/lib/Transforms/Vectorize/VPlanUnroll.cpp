@@ -337,16 +337,18 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
     VPValue *Op0;
-    if (match(&R, m_VPInstruction<VPInstruction::ExtractFromEnd>(
-                      m_VPValue(Op0), m_VPValue(Op1)))) {
+    if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                      m_VPValue(Op0))) ||
+        match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
+                      m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
       if (Plan.hasScalarVFOnly()) {
-        // Extracting from end with VF = 1 implies retrieving the scalar part UF
-        // - Op1.
+        auto *I = cast<VPInstruction>(&R);
+        // Extracting from end with VF = 1 implies retrieving the last or
+        // penultimate scalar part (UF-1 or UF-2).
         unsigned Offset =
-            cast<ConstantInt>(Op1->getLiveInIRValue())->getZExtValue();
-        R.getVPSingleValue()->replaceAllUsesWith(
-            getValueForPart(Op0, UF - Offset));
+            I->getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
+        I->replaceAllUsesWith(getValueForPart(Op0, UF - Offset));
         R.eraseFromParent();
       } else {
         // Otherwise we extract from the last part.

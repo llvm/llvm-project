@@ -27,7 +27,7 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/Support/InterleavedRange.h"
 
 #define DEBUG_TYPE "vector-utils"
 
@@ -312,7 +312,7 @@ SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
 
   Value base = TypeSwitch<Operation *, Value>(xfer)
                    .Case<vector::TransferReadOp>(
-                       [&](auto readOp) { return readOp.getSource(); })
+                       [&](auto readOp) { return readOp.getBase(); })
                    .Case<vector::TransferWriteOp>(
                        [&](auto writeOp) { return writeOp.getOperand(1); });
 
@@ -372,9 +372,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
 LogicalResult
 vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
                                  ArrayRef<int64_t> inputVectorSizes) {
-  LDBG("Iteration space static sizes:");
-  LLVM_DEBUG(llvm::interleaveComma(shape, llvm::dbgs()));
-  LLVM_DEBUG(llvm::dbgs() << "\n");
+  LDBG("Iteration space static sizes:" << llvm::interleaved(shape));
 
   if (inputVectorSizes.size() != shape.size()) {
     LDBG("Input vector sizes don't match the number of loops");

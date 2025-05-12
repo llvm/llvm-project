@@ -19,7 +19,9 @@ struct MyStruct {
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.10" = type { target("dx.RawBuffer", <2 x half>, 1, 0)
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.11" = type { target("dx.RawBuffer", <3 x float>, 1, 0)
 // DXIL: %"class.hlsl::ConsumeStructuredBuffer.12" = type { target("dx.RawBuffer", %struct.MyStruct, 1, 0)
-// DXIL: %struct.MyStruct = type { <4 x float>, <2 x i32>, [8 x i8] }
+// DXIL: %struct.MyStruct = type <{ <4 x float>, <2 x i32> }>
+// DXIL: %"class.hlsl::ConsumeStructuredBuffer.13" = type { target("dx.RawBuffer", i32, 1, 0)
+// DXIL: %"class.hlsl::ConsumeStructuredBuffer.14" = type { target("dx.RawBuffer", <4 x i32>, 1, 0)
 
 ConsumeStructuredBuffer<int16_t> BufI16;
 ConsumeStructuredBuffer<uint16_t> BufU16;
@@ -41,6 +43,8 @@ ConsumeStructuredBuffer<float3> BufF32x3;
 // TODO: ConsumeStructuredBuffer<snorm double> BufSNormF64;
 // TODO: ConsumeStructuredBuffer<unorm double> BufUNormF64;
 ConsumeStructuredBuffer<MyStruct> BufMyStruct;
+ConsumeStructuredBuffer<bool> BufBool;
+ConsumeStructuredBuffer<bool4> BufBoolVec;
 
 [numthreads(1,1,1)]
 void main(int GI : SV_GroupIndex) {

@@ -332,17 +332,10 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
 
   // Since everything went well, we can now set the "superclass" list for the
   // current record.
-  for (const auto &[SC, Loc] : SC->getSuperClasses()) {
-    if (CurRec->isSubClassOf(SC))
-      return Error(SubClass.RefRange.Start,
-                   "Already subclass of '" + SC->getName() + "'!\n");
-    CurRec->addSuperClass(SC, Loc);
-  }
-
   if (CurRec->isSubClassOf(SC))
     return Error(SubClass.RefRange.Start,
                  "Already subclass of '" + SC->getName() + "'!\n");
-  CurRec->addSuperClass(SC, SubClass.RefRange);
+  CurRec->addDirectSuperClass(SC, SubClass.RefRange);
   return false;
 }
 
@@ -1935,9 +1928,10 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
         const auto *Arg2 = cast<TypedInit>(Args[2]);
         assert(isa<IntRecTy>(Arg2->getType()));
         RHS = Arg2;
-      } else
+      } else {
         // (start, end, 1)
         RHS = IntInit::get(Records, 1);
+      }
     }
     return TernOpInit::get(TernOpInit::RANGE, LHS, MHS, RHS,
                            IntRecTy::get(Records)->getListTy())
@@ -1953,7 +1947,7 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     const RecTy *Type = nullptr;
 
     tgtok::TokKind LexCode = Lex.getCode();
-    Lex.Lex();  // eat the operation
+    Lex.Lex(); // Eat the operation.
     switch (LexCode) {
     default: llvm_unreachable("Unhandled code!");
     case tgtok::XDag:
@@ -4056,7 +4050,7 @@ bool TGParser::ParseClass() {
   if (CurRec) {
     // If the body was previously defined, this is an error.
     if (!CurRec->getValues().empty() ||
-        !CurRec->getSuperClasses().empty() ||
+        !CurRec->getDirectSuperClasses().empty() ||
         !CurRec->getTemplateArgs().empty())
       return TokError("Class '" + CurRec->getNameInitAsString() +
                       "' already defined");

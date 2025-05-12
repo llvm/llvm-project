@@ -88,10 +88,11 @@ static Operation *extractFunction(std::vector<Operation *> &ops,
   // Remove unused function arguments
   size_t currentIndex = 0;
   while (currentIndex < funcOp.getNumArguments()) {
+    // Erase if possible.
     if (funcOp.getArgument(currentIndex).use_empty())
-      funcOp.eraseArgument(currentIndex);
-    else
-      ++currentIndex;
+      if (succeeded(funcOp.eraseArgument(currentIndex)))
+        continue;
+    ++currentIndex;
   }
 
   return funcOp;

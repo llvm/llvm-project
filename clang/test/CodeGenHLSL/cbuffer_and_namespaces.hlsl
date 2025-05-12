@@ -15,7 +15,7 @@
 
 // CHECK: @C.cb = global target("dx.CBuffer", target("dx.Layout", %"n0::n2::__cblayout_C", 20, 0, 16))
 // CHECK: @_ZN2n02n21aE = external addrspace(2) global float, align 4
-// CHECK: external addrspace(2) global target("dx.Layout", %"n0::Foo", 4, 0), align 4
+// CHECK: external addrspace(2) global target("dx.Layout", %"n0::Foo", 4, 0), align 1
 
 namespace n0 {
   struct Foo {

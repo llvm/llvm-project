@@ -34,9 +34,10 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
       PrintFatalError(R->getLoc(),
                       R->getName() +
                           ": invalid def name for output list: use 'outs'");
-  } else
+  } else {
     PrintFatalError(R->getLoc(),
                     R->getName() + ": invalid output list: use 'outs'");
+  }
 
   NumDefs = OutDI->getNumArgs();
 
@@ -46,9 +47,10 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
       PrintFatalError(R->getLoc(),
                       R->getName() +
                           ": invalid def name for input list: use 'ins'");
-  } else
+  } else {
     PrintFatalError(R->getLoc(),
                     R->getName() + ": invalid input list: use 'ins'");
+  }
 
   unsigned MIOperandNo = 0;
   std::set<std::string> OperandNames;

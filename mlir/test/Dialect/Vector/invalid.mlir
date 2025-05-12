@@ -525,6 +525,24 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
 
 // -----
 
+func.func @test_vector.transfer_read(%arg0: memref<?xindex>) -> vector<3x4xindex> {
+  %c3 = arith.constant 3 : index
+  // expected-error@+1 {{expected a custom permutation_map when rank(source) != rank(destination)}}
+  %0 = vector.transfer_read %arg0[%c3], %c3 : memref<?xindex>, vector<3x4xindex>
+  return %0 : vector<3x4xindex>
+}
+
+// -----
+
+func.func @test_vector.transfer_write(%arg0: memref<?xvector<2xindex>>) {
+  %c3 = arith.constant 3 : index
+  // expected-error@+1 {{expected a custom permutation_map when rank(source) != rank(destination)}}
+  %0 = vector.transfer_read %arg0[%c3], %c3 : memref<?xvector<2xindex>>, vector<2x3x4xindex>
+  return %0 : vector<2x3x4xindex>
+}
+
+// -----
+
 func.func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
   %c3 = arith.constant 3 : index
   %cst = arith.constant 3.0 : f32
@@ -642,6 +660,22 @@ func.func @test_vector.transfer_write(%arg0: memref<?xf32>, %arg1: vector<7xf32>
   vector.transfer_write %arg1, %arg0[%c3]
       {permutation_map = affine_map<(d0) -> (0)>}
       : vector<7xf32>, memref<?xf32>
+}
+
+// -----
+
+func.func @test_vector.transfer_write(%arg0: memref<?xindex>, %arg1: vector<3x4xindex>) {
+  %c3 = arith.constant 3 : index
+  // expected-error@+1 {{expected a custom permutation_map when rank(source) != rank(destination)}}
+  vector.transfer_write %arg1, %arg0[%c3, %c3] : vector<3x4xindex>, memref<?xindex>
+}
+
+// -----
+
+func.func @test_vector.transfer_write(%arg0: memref<?xvector<2xindex>>, %arg1: vector<2x3x4xindex>) {
+  %c3 = arith.constant 3 : index
+  // expected-error@+1 {{expected a custom permutation_map when rank(source) != rank(destination)}}
+  vector.transfer_write %arg1, %arg0[%c3, %c3] : vector<2x3x4xindex>, memref<?xvector<2xindex>>
 }
 
 // -----
@@ -1131,30 +1165,17 @@ func.func @cannot_print_string_with_source_set(%vec: vector<[4]xf32>) {
 
 // -----
 
+
 func.func @shape_cast_wrong_element_type(%arg0 : vector<5x1x3x2xf32>) {
-  // expected-error@+1 {{op source/result vectors must have same element type}}
+  // expected-error@+1 {{'vector.shape_cast' op has different source and result element types}}
   %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<15x2xi32>
 }
 
 // -----
 
 func.func @shape_cast_wrong_num_elements(%arg0 : vector<5x1x3x2xf32>) {
-  // expected-error@+1 {{op source/result number of elements must match}}
+  // expected-error@+1 {{'vector.shape_cast' op has different number of elements at source (30) and result (20)}}
   %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<10x2xf32>
-}
-
-// -----
-
-func.func @shape_cast_invalid_rank_reduction(%arg0 : vector<5x1x3x2xf32>) {
-  // expected-error@+1 {{invalid shape cast}}
-  %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<2x15xf32>
-}
-
-// -----
-
-func.func @shape_cast_invalid_rank_expansion(%arg0 : vector<15x2xf32>) {
-  // expected-error@+1 {{invalid shape cast}}
-  %0 = vector.shape_cast %arg0 : vector<15x2xf32> to vector<5x2x3x1xf32>
 }
 
 // -----

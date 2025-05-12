@@ -660,8 +660,9 @@ void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
   if (hasAltNames) {
     for (const Record *R : AltNameIndices)
       emitRegisterNameString(O, R->getName(), Registers);
-  } else
+  } else {
     emitRegisterNameString(O, "", Registers);
+  }
 
   if (hasAltNames) {
     O << "  switch(AltIdx) {\n"
@@ -869,9 +870,6 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   DenseMap<const Record *, unsigned> MCOpPredicateMap;
 
   for (auto &Aliases : AliasMap) {
-    // Collection of instruction alias rules. May contain ambiguous rules.
-    std::vector<IAPrinter> IAPs;
-
     for (auto &Alias : Aliases.second) {
       const CodeGenInstAlias &CGA = Alias.first;
       unsigned LastOpNo = CGA.ResultInstOperandIndex.size();
@@ -972,8 +970,9 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
               if (!Rec->isValueUnset("MCOperandPredicate")) {
                 MCOpPredicates.push_back(Rec);
                 Entry = MCOpPredicates.size();
-              } else
+              } else {
                 break; // No conditions on this operand at all
+              }
             }
             IAP.addCond(
                 std::string(formatv("AliasPatternCond::K_Custom, {}", Entry)));

@@ -6,13 +6,9 @@
 declare half @llvm.fabs.f16(half %f)
 define half @f0(half %f) {
 ; CHECK-LABEL: f0:
-; CHECK:      brasl   %r14, __extendhfsf2@PLT
-; CHECK-NEXT: lpdfr   %f0, %f0
-; CHECK-NEXT: brasl   %r14, __truncsfhf2@PLT
-; CHECK-NEXT: brasl   %r14, __extendhfsf2@PLT
-; CHECK-NEXT: lcdfr   %f0, %f0
-; CHECK-NEXT: brasl   %r14, __truncsfhf2@PLT
-; CHECK: br %r14
+; CHECK:      # %bb.0:
+; CHECK-NEXT: lndfr %f0, %f0
+; CHECK-NEXT: br %r14
   %abs = call half @llvm.fabs.f16(half %f)
   %res = fneg half %abs
   ret half %res

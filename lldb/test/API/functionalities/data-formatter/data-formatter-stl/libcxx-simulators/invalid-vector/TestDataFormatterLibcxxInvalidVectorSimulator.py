@@ -14,7 +14,7 @@ class LibcxxInvalidVectorDataFormatterSimulatorTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
 
-    @skipIf(compiler="clang", compiler_version=['<', '15.0.1'])
+    @skipIf(compiler="clang", compiler_version=['<', '18.0'])
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "return 0", lldb.SBFileSpec("main.cpp"))

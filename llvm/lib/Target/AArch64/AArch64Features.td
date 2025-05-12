@@ -820,6 +820,11 @@ def FeatureUseFixedOverScalableIfEqualCost : SubtargetFeature<"use-fixed-over-sc
 def FeatureAvoidLDAPUR : SubtargetFeature<"avoid-ldapur", "AvoidLDAPUR", "true",
   "Prefer add+ldapr to offset ldapur">;
 
+// Some INC/DEC forms have better latency and throughput than ADDVL.
+def FeatureDisableFastIncVL : SubtargetFeature<"disable-fast-inc-vl",
+                                               "HasDisableFastIncVL", "true",
+                                               "Do not prefer INC/DEC, ALL, { 1, 2, 4 } over ADDVL">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

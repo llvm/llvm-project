@@ -23,10 +23,12 @@ add_llvm_target(DirectXCodeGen
   DXILCBufferAccess.cpp
   DXILDataScalarization.cpp
   DXILFinalizeLinkage.cpp
+  DXILForwardHandleAccesses.cpp
   DXILFlattenArrays.cpp
   DXILIntrinsicExpansion.cpp
   DXILOpBuilder.cpp
   DXILOpLowering.cpp
+  DXILPostOptimizationValidation.cpp
   DXILPrepare.cpp
   DXILPrettyPrinter.cpp
   DXILResourceAccess.cpp

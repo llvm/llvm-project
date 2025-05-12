@@ -298,8 +298,7 @@ namespace {
       assert(V.isLValue() && "Non-LValue used to make an LValue designator?");
       if (!Invalid) {
         IsOnePastTheEnd = V.isLValueOnePastTheEnd();
-        ArrayRef<PathEntry> VEntries = V.getLValuePath();
-        Entries.insert(Entries.end(), VEntries.begin(), VEntries.end());
+        llvm::append_range(Entries, V.getLValuePath());
         if (V.getLValueBase()) {
           bool IsArray = false;
           bool FirstIsUnsizedArray = false;
@@ -1832,8 +1831,7 @@ namespace {
       DeclAndIsDerivedMember.setPointer(V.getMemberPointerDecl());
       DeclAndIsDerivedMember.setInt(V.isMemberPointerToDerivedMember());
       Path.clear();
-      ArrayRef<const CXXRecordDecl*> P = V.getMemberPointerPath();
-      Path.insert(Path.end(), P.begin(), P.end());
+      llvm::append_range(Path, V.getMemberPointerPath());
     }
 
     /// DeclAndIsDerivedMember - The member declaration, and a flag indicating
@@ -2234,10 +2232,15 @@ static bool ArePotentiallyOverlappingStringLiterals(const EvalInfo &Info,
   // within RHS. We don't need to look at the characters of one string that
   // would appear before the start of the other string if they were merged.
   CharUnits Offset = RHS.Offset - LHS.Offset;
-  if (Offset.isNegative())
+  if (Offset.isNegative()) {
+    if (LHSString.Bytes.size() < (size_t)-Offset.getQuantity())
+      return false;
     LHSString.Bytes = LHSString.Bytes.drop_front(-Offset.getQuantity());
-  else
+  } else {
+    if (RHSString.Bytes.size() < (size_t)Offset.getQuantity())
+      return false;
     RHSString.Bytes = RHSString.Bytes.drop_front(Offset.getQuantity());
+  }
 
   bool LHSIsLonger = LHSString.Bytes.size() > RHSString.Bytes.size();
   StringRef Longer = LHSIsLonger ? LHSString.Bytes : RHSString.Bytes;
@@ -9199,7 +9202,10 @@ bool LValueExprEvaluator::VisitExtVectorElementExpr(
 
   if (Success) {
     Result.setFrom(Info.Ctx, Val);
-    const auto *VT = E->getBase()->getType()->castAs<VectorType>();
+    QualType BaseType = E->getBase()->getType();
+    if (E->isArrow())
+      BaseType = BaseType->getPointeeType();
+    const auto *VT = BaseType->castAs<VectorType>();
     HandleLValueVectorElement(Info, E, Result, VT->getElementType(),
                               VT->getNumElements(), Indices[0]);
   }
@@ -11032,7 +11038,7 @@ bool RecordExprEvaluator::VisitLambdaExpr(const LambdaExpr *E) {
 
     // If there is no initializer, either this is a VLA or an error has
     // occurred.
-    if (!CurFieldInit)
+    if (!CurFieldInit || CurFieldInit->containsErrors())
       return Error(E);
 
     LValue Subobject = This;
@@ -12766,11 +12772,13 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
   bool DetermineForCompleteObject = refersToCompleteObject(LVal);
 
   auto CheckedHandleSizeof = [&](QualType Ty, CharUnits &Result) {
-    if (Ty.isNull() || Ty->isIncompleteType() || Ty->isFunctionType())
+    if (Ty.isNull())
       return false;
 
-    if (Ty->isReferenceType())
-      Ty = Ty.getNonReferenceType();
+    Ty = Ty.getNonReferenceType();
+
+    if (Ty->isIncompleteType() || Ty->isFunctionType())
+      return false;
 
     return HandleSizeof(Info, ExprLoc, Ty, Result);
   };
@@ -14764,9 +14772,6 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
     // Reject differing bases from the normal codepath; we special-case
     // comparisons to null.
     if (!HasSameBase(LHSValue, RHSValue)) {
-      // Handle &&A - &&B.
-      if (!LHSValue.Offset.isZero() || !RHSValue.Offset.isZero())
-        return Error(E);
       const Expr *LHSExpr = LHSValue.Base.dyn_cast<const Expr *>();
       const Expr *RHSExpr = RHSValue.Base.dyn_cast<const Expr *>();
 
@@ -18014,10 +18019,14 @@ static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
                                           const Expr *PtrExpression,
                                           ASTContext &Ctx,
                                           Expr::EvalResult &Status) {
-  LValue String;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantExpression);
   Info.InConstantContext = true;
 
+  if (Info.EnableNewConstInterp)
+    return Info.Ctx.getInterpContext().evaluateCharRange(Info, SizeExpression,
+                                                         PtrExpression, Result);
+
+  LValue String;
   FullExpressionRAII Scope(Info);
   APSInt SizeValue;
   if (!::EvaluateInteger(SizeExpression, SizeValue, Info))

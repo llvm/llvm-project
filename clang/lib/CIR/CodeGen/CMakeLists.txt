@@ -21,7 +21,9 @@ add_clang_library(clangCIR
   CIRGenRecordLayoutBuilder.cpp
   CIRGenStmt.cpp
   CIRGenStmtOpenACC.cpp
+  CIRGenStmtOpenACCLoop.cpp
   CIRGenTypes.cpp
+  TargetInfo.cpp
 
   DEPENDS
   MLIRCIR

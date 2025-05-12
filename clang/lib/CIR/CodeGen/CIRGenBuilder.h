@@ -63,6 +63,7 @@ public:
     case clang::TagTypeKind::Enum:
       llvm_unreachable("enums are not records");
     }
+    llvm_unreachable("Unsupported record kind");
   }
 
   /// Get an incomplete CIR struct type. If we have a complete record
@@ -81,6 +82,9 @@ public:
     if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType,
                   cir::IntType>(ty))
       return true;
+
+    if (const auto vt = mlir::dyn_cast<cir::VectorType>(ty))
+      return isSized(vt.getElementType());
 
     assert(!cir::MissingFeatures::unsizedTypes());
     return false;
@@ -181,10 +185,18 @@ public:
   }
   bool isInt(mlir::Type i) { return mlir::isa<cir::IntType>(i); }
 
+  //
+  // Constant creation helpers
+  // -------------------------
+  //
+  cir::ConstantOp getSInt32(int32_t c, mlir::Location loc) {
+    return getConstantInt(loc, getSInt32Ty(), c);
+  }
+
   // Creates constant nullptr for pointer type ty.
   cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
     assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());
-    return create<cir::ConstantOp>(loc, ty, getConstPtrAttr(ty, 0));
+    return create<cir::ConstantOp>(loc, getConstPtrAttr(ty, 0));
   }
 
   mlir::Value createNeg(mlir::Value value) {

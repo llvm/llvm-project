@@ -176,7 +176,8 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT:   Successor(s): pred.udiv.if, pred.udiv.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.udiv.if:
-; CHECK-NEXT:     REPLICATE ir<%tmp4> = udiv ir<%n>, vp<[[STEPS]]> (S->V)
+; CHECK-NEXT:     vp<[[STEPS2:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     REPLICATE ir<%tmp4> = udiv ir<%n>, vp<[[STEPS2]]> (S->V)
 ; CHECK-NEXT:   Successor(s): pred.udiv.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.udiv.continue:
@@ -537,7 +538,7 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[EXIT:%.+]]> = extract-from-end ir<%add>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[EXIT:%.+]]> = extract-last-element ir<%add>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
@@ -960,8 +961,8 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[FOR_RESULT:%.+]]> = extract-from-end ir<%for.1.next>, ir<2>
-; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[FOR_RESULT:%.+]]> = extract-penultimate-element ir<%for.1.next>
+; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-last-element ir<%for.1.next>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph

@@ -353,8 +353,7 @@ std::optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
       .Default(MCAsmBackend::getFixupKind(Name));
 }
 
-const MCFixupKindInfo &MipsAsmBackend::
-getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo MipsAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo LittleEndianInfos[] = {
       // This table *must* be in same the order of fixup_* kinds in
       // MipsFixupKinds.h.
@@ -527,7 +526,7 @@ getFixupKindInfo(MCFixupKind Kind) const {
   static_assert(std::size(BigEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS big endian fixup kinds added!");
 
-  if (Kind >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);

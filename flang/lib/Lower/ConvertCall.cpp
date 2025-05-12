@@ -589,7 +589,7 @@ Fortran::lower::genCallOpAndResult(
 
     mlir::Value stream; // stream is optional.
     if (caller.getCallDescription().chevrons().size() > 3)
-      stream = fir::getBase(converter.genExprValue(
+      stream = fir::getBase(converter.genExprAddr(
           caller.getCallDescription().chevrons()[3], stmtCtx));
 
     builder.create<cuf::KernelLaunchOp>(
@@ -1369,7 +1369,10 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // it according to the interface.
   mlir::Value addr;
   if (mlir::isa<fir::BoxCharType>(dummyTypeWithActualRank)) {
-    addr = hlfir::genVariableBoxChar(loc, builder, entity);
+    // Cast the argument to match the volatility of the dummy argument.
+    auto nonVolatileEntity = hlfir::Entity{builder.createVolatileCast(
+        loc, fir::isa_volatile_type(dummyType), entity)};
+    addr = hlfir::genVariableBoxChar(loc, builder, nonVolatileEntity);
   } else if (mlir::isa<fir::BaseBoxType>(dummyTypeWithActualRank)) {
     entity = hlfir::genVariableBox(loc, builder, entity);
     // Ensures the box has the right attributes and that it holds an

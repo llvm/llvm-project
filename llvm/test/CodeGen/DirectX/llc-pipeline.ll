@@ -22,11 +22,13 @@
 ; CHECK-NEXT:     DXIL Resource Access
 ; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT:     Scalarize vector operations
-; CHECK-NEXT:   DXIL Legalizer
-; CHECK-NEXT:   DXIL Resource Binding Analysis
+; CHECK-NEXT:     DXIL Forward Handle Accesses
+; CHECK-NEXT:     DXIL Legalizer
+; CHECK-NEXT:   DXIL Resources Analysis
 ; CHECK-NEXT:   DXIL Module Metadata analysis
 ; CHECK-NEXT:   DXIL Shader Flag Analysis
 ; CHECK-NEXT:   DXIL Translate Metadata
+; CHECK-NEXT:   DXIL Post Optimization Validation
 ; CHECK-NEXT:   DXIL Op Lowering
 ; CHECK-NEXT:   DXIL Prepare Module
 

@@ -53,6 +53,12 @@ void initializeDXILFlattenArraysLegacyPass(PassRegistry &);
 /// Pass to flatten arrays into a one dimensional DXIL legal form
 ModulePass *createDXILFlattenArraysLegacyPass();
 
+/// Initializer for DXIL Forward Handle Accesses Pass
+void initializeDXILForwardHandleAccessesLegacyPass(PassRegistry &);
+
+/// Pass to eliminate redundant stores and loads from handle globals.
+FunctionPass *createDXILForwardHandleAccessesLegacyPass();
+
 /// Initializer DXIL legalizationPass
 void initializeDXILLegalizeLegacyPass(PassRegistry &);
 
@@ -83,6 +89,12 @@ ModulePass *createDXILPrettyPrinterLegacyPass(raw_ostream &OS);
 
 /// Initializer for DXILPrettyPrinter.
 void initializeDXILPrettyPrinterLegacyPass(PassRegistry &);
+
+/// Initializer for DXILPostOptimizationValidation.
+void initializeDXILPostOptimizationValidationLegacyPass(PassRegistry &);
+
+/// Pass to lowering LLVM intrinsic call to DXIL op function call.
+ModulePass *createDXILPostOptimizationValidationLegacyPass();
 
 /// Initializer for dxil::ShaderFlagsAnalysisWrapper pass.
 void initializeShaderFlagsAnalysisWrapperPass(PassRegistry &);

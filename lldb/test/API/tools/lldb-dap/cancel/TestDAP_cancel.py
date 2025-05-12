@@ -82,7 +82,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
 
         blocking_seq = self.async_blocking_request(duration=self.timeoutval / 2)
         # Wait for the sleep to start to cancel the inflight request.
-        self.collect_stdout(
+        self.collect_console(
             timeout_secs=self.timeoutval,
             pattern="starting sleep",
         )

@@ -24,9 +24,8 @@
  * [Worker Thread] ASan: lock B -> requests lock A
  * 
  * Success Criteria: 
- * With proper lock ordering enforcement, watchdog should NOT trigger - test exits normally.
- * If deadlock occurs, watchdog terminates via _exit(1) after 10s timeout.
- */
+ * With proper lock ordering enforcement, watchdog should NOT trigger - test exits with Asan report.
+  */
 
 #include <mutex>
 #include <sanitizer/lsan_interface.h>
@@ -36,11 +35,9 @@
 
 void Watchdog() {
   // Safety mechanism: Turn infinite deadlock into finite test failure
-  usleep(10000000);
-  // CHECK-NOT: Timeout! Deadlock detected.
-  puts("Timeout! Deadlock detected.");
-  fflush(stdout);
-  _exit(1);
+  sleep(60);
+  // Unexpected. "not" in RUN will fail if we reached here.
+  _exit(0);
 }
 
 int main(int argc, char **argv) {
