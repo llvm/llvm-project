@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_BRANCHPROBABILITY_H
 
 #include "llvm/ADT/ADL.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <algorithm>
 #include <cassert>
@@ -42,7 +43,7 @@ class BranchProbability {
 
 public:
   BranchProbability() : N(UnknownN) {}
-  BranchProbability(uint32_t Numerator, uint32_t Denominator);
+  LLVM_ABI BranchProbability(uint32_t Numerator, uint32_t Denominator);
 
   bool isZero() const { return N == 0; }
   bool isUnknown() const { return N == UnknownN; }
@@ -54,8 +55,8 @@ public:
   // as denominator.
   static BranchProbability getRaw(uint32_t N) { return BranchProbability(N); }
   // Create a BranchProbability object from 64-bit integers.
-  static BranchProbability getBranchProbability(uint64_t Numerator,
-                                                uint64_t Denominator);
+  LLVM_ABI static BranchProbability getBranchProbability(uint64_t Numerator,
+                                                         uint64_t Denominator);
 
   // Normalize given probabilties so that the sum of them becomes approximate
   // one.
@@ -74,9 +75,9 @@ public:
   // Return (1 - Probability).
   BranchProbability getCompl() const { return BranchProbability(D - N); }
 
-  raw_ostream &print(raw_ostream &OS) const;
+  LLVM_ABI raw_ostream &print(raw_ostream &OS) const;
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 
   /// Scale a large integer.
   ///
@@ -84,7 +85,7 @@ public:
   /// result.
   ///
   /// \return \c Num times \c this.
-  uint64_t scale(uint64_t Num) const;
+  LLVM_ABI uint64_t scale(uint64_t Num) const;
 
   /// Scale a large integer by the inverse.
   ///
@@ -92,7 +93,7 @@ public:
   /// Returns the floor of the result.
   ///
   /// \return \c Num divided by \c this.
-  uint64_t scaleByInverse(uint64_t Num) const;
+  LLVM_ABI uint64_t scaleByInverse(uint64_t Num) const;
 
   BranchProbability &operator+=(BranchProbability RHS) {
     assert(N != UnknownN && RHS.N != UnknownN &&
