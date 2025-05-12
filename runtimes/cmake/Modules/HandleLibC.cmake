@@ -8,6 +8,8 @@
 # - runtimes-libc-static: A target representing the selected static C library.
 #===============================================================================
 
+include_guard(GLOBAL)
+
 set(RUNTIMES_SUPPORTED_C_LIBRARIES system llvm-libc)
 set(RUNTIMES_USE_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${RUNTIMES_SUPPORTED_C_LIBRARIES}.")
 if (NOT "${RUNTIMES_USE_LIBC}" IN_LIST RUNTIMES_SUPPORTED_C_LIBRARIES)
