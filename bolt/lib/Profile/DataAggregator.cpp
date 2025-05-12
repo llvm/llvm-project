@@ -565,15 +565,14 @@ void DataAggregator::processProfile(BinaryContext &BC) {
   processMemEvents();
 
   // Mark all functions with registered events as having a valid profile.
-  const auto Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
-                                            : BinaryFunction::PF_LBR;
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &BF = BFI.second;
-    FuncBranchData *FBD = getBranchData(BF);
-    if (FBD || getFuncSampleData(BF.getNames())) {
-      BF.markProfiled(Flags);
-      if (FBD)
-        BF.RawBranchCount = FBD->getNumExecutedBranches();
+    if (FuncBranchData *FBD = getBranchData(BF)) {
+      BF.markProfiled(BinaryFunction::PF_LBR);
+      BF.RawBranchCount = FBD->getNumExecutedBranches();
+    } else if (FuncSampleData *FSD = getFuncSampleData(BF.getNames())) {
+      BF.markProfiled(BinaryFunction::PF_SAMPLE);
+      BF.RawBranchCount = FSD->getSamples();
     }
   }
 
@@ -630,10 +629,18 @@ StringRef DataAggregator::getLocationName(const BinaryFunction &Func,
 
 bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
                               uint64_t Count) {
+  // To record executed bytes, use basic block size as is regardless of BAT.
+  uint64_t BlockSize = 0;
+  if (BinaryBasicBlock *BB = OrigFunc.getBasicBlockContainingOffset(
+          Address - OrigFunc.getAddress()))
+    BlockSize = BB->getOriginalSize();
+
   BinaryFunction *ParentFunc = getBATParentFunction(OrigFunc);
   BinaryFunction &Func = ParentFunc ? *ParentFunc : OrigFunc;
-  if (ParentFunc || (BAT && !BAT->isBATFunction(OrigFunc.getAddress())))
+  if (ParentFunc || (BAT && !BAT->isBATFunction(Func.getAddress())))
     NumColdSamples += Count;
+  // Attach executed bytes to parent function in case of cold fragment.
+  Func.SampleCountInBytes += Count * BlockSize;
 
   auto I = NamesToSamples.find(Func.getOneName());
   if (I == NamesToSamples.end()) {
