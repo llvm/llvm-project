@@ -5774,6 +5774,9 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
       Res.append("-p7:160:256:256:32");
     if (!DL.contains("-p8") && !DL.starts_with("p8"))
       Res.append("-p8:128:128:128:48");
+    constexpr StringRef OldP8("-p8:128:128-");
+    if (DL.contains(OldP8))
+      Res.replace(Res.find(OldP8), OldP8.size(), "-p8:128:128:128:48-");
     if (!DL.contains("-p9") && !DL.starts_with("p9"))
       Res.append("-p9:192:256:256:32");
 

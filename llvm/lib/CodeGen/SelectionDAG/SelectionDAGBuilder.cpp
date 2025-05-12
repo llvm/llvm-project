@@ -3877,9 +3877,7 @@ void SelectionDAGBuilder::visitSIToFP(const User &I) {
   setValue(&I, DAG.getNode(ISD::SINT_TO_FP, getCurSDLoc(), DestVT, N));
 }
 
-void SelectionDAGBuilder::visitPtrToAddr(const User &I) {
-  visitPtrToInt(I);
-}
+void SelectionDAGBuilder::visitPtrToAddr(const User &I) { visitPtrToInt(I); }
 
 void SelectionDAGBuilder::visitPtrToInt(const User &I) {
   // What to do depends on the size of the integer and the size of the pointer.
@@ -7980,10 +7978,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (Mask.getValueType().getFixedSizeInBits() < MemVT.getFixedSizeInBits()) {
       // For AMDGPU buffer descriptors the mask is 48 bits, but the pointer is
       // 128-bit, so we have to pad the mask with ones for unused bits.
-      auto HighOnes =
-          DAG.getNode(ISD::SHL, sdl, PtrVT, DAG.getAllOnesConstant(sdl, PtrVT),
-                      DAG.getConstant(Mask.getValueType().getFixedSizeInBits(),
-                                      sdl, PtrVT));
+      auto HighOnes = DAG.getNode(
+          ISD::SHL, sdl, PtrVT, DAG.getAllOnesConstant(sdl, PtrVT),
+          DAG.getShiftAmountConstant(Mask.getValueType().getFixedSizeInBits(),
+                                     PtrVT, sdl));
       Mask = DAG.getNode(ISD::OR, sdl, PtrVT,
                          DAG.getZExtOrTrunc(Mask, sdl, PtrVT), HighOnes);
     } else if (Mask.getValueType() != PtrVT)
@@ -10030,7 +10028,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
   std::vector<SDValue> AsmNodeOperands;
   AsmNodeOperands.push_back(SDValue());  // reserve space for input chain
   AsmNodeOperands.push_back(DAG.getTargetExternalSymbol(
-      IA->getAsmString().c_str(), TLI.getProgramPointerTy(DAG.getDataLayout())));
+      IA->getAsmString().data(), TLI.getProgramPointerTy(DAG.getDataLayout())));
 
   // If we have a !srcloc metadata node associated with it, we want to attach
   // this to the ultimately generated inline asm machineinstr.  To do this, we
