@@ -2419,10 +2419,10 @@ def INT_PTX_LDG_G_v4i16_ELE : VLDG_G_ELE_V4<"b16", Int16Regs>;
 def INT_PTX_LDG_G_v4i32_ELE : VLDG_G_ELE_V4<"b32", Int32Regs>;
 def INT_PTX_LDG_G_v4f32_ELE : VLDG_G_ELE_V4<"b32", Float32Regs>;
 
-def INT_PTX_LDG_G_v4i64_ELE : VLDG_G_ELE_V4<"u64", Int64Regs>;
-def INT_PTX_LDG_G_v4f64_ELE : VLDG_G_ELE_V4<"f64", Float64Regs>;
-def INT_PTX_LDG_G_v8i32_ELE : VLDG_G_ELE_V8<"u32", Int32Regs>;
-def INT_PTX_LDG_G_v8f32_ELE : VLDG_G_ELE_V8<"f32", Float32Regs>;
+def INT_PTX_LDG_G_v4i64_ELE : VLDG_G_ELE_V4<"b64", Int64Regs>;
+def INT_PTX_LDG_G_v4f64_ELE : VLDG_G_ELE_V4<"b64", Float64Regs>;
+def INT_PTX_LDG_G_v8i32_ELE : VLDG_G_ELE_V8<"b32", Int32Regs>;
+def INT_PTX_LDG_G_v8f32_ELE : VLDG_G_ELE_V8<"b32", Float32Regs>;
 
 multiclass NG_TO_G<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
   if Supports32 then
