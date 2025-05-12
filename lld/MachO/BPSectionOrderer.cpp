@@ -115,7 +115,7 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     for (auto *sec : file->sections) {
       for (auto &subsec : sec->subsections) {
         auto *isec = subsec.isec;
-        if (!isec || isec->data.empty())
+        if (!isec || isec->data.empty() || !isec->data.data())
           continue;
         // ConcatInputSections are entirely live or dead, so the offset is
         // irrelevant.

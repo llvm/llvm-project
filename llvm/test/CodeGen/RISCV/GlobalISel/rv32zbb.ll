@@ -62,6 +62,9 @@ declare i64 @llvm.ctlz.i64(i64, i1)
 define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32I-LABEL: ctlz_i64:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    or a2, a0, a1
+; RV32I-NEXT:    beqz a2, .LBB1_3
+; RV32I-NEXT:  # %bb.1: # %cond.false
 ; RV32I-NEXT:    lui a2, 349525
 ; RV32I-NEXT:    lui a3, 209715
 ; RV32I-NEXT:    lui a6, 61681
@@ -69,8 +72,8 @@ define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    addi a4, a3, 819
 ; RV32I-NEXT:    addi a3, a6, -241
 ; RV32I-NEXT:    li a2, 32
-; RV32I-NEXT:    beqz a1, .LBB1_2
-; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    beqz a1, .LBB1_4
+; RV32I-NEXT:  # %bb.2: # %cond.false
 ; RV32I-NEXT:    srli a0, a1, 1
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    srli a1, a0, 2
@@ -99,7 +102,11 @@ define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    sub a0, a2, a0
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB1_2:
+; RV32I-NEXT:  .LBB1_3:
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    li a0, 64
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB1_4:
 ; RV32I-NEXT:    srli a1, a0, 1
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    srli a1, a0, 2
@@ -195,14 +202,17 @@ declare i64 @llvm.cttz.i64(i64, i1)
 define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32I-LABEL: cttz_i64:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    or a2, a0, a1
+; RV32I-NEXT:    beqz a2, .LBB3_3
+; RV32I-NEXT:  # %bb.1: # %cond.false
 ; RV32I-NEXT:    lui a2, 349525
 ; RV32I-NEXT:    lui a3, 209715
 ; RV32I-NEXT:    lui a5, 61681
 ; RV32I-NEXT:    addi a4, a2, 1365
 ; RV32I-NEXT:    addi a3, a3, 819
 ; RV32I-NEXT:    addi a2, a5, -241
-; RV32I-NEXT:    beqz a0, .LBB3_2
-; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    beqz a0, .LBB3_4
+; RV32I-NEXT:  # %bb.2: # %cond.false
 ; RV32I-NEXT:    not a1, a0
 ; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    and a0, a1, a0
@@ -223,7 +233,11 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    srli a0, a0, 24
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB3_2:
+; RV32I-NEXT:  .LBB3_3:
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    li a0, 64
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB3_4:
 ; RV32I-NEXT:    not a0, a1
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    and a0, a0, a1

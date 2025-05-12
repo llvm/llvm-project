@@ -20,7 +20,7 @@
 // CHECK-NEXT:   }
 // CHECK:        Section {
 // CHECK:          Name: .xdata
-// CHECK:          RawDataSize: 92
+// CHECK:          RawDataSize: 100
 // CHECK:          RelocationCount: 1
 // CHECK:          Characteristics [
 // CHECK-NEXT:       ALIGN_4BYTES
@@ -41,7 +41,7 @@
 
 // CHECK-NEXT: Relocations [
 // CHECK-NEXT:   Section (4) .xdata {
-// CHECK-NEXT:     0x50 IMAGE_REL_ARM64_ADDR32NB __C_specific_handler
+// CHECK-NEXT:     0x58 IMAGE_REL_ARM64_ADDR32NB __C_specific_handler
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (5) .pdata {
 // CHECK-NEXT:     0x0 IMAGE_REL_ARM64_ADDR32NB .text
@@ -54,8 +54,11 @@
 // CHECK-NEXT:     Function: func
 // CHECK-NEXT:     ExceptionRecord: .xdata
 // CHECK-NEXT:     ExceptionData {
-// CHECK-NEXT:       FunctionLength: 156
+// CHECK-NEXT:       FunctionLength: 172
 // CHECK:            Prologue [
+// CHECK-NEXT:         0xe716c3            ; str p6, [sp, #3, mul vl]
+// CHECK-NEXT:         0xe703c5            ; str z11, [sp, #5, mul vl]
+// CHECK-NEXT:         0xdf05              ; addvl sp, #-5
 // CHECK-NEXT:         0xe76983            ; stp q9, q10, [sp, #-64]!
 // CHECK-NEXT:         0xe73d83            ; str q29, [sp, #-64]!
 // CHECK-NEXT:         0xe76243            ; stp d2, d3, [sp, #-64]!
@@ -96,8 +99,8 @@
 // CHECK-NEXT:       ]
 // CHECK-NEXT:       EpilogueScopes [
 // CHECK-NEXT:         EpilogueScope {
-// CHECK-NEXT:           StartOffset: 37
-// CHECK-NEXT:           EpilogueStartIndex: 69
+// CHECK-NEXT:           StartOffset: 41
+// CHECK-NEXT:           EpilogueStartIndex: 77
 // CHECK-NEXT:           Opcodes [
 // CHECK-NEXT:             0x01                ; add sp, #16
 // CHECK-NEXT:             0xe4                ; end
@@ -193,6 +196,13 @@ func:
     .seh_save_any_reg_x q29, 64
     nop
     .seh_save_any_reg_px q9, 64
+    nop
+    .seh_allocz 5
+    nop
+    .seh_save_zreg z11, 5
+    nop
+    .seh_save_preg p6, 3
+    nop
     .seh_endprologue
     nop
     .seh_startepilogue

@@ -871,7 +871,8 @@ public:
   /// extracted from vectors.
   InstructionCost getScalarizationOverhead(
       VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, ArrayRef<Value *> VL = {}) const override {
+      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+      ArrayRef<Value *> VL = {}) const override {
     /// FIXME: a bitfield is not a reasonable abstraction for talking about
     /// which elements are needed from a scalable vector
     if (isa<ScalableVectorType>(InTy))
@@ -1409,8 +1410,8 @@ public:
 
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override {
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override {
     return getRegUsageForType(Val->getScalarType());
   }
 

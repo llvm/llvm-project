@@ -195,7 +195,7 @@ static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
   for (auto &PluginFN : PassPlugins) {
     auto PassPlugin = PassPlugin::Load(PluginFN);
     if (!PassPlugin)
-      report_fatal_error(PassPlugin.takeError(), /*gen_crash_diag=*/false);
+      reportFatalUsageError(PassPlugin.takeError());
     PassPlugin->registerPassBuilderCallbacks(PB);
   }
 }

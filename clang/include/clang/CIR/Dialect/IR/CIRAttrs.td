@@ -204,7 +204,7 @@ def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]>
     }]>
   ];
 
-  // Printing and parsing available in CIRDialect.cpp
+  // Printing and parsing available in CIRAttrs.cpp
   let hasCustomAssemblyFormat = 1;
 
   // Enable verifier.
@@ -213,6 +213,38 @@ def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]>
   let extraClassDeclaration = [{
     bool hasTrailingZeros() const { return getTrailingZerosNum() != 0; };
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// ConstVectorAttr
+//===----------------------------------------------------------------------===//
+
+def ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector",
+                               [TypedAttrInterface]> {
+  let summary = "A constant vector from ArrayAttr";
+  let description = [{
+    A CIR vector attribute is an array of literals of the specified attribute
+    types.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+		        "mlir::ArrayAttr":$elts);
+
+  // Define a custom builder for the type; that removes the need to pass in an
+  // MLIRContext instance, as it can be inferred from the `type`.
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::VectorType":$type,
+		                        "mlir::ArrayAttr":$elts), [{
+      return $_get(type.getContext(), type, elts);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `<` $elts `>`
+  }];
+
+  // Enable verifier.
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//

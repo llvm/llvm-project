@@ -111,7 +111,7 @@ public:
   cir::BoolType getBoolTy() { return cir::BoolType::get(getContext()); }
 
   cir::PointerType getPointerTo(mlir::Type ty) {
-    return cir::PointerType::get(getContext(), ty);
+    return cir::PointerType::get(ty);
   }
 
   cir::PointerType getVoidPtrTy() {
@@ -215,14 +215,14 @@ public:
   //===--------------------------------------------------------------------===//
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
-                           mlir::Type returnType) {
-    auto op = create<cir::CallOp>(loc, callee, returnType);
-    return op;
+                           mlir::Type returnType, mlir::ValueRange operands) {
+    return create<cir::CallOp>(loc, callee, returnType, operands);
   }
 
-  cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee) {
+  cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee,
+                           mlir::ValueRange operands) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
-                        callee.getFunctionType().getReturnType());
+                        callee.getFunctionType().getReturnType(), operands);
   }
 
   //===--------------------------------------------------------------------===//

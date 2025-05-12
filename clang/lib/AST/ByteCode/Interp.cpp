@@ -834,6 +834,12 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return false;
   }
 
+  // Bail out if the function declaration itself is invalid.  We will
+  // have produced a relevant diagnostic while parsing it, so just
+  // note the problematic sub-expression.
+  if (F->getDecl()->isInvalidDecl())
+    return Invalid(S, OpPC);
+
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
     return false;
 
@@ -933,15 +939,6 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
   else
     S.FFDiag(Loc);
 
-  return false;
-}
-
-bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
-  if (!MD->isPureVirtual())
-    return true;
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << MD;
-  S.Note(MD->getLocation(), diag::note_declared_at);
   return false;
 }
 
@@ -1336,7 +1333,7 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   }
 
-  if (Off > Ptr.block()->getSize())
+  if ((Ptr.getByteOffset() + Off) >= Ptr.block()->getSize())
     return false;
 
   S.Stk.push<Pointer>(Ptr.atField(Off));

@@ -203,7 +203,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   if (IsResolved) {
     auto TargetVal = Target;
     TargetVal.Cst = Value;
-    if (mc::isRelocation(Fixup.getKind()) ||
+    if (mc::isRelocRelocation(Fixup.getKind()) ||
         getBackend().shouldForceRelocation(*this, Fixup, TargetVal, STI))
       IsResolved = false;
   }
@@ -809,8 +809,8 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
           getContext().reportError(SMLoc(), Sec->getVirtualSectionKind() +
                                                 " section '" + Sec->getName() +
                                                 "' cannot have fixups");
-        for (unsigned i = 0, e = DF.getContents().size(); i != e; ++i)
-          if (DF.getContents()[i]) {
+        for (char C : DF.getContents())
+          if (C) {
             getContext().reportError(SMLoc(),
                                      Sec->getVirtualSectionKind() +
                                          " section '" + Sec->getName() +

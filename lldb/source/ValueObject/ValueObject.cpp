@@ -403,7 +403,8 @@ ValueObject::GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names) {
   return root;
 }
 
-size_t ValueObject::GetIndexOfChildWithName(llvm::StringRef name) {
+llvm::Expected<size_t>
+ValueObject::GetIndexOfChildWithName(llvm::StringRef name) {
   bool omit_empty_base_classes = true;
   return GetCompilerType().GetIndexOfChildWithName(name,
                                                    omit_empty_base_classes);
@@ -2202,6 +2203,45 @@ void ValueObject::GetExpressionPath(Stream &s,
   }
 }
 
+// Return the alternate value (synthetic if the input object is non-synthetic
+// and otherwise) this is permitted by the expression path options.
+static ValueObjectSP GetAlternateValue(
+    ValueObject &valobj,
+    ValueObject::GetValueForExpressionPathOptions::SyntheticChildrenTraversal
+        synth_traversal) {
+  using SynthTraversal =
+      ValueObject::GetValueForExpressionPathOptions::SyntheticChildrenTraversal;
+
+  if (valobj.IsSynthetic()) {
+    if (synth_traversal == SynthTraversal::FromSynthetic ||
+        synth_traversal == SynthTraversal::Both)
+      return valobj.GetNonSyntheticValue();
+  } else {
+    if (synth_traversal == SynthTraversal::ToSynthetic ||
+        synth_traversal == SynthTraversal::Both)
+      return valobj.GetSyntheticValue();
+  }
+  return nullptr;
+}
+
+// Dereference the provided object or the alternate value, if permitted by the
+// expression path options.
+static ValueObjectSP DereferenceValueOrAlternate(
+    ValueObject &valobj,
+    ValueObject::GetValueForExpressionPathOptions::SyntheticChildrenTraversal
+        synth_traversal,
+    Status &error) {
+  error.Clear();
+  ValueObjectSP result = valobj.Dereference(error);
+  if (!result || error.Fail()) {
+    if (ValueObjectSP alt_obj = GetAlternateValue(valobj, synth_traversal)) {
+      error.Clear();
+      result = alt_obj->Dereference(error);
+    }
+  }
+  return result;
+}
+
 ValueObjectSP ValueObject::GetValueForExpressionPath(
     llvm::StringRef expression, ExpressionPathScanEndReason *reason_to_stop,
     ExpressionPathEndResultType *final_value_type,
@@ -2234,7 +2274,8 @@ ValueObjectSP ValueObject::GetValueForExpressionPath(
                               : dummy_final_task_on_target) ==
         ValueObject::eExpressionPathAftermathDereference) {
       Status error;
-      ValueObjectSP final_value = ret_val->Dereference(error);
+      ValueObjectSP final_value = DereferenceValueOrAlternate(
+          *ret_val, options.m_synthetic_children_traversal, error);
       if (error.Fail() || !final_value.get()) {
         if (reason_to_stop)
           *reason_to_stop =
@@ -2348,144 +2389,45 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
       temp_expression = temp_expression.drop_front(); // skip . or >
 
       size_t next_sep_pos = temp_expression.find_first_of("-.[", 1);
-      if (next_sep_pos == llvm::StringRef::npos) // if no other separator just
-                                                 // expand this last layer
-      {
+      if (next_sep_pos == llvm::StringRef::npos) {
+        // if no other separator just expand this last layer
         llvm::StringRef child_name = temp_expression;
         ValueObjectSP child_valobj_sp =
             root->GetChildMemberWithName(child_name);
-
-        if (child_valobj_sp.get()) // we know we are done, so just return
-        {
+        if (!child_valobj_sp) {
+          if (ValueObjectSP altroot = GetAlternateValue(
+                  *root, options.m_synthetic_children_traversal))
+            child_valobj_sp = altroot->GetChildMemberWithName(child_name);
+        }
+        if (child_valobj_sp) {
           *reason_to_stop =
               ValueObject::eExpressionPathScanEndReasonEndOfString;
           *final_result = ValueObject::eExpressionPathEndResultTypePlain;
           return child_valobj_sp;
-        } else {
-          switch (options.m_synthetic_children_traversal) {
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              None:
-            break;
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              FromSynthetic:
-            if (root->IsSynthetic()) {
-              child_valobj_sp = root->GetNonSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            }
-            break;
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              ToSynthetic:
-            if (!root->IsSynthetic()) {
-              child_valobj_sp = root->GetSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            }
-            break;
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              Both:
-            if (root->IsSynthetic()) {
-              child_valobj_sp = root->GetNonSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            } else {
-              child_valobj_sp = root->GetSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            }
-            break;
-          }
         }
-
-        // if we are here and options.m_no_synthetic_children is true,
-        // child_valobj_sp is going to be a NULL SP, so we hit the "else"
-        // branch, and return an error
-        if (child_valobj_sp.get()) // if it worked, just return
-        {
-          *reason_to_stop =
-              ValueObject::eExpressionPathScanEndReasonEndOfString;
-          *final_result = ValueObject::eExpressionPathEndResultTypePlain;
-          return child_valobj_sp;
-        } else {
-          *reason_to_stop =
-              ValueObject::eExpressionPathScanEndReasonNoSuchChild;
-          *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
-          return nullptr;
-        }
-      } else // other layers do expand
-      {
-        llvm::StringRef next_separator = temp_expression.substr(next_sep_pos);
-        llvm::StringRef child_name = temp_expression.slice(0, next_sep_pos);
-
-        ValueObjectSP child_valobj_sp =
-            root->GetChildMemberWithName(child_name);
-        if (child_valobj_sp.get()) // store the new root and move on
-        {
-          root = child_valobj_sp;
-          remainder = next_separator;
-          *final_result = ValueObject::eExpressionPathEndResultTypePlain;
-          continue;
-        } else {
-          switch (options.m_synthetic_children_traversal) {
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              None:
-            break;
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              FromSynthetic:
-            if (root->IsSynthetic()) {
-              child_valobj_sp = root->GetNonSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            }
-            break;
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              ToSynthetic:
-            if (!root->IsSynthetic()) {
-              child_valobj_sp = root->GetSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            }
-            break;
-          case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
-              Both:
-            if (root->IsSynthetic()) {
-              child_valobj_sp = root->GetNonSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            } else {
-              child_valobj_sp = root->GetSyntheticValue();
-              if (child_valobj_sp.get())
-                child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name);
-            }
-            break;
-          }
-        }
-
-        // if we are here and options.m_no_synthetic_children is true,
-        // child_valobj_sp is going to be a NULL SP, so we hit the "else"
-        // branch, and return an error
-        if (child_valobj_sp.get()) // if it worked, move on
-        {
-          root = child_valobj_sp;
-          remainder = next_separator;
-          *final_result = ValueObject::eExpressionPathEndResultTypePlain;
-          continue;
-        } else {
-          *reason_to_stop =
-              ValueObject::eExpressionPathScanEndReasonNoSuchChild;
-          *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
-          return nullptr;
-        }
+        *reason_to_stop = ValueObject::eExpressionPathScanEndReasonNoSuchChild;
+        *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
+        return nullptr;
       }
-      break;
+
+      llvm::StringRef next_separator = temp_expression.substr(next_sep_pos);
+      llvm::StringRef child_name = temp_expression.slice(0, next_sep_pos);
+
+      ValueObjectSP child_valobj_sp = root->GetChildMemberWithName(child_name);
+      if (!child_valobj_sp) {
+        if (ValueObjectSP altroot = GetAlternateValue(
+                *root, options.m_synthetic_children_traversal))
+          child_valobj_sp = altroot->GetChildMemberWithName(child_name);
+      }
+      if (child_valobj_sp) {
+        root = child_valobj_sp;
+        remainder = next_separator;
+        *final_result = ValueObject::eExpressionPathEndResultTypePlain;
+        continue;
+      }
+      *reason_to_stop = ValueObject::eExpressionPathScanEndReasonNoSuchChild;
+      *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
+      return nullptr;
     }
     case '[': {
       if (!root_compiler_type_info.Test(eTypeIsArray) &&
@@ -2601,7 +2543,8 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
                                                              // a bitfield
               pointee_compiler_type_info.Test(eTypeIsScalar)) {
             Status error;
-            root = root->Dereference(error);
+            root = DereferenceValueOrAlternate(
+                *root, options.m_synthetic_children_traversal, error);
             if (error.Fail() || !root) {
               *reason_to_stop =
                   ValueObject::eExpressionPathScanEndReasonDereferencingFailed;
@@ -2746,7 +2689,8 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
                        ValueObject::eExpressionPathAftermathDereference &&
                    pointee_compiler_type_info.Test(eTypeIsScalar)) {
           Status error;
-          root = root->Dereference(error);
+          root = DereferenceValueOrAlternate(
+              *root, options.m_synthetic_children_traversal, error);
           if (error.Fail() || !root) {
             *reason_to_stop =
                 ValueObject::eExpressionPathScanEndReasonDereferencingFailed;
@@ -2916,9 +2860,6 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
       }
     }
 
-  } else if (HasSyntheticValue()) {
-    m_deref_valobj =
-        GetSyntheticValue()->GetChildMemberWithName("$$dereference$$").get();
   } else if (IsSynthetic()) {
     m_deref_valobj = GetChildMemberWithName("$$dereference$$").get();
   }
@@ -2966,10 +2907,13 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
         std::string name(1, '&');
         name.append(m_name.AsCString(""));
         ExecutionContext exe_ctx(GetExecutionContextRef());
+
+        lldb::DataBufferSP buffer(
+            new lldb_private::DataBufferHeap(&addr, sizeof(lldb::addr_t)));
         m_addr_of_valobj_sp = ValueObjectConstResult::Create(
             exe_ctx.GetBestExecutionContextScope(),
-            compiler_type.GetPointerType(), ConstString(name.c_str()), addr,
-            eAddressTypeInvalid, m_data.GetAddressByteSize());
+            compiler_type.GetPointerType(), ConstString(name.c_str()), buffer,
+            endian::InlHostByteOrder(), exe_ctx.GetAddressByteSize());
       }
     } break;
     default:

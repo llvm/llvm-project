@@ -4837,7 +4837,6 @@ void SemaCodeCompletion::CodeCompleteAttribute(
       // We skip this if the scope was already spelled and not guarded, or
       // we must spell it and can't guard it.
       if (!(InScope && !InScopeUnderscore) && SyntaxSupportsGuards) {
-        llvm::SmallString<32> Guarded;
         if (Scope.empty()) {
           Add(Scope, Name, /*Underscores=*/true);
         } else {

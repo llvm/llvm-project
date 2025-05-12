@@ -1463,7 +1463,6 @@ bool LoopInterchangeTransform::transform() {
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
   if (InnerLoopPreHeader != OuterLoopHeader) {
-    SmallPtrSet<Instruction *, 4> NeedsMoving;
     for (Instruction &I :
          make_early_inc_range(make_range(InnerLoopPreHeader->begin(),
                                          std::prev(InnerLoopPreHeader->end()))))
