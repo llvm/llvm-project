@@ -1,6 +1,8 @@
 ; RUN: llc %s -o %t.o -filetype=obj
 ; RUN: llvm-dwarfdump --debug-line %t.o | FileCheck %s --check-prefix=LINES
 ; RUN: llc %s -o %t.o -filetype=obj -debug-only=mc-dump 2>&1 | FileCheck %s --check-prefix=FRAGMENTS
+;
+; REQUIRES: asserts
 
 ;; Test (using mc-dump debug output) that .debug_line can be arranged in memory
 ;; using a single data fragment for a simple function, instead of using multiple
