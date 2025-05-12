@@ -35,13 +35,13 @@
 // EXCEPTION-HANDLING: #define __wasm_exception_handling__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
-// RUN:     -target wasm32-unknown-unknown -mextended-const \
-// RUN:   | FileCheck %s -check-prefix=EXTENDED-CONST
+// RUN:     -target wasm32-unknown-unknown -mno-extended-const \
+// RUN:   | FileCheck %s -check-prefix=NO-EXTENDED-CONST
 // RUN: %clang -E -dM %s -o - 2>&1 \
-// RUN:     -target wasm64-unknown-unknown -mextended-const \
-// RUN:   | FileCheck %s -check-prefix=EXTENDED-CONST
+// RUN:     -target wasm64-unknown-unknown -mno-extended-const \
+// RUN:   | FileCheck %s -check-prefix=NO-EXTENDED-CONST
 //
-// EXTENDED-CONST: #define __wasm_extended_const__ 1{{$}}
+// NO-EXTENDED-CONST-NOT: #define __wasm_extended_const__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mfp16 \
@@ -164,6 +164,7 @@
 // RUN:   | FileCheck %s -check-prefix=GENERIC-INCLUDE
 //
 // GENERIC-INCLUDE-DAG: #define __wasm_bulk_memory__ 1{{$}}
+// GENERIC-INCLUDE-DAG: #define __wasm_extended_const__ 1{{$}}
 // GENERIC-INCLUDE-DAG: #define __wasm_multivalue__ 1{{$}}
 // GENERIC-INCLUDE-DAG: #define __wasm_mutable_globals__ 1{{$}}
 // GENERIC-INCLUDE-DAG: #define __wasm_nontrapping_fptoint__ 1{{$}}
@@ -179,7 +180,6 @@
 //
 // GENERIC-NOT: #define __wasm_atomics__ 1{{$}}
 // GENERIC-NOT: #define __wasm_exception_handling__ 1{{$}}
-// GENERIC-NOT: #define __wasm_extended_const__ 1{{$}}
 // GENERIC-NOT: #define __wasm__fp16__ 1{{$}}
 // GENERIC-NOT: #define __wasm_multimemory__ 1{{$}}
 // GENERIC-NOT: #define __wasm_relaxed_simd__ 1{{$}}
