@@ -382,12 +382,11 @@ template <class EntryType, typename... ProfileArguments>
 typename RedeclarableTemplateDecl::SpecEntryTraits<EntryType>::DeclType *
 RedeclarableTemplateDecl::findSpecializationLocally(
     llvm::FoldingSetVector<EntryType> &Specs, void *&InsertPos,
-    ProfileArguments &&...ProfileArgs) {
+    ProfileArguments... ProfileArgs) {
   using SETraits = RedeclarableTemplateDecl::SpecEntryTraits<EntryType>;
 
   llvm::FoldingSetNodeID ID;
-  EntryType::Profile(ID, std::forward<ProfileArguments>(ProfileArgs)...,
-                     getASTContext());
+  EntryType::Profile(ID, ProfileArgs..., getASTContext());
   EntryType *Entry = Specs.FindNodeOrInsertPos(ID, InsertPos);
   return Entry ? SETraits::getDecl(Entry)->getMostRecentDecl() : nullptr;
 }
@@ -396,18 +395,15 @@ template <class EntryType, typename... ProfileArguments>
 typename RedeclarableTemplateDecl::SpecEntryTraits<EntryType>::DeclType *
 RedeclarableTemplateDecl::findSpecializationImpl(
     llvm::FoldingSetVector<EntryType> &Specs, void *&InsertPos,
-    ProfileArguments &&...ProfileArgs) {
+    ProfileArguments... ProfileArgs) {
 
-  if (auto *Found = findSpecializationLocally(
-          Specs, InsertPos, std::forward<ProfileArguments>(ProfileArgs)...))
+  if (auto *Found = findSpecializationLocally(Specs, InsertPos, ProfileArgs...))
     return Found;
 
-  if (!loadLazySpecializationsImpl(
-          std::forward<ProfileArguments>(ProfileArgs)...))
+  if (!loadLazySpecializationsImpl(ProfileArgs...))
     return nullptr;
 
-  return findSpecializationLocally(
-      Specs, InsertPos, std::forward<ProfileArguments>(ProfileArgs)...);
+  return findSpecializationLocally(Specs, InsertPos, ProfileArgs...);
 }
 
 template<class Derived, class EntryType>
