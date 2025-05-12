@@ -9,6 +9,10 @@
 #ifndef MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 
+#include <functional>
+#include <optional>
+#include <utility>
+
 namespace mlir {
 class RewritePatternSet;
 
