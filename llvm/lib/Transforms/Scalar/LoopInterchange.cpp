@@ -232,13 +232,13 @@ static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
 }
 
 // Check if a direction vector is lexicographically positive. Return true if it
-// is positive, nullopt if it is "zero", othrewise false.
+// is positive, nullopt if it is "zero", otherwise false.
 // [Theorem] A permutation of the loops in a perfect nest is legal if and only
 // if the direction matrix, after the same permutation is applied to its
 // columns, has no ">" direction as the leftmost non-"=" direction in any row.
 static std::optional<bool> isLexicographicallyPositive(std::vector<char> &DV,
-                                                       unsigned Begin,
-                                                       unsigned End) {
+                                                       unsigned Begin = 0,
+                                                       unsigned End = DV.size()) {
   ArrayRef<char> DVRef(DV);
   for (unsigned char Direction : DVRef.slice(Begin, End - Begin)) {
     if (Direction == '<')
@@ -261,9 +261,8 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
     // before and after swapping OuterLoop vs InnerLoop
     Cur = DepMatrix[Row];
 
-    // If the direction vector is lexicographically positive due to an element
-    // to the left of OuterLoopId, it is still positive after exchanging the two
-    // loops. In such a case we can skip the subsequent check.
+    // If the surrounding loops already ensure that the direction vector is lexicographically positive, nothing within the loop will be able to break the dependence.
+    // In such a case we can skip the subsequent check.
     if (isLexicographicallyPositive(Cur, 0, OuterLoopId) == true)
       continue;
 
