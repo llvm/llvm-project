@@ -521,6 +521,9 @@ Improvements to Clang's diagnostics
 - Fixed a duplicate diagnostic when performing typo correction on function template
   calls with explicit template arguments. (#GH139226)
 
+- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have an
+  argument larger than what can fit within a 64-bit integer.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
