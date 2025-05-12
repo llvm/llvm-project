@@ -351,8 +351,8 @@ struct Fragment {
     std::optional<Located<std::string>> HeaderInsertion;
     /// Will suggest code patterns & snippets.
     /// Values are Config::CodePatternsPolicy:
-    ///   all  => enable all code patterns and snippets suggestion
-    ///   none => disable all code patterns and snippets suggestion
+    ///   All  => enable all code patterns and snippets suggestion
+    ///   None => disable all code patterns and snippets suggestion
     std::optional<Located<std::string>> CodePatterns;
   };
   CompletionBlock Completion;
