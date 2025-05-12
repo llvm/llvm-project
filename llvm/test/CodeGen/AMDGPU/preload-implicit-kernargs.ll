@@ -1520,21 +1520,20 @@ define amdgpu_kernel void @preload_block_count_z_workgroup_size_z_remainder_z(pt
 ; GFX90a-SDAG-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX90a-SDAG-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX90a-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-SDAG-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX90a-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX90a-SDAG-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9]
 ; GFX90a-SDAG-NEXT:    s_endpgm
 ;
 ; GFX942-GISEL-LABEL: preload_block_count_z_workgroup_size_z_remainder_z:
 ; GFX942-GISEL:       ; %bb.1:
-; GFX90a-GISEL-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x0
+; GFX942-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX942-GISEL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x8
+; GFX942-GISEL-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x18
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    s_branch .LBB22_0
 ; GFX942-GISEL-NEXT:    .p2align 8
 ; GFX942-GISEL-NEXT:  ; %bb.2:
 ; GFX942-GISEL-NEXT:  .LBB22_0:
-; GFX90a-GISEL-NEXT:    s_lshr_b32 s0, s15, 16
 ; GFX942-GISEL-NEXT:    v_alignbit_b32 v0, s9, s9, 16
 ; GFX942-GISEL-NEXT:    s_and_b32 s0, s8, 0xffff
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v0
@@ -1546,22 +1545,18 @@ define amdgpu_kernel void @preload_block_count_z_workgroup_size_z_remainder_z(pt
 ;
 ; GFX90a-GISEL-LABEL: preload_block_count_z_workgroup_size_z_remainder_z:
 ; GFX90a-GISEL:       ; %bb.1:
-; GFX90a-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX90a-GISEL-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
-; GFX90a-GISEL-NEXT:    s_load_dword s14, s[4:5], 0x18
+; GFX90a-GISEL-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x0
 ; GFX90a-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90a-GISEL-NEXT:    s_branch .LBB22_0
 ; GFX90a-GISEL-NEXT:    .p2align 8
 ; GFX90a-GISEL-NEXT:  ; %bb.2:
 ; GFX90a-GISEL-NEXT:  .LBB22_0:
-; GFX90a-GISEL-NEXT:    s_load_dword s0, s[4:5], 0x1c
-; GFX90a-GISEL-NEXT:    s_and_b32 s13, s14, 0xffff
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v3, 0
-; GFX90a-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-GISEL-NEXT:    s_lshr_b32 s14, s0, 16
+; GFX90a-GISEL-NEXT:    v_alignbit_b32 v0, s15, s15, 16
+; GFX90a-GISEL-NEXT:    s_and_b32 s0, s14, 0xffff
+; GFX90a-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v0
 ; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s12
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v1, s13
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v2, s14
+; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v1, s0
+; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX90a-GISEL-NEXT:    global_store_dwordx3 v3, v[0:2], s[8:9]
 ; GFX90a-GISEL-NEXT:    s_endpgm
   %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()

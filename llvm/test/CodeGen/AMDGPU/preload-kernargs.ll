@@ -1637,29 +1637,28 @@ define amdgpu_kernel void @half_v7bfloat_kernel_preload_arg(ptr addrspace(1) inr
 ; GFX90a-GISEL-NEXT:    .p2align 8
 ; GFX90a-GISEL-NEXT:  ; %bb.2:
 ; GFX90a-GISEL-NEXT:  .LBB23_0:
-; GFX90a-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x20
+; GFX90a-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x20
 ; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX90a-GISEL-NEXT:    s_lshr_b32 s2, s12, 16
 ; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[8:9]
+; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX90a-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-GISEL-NEXT:    s_lshr_b32 s4, s0, 16
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[6:7]
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; GFX90a-GISEL-NEXT:    s_lshr_b32 s5, s1, 16
-; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[6:7] offset:2
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[6:7] offset:4
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s5
-; GFX90a-GISEL-NEXT:    s_lshr_b32 s11, s2, 16
-; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[6:7] offset:6
+; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[0:1]
 ; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[6:7] offset:8
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s11
-; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[6:7] offset:10
+; GFX90a-GISEL-NEXT:    s_lshr_b32 s3, s13, 16
+; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[0:1] offset:2
+; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s13
+; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[0:1] offset:4
 ; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[6:7] offset:12
+; GFX90a-GISEL-NEXT:    s_lshr_b32 s6, s14, 16
+; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[0:1] offset:6
+; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s14
+; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[0:1] offset:8
+; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s6
+; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[0:1] offset:10
+; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s15
+; GFX90a-GISEL-NEXT:    global_store_short v1, v0, s[0:1] offset:12
 ; GFX90a-GISEL-NEXT:    s_endpgm
   store half %in, ptr addrspace(1) %out
   store <7 x bfloat> %in2, ptr addrspace(1) %out2
@@ -2133,7 +2132,7 @@ define amdgpu_kernel void @i16_v3i32_kernel_preload_arg(ptr addrspace(1) inreg %
 ; GFX90a-SDAG-NEXT:    .p2align 8
 ; GFX90a-SDAG-NEXT:  ; %bb.2:
 ; GFX90a-SDAG-NEXT:  .LBB29_0:
-; GFX90a-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x10
+; GFX90a-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x20
 ; GFX90a-SDAG-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX90a-SDAG-NEXT:    v_mov_b32_e32 v4, s10
 ; GFX90a-SDAG-NEXT:    v_mov_b32_e32 v0, s12
@@ -2152,16 +2151,15 @@ define amdgpu_kernel void @i16_v3i32_kernel_preload_arg(ptr addrspace(1) inreg %
 ; GFX90a-GISEL-NEXT:    .p2align 8
 ; GFX90a-GISEL-NEXT:  ; %bb.2:
 ; GFX90a-GISEL-NEXT:  .LBB29_0:
-; GFX90a-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
-; GFX90a-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x20
+; GFX90a-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x20
 ; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX90a-GISEL-NEXT:    global_store_short v3, v0, s[8:9]
+; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s12
+; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v1, s13
+; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v2, s14
 ; GFX90a-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX90a-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX90a-GISEL-NEXT:    global_store_dwordx3 v3, v[0:2], s[6:7]
+; GFX90a-GISEL-NEXT:    global_store_dwordx3 v3, v[0:2], s[0:1]
 ; GFX90a-GISEL-NEXT:    s_endpgm
   store i16 %in, ptr addrspace(1) %out
   store <3 x i32> %in2, ptr addrspace(1) %out2
