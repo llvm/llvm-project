@@ -896,8 +896,9 @@ public:
     } else if (kind == vector::CombiningKind::MAXNUMF) {
       result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmax>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else
+    } else {
       return failure();
+    }
 
     rewriter.replaceOp(reductionOp, result);
     return success();
