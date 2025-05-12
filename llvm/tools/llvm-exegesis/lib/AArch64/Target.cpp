@@ -220,11 +220,7 @@ private:
       // safer to check the existing key state and then disable/enable them.
       // Hence the guard for switching.
       errno = 0;
-      unsigned long PacKeys = prctl_wrapper(PR_PAC_GET_ENABLED_KEYS,
-                                            0,  // unused
-                                            0,  // unused
-                                            0,  // unused
-                                            0); // unused
+      unsigned long PacKeys = prctl_wrapper(PR_PAC_GET_ENABLED_KEYS);
       if ((long)PacKeys < 0) {
         if (errno == EINVAL) {
           return "PAuth not supported on this system";
