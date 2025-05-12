@@ -265,7 +265,7 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 4)
   set_target_properties(amd_comgr PROPERTIES OUTPUT_NAME "amd_comgr32")
 endif()
 
-option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)
+option(COMGR_BUILD_INSTRUMENTED_COVERAGE "Build Comgr with Code Coverage instrumentation" Off)
 mark_as_advanced(LLVM_BUILD_INSTRUMENTED_COVERAGE)
 if(LLVM_BUILD_INSTRUMENTED_COVERAGE)
   if(NOT LLVM_PROFILE_MERGE_POOL_SIZE)
