@@ -791,26 +791,30 @@ public:
                                  const Expr *PtrExpression, ASTContext &Ctx,
                                  EvalResult &Status) const;
 
+  /// Represents the result of a string compile-time evaluation query. Can tell
+  /// whether the expression evaluated to a string literal, which is often
+  /// preferable if diagnostics are involved (since a string literal has
+  /// source location info), and whether the string was null-terminated.
   class StringEvalResult {
     std::string Storage;
     const StringLiteral *SL;
     uint64_t Offset;
+    bool HasNullTerminator;
 
   public:
-    StringEvalResult(std::string Contents);
-    StringEvalResult(const StringLiteral *SL, uint64_t Offset);
+    StringEvalResult(std::string Contents, bool HasNullTerminator);
+    StringEvalResult(const StringLiteral *SL, uint64_t Offset,
+                     bool HasNullTerminator);
 
     llvm::StringRef getString() const;
+    bool hasNullTerminator() const { return HasNullTerminator; }
     bool getStringLiteral(const StringLiteral *&SL, uint64_t &Offset) const;
   };
 
   /// If the current \c Expr can be evaluated to a pointer to a constant string,
-  /// return the constant string. The string may not be NUL-terminated. If
-  /// \c NullTerminated is supplied, it is set to whether there is at least one
-  /// NUL character in the string.
+  /// return the constant string. The string may not be NUL-terminated.
   std::optional<StringEvalResult>
-  tryEvaluateString(ASTContext &Ctx, bool *NullTerminated = nullptr,
-                    bool InConstantContext = false) const;
+  tryEvaluateString(ASTContext &Ctx, bool InConstantContext = false) const;
 
   /// Enumeration used to describe the kind of Null pointer constant
   /// returned from \c isNullPointerConstant().

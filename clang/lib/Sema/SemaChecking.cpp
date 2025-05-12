@@ -183,10 +183,9 @@ static bool checkBuiltinVerboseTrap(CallExpr *Call, Sema &S) {
 
     // Arguments must be pointers to constant strings, must be NUL-terminated,
     // and cannot contain '$'.
-    bool HasNulTerminator;
-    auto ArgString = Arg->tryEvaluateString(S.Context, &HasNulTerminator);
+    auto ArgString = Arg->tryEvaluateString(S.Context);
     int DiagMsgKind = -1;
-    if (!(ArgString && HasNulTerminator))
+    if (!(ArgString && ArgString->hasNullTerminator()))
       DiagMsgKind = 0;
     else if (ArgString->getString().find('$') != llvm::StringRef::npos)
       DiagMsgKind = 1;
@@ -6513,11 +6512,10 @@ FormatStringFinder::EvaluateStringAndCreateLiteral(Sema &S, const Expr *E,
                                                    const StringLiteral *&SL,
                                                    uint64_t &Offset) {
   // As a last resort, try to constant-evaluate the format string.
-  bool HasNul;
-  auto SER = E->tryEvaluateString(S.Context, &HasNul, IsConstantEvaluation);
+  auto SER = E->tryEvaluateString(S.Context, IsConstantEvaluation);
   if (!SER)
     return SLCER_NotEvaluated;
-  if (!HasNul)
+  if (!SER || !SER->hasNullTerminator())
     return SLCER_NotNullTerminated;
 
   // If it evaluates to a string literal in the first place, we can point to

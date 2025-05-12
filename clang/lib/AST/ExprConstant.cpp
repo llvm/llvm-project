@@ -1922,13 +1922,19 @@ static bool EvaluateAtomic(const Expr *E, const LValue *This, APValue &Result,
 static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
 static bool EvaluateStringAsLValue(EvalInfo &Info, const Expr *E,
                                    QualType &CharTy, LValue &String);
-static const StringLiteral *StringLValueIsLiteral(EvalInfo &Info,
-                                                  LValue &String,
-                                                  QualType CharTy,
-                                                  uint64_t &Offset);
+static const StringLiteral *GetLValueAsStringLiteralAndOffset(EvalInfo &Info,
+                                                              LValue &String,
+                                                              QualType CharTy,
+                                                              uint64_t &Offset);
+
+/// Call \c Action (which must be like \c bool(int) ) on each character in a
+/// string \c LValue . Iteration stops "normally" when \c Action returns
+/// \c false . This function returns \c true if iteration stopped normally; if
+/// it runs out of characters before \c Action breaks, it returns \c false.
 template <typename CharAction>
-static bool IterateStringLValue(EvalInfo &Info, const Expr *E, QualType CharTy,
-                                LValue &String, CharAction &&Action);
+static bool ForEachCharacterInStringLValue(EvalInfo &Info, const Expr *E,
+                                           QualType CharTy, LValue &String,
+                                           CharAction &&Action);
 static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
                                   EvalInfo &Info);
 
@@ -17994,10 +18000,9 @@ static bool EvaluateStringAsLValue(EvalInfo &Info, const Expr *E,
   return false;
 }
 
-static const StringLiteral *StringLValueIsLiteral(EvalInfo &Info,
-                                                  LValue &String,
-                                                  QualType CharTy,
-                                                  uint64_t &Offset) {
+static const StringLiteral *
+GetLValueAsStringLiteralAndOffset(EvalInfo &Info, LValue &String,
+                                  QualType CharTy, uint64_t &Offset) {
   if (const StringLiteral *S = dyn_cast_or_null<StringLiteral>(
           String.getLValueBase().dyn_cast<const Expr *>())) {
     StringRef Str = S->getBytes();
@@ -18014,8 +18019,9 @@ static const StringLiteral *StringLValueIsLiteral(EvalInfo &Info,
 }
 
 template <typename CharAction>
-static bool IterateStringLValue(EvalInfo &Info, const Expr *E, QualType CharTy,
-                                LValue &String, CharAction &&Action) {
+static bool ForEachCharacterInStringLValue(EvalInfo &Info, const Expr *E,
+                                           QualType CharTy, LValue &String,
+                                           CharAction &&Action) {
   while (true) {
     APValue Char;
     if (!handleLValueToRValueConversion(Info, E, CharTy, String, Char) ||
@@ -18037,7 +18043,8 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
 
   // Fast path: if it's a string literal, search the string value.
   uint64_t Off;
-  if (const auto *S = StringLValueIsLiteral(Info, String, CharTy, Off)) {
+  if (const auto *S =
+          GetLValueAsStringLiteralAndOffset(Info, String, CharTy, Off)) {
     StringRef Str = S->getBytes().substr(Off);
 
     StringRef::size_type Pos = Str.find(0);
@@ -18050,7 +18057,7 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
 
   // Slow path: scan the bytes of the string looking for the terminating 0.
   Result = 0;
-  return IterateStringLValue(Info, E, CharTy, String, [&](int Char) {
+  return ForEachCharacterInStringLValue(Info, E, CharTy, String, [&](int Char) {
     if (Char) {
       Result++;
       return true;
@@ -18060,11 +18067,12 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
 }
 
 Expr::StringEvalResult::StringEvalResult(const StringLiteral *SL,
-                                         uint64_t Offset)
-    : SL(SL), Offset(Offset) {}
+                                         uint64_t Offset, bool NullTerm)
+    : SL(SL), Offset(Offset), HasNullTerminator(NullTerm) {}
 
-Expr::StringEvalResult::StringEvalResult(std::string Contents)
-    : Storage(std::move(Contents)), SL(nullptr), Offset(0) {}
+Expr::StringEvalResult::StringEvalResult(std::string Contents, bool NullTerm)
+    : Storage(std::move(Contents)), SL(nullptr), Offset(0),
+      HasNullTerminator(NullTerm) {}
 
 llvm::StringRef Expr::StringEvalResult::getString() const {
   return SL ? SL->getBytes().substr(Offset) : Storage;
@@ -18081,11 +18089,7 @@ bool Expr::StringEvalResult::getStringLiteral(const StringLiteral *&SL,
 }
 
 std::optional<Expr::StringEvalResult>
-Expr::tryEvaluateString(ASTContext &Ctx, bool *NullTerminated,
-                        bool InConstantContext) const {
-  if (NullTerminated)
-    *NullTerminated = false;
-
+Expr::tryEvaluateString(ASTContext &Ctx, bool InConstantContext) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status,
                 (InConstantContext &&
@@ -18099,24 +18103,22 @@ Expr::tryEvaluateString(ASTContext &Ctx, bool *NullTerminated,
     return {};
 
   uint64_t Off;
-  if (const auto *S = StringLValueIsLiteral(Info, String, CharTy, Off)) {
-    if (NullTerminated)
-      *NullTerminated = true;
-    return StringEvalResult(S, Off);
+  if (const auto *S =
+          GetLValueAsStringLiteralAndOffset(Info, String, CharTy, Off)) {
+    return StringEvalResult(S, Off, true);
   }
 
   std::string Result;
-  bool NTFound = IterateStringLValue(Info, this, CharTy, String, [&](int Char) {
-    if (Char) {
-      Result.push_back(Char);
-      return true;
-    } else
-      return false;
-  });
+  bool NTFound =
+      ForEachCharacterInStringLValue(Info, this, CharTy, String, [&](int Char) {
+        if (Char) {
+          Result.push_back(Char);
+          return true;
+        } else
+          return false;
+      });
 
-  if (NullTerminated)
-    *NullTerminated = NTFound;
-  return StringEvalResult(Result);
+  return StringEvalResult(Result, NTFound);
 }
 
 template <typename T>
