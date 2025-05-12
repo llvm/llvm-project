@@ -3419,6 +3419,7 @@ cc_library(
     deps = [
         ":AffineUtils",
         ":Analysis",
+        ":DialectUtils",
         ":FunctionInterfaces",
         ":GPUDialect",
         ":GPUUtils",
@@ -8988,6 +8989,7 @@ cc_binary(
         "//mlir/test:TestTransforms",
         "//mlir/test:TestVector",
         "//mlir/test:TestVectorToSPIRV",
+        "//mlir/test:TestXeGPU",
     ],
 )
 

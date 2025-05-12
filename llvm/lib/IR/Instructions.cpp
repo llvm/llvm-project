@@ -2856,6 +2856,7 @@ unsigned CastInst::isEliminableCastPair(
   const unsigned numCastOps =
     Instruction::CastOpsEnd - Instruction::CastOpsBegin;
   static const uint8_t CastResults[numCastOps][numCastOps] = {
+    // clang-format off
     // T        F  F  U  S  F  F  P  P  I  B  A  -+
     // R  Z  S  P  P  I  I  T  P  2  2  N  T  S   |
     // U  E  E  2  2  2  2  R  E  I  A  T  C  C   +- secondOp
@@ -2875,6 +2876,7 @@ unsigned CastInst::isEliminableCastPair(
     { 99,99,99,99,99,99,99,99,99,11,99,99,15, 0}, // IntToPtr       |
     {  5, 5, 5, 0, 0, 5, 5, 0, 0,16,16, 5, 1,14}, // BitCast        |
     {  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,13,12}, // AddrSpaceCast -+
+    // clang-format on
   };
 
   // TODO: This logic could be encoded into the table above and handled in the

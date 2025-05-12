@@ -3877,9 +3877,7 @@ void SelectionDAGBuilder::visitSIToFP(const User &I) {
   setValue(&I, DAG.getNode(ISD::SINT_TO_FP, getCurSDLoc(), DestVT, N));
 }
 
-void SelectionDAGBuilder::visitPtrToAddr(const User &I) {
-  visitPtrToInt(I);
-}
+void SelectionDAGBuilder::visitPtrToAddr(const User &I) { visitPtrToInt(I); }
 
 void SelectionDAGBuilder::visitPtrToInt(const User &I) {
   // What to do depends on the size of the integer and the size of the pointer.
@@ -10021,7 +10019,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
   std::vector<SDValue> AsmNodeOperands;
   AsmNodeOperands.push_back(SDValue());  // reserve space for input chain
   AsmNodeOperands.push_back(DAG.getTargetExternalSymbol(
-      IA->getAsmString().c_str(), TLI.getProgramPointerTy(DAG.getDataLayout())));
+      IA->getAsmString().data(), TLI.getProgramPointerTy(DAG.getDataLayout())));
 
   // If we have a !srcloc metadata node associated with it, we want to attach
   // this to the ultimately generated inline asm machineinstr.  To do this, we

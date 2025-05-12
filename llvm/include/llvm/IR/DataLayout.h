@@ -324,37 +324,15 @@ public:
   /// the backends/clients are updated.
   Align getPointerPrefAlignment(unsigned AS = 0) const;
 
-  /// The pointer representation size in bytes, rounded up to a whole number of
-  /// bytes. The difference between this function and getPointerAddressSize() is
-  /// this one returns the size of the entire pointer type (this includes
-  /// metadata bits for fat pointers) and the latter only returns the number of
-  /// address bits.
-  /// \sa DataLayout::getPointerAddressSizeInBits
+  /// Layout pointer size in bytes, rounded up to a whole
+  /// number of bytes.
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
   unsigned getPointerSize(unsigned AS = 0) const;
 
-  /// The index size in bytes used for address calculation, rounded up to a
-  /// whole number of bytes. This not only defines the size used in
-  /// getelementptr operations, but also the size of addresses in this \p AS.
-  /// For example, a 64-bit CHERI-enabled target has 128-bit pointers of which
-  /// only 64 are used to represent the address and the remaining ones are used
-  /// for metadata such as bounds and access permissions. In this case
-  /// getPointerSize() returns 16, but getIndexSize() returns 8.
-  /// To help with code understanding, the alias getPointerAddressSize() can be
-  /// used instead of getIndexSize() to clarify that an address width is needed.
+  // Index size in bytes used for address calculation,
+  /// rounded up to a whole number of bytes.
   unsigned getIndexSize(unsigned AS) const;
-
-  /// The integral size of a pointer in a given address space in bytes, which
-  /// is defined to be the same as getIndexSize(). This exists as a separate
-  /// function to make it clearer when reading code that the size of an address
-  /// is being requested. While targets exist where index size and the
-  /// underlying address width are not identical (e.g. AMDGPU fat pointers with
-  /// 48-bit addresses and 32-bit offsets indexing), there is currently no need
-  /// to differentiate these properties in LLVM.
-  /// \sa DataLayout::getIndexSize
-  /// \sa DataLayout::getPointerAddressSizeInBits
-  unsigned getPointerAddressSize(unsigned AS) const { return getIndexSize(AS); }
 
   /// Return the address spaces containing non-integral pointers.  Pointers in
   /// this address space don't have a well-defined bitwise representation.
@@ -380,52 +358,28 @@ public:
     return PTy && isNonIntegralPointerType(PTy);
   }
 
-  /// The size in bits of the pointer representation in a given address space.
-  /// This is not necessarily the same as the integer address of a pointer (e.g.
-  /// for fat pointers).
-  /// \sa DataLayout::getPointerAddressSizeInBits()
+  /// Layout pointer size, in bits
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
   unsigned getPointerSizeInBits(unsigned AS = 0) const {
     return getPointerSpec(AS).BitWidth;
   }
 
-  /// The size in bits of indices used for address calculation in getelementptr
-  /// and for addresses in the given AS. See getIndexSize() for more
-  /// information.
-  /// \sa DataLayout::getPointerAddressSizeInBits()
+  /// Size in bits of index used for address calculation in getelementptr.
   unsigned getIndexSizeInBits(unsigned AS) const {
     return getPointerSpec(AS).IndexBitWidth;
   }
 
-  /// The size in bits of an address in for the given AS. This is defined to
-  /// return the same value as getIndexSizeInBits() since there is currently no
-  /// target that requires these two properties to have different values. See
-  /// getIndexSize() for more information.
-  /// \sa DataLayout::getIndexSizeInBits()
-  unsigned getPointerAddressSizeInBits(unsigned AS) const {
-    return getIndexSizeInBits(AS);
-  }
-
-  /// The pointer representation size in bits for this type. If this function is
+  /// Layout pointer size, in bits, based on the type.  If this function is
   /// called with a pointer type, then the type size of the pointer is returned.
   /// If this function is called with a vector of pointers, then the type size
   /// of the pointer is returned.  This should only be called with a pointer or
   /// vector of pointers.
   unsigned getPointerTypeSizeInBits(Type *) const;
 
-  /// The size in bits of the index used in GEP calculation for this type.
+  /// Layout size of the index used in GEP calculation.
   /// The function should be called with pointer or vector of pointers type.
-  /// This is defined to return the same value as getPointerAddressSizeInBits(),
-  /// but separate functions exist for code clarity.
   unsigned getIndexTypeSizeInBits(Type *Ty) const;
-
-  /// The size in bits of an address for this type.
-  /// This is defined to return the same value as getIndexTypeSizeInBits(),
-  /// but separate functions exist for code clarity.
-  unsigned getPointerAddressSizeInBits(Type *Ty) const {
-    return getIndexTypeSizeInBits(Ty);
-  }
 
   unsigned getPointerTypeSize(Type *Ty) const {
     return getPointerTypeSizeInBits(Ty) / 8;

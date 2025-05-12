@@ -3147,21 +3147,14 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[n]:<size>:<abi>[:<pref>[:<idx>]]``
-    This specifies the properties of a pointer in address space ``n``.
-    The ``<size>`` parameter specifies the size of the bitwise representation.
-    For :ref:`non-integral pointers <nointptrtype>` the representation size may
-    be larger than the address width of the underlying address space (e.g. to
-    accommodate additional metadata).
-    The alignment requirements are specified via the ``<abi>`` and
-    ``<pref>``\erred alignments parameters.
-    The fourth parameter ``<idx>`` is the size of the index that used for
-    address calculations such as :ref:`getelementptr <i_getelementptr>`.
-    It must be less than or equal to the pointer size. If not specified, the
-    default index size is equal to the pointer size.
-    The index size also specifies the width of addresses in this address space.
-    All sizes are in bits.
-    The address space, ``n``, is optional, and if not specified,
+``p[n]:<size>:<abi>[:<pref>][:<idx>]``
+    This specifies the *size* of a pointer and its ``<abi>`` and
+    ``<pref>``\erred alignments for address space ``n``.
+    The fourth parameter ``<idx>`` is the size of the
+    index that used for address calculation, which must be less than or equal
+    to the pointer size. If not
+    specified, the default index size is equal to the pointer size. All sizes
+    are in bits. The address space, ``n``, is optional, and if not specified,
     denotes the default address space 0. The value of ``n`` must be
     in the range [1,2^24).
 ``i<size>:<abi>[:<pref>]``
@@ -4272,16 +4265,6 @@ address spaces defined in the :ref:`datalayout string<langref_datalayout>`.
 ``addrspace("A")`` will use the alloca address space, ``addrspace("G")``
 the default globals address space and ``addrspace("P")`` the program address
 space.
-
-The representation of pointers can be different for each address space and does
-not necessarily need to be a plain integer address (e.g. for
-:ref:`non-integral pointers <nointptrtype>`). In addition to a representation
-bits size, pointers in each address space also have an index size which defines
-the bitwidth of indexing operations as well as the size of `integer addresses`
-in this address space. For example, CHERI capabilities are twice the size of the
-underlying addresses to accommodate for additional metadata such as bounds and
-permissions: on a 32-bit system the bitwidth of the pointer representation size
-is 64, but the underlying address width remains 32 bits.
 
 The default address space is number zero.
 
@@ -6380,6 +6363,8 @@ The following ``tag:`` values are valid:
   DW_TAG_enumeration_type = 4
   DW_TAG_structure_type   = 19
   DW_TAG_union_type       = 23
+  DW_TAG_variant          = 25
+  DW_TAG_variant_part     = 51
 
 For ``DW_TAG_array_type``, the ``elements:`` should be :ref:`subrange
 descriptors <DISubrange>` or :ref:`subrange descriptors
@@ -6414,6 +6399,16 @@ For ``DW_TAG_structure_type``, ``DW_TAG_class_type``, and
 <DIDerivedType>` with ``tag: DW_TAG_member``, ``tag: DW_TAG_inheritance``, or
 ``tag: DW_TAG_friend``; or :ref:`subprograms <DISubprogram>` with
 ``isDefinition: false``.
+
+``DW_TAG_variant_part`` introduces a variant part of a structure type.
+This should have a discriminant, a member that is used to decide which
+elements are active.  The elements of the variant part should each be
+a ``DW_TAG_member``; if a member has a non-null ``ExtraData``, then it
+is a ``ConstantInt`` or ``ConstantDataArray`` indicating the values of
+the discriminant member that cause the activation of this branch.  A
+member itself may be of composite type with tag ``DW_TAG_variant``; in
+this case the members of that composite type are inlined into the
+current one.
 
 .. _DISubrange:
 
@@ -12413,15 +12408,12 @@ Semantics:
 """"""""""
 
 The '``ptrtoint``' instruction converts ``value`` to integer type
-``ty2`` by interpreting the all pointer representation bits as an integer
-(equivalent to a ``bitcast``) and either truncating or zero extending that value
-to the size of the integer type.
+``ty2`` by interpreting the pointer value as an integer and either
+truncating or zero extending that value to the size of the integer type.
 If ``value`` is smaller than ``ty2`` then a zero extension is done. If
 ``value`` is larger than ``ty2`` then a truncation is done. If they are
 the same size, then nothing is done (*no-op cast*) other than a type
 change.
-The ``ptrtoint`` always :ref:`captures address and provenance <pointercapture>`
-of the pointer argument.
 
 Example:
 """"""""
@@ -12531,9 +12523,6 @@ of the integer ``value``. If ``value`` is larger than the size of a
 pointer then a truncation is done. If ``value`` is smaller than the size
 of a pointer then a zero extension is done. If they are the same size,
 nothing is done (*no-op cast*).
-The behavior is equivalent to a ``bitcast``, however, the resulting value is not
-guaranteed to be dereferenceable (e.g. if the result type is a
-:ref:`non-integral pointers <nointptrtype>`).
 
 Example:
 """"""""
