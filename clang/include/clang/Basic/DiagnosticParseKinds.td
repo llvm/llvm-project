@@ -1065,11 +1065,23 @@ def ext_ms_abstract_keyword : ExtWarn<
   "'abstract' keyword is a Microsoft extension">,
   InGroup<MicrosoftAbstract>;
 
+def ext_relocatable_keyword : ExtWarn<
+  "'%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0' "
+  "keyword is a C++2c extension">,
+  InGroup<CXX26>;
+def warn_relocatable_keyword  : Warning<
+  "'%select{trivially_relocatable|replaceable}0_if_eligible' "
+  "keyword is incompatible with standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+
 def err_access_specifier_interface : Error<
   "interface types cannot specify '%select{private|protected}0' access">;
 
 def err_duplicate_class_virt_specifier : Error<
   "class already marked '%0'">;
+
+def err_duplicate_class_relocation_specifier : Error<
+  "class already marked '%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0'">;
 
 def err_duplicate_virt_specifier : Error<
   "class member already marked '%0'">;
@@ -1844,5 +1856,6 @@ def err_hlsl_unexpected_end_of_params
 def err_hlsl_rootsig_repeat_param : Error<"specified the same parameter '%0' multiple times">;
 def err_hlsl_rootsig_missing_param : Error<"did not specify mandatory parameter '%0'">;
 def err_hlsl_number_literal_overflow : Error<"integer literal is too large to be represented as a 32-bit %select{signed |}0 integer type">;
+def err_hlsl_rootsig_non_zero_flag : Error<"flag value is neither a literal 0 nor a named value">;
 
 } // end of Parser diagnostics

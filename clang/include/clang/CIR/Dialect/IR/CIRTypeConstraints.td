@@ -141,4 +141,37 @@ def CIR_AnyIntOrFloatType : AnyTypeOf<[CIR_AnyFloatType, CIR_AnyIntType],
     let cppFunctionName = "isAnyIntegerOrFloatingPointType";
 }
 
+//===----------------------------------------------------------------------===//
+// Pointer Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyPtrType : CIR_TypeBase<"::cir::PointerType", "pointer type">;
+
+// Pointer to type constraint bases
+class CIR_IsPtrToPred<code type> : CPred<"$_self.isPtrTo<" # type # ">()">;
+
+class CIR_PtrTo<code type, string summary>
+    : CIR_ConfinedType<CIR_AnyPtrType, [CIR_IsPtrToPred<type>],
+        "pointer to " # summary>;
+
+// Pointer to pointer constraint bases
+class CIR_IsPtrToPtrToPred<code type>
+    : CPred<"$_self.isPtrToPtrTo<" # type # ">()">;
+
+class CIR_PtrToPtrTo<code type, string summary>
+    : CIR_ConfinedType<CIR_AnyPtrType, [CIR_IsPtrToPtrToPred<type>],
+        "pointer to pointer to " # summary>;
+
+// Void pointer type constraints
+def CIR_VoidPtrType
+    : CIR_PtrTo<"::cir::VoidType", "void type">,
+      BuildableType<"$_builder.getType<" # cppType # ">("
+        "cir::VoidType::get($_builder.getContext()))">;
+
+def CIR_PtrToVoidPtrType
+    : CIR_PtrToPtrTo<"::cir::VoidType", "void type">,
+      BuildableType<"$_builder.getType<" # cppType # ">("
+        "$_builder.getType<" # cppType # ">("
+        "cir::VoidType::get($_builder.getContext())))">;
+
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPECONSTRAINTS_TD

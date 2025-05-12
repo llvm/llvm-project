@@ -274,10 +274,8 @@ static Status spawn_process(const char *progname, const FileSpec &prog,
   self_args.AppendArgument(llvm::StringRef("platform"));
   self_args.AppendArgument(llvm::StringRef("--child-platform-fd"));
   self_args.AppendArgument(llvm::to_string(shared_socket.GetSendableFD()));
-#ifndef _WIN32
   launch_info.AppendDuplicateFileAction((int)shared_socket.GetSendableFD(),
                                         (int)shared_socket.GetSendableFD());
-#endif
   if (gdb_port) {
     self_args.AppendArgument(llvm::StringRef("--gdbserver-port"));
     self_args.AppendArgument(llvm::to_string(gdb_port));

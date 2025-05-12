@@ -394,7 +394,9 @@ namespace llvm {
     /// \param OffsetInBits Member offset.
     /// \param Flags        Flags to encode member attribute, e.g. private
     /// \param Discriminant The discriminant for this branch; null for
-    ///                     the default branch
+    ///                     the default branch.  This may be a
+    ///                     ConstantDataArray if the variant applies
+    ///                     for multiple discriminants.
     /// \param Ty           Parent type.
     DIDerivedType *createVariantMemberType(DIScope *Scope, StringRef Name,
 					   DIFile *File, unsigned LineNo,

@@ -63,15 +63,20 @@
 ;; give both memprof and pgo metadata.
 ; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO
 
-;; Check that the total sizes are reported if requested.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -memprof-keep-all-not-cold-contexts 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES
+;; Check that the total sizes are reported if requested. A message should be
+;; emitted for the pruned context.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES,TOTALSIZENOKEEPALL
+
+;; Check that the total sizes are reported if requested, and prevent pruning
+;; via -memprof-keep-all-not-cold-contexts.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -memprof-keep-all-not-cold-contexts 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZES,TOTALSIZESKEEPALL
 
 ;; Check that we hint additional allocations with a threshold < 100%
 ; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -memprof-matching-cold-threshold=60 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZESTHRESH60
 
 ;; Make sure that the -memprof-cloning-cold-threshold flag is enough to cause
 ;; the size metadata to be generated for the LTO link.
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-cloning-cold-threshold=80 -memprof-keep-all-not-cold-contexts 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-cloning-cold-threshold=80 -memprof-keep-all-not-cold-contexts 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES,TOTALSIZESKEEPALL
 
 ;; Make sure we emit a random hotness seed if requested.
 ; RUN: llvm-profdata merge -memprof-random-hotness %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdatarand 2>&1 | FileCheck %s --check-prefix=RAND
@@ -370,6 +375,8 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROF: ![[C10]] = !{i64 2061451396820446691}
 ; MEMPROF: ![[C11]] = !{i64 1544787832369987002}
 
+; TOTALSIZENOKEEPALL: Total size for pruned non-cold full allocation context hash 1093248920606587996: 10
+
 ;; For non-context sensitive allocations that get attributes we emit a message
 ;; with the full allocation context hash, type, and size in bytes.
 ; TOTALSIZESTHRESH60: Total size for full allocation context hash 8525406123785421946 and dominant alloc type cold: 10
@@ -393,8 +400,8 @@ for.end:                                          ; preds = %for.cond
 ; TOTALSIZES: !"cold", ![[CONTEXT4:[0-9]+]], ![[CONTEXT5:[0-9]+]]}
 ; TOTALSIZES: ![[CONTEXT4]] = !{i64 -2103941543456458045, i64 10}
 ; TOTALSIZES: ![[CONTEXT5]] = !{i64 -191931298737547222, i64 10}
-; TOTALSIZES: !"notcold", ![[CONTEXT6:[0-9]+]]}
-; TOTALSIZES: ![[CONTEXT6]] = !{i64 1093248920606587996, i64 10}
+; TOTALSIZESKEEPALL: !"notcold", ![[CONTEXT6:[0-9]+]]}
+; TOTALSIZESKEEPALL: ![[CONTEXT6]] = !{i64 1093248920606587996, i64 10}
 
 ; MEMPROFNOCOLINFO: #[[A1]] = { builtin allocsize(0) "memprof"="notcold" }
 ; MEMPROFNOCOLINFO: #[[A2]] = { builtin allocsize(0) "memprof"="cold" }

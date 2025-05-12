@@ -20,12 +20,21 @@ def SDT_RISCVFMV_H_X
 def SDT_RISCVFMV_X_EXTH
     : SDTypeProfile<1, 1, [SDTCisVT<0, XLenVT>, SDTCisFP<1>]>;
 
+// FPR<->GPR transfer operations when the FPR is smaller than XLEN, needed as
+// XLEN is the only legal integer width.
+//
+// FMV_H_X matches the semantics of the FMV.H.X.
+// FMV_X_ANYEXTH is similar to FMV.X.H but has an any-extended result.
+// FMV_X_SIGNEXTH is similar to FMV.X.H and has a sign-extended result.
+//
+// This is a more convenient semantic for producing dagcombines that remove
+// unnecessary GPR->FPR->GPR moves.
 def riscv_fmv_h_x
-    : SDNode<"RISCVISD::FMV_H_X", SDT_RISCVFMV_H_X>;
+    : RVSDNode<"FMV_H_X", SDT_RISCVFMV_H_X>;
 def riscv_fmv_x_anyexth
-    : SDNode<"RISCVISD::FMV_X_ANYEXTH", SDT_RISCVFMV_X_EXTH>;
+    : RVSDNode<"FMV_X_ANYEXTH", SDT_RISCVFMV_X_EXTH>;
 def riscv_fmv_x_signexth
-    : SDNode<"RISCVISD::FMV_X_SIGNEXTH", SDT_RISCVFMV_X_EXTH>;
+    : RVSDNode<"FMV_X_SIGNEXTH", SDT_RISCVFMV_X_EXTH>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.

@@ -1819,6 +1819,22 @@ def Final : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
+def TriviallyRelocatable : InheritableAttr {
+  let Spellings = [CustomKeyword<"trivially_relocatable_if_eligible">];
+  let SemaHandler = 0;
+  // Omitted from docs, since this is language syntax, not an attribute, as far
+  // as users are concerned.
+  let Documentation = [InternalOnly];
+}
+
+def Replaceable : InheritableAttr {
+  let Spellings = [CustomKeyword<"replaceable_if_eligible">];
+  let SemaHandler = 0;
+  // Omitted from docs, since this is language syntax, not an attribute, as far
+  // as users are concerned.
+  let Documentation = [InternalOnly];
+}
+
 def MinSize : InheritableAttr {
   let Spellings = [Clang<"minsize">];
   let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
@@ -4769,15 +4785,15 @@ def HLSLResourceBinding: InheritableAttr {
         SlotNumber = SlotNum;
         SpaceNumber = SpaceNum;
       }
-      bool isImplicit() const {
-        return !SlotNumber.has_value();
+      bool hasRegisterSlot() const {
+        return SlotNumber.has_value();
       }
       RegisterType getRegisterType() const {
-        assert(!isImplicit() && "binding does not have register slot");
+        assert(hasRegisterSlot() && "binding does not have register slot");
         return RegType;
       }
       unsigned getSlotNumber() const {
-        assert(!isImplicit() && "binding does not have register slot");
+        assert(hasRegisterSlot() && "binding does not have register slot");
         return SlotNumber.value();
       }
       unsigned getSpaceNumber() const {

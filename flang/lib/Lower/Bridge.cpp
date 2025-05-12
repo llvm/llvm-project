@@ -94,10 +94,11 @@ struct IncrementLoopInfo {
   template <typename T>
   explicit IncrementLoopInfo(Fortran::semantics::Symbol &sym, const T &lower,
                              const T &upper, const std::optional<T> &step,
-                             bool isUnordered = false)
+                             bool isConcurrent = false)
       : loopVariableSym{&sym}, lowerExpr{Fortran::semantics::GetExpr(lower)},
         upperExpr{Fortran::semantics::GetExpr(upper)},
-        stepExpr{Fortran::semantics::GetExpr(step)}, isUnordered{isUnordered} {}
+        stepExpr{Fortran::semantics::GetExpr(step)},
+        isConcurrent{isConcurrent} {}
 
   IncrementLoopInfo(IncrementLoopInfo &&) = default;
   IncrementLoopInfo &operator=(IncrementLoopInfo &&x) = default;
@@ -120,7 +121,7 @@ struct IncrementLoopInfo {
   const Fortran::lower::SomeExpr *upperExpr;
   const Fortran::lower::SomeExpr *stepExpr;
   const Fortran::lower::SomeExpr *maskExpr = nullptr;
-  bool isUnordered; // do concurrent, forall
+  bool isConcurrent;
   llvm::SmallVector<const Fortran::semantics::Symbol *> localSymList;
   llvm::SmallVector<const Fortran::semantics::Symbol *> localInitSymList;
   llvm::SmallVector<
@@ -130,7 +131,7 @@ struct IncrementLoopInfo {
   mlir::Value loopVariable = nullptr;
 
   // Data members for structured loops.
-  fir::DoLoopOp doLoop = nullptr;
+  mlir::Operation *loopOp = nullptr;
 
   // Data members for unstructured loops.
   bool hasRealControl = false;
@@ -397,37 +398,39 @@ public:
     //   they are available before lowering any function that may use them.
     bool hasMainProgram = false;
     const Fortran::semantics::Symbol *globalOmpRequiresSymbol = nullptr;
-    for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
-      Fortran::common::visit(
-          Fortran::common::visitors{
-              [&](Fortran::lower::pft::FunctionLikeUnit &f) {
-                if (f.isMainProgram())
-                  hasMainProgram = true;
-                declareFunction(f);
-                if (!globalOmpRequiresSymbol)
-                  globalOmpRequiresSymbol = f.getScope().symbol();
-              },
-              [&](Fortran::lower::pft::ModuleLikeUnit &m) {
-                lowerModuleDeclScope(m);
-                for (Fortran::lower::pft::ContainedUnit &unit :
-                     m.containedUnitList)
-                  if (auto *f =
-                          std::get_if<Fortran::lower::pft::FunctionLikeUnit>(
-                              &unit))
-                    declareFunction(*f);
-              },
-              [&](Fortran::lower::pft::BlockDataUnit &b) {
-                if (!globalOmpRequiresSymbol)
-                  globalOmpRequiresSymbol = b.symTab.symbol();
-              },
-              [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
-              [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
-          },
-          u);
-    }
+    createBuilderOutsideOfFuncOpAndDo([&]() {
+      for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
+        Fortran::common::visit(
+            Fortran::common::visitors{
+                [&](Fortran::lower::pft::FunctionLikeUnit &f) {
+                  if (f.isMainProgram())
+                    hasMainProgram = true;
+                  declareFunction(f);
+                  if (!globalOmpRequiresSymbol)
+                    globalOmpRequiresSymbol = f.getScope().symbol();
+                },
+                [&](Fortran::lower::pft::ModuleLikeUnit &m) {
+                  lowerModuleDeclScope(m);
+                  for (Fortran::lower::pft::ContainedUnit &unit :
+                       m.containedUnitList)
+                    if (auto *f =
+                            std::get_if<Fortran::lower::pft::FunctionLikeUnit>(
+                                &unit))
+                      declareFunction(*f);
+                },
+                [&](Fortran::lower::pft::BlockDataUnit &b) {
+                  if (!globalOmpRequiresSymbol)
+                    globalOmpRequiresSymbol = b.symTab.symbol();
+                },
+                [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
+                [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
+            },
+            u);
+      }
+    });
 
     // Create definitions of intrinsic module constants.
-    createGlobalOutsideOfFunctionLowering(
+    createBuilderOutsideOfFuncOpAndDo(
         [&]() { createIntrinsicModuleDefinitions(pft); });
 
     // Primary translation pass.
@@ -438,14 +441,7 @@ public:
               [&](Fortran::lower::pft::ModuleLikeUnit &m) { lowerMod(m); },
               [&](Fortran::lower::pft::BlockDataUnit &b) {},
               [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
-              [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {
-                builder = new fir::FirOpBuilder(
-                    bridge.getModule(), bridge.getKindMap(), &mlirSymbolTable);
-                Fortran::lower::genOpenACCRoutineConstruct(
-                    *this, bridge.getSemanticsContext(), bridge.getModule(),
-                    d.routine, accRoutineInfos);
-                builder = nullptr;
-              },
+              [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
           },
           u);
     }
@@ -453,24 +449,24 @@ public:
     // Once all the code has been translated, create global runtime type info
     // data structures for the derived types that have been processed, as well
     // as fir.type_info operations for the dispatch tables.
-    createGlobalOutsideOfFunctionLowering(
+    createBuilderOutsideOfFuncOpAndDo(
         [&]() { typeInfoConverter.createTypeInfo(*this); });
 
     // Generate the `main` entry point if necessary
     if (hasMainProgram)
-      createGlobalOutsideOfFunctionLowering([&]() {
+      createBuilderOutsideOfFuncOpAndDo([&]() {
         fir::runtime::genMain(*builder, toLocation(),
                               bridge.getEnvironmentDefaults(),
                               getFoldingContext().languageFeatures().IsEnabled(
                                   Fortran::common::LanguageFeature::CUDA));
       });
 
-    finalizeOpenACCLowering();
     finalizeOpenMPLowering(globalOmpRequiresSymbol);
   }
 
   /// Declare a function.
   void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
+    CHECK(builder && "declareFunction called with uninitialized builder");
     setCurrentPosition(funit.getStartingSourceLoc());
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
@@ -1035,7 +1031,10 @@ public:
     return bridge.getSemanticsContext().FindScope(currentPosition);
   }
 
-  fir::FirOpBuilder &getFirOpBuilder() override final { return *builder; }
+  fir::FirOpBuilder &getFirOpBuilder() override final {
+    CHECK(builder && "builder is not set before calling getFirOpBuilder");
+    return *builder;
+  }
 
   mlir::ModuleOp getModuleOp() override final { return bridge.getModule(); }
 
@@ -1981,7 +1980,7 @@ private:
     llvm_unreachable("illegal reduction operator");
   }
 
-  /// Collect DO CONCURRENT or FORALL loop control information.
+  /// Collect DO CONCURRENT loop control information.
   IncrementLoopNestInfo getConcurrentControl(
       const Fortran::parser::ConcurrentHeader &header,
       const std::list<Fortran::parser::LocalitySpec> &localityList = {}) {
@@ -2292,8 +2291,14 @@ private:
     mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
         builder->getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ ua,
         /*unroll_and_jam*/ uja, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    if (has_attrs)
-      info.doLoop.setLoopAnnotationAttr(la);
+    if (has_attrs) {
+      if (auto loopOp = mlir::dyn_cast<fir::DoLoopOp>(info.loopOp))
+        loopOp.setLoopAnnotationAttr(la);
+
+      if (auto doConcurrentOp =
+              mlir::dyn_cast<fir::DoConcurrentLoopOp>(info.loopOp))
+        doConcurrentOp.setLoopAnnotationAttr(la);
+    }
   }
 
   /// Generate FIR to begin a structured or unstructured increment loop nest.
@@ -2302,96 +2307,77 @@ private:
       llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     mlir::Location loc = toLocation();
-    mlir::Operation *boundsAndStepIP = nullptr;
     mlir::arith::IntegerOverflowFlags iofBackup{};
 
+    llvm::SmallVector<mlir::Value> nestLBs;
+    llvm::SmallVector<mlir::Value> nestUBs;
+    llvm::SmallVector<mlir::Value> nestSts;
+    llvm::SmallVector<mlir::Value> nestReduceOperands;
+    llvm::SmallVector<mlir::Attribute> nestReduceAttrs;
+    bool genDoConcurrent = false;
+
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
-      mlir::Value lowerValue;
-      mlir::Value upperValue;
-      mlir::Value stepValue;
+      genDoConcurrent = info.isStructured() && info.isConcurrent;
 
-      {
-        mlir::OpBuilder::InsertionGuard guard(*builder);
-
-        // Set the IP before the first loop in the nest so that all nest bounds
-        // and step values are created outside the nest.
-        if (boundsAndStepIP)
-          builder->setInsertionPointAfter(boundsAndStepIP);
-
+      if (!genDoConcurrent)
         info.loopVariable = genLoopVariableAddress(loc, *info.loopVariableSym,
-                                                   info.isUnordered);
-        if (!getLoweringOptions().getIntegerWrapAround()) {
-          iofBackup = builder->getIntegerOverflowFlags();
-          builder->setIntegerOverflowFlags(
-              mlir::arith::IntegerOverflowFlags::nsw);
-        }
-        lowerValue = genControlValue(info.lowerExpr, info);
-        upperValue = genControlValue(info.upperExpr, info);
-        bool isConst = true;
-        stepValue = genControlValue(info.stepExpr, info,
-                                    info.isStructured() ? nullptr : &isConst);
-        if (!getLoweringOptions().getIntegerWrapAround())
-          builder->setIntegerOverflowFlags(iofBackup);
-        boundsAndStepIP = stepValue.getDefiningOp();
+                                                   info.isConcurrent);
 
-        // Use a temp variable for unstructured loops with non-const step.
-        if (!isConst) {
-          info.stepVariable =
-              builder->createTemporary(loc, stepValue.getType());
-          boundsAndStepIP =
-              builder->create<fir::StoreOp>(loc, stepValue, info.stepVariable);
-        }
+      if (!getLoweringOptions().getIntegerWrapAround()) {
+        iofBackup = builder->getIntegerOverflowFlags();
+        builder->setIntegerOverflowFlags(
+            mlir::arith::IntegerOverflowFlags::nsw);
       }
 
+      nestLBs.push_back(genControlValue(info.lowerExpr, info));
+      nestUBs.push_back(genControlValue(info.upperExpr, info));
+      bool isConst = true;
+      nestSts.push_back(genControlValue(
+          info.stepExpr, info, info.isStructured() ? nullptr : &isConst));
+
+      if (!getLoweringOptions().getIntegerWrapAround())
+        builder->setIntegerOverflowFlags(iofBackup);
+
+      // Use a temp variable for unstructured loops with non-const step.
+      if (!isConst) {
+        mlir::Value stepValue = nestSts.back();
+        info.stepVariable = builder->createTemporary(loc, stepValue.getType());
+        builder->create<fir::StoreOp>(loc, stepValue, info.stepVariable);
+      }
+
+      if (genDoConcurrent && nestReduceOperands.empty()) {
+        // Create DO CONCURRENT reduce operands and attributes
+        for (const auto &reduceSym : info.reduceSymList) {
+          const fir::ReduceOperationEnum reduceOperation = reduceSym.first;
+          const Fortran::semantics::Symbol *sym = reduceSym.second;
+          fir::ExtendedValue exv = getSymbolExtendedValue(*sym, nullptr);
+          nestReduceOperands.push_back(fir::getBase(exv));
+          auto reduceAttr =
+              fir::ReduceAttr::get(builder->getContext(), reduceOperation);
+          nestReduceAttrs.push_back(reduceAttr);
+        }
+      }
+    }
+
+    for (auto [info, lowerValue, upperValue, stepValue] :
+         llvm::zip_equal(incrementLoopNestInfo, nestLBs, nestUBs, nestSts)) {
       // Structured loop - generate fir.do_loop.
       if (info.isStructured()) {
+        if (genDoConcurrent)
+          continue;
+
+        // The loop variable is a doLoop op argument.
         mlir::Type loopVarType = info.getLoopVariableType();
-        mlir::Value loopValue;
-        if (info.isUnordered) {
-          llvm::SmallVector<mlir::Value> reduceOperands;
-          llvm::SmallVector<mlir::Attribute> reduceAttrs;
-          // Create DO CONCURRENT reduce operands and attributes
-          for (const auto &reduceSym : info.reduceSymList) {
-            const fir::ReduceOperationEnum reduce_operation = reduceSym.first;
-            const Fortran::semantics::Symbol *sym = reduceSym.second;
-            fir::ExtendedValue exv = getSymbolExtendedValue(*sym, nullptr);
-            reduceOperands.push_back(fir::getBase(exv));
-            auto reduce_attr =
-                fir::ReduceAttr::get(builder->getContext(), reduce_operation);
-            reduceAttrs.push_back(reduce_attr);
-          }
-          // The loop variable value is explicitly updated.
-          info.doLoop = builder->create<fir::DoLoopOp>(
-              loc, lowerValue, upperValue, stepValue, /*unordered=*/true,
-              /*finalCountValue=*/false, /*iterArgs=*/std::nullopt,
-              llvm::ArrayRef<mlir::Value>(reduceOperands), reduceAttrs);
-          builder->setInsertionPointToStart(info.doLoop.getBody());
-          loopValue = builder->createConvert(loc, loopVarType,
-                                             info.doLoop.getInductionVar());
-        } else {
-          // The loop variable is a doLoop op argument.
-          info.doLoop = builder->create<fir::DoLoopOp>(
-              loc, lowerValue, upperValue, stepValue, /*unordered=*/false,
-              /*finalCountValue=*/true,
-              builder->createConvert(loc, loopVarType, lowerValue));
-          builder->setInsertionPointToStart(info.doLoop.getBody());
-          loopValue = info.doLoop.getRegionIterArgs()[0];
-        }
+        auto loopOp = builder->create<fir::DoLoopOp>(
+            loc, lowerValue, upperValue, stepValue, /*unordered=*/false,
+            /*finalCountValue=*/true,
+            builder->createConvert(loc, loopVarType, lowerValue));
+        info.loopOp = loopOp;
+        builder->setInsertionPointToStart(loopOp.getBody());
+        mlir::Value loopValue = loopOp.getRegionIterArgs()[0];
+
         // Update the loop variable value in case it has non-index references.
         builder->create<fir::StoreOp>(loc, loopValue, info.loopVariable);
-        if (info.maskExpr) {
-          Fortran::lower::StatementContext stmtCtx;
-          mlir::Value maskCond = createFIRExpr(loc, info.maskExpr, stmtCtx);
-          stmtCtx.finalizeAndReset();
-          mlir::Value maskCondCast =
-              builder->createConvert(loc, builder->getI1Type(), maskCond);
-          auto ifOp = builder->create<fir::IfOp>(loc, maskCondCast,
-                                                 /*withElseRegion=*/false);
-          builder->setInsertionPointToStart(&ifOp.getThenRegion().front());
-        }
-        if (info.hasLocalitySpecs())
-          handleLocalitySpecs(info);
-
         addLoopAnnotationAttr(info, dirs);
         continue;
       }
@@ -2455,6 +2441,60 @@ private:
         builder->restoreInsertionPoint(insertPt);
       }
     }
+
+    if (genDoConcurrent) {
+      auto loopWrapperOp = builder->create<fir::DoConcurrentOp>(loc);
+      builder->setInsertionPointToStart(
+          builder->createBlock(&loopWrapperOp.getRegion()));
+
+      for (IncrementLoopInfo &info : llvm::reverse(incrementLoopNestInfo)) {
+        info.loopVariable = genLoopVariableAddress(loc, *info.loopVariableSym,
+                                                   info.isConcurrent);
+      }
+
+      builder->setInsertionPointToEnd(loopWrapperOp.getBody());
+      auto loopOp = builder->create<fir::DoConcurrentLoopOp>(
+          loc, nestLBs, nestUBs, nestSts, nestReduceOperands,
+          nestReduceAttrs.empty()
+              ? nullptr
+              : mlir::ArrayAttr::get(builder->getContext(), nestReduceAttrs),
+          nullptr, /*local_vars=*/std::nullopt, /*local_syms=*/nullptr);
+
+      llvm::SmallVector<mlir::Type> loopBlockArgTypes(
+          incrementLoopNestInfo.size(), builder->getIndexType());
+      llvm::SmallVector<mlir::Location> loopBlockArgLocs(
+          incrementLoopNestInfo.size(), loc);
+      mlir::Region &loopRegion = loopOp.getRegion();
+      mlir::Block *loopBlock = builder->createBlock(
+          &loopRegion, loopRegion.begin(), loopBlockArgTypes, loopBlockArgLocs);
+      builder->setInsertionPointToStart(loopBlock);
+
+      for (auto [info, blockArg] :
+           llvm::zip_equal(incrementLoopNestInfo, loopBlock->getArguments())) {
+        info.loopOp = loopOp;
+        mlir::Value loopValue =
+            builder->createConvert(loc, info.getLoopVariableType(), blockArg);
+        builder->create<fir::StoreOp>(loc, loopValue, info.loopVariable);
+
+        if (info.maskExpr) {
+          Fortran::lower::StatementContext stmtCtx;
+          mlir::Value maskCond = createFIRExpr(loc, info.maskExpr, stmtCtx);
+          stmtCtx.finalizeAndReset();
+          mlir::Value maskCondCast =
+              builder->createConvert(loc, builder->getI1Type(), maskCond);
+          auto ifOp = builder->create<fir::IfOp>(loc, maskCondCast,
+                                                 /*withElseRegion=*/false);
+          builder->setInsertionPointToStart(&ifOp.getThenRegion().front());
+        }
+      }
+
+      IncrementLoopInfo &innermostInfo = incrementLoopNestInfo.back();
+
+      if (innermostInfo.hasLocalitySpecs())
+        handleLocalitySpecs(innermostInfo);
+
+      addLoopAnnotationAttr(innermostInfo, dirs);
+    }
   }
 
   /// Generate FIR to end a structured or unstructured increment loop nest.
@@ -2471,29 +2511,31 @@ private:
          it != rend; ++it) {
       IncrementLoopInfo &info = *it;
       if (info.isStructured()) {
-        // End fir.do_loop.
-        if (info.isUnordered) {
-          builder->setInsertionPointAfter(info.doLoop);
+        // End fir.do_concurent.loop.
+        if (info.isConcurrent) {
+          builder->setInsertionPointAfter(info.loopOp->getParentOp());
           continue;
         }
+
+        // End fir.do_loop.
         // Decrement tripVariable.
-        builder->setInsertionPointToEnd(info.doLoop.getBody());
+        auto doLoopOp = mlir::cast<fir::DoLoopOp>(info.loopOp);
+        builder->setInsertionPointToEnd(doLoopOp.getBody());
         llvm::SmallVector<mlir::Value, 2> results;
         results.push_back(builder->create<mlir::arith::AddIOp>(
-            loc, info.doLoop.getInductionVar(), info.doLoop.getStep(),
-            iofAttr));
+            loc, doLoopOp.getInductionVar(), doLoopOp.getStep(), iofAttr));
         // Step loopVariable to help optimizations such as vectorization.
         // Induction variable elimination will clean up as necessary.
         mlir::Value step = builder->createConvert(
-            loc, info.getLoopVariableType(), info.doLoop.getStep());
+            loc, info.getLoopVariableType(), doLoopOp.getStep());
         mlir::Value loopVar =
             builder->create<fir::LoadOp>(loc, info.loopVariable);
         results.push_back(
             builder->create<mlir::arith::AddIOp>(loc, loopVar, step, iofAttr));
         builder->create<fir::ResultOp>(loc, results);
-        builder->setInsertionPointAfter(info.doLoop);
+        builder->setInsertionPointAfter(doLoopOp);
         // The loop control variable may be used after the loop.
-        builder->create<fir::StoreOp>(loc, info.doLoop.getResult(1),
+        builder->create<fir::StoreOp>(loc, doLoopOp.getResult(1),
                                       info.loopVariable);
         continue;
       }
@@ -3019,8 +3061,7 @@ private:
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
-                                   bridge.openAccCtx(), accDecl,
-                                   accRoutineInfos);
+                                   bridge.openAccCtx(), accDecl);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
   }
@@ -5617,6 +5658,10 @@ private:
     LLVM_DEBUG(llvm::dbgs() << "\n[bridge - startNewFunction]";
                if (auto *sym = scope.symbol()) llvm::dbgs() << " " << *sym;
                llvm::dbgs() << "\n");
+    // Setting the builder is not necessary here, because callee
+    // always looks up the FuncOp from the module. If there was a function that
+    // was not declared yet, this call to callee will cause an assertion
+    // failure.
     Fortran::lower::CalleeInterface callee(funit, *this);
     mlir::func::FuncOp func = callee.addEntryBlockAndMapArguments();
     builder =
@@ -5886,8 +5931,9 @@ private:
   /// Helper to generate GlobalOps when the builder is not positioned in any
   /// region block. This is required because the FirOpBuilder assumes it is
   /// always positioned inside a region block when creating globals, the easiest
-  /// way comply is to create a dummy function and to throw it afterwards.
-  void createGlobalOutsideOfFunctionLowering(
+  /// way to comply is to create a dummy function and to throw it away
+  /// afterwards.
+  void createBuilderOutsideOfFuncOpAndDo(
       const std::function<void()> &createGlobals) {
     // FIXME: get rid of the bogus function context and instantiate the
     // globals directly into the module.
@@ -5899,6 +5945,7 @@ private:
         mlir::FunctionType::get(context, std::nullopt, std::nullopt),
         symbolTable);
     func.addEntryBlock();
+    CHECK(!builder && "Expected builder to be uninitialized");
     builder = new fir::FirOpBuilder(func, bridge.getKindMap(), symbolTable);
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
@@ -5914,7 +5961,7 @@ private:
 
   /// Instantiate the data from a BLOCK DATA unit.
   void lowerBlockData(Fortran::lower::pft::BlockDataUnit &bdunit) {
-    createGlobalOutsideOfFunctionLowering([&]() {
+    createBuilderOutsideOfFuncOpAndDo([&]() {
       Fortran::lower::AggregateStoreMap fakeMap;
       for (const auto &[_, sym] : bdunit.symTab) {
         if (sym->has<Fortran::semantics::ObjectEntityDetails>()) {
@@ -5928,7 +5975,7 @@ private:
   /// Create fir::Global for all the common blocks that appear in the program.
   void
   lowerCommonBlocks(const Fortran::semantics::CommonBlockList &commonBlocks) {
-    createGlobalOutsideOfFunctionLowering(
+    createBuilderOutsideOfFuncOpAndDo(
         [&]() { Fortran::lower::defineCommonBlocks(*this, commonBlocks); });
   }
 
@@ -5998,36 +6045,34 @@ private:
   /// declarative construct.
   void lowerModuleDeclScope(Fortran::lower::pft::ModuleLikeUnit &mod) {
     setCurrentPosition(mod.getStartingSourceLoc());
-    createGlobalOutsideOfFunctionLowering([&]() {
-      auto &scopeVariableListMap =
-          Fortran::lower::pft::getScopeVariableListMap(mod);
-      for (const auto &var : Fortran::lower::pft::getScopeVariableList(
-               mod.getScope(), scopeVariableListMap)) {
+    auto &scopeVariableListMap =
+        Fortran::lower::pft::getScopeVariableListMap(mod);
+    for (const auto &var : Fortran::lower::pft::getScopeVariableList(
+             mod.getScope(), scopeVariableListMap)) {
 
-        // Only define the variables owned by this module.
-        const Fortran::semantics::Scope *owningScope = var.getOwningScope();
-        if (owningScope && mod.getScope() != *owningScope)
+      // Only define the variables owned by this module.
+      const Fortran::semantics::Scope *owningScope = var.getOwningScope();
+      if (owningScope && mod.getScope() != *owningScope)
+        continue;
+
+      // Very special case: The value of numeric_storage_size depends on
+      // compilation options and therefore its value is not yet known when
+      // building the builtins runtime. Instead, the parameter is folding a
+      // __numeric_storage_size() expression which is loaded into the user
+      // program. For the iso_fortran_env object file, omit the symbol as it
+      // is never used.
+      if (var.hasSymbol()) {
+        const Fortran::semantics::Symbol &sym = var.getSymbol();
+        const Fortran::semantics::Scope &owner = sym.owner();
+        if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
+            DEREF(owner.symbol()).name() == "iso_fortran_env")
           continue;
-
-        // Very special case: The value of numeric_storage_size depends on
-        // compilation options and therefore its value is not yet known when
-        // building the builtins runtime. Instead, the parameter is folding a
-        // __numeric_storage_size() expression which is loaded into the user
-        // program. For the iso_fortran_env object file, omit the symbol as it
-        // is never used.
-        if (var.hasSymbol()) {
-          const Fortran::semantics::Symbol &sym = var.getSymbol();
-          const Fortran::semantics::Scope &owner = sym.owner();
-          if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
-              DEREF(owner.symbol()).name() == "iso_fortran_env")
-            continue;
-        }
-
-        Fortran::lower::defineModuleVariable(*this, var);
       }
+
+      Fortran::lower::defineModuleVariable(*this, var);
+    }
       for (auto &eval : mod.evaluationList)
         genFIR(eval);
-    });
   }
 
   /// Lower functions contained in a module.
@@ -6328,13 +6373,6 @@ private:
         expr.u);
   }
 
-  /// Performing OpenACC lowering action that were deferred to the end of
-  /// lowering.
-  void finalizeOpenACCLowering() {
-    Fortran::lower::finalizeOpenACCRoutineAttachment(getModuleOp(),
-                                                     accRoutineInfos);
-  }
-
   /// Performing OpenMP lowering actions that were deferred to the end of
   /// lowering.
   void finalizeOpenMPLowering(
@@ -6425,9 +6463,6 @@ private:
 
   /// A counter for uniquing names in `literalNamesMap`.
   std::uint64_t uniqueLitId = 0;
-
-  /// Deferred OpenACC routine attachment.
-  Fortran::lower::AccRoutineInfoMappingList accRoutineInfos;
 
   /// Whether an OpenMP target region or declare target function/subroutine
   /// intended for device offloading has been detected

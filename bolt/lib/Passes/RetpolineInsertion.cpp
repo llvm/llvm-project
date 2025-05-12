@@ -78,7 +78,7 @@ BinaryFunction *createNewRetpoline(BinaryContext &BC,
                                    const IndirectBranchInfo &BrInfo,
                                    bool R11Available) {
   auto &MIB = *BC.MIB;
-  MCContext &Ctx = *BC.Ctx.get();
+  MCContext &Ctx = *BC.Ctx;
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Creating a new retpoline function["
                     << RetpolineTag << "]\n");
 

@@ -349,12 +349,11 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
           if (AllowImplicitTypename == ImplicitTypenameContext::No)
             return nullptr;
           SourceLocation QualifiedLoc = SS->getRange().getBegin();
-          if (getLangOpts().CPlusPlus20)
-            Diag(QualifiedLoc, diag::warn_cxx17_compat_implicit_typename);
-          else
-            Diag(QualifiedLoc, diag::ext_implicit_typename)
-                << NestedNameSpecifier::Create(Context, SS->getScopeRep(), &II)
-                << FixItHint::CreateInsertion(QualifiedLoc, "typename ");
+          auto DB =
+              DiagCompat(QualifiedLoc, diag_compat::implicit_typename)
+              << NestedNameSpecifier::Create(Context, SS->getScopeRep(), &II);
+          if (!getLangOpts().CPlusPlus20)
+            DB << FixItHint::CreateInsertion(QualifiedLoc, "typename ");
         }
 
         // We know from the grammar that this name refers to a type,
@@ -18480,11 +18479,10 @@ bool Sema::ActOnDuplicateDefinition(Scope *S, Decl *Prev,
   return true;
 }
 
-void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
-                                           SourceLocation FinalLoc,
-                                           bool IsFinalSpelledSealed,
-                                           bool IsAbstract,
-                                           SourceLocation LBraceLoc) {
+void Sema::ActOnStartCXXMemberDeclarations(
+    Scope *S, Decl *TagD, SourceLocation FinalLoc, bool IsFinalSpelledSealed,
+    bool IsAbstract, SourceLocation TriviallyRelocatable,
+    SourceLocation Replaceable, SourceLocation LBraceLoc) {
   AdjustDeclIfTemplate(TagD);
   CXXRecordDecl *Record = cast<CXXRecordDecl>(TagD);
 
@@ -18502,6 +18500,14 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
                                           ? FinalAttr::Keyword_sealed
                                           : FinalAttr::Keyword_final));
   }
+
+  if (TriviallyRelocatable.isValid())
+    Record->addAttr(
+        TriviallyRelocatableAttr::Create(Context, TriviallyRelocatable));
+
+  if (Replaceable.isValid())
+    Record->addAttr(ReplaceableAttr::Create(Context, Replaceable));
+
   // C++ [class]p2:
   //   [...] The class-name is also inserted into the scope of the
   //   class itself; this is known as the injected-class-name. For

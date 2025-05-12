@@ -198,67 +198,6 @@ GetStringMap(const llvm::json::Object &obj, llvm::StringRef key);
 void FillResponse(const llvm::json::Object &request,
                   llvm::json::Object &response);
 
-/// Converts \a bp to a JSON value and appends the first valid location to the
-/// \a breakpoints array.
-///
-/// \param[in] bp
-///     A LLDB breakpoint object which will get the first valid location
-///     extracted and converted into a JSON object in the \a breakpoints array
-///
-/// \param[in] breakpoints
-///     A JSON array that will get a llvm::json::Value for \a bp
-///     appended to it.
-///
-/// \param[in] request_path
-///     An optional source path to use when creating the "Source" object of this
-///     breakpoint. If not specified, the "Source" object is created from the
-///     breakpoint's address' LineEntry. It is useful to ensure the same source
-///     paths provided by the setBreakpoints request are returned to the IDE.
-///
-/// \param[in] request_line
-///     An optional line to use when creating the "Breakpoint" object to append.
-///     It is used if the breakpoint has no valid locations.
-///     It is useful to ensure the same line
-///     provided by the setBreakpoints request are returned to the IDE as a
-///     fallback.
-void AppendBreakpoint(
-    BreakpointBase *bp, llvm::json::Array &breakpoints,
-    std::optional<llvm::StringRef> request_path = std::nullopt,
-    std::optional<uint32_t> request_line = std::nullopt);
-
-/// Converts breakpoint location to a debug adapter protocol "Breakpoint".
-///
-/// \param[in] bp
-///     A LLDB breakpoint object to convert into a JSON value
-///
-/// \param[in] request_path
-///     An optional source path to use when creating the "Source" object of this
-///     breakpoint. If not specified, the "Source" object is created from the
-///     breakpoint's address' LineEntry. It is useful to ensure the same source
-///     paths provided by the setBreakpoints request are returned to the IDE.
-///
-/// \param[in] request_line
-///     An optional line to use when creating the resulting "Breakpoint" object.
-///     It is used if the breakpoint has no valid locations.
-///     It is useful to ensure the same line
-///     provided by the setBreakpoints request are returned to the IDE as a
-///     fallback.
-///
-/// \param[in] request_column
-///     An optional column to use when creating the resulting "Breakpoint"
-///     object. It is used if the breakpoint has no valid locations. It is
-///     useful to ensure the same column provided by the setBreakpoints request
-///     are returned to the IDE as a fallback.
-///
-/// \return
-///     A "Breakpoint" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value
-CreateBreakpoint(BreakpointBase *bp,
-                 std::optional<llvm::StringRef> request_path = std::nullopt,
-                 std::optional<uint32_t> request_line = std::nullopt,
-                 std::optional<uint32_t> request_column = std::nullopt);
-
 /// Converts a LLDB module to a VS Code DAP module for use in "modules" events.
 ///
 /// \param[in] target
@@ -267,10 +206,15 @@ CreateBreakpoint(BreakpointBase *bp,
 /// \param[in] module
 ///     A LLDB module object to convert into a JSON value
 ///
+/// \param[in] id_only
+///     Only include the module ID in the JSON value. This is used when sending
+///     a "removed" module event.
+///
 /// \return
 ///     A "Module" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module);
+llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
+                               bool id_only = false);
 
 /// Create a "Event" JSON object using \a event_name as the event name
 ///
@@ -323,7 +267,7 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 /// \return
 ///     A "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateSource(const lldb::SBFileSpec &file);
+protocol::Source CreateSource(const lldb::SBFileSpec &file);
 
 /// Create a "Source" JSON object as described in the debug adapter definition.
 ///
@@ -334,7 +278,7 @@ llvm::json::Value CreateSource(const lldb::SBFileSpec &file);
 /// \return
 ///     A "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateSource(const lldb::SBLineEntry &line_entry);
+protocol::Source CreateSource(const lldb::SBLineEntry &line_entry);
 
 /// Create a "Source" object for a given source path.
 ///
@@ -344,7 +288,7 @@ llvm::json::Value CreateSource(const lldb::SBLineEntry &line_entry);
 /// \return
 ///     A "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateSource(llvm::StringRef source_path);
+protocol::Source CreateSource(llvm::StringRef source_path);
 
 /// Return true if the given line entry should be displayed as assembly.
 ///

@@ -292,10 +292,10 @@ void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
 
   getState().Type = ProcessingType::DWARF4TUs;
   for (std::unique_ptr<DWARFUnit> &DU : CU4TURanges)
-    registerUnit(*DU.get(), false);
+    registerUnit(*DU, false);
 
   for (std::unique_ptr<DWARFUnit> &DU : CU4TURanges)
-    constructFromUnit(*DU.get());
+    constructFromUnit(*DU);
 
   DWARFContext::unit_iterator_range CURanges =
       isDWO() ? DwarfContext->dwo_info_section_units()
@@ -308,7 +308,7 @@ void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
   for (std::unique_ptr<DWARFUnit> &DU : CURanges) {
     if (!DU->isTypeUnit())
       continue;
-    registerUnit(*DU.get(), false);
+    registerUnit(*DU, false);
   }
 
   for (DWARFUnit *DU : getState().DWARF5TUVector) {
@@ -335,7 +335,7 @@ void DIEBuilder::buildCompileUnits(const bool Init) {
   for (std::unique_ptr<DWARFUnit> &DU : CURanges) {
     if (DU->isTypeUnit())
       continue;
-    registerUnit(*DU.get(), false);
+    registerUnit(*DU, false);
   }
 
   // Using DULIst since it can be modified by cross CU refrence resolution.

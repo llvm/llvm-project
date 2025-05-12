@@ -136,3 +136,80 @@ void foo2(vi4 p) {}
 
 // OGCG: %[[VEC_A:.*]] = alloca <4 x i32>, align 16
 // OGCG: store <4 x i32> %{{.*}}, ptr %[[VEC_A]], align 16
+
+void foo3() {
+  vi4 a = { 1, 2, 3, 4 };
+  int e = a[1];
+}
+
+// CIR: %[[VEC:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
+// CIR: %[[INIT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
+// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
+// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
+// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
+// CIR: %[[VEC_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
+// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: cir.store %[[VEC_VAL]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP:.*]] = cir.load %[[VEC]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[IDX:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: %[[ELE:.*]] = cir.vec.extract %[[TMP]][%[[IDX]] : !s32i] : !cir.vector<4 x !s32i>
+// CIR: cir.store %[[ELE]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: %[[VEC:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[INIT:.*]] = alloca i32, i64 1, align 4
+// LLVM: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC]], align 16
+// LLVM: %[[TMP:.*]] = load <4 x i32>, ptr %[[VEC]], align 16
+// LLVM: %[[ELE:.*]] = extractelement <4 x i32> %[[TMP]], i32 1
+// LLVM: store i32 %[[ELE]], ptr %[[INIT]], align 4
+
+// OGCG: %[[VEC:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[INIT:.*]] = alloca i32, align 4
+// OGCG: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC]], align 16
+// OGCG: %[[TMP:.*]] = load <4 x i32>, ptr %[[VEC]], align 16
+// OGCG: %[[ELE:.*]] = extractelement <4 x i32> %[[TMP]], i32 1
+// OGCG: store i32 %[[ELE]], ptr %[[INIT]], align 4
+
+void foo4() {
+  vi4 a = { 1, 2, 3, 4 };
+
+  int idx = 2;
+  int e = a[idx];
+}
+
+// CIR: %[[VEC:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
+// CIR: %[[IDX:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["idx", init]
+// CIR: %[[INIT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
+// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
+// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
+// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
+// CIR: %[[VEC_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
+// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: cir.store %[[VEC_VAL]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[CONST_IDX:.*]] = cir.const #cir.int<2> : !s32i
+// CIR: cir.store %[[CONST_IDX]], %[[IDX]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[TMP1:.*]] = cir.load %[[VEC]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP2:.*]] = cir.load %[[IDX]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[ELE:.*]] = cir.vec.extract %[[TMP1]][%[[TMP2]] : !s32i] : !cir.vector<4 x !s32i>
+// CIR: cir.store %[[ELE]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: %[[VEC:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[IDX:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[INIT:.*]] = alloca i32, i64 1, align 4
+// LLVM: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC]], align 16
+// LLVM: store i32 2, ptr %[[IDX]], align 4
+// LLVM: %[[TMP1:.*]] = load <4 x i32>, ptr %[[VEC]], align 16
+// LLVM: %[[TMP2:.*]] = load i32, ptr %[[IDX]], align 4
+// LLVM: %[[ELE:.*]] = extractelement <4 x i32> %[[TMP1]], i32 %[[TMP2]]
+// LLVM: store i32 %[[ELE]], ptr %[[INIT]], align 4
+
+// OGCG: %[[VEC:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[IDX:.*]] = alloca i32, align 4
+// OGCG: %[[INIT:.*]] = alloca i32, align 4
+// OGCG: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC]], align 16
+// OGCG: store i32 2, ptr %[[IDX]], align 4
+// OGCG: %[[TMP1:.*]] = load <4 x i32>, ptr %[[VEC]], align 16
+// OGCG: %[[TMP2:.*]] = load i32, ptr %[[IDX]], align 4
+// OGCG: %[[ELE:.*]] = extractelement <4 x i32> %[[TMP1]], i32 %[[TMP2]]
+// OGCG: store i32 %[[ELE]], ptr %[[INIT]], align 4

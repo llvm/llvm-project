@@ -25,8 +25,8 @@ alignment:       4
 tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
-#CHECK:    frame-setup CFI_INSTRUCTION negate_ra_sign_state
 #CHECK:    frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
+#CHECK:    frame-setup CFI_INSTRUCTION negate_ra_sign_state
 #CHECK:    frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
 body:             |
   bb.0.entry:
@@ -42,8 +42,8 @@ tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 #CHECK:    frame-setup EMITBKEY
-#CHECK:    frame-setup CFI_INSTRUCTION negate_ra_sign_state
 #CHECK:    frame-setup PACIBSP implicit-def $lr, implicit $lr, implicit $sp
+#CHECK:    frame-setup CFI_INSTRUCTION negate_ra_sign_state
 #CHECK:    frame-destroy AUTIBSP implicit-def $lr, implicit $lr, implicit $sp
 body:             |
   bb.0.entry:

@@ -131,7 +131,8 @@ class MapInfoFinalizationPass
               boxMap.getVarPtr().getDefiningOp()))
         descriptor = addrOp.getVal();
 
-    if (!mlir::isa<fir::BaseBoxType>(descriptor.getType()))
+    if (!mlir::isa<fir::BaseBoxType>(descriptor.getType()) &&
+        !fir::factory::isOptionalArgument(descriptor.getDefiningOp()))
       return descriptor;
 
     mlir::Value &slot = localBoxAllocas[descriptor.getDefiningOp()];
@@ -151,7 +152,11 @@ class MapInfoFinalizationPass
     mlir::Location loc = boxMap->getLoc();
     assert(allocaBlock && "No alloca block found for this top level op");
     builder.setInsertionPointToStart(allocaBlock);
-    auto alloca = builder.create<fir::AllocaOp>(loc, descriptor.getType());
+
+    mlir::Type allocaType = descriptor.getType();
+    if (fir::isBoxAddress(allocaType))
+      allocaType = fir::unwrapRefType(allocaType);
+    auto alloca = builder.create<fir::AllocaOp>(loc, allocaType);
     builder.restoreInsertionPoint(insPt);
     // We should only emit a store if the passed in data is present, it is
     // possible a user passes in no argument to an optional parameter, in which
@@ -159,8 +164,10 @@ class MapInfoFinalizationPass
     auto isPresent =
         builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), descriptor);
     builder.genIfOp(loc, {}, isPresent, false)
-        .genThen(
-            [&]() { builder.create<fir::StoreOp>(loc, descriptor, alloca); })
+        .genThen([&]() {
+          descriptor = builder.loadIfRef(loc, descriptor);
+          builder.create<fir::StoreOp>(loc, descriptor, alloca);
+        })
         .end();
     return slot = alloca;
   }

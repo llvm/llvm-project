@@ -55,7 +55,7 @@ struct VPlanTransforms {
 
   static std::unique_ptr<VPlan>
   buildPlainCFG(Loop *TheLoop, LoopInfo &LI,
-                DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB);
+                DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB);
 
   /// Prepare the plan for vectorization. It will introduce a dedicated
   /// VPBasicBlock for the vector pre-header as well as a VPBasicBlock as exit
@@ -69,7 +69,8 @@ struct VPlanTransforms {
                                       PredicatedScalarEvolution &PSE,
                                       bool RequiresScalarEpilogueCheck,
                                       bool TailFolded, Loop *TheLoop,
-                                      DebugLoc IVDL);
+                                      DebugLoc IVDL, bool HasUncountableExit,
+                                      VFRange &Range);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
@@ -173,15 +174,16 @@ struct VPlanTransforms {
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
-  /// Update \p Plan to account for the uncountable early exit block in \p
-  /// UncountableExitingBlock by
-  ///  * updating the condition exiting the vector loop to include the early
-  ///    exit conditions
+  /// Update \p Plan to account for the uncountable early exit from \p
+  /// EarlyExitingVPBB to \p EarlyExitVPBB by
+  ///  * updating the condition exiting the loop via the latch to include the
+  ///    early exit condition,
   ///  * splitting the original middle block to branch to the early exit block
-  ///    if taken.
-  static void handleUncountableEarlyExit(VPlan &Plan, Loop *OrigLoop,
-                                         BasicBlock *UncountableExitingBlock,
-                                         VPRecipeBuilder &RecipeBuilder,
+  ///    conditionally - according to the early exit condition.
+  static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
+                                         VPBasicBlock *EarlyExitVPBB,
+                                         VPlan &Plan, VPBasicBlock *HeaderVPBB,
+                                         VPBasicBlock *LatchVPBB,
                                          VFRange &Range);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
@@ -198,6 +200,11 @@ struct VPlanTransforms {
   static void
   optimizeInductionExitUsers(VPlan &Plan,
                              DenseMap<VPValue *, VPValue *> &EndValues);
+
+  /// Materialize VPInstruction::StepVectors for VPWidenIntOrFpInductionRecipes.
+  /// TODO: Remove once all of VPWidenIntOrFpInductionRecipe is expanded in
+  /// convertToConcreteRecipes.
+  static void materializeStepVectors(VPlan &Plan);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);

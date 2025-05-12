@@ -4013,6 +4013,15 @@ struct OmpAbsentClause {
   WRAPPER_CLASS_BOILERPLATE(OmpAbsentClause, OmpDirectiveList);
 };
 
+struct OmpAdjustArgsClause {
+  TUPLE_CLASS_BOILERPLATE(OmpAdjustArgsClause);
+  struct OmpAdjustOp {
+    ENUM_CLASS(Value, Nothing, Need_Device_Ptr)
+    WRAPPER_CLASS_BOILERPLATE(OmpAdjustOp, Value);
+  };
+  std::tuple<OmpAdjustOp, OmpObjectList> t;
+};
+
 // Ref: [5.0:135-140], [5.1:161-166], [5.2:264-265]
 //
 // affinity-clause ->
@@ -4054,6 +4063,13 @@ struct OmpAllocateClause {
       OmpAllocatorComplexModifier);
   TUPLE_CLASS_BOILERPLATE(OmpAllocateClause);
   std::tuple<MODIFIERS(), OmpObjectList> t;
+};
+
+struct OmpAppendArgsClause {
+  struct OmpAppendOp {
+    WRAPPER_CLASS_BOILERPLATE(OmpAppendOp, std::list<OmpInteropType>);
+  };
+  WRAPPER_CLASS_BOILERPLATE(OmpAppendArgsClause, std::list<OmpAppendOp>);
 };
 
 // Ref: [5.2:216-217 (sort of, as it's only mentioned in passing)
@@ -4698,6 +4714,12 @@ struct OmpBlockDirective {
   CharBlock source;
 };
 
+struct OmpDeclareVariantDirective {
+  TUPLE_CLASS_BOILERPLATE(OmpDeclareVariantDirective);
+  CharBlock source;
+  std::tuple<Verbatim, std::optional<Name>, Name, OmpClauseList> t;
+};
+
 // 2.10.6 declare-target -> DECLARE TARGET (extended-list) |
 //                          DECLARE TARGET [declare-target-clause[ [,]
 //                                          declare-target-clause]...]
@@ -4776,8 +4798,8 @@ struct OpenMPDeclarativeConstruct {
   std::variant<OpenMPDeclarativeAllocate, OpenMPDeclarativeAssumes,
       OpenMPDeclareMapperConstruct, OpenMPDeclareReductionConstruct,
       OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
-      OpenMPThreadprivate, OpenMPRequiresConstruct, OpenMPUtilityConstruct,
-      OmpMetadirectiveDirective>
+      OmpDeclareVariantDirective, OpenMPThreadprivate, OpenMPRequiresConstruct,
+      OpenMPUtilityConstruct, OmpMetadirectiveDirective>
       u;
 };
 

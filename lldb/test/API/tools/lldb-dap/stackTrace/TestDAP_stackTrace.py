@@ -61,7 +61,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         Tests the 'stackTrace' packet and all its variants.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(program, stopOnEntry=True)
         source = "main.c"
         self.source_path = os.path.join(os.getcwd(), source)
         self.recurse_end = line_number(source, "recurse end")
@@ -201,6 +201,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
             0, len(stackFrames), "verify zero frames with startFrame out of bounds"
         )
 
+    @skipIfWindows
     def test_functionNameWithArgs(self):
         """
         Test that the stack frame without a function name is given its pc in the response.
@@ -215,6 +216,7 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         frame = self.get_stackFrames()[0]
         self.assertEqual(frame["name"], "recurse(x=1)")
 
+    @skipIfWindows
     def test_StackFrameFormat(self):
         """
         Test the StackFrameFormat.

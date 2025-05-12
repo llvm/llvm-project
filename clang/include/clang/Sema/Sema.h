@@ -4316,12 +4316,17 @@ public:
                                        SourceLocation FinalLoc,
                                        bool IsFinalSpelledSealed,
                                        bool IsAbstract,
+                                       SourceLocation TriviallyRelocatable,
+                                       SourceLocation Replaceable,
                                        SourceLocation LBraceLoc);
 
   /// ActOnTagFinishDefinition - Invoked once we have finished parsing
   /// the definition of a tag (enumeration, class, struct, or union).
   void ActOnTagFinishDefinition(Scope *S, Decl *TagDecl,
                                 SourceRange BraceRange);
+
+  ASTContext::CXXRecordDeclRelocationInfo
+  CheckCXX2CRelocatableAndReplaceable(const clang::CXXRecordDecl *D);
 
   void ActOnTagFinishSkippedDefinition(SkippedDefinitionContext Context);
 
@@ -8637,6 +8642,18 @@ public:
                                                ExprResult &LHS, ExprResult &RHS,
                                                SourceLocation QuestionLoc);
 
+  //// Determines if a type is trivially relocatable
+  /// according to the C++26 rules.
+  // FIXME: This is in Sema because it requires
+  // overload resolution, can we move to ASTContext?
+  bool IsCXXTriviallyRelocatableType(QualType T);
+
+  //// Determines if a type is replaceable
+  /// according to the C++26 rules.
+  // FIXME: This is in Sema because it requires
+  // overload resolution, can we move to ASTContext?
+  bool IsCXXReplaceableType(QualType T);
+
   /// Check the operands of ?: under C++ semantics.
   ///
   /// See C++ [expr.cond]. Note that LHS is never null, even for the GNU x ?: y
@@ -10223,8 +10240,13 @@ public:
   /// Determine whether the conversion from FromType to ToType is a valid
   /// conversion that strips "noexcept" or "noreturn" off the nested function
   /// type.
-  bool IsFunctionConversion(QualType FromType, QualType ToType,
-                            QualType &ResultTy);
+  bool IsFunctionConversion(QualType FromType, QualType ToType) const;
+
+  /// Same as `IsFunctionConversion`, but if this would return true, it sets
+  /// `ResultTy` to `ToType`.
+  bool TryFunctionConversion(QualType FromType, QualType ToType,
+                             QualType &ResultTy) const;
+
   bool DiagnoseMultipleUserDefinedConversion(Expr *From, QualType ToType);
   void DiagnoseUseOfDeletedFunction(SourceLocation Loc, SourceRange Range,
                                     DeclarationName Name,

@@ -24,9 +24,10 @@ def spawn_and_wait(program, delay):
     process.wait()
 
 
-@skip
 class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
     def set_and_hit_breakpoint(self, continueToExit=True):
+        self.dap_server.wait_for_stopped()
+
         source = "main.c"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         lines = [breakpoint1_line]
@@ -77,7 +78,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
     def test_by_name_waitFor(self):
         """
         Tests attaching to a process by process name and waiting for the
-        next instance of a process to be launched, ingoring all current
+        next instance of a process to be launched, ignoring all current
         ones.
         """
         program = self.build_and_create_debug_adapter_for_attach()
@@ -100,7 +101,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         that can be passed during attach.
 
         "initCommands" are a list of LLDB commands that get executed
-        before the targt is created.
+        before the target is created.
         "preRunCommands" are a list of LLDB commands that get executed
         after the target has been created and before the launch.
         "stopCommands" are a list of LLDB commands that get executed each
@@ -177,6 +178,24 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         )
         self.verify_commands("exitCommands", output, exitCommands)
         self.verify_commands("terminateCommands", output, terminateCommands)
+
+    def test_attach_command_process_failures(self):
+        """
+        Tests that a 'attachCommands' is expected to leave the debugger's
+        selected target with a valid process.
+        """
+        program = self.build_and_create_debug_adapter_for_attach()
+        attachCommands = ['script print("oops, forgot to attach to a process...")']
+        resp = self.attach(
+            program=program,
+            attachCommands=attachCommands,
+            expectFailure=True,
+        )
+        self.assertFalse(resp["success"])
+        self.assertIn(
+            "attachCommands failed to attach to a process",
+            resp["body"]["error"]["format"],
+        )
 
     @skipIfNetBSD  # Hangs on NetBSD as well
     @skipIf(
