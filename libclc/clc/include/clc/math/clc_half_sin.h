@@ -6,12 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/utils.h>
+#ifndef __CLC_MATH_CLC_HALF_SIN_H__
+#define __CLC_MATH_CLC_HALF_SIN_H__
 
-#define __CLC_HALF_FUNC(x) __CLC_CONCAT(half_, x)
+#define __FLOAT_ONLY
+#define __CLC_FUNCTION __clc_half_sin
+#define __CLC_BODY <clc/shared/unary_decl.inc>
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_HALF_FUNC(__CLC_FUNC)(__CLC_GENTYPE x, __CLC_GENTYPE y) {
-  return __CLC_FUNC(x, y);
-}
+#include <clc/math/gentype.inc>
 
-#undef __CLC_HALF_FUNC
+#undef __CLC_FUNCTION
+#undef __FLOAT_ONLY
+
+#endif // __CLC_MATH_CLC_HALF_SIN_H__

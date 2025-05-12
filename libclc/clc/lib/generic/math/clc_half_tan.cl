@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_half_powr.h>
+#include <clc/math/clc_tan.h>
 
 #define __FLOAT_ONLY
-#define FUNCTION half_powr
-#define __CLC_BODY <clc/shared/binary_def.inc>
+#define FUNCTION __clc_half_tan
+#define __CLC_FUNCTION(x) __clc_tan
+#define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>
