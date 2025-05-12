@@ -47,6 +47,10 @@ def HasVIS2 : Predicate<"Subtarget->isVIS2()">,
 def HasVIS3 : Predicate<"Subtarget->isVIS3()">,
              AssemblerPredicate<(all_of FeatureVIS3)>;
 
+// HasUA2005 - This is true when the target processor has UA 2005 extensions.
+def HasUA2005 : Predicate<"Subtarget->isUA2005()">,
+                AssemblerPredicate<(all_of FeatureUA2005)>;
+
 // HasHardQuad - This is true when the target processor supports quad floating
 // point instructions.
 def HasHardQuad : Predicate<"Subtarget->hasHardQuad()">;
@@ -1971,4 +1975,5 @@ def : Pat<(build_vector (i32 IntRegs:$a1), (i32 IntRegs:$a2)),
 
 include "SparcInstr64Bit.td"
 include "SparcInstrVIS.td"
+include "SparcInstrUAOSA.td"
 include "SparcInstrAliases.td"

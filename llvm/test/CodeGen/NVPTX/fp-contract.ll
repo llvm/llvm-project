@@ -18,11 +18,11 @@ define float @t0(float %a, float %b, float %c) {
 ; FAST-NEXT:    .reg .b32 %f<5>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
-; FAST-NEXT:    ld.param.f32 %f1, [t0_param_0];
-; FAST-NEXT:    ld.param.f32 %f2, [t0_param_1];
-; FAST-NEXT:    ld.param.f32 %f3, [t0_param_2];
+; FAST-NEXT:    ld.param.b32 %f1, [t0_param_0];
+; FAST-NEXT:    ld.param.b32 %f2, [t0_param_1];
+; FAST-NEXT:    ld.param.b32 %f3, [t0_param_2];
 ; FAST-NEXT:    fma.rn.f32 %f4, %f1, %f2, %f3;
-; FAST-NEXT:    st.param.f32 [func_retval0], %f4;
+; FAST-NEXT:    st.param.b32 [func_retval0], %f4;
 ; FAST-NEXT:    ret;
 ;
 ; DEFAULT-LABEL: t0(
@@ -30,12 +30,12 @@ define float @t0(float %a, float %b, float %c) {
 ; DEFAULT-NEXT:    .reg .b32 %f<6>;
 ; DEFAULT-EMPTY:
 ; DEFAULT-NEXT:  // %bb.0:
-; DEFAULT-NEXT:    ld.param.f32 %f1, [t0_param_0];
-; DEFAULT-NEXT:    ld.param.f32 %f2, [t0_param_1];
+; DEFAULT-NEXT:    ld.param.b32 %f1, [t0_param_0];
+; DEFAULT-NEXT:    ld.param.b32 %f2, [t0_param_1];
 ; DEFAULT-NEXT:    mul.rn.f32 %f3, %f1, %f2;
-; DEFAULT-NEXT:    ld.param.f32 %f4, [t0_param_2];
+; DEFAULT-NEXT:    ld.param.b32 %f4, [t0_param_2];
 ; DEFAULT-NEXT:    add.rn.f32 %f5, %f3, %f4;
-; DEFAULT-NEXT:    st.param.f32 [func_retval0], %f5;
+; DEFAULT-NEXT:    st.param.b32 [func_retval0], %f5;
 ; DEFAULT-NEXT:    ret;
   %v0 = fmul float %a, %b
   %v1 = fadd float %v0, %c
@@ -50,12 +50,12 @@ define float @t1(float %a, float %b) {
 ; FAST-NEXT:    .reg .b32 %f<6>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
-; FAST-NEXT:    ld.param.f32 %f1, [t1_param_0];
-; FAST-NEXT:    ld.param.f32 %f2, [t1_param_1];
+; FAST-NEXT:    ld.param.b32 %f1, [t1_param_0];
+; FAST-NEXT:    ld.param.b32 %f2, [t1_param_1];
 ; FAST-NEXT:    add.f32 %f3, %f1, %f2;
 ; FAST-NEXT:    sub.f32 %f4, %f1, %f2;
 ; FAST-NEXT:    mul.f32 %f5, %f3, %f4;
-; FAST-NEXT:    st.param.f32 [func_retval0], %f5;
+; FAST-NEXT:    st.param.b32 [func_retval0], %f5;
 ; FAST-NEXT:    ret;
 ;
 ; DEFAULT-LABEL: t1(
@@ -63,12 +63,12 @@ define float @t1(float %a, float %b) {
 ; DEFAULT-NEXT:    .reg .b32 %f<6>;
 ; DEFAULT-EMPTY:
 ; DEFAULT-NEXT:  // %bb.0:
-; DEFAULT-NEXT:    ld.param.f32 %f1, [t1_param_0];
-; DEFAULT-NEXT:    ld.param.f32 %f2, [t1_param_1];
+; DEFAULT-NEXT:    ld.param.b32 %f1, [t1_param_0];
+; DEFAULT-NEXT:    ld.param.b32 %f2, [t1_param_1];
 ; DEFAULT-NEXT:    add.rn.f32 %f3, %f1, %f2;
 ; DEFAULT-NEXT:    sub.rn.f32 %f4, %f1, %f2;
 ; DEFAULT-NEXT:    mul.rn.f32 %f5, %f3, %f4;
-; DEFAULT-NEXT:    st.param.f32 [func_retval0], %f5;
+; DEFAULT-NEXT:    st.param.b32 [func_retval0], %f5;
 ; DEFAULT-NEXT:    ret;
   %v1 = fadd float %a, %b
   %v2 = fsub float %a, %b
@@ -84,12 +84,12 @@ define float @t2(float %a, float %b) {
 ; CHECK-NEXT:    .reg .b32 %f<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [t2_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [t2_param_1];
+; CHECK-NEXT:    ld.param.b32 %f1, [t2_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [t2_param_1];
 ; CHECK-NEXT:    add.f32 %f3, %f1, %f2;
 ; CHECK-NEXT:    sub.f32 %f4, %f1, %f2;
 ; CHECK-NEXT:    mul.f32 %f5, %f3, %f4;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f5;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f5;
 ; CHECK-NEXT:    ret;
   %v1 = fadd contract float %a, %b
   %v2 = fsub contract float %a, %b
@@ -104,11 +104,11 @@ define float @t3(float %a, float %b, float %c) {
 ; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [t3_param_0];
-; CHECK-NEXT:    ld.param.f32 %f2, [t3_param_1];
-; CHECK-NEXT:    ld.param.f32 %f3, [t3_param_2];
+; CHECK-NEXT:    ld.param.b32 %f1, [t3_param_0];
+; CHECK-NEXT:    ld.param.b32 %f2, [t3_param_1];
+; CHECK-NEXT:    ld.param.b32 %f3, [t3_param_2];
 ; CHECK-NEXT:    fma.rn.f32 %f4, %f1, %f2, %f3;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f4;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f4;
 ; CHECK-NEXT:    ret;
   %v0 = fmul contract float %a, %b
   %v1 = fadd contract float %v0, %c

@@ -5448,6 +5448,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   // If we have a Mask, and the LT is being legalized somehow, split the Mask
   // into smaller vectors and sum the cost of each shuffle.
   if (!Mask.empty() && isa<FixedVectorType>(Tp) && LT.second.isVector() &&
+      LT.second.getScalarSizeInBits() * Mask.size() > 128 &&
       Tp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
       Mask.size() > LT.second.getVectorNumElements() && !Index && !SubTp) {
 
@@ -5606,6 +5607,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         {TTI::SK_Broadcast, MVT::v2i64, 1},
         {TTI::SK_Broadcast, MVT::v4f16, 1},
         {TTI::SK_Broadcast, MVT::v8f16, 1},
+        {TTI::SK_Broadcast, MVT::v4bf16, 1},
+        {TTI::SK_Broadcast, MVT::v8bf16, 1},
         {TTI::SK_Broadcast, MVT::v2f32, 1},
         {TTI::SK_Broadcast, MVT::v4f32, 1},
         {TTI::SK_Broadcast, MVT::v2f64, 1},
@@ -5620,6 +5623,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         {TTI::SK_Transpose, MVT::v2i64, 1},
         {TTI::SK_Transpose, MVT::v4f16, 1},
         {TTI::SK_Transpose, MVT::v8f16, 1},
+        {TTI::SK_Transpose, MVT::v4bf16, 1},
+        {TTI::SK_Transpose, MVT::v8bf16, 1},
         {TTI::SK_Transpose, MVT::v2f32, 1},
         {TTI::SK_Transpose, MVT::v4f32, 1},
         {TTI::SK_Transpose, MVT::v2f64, 1},

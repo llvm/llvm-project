@@ -2300,7 +2300,7 @@ static bool isLValueKnownNonNull(CodeGenFunction &CGF, const Expr *E) {
 }
 
 bool CodeGenFunction::isPointerKnownNonNull(const Expr *E) {
-  assert(E->getType()->isSignableType());
+  assert(E->getType()->isSignableType(getContext()));
 
   E = E->IgnoreParens();
 
@@ -2434,8 +2434,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // expects. It is desirable to remove this iff a better solution is found.
     if (auto A = dyn_cast<llvm::Argument>(Src); A && A->hasStructRetAttr())
       return CGF.CGM.getTargetCodeGenInfo().performAddrSpaceCast(
-          CGF, Src, E->getType().getAddressSpace(), DestTy.getAddressSpace(),
-          DstTy);
+          CGF, Src, E->getType().getAddressSpace(), DstTy);
 
     assert(
         (!SrcTy->isPtrOrPtrVectorTy() || !DstTy->isPtrOrPtrVectorTy() ||
@@ -2568,7 +2567,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // space, an address space conversion may end up as a bitcast.
     return CGF.CGM.getTargetCodeGenInfo().performAddrSpaceCast(
         CGF, Visit(E), E->getType()->getPointeeType().getAddressSpace(),
-        DestTy->getPointeeType().getAddressSpace(), ConvertType(DestTy));
+        ConvertType(DestTy));
   }
   case CK_AtomicToNonAtomic:
   case CK_NonAtomicToAtomic:
