@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDBUtils.h"
+#include "lldb/API/SBError.h"
 #include "lldb/API/SBStructuredData.h"
+#include "llvm/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -43,4 +45,21 @@ TEST(LLDBUtilsTest, GetStringValue) {
 
   result = GetStringValue(empty_data);
   EXPECT_EQ(result, "");
+}
+
+TEST(LLDBUtilsTest, ToError) {
+  // Test with a successful SBError.
+  SBError success_error;
+  ASSERT_TRUE(success_error.Success());
+  llvm::Error llvm_error = ToError(success_error);
+  EXPECT_FALSE(llvm_error);
+
+  // Test with a failing SBError.
+  SBError fail_error;
+  fail_error.SetErrorString("Test error message");
+  ASSERT_TRUE(fail_error.Fail());
+  llvm_error = ToError(fail_error);
+
+  std::string error_message = toString(std::move(llvm_error));
+  EXPECT_EQ(error_message, "Test error message");
 }
