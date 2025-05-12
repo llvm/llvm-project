@@ -32,6 +32,8 @@ page](https://llvm.org/releases/).
 
 ## New Compiler Flags
 
+* -floop-interchange is now recognized by flang.
+
 ## Windows Support
 
 ## Fortran Language Changes in Flang
