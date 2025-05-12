@@ -1745,6 +1745,8 @@ unsigned getVGPREncodingMSBs(MCPhysReg Reg, const MCRegisterInfo &MRI);
 MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
                           const MCRegisterInfo &MRI);
 
+#define VGPRLoweringOperandTableNumOps 7
+
 // Returns a table for the opcode with a given \p Desc to map the VGPR MSB
 // set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2
 // maps, one for X and one for Y component.
