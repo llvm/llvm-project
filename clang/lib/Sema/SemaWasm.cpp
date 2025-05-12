@@ -71,14 +71,13 @@ bool SemaWasm::BuiltinWasmRefIsNullExtern(CallExpr *TheCall) {
   Expr *ArgExpr = TheCall->getArg(0);
   if (!ArgExpr->getType().isWebAssemblyExternrefType()) {
     SemaRef.Diag(ArgExpr->getBeginLoc(),
-                  diag::err_wasm_builtin_arg_must_be_externref_type)
-           << 1 << ArgExpr->getSourceRange();
+                 diag::err_wasm_builtin_arg_must_be_externref_type)
+        << 1 << ArgExpr->getSourceRange();
     return true;
   }
 
   return false;
 }
-
 
 bool SemaWasm::BuiltinWasmRefNullFunc(CallExpr *TheCall) {
   ASTContext &Context = getASTContext();
