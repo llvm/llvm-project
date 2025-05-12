@@ -168,7 +168,7 @@ bool Sema::checkArgCount(CallExpr *Call, unsigned DesiredArgCount) {
 
   return Diag(Range.getBegin(), diag::err_typecheck_call_too_many_args)
          << 0 /*function call*/ << DesiredArgCount << ArgCount
-         << /*is non object*/ 0 << Call->getArg(1)->getSourceRange();
+         << /*is non object*/ 0 << Range;
 }
 
 static bool checkBuiltinVerboseTrap(CallExpr *Call, Sema &S) {
