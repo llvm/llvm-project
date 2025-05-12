@@ -9,6 +9,7 @@ define i32 @test(i32 noundef %x, i32 noundef %y) !dbg !10 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:      #dbg_value(i1 [[CMP_NOT]], [[META15:![0-9]+]], !DIExpression(DW_OP_not, DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value), [[META16:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(!DIArgList(i1 false, i1 [[CMP_NOT]]), [[META17:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_not, DW_OP_or, DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value), [[META16]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[Y]], 1
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP_NOT]], i32 0, i32 [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[AND]]
@@ -17,6 +18,7 @@ entry:
   %cmp = icmp ne i32 %x, 0
   %conv = zext i1 %cmp to i32
     #dbg_value(i32 %conv, !15, !DIExpression(), !16)
+    #dbg_value(!DIArgList(i1 false, i1 %cmp), !17, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_or, DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value), !18)
   %and = and i32 %conv, %y
   ret i32 %and
 }
@@ -42,9 +44,11 @@ entry:
 !14 = !{!15}
 !15 = !DILocalVariable(name: "z", scope: !10, file: !1, line: 2, type: !13)
 !16 = !DILocation(line: 0, scope: !10)
+!17 = !DILocalVariable(name: "w", scope: !10, file: !1, line: 3, type: !13)
+!18 = !DILocation(line: 0, scope: !10)
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-; CHECK: [[META1]] = !DIFile(filename: "test.c", directory: {{.*}})
+; CHECK: [[META1]] = !DIFile(filename: "{{.*}}test.c", directory: {{.*}})
 ; CHECK: [[DBG10]] = distinct !DISubprogram(name: "test", scope: [[META1]], file: [[META1]], line: 1, type: [[META11:![0-9]+]], scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META14:![0-9]+]])
 ; CHECK: [[META11]] = !DISubroutineType(types: [[META12:![0-9]+]])
 ; CHECK: [[META12]] = !{[[META13:![0-9]+]], [[META13]], [[META13]]}
@@ -52,4 +56,5 @@ entry:
 ; CHECK: [[META14]] = !{[[META15]]}
 ; CHECK: [[META15]] = !DILocalVariable(name: "z", scope: [[DBG10]], file: [[META1]], line: 2, type: [[META13]])
 ; CHECK: [[META16]] = !DILocation(line: 0, scope: [[DBG10]])
+; CHECK: [[META17]] = !DILocalVariable(name: "w", scope: [[DBG10]], file: [[META1]], line: 3, type: [[META13]])
 ;.
