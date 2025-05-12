@@ -56709,15 +56709,15 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (DCI.isBeforeLegalize()) {
+    unsigned IndexWidth = Index.getScalarValueSizeInBits();
     // Attempt to move shifted index into the address scale, allows further
     // index truncation below.
     if (Index.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Scale)) {
-      unsigned BitWidth = Index.getScalarValueSizeInBits();
       unsigned ScaleAmt = Scale->getAsZExtVal();
       assert(isPowerOf2_32(ScaleAmt) && "Scale must be a power of 2");
       unsigned Log2ScaleAmt = Log2_32(ScaleAmt);
-      unsigned MaskBits = BitWidth - Log2ScaleAmt;
-      APInt DemandedBits = APInt::getLowBitsSet(BitWidth, MaskBits);
+      unsigned MaskBits = IndexWidth - Log2ScaleAmt;
+      APInt DemandedBits = APInt::getLowBitsSet(IndexWidth, MaskBits);
       if (TLI.SimplifyDemandedBits(Index, DemandedBits, DCI)) {
         if (N->getOpcode() != ISD::DELETED_NODE)
           DCI.AddToWorklist(N);
@@ -56738,7 +56738,6 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
         }
       }
     }
-    unsigned IndexWidth = Index.getScalarValueSizeInBits();
 
     // Shrink indices if they are larger than 32-bits.
     // Only do this before legalize types since v2i64 could become v2i32.
