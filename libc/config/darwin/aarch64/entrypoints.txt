@@ -20,6 +20,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
+    # setjmp.h entrypoints
+    libc.src.setjmp
+
+
     # string.h entrypoints
     libc.src.string.memccpy
     libc.src.string.memchr
