@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_sincos.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_cos.h>
+#include <clc/math/clc_sin.h>
 
-#define FUNCTION sincos
-#define __CLC_BODY <clc/math/unary_def_with_ptr.inc>
+#define __CLC_BODY <clc_sincos.inc>
 #include <clc/math/gentype.inc>
