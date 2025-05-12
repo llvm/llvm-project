@@ -690,8 +690,7 @@ define void @pr70590_recipe_without_underlying_instr(i64 %n, ptr noalias %dst) {
 ; CHECK:       [[PRED_SREM_IF5]]:
 ; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE6]]
 ; CHECK:       [[PRED_SREM_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 poison, -3
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], poison
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [5 x i8], ptr @c, i64 0, i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP14]], align 1
@@ -768,8 +767,7 @@ define void @recipe_without_underlying_instr_lanes_used(i64 %n, ptr noalias %dst
 ; CHECK:       [[PRED_SREM_IF5]]:
 ; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE6]]
 ; CHECK:       [[PRED_SREM_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 poison, -3
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], poison
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr [5 x i8], ptr @c, i64 0, i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP9]], align 1
