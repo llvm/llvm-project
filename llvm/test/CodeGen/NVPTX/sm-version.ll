@@ -56,7 +56,6 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_121 | FileCheck %s --check-prefix=SM121
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_121a | FileCheck %s --check-prefix=SM121a
 
-; Also check if ptxas is available for the various SM versions
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_21 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_30 | %ptxas-verify %}
@@ -172,15 +171,3 @@
 ; SM120a: .target sm_120a
 ; SM121: .target sm_121
 ; SM121a: .target sm_121a
-
-; Simple kernel function that does a basic operation that should work on all SM versions
-define void @test_kernel(ptr %out, i32 %val) {
-  store i32 %val, ptr %out, align 4
-  ret void
-}
-
-; Add a ptx_kernel for good measure
-define ptx_kernel void @test_ptx_kernel(ptr %out, i32 %val) {
-  store i32 %val, ptr %out, align 4
-  ret void
-}
