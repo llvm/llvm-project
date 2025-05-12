@@ -28,3 +28,12 @@ define i32 @test3(ptr %ptr) {
   %val = load atomic i32, ptr %ptr seq_cst, align 4
   ret i32 %val
 }
+
+define <1 x i32> @atomic_vec1_i32(ptr %x) {
+; CHECK-LABEL: atomic_vec1_i32:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    retq
+  %ret = load atomic <1 x i32>, ptr %x acquire, align 4
+  ret <1 x i32> %ret
+}
