@@ -1104,7 +1104,6 @@ protected:
       bool check_inlines = false;
       SymbolContextList sc_list;
       size_t num_matches = 0;
-      uint32_t start_line = m_options.start_line;
 
       if (!m_options.modules.empty()) {
         ModuleList matching_modules;
@@ -1115,7 +1114,7 @@ protected:
             matching_modules.Clear();
             target.GetImages().FindModules(module_spec, matching_modules);
             num_matches += matching_modules.ResolveSymbolContextForFilePath(
-                filename, start_line, check_inlines,
+                filename, 1, check_inlines,
                 SymbolContextItem(eSymbolContextModule |
                                   eSymbolContextCompUnit |
                                   eSymbolContextLineEntry),
@@ -1124,7 +1123,7 @@ protected:
         }
       } else {
         num_matches = target.GetImages().ResolveSymbolContextForFilePath(
-            filename, start_line, check_inlines,
+            filename, 1, check_inlines,
             eSymbolContextModule | eSymbolContextCompUnit |
                 eSymbolContextLineEntry,
             sc_list);
