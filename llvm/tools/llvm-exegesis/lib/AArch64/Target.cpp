@@ -232,13 +232,13 @@ private:
       // be the same with PAC keys disabled, they could potentially be lower
       // since authentication checks are bypassed.
       if ((long)PacKeys != 0) {
-        if (prctl_wrapper(PR_PAC_SET_ENABLED_KEYS,
-                          PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
-                              PR_PAC_APDBKEY, // all keys
-                          0,                  // disable all
-                          0,                  // unused
-                          0)                  // unused
-            < 0) {
+        // Operate on all keys.
+        const long KeysToControl = 
+            PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY | PR_PAC_APDBKEY;
+        // Disable all.
+        const long EnabledBitMask = 0;
+        if (prctl_wrapper(PR_PAC_SET_ENABLED_KEYS, KeysToControl, 
+                          EnabledBitMask) < 0) {
           return "Failed to disable PAC keys";
         }
       }
