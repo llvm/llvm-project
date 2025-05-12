@@ -100,6 +100,13 @@ public:
     Timestamp.store(llvm::sys::toTimeT(std::chrono::system_clock::now()));
   }
 
+  void maybePrune(StringRef Path, time_t PruneInterval,
+                  time_t PruneAfter) override {
+    // FIXME: This only needs to be ran once per build, not in every
+    // compilation. Call it once per service.
+    maybePruneImpl(Path, PruneInterval, PruneAfter);
+  }
+
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
