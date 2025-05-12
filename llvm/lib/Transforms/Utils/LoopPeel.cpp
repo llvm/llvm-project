@@ -326,13 +326,7 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
   return 0;
 }
 
-/// Returns true if the last iteration can be peeled off and the condition (Pred
-/// LeftAR, RightSCEV) is known at the last iteration and the inverse condition
-/// is known at the second-to-last. This function also has to make sure the loop
-/// exit condition can be adjusted when peeling and that the loop executes at
-/// least 2 iterations.
-static bool canPeelLastIteration(Loop &L, const SCEVAddRecExpr *LeftAR,
-                                 const SCEV *RightSCEV, ScalarEvolution &SE) {
+bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
   const SCEV *BTC = SE.getBackedgeTakenCount(&L);
   Value *Inc;
   CmpPredicate Pred;
@@ -351,16 +345,27 @@ static bool canPeelLastIteration(Loop &L, const SCEVAddRecExpr *LeftAR,
   // * the exit condition must be a NE/EQ compare of an induction with step
   // of 1.
   BasicBlock *Latch = L.getLoopLatch();
-  if (Latch != L.getExitingBlock() ||
-      !match(Latch->getTerminator(),
-             m_Br(m_ICmp(Pred, m_Value(Inc), m_Value()), m_BasicBlock(Succ1),
-                  m_BasicBlock(Succ2))) ||
-      !((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
-        (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) ||
-      !isa<SCEVAddRecExpr>(SE.getSCEV(Inc)) ||
-      !cast<SCEVAddRecExpr>(SE.getSCEV(Inc))->getStepRecurrence(SE)->isOne())
+  return Latch == L.getExitingBlock() &&
+         match(Latch->getTerminator(),
+               m_Br(m_ICmp(Pred, m_Value(Inc), m_Value()), m_BasicBlock(Succ1),
+                    m_BasicBlock(Succ2))) &&
+         ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
+          (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) &&
+         isa<SCEVAddRecExpr>(SE.getSCEV(Inc)) &&
+         cast<SCEVAddRecExpr>(SE.getSCEV(Inc))->getStepRecurrence(SE)->isOne();
+}
+
+/// Returns true if the last iteration can be peeled off and the condition (Pred
+/// LeftAR, RightSCEV) is known at the last iteration and the inverse condition
+/// is known at the second-to-last.
+static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
+                                    const SCEVAddRecExpr *LeftAR,
+                                    const SCEV *RightSCEV,
+                                    ScalarEvolution &SE) {
+  if (!canPeelLastIteration(L, SE))
     return false;
 
+  const SCEV *BTC = SE.getBackedgeTakenCount(&L);
   const SCEV *ValAtLastIter =
       SE.applyLoopGuards(LeftAR->evaluateAtIteration(BTC, SE), &L);
   const SCEV *ValAtSecondToLastIter = LeftAR->evaluateAtIteration(
@@ -470,7 +475,7 @@ static int countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     const SCEV *Step = LeftAR->getStepRecurrence(SE);
     if (!PeelWhilePredicateIsKnown(NewPeelCount, IterVal, RightSCEV, Step,
                                    Pred)) {
-      if (canPeelLastIteration(L, LeftAR, RightSCEV, SE))
+      if (shouldPeelLastIteration(L, Pred, LeftAR, RightSCEV, SE))
         DesiredPeelCount = -1;
       return;
     }
@@ -987,8 +992,9 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
                     bool PreserveLCSSA, ValueToValueMapTy &LVMap) {
   assert(PeelCount > 0 && "Attempt to peel out zero iterations?");
   assert(canPeel(L) && "Attempt to peel a loop which is not peelable?");
-  assert((!PeelLast || PeelCount == 1) &&
-         "can only peel off a single iteration from the end for now");
+  assert((!PeelLast || (canPeelLastIteration(*L, *SE) && PeelCount == 1)) &&
+         "when peeling the last iteration, the loop must be supported and can "
+         "only peel a single iteration");
 
   LoopBlocksDFS LoopBlocks(L);
   LoopBlocks.perform(LI);
