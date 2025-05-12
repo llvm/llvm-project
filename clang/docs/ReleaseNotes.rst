@@ -579,6 +579,8 @@ Bug Fixes in This Version
   ``#include`` directive. (#GH138094)
 - Fixed a crash during constant evaluation involving invalid lambda captures
   (#GH138832)
+- Fixed a crash with an invalid member function parameter list with a default
+  argument which contains a pragma. (#GH113722)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
