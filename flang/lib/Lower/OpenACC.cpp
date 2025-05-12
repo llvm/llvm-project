@@ -416,7 +416,8 @@ static inline void genAtomicUpdateStatement(
     Fortran::lower::AbstractConverter &converter, mlir::Value lhsAddr,
     mlir::Type varType, const Fortran::parser::Variable &assignmentStmtVariable,
     const Fortran::parser::Expr &assignmentStmtExpr, mlir::Location loc,
-    mlir::Operation *atomicCaptureOp = nullptr) {
+    mlir::Operation *atomicCaptureOp = nullptr,
+    Fortran::lower::StatementContext *atomicCaptureStmtCtx = nullptr) {
   // Generate `atomic.update` operation for atomic assignment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -496,15 +497,24 @@ static inline void genAtomicUpdateStatement(
       },
       assignmentStmtExpr.u);
   Fortran::lower::StatementContext nonAtomicStmtCtx;
+  Fortran::lower::StatementContext *stmtCtxPtr = &nonAtomicStmtCtx;
   if (!nonAtomicSubExprs.empty()) {
     // Generate non atomic part before all the atomic operations.
     auto insertionPoint = firOpBuilder.saveInsertionPoint();
-    if (atomicCaptureOp)
+    if (atomicCaptureOp) {
+      assert(atomicCaptureStmtCtx && "must specify statement context");
       firOpBuilder.setInsertionPoint(atomicCaptureOp);
+      // Any clean-ups associated with the expression lowering
+      // must also be generated outside of the atomic update operation
+      // and after the atomic capture operation.
+      // The atomicCaptureStmtCtx will be finalized at the end
+      // of the atomic capture operation generation.
+      stmtCtxPtr = atomicCaptureStmtCtx;
+    }
     mlir::Value nonAtomicVal;
     for (auto *nonAtomicSubExpr : nonAtomicSubExprs) {
       nonAtomicVal = fir::getBase(converter.genExprValue(
-          currentLocation, *nonAtomicSubExpr, nonAtomicStmtCtx));
+          currentLocation, *nonAtomicSubExpr, *stmtCtxPtr));
       exprValueOverrides.try_emplace(nonAtomicSubExpr, nonAtomicVal);
     }
     if (atomicCaptureOp)
@@ -652,7 +662,7 @@ void genAtomicCapture(Fortran::lower::AbstractConverter &converter,
       genAtomicCaptureStatement(converter, stmt2LHSArg, stmt1LHSArg,
                                 elementType, loc);
       genAtomicUpdateStatement(converter, stmt2LHSArg, stmt2VarType, stmt2Var,
-                               stmt2Expr, loc, atomicCaptureOp);
+                               stmt2Expr, loc, atomicCaptureOp, &stmtCtx);
     } else {
       // Atomic capture construct is of the form [capture-stmt, write-stmt]
       firOpBuilder.setInsertionPoint(atomicCaptureOp);
@@ -672,13 +682,15 @@ void genAtomicCapture(Fortran::lower::AbstractConverter &converter,
         *Fortran::semantics::GetExpr(stmt2Expr);
     mlir::Type elementType = converter.genType(fromExpr);
     genAtomicUpdateStatement(converter, stmt1LHSArg, stmt1VarType, stmt1Var,
-                             stmt1Expr, loc, atomicCaptureOp);
+                             stmt1Expr, loc, atomicCaptureOp, &stmtCtx);
     genAtomicCaptureStatement(converter, stmt1LHSArg, stmt2LHSArg, elementType,
                               loc);
   }
   firOpBuilder.setInsertionPointToEnd(&block);
   firOpBuilder.create<mlir::acc::TerminatorOp>(loc);
-  firOpBuilder.setInsertionPointToStart(&block);
+  // The clean-ups associated with the statements inside the capture
+  // construct must be generated after the AtomicCaptureOp.
+  firOpBuilder.setInsertionPointAfter(atomicCaptureOp);
 }
 
 template <typename Op>
