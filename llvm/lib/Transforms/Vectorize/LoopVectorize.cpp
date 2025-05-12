@@ -8549,8 +8549,8 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(VPWidenPHIRecipe *PhiR) {
 
   SmallVector<VPValue *, 2> OperandsWithMask;
   for (unsigned In = 0; In < NumIncoming; In++) {
-    const VPBasicBlock *Pred = PhiR->getIncomingBlock(In);
     OperandsWithMask.push_back(PhiR->getIncomingValue(In));
+    const VPBasicBlock *Pred = PhiR->getIncomingBlock(In);
     VPValue *EdgeMask = getEdgeMask(Pred, PhiR->getParent());
     if (!EdgeMask) {
       assert(In == 0 && "Both null and non-null edge masks found");
@@ -8956,6 +8956,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
   Instruction *Instr = R->getUnderlyingInstr();
   SmallVector<VPValue *, 4> Operands(R->operands());
   if (auto *PhiR = dyn_cast<VPWidenPHIRecipe>(R)) {
+    // Handle phis in non-header blocks.
     if (PhiR->getParent()->getNumPredecessors() != 0)
       return tryToBlend(PhiR);
 

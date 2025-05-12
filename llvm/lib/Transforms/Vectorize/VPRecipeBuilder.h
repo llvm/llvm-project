@@ -122,7 +122,7 @@ class VPRecipeBuilder {
   tryToOptimizeInductionTruncate(TruncInst *I, ArrayRef<VPValue *> Operands,
                                  VFRange &Range);
 
-  /// Handle non-loop phi nodes. Return a new VPBlendRecipe otherwise. Currently
+  /// Handle non-loop phi nodes, returning a new VPBlendRecipe. Currently
   /// all such phi nodes are turned into a sequence of select instructions as
   /// the vectorizer currently performs full if-conversion.
   VPBlendRecipe *tryToBlend(VPWidenPHIRecipe *PhiR);
