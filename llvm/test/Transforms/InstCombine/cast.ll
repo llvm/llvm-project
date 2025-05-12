@@ -2044,12 +2044,9 @@ define <2 x i8> @trunc_lshr_zext_uses1(<2 x i8> %A) {
 
 define i8 @trunc_lshr_ext_halfWidth(i16 %a, i16 %b, i16 range(i16 0, 8) %shiftAmt) {
 ; ALL-LABEL: @trunc_lshr_ext_halfWidth(
-; ALL-NEXT:    [[ZEXT_A:%.*]] = zext i16 [[A:%.*]] to i32
-; ALL-NEXT:    [[ZEXT_B:%.*]] = zext i16 [[B:%.*]] to i32
-; ALL-NEXT:    [[ZEXT_SHIFTAMT:%.*]] = zext nneg i16 [[SHIFTAMT:%.*]] to i32
-; ALL-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
-; ALL-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], [[ZEXT_SHIFTAMT]]
-; ALL-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHR]] to i8
+; ALL-NEXT:    [[ADD:%.*]] = add i16 [[A:%.*]], [[B:%.*]]
+; ALL-NEXT:    [[SHR:%.*]] = lshr i16 [[ADD]], [[SHIFTAMT:%.*]]
+; ALL-NEXT:    [[TRUNC:%.*]] = trunc i16 [[SHR]] to i8
 ; ALL-NEXT:    ret i8 [[TRUNC]]
 ;
   %zext_a = zext i16 %a to i32
