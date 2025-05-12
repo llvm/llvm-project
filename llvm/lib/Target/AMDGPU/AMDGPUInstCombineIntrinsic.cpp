@@ -867,7 +867,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     } else if (match(Src1, PatternMatch::m_NaN()) || isa<UndefValue>(Src1)) {
       V = IC.Builder.CreateMinNum(Src0, Src2);
     } else if (match(Src2, PatternMatch::m_NaN()) || isa<UndefValue>(Src2)) {
-      V = IC.Builder.CreateMaxNum(Src0, Src1);
+      V = IC.Builder.CreateMinNum(Src0, Src1);
     }
 
     if (V) {

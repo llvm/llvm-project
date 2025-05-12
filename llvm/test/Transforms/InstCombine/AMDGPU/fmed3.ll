@@ -117,7 +117,7 @@ define float @fmed3_x_undef_y_f32(float %x, float %y) #1 {
 define float @fmed3_x_y_undef_f32(float %x, float %y) #1 {
 ; CHECK-LABEL: define float @fmed3_x_y_undef_f32(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float undef)
@@ -147,7 +147,7 @@ define float @fmed3_x_qnan0_y_f32(float %x, float %y) #1 {
 define float @fmed3_x_y_qnan0_f32(float %x, float %y) #1 {
 ; CHECK-LABEL: define float @fmed3_x_y_qnan0_f32(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0x7FF8000000000000)
@@ -276,7 +276,7 @@ define float @fmed3_0_nan_1_f32() #1 {
 define float @fmed3_0_1_nan_f32() #1 {
 ; CHECK-LABEL: define float @fmed3_0_1_nan_f32(
 ; CHECK-SAME: ) #[[ATTR1]] {
-; CHECK-NEXT:    ret float 1.000000e+00
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float 0x7FF8001000000000)
   ret float %med
@@ -303,7 +303,7 @@ define float @fmed3_0_undef_1_f32() #1 {
 define float @fmed3_0_1_undef_f32() #1 {
 ; CHECK-LABEL: define float @fmed3_0_1_undef_f32(
 ; CHECK-SAME: ) #[[ATTR1]] {
-; CHECK-NEXT:    ret float 1.000000e+00
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float undef)
   ret float %med
@@ -359,7 +359,7 @@ define float @fmed3_x_snan1_y_f32(float %x, float %y) #1 {
 define float @fmed3_x_y_snan1_f32(float %x, float %y) #1 {
 ; CHECK-LABEL: define float @fmed3_x_y_snan1_f32(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0x7FF4000000000000)
@@ -414,7 +414,7 @@ define float @fmed3_snan1_neg1_2_f32(float %x, float %y) #1 {
 define float @fmed3_neg2_3_snan1_f32(float %x, float %y) #1 {
 ; CHECK-LABEL: define float @fmed3_neg2_3_snan1_f32(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret float 3.000000e+00
+; CHECK-NEXT:    ret float -2.000000e+00
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float -2.0, float 3.0, float 0x7FF4000000000000)
   ret float %med3
@@ -447,7 +447,7 @@ define amdgpu_ps float @amdgpu_ps_default_fmed3_x_snan1_y_f32(float %x, float %y
 define amdgpu_ps float @amdgpu_ps_default_fmed3_x_y_snan1_f32(float %x, float %y) {
 ; CHECK-LABEL: define amdgpu_ps float @amdgpu_ps_default_fmed3_x_y_snan1_f32(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0x7FF4000000000000)
@@ -480,7 +480,7 @@ define amdgpu_ps float @amdgpu_ps_attr_fmed3_x_snan1_y_f32(float %x, float %y) #
 define amdgpu_ps float @amdgpu_ps_attr_fmed3_x_y_snan1_f32(float %x, float %y) #1 {
 ; CHECK-LABEL: define amdgpu_ps float @amdgpu_ps_attr_fmed3_x_y_snan1_f32(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0x7FF4000000000000)
