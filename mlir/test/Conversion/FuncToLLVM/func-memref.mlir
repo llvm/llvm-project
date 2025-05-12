@@ -123,3 +123,11 @@ func.func @loop_carried(%arg0 : index, %arg1 : index, %arg2 : index, %base0 : !b
   ^bb3:  // pred: ^bb1
     return %1, %2 : memref<64xi32, 201>, memref<64xi32, 201>
 }
+
+// -----
+
+func.func @memref_target_ext(%arg0: memref<4x!llvm.target<"spirv.Event">>) {
+  return
+}
+// CHECK-LABEL: func @memref_target_ext
+// CHECK-SAME: (%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: i64, %arg3: i64, %arg4: i64)
