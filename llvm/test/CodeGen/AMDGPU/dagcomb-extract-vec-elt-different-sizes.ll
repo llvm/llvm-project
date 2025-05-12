@@ -6,8 +6,6 @@
 define amdgpu_kernel void @eggs(i1 %arg, ptr addrspace(1) %arg1, ptr %arg2, ptr %arg3, ptr %arg4, ptr %arg5, ptr %arg6, ptr %arg7, ptr %arg8, ptr %arg9) {
 ; CHECK-LABEL: eggs:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
-; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; CHECK-NEXT:    s_load_dwordx16 s[12:27], s[8:9], 0x8
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
@@ -35,31 +33,17 @@ define amdgpu_kernel void @eggs(i1 %arg, ptr addrspace(1) %arg1, ptr %arg2, ptr 
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v7, 0
 ; CHECK-NEXT:  .LBB0_3: ; %bb41
+; CHECK-NEXT:    v_mov_b32_e32 v8, 0
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x48
-; CHECK-NEXT:    v_mov_b32_e32 v8, s14
-; CHECK-NEXT:    v_mov_b32_e32 v9, s15
-; CHECK-NEXT:    v_mov_b32_e32 v10, s16
-; CHECK-NEXT:    v_mov_b32_e32 v11, s17
-; CHECK-NEXT:    v_mov_b32_e32 v12, s18
-; CHECK-NEXT:    v_mov_b32_e32 v13, s19
-; CHECK-NEXT:    v_mov_b32_e32 v14, s20
-; CHECK-NEXT:    v_mov_b32_e32 v15, s21
-; CHECK-NEXT:    v_mov_b32_e32 v16, s22
-; CHECK-NEXT:    v_mov_b32_e32 v17, s23
-; CHECK-NEXT:    v_mov_b32_e32 v18, s24
-; CHECK-NEXT:    v_mov_b32_e32 v19, s25
-; CHECK-NEXT:    v_mov_b32_e32 v20, s26
-; CHECK-NEXT:    v_mov_b32_e32 v21, s27
-; CHECK-NEXT:    flat_store_byte v[8:9], v7
-; CHECK-NEXT:    flat_store_byte v[10:11], v6
-; CHECK-NEXT:    flat_store_byte v[12:13], v5
-; CHECK-NEXT:    flat_store_byte v[14:15], v4
-; CHECK-NEXT:    flat_store_byte v[16:17], v3
-; CHECK-NEXT:    flat_store_byte v[18:19], v2
-; CHECK-NEXT:    flat_store_byte v[20:21], v1
+; CHECK-NEXT:    global_store_byte v8, v7, s[14:15]
+; CHECK-NEXT:    global_store_byte v8, v6, s[16:17]
+; CHECK-NEXT:    global_store_byte v8, v5, s[18:19]
+; CHECK-NEXT:    global_store_byte v8, v4, s[20:21]
+; CHECK-NEXT:    global_store_byte v8, v3, s[22:23]
+; CHECK-NEXT:    global_store_byte v8, v2, s[24:25]
+; CHECK-NEXT:    global_store_byte v8, v1, s[26:27]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[0:1], s[0:1] op_sel:[0,1]
-; CHECK-NEXT:    flat_store_byte v[2:3], v0
+; CHECK-NEXT:    global_store_byte v8, v0, s[0:1]
 ; CHECK-NEXT:    s_endpgm
 bb:
   br i1 %arg, label %bb10, label %bb41

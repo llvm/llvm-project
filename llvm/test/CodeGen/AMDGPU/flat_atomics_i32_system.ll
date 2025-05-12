@@ -3823,90 +3823,110 @@ define amdgpu_gfx i32 @flat_atomic_max_i32_ret_offset_scalar(ptr inreg %out, i32
 define amdgpu_kernel void @atomic_max_i32_addr64_offset(ptr %out, i32 %in, i32 %index) {
 ; GCN1-LABEL: atomic_max_i32_addr64_offset:
 ; GCN1:       ; %bb.0: ; %entry
+; GCN1-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN1-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN1-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN1-NEXT:    s_cbranch_execz .LBB88_3
+; GCN1-NEXT:  ; %bb.1:
 ; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    s_ashr_i32 s5, s3, 31
 ; GCN1-NEXT:    s_mov_b32 s4, s3
 ; GCN1-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN1-NEXT:    s_add_u32 s0, s0, s4
-; GCN1-NEXT:    s_addc_u32 s1, s1, s5
-; GCN1-NEXT:    s_add_u32 s0, s0, 16
-; GCN1-NEXT:    s_addc_u32 s1, s1, 0
-; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v1, s1
-; GCN1-NEXT:    flat_load_dword v3, v[0:1]
+; GCN1-NEXT:    s_add_u32 s4, s0, s4
+; GCN1-NEXT:    s_addc_u32 s5, s1, s5
+; GCN1-NEXT:    s_load_dword s3, s[4:5], 0x4
 ; GCN1-NEXT:    s_mov_b64 s[0:1], 0
-; GCN1-NEXT:  .LBB88_1: ; %atomicrmw.start
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v1, s3
+; GCN1-NEXT:  .LBB88_2: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_max_i32_e32 v2, s2, v3
-; GCN1-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    v_max_i32_e32 v0, s2, v1
+; GCN1-NEXT:    v_mov_b32_e32 v3, v1
+; GCN1-NEXT:    v_mov_b32_e32 v2, v0
+; GCN1-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 offset:16 glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
-; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; GCN1-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN1-NEXT:    v_mov_b32_e32 v3, v2
+; GCN1-NEXT:    v_mov_b32_e32 v1, v2
 ; GCN1-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    s_cbranch_execnz .LBB88_1
-; GCN1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN1-NEXT:    s_cbranch_execnz .LBB88_2
+; GCN1-NEXT:  .LBB88_3:
 ; GCN1-NEXT:    s_endpgm
 ;
 ; GCN2-LABEL: atomic_max_i32_addr64_offset:
 ; GCN2:       ; %bb.0: ; %entry
+; GCN2-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN2-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN2-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN2-NEXT:    s_cbranch_execz .LBB88_3
+; GCN2-NEXT:  ; %bb.1:
 ; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN2-NEXT:    s_ashr_i32 s5, s3, 31
 ; GCN2-NEXT:    s_mov_b32 s4, s3
 ; GCN2-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN2-NEXT:    s_add_u32 s0, s0, s4
-; GCN2-NEXT:    s_addc_u32 s1, s1, s5
-; GCN2-NEXT:    s_add_u32 s0, s0, 16
-; GCN2-NEXT:    s_addc_u32 s1, s1, 0
-; GCN2-NEXT:    v_mov_b32_e32 v0, s0
-; GCN2-NEXT:    v_mov_b32_e32 v1, s1
-; GCN2-NEXT:    flat_load_dword v3, v[0:1]
+; GCN2-NEXT:    s_add_u32 s4, s0, s4
+; GCN2-NEXT:    s_addc_u32 s5, s1, s5
+; GCN2-NEXT:    s_load_dword s3, s[4:5], 0x10
+; GCN2-NEXT:    s_add_u32 s4, s4, 16
+; GCN2-NEXT:    s_addc_u32 s5, s5, 0
+; GCN2-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN2-NEXT:    s_mov_b64 s[0:1], 0
-; GCN2-NEXT:  .LBB88_1: ; %atomicrmw.start
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v3, s3
+; GCN2-NEXT:    v_mov_b32_e32 v1, s5
+; GCN2-NEXT:  .LBB88_2: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_max_i32_e32 v2, s2, v3
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    s_waitcnt vmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GCN2-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GCN2-NEXT:    v_mov_b32_e32 v3, v2
 ; GCN2-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN2-NEXT:    s_cbranch_execnz .LBB88_1
-; GCN2-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN2-NEXT:    s_cbranch_execnz .LBB88_2
+; GCN2-NEXT:  .LBB88_3:
 ; GCN2-NEXT:    s_endpgm
 ;
 ; GCN3-LABEL: atomic_max_i32_addr64_offset:
 ; GCN3:       ; %bb.0: ; %entry
+; GCN3-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN3-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN3-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN3-NEXT:    s_cbranch_execz .LBB88_3
+; GCN3-NEXT:  ; %bb.1:
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN3-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    s_ashr_i32 s5, s3, 31
 ; GCN3-NEXT:    s_mov_b32 s4, s3
 ; GCN3-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
 ; GCN3-NEXT:    s_add_u32 s0, s0, s4
 ; GCN3-NEXT:    s_addc_u32 s1, s1, s5
-; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v1, s1
-; GCN3-NEXT:    flat_load_dword v3, v[0:1] offset:16
-; GCN3-NEXT:    s_mov_b64 s[0:1], 0
-; GCN3-NEXT:  .LBB88_1: ; %atomicrmw.start
+; GCN3-NEXT:    s_load_dword s3, s[0:1], 0x10
+; GCN3-NEXT:    s_mov_b64 s[4:5], 0
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_mov_b32_e32 v1, s3
+; GCN3-NEXT:  .LBB88_2: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_max_i32_e32 v2, s2, v3
-; GCN3-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    v_max_i32_e32 v0, s2, v1
+; GCN3-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
-; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN3-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN3-NEXT:    v_mov_b32_e32 v3, v2
-; GCN3-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    s_cbranch_execnz .LBB88_1
-; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GCN3-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GCN3-NEXT:    v_mov_b32_e32 v1, v0
+; GCN3-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GCN3-NEXT:    s_cbranch_execnz .LBB88_2
+; GCN3-NEXT:  .LBB88_3:
 ; GCN3-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i32 %index
@@ -3918,105 +3938,153 @@ entry:
 define amdgpu_kernel void @atomic_max_i32_ret_addr64_offset(ptr %out, ptr %out2, i32 %in, i32 %index) {
 ; GCN1-LABEL: atomic_max_i32_ret_addr64_offset:
 ; GCN1:       ; %bb.0: ; %entry
-; GCN1-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0xd
 ; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN1-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
+; GCN1-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN1-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN1-NEXT:    ; implicit-def: $vgpr0
+; GCN1-NEXT:    s_and_saveexec_b64 s[10:11], vcc
+; GCN1-NEXT:    s_cbranch_execz .LBB89_4
+; GCN1-NEXT:  ; %bb.1:
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN1-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN1-NEXT:    s_mov_b32 s4, s7
+; GCN1-NEXT:    s_ashr_i32 s5, s9, 31
+; GCN1-NEXT:    s_mov_b32 s4, s9
 ; GCN1-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN1-NEXT:    s_add_u32 s0, s0, s4
-; GCN1-NEXT:    s_addc_u32 s1, s1, s5
-; GCN1-NEXT:    s_add_u32 s0, s0, 16
-; GCN1-NEXT:    s_addc_u32 s1, s1, 0
+; GCN1-NEXT:    s_add_u32 s4, s0, s4
+; GCN1-NEXT:    s_addc_u32 s5, s1, s5
+; GCN1-NEXT:    s_load_dword s0, s[4:5], 0x4
+; GCN1-NEXT:    s_mov_b64 s[12:13], 0
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v1, s1
-; GCN1-NEXT:    flat_load_dword v2, v[0:1]
-; GCN1-NEXT:    s_mov_b64 s[0:1], 0
-; GCN1-NEXT:  .LBB89_1: ; %atomicrmw.start
+; GCN1-NEXT:  .LBB89_2: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_mov_b32_e32 v3, v2
-; GCN1-NEXT:    v_max_i32_e32 v2, s6, v3
-; GCN1-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v2, v0
+; GCN1-NEXT:    v_max_i32_e32 v1, s8, v2
+; GCN1-NEXT:    v_mov_b32_e32 v0, v1
+; GCN1-NEXT:    v_mov_b32_e32 v1, v2
+; GCN1-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
-; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN1-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN1-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    s_cbranch_execnz .LBB89_1
-; GCN1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN1-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    v_mov_b32_e32 v0, s2
-; GCN1-NEXT:    v_mov_b32_e32 v1, s3
-; GCN1-NEXT:    flat_store_dword v[0:1], v2
+; GCN1-NEXT:    v_cmp_eq_u32_e64 s[0:1], v0, v2
+; GCN1-NEXT:    s_or_b64 s[12:13], s[0:1], s[12:13]
+; GCN1-NEXT:    s_andn2_b64 exec, exec, s[12:13]
+; GCN1-NEXT:    s_cbranch_execnz .LBB89_2
+; GCN1-NEXT:  ; %bb.3: ; %Flow
+; GCN1-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GCN1-NEXT:  .LBB89_4: ; %Flow6
+; GCN1-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN1-NEXT:    v_mov_b32_e32 v0, s8
+; GCN1-NEXT:    v_bfrev_b32_e32 v1, 1
+; GCN1-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
+; GCN1-NEXT:    s_mov_b32 s4, s2
+; GCN1-NEXT:    s_mov_b32 s5, s3
+; GCN1-NEXT:    v_max_i32_e32 v0, s0, v0
+; GCN1-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN1-NEXT:    s_endpgm
 ;
 ; GCN2-LABEL: atomic_max_i32_ret_addr64_offset:
 ; GCN2:       ; %bb.0: ; %entry
-; GCN2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN2-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
+; GCN2-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN2-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    s_and_saveexec_b64 s[6:7], vcc
+; GCN2-NEXT:    s_cbranch_execz .LBB89_4
+; GCN2-NEXT:  ; %bb.1:
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN2-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN2-NEXT:    s_mov_b32 s4, s7
-; GCN2-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN2-NEXT:    s_add_u32 s0, s0, s4
-; GCN2-NEXT:    s_addc_u32 s1, s1, s5
+; GCN2-NEXT:    s_ashr_i32 s9, s5, 31
+; GCN2-NEXT:    s_mov_b32 s8, s5
+; GCN2-NEXT:    s_lshl_b64 s[8:9], s[8:9], 2
+; GCN2-NEXT:    s_add_u32 s0, s0, s8
+; GCN2-NEXT:    s_addc_u32 s1, s1, s9
+; GCN2-NEXT:    s_load_dword s5, s[0:1], 0x10
 ; GCN2-NEXT:    s_add_u32 s0, s0, 16
 ; GCN2-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s0
+; GCN2-NEXT:    s_mov_b64 s[8:9], 0
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v2, s5
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s1
-; GCN2-NEXT:    flat_load_dword v2, v[0:1]
-; GCN2-NEXT:    s_mov_b64 s[0:1], 0
-; GCN2-NEXT:  .LBB89_1: ; %atomicrmw.start
+; GCN2-NEXT:  .LBB89_2: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v3, v2
-; GCN2-NEXT:    v_max_i32_e32 v2, s6, v3
+; GCN2-NEXT:    v_max_i32_e32 v2, s4, v3
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    s_waitcnt vmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
-; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN2-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN2-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN2-NEXT:    s_cbranch_execnz .LBB89_1
-; GCN2-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN2-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GCN2-NEXT:    v_cmp_eq_u32_e64 s[0:1], v2, v3
+; GCN2-NEXT:    s_or_b64 s[8:9], s[0:1], s[8:9]
+; GCN2-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; GCN2-NEXT:    s_cbranch_execnz .LBB89_2
+; GCN2-NEXT:  ; %bb.3: ; %Flow
+; GCN2-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GCN2-NEXT:  .LBB89_4: ; %Flow5
+; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_readfirstlane_b32 s0, v2
+; GCN2-NEXT:    v_mov_b32_e32 v2, s4
+; GCN2-NEXT:    v_bfrev_b32_e32 v3, 1
+; GCN2-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s3
+; GCN2-NEXT:    v_max_i32_e32 v2, s0, v2
 ; GCN2-NEXT:    flat_store_dword v[0:1], v2
 ; GCN2-NEXT:    s_endpgm
 ;
 ; GCN3-LABEL: atomic_max_i32_ret_addr64_offset:
 ; GCN3:       ; %bb.0: ; %entry
-; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN3-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN3-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN3-NEXT:    ; implicit-def: $vgpr0
+; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GCN3-NEXT:    s_cbranch_execz .LBB89_4
+; GCN3-NEXT:  ; %bb.1:
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN3-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN3-NEXT:    s_mov_b32 s4, s7
-; GCN3-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN3-NEXT:    s_add_u32 s0, s0, s4
-; GCN3-NEXT:    s_addc_u32 s1, s1, s5
+; GCN3-NEXT:    s_ashr_i32 s9, s7, 31
+; GCN3-NEXT:    s_mov_b32 s8, s7
+; GCN3-NEXT:    s_lshl_b64 s[8:9], s[8:9], 2
+; GCN3-NEXT:    s_add_u32 s8, s0, s8
+; GCN3-NEXT:    s_addc_u32 s9, s1, s9
+; GCN3-NEXT:    s_load_dword s0, s[8:9], 0x10
+; GCN3-NEXT:    s_mov_b64 s[10:11], 0
+; GCN3-NEXT:    v_mov_b32_e32 v1, 0
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v1, s1
-; GCN3-NEXT:    flat_load_dword v2, v[0:1] offset:16
-; GCN3-NEXT:    s_mov_b64 s[0:1], 0
-; GCN3-NEXT:  .LBB89_1: ; %atomicrmw.start
+; GCN3-NEXT:  .LBB89_2: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_mov_b32_e32 v3, v2
+; GCN3-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN3-NEXT:    v_max_i32_e32 v2, s6, v3
-; GCN3-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    global_atomic_cmpswap v0, v1, v[2:3], s[8:9] offset:16 glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
-; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN3-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN3-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    s_cbranch_execnz .LBB89_1
-; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN3-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    v_mov_b32_e32 v0, s2
-; GCN3-NEXT:    v_mov_b32_e32 v1, s3
-; GCN3-NEXT:    flat_store_dword v[0:1], v2
+; GCN3-NEXT:    v_cmp_eq_u32_e64 s[0:1], v0, v3
+; GCN3-NEXT:    s_or_b64 s[10:11], s[0:1], s[10:11]
+; GCN3-NEXT:    s_andn2_b64 exec, exec, s[10:11]
+; GCN3-NEXT:    s_cbranch_execnz .LBB89_2
+; GCN3-NEXT:  ; %bb.3: ; %Flow
+; GCN3-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN3-NEXT:  .LBB89_4: ; %Flow6
+; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN3-NEXT:    v_mov_b32_e32 v0, s6
+; GCN3-NEXT:    v_bfrev_b32_e32 v2, 1
+; GCN3-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN3-NEXT:    v_mov_b32_e32 v1, 0
+; GCN3-NEXT:    v_max_i32_e32 v0, s0, v0
+; GCN3-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN3-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i32 %index
@@ -4029,86 +4097,108 @@ entry:
 define amdgpu_kernel void @atomic_max_i32_addr64(ptr %out, i32 %in, i32 %index) {
 ; GCN1-LABEL: atomic_max_i32_addr64:
 ; GCN1:       ; %bb.0: ; %entry
+; GCN1-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN1-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN1-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN1-NEXT:    s_cbranch_execz .LBB90_3
+; GCN1-NEXT:  ; %bb.1:
 ; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    s_ashr_i32 s5, s3, 31
 ; GCN1-NEXT:    s_mov_b32 s4, s3
 ; GCN1-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN1-NEXT:    s_add_u32 s0, s0, s4
-; GCN1-NEXT:    s_addc_u32 s1, s1, s5
-; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v1, s1
-; GCN1-NEXT:    flat_load_dword v3, v[0:1]
+; GCN1-NEXT:    s_add_u32 s4, s0, s4
+; GCN1-NEXT:    s_addc_u32 s5, s1, s5
+; GCN1-NEXT:    s_load_dword s3, s[4:5], 0x0
 ; GCN1-NEXT:    s_mov_b64 s[0:1], 0
-; GCN1-NEXT:  .LBB90_1: ; %atomicrmw.start
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v1, s3
+; GCN1-NEXT:  .LBB90_2: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_max_i32_e32 v2, s2, v3
-; GCN1-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    v_max_i32_e32 v0, s2, v1
+; GCN1-NEXT:    v_mov_b32_e32 v3, v1
+; GCN1-NEXT:    v_mov_b32_e32 v2, v0
+; GCN1-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
-; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; GCN1-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN1-NEXT:    v_mov_b32_e32 v3, v2
+; GCN1-NEXT:    v_mov_b32_e32 v1, v2
 ; GCN1-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    s_cbranch_execnz .LBB90_1
-; GCN1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN1-NEXT:    s_cbranch_execnz .LBB90_2
+; GCN1-NEXT:  .LBB90_3:
 ; GCN1-NEXT:    s_endpgm
 ;
 ; GCN2-LABEL: atomic_max_i32_addr64:
 ; GCN2:       ; %bb.0: ; %entry
+; GCN2-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN2-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN2-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN2-NEXT:    s_cbranch_execz .LBB90_3
+; GCN2-NEXT:  ; %bb.1:
 ; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN2-NEXT:    s_ashr_i32 s5, s3, 31
 ; GCN2-NEXT:    s_mov_b32 s4, s3
 ; GCN2-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN2-NEXT:    s_add_u32 s0, s0, s4
-; GCN2-NEXT:    s_addc_u32 s1, s1, s5
-; GCN2-NEXT:    v_mov_b32_e32 v0, s0
-; GCN2-NEXT:    v_mov_b32_e32 v1, s1
-; GCN2-NEXT:    flat_load_dword v3, v[0:1]
+; GCN2-NEXT:    s_add_u32 s4, s0, s4
+; GCN2-NEXT:    s_addc_u32 s5, s1, s5
+; GCN2-NEXT:    s_load_dword s3, s[4:5], 0x0
+; GCN2-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN2-NEXT:    s_mov_b64 s[0:1], 0
-; GCN2-NEXT:  .LBB90_1: ; %atomicrmw.start
+; GCN2-NEXT:    v_mov_b32_e32 v1, s5
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v3, s3
+; GCN2-NEXT:  .LBB90_2: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_max_i32_e32 v2, s2, v3
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    s_waitcnt vmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GCN2-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GCN2-NEXT:    v_mov_b32_e32 v3, v2
 ; GCN2-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN2-NEXT:    s_cbranch_execnz .LBB90_1
-; GCN2-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN2-NEXT:    s_cbranch_execnz .LBB90_2
+; GCN2-NEXT:  .LBB90_3:
 ; GCN2-NEXT:    s_endpgm
 ;
 ; GCN3-LABEL: atomic_max_i32_addr64:
 ; GCN3:       ; %bb.0: ; %entry
+; GCN3-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN3-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN3-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN3-NEXT:    s_cbranch_execz .LBB90_3
+; GCN3-NEXT:  ; %bb.1:
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN3-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    s_ashr_i32 s5, s3, 31
 ; GCN3-NEXT:    s_mov_b32 s4, s3
 ; GCN3-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
 ; GCN3-NEXT:    s_add_u32 s0, s0, s4
 ; GCN3-NEXT:    s_addc_u32 s1, s1, s5
-; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v1, s1
-; GCN3-NEXT:    flat_load_dword v3, v[0:1]
-; GCN3-NEXT:    s_mov_b64 s[0:1], 0
-; GCN3-NEXT:  .LBB90_1: ; %atomicrmw.start
+; GCN3-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GCN3-NEXT:    s_mov_b64 s[4:5], 0
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_mov_b32_e32 v1, s3
+; GCN3-NEXT:  .LBB90_2: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_max_i32_e32 v2, s2, v3
-; GCN3-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    v_max_i32_e32 v0, s2, v1
+; GCN3-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
-; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN3-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN3-NEXT:    v_mov_b32_e32 v3, v2
-; GCN3-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    s_cbranch_execnz .LBB90_1
-; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GCN3-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GCN3-NEXT:    v_mov_b32_e32 v1, v0
+; GCN3-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GCN3-NEXT:    s_cbranch_execnz .LBB90_2
+; GCN3-NEXT:  .LBB90_3:
 ; GCN3-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i32 %index
@@ -4119,101 +4209,151 @@ entry:
 define amdgpu_kernel void @atomic_max_i32_ret_addr64(ptr %out, ptr %out2, i32 %in, i32 %index) {
 ; GCN1-LABEL: atomic_max_i32_ret_addr64:
 ; GCN1:       ; %bb.0: ; %entry
-; GCN1-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0xd
 ; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN1-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
+; GCN1-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN1-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN1-NEXT:    ; implicit-def: $vgpr0
+; GCN1-NEXT:    s_and_saveexec_b64 s[10:11], vcc
+; GCN1-NEXT:    s_cbranch_execz .LBB91_4
+; GCN1-NEXT:  ; %bb.1:
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN1-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN1-NEXT:    s_mov_b32 s4, s7
+; GCN1-NEXT:    s_ashr_i32 s5, s9, 31
+; GCN1-NEXT:    s_mov_b32 s4, s9
 ; GCN1-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN1-NEXT:    s_add_u32 s0, s0, s4
-; GCN1-NEXT:    s_addc_u32 s1, s1, s5
+; GCN1-NEXT:    s_add_u32 s4, s0, s4
+; GCN1-NEXT:    s_addc_u32 s5, s1, s5
+; GCN1-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GCN1-NEXT:    s_mov_b64 s[12:13], 0
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v1, s1
-; GCN1-NEXT:    flat_load_dword v2, v[0:1]
-; GCN1-NEXT:    s_mov_b64 s[0:1], 0
-; GCN1-NEXT:  .LBB91_1: ; %atomicrmw.start
+; GCN1-NEXT:  .LBB91_2: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_mov_b32_e32 v3, v2
-; GCN1-NEXT:    v_max_i32_e32 v2, s6, v3
-; GCN1-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v2, v0
+; GCN1-NEXT:    v_max_i32_e32 v1, s8, v2
+; GCN1-NEXT:    v_mov_b32_e32 v0, v1
+; GCN1-NEXT:    v_mov_b32_e32 v1, v2
+; GCN1-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
-; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN1-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN1-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    s_cbranch_execnz .LBB91_1
-; GCN1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN1-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    v_mov_b32_e32 v0, s2
-; GCN1-NEXT:    v_mov_b32_e32 v1, s3
-; GCN1-NEXT:    flat_store_dword v[0:1], v2
+; GCN1-NEXT:    v_cmp_eq_u32_e64 s[0:1], v0, v2
+; GCN1-NEXT:    s_or_b64 s[12:13], s[0:1], s[12:13]
+; GCN1-NEXT:    s_andn2_b64 exec, exec, s[12:13]
+; GCN1-NEXT:    s_cbranch_execnz .LBB91_2
+; GCN1-NEXT:  ; %bb.3: ; %Flow
+; GCN1-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GCN1-NEXT:  .LBB91_4: ; %Flow5
+; GCN1-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN1-NEXT:    v_mov_b32_e32 v0, s8
+; GCN1-NEXT:    v_bfrev_b32_e32 v1, 1
+; GCN1-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
+; GCN1-NEXT:    s_mov_b32 s4, s2
+; GCN1-NEXT:    s_mov_b32 s5, s3
+; GCN1-NEXT:    v_max_i32_e32 v0, s0, v0
+; GCN1-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN1-NEXT:    s_endpgm
 ;
 ; GCN2-LABEL: atomic_max_i32_ret_addr64:
 ; GCN2:       ; %bb.0: ; %entry
-; GCN2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN2-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
+; GCN2-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN2-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    s_and_saveexec_b64 s[6:7], vcc
+; GCN2-NEXT:    s_cbranch_execz .LBB91_4
+; GCN2-NEXT:  ; %bb.1:
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN2-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN2-NEXT:    s_mov_b32 s4, s7
-; GCN2-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN2-NEXT:    s_add_u32 s0, s0, s4
-; GCN2-NEXT:    s_addc_u32 s1, s1, s5
+; GCN2-NEXT:    s_ashr_i32 s9, s5, 31
+; GCN2-NEXT:    s_mov_b32 s8, s5
+; GCN2-NEXT:    s_lshl_b64 s[8:9], s[8:9], 2
+; GCN2-NEXT:    s_add_u32 s0, s0, s8
+; GCN2-NEXT:    s_addc_u32 s1, s1, s9
+; GCN2-NEXT:    s_load_dword s5, s[0:1], 0x0
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s0
+; GCN2-NEXT:    s_mov_b64 s[8:9], 0
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s1
-; GCN2-NEXT:    flat_load_dword v2, v[0:1]
-; GCN2-NEXT:    s_mov_b64 s[0:1], 0
-; GCN2-NEXT:  .LBB91_1: ; %atomicrmw.start
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v2, s5
+; GCN2-NEXT:  .LBB91_2: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v3, v2
-; GCN2-NEXT:    v_max_i32_e32 v2, s6, v3
+; GCN2-NEXT:    v_max_i32_e32 v2, s4, v3
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    s_waitcnt vmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
-; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN2-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN2-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN2-NEXT:    s_cbranch_execnz .LBB91_1
-; GCN2-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN2-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GCN2-NEXT:    v_cmp_eq_u32_e64 s[0:1], v2, v3
+; GCN2-NEXT:    s_or_b64 s[8:9], s[0:1], s[8:9]
+; GCN2-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; GCN2-NEXT:    s_cbranch_execnz .LBB91_2
+; GCN2-NEXT:  ; %bb.3: ; %Flow
+; GCN2-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GCN2-NEXT:  .LBB91_4: ; %Flow5
+; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_readfirstlane_b32 s0, v2
+; GCN2-NEXT:    v_mov_b32_e32 v2, s4
+; GCN2-NEXT:    v_bfrev_b32_e32 v3, 1
+; GCN2-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s3
+; GCN2-NEXT:    v_max_i32_e32 v2, s0, v2
 ; GCN2-NEXT:    flat_store_dword v[0:1], v2
 ; GCN2-NEXT:    s_endpgm
 ;
 ; GCN3-LABEL: atomic_max_i32_ret_addr64:
 ; GCN3:       ; %bb.0: ; %entry
-; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN3-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN3-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN3-NEXT:    ; implicit-def: $vgpr0
+; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GCN3-NEXT:    s_cbranch_execz .LBB91_4
+; GCN3-NEXT:  ; %bb.1:
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN3-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN3-NEXT:    s_mov_b32 s4, s7
-; GCN3-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN3-NEXT:    s_add_u32 s0, s0, s4
-; GCN3-NEXT:    s_addc_u32 s1, s1, s5
+; GCN3-NEXT:    s_ashr_i32 s9, s7, 31
+; GCN3-NEXT:    s_mov_b32 s8, s7
+; GCN3-NEXT:    s_lshl_b64 s[8:9], s[8:9], 2
+; GCN3-NEXT:    s_add_u32 s8, s0, s8
+; GCN3-NEXT:    s_addc_u32 s9, s1, s9
+; GCN3-NEXT:    s_load_dword s0, s[8:9], 0x0
+; GCN3-NEXT:    s_mov_b64 s[10:11], 0
+; GCN3-NEXT:    v_mov_b32_e32 v1, 0
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v1, s1
-; GCN3-NEXT:    flat_load_dword v2, v[0:1]
-; GCN3-NEXT:    s_mov_b64 s[0:1], 0
-; GCN3-NEXT:  .LBB91_1: ; %atomicrmw.start
+; GCN3-NEXT:  .LBB91_2: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_mov_b32_e32 v3, v2
+; GCN3-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN3-NEXT:    v_max_i32_e32 v2, s6, v3
-; GCN3-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    global_atomic_cmpswap v0, v1, v[2:3], s[8:9] glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
-; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN3-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN3-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    s_cbranch_execnz .LBB91_1
-; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN3-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    v_mov_b32_e32 v0, s2
-; GCN3-NEXT:    v_mov_b32_e32 v1, s3
-; GCN3-NEXT:    flat_store_dword v[0:1], v2
+; GCN3-NEXT:    v_cmp_eq_u32_e64 s[0:1], v0, v3
+; GCN3-NEXT:    s_or_b64 s[10:11], s[0:1], s[10:11]
+; GCN3-NEXT:    s_andn2_b64 exec, exec, s[10:11]
+; GCN3-NEXT:    s_cbranch_execnz .LBB91_2
+; GCN3-NEXT:  ; %bb.3: ; %Flow
+; GCN3-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN3-NEXT:  .LBB91_4: ; %Flow5
+; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN3-NEXT:    v_mov_b32_e32 v0, s6
+; GCN3-NEXT:    v_bfrev_b32_e32 v2, 1
+; GCN3-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN3-NEXT:    v_mov_b32_e32 v1, 0
+; GCN3-NEXT:    v_max_i32_e32 v0, s0, v0
+; GCN3-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN3-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i32 %index
@@ -4966,90 +5106,110 @@ define amdgpu_gfx i32 @flat_atomic_umax_i32_ret_offset_scalar(ptr inreg %out, i3
 define amdgpu_kernel void @atomic_umax_i32_addr64_offset(ptr %out, i32 %in, i32 %index) {
 ; GCN1-LABEL: atomic_umax_i32_addr64_offset:
 ; GCN1:       ; %bb.0: ; %entry
+; GCN1-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN1-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN1-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN1-NEXT:    s_cbranch_execz .LBB102_3
+; GCN1-NEXT:  ; %bb.1:
 ; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    s_ashr_i32 s5, s3, 31
 ; GCN1-NEXT:    s_mov_b32 s4, s3
 ; GCN1-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN1-NEXT:    s_add_u32 s0, s0, s4
-; GCN1-NEXT:    s_addc_u32 s1, s1, s5
-; GCN1-NEXT:    s_add_u32 s0, s0, 16
-; GCN1-NEXT:    s_addc_u32 s1, s1, 0
-; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v1, s1
-; GCN1-NEXT:    flat_load_dword v3, v[0:1]
+; GCN1-NEXT:    s_add_u32 s4, s0, s4
+; GCN1-NEXT:    s_addc_u32 s5, s1, s5
+; GCN1-NEXT:    s_load_dword s3, s[4:5], 0x4
 ; GCN1-NEXT:    s_mov_b64 s[0:1], 0
-; GCN1-NEXT:  .LBB102_1: ; %atomicrmw.start
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v1, s3
+; GCN1-NEXT:  .LBB102_2: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_max_u32_e32 v2, s2, v3
-; GCN1-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    v_max_u32_e32 v0, s2, v1
+; GCN1-NEXT:    v_mov_b32_e32 v3, v1
+; GCN1-NEXT:    v_mov_b32_e32 v2, v0
+; GCN1-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 offset:16 glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
-; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; GCN1-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN1-NEXT:    v_mov_b32_e32 v3, v2
+; GCN1-NEXT:    v_mov_b32_e32 v1, v2
 ; GCN1-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    s_cbranch_execnz .LBB102_1
-; GCN1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN1-NEXT:    s_cbranch_execnz .LBB102_2
+; GCN1-NEXT:  .LBB102_3:
 ; GCN1-NEXT:    s_endpgm
 ;
 ; GCN2-LABEL: atomic_umax_i32_addr64_offset:
 ; GCN2:       ; %bb.0: ; %entry
+; GCN2-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN2-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN2-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN2-NEXT:    s_cbranch_execz .LBB102_3
+; GCN2-NEXT:  ; %bb.1:
 ; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN2-NEXT:    s_ashr_i32 s5, s3, 31
 ; GCN2-NEXT:    s_mov_b32 s4, s3
 ; GCN2-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN2-NEXT:    s_add_u32 s0, s0, s4
-; GCN2-NEXT:    s_addc_u32 s1, s1, s5
-; GCN2-NEXT:    s_add_u32 s0, s0, 16
-; GCN2-NEXT:    s_addc_u32 s1, s1, 0
-; GCN2-NEXT:    v_mov_b32_e32 v0, s0
-; GCN2-NEXT:    v_mov_b32_e32 v1, s1
-; GCN2-NEXT:    flat_load_dword v3, v[0:1]
+; GCN2-NEXT:    s_add_u32 s4, s0, s4
+; GCN2-NEXT:    s_addc_u32 s5, s1, s5
+; GCN2-NEXT:    s_load_dword s3, s[4:5], 0x10
+; GCN2-NEXT:    s_add_u32 s4, s4, 16
+; GCN2-NEXT:    s_addc_u32 s5, s5, 0
+; GCN2-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN2-NEXT:    s_mov_b64 s[0:1], 0
-; GCN2-NEXT:  .LBB102_1: ; %atomicrmw.start
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v3, s3
+; GCN2-NEXT:    v_mov_b32_e32 v1, s5
+; GCN2-NEXT:  .LBB102_2: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_max_u32_e32 v2, s2, v3
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    s_waitcnt vmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GCN2-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GCN2-NEXT:    v_mov_b32_e32 v3, v2
 ; GCN2-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN2-NEXT:    s_cbranch_execnz .LBB102_1
-; GCN2-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN2-NEXT:    s_cbranch_execnz .LBB102_2
+; GCN2-NEXT:  .LBB102_3:
 ; GCN2-NEXT:    s_endpgm
 ;
 ; GCN3-LABEL: atomic_umax_i32_addr64_offset:
 ; GCN3:       ; %bb.0: ; %entry
+; GCN3-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN3-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN3-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN3-NEXT:    s_cbranch_execz .LBB102_3
+; GCN3-NEXT:  ; %bb.1:
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN3-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    s_ashr_i32 s5, s3, 31
 ; GCN3-NEXT:    s_mov_b32 s4, s3
 ; GCN3-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
 ; GCN3-NEXT:    s_add_u32 s0, s0, s4
 ; GCN3-NEXT:    s_addc_u32 s1, s1, s5
-; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v1, s1
-; GCN3-NEXT:    flat_load_dword v3, v[0:1] offset:16
-; GCN3-NEXT:    s_mov_b64 s[0:1], 0
-; GCN3-NEXT:  .LBB102_1: ; %atomicrmw.start
+; GCN3-NEXT:    s_load_dword s3, s[0:1], 0x10
+; GCN3-NEXT:    s_mov_b64 s[4:5], 0
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_mov_b32_e32 v1, s3
+; GCN3-NEXT:  .LBB102_2: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_max_u32_e32 v2, s2, v3
-; GCN3-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    v_max_u32_e32 v0, s2, v1
+; GCN3-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
-; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN3-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN3-NEXT:    v_mov_b32_e32 v3, v2
-; GCN3-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    s_cbranch_execnz .LBB102_1
-; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GCN3-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GCN3-NEXT:    v_mov_b32_e32 v1, v0
+; GCN3-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GCN3-NEXT:    s_cbranch_execnz .LBB102_2
+; GCN3-NEXT:  .LBB102_3:
 ; GCN3-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i32 %index
@@ -5061,105 +5221,150 @@ entry:
 define amdgpu_kernel void @atomic_umax_i32_ret_addr64_offset(ptr %out, ptr %out2, i32 %in, i32 %index) {
 ; GCN1-LABEL: atomic_umax_i32_ret_addr64_offset:
 ; GCN1:       ; %bb.0: ; %entry
-; GCN1-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0xd
 ; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN1-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
+; GCN1-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN1-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN1-NEXT:    ; implicit-def: $vgpr0
+; GCN1-NEXT:    s_and_saveexec_b64 s[10:11], vcc
+; GCN1-NEXT:    s_cbranch_execz .LBB103_4
+; GCN1-NEXT:  ; %bb.1:
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN1-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN1-NEXT:    s_mov_b32 s4, s7
+; GCN1-NEXT:    s_ashr_i32 s5, s9, 31
+; GCN1-NEXT:    s_mov_b32 s4, s9
 ; GCN1-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN1-NEXT:    s_add_u32 s0, s0, s4
-; GCN1-NEXT:    s_addc_u32 s1, s1, s5
-; GCN1-NEXT:    s_add_u32 s0, s0, 16
-; GCN1-NEXT:    s_addc_u32 s1, s1, 0
+; GCN1-NEXT:    s_add_u32 s4, s0, s4
+; GCN1-NEXT:    s_addc_u32 s5, s1, s5
+; GCN1-NEXT:    s_load_dword s0, s[4:5], 0x4
+; GCN1-NEXT:    s_mov_b64 s[12:13], 0
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v1, s1
-; GCN1-NEXT:    flat_load_dword v2, v[0:1]
-; GCN1-NEXT:    s_mov_b64 s[0:1], 0
-; GCN1-NEXT:  .LBB103_1: ; %atomicrmw.start
+; GCN1-NEXT:  .LBB103_2: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_mov_b32_e32 v3, v2
-; GCN1-NEXT:    v_max_u32_e32 v2, s6, v3
-; GCN1-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v2, v0
+; GCN1-NEXT:    v_max_u32_e32 v1, s8, v2
+; GCN1-NEXT:    v_mov_b32_e32 v0, v1
+; GCN1-NEXT:    v_mov_b32_e32 v1, v2
+; GCN1-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
-; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN1-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN1-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    s_cbranch_execnz .LBB103_1
-; GCN1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN1-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    v_mov_b32_e32 v0, s2
-; GCN1-NEXT:    v_mov_b32_e32 v1, s3
-; GCN1-NEXT:    flat_store_dword v[0:1], v2
+; GCN1-NEXT:    v_cmp_eq_u32_e64 s[0:1], v0, v2
+; GCN1-NEXT:    s_or_b64 s[12:13], s[0:1], s[12:13]
+; GCN1-NEXT:    s_andn2_b64 exec, exec, s[12:13]
+; GCN1-NEXT:    s_cbranch_execnz .LBB103_2
+; GCN1-NEXT:  ; %bb.3: ; %Flow
+; GCN1-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GCN1-NEXT:  .LBB103_4: ; %Flow6
+; GCN1-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN1-NEXT:    v_mov_b32_e32 v0, s8
+; GCN1-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
+; GCN1-NEXT:    s_mov_b32 s4, s2
+; GCN1-NEXT:    s_mov_b32 s5, s3
+; GCN1-NEXT:    v_max_u32_e32 v0, s0, v0
+; GCN1-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN1-NEXT:    s_endpgm
 ;
 ; GCN2-LABEL: atomic_umax_i32_ret_addr64_offset:
 ; GCN2:       ; %bb.0: ; %entry
-; GCN2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN2-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
+; GCN2-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN2-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    s_and_saveexec_b64 s[6:7], vcc
+; GCN2-NEXT:    s_cbranch_execz .LBB103_4
+; GCN2-NEXT:  ; %bb.1:
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN2-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN2-NEXT:    s_mov_b32 s4, s7
-; GCN2-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN2-NEXT:    s_add_u32 s0, s0, s4
-; GCN2-NEXT:    s_addc_u32 s1, s1, s5
+; GCN2-NEXT:    s_ashr_i32 s9, s5, 31
+; GCN2-NEXT:    s_mov_b32 s8, s5
+; GCN2-NEXT:    s_lshl_b64 s[8:9], s[8:9], 2
+; GCN2-NEXT:    s_add_u32 s0, s0, s8
+; GCN2-NEXT:    s_addc_u32 s1, s1, s9
+; GCN2-NEXT:    s_load_dword s5, s[0:1], 0x10
 ; GCN2-NEXT:    s_add_u32 s0, s0, 16
 ; GCN2-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s0
+; GCN2-NEXT:    s_mov_b64 s[8:9], 0
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v2, s5
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s1
-; GCN2-NEXT:    flat_load_dword v2, v[0:1]
-; GCN2-NEXT:    s_mov_b64 s[0:1], 0
-; GCN2-NEXT:  .LBB103_1: ; %atomicrmw.start
+; GCN2-NEXT:  .LBB103_2: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v3, v2
-; GCN2-NEXT:    v_max_u32_e32 v2, s6, v3
+; GCN2-NEXT:    v_max_u32_e32 v2, s4, v3
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    s_waitcnt vmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
-; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN2-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN2-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN2-NEXT:    s_cbranch_execnz .LBB103_1
-; GCN2-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN2-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GCN2-NEXT:    v_cmp_eq_u32_e64 s[0:1], v2, v3
+; GCN2-NEXT:    s_or_b64 s[8:9], s[0:1], s[8:9]
+; GCN2-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; GCN2-NEXT:    s_cbranch_execnz .LBB103_2
+; GCN2-NEXT:  ; %bb.3: ; %Flow
+; GCN2-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GCN2-NEXT:  .LBB103_4: ; %Flow5
+; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_readfirstlane_b32 s0, v2
+; GCN2-NEXT:    v_mov_b32_e32 v2, s4
+; GCN2-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s3
+; GCN2-NEXT:    v_max_u32_e32 v2, s0, v2
 ; GCN2-NEXT:    flat_store_dword v[0:1], v2
 ; GCN2-NEXT:    s_endpgm
 ;
 ; GCN3-LABEL: atomic_umax_i32_ret_addr64_offset:
 ; GCN3:       ; %bb.0: ; %entry
-; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN3-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN3-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN3-NEXT:    ; implicit-def: $vgpr0
+; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GCN3-NEXT:    s_cbranch_execz .LBB103_4
+; GCN3-NEXT:  ; %bb.1:
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN3-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN3-NEXT:    s_mov_b32 s4, s7
-; GCN3-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN3-NEXT:    s_add_u32 s0, s0, s4
-; GCN3-NEXT:    s_addc_u32 s1, s1, s5
+; GCN3-NEXT:    s_ashr_i32 s9, s7, 31
+; GCN3-NEXT:    s_mov_b32 s8, s7
+; GCN3-NEXT:    s_lshl_b64 s[8:9], s[8:9], 2
+; GCN3-NEXT:    s_add_u32 s8, s0, s8
+; GCN3-NEXT:    s_addc_u32 s9, s1, s9
+; GCN3-NEXT:    s_load_dword s0, s[8:9], 0x10
+; GCN3-NEXT:    s_mov_b64 s[10:11], 0
+; GCN3-NEXT:    v_mov_b32_e32 v1, 0
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v1, s1
-; GCN3-NEXT:    flat_load_dword v2, v[0:1] offset:16
-; GCN3-NEXT:    s_mov_b64 s[0:1], 0
-; GCN3-NEXT:  .LBB103_1: ; %atomicrmw.start
+; GCN3-NEXT:  .LBB103_2: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_mov_b32_e32 v3, v2
+; GCN3-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN3-NEXT:    v_max_u32_e32 v2, s6, v3
-; GCN3-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    global_atomic_cmpswap v0, v1, v[2:3], s[8:9] offset:16 glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
-; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN3-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN3-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    s_cbranch_execnz .LBB103_1
-; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN3-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    v_mov_b32_e32 v0, s2
-; GCN3-NEXT:    v_mov_b32_e32 v1, s3
-; GCN3-NEXT:    flat_store_dword v[0:1], v2
+; GCN3-NEXT:    v_cmp_eq_u32_e64 s[0:1], v0, v3
+; GCN3-NEXT:    s_or_b64 s[10:11], s[0:1], s[10:11]
+; GCN3-NEXT:    s_andn2_b64 exec, exec, s[10:11]
+; GCN3-NEXT:    s_cbranch_execnz .LBB103_2
+; GCN3-NEXT:  ; %bb.3: ; %Flow
+; GCN3-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN3-NEXT:  .LBB103_4: ; %Flow6
+; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN3-NEXT:    v_mov_b32_e32 v0, s6
+; GCN3-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN3-NEXT:    v_mov_b32_e32 v1, 0
+; GCN3-NEXT:    v_max_u32_e32 v0, s0, v0
+; GCN3-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN3-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i32 %index
@@ -5172,101 +5377,148 @@ entry:
 define amdgpu_kernel void @atomic_umax_i32_ret_addr64(ptr %out, ptr %out2, i32 %in, i32 %index) {
 ; GCN1-LABEL: atomic_umax_i32_ret_addr64:
 ; GCN1:       ; %bb.0: ; %entry
-; GCN1-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0xd
 ; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN1-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
+; GCN1-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN1-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN1-NEXT:    ; implicit-def: $vgpr0
+; GCN1-NEXT:    s_and_saveexec_b64 s[10:11], vcc
+; GCN1-NEXT:    s_cbranch_execz .LBB104_4
+; GCN1-NEXT:  ; %bb.1:
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN1-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN1-NEXT:    s_mov_b32 s4, s7
+; GCN1-NEXT:    s_ashr_i32 s5, s9, 31
+; GCN1-NEXT:    s_mov_b32 s4, s9
 ; GCN1-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN1-NEXT:    s_add_u32 s0, s0, s4
-; GCN1-NEXT:    s_addc_u32 s1, s1, s5
+; GCN1-NEXT:    s_add_u32 s4, s0, s4
+; GCN1-NEXT:    s_addc_u32 s5, s1, s5
+; GCN1-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GCN1-NEXT:    s_mov_b64 s[12:13], 0
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v1, s1
-; GCN1-NEXT:    flat_load_dword v2, v[0:1]
-; GCN1-NEXT:    s_mov_b64 s[0:1], 0
-; GCN1-NEXT:  .LBB104_1: ; %atomicrmw.start
+; GCN1-NEXT:  .LBB104_2: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_mov_b32_e32 v3, v2
-; GCN1-NEXT:    v_max_u32_e32 v2, s6, v3
-; GCN1-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v2, v0
+; GCN1-NEXT:    v_max_u32_e32 v1, s8, v2
+; GCN1-NEXT:    v_mov_b32_e32 v0, v1
+; GCN1-NEXT:    v_mov_b32_e32 v1, v2
+; GCN1-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
-; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN1-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN1-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    s_cbranch_execnz .LBB104_1
-; GCN1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN1-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    v_mov_b32_e32 v0, s2
-; GCN1-NEXT:    v_mov_b32_e32 v1, s3
-; GCN1-NEXT:    flat_store_dword v[0:1], v2
+; GCN1-NEXT:    v_cmp_eq_u32_e64 s[0:1], v0, v2
+; GCN1-NEXT:    s_or_b64 s[12:13], s[0:1], s[12:13]
+; GCN1-NEXT:    s_andn2_b64 exec, exec, s[12:13]
+; GCN1-NEXT:    s_cbranch_execnz .LBB104_2
+; GCN1-NEXT:  ; %bb.3: ; %Flow
+; GCN1-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GCN1-NEXT:  .LBB104_4: ; %Flow5
+; GCN1-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN1-NEXT:    v_mov_b32_e32 v0, s8
+; GCN1-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
+; GCN1-NEXT:    s_mov_b32 s4, s2
+; GCN1-NEXT:    s_mov_b32 s5, s3
+; GCN1-NEXT:    v_max_u32_e32 v0, s0, v0
+; GCN1-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN1-NEXT:    s_endpgm
 ;
 ; GCN2-LABEL: atomic_umax_i32_ret_addr64:
 ; GCN2:       ; %bb.0: ; %entry
-; GCN2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN2-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
+; GCN2-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN2-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    s_and_saveexec_b64 s[6:7], vcc
+; GCN2-NEXT:    s_cbranch_execz .LBB104_4
+; GCN2-NEXT:  ; %bb.1:
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN2-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN2-NEXT:    s_mov_b32 s4, s7
-; GCN2-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN2-NEXT:    s_add_u32 s0, s0, s4
-; GCN2-NEXT:    s_addc_u32 s1, s1, s5
+; GCN2-NEXT:    s_ashr_i32 s9, s5, 31
+; GCN2-NEXT:    s_mov_b32 s8, s5
+; GCN2-NEXT:    s_lshl_b64 s[8:9], s[8:9], 2
+; GCN2-NEXT:    s_add_u32 s0, s0, s8
+; GCN2-NEXT:    s_addc_u32 s1, s1, s9
+; GCN2-NEXT:    s_load_dword s5, s[0:1], 0x0
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s0
+; GCN2-NEXT:    s_mov_b64 s[8:9], 0
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s1
-; GCN2-NEXT:    flat_load_dword v2, v[0:1]
-; GCN2-NEXT:    s_mov_b64 s[0:1], 0
-; GCN2-NEXT:  .LBB104_1: ; %atomicrmw.start
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v2, s5
+; GCN2-NEXT:  .LBB104_2: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v3, v2
-; GCN2-NEXT:    v_max_u32_e32 v2, s6, v3
+; GCN2-NEXT:    v_max_u32_e32 v2, s4, v3
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    s_waitcnt vmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
-; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN2-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN2-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN2-NEXT:    s_cbranch_execnz .LBB104_1
-; GCN2-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN2-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GCN2-NEXT:    v_cmp_eq_u32_e64 s[0:1], v2, v3
+; GCN2-NEXT:    s_or_b64 s[8:9], s[0:1], s[8:9]
+; GCN2-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; GCN2-NEXT:    s_cbranch_execnz .LBB104_2
+; GCN2-NEXT:  ; %bb.3: ; %Flow
+; GCN2-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GCN2-NEXT:  .LBB104_4: ; %Flow5
+; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_readfirstlane_b32 s0, v2
+; GCN2-NEXT:    v_mov_b32_e32 v2, s4
+; GCN2-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s3
+; GCN2-NEXT:    v_max_u32_e32 v2, s0, v2
 ; GCN2-NEXT:    flat_store_dword v[0:1], v2
 ; GCN2-NEXT:    s_endpgm
 ;
 ; GCN3-LABEL: atomic_umax_i32_ret_addr64:
 ; GCN3:       ; %bb.0: ; %entry
-; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN3-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN3-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN3-NEXT:    ; implicit-def: $vgpr0
+; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GCN3-NEXT:    s_cbranch_execz .LBB104_4
+; GCN3-NEXT:  ; %bb.1:
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN3-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN3-NEXT:    s_mov_b32 s4, s7
-; GCN3-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN3-NEXT:    s_add_u32 s0, s0, s4
-; GCN3-NEXT:    s_addc_u32 s1, s1, s5
+; GCN3-NEXT:    s_ashr_i32 s9, s7, 31
+; GCN3-NEXT:    s_mov_b32 s8, s7
+; GCN3-NEXT:    s_lshl_b64 s[8:9], s[8:9], 2
+; GCN3-NEXT:    s_add_u32 s8, s0, s8
+; GCN3-NEXT:    s_addc_u32 s9, s1, s9
+; GCN3-NEXT:    s_load_dword s0, s[8:9], 0x0
+; GCN3-NEXT:    s_mov_b64 s[10:11], 0
+; GCN3-NEXT:    v_mov_b32_e32 v1, 0
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v1, s1
-; GCN3-NEXT:    flat_load_dword v2, v[0:1]
-; GCN3-NEXT:    s_mov_b64 s[0:1], 0
-; GCN3-NEXT:  .LBB104_1: ; %atomicrmw.start
+; GCN3-NEXT:  .LBB104_2: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_mov_b32_e32 v3, v2
+; GCN3-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN3-NEXT:    v_max_u32_e32 v2, s6, v3
-; GCN3-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    global_atomic_cmpswap v0, v1, v[2:3], s[8:9] glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
-; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN3-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN3-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    s_cbranch_execnz .LBB104_1
-; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN3-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    v_mov_b32_e32 v0, s2
-; GCN3-NEXT:    v_mov_b32_e32 v1, s3
-; GCN3-NEXT:    flat_store_dword v[0:1], v2
+; GCN3-NEXT:    v_cmp_eq_u32_e64 s[0:1], v0, v3
+; GCN3-NEXT:    s_or_b64 s[10:11], s[0:1], s[10:11]
+; GCN3-NEXT:    s_andn2_b64 exec, exec, s[10:11]
+; GCN3-NEXT:    s_cbranch_execnz .LBB104_2
+; GCN3-NEXT:  ; %bb.3: ; %Flow
+; GCN3-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN3-NEXT:  .LBB104_4: ; %Flow5
+; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN3-NEXT:    v_mov_b32_e32 v0, s6
+; GCN3-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN3-NEXT:    v_mov_b32_e32 v1, 0
+; GCN3-NEXT:    v_max_u32_e32 v0, s0, v0
+; GCN3-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN3-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i32 %index
@@ -6760,90 +7012,110 @@ define amdgpu_gfx i32 @flat_atomic_min_i32_ret_offset_scalar(ptr inreg %out, i32
 define amdgpu_kernel void @atomic_min_i32_addr64_offset(ptr %out, i32 %in, i32 %index) {
 ; GCN1-LABEL: atomic_min_i32_addr64_offset:
 ; GCN1:       ; %bb.0: ; %entry
+; GCN1-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN1-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN1-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN1-NEXT:    s_cbranch_execz .LBB125_3
+; GCN1-NEXT:  ; %bb.1:
 ; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    s_ashr_i32 s5, s3, 31
 ; GCN1-NEXT:    s_mov_b32 s4, s3
 ; GCN1-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN1-NEXT:    s_add_u32 s0, s0, s4
-; GCN1-NEXT:    s_addc_u32 s1, s1, s5
-; GCN1-NEXT:    s_add_u32 s0, s0, 16
-; GCN1-NEXT:    s_addc_u32 s1, s1, 0
-; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v1, s1
-; GCN1-NEXT:    flat_load_dword v3, v[0:1]
+; GCN1-NEXT:    s_add_u32 s4, s0, s4
+; GCN1-NEXT:    s_addc_u32 s5, s1, s5
+; GCN1-NEXT:    s_load_dword s3, s[4:5], 0x4
 ; GCN1-NEXT:    s_mov_b64 s[0:1], 0
-; GCN1-NEXT:  .LBB125_1: ; %atomicrmw.start
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v1, s3
+; GCN1-NEXT:  .LBB125_2: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_min_i32_e32 v2, s2, v3
-; GCN1-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    v_min_i32_e32 v0, s2, v1
+; GCN1-NEXT:    v_mov_b32_e32 v3, v1
+; GCN1-NEXT:    v_mov_b32_e32 v2, v0
+; GCN1-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 offset:16 glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
-; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; GCN1-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN1-NEXT:    v_mov_b32_e32 v3, v2
+; GCN1-NEXT:    v_mov_b32_e32 v1, v2
 ; GCN1-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    s_cbranch_execnz .LBB125_1
-; GCN1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN1-NEXT:    s_cbranch_execnz .LBB125_2
+; GCN1-NEXT:  .LBB125_3:
 ; GCN1-NEXT:    s_endpgm
 ;
 ; GCN2-LABEL: atomic_min_i32_addr64_offset:
 ; GCN2:       ; %bb.0: ; %entry
+; GCN2-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN2-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN2-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN2-NEXT:    s_cbranch_execz .LBB125_3
+; GCN2-NEXT:  ; %bb.1:
 ; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN2-NEXT:    s_ashr_i32 s5, s3, 31
 ; GCN2-NEXT:    s_mov_b32 s4, s3
 ; GCN2-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN2-NEXT:    s_add_u32 s0, s0, s4
-; GCN2-NEXT:    s_addc_u32 s1, s1, s5
-; GCN2-NEXT:    s_add_u32 s0, s0, 16
-; GCN2-NEXT:    s_addc_u32 s1, s1, 0
-; GCN2-NEXT:    v_mov_b32_e32 v0, s0
-; GCN2-NEXT:    v_mov_b32_e32 v1, s1
-; GCN2-NEXT:    flat_load_dword v3, v[0:1]
+; GCN2-NEXT:    s_add_u32 s4, s0, s4
+; GCN2-NEXT:    s_addc_u32 s5, s1, s5
+; GCN2-NEXT:    s_load_dword s3, s[4:5], 0x10
+; GCN2-NEXT:    s_add_u32 s4, s4, 16
+; GCN2-NEXT:    s_addc_u32 s5, s5, 0
+; GCN2-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN2-NEXT:    s_mov_b64 s[0:1], 0
-; GCN2-NEXT:  .LBB125_1: ; %atomicrmw.start
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v3, s3
+; GCN2-NEXT:    v_mov_b32_e32 v1, s5
+; GCN2-NEXT:  .LBB125_2: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_min_i32_e32 v2, s2, v3
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    s_waitcnt vmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GCN2-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GCN2-NEXT:    v_mov_b32_e32 v3, v2
 ; GCN2-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN2-NEXT:    s_cbranch_execnz .LBB125_1
-; GCN2-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN2-NEXT:    s_cbranch_execnz .LBB125_2
+; GCN2-NEXT:  .LBB125_3:
 ; GCN2-NEXT:    s_endpgm
 ;
 ; GCN3-LABEL: atomic_min_i32_addr64_offset:
 ; GCN3:       ; %bb.0: ; %entry
+; GCN3-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN3-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN3-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN3-NEXT:    s_cbranch_execz .LBB125_3
+; GCN3-NEXT:  ; %bb.1:
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN3-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    s_ashr_i32 s5, s3, 31
 ; GCN3-NEXT:    s_mov_b32 s4, s3
 ; GCN3-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
 ; GCN3-NEXT:    s_add_u32 s0, s0, s4
 ; GCN3-NEXT:    s_addc_u32 s1, s1, s5
-; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v1, s1
-; GCN3-NEXT:    flat_load_dword v3, v[0:1] offset:16
-; GCN3-NEXT:    s_mov_b64 s[0:1], 0
-; GCN3-NEXT:  .LBB125_1: ; %atomicrmw.start
+; GCN3-NEXT:    s_load_dword s3, s[0:1], 0x10
+; GCN3-NEXT:    s_mov_b64 s[4:5], 0
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_mov_b32_e32 v1, s3
+; GCN3-NEXT:  .LBB125_2: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_min_i32_e32 v2, s2, v3
-; GCN3-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    v_min_i32_e32 v0, s2, v1
+; GCN3-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] offset:16 glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
-; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN3-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN3-NEXT:    v_mov_b32_e32 v3, v2
-; GCN3-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    s_cbranch_execnz .LBB125_1
-; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GCN3-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GCN3-NEXT:    v_mov_b32_e32 v1, v0
+; GCN3-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GCN3-NEXT:    s_cbranch_execnz .LBB125_2
+; GCN3-NEXT:  .LBB125_3:
 ; GCN3-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i32 %index
@@ -6855,105 +7127,153 @@ entry:
 define amdgpu_kernel void @atomic_min_i32_ret_addr64_offset(ptr %out, ptr %out2, i32 %in, i32 %index) {
 ; GCN1-LABEL: atomic_min_i32_ret_addr64_offset:
 ; GCN1:       ; %bb.0: ; %entry
-; GCN1-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0xd
 ; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN1-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
+; GCN1-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN1-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN1-NEXT:    ; implicit-def: $vgpr0
+; GCN1-NEXT:    s_and_saveexec_b64 s[10:11], vcc
+; GCN1-NEXT:    s_cbranch_execz .LBB126_4
+; GCN1-NEXT:  ; %bb.1:
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN1-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN1-NEXT:    s_mov_b32 s4, s7
+; GCN1-NEXT:    s_ashr_i32 s5, s9, 31
+; GCN1-NEXT:    s_mov_b32 s4, s9
 ; GCN1-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN1-NEXT:    s_add_u32 s0, s0, s4
-; GCN1-NEXT:    s_addc_u32 s1, s1, s5
-; GCN1-NEXT:    s_add_u32 s0, s0, 16
-; GCN1-NEXT:    s_addc_u32 s1, s1, 0
+; GCN1-NEXT:    s_add_u32 s4, s0, s4
+; GCN1-NEXT:    s_addc_u32 s5, s1, s5
+; GCN1-NEXT:    s_load_dword s0, s[4:5], 0x4
+; GCN1-NEXT:    s_mov_b64 s[12:13], 0
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v1, s1
-; GCN1-NEXT:    flat_load_dword v2, v[0:1]
-; GCN1-NEXT:    s_mov_b64 s[0:1], 0
-; GCN1-NEXT:  .LBB126_1: ; %atomicrmw.start
+; GCN1-NEXT:  .LBB126_2: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_mov_b32_e32 v3, v2
-; GCN1-NEXT:    v_min_i32_e32 v2, s6, v3
-; GCN1-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v2, v0
+; GCN1-NEXT:    v_min_i32_e32 v1, s8, v2
+; GCN1-NEXT:    v_mov_b32_e32 v0, v1
+; GCN1-NEXT:    v_mov_b32_e32 v1, v2
+; GCN1-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
-; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN1-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN1-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    s_cbranch_execnz .LBB126_1
-; GCN1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN1-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    v_mov_b32_e32 v0, s2
-; GCN1-NEXT:    v_mov_b32_e32 v1, s3
-; GCN1-NEXT:    flat_store_dword v[0:1], v2
+; GCN1-NEXT:    v_cmp_eq_u32_e64 s[0:1], v0, v2
+; GCN1-NEXT:    s_or_b64 s[12:13], s[0:1], s[12:13]
+; GCN1-NEXT:    s_andn2_b64 exec, exec, s[12:13]
+; GCN1-NEXT:    s_cbranch_execnz .LBB126_2
+; GCN1-NEXT:  ; %bb.3: ; %Flow
+; GCN1-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GCN1-NEXT:  .LBB126_4: ; %Flow6
+; GCN1-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN1-NEXT:    v_mov_b32_e32 v0, s8
+; GCN1-NEXT:    v_bfrev_b32_e32 v1, -2
+; GCN1-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
+; GCN1-NEXT:    s_mov_b32 s4, s2
+; GCN1-NEXT:    s_mov_b32 s5, s3
+; GCN1-NEXT:    v_min_i32_e32 v0, s0, v0
+; GCN1-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN1-NEXT:    s_endpgm
 ;
 ; GCN2-LABEL: atomic_min_i32_ret_addr64_offset:
 ; GCN2:       ; %bb.0: ; %entry
-; GCN2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN2-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
+; GCN2-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN2-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    s_and_saveexec_b64 s[6:7], vcc
+; GCN2-NEXT:    s_cbranch_execz .LBB126_4
+; GCN2-NEXT:  ; %bb.1:
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN2-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN2-NEXT:    s_mov_b32 s4, s7
-; GCN2-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN2-NEXT:    s_add_u32 s0, s0, s4
-; GCN2-NEXT:    s_addc_u32 s1, s1, s5
+; GCN2-NEXT:    s_ashr_i32 s9, s5, 31
+; GCN2-NEXT:    s_mov_b32 s8, s5
+; GCN2-NEXT:    s_lshl_b64 s[8:9], s[8:9], 2
+; GCN2-NEXT:    s_add_u32 s0, s0, s8
+; GCN2-NEXT:    s_addc_u32 s1, s1, s9
+; GCN2-NEXT:    s_load_dword s5, s[0:1], 0x10
 ; GCN2-NEXT:    s_add_u32 s0, s0, 16
 ; GCN2-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s0
+; GCN2-NEXT:    s_mov_b64 s[8:9], 0
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v2, s5
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s1
-; GCN2-NEXT:    flat_load_dword v2, v[0:1]
-; GCN2-NEXT:    s_mov_b64 s[0:1], 0
-; GCN2-NEXT:  .LBB126_1: ; %atomicrmw.start
+; GCN2-NEXT:  .LBB126_2: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v3, v2
-; GCN2-NEXT:    v_min_i32_e32 v2, s6, v3
+; GCN2-NEXT:    v_min_i32_e32 v2, s4, v3
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    s_waitcnt vmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
-; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN2-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN2-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN2-NEXT:    s_cbranch_execnz .LBB126_1
-; GCN2-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN2-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GCN2-NEXT:    v_cmp_eq_u32_e64 s[0:1], v2, v3
+; GCN2-NEXT:    s_or_b64 s[8:9], s[0:1], s[8:9]
+; GCN2-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; GCN2-NEXT:    s_cbranch_execnz .LBB126_2
+; GCN2-NEXT:  ; %bb.3: ; %Flow
+; GCN2-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GCN2-NEXT:  .LBB126_4: ; %Flow5
+; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_readfirstlane_b32 s0, v2
+; GCN2-NEXT:    v_mov_b32_e32 v2, s4
+; GCN2-NEXT:    v_bfrev_b32_e32 v3, -2
+; GCN2-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s3
+; GCN2-NEXT:    v_min_i32_e32 v2, s0, v2
 ; GCN2-NEXT:    flat_store_dword v[0:1], v2
 ; GCN2-NEXT:    s_endpgm
 ;
 ; GCN3-LABEL: atomic_min_i32_ret_addr64_offset:
 ; GCN3:       ; %bb.0: ; %entry
-; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN3-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN3-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN3-NEXT:    ; implicit-def: $vgpr0
+; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GCN3-NEXT:    s_cbranch_execz .LBB126_4
+; GCN3-NEXT:  ; %bb.1:
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN3-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN3-NEXT:    s_mov_b32 s4, s7
-; GCN3-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN3-NEXT:    s_add_u32 s0, s0, s4
-; GCN3-NEXT:    s_addc_u32 s1, s1, s5
+; GCN3-NEXT:    s_ashr_i32 s9, s7, 31
+; GCN3-NEXT:    s_mov_b32 s8, s7
+; GCN3-NEXT:    s_lshl_b64 s[8:9], s[8:9], 2
+; GCN3-NEXT:    s_add_u32 s8, s0, s8
+; GCN3-NEXT:    s_addc_u32 s9, s1, s9
+; GCN3-NEXT:    s_load_dword s0, s[8:9], 0x10
+; GCN3-NEXT:    s_mov_b64 s[10:11], 0
+; GCN3-NEXT:    v_mov_b32_e32 v1, 0
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v1, s1
-; GCN3-NEXT:    flat_load_dword v2, v[0:1] offset:16
-; GCN3-NEXT:    s_mov_b64 s[0:1], 0
-; GCN3-NEXT:  .LBB126_1: ; %atomicrmw.start
+; GCN3-NEXT:  .LBB126_2: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_mov_b32_e32 v3, v2
+; GCN3-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN3-NEXT:    v_min_i32_e32 v2, s6, v3
-; GCN3-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 glc
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    global_atomic_cmpswap v0, v1, v[2:3], s[8:9] offset:16 glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
-; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN3-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN3-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    s_cbranch_execnz .LBB126_1
-; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN3-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    v_mov_b32_e32 v0, s2
-; GCN3-NEXT:    v_mov_b32_e32 v1, s3
-; GCN3-NEXT:    flat_store_dword v[0:1], v2
+; GCN3-NEXT:    v_cmp_eq_u32_e64 s[0:1], v0, v3
+; GCN3-NEXT:    s_or_b64 s[10:11], s[0:1], s[10:11]
+; GCN3-NEXT:    s_andn2_b64 exec, exec, s[10:11]
+; GCN3-NEXT:    s_cbranch_execnz .LBB126_2
+; GCN3-NEXT:  ; %bb.3: ; %Flow
+; GCN3-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN3-NEXT:  .LBB126_4: ; %Flow6
+; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN3-NEXT:    v_mov_b32_e32 v0, s6
+; GCN3-NEXT:    v_bfrev_b32_e32 v2, -2
+; GCN3-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN3-NEXT:    v_mov_b32_e32 v1, 0
+; GCN3-NEXT:    v_min_i32_e32 v0, s0, v0
+; GCN3-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN3-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i32 %index
@@ -6966,74 +7286,96 @@ entry:
 define amdgpu_kernel void @atomic_min_i32(ptr %out, i32 %in) {
 ; GCN1-LABEL: atomic_min_i32:
 ; GCN1:       ; %bb.0: ; %entry
-; GCN1-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x9
-; GCN1-NEXT:    s_load_dword s2, s[4:5], 0xb
-; GCN1-NEXT:    s_mov_b64 s[0:1], 0
+; GCN1-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN1-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN1-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN1-NEXT:    s_cbranch_execz .LBB127_3
+; GCN1-NEXT:  ; %bb.1:
+; GCN1-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN1-NEXT:    s_load_dword s6, s[4:5], 0xb
+; GCN1-NEXT:    s_mov_b64 s[4:5], 0
+; GCN1-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN1-NEXT:    v_mov_b32_e32 v0, s6
-; GCN1-NEXT:    v_mov_b32_e32 v1, s7
-; GCN1-NEXT:    flat_load_dword v3, v[0:1]
-; GCN1-NEXT:  .LBB127_1: ; %atomicrmw.start
+; GCN1-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v1, s2
+; GCN1-NEXT:    s_mov_b32 s2, -1
+; GCN1-NEXT:  .LBB127_2: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_min_i32_e32 v2, s2, v3
-; GCN1-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    v_min_i32_e32 v0, s6, v1
+; GCN1-NEXT:    v_mov_b32_e32 v3, v1
+; GCN1-NEXT:    v_mov_b32_e32 v2, v0
+; GCN1-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[0:3], 0 glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
-; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN1-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN1-NEXT:    v_mov_b32_e32 v3, v2
-; GCN1-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    s_cbranch_execnz .LBB127_1
-; GCN1-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
+; GCN1-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GCN1-NEXT:    v_mov_b32_e32 v1, v2
+; GCN1-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GCN1-NEXT:    s_cbranch_execnz .LBB127_2
+; GCN1-NEXT:  .LBB127_3:
 ; GCN1-NEXT:    s_endpgm
 ;
 ; GCN2-LABEL: atomic_min_i32:
 ; GCN2:       ; %bb.0: ; %entry
+; GCN2-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN2-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN2-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN2-NEXT:    s_cbranch_execz .LBB127_3
+; GCN2-NEXT:  ; %bb.1:
 ; GCN2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; GCN2-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GCN2-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    s_load_dword s3, s[6:7], 0x0
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s7
-; GCN2-NEXT:    flat_load_dword v3, v[0:1]
-; GCN2-NEXT:  .LBB127_1: ; %atomicrmw.start
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v3, s3
+; GCN2-NEXT:  .LBB127_2: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_min_i32_e32 v2, s2, v3
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    s_waitcnt vmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GCN2-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GCN2-NEXT:    v_mov_b32_e32 v3, v2
 ; GCN2-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN2-NEXT:    s_cbranch_execnz .LBB127_1
-; GCN2-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN2-NEXT:    s_cbranch_execnz .LBB127_2
+; GCN2-NEXT:  .LBB127_3:
 ; GCN2-NEXT:    s_endpgm
 ;
 ; GCN3-LABEL: atomic_min_i32:
 ; GCN3:       ; %bb.0: ; %entry
-; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
-; GCN3-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GCN3-NEXT:    s_mov_b64 s[0:1], 0
+; GCN3-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN3-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN3-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN3-NEXT:    s_cbranch_execz .LBB127_3
+; GCN3-NEXT:  ; %bb.1:
+; GCN3-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN3-NEXT:    s_load_dword s6, s[4:5], 0x2c
+; GCN3-NEXT:    s_mov_b64 s[2:3], 0
+; GCN3-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN3-NEXT:    v_mov_b32_e32 v0, s6
-; GCN3-NEXT:    v_mov_b32_e32 v1, s7
-; GCN3-NEXT:    flat_load_dword v3, v[0:1]
-; GCN3-NEXT:  .LBB127_1: ; %atomicrmw.start
+; GCN3-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_mov_b32_e32 v1, s4
+; GCN3-NEXT:  .LBB127_2: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_min_i32_e32 v2, s2, v3
-; GCN3-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    v_min_i32_e32 v0, s6, v1
+; GCN3-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
-; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN3-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN3-NEXT:    v_mov_b32_e32 v3, v2
-; GCN3-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    s_cbranch_execnz .LBB127_1
-; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GCN3-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GCN3-NEXT:    v_mov_b32_e32 v1, v0
+; GCN3-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GCN3-NEXT:    s_cbranch_execnz .LBB127_2
+; GCN3-NEXT:  .LBB127_3:
 ; GCN3-NEXT:    s_endpgm
 entry:
   %tmp0 = atomicrmw min ptr %out, i32 %in seq_cst
@@ -7043,101 +7385,151 @@ entry:
 define amdgpu_kernel void @atomic_min_i32_ret_addr64(ptr %out, ptr %out2, i32 %in, i32 %index) {
 ; GCN1-LABEL: atomic_min_i32_ret_addr64:
 ; GCN1:       ; %bb.0: ; %entry
-; GCN1-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0xd
 ; GCN1-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN1-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
+; GCN1-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
+; GCN1-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, exec_hi, v0
+; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN1-NEXT:    ; implicit-def: $vgpr0
+; GCN1-NEXT:    s_and_saveexec_b64 s[10:11], vcc
+; GCN1-NEXT:    s_cbranch_execz .LBB128_4
+; GCN1-NEXT:  ; %bb.1:
 ; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN1-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN1-NEXT:    s_mov_b32 s4, s7
+; GCN1-NEXT:    s_ashr_i32 s5, s9, 31
+; GCN1-NEXT:    s_mov_b32 s4, s9
 ; GCN1-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN1-NEXT:    s_add_u32 s0, s0, s4
-; GCN1-NEXT:    s_addc_u32 s1, s1, s5
+; GCN1-NEXT:    s_add_u32 s4, s0, s4
+; GCN1-NEXT:    s_addc_u32 s5, s1, s5
+; GCN1-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GCN1-NEXT:    s_mov_b64 s[12:13], 0
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN1-NEXT:    v_mov_b32_e32 v0, s0
-; GCN1-NEXT:    v_mov_b32_e32 v1, s1
-; GCN1-NEXT:    flat_load_dword v2, v[0:1]
-; GCN1-NEXT:    s_mov_b64 s[0:1], 0
-; GCN1-NEXT:  .LBB128_1: ; %atomicrmw.start
+; GCN1-NEXT:  .LBB128_2: ; %atomicrmw.start
 ; GCN1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN1-NEXT:    v_mov_b32_e32 v3, v2
-; GCN1-NEXT:    v_min_i32_e32 v2, s6, v3
-; GCN1-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN1-NEXT:    v_mov_b32_e32 v2, v0
+; GCN1-NEXT:    v_min_i32_e32 v1, s8, v2
+; GCN1-NEXT:    v_mov_b32_e32 v0, v1
+; GCN1-NEXT:    v_mov_b32_e32 v1, v2
+; GCN1-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 glc
+; GCN1-NEXT:    s_waitcnt vmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
-; GCN1-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN1-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN1-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    s_cbranch_execnz .LBB128_1
-; GCN1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN1-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GCN1-NEXT:    v_mov_b32_e32 v0, s2
-; GCN1-NEXT:    v_mov_b32_e32 v1, s3
-; GCN1-NEXT:    flat_store_dword v[0:1], v2
+; GCN1-NEXT:    v_cmp_eq_u32_e64 s[0:1], v0, v2
+; GCN1-NEXT:    s_or_b64 s[12:13], s[0:1], s[12:13]
+; GCN1-NEXT:    s_andn2_b64 exec, exec, s[12:13]
+; GCN1-NEXT:    s_cbranch_execnz .LBB128_2
+; GCN1-NEXT:  ; %bb.3: ; %Flow
+; GCN1-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GCN1-NEXT:  .LBB128_4: ; %Flow5
+; GCN1-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN1-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN1-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN1-NEXT:    v_mov_b32_e32 v0, s8
+; GCN1-NEXT:    v_bfrev_b32_e32 v1, -2
+; GCN1-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN1-NEXT:    s_mov_b32 s7, 0xf000
+; GCN1-NEXT:    s_mov_b32 s6, -1
+; GCN1-NEXT:    s_mov_b32 s4, s2
+; GCN1-NEXT:    s_mov_b32 s5, s3
+; GCN1-NEXT:    v_min_i32_e32 v0, s0, v0
+; GCN1-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN1-NEXT:    s_endpgm
 ;
 ; GCN2-LABEL: atomic_min_i32_ret_addr64:
 ; GCN2:       ; %bb.0: ; %entry
-; GCN2-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN2-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN2-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
+; GCN2-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN2-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    s_and_saveexec_b64 s[6:7], vcc
+; GCN2-NEXT:    s_cbranch_execz .LBB128_4
+; GCN2-NEXT:  ; %bb.1:
 ; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN2-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN2-NEXT:    s_mov_b32 s4, s7
-; GCN2-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN2-NEXT:    s_add_u32 s0, s0, s4
-; GCN2-NEXT:    s_addc_u32 s1, s1, s5
+; GCN2-NEXT:    s_ashr_i32 s9, s5, 31
+; GCN2-NEXT:    s_mov_b32 s8, s5
+; GCN2-NEXT:    s_lshl_b64 s[8:9], s[8:9], 2
+; GCN2-NEXT:    s_add_u32 s0, s0, s8
+; GCN2-NEXT:    s_addc_u32 s1, s1, s9
+; GCN2-NEXT:    s_load_dword s5, s[0:1], 0x0
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s0
+; GCN2-NEXT:    s_mov_b64 s[8:9], 0
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s1
-; GCN2-NEXT:    flat_load_dword v2, v[0:1]
-; GCN2-NEXT:    s_mov_b64 s[0:1], 0
-; GCN2-NEXT:  .LBB128_1: ; %atomicrmw.start
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_mov_b32_e32 v2, s5
+; GCN2-NEXT:  .LBB128_2: ; %atomicrmw.start
 ; GCN2-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    v_mov_b32_e32 v3, v2
-; GCN2-NEXT:    v_min_i32_e32 v2, s6, v3
+; GCN2-NEXT:    v_min_i32_e32 v2, s4, v3
 ; GCN2-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN2-NEXT:    s_waitcnt vmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
-; GCN2-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN2-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN2-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN2-NEXT:    s_cbranch_execnz .LBB128_1
-; GCN2-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN2-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GCN2-NEXT:    v_cmp_eq_u32_e64 s[0:1], v2, v3
+; GCN2-NEXT:    s_or_b64 s[8:9], s[0:1], s[8:9]
+; GCN2-NEXT:    s_andn2_b64 exec, exec, s[8:9]
+; GCN2-NEXT:    s_cbranch_execnz .LBB128_2
+; GCN2-NEXT:  ; %bb.3: ; %Flow
+; GCN2-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GCN2-NEXT:  .LBB128_4: ; %Flow5
+; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GCN2-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN2-NEXT:    v_readfirstlane_b32 s0, v2
+; GCN2-NEXT:    v_mov_b32_e32 v2, s4
+; GCN2-NEXT:    v_bfrev_b32_e32 v3, -2
+; GCN2-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
 ; GCN2-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN2-NEXT:    v_mov_b32_e32 v1, s3
+; GCN2-NEXT:    v_min_i32_e32 v2, s0, v2
 ; GCN2-NEXT:    flat_store_dword v[0:1], v2
 ; GCN2-NEXT:    s_endpgm
 ;
 ; GCN3-LABEL: atomic_min_i32_ret_addr64:
 ; GCN3:       ; %bb.0: ; %entry
-; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN3-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GCN3-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
+; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN3-NEXT:    ; implicit-def: $vgpr0
+; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GCN3-NEXT:    s_cbranch_execz .LBB128_4
+; GCN3-NEXT:  ; %bb.1:
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN3-NEXT:    s_ashr_i32 s5, s7, 31
-; GCN3-NEXT:    s_mov_b32 s4, s7
-; GCN3-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN3-NEXT:    s_add_u32 s0, s0, s4
-; GCN3-NEXT:    s_addc_u32 s1, s1, s5
+; GCN3-NEXT:    s_ashr_i32 s9, s7, 31
+; GCN3-NEXT:    s_mov_b32 s8, s7
+; GCN3-NEXT:    s_lshl_b64 s[8:9], s[8:9], 2
+; GCN3-NEXT:    s_add_u32 s8, s0, s8
+; GCN3-NEXT:    s_addc_u32 s9, s1, s9
+; GCN3-NEXT:    s_load_dword s0, s[8:9], 0x0
+; GCN3-NEXT:    s_mov_b64 s[10:11], 0
+; GCN3-NEXT:    v_mov_b32_e32 v1, 0
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN3-NEXT:    v_mov_b32_e32 v0, s0
-; GCN3-NEXT:    v_mov_b32_e32 v1, s1
-; GCN3-NEXT:    flat_load_dword v2, v[0:1]
-; GCN3-NEXT:    s_mov_b64 s[0:1], 0
-; GCN3-NEXT:  .LBB128_1: ; %atomicrmw.start
+; GCN3-NEXT:  .LBB128_2: ; %atomicrmw.start
 ; GCN3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN3-NEXT:    v_mov_b32_e32 v3, v2
+; GCN3-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN3-NEXT:    v_min_i32_e32 v2, s6, v3
-; GCN3-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
-; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN3-NEXT:    global_atomic_cmpswap v0, v1, v[2:3], s[8:9] glc
+; GCN3-NEXT:    s_waitcnt vmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
-; GCN3-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN3-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN3-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    s_cbranch_execnz .LBB128_1
-; GCN3-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GCN3-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GCN3-NEXT:    v_mov_b32_e32 v0, s2
-; GCN3-NEXT:    v_mov_b32_e32 v1, s3
-; GCN3-NEXT:    flat_store_dword v[0:1], v2
+; GCN3-NEXT:    v_cmp_eq_u32_e64 s[0:1], v0, v3
+; GCN3-NEXT:    s_or_b64 s[10:11], s[0:1], s[10:11]
+; GCN3-NEXT:    s_andn2_b64 exec, exec, s[10:11]
+; GCN3-NEXT:    s_cbranch_execnz .LBB128_2
+; GCN3-NEXT:  ; %bb.3: ; %Flow
+; GCN3-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN3-NEXT:  .LBB128_4: ; %Flow5
+; GCN3-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN3-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN3-NEXT:    v_mov_b32_e32 v0, s6
+; GCN3-NEXT:    v_bfrev_b32_e32 v2, -2
+; GCN3-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN3-NEXT:    v_mov_b32_e32 v1, 0
+; GCN3-NEXT:    v_min_i32_e32 v0, s0, v0
+; GCN3-NEXT:    global_store_dword v1, v0, s[2:3]
 ; GCN3-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i32, ptr %out, i32 %index
