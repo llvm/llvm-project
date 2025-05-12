@@ -1090,7 +1090,7 @@ auto GetSymbolVectorHelper::operator()(const ArrayRef &x) const -> Result {
   return GetSymbolVector(x.base());
 }
 auto GetSymbolVectorHelper::operator()(const CoarrayRef &x) const -> Result {
-  return x.base();
+  return GetSymbolVector(x.base());
 }
 
 const Symbol *GetLastTarget(const SymbolVector &symbols) {
@@ -1318,6 +1318,19 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
           " designator '%s': %s"_err_en_US;
   }
   return msg;
+}
+
+const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(const DataRef &dataRef) {
+  if (const SymbolRef * p{std::get_if<SymbolRef>(&dataRef.u)}) {
+    return &p->get();
+  } else if (const Component * c{std::get_if<Component>(&dataRef.u)}) {
+    if (c->base().Rank() == 0) {
+      return &c->GetLastSymbol();
+    }
+  } else if (const CoarrayRef * c{std::get_if<CoarrayRef>(&dataRef.u)}) {
+    return UnwrapWholeSymbolOrComponentOrCoarrayRef(c->base());
+  }
+  return nullptr;
 }
 
 // GetLastPointerSymbol()
