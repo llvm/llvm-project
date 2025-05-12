@@ -3139,6 +3139,7 @@ private:
     return AttrsParsed;
   }
   void ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs);
+  void ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs);
   void ParseMicrosoftAttributes(ParsedAttributes &Attrs);
   bool MaybeParseMicrosoftDeclSpecs(ParsedAttributes &Attrs) {
     if (getLangOpts().DeclSpecKeyword && Tok.is(tok::kw___declspec)) {
