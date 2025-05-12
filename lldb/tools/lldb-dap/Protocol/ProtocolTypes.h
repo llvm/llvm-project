@@ -27,6 +27,8 @@
 #include <optional>
 #include <string>
 
+#define LLDB_DAP_INVALID_VARRERF UINT64_MAX
+
 namespace lldb_dap::protocol {
 
 /// An `ExceptionBreakpointsFilter` is shown in the UI as an filter option for
@@ -350,7 +352,7 @@ struct Scope {
   /// remains suspended. See 'Lifetime of Object References' in the Overview
   /// section for details.
   ////
-  uint64_t variablesReference;
+  uint64_t variablesReference = LLDB_DAP_INVALID_VARRERF;
 
   /// The number of named variables in this scope.
   /// The client can use this information to present the variables in a paged UI
@@ -367,7 +369,7 @@ struct Scope {
 
   /// If true, the number of variables in this scope is large or expensive to
   /// retrieve.
-  bool expensive;
+  bool expensive = false;
 
   /// The start line of the range covered by this scope.
   std::optional<uint64_t> line;

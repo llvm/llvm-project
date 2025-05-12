@@ -443,7 +443,7 @@ struct ScopesArguments {
   /// Retrieve the scopes for the stack frame identified by `frameId`. The
   /// `frameId` must have been obtained in the current suspended state. See
   /// 'Lifetime of Object References' in the Overview section for details.
-  uint64_t frameId;
+  uint64_t frameId = LLDB_INVALID_FRAME_ID;
 };
 bool fromJSON(const llvm::json::Value &, ScopesArguments &, llvm::json::Path);
 
