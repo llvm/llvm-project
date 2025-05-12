@@ -6419,7 +6419,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "VGPR arguments must not have the `inreg` attribute", &Call);
 
     auto *Next = Call.getNextNode();
-    bool IsAMDUnreachable = isa<IntrinsicInst>(Next) &&
+    bool IsAMDUnreachable = Next && isa<IntrinsicInst>(Next) &&
                             cast<IntrinsicInst>(Next)->getIntrinsicID() ==
                                 Intrinsic::amdgcn_unreachable;
     Check(Next && (isa<UnreachableInst>(Next) || IsAMDUnreachable),

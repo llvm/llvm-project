@@ -1,12 +1,12 @@
-; RUN: llvm-as %s --disable-output
-
-; Check @llvm.amdgcn.unreachable is a valid alternative to unreachable after @llvm.amdgcn.cs.chain
+; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 
 declare amdgpu_cs_chain void @callee() nounwind
 declare void @llvm.amdgcn.cs.chain.p0.i64.i32.i32(ptr, i64, i32, i32, i32 immarg, ...)
 declare void @llvm.amdgcn.unreachable()
 
-define amdgpu_cs_chain void @test_unreachable(i32 %val) {
+; @llvm.amdgcn.unreachable is legal after @llvm.amdgcn.cs.chain
+; CHECK: define amdgpu_cs_chain void @test_cc_chain_unreachable(i32 %val)
+define amdgpu_cs_chain void @test_cc_chain_unreachable(i32 %val) {
 tail.block:
   %.cond = icmp ne i32 %val, 0
   br i1 %.cond, label %chain.block, label %UnifiedReturnBlock
