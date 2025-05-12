@@ -2497,7 +2497,7 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
   } else if (DKind == OMPD_cancellation_point || DKind == OMPD_cancel) {
     CancelRegion = parseOpenMPDirectiveKind(*this);
     if (Tok.isNot(tok::annot_pragma_openmp_end))
-      ConsumeToken();
+      ConsumeAnyToken();
   }
 
   if (isOpenMPLoopDirective(DKind))

@@ -922,6 +922,7 @@ OpenMP Support
   an invalid expression. (#GH139073)
 - Fixed a crashing bug with ``omp simd collapse`` if the argument to
   ``collapse`` was an invalid expression. (#GH138493)
+- Fixed a crashing bug with a malformed ``cancel`` directive. (#GH139360)
 - Fixed a crashing bug with ``omp distribute dist_schedule`` if the argument to
   ``dist_schedule`` was not strictly positive. (#GH139266)
 
