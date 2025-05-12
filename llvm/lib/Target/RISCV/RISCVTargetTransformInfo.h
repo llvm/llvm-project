@@ -143,6 +143,8 @@ public:
 
   bool shouldConsiderVectorizationRegPressure() const override { return true; }
 
+  bool preferControlFlow() const override { return false; }
+
   InstructionCost
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
