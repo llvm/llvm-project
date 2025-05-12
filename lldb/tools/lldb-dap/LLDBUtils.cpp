@@ -235,4 +235,11 @@ std::string GetStringValue(const lldb::SBStructuredData &data) {
   return str;
 }
 
+ScopeSyncMode::ScopeSyncMode(lldb::SBDebugger &debugger)
+    : m_debugger(debugger), m_async(m_debugger.GetAsync()) {
+  m_debugger.SetAsync(false);
+}
+
+ScopeSyncMode::~ScopeSyncMode() { m_debugger.SetAsync(m_async); }
+
 } // namespace lldb_dap

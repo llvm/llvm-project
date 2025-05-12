@@ -388,6 +388,27 @@ bool ClauseProcessor::processNowait(mlir::omp::NowaitClauseOps &result) const {
   return markClauseOccurrence<omp::clause::Nowait>(result.nowait);
 }
 
+bool ClauseProcessor::processNumTasks(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::NumTasksClauseOps &result) const {
+  using NumTasks = omp::clause::NumTasks;
+  if (auto *clause = findUniqueClause<NumTasks>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::MLIRContext *context = firOpBuilder.getContext();
+    const auto &modifier =
+        std::get<std::optional<NumTasks::Prescriptiveness>>(clause->t);
+    if (modifier && *modifier == NumTasks::Prescriptiveness::Strict) {
+      result.numTasksMod = mlir::omp::ClauseNumTasksTypeAttr::get(
+          context, mlir::omp::ClauseNumTasksType::Strict);
+    }
+    const auto &numtasksExpr = std::get<omp::SomeExpr>(clause->t);
+    result.numTasks =
+        fir::getBase(converter.genExprValue(numtasksExpr, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processNumTeams(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumTeamsClauseOps &result) const {
@@ -934,6 +955,27 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
   return findRepeatableClause<omp::clause::Depend>(process);
 }
 
+bool ClauseProcessor::processGrainsize(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::GrainsizeClauseOps &result) const {
+  using Grainsize = omp::clause::Grainsize;
+  if (auto *clause = findUniqueClause<Grainsize>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::MLIRContext *context = firOpBuilder.getContext();
+    const auto &modifier =
+        std::get<std::optional<Grainsize::Prescriptiveness>>(clause->t);
+    if (modifier && *modifier == Grainsize::Prescriptiveness::Strict) {
+      result.grainsizeMod = mlir::omp::ClauseGrainsizeTypeAttr::get(
+          context, mlir::omp::ClauseGrainsizeType::Strict);
+    }
+    const auto &grainsizeExpr = std::get<omp::SomeExpr>(clause->t);
+    result.grainsize =
+        fir::getBase(converter.genExprValue(grainsizeExpr, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processHasDeviceAddr(
     lower::StatementContext &stmtCtx, mlir::omp::HasDeviceAddrClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceSyms) const {
@@ -982,6 +1024,29 @@ bool ClauseProcessor::processIf(
     }
   });
   return found;
+}
+bool ClauseProcessor::processInReduction(
+    mlir::Location currentLocation, mlir::omp::InReductionClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const {
+  return findRepeatableClause<omp::clause::InReduction>(
+      [&](const omp::clause::InReduction &clause, const parser::CharBlock &) {
+        llvm::SmallVector<mlir::Value> inReductionVars;
+        llvm::SmallVector<bool> inReduceVarByRef;
+        llvm::SmallVector<mlir::Attribute> inReductionDeclSymbols;
+        llvm::SmallVector<const semantics::Symbol *> inReductionSyms;
+        ReductionProcessor rp;
+        rp.processReductionArguments<omp::clause::InReduction>(
+            currentLocation, converter, clause, inReductionVars,
+            inReduceVarByRef, inReductionDeclSymbols, inReductionSyms);
+
+        // Copy local lists into the output.
+        llvm::copy(inReductionVars, std::back_inserter(result.inReductionVars));
+        llvm::copy(inReduceVarByRef,
+                   std::back_inserter(result.inReductionByref));
+        llvm::copy(inReductionDeclSymbols,
+                   std::back_inserter(result.inReductionSyms));
+        llvm::copy(inReductionSyms, std::back_inserter(outReductionSyms));
+      });
 }
 
 bool ClauseProcessor::processIsDevicePtr(
@@ -1257,15 +1322,39 @@ bool ClauseProcessor::processReduction(
         llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
         llvm::SmallVector<const semantics::Symbol *> reductionSyms;
         ReductionProcessor rp;
-        rp.processReductionArguments(
+        rp.processReductionArguments<omp::clause::Reduction>(
             currentLocation, converter, clause, reductionVars, reduceVarByRef,
-            reductionDeclSymbols, reductionSyms, result.reductionMod);
+            reductionDeclSymbols, reductionSyms, &result.reductionMod);
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
         llvm::copy(reductionDeclSymbols,
                    std::back_inserter(result.reductionSyms));
         llvm::copy(reductionSyms, std::back_inserter(outReductionSyms));
+      });
+}
+
+bool ClauseProcessor::processTaskReduction(
+    mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const {
+  return findRepeatableClause<omp::clause::TaskReduction>(
+      [&](const omp::clause::TaskReduction &clause, const parser::CharBlock &) {
+        llvm::SmallVector<mlir::Value> taskReductionVars;
+        llvm::SmallVector<bool> TaskReduceVarByRef;
+        llvm::SmallVector<mlir::Attribute> TaskReductionDeclSymbols;
+        llvm::SmallVector<const semantics::Symbol *> TaskReductionSyms;
+        ReductionProcessor rp;
+        rp.processReductionArguments<omp::clause::TaskReduction>(
+            currentLocation, converter, clause, taskReductionVars,
+            TaskReduceVarByRef, TaskReductionDeclSymbols, TaskReductionSyms);
+        // Copy local lists into the output.
+        llvm::copy(taskReductionVars,
+                   std::back_inserter(result.taskReductionVars));
+        llvm::copy(TaskReduceVarByRef,
+                   std::back_inserter(result.taskReductionByref));
+        llvm::copy(TaskReductionDeclSymbols,
+                   std::back_inserter(result.taskReductionSyms));
+        llvm::copy(TaskReductionSyms, std::back_inserter(outReductionSyms));
       });
 }
 

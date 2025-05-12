@@ -11846,7 +11846,6 @@ bool ARMAsmParser::parseDirectiveArch(SMLoc L) {
     return Error(L, "Unknown arch name");
 
   bool WasThumb = isThumb();
-  Triple T;
   MCSubtargetInfo &STI = copySTI();
   STI.setDefaultFeatures("", /*TuneCPU*/ "",
                          ("+" + ARM::getArchName(ID)).str());

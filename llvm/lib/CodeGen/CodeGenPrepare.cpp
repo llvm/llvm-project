@@ -2552,9 +2552,9 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
       (IntrinsicID == Intrinsic::ctlz && TLI->isCheapToSpeculateCtlz(Ty)))
     return false;
 
-  // Only handle legal scalar cases. Anything else requires too much work.
+  // Only handle scalar cases. Anything else requires too much work.
   unsigned SizeInBits = Ty->getScalarSizeInBits();
-  if (Ty->isVectorTy() || SizeInBits > DL->getLargestLegalIntTypeSizeInBits())
+  if (Ty->isVectorTy())
     return false;
 
   // Bail if the value is never zero.
@@ -8591,6 +8591,9 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
     return false;
 
   Value *X = Cmp->getOperand(0);
+  if (!X->hasUseList())
+    return false;
+
   APInt CmpC = cast<ConstantInt>(Cmp->getOperand(1))->getValue();
 
   for (auto *U : X->users()) {

@@ -104,6 +104,7 @@ write_lit_cfg("lit_shell_site_cfg") {
   input = "//lldb/test/Shell/lit.site.cfg.py.in"
   output = lldb_lit_shell_site_cfg_file
   extra_values = [
+    "CLANG_RESOURCE_DIR=",
     "DEFAULT_SYSROOT=",
     "LIBCXX_LIBRARY_DIR=" + rebase_path("$root_build_dir/lib"),
     "LLDB_ENABLE_LUA=0",  # FIXME: gn arg, use in Config.h

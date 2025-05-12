@@ -88,6 +88,14 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
+Improvements to include-cleaner
+-------------------------------
+- Deprecated the ``-insert`` and ``-remove`` command line options, and added
+  the ``-disable-remove`` and ``-disable-insert`` command line options as
+  replacements. The previous command line options were confusing because they
+  did not imply the default state of the option (which is inserts and removes
+  being enabled). The new options are easier to understand the semantics of.
+
 Improvements to clang-tidy
 --------------------------
 
@@ -102,6 +110,9 @@ Improvements to clang-tidy
 
 - Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
   effect when passed via the `.clang-tidy` file.
+
+- Fixed bug in :program:`run_clang_tidy.py` where the program would not
+  correctly display the checks enabled by the top-level `.clang-tidy` file.
 
 New checks
 ^^^^^^^^^^

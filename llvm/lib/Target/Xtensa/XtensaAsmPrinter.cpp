@@ -312,6 +312,11 @@ void XtensaAsmPrinter::lowerToMCInst(const MachineInstr *MI,
   }
 }
 
+char XtensaAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(XtensaAsmPrinter, "xtensa-asm-printer",
+                "Xtensa Assembly Printer", false, false)
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaAsmPrinter() {
   RegisterAsmPrinter<XtensaAsmPrinter> A(getTheXtensaTarget());
 }
