@@ -148,6 +148,13 @@ def ntl_store : RISCVBuiltin<"void(...)">;
 } // Features = "zihintntl", Attributes = [CustomTypeChecking]
 
 //===----------------------------------------------------------------------===//
+// Zihintpause extension.
+//===----------------------------------------------------------------------===//
+let Features = "zihintpause" in {
+def pause : RISCVBuiltin<"void(...)">;
+} // Features = "zihintntl"
+
+//===----------------------------------------------------------------------===//
 // XCV extensions.
 //===----------------------------------------------------------------------===//
 include "clang/Basic/BuiltinsRISCVXCV.td"
