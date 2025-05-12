@@ -970,8 +970,7 @@ void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
 
   LookupResult R(SemaRef, Ident, SourceLocation(), Sema::LookupOrdinaryName);
   if (SemaRef.LookupQualifiedName(R, D->getDeclContext()))
-    if (auto *SignatureDecl =
-            dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl())) {
+    if (isa<HLSLRootSignatureDecl>(R.getFoundDecl())) {
       // Perform validation of constructs here
       D->addAttr(::new (getASTContext())
                      RootSignatureAttr(getASTContext(), AL, Ident));
