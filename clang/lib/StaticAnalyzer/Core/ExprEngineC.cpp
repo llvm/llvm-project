@@ -314,10 +314,9 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       // Although `Ex` is an lvalue, it could have `Loc::ConcreteInt` kind
       // (e.g., `(int *)123456`).  In such cases, there is no MemRegion
       // available and we can't get the value to be casted.
-      const MemRegion *MR = State->getSVal(Ex, LCtx).getAsRegion();
       SVal CastedV = UnknownVal();
 
-      if (MR) {
+      if (const MemRegion *MR = State->getSVal(Ex, LCtx).getAsRegion()) {
         SVal OrigV = State->getSVal(MR);
         CastedV = svalBuilder.evalCast(svalBuilder.simplifySVal(State, OrigV),
                                        CastE->getType(), Ex->getType());
