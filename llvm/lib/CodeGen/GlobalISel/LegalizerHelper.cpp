@@ -8990,12 +8990,14 @@ LegalizerHelper::lowerBitreverse(MachineInstr &MI) {
   unsigned VSize = SrcTy.getSizeInBits();
 
   if (Size >= 8) {
-    LLT VTy = LLT::fixed_vector(VSize / 8, 8);
-
-    if (LI.isLegal({TargetOpcode::G_BITREVERSE, {VTy, VTy}})) {
+    if (SrcTy.isVector() && (VSize % 8 == 0) &&
+        (LI.isLegal({TargetOpcode::G_BITREVERSE,
+                     {LLT::fixed_vector(VSize / 8, 8),
+                      LLT::fixed_vector(VSize / 8, 8)}}))) {
       // If bitreverse is legal for i8 vector of the same size, then cast
       // to i8 vector type.
       // e.g. v4s32 -> v16s8
+      LLT VTy = LLT::fixed_vector(VSize / 8, 8);
       auto BSWAP = MIRBuilder.buildBSwap(SrcTy, Src);
       auto Cast = MIRBuilder.buildBitcast(VTy, BSWAP);
       auto RBIT = MIRBuilder.buildBitReverse(VTy, Cast);
