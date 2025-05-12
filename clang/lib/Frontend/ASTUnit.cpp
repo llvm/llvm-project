@@ -1766,6 +1766,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
     const char **ArgBegin, const char **ArgEnd,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+    std::shared_ptr<DiagnosticOptions> DiagOpts,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
     bool StorePreamblesInMemory, StringRef PreambleStoragePath,
     bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
@@ -1828,6 +1829,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
   AST->NumStoredDiagnosticsFromDriver = StoredDiagnostics.size();
   AST->StoredDiagnostics.swap(StoredDiagnostics);
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
+  AST->DiagOpts = DiagOpts;
   AST->Diagnostics = Diags;
   AST->FileSystemOpts = CI->getFileSystemOpts();
   VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS);

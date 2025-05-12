@@ -604,6 +604,7 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
                  [](auto &&CmdPart) { return CmdPart.c_str(); });
 
   auto *DiagClient = new ForwardingDiagnosticConsumer{CI.getDiagnosticClient()};
+  auto DiagOpts = std::make_shared<DiagnosticOptions>(CI.getDiagnosticOpts());
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID{
       CI.getDiagnostics().getDiagnosticIDs()};
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
@@ -611,7 +612,7 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
 
   return ASTUnit::LoadFromCommandLine(CommandLineArgs.begin(),
                                       (CommandLineArgs.end()),
-                                      CI.getPCHContainerOperations(), Diags,
+                                      CI.getPCHContainerOperations(),DiagOpts, Diags,
                                       CI.getHeaderSearchOpts().ResourceDir);
 }
 

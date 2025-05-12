@@ -53,6 +53,8 @@ class PCHPreambleTest : public ::testing::Test {
   IntrusiveRefCntPtr<ReadCountingInMemoryFileSystem> VFS;
   StringMap<std::string> RemappedFiles;
   std::shared_ptr<PCHContainerOperations> PCHContainerOpts;
+  std::shared_ptr<DiagnosticOptions> DiagOpts =
+      std::make_shared<DiagnosticOptions>();
   FileSystemOptions FSOpts;
 
 public:
@@ -94,9 +96,8 @@ public:
     PreprocessorOptions &PPOpts = CI->getPreprocessorOpts();
     PPOpts.RemappedFilesKeepOriginalName = true;
 
-    DiagnosticOptions DiagOpts;
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-        CompilerInstance::createDiagnostics(*VFS, DiagOpts,
+        CompilerInstance::createDiagnostics(*VFS, *DiagOpts,
                                             new DiagnosticConsumer));
 
     FileManager *FileMgr = new FileManager(FSOpts, VFS);

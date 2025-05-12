@@ -107,6 +107,7 @@ public:
 
 private:
   std::unique_ptr<LangOptions> LangOpts;
+  std::shared_ptr<DiagnosticOptions> DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine>   Diagnostics;
   IntrusiveRefCntPtr<FileManager>         FileMgr;
   IntrusiveRefCntPtr<SourceManager>       SourceMgr;
@@ -837,6 +838,7 @@ public:
   static std::unique_ptr<ASTUnit> LoadFromCommandLine(
       const char **ArgBegin, const char **ArgEnd,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+      std::shared_ptr<DiagnosticOptions> DiagOpts,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
       bool StorePreamblesInMemory = false,
       StringRef PreambleStoragePath = StringRef(), bool OnlyLocalDecls = false,

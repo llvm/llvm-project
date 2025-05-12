@@ -30,7 +30,8 @@ protected:
   int FD;
   llvm::SmallString<256> InputFileName;
   std::unique_ptr<ToolOutputFile> input_file;
-  DiagnosticOptions DiagOpts;
+  std::shared_ptr<DiagnosticOptions> DiagOpts =
+      std::make_shared<DiagnosticOptions>();
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
   std::shared_ptr<CompilerInvocation> CInvok;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
@@ -44,7 +45,7 @@ protected:
     const char *Args[] = {"clang", "-xc++", InputFileName.c_str()};
 
     auto VFS = llvm::vfs::getRealFileSystem();
-    Diags = CompilerInstance::createDiagnostics(*VFS, DiagOpts);
+    Diags = CompilerInstance::createDiagnostics(*VFS, *DiagOpts);
 
     CreateInvocationOptions CIOpts;
     CIOpts.Diags = Diags;
@@ -138,7 +139,7 @@ TEST_F(ASTUnitTest, ModuleTextualHeader) {
   const char *Args[] = {"clang", "test.cpp", "-fmodule-map-file=m.modulemap",
                         "-fmodule-name=M"};
   Diags =
-      CompilerInstance::createDiagnostics(*InMemoryFs, DiagOpts);
+      CompilerInstance::createDiagnostics(*InMemoryFs, *DiagOpts);
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
   CInvok = createInvocation(Args, std::move(CIOpts));
@@ -167,12 +168,12 @@ TEST_F(ASTUnitTest, LoadFromCommandLineEarlyError) {
   const char *Args[] = {"clang", "-target", "foobar", InputFileName.c_str()};
 
   auto Diags = CompilerInstance::createDiagnostics(
-      *llvm::vfs::getRealFileSystem(), DiagOpts);
+      *llvm::vfs::getRealFileSystem(), *DiagOpts);
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
   std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCommandLine(
-      &Args[0], &Args[4], PCHContainerOps, Diags, "", false, "", false,
+      &Args[0], &Args[4], PCHContainerOps, DiagOpts, Diags, "", false, "", false,
       CaptureDiagsKind::All, {}, true, 0, TU_Complete, false, false, false,
       SkipFunctionBodiesScope::None, false, true, false, false, std::nullopt,
       &ErrUnit, nullptr);
@@ -195,12 +196,12 @@ TEST_F(ASTUnitTest, LoadFromCommandLineWorkingDirectory) {
                         InputFileName.c_str()};
 
   auto Diags = CompilerInstance::createDiagnostics(
-      *llvm::vfs::getRealFileSystem(), DiagOpts);
+      *llvm::vfs::getRealFileSystem(), *DiagOpts);
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
   std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCommandLine(
-      &Args[0], &Args[4], PCHContainerOps, Diags, "", false, "", false,
+      &Args[0], &Args[4], PCHContainerOps, DiagOpts, Diags, "", false, "", false,
       CaptureDiagsKind::All, {}, true, 0, TU_Complete, false, false, false,
       SkipFunctionBodiesScope::None, false, true, false, false, std::nullopt,
       &ErrUnit, nullptr);
