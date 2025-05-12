@@ -8,16 +8,23 @@ target datalayout = "A5"
 @vx = external local_unnamed_addr addrspace(10) global [400 x i8], align 16
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none, inaccessiblemem: none)
-define dso_local amdgpu_kernel void @_Z3foov() local_unnamed_addr {
+define dso_local amdgpu_kernel void @_Z3foov() "amdgpu-wavegroup-enable" !reqd_work_group_size !{i32 32, i32 8, i32 1} {
 ; CHECK-LABEL: _Z3foov:
 ; CHECK:       _Z3foov$local:
 ; CHECK-NEXT:    .type _Z3foov$local,@function
 ; CHECK-NEXT:  ; %bb.0: ; %entry
+; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_mul_i32 s1, s0, 1
+; CHECK-NEXT:    s_mul_i32 s33, s0, s8
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
+; CHECK-NEXT:    s_add_co_u32 s33, s33, 0x190
+; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    s_mov_b32 s0, 20
 ; CHECK-NEXT:    scratch_load_u16 v0, off, s0
 ; CHECK-NEXT:    s_mov_b32 s0, 12
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    scratch_store_b16 off, v0, s0
+; CHECK-NEXT:    scratch_store_b16 off, v0, s0 scope:SCOPE_SE
 ; CHECK-NEXT:    s_endpgm
 entry:
   %1 = load <2 x i8>, ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 20), align 4, !tbaa !4

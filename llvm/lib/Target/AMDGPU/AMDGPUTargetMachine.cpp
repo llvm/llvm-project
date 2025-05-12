@@ -487,10 +487,10 @@ static cl::opt<bool> HasClosedWorldAssumption(
     cl::desc("Whether has closed-world assumption at link time"),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    EnablePromoteLaneShared("amdgpu-promote-lane-shared",
-                            cl::desc("Enable promoting lane-shared into VGPR"),
-                            cl::init(true), cl::Hidden);
+static cl::opt<unsigned>
+    MaxLaneSharedVGPRS("max-vgprs-for-laneshared",
+                       cl::desc("Max number of VGPRs allowed for lane-shared"),
+                       cl::init(896), cl::Hidden);
 
 // TODO: Enable by default once all codegen phases are implemented.
 static cl::opt<bool> EnablePromotePrivate(
@@ -551,7 +551,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULateCodeGenPrepareLegacyPass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
-  initializeAMDGPUMarkPromotableLaneSharedLegacyPass(*PR);
+  initializeAMDGPUAssignLaneSharedLegacyPass(*PR);
   initializeAMDGPUMarkPromotablePrivateLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
   initializeAMDGPUReserveWWMRegsLegacyPass(*PR);
@@ -1370,6 +1370,8 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
     // nodes out of the graph, which leads to function-level passes not
     // being run on them, which causes crashes in the resource usage analysis).
     addPass(createAMDGPULowerBufferFatPointersPass());
+    // Another module pass.
+    addPass(createAMDGPUAssignLaneSharedLegacyPass(MaxLaneSharedVGPRS));
     // In accordance with the above FIXME, manually force all the
     // function-level passes into a CGSCCPassManager.
     addPass(new DummyCGSCCPass());
@@ -1439,8 +1441,6 @@ bool GCNPassConfig::addPreISel() {
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
     addPass(&AMDGPUPerfHintAnalysisLegacyID);
 
-  if (isPassEnabled(EnablePromoteLaneShared))
-    addPass(createAMDGPUMarkPromotableLaneSharedLegacyPass());
   if (isPassEnabled(EnablePromotePrivate))
     addPass(createAMDGPUMarkPromotablePrivateLegacyPass());
 
@@ -2050,6 +2050,8 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS)
     addPass(AMDGPULowerModuleLDSPass(TM));
+
+  addPass(AMDGPUAssignLaneSharedPass(MaxLaneSharedVGPRS));
 
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(InferAddressSpacesPass());
