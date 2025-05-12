@@ -6350,6 +6350,10 @@ void DeclarationVisitor::Post(const parser::ProcDecl &x) {
   if (!dtDetails) {
     attrs.set(Attr::EXTERNAL);
   }
+  if (derivedTypeInfo_.privateComps &&
+      !attrs.HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
+    attrs.set(Attr::PRIVATE);
+  }
   Symbol &symbol{DeclareProcEntity(name, attrs, procInterface)};
   SetCUDADataAttr(name.source, symbol, cudaDataAttr()); // for error
   symbol.ReplaceName(name.source);
