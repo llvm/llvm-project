@@ -18458,16 +18458,17 @@ static SDValue stripModuloOnShift(const TargetLowering &TLI, SDNode *N,
 
 SDValue PPCTargetLowering::combineVectorSHL(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
-  assert(N->getValueType(0).isVector() && "Vector type expected.");
+  EVT VT = N->getValueType(0);
+  assert(VT.isVector() && "Vector type expected.");
 
   SDValue N1 = N->getOperand(1);
   if (!Subtarget.hasP8Altivec() || N1.getOpcode() != ISD::BUILD_VECTOR ||
-      !isOperationLegal(ISD::ADD, N->getValueType(0)))
+      !isOperationLegal(ISD::ADD, VT))
     return SDValue();
 
   // For 64-bit there is no splat immediate so we want to catch shift by 1 here
   // before the BUILD_VECTOR is replaced by a load.
-  EVT EltTy = N->getValueType(0).getScalarType();
+  EVT EltTy = VT.getScalarType();
   if (EltTy != MVT::i64)
     return SDValue();
 
@@ -18484,8 +18485,8 @@ SDValue PPCTargetLowering::combineVectorSHL(SDNode *N,
   if (SplatBits != 1)
     return SDValue();
 
-  return DCI.DAG.getNode(ISD::ADD, SDLoc(N), N->getValueType(0),
-                         N->getOperand(0), N->getOperand(0));
+  SDValue N0 = N->getOperand(0);
+  return DCI.DAG.getNode(ISD::ADD, SDLoc(N), VT, N0, N0);
 }
 
 SDValue PPCTargetLowering::combineSHL(SDNode *N, DAGCombinerInfo &DCI) const {
