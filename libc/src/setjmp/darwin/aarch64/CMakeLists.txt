@@ -14,38 +14,38 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-        longjmp
-        SRCS
-        longjmp.cpp
-        HDRS
-        ../../longjmp.h
-        DEPENDS
-        libc.hdr.types.jmp_buf
-        ${setjmp_config_options}
+  longjmp
+  SRCS
+    longjmp.cpp
+  HDRS
+    ../../longjmp.h
+  DEPENDS
+    libc.hdr.types.jmp_buf
+  ${setjmp_config_options}
 )
 
 add_entrypoint_object(
-        sigsetjmp
-        SRCS
-        sigsetjmp.cpp
-        HDRS
-        ../../sigsetjmp.h
-        DEPENDS
-        libc.hdr.types.jmp_buf
-        libc.hdr.types.sigset_t
-        libc.hdr.offsetof_macros
-        libc.src.setjmp.sigsetjmp_epilogue
-        libc.src.setjmp.setjmp
+  sigsetjmp
+  SRCS
+    sigsetjmp.cpp
+  HDRS
+    ../../sigsetjmp.h
+  DEPENDS
+    libc.hdr.types.jmp_buf
+    libc.hdr.types.sigset_t
+    libc.hdr.offsetof_macros
+    libc.src.setjmp.sigsetjmp_epilogue
+    libc.src.setjmp.setjmp
 )
 add_object_library(
-        sigsetjmp_epilogue
-        HDRS
-        ../../sigsetjmp_epilogue.h
-        SRCS
-        sigsetjmp_epilogue.cpp
-        DEPENDS
-        libc.src.__support.common
-        libc.src.__support.OSUtil.osutil
-        libc.hdr.types.jmp_buf
-        libc.hdr.types.sigset_t
+  sigsetjmp_epilogue
+  HDRS
+  ../../sigsetjmp_epilogue.h
+  SRCS
+    sigsetjmp_epilogue.cpp
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.jmp_buf
+    libc.hdr.types.sigset_t
 )
