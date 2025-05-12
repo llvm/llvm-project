@@ -48,3 +48,15 @@ concept is_foo_concept = __is_same(foo::bar, T);
 // expected-error@-1 {{'bar' is a private member of 'GH131530::foo'}}
 
 }
+
+namespace GH138820 {
+int a;
+template<typename T>
+concept atomicish = requires() {
+  {    // expected-note {{to match this '{'}}
+    a
+   ... // expected-error {{expected '}'}}
+  };
+};
+atomicish<int> f(); // expected-error {{expected 'auto' or 'decltype(auto)' after concept name}}
+} // namespace GH138820

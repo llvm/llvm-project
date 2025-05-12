@@ -55,7 +55,7 @@ struct VPlanTransforms {
 
   static std::unique_ptr<VPlan>
   buildPlainCFG(Loop *TheLoop, LoopInfo &LI,
-                DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB);
+                DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB);
 
   /// Prepare the plan for vectorization. It will introduce a dedicated
   /// VPBasicBlock for the vector pre-header as well as a VPBasicBlock as exit
@@ -198,6 +198,11 @@ struct VPlanTransforms {
   static void
   optimizeInductionExitUsers(VPlan &Plan,
                              DenseMap<VPValue *, VPValue *> &EndValues);
+
+  /// Materialize VPInstruction::StepVectors for VPWidenIntOrFpInductionRecipes.
+  /// TODO: Remove once all of VPWidenIntOrFpInductionRecipe is expanded in
+  /// convertToConcreteRecipes.
+  static void materializeStepVectors(VPlan &Plan);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);

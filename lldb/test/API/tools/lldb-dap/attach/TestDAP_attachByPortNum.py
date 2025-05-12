@@ -18,6 +18,7 @@ import sys
 import socket
 
 
+@skip("https://github.com/llvm/llvm-project/issues/138803")
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
     default_timeout = 20
 

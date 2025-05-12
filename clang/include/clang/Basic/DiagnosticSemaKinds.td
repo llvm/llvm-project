@@ -51,6 +51,8 @@ defm adl_only_template_id : CXX20Compat<
   "with explicit template arguments is">;
 defm ctad_for_alias_templates
     : CXX20Compat<"class template argument deduction for alias templates is">;
+defm implicit_typename
+    : CXX20Compat<"missing 'typename' prior to dependent type name %0 is">;
 
 // C++23 compatibility with C++20 and earlier.
 defm constexpr_static_var : CXX23Compat<
@@ -1026,19 +1028,22 @@ def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
 
 // __ptrauth qualifier
 def err_ptrauth_qualifier_invalid : Error<
-  "%select{return type|parameter type|property}1 may not be qualified with '__ptrauth'; type is %0">;
+  "%select{return type|parameter type|property}1 may not be qualified with "
+  "'__ptrauth'; type is %0">;
 def err_ptrauth_qualifier_cast : Error<
   "cannot cast to '__ptrauth'-qualified type %0">;
-def err_ptrauth_qualifier_nonpointer : Error<
-  "'__ptrauth' qualifier only applies to pointer types; %0 is invalid">;
-def err_ptrauth_qualifier_redundant : Error<
-  "type %0 is already %1-qualified">;
+def err_ptrauth_qualifier_invalid_target : Error<
+  "'__ptrauth' qualifier only applies to pointer or pointer sized integer "
+  "types; %0 is invalid">;
+def err_ptrauth_qualifier_redundant: Error<
+  "type %0 is already '__ptrauth'-qualified">;
 def err_ptrauth_arg_not_ice : Error<
   "argument to '__ptrauth' must be an integer constant expression">;
 def err_ptrauth_address_discrimination_invalid : Error<
   "invalid address discrimination flag '%0'; '__ptrauth' requires '0' or '1'">;
 def err_ptrauth_extra_discriminator_invalid : Error<
-  "invalid extra discriminator flag '%0'; '__ptrauth' requires a value between '0' and '%1'">;
+  "invalid extra discriminator flag '%0'; '__ptrauth' requires a value between "
+  "'0' and '%1'">;
 
 /// main()
 // static main() is not an error in C, just in C++.
@@ -5867,16 +5872,8 @@ def ext_typename_missing
 def err_typename_refers_to_using_value_decl : Error<
   "typename specifier refers to a dependent using declaration for a value "
   "%0 in %1">;
-def note_using_value_decl_missing_typename : Note<
-  "add 'typename' to treat this using declaration as a type">;
-def warn_cxx17_compat_implicit_typename : Warning<"use of implicit 'typename' is "
-  "incompatible with C++ standards before C++20">, InGroup<CXX20Compat>,
-  DefaultIgnore;
-def ext_implicit_typename
-    : ExtWarn<"missing 'typename' prior to dependent "
-              "type name %0; implicit 'typename' is a C++20 extension">,
-      InGroup<CXX20>;
-
+def note_using_value_decl_missing_typename
+    : Note<"add 'typename' to treat this using declaration as a type">;
 def err_template_kw_refers_to_non_template : Error<
   "%0%select{| following the 'template' keyword}1 "
   "does not refer to a template">;
@@ -9572,9 +9569,11 @@ def err_incomplete_type_used_in_type_trait_expr : Error<
   "incomplete type %0 used in type trait expression">, NoSFINAE;
 
 // C++20 constinit and require_constant_initialization attribute
-def warn_cxx20_compat_constinit : Warning<
-  "'constinit' specifier is incompatible with C++ standards before C++20">,
-  InGroup<CXX20Compat>, DefaultIgnore;
+def warn_cxx20_compat_constinit
+    : Warning<"'constinit' specifier is incompatible with C++ standards before "
+              "C++20">,
+      InGroup<CXXPre20Compat>,
+      DefaultIgnore;
 def err_constinit_local_variable : Error<
   "local variable cannot be declared 'constinit'">;
 def err_require_constant_init_failed : Error<
@@ -10532,7 +10531,7 @@ def warn_tautological_negation_or_compare: Warning<
   "'||' of a value and its negation always evaluates to true">,
   InGroup<TautologicalNegationCompare>, DefaultIgnore;
 def warn_tautological_overlap_comparison : Warning<
-  "overlapping comparisons always evaluate to %select{false|true}0">,
+  "%select{non-|}0overlapping comparisons always evaluate to %select{false|true}0">,
   InGroup<TautologicalOverlapCompare>, DefaultIgnore;
 def warn_depr_array_comparison : Warning<
   "comparison between two arrays is deprecated; "
