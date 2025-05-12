@@ -38,6 +38,7 @@
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
 #include "flang/Support/default-kinds.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
@@ -1766,14 +1767,6 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   // just following the natural flow, the map clauses gets processed before
   // the type has been fully processed.
   BeginDeclTypeSpec();
-  if (auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)}) {
-    mapperName->symbol =
-        &MakeSymbol(*mapperName, MiscDetails{MiscDetails::Kind::ConstructName});
-  } else {
-    const parser::CharBlock defaultName{"default", 7};
-    MakeSymbol(
-        defaultName, Attrs{}, MiscDetails{MiscDetails::Kind::ConstructName});
-  }
 
   PushScope(Scope::Kind::OtherConstruct, nullptr);
   Walk(std::get<parser::TypeSpec>(spec.t));
@@ -1783,6 +1776,18 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   Walk(clauses);
   EndDeclTypeSpec();
   PopScope();
+
+  if (auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)}) {
+    mapperName->symbol =
+        &MakeSymbol(*mapperName, MiscDetails{MiscDetails::Kind::ConstructName});
+  } else {
+    const auto &type = std::get<parser::TypeSpec>(spec.t);
+    static llvm::SmallVector<std::string> defaultNames;
+    defaultNames.emplace_back(
+        type.declTypeSpec->derivedTypeSpec().name().ToString() + ".default");
+    MakeSymbol(defaultNames.back(), Attrs{},
+        MiscDetails{MiscDetails::Kind::ConstructName});
+  }
 }
 
 void OmpVisitor::ProcessReductionSpecifier(
