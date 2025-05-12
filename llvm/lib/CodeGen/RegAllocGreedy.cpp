@@ -107,14 +107,6 @@ static cl::opt<bool> ExhaustiveSearch(
              "and interference cutoffs of last chance recoloring"),
     cl::Hidden);
 
-static cl::opt<bool> EnableDeferredSpilling(
-    "enable-deferred-spilling", cl::Hidden,
-    cl::desc("Instead of spilling a variable right away, defer the actual "
-             "code insertion to the end of the allocation. That way the "
-             "allocator might still find a suitable coloring for this "
-             "variable because of other evicted variables."),
-    cl::init(false));
-
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned>
 CSRFirstTimeCost("regalloc-csr-first-time-cost",
@@ -179,7 +171,7 @@ public:
 } // end anonymous namespace
 
 RAGreedyLegacy::RAGreedyLegacy(const RegAllocFilterFunc F)
-    : MachineFunctionPass(ID), F(F) {
+    : MachineFunctionPass(ID), F(std::move(F)) {
   initializeRAGreedyLegacyPass(*PassRegistry::getPassRegistry());
 }
 
@@ -328,7 +320,6 @@ const char *const RAGreedy::StageName[] = {
     "RS_Split",
     "RS_Split2",
     "RS_Spill",
-    "RS_Memory",
     "RS_Done"
 };
 #endif
@@ -456,13 +447,6 @@ unsigned DefaultPriorityAdvisor::getPriority(const LiveInterval &LI) const {
     // Unsplit ranges that couldn't be allocated immediately are deferred until
     // everything else has been allocated.
     Prio = Size;
-  } else if (Stage == RS_Memory) {
-    // Memory operand should be considered last.
-    // Change the priority such that Memory operand are assigned in
-    // the reverse order that they came in.
-    // TODO: Make this a member variable and probably do something about hints.
-    static unsigned MemOp = 0;
-    Prio = MemOp++;
   } else {
     // Giant live ranges fall back to the global assignment heuristic, which
     // prevents excessive spilling in pathological cases.
@@ -2650,34 +2634,22 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   }
 
   // Finally spill VirtReg itself.
-  if ((EnableDeferredSpilling ||
-       TRI->shouldUseDeferredSpillingForVirtReg(*MF, VirtReg)) &&
-      ExtraInfo->getStage(VirtReg) < RS_Memory) {
-    // TODO: This is experimental and in particular, we do not model
-    // the live range splitting done by spilling correctly.
-    // We would need a deep integration with the spiller to do the
-    // right thing here. Anyway, that is still good for early testing.
-    ExtraInfo->setStage(VirtReg, RS_Memory);
-    LLVM_DEBUG(dbgs() << "Do as if this register is in memory\n");
-    NewVRegs.push_back(VirtReg.reg());
-  } else {
-    NamedRegionTimer T("spill", "Spiller", TimerGroupName,
-                       TimerGroupDescription, TimePassesIsEnabled);
-    LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
-    spiller().spill(LRE);
-    ExtraInfo->setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
+  NamedRegionTimer T("spill", "Spiller", TimerGroupName,
+                     TimerGroupDescription, TimePassesIsEnabled);
+  LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+  spiller().spill(LRE, &Order);
+  ExtraInfo->setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
 
-    // Tell LiveDebugVariables about the new ranges. Ranges not being covered by
-    // the new regs are kept in LDV (still mapping to the old register), until
-    // we rewrite spilled locations in LDV at a later stage.
-    for (Register r : spiller().getSpilledRegs())
-      DebugVars->splitRegister(r, LRE.regs(), *LIS);
-    for (Register r : spiller().getReplacedRegs())
-      DebugVars->splitRegister(r, LRE.regs(), *LIS);
+  // Tell LiveDebugVariables about the new ranges. Ranges not being covered by
+  // the new regs are kept in LDV (still mapping to the old register), until
+  // we rewrite spilled locations in LDV at a later stage.
+  for (Register r : spiller().getSpilledRegs())
+    DebugVars->splitRegister(r, LRE.regs(), *LIS);
+  for (Register r : spiller().getReplacedRegs())
+    DebugVars->splitRegister(r, LRE.regs(), *LIS);
 
-    if (VerifyEnabled)
-      MF->verify(LIS, Indexes, "After spilling", &errs());
-  }
+  if (VerifyEnabled)
+    MF->verify(LIS, Indexes, "After spilling", &errs());
 
   // The live virtual register requesting allocation was spilled, so tell
   // the caller not to allocate anything during this round.
@@ -2908,8 +2880,8 @@ bool RAGreedy::run(MachineFunction &mf) {
   PriorityAdvisor = PriorityProvider->getAdvisor(*MF, *this, *Indexes);
 
   VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, *VRM, *Loops, *MBFI);
-  SpillerInstance.reset(
-      createInlineSpiller({*LIS, *LSS, *DomTree, *MBFI}, *MF, *VRM, *VRAI));
+  SpillerInstance.reset(createInlineSpiller({*LIS, *LSS, *DomTree, *MBFI}, *MF,
+                                            *VRM, *VRAI, Matrix));
 
   VRAI->calculateSpillWeightsAndHints();
 

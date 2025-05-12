@@ -96,7 +96,7 @@ bool isBranchWeightMD(const MDNode *ProfileData) {
   return isTargetMD(ProfileData, "branch_weights", MinBWOps);
 }
 
-bool isValueProfileMD(const MDNode *ProfileData) {
+static bool isValueProfileMD(const MDNode *ProfileData) {
   return isTargetMD(ProfileData, "VP", MinVPOps);
 }
 
@@ -105,7 +105,7 @@ bool hasBranchWeightMD(const Instruction &I) {
   return isBranchWeightMD(ProfileData);
 }
 
-bool hasCountTypeMD(const Instruction &I) {
+static bool hasCountTypeMD(const Instruction &I) {
   auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
   // Value profiles record count-type information.
   if (isValueProfileMD(ProfileData))
@@ -271,16 +271,16 @@ void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
     Vals.push_back(MDB.createConstant(ConstantInt::get(
         Type::getInt32Ty(C), Val.udiv(APT).getLimitedValue(UINT32_MAX))));
   } else if (ProfDataName->getString() == "VP")
-    for (unsigned i = 1; i < ProfileData->getNumOperands(); i += 2) {
+    for (unsigned Idx = 1; Idx < ProfileData->getNumOperands(); Idx += 2) {
       // The first value is the key of the value profile, which will not change.
-      Vals.push_back(ProfileData->getOperand(i));
+      Vals.push_back(ProfileData->getOperand(Idx));
       uint64_t Count =
-          mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(i + 1))
+          mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(Idx + 1))
               ->getValue()
               .getZExtValue();
       // Don't scale the magic number.
       if (Count == NOMORE_ICP_MAGICNUM) {
-        Vals.push_back(ProfileData->getOperand(i + 1));
+        Vals.push_back(ProfileData->getOperand(Idx + 1));
         continue;
       }
       // Using APInt::div may be expensive, but most cases should fit 64 bits.

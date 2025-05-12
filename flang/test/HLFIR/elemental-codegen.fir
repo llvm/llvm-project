@@ -191,7 +191,7 @@ func.func @test_polymorphic(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.bindc_
 // CHECK:           %[[VAL_35:.*]] = fir.absent !fir.box<none>
 // CHECK:           %[[VAL_36:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_37:.*]] = fir.convert %[[VAL_31]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:           %[[VAL_38:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_36]], %[[VAL_34]], %[[VAL_35]], %[[VAL_37]], %[[VAL_33]]) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:           %[[VAL_38:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_36]], %{{.*}}, %[[VAL_34]], %[[VAL_35]], %[[VAL_37]], %[[VAL_33]]) : (!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:           %[[VAL_12:.*]] = arith.constant true
 // CHECK:           %[[VAL_39:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_40:.*]] = arith.constant 1 : index
@@ -275,7 +275,7 @@ func.func @test_polymorphic_expr(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.b
 // CHECK:           %[[VAL_36:.*]] = fir.absent !fir.box<none>
 // CHECK:           %[[VAL_37:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_38:.*]] = fir.convert %[[VAL_32]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:           %[[VAL_39:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_37]], %[[VAL_35]], %[[VAL_36]], %[[VAL_38]], %[[VAL_34]]) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:           %[[VAL_39:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_37]], %{{.*}}, %[[VAL_35]], %[[VAL_36]], %[[VAL_38]], %[[VAL_34]]) : (!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:           %[[VAL_13:.*]] = arith.constant true
 // CHECK:           %[[VAL_40:.*]] = fir.load %[[VAL_14]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_41:.*]] = arith.constant 1 : index
@@ -328,7 +328,7 @@ func.func @test_polymorphic_expr(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.b
 // CHECK:           %[[VAL_85:.*]] = fir.absent !fir.box<none>
 // CHECK:           %[[VAL_86:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_87:.*]] = fir.convert %[[VAL_81]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:           %[[VAL_88:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_86]], %[[VAL_84]], %[[VAL_85]], %[[VAL_87]], %[[VAL_83]]) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:           %[[VAL_88:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_86]], %{{.*}}, %[[VAL_84]], %[[VAL_85]], %[[VAL_87]], %[[VAL_83]]) : (!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:           %[[VAL_62:.*]] = arith.constant true
 // CHECK:           %[[VAL_89:.*]] = fir.load %[[VAL_63]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_90:.*]] = arith.constant 1 : index

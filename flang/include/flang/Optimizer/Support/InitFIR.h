@@ -18,6 +18,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/OpenACC/RegisterOpenACCExtensions.h"
+#include "flang/Optimizer/OpenMP/Support/RegisterOpenMPExtensions.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
@@ -39,7 +40,7 @@ namespace fir::support {
       mlir::cf::ControlFlowDialect, mlir::func::FuncDialect,                   \
       mlir::vector::VectorDialect, mlir::math::MathDialect,                    \
       mlir::complex::ComplexDialect, mlir::DLTIDialect, cuf::CUFDialect,       \
-      mlir::NVVM::NVVMDialect
+      mlir::NVVM::NVVMDialect, mlir::gpu::GPUDialect
 
 #define FLANG_CODEGEN_DIALECT_LIST FIRCodeGenDialect, mlir::LLVM::LLVMDialect
 
@@ -67,6 +68,7 @@ inline void addFIRExtensions(mlir::DialectRegistry &registry,
   addFIRToLLVMIRExtension(registry);
   cuf::registerCUFDialectTranslation(registry);
   fir::acc::registerOpenACCExtensions(registry);
+  fir::omp::registerOpenMPExtensions(registry);
 }
 
 inline void loadNonCodegenDialects(mlir::MLIRContext &context) {

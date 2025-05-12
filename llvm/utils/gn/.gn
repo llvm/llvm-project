@@ -5,8 +5,8 @@
 buildconfig = "//llvm/utils/gn/build/BUILDCONFIG.gn"
 
 # Disallow all calls to exec_script. We should be very conservative about
-# whitelisting things here.
-exec_script_whitelist = []
+# allowing things here.
+exec_script_allowlist = []
 
 # Execute action() targets using Python 3.
 script_executable = "python3"

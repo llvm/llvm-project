@@ -105,7 +105,7 @@ subroutine acc_enter_data
 !CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB1]] : index) upperbound(%[[UB1]] : index) extent(%c10{{.*}} : index) stride(%[[ONE]] : index) startIdx(%c1{{.*}} : index)
 !CHECK: %[[LB2:.*]] = arith.constant 0 : index
 !CHECK: %[[UB2:.*]] = arith.constant 4 : index
-!CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB2]] : index) upperbound(%[[UB2]] : index) extent(%[[EXTENT_C10]] : index) stride(%[[ONE]] : index) startIdx(%c1{{.*}} : index)
+!CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB2]] : index) upperbound(%[[UB2]] : index) extent(%[[EXTENT_C10]] : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
 !CHECK: %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a(1:,1:5)", structured = false}
 !CHECK: acc.enter_data   dataOperands(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
@@ -116,7 +116,7 @@ subroutine acc_enter_data
 !CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB1]] : index) extent(%[[C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
 !CHECK: %[[UB2:.*]] = arith.constant 4 : index
-!CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB2]] : index) extent(%[[EXTENT_C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+!CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB2]] : index) extent(%[[EXTENT_C10]] : index) stride(%c1{{.*}} : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a(:10,1:5)", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
@@ -126,7 +126,7 @@ subroutine acc_enter_data
 !CHECK: %[[UB:.*]] = arith.subi %c10{{.*}}, %[[ONE]] : index
 !CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%c10{{.*}} : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[UB:.*]] = arith.subi %c10{{.*}}, %[[ONE]] : index
-!CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%c10{{.*}} : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+!CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%c10{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
 !CHECK: %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a(:,:)", structured = false}
 end subroutine acc_enter_data
 

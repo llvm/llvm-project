@@ -5,7 +5,6 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; Test case where the minimum profitable trip count due to runtime checks
 ; exceeds VF.getKnownMinValue() * UF.
-; FIXME: The code currently incorrectly is missing a umax(VF * UF, 28).
 define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr %src.1, ptr %src.2, i64 %n) {
 ; CHECK-LABEL: @min_trip_count_due_to_runtime_checks_1(
 ; CHECK-NEXT:  entry:

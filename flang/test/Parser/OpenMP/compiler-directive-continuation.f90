@@ -15,7 +15,7 @@
 ! CHECK-NO-OMP: i=1010011_4
 subroutine mixed_form1()
    i = 1 &
-  !$+100&
+  !$ +100&
   !$&+ 1000&
    &+ 10 + 1&
   !$& +100000&
@@ -53,3 +53,12 @@ subroutine mixed_form3()
    !$ +1000
 end subroutine
 
+! CHECK-LABEL: subroutine regression
+! CHECK-E:{{^}}!$    real x, &
+! CHECK-E:{{^}}      stop
+! CHECK-OMP: REAL x, stop
+! CHECK-NO-OMP-NOT: REAL x,
+subroutine regression
+!$ real x, &
+ stop
+end

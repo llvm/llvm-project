@@ -19,6 +19,7 @@
 // the predicate register, they cannot use the .new form. In such cases it
 // is better to collapse them back to a single MUX instruction.
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
@@ -47,13 +48,6 @@
 #define DEBUG_TYPE "hexmux"
 
 using namespace llvm;
-
-namespace llvm {
-
-  FunctionPass *createHexagonGenMux();
-  void initializeHexagonGenMuxPass(PassRegistry& Registry);
-
-} // end namespace llvm
 
 // Initialize this to 0 to always prefer generating mux by default.
 static cl::opt<unsigned> MinPredDist("hexagon-gen-mux-threshold", cl::Hidden,

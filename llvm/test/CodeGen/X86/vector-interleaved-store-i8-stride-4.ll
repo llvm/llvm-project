@@ -1696,20 +1696,20 @@ define void @store_i8_stride4_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512BW-NEXT:    vextracti32x4 $2, %zmm1, %xmm6
 ; AVX512BW-NEXT:    vextracti64x4 $1, %zmm3, %ymm7
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm6, %ymm7, %ymm6
-; AVX512BW-NEXT:    vextracti32x4 $2, %zmm0, %xmm8
-; AVX512BW-NEXT:    vextracti64x4 $1, %zmm4, %ymm9
-; AVX512BW-NEXT:    vinserti128 $1, %xmm8, %ymm9, %ymm8
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm0, %xmm7
+; AVX512BW-NEXT:    vextracti64x4 $1, %zmm4, %ymm8
+; AVX512BW-NEXT:    vinserti128 $1, %xmm7, %ymm8, %ymm7
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm5, %zmm2, %zmm2
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm4
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm3
-; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm3 = zmm3[2,3,6,7],zmm4[2,3,6,7]
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm8, %zmm6, %zmm4
-; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm9[0,1,2,3],zmm0[4,5,6,7]
-; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm7[0,1,2,3],zmm1[4,5,6,7]
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm5
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm8
+; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm5 = zmm8[2,3,6,7],zmm5[2,3,6,7]
+; AVX512BW-NEXT:    vinserti64x4 $1, %ymm7, %zmm6, %zmm6
+; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm4[4,5,6,7],zmm0[4,5,6,7]
+; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm3[4,5,6,7],zmm1[4,5,6,7]
 ; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[2,3,6,7],zmm0[2,3,6,7]
-; AVX512BW-NEXT:    vmovdqa64 %zmm3, 64(%r8)
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, 192(%r8)
-; AVX512BW-NEXT:    vmovdqa64 %zmm4, 128(%r8)
+; AVX512BW-NEXT:    vmovdqa64 %zmm5, 64(%r8)
+; AVX512BW-NEXT:    vmovdqa64 %zmm6, 128(%r8)
 ; AVX512BW-NEXT:    vmovdqa64 %zmm2, (%r8)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -1733,20 +1733,20 @@ define void @store_i8_stride4_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512BW-FCP-NEXT:    vextracti32x4 $2, %zmm1, %xmm6
 ; AVX512BW-FCP-NEXT:    vextracti64x4 $1, %zmm3, %ymm7
 ; AVX512BW-FCP-NEXT:    vinserti128 $1, %xmm6, %ymm7, %ymm6
-; AVX512BW-FCP-NEXT:    vextracti32x4 $2, %zmm0, %xmm8
-; AVX512BW-FCP-NEXT:    vextracti64x4 $1, %zmm4, %ymm9
-; AVX512BW-FCP-NEXT:    vinserti128 $1, %xmm8, %ymm9, %ymm8
+; AVX512BW-FCP-NEXT:    vextracti32x4 $2, %zmm0, %xmm7
+; AVX512BW-FCP-NEXT:    vextracti64x4 $1, %zmm4, %ymm8
+; AVX512BW-FCP-NEXT:    vinserti128 $1, %xmm7, %ymm8, %ymm7
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $1, %ymm5, %zmm2, %zmm2
-; AVX512BW-FCP-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm4
-; AVX512BW-FCP-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm3
-; AVX512BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm3 = zmm3[2,3,6,7],zmm4[2,3,6,7]
-; AVX512BW-FCP-NEXT:    vinserti64x4 $1, %ymm8, %zmm6, %zmm4
-; AVX512BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm9[0,1,2,3],zmm0[4,5,6,7]
-; AVX512BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm7[0,1,2,3],zmm1[4,5,6,7]
+; AVX512BW-FCP-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm5
+; AVX512BW-FCP-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm8
+; AVX512BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm5 = zmm8[2,3,6,7],zmm5[2,3,6,7]
+; AVX512BW-FCP-NEXT:    vinserti64x4 $1, %ymm7, %zmm6, %zmm6
+; AVX512BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm4[4,5,6,7],zmm0[4,5,6,7]
+; AVX512BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm3[4,5,6,7],zmm1[4,5,6,7]
 ; AVX512BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[2,3,6,7],zmm0[2,3,6,7]
-; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm3, 64(%r8)
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm0, 192(%r8)
-; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm4, 128(%r8)
+; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm5, 64(%r8)
+; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm6, 128(%r8)
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm2, (%r8)
 ; AVX512BW-FCP-NEXT:    vzeroupper
 ; AVX512BW-FCP-NEXT:    retq
@@ -1770,20 +1770,20 @@ define void @store_i8_stride4_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-BW-NEXT:    vextracti32x4 $2, %zmm1, %xmm6
 ; AVX512DQ-BW-NEXT:    vextracti64x4 $1, %zmm3, %ymm7
 ; AVX512DQ-BW-NEXT:    vinserti128 $1, %xmm6, %ymm7, %ymm6
-; AVX512DQ-BW-NEXT:    vextracti32x4 $2, %zmm0, %xmm8
-; AVX512DQ-BW-NEXT:    vextracti64x4 $1, %zmm4, %ymm9
-; AVX512DQ-BW-NEXT:    vinserti128 $1, %xmm8, %ymm9, %ymm8
+; AVX512DQ-BW-NEXT:    vextracti32x4 $2, %zmm0, %xmm7
+; AVX512DQ-BW-NEXT:    vextracti64x4 $1, %zmm4, %ymm8
+; AVX512DQ-BW-NEXT:    vinserti128 $1, %xmm7, %ymm8, %ymm7
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $1, %ymm5, %zmm2, %zmm2
-; AVX512DQ-BW-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm4
-; AVX512DQ-BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm3
-; AVX512DQ-BW-NEXT:    vshufi64x2 {{.*#+}} zmm3 = zmm3[2,3,6,7],zmm4[2,3,6,7]
-; AVX512DQ-BW-NEXT:    vinserti64x4 $1, %ymm8, %zmm6, %zmm4
-; AVX512DQ-BW-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm9[0,1,2,3],zmm0[4,5,6,7]
-; AVX512DQ-BW-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm7[0,1,2,3],zmm1[4,5,6,7]
+; AVX512DQ-BW-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm5
+; AVX512DQ-BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm8
+; AVX512DQ-BW-NEXT:    vshufi64x2 {{.*#+}} zmm5 = zmm8[2,3,6,7],zmm5[2,3,6,7]
+; AVX512DQ-BW-NEXT:    vinserti64x4 $1, %ymm7, %zmm6, %zmm6
+; AVX512DQ-BW-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm4[4,5,6,7],zmm0[4,5,6,7]
+; AVX512DQ-BW-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm3[4,5,6,7],zmm1[4,5,6,7]
 ; AVX512DQ-BW-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[2,3,6,7],zmm0[2,3,6,7]
-; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm3, 64(%r8)
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm0, 192(%r8)
-; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm4, 128(%r8)
+; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm5, 64(%r8)
+; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm6, 128(%r8)
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm2, (%r8)
 ; AVX512DQ-BW-NEXT:    vzeroupper
 ; AVX512DQ-BW-NEXT:    retq
@@ -1807,20 +1807,20 @@ define void @store_i8_stride4_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-BW-FCP-NEXT:    vextracti32x4 $2, %zmm1, %xmm6
 ; AVX512DQ-BW-FCP-NEXT:    vextracti64x4 $1, %zmm3, %ymm7
 ; AVX512DQ-BW-FCP-NEXT:    vinserti128 $1, %xmm6, %ymm7, %ymm6
-; AVX512DQ-BW-FCP-NEXT:    vextracti32x4 $2, %zmm0, %xmm8
-; AVX512DQ-BW-FCP-NEXT:    vextracti64x4 $1, %zmm4, %ymm9
-; AVX512DQ-BW-FCP-NEXT:    vinserti128 $1, %xmm8, %ymm9, %ymm8
+; AVX512DQ-BW-FCP-NEXT:    vextracti32x4 $2, %zmm0, %xmm7
+; AVX512DQ-BW-FCP-NEXT:    vextracti64x4 $1, %zmm4, %ymm8
+; AVX512DQ-BW-FCP-NEXT:    vinserti128 $1, %xmm7, %ymm8, %ymm7
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $1, %ymm5, %zmm2, %zmm2
-; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm4
-; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm3
-; AVX512DQ-BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm3 = zmm3[2,3,6,7],zmm4[2,3,6,7]
-; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $1, %ymm8, %zmm6, %zmm4
-; AVX512DQ-BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm9[0,1,2,3],zmm0[4,5,6,7]
-; AVX512DQ-BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm7[0,1,2,3],zmm1[4,5,6,7]
+; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm5
+; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm8
+; AVX512DQ-BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm5 = zmm8[2,3,6,7],zmm5[2,3,6,7]
+; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $1, %ymm7, %zmm6, %zmm6
+; AVX512DQ-BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm4[4,5,6,7],zmm0[4,5,6,7]
+; AVX512DQ-BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm3[4,5,6,7],zmm1[4,5,6,7]
 ; AVX512DQ-BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[2,3,6,7],zmm0[2,3,6,7]
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm3, 64(%r8)
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm0, 192(%r8)
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm4, 128(%r8)
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm5, 64(%r8)
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm6, 128(%r8)
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm2, (%r8)
 ; AVX512DQ-BW-FCP-NEXT:    vzeroupper
 ; AVX512DQ-BW-FCP-NEXT:    retq

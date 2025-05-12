@@ -237,6 +237,18 @@ public:
     return true;
   }
 
+  /// Overloaded member function of \c visitInputFile that should
+  /// be defined when there is a distinction between
+  /// the file name and name-as-requested. For example, when deserializing input
+  /// files from precompiled AST files.
+  ///
+  /// \returns true to continue receiving the next input file, false to stop.
+  virtual bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
+                              bool isSystem, bool isOverridden,
+                              bool isExplicitModule) {
+    return true;
+  }
+
   /// Returns true if this \c ASTReaderListener wants to receive the
   /// imports of the AST file via \c visitImport, false otherwise.
   virtual bool needsImportVisitation() const { return false; }
@@ -1079,8 +1091,11 @@ private:
   /// from the current compiler instance.
   bool AllowConfigurationMismatch;
 
-  /// Whether validate system input files.
+  /// Whether to validate system input files.
   bool ValidateSystemInputs;
+
+  /// Whether to force the validation of user input files.
+  bool ForceValidateUserInputs;
 
   /// Whether validate headers and module maps using hash based on contents.
   bool ValidateASTInputFilesContent;
@@ -1755,6 +1770,7 @@ public:
             bool AllowASTWithCompilerErrors = false,
             bool AllowConfigurationMismatch = false,
             bool ValidateSystemInputs = false,
+            bool ForceValidateUserInputs = true,
             bool ValidateASTInputFilesContent = false,
             bool UseGlobalIndex = true,
             std::unique_ptr<llvm::Timer> ReadTimer = {});

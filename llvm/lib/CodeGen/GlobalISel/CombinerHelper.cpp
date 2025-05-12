@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -382,6 +383,45 @@ void CombinerHelper::applyCombineConcatVectors(
   else
     Builder.buildBuildVector(NewDstReg, Ops);
   replaceRegWith(MRI, DstReg, NewDstReg);
+  MI.eraseFromParent();
+}
+
+bool CombinerHelper::matchCombineShuffleToBuildVector(MachineInstr &MI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
+         "Invalid instruction");
+  auto &Shuffle = cast<GShuffleVector>(MI);
+
+  Register SrcVec1 = Shuffle.getSrc1Reg();
+  Register SrcVec2 = Shuffle.getSrc2Reg();
+
+  LLT SrcVec1Type = MRI.getType(SrcVec1);
+  LLT SrcVec2Type = MRI.getType(SrcVec2);
+  return SrcVec1Type.isVector() && SrcVec2Type.isVector();
+}
+
+void CombinerHelper::applyCombineShuffleToBuildVector(MachineInstr &MI) const {
+  auto &Shuffle = cast<GShuffleVector>(MI);
+
+  Register SrcVec1 = Shuffle.getSrc1Reg();
+  Register SrcVec2 = Shuffle.getSrc2Reg();
+  LLT EltTy = MRI.getType(SrcVec1).getElementType();
+  int Width = MRI.getType(SrcVec1).getNumElements();
+
+  auto Unmerge1 = Builder.buildUnmerge(EltTy, SrcVec1);
+  auto Unmerge2 = Builder.buildUnmerge(EltTy, SrcVec2);
+
+  SmallVector<Register> Extracts;
+  // Select only applicable elements from unmerged values.
+  for (int Val : Shuffle.getMask()) {
+    if (Val == -1)
+      Extracts.push_back(Builder.buildUndef(EltTy).getReg(0));
+    else if (Val < Width)
+      Extracts.push_back(Unmerge1.getReg(Val));
+    else
+      Extracts.push_back(Unmerge2.getReg(Val - Width));
+  }
+
+  Builder.buildBuildVector(MI.getOperand(0).getReg(), Extracts);
   MI.eraseFromParent();
 }
 
@@ -827,9 +867,8 @@ void CombinerHelper::applyCombineExtendingLoads(
 
   // Rewrite all the uses to fix up the types.
   auto &LoadValue = MI.getOperand(0);
-  SmallVector<MachineOperand *, 4> Uses;
-  for (auto &UseMO : MRI.use_operands(LoadValue.getReg()))
-    Uses.push_back(&UseMO);
+  SmallVector<MachineOperand *, 4> Uses(
+      llvm::make_pointer_range(MRI.use_operands(LoadValue.getReg())));
 
   for (auto *UseMO : Uses) {
     MachineInstr *UseMI = UseMO->getParent();
@@ -1411,9 +1450,8 @@ bool CombinerHelper::matchCombineExtractedVectorLoad(
 
   LegalityQuery::MemDesc MMDesc(*NewMMO);
 
-  LegalityQuery Q = {TargetOpcode::G_LOAD, {VecEltTy, PtrTy}, {MMDesc}};
-
-  if (!isLegalOrBeforeLegalizer(Q))
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_LOAD, {VecEltTy, PtrTy}, {MMDesc}}))
     return false;
 
   // Load must be allowed and fast on the target.
@@ -2074,6 +2112,8 @@ bool CombinerHelper::matchCombineSubToAdd(MachineInstr &MI,
     MI.setDesc(B.getTII().get(TargetOpcode::G_ADD));
     MI.getOperand(2).setReg(NegCst.getReg(0));
     MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
+    if (Imm.isMinSignedValue())
+      MI.clearFlags(MachineInstr::MIFlag::NoSWrap);
     Observer.changedInstr(MI);
   };
   return true;

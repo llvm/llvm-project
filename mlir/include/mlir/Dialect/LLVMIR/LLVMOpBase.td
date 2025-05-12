@@ -113,17 +113,20 @@ def LLVM_AnyNonAggregate : Type<And<[LLVM_Type.predicate,
 
 // Type constraint accepting any LLVM vector type.
 def LLVM_AnyVector : Type<CPred<"::mlir::LLVM::isCompatibleVectorType($_self)">,
-                         "LLVM dialect-compatible vector type">;
+                         "LLVM dialect-compatible vector type",
+                         "::mlir::VectorType">;
 
 // Type constraint accepting any LLVM fixed-length vector type.
 def LLVM_AnyFixedVector : Type<CPred<
                                 "!::mlir::LLVM::isScalableVectorType($_self)">,
-                                "LLVM dialect-compatible fixed-length vector type">;
+                                "LLVM dialect-compatible fixed-length vector type",
+                                "::mlir::VectorType">;
 
 // Type constraint accepting any LLVM scalable vector type.
 def LLVM_AnyScalableVector : Type<CPred<
                                 "::mlir::LLVM::isScalableVectorType($_self)">,
-                                "LLVM dialect-compatible scalable vector type">;
+                                "LLVM dialect-compatible scalable vector type",
+                                "::mlir::VectorType">;
 
 // Type constraint accepting an LLVM vector type with an additional constraint
 // on the vector element type.
@@ -131,9 +134,10 @@ class LLVM_VectorOf<Type element> : Type<
   And<[LLVM_AnyVector.predicate,
        SubstLeaves<
          "$_self",
-         "::mlir::LLVM::getVectorElementType($_self)",
+         "::llvm::cast<::mlir::VectorType>($_self).getElementType()",
          element.predicate>]>,
-  "LLVM dialect-compatible vector of " # element.summary>;
+  "LLVM dialect-compatible vector of " # element.summary,
+  "::mlir::VectorType">;
 
 // Type constraint accepting a constrained type, or a vector of such types.
 class LLVM_ScalarOrVectorOf<Type element> :

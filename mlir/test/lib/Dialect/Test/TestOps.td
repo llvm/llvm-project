@@ -424,6 +424,52 @@ def : Pat<(OpWithEnum ConstantEnumCase<TestEnumAttr, "first">:$value,
                       ConstantAttr<I32Attr, "1">)>;
 
 //===----------------------------------------------------------------------===//
+// Test Enum Properties
+//===----------------------------------------------------------------------===//
+
+// Define the enum property.
+def TestEnumProp : EnumProp<TestEnum>;
+// Define an op that contains the enum property.
+def OpWithEnumProp : TEST_Op<"op_with_enum_prop"> {
+  let arguments = (ins TestEnumProp:$value);
+  let assemblyFormat = "$value attr-dict";
+}
+
+def TestEnumPropAttrForm : EnumPropWithAttrForm<TestEnum, TestEnumAttr>;
+def OpWithEnumPropAttrForm : TEST_Op<"op_with_enum_prop_attr_form"> {
+  let arguments = (ins TestEnumPropAttrForm:$value);
+  let assemblyFormat = "prop-dict attr-dict";
+}
+
+def TestEnumPropAttrFormAlways : EnumPropWithAttrForm<TestEnum, TestEnumAttr> {
+  let storeInCustomAttribute = 1;
+}
+def OpWithEnumPropAttrFormAlways : TEST_Op<"op_with_enum_prop_attr_form_always"> {
+  let arguments = (ins TestEnumPropAttrFormAlways:$value);
+  let assemblyFormat = "prop-dict attr-dict";
+}
+
+def TestBitEnumProp : EnumProp<TestBitEnum> {
+  let defaultValue = TestBitEnum.cppType # "::Read";
+}
+def OpWithTestBitEnum : TEST_Op<"op_with_bit_enum_prop"> {
+  let arguments = (ins
+    TestBitEnumProp:$value1,
+    TestBitEnumProp:$value2);
+  let assemblyFormat = "$value1 ($value2^)? attr-dict `:` `(``)`";
+}
+
+def TestBitEnumPropNamed : NamedEnumProp<TestBitEnum, "bit_enum"> {
+  let defaultValue = TestBitEnum.cppType # "::Read";
+}
+def OpWithBitEnumPropNamed : TEST_Op<"op_with_bit_enum_prop_named"> {
+  let arguments = (ins
+    TestBitEnumPropNamed:$value1,
+    TestBitEnumPropNamed:$value2);
+  let assemblyFormat = "$value1 ($value2^)? attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // Test Bit Enum Attributes
 //===----------------------------------------------------------------------===//
 
@@ -1803,6 +1849,20 @@ def : Pat<
                     ConstantAttr<I32Attr, "2">:$attr1),
   (MixedVOperandOp5 $input2a, $input2b, $input1b, $attr1,
                     ConstantStrAttr<StrAttr, "MatchMultiVariadicSubSymbol">)>;
+
+def MixedVOperandOp7 : TEST_Op<"mixed_variadic_optional_in7",
+                               [AttrSizedOperandSegments]> {
+  let arguments = (ins
+    Variadic<I32>:$input1,
+    Optional<I32>:$input2,
+    I32Attr:$attr1
+  );
+}
+
+def : Pat<
+  (MixedVOperandOp7 $input1, $input2, ConstantAttr<I32Attr, "2">:$attr1),
+  (MixedVOperandOp6 $input1, (variadic $input2), $attr1),
+  [(Constraint<CPred<"$0 != Value()">> $input2)]>;
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (either)
@@ -3439,6 +3499,18 @@ def TestMultiSlotAlloca : TEST_Op<"multi_slot_alloca",
      DeclareOpInterfaceMethods<DestructurableAllocationOpInterface>]> {
   let results = (outs Variadic<MemRefOf<[I32]>>:$results);
   let assemblyFormat = "attr-dict `:` functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
+// Test allocation Ops
+//===----------------------------------------------------------------------===//
+
+def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
+  let results = (outs Index:$index,
+                      Res<AnyMemRef, "", [MemAlloc]>:$memref);
+  let assemblyFormat = [{
+     attr-dict `:` type($index) `,` type($memref)
+  }];
 }
 
 #endif // TEST_OPS

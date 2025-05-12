@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 #include <optional>
 
 namespace mlir {
@@ -528,6 +529,25 @@ static Value convertMFMAVectorOperand(ConversionPatternRewriter &rewriter,
   return input;
 }
 
+/// Converts the scaled MFMA operands, `scalesA` and `scalesB`, from MLIR AMDGPU
+/// dialect convention to ROCDL and LLVM AMDGPU intrinsics convention.
+///
+/// Specifically:
+/// 1. If `input` is a i8 value, zero extend it to i32
+/// 2. If `input` is a vector of length 4 and type i8, cast it to i32
+///
+/// Note that the type of `input` has already been LLVM type converted:
+/// therefore 8-bit and smaller floats are represented as their corresponding
+/// `iN` integers.
+static Value castMFMAScaleOperand(ConversionPatternRewriter &rewriter,
+                                  Location loc, Value input) {
+  Type inputType = input.getType();
+  Type outputType = rewriter.getI32Type();
+  if (auto intType = dyn_cast<IntegerType>(inputType))
+    return rewriter.create<LLVM::ZExtOp>(loc, outputType, input);
+  return rewriter.create<LLVM::BitcastOp>(loc, outputType, input);
+}
+
 /// Push an input operand. If it is a float type, nothing to do. If it is
 /// an integer type, then we need to also push its signdness (1 for signed, 0
 /// for unsigned) and we need to pack the input 16xi8 vector into a 4xi32
@@ -833,6 +853,14 @@ mfmaOpToScaledIntrinsic(MFMAOp mfma, Chipset chipset) {
       mfma.getBlocks(), chipset);
 }
 
+static std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
+mfmaOpToScaledIntrinsic(ScaledMFMAOp smfma, Chipset chipset) {
+  return mfmaOpToScaledIntrinsic(smfma.getSourceA().getType(),
+                                 smfma.getSourceB().getType(),
+                                 smfma.getDestC().getType(), smfma.getM(),
+                                 smfma.getN(), smfma.getK(), 1u, chipset);
+}
+
 /// Return the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
 /// if one exists. This includes checking to ensure the intrinsic is supported
 /// on the architecture you are compiling for.
@@ -954,6 +982,52 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
   }
 };
 
+struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
+  ScaledMFMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern(converter), chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(ScaledMFMAOp op, ScaledMFMAOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Type intrinsicOutType = typeConverter->convertType(op.getDestD().getType());
+
+    if (chipset.majorVersion != 9 || chipset < kGfx950)
+      return op->emitOpError("scaled MFMA only supported on gfx908+");
+    std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
+        maybeScaledIntrinsic = mfmaOpToScaledIntrinsic(op, chipset);
+    if (!maybeScaledIntrinsic.has_value())
+      return op.emitOpError(
+          "no intrinsic matching scaled MFMA size on given chipset");
+
+    auto [intrinsicName, aTypeCode, bTypeCode] = *maybeScaledIntrinsic;
+    OperationState loweredOp(loc, intrinsicName);
+    loweredOp.addTypes(intrinsicOutType);
+    loweredOp.addOperands(
+        {convertMFMAVectorOperand(rewriter, loc, adaptor.getSourceA()),
+         convertMFMAVectorOperand(rewriter, loc, adaptor.getSourceB()),
+         adaptor.getDestC()});
+    Value scalesIdxA =
+        createI32Constant(rewriter, loc, adaptor.getScalesIdxA());
+    Value scalesIdxB =
+        createI32Constant(rewriter, loc, adaptor.getScalesIdxB());
+    loweredOp.addOperands(
+        {createI32Constant(rewriter, loc, aTypeCode),
+         createI32Constant(rewriter, loc, bTypeCode),
+         /*scales idx A=*/scalesIdxA,
+         /*scales A*/
+         castMFMAScaleOperand(rewriter, loc, adaptor.getScalesA()),
+         /*scales idx B=*/scalesIdxB,
+         /*scales B*/
+         castMFMAScaleOperand(rewriter, loc, adaptor.getScalesB())});
+    Value lowered = rewriter.create(loweredOp)->getResult(0);
+    rewriter.replaceOp(op, lowered);
+    return success();
+  }
+};
+
 struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
   WMMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<WMMAOp>(converter), chipset(chipset) {}
@@ -1005,6 +1079,55 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
       maybeCastBack =
           rewriter.create<LLVM::BitcastOp>(loc, outType, lowered->getResult(0));
     rewriter.replaceOp(op, maybeCastBack->getResults());
+
+    return success();
+  }
+};
+
+struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
+  GatherToLDSOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<GatherToLDSOp>(converter), chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(GatherToLDSOp op, GatherToLDSOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx942)
+      return op.emitOpError("chipset not supported");
+
+    Location loc = op.getLoc();
+
+    auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
+    auto dstMemRefType = cast<MemRefType>(op.getSrc().getType());
+
+    // TODO: instead of only transfering one element per thread, we could
+    // augment it to transfer multiple elements per thread by issuing multiple
+    // `global_load_lds` instructions.
+    Type transferType = op.getTransferType();
+    size_t loadWidth = [&]() -> size_t {
+      if (auto transferVectorType = dyn_cast<VectorType>(transferType)) {
+        return transferVectorType.getNumElements() *
+               (transferVectorType.getElementTypeBitWidth() / 8);
+      } else {
+        return transferType.getIntOrFloatBitWidth() / 8;
+      }
+    }();
+
+    // Currently only 1, 2, and 4 byte loads are supported.
+    if (loadWidth != 1 && loadWidth != 2 && loadWidth != 4)
+      return op.emitOpError("chipset unsupported element size");
+
+    Value srcPtr = getStridedElementPtr(loc, srcMemRefType, adaptor.getSrc(),
+                                        (adaptor.getSrcIndices()), rewriter);
+    Value dstPtr = getStridedElementPtr(loc, dstMemRefType, adaptor.getDst(),
+                                        (adaptor.getDstIndices()), rewriter);
+
+    rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadLDSOp>(
+        op, srcPtr, dstPtr, createI32Constant(rewriter, loc, loadWidth),
+        createI32Constant(rewriter, loc, 0),
+        createI32Constant(rewriter, loc, 0), ArrayAttr{}, ArrayAttr{},
+        ArrayAttr{});
 
     return success();
   }
@@ -1328,6 +1451,39 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
   }
 };
 
+struct AMDGPUSwizzleBitModeLowering
+    : public ConvertOpToLLVMPattern<SwizzleBitModeOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(SwizzleBitModeOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+    Value src = adaptor.getSrc();
+    SmallVector<Value> decomposed =
+        LLVM::decomposeValue(rewriter, loc, src, i32);
+    unsigned andMask = op.getAndMask();
+    unsigned orMask = op.getOrMask();
+    unsigned xorMask = op.getXorMask();
+
+    // bit 15 is 0 for the BitMode swizzle.
+    // https://gpuopen.com/learn/amd-gcn-assembly-cross-lane-operations/
+    unsigned mask = andMask | (orMask << 5) | (xorMask << 10);
+    Value maskValue = createI32Constant(rewriter, loc, mask);
+    SmallVector<Value> swizzled;
+    for (Value v : decomposed) {
+      Value res =
+          rewriter.create<ROCDL::DsSwizzleOp>(loc, v.getType(), v, maskValue);
+      swizzled.emplace_back(res);
+    }
+
+    Value result = LLVM::composeValue(rewriter, loc, swizzled, src.getType());
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 struct ConvertAMDGPUToROCDLPass
     : public impl::ConvertAMDGPUToROCDLPassBase<ConvertAMDGPUToROCDLPass> {
   using Base::Base;
@@ -1392,7 +1548,9 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            RawBufferOpLowering<RawBufferAtomicCmpswapOp,
                                ROCDL::RawPtrBufferAtomicCmpSwap>,
            AMDGPUDPPLowering, LDSBarrierOpLowering, SchedBarrierOpLowering,
-           MFMAOpLowering, WMMAOpLowering, ExtPackedFp8OpLowering,
-           PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering>(converter,
-                                                                      chipset);
+           MFMAOpLowering, ScaledMFMAOpLowering, WMMAOpLowering,
+           ExtPackedFp8OpLowering, PackedTrunc2xFp8OpLowering,
+           PackedStochRoundFp8OpLowering, GatherToLDSOpLowering>(converter,
+                                                                 chipset);
+  patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }

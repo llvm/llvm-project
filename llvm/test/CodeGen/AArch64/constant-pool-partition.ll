@@ -1,12 +1,10 @@
-; RUN: llc -mtriple=aarch64 -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=true \
-; RUN:     -unique-section-names=false \
+; RUN: llc -mtriple=aarch64 -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names=false \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --dump-input=always
 
 ; Repeat the RUN command above for big-endian systems.
-; RUN: llc -mtriple=aarch64_be -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=true \
-; RUN:     -unique-section-names=false \
+; RUN: llc -mtriple=aarch64_be -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names=false \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --dump-input=always
 
 ; Tests that constant pool hotness is aggregated across the module. The
