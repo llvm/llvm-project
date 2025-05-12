@@ -447,7 +447,7 @@ INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
                     "Structurize the CFG", false, false)
 
 /// Then and Else block order in SCC is arbitrary. But based on the
-/// order, after structurization there are cases where there might be extra 
+/// order, after structurization there are cases where there might be extra
 /// VGPR copies due to interference during register coelescing.
 ///  eg:- incoming phi values from Else block contains only vgpr copies and
 ///  incoming phis in Then block has are some modification for the vgprs.
@@ -457,7 +457,7 @@ INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
 ///
 /// This function checks the incoming phi values in the merge block and
 /// orders based on the following heuristics  of Then and Else block. Checks
-/// whether an incoming phi can be potential copy instructions and if so 
+/// whether an incoming phi can be potential copy instructions and if so
 /// checks whether copy within the block or not. 
 /// Increases score if its a potential copy from outside the block. 
 /// the higher scored block is ordered first.
