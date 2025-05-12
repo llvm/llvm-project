@@ -510,7 +510,7 @@ void AMDGPUCallLowering::lowerPreloadedParameter(
   const DataLayout &DL = B.getDataLayout();
 
   LLT ResTy = getLLTForType(*ArgTy, DL);
-  LLT ScalarTy = LLT::scalar(ResTy.getScalarSizeInBits());
+  LLT ScalarTy = LLT::scalar(ResTy.getSizeInBits());
   unsigned TotalSize = 0;
   SmallVector<Register> SrcRegs(PreloadRegs.size());
 
