@@ -904,7 +904,6 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
   if (!debugserver_file_spec)
     return Status::FromErrorString("unable to locate " DEBUGSERVER_BASENAME);
 
-  std::string debugserver_path = debugserver_file_spec.GetPath();
   launch_info.SetExecutableFile(debugserver_file_spec,
                                 /*add_exe_file_as_first_arg=*/true);
 
@@ -925,9 +924,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     debugserver_args.AppendArgument(fd_arg.GetString());
     // Send "pass_comm_fd" down to the inferior so it can use it to
     // communicate back with this process. Ignored on Windows.
-#ifndef _WIN32
     launch_info.AppendDuplicateFileAction((int)pass_comm_fd, (int)pass_comm_fd);
-#endif
   }
 
   // use native registers, not the GDB registers

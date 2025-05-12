@@ -7,7 +7,7 @@ declare i8 @llvm.nvvm.ldu.global.i.i8.p0(ptr, i32)
 
 define i8 @foo(ptr %a) {
 ; Ensure we properly truncate off the high-order 24 bits
-; CHECK:        ldu.global.u8
+; CHECK:        ldu.global.b8
 ; CHECK:        cvt.u32.u16
 ; CHECK:        and.b32         %r{{[0-9]+}}, %r{{[0-9]+}}, 255
   %val = tail call i8 @llvm.nvvm.ldu.global.i.i8.p0(ptr %a, i32 4)

@@ -3706,8 +3706,10 @@ ExprResult Parser::ParseRequiresExpression() {
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
           break;
         }
+        // If there's an error consuming the closing bracket, consumeClose()
+        // will handle skipping to the nearest recovery point for us.
         if (ExprBraces.consumeClose())
-          ExprBraces.skipToEnd();
+          break;
 
         concepts::Requirement *Req = nullptr;
         SourceLocation NoexceptLoc;

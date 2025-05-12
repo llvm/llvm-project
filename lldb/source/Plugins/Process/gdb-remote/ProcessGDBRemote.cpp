@@ -2056,7 +2056,6 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   // Stop with signal and thread info
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
   uint8_t signo = 0;
-  std::string value;
   std::string thread_name;
   std::string reason;
   std::string description;
@@ -2276,7 +2275,6 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         m_jstopinfo_sp = StructuredData::ParseJSON(json);
       } else if (key.compare("hexname") == 0) {
         StringExtractor name_extractor(value);
-        std::string name;
         // Now convert the HEX bytes into a string value
         name_extractor.GetHexByteString(thread_name);
       } else if (key.compare("name") == 0) {

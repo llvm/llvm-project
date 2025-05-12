@@ -21,9 +21,9 @@ define float @fabs_float(float %a) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [fabs_float_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [fabs_float_param_0];
 ; CHECK-NEXT:    abs.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %ret = call float @llvm.nvvm.fabs.f32(float %a)
   ret float %ret
@@ -35,9 +35,9 @@ define float @fabs_float_ftz(float %a) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [fabs_float_ftz_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [fabs_float_ftz_param_0];
 ; CHECK-NEXT:    abs.ftz.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %ret = call float @llvm.nvvm.fabs.ftz.f32(float %a)
   ret float %ret
@@ -49,9 +49,9 @@ define double @fabs_double(double %a) {
 ; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f64 %fd1, [fabs_double_param_0];
+; CHECK-NEXT:    ld.param.b64 %fd1, [fabs_double_param_0];
 ; CHECK-NEXT:    abs.f64 %fd2, %fd1;
-; CHECK-NEXT:    st.param.f64 [func_retval0], %fd2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %fd2;
 ; CHECK-NEXT:    ret;
   %ret = call double @llvm.nvvm.fabs.f64(double %a)
   ret double %ret

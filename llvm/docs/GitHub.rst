@@ -254,16 +254,6 @@ To illustrate, assume that you are working on two branches in your fork of the
 
 Your options are as follows:
 
-#. Two PRs with a dependency note
-
-   Create PR_1 for `feature_1` and PR_2 for `feature_2`. In PR_2, include a
-   note in the PR summary indicating that it depends on PR_1 (e.g.,
-   “Depends on #PR_1”).
-
-   To make review easier, make it clear which commits are part of the base PR
-   and which are new, e.g. "The first N commits are from the base PR". This
-   helps reviewers focus only on the incremental changes.
-
 #. Use user branches in ``llvm/llvm-project``
 
    Create user branches in the main repository, as described
@@ -274,8 +264,22 @@ Your options are as follows:
 
    This approach allows GitHub to display clean, incremental diffs for each PR
    in the stack, making it much easier for reviewers to see what has changed at
-   each step. Once `feature_1` is merged, you can rebase and re-target
-   `feature_2` to `main`.
+   each step. Once `feature_1` is merged, GitHub will automatically rebase and
+   re-target your branch `feature_2` to `main`. For more complex stacks, you can
+   perform this step using the web interface.
+
+   This approach requires commit access. See how to obtain it
+   `here <https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access>`_.
+
+#. Two PRs with a dependency note
+
+   Create PR_1 for `feature_1` and PR_2 for `feature_2`. In PR_2, include a
+   note in the PR summary indicating that it depends on PR_1 (e.g.,
+   “Depends on #PR_1”).
+
+   To make review easier, make it clear which commits are part of the base PR
+   and which are new, e.g. "The first N commits are from the base PR". This
+   helps reviewers focus only on the incremental changes.
 
 #. Use a stacked PR tool
 

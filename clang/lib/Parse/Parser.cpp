@@ -537,6 +537,8 @@ void Parser::Initialize() {
   Ident_sealed = nullptr;
   Ident_abstract = nullptr;
   Ident_override = nullptr;
+  Ident_trivially_relocatable_if_eligible = nullptr;
+  Ident_replaceable_if_eligible = nullptr;
   Ident_GNU_final = nullptr;
   Ident_import = nullptr;
   Ident_module = nullptr;

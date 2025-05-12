@@ -37,7 +37,7 @@ cwbcs %o0, %o1, .BB0
 ! OSA2011: cwbpos	%o0, %o1, .BB0                  ! encoding: [0x3c'A',0xc2'A',A,0x09'A']
 cwbpos %o0, %o1, .BB0
 ! NO-OSA2011: error: instruction requires a CPU feature not currently enabled
-! OSA2011: cwbneg	%o0, %o1, .BB0                  ! encoding: [0x1c'A',0xc2'A',A,0x09'A'
+! OSA2011: cwbneg	%o0, %o1, .BB0                  ! encoding: [0x1c'A',0xc2'A',A,0x09'A']
 cwbneg %o0, %o1, .BB0
 ! NO-OSA2011: error: instruction requires a CPU feature not currently enabled
 ! OSA2011: cwbvc	%o0, %o1, .BB0                  ! encoding: [0x3e'A',0xc2'A',A,0x09'A']
