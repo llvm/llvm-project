@@ -230,6 +230,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
+#  include <__type_traits/is_replaceable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
 #  include <__type_traits/is_trivially_relocatable.h>
@@ -530,6 +531,10 @@ public:
       __libcpp_is_trivially_relocatable<__map>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
       deque,
       void>;
+  using __replaceable _LIBCPP_NODEBUG =
+      __conditional_t<__is_replaceable_v<__map> && __container_allocator_is_replaceable<__alloc_traits>::value,
+                      deque,
+                      void>;
 
   static_assert(is_nothrow_default_constructible<allocator_type>::value ==
                     is_nothrow_default_constructible<__pointer_allocator>::value,

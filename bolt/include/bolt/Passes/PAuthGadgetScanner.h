@@ -43,9 +43,7 @@ struct MCInstInBBReference {
     return BB == RHS.BB && BBIndex == RHS.BBIndex;
   }
   bool operator<(const MCInstInBBReference &RHS) const {
-    if (BB != RHS.BB)
-      return BB < RHS.BB;
-    return BBIndex < RHS.BBIndex;
+    return std::tie(BB, BBIndex) < std::tie(RHS.BB, RHS.BBIndex);
   }
   operator MCInst &() const {
     assert(BB != nullptr);

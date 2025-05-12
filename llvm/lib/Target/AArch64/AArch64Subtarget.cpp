@@ -175,6 +175,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
+  case CortexA320:
   case CortexA510:
   case CortexA520:
     PrefFunctionAlignment = Align(16);
