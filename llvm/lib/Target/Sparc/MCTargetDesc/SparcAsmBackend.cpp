@@ -50,6 +50,15 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
     return (d16hi << 20) | d16lo;
   }
 
+  case ELF::R_SPARC_WDISP10: {
+    // 7.17 Compare and Branch
+    // Inst{20-19} = d10hi;
+    // Inst{12-5}  = d10lo;
+    unsigned d10hi = (Value >> 10) & 0x3;
+    unsigned d10lo = (Value >> 2) & 0xff;
+    return (d10hi << 19) | (d10lo << 5);
+  }
+
   case ELF::R_SPARC_HIX22:
     return (~Value >> 10) & 0x3fffff;
 
@@ -162,6 +171,9 @@ namespace {
         break;
       case ELF::R_SPARC_PC22:
         Info = {"", 10, 22, MCFixupKindInfo::FKF_IsPCRel};
+        break;
+      case ELF::R_SPARC_WDISP10:
+        Info = {"", 0, 32, MCFixupKindInfo::FKF_IsPCRel};
         break;
       case ELF::R_SPARC_WDISP16:
         Info = {"", 0, 32, MCFixupKindInfo::FKF_IsPCRel};
