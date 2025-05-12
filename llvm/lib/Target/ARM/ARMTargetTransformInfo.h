@@ -230,8 +230,7 @@ public:
 
   bool preferInLoopReduction(RecurKind Kind, Type *Ty) const override;
 
-  bool preferPredicatedReductionSelect(unsigned Opcode,
-                                       Type *Ty) const override;
+  bool preferPredicatedReductionSelect() const override;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override {
     return false;
