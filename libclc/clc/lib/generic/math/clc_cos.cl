@@ -6,9 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_sincos.h>
+#include <clc/clc_convert.h>
+#include <clc/clcmacro.h>
+#include <clc/float/definitions.h>
+#include <clc/math/clc_fabs.h>
+#include <clc/math/clc_sincos_helpers.h>
+#include <clc/math/clc_sincos_piby4.h>
+#include <clc/math/math.h>
+#include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_isnan.h>
+#include <clc/relational/clc_select.h>
 
-#define FUNCTION sincos
-#define __CLC_BODY <clc/math/unary_def_with_ptr.inc>
+#define __CLC_BODY <clc_cos.inc>
 #include <clc/math/gentype.inc>
