@@ -3,7 +3,7 @@
 
 ; Check @llvm.amdgcn.unreachable is a valid alternative to unreachable after @llvm.amdgcn.cs.chain
 
-declare amdgpu_cs_chain void @callee() #0
+declare amdgpu_cs_chain void @callee() nounwind
 
 define amdgpu_cs_chain void @test_unreachable(i32 %val) {
 ; CHECK-LABEL: define amdgpu_cs_chain void @test_unreachable(
@@ -30,9 +30,5 @@ ret.block:
   ret void
 }
 
-; Function Attrs: convergent noreturn nounwind
-declare void @llvm.amdgcn.cs.chain.p0.i64.i32.i32(ptr, i64, i32, i32, i32 immarg, ...) #1
-
-attributes #0 = { nounwind }
-attributes #1 = { convergent noreturn nounwind }
+declare void @llvm.amdgcn.cs.chain.p0.i64.i32.i32(ptr, i64, i32, i32, i32 immarg, ...)
 
