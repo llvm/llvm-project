@@ -583,6 +583,8 @@ bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
       SrcPolicy.setImm(SrcPolicy.getImm() | RISCVVType::TAIL_AGNOSTIC);
   }
 
+  MRI->constrainRegClass(MI.getOperand(2).getReg(),
+                         MRI->getRegClass(MI.getOperand(0).getReg()));
   MRI->replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(2).getReg());
   MRI->clearKillFlags(MI.getOperand(2).getReg());
   MI.eraseFromParent();
@@ -653,6 +655,8 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
     Policy |= RISCVVType::TAIL_AGNOSTIC;
   Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc())).setImm(Policy);
 
+  MRI->constrainRegClass(Src->getOperand(0).getReg(),
+                         MRI->getRegClass(MI.getOperand(0).getReg()));
   MRI->replaceRegWith(MI.getOperand(0).getReg(), Src->getOperand(0).getReg());
   MI.eraseFromParent();
 
