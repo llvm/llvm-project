@@ -350,7 +350,6 @@ struct Fragment {
     ///   "Never": Never insert headers
     std::optional<Located<std::string>> HeaderInsertion;
     /// Will suggest code patterns & snippets.
-    /// CLI option available '--code-patterns':
     /// Values are Config::CodePatternsPolicy:
     ///   all  => enable all code patterns and snippets suggestion
     ///   none => disable all code patterns and snippets suggestion
