@@ -4735,6 +4735,17 @@ def Error : InheritableAttr {
   let Documentation = [ErrorAttrDocs];
 }
 
+/// HLSL Root Signature Attribute
+def RootSignature : Attr {
+  /// [RootSignature(Signature)]
+  let Spellings = [Microsoft<"RootSignature">];
+  let Args = [IdentifierArgument<"Signature">];
+  let Subjects = SubjectList<[Function],
+                             ErrorDiag, "'function'">;
+  let LangOpts = [HLSL];
+  let Documentation = [RootSignatureDocs];
+}
+
 def HLSLNumThreads: InheritableAttr {
   let Spellings = [Microsoft<"numthreads">];
   let Args = [IntArgument<"X">, IntArgument<"Y">, IntArgument<"Z">];

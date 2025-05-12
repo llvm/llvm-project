@@ -144,6 +144,22 @@ void DescriptorTableClause::dump(raw_ostream &OS) const {
   OS << ", flags = " << Flags << ")";
 }
 
+void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
+  OS << "RootElements{";
+  bool First = true;
+  for (const RootElement &Element : Elements) {
+    if (!First)
+      OS << ",";
+    OS << " ";
+    First = false;
+    if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
+      Clause->dump(OS);
+    if (const auto &Table = std::get_if<DescriptorTable>(&Element))
+      Table->dump(OS);
+  }
+  OS << "}";
+}
+
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm

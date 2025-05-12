@@ -41,6 +41,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -5176,6 +5177,42 @@ public:
 
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+};
+
+class HLSLRootSignatureDecl final
+    : public NamedDecl,
+      private llvm::TrailingObjects<HLSLRootSignatureDecl,
+                                    llvm::hlsl::rootsig::RootElement> {
+  friend TrailingObjects;
+
+  unsigned NumElems;
+
+  llvm::hlsl::rootsig::RootElement *getElems() {
+    return getTrailingObjects<llvm::hlsl::rootsig::RootElement>();
+  }
+
+  const llvm::hlsl::rootsig::RootElement *getElems() const {
+    return getTrailingObjects<llvm::hlsl::rootsig::RootElement>();
+  }
+
+  HLSLRootSignatureDecl(DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+                        unsigned NumElems);
+
+public:
+  static HLSLRootSignatureDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+         ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements);
+
+  static HLSLRootSignatureDecl *CreateDeserialized(ASTContext &C,
+                                                   GlobalDeclID ID);
+
+  ArrayRef<llvm::hlsl::rootsig::RootElement> getRootElements() const {
+    return {getElems(), NumElems};
+  }
+
+  // Implement isa/cast/dyncast/etc.
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == HLSLRootSignature; }
 };
 
 /// Insertion operator for diagnostics.  This allows sending NamedDecl's
