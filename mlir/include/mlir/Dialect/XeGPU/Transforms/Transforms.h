@@ -9,6 +9,10 @@
 #ifndef MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LogicalResult.h"
+#include "mlir/IR/Operation.h"
+
 #include <functional>
 #include <optional>
 #include <utility>
