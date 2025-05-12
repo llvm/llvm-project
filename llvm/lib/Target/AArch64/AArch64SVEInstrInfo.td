@@ -545,12 +545,18 @@ def AArch64umulh : PatFrag<(ops node:$op1, node:$op2),
 
 
 def AArch64bsl  : PatFrags<(ops node:$Op1, node:$Op2, node:$Op3),
-                           [(int_aarch64_sve_bsl node:$Op1, node:$Op2, node:$Op3),
-                            (AArch64bsp node:$Op3, node:$Op1, node:$Op2)]>;
+                           [(AArch64bsp node:$Op3, node:$Op1, node:$Op2),
+                            (or (and node:$Op1, node:$Op3), (and node:$Op2, (vnot node:$Op3)))]>;
 
-def AArch64nbsl : PatFrags<(ops node:$Op1, node:$Op2, node:$Op3),
-                           [(int_aarch64_sve_nbsl node:$Op1, node:$Op2, node:$Op3),
-                            (vnot (AArch64bsp node:$Op3, node:$Op1, node:$Op2))]>;
+def AArch64bsl1n : PatFrag<(ops node:$Op1, node:$Op2, node:$Op3),
+                           (AArch64bsl (vnot node:$Op1), node:$Op2, node:$Op3)>;
+
+def AArch64bsl2n : PatFrags<(ops node:$Op1, node:$Op2, node:$Op3),
+                            [(AArch64bsl node:$Op1, (vnot node:$Op2), node:$Op3),
+                             (or (and node:$Op1, node:$Op3), (vnot (or node:$Op2, node:$Op3)))]>;
+
+def AArch64nbsl : PatFrag<(ops node:$Op1, node:$Op2, node:$Op3),
+                          (vnot (AArch64bsl node:$Op1, node:$Op2, node:$Op3))>;
 
 
 let Predicates = [HasSVE] in {
@@ -3934,8 +3940,8 @@ let Predicates = [HasSVE2_or_SME] in {
   defm EOR3_ZZZZ  : sve2_int_bitwise_ternary_op<0b000, "eor3",  AArch64eor3>;
   defm BCAX_ZZZZ  : sve2_int_bitwise_ternary_op<0b010, "bcax",  AArch64bcax>;
   defm BSL_ZZZZ   : sve2_int_bitwise_ternary_op<0b001, "bsl",   AArch64bsl>;
-  defm BSL1N_ZZZZ : sve2_int_bitwise_ternary_op<0b011, "bsl1n", int_aarch64_sve_bsl1n>;
-  defm BSL2N_ZZZZ : sve2_int_bitwise_ternary_op<0b101, "bsl2n", int_aarch64_sve_bsl2n>;
+  defm BSL1N_ZZZZ : sve2_int_bitwise_ternary_op<0b011, "bsl1n", AArch64bsl1n>;
+  defm BSL2N_ZZZZ : sve2_int_bitwise_ternary_op<0b101, "bsl2n", AArch64bsl2n>;
   defm NBSL_ZZZZ  : sve2_int_bitwise_ternary_op<0b111, "nbsl",  AArch64nbsl>;
 
   // SVE2 bitwise xor and rotate right by immediate
