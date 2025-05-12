@@ -12,9 +12,9 @@
 
 class UA2005RegWin<string asmstr, bits<5> fcn>
     : F3_1<2, 0b110001, (outs), (ins), asmstr, []> {
-    let rd = fcn;
-    let rs1 = 0;
-    let rs2 = 0;
+  let rd = fcn;
+  let rs1 = 0;
+  let rs2 = 0;
 }
 
 // Convenience template for 4-operand instructions

@@ -11038,7 +11038,7 @@ bool RecordExprEvaluator::VisitLambdaExpr(const LambdaExpr *E) {
 
     // If there is no initializer, either this is a VLA or an error has
     // occurred.
-    if (!CurFieldInit)
+    if (!CurFieldInit || CurFieldInit->containsErrors())
       return Error(E);
 
     LValue Subobject = This;
@@ -18019,10 +18019,14 @@ static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
                                           const Expr *PtrExpression,
                                           ASTContext &Ctx,
                                           Expr::EvalResult &Status) {
-  LValue String;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantExpression);
   Info.InConstantContext = true;
 
+  if (Info.EnableNewConstInterp)
+    return Info.Ctx.getInterpContext().evaluateCharRange(Info, SizeExpression,
+                                                         PtrExpression, Result);
+
+  LValue String;
   FullExpressionRAII Scope(Info);
   APSInt SizeValue;
   if (!::EvaluateInteger(SizeExpression, SizeValue, Info))

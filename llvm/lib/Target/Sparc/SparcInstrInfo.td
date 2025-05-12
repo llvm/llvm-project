@@ -163,6 +163,18 @@ def SparcMEMriAsmOperand : AsmOperandClass {
   let ParserMethod = "parseMEMOperand";
 }
 
+def simm5Op : Operand<iPTR> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let DecoderMethod = "DecodeSIMM5";
+  let EncoderMethod = "getSImm5OpValue";
+}
+
+def simm13Op : Operand<iPTR> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let DecoderMethod = "DecodeSIMM13";
+  let EncoderMethod = "getSImm13OpValue";
+}
+
 def MEMrr : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
   let MIOperandInfo = (ops ptr_rc, ptr_rc);
@@ -170,7 +182,7 @@ def MEMrr : Operand<iPTR> {
 }
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, i32imm);
+  let MIOperandInfo = (ops ptr_rc, simm13Op);
   let ParserMatchClass = SparcMEMriAsmOperand;
 }
 
@@ -256,18 +268,6 @@ def calltarget : Operand<i32> {
   let ParserMatchClass = SparcCallTargetAsmOperand;
 }
 
-def simm5Op : Operand<iPTR> {
-  let OperandType = "OPERAND_IMMEDIATE";
-  let DecoderMethod = "DecodeSIMM5";
-  let EncoderMethod = "getSImm5OpValue";
-}
-
-def simm13Op : Operand<iPTR> {
-  let OperandType = "OPERAND_IMMEDIATE";
-  let DecoderMethod = "DecodeSIMM13";
-  let EncoderMethod = "getSImm13OpValue";
-}
-
 // Operand for printing out a condition code.
 let PrintMethod = "printCCOperand" in {
   def CCOp : Operand<i32>;
@@ -348,6 +348,9 @@ def tailcall      : SDNode<"SPISD::TAIL_CALL", SDT_SPCall,
 def SDT_SPRet     : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 def retglue       : SDNode<"SPISD::RET_GLUE", SDT_SPRet,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+def global_base_reg : SDNode<"SPISD::GLOBAL_BASE_REG",
+                             SDTypeProfile<1, 0, [SDTCisVT<0, iPTR>]>>;
 
 def flushw        : SDNode<"SPISD::FLUSHW", SDTNone,
                            [SDNPHasChain, SDNPSideEffect, SDNPMayStore]>;
