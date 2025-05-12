@@ -1504,6 +1504,11 @@ void DAP::EventThread() {
   bool done = false;
   while (!done) {
     if (listener.WaitForEvent(1, event)) {
+      // Once we get an event, make sure we finish handling it before the main
+      // thread handles the next DAP request.
+      lldb::SBMutex lock = GetAPIMutex();
+      std::lock_guard<lldb::SBMutex> guard(lock);
+
       const auto event_mask = event.GetType();
       if (lldb::SBProcess::EventIsProcessEvent(event)) {
         lldb::SBProcess process = lldb::SBProcess::GetProcessFromEvent(event);
