@@ -9,8 +9,8 @@ target triple = "nvptx64-nvidia-nvcl"
 define ptx_kernel void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(3) %in) {
 ; IR-NOT: addrspacecast
 ; PTX-NOT: cvta.to.global
-; PTX:  ld.shared.u32
-; PTX   st.global.u32
+; PTX:  ld.shared.b32
+; PTX   st.global.b32
   %v = load i32, ptr addrspace(3) %in, align 4
   store i32 %v, ptr addrspace(1) %out, align 4
   ret void
