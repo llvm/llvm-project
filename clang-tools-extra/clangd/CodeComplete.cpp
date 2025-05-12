@@ -954,6 +954,7 @@ struct CompletionRecorder : public CodeCompleteConsumer {
       if (Config::current().Completion.CodePatterns ==
               Config::CodePatternsPolicy::None &&
           Result.Kind == CodeCompletionResult::RK_Pattern &&
+          // keep allowing the include files autocomplete suggestions
           ContextKind != CodeCompletionContext::CCC_IncludedFile)
         continue;
       // Class members that are shadowed by subclasses are usually noise.
