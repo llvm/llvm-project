@@ -799,6 +799,9 @@ public:
   RegUnit &getRegUnit(unsigned RUID) { return RegUnits[RUID]; }
   const RegUnit &getRegUnit(unsigned RUID) const { return RegUnits[RUID]; }
 
+  // Helper function to print information about a register unit.
+  void printRegUnitName(unsigned Unit) const;
+
   std::list<CodeGenRegisterClass> &getRegClasses() { return RegClasses; }
 
   const std::list<CodeGenRegisterClass> &getRegClasses() const {

@@ -440,7 +440,7 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
   //
   // Create a RegUnit for leaf register that uniquely defines it, which has
   // explicit alias registers.
-  if (RegUnits.empty() && !ExplicitAliases.empty())
+  if (!ExplicitAliases.empty())
     RegUnits.set(RegBank.newRegUnit(this));
   for (CodeGenRegister *AR : ExplicitAliases) {
     // Only visit each edge once.
@@ -2685,19 +2685,23 @@ CodeGenRegBank::computeCoveredRegisters(ArrayRef<const Record *> Regs) {
   return BV;
 }
 
+void CodeGenRegBank::printRegUnitName(unsigned Unit) const {
+  if (Unit < NumNativeRegUnits)
+    dbgs() << ' ' << RegUnits[Unit].Roots[0]->getName();
+  else
+    dbgs() << " #" << Unit;
+
+  if (RegUnits[Unit].Roots[1]) {
+    if (Unit < NumNativeRegUnits)
+      dbgs() << '~' << RegUnits[Unit].Roots[1]->getName();
+    else
+      dbgs() << "~#" << Unit;
+  }
+}
+
 void CodeGenRegBank::printRegUnitNames(ArrayRef<unsigned> Units) const {
   for (unsigned Unit : Units) {
-    if (Unit < NumNativeRegUnits)
-      dbgs() << ' ' << RegUnits[Unit].Roots[0]->getName();
-    else
-      dbgs() << " #" << Unit;
-
-    if (RegUnits[Unit].Roots[1]) {
-      if (Unit < NumNativeRegUnits)
-        dbgs() << '~' << RegUnits[Unit].Roots[1]->getName();
-      else
-        dbgs() << "~#" << Unit;
-    }
+    printRegUnitName(Unit);
   }
   dbgs() << '\n';
 }

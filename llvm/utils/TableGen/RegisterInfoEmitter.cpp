@@ -1933,6 +1933,20 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     for (auto &[SubIdx, SubReg] : R.getSubRegs()) {
       OS << "\tSubReg " << SubIdx->getName() << " = " << SubReg->getName()
          << '\n';
+      for (const auto &Unit : SubReg->getNativeRegUnits()) {
+        OS << "\tRegUnit " << SubReg->getName() << " : ";
+        RegBank.printRegUnitName(Unit);
+        OS << '\n';
+      }
+    }
+    const auto &RUMasks = R.getRegUnitLaneMasks();
+    unsigned u = 0;
+    for (const auto &Unit : R.getNativeRegUnits()) {
+      OS << "\tNative RegUnit: ";
+      RegBank.printRegUnitName(Unit);
+      OS << '\n';
+      OS << "\tLaneMask Value: " << PrintLaneMask(RUMasks[u]) << '\n';
+      ++u;
     }
   }
 }
