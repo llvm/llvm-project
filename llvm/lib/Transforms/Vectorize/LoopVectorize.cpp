@@ -5019,8 +5019,8 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
         1u, std::min(AvailableTC / (EstimatedVF * 2), MaxInterleaveCount)));
 
     if (PSE.getSE()->getSmallConstantTripCount(TheLoop) > 0) {
-      // If the estimated trip count is actually an exact one we select between
-      // two prospective ICs, where
+      // If the best known trip count is exact, we select between two
+      // prospective ICs, where
       //
       // 1) the aggressive IC is capped by the trip count divided by VF
       // 2) the conservative IC is capped by the trip count divided by (VF * 2)
