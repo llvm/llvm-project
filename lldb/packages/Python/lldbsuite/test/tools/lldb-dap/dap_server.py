@@ -7,6 +7,7 @@ import os
 import pprint
 import socket
 import string
+import signal
 import subprocess
 import sys
 import threading
@@ -97,37 +98,15 @@ def dump_dap_log(log_file):
     print("========= END =========", file=sys.stderr)
 
 
-def read_packet_thread(vs_comm, log_file):
-    done = False
-    try:
-        while not done:
-            packet = read_packet(vs_comm.recv, trace_file=vs_comm.trace_file)
-            # `packet` will be `None` on EOF. We want to pass it down to
-            # handle_recv_packet anyway so the main thread can handle unexpected
-            # termination of lldb-dap and stop waiting for new packets.
-            done = not vs_comm.handle_recv_packet(packet)
-    finally:
-        # Wait for the process to fully exit before dumping the log file to
-        # ensure we have the entire log contents.
-        if vs_comm.process is not None:
-            try:
-                # Do not wait forever, some logs are better than none.
-                vs_comm.process.wait(timeout=20)
-            except subprocess.TimeoutExpired:
-                pass
-        dump_dap_log(log_file)
-
-
 class DebugCommunication(object):
     def __init__(self, recv, send, init_commands, log_file=None):
+        self.log_file = log_file
         self.trace_file = None
         self.send = send
         self.recv = recv
         self.recv_packets = []
         self.recv_condition = threading.Condition()
-        self.recv_thread = threading.Thread(
-            target=read_packet_thread, args=(self, log_file)
-        )
+        self.recv_thread = threading.Thread(target=self._read_packet_thread)
         self.process_event_body = None
         self.exit_status = None
         self.initialize_body = None
@@ -154,6 +133,15 @@ class DebugCommunication(object):
             raise ValueError("command mismatch in response")
         if command["seq"] != response["request_seq"]:
             raise ValueError("seq mismatch in response")
+
+    def _read_packet_thread(self):
+        done = False
+        while not done:
+            packet = read_packet(self.recv, trace_file=self.trace_file)
+            # `packet` will be `None` on EOF. We want to pass it down to
+            # handle_recv_packet anyway so the main thread can handle unexpected
+            # termination of lldb-dap and stop waiting for new packets.
+            done = not self.handle_recv_packet(packet)
 
     def get_modules(self):
         module_list = self.request_modules()["body"]["modules"]
@@ -247,10 +235,12 @@ class DebugCommunication(object):
                 # and 'progressEnd' events. Keep these around in case test
                 # cases want to verify them.
                 self.progress_events.append(packet)
-
-        elif packet_type == "response":
-            if packet["command"] == "disconnect":
+            elif event == "terminated":
+                # The terminated event corresponds to the last message we expect
+                # on the DAP. See section 'Debug session end' on
+                # https://microsoft.github.io/debug-adapter-protocol/overview
                 keepGoing = False
+
         self.enqueue_recv_packet(packet)
         return keepGoing
 
@@ -307,7 +297,6 @@ class DebugCommunication(object):
                 return None
             finally:
                 self.recv_condition.release()
-
         return None
 
     def send_recv(self, command):
@@ -1263,7 +1252,7 @@ class DebugAdapterServer(DebugCommunication):
             args,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=sys.stderr,
             env=adapter_env,
         )
 
@@ -1294,16 +1283,41 @@ class DebugAdapterServer(DebugCommunication):
         return -1
 
     def terminate(self):
-        super(DebugAdapterServer, self).terminate()
         if self.process is not None:
-            self.process.terminate()
-            try:
-                self.process.wait(timeout=20)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-                self.process.wait()
+            process = self.process
             self.process = None
+            try:
+                # When we close stdin it should signal the lldb-dap that no
+                # new messages will arrive and it should shutdown on its own.
+                process.stdin.close()
+                process.wait(timeout=30.0)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+            finally:
+                dump_dap_log(self.log_file)
+            if process.returncode != 0:
+                raise DebugAdapterProcessError(process.returncode)
 
+
+class DebugAdapterError(Exception):
+    pass
+
+
+class DebugAdapterProcessError(DebugAdapterError):
+    """Raised when the lldb-dap process exits with a non-zero exit status."""
+
+    def __init__(self, returncode):
+        self.returncode = returncode
+
+    def __str__(self):
+        if self.returncode and self.returncode < 0:
+            try:
+                return f"lldb-dap died with {signal.Signals(-self.returncode).name}."
+            except ValueError:
+                return f"lldb-dap died with unknown signal {-self.returncode}."
+        else:
+            return f"lldb-dap returned non-zero exit status {self.returncode}."
 
 def attach_options_specified(options):
     if options.pid is not None:

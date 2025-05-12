@@ -75,9 +75,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.request_disconnect()
 
         # Wait until the underlying lldb-dap process dies.
-        self.dap_server.process.wait(
-            timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval
-        )
+        self.dap_server.process.wait(timeout=self.timeoutval)
 
         # Check the return code
         self.assertEqual(self.dap_server.process.poll(), 0)
@@ -536,12 +534,13 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             terminateCommands=terminateCommands,
             disconnectAutomatically=False,
         )
+        self.dap_server.wait_for_stopped()
         self.get_console()
         # Once it's disconnected the console should contain the
         # "terminateCommands"
         self.dap_server.request_disconnect(terminateDebuggee=True)
         output = self.collect_console(
-            timeout_secs=1.0,
+            timeout_secs=self.timeoutval,
             pattern=terminateCommands[0],
         )
         self.verify_commands("terminateCommands", output, terminateCommands)
@@ -553,7 +552,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         as the one returned by "version" command.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(program, stopOnEntry=True)
 
         source = "main.c"
         breakpoint_line = line_number(source, "// breakpoint 1")

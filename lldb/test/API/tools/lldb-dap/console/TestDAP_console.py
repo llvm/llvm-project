@@ -169,6 +169,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
     def test_diagnositcs(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
+        self.dap_server.wait_for_stopped()
 
         core = self.getBuildArtifact("minidump.core")
         self.yaml2obj("minidump.yaml", core)
@@ -176,7 +177,9 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             f"target create --core  {core}", context="repl"
         )
 
-        output = self.get_important()
+        output = self.collect_important(
+            self.timeoutval, pattern="process ID from minidump file"
+        )
         self.assertIn(
             "warning: unable to retrieve process ID from minidump file",
             output,

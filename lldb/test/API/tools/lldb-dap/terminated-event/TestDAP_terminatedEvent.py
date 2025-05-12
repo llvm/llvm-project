@@ -32,7 +32,7 @@ class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
 
         program_basename = "a.out.stripped"
         program = self.getBuildArtifact(program_basename)
-        self.build_and_launch(program)
+        self.build_and_launch(program, stopOnEntry=True, disconnectAutomatically=False)
         # Set breakpoints
         functions = ["foo"]
         breakpoint_ids = self.set_function_breakpoints(functions)

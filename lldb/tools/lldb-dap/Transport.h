@@ -66,14 +66,14 @@ public:
   void operator=(const Transport &rhs) = delete;
   /// @}
 
-  /// Writes a Debug Adater Protocol message to the output stream.
+  /// Writes a Debug Adapter Protocol message to the output stream.
   llvm::Error Write(const protocol::Message &M);
 
-  /// Reads the next Debug Adater Protocol message from the input stream.
+  /// Reads the next Debug Adapter Protocol message from the input stream.
   ///
   /// \param timeout[in]
   ///     A timeout to wait for reading the initial header. Once a message
-  ///     header is recieved, this will block until the full message is
+  ///     header is received, this will block until the full message is
   ///     read.
   ///
   /// \returns Returns the next protocol message.

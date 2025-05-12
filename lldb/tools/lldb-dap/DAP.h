@@ -32,6 +32,7 @@
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
+#include "lldb/Host/MainLoop.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -46,6 +47,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -338,7 +340,7 @@ struct DAP {
   /// listeing for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
-  bool HandleObject(const protocol::Message &M);
+  bool HandleProtocolMessage(const protocol::Message &M);
 
   /// Disconnect the DAP session.
   llvm::Error Disconnect();
@@ -349,7 +351,11 @@ struct DAP {
   /// Send a "terminated" event to indicate the process is done being debugged.
   void SendTerminatedEvent();
 
-  llvm::Error Loop();
+  /// Run the main run loop for the debug adapter session.
+  llvm::Error Run();
+
+  /// Stop the main run loop for the debug adapter session.
+  void RequestTermination();
 
   /// Send a Debug Adapter Protocol reverse request to the IDE.
   ///
@@ -417,8 +423,6 @@ struct DAP {
   /// Clears the cancel request from the set of tracked cancel requests.
   void ClearCancelRequest(const protocol::CancelArguments &);
 
-  lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
-
   void StartEventThread();
   void StartProgressEventThread();
 
@@ -435,17 +439,20 @@ private:
   /// Event threads.
   /// @{
   void EventThread();
+  void HandleEvent(lldb::SBEvent event);
   void ProgressEventThread();
 
-  std::thread event_thread;
-  std::thread progress_event_thread;
+  std::thread m_event_thread;
+  std::thread m_progress_event_thread;
   /// @}
 
+  lldb::SBError TransportThread();
+  std::thread m_transport_thread;
+  lldb_private::MainLoop m_loop;
+
   /// Queue for all incoming messages.
-  std::deque<protocol::Message> m_queue;
-  std::deque<protocol::Message> m_pending_queue;
-  std::mutex m_queue_mutex;
-  std::condition_variable m_queue_cv;
+  std::deque<lldb_private::MainLoop::Callback> m_pending_queue;
+  std::mutex m_pending_queue_mutex;
 
   std::mutex m_cancelled_requests_mutex;
   llvm::SmallSet<int64_t, 4> m_cancelled_requests;
