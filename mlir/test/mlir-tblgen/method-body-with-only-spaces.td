@@ -1,4 +1,4 @@
-// RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s
+// RUN: mlir-tblgen --gen-type-interface-decls -I %S/../../include %s | FileCheck %s
 
 include "mlir/IR/OpBase.td"
 
