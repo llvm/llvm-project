@@ -2627,7 +2627,7 @@ struct PadOpVectorizationWithTransferReadPattern
       SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
       xferOp->setAttr(xferOp.getInBoundsAttrName(),
                       rewriter.getBoolArrayAttr(inBounds));
-      xferOp.getSourceMutable().assign(padOp.getSource());
+      xferOp.getBaseMutable().assign(padOp.getSource());
       xferOp.getPaddingMutable().assign(padValue);
     });
 
@@ -3114,7 +3114,7 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
     return rewriter.notifyMatchFailure(xferOp, "unsupported mask");
 
   // Transfer into `view`.
-  Value viewOrAlloc = xferOp.getSource();
+  Value viewOrAlloc = xferOp.getBase();
   if (!viewOrAlloc.getDefiningOp<memref::ViewOp>() &&
       !viewOrAlloc.getDefiningOp<memref::AllocOp>())
     return rewriter.notifyMatchFailure(xferOp, "source not a view or alloc");
@@ -3191,7 +3191,7 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
     return rewriter.notifyMatchFailure(xferOp, "unsupported mask");
 
   // Transfer into `viewOrAlloc`.
-  Value viewOrAlloc = xferOp.getSource();
+  Value viewOrAlloc = xferOp.getBase();
   if (!viewOrAlloc.getDefiningOp<memref::ViewOp>() &&
       !viewOrAlloc.getDefiningOp<memref::AllocOp>())
     return rewriter.notifyMatchFailure(xferOp, "source not a view or alloc");

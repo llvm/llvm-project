@@ -1273,7 +1273,7 @@ def Vector_TransferReadOp :
       AttrSizedOperandSegments,
       DestinationStyleOpInterface
     ]>,
-    Arguments<(ins AnyShaped:$source,
+    Arguments<(ins AnyShaped:$base,
                    Variadic<Index>:$indices,
                    AffineMapAttr:$permutation_map,
                    AnyType:$padding,
@@ -1522,7 +1522,7 @@ def Vector_TransferWriteOp :
       DestinationStyleOpInterface
   ]>,
     Arguments<(ins AnyVectorOfAnyRank:$valueToStore,
-                   AnyShaped:$source,
+                   AnyShaped:$base,
                    Variadic<Index>:$indices,
                    AffineMapAttr:$permutation_map,
                    Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
@@ -1663,7 +1663,7 @@ def Vector_TransferWriteOp :
     ///  ops of other dialects.
     Value getValue() { return getVector(); }
 
-    MutableOperandRange getDpsInitsMutable() { return getSourceMutable(); }
+    MutableOperandRange getDpsInitsMutable() { return getBaseMutable(); }
   }];
 
   let hasFolder = 1;
