@@ -4594,16 +4594,10 @@ void ASTWriter::GenerateNameLookupTable(
       break;
 
     case DeclarationName::CXXConstructorName:
-      // assert(isa<CXXRecordDecl>(DC) &&
-      //        "Cannot have a constructor name outside of a class!");
-      // ConstructorNameSet.insert(Name);
       IncludeConstructorNames = true;
       break;
 
     case DeclarationName::CXXConversionFunctionName:
-      // assert(isa<CXXRecordDecl>(DC) &&
-      //        "Cannot have a conversion function name outside of a class!");
-      // ConversionNameSet.insert(Name);
       IncludeConversionNames = true;
       break;
     }
@@ -4612,7 +4606,6 @@ void ASTWriter::GenerateNameLookupTable(
   // Sort the names into a stable order.
   llvm::sort(Names);
 
-  // if (auto *D = dyn_cast<CXXRecordDecl>(DC)) {
   if (IncludeConstructorNames || IncludeConversionNames) {
     // We need to establish an ordering of constructor and conversion function
     // names, and they don't have an intrinsic ordering. We also need to write
