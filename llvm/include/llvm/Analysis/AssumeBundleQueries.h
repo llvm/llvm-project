@@ -152,18 +152,19 @@ RetainedKnowledge getKnowledgeFromUse(const Use *U,
 /// in AttrKinds and it matches the Filter.
 RetainedKnowledge getKnowledgeForValue(
     const Value *V, ArrayRef<Attribute::AttrKind> AttrKinds,
-    AssumptionCache *AC = nullptr,
+    AssumptionCache &AC,
     function_ref<bool(RetainedKnowledge, Instruction *,
-                            const CallBase::BundleOpInfo *)>
+                      const CallBase::BundleOpInfo *)>
         Filter = [](auto...) { return true; });
 
 /// Return a valid Knowledge associated to the Value V if its Attribute kind is
 /// in AttrKinds and the knowledge is suitable to be used in the context of
 /// CtxI.
-RetainedKnowledge getKnowledgeValidInContext(
-    const Value *V, ArrayRef<Attribute::AttrKind> AttrKinds,
-    const Instruction *CtxI, const DominatorTree *DT = nullptr,
-    AssumptionCache *AC = nullptr);
+RetainedKnowledge
+getKnowledgeValidInContext(const Value *V,
+                           ArrayRef<Attribute::AttrKind> AttrKinds,
+                           AssumptionCache &AC, const Instruction *CtxI,
+                           const DominatorTree *DT = nullptr);
 
 /// This extracts the Knowledge from an element of an operand bundle.
 /// This is mostly for use in the assume builder.
