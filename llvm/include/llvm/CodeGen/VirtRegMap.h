@@ -248,6 +248,14 @@ public:
   static bool isRequired() { return true; }
 
   void printPipeline(raw_ostream &OS, function_ref<StringRef(StringRef)>) const;
+
+  MachineFunctionProperties getSetProperties() const {
+    if (ClearVirtRegs) {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::NoVRegs);
+    }
+    return {};
+  }
 };
 
 } // end llvm namespace
