@@ -230,8 +230,13 @@ struct LinearizeVectorExtractStridedSlice final
         extractStridedSliceOp.getType());
     assert(flatOutputType && "vector type expected");
 
-    assert(stridesAllOne(extractStridedSliceOp) &&
-           "has extract_strided_slice's verifier not checked strides are 1?");
+    // Expect a legalization failure if the strides are not all 1 (if ever the
+    // verifier for extract_strided_slice allows non-1 strides).
+    if (!stridesAllOne(extractStridedSliceOp)) {
+      return rewriter.notifyMatchFailure(
+          extractStridedSliceOp,
+          "extract_strided_slice with strides != 1 not supported");
+    }
 
     FailureOr<SmallVector<int64_t>> offsets =
         intsFromArrayAttr(extractStridedSliceOp.getOffsets());
@@ -292,9 +297,13 @@ struct LinearizeVectorInsertStridedSlice final
                   OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    // See InsertStridedSliceOp's verify method.
-    assert(stridesAllOne(insertStridedSliceOp) &&
-           "has insert_strided_slice's verifier not checked strides are 1?");
+    // Expect a legalization failure if the strides are not all 1 (if ever the
+    // verifier for insert_strided_slice allows non-1 strides).
+    if (!stridesAllOne(insertStridedSliceOp)) {
+      return rewriter.notifyMatchFailure(
+          insertStridedSliceOp,
+          "insert_strided_slice with strides != 1 not supported");
+    }
 
     VectorType inputType = insertStridedSliceOp.getValueToStore().getType();
     ArrayRef<int64_t> inputShape = inputType.getShape();
