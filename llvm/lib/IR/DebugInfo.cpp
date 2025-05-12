@@ -1339,9 +1339,8 @@ LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
   return wrap(unwrap(Builder)->createSubrangeType(
       {Name, NameLen}, unwrapDI<DIFile>(File), LineNo, unwrapDI<DIScope>(Scope),
       SizeInBits, AlignInBits, map_from_llvmDIFlags(Flags),
-      unwrapDI<DIType>(BaseTy), unwrap<DIExpression>(LowerBound),
-      unwrap<DIExpression>(UpperBound), unwrap<DIExpression>(Stride),
-      unwrap<DIExpression>(Bias)));
+      unwrapDI<DIType>(BaseTy), unwrap(LowerBound), unwrap(UpperBound),
+      unwrap(Stride), unwrap(Bias)));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
@@ -1356,17 +1355,17 @@ LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
   return wrap(unwrap(Builder)->createArrayType(
       unwrapDI<DIScope>(Scope), {Name, NameLen}, unwrapDI<DIFile>(File), LineNo,
       Size, AlignInBits, unwrapDI<DIType>(Ty), Subs,
-      unwrap<DIExpression>(DataLocation), unwrap<DIExpression>(Associated),
+      unwrapDI<DIExpression>(DataLocation), unwrap<DIExpression>(Associated),
       unwrap<DIExpression>(Allocated), unwrap<DIExpression>(Rank),
       unwrap(BitStride)));
 }
 
 void LLVMReplaceArrays(LLVMDIBuilderRef Builder, LLVMMetadataRef *T,
                        LLVMMetadataRef *Elements, unsigned NumElements) {
-  auto Arr = unwrap<DICompositeType>(*T);
+  auto CT = unwrap<DICompositeType>(*T);
   auto Elts =
       unwrap(Builder)->getOrCreateArray({unwrap(Elements), NumElements});
-  unwrap(Builder)->replaceArrays(Arr, Elts);
+  unwrap(Builder)->replaceArrays(CT, Elts);
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateUnionType(
