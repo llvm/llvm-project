@@ -25,7 +25,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalIFunc.h"
-#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ProfileSummary.h"
