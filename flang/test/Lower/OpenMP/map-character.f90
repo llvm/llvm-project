@@ -11,11 +11,12 @@ subroutine TestOfCharacter(a0, a1, l)
 end subroutine TestOfCharacter
 
 
+!CHECK:  func.func @_QPtestofcharacter(%[[ARG0:.*]]: !fir.boxchar<1> {{.*}}, %[[ARG1:.*]]: !fir.boxchar<1> {{.*}}
 !CHECK:  %[[A0_BOXCHAR_ALLOCA:.*]] = fir.alloca !fir.boxchar<1>
 !CHECK:  %[[A1_BOXCHAR_ALLOCA:.*]] = fir.alloca !fir.boxchar<1>
-!CHECK:  %[[UNBOXED_ARG0:.*]]:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+!CHECK:  %[[UNBOXED_ARG0:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 !CHECK:  %[[A0_DECL:.*]]:2 = hlfir.declare %[[UNBOXED_ARG0]]#0 typeparams %[[UNBOXED_ARG0]]#1 dummy_scope {{.*}} -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-!CHECK:  %[[UNBOXED_ARG1:.*]]:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+!CHECK:  %[[UNBOXED_ARG1:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 !CHECK:  %[[A1_DECL:.*]]:2 = hlfir.declare %[[UNBOXED_ARG1]]#0 typeparams %[[UNBOXED_ARG1]]#1 dummy_scope {{.*}} -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 !CHECK:  %[[UNBOXED_A0_DECL:.*]]:2 = fir.unboxchar %[[A0_DECL]]#0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 !CHECK:  %[[A0_LB:.*]] = arith.constant 0 : index
@@ -31,9 +32,9 @@ end subroutine TestOfCharacter
 !CHECK:  %[[A1_BOUNDS:.*]] = omp.map.bounds lower_bound(%[[A1_LB]] : index) upper_bound(%[[A1_UB]] : index) extent(%[[UNBOXED_A1_DECL]]#1 : index)
 !CHECKL-SAME: stride(%[[A1_STRIDE]] : index) start_idx(%[[A1_LB]] : index) {stride_in_bytes = true}
 !CHECK:  %[[A1_MAP:.*]] = omp.map.info var_ptr(%[[A1_DECL]]#1 : !fir.ref<!fir.char<1,?>>, !fir.char<1,?>) map_clauses(from) capture(ByRef) bounds(%[[A1_BOUNDS]]) -> !fir.ref<!fir.char<1,?>> {name = "a1"}
-!CHECK:  fir.store %arg1 to %[[A1_BOXCHAR_ALLOCA]] : !fir.ref<!fir.boxchar<1>>
+!CHECK:  fir.store %[[ARG1]] to %[[A1_BOXCHAR_ALLOCA]] : !fir.ref<!fir.boxchar<1>>
 !CHECK:  %[[A1_BOXCHAR_MAP:.*]] = omp.map.info var_ptr(%[[A1_BOXCHAR_ALLOCA]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(implicit, to) capture(ByRef) -> !fir.ref<!fir.boxchar<1>> {name = ""}
-!CHECK:  fir.store %arg0 to %[[A0_BOXCHAR_ALLOCA]] : !fir.ref<!fir.boxchar<1>>
+!CHECK:  fir.store %[[ARG0]] to %[[A0_BOXCHAR_ALLOCA]] : !fir.ref<!fir.boxchar<1>>
 !CHECK:  %[[A0_BOXCHAR_MAP:.*]] = omp.map.info var_ptr(%[[A0_BOXCHAR_ALLOCA]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(implicit, to) capture(ByRef) -> !fir.ref<!fir.boxchar<1>> {name = ""}
 
 !CHECK:  omp.target map_entries(%[[A0_MAP]] -> %[[TGT_A0:.*]], %[[A1_MAP]] -> %[[TGT_A1:.*]], %[[A1_BOXCHAR_MAP]] -> %[[TGT_A1_BOXCHAR:.*]], %[[A0_BOXCHAR_MAP]] -> %[[TGT_A0_BOXCHAR:.*]] : !fir.ref<!fir.char<1,?>>, !fir.ref<!fir.char<1,?>>, !fir.ref<!fir.boxchar<1>>, !fir.ref<!fir.boxchar<1>>) {

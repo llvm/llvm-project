@@ -154,7 +154,7 @@ genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, mlir::Location loc,
     return builder.create<mlir::omp::MapBoundsOp>(
         loc, boundTy, /*lower_bound=*/zero,
         /*upper_bound=*/ub, /*extent=*/extent, /*stride=*/stride,
-        /*stride_in_bytes = */ true, /*start_idx=*/zero);
+        /*stride_in_bytes=*/ true, /*start_idx=*/zero);
   }
   return mlir::Value{};
 }

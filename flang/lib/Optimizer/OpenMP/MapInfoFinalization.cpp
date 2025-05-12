@@ -557,13 +557,13 @@ class MapInfoFinalizationPass
       // with dynamic length. If so, check if they need bounds added.
       func->walk([&](mlir::omp::MapInfoOp op) {
         if (!op.getBounds().empty())
-          return mlir::WalkResult::advance();
+          return;
 
         mlir::Value varPtr = op.getVarPtr();
         mlir::Type underlyingVarType = fir::unwrapRefType(varPtr.getType());
 
         if (!fir::characterWithDynamicLen(underlyingVarType))
-          return mlir::WalkResult::advance();
+          return;
 
         fir::factory::AddrAndBoundsInfo info =
             fir::factory::getDataOperandBaseAddr(
@@ -581,7 +581,6 @@ class MapInfoFinalizationPass
                 /*dataExvIsAssumedSize=*/false, varPtr.getLoc());
 
         op.getBoundsMutable().append(boundsOps);
-        return mlir::WalkResult::advance();
       });
 
       // Next, walk `omp.map.info` ops to see if any record members should be
