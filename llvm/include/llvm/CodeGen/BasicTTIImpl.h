@@ -805,6 +805,8 @@ public:
     return BaseT::preferPredicateOverEpilogue(TFI);
   }
 
+  bool preferControlFlow() const override { return BaseT::preferControlFlow(); }
+
   TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const override {
     return BaseT::getPreferredTailFoldingStyle(IVUpdateMayOverflow);
