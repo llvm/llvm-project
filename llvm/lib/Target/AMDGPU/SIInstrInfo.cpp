@@ -7245,15 +7245,16 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI,
     unsigned OpIdx = Op.getOperandNo();
     if (!OpIdx)
       continue;
-    if (Op.isReg() && Op.getReg().isVirtual() && RI.isVGPR(MRI, Op.getReg())) {
-      unsigned RCID = get(Opcode).operands()[OpIdx].RegClass;
-      const TargetRegisterClass *ExpectedRC = RI.getRegClass(RCID);
+    if (Op.isReg() && Op.getReg().isVirtual()) {
       const TargetRegisterClass *RC = MRI.getRegClass(Op.getReg());
-      if (32 == RI.getRegSizeInBits(*RC) &&
-          16 == RI.getRegSizeInBits(*ExpectedRC)) {
+      if (!RI.isVGPRClass(RC))
+        continue;
+      unsigned RCID = get(Opcode).operands()[OpIdx].RegClass;
+      unsigned expectedSize = RI.getRegSizeInBits(*RI.getRegClass(RCID));
+      unsigned currSize = RI.getRegSizeInBits(*RC);
+      if (expectedSize == 16 && currSize == 32) {
         Op.setSubReg(AMDGPU::lo16);
-      } else if (16 == RI.getRegSizeInBits(*RC) &&
-                 32 == RI.getRegSizeInBits(*ExpectedRC)) {
+      } else if (expectedSize == 32 && currSize == 16) {
         const DebugLoc &DL = MI.getDebugLoc();
         Register NewDstReg =
             MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
