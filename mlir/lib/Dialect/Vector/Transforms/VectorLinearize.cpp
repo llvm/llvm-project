@@ -162,32 +162,34 @@ SmallVector<int64_t> static getStridedSliceInsertionIndices(
          "rank of 'large' cannot be lower than the number of offsets");
   unsigned delta = large.size() - small.size();
   unsigned nOffsets = offsets.size();
-  auto getSmall = [&](int64_t i) { return i >= delta ? small[i - delta] : 1; };
-  auto getOffset = [&](int64_t i) { return i < nOffsets ? offsets[i] : 0; };
+  auto getSmall = [&](int64_t i) -> int64_t {
+    return i >= delta ? small[i - delta] : 1;
+  };
+  auto getOffset = [&](int64_t i) -> int64_t {
+    return i < nOffsets ? offsets[i] : 0;
+  };
 
   // Using 2 vectors of indices, at each iteration populate the updated set of
   // indices based on the old set of indices, and the size of the small vector
   // in the current iteration.
   SmallVector<int64_t> indices{0};
-  SmallVector<int64_t> nextIndices;
   int64_t stride = 1;
   for (int i = large.size() - 1; i >= 0; --i) {
-    auto currentSize = indices.size();
-    auto smallSize = getSmall(i);
-    auto nextSize = currentSize * smallSize;
-    nextIndices.resize(nextSize);
+    int64_t currentSize = indices.size();
+    int64_t smallSize = getSmall(i);
+    int64_t nextSize = currentSize * smallSize;
+    SmallVector<int64_t> nextIndices(nextSize);
     int64_t *base = nextIndices.begin();
     int64_t offset = getOffset(i) * stride;
     for (int j = 0; j < smallSize; ++j) {
-      for (uint64_t k = 0; k < currentSize; ++k) {
+      for (int k = 0; k < currentSize; ++k) {
         base[k] = indices[k] + offset;
       }
       offset += stride;
       base += currentSize;
     }
     stride *= large[i];
-    std::swap(indices, nextIndices);
-    nextIndices.clear();
+    indices = std::move(nextIndices);
   }
   return indices;
 }
