@@ -253,15 +253,15 @@ protected:
 
   private:
     void flushFPMToMPM() {
-      if (!FPM.isEmpty()) {
-        if (PB.AddInCGSCCOrder) {
-          MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-              createCGSCCToFunctionPassAdaptor(std::move(FPM))));
-        } else {
-          MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-        }
-        FPM = FunctionPassManager();
+      if (FPM.isEmpty())
+        return;
+      if (PB.AddInCGSCCOrder) {
+        MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+            createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+      } else {
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       }
+      FPM = FunctionPassManager();
     }
     ModulePassManager &MPM;
     FunctionPassManager FPM;
@@ -274,17 +274,17 @@ protected:
     AddMachinePass(ModulePassManager &MPM, const DerivedT &PB)
         : MPM(MPM), PB(PB) {}
     ~AddMachinePass() {
-      if (!MFPM.isEmpty()) {
-        FunctionPassManager FPM;
-        FPM.addPass(
-            createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-        FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
-        if (this->PB.AddInCGSCCOrder) {
-          MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-              createCGSCCToFunctionPassAdaptor(std::move(FPM))));
-        } else
-          MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-      }
+      if (MFPM.isEmpty())
+        return;
+
+      FunctionPassManager FPM;
+      FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+      FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
+      if (this->PB.AddInCGSCCOrder) {
+        MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+            createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+      } else
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
     }
 
     template <typename PassT>
