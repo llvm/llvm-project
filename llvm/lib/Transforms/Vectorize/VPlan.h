@@ -1310,9 +1310,8 @@ protected:
       : VPRecipeWithIRFlags(VPDefOpcode, Operands, I), VPIRMetadata(I),
         Opcode(I.getOpcode()) {}
 
-  template <typename IterT>
-  VPWidenRecipe(unsigned VPDefOpcode, unsigned Opcode, ArrayRef<IterT> Operands,
-                bool NUW, bool NSW, DebugLoc DL)
+  VPWidenRecipe(unsigned VPDefOpcode, unsigned Opcode,
+                ArrayRef<VPValue *> Operands, bool NUW, bool NSW, DebugLoc DL)
       : VPRecipeWithIRFlags(VPDefOpcode, Operands, WrapFlagsTy(NUW, NSW), DL),
         Opcode(Opcode) {}
 
@@ -1320,9 +1319,8 @@ public:
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands)
       : VPWidenRecipe(VPDef::VPWidenSC, I, Operands) {}
 
-  template <typename IterT>
-  VPWidenRecipe(unsigned Opcode, ArrayRef<IterT> Operands, bool NUW, bool NSW,
-                DebugLoc DL)
+  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands, bool NUW,
+                bool NSW, DebugLoc DL)
       : VPWidenRecipe(VPDef::VPWidenSC, Opcode, Operands, NUW, NSW, DL) {}
 
   ~VPWidenRecipe() override = default;
@@ -2725,14 +2723,15 @@ public:
       IsNonNeg = Ext0->isNonNeg();
   }
 
-  VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul)
+  VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul,
+                                 Type *ResultTy)
       : VPReductionRecipe(
             VPDef::VPMulAccumulateReductionSC, R->getRecurrenceKind(),
             {R->getChainOp(), Mul->getOperand(0), Mul->getOperand(1)},
             R->getCondOp(), R->isOrdered(),
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
             R->getDebugLoc()),
-        ExtOp(Instruction::CastOps::CastOpsEnd) {
+        ExtOp(Instruction::CastOps::CastOpsEnd), ResultTy(ResultTy) {
     assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind()) ==
                Instruction::Add &&
            "The reduction instruction in MulAccumulateReductionRecipe must be "

@@ -2745,7 +2745,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                                 RecipeA->getResultType());
     // Match reduce.add(mul).
     if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
-      return new VPMulAccumulateReductionRecipe(Red, Mul);
+      return new VPMulAccumulateReductionRecipe(Red, Mul, RedTy);
   }
   // Match reduce.add(ext(mul(ext(A), ext(B)))).
   // All extend recipes must have same opcode or A == B
