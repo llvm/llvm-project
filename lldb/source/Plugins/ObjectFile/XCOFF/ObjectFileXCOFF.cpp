@@ -202,10 +202,8 @@ void ObjectFileXCOFF::CreateSections(SectionList &unified_section_list) {
 
   std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-  const auto &sections = m_binary->sections64();
   int idx = 0;
-  for (size_t i = 0; i < sections.size(); ++i) {
-    const llvm::object::XCOFFSectionHeader64 &section = sections[i];
+  for (const llvm::object::XCOFFSectionHeader64 &section : m_binary->sections64()) {
 
     ConstString const_sect_name(section.Name);
 
@@ -222,9 +220,6 @@ void ObjectFileXCOFF::CreateSections(SectionList &unified_section_list) {
                          .Case(".dwline", eSectionTypeDWARFDebugLine)
                          .Case(".dwabrev", eSectionTypeDWARFDebugAbbrev)
                          .Default(eSectionTypeInvalid);
-
-      if (section_type == eSectionTypeInvalid)
-        section_type = lldb::eSectionTypeOther;
     }
 
     SectionSP section_sp(new Section(
