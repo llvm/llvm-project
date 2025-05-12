@@ -388,6 +388,10 @@ TailFoldingStyle TargetTransformInfo::getPreferredTailFoldingStyle() const {
   return TTIImpl->getPreferredTailFoldingStyle();
 }
 
+bool TargetTransformInfo::preferControlFlowVectorization() const {
+  return TTIImpl->preferControlFlowVectorization();
+}
+
 std::optional<Instruction *>
 TargetTransformInfo::instCombineIntrinsic(InstCombiner &IC,
                                           IntrinsicInst &II) const {
