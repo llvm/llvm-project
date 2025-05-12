@@ -9464,7 +9464,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range,
       HeaderVPBB);
 
   VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
-  VPBlockBase *PrevVPBB = nullptr;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     // Create mask based on the IR BB corresponding to VPBB.
     // TODO: Predicate directly based on VPlan.
@@ -9548,7 +9547,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range,
                "Unexpected multidef recipe");
       R.eraseFromParent();
     }
+  }
 
+  VPBlockBase *PrevVPBB = nullptr;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     // Flatten the CFG in the loop. Masks for blocks have already been generated
     // and added to recipes as needed. To do so, first disconnect VPBB from its
     // successors. Then connect VPBB to the previously visited VPBB.
