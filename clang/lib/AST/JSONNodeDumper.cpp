@@ -1864,7 +1864,7 @@ void JSONNodeDumper::visitVerbatimLineComment(
 
 llvm::json::Object JSONNodeDumper::createFPOptions(FPOptionsOverride FPO) {
   llvm::json::Object Ret;
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   if (FPO.has##NAME##Override())                                               \
     Ret.try_emplace(#NAME, static_cast<unsigned>(FPO.get##NAME##Override()));
 #include "clang/Basic/FPOptions.def"

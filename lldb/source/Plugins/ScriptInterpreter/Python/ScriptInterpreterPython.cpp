@@ -2567,8 +2567,6 @@ bool ScriptInterpreterPythonImpl::RunScriptBasedCommand(
 
   bool ret_val = false;
 
-  std::string err_msg;
-
   {
     Locker py_lock(this,
                    Locker::AcquireLock | Locker::InitSession |
@@ -2612,8 +2610,6 @@ bool ScriptInterpreterPythonImpl::RunScriptBasedCommand(
 
   bool ret_val = false;
 
-  std::string err_msg;
-
   {
     Locker py_lock(this,
                    Locker::AcquireLock | Locker::InitSession |
@@ -2656,8 +2652,6 @@ bool ScriptInterpreterPythonImpl::RunScriptBasedParsedCommand(
   }
 
   bool ret_val = false;
-
-  std::string err_msg;
 
   {
     Locker py_lock(this,
@@ -3166,8 +3160,6 @@ void ScriptInterpreterPythonImpl::Initialize() {
 
 void ScriptInterpreterPythonImpl::AddToSysPath(AddLocation location,
                                                std::string path) {
-  std::string path_copy;
-
   std::string statement;
   if (location == AddLocation::Beginning) {
     statement.assign("sys.path.insert(0,\"");

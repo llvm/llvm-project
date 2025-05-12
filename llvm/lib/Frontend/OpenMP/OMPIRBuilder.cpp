@@ -1096,6 +1096,57 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
   return Builder.saveIP();
 }
 
+OpenMPIRBuilder::InsertPointOrErrorTy
+OpenMPIRBuilder::createCancellationPoint(const LocationDescription &Loc,
+                                         omp::Directive CanceledDirective) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  // LLVM utilities like blocks with terminators.
+  auto *UI = Builder.CreateUnreachable();
+  Builder.SetInsertPoint(UI);
+
+  Value *CancelKind = nullptr;
+  switch (CanceledDirective) {
+#define OMP_CANCEL_KIND(Enum, Str, DirectiveEnum, Value)                       \
+  case DirectiveEnum:                                                          \
+    CancelKind = Builder.getInt32(Value);                                      \
+    break;
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
+  default:
+    llvm_unreachable("Unknown cancel kind!");
+  }
+
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  Value *Args[] = {Ident, getOrCreateThreadID(Ident), CancelKind};
+  Value *Result = Builder.CreateCall(
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_cancellationpoint), Args);
+  auto ExitCB = [this, CanceledDirective, Loc](InsertPointTy IP) -> Error {
+    if (CanceledDirective == OMPD_parallel) {
+      IRBuilder<>::InsertPointGuard IPG(Builder);
+      Builder.restoreIP(IP);
+      return createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
+                           omp::Directive::OMPD_unknown,
+                           /* ForceSimpleCall */ false,
+                           /* CheckCancelFlag */ false)
+          .takeError();
+    }
+    return Error::success();
+  };
+
+  // The actual cancel logic is shared with others, e.g., cancel_barriers.
+  if (Error Err = emitCancelationCheckImpl(Result, CanceledDirective, ExitCB))
+    return Err;
+
+  // Update the insertion point and remove the terminator we introduced.
+  Builder.SetInsertPoint(UI->getParent());
+  UI->eraseFromParent();
+
+  return Builder.saveIP();
+}
+
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
     const LocationDescription &Loc, InsertPointTy AllocaIP, Value *&Return,
     Value *Ident, Value *DeviceID, Value *NumTeams, Value *NumThreads,
@@ -4607,8 +4658,6 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
   OI.collectBlocks(ParallelRegionBlockSet, Blocks);
-  SmallVector<BasicBlock *, 32> BlocksT(ParallelRegionBlockSet.begin(),
-                                        ParallelRegionBlockSet.end());
 
   CodeExtractorAnalysisCache CEAC(*OuterFn);
   CodeExtractor Extractor(Blocks,
@@ -4624,7 +4673,7 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
                           /* AggrArgsIn0AddrSpace */ true);
 
   BasicBlock *CommonExit = nullptr;
-  SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
+  SetVector<Value *> SinkingCands, HoistingCands;
 
   // Find allocas outside the loop body region which are used inside loop
   // body
@@ -8380,9 +8429,8 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
 
   // The information types are only built if provided.
   if (!CombinedInfo.Names.empty()) {
-    std::string MapnamesName = createPlatformSpecificName({"offload_mapnames"});
-    auto *MapNamesArrayGbl =
-        createOffloadMapnames(CombinedInfo.Names, MapnamesName);
+    auto *MapNamesArrayGbl = createOffloadMapnames(
+        CombinedInfo.Names, createPlatformSpecificName({"offload_mapnames"}));
     Info.RTArgs.MapNamesArray = MapNamesArrayGbl;
     Info.EmitDebug = true;
   } else {

@@ -632,10 +632,11 @@ public:
 
   const Init *resolveReferences(Resolver &R) const override;
 
-  const Init *getBit(unsigned Bit) const override {
-    assert(Bit < NumBits && "Bit index out of range!");
-    return getTrailingObjects<const Init *>()[Bit];
+  ArrayRef<const Init *> getBits() const {
+    return ArrayRef(getTrailingObjects<const Init *>(), NumBits);
   }
+
+  const Init *getBit(unsigned Bit) const override { return getBits()[Bit]; }
 };
 
 /// '7' - Represent an initialization by a literal integer value.
@@ -781,10 +782,12 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  const Init *getElement(unsigned i) const {
-    assert(i < NumValues && "List element index out of range!");
-    return getTrailingObjects<const Init *>()[i];
+  ArrayRef<const Init *> getValues() const {
+    return ArrayRef(getTrailingObjects<const Init *>(), NumValues);
   }
+
+  const Init *getElement(unsigned Index) const { return getValues()[Index]; }
+
   const RecTy *getElementType() const {
     return cast<ListRecTy>(getType())->getElementType();
   }
@@ -804,12 +807,8 @@ public:
   bool isConcrete() const override;
   std::string getAsString() const override;
 
-  ArrayRef<const Init *> getValues() const {
-    return ArrayRef(getTrailingObjects<const Init *>(), NumValues);
-  }
-
-  const_iterator begin() const { return getTrailingObjects<const Init *>(); }
-  const_iterator end  () const { return begin() + NumValues; }
+  const_iterator begin() const { return getValues().begin(); }
+  const_iterator end() const { return getValues().end(); }
 
   size_t         size () const { return NumValues;  }
   bool           empty() const { return NumValues == 0; }

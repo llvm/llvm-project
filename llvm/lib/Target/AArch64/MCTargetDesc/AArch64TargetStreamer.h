@@ -55,6 +55,9 @@ public:
   /// Callback used to implement the .variant_pcs directive.
   virtual void emitDirectiveVariantPCS(MCSymbol *Symbol) {};
 
+  virtual void emitDirectiveArch(StringRef Name) {};
+  virtual void emitDirectiveArchExtension(StringRef Name) {};
+
   virtual void emitARM64WinCFIAllocStack(unsigned Size) {}
   virtual void emitARM64WinCFISaveR19R20X(int Offset) {}
   virtual void emitARM64WinCFISaveFPLR(int Offset) {}
