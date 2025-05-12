@@ -995,7 +995,10 @@ class BinOpSameOpcodeHelper {
       Value *LHS = I->getOperand(1 - Pos);
       Constant *RHS =
           ConstantInt::get(I->getOperand(Pos)->getType(), ToCIValue);
-      if (Pos == 1)
+      // constant + x cannot be -constant - x
+      // instead, it should be x - -constant
+      if (Pos == 1 ||
+          (FromOpcode == Instruction::Add && ToOpcode == Instruction::Sub))
         return SmallVector<Value *>({LHS, RHS});
       return SmallVector<Value *>({RHS, LHS});
     }
