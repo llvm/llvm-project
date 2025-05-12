@@ -196,11 +196,11 @@ and used to obtain the vocabulary mapping. Then, use this mapping to
 derive the representations. In LLVM, this process is implemented using two
 independent passes: ``IR2VecVocabAnalysis`` and ``IR2VecAnalysis``. The former
 reads the JSON vocabulary and populates ``IR2VecVocabResult``, which is then used
-by ``IR2VecAnalysis``.
+by ``IR2VecAnalysis``. 
 
-It is recommended to run ``IR2VecVocabAnalysis`` once, as the
-vocabulary typically does not change. In the future, we plan
-to improve this process by automatically generating the vocabulary mappings
+``IR2VecVocabAnalysis`` is immutable and is intended to
+be run once before ``IR2VecAnalysis`` is run. In the future, we plan
+to improve this requirement by automatically generating default the vocabulary mappings
 during build time, eliminating the need for a separate file read.
 
 IR2VecAnalysis Usage
@@ -208,27 +208,23 @@ IR2VecAnalysis Usage
 
 To use IR2Vec in an LLVM-based tool or pass, interaction with the analysis 
 results can be done through the following APIs:
-
-1. **Including the Header:**
-
-   First, include the necessary header file in the source code:
-
-   .. code-block:: c++
-
-      #include "llvm/Analysis/IR2VecAnalysis.h"
-
-2. **Accessing the Analysis Results:**
+    
+1. **Accessing the Analysis Results:**
 
    To access the IR2Vec embeddings, obtain the ``IR2VecAnalysis``
    result from the Function Analysis Manager (FAM).
 
    .. code-block:: c++
 
+      #include "llvm/Analysis/IR2VecAnalysis.h"
+
+      // ... other includes and code ...
+
       llvm::FunctionAnalysisManager &FAM = ...; // The FAM instance
       llvm::Function &F = ...; // The function to analyze
       auto &IR2VecResult = FAM.getResult<llvm::IR2VecAnalysis>(F);
 
-3. **Checking for Valid Results:**
+2. **Checking for Valid Results:**
 
    Ensure that the analysis result is valid before accessing the embeddings:
 
@@ -238,7 +234,7 @@ results can be done through the following APIs:
         // Proceed to access embeddings
       }
 
-4. **Retrieving Embeddings:**
+3. **Retrieving Embeddings:**
 
    The ``IR2VecResult`` provides access to embeddings (currently) at three levels:
 
@@ -271,7 +267,7 @@ results can be done through the following APIs:
         const ir2vec::Embedding &funcEmbedding = IR2VecResult.getFunctionVector();
         // Use the function embedding
 
-5. **Working with Embeddings:**
+4. **Working with Embeddings:**
 
    Embeddings are represented as ``std::vector<double>``. These
    vectors as features for machine learning models, compute similarity scores
