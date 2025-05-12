@@ -17,6 +17,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
@@ -5444,6 +5445,8 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   // impose the same constraints.
   case UTT_IsTriviallyRelocatable:
   case UTT_IsTriviallyEqualityComparable:
+  case UTT_IsCppTriviallyRelocatable:
+  case UTT_IsReplaceable:
   case UTT_CanPassInRegs:
   // Per the GCC type traits documentation, T shall be a complete type, cv void,
   // or an array of unknown bound. But GCC actually imposes the same constraints
@@ -5586,6 +5589,100 @@ static bool isTriviallyEqualityComparableType(Sema &S, QualType Type, SourceLoca
 
   return S.getASTContext().hasUniqueObjectRepresentations(
       CanonicalType, /*CheckIfTriviallyCopyable=*/false);
+}
+
+static bool IsCXXTriviallyRelocatableType(Sema &S, const CXXRecordDecl *RD) {
+  if (std::optional<ASTContext::CXXRecordDeclRelocationInfo> Info =
+          S.getASTContext().getRelocationInfoForCXXRecord(RD))
+    return Info->IsRelocatable;
+  ASTContext::CXXRecordDeclRelocationInfo Info =
+      S.CheckCXX2CRelocatableAndReplaceable(RD);
+  S.getASTContext().setRelocationInfoForCXXRecord(RD, Info);
+  return Info.IsRelocatable;
+}
+
+bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
+
+  QualType BaseElementType = getASTContext().getBaseElementType(Type);
+
+  if (Type->isVariableArrayType())
+    return false;
+
+  if (BaseElementType.hasNonTrivialObjCLifetime())
+    return false;
+
+  if (BaseElementType.hasAddressDiscriminatedPointerAuth())
+    return false;
+
+  if (BaseElementType->isIncompleteType())
+    return false;
+
+  if (BaseElementType->isScalarType() || BaseElementType->isVectorType())
+    return true;
+
+  if (const auto *RD = BaseElementType->getAsCXXRecordDecl())
+    return ::IsCXXTriviallyRelocatableType(*this, RD);
+
+  return false;
+}
+
+static bool IsCXXReplaceableType(Sema &S, const CXXRecordDecl *RD) {
+  if (std::optional<ASTContext::CXXRecordDeclRelocationInfo> Info =
+          S.getASTContext().getRelocationInfoForCXXRecord(RD))
+    return Info->IsReplaceable;
+  ASTContext::CXXRecordDeclRelocationInfo Info =
+      S.CheckCXX2CRelocatableAndReplaceable(RD);
+  S.getASTContext().setRelocationInfoForCXXRecord(RD, Info);
+  return Info.IsReplaceable;
+}
+
+bool Sema::IsCXXReplaceableType(QualType Type) {
+  if (Type.isConstQualified() || Type.isVolatileQualified())
+    return false;
+
+  if (Type->isVariableArrayType())
+    return false;
+
+  QualType BaseElementType =
+      getASTContext().getBaseElementType(Type.getUnqualifiedType());
+  if (BaseElementType->isIncompleteType())
+    return false;
+  if (BaseElementType->isScalarType())
+    return true;
+  if (const auto *RD = BaseElementType->getAsCXXRecordDecl())
+    return ::IsCXXReplaceableType(*this, RD);
+  return false;
+}
+
+static bool IsTriviallyRelocatableType(Sema &SemaRef, QualType T) {
+  QualType BaseElementType = SemaRef.getASTContext().getBaseElementType(T);
+
+  if (BaseElementType->isIncompleteType())
+    return false;
+  if (!BaseElementType->isObjectType())
+    return false;
+
+  if (T.hasAddressDiscriminatedPointerAuth())
+    return false;
+
+  if (const auto *RD = BaseElementType->getAsCXXRecordDecl();
+      RD && !RD->isPolymorphic() && IsCXXTriviallyRelocatableType(SemaRef, RD))
+    return true;
+
+  if (const auto *RD = BaseElementType->getAsRecordDecl())
+    return RD->canPassInRegisters();
+
+  if (BaseElementType.isTriviallyCopyableType(SemaRef.getASTContext()))
+    return true;
+
+  switch (T.isNonTrivialToPrimitiveDestructiveMove()) {
+  case QualType::PCK_Trivial:
+    return !T.isDestructedType();
+  case QualType::PCK_ARCStrong:
+    return true;
+  default:
+    return false;
+  }
 }
 
 static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
@@ -6007,9 +6104,13 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_HasUniqueObjectRepresentations:
     return C.hasUniqueObjectRepresentations(T);
   case UTT_IsTriviallyRelocatable:
-    return T.isTriviallyRelocatableType(C);
+    return IsTriviallyRelocatableType(Self, T);
   case UTT_IsBitwiseCloneable:
     return T.isBitwiseCloneableType(C);
+  case UTT_IsCppTriviallyRelocatable:
+    return Self.IsCXXTriviallyRelocatableType(T);
+  case UTT_IsReplaceable:
+    return Self.IsCXXReplaceableType(T);
   case UTT_CanPassInRegs:
     if (CXXRecordDecl *RD = T->getAsCXXRecordDecl(); RD && !T.hasQualifiers())
       return RD->canPassInRegisters();
@@ -6347,6 +6448,9 @@ void DiagnoseBuiltinDeprecation(Sema& S, TypeTrait Kind,
       break;
     case UTT_HasTrivialDestructor:
       Replacement = UTT_IsTriviallyDestructible;
+      break;
+    case UTT_IsTriviallyRelocatable:
+      Replacement = clang::UTT_IsCppTriviallyRelocatable;
       break;
     default:
       return;

@@ -70,7 +70,7 @@ protected:
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    DenseMap<VPBlockBase *, BasicBlock *> VPB2IRBB;
+    DenseMap<const VPBlockBase *, BasicBlock *> VPB2IRBB;
     auto Plan = VPlanTransforms::buildPlainCFG(L, *LI, VPB2IRBB);
     VPlanTransforms::prepareForVectorization(*Plan, IntegerType::get(*Ctx, 64),
                                              PSE, true, false, L, {});

@@ -561,3 +561,62 @@ func.func @test_vector_inner_reduction(%arg0: vector<16x16xf32>, %arg1: !xegpu.t
   xegpu.store_nd %0, %arg1  : vector<16xf32>, !xegpu.tensor_desc<16xf32>
   return
 }
+
+// -----
+// CHECK: function: update_nd_offset_1d:
+// CHECK: op    : %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<16xf32>
+// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
+// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}}[%{{.*}}] : memref<256xf32> -> !xegpu.tensor_desc<16xf32>
+// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
+// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.update_nd_offset %[[T0]], [%{{.*}}] : !xegpu.tensor_desc<16xf32>
+// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
+func.func @update_nd_offset_1d(%arg0: memref<256xf32>){
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %1 = arith.constant dense<1.000000e+00> : vector<16xf32>
+  %0 = xegpu.create_nd_tdesc %arg0[%c0] : memref<256xf32> -> !xegpu.tensor_desc<16xf32>
+  %2 = xegpu.update_nd_offset %0, [%c32] : !xegpu.tensor_desc<16xf32>
+  xegpu.store_nd %1, %2 : vector<16xf32>, !xegpu.tensor_desc<16xf32>
+  return
+}
+
+// -----
+// CHECK: function: update_nd_offset_2d:
+// CHECK: op    : %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<16x16xf32>
+// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
+// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}}[%{{.*}}] : memref<256x256xf32> -> !xegpu.tensor_desc<16x16xf32>
+// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
+// CHECK-NEXT: op    : %[[T1:.*]] = xegpu.update_nd_offset %[[T0]], [%{{.*}}] : !xegpu.tensor_desc<16x16xf32>
+// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
+func.func @update_nd_offset_2d(%arg0: memref<256x256xf32>){
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %1 = arith.constant dense<1.000000e+00> : vector<16x16xf32>
+  %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<256x256xf32> -> !xegpu.tensor_desc<16x16xf32>
+  %2 = xegpu.update_nd_offset %0, [%c32, %c32] : !xegpu.tensor_desc<16x16xf32>
+  xegpu.store_nd %1, %2 : vector<16x16xf32>, !xegpu.tensor_desc<16x16xf32>
+  return
+}
+
+// -----
+// CHECK: function: prefetch_2d:
+// CHECK: layout for result #0: Not assigned.
+// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}}[%{{.*}}] : memref<256x256xf16> -> !xegpu.tensor_desc<16x16xf16>
+// CHECK-NEXT: layout for result #0: lane_layout: [1, 16], lane_data: [1, 1]
+func.func @prefetch_2d(%arg0: memref<256x256xf16>){
+  %c0 = arith.constant 0 : index
+  %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<256x256xf16> -> !xegpu.tensor_desc<16x16xf16>
+  xegpu.prefetch_nd %0 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: !xegpu.tensor_desc<16x16xf16>
+  return
+}
+
+// -----
+// CHECK: function: prefetch_1d:
+// CHECK: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}}[%{{.*}}] : memref<256xf16> -> !xegpu.tensor_desc<16xf16>
+// CHECK-NEXT: layout for result #0: lane_layout: [16], lane_data: [1]
+func.func @prefetch_1d(%arg0: memref<256xf16>){
+  %c0 = arith.constant 0 : index
+  %0 = xegpu.create_nd_tdesc %arg0[%c0] : memref<256xf16> -> !xegpu.tensor_desc<16xf16>
+  xegpu.prefetch_nd %0 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: !xegpu.tensor_desc<16xf16>
+  return
+}

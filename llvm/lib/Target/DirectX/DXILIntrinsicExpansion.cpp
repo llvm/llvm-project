@@ -46,6 +46,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::abs:
   case Intrinsic::atan2:
   case Intrinsic::exp:
+  case Intrinsic::is_fpclass:
   case Intrinsic::log:
   case Intrinsic::log10:
   case Intrinsic::pow:
@@ -269,6 +270,59 @@ static Value *expandExpIntrinsic(CallInst *Orig) {
   Exp2Call->setTailCall(Orig->isTailCall());
   Exp2Call->setAttributes(Orig->getAttributes());
   return Exp2Call;
+}
+
+static Value *expandIsFPClass(CallInst *Orig) {
+  Value *T = Orig->getArgOperand(1);
+  auto *TCI = dyn_cast<ConstantInt>(T);
+
+  // These FPClassTest cases have DXIL opcodes, so they will be handled in
+  // DXIL Op Lowering instead.
+  switch (TCI->getZExtValue()) {
+  case FPClassTest::fcInf:
+  case FPClassTest::fcNan:
+  case FPClassTest::fcNormal:
+  case FPClassTest::fcFinite:
+    return nullptr;
+  }
+
+  IRBuilder<> Builder(Orig);
+
+  Value *F = Orig->getArgOperand(0);
+  Type *FTy = F->getType();
+  unsigned FNumElem = 0; // 0 => F is not a vector
+
+  unsigned BitWidth; // Bit width of F or the ElemTy of F
+  Type *BitCastTy;   // An IntNTy of the same bitwidth as F or ElemTy of F
+
+  if (auto *FVecTy = dyn_cast<FixedVectorType>(FTy)) {
+    Type *ElemTy = FVecTy->getElementType();
+    FNumElem = FVecTy->getNumElements();
+    BitWidth = ElemTy->getPrimitiveSizeInBits();
+    BitCastTy = FixedVectorType::get(Builder.getIntNTy(BitWidth), FNumElem);
+  } else {
+    BitWidth = FTy->getPrimitiveSizeInBits();
+    BitCastTy = Builder.getIntNTy(BitWidth);
+  }
+
+  Value *FBitCast = Builder.CreateBitCast(F, BitCastTy);
+  switch (TCI->getZExtValue()) {
+  case FPClassTest::fcNegZero: {
+    Value *NegZero =
+        ConstantInt::get(Builder.getIntNTy(BitWidth), 1 << (BitWidth - 1));
+    Value *RetVal;
+    if (FNumElem) {
+      Value *NegZeroSplat = Builder.CreateVectorSplat(FNumElem, NegZero);
+      RetVal =
+          Builder.CreateICmpEQ(FBitCast, NegZeroSplat, "is.fpclass.negzero");
+    } else
+      RetVal = Builder.CreateICmpEQ(FBitCast, NegZero, "is.fpclass.negzero");
+    return RetVal;
+  }
+  default:
+    report_fatal_error(Twine("Unsupported FPClassTest"),
+                       /* gen_crash_diag=*/false);
+  }
 }
 
 static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
@@ -556,6 +610,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::exp:
     Result = expandExpIntrinsic(Orig);
+    break;
+  case Intrinsic::is_fpclass:
+    Result = expandIsFPClass(Orig);
     break;
   case Intrinsic::log:
     Result = expandLogIntrinsic(Orig);

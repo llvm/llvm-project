@@ -18,9 +18,12 @@ class CallBase;
 class AttributeList;
 
 /// SMEAttrs is a utility class to parse the SME ACLE attributes on functions.
-/// It helps determine a function's requirements for PSTATE.ZA and PSTATE.SM.
+/// It helps determine a function's requirements for PSTATE.ZA and PSTATE.SM. It
+/// has interfaces to query whether a streaming mode change or lazy-save
+/// mechanism is required when going from one function to another (e.g. through
+/// a call).
 class SMEAttrs {
-  unsigned Bitmask = Normal;
+  unsigned Bitmask;
 
 public:
   enum class StateValue {
@@ -40,24 +43,18 @@ public:
     SM_Body = 1 << 2,         // aarch64_pstate_sm_body
     SME_ABI_Routine = 1 << 3, // Used for SME ABI routines to avoid lazy saves
     ZA_State_Agnostic = 1 << 4,
-    ZT0_Undef = 1 << 5, // Use to mark ZT0 as undef to avoid spills
+    ZT0_Undef = 1 << 5,       // Use to mark ZT0 as undef to avoid spills
     ZA_Shift = 6,
     ZA_Mask = 0b111 << ZA_Shift,
     ZT0_Shift = 9,
-    ZT0_Mask = 0b111 << ZT0_Shift,
-    Callsite_Flags = ZT0_Undef
+    ZT0_Mask = 0b111 << ZT0_Shift
   };
 
-  SMEAttrs() = default;
-  SMEAttrs(unsigned Mask) { set(Mask); }
-  SMEAttrs(const Function *F)
-      : SMEAttrs(F ? F->getAttributes() : AttributeList()) {
-    if (F)
-      addKnownFunctionAttrs(F->getName());
-  }
-  SMEAttrs(const Function &F) : SMEAttrs(&F) {}
+  SMEAttrs(unsigned Mask = Normal) : Bitmask(0) { set(Mask); }
+  SMEAttrs(const Function &F) : SMEAttrs(F.getAttributes()) {}
+  SMEAttrs(const CallBase &CB);
   SMEAttrs(const AttributeList &L);
-  SMEAttrs(StringRef FuncName) { addKnownFunctionAttrs(FuncName); };
+  SMEAttrs(StringRef FuncName);
 
   void set(unsigned M, bool Enable = true);
 
@@ -76,6 +73,10 @@ public:
   bool hasNonStreamingInterfaceAndBody() const {
     return hasNonStreamingInterface() && !hasStreamingBody();
   }
+
+  /// \return true if a call from Caller -> Callee requires a change in
+  /// streaming mode.
+  bool requiresSMChange(const SMEAttrs &Callee) const;
 
   // Interfaces to query ZA
   static StateValue decodeZAState(unsigned Bitmask) {
@@ -103,7 +104,10 @@ public:
     return !hasSharedZAInterface() && !hasAgnosticZAInterface();
   }
   bool hasZAState() const { return isNewZA() || sharesZA(); }
-  bool isSMEABIRoutine() const { return Bitmask & SME_ABI_Routine; }
+  bool requiresLazySave(const SMEAttrs &Callee) const {
+    return hasZAState() && Callee.hasPrivateZAInterface() &&
+           !(Callee.Bitmask & SME_ABI_Routine);
+  }
 
   // Interfaces to query ZT0 State
   static StateValue decodeZT0State(unsigned Bitmask) {
@@ -122,83 +126,27 @@ public:
   bool isPreservesZT0() const {
     return decodeZT0State(Bitmask) == StateValue::Preserved;
   }
-  bool hasUndefZT0() const { return Bitmask & ZT0_Undef; }
+  bool isUndefZT0() const { return Bitmask & ZT0_Undef; }
   bool sharesZT0() const {
     StateValue State = decodeZT0State(Bitmask);
     return State == StateValue::In || State == StateValue::Out ||
            State == StateValue::InOut || State == StateValue::Preserved;
   }
   bool hasZT0State() const { return isNewZT0() || sharesZT0(); }
-
-  SMEAttrs operator|(SMEAttrs Other) const {
-    SMEAttrs Merged(*this);
-    Merged.set(Other.Bitmask, /*Enable=*/true);
-    return Merged;
+  bool requiresPreservingZT0(const SMEAttrs &Callee) const {
+    return hasZT0State() && !Callee.isUndefZT0() && !Callee.sharesZT0() &&
+           !Callee.hasAgnosticZAInterface();
   }
-
-  SMEAttrs withoutPerCallsiteFlags() const {
-    return (Bitmask & ~Callsite_Flags);
+  bool requiresDisablingZABeforeCall(const SMEAttrs &Callee) const {
+    return hasZT0State() && !hasZAState() && Callee.hasPrivateZAInterface() &&
+           !(Callee.Bitmask & SME_ABI_Routine);
   }
-
-  bool operator==(SMEAttrs const &Other) const {
-    return Bitmask == Other.Bitmask;
+  bool requiresEnablingZAAfterCall(const SMEAttrs &Callee) const {
+    return requiresLazySave(Callee) || requiresDisablingZABeforeCall(Callee);
   }
-
-private:
-  void addKnownFunctionAttrs(StringRef FuncName);
-};
-
-/// SMECallAttrs is a utility class to hold the SMEAttrs for a callsite. It has
-/// interfaces to query whether a streaming mode change or lazy-save mechanism
-/// is required when going from one function to another (e.g. through a call).
-class SMECallAttrs {
-  SMEAttrs CallerFn;
-  SMEAttrs CalledFn;
-  SMEAttrs Callsite;
-  bool IsIndirect = false;
-
-public:
-  SMECallAttrs(SMEAttrs Caller, SMEAttrs Callee,
-               SMEAttrs Callsite = SMEAttrs::Normal)
-      : CallerFn(Caller), CalledFn(Callee), Callsite(Callsite) {}
-
-  SMECallAttrs(const CallBase &CB);
-
-  SMEAttrs &caller() { return CallerFn; }
-  SMEAttrs &callee() { return IsIndirect ? Callsite : CalledFn; }
-  SMEAttrs &callsite() { return Callsite; }
-  SMEAttrs const &caller() const { return CallerFn; }
-  SMEAttrs const &callee() const {
-    return const_cast<SMECallAttrs *>(this)->callee();
-  }
-  SMEAttrs const &callsite() const { return Callsite; }
-
-  /// \return true if a call from Caller -> Callee requires a change in
-  /// streaming mode.
-  bool requiresSMChange() const;
-
-  bool requiresLazySave() const {
-    return caller().hasZAState() && callee().hasPrivateZAInterface() &&
-           !callee().isSMEABIRoutine();
-  }
-
-  bool requiresPreservingZT0() const {
-    return caller().hasZT0State() && !callsite().hasUndefZT0() &&
-           !callee().sharesZT0() && !callee().hasAgnosticZAInterface();
-  }
-
-  bool requiresDisablingZABeforeCall() const {
-    return caller().hasZT0State() && !caller().hasZAState() &&
-           callee().hasPrivateZAInterface() && !callee().isSMEABIRoutine();
-  }
-
-  bool requiresEnablingZAAfterCall() const {
-    return requiresLazySave() || requiresDisablingZABeforeCall();
-  }
-
-  bool requiresPreservingAllZAState() const {
-    return caller().hasAgnosticZAInterface() &&
-           !callee().hasAgnosticZAInterface() && !callee().isSMEABIRoutine();
+  bool requiresPreservingAllZAState(const SMEAttrs &Callee) const {
+    return hasAgnosticZAInterface() && !Callee.hasAgnosticZAInterface() &&
+           !(Callee.Bitmask & SME_ABI_Routine);
   }
 };
 
