@@ -2046,7 +2046,7 @@ static void updateCallProfile(Function *Callee, const ValueToValueMapTy &VMap,
                               const ProfileCount &CalleeEntryCount,
                               const CallBase &TheCall, ProfileSummaryInfo *PSI,
                               BlockFrequencyInfo *CallerBFI) {
-  if (CalleeEntryCount.isSynthetic() || CalleeEntryCount.getCount() < 1)
+  if (CalleeEntryCount.isPseudo() || CalleeEntryCount.getCount() < 1)
     return;
   auto CallSiteCount =
       PSI ? PSI->getProfileCount(TheCall, CallerBFI) : std::nullopt;

@@ -1119,9 +1119,8 @@ void Function::setEntryCount(ProfileCount Count,
     S = &ImportGUIDs;
 
   MDBuilder MDB(getContext());
-  setMetadata(
-      LLVMContext::MD_prof,
-      MDB.createFunctionEntryCount(Count.getCount(), Count.isSynthetic(), S));
+  setMetadata(LLVMContext::MD_prof, MDB.createFunctionEntryCount(
+                                        Count.getCount(), Count.isPseudo(), S));
 }
 
 void Function::setEntryCount(uint64_t Count, Function::ProfileCountType Type,
@@ -1129,7 +1128,7 @@ void Function::setEntryCount(uint64_t Count, Function::ProfileCountType Type,
   setEntryCount(ProfileCount(Count, Type), Imports);
 }
 
-std::optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
+std::optional<ProfileCount> Function::getEntryCount(bool AllowPseudo) const {
   MDNode *MD = getMetadata(LLVMContext::MD_prof);
   if (MD && MD->getOperand(0))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0))) {
@@ -1141,11 +1140,11 @@ std::optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
         if (Count == (uint64_t)-1)
           return std::nullopt;
         return ProfileCount(Count, PCT_Real);
-      } else if (AllowSynthetic &&
-                 MDS->getString() == "synthetic_function_entry_count") {
+      } else if (AllowPseudo &&
+                 MDS->getString() == "pseudo_function_entry_count") {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
         uint64_t Count = CI->getValue().getZExtValue();
-        return ProfileCount(Count, PCT_Synthetic);
+        return ProfileCount(Count, PCT_Pseudo);
       }
     }
   return std::nullopt;

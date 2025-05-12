@@ -83,10 +83,10 @@ public:
   MDNode *createUnpredictable();
 
   /// Return metadata containing the entry \p Count for a function, a boolean
-  /// \Synthetic indicating whether the counts were synthetized, and the
-  /// GUIDs stored in \p Imports that need to be imported for sample PGO, to
-  /// enable the same inlines as the profiled optimized binary
-  MDNode *createFunctionEntryCount(uint64_t Count, bool Synthetic,
+  /// \p Pseudo indicating whether the counts were from supplementary AFDO
+  /// profiles, and the GUIDs stored in \p Imports that need to be imported for
+  /// sample PGO, to enable the same inlines as the profiled optimized binary
+  MDNode *createFunctionEntryCount(uint64_t Count, bool Pseudo,
                                    const DenseSet<GlobalValue::GUID> *Imports);
 
   /// Return metadata containing the section prefix for a global object.

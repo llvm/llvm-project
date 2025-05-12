@@ -296,11 +296,11 @@ public:
     }
   }
 
-  enum ProfileCountType { PCT_Real, PCT_Synthetic };
+  enum ProfileCountType { PCT_Real, PCT_Pseudo };
 
   /// Class to represent profile counts.
   ///
-  /// This class represents both real and synthetic profile counts.
+  /// This class represents both real and supplementary profile counts.
   class ProfileCount {
   private:
     uint64_t Count = 0;
@@ -311,7 +311,7 @@ public:
         : Count(Count), PCT(PCT) {}
     uint64_t getCount() const { return Count; }
     ProfileCountType getType() const { return PCT; }
-    bool isSynthetic() const { return PCT == PCT_Synthetic; }
+    bool isPseudo() const { return PCT == PCT_Pseudo; }
   };
 
   /// Set the entry count for this function.
@@ -330,16 +330,17 @@ public:
   /// Get the entry count for this function.
   ///
   /// Entry count is the number of times the function was executed.
-  /// When AllowSynthetic is false, only pgo_data will be returned.
-  std::optional<ProfileCount> getEntryCount(bool AllowSynthetic = false) const;
+  /// When \p AllowPseudo is false, supplementary AFDO profile counts in an
+  /// iFDO-optimized binary is not used.
+  std::optional<ProfileCount> getEntryCount(bool AllowPseudo = false) const;
 
   /// Return true if the function is annotated with profile data.
   ///
   /// Presence of entry counts from a profile run implies the function has
-  /// profile annotations. If IncludeSynthetic is false, only return true
-  /// when the profile data is real.
-  bool hasProfileData(bool IncludeSynthetic = false) const {
-    return getEntryCount(IncludeSynthetic).has_value();
+  /// profile annotations. If \p AllowPseudo is false, supplementary AFDO
+  /// profile counts in an iFDO-optimized binary is not used.
+  bool hasProfileData(bool AllowPseudo = false) const {
+    return getEntryCount(AllowPseudo).has_value();
   }
 
   /// Returns the set of GUIDs that needs to be imported to the function for
