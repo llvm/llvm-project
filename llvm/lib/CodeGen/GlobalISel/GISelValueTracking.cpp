@@ -925,16 +925,23 @@ PreservedAnalyses
 GISelValueTrackingPrinterPass::run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM) {
   auto &VTA = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
-  OS << "name: " << MF.getName() << "\n";
+  const auto &MRI = MF.getRegInfo();
+  OS << "name: ";
+  MF.getFunction().printAsOperand(OS, /*PrintType=*/false);
+  OS << '\n';
+
   for (MachineBasicBlock &BB : MF) {
     for (MachineInstr &MI : BB) {
       for (MachineOperand &MO : MI.defs()) {
         if (!MO.isReg() || MO.getReg().isPhysical())
           continue;
-        KnownBits Known = VTA.getKnownBits(MO.getReg());
-        unsigned SignedBits = VTA.computeNumSignBits(MO.getReg());
+        Register Reg = MO.getReg();
+        if (!MRI.getType(Reg).isValid())
+          continue;
+        KnownBits Known = VTA.getKnownBits(Reg);
+        unsigned SignedBits = VTA.computeNumSignBits(Reg);
         OS << "KnownBits:" << Known << " SignBits:" << SignedBits << " for "
-           << MO << "\n";
+           << MO << '\n';
       };
     }
   }
