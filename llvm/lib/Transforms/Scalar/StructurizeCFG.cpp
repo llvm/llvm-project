@@ -129,8 +129,6 @@ using BBPredicates = DenseMap<BasicBlock *, PredInfo>;
 using PredMap = DenseMap<BasicBlock *, BBPredicates>;
 using BB2BBMap = DenseMap<BasicBlock *, BasicBlock *>;
 
-using BranchDebugLocMap = DenseMap<BasicBlock *, DebugLoc>;
-
 // A traits type that is intended to be used in graph algorithms. The graph
 // traits starts at an entry node, and traverses the RegionNodes that are in
 // the Nodes set.
@@ -303,8 +301,6 @@ class StructurizeCFG {
   PredMap LoopPreds;
   BranchVector LoopConds;
 
-  BranchDebugLocMap TermDL;
-
   RegionNode *PrevNode;
 
   void orderNodes();
@@ -336,14 +332,14 @@ class StructurizeCFG {
 
   void simplifyAffectedPhis();
 
-  void killTerminator(BasicBlock *BB);
+  DebugLoc killTerminator(BasicBlock *BB);
 
   void changeExit(RegionNode *Node, BasicBlock *NewExit,
                   bool IncludeDominator);
 
   BasicBlock *getNextFlow(BasicBlock *Dominator);
 
-  BasicBlock *needPrefix(bool NeedEmpty);
+  std::pair<BasicBlock *, DebugLoc> needPrefix(bool NeedEmpty);
 
   BasicBlock *needPostfix(BasicBlock *Flow, bool ExitUseAllowed);
 
@@ -360,8 +356,6 @@ class StructurizeCFG {
   void createFlow();
 
   void rebuildSSA();
-
-  void setDebugLoc(BranchInst *Br, BasicBlock *BB);
 
 public:
   void init(Region *R);
@@ -918,28 +912,18 @@ void StructurizeCFG::simplifyAffectedPhis() {
   } while (Changed);
 }
 
-void StructurizeCFG::setDebugLoc(BranchInst *Br, BasicBlock *BB) {
-  auto I = TermDL.find(BB);
-  if (I == TermDL.end())
-    return;
-
-  Br->setDebugLoc(I->second);
-  TermDL.erase(I);
-}
-
 /// Remove phi values from all successors and then remove the terminator.
-void StructurizeCFG::killTerminator(BasicBlock *BB) {
+DebugLoc StructurizeCFG::killTerminator(BasicBlock *BB) {
   Instruction *Term = BB->getTerminator();
   if (!Term)
-    return;
-
-  if (const DebugLoc &DL = Term->getDebugLoc())
-    TermDL[BB] = DL;
+    return DebugLoc();
 
   for (BasicBlock *Succ : successors(BB))
     delPhiValues(BB, Succ);
 
+  DebugLoc DL = Term->getDebugLoc();
   Term->eraseFromParent();
+  return DL;
 }
 
 /// Let node exit(s) point to NewExit
@@ -978,9 +962,9 @@ void StructurizeCFG::changeExit(RegionNode *Node, BasicBlock *NewExit,
     SubRegion->replaceExit(NewExit);
   } else {
     BasicBlock *BB = Node->getNodeAs<BasicBlock>();
-    killTerminator(BB);
+    DebugLoc DL = killTerminator(BB);
     BranchInst *Br = BranchInst::Create(NewExit, BB);
-    setDebugLoc(Br, BB);
+    Br->setDebugLoc(DL);
     addPhiValues(BB, NewExit);
     if (IncludeDominator)
       DT->changeImmediateDominator(NewExit, BB);
@@ -995,29 +979,20 @@ BasicBlock *StructurizeCFG::getNextFlow(BasicBlock *Dominator) {
   BasicBlock *Flow = BasicBlock::Create(Context, FlowBlockName,
                                         Func, Insert);
   FlowSet.insert(Flow);
-
-  if (auto *Term = Dominator->getTerminator()) {
-    if (const DebugLoc &DL = Term->getDebugLoc())
-      TermDL[Flow] = DL;
-  } else if (DebugLoc DLTemp = TermDL.lookup(Dominator)) {
-    // Use a temporary copy to avoid a use-after-free if the map's storage
-    // is reallocated.
-    TermDL[Flow] = DLTemp;
-  }
-
   DT->addNewBlock(Flow, Dominator);
   ParentRegion->getRegionInfo()->setRegionFor(Flow, ParentRegion);
   return Flow;
 }
 
-/// Create a new or reuse the previous node as flow node
-BasicBlock *StructurizeCFG::needPrefix(bool NeedEmpty) {
+/// Create a new or reuse the previous node as flow node. Returns a block and a
+/// debug location to be used for new instructions in that block.
+std::pair<BasicBlock *, DebugLoc> StructurizeCFG::needPrefix(bool NeedEmpty) {
   BasicBlock *Entry = PrevNode->getEntry();
 
   if (!PrevNode->isSubRegion()) {
-    killTerminator(Entry);
+    DebugLoc DL = killTerminator(Entry);
     if (!NeedEmpty || Entry->getFirstInsertionPt() == Entry->end())
-      return Entry;
+      return {Entry, DL};
   }
 
   // create a new flow node
@@ -1026,7 +1001,7 @@ BasicBlock *StructurizeCFG::needPrefix(bool NeedEmpty) {
   // and wire it up
   changeExit(PrevNode, Flow, true);
   PrevNode = ParentRegion->getBBNode(Flow);
-  return Flow;
+  return {Flow, DebugLoc()};
 }
 
 /// Returns the region exit if possible, otherwise just a new flow node
@@ -1090,7 +1065,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
     PrevNode = Node;
   } else {
     // Insert extra prefix node (or reuse last one)
-    BasicBlock *Flow = needPrefix(false);
+    auto [Flow, DL] = needPrefix(false);
 
     // Insert extra postfix node (or use exit instead)
     BasicBlock *Entry = Node->getEntry();
@@ -1098,7 +1073,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
 
     // let it point to entry and next block
     BranchInst *Br = BranchInst::Create(Entry, Next, BoolPoison, Flow);
-    setDebugLoc(Br, Flow);
+    Br->setDebugLoc(DL);
     Conditions.push_back(Br);
     addPhiValues(Flow, Entry);
     DT->changeImmediateDominator(Entry, Flow);
@@ -1125,7 +1100,7 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
   }
 
   if (!isPredictableTrue(Node))
-    LoopStart = needPrefix(true);
+    LoopStart = needPrefix(true).first;
 
   LoopEnd = Loops[Node->getEntry()];
   wireFlow(false, LoopEnd);
@@ -1136,10 +1111,11 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
   assert(LoopStart != &LoopStart->getParent()->getEntryBlock());
 
   // Create an extra loop end node
-  LoopEnd = needPrefix(false);
+  DebugLoc DL;
+  std::tie(LoopEnd, DL) = needPrefix(false);
   BasicBlock *Next = needPostfix(LoopEnd, ExitUseAllowed);
   BranchInst *Br = BranchInst::Create(Next, LoopStart, BoolPoison, LoopEnd);
-  setDebugLoc(Br, LoopEnd);
+  Br->setDebugLoc(DL);
   LoopConds.push_back(Br);
   addPhiValues(LoopEnd, LoopStart);
   setPrevNode(Next);
@@ -1339,7 +1315,6 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT) {
   LoopPreds.clear();
   LoopConds.clear();
   FlowSet.clear();
-  TermDL.clear();
 
   return true;
 }

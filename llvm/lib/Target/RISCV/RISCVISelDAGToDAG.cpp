@@ -16,6 +16,7 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCVISelLowering.h"
 #include "RISCVInstrInfo.h"
+#include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
@@ -33,6 +34,9 @@ static cl::opt<bool> UsePseudoMovImm(
     cl::desc("Use a rematerializable pseudoinstruction for 2 instruction "
              "constant materialization"),
     cl::init(false));
+
+#define GET_DAGISEL_BODY RISCVDAGToDAGISel
+#include "RISCVGenDAGISel.inc"
 
 void RISCVDAGToDAGISel::PreprocessISelDAG() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
@@ -2990,6 +2994,18 @@ bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
           CurDAG->getMachineNode(
               RISCV::BINVI, DL, N->getValueType(0), LHS,
               CurDAG->getTargetConstant(Log2_64(CVal), DL, N->getValueType(0))),
+          0);
+      return true;
+    }
+    // Same as the addi case above but for larger immediates (signed 26-bit) use
+    // the QC_E_ADDI instruction from the Xqcilia extension, if available. Avoid
+    // anything which can be done with a single lui as it might be compressible.
+    if (Subtarget->hasVendorXqcilia() && isInt<26>(CVal) &&
+        (CVal & 0xFFF) != 0) {
+      Val = SDValue(
+          CurDAG->getMachineNode(
+              RISCV::QC_E_ADDI, DL, N->getValueType(0), LHS,
+              CurDAG->getSignedTargetConstant(-CVal, DL, N->getValueType(0))),
           0);
       return true;
     }
