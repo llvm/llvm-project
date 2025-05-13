@@ -13,6 +13,7 @@
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
@@ -88,7 +89,7 @@ mlir::xegpu::getDistributedVectorType(VectorType originalType,
 
 xegpu::LayoutAttr xegpu::getLayoutAttr(Value value) {
   if (!value)
-    return LayoutAttr();
+    return nullptr;
 
   if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(value.getType()))
     return tdescTy.getLayoutAttr();
@@ -96,6 +97,11 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(Value value) {
   if (auto result = dyn_cast<OpResult>(value)) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
+
+    // for LoadNdOp, the layout is stored in the tensor descriptor
+    if (auto loadNd = dyn_cast<xegpu::LoadNdOp>(defOp))
+      return getLayoutAttr(loadNd.getTensorDesc());
+
     std::string layoutName = getLayoutName(result);
     if (defOp->hasAttr(layoutName))
       return defOp->getAttrOfType<xegpu::LayoutAttr>(layoutName);
@@ -103,10 +109,9 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(Value value) {
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
     auto parentOp = arg.getOwner()->getParentOp();
-    if (auto funcOp = dyn_cast<FuncOp>(parentOp)) {
-      std::string layoutName = getLayoutName(arg);
-      if (funcOp->hasAttr(layoutName))
-        return funcOp->getAttrOfType<xegpu::LayoutAttr>(layoutName);
+    if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
+      OpOperand *tiedInit = loop.getTiedLoopInit(arg);
+      return getLayoutAttr(tiedInit->get());
     }
   }
 
@@ -122,4 +127,3 @@ std::string xegpu::getLayoutName(OpResult res) {
   const StringRef prefix = "layout_result_";
   return llvm::formatv("{0}{1}", prefix, res.getResultNumber()).str();
 }
-
