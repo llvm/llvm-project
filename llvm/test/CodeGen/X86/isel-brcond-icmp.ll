@@ -2,8 +2,8 @@
 ; RUN: llc < %s -global-isel=0                    -mtriple=x86_64-apple-darwin10 -verify-machineinstrs | FileCheck %s --check-prefixes=X64,SDAG
 ; RUN: llc < %s -fast-isel -fast-isel-abort=1     -mtriple=x86_64-apple-darwin10 -verify-machineinstrs | FileCheck %s --check-prefixes=X64,FASTISEL
 ; RUN: llc < %s -global-isel -global-isel-abort=1 -mtriple=x86_64-apple-darwin10 -verify-machineinstrs | FileCheck %s --check-prefixes=GISEL-X64
-; RUN: llc < %s -global-isel=0                    -mtriple=i686-apple-darwin10   -verify-machineinstrs | FileCheck %s --check-prefixes=X86,SDAG
-; RUN: llc < %s -fast-isel -fast-isel-abort=1     -mtriple=i686-apple-darwin10   -verify-machineinstrs | FileCheck %s --check-prefixes=X86,FASTISEL
+; RUN: llc < %s -global-isel=0                    -mtriple=i686-apple-darwin10   -verify-machineinstrs | FileCheck %s --check-prefixes=X86,SDAG,SDAG-X86
+; RUN: llc < %s -fast-isel -fast-isel-abort=1     -mtriple=i686-apple-darwin10   -verify-machineinstrs | FileCheck %s --check-prefixes=X86,FASTISEL,FASTISEL-X86
 ; RUN: llc < %s -global-isel -global-isel-abort=1 -mtriple=i686-apple-darwin10   -verify-machineinstrs | FileCheck %s --check-prefixes=GISEL-X86
 
 define i32 @icmp_eq_2(i32 %x, i32 %y) {
@@ -31,6 +31,33 @@ define i32 @icmp_eq_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
+<<<<<<< HEAD
+=======
+; SDAG-X86-LABEL: icmp_eq_2:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    jne LBB0_1
+; SDAG-X86-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X86-NEXT:    xorl %eax, %eax
+; SDAG-X86-NEXT:    retl
+; SDAG-X86-NEXT:  LBB0_1: ## %bb2
+; SDAG-X86-NEXT:    movl $1, %eax
+; SDAG-X86-NEXT:    retl
+;
+; FASTISEL-X86-LABEL: icmp_eq_2:
+; FASTISEL-X86:       ## %bb.0:
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    jne LBB0_1
+; FASTISEL-X86-NEXT:  ## %bb.2: ## %bb1
+; FASTISEL-X86-NEXT:    xorl %eax, %eax
+; FASTISEL-X86-NEXT:    retl
+; FASTISEL-X86-NEXT:  LBB0_1: ## %bb2
+; FASTISEL-X86-NEXT:    movl $1, %eax
+; FASTISEL-X86-NEXT:    retl
+;
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; GISEL-X86-LABEL: icmp_eq_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -77,6 +104,33 @@ define i32 @icmp_ne_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
+<<<<<<< HEAD
+=======
+; SDAG-X86-LABEL: icmp_ne_2:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    je LBB1_1
+; SDAG-X86-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X86-NEXT:    xorl %eax, %eax
+; SDAG-X86-NEXT:    retl
+; SDAG-X86-NEXT:  LBB1_1: ## %bb2
+; SDAG-X86-NEXT:    movl $1, %eax
+; SDAG-X86-NEXT:    retl
+;
+; FASTISEL-X86-LABEL: icmp_ne_2:
+; FASTISEL-X86:       ## %bb.0:
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    je LBB1_1
+; FASTISEL-X86-NEXT:  ## %bb.2: ## %bb1
+; FASTISEL-X86-NEXT:    xorl %eax, %eax
+; FASTISEL-X86-NEXT:    retl
+; FASTISEL-X86-NEXT:  LBB1_1: ## %bb2
+; FASTISEL-X86-NEXT:    movl $1, %eax
+; FASTISEL-X86-NEXT:    retl
+;
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; GISEL-X86-LABEL: icmp_ne_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -123,6 +177,33 @@ define i32 @icmp_ugt_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
+<<<<<<< HEAD
+=======
+; SDAG-X86-LABEL: icmp_ugt_2:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    jbe LBB2_1
+; SDAG-X86-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X86-NEXT:    xorl %eax, %eax
+; SDAG-X86-NEXT:    retl
+; SDAG-X86-NEXT:  LBB2_1: ## %bb2
+; SDAG-X86-NEXT:    movl $1, %eax
+; SDAG-X86-NEXT:    retl
+;
+; FASTISEL-X86-LABEL: icmp_ugt_2:
+; FASTISEL-X86:       ## %bb.0:
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    jbe LBB2_1
+; FASTISEL-X86-NEXT:  ## %bb.2: ## %bb1
+; FASTISEL-X86-NEXT:    xorl %eax, %eax
+; FASTISEL-X86-NEXT:    retl
+; FASTISEL-X86-NEXT:  LBB2_1: ## %bb2
+; FASTISEL-X86-NEXT:    movl $1, %eax
+; FASTISEL-X86-NEXT:    retl
+;
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; GISEL-X86-LABEL: icmp_ugt_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -169,6 +250,33 @@ define i32 @icmp_uge_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
+<<<<<<< HEAD
+=======
+; SDAG-X86-LABEL: icmp_uge_2:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    jb LBB3_1
+; SDAG-X86-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X86-NEXT:    xorl %eax, %eax
+; SDAG-X86-NEXT:    retl
+; SDAG-X86-NEXT:  LBB3_1: ## %bb2
+; SDAG-X86-NEXT:    movl $1, %eax
+; SDAG-X86-NEXT:    retl
+;
+; FASTISEL-X86-LABEL: icmp_uge_2:
+; FASTISEL-X86:       ## %bb.0:
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    jb LBB3_1
+; FASTISEL-X86-NEXT:  ## %bb.2: ## %bb1
+; FASTISEL-X86-NEXT:    xorl %eax, %eax
+; FASTISEL-X86-NEXT:    retl
+; FASTISEL-X86-NEXT:  LBB3_1: ## %bb2
+; FASTISEL-X86-NEXT:    movl $1, %eax
+; FASTISEL-X86-NEXT:    retl
+;
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; GISEL-X86-LABEL: icmp_uge_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -215,6 +323,33 @@ define i32 @icmp_ult_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
+<<<<<<< HEAD
+=======
+; SDAG-X86-LABEL: icmp_ult_2:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    jae LBB4_1
+; SDAG-X86-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X86-NEXT:    xorl %eax, %eax
+; SDAG-X86-NEXT:    retl
+; SDAG-X86-NEXT:  LBB4_1: ## %bb2
+; SDAG-X86-NEXT:    movl $1, %eax
+; SDAG-X86-NEXT:    retl
+;
+; FASTISEL-X86-LABEL: icmp_ult_2:
+; FASTISEL-X86:       ## %bb.0:
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    jae LBB4_1
+; FASTISEL-X86-NEXT:  ## %bb.2: ## %bb1
+; FASTISEL-X86-NEXT:    xorl %eax, %eax
+; FASTISEL-X86-NEXT:    retl
+; FASTISEL-X86-NEXT:  LBB4_1: ## %bb2
+; FASTISEL-X86-NEXT:    movl $1, %eax
+; FASTISEL-X86-NEXT:    retl
+;
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; GISEL-X86-LABEL: icmp_ult_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -261,6 +396,33 @@ define i32 @icmp_ule_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
+<<<<<<< HEAD
+=======
+; SDAG-X86-LABEL: icmp_ule_2:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    ja LBB5_1
+; SDAG-X86-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X86-NEXT:    xorl %eax, %eax
+; SDAG-X86-NEXT:    retl
+; SDAG-X86-NEXT:  LBB5_1: ## %bb2
+; SDAG-X86-NEXT:    movl $1, %eax
+; SDAG-X86-NEXT:    retl
+;
+; FASTISEL-X86-LABEL: icmp_ule_2:
+; FASTISEL-X86:       ## %bb.0:
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    ja LBB5_1
+; FASTISEL-X86-NEXT:  ## %bb.2: ## %bb1
+; FASTISEL-X86-NEXT:    xorl %eax, %eax
+; FASTISEL-X86-NEXT:    retl
+; FASTISEL-X86-NEXT:  LBB5_1: ## %bb2
+; FASTISEL-X86-NEXT:    movl $1, %eax
+; FASTISEL-X86-NEXT:    retl
+;
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; GISEL-X86-LABEL: icmp_ule_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -307,6 +469,33 @@ define i32 @icmp_sgt_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
+<<<<<<< HEAD
+=======
+; SDAG-X86-LABEL: icmp_sgt_2:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    jle LBB6_1
+; SDAG-X86-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X86-NEXT:    xorl %eax, %eax
+; SDAG-X86-NEXT:    retl
+; SDAG-X86-NEXT:  LBB6_1: ## %bb2
+; SDAG-X86-NEXT:    movl $1, %eax
+; SDAG-X86-NEXT:    retl
+;
+; FASTISEL-X86-LABEL: icmp_sgt_2:
+; FASTISEL-X86:       ## %bb.0:
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    jle LBB6_1
+; FASTISEL-X86-NEXT:  ## %bb.2: ## %bb1
+; FASTISEL-X86-NEXT:    xorl %eax, %eax
+; FASTISEL-X86-NEXT:    retl
+; FASTISEL-X86-NEXT:  LBB6_1: ## %bb2
+; FASTISEL-X86-NEXT:    movl $1, %eax
+; FASTISEL-X86-NEXT:    retl
+;
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; GISEL-X86-LABEL: icmp_sgt_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -353,6 +542,33 @@ define i32 @icmp_sge_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
+<<<<<<< HEAD
+=======
+; SDAG-X86-LABEL: icmp_sge_2:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    jl LBB7_1
+; SDAG-X86-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X86-NEXT:    xorl %eax, %eax
+; SDAG-X86-NEXT:    retl
+; SDAG-X86-NEXT:  LBB7_1: ## %bb2
+; SDAG-X86-NEXT:    movl $1, %eax
+; SDAG-X86-NEXT:    retl
+;
+; FASTISEL-X86-LABEL: icmp_sge_2:
+; FASTISEL-X86:       ## %bb.0:
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    jl LBB7_1
+; FASTISEL-X86-NEXT:  ## %bb.2: ## %bb1
+; FASTISEL-X86-NEXT:    xorl %eax, %eax
+; FASTISEL-X86-NEXT:    retl
+; FASTISEL-X86-NEXT:  LBB7_1: ## %bb2
+; FASTISEL-X86-NEXT:    movl $1, %eax
+; FASTISEL-X86-NEXT:    retl
+;
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; GISEL-X86-LABEL: icmp_sge_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -399,6 +615,33 @@ define i32 @icmp_slt_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
+<<<<<<< HEAD
+=======
+; SDAG-X86-LABEL: icmp_slt_2:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    jge LBB8_1
+; SDAG-X86-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X86-NEXT:    xorl %eax, %eax
+; SDAG-X86-NEXT:    retl
+; SDAG-X86-NEXT:  LBB8_1: ## %bb2
+; SDAG-X86-NEXT:    movl $1, %eax
+; SDAG-X86-NEXT:    retl
+;
+; FASTISEL-X86-LABEL: icmp_slt_2:
+; FASTISEL-X86:       ## %bb.0:
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    jge LBB8_1
+; FASTISEL-X86-NEXT:  ## %bb.2: ## %bb1
+; FASTISEL-X86-NEXT:    xorl %eax, %eax
+; FASTISEL-X86-NEXT:    retl
+; FASTISEL-X86-NEXT:  LBB8_1: ## %bb2
+; FASTISEL-X86-NEXT:    movl $1, %eax
+; FASTISEL-X86-NEXT:    retl
+;
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; GISEL-X86-LABEL: icmp_slt_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -445,6 +688,33 @@ define i32 @icmp_sle_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
+<<<<<<< HEAD
+=======
+; SDAG-X86-LABEL: icmp_sle_2:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    jg LBB9_1
+; SDAG-X86-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X86-NEXT:    xorl %eax, %eax
+; SDAG-X86-NEXT:    retl
+; SDAG-X86-NEXT:  LBB9_1: ## %bb2
+; SDAG-X86-NEXT:    movl $1, %eax
+; SDAG-X86-NEXT:    retl
+;
+; FASTISEL-X86-LABEL: icmp_sle_2:
+; FASTISEL-X86:       ## %bb.0:
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FASTISEL-X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
+; FASTISEL-X86-NEXT:    jg LBB9_1
+; FASTISEL-X86-NEXT:  ## %bb.2: ## %bb1
+; FASTISEL-X86-NEXT:    xorl %eax, %eax
+; FASTISEL-X86-NEXT:    retl
+; FASTISEL-X86-NEXT:  LBB9_1: ## %bb2
+; FASTISEL-X86-NEXT:    movl $1, %eax
+; FASTISEL-X86-NEXT:    retl
+;
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; GISEL-X86-LABEL: icmp_sle_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -523,10 +793,19 @@ define i32 @icmp_ne(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
+<<<<<<< HEAD
 ; SDAG-NEXT:    jne LBB11_2
 ; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
 ; SDAG-NEXT:  LBB11_2: ## %bb1
+=======
+; SDAG-NEXT:    je LBB11_1
+; SDAG-NEXT:  ## %bb.2: ## %bb1
+; SDAG-NEXT:    xorl %eax, %eax
+; SDAG-NEXT:    ret{{[l|q]}}
+; SDAG-NEXT:  LBB11_1: ## %bb2
+; SDAG-NEXT:    movl $1, %eax
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_ne:
@@ -573,10 +852,19 @@ define i32 @icmp_ugt(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
+<<<<<<< HEAD
 ; SDAG-NEXT:    jne LBB12_2
 ; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
 ; SDAG-NEXT:  LBB12_2: ## %bb1
+=======
+; SDAG-NEXT:    je LBB12_1
+; SDAG-NEXT:  ## %bb.2: ## %bb1
+; SDAG-NEXT:    xorl %eax, %eax
+; SDAG-NEXT:    ret{{[l|q]}}
+; SDAG-NEXT:  LBB12_1: ## %bb2
+; SDAG-NEXT:    movl $1, %eax
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_ugt:
@@ -679,10 +967,19 @@ define i32 @icmp_ult(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
+<<<<<<< HEAD
 ; SDAG-NEXT:    jne LBB14_2
 ; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
 ; SDAG-NEXT:  LBB14_2: ## %bb1
+=======
+; SDAG-NEXT:    je LBB14_1
+; SDAG-NEXT:  ## %bb.2: ## %bb1
+; SDAG-NEXT:    xorl %eax, %eax
+; SDAG-NEXT:    ret{{[l|q]}}
+; SDAG-NEXT:  LBB14_1: ## %bb2
+; SDAG-NEXT:    movl $1, %eax
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_ult:
@@ -785,10 +1082,19 @@ define i32 @icmp_sgt(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
+<<<<<<< HEAD
 ; SDAG-NEXT:    jne LBB16_2
 ; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
 ; SDAG-NEXT:  LBB16_2: ## %bb1
+=======
+; SDAG-NEXT:    je LBB16_1
+; SDAG-NEXT:  ## %bb.2: ## %bb1
+; SDAG-NEXT:    xorl %eax, %eax
+; SDAG-NEXT:    ret{{[l|q]}}
+; SDAG-NEXT:  LBB16_1: ## %bb2
+; SDAG-NEXT:    movl $1, %eax
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_sgt:
@@ -887,10 +1193,19 @@ define i32 @icmp_slt(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
+<<<<<<< HEAD
 ; SDAG-NEXT:    jne LBB18_2
 ; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
 ; SDAG-NEXT:  LBB18_2: ## %bb1
+=======
+; SDAG-NEXT:    je LBB18_1
+; SDAG-NEXT:  ## %bb.2: ## %bb1
+; SDAG-NEXT:    xorl %eax, %eax
+; SDAG-NEXT:    ret{{[l|q]}}
+; SDAG-NEXT:  LBB18_1: ## %bb2
+; SDAG-NEXT:    movl $1, %eax
+>>>>>>> 7038d50d624d43667a7c56501b83e3bb7cc2fe3b
 ; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_slt:
