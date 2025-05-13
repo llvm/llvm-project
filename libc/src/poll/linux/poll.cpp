@@ -18,7 +18,7 @@
 
 #include <sys/syscall.h> // SYS_poll, SYS_ppoll
 
-#if SYS_poll
+#ifdef SYS_poll
 constexpr auto POLL_SYSCALL_ID = SYS_poll;
 #elif defined(SYS_ppoll)
 constexpr auto POLL_SYSCALL_ID = SYS_ppoll;
