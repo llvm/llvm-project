@@ -105,12 +105,10 @@ struct TagNode : public HTMLNode {
   void render(llvm::raw_ostream &OS, int IndentationLevel) override;
 };
 
-constexpr const char *kDoctypeDecl = "<!DOCTYPE html>";
-
 struct HTMLFile {
   std::vector<std::unique_ptr<HTMLNode>> Children; // List of child nodes
   void render(llvm::raw_ostream &OS) {
-    OS << kDoctypeDecl << "\n";
+    OS << "<!DOCTYPE html>\n";
     for (const auto &C : Children) {
       C->render(OS, 0);
       OS << "\n";
@@ -416,12 +414,14 @@ genRecordMembersBlock(const llvm::SmallVector<MemberTypeInfo, 4> &Members,
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_UL));
   auto &ULBody = Out.back();
   for (const auto &M : Members) {
-    std::string Access = getAccessSpelling(M.Access).str();
-    if (Access != "")
-      Access = Access + " ";
+    StringRef Access = getAccessSpelling(M.Access);
     auto LIBody = std::make_unique<TagNode>(HTMLTag::TAG_LI);
     auto MemberDecl = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
-    MemberDecl->Children.emplace_back(std::make_unique<TextNode>(Access));
+    if (!Access.empty())
+      MemberDecl->Children.emplace_back(
+          std::make_unique<TextNode>(Access + " "));
+    if (M.IsStatic)
+      MemberDecl->Children.emplace_back(std::make_unique<TextNode>("static "));
     MemberDecl->Children.emplace_back(genReference(M.Type, ParentInfoDir));
     MemberDecl->Children.emplace_back(std::make_unique<TextNode>(" " + M.Name));
     if (!M.Description.empty())
@@ -455,7 +455,7 @@ static std::unique_ptr<TagNode> writeSourceFileRef(const ClangDocContext &CDCtx,
 
   if (!L.IsFileInRootDir && !CDCtx.RepositoryUrl)
     return std::make_unique<TagNode>(
-        HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
+        HTMLTag::TAG_P, "Defined at line " + std::to_string(L.StartLineNumber) +
                             " of file " + L.Filename);
 
   SmallString<128> FileURL(CDCtx.RepositoryUrl.value_or(""));
@@ -472,13 +472,14 @@ static std::unique_ptr<TagNode> writeSourceFileRef(const ClangDocContext &CDCtx,
           llvm::sys::path::Style::windows));
   auto Node = std::make_unique<TagNode>(HTMLTag::TAG_P);
   Node->Children.emplace_back(std::make_unique<TextNode>("Defined at line "));
-  auto LocNumberNode =
-      std::make_unique<TagNode>(HTMLTag::TAG_A, std::to_string(L.LineNumber));
+  auto LocNumberNode = std::make_unique<TagNode>(
+      HTMLTag::TAG_A, std::to_string(L.StartLineNumber));
   // The links to a specific line in the source code use the github /
   // googlesource notation so it won't work for all hosting pages.
   LocNumberNode->Attributes.emplace_back(
-      "href", formatv("{0}#{1}{2}", FileURL,
-                      CDCtx.RepositoryLinePrefix.value_or(""), L.LineNumber));
+      "href",
+      formatv("{0}#{1}{2}", FileURL, CDCtx.RepositoryLinePrefix.value_or(""),
+              L.StartLineNumber));
   Node->Children.emplace_back(std::move(LocNumberNode));
   Node->Children.emplace_back(std::make_unique<TextNode>(" of file "));
   auto LocFileNode = std::make_unique<TagNode>(
@@ -716,7 +717,6 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
 
   maybeWriteSourceFileRef(Out, CDCtx, I.DefLoc);
 
-  std::string Description;
   if (!I.Description.empty())
     Out.emplace_back(genHTML(I.Description));
 
@@ -740,6 +740,9 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
   if (Access != "")
     FunctionHeader->Children.emplace_back(
         std::make_unique<TextNode>(Access + " "));
+  if (I.IsStatic)
+    FunctionHeader->Children.emplace_back(
+        std::make_unique<TextNode>("static "));
   if (I.ReturnType.Type.Name != "") {
     FunctionHeader->Children.emplace_back(
         genReference(I.ReturnType.Type, ParentInfoDir));
@@ -759,7 +762,6 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
 
   maybeWriteSourceFileRef(Out, CDCtx, I.DefLoc);
 
-  std::string Description;
   if (!I.Description.empty())
     Out.emplace_back(genHTML(I.Description));
 
@@ -777,7 +779,6 @@ genHTML(const NamespaceInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
 
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_H1, InfoTitle));
 
-  std::string Description;
   if (!I.Description.empty())
     Out.emplace_back(genHTML(I.Description));
 
@@ -820,7 +821,6 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
 
   maybeWriteSourceFileRef(Out, CDCtx, I.DefLoc);
 
-  std::string Description;
   if (!I.Description.empty())
     Out.emplace_back(genHTML(I.Description));
 

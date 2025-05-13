@@ -515,9 +515,7 @@ PreservedAnalyses CGSCCToFunctionPassAdaptor::run(LazyCallGraph::SCC &C,
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
-  SmallVector<LazyCallGraph::Node *, 4> Nodes;
-  for (LazyCallGraph::Node &N : C)
-    Nodes.push_back(&N);
+  SmallVector<LazyCallGraph::Node *, 4> Nodes(llvm::make_pointer_range(C));
 
   // The SCC may get split while we are optimizing functions due to deleting
   // edges. If this happens, the current SCC can shift, so keep track of

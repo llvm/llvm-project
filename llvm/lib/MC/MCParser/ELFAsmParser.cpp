@@ -137,7 +137,6 @@ private:
   bool parseMergeSize(int64_t &Size);
   bool parseGroup(StringRef &GroupName, bool &IsComdat);
   bool parseLinkedToSym(MCSymbolELF *&LinkedToSym);
-  bool maybeParseUniqueID(int64_t &UniqueID);
 };
 
 } // end anonymous namespace
@@ -471,28 +470,6 @@ bool ELFAsmParser::parseLinkedToSym(MCSymbolELF *&LinkedToSym) {
   LinkedToSym = dyn_cast_or_null<MCSymbolELF>(getContext().lookupSymbol(Name));
   if (!LinkedToSym || !LinkedToSym->isInSection())
     return Error(StartLoc, "linked-to symbol is not in a section: " + Name);
-  return false;
-}
-
-bool ELFAsmParser::maybeParseUniqueID(int64_t &UniqueID) {
-  MCAsmLexer &L = getLexer();
-  if (L.isNot(AsmToken::Comma))
-    return false;
-  Lex();
-  StringRef UniqueStr;
-  if (getParser().parseIdentifier(UniqueStr))
-    return TokError("expected identifier");
-  if (UniqueStr != "unique")
-    return TokError("expected 'unique'");
-  if (L.isNot(AsmToken::Comma))
-    return TokError("expected commma");
-  Lex();
-  if (getParser().parseAbsoluteExpression(UniqueID))
-    return true;
-  if (UniqueID < 0)
-    return TokError("unique id must be positive");
-  if (!isUInt<32>(UniqueID) || UniqueID == ~0U)
-    return TokError("unique id is too large");
   return false;
 }
 

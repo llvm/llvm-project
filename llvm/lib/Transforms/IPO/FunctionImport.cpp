@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/AutoUpgrade.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
@@ -71,6 +72,10 @@ STATISTIC(NumImportedModules, "Number of modules imported from");
 STATISTIC(NumDeadSymbols, "Number of dead stripped symbols in index");
 STATISTIC(NumLiveSymbols, "Number of live symbols in index");
 
+cl::opt<bool>
+    ForceImportAll("force-import-all", cl::init(false), cl::Hidden,
+                   cl::desc("Import functions with noinline attribute"));
+
 /// Limit on instruction count of imported functions.
 static cl::opt<unsigned> ImportInstrLimit(
     "import-instr-limit", cl::init(100), cl::Hidden, cl::value_desc("N"),
@@ -79,10 +84,6 @@ static cl::opt<unsigned> ImportInstrLimit(
 static cl::opt<int> ImportCutoff(
     "import-cutoff", cl::init(-1), cl::Hidden, cl::value_desc("N"),
     cl::desc("Only import first N functions if N>=0 (default -1)"));
-
-static cl::opt<bool>
-    ForceImportAll("force-import-all", cl::init(false), cl::Hidden,
-                   cl::desc("Import functions with noinline attribute"));
 
 static cl::opt<float>
     ImportInstrFactor("import-instr-evolution-factor", cl::init(0.7),
@@ -577,7 +578,6 @@ class WorkloadImportsManager : public ModuleImportsManager {
     GlobalsImporter GVI(Index, DefinedGVSummaries, IsPrevailing, ImportList,
                         ExportLists);
     auto &ValueInfos = SetIter->second;
-    SmallVector<EdgeInfo, 128> GlobWorklist;
     for (auto &VI : llvm::make_early_inc_range(ValueInfos)) {
       auto It = DefinedGVSummaries.find(VI.getGUID());
       if (It != DefinedGVSummaries.end() &&
@@ -607,7 +607,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
       if (PotentialCandidates.empty()) {
         LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
                           << " because can't find eligible Callee. Guid is: "
-                          << Function::getGUID(VI.name()) << "\n");
+                          << VI.getGUID() << "\n");
         continue;
       }
       /// We will prefer importing the prevailing candidate, if not, we'll
@@ -660,8 +660,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
         continue;
       }
       LLVM_DEBUG(dbgs() << "[Workload][Including]" << VI.name() << " from "
-                        << ExportingModule << " : "
-                        << Function::getGUID(VI.name()) << "\n");
+                        << ExportingModule << " : " << VI.getGUID() << "\n");
       ImportList.addDefinition(ExportingModule, VI.getGUID());
       GVI.onImportingSummary(*GVS);
       if (ExportLists)
@@ -1807,7 +1806,8 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
       std::string OrigId = GlobalValue::getGlobalIdentifier(
           OrigName, GlobalValue::InternalLinkage,
           TheModule.getSourceFileName());
-      GS = DefinedGlobals.find(GlobalValue::getGUID(OrigId));
+      GS = DefinedGlobals.find(
+          GlobalValue::getGUIDAssumingExternalLinkage(OrigId));
       if (GS == DefinedGlobals.end()) {
         // Also check the original non-promoted non-globalized name. In some
         // cases a preempted weak value is linked in as a local copy because
@@ -1815,7 +1815,8 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
         // In that case, since it was originally not a local value, it was
         // recorded in the index using the original name.
         // FIXME: This may not be needed once PR27866 is fixed.
-        GS = DefinedGlobals.find(GlobalValue::getGUID(OrigName));
+        GS = DefinedGlobals.find(
+            GlobalValue::getGUIDAssumingExternalLinkage(OrigName));
         assert(GS != DefinedGlobals.end());
       }
     }

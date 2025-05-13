@@ -278,12 +278,12 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
   auto module = builder.getInsertionPoint()->getParentOfType<ModuleOp>();
   FailureOr<LLVM::LLVMFuncOp> freeFunc, mallocFunc;
   if (toDynamic) {
-    mallocFunc = LLVM::lookupOrCreateMallocFn(module, indexType);
+    mallocFunc = LLVM::lookupOrCreateMallocFn(builder, module, indexType);
     if (failed(mallocFunc))
       return failure();
   }
   if (!toDynamic) {
-    freeFunc = LLVM::lookupOrCreateFreeFn(module);
+    freeFunc = LLVM::lookupOrCreateFreeFn(builder, module);
     if (failed(freeFunc))
       return failure();
   }
@@ -380,4 +380,97 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   }
   rewriter.replaceOp(op, results);
   return success();
+}
+
+static unsigned getBitWidth(Type type) {
+  if (type.isIntOrFloat())
+    return type.getIntOrFloatBitWidth();
+
+  auto vec = cast<VectorType>(type);
+  assert(!vec.isScalable() && "scalable vectors are not supported");
+  return vec.getNumElements() * getBitWidth(vec.getElementType());
+}
+
+static Value createI32Constant(OpBuilder &builder, Location loc,
+                               int32_t value) {
+  Type i32 = builder.getI32Type();
+  return builder.create<LLVM::ConstantOp>(loc, i32, value);
+}
+
+SmallVector<Value> mlir::LLVM::decomposeValue(OpBuilder &builder, Location loc,
+                                              Value src, Type dstType) {
+  Type srcType = src.getType();
+  if (srcType == dstType)
+    return {src};
+
+  unsigned srcBitWidth = getBitWidth(srcType);
+  unsigned dstBitWidth = getBitWidth(dstType);
+  if (srcBitWidth == dstBitWidth) {
+    Value cast = builder.create<LLVM::BitcastOp>(loc, dstType, src);
+    return {cast};
+  }
+
+  if (dstBitWidth > srcBitWidth) {
+    auto smallerInt = builder.getIntegerType(srcBitWidth);
+    if (srcType != smallerInt)
+      src = builder.create<LLVM::BitcastOp>(loc, smallerInt, src);
+
+    auto largerInt = builder.getIntegerType(dstBitWidth);
+    Value res = builder.create<LLVM::ZExtOp>(loc, largerInt, src);
+    return {res};
+  }
+  assert(srcBitWidth % dstBitWidth == 0 &&
+         "src bit width must be a multiple of dst bit width");
+  int64_t numElements = srcBitWidth / dstBitWidth;
+  auto vecType = VectorType::get(numElements, dstType);
+
+  src = builder.create<LLVM::BitcastOp>(loc, vecType, src);
+
+  SmallVector<Value> res;
+  for (auto i : llvm::seq(numElements)) {
+    Value idx = createI32Constant(builder, loc, i);
+    Value elem = builder.create<LLVM::ExtractElementOp>(loc, src, idx);
+    res.emplace_back(elem);
+  }
+
+  return res;
+}
+
+Value mlir::LLVM::composeValue(OpBuilder &builder, Location loc, ValueRange src,
+                               Type dstType) {
+  assert(!src.empty() && "src range must not be empty");
+  if (src.size() == 1) {
+    Value res = src.front();
+    if (res.getType() == dstType)
+      return res;
+
+    unsigned srcBitWidth = getBitWidth(res.getType());
+    unsigned dstBitWidth = getBitWidth(dstType);
+    if (dstBitWidth < srcBitWidth) {
+      auto largerInt = builder.getIntegerType(srcBitWidth);
+      if (res.getType() != largerInt)
+        res = builder.create<LLVM::BitcastOp>(loc, largerInt, res);
+
+      auto smallerInt = builder.getIntegerType(dstBitWidth);
+      res = builder.create<LLVM::TruncOp>(loc, smallerInt, res);
+    }
+
+    if (res.getType() != dstType)
+      res = builder.create<LLVM::BitcastOp>(loc, dstType, res);
+
+    return res;
+  }
+
+  int64_t numElements = src.size();
+  auto srcType = VectorType::get(numElements, src.front().getType());
+  Value res = builder.create<LLVM::PoisonOp>(loc, srcType);
+  for (auto &&[i, elem] : llvm::enumerate(src)) {
+    Value idx = createI32Constant(builder, loc, i);
+    res = builder.create<LLVM::InsertElementOp>(loc, srcType, res, elem, idx);
+  }
+
+  if (res.getType() != dstType)
+    res = builder.create<LLVM::BitcastOp>(loc, dstType, res);
+
+  return res;
 }

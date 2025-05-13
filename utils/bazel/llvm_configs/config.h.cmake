@@ -19,10 +19,6 @@
 /* Define to 1 to enable crash memory dumps, and to 0 otherwise. */
 #cmakedefine01 LLVM_ENABLE_CRASH_DUMPS
 
-/* Define to 1 to enable expensive checks for debug location coverage checking,
-   and to 0 otherwise. */
-#cmakedefine01 ENABLE_DEBUGLOC_COVERAGE_TRACKING
-
 /* Define to 1 to prefer forward slashes on Windows, and to 0 prefer
    backslashes. */
 #cmakedefine01 LLVM_WINDOWS_PREFER_FORWARD_SLASH

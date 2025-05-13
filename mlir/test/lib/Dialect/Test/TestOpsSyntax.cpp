@@ -487,6 +487,25 @@ static void printOptionalLoc(OpAsmPrinter &p, Operation *op, Attribute loc) {
   p.printOptionalLocationSpecifier(cast<LocationAttr>(loc));
 }
 
+//===----------------------------------------------------------------------===//
+// ParseCustomOperationNameAPI
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseCustomOperationNameEntry(OpAsmParser &p,
+                                                 Attribute &name) {
+  FailureOr<OperationName> opName = p.parseCustomOperationName();
+  if (failed(opName))
+    return ParseResult::failure();
+
+  name = p.getBuilder().getStringAttr(opName->getStringRef());
+  return ParseResult::success();
+}
+
+static void printCustomOperationNameEntry(OpAsmPrinter &p, Operation *op,
+                                          Attribute name) {
+  p << cast<StringAttr>(name).getValue();
+}
+
 #define GET_OP_CLASSES
 #include "TestOpsSyntax.cpp.inc"
 

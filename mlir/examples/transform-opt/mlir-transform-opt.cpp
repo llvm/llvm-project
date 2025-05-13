@@ -136,7 +136,7 @@ public:
   /// Verifies the captured "expected-*" diagnostics if required.
   llvm::LogicalResult verify() const {
     if (auto *ptr =
-            handler.dyn_cast<mlir::SourceMgrDiagnosticVerifierHandler *>()) {
+            dyn_cast<mlir::SourceMgrDiagnosticVerifierHandler *>(handler)) {
       return ptr->verify();
     }
     return mlir::success();
@@ -144,7 +144,7 @@ public:
 
   /// Destructs the object of the same type as allocated.
   ~DiagnosticHandlerWrapper() {
-    if (auto *ptr = handler.dyn_cast<mlir::SourceMgrDiagnosticHandler *>()) {
+    if (auto *ptr = dyn_cast<mlir::SourceMgrDiagnosticHandler *>(handler)) {
       delete ptr;
     } else {
       delete cast<mlir::SourceMgrDiagnosticVerifierHandler *>(handler);
