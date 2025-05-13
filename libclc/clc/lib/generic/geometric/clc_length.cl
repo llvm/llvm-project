@@ -6,4 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_FLOAT fast_length(__CLC_FLOATN p0);
+#include <clc/float/definitions.h>
+#include <clc/geometric/clc_dot.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_fabs.h>
+#include <clc/math/clc_sqrt.h>
+
+#define __CLC_BODY <clc_length.inc>
+#include <clc/math/gentype.inc>
