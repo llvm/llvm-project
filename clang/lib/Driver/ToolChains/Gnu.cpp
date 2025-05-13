@@ -3103,6 +3103,7 @@ Generic_GCC::getDefaultUnwindTableLevel(const ArgList &Args) const {
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::systemz:
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     return UnwindTableLevel::Asynchronous;
