@@ -2890,6 +2890,23 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     OutStreamer->emitLabel(LOHLabel);
   }
 
+  if (MI->getDeactivationSymbol()) {
+    if (isa<GlobalAlias>(MI->getDeactivationSymbol())) {
+      // Just emit the nop directly.
+      EmitToStreamer(MCInstBuilder(AArch64::HINT).addImm(0));
+      return;
+    }
+    MCSymbol *Dot = OutContext.createTempSymbol();
+    OutStreamer->emitLabel(Dot);
+    const MCExpr *DeactDotExpr = MCSymbolRefExpr::create(Dot, OutContext);
+
+    MCSymbol *DS =
+        OutContext.getOrCreateSymbol(MI->getDeactivationSymbol()->getName());
+    const MCExpr *DSExpr = MCSymbolRefExpr::create(DS, OutContext);
+    OutStreamer->emitRelocDirective(*DeactDotExpr, "R_AARCH64_INST32", DSExpr,
+                                    SMLoc(), *TM.getMCSubtargetInfo());
+  }
+
   AArch64TargetStreamer *TS =
     static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
   // Do any manual lowerings.

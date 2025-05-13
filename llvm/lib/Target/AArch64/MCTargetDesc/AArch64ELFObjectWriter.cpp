@@ -40,6 +40,8 @@ protected:
                         const MCFixup &Fixup, bool IsPCRel) const override;
   bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                unsigned Type) const override;
+  void sortRelocs(const MCAssembler &Asm,
+                  std::vector<ELFRelocationEntry> &Relocs) override;
   bool IsILP32;
 };
 
@@ -512,6 +514,17 @@ bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
     return true;
   return is_contained({AArch64MCExpr::VK_GOTPCREL, AArch64MCExpr::VK_PLT},
                       AArch64MCExpr::Specifier(Val.getSpecifier()));
+}
+
+void AArch64ELFObjectWriter::sortRelocs(
+    const MCAssembler &Asm, std::vector<ELFRelocationEntry> &Relocs) {
+  // INST32 relocations should be applied last because they may overwrite the
+  // whole instruction and so should take precedence over other relocations that
+  // modify operands of the original instruction.
+  std::stable_partition(Relocs.begin(), Relocs.end(),
+                        [](const ELFRelocationEntry &R) {
+                          return R.Type != ELF::R_AARCH64_INST32;
+                        });
 }
 
 std::unique_ptr<MCObjectTargetWriter>
