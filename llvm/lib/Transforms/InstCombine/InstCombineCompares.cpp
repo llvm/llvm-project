@@ -1966,30 +1966,6 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
     return new ICmpInst(NewPred, X, SubOne(cast<Constant>(Cmp.getOperand(1))));
   }
 
-  // If we are testing the intersection of 2 select-of-nonzero-constants with no
-  // common bits set, it's the same as checking if exactly one select condition
-  // is set:
-  // ((A ? TC : FC) & (B ? TC : FC)) == 0 --> xor A, B
-  // ((A ? TC : FC) & (B ? TC : FC)) != 0 --> not(xor A, B)
-  // TODO: Generalize for non-constant values.
-  // TODO: Handle signed/unsigned predicates.
-  // TODO: Handle other bitwise logic connectors.
-  // TODO: Extend to handle a non-zero compare constant.
-  if (C.isZero() && (Pred == CmpInst::ICMP_EQ || And->hasOneUse())) {
-    assert(Cmp.isEquality() && "Not expecting non-equality predicates");
-    Value *A, *B;
-    const APInt *TC, *FC;
-    if (match(X, m_Select(m_Value(A), m_APInt(TC), m_APInt(FC))) &&
-        match(Y,
-              m_Select(m_Value(B), m_SpecificInt(*TC), m_SpecificInt(*FC))) &&
-        !TC->isZero() && !FC->isZero() && !TC->intersects(*FC)) {
-      Value *R = Builder.CreateXor(A, B);
-      if (Pred == CmpInst::ICMP_NE)
-        R = Builder.CreateNot(R);
-      return replaceInstUsesWith(Cmp, R);
-    }
-  }
-
   // ((zext i1 X) & Y) == 0 --> !((trunc Y) & X)
   // ((zext i1 X) & Y) != 0 -->  ((trunc Y) & X)
   // ((zext i1 X) & Y) == 1 -->  ((trunc Y) & X)
@@ -3110,6 +3086,44 @@ static Value *createLogicFromTable(const std::bitset<4> &Table, Value *Op0,
   return nullptr;
 }
 
+Instruction *InstCombinerImpl::foldICmpBinOpWithConstantViaTruthTable(
+    ICmpInst &Cmp, BinaryOperator *BO, const APInt &C) {
+  Value *A, *B;
+  Constant *C1, *C2, *C3, *C4;
+  if (!(match(BO->getOperand(0),
+              m_Select(m_Value(A), m_Constant(C1), m_Constant(C2)))) ||
+      !match(BO->getOperand(1),
+             m_Select(m_Value(B), m_Constant(C3), m_Constant(C4))) ||
+      Cmp.getType() != A->getType())
+    return nullptr;
+
+  std::bitset<4> Table;
+  auto ComputeTable = [&](bool First, bool Second) -> std::optional<bool> {
+    Constant *L = First ? C1 : C2;
+    Constant *R = Second ? C3 : C4;
+    if (auto *Res = ConstantFoldBinaryOpOperands(BO->getOpcode(), L, R, DL)) {
+      auto *Val = Res->getType()->isVectorTy() ? Res->getSplatValue() : Res;
+      if (auto *CI = dyn_cast_or_null<ConstantInt>(Val))
+        return ICmpInst::compare(CI->getValue(), C, Cmp.getPredicate());
+    }
+    return std::nullopt;
+  };
+
+  for (unsigned I = 0; I < 4; ++I) {
+    bool First = (I >> 1) & 1;
+    bool Second = I & 1;
+    if (auto Res = ComputeTable(First, Second))
+      Table[I] = *Res;
+    else
+      return nullptr;
+  }
+
+  // Synthesize optimal logic.
+  if (auto *Cond = createLogicFromTable(Table, A, B, Builder, BO->hasOneUse()))
+    return replaceInstUsesWith(Cmp, Cond);
+  return nullptr;
+}
+
 /// Fold icmp (add X, Y), C.
 Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
                                                    BinaryOperator *Add,
@@ -4014,7 +4028,13 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
   }
 
   // TODO: These folds could be refactored to be part of the above calls.
-  return foldICmpBinOpEqualityWithConstant(Cmp, BO, C);
+  if (Instruction *I = foldICmpBinOpEqualityWithConstant(Cmp, BO, C))
+    return I;
+
+  // Fall back to handling `icmp pred (select A ? C1 : C2) binop (select B ? C3
+  // : C4), C5` pattern, by computing a truth table of the four constant
+  // variants.
+  return foldICmpBinOpWithConstantViaTruthTable(Cmp, BO, C);
 }
 
 static Instruction *

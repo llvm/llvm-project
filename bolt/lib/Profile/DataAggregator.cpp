@@ -164,9 +164,9 @@ void DataAggregator::findPerfExecutable() {
 void DataAggregator::start() {
   outs() << "PERF2BOLT: Starting data aggregation job for " << Filename << "\n";
 
-  // Turn on heatmap building if requested by --print-heatmap-stats flag.
-  if (opts::HeatmapStats)
-    opts::HeatmapMode = true;
+  // Turn on heatmap building if requested by --heatmap flag.
+  if (!opts::HeatmapMode && opts::HeatmapOutput.getNumOccurrences())
+    opts::HeatmapMode = opts::HeatmapModeKind::HM_Optional;
 
   // Don't launch perf for pre-aggregated files or when perf input is specified
   // by the user.
@@ -520,9 +520,10 @@ heatmap:
   if (std::error_code EC = printLBRHeatMap())
     return errorCodeToError(EC);
 
-  if (opts::HeatmapStats)
+  if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Optional)
     return Error::success();
 
+  assert(opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive);
   exit(0);
 }
 
@@ -570,11 +571,11 @@ void DataAggregator::processProfile(BinaryContext &BC) {
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &BF = BFI.second;
     if (FuncBranchData *FBD = getBranchData(BF)) {
-      BF.markProfiled(BinaryFunction::PF_LBR);
+      BF.markProfiled(BinaryFunction::PF_BRANCH);
       BF.RawSampleCount = FBD->getNumExecutedBranches();
     } else if (FuncBasicSampleData *FSD =
                    getFuncBasicSampleData(BF.getNames())) {
-      BF.markProfiled(BinaryFunction::PF_IP);
+      BF.markProfiled(BinaryFunction::PF_BASIC);
       BF.RawSampleCount = FSD->getSamples();
     }
   }
@@ -1216,8 +1217,8 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   ErrorOr<StringRef> TypeOrErr = parseString(FieldSeparator);
   if (std::error_code EC = TypeOrErr.getError())
     return EC;
-  enum TType { TRACE, BRANCH, FT, FT_EXTERNAL_ORIGIN, INVALID };
-  auto Type = StringSwitch<TType>(TypeOrErr.get())
+  enum AggregatedLBREntry { TRACE, BRANCH, FT, FT_EXTERNAL_ORIGIN, INVALID };
+  auto Type = StringSwitch<AggregatedLBREntry>(TypeOrErr.get())
                   .Case("T", TRACE)
                   .Case("B", BRANCH)
                   .Case("F", FT)
@@ -1241,7 +1242,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     return EC;
 
   ErrorOr<Location> TraceFtEnd = std::error_code();
-  if (Type == TRACE) {
+  if (Type == AggregatedLBREntry::TRACE) {
     while (checkAndConsumeFS()) {
     }
     TraceFtEnd = parseLocationOrOffset();
@@ -1251,12 +1252,13 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
 
   while (checkAndConsumeFS()) {
   }
-  ErrorOr<int64_t> Frequency = parseNumberField(FieldSeparator, Type != BRANCH);
+  ErrorOr<int64_t> Frequency =
+      parseNumberField(FieldSeparator, Type != AggregatedLBREntry::BRANCH);
   if (std::error_code EC = Frequency.getError())
     return EC;
 
   uint64_t Mispreds = 0;
-  if (Type == BRANCH) {
+  if (Type == AggregatedLBREntry::BRANCH) {
     while (checkAndConsumeFS()) {
     }
     ErrorOr<int64_t> MispredsOrErr = parseNumberField(FieldSeparator, true);
@@ -1354,19 +1356,14 @@ std::error_code DataAggregator::printLBRHeatMap() {
     exit(1);
   }
 
-  if (opts::HeatmapStats) {
-    HM.printSectionHotness(outs());
-    return std::error_code();
+  HM.print(opts::HeatmapOutput);
+  if (opts::HeatmapOutput == "-") {
+    HM.printCDF(opts::HeatmapOutput);
+    HM.printSectionHotness(opts::HeatmapOutput);
+  } else {
+    HM.printCDF(opts::HeatmapOutput + ".csv");
+    HM.printSectionHotness(opts::HeatmapOutput + "-section-hotness.csv");
   }
-  HM.print(opts::OutputFilename);
-  if (opts::OutputFilename == "-")
-    HM.printCDF(opts::OutputFilename);
-  else
-    HM.printCDF(opts::OutputFilename + ".csv");
-  if (opts::OutputFilename == "-")
-    HM.printSectionHotness(opts::OutputFilename);
-  else
-    HM.printSectionHotness(opts::OutputFilename + "-section-hotness.csv");
 
   return std::error_code();
 }
@@ -1393,7 +1390,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
       const uint64_t TraceTo = NextLBR->From;
       const BinaryFunction *TraceBF =
           getBinaryFunctionContainingAddress(TraceFrom);
-      if (opts::HeatmapMode) {
+      if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive) {
         FTInfo &Info = FallthroughLBRs[Trace(TraceFrom, TraceTo)];
         ++Info.InternCount;
       } else if (TraceBF && TraceBF->containsAddress(TraceTo)) {
@@ -1431,7 +1428,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     NextLBR = &LBR;
 
     // Record branches outside binary functions for heatmap.
-    if (opts::HeatmapMode) {
+    if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive) {
       TakenBranchInfo &Info = BranchLBRs[Trace(LBR.From, LBR.To)];
       ++Info.TakenCount;
       continue;
@@ -1446,7 +1443,8 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
   }
   // Record LBR addresses not covered by fallthroughs (bottom-of-stack source
   // and top-of-stack target) as basic samples for heatmap.
-  if (opts::HeatmapMode && !Sample.LBR.empty()) {
+  if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive &&
+      !Sample.LBR.empty()) {
     ++BasicSamples[Sample.LBR.front().To];
     ++BasicSamples[Sample.LBR.back().From];
   }
@@ -2231,8 +2229,8 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
   for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames)
     EventNamesOS << LS << EventEntry.first().str();
 
-  BP.Header.Flags =
-      opts::BasicAggregation ? BinaryFunction::PF_IP : BinaryFunction::PF_LBR;
+  BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_BASIC
+                                           : BinaryFunction::PF_BRANCH;
 
   // Add probe inline tree nodes.
   YAMLProfileWriter::InlineTreeDesc InlineTree;
