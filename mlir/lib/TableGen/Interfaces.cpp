@@ -58,10 +58,8 @@ std::optional<StringRef> InterfaceMethod::getBody() const {
 
 // Return the default implementation for this method if it has one.
 std::optional<StringRef> InterfaceMethod::getDefaultImplementation() const {
-  auto value = def->getValueAsString("defaultBody");
   // Trim leading and trailing spaces from the default implementation.
-  if (!value.empty())
-    value = value.trim();
+  auto value = def->getValueAsString("defaultBody").trim();
   return value.empty() ? std::optional<StringRef>() : value;
 }
 
