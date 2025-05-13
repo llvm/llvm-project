@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -629,6 +630,33 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setBitsFrom(LowBits);
     break;
   }
+  case TargetOpcode::G_SHUFFLE_VECTOR: {
+    APInt DemandedLHS, DemandedRHS;
+    // Collect the known bits that are shared by every vector element referenced
+    // by the shuffle.
+    unsigned NumElts = MRI.getType(MI.getOperand(1).getReg()).getNumElements();
+    if (!getShuffleDemandedElts(NumElts, MI.getOperand(3).getShuffleMask(),
+                                DemandedElts, DemandedLHS, DemandedRHS))
+      break;
+
+    // Known bits are the values that are shared by every demanded element.
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+    if (!!DemandedLHS) {
+      computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedLHS,
+                           Depth + 1);
+      Known = Known.intersectWith(Known2);
+    }
+    // If we don't know any bits, early out.
+    if (Known.isUnknown())
+      break;
+    if (!!DemandedRHS) {
+      computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedRHS,
+                           Depth + 1);
+      Known = Known.intersectWith(Known2);
+    }
+    break;
+  }
   }
 
   LLVM_DEBUG(dumpResult(MI, Known, Depth));
@@ -834,6 +862,16 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       return TyBits; // All bits are sign bits.
     if (BC == TargetLowering::ZeroOrOneBooleanContent)
       return TyBits - 1; // Every always-zero bit is a sign bit.
+    break;
+  }
+  case TargetOpcode::G_ASHR: {
+    Register Src1 = MI.getOperand(1).getReg();
+    Register Src2 = MI.getOperand(2).getReg();
+    LLT SrcTy = MRI.getType(Src1);
+    FirstAnswer = computeNumSignBits(Src1, DemandedElts, Depth + 1);
+    if (auto C = getIConstantSplatVal(Src2, MRI))
+      FirstAnswer = std::max<uint64_t>(FirstAnswer + C->getZExtValue(),
+                                       SrcTy.getScalarSizeInBits());
     break;
   }
   case TargetOpcode::G_INTRINSIC:
