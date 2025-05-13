@@ -2249,7 +2249,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   return Dependence::BackwardVectorizable;
 }
 
-bool MemoryDepChecker::areDepsSafe(const DepCandidates &AccessSets,
+bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
                                    const MemAccessInfoList &CheckDeps) {
 
   MinDepDistBytes = -1;
@@ -2260,9 +2260,9 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &AccessSets,
 
     // Check accesses within this set.
     EquivalenceClasses<MemAccessInfo>::member_iterator AI =
-        AccessSets.findLeader(CurAccess);
+        DepCands.findLeader(CurAccess);
     EquivalenceClasses<MemAccessInfo>::member_iterator AE =
-        AccessSets.member_end();
+        DepCands.member_end();
 
     // Check every access pair.
     while (AI != AE) {
@@ -2527,9 +2527,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     return true;
   }
 
-  MemoryDepChecker::DepCandidates DependentAccesses;
-  AccessAnalysis Accesses(TheLoop, AA, LI, DependentAccesses, *PSE,
-                          LoopAliasScopes);
+  MemoryDepChecker::DepCandidates DepCands;
+  AccessAnalysis Accesses(TheLoop, AA, LI, DepCands, *PSE, LoopAliasScopes);
 
   // Holds the analyzed pointers. We don't want to call getUnderlyingObjects
   // multiple times on the same object. If the ptr is accessed twice, once
@@ -2651,8 +2650,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   bool DepsAreSafe = true;
   if (Accesses.isDependencyCheckNeeded()) {
     LLVM_DEBUG(dbgs() << "LAA: Checking memory dependencies\n");
-    DepsAreSafe = DepChecker->areDepsSafe(DependentAccesses,
-                                          Accesses.getDependenciesToCheck());
+    DepsAreSafe =
+        DepChecker->areDepsSafe(DepCands, Accesses.getDependenciesToCheck());
 
     if (!DepsAreSafe && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
