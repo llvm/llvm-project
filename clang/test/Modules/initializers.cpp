@@ -48,6 +48,7 @@
 // instantiation for v<int> in one of the two headers, because we will only
 // parse one of the two get() functions.
 
+#ifdef NS
 #pragma clang module build m
 module m {
   module a {
@@ -60,9 +61,7 @@ module m {
 #pragma clang module begin m.a
 inline int non_trivial() { return 3; }
 
-#ifdef NS
 namespace ns {
-#endif
 
 int a = non_trivial();
 inline int b = non_trivial();
@@ -102,12 +101,64 @@ inline void use(bool b, ...) {
       X<int>::e<int>, X<int>::f<int>, X<int>::g<int>, X<int>::h<int>);
 }
 
-#ifdef NS
 }
-#endif
 
 #pragma clang module end
 #pragma clang module endbuild
+#else
+#pragma clang module build m
+module m {
+  module a {
+    header "foo.h" { size 123 mtime 456789 }
+  }
+  module b {}
+}
+
+#pragma clang module contents
+#pragma clang module begin m.a
+inline int non_trivial() { return 3; }
+
+int a = non_trivial();
+inline int b = non_trivial();
+thread_local int c = non_trivial();
+inline thread_local int d = non_trivial();
+
+template<typename U> int e = non_trivial();
+template<typename U> inline int f = non_trivial();
+template<typename U> thread_local int g = non_trivial();
+template<typename U> inline thread_local int h = non_trivial();
+
+inline int unused = 123; // should not be emitted
+
+template<typename T> struct X {
+  static int a;
+  static inline int b = non_trivial();
+  static thread_local int c;
+  static inline thread_local int d = non_trivial();
+
+  template<typename U> static int e;
+  template<typename U> static inline int f = non_trivial();
+  template<typename U> static thread_local int g;
+  template<typename U> static inline thread_local int h = non_trivial();
+
+  static inline int unused = 123; // should not be emitted
+};
+
+template<typename T> int X<T>::a = non_trivial();
+template<typename T> thread_local int X<T>::c = non_trivial();
+template<typename T> template<typename U> int X<T>::e = non_trivial();
+template<typename T> template<typename U> thread_local int X<T>::g = non_trivial();
+
+inline void use(bool b, ...) {
+  if (b) return;
+  use(true, e<int>, f<int>, g<int>, h<int>,
+      X<int>::a, X<int>::b, X<int>::c, X<int>::d,
+      X<int>::e<int>, X<int>::f<int>, X<int>::g<int>, X<int>::h<int>);
+}
+
+#pragma clang module end
+#pragma clang module endbuild
+#endif
 
 #if IMPORT == 1
 // Import the module and the m.a submodule; runs the ordered initializers and
