@@ -12238,6 +12238,32 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
 
         break;
       }
+      case CC_And: {
+        SDLoc dl = getCurSDLoc();
+
+        const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+        EVT VT = TLI.getValueType(DAG.getDataLayout(), I->Low->getType(), true);
+        SDValue C = DAG.getConstant(*I->Low, dl, VT);
+        SDValue Zero = DAG.getConstant(0, dl, VT);
+        SDValue CondLHS = getValue(Cond);
+        SDValue And = DAG.getNode(ISD::AND, dl, C.getValueType(), CondLHS, C);
+        auto CondD = DAG.getSetCC(dl, MVT::i1, And, Zero, ISD::SETEQ);
+        SDNodeFlags Flags;
+        SDValue BrCond =
+            DAG.getNode(ISD::BRCOND, dl, MVT::Other, getControlRoot(), CondD,
+                        DAG.getBasicBlock(I->MBB), Flags);
+
+        // Insert the false branch. Do this even if it's a fall through branch,
+        // this makes it easier to do DAG optimizations which require inverting
+        // the branch condition.
+        BrCond = DAG.getNode(ISD::BR, dl, MVT::Other, BrCond,
+                             DAG.getBasicBlock(Fallthrough));
+        addSuccessorWithProb(CurMBB, I->MBB, UnhandledProbs);
+        addSuccessorWithProb(CurMBB, Fallthrough,
+                             BranchProbability::getUnknown());
+        CurMBB->normalizeSuccProbs();
+        DAG.setRoot(BrCond);
+      }
     }
     CurMBB = Fallthrough;
   }
