@@ -11,7 +11,7 @@ entry:
   ; CHECK: callSites:
   ; CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeIds:
   ; CHECK-NEXT: [ 3498816979441845844 ] }
-  %call = tail call noundef i32 %func(i8 noundef signext %x), !callee_type !1
+  %call = tail call i32 %func(i8 signext %x), !callee_type !1
   ret i32 %call
 }
 
