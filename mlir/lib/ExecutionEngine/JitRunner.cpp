@@ -227,7 +227,8 @@ static Error compileAndExecuteVoidFunction(
 
   if (cast<LLVM::LLVMFunctionType>(mainFunction.getFunctionType())
           .getNumParams() != 0)
-    return makeStringError("function inputs not supported");
+    return makeStringError(
+        "JIT can't invoke a main function expecting arguments");
 
   auto resultType = dyn_cast<LLVM::LLVMVoidType>(
       mainFunction.getFunctionType().getReturnType());
@@ -278,7 +279,8 @@ Error compileAndExecuteSingleReturnFunction(
 
   if (cast<LLVM::LLVMFunctionType>(mainFunction.getFunctionType())
           .getNumParams() != 0)
-    return makeStringError("function inputs not supported");
+    return makeStringError(
+        "JIT can't invoke a main function expecting arguments");
 
   if (Error error = checkCompatibleReturnType<Type>(mainFunction))
     return error;
