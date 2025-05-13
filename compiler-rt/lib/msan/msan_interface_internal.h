@@ -73,13 +73,13 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __msan_maybe_warning_8(u64 s, u32 o);
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __msan_maybe_warning_1_instname(u8 s, u32 o, char *instname);
+void __msan_maybe_warning_instname_1(u8 s, u32 o, char *instname);
 SANITIZER_INTERFACE_ATTRIBUTE
-void __msan_maybe_warning_2_instname(u16 s, u32 o, char *instname);
+void __msan_maybe_warning_instname_2(u16 s, u32 o, char *instname);
 SANITIZER_INTERFACE_ATTRIBUTE
-void __msan_maybe_warning_4_instname(u32 s, u32 o, char *instname);
+void __msan_maybe_warning_instname_4(u32 s, u32 o, char *instname);
 SANITIZER_INTERFACE_ATTRIBUTE
-void __msan_maybe_warning_8_instname(u64 s, u32 o, char *instname);
+void __msan_maybe_warning_instname_8(u64 s, u32 o, char *instname);
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __msan_maybe_store_origin_1(u8 s, void *p, u32 o);
