@@ -105,7 +105,9 @@ add_subdirectory(Index)
 add_subdirectory(InstallAPI)
 add_subdirectory(Serialization)
 add_subdirectory(Support)
-
+if (CLANG_ENABLE_CIR)
+  add_subdirectory(CIR)
+endif()
 
 # If we're doing a single merged clang unit test binary, add that target after
 # all the previous subdirectories have been processed.
@@ -127,3 +129,10 @@ add_distinct_clang_unittest(AllClangUnitTests
 # the merged clang unit test binary, we can update the include paths and make
 # this the default.
 include_directories(Tooling)
+
+if (CLANG_ENABLE_CIR)
+  set(MLIR_INCLUDE_DIR ${LLVM_MAIN_SRC_DIR}/../mlir/include )
+  set(MLIR_TABLEGEN_OUTPUT_DIR ${CMAKE_BINARY_DIR}/tools/mlir/include)
+  include_directories(SYSTEM ${MLIR_INCLUDE_DIR})
+  include_directories(${MLIR_TABLEGEN_OUTPUT_DIR})
+endif()
