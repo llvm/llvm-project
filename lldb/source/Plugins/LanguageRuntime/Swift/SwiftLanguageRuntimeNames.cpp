@@ -379,6 +379,7 @@ CreateRunThroughTaskSwitchThreadPlan(Thread &thread,
   if (!resume_fn_ptr)
     return {};
 
+  resume_fn_ptr = thread.GetProcess()->FixCodeAddress(resume_fn_ptr);
   return std::make_shared<ThreadPlanRunToAddress>(thread, resume_fn_ptr,
                                                   /*stop_others*/ false);
 }
