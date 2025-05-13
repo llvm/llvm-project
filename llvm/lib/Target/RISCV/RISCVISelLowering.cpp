@@ -11973,9 +11973,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
       // Reassemble the low and high pieces reversed.
       // FIXME: This is a CONCAT_VECTORS.
       SDValue Res = DAG.getInsertSubvector(DL, DAG.getUNDEF(VecVT), Hi, 0);
-      return DAG.getNode(
-          ISD::INSERT_SUBVECTOR, DL, VecVT, Res, Lo,
-          DAG.getVectorIdxConstant(LoVT.getVectorMinNumElements(), DL));
+      return DAG.getInsertSubvector(DL, Res, Lo,
+                                    LoVT.getVectorMinNumElements());
     }
 
     // Just promote the int type to i16 which will double the LMUL.
@@ -18055,10 +18054,8 @@ static SDValue lowerVQDOT(unsigned Opc, SDValue Op0, SDValue Op1,
   Op1 = convertToScalableVector(ContainerVT, Op1, DAG, Subtarget);
 
   auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-  const unsigned Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
-  SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
   SDValue LocalAccum = DAG.getNode(Opc, DL, ContainerVT,
-                                   {Op0, Op1, Passthru, Mask, VL, PolicyOp});
+                                   {Op0, Op1, Passthru, Mask, VL});
   return convertFromScalableVector(VT, LocalAccum, DAG, Subtarget);
 }
 
@@ -23383,7 +23380,10 @@ EVT RISCVTargetLowering::getOptimalMemOpType(const MemOp &Op,
   // combining will typically form larger LMUL operations from the LMUL1
   // operations emitted here, and that's okay because combining isn't
   // introducing new memory operations; it's just merging existing ones.
-  const unsigned MinVLenInBytes = Subtarget.getRealMinVLen()/8;
+  // NOTE: We limit to 1024 bytes to avoid creating an invalid MVT.
+  const unsigned MinVLenInBytes =
+      std::min(Subtarget.getRealMinVLen() / 8, 1024U);
+
   if (Op.size() < MinVLenInBytes)
     // TODO: Figure out short memops.  For the moment, do the default thing
     // which ends up using scalar sequences.
@@ -24505,7 +24505,7 @@ RISCVTargetLowering::emitDynamicProbedAlloc(MachineInstr &MI,
   MachineFunction &MF = *MBB->getParent();
   MachineBasicBlock::iterator MBBI = MI.getIterator();
   DebugLoc DL = MBB->findDebugLoc(MBBI);
-  Register TargetReg = MI.getOperand(1).getReg();
+  Register TargetReg = MI.getOperand(0).getReg();
 
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
   bool IsRV64 = Subtarget.is64Bit();
