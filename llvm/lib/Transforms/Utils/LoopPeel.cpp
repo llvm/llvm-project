@@ -376,21 +376,22 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
          SE.isKnownPredicate(Pred, ValAtSecondToLastIter, RightSCEV);
 }
 
-// Return the number of iterations to peel off that make conditions in the
-// body true/false. Positive return values indicate the iterations to peel of
-// from the front and negative return values indicate the number of iterations
-// from the back after removing the sign. For example, if we peel 2 iterations
-// off the loop below, the condition i < 2 can be evaluated at compile time.
+// Return the number of iterations to peel off from the beginning and end of the
+// loop respectively, that make conditions in the body true/false. For example,
+// if we peel 2 iterations off the loop below, the condition i < 2 can be
+// evaluated at compile time.
+//
 //  for (i = 0; i < n; i++)
 //    if (i < 2)
 //      ..
 //    else
 //      ..
 //   }
-static int countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
-                                    ScalarEvolution &SE) {
+static std::pair<unsigned, unsigned>
+countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE) {
   assert(L.isLoopSimplifyForm() && "Loop needs to be in loop simplify form");
-  int DesiredPeelCount = 0;
+  unsigned DesiredPeelCount = 0;
+  unsigned DesiredPeelCountLast = 0;
 
   // Do not peel the entire loop.
   const SCEV *BE = SE.getConstantMaxBackedgeTakenCount(&L);
@@ -402,9 +403,9 @@ static int countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
   // return true if inversed condition become known before reaching the
   // MaxPeelCount limit.
   auto PeelWhilePredicateIsKnown =
-      [&](int &PeelCount, const SCEV *&IterVal, const SCEV *BoundSCEV,
+      [&](unsigned &PeelCount, const SCEV *&IterVal, const SCEV *BoundSCEV,
           const SCEV *Step, ICmpInst::Predicate Pred) {
-        while (unsigned(std::abs(PeelCount)) < MaxPeelCount &&
+        while (PeelCount < MaxPeelCount &&
                SE.isKnownPredicate(Pred, IterVal, BoundSCEV)) {
           IterVal = SE.getAddExpr(IterVal, Step);
           ++PeelCount;
@@ -461,7 +462,7 @@ static int countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
 
     // Check if extending the current DesiredPeelCount lets us evaluate Pred
     // or !Pred in the loop body statically.
-    int NewPeelCount = DesiredPeelCount;
+    unsigned NewPeelCount = DesiredPeelCount;
 
     const SCEV *IterVal = LeftAR->evaluateAtIteration(
         SE.getConstant(LeftSCEV->getType(), NewPeelCount), SE);
@@ -476,7 +477,7 @@ static int countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     if (!PeelWhilePredicateIsKnown(NewPeelCount, IterVal, RightSCEV, Step,
                                    Pred)) {
       if (shouldPeelLastIteration(L, Pred, LeftAR, RightSCEV, SE))
-        DesiredPeelCount = -1;
+        DesiredPeelCountLast = 1;
       return;
     }
 
@@ -489,12 +490,13 @@ static int countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
                              RightSCEV) &&
         !SE.isKnownPredicate(Pred, IterVal, RightSCEV) &&
         SE.isKnownPredicate(Pred, NextIterVal, RightSCEV)) {
-      if (unsigned(std::abs(NewPeelCount)) >= MaxPeelCount)
+      if (NewPeelCount >= MaxPeelCount)
         return; // Need to peel one more iteration, but can't. Give up.
       ++NewPeelCount; // Great!
     }
 
     DesiredPeelCount = std::max(DesiredPeelCount, NewPeelCount);
+    DesiredPeelCountLast = std::max(DesiredPeelCountLast, NewPeelCount);
   };
 
   auto ComputePeelCountMinMax = [&](MinMaxIntrinsic *MinMax) {
@@ -528,7 +530,7 @@ static int countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     // Check that AddRec is not wrapping.
     if (!(IsSigned ? AddRec->hasNoSignedWrap() : AddRec->hasNoUnsignedWrap()))
       return;
-    int NewPeelCount = DesiredPeelCount;
+    unsigned NewPeelCount = DesiredPeelCount;
     const SCEV *IterVal = AddRec->evaluateAtIteration(
         SE.getConstant(AddRec->getType(), NewPeelCount), SE);
     if (!PeelWhilePredicateIsKnown(NewPeelCount, IterVal, BoundSCEV, Step,
@@ -556,7 +558,7 @@ static int countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     ComputePeelCount(BI->getCondition(), 0);
   }
 
-  return DesiredPeelCount;
+  return {DesiredPeelCount, DesiredPeelCountLast};
 }
 
 /// This "heuristic" exactly matches implicit behavior which used to exist
@@ -649,9 +651,9 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
       DesiredPeelCount = std::max(DesiredPeelCount, *NumPeels);
   }
 
-  int CountToEliminateCmps = countToEliminateCompares(*L, MaxPeelCount, SE);
-  DesiredPeelCount =
-      std::max(DesiredPeelCount, unsigned(std::abs(CountToEliminateCmps)));
+  const auto &[CountToEliminateCmps, CountToEliminateCmpsLast] =
+      countToEliminateCompares(*L, MaxPeelCount, SE);
+  DesiredPeelCount = std::max(DesiredPeelCount, CountToEliminateCmps);
 
   if (DesiredPeelCount == 0)
     DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT, AC);
@@ -666,9 +668,23 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                         << " some Phis into invariants.\n");
       PP.PeelCount = DesiredPeelCount;
       PP.PeelProfiledIterations = false;
-      PP.PeelLast =
-          DesiredPeelCount == unsigned(std::abs(CountToEliminateCmps)) &&
-          CountToEliminateCmps < 0;
+      PP.PeelLast = false;
+      return;
+    }
+  }
+
+  if (CountToEliminateCmpsLast > 0) {
+    unsigned DesiredPeelCountLast =
+        std::min(CountToEliminateCmpsLast, MaxPeelCount);
+    // Consider max peel count limitation.
+    assert(DesiredPeelCountLast > 0 && "Wrong loop size estimation?");
+    if (DesiredPeelCountLast + AlreadyPeeled <= UnrollPeelMaxCount) {
+      LLVM_DEBUG(dbgs() << "Peel " << DesiredPeelCount
+                        << " iteration(s) to turn"
+                        << " some Phis into invariants.\n");
+      PP.PeelCount = DesiredPeelCountLast;
+      PP.PeelProfiledIterations = false;
+      PP.PeelLast = true;
       return;
     }
   }
