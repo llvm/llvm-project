@@ -1,5 +1,6 @@
 #include "CIRGenTypes.h"
 
+#include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
 
 #include "clang/AST/ASTContext.h"
@@ -73,21 +74,19 @@ mlir::Type CIRGenTypes::convertFunctionTypeInternal(QualType qft) {
     return cir::FuncType::get(SmallVector<mlir::Type, 1>{}, cgm.VoidTy);
   }
 
-  // TODO(CIR): This is a stub of what the final code will be.  See the
-  // implementation of this function and the implementation of class
-  // CIRGenFunction in the ClangIR incubator project.
-
+  const CIRGenFunctionInfo *fi;
   if (const auto *fpt = dyn_cast<FunctionProtoType>(ft)) {
-    SmallVector<mlir::Type> mlirParamTypes;
-    for (unsigned i = 0; i < fpt->getNumParams(); ++i) {
-      mlirParamTypes.push_back(convertType(fpt->getParamType(i)));
-    }
-    return cir::FuncType::get(
-        mlirParamTypes, convertType(fpt->getReturnType().getUnqualifiedType()),
-        fpt->isVariadic());
+    fi = &arrangeFreeFunctionType(
+        CanQual<FunctionProtoType>::CreateUnsafe(QualType(fpt, 0)));
+  } else {
+    const FunctionNoProtoType *fnpt = cast<FunctionNoProtoType>(ft);
+    fi = &arrangeFreeFunctionType(
+        CanQual<FunctionNoProtoType>::CreateUnsafe(QualType(fnpt, 0)));
   }
-  cgm.errorNYI(SourceLocation(), "non-prototype function type", qft);
-  return cir::FuncType::get(SmallVector<mlir::Type, 1>{}, cgm.VoidTy);
+
+  mlir::Type resultType = getFunctionType(*fi);
+
+  return resultType;
 }
 
 // This is CIR's version of CodeGenTypes::addRecordTypeName. It isn't shareable
@@ -531,14 +530,15 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
-const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
-    CanQualType returnType, llvm::ArrayRef<clang::CanQualType> argTypes) {
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
+                                    llvm::ArrayRef<CanQualType> argTypes,
+                                    RequiredArgs required) {
   assert(llvm::all_of(argTypes,
-                      [](CanQualType T) { return T.isCanonicalAsParam(); }));
-
+                      [](CanQualType t) { return t.isCanonicalAsParam(); }));
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id, returnType, argTypes);
+  CIRGenFunctionInfo::Profile(id, required, returnType, argTypes);
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
@@ -548,7 +548,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(returnType, argTypes);
+  fi = CIRGenFunctionInfo::create(returnType, argTypes, required);
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;

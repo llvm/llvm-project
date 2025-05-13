@@ -23,6 +23,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
+#include "CIRGenFunctionInfo.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
@@ -247,8 +248,22 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
              "function definition with a non-identifier for a name");
     return;
   }
-  cir::FuncType funcType =
-      cast<cir::FuncType>(convertType(funcDecl->getType()));
+
+  cir::FuncType funcType;
+  // TODO: Move this to arrangeFunctionDeclaration when it is
+  // implemented.
+  // When declaring a function without a prototype, always use a
+  // non-variadic type.
+  if (CanQual<FunctionNoProtoType> noProto =
+          funcDecl->getType()
+              ->getCanonicalTypeUnqualified()
+              .getAs<FunctionNoProtoType>()) {
+    const CIRGenFunctionInfo &fi = getTypes().arrangeCIRFunctionInfo(
+        noProto->getReturnType(), {}, RequiredArgs::All);
+    funcType = getTypes().getFunctionType(fi);
+  } else {
+    funcType = cast<cir::FuncType>(convertType(funcDecl->getType()));
+  }
 
   cir::FuncOp funcOp = dyn_cast_if_present<cir::FuncOp>(op);
   if (!funcOp || funcOp.getFunctionType() != funcType) {

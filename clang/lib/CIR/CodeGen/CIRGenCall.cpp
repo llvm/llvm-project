@@ -13,6 +13,7 @@
 
 #include "CIRGenCall.h"
 #include "CIRGenFunction.h"
+#include "CIRGenFunctionInfo.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -20,23 +21,41 @@ using namespace clang::CIRGen;
 
 CIRGenFunctionInfo *
 CIRGenFunctionInfo::create(CanQualType resultType,
-                           llvm::ArrayRef<CanQualType> argTypes) {
+                           llvm::ArrayRef<CanQualType> argTypes,
+                           RequiredArgs required) {
   // The first slot allocated for ArgInfo is for the return value.
   void *buffer = operator new(totalSizeToAlloc<ArgInfo>(argTypes.size() + 1));
 
-  CIRGenFunctionInfo *fi = new (buffer) CIRGenFunctionInfo();
-  fi->numArgs = argTypes.size();
-
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoParamInfo());
+
+  CIRGenFunctionInfo *fi = new (buffer) CIRGenFunctionInfo();
+
+  fi->required = required;
+  fi->numArgs = argTypes.size();
 
   ArgInfo *argsBuffer = fi->getArgsBuffer();
   (argsBuffer++)->type = resultType;
   for (CanQualType ty : argTypes)
     (argsBuffer++)->type = ty;
-
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
 
   return fi;
+}
+
+cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &fi) {
+  mlir::Type resultType = convertType(fi.getReturnType());
+
+  SmallVector<mlir::Type, 8> argTypes(fi.getNumRequiredArgs());
+
+  unsigned argNo = 0;
+  llvm::ArrayRef<CIRGenFunctionInfoArgInfo> argInfos(fi.argInfoBegin(),
+                                                     fi.getNumRequiredArgs());
+  for (const auto &argInfo : argInfos)
+    argTypes[argNo++] = convertType(argInfo.type);
+
+  return cir::FuncType::get(argTypes,
+                            (resultType ? resultType : builder.getVoidTy()),
+                            fi.isVariadic());
 }
 
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
@@ -48,6 +67,9 @@ static const CIRGenFunctionInfo &
 arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
                             const CallArgList &args,
                             const FunctionType *fnType) {
+
+  RequiredArgs required = RequiredArgs::All;
+
   if (const auto *proto = dyn_cast<FunctionProtoType>(fnType)) {
     if (proto->isVariadic())
       cgm.errorNYI("call to variadic function");
@@ -64,7 +86,7 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
   CanQualType retType = fnType->getReturnType()
                             ->getCanonicalTypeUnqualified()
                             .getUnqualifiedType();
-  return cgt.arrangeCIRFunctionInfo(retType, argTypes);
+  return cgt.arrangeCIRFunctionInfo(retType, argTypes, required);
 }
 
 const CIRGenFunctionInfo &
@@ -88,6 +110,23 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
   return builder.createCallOp(callLoc, directFuncOp, cirCallArgs);
 }
 
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> fpt) {
+  SmallVector<CanQualType, 8> argTypes;
+  for (unsigned i = 0, e = fpt->getNumParams(); i != e; ++i)
+    argTypes.push_back(fpt->getParamType(i));
+  RequiredArgs required = RequiredArgs::forPrototypePlus(fpt);
+
+  CanQualType resultType = fpt->getReturnType().getUnqualifiedType();
+  return arrangeCIRFunctionInfo(resultType, argTypes, required);
+}
+
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt) {
+  CanQualType resultType = fnpt->getReturnType().getUnqualifiedType();
+  return arrangeCIRFunctionInfo(resultType, {}, RequiredArgs(0));
+}
+
 RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 const CIRGenCallee &callee,
                                 ReturnValueSlot returnValue,
@@ -102,7 +141,8 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
 
   // Translate all of the arguments as necessary to match the CIR lowering.
   for (auto [argNo, arg, argInfo] :
-       llvm::enumerate(args, funcInfo.arguments())) {
+       llvm::enumerate(args, funcInfo.argInfos())) {
+
     // Insert a padding argument to ensure proper alignment.
     assert(!cir::MissingFeatures::opCallPaddingArgs());
 
