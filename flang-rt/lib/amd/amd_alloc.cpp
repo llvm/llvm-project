@@ -33,7 +33,6 @@
 
 namespace Fortran::runtime::amd {
 
-extern bool amdAllocatorEnabled; // connects to descriptor.h
 static bool debugEnabled;
 static umpire_resourcemanager resourceManager;
 static umpire_allocator memoryPool;
@@ -75,7 +74,7 @@ void registerUmpireAllocator(
         pool.c_str());
   }
 #endif // ALLOC_DEBUG
-  // Configure a dynanmically growing memory pool.
+  // Configure a dynamically growing memory pool.
   umpire_allocator allocator;
   umpire_resourcemanager_get_instance(&resourceManager);
   umpire_resourcemanager_get_allocator_by_name(
@@ -181,9 +180,6 @@ void RTDEF(AMDRegisterAllocator)() {
     }
     registerUmpireAllocator(allocSpec.second, initialSize, blockSize);
   }
-
-  // enable the allocator in the allocator infrastructure
-  amdAllocatorEnabled = true;
 }
 
 void RTDEF(AMDAllocatableSetAllocIdx)(Descriptor &descriptor, int pos) {
