@@ -11,9 +11,7 @@ module m1
   end subroutine
   pure subroutine s2(x)
     class(t), intent(in out) :: x
-    !ERROR: Left-hand side of assignment may not be polymorphic unless assignment is to an entire allocatable
-    !ERROR: Left-hand side of assignment is not definable
-    !BECAUSE: 'x' is polymorphic in a pure subprogram
+    !ERROR: Left-hand side of intrinsic assignment may not be polymorphic unless assignment is to an entire allocatable
     x = t()
   end subroutine
   pure subroutine s3(x)

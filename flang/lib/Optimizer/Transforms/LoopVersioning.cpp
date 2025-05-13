@@ -51,6 +51,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
