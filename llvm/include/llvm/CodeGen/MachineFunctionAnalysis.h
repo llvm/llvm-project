@@ -45,6 +45,11 @@ public:
   Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
+class FreeAllAnalysesPass : public PassInfoMixin<FreeAllAnalysesPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_MachineFunctionAnalysis
