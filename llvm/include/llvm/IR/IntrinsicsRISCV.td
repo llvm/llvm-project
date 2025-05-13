@@ -1888,9 +1888,8 @@ let TargetPrefix = "riscv" in {
 
 // Zihintpause extensions
 //===----------------------------------------------------------------------===//
-let TargetPrefix = "riscv" in {
-  def int_riscv_pause : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
-} // TargetPrefix = "riscv"
+let TargetPrefix = "riscv" in
+def int_riscv_pause : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
 // Vendor extensions
 //===----------------------------------------------------------------------===//

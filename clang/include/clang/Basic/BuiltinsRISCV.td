@@ -150,9 +150,8 @@ def ntl_store : RISCVBuiltin<"void(...)">;
 //===----------------------------------------------------------------------===//
 // Zihintpause extension.
 //===----------------------------------------------------------------------===//
-let Features = "zihintpause", Attributes = [NoThrow] in {
+let Features = "zihintpause", Attributes = [NoThrow] in
 def pause : RISCVBuiltin<"void()">;
-} // Features = "zihintpause", Attributes = [NoThrow]
 
 //===----------------------------------------------------------------------===//
 // XCV extensions.

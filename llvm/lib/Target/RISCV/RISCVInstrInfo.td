@@ -2203,9 +2203,8 @@ def : Pat<(i64 (add GPR:$rs1, negImm:$rs2)), (SUB GPR:$rs1, negImm:$rs2)>;
 //===----------------------------------------------------------------------===//
 
 // Zihintpause
-let Predicates = [HasStdExtZihintpause] in {
-  def : Pat<(int_riscv_pause), (FENCE 0x1, 0x0)>;
-}
+let Predicates = [HasStdExtZihintpause] in
+def : Pat<(int_riscv_pause), (FENCE 0x1, 0x0)>;
 
 //===----------------------------------------------------------------------===//
 // Standard extensions
