@@ -19,8 +19,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS)
-
 template <class _Predicate>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 binary_negate
     : public __binary_function<typename _Predicate::first_argument_type,
@@ -43,8 +41,6 @@ _LIBCPP_DEPRECATED_IN_CXX17 inline _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FR
 not2(const _Predicate& __pred) {
   return binary_negate<_Predicate>(__pred);
 }
-
-#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS)
 
 _LIBCPP_END_NAMESPACE_STD
 

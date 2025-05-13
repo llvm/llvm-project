@@ -136,6 +136,50 @@ define <16 x i8> @g_vec_16x8(<16 x i8> %a) {
   ret <16 x i8> %b
 }
 
+declare <32 x i8> @llvm.bitreverse.v32i8(<32 x i8>) readnone
+
+define <32 x i8> @g_vec_32x8(<32 x i8> %a) {
+; CHECK-LABEL: g_vec_32x8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    rbit v1.16b, v1.16b
+; CHECK-NEXT:    ret
+  %b = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> %a)
+  ret <32 x i8> %b
+}
+
+declare <4 x i8> @llvm.bitreverse.v4i8(<4 x i8>) readnone
+
+define <4 x i8> @g_vec_4x8(<4 x i8> %a) {
+; SDAG-LABEL: g_vec_4x8:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    rev16 v0.8b, v0.8b
+; SDAG-NEXT:    rbit v0.8b, v0.8b
+; SDAG-NEXT:    ushr v0.4h, v0.4h, #8
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: g_vec_4x8:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; GISEL-NEXT:    rbit v0.8b, v0.8b
+; GISEL-NEXT:    ushll v0.8h, v0.8b, #0
+; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; GISEL-NEXT:    ret
+  %b = call <4 x i8> @llvm.bitreverse.v4i8(<4 x i8> %a)
+  ret <4 x i8> %b
+}
+
+declare <9 x i8> @llvm.bitreverse.v9i8(<9 x i8>) readnone
+
+define <9 x i8> @g_vec_9x8(<9 x i8> %a) {
+; CHECK-LABEL: g_vec_9x8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    ret
+  %b = call <9 x i8> @llvm.bitreverse.v9i8(<9 x i8> %a)
+  ret <9 x i8> %b
+}
+
 declare <4 x i16> @llvm.bitreverse.v4i16(<4 x i16>) readnone
 
 define <4 x i16> @g_vec_4x16(<4 x i16> %a) {

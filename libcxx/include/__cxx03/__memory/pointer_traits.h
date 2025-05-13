@@ -93,20 +93,12 @@ public:
 
 template <class _Tp, class _Up, bool = __has_rebind<_Tp, _Up>::value>
 struct __pointer_traits_rebind {
-#ifndef _LIBCPP_CXX03_LANG
-  typedef _LIBCPP_NODEBUG typename _Tp::template rebind<_Up> type;
-#else
   typedef _LIBCPP_NODEBUG typename _Tp::template rebind<_Up>::other type;
-#endif
 };
 
 template <template <class, class...> class _Sp, class _Tp, class... _Args, class _Up>
 struct __pointer_traits_rebind<_Sp<_Tp, _Args...>, _Up, true> {
-#ifndef _LIBCPP_CXX03_LANG
-  typedef _LIBCPP_NODEBUG typename _Sp<_Tp, _Args...>::template rebind<_Up> type;
-#else
   typedef _LIBCPP_NODEBUG typename _Sp<_Tp, _Args...>::template rebind<_Up>::other type;
-#endif
 };
 
 template <template <class, class...> class _Sp, class _Tp, class... _Args, class _Up>
@@ -123,15 +115,10 @@ struct __pointer_traits_impl<_Ptr, __void_t<typename __pointer_traits_element_ty
   typedef typename __pointer_traits_element_type<pointer>::type element_type;
   typedef typename __pointer_traits_difference_type<pointer>::type difference_type;
 
-#ifndef _LIBCPP_CXX03_LANG
-  template <class _Up>
-  using rebind = typename __pointer_traits_rebind<pointer, _Up>::type;
-#else
   template <class _Up>
   struct rebind {
     typedef typename __pointer_traits_rebind<pointer, _Up>::type other;
   };
-#endif // _LIBCPP_CXX03_LANG
 
 private:
   struct __nat {};
@@ -152,15 +139,10 @@ struct _LIBCPP_TEMPLATE_VIS pointer_traits<_Tp*> {
   typedef _Tp element_type;
   typedef ptrdiff_t difference_type;
 
-#ifndef _LIBCPP_CXX03_LANG
-  template <class _Up>
-  using rebind = _Up*;
-#else
   template <class _Up>
   struct rebind {
     typedef _Up* other;
   };
-#endif
 
 private:
   struct __nat {};
@@ -172,13 +154,8 @@ public:
   }
 };
 
-#ifndef _LIBCPP_CXX03_LANG
-template <class _From, class _To>
-using __rebind_pointer_t = typename pointer_traits<_From>::template rebind<_To>;
-#else
 template <class _From, class _To>
 using __rebind_pointer_t = typename pointer_traits<_From>::template rebind<_To>::other;
-#endif
 
 // to_address
 
@@ -235,70 +212,6 @@ struct __to_address_helper<_Pointer,
     return pointer_traits<_Pointer>::to_address(__p);
   }
 };
-
-#if _LIBCPP_STD_VER >= 20
-template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI constexpr auto to_address(_Tp* __p) noexcept {
-  return std::__to_address(__p);
-}
-
-template <class _Pointer>
-inline _LIBCPP_HIDE_FROM_ABI constexpr auto
-to_address(const _Pointer& __p) noexcept -> decltype(std::__to_address(__p)) {
-  return std::__to_address(__p);
-}
-#endif
-
-#if _LIBCPP_STD_VER >= 23
-
-template <class _Tp>
-struct __pointer_of {};
-
-template <class _Tp>
-  requires(__has_pointer<_Tp>::value)
-struct __pointer_of<_Tp> {
-  using type = typename _Tp::pointer;
-};
-
-template <class _Tp>
-  requires(!__has_pointer<_Tp>::value && __has_element_type<_Tp>::value)
-struct __pointer_of<_Tp> {
-  using type = typename _Tp::element_type*;
-};
-
-template <class _Tp>
-  requires(!__has_pointer<_Tp>::value && !__has_element_type<_Tp>::value &&
-           __has_element_type<pointer_traits<_Tp>>::value)
-struct __pointer_of<_Tp> {
-  using type = typename pointer_traits<_Tp>::element_type*;
-};
-
-template <typename _Tp>
-using __pointer_of_t = typename __pointer_of<_Tp>::type;
-
-template <class _Tp, class _Up>
-struct __pointer_of_or {
-  using type _LIBCPP_NODEBUG = _Up;
-};
-
-template <class _Tp, class _Up>
-  requires requires { typename __pointer_of_t<_Tp>; }
-struct __pointer_of_or<_Tp, _Up> {
-  using type _LIBCPP_NODEBUG = __pointer_of_t<_Tp>;
-};
-
-template <typename _Tp, typename _Up>
-using __pointer_of_or_t = typename __pointer_of_or<_Tp, _Up>::type;
-
-template <class _Smart>
-concept __resettable_smart_pointer = requires(_Smart __s) { __s.reset(); };
-
-template <class _Smart, class _Pointer, class... _Args>
-concept __resettable_smart_pointer_with_args = requires(_Smart __s, _Pointer __p, _Args... __args) {
-  __s.reset(static_cast<__pointer_of_or_t<_Smart, _Pointer>>(__p), std::forward<_Args>(__args)...);
-};
-
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

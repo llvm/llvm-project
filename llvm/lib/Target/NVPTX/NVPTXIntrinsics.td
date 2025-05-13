@@ -1679,6 +1679,33 @@ foreach t = [I32RT, I64RT] in {
 }
 
 //
+// szext
+//
+
+foreach sign = ["s", "u"] in {
+  foreach mode = ["wrap", "clamp"] in {
+    defvar ext = !if(!eq(sign, "s"), "sext", "zext");
+    defvar intrin = !cast<Intrinsic>("int_nvvm_" # ext # "_" # mode);
+    defm SZEXT_ # sign # _ # mode
+      : I3Inst<"szext." # mode # "." # sign # "32",
+               intrin, I32RT, commutative = false,
+               requires = [hasSM<70>, hasPTX<76>]>;
+  }
+}
+
+//
+// BMSK
+//
+
+foreach mode = ["wrap", "clamp"] in {
+  defvar intrin = !cast<Intrinsic>("int_nvvm_bmsk_" # mode);
+  defm BMSK_ # mode
+    : I3Inst<"bmsk." # mode # ".b32",
+             intrin, I32RT, commutative = false,
+             requires = [hasSM<70>, hasPTX<76>]>;
+}
+
+//
 // Convert
 //
 
@@ -2302,12 +2329,12 @@ class LDU_G<string TyStr, NVPTXRegClass regclass>
                "ldu.global." # TyStr # " \t$result, [$src];",
                       []>, Requires<[hasLDU]>;
 
-def INT_PTX_LDU_GLOBAL_i8  : LDU_G<"u8", Int16Regs>;
-def INT_PTX_LDU_GLOBAL_i16 : LDU_G<"u16", Int16Regs>;
-def INT_PTX_LDU_GLOBAL_i32 : LDU_G<"u32", Int32Regs>;
-def INT_PTX_LDU_GLOBAL_i64 : LDU_G<"u64", Int64Regs>;
-def INT_PTX_LDU_GLOBAL_f32 : LDU_G<"f32", Float32Regs>;
-def INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64", Float64Regs>;
+def INT_PTX_LDU_GLOBAL_i8  : LDU_G<"b8", Int16Regs>;
+def INT_PTX_LDU_GLOBAL_i16 : LDU_G<"b16", Int16Regs>;
+def INT_PTX_LDU_GLOBAL_i32 : LDU_G<"b32", Int32Regs>;
+def INT_PTX_LDU_GLOBAL_i64 : LDU_G<"b64", Int64Regs>;
+def INT_PTX_LDU_GLOBAL_f32 : LDU_G<"b32", Float32Regs>;
+def INT_PTX_LDU_GLOBAL_f64 : LDU_G<"b64", Float64Regs>;
 
 // vector
 
@@ -2324,19 +2351,19 @@ class VLDU_G_ELE_V4<string TyStr, NVPTXRegClass regclass>
                "ldu.global.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
 
 
-def INT_PTX_LDU_G_v2i8_ELE : VLDU_G_ELE_V2<"u8", Int16Regs>;
-def INT_PTX_LDU_G_v2i16_ELE : VLDU_G_ELE_V2<"u16", Int16Regs>;
-def INT_PTX_LDU_G_v2i32_ELE : VLDU_G_ELE_V2<"u32", Int32Regs>;
-def INT_PTX_LDU_G_v2f32_ELE : VLDU_G_ELE_V2<"f32", Float32Regs>;
-def INT_PTX_LDU_G_v2i64_ELE : VLDU_G_ELE_V2<"u64", Int64Regs>;
-def INT_PTX_LDU_G_v2f64_ELE : VLDU_G_ELE_V2<"f64", Float64Regs>;
+def INT_PTX_LDU_G_v2i8_ELE : VLDU_G_ELE_V2<"b8", Int16Regs>;
+def INT_PTX_LDU_G_v2i16_ELE : VLDU_G_ELE_V2<"b16", Int16Regs>;
+def INT_PTX_LDU_G_v2i32_ELE : VLDU_G_ELE_V2<"b32", Int32Regs>;
+def INT_PTX_LDU_G_v2f32_ELE : VLDU_G_ELE_V2<"b32", Float32Regs>;
+def INT_PTX_LDU_G_v2i64_ELE : VLDU_G_ELE_V2<"b64", Int64Regs>;
+def INT_PTX_LDU_G_v2f64_ELE : VLDU_G_ELE_V2<"b64", Float64Regs>;
 
-def INT_PTX_LDU_G_v4i8_ELE : VLDU_G_ELE_V4<"u8", Int16Regs>;
-def INT_PTX_LDU_G_v4i16_ELE : VLDU_G_ELE_V4<"u16", Int16Regs>;
-def INT_PTX_LDU_G_v4i32_ELE  : VLDU_G_ELE_V4<"u32", Int32Regs>;
+def INT_PTX_LDU_G_v4i8_ELE : VLDU_G_ELE_V4<"b8", Int16Regs>;
+def INT_PTX_LDU_G_v4i16_ELE : VLDU_G_ELE_V4<"b16", Int16Regs>;
+def INT_PTX_LDU_G_v4i32_ELE  : VLDU_G_ELE_V4<"b32", Int32Regs>;
 def INT_PTX_LDU_G_v4f16_ELE   : VLDU_G_ELE_V4<"b16", Int16Regs>;
 def INT_PTX_LDU_G_v4f16x2_ELE  : VLDU_G_ELE_V4<"b32", Int32Regs>;
-def INT_PTX_LDU_G_v4f32_ELE  : VLDU_G_ELE_V4<"f32", Float32Regs>;
+def INT_PTX_LDU_G_v4f32_ELE  : VLDU_G_ELE_V4<"b32", Float32Regs>;
 
 
 //-----------------------------------
@@ -2352,12 +2379,12 @@ class LDG_G<string TyStr, NVPTXRegClass regclass>
                "ld.global.nc." # TyStr # " \t$result, [$src];",
                         []>, Requires<[hasLDG]>;
 
-def INT_PTX_LDG_GLOBAL_i8 : LDG_G<"u8", Int16Regs>;
-def INT_PTX_LDG_GLOBAL_i16 : LDG_G<"u16", Int16Regs>;
-def INT_PTX_LDG_GLOBAL_i32 : LDG_G<"u32", Int32Regs>;
-def INT_PTX_LDG_GLOBAL_i64 : LDG_G<"u64", Int64Regs>;
-def INT_PTX_LDG_GLOBAL_f32 : LDG_G<"f32", Float32Regs>;
-def INT_PTX_LDG_GLOBAL_f64 : LDG_G<"f64", Float64Regs>;
+def INT_PTX_LDG_GLOBAL_i8 : LDG_G<"b8", Int16Regs>;
+def INT_PTX_LDG_GLOBAL_i16 : LDG_G<"b16", Int16Regs>;
+def INT_PTX_LDG_GLOBAL_i32 : LDG_G<"b32", Int32Regs>;
+def INT_PTX_LDG_GLOBAL_i64 : LDG_G<"b64", Int64Regs>;
+def INT_PTX_LDG_GLOBAL_f32 : LDG_G<"b32", Float32Regs>;
+def INT_PTX_LDG_GLOBAL_f64 : LDG_G<"b64", Float64Regs>;
 
 // vector
 
@@ -2374,17 +2401,17 @@ class VLDG_G_ELE_V4<string TyStr, NVPTXRegClass regclass> :
             "ld.global.nc.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
 
 // FIXME: 8-bit LDG should be fixed once LDG/LDU nodes are made into proper loads.
-def INT_PTX_LDG_G_v2i8_ELE : VLDG_G_ELE_V2<"u8", Int16Regs>;
-def INT_PTX_LDG_G_v2i16_ELE : VLDG_G_ELE_V2<"u16", Int16Regs>;
-def INT_PTX_LDG_G_v2i32_ELE : VLDG_G_ELE_V2<"u32", Int32Regs>;
-def INT_PTX_LDG_G_v2f32_ELE : VLDG_G_ELE_V2<"f32", Float32Regs>;
-def INT_PTX_LDG_G_v2i64_ELE : VLDG_G_ELE_V2<"u64", Int64Regs>;
-def INT_PTX_LDG_G_v2f64_ELE : VLDG_G_ELE_V2<"f64", Float64Regs>;
+def INT_PTX_LDG_G_v2i8_ELE : VLDG_G_ELE_V2<"b8", Int16Regs>;
+def INT_PTX_LDG_G_v2i16_ELE : VLDG_G_ELE_V2<"b16", Int16Regs>;
+def INT_PTX_LDG_G_v2i32_ELE : VLDG_G_ELE_V2<"b32", Int32Regs>;
+def INT_PTX_LDG_G_v2f32_ELE : VLDG_G_ELE_V2<"b32", Float32Regs>;
+def INT_PTX_LDG_G_v2i64_ELE : VLDG_G_ELE_V2<"b64", Int64Regs>;
+def INT_PTX_LDG_G_v2f64_ELE : VLDG_G_ELE_V2<"b64", Float64Regs>;
 
-def INT_PTX_LDG_G_v4i8_ELE : VLDG_G_ELE_V4<"u8", Int16Regs>;
-def INT_PTX_LDG_G_v4i16_ELE : VLDG_G_ELE_V4<"u16", Int16Regs>;
-def INT_PTX_LDG_G_v4i32_ELE : VLDG_G_ELE_V4<"u32", Int32Regs>;
-def INT_PTX_LDG_G_v4f32_ELE : VLDG_G_ELE_V4<"f32", Float32Regs>;
+def INT_PTX_LDG_G_v4i8_ELE : VLDG_G_ELE_V4<"b8", Int16Regs>;
+def INT_PTX_LDG_G_v4i16_ELE : VLDG_G_ELE_V4<"b16", Int16Regs>;
+def INT_PTX_LDG_G_v4i32_ELE : VLDG_G_ELE_V4<"b32", Int32Regs>;
+def INT_PTX_LDG_G_v4f32_ELE : VLDG_G_ELE_V4<"b32", Float32Regs>;
 
 
 multiclass NG_TO_G<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {

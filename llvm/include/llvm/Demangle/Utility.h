@@ -136,6 +136,8 @@ public:
 
   OutputBuffer &prepend(std::string_view R) {
     size_t Size = R.size();
+    if (!Size)
+      return *this;
 
     grow(Size);
     std::memmove(Buffer + Size, Buffer, CurrentPosition);

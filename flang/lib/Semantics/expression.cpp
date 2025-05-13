@@ -419,13 +419,9 @@ static void CheckSubscripts(
   }
 }
 
-static void CheckSubscripts(
+static void CheckCosubscripts(
     semantics::SemanticsContext &context, CoarrayRef &ref) {
-  const Symbol &coarraySymbol{ref.GetBase().GetLastSymbol()};
-  Shape lb, ub;
-  if (FoldSubscripts(context, coarraySymbol, ref.subscript(), lb, ub)) {
-    ValidateSubscripts(context, coarraySymbol, ref.subscript(), lb, ub);
-  }
+  const Symbol &coarraySymbol{ref.GetLastSymbol()};
   FoldingContext &foldingContext{context.foldingContext()};
   int dim{0};
   for (auto &expr : ref.cosubscript()) {
@@ -1534,29 +1530,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
-  if (auto maybeDataRef{ExtractDataRef(Analyze(x.base))}) {
-    DataRef *dataRef{&*maybeDataRef};
-    std::vector<Subscript> subscripts;
-    SymbolVector reversed;
-    if (auto *aRef{std::get_if<ArrayRef>(&dataRef->u)}) {
-      subscripts = std::move(aRef->subscript());
-      reversed.push_back(aRef->GetLastSymbol());
-      if (Component *component{aRef->base().UnwrapComponent()}) {
-        dataRef = &component->base();
-      } else {
-        dataRef = nullptr;
-      }
-    }
-    if (dataRef) {
-      while (auto *component{std::get_if<Component>(&dataRef->u)}) {
-        reversed.push_back(component->GetLastSymbol());
-        dataRef = &component->base();
-      }
-      if (auto *baseSym{std::get_if<SymbolRef>(&dataRef->u)}) {
-        reversed.push_back(*baseSym);
-      } else {
-        Say("Base of coindexed named object has subscripts or cosubscripts"_err_en_US);
-      }
+  if (auto dataRef{ExtractDataRef(Analyze(x.base))}) {
+    if (!std::holds_alternative<ArrayRef>(dataRef->u) &&
+        dataRef->GetLastSymbol().Rank() > 0) { // F'2023 C916
+      Say("Subscripts must appear in a coindexed reference when its base is an array"_err_en_US);
     }
     std::vector<Expr<SubscriptInteger>> cosubscripts;
     bool cosubsOk{true};
@@ -1570,30 +1547,59 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
         cosubsOk = false;
       }
     }
-    if (cosubsOk && !reversed.empty()) {
+    if (cosubsOk) {
       int numCosubscripts{static_cast<int>(cosubscripts.size())};
-      const Symbol &symbol{reversed.front()};
+      const Symbol &symbol{dataRef->GetLastSymbol()};
       if (numCosubscripts != GetCorank(symbol)) {
         Say("'%s' has corank %d, but coindexed reference has %d cosubscripts"_err_en_US,
             symbol.name(), GetCorank(symbol), numCosubscripts);
       }
     }
+    CoarrayRef coarrayRef{std::move(*dataRef), std::move(cosubscripts)};
     for (const auto &imageSelSpec :
         std::get<std::list<parser::ImageSelectorSpec>>(x.imageSelector.t)) {
       common::visit(
           common::visitors{
-              [&](const auto &x) { Analyze(x.v); },
-          },
+              [&](const parser::ImageSelectorSpec::Stat &x) {
+                Analyze(x.v);
+                if (const auto *expr{GetExpr(context_, x.v)}) {
+                  if (const auto *intExpr{
+                          std::get_if<Expr<SomeInteger>>(&expr->u)}) {
+                    if (coarrayRef.stat()) {
+                      Say("coindexed reference has multiple STAT= specifiers"_err_en_US);
+                    } else {
+                      coarrayRef.set_stat(Expr<SomeInteger>{*intExpr});
+                    }
+                  }
+                }
+              },
+              [&](const parser::TeamValue &x) {
+                Analyze(x.v);
+                if (const auto *expr{GetExpr(context_, x.v)}) {
+                  if (coarrayRef.team()) {
+                    Say("coindexed reference has multiple TEAM= or TEAM_NUMBER= specifiers"_err_en_US);
+                  } else if (auto dyType{expr->GetType()};
+                      dyType && IsTeamType(GetDerivedTypeSpec(*dyType))) {
+                    coarrayRef.set_team(Expr<SomeType>{*expr});
+                  } else {
+                    Say("TEAM= specifier must have type TEAM_TYPE from ISO_FORTRAN_ENV"_err_en_US);
+                  }
+                }
+              },
+              [&](const parser::ImageSelectorSpec::Team_Number &x) {
+                Analyze(x.v);
+                if (const auto *expr{GetExpr(context_, x.v)}) {
+                  if (coarrayRef.team()) {
+                    Say("coindexed reference has multiple TEAM= or TEAM_NUMBER= specifiers"_err_en_US);
+                  } else {
+                    coarrayRef.set_team(Expr<SomeType>{*expr});
+                  }
+                }
+              }},
           imageSelSpec.u);
     }
-    // Reverse the chain of symbols so that the base is first and coarray
-    // ultimate component is last.
-    if (cosubsOk) {
-      CoarrayRef coarrayRef{SymbolVector{reversed.crbegin(), reversed.crend()},
-          std::move(subscripts), std::move(cosubscripts)};
-      CheckSubscripts(context_, coarrayRef);
-      return Designate(DataRef{std::move(coarrayRef)});
-    }
+    CheckCosubscripts(context_, coarrayRef);
+    return Designate(DataRef{std::move(coarrayRef)});
   }
   return std::nullopt;
 }

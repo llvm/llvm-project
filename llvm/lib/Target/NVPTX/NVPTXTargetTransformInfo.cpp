@@ -492,7 +492,7 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
       // since it is classified as a call in the IR. A better cost model would
       // be to return the number of asm instructions embedded in the asm
       // string.
-      auto &AsmStr = IA->getAsmString();
+      StringRef AsmStr = IA->getAsmString();
       const unsigned InstCount =
           count_if(split(AsmStr, ';'), [](StringRef AsmInst) {
             // Trim off scopes denoted by '{' and '}' as these can be ignored

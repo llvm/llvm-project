@@ -296,8 +296,7 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       return failure();
   }
   StringRef layoutSpec(llvmDataLayout);
-  if (layoutSpec.starts_with("-"))
-    layoutSpec = layoutSpec.drop_front();
+  layoutSpec.consume_front("-");
 
   return llvm::DataLayout(layoutSpec);
 }
@@ -1532,6 +1531,12 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   if (auto fpContract = func.getFpContract())
     llvmFunc->addFnAttr("fp-contract", *fpContract);
+
+  if (auto instrumentFunctionEntry = func.getInstrumentFunctionEntry())
+    llvmFunc->addFnAttr("instrument-function-entry", *instrumentFunctionEntry);
+
+  if (auto instrumentFunctionExit = func.getInstrumentFunctionExit())
+    llvmFunc->addFnAttr("instrument-function-exit", *instrumentFunctionExit);
 
   // First, create all blocks so we can jump to them.
   llvm::LLVMContext &llvmContext = llvmFunc->getContext();

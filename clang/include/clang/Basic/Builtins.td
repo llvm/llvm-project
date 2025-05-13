@@ -2853,6 +2853,12 @@ def MemMove : LibBuiltin<"string.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
+def BuiltinTriviallyRelocate : Builtin {
+  let Spellings = ["__builtin_trivially_relocate"];
+  let Attributes = [FunctionWithBuiltinPrefix, CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*, void*, size_t)";
+}
+
 def StrCpy : LibBuiltin<"string.h"> {
   let Spellings = ["strcpy"];
   let Attributes = [NoThrow];
@@ -4797,6 +4803,18 @@ def HLSLAddUint64: LangBuiltin<"HLSL_LANG"> {
 
 def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_getpointer"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceUninitializedHandle : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_uninitializedhandle"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceHandleFromBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_handlefrombinding"];
   let Attributes = [NoThrow];
   let Prototype = "void(...)";
 }

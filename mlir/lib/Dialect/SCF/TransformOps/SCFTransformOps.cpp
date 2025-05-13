@@ -594,9 +594,10 @@ transform::LoopFuseSiblingOp::apply(transform::TransformRewriter &rewriter,
   } else if (isForallWithIdenticalConfiguration(target, source)) {
     fusedLoop = fuseIndependentSiblingForallLoops(
         cast<scf::ForallOp>(target), cast<scf::ForallOp>(source), rewriter);
-  } else
+  } else {
     return emitSilenceableFailure(target->getLoc())
            << "operations cannot be fused";
+  }
 
   assert(fusedLoop && "failed to fuse operations");
 

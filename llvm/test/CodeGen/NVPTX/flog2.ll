@@ -10,9 +10,9 @@ define float @log2_test(float %in) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.f32 %f1, [log2_test_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [log2_test_param_0];
 ; CHECK-NEXT:    lg2.approx.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
 entry:
   %log2 = call float @llvm.log2.f32(float %in)
@@ -26,9 +26,9 @@ define float @log2_ftz_test(float %in) #0 {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.f32 %f1, [log2_ftz_test_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [log2_ftz_test_param_0];
 ; CHECK-NEXT:    lg2.approx.ftz.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
 entry:
   %log2 = call float @llvm.log2.f32(float %in)
@@ -42,10 +42,10 @@ define <2 x float> @log2_test_v(<2 x float> %in) {
 ; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.v2.f32 {%f1, %f2}, [log2_test_v_param_0];
+; CHECK-NEXT:    ld.param.v2.b32 {%f1, %f2}, [log2_test_v_param_0];
 ; CHECK-NEXT:    lg2.approx.f32 %f3, %f2;
 ; CHECK-NEXT:    lg2.approx.f32 %f4, %f1;
-; CHECK-NEXT:    st.param.v2.f32 [func_retval0], {%f4, %f3};
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%f4, %f3};
 ; CHECK-NEXT:    ret;
 entry:
   %log2 = call <2 x float> @llvm.log2.v2f32(<2 x float> %in)
@@ -129,7 +129,7 @@ define bfloat @log2_bf16_test(bfloat %in) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.u16 %r1, [log2_bf16_test_param_0];
+; CHECK-NEXT:    ld.param.b16 %r1, [log2_bf16_test_param_0];
 ; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
 ; CHECK-NEXT:    mov.b32 %f1, %r2;
 ; CHECK-NEXT:    lg2.approx.f32 %f2, %f1;
@@ -158,7 +158,7 @@ define bfloat @log2_bf16_ftz_test(bfloat %in) #0 {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.u16 %r1, [log2_bf16_ftz_test_param_0];
+; CHECK-NEXT:    ld.param.b16 %r1, [log2_bf16_ftz_test_param_0];
 ; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
 ; CHECK-NEXT:    mov.b32 %f1, %r2;
 ; CHECK-NEXT:    lg2.approx.ftz.f32 %f2, %f1;

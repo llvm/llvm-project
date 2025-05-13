@@ -62,42 +62,42 @@ float2 test_lerp_element_type_mismatch(half2 p0, float2 p1) {
 
 float2 test_builtin_lerp_float2_splat(float p0, float2 p1) {
   return __builtin_hlsl_lerp(p0, p1, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
 float2 test_builtin_lerp_float2_splat2(double p0, double2 p1) {
   return __builtin_hlsl_lerp(p1, p0, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
 float2 test_builtin_lerp_float2_splat3(double p0, double2 p1) {
   return __builtin_hlsl_lerp(p1, p1, p0);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
 float3 test_builtin_lerp_float3_splat(float p0, float3 p1) {
   return __builtin_hlsl_lerp(p0, p1, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
 float4 test_builtin_lerp_float4_splat(float p0, float4 p1) {
   return __builtin_hlsl_lerp(p0, p1, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
 float2 test_lerp_float2_int_splat(float2 p0, int p1) {
   return __builtin_hlsl_lerp(p0, p1, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
 float3 test_lerp_float3_int_splat(float3 p0, int p1) {
   return __builtin_hlsl_lerp(p0, p1, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
 float2 test_builtin_lerp_int_vect_to_float_vec_promotion(int2 p0, float p1) {
   return __builtin_hlsl_lerp(p0, p1, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
 float test_builtin_lerp_bool_type_promotion(bool p0) {
@@ -107,17 +107,17 @@ float test_builtin_lerp_bool_type_promotion(bool p0) {
 
 float builtin_bool_to_float_type_promotion(float p0, bool p1) {
   return __builtin_hlsl_lerp(p0, p0, p1);
-  // expected-error@-1 {{3rd argument must be a scalar or vector of floating-point types (was 'bool')}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
 float builtin_bool_to_float_type_promotion2(bool p0, float p1) {
   return __builtin_hlsl_lerp(p1, p0, p1);
-  // expected-error@-1 {{2nd argument must be a scalar or vector of floating-point types (was 'bool')}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
 float builtin_lerp_int_to_float_promotion(float p0, int p1) {
   return __builtin_hlsl_lerp(p0, p0, p1);
-  // expected-error@-1 {{3rd argument must be a scalar or vector of floating-point types (was 'int')}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
 float4 test_lerp_int4(int4 p0, int4 p1, int4 p2) {

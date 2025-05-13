@@ -8,11 +8,11 @@
 
 #include "clang/Basic/LangStandard.h"
 #include "clang/CodeGen/BackendUtil.h"
-#include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
@@ -23,6 +23,7 @@ using namespace clang::frontend;
 namespace {
 
 TEST(FrontendOutputTests, TestOutputStream) {
+  llvm::InitializeAllTargetMCs();
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc", MemoryBuffer::getMemBuffer("").release());
@@ -30,14 +31,13 @@ TEST(FrontendOutputTests, TestOutputStream) {
       FrontendInputFile("test.cc", Language::CXX));
   Invocation->getFrontendOpts().ProgramAction = EmitBC;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance Compiler;
+  CompilerInstance Compiler(std::move(Invocation));
 
   SmallVector<char, 256> IRBuffer;
   std::unique_ptr<raw_pwrite_stream> IRStream(
       new raw_svector_ostream(IRBuffer));
 
   Compiler.setOutputStream(std::move(IRStream));
-  Compiler.setInvocation(std::move(Invocation));
   Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   bool Success = ExecuteCompilerInvocation(&Compiler);
@@ -47,6 +47,7 @@ TEST(FrontendOutputTests, TestOutputStream) {
 }
 
 TEST(FrontendOutputTests, TestVerboseOutputStreamShared) {
+  llvm::InitializeAllTargetMCs();
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc", MemoryBuffer::getMemBuffer("invalid").release());
@@ -54,13 +55,12 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamShared) {
       FrontendInputFile("test.cc", Language::CXX));
   Invocation->getFrontendOpts().ProgramAction = EmitBC;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-  CompilerInstance Compiler;
+  CompilerInstance Compiler(std::move(Invocation));
 
   std::string VerboseBuffer;
   raw_string_ostream VerboseStream(VerboseBuffer);
 
   Compiler.setOutputStream(std::make_unique<raw_null_ostream>());
-  Compiler.setInvocation(std::move(Invocation));
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   Compiler.createDiagnostics(
       *llvm::vfs::getRealFileSystem(),
@@ -77,6 +77,7 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamOwned) {
   std::string VerboseBuffer;
   bool Success;
   {
+    llvm::InitializeAllTargetMCs();
     auto Invocation = std::make_shared<CompilerInvocation>();
     Invocation->getPreprocessorOpts().addRemappedFile(
         "test.cc", MemoryBuffer::getMemBuffer("invalid").release());
@@ -84,13 +85,12 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamOwned) {
         FrontendInputFile("test.cc", Language::CXX));
     Invocation->getFrontendOpts().ProgramAction = EmitBC;
     Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
-    CompilerInstance Compiler;
+    CompilerInstance Compiler(std::move(Invocation));
 
     std::unique_ptr<raw_ostream> VerboseStream =
         std::make_unique<raw_string_ostream>(VerboseBuffer);
 
     Compiler.setOutputStream(std::make_unique<raw_null_ostream>());
-    Compiler.setInvocation(std::move(Invocation));
     IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
     Compiler.createDiagnostics(
         *llvm::vfs::getRealFileSystem(),

@@ -235,6 +235,21 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
+
+class VirtRegRewriterPass : public PassInfoMixin<VirtRegRewriterPass> {
+  bool ClearVirtRegs = true;
+
+public:
+  VirtRegRewriterPass(bool ClearVirtRegs = true)
+      : ClearVirtRegs(ClearVirtRegs) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  static bool isRequired() { return true; }
+
+  void printPipeline(raw_ostream &OS, function_ref<StringRef(StringRef)>) const;
+};
+
 } // end llvm namespace
 
 #endif // LLVM_CODEGEN_VIRTREGMAP_H

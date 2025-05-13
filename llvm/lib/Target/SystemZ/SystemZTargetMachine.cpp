@@ -40,6 +40,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   // Register the target.
   RegisterTargetMachine<SystemZTargetMachine> X(getTheSystemZTarget());
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeSystemZAsmPrinterPass(PR);
   initializeSystemZElimComparePass(PR);
   initializeSystemZShortenInstPass(PR);
   initializeSystemZLongBranchPass(PR);

@@ -11,5 +11,4 @@
 
 #include <clc/relational/floatn.inc>
 
-#undef __CLC_BODY
 #undef __CLC_FUNCTION

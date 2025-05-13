@@ -135,6 +135,16 @@ class NDSRVInstRR<bits<7> funct7, string opcodestr>
   let mayStore = 0;
 }
 
+class NDSRVInstLEA<bits<7> funct7, string opcodestr>
+    : RVInstR<funct7, 0b000, OPC_CUSTOM_2,
+              (outs GPR:$rd), (ins GPR:$rs2, GPR:$rs1),
+              opcodestr, "$rd, $rs1, $rs2">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU]> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
 // GP: ADDI, LB, LBU
 class NDSRVInstLBGP<bits<2> funct2, string opcodestr>
     : RVInst<(outs GPR:$rd), (ins simm18:$imm18),
@@ -305,6 +315,29 @@ class NDSRVInstSDGP<bits<3> funct3, string opcodestr>
   let mayStore = 1;
 }
 
+class NDSRVInstVFPMAD<bits<6> funct6, string opcodestr>
+    : RVInst<(outs VR:$vd), (ins VR:$vs2, FPR32:$rs1, VMaskOp:$vm),
+             opcodestr # "." # "vf", "$vd, $rs1, $vs2$vm", [], InstFormatR>,
+      SchedBinaryMC<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF"> {
+  bits<5> vs2;
+  bits<5> rs1;
+  bits<5> vd;
+  bit vm;
+
+  let Inst{31-26} = funct6;
+  let Inst{25} = vm;
+  let Inst{24-20} = vs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = vd;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+
+  let RVVConstraint = VMConstraint;
+}
+
 //===----------------------------------------------------------------------===//
 // XAndesPerf
 //===----------------------------------------------------------------------===//
@@ -321,9 +354,9 @@ def NDS_BNEC : NDSRVInstBC<0b110, "nds.bnec">;
 def NDS_BFOS : NDSRVInstBFO<0b011, "nds.bfos">;
 def NDS_BFOZ : NDSRVInstBFO<0b010, "nds.bfoz">;
 
-def NDS_LEA_H : NDSRVInstRR<0b0000101, "nds.lea.h">;
-def NDS_LEA_W : NDSRVInstRR<0b0000110, "nds.lea.w">;
-def NDS_LEA_D : NDSRVInstRR<0b0000111, "nds.lea.d">;
+def NDS_LEA_H : NDSRVInstLEA<0b0000101, "nds.lea.h">;
+def NDS_LEA_W : NDSRVInstLEA<0b0000110, "nds.lea.w">;
+def NDS_LEA_D : NDSRVInstLEA<0b0000111, "nds.lea.d">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def NDS_ADDIGP : NDSRVInstLBGP<0b01, "nds.addigp">;
@@ -345,14 +378,53 @@ def NDS_FLMISM  : NDSRVInstRR<0b0010011, "nds.flmism">;
 } // Predicates = [HasVendorXAndesPerf]
 
 let Predicates = [HasVendorXAndesPerf, IsRV64] in {
-def NDS_LEA_B_ZE : NDSRVInstRR<0b0001000, "nds.lea.b.ze">;
-def NDS_LEA_H_ZE : NDSRVInstRR<0b0001001, "nds.lea.h.ze">;
-def NDS_LEA_W_ZE : NDSRVInstRR<0b0001010, "nds.lea.w.ze">;
-def NDS_LEA_D_ZE : NDSRVInstRR<0b0001011, "nds.lea.d.ze">;
+def NDS_LEA_B_ZE : NDSRVInstLEA<0b0001000, "nds.lea.b.ze">;
+def NDS_LEA_H_ZE : NDSRVInstLEA<0b0001001, "nds.lea.h.ze">;
+def NDS_LEA_W_ZE : NDSRVInstLEA<0b0001010, "nds.lea.w.ze">;
+def NDS_LEA_D_ZE : NDSRVInstLEA<0b0001011, "nds.lea.d.ze">;
 
 def NDS_LWUGP : NDSRVInstLWGP<0b110, "nds.lwugp">;
 def NDS_LDGP  : NDSRVInstLDGP<0b011, "nds.ldgp">;
 
 def NDS_SDGP  : NDSRVInstSDGP<0b111, "nds.sdgp">;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
+
+//===----------------------------------------------------------------------===//
+// XAndesVPackFPH
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXAndesVPackFPH],
+    Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
+def NDS_VFPMADT_VF : NDSRVInstVFPMAD<0b000010, "nds.vfpmadt">;
+def NDS_VFPMADB_VF : NDSRVInstVFPMAD<0b000011, "nds.vfpmadb">;
+}
 } // DecoderNamespace = "XAndes"
+
+// Patterns
+
+let Predicates = [HasVendorXAndesPerf] in {
+
+defm : ShxAddPat<1, NDS_LEA_H>;
+defm : ShxAddPat<2, NDS_LEA_W>;
+defm : ShxAddPat<3, NDS_LEA_D>;
+
+def : CSImm12MulBy4Pat<NDS_LEA_W>;
+def : CSImm12MulBy8Pat<NDS_LEA_D>;
+} // Predicates = [HasVendorXAndesPerf]
+
+let Predicates = [HasVendorXAndesPerf, IsRV64] in {
+
+defm : ADD_UWPat<NDS_LEA_B_ZE>;
+
+defm : ShxAdd_UWPat<1, NDS_LEA_H_ZE>;
+defm : ShxAdd_UWPat<2, NDS_LEA_W_ZE>;
+defm : ShxAdd_UWPat<3, NDS_LEA_D_ZE>;
+
+defm : Sh1Add_UWPat<NDS_LEA_H_ZE>;
+defm : Sh2Add_UWPat<NDS_LEA_W_ZE>;
+defm : Sh3Add_UWPat<NDS_LEA_D_ZE>;
+
+def : Sh1AddPat<NDS_LEA_H_ZE>;
+def : Sh2AddPat<NDS_LEA_W_ZE>;
+def : Sh3AddPat<NDS_LEA_D_ZE>;
+} // Predicates = [HasVendorXAndesPerf, IsRV64]

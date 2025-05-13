@@ -37,31 +37,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _AlgPolicy>
 struct _IterOps;
 
-#if _LIBCPP_STD_VER >= 20
-struct _RangeAlgPolicy {};
-
-template <>
-struct _IterOps<_RangeAlgPolicy> {
-  template <class _Iter>
-  using __value_type = iter_value_t<_Iter>;
-
-  template <class _Iter>
-  using __iterator_category = ranges::__iterator_concept<_Iter>;
-
-  template <class _Iter>
-  using __difference_type = iter_difference_t<_Iter>;
-
-  static constexpr auto advance      = ranges::advance;
-  static constexpr auto distance     = ranges::distance;
-  static constexpr auto __iter_move  = ranges::iter_move;
-  static constexpr auto iter_swap    = ranges::iter_swap;
-  static constexpr auto next         = ranges::next;
-  static constexpr auto prev         = ranges::prev;
-  static constexpr auto __advance_to = ranges::advance;
-};
-
-#endif
-
 struct _ClassicAlgPolicy {};
 
 template <>
