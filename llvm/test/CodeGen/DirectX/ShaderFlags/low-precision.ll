@@ -14,7 +14,7 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ;CHECK-NEXT: ; Note: shader requires additional functionality:
 ;CHECK-NEXT: ;       Minimum-precision data types
 ;CHECK-NEXT: ; Note: extra DXIL module flags:
-;CHECK-NEXT: ;       Low-precision data types
+;CHECK-NEXT: ;       Low-precision data types present
 ;CHECK-NEXT: ;
 ;CHECK-NEXT: ; Shader Flags for Module Functions
 
