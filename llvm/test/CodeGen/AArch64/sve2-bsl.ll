@@ -304,9 +304,7 @@ define <vscale x 2 x i64> @codegen_bsl2n_i64(<vscale x 2 x i64> %0, <vscale x 2 
 define <vscale x 4 x i32> @bsl_combine_when_bic_available(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: bsl_combine_when_bic_available:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
 entry:
   %t1 = xor <vscale x 4 x i32> %a, %b
