@@ -63,17 +63,17 @@ define i32 @goo() {
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 13 registers
 ; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
 ;
-; AVX512F-CHECK-LABEL: goo
-; AVX512F-CHECK:      LV(REG): VF = 8
-; AVX512F-CHECK-NEXT: LV(REG): Found max usage: 2 item
-; AVX512F-CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
-; AVX512F-CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 4 registers
-; AVX512F-CHECK-NEXT: LV(REG): Found invariant usage: 1 item
-; AVX512F-CHECK:      LV(REG): VF = 16
-; AVX512F-CHECK-NEXT: LV(REG): Found max usage: 2 item
-; AVX512F-CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
-; AVX512F-CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 4 registers
-; AVX512F-CHECK-NEXT: LV(REG): Found invariant usage: 1 item
+; AVX512F-LABEL: goo
+; AVX512F:      LV(REG): VF = 8
+; AVX512F-NEXT: LV(REG): Found max usage: 2 item
+; AVX512F-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
+; AVX512F-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 4 registers
+; AVX512F-NEXT: LV(REG): Found invariant usage: 1 item
+; AVX512F:      LV(REG): VF = 16
+; AVX512F-NEXT: LV(REG): Found max usage: 2 item
+; AVX512F-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
+; AVX512F-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 4 registers
+; AVX512F-NEXT: LV(REG): Found invariant usage: 1 item
 entry:
   br label %for.body
 
