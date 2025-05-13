@@ -78,18 +78,26 @@ public:
   /// Estimate of the number of floating point operations typically executed
   /// based on any available profile data.  If no profile data is available, the
   /// count is zero.
-  uint64_t FloatingPointOpProfileCount = 0;
+  uint64_t ProfileFloatingPointOpCount = 0;
+
+  /// Estimate of the number bytes of floating point memory typically moved
+  /// (e.g., load or store) based on any available profile data.  If no profile
+  /// data is available, the count is zero.  LLVM memory access operations
+  /// (e.g., llvm.memcpy.*, cmpxchg) that are always encoded as operating on
+  /// integer types and never on floating point types are not included.
+  uint64_t ProfileFloatingPointBytesMoved = 0;
 };
 
 } // end anonymous namespace
 
-// For the purposes of KernelInfo::FloatingPointOpProfileCount, should this be
-// considered a floating point operation?  If so, return the floating point
-// type.  Otherwise, return nullptr.
+// For the purposes of KernelInfo::ProfileFloatingPointOpCount, should the
+// specified Instruction be considered a floating point operation?  If so,
+// return the floating point type.  Otherwise, return nullptr.
 //
 // TODO: Does this correctly identify floating point operations we care about?
-// For example, we skip phi and load even when they return floating point
-// values.
+// For example, we skip phi even when it returns a floating point value, and
+// load is covered by KernelInfo::ProfileFloatingPointBytesMoved instead.  Is
+// there anything missing that should be covered here?
 //
 // TODO: Should different operations have different weights?  For example,
 // @llvm.fmuladd.* might be expensive for some targets.
@@ -208,12 +216,16 @@ static void remarkFlatAddrspaceAccess(OptimizationRemarkEmitter &ORE,
   });
 }
 
-static void remarkFloatingPointOp(OptimizationRemarkEmitter &ORE,
-                                  const Function &Caller, const Instruction &I,
-                                  Type *Ty,
-                                  std::optional<uint64_t> BlockProfileCount) {
+static void
+remarkFloatingPointOp(OptimizationRemarkEmitter &ORE, const Function &Caller,
+                      const Instruction &I, Type *Ty,
+                      std::optional<uint64_t> BlockProfileCount,
+                      std::optional<uint64_t> BytesMoved = std::nullopt) {
   ORE.emit([&] {
-    OptimizationRemark R(DEBUG_TYPE, "FloatingPointOp", &I);
+    OptimizationRemark R(DEBUG_TYPE,
+                         BytesMoved ? "ProfileFloatingPointBytesMoved"
+                                    : "ProfileFloatingPointOpCount",
+                         &I);
     R << "in ";
     identifyFunction(R, Caller);
     R << ", ";
@@ -222,10 +234,15 @@ static void remarkFloatingPointOp(OptimizationRemarkEmitter &ORE,
     Ty->print(OS);
     R << TyName << " ";
     identifyInstruction(R, I);
-    if (BlockProfileCount)
-      R << " executed " << utostr(*BlockProfileCount) << " times";
-    else
+    if (BlockProfileCount) {
+      if (BytesMoved)
+        R << " moved " << itostr(*BytesMoved * *BlockProfileCount)
+          << " fp bytes";
+      else
+        R << " executed " << utostr(*BlockProfileCount) << " flops";
+    } else {
       R << " has no profile data";
+    }
     return R;
   });
 }
@@ -239,6 +256,14 @@ void KernelInfo::updateForBB(const BasicBlock &BB, BlockFrequencyInfo &BFI,
   std::optional<uint64_t> BlockProfileCount =
       BFI.getBlockProfileCount(&BB, /*AllowSynthetic=*/true);
   for (const Instruction &I : BB.instructionsWithoutDebug()) {
+    auto HandleFloatingPointBytesMoved = [&]() {
+      Type *Ty = I.getAccessType();
+      if (!Ty || !Ty->isFPOrFPVectorTy())
+        return;
+      TypeSize::ScalarTy Size = DL.getTypeAllocSize(Ty).getFixedValue();
+      ProfileFloatingPointBytesMoved += BlockProfileCount.value_or(0) * Size;
+      remarkFloatingPointOp(ORE, F, I, Ty, BlockProfileCount, Size);
+    };
     if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(&I)) {
       ++Allocas;
       TypeSize::ScalarTy StaticSize = 0;
@@ -296,30 +321,40 @@ void KernelInfo::updateForBB(const BasicBlock &BB, BlockFrequencyInfo &BFI,
             remarkFlatAddrspaceAccess(ORE, F, I);
           }
         }
+        // llvm.memcpy.*, llvm.memset.*, etc. are encoded as operating on
+        // integer types not floating point types, so
+        // HandleFloatingPointBytesMoved is useless here.
       }
     } else if (const LoadInst *Load = dyn_cast<LoadInst>(&I)) {
       if (Load->getPointerAddressSpace() == FlatAddrspace) {
         ++FlatAddrspaceAccesses;
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
+      HandleFloatingPointBytesMoved();
     } else if (const StoreInst *Store = dyn_cast<StoreInst>(&I)) {
       if (Store->getPointerAddressSpace() == FlatAddrspace) {
         ++FlatAddrspaceAccesses;
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
+      HandleFloatingPointBytesMoved();
     } else if (const AtomicRMWInst *At = dyn_cast<AtomicRMWInst>(&I)) {
       if (At->getPointerAddressSpace() == FlatAddrspace) {
         ++FlatAddrspaceAccesses;
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
+      // TODO: Because there is a read and write, should we double the bytes
+      // moved count?
+      HandleFloatingPointBytesMoved();
     } else if (const AtomicCmpXchgInst *At = dyn_cast<AtomicCmpXchgInst>(&I)) {
       if (At->getPointerAddressSpace() == FlatAddrspace) {
         ++FlatAddrspaceAccesses;
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
+      // cmpxchg is encoded as operating on integer types not floating point
+      // types, so HandleFloatingPointBytesMoved is useless here.
     }
     if (Type *Ty = getFloatingPointOpType(I)) {
-      FloatingPointOpProfileCount += BlockProfileCount.value_or(0);
+      ProfileFloatingPointOpCount += BlockProfileCount.value_or(0);
       remarkFloatingPointOp(ORE, F, I, Ty, BlockProfileCount);
     }
   }
@@ -381,7 +416,8 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
   REMARK_PROPERTY(InlineAssemblyCalls);
   REMARK_PROPERTY(Invokes);
   REMARK_PROPERTY(FlatAddrspaceAccesses);
-  REMARK_PROPERTY(FloatingPointOpProfileCount);
+  REMARK_PROPERTY(ProfileFloatingPointOpCount);
+  REMARK_PROPERTY(ProfileFloatingPointBytesMoved);
 #undef REMARK_PROPERTY
 }
 
