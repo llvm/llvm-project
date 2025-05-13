@@ -237,6 +237,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       if (RefKind == AArch64MCExpr::VK_AUTH ||
           RefKind == AArch64MCExpr::VK_AUTHADDR)
         return ELF::R_AARCH64_AUTH_ABS64;
+      if (RefKind == AArch64MCExpr::VK_FUNCINIT)
+        return ELF::R_AARCH64_FUNCINIT64;
       return ELF::R_AARCH64_ABS64;
     }
     case AArch64::fixup_aarch64_add_imm12:

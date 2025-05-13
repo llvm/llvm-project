@@ -8203,6 +8203,8 @@ bool AArch64AsmParser::parseDataExpr(const MCExpr *&Res) {
       Spec = AArch64MCExpr::VK_GOTPCREL;
     else if (Identifier == "plt")
       Spec = AArch64MCExpr::VK_PLT;
+    else if (Identifier == "funcinit")
+      Spec = AArch64MCExpr::VK_FUNCINIT;
   }
   if (Spec == AArch64MCExpr::None)
     return Error(Loc, "invalid relocation specifier");
