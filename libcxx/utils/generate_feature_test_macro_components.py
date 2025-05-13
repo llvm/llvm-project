@@ -2135,6 +2135,97 @@ ftm_header_test_file_dialect_block = """
 {tests}\
 """
 
+#
+# The templates used to create a FTM documentation
+#
+
+ftm_documentation = """.. _FeatureTestMacroTable:
+
+==========================
+Feature Test Macro Support
+==========================
+
+.. contents::
+   :local:
+
+Overview
+========
+
+This page documents libc++'s implementation status of the Standard library
+feature test macros. This page does not list all details, that information can
+be found at the `isoccp
+<https://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations#library-feature-test-macros>`__.
+
+.. _feature-status:
+
+Status
+======
+
+.. list-table:: Current Status
+  :widths: auto
+  :header-rows: 1
+  :align: left
+
+  * - Macro Name
+    - Libc++ Value
+    - Standard Value
+    - 
+    - Paper
+{status_list_table}
+"""
+
+def create_table_row(data: List[List[str]]) -> str:
+    """Creates an RST list-table row from the contents of `data`.
+
+    Data contains one or more elements for a single row for a RST list-table.
+    When the list contains more than one element, the data is considered to be
+    a multi-row entry. The for a table cell is stored like
+    cell = data[row][column].
+
+    All rows in the table need to have the same number of columns. (This also
+    holds true for the "Standard version header rows".)
+
+    A row for an RST list-table has the following structure:
+      * - column 1
+        - column 2
+        - column 3
+
+    Note the output is indented.
+
+    Alternatively it is possible to have cells that "span" multiple rows. This
+    is not a real span since all cells are created, however creating an empty
+    cell gives the wanted visual effect. These rows have the following
+    structure: A row for an RST list-table has the following structure:
+      * - | row 1, column 1
+          | row 2, column 1
+        - | row 1, column 2
+          | row 2, column 2
+        - | row 1, column 3
+          | row 2, column 3
+
+    Note it is allowed to use the following for a single row:
+      * - | column 1
+        - | column 2
+        - | column 3
+
+    However the algorithm does not do that.
+    """
+
+    result = ""
+
+    cell = "*"  # The marker for the first cell in the row
+    multi_row = "| " if len(data) > 0 else ""
+    # As described above the rows and columns are traversed column first.
+    for c in range(len(data[0])):
+        column = "-"  # The marker for the columns
+        for r in range(len(data)):
+            result += f"  {cell} {column} {multi_row}{data[r][c]}\n"
+            cell = " "
+            column = " "
+
+    return result
+
+
 class FeatureTestMacros:
     """Provides all feature-test macro (FTM) output components.
 
@@ -2293,7 +2384,6 @@ class FeatureTestMacros:
         """
 
         return get_ftms(self.__data, self.std_dialects, True)
-
 
     def is_implemented(self, ftm: Ftm, std: Std) -> bool:
         """Has the FTM `ftm` been implemented in the dialect `std`?"""
@@ -2565,6 +2655,72 @@ class FeatureTestMacros:
                 f.write(self.generate_header_test_file(header))
 
 
+    @functools.cached_property
+    def status_list_table(self) -> str:
+        """Creates the rst status table using a list-table."""
+
+        result = ""
+        for std in self.std_dialects:
+            result += create_table_row(
+                [[f'**{std.replace("c++", "C++")}**', "", "", "", ""]]
+            )
+
+            for feature in self.__data:
+                if std not in feature["values"].keys():
+                    continue
+
+                row = list()
+
+                ftm = feature["name"]
+                libcxx_value = (
+                    f"{self.standard_ftms[ftm][std]}"
+                    if self.is_implemented(ftm, std)
+                    else "*unimplemented*"
+                )
+
+                values = feature["values"][std]
+                assert len(values) > 0, f"{feature['name']}[{std}] has no entries"
+                for value in values:
+                    std_value = f"{value}L"
+                    papers = list(values[value])
+                    assert (
+                        len(papers) > 0
+                    ), f"{feature['name']}[{std}][{value}] has no entries"
+
+                    for paper in papers:
+                        number = "" if not "number" in paper.keys() else paper["number"]
+                        title = "" if not "title" in paper.keys() else paper["title"]
+                        implemented = paper["implemented"]
+
+                        row += [
+                            [
+                                f"``{ftm}``" if ftm else "",
+                                libcxx_value,
+                                std_value,
+                                "✅" if implemented else "❌",
+                                (
+                                    f"`{number} <https://wg21.link/{number}>`__ {title}"
+                                    if number
+                                    else f"{title}"
+                                ),
+                            ]
+                        ]
+                        ftm = ""
+                        libcxx_value = ""
+                        std_value = ""
+
+                result += create_table_row(row)
+
+        return result
+
+
+    @functools.cached_property
+    def documentation(self) -> str:
+        """Generates the FTM documentation."""
+
+        return ftm_documentation.format(status_list_table=self.status_list_table)
+
+
 def main():
     produce_version_header()
     produce_tests()
@@ -2582,6 +2738,10 @@ def main():
             f.write(ftm.version_header)
 
         ftm.generate_header_test_directory(macro_test_path)
+
+        documentation_path = os.path.join(docs_path, "FeatureTestMacroTable.rst")
+        with open(documentation_path, "w", newline="\n") as f:
+             f.write(ftm.documentation)
 
 
 if __name__ == "__main__":
