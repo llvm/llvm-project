@@ -524,6 +524,10 @@ Improvements to Clang's diagnostics
 - An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have an
   argument larger than what can fit within a 64-bit integer.
 
+- A new off-by-default warning ``-Wms-bitfield-padding`` has been added to alert to cases where bit-field
+  packing may differ under the MS struct ABI (#GH117428).
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
