@@ -3880,13 +3880,10 @@ void SelectionDAGBuilder::visitSIToFP(const User &I) {
 void SelectionDAGBuilder::visitPtrToAddr(const User &I) {
   const auto &TLI = DAG.getTargetLoweringInfo();
   const DataLayout &DL = DAG.getDataLayout();
-  LLVMContext &Ctx = *DAG.getContext();
   // ptrtoaddr is equivalent to a truncate of ptrtoint to address/index width
-  SDValue N = getValue(I.getOperand(0));
-  Type *PtrTy = I.getOperand(0)->getType();
-  EVT AddrVT = EVT::getIntegerVT(Ctx, DL.getPointerAddressSizeInBits(PtrTy));
-  if (auto *VTy = dyn_cast<VectorType>(PtrTy))
-    AddrVT = EVT::getVectorVT(Ctx, AddrVT, VTy->getElementCount());
+  auto Op0 = I.getOperand(0);
+  SDValue N = getValue(Op0);
+  EVT AddrVT = TLI.getValueType(DL, DL.getAddressType(Op0->getType()));
   N = DAG.getPtrExtOrTrunc(N, getCurSDLoc(), AddrVT);
   N = DAG.getZExtOrTrunc(N, getCurSDLoc(), TLI.getValueType(DL, I.getType()));
   setValue(&I, N);
@@ -7991,10 +7988,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (Mask.getValueType().getFixedSizeInBits() < MemVT.getFixedSizeInBits()) {
       // For AMDGPU buffer descriptors the mask is 48 bits, but the pointer is
       // 128-bit, so we have to pad the mask with ones for unused bits.
-      auto HighOnes =
-          DAG.getNode(ISD::SHL, sdl, PtrVT, DAG.getAllOnesConstant(sdl, PtrVT),
-                      DAG.getConstant(Mask.getValueType().getFixedSizeInBits(),
-                                      sdl, PtrVT));
+      auto HighOnes = DAG.getNode(
+          ISD::SHL, sdl, PtrVT, DAG.getAllOnesConstant(sdl, PtrVT),
+          DAG.getShiftAmountConstant(Mask.getValueType().getFixedSizeInBits(),
+                                     PtrVT, sdl));
       Mask = DAG.getNode(ISD::OR, sdl, PtrVT,
                          DAG.getZExtOrTrunc(Mask, sdl, PtrVT), HighOnes);
     } else if (Mask.getValueType() != PtrVT)
@@ -10041,7 +10038,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
   std::vector<SDValue> AsmNodeOperands;
   AsmNodeOperands.push_back(SDValue());  // reserve space for input chain
   AsmNodeOperands.push_back(DAG.getTargetExternalSymbol(
-      IA->getAsmString().c_str(), TLI.getProgramPointerTy(DAG.getDataLayout())));
+      IA->getAsmString().data(), TLI.getProgramPointerTy(DAG.getDataLayout())));
 
   // If we have a !srcloc metadata node associated with it, we want to attach
   // this to the ultimately generated inline asm machineinstr.  To do this, we
