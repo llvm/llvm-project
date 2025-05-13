@@ -4935,13 +4935,34 @@ void CGOpenMPRuntime::emitPrivateReduction(
     if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates)) {
       if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
         const Expr *InitExpr = VD->getInit();
-        if (InitExpr && !PrivateType->isAggregateType() &&
-            !PrivateType->isAnyComplexType()) {
+        if (InitExpr) {
           Expr::EvalResult Result;
           if (InitExpr->EvaluateAsRValue(Result, CGF.getContext())) {
             APValue &InitValue = Result.Val;
             if (InitValue.isInt())
               InitVal = llvm::ConstantInt::get(LLVMType, InitValue.getInt());
+            else if (InitValue.isFloat())
+              InitVal = llvm::ConstantFP::get(LLVMType, InitValue.getFloat());
+            else if (InitValue.isComplexInt()) {
+              // For complex int: create struct { real, imag }
+              llvm::Constant *Real = llvm::ConstantInt::get(
+                  cast<llvm::StructType>(LLVMType)->getElementType(0),
+                  InitValue.getComplexIntReal());
+              llvm::Constant *Imag = llvm::ConstantInt::get(
+                  cast<llvm::StructType>(LLVMType)->getElementType(1),
+                  InitValue.getComplexIntImag());
+              InitVal = llvm::ConstantStruct::get(
+                  cast<llvm::StructType>(LLVMType), {Real, Imag});
+            } else if (InitValue.isComplexFloat()) {
+              llvm::Constant *Real = llvm::ConstantFP::get(
+                  cast<llvm::StructType>(LLVMType)->getElementType(0),
+                  InitValue.getComplexFloatReal());
+              llvm::Constant *Imag = llvm::ConstantFP::get(
+                  cast<llvm::StructType>(LLVMType)->getElementType(1),
+                  InitValue.getComplexFloatImag());
+              InitVal = llvm::ConstantStruct::get(
+                  cast<llvm::StructType>(LLVMType), {Real, Imag});
+            }
           }
         }
       }
@@ -4950,11 +4971,10 @@ void CGOpenMPRuntime::emitPrivateReduction(
     InitVal = llvm::Constant::getNullValue(LLVMType);
   }
   std::string ReductionVarNameStr;
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates->IgnoreParenCasts())) {
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates->IgnoreParenCasts()))
     ReductionVarNameStr = DRE->getDecl()->getNameAsString();
-  } else {
+  else
     ReductionVarNameStr = "unnamed_priv_var";
-  }
 
   // Create an internal shared variable
   std::string SharedName =
@@ -5027,16 +5047,9 @@ void CGOpenMPRuntime::emitPrivateReduction(
     }
     if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates)) {
       if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-        const Expr *InitExpr = VD->getInit();
-        if (InitExpr && (PrivateType->isAggregateType() ||
-                         PrivateType->isAnyComplexType())) {
+        if (const Expr *InitExpr = VD->getInit()) {
           CGF.EmitAnyExprToMem(InitExpr, SharedResult,
                                PrivateType.getQualifiers(), true);
-          return;
-        }
-        if (!InitVal->isNullValue()) {
-          CGF.EmitStoreOfScalar(InitVal,
-                                CGF.MakeAddrLValue(SharedResult, PrivateType));
           return;
         }
       }
@@ -5086,9 +5099,8 @@ void CGOpenMPRuntime::emitPrivateReduction(
       }
     };
     EmitCriticalReduction(ReductionGen);
-  }
-  // Handle built-in reduction operations.
-  else {
+  } else {
+    // Handle built-in reduction operations.
     const Expr *ReductionClauseExpr = ReductionOp->IgnoreParenCasts();
     if (const auto *Cleanup = dyn_cast<ExprWithCleanups>(ReductionClauseExpr))
       ReductionClauseExpr = Cleanup->getSubExpr()->IgnoreParenCasts();
@@ -5105,10 +5117,6 @@ void CGOpenMPRuntime::emitPrivateReduction(
 
     if (!AssignRHS)
       return;
-
-    const Expr *CombinerExpr = AssignRHS->IgnoreParenImpCasts();
-    if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(CombinerExpr))
-      CombinerExpr = MTE->getSubExpr()->IgnoreParenImpCasts();
 
     auto ReductionGen = [&](CodeGenFunction &CGF, PrePostActionTy &Action) {
       Action.Enter(CGF);
@@ -5414,7 +5422,7 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
       } else {
         // Emit as a critical region.
         auto &&CritRedGen = [E, Loc](CodeGenFunction &CGF, const Expr *,
-                                           const Expr *, const Expr *) {
+                                     const Expr *, const Expr *) {
           CGOpenMPRuntime &RT = CGF.CGM.getOpenMPRuntime();
           std::string Name = RT.getName({"atomic_reduction"});
           RT.emitCriticalRegion(
@@ -5467,6 +5475,14 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
     if (LHSExprs.size() != Privates.size() ||
         LHSExprs.size() != ReductionOps.size())
       return;
+    assert(!LHSExprs.empty() && "PrivateVarReduction: LHSExprs is empty");
+    assert(!Privates.empty() && "PrivateVarReduction: Privates is empty");
+    assert(!ReductionOps.empty() &&
+           "PrivateVarReduction: ReductionOps is empty");
+    assert(LHSExprs.size() == Privates.size() &&
+           "PrivateVarReduction: Privates size mismatch");
+    assert(LHSExprs.size() == ReductionOps.size() &&
+           "PrivateVarReduction: ReductionOps size mismatch");
     for (unsigned I :
          llvm::seq<unsigned>(std::min(ReductionOps.size(), LHSExprs.size()))) {
       emitPrivateReduction(CGF, Loc, Privates[I], LHSExprs[I], RHSExprs[I],

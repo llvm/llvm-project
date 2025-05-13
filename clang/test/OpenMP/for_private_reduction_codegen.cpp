@@ -464,7 +464,7 @@ int main(void) {
 // CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i32 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[TMP28]], label %[[INIT:.*]], label %[[INIT_END:.*]]
 // CHECK:       [[INIT]]:
-// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 @.omp.reduction..internal_pivate_.sum_v, i8 0, i64 4, i1 false)
+// CHECK-NEXT:    store i32 0, ptr @.omp.reduction..internal_pivate_.sum_v, align 4
 // CHECK-NEXT:    br label %[[INIT_END]]
 // CHECK:       [[INIT_END]]:
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
@@ -668,7 +668,7 @@ int main(void) {
 // CHECK-NEXT:    [[TMP47:%.*]] = icmp eq i32 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[TMP47]], label %[[INIT:.*]], label %[[INIT_END:.*]]
 // CHECK:       [[INIT]]:
-// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 @.omp.reduction..internal_pivate_.sum_v.1, i8 0, i64 4, i1 false)
+// CHECK-NEXT:    store i32 0, ptr @.omp.reduction..internal_pivate_.sum_v.1, align 4
 // CHECK-NEXT:    br label %[[INIT_END]]
 // CHECK:       [[INIT_END]]:
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
@@ -734,7 +734,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @main(
-// CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
+// CHECK-SAME: ) #[[ATTR7:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca [10 x i32], align 16
@@ -785,4 +785,3 @@ int main(void) {
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [10 x i32], ptr [[TMP0]], i64 0, i64 0
 // CHECK-NEXT:    call void @_Z6do_rediPiRi(i32 noundef 10, ptr noundef [[ARRAYDECAY]], ptr noundef nonnull align 4 dereferenceable(4) [[S_V]])
 // CHECK-NEXT:    ret void
-
