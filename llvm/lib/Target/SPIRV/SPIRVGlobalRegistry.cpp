@@ -1632,10 +1632,8 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
   auto SpirvTy = getOrCreateSPIRVType(Ty, MIRBuilder, AQ, false, true);
 
   // Handle "type*" or  "type* vector[N]".
-  if (TypeStr.starts_with("*")) {
+  if (TypeStr.consume_front("*"))
     SpirvTy = getOrCreateSPIRVPointerType(Ty, MIRBuilder, SC);
-    TypeStr = TypeStr.substr(strlen("*"));
-  }
 
   // Handle "typeN*" or  "type vector[N]*".
   bool IsPtrToVec = TypeStr.consume_back("*");

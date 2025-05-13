@@ -319,7 +319,6 @@ struct LowerGpuOpsToROCDLOpsPass final
     {
       RewritePatternSet patterns(ctx);
       populateGpuRewritePatterns(patterns);
-      arith::populateExpandBFloat16Patterns(patterns);
       (void)applyPatternsGreedily(m, std::move(patterns));
     }
 

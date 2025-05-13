@@ -13,10 +13,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/StaticAnalyzer/Core/PathSensitive/LoopWidening.h"
 #include "clang/AST/AST.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/LoopWidening.h"
 
 using namespace clang;
 using namespace ento;
@@ -24,31 +24,13 @@ using namespace clang::ast_matchers;
 
 const auto MatchRef = "matchref";
 
-/// Return the loops condition Stmt or NULL if LoopStmt is not a loop
-static const Expr *getLoopCondition(const Stmt *LoopStmt) {
-  switch (LoopStmt->getStmtClass()) {
-  default:
-    return nullptr;
-  case Stmt::ForStmtClass:
-    return cast<ForStmt>(LoopStmt)->getCond();
-  case Stmt::WhileStmtClass:
-    return cast<WhileStmt>(LoopStmt)->getCond();
-  case Stmt::DoStmtClass:
-    return cast<DoStmt>(LoopStmt)->getCond();
-  case Stmt::CXXForRangeStmtClass:
-    return cast<CXXForRangeStmt>(LoopStmt)->getCond();
-  }
-}
-
 namespace clang {
 namespace ento {
 
 ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
                                     const LocationContext *LCtx,
-                                    unsigned BlockCount, const Stmt *LoopStmt) {
-
-  assert((isa<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(LoopStmt)));
-
+                                    unsigned BlockCount,
+                                    ConstCFGElementRef Elem) {
   // Invalidate values in the current state.
   // TODO Make this more conservative by only invalidating values that might
   //      be modified by the body of the loop.
@@ -93,9 +75,8 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
                      RegionAndSymbolInvalidationTraits::TK_PreserveContents);
   }
 
-  return PrevState->invalidateRegions(Regions, getLoopCondition(LoopStmt),
-                                      BlockCount, LCtx, true, nullptr, nullptr,
-                                      &ITraits);
+  return PrevState->invalidateRegions(Regions, Elem, BlockCount, LCtx, true,
+                                      nullptr, nullptr, &ITraits);
 }
 
 } // end namespace ento

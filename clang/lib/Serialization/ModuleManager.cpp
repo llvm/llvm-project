@@ -124,9 +124,9 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Note: ExpectedSize and ExpectedModTime will be 0 for MK_ImplicitModule
   // when using an ASTFileSignature.
   if (lookupModuleFile(FileName, ExpectedSize, ExpectedModTime, Entry)) {
-    ErrorStr = IgnoreModTime
-                   ? "module file has a different size than expected"
-                   : "module file has a different size or mtime than expected";
+    ErrorStr = IgnoreModTime ? "module file has a different size than expected"
+                             : "module file has a different size or "
+                               "modification time than expected";
     return OutOfDate;
   }
 

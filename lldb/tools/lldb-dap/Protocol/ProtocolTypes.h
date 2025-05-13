@@ -55,6 +55,8 @@ struct ExceptionBreakpointsFilter {
   /// shown as the placeholder text for a text box and can be translated.
   std::optional<std::string> conditionDescription;
 };
+bool fromJSON(const llvm::json::Value &, ExceptionBreakpointsFilter &,
+              llvm::json::Path);
 llvm::json::Value toJSON(const ExceptionBreakpointsFilter &);
 
 enum ColumnType : unsigned {

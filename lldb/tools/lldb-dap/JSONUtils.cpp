@@ -99,19 +99,6 @@ std::optional<bool> GetBoolean(const llvm::json::Object *obj,
   return std::nullopt;
 }
 
-std::optional<int64_t> GetSigned(const llvm::json::Object &obj,
-                                 llvm::StringRef key) {
-  return obj.getInteger(key);
-}
-
-std::optional<int64_t> GetSigned(const llvm::json::Object *obj,
-                                 llvm::StringRef key) {
-  if (obj == nullptr)
-    return std::nullopt;
-
-  return GetSigned(*obj, key);
-}
-
 bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key) {
   return obj.find(key) != obj.end();
 }
@@ -263,7 +250,7 @@ void FillResponse(const llvm::json::Object &request,
   response.try_emplace("seq", (int64_t)0);
   EmplaceSafeString(response, "command",
                     GetString(request, "command").value_or(""));
-  const int64_t seq = GetSigned(request, "seq").value_or(0);
+  const uint64_t seq = GetInteger<uint64_t>(request, "seq").value_or(0);
   response.try_emplace("request_seq", seq);
   response.try_emplace("success", true);
 }

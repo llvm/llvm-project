@@ -14,6 +14,7 @@
 #ifndef LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 #define LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/raw_ostream.h"
 #include <variant>
@@ -121,6 +122,8 @@ struct DescriptorTableClause {
 // Models RootElement : RootConstants | DescriptorTable | DescriptorTableClause
 using RootElement = std::variant<RootFlags, RootConstants, DescriptorTable,
                                  DescriptorTableClause>;
+
+void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
 
 } // namespace rootsig
 } // namespace hlsl

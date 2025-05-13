@@ -1429,6 +1429,11 @@ Parser::ParseOpenACCBindClauseArgument() {
     return II;
   }
 
+  if (!tok::isStringLiteral(getCurToken().getKind())) {
+    Diag(getCurToken(), diag::err_acc_incorrect_bind_arg);
+    return std::monostate{};
+  }
+
   ExprResult Res =
       getActions().CorrectDelayedTyposInExpr(ParseStringLiteralExpression(
           /*AllowUserDefinedLiteral=*/false, /*Unevaluated=*/true));

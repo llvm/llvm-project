@@ -519,6 +519,18 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
 }
 
 BitVector
+AArch64RegisterInfo::getUserReservedRegs(const MachineFunction &MF) const {
+  BitVector Reserved(getNumRegs());
+  for (size_t i = 0; i < AArch64::GPR32commonRegClass.getNumRegs(); ++i) {
+    // ReserveXRegister is set for registers manually reserved
+    // through +reserve-x#i.
+    if (MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(i))
+      markSuperRegs(Reserved, AArch64::GPR32commonRegClass.getRegister(i));
+  }
+  return Reserved;
+}
+
+BitVector
 AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   for (size_t i = 0; i < AArch64::GPR32commonRegClass.getNumRegs(); ++i) {
@@ -549,6 +561,11 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 bool AArch64RegisterInfo::isReservedReg(const MachineFunction &MF,
                                         MCRegister Reg) const {
   return getReservedRegs(MF)[Reg];
+}
+
+bool AArch64RegisterInfo::isUserReservedReg(const MachineFunction &MF,
+                                            MCRegister Reg) const {
+  return getUserReservedRegs(MF)[Reg];
 }
 
 bool AArch64RegisterInfo::isStrictlyReservedReg(const MachineFunction &MF,

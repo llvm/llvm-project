@@ -886,6 +886,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case ObjCProperty:
     case MSProperty:
     case HLSLBuffer:
+    case HLSLRootSignature:
       return IDNS_Ordinary;
     case Label:
       return IDNS_Label;

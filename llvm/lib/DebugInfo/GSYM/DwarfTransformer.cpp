@@ -780,7 +780,7 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
           const auto &dii = DwarfInlineInfos.getFrame(Idx);
           gsymFilename = LR->getSourceFile(Idx);
           // Verify function name
-          if (dii.FunctionName.find(gii.Name.str()) != 0)
+          if (!StringRef(dii.FunctionName).starts_with(gii.Name))
             Out << "error: address " << HEX64(Addr) << " DWARF function \""
                 << dii.FunctionName.c_str()
                 << "\" doesn't match GSYM function \"" << gii.Name << "\"\n";

@@ -2340,7 +2340,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         if (!knownArg) {
           knownArg = arg;
         }
-        if (!dimArg && rank > 0 &&
+        if (rank > 0 &&
             (std::strcmp(name, "shape") == 0 ||
                 std::strcmp(name, "size") == 0 ||
                 std::strcmp(name, "ubound") == 0)) {
@@ -2351,16 +2351,18 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           // over this one, as this error is caught by the second entry
           // for UBOUND.)
           if (auto named{ExtractNamedEntity(*arg)}) {
-            if (semantics::IsAssumedSizeArray(named->GetLastSymbol())) {
+            if (semantics::IsAssumedSizeArray(ResolveAssociations(
+                    named->GetLastSymbol().GetUltimate()))) {
               if (strcmp(name, "shape") == 0) {
                 messages.Say(arg->sourceLocation(),
                     "The 'source=' argument to the intrinsic function 'shape' may not be assumed-size"_err_en_US);
-              } else {
+                return std::nullopt;
+              } else if (!dimArg) {
                 messages.Say(arg->sourceLocation(),
                     "A dim= argument is required for '%s' when the array is assumed-size"_err_en_US,
                     name);
+                return std::nullopt;
               }
-              return std::nullopt;
             }
           }
         }

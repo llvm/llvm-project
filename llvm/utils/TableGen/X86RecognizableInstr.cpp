@@ -458,12 +458,12 @@ void RecognizableInstr::handleOperand(
 
   StringRef typeName = (*Operands)[operandIndex].Rec->getName();
 
-  OperandEncoding encoding = encodingFromString(std::string(typeName), OpSize);
+  OperandEncoding encoding = encodingFromString(typeName.str(), OpSize);
   // Adjust the encoding type for an operand based on the instruction.
   adjustOperandEncoding(encoding);
   Spec->operands[operandIndex].encoding = encoding;
   Spec->operands[operandIndex].type =
-      typeFromString(std::string(typeName), HasREX_W, OpSize);
+      typeFromString(typeName.str(), HasREX_W, OpSize);
 
   ++operandIndex;
   ++physicalOperandIndex;
