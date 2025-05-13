@@ -67,10 +67,10 @@ PGO
 
 Using LLVM's PGO implementation for GPUs, profile data can augment the info
 reported by kernel-info.  In particular, kernel-info can estimate the number of
-floating point operations executed.
+floating point operations executed or bytes moved.
 
 For example, the following computes 2\ :sup:`4`\ , so we expect 4 fmul
-instructions to execute at run time:
+instructions to execute at run time, and we expect a load and store for ``x``:
 
 .. code-block:: shell
 
@@ -104,9 +104,13 @@ instructions to execute at run time:
   $ clang -O1 -g -fopenmp --offload-arch=native test.c -foffload-lto \
         -Rpass=kernel-info -fprofile-use=test.profdata | \
       grep "test.c:.*Floating\|double"
-  test.c:13:0: in artificial function '__omp_offloading_34_1bc8484_main_l13', FloatingPointOpProfileCount = 0
-  test.c:7:9: in function 'test', double 'fmul' ('%9') executed 4 times
-  test.c:4:0: in function 'test', FloatingPointOpProfileCount = 4
+  test.c:14:14: in artificial function '__omp_offloading_34_1c64d55_main_l13', double 'load' ('%11') moved 8 fp bytes
+  test.c:14:7: in artificial function '__omp_offloading_34_1c64d55_main_l13', double 'store' moved 8 fp bytes
+  test.c:13:0: in artificial function '__omp_offloading_34_1c64d55_main_l13', ProfileFloatingPointOpCount = 0
+  test.c:13:0: in artificial function '__omp_offloading_34_1c64d55_main_l13', ProfileFloatingPointBytesMoved = 16
+  test.c:7:11: in function 'test', double 'fmul' ('%9') executed 4 flops
+  test.c:4:0: in function 'test', ProfileFloatingPointOpCount = 4
+  test.c:4:0: in function 'test', ProfileFloatingPointBytesMoved = 0
 
 While ``-Xarch_device -fprofile-update=atomic`` is not required for the simple
 example above, it can be critical while profiling parallel code.
