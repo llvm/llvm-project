@@ -610,9 +610,6 @@ public:
     LLVM_DEBUG(dbgs() << "SDA:computeJoinPoints: "
                       << Context.print(&DivTermBlock) << "\n");
 
-    // Early stopping criterion
-    int FloorIdx = CyclePOT.size() - 1;
-    const BlockT *FloorLabel = nullptr;
     int DivTermIdx = CyclePOT.getIndex(&DivTermBlock);
 
     // Bootstrap with branch targets
@@ -626,14 +623,36 @@ public:
         LLVM_DEBUG(dbgs() << "\tImmediate divergent cycle exit: "
                           << Context.print(SuccBlock) << "\n");
       }
-      auto SuccIdx = CyclePOT.getIndex(SuccBlock);
       visitEdge(*SuccBlock, *SuccBlock);
-      FloorIdx = std::min<int>(FloorIdx, SuccIdx);
     }
 
+    // Return true if B is inside an irreducible cycle
+    auto IsInIrreducibleCycle = [this](const BlockT *B) {
+      for (const auto *Cycle = CI.getCycle(B); Cycle;
+           Cycle = Cycle->getParentCycle()) {
+        if (!Cycle->isReducible())
+          return true;
+      }
+      return false;
+    };
+
+    // Technically propagation can continue until it reaches the last node.
+    //
+    // For efficiency, propagation can just stop at the IPD (immediate
+    // post-dominator) of successors(DivTemBlock) for any reducible graph.
+    // If FreshLabels.count()=1, the block in FreshLabels should be the IPD.
+    //
+    // For irreducible cycle, propagation continues until it reaches out of
+    // any irreducible cycles first, then stop when FreshLabels.count()=1.
     while (true) {
       auto BlockIdx = FreshLabels.find_last();
-      if (BlockIdx == -1 || BlockIdx < FloorIdx)
+      if (BlockIdx == -1)
+        break;
+
+      const auto *Block = CyclePOT[BlockIdx];
+      // If no irreducible cycle, stop if freshLable.count() = 1 and Block
+      // is the IPD. If it is in any irreducible cycle, continue propagation.
+      if (FreshLabels.count() == 1 && !IsInIrreducibleCycle(Block))
         break;
 
       LLVM_DEBUG(dbgs() << "Current labels:\n"; printDefs(dbgs()));
@@ -644,15 +663,11 @@ public:
         continue;
       }
 
-      const auto *Block = CyclePOT[BlockIdx];
       LLVM_DEBUG(dbgs() << "visiting " << Context.print(Block) << " at index "
                         << BlockIdx << "\n");
 
       const auto *Label = BlockLabels[Block];
       assert(Label);
-
-      bool CausedJoin = false;
-      int LoweredFloorIdx = FloorIdx;
 
       // If the current block is the header of a reducible cycle that
       // contains the divergent branch, then the label should be
@@ -681,28 +696,11 @@ public:
       if (const auto *BlockCycle = getReducibleParent(Block)) {
         SmallVector<BlockT *, 4> BlockCycleExits;
         BlockCycle->getExitBlocks(BlockCycleExits);
-        for (auto *BlockCycleExit : BlockCycleExits) {
-          CausedJoin |= visitCycleExitEdge(*BlockCycleExit, *Label);
-          LoweredFloorIdx =
-              std::min<int>(LoweredFloorIdx, CyclePOT.getIndex(BlockCycleExit));
-        }
+        for (auto *BlockCycleExit : BlockCycleExits)
+          visitCycleExitEdge(*BlockCycleExit, *Label);
       } else {
-        for (const auto *SuccBlock : successors(Block)) {
-          CausedJoin |= visitEdge(*SuccBlock, *Label);
-          LoweredFloorIdx =
-              std::min<int>(LoweredFloorIdx, CyclePOT.getIndex(SuccBlock));
-        }
-      }
-
-      // Floor update
-      if (CausedJoin) {
-        // 1. Different labels pushed to successors
-        FloorIdx = LoweredFloorIdx;
-      } else if (FloorLabel != Label) {
-        // 2. No join caused BUT we pushed a label that is different than the
-        // last pushed label
-        FloorIdx = LoweredFloorIdx;
-        FloorLabel = Label;
+        for (const auto *SuccBlock : successors(Block))
+          visitEdge(*SuccBlock, *Label);
       }
     }
 
