@@ -26,11 +26,7 @@ template <class _InputIterator1, class _InputIterator2, class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp
 inner_product(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _Tp __init) {
   for (; __first1 != __last1; ++__first1, (void)++__first2)
-#if _LIBCPP_STD_VER >= 20
-    __init = std::move(__init) + *__first1 * *__first2;
-#else
     __init = __init + *__first1 * *__first2;
-#endif
   return __init;
 }
 
@@ -43,11 +39,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp inner_product(
     _BinaryOperation1 __binary_op1,
     _BinaryOperation2 __binary_op2) {
   for (; __first1 != __last1; ++__first1, (void)++__first2)
-#if _LIBCPP_STD_VER >= 20
-    __init = __binary_op1(std::move(__init), __binary_op2(*__first1, *__first2));
-#else
     __init = __binary_op1(__init, __binary_op2(*__first1, *__first2));
-#endif
   return __init;
 }
 

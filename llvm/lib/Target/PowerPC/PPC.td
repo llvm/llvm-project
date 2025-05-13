@@ -435,8 +435,7 @@ def ProcessorFeatures {
      FeatureP9Vector,
      FeaturePPCPreRASched,
      FeaturePPCPostRASched,
-     FeatureISA3_0,
-     FeaturePredictableSelectIsExpensive
+     FeatureISA3_0
     ];
 
   // Some features are unique to Power9 and there is no reason to assume

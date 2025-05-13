@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
+#include <clc/math/clc_native_log2.h>
 
-#define __CLC_NATIVE_INTRINSIC log2
-#define __CLC_BODY <native_unary_intrinsic.inc>
 #define __FLOAT_ONLY
+#define FUNCTION native_log2
+#define __CLC_BODY <clc/shared/unary_def.inc>
+
 #include <clc/math/gentype.inc>

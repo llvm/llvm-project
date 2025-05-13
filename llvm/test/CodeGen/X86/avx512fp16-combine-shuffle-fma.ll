@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx2 | FileCheck %s --check-prefix=AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=f16c,fma | FileCheck %s --check-prefix=F16C
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512vl | FileCheck %s --check-prefix=F16C
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512fp16 | FileCheck %s --check-prefix=FP16
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512fp16,avx512vl | FileCheck %s --check-prefix=FP16
 
 define <2 x half> @foo(<2 x half> %0) "unsafe-fp-math"="true" nounwind {
 ; AVX2-LABEL: foo:

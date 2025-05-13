@@ -68,3 +68,23 @@ int has_no_volatile_attribute();
 int has_fallthrough;
 #endif
 // CHECK: int has_fallthrough;
+
+#if __has_attribute(F\
+)
+int has_fallthrough_2;
+#endif
+// CHECK: int has_fallthrough_2;
+
+#define F_2 fall\
+through
+
+#if __has_attribute(F_2)
+int has_fallthrough_3;
+#endif
+// CHECK: int has_fallthrough_3;
+
+#if __has_attribute(F_2\
+)
+int has_fallthrough_4;
+#endif
+// CHECK: int has_fallthrough_4;

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++23 -verify=expected,nointerpreter %s
-// RUN: %clang_cc1 -std=c++23 -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++23 -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify=expected,interpreter %s -fexperimental-new-constant-interpreter
 
 using size_t = decltype(sizeof(0));
 
@@ -48,10 +48,11 @@ void splash(Swim& swam) {
 }
 
 extern Swim dc;
-extern Swim& trident;
+extern Swim& trident; // interpreter-note {{declared here}}
 
 constexpr auto& sandeno   = typeid(dc);         // ok: can only be typeid(Swim)
-constexpr auto& gallagher = typeid(trident);    // expected-error {{constexpr variable 'gallagher' must be initialized by a constant expression}}
+constexpr auto& gallagher = typeid(trident);    // expected-error {{constexpr variable 'gallagher' must be initialized by a constant expression}} \
+                                                // interpreter-note {{initializer of 'trident' is unknown}}
 
 namespace explicitThis {
 struct C {
@@ -157,18 +158,18 @@ int g() {
 
 namespace GH128409 {
   int &ff();
-  int &x = ff(); // nointerpreter-note {{declared here}}
+  int &x = ff(); // expected-note {{declared here}}
   constinit int &z = x; // expected-error {{variable does not have a constant initializer}} \
                         // expected-note {{required by 'constinit' specifier here}} \
-                        // nointerpreter-note {{initializer of 'x' is not a constant expression}}
+                        // expected-note {{initializer of 'x' is not a constant expression}}
 }
 
 namespace GH129845 {
   int &ff();
-  int &x = ff(); // nointerpreter-note {{declared here}}
+  int &x = ff(); // expected-note {{declared here}}
   struct A { int& x; };
   constexpr A g = {x}; // expected-error {{constexpr variable 'g' must be initialized by a constant expression}} \
-                       // nointerpreter-note {{initializer of 'x' is not a constant expression}}
+                       // expected-note {{initializer of 'x' is not a constant expression}}
   const A* gg = &g;
 }
 

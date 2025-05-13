@@ -220,40 +220,6 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
   setMinimumJumpTableEntries(UINT_MAX);
 }
 
-const char *AVRTargetLowering::getTargetNodeName(unsigned Opcode) const {
-#define NODE(name)                                                             \
-  case AVRISD::name:                                                           \
-    return #name
-
-  switch (Opcode) {
-  default:
-    return nullptr;
-    NODE(RET_GLUE);
-    NODE(RETI_GLUE);
-    NODE(CALL);
-    NODE(WRAPPER);
-    NODE(LSL);
-    NODE(LSLW);
-    NODE(LSR);
-    NODE(LSRW);
-    NODE(ROL);
-    NODE(ROR);
-    NODE(ASR);
-    NODE(ASRW);
-    NODE(LSLLOOP);
-    NODE(LSRLOOP);
-    NODE(ROLLOOP);
-    NODE(RORLOOP);
-    NODE(ASRLOOP);
-    NODE(BRCOND);
-    NODE(CMP);
-    NODE(CMPC);
-    NODE(TST);
-    NODE(SELECT_CC);
-#undef NODE
-  }
-}
-
 EVT AVRTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
                                           EVT VT) const {
   assert(!VT.isVector() && "No AVR SetCC type for vectors!");

@@ -5,8 +5,7 @@ done!
 
 The list is sorted by surname and formatted to allow easy grepping and
 beautification by scripts.  The fields are: name (N), email (E), web-address
-(W), PGP key ID and fingerprint (P), description (D), snail-mail address
-(S), and (I) IRC handle.
+(W), PGP key ID and fingerprint (P), and description (D).
 
 N: Vikram Adve
 E: vadve@cs.uiuc.edu
@@ -24,12 +23,10 @@ D: MingW Win32 API portability layer
 N: Aaron Ballman
 E: aaron@aaronballman.com
 D: Clang frontend, frontend attributes, Windows support, general bug fixing
-I: AaronBallman
 
 N: Alexey Bataev
 E: a.bataev@outlook.com
 D: Clang frontend, OpenMP in clang, SLP vectorizer, Loop vectorizer, InstCombine
-I: ABataev
 
 N: Nate Begeman
 E: natebegeman@mac.com
@@ -180,7 +177,6 @@ D: Loop Vectorizer improvements
 D: Regression and Test Suite improvements
 D: Linux compatibility (GNU, musl, etc)
 D: Initial Linux kernel / Android support effort
-I: rengolin
 
 N: David Goodwin
 E: david@goodwinz.net
@@ -197,7 +193,6 @@ D: Improvements for space efficiency
 
 N: James Grosbach
 E: grosbach@apple.com
-I: grosbach
 D: SjLj exception handling support
 D: General fixes and improvements for the ARM back-end
 D: MCJIT
@@ -250,7 +245,6 @@ D: Author of LLVM Ada bindings
 N: Erich Keane
 E: erich.keane@intel.com
 D: A variety of Clang contributions including function multiversioning, regcall/vectorcall.
-I: ErichKeane
 
 N: Eric Kidd
 W: http://randomhacks.net/
@@ -326,7 +320,6 @@ D: Backend for Qualcomm's Hexagon VLIW processor.
 
 N: Bruno Cardoso Lopes
 E: bruno.cardoso@gmail.com
-I: bruno
 W: http://brunocardoso.cc
 D: Mips backend
 D: Random ARM integrated assembler and assembly parser improvements
@@ -367,7 +360,6 @@ D: Support for implicit TLS model used with MS VC runtime
 D: Dumping of Win64 EH structures
 
 N: Takumi Nakamura
-I: chapuni
 E: geek4civic@gmail.com
 E: chapuni@hf.rim.or.jp
 D: Maintaining the Git monorepo
@@ -442,12 +434,10 @@ D: Cmake dependency chain and various bug fixes
 
 N: Alex Rosenberg
 E: alexr@leftfield.org
-I: arosenberg
 D: ARM calling conventions rewrite, hard float support
 
 N: Chad Rosier
 E: mcrosier@codeaurora.org
-I: mcrosier
 D: AArch64 fast instruction selection pass
 D: Fixes and improvements to the ARM fast-isel pass
 D: Fixes and improvements to the AArch64 backend
@@ -462,7 +452,6 @@ D: MSIL backend
 
 N: Duncan Sands
 E: baldrick@free.fr
-I: baldrick
 D: Ada support in llvm-gcc
 D: Dragonegg plugin
 D: Exception handling improvements
@@ -533,7 +522,6 @@ E: phoebe.wang@intel.com
 D: X86 bug fixes and new instruction support.
 
 N: Bill Wendling
-I: wendling
 E: isanbard@gmail.com
 D: Release manager, IR Linker, LTO.
 D: Bunches of stuff.

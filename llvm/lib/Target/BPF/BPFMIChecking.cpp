@@ -32,9 +32,7 @@ struct BPFMIPreEmitChecking : public MachineFunctionPass {
   MachineFunction *MF;
   const TargetRegisterInfo *TRI;
 
-  BPFMIPreEmitChecking() : MachineFunctionPass(ID) {
-    initializeBPFMIPreEmitCheckingPass(*PassRegistry::getPassRegistry());
-  }
+  BPFMIPreEmitChecking() : MachineFunctionPass(ID) {}
 
 private:
   // Initialize class variables.
@@ -161,7 +159,6 @@ void BPFMIPreEmitChecking::processAtomicInsts() {
 
       LLVM_DEBUG(MI.dump());
       if (hasLiveDefs(MI, TRI)) {
-        DebugLoc Empty;
         const DebugLoc &DL = MI.getDebugLoc();
         const Function &F = MF->getFunction();
         F.getContext().diagnose(DiagnosticInfoUnsupported{

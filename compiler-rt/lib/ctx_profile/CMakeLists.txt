@@ -2,11 +2,13 @@ add_compiler_rt_component(ctx_profile)
 
 set(CTX_PROFILE_SOURCES
   CtxInstrProfiling.cpp
+  RootAutoDetector.cpp
   )
 
 set(CTX_PROFILE_HEADERS
   CtxInstrContextNode.h
   CtxInstrProfiling.h
+  RootAutoDetector.h
   )
 
 include_directories(..)
@@ -25,7 +27,7 @@ endif()
 add_compiler_rt_runtime(clang_rt.ctx_profile
   STATIC
   ARCHS ${CTX_PROFILE_SUPPORTED_ARCH}
-  OBJECT_LIBS RTSanitizerCommon RTSanitizerCommonLibc
+  OBJECT_LIBS RTSanitizerCommon RTSanitizerCommonLibc RTSanitizerCommonSymbolizer
   CFLAGS ${EXTRA_FLAGS}
   SOURCES ${CTX_PROFILE_SOURCES}
   ADDITIONAL_HEADERS ${CTX_PROFILE_HEADERS}

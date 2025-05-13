@@ -199,6 +199,7 @@ public:
     case DISubrangeKind:
     case DIEnumeratorKind:
     case DIBasicTypeKind:
+    case DIFixedPointTypeKind:
     case DIStringTypeKind:
     case DISubrangeTypeKind:
     case DIDerivedTypeKind:
@@ -547,6 +548,7 @@ public:
     default:
       return false;
     case DIBasicTypeKind:
+    case DIFixedPointTypeKind:
     case DIStringTypeKind:
     case DISubrangeTypeKind:
     case DIDerivedTypeKind:
@@ -806,6 +808,7 @@ public:
     default:
       return false;
     case DIBasicTypeKind:
+    case DIFixedPointTypeKind:
     case DIStringTypeKind:
     case DISubrangeTypeKind:
     case DIDerivedTypeKind:
@@ -826,11 +829,19 @@ class DIBasicType : public DIType {
 
   unsigned Encoding;
 
+protected:
   DIBasicType(LLVMContext &C, StorageType Storage, unsigned Tag,
               uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
               uint32_t NumExtraInhabitants, DIFlags Flags,
               ArrayRef<Metadata *> Ops)
       : DIType(C, DIBasicTypeKind, Storage, Tag, 0, SizeInBits, AlignInBits, 0,
+               NumExtraInhabitants, Flags, Ops),
+        Encoding(Encoding) {}
+  DIBasicType(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Tag,
+              uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+              uint32_t NumExtraInhabitants, DIFlags Flags,
+              ArrayRef<Metadata *> Ops)
+      : DIType(C, ID, Storage, Tag, 0, SizeInBits, AlignInBits, 0,
                NumExtraInhabitants, Flags, Ops),
         Encoding(Encoding) {}
   ~DIBasicType() = default;
@@ -897,7 +908,132 @@ public:
   std::optional<Signedness> getSignedness() const;
 
   static bool classof(const Metadata *MD) {
-    return MD->getMetadataID() == DIBasicTypeKind;
+    return MD->getMetadataID() == DIBasicTypeKind ||
+           MD->getMetadataID() == DIFixedPointTypeKind;
+  }
+};
+
+/// Fixed-point type.
+class DIFixedPointType : public DIBasicType {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  // Actually FixedPointKind.
+  unsigned Kind;
+  // Used for binary and decimal.
+  int Factor;
+  // Used for rational.
+  APInt Numerator;
+  APInt Denominator;
+
+  DIFixedPointType(LLVMContext &C, StorageType Storage, unsigned Tag,
+                   uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+                   DIFlags Flags, unsigned Kind, int Factor,
+                   ArrayRef<Metadata *> Ops)
+      : DIBasicType(C, DIFixedPointTypeKind, Storage, Tag, SizeInBits,
+                    AlignInBits, Encoding, 0, Flags, Ops),
+        Kind(Kind), Factor(Factor) {
+    assert(Kind == FixedPointBinary || Kind == FixedPointDecimal);
+  }
+  DIFixedPointType(LLVMContext &C, StorageType Storage, unsigned Tag,
+                   uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+                   DIFlags Flags, unsigned Kind, APInt Numerator,
+                   APInt Denominator, ArrayRef<Metadata *> Ops)
+      : DIBasicType(C, DIFixedPointTypeKind, Storage, Tag, SizeInBits,
+                    AlignInBits, Encoding, 0, Flags, Ops),
+        Kind(Kind), Factor(0), Numerator(Numerator), Denominator(Denominator) {
+    assert(Kind == FixedPointRational);
+  }
+  DIFixedPointType(LLVMContext &C, StorageType Storage, unsigned Tag,
+                   uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+                   DIFlags Flags, unsigned Kind, int Factor, APInt Numerator,
+                   APInt Denominator, ArrayRef<Metadata *> Ops)
+      : DIBasicType(C, DIFixedPointTypeKind, Storage, Tag, SizeInBits,
+                    AlignInBits, Encoding, 0, Flags, Ops),
+        Kind(Kind), Factor(Factor), Numerator(Numerator),
+        Denominator(Denominator) {}
+  ~DIFixedPointType() = default;
+
+  static DIFixedPointType *
+  getImpl(LLVMContext &Context, unsigned Tag, StringRef Name,
+          uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+          DIFlags Flags, unsigned Kind, int Factor, APInt Numerator,
+          APInt Denominator, StorageType Storage, bool ShouldCreate = true) {
+    return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
+                   SizeInBits, AlignInBits, Encoding, Flags, Kind, Factor,
+                   Numerator, Denominator, Storage, ShouldCreate);
+  }
+  static DIFixedPointType *
+  getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+          uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+          DIFlags Flags, unsigned Kind, int Factor, APInt Numerator,
+          APInt Denominator, StorageType Storage, bool ShouldCreate = true);
+
+  TempDIFixedPointType cloneImpl() const {
+    return getTemporary(getContext(), getTag(), getName(), getSizeInBits(),
+                        getAlignInBits(), getEncoding(), getFlags(), Kind,
+                        Factor, Numerator, Denominator);
+  }
+
+public:
+  enum FixedPointKind : unsigned {
+    /// Scale factor 2^Factor.
+    FixedPointBinary,
+    /// Scale factor 10^Factor.
+    FixedPointDecimal,
+    /// Arbitrary rational scale factor.
+    FixedPointRational,
+    LastFixedPointKind = FixedPointRational,
+  };
+
+  static std::optional<FixedPointKind> getFixedPointKind(StringRef Str);
+  static const char *fixedPointKindString(FixedPointKind);
+
+  DEFINE_MDNODE_GET(DIFixedPointType,
+                    (unsigned Tag, MDString *Name, uint64_t SizeInBits,
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags,
+                     unsigned Kind, int Factor, APInt Numerator,
+                     APInt Denominator),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags, Kind,
+                     Factor, Numerator, Denominator))
+  DEFINE_MDNODE_GET(DIFixedPointType,
+                    (unsigned Tag, StringRef Name, uint64_t SizeInBits,
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags,
+                     unsigned Kind, int Factor, APInt Numerator,
+                     APInt Denominator),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags, Kind,
+                     Factor, Numerator, Denominator))
+
+  TempDIFixedPointType clone() const { return cloneImpl(); }
+
+  bool isBinary() const { return Kind == FixedPointBinary; }
+  bool isDecimal() const { return Kind == FixedPointDecimal; }
+  bool isRational() const { return Kind == FixedPointRational; }
+
+  bool isSigned() const;
+
+  FixedPointKind getKind() const { return static_cast<FixedPointKind>(Kind); }
+
+  int getFactorRaw() const { return Factor; }
+  int getFactor() const {
+    assert(Kind == FixedPointBinary || Kind == FixedPointDecimal);
+    return Factor;
+  }
+
+  const APInt &getNumeratorRaw() const { return Numerator; }
+  const APInt &getNumerator() const {
+    assert(Kind == FixedPointRational);
+    return Numerator;
+  }
+
+  const APInt &getDenominatorRaw() const { return Denominator; }
+  const APInt &getDenominator() const {
+    assert(Kind == FixedPointRational);
+    return Denominator;
+  }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIFixedPointTypeKind;
   }
 };
 
@@ -2099,44 +2235,77 @@ public:
 class DILocation : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+  uint64_t AtomGroup : 61;
+  uint64_t AtomRank : 3;
+#endif
 
   DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
-             unsigned Column, ArrayRef<Metadata *> MDs, bool ImplicitCode);
+             unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
+             ArrayRef<Metadata *> MDs, bool ImplicitCode);
   ~DILocation() { dropAllReferences(); }
 
   static DILocation *getImpl(LLVMContext &Context, unsigned Line,
                              unsigned Column, Metadata *Scope,
                              Metadata *InlinedAt, bool ImplicitCode,
+                             uint64_t AtomGroup, uint8_t AtomRank,
                              StorageType Storage, bool ShouldCreate = true);
   static DILocation *getImpl(LLVMContext &Context, unsigned Line,
                              unsigned Column, DILocalScope *Scope,
                              DILocation *InlinedAt, bool ImplicitCode,
+                             uint64_t AtomGroup, uint8_t AtomRank,
                              StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Line, Column, static_cast<Metadata *>(Scope),
-                   static_cast<Metadata *>(InlinedAt), ImplicitCode, Storage,
-                   ShouldCreate);
+                   static_cast<Metadata *>(InlinedAt), ImplicitCode, AtomGroup,
+                   AtomRank, Storage, ShouldCreate);
   }
 
   TempDILocation cloneImpl() const {
     // Get the raw scope/inlinedAt since it is possible to invoke this on
     // a DILocation containing temporary metadata.
     return getTemporary(getContext(), getLine(), getColumn(), getRawScope(),
-                        getRawInlinedAt(), isImplicitCode());
+                        getRawInlinedAt(), isImplicitCode(), getAtomGroup(),
+                        getAtomRank());
   }
 
 public:
+  uint64_t getAtomGroup() const {
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+    return AtomGroup;
+#else
+    return 0;
+#endif
+  }
+  uint8_t getAtomRank() const {
+#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+    return AtomRank;
+#else
+    return 0;
+#endif
+  }
+
+  const DILocation *getWithoutAtom() const {
+    if (!getAtomGroup() && !getAtomRank())
+      return this;
+    return get(getContext(), getLine(), getColumn(), getScope(), getInlinedAt(),
+               isImplicitCode());
+  }
+
   // Disallow replacing operands.
   void replaceOperandWith(unsigned I, Metadata *New) = delete;
 
   DEFINE_MDNODE_GET(DILocation,
                     (unsigned Line, unsigned Column, Metadata *Scope,
-                     Metadata *InlinedAt = nullptr, bool ImplicitCode = false),
-                    (Line, Column, Scope, InlinedAt, ImplicitCode))
+                     Metadata *InlinedAt = nullptr, bool ImplicitCode = false,
+                     uint64_t AtomGroup = 0, uint8_t AtomRank = 0),
+                    (Line, Column, Scope, InlinedAt, ImplicitCode, AtomGroup,
+                     AtomRank))
   DEFINE_MDNODE_GET(DILocation,
                     (unsigned Line, unsigned Column, DILocalScope *Scope,
-                     DILocation *InlinedAt = nullptr,
-                     bool ImplicitCode = false),
-                    (Line, Column, Scope, InlinedAt, ImplicitCode))
+                     DILocation *InlinedAt = nullptr, bool ImplicitCode = false,
+                     uint64_t AtomGroup = 0, uint8_t AtomRank = 0),
+                    (Line, Column, Scope, InlinedAt, ImplicitCode, AtomGroup,
+                     AtomRank))
 
   /// Return a (temporary) clone of this.
   TempDILocation clone() const { return cloneImpl(); }
@@ -2511,7 +2680,8 @@ DILocation::cloneWithDiscriminator(unsigned Discriminator) const {
   DILexicalBlockFile *NewScope =
       DILexicalBlockFile::get(getContext(), Scope, getFile(), Discriminator);
   return DILocation::get(getContext(), getLine(), getColumn(), NewScope,
-                         getInlinedAt());
+                         getInlinedAt(), isImplicitCode(), getAtomGroup(),
+                         getAtomRank());
 }
 
 unsigned DILocation::getBaseDiscriminator() const {
