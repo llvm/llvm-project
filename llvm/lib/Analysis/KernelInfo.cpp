@@ -260,7 +260,7 @@ void KernelInfo::updateForBB(const BasicBlock &BB, BlockFrequencyInfo &BFI,
       Type *Ty = I.getAccessType();
       if (!Ty || !Ty->isFPOrFPVectorTy())
         return;
-      TypeSize::ScalarTy Size = DL.getTypeAllocSize(Ty).getFixedValue();
+      TypeSize::ScalarTy Size = DL.getTypeStoreSize(Ty).getFixedValue();
       ProfileFloatingPointBytesMoved += BlockProfileCount.value_or(0) * Size;
       remarkFloatingPointOp(ORE, F, I, Ty, BlockProfileCount, Size);
     };
