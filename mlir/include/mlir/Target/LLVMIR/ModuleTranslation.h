@@ -145,18 +145,15 @@ public:
            "attempting to map a blockaddress that is already mapped");
   }
 
-  /// Maps a blockaddress operation to its corresponding placeholder LLVM
-  /// value.
-  void mapBlockTag(BlockAddressAttr attr, BlockTagOp blockTag) {
-    // Attempts to map already mapped block labels which is fine if the given
-    // labels are verified to be unique.
-    blockTagMapping[attr] = blockTag;
+  /// Maps a BlockAddressAttr to its corresponding LLVM basic block.
+  void mapBlockAddress(BlockAddressAttr attr, llvm::BasicBlock *block) {
+    assert(!blockAddressToLLVMMapping.count(blockAddressToLLVMMapping));
+    blockAddressToLLVMMapping[attr] = block;
   }
 
-  /// Finds an MLIR block that corresponds to the given MLIR call
-  /// operation.
-  BlockTagOp lookupBlockTag(BlockAddressAttr attr) const {
-    return blockTagMapping.lookup(attr);
+  /// Finds the LLVM basic block that corresponds to the given BlockAddressAttr.
+  llvm::BasicBlock *lookupBlockAddress(BlockAddressAttr attr) const {
+    return blockAddressToLLVMMapping.lookup(attr);
   }
 
   /// Removes the mapping for blocks contained in the region and values defined
@@ -463,10 +460,9 @@ private:
   /// mapping is used to replace the placeholders with the LLVM block addresses.
   DenseMap<BlockAddressOp, llvm::Value *> unresolvedBlockAddressMapping;
 
-  /// Mapping from a BlockAddressAttr attribute to a matching BlockTagOp. This
-  /// is used to cache BlockTagOp locations instead of walking a LLVMFuncOp in
-  /// search for those.
-  DenseMap<BlockAddressAttr, BlockTagOp> blockTagMapping;
+  /// Mapping from a BlockAddressAttr attribute to it's matching LLVM basic
+  /// block.
+  DenseMap<BlockAddressAttr, llvm::BasicBlock *> blockAddressToLLVMMapping;
 
   /// Stack of user-specified state elements, useful when translating operations
   /// with regions.

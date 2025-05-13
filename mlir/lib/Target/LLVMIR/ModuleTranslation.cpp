@@ -1843,17 +1843,13 @@ LogicalResult ModuleTranslation::convertComdats() {
 LogicalResult ModuleTranslation::convertUnresolvedBlockAddress() {
   for (auto &[blockAddressOp, llvmCst] : unresolvedBlockAddressMapping) {
     BlockAddressAttr blockAddressAttr = blockAddressOp.getBlockAddr();
-    BlockTagOp blockTagOp = lookupBlockTag(blockAddressAttr);
-    assert(blockTagOp && "expected all block tags to be already seen");
-
-    llvm::BasicBlock *llvmBlock = lookupBlock(blockTagOp->getBlock());
+    llvm::BasicBlock *llvmBlock = lookupBlockAddress(blockAddressAttr);
     assert(llvmBlock && "expected LLVM blocks to be already translated");
 
     // Update mapping with new block address constant.
     auto *llvmBlockAddr = llvm::BlockAddress::get(
         lookupFunction(blockAddressAttr.getFunction().getValue()), llvmBlock);
     llvmCst->replaceAllUsesWith(llvmBlockAddr);
-    mapValue(blockAddressOp.getResult(), llvmBlockAddr);
     assert(llvmCst->use_empty() && "expected all uses to be replaced");
     cast<llvm::GlobalVariable>(llvmCst)->eraseFromParent();
   }
