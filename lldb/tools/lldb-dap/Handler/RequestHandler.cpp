@@ -18,7 +18,6 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBEnvironment.h"
 #include "llvm/Support/Error.h"
-#include <mutex>
 
 #if !defined(_WIN32)
 #include <unistd.h>
@@ -137,9 +136,6 @@ void BaseRequestHandler::Run(const Request &request) {
     dap.Send(cancelled);
     return;
   }
-
-  lldb::SBMutex lock = dap.GetAPIMutex();
-  std::lock_guard<lldb::SBMutex> guard(lock);
 
   // FIXME: After all the requests have migrated from LegacyRequestHandler >
   // RequestHandler<> we should be able to move this into

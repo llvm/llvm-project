@@ -146,7 +146,9 @@ class DAPTestCaseBase(TestBase):
                     found = True
                     break
             self.assertTrue(
-                found, "verify '%s' found in console output for '%s'" % (cmd, flavor)
+                found,
+                "verify '%s' found in console output for '%s' in %s"
+                % (cmd, flavor, output),
             )
 
     def get_dict_value(self, d, key_path):

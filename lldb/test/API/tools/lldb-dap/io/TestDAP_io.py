@@ -22,12 +22,8 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
                 process.terminate()
                 process.wait()
             stdout_data = process.stdout.read().decode()
-            stderr_data = process.stderr.read().decode()
             print("========= STDOUT =========", file=sys.stderr)
             print(stdout_data, file=sys.stderr)
-            print("========= END =========", file=sys.stderr)
-            print("========= STDERR =========", file=sys.stderr)
-            print(stderr_data, file=sys.stderr)
             print("========= END =========", file=sys.stderr)
             print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
             with open(log_file_path, "r") as file:
@@ -52,13 +48,13 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         lldb-dap handles invalid message headers.
         """
         process = self.launch()
-        process.stdin.write(b"not the corret message header")
+        process.stdin.write(b"not the correct message header")
         process.stdin.close()
         self.assertEqual(process.wait(timeout=5.0), 1)
 
     def test_partial_header(self):
         """
-        lldb-dap handles parital message headers.
+        lldb-dap handles partial message headers.
         """
         process = self.launch()
         process.stdin.write(b"Content-Length: ")

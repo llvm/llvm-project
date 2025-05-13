@@ -305,7 +305,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
         dap_sessions[io.get()] = &dap;
       }
 
-      if (auto Err = dap.Loop()) {
+      if (auto Err = dap.Run()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                     "DAP session (" + client_name +
                                         ") error: ");
@@ -342,8 +342,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                      << " disconnected failed: "
                      << llvm::toString(std::move(error)) << "\n";
       }
-      // Close the socket to ensure the DAP::Loop read finishes.
-      sock->Close();
+      dap->RequestTermination();
     }
   }
 
@@ -542,7 +541,7 @@ int main(int argc, char *argv[]) {
   lldb::IOObjectSP output = std::make_shared<NativeFile>(
       stdout_fd, File::eOpenOptionWriteOnly, NativeFile::Unowned);
 
-  constexpr llvm::StringLiteral client_name = "stdin/stdout";
+  constexpr llvm::StringLiteral client_name = "stdio";
   Transport transport(client_name, log.get(), input, output);
   DAP dap(log.get(), default_repl_mode, pre_init_commands, transport);
 
@@ -557,7 +556,7 @@ int main(int argc, char *argv[]) {
   if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
     redirection_test();
 
-  if (auto Err = dap.Loop()) {
+  if (auto Err = dap.Run()) {
     DAP_LOG(log.get(), "({0}) DAP session error: {1}", client_name,
             llvm::toStringWithoutConsuming(Err));
     llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
