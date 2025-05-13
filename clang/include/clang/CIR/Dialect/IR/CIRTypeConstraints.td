@@ -174,4 +174,23 @@ def CIR_PtrToVoidPtrType
         "$_builder.getType<" # cppType # ">("
         "cir::VoidType::get($_builder.getContext())))">;
 
+//===----------------------------------------------------------------------===//
+// Vector Type predicates
+//===----------------------------------------------------------------------===//
+
+// Vector of integral type
+def IntegerVector : Type<
+    And<[
+      CPred<"::mlir::isa<::cir::VectorType>($_self)">,
+      CPred<"::mlir::isa<::cir::IntType>("
+            "::mlir::cast<::cir::VectorType>($_self).getElementType())">,
+      CPred<"::mlir::cast<::cir::IntType>("
+            "::mlir::cast<::cir::VectorType>($_self).getElementType())"
+            ".isFundamental()">
+    ]>, "!cir.vector of !cir.int"> {
+}
+
+// Any Integer or Vector of Integer Constraints
+def CIR_AnyIntOrVecOfInt: AnyTypeOf<[CIR_AnyIntType, IntegerVector]>;
+
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPECONSTRAINTS_TD
