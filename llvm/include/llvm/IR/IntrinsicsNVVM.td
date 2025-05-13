@@ -856,10 +856,10 @@ let TargetPrefix = "nvvm" in {
           def int_nvvm_f # operation # ftz # nan # variant # _bf16x2 : NVVMBuiltin,
             DefaultAttrsIntrinsic<[llvm_v2bf16_ty], [llvm_v2bf16_ty, llvm_v2bf16_ty],
               [IntrNoMem, IntrSpeculatable, Commutative]>;
-        }
-      }
-    }
-  }
+        } // ftz
+      } // nan
+    } // variant
+  } // operation
 
 //
 // Multiplication
@@ -1056,8 +1056,8 @@ let TargetPrefix = "nvvm" in {
         DefaultAttrsIntrinsic<[llvm_v2bf16_ty],
           [llvm_v2bf16_ty, llvm_v2bf16_ty, llvm_v2bf16_ty],
           [IntrNoMem, IntrSpeculatable]>;
-    }
-  }
+    } // ftz
+  } // variant
 
   foreach rnd = ["rn", "rz", "rm", "rp"] in {
     foreach ftz = ["", "_ftz"] in
@@ -1234,8 +1234,8 @@ let TargetPrefix = "nvvm" in {
 
       def int_nvvm_ # sign # ll2d_ # rnd : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_i64_ty], [IntrNoMem, IntrSpeculatable]>;
-    }
-  }
+    } // sign
+  } // rnd
 
   foreach ftz = ["", "_ftz"] in {
     def int_nvvm_f2h_rn # ftz : NVVMBuiltin,
@@ -1321,8 +1321,7 @@ let TargetPrefix = "nvvm" in {
           [IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
   class SCOPED_ATOMIC3_impl<LLVMType elty>
         : Intrinsic<[elty],
-          [llvm_anyptr_ty, LLVMMatchType<0>,
-           LLVMMatchType<0>],
+          [llvm_anyptr_ty, LLVMMatchType<0>, LLVMMatchType<0>],
           [IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
 
   multiclass PTXAtomicWithScope2<LLVMType elty> {
@@ -1334,19 +1333,19 @@ let TargetPrefix = "nvvm" in {
     def _sys : SCOPED_ATOMIC3_impl<elty>;
   }
   multiclass PTXAtomicWithScope2_fi {
-    defm _f: PTXAtomicWithScope2<llvm_anyfloat_ty>;
-    defm _i: PTXAtomicWithScope2<llvm_anyint_ty>;
+    defm _f : PTXAtomicWithScope2<llvm_anyfloat_ty>;
+    defm _i : PTXAtomicWithScope2<llvm_anyint_ty>;
   }
-  defm int_nvvm_atomic_add_gen   : PTXAtomicWithScope2_fi;
-  defm int_nvvm_atomic_inc_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_dec_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_exch_gen_i: PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_xor_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_max_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_min_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_or_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_and_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_cas_gen_i : PTXAtomicWithScope3<llvm_anyint_ty>;
+  defm int_nvvm_atomic_add_gen    : PTXAtomicWithScope2_fi;
+  defm int_nvvm_atomic_inc_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_dec_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_exch_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_xor_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_max_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_min_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_or_gen_i   : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_and_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
+  defm int_nvvm_atomic_cas_gen_i  : PTXAtomicWithScope3<llvm_anyint_ty>;
 
 // Bar.Sync
 
@@ -1396,44 +1395,39 @@ let TargetPrefix = "nvvm" in {
       Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
 
   // Membar
-  def int_nvvm_membar_cta : NVVMBuiltin,
-      Intrinsic<[], [], [IntrNoCallback]>;
-  def int_nvvm_membar_gl : NVVMBuiltin,
-      Intrinsic<[], [], [IntrNoCallback]>;
-  def int_nvvm_membar_sys : NVVMBuiltin,
-      Intrinsic<[], [], [IntrNoCallback]>;
-  def int_nvvm_fence_sc_cluster:
-      Intrinsic<[], [], [IntrNoCallback]>;
+  def int_nvvm_membar_cta : NVVMBuiltin, Intrinsic<[], [], [IntrNoCallback]>;
+  def int_nvvm_membar_gl : NVVMBuiltin, Intrinsic<[], [], [IntrNoCallback]>;
+  def int_nvvm_membar_sys : NVVMBuiltin, Intrinsic<[], [], [IntrNoCallback]>;
+  def int_nvvm_fence_sc_cluster : Intrinsic<[], [], [IntrNoCallback]>;
 
 // Proxy fence (uni-directional)
 foreach scope = ["cta", "cluster", "gpu", "sys"] in {
 
-  def int_nvvm_fence_proxy_tensormap_generic_release_ # scope:
+  def int_nvvm_fence_proxy_tensormap_generic_release_ # scope :
         Intrinsic<[], [], [IntrNoCallback],
         "llvm.nvvm.fence.proxy.tensormap_generic.release." # scope>;
 
-  def int_nvvm_fence_proxy_tensormap_generic_acquire_ # scope:
+  def int_nvvm_fence_proxy_tensormap_generic_acquire_ # scope :
         Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
                   [IntrNoCallback, IntrArgMemOnly, ImmArg<ArgIndex<1>>],
                   "llvm.nvvm.fence.proxy.tensormap_generic.acquire." # scope>;
-
 }
 
 // Async Copy
 def int_nvvm_cp_async_mbarrier_arrive : NVVMBuiltin,
-    Intrinsic<[],[llvm_ptr_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[], [llvm_ptr_ty], [IntrConvergent, IntrNoCallback]>;
 def int_nvvm_cp_async_mbarrier_arrive_shared : NVVMBuiltin,
-    Intrinsic<[],[llvm_shared_ptr_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[], [llvm_shared_ptr_ty], [IntrConvergent, IntrNoCallback]>;
 def int_nvvm_cp_async_mbarrier_arrive_noinc : NVVMBuiltin,
-    Intrinsic<[],[llvm_ptr_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[], [llvm_ptr_ty], [IntrConvergent, IntrNoCallback]>;
 def int_nvvm_cp_async_mbarrier_arrive_noinc_shared : NVVMBuiltin,
-    Intrinsic<[],[llvm_shared_ptr_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[], [llvm_shared_ptr_ty], [IntrConvergent, IntrNoCallback]>;
 
 multiclass CP_ASYNC_SHARED_GLOBAL {
-  def NAME: Intrinsic<[],[llvm_shared_ptr_ty, llvm_global_ptr_ty],
+  def NAME : Intrinsic<[], [llvm_shared_ptr_ty, llvm_global_ptr_ty],
         [IntrArgMemOnly, IntrNoCallback, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
         WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
-  def _s: Intrinsic<[],[llvm_shared_ptr_ty, llvm_global_ptr_ty, llvm_i32_ty],
+  def _s : Intrinsic<[], [llvm_shared_ptr_ty, llvm_global_ptr_ty, llvm_i32_ty],
         [IntrArgMemOnly, IntrNoCallback, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
         WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
 }
@@ -1443,67 +1437,65 @@ defm int_nvvm_cp_async_ca_shared_global_8 : CP_ASYNC_SHARED_GLOBAL;
 defm int_nvvm_cp_async_ca_shared_global_16 : CP_ASYNC_SHARED_GLOBAL;
 defm int_nvvm_cp_async_cg_shared_global_16 : CP_ASYNC_SHARED_GLOBAL;
 
-def int_nvvm_cp_async_commit_group : NVVMBuiltin,
-    Intrinsic<[],[],[]>;
+def int_nvvm_cp_async_commit_group : NVVMBuiltin, Intrinsic<[], [], []>;
 
 def int_nvvm_cp_async_wait_group : NVVMBuiltin,
-    Intrinsic<[],[llvm_i32_ty],[ImmArg<ArgIndex<0>>]>;
+    Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
 def int_nvvm_cp_async_wait_all : NVVMBuiltin,
-    Intrinsic<[],[],[]>;
+    Intrinsic<[], [], []>;
 
 // cp.async.bulk variants of the commit/wait group
 def int_nvvm_cp_async_bulk_commit_group :
-    Intrinsic<[],[],[]>;
+    Intrinsic<[], [], []>;
 
 def int_nvvm_cp_async_bulk_wait_group :
-    Intrinsic<[],[llvm_i32_ty],[ImmArg<ArgIndex<0>>]>;
+    Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
 def int_nvvm_cp_async_bulk_wait_group_read :
-    Intrinsic<[],[llvm_i32_ty],[ImmArg<ArgIndex<0>>]>;
+    Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
 // mbarrier
 def int_nvvm_mbarrier_init : NVVMBuiltin,
-    Intrinsic<[],[llvm_ptr_ty, llvm_i32_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_init_shared : NVVMBuiltin,
-    Intrinsic<[],[llvm_shared_ptr_ty, llvm_i32_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[], [llvm_shared_ptr_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 
 def int_nvvm_mbarrier_inval : NVVMBuiltin,
-    Intrinsic<[],[llvm_ptr_ty],
+    Intrinsic<[], [llvm_ptr_ty],
     [IntrConvergent, IntrWriteMem, IntrArgMemOnly, IntrNoCallback,
     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 def int_nvvm_mbarrier_inval_shared : NVVMBuiltin,
-    Intrinsic<[],[llvm_shared_ptr_ty],
+    Intrinsic<[], [llvm_shared_ptr_ty],
     [IntrConvergent, IntrWriteMem, IntrArgMemOnly, IntrNoCallback,
     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
 def int_nvvm_mbarrier_arrive : NVVMBuiltin,
-    Intrinsic<[llvm_i64_ty],[llvm_ptr_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[llvm_i64_ty], [llvm_ptr_ty], [IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_arrive_shared : NVVMBuiltin,
-    Intrinsic<[llvm_i64_ty],[llvm_shared_ptr_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[llvm_i64_ty], [llvm_shared_ptr_ty], [IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_arrive_noComplete : NVVMBuiltin,
-    Intrinsic<[llvm_i64_ty],[llvm_ptr_ty, llvm_i32_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_arrive_noComplete_shared : NVVMBuiltin,
-    Intrinsic<[llvm_i64_ty],[llvm_shared_ptr_ty,
-    llvm_i32_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[llvm_i64_ty], [llvm_shared_ptr_ty,
+    llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 
 def int_nvvm_mbarrier_arrive_drop : NVVMBuiltin,
-    Intrinsic<[llvm_i64_ty],[llvm_ptr_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[llvm_i64_ty], [llvm_ptr_ty], [IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_arrive_drop_shared : NVVMBuiltin,
-    Intrinsic<[llvm_i64_ty],[llvm_shared_ptr_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[llvm_i64_ty], [llvm_shared_ptr_ty], [IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_arrive_drop_noComplete : NVVMBuiltin,
-    Intrinsic<[llvm_i64_ty],[llvm_ptr_ty, llvm_i32_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[llvm_i64_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_arrive_drop_noComplete_shared : NVVMBuiltin,
-    Intrinsic<[llvm_i64_ty],[llvm_shared_ptr_ty,
-    llvm_i32_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[llvm_i64_ty], [llvm_shared_ptr_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 
 def int_nvvm_mbarrier_test_wait : NVVMBuiltin,
-    Intrinsic<[llvm_i1_ty],[llvm_ptr_ty, llvm_i64_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_i64_ty], [IntrConvergent, IntrNoCallback]>;
 def int_nvvm_mbarrier_test_wait_shared : NVVMBuiltin,
-    Intrinsic<[llvm_i1_ty],[llvm_shared_ptr_ty, llvm_i64_ty],[IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[llvm_i1_ty], [llvm_shared_ptr_ty, llvm_i64_ty], [IntrConvergent, IntrNoCallback]>;
 
 def int_nvvm_mbarrier_pending_count : NVVMBuiltin,
-    Intrinsic<[llvm_i32_ty],[llvm_i64_ty],[IntrNoMem, IntrConvergent, IntrNoCallback]>;
+    Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem, IntrConvergent, IntrNoCallback]>;
 
 // Generated within nvvm. Use for ldu on sm_20 or later.  Second arg is the
 // pointer's alignment.
@@ -1544,11 +1536,9 @@ def int_nvvm_move_ptr : Intrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty], [IntrNoMem
 
 // For getting the handle from a texture or surface variable
 def int_nvvm_texsurf_handle
-  : Intrinsic<[llvm_i64_ty], [llvm_metadata_ty, llvm_anyptr_ty],
-              [IntrNoMem]>;
+  : Intrinsic<[llvm_i64_ty], [llvm_metadata_ty, llvm_anyptr_ty], [IntrNoMem]>;
 def int_nvvm_texsurf_handle_internal
-  : Intrinsic<[llvm_i64_ty], [llvm_anyptr_ty],
-              [IntrNoMem]>;
+  : Intrinsic<[llvm_i64_ty], [llvm_anyptr_ty], [IntrNoMem]>;
 
 /// Error / Warn
 def int_nvvm_compiler_error : Intrinsic<[], [llvm_anyptr_ty], []>;
@@ -1558,18 +1548,16 @@ def int_nvvm_reflect : NVVMBuiltin,
   Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrNoMem]>;
 
 // isspacep.{const, global, local, shared}
-foreach space = ["const", "global", "local", "shared", "shared_cluster"] in {
+foreach space = ["const", "global", "local", "shared", "shared_cluster"] in
   def int_nvvm_isspacep_ # space : NVVMBuiltin,
     DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty],
               [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>]>;
-}
 
 // Environment register read
-foreach i = 0...31 in {
+foreach i = 0...31 in
   def int_nvvm_read_ptx_sreg_envreg # i : NVVMBuiltin,
     DefaultAttrsIntrinsic<[llvm_i32_ty], [],
               [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>;
-}
 
 // Texture Fetch
 // texmode_independent
@@ -3485,13 +3473,12 @@ foreach sync = [false, true] in {
         defvar i = SHFL_INFO<sync, mode, type, return_pred>;
         if i.withGccBuiltin then {
           def i.Name : NVVMBuiltin,
-                        Intrinsic<i.RetTy, i.ArgsTy,
-                                  [IntrInaccessibleMemOnly, IntrConvergent,
-                                  IntrNoCallback]>;
+            Intrinsic<i.RetTy, i.ArgsTy,
+                      [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
         } else {
-          def i.Name : Intrinsic<i.RetTy, i.ArgsTy,
-                        [IntrInaccessibleMemOnly, IntrConvergent,
-                        IntrNoCallback]>;
+          def i.Name :
+            Intrinsic<i.RetTy, i.ArgsTy,
+                      [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback]>;
         }
       }
     }
@@ -3606,8 +3593,7 @@ foreach binOp = ["min", "max"] in {
 // WGMMA fence instructions
 //
 // wgmma.fence.sync.aligned;
-def int_nvvm_wgmma_fence_sync_aligned 
-  : Intrinsic<[], [], [IntrConvergent]>;
+def int_nvvm_wgmma_fence_sync_aligned : Intrinsic<[], [], [IntrConvergent]>;
 
 // wgmma.commit_group.sync.aligned;
 def int_nvvm_wgmma_commit_group_sync_aligned
@@ -3774,18 +3760,18 @@ def int_nvvm_prefetch_L1 : Intrinsic<[], [llvm_ptr_ty],
   [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 def int_nvvm_prefetch_L2 : Intrinsic<[], [llvm_ptr_ty],
   [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
-def int_nvvm_prefetch_global_L1 :  Intrinsic<[], [llvm_global_ptr_ty],
+def int_nvvm_prefetch_global_L1 : Intrinsic<[], [llvm_global_ptr_ty],
   [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
-def int_nvvm_prefetch_global_L2 :  Intrinsic<[], [llvm_global_ptr_ty],
+def int_nvvm_prefetch_global_L2 : Intrinsic<[], [llvm_global_ptr_ty],
   [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
-def int_nvvm_prefetch_local_L1 :  Intrinsic<[], [llvm_local_ptr_ty],
+def int_nvvm_prefetch_local_L1 : Intrinsic<[], [llvm_local_ptr_ty],
   [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
-def int_nvvm_prefetch_local_L2 :  Intrinsic<[], [llvm_local_ptr_ty],
+def int_nvvm_prefetch_local_L2 : Intrinsic<[], [llvm_local_ptr_ty],
   [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
-def int_nvvm_prefetch_global_L2_evict_normal: Intrinsic<[], [llvm_global_ptr_ty],
+def int_nvvm_prefetch_global_L2_evict_normal : Intrinsic<[], [llvm_global_ptr_ty],
   [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
-def int_nvvm_prefetch_global_L2_evict_last: Intrinsic<[], [llvm_global_ptr_ty],
+def int_nvvm_prefetch_global_L2_evict_last : Intrinsic<[], [llvm_global_ptr_ty],
   [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 def int_nvvm_prefetchu_L1 : Intrinsic<[], [llvm_ptr_ty],
   [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
@@ -3863,8 +3849,8 @@ def int_nvvm_cp_async_bulk_prefetch_L2
        NoCapture<ArgIndex<0>>, ReadOnly<ArgIndex<0>>,
        ImmArg<ArgIndex<3>>]>;
 
-def int_nvvm_griddepcontrol_launch_dependents: Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
-def int_nvvm_griddepcontrol_wait: Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+def int_nvvm_griddepcontrol_launch_dependents : Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+def int_nvvm_griddepcontrol_wait : Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
 //
 // Tcgen05 family of Intrinsics
@@ -3979,9 +3965,9 @@ class NVVM_TCGEN05_ST<string Shape, int Num> :
 foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
   foreach num = !range(0, 8) in {
     if NVVM_TCGEN05_LDST_ACCESS_SIZE<shape, num>.valid then {
-      def NVVM_TCGEN05_LDST_NAME<"ld", shape, num>.record:
+      def NVVM_TCGEN05_LDST_NAME<"ld", shape, num>.record :
             NVVM_TCGEN05_LD<shape, num>;
-      def NVVM_TCGEN05_LDST_NAME<"st", shape, num>.record:
+      def NVVM_TCGEN05_LDST_NAME<"st", shape, num>.record :
             NVVM_TCGEN05_ST<shape, num>;
       }
   }
@@ -3991,7 +3977,7 @@ foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
 // Bulk store intrinsics
 //
 
-def int_nvvm_st_bulk: DefaultAttrsIntrinsic<[],
+def int_nvvm_st_bulk : DefaultAttrsIntrinsic<[],
   [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
   [IntrArgMemOnly, IntrWriteMem,
     WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
