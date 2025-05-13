@@ -379,9 +379,9 @@ void DynamicTypePropagation::checkPostCall(const CallEvent &Call,
         // aggregates, and in such case no top-frame constructor will be called.
         // Figure out if we need to do anything in this case.
         // FIXME: Instead of relying on the ParentMap, we should have the
-        // trigger-statement (InitListExpr in this case) available in this
-        // callback, ideally as part of CallEvent.
-        if (isa_and_nonnull<InitListExpr>(
+        // trigger-statement (InitListExpr or CXXParenListInitExpr in this case)
+        // available in this callback, ideally as part of CallEvent.
+        if (isa_and_nonnull<InitListExpr, CXXParenListInitExpr>(
                 LCtx->getParentMap().getParent(Ctor->getOriginExpr())))
           return;
 

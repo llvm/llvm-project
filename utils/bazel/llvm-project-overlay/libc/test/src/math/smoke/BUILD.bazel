@@ -209,12 +209,12 @@ math_test(
 #     name = "f16fma",
 #     hdrs = ["FmaTest.h"],
 # )
-# 
+#
 # math_test(
 #     name = "f16fmaf",
 #     hdrs = ["FmaTest.h"],
 # )
-# 
+#
 # math_test(
 #     name = "f16fmal",
 #     hdrs = ["FmaTest.h"],

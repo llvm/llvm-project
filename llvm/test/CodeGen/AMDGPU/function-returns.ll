@@ -2,7 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX789,CI %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX789,GFX89,GFX8 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX789,GFX89,GFX9 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE16 %s
 
 define i1 @i1_func_void() #0 {
 ; GFX789-LABEL: i1_func_void:
@@ -1176,32 +1177,59 @@ define <16 x i8> @v16i8_func_void() #0 {
 ; GFX789-NEXT:    v_mov_b32_e32 v3, v18
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v16i8_func_void:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v16, 8, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v17, 16, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v18, 24, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
-; GFX11-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
-; GFX11-NEXT:    v_lshrrev_b32_e32 v7, 24, v1
-; GFX11-NEXT:    v_lshrrev_b32_e32 v9, 8, v2
-; GFX11-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
-; GFX11-NEXT:    v_lshrrev_b32_e32 v11, 24, v2
-; GFX11-NEXT:    v_lshrrev_b32_e32 v13, 8, v3
-; GFX11-NEXT:    v_lshrrev_b32_e32 v14, 16, v3
-; GFX11-NEXT:    v_lshrrev_b32_e32 v15, 24, v3
-; GFX11-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v1, v16
-; GFX11-NEXT:    v_mov_b32_e32 v8, v2
-; GFX11-NEXT:    v_dual_mov_b32 v12, v3 :: v_dual_mov_b32 v3, v18
-; GFX11-NEXT:    v_mov_b32_e32 v2, v17
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: v16i8_func_void:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    buffer_load_b128 v[16:19], off, s[0:3], 0
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v16
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v16
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v16
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, 8, v17
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v17
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v7, 24, v17
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v9, 8, v18
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v10, 16, v18
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v11, 24, v18
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v13, 8, v19
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v14, 16, v19
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v15, 24, v19
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v16.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v17.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v8.l, v18.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v12.l, v19.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v16i8_func_void:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-FAKE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v16, 8, v0
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v17, 16, v0
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v18, 24, v0
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v7, 24, v1
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v9, 8, v2
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v11, 24, v2
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v13, 8, v3
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v14, 16, v3
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v15, 24, v3
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v1, v16
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v8, v2
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v12, v3 :: v_dual_mov_b32 v3, v18
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, v17
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i8>, ptr addrspace(1) %ptr
   ret <16 x i8> %val
@@ -2310,17 +2338,30 @@ define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0)
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: void_func_sret_max_known_zero_bits:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    ds_store_b32 v0, v1
-; GFX11-NEXT:    ds_store_b32 v0, v0
-; GFX11-NEXT:    ds_store_b32 v0, v2
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: void_func_sret_max_known_zero_bits:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-TRUE16-NEXT:    ds_store_b32 v0, v1
+; GFX11-TRUE16-NEXT:    ds_store_b32 v0, v0
+; GFX11-TRUE16-NEXT:    ds_store_b32 v0, v2
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: void_func_sret_max_known_zero_bits:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-FAKE16-NEXT:    ds_store_b32 v0, v1
+; GFX11-FAKE16-NEXT:    ds_store_b32 v0, v0
+; GFX11-FAKE16-NEXT:    ds_store_b32 v0, v2
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %arg0.int = ptrtoint ptr addrspace(5) %arg0 to i32
 
   %lshr0 = lshr i32 %arg0.int, 16

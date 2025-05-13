@@ -1067,7 +1067,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   // Emit RewritePattern for Pattern.
   auto locs = pattern.getLocation();
   os << formatv("/* Generated from:\n    {0:$[ instantiating\n    ]}\n*/\n",
-                make_range(locs.rbegin(), locs.rend()));
+                llvm::reverse(locs));
   os << formatv(R"(struct {0} : public ::mlir::RewritePattern {
   {0}(::mlir::MLIRContext *context)
       : ::mlir::RewritePattern("{1}", {2}, context, {{)",
@@ -1847,7 +1847,6 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
 
     const auto *operand =
         cast<NamedTypeConstraint *>(resultOp.getArg(argIndex));
-    std::string varName;
     if (operand->isVariadic()) {
       ++numVariadic;
       std::string range;

@@ -1035,3 +1035,18 @@ struct B {};
         self.assertNotEqual(foos[0], foos[1])
         self.assertEqual(foos[0], prime_foo)
         self.assertIsNone(tu.cursor.specialized_template)
+
+    def test_equality(self):
+        tu = get_tu(CHILDREN_TEST, lang="cpp")
+        cursor1 = get_cursor(tu, "s0")
+        cursor1_2 = get_cursor(tu, "s0")
+        cursor2 = get_cursor(tu, "f0")
+
+        self.assertIsNotNone(cursor1)
+        self.assertIsNotNone(cursor1_2)
+        self.assertIsNotNone(cursor2)
+
+        self.assertEqual(cursor1, cursor1)
+        self.assertEqual(cursor1, cursor1_2)
+        self.assertNotEqual(cursor1, cursor2)
+        self.assertNotEqual(cursor1, "foo")

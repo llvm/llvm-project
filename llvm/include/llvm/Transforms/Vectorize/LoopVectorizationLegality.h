@@ -382,7 +382,8 @@ public:
   const LoopAccessInfo *getLAI() const { return LAI; }
 
   bool isSafeForAnyVectorWidth() const {
-    return LAI->getDepChecker().isSafeForAnyVectorWidth();
+    return LAI->getDepChecker().isSafeForAnyVectorWidth() &&
+           LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
   }
 
   uint64_t getMaxSafeVectorWidthInBits() const {
@@ -404,6 +405,17 @@ public:
   /// is exactly one.
   BasicBlock *getUncountableEarlyExitBlock() const {
     return hasUncountableEarlyExit() ? getUncountableEdge()->second : nullptr;
+  }
+
+  /// Return true if there is store-load forwarding dependencies.
+  bool isSafeForAnyStoreLoadForwardDistances() const {
+    return LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
+  }
+
+  /// Return safe power-of-2 number of elements, which do not prevent store-load
+  /// forwarding and safe to operate simultaneously.
+  uint64_t getMaxStoreLoadForwardSafeDistanceInBits() const {
+    return LAI->getDepChecker().getStoreLoadForwardSafeDistanceInBits();
   }
 
   /// Returns true if vector representation of the instruction \p I

@@ -146,6 +146,30 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
   finishBuildOpDecorate(MIB, DecArgs, StrImm);
 }
 
+void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm) {
+  auto MIB = MIRBuilder.buildInstr(SPIRV::OpMemberDecorate)
+                 .addUse(Reg)
+                 .addImm(Member)
+                 .addImm(static_cast<uint32_t>(Dec));
+  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+}
+
+void buildOpMemberDecorate(Register Reg, MachineInstr &I,
+                           const SPIRVInstrInfo &TII,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm) {
+  MachineBasicBlock &MBB = *I.getParent();
+  auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemberDecorate))
+                 .addUse(Reg)
+                 .addImm(Member)
+                 .addImm(static_cast<uint32_t>(Dec));
+  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+}
+
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD) {
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
@@ -236,6 +260,8 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
     return SPIRV::StorageClass::CodeSectionINTEL;
   case 10:
     return SPIRV::StorageClass::Private;
+  case 11:
+    return SPIRV::StorageClass::StorageBuffer;
   default:
     report_fatal_error("Unknown address space");
   }
@@ -689,8 +715,7 @@ bool sortBlocks(Function &F) {
   Order.reserve(F.size());
 
   ReversePostOrderTraversal<Function *> RPOT(&F);
-  for (BasicBlock *BB : RPOT)
-    Order.push_back(BB);
+  llvm::append_range(Order, RPOT);
 
   assert(&*F.begin() == Order[0]);
   BasicBlock *LastBlock = &*F.begin();
@@ -785,8 +810,7 @@ CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
   SmallVector<Value *, 4> Args;
   Args.push_back(Arg2);
   Args.push_back(buildMD(Arg));
-  for (auto *Imm : Imms)
-    Args.push_back(Imm);
+  llvm::append_range(Args, Imms);
   return B.CreateIntrinsic(IntrID, {Types}, Args);
 }
 
@@ -852,6 +876,33 @@ createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
     Instructions.push_back(MIB.getInstr());
   }
   return Instructions;
+}
+
+SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L) {
+  unsigned LC = SPIRV::LoopControl::None;
+  // Currently used only to store PartialCount value. Later when other
+  // LoopControls are added - this map should be sorted before making
+  // them loop_merge operands to satisfy 3.23. Loop Control requirements.
+  std::vector<std::pair<unsigned, unsigned>> MaskToValueMap;
+  if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable")) {
+    LC |= SPIRV::LoopControl::DontUnroll;
+  } else {
+    if (getBooleanLoopAttribute(L, "llvm.loop.unroll.enable") ||
+        getBooleanLoopAttribute(L, "llvm.loop.unroll.full")) {
+      LC |= SPIRV::LoopControl::Unroll;
+    }
+    std::optional<int> Count =
+        getOptionalIntLoopAttribute(L, "llvm.loop.unroll.count");
+    if (Count && Count != 1) {
+      LC |= SPIRV::LoopControl::PartialCount;
+      MaskToValueMap.emplace_back(
+          std::make_pair(SPIRV::LoopControl::PartialCount, *Count));
+    }
+  }
+  SmallVector<unsigned, 1> Result = {LC};
+  for (auto &[Mask, Val] : MaskToValueMap)
+    Result.push_back(Val);
+  return Result;
 }
 
 const std::set<unsigned> &getTypeFoldingSupportedOpcodes() {
