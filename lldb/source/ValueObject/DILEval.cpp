@@ -274,11 +274,9 @@ Interpreter::Visit(const UnaryOpNode *node) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const MemberOfNode *node) {
-  Status error;
   auto base_or_err = Evaluate(node->GetBase());
-  if (!base_or_err) {
+  if (!base_or_err)
     return base_or_err;
-  }
   lldb::ValueObjectSP base = *base_or_err;
 
   // Perform basic type checking.
@@ -287,6 +285,7 @@ Interpreter::Visit(const MemberOfNode *node) {
   // When using a period, make sure the base type is NOT a pointer type.
   if (node->GetIsArrow() && !base_type.IsPointerType() &&
       !base_type.IsArrayType()) {
+    Status error;
     lldb::ValueObjectSP deref_sp = base->Dereference(error);
     if (error.Success()) {
       base = deref_sp;
@@ -314,14 +313,8 @@ Interpreter::Visit(const MemberOfNode *node) {
 
   // Now look for the member with the specified name.
   lldb::ValueObjectSP field_obj =
-      base->GetChildMemberWithName(llvm::StringRef(node->GetFieldName()));
-  if (field_obj && field_obj->GetName().GetString() == node->GetFieldName()) {
-    if (field_obj->GetCompilerType().IsReferenceType()) {
-      lldb::ValueObjectSP tmp_obj = field_obj->Dereference(error);
-      if (error.Fail())
-        return error.ToError();
-      return tmp_obj;
-    }
+      base->GetChildMemberWithName(node->GetFieldName());
+  if (field_obj && field_obj->GetName() == node->GetFieldName()) {
     return field_obj;
   }
 

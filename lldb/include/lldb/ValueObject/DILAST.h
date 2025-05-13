@@ -100,7 +100,7 @@ public:
 
   ASTNode *GetBase() const { return m_base.get(); }
   bool GetIsArrow() const { return m_is_arrow; }
-  std::string GetFieldName() const { return m_field_name; }
+  llvm::StringRef GetFieldName() const { return llvm::StringRef(m_field_name); }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eMemberOfNode;

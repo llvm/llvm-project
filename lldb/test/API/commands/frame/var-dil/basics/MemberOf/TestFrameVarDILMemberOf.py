@@ -25,13 +25,13 @@ class TestFrameVarDILMemberOf(TestBase):
         self.expect("settings set target.experimental.use-DIL true",
                     substrs=[""])
         self.expect_var_path("s.x", value="1")
-        self.expect_var_path("s.r", value="2")
+        self.expect_var_path("s.r", type="int &")
         self.expect_var_path("sr.x", value="1")
-        self.expect_var_path("sr.r", value="2")
+        self.expect_var_path("sr.r", type="int &")
         self.expect_var_path("sp->x", value="1")
-        self.expect_var_path("sp->r", value="2")
+        self.expect_var_path("sp->r", type="int &")
         self.expect_var_path("sarr->x", value="5");
-        self.expect_var_path("sarr->r", value="2")
+        self.expect_var_path("sarr->r", type="int &")
 
         self.expect("frame variable 'sp->foo'", error=True,
                     substrs=["no member named 'foo' in 'Sx'"])
