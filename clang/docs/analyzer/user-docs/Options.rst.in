@@ -63,7 +63,7 @@ the *driver*):
 
 Here ``[...]`` stands for dozens of low-level flags which ensure that ``clang
 -cc1`` does the right thing (e.g. ``-fcolor-diagnostics`` when it's suitable;
-``-analyzer-checker`` flags to enable a sane default set of checkers). Also
+``-analyzer-checker`` flags to enable the default set of checkers). Also
 note the distinction that the ``clang`` *driver* requires ``--analyze`` (double
 dashes) while the ``clang -cc1`` *compiler frontend* requires ``-analyze``
 (single dash).
