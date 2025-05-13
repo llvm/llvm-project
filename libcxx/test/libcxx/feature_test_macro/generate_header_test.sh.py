@@ -621,7 +621,7 @@ class Test(unittest.TestCase):
 
         for key, value in self.expected.items():
             # Test whether the per header generate function generates the proper output.
-            self.assertEqual(self.ftm.generate_header_test(key), value)
+            self.assertEqual(self.ftm.generate_header_test_file(key), value)
 
             # Test whether all header generate function generates the proper output.
             with open(

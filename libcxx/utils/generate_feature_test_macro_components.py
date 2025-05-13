@@ -2125,56 +2125,6 @@ ftm_header_test_file_dialect_block = """
 {tests}\
 """
 
-#
-# The templates used for a single FTM block in the tests.
-#
-
-ftm_unavailable_in_dialect = """
-#  ifdef {ftm}
-#    error "{ftm} should not be defined before {dialect}"
-#  endif
-"""
-
-libcxx_ftm_not_implemented = """
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef {ftm}
-#      error "{ftm} should be defined in {dialect}"
-#    endif
-#    if {ftm} != {value}
-#      error "{ftm} should have the value {value} in {dialect}"
-#    endif
-#  else
-#    ifdef {ftm}
-#      error "{ftm} should not be defined because it is unimplemented in libc++!"
-#    endif
-#  endif
-"""
-
-libcxx_ftm_conditionally_implemented = """
-#  if {condition}
-#    ifndef {ftm}
-#      error "{ftm} should be defined in {dialect}"
-#    endif
-#    if {ftm} != {value}
-#      error "{ftm} should have the value {value} in {dialect}"
-#    endif
-#  else
-#    ifdef {ftm}
-#      error "{ftm} should not be defined when the requirement '{condition}' is not met!"
-#    endif
-#  endif
-"""
-
-libcxx_ftm_implemented = """
-#  ifndef {ftm}
-#    error "{ftm} should be defined in {dialect}"
-#  endif
-#  if {ftm} != {value}
-#    error "{ftm} should have the value {value} in {dialect}"
-#  endif
-"""
-
-
 class FeatureTestMacros:
     """Provides all feature-test macro (FTM) output components.
 
@@ -2424,7 +2374,7 @@ class FeatureTestMacros:
             )
         )
 
-    def header_ftm(self, header: str) -> Dict[Std, List[Dict[Ftm, FtmHeaderTest]]]:
+    def header_ftm_data(self, header: str) -> Dict[Std, List[Dict[Ftm, FtmHeaderTest]]]:
         """Generates the FTM information for a `header`."""
 
         result = dict()
@@ -2440,11 +2390,10 @@ class FeatureTestMacros:
 
             for std in self.std_dialects:
                 if not std in values.keys():
-                    result[get_std_number(std)].append(dict({ftm: None}))
+                    result[get_std_number(std)].append({ftm: None})
                     continue
 
                 result[get_std_number(std)].append(
-                    dict(
                         {
                             ftm: FtmHeaderTest(
                                 values[std],
@@ -2452,7 +2401,6 @@ class FeatureTestMacros:
                                 self.ftm_metadata[ftm].test_suite_guard,
                             )
                         }
-                    )
                 )
 
         return result
@@ -2466,25 +2414,70 @@ class FeatureTestMacros:
         this is 14, since FTM have been introduced in C++14.)
         """
 
+        ftm_unavailable_in_dialect = """
+#  ifdef {ftm}
+#    error "{ftm} should not be defined before {dialect}"
+#  endif
+"""
+
+        ftm_not_implemented = """
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef {ftm}
+#      error "{ftm} should be defined in {dialect}"
+#    endif
+#    if {ftm} != {value}
+#      error "{ftm} should have the value {value} in {dialect}"
+#    endif
+#  else
+#    ifdef {ftm}
+#      error "{ftm} should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+"""
+
+        ftm_conditionally_implemented = """
+#  if {condition}
+#    ifndef {ftm}
+#      error "{ftm} should be defined in {dialect}"
+#    endif
+#    if {ftm} != {value}
+#      error "{ftm} should have the value {value} in {dialect}"
+#    endif
+#  else
+#    ifdef {ftm}
+#      error "{ftm} should not be defined when the requirement '{condition}' is not met!"
+#    endif
+#  endif
+"""
+
+        ftm_implemented = """
+#  ifndef {ftm}
+#    error "{ftm} should be defined in {dialect}"
+#  endif
+#  if {ftm} != {value}
+#    error "{ftm} should have the value {value} in {dialect}"
+#  endif
+"""
+
         if std == None or value == None:
             return ftm_unavailable_in_dialect.format(
                 ftm=ftm, dialect=self.ftm_metadata[ftm].available_since
             )
 
         if not value.implemented:
-            return libcxx_ftm_not_implemented.format(
+            return ftm_not_implemented.format(
                 ftm=ftm, value=value.value, dialect=std
             )
 
         if self.ftm_metadata[ftm].test_suite_guard:
-            return libcxx_ftm_conditionally_implemented.format(
+            return ftm_conditionally_implemented.format(
                 ftm=ftm,
                 value=value.value,
                 dialect=std,
                 condition=self.ftm_metadata[ftm].test_suite_guard,
             )
 
-        return libcxx_ftm_implemented.format(ftm=ftm, value=value.value, dialect=std)
+        return ftm_implemented.format(ftm=ftm, value=value.value, dialect=std)
 
     def generate_header_test_dialect(
         self, std: Std, data: List[Dict[Ftm, FtmHeaderTest]]
@@ -2502,9 +2495,39 @@ class FeatureTestMacros:
 
         return "\n".join(f"// {markup}" for markup in lit_markup[header]) + "\n\n"
 
-    def generate_header_test(self, header: str) -> str:
+    def generate_header_test_file(self, header: str) -> str:
         """Returns the body for the FTM test of a `header`."""
 
+        # FTM block before the first Standard that introduced them.
+        # This test the macros are not available before this version.
+        data = ftm_header_test_file_dialect_block.format(
+                pp_if="if",
+                operator="<",
+                dialect=get_std_number(self.std_dialects[0]),
+                tests=self.generate_header_test_dialect(
+                    None, next(iter(self.header_ftm_data(header).values()))
+                ),
+            )
+
+        # FTM for all Standards that have FTM defined.
+        # Note in libc++ the TEST_STD_VER contains 99 for the Standard
+        # in development, therefore the last entry uses a different #elif.
+        data += "".join(
+                ftm_header_test_file_dialect_block.format(
+                    pp_if="elif",
+                    operator="==" if std != get_std_number(self.std_dialects[-1]) else ">",
+                    dialect=std
+                    if std != get_std_number(self.std_dialects[-1])
+                    else get_std_number(self.std_dialects[-2]),
+                    tests=self.generate_header_test_dialect(f"c++{std}", values),
+                )
+                for std, values in self.header_ftm_data(header).items()
+            )
+
+        # The final #endif for the last #elif block.
+        data += f"\n#endif // TEST_STD_VER > {get_std_number(self.std_dialects[-2])}"
+
+        # Generate the test for the requested header.
         return ftm_header_test_file_contents.format(
             script_name=script_name,
             lit_markup=self.generate_lit_markup(header),
@@ -2514,35 +2537,7 @@ class FeatureTestMacros:
                 if header in self.__unavailable_headers
                 else ftm_header_test_file_include_unconditional.format(header=header)
             ),
-            data=
-            # FTM block before the first Standard that introduced them.
-            # This test the macros are not available before this version.
-            ftm_header_test_file_dialect_block.format(
-                pp_if="if",
-                operator="<",
-                dialect=self.std_dialects[0][3:],
-                tests=self.generate_header_test_dialect(
-                    None, next(iter(self.header_ftm(header).values()))
-                ),
-            )
-            +
-            # FTM for all Standards that have FTM defined.
-            # Note in libc++ the TEST_STD_VER contains 99 for the Standard
-            # in development, therefore the last entry uses a different #elif.
-            "".join(
-                ftm_header_test_file_dialect_block.format(
-                    pp_if="elif",
-                    operator="==" if std != self.std_dialects[-1][3:] else ">",
-                    dialect=std
-                    if std != self.std_dialects[-1][3:]
-                    else self.std_dialects[-2][3:],
-                    tests=self.generate_header_test_dialect(f"c++{std}", values),
-                )
-                for std, values in self.header_ftm(header).items()
-            )
-            +
-            # The final #endif for the last #elif block.
-            f"\n#endif // TEST_STD_VER > {self.std_dialects[-2][3:]}",
+            data=data
         )
 
     def generate_header_test_directory(self, path: os.path) -> None:
@@ -2557,7 +2552,7 @@ class FeatureTestMacros:
                 "w",
                 newline="\n",
             ) as f:
-                f.write(self.generate_header_test(header))
+                f.write(self.generate_header_test_file(header))
 
 
 def main():
