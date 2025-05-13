@@ -849,6 +849,38 @@ define <2 x double> @minnum_snan_op1_vec(<2 x double> %x) {
   ret <2 x double> %r
 }
 
+define <2 x double> @maxnum_snan_qnan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @maxnum_snan_qnan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maxnum.v2f64(<2 x double> <double 0x7ff4000000000000, double 0x7fff000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maxnum_snan_qnan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @maxnum_snan_qnan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maxnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400000000dead, double 0x7fff000000000000>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minnum_snan_qnan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @minnum_snan_qnan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0x7ff4000dead00000, double 0x7fff000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minnum_snan_qnan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @minnum_snan_qnan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400dead00dead, double 0x7fff00dead00dead>)
+  ret <2 x double> %r
+}
+
 define float @maxnum_undef_op1(float %x) {
 ; CHECK-LABEL: @maxnum_undef_op1(
 ; CHECK-NEXT:    ret float [[X:%.*]]
@@ -1343,6 +1375,38 @@ define <2 x double> @minimum_snan_op1_vec(<2 x double> %x) {
 ; CHECK-NEXT:    ret <2 x double> splat (double 0x7FFC00DEAD00DEAD)
 ;
   %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400dead00dead, double 0x7ff400dead00dead>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximum_snan_qnan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @maximum_snan_qnan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FFC000000000000, double 0x7FFF000000000000>
+;
+  %r = call <2 x double> @llvm.maximum.v2f64(<2 x double> <double 0x7ff4000000000000, double 0x7fff000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximum_snan_qnan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @maximum_snan_qnan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FFC00000000DEAD, double 0x7FFF000000000000>
+;
+  %r = call <2 x double> @llvm.maximum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400000000dead, double 0x7fff000000000000>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimum_snan_qnan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimum_snan_qnan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FFC000DEAD00000, double 0x7FFF000000000000>
+;
+  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double 0x7ff4000dead00000, double 0x7fff000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimum_snan_qnan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimum_snan_qnan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FFC00DEAD00DEAD, double 0x7FFF00DEAD00DEAD>
+;
+  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400dead00dead, double 0x7fff00dead00dead>)
   ret <2 x double> %r
 }
 
@@ -1894,6 +1958,30 @@ define <2 x double> @minimumnum_nan_op1_vec(<2 x double> %x) {
   ret <2 x double> %r
 }
 
+define <2 x double> @maximumnum_nan_op0_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_nan_op0_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double 0x7ff8000000000000, double poison>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_nan_op1_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_nan_op1_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff8000000000000, double poison>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_nan_op1_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_nan_op1_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> <double poison, double 0x7ff8000dead00000>)
+  ret <2 x double> %r
+}
+
 define double @maximumnum_snan_op0(double %x) {
 ; CHECK-LABEL: @maximumnum_snan_op0(
 ; CHECK-NEXT:    ret double [[X:%.*]]
@@ -1955,6 +2043,70 @@ define <2 x double> @minimumnum_snan_op1_vec(<2 x double> %x) {
 ; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
 ;
   %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400dead00dead, double 0x7ff400dead00dead>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_snan_op0_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_snan_op0_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double 0x7ff4000000000000, double poison>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_snan_op1_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_snan_op1_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff4000000000000, double poison>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_snan_op0_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_snan_op0_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double poison, double 0x7ff4000dead00000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_snan_op1_vec_partial_poison(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_snan_op1_vec_partial_poison(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> <double poison, double 0x7ff4000dead00000>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_snan_qnan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_snan_qnan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double 0x7ff4000000000000, double 0x7fff000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_snan_qnan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_snan_qnan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400000000dead, double 0x7fff000000000000>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_snan_qnan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_snan_qnan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double 0x7ff4000dead00000, double 0x7fff000000000000>, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_snan_qnan_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_snan_qnan_op1_vec(
+; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400dead00dead, double 0x7fff00dead00dead>)
   ret <2 x double> %r
 }
 

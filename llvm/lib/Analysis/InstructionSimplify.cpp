@@ -6719,9 +6719,9 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // In several cases here, we deviate from exact IEEE 754 semantics
     // to enable optimizations (as allowed by the LLVM IR spec).
     //
-    // For instance, we often return one of the arguments unmodified instead of
-    // inserting an llvm.canonicalize to transform input sNaNs into qNaNs or to
-    // respect any FTZ semantics, and sometimes assume all NaN inputs are qNaNs.
+    // For instance, we may return one of the arguments unmodified instead of
+    // inserting an llvm.canonicalize to transform input sNaNs into qNaNs,
+    // or may assume all NaN inputs are qNaNs.
 
     // If the arguments are the same, this is a no-op.
     if (Op0 == Op1)
@@ -6742,15 +6742,14 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
     // minnum(x, qnan) -> x
     // maxnum(x, qnan) -> x
-    // minnum(x, snan) -> qnan
-    // maxnum(x, snan) -> qnan
+    // minnum(x, snan) -> qnan (or x for vectors mixing snans and qnans)
+    // maxnum(x, snan) -> qnan (or x for vectors mixing snans and qnans)
     // minimum(X, nan) -> qnan
     // maximum(X, nan) -> qnan
-    if (match(Op1, m_NaN())) {
-      if (PropagateNaN || (PropagateSNaN && match(Op1, m_sNaN())))
-        return propagateNaN(cast<Constant>(Op1));
-      return Op0;
-    }
+    if (PropagateSNaN && match(Op1, m_sNaN()))
+      return propagateNaN(cast<Constant>(Op1));
+    else if (match(Op1, m_NaN()))
+      return PropagateNaN ? propagateNaN(cast<Constant>(Op1)) : Op0;
 
     // In the following folds, inf can be replaced with the largest finite
     // float, if the ninf flag is set.
