@@ -44,7 +44,8 @@ bool NoSanitizeList::containsFunction(SanitizerMask Mask,
 
 bool NoSanitizeList::containsFile(SanitizerMask Mask, StringRef FileName,
                                   StringRef Category) const {
-  return SSCL->inSection(Mask, "src", FileName, Category);
+  bool allowList = SSCL->inSection(Mask, "src", FileName, "sanitize");
+  return SSCL->inSection(Mask, "src", FileName, Category) && !allowList;
 }
 
 bool NoSanitizeList::containsMainFile(SanitizerMask Mask, StringRef FileName,
