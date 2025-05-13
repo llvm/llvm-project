@@ -41,11 +41,27 @@ getForwardSliceImpl(Operation *op, DenseSet<Operation *> &visited,
   for (Region &region : op->getRegions())
     for (Block &block : region)
       for (Operation &blockOp : block)
-        if (forwardSlice->count(&blockOp) == 0)
+        if (forwardSlice->count(&blockOp) == 0) {
+          // We don't have to check if the 'blockOp' is already visited because
+          // there cannot be a traversal path from this nested op to the parent
+          // and thus a cycle cannot be closed here. We still have to mark it
+          // as visited to stop before visiting this operation again if it is
+          // part of a cycle.
+          visited.insert(&blockOp);
           getForwardSliceImpl(&blockOp, visited, forwardSlice, filter);
+          visited.erase(&blockOp);
+        }
 
   for (Value result : op->getResults())
     for (Operation *userOp : result.getUsers()) {
+      // A cycle can only occur within a basic block (not across regions or
+      // basic blocks) because the parent region must be a graph region, graph
+      // regions are restricted to always have 0 or 1 blocks, and there cannot
+      // be a def-use edge from a nested operation to an operation in an
+      // ancestor region. Therefore, we don't have to but may use the same
+      // 'visited' set across regions/blocks as long as we remove operations
+      // from the set again when the DFS traverses back from the leaf to the
+      // root.
       if (forwardSlice->count(userOp) == 0 && visited.insert(userOp).second)
         getForwardSliceImpl(userOp, visited, forwardSlice, filter);
 
@@ -58,6 +74,7 @@ getForwardSliceImpl(Operation *op, DenseSet<Operation *> &visited,
 void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
                            const ForwardSliceOptions &options) {
   DenseSet<Operation *> visited;
+  visited.insert(op);
   getForwardSliceImpl(op, visited, forwardSlice, options.filter);
   if (!options.inclusive) {
     // Don't insert the top level operation, we just queried on it and don't
@@ -75,8 +92,11 @@ void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
 void mlir::getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
                            const SliceOptions &options) {
   DenseSet<Operation *> visited;
-  for (Operation *user : root.getUsers())
+  for (Operation *user : root.getUsers()) {
+    visited.insert(user);
     getForwardSliceImpl(user, visited, forwardSlice, options.filter);
+    visited.erase(user);
+  }
 
   // Reverse to get back the actual topological order.
   // std::reverse does not work out of the box on SetVector and I want an
@@ -158,6 +178,7 @@ LogicalResult mlir::getBackwardSlice(Operation *op,
                                      SetVector<Operation *> *backwardSlice,
                                      const BackwardSliceOptions &options) {
   DenseSet<Operation *> visited;
+  visited.insert(op);
   LogicalResult result =
       getBackwardSliceImpl(op, visited, backwardSlice, options);
 
