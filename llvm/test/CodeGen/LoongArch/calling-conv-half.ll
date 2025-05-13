@@ -226,8 +226,9 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA32F-ILP32D:       # %bb.0:
 ; LA32F-ILP32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; LA32F-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI1_0)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi0:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI1_0)
+; LA32F-ILP32D-NEXT:    fld.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32F-ILP32D-NEXT:    ori $a0, $zero, 1
 ; LA32F-ILP32D-NEXT:    ori $a1, $zero, 2
 ; LA32F-ILP32D-NEXT:    ori $a2, $zero, 3
@@ -264,8 +265,9 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA32D-ILP32D:       # %bb.0:
 ; LA32D-ILP32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32D-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; LA32D-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI1_0)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi0:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI1_0)
+; LA32D-ILP32D-NEXT:    fld.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32D-ILP32D-NEXT:    ori $a0, $zero, 1
 ; LA32D-ILP32D-NEXT:    ori $a1, $zero, 2
 ; LA32D-ILP32D-NEXT:    ori $a2, $zero, 3
@@ -606,22 +608,30 @@ define i32 @caller_half_in_gregs() nounwind {
 ; LA32F-ILP32D:       # %bb.0:
 ; LA32F-ILP32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA32F-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI3_0)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; LA32F-ILP32D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI3_1)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_2)
-; LA32F-ILP32D-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI3_2)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_3)
-; LA32F-ILP32D-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI3_3)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_4)
-; LA32F-ILP32D-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI3_4)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_5)
-; LA32F-ILP32D-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI3_5)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_6)
-; LA32F-ILP32D-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI3_6)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_7)
-; LA32F-ILP32D-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI3_7)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi1:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_0)
+; LA32F-ILP32D-NEXT:    fld.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi1)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi2:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_1)
+; LA32F-ILP32D-NEXT:    fld.s $fa1, $a0, %pcadd_lo12(.Lpcadd_hi2)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi3:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_2)
+; LA32F-ILP32D-NEXT:    fld.s $fa2, $a0, %pcadd_lo12(.Lpcadd_hi3)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi4:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_3)
+; LA32F-ILP32D-NEXT:    fld.s $fa3, $a0, %pcadd_lo12(.Lpcadd_hi4)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi5:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_4)
+; LA32F-ILP32D-NEXT:    fld.s $fa4, $a0, %pcadd_lo12(.Lpcadd_hi5)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi6:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_5)
+; LA32F-ILP32D-NEXT:    fld.s $fa5, $a0, %pcadd_lo12(.Lpcadd_hi6)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi7:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_6)
+; LA32F-ILP32D-NEXT:    fld.s $fa6, $a0, %pcadd_lo12(.Lpcadd_hi7)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi8:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_7)
+; LA32F-ILP32D-NEXT:    fld.s $fa7, $a0, %pcadd_lo12(.Lpcadd_hi8)
 ; LA32F-ILP32D-NEXT:    lu12i.w $a0, -12
 ; LA32F-ILP32D-NEXT:    ori $a0, $a0, 2176
 ; LA32F-ILP32D-NEXT:    ori $a1, $zero, 10
@@ -656,22 +666,30 @@ define i32 @caller_half_in_gregs() nounwind {
 ; LA32D-ILP32D:       # %bb.0:
 ; LA32D-ILP32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32D-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA32D-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI3_0)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; LA32D-ILP32D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI3_1)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_2)
-; LA32D-ILP32D-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI3_2)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_3)
-; LA32D-ILP32D-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI3_3)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_4)
-; LA32D-ILP32D-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI3_4)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_5)
-; LA32D-ILP32D-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI3_5)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_6)
-; LA32D-ILP32D-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI3_6)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_7)
-; LA32D-ILP32D-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI3_7)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi1:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_0)
+; LA32D-ILP32D-NEXT:    fld.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi1)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi2:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_1)
+; LA32D-ILP32D-NEXT:    fld.s $fa1, $a0, %pcadd_lo12(.Lpcadd_hi2)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi3:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_2)
+; LA32D-ILP32D-NEXT:    fld.s $fa2, $a0, %pcadd_lo12(.Lpcadd_hi3)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi4:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_3)
+; LA32D-ILP32D-NEXT:    fld.s $fa3, $a0, %pcadd_lo12(.Lpcadd_hi4)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi5:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_4)
+; LA32D-ILP32D-NEXT:    fld.s $fa4, $a0, %pcadd_lo12(.Lpcadd_hi5)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi6:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_5)
+; LA32D-ILP32D-NEXT:    fld.s $fa5, $a0, %pcadd_lo12(.Lpcadd_hi6)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi7:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_6)
+; LA32D-ILP32D-NEXT:    fld.s $fa6, $a0, %pcadd_lo12(.Lpcadd_hi7)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi8:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_7)
+; LA32D-ILP32D-NEXT:    fld.s $fa7, $a0, %pcadd_lo12(.Lpcadd_hi8)
 ; LA32D-ILP32D-NEXT:    lu12i.w $a0, -12
 ; LA32D-ILP32D-NEXT:    ori $a0, $a0, 2176
 ; LA32D-ILP32D-NEXT:    ori $a1, $zero, 10
@@ -1110,22 +1128,30 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32F-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32F-ILP32D-NEXT:    lu12i.w $a0, -12
 ; LA32F-ILP32D-NEXT:    ori $t0, $a0, 3200
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA32F-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI5_0)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_1)
-; LA32F-ILP32D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI5_1)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_2)
-; LA32F-ILP32D-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI5_2)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_3)
-; LA32F-ILP32D-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI5_3)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_4)
-; LA32F-ILP32D-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI5_4)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_5)
-; LA32F-ILP32D-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI5_5)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_6)
-; LA32F-ILP32D-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI5_6)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_7)
-; LA32F-ILP32D-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI5_7)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi9:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_0)
+; LA32F-ILP32D-NEXT:    fld.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi9)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi10:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_1)
+; LA32F-ILP32D-NEXT:    fld.s $fa1, $a0, %pcadd_lo12(.Lpcadd_hi10)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi11:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_2)
+; LA32F-ILP32D-NEXT:    fld.s $fa2, $a0, %pcadd_lo12(.Lpcadd_hi11)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi12:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_3)
+; LA32F-ILP32D-NEXT:    fld.s $fa3, $a0, %pcadd_lo12(.Lpcadd_hi12)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi13:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_4)
+; LA32F-ILP32D-NEXT:    fld.s $fa4, $a0, %pcadd_lo12(.Lpcadd_hi13)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi14:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_5)
+; LA32F-ILP32D-NEXT:    fld.s $fa5, $a0, %pcadd_lo12(.Lpcadd_hi14)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi15:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_6)
+; LA32F-ILP32D-NEXT:    fld.s $fa6, $a0, %pcadd_lo12(.Lpcadd_hi15)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi16:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_7)
+; LA32F-ILP32D-NEXT:    fld.s $fa7, $a0, %pcadd_lo12(.Lpcadd_hi16)
 ; LA32F-ILP32D-NEXT:    ori $a0, $zero, 1
 ; LA32F-ILP32D-NEXT:    ori $a1, $zero, 2
 ; LA32F-ILP32D-NEXT:    ori $a2, $zero, 3
@@ -1182,22 +1208,30 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32D-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32D-ILP32D-NEXT:    lu12i.w $a0, -12
 ; LA32D-ILP32D-NEXT:    ori $t0, $a0, 3200
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA32D-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI5_0)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_1)
-; LA32D-ILP32D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI5_1)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_2)
-; LA32D-ILP32D-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI5_2)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_3)
-; LA32D-ILP32D-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI5_3)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_4)
-; LA32D-ILP32D-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI5_4)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_5)
-; LA32D-ILP32D-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI5_5)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_6)
-; LA32D-ILP32D-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI5_6)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_7)
-; LA32D-ILP32D-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI5_7)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi9:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_0)
+; LA32D-ILP32D-NEXT:    fld.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi9)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi10:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_1)
+; LA32D-ILP32D-NEXT:    fld.s $fa1, $a0, %pcadd_lo12(.Lpcadd_hi10)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi11:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_2)
+; LA32D-ILP32D-NEXT:    fld.s $fa2, $a0, %pcadd_lo12(.Lpcadd_hi11)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi12:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_3)
+; LA32D-ILP32D-NEXT:    fld.s $fa3, $a0, %pcadd_lo12(.Lpcadd_hi12)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi13:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_4)
+; LA32D-ILP32D-NEXT:    fld.s $fa4, $a0, %pcadd_lo12(.Lpcadd_hi13)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi14:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_5)
+; LA32D-ILP32D-NEXT:    fld.s $fa5, $a0, %pcadd_lo12(.Lpcadd_hi14)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi15:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_6)
+; LA32D-ILP32D-NEXT:    fld.s $fa6, $a0, %pcadd_lo12(.Lpcadd_hi15)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi16:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_7)
+; LA32D-ILP32D-NEXT:    fld.s $fa7, $a0, %pcadd_lo12(.Lpcadd_hi16)
 ; LA32D-ILP32D-NEXT:    ori $a0, $zero, 1
 ; LA32D-ILP32D-NEXT:    ori $a1, $zero, 2
 ; LA32D-ILP32D-NEXT:    ori $a2, $zero, 3
@@ -1436,8 +1470,9 @@ define half @callee_half_ret() nounwind {
 ;
 ; LA32F-ILP32D-LABEL: callee_half_ret:
 ; LA32F-ILP32D:       # %bb.0:
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA32F-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI6_0)
+; LA32F-ILP32D-NEXT:  .Lpcadd_hi17:
+; LA32F-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI6_0)
+; LA32F-ILP32D-NEXT:    fld.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi17)
 ; LA32F-ILP32D-NEXT:    ret
 ;
 ; LA32D-ILP32S-LABEL: callee_half_ret:
@@ -1448,8 +1483,9 @@ define half @callee_half_ret() nounwind {
 ;
 ; LA32D-ILP32D-LABEL: callee_half_ret:
 ; LA32D-ILP32D:       # %bb.0:
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA32D-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI6_0)
+; LA32D-ILP32D-NEXT:  .Lpcadd_hi17:
+; LA32D-ILP32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI6_0)
+; LA32D-ILP32D-NEXT:    fld.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi17)
 ; LA32D-ILP32D-NEXT:    ret
 ;
 ; LA64S-LABEL: callee_half_ret:
