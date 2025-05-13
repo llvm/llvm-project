@@ -154,7 +154,7 @@ static_assert(std::ranges::sized_range<Range<0>>);
 
 int main() {
   {
-    //valueless by exception test operator*
+    // valueless by exception test operator*
     Range<0> r1;
     Range<1> r2;
 
@@ -172,7 +172,7 @@ int main() {
   }
 
   {
-    //valueless by exception test operator==
+    // valueless by exception test operator==
     flag = false;
     Range<0> r1;
     Range<1> r2;
@@ -190,7 +190,7 @@ int main() {
   }
 
   {
-    //valueless by exception test operator--
+    // valueless by exception test operator--
     flag = false;
     Range<0> r1;
     Range<1> r2;
@@ -202,13 +202,12 @@ int main() {
     try {
       iter1 = std::move(iter2);
     } catch (...) {
-      //ASSERT_SAME_TYPE(decltype(iter1), int);
       TEST_LIBCPP_ASSERT_FAILURE([&] { iter1--; }(), "valueless by exception");
     }
   }
 
   {
-    //valueless by exception test operator++
+    // valueless by exception test operator++
     flag = false;
     Range<0> r1;
     Range<1> r2;
@@ -225,7 +224,7 @@ int main() {
   }
 
   {
-    //valueless by exception test operator+=
+    // valueless by exception test operator+=
     flag = false;
     Range<0> r1;
     Range<1> r2;
@@ -242,7 +241,7 @@ int main() {
   }
 
   {
-    //valueless by exception test constructor
+    // valueless by exception test constructor
     flag = false;
     Range<0> r1;
     Range<1> r2;
