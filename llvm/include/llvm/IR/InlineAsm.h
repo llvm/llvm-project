@@ -83,7 +83,7 @@ public:
   ///
   FunctionType *getFunctionType() const;
 
-  const std::string &getAsmString() const { return AsmString; }
+  StringRef getAsmString() const { return AsmString; }
   StringRef getConstraintString() const { return Constraints; }
   void collectAsmStrs(SmallVectorImpl<StringRef> &AsmStrs) const;
 

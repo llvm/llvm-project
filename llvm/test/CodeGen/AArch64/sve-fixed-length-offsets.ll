@@ -380,11 +380,10 @@ define void @v8i32(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-256-LABEL: v8i32:
 ; CHECK-256:       // %bb.0:
-; CHECK-256-NEXT:    ptrue p0.s
-; CHECK-256-NEXT:    ld1w { z0.s }, p0/z, [x0, #2, mul vl]
-; CHECK-256-NEXT:    ld1w { z1.s }, p0/z, [x0, #1, mul vl]
-; CHECK-256-NEXT:    st1w { z0.s }, p0, [x1, #2, mul vl]
-; CHECK-256-NEXT:    st1w { z1.s }, p0, [x1, #1, mul vl]
+; CHECK-256-NEXT:    ldr z0, [x0, #2, mul vl]
+; CHECK-256-NEXT:    ldr z1, [x0, #1, mul vl]
+; CHECK-256-NEXT:    str z0, [x1, #2, mul vl]
+; CHECK-256-NEXT:    str z1, [x1, #1, mul vl]
 ; CHECK-256-NEXT:    ret
 ;
 ; CHECK-512-LABEL: v8i32:
@@ -437,8 +436,7 @@ define void @v8i32_vscale(ptr %0) {
 ; CHECK-256-LABEL: v8i32_vscale:
 ; CHECK-256:       // %bb.0:
 ; CHECK-256-NEXT:    mov z0.s, #1 // =0x1
-; CHECK-256-NEXT:    ptrue p0.s
-; CHECK-256-NEXT:    st1w { z0.s }, p0, [x0, #2, mul vl]
+; CHECK-256-NEXT:    str z0, [x0, #2, mul vl]
 ; CHECK-256-NEXT:    ret
 ;
 ; CHECK-512-LABEL: v8i32_vscale:

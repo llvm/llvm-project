@@ -171,7 +171,7 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
 
 static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
                                 LoopLikeOpInterface loop) {
-  Value source = transferRead.getSource();
+  Value source = transferRead.getBase();
 
   // Skip view-like Ops and retrive the actual soruce Operation
   while (auto srcOp =
@@ -276,7 +276,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       for (auto *sliceOp : llvm::reverse(forwardSlice)) {
         auto candidateWrite = dyn_cast<vector::TransferWriteOp>(sliceOp);
         if (!candidateWrite ||
-            candidateWrite.getSource() != transferRead.getSource())
+            candidateWrite.getBase() != transferRead.getBase())
           continue;
         transferWrite = candidateWrite;
       }
@@ -312,11 +312,11 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
           transferRead.getPermutationMap() != transferWrite.getPermutationMap())
         return WalkResult::advance();
 
-      auto *source = transferRead.getSource().getDefiningOp();
+      auto *source = transferRead.getBase().getDefiningOp();
       if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
         return WalkResult::advance();
 
-      source = transferWrite.getSource().getDefiningOp();
+      source = transferWrite.getBase().getDefiningOp();
       if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
         return WalkResult::advance();
 
@@ -325,7 +325,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       DominanceInfo dom(loop);
       if (!dom.properlyDominates(transferRead.getOperation(), transferWrite))
         return WalkResult::advance();
-      for (auto &use : transferRead.getSource().getUses()) {
+      for (auto &use : transferRead.getBase().getUses()) {
         if (!loop->isAncestor(use.getOwner()))
           continue;
         if (use.getOwner() == transferRead.getOperation() ||
