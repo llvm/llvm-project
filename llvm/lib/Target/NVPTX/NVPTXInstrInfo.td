@@ -2249,11 +2249,11 @@ def LoadParamMemV2I8   : LoadParamV2MemInst<Int16Regs, ".b8">;
 def LoadParamMemV4I32  : LoadParamV4MemInst<Int32Regs, ".b32">;
 def LoadParamMemV4I16  : LoadParamV4MemInst<Int16Regs, ".b16">;
 def LoadParamMemV4I8   : LoadParamV4MemInst<Int16Regs, ".b8">;
-def LoadParamMemF32    : LoadParamMemInst<Float32Regs, ".f32">;
-def LoadParamMemF64    : LoadParamMemInst<Float64Regs, ".f64">;
-def LoadParamMemV2F32  : LoadParamV2MemInst<Float32Regs, ".f32">;
-def LoadParamMemV2F64  : LoadParamV2MemInst<Float64Regs, ".f64">;
-def LoadParamMemV4F32  : LoadParamV4MemInst<Float32Regs, ".f32">;
+def LoadParamMemF32    : LoadParamMemInst<Float32Regs, ".b32">;
+def LoadParamMemF64    : LoadParamMemInst<Float64Regs, ".b64">;
+def LoadParamMemV2F32  : LoadParamV2MemInst<Float32Regs, ".b32">;
+def LoadParamMemV2F64  : LoadParamV2MemInst<Float64Regs, ".b64">;
+def LoadParamMemV4F32  : LoadParamV4MemInst<Float32Regs, ".b32">;
 
 defm StoreParamI64    : StoreParamInst<Int64Regs, i64imm, ".b64">;
 defm StoreParamI32    : StoreParamInst<Int32Regs, i32imm, ".b32">;
@@ -2272,13 +2272,13 @@ defm StoreParamV4I32  : StoreParamV4Inst<Int32Regs, i32imm, ".b32">;
 defm StoreParamV4I16  : StoreParamV4Inst<Int16Regs, i16imm, ".b16">;
 defm StoreParamV4I8   : StoreParamV4Inst<Int16Regs, i8imm,  ".b8">;
 
-defm StoreParamF32    : StoreParamInst<Float32Regs, f32imm, ".f32">;
-defm StoreParamF64    : StoreParamInst<Float64Regs, f64imm, ".f64">;
+defm StoreParamF32    : StoreParamInst<Float32Regs, f32imm, ".b32">;
+defm StoreParamF64    : StoreParamInst<Float64Regs, f64imm, ".b64">;
 
-defm StoreParamV2F32  : StoreParamV2Inst<Float32Regs, f32imm, ".f32">;
-defm StoreParamV2F64  : StoreParamV2Inst<Float64Regs, f64imm, ".f64">;
+defm StoreParamV2F32  : StoreParamV2Inst<Float32Regs, f32imm, ".b32">;
+defm StoreParamV2F64  : StoreParamV2Inst<Float64Regs, f64imm, ".b64">;
 
-defm StoreParamV4F32  : StoreParamV4Inst<Float32Regs, f32imm, ".f32">;
+defm StoreParamV4F32  : StoreParamV4Inst<Float32Regs, f32imm, ".b32">;
 
 def StoreRetvalI64    : StoreRetvalInst<Int64Regs, ".b64">;
 def StoreRetvalI32    : StoreRetvalInst<Int32Regs, ".b32">;
@@ -2294,11 +2294,11 @@ def StoreRetvalV4I32  : StoreRetvalV4Inst<Int32Regs, ".b32">;
 def StoreRetvalV4I16  : StoreRetvalV4Inst<Int16Regs, ".b16">;
 def StoreRetvalV4I8   : StoreRetvalV4Inst<Int16Regs, ".b8">;
 
-def StoreRetvalF64    : StoreRetvalInst<Float64Regs, ".f64">;
-def StoreRetvalF32    : StoreRetvalInst<Float32Regs, ".f32">;
-def StoreRetvalV2F64  : StoreRetvalV2Inst<Float64Regs, ".f64">;
-def StoreRetvalV2F32  : StoreRetvalV2Inst<Float32Regs, ".f32">;
-def StoreRetvalV4F32  : StoreRetvalV4Inst<Float32Regs, ".f32">;
+def StoreRetvalF64    : StoreRetvalInst<Float64Regs, ".b64">;
+def StoreRetvalF32    : StoreRetvalInst<Float32Regs, ".b32">;
+def StoreRetvalV2F64  : StoreRetvalV2Inst<Float64Regs, ".b64">;
+def StoreRetvalV2F32  : StoreRetvalV2Inst<Float32Regs, ".b32">;
+def StoreRetvalV4F32  : StoreRetvalV4Inst<Float32Regs, ".b32">;
 
 def CallArgBeginInst : NVPTXInst<(outs), (ins), "(", [(CallArgBegin)]>;
 def CallArgEndInst1  : NVPTXInst<(outs), (ins), ");", [(CallArgEnd (i32 1))]>;
@@ -3102,28 +3102,20 @@ def CALL_PROTOTYPE :
             "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
 
 def SDTDynAllocaOp :
-  SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisInt<2>]>;
+  SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisVT<2, i32>]>;
 
 def dyn_alloca :
   SDNode<"NVPTXISD::DYNAMIC_STACKALLOC", SDTDynAllocaOp,
          [SDNPHasChain, SDNPSideEffect]>;
 
-def DYNAMIC_STACKALLOC32 :
-  NVPTXInst<(outs Int32Regs:$ptr),
-            (ins Int32Regs:$size, i32imm:$align),
-            "alloca.u32 \t$ptr, $size, $align;\n\t"
-            "cvta.local.u32 \t$ptr, $ptr;",
-            [(set i32:$ptr, (dyn_alloca i32:$size, (i32 timm:$align)))]>,
-            Requires<[hasPTX<73>, hasSM<52>]>;
-
-def DYNAMIC_STACKALLOC64 :
-  NVPTXInst<(outs Int64Regs:$ptr),
-            (ins Int64Regs:$size, i32imm:$align),
-            "alloca.u64 \t$ptr, $size, $align;\n\t"
-            "cvta.local.u64 \t$ptr, $ptr;",
-            [(set i64:$ptr, (dyn_alloca i64:$size, (i32 timm:$align)))]>,
-            Requires<[hasPTX<73>, hasSM<52>]>;
-
+foreach t = [I32RT, I64RT] in {
+  def DYNAMIC_STACKALLOC # t.Size :
+    NVPTXInst<(outs t.RC:$ptr),
+              (ins t.RC:$size, i32imm:$align),
+              "alloca.u" # t.Size # " \t$ptr, $size, $align;",
+              [(set t.Ty:$ptr, (dyn_alloca t.Ty:$size, timm:$align))]>,
+              Requires<[hasPTX<73>, hasSM<52>]>;
+}
 
 //
 // BRX

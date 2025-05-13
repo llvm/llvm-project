@@ -3081,15 +3081,19 @@ private:
                             bool CouldBeBitField = false);
   Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
 
-  void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
+  bool MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
+    bool AttrsParsed = false;
     if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&
         Tok.is(tok::l_square)) {
       ParsedAttributes AttrsWithRange(AttrFactory);
       ParseMicrosoftAttributes(AttrsWithRange);
+      AttrsParsed = !AttrsWithRange.empty();
       Attrs.takeAllFrom(AttrsWithRange);
     }
+    return AttrsParsed;
   }
   void ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs);
+  void ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs);
   void ParseMicrosoftAttributes(ParsedAttributes &Attrs);
   bool MaybeParseMicrosoftDeclSpecs(ParsedAttributes &Attrs) {
     if (getLangOpts().DeclSpecKeyword && Tok.is(tok::kw___declspec)) {
@@ -3533,6 +3537,9 @@ private:
   TypeResult parseOpenMPDeclareMapperVarDecl(SourceRange &Range,
                                              DeclarationName &Name,
                                              AccessSpecifier AS = AS_none);
+
+  /// Parses 'omp begin declare variant' directive.
+  bool ParseOpenMPDeclareBeginVariantDirective(SourceLocation Loc);
 
   /// Tries to parse cast part of OpenMP array shaping operation:
   /// '[' expression ']' { '[' expression ']' } ')'.
