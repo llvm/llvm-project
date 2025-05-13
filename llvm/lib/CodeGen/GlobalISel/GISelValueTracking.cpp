@@ -485,7 +485,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     else {
       SrcBitWidth = SrcTy.isPointer()
                         ? DL.getIndexSizeInBits(SrcTy.getAddressSpace())
-                        : SrcTy.getScalarSizeInBits();
+                        : SrcTy.getSizeInBits();
     }
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
     Known = Known.zextOrTrunc(SrcBitWidth);
@@ -889,7 +889,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
 unsigned GISelValueTracking::computeNumSignBits(Register R, unsigned Depth) {
   LLT Ty = MRI.getType(R);
   APInt DemandedElts =
-      Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
+      Ty.isVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
   return computeNumSignBits(R, DemandedElts, Depth);
 }
 
