@@ -1895,7 +1895,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
       Entry.IsTopLevel = true;
       Entry.IsModuleMap = false;
       std::unique_ptr<MemoryBuffer> MB;
-      Entry.trySetContentHash(*PP, [&] -> std::optional<MemoryBufferRef> {
+      Entry.trySetContentHash(*PP, [&]() -> std::optional<MemoryBufferRef> {
         if (auto MBOrErr = FM.getBufferForFile(Entry.File)) {
           MB = std::move(*MBOrErr);
           return MB->getMemBufferRef();
