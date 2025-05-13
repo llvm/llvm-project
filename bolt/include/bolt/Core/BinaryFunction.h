@@ -142,8 +142,8 @@ public:
   /// Types of profile the function can use. Could be a combination.
   enum {
     PF_NONE = 0,     /// No profile.
-    PF_LBR = 1,      /// Profile is based on last branch records.
-    PF_IP = 2,       /// Non-LBR sample-based profile.
+    PF_BRANCH = 1,   /// Profile is based on branches or branch stacks.
+    PF_BASIC = 2,    /// Non-branch IP sample-based profile.
     PF_MEMEVENT = 4, /// Profile has mem events.
   };
 
