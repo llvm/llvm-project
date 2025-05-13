@@ -69,6 +69,8 @@
 #include "llvm/Support/KnownBits.h"
 
 using namespace llvm;
+using namespace PatternMatch;
+using namespace SCEVPatternMatch;
 
 #define DEBUG_TYPE "hash-recognize"
 
@@ -173,14 +175,12 @@ KnownBits ValueEvolution::computeBinOp(const BinaryOperator *I,
 /// Compute the KnownBits of Instruction \p I.
 KnownBits ValueEvolution::computeInstr(const Instruction *I,
                                        const KnownPhiMap &KnownPhis) {
-  using namespace llvm::PatternMatch;
-
   unsigned BitWidth = I->getType()->getScalarSizeInBits();
 
   // We look up in the map that contains the KnownBits of the PHI from the
   // previous iteration.
   if (const PHINode *P = dyn_cast<PHINode>(I))
-    return KnownPhis.lookup_or(P, {BitWidth});
+    return KnownPhis.lookup_or(P, BitWidth);
 
   // Compute the KnownBits for a Select(Cmp()), forcing it to take the take the
   // branch that is predicated on the (least|most)-significant-bit check.
@@ -196,7 +196,7 @@ KnownBits ValueEvolution::computeInstr(const Instruction *I,
     auto RCR = ConstantRange::fromKnownBits(KnownR, false);
 
     // We need to check LCR against [0, 2) in the little-endian case, because
-    // the RCR check is too lax: it is simply [0, SMIN).
+    // the RCR check is insufficient: it is simply [0, 1).
     auto CheckLCR = ConstantRange(APInt::getZero(BitWidth), APInt(BitWidth, 2));
     if (!ByteOrderSwapped && LCR != CheckLCR) {
       ErrStr = "Bad LHS of significant-bit-check";
@@ -239,8 +239,6 @@ KnownBits ValueEvolution::computeInstr(const Instruction *I,
 /// Compute the KnownBits of Value \p V.
 KnownBits ValueEvolution::compute(const Value *V,
                                   const KnownPhiMap &KnownPhis) {
-  using namespace llvm::PatternMatch;
-
   unsigned BitWidth = V->getType()->getScalarSizeInBits();
 
   const APInt *C;
@@ -262,7 +260,6 @@ ValueEvolution::computeEvolutions(ArrayRef<PhiStepPair> PhiEvolutions) {
   for (unsigned I = 0; I < TripCount; ++I) {
     AtIteration = I;
     for (auto [Phi, Step] : PhiEvolutions) {
-      // Check that the {top, bottom} I bits are zero, with the rest unknown.
       KnownBits KnownAtIter = computeInstr(Step, KnownPhis);
       if (KnownAtIter.getBitWidth() < I + 1) {
         ErrStr = "Loop iterations exceed bitwidth of result";
@@ -271,8 +268,6 @@ ValueEvolution::computeEvolutions(ArrayRef<PhiStepPair> PhiEvolutions) {
       KnownPhis.emplace_or_assign(Phi, KnownAtIter);
     }
   }
-
-  // Return the final ComputedBits.
   return KnownPhis;
 }
 
@@ -282,8 +277,6 @@ static BinaryOperator *
 digRecurrence(Instruction *V, const PHINode *P, const Loop &L,
               const APInt *&ExtraConst,
               Instruction::BinaryOps BOWithConstOpToMatch) {
-  using namespace llvm::PatternMatch;
-
   SmallVector<Instruction *> Worklist;
   Worklist.push_back(V);
   while (!Worklist.empty()) {
@@ -337,8 +330,6 @@ static bool matchConditionalRecurrence(
     return false;
 
   for (unsigned Idx = 0; Idx != 2; ++Idx) {
-    using namespace llvm::PatternMatch;
-
     Value *FoundStep = P->getIncomingValue(Idx);
     Value *FoundStart = P->getIncomingValue(!Idx);
 
@@ -374,7 +365,7 @@ static bool matchConditionalRecurrence(
 
 /// A structure that can hold either a Simple Recurrence or a Conditional
 /// Recurrence. Note that in the case of a Simple Recurrence, Step is an operand
-/// of the BO, while in a Conditional Recurrence, Step is a SelectInst.
+/// of the BO, while in a Conditional Recurrence, it is a SelectInst.
 struct RecurrenceInfo {
   PHINode *Phi;
   BinaryOperator *BO;
@@ -452,7 +443,7 @@ static bool checkExtractBits(const KnownBits &Known, unsigned N,
   unsigned BitPos = ByteOrderSwapped ? 0 : Known.getBitWidth() - N;
   unsigned SwappedBitPos = ByteOrderSwapped ? N : 0;
 
-  // If there are no other bits, check that the entire thing is a constant.
+  // Check that the entire thing is a constant.
   if (N == Known.getBitWidth())
     return CheckFn(Known.extractBits(N, 0));
 
@@ -510,9 +501,9 @@ static bool arePHIsIntertwined(
 
   // BOToMatch is usually XOR for CRC.
   if (BOToMatch != Instruction::BinaryOpsEnd) {
-    if (none_of(Worklist, [BOToMatch](const Instruction *I) {
+    if (count_if(Worklist, [BOToMatch](const Instruction *I) {
           return I->getOpcode() == BOToMatch;
-        }))
+        }) != 1)
       return false;
   }
 
@@ -539,8 +530,6 @@ static bool arePHIsIntertwined(
 // equivalently shl/lshr. Return false when it is a UDiv, true when it is a Mul,
 // and std::nullopt otherwise.
 static std::optional<bool> isBigEndianBitShift(const SCEV *E) {
-  using namespace llvm::SCEVPatternMatch;
-
   if (match(E, m_scev_UDiv(m_SCEV(), m_scev_SpecificInt(2))))
     return false;
   if (match(E, m_scev_Mul(m_scev_SpecificInt(2), m_SCEV())))
