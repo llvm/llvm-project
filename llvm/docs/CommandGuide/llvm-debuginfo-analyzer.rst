@@ -519,6 +519,7 @@ The following options allow printing of scopes that match the given <kind>.
     =InlinedFunction: An inlined function.
     =Label: A label.
     =LexicalBlock: A lexical block.
+    =Module: A module.
     =Namespace: A namespace.
     =Root: The element representing the main scope.
     =Structure: A structure.
