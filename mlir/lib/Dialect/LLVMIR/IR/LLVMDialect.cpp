@@ -3221,15 +3221,50 @@ LogicalResult LLVM::ConstantOp::verify() {
     if (!isa<VectorType, LLVM::LLVMArrayType>(getType()))
       return emitOpError() << "expected vector or array type";
     // The number of elements of the attribute and the type must match.
-    int64_t attrNumElements;
-    if (auto elementsAttr = dyn_cast<ElementsAttr>(getValue()))
-      attrNumElements = elementsAttr.getNumElements();
-    else
-      attrNumElements = cast<ArrayAttr>(getValue()).size();
-    if (getNumElements(getType()) != attrNumElements)
-      return emitOpError()
-             << "type and attribute have a different number of elements: "
-             << getNumElements(getType()) << " vs. " << attrNumElements;
+    if (auto elementsAttr = dyn_cast<ElementsAttr>(getValue())) {
+      int64_t attrNumElements = elementsAttr.getNumElements();
+      if (getNumElements(getType()) != attrNumElements)
+        return emitOpError()
+               << "type and attribute have a different number of elements: "
+               << getNumElements(getType()) << " vs. " << attrNumElements;
+    } else {
+      // When the attribute is an ArrayAttr, check that its nesting matches the
+      // corresponding ArrayType or VectorType nesting.
+      Type dimType = getType();
+      Attribute dimVal = getValue();
+      int dim = 0;
+      while (true) {
+        int64_t dimSize =
+            llvm::TypeSwitch<Type, int64_t>(dimType)
+                .Case<VectorType, LLVMArrayType>([&dimType](auto t) -> int64_t {
+                  dimType = t.getElementType();
+                  return t.getNumElements();
+                })
+                .Default([](auto) -> int64_t { return -1; });
+        if (dimSize < 0)
+          break;
+        auto arrayAttr = dyn_cast<ArrayAttr>(dimVal);
+        if (!arrayAttr)
+          return emitOpError()
+                 << "array attribute nesting must match array type nesting";
+        if (dimSize != static_cast<int64_t>(arrayAttr.size()))
+          return emitOpError()
+                 << "array attribute size does not match array type size in "
+                    "dimension "
+                 << dim << ": " << arrayAttr.size() << " vs. " << dimSize;
+        if (arrayAttr.size() == 0)
+          break;
+        dimVal = arrayAttr.getValue()[0];
+        ++dim;
+      }
+      if (auto structType = dyn_cast<LLVMStructType>(dimType)) {
+        auto arrayAttr = dyn_cast<ArrayAttr>(dimVal);
+        if (!arrayAttr || arrayAttr.size() != structType.getBody().size())
+          return emitOpError()
+                 << "nested attribute must be an array attribute with the same "
+                    "number of elements as the struct type";
+      }
+    }
   } else {
     return emitOpError()
            << "only supports integer, float, string or elements attributes";
