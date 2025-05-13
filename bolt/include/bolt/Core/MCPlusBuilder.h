@@ -1086,7 +1086,7 @@ public:
     return false;
   }
 
-  /// Use \p Input1 or Input2 as the current value for the input
+  /// Use \p Input1 or \p Input2 as the current value for the input
   /// register and put in \p Output the changes incurred by executing
   /// \p Inst. Return false if it was not possible to perform the
   /// evaluation. evaluateStackOffsetExpr is restricted to operations
