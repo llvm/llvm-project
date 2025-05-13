@@ -320,8 +320,7 @@ static Value *expandIsFPClass(CallInst *Orig) {
     return RetVal;
   }
   default:
-    report_fatal_error(Twine("Unsupported FPClassTest"),
-                       /* gen_crash_diag=*/false);
+    reportFatalUsageError("Unsupported FPClassTest");
   }
 }
 

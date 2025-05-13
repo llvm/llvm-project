@@ -34,9 +34,10 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
       PrintFatalError(R->getLoc(),
                       R->getName() +
                           ": invalid def name for output list: use 'outs'");
-  } else
+  } else {
     PrintFatalError(R->getLoc(),
                     R->getName() + ": invalid output list: use 'outs'");
+  }
 
   NumDefs = OutDI->getNumArgs();
 
@@ -46,9 +47,10 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
       PrintFatalError(R->getLoc(),
                       R->getName() +
                           ": invalid def name for input list: use 'ins'");
-  } else
+  } else {
     PrintFatalError(R->getLoc(),
                     R->getName() + ": invalid input list: use 'ins'");
+  }
 
   unsigned MIOperandNo = 0;
   std::set<std::string> OperandNames;
@@ -83,16 +85,16 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
     unsigned NumOps = 1;
     const DagInit *MIOpInfo = nullptr;
     if (Rec->isSubClassOf("RegisterOperand")) {
-      PrintMethod = std::string(Rec->getValueAsString("PrintMethod"));
-      OperandType = std::string(Rec->getValueAsString("OperandType"));
-      OperandNamespace = std::string(Rec->getValueAsString("OperandNamespace"));
-      EncoderMethod = std::string(Rec->getValueAsString("EncoderMethod"));
+      PrintMethod = Rec->getValueAsString("PrintMethod").str();
+      OperandType = Rec->getValueAsString("OperandType").str();
+      OperandNamespace = Rec->getValueAsString("OperandNamespace").str();
+      EncoderMethod = Rec->getValueAsString("EncoderMethod").str();
     } else if (Rec->isSubClassOf("Operand")) {
-      PrintMethod = std::string(Rec->getValueAsString("PrintMethod"));
-      OperandType = std::string(Rec->getValueAsString("OperandType"));
-      OperandNamespace = std::string(Rec->getValueAsString("OperandNamespace"));
+      PrintMethod = Rec->getValueAsString("PrintMethod").str();
+      OperandType = Rec->getValueAsString("OperandType").str();
+      OperandNamespace = Rec->getValueAsString("OperandNamespace").str();
       // If there is an explicit encoder method, use it.
-      EncoderMethod = std::string(Rec->getValueAsString("EncoderMethod"));
+      EncoderMethod = Rec->getValueAsString("EncoderMethod").str();
       MIOpInfo = Rec->getValueAsDag("MIOperandInfo");
 
       // Verify that MIOpInfo has an 'ops' root value.
@@ -130,14 +132,14 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
       PrintFatalError(R->getLoc(), "In instruction '" + R->getName() +
                                        "', operand #" + Twine(i) +
                                        " has no name!");
-    if (!OperandNames.insert(std::string(ArgName)).second)
+    if (!OperandNames.insert(ArgName.str()).second)
       PrintFatalError(R->getLoc(),
                       "In instruction '" + R->getName() + "', operand #" +
                           Twine(i) +
                           " has the same name as a previous operand!");
 
     OperandInfo &OpInfo = OperandList.emplace_back(
-        Rec, std::string(ArgName), std::string(std::move(PrintMethod)),
+        Rec, ArgName.str(), std::string(std::move(PrintMethod)),
         OperandNamespace + "::" + OperandType, MIOperandNo, NumOps, MIOpInfo);
 
     if (SubArgDag) {
@@ -161,7 +163,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
           PrintFatalError(R->getLoc(), "In instruction '" + R->getName() +
                                            "', operand #" + Twine(i) +
                                            " has no name!");
-        if (!OperandNames.insert(std::string(SubArgName)).second)
+        if (!OperandNames.insert(SubArgName.str()).second)
           PrintFatalError(R->getLoc(),
                           "In instruction '" + R->getName() + "', operand #" +
                               Twine(i) + " sub-arg #" + Twine(j) +
@@ -433,7 +435,7 @@ void CGIOperandList::ProcessDisableEncoding(StringRef DisableEncoding) {
 CodeGenInstruction::CodeGenInstruction(const Record *R)
     : TheDef(R), Operands(R), InferredFrom(nullptr) {
   Namespace = R->getValueAsString("Namespace");
-  AsmString = std::string(R->getValueAsString("AsmString"));
+  AsmString = R->getValueAsString("AsmString").str();
 
   isPreISelOpcode = R->getValueAsBit("isPreISelOpcode");
   isReturn = R->getValueAsBit("isReturn");
@@ -501,8 +503,7 @@ CodeGenInstruction::CodeGenInstruction(const Record *R)
   // First check for a ComplexDeprecationPredicate.
   if (R->getValue("ComplexDeprecationPredicate")) {
     HasComplexDeprecationPredicate = true;
-    DeprecatedReason =
-        std::string(R->getValueAsString("ComplexDeprecationPredicate"));
+    DeprecatedReason = R->getValueAsString("ComplexDeprecationPredicate").str();
   } else if (const RecordVal *Dep = R->getValue("DeprecatedFeatureMask")) {
     // Check if we have a Subtarget feature mask.
     HasComplexDeprecationPredicate = false;

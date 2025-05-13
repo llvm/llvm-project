@@ -3421,7 +3421,7 @@ const typename AbstractManglingParser<
     {"or", OperatorInfo::Binary, false, Node::Prec::Ior, "operator|"},
     {"pL", OperatorInfo::Binary, false, Node::Prec::Assign, "operator+="},
     {"pl", OperatorInfo::Binary, false, Node::Prec::Additive, "operator+"},
-    {"pm", OperatorInfo::Member, /*Named*/ false, Node::Prec::PtrMem,
+    {"pm", OperatorInfo::Member, /*Named*/ true, Node::Prec::PtrMem,
      "operator->*"},
     {"pp", OperatorInfo::Postfix, false, Node::Prec::Postfix, "operator++"},
     {"ps", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator+"},
