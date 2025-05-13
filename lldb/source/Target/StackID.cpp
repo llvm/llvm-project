@@ -83,6 +83,7 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
 static llvm::Expected<bool> IsReachableParent(lldb::addr_t source,
                                               lldb::addr_t maybe_parent,
                                               Process &process) {
+  maybe_parent = process.FixDataAddress(maybe_parent);
   auto max_num_frames = 512;
   for (lldb::addr_t parent_ctx = source; parent_ctx && max_num_frames;
        max_num_frames--) {
@@ -94,7 +95,7 @@ static llvm::Expected<bool> IsReachableParent(lldb::addr_t source,
       return llvm::createStringError(llvm::formatv(
           "Failed to read parent async context of: {0:x}. Error: {1}",
           old_parent_ctx, error.AsCString()));
-    if (parent_ctx == maybe_parent)
+    if (process.FixDataAddress(parent_ctx) == maybe_parent)
       return true;
   }
   if (max_num_frames == 0)
