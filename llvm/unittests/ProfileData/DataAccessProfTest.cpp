@@ -1,4 +1,3 @@
-
 //===- unittests/Support/DataAccessProfTest.cpp
 //----------------------------------===//
 //
@@ -10,6 +9,7 @@
 
 #include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock-more-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -19,7 +19,9 @@ namespace data_access_prof {
 namespace {
 
 using ::llvm::StringRef;
+using llvm::ValueIs;
 using ::testing::ElementsAre;
+using ::testing::Field;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 
@@ -53,6 +55,8 @@ TEST(MemProf, DataAccessProfileError) {
 // - Profile record look up.
 // - Serialization and de-serialization.
 TEST(MemProf, DataAccessProfile) {
+  using internal::DataAccessProfRecordRef;
+  using internal::SourceLocationRef;
   DataAccessProfData Data;
 
   // In the bool conversion, Error is true if it's in a failure state and false
@@ -62,18 +66,19 @@ TEST(MemProf, DataAccessProfile) {
   ASSERT_FALSE(Data.addKnownSymbolWithoutSamples("sym2"));
   ASSERT_FALSE(Data.setDataAccessProfile("bar.__uniq.321", 123,
                                          {
-                                             DataLocation{"file2", 3},
+                                             SourceLocation{"file2", 3},
                                          }));
   ASSERT_FALSE(Data.addKnownSymbolWithoutSamples("sym1"));
   ASSERT_FALSE(Data.addKnownSymbolWithoutSamples((uint64_t)678));
   ASSERT_FALSE(Data.setDataAccessProfile(
       (uint64_t)135246, 1000,
-      {DataLocation{"file1", 1}, DataLocation{"file2", 2}}));
+      {SourceLocation{"file1", 1}, SourceLocation{"file2", 2}}));
 
   {
     // Test that symbol names and file names are stored in the input order.
-    EXPECT_THAT(llvm::to_vector(Data.getStrings()),
-                ElementsAre("foo", "bar.__uniq.321", "file2", "file1"));
+    EXPECT_THAT(
+        llvm::to_vector(llvm::make_first_range(Data.getStrToIndexMapRef())),
+        ElementsAre("foo", "bar.__uniq.321", "file2", "file1"));
     EXPECT_THAT(Data.getKnownColdSymbols(), ElementsAre("sym2", "sym1"));
     EXPECT_THAT(Data.getKnownColdHashes(), ElementsAre(789, 678));
 
@@ -83,38 +88,34 @@ TEST(MemProf, DataAccessProfile) {
     EXPECT_TRUE(Data.isKnownColdSymbol("sym2"));
     EXPECT_TRUE(Data.isKnownColdSymbol("sym1"));
 
-    EXPECT_EQ(Data.getProfileRecord("non-existence"), nullptr);
-    EXPECT_EQ(Data.getProfileRecord((uint64_t)789987), nullptr);
+    EXPECT_EQ(Data.getProfileRecord("non-existence"), std::nullopt);
+    EXPECT_EQ(Data.getProfileRecord((uint64_t)789987), std::nullopt);
 
     EXPECT_THAT(
-        *Data.getProfileRecord("foo.llvm.123"),
-        AllOf(testing::Field(&DataAccessProfRecord::SymbolID, 0),
-              testing::Field(&DataAccessProfRecord::AccessCount, 100),
-              testing::Field(&DataAccessProfRecord::IsStringLiteral, false),
-              testing::Field(&DataAccessProfRecord::Locations,
-                             testing::IsEmpty())));
+        Data.getProfileRecord("foo.llvm.123"),
+        ValueIs(AllOf(
+            Field(&DataAccessProfRecord::SymHandle,
+                  testing::VariantWith<std::string>(testing::Eq("foo"))),
+            Field(&DataAccessProfRecord::Locations, testing::IsEmpty()))));
     EXPECT_THAT(
-        *Data.getProfileRecord("bar.__uniq.321"),
-        AllOf(
-            testing::Field(&DataAccessProfRecord::SymbolID, 1),
-            testing::Field(&DataAccessProfRecord::AccessCount, 123),
-            testing::Field(&DataAccessProfRecord::IsStringLiteral, false),
-            testing::Field(&DataAccessProfRecord::Locations,
-                           ElementsAre(AllOf(
-                               testing::Field(&DataLocation::FileName, "file2"),
-                               testing::Field(&DataLocation::Line, 3))))));
+        Data.getProfileRecord("bar.__uniq.321"),
+        ValueIs(AllOf(
+            Field(&DataAccessProfRecord::SymHandle,
+                  testing::VariantWith<std::string>(
+                      testing::Eq("bar.__uniq.321"))),
+            Field(&DataAccessProfRecord::Locations,
+                  ElementsAre(AllOf(Field(&SourceLocation::FileName, "file2"),
+                                    Field(&SourceLocation::Line, 3)))))));
     EXPECT_THAT(
-        *Data.getProfileRecord((uint64_t)135246),
-        AllOf(testing::Field(&DataAccessProfRecord::SymbolID, 135246),
-              testing::Field(&DataAccessProfRecord::AccessCount, 1000),
-              testing::Field(&DataAccessProfRecord::IsStringLiteral, true),
-              testing::Field(
-                  &DataAccessProfRecord::Locations,
-                  ElementsAre(
-                      AllOf(testing::Field(&DataLocation::FileName, "file1"),
-                            testing::Field(&DataLocation::Line, 1)),
-                      AllOf(testing::Field(&DataLocation::FileName, "file2"),
-                            testing::Field(&DataLocation::Line, 2))))));
+        Data.getProfileRecord((uint64_t)135246),
+        ValueIs(AllOf(
+            Field(&DataAccessProfRecord::SymHandle,
+                  testing::VariantWith<uint64_t>(testing::Eq(135246))),
+            Field(&DataAccessProfRecord::Locations,
+                  ElementsAre(AllOf(Field(&SourceLocation::FileName, "file1"),
+                                    Field(&SourceLocation::Line, 1)),
+                              AllOf(Field(&SourceLocation::FileName, "file2"),
+                                    Field(&SourceLocation::Line, 2)))))));
   }
 
   // Tests serialization and de-serialization.
@@ -128,11 +129,13 @@ TEST(MemProf, DataAccessProfile) {
 
     const unsigned char *p =
         reinterpret_cast<const unsigned char *>(serializedData.data());
-    ASSERT_THAT(llvm::to_vector(deserializedData.getStrings()),
+    ASSERT_THAT(llvm::to_vector(llvm::make_first_range(
+                    deserializedData.getStrToIndexMapRef())),
                 testing::IsEmpty());
     EXPECT_FALSE(deserializedData.deserialize(p));
 
-    EXPECT_THAT(llvm::to_vector(deserializedData.getStrings()),
+    EXPECT_THAT(llvm::to_vector(llvm::make_first_range(
+                    deserializedData.getStrToIndexMapRef())),
                 ElementsAre("foo", "bar.__uniq.321", "file2", "file1"));
     EXPECT_THAT(deserializedData.getKnownColdSymbols(),
                 ElementsAre("sym2", "sym1"));
@@ -150,30 +153,27 @@ TEST(MemProf, DataAccessProfile) {
     EXPECT_THAT(
         Records,
         ElementsAre(
-            AllOf(testing::Field(&DataAccessProfRecord::SymbolID, 0),
-                  testing::Field(&DataAccessProfRecord::AccessCount, 100),
-                  testing::Field(&DataAccessProfRecord::IsStringLiteral, false),
-                  testing::Field(&DataAccessProfRecord::Locations,
-                                 testing::IsEmpty())),
-            AllOf(testing::Field(&DataAccessProfRecord::SymbolID, 1),
-                  testing::Field(&DataAccessProfRecord::AccessCount, 123),
-                  testing::Field(&DataAccessProfRecord::IsStringLiteral, false),
-                  testing::Field(
-                      &DataAccessProfRecord::Locations,
-                      ElementsAre(AllOf(
-                          testing::Field(&DataLocation::FileName, "file2"),
-                          testing::Field(&DataLocation::Line, 3))))),
             AllOf(
-                testing::Field(&DataAccessProfRecord::SymbolID, 135246),
-                testing::Field(&DataAccessProfRecord::AccessCount, 1000),
-                testing::Field(&DataAccessProfRecord::IsStringLiteral, true),
-                testing::Field(
-                    &DataAccessProfRecord::Locations,
-                    ElementsAre(
-                        AllOf(testing::Field(&DataLocation::FileName, "file1"),
-                              testing::Field(&DataLocation::Line, 1)),
-                        AllOf(testing::Field(&DataLocation::FileName, "file2"),
-                              testing::Field(&DataLocation::Line, 2)))))));
+                Field(&DataAccessProfRecordRef::SymbolID, 0),
+                Field(&DataAccessProfRecordRef::AccessCount, 100),
+                Field(&DataAccessProfRecordRef::IsStringLiteral, false),
+                Field(&DataAccessProfRecordRef::Locations, testing::IsEmpty())),
+            AllOf(Field(&DataAccessProfRecordRef::SymbolID, 1),
+                  Field(&DataAccessProfRecordRef::AccessCount, 123),
+                  Field(&DataAccessProfRecordRef::IsStringLiteral, false),
+                  Field(&DataAccessProfRecordRef::Locations,
+                        ElementsAre(
+                            AllOf(Field(&SourceLocationRef::FileName, "file2"),
+                                  Field(&SourceLocationRef::Line, 3))))),
+            AllOf(Field(&DataAccessProfRecordRef::SymbolID, 135246),
+                  Field(&DataAccessProfRecordRef::AccessCount, 1000),
+                  Field(&DataAccessProfRecordRef::IsStringLiteral, true),
+                  Field(&DataAccessProfRecordRef::Locations,
+                        ElementsAre(
+                            AllOf(Field(&SourceLocationRef::FileName, "file1"),
+                                  Field(&SourceLocationRef::Line, 1)),
+                            AllOf(Field(&SourceLocationRef::FileName, "file2"),
+                                  Field(&SourceLocationRef::Line, 2)))))));
   }
 }
 } // namespace

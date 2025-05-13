@@ -500,7 +500,7 @@ class InstrProfSymtab {
 public:
   using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
 
-  // Returns the canonial name of the given PGOName. In a canonical name, all
+  // Returns the canonical name of the given PGOName. In a canonical name, all
   // suffixes that begins with "." except ".__uniq." are stripped.
   // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
   static StringRef getCanonicalName(StringRef PGOName);

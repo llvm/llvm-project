@@ -16,11 +16,11 @@ namespace data_access_prof {
 // If `Map` has an entry keyed by `Str`, returns the entry iterator. Otherwise,
 // creates an owned copy of `Str`, adds a map entry for it and returns the
 // iterator.
-static MapVector<StringRef, uint64_t>::iterator
-saveStringToMap(MapVector<StringRef, uint64_t> &Map,
+static std::pair<StringRef, uint64_t>
+saveStringToMap(DataAccessProfData::StringToIndexMap &Map,
                 llvm::UniqueStringSaver &Saver, StringRef Str) {
   auto [Iter, Inserted] = Map.try_emplace(Saver.save(Str), Map.size());
-  return Iter;
+  return *Iter;
 }
 
 // Returns the canonical name or error.
@@ -31,8 +31,8 @@ static Expected<StringRef> getCanonicalName(StringRef Name) {
   return InstrProfSymtab::getCanonicalName(Name);
 }
 
-const DataAccessProfRecord *
-DataAccessProfData::getProfileRecord(const SymbolHandle SymbolID) const {
+std::optional<DataAccessProfRecord>
+DataAccessProfData::getProfileRecord(const SymbolHandleRef SymbolID) const {
   auto Key = SymbolID;
   if (std::holds_alternative<StringRef>(SymbolID)) {
     auto NameOrErr = getCanonicalName(std::get<StringRef>(SymbolID));
@@ -41,40 +41,39 @@ DataAccessProfData::getProfileRecord(const SymbolHandle SymbolID) const {
       assert(
           std::get<StringRef>(SymbolID).empty() &&
           "Name canonicalization only fails when stringified string is empty.");
-      return nullptr;
+      return std::nullopt;
     }
     Key = *NameOrErr;
   }
 
   auto It = Records.find(Key);
-  if (It != Records.end())
-    return &It->second;
+  if (It != Records.end()) {
+    return DataAccessProfRecord(Key, It->second.Locations);
+  }
 
-  return nullptr;
+  return std::nullopt;
 }
 
-bool DataAccessProfData::isKnownColdSymbol(const SymbolHandle SymID) const {
+bool DataAccessProfData::isKnownColdSymbol(const SymbolHandleRef SymID) const {
   if (std::holds_alternative<uint64_t>(SymID))
     return KnownColdHashes.contains(std::get<uint64_t>(SymID));
   return KnownColdSymbols.contains(std::get<StringRef>(SymID));
 }
 
-Error DataAccessProfData::setDataAccessProfile(SymbolHandle Symbol,
+Error DataAccessProfData::setDataAccessProfile(SymbolHandleRef Symbol,
                                                uint64_t AccessCount) {
   uint64_t RecordID = -1;
-  bool IsStringLiteral = false;
-  SymbolHandle Key;
-  if (std::holds_alternative<uint64_t>(Symbol)) {
+  const bool IsStringLiteral = std::holds_alternative<uint64_t>(Symbol);
+  SymbolHandleRef Key;
+  if (IsStringLiteral) {
     RecordID = std::get<uint64_t>(Symbol);
     Key = RecordID;
-    IsStringLiteral = true;
   } else {
     auto CanonicalName = getCanonicalName(std::get<StringRef>(Symbol));
     if (!CanonicalName)
       return CanonicalName.takeError();
     std::tie(Key, RecordID) =
-        *saveStringToMap(StrToIndexMap, Saver, *CanonicalName);
-    IsStringLiteral = false;
+        saveStringToMap(StrToIndexMap, Saver, *CanonicalName);
   }
 
   auto [Iter, Inserted] =
@@ -89,21 +88,22 @@ Error DataAccessProfData::setDataAccessProfile(SymbolHandle Symbol,
 }
 
 Error DataAccessProfData::setDataAccessProfile(
-    SymbolHandle SymbolID, uint64_t AccessCount,
-    ArrayRef<DataLocation> Locations) {
+    SymbolHandleRef SymbolID, uint64_t AccessCount,
+    ArrayRef<SourceLocation> Locations) {
   if (Error E = setDataAccessProfile(SymbolID, AccessCount))
     return E;
 
   auto &Record = Records.back().second;
   for (const auto &Location : Locations)
     Record.Locations.push_back(
-        {saveStringToMap(StrToIndexMap, Saver, Location.FileName)->first,
+        {saveStringToMap(StrToIndexMap, Saver, Location.FileName).first,
          Location.Line});
 
   return Error::success();
 }
 
-Error DataAccessProfData::addKnownSymbolWithoutSamples(SymbolHandle SymbolID) {
+Error DataAccessProfData::addKnownSymbolWithoutSamples(
+    SymbolHandleRef SymbolID) {
   if (std::holds_alternative<uint64_t>(SymbolID)) {
     KnownColdHashes.insert(std::get<uint64_t>(SymbolID));
     return Error::success();
@@ -164,7 +164,7 @@ Error DataAccessProfData::serializeSymbolsAndFilenames(ProfOStream &OS) const {
 }
 
 uint64_t
-DataAccessProfData::getEncodedIndex(const SymbolHandle SymbolID) const {
+DataAccessProfData::getEncodedIndex(const SymbolHandleRef SymbolID) const {
   if (std::holds_alternative<uint64_t>(SymbolID))
     return std::get<uint64_t>(SymbolID);
 
@@ -220,7 +220,8 @@ Error DataAccessProfData::deserializeSymbolsAndFilenames(
 }
 
 Error DataAccessProfData::deserializeRecords(const unsigned char *&Ptr) {
-  SmallVector<StringRef> Strings = llvm::to_vector(getStrings());
+  SmallVector<StringRef> Strings =
+      llvm::to_vector(llvm::make_first_range(getStrToIndexMapRef()));
 
   uint64_t NumRecords =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
@@ -235,7 +236,7 @@ Error DataAccessProfData::deserializeRecords(const unsigned char *&Ptr) {
     uint64_t AccessCount =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
-    SymbolHandle SymbolID;
+    SymbolHandleRef SymbolID;
     if (IsStringLiteral)
       SymbolID = ID;
     else

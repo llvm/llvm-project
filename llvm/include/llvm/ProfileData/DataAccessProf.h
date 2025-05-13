@@ -30,23 +30,40 @@
 #include "llvm/Support/StringSaver.h"
 
 #include <cstdint>
+#include <optional>
 #include <variant>
 
 namespace llvm {
 
 namespace data_access_prof {
-// The location of data in the source code.
-struct DataLocation {
+
+/// The location of data in the source code. Used by profile lookup API.
+struct SourceLocation {
+  SourceLocation(StringRef FileNameRef, uint32_t Line)
+      : FileName(FileNameRef.str()), Line(Line) {}
+  /// The filename where the data is located.
+  std::string FileName;
+  /// The line number in the source code.
+  uint32_t Line;
+};
+
+namespace internal {
+
+// Conceptually similar to SourceLocation except that FileNames are StringRef of
+// which strings are owned by `DataAccessProfData`. Used by `DataAccessProfData`
+// to represent data locations internally.
+struct SourceLocationRef {
   // The filename where the data is located.
   StringRef FileName;
   // The line number in the source code.
   uint32_t Line;
 };
 
-// The data access profiles for a symbol.
-struct DataAccessProfRecord {
-  DataAccessProfRecord(uint64_t SymbolID, uint64_t AccessCount,
-                       bool IsStringLiteral)
+// The data access profiles for a symbol. Used by `DataAccessProfData`
+// to represent records internally.
+struct DataAccessProfRecordRef {
+  DataAccessProfRecordRef(uint64_t SymbolID, uint64_t AccessCount,
+                          bool IsStringLiteral)
       : SymbolID(SymbolID), AccessCount(AccessCount),
         IsStringLiteral(IsStringLiteral) {}
 
@@ -67,18 +84,43 @@ struct DataAccessProfRecord {
   bool IsStringLiteral;
 
   // The locations of data in the source code. Optional.
-  llvm::SmallVector<DataLocation, 0> Locations;
+  llvm::SmallVector<SourceLocationRef, 0> Locations;
+};
+} // namespace internal
+
+// SymbolID is either a string representing symbol name if the symbol has
+// stable mangled name relative to source code, or a uint64_t representing the
+// content hash of a string literal (with unstable name patterns like
+// `.str.N[.llvm.hash]`). The StringRef is owned by the class's saver object.
+using SymbolHandleRef = std::variant<StringRef, uint64_t>;
+
+// The senamtic is the same as `SymbolHandleRef` above. The strings are owned.
+using SymbolHandle = std::variant<std::string, uint64_t>;
+
+/// The data access profiles for a symbol.
+struct DataAccessProfRecord {
+public:
+  DataAccessProfRecord(SymbolHandleRef SymHandleRef,
+                       ArrayRef<internal::SourceLocationRef> LocRefs) {
+    if (std::holds_alternative<StringRef>(SymHandleRef)) {
+      SymHandle = std::get<StringRef>(SymHandleRef).str();
+    } else
+      SymHandle = std::get<uint64_t>(SymHandleRef);
+
+    for (auto Loc : LocRefs)
+      Locations.push_back(SourceLocation(Loc.FileName, Loc.Line));
+  }
+  SymbolHandle SymHandle;
+
+  // The locations of data in the source code. Optional.
+  SmallVector<SourceLocation> Locations;
 };
 
-/// Encapsulates the data access profile data and the methods to operate on it.
-/// This class provides profile look-up, serialization and deserialization.
+/// Encapsulates the data access profile data and the methods to operate on
+/// it. This class provides profile look-up, serialization and
+/// deserialization.
 class DataAccessProfData {
 public:
-  // SymbolID is either a string representing symbol name if the symbol has
-  // stable mangled name relative to source code, or a uint64_t representing the
-  // content hash of a string literal (with unstable name patterns like
-  // `.str.N[.llvm.hash]`). The StringRef is owned by the class's saver object.
-  using SymbolHandle = std::variant<StringRef, uint64_t>;
   using StringToIndexMap = llvm::MapVector<StringRef, uint64_t>;
 
   DataAccessProfData() : Saver(Allocator) {}
@@ -93,35 +135,39 @@ public:
   /// Deserialize this class from the given buffer.
   Error deserialize(const unsigned char *&Ptr);
 
-  /// Returns a pointer of profile record for \p SymbolID, or nullptr if there
+  /// Returns a profile record for \p SymbolID, or std::nullopt if there
   /// isn't a record. Internally, this function will canonicalize the symbol
   /// name before the lookup.
-  const DataAccessProfRecord *getProfileRecord(const SymbolHandle SymID) const;
+  std::optional<DataAccessProfRecord>
+  getProfileRecord(const SymbolHandleRef SymID) const;
 
   /// Returns true if \p SymID is seen in profiled binaries and cold.
-  bool isKnownColdSymbol(const SymbolHandle SymID) const;
+  bool isKnownColdSymbol(const SymbolHandleRef SymID) const;
 
-  /// Methods to set symbolized data access profile. Returns error if duplicated
-  /// symbol names or content hashes are seen. The user of this class should
-  /// aggregate counters that correspond to the same symbol name or with the
-  /// same string literal hash before calling 'set*' methods.
-  Error setDataAccessProfile(SymbolHandle SymbolID, uint64_t AccessCount);
+  /// Methods to set symbolized data access profile. Returns error if
+  /// duplicated symbol names or content hashes are seen. The user of this
+  /// class should aggregate counters that correspond to the same symbol name
+  /// or with the same string literal hash before calling 'set*' methods.
+  Error setDataAccessProfile(SymbolHandleRef SymbolID, uint64_t AccessCount);
   /// Similar to the method above, for records with \p Locations representing
   /// the `filename:line` where this symbol shows up. Note because of linker's
   /// merge of identical symbols (e.g., unnamed_addr string literals), one
   /// symbol is likely to have multiple locations.
-  Error setDataAccessProfile(SymbolHandle SymbolID, uint64_t AccessCount,
-                             ArrayRef<DataLocation> Locations);
-  Error addKnownSymbolWithoutSamples(SymbolHandle SymbolID);
+  Error setDataAccessProfile(SymbolHandleRef SymbolID, uint64_t AccessCount,
+                             ArrayRef<SourceLocation> Locations);
+  /// Add a symbol that's seen in the profiled binary without samples.
+  Error addKnownSymbolWithoutSamples(SymbolHandleRef SymbolID);
 
-  /// Returns an iterable StringRef for strings in the order they are added.
-  /// Each string may be a symbol name or a file name.
-  auto getStrings() const {
-    return llvm::make_first_range(StrToIndexMap.getArrayRef());
+  /// The following methods return array reference for various internal data
+  /// structures.
+  ArrayRef<StringToIndexMap::value_type> getStrToIndexMapRef() const {
+    return StrToIndexMap.getArrayRef();
   }
-
-  /// Returns array reference for various internal data structures.
-  auto getRecords() const { return Records.getArrayRef(); }
+  ArrayRef<
+      MapVector<SymbolHandleRef, internal::DataAccessProfRecordRef>::value_type>
+  getRecords() const {
+    return Records.getArrayRef();
+  }
   ArrayRef<StringRef> getKnownColdSymbols() const {
     return KnownColdSymbols.getArrayRef();
   }
@@ -139,11 +185,12 @@ private:
                                        const uint64_t NumSampledSymbols,
                                        const uint64_t NumColdKnownSymbols);
 
-  /// Decode the records and increment \p Ptr to the start of the next payload.
+  /// Decode the records and increment \p Ptr to the start of the next
+  /// payload.
   Error deserializeRecords(const unsigned char *&Ptr);
 
   /// A helper function to compute a storage index for \p SymbolID.
-  uint64_t getEncodedIndex(const SymbolHandle SymbolID) const;
+  uint64_t getEncodedIndex(const SymbolHandleRef SymbolID) const;
 
   // Keeps owned copies of the input strings.
   // NOTE: Keep `Saver` initialized before other class members that reference
@@ -152,7 +199,7 @@ private:
   llvm::UniqueStringSaver Saver;
 
   // `Records` stores the records.
-  MapVector<SymbolHandle, DataAccessProfRecord> Records;
+  MapVector<SymbolHandleRef, internal::DataAccessProfRecordRef> Records;
 
   // Use MapVector to keep input order of strings for serialization and
   // deserialization.
