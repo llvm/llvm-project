@@ -685,6 +685,15 @@ def OMP_CancellationPoint : Directive<[Spelling<"cancellation point">]> {
   let association = AS_None;
   let category = CA_Executable;
 }
+def OMP_Coexecute : Directive<"coexecute"> {
+  let association = AS_Block;
+  let category = CA_Executable;
+}
+def OMP_EndCoexecute : Directive<"end coexecute"> {
+  let leafConstructs = OMP_Coexecute.leafConstructs;
+  let association = OMP_Coexecute.association;
+  let category = OMP_Coexecute.category;
+}
 def OMP_Critical : Directive<"critical"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Hint>,
@@ -2230,8 +2239,10 @@ def OMP_TargetTeamsCoexecute : Directive<"target teams coexecute"> {
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_ThreadLimit>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
-    VersionedClause<OMPC_OMX_Bare>,
+    VersionedClause<OMPC_OMPX_Bare>,
   ];
+  let leafConstructs = [OMP_Target, OMP_Teams, OMP_Coexecute];
+  let category = CA_Executable;
 }
 def OMP_TargetTeamsDistribute : Directive<"target teams distribute"> {
   let allowedClauses = [
@@ -2534,6 +2545,8 @@ def OMP_TeamsCoexecute : Directive<"teams coexecute"> {
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_ThreadLimit>
   ];
+  let leafConstructs = [OMP_Target, OMP_Teams];
+  let category = CA_Executable;
 }
 def OMP_TeamsDistribute : Directive<"teams distribute"> {
   let allowedClauses = [
