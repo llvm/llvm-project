@@ -282,9 +282,9 @@ body: |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $vgpr0, $sgpr8_sgpr9
 
-    %0:sgpr_64(p4) = COPY $sgpr8_sgpr9
-    %1:vgpr_32(s32) = COPY $vgpr0
-    %2:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0(p4), 0, 0
+    %0:sgpr_64 = COPY $sgpr8_sgpr9
+    %1:vgpr_32 = COPY $vgpr0
+    %2:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0
     S_BITCMP1_B32 %2.sub1, 0, implicit-def $scc
     %3:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
     %4:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
