@@ -568,11 +568,12 @@ void DataAggregator::processProfile(BinaryContext &BC) {
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &BF = BFI.second;
     if (FuncBranchData *FBD = getBranchData(BF)) {
-      BF.markProfiled(BinaryFunction::PF_LBR);
-      BF.RawBranchCount = FBD->getNumExecutedBranches();
-    } else if (FuncSampleData *FSD = getFuncSampleData(BF.getNames())) {
-      BF.markProfiled(BinaryFunction::PF_SAMPLE);
-      BF.RawBranchCount = FSD->getSamples();
+      BF.markProfiled(BinaryFunction::PF_BRANCH);
+      BF.RawSampleCount = FBD->getNumExecutedBranches();
+    } else if (FuncBasicSampleData *FSD =
+                   getFuncBasicSampleData(BF.getNames())) {
+      BF.markProfiled(BinaryFunction::PF_BASIC);
+      BF.RawSampleCount = FSD->getSamples();
     }
   }
 
@@ -627,8 +628,8 @@ StringRef DataAggregator::getLocationName(const BinaryFunction &Func,
   return OrigFunc->getOneName();
 }
 
-bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
-                              uint64_t Count) {
+bool DataAggregator::doBasicSample(BinaryFunction &OrigFunc, uint64_t Address,
+                                   uint64_t Count) {
   // To record executed bytes, use basic block size as is regardless of BAT.
   uint64_t BlockSize = 0;
   if (BinaryBasicBlock *BB = OrigFunc.getBasicBlockContainingOffset(
@@ -642,13 +643,13 @@ bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
   // Attach executed bytes to parent function in case of cold fragment.
   Func.SampleCountInBytes += Count * BlockSize;
 
-  auto I = NamesToSamples.find(Func.getOneName());
-  if (I == NamesToSamples.end()) {
+  auto I = NamesToBasicSamples.find(Func.getOneName());
+  if (I == NamesToBasicSamples.end()) {
     bool Success;
     StringRef LocName = getLocationName(Func, BAT);
-    std::tie(I, Success) = NamesToSamples.insert(
-        std::make_pair(Func.getOneName(),
-                       FuncSampleData(LocName, FuncSampleData::ContainerTy())));
+    std::tie(I, Success) = NamesToBasicSamples.insert(std::make_pair(
+        Func.getOneName(),
+        FuncBasicSampleData(LocName, FuncBasicSampleData::ContainerTy())));
   }
 
   Address -= Func.getAddress();
@@ -1661,7 +1662,7 @@ void DataAggregator::processBasicEvents() {
       continue;
     }
 
-    doSample(*Func, PC, HitCount);
+    doBasicSample(*Func, PC, HitCount);
   }
   outs() << "PERF2BOLT: read " << NumTotalSamples << " samples\n";
 
@@ -2192,9 +2193,9 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
       OutFile << " " << Entry.getKey();
     OutFile << "\n";
 
-    for (const auto &KV : NamesToSamples) {
-      const FuncSampleData &FSD = KV.second;
-      for (const SampleInfo &SI : FSD.Data) {
+    for (const auto &KV : NamesToBasicSamples) {
+      const FuncBasicSampleData &FSD = KV.second;
+      for (const BasicSampleInfo &SI : FSD.Data) {
         writeLocation(SI.Loc);
         OutFile << SI.Hits << "\n";
         ++BranchValues;
@@ -2267,8 +2268,8 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
   for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames)
     EventNamesOS << LS << EventEntry.first().str();
 
-  BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
-                                           : BinaryFunction::PF_LBR;
+  BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_BASIC
+                                           : BinaryFunction::PF_BRANCH;
 
   // Add probe inline tree nodes.
   YAMLProfileWriter::InlineTreeDesc InlineTree;
