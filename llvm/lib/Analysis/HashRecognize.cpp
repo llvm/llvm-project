@@ -153,9 +153,7 @@ KnownBits ValueEvolution::computeBinOp(const BinaryOperator *I,
   case Instruction::BinaryOps::Mul: {
     Value *Op0 = I->getOperand(0);
     Value *Op1 = I->getOperand(1);
-    bool SelfMultiply = Op0 == Op1;
-    if (SelfMultiply)
-      SelfMultiply &= isGuaranteedNotToBeUndef(Op0);
+    bool SelfMultiply = Op0 == Op1 && isGuaranteedNotToBeUndef(Op0);
     return KnownBits::mul(KnownL, KnownR, SelfMultiply);
   }
   case Instruction::BinaryOps::UDiv:
@@ -278,6 +276,44 @@ ValueEvolution::computeEvolutions(ArrayRef<PhiStepPair> PhiEvolutions) {
   return KnownPhis;
 }
 
+/// Digs for a recurrence starting with \p V hitting the PHI node \p P in a
+/// use-def chain. Used by matchConditionalRecurrence.
+static BinaryOperator *
+digRecurrence(Instruction *V, const PHINode *P, const Loop &L,
+              const APInt *&ExtraConst,
+              Instruction::BinaryOps BOWithConstOpToMatch) {
+  using namespace llvm::PatternMatch;
+
+  SmallVector<Instruction *> Worklist;
+  Worklist.push_back(V);
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.pop_back_val();
+
+    // Don't add a PHI's operands to the Worklist.
+    if (isa<PHINode>(I))
+      continue;
+
+    // Find a recurrence over a BinOp, by matching either of its operands
+    // with with the PHINode.
+    if (match(I, m_c_BinOp(m_Value(), m_Specific(P))))
+      return cast<BinaryOperator>(I);
+
+    // Bind to ExtraConst, if we match exactly one.
+    if (I->getOpcode() == BOWithConstOpToMatch) {
+      if (ExtraConst)
+        return nullptr;
+      match(I, m_c_BinOp(m_APInt(ExtraConst), m_Value()));
+    }
+
+    // Continue along the use-def chain.
+    for (Use &U : I->operands())
+      if (auto *UI = dyn_cast<Instruction>(U))
+        if (L.contains(UI))
+          Worklist.push_back(UI);
+  }
+  return nullptr;
+}
+
 /// A Conditional Recurrence is a recurrence of the form:
 ///
 /// loop:
@@ -311,42 +347,15 @@ static bool matchConditionalRecurrence(
                m_Select(m_Cmp(), m_Instruction(TV), m_Instruction(FV))))
       continue;
 
-    auto DigRecurrence = [&](Instruction *V) -> BinaryOperator * {
-      SmallVector<Instruction *> Worklist;
-      Worklist.push_back(V);
-      while (!Worklist.empty()) {
-        Instruction *I = Worklist.pop_back_val();
-
-        // Don't add a PHI's operands to the Worklist.
-        if (isa<PHINode>(I))
-          continue;
-
-        // Find a recurrence over a BinOp, by matching either of its operands
-        // with with the PHINode.
-        if (match(I, m_c_BinOp(m_Value(), m_Specific(P))))
-          return cast<BinaryOperator>(I);
-
-        // Bind to ExtraConst, if we match exactly one.
-        if (I->getOpcode() == BOWithConstOpToMatch) {
-          if (ExtraConst)
-            return nullptr;
-          match(I, m_c_BinOp(m_APInt(ExtraConst), m_Value()));
-        }
-
-        // Continue along the use-def chain.
-        for (Use &U : I->operands())
-          if (auto *UI = dyn_cast<Instruction>(U))
-            if (L.contains(UI))
-              Worklist.push_back(UI);
-      }
-      return nullptr;
-    };
-
     // For a conditional recurrence, both the true and false values of the
     // select must ultimately end up in the same recurrent BinOp.
-    BinaryOperator *FoundBO = DigRecurrence(TV);
-    BinaryOperator *AltBO = DigRecurrence(FV);
-    if (!FoundBO || !AltBO || FoundBO != AltBO)
+    ExtraConst = nullptr;
+    BinaryOperator *FoundBO =
+        digRecurrence(TV, P, L, ExtraConst, BOWithConstOpToMatch);
+    BinaryOperator *AltBO =
+        digRecurrence(FV, P, L, ExtraConst, BOWithConstOpToMatch);
+
+    if (!FoundBO || FoundBO != AltBO)
       return false;
 
     if (BOWithConstOpToMatch != Instruction::BinaryOpsEnd && !ExtraConst) {
@@ -404,15 +413,16 @@ static std::pair<std::optional<RecurrenceInfo>, std::optional<RecurrenceInfo>>
 getRecurrences(BasicBlock *LoopLatch, const PHINode *IndVar, const Loop &L) {
   std::optional<RecurrenceInfo> SimpleRecurrence, ConditionalRecurrence;
   for (PHINode &P : LoopLatch->phis()) {
-    BinaryOperator *BO;
-    Value *Start, *Step;
-    const APInt *GenPoly = nullptr;
     if (&P == IndVar)
       continue;
     if (!P.getType()->isIntegerTy()) {
       LLVM_DEBUG(dbgs() << "HashRecognize: Non-integral PHI found\n");
       return {};
     }
+
+    BinaryOperator *BO;
+    Value *Start, *Step;
+    const APInt *GenPoly;
     if (!SimpleRecurrence && matchSimpleRecurrence(&P, BO, Start, Step)) {
       SimpleRecurrence = {&P, BO, Start, Step};
     } else if (!ConditionalRecurrence &&
@@ -461,19 +471,24 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
   unsigned MSB = 1 << (BW - 1);
   CRCTable Table;
   Table[0] = APInt::getZero(BW);
-  APInt CRCInit(BW, ByteOrderSwapped ? 1 : 128);
-  for (unsigned I = ByteOrderSwapped ? 1 : 128; ByteOrderSwapped ? I < 256 : I;
-       ByteOrderSwapped ? I <<= 1 : I >>= 1) {
-    APInt CRCShift = ByteOrderSwapped ? CRCInit.shl(1) : CRCInit.lshr(1);
-    APInt SBCheck = ByteOrderSwapped ? (CRCInit & MSB) : (CRCInit & 1);
-    CRCInit = CRCShift ^ (SBCheck.isZero() ? APInt::getZero(BW) : GenPoly);
-    if (ByteOrderSwapped) {
+
+  if (ByteOrderSwapped) {
+    APInt CRCInit(BW, 1);
+    for (unsigned I = 1; I < 256; I <<= 1) {
+      CRCInit = CRCInit.shl(1) ^
+                ((CRCInit & MSB).isZero() ? APInt::getZero(BW) : GenPoly);
       for (unsigned J = 0; J < I; ++J)
         Table[I + J] = CRCInit ^ Table[J];
-    } else {
-      for (unsigned J = 0; J < 256; J += (I << 1))
-        Table[I + J] = CRCInit ^ Table[J];
     }
+    return Table;
+  }
+
+  APInt CRCInit(BW, 128);
+  for (unsigned I = 128; I; I >>= 1) {
+    CRCInit = CRCInit.lshr(1) ^
+              ((CRCInit & 1).isZero() ? APInt::getZero(BW) : GenPoly);
+    for (unsigned J = 0; J < 256; J += (I << 1))
+      Table[I + J] = CRCInit ^ Table[J];
   }
   return Table;
 }
@@ -576,7 +591,7 @@ HashRecognize::recognizeCRC() const {
   // true even if it is only really used in an outer loop's exit block, since
   // the loop is in LCSSA form.
   auto *ComputedValue = cast<SelectInst>(ConditionalRecurrence->Step);
-  if (!count_if(ComputedValue->users(), [Exit](User *U) {
+  if (none_of(ComputedValue->users(), [Exit](User *U) {
         auto *UI = dyn_cast<Instruction>(U);
         return UI && UI->getParent() == Exit;
       }))
@@ -611,12 +626,9 @@ HashRecognize::recognizeCRC() const {
 }
 
 void CRCTable::print(raw_ostream &OS) const {
-  for (unsigned I = 0; I < 256; I += 16) {
-    for (unsigned J = I; J < I + 16; ++J) {
-      std::array<APInt, 256>::operator[](J).print(OS, false);
-      OS << " ";
-    }
-    OS << "\n";
+  for (unsigned I = 0; I < 256; I++) {
+    (*this)[I].print(OS, false);
+    OS << (I % 16 == 15 ? '\n' : ' ');
   }
 }
 
