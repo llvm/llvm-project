@@ -2508,10 +2508,8 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
             WrapFlagsTy(MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap()),
             MulAcc->getDebugLoc()),
         ResultTy(MulAcc->getResultType()),
-        IsPartialReduction(MulAcc->isPartialReduction()) {
-    VecOpInfo[0] = MulAcc->getVecOp0Info();
-    VecOpInfo[1] = MulAcc->getVecOp1Info();
-  }
+        IsPartialReduction(MulAcc->isPartialReduction()),
+        VecOpInfo{MulAcc->getVecOp0Info(), MulAcc->getVecOp1Info()} {}
 
 public:
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul,
@@ -2524,13 +2522,13 @@ public:
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
             R->getDebugLoc()),
         ResultTy(ResultTy),
-        IsPartialReduction(isa<VPPartialReductionRecipe>(R)) {
+        IsPartialReduction(isa<VPPartialReductionRecipe>(R)),
+        VecOpInfo{{Ext0->getOpcode(), Ext0->isNonNeg()},
+                  {Ext1->getOpcode(), Ext1->isNonNeg()}} {
     assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind()) ==
                Instruction::Add &&
            "The reduction instruction in MulAccumulateteReductionRecipe must "
            "be Add");
-    VecOpInfo[0] = {Ext0->getOpcode(), Ext0->isNonNeg()};
-    VecOpInfo[1] = {Ext1->getOpcode(), Ext1->isNonNeg()};
   }
 
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul)
@@ -2597,8 +2595,8 @@ public:
   /// Return if the operands of mul instruction come from same extend.
   bool isSameExtendVal() const { return getVecOp0() == getVecOp1(); }
 
-  VecOperandInfo getVecOp0Info() const { return VecOpInfo[0]; }
-  VecOperandInfo getVecOp1Info() const { return VecOpInfo[1]; }
+  const VecOperandInfo &getVecOp0Info() const { return VecOpInfo[0]; }
+  const VecOperandInfo &getVecOp1Info() const { return VecOpInfo[1]; }
 
   /// Return if the underlying reduction recipe is a partial reduction.
   bool isPartialReduction() const { return IsPartialReduction; }
