@@ -5,13 +5,24 @@
 
 define amdgpu_kernel void @out_of_bounds() {
 ; CHECK-LABEL: define amdgpu_kernel void @out_of_bounds() {
-; CHECK-NEXT:    [[PTR:%.*]] = alloca [4 x float], align 4, addrspace(5)
-; CHECK-NEXT:    [[ELEM_PTR:%.*]] = getelementptr [4 x float], ptr addrspace(5) [[PTR]], i32 0, i32 42
-; CHECK-NEXT:    call void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) [[PTR]], ptr addrspace(5) [[ELEM_PTR]], i32 8, i1 false)
+; CHECK-NEXT:    [[PTR:%.*]] = freeze <4 x float> poison
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[PTR]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 2, i32 3>
 ; CHECK-NEXT:    ret void
 ;
   %ptr = alloca [4 x float], align 4, addrspace(5)
   %elem_ptr = getelementptr [4 x float], ptr addrspace(5) %ptr, i32 0, i32 42
+  call void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) %ptr, ptr addrspace(5) %elem_ptr, i32 8, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @partially_out_of_bounds() {
+; CHECK-LABEL: define amdgpu_kernel void @partially_out_of_bounds() {
+; CHECK-NEXT:    [[PTR:%.*]] = freeze <3 x float> poison
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x float> [[PTR]], <3 x float> poison, <3 x i32> <i32 2, i32 poison, i32 2>
+; CHECK-NEXT:    ret void
+;
+  %ptr = alloca [3 x float], align 4, addrspace(5)
+  %elem_ptr = getelementptr [3 x float], ptr addrspace(5) %ptr, i32 0, i32 2
   call void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) %ptr, ptr addrspace(5) %elem_ptr, i32 8, i1 false)
   ret void
 }

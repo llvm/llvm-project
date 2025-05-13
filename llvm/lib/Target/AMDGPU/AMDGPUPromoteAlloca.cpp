@@ -666,7 +666,9 @@ static Value *promoteAllocaUserToVector(
       SmallVector<int> Mask;
       for (unsigned Idx = 0; Idx < VectorTy->getNumElements(); ++Idx) {
         if (Idx >= DestBegin && Idx < DestBegin + NumCopied) {
-          Mask.push_back(SrcBegin++);
+          Mask.push_back(SrcBegin < VectorTy->getNumElements()
+                             ? SrcBegin++
+                             : PoisonMaskElem);
         } else {
           Mask.push_back(Idx);
         }
@@ -919,12 +921,6 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       Value *Index = GEPToVectorIndex(GEP, &Alloca, VecEltTy, *DL, NewGEPInsts);
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
-      // Alternatively, if there is a constant index for which we already know
-      // that it will be out-of-bounds, we also don't want to promote this
-      // alloca to vector.
-      if (ConstantInt *I = dyn_cast<ConstantInt>(Index);
-          I && I->getZExtValue() >= Alloca.getAllocationSize(*DL))
-        return RejectUser(Inst, "GEP constant index out-of-bounds");
 
       GEPVectorIdx[GEP] = Index;
       UsersToRemove.push_back(Inst);
