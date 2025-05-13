@@ -287,7 +287,11 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
     // Relocations referring to InputSections are constant-equal if their
     // section offsets are equal.
     if (isa<InputSection>(da->section)) {
-      if (da->value + addA == db->value + addB)
+      // Our symbol folding logic later merges symbols in two folded sections
+      // We should not merge sections in the first place if their symbols
+      // cannot be merged together.
+      bool canMergeSymbols = addA == addB;
+      if (da->value + addA == db->value + addB && canMergeSymbols)
         continue;
       return false;
     }
