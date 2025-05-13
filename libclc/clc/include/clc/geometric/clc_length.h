@@ -6,6 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DEF __CLC_FLOAT fast_distance(__CLC_FLOATN p0, __CLC_FLOATN p1) {
-  return fast_length(p0 - p1);
-}
+#ifndef __CLC_GEOMETRIC_CLC_LENGTH_H__
+#define __CLC_GEOMETRIC_CLC_LENGTH_H__
+
+#define __CLC_FUNCTION __clc_length
+#define __CLC_BODY <clc/geometric/unary_decl.inc>
+
+#include <clc/math/gentype.inc>
+
+#undef __CLC_FUNCTION
+
+#endif // __CLC_GEOMETRIC_CLC_LENGTH_H__

@@ -6,14 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Geometric functions are only defined for scalar, vec2, vec3 and vec4
-// Only handle vector implementations
-#if (__CLC_VECSIZE_OR_1 == 2 || __CLC_VECSIZE_OR_1 == 3 ||                     \
-     __CLC_VECSIZE_OR_1 == 4)
+#include <clc/utils.h>
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE fast_normalize(__CLC_GENTYPE p) {
-  __CLC_SCALAR_GENTYPE l2 = dot(p, p);
-  return l2 == 0.0f ? p : p * half_rsqrt(l2);
+#ifndef __CLC_FUNCTION
+#define __CLC_FUNCTION(x) __CLC_CONCAT(__clc_, x)
+#endif
+
+// Geometric functions are only defined for scalar, vec2, vec3 and vec4
+#if (__CLC_VECSIZE_OR_1 == 1 || __CLC_VECSIZE_OR_1 == 2 ||                     \
+     __CLC_VECSIZE_OR_1 == 3 || __CLC_VECSIZE_OR_1 == 4)
+
+_CLC_OVERLOAD _CLC_DEF __CLC_SCALAR_GENTYPE FUNCTION(__CLC_GENTYPE a,
+                                                     __CLC_GENTYPE b) {
+  return __CLC_FUNCTION(FUNCTION)(a, b);
 }
 
 #endif

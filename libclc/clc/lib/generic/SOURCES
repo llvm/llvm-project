@@ -2,7 +2,11 @@ common/clc_degrees.cl
 common/clc_radians.cl
 common/clc_sign.cl
 common/clc_smoothstep.cl
+geometric/clc_distance.cl
 geometric/clc_dot.cl
+geometric/clc_fast_distance.cl
+geometric/clc_fast_length.cl
+geometric/clc_length.cl
 integer/clc_abs.cl
 integer/clc_abs_diff.cl
 integer/clc_add_sat.cl

@@ -6,4 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_FLOATN normalize(__CLC_FLOATN p);
+#if (__CLC_VECSIZE_OR_1 == 1 || __CLC_VECSIZE_OR_1 == 2 ||                     \
+     __CLC_VECSIZE_OR_1 == 3 || __CLC_VECSIZE_OR_1 == 4)
+
+_CLC_OVERLOAD _CLC_DEF __CLC_SCALAR_GENTYPE __clc_distance(__CLC_GENTYPE p0,
+                                                           __CLC_GENTYPE p1) {
+  return __clc_length(p0 - p1);
+}
+
+#endif
