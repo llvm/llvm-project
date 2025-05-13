@@ -17,6 +17,7 @@
 #define LLVM_SUPPORT_REGEX_H
 
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 struct llvm_regex;
@@ -45,31 +46,31 @@ namespace llvm {
       LLVM_MARK_AS_BITMASK_ENUM(BasicRegex)
     };
 
-    Regex();
+    LLVM_ABI Regex();
     /// Compiles the given regular expression \p Regex.
     ///
     /// \param Regex - referenced string is no longer needed after this
     /// constructor does finish.  Only its compiled form is kept stored.
-    Regex(StringRef Regex, RegexFlags Flags = NoFlags);
-    Regex(StringRef Regex, unsigned Flags);
+    LLVM_ABI Regex(StringRef Regex, RegexFlags Flags = NoFlags);
+    LLVM_ABI Regex(StringRef Regex, unsigned Flags);
     Regex(const Regex &) = delete;
     Regex &operator=(Regex regex) {
       std::swap(preg, regex.preg);
       std::swap(error, regex.error);
       return *this;
     }
-    Regex(Regex &&regex);
-    ~Regex();
+    LLVM_ABI Regex(Regex &&regex);
+    LLVM_ABI ~Regex();
 
     /// isValid - returns the error encountered during regex compilation, if
     /// any.
-    bool isValid(std::string &Error) const;
+    LLVM_ABI bool isValid(std::string &Error) const;
     bool isValid() const { return !error; }
 
     /// getNumMatches - In a valid regex, return the number of parenthesized
     /// matches it contains.  The number filled in by match will include this
     /// many entries plus one for the whole regex (as element 0).
-    unsigned getNumMatches() const;
+    LLVM_ABI unsigned getNumMatches() const;
 
     /// matches - Match the regex against a given \p String.
     ///
@@ -81,8 +82,9 @@ namespace llvm {
     /// as a non-empty string. If there is no error, it will be an empty string.
     ///
     /// This returns true on a successful match.
-    bool match(StringRef String, SmallVectorImpl<StringRef> *Matches = nullptr,
-               std::string *Error = nullptr) const;
+    LLVM_ABI bool match(StringRef String,
+                        SmallVectorImpl<StringRef> *Matches = nullptr,
+                        std::string *Error = nullptr) const;
 
     /// sub - Return the result of replacing the first match of the regex in
     /// \p String with the \p Repl string. Backreferences like "\0" and "\g<1>"
@@ -95,15 +97,15 @@ namespace llvm {
     /// \param Error If non-null, any errors in the substitution (invalid
     /// backreferences, trailing backslashes) will be recorded as a non-empty
     /// string. If there is no error, it will be an empty string.
-    std::string sub(StringRef Repl, StringRef String,
-                    std::string *Error = nullptr) const;
+    LLVM_ABI std::string sub(StringRef Repl, StringRef String,
+                             std::string *Error = nullptr) const;
 
     /// If this function returns true, ^Str$ is an extended regular
     /// expression that matches Str and only Str.
-    static bool isLiteralERE(StringRef Str);
+    LLVM_ABI static bool isLiteralERE(StringRef Str);
 
     /// Turn String into a regex by escaping its special characters.
-    static std::string escape(StringRef String);
+    LLVM_ABI static std::string escape(StringRef String);
 
   private:
     struct llvm_regex *preg;
