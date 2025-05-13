@@ -2391,9 +2391,9 @@ foreach vt = [v2f16, v2bf16, v2i16, v4i8] in {
 class LD<NVPTXRegClass regclass>
   : NVPTXInst<
     (outs regclass:$dst),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign,
+    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Sign,
          i32imm:$fromWidth, ADDR:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${scope:scope}${addsp:addsp}.${Sign:sign}$fromWidth "
     "\t$dst, [$addr];", []>;
 
 let mayLoad=1, hasSideEffects=0 in {
@@ -2409,8 +2409,8 @@ class ST<NVPTXRegClass regclass>
   : NVPTXInst<
     (outs),
     (ins regclass:$src, LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
-         LdStCode:$Vec, LdStCode:$Sign, i32imm:$toWidth, ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$toWidth"
+         LdStCode:$Sign, i32imm:$toWidth, ADDR:$addr),
+    "st${sem:sem}${scope:scope}${addsp:addsp}.${Sign:sign}$toWidth"
     " \t[$addr], $src;", []>;
 
 let mayStore=1, hasSideEffects=0 in {
@@ -2425,52 +2425,71 @@ let mayStore=1, hasSideEffects=0 in {
 // The following is used only in and after vector elementizations.  Vector
 // elementization happens at the machine instruction level, so the following
 // instructions never appear in the DAG.
-multiclass LD_VEC<NVPTXRegClass regclass> {
+multiclass LD_VEC<NVPTXRegClass regclass, bit support_v8 = false> {
   def _v2 : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
+    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
          LdStCode:$Sign, i32imm:$fromWidth, ADDR:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${scope:scope}${addsp:addsp}.v2.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2}}, [$addr];", []>;
   def _v4 : NVPTXInst<
     (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4),
-    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
+    (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
          LdStCode:$Sign, i32imm:$fromWidth, ADDR:$addr),
-    "ld${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "ld${sem:sem}${scope:scope}${addsp:addsp}.v4.${Sign:sign}$fromWidth "
     "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr];", []>;
+  if support_v8 then
+    def _v8 : NVPTXInst<
+      (outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4,
+            regclass:$dst5, regclass:$dst6, regclass:$dst7, regclass:$dst8),
+      (ins LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Sign,
+           i32imm:$fromWidth, ADDR:$addr),
+      "ld${sem:sem}${scope:scope}${addsp:addsp}.v8.${Sign:sign}$fromWidth "
+      "\t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, "
+      "[$addr];", []>;
 }
 let mayLoad=1, hasSideEffects=0 in {
   defm LDV_i8  : LD_VEC<Int16Regs>;
   defm LDV_i16 : LD_VEC<Int16Regs>;
-  defm LDV_i32 : LD_VEC<Int32Regs>;
+  defm LDV_i32 : LD_VEC<Int32Regs, support_v8 = true>;
   defm LDV_i64 : LD_VEC<Int64Regs>;
-  defm LDV_f32 : LD_VEC<Float32Regs>;
+  defm LDV_f32 : LD_VEC<Float32Regs, support_v8 = true>;
   defm LDV_f64 : LD_VEC<Float64Regs>;
 }
 
-multiclass ST_VEC<NVPTXRegClass regclass> {
+multiclass ST_VEC<NVPTXRegClass regclass, bit support_v8 = false> {
   def _v2 : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$scope,
-         LdStCode:$addsp, LdStCode:$Vec, LdStCode:$Sign, i32imm:$fromWidth,
+         LdStCode:$addsp, LdStCode:$Sign, i32imm:$fromWidth,
          ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${scope:scope}${addsp:addsp}.v2.${Sign:sign}$fromWidth "
     "\t[$addr], {{$src1, $src2}};", []>;
   def _v4 : NVPTXInst<
     (outs),
     (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Vec,
+         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
          LdStCode:$Sign, i32imm:$fromWidth, ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}${Vec:vec}.${Sign:sign}$fromWidth "
+    "st${sem:sem}${scope:scope}${addsp:addsp}.v4.${Sign:sign}$fromWidth "
     "\t[$addr], {{$src1, $src2, $src3, $src4}};", []>;
+  if support_v8 then
+    def _v8 : NVPTXInst<
+      (outs),
+      (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
+           regclass:$src5, regclass:$src6, regclass:$src7, regclass:$src8,
+           LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Sign,
+           i32imm:$fromWidth, ADDR:$addr),
+      "st${sem:sem}${scope:scope}${addsp:addsp}.v8.${Sign:sign}$fromWidth "
+      "\t[$addr], "
+      "{{$src1, $src2, $src3, $src4, $src5, $src6, $src7, $src8}};", []>;
 }
 
 let mayStore=1, hasSideEffects=0 in {
   defm STV_i8  : ST_VEC<Int16Regs>;
   defm STV_i16 : ST_VEC<Int16Regs>;
-  defm STV_i32 : ST_VEC<Int32Regs>;
+  defm STV_i32 : ST_VEC<Int32Regs, support_v8 = true>;
   defm STV_i64 : ST_VEC<Int64Regs>;
-  defm STV_f32 : ST_VEC<Float32Regs>;
+  defm STV_f32 : ST_VEC<Float32Regs, support_v8 = true>;
   defm STV_f64 : ST_VEC<Float64Regs>;
 }
 
