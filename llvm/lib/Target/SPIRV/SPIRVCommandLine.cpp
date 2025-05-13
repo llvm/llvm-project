@@ -151,7 +151,11 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_KHR_bfloat16", SPIRV::Extension::Extension::SPV_KHR_bfloat16},
         {"SPV_EXT_relaxed_printf_string_address_space",
          SPIRV::Extension::Extension::
-             SPV_EXT_relaxed_printf_string_address_space}};
+             SPV_EXT_relaxed_printf_string_address_space},
+        {"SPV_INTEL_int4", SPIRV::Extension::Extension::SPV_INTEL_int4},
+        {"SPV_INTEL_arbitrary_precision_fixed_point",
+         SPIRV::Extension::Extension::
+             SPV_INTEL_arbitrary_precision_fixed_point}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,

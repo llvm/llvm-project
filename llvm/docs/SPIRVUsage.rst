@@ -233,6 +233,18 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds support for 4-bit integer type, and allow this type to be used in cooperative matrices.
    * - ``SPV_KHR_float_controls2``
      - Adds ability to specify the floating-point environment in shaders. It can be used on whole modules and individual instructions.
+   * - ``SPV_INTEL_arbitrary_precision_fixed_point``
+     - Add instructions for fixed point arithmetic. The extension works without SPV_INTEL_arbitrary_precision_integers, but together they allow greater flexibility in representing arbitrary precision data types.
+
+To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
+
+``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_INTEL_arbitrary_precision_integers``
+
+To enable all extensions, use the following option:
+``-spirv-ext=all``
+
+To enable all extensions except specified, specify ``all`` followed by a list of disallowed extensions. For example:
+``-spirv-ext=all,-SPV_INTEL_arbitrary_precision_integers``
 
 SPIR-V representation in LLVM IR
 ================================
