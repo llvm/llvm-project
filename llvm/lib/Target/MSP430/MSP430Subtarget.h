@@ -17,7 +17,6 @@
 #include "MSP430ISelLowering.h"
 #include "MSP430InstrInfo.h"
 #include "MSP430RegisterInfo.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include <string>
@@ -40,7 +39,7 @@ private:
   HWMultEnum HWMultMode = NoHWMult;
   MSP430InstrInfo InstrInfo;
   MSP430TargetLowering TLInfo;
-  SelectionDAGTargetInfo TSInfo;
+  std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
   MSP430FrameLowering FrameLowering;
 
 public:
@@ -49,6 +48,8 @@ public:
   ///
   MSP430Subtarget(const Triple &TT, const std::string &CPU,
                   const std::string &FS, const TargetMachine &TM);
+
+  ~MSP430Subtarget() override;
 
   MSP430Subtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS);
 
@@ -71,9 +72,8 @@ public:
   const MSP430TargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
-  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
-    return &TSInfo;
-  }
+
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 };
 } // End llvm namespace
 

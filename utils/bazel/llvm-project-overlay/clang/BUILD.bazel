@@ -43,7 +43,7 @@ cc_binary(
 
 gentbl_cc_library(
     name = "diagnostic_defs_gen",
-    tbl_outs = [out for c in [
+    tbl_outs = dict([out for c in [
         "AST",
         "Analysis",
         "Comment",
@@ -59,47 +59,47 @@ gentbl_cc_library(
         "Serialization",
     ] for out in [
         (
+            "include/clang/Basic/Diagnostic%sKinds.inc" % c,
             [
                 "-gen-clang-diags-defs",
                 "-clang-component=%s" % c,
             ],
-            "include/clang/Basic/Diagnostic%sKinds.inc" % c,
         ),
         (
+            "include/clang/Basic/Diagnostic%sEnums.inc" % c,
             [
                 "-gen-clang-diags-enums",
                 "-clang-component=%s" % c,
             ],
-            "include/clang/Basic/Diagnostic%sEnums.inc" % c,
         ),
         (
+            "include/clang/Basic/Diagnostic%sCompatIDs.inc" % c,
             [
                 "-gen-clang-diags-compat-ids",
                 "-clang-component=%s" % c,
             ],
-            "include/clang/Basic/Diagnostic%sCompatIDs.inc" % c,
         ),
         (
+            "include/clang/Basic/Diagnostic%sInterface.inc" % c,
             [
                 "-gen-clang-diags-iface",
                 "-clang-component=%s" % c,
             ],
-            "include/clang/Basic/Diagnostic%sInterface.inc" % c,
         ),
     ]] + [
         (
-            ["-gen-clang-diag-groups"],
             "include/clang/Basic/DiagnosticGroups.inc",
+            ["-gen-clang-diag-groups"],
         ),
         (
-            ["-gen-clang-diags-index-name"],
             "include/clang/Basic/DiagnosticIndexName.inc",
+            ["-gen-clang-diags-index-name"],
         ),
         (
-            ["-gen-clang-diags-compat-ids"],
             "include/clang/Basic/DiagnosticAllCompatIDs.inc",
+            ["-gen-clang-diags-compat-ids"],
         ),
-    ],
+    ]),
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/Diagnostic.td",
     deps = [":BasicTdFiles"],
@@ -962,7 +962,9 @@ cc_library(
     srcs = glob([
         "lib/Sema/*.cpp",
         "lib/Sema/*.h",
-    ]),
+    ]) + [
+        "//llvm:include/llvm/Frontend/OpenACC/ACC.inc",
+    ],
     hdrs = glob([
         "include/clang/Sema/*.h",
         "include/clang-c/*.h",

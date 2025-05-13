@@ -31,6 +31,26 @@ void x86vector::X86VectorDialect::initialize() {
       >();
 }
 
+static SmallVector<Value>
+getMemrefBuffPtr(Location loc, ::mlir::TypedValue<::mlir::MemRefType> memrefVal,
+                 RewriterBase &rewriter,
+                 const LLVMTypeConverter &typeConverter) {
+  SmallVector<Value> operands;
+  auto opType = memrefVal.getType();
+
+  Type llvmStructType = typeConverter.convertType(opType);
+  Value llvmStruct =
+      rewriter
+          .create<UnrealizedConversionCastOp>(loc, llvmStructType, memrefVal)
+          .getResult(0);
+  MemRefDescriptor memRefDescriptor(llvmStruct);
+
+  Value ptr = memRefDescriptor.bufferPtr(rewriter, loc, typeConverter, opType);
+  operands.push_back(ptr);
+
+  return operands;
+}
+
 LogicalResult x86vector::MaskCompressOp::verify() {
   if (getSrc() && getConstantSrc())
     return emitError("cannot use both src and constant_src");
@@ -45,8 +65,8 @@ LogicalResult x86vector::MaskCompressOp::verify() {
   return success();
 }
 
-SmallVector<Value>
-x86vector::MaskCompressOp::getIntrinsicOperands(RewriterBase &rewriter) {
+SmallVector<Value> x86vector::MaskCompressOp::getIntrinsicOperands(
+    RewriterBase &rewriter, const LLVMTypeConverter &typeConverter) {
   auto loc = getLoc();
 
   auto opType = getA().getType();
@@ -64,7 +84,8 @@ x86vector::MaskCompressOp::getIntrinsicOperands(RewriterBase &rewriter) {
 }
 
 SmallVector<Value>
-x86vector::DotOp::getIntrinsicOperands(RewriterBase &rewriter) {
+x86vector::DotOp::getIntrinsicOperands(RewriterBase &rewriter,
+                                       const LLVMTypeConverter &typeConverter) {
   SmallVector<Value> operands(getOperands());
   // Dot product of all elements, broadcasted to all elements.
   Value scale =
@@ -72,6 +93,21 @@ x86vector::DotOp::getIntrinsicOperands(RewriterBase &rewriter) {
   operands.push_back(scale);
 
   return operands;
+}
+
+SmallVector<Value> x86vector::BcstToPackedF32Op::getIntrinsicOperands(
+    RewriterBase &rewriter, const LLVMTypeConverter &typeConverter) {
+  return getMemrefBuffPtr(getLoc(), getA(), rewriter, typeConverter);
+}
+
+SmallVector<Value> x86vector::CvtPackedEvenIndexedToF32Op::getIntrinsicOperands(
+    RewriterBase &rewriter, const LLVMTypeConverter &typeConverter) {
+  return getMemrefBuffPtr(getLoc(), getA(), rewriter, typeConverter);
+}
+
+SmallVector<Value> x86vector::CvtPackedOddIndexedToF32Op::getIntrinsicOperands(
+    RewriterBase &rewriter, const LLVMTypeConverter &typeConverter) {
+  return getMemrefBuffPtr(getLoc(), getA(), rewriter, typeConverter);
 }
 
 #define GET_OP_CLASSES

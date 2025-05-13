@@ -125,11 +125,15 @@ static void orderValue(const Value *V, OrderMap &OM) {
   if (OM.lookup(V))
     return;
 
-  if (const Constant *C = dyn_cast<Constant>(V))
+  if (const Constant *C = dyn_cast<Constant>(V)) {
+    if (isa<ConstantData>(C))
+      return;
+
     if (C->getNumOperands() && !isa<GlobalValue>(C))
       for (const Value *Op : C->operands())
         if (!isa<BasicBlock>(Op) && !isa<GlobalValue>(Op))
           orderValue(Op, OM);
+  }
 
   // Note: we cannot cache this lookup above, since inserting into the map
   // changes the map's size, and thus affects the other IDs.
@@ -2103,6 +2107,8 @@ static void writeDILocation(raw_ostream &Out, const DILocation *DL,
   Printer.printMetadata("inlinedAt", DL->getRawInlinedAt());
   Printer.printBool("isImplicitCode", DL->isImplicitCode(),
                     /* Default */ false);
+  Printer.printInt("atomGroup", DL->getAtomGroup());
+  Printer.printInt<unsigned>("atomRank", DL->getAtomRank());
   Out << ")";
 }
 
@@ -3226,7 +3232,7 @@ void AssemblyWriter::printModuleSummaryIndex() {
 
   // Print the TypeIdCompatibleVtableMap entries.
   for (auto &TId : TheIndex->typeIdCompatibleVtableMap()) {
-    auto GUID = GlobalValue::getGUID(TId.first);
+    auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(TId.first);
     Out << "^" << Machine.getTypeIdCompatibleVtableSlot(TId.first)
         << " = typeidCompatibleVTable: (name: \"" << TId.first << "\"";
     printTypeIdCompatibleVtableSummary(TId.second);
@@ -4996,13 +5002,9 @@ void AssemblyWriter::printUseListOrder(const Value *V,
     Out << " ";
     writeOperand(V, true);
   }
-  Out << ", { ";
 
   assert(Shuffle.size() >= 2 && "Shuffle too small");
-  Out << Shuffle[0];
-  for (unsigned I = 1, E = Shuffle.size(); I != E; ++I)
-    Out << ", " << Shuffle[I];
-  Out << " }\n";
+  Out << ", { " << llvm::interleaved(Shuffle) << " }\n";
 }
 
 void AssemblyWriter::printUseLists(const Function *F) {
