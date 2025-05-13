@@ -1377,14 +1377,8 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
         auto *PoisonVec = llvm::PoisonValue::get(ScalableDstTy);
         llvm::Value *Result = CGF.Builder.CreateInsertVector(
             ScalableDstTy, PoisonVec, Load, uint64_t(0), "cast.scalable");
-        ScalableDstTy = cast<llvm::ScalableVectorType>(Ty);
-        if (ScalableDstTy->getElementType()->isIntegerTy(1) &&
-            !ScalableDstTy->getElementCount().isKnownMultipleOf(8) &&
-            FixedSrcTy->getElementType()->isIntegerTy(8))
-          ScalableDstTy = llvm::ScalableVectorType::get(
-              ScalableDstTy->getElementType(),
-              llvm::alignTo<8>(
-                  ScalableDstTy->getElementCount().getKnownMinValue()));
+        ScalableDstTy = cast<llvm::ScalableVectorType>(
+            llvm::VectorType::getWithSizeAndScalar(ScalableDstTy, Ty));
         if (Result->getType() != ScalableDstTy)
           Result = CGF.Builder.CreateBitCast(Result, ScalableDstTy);
         if (Result->getType() != Ty)
