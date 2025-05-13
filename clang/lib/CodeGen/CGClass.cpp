@@ -2805,6 +2805,8 @@ SanitizerInfoFromCFICheckKind(CodeGenFunction::CFITypeCheckKind TCK) {
   case CodeGenFunction::CFITCK_VMFCall:
     llvm_unreachable("unexpected sanitizer kind");
   }
+
+  return std::make_pair(M, SSK);
 }
 
 void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
@@ -2814,10 +2816,9 @@ void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
   if (!SanOpts.has(SanitizerKind::CFICastStrict))
     RD = LeastDerivedClassWithSameLayout(RD);
 
-  SanitizerKind::SanitizerOrdinal Ordinal;
-  llvm::SanitizerStatKind SSK;
-  ParseCFITypeCheckKind(TCK, Ordinal, SSK);
+  auto [Ordinal, SSK] = ParseCFITypeCheckKind(TCK);
   ApplyDebugLocation ApplyTrapDI(*this, SanitizerAnnotateDebugInfo(Ordinal));
+
   EmitVTablePtrCheck(RD, VTable, TCK, Loc);
 }
 
@@ -2840,9 +2841,7 @@ void CodeGenFunction::EmitVTablePtrCheckForCast(QualType T, Address Derived,
   if (!SanOpts.has(SanitizerKind::CFICastStrict))
     ClassDecl = LeastDerivedClassWithSameLayout(ClassDecl);
 
-  SanitizerKind::SanitizerOrdinal Ordinal;
-  llvm::SanitizerStatKind SSK;
-  ParseCFITypeCheckKind(TCK, Ordinal, SSK);
+  auto [Ordinal, SSK] = ParseCFITypeCheckKind(TCK);
   ApplyDebugLocation ApplyTrapDI(*this, SanitizerAnnotateDebugInfo(Ordinal));
 
   llvm::BasicBlock *ContBlock = nullptr;

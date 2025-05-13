@@ -3365,9 +3365,8 @@ public:
 
   /// Converts the CFITypeCheckKind into SanitizerKind::SanitizerOrdinal and
   /// llvm::SanitizerStatKind.
-  void ParseCFITypeCheckKind(CFITypeCheckKind TCK,
-                             SanitizerKind::SanitizerOrdinal &M,
-                             llvm::SanitizerStatKind &SSK);
+  static std::pair<SanitizerKind::SanitizerOrdinal, llvm::SanitizerStatKind>
+  ParseCFITypeCheckKind(CFITypeCheckKind TCK);
 
   /// Emit a check that \p Base points into an array object, which
   /// we can access at index \p Index. \p Accessed should be \c false if we
