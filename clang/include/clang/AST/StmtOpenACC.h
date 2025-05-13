@@ -17,6 +17,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/STLExtras.h"
 #include <memory>
 
 namespace clang {
@@ -159,8 +160,8 @@ class OpenACCComputeConstruct final
            "represented by this type");
 
     // Initialize the trailing storage.
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
 
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));
@@ -272,8 +273,8 @@ class OpenACCCombinedConstruct final
            "Only parallel loop, serial loop, and kernels loop constructs "
            "should be represented by this type");
 
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));
   }
@@ -322,8 +323,8 @@ class OpenACCDataConstruct final
       : OpenACCAssociatedStmtConstruct(OpenACCDataConstructClass,
                                        OpenACCDirectiveKind::Data, Start,
                                        DirectiveLoc, End, StructuredBlock) {
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));
   }
@@ -368,8 +369,8 @@ class OpenACCEnterDataConstruct final
       : OpenACCConstructStmt(OpenACCEnterDataConstructClass,
                              OpenACCDirectiveKind::EnterData, Start,
                              DirectiveLoc, End) {
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));
   }
@@ -406,8 +407,8 @@ class OpenACCExitDataConstruct final
       : OpenACCConstructStmt(OpenACCExitDataConstructClass,
                              OpenACCDirectiveKind::ExitData, Start,
                              DirectiveLoc, End) {
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));
   }
@@ -447,8 +448,8 @@ class OpenACCHostDataConstruct final
       : OpenACCAssociatedStmtConstruct(OpenACCHostDataConstructClass,
                                        OpenACCDirectiveKind::HostData, Start,
                                        DirectiveLoc, End, StructuredBlock) {
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));
   }
@@ -525,11 +526,8 @@ class OpenACCWaitConstruct final
            "NumExprs should always be >= 1 because the 'devnum' "
            "expr is represented by a null if necessary");
 
-    std::uninitialized_copy(&DevNumExpr, &DevNumExpr + 1,
-                            getExprPtr());
-    std::uninitialized_copy(QueueIdExprs.begin(), QueueIdExprs.end(),
-                            getExprPtr() + 1);
-
+    llvm::uninitialized_copy(ArrayRef(DevNumExpr), getExprPtr());
+    llvm::uninitialized_copy(QueueIdExprs, getExprPtr() + 1);
     std::uninitialized_copy(const_cast<OpenACCClause **>(Clauses.begin()),
                             const_cast<OpenACCClause **>(Clauses.end()),
                             getTrailingObjects<OpenACCClause *>());
@@ -624,7 +622,7 @@ class OpenACCCacheConstruct final
         ParensLoc(LParenLoc, RParenLoc), ReadOnlyLoc(ReadOnlyLoc),
         NumVars(VarList.size()) {
 
-    std::uninitialized_copy(VarList.begin(), VarList.end(), getVarListPtr());
+    llvm::uninitialized_copy(VarList, getVarListPtr());
   }
 
   Expr **getVarListPtr() const {
@@ -690,8 +688,8 @@ class OpenACCInitConstruct final
       : OpenACCConstructStmt(OpenACCInitConstructClass,
                              OpenACCDirectiveKind::Init, Start, DirectiveLoc,
                              End) {
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));
   }
@@ -730,8 +728,8 @@ class OpenACCShutdownConstruct final
       : OpenACCConstructStmt(OpenACCShutdownConstructClass,
                              OpenACCDirectiveKind::Shutdown, Start,
                              DirectiveLoc, End) {
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));
   }
@@ -770,8 +768,8 @@ class OpenACCSetConstruct final
       : OpenACCConstructStmt(OpenACCSetConstructClass,
                              OpenACCDirectiveKind::Set, Start, DirectiveLoc,
                              End) {
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));
   }
@@ -810,8 +808,8 @@ class OpenACCUpdateConstruct final
       : OpenACCConstructStmt(OpenACCUpdateConstructClass,
                              OpenACCDirectiveKind::Update, Start, DirectiveLoc,
                              End) {
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));
   }
@@ -859,8 +857,8 @@ class OpenACCAtomicConstruct final
                                        DirectiveLoc, End, AssociatedStmt),
         AtomicKind(AtKind) {
     // Initialize the trailing storage.
-    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                            getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses,
+                             getTrailingObjects<const OpenACCClause *>());
 
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));

@@ -9,10 +9,10 @@ int also_before(void) {
 #pragma omp begin declare variant match(device={kind(cpu)})
 int also_before(void);
 #pragma omp end declare variant
-#pragma omp begin declare variant match(implementation={vendor(score(100):llvm)})
+#pragma omp begin declare variant match(implementation={vendor(score(100):amd)})
 int also_after(void);
 #pragma omp end declare variant
-#pragma omp begin declare variant match(implementation={vendor(score(0):llvm)})
+#pragma omp begin declare variant match(implementation={vendor(score(0):amd)})
 int also_before(void);
 #pragma omp end declare variant
 
@@ -27,7 +27,7 @@ int test(void) {
 
 // Make sure:
 //  - we do see the ast nodes for the cpu kind
-//  - we do see the ast nodes for the llvm vendor
+//  - we do see the ast nodes for the amd vendor
 //  - we pick the right callees
 
 // CHECK:      |-FunctionDecl [[ADDR_0:0x[a-z0-9]*]] <{{.*}}, line:7:1> line:5:5 used also_before 'int ({{.*}})'

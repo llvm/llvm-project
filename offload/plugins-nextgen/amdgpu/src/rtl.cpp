@@ -961,11 +961,10 @@ private:
   /// user-defined threads and block clauses.
   uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
                          uint32_t ThreadLimitClause[3]) const override {
-    // On amd-staging, bare kernels go through this codepath. Legacy flang
-    // kernels show up as bare kernels since kernel-env is not generated.
-    // In order to accomodate bare ekrnels, disable this assert.
-    // assert(ThreadLimitClause[1] == 1 && ThreadLimitClause[2] == 1 &&
-    //       "Multi dimensional launch not supported yet.");
+    assert(!isBareMode() && "bare kernel should not call this function");
+
+    assert(ThreadLimitClause[1] == 1 && ThreadLimitClause[2] == 1 &&
+           "Multi dimensional launch not supported yet.");
 
     // Honor OMP_TEAMS_THREAD_LIMIT environment variable and
     // num_threads/thread_limit clause for BigJumpLoop and NoLoop kernel types.
@@ -1014,11 +1013,10 @@ private:
                         uint32_t NumTeamsClause[3], uint64_t LoopTripCount,
                         uint32_t &NumThreads,
                         bool IsNumThreadsFromUser) const override {
-    // On amd-staging, bare kernels go through this codepath. Legacy flang
-    // kernels show up as bare kernels since kernel-env is not generated.
-    // In order to accomodate bare ekrnels, disable this assert.
-    // assert(NumTeamsClause[1] == 1 && NumTeamsClause[2] == 1 &&
-    //      "Multi dimensional launch not supported yet.");
+    assert(!isBareMode() && "bare kernel should not call this function");
+
+    assert(NumTeamsClause[1] == 1 && NumTeamsClause[2] == 1 &&
+           "Multi dimensional launch not supported yet.");
 
     const auto getNumGroupsFromThreadsAndTripCount =
         [](const uint64_t TripCount, const uint32_t NumThreads) {

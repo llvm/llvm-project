@@ -40,33 +40,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "xcore-lower"
 
-const char *XCoreTargetLowering::
-getTargetNodeName(unsigned Opcode) const
-{
-  switch ((XCoreISD::NodeType)Opcode)
-  {
-    case XCoreISD::FIRST_NUMBER      : break;
-    case XCoreISD::BL                : return "XCoreISD::BL";
-    case XCoreISD::PCRelativeWrapper : return "XCoreISD::PCRelativeWrapper";
-    case XCoreISD::DPRelativeWrapper : return "XCoreISD::DPRelativeWrapper";
-    case XCoreISD::CPRelativeWrapper : return "XCoreISD::CPRelativeWrapper";
-    case XCoreISD::LDWSP             : return "XCoreISD::LDWSP";
-    case XCoreISD::STWSP             : return "XCoreISD::STWSP";
-    case XCoreISD::RETSP             : return "XCoreISD::RETSP";
-    case XCoreISD::LADD              : return "XCoreISD::LADD";
-    case XCoreISD::LSUB              : return "XCoreISD::LSUB";
-    case XCoreISD::LMUL              : return "XCoreISD::LMUL";
-    case XCoreISD::MACCU             : return "XCoreISD::MACCU";
-    case XCoreISD::MACCS             : return "XCoreISD::MACCS";
-    case XCoreISD::CRC8              : return "XCoreISD::CRC8";
-    case XCoreISD::BR_JT             : return "XCoreISD::BR_JT";
-    case XCoreISD::BR_JT32           : return "XCoreISD::BR_JT32";
-    case XCoreISD::FRAME_TO_ARGS_OFFSET : return "XCoreISD::FRAME_TO_ARGS_OFFSET";
-    case XCoreISD::EH_RETURN         : return "XCoreISD::EH_RETURN";
-  }
-  return nullptr;
-}
-
 XCoreTargetLowering::XCoreTargetLowering(const TargetMachine &TM,
                                          const XCoreSubtarget &Subtarget)
     : TargetLowering(TM), TM(TM), Subtarget(Subtarget) {

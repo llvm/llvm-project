@@ -661,8 +661,9 @@ static ParseResult parseClauseWithRegionArgs(
                 parser.parseInteger(mapIndicesVec.emplace_back()) ||
                 parser.parseRSquare())
               return failure();
-          } else
+          } else {
             mapIndicesVec.push_back(-1);
+          }
         }
 
         return success();

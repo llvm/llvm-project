@@ -363,7 +363,7 @@ template <typename T>
 static ArrayRef<T> copyArrayRefInto(llvm::BumpPtrAllocator &allocator,
                                     ArrayRef<T> elements) {
   auto result = allocator.Allocate<T>(elements.size());
-  std::uninitialized_copy(elements.begin(), elements.end(), result);
+  llvm::uninitialized_copy(elements, result);
   return ArrayRef<T>(result, elements.size());
 }
 

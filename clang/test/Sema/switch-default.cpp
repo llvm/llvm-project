@@ -50,3 +50,4 @@ int t2(Index i)
 int main() {
   return t1(1);       // expected-note {{in instantiation of function template specialization 't1<int>' requested here}}
 }
+
