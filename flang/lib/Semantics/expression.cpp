@@ -150,8 +150,9 @@ public:
   }
   void Analyze(const parser::Variable &);
   void Analyze(const parser::ActualArgSpec &, bool isSubroutine);
-  void ConvertBOZ(std::optional<DynamicType> *thisType, std::size_t,
+  void ConvertBOZOperand(std::optional<DynamicType> *thisType, std::size_t,
       std::optional<DynamicType> otherType);
+  void ConvertBOZAssignmentRHS(const DynamicType &lhsType);
 
   bool IsIntrinsicRelational(
       RelationalOperator, const DynamicType &, const DynamicType &) const;
@@ -3849,8 +3850,8 @@ MaybeExpr RelationHelper(ExpressionAnalyzer &context, RelationalOperator opr,
   if (!analyzer.fatalErrors()) {
     std::optional<DynamicType> leftType{analyzer.GetType(0)};
     std::optional<DynamicType> rightType{analyzer.GetType(1)};
-    analyzer.ConvertBOZ(&leftType, 0, rightType);
-    analyzer.ConvertBOZ(&rightType, 1, leftType);
+    analyzer.ConvertBOZOperand(&leftType, 0, rightType);
+    analyzer.ConvertBOZOperand(&rightType, 1, leftType);
     if (leftType && rightType &&
         analyzer.IsIntrinsicRelational(opr, *leftType, *rightType)) {
       analyzer.CheckForNullPointer("as a relational operand");
@@ -4761,12 +4762,8 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
         if (!IsAllocatableDesignator(lhs) || context_.inWhereBody()) {
           AddAssignmentConversion(*lhsType, *rhsType);
         }
-      } else {
-        if (lhsType->category() == TypeCategory::Integer ||
-            lhsType->category() == TypeCategory::Unsigned ||
-            lhsType->category() == TypeCategory::Real) {
-          ConvertBOZ(nullptr, 1, lhsType);
-        }
+      } else if (IsBOZLiteral(1)) {
+        ConvertBOZAssignmentRHS(*lhsType);
         if (IsBOZLiteral(1)) {
           context_.Say(
               "Right-hand side of this assignment may not be BOZ"_err_en_US);
@@ -5003,7 +5000,7 @@ int ArgumentAnalyzer::GetRank(std::size_t i) const {
 // UNSIGNED; otherwise, convert to INTEGER.
 // Note that IBM supports comparing BOZ literals to CHARACTER operands.  That
 // is not currently supported.
-void ArgumentAnalyzer::ConvertBOZ(std::optional<DynamicType> *thisType,
+void ArgumentAnalyzer::ConvertBOZOperand(std::optional<DynamicType> *thisType,
     std::size_t i, std::optional<DynamicType> otherType) {
   if (IsBOZLiteral(i)) {
     Expr<SomeType> &&argExpr{MoveExpr(i)};
@@ -5032,6 +5029,17 @@ void ArgumentAnalyzer::ConvertBOZ(std::optional<DynamicType> *thisType,
       if (thisType) {
         thisType->emplace(TypeCategory::Integer, kind);
       }
+    }
+  }
+}
+
+void ArgumentAnalyzer::ConvertBOZAssignmentRHS(const DynamicType &lhsType) {
+  if (lhsType.category() == TypeCategory::Integer ||
+      lhsType.category() == TypeCategory::Unsigned ||
+      lhsType.category() == TypeCategory::Real) {
+    Expr<SomeType> rhs{MoveExpr(1)};
+    if (MaybeExpr converted{ConvertToType(lhsType, std::move(rhs))}) {
+      actuals_[1] = std::move(*converted);
     }
   }
 }
