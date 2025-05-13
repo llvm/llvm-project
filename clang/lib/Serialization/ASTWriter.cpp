@@ -1775,8 +1775,9 @@ struct InputFileEntry {
 
   InputFileEntry(FileEntryRef File) : File(File) {}
 
-  void trySetContentHash(Preprocessor &PP,
-                         std::optional<llvm::MemoryBufferRef> MemBuff) {
+  void trySetContentHash(
+      Preprocessor &PP,
+      llvm::function_ref<std::optional<llvm::MemoryBufferRef>()> GetMemBuff) {
     ContentHash[0] = 0;
     ContentHash[1] = 0;
 
@@ -1785,6 +1786,7 @@ struct InputFileEntry {
              .ValidateASTInputFilesContent)
       return;
 
+    auto MemBuff = GetMemBuff();
     if (!MemBuff) {
       PP.Diag(SourceLocation(), diag::err_module_unable_to_hash_content)
           << File.getName();
@@ -1869,7 +1871,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
                        !IsSLocFileEntryAffecting[IncludeFileID.ID];
     Entry.IsModuleMap = isModuleMap(File.getFileCharacteristic());
 
-    Entry.trySetContentHash(*PP, Cache->getBufferIfLoaded());
+    Entry.trySetContentHash(*PP, [&] { return Cache->getBufferIfLoaded(); });
 
     if (Entry.IsSystemFile)
       SystemFiles.push_back(Entry);
@@ -1892,10 +1894,14 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
       Entry.BufferOverridden = false;
       Entry.IsTopLevel = true;
       Entry.IsModuleMap = false;
-      auto Convert = [](const ErrorOr<std::unique_ptr<MemoryBuffer>> &MB) {
-        return MB ? std::optional((*MB)->getMemBufferRef()) : std::nullopt;
-      };
-      Entry.trySetContentHash(*PP, Convert(FM.getBufferForFile(Entry.File)));
+      std::unique_ptr<MemoryBuffer> MB;
+      Entry.trySetContentHash(*PP, [&] -> std::optional<MemoryBufferRef> {
+        if (auto MBOrErr = FM.getBufferForFile(Entry.File)) {
+          MB = std::move(*MBOrErr);
+          return MB->getMemBufferRef();
+        }
+        return std::nullopt;
+      });
       SystemFiles.push_back(Entry);
     }
   }
