@@ -7,6 +7,7 @@ static __externref_t table[0];
 typedef void (*__funcref funcref_t)();
 void test_ref_null() {
   funcref_t func = __builtin_wasm_ref_null_func(0); // expected-error {{too many arguments to function call, expected 0, have 1}}
+  __externref_t ref = __builtin_wasm_ref_null_extern(0); // expected-error {{too many arguments to function call, expected 0, have 1}}
 }
 
 void test_table_size(__externref_t ref, void *ptr, int arr[]) {
