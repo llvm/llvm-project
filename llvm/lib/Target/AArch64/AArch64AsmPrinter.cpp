@@ -49,6 +49,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -2240,19 +2241,20 @@ static void emitAddress(MCStreamer &Streamer, MCRegister Reg,
             .addImm(0),
         STI);
   } else {
-    Streamer.emitInstruction(MCInstBuilder(AArch64::ADRP)
-                                 .addReg(Reg)
-                                 .addExpr(AArch64MCExpr::create(
-                                     Val.getSymA(), AArch64MCExpr::VK_GOT_PAGE,
-                                     Streamer.getContext())),
-                             STI);
-    Streamer.emitInstruction(MCInstBuilder(AArch64::LDRXui)
-                                 .addReg(Reg)
-                                 .addReg(Reg)
-                                 .addExpr(AArch64MCExpr::create(
-                                     Val.getSymA(), AArch64MCExpr::VK_GOT_LO12,
-                                     Streamer.getContext())),
-                             STI);
+    auto *SymRef = MCSymbolRefExpr::create(Val.getAddSym(), Streamer.getContext());
+    Streamer.emitInstruction(
+        MCInstBuilder(AArch64::ADRP)
+            .addReg(Reg)
+            .addExpr(AArch64MCExpr::create(SymRef, AArch64MCExpr::VK_GOT_PAGE,
+                                           Streamer.getContext())),
+        STI);
+    Streamer.emitInstruction(
+        MCInstBuilder(AArch64::LDRXui)
+            .addReg(Reg)
+            .addReg(Reg)
+            .addExpr(AArch64MCExpr::create(SymRef, AArch64MCExpr::VK_GOT_LO12,
+                                           Streamer.getContext())),
+        STI);
     if (Val.getConstant())
       Streamer.emitInstruction(MCInstBuilder(AArch64::ADDXri)
                                    .addReg(Reg)

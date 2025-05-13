@@ -255,9 +255,12 @@ void unique_ptr_test() {
   ComparePrettyPrintToRegex(std::move(forty_two),
       R"(std::unique_ptr<int> containing = {__ptr_ = 0x[a-f0-9]+})");
 
+#if !__has_feature(pointer_field_protection)
+  // GDB doesn't know how to read PFP fields correctly yet.
   std::unique_ptr<int> this_is_null;
   ComparePrettyPrintToChars(std::move(this_is_null),
       R"(std::unique_ptr is nullptr)");
+#endif
 }
 
 void bitset_test() {
@@ -475,10 +478,13 @@ void vector_test() {
                             "std::vector of length "
                             "3, capacity 3 = {5, 6, 7}");
 
+#if !__has_feature(pointer_field_protection)
+  // GDB doesn't know how to read PFP fields correctly yet.
   std::vector<int, UncompressibleAllocator<int>> test3({7, 8});
   ComparePrettyPrintToChars(std::move(test3),
                             "std::vector of length "
                             "2, capacity 2 = {7, 8}");
+#endif
 }
 
 void set_iterator_test() {
@@ -649,8 +655,11 @@ void shared_ptr_test() {
       test0,
       R"(std::shared_ptr<int> count [3\?], weak [0\?]( \(libc\+\+ missing debug info\))? containing = {__ptr_ = 0x[a-f0-9]+})");
 
+#if !__has_feature(pointer_field_protection)
+  // GDB doesn't know how to read PFP fields correctly yet.
   std::shared_ptr<const int> test3;
   ComparePrettyPrintToChars(test3, "std::shared_ptr is nullptr");
+#endif
 }
 
 void streampos_test() {

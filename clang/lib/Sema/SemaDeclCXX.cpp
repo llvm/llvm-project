@@ -7538,6 +7538,14 @@ static bool IsEligibleForTrivialRelocation(Sema &SemaRef,
     if (!SemaRef.IsCXXTriviallyRelocatableType(Field->getType()))
       return false;
   }
+
+  // FIXME: PFP should not affect trivial relocatability, instead it should
+  // affect the implementation of std::trivially_relocate. See:
+  // https://discourse.llvm.org/t/rfc-structure-protection-a-family-of-uaf-mitigation-techniques/85555/16?u=pcc
+  if (!SemaRef.Context.arePFPFieldsTriviallyRelocatable(D) &&
+      SemaRef.Context.hasPFPFields(QualType(D->getTypeForDecl(), 0)))
+    return false;
+
   return !D->hasDeletedDestructor();
 }
 
