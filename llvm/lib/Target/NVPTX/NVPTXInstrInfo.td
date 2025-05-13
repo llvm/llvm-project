@@ -161,6 +161,7 @@ def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
 def hasTcgen05Instructions : Predicate<"Subtarget->hasTcgen05Instructions()">;
+def hasF32x2Instructions : Predicate<"Subtarget->hasF32x2Instructions()">;
 
 def True : Predicate<"true">;
 def False : Predicate<"false">;
@@ -237,6 +238,7 @@ def F64RT    : RegTyInfo<f64, Float64Regs, f64imm, fpimm>;
 def F16RT    : RegTyInfo<f16, Int16Regs, f16imm, fpimm, supports_imm = 0>;
 def BF16RT   : RegTyInfo<bf16, Int16Regs, bf16imm, fpimm, supports_imm = 0>;
 
+def F32X2RT  : RegTyInfo<v2f32, Int64Regs, ?, ?, supports_imm = 0>;
 def F16X2RT  : RegTyInfo<v2f16, Int32Regs, ?, ?, supports_imm = 0>;
 def BF16X2RT : RegTyInfo<v2bf16, Int32Regs, ?, ?, supports_imm = 0>;
 
@@ -407,7 +409,18 @@ multiclass F3<string op_str, SDPatternOperator op_pat> {
               (ins Float32Regs:$a, f32imm:$b),
               op_str # ".f32 \t$dst, $a, $b;",
               [(set f32:$dst, (op_pat f32:$a, fpimm:$b))]>;
-
+  def f32x2rr_ftz :
+    NVPTXInst<(outs Int64Regs:$dst),
+              (ins Int64Regs:$a, Int64Regs:$b),
+              op_str # ".ftz.f32x2 \t$dst, $a, $b;",
+              [(set v2f32:$dst, (op_pat v2f32:$a, v2f32:$b))]>,
+              Requires<[doF32FTZ, hasF32x2Instructions]>;
+  def f32x2rr :
+    NVPTXInst<(outs Int64Regs:$dst),
+              (ins Int64Regs:$a, Int64Regs:$b),
+              op_str # ".f32x2 \t$dst, $a, $b;",
+              [(set v2f32:$dst, (op_pat v2f32:$a, v2f32:$b))]>,
+              Requires<[hasF32x2Instructions]>;
   def f16rr_ftz :
     NVPTXInst<(outs Int16Regs:$dst),
               (ins Int16Regs:$a, Int16Regs:$b),
@@ -439,7 +452,6 @@ multiclass F3<string op_str, SDPatternOperator op_pat> {
               op_str # ".bf16 \t$dst, $a, $b;",
               [(set bf16:$dst, (op_pat bf16:$a, bf16:$b))]>,
               Requires<[hasBF16Math]>;
-
   def bf16x2rr :
     NVPTXInst<(outs Int32Regs:$dst),
               (ins Int32Regs:$a, Int32Regs:$b),
@@ -800,6 +812,9 @@ foreach vt = [v2f16, v2bf16, v2i16, v4i8] in {
 def : Pat<(vt (select i1:$p, vt:$a, vt:$b)),
           (SELP_b32rr $a, $b, $p)>;
 }
+
+def : Pat<(v2f32 (select i1:$p, v2f32:$a, v2f32:$b)),
+          (SELP_b64rr $a, $b, $p)>;
 
 //-----------------------------------
 // Test Instructions
@@ -1362,6 +1377,8 @@ defm BFMA16       : FMA<"fma.rn.bf16", BF16RT, [hasBF16Math]>;
 defm BFMA16x2     : FMA<"fma.rn.bf16x2", BF16X2RT, [hasBF16Math]>;
 defm FMA32_ftz    : FMA<"fma.rn.ftz.f32", F32RT, [doF32FTZ]>;
 defm FMA32        : FMA<"fma.rn.f32", F32RT>;
+defm FMA32x2_ftz  : FMA<"fma.rn.ftz.f32x2", F32X2RT, [doF32FTZ]>;
+defm FMA32x2      : FMA<"fma.rn.f32x2", F32X2RT>;
 defm FMA64        : FMA<"fma.rn.f64", F64RT>;
 
 // sin/cos
@@ -2385,6 +2402,10 @@ foreach vt = [v2f16, v2bf16, v2i16, v4i8] in {
   def: Pat<(vt (ProxyReg  vt:$src)), (ProxyRegI32 $src)>;
 }
 
+def: Pat<(v2f32 (ProxyReg v2f32:$src)), (ProxyRegI64 $src)>;
+
+def: Pat<(v2f32 (bitconvert i64:$src)), (ProxyRegI64 $src)>;
+
 //
 // Load / Store Handling
 //
@@ -2494,6 +2515,8 @@ def: Pat<(vt (bitconvert (f32 Float32Regs:$a))),
 def: Pat<(f32 (bitconvert vt:$a)),
          (BITCONVERT_32_I2F $a)>;
 }
+def: Pat<(v2f32 (bitconvert (f64 Float64Regs:$a))),
+         (BITCONVERT_64_F2I $a)>;
 foreach vt = [f16, bf16] in {
   def: Pat<(vt (bitconvert i16:$a)),
            (vt Int16Regs:$a)>;
@@ -2509,6 +2532,9 @@ foreach ta = [v2f16, v2bf16, v2i16, v4i8, i32] in {
     }
   }
 }
+
+def: Pat<(i64 (bitconvert v2f32:$a)),
+         (i64 Int64Regs:$a)>;
 
 // NOTE: pred->fp are currently sub-optimal due to an issue in TableGen where
 // we cannot specify floating-point literals in isel patterns.  Therefore, we
@@ -2786,6 +2812,9 @@ let hasSideEffects = false in {
   def V2F32toF64 : NVPTXInst<(outs Float64Regs:$d),
                              (ins Float32Regs:$s1, Float32Regs:$s2),
                              "mov.b64 \t$d, {{$s1, $s2}};", []>;
+  def V2F32toI64 : NVPTXInst<(outs Int64Regs:$d),
+                             (ins Float32Regs:$s1, Float32Regs:$s2),
+                             "mov.b64 \t$d, {{$s1, $s2}};", []>;
 
   // unpack a larger int register to a set of smaller int registers
   def I64toV4I16 : NVPTXInst<(outs Int16Regs:$d1, Int16Regs:$d2,
@@ -2796,6 +2825,9 @@ let hasSideEffects = false in {
                              (ins Int32Regs:$s),
                              "mov.b32 \t{{$d1, $d2}}, $s;", []>;
   def I64toV2I32 : NVPTXInst<(outs Int32Regs:$d1, Int32Regs:$d2),
+                             (ins Int64Regs:$s),
+                             "mov.b64 \t{{$d1, $d2}}, $s;", []>;
+  def I64toV2F32 : NVPTXInst<(outs Float32Regs:$d1, Float32Regs:$d2),
                              (ins Int64Regs:$s),
                              "mov.b64 \t{{$d1, $d2}}, $s;", []>;
   def I128toV2I64: NVPTXInst<(outs Int64Regs:$d1, Int64Regs:$d2),
@@ -2821,9 +2853,26 @@ let hasSideEffects = false in {
                              (ins Int64Regs:$s),
                              "{{ .reg .b32 tmp; mov.b64 {$low, tmp}, $s; }}",
                              []>;
-
+  def I64toF32H  : NVPTXInst<(outs Float32Regs:$high),
+                             (ins Int64Regs:$s),
+                             "{{ .reg .b32 tmp; mov.b64 {tmp, $high}, $s; }}",
+                             []>;
+  def I64toF32L  : NVPTXInst<(outs Float32Regs:$low),
+                             (ins Int64Regs:$s),
+                             "{{ .reg .b32 tmp; mov.b64 {$low, tmp}, $s; }}",
+                             []>;
   // PTX 7.1 lets you avoid a temp register and just use _ as a "sink" for the
   // unused high/low part.
+  def I64toF32H_Sink : NVPTXInst<(outs Float32Regs:$high),
+                             (ins Int64Regs:$s),
+                             "mov.b64 {{_, $high}}, $s;",
+                             []>,
+                             Requires<[hasPTX<71>]>;
+  def I64toF32L_Sink : NVPTXInst<(outs Float32Regs:$low),
+                             (ins Int64Regs:$s),
+                             "mov.b64 {{$low, _}}, $s;",
+                             []>,
+                             Requires<[hasPTX<71>]>;
   def I32toI16H_Sink  : NVPTXInst<(outs Int16Regs:$high),
                              (ins Int32Regs:$s),
                              "mov.b32 \t{{_, $high}}, $s;",
@@ -2863,12 +2912,25 @@ foreach vt = [v2f16, v2bf16, v2i16] in {
   def : Pat<(extractelt vt:$src, 0), (I32toI16L $src)>;
   def : Pat<(extractelt vt:$src, 1), (I32toI16H $src)>;
 }
+
+def : Pat<(extractelt v2f32:$src, 0),
+          (I64toF32L_Sink $src)>, Requires<[hasPTX<71>]>;
+def : Pat<(extractelt v2f32:$src, 1),
+          (I64toF32H_Sink $src)>, Requires<[hasPTX<71>]>;
+
+def : Pat<(extractelt v2f32:$src, 0),
+          (I64toF32L $src)>;
+def : Pat<(extractelt v2f32:$src, 1),
+          (I64toF32H $src)>;
+
 def : Pat<(v2f16 (build_vector f16:$a, f16:$b)),
           (V2I16toI32 $a, $b)>;
 def : Pat<(v2bf16 (build_vector bf16:$a, bf16:$b)),
           (V2I16toI32 $a, $b)>;
 def : Pat<(v2i16 (build_vector i16:$a, i16:$b)),
           (V2I16toI32 $a, $b)>;
+def : Pat<(v2f32 (build_vector f32:$a, f32:$b)),
+          (V2F32toI64 $a, $b)>;
 
 def: Pat<(v2i16 (scalar_to_vector i16:$a)),
          (CVT_u32_u16 $a, CvtNONE)>;
