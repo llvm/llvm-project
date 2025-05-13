@@ -155,6 +155,36 @@ void MacroFusionPredicatorEmitter::emitFirstPredicate(const Record *Predicate,
         << "if (FirstDest.isVirtual() && !MRI.hasOneNonDBGUse(FirstDest))\n";
     OS.indent(4) << "  return false;\n";
     OS.indent(2) << "}\n";
+  } else if (Predicate->isSubClassOf("FirstInstHasSameReg")) {
+    int FirstOpIdx = Predicate->getValueAsInt("FirstOpIdx");
+    int SecondOpIdx = Predicate->getValueAsInt("SecondOpIdx");
+
+    OS.indent(2) << "if (!FirstMI->getOperand(" << FirstOpIdx
+                 << ").getReg().isVirtual()) {\n";
+    OS.indent(4) << "if (FirstMI->getOperand(" << FirstOpIdx
+                 << ").getReg() != FirstMI->getOperand(" << SecondOpIdx
+                 << ").getReg())";
+
+    if (IsCommutable) {
+      OS << " {\n";
+      OS.indent(6) << "if (!FirstMI->getDesc().isCommutable())\n";
+      OS.indent(6) << "  return false;\n";
+
+      OS.indent(6)
+          << "unsigned SrcOpIdx1 = " << SecondOpIdx
+          << ", SrcOpIdx2 = TargetInstrInfo::CommuteAnyOperandIndex;\n";
+      OS.indent(6)
+          << "if (TII.findCommutedOpIndices(FirstMI, SrcOpIdx1, SrcOpIdx2))\n";
+      OS.indent(6)
+          << "  if (FirstMI->getOperand(" << FirstOpIdx
+          << ").getReg() != FirstMI->getOperand(SrcOpIdx2).getReg())\n";
+      OS.indent(6) << "    return false;\n";
+      OS.indent(4) << "}\n";
+    } else {
+      OS << "\n";
+      OS.indent(4) << "  return false;\n";
+    }
+    OS.indent(2) << "}\n";
   } else if (Predicate->isSubClassOf("FusionPredicateWithMCInstPredicate")) {
     OS.indent(2) << "{\n";
     OS.indent(4) << "const MachineInstr *MI = FirstMI;\n";
@@ -186,7 +216,7 @@ void MacroFusionPredicatorEmitter::emitSecondPredicate(const Record *Predicate,
     OS << ")\n";
     OS.indent(4) << "  return false;\n";
     OS.indent(2) << "}\n";
-  } else if (Predicate->isSubClassOf("SameReg")) {
+  } else if (Predicate->isSubClassOf("SecondInstHasSameReg")) {
     int FirstOpIdx = Predicate->getValueAsInt("FirstOpIdx");
     int SecondOpIdx = Predicate->getValueAsInt("SecondOpIdx");
 
