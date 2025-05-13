@@ -362,10 +362,7 @@ define i1 @test_icmp_sgt_and_negpow2_invalid_c(i32 %add) {
 
 define i1 @icmp_eq_or_of_selects_with_constant(i1 %a, i1 %b) {
 ; CHECK-LABEL: @icmp_eq_or_of_selects_with_constant(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[A:%.*]], i64 65536, i64 0
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[B:%.*]], i64 256, i64 0
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 65792
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %s1 = select i1 %a, i64 65536, i64 0
@@ -377,10 +374,8 @@ define i1 @icmp_eq_or_of_selects_with_constant(i1 %a, i1 %b) {
 
 define i1 @icmp_slt_and_of_selects_with_constant(i1 %a, i1 %b) {
 ; CHECK-LABEL: @icmp_slt_and_of_selects_with_constant(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[A:%.*]], i8 1, i8 -4
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[B:%.*]], i8 1, i8 -3
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[AND]], -2
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %s1 = select i1 %a, i8 1, i8 254
@@ -392,11 +387,7 @@ define i1 @icmp_slt_and_of_selects_with_constant(i1 %a, i1 %b) {
 
 define i1 @icmp_sge_add_of_selects_with_constant(i1 %a, i1 %b) {
 ; CHECK-LABEL: @icmp_sge_add_of_selects_with_constant(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[A:%.*]], i8 -8, i8 7
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[B:%.*]], i8 16, i8 0
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[ADD]], -10
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %s1 = select i1 %a, i8 248, i8 7
   %s2 = select i1 %b, i8 16, i8 0
@@ -411,7 +402,7 @@ define i1 @icmp_eq_or_of_selects_with_constant_multiuse_foldable(i1 %a, i1 %b) {
 ; CHECK-NEXT:    [[S2:%.*]] = select i1 [[B:%.*]], i64 256, i64 0
 ; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[S1]], [[S2]]
 ; CHECK-NEXT:    call void @use64(i64 [[OR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 65792
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %s1 = select i1 %a, i64 65536, i64 0
@@ -424,10 +415,7 @@ define i1 @icmp_eq_or_of_selects_with_constant_multiuse_foldable(i1 %a, i1 %b) {
 
 define <2 x i1> @icmp_eq_or_of_selects_with_constant_vectorized(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @icmp_eq_or_of_selects_with_constant_vectorized(
-; CHECK-NEXT:    [[S1:%.*]] = select <2 x i1> [[A:%.*]], <2 x i64> splat (i64 65536), <2 x i64> zeroinitializer
-; CHECK-NEXT:    [[S2:%.*]] = select <2 x i1> [[B:%.*]], <2 x i64> splat (i64 256), <2 x i64> zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i64> [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i64> [[OR]], splat (i64 65792)
+; CHECK-NEXT:    [[CMP:%.*]] = and <2 x i1> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %s1 = select <2 x i1> %a, <2 x i64> <i64 65536, i64 65536>, <2 x i64> zeroinitializer
