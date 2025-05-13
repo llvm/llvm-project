@@ -300,7 +300,7 @@ define <vscale x 2 x i64> @codegen_bsl2n_i64(<vscale x 2 x i64> %0, <vscale x 2 
   ret <vscale x 2 x i64> %7
 }
 
-; (A ^ B) & C) ^ B -> (A & C) ^ (B & !C) when BIC instructions are available.
+; (A ^ B) & C) ^ B -> (A & C) | (B & !C) when BIC instructions are available.
 define <vscale x 4 x i32> @bsl_combine_when_bic_available(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: bsl_combine_when_bic_available:
 ; CHECK:       // %bb.0: // %entry
