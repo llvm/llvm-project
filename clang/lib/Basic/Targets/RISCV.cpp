@@ -253,7 +253,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__riscv_landing_pad_unlabeled");
       break;
     case CFBranchLabelSchemeKind::FuncSig:
-      Builder.defineMacro("__riscv_landing_pad_func_sig");
+      // TODO: Define macros after the func-sig scheme is implemented
       break;
     case CFBranchLabelSchemeKind::Default:
       llvm_unreachable("default cf-branch-label scheme should already be "
