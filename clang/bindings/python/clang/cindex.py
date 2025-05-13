@@ -1931,7 +1931,7 @@ class Cursor(Structure):
         return self._type
 
     @property
-    def canonical(self) -> Cursor | None:
+    def canonical(self) -> Cursor:
         """Return the canonical Cursor corresponding to this Cursor.
 
         The canonical cursor is the cursor which is representative for the
@@ -1940,7 +1940,7 @@ class Cursor(Structure):
         declarations will be identical.
         """
         if not hasattr(self, "_canonical"):
-            self._canonical = Cursor.from_cursor_result(
+            self._canonical = Cursor.from_non_null_cursor_result(
                 conf.lib.clang_getCanonicalCursor(self), self
             )
 
@@ -2223,7 +2223,6 @@ class Cursor(Structure):
     @staticmethod
     def from_result(res: Cursor, arg: Cursor | TranslationUnit | Type) -> Cursor | None:
         assert isinstance(res, Cursor)
-        # FIXME: There should just be an isNull method.
         if res.is_null():
             return None
 
@@ -2245,6 +2244,14 @@ class Cursor(Structure):
         assert isinstance(res, Cursor)
         if res.is_null():
             return None
+
+        res._tu = arg._tu
+        return res
+
+    @staticmethod
+    def from_non_null_cursor_result(res: Cursor, arg: Cursor | Type) -> Cursor:
+        assert isinstance(res, Cursor)
+        assert not res.is_null()
 
         res._tu = arg._tu
         return res
@@ -2682,7 +2689,9 @@ class Type(Structure):
         """
         Return the cursor for the declaration of the given type.
         """
-        return Cursor.from_result(conf.lib.clang_getTypeDeclaration(self), self)
+        return Cursor.from_non_null_cursor_result(
+            conf.lib.clang_getTypeDeclaration(self), self
+        )
 
     def get_result(self):
         """
