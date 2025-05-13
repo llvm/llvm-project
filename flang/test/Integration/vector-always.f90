@@ -16,7 +16,9 @@ end subroutine vector_always
 subroutine no_vector
   integer :: a(10)
   !dir$ novector
-  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[ANNOTATION2:.*]]
+  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}
+  ! CHECK-NOT: !llvm.loop
+  ! CHECK:   br label {{.*}}, !llvm.loop ![[ANNOTATION2:.*]]
   do i=1,10
      a(i)=i
   end do
