@@ -191,7 +191,7 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
           DefedReg = MO.getReg();
         else
           return false;
-      } else if (MI->isPseudo() && MI->isMoveImmediate()) {
+      } else if (MI->isMoveImmediate()) {
         return DefedReg.isValid();
       } else if (MO.getReg() && MO.getReg() != FrameReg)
         return false;
