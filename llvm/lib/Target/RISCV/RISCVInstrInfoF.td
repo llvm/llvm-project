@@ -35,36 +35,64 @@ def SDT_RISCVFSGNJX
     : SDTypeProfile<1, 2, [SDTCisFP<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>]>;
 
 def riscv_fclass
-    : SDNode<"RISCVISD::FCLASS", SDT_RISCVFCLASS>;
+    : RVSDNode<"FCLASS", SDT_RISCVFCLASS>;
 
+// Rounds an FP value to its corresponding integer in the same FP format.
+// First operand is the value to round, the second operand is the largest
+// integer that can be represented exactly in the FP format. This will be
+// expanded into multiple instructions and basic blocks with a custom
+// inserter.
 def riscv_fround
-    : SDNode<"RISCVISD::FROUND", SDT_RISCVFROUND>;
+    : RVSDNode<"FROUND", SDT_RISCVFROUND>;
 
 def riscv_fsgnjx
-    : SDNode<"RISCVISD::FSGNJX", SDT_RISCVFSGNJX>;
+    : RVSDNode<"FSGNJX", SDT_RISCVFSGNJX>;
 
+// FPR<->GPR transfer operations when the FPR is smaller than XLEN, needed as
+// XLEN is the only legal integer width.
+//
+// FMV_W_X_RV64 matches the semantics of the FMV.W.X.
+// FMV_X_ANYEXTW_RV64 is similar to FMV.X.W but has an any-extended result.
+//
+// This is a more convenient semantic for producing dagcombines that remove
+// unnecessary GPR->FPR->GPR moves.
 def riscv_fmv_w_x_rv64
-    : SDNode<"RISCVISD::FMV_W_X_RV64", SDT_RISCVFMV_W_X_RV64>;
+    : RVSDNode<"FMV_W_X_RV64", SDT_RISCVFMV_W_X_RV64>;
 def riscv_fmv_x_anyextw_rv64
-    : SDNode<"RISCVISD::FMV_X_ANYEXTW_RV64", SDT_RISCVFMV_X_ANYEXTW_RV64>;
+    : RVSDNode<"FMV_X_ANYEXTW_RV64", SDT_RISCVFMV_X_ANYEXTW_RV64>;
+
+// FP to 32 bit int conversions for RV64. These are used to keep track of the
+// result being sign extended to 64 bit. These saturate out of range inputs.
+// Used for FP_TO_S/UINT and FP_TO_S/UINT_SAT lowering. Rounding mode
+// is passed as a TargetConstant operand using the RISCVFPRndMode enum.
 def riscv_fcvt_w_rv64
-    : SDNode<"RISCVISD::FCVT_W_RV64", SDT_RISCVFCVT_W_RV64>;
+    : RVSDNode<"FCVT_W_RV64", SDT_RISCVFCVT_W_RV64>;
 def riscv_fcvt_wu_rv64
-    : SDNode<"RISCVISD::FCVT_WU_RV64", SDT_RISCVFCVT_W_RV64>;
+    : RVSDNode<"FCVT_WU_RV64", SDT_RISCVFCVT_W_RV64>;
+
+// FP to XLen int conversions. Corresponds to fcvt.l(u).s/d/h on RV64 and
+// fcvt.w(u).s/d/h on RV32. Unlike FP_TO_S/UINT these saturate out of
+// range inputs. These are used for FP_TO_S/UINT_SAT lowering. Rounding mode
+// is passed as a TargetConstant operand using the RISCVFPRndMode enum.
 def riscv_fcvt_x
-    : SDNode<"RISCVISD::FCVT_X", SDT_RISCVFCVT_X>;
+    : RVSDNode<"FCVT_X", SDT_RISCVFCVT_X>;
 def riscv_fcvt_xu
-    : SDNode<"RISCVISD::FCVT_XU", SDT_RISCVFCVT_X>;
+    : RVSDNode<"FCVT_XU", SDT_RISCVFCVT_X>;
 
-def riscv_fmin : SDNode<"RISCVISD::FMIN", SDTFPBinOp>;
-def riscv_fmax : SDNode<"RISCVISD::FMAX", SDTFPBinOp>;
+// Floating point fmax and fmin matching the RISC-V instruction semantics.
+def riscv_fmin : RVSDNode<"FMIN", SDTFPBinOp>;
+def riscv_fmax : RVSDNode<"FMAX", SDTFPBinOp>;
 
-def riscv_strict_fcvt_w_rv64
-    : SDNode<"RISCVISD::STRICT_FCVT_W_RV64", SDT_RISCVFCVT_W_RV64,
-             [SDNPHasChain]>;
-def riscv_strict_fcvt_wu_rv64
-    : SDNode<"RISCVISD::STRICT_FCVT_WU_RV64", SDT_RISCVFCVT_W_RV64,
-             [SDNPHasChain]>;
+let IsStrictFP = true in {
+  // FP to 32 bit int conversions for RV64. These are used to keep track of the
+  // result being sign extended to 64 bit. These saturate out of range inputs.
+  def riscv_strict_fcvt_w_rv64
+      : RVSDNode<"STRICT_FCVT_W_RV64", SDT_RISCVFCVT_W_RV64,
+              [SDNPHasChain]>;
+  def riscv_strict_fcvt_wu_rv64
+      : RVSDNode<"STRICT_FCVT_WU_RV64", SDT_RISCVFCVT_W_RV64,
+              [SDNPHasChain]>;
+}
 
 def riscv_any_fcvt_w_rv64 : PatFrags<(ops node:$src, node:$frm),
                                      [(riscv_strict_fcvt_w_rv64 node:$src, node:$frm),

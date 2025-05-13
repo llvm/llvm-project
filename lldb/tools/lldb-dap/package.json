@@ -30,9 +30,10 @@
   "devDependencies": {
     "@types/node": "^18.19.41",
     "@types/vscode": "1.75.0",
+    "@vscode/debugprotocol": "^1.68.0",
     "@vscode/vsce": "^3.2.2",
-    "prettier-plugin-curly": "^0.3.1",
     "prettier": "^3.4.2",
+    "prettier-plugin-curly": "^0.3.1",
     "typescript": "^5.7.3"
   },
   "activationEvents": [
@@ -242,527 +243,534 @@
           }
         }
       }
-    ]
-  },
-  "breakpoints": [
-    {
-      "language": "ada"
-    },
-    {
-      "language": "arm"
-    },
-    {
-      "language": "asm"
-    },
-    {
-      "language": "c"
-    },
-    {
-      "language": "cpp"
-    },
-    {
-      "language": "crystal"
-    },
-    {
-      "language": "d"
-    },
-    {
-      "language": "fortan"
-    },
-    {
-      "language": "fortran-modern"
-    },
-    {
-      "language": "nim"
-    },
-    {
-      "language": "objective-c"
-    },
-    {
-      "language": "objectpascal"
-    },
-    {
-      "language": "pascal"
-    },
-    {
-      "language": "rust"
-    },
-    {
-      "language": "swift"
-    }
-  ],
-  "debuggers": [
-    {
-      "type": "lldb-dap",
-      "label": "LLDB DAP Debugger",
-      "configurationAttributes": {
-        "launch": {
-          "required": [
-            "program"
-          ],
-          "properties": {
-            "debugAdapterHostname": {
-              "type": "string",
-              "markdownDescription": "The hostname that an existing lldb-dap executable is listening on."
-            },
-            "debugAdapterPort": {
-              "type": "number",
-              "markdownDescription": "The port that an existing lldb-dap executable is listening on."
-            },
-            "debugAdapterExecutable": {
-              "type": "string",
-              "markdownDescription": "The absolute path to the LLDB debug adapter executable to use. Overrides any user or workspace settings."
-            },
-            "debugAdapterArgs": {
-              "type": "array",
-              "items": {
-                "type": "string"
+    ],
+    "breakpoints": [
+      {
+        "language": "ada"
+      },
+      {
+        "language": "arm"
+      },
+      {
+        "language": "asm"
+      },
+      {
+        "language": "c"
+      },
+      {
+        "language": "cpp"
+      },
+      {
+        "language": "crystal"
+      },
+      {
+        "language": "d"
+      },
+      {
+        "language": "fortan"
+      },
+      {
+        "language": "fortran-modern"
+      },
+      {
+        "language": "nim"
+      },
+      {
+        "language": "objective-c"
+      },
+      {
+        "language": "objectpascal"
+      },
+      {
+        "language": "pascal"
+      },
+      {
+        "language": "rust"
+      },
+      {
+        "language": "swift"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "lldb-dap",
+        "label": "LLDB DAP Debugger",
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "debugAdapterHostname": {
+                "type": "string",
+                "markdownDescription": "The hostname that an existing lldb-dap executable is listening on."
               },
-              "markdownDescription": "The list of additional arguments used to launch the debug adapter executable. Overrides any user or workspace settings."
-            },
-            "program": {
-              "type": "string",
-              "description": "Path to the program to debug."
-            },
-            "args": {
-              "type": [
-                "array"
-              ],
-              "items": {
-                "type": "string"
+              "debugAdapterPort": {
+                "type": "number",
+                "markdownDescription": "The port that an existing lldb-dap executable is listening on."
               },
-              "description": "Program arguments.",
-              "default": []
-            },
-            "cwd": {
-              "type": "string",
-              "description": "Program working directory.",
-              "default": "${workspaceRoot}"
-            },
-            "env": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "description": "Additional environment variables to set when launching the program. E.g. `{ \"FOO\": \"1\" }`",
-                  "patternProperties": {
-                    ".*": {
-                      "type": "string"
-                    }
-                  },
-                  "default": {}
+              "debugAdapterExecutable": {
+                "type": "string",
+                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use. Overrides any user or workspace settings."
+              },
+              "debugAdapterArgs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
                 },
-                {
-                  "type": "array",
-                  "description": "Additional environment variables to set when launching the program. E.g. `[\"FOO=1\", \"BAR\"]`",
-                  "items": {
-                    "type": "string",
-                    "pattern": "^((\\w+=.*)|^\\w+)$"
-                  },
-                  "default": []
-                }
-              ]
-            },
-            "stopOnEntry": {
-              "type": "boolean",
-              "description": "Automatically stop after launch.",
-              "default": false
-            },
-            "disableASLR": {
-              "type": "boolean",
-              "description": "Enable or disable Address space layout randomization if the debugger supports it.",
-              "default": true
-            },
-            "disableSTDIO": {
-              "type": "boolean",
-              "description": "Don't retrieve STDIN, STDOUT and STDERR as the program is running.",
-              "default": false
-            },
-            "shellExpandArguments": {
-              "type": "boolean",
-              "description": "Expand program arguments as a shell would without actually launching the program in a shell.",
-              "default": false
-            },
-            "detachOnError": {
-              "type": "boolean",
-              "description": "Detach from the program.",
-              "default": false
-            },
-            "sourcePath": {
-              "type": "string",
-              "description": "Specify a source path to remap \"./\" to allow full paths to be used when setting breakpoints in binaries that have relative source paths."
-            },
-            "sourceMap": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "description": "Specify an object of path remappings; each entry has a key containing the source path and a value containing the destination path. E.g `{ \"/the/source/path\": \"/the/destination/path\" }`. Overrides sourcePath.",
-                  "patternProperties": {
-                    ".*": {
-                      "type": "string"
-                    }
-                  },
-                  "default": {}
+                "markdownDescription": "The list of additional arguments used to launch the debug adapter executable. Overrides any user or workspace settings."
+              },
+              "program": {
+                "type": "string",
+                "description": "Path to the program to debug."
+              },
+              "args": {
+                "type": [
+                  "array"
+                ],
+                "items": {
+                  "type": "string"
                 },
-                {
-                  "type": "array",
-                  "description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination path name. Overrides sourcePath.",
-                  "items": {
+                "description": "Program arguments.",
+                "default": []
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Program working directory.",
+                "default": "${workspaceRoot}"
+              },
+              "env": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "description": "Additional environment variables to set when launching the program. E.g. `{ \"FOO\": \"1\" }`",
+                    "patternProperties": {
+                      ".*": {
+                        "type": "string"
+                      }
+                    },
+                    "default": {}
+                  },
+                  {
                     "type": "array",
-                    "minItems": 2,
-                    "maxItems": 2,
+                    "description": "Additional environment variables to set when launching the program. E.g. `[\"FOO=1\", \"BAR\"]`",
                     "items": {
-                      "type": "string"
-                    }
+                      "type": "string",
+                      "pattern": "^((\\w+=.*)|^\\w+)$"
+                    },
+                    "default": []
+                  }
+                ]
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Automatically stop after launch.",
+                "default": false
+              },
+              "disableASLR": {
+                "type": "boolean",
+                "description": "Enable or disable Address space layout randomization if the debugger supports it.",
+                "default": true
+              },
+              "disableSTDIO": {
+                "type": "boolean",
+                "description": "Don't retrieve STDIN, STDOUT and STDERR as the program is running.",
+                "default": false
+              },
+              "shellExpandArguments": {
+                "type": "boolean",
+                "description": "Expand program arguments as a shell would without actually launching the program in a shell.",
+                "default": false
+              },
+              "detachOnError": {
+                "type": "boolean",
+                "description": "Detach from the program.",
+                "default": false
+              },
+              "sourcePath": {
+                "type": "string",
+                "description": "Specify a source path to remap \"./\" to allow full paths to be used when setting breakpoints in binaries that have relative source paths."
+              },
+              "sourceMap": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "description": "Specify an object of path remappings; each entry has a key containing the source path and a value containing the destination path. E.g `{ \"/the/source/path\": \"/the/destination/path\" }`. Overrides sourcePath.",
+                    "patternProperties": {
+                      ".*": {
+                        "type": "string"
+                      }
+                    },
+                    "default": {}
                   },
-                  "default": []
-                }
-              ]
-            },
-            "debuggerRoot": {
-              "type": "string",
-              "description": "Specify a working directory to set the debug adapter to so relative object files can be located."
-            },
-            "targetTriple": {
-              "type": "string",
-              "description": "Triplet of the target architecture to override value derived from the program file."
-            },
-            "platformName": {
-              "type": "string",
-              "description": "Name of the execution platform to override value derived from the program file."
-            },
-            "initCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
+                  {
+                    "type": "array",
+                    "description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination path name. Overrides sourcePath.",
+                    "items": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "default": []
+                  }
+                ]
               },
-              "description": "Initialization commands executed upon debugger startup.",
-              "default": []
-            },
-            "preRunCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
+              "debuggerRoot": {
+                "type": "string",
+                "description": "Specify a working directory to set the debug adapter to so relative object files can be located."
               },
-              "description": "Commands executed just before the program is launched.",
-              "default": []
-            },
-            "postRunCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
+              "targetTriple": {
+                "type": "string",
+                "description": "Triplet of the target architecture to override value derived from the program file."
               },
-              "description": "Commands executed just as soon as the program is successfully launched when it's in a stopped state prior to any automatic continuation.",
-              "default": []
-            },
-            "launchCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
+              "platformName": {
+                "type": "string",
+                "description": "Name of the execution platform to override value derived from the program file."
               },
-              "description": "Custom commands that are executed instead of launching a process. A target will be created with the launch arguments prior to executing these commands. The commands may optionally create a new target and must perform a launch. A valid process must exist after these commands complete or the \"launch\" will fail. Launch the process with \"process launch -s\" to make the process to at the entry point since lldb-dap will auto resume if necessary.",
-              "default": []
-            },
-            "stopCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
+              "initCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Initialization commands executed upon debugger startup.",
+                "default": []
               },
-              "description": "Commands executed each time the program stops.",
-              "default": []
-            },
-            "exitCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
+              "preRunCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Commands executed just before the program is launched.",
+                "default": []
               },
-              "description": "Commands executed when the program exits.",
-              "default": []
-            },
-            "terminateCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
+              "postRunCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Commands executed just as soon as the program is successfully launched when it's in a stopped state prior to any automatic continuation.",
+                "default": []
               },
-              "description": "Commands executed when the debugging session ends.",
-              "default": []
-            },
-            "runInTerminal": {
-              "type": "boolean",
-              "description": "Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs",
-              "default": false
-            },
-            "timeout": {
-              "type": "number",
-              "description": "The time in seconds to wait for a program to stop at entry point when launching with \"launchCommands\". Defaults to 30 seconds."
-            },
-            "enableAutoVariableSummaries": {
-              "type": "boolean",
-              "description": "Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.",
-              "default": false
-            },
-            "displayExtendedBacktrace": {
-              "type": "boolean",
-              "description": "Enable language specific extended backtraces.",
-              "default": false
-            },
-            "enableSyntheticChildDebugging": {
-              "type": "boolean",
-              "description": "If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating sythetic child plug-ins as it lets you see the actual contents of the variable.",
-              "default": false
-            },
-            "commandEscapePrefix": {
-              "type": "string",
-              "description": "The escape prefix to use for executing regular LLDB commands in the Debug Console, instead of printing variables. Defaults to a back-tick (`). If it's an empty string, then all expression in the Debug Console are treated as regular LLDB commands.",
-              "default": "`"
-            },
-            "customFrameFormat": {
-              "type": "string",
-              "description": "If non-empty, stack frames will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for frames. If the format string contains errors, an error message will be displayed on the Debug Console and the default frame names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.",
-              "default": ""
-            },
-            "customThreadFormat": {
-              "type": "string",
-              "description": "If non-empty, threads will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for threads. If the format string contains errors, an error message will be displayed on the Debug Console and the default thread names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.",
-              "default": ""
+              "launchCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Custom commands that are executed instead of launching a process. A target will be created with the launch arguments prior to executing these commands. The commands may optionally create a new target and must perform a launch. A valid process must exist after these commands complete or the \"launch\" will fail. Launch the process with \"process launch -s\" to make the process to at the entry point since lldb-dap will auto resume if necessary.",
+                "default": []
+              },
+              "stopCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Commands executed each time the program stops.",
+                "default": []
+              },
+              "exitCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Commands executed when the program exits.",
+                "default": []
+              },
+              "terminateCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Commands executed when the debugging session ends.",
+                "default": []
+              },
+              "runInTerminal": {
+                "type": "boolean",
+                "description": "Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs",
+                "default": false
+              },
+              "timeout": {
+                "type": "number",
+                "description": "The time in seconds to wait for a program to stop at entry point when launching with \"launchCommands\". Defaults to 30 seconds."
+              },
+              "enableAutoVariableSummaries": {
+                "type": "boolean",
+                "description": "Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.",
+                "default": false
+              },
+              "displayExtendedBacktrace": {
+                "type": "boolean",
+                "description": "Enable language specific extended backtraces.",
+                "default": false
+              },
+              "enableSyntheticChildDebugging": {
+                "type": "boolean",
+                "description": "If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating sythetic child plug-ins as it lets you see the actual contents of the variable.",
+                "default": false
+              },
+              "commandEscapePrefix": {
+                "type": "string",
+                "description": "The escape prefix to use for executing regular LLDB commands in the Debug Console, instead of printing variables. Defaults to a back-tick (`). If it's an empty string, then all expression in the Debug Console are treated as regular LLDB commands.",
+                "default": "`"
+              },
+              "customFrameFormat": {
+                "type": "string",
+                "description": "If non-empty, stack frames will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for frames. If the format string contains errors, an error message will be displayed on the Debug Console and the default frame names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.",
+                "default": ""
+              },
+              "customThreadFormat": {
+                "type": "string",
+                "description": "If non-empty, threads will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for threads. If the format string contains errors, an error message will be displayed on the Debug Console and the default thread names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.",
+                "default": ""
+              }
+            }
+          },
+          "attach": {
+            "properties": {
+              "debugAdapterHostname": {
+                "type": "string",
+                "markdownDescription": "The hostname that an existing lldb-dap executable is listening on."
+              },
+              "debugAdapterPort": {
+                "type": "number",
+                "markdownDescription": "The port that an existing lldb-dap executable is listening on."
+              },
+              "debugAdapterExecutable": {
+                "type": "string",
+                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use. Overrides any user or workspace settings."
+              },
+              "debugAdapterArgs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "markdownDescription": "The list of additional arguments used to launch the debug adapter executable. Overrides any user or workspace settings."
+              },
+              "program": {
+                "type": "string",
+                "description": "Path to the program to attach to."
+              },
+              "pid": {
+                "type": "number",
+                "description": "System process ID to attach to."
+              },
+              "waitFor": {
+                "type": "boolean",
+                "description": "If set to true, then wait for the process to launch by looking for a process with a basename that matches `program`. No process ID needs to be specified when using this flag.",
+                "default": true
+              },
+              "sourcePath": {
+                "type": "string",
+                "description": "Specify a source path to remap \"./\" to allow full paths to be used when setting breakpoints in binaries that have relative source paths."
+              },
+              "sourceMap": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "description": "Specify an object of path remappings; each entry has a key containing the source path and a value containing the destination path. E.g `{ \"/the/source/path\": \"/the/destination/path\" }`. Overrides sourcePath.",
+                    "patternProperties": {
+                      ".*": {
+                        "type": "string"
+                      }
+                    },
+                    "default": {}
+                  },
+                  {
+                    "type": "array",
+                    "description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination path name. Overrides sourcePath.",
+                    "items": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "default": []
+                  }
+                ]
+              },
+              "debuggerRoot": {
+                "type": "string",
+                "description": "Specify a working directory to set the debug adapter to so relative object files can be located."
+              },
+              "targetTriple": {
+                "type": "string",
+                "description": "Triplet of the target architecture to override value derived from the program file."
+              },
+              "platformName": {
+                "type": "string",
+                "description": "Name of the execution platform to override value derived from the program file."
+              },
+              "attachCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Custom commands that are executed instead of attaching to a process ID or to a process by name. These commands may optionally create a new target and must perform an attach. A valid process must exist after these commands complete or the \"attach\" will fail.",
+                "default": []
+              },
+              "initCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Initialization commands executed upon debugger startup.",
+                "default": []
+              },
+              "preRunCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Commands executed just before the program is attached to.",
+                "default": []
+              },
+              "postRunCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Commands executed just as soon as the program is successfully attached when it's in a stopped state prior to any automatic continuation.",
+                "default": []
+              },
+              "stopCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Commands executed each time the program stops.",
+                "default": []
+              },
+              "exitCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Commands executed when the program exits.",
+                "default": []
+              },
+              "terminateCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Commands executed when the debugging session ends.",
+                "default": []
+              },
+              "coreFile": {
+                "type": "string",
+                "description": "Path to the core file to debug."
+              },
+              "timeout": {
+                "type": "number",
+                "description": "The time in seconds to wait for a program to stop when attaching using \"attachCommands\". Defaults to 30 seconds."
+              },
+              "gdb-remote-port": {
+                "type": [
+                  "number",
+                  "string"
+                ],
+                "description": "TCP/IP port to attach to a remote system. Specifying both pid and port is an error."
+              },
+              "gdb-remote-hostname": {
+                "type": "string",
+                "description": "The hostname to connect to a remote system. The default hostname being used localhost."
+              },
+              "enableAutoVariableSummaries": {
+                "type": "boolean",
+                "description": "Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.",
+                "default": false
+              },
+              "displayExtendedBacktrace": {
+                "type": "boolean",
+                "description": "Enable language specific extended backtraces.",
+                "default": false
+              },
+              "enableSyntheticChildDebugging": {
+                "type": "boolean",
+                "description": "If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating sythetic child plug-ins as it lets you see the actual contents of the variable.",
+                "default": false
+              },
+              "commandEscapePrefix": {
+                "type": "string",
+                "description": "The escape prefix character to use for executing regular LLDB commands in the Debug Console, instead of printing variables. Defaults to a back-tick (`). If empty, then all expression in the Debug Console are treated as regular LLDB commands.",
+                "default": "`"
+              },
+              "customFrameFormat": {
+                "type": "string",
+                "description": "If non-empty, stack frames will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for frames. If the format string contains errors, an error message will be displayed on the Debug Console and the default frame names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.",
+                "default": ""
+              },
+              "customThreadFormat": {
+                "type": "string",
+                "description": "If non-empty, threads will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for threads. If the format string contains errors, an error message will be displayed on the Debug Console and the default thread names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.",
+                "default": ""
+              }
             }
           }
         },
-        "attach": {
-          "properties": {
-            "debugAdapterHostname": {
-              "type": "string",
-              "markdownDescription": "The hostname that an existing lldb-dap executable is listening on."
-            },
-            "debugAdapterPort": {
-              "type": "number",
-              "markdownDescription": "The port that an existing lldb-dap executable is listening on."
-            },
-            "debugAdapterExecutable": {
-              "type": "string",
-              "markdownDescription": "The absolute path to the LLDB debug adapter executable to use. Overrides any user or workspace settings."
-            },
-            "debugAdapterArgs": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "markdownDescription": "The list of additional arguments used to launch the debug adapter executable. Overrides any user or workspace settings."
-            },
-            "program": {
-              "type": "string",
-              "description": "Path to the program to attach to."
-            },
-            "pid": {
-              "type": [
-                "number",
-                "string"
-              ],
-              "description": "System process ID to attach to."
-            },
-            "waitFor": {
-              "type": "boolean",
-              "description": "If set to true, then wait for the process to launch by looking for a process with a basename that matches `program`. No process ID needs to be specified when using this flag.",
-              "default": true
-            },
-            "sourcePath": {
-              "type": "string",
-              "description": "Specify a source path to remap \"./\" to allow full paths to be used when setting breakpoints in binaries that have relative source paths."
-            },
-            "sourceMap": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "description": "Specify an object of path remappings; each entry has a key containing the source path and a value containing the destination path. E.g `{ \"/the/source/path\": \"/the/destination/path\" }`. Overrides sourcePath.",
-                  "patternProperties": {
-                    ".*": {
-                      "type": "string"
-                    }
-                  },
-                  "default": {}
-                },
-                {
-                  "type": "array",
-                  "description": "Specify an array of path remappings; each element must itself be a two element array containing a source and destination path name. Overrides sourcePath.",
-                  "items": {
-                    "type": "array",
-                    "minItems": 2,
-                    "maxItems": 2,
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "default": []
-                }
-              ]
-            },
-            "debuggerRoot": {
-              "type": "string",
-              "description": "Specify a working directory to set the debug adapter to so relative object files can be located."
-            },
-            "targetTriple": {
-              "type": "string",
-              "description": "Triplet of the target architecture to override value derived from the program file."
-            },
-            "platformName": {
-              "type": "string",
-              "description": "Name of the execution platform to override value derived from the program file."
-            },
-            "attachCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Custom commands that are executed instead of attaching to a process ID or to a process by name. These commands may optionally create a new target and must perform an attach. A valid process must exist after these commands complete or the \"attach\" will fail.",
-              "default": []
-            },
-            "initCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Initialization commands executed upon debugger startup.",
-              "default": []
-            },
-            "preRunCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Commands executed just before the program is attached to.",
-              "default": []
-            },
-            "postRunCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Commands executed just as soon as the program is successfully attached when it's in a stopped state prior to any automatic continuation.",
-              "default": []
-            },
-            "stopCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Commands executed each time the program stops.",
-              "default": []
-            },
-            "exitCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Commands executed when the program exits.",
-              "default": []
-            },
-            "terminateCommands": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Commands executed when the debugging session ends.",
-              "default": []
-            },
-            "coreFile": {
-              "type": "string",
-              "description": "Path to the core file to debug."
-            },
-            "timeout": {
-              "type": "number",
-              "description": "The time in seconds to wait for a program to stop when attaching using \"attachCommands\". Defaults to 30 seconds."
-            },
-            "gdb-remote-port": {
-              "type": [
-                "number",
-                "string"
-              ],
-              "description": "TCP/IP port to attach to a remote system. Specifying both pid and port is an error."
-            },
-            "gdb-remote-hostname": {
-              "type": "string",
-              "description": "The hostname to connect to a remote system. The default hostname being used localhost."
-            },
-            "enableAutoVariableSummaries": {
-              "type": "boolean",
-              "description": "Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.",
-              "default": false
-            },
-            "displayExtendedBacktrace": {
-              "type": "boolean",
-              "description": "Enable language specific extended backtraces.",
-              "default": false
-            },
-            "enableSyntheticChildDebugging": {
-              "type": "boolean",
-              "description": "If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating sythetic child plug-ins as it lets you see the actual contents of the variable.",
-              "default": false
-            },
-            "commandEscapePrefix": {
-              "type": "string",
-              "description": "The escape prefix character to use for executing regular LLDB commands in the Debug Console, instead of printing variables. Defaults to a back-tick (`). If empty, then all expression in the Debug Console are treated as regular LLDB commands.",
-              "default": "`"
-            },
-            "customFrameFormat": {
-              "type": "string",
-              "description": "If non-empty, stack frames will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for frames. If the format string contains errors, an error message will be displayed on the Debug Console and the default frame names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.",
-              "default": ""
-            },
-            "customThreadFormat": {
-              "type": "string",
-              "description": "If non-empty, threads will have descriptions generated based on the provided format. See https://lldb.llvm.org/use/formatting.html for an explanation on format strings for threads. If the format string contains errors, an error message will be displayed on the Debug Console and the default thread names will be used. This might come with a performance cost because debug information might need to be processed to generate the description.",
-              "default": ""
-            }
-          }
-        }
-      },
-      "initialConfigurations": [
-        {
-          "type": "lldb-dap",
-          "request": "launch",
-          "name": "Debug",
-          "program": "${workspaceRoot}/<your program>",
-          "args": [],
-          "env": [],
-          "cwd": "${workspaceRoot}"
-        }
-      ],
-      "configurationSnippets": [
-        {
-          "label": "LLDB: Launch",
-          "description": "",
-          "body": {
+        "initialConfigurations": [
+          {
             "type": "lldb-dap",
             "request": "launch",
-            "name": "${2:Launch}",
-            "program": "^\"\\${workspaceRoot}/${1:<your program>}\"",
+            "name": "Debug",
+            "program": "${workspaceRoot}/<your program>",
             "args": [],
             "env": [],
-            "cwd": "^\"\\${workspaceRoot}\""
+            "cwd": "${workspaceRoot}"
           }
-        },
+        ],
+        "configurationSnippets": [
+          {
+            "label": "LLDB: Launch",
+            "description": "",
+            "body": {
+              "type": "lldb-dap",
+              "request": "launch",
+              "name": "${2:Launch}",
+              "program": "^\"\\${workspaceRoot}/${1:<your program>}\"",
+              "args": [],
+              "env": [],
+              "cwd": "^\"\\${workspaceRoot}\""
+            }
+          },
+          {
+            "label": "LLDB: Attach",
+            "description": "",
+            "body": {
+              "type": "lldb-dap",
+              "request": "attach",
+              "name": "${2:Attach}",
+              "program": "${1:<your program>}",
+              "waitFor": true
+            }
+          },
+          {
+            "label": "LLDB: Load Coredump",
+            "description": "",
+            "body": {
+              "type": "lldb-dap",
+              "request": "attach",
+              "name": "${2:Core}",
+              "program": "${1:<your program>}",
+              "coreFile": "${1:<your program>}.core"
+            }
+          }
+        ]
+      }
+    ],
+    "views": {
+      "debug": [
         {
-          "label": "LLDB: Attach",
-          "description": "",
-          "body": {
-            "type": "lldb-dap",
-            "request": "attach",
-            "name": "${2:Attach}",
-            "program": "${1:<your program>}",
-            "waitFor": true
-          }
-        },
-        {
-          "label": "LLDB: Load Coredump",
-          "description": "",
-          "body": {
-            "type": "lldb-dap",
-            "request": "attach",
-            "name": "${2:Core}",
-            "program": "${1:<your program>}",
-            "coreFile": "${1:<your program>}.core"
-          }
+          "id": "lldb-dap.modules",
+          "name": "Modules",
+          "when": "inDebugMode && debugType == 'lldb-dap'",
+          "icon": "$(symbol-module)"
         }
       ]
     }
-  ]
+  }
 }

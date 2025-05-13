@@ -164,6 +164,8 @@ namespace llvm {
       return VT != MVT::f128;
     }
 
+    bool isFNegFree(EVT VT) const override;
+
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize) const override;
 

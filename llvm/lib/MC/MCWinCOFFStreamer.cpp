@@ -145,9 +145,9 @@ void MCWinCOFFStreamer::emitInstToData(const MCInst &Inst,
   getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
 
   // Add the fixups and data.
-  for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
-    Fixups[i].setOffset(Fixups[i].getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixups[i]);
+  for (MCFixup &Fixup : Fixups) {
+    Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
+    DF->getFixups().push_back(Fixup);
   }
   DF->setHasInstructions(STI);
   DF->appendContents(Code);

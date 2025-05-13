@@ -30,8 +30,6 @@ class StoreInst;
 class MemTransferInst;
 class MemIntrinsic;
 class AtomicCmpXchgInst;
-class AtomicMemTransferInst;
-class AtomicMemIntrinsic;
 class AtomicRMWInst;
 class AnyMemTransferInst;
 class AnyMemIntrinsic;
@@ -253,13 +251,11 @@ public:
 
   /// Return a location representing the source of a memory transfer.
   static MemoryLocation getForSource(const MemTransferInst *MTI);
-  static MemoryLocation getForSource(const AtomicMemTransferInst *MTI);
   static MemoryLocation getForSource(const AnyMemTransferInst *MTI);
 
   /// Return a location representing the destination of a memory set or
   /// transfer.
   static MemoryLocation getForDest(const MemIntrinsic *MI);
-  static MemoryLocation getForDest(const AtomicMemIntrinsic *MI);
   static MemoryLocation getForDest(const AnyMemIntrinsic *MI);
   static std::optional<MemoryLocation> getForDest(const CallBase *CI,
                                                   const TargetLibraryInfo &TLI);

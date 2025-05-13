@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
+#include <clc/math/clc_half_divide.h>
 
-#define divide(x,y) (x/y)
-
-#define __CLC_FUNC divide
-#define __CLC_BODY <half_binary.inc>
 #define __FLOAT_ONLY
+#define FUNCTION half_divide
+#define __CLC_BODY <clc/shared/binary_def.inc>
+
 #include <clc/math/gentype.inc>
-#undef divide

@@ -312,7 +312,7 @@ SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
 
   Value base = TypeSwitch<Operation *, Value>(xfer)
                    .Case<vector::TransferReadOp>(
-                       [&](auto readOp) { return readOp.getSource(); })
+                       [&](auto readOp) { return readOp.getBase(); })
                    .Case<vector::TransferWriteOp>(
                        [&](auto writeOp) { return writeOp.getOperand(1); });
 

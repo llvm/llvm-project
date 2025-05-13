@@ -21,22 +21,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
-
-template <class _Tp>
-inline constexpr bool __is_ranges_subrange_v = false;
-
-template <class _Iter, class _Sent, ranges::subrange_kind _Kind>
-inline constexpr bool __is_ranges_subrange_v<ranges::subrange<_Iter, _Sent, _Kind>> = true;
-
-template <class _Tp>
-concept __tuple_like = __tuple_like_no_subrange<_Tp> || __is_ranges_subrange_v<remove_cvref_t<_Tp>>;
-
-// As of writing this comment every use of `pair-like` in the standard excludes `ranges::subrange`, so
-// you most likely want to use `__pair_like_no_subrange` if you're looking for `pair-like`.
-
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___TUPLE_TUPLE_LIKE_H

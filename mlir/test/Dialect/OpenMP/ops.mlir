@@ -2215,6 +2215,18 @@ func.func @omp_cancel_taskgroup() -> () {
   return
 }
 
+func.func @omp_taskloop_cancel_taskgroup(%lb : index, %ub : index, %step : index) {
+  omp.taskloop {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+      omp.cancel cancellation_construct_type(taskgroup)
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+  return
+}
+
 func.func @omp_cancel_parallel_nested(%if_cond : i1) -> () {
   omp.parallel {
     scf.if %if_cond {

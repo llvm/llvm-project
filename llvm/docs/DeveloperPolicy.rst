@@ -722,6 +722,8 @@ Indirect contributions are permissible only by someone taking full ownership of
 such a contribution and they are responsible for all related interactions with
 the community regarding that contribution.
 
+Trying to evade a non-permanent ban results in getting banned permanently.
+
 When in doubt how to act in a specific instance, please reach out to
 conduct@llvm.org for advice.
 

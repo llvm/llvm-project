@@ -20,12 +20,16 @@ namespace cir {
 mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
                                       mlir::MLIRContext &mlirContext,
                                       clang::ASTContext &astContext,
-                                      bool enableVerifier) {
+                                      bool enableVerifier,
+                                      bool enableCIRSimplify) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
   mlir::PassManager pm(&mlirContext);
   pm.addPass(mlir::createCIRCanonicalizePass());
+
+  if (enableCIRSimplify)
+    pm.addPass(mlir::createCIRSimplifyPass());
 
   pm.enableVerifier(enableVerifier);
   (void)mlir::applyPassManagerCLOptions(pm);

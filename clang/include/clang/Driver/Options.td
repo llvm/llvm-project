@@ -2167,6 +2167,11 @@ defm assume_nothrow_exception_dtor: BoolFOption<"assume-nothrow-exception-dtor",
   LangOpts<"AssumeNothrowExceptionDtor">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume that exception objects' destructors are non-throwing">,
   NegFlag<SetFalse>>;
+defm winx64_eh_unwindv2 : BoolFOption<"winx64-eh-unwindv2",
+  CodeGenOpts<"WinX64EHUnwindV2">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " unwind v2 (epilog) information for x64 Windows">>;
 def fexcess_precision_EQ : Joined<["-"], "fexcess-precision=">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>,
   HelpText<"Allows control over excess precision on targets where native "
@@ -2365,6 +2370,13 @@ def fsanitize_coverage_ignorelist : Joined<["-"], "fsanitize-coverage-ignorelist
     HelpText<"Disable sanitizer coverage instrumentation for modules and functions "
              "that match the provided special case list, even the allowed ones">,
     MarshallingInfoStringVector<CodeGenOpts<"SanitizeCoverageIgnorelistFiles">>;
+def fsanitize_coverage_stack_depth_callback_min_EQ
+    : Joined<["-"], "fsanitize-coverage-stack-depth-callback-min=">,
+      Group<f_clang_Group>,
+      MetaVarName<"<M>">,
+      HelpText<"Use callback for max stack depth tracing with minimum stack "
+               "depth M">,
+      MarshallingInfoInt<CodeGenOpts<"SanitizeCoverageStackDepthCallbackMin">>;
 def fexperimental_sanitize_metadata_EQ : CommaJoined<["-"], "fexperimental-sanitize-metadata=">,
   Group<f_Group>,
   HelpText<"Specify the type of metadata to emit for binary analysis sanitizers">;
@@ -2533,6 +2545,31 @@ def fno_sanitize_merge_handlers : Flag<["-"], "fno-sanitize-merge">, Group<f_cla
                         Alias<fno_sanitize_merge_handlers_EQ>, AliasArgs<["all"]>,
                         Visibility<[ClangOption, CLOption]>,
                         HelpText<"Do not allow compiler to merge handlers for any sanitizers">;
+def fsanitize_annotate_debug_info_EQ
+    : CommaJoined<["-"], "fsanitize-annotate-debug-info=">,
+      Group<f_clang_Group>,
+      HelpText<"Annotate sanitizer instrumentation with extra debug info for "
+               "the specified sanitizers, if supported">;
+def fno_sanitize_annotate_debug_info_EQ
+    : CommaJoined<["-"], "fno-sanitize-annotate-debug-info=">,
+      Group<f_clang_Group>,
+      HelpText<"Do not allow compiler to annotate sanitizer instrumentation "
+               "with extra debug info for the specified sanitizers">;
+def fsanitize_annotate_debug_info
+    : Flag<["-"], "fsanitize-annotate-debug-info">,
+      Group<f_clang_Group>,
+      Alias<fsanitize_annotate_debug_info_EQ>,
+      AliasArgs<["all"]>,
+      HelpText<"Allow compiler to annotate sanitizer instrumentation with "
+               "extra debug info for all sanitizers, where supported">;
+def fno_sanitize_annotate_debug_info
+    : Flag<["-"], "fno-sanitize-annotate-debug-info">,
+      Group<f_clang_Group>,
+      Alias<fno_sanitize_annotate_debug_info_EQ>,
+      AliasArgs<["all"]>,
+      Visibility<[ClangOption, CLOption]>,
+      HelpText<"Do not allow compiler to annotate sanitizer instrumentation "
+               "with extra debug info for any sanitizers">;
 def fsanitize_undefined_trap_on_error
     : Flag<["-"], "fsanitize-undefined-trap-on-error">, Group<f_clang_Group>,
       Alias<fsanitize_trap_EQ>, AliasArgs<["undefined"]>;
@@ -3237,6 +3274,13 @@ def fmodules_disable_diagnostic_validation : Flag<["-"], "fmodules-disable-diagn
   Group<i_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Disable validation of the diagnostic options when loading the module">,
   MarshallingInfoNegativeFlag<HeaderSearchOpts<"ModulesValidateDiagnosticOptions">>;
+defm modules_force_validate_user_headers : BoolOption<"f", "modules-force-validate-user-headers",
+  HeaderSearchOpts<"ModulesForceValidateUserHeaders">, DefaultTrue,
+  PosFlag<SetTrue, [], [], "Force">,
+  NegFlag<SetFalse, [], [CC1Option], "Do not force">,
+  BothFlags<[], [ClangOption],
+            " validation of user headers when repeatedly loading a module file within single build session">>,
+  Group<i_Group>;
 defm modules_validate_system_headers : BoolOption<"f", "modules-validate-system-headers",
   HeaderSearchOpts<"ModulesValidateSystemHeaders">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -3879,7 +3923,8 @@ defm char8__t : BoolFOption<"char8_t",
   LangOpts<"Char8">, Default<cpp20.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption, CC1Option], " C++ builtin type char8_t">>;
+  BothFlags<[], [ClangOption, CC1Option], " C++ builtin type char8_t">>,
+  ShouldParseIf<cplusplus.KeyPath>;
 def fshort_wchar : Flag<["-"], "fshort-wchar">, Group<f_Group>,
   HelpText<"Force wchar_t to be a short unsigned int">;
 def fno_short_wchar : Flag<["-"], "fno-short-wchar">, Group<f_Group>,
@@ -7700,9 +7745,9 @@ def fpatchable_function_entry_section_EQ
       HelpText<"Use Section instead of __patchable_function_entries">,
       MarshallingInfoString<CodeGenOpts<"PatchableFunctionEntrySection">>;
 def fprofile_instrument_EQ : Joined<["-"], "fprofile-instrument=">,
-    HelpText<"Enable PGO instrumentation">, Values<"none,clang,llvm,csllvm">,
+    HelpText<"Enable PGO instrumentation">, Values<"none,clang,llvm,csllvm,sample-coldcov">,
     NormalizedValuesScope<"CodeGenOptions">,
-    NormalizedValues<["ProfileNone", "ProfileClangInstr", "ProfileIRInstr", "ProfileCSIRInstr"]>,
+    NormalizedValues<["ProfileNone", "ProfileClangInstr", "ProfileIRInstr", "ProfileCSIRInstr", "ProfileIRSampleColdCov"]>,
     MarshallingInfoEnum<CodeGenOpts<"ProfileInstr">, "ProfileNone">;
 def fprofile_instrument_path_EQ : Joined<["-"], "fprofile-instrument-path=">,
     HelpText<"Generate instrumented code to collect execution counts into "
@@ -7780,6 +7825,9 @@ def import_call_optimization : Flag<["-"], "import-call-optimization">,
     HelpText<"Emit Import Call sections on supported targets that can be used "
              "by the Windows kernel to enable import call optimization">,
     MarshallingInfoFlag<CodeGenOpts<"ImportCallOptimization">>;
+
+def replaceable_function: Joined<["-"], "loader-replaceable-function=">,
+  MarshallingInfoStringVector<CodeGenOpts<"LoaderReplaceableFunctionNames">>;
 
 } // let Visibility = [CC1Option]
 
@@ -8419,6 +8467,11 @@ def objc_isystem : Separate<["-"], "objc-isystem">,
 def objcxx_isystem : Separate<["-"], "objcxx-isystem">,
   MetaVarName<"<directory>">,
   HelpText<"Add directory to the ObjC++ SYSTEM include search path">;
+def internal_iframework : Separate<["-"], "internal-iframework">,
+  MetaVarName<"<directory>">,
+  HelpText<"Add directory to the internal system framework search path; these "
+           "are assumed to not be user-provided and are used to model system "
+           "and standard frameworks' paths.">;
 def internal_isystem : Separate<["-"], "internal-isystem">,
   MetaVarName<"<directory>">,
   HelpText<"Add directory to the internal system include search path; these "
@@ -8902,6 +8955,8 @@ def _SLASH_M_Group : OptionGroup<"</M group>">, Group<cl_compile_Group>;
 def _SLASH_volatile_Group : OptionGroup<"</volatile group>">,
   Group<cl_compile_Group>;
 
+def _SLASH_d2epilogunwind : CLFlag<"d2epilogunwind">,
+  HelpText<"Enable unwind v2 (epilog) information for x64 Windows">;
 def _SLASH_EH : CLJoined<"EH">, HelpText<"Set exception handling model">;
 def _SLASH_EP : CLFlag<"EP">,
   HelpText<"Disable linemarker output and preprocess to stdout">;
@@ -9035,6 +9090,10 @@ def _SLASH_Gregcall : CLFlag<"Gregcall">,
   HelpText<"Set __regcall as a default calling convention">;
 def _SLASH_Gregcall4 : CLFlag<"Gregcall4">,
   HelpText<"Set __regcall4 as a default calling convention to respect __regcall ABI v.4">;
+
+def _SLASH_funcoverride : CLCompileJoined<"funcoverride:">,
+  HelpText<"Mark <function> as being replaceable by the Windows kernel loader">,
+  MetaVarName<"<function>">;
 
 // GNU Driver aliases
 

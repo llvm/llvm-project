@@ -7,5 +7,6 @@ static_library("HLSL") {
   sources = [
     "CBuffer.cpp",
     "HLSLResource.cpp",
+    "HLSLRootSignature.cpp",
   ]
 }

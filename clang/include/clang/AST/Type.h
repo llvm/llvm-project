@@ -1133,9 +1133,6 @@ public:
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 
-  /// Return true if this is a trivially relocatable type.
-  bool isTriviallyRelocatableType(const ASTContext &Context) const;
-
   /// Returns true if it is a class and it might be dynamic.
   bool mayBeDynamicClass() const;
 
@@ -2563,7 +2560,9 @@ public:
   bool isFunctionProtoType() const { return getAs<FunctionProtoType>(); }
   bool isPointerType() const;
   bool isPointerOrReferenceType() const;
-  bool isSignableType() const;
+  bool isSignableType(const ASTContext &Ctx) const;
+  bool isSignablePointerType() const;
+  bool isSignableIntegerType(const ASTContext &Ctx) const;
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
   bool isBlockPointerType() const;
@@ -5979,7 +5978,6 @@ class PackIndexingType final
       private llvm::TrailingObjects<PackIndexingType, QualType> {
   friend TrailingObjects;
 
-  const ASTContext &Context;
   QualType Pattern;
   Expr *IndexExpr;
 
@@ -5990,9 +5988,8 @@ class PackIndexingType final
 
 protected:
   friend class ASTContext; // ASTContext creates these.
-  PackIndexingType(const ASTContext &Context, QualType Canonical,
-                   QualType Pattern, Expr *IndexExpr, bool FullySubstituted,
-                   ArrayRef<QualType> Expansions = {});
+  PackIndexingType(QualType Canonical, QualType Pattern, Expr *IndexExpr,
+                   bool FullySubstituted, ArrayRef<QualType> Expansions = {});
 
 public:
   Expr *getIndexExpr() const { return IndexExpr; }
@@ -6027,14 +6024,10 @@ public:
     return T->getTypeClass() == PackIndexing;
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    if (hasSelectedType())
-      getSelectedType().Profile(ID);
-    else
-      Profile(ID, Context, getPattern(), getIndexExpr(), isFullySubstituted());
-  }
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context);
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      QualType Pattern, Expr *E, bool FullySubstituted);
+                      QualType Pattern, Expr *E, bool FullySubstituted,
+                      ArrayRef<QualType> Expansions);
 
 private:
   const QualType *getExpansionsPtr() const {
@@ -8225,7 +8218,13 @@ inline bool Type::isAnyPointerType() const {
   return isPointerType() || isObjCObjectPointerType();
 }
 
-inline bool Type::isSignableType() const { return isPointerType(); }
+inline bool Type::isSignableType(const ASTContext &Ctx) const {
+  return isSignablePointerType() || isSignableIntegerType(Ctx);
+}
+
+inline bool Type::isSignablePointerType() const {
+  return isPointerType() || isObjCClassType() || isObjCQualifiedClassType();
+}
 
 inline bool Type::isBlockPointerType() const {
   return isa<BlockPointerType>(CanonicalType);

@@ -14,6 +14,15 @@
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
+class RVSDNode<string opcode, SDTypeProfile type_profile,
+               list<SDNodeProperty> properties = []>
+    : SDNode<"RISCVISD::" # opcode, type_profile, properties> {
+  bit HasPassthruOp = false;
+  bit HasMaskOp = false;
+  let TSFlags{0} = HasPassthruOp;
+  let TSFlags{1} = HasMaskOp;
+}
+
 // Target-independent type requirements, but with target-specific formats.
 def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
                                        SDTCisVT<1, i32>]>;
@@ -29,14 +38,6 @@ def SDT_RISCVSelectCC : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
 def SDT_RISCVBrCC : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
                                          SDTCisVT<2, OtherVT>,
                                          SDTCisVT<3, OtherVT>]>;
-def SDT_RISCVReadCSR  : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
-def SDT_RISCVWriteCSR : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisInt<1>]>;
-def SDT_RISCVSwapCSR  : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
-                                             SDTCisInt<2>]>;
-def SDT_RISCVReadCounterWide : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
-                                                    SDTCisVT<1, i32>,
-                                                    SDTCisInt<2>,
-                                                    SDTCisInt<3>]>;
 def SDT_RISCVIntUnaryOpW : SDTypeProfile<1, 1, [
   SDTCisSameAs<0, 1>, SDTCisVT<0, i64>
 ]>;
@@ -53,59 +54,124 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
 def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-// Target-dependent nodes.
-def riscv_call      : SDNode<"RISCVISD::CALL", SDT_RISCVCall,
-                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                              SDNPVariadic]>;
-def riscv_sw_guarded_call : SDNode<"RISCVISD::SW_GUARDED_CALL", SDT_RISCVCall,
-                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                                    SDNPVariadic]>;
-def riscv_ret_glue  : SDNode<"RISCVISD::RET_GLUE", SDTNone,
-                             [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def riscv_sret_glue : SDNode<"RISCVISD::SRET_GLUE", SDTNone,
-                             [SDNPHasChain, SDNPOptInGlue]>;
-def riscv_mret_glue : SDNode<"RISCVISD::MRET_GLUE", SDTNone,
-                             [SDNPHasChain, SDNPOptInGlue]>;
-def riscv_mileaveret_glue : SDNode<"RISCVISD::QC_C_MILEAVERET_GLUE", SDTNone,
-                                   [SDNPHasChain, SDNPOptInGlue]>;
-def riscv_selectcc  : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC>;
-def riscv_brcc      : SDNode<"RISCVISD::BR_CC", SDT_RISCVBrCC,
-                             [SDNPHasChain]>;
-def riscv_tail      : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
-                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                              SDNPVariadic]>;
-def riscv_sw_guarded_tail : SDNode<"RISCVISD::SW_GUARDED_TAIL", SDT_RISCVCall,
-                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                                    SDNPVariadic]>;
-def riscv_sw_guarded_brind : SDNode<"RISCVISD::SW_GUARDED_BRIND",
-                                    SDTBrind, [SDNPHasChain]>;
-def riscv_sllw      : SDNode<"RISCVISD::SLLW", SDT_RISCVIntBinOpW>;
-def riscv_sraw      : SDNode<"RISCVISD::SRAW", SDT_RISCVIntBinOpW>;
-def riscv_srlw      : SDNode<"RISCVISD::SRLW", SDT_RISCVIntBinOpW>;
-def riscv_read_csr  : SDNode<"RISCVISD::READ_CSR", SDT_RISCVReadCSR,
-                             [SDNPHasChain]>;
-def riscv_write_csr : SDNode<"RISCVISD::WRITE_CSR", SDT_RISCVWriteCSR,
-                             [SDNPHasChain]>;
-def riscv_swap_csr  : SDNode<"RISCVISD::SWAP_CSR", SDT_RISCVSwapCSR,
-                             [SDNPHasChain]>;
+def riscv_call      : RVSDNode<"CALL", SDT_RISCVCall,
+                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                SDNPVariadic]>;
+def riscv_tail      : RVSDNode<"TAIL", SDT_RISCVCall,
+                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                SDNPVariadic]>;
 
-def riscv_read_counter_wide : SDNode<"RISCVISD::READ_COUNTER_WIDE",
-                                     SDT_RISCVReadCounterWide,
-                                     [SDNPHasChain, SDNPSideEffect]>;
+// Software guarded calls for large code model
+def riscv_sw_guarded_call : RVSDNode<"SW_GUARDED_CALL", SDT_RISCVCall,
+                                     [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                      SDNPVariadic]>;
+def riscv_sw_guarded_tail : RVSDNode<"SW_GUARDED_TAIL", SDT_RISCVCall,
+                                     [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                      SDNPVariadic]>;
 
-def riscv_add_lo : SDNode<"RISCVISD::ADD_LO", SDTIntBinOp>;
-def riscv_hi : SDNode<"RISCVISD::HI", SDTIntUnaryOp>;
-def riscv_lla : SDNode<"RISCVISD::LLA", SDTIntUnaryOp>;
-def riscv_add_tprel : SDNode<"RISCVISD::ADD_TPREL",
-                             SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
-                                                  SDTCisSameAs<0, 2>,
-                                                  SDTCisSameAs<0, 3>,
-                                                  SDTCisInt<0>]>>;
+def riscv_ret_glue  : RVSDNode<"RET_GLUE", SDTNone,
+                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def riscv_sret_glue : RVSDNode<"SRET_GLUE", SDTNone,
+                               [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mret_glue : RVSDNode<"MRET_GLUE", SDTNone,
+                               [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mileaveret_glue : RVSDNode<"QC_C_MILEAVERET_GLUE", SDTNone,
+                                     [SDNPHasChain, SDNPOptInGlue]>;
 
-def riscv_probed_alloca : SDNode<"RISCVISD::PROBED_ALLOCA",
-                                 SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
-                                                      SDTCisVT<0, i32>]>,
-                                 [SDNPHasChain, SDNPMayStore]>;
+// Select with condition operator - This selects between a true value and
+// a false value (ops #3 and #4) based on the boolean result of comparing
+// the lhs and rhs (ops #0 and #1) of a conditional expression with the
+// condition code in op #2, a XLenVT constant from the ISD::CondCode enum.
+// The lhs and rhs are XLenVT integers. The true and false values can be
+// integer or floating point.
+def riscv_selectcc  : RVSDNode<"SELECT_CC", SDT_RISCVSelectCC>;
+def riscv_brcc      : RVSDNode<"BR_CC", SDT_RISCVBrCC,
+                               [SDNPHasChain]>;
+
+// Software guarded BRIND node. Operand is the target address.
+def riscv_sw_guarded_brind : RVSDNode<"SW_GUARDED_BRIND",
+                                      SDTBrind, [SDNPHasChain]>;
+
+// RV64I shifts, directly matching the semantics of the named RISC-V
+// instructions.
+def riscv_sllw      : RVSDNode<"SLLW", SDT_RISCVIntBinOpW>;
+def riscv_sraw      : RVSDNode<"SRAW", SDT_RISCVIntBinOpW>;
+def riscv_srlw      : RVSDNode<"SRLW", SDT_RISCVIntBinOpW>;
+
+// Reads value of CSR. The first operand is the address of the required CSR.
+// The result is the read value.
+def riscv_read_csr  : RVSDNode<"READ_CSR",
+                               SDTypeProfile<1, 1, [SDTCisInt<0>,
+                                                    SDTCisInt<1>]>,
+                               [SDNPHasChain]>;
+// Write value to CSR. The first operand is the address of the required CSR,
+// the second is the value to write.
+def riscv_write_csr : RVSDNode<"WRITE_CSR",
+                               SDTypeProfile<0, 2, [SDTCisInt<0>,
+                                                    SDTCisInt<1>]>,
+                               [SDNPHasChain]>;
+
+// Read and write value of CSR. The first operand is the address of the
+// required CSR, the second is the value to write, and the result is the
+// read value (before modification).
+def riscv_swap_csr  : RVSDNode<"SWAP_CSR",
+                               SDTypeProfile<1, 2, [SDTCisInt<0>,
+                                                    SDTCisInt<1>,
+                                                    SDTCisInt<2>]>,
+                               [SDNPHasChain]>;
+
+// A read of the 64-bit counter CSR on a 32-bit target (returns (Lo, Hi)).
+// It takes a chain operand and another two target constant operands (the
+// CSR numbers of the low and high parts of the counter).
+def riscv_read_counter_wide : RVSDNode<"READ_COUNTER_WIDE",
+                                       SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
+                                                            SDTCisVT<1, i32>,
+                                                            SDTCisInt<2>,
+                                                            SDTCisInt<3>]>,
+                                       [SDNPHasChain, SDNPSideEffect]>;
+
+// Add the Lo 12 bits from an address. Selected to ADDI.
+def riscv_add_lo : RVSDNode<"ADD_LO", SDTIntBinOp>;
+
+// Get the Hi 20 bits from an address. Selected to LUI.
+def riscv_hi : RVSDNode<"HI", SDTIntUnaryOp>;
+
+// Represents an AUIPC+ADDI pair. Selected to PseudoLLA.
+def riscv_lla : RVSDNode<"LLA", SDTIntUnaryOp>;
+
+// Selected as PseudoAddTPRel. Used to emit a TP-relative relocation.
+def riscv_add_tprel : RVSDNode<"ADD_TPREL",
+                               SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
+                                                    SDTCisSameAs<0, 2>,
+                                                    SDTCisSameAs<0, 3>,
+                                                    SDTCisInt<0>]>>;
+
+// To avoid stack clash, allocation is performed by block and each block is
+// probed.
+def riscv_probed_alloca : RVSDNode<"PROBED_ALLOCA",
+                                   SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
+                                   [SDNPHasChain, SDNPMayStore]>;
+
+
+defvar GPRPairVT = untyped;
+
+/// Turn a pair of `i<xlen>`s into an even-odd register pair (`untyped`).
+/// - Output: `untyped` even-odd register pair
+/// - Input 0: `i<xlen>` low-order bits, for even register.
+/// - Input 1: `i<xlen>` high-order bits, for odd register.
+def riscv_build_gpr_pair : RVSDNode<"BuildGPRPair",
+                                    SDTypeProfile<1, 2, [SDTCisVT<0, GPRPairVT>,
+                                                         SDTCisVT<1, XLenVT>,
+                                                         SDTCisVT<2, XLenVT>]>>;
+
+/// Turn an even-odd register pair (`untyped`) into a pair of `i<xlen>`s.
+/// - Output 0: `i<xlen>` low-order bits, from even register.
+/// - Output 1: `i<xlen>` high-order bits, from odd register.
+/// - Input: `untyped` even-odd register pair
+def riscv_split_gpr_pair : RVSDNode<"SplitGPRPair",
+                                    SDTypeProfile<2, 1, [SDTCisVT<0, XLenVT>,
+                                                         SDTCisVT<1, XLenVT>,
+                                                         SDTCisVT<2, GPRPairVT>]>>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -1456,17 +1522,17 @@ let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1 in {
 // Probed stack allocation of a constant size, used in function prologues when
 // stack-clash protection is enabled.
 def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
-                               (ins GPR:$scratch),
+                               (ins GPR:$target),
                                []>,
                                Sched<[]>;
 def PROBED_STACKALLOC_RVV : Pseudo<(outs GPR:$sp),
-                               (ins GPR:$scratch),
+                               (ins GPR:$target),
                                []>,
                                Sched<[]>;
 let usesCustomInserter = 1 in
-def PROBED_STACKALLOC_DYN : Pseudo<(outs GPR:$rd),
-                               (ins GPR:$scratch),
-                               [(set GPR:$rd, (riscv_probed_alloca GPR:$scratch))]>,
+def PROBED_STACKALLOC_DYN : Pseudo<(outs),
+                               (ins GPR:$target),
+                               [(riscv_probed_alloca GPR:$target)]>,
                                Sched<[]>;
 }
 

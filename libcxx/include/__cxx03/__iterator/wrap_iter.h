@@ -33,9 +33,6 @@ public:
   typedef typename iterator_traits<iterator_type>::pointer pointer;
   typedef typename iterator_traits<iterator_type>::reference reference;
   typedef typename iterator_traits<iterator_type>::iterator_category iterator_category;
-#if _LIBCPP_STD_VER >= 20
-  typedef contiguous_iterator_tag iterator_concept;
-#endif
 
 private:
   iterator_type __i_;
@@ -131,7 +128,6 @@ operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXC
   return __x.base() < __y.base();
 }
 
-#if _LIBCPP_STD_VER <= 17
 template <class _Iter1>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
 operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
@@ -143,7 +139,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
 operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
   return !(__x == __y);
 }
-#endif
 
 // TODO(mordante) disable these overloads in the LLVM 20 release.
 template <class _Iter1>
@@ -182,35 +177,9 @@ operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEX
   return !(__y < __x);
 }
 
-#if _LIBCPP_STD_VER >= 20
 template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering
-operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) noexcept {
-  if constexpr (three_way_comparable_with<_Iter1, _Iter2, strong_ordering>) {
-    return __x.base() <=> __y.base();
-  } else {
-    if (__x.base() < __y.base())
-      return strong_ordering::less;
-
-    if (__x.base() == __y.base())
-      return strong_ordering::equal;
-
-    return strong_ordering::greater;
-  }
-}
-#endif // _LIBCPP_STD_VER >= 20
-
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-#ifndef _LIBCPP_CXX03_LANG
-    auto
-    operator-(const __wrap_iter<_Iter1>& __x,
-              const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.base() - __y.base())
-#else
-typename __wrap_iter<_Iter1>::difference_type
-operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
-#endif // C++03
-{
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename __wrap_iter<_Iter1>::difference_type
+operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
   return __x.base() - __y.base();
 }
 
@@ -221,10 +190,8 @@ operator+(typename __wrap_iter<_Iter1>::difference_type __n, __wrap_iter<_Iter1>
   return __x;
 }
 
-#if _LIBCPP_STD_VER <= 17
 template <class _It>
 struct __libcpp_is_contiguous_iterator<__wrap_iter<_It> > : true_type {};
-#endif
 
 template <class _It>
 struct _LIBCPP_TEMPLATE_VIS pointer_traits<__wrap_iter<_It> > {

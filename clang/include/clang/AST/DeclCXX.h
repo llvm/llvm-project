@@ -1550,6 +1550,9 @@ public:
   /// Returns the destructor decl for this class.
   CXXDestructorDecl *getDestructor() const;
 
+  /// Returns the destructor decl for this class.
+  bool hasDeletedDestructor() const;
+
   /// Returns true if the class destructor, or any implicitly invoked
   /// destructors are marked noreturn.
   bool isAnyDestructorNoReturn() const { return data().IsAnyDestructorNoReturn; }
@@ -3861,8 +3864,7 @@ class UsingPackDecl final
                   InstantiatedFrom ? InstantiatedFrom->getDeclName()
                                    : DeclarationName()),
         InstantiatedFrom(InstantiatedFrom), NumExpansions(UsingDecls.size()) {
-    std::uninitialized_copy(UsingDecls.begin(), UsingDecls.end(),
-                            getTrailingObjects<NamedDecl *>());
+    llvm::uninitialized_copy(UsingDecls, getTrailingObjects<NamedDecl *>());
   }
 
   void anchor() override;
@@ -3880,7 +3882,7 @@ public:
   /// Get the set of using declarations that this pack expanded into. Note that
   /// some of these may still be unresolved.
   ArrayRef<NamedDecl *> expansions() const {
-    return llvm::ArrayRef(getTrailingObjects<NamedDecl *>(), NumExpansions);
+    return getTrailingObjects<NamedDecl *>(NumExpansions);
   }
 
   static UsingPackDecl *Create(ASTContext &C, DeclContext *DC,
@@ -4233,8 +4235,7 @@ class DecompositionDecl final
       : VarDecl(Decomposition, C, DC, StartLoc, LSquareLoc, nullptr, T, TInfo,
                 SC),
         NumBindings(Bindings.size()) {
-    std::uninitialized_copy(Bindings.begin(), Bindings.end(),
-                            getTrailingObjects<BindingDecl *>());
+    llvm::uninitialized_copy(Bindings, getTrailingObjects<BindingDecl *>());
     for (auto *B : Bindings) {
       B->setDecomposedDecl(this);
       if (B->isParameterPack() && B->getBinding()) {

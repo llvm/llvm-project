@@ -11,10 +11,10 @@ define amdgpu_ps i32 @if_else(i32 %0) !dbg !5 {
 ; OPT-NEXT:    [[TMP4:%.*]] = extractvalue { i1, i64 } [[TMP2]], 1, !dbg [[DBG14]]
 ; OPT-NEXT:    br i1 [[TMP3]], label [[FALSE:%.*]], label [[FLOW:%.*]], !dbg [[DBG14]]
 ; OPT:       Flow:
-; OPT-NEXT:    [[TMP5:%.*]] = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 [[TMP4]]), !dbg [[DBG14]]
-; OPT-NEXT:    [[TMP6:%.*]] = extractvalue { i1, i64 } [[TMP5]], 0, !dbg [[DBG14]]
-; OPT-NEXT:    [[TMP8:%.*]] = extractvalue { i1, i64 } [[TMP5]], 1, !dbg [[DBG14]]
-; OPT-NEXT:    br i1 [[TMP6]], label [[TRUE:%.*]], label [[EXIT:%.*]], !dbg [[DBG14]]
+; OPT-NEXT:    [[TMP5:%.*]] = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 [[TMP4]])
+; OPT-NEXT:    [[TMP6:%.*]] = extractvalue { i1, i64 } [[TMP5]], 0
+; OPT-NEXT:    [[TMP8:%.*]] = extractvalue { i1, i64 } [[TMP5]], 1
+; OPT-NEXT:    br i1 [[TMP6]], label [[TRUE:%.*]], label [[EXIT:%.*]]
 ; OPT:       true:
 ; OPT-NEXT:    br label [[EXIT]], !dbg [[DBG15:![0-9]+]]
 ; OPT:       false:
@@ -64,9 +64,9 @@ define amdgpu_ps void @loop_if_break(i32 %n) !dbg !19 {
 ; OPT-NEXT:    [[TMP3]] = phi i32 [ [[I_NEXT]], [[LOOP_BODY]] ], [ poison, [[LOOP]] ]
 ; OPT-NEXT:    [[TMP4:%.*]] = phi i1 [ false, [[LOOP_BODY]] ], [ true, [[LOOP]] ]
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
-; OPT-NEXT:    [[TMP5]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP4]], i64 [[PHI_BROKEN]]), !dbg [[DBG27]]
-; OPT-NEXT:    [[TMP6:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP5]]), !dbg [[DBG27]]
-; OPT-NEXT:    br i1 [[TMP6]], label [[EXIT:%.*]], label [[LOOP]], !dbg [[DBG27]]
+; OPT-NEXT:    [[TMP5]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP4]], i64 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP6:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP5]])
+; OPT-NEXT:    br i1 [[TMP6]], label [[EXIT:%.*]], label [[LOOP]]
 ; OPT:       exit:
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP5]])
 ; OPT-NEXT:    ret void, !dbg [[DBG30:![0-9]+]]
@@ -132,7 +132,7 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 !30 = !DILocation(line: 13, column: 1, scope: !19)
 ;.
 ; OPT: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: [[META1:![0-9]+]], producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
-; OPT: [[META1]] = !DIFile(filename: "../../../test/CodeGen/AMDGPU/si-annotate-dbg-info.ll", directory: {{.*}})
+; OPT: [[META1]] = !DIFile(filename: "{{.*}}si-annotate-dbg-info.ll", directory: {{.*}})
 ; OPT: [[DBG5]] = distinct !DISubprogram(name: "if_else", linkageName: "if_else", scope: null, file: [[META1]], line: 1, type: [[META6:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META8:![0-9]+]])
 ; OPT: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
 ; OPT: [[META7]] = !{}

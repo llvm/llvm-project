@@ -1272,10 +1272,6 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
       goto consume_token;
 
     case tok::eof:
-    case tok::annot_module_begin:
-    case tok::annot_module_end:
-    case tok::annot_module_include:
-    case tok::annot_repl_input_end:
       // Ran out of tokens.
       return false;
 
@@ -1411,6 +1407,11 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
       [[fallthrough]];
     default:
     consume_token:
+      // If it's an annotation token, then we've run out of tokens and should
+      // bail out. Otherwise, cache the token and consume it.
+      if (Tok.isAnnotation())
+        return false;
+
       Toks.push_back(Tok);
       ConsumeToken();
       break;

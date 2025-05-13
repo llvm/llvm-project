@@ -17,6 +17,7 @@
 #include "ToolChains/Clang.h"
 #include "ToolChains/CrossWindows.h"
 #include "ToolChains/Cuda.h"
+#include "ToolChains/Cygwin.h"
 #include "ToolChains/Darwin.h"
 #include "ToolChains/DragonFly.h"
 #include "ToolChains/FreeBSD.h"
@@ -5611,19 +5612,20 @@ class ToolSelector final {
     if (!BJ || !CJ)
       return nullptr;
 
+    auto HasBitcodeInput = [](const JobActionInfo &AI) {
+      for (auto &Input : AI.JA->getInputs())
+        if (!types::isLLVMIR(Input->getType()))
+          return false;
+      return true;
+    };
+
     // Check if the initial input (to the compile job or its predessor if one
     // exists) is LLVM bitcode. In that case, no preprocessor step is required
     // and we can still collapse the compile and backend jobs when we have
     // -save-temps. I.e. there is no need for a separate compile job just to
     // emit unoptimized bitcode.
-    bool InputIsBitcode = true;
-    for (size_t i = 1; i < ActionInfo.size(); i++)
-      if (ActionInfo[i].JA->getType() != types::TY_LLVM_BC &&
-          ActionInfo[i].JA->getType() != types::TY_LTO_BC) {
-        InputIsBitcode = false;
-        break;
-      }
-    if (!InputIsBitcode && !canCollapsePreprocessorAction())
+    bool InputIsBitcode = all_of(ActionInfo, HasBitcodeInput);
+    if (SaveTemps && !InputIsBitcode)
       return nullptr;
 
     // Get compiler tool.
@@ -5637,7 +5639,7 @@ class ToolSelector final {
     if (!T->hasIntegratedBackend() && !(OutputIsLLVM && T->canEmitIR()))
       return nullptr;
 
-    if (T->canEmitIR() && ((SaveTemps && !InputIsBitcode) || EmbedBitcode))
+    if (T->canEmitIR() && EmbedBitcode)
       return nullptr;
 
     Inputs = CJ->getInputs();
@@ -6854,6 +6856,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         break;
       case llvm::Triple::GNU:
         TC = std::make_unique<toolchains::MinGW>(*this, Target, Args);
+        break;
+      case llvm::Triple::Cygnus:
+        TC = std::make_unique<toolchains::Cygwin>(*this, Target, Args);
         break;
       case llvm::Triple::Itanium:
         TC = std::make_unique<toolchains::CrossWindowsToolChain>(*this, Target,

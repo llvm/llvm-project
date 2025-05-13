@@ -64,7 +64,7 @@ def WriteFCvtI64ToF16  : SchedWrite;    // RV64I only
 def WriteFCvtI64ToF32  : SchedWrite;    // RV64I only
 def WriteFCvtI64ToF64  : SchedWrite;    // RV64I only
 
-//Float to integer conversions
+// Float to integer conversions
 def WriteFCvtF16ToI32  : SchedWrite;
 def WriteFCvtF16ToI64  : SchedWrite;    // RV64I only
 def WriteFCvtF32ToI32  : SchedWrite;
@@ -80,7 +80,7 @@ def WriteFCvtF32ToF16  : SchedWrite;
 def WriteFCvtF16ToF64  : SchedWrite;
 def WriteFCvtF64ToF16  : SchedWrite;
 
-// Zfa found instructions.
+// Zfa fround instructions.
 def WriteFRoundF32     : SchedWrite;
 def WriteFRoundF64     : SchedWrite;
 def WriteFRoundF16     : SchedWrite;
