@@ -3090,13 +3090,23 @@ SDValue LoongArchTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
   case CodeModel::Small:
   case CodeModel::Medium:
     if (IsLocal) {
-      // This generates the pattern (PseudoLA_PCREL sym), which expands to
-      // (addi.w/d (pcalau12i %pc_hi20(sym)) %pc_lo12(sym)).
+      // This generates the pattern (PseudoLA_PCREL sym), which
+      //
+      // for la32r expands to:
+      //   (addi.w (pcaddu12i %pcadd_hi20(sym)) %pcadd_lo12(.Lpcadd_hi)).
+      //
+      // for la32s and la64 expands to:
+      //   (addi.d (pcalau12i %pc_hi20(sym)) %pc_lo12(sym)).
       Load = SDValue(
           DAG.getMachineNode(LoongArch::PseudoLA_PCREL, DL, Ty, Addr), 0);
     } else {
-      // This generates the pattern (PseudoLA_GOT sym), which expands to (ld.w/d
-      // (pcalau12i %got_pc_hi20(sym)) %got_pc_lo12(sym)).
+      // This generates the pattern (PseudoLA_GOT sym), which
+      //
+      // for la32r expands to:
+      //   (ld.w (pcaddu12i %got_pcadd_hi20(sym)) %pcadd_lo12(.Lpcadd_hi)).
+      //
+      // for la32s and la64 expands to:
+      //   (ld.d (pcalau12i %got_pc_hi20(sym)) %got_pc_lo12(sym)).
       Load =
           SDValue(DAG.getMachineNode(LoongArch::PseudoLA_GOT, DL, Ty, Addr), 0);
     }
@@ -7918,7 +7928,6 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Op = IsTailCall ? LoongArchISD::TAIL : LoongArchISD::CALL;
     break;
   case CodeModel::Medium:
-    assert(Subtarget.is64Bit() && "Medium code model requires LA64");
     Op = IsTailCall ? LoongArchISD::TAIL_MEDIUM : LoongArchISD::CALL_MEDIUM;
     break;
   case CodeModel::Large:

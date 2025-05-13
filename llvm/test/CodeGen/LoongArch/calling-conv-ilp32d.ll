@@ -65,20 +65,27 @@ define i32 @caller_double_in_gpr_exhausted_fprs() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.w $sp, $sp, -16
 ; CHECK-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; CHECK-NEXT:    fld.d $fa1, $a0, %pc_lo12(.LCPI3_0)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; CHECK-NEXT:    fld.d $fa2, $a0, %pc_lo12(.LCPI3_1)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_2)
-; CHECK-NEXT:    fld.d $fa3, $a0, %pc_lo12(.LCPI3_2)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_3)
-; CHECK-NEXT:    fld.d $fa4, $a0, %pc_lo12(.LCPI3_3)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_4)
-; CHECK-NEXT:    fld.d $fa5, $a0, %pc_lo12(.LCPI3_4)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_5)
-; CHECK-NEXT:    fld.d $fa6, $a0, %pc_lo12(.LCPI3_5)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_6)
-; CHECK-NEXT:    fld.d $fa7, $a0, %pc_lo12(.LCPI3_6)
+; CHECK-NEXT:  .Lpcadd_hi0:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_0)
+; CHECK-NEXT:    fld.d $fa1, $a0, %pcadd_lo12(.Lpcadd_hi0)
+; CHECK-NEXT:  .Lpcadd_hi1:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_1)
+; CHECK-NEXT:    fld.d $fa2, $a0, %pcadd_lo12(.Lpcadd_hi1)
+; CHECK-NEXT:  .Lpcadd_hi2:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_2)
+; CHECK-NEXT:    fld.d $fa3, $a0, %pcadd_lo12(.Lpcadd_hi2)
+; CHECK-NEXT:  .Lpcadd_hi3:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_3)
+; CHECK-NEXT:    fld.d $fa4, $a0, %pcadd_lo12(.Lpcadd_hi3)
+; CHECK-NEXT:  .Lpcadd_hi4:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_4)
+; CHECK-NEXT:    fld.d $fa5, $a0, %pcadd_lo12(.Lpcadd_hi4)
+; CHECK-NEXT:  .Lpcadd_hi5:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_5)
+; CHECK-NEXT:    fld.d $fa6, $a0, %pcadd_lo12(.Lpcadd_hi5)
+; CHECK-NEXT:  .Lpcadd_hi6:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_6)
+; CHECK-NEXT:    fld.d $fa7, $a0, %pcadd_lo12(.Lpcadd_hi6)
 ; CHECK-NEXT:    addi.w $a0, $zero, 1
 ; CHECK-NEXT:    movgr2fr.w $fa0, $a0
 ; CHECK-NEXT:    ffint.s.w $fa0, $fa0
@@ -125,20 +132,27 @@ define i32 @caller_double_on_stack_exhausted_fprs_gprs() nounwind {
 ; CHECK-NEXT:    st.w $zero, $sp, 0
 ; CHECK-NEXT:    lu12i.w $a0, 262848
 ; CHECK-NEXT:    st.w $a0, $sp, 12
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; CHECK-NEXT:    fld.d $fa1, $a0, %pc_lo12(.LCPI5_0)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_1)
-; CHECK-NEXT:    fld.d $fa2, $a0, %pc_lo12(.LCPI5_1)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_2)
-; CHECK-NEXT:    fld.d $fa3, $a0, %pc_lo12(.LCPI5_2)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_3)
-; CHECK-NEXT:    fld.d $fa4, $a0, %pc_lo12(.LCPI5_3)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_4)
-; CHECK-NEXT:    fld.d $fa5, $a0, %pc_lo12(.LCPI5_4)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_5)
-; CHECK-NEXT:    fld.d $fa6, $a0, %pc_lo12(.LCPI5_5)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_6)
-; CHECK-NEXT:    fld.d $fa7, $a0, %pc_lo12(.LCPI5_6)
+; CHECK-NEXT:  .Lpcadd_hi7:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_0)
+; CHECK-NEXT:    fld.d $fa1, $a0, %pcadd_lo12(.Lpcadd_hi7)
+; CHECK-NEXT:  .Lpcadd_hi8:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_1)
+; CHECK-NEXT:    fld.d $fa2, $a0, %pcadd_lo12(.Lpcadd_hi8)
+; CHECK-NEXT:  .Lpcadd_hi9:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_2)
+; CHECK-NEXT:    fld.d $fa3, $a0, %pcadd_lo12(.Lpcadd_hi9)
+; CHECK-NEXT:  .Lpcadd_hi10:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_3)
+; CHECK-NEXT:    fld.d $fa4, $a0, %pcadd_lo12(.Lpcadd_hi10)
+; CHECK-NEXT:  .Lpcadd_hi11:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_4)
+; CHECK-NEXT:    fld.d $fa5, $a0, %pcadd_lo12(.Lpcadd_hi11)
+; CHECK-NEXT:  .Lpcadd_hi12:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_5)
+; CHECK-NEXT:    fld.d $fa6, $a0, %pcadd_lo12(.Lpcadd_hi12)
+; CHECK-NEXT:  .Lpcadd_hi13:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_6)
+; CHECK-NEXT:    fld.d $fa7, $a0, %pcadd_lo12(.Lpcadd_hi13)
 ; CHECK-NEXT:    addi.w $a0, $zero, 1
 ; CHECK-NEXT:    movgr2fr.w $fa0, $a0
 ; CHECK-NEXT:    ffint.s.w $fa0, $fa0
