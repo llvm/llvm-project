@@ -1,5 +1,4 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
-! XFAIL: *
 
 subroutine TestOfCharacter(a0, a1, l)
   character(len=*), intent(in) :: a0
