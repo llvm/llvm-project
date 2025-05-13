@@ -356,6 +356,28 @@ static uint64_t getUniqueCaseValue(SmallSet<uint64_t, 4> &CasesTaken,
   return tmp;
 }
 
+bool InsertFunctionStrategy::isUnsupportedFunction(Function *F) {
+  // Some functions accept metadata type or token type as arguments.
+  // We don't call those functions for now.
+  // For example, `@llvm.dbg.declare(metadata, metadata, metadata)`
+  // https://llvm.org/docs/SourceLevelDebugging.html#llvm-dbg-declare
+  auto IsUnsupportedTy = [](Type *T) {
+    return T->isMetadataTy() || T->isTokenTy();
+  };
+
+  if (IsUnsupportedTy(F->getReturnType()) ||
+      any_of(F->getFunctionType()->params(), IsUnsupportedTy)) {
+    return true;
+  }
+
+  // If it is not satisfied, the IR will be invalid.
+  if (!isCallableCC(F->getCallingConv())) {
+    return true;
+  }
+
+  return false;
+}
+
 void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   Module *M = BB.getParent()->getParent();
   // If nullptr is selected, we will create a new function declaration.
@@ -366,16 +388,8 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
 
   auto RS = makeSampler(IB.Rand, Functions);
   Function *F = RS.getSelection();
-  // Some functions accept metadata type or token type as arguments.
-  // We don't call those functions for now.
-  // For example, `@llvm.dbg.declare(metadata, metadata, metadata)`
-  // https://llvm.org/docs/SourceLevelDebugging.html#llvm-dbg-declare
-  auto IsUnsupportedTy = [](Type *T) {
-    return T->isMetadataTy() || T->isTokenTy();
-  };
-  if (!F || IsUnsupportedTy(F->getReturnType()) ||
-      any_of(F->getFunctionType()->params(), IsUnsupportedTy) ||
-      !isCallableCC(F->getCallingConv())) {
+
+  if (!F || isUnsupportedFunction(F)) {
     F = IB.createFunctionDeclaration(*M);
   }
 

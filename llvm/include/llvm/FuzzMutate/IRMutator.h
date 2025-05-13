@@ -144,6 +144,9 @@ public:
 
   using IRMutationStrategy::mutate;
   void mutate(BasicBlock &BB, RandomIRBuilder &IB) override;
+
+private:
+  bool isUnsupportedFunction(Function *F);
 };
 
 /// Strategy to split a random block and insert a random CFG in between.
