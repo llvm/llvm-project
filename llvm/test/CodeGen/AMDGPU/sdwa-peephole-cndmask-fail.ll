@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1030 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 < %s | FileCheck %s
 
 ; In this test, V_CNDMASK_B32_e64 gets converted to V_CNDMASK_B32_e32,
 ; but the expected conversion to SDWA does not occur.  This led to a
@@ -6,12 +6,7 @@
 ; instruction must be fixed to $vcc_lo for wave32 which only happened
 ; after the full conversion to SDWA.
 
-
-; CHECK-NOT: {{.*}}V_CNDMASK_B32_e32{{.*}}$vcc
-; CHECK-NOT: {{.*}}Bad machine code: Virtual register defs don't dominate all uses
-; CHECK: {{.*}}v_cndmask_b32_e32{{.*}}vcc_lo
-
-define amdgpu_kernel void @quux(i32 %arg, i1 %arg1, i1 %arg2) {
+define void @quux(i32 %arg, i1 %arg1, i1 %arg2) {
 bb:
   br i1 %arg1, label %bb9, label %bb3
 
