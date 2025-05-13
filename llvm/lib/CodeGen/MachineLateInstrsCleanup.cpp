@@ -186,11 +186,13 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
     if (MO.isReg()) {
-      if (MO.isDef()) {
+      if (MO.isDef() && DefedReg == MCRegister::NoRegister) {
         if (i == 0 && !MO.isImplicit() && !MO.isDead())
           DefedReg = MO.getReg();
         else
           return false;
+      } else if (MI->isPseudo() && MI->isMoveImmediate()) {
+        return DefedReg.isValid();
       } else if (MO.getReg() && MO.getReg() != FrameReg)
         return false;
     } else if (!(MO.isImm() || MO.isCImm() || MO.isFPImm() || MO.isCPI() ||

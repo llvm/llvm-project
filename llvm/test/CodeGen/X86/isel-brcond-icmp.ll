@@ -31,18 +31,6 @@ define i32 @icmp_eq_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
-; X86-LABEL: icmp_eq_2:
-; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl {{[0-9]+\(%esp\), %eax|%eax, [0-9]+\(%esp\)}}
-; X86-NEXT:    jne LBB0_1
-; X86-NEXT:  ## %bb.2: ## %bb1
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  LBB0_1: ## %bb2
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    retl
-;
 ; GISEL-X86-LABEL: icmp_eq_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -88,18 +76,6 @@ define i32 @icmp_ne_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:  LBB1_1: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
-;
-; X86-LABEL: icmp_ne_2:
-; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl {{[0-9]+\(%esp\), %eax|%eax, [0-9]+\(%esp\)}}
-; X86-NEXT:    je LBB1_1
-; X86-NEXT:  ## %bb.2: ## %bb1
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  LBB1_1: ## %bb2
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    retl
 ;
 ; GISEL-X86-LABEL: icmp_ne_2:
 ; GISEL-X86:       ## %bb.0:
@@ -147,18 +123,6 @@ define i32 @icmp_ugt_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
-; X86-LABEL: icmp_ugt_2:
-; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl {{[0-9]+\(%esp\), %eax|%eax, [0-9]+\(%esp\)}}
-; X86-NEXT:    jbe LBB2_1
-; X86-NEXT:  ## %bb.2: ## %bb1
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  LBB2_1: ## %bb2
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    retl
-;
 ; GISEL-X86-LABEL: icmp_ugt_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -204,18 +168,6 @@ define i32 @icmp_uge_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:  LBB3_1: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
-;
-; X86-LABEL: icmp_uge_2:
-; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl {{[0-9]+\(%esp\), %eax|%eax, [0-9]+\(%esp\)}}
-; X86-NEXT:    jb LBB3_1
-; X86-NEXT:  ## %bb.2: ## %bb1
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  LBB3_1: ## %bb2
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    retl
 ;
 ; GISEL-X86-LABEL: icmp_uge_2:
 ; GISEL-X86:       ## %bb.0:
@@ -263,18 +215,6 @@ define i32 @icmp_ult_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
-; X86-LABEL: icmp_ult_2:
-; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl {{[0-9]+\(%esp\), %eax|%eax, [0-9]+\(%esp\)}}
-; X86-NEXT:    jae LBB4_1
-; X86-NEXT:  ## %bb.2: ## %bb1
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  LBB4_1: ## %bb2
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    retl
-;
 ; GISEL-X86-LABEL: icmp_ult_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -320,18 +260,6 @@ define i32 @icmp_ule_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:  LBB5_1: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
-;
-; X86-LABEL: icmp_ule_2:
-; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl {{[0-9]+\(%esp\), %eax|%eax, [0-9]+\(%esp\)}}
-; X86-NEXT:    ja LBB5_1
-; X86-NEXT:  ## %bb.2: ## %bb1
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  LBB5_1: ## %bb2
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    retl
 ;
 ; GISEL-X86-LABEL: icmp_ule_2:
 ; GISEL-X86:       ## %bb.0:
@@ -379,18 +307,6 @@ define i32 @icmp_sgt_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
-; X86-LABEL: icmp_sgt_2:
-; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl {{[0-9]+\(%esp\), %eax|%eax, [0-9]+\(%esp\)}}
-; X86-NEXT:    jle LBB6_1
-; X86-NEXT:  ## %bb.2: ## %bb1
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  LBB6_1: ## %bb2
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    retl
-;
 ; GISEL-X86-LABEL: icmp_sgt_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -436,18 +352,6 @@ define i32 @icmp_sge_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:  LBB7_1: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
-;
-; X86-LABEL: icmp_sge_2:
-; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl {{[0-9]+\(%esp\), %eax|%eax, [0-9]+\(%esp\)}}
-; X86-NEXT:    jl LBB7_1
-; X86-NEXT:  ## %bb.2: ## %bb1
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  LBB7_1: ## %bb2
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    retl
 ;
 ; GISEL-X86-LABEL: icmp_sge_2:
 ; GISEL-X86:       ## %bb.0:
@@ -495,18 +399,6 @@ define i32 @icmp_slt_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
-; X86-LABEL: icmp_slt_2:
-; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl {{[0-9]+\(%esp\), %eax|%eax, [0-9]+\(%esp\)}}
-; X86-NEXT:    jge LBB8_1
-; X86-NEXT:  ## %bb.2: ## %bb1
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  LBB8_1: ## %bb2
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    retl
-;
 ; GISEL-X86-LABEL: icmp_slt_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -553,18 +445,6 @@ define i32 @icmp_sle_2(i32 %x, i32 %y) {
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
 ;
-; X86-LABEL: icmp_sle_2:
-; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl {{[0-9]+\(%esp\), %eax|%eax, [0-9]+\(%esp\)}}
-; X86-NEXT:    jg LBB9_1
-; X86-NEXT:  ## %bb.2: ## %bb1
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  LBB9_1: ## %bb2
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    retl
-;
 ; GISEL-X86-LABEL: icmp_sle_2:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -594,15 +474,15 @@ define i32 @icmp_eq(i32 %x) {
 ; SDAG-NEXT:    je LBB10_1
 ; SDAG-NEXT:  ## %bb.2: ## %bb1
 ; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:    ret{{[l|q]}}
 ; SDAG-NEXT:  LBB10_1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_eq:
 ; FASTISEL:       ## %bb.0:
 ; FASTISEL-NEXT:    xorl %eax, %eax
-; FASTISEL-NEXT:    ret{{q|l}}
+; FASTISEL-NEXT:    ret{{[l|q]}}
 ;
 ; GISEL-X64-LABEL: icmp_eq:
 ; GISEL-X64:       ## %bb.0:
@@ -643,18 +523,16 @@ define i32 @icmp_ne(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
-; SDAG-NEXT:    je LBB11_1
-; SDAG-NEXT:  ## %bb.2: ## %bb1
-; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{q|l}}
-; SDAG-NEXT:  LBB11_1: ## %bb2
+; SDAG-NEXT:    jne LBB11_2
+; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:  LBB11_2: ## %bb1
+; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_ne:
 ; FASTISEL:       ## %bb.0:
 ; FASTISEL-NEXT:    movl $1, %eax
-; FASTISEL-NEXT:    ret{{q|l}}
+; FASTISEL-NEXT:    ret{{[l|q]}}
 ;
 ; GISEL-X64-LABEL: icmp_ne:
 ; GISEL-X64:       ## %bb.0:
@@ -695,18 +573,16 @@ define i32 @icmp_ugt(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
-; SDAG-NEXT:    je LBB12_1
-; SDAG-NEXT:  ## %bb.2: ## %bb1
-; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{q|l}}
-; SDAG-NEXT:  LBB12_1: ## %bb2
+; SDAG-NEXT:    jne LBB12_2
+; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:  LBB12_2: ## %bb1
+; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_ugt:
 ; FASTISEL:       ## %bb.0:
 ; FASTISEL-NEXT:    movl $1, %eax
-; FASTISEL-NEXT:    ret{{q|l}}
+; FASTISEL-NEXT:    ret{{[l|q]}}
 ;
 ; GISEL-X64-LABEL: icmp_ugt:
 ; GISEL-X64:       ## %bb.0:
@@ -750,15 +626,15 @@ define i32 @icmp_uge(i32 %x) {
 ; SDAG-NEXT:    je LBB13_1
 ; SDAG-NEXT:  ## %bb.2: ## %bb1
 ; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:    ret{{[l|q]}}
 ; SDAG-NEXT:  LBB13_1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:    ret{{[l|q]}}
 ;
-; FASTISEL-X64-LABEL: icmp_uge:
-; FASTISEL-X64:       ## %bb.0:
-; FASTISEL-X64-NEXT:    xorl %eax, %eax
-; FASTISEL-X64-NEXT:    retq
+; FASTISEL-LABEL: icmp_uge:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    xorl %eax, %eax
+; FASTISEL-NEXT:    ret{{[l|q]}}
 ;
 ; GISEL-X64-LABEL: icmp_uge:
 ; GISEL-X64:       ## %bb.0:
@@ -786,6 +662,10 @@ define i32 @icmp_uge(i32 %x) {
 ; GISEL-X86-NEXT:  LBB13_1: ## %bb2
 ; GISEL-X86-NEXT:    movl $1, %eax
 ; GISEL-X86-NEXT:    retl
+; FASTISEL-X64-LABEL: icmp_uge:
+; FASTISEL-X64:       ## %bb.0:
+; FASTISEL-X64-NEXT:    xorl %eax, %eax
+; FASTISEL-X64-NEXT:    retq
   %1 = icmp uge i32 %x, %x
   br i1 %1, label %bb1, label %bb2
 bb2:
@@ -799,18 +679,16 @@ define i32 @icmp_ult(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
-; SDAG-NEXT:    je LBB14_1
-; SDAG-NEXT:  ## %bb.2: ## %bb1
-; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{q|l}}
-; SDAG-NEXT:  LBB14_1: ## %bb2
+; SDAG-NEXT:    jne LBB14_2
+; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:  LBB14_2: ## %bb1
+; SDAG-NEXT:    ret{{[l|q]}}
 ;
-; FASTISEL-X64-LABEL: icmp_ult:
-; FASTISEL-X64:       ## %bb.0:
-; FASTISEL-X64-NEXT:    movl $1, %eax
-; FASTISEL-X64-NEXT:    ret{{q|l}}
+; FASTISEL-LABEL: icmp_ult:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    movl $1, %eax
+; FASTISEL-NEXT:    ret{{[l|q]}}
 ;
 ; GISEL-X64-LABEL: icmp_ult:
 ; GISEL-X64:       ## %bb.0:
@@ -838,6 +716,10 @@ define i32 @icmp_ult(i32 %x) {
 ; GISEL-X86-NEXT:  LBB14_1: ## %bb2
 ; GISEL-X86-NEXT:    movl $1, %eax
 ; GISEL-X86-NEXT:    retl
+; FASTISEL-X64-LABEL: icmp_ult:
+; FASTISEL-X64:       ## %bb.0:
+; FASTISEL-X64-NEXT:    movl $1, %eax
+; FASTISEL-X64-NEXT:    ret{{q|l}}
   %1 = icmp ult i32 %x, %x
   br i1 %1, label %bb1, label %bb2
 bb2:
@@ -854,15 +736,15 @@ define i32 @icmp_ule(i32 %x) {
 ; SDAG-NEXT:    je LBB15_1
 ; SDAG-NEXT:  ## %bb.2: ## %bb1
 ; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:    ret{{[l|q]}}
 ; SDAG-NEXT:  LBB15_1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_ule:
 ; FASTISEL:       ## %bb.0:
 ; FASTISEL-NEXT:    xorl %eax, %eax
-; FASTISEL-NEXT:    ret{{q|l}}
+; FASTISEL-NEXT:    ret{{[l|q]}}
 ;
 ; GISEL-X64-LABEL: icmp_ule:
 ; GISEL-X64:       ## %bb.0:
@@ -903,18 +785,16 @@ define i32 @icmp_sgt(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
-; SDAG-NEXT:    je LBB16_1
-; SDAG-NEXT:  ## %bb.2: ## %bb1
-; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{q|l}}
-; SDAG-NEXT:  LBB16_1: ## %bb2
+; SDAG-NEXT:    jne LBB16_2
+; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:  LBB16_2: ## %bb1
+; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_sgt:
 ; FASTISEL:       ## %bb.0:
 ; FASTISEL-NEXT:    movl $1, %eax
-; FASTISEL-NEXT:    ret{{q|l}}
+; FASTISEL-NEXT:    ret{{[l|q]}}
 ;
 ; GISEL-X64-LABEL: icmp_sgt:
 ; GISEL-X64:       ## %bb.0:
@@ -958,15 +838,15 @@ define i32 @icmp_sge(i32 %x) {
 ; SDAG-NEXT:    je LBB17_1
 ; SDAG-NEXT:  ## %bb.2: ## %bb1
 ; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:    ret{{[l|q]}}
 ; SDAG-NEXT:  LBB17_1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_sge:
 ; FASTISEL:       ## %bb.0:
 ; FASTISEL-NEXT:    xorl %eax, %eax
-; FASTISEL-NEXT:    ret{{q|l}}
+; FASTISEL-NEXT:    ret{{[l|q]}}
 ;
 ; GISEL-X64-LABEL: icmp_sge:
 ; GISEL-X64:       ## %bb.0:
@@ -1007,18 +887,16 @@ define i32 @icmp_slt(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
-; SDAG-NEXT:    je LBB18_1
-; SDAG-NEXT:  ## %bb.2: ## %bb1
-; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{q|l}}
-; SDAG-NEXT:  LBB18_1: ## %bb2
+; SDAG-NEXT:    jne LBB18_2
+; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:  LBB18_2: ## %bb1
+; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_slt:
 ; FASTISEL:       ## %bb.0:
 ; FASTISEL-NEXT:    movl $1, %eax
-; FASTISEL-NEXT:    ret{{q|l}}
+; FASTISEL-NEXT:    ret{{[l|q]}}
 ;
 ; GISEL-X64-LABEL: icmp_slt:
 ; GISEL-X64:       ## %bb.0:
@@ -1062,15 +940,15 @@ define i32 @icmp_sle(i32 %x) {
 ; SDAG-NEXT:    je LBB19_1
 ; SDAG-NEXT:  ## %bb.2: ## %bb1
 ; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:    ret{{[l|q]}}
 ; SDAG-NEXT:  LBB19_1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
-; SDAG-NEXT:    ret{{q|l}}
+; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_sle:
 ; FASTISEL:       ## %bb.0:
 ; FASTISEL-NEXT:    xorl %eax, %eax
-; FASTISEL-NEXT:    ret{{q|l}}
+; FASTISEL-NEXT:    ret{{[l|q]}}
 ;
 ; GISEL-X64-LABEL: icmp_sle:
 ; GISEL-X64:       ## %bb.0:
@@ -1105,3 +983,5 @@ bb2:
 bb1:
   ret i32 0
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; X86: {{.*}}

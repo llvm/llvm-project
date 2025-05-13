@@ -9,7 +9,6 @@ define i32 @fn2() {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2: # %bb2
 ; CHECK-NEXT:    movl $1, %eax

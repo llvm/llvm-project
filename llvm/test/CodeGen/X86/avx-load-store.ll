@@ -216,7 +216,6 @@ define void @f_f() nounwind {
 ; CHECK-NEXT:    jne .LBB9_2
 ; CHECK-NEXT:  # %bb.1: # %cif_mask_all
 ; CHECK-NEXT:  .LBB9_2: # %cif_mask_mixed
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB9_4
 ; CHECK-NEXT:  # %bb.3: # %cif_mixed_test_all

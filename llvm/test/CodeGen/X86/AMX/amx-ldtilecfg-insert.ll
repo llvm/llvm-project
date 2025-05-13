@@ -174,7 +174,6 @@ define dso_local void @test4(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    incl %edi
 ; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB3_4
 ; CHECK-NEXT:  .LBB3_2: # %amx2
@@ -190,7 +189,6 @@ define dso_local void @test4(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    decl %edi
 ; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB3_2
 ; CHECK-NEXT:  .LBB3_4: # %amx1

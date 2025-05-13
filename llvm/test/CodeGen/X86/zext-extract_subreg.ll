@@ -8,7 +8,6 @@ define void @t() nounwind ssp {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne LBB0_6
 ; CHECK-NEXT:  ## %bb.1: ## %if.end.i
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je LBB0_2
 ; CHECK-NEXT:  LBB0_6: ## %return
@@ -20,11 +19,9 @@ define void @t() nounwind ssp {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne LBB0_5
 ; CHECK-NEXT:  ## %bb.3: ## %cond.true190
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne LBB0_5
 ; CHECK-NEXT:  ## %bb.4: ## %cond.true225
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:  LBB0_5: ## %cond.false205
 ; CHECK-NEXT:    ud2
