@@ -6701,12 +6701,12 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDeviceSPMD) {
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
 
-  ASSERT_EXPECTED_INIT(
-      OpenMPIRBuilder::InsertPointTy, AfterIP,
-      OMPBuilder.createTarget(Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
-                              Info, EntryInfo, DefaultAttrs, RuntimeAttrs,
-                              /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB,
-                              BodyGenCB, SimpleArgAccessorCB, CustomMapperCB,{}));
+  ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP,
+                       OMPBuilder.createTarget(
+                           Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP, Info,
+                           EntryInfo, DefaultAttrs, RuntimeAttrs,
+                           /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB,
+                           BodyGenCB, SimpleArgAccessorCB, CustomMapperCB, {}));
   Builder.restoreIP(AfterIP);
 
   Builder.CreateRetVoid();
