@@ -802,9 +802,19 @@ public:
       OS << "AVLImm=" << (unsigned)AVLImm;
     if (hasAVLVLMAX())
       OS << "AVLVLMAX";
-    OS << ", "
-       << "VLMul=" << (unsigned)VLMul << ", "
-       << "SEW=" << (unsigned)SEW << ", "
+    OS << ", ";
+
+    unsigned LMul;
+    bool Fractional;
+    std::tie(LMul, Fractional) = decodeVLMUL(VLMul);
+
+    OS << "VLMul=";
+    if (Fractional)
+      OS << "mf";
+    else
+      OS << "m";
+    OS << LMul << ", "
+       << "SEW=e" << (unsigned)SEW << ", "
        << "TailAgnostic=" << (bool)TailAgnostic << ", "
        << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
        << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << "}";
