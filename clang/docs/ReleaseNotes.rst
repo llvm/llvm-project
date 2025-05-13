@@ -811,6 +811,11 @@ WebAssembly Support
 AVR Support
 ^^^^^^^^^^^
 
+SystemZ Support
+^^^^^^^^^^^^^^^
+
+- Add support for `#pragma export` and `_Export` keyword for z/OS
+
 DWARF Support in Clang
 ----------------------
 

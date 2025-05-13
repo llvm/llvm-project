@@ -2278,6 +2278,39 @@ public:
   ActOnPragmaMSFunction(SourceLocation Loc,
                         const llvm::SmallVectorImpl<StringRef> &NoBuiltins);
 
+  /// A label from a C++ #pragma export, for a symbol that we
+  /// haven't seen the declaration for yet. The TypeList is the argument list
+  /// the function must match if HasTypeList is true.
+  struct SymbolLabel {
+    std::optional<SmallVector<QualType, 4>> TypeList;
+    SourceLocation NameLoc;
+    bool HasTypeList;
+    Qualifiers CVQual;
+    NestedNameSpecifier
+        *NestedNameId; // Nested name identifier for type lookup.
+    bool Used;
+  };
+
+  bool typeListMatchesSymbolLabel(FunctionDecl *FD,
+                                  const clang::Sema::SymbolLabel &Label);
+
+  /// tryLookupSymbolLabel try to look up a decl matching the nested
+  //  specifier with optional type list.
+  NamedDecl *tryLookupSymbolLabel(const clang::Sema::SymbolLabel &Label);
+
+  bool isNamedDeclSameAsSymbolLabel(NamedDecl *D,
+                                    clang::Sema::SymbolLabel &Label);
+
+  typedef SmallVector<SymbolLabel, 1> PendingPragmaExportOverloads;
+  llvm::DenseMap<IdentifierInfo *, PendingPragmaExportOverloads>
+      PendingExportedNames;
+
+  /// ActonPragmaExport - called on well-formed '\#pragma export'.
+  void ActOnPragmaExport(NestedNameSpecifier *NestedId,
+                         SourceLocation ExportNameLoc,
+                         std::optional<SmallVector<QualType, 4>> &&TypeList,
+                         Qualifiers CVQual);
+
   /// Only called on function definitions; if there is a pragma in scope
   /// with the effect of a range-based optnone, consider marking the function
   /// with attribute optnone.
@@ -3910,6 +3943,9 @@ public:
   /// a C++0x [dcl.typedef]p2 alias-declaration: 'using T = A;'.
   NamedDecl *ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *D,
                                   LookupResult &Previous, bool &Redeclaration);
+
+  void ProcessPragmaExport(DeclaratorDecl *newDecl);
+
   NamedDecl *ActOnVariableDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                      TypeSourceInfo *TInfo,
                                      LookupResult &Previous,
@@ -4871,6 +4907,8 @@ public:
                           TypeVisibilityAttr::VisibilityType Vis);
   VisibilityAttr *mergeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
                                       VisibilityAttr::VisibilityType Vis);
+  void mergeVisibilityType(Decl *D, SourceLocation Loc,
+                           VisibilityAttr::VisibilityType Type);
   SectionAttr *mergeSectionAttr(Decl *D, const AttributeCommonInfo &CI,
                                 StringRef Name);
 

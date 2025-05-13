@@ -1477,6 +1477,12 @@ void Sema::ActOnEndOfTranslationUnit() {
     Consumer.CompleteExternalDeclaration(D);
   }
 
+  // Visit all pending #pragma export.
+  for (auto &Iter : PendingExportedNames)
+    for (auto &Exported : Iter.second)
+      if (!Exported.Used)
+        Diag(Exported.NameLoc, diag::warn_failed_to_resolve_pragma) << "export";
+
   if (LangOpts.HLSL)
     HLSL().ActOnEndOfTranslationUnit(getASTContext().getTranslationUnitDecl());
 
