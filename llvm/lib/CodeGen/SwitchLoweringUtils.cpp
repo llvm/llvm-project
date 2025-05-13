@@ -362,6 +362,41 @@ void SwitchCG::SwitchLowering::findBitTestClusters(CaseClusterVector &Clusters,
     }
   }
   Clusters.resize(DstIndex);
+
+  // Check if the clusters contain one checking for 0 and another one checking
+  // for a power-of-2 constant with matching destinations. Those clusters can be
+  // combined to a single ane with CC_And.
+  unsigned ZeroIdx = -1;
+  for (const auto &[Idx, C] : enumerate(Clusters)) {
+    if (C.Kind != CC_Range || C.Low != C.High)
+      continue;
+    if (C.Low->isZero()) {
+      ZeroIdx = Idx;
+      break;
+    }
+  }
+  if (ZeroIdx == -1u)
+    return;
+
+  unsigned Pow2Idx = -1;
+  for (const auto &[Idx, C] : enumerate(Clusters)) {
+    if (C.Kind != CC_Range || C.Low != C.High || C.MBB != Clusters[ZeroIdx].MBB)
+      continue;
+    if (C.Low->getValue().isPowerOf2()) {
+      Pow2Idx = Idx;
+      break;
+    }
+  }
+  if (Pow2Idx == -1u)
+    return;
+
+  APInt Pow2 = Clusters[Pow2Idx].Low->getValue();
+  APInt NewC = (Pow2 + 1) * -1;
+  Clusters[ZeroIdx].Low = ConstantInt::get(SI->getContext(), NewC);
+  Clusters[ZeroIdx].High = ConstantInt::get(SI->getContext(), NewC);
+  Clusters[ZeroIdx].Kind = CC_And;
+  Clusters[ZeroIdx].Prob += Clusters[Pow2Idx].Prob;
+  Clusters.erase(Clusters.begin() + Pow2Idx);
 }
 
 bool SwitchCG::SwitchLowering::buildBitTests(CaseClusterVector &Clusters,

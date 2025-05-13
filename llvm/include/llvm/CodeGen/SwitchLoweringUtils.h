@@ -35,7 +35,8 @@ enum CaseClusterKind {
   /// A cluster of cases suitable for jump table lowering.
   CC_JumpTable,
   /// A cluster of cases suitable for bit test lowering.
-  CC_BitTests
+  CC_BitTests,
+  CC_And
 };
 
 /// A cluster of case labels.
@@ -140,6 +141,8 @@ struct CaseBlock {
   // Branch weights and predictability.
   BranchProbability TrueProb, FalseProb;
   bool IsUnpredictable;
+
+  bool EmitAnd = false;
 
   // Constructor for SelectionDAG.
   CaseBlock(ISD::CondCode cc, const Value *cmplhs, const Value *cmprhs,
