@@ -452,10 +452,9 @@ define <2 x i64> @vadd_vx_v2i64_to_sub(<2 x i64> %va) {
 ; RV64-LABEL: vadd_vx_v2i64_to_sub:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, -1
-; RV64-NEXT:    slli a0, a0, 40
-; RV64-NEXT:    addi a0, a0, 1
+; RV64-NEXT:    srli a0, a0, 24
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vadd.vx v8, v8, a0
+; RV64-NEXT:    vsub.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %v = add <2 x i64> splat (i64 -1099511627775), %va
   ret <2 x i64> %v
@@ -481,10 +480,9 @@ define <2 x i64> @vadd_vx_v2i64_to_sub_swapped(<2 x i64> %va) {
 ; RV64-LABEL: vadd_vx_v2i64_to_sub_swapped:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, -1
-; RV64-NEXT:    slli a0, a0, 40
-; RV64-NEXT:    addi a0, a0, 1
+; RV64-NEXT:    srli a0, a0, 24
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vadd.vx v8, v8, a0
+; RV64-NEXT:    vsub.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %v = add <2 x i64> %va, splat (i64 -1099511627775)
   ret <2 x i64> %v
