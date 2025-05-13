@@ -3475,15 +3475,15 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
             const Symbol *lastWhole{
                 lastWhole0 ? &ResolveAssociations(*lastWhole0) : nullptr};
             if (!lastWhole || !IsAllocatable(*lastWhole)) {
-              Say("Left-hand side of assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
+              Say("Left-hand side of intrinsic assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
             } else if (evaluate::IsCoarray(*lastWhole)) {
-              Say("Left-hand side of assignment may not be polymorphic if it is a coarray"_err_en_US);
+              Say("Left-hand side of intrinsic assignment may not be polymorphic if it is a coarray"_err_en_US);
             }
           }
           if (auto *derived{GetDerivedTypeSpec(*dyType)}) {
             if (auto iter{FindAllocatableUltimateComponent(*derived)}) {
               if (ExtractCoarrayRef(lhs)) {
-                Say("Left-hand side of assignment must not be coindexed due to allocatable ultimate component '%s'"_err_en_US,
+                Say("Left-hand side of intrinsic assignment must not be coindexed due to allocatable ultimate component '%s'"_err_en_US,
                     iter.BuildResultDesignatorName());
               }
             }
