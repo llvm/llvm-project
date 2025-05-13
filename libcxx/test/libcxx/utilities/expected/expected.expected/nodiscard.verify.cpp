@@ -18,6 +18,6 @@ std::expected<int, int> returns_expected();
 std::expected<void, int> returns_expected_void();
 
 void test() {
-  returns_expected(); // expected-warning {{ignoring return value of type 'expected<int, int>'}}
+  returns_expected();      // expected-warning {{ignoring return value of type 'expected<int, int>'}}
   returns_expected_void(); // expected-warning {{ignoring return value of type 'expected<void, int>'}}
 }
