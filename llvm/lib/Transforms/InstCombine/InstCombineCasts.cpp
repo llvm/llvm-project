@@ -325,9 +325,6 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
     APInt MaxShiftAmt = AmtKnownBits.getMaxValue();
     APInt ShiftedBits = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
     if (MaxShiftAmt.ult(BitWidth)) {
-      if (IC.MaskedValueIsZero(I->getOperand(0), ShiftedBits, 0, CxtI))
-        return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
-               canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
       // If the only user is a trunc then we can narrow the shift if any new
       // MSBs are not going to be used.
       if (auto *Trunc = dyn_cast<TruncInst>(V->user_back())) {
@@ -336,6 +333,9 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
           return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
                  canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
       }
+      if (IC.MaskedValueIsZero(I->getOperand(0), ShiftedBits, 0, CxtI))
+        return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
+               canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
     }
     break;
   }
