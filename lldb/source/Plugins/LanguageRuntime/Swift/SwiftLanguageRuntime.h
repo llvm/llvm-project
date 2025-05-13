@@ -273,6 +273,9 @@ public:
                                 Address &address, Value::ValueType &value_type,
                                 llvm::ArrayRef<uint8_t> &local_buffer) override;
 
+  llvm::Expected<CompilerType> BindGenericPackType(StackFrame &frame,
+                                                   CompilerType pack_type,
+                                                   bool *indirect = nullptr);
   CompilerType BindGenericTypeParameters(
       CompilerType unbound_type,
       std::function<CompilerType(unsigned, unsigned)> finder);

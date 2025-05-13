@@ -1157,6 +1157,42 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::Transform(
   return fn(node);
 }
 
+llvm::Expected<swift::Demangle::NodePointer>
+TypeSystemSwiftTypeRef::TryTransform(
+    swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
+    std::function<llvm::Expected<swift::Demangle::NodePointer>(
+        swift::Demangle::NodePointer)>
+        fn) {
+  if (!node)
+    return node;
+  using namespace swift::Demangle;
+  llvm::SmallVector<NodePointer, 2> children;
+  bool changed = false;
+  for (NodePointer child : *node) {
+    llvm::Expected<NodePointer> transformed_or_err = TryTransform(dem, child, fn);
+    if (!transformed_or_err)
+      return transformed_or_err.takeError();
+    NodePointer transformed = *transformed_or_err;
+    changed |= (child != transformed);
+    assert(transformed && "callback returned a nullptr");
+    if (transformed)
+      children.push_back(transformed);
+  }
+  if (changed) {
+    // Create a new node with the transformed children.
+    auto kind = node->getKind();
+    if (node->hasText())
+      node = dem.createNodeWithAllocatedText(kind, node->getText());
+    else if (node->hasIndex())
+      node = dem.createNode(kind, node->getIndex());
+    else
+      node = dem.createNode(kind);
+    for (NodePointer transformed_child : children)
+      node->addChild(transformed_child, dem);
+  }
+  return fn(node);
+}
+
 void TypeSystemSwiftTypeRef::PreOrderTraversal(
     swift::Demangle::NodePointer node,
     std::function<bool(swift::Demangle::NodePointer)> visitor) {
