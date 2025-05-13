@@ -571,11 +571,11 @@ void DataAggregator::processProfile(BinaryContext &BC) {
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &BF = BFI.second;
     if (FuncBranchData *FBD = getBranchData(BF)) {
-      BF.markProfiled(BinaryFunction::PF_LBR);
+      BF.markProfiled(BinaryFunction::PF_BRANCH);
       BF.RawSampleCount = FBD->getNumExecutedBranches();
     } else if (FuncBasicSampleData *FSD =
                    getFuncBasicSampleData(BF.getNames())) {
-      BF.markProfiled(BinaryFunction::PF_IP);
+      BF.markProfiled(BinaryFunction::PF_BASIC);
       BF.RawSampleCount = FSD->getSamples();
     }
   }
@@ -2229,8 +2229,8 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
   for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames)
     EventNamesOS << LS << EventEntry.first().str();
 
-  BP.Header.Flags =
-      opts::BasicAggregation ? BinaryFunction::PF_IP : BinaryFunction::PF_LBR;
+  BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_BASIC
+                                           : BinaryFunction::PF_BRANCH;
 
   // Add probe inline tree nodes.
   YAMLProfileWriter::InlineTreeDesc InlineTree;

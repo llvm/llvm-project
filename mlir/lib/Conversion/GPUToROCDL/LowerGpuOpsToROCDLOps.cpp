@@ -27,6 +27,7 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -197,8 +198,7 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Value widthOrZeroIfOutside =
         rewriter.create<LLVM::AndOp>(loc, int32Type, add, negwidth);
     Value dstLane;
-    // TODO: Use ds_swizzle for XOR when step/offsets are constants for better
-    // perf.
+
     switch (op.getMode()) {
     case gpu::ShuffleMode::UP:
       dstLane = rewriter.create<LLVM::SubOp>(loc, int32Type, srcLaneId,
@@ -319,7 +319,7 @@ struct LowerGpuOpsToROCDLOpsPass final
     {
       RewritePatternSet patterns(ctx);
       populateGpuRewritePatterns(patterns);
-      arith::populateExpandBFloat16Patterns(patterns);
+      populateGpuPromoteShuffleToAMDGPUPatterns(patterns);
       (void)applyPatternsGreedily(m, std::move(patterns));
     }
 
