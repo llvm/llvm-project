@@ -2225,8 +2225,7 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
   SmallVector<uint64_t, 8> ImmVals;
   uint64_t ImmVal = 0;
   uint64_t ImmSize = 0;
-  for (unsigned i = 0; i < Defs.size(); ++i) {
-    auto &[Op, SubIdx] = Defs[i];
+  for (auto &[Op, SubIdx] : Defs) {
     unsigned SubRegSize = TRI->getSubRegIdxSize(SubIdx);
     unsigned Shift = (TRI->getChannelFromSubReg(SubIdx) % 2) * SubRegSize;
     ImmSize += SubRegSize;
@@ -2244,9 +2243,6 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
       ImmSize = 0;
     }
   }
-
-  assert(ImmVals.size() > 0 &&
-         "REG_SEQUENCE should have at least 1 operand pair");
 
   // Can only combine REG_SEQUENCE into one 64b immediate materialization mov.
   if (DefRC == TRI->getVGPR64Class()) {
@@ -2268,7 +2264,7 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
 
   for (unsigned i = 0; i < ImmVals.size(); ++i) {
     const TargetRegisterClass *RC = TRI->getVGPR64Class();
-    auto MovReg = MRI->createVirtualRegister(RC);
+    Register MovReg = MRI->createVirtualRegister(RC);
     // Duplicate vmov imm materializations (e.g., splatted operands) should get
     // combined by MachineCSE pass.
     BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
