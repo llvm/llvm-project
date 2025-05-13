@@ -881,6 +881,37 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         }
       }
 
+      // Try to use S_CMOVK_I32 in place of S_CSELECT_B32
+      if (MI.getOpcode() == AMDGPU::S_CSELECT_B32) {
+        const MachineOperand *Dest = &MI.getOperand(0);
+        MachineOperand *Src0 = &MI.getOperand(1);
+        MachineOperand *Src1 = &MI.getOperand(2);
+
+        // First source must be a register
+        if (!Src0->isReg())
+          continue;
+
+        // Second source must be a K-immediate
+        if (!Src1->isImm() || !isKImmOperand(*Src1))
+          continue;
+
+        // Hint that the source and destination register should be allocated
+        // as the same register so that we can shrink to S_CMOVK_I32 on the
+        // post-allocation SIShrinkInstructions pass.
+        if (Dest->getReg().isVirtual()) {
+          MRI->setRegAllocationHint(Dest->getReg(), 0, Src0->getReg());
+          MRI->setRegAllocationHint(Src0->getReg(), 0, Dest->getReg());
+          continue;
+        }
+
+        // The first source and destination must be the same register
+        if (Src0->getReg() != Dest->getReg())
+          continue;
+
+        MI.setDesc(TII->get(AMDGPU::S_CMOVK_I32));
+        MI.removeOperand(1);
+      }
+
       // Try to use S_ADDK_I32 and S_MULK_I32.
       if (MI.getOpcode() == AMDGPU::S_ADD_I32 ||
           MI.getOpcode() == AMDGPU::S_MUL_I32) {
