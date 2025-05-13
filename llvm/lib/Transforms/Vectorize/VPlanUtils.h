@@ -39,19 +39,46 @@ const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
 
 /// Returns true if \p VPV is uniform after vectorization.
 inline bool isUniformAfterVectorization(const VPValue *VPV) {
-  // A value defined outside the vector region must be uniform after
-  // vectorization inside a vector region.
-  if (VPV->isDefinedOutsideLoopRegions())
+  auto PreservesUniformity = [](unsigned Opcode) -> bool {
+    if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
+      return true;
+    switch (Opcode) {
+    case Instruction::GetElementPtr:
+    case Instruction::ICmp:
+    case Instruction::FCmp:
+    case VPInstruction::Broadcast:
+    case VPInstruction::PtrAdd:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  // A live-in must be uniform across the scope of VPlan.
+  if (VPV->isLiveIn())
     return true;
-  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV))
-    return Rep->isUniform();
+
+  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
+    const VPRegionBlock *RegionOfR = Rep->getParent()->getParent();
+    // Don't consider recipes in replicate regions as uniform yet; their first
+    // lane cannot be accessed when executing the replicate region for other
+    // lanes.
+    if (RegionOfR && RegionOfR->isReplicator())
+      return false;
+    return Rep->isUniform() ||
+           (PreservesUniformity(Rep->getOpcode()) &&
+            all_of(Rep->operands(), isUniformAfterVectorization));
+  }
   if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(),
                   isUniformAfterVectorization);
+  if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
+    return PreservesUniformity(WidenR->getOpcode()) &&
+           all_of(WidenR->operands(), isUniformAfterVectorization);
+  }
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-           ((Instruction::isBinaryOp(VPI->getOpcode()) ||
-             VPI->getOpcode() == VPInstruction::PtrAdd) &&
+           (PreservesUniformity(VPI->getOpcode()) &&
             all_of(VPI->operands(), isUniformAfterVectorization));
 
   // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.

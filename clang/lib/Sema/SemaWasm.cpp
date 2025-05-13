@@ -52,7 +52,7 @@ static bool CheckWasmBuiltinArgIsInteger(Sema &S, CallExpr *E,
 }
 
 bool SemaWasm::BuiltinWasmRefNullExtern(CallExpr *TheCall) {
-  if (TheCall->getNumArgs() != 0)
+  if (SemaRef.checkArgCount(TheCall, /*DesiredArgCount=*/0))
     return true;
 
   TheCall->setType(getASTContext().getWebAssemblyExternrefType());
@@ -62,12 +62,8 @@ bool SemaWasm::BuiltinWasmRefNullExtern(CallExpr *TheCall) {
 
 bool SemaWasm::BuiltinWasmRefNullFunc(CallExpr *TheCall) {
   ASTContext &Context = getASTContext();
-  if (TheCall->getNumArgs() != 0) {
-    Diag(TheCall->getBeginLoc(), diag::err_typecheck_call_too_many_args)
-        << 0 /*function call*/ << /*expected*/ 0 << TheCall->getNumArgs()
-        << /*is non object*/ 0;
+  if (SemaRef.checkArgCount(TheCall, /*DesiredArgCount=*/0))
     return true;
-  }
 
   // This custom type checking code ensures that the nodes are as expected
   // in order to later on generate the necessary builtin.

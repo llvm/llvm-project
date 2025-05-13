@@ -110,10 +110,12 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Look for the file entry. This only fails if the expected size or
   // modification time differ.
   OptionalFileEntryRef Entry;
-  const bool IgnoreModTime =
-      (Type == MK_ExplicitModule || Type == MK_PrebuiltModule);
+  bool IgnoreModTime = Type == MK_ExplicitModule || Type == MK_PrebuiltModule;
+  if (ImportedBy)
+    IgnoreModTime &= ImportedBy->Kind == MK_ExplicitModule ||
+                     ImportedBy->Kind == MK_PrebuiltModule;
   if (IgnoreModTime) {
-    // If we're not expecting to pull this file out of the module cache, it
+    // If neither this file nor the importer are in the module cache, this file
     // might have a different mtime due to being moved across filesystems in
     // a distributed build. The size must still match, though. (As must the
     // contents, but we can't check that.)
@@ -122,9 +124,9 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Note: ExpectedSize and ExpectedModTime will be 0 for MK_ImplicitModule
   // when using an ASTFileSignature.
   if (lookupModuleFile(FileName, ExpectedSize, ExpectedModTime, Entry)) {
-    ErrorStr = IgnoreModTime
-                   ? "module file has a different size than expected"
-                   : "module file has a different size or mtime than expected";
+    ErrorStr = IgnoreModTime ? "module file has a different size than expected"
+                             : "module file has a different size or "
+                               "modification time than expected";
     return OutOfDate;
   }
 
@@ -174,15 +176,9 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   NewModule->ImportLoc = ImportLoc;
   NewModule->InputFilesValidationTimestamp = 0;
 
-  if (NewModule->Kind == MK_ImplicitModule) {
-    std::string TimestampFilename =
-        ModuleFile::getTimestampFilename(NewModule->FileName);
-    llvm::vfs::Status Status;
-    // A cached stat value would be fine as well.
-    if (!FileMgr.getNoncachedStatValue(TimestampFilename, Status))
-      NewModule->InputFilesValidationTimestamp =
-          llvm::sys::toTimeT(Status.getLastModificationTime());
-  }
+  if (NewModule->Kind == MK_ImplicitModule)
+    NewModule->InputFilesValidationTimestamp =
+        ModCache->getModuleTimestamp(NewModule->FileName);
 
   // Load the contents of the module
   if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {

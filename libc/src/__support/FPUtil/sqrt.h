@@ -35,6 +35,14 @@ template <> LIBC_INLINE double sqrt<double>(double x) {
 }
 #endif // LIBC_TARGET_CPU_HAS_FPU_DOUBLE
 
+// Use 80-bit long double instruction on x86.
+// https://godbolt.org/z/oWEaj6hxK
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+template <> LIBC_INLINE long double sqrt<long double>(long double x) {
+  return __builtin_elementwise_sqrt(x);
+}
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
@@ -42,7 +50,7 @@ template <> LIBC_INLINE double sqrt<double>(double x) {
 // Use inline assembly when __builtin_elementwise_sqrt is not available.
 #if defined(LIBC_TARGET_CPU_HAS_SSE2)
 #include "x86_64/sqrt.h"
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP)
 #include "aarch64/sqrt.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ARM)
 #include "arm/sqrt.h"

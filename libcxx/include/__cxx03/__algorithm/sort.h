@@ -135,12 +135,6 @@ template <class _Tp>
 struct __is_simple_comparator<less<_Tp>&> : true_type {};
 template <class _Tp>
 struct __is_simple_comparator<greater<_Tp>&> : true_type {};
-#if _LIBCPP_STD_VER >= 20
-template <>
-struct __is_simple_comparator<ranges::less&> : true_type {};
-template <>
-struct __is_simple_comparator<ranges::greater&> : true_type {};
-#endif
 
 template <class _Compare, class _Iter, class _Tp = typename iterator_traits<_Iter>::value_type>
 using __use_branchless_sort =
@@ -965,22 +959,6 @@ _LIBCPP_HIDE_FROM_ABI void __sort_dispatch(_Type* __first, _Type* __last, less<_
   __less<_Type> __comp;
   std::__sort<__less<_Type>&, _Type*>(__first, __last, __comp);
 }
-
-#if _LIBCPP_STD_VER >= 14
-template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_library<_Type>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI void __sort_dispatch(_Type* __first, _Type* __last, less<>&) {
-  __less<_Type> __comp;
-  std::__sort<__less<_Type>&, _Type*>(__first, __last, __comp);
-}
-#endif
-
-#if _LIBCPP_STD_VER >= 20
-template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_library<_Type>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI void __sort_dispatch(_Type* __first, _Type* __last, ranges::less&) {
-  __less<_Type> __comp;
-  std::__sort<__less<_Type>&, _Type*>(__first, __last, __comp);
-}
-#endif
 
 template <class _AlgPolicy, class _RandomAccessIterator, class _Comp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void

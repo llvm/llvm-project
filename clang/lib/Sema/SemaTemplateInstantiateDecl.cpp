@@ -999,6 +999,11 @@ Decl *TemplateDeclInstantiator::VisitHLSLBufferDecl(HLSLBufferDecl *Decl) {
   llvm_unreachable("HLSL buffer declarations cannot be instantiated");
 }
 
+Decl *TemplateDeclInstantiator::VisitHLSLRootSignatureDecl(
+    HLSLRootSignatureDecl *Decl) {
+  llvm_unreachable("HLSL root signature declarations cannot be instantiated");
+}
+
 Decl *
 TemplateDeclInstantiator::VisitPragmaCommentDecl(PragmaCommentDecl *D) {
   llvm_unreachable("pragma comment cannot be instantiated");
@@ -2211,8 +2216,8 @@ Decl *TemplateDeclInstantiator::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     if (!PrevClassTemplate && QualifierLoc) {
       SemaRef.Diag(Pattern->getLocation(), diag::err_not_tag_in_scope)
-          << llvm::to_underlying(D->getTemplatedDecl()->getTagKind())
-          << Pattern->getDeclName() << DC << QualifierLoc.getSourceRange();
+          << D->getTemplatedDecl()->getTagKind() << Pattern->getDeclName() << DC
+          << QualifierLoc.getSourceRange();
       return nullptr;
     }
   }

@@ -24,8 +24,9 @@ bb1:
 define ptr @blockaddr0() {
   br label %bb1
   ; CHECK: %[[BLOCKADDR:.*]] = llvm.blockaddress <function = @blockaddr0, tag = <id = [[BLOCK_ID:.*]]>> : !llvm.ptr
+  ; CHECK: llvm.br ^[[BB1:.*]]
 bb1:
-  ; CHECK: [[BLOCKADDR]]:
+  ; CHECK: ^[[BB1]]:
   ; CHECK: llvm.blocktag <id = [[BLOCK_ID]]>
   ; CHECK-NEXT: llvm.return %[[BLOCKADDR]] : !llvm.ptr
   ret ptr blockaddress(@blockaddr0, %bb1)

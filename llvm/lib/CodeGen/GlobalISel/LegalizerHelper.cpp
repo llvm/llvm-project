@@ -2060,7 +2060,6 @@ void LegalizerHelper::moreElementsVectorDst(MachineInstr &MI, LLT WideTy,
 void LegalizerHelper::moreElementsVectorSrc(MachineInstr &MI, LLT MoreTy,
                                             unsigned OpIdx) {
   MachineOperand &MO = MI.getOperand(OpIdx);
-  SmallVector<Register, 8> Regs;
   MO.setReg(MIRBuilder.buildPadVectorWithUndefElements(MoreTy, MO).getReg(0));
 }
 
@@ -2151,7 +2150,6 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
   const int GCD = std::gcd(SrcSize, WideSize);
   LLT GCDTy = LLT::scalar(GCD);
 
-  SmallVector<Register, 8> Parts;
   SmallVector<Register, 8> NewMergeRegs;
   SmallVector<Register, 8> Unmerges;
   LLT WideDstTy = LLT::scalar(NumMerge * WideSize);
@@ -5210,6 +5208,11 @@ LegalizerHelper::reduceLoadStoreWidth(GLoadStore &LdStMI, unsigned TypeIdx,
   if (TypeIdx != 0)
     return UnableToLegalize;
 
+  if (!NarrowTy.isByteSized()) {
+    LLVM_DEBUG(dbgs() << "Can't narrow load/store to non-byte-sized type\n");
+    return UnableToLegalize;
+  }
+
   // This implementation doesn't work for atomics. Give up instead of doing
   // something invalid.
   if (LdStMI.isAtomic())
@@ -5495,9 +5498,8 @@ LegalizerHelper::fewerElementsBitcast(MachineInstr &MI, unsigned int TypeIdx,
 
   // Build new smaller bitcast instructions
   // Not supporting Leftover types for now but will have to
-  for (unsigned i = 0; i < SrcVRegs.size(); i++)
-    BitcastVRegs.push_back(
-        MIRBuilder.buildBitcast(NarrowTy, SrcVRegs[i]).getReg(0));
+  for (Register Reg : SrcVRegs)
+    BitcastVRegs.push_back(MIRBuilder.buildBitcast(NarrowTy, Reg).getReg(0));
 
   MIRBuilder.buildMergeLikeInstr(DstReg, BitcastVRegs);
   MI.eraseFromParent();
@@ -6134,6 +6136,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_INTRINSIC_ROUND:
   case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
   case TargetOpcode::G_INTRINSIC_TRUNC:
+  case TargetOpcode::G_BITREVERSE:
   case TargetOpcode::G_BSWAP:
   case TargetOpcode::G_FCANONICALIZE:
   case TargetOpcode::G_SEXT_INREG:
@@ -6639,7 +6642,6 @@ LegalizerHelper::narrowScalarExtract(MachineInstr &MI, unsigned TypeIdx,
   int NumParts = SizeOp1 / NarrowSize;
 
   SmallVector<Register, 2> SrcRegs, DstRegs;
-  SmallVector<uint64_t, 2> Indexes;
   extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, SrcRegs,
                MIRBuilder, MRI);
 
@@ -6699,7 +6701,6 @@ LegalizerHelper::narrowScalarInsert(MachineInstr &MI, unsigned TypeIdx,
     return UnableToLegalize;
 
   SmallVector<Register, 2> SrcRegs, LeftoverRegs, DstRegs;
-  SmallVector<uint64_t, 2> Indexes;
   LLT RegTy = MRI.getType(MI.getOperand(0).getReg());
   LLT LeftoverTy;
   extractParts(MI.getOperand(1).getReg(), RegTy, NarrowTy, LeftoverTy, SrcRegs,
@@ -7378,9 +7379,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerTRUNC(MachineInstr &MI) {
       InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits() * 2);
     else
       InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits());
-    for (unsigned I = 0; I < SplitSrcs.size(); ++I) {
-      SplitSrcs[I] = MIRBuilder.buildTrunc(InterTy, SplitSrcs[I]).getReg(0);
-    }
+    for (Register &Src : SplitSrcs)
+      Src = MIRBuilder.buildTrunc(InterTy, Src).getReg(0);
 
     // Combine the new truncates into one vector
     auto Merge = MIRBuilder.buildMergeLikeInstr(
@@ -8985,49 +8985,64 @@ static MachineInstrBuilder SwapN(unsigned N, DstOp Dst, MachineIRBuilder &B,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerBitreverse(MachineInstr &MI) {
   auto [Dst, Src] = MI.getFirst2Regs();
-  const LLT Ty = MRI.getType(Src);
-  unsigned Size = Ty.getScalarSizeInBits();
+  const LLT SrcTy = MRI.getType(Src);
+  unsigned Size = SrcTy.getScalarSizeInBits();
+  unsigned VSize = SrcTy.getSizeInBits();
 
   if (Size >= 8) {
-    MachineInstrBuilder BSWAP =
-        MIRBuilder.buildInstr(TargetOpcode::G_BSWAP, {Ty}, {Src});
+    if (SrcTy.isVector() && (VSize % 8 == 0) &&
+        (LI.isLegal({TargetOpcode::G_BITREVERSE,
+                     {LLT::fixed_vector(VSize / 8, 8),
+                      LLT::fixed_vector(VSize / 8, 8)}}))) {
+      // If bitreverse is legal for i8 vector of the same size, then cast
+      // to i8 vector type.
+      // e.g. v4s32 -> v16s8
+      LLT VTy = LLT::fixed_vector(VSize / 8, 8);
+      auto BSWAP = MIRBuilder.buildBSwap(SrcTy, Src);
+      auto Cast = MIRBuilder.buildBitcast(VTy, BSWAP);
+      auto RBIT = MIRBuilder.buildBitReverse(VTy, Cast);
+      MIRBuilder.buildBitcast(Dst, RBIT);
+    } else {
+      MachineInstrBuilder BSWAP =
+          MIRBuilder.buildInstr(TargetOpcode::G_BSWAP, {SrcTy}, {Src});
 
-    // swap high and low 4 bits in 8 bit blocks 7654|3210 -> 3210|7654
-    //    [(val & 0xF0F0F0F0) >> 4] | [(val & 0x0F0F0F0F) << 4]
-    // -> [(val & 0xF0F0F0F0) >> 4] | [(val << 4) & 0xF0F0F0F0]
-    MachineInstrBuilder Swap4 =
-        SwapN(4, Ty, MIRBuilder, BSWAP, APInt::getSplat(Size, APInt(8, 0xF0)));
+      // swap high and low 4 bits in 8 bit blocks 7654|3210 -> 3210|7654
+      //    [(val & 0xF0F0F0F0) >> 4] | [(val & 0x0F0F0F0F) << 4]
+      // -> [(val & 0xF0F0F0F0) >> 4] | [(val << 4) & 0xF0F0F0F0]
+      MachineInstrBuilder Swap4 = SwapN(4, SrcTy, MIRBuilder, BSWAP,
+                                        APInt::getSplat(Size, APInt(8, 0xF0)));
 
-    // swap high and low 2 bits in 4 bit blocks 32|10 76|54 -> 10|32 54|76
-    //    [(val & 0xCCCCCCCC) >> 2] & [(val & 0x33333333) << 2]
-    // -> [(val & 0xCCCCCCCC) >> 2] & [(val << 2) & 0xCCCCCCCC]
-    MachineInstrBuilder Swap2 =
-        SwapN(2, Ty, MIRBuilder, Swap4, APInt::getSplat(Size, APInt(8, 0xCC)));
+      // swap high and low 2 bits in 4 bit blocks 32|10 76|54 -> 10|32 54|76
+      //    [(val & 0xCCCCCCCC) >> 2] & [(val & 0x33333333) << 2]
+      // -> [(val & 0xCCCCCCCC) >> 2] & [(val << 2) & 0xCCCCCCCC]
+      MachineInstrBuilder Swap2 = SwapN(2, SrcTy, MIRBuilder, Swap4,
+                                        APInt::getSplat(Size, APInt(8, 0xCC)));
 
-    // swap high and low 1 bit in 2 bit blocks 1|0 3|2 5|4 7|6 -> 0|1 2|3 4|5
-    // 6|7
-    //    [(val & 0xAAAAAAAA) >> 1] & [(val & 0x55555555) << 1]
-    // -> [(val & 0xAAAAAAAA) >> 1] & [(val << 1) & 0xAAAAAAAA]
-    SwapN(1, Dst, MIRBuilder, Swap2, APInt::getSplat(Size, APInt(8, 0xAA)));
+      // swap high and low 1 bit in 2 bit blocks 1|0 3|2 5|4 7|6 -> 0|1 2|3 4|5
+      // 6|7
+      //    [(val & 0xAAAAAAAA) >> 1] & [(val & 0x55555555) << 1]
+      // -> [(val & 0xAAAAAAAA) >> 1] & [(val << 1) & 0xAAAAAAAA]
+      SwapN(1, Dst, MIRBuilder, Swap2, APInt::getSplat(Size, APInt(8, 0xAA)));
+    }
   } else {
     // Expand bitreverse for types smaller than 8 bits.
     MachineInstrBuilder Tmp;
     for (unsigned I = 0, J = Size - 1; I < Size; ++I, --J) {
       MachineInstrBuilder Tmp2;
       if (I < J) {
-        auto ShAmt = MIRBuilder.buildConstant(Ty, J - I);
-        Tmp2 = MIRBuilder.buildShl(Ty, Src, ShAmt);
+        auto ShAmt = MIRBuilder.buildConstant(SrcTy, J - I);
+        Tmp2 = MIRBuilder.buildShl(SrcTy, Src, ShAmt);
       } else {
-        auto ShAmt = MIRBuilder.buildConstant(Ty, I - J);
-        Tmp2 = MIRBuilder.buildLShr(Ty, Src, ShAmt);
+        auto ShAmt = MIRBuilder.buildConstant(SrcTy, I - J);
+        Tmp2 = MIRBuilder.buildLShr(SrcTy, Src, ShAmt);
       }
 
-      auto Mask = MIRBuilder.buildConstant(Ty, 1ULL << J);
-      Tmp2 = MIRBuilder.buildAnd(Ty, Tmp2, Mask);
+      auto Mask = MIRBuilder.buildConstant(SrcTy, 1ULL << J);
+      Tmp2 = MIRBuilder.buildAnd(SrcTy, Tmp2, Mask);
       if (I == 0)
         Tmp = Tmp2;
       else
-        Tmp = MIRBuilder.buildOr(Ty, Tmp, Tmp2);
+        Tmp = MIRBuilder.buildOr(SrcTy, Tmp, Tmp2);
     }
     MIRBuilder.buildCopy(Dst, Tmp);
   }

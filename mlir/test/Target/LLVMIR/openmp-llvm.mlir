@@ -1396,42 +1396,35 @@ llvm.func @omp_atomic_read_implicit_cast () {
 
 //CHECK: call void @__atomic_load(i64 8, ptr %[[X_ELEMENT]], ptr %[[ATOMIC_LOAD_TEMP]], i32 0)
 //CHECK: %[[LOAD:.*]] = load { float, float }, ptr %[[ATOMIC_LOAD_TEMP]], align 8
-//CHECK: %[[EXT:.*]] = extractvalue { float, float } %[[LOAD]], 0
-//CHECK: store float %[[EXT]], ptr %[[Y]], align 4
+//CHECK: store { float, float } %[[LOAD]], ptr %[[Y]], align 4
   omp.atomic.read %3 = %17 : !llvm.ptr, !llvm.ptr, !llvm.struct<(f32, f32)>
 
 //CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = load atomic i32, ptr %[[Z]] monotonic, align 4
 //CHECK: %[[CAST:.*]] = bitcast i32 %[[ATOMIC_LOAD_TEMP]] to float
-//CHECK: %[[LOAD:.*]] = fpext float %[[CAST]] to double
-//CHECK: store double %[[LOAD]], ptr %[[Y]], align 8
+//CHECK: store float %[[CAST]], ptr %[[Y]], align 4
   omp.atomic.read %3 = %1 : !llvm.ptr, !llvm.ptr, f32
 
 //CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = load atomic i32, ptr %[[W]] monotonic, align 4
-//CHECK: %[[LOAD:.*]] = sitofp i32 %[[ATOMIC_LOAD_TEMP]] to double
-//CHECK: store double %[[LOAD]], ptr %[[Y]], align 8
+//CHECK: store i32 %[[ATOMIC_LOAD_TEMP]], ptr %[[Y]], align 4
   omp.atomic.read %3 = %7 : !llvm.ptr, !llvm.ptr, i32
 
 //CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = load atomic i64, ptr %[[Y]] monotonic, align 4
 //CHECK: %[[CAST:.*]] = bitcast i64 %[[ATOMIC_LOAD_TEMP]] to double
-//CHECK: %[[LOAD:.*]] = fptrunc double %[[CAST]] to float
-//CHECK: store float %[[LOAD]], ptr %[[Z]], align 4
+//CHECK: store double %[[CAST]], ptr %[[Z]], align 8
   omp.atomic.read %1 = %3 : !llvm.ptr, !llvm.ptr, f64
 
 //CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = load atomic i32, ptr %[[W]] monotonic, align 4
-//CHECK: %[[LOAD:.*]] = sitofp i32 %[[ATOMIC_LOAD_TEMP]] to float
-//CHECK: store float %[[LOAD]], ptr %[[Z]], align 4
+//CHECK: store i32 %[[ATOMIC_LOAD_TEMP]], ptr %[[Z]], align 4
   omp.atomic.read %1 = %7 : !llvm.ptr, !llvm.ptr, i32
 
 //CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = load atomic i64, ptr %[[Y]] monotonic, align 4
 //CHECK: %[[CAST:.*]] = bitcast i64 %[[ATOMIC_LOAD_TEMP]] to double
-//CHECK: %[[LOAD:.*]] = fptosi double %[[CAST]] to i32
-//CHECK: store i32 %[[LOAD]], ptr %[[W]], align 4
+//CHECK: store double %[[CAST]], ptr %[[W]], align 8
   omp.atomic.read %7 = %3 : !llvm.ptr, !llvm.ptr, f64
 
 //CHECK: %[[ATOMIC_LOAD_TEMP:.*]] = load atomic i32, ptr %[[Z]] monotonic, align 4
 //CHECK: %[[CAST:.*]] = bitcast i32 %[[ATOMIC_LOAD_TEMP]] to float
-//CHECK: %[[LOAD:.*]] = fptosi float %[[CAST]] to i32
-//CHECK: store i32 %[[LOAD]], ptr %[[W]], align 4
+//CHECK: store float %[[CAST]], ptr %[[W]], align 4
   omp.atomic.read %7 = %1 : !llvm.ptr, !llvm.ptr, f32
   llvm.return
 }
@@ -1477,6 +1470,49 @@ llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: i32, %xbool: !llvm.ptr, %exprb
     omp.yield(%newval : i32)
   }
   llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_atomic_write
+llvm.func @omp_atomic_write() {
+// CHECK: %[[ALLOCA0:.*]] = alloca { float, float }, align 8
+// CHECK: %[[ALLOCA1:.*]] = alloca { float, float }, align 8
+// CHECK: %[[X:.*]] = alloca float, i64 1, align 4
+// CHECK: %[[R1:.*]] = alloca float, i64 1, align 4
+// CHECK: %[[ALLOCA:.*]] = alloca { float, float }, i64 1, align 8
+// CHECK: %[[LOAD:.*]] = load float, ptr %[[R1]], align 4
+// CHECK: %[[IDX1:.*]] = insertvalue { float, float } undef, float %[[LOAD]], 0
+// CHECK: %[[IDX2:.*]] = insertvalue { float, float } %[[IDX1]], float 0.000000e+00, 1
+// CHECK: br label %entry
+
+// CHECK: entry:
+// CHECK: store { float, float } %[[IDX2]], ptr %[[ALLOCA1]], align 4
+// CHECK: call void @__atomic_store(i64 8, ptr %[[ALLOCA]], ptr %[[ALLOCA1]], i32 0)
+// CHECK: store { float, float } { float 1.000000e+00, float 1.000000e+00 }, ptr %[[ALLOCA0]], align 4
+// CHECK: call void @__atomic_store(i64 8, ptr %[[ALLOCA]], ptr %[[ALLOCA0]], i32 0)
+
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x f32 {bindc_name = "x"} : (i64) -> !llvm.ptr
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.alloca %2 x f32 {bindc_name = "r1"} : (i64) -> !llvm.ptr
+    %4 = llvm.mlir.constant(1 : i64) : i64
+    %5 = llvm.alloca %4 x !llvm.struct<(f32, f32)> {bindc_name = "c1"} : (i64) -> !llvm.ptr
+    %6 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+    %7 = llvm.mlir.constant(0.000000e+00 : f32) : f32
+    %8 = llvm.mlir.constant(1 : i64) : i64
+    %9 = llvm.mlir.constant(1 : i64) : i64
+    %10 = llvm.mlir.constant(1 : i64) : i64
+    %11 = llvm.load %3 : !llvm.ptr -> f32
+    %12 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %13 = llvm.insertvalue %11, %12[0] : !llvm.struct<(f32, f32)>
+    %14 = llvm.insertvalue %7, %13[1] : !llvm.struct<(f32, f32)>
+    omp.atomic.write %5 = %14 : !llvm.ptr, !llvm.struct<(f32, f32)>
+    %15 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %16 = llvm.insertvalue %6, %15[0] : !llvm.struct<(f32, f32)>
+    %17 = llvm.insertvalue %6, %16[1] : !llvm.struct<(f32, f32)>
+    omp.atomic.write %5 = %17 : !llvm.ptr, !llvm.struct<(f32, f32)>
+    llvm.return
 }
 
 // -----

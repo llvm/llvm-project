@@ -45,6 +45,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::HollerithPolymorphic);
   warnLanguage_.set(LanguageFeature::ListDirectedSize);
   warnLanguage_.set(LanguageFeature::IgnoreIrrelevantAttributes);
+  warnLanguage_.set(LanguageFeature::AmbiguousStructureConstructor);
   warnUsage_.set(UsageWarning::ShortArrayActual);
   warnUsage_.set(UsageWarning::FoldingException);
   warnUsage_.set(UsageWarning::FoldingAvoidsRuntimeCrash);
@@ -87,6 +88,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::NullActualForDefaultIntentAllocatable);
   warnUsage_.set(UsageWarning::UseAssociationIntoSameNameSubprogram);
   warnUsage_.set(UsageWarning::HostAssociatedIntentOutInSpecExpr);
+  warnUsage_.set(UsageWarning::NonVolatilePointerToVolatile);
   // New warnings, on by default
   warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
