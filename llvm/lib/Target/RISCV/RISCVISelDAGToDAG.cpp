@@ -1626,6 +1626,51 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
+  case RISCVISD::LD_RV32: {
+    assert(Subtarget->hasStdExtZilsd() && "LD_RV32 is only used with Zilsd");
+
+    SDValue Base, Offset;
+    SDValue Chain = Node->getOperand(0);
+    SDValue Addr = Node->getOperand(1);
+    SelectAddrRegImm(Addr, Base, Offset);
+
+    SDValue Ops[] = {Base, Offset, Chain};
+    MachineSDNode *New = CurDAG->getMachineNode(
+        RISCV::LD_RV32, DL, {MVT::Untyped, MVT::Other}, Ops);
+    SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
+                                                MVT::i32, SDValue(New, 0));
+    SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL,
+                                                MVT::i32, SDValue(New, 0));
+    CurDAG->setNodeMemRefs(New, {cast<MemSDNode>(Node)->getMemOperand()});
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    ReplaceUses(SDValue(Node, 2), SDValue(New, 1));
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
+  case RISCVISD::SD_RV32: {
+    SDValue Base, Offset;
+    SDValue Chain = Node->getOperand(0);
+    SDValue Addr = Node->getOperand(3);
+    SelectAddrRegImm(Addr, Base, Offset);
+
+    SDValue Ops[] = {
+        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32),
+        Node->getOperand(1),
+        CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32),
+        Node->getOperand(2),
+        CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
+
+    SDNode *RegPair = CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                             MVT::Untyped, Ops);
+    MachineSDNode *New =
+        CurDAG->getMachineNode(RISCV::SD_RV32, DL, MVT::Other,
+                               {SDValue(RegPair, 0), Base, Offset, Chain});
+    CurDAG->setNodeMemRefs(New, {cast<MemSDNode>(Node)->getMemOperand()});
+    ReplaceUses(SDValue(Node, 0), SDValue(New, 0));
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo = Node->getConstantOperandVal(0);
     switch (IntNo) {
