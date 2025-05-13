@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __FLOAT_ONLY
-#define __CLC_FUNCTION fast_normalize
-#define __CLC_GEOMETRIC_RET_GENTYPE
-#define __CLC_BODY <clc/geometric/unary_decl.inc>
+// Geometric functions are only defined for scalar, vec2, vec3 and vec4
+#if (__CLC_VECSIZE_OR_1 == 1 || __CLC_VECSIZE_OR_1 == 2 ||                     \
+     __CLC_VECSIZE_OR_1 == 3 || __CLC_VECSIZE_OR_1 == 4)
 
-#include <clc/math/gentype.inc>
+_CLC_OVERLOAD _CLC_DECL
+#ifdef __CLC_GEOMETRIC_RET_GENTYPE
+    __CLC_GENTYPE
+#else
+    __CLC_SCALAR_GENTYPE
+#endif
+    __CLC_FUNCTION(__CLC_GENTYPE a);
 
-#undef __CLC_FUNCTION
-#undef __CLC_GEOMETRIC_RET_GENTYPE
-#undef __FLOAT_ONLY
+#endif
