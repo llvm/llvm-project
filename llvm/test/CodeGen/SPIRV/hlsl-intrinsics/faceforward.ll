@@ -11,6 +11,50 @@
 ; CHECK-DAG: %[[#float_32:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#vec4_float_32:]] = OpTypeVector %[[#float_32]] 4
 
+define noundef half @faceforward_half(half noundef %a, half noundef %b, half noundef %c) {
+entry:
+  ; CHECK: %[[#]] = OpFunction %[[#float_16]] None %[[#]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_16]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#float_16]]
+  ; CHECK: %[[#arg2:]] = OpFunctionParameter %[[#float_16]]
+  ; CHECK: %[[#]] = OpExtInst %[[#float_16]] %[[#op_ext_glsl]] FaceForward %[[#arg0]] %[[#arg1]] %[[#arg2]]
+  %spv.faceforward = call half @llvm.spv.faceforward.f16(half %a, half %b, half %c)
+  ret half %spv.faceforward
+}
+
+define noundef float @faceforward_float(float noundef %a, float noundef %b, float noundef %c) {
+entry:
+  ; CHECK: %[[#]] = OpFunction %[[#float_32]] None %[[#]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#arg2:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext_glsl]] FaceForward %[[#arg0]] %[[#arg1]] %[[#arg2]]
+  %spv.faceforward = call float @llvm.spv.faceforward.f32(float %a, float %b, float %c)
+  ret float %spv.faceforward
+}
+
+define noundef <4 x half> @faceforward_half4(<4 x half> noundef %a, <4 x half> noundef %b, <4 x half> noundef %c) {
+entry:
+  ; CHECK: %[[#]] = OpFunction %[[#vec4_float_16]] None %[[#]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_16]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#vec4_float_16]]
+  ; CHECK: %[[#arg2:]] = OpFunctionParameter %[[#vec4_float_16]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_16]] %[[#op_ext_glsl]] FaceForward %[[#arg0]] %[[#arg1]] %[[#arg2]]
+  %spv.faceforward = call <4 x half> @llvm.spv.faceforward.v4f16(<4 x half> %a, <4 x half> %b, <4 x half> %c)
+  ret <4 x half> %spv.faceforward
+}
+
+define noundef <4 x float> @faceforward_float4(<4 x float> noundef %a, <4 x float> noundef %b, <4 x float> noundef %c) {
+entry:
+  ; CHECK: %[[#]] = OpFunction %[[#vec4_float_32]] None %[[#]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#arg2:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] FaceForward %[[#arg0]] %[[#arg1]] %[[#arg2]]
+  %spv.faceforward = call <4 x float> @llvm.spv.faceforward.v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c)
+  ret <4 x float> %spv.faceforward
+}
+
 define noundef <4 x float> @faceforward_instcombine_float4(<4 x float> noundef %a, <4 x float> noundef %b, <4 x float> noundef %c) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#vec4_float_32]] None %[[#]]
@@ -20,7 +64,7 @@ entry:
   ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] FaceForward %[[#arg0]] %[[#arg1]] %[[#arg2]]
   %spv.fdot = call float @llvm.spv.fdot.v4f32(<4 x float> %b, <4 x float> %c)
   %fcmp = fcmp olt float %spv.fdot, 0.000000e+00
-  %delta = fsub <4 x float> zeroinitializer, %a
+  %delta = fneg <4 x float> %a
   %select = select i1 %fcmp, <4 x float> %a, <4 x float> %delta
   ret <4 x float> %select
  }
