@@ -110,8 +110,12 @@ public:
   using Result = RESULT;
   using Element = ELEMENT;
 
-  template <typename A>
+  // Constructor for creating ConstantBase from an actual value (i.e.
+  // literals, etc.)
+  template <typename A,
+      typename = std::enable_if_t<std::is_convertible_v<A, Element>>>
   ConstantBase(const A &x, Result res = Result{}) : result_{res}, values_{x} {}
+
   ConstantBase(ELEMENT &&x, Result res = Result{})
       : result_{res}, values_{std::move(x)} {}
   ConstantBase(

@@ -218,11 +218,13 @@ Appeal Process
 ===============
 
 Any individual(s) determined to have violated the CoC have the right to appeal
-a decision. An appeal can be made directly to the committee by sending an email
-to conduct@llvm.org with subject line Code of Conduct Incident Appeal.
+a resolution decision. An appeal can be made directly to the committee by sending an 
+email to conduct@llvm.org with subject line Code of Conduct Incident Appeal.
 
-The email should include documentation related to the incident to support the
-appeal. The said documentation may include, but does not have to be limited to:
+This process is intended to consider new or different evidence from the 
+initial incident investigation. The email should include documentation related 
+to the incident to support the appeal. The said documentation may include, 
+but does not have to be limited to:
 
 * Information from the reportee justifying reasoning for the appeal.
 * Statements from other individuals involved in the incident to support the

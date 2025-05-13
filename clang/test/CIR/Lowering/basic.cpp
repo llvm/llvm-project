@@ -5,7 +5,7 @@ int f1() {
   return i;
 }
 
-// CHECK: define{{.*}} i32 @f1() {
+// CHECK: define{{.*}} i32 @_Z2f1v() {
 // CHECK:    %[[RV:.*]] = alloca i32, i64 1, align 4
 // CHECK:    %[[I_PTR:.*]] = alloca i32, i64 1, align 4
 // CHECK:    %[[I:.*]] = load i32, ptr %[[I_PTR]], align 4
@@ -18,7 +18,7 @@ int f2() {
   return i;
 }
 
-// CHECK: define{{.*}} i32 @f2() {
+// CHECK: define{{.*}} i32 @_Z2f2v() {
 // CHECK:    %[[RV:.*]] = alloca i32, i64 1, align 4
 // CHECK:    %[[I_PTR:.*]] = alloca i32, i64 1, align 4
 // CHECK:    store i32 2, ptr %[[I_PTR]], align 4
@@ -31,7 +31,7 @@ int f3(int i) {
     return i;
   }
 
-// CHECK: define{{.*}} i32 @f3(i32 %[[ARG:.*]])
+// CHECK: define{{.*}} i32 @_Z2f3i(i32 %[[ARG:.*]])
 // CHECK:   %[[ARG_ALLOCA:.*]] = alloca i32, i64 1, align 4
 // CHECK:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // CHECK:   store i32 %[[ARG]], ptr %[[ARG_ALLOCA]], align 4
@@ -44,7 +44,7 @@ int f4(const int i) {
   return i;
 }
 
-// CHECK: define{{.*}} i32 @f4(i32 %[[ARG:.*]])
+// CHECK: define{{.*}} i32 @_Z2f4i(i32 %[[ARG:.*]])
 // CHECK:   %[[ARG_ALLOCA:.*]] = alloca i32, i64 1, align 4
 // CHECK:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // CHECK:   store i32 %[[ARG]], ptr %[[ARG_ALLOCA]], align 4

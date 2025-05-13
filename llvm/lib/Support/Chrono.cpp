@@ -8,6 +8,7 @@
 
 #include "llvm/Support/Chrono.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -15,12 +16,12 @@ namespace llvm {
 
 using namespace sys;
 
-const char llvm::detail::unit<std::ratio<3600>>::value[] = "h";
-const char llvm::detail::unit<std::ratio<60>>::value[] = "m";
-const char llvm::detail::unit<std::ratio<1>>::value[] = "s";
-const char llvm::detail::unit<std::milli>::value[] = "ms";
-const char llvm::detail::unit<std::micro>::value[] = "us";
-const char llvm::detail::unit<std::nano>::value[] = "ns";
+LLVM_ABI const char llvm::detail::unit<std::ratio<3600>>::value[] = "h";
+LLVM_ABI const char llvm::detail::unit<std::ratio<60>>::value[] = "m";
+LLVM_ABI const char llvm::detail::unit<std::ratio<1>>::value[] = "s";
+LLVM_ABI const char llvm::detail::unit<std::milli>::value[] = "ms";
+LLVM_ABI const char llvm::detail::unit<std::micro>::value[] = "us";
+LLVM_ABI const char llvm::detail::unit<std::nano>::value[] = "ns";
 
 static inline struct tm getStructTM(TimePoint<> TP) {
   struct tm Storage;

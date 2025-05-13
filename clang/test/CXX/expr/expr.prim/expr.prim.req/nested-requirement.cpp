@@ -150,7 +150,7 @@ void func() {
   // expected-note@#bar {{while substituting template arguments into constraint expression here}}
   // expected-note@#bar {{while checking the satisfaction of nested requirement requested here}}
   // expected-note@#bar {{candidate template ignored: constraints not satisfied [with T = False]}}
-  // expected-note@#bar {{because 'X<False>::value' evaluated to false}}
+  // expected-note@#bar {{because 'X<SubstitutionFailureNestedRequires::ErrorExpressions_NotSF::False>::value' evaluated to false}}
 
   bar<int>();
   // expected-note@-1 {{while checking constraint satisfaction for template 'bar<int>' required here}} \

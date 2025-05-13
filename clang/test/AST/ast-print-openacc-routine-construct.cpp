@@ -8,10 +8,10 @@ auto Lambda = [](){};
 int function();
 #pragma acc routine (function) vector nohost bind("string")
 // CHECK: #pragma acc routine(function) vector nohost bind("string")
-#pragma acc routine(function) device_type(Something) seq
-// CHECK-NEXT: #pragma acc routine(function) device_type(Something) seq
-#pragma acc routine(function) dtype(Something) seq
-// CHECK-NEXT: #pragma acc routine(function) dtype(Something) seq
+#pragma acc routine(function) device_type(multicore) seq
+// CHECK-NEXT: #pragma acc routine(function) device_type(multicore) seq
+#pragma acc routine(function) dtype(radeon) seq
+// CHECK-NEXT: #pragma acc routine(function) dtype(radeon) seq
 
 #pragma acc routine nohost vector
 int function2();
@@ -136,8 +136,8 @@ struct DepS {
 
 #pragma acc routine (MemFunc) worker dtype(*)
 // CHECK-NEXT: #pragma acc routine(MemFunc) worker dtype(*)
-#pragma acc routine (MemFunc) device_type(Lambda) vector
-// CHECK-NEXT: #pragma acc routine(MemFunc) device_type(Lambda) vector
+#pragma acc routine (MemFunc) device_type(nvidia) vector
+// CHECK-NEXT: #pragma acc routine(MemFunc) device_type(nvidia) vector
 };
 
 // CHECK: #pragma acc routine(DepS<int>::Lambda) gang bind("string")

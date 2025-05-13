@@ -11,7 +11,7 @@
 // CHECK:        .param .align 2 .b8 _Z8test_argPDF16bDF16b_param_1[2]
 //
 __device__ void test_arg(__bf16 *out, __bf16 in) {
-// CHECK-DAG:     ld.param.u64  %[[A:rd[0-9]+]], [_Z8test_argPDF16bDF16b_param_0];
+// CHECK-DAG:     ld.param.b64  %[[A:rd[0-9]+]], [_Z8test_argPDF16bDF16b_param_0];
 // CHECK-DAG:     ld.param.b16  %[[R:rs[0-9]+]], [_Z8test_argPDF16bDF16b_param_1];
   __bf16 bf16 = in;
   *out = bf16;

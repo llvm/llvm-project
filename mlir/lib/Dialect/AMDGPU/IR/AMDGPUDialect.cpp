@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -112,21 +113,31 @@ LogicalResult FatRawBufferCastOp::verify() {
   return success();
 }
 
+static bool hasGlobalMemorySpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return true;
+  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
+  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
+  return false;
+}
+
+static bool hasWorkgroupMemorySpace(Attribute memorySpace) {
+  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 3;
+  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == gpu::AddressSpace::Workgroup;
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // RawBuffer*Op
 //===----------------------------------------------------------------------===//
 template <typename T>
 static LogicalResult verifyRawBufferOp(T &op) {
   MemRefType bufferType = llvm::cast<MemRefType>(op.getMemref().getType());
-  Attribute memorySpace = bufferType.getMemorySpace();
-  bool isGlobal = false;
-  if (!memorySpace)
-    isGlobal = true;
-  else if (auto intMemorySpace = llvm::dyn_cast<IntegerAttr>(memorySpace))
-    isGlobal = intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
-  else if (auto gpuMemorySpace =
-               llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
-    isGlobal = gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
+  bool isGlobal = hasGlobalMemorySpace(bufferType.getMemorySpace());
 
   if (!isGlobal)
     return op.emitOpError(
@@ -341,22 +352,24 @@ LogicalResult MFMAOp::verify() {
   }
 
   Type sourceBType = getSourceB().getType();
-  if (sourceElem.isFloat(8)) {
+  if (sourceElem.isFloat(8) || sourceElem.isFloat(6) || sourceElem.isFloat(4)) {
     int64_t sourceBLen = 1;
     Type sourceBElem = sourceBType;
     if (auto sourceBVector = llvm::dyn_cast<VectorType>(sourceBType)) {
       sourceBLen = sourceBVector.getNumElements();
       sourceBElem = sourceBVector.getElementType();
     }
-    if (!sourceBElem.isFloat(8))
-      return emitOpError("expected both source operands to have f8 elements");
+    if (!sourceBElem.isFloat(8) && !sourceBElem.isFloat(6) &&
+        !sourceBElem.isFloat(4))
+      return emitOpError("expected both source operands to have small-float "
+                         "elements if one does");
     if (sourceLen != sourceBLen)
       return emitOpError(
-          "expected both f8 source vectors to have the same length");
+          "expected both small-float source vectors to have the same length");
   } else {
     if (sourceType != sourceBType)
-      return emitOpError(
-          "expected both non-f8 source operand types to match exactly");
+      return emitOpError("expected both non-small-float source operand types "
+                         "to match exactly");
   }
   // Normalize the wider integer types the compiler expects to i8
   if (sourceElem.isInteger(32)) {
@@ -456,6 +469,40 @@ LogicalResult DPPOp::verify() {
     break;
   }
   }
+  return success();
+}
+
+LogicalResult GatherToLDSOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+  MemRefType dstType = cast<MemRefType>(getDst().getType());
+
+  if (!memref::isStaticShapeAndContiguousRowMajor(dstType))
+    return emitOpError(
+        "destination types must have static shape  and contiguous");
+
+  auto elemType = srcType.getElementType();
+  // Check $src and $dst element types are the same.
+  if (elemType != dstType.getElementType())
+    return emitOpError("source and destination element types must match");
+
+  // copy type sizes should be 1, 2, or 4 bytes.
+  auto transferType = getTransferType();
+  size_t transferSize;
+  if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
+    transferSize = vectorTransfer.getNumElements() *
+                   vectorTransfer.getElementTypeBitWidth();
+  } else {
+    transferSize = transferType.getIntOrFloatBitWidth();
+  }
+  if (transferSize != 8 && transferSize != 16 && transferSize != 32)
+    return emitOpError("Transfering type size must be 8, 16, or 32 bits");
+
+  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
+    return emitOpError("source memory address space must be Global");
+
+  if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
+    return emitOpError("destination memory address space must be Workgroup");
+
   return success();
 }
 

@@ -500,7 +500,6 @@ public:
       }
       return;
     case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate:
       add(QualType(NNS->getAsType(), 0), Flags);
       return;
     case NestedNameSpecifier::Global:

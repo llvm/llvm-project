@@ -439,8 +439,9 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         if (!OmitComments) {
           OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
           OS.indent(Indent) << "/*Scope*/ ";
-        } else
+        } else {
           OS.indent(Indent);
+        }
       }
 
       unsigned ChildSize = SM->getChild(i)->getSize();
@@ -558,8 +559,9 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       if (PredNo < 8) {
         OperandBytes = -1;
         OS << "OPC_CheckPredicate" << PredNo << ", ";
-      } else
+      } else {
         OS << "OPC_CheckPredicate, ";
+      }
     }
 
     if (PredNo >= 8 || Pred.usesOperands())
@@ -916,9 +918,10 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         OS << "OPC_EmitCopyToReg" << Slot << ", "
            << getQualifiedName(Reg->TheDef) << ",\n";
         --Bytes;
-      } else
+      } else {
         OS << "OPC_EmitCopyToReg, " << Slot << ", "
            << getQualifiedName(Reg->TheDef) << ",\n";
+      }
     }
 
     return Bytes;
@@ -1049,8 +1052,9 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         OS.indent(FullIndexWidth + Indent)
             << "// Dst: " << SNT->getPattern().getDstPattern() << '\n';
       }
-    } else
+    } else {
       OS << '\n';
+    }
 
     return 4 + SupportsDeactivationSymbol + !CompressVTs + !CompressNodeInfo +
            NumTypeBytes + NumOperandBytes + NumCoveredBytes;
@@ -1156,11 +1160,11 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
 
   // Emit Node predicates.
   EmitNodePredicatesFunction(
-      NodePredicates, "CheckNodePredicate(SDNode *Node, unsigned PredNo) const",
+      NodePredicates, "CheckNodePredicate(SDValue Op, unsigned PredNo) const",
       OS);
   EmitNodePredicatesFunction(
       NodePredicatesWithOperands,
-      "CheckNodePredicateWithOperands(SDNode *Node, unsigned PredNo, "
+      "CheckNodePredicateWithOperands(SDValue Op, unsigned PredNo, "
       "const SmallVectorImpl<SDValue> &Operands) const",
       OS);
 
@@ -1244,8 +1248,7 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
         OS << "// " << NodeXForms[i]->getName();
       OS << '\n';
 
-      std::string ClassName =
-          std::string(CGP.getSDNodeInfo(SDNode).getSDClassName());
+      std::string ClassName = CGP.getSDNodeInfo(SDNode).getSDClassName().str();
       if (ClassName == "SDNode")
         OS << "    SDNode *N = V.getNode();\n";
       else

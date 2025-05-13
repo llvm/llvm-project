@@ -66,9 +66,9 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
     }
 
     StringRef Key(Prev, Curr - Prev);
-    auto Where = llvm::lower_bound(ConfusableEntries, CodePoint,
-                                   [](decltype(ConfusableEntries[0]) x,
-                                      UTF32 y) { return x.codepoint < y; });
+    auto *Where = llvm::lower_bound(ConfusableEntries, CodePoint,
+                                    [](decltype(ConfusableEntries[0]) X,
+                                       UTF32 Y) { return X.codepoint < Y; });
     if (Where == std::end(ConfusableEntries) || CodePoint != Where->codepoint) {
       Skeleton.append(Prev, Curr);
     } else {

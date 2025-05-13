@@ -65,14 +65,6 @@ public:
 class StripFuncQuantTypes
     : public impl::StripFuncQuantTypesBase<StripFuncQuantTypes> {
 
-  // Return whether a type is considered legal when occurring in the header of
-  // a function or as an operand to a 'return' op.
-  static bool isLegalType(Type type) {
-    if (auto tensorType = dyn_cast<TensorType>(type))
-      return isLegalType(tensorType.getElementType());
-    return !isa<quant::QuantizedType>(type);
-  }
-
 public:
   void runOnOperation() override {
 
