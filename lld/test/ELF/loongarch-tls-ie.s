@@ -1,7 +1,7 @@
 # REQUIRES: loongarch
 # RUN: rm -rf %t && split-file %s %t
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/32.s -o %t/32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 --mattr=+32s %t/32.s -o %t/32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/64.s -o %t/64.o
 
 ## LA32 IE

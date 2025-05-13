@@ -251,6 +251,8 @@ TEST(ELFTest, getELFRelocationTypeNameForLoongArch) {
             getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_SUB_ULEB128));
   EXPECT_EQ("R_LARCH_64_PCREL",
             getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_64_PCREL));
+  EXPECT_EQ("R_LARCH_CALL30",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_CALL30));
   EXPECT_EQ("R_LARCH_CALL36",
             getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_CALL36));
 }

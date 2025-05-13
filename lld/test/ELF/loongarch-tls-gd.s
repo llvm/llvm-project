@@ -5,11 +5,11 @@
 ## (a) code sequence can be converted from `pcalau12i+addi.[wd]` to `pcaddi`.
 ## (b) dynamic relocations can be omitted for GD->LE relaxation.
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/a.s -o %t/a.32.o
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+relax %t/a.s -o %t/a.32.relax.o
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/bc.s -o %t/bc.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+32s %t/a.s -o %t/a.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+32s,+relax %t/a.s -o %t/a.32.relax.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+32s %t/bc.s -o %t/bc.32.o
 # RUN: ld.lld -shared -soname=bc.so %t/bc.32.o -o %t/bc.32.so
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/tga.s -o %t/tga.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+32s %t/tga.s -o %t/tga.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/a.s -o %t/a.64.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/a.s -mattr=+relax -o %t/a.64.relax.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/bc.s -o %t/bc.64.o
