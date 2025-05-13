@@ -34,8 +34,9 @@ class DivZeroChecker : public CheckerFamily<check::PreStmt<BinaryOperator>> {
 
 public:
   /// This checker family implements two user-facing checker parts.
-  CheckerFrontendWithBugType DivideZeroChecker{"Division by zero"},
-      TaintedDivChecker{"Division by zero", categories::TaintedData};
+  CheckerFrontendWithBugType DivideZeroChecker{"Division by zero"};
+  CheckerFrontendWithBugType TaintedDivChecker{"Division by zero",
+                                               categories::TaintedData};
 
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
 

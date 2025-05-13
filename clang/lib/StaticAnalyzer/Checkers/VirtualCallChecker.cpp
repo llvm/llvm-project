@@ -44,9 +44,9 @@ class VirtualCallChecker
                            check::PreCall> {
 public:
   CheckerFrontendWithBugType PureChecker{"Pure virtual method call",
-                                         categories::CXXObjectLifecycle},
-      ImpureChecker{"Unexpected loss of virtual dispatch",
-                    categories::CXXObjectLifecycle};
+                                         categories::CXXObjectLifecycle};
+  CheckerFrontendWithBugType ImpureChecker{
+      "Unexpected loss of virtual dispatch", categories::CXXObjectLifecycle};
 
   bool ShowFixIts = false;
 
