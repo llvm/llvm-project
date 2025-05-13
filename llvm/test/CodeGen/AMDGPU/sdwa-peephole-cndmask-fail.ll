@@ -1,4 +1,4 @@
-; RUN: llc %s -march=amdgcn -mcpu=gfx1030 -o - 2>&1 | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=gfx1030 < %s | FileCheck %s
 
 ; In this test, V_CNDMASK_B32_e64 gets converted to V_CNDMASK_B32_e32,
 ; but the expected conversion to SDWA does not occur.  This led to a
