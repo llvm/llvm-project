@@ -114,27 +114,6 @@ namespace clang {
 using namespace clang;
 using namespace sema;
 
-/// Compare two APSInts, extending and switching the sign as
-/// necessary to compare their values regardless of underlying type.
-static bool hasSameExtendedValue(llvm::APSInt X, llvm::APSInt Y) {
-  if (Y.getBitWidth() > X.getBitWidth())
-    X = X.extend(Y.getBitWidth());
-  else if (Y.getBitWidth() < X.getBitWidth())
-    Y = Y.extend(X.getBitWidth());
-
-  // If there is a signedness mismatch, correct it.
-  if (X.isSigned() != Y.isSigned()) {
-    // If the signed value is negative, then the values cannot be the same.
-    if ((Y.isSigned() && Y.isNegative()) || (X.isSigned() && X.isNegative()))
-      return false;
-
-    Y.setIsSigned(true);
-    X.setIsSigned(true);
-  }
-
-  return X == Y;
-}
-
 /// The kind of PartialOrdering we're performing template argument deduction
 /// for (C++11 [temp.deduct.partial]).
 enum class PartialOrderingKind { None, NonCall, Call };
@@ -273,7 +252,7 @@ checkDeducedTemplateArguments(ASTContext &Context,
     if (Y.getKind() == TemplateArgument::Expression ||
         Y.getKind() == TemplateArgument::Declaration ||
         (Y.getKind() == TemplateArgument::Integral &&
-         hasSameExtendedValue(X.getAsIntegral(), Y.getAsIntegral())))
+         llvm::APSInt::isSameValue(X.getAsIntegral(), Y.getAsIntegral())))
       return X.wasDeducedFromArrayBound() ? Y : X;
 
     // All other combinations are incompatible.
@@ -493,8 +472,8 @@ DeduceNullPtrTemplateArgument(Sema &S, TemplateParameterList *TemplateParams,
                                                         : CK_NullToPointer)
                     .get();
   return DeduceNonTypeTemplateArgument(
-      S, TemplateParams, NTTP, TemplateArgument(Value), Value->getType(), Info,
-      PartialOrdering, Deduced, HasDeducedAnyParam);
+      S, TemplateParams, NTTP, TemplateArgument(Value, /*IsCanonical=*/false),
+      Value->getType(), Info, PartialOrdering, Deduced, HasDeducedAnyParam);
 }
 
 /// Deduce the value of the given non-type template parameter
@@ -508,8 +487,8 @@ DeduceNonTypeTemplateArgument(Sema &S, TemplateParameterList *TemplateParams,
                               SmallVectorImpl<DeducedTemplateArgument> &Deduced,
                               bool *HasDeducedAnyParam) {
   return DeduceNonTypeTemplateArgument(
-      S, TemplateParams, NTTP, TemplateArgument(Value), Value->getType(), Info,
-      PartialOrdering, Deduced, HasDeducedAnyParam);
+      S, TemplateParams, NTTP, TemplateArgument(Value, /*IsCanonical=*/false),
+      Value->getType(), Info, PartialOrdering, Deduced, HasDeducedAnyParam);
 }
 
 /// Deduce the value of the given non-type template parameter
@@ -615,12 +594,15 @@ static TemplateDeductionResult DeduceTemplateArguments(
 /// but it may still fail, later, for other reasons.
 
 static const TemplateSpecializationType *getLastTemplateSpecType(QualType QT) {
+  const TemplateSpecializationType *LastTST = nullptr;
   for (const Type *T = QT.getTypePtr(); /**/; /**/) {
     const TemplateSpecializationType *TST =
         T->getAs<TemplateSpecializationType>();
-    assert(TST && "Expected a TemplateSpecializationType");
+    if (!TST)
+      return LastTST;
     if (!TST->isSugared())
       return TST;
+    LastTST = TST;
     T = TST->desugar().getTypePtr();
   }
 }
@@ -1351,7 +1333,7 @@ bool Sema::isSameOrCompatibleFunctionType(QualType P, QualType A) {
     return Context.hasSameType(P, A);
 
   // Noreturn and noexcept adjustment.
-  if (QualType AdjustedParam; IsFunctionConversion(P, A, AdjustedParam))
+  if (QualType AdjustedParam; TryFunctionConversion(P, A, AdjustedParam))
     P = AdjustedParam;
 
   // FIXME: Compatible calling conventions.
@@ -2571,7 +2553,7 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
 
   case TemplateArgument::Integral:
     if (A.getKind() == TemplateArgument::Integral) {
-      if (hasSameExtendedValue(P.getAsIntegral(), A.getAsIntegral()))
+      if (llvm::APSInt::isSameValue(P.getAsIntegral(), A.getAsIntegral()))
         return TemplateDeductionResult::Success;
     }
     Info.FirstArg = P;
@@ -2825,62 +2807,6 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
       /*HasDeducedAnyParam=*/nullptr);
 }
 
-/// Determine whether two template arguments are the same.
-static bool isSameTemplateArg(ASTContext &Context, const TemplateArgument &X,
-                              const TemplateArgument &Y) {
-  if (X.getKind() != Y.getKind())
-    return false;
-
-  switch (X.getKind()) {
-    case TemplateArgument::Null:
-      llvm_unreachable("Comparing NULL template argument");
-
-    case TemplateArgument::Type:
-      return Context.getCanonicalType(X.getAsType()) ==
-             Context.getCanonicalType(Y.getAsType());
-
-    case TemplateArgument::Declaration:
-      return isSameDeclaration(X.getAsDecl(), Y.getAsDecl());
-
-    case TemplateArgument::NullPtr:
-      return Context.hasSameType(X.getNullPtrType(), Y.getNullPtrType());
-
-    case TemplateArgument::Template:
-    case TemplateArgument::TemplateExpansion:
-      return Context.getCanonicalTemplateName(
-                    X.getAsTemplateOrTemplatePattern()).getAsVoidPointer() ==
-             Context.getCanonicalTemplateName(
-                    Y.getAsTemplateOrTemplatePattern()).getAsVoidPointer();
-
-    case TemplateArgument::Integral:
-      return hasSameExtendedValue(X.getAsIntegral(), Y.getAsIntegral());
-
-    case TemplateArgument::StructuralValue:
-      return X.structurallyEquals(Y);
-
-    case TemplateArgument::Expression: {
-      llvm::FoldingSetNodeID XID, YID;
-      X.getAsExpr()->Profile(XID, Context, true);
-      Y.getAsExpr()->Profile(YID, Context, true);
-      return XID == YID;
-    }
-
-    case TemplateArgument::Pack: {
-      unsigned PackIterationSize = X.pack_size();
-      if (X.pack_size() != Y.pack_size())
-        return false;
-      ArrayRef<TemplateArgument> XP = X.pack_elements();
-      ArrayRef<TemplateArgument> YP = Y.pack_elements();
-      for (unsigned i = 0; i < PackIterationSize; ++i)
-        if (!isSameTemplateArg(Context, XP[i], YP[i]))
-          return false;
-      return true;
-    }
-  }
-
-  llvm_unreachable("Invalid TemplateArgument Kind!");
-}
-
 TemplateArgumentLoc
 Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
                                     QualType NTTPType, SourceLocation Loc,
@@ -2899,7 +2825,7 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
     Expr *E = BuildExpressionFromDeclTemplateArgument(Arg, NTTPType, Loc,
                                                       TemplateParam)
                   .getAs<Expr>();
-    return TemplateArgumentLoc(TemplateArgument(E), E);
+    return TemplateArgumentLoc(TemplateArgument(E, /*IsCanonical=*/false), E);
   }
 
   case TemplateArgument::NullPtr: {
@@ -2914,7 +2840,7 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
   case TemplateArgument::Integral:
   case TemplateArgument::StructuralValue: {
     Expr *E = BuildExpressionFromNonTypeTemplateArgument(Arg, Loc).get();
-    return TemplateArgumentLoc(TemplateArgument(E), E);
+    return TemplateArgumentLoc(TemplateArgument(E, /*IsCanonical=*/false), E);
   }
 
     case TemplateArgument::Template:
@@ -3346,7 +3272,7 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
       break;
     TemplateArgument PP = P.isPackExpansion() ? P.getPackExpansionPattern() : P,
                      PA = A.isPackExpansion() ? A.getPackExpansionPattern() : A;
-    if (!isSameTemplateArg(S.Context, PP, PA)) {
+    if (!S.Context.isSameTemplateArgument(PP, PA)) {
       if (!P.isPackExpansion() && !A.isPackExpansion()) {
         Info.Param = makeTemplateParameter(TPL->getParam(
             (AsStack.empty() ? As.end() : AsStack.back().begin()) -
@@ -3806,8 +3732,7 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
     // FIXME: Resolve core issue (no number yet): if the original P is a
     // reference type and the transformed A is function type "noexcept F",
     // the deduced A can be F.
-    QualType Tmp;
-    if (A->isFunctionType() && S.IsFunctionConversion(A, DeducedA, Tmp))
+    if (A->isFunctionType() && S.IsFunctionConversion(A, DeducedA))
       return TemplateDeductionResult::Success;
 
     Qualifiers AQuals = A.getQualifiers();
@@ -3844,11 +3769,10 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
   // Also allow conversions which merely strip __attribute__((noreturn)) from
   // function types (recursively).
   bool ObjCLifetimeConversion = false;
-  QualType ResultTy;
   if ((A->isAnyPointerType() || A->isMemberPointerType()) &&
       (S.IsQualificationConversion(A, DeducedA, false,
                                    ObjCLifetimeConversion) ||
-       S.IsFunctionConversion(A, DeducedA, ResultTy)))
+       S.IsFunctionConversion(A, DeducedA)))
     return TemplateDeductionResult::Success;
 
   //    - If P is a class and P has the form simple-template-id, then the
@@ -6139,9 +6063,9 @@ FunctionDecl *Sema::getMoreConstrainedFunction(FunctionDecl *FD1,
   assert(!FD1->getDescribedTemplate() && !FD2->getDescribedTemplate() &&
          "not for function templates");
   assert(!FD1->isFunctionTemplateSpecialization() ||
-         isa<CXXConversionDecl>(FD1));
+         (isa<CXXConversionDecl, CXXConstructorDecl>(FD1)));
   assert(!FD2->isFunctionTemplateSpecialization() ||
-         isa<CXXConversionDecl>(FD2));
+         (isa<CXXConversionDecl, CXXConstructorDecl>(FD2)));
 
   FunctionDecl *F1 = FD1;
   if (FunctionDecl *P = FD1->getTemplateInstantiationPattern(false))
@@ -6415,8 +6339,8 @@ Sema::getMoreSpecializedPartialSpecialization(
                                   ClassTemplatePartialSpecializationDecl *PS1,
                                   ClassTemplatePartialSpecializationDecl *PS2,
                                               SourceLocation Loc) {
-  QualType PT1 = PS1->getInjectedSpecializationType();
-  QualType PT2 = PS2->getInjectedSpecializationType();
+  QualType PT1 = PS1->getInjectedSpecializationType().getCanonicalType();
+  QualType PT2 = PS2->getInjectedSpecializationType().getCanonicalType();
 
   TemplateDeductionInfo Info(Loc);
   return getMoreSpecialized(*this, PT1, PT2, PS1, PS2, Info);
@@ -6425,8 +6349,9 @@ Sema::getMoreSpecializedPartialSpecialization(
 bool Sema::isMoreSpecializedThanPrimary(
     ClassTemplatePartialSpecializationDecl *Spec, TemplateDeductionInfo &Info) {
   ClassTemplateDecl *Primary = Spec->getSpecializedTemplate();
-  QualType PrimaryT = Primary->getInjectedClassNameSpecialization();
-  QualType PartialT = Spec->getInjectedSpecializationType();
+  QualType PrimaryT =
+      Primary->getInjectedClassNameSpecialization().getCanonicalType();
+  QualType PartialT = Spec->getInjectedSpecializationType().getCanonicalType();
 
   ClassTemplatePartialSpecializationDecl *MaybeSpec =
       getMoreSpecialized(*this, PartialT, PrimaryT, Spec, Primary, Info);
@@ -6444,10 +6369,10 @@ Sema::getMoreSpecializedPartialSpecialization(
   assert(PS1->getSpecializedTemplate() == PS2->getSpecializedTemplate() &&
          "the partial specializations being compared should specialize"
          " the same template.");
-  TemplateName Name(PS1->getSpecializedTemplate());
-  QualType PT1 = Context.getTemplateSpecializationType(
+  TemplateName Name(PS1->getSpecializedTemplate()->getCanonicalDecl());
+  QualType PT1 = Context.getCanonicalTemplateSpecializationType(
       Name, PS1->getTemplateArgs().asArray());
-  QualType PT2 = Context.getTemplateSpecializationType(
+  QualType PT2 = Context.getCanonicalTemplateSpecializationType(
       Name, PS2->getTemplateArgs().asArray());
 
   TemplateDeductionInfo Info(Loc);
@@ -6457,10 +6382,15 @@ Sema::getMoreSpecializedPartialSpecialization(
 bool Sema::isMoreSpecializedThanPrimary(
     VarTemplatePartialSpecializationDecl *Spec, TemplateDeductionInfo &Info) {
   VarTemplateDecl *Primary = Spec->getSpecializedTemplate();
-  TemplateName Name(Primary);
-  QualType PrimaryT = Context.getTemplateSpecializationType(
-      Name, Primary->getInjectedTemplateArgs(Context));
-  QualType PartialT = Context.getTemplateSpecializationType(
+  TemplateName Name(Primary->getCanonicalDecl());
+
+  SmallVector<TemplateArgument, 8> PrimaryCanonArgs(
+      Primary->getInjectedTemplateArgs(Context));
+  Context.canonicalizeTemplateArguments(PrimaryCanonArgs);
+
+  QualType PrimaryT =
+      Context.getCanonicalTemplateSpecializationType(Name, PrimaryCanonArgs);
+  QualType PartialT = Context.getCanonicalTemplateSpecializationType(
       Name, Spec->getTemplateArgs().asArray());
 
   VarTemplatePartialSpecializationDecl *MaybeSpec =
@@ -6595,8 +6525,6 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   case TemplateDeductionResult::CUDATargetMismatch:
     llvm_unreachable("Unexpected Result");
   }
-
-  SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
 
   TemplateDeductionResult TDK;
   runWithSufficientStackSpace(Info.getLocation(), [&] {

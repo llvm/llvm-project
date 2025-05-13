@@ -52,8 +52,15 @@ program openacc_serial_validity
   !$acc serial async(1)
   !$acc end serial
 
-  !ERROR: At most one ASYNC clause can appear on the SERIAL directive
+  !ERROR: At most one ASYNC clause can appear on the SERIAL directive or in group separated by the DEVICE_TYPE clause
   !$acc serial async(1) async(2)
+  !$acc end serial
+
+  !ERROR: At most one ASYNC clause can appear on the SERIAL directive or in group separated by the DEVICE_TYPE clause
+  !$acc serial async(1) device_type(nvidia) async(2) async(4)
+  !$acc end serial
+
+  !$acc serial async(1) device_type(nvidia) async(2)
   !$acc end serial
 
   !$acc serial async(async1)

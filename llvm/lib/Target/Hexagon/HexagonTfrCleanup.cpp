@@ -160,11 +160,8 @@ bool HexagonTfrCleanup::updateImmMap(MachineInstr *MI, ImmediateMap &IMap) {
     if (!Mo->isReg() || !Mo->isDef())
       continue;
     unsigned R = Mo->getReg();
-    for (MCRegAliasIterator AR(R, TRI, true); AR.isValid(); ++AR) {
-      ImmediateMap::iterator F = IMap.find(*AR);
-      if (F != IMap.end())
-        IMap.erase(F);
-    }
+    for (MCRegAliasIterator AR(R, TRI, true); AR.isValid(); ++AR)
+      IMap.erase(*AR);
   }
   return true;
 }

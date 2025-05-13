@@ -54,7 +54,8 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
     UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
     SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
-    IgnoreIrrelevantAttributes, Unsigned)
+    IgnoreIrrelevantAttributes, Unsigned, AmbiguousStructureConstructor,
+    ContiguousOkForSeqAssociation)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -75,7 +76,8 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
     MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation,
     CompatibleDeclarationsFromDistinctModules,
-    NullActualForDefaultIntentAllocatable, UseAssociationIntoSameNameSubprogram)
+    NullActualForDefaultIntentAllocatable, UseAssociationIntoSameNameSubprogram,
+    HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

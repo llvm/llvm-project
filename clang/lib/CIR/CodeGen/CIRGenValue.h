@@ -43,6 +43,7 @@ class RValue {
 
 public:
   bool isScalar() const { return v1.getInt() == Scalar; }
+  bool isAggregate() const { return v1.getInt() == Aggregate; }
 
   /// Return the mlir::Value of this scalar value.
   mlir::Value getScalarVal() const {
@@ -115,6 +116,7 @@ class LValue {
   // this is the alignment of the whole vector)
   unsigned alignment;
   mlir::Value v;
+  mlir::Value vectorIdx; // Index for vector subscript
   mlir::Type elementType;
   LValueBaseInfo baseInfo;
 
@@ -135,10 +137,15 @@ class LValue {
 
 public:
   bool isSimple() const { return lvType == Simple; }
+  bool isVectorElt() const { return lvType == VectorElt; }
   bool isBitField() const { return lvType == BitField; }
 
   // TODO: Add support for volatile
   bool isVolatile() const { return false; }
+
+  unsigned getVRQualifiers() const {
+    return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;
+  }
 
   clang::QualType getType() const { return type; }
 
@@ -154,6 +161,9 @@ public:
   }
 
   const clang::Qualifiers &getQuals() const { return quals; }
+  clang::Qualifiers &getQuals() { return quals; }
+
+  LValueBaseInfo getBaseInfo() const { return baseInfo; }
 
   static LValue makeAddr(Address address, clang::QualType t,
                          LValueBaseInfo baseInfo) {
@@ -166,6 +176,31 @@ public:
     r.v = address.getPointer();
     r.elementType = address.getElementType();
     r.initialize(t, t.getQualifiers(), address.getAlignment(), baseInfo);
+    return r;
+  }
+
+  Address getVectorAddress() const {
+    return Address(getVectorPointer(), elementType, getAlignment());
+  }
+
+  mlir::Value getVectorPointer() const {
+    assert(isVectorElt());
+    return v;
+  }
+
+  mlir::Value getVectorIdx() const {
+    assert(isVectorElt());
+    return vectorIdx;
+  }
+
+  static LValue makeVectorElt(Address vecAddress, mlir::Value index,
+                              clang::QualType t, LValueBaseInfo baseInfo) {
+    LValue r;
+    r.lvType = VectorElt;
+    r.v = vecAddress.getPointer();
+    r.elementType = vecAddress.getElementType();
+    r.vectorIdx = index;
+    r.initialize(t, t.getQualifiers(), vecAddress.getAlignment(), baseInfo);
     return r;
   }
 };

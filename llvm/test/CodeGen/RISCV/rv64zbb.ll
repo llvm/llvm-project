@@ -719,11 +719,11 @@ define <2 x i1> @ctpop_v2i32_ult_two(<2 x i32> %a) nounwind {
 ; RV64I-LABEL: ctpop_v2i32_ult_two:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi a2, a0, -1
+; RV64I-NEXT:    addi a3, a1, -1
+; RV64I-NEXT:    and a1, a1, a3
 ; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    addi a2, a1, -1
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    sext.w a1, a1
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    seqz a1, a1
 ; RV64I-NEXT:    ret
@@ -744,11 +744,11 @@ define <2 x i1> @ctpop_v2i32_ugt_one(<2 x i32> %a) nounwind {
 ; RV64I-LABEL: ctpop_v2i32_ugt_one:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi a2, a0, -1
+; RV64I-NEXT:    addi a3, a1, -1
+; RV64I-NEXT:    and a1, a1, a3
 ; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    addi a2, a1, -1
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    sext.w a1, a1
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    snez a1, a1
 ; RV64I-NEXT:    ret
@@ -771,13 +771,13 @@ define <2 x i1> @ctpop_v2i32_eq_one(<2 x i32> %a) nounwind {
 ; RV64I-LABEL: ctpop_v2i32_eq_one:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addiw a2, a0, -1
+; RV64I-NEXT:    addiw a3, a1, -1
+; RV64I-NEXT:    xor a1, a1, a3
 ; RV64I-NEXT:    xor a0, a0, a2
+; RV64I-NEXT:    sext.w a1, a1
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    sltu a0, a2, a0
-; RV64I-NEXT:    addiw a2, a1, -1
-; RV64I-NEXT:    xor a1, a1, a2
-; RV64I-NEXT:    sext.w a1, a1
-; RV64I-NEXT:    sltu a1, a2, a1
+; RV64I-NEXT:    sltu a1, a3, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: ctpop_v2i32_eq_one:
@@ -798,13 +798,13 @@ define <2 x i1> @ctpop_v2i32_ne_one(<2 x i32> %a) nounwind {
 ; RV64I-LABEL: ctpop_v2i32_ne_one:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addiw a2, a0, -1
+; RV64I-NEXT:    addiw a3, a1, -1
+; RV64I-NEXT:    xor a1, a1, a3
 ; RV64I-NEXT:    xor a0, a0, a2
+; RV64I-NEXT:    sext.w a1, a1
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    sltu a0, a2, a0
-; RV64I-NEXT:    addiw a2, a1, -1
-; RV64I-NEXT:    xor a1, a1, a2
-; RV64I-NEXT:    sext.w a1, a1
-; RV64I-NEXT:    sltu a1, a2, a1
+; RV64I-NEXT:    sltu a1, a3, a1
 ; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    xori a1, a1, 1
 ; RV64I-NEXT:    ret
@@ -1009,9 +1009,9 @@ define <2 x i1> @ctpop_v2i64_ult_two(<2 x i64> %a) nounwind {
 ; RV64I-LABEL: ctpop_v2i64_ult_two:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi a2, a0, -1
+; RV64I-NEXT:    addi a3, a1, -1
+; RV64I-NEXT:    and a1, a1, a3
 ; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    addi a2, a1, -1
-; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    seqz a1, a1
 ; RV64I-NEXT:    ret
@@ -1032,9 +1032,9 @@ define <2 x i1> @ctpop_v2i64_ugt_one(<2 x i64> %a) nounwind {
 ; RV64I-LABEL: ctpop_v2i64_ugt_one:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi a2, a0, -1
+; RV64I-NEXT:    addi a3, a1, -1
+; RV64I-NEXT:    and a1, a1, a3
 ; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    addi a2, a1, -1
-; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    snez a1, a1
 ; RV64I-NEXT:    ret
@@ -1057,11 +1057,11 @@ define <2 x i1> @ctpop_v2i64_eq_one(<2 x i64> %a) nounwind {
 ; RV64I-LABEL: ctpop_v2i64_eq_one:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi a2, a0, -1
+; RV64I-NEXT:    addi a3, a1, -1
+; RV64I-NEXT:    xor a1, a1, a3
 ; RV64I-NEXT:    xor a0, a0, a2
 ; RV64I-NEXT:    sltu a0, a2, a0
-; RV64I-NEXT:    addi a2, a1, -1
-; RV64I-NEXT:    xor a1, a1, a2
-; RV64I-NEXT:    sltu a1, a2, a1
+; RV64I-NEXT:    sltu a1, a3, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: ctpop_v2i64_eq_one:
@@ -1082,11 +1082,11 @@ define <2 x i1> @ctpop_v2i64_ne_one(<2 x i64> %a) nounwind {
 ; RV64I-LABEL: ctpop_v2i64_ne_one:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi a2, a0, -1
+; RV64I-NEXT:    addi a3, a1, -1
+; RV64I-NEXT:    xor a1, a1, a3
 ; RV64I-NEXT:    xor a0, a0, a2
 ; RV64I-NEXT:    sltu a0, a2, a0
-; RV64I-NEXT:    addi a2, a1, -1
-; RV64I-NEXT:    xor a1, a1, a2
-; RV64I-NEXT:    sltu a1, a2, a1
+; RV64I-NEXT:    sltu a1, a3, a1
 ; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    xori a1, a1, 1
 ; RV64I-NEXT:    ret

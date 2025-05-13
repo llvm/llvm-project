@@ -864,7 +864,7 @@ std::vector<std::string> visibleNamespaces(llvm::StringRef Code,
       return true;
     return LHS < RHS;
   });
-  Found.erase(std::unique(Found.begin(), Found.end()), Found.end());
+  Found.erase(llvm::unique(Found), Found.end());
   return Found;
 }
 

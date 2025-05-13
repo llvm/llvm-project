@@ -41,9 +41,6 @@
 #include "llvm/ADT/StringMap.h"
 
 namespace lldb_private {
-namespace repro {
-class Loader;
-}
 namespace process_gdb_remote {
 
 class ThreadGDBRemote;
