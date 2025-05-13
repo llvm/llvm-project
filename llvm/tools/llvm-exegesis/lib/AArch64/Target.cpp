@@ -200,11 +200,13 @@ private:
     PM.add(createAArch64ExpandPseudoPass());
   }
 
+#if defined(__aarch64__) && defined(__linux__)
   // Converts variadic arguments to `long` and passes zeros for the unused
   // arg2-arg5, as tested by the Linux kernel.
   static long prctl_wrapper(int op, long arg2 = 0, long arg3 = 0) {
     return prctl(op, arg2, arg3, /*arg4=*/0L, /*arg5=*/0L);
   }
+#endif
 
   const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
                                            unsigned Opcode) const override {
@@ -222,9 +224,8 @@ private:
       errno = 0;
       unsigned long PacKeys = prctl_wrapper(PR_PAC_GET_ENABLED_KEYS);
       if ((long)PacKeys < 0) {
-        if (errno == EINVAL) {
-          return "PAuth not supported on this system";
-        }
+        if (errno == EINVAL)
+          return nullptr;
         return "Failed to get PAC key status";
       }
 
@@ -241,9 +242,12 @@ private:
                           EnabledBitMask) < 0) {
           return "Failed to disable PAC keys";
         }
+        llvm::errs() << "llvm-exegesis: PAC keys were disabled at runtime for "
+                        "benchmarking.\n";
       }
 #else
-      return "Unsupported opcode: isPointerAuth";
+      // Silently return nullptr to ensure forward progress
+      return nullptr;
 #endif
     }
 
