@@ -1044,8 +1044,10 @@ public:
   bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
                               bool OrNegative = false);
 
-  /// Check that memory access offsets in S are multiples of M.  Assumptions
-  /// records the runtime predicates under which S is a multiple of M.
+  /// Check that \p S is a multiple of \p M. When \p S is an AddRecExpr, \p S is
+  /// a multiple of \p M if \p S starts with a multiple of \p M and at every
+  /// iteration step \p S only adds multiples of \p M. \p Assumptions records
+  /// the runtime predicates under which \p S is a multiple of \p M.
   bool isKnownMultipleOf(const SCEV *S, uint64_t M,
                          SmallVectorImpl<const SCEVPredicate *> &Assumptions);
 

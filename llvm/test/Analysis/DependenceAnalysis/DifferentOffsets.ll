@@ -149,10 +149,19 @@ define void @multidim_accesses(ptr %A) {
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx0, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx1, align 4
+; FIXME: the dependence distance is not constant. Distance vector should be [* * *|<]!
 ; CHECK-NEXT:    da analyze - consistent output [0 0 0|<]!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx1, align 4 --> Dst: store i32 1, ptr %idx1, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;
+; for (i = 0; i < 256; i++)
+;   for (j = 0; j < 256; j++)
+;      for (k = 0; k < 256; k++) {
+;         int *idx0 = (int *)((long long *)(A) + 256*256*i + 256*j + k);
+;         *idx0 = 1;
+;         int *idx1 = (int *)((int *)(A) + 256*256*i + 256*j + k);
+;         *idx1 = 1;
+;      }
 entry:
   br label %for.i
 

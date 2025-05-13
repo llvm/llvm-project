@@ -187,7 +187,8 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
         if (DstI->mayReadOrWriteMemory()) {
           OS << "Src:" << *SrcI << " --> Dst:" << *DstI << "\n";
           OS << "  da analyze - ";
-          if (auto D = DA->depends(&*SrcI, &*DstI, true)) {
+          if (auto D = DA->depends(&*SrcI, &*DstI,
+                                   /*UnderRuntimeAssumptions=*/true)) {
             // Normalize negative direction vectors if required by clients.
             if (NormalizeResults && D->normalize(&SE))
                 OS << "normalized - ";
@@ -3661,8 +3662,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   }
 
   uint64_t EltSize = SrcLoc.Size.toRaw();
-  assert(EltSize == DstLoc.Size.toRaw() && "Array element size differ");
-
   const SCEV *SrcEv = SE->getMinusSCEV(SrcSCEV, SrcBase);
   const SCEV *DstEv = SE->getMinusSCEV(DstSCEV, DstBase);
 

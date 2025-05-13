@@ -10979,7 +10979,9 @@ bool ScalarEvolution::isKnownMultipleOf(
   if (M == 1)
     return true;
 
-  // Recursively check AddRec operands.
+  // Recursively check AddRec operands. An AddRecExpr S is a multiple of M if S
+  // starts with a multiple of M and at every iteration step S only adds
+  // multiples of M.
   if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
     return isKnownMultipleOf(AddRec->getStart(), M, Assumptions) &&
            isKnownMultipleOf(AddRec->getStepRecurrence(*this), M, Assumptions);
@@ -10989,6 +10991,8 @@ bool ScalarEvolution::isKnownMultipleOf(
     APInt C = Cst->getAPInt();
     return C.urem(M) == 0;
   }
+
+  // TODO: Also check other SCEV expressions, i.e., SCEVAddRecExpr, etc.
 
   // Basic tests have failed.
   // Check "S % M == 0" at compile time and record runtime Assumptions.
