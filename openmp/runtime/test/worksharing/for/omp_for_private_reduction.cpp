@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <omp.h>
 #include <limits.h>
+#include <complex.h>
+#include <math.h>
 #include "omp_testsuite.h"
 
 #define N 10
@@ -71,6 +73,33 @@ void performMinMaxRed(int &min_val, int &max_val) {
       max_val = input_data[i];
   }
 }
+int performComplexReduction() {
+  double _Complex arr[N];
+  double _Complex expected = 0.0 + 0.0 * I;
+  double _Complex result = 0.0 + 0.0 * I;
+  int error = 0;
+
+  // Initialize the array and compute serial sum
+  for (int i = 0; i < N; ++i) {
+    arr[i] = i - i * I;
+    expected += arr[i];
+  }
+  double real_sum = 0.0, imag_sum = 0.0;
+#pragma omp parallel private(real_sum) private(imag_sum)
+  {
+#pragma omp for reduction(+ : real_sum, imag_sum)
+    for (int i = 0; i < N; ++i) {
+      real_sum += creal(arr[i]);
+      imag_sum += cimag(arr[i]);
+    }
+
+    result = real_sum + imag_sum * I;
+    if (cabs(result - expected) > 1e-6) {
+      error++;
+    }
+  }
+  return error;
+}
 void performReductions(int n_elements, const int *input_values,
                        int &sum_val_out, int &prod_val_out,
                        float &float_sum_val_out) {
@@ -126,6 +155,7 @@ int main(void) {
       total_errors++;
   }
   total_errors += checkUserDefinedReduction();
+  total_errors += performComplexReduction();
   if (total_errors != 0)
     fprintf(stderr, "ERROR: reduction on private variable  %d\n", total_errors);
 
