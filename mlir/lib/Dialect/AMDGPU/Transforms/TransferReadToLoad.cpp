@@ -66,7 +66,7 @@ static LogicalResult transferPreconditions(
   if (!isa_and_nonnull<amdgpu::AddressSpaceAttr>(addrSpace))
     return rewriter.notifyMatchFailure(xferOp, "no address space");
 
-  if (isa<amdgpu::AddressSpaceAttr>(addrSpace).getValue() !=
+  if (dyn_cast<amdgpu::AddressSpaceAttr>(addrSpace).getValue() !=
       amdgpu::AddressSpace::FatRawBuffer)
     return rewriter.notifyMatchFailure(xferOp, "not in buffer address space");
 
