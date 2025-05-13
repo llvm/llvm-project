@@ -54,7 +54,7 @@ static MCSymbol *GetSymbolFromOperand(const MachineOperand &MO,
 static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
                               AsmPrinter &Printer) {
   MCContext &Ctx = Printer.OutContext;
-  PPCMCExpr::VariantKind RefKind = PPCMCExpr::VK_None;
+  PPCMCExpr::Specifier RefKind = PPCMCExpr::VK_None;
 
   unsigned access = MO.getTargetFlags();
 
@@ -196,6 +196,12 @@ bool llvm::LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
     assert(MO.getReg() > PPC::NoRegister &&
            MO.getReg() < PPC::NUM_TARGET_REGS &&
            "Invalid register for this target!");
+    // ISA instructions refer to the containing dmr reg.
+    if (PPC::isDMRROWpRegister(MO.getReg())) {
+      OutMO =
+          MCOperand::createReg(PPC::DMR0 + (MO.getReg() - PPC::DMRROWp0) / 4);
+      return true;
+    }
     // Ignore all implicit register operands.
     if (MO.isImplicit())
       return false;

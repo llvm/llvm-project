@@ -881,11 +881,8 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
     // Avoid a data dependence from a select or a branch to a(nother)
     // select. Note no instruction can't data-depend on a branch (a branch
     // instruction doesn't produce a value).
-    DenseSet<Instruction *> Unhoistables;
     // Initialize Unhoistables with the selects.
-    for (SelectInst *SI : Selects) {
-      Unhoistables.insert(SI);
-    }
+    DenseSet<Instruction *> Unhoistables(llvm::from_range, Selects);
     // Remove Selects that can't be hoisted.
     for (auto it = Selects.begin(); it != Selects.end(); ) {
       SelectInst *SI = *it;
@@ -1104,8 +1101,7 @@ static bool shouldSplit(Instruction *InsertPoint,
 static void getSelectsInScope(CHRScope *Scope,
                               DenseSet<Instruction *> &Output) {
   for (RegInfo &RI : Scope->RegInfos)
-    for (SelectInst *SI : RI.Selects)
-      Output.insert(SI);
+    Output.insert_range(RI.Selects);
   for (CHRScope *Sub : Scope->Subs)
     getSelectsInScope(Sub, Output);
 }
@@ -1370,11 +1366,8 @@ void CHR::setCHRRegions(CHRScope *Scope, CHRScope *OutermostScope) {
   // Put the biased selects in Unhoistables because they should stay where they
   // are and constant-folded after CHR (in case one biased select or a branch
   // can depend on another biased select.)
-  for (RegInfo &RI : Scope->RegInfos) {
-    for (SelectInst *SI : RI.Selects) {
-      Unhoistables.insert(SI);
-    }
-  }
+  for (RegInfo &RI : Scope->RegInfos)
+    Unhoistables.insert_range(RI.Selects);
   Instruction *InsertPoint = OutermostScope->BranchInsertPoint;
   for (RegInfo &RI : Scope->RegInfos) {
     Region *R = RI.R;

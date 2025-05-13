@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
+#include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -20,34 +20,56 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include <algorithm>
 
 using namespace llvm;
 
 namespace {
-class MachineSanitizerBinaryMetadata : public MachineFunctionPass {
+// FIXME: This pass modifies Function metadata, which is not to be done in
+// MachineFunctionPass. It should probably be moved to a FunctionPass.
+class MachineSanitizerBinaryMetadataLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  MachineSanitizerBinaryMetadata();
+  MachineSanitizerBinaryMetadataLegacy();
   bool runOnMachineFunction(MachineFunction &F) override;
 };
+
+struct MachineSanitizerBinaryMetadata {
+  bool run(MachineFunction &MF);
+};
+
 } // namespace
 
-INITIALIZE_PASS(MachineSanitizerBinaryMetadata, "machine-sanmd",
+INITIALIZE_PASS(MachineSanitizerBinaryMetadataLegacy, "machine-sanmd",
                 "Machine Sanitizer Binary Metadata", false, false)
 
-char MachineSanitizerBinaryMetadata::ID = 0;
+char MachineSanitizerBinaryMetadataLegacy::ID = 0;
 char &llvm::MachineSanitizerBinaryMetadataID =
-    MachineSanitizerBinaryMetadata::ID;
+    MachineSanitizerBinaryMetadataLegacy::ID;
 
-MachineSanitizerBinaryMetadata::MachineSanitizerBinaryMetadata()
+MachineSanitizerBinaryMetadataLegacy::MachineSanitizerBinaryMetadataLegacy()
     : MachineFunctionPass(ID) {
-  initializeMachineSanitizerBinaryMetadataPass(
+  initializeMachineSanitizerBinaryMetadataLegacyPass(
       *PassRegistry::getPassRegistry());
 }
 
-bool MachineSanitizerBinaryMetadata::runOnMachineFunction(MachineFunction &MF) {
+bool MachineSanitizerBinaryMetadataLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return MachineSanitizerBinaryMetadata().run(MF);
+}
+
+PreservedAnalyses
+MachineSanitizerBinaryMetadataPass::run(MachineFunction &MF,
+                                        MachineFunctionAnalysisManager &MFAM) {
+  if (!MachineSanitizerBinaryMetadata().run(MF))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses();
+}
+
+bool MachineSanitizerBinaryMetadata::run(MachineFunction &MF) {
   MDNode *MD = MF.getFunction().getMetadata(LLVMContext::MD_pcsections);
   if (!MD)
     return false;

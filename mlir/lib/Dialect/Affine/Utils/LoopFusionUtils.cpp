@@ -612,11 +612,8 @@ bool mlir::affine::getFusionComputeCost(AffineForOp srcForOp,
         // 'insertPointParent'.
         getAffineForIVs(*user, &loops);
         if (llvm::is_contained(loops, cast<AffineForOp>(insertPointParent))) {
-          if (auto forOp = dyn_cast_or_null<AffineForOp>(user->getParentOp())) {
-            if (computeCostMap.count(forOp) == 0)
-              computeCostMap[forOp] = 0;
-            computeCostMap[forOp] -= 1;
-          }
+          if (auto forOp = dyn_cast_or_null<AffineForOp>(user->getParentOp()))
+            --computeCostMap[forOp];
         }
       }
     }

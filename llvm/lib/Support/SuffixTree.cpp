@@ -95,8 +95,7 @@ void SuffixTree::setSuffixIndices() {
   unsigned CurrNodeLen = 0;
   ToVisit.push_back({CurrNode, CurrNodeLen});
   while (!ToVisit.empty()) {
-    std::tie(CurrNode, CurrNodeLen) = ToVisit.back();
-    ToVisit.pop_back();
+    std::tie(CurrNode, CurrNodeLen) = ToVisit.pop_back_val();
     // Length of the current node from the root down to here.
     CurrNode->setConcatLen(CurrNodeLen);
     if (auto *InternalNode = dyn_cast<SuffixTreeInternalNode>(CurrNode))
@@ -193,7 +192,8 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
     unsigned FirstChar = Str[Active.Idx];
 
     // Have we inserted anything starting with FirstChar at the current node?
-    if (Active.Node->Children.count(FirstChar) == 0) {
+    if (auto It = Active.Node->Children.find(FirstChar);
+        It == Active.Node->Children.end()) {
       // If not, then we can just insert a leaf and move to the next step.
       insertLeaf(*Active.Node, EndIdx, FirstChar);
 
@@ -206,7 +206,7 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
     } else {
       // There's a match with FirstChar, so look for the point in the tree to
       // insert a new node.
-      SuffixTreeNode *NextNode = Active.Node->Children[FirstChar];
+      SuffixTreeNode *NextNode = It->second;
 
       unsigned SubstringLen = numElementsInSubstring(NextNode);
 
@@ -305,8 +305,7 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
   // Continue visiting nodes until we find one which repeats more than once.
   while (!InternalNodesToVisit.empty()) {
     RepeatedSubstringStarts.clear();
-    auto *Curr = InternalNodesToVisit.back();
-    InternalNodesToVisit.pop_back();
+    auto *Curr = InternalNodesToVisit.pop_back_val();
 
     // Keep track of the length of the string associated with the node. If
     // it's too short, we'll quit.
@@ -347,8 +346,7 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
     // Yes. Update the state to reflect this, and then bail out.
     N = Curr;
     RS.Length = Length;
-    for (unsigned StartIdx : RepeatedSubstringStarts)
-      RS.StartIndices.push_back(StartIdx);
+    llvm::append_range(RS.StartIndices, RepeatedSubstringStarts);
     break;
   }
   // At this point, either NewRS is an empty RepeatedSubstring, or it was

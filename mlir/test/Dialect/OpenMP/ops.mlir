@@ -2201,6 +2201,90 @@ func.func @omp_cancel_sections() -> () {
   return
 }
 
+func.func @omp_cancel_taskgroup() -> () {
+  omp.taskgroup {
+    omp.task {
+      // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+      omp.cancel cancellation_construct_type(taskgroup)
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_taskloop_cancel_taskgroup(%lb : index, %ub : index, %step : index) {
+  omp.taskloop {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+      omp.cancel cancellation_construct_type(taskgroup)
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+  return
+}
+
+func.func @omp_cancel_parallel_nested(%if_cond : i1) -> () {
+  omp.parallel {
+    scf.if %if_cond {
+      // CHECK: omp.cancel cancellation_construct_type(parallel)
+      omp.cancel cancellation_construct_type(parallel)
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancel_wsloop_nested(%lb : index, %ub : index, %step : index,
+                                    %if_cond : i1) {
+  omp.wsloop {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      scf.if %if_cond {
+        // CHECK: omp.cancel cancellation_construct_type(loop)
+        omp.cancel cancellation_construct_type(loop)
+      }
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+  return
+}
+
+func.func @omp_cancel_sections_nested(%if_cond : i1) -> () {
+  omp.sections {
+    omp.section {
+      scf.if %if_cond {
+        // CHECK: omp.cancel cancellation_construct_type(sections)
+        omp.cancel cancellation_construct_type(sections)
+      }
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancel_taskgroup_nested(%if_cond : i1) -> () {
+  omp.taskgroup {
+    omp.task {
+      scf.if %if_cond {
+        // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+        omp.cancel cancellation_construct_type(taskgroup)
+      }
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
 func.func @omp_cancellationpoint_parallel() -> () {
   omp.parallel {
     // CHECK: omp.cancellation_point cancellation_construct_type(parallel)
@@ -2233,6 +2317,77 @@ func.func @omp_cancellationpoint_sections() -> () {
       omp.cancellation_point cancellation_construct_type(sections)
       // CHECK: omp.cancel cancellation_construct_type(sections)
       omp.cancel cancellation_construct_type(sections)
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_taskgroup() -> () {
+  omp.taskgroup {
+    omp.task {
+      // CHECK: omp.cancellation_point cancellation_construct_type(taskgroup)
+      omp.cancellation_point cancellation_construct_type(taskgroup)
+      // CHECK: omp.cancel cancellation_construct_type(taskgroup)
+      omp.cancel cancellation_construct_type(taskgroup)
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_parallel_nested(%if_cond : i1) -> () {
+  omp.parallel {
+    scf.if %if_cond {
+      // CHECK: omp.cancellation_point cancellation_construct_type(parallel)
+      omp.cancellation_point cancellation_construct_type(parallel)
+    }
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_wsloop_nested(%lb : index, %ub : index, %step : index, %if_cond : i1) {
+  omp.wsloop {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      scf.if %if_cond {
+        // CHECK: omp.cancellation_point cancellation_construct_type(loop)
+        omp.cancellation_point cancellation_construct_type(loop)
+      }
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_sections_nested(%if_cond : i1) -> () {
+  omp.sections {
+    omp.section {
+      scf.if %if_cond {
+        // CHECK: omp.cancellation_point cancellation_construct_type(sections)
+        omp.cancellation_point cancellation_construct_type(sections)
+      }
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+func.func @omp_cancellationpoint_taskgroup_nested(%if_cond : i1) -> () {
+  omp.taskgroup {
+    omp.task {
+      scf.if %if_cond {
+        // CHECK: omp.cancellation_point cancellation_construct_type(taskgroup)
+        omp.cancellation_point cancellation_construct_type(taskgroup)
+      }
       omp.terminator
     }
     // CHECK: omp.terminator
@@ -2569,13 +2724,13 @@ func.func @omp_targets_with_map_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> ()
   // CHECK: %[[C_12:.*]] = llvm.mlir.constant(2 : index) : i64
   // CHECK: %[[C_13:.*]] = llvm.mlir.constant(2 : index) : i64
   // CHECK: %[[BOUNDS1:.*]] = omp.map.bounds   lower_bound(%[[C_11]] : i64) upper_bound(%[[C_10]] : i64) stride(%[[C_12]] : i64) start_idx(%[[C_13]] : i64)
-  // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.array<10 x i32>)   mapper(@my_mapper) map_clauses(exit_release_or_enter_alloc) capture(ByCopy) bounds(%[[BOUNDS1]]) -> !llvm.ptr {name = ""}
+  // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(exit_release_or_enter_alloc) capture(ByCopy) mapper(@my_mapper) bounds(%[[BOUNDS1]]) -> !llvm.ptr {name = ""}
     %6 = llvm.mlir.constant(9 : index) : i64
     %7 = llvm.mlir.constant(1 : index) : i64
     %8 = llvm.mlir.constant(2 : index) : i64
     %9 = llvm.mlir.constant(2 : index) : i64
     %10 = omp.map.bounds   lower_bound(%7 : i64) upper_bound(%6 : i64) stride(%8 : i64) start_idx(%9 : i64)
-    %mapv2 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>)   mapper(@my_mapper) map_clauses(exit_release_or_enter_alloc) capture(ByCopy) bounds(%10) -> !llvm.ptr {name = ""}
+    %mapv2 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(exit_release_or_enter_alloc) capture(ByCopy) mapper(@my_mapper) bounds(%10) -> !llvm.ptr {name = ""}
 
     // CHECK: omp.target map_entries(%[[MAP0]] -> {{.*}}, %[[MAP1]] -> {{.*}} : !llvm.ptr, !llvm.ptr)
     omp.target map_entries(%mapv1 -> %arg2, %mapv2 -> %arg3 : !llvm.ptr, !llvm.ptr) {
@@ -2865,12 +3020,45 @@ func.func @omp_target_host_eval(%x : i32) {
   }
 
   // CHECK: omp.target host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
+  // CHECK: omp.parallel num_threads(%[[HOST_ARG]] : i32) {
+  // CHECK: omp.wsloop {
+  // CHECK: omp.loop_nest
+  omp.target host_eval(%x -> %arg0 : i32) {
+    %y = arith.constant 2 : i32
+    omp.parallel num_threads(%arg0 : i32) {
+      omp.wsloop {
+        omp.loop_nest (%iv) : i32 = (%y) to (%y) step (%y) {
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.target host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
   // CHECK: omp.teams {
   // CHECK: omp.distribute {
   // CHECK: omp.loop_nest (%{{.*}}) : i32 = (%[[HOST_ARG]]) to (%[[HOST_ARG]]) step (%[[HOST_ARG]]) {
   omp.target host_eval(%x -> %arg0 : i32) {
     omp.teams {
       omp.distribute {
+        omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+
+  // CHECK: omp.target host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
+  // CHECK: omp.teams {
+  // CHECK: omp.loop {
+  // CHECK: omp.loop_nest (%{{.*}}) : i32 = (%[[HOST_ARG]]) to (%[[HOST_ARG]]) step (%[[HOST_ARG]]) {
+  omp.target host_eval(%x -> %arg0 : i32) {
+    omp.teams {
+      omp.loop {
         omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
           omp.yield
         }

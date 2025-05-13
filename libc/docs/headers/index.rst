@@ -10,6 +10,7 @@ Implementation Status
    complex
    cpio
    ctype
+   dirent
    endian
    errno
    fenv
@@ -34,13 +35,13 @@ Implementation Status
    sys/stat
    sys/statvfs
    sys/time
+   sys/utsname
    sys/wait
    termios
    threads
    time
    uchar
    unistd
-   sys/utsname
    wchar
    wctype
 ..

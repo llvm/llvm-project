@@ -188,12 +188,6 @@ static void getRegisterPressures(
   Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = NewPressure.getAGPRNum();
 }
 
-// Return true if the instruction is mutually exclusive with all non-IGLP DAG
-// mutations, requiring all other mutations to be disabled.
-static bool isIGLPMutationOnly(unsigned Opcode) {
-  return Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
-}
-
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
                                      bool AtTop,
                                      const RegPressureTracker &RPTracker,
@@ -1161,9 +1155,10 @@ bool GCNSchedStage::initGCNRegion() {
   Unsched.reserve(DAG.NumRegionInstrs);
   if (StageID == GCNSchedStageID::OccInitialSchedule ||
       StageID == GCNSchedStageID::ILPInitialSchedule) {
+    const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(DAG.TII);
     for (auto &I : DAG) {
       Unsched.push_back(&I);
-      if (isIGLPMutationOnly(I.getOpcode()))
+      if (SII->isIGLPMutationOnly(I.getOpcode()))
         DAG.RegionsWithIGLPInstrs[RegionIdx] = true;
     }
   } else {
@@ -1795,7 +1790,7 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
   // Collect only regions that has a rematerializable def as a live-in.
   SmallSet<unsigned, 16> ImpactedRegions;
   for (const auto &It : RematDefToLiveInRegions)
-    ImpactedRegions.insert(It.second.begin(), It.second.end());
+    ImpactedRegions.insert_range(It.second);
 
   // Make copies of register pressure and live-ins cache that will be updated
   // as we rematerialize.
@@ -2047,8 +2042,9 @@ void GCNScheduleDAGMILive::updateRegionBoundaries(
 }
 
 static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
-  return any_of(*DAG, [](MachineBasicBlock::iterator MI) {
-    return isIGLPMutationOnly(MI->getOpcode());
+  const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(DAG->TII);
+  return any_of(*DAG, [SII](MachineBasicBlock::iterator MI) {
+    return SII->isIGLPMutationOnly(MI->getOpcode());
   });
 }
 

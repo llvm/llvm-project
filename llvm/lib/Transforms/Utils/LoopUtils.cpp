@@ -700,8 +700,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // Finally, the blocks from loopinfo.  This has to happen late because
     // otherwise our loop iterators won't work.
 
-    SmallPtrSet<BasicBlock *, 8> blocks;
-    blocks.insert(L->block_begin(), L->block_end());
+    SmallPtrSet<BasicBlock *, 8> blocks(llvm::from_range, L->blocks());
     for (BasicBlock *BB : blocks)
       LI->removeBlock(BB);
 
@@ -959,6 +958,10 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
     return Intrinsic::vector_reduce_fmaximum;
   case RecurKind::FMinimum:
     return Intrinsic::vector_reduce_fminimum;
+  case RecurKind::FMaximumNum:
+    return Intrinsic::vector_reduce_fmax;
+  case RecurKind::FMinimumNum:
+    return Intrinsic::vector_reduce_fmin;
   }
 }
 
@@ -1054,6 +1057,10 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
     return Intrinsic::minimum;
   case RecurKind::FMaximum:
     return Intrinsic::maximum;
+  case RecurKind::FMinimumNum:
+    return Intrinsic::minimumnum;
+  case RecurKind::FMaximumNum:
+    return Intrinsic::maximumnum;
   }
 }
 
@@ -1102,7 +1109,8 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
                             Value *Right) {
   Type *Ty = Left->getType();
   if (Ty->isIntOrIntVectorTy() ||
-      (RK == RecurKind::FMinimum || RK == RecurKind::FMaximum)) {
+      (RK == RecurKind::FMinimum || RK == RecurKind::FMaximum ||
+       RK == RecurKind::FMinimumNum || RK == RecurKind::FMaximumNum)) {
     // TODO: Add float minnum/maxnum support when FMF nnan is set.
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RK);
     return Builder.CreateIntrinsic(Ty, Id, {Left, Right}, nullptr,
@@ -1234,11 +1242,11 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
+                                       Value *Start,
                                        const RecurrenceDescriptor &Desc) {
   assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
              Desc.getRecurrenceKind()) &&
          "Unexpected reduction kind");
-  Value *StartVal = Desc.getRecurrenceStartValue();
   Value *Sentinel = Desc.getSentinelValue();
   Value *MaxRdx = Src->getType()->isVectorTy()
                       ? Builder.CreateIntMaxReduce(Src, true)
@@ -1247,7 +1255,7 @@ Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
   // reduction is sentinel value.
   Value *Cmp =
       Builder.CreateCmp(CmpInst::ICMP_NE, MaxRdx, Sentinel, "rdx.select.cmp");
-  return Builder.CreateSelect(Cmp, MaxRdx, StartVal, "rdx.select");
+  return Builder.CreateSelect(Cmp, MaxRdx, Start, "rdx.select");
 }
 
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
@@ -1321,6 +1329,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::FMin:
   case RecurKind::FMinimum:
   case RecurKind::FMaximum:
+  case RecurKind::FMinimumNum:
+  case RecurKind::FMaximumNum:
     return Builder.CreateUnaryIntrinsic(getReductionIntrinsicID(RdxKind), Src);
   case RecurKind::FMulAdd:
   case RecurKind::FAdd:
@@ -1333,14 +1343,15 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
-                                   RecurKind Kind, FastMathFlags FMFs) {
+                                   RecurKind Kind) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
          !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
          "AnyOf or FindLastIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Type *SrcEltTy = SrcTy->getElementType();
-  Value *Iden = getRecurrenceIdentity(Kind, SrcEltTy, FMFs);
+  Value *Iden =
+      getRecurrenceIdentity(Kind, SrcEltTy, VBuilder.getFastMathFlags());
   Value *Ops[] = {Iden, Src};
   return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
 }

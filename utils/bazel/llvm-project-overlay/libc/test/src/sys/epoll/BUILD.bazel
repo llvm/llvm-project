@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# Tests for LLVM libc string.h functions.
+# Tests for LLVM libc sys/epoll.h functions.
 
 load("//libc/test:libc_test_rules.bzl", "libc_test")
 
@@ -13,84 +13,80 @@ licenses(["notice"])
 libc_test(
     name = "epoll_create_test",
     srcs = ["linux/epoll_create_test.cpp"],
-    libc_function_deps = [
-        "//libc:epoll_create",
+    deps = [
         "//libc:close",
+        "//libc:epoll_create",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "epoll_create1_test",
     srcs = ["linux/epoll_create1_test.cpp"],
-    libc_function_deps = [
-        "//libc:epoll_create1",
-        "//libc:close",
-    ],
     deps = [
+        "//libc:close",
+        "//libc:epoll_create1",
         "//libc:hdr_sys_epoll_macros",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "epoll_ctl_test",
     srcs = ["linux/epoll_ctl_test.cpp"],
-    libc_function_deps = [
+    deps = [
+        "//libc:close",
         "//libc:epoll_create1",
         "//libc:epoll_ctl",
-        "//libc:pipe",
-        "//libc:close",
-    ],
-    deps = [
         "//libc:hdr_sys_epoll_macros",
+        "//libc:pipe",
         "//libc:types_struct_epoll_event",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "epoll_wait_test",
     srcs = ["linux/epoll_wait_test.cpp"],
-    libc_function_deps = [
-        "//libc:epoll_wait",
+    deps = [
+        "//libc:close",
         "//libc:epoll_create1",
         "//libc:epoll_ctl",
-        "//libc:pipe",
-        "//libc:close",
-    ],
-    deps = [
+        "//libc:epoll_wait",
         "//libc:hdr_sys_epoll_macros",
+        "//libc:pipe",
         "//libc:types_struct_epoll_event",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "epoll_pwait_test",
     srcs = ["linux/epoll_pwait_test.cpp"],
-    libc_function_deps = [
-        "//libc:epoll_pwait",
+    deps = [
+        "//libc:close",
         "//libc:epoll_create1",
         "//libc:epoll_ctl",
-        "//libc:pipe",
-        "//libc:close",
-    ],
-    deps = [
+        "//libc:epoll_pwait",
         "//libc:hdr_sys_epoll_macros",
+        "//libc:pipe",
         "//libc:types_struct_epoll_event",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "epoll_pwait2_test",
     srcs = ["linux/epoll_pwait2_test.cpp"],
-    libc_function_deps = [
-        "//libc:epoll_pwait2",
+    deps = [
+        "//libc:close",
         "//libc:epoll_create1",
         "//libc:epoll_ctl",
-        "//libc:pipe",
-        "//libc:close",
-    ],
-    deps = [
+        "//libc:epoll_pwait2",
         "//libc:hdr_sys_epoll_macros",
+        "//libc:pipe",
         "//libc:types_struct_epoll_event",
         "//libc:types_struct_timespec",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )

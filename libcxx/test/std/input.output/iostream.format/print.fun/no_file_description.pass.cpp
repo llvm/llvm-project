@@ -10,7 +10,8 @@
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// XFAIL: msvc, target={{.+}}-windows-gnu
+// XFAIL: msvc
+// XFAIL: target={{.+}}-windows-gnu
 // XFAIL: availability-fp_to_chars-missing
 
 // fmemopen is available starting in Android M (API 23)

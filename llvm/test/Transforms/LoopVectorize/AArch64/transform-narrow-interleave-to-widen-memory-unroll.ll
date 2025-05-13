@@ -13,25 +13,16 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP3]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[WIDE_VEC2:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <4 x i64> [[WIDE_VEC2]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <4 x i64> [[WIDE_VEC2]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[STRIDED_VEC]], <2 x i64> [[STRIDED_VEC1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP8]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[STRIDED_VEC3]], <2 x i64> [[STRIDED_VEC4]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC5:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x i64> [[INTERLEAVED_VEC5]], ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    store <2 x i64> [[WIDE_LOAD1]], ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -68,6 +59,94 @@ loop:
   %data.1 = getelementptr inbounds i64, ptr %data, i64 %add.1
   %l.1 = load i64, ptr %data.1, align 8
   store i64 %l.1, ptr %data.1, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_2xi64_with_wide_load(ptr noalias %data, ptr noalias %factor) {
+; CHECK-LABEL: define void @test_2xi64_with_wide_load(
+; CHECK-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[FACTOR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 2
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP7]]
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[WIDE_VEC3:%.*]] = load <4 x i64>, ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = shufflevector <4 x i64> [[WIDE_VEC3]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <4 x i64> [[WIDE_VEC3]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = mul <2 x i64> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP11:%.*]] = mul <2 x i64> [[BROADCAST_SPLAT3]], [[WIDE_LOAD1]]
+; CHECK-NEXT:    [[TMP15:%.*]] = mul <2 x i64> [[BROADCAST_SPLAT]], [[STRIDED_VEC2]]
+; CHECK-NEXT:    [[TMP16:%.*]] = mul <2 x i64> [[BROADCAST_SPLAT3]], [[STRIDED_VEC5]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x i64> [[TMP10]], <2 x i64> [[TMP15]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP17]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x i64> [[TMP11]], <2 x i64> [[TMP16]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[INTERLEAVED_VEC6:%.*]] = shufflevector <4 x i64> [[TMP18]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    store <4 x i64> [[INTERLEAVED_VEC6]], ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[IV]]
+; CHECK-NEXT:    [[L_FACTOR:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP13:%.*]] = shl nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[DATA_0:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP13]]
+; CHECK-NEXT:    [[L_0:%.*]] = load i64, ptr [[DATA_0]], align 8
+; CHECK-NEXT:    [[MUL_0:%.*]] = mul i64 [[L_FACTOR]], [[L_0]]
+; CHECK-NEXT:    store i64 [[MUL_0]], ptr [[DATA_0]], align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = or disjoint i64 [[TMP13]], 1
+; CHECK-NEXT:    [[DATA_1:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP14]]
+; CHECK-NEXT:    [[L_1:%.*]] = load i64, ptr [[DATA_1]], align 8
+; CHECK-NEXT:    [[MUL_1:%.*]] = mul i64 [[L_FACTOR]], [[L_1]]
+; CHECK-NEXT:    store i64 [[MUL_1]], ptr [[DATA_1]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i64, ptr %factor, i64 %iv
+  %l.factor = load i64, ptr %arrayidx, align 8
+  %1 = shl nsw i64 %iv, 1
+  %data.0 = getelementptr inbounds i64, ptr %data, i64 %1
+  %l.0 = load i64, ptr %data.0, align 8
+  %mul.0 = mul i64 %l.factor, %l.0
+  store i64 %mul.0, ptr %data.0, align 8
+  %3 = or disjoint i64 %1, 1
+  %data.1 = getelementptr inbounds i64, ptr %data, i64 %3
+  %l.1 = load i64, ptr %data.1, align 8
+  %mul.1 = mul i64 %l.factor, %l.1
+  store i64 %mul.1, ptr %data.1, align 8
   %iv.next = add nuw nsw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 100
   br i1 %ec, label %exit, label %loop

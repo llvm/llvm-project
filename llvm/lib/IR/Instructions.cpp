@@ -376,9 +376,17 @@ FPClassTest CallBase::getParamNoFPClass(unsigned i) const {
 }
 
 std::optional<ConstantRange> CallBase::getRange() const {
-  const Attribute RangeAttr = getRetAttr(llvm::Attribute::Range);
-  if (RangeAttr.isValid())
-    return RangeAttr.getRange();
+  Attribute CallAttr = Attrs.getRetAttr(Attribute::Range);
+  Attribute FnAttr;
+  if (const Function *F = getCalledFunction())
+    FnAttr = F->getRetAttribute(Attribute::Range);
+
+  if (CallAttr.isValid() && FnAttr.isValid())
+    return CallAttr.getRange().intersectWith(FnAttr.getRange());
+  if (CallAttr.isValid())
+    return CallAttr.getRange();
+  if (FnAttr.isValid())
+    return FnAttr.getRange();
   return std::nullopt;
 }
 
@@ -928,7 +936,7 @@ void CallBrInst::init(FunctionType *FTy, Value *Fn, BasicBlock *Fallthrough,
 
   // Set operands in order of their index to match use-list-order
   // prediction.
-  std::copy(Args.begin(), Args.end(), op_begin());
+  llvm::copy(Args, op_begin());
   NumIndirectDests = IndirectDests.size();
   setDefaultDest(Fallthrough);
   for (unsigned i = 0; i != NumIndirectDests; ++i)
@@ -1473,6 +1481,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "fmax";
   case AtomicRMWInst::FMin:
     return "fmin";
+  case AtomicRMWInst::FMaximum:
+    return "fmaximum";
+  case AtomicRMWInst::FMinimum:
+    return "fminimum";
   case AtomicRMWInst::UIncWrap:
     return "uinc_wrap";
   case AtomicRMWInst::UDecWrap:
@@ -4527,6 +4539,27 @@ FuncletPadInst *FuncletPadInst::cloneImpl() const {
 UnreachableInst *UnreachableInst::cloneImpl() const {
   LLVMContext &Context = getContext();
   return new UnreachableInst(Context);
+}
+
+bool UnreachableInst::shouldLowerToTrap(bool TrapUnreachable,
+                                        bool NoTrapAfterNoreturn) const {
+  if (!TrapUnreachable)
+    return false;
+
+  // We may be able to ignore unreachable behind a noreturn call.
+  if (const CallInst *Call = dyn_cast_or_null<CallInst>(getPrevNode());
+      Call && Call->doesNotReturn()) {
+    if (NoTrapAfterNoreturn)
+      return false;
+    // Do not emit an additional trap instruction.
+    if (Call->isNonContinuableTrap())
+      return false;
+  }
+
+  if (getFunction()->hasFnAttribute(Attribute::Naked))
+    return false;
+
+  return true;
 }
 
 FreezeInst *FreezeInst::cloneImpl() const {

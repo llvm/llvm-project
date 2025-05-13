@@ -150,10 +150,7 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::is_sorted(a, Less(&copies)); assert(copies == 0);
     (void)std::ranges::is_sorted_until(first, last, Less(&copies)); assert(copies == 0);
     (void)std::ranges::is_sorted_until(a, Less(&copies)); assert(copies == 0);
-#if TEST_STD_VER < 26
-    if (!std::is_constant_evaluated())
-#endif
-    {
+    if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED) {
       (void)std::ranges::inplace_merge(first, mid, last, Less(&copies));
       assert(copies == 0);
       (void)std::ranges::inplace_merge(a, mid, Less(&copies));
@@ -230,10 +227,7 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::sort(a, Less(&copies)); assert(copies == 0);
     (void)std::ranges::sort_heap(first, last, Less(&copies)); assert(copies == 0);
     (void)std::ranges::sort_heap(a, Less(&copies)); assert(copies == 0);
-#if TEST_STD_VER < 26
-    if (!std::is_constant_evaluated())
-#endif
-    {
+    if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED) {
       (void)std::ranges::stable_partition(first, last, UnaryTrue(&copies));
       assert(copies == 0);
       (void)std::ranges::stable_partition(a, UnaryTrue(&copies));

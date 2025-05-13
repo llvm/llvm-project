@@ -810,7 +810,7 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
     auto idxTy = mlir::IndexType::get(op.getContext());
-    auto zero = rewriter.create<mlir::arith::ConstantOp>(
+    mlir::Value zero = rewriter.create<mlir::arith::ConstantOp>(
         loc, rewriter.getIntegerType(32), rewriter.getI32IntegerAttr(0));
     auto gridSizeX =
         rewriter.create<mlir::arith::IndexCastOp>(loc, idxTy, op.getGridX());
@@ -869,17 +869,30 @@ public:
       }
       args.push_back(arg);
     }
-
+    mlir::Value dynamicShmemSize = op.getBytes() ? op.getBytes() : zero;
     auto gpuLaunchOp = rewriter.create<mlir::gpu::LaunchFuncOp>(
         loc, kernelName, mlir::gpu::KernelDim3{gridSizeX, gridSizeY, gridSizeZ},
-        mlir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ}, zero, args);
+        mlir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ},
+        dynamicShmemSize, args);
     if (clusterDimX && clusterDimY && clusterDimZ) {
       gpuLaunchOp.getClusterSizeXMutable().assign(clusterDimX);
       gpuLaunchOp.getClusterSizeYMutable().assign(clusterDimY);
       gpuLaunchOp.getClusterSizeZMutable().assign(clusterDimZ);
     }
+    if (op.getStream()) {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPoint(gpuLaunchOp);
+      mlir::Value stream =
+          rewriter.create<cuf::StreamCastOp>(loc, op.getStream());
+      gpuLaunchOp.getAsyncDependenciesMutable().append(stream);
+    }
     if (procAttr)
       gpuLaunchOp->setAttr(cuf::getProcAttrName(), procAttr);
+    else
+      // Set default global attribute of the original was not found.
+      gpuLaunchOp->setAttr(cuf::getProcAttrName(),
+                           cuf::ProcAttributeAttr::get(
+                               op.getContext(), cuf::ProcAttribute::Global));
     rewriter.replaceOp(op, gpuLaunchOp);
     return mlir::success();
   }
@@ -930,6 +943,7 @@ public:
                                          /*forceUnifiedTBAATree=*/false, *dl);
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
                            mlir::gpu::GPUDialect>();
+    target.addLegalOp<cuf::StreamCastOp>();
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
                                             patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,

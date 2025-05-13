@@ -41,10 +41,10 @@ contains
 ! CHECK:           %[[VAL_24:.*]] = fir.convert %[[VAL_21]] : (i32) -> i64
 ! CHECK:           %[[VAL_25:.*]] = fir.box_addr %[[VAL_23]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:           %[[VAL_26:.*]] = fir.call @_FortranASignal(%[[VAL_24]], %[[VAL_25]]) fastmath<contract> : (i64, () -> ()) -> i64
-! CHECK:           %[[VAL_27:.*]] = fir.is_present %[[VAL_14]]#1 : (!fir.ref<i32>) -> i1
+! CHECK:           %[[VAL_27:.*]] = fir.is_present %[[VAL_14]]#0 : (!fir.ref<i32>) -> i1
 ! CHECK:           fir.if %[[VAL_27]] {
 ! CHECK:             %[[VAL_28:.*]] = fir.convert %[[VAL_26]] : (i64) -> i32
-! CHECK:             fir.store %[[VAL_28]] to %[[VAL_14]]#1 : !fir.ref<i32>
+! CHECK:             fir.store %[[VAL_28]] to %[[VAL_14]]#0 : !fir.ref<i32>
 ! CHECK:           }
 
     call signal(SIGUSR2, SIG_IGN, stat)
@@ -55,10 +55,10 @@ contains
 ! CHECK:           %[[VAL_32:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (i32) -> !fir.llvm_ptr<() -> ()>
 ! CHECK:           %[[VAL_34:.*]] = fir.call @_FortranASignal(%[[VAL_31]], %[[VAL_33]]) fastmath<contract> : (i64, !fir.llvm_ptr<() -> ()>) -> i64
-! CHECK:           %[[VAL_35:.*]] = fir.is_present %[[VAL_14]]#1 : (!fir.ref<i32>) -> i1
+! CHECK:           %[[VAL_35:.*]] = fir.is_present %[[VAL_14]]#0 : (!fir.ref<i32>) -> i1
 ! CHECK:           fir.if %[[VAL_35]] {
 ! CHECK:             %[[VAL_36:.*]] = fir.convert %[[VAL_34]] : (i64) -> i32
-! CHECK:             fir.store %[[VAL_36]] to %[[VAL_14]]#1 : !fir.ref<i32>
+! CHECK:             fir.store %[[VAL_36]] to %[[VAL_14]]#0 : !fir.ref<i32>
 ! CHECK:           }
 
     call signal(SIGPIPE, handler, optional_status)
@@ -68,10 +68,10 @@ contains
 ! CHECK:           %[[VAL_40:.*]] = fir.convert %[[VAL_37]] : (i32) -> i64
 ! CHECK:           %[[VAL_41:.*]] = fir.box_addr %[[VAL_39]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:           %[[VAL_42:.*]] = fir.call @_FortranASignal(%[[VAL_40]], %[[VAL_41]]) fastmath<contract> : (i64, () -> ()) -> i64
-! CHECK:           %[[VAL_43:.*]] = fir.is_present %[[VAL_2]]#1 : (!fir.ref<i32>) -> i1
+! CHECK:           %[[VAL_43:.*]] = fir.is_present %[[VAL_2]]#0 : (!fir.ref<i32>) -> i1
 ! CHECK:           fir.if %[[VAL_43]] {
 ! CHECK:             %[[VAL_44:.*]] = fir.convert %[[VAL_42]] : (i64) -> i32
-! CHECK:             fir.store %[[VAL_44]] to %[[VAL_2]]#1 : !fir.ref<i32>
+! CHECK:             fir.store %[[VAL_44]] to %[[VAL_2]]#0 : !fir.ref<i32>
 ! CHECK:           }
   end subroutine
 end module

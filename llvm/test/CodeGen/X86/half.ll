@@ -1593,9 +1593,9 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; BWON-F16C-NEXT:  # %bb.7:
 ; BWON-F16C-NEXT:    vmovaps %xmm5, %xmm6
 ; BWON-F16C-NEXT:  .LBB26_8:
-; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm5 = xmm1[3,3,3,3,4,5,6,7]
+; BWON-F16C-NEXT:    vpsrlq $48, %xmm1, %xmm5
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm5, %xmm7
-; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm5 = xmm0[3,3,3,3,4,5,6,7]
+; BWON-F16C-NEXT:    vpsrlq $48, %xmm0, %xmm5
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; BWON-F16C-NEXT:    vucomiss %xmm7, %xmm5
 ; BWON-F16C-NEXT:    ja .LBB26_10
@@ -1629,9 +1629,9 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; BWON-F16C-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
 ; BWON-F16C-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm6, %xmm4
-; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,1,1,1,4,5,6,7]
+; BWON-F16C-NEXT:    vpsrld $16, %xmm1, %xmm1
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; BWON-F16C-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
+; BWON-F16C-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vucomiss %xmm1, %xmm0
 ; BWON-F16C-NEXT:    ja .LBB26_16
