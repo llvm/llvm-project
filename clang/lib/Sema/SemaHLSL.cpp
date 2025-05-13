@@ -2048,16 +2048,14 @@ static bool CheckAllArgTypesAreCorrect(
 static bool CheckFloatOrHalfVecRepresentation(Sema *S, SourceLocation Loc,
                                               int ArgOrdinal,
                                               clang::QualType PassedType) {
-  QualType EltTy = PassedType;
-  if (auto *VecTy = EltTy->getAs<VectorType>())
-    EltTy = VecTy->getElementType();
+  if (auto *VecTy = PassedType->getAs<VectorType>())
+    if (VecTy->getElementType()->isHalfType() ||
+        VecTy->getElementType()->isFloat32Type())
+      return false;
 
-  if (!PassedType->getAs<VectorType>() ||
-      !(EltTy->isHalfType() || EltTy->isFloat32Type()))
-    return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* vector of */ 4 << /* no int */ 0
-           << /* half or float */ 2 << PassedType;
-  return false;
+  return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
+         << ArgOrdinal << /* vector of */ 4 << /* no int */ 0
+         << /* half or float */ 2 << PassedType;
 }
 
 static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
@@ -2109,17 +2107,16 @@ static bool CheckFloatingOrIntRepresentation(Sema *S, SourceLocation Loc,
 static bool CheckUnsignedIntVecRepresentation(Sema *S, SourceLocation Loc,
                                               int ArgOrdinal,
                                               clang::QualType PassedType) {
-  QualType EltTy = PassedType;
-  if (auto *VecTy = EltTy->getAs<VectorType>())
-    EltTy = VecTy->getElementType();
+  if (auto *VecTy = PassedType->getAs<VectorType>())
+    if (VecTy->getElementType()->isUnsignedIntegerType())
+      return false;
 
-  if (!PassedType->getAs<VectorType>() || !EltTy->isUnsignedIntegerType())
-    return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* vector of */ 4 << /* uint */ 3 << /* no fp */ 0
-           << PassedType;
-  return false;
+  return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
+         << ArgOrdinal << /* vector of */ 4 << /* uint */ 3 << /* no fp */ 0
+         << PassedType;
 }
 
+// checks for unsigned ints of all sizes
 static bool CheckUnsignedIntRepresentation(Sema *S, SourceLocation Loc,
                                            int ArgOrdinal,
                                            clang::QualType PassedType) {
@@ -2387,10 +2384,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
     if (CheckScalarOrVector(&SemaRef, TheCall, SemaRef.Context.UnsignedIntTy,
-                            0))
+                            0)) // only check for uint
       return true;
     if (CheckScalarOrVector(&SemaRef, TheCall, SemaRef.Context.UnsignedIntTy,
-                            1))
+                            1)) // only check for uint
       return true;
     if (CheckAllArgsHaveSameType(&SemaRef, TheCall))
       return true;
