@@ -240,7 +240,7 @@ static void ProfileRecordRecTy(FoldingSetNodeID &ID,
 
 RecordRecTy::RecordRecTy(RecordKeeper &RK, ArrayRef<const Record *> Classes)
     : RecTy(RecordRecTyKind, RK), NumClasses(Classes.size()) {
-  llvm::uninitialized_copy(Classes, getTrailingObjects<const Record *>());
+  llvm::uninitialized_copy(Classes, getTrailingObjects());
 }
 
 const RecordRecTy *RecordRecTy::get(RecordKeeper &RK,
@@ -473,7 +473,7 @@ static void ProfileBitsInit(FoldingSetNodeID &ID,
 BitsInit::BitsInit(RecordKeeper &RK, ArrayRef<const Init *> Bits)
     : TypedInit(IK_BitsInit, BitsRecTy::get(RK, Bits.size())),
       NumBits(Bits.size()) {
-  llvm::uninitialized_copy(Bits, getTrailingObjects<const Init *>());
+  llvm::uninitialized_copy(Bits, getTrailingObjects());
 }
 
 BitsInit *BitsInit::get(RecordKeeper &RK, ArrayRef<const Init *> Bits) {
@@ -493,7 +493,7 @@ BitsInit *BitsInit::get(RecordKeeper &RK, ArrayRef<const Init *> Bits) {
 }
 
 void BitsInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileBitsInit(ID, ArrayRef(getTrailingObjects<const Init *>(), NumBits));
+  ProfileBitsInit(ID, getBits());
 }
 
 const Init *BitsInit::convertInitializerTo(const RecTy *Ty) const {
@@ -706,7 +706,7 @@ static void ProfileListInit(FoldingSetNodeID &ID, ArrayRef<const Init *> Range,
 ListInit::ListInit(ArrayRef<const Init *> Elements, const RecTy *EltTy)
     : TypedInit(IK_ListInit, ListRecTy::get(EltTy)),
       NumValues(Elements.size()) {
-  llvm::uninitialized_copy(Elements, getTrailingObjects<const Init *>());
+  llvm::uninitialized_copy(Elements, getTrailingObjects());
 }
 
 const ListInit *ListInit::get(ArrayRef<const Init *> Elements,
@@ -2432,7 +2432,7 @@ VarDefInit::VarDefInit(SMLoc Loc, const Record *Class,
                        ArrayRef<const ArgumentInit *> Args)
     : TypedInit(IK_VarDefInit, RecordRecTy::get(Class)), Loc(Loc), Class(Class),
       NumArgs(Args.size()) {
-  llvm::uninitialized_copy(Args, getTrailingObjects<const ArgumentInit *>());
+  llvm::uninitialized_copy(Args, getTrailingObjects());
 }
 
 const VarDefInit *VarDefInit::get(SMLoc Loc, const Record *Class,
@@ -2616,7 +2616,7 @@ static void ProfileCondOpInit(FoldingSetNodeID &ID,
 CondOpInit::CondOpInit(ArrayRef<const Init *> Conds,
                        ArrayRef<const Init *> Values, const RecTy *Type)
     : TypedInit(IK_CondOpInit, Type), NumConds(Conds.size()), ValType(Type) {
-  auto *TrailingObjects = getTrailingObjects<const Init *>();
+  const Init **TrailingObjects = getTrailingObjects();
   llvm::uninitialized_copy(Conds, TrailingObjects);
   llvm::uninitialized_copy(Values, TrailingObjects + NumConds);
 }
