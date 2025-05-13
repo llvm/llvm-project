@@ -187,6 +187,40 @@ inline static bool isAddMemInstrWithRelocation(const MachineInstr &MI) {
   return false;
 }
 
+inline static bool isMemInstrWithGOTPCREL(const MachineInstr &MI) {
+  unsigned Op = MI.getOpcode();
+  switch (Op) {
+  case X86::TEST32mr:
+  case X86::TEST64mr:
+  case X86::CMP32rm:
+  case X86::CMP64rm:
+  case X86::MOV32rm:
+  case X86::MOV64rm:
+  case X86::ADC32rm:
+  case X86::ADD32rm:
+  case X86::AND32rm:
+  case X86::OR32rm:
+  case X86::SBB32rm:
+  case X86::SUB32rm:
+  case X86::XOR32rm:
+  case X86::ADC64rm:
+  case X86::ADD64rm:
+  case X86::AND64rm:
+  case X86::OR64rm:
+  case X86::SBB64rm:
+  case X86::SUB64rm:
+  case X86::XOR64rm: {
+    int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
+                  X86II::getOperandBias(MI.getDesc());
+    const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
+    if (MO.getTargetFlags() == X86II::MO_GOTPCREL)
+      return true;
+    break;
+  }
+  }
+  return false;
+}
+
 class X86InstrInfo final : public X86GenInstrInfo {
   X86Subtarget &Subtarget;
   const X86RegisterInfo RI;

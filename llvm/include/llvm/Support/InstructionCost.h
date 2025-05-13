@@ -18,8 +18,10 @@
 #ifndef LLVM_SUPPORT_INSTRUCTIONCOST_H
 #define LLVM_SUPPORT_INSTRUCTIONCOST_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <limits>
+#include <tuple>
 
 namespace llvm {
 
@@ -191,9 +193,7 @@ public:
   /// the states are valid and users can test for validity of the cost
   /// explicitly.
   bool operator<(const InstructionCost &RHS) const {
-    if (State != RHS.State)
-      return State < RHS.State;
-    return Value < RHS.Value;
+    return std::tie(State, Value) < std::tie(RHS.State, RHS.Value);
   }
 
   bool operator==(const InstructionCost &RHS) const {
@@ -235,7 +235,7 @@ public:
     return *this >= RHS2;
   }
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   template <class Function>
   auto map(const Function &F) const -> InstructionCost {

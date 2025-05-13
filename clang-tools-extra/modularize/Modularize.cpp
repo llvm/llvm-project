@@ -406,11 +406,8 @@ struct Location {
   }
 
   friend bool operator<(const Location &X, const Location &Y) {
-    if (X.File != Y.File)
-      return X.File < Y.File;
-    if (X.Line != Y.Line)
-      return X.Line < Y.Line;
-    return X.Column < Y.Column;
+    return std::tie(X.File, X.Line, X.Column) <
+           std::tie(Y.File, Y.Line, Y.Column);
   }
   friend bool operator>(const Location &X, const Location &Y) { return Y < X; }
   friend bool operator<=(const Location &X, const Location &Y) {

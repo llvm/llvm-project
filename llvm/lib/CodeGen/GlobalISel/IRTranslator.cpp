@@ -1585,20 +1585,14 @@ bool IRTranslator::translateCast(unsigned Opcode, const User &U,
 
 bool IRTranslator::translatePtrToAddr(const User &U,
                                       MachineIRBuilder &MIRBuilder) {
-  if (containsBF16Type(U))
-    return false;
-
-  uint32_t Flags = 0;
-  if (const Instruction *I = dyn_cast<Instruction>(&U))
-    Flags = MachineInstr::copyFlagsFromInstruction(*I);
-
   Register Op = getOrCreateVReg(*U.getOperand(0));
   Type *PtrTy = U.getOperand(0)->getType();
-  LLT AddrTy = getLLTForType(*DL->getIndexType(PtrTy), *DL);
+  LLT AddrTy = getLLTForType(*DL->getAddressType(PtrTy), *DL);
   auto IntPtrTy = getLLTForType(*DL->getIntPtrType(PtrTy), *DL);
   auto PtrToInt = MIRBuilder.buildPtrToInt(IntPtrTy, Op);
-  PtrToInt->setFlags(Flags);
-  auto Addr = MIRBuilder.buildTrunc(AddrTy, PtrToInt.getReg(0));
+  auto Addr = PtrToInt;
+  if (AddrTy != IntPtrTy)
+    Addr = MIRBuilder.buildTrunc(AddrTy, PtrToInt.getReg(0));
   MIRBuilder.buildZExtOrTrunc(getOrCreateVReg(U), Addr.getReg(0));
   return true;
 }

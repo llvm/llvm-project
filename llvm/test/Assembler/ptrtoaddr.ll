@@ -1,6 +1,14 @@
-; RUN: not llvm-as < %s 2>&1 | FileCheck %s
-; ptrtoaddr is not currently support in constant expressions
+; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+target datalayout = "p1:64:64:64:32"
 
-@i = global i32 0
-@global_cast = global i32 ptrtoaddr (ptr @i0 to i32)
-; CHECK: [[#@LINE-1]]:27: error: expected value token
+define i32 @test_as0(ptr %p) {
+  %addr = ptrtoaddr ptr %p to i32
+  ; CHECK: %addr = ptrtoaddr ptr %p to i32
+  ret i32 %addr
+}
+
+define i16 @test_as1(ptr addrspace(1) %p) {
+  %addr = ptrtoaddr ptr addrspace(1) %p to i16
+  ; CHECK: %addr = ptrtoaddr ptr addrspace(1) %p to i16
+  ret i16 %addr
+}
