@@ -2221,9 +2221,9 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_TRAP:
     return legalizeTrap(MI, MRI, B);
   case TargetOpcode::G_DEBUGTRAP:
-    return legalizeDebugTrap(MI, MRI, B);
+  return legalizeDebugUbsanTrap(MI, MRI, B, TargetOpcode::G_DEBUGTRAP);
   case TargetOpcode::G_UBSANTRAP:
-    return legalizeUbsanTrap(MI, MRI, B);
+    return legalizeDebugUbsanTrap(MI, MRI, B, TargetOpcode::G_UBSANTRAP);
   default:
     return false;
   }
@@ -7025,42 +7025,23 @@ bool AMDGPULegalizerInfo::legalizeTrapHsa(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
+bool AMDGPULegalizerInfo::legalizeDebugUbsanTrap(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
-                                            MachineIRBuilder &B) const {
+                                            MachineIRBuilder &B, unsigned int Opcode) const {
   // Is non-HSA path or trap-handler disabled? Then, report a warning
   // accordingly
   if (!ST.isTrapHandlerEnabled() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
     DiagnosticInfoUnsupported NoTrap(B.getMF().getFunction(),
-                                     "debugtrap handler not supported",
+                                     "debugtrap/ubsantrap handler not supported",
                                      MI.getDebugLoc(), DS_Warning);
     LLVMContext &Ctx = B.getMF().getFunction().getContext();
     Ctx.diagnose(NoTrap);
-  } else {
+  } else if (Opcode == TargetOpcode::G_DEBUGTRAP){
     // Insert debug-trap instruction
     B.buildInstr(AMDGPU::S_TRAP)
         .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSADebugTrap));
-  }
-
-  MI.eraseFromParent();
-  return true;
-}
-
-bool AMDGPULegalizerInfo::legalizeUbsanTrap(MachineInstr &MI,
-                                            MachineRegisterInfo &MRI,
-                                            MachineIRBuilder &B) const {
-  // Is non-HSA path or trap-handler disabled? Then, report a warning
-  // accordingly
-  if (!ST.isTrapHandlerEnabled() ||
-      ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
-    DiagnosticInfoUnsupported NoTrap(B.getMF().getFunction(),
-                                     "ubsantrap handler not supported",
-                                     MI.getDebugLoc(), DS_Warning);
-    LLVMContext &Ctx = B.getContext();
-    Ctx.diagnose(NoTrap);
-  } else {
-    // Insert trap instruction
+  } else if (Opcode == TargetOpcode::G_UBSANTRAP){
     B.buildInstr(AMDGPU::S_TRAP)
         .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap));
   }
