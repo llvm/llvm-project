@@ -173,6 +173,7 @@ static const OmpDirectiveSet topTeamsSet{
     Directive::OMPD_teams_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_simd,
     Directive::OMPD_teams_loop,
+    Directive::OMPD_teams_coexecute,
 };
 
 static const OmpDirectiveSet bottomTeamsSet{
