@@ -277,23 +277,32 @@ private:
   /// List of parameter offsets.
   llvm::SmallVector<unsigned, 8> ParamOffsets;
   /// Flag to indicate if the function is valid.
-  bool IsValid = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsValid : 1;
   /// Flag to indicate if the function is done being
   /// compiled to bytecode.
-  bool IsFullyCompiled = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsFullyCompiled : 1;
   /// Flag indicating if this function takes the this pointer
   /// as the first implicit argument
-  bool HasThisPointer = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasThisPointer : 1;
   /// Whether this function has Return Value Optimization, i.e.
   /// the return value is constructed in the caller's stack frame.
   /// This is done for functions that return non-primive values.
-  bool HasRVO = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasRVO : 1;
   /// If we've already compiled the function's body.
-  bool HasBody = false;
-  bool Defined = false;
-  bool Variadic = false;
-  bool Virtual = false;
-  bool Immediate = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasBody : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Defined : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Variadic : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Virtual : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Immediate : 1;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
