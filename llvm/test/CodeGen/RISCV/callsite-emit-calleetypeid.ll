@@ -9,7 +9,7 @@
 declare !type !0 void @foo(i8 signext %a)
 
 ; CHECK: name: main
-define dso_local i32 @main() !type !1 {
+define i32 @main() !type !1 {
 entry:
   %retval = alloca i32, align 4
   %fp = alloca ptr, align 8
