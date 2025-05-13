@@ -10052,9 +10052,10 @@ void CheckFreeArgumentsAddressof(Sema &S, const std::string &CalleeName,
                                  const UnaryOperator *UnaryExpr) {
   if (const auto *Lvalue = dyn_cast<DeclRefExpr>(UnaryExpr->getSubExpr())) {
     const Decl *D = Lvalue->getDecl();
-    if (isa<DeclaratorDecl>(D))
-      if (!dyn_cast<DeclaratorDecl>(D)->getType()->isReferenceType())
+    if (auto *DD = dyn_cast<DeclaratorDecl>(D)) {
+      if (!DD->getType()->isReferenceType())
         return CheckFreeArgumentsOnLvalue(S, CalleeName, UnaryExpr, D);
+    }
   }
 
   if (const auto *Lvalue = dyn_cast<MemberExpr>(UnaryExpr->getSubExpr()))
