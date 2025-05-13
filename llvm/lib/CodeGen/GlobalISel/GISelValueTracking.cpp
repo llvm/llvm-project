@@ -483,8 +483,10 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     if (Opcode == TargetOpcode::G_ASSERT_ZEXT)
       SrcBitWidth = MI.getOperand(2).getImm();
     else {
+      // For G_PTRTOINT all representation bits are returned even though only
+      // the address bits can be reasoned about generically.
       SrcBitWidth = SrcTy.isPointer()
-                        ? DL.getIndexSizeInBits(SrcTy.getAddressSpace())
+                        ? DL.getPointerSizeInBits(SrcTy.getAddressSpace())
                         : SrcTy.getSizeInBits();
     }
     assert(SrcBitWidth && "SrcBitWidth can't be zero");

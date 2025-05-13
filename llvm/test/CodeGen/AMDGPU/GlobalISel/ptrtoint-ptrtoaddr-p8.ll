@@ -79,9 +79,9 @@ define <2 x i64> @ptrtoaddr_vec(ptr addrspace(8) %ignored, <2 x ptr addrspace(8)
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, v4
-; GISEL-NEXT:    v_mov_b32_e32 v1, v5
+; GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v5
+; GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v9
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v8
-; GISEL-NEXT:    v_mov_b32_e32 v3, v9
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-LABEL: ptrtoaddr_vec:
@@ -129,31 +129,18 @@ define i256 @ptrtoint_ext(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
 ;; FIXME: this is wrong for the GlobalISel case, we are removing the trunc:
 ;; https://github.com/llvm/llvm-project/issues/139598
 define i256 @ptrtoaddr_ext(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
-; GISEL-LABEL: ptrtoaddr_ext:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_mov_b32_e32 v0, v4
-; GISEL-NEXT:    v_mov_b32_e32 v1, v5
-; GISEL-NEXT:    v_mov_b32_e32 v2, v6
-; GISEL-NEXT:    v_mov_b32_e32 v3, v7
-; GISEL-NEXT:    v_mov_b32_e32 v4, 0
-; GISEL-NEXT:    v_mov_b32_e32 v5, 0
-; GISEL-NEXT:    v_mov_b32_e32 v6, 0
-; GISEL-NEXT:    v_mov_b32_e32 v7, 0
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; SDAG-LABEL: ptrtoaddr_ext:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    v_mov_b32_e32 v0, v4
-; SDAG-NEXT:    v_and_b32_e32 v1, 0xffff, v5
-; SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; SDAG-NEXT:    v_mov_b32_e32 v3, 0
-; SDAG-NEXT:    v_mov_b32_e32 v4, 0
-; SDAG-NEXT:    v_mov_b32_e32 v5, 0
-; SDAG-NEXT:    v_mov_b32_e32 v6, 0
-; SDAG-NEXT:    v_mov_b32_e32 v7, 0
-; SDAG-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-LABEL: ptrtoaddr_ext:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, v4
+; CHECK-NEXT:    v_and_b32_e32 v1, 0xffff, v5
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NEXT:    v_mov_b32_e32 v5, 0
+; CHECK-NEXT:    v_mov_b32_e32 v6, 0
+; CHECK-NEXT:    v_mov_b32_e32 v7, 0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %ret = ptrtoaddr ptr addrspace(8) %ptr to i256
   ret i256 %ret
 }
