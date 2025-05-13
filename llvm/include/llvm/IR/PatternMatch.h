@@ -707,9 +707,24 @@ m_SpecificInt_ICMP(ICmpInst::Predicate Predicate, const APInt &Threshold) {
 struct is_nan {
   bool isValue(const APFloat &C) const { return C.isNaN(); }
 };
+
+struct is_snan {
+  bool isValue(const APFloat &C) const { return C.isSignaling(); }
+};
+
+struct is_qnan {
+  bool isValue(const APFloat &C) const { return C.isNaN() && !C.isSignaling(); }
+};
+
 /// Match an arbitrary NaN constant. This includes quiet and signalling nans.
 /// For vectors, this includes constants with undefined elements.
 inline cstfp_pred_ty<is_nan> m_NaN() { return cstfp_pred_ty<is_nan>(); }
+
+/// Match quiet NaN constants, including vectors with undefined elements.
+inline cstfp_pred_ty<is_qnan> m_qNaN() { return cstfp_pred_ty<is_qnan>(); }
+
+/// Match signalling NaN constants, including vectors with undefined elements.
+inline cstfp_pred_ty<is_snan> m_sNaN() { return cstfp_pred_ty<is_snan>(); }
 
 struct is_nonnan {
   bool isValue(const APFloat &C) const { return !C.isNaN(); }
