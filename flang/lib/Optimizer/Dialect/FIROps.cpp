@@ -4721,6 +4721,48 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
   return eleTy;
 }
 
+bool fir::reboxPreservesContinuity(fir::ReboxOp rebox, bool checkWhole) {
+  // If slicing is not involved, then the rebox does not affect
+  // the continuity of the array.
+  auto sliceArg = rebox.getSlice();
+  if (!sliceArg)
+    return true;
+
+  if (auto sliceOp =
+          mlir::dyn_cast_or_null<fir::SliceOp>(sliceArg.getDefiningOp())) {
+    if (sliceOp.getFields().empty() && sliceOp.getSubstr().empty()) {
+      // TODO: generalize code for the triples analysis with
+      // hlfir::designatePreservesContinuity, especially when
+      // recognition of the whole dimension slices is added.
+      auto triples = sliceOp.getTriples();
+      assert((triples.size() % 3) == 0 && "invalid triples size");
+
+      // A slice with step=1 in the innermost dimension preserves
+      // the continuity of the array in the innermost dimension.
+      // If checkWhole is false, then check only the innermost slice triples.
+      std::size_t checkUpTo = checkWhole ? triples.size() : 3;
+      checkUpTo = std::min(checkUpTo, triples.size());
+      for (std::size_t i = 0; i < checkUpTo; i += 3) {
+        if (triples[i] != triples[i + 1]) {
+          // This is a section of the dimension. Only allow it
+          // to be the first triple.
+          if (i != 0)
+            return false;
+          auto constantStep = fir::getIntIfConstant(triples[i + 2]);
+          if (!constantStep || *constantStep != 1)
+            return false;
+        }
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareOp
+//===----------------------------------------------------------------------===//
+
 llvm::LogicalResult fir::DeclareOp::verify() {
   auto fortranVar =
       mlir::cast<fir::FortranVariableOpInterface>(this->getOperation());

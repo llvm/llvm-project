@@ -250,6 +250,8 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
           {/*allowNewSideEffects=*/true});
     });
     addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, hlfir::createPropagateFortranVariableAttributes);
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createOptimizedBufferization);
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createInlineHLFIRAssign);
