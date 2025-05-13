@@ -9,7 +9,7 @@ declare !type !1 i32 @bar(i8 signext)
 
 declare !type !2 ptr @baz(ptr)
 
-define dso_local void @main() {
+define void @main() {
 entry:
   %retval = alloca i32, align 4
   %fp_foo = alloca ptr, align 8
