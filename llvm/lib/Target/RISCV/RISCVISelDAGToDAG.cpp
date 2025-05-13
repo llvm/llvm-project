@@ -3223,11 +3223,28 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
 }
 
 bool RISCVDAGToDAGISel::selectNegImm(SDValue N, SDValue &Val) {
-  if (!isa<ConstantSDNode>(N) || !N.hasOneUse())
+  if (!isa<ConstantSDNode>(N))
     return false;
   int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
   if (isInt<32>(Imm))
     return false;
+
+  for (const SDNode *U : N->users()) {
+    switch (U->getOpcode()) {
+    case ISD::ADD:
+      break;
+    case RISCVISD::VMV_V_X_VL:
+      if (!all_of(U->users(), [](const SDNode *V) {
+            return V->getOpcode() == ISD::ADD ||
+                   V->getOpcode() == RISCVISD::ADD_VL;
+          }))
+        return false;
+      break;
+    default:
+      return false;
+    }
+  }
+
   int OrigImmCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
                                                /*CompressionCost=*/true);
   int NegImmCost = RISCVMatInt::getIntMatCost(APInt(64, -Imm), 64, *Subtarget,
@@ -3628,6 +3645,11 @@ bool RISCVDAGToDAGISel::selectVSplatUimm(SDValue N, unsigned Bits,
   return selectVSplatImmHelper(
       N, SplatVal, *CurDAG, *Subtarget,
       [Bits](int64_t Imm) { return isUIntN(Bits, Imm); });
+}
+
+bool RISCVDAGToDAGISel::selectVSplatImm64Neg(SDValue N, SDValue &SplatVal) {
+  SDValue Splat = findVSplat(N);
+  return Splat && selectNegImm(Splat.getOperand(1), SplatVal);
 }
 
 bool RISCVDAGToDAGISel::selectLow8BitsVSplat(SDValue N, SDValue &SplatVal) {
