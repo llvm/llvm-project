@@ -2,7 +2,7 @@
 
 subroutine f(x)
   integer :: x
-!ERROR: Cancellation construct type is not allowed on SECTIONS
+!ERROR: PARALLEL cannot follow SECTIONS
 !$omp sections parallel
 !$omp section
   x = x + 1

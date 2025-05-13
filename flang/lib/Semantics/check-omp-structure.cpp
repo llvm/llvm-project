@@ -2430,9 +2430,9 @@ void OmpStructureChecker::Enter(
     // Do not call CheckAllowed/CheckAllowedClause, because in case of an error
     // it will print "CANCELLATION_CONSTRUCT_TYPE" as the clause name instead
     // of the contained construct name.
-    context_.Say(dirName.source,
-        "Cancellation construct type is not allowed on %s"_err_en_US,
-        parser::ToUpperCaseLetters(getDirectiveName(dir).str()));
+    context_.Say(dirName.source, "%s cannot follow %s"_err_en_US,
+        parser::ToUpperCaseLetters(getDirectiveName(dirName.v)),
+        parser::ToUpperCaseLetters(getDirectiveName(dir)));
   } else {
     switch (dirName.v) {
     case llvm::omp::Directive::OMPD_do:
@@ -2443,7 +2443,7 @@ void OmpStructureChecker::Enter(
     default:
       context_.Say(dirName.source,
           "%s is not a cancellable construct"_err_en_US,
-          parser::ToUpperCaseLetters(getDirectiveName(dirName.v).str()));
+          parser::ToUpperCaseLetters(getDirectiveName(dirName.v)));
       break;
     }
   }
