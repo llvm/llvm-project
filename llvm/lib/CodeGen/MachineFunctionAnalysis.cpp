@@ -48,6 +48,6 @@ MachineFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 
 PreservedAnalyses FreeAllAnalysesPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
-  FAM.clear(F, F.getName());
+  FAM.clearAnalysis<MachineFunctionAnalysis>(F);
   return PreservedAnalyses::all();
 }
