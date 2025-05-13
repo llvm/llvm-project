@@ -15,8 +15,8 @@
 
 using namespace llvm;
 
-bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
-                                                        unsigned ScalarOpdIdx) {
+bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(
+    Intrinsic::ID ID, unsigned ScalarOpdIdx) const {
   switch (ID) {
   case Intrinsic::dx_wave_readlane:
     return ScalarOpdIdx == 1;
@@ -26,7 +26,7 @@ bool DirectXTTIImpl::isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
 }
 
 bool DirectXTTIImpl::isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                                            int OpdIdx) {
+                                                            int OpdIdx) const {
   switch (ID) {
   case Intrinsic::dx_asdouble:
     return OpdIdx == 0;

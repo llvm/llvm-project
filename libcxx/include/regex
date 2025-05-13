@@ -3929,7 +3929,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_character_escape(
       if (__hd == -1)
         std::__throw_regex_error<regex_constants::error_escape>();
       __sum = 16 * __sum + static_cast<unsigned>(__hd);
-      _LIBCPP_FALLTHROUGH();
+      [[__fallthrough__]];
     case 'x':
       ++__first;
       if (__first == __last)

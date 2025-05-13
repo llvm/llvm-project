@@ -189,7 +189,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX12-PACKED-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v1, s7
-; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyz v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX12-PACKED-GISEL-NEXT:    s_endpgm
 main_body:
   %data_subvec = shufflevector <4 x half> %data, <4 x half> poison, <3 x i32> <i32 0, i32 1, i32 2>

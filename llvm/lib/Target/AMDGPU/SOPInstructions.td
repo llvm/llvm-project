@@ -663,14 +663,16 @@ let SubtargetPredicate = isGFX12Plus in {
   }
 
   // The higher 32-bits of the inputs contain the sign extension bits.
-  def S_MUL_I64_I32_PSEUDO : SPseudoInstSI <
-    (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
-  >;
+  let hasSideEffects = 0 in {
+    def S_MUL_I64_I32_PSEUDO : SPseudoInstSI <
+      (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+    >;
 
-  // The higher 32-bits of the inputs are zero.
-  def S_MUL_U64_U32_PSEUDO : SPseudoInstSI <
-    (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
-  >;
+    // The higher 32-bits of the inputs are zero.
+    def S_MUL_U64_U32_PSEUDO : SPseudoInstSI <
+      (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+    >;
+  }
 
 } // End SubtargetPredicate = isGFX12Plus
 
@@ -870,7 +872,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
       let FixedSize = 1 in
       def S_FMAAK_F32 : SOP2_Pseudo<
         "s_fmaak_f32", (outs SReg_32:$sdst),
-        (ins SSrc_f32_Deferred:$src0, SSrc_f32_Deferred:$src1, KImmFP32:$imm),
+        (ins SSrc_f32:$src0, SSrc_f32:$src1, KImmFP32:$imm),
         "$sdst, $src0, $src1, $imm"
       >;
 
@@ -893,7 +895,7 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
     let FixedSize = 1 in
     def S_FMAMK_F32 : SOP2_Pseudo<
       "s_fmamk_f32", (outs SReg_32:$sdst),
-      (ins SSrc_f32_Deferred:$src0, KImmFP32:$imm, SSrc_f32_Deferred:$src1),
+      (ins SSrc_f32:$src0, KImmFP32:$imm, SSrc_f32:$src1),
       "$sdst, $src0, $imm, $src1"
     >;
   } // End isReMaterializable = 1

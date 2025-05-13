@@ -177,15 +177,6 @@ search(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 
   return std::search(__first1, __last1, __first2, __last2, __equal_to());
 }
 
-#if _LIBCPP_STD_VER >= 17
-template <class _ForwardIterator, class _Searcher>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
-search(_ForwardIterator __f, _ForwardIterator __l, const _Searcher& __s) {
-  return __s(__f, __l).first;
-}
-
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___ALGORITHM_SEARCH_H

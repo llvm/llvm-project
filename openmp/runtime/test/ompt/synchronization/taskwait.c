@@ -26,7 +26,7 @@ int main()
 
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
-  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_taskwait_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]
+  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_taskwait_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_taskwait_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_taskwait_end: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS]]
   // CHECK-NEXT: {{^}}[[MASTER_ID]]: ompt_event_taskwait_end: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS]]

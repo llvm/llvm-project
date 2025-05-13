@@ -31,6 +31,8 @@ def defs;
 def pattern;
 def match;
 def apply;
+def combine;
+def empty_action;
 
 def wip_match_opcode;
 
@@ -67,18 +69,17 @@ class GIDefMatchData<string type>  {
   string Type = type;
 }
 
-class GICombineRule<dag defs, dag match, dag apply> : GICombine {
+class GICombineRule<dag defs, dag a0, dag a1 = (empty_action)> : GICombine {
   /// Defines the external interface of the match rule. This includes:
   /// * The names of the root nodes (requires at least one)
   /// See GIDefKind for details.
   dag Defs = defs;
 
-  /// Defines the things which must be true for the pattern to match
-  dag Match = match;
-
-  /// Defines the things which happen after the decision is made to apply a
-  /// combine rule.
-  dag Apply = apply;
+  // The patterns that will be used. Two types of list can exist:
+  //  match (Action0) + apply (Action1).
+  //  combine (Action0) + empty_action (Action1).
+  dag Action0 = a0;
+  dag Action1 = a1;
 
   /// Defines the predicates that are checked before the match function
   /// is called. Targets can use this to, for instance, check Subtarget
@@ -1867,6 +1868,13 @@ def anyext_of_anyext : ext_of_ext_opcodes<G_ANYEXT, G_ANYEXT>;
 def anyext_of_zext : ext_of_ext_opcodes<G_ANYEXT, G_ZEXT>;
 def anyext_of_sext : ext_of_ext_opcodes<G_ANYEXT, G_SEXT>;
 
+def sext_inreg_of_sext_inreg : GICombineRule<
+   (defs root:$dst, build_fn_matchinfo:$matchinfo),
+   (match (G_SEXT_INREG $x, $src, $a):$other,
+          (G_SEXT_INREG $dst, $x, $b):$root,
+          [{ return Helper.matchRedundantSextInReg(*${root}, *${other}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 // Push cast through build vector.
 class buildvector_of_opcode<Instruction castOpcode> : GICombineRule <
   (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -1914,7 +1922,8 @@ def cast_of_cast_combines: GICombineGroup<[
   sext_of_anyext,
   anyext_of_anyext,
   anyext_of_zext,
-  anyext_of_sext
+  anyext_of_sext,
+  sext_inreg_of_sext_inreg,
 ]>;
 
 def cast_combines: GICombineGroup<[

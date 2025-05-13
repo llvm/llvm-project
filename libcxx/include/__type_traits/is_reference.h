@@ -44,14 +44,14 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_rvalue_reference_v = __is_rv
 #else // __has_builtin(__is_lvalue_reference)
 
 template <class _Tp>
-struct is_lvalue_reference : public false_type {};
+struct is_lvalue_reference : false_type {};
 template <class _Tp>
-struct is_lvalue_reference<_Tp&> : public true_type {};
+struct is_lvalue_reference<_Tp&> : true_type {};
 
 template <class _Tp>
-struct is_rvalue_reference : public false_type {};
+struct is_rvalue_reference : false_type {};
 template <class _Tp>
-struct is_rvalue_reference<_Tp&&> : public true_type {};
+struct is_rvalue_reference<_Tp&&> : true_type {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
