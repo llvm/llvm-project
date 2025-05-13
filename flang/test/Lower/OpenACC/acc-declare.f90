@@ -250,14 +250,14 @@ module acc_declare
 
 ! CHECK-LABEL: func.func private @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_alloc(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
-! CHECK:         %[[UPDATE:.*]] = acc.update_device varPtr(%[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {implicit = true, name = "a", structured = false}
+! CHECK:         %[[UPDATE:.*]] = acc.update_device varPtr(%[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {implicit = true, name = "a"}
 ! CHECK:         acc.update dataOperands(%[[UPDATE]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:         return
 ! CHECK:       }
 
 ! CHECK-LABEL: func.func private @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_dealloc(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
-! CHECK:         %[[UPDATE:.*]] = acc.update_device varPtr(%[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {implicit = true, name = "a", structured = false}
+! CHECK:         %[[UPDATE:.*]] = acc.update_device varPtr(%[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {implicit = true, name = "a"}
 ! CHECK:         acc.update dataOperands(%[[UPDATE]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:         return
 ! CHECK:       }
@@ -323,30 +323,30 @@ end module
 
 ! CHECK-LABEL: acc.global_ctor @_QMacc_declare_allocatable_testEdata1_acc_ctor {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_allocatable_testEdata1) {acc.declare = #acc.declare<dataClause =  acc_create>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:         %[[COPYIN:.*]] = acc.copyin varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)   -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {dataClause = #acc<data_clause acc_create>, implicit = true, name = "data1", structured = false}
+! CHECK:         %[[COPYIN:.*]] = acc.copyin varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)   -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {dataClause = #acc<data_clause acc_create>, implicit = true, name = "data1"}
 ! CHECK:         acc.declare_enter dataOperands(%[[COPYIN]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:         acc.terminator
 ! CHECK:       }
 
 ! CHECK-LABEL: func.func private @_QMacc_declare_allocatable_testEdata1_acc_declare_update_desc_post_alloc() {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_allocatable_testEdata1) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:         %[[UPDATE:.*]] = acc.update_device varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {implicit = true, name = "data1", structured = false}
+! CHECK:         %[[UPDATE:.*]] = acc.update_device varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {implicit = true, name = "data1"}
 ! CHECK:         acc.update dataOperands(%[[UPDATE]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:         return
 ! CHECK:       }
 
 ! CHECK-LABEL: func.func private @_QMacc_declare_allocatable_testEdata1_acc_declare_update_desc_post_dealloc() {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_allocatable_testEdata1) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:         %[[UPDATE:.*]] = acc.update_device varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)   -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {implicit = true, name = "data1", structured = false}
+! CHECK:         %[[UPDATE:.*]] = acc.update_device varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)   -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {implicit = true, name = "data1"}
 ! CHECK:         acc.update dataOperands(%[[UPDATE]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:         return
 ! CHECK:       }
 
 ! CHECK-LABEL: acc.global_dtor @_QMacc_declare_allocatable_testEdata1_acc_dtor {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_allocatable_testEdata1) {acc.declare = #acc.declare<dataClause =  acc_create>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)   -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {dataClause = #acc<data_clause acc_create>, name = "data1", structured = false}
+! CHECK:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)   -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {dataClause = #acc<data_clause acc_create>, name = "data1"}
 ! CHECK:         acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {dataClause = #acc<data_clause acc_create>, name = "data1", structured = false}
+! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {dataClause = #acc<data_clause acc_create>, name = "data1"}
 ! CHECK:         acc.terminator
 ! CHECK:       }
 
@@ -361,15 +361,15 @@ end module
 
 ! CHECK-LABEL: acc.global_ctor @_QMacc_declare_equivalentEv2_acc_ctor {
 ! CHECK:         %[[ADDR:.*]] = fir.address_of(@_QMacc_declare_equivalentEv1) {acc.declare = #acc.declare<dataClause = acc_create>} : !fir.ref<!fir.array<40xi8>>
-! CHECK:         %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !fir.ref<!fir.array<40xi8>>) -> !fir.ref<!fir.array<40xi8>> {name = "v2", structured = false}
+! CHECK:         %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !fir.ref<!fir.array<40xi8>>) -> !fir.ref<!fir.array<40xi8>> {name = "v2"}
 ! CHECK:         acc.declare_enter dataOperands(%[[CREATE]] : !fir.ref<!fir.array<40xi8>>)
 ! CHECK:         acc.terminator
 ! CHECK:       }
 ! CHECK-LABEL: acc.global_dtor @_QMacc_declare_equivalentEv2_acc_dtor {
 ! CHECK:         %[[ADDR:.*]] = fir.address_of(@_QMacc_declare_equivalentEv1) {acc.declare = #acc.declare<dataClause =  acc_create>} : !fir.ref<!fir.array<40xi8>>
-! CHECK:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[ADDR]] : !fir.ref<!fir.array<40xi8>>) -> !fir.ref<!fir.array<40xi8>> {dataClause = #acc<data_clause acc_create>, name = "v2", structured = false}
+! CHECK:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[ADDR]] : !fir.ref<!fir.array<40xi8>>) -> !fir.ref<!fir.array<40xi8>> {dataClause = #acc<data_clause acc_create>, name = "v2"}
 ! CHECK:         acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<40xi8>>)
-! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<40xi8>>) {dataClause = #acc<data_clause acc_create>, name = "v2", structured = false}
+! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<40xi8>>) {dataClause = #acc<data_clause acc_create>, name = "v2"}
 ! CHECK:         acc.terminator
 ! CHECK:       }
 
@@ -382,15 +382,15 @@ end module
 
 ! CHECK-LABEL: acc.global_ctor @_QMacc_declare_equivalent2Ev2_acc_ctor {
 ! CHECK:         %[[ADDR:.*]] = fir.address_of(@_QMacc_declare_equivalent2Ev1) {acc.declare = #acc.declare<dataClause =  acc_create>} : !fir.ref<!fir.array<40xi8>>
-! CHECK:         %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !fir.ref<!fir.array<40xi8>>) -> !fir.ref<!fir.array<40xi8>> {name = "v2", structured = false}
+! CHECK:         %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !fir.ref<!fir.array<40xi8>>) -> !fir.ref<!fir.array<40xi8>> {name = "v2"}
 ! CHECK:         acc.declare_enter dataOperands(%[[CREATE]] : !fir.ref<!fir.array<40xi8>>)
 ! CHECK:         acc.terminator
 ! CHECK:       }
 ! CHECK-LABEL: acc.global_dtor @_QMacc_declare_equivalent2Ev2_acc_dtor {
 ! CHECK:         %[[ADDR:.*]] = fir.address_of(@_QMacc_declare_equivalent2Ev1) {acc.declare = #acc.declare<dataClause =  acc_create>} : !fir.ref<!fir.array<40xi8>>
-! CHECK:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[ADDR]] : !fir.ref<!fir.array<40xi8>>) -> !fir.ref<!fir.array<40xi8>> {dataClause = #acc<data_clause acc_create>, name = "v2", structured = false}
+! CHECK:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[ADDR]] : !fir.ref<!fir.array<40xi8>>) -> !fir.ref<!fir.array<40xi8>> {dataClause = #acc<data_clause acc_create>, name = "v2"}
 ! CHECK:         acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<40xi8>>)
-! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<40xi8>>) {dataClause = #acc<data_clause acc_create>, name = "v2", structured = false}
+! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<40xi8>>) {dataClause = #acc<data_clause acc_create>, name = "v2"}
 ! CHECK:         acc.terminator
 ! CHECK:       }
 

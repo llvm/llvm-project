@@ -33,7 +33,7 @@ contains
 ! CHECK: %[[UB:.*]] = arith.subi %[[BOX_DIMS1]]#1, %[[C1]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%[[UB]] : index) extent(%[[BOX_DIMS1]]#1 : index) stride(%[[BOX_DIMS1]]#2 : index) startIdx(%[[BOX_DIMS0]]#0 : index) {strideInBytes = true}
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
-! CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.ptr<!fir.array<?xi32>>) bounds(%[[BOUND]]) -> !fir.ptr<!fir.array<?xi32>> {name = "d%array_comp", structured = false}
+! CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.ptr<!fir.array<?xi32>>) bounds(%[[BOUND]]) -> !fir.ptr<!fir.array<?xi32>> {name = "d%array_comp"}
 ! CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ptr<!fir.array<?xi32>>)
 ! CHECK: return
 ! CHECK: }
@@ -53,7 +53,7 @@ contains
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[UB:.*]] = arith.subi %[[C10]], %[[C1]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[C0]] : index) upperbound(%[[UB]] : index) extent(%[[C10]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[COORD]] : !fir.ref<!fir.array<10xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xi32>> {name = "d%array_comp", structured = false}
+! CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[COORD]] : !fir.ref<!fir.array<10xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xi32>> {name = "d%array_comp"}
 ! CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xi32>>)
 ! CHECK: return
 ! CHECK: }
@@ -74,7 +74,7 @@ contains
 ! CHECK: %[[UB:.*]] = arith.subi %[[BOX_DIMS1]]#1, %[[C1]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%[[UB]] : index) extent(%[[BOX_DIMS1]]#1 : index) stride(%[[BOX_DIMS1]]#2 : index) startIdx(%[[BOX_DIMS0]]#0 : index) {strideInBytes = true}
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xi32>> {name = "d%array_comp", structured = false}
+! CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xi32>> {name = "d%array_comp"}
 ! CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.heap<!fir.array<?xi32>>)
 ! CHECK: return
 ! CHECK: }

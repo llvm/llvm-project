@@ -330,10 +330,11 @@ subroutine acc_parallel
 !$acc parallel private(a) firstprivate(b) private(c) async(1)
 !$acc end parallel
 
-! CHECK:      %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) async([[ASYNC3:%.*]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a"}
-! CHECK:      %[[ACC_FPRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) async([[ASYNC3]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "b"}
-! CHECK:      %[[ACC_PRIVATE_C:.*]] = acc.private varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) async([[ASYNC3]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "c"}
-! CHECK:      acc.parallel async([[ASYNC3]]) firstprivate(@firstprivatization_ref_10x10xf32 -> %[[ACC_FPRIVATE_B]] : !fir.ref<!fir.array<10x10xf32>>) private(@privatization_ref_10x10xf32 -> %[[ACC_PRIVATE_A]] : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_10x10xf32 -> %[[ACC_PRIVATE_C]] : !fir.ref<!fir.array<10x10xf32>>) {
+! CHECK-DAG:  %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "a"}
+! CHECK-DAG:  %[[ACC_FPRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "b"}
+! CHECK-DAG:  %[[ACC_PRIVATE_C:.*]] = acc.private varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "c"}
+! CHECK-DAG:  acc.parallel async(%[[ASYNC3:.*]] : i32) firstprivate(@firstprivatization_ref_10x10xf32 -> %[[ACC_FPRIVATE_B]] : !fir.ref<!fir.array<10x10xf32>>) private(@privatization_ref_10x10xf32 -> %[[ACC_PRIVATE_A]] : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_10x10xf32 -> %[[ACC_PRIVATE_C]] : !fir.ref<!fir.array<10x10xf32>>) {
+! CHECK-DAG:  %[[ASYNC3]] = arith.constant 1 : i32
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 

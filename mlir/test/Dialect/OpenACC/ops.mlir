@@ -938,7 +938,7 @@ func.func @testupdateop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> ()
   acc.update if(%ifCond) dataOperands(%0: memref<f32>)
   acc.update dataOperands(%0: memref<f32>)
   acc.update dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>)
-  acc.update async dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>)
+  acc.update dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>) attributes {asyncOnly = [#acc.device_type<none>]}
   acc.update wait dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>)
   acc.update dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>) attributes {ifPresent}
   return
@@ -957,7 +957,7 @@ func.func @testupdateop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> ()
 // CHECK:   acc.update if([[IFCOND]]) dataOperands(%{{.*}} : memref<f32>)
 // CHECK:   acc.update dataOperands(%{{.*}} : memref<f32>)
 // CHECK:   acc.update dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>)
-// CHECK:   acc.update async dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>)
+// CHECK:   acc.update dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>) attributes {asyncOnly = [#acc.device_type<none>]}
 // CHECK:   acc.update wait dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>)
 // CHECK:   acc.update dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>) attributes {ifPresent}
 
@@ -1342,28 +1342,28 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
 // -----
 
 func.func @testunstructuredclauseops(%a: memref<10xf32>) -> () {
-  %copyin = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {structured = false}
+  %copyin = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
   acc.enter_data dataOperands(%copyin : memref<10xf32>)
 
   %devptr = acc.getdeviceptr varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copyout>}
   acc.exit_data dataOperands(%devptr : memref<10xf32>)
-  acc.copyout accPtr(%devptr : memref<10xf32>) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) {structured = false}
+  acc.copyout accPtr(%devptr : memref<10xf32>) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>)
 
   return
 }
 
 // CHECK: func.func @testunstructuredclauseops([[ARGA:%.*]]: memref<10xf32>) {
-// CHECK: [[COPYIN:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {structured = false}
+// CHECK: [[COPYIN:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
 // CHECK-NEXT: acc.enter_data dataOperands([[COPYIN]] : memref<10xf32>)
 // CHECK: [[DEVPTR:%.*]] = acc.getdeviceptr varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copyout>}
 // CHECK-NEXT: acc.exit_data dataOperands([[DEVPTR]] : memref<10xf32>)
-// CHECK-NEXT: acc.copyout accPtr([[DEVPTR]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) {structured = false}
+// CHECK-NEXT: acc.copyout accPtr([[DEVPTR]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>)
 
 // -----
 
 func.func @host_device_ops(%a: memref<f32>) -> () {
   %devptr = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
-  acc.update_host accPtr(%devptr : memref<f32>) to varPtr(%a : memref<f32>) {structured = false}
+  acc.update_host accPtr(%devptr : memref<f32>) to varPtr(%a : memref<f32>)
   acc.update dataOperands(%devptr : memref<f32>)
 
   %accPtr = acc.update_device varPtr(%a : memref<f32>) -> memref<f32>
@@ -1374,7 +1374,7 @@ func.func @host_device_ops(%a: memref<f32>) -> () {
 // CHECK-LABEL: func.func @host_device_ops(
 // CHECK-SAME:    %[[A:.*]]: memref<f32>)
 // CHECK: %[[DEVPTR_A:.*]] = acc.getdeviceptr varPtr(%[[A]] : memref<f32>)   -> memref<f32>
-// CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : memref<f32>) to varPtr(%[[A]] : memref<f32>) {structured = false}
+// CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : memref<f32>) to varPtr(%[[A]] : memref<f32>)
 // CHECK: acc.update dataOperands(%[[DEVPTR_A]] : memref<f32>)
 // CHECK: %[[DEVPTR_A:.*]] = acc.update_device varPtr(%[[A]] : memref<f32>)   -> memref<f32>
 // CHECK: acc.update dataOperands(%[[DEVPTR_A]] : memref<f32>)

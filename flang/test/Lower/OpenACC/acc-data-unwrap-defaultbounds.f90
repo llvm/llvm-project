@@ -161,10 +161,11 @@ subroutine acc_data
   !$acc data copy(a) async(1)
   !$acc end data
 
-! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) async(%[[ASYNC:.*]] : i32) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "a"}
-! CHECK: acc.data async(%[[ASYNC]] : i32) dataOperands(%[[COPYIN]] : !fir.ref<!fir.array<10x10xf32>>) {
+! CHECK-DAG: %[[COPYIN:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "a"}
+! CHECK-DAG: acc.data async(%[[ASYNC:.*]] : i32) dataOperands(%[[COPYIN]] : !fir.ref<!fir.array<10x10xf32>>) {
+! CHECK-DAG: %[[ASYNC]] = arith.constant 1 : i32
 ! CHECK: }{{$}}
-! CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) async(%[[ASYNC]] : i32) to varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "a"}
+! CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) to varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "a"}
 
   !$acc data present(a) wait
   !$acc end data
