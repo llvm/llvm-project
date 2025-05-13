@@ -164,7 +164,7 @@ void template_inst() {
 
 namespace GH139433 {
 void f() {
-#pragma omp stripe sizes(a)
+#pragma omp stripe sizes(a)    // expected-error {{use of undeclared identifier 'a'}}
   for (int i = 0; i < 10; i++)
     ;
 }
