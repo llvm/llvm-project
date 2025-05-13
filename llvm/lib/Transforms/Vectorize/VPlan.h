@@ -2706,7 +2706,8 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
             WrapFlagsTy(MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap()),
             MulAcc->getDebugLoc()),
         ResultTy(MulAcc->getResultType()),
-        VFScaleFactor(MulAcc->getVFScaleFactor()) {
+        VFScaleFactor(MulAcc->getVFScaleFactor()),
+        VecOpInfo{MulAcc->getVecOp0Info(), MulAcc->getVecOp1Info()} {
     transferFlags(*MulAcc);
     setUnderlyingValue(MulAcc->getUnderlyingValue());
     VecOpInfo[0] = MulAcc->getVecOp0Info();
@@ -2724,17 +2725,15 @@ public:
             R->getCondOp(), R->isOrdered(),
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
             R->getDebugLoc()),
-        ResultTy(ResultTy), VFScaleFactor(ScaleFactor) {
+        ResultTy(ResultTy), VFScaleFactor(ScaleFactor),
+        VecOpInfo{
+            {Ext0->getOpcode(), Ext0->hasNonNegFlag() && Ext0->isNonNeg()},
+            {Ext1->getOpcode(), Ext1->hasNonNegFlag() && Ext1->isNonNeg()}} {
     assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind()) ==
                Instruction::Add &&
            "The reduction instruction in MulAccumulateteReductionRecipe must "
            "be Add");
     setUnderlyingValue(R->getUnderlyingValue());
-    // Only set the non-negative flag if the original recipe contains one.
-    VecOpInfo[0] = {Ext0->getOpcode(),
-                    Ext0->hasNonNegFlag() && Ext0->isNonNeg()};
-    VecOpInfo[1] = {Ext1->getOpcode(),
-                    Ext1->hasNonNegFlag() && Ext1->isNonNeg()};
     assert(((Ext0->getOpcode() == Instruction::CastOps::ZExt ||
              Ext0->getOpcode() == Instruction::CastOps::SExt) &&
             (Ext1->getOpcode() == Instruction::CastOps::ZExt ||
@@ -2809,8 +2808,8 @@ public:
   /// output
   unsigned getVFScaleFactor() const { return VFScaleFactor; }
 
-  VecOperandInfo getVecOp0Info() const { return VecOpInfo[0]; }
-  VecOperandInfo getVecOp1Info() const { return VecOpInfo[1]; }
+  const VecOperandInfo &getVecOp0Info() const { return VecOpInfo[0]; }
+  const VecOperandInfo &getVecOp1Info() const { return VecOpInfo[1]; }
 
 protected:
   VecOperandInfo VecOpInfo[2];
