@@ -91,7 +91,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr uint32_t __substitute_arg_id(basic_format_arg<_C
   // This means the 128-bit will not be valid anymore.
   // TODO FMT Verify this resolution is accepted and add a test to verify
   //          128-bit integrals fail and switch to visit_format_arg.
-  return std::__visit_format_arg(
+  return std::__visit_format_arg<__format::__directly_visit_i128::__yes>(
       [](auto __arg) -> uint32_t {
         using _Type = decltype(__arg);
         if constexpr (same_as<_Type, monostate>)

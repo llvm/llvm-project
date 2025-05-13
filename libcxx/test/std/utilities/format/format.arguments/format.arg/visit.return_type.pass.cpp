@@ -22,6 +22,7 @@
 #include <cassert>
 #include <format>
 #include <type_traits>
+#include <variant>
 
 #include "constexpr_char_traits.h"
 #include "make_string.h"
@@ -115,6 +116,48 @@ void test_string_view(From value, ExpectedR expectedValue) {
       });
 
   assert(result == expectedValue);
+}
+
+template <class Context>
+struct limited_int_visitor {
+  using CharT = Context::char_type;
+
+  int operator()(std::monostate) const { return 1; }
+  int operator()(bool) const { return 2; }
+  int operator()(CharT) const { return 3; }
+  int operator()(int) const { return 4; }
+  int operator()(unsigned int) const { return 5; }
+  int operator()(long long) const { return 6; }
+  int operator()(unsigned long long) const { return 7; }
+  int operator()(float) const { return 8; }
+  int operator()(double) const { return 9; }
+  int operator()(long double) const { return 10; }
+  int operator()(const CharT*) const { return 11; }
+  int operator()(std::basic_string_view<CharT>) const { return 12; }
+  int operator()(const void*) const { return 13; }
+  int operator()(const std::basic_format_arg<Context>::handle&) const { return 14; }
+
+  void operator()(auto) const = delete;
+};
+
+// https://github.com/llvm/llvm-project/issues/139582
+template <class Context, class ExpectedR, class From>
+void test_limited_visitation(From value) {
+  auto store = std::make_format_args<Context>(value);
+  std::basic_format_args<Context> format_args{store};
+
+  LIBCPP_ASSERT(format_args.__size() == 1);
+  assert(format_args.get(0));
+
+  if constexpr (std::is_void_v<ExpectedR>) {
+    format_args.get(0).template visit<ExpectedR>(limited_int_visitor<Context>{});
+    static_assert(
+        std::is_same_v<void, decltype(format_args.get(0).template visit<ExpectedR>(limited_int_visitor<Context>{}))>);
+  } else {
+    std::same_as<ExpectedR> decltype(auto) result =
+        format_args.get(0).template visit<ExpectedR>(limited_int_visitor<Context>{});
+    assert(result);
+  }
 }
 
 template <class CharT>
@@ -354,6 +397,25 @@ void test() {
   test<Context, const void*, ExpectedResultType>(static_cast<void*>(&i), visited);
   const int ci = 0;
   test<Context, const void*, ExpectedResultType>(static_cast<const void*>(&ci), visited);
+
+  // https://github.com/llvm/llvm-project/issues/139582
+  // Test limited visitors.
+  test_limited_visitation<Context, void>(true);
+  test_limited_visitation<Context, void>(42);
+  test_limited_visitation<Context, void>(0.5);
+  test_limited_visitation<Context, void>(str);
+#ifndef TEST_HAS_NO_INT128
+  test_limited_visitation<Context, void>(__int128_t{0});
+  test_limited_visitation<Context, void>(__uint128_t{0});
+#endif // TEST_HAS_NO_INT128
+  test_limited_visitation<Context, long>(true);
+  test_limited_visitation<Context, long>(42);
+  test_limited_visitation<Context, long>(0.5);
+  test_limited_visitation<Context, long>(str);
+#ifndef TEST_HAS_NO_INT128
+  test_limited_visitation<Context, long>(__int128_t{0});
+  test_limited_visitation<Context, long>(__uint128_t{0});
+#endif // TEST_HAS_NO_INT128
 }
 
 int main(int, char**) {

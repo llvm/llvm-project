@@ -272,7 +272,7 @@ __handle_replacement_field(_Iterator __begin, _Iterator __end, _ParseCtx& __pars
     else if (__parse)
       __format::__compile_time_visit_format_arg(__parse_ctx, __ctx, __type);
   } else
-    std::__visit_format_arg(
+    std::__visit_format_arg<__format::__directly_visit_i128::__yes>(
         [&](auto __arg) {
           if constexpr (same_as<decltype(__arg), monostate>)
             std::__throw_format_error("The argument index value is too large for the number of arguments supplied");
