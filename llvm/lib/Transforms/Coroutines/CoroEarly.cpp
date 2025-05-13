@@ -236,10 +236,9 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
       case Intrinsic::coro_destroy:
         lowerResumeOrDestroy(*CB, CoroSubFnInst::DestroyIndex);
         break;
-      case Intrinsic::coro_promise: {
+      case Intrinsic::coro_promise:
         lowerCoroPromise(cast<CoroPromiseInst>(&I));
         break;
-      }
       case Intrinsic::coro_done:
         lowerCoroDone(cast<IntrinsicInst>(&I));
         break;
@@ -253,9 +252,9 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
     for (CoroFreeInst *CF : CoroFrees)
       CF->setArgOperand(0, CoroId);
 
-    if (auto *PA = CoroId->getPromise()) {
-      assert(CoroBegin && "Use Switch-Resumed ABI but missing coro.begin");
-
+    auto *PA = CoroId->getPromise();
+    if (PA && CoroBegin) {
+      assert(isa<AllocaInst>(PA) && "Must pass alloca to coro.id");
       Builder.SetInsertPoint(*CoroBegin->getInsertionPointAfterDef());
 
       auto *Alignment = Builder.getInt32(PA->getAlign().value());
