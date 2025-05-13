@@ -640,8 +640,6 @@ bool DataAggregator::doBasicSample(BinaryFunction &OrigFunc, uint64_t Address,
 
   BinaryFunction *ParentFunc = getBATParentFunction(OrigFunc);
   BinaryFunction &Func = ParentFunc ? *ParentFunc : OrigFunc;
-  if (ParentFunc || (BAT && !BAT->isBATFunction(Func.getAddress())))
-    NumColdSamples += Count;
   // Attach executed bytes to parent function in case of cold fragment.
   Func.SampleCountInBytes += Count * BlockSize;
 
@@ -745,15 +743,10 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
     if (BAT)
       Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
 
-    BinaryFunction *ParentFunc = getBATParentFunction(*Func);
-    if (IsFrom &&
-        (ParentFunc || (BAT && !BAT->isBATFunction(Func->getAddress()))))
-      NumColdSamples += Count;
+    if (BinaryFunction *ParentFunc = getBATParentFunction(*Func))
+      Func = ParentFunc;
 
-    if (!ParentFunc)
-      return std::pair{Func, IsRet};
-
-    return std::pair{ParentFunc, IsRet};
+    return std::pair{Func, IsRet};
   };
 
   auto [FromFunc, IsReturn] = handleAddress(From, /*IsFrom*/ true);
@@ -1450,20 +1443,6 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
   }
 }
 
-void DataAggregator::printColdSamplesDiagnostic() const {
-  if (NumColdSamples > 0) {
-    const float ColdSamples = NumColdSamples * 100.0f / NumTotalSamples;
-    outs() << "PERF2BOLT: " << NumColdSamples
-           << format(" (%.1f%%)", ColdSamples)
-           << " samples recorded in cold regions of split functions.\n";
-    if (ColdSamples > 5.0f)
-      outs()
-          << "WARNING: The BOLT-processed binary where samples were collected "
-             "likely used bad data or your service observed a large shift in "
-             "profile. You may want to audit this\n";
-  }
-}
-
 void DataAggregator::printLongRangeTracesDiagnostic() const {
   outs() << "PERF2BOLT: out of range traces involving unknown regions: "
          << NumLongRangeTraces;
@@ -1504,7 +1483,6 @@ void DataAggregator::printBranchSamplesDiagnostics() const {
               "collection. The generated data may be ineffective for improving "
               "performance\n\n";
   printLongRangeTracesDiagnostic();
-  printColdSamplesDiagnostic();
 }
 
 void DataAggregator::printBasicSamplesDiagnostics(
@@ -1516,7 +1494,6 @@ void DataAggregator::printBasicSamplesDiagnostics(
               "binary is probably not the same binary used during profiling "
               "collection. The generated data may be ineffective for improving "
               "performance\n\n";
-  printColdSamplesDiagnostic();
 }
 
 void DataAggregator::printBranchStacksDiagnostics(
