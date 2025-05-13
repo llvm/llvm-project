@@ -21,7 +21,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#if SYS_utimes
+#ifdef SYS_utimes
 constexpr auto UTIMES_SYSCALL_ID = SYS_utimes;
 #elif defined(SYS_utimensat)
 constexpr auto UTIMES_SYSCALL_ID = SYS_utimensat;
