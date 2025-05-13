@@ -4220,12 +4220,19 @@ void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
 }
 
 bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
+  const auto *Op = I->getOperand(OpIdx);
   // We can't have a PHI with a metadata type.
-  if (I->getOperand(OpIdx)->getType()->isMetadataTy())
+  if (Op->getType()->isMetadataTy())
+    return false;
+
+  // swifterror pointers can only be used by a load, store, or as a swifterror
+  // argument; swifterror pointers are not allowed to be used in select or phi
+  // instructions.
+  if (Op->isSwiftError())
     return false;
 
   // Early exit.
-  if (!isa<Constant, InlineAsm>(I->getOperand(OpIdx)))
+  if (!isa<Constant, InlineAsm>(Op))
     return true;
 
   switch (I->getOpcode()) {
