@@ -99,6 +99,8 @@ def V2Write_0c : SchedWriteRes<[]> { let Latency = 0; }
 def V2Write_1c_1B    : SchedWriteRes<[V2UnitB]>   { let Latency = 1; }
 def V2Write_1c_1F    : SchedWriteRes<[V2UnitF]>   { let Latency = 1; }
 def V2Write_1c_1F_1Flg : SchedWriteRes<[V2UnitF, V2UnitFlg]>   { let Latency = 1; }
+def V2Write_1c_1F_1Flg_1T : SchedWriteRes<[V2UnitF, V2UnitFlg]>   { let Latency = 1;
+                                                         let ReleaseAtCycles = [4, 3]; }
 def V2Write_1c_1I    : SchedWriteRes<[V2UnitI]>   { let Latency = 1; }
 def V2Write_1c_1M    : SchedWriteRes<[V2UnitM]>   { let Latency = 1; }
 def V2Write_1c_1M0   : SchedWriteRes<[V2UnitM0]>  { let Latency = 1; }
@@ -1136,8 +1138,12 @@ def : InstRW<[V2Write_2c_1M], (instrs ADDG, SUBG)>;
 def : InstRW<[V2Write_1c_1F_1Flg], (instregex "^CCM[NP][WX][ir]")>;
 
 // Convert floating-point condition flags
-// Flag manipulation instructions
 def : WriteRes<WriteSys, []> { let Latency = 1; }
+
+// Flag manipulation instructions
+// NOTE: Releases its resources later in order to model throughput=1
+def : InstRW<[V2Write_1c_1F_1Flg_1T], (instregex "^(RMIF|CFINV)",
+                                                 "^SETF(8|16)")>;
 
 // Insert Random Tags
 def : InstRW<[V2Write_2c_1M], (instrs IRG, IRGstack)>;
