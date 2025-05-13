@@ -119,8 +119,7 @@ mlir::SmallVector<mlir::Value> getBounds(mlir::Operation *accDataClauseOp);
 
 /// Used to obtain `async` operands from an acc operation.
 /// Returns an empty vector if there are no such operands.
-mlir::SmallVector<mlir::Value>
-getAsyncOperands(mlir::Operation *accOp);
+mlir::SmallVector<mlir::Value> getAsyncOperands(mlir::Operation *accOp);
 
 /// Returns an array of acc:DeviceTypeAttr attributes attached to
 /// an acc operation, that correspond to the device types associated with the
