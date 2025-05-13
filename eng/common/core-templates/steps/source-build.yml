@@ -19,19 +19,6 @@ steps:
     set -x
     df -h
 
-    # If file changes are detected, set CopyWipIntoInnerSourceBuildRepo to copy the WIP changes into the inner source build repo.
-    internalRestoreArgs=
-    if ! git diff --quiet; then
-      internalRestoreArgs='/p:CopyWipIntoInnerSourceBuildRepo=true'
-      # The 'Copy WIP' feature of source build uses git stash to apply changes from the original repo.
-      # This only works if there is a username/email configured, which won't be the case in most CI runs.
-      git config --get user.email
-      if [ $? -ne 0 ]; then
-        git config user.email dn-bot@microsoft.com
-        git config user.name dn-bot
-      fi
-    fi
-
     # If building on the internal project, the internal storage variable may be available (usually only if needed)
     # In that case, add variables to allow the download of internal runtimes if the specified versions are not found
     # in the default public locations.
@@ -44,11 +31,6 @@ steps:
     # Check if AzDO substitutes in a build config from a variable, and use it if so.
     if [ '$(_BuildConfig)' != '$''(_BuildConfig)' ]; then
       buildConfig='$(_BuildConfig)'
-    fi
-
-    officialBuildArgs=
-    if [ '${{ and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}' = 'True' ]; then
-      officialBuildArgs='/p:DotNetPublishUsingPipelines=true /p:OfficialBuildId=$(BUILD.BUILDNUMBER)'
     fi
 
     targetRidArgs=
@@ -66,16 +48,6 @@ steps:
       baseOsArgs='/p:BaseOS=${{ parameters.platform.baseOS }}'
     fi
 
-    publishArgs=
-    if [ '${{ parameters.platform.skipPublishValidation }}' != 'true' ]; then
-      publishArgs='--publish'
-    fi
-
-    assetManifestFileName=SourceBuild_RidSpecific.xml
-    if [ '${{ parameters.platform.name }}' != '' ]; then
-      assetManifestFileName=SourceBuild_${{ parameters.platform.name }}.xml
-    fi
-
     portableBuildArgs=
     if [ '${{ parameters.platform.portableBuild }}' != '' ]; then
       portableBuildArgs='/p:PortableBuild=${{ parameters.platform.portableBuild }}'
@@ -83,40 +55,23 @@ steps:
 
     ${{ coalesce(parameters.platform.buildScript, './build.sh') }} --ci \
       --configuration $buildConfig \
-      --restore --build --pack $publishArgs -bl \
+      --restore --build --pack -bl \
       ${{ parameters.platform.buildArguments }} \
-      $officialBuildArgs \
       $internalRuntimeDownloadArgs \
-      $internalRestoreArgs \
       $targetRidArgs \
       $runtimeOsArgs \
       $baseOsArgs \
       $portableBuildArgs \
       /p:DotNetBuildSourceOnly=true \
       /p:DotNetBuildRepo=true \
-      /p:AssetManifestFileName=$assetManifestFileName
   displayName: Build
-
-# Upload build logs for diagnosis.
-- task: CopyFiles@2
-  displayName: Prepare BuildLogs staging directory
-  inputs:
-    SourceFolder: '$(Build.SourcesDirectory)'
-    Contents: |
-      **/*.log
-      **/*.binlog
-      artifacts/sb/prebuilt-report/**
-    TargetFolder: '$(Build.StagingDirectory)/BuildLogs'
-    CleanTargetFolder: true
-  continueOnError: true
-  condition: succeededOrFailed()
 
 - template: /eng/common/core-templates/steps/publish-pipeline-artifacts.yml
   parameters:
     is1ESPipeline: ${{ parameters.is1ESPipeline }}
     args:
       displayName: Publish BuildLogs
-      targetPath: '$(Build.StagingDirectory)/BuildLogs'
+      targetPath: artifacts/log/${{ coalesce(variables._BuildConfig, 'Release') }}
       artifactName: BuildLogs_SourceBuild_${{ parameters.platform.name }}_Attempt$(System.JobAttempt)
       continueOnError: true
       condition: succeededOrFailed()
