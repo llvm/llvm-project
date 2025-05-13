@@ -50,6 +50,8 @@ static cl::opt<bool>
                             cl::desc("Disable two address hints for register "
                                      "allocation"));
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 X86RegisterInfo::X86RegisterInfo(const Triple &TT)
     : X86GenRegisterInfo((TT.isArch64Bit() ? X86::RIP : X86::EIP),
                          X86_MC::getDwarfRegFlavour(TT, false),
@@ -119,6 +121,11 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   // sub-class, so sub-classes like GR8_ABCD_L are allowed to expand to the
   // full GR8 class.
   if (RC == &X86::GR8_NOREXRegClass)
+    return RC;
+
+  // Keep using non-rex2 register class when APX feature (EGPR/NDD/NF) is not
+  // enabled for relocation.
+  if (!X86EnableAPXForRelocation && isNonRex2RegClass(RC))
     return RC;
 
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
@@ -1256,5 +1263,20 @@ const TargetRegisterClass *X86RegisterInfo::constrainRegClassToNonRex2(
     return &X86::GR32_NOREX2_NOSPRegClass;
   case X86::GR64_NOSPRegClassID:
     return &X86::GR64_NOREX2_NOSPRegClass;
+  }
+}
+
+bool X86RegisterInfo::isNonRex2RegClass(const TargetRegisterClass *RC) const {
+  switch (RC->getID()) {
+  default:
+    return false;
+  case X86::GR8_NOREX2RegClassID:
+  case X86::GR16_NOREX2RegClassID:
+  case X86::GR32_NOREX2RegClassID:
+  case X86::GR64_NOREX2RegClassID:
+  case X86::GR32_NOREX2_NOSPRegClassID:
+  case X86::GR64_NOREX2_NOSPRegClassID:
+  case X86::GR64_with_sub_16bit_in_GR16_NOREX2RegClassID:
+    return true;
   }
 }
