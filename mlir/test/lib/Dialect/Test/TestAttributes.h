@@ -33,7 +33,7 @@ namespace test {
 class TestDialect;
 // Payload class for the CopyCountAttr.
 class CopyCount {
- public:
+public:
   CopyCount(std::string value) : value(value) {}
   CopyCount(const CopyCount &rhs);
   CopyCount &operator=(const CopyCount &rhs);
@@ -48,9 +48,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 /// A handle used to reference external elements instances.
 using TestDialectResourceBlobHandle =
     mlir::DialectResourceBlobHandle<TestDialect>;
-}  // namespace test
+} // namespace test
 
 #define GET_ATTRDEF_CLASSES
 #include "TestAttrDefs.h.inc"
 
-#endif  // MLIR_TESTATTRIBUTES_H
+#endif // MLIR_TESTATTRIBUTES_H

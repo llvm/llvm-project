@@ -205,6 +205,6 @@ inline void registerAllDialects(MLIRContext &context) {
   context.appendDialectRegistry(registry);
 }
 
-}  // namespace mlir
+} // namespace mlir
 
-#endif  // MLIR_INITALLDIALECTS_H_
+#endif // MLIR_INITALLDIALECTS_H_
