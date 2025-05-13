@@ -1,7 +1,6 @@
 ;; Check if manually reserved registers are always excluded from being saved by
 ;; the function prolog/epilog, even for callee-saved ones, as per GCC behavior.
-;; X19(BP, LLVM specific), X29(FP), X30(LP), X31(SP) are special so
-;; they are not checked.
+;; Look at AArch64Features.td for registers excluded from this test.
 
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu | FileCheck %s
 
@@ -82,17 +81,6 @@ define preserve_mostcc void @t7() "target-features"="+reserve-x7" {
   ret void
 }
 
-define preserve_mostcc void @t8() "target-features"="+reserve-x8" {
-; CHECK-LABEL: t8:
-; CHECK: // %bb.0:
-; CHECK-NEXT:        mov     w8, #256
-; CHECK-NEXT:        //APP
-; CHECK-NEXT:        //NO_APP
-; CHECK-NEXT:        ret
-  call i64 asm sideeffect "", "={x8},{x8}"(i64 256)
-  ret void
-}
-
 define preserve_mostcc void @t9() "target-features"="+reserve-x9" {
 ; CHECK-LABEL: t9:
 ; CHECK: // %bb.0:
@@ -167,28 +155,6 @@ define preserve_mostcc void @t15() "target-features"="+reserve-x15" {
 ; CHECK-NEXT:        //NO_APP
 ; CHECK-NEXT:        ret
   call i64 asm sideeffect "", "={x15},{x15}"(i64 256)
-  ret void
-}
-
-define preserve_mostcc void @t16() "target-features"="+reserve-x16" {
-; CHECK-LABEL: t16:
-; CHECK: // %bb.0:
-; CHECK-NEXT:        mov     w16, #256
-; CHECK-NEXT:        //APP
-; CHECK-NEXT:        //NO_APP
-; CHECK-NEXT:        ret
-  call i64 asm sideeffect "", "={x16},{x16}"(i64 256)
-  ret void
-}
-
-define preserve_mostcc void @t17() "target-features"="+reserve-x17" {
-; CHECK-LABEL: t17:
-; CHECK: // %bb.0:
-; CHECK-NEXT:        mov     w17, #256
-; CHECK-NEXT:        //APP
-; CHECK-NEXT:        //NO_APP
-; CHECK-NEXT:        ret
-  call i64 asm sideeffect "", "={x17},{x17}"(i64 256)
   ret void
 }
 
