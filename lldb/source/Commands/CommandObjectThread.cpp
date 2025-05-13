@@ -1650,8 +1650,7 @@ public:
                                                    option_arg.str().c_str());
         break;
       case 'b': {
-        if (option_arg.starts_with('+'))
-          option_arg.consume_front("+");
+        option_arg.consume_front("+");
 
         if (option_arg.getAsInteger(0, m_line_offset))
           return Status::FromErrorStringWithFormat("invalid line offset: '%s'.",
