@@ -248,7 +248,12 @@ const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV,
   // Intercept LDS variables with known addresses
   if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(CV)) {
     if (std::optional<uint32_t> Address =
+#if LLPC_BUILD_NPI
+            AMDGPUMachineFunction::getAbsoluteAddress(
+                *GV, AMDGPUAS::LOCAL_ADDRESS)) {
+#else /* LLPC_BUILD_NPI */
             AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
+#endif /* LLPC_BUILD_NPI */
       auto *IntTy = Type::getInt32Ty(CV->getContext());
       return AsmPrinter::lowerConstant(ConstantInt::get(IntTy, *Address),
                                        BaseCV, Offset);

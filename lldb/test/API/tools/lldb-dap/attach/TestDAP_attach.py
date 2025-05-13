@@ -24,9 +24,10 @@ def spawn_and_wait(program, delay):
     process.wait()
 
 
-@skip
 class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
     def set_and_hit_breakpoint(self, continueToExit=True):
+        self.dap_server.wait_for_stopped()
+
         source = "main.c"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         lines = [breakpoint1_line]

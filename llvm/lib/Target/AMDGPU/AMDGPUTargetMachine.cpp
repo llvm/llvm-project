@@ -490,10 +490,10 @@ static cl::opt<bool> HasClosedWorldAssumption(
     cl::init(false), cl::Hidden);
 
 #if LLPC_BUILD_NPI
-static cl::opt<bool>
-    EnablePromoteLaneShared("amdgpu-promote-lane-shared",
-                            cl::desc("Enable promoting lane-shared into VGPR"),
-                            cl::init(true), cl::Hidden);
+static cl::opt<unsigned>
+    MaxLaneSharedVGPRS("max-vgprs-for-laneshared",
+                       cl::desc("Max number of VGPRs allowed for lane-shared"),
+                       cl::init(896), cl::Hidden);
 
 // TODO: Enable by default once all codegen phases are implemented.
 static cl::opt<bool> EnablePromotePrivate(
@@ -560,7 +560,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
 #if LLPC_BUILD_NPI
-  initializeAMDGPUMarkPromotableLaneSharedLegacyPass(*PR);
+  initializeAMDGPUAssignLaneSharedLegacyPass(*PR);
   initializeAMDGPUMarkPromotablePrivateLegacyPass(*PR);
 #endif /* LLPC_BUILD_NPI */
   initializeAMDGPULowerBufferFatPointersPass(*PR);
@@ -1393,6 +1393,10 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
     // nodes out of the graph, which leads to function-level passes not
     // being run on them, which causes crashes in the resource usage analysis).
     addPass(createAMDGPULowerBufferFatPointersPass());
+#if LLPC_BUILD_NPI
+    // Another module pass.
+    addPass(createAMDGPUAssignLaneSharedLegacyPass(MaxLaneSharedVGPRS));
+#endif /* LLPC_BUILD_NPI */
     // In accordance with the above FIXME, manually force all the
     // function-level passes into a CGSCCPassManager.
     addPass(new DummyCGSCCPass());
@@ -1465,8 +1469,6 @@ bool GCNPassConfig::addPreISel() {
     addPass(&AMDGPUPerfHintAnalysisLegacyID);
 
 #if LLPC_BUILD_NPI
-  if (isPassEnabled(EnablePromoteLaneShared))
-    addPass(createAMDGPUMarkPromotableLaneSharedLegacyPass());
   if (isPassEnabled(EnablePromotePrivate))
     addPass(createAMDGPUMarkPromotablePrivateLegacyPass());
 
@@ -1788,14 +1790,14 @@ void GCNPassConfig::addPreEmitPass() {
   addPass(&PostRAHazardRecognizerID);
 
   addPass(&AMDGPUWaitSGPRHazardsLegacyID);
-#if LLPC_BUILD_NPI
 
+#if LLPC_BUILD_NPI
   addPass(&AMDGPULowerVGPREncodingID);
 
   if (isPassEnabled(EnableInsertSingleUseVDST, CodeGenOptLevel::Less))
     addPass(&AMDGPUInsertSingleUseVDSTID);
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less))
     addPass(&AMDGPUInsertDelayAluID);
 
@@ -2088,6 +2090,10 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS)
     addPass(AMDGPULowerModuleLDSPass(TM));
+#if LLPC_BUILD_NPI
+
+  addPass(AMDGPUAssignLaneSharedPass(MaxLaneSharedVGPRS));
+#endif /* LLPC_BUILD_NPI */
 
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(InferAddressSpacesPass());

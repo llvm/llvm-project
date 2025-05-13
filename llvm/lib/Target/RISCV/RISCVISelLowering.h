@@ -936,13 +936,11 @@ public:
   bool lowerInterleaveIntrinsicToStore(
       StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
 
-  bool lowerDeinterleavedIntrinsicToVPLoad(
-      VPIntrinsic *Load, Value *Mask,
-      ArrayRef<Value *> DeinterleaveRes) const override;
+  bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
+                              ArrayRef<Value *> DeinterleaveRes) const override;
 
-  bool lowerInterleavedIntrinsicToVPStore(
-      VPIntrinsic *Store, Value *Mask,
-      ArrayRef<Value *> InterleaveOps) const override;
+  bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
+                               ArrayRef<Value *> InterleaveOps) const override;
 
   bool supportKCFIBundles() const override { return true; }
 

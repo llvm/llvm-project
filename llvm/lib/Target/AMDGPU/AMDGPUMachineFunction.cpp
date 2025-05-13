@@ -109,7 +109,12 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   unsigned Offset;
   if (GV.getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
     if (AMDGPU::isNamedBarrier(GV)) {
+#if LLPC_BUILD_NPI
+      std::optional<unsigned> BarAddr =
+          getAbsoluteAddress(GV, AMDGPUAS::LOCAL_ADDRESS);
+#else /* LLPC_BUILD_NPI */
       std::optional<unsigned> BarAddr = getLDSAbsoluteAddress(GV);
+#endif /* LLPC_BUILD_NPI */
       if (!BarAddr)
         llvm_unreachable("named barrier should have an assigned address");
       Entry.first->second = BarAddr.value();
@@ -131,8 +136,11 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
       return Offset;
     }
 
-#endif /* LLPC_BUILD_NPI */
+    std::optional<uint32_t> MaybeAbs =
+        getAbsoluteAddress(GV, AMDGPUAS::LOCAL_ADDRESS);
+#else /* LLPC_BUILD_NPI */
     std::optional<uint32_t> MaybeAbs = getLDSAbsoluteAddress(GV);
+#endif /* LLPC_BUILD_NPI */
     if (MaybeAbs) {
       // Absolute address LDS variables that exist prior to the LDS lowering
       // pass raise a fatal error in that pass. These failure modes are only
@@ -188,38 +196,27 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   }
 
   Entry.first->second = Offset;
-#if LLPC_BUILD_NPI
   return Offset;
 }
 
+#if LLPC_BUILD_NPI
 unsigned
 AMDGPUMachineFunction::allocateLaneSharedGlobal(const DataLayout &DL,
                                                 const GlobalVariable &GV) {
-  assert(GV.getAddressSpace() == AMDGPUAS::LANE_SHARED &&
-         "expected lane-shared address space");
-  bool InVGPR = GV.hasAttribute("lane-shared-in-vgpr");
-  if (InVGPR) {
-    auto Entry = LaneSharedVGPRObjects.insert(std::pair(&GV, 0));
-    if (!Entry.second)
-      return Entry.first->second;
-
-    unsigned Offset = LaneSharedVGPRSize;
-    LaneSharedVGPRSize += DL.getTypeAllocSize(GV.getValueType());
-    LaneSharedVGPRSize = alignTo(LaneSharedVGPRSize, 4u);
-    Entry.first->second = Offset;
-    return Offset;
+  std::optional<uint32_t> MaybeAbs =
+      getAbsoluteAddress(GV, AMDGPUAS::LANE_SHARED);
+  if (!MaybeAbs) {
+    report_fatal_error("Lane-shared variable must have an absolute address");
   }
-  auto Entry = LaneSharedMemoryObjects.insert(std::pair(&GV, 0));
-  if (!Entry.second)
-    return Entry.first->second;
+  bool IsVGPR = (MaybeAbs.value() >> 28);
+  uint32_t Offset = MaybeAbs.value() & ((1 << 28) - 1);
+  uint32_t Size = DL.getTypeAllocSize(GV.getValueType());
+  if (IsVGPR)
+    LaneSharedVGPRSize =
+        std::max(LaneSharedVGPRSize, alignTo(Offset + Size, 4u));
+  else
+    LaneSharedScratchSize = std::max(LaneSharedScratchSize, Offset + Size);
 
-  Align Alignment =
-      DL.getValueOrABITypeAlignment(GV.getAlign(), GV.getValueType());
-
-  unsigned Offset;
-  Offset = LaneSharedScratchSize = alignTo(LaneSharedScratchSize, Alignment);
-  LaneSharedScratchSize += DL.getTypeAllocSize(GV.getValueType());
-  Entry.first->second = Offset;
   return Offset;
 }
 
@@ -244,10 +241,10 @@ unsigned AMDGPUMachineFunction::allocatePrivateInVGPR(const DataLayout &DL,
             Ctx, {ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Offset)),
                   ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Size))}));
   }
-#endif /* LLPC_BUILD_NPI */
   return Offset;
 }
 
+#endif /* LLPC_BUILD_NPI */
 std::optional<uint32_t>
 AMDGPUMachineFunction::getLDSKernelIdMetadata(const Function &F) {
   // TODO: Would be more consistent with the abs symbols to use a range
@@ -265,8 +262,13 @@ AMDGPUMachineFunction::getLDSKernelIdMetadata(const Function &F) {
 }
 
 std::optional<uint32_t>
+#if LLPC_BUILD_NPI
+AMDGPUMachineFunction::getAbsoluteAddress(const GlobalValue &GV, unsigned AS) {
+  if (GV.getAddressSpace() != AS)
+#else /* LLPC_BUILD_NPI */
 AMDGPUMachineFunction::getLDSAbsoluteAddress(const GlobalValue &GV) {
   if (GV.getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
+#endif /* LLPC_BUILD_NPI */
     return {};
 
   std::optional<ConstantRange> AbsSymRange = GV.getAbsoluteSymbolRange();
@@ -304,7 +306,12 @@ void AMDGPUMachineFunction::setDynLDSAlign(const Function &F,
   const GlobalVariable *Dyn = getKernelDynLDSGlobalFromFunction(F);
   if (Dyn) {
     unsigned Offset = LDSSize; // return this?
+#if LLPC_BUILD_NPI
+    std::optional<uint32_t> Expect =
+        getAbsoluteAddress(*Dyn, AMDGPUAS::LOCAL_ADDRESS);
+#else /* LLPC_BUILD_NPI */
     std::optional<uint32_t> Expect = getLDSAbsoluteAddress(*Dyn);
+#endif /* LLPC_BUILD_NPI */
     if (!Expect || (Offset != *Expect)) {
       report_fatal_error("Inconsistent metadata on dynamic LDS variable");
     }

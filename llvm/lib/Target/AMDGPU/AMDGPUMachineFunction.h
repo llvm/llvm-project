@@ -29,12 +29,6 @@ class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// local memory space.
   SmallDenseMap<const GlobalValue *, unsigned, 4> LocalMemoryObjects;
 #if LLPC_BUILD_NPI
-  /// A map to keep track of lane-shared objects and their offsets
-  /// mapping to the lane-shared-memory space.
-  SmallDenseMap<const GlobalValue *, unsigned, 4> LaneSharedMemoryObjects;
-  /// A map to keep track of lane-shared objects and their offsets
-  /// mapping to the lane-shared-vgpr space.
-  SmallDenseMap<const GlobalValue *, unsigned, 4> LaneSharedVGPRObjects;
   /// A map to keep track of private objects and their offsets
   /// mapping to the VGPR space.
   SmallDenseMap<const AllocaInst *, unsigned, 4> PrivateVGPRObjects;
@@ -166,16 +160,21 @@ public:
 
   unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV,
                              Align Trailing);
-#if LLPC_BUILD_NPI
 
+#if LLPC_BUILD_NPI
   unsigned allocateLaneSharedGlobal(const DataLayout &DL,
                                     const GlobalVariable &GV);
 
   unsigned allocatePrivateInVGPR(const DataLayout &DL, AllocaInst &Alloca);
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   static std::optional<uint32_t> getLDSKernelIdMetadata(const Function &F);
+#if LLPC_BUILD_NPI
+  static std::optional<uint32_t> getAbsoluteAddress(const GlobalValue &GV,
+                                                    unsigned AS);
+#else /* LLPC_BUILD_NPI */
   static std::optional<uint32_t> getLDSAbsoluteAddress(const GlobalValue &GV);
+#endif /* LLPC_BUILD_NPI */
 
   Align getDynLDSAlign() const { return DynLDSAlign; }
 

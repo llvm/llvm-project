@@ -319,6 +319,8 @@ Modified Compiler Flags
 
 - The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
 
+- The ``-fchar8_t`` flag is no longer considered in non-C++ languages modes. (#GH55373)
+
 Removed Compiler Flags
 -------------------------
 
@@ -505,6 +507,9 @@ Improvements to Clang's diagnostics
 - ``-Wreserved-identifier`` now fires on reserved parameter names in a function
   declaration which is not a definition.
 
+- Several compatibility diagnostics that were incorrectly being grouped under
+  ``-Wpre-c++20-compat`` are now part of ``-Wc++20-compat``. (#GH138775)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -561,6 +566,8 @@ Bug Fixes in This Version
   the invalid attribute location appropriately. (#GH137861)
 - Fixed a crash when a malformed ``_Pragma`` directive appears as part of an 
   ``#include`` directive. (#GH138094)
+- Fixed a crash during constant evaluation involving invalid lambda captures
+  (#GH138832)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -805,6 +812,7 @@ clang-format
 - Add ``EnumTrailingComma`` option for inserting/removing commas at the end of
   ``enum`` enumerator lists.
 - Add ``OneLineFormatOffRegex`` option for turning formatting off for one line.
+- Add ``SpaceAfterOperatorKeyword`` option.
 
 libclang
 --------

@@ -1,4 +1,4 @@
-//===---- i386.cpp - Generic JITLink i386 edge kinds, utilities -----===//
+//===-------- x86.cpp - Generic JITLink x86 edge kinds, utilities ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Generic utilities for graphs representing i386 objects.
+// Generic utilities for graphs representing x86 objects.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/JITLink/i386.h"
+#include "llvm/ExecutionEngine/JITLink/x86.h"
 
 #define DEBUG_TYPE "jitlink"
 
-namespace llvm::jitlink::i386 {
+namespace llvm::jitlink::x86 {
 
 const char *getEdgeKindName(Edge::Kind K) {
   switch (K) {
-  case None:
-    return "None";
   case Pointer32:
     return "Pointer32";
   case PCRel32:
@@ -55,7 +53,7 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
 
   for (auto *B : G.blocks())
     for (auto &E : B->edges()) {
-      if (E.getKind() == i386::BranchPCRel32ToPtrJumpStubBypassable) {
+      if (E.getKind() == BranchPCRel32ToPtrJumpStubBypassable) {
         auto &StubBlock = E.getTarget().getBlock();
         assert(StubBlock.getSize() == sizeof(PointerJumpStubContent) &&
                "Stub block should be stub sized");
@@ -74,7 +72,7 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
 
         int64_t Displacement = TargetAddr - EdgeAddr + 4;
         if (isInt<32>(Displacement)) {
-          E.setKind(i386::BranchPCRel32);
+          E.setKind(BranchPCRel32);
           E.setTarget(GOTTarget);
           LLVM_DEBUG({
             dbgs() << "  Replaced stub branch with direct branch:\n    ";
@@ -88,4 +86,4 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
   return Error::success();
 }
 
-} // namespace llvm::jitlink::i386
+} // namespace llvm::jitlink::x86

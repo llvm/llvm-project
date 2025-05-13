@@ -2525,7 +2525,13 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   ScoreBrackets.applyWaitcnt(Wait);
 
   // ExpCnt can be merged into VINTERP.
+#if LLPC_BUILD_NPI
+  // Note that VINTERP wait_exp:7 always means "no wait" even if EXPcnt is
+  // higher than 7.
+  if (Wait.ExpCnt < 7 && It != Block.instr_end() &&
+#else /* LLPC_BUILD_NPI */
   if (Wait.ExpCnt != ~0u && It != Block.instr_end() &&
+#endif /* LLPC_BUILD_NPI */
       SIInstrInfo::isVINTERP(*It)) {
     MachineOperand *WaitExp =
         TII->getNamedOperand(*It, AMDGPU::OpName::waitexp);
@@ -2869,8 +2875,17 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   } else if (SIInstrInfo::isLDSDIR(Inst)) {
     ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_LDS_ACCESS, Inst);
   } else if (TII->isVINTERP(Inst)) {
+#if LLPC_BUILD_NPI
+    // Note that VINTERP wait_exp:7 always means "no wait" even if EXPcnt is
+    // higher than 7.
+#endif /* LLPC_BUILD_NPI */
     int64_t Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::waitexp)->getImm();
+#if LLPC_BUILD_NPI
+    if (Imm < 7)
+      ScoreBrackets->applyWaitcnt(EXP_CNT, Imm);
+#else /* LLPC_BUILD_NPI */
     ScoreBrackets->applyWaitcnt(EXP_CNT, Imm);
+#endif /* LLPC_BUILD_NPI */
   } else if (SIInstrInfo::isEXP(Inst)) {
     unsigned Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
     if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)

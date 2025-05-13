@@ -66,7 +66,7 @@ FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
 #if LLPC_BUILD_NPI
-FunctionPass *createAMDGPUMarkPromotableLaneSharedLegacyPass();
+ModulePass *createAMDGPUAssignLaneSharedLegacyPass(unsigned MaxLaneSharedVGPRs);
 FunctionPass *createAMDGPUMarkPromotablePrivateLegacyPass();
 #endif /* LLPC_BUILD_NPI */
 ModulePass *createAMDGPULowerBufferFatPointersPass();
@@ -161,14 +161,14 @@ struct AMDGPULowerModuleLDSPass : PassInfoMixin<AMDGPULowerModuleLDSPass> {
 };
 
 #if LLPC_BUILD_NPI
-void initializeAMDGPUMarkPromotableLaneSharedLegacyPass(PassRegistry &);
-extern char &AMDGPUMarkPromotableLaneSharedLegacyPassID;
+void initializeAMDGPUAssignLaneSharedLegacyPass(PassRegistry &);
+extern char &AMDGPUAssignLaneSharedLegacyPassID;
 
-struct AMDGPUMarkPromotableLaneSharedPass
-    : PassInfoMixin<AMDGPUMarkPromotableLaneSharedPass> {
-  AMDGPUMarkPromotableLaneSharedPass() {}
+struct AMDGPUAssignLaneSharedPass : PassInfoMixin<AMDGPUAssignLaneSharedPass> {
+  unsigned MaxLaneSharedVGPRs;
+  AMDGPUAssignLaneSharedPass(unsigned MaxLS) : MaxLaneSharedVGPRs(MaxLS) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 void initializeAMDGPUMarkPromotablePrivateLegacyPass(PassRegistry &);

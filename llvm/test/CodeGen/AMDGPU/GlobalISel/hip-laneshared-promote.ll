@@ -8,23 +8,23 @@ target datalayout = "A5"
 @v2 = external local_unnamed_addr addrspace(10) global float, align 4
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none, inaccessiblemem: none)
-define dso_local amdgpu_kernel void @_Z3foov() local_unnamed_addr {
+define amdgpu_kernel void @_Z3foov() "amdgpu-wavegroup-enable" {
   ; CHECK-LABEL: name: _Z3foov
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 20
-  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 28
-  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 4
-  ; CHECK-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_2]], 2, implicit-def dead $scc
-  ; CHECK-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_]], 0, implicit $exec :: (dereferenceable load (s32) from @v1, !tbaa !3, addrspace 10)
-  ; CHECK-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_]], 2, implicit-def dead $scc
-  ; CHECK-NEXT:   V_STORE_IDX [[V_LOAD_IDX]], [[S_LSHR_B32_1]], 0, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 12)`, !tbaa !3, addrspace 10)
+  ; CHECK-NEXT:   [[S_MOV_B32_0:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 16
+  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 24
+  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
+  ; CHECK-NEXT:   [[S_LSHR_B32_0:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_2]], 2, implicit-def dead $scc
+  ; CHECK-NEXT:   [[V_LOAD_IDX:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_0]], 0, implicit $exec :: (dereferenceable load (s32) from @v1, !tbaa !6, addrspace 10)
+  ; CHECK-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_0]], 2, implicit-def dead $scc
+  ; CHECK-NEXT:   V_STORE_IDX [[V_LOAD_IDX]], [[S_LSHR_B32_1]], 0, implicit $exec :: (store (s32) into `ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 12)`, !tbaa !6, addrspace 10)
   ; CHECK-NEXT:   [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_1]], 2, implicit-def dead $scc
-  ; CHECK-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_2]], 0, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 20)`, !tbaa !3, addrspace 10)
-  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
+  ; CHECK-NEXT:   [[V_LOAD_IDX1:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[S_LSHR_B32_2]], 0, implicit $exec :: (dereferenceable load (s32) from `ptr addrspace(10) getelementptr inbounds (i8, ptr addrspace(10) @vx, i32 20)`, !tbaa !6, addrspace 10)
+  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 32
   ; CHECK-NEXT:   [[S_LSHR_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_3]], 2, implicit-def dead $scc
-  ; CHECK-NEXT:   V_STORE_IDX [[V_LOAD_IDX1]], [[S_LSHR_B32_3]], 0, implicit $exec :: (store (s32) into @v2, !tbaa !3, addrspace 10)
+  ; CHECK-NEXT:   V_STORE_IDX [[V_LOAD_IDX1]], [[S_LSHR_B32_3]], 0, implicit $exec :: (store (s32) into @v2, !tbaa !6, addrspace 10)
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:
   %0 = load float, ptr addrspace(10) @v1, align 4, !tbaa !4

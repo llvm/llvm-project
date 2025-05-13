@@ -2720,6 +2720,34 @@ void acc::LoopOp::setTileForDeviceTypes(
   setTileOperandsSegments(segments);
 }
 
+void acc::LoopOp::addVectorOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setVectorOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getVectorOperandsDeviceTypeAttr(), effectiveDeviceTypes,
+      newValue, getVectorOperandsMutable()));
+}
+
+void acc::LoopOp::addEmptyVector(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setVectorAttr(addDeviceTypeAffectedOperandHelper(context, getVectorAttr(),
+                                                   effectiveDeviceTypes));
+}
+
+void acc::LoopOp::addWorkerNumOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWorkerNumOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getWorkerNumOperandsDeviceTypeAttr(), effectiveDeviceTypes,
+      newValue, getWorkerNumOperandsMutable()));
+}
+
+void acc::LoopOp::addEmptyWorker(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWorkerAttr(addDeviceTypeAffectedOperandHelper(context, getWorkerAttr(),
+                                                   effectiveDeviceTypes));
+}
+
 //===----------------------------------------------------------------------===//
 // DataOp
 //===----------------------------------------------------------------------===//

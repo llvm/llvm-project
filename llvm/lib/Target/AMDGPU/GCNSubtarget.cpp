@@ -466,7 +466,7 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
                             getReservedNumSGPRs(MF));
 }
 
-static unsigned getMaxNumPreloadedSGPRs() {
+unsigned GCNSubtarget::getMaxNumPreloadedSGPRs() const {
   using USI = GCNUserSGPRUsageInfo;
   // Max number of user SGPRs
   const unsigned MaxUserSGPRs =
@@ -496,62 +496,43 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
                             getReservedNumSGPRs(F));
 }
 
-#if LLPC_BUILD_NPI
-unsigned
-GCNSubtarget::getBaseMaxNumVGPRs(const Function &F,
-                                 std::pair<unsigned, unsigned> WavesPerEU,
-                                 unsigned NumExcludedVGRs) const {
-#else /* LLPC_BUILD_NPI */
 unsigned GCNSubtarget::getBaseMaxNumVGPRs(
-    const Function &F, std::pair<unsigned, unsigned> WavesPerEU) const {
-#endif /* LLPC_BUILD_NPI */
-  // Compute maximum number of VGPRs function can use using default/requested
-  // minimum number of waves per execution unit.
-#if LLPC_BUILD_NPI
-  unsigned MaxNumVGPRs = getMaxNumVGPRs(WavesPerEU.first, NumExcludedVGRs);
-#else /* LLPC_BUILD_NPI */
-  unsigned MaxNumVGPRs = getMaxNumVGPRs(WavesPerEU.first);
-#endif /* LLPC_BUILD_NPI */
+    const Function &F, std::pair<unsigned, unsigned> NumVGPRBounds) const {
+  const auto &[Min, Max] = NumVGPRBounds;
 
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
-  unsigned Requested =
-      F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
-  if (Requested != MaxNumVGPRs) {
-    if (hasGFX90AInsts())
-      Requested *= 2;
 
-    // Make sure requested value is compatible with values implied by
-    // default/requested minimum/maximum number of waves per execution unit.
-#if LLPC_BUILD_NPI
-    if (Requested && Requested > MaxNumVGPRs)
-#else /* LLPC_BUILD_NPI */
-    if (Requested && Requested > getMaxNumVGPRs(WavesPerEU.first))
-#endif /* LLPC_BUILD_NPI */
-      Requested = 0;
-    if (WavesPerEU.second && Requested &&
-        Requested < getMinNumVGPRs(WavesPerEU.second))
-      Requested = 0;
+  unsigned Requested = F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", Max);
+  if (Requested != Max && hasGFX90AInsts())
+    Requested *= 2;
 
-    if (Requested)
-      MaxNumVGPRs = Requested;
-  }
-
-  return MaxNumVGPRs;
+  // Make sure requested value is inside the range of possible VGPR usage.
+  return std::clamp(Requested, Min, Max);
 }
 
+#if LLPC_BUILD_NPI
+unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F,
+                                      unsigned NumExcludedVGPRs) const {
+#else /* LLPC_BUILD_NPI */
 unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
-  return getBaseMaxNumVGPRs(F, getWavesPerEU(F));
+#endif /* LLPC_BUILD_NPI */
+  std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
+  return getBaseMaxNumVGPRs(
+#if LLPC_BUILD_NPI
+      F, {getMinNumVGPRs(Waves.second), getMaxNumVGPRs(Waves.first, NumExcludedVGPRs)});
+#else /* LLPC_BUILD_NPI */
+      F, {getMinNumVGPRs(Waves.second), getMaxNumVGPRs(Waves.first)});
+#endif /* LLPC_BUILD_NPI */
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
 #if LLPC_BUILD_NPI
-  auto NumExcludedVGRs = MFI.getLaneSharedVGPRSize() / 4u;
-  return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU(), NumExcludedVGRs);
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  auto NumExcludedVGPRs = MFI.getLaneSharedVGPRSize() / 4u;
+  return getMaxNumVGPRs(MF.getFunction(), NumExcludedVGPRs);
 #else /* LLPC_BUILD_NPI */
-  return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU());
+  return getMaxNumVGPRs(MF.getFunction());
 #endif /* LLPC_BUILD_NPI */
 }
 

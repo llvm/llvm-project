@@ -432,6 +432,23 @@ static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCSubtargetInfo &STI,
   return RC->getRegister(Idx);
 }
 
+static unsigned getIdxLocFromTable(unsigned OpNo, const MCInstrDesc &Desc) {
+  auto Ops = AMDGPU::getVGPRLoweringOperandTables(Desc);
+  if (!Ops.first)
+    return VGPRLoweringOperandTableNumOps;
+  unsigned Opc = Desc.getOpcode();
+  unsigned I;
+  for (I = 0; I < VGPRLoweringOperandTableNumOps; ++I) {
+    if (Ops.first[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
+        (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.first[I]) == OpNo)
+      break;
+    if (Ops.second && Ops.second[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
+        (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.second[I]) == OpNo)
+      break;
+  }
+  return I;
+}
+
 // Restore MSBs of a VGPR above 255 from the MCInstrAnalysis.
 static MCPhysReg getRegFromMIA(MCPhysReg Reg, unsigned OpNo,
                                const MCInstrDesc &Desc,
@@ -445,20 +462,8 @@ static MCPhysReg getRegFromMIA(MCPhysReg Reg, unsigned OpNo,
   if (!(Enc & AMDGPU::HWEncoding::IS_VGPR))
     return Reg;
 
-  auto Ops = AMDGPU::getVGPRLoweringOperandTables(Desc);
-  if (!Ops.first)
-    return Reg;
-  unsigned Opc = Desc.getOpcode();
-  unsigned I;
-  for (I = 0; I < 4; ++I) {
-    if (Ops.first[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
-        (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.first[I]) == OpNo)
-      break;
-    if (Ops.second && Ops.second[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
-        (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.second[I]) == OpNo)
-      break;
-  }
-  if (I == 4)
+  unsigned I = getIdxLocFromTable(OpNo, Desc);
+  if (I >= 4)
     return Reg;
   unsigned OpMSBs = (VgprMSBs >> (I * 2)) & 3;
   if (!OpMSBs)
@@ -475,20 +480,8 @@ static unsigned getIdxFromMIA(unsigned OpNo, const MCInstrDesc &Desc,
   if (!VgprIDXs)
     return 0;
 
-  auto Ops = AMDGPU::getVGPRLoweringOperandTables(Desc);
-  if (!Ops.first)
-    return 0;
-  unsigned Opc = Desc.getOpcode();
-  unsigned I;
-  for (I = 0; I < 4; ++I) {
-    if (Ops.first[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
-        (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.first[I]) == OpNo)
-      break;
-    if (Ops.second && Ops.second[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
-        (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.second[I]) == OpNo)
-      break;
-  }
-  if (I == 4)
+  unsigned I = getIdxLocFromTable(OpNo, Desc);
+  if (I >= 4)
     return 0;
   return (VgprIDXs >> (I * 2)) & 3;
 }
@@ -773,20 +766,17 @@ void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm, uint8_t OpType,
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
     if (printImmediateFloat32(Imm, STI, O))
       return;
     break;
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
     if (isUInt<16>(Imm) &&
         printImmediateFP16(static_cast<uint16_t>(Imm), STI, O))
       return;
     break;
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2BF16:
     if (isUInt<16>(Imm) &&
         printImmediateBFloat16(static_cast<uint16_t>(Imm), STI, O))
       return;
@@ -1032,8 +1022,6 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
     case AMDGPU::OPERAND_REG_IMM_V2INT32:
     case AMDGPU::OPERAND_REG_IMM_V2FP32:
-    case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
-    case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
     case MCOI::OPERAND_IMMEDIATE:
     case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
       printImmediate32(Op.getImm(), STI, O);
@@ -1051,18 +1039,15 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       printImmediate64(Op.getImm(), STI, O, true);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
     case AMDGPU::OPERAND_REG_IMM_INT16:
       printImmediateInt16(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_FP16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
     case AMDGPU::OPERAND_REG_IMM_FP16:
     case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
       printImmediateF16(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_BF16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_BF16:
     case AMDGPU::OPERAND_REG_IMM_BF16:
     case AMDGPU::OPERAND_REG_IMM_BF16_DEFERRED:
       printImmediateBF16(Op.getImm(), STI, O);
@@ -1074,11 +1059,8 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
 #endif /* LLPC_BUILD_NPI */
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_V2BF16:
-    case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
       printImmediateV216(Op.getImm(), OpTy, STI, O);
       break;
     case MCOI::OPERAND_UNKNOWN:
@@ -2232,7 +2214,10 @@ void AMDGPUInstPrinter::printGVGPR(const MCInst *MI, unsigned OpNo,
   const unsigned Opc = MI->getOpcode();
   if (isVOPMAsmOnly(Opc)) {
     int OpIdxs = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idxs);
-    unsigned IdxReg = (MI->getOperand(OpIdxs).getImm() >> (OpNo * 4)) & 0xf;
+    unsigned IdxLoc = getIdxLocFromTable(OpNo, MII.get(Opc));
+    if (IdxLoc >= VGPRLoweringOperandTableNumOps)
+      IdxLoc = OpNo;
+    unsigned IdxReg = (MI->getOperand(OpIdxs).getImm() >> (IdxLoc * 4)) & 0xf;
     modifyVGPRNameUsingIndex(OpndStr, IdxReg);
   }
 
@@ -2248,7 +2233,10 @@ void AMDGPUInstPrinter::printGSrcSimple(const MCInst *MI, unsigned OpNo,
     const unsigned Opc = MI->getOpcode();
     if (isVOPMAsmOnly(Opc)) {
       int OpIdxs = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idxs);
-      unsigned IdxReg = (MI->getOperand(OpIdxs).getImm() >> (OpNo * 4)) & 0xf;
+      unsigned IdxLoc = getIdxLocFromTable(OpNo, MII.get(Opc));
+      if (IdxLoc >= VGPRLoweringOperandTableNumOps)
+        IdxLoc = OpNo;
+      unsigned IdxReg = (MI->getOperand(OpIdxs).getImm() >> (IdxLoc * 4)) & 0xf;
       modifyVGPRNameUsingIndex(OpndStr, IdxReg);
     }
     O << OpndStr;

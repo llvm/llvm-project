@@ -49,6 +49,7 @@
 ; GCN-O0-NEXT:      Expand reduction intrinsics
 ; GCN-O0-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O0-NEXT:    Lower buffer fat pointer operations to buffer resources
+; GCN-O0-NEXT:    Assign scratch or vgpr offset for laneshared
 ; GCN-O0-NEXT:    CallGraph Construction
 ; GCN-O0-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O0-NEXT:      DummyCGSCCPass
@@ -238,6 +239,7 @@
 ; GCN-O1-NEXT:      Expand reduction intrinsics
 ; GCN-O1-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O1-NEXT:    Lower buffer fat pointer operations to buffer resources
+; GCN-O1-NEXT:    Assign scratch or vgpr offset for laneshared
 ; GCN-O1-NEXT:    CallGraph Construction
 ; GCN-O1-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O1-NEXT:      DummyCGSCCPass
@@ -543,6 +545,7 @@
 ; GCN-O1-OPTS-NEXT:      Early CSE
 ; GCN-O1-OPTS-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O1-OPTS-NEXT:    Lower buffer fat pointer operations to buffer resources
+; GCN-O1-OPTS-NEXT:    Assign scratch or vgpr offset for laneshared
 ; GCN-O1-OPTS-NEXT:    CallGraph Construction
 ; GCN-O1-OPTS-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O1-OPTS-NEXT:      DummyCGSCCPass
@@ -867,6 +870,7 @@
 ; GCN-O2-NEXT:      Early CSE
 ; GCN-O2-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O2-NEXT:    Lower buffer fat pointer operations to buffer resources
+; GCN-O2-NEXT:    Assign scratch or vgpr offset for laneshared
 ; GCN-O2-NEXT:    CallGraph Construction
 ; GCN-O2-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O2-NEXT:      DummyCGSCCPass
@@ -926,8 +930,6 @@
 ; GCN-O2-NEXT:        LCSSA Verifier
 ; GCN-O2-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O2-NEXT:      Analysis if a function is memory bound
-; GCN-O2-NEXT:      FunctionPass Manager
-; GCN-O2-NEXT:        Mark promotable lane-shared
 ; GCN-O2-NEXT:      DummyCGSCCPass
 ; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        Dominator Tree Construction
@@ -1208,6 +1210,7 @@
 ; GCN-O3-NEXT:      Global Value Numbering
 ; GCN-O3-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O3-NEXT:    Lower buffer fat pointer operations to buffer resources
+; GCN-O3-NEXT:    Assign scratch or vgpr offset for laneshared
 ; GCN-O3-NEXT:    CallGraph Construction
 ; GCN-O3-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O3-NEXT:      DummyCGSCCPass
@@ -1267,8 +1270,6 @@
 ; GCN-O3-NEXT:        LCSSA Verifier
 ; GCN-O3-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O3-NEXT:      Analysis if a function is memory bound
-; GCN-O3-NEXT:      FunctionPass Manager
-; GCN-O3-NEXT:        Mark promotable lane-shared
 ; GCN-O3-NEXT:      DummyCGSCCPass
 ; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        Dominator Tree Construction

@@ -102,12 +102,11 @@ void test_global_discard(global int* ptr) {
 // CHECK-LABEL: @test_scratch_discard(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TAB:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
-// CHECK-NEXT:    [[TAB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[TAB]] to ptr
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(5), ptr [[TAB_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(5), ptr addrspace(5) [[TAB]], align 4
 // CHECK-NEXT:    call void @llvm.amdgcn.discard.b32.p5(ptr addrspace(5) [[TMP0]], i32 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(5), ptr [[TAB_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(5), ptr addrspace(5) [[TAB]], align 4
 // CHECK-NEXT:    call void @llvm.amdgcn.discard.b128.p5(ptr addrspace(5) [[TMP1]], i32 0)
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(5), ptr [[TAB_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(5), ptr addrspace(5) [[TAB]], align 4
 // CHECK-NEXT:    call void @llvm.amdgcn.discard.b1024.p5(ptr addrspace(5) [[TMP2]], i32 0)
 // CHECK-NEXT:    ret void
 //

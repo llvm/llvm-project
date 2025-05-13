@@ -1,12 +1,12 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 -verify-machineinstrs -stop-after=finalize-isel -o - %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 -amdgpu-promote-lane-shared=false -verify-machineinstrs -stop-after=finalize-isel -o - %s | FileCheck -check-prefix=SCRATCH %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 -max-vgprs-for-laneshared=0 -verify-machineinstrs -stop-after=finalize-isel -o - %s | FileCheck -check-prefix=SCRATCH %s
 
 target datalayout = "A5"
 
 @exchange = external local_unnamed_addr addrspace(10) global [70 x float], align 4
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind memory(readwrite, argmem: none, inaccessiblemem: none)
-define dso_local amdgpu_kernel void @_Z3foov() local_unnamed_addr {
+define amdgpu_kernel void @_Z3foov() "amdgpu-wavegroup-enable" {
 entry:
   br label %for.body
 
