@@ -785,10 +785,12 @@ def int_objc_loadWeakRetained               : Intrinsic<[llvm_ptr_ty],
 def int_objc_moveWeak                       : Intrinsic<[],
                                                         [llvm_ptr_ty,
                                                          llvm_ptr_ty]>;
+
 def int_objc_release                        : Intrinsic<[], [llvm_ptr_ty]>;
 def int_objc_retain                         : Intrinsic<[llvm_ptr_ty],
                                                         [llvm_ptr_ty],
                                                         [Returned<ArgIndex<0>>]>;
+
 def int_objc_retainAutorelease              : Intrinsic<[llvm_ptr_ty],
                                                         [llvm_ptr_ty],
                                                         [Returned<ArgIndex<0>>]>;
@@ -797,6 +799,11 @@ def int_objc_retainAutoreleaseReturnValue   : Intrinsic<[llvm_ptr_ty],
                                                         [Returned<ArgIndex<0>>]>;
 def int_objc_retainAutoreleasedReturnValue  : Intrinsic<[llvm_ptr_ty],
                                                         [llvm_ptr_ty]>;
+def int_objc_unsafeClaimAutoreleasedReturnValue : Intrinsic<[llvm_ptr_ty],
+                                                            [llvm_ptr_ty]>;
+def int_objc_claimAutoreleasedReturnValue   : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+
 def int_objc_retainBlock                    : Intrinsic<[llvm_ptr_ty],
                                                         [llvm_ptr_ty]>;
 def int_objc_storeStrong                    : Intrinsic<[],
@@ -810,8 +817,6 @@ def int_objc_clang_arc_use                  : Intrinsic<[],
 def int_objc_clang_arc_noop_use : DefaultAttrsIntrinsic<[],
                                                         [llvm_vararg_ty],
                                                         [IntrInaccessibleMemOnly]>;
-def int_objc_unsafeClaimAutoreleasedReturnValue : Intrinsic<[llvm_ptr_ty],
-                                                            [llvm_ptr_ty]>;
 def int_objc_retainedObject                 : Intrinsic<[llvm_ptr_ty],
                                                         [llvm_ptr_ty]>;
 def int_objc_unretainedObject               : Intrinsic<[llvm_ptr_ty],
