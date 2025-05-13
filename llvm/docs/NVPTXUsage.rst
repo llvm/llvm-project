@@ -568,6 +568,62 @@ to left-shift the found bit into the most-significant bit position, otherwise
 the result is the shift amount needed to right-shift the found bit into the
 least-significant bit position. 0xffffffff is returned if no 1 bit is found.
 
+'``llvm.nvvm.{zext,sext}.{wrap,clamp}``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.zext.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.zext.clamp(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.sext.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.sext.clamp(i32 %a, i32 %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.{zext,sext}.{wrap,clamp}``' family of intrinsics extracts the
+low bits of the input value, and zero- or sign-extends them back to the original
+width.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.{zext,sext}.{wrap,clamp}``' family of intrinsics returns
+extension of N lowest bits of operand %a. For the '``wrap``' variants, N is the
+value of operand %b modulo 32. For the '``clamp``' variants, N is the value of
+operand %b clamped to the range [0, 32]. The N lowest bits are then
+zero-extended the case of the '``zext``' variants, or sign-extended the case of
+the '``sext``' variants. If N is 0, the result is 0.
+
+'``llvm.nvvm.bmsk.{wrap,clamp}``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.bmsk.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.bmsk.clamp(i32 %a, i32 %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.bmsk.{wrap,clamp}``' family of intrinsics creates a bit mask
+given a starting bit position and a bit width.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.bmsk.{wrap,clamp}``' family of intrinsics returns a value with
+all bits set to 0 except for %b bits starting at bit position %a. For the
+'``wrap``' variants, the values of %a and %b modulo 32 are used. For the
+'``clamp``' variants, the values of %a and %b are clamped to the range [0, 32],
+which in practice is equivalent to using them as is.
+
 TMA family of Intrinsics
 ------------------------
 

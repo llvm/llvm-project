@@ -3419,6 +3419,7 @@ cc_library(
     deps = [
         ":AffineUtils",
         ":Analysis",
+        ":DialectUtils",
         ":FunctionInterfaces",
         ":GPUDialect",
         ":GPUUtils",
@@ -5312,6 +5313,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":AMDGPUDialect",
         ":AffineDialect",
         ":ArithDialect",
         ":DialectUtils",
@@ -5542,6 +5544,7 @@ cc_library(
     hdrs = ["include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"],
     includes = ["include"],
     deps = [
+        ":AMDGPUDialect",
         ":AMDGPUToROCDL",
         ":ArithTransforms",
         ":ControlFlowDialect",
@@ -8988,6 +8991,7 @@ cc_binary(
         "//mlir/test:TestTransforms",
         "//mlir/test:TestVector",
         "//mlir/test:TestVectorToSPIRV",
+        "//mlir/test:TestXeGPU",
     ],
 )
 

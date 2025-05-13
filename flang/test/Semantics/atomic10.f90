@@ -47,13 +47,13 @@ program test_atomic_ref
   call atomic_ref(val, non_scalar_coarray)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_ref'
-  call atomic_ref(val, non_scalar_coarray[1])
+  call atomic_ref(val, non_scalar_coarray(:)[1])
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_ref'
   call atomic_ref(val_logical, non_scalar_logical_coarray)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_ref'
-  call atomic_ref(val_logical, non_scalar_logical_coarray[1])
+  call atomic_ref(val_logical, non_scalar_logical_coarray(:)[1])
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_ref'
   call atomic_ref(val, non_coarray)

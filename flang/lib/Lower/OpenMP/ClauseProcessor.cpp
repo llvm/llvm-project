@@ -388,6 +388,27 @@ bool ClauseProcessor::processNowait(mlir::omp::NowaitClauseOps &result) const {
   return markClauseOccurrence<omp::clause::Nowait>(result.nowait);
 }
 
+bool ClauseProcessor::processNumTasks(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::NumTasksClauseOps &result) const {
+  using NumTasks = omp::clause::NumTasks;
+  if (auto *clause = findUniqueClause<NumTasks>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::MLIRContext *context = firOpBuilder.getContext();
+    const auto &modifier =
+        std::get<std::optional<NumTasks::Prescriptiveness>>(clause->t);
+    if (modifier && *modifier == NumTasks::Prescriptiveness::Strict) {
+      result.numTasksMod = mlir::omp::ClauseNumTasksTypeAttr::get(
+          context, mlir::omp::ClauseNumTasksType::Strict);
+    }
+    const auto &numtasksExpr = std::get<omp::SomeExpr>(clause->t);
+    result.numTasks =
+        fir::getBase(converter.genExprValue(numtasksExpr, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processNumTeams(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumTeamsClauseOps &result) const {
@@ -856,6 +877,26 @@ static bool isVectorSubscript(const evaluate::Expr<T> &expr) {
   return false;
 }
 
+bool ClauseProcessor::processDefaultMap(lower::StatementContext &stmtCtx,
+                                        DefaultMapsTy &result) const {
+  auto process = [&](const omp::clause::Defaultmap &clause,
+                     const parser::CharBlock &) {
+    using Defmap = omp::clause::Defaultmap;
+    clause::Defaultmap::VariableCategory variableCategory =
+        Defmap::VariableCategory::All;
+    // Variable Category is optional, if not specified defaults to all.
+    // Multiples of the same category are illegal as are any other
+    // defaultmaps being specified when a user specified all is in place,
+    // however, this should be handled earlier during semantics.
+    if (auto varCat =
+            std::get<std::optional<Defmap::VariableCategory>>(clause.t))
+      variableCategory = varCat.value();
+    auto behaviour = std::get<Defmap::ImplicitBehavior>(clause.t);
+    result[variableCategory] = behaviour;
+  };
+  return findRepeatableClause<omp::clause::Defaultmap>(process);
+}
+
 bool ClauseProcessor::processDepend(lower::SymMap &symMap,
                                     lower::StatementContext &stmtCtx,
                                     mlir::omp::DependClauseOps &result) const {
@@ -932,6 +973,27 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
   };
 
   return findRepeatableClause<omp::clause::Depend>(process);
+}
+
+bool ClauseProcessor::processGrainsize(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::GrainsizeClauseOps &result) const {
+  using Grainsize = omp::clause::Grainsize;
+  if (auto *clause = findUniqueClause<Grainsize>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::MLIRContext *context = firOpBuilder.getContext();
+    const auto &modifier =
+        std::get<std::optional<Grainsize::Prescriptiveness>>(clause->t);
+    if (modifier && *modifier == Grainsize::Prescriptiveness::Strict) {
+      result.grainsizeMod = mlir::omp::ClauseGrainsizeTypeAttr::get(
+          context, mlir::omp::ClauseGrainsizeType::Strict);
+    }
+    const auto &grainsizeExpr = std::get<omp::SomeExpr>(clause->t);
+    result.grainsize =
+        fir::getBase(converter.genExprValue(grainsizeExpr, stmtCtx));
+    return true;
+  }
+  return false;
 }
 
 bool ClauseProcessor::processHasDeviceAddr(
