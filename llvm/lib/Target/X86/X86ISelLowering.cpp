@@ -56740,7 +56740,6 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
         }
       }
     }
-    
     // If the index is a left shift, \ComputeNumSignBits we are recomputing
     // the number of sign bits from the shifted value. We are trying to enable
     // the optimization in which we can shrink indices if they are larger than
