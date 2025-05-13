@@ -470,8 +470,10 @@ AST Matchers
 clang-format
 ------------
 - Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
+<<<<<<< HEAD
 - Add ``NumericLiteralCase`` option for enforcing character case in numeric
   literals.
+- Add ``Leave`` suboption to ``IndentPPDirectives``.
 
 libclang
 --------
