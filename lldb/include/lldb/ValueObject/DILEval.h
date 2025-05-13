@@ -49,6 +49,7 @@ public:
 private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const IdentifierNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const UnaryOpNode *node) override;
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;

@@ -41,6 +41,7 @@ const MCAsmInfo::AtSpecifier ELFAtSpecifiers[] = {
     {AArch64MCExpr::VK_GOT, "GOT"},
     {AArch64MCExpr::VK_GOTPCREL, "GOTPCREL"},
     {AArch64MCExpr::VK_PLT, "PLT"},
+    {AArch64MCExpr::VK_FUNCINIT, "FUNCINIT"},
 };
 
 const MCAsmInfo::AtSpecifier MachOAtSpecifiers[] = {

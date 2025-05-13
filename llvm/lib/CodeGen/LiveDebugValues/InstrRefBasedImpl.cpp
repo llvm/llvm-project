@@ -928,8 +928,7 @@ public:
       assert(ActiveVLocIt != ActiveVLocs.end());
 
       // Update all instances of Src in the variable's tracked values to Dst.
-      std::replace(ActiveVLocIt->second.Ops.begin(),
-                   ActiveVLocIt->second.Ops.end(), SrcOp, DstOp);
+      llvm::replace(ActiveVLocIt->second.Ops, SrcOp, DstOp);
 
       auto &[Var, DILoc] = DVMap.lookupDVID(VarID);
       MachineInstr *MI = MTracker->emitLoc(ActiveVLocIt->second.Ops, Var, DILoc,
@@ -2589,8 +2588,7 @@ void InstrRefBasedLDV::placeMLocPHIs(
   auto CollectPHIsForLoc = [&](LocIdx L) {
     // Collect the set of defs.
     SmallPtrSet<MachineBasicBlock *, 32> DefBlocks;
-    for (unsigned int I = 0; I < OrderToBB.size(); ++I) {
-      MachineBasicBlock *MBB = OrderToBB[I];
+    for (MachineBasicBlock *MBB : OrderToBB) {
       const auto &TransferFunc = MLocTransfer[MBB->getNumber()];
       if (TransferFunc.contains(L))
         DefBlocks.insert(MBB);
@@ -3801,8 +3799,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   // To mirror old LiveDebugValues, enumerate variables in RPOT order. Otherwise
   // the order is unimportant, it just has to be stable.
   unsigned VarAssignCount = 0;
-  for (unsigned int I = 0; I < OrderToBB.size(); ++I) {
-    auto *MBB = OrderToBB[I];
+  for (MachineBasicBlock *MBB : OrderToBB) {
     auto *VTracker = &vlocs[MBB->getNumber()];
     // Collect each variable with a DBG_VALUE in this block.
     for (auto &idx : VTracker->Vars) {

@@ -20,7 +20,6 @@ include( GNUInstallDirs )
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   amdgcn-amdhsa/lib/SOURCES;
   amdgcn/lib/SOURCES;
-  amdgpu/lib/SOURCES;
   clspv/lib/SOURCES;
   generic/lib/SOURCES;
   ptx-nvidiacl/lib/SOURCES;
@@ -411,6 +410,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set( LIBCLC_ARCH_OBJFILE_DIR "${LIBCLC_OBJFILE_DIR}/${arch_suffix}" )
     file( MAKE_DIRECTORY ${LIBCLC_ARCH_OBJFILE_DIR} )
 
+    # Build for OpenCL 3.0 independently of the target or device.
+    list( APPEND build_flags -cl-std=CL3.0 )
+
     string( TOUPPER "CLC_${MACRO_ARCH}" CLC_TARGET_DEFINE )
 
     list( APPEND build_flags
@@ -438,8 +440,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
     list( APPEND build_flags
       -I${CMAKE_CURRENT_SOURCE_DIR}/generic/include
-      # FIXME: Fix libclc to not require disabling this noisy warning
-      -Wno-bitwise-conditional-parentheses
     )
 
     add_libclc_builtin_set(

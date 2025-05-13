@@ -850,12 +850,14 @@ CodeGenTypes::getCGRecordLayout(const RecordDecl *RD) {
 }
 
 bool CodeGenTypes::isPointerZeroInitializable(QualType T) {
-  assert((T->isAnyPointerType() || T->isBlockPointerType()) && "Invalid type");
+  assert((T->isAnyPointerType() || T->isBlockPointerType() ||
+          T->isNullPtrType()) &&
+         "Invalid type");
   return isZeroInitializable(T);
 }
 
 bool CodeGenTypes::isZeroInitializable(QualType T) {
-  if (T->getAs<PointerType>())
+  if (T->getAs<PointerType>() || T->isNullPtrType())
     return Context.getTargetNullPointerValue(T) == 0;
 
   if (const auto *AT = Context.getAsArrayType(T)) {

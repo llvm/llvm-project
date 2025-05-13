@@ -638,10 +638,10 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %splice_nxv4bf16 = call <vscale x 4 x bfloat> @llvm.vector.splice.nxv4bf16(<vscale x 4 x bfloat> zeroinitializer, <vscale x 4 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 1 for: %splice_nxv8bf16 = call <vscale x 8 x bfloat> @llvm.vector.splice.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 2 for: %splice_nxv16bf16 = call <vscale x 16 x bfloat> @llvm.vector.splice.nxv16bf16(<vscale x 16 x bfloat> zeroinitializer, <vscale x 16 x bfloat> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %splice_nxv16i1 = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %splice_nxv8i1 = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %splice_nxv4i1 = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %splice_nxv16i1 = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %splice_nxv8i1 = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %splice_nxv4i1 = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 3 for: %splice_nxv16i8_neg = call <vscale x 16 x i8> @llvm.vector.splice.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %splice_nxv32i8_neg = call <vscale x 32 x i8> @llvm.vector.splice.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: %splice_nxv1i16_neg = call <vscale x 1 x i16> @llvm.vector.splice.nxv1i16(<vscale x 1 x i16> zeroinitializer, <vscale x 1 x i16> zeroinitializer, i32 -1)
@@ -671,10 +671,10 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 3 for: %splice_nxv4bf16_neg = call <vscale x 4 x bfloat> @llvm.vector.splice.nxv4bf16(<vscale x 4 x bfloat> zeroinitializer, <vscale x 4 x bfloat> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 3 for: %splice_nxv8bf16_neg = call <vscale x 8 x bfloat> @llvm.vector.splice.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %splice_nxv16bf16_neg = call <vscale x 16 x bfloat> @llvm.vector.splice.nxv16bf16(<vscale x 16 x bfloat> zeroinitializer, <vscale x 16 x bfloat> zeroinitializer, i32 -1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %splice_nxv16i1_neg = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 -1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %splice_nxv8i1_neg = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 -1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %splice_nxv4i1_neg = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 -1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %splice_nxv2i1_neg = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %splice_nxv16i1_neg = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %splice_nxv8i1_neg = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %splice_nxv4i1_neg = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %splice_nxv2i1_neg = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of Invalid for: %splice_nxv1i1_neg = call <vscale x 1 x i1> @llvm.vector.splice.nxv1i1(<vscale x 1 x i1> zeroinitializer, <vscale x 1 x i1> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -702,10 +702,10 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %splice_nxv4bf16 = call <vscale x 4 x bfloat> @llvm.vector.splice.nxv4bf16(<vscale x 4 x bfloat> zeroinitializer, <vscale x 4 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 1 for: %splice_nxv8bf16 = call <vscale x 8 x bfloat> @llvm.vector.splice.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 2 for: %splice_nxv16bf16 = call <vscale x 16 x bfloat> @llvm.vector.splice.nxv16bf16(<vscale x 16 x bfloat> zeroinitializer, <vscale x 16 x bfloat> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %splice_nxv16i1 = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %splice_nxv8i1 = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %splice_nxv4i1 = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 4 for: %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %splice_nxv16i1 = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %splice_nxv8i1 = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %splice_nxv4i1 = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 3 for: %splice_nxv16i8_neg = call <vscale x 16 x i8> @llvm.vector.splice.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %splice_nxv32i8_neg = call <vscale x 32 x i8> @llvm.vector.splice.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: %splice_nxv1i16_neg = call <vscale x 1 x i16> @llvm.vector.splice.nxv1i16(<vscale x 1 x i16> zeroinitializer, <vscale x 1 x i16> zeroinitializer, i32 -1)
@@ -735,10 +735,10 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 3 for: %splice_nxv4bf16_neg = call <vscale x 4 x bfloat> @llvm.vector.splice.nxv4bf16(<vscale x 4 x bfloat> zeroinitializer, <vscale x 4 x bfloat> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 3 for: %splice_nxv8bf16_neg = call <vscale x 8 x bfloat> @llvm.vector.splice.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %splice_nxv16bf16_neg = call <vscale x 16 x bfloat> @llvm.vector.splice.nxv16bf16(<vscale x 16 x bfloat> zeroinitializer, <vscale x 16 x bfloat> zeroinitializer, i32 -1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %splice_nxv16i1_neg = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 -1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %splice_nxv8i1_neg = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 -1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %splice_nxv4i1_neg = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 -1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of 6 for: %splice_nxv2i1_neg = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %splice_nxv16i1_neg = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %splice_nxv8i1_neg = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %splice_nxv4i1_neg = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:5 Lat:5 SizeLat:5 for: %splice_nxv2i1_neg = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of Invalid for: %splice_nxv1i1_neg = call <vscale x 1 x i1> @llvm.vector.splice.nxv1i1(<vscale x 1 x i1> zeroinitializer, <vscale x 1 x i1> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -1103,15 +1103,15 @@ define <vscale x 8 x i32> @masked_gather_nxv8i32(<vscale x 8 x ptr> %ld, <vscale
 
 define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> %passthru) {
 ; CHECK-VSCALE-1-LABEL: 'masked_gather_v4i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:32 Lat:32 SizeLat:32 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %res
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_gather_v4i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:32 Lat:32 SizeLat:32 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_v4i32'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 36 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:20 Lat:36 SizeLat:36 for: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %res
 ;
   %res = call <4 x i32> @llvm.masked.gather.v4i32(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
@@ -1120,11 +1120,11 @@ define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> 
 
 define <1 x i128> @masked_gather_v1i128(<1 x ptr> %ld, <1 x i1> %masks, <1 x i128> %passthru) {
 ; CHECK-VSCALE-1-LABEL: 'masked_gather_v1i128'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:9 Lat:8 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <1 x i128> %res
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_gather_v1i128'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:9 Lat:8 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <1 x i128> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_v1i128'
@@ -1173,15 +1173,15 @@ define void @masked_scatter_nxv8i32(<vscale x 8 x i32> %data, <vscale x 8 x ptr>
 
 define void @masked_scatter_v4i32(<4 x i32> %data, <4 x ptr> %ptrs, <4 x i1> %masks) {
 ; CHECK-VSCALE-1-LABEL: 'masked_scatter_v4i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:32 Lat:32 SizeLat:32 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_scatter_v4i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:32 Lat:32 SizeLat:32 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:20 Lat:32 SizeLat:32 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_scatter_v4i32'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 28 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:16 Lat:28 SizeLat:28 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 
@@ -1191,11 +1191,11 @@ define void @masked_scatter_v4i32(<4 x i32> %data, <4 x ptr> %ptrs, <4 x i1> %ma
 
 define void @masked_scatter_v1i128(<1 x i128> %data, <1 x ptr> %ptrs, <1 x i1> %masks) {
 ; CHECK-VSCALE-1-LABEL: 'masked_scatter_v1i128'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:9 Lat:8 SizeLat:9 for: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_scatter_v1i128'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:9 Lat:8 SizeLat:9 for: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:9 for: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_scatter_v1i128'

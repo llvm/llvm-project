@@ -172,10 +172,9 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Get the operation class
   OpClass = R->getValueAsDef("OpClass")->getName();
 
-  if (!OpClass.str().compare("UnknownOpClass")) {
+  if (OpClass.str() == "UnknownOpClass")
     PrintFatalError(R, Twine("Unspecified DXIL OpClass for DXIL operation - ") +
                            OpName);
-  }
 
   auto IntrinsicSelectRecords = R->getValueAsListOfDefs("intrinsics");
   if (IntrinsicSelectRecords.size()) {
