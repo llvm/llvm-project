@@ -15,6 +15,7 @@
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/is_pointer.h>
 #include <cstdlib>
 #include <typeinfo>
 
@@ -92,39 +93,50 @@ public:
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 #  if _LIBCPP_HAS_EXCEPTIONS
+#    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION && __cplusplus >= 201703L
   // Clang treats throwing ObjC types differently, and we have to preserve original throw-ing behavior
-#    if !defined(__OBJC__) && _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION && __cplusplus >= 201103L
-  using _Ep2 = __decay_t<_Ep>;
+  // to not break some ObjC invariants. ObjC types are thrown by a pointer, hence the condition;
+  // although it does also trigger for some valid c++ usages, this should be a case rare enough to
+  // not complicate the condition any further
+  if constexpr (std::is_pointer_v<_Ep>) {
+    try {
+      throw __e;
+    } catch (...) {
+      return current_exception();
+    }
+  } else {
+    using _Ep2 = __decay_t<_Ep>;
 
-  void* __ex = __cxxabiv1::__cxa_allocate_exception(sizeof(_Ep));
+    void* __ex = __cxxabiv1::__cxa_allocate_exception(sizeof(_Ep));
 #      ifdef __wasm__
-  // In Wasm, a destructor returns its argument
-  (void)__cxxabiv1::__cxa_init_primary_exception(
-      __ex, const_cast<std::type_info*>(&typeid(_Ep)), [](void* __p) -> void* {
+    // In Wasm, a destructor returns its argument
+    (void)__cxxabiv1::__cxa_init_primary_exception(
+        __ex, const_cast<std::type_info*>(&typeid(_Ep)), [](void* __p) -> void* {
 #      else
-  (void)__cxxabiv1::__cxa_init_primary_exception(__ex, const_cast<std::type_info*>(&typeid(_Ep)), [](void* __p) {
+    (void)__cxxabiv1::__cxa_init_primary_exception(__ex, const_cast<std::type_info*>(&typeid(_Ep)), [](void* __p) {
 #      endif
-        std::__destroy_at(static_cast<_Ep2*>(__p));
+          std::__destroy_at(static_cast<_Ep2*>(__p));
 #      ifdef __wasm__
-        return __p;
+          return __p;
 #      endif
-      });
+        });
 
-  try {
-    ::new (__ex) _Ep2(__e);
-    return exception_ptr::__from_native_exception_pointer(__ex);
-  } catch (...) {
-    __cxxabiv1::__cxa_free_exception(__ex);
-    return current_exception();
+    try {
+      ::new (__ex) _Ep2(__e);
+      return exception_ptr::__from_native_exception_pointer(__ex);
+    } catch (...) {
+      __cxxabiv1::__cxa_free_exception(__ex);
+      return current_exception();
+    }
   }
-#    else
+#    else // !(_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION && __cplusplus >= 201703L)
   try {
     throw __e;
   } catch (...) {
     return current_exception();
   }
 #    endif
-#  else
+#  else // !LIBCPP_HAS_EXCEPTIONS
   ((void)__e);
   std::abort();
 #  endif
