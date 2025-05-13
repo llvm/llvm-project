@@ -12,7 +12,7 @@ include(CheckCSourceCompiles)
 # LIBCXXABI_USE_LLVM_UNWINDER set, we'd be linking against the just-built
 # libunwind (and the compiler implicit -lunwind wouldn't succeed as the newly
 # built libunwind isn't installed yet). For those cases, it'd be good to
-# link with --uwnindlib=none. Check if that option works.
+# link with --unwindlib=none. Check if that option works.
 llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
 
 if (NOT LIBCXX_USE_COMPILER_RT)
@@ -26,6 +26,9 @@ if (NOT LIBCXX_USE_COMPILER_RT)
     endif()
   endif()
 endif()
+
+check_cxx_compiler_flag(-nostdlibinc CXX_SUPPORTS_NOSTDLIBINC_FLAG)
+check_cxx_compiler_flag(-nolibc CXX_SUPPORTS_NOLIBC_FLAG)
 
 # libc++ is using -nostdlib++ at the link step when available,
 # otherwise -nodefaultlibs is used. We want all our checks to also

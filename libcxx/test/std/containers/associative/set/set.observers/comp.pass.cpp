@@ -15,19 +15,19 @@
 #include <cassert>
 
 int main(int, char**) {
-    typedef std::set<int> set_type;
+  typedef std::set<int> set_type;
 
-    set_type s;
-    std::pair<set_type::iterator, bool> p1 = s.insert(1);
-    std::pair<set_type::iterator, bool> p2 = s.insert(2);
+  set_type s;
+  std::pair<set_type::iterator, bool> p1 = s.insert(1);
+  std::pair<set_type::iterator, bool> p2 = s.insert(2);
 
-    const set_type& cs = s;
+  const set_type& cs = s;
 
-    assert(cs.key_comp()(*p1.first, *p2.first));
-    assert(!cs.key_comp()(*p2.first, *p1.first));
+  assert(cs.key_comp()(*p1.first, *p2.first));
+  assert(!cs.key_comp()(*p2.first, *p1.first));
 
-    assert(cs.value_comp()(*p1.first, *p2.first));
-    assert(!cs.value_comp()(*p2.first, *p1.first));
+  assert(cs.value_comp()(*p1.first, *p2.first));
+  assert(!cs.value_comp()(*p2.first, *p1.first));
 
-    return 0;
+  return 0;
 }

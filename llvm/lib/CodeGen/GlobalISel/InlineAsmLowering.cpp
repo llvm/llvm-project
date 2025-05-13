@@ -223,7 +223,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
@@ -297,7 +297,7 @@ bool InlineAsmLowering::lowerInlineAsm(
   // Create the MachineInstr, but don't insert it yet since input
   // operands still need to insert instructions before this one
   auto Inst = MIRBuilder.buildInstrNoInsert(TargetOpcode::INLINEASM)
-                  .addExternalSymbol(IA->getAsmString().c_str())
+                  .addExternalSymbol(IA->getAsmString().data())
                   .addImm(ExtraInfo.get());
 
   // Starting from this operand: flag followed by register(s) will be added as

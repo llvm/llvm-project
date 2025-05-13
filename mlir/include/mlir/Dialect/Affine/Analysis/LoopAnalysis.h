@@ -109,6 +109,24 @@ bool isVectorizableLoopBody(AffineForOp loop, int *memRefDim,
 // the support.
 bool isOpwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts);
 
+/// Checks whether hyper-rectangular loop tiling of the nest represented by
+/// `loops` is valid. The validity condition is from Irigoin and Triolet,
+/// which states that two tiles cannot depend on each other. We simplify such
+/// condition to just checking whether there is any negative dependence
+/// direction, since we have the prior knowledge that the tiling results will be
+/// hyper-rectangles, which are scheduled in the lexicographically increasing
+/// order on the vector of loop indices. This function will return failure when
+/// any dependence component is negative along any of `loops`.
+bool isTilingValid(ArrayRef<AffineForOp> loops);
+
+/// Returns true if the affine nest rooted at `root` has a cyclic dependence
+/// among its affine memory accesses. The dependence could be through any
+/// dependences carried by loops contained in `root` (inclusive of `root`) and
+/// those carried by loop bodies (blocks) contained. Dependences carried by
+/// loops outer to `root` aren't relevant. This method doesn't consider/account
+/// for aliases.
+bool hasCyclicDependence(AffineForOp root);
+
 } // namespace affine
 } // namespace mlir
 

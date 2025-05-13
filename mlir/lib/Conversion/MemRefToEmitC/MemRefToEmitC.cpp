@@ -12,6 +12,7 @@
 
 #include "mlir/Conversion/MemRefToEmitC/MemRefToEmitC.h"
 
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
@@ -19,6 +20,32 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
+
+namespace {
+/// Implement the interface to convert MemRef to EmitC.
+struct MemRefToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  using ConvertToEmitCPatternInterface::ConvertToEmitCPatternInterface;
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateMemRefToEmitCTypeConversion(typeConverter);
+    populateMemRefToEmitCConversionPatterns(patterns, typeConverter);
+  }
+};
+} // namespace
+
+void mlir::registerConvertMemRefToEmitCInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+    dialect->addInterfaces<MemRefToEmitCDialectInterface>();
+  });
+}
+
+//===----------------------------------------------------------------------===//
+// Conversion Patterns
+//===----------------------------------------------------------------------===//
 
 namespace {
 struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
@@ -137,12 +164,7 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
     auto subscript = rewriter.create<emitc::SubscriptOp>(
         op.getLoc(), arrayValue, operands.getIndices());
 
-    auto noInit = emitc::OpaqueAttr::get(getContext(), "");
-    auto var =
-        rewriter.create<emitc::VariableOp>(op.getLoc(), resultTy, noInit);
-
-    rewriter.create<emitc::AssignOp>(op.getLoc(), var, subscript);
-    rewriter.replaceOp(op, var);
+    rewriter.replaceOpWithNewOp<emitc::LoadOp>(op, resultTy, subscript);
     return success();
   }
 };
@@ -172,7 +194,9 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
   typeConverter.addConversion(
       [&](MemRefType memRefType) -> std::optional<Type> {
         if (!memRefType.hasStaticShape() ||
-            !memRefType.getLayout().isIdentity() || memRefType.getRank() == 0) {
+            !memRefType.getLayout().isIdentity() || memRefType.getRank() == 0 ||
+            llvm::any_of(memRefType.getShape(),
+                         [](int64_t dim) { return dim == 0; })) {
           return {};
         }
         Type convertedElementType =
@@ -182,10 +206,23 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
         return emitc::ArrayType::get(memRefType.getShape(),
                                      convertedElementType);
       });
+
+  auto materializeAsUnrealizedCast = [](OpBuilder &builder, Type resultType,
+                                        ValueRange inputs,
+                                        Location loc) -> Value {
+    if (inputs.size() != 1)
+      return Value();
+
+    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+        .getResult(0);
+  };
+
+  typeConverter.addSourceMaterialization(materializeAsUnrealizedCast);
+  typeConverter.addTargetMaterialization(materializeAsUnrealizedCast);
 }
 
-void mlir::populateMemRefToEmitCConversionPatterns(RewritePatternSet &patterns,
-                                                   TypeConverter &converter) {
+void mlir::populateMemRefToEmitCConversionPatterns(
+    RewritePatternSet &patterns, const TypeConverter &converter) {
   patterns.add<ConvertAlloca, ConvertGlobal, ConvertGetGlobal, ConvertLoad,
                ConvertStore>(converter, patterns.getContext());
 }

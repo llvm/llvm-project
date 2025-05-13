@@ -86,6 +86,10 @@ enum class ThinOrFullLTOPhase {
   FullLTOPostLink
 };
 
+#ifndef NDEBUG
+const char *to_string(ThinOrFullLTOPhase Phase);
+#endif
+
 //===----------------------------------------------------------------------===//
 /// Pass interface - Implemented by all 'passes'.  Subclass this if you are an
 /// interprocedural optimization or you do not fit into any of the more
@@ -276,8 +280,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 /// ImmutablePass class - This class is used to provide information that does
-/// not need to be run.  This is useful for things like target information and
-/// "basic" versions of AnalysisGroups.
+/// not need to be run.  This is useful for things like target information.
 ///
 class ImmutablePass : public ModulePass {
 public:

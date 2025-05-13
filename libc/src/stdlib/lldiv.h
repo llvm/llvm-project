@@ -8,12 +8,13 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_LLDIV_H
 #define LLVM_LIBC_SRC_STDLIB_LLDIV_H
 
-#include <stdlib.h>
+#include "hdr/types/lldiv_t.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 lldiv_t lldiv(long long x, long long y);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_LLDIV_H

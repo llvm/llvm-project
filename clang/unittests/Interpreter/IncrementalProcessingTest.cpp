@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InterpreterTestFixture.h"
+
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -16,19 +18,26 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
+
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
+
 #include "gtest/gtest.h"
 
 #include <memory>
+
+#if defined(_AIX) || defined(__MVS__)
+#define CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+#endif
 
 using namespace llvm;
 using namespace clang;
 
 namespace {
+
+class IncrementalProcessingTest : public InterpreterTestBase {};
 
 // Incremental processing produces several modules, all using the same "main
 // file". Make sure CodeGen can cope with that, e.g. for static initializers.
@@ -50,7 +59,7 @@ const Function *getGlobalInit(llvm::Module *M) {
   return nullptr;
 }
 
-TEST(IncrementalProcessing, EmitCXXGlobalInitFunc) {
+TEST_F(IncrementalProcessingTest, EmitCXXGlobalInitFunc) {
   std::vector<const char *> ClangArgv = {"-Xclang", "-emit-llvm-only"};
   auto CB = clang::IncrementalCompilerBuilder();
   CB.SetCompilerArgs(ClangArgv);

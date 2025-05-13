@@ -33,13 +33,9 @@ class LoongArchAsmBackend : public MCAsmBackend {
 
 public:
   LoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
-                      const MCTargetOptions &Options)
-      : MCAsmBackend(llvm::endianness::little,
-                     LoongArch::fixup_loongarch_relax),
-        STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {}
-  ~LoongArchAsmBackend() override {}
+                      const MCTargetOptions &Options);
 
-  bool handleAddSubRelocations(const MCAsmLayout &Layout, const MCFragment &F,
+  bool handleAddSubRelocations(const MCAssembler &Asm, const MCFragment &F,
                                const MCFixup &Fixup, const MCValue &Target,
                                uint64_t &FixedValue) const override;
 
@@ -54,36 +50,26 @@ public:
 
   // Insert target specific fixup type for alignment directive in code section.
   bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                     const MCAsmLayout &Layout,
                                      MCAlignFragment &AF) override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target,
                              const MCSubtargetInfo *STI) override;
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    return false;
-  }
-
-  unsigned getNumFixupKinds() const override {
-    return LoongArch::NumTargetFixupKinds;
-  }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override {}
 
-  std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout,
+  std::pair<bool, bool> relaxLEB128(const MCAssembler &Asm, MCLEBFragment &LF,
                                     int64_t &Value) const override;
 
-  bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF, MCAsmLayout &Layout,
+  bool relaxDwarfLineAddr(const MCAssembler &Asm, MCDwarfLineAddrFragment &DF,
                           bool &WasRelaxed) const override;
-  bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF, MCAsmLayout &Layout,
+  bool relaxDwarfCFA(const MCAssembler &Asm, MCDwarfCallFrameFragment &DF,
                      bool &WasRelaxed) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,

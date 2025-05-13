@@ -10,7 +10,6 @@
 #define MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -261,7 +260,7 @@ public:
 // Make Polynomials hashable.
 template <class D, typename T>
 inline ::llvm::hash_code hash_value(const PolynomialBase<D, T> &arg) {
-  return ::llvm::hash_combine_range(arg.terms.begin(), arg.terms.end());
+  return ::llvm::hash_combine_range(arg.terms);
 }
 
 template <class D, typename T>

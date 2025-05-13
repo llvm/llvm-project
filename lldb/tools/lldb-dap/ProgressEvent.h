@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <atomic>
+#include <chrono>
 #include <mutex>
 #include <optional>
 #include <queue>
@@ -98,7 +99,8 @@ public:
 
   /// Receive a new progress event for the start event and try to report it if
   /// appropriate.
-  void Update(uint64_t progress_id, uint64_t completed, uint64_t total);
+  void Update(uint64_t progress_id, llvm::StringRef message, uint64_t completed,
+              uint64_t total);
 
   /// \return
   ///     \b true if a \a progressEnd event has been notified. There's no

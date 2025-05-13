@@ -3,9 +3,9 @@
 ; the sub_8bit_hi subregister with a class like GR16_ABCD that did.
 target triple = "x86_64-apple-macosx10.10.0"
 
-define void @test() #0 {
+define void @test(i1 %arg) #0 {
 entry:
-  br i1 undef, label %loop, label %for.end597
+  br i1 %arg, label %loop, label %for.end597
 
 loop:
   %0 = load i16, ptr null, align 4

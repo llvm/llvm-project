@@ -14,11 +14,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/WebAssemblyMCExpr.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -38,9 +38,9 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 
 #include "WebAssemblyGenDisassemblerTables.inc"
 
-namespace {
 static constexpr int WebAssemblyInstructionTableSize = 256;
 
+namespace {
 class WebAssemblyDisassembler final : public MCDisassembler {
   std::unique_ptr<const MCInstrInfo> MCII;
 
@@ -171,10 +171,10 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
   // If this is a prefix byte, indirect to another table.
   if (WasmInst->ET == ET_Prefix) {
     WasmInst = nullptr;
-    // Linear search, so far only 2 entries.
-    for (auto PT = PrefixTable; PT->Table; PT++) {
-      if (PT->Prefix == Opc) {
-        WasmInst = PT->Table;
+    // Linear search, so far only 4 entries.
+    for (const auto &[Prefix, Table] : PrefixTable) {
+      if (Prefix == Opc) {
+        WasmInst = Table;
         break;
       }
     }
@@ -239,7 +239,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
         auto *WasmSym = cast<MCSymbolWasm>(Sym);
         WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
         const MCExpr *Expr = MCSymbolRefExpr::create(
-            WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, getContext());
+            WasmSym, WebAssembly::S_TYPEINDEX, getContext());
         MI.addOperand(MCOperand::createExpr(Expr));
       }
       break;
@@ -287,6 +287,24 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
       // Default case.
       if (!parseLEBImmediate(MI, Size, Bytes, false))
         return MCDisassembler::Fail;
+      break;
+    }
+    case WebAssembly::OPERAND_CATCH_LIST: {
+      if (!parseLEBImmediate(MI, Size, Bytes, false))
+        return MCDisassembler::Fail;
+      int64_t NumCatches = MI.getOperand(MI.getNumOperands() - 1).getImm();
+      for (int64_t I = 0; I < NumCatches; I++) {
+        if (!parseImmediate<uint8_t>(MI, Size, Bytes))
+          return MCDisassembler::Fail;
+        int64_t CatchOpcode = MI.getOperand(MI.getNumOperands() - 1).getImm();
+        if (CatchOpcode == wasm::WASM_OPCODE_CATCH ||
+            CatchOpcode == wasm::WASM_OPCODE_CATCH_REF) {
+          if (!parseLEBImmediate(MI, Size, Bytes, false)) // tag index
+            return MCDisassembler::Fail;
+        }
+        if (!parseLEBImmediate(MI, Size, Bytes, false)) // destination
+          return MCDisassembler::Fail;
+      }
       break;
     }
     case MCOI::OPERAND_REGISTER:

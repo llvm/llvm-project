@@ -22,6 +22,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -121,9 +122,8 @@ getInsertionRange(BasicBlock &BB) {
 }
 
 void InjectorIRStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
 
@@ -147,7 +147,7 @@ void InjectorIRStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   for (const auto &Pred : ArrayRef(OpDesc->SourcePreds).slice(1))
     Srcs.push_back(IB.findOrCreateSource(BB, InstsBefore, Srcs, Pred));
 
-  if (Value *Op = OpDesc->BuilderFunc(Srcs, Insts[IP])) {
+  if (Value *Op = OpDesc->BuilderFunc(Srcs, Insts[IP]->getIterator())) {
     // Find a sink and wire up the results of the operation.
     IB.connectToSink(BB, InstsAfter, Op);
   }
@@ -374,7 +374,8 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     return T->isMetadataTy() || T->isTokenTy();
   };
   if (!F || IsUnsupportedTy(F->getReturnType()) ||
-      any_of(F->getFunctionType()->params(), IsUnsupportedTy)) {
+      any_of(F->getFunctionType()->params(), IsUnsupportedTy) ||
+      !isCallableCC(F->getCallingConv())) {
     F = IB.createFunctionDeclaration(*M);
   }
 
@@ -387,16 +388,16 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   }
   bool isRetVoid = (F->getReturnType() == Type::getVoidTy(M->getContext()));
   auto BuilderFunc = [FTy, F, isRetVoid](ArrayRef<Value *> Srcs,
-                                         Instruction *Inst) {
+                                         BasicBlock::iterator InsertPt) {
     StringRef Name = isRetVoid ? nullptr : "C";
-    CallInst *Call = CallInst::Create(FTy, F, Srcs, Name, Inst);
+    CallInst *Call = CallInst::Create(FTy, F, Srcs, Name, InsertPt);
+    Call->setCallingConv(F->getCallingConv());
     // Don't return this call inst if it return void as it can't be sinked.
     return isRetVoid ? nullptr : Call;
   };
 
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
 
@@ -413,16 +414,15 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     Srcs.push_back(IB.findOrCreateSource(BB, InstsBefore, Srcs, Pred));
   }
 
-  if (Value *Op = BuilderFunc(Srcs, Insts[IP])) {
+  if (Value *Op = BuilderFunc(Srcs, Insts[IP]->getIterator())) {
     // Find a sink and wire up the results of the operation.
     IB.connectToSink(BB, InstsAfter, Op);
   }
 }
 
 void InsertCFGStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
 
@@ -542,7 +542,7 @@ void InsertPHIStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   if (&BB == &BB.getParent()->getEntryBlock())
     return;
   Type *Ty = IB.randomType();
-  PHINode *PHI = PHINode::Create(Ty, llvm::pred_size(&BB), "", &BB.front());
+  PHINode *PHI = PHINode::Create(Ty, llvm::pred_size(&BB), "", BB.begin());
 
   // Use a map to make sure the same incoming basic block has the same value.
   DenseMap<BasicBlock *, Value *> IncomingValues;
@@ -560,9 +560,8 @@ void InsertPHIStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     }
     PHI->addIncoming(Src, Pred);
   }
-  SmallVector<Instruction *, 32> InstsAfter;
-  for (Instruction &I : getInsertionRange(BB))
-    InstsAfter.push_back(&I);
+  SmallVector<Instruction *, 32> InstsAfter(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   IB.connectToSink(BB, InstsAfter, PHI);
 }
 
@@ -572,9 +571,8 @@ void SinkInstructionStrategy::mutate(Function &F, RandomIRBuilder &IB) {
   }
 }
 void SinkInstructionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
   // Choose an Instruction to mutate.
@@ -622,9 +620,11 @@ void ShuffleBlockStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   auto getAliveChildren = [&AliveInstsLookup](Instruction *I) {
     SmallSetVector<size_t, 8> Children;
     for (Value *U : I->users()) {
-      Instruction *P = dyn_cast<Instruction>(U);
-      if (P && AliveInstsLookup.count(P))
-        Children.insert(AliveInstsLookup[P]);
+      if (Instruction *P = dyn_cast<Instruction>(U)) {
+        auto It = AliveInstsLookup.find(P);
+        if (It != AliveInstsLookup.end())
+          Children.insert(It->second);
+      }
     }
     return Children;
   };
@@ -657,7 +657,7 @@ void ShuffleBlockStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   Instruction *Terminator = BB.getTerminator();
   // Then put instructions back.
   for (Instruction *I : Insts) {
-    I->insertBefore(Terminator);
+    I->insertBefore(Terminator->getIterator());
   }
 }
 

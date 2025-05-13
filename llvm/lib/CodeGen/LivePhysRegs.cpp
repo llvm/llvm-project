@@ -90,7 +90,7 @@ void LivePhysRegs::stepForward(const MachineInstr &MI,
       if (O->isDef()) {
         // Note, dead defs are still recorded.  The caller should decide how to
         // handle them.
-        Clobbers.push_back(std::make_pair(Reg, &*O));
+        Clobbers.push_back(std::make_pair(Reg.id(), &*O));
       } else {
         assert(O->isUse());
         if (O->isKill())
@@ -139,8 +139,8 @@ LLVM_DUMP_METHOD void LivePhysRegs::dump() const {
 #endif
 
 bool LivePhysRegs::available(const MachineRegisterInfo &MRI,
-                             MCPhysReg Reg) const {
-  if (LiveRegs.count(Reg))
+                             MCRegister Reg) const {
+  if (LiveRegs.count(Reg.id()))
     return false;
   if (MRI.isReserved(Reg))
     return false;
@@ -154,7 +154,7 @@ bool LivePhysRegs::available(const MachineRegisterInfo &MRI,
 /// Add live-in registers of basic block \p MBB to \p LiveRegs.
 void LivePhysRegs::addBlockLiveIns(const MachineBasicBlock &MBB) {
   for (const auto &LI : MBB.liveins()) {
-    MCPhysReg Reg = LI.PhysReg;
+    MCRegister Reg = LI.PhysReg;
     LaneBitmask Mask = LI.LaneMask;
     MCSubRegIndexIterator S(Reg, TRI);
     assert(Mask.any() && "Invalid livein mask");
@@ -301,7 +301,7 @@ void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
       // the last instruction in the block.
       if (MI.isReturn() && MFI.isCalleeSavedInfoValid()) {
         for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
-          if (Info.getReg() == Reg) {
+          if (Info.getReg() == Reg.asMCReg()) {
             IsNotLive = !Info.isRestored();
             break;
           }
@@ -337,4 +337,28 @@ void llvm::computeAndAddLiveIns(LivePhysRegs &LiveRegs,
                                 MachineBasicBlock &MBB) {
   computeLiveIns(LiveRegs, MBB);
   addLiveIns(MBB, LiveRegs);
+}
+
+// Returns true if `Reg` is used after this iterator in the rest of the
+// basic block or any successors of the basic block.
+bool llvm::isPhysRegUsedAfter(Register Reg, MachineBasicBlock::iterator MBI) {
+  assert(Reg.isPhysical() && "Apply to physical register only");
+
+  MachineBasicBlock *MBB = MBI->getParent();
+  // Scan forward through BB for a use/def of Reg
+  for (const MachineInstr &MI : llvm::make_range(std::next(MBI), MBB->end())) {
+    if (MI.readsRegister(Reg, /*TRI=*/nullptr))
+      return true;
+    // If we found a def, we can stop searching.
+    if (MI.definesRegister(Reg, /*TRI=*/nullptr))
+      return false;
+  }
+
+  // If we hit the end of the block, check whether Reg is live into a
+  //  successor.
+  for (MachineBasicBlock *Succ : MBB->successors())
+    if (Succ->isLiveIn(Reg))
+      return true;
+
+  return false;
 }

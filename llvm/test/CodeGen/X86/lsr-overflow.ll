@@ -4,9 +4,9 @@
 ; The comparison uses the pre-inc value, which could lead LSR to
 ; try to compute -INT64_MIN.
 
-; CHECK: movabsq $-9223372036854775808, %rax
-; CHECK: cmpq  %rax,
-; CHECK: sete  %al
+; CHECK-NOT: movabsq $-9223372036854775808, %rax
+; CHECK: negq  %r
+; CHECK-NEXT: seto  %al
 
 declare i64 @bar()
 
@@ -26,7 +26,7 @@ __ABContainsLabel.exit:
   ret i1 %cmp
 }
 
-define void @func_37() noreturn nounwind readonly {
+define void @func_37(i1 %arg) noreturn nounwind readonly {
 entry:
   br label %for.body
 
@@ -34,7 +34,7 @@ for.body:                                         ; preds = %for.inc8, %entry
   %indvar = phi i64 [ 0, %entry ], [ %indvar.next, %for.inc8 ]
   %sub.i = add i64 undef, %indvar
   %cmp.i = icmp eq i64 %sub.i, -9223372036854775808
-  br i1 undef, label %for.inc8, label %for.cond4
+  br i1 %arg, label %for.inc8, label %for.cond4
 
 for.cond4:                                        ; preds = %for.cond4, %for.body
   br label %for.cond4

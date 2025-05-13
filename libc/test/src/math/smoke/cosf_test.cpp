@@ -13,13 +13,15 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcCosfTest, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::cosf(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::cosf(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -36,3 +38,30 @@ TEST_F(LlvmLibcCosfTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::cosf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcCosfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(max_denormal));
+}
+
+TEST_F(LlvmLibcCosfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(max_denormal));
+}
+
+TEST_F(LlvmLibcCosfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(max_denormal));
+}
+
+#endif

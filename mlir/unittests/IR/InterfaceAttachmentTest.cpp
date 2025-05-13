@@ -43,7 +43,7 @@ struct Model
 /// overrides default methods.
 struct OverridingModel
     : public TestExternalTypeInterface::ExternalModel<OverridingModel,
-                                                      FloatType> {
+                                                      Float32Type> {
   unsigned getBitwidthPlusArg(Type type, unsigned arg) const {
     return type.getIntOrFloatBitWidth() + arg;
   }

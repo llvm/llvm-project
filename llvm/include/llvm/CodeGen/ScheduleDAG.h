@@ -32,7 +32,7 @@ namespace llvm {
 
 template <class GraphType> struct GraphTraits;
 template<class Graph> class GraphWriter;
-class LLVMTargetMachine;
+class TargetMachine;
 class MachineFunction;
 class MachineRegisterInfo;
 class MCInstrDesc;
@@ -101,20 +101,18 @@ class TargetRegisterInfo;
     SDep() : Dep(nullptr, Data) {}
 
     /// Constructs an SDep with the specified values.
-    SDep(SUnit *S, Kind kind, unsigned Reg)
-      : Dep(S, kind), Contents() {
+    SDep(SUnit *S, Kind kind, Register Reg) : Dep(S, kind), Contents() {
       switch (kind) {
       default:
         llvm_unreachable("Reg given for non-register dependence!");
       case Anti:
       case Output:
-        assert(Reg != 0 &&
-               "SDep::Anti and SDep::Output must use a non-zero Reg!");
-        Contents.Reg = Reg;
+        assert(Reg && "SDep::Anti and SDep::Output must use a non-zero Reg!");
+        Contents.Reg = Reg.id();
         Latency = 0;
         break;
       case Data:
-        Contents.Reg = Reg;
+        Contents.Reg = Reg.id();
         Latency = 1;
         break;
       }
@@ -208,14 +206,12 @@ class TargetRegisterInfo;
     }
 
     /// Tests if this is a Data dependence that is associated with a register.
-    bool isAssignedRegDep() const {
-      return getKind() == Data && Contents.Reg != 0;
-    }
+    bool isAssignedRegDep() const { return getKind() == Data && Contents.Reg; }
 
     /// Returns the register associated with this edge. This is only valid on
     /// Data, Anti, and Output edges. On Data edges, this value may be zero,
     /// meaning there is no associated register.
-    unsigned getReg() const {
+    Register getReg() const {
       assert((getKind() == Data || getKind() == Anti || getKind() == Output) &&
              "getReg called on non-register dependence edge!");
       return Contents.Reg;
@@ -225,14 +221,14 @@ class TargetRegisterInfo;
     /// Data, Anti, and Output edges. On Anti and Output edges, this value must
     /// not be zero. On Data edges, the value may be zero, which would mean that
     /// no specific register is associated with this edge.
-    void setReg(unsigned Reg) {
+    void setReg(Register Reg) {
       assert((getKind() == Data || getKind() == Anti || getKind() == Output) &&
              "setReg called on non-register dependence edge!");
-      assert((getKind() != Anti || Reg != 0) &&
+      assert((getKind() != Anti || Reg) &&
              "SDep::Anti edge cannot use the zero register!");
-      assert((getKind() != Output || Reg != 0) &&
+      assert((getKind() != Output || Reg) &&
              "SDep::Output edge cannot use the zero register!");
-      Contents.Reg = Reg;
+      Contents.Reg = Reg.id();
     }
 
     void dump(const TargetRegisterInfo *TRI = nullptr) const;
@@ -243,8 +239,10 @@ class TargetRegisterInfo;
   private:
     enum : unsigned { BoundaryID = ~0u };
 
-    SDNode *Node = nullptr;        ///< Representative node.
-    MachineInstr *Instr = nullptr; ///< Alternatively, a MachineInstr.
+    union {
+      SDNode *Node;        ///< Representative node.
+      MachineInstr *Instr; ///< Alternatively, a MachineInstr.
+    };
 
   public:
     SUnit *OrigNode = nullptr; ///< If not this, the node from which this node
@@ -252,6 +250,10 @@ class TargetRegisterInfo;
 
     const MCSchedClassDesc *SchedClass =
         nullptr; ///< nullptr or resolved SchedClass.
+
+    const TargetRegisterClass *CopyDstRC =
+        nullptr; ///< Is a special copy node if != nullptr.
+    const TargetRegisterClass *CopySrcRC = nullptr;
 
     SmallVector<SDep, 4> Preds;  ///< All sunit predecessors.
     SmallVector<SDep, 4> Succs;  ///< All sunit successors.
@@ -269,8 +271,14 @@ class TargetRegisterInfo;
     unsigned NumSuccsLeft = 0;         ///< # of succs not scheduled.
     unsigned WeakPredsLeft = 0;        ///< # of weak preds not scheduled.
     unsigned WeakSuccsLeft = 0;        ///< # of weak succs not scheduled.
-    unsigned short NumRegDefsLeft = 0; ///< # of reg defs with no scheduled use.
-    unsigned short Latency = 0;        ///< Node latency.
+    unsigned TopReadyCycle = 0; ///< Cycle relative to start when node is ready.
+    unsigned BotReadyCycle = 0; ///< Cycle relative to end when node is ready.
+
+  private:
+    unsigned Depth = 0;  ///< Node depth.
+    unsigned Height = 0; ///< Node height.
+
+  public:
     bool isVRegCycle      : 1;         ///< May use and def the same vreg.
     bool isCall           : 1;         ///< Is a function call.
     bool isCallOp         : 1;         ///< Is a function call operand.
@@ -287,52 +295,54 @@ class TargetRegisterInfo;
     bool isCloned         : 1;         ///< True if this node has been cloned.
     bool isUnbuffered     : 1;         ///< Uses an unbuffered resource.
     bool hasReservedResource : 1;      ///< Uses a reserved resource.
-    Sched::Preference SchedulingPref = Sched::None; ///< Scheduling preference.
+    unsigned short NumRegDefsLeft = 0; ///< # of reg defs with no scheduled use.
+    unsigned short Latency = 0;        ///< Node latency.
 
   private:
     bool isDepthCurrent   : 1;         ///< True if Depth is current.
     bool isHeightCurrent  : 1;         ///< True if Height is current.
-    unsigned Depth = 0;                ///< Node depth.
-    unsigned Height = 0;               ///< Node height.
+    bool isNode : 1; ///< True if the representative is an SDNode
+    bool isInst : 1; ///< True if the representative is a MachineInstr
 
   public:
-    unsigned TopReadyCycle = 0; ///< Cycle relative to start when node is ready.
-    unsigned BotReadyCycle = 0; ///< Cycle relative to end when node is ready.
-
-    const TargetRegisterClass *CopyDstRC =
-        nullptr; ///< Is a special copy node if != nullptr.
-    const TargetRegisterClass *CopySrcRC = nullptr;
+    Sched::Preference SchedulingPref : 4; ///< Scheduling preference.
+    static_assert(Sched::Preference::Last <= (1 << 4),
+                  "not enough bits in bitfield");
 
     /// Constructs an SUnit for pre-regalloc scheduling to represent an
     /// SDNode and any nodes flagged to it.
     SUnit(SDNode *node, unsigned nodenum)
-      : Node(node), NodeNum(nodenum), isVRegCycle(false), isCall(false),
-        isCallOp(false), isTwoAddress(false), isCommutable(false),
-        hasPhysRegUses(false), hasPhysRegDefs(false), hasPhysRegClobbers(false),
-        isPending(false), isAvailable(false), isScheduled(false),
-        isScheduleHigh(false), isScheduleLow(false), isCloned(false),
-        isUnbuffered(false), hasReservedResource(false), isDepthCurrent(false),
-        isHeightCurrent(false) {}
+        : Node(node), NodeNum(nodenum), isVRegCycle(false), isCall(false),
+          isCallOp(false), isTwoAddress(false), isCommutable(false),
+          hasPhysRegUses(false), hasPhysRegDefs(false),
+          hasPhysRegClobbers(false), isPending(false), isAvailable(false),
+          isScheduled(false), isScheduleHigh(false), isScheduleLow(false),
+          isCloned(false), isUnbuffered(false), hasReservedResource(false),
+          isDepthCurrent(false), isHeightCurrent(false), isNode(true),
+          isInst(false), SchedulingPref(Sched::None) {}
 
     /// Constructs an SUnit for post-regalloc scheduling to represent a
     /// MachineInstr.
     SUnit(MachineInstr *instr, unsigned nodenum)
-      : Instr(instr), NodeNum(nodenum), isVRegCycle(false), isCall(false),
-        isCallOp(false), isTwoAddress(false), isCommutable(false),
-        hasPhysRegUses(false), hasPhysRegDefs(false), hasPhysRegClobbers(false),
-        isPending(false), isAvailable(false), isScheduled(false),
-        isScheduleHigh(false), isScheduleLow(false), isCloned(false),
-        isUnbuffered(false), hasReservedResource(false), isDepthCurrent(false),
-        isHeightCurrent(false) {}
+        : Instr(instr), NodeNum(nodenum), isVRegCycle(false), isCall(false),
+          isCallOp(false), isTwoAddress(false), isCommutable(false),
+          hasPhysRegUses(false), hasPhysRegDefs(false),
+          hasPhysRegClobbers(false), isPending(false), isAvailable(false),
+          isScheduled(false), isScheduleHigh(false), isScheduleLow(false),
+          isCloned(false), isUnbuffered(false), hasReservedResource(false),
+          isDepthCurrent(false), isHeightCurrent(false), isNode(false),
+          isInst(true), SchedulingPref(Sched::None) {}
 
     /// Constructs a placeholder SUnit.
     SUnit()
-      : isVRegCycle(false), isCall(false), isCallOp(false), isTwoAddress(false),
-        isCommutable(false), hasPhysRegUses(false), hasPhysRegDefs(false),
-        hasPhysRegClobbers(false), isPending(false), isAvailable(false),
-        isScheduled(false), isScheduleHigh(false), isScheduleLow(false),
-        isCloned(false), isUnbuffered(false), hasReservedResource(false),
-        isDepthCurrent(false), isHeightCurrent(false) {}
+        : Node(nullptr), isVRegCycle(false), isCall(false), isCallOp(false),
+          isTwoAddress(false), isCommutable(false), hasPhysRegUses(false),
+          hasPhysRegDefs(false), hasPhysRegClobbers(false), isPending(false),
+          isAvailable(false), isScheduled(false), isScheduleHigh(false),
+          isScheduleLow(false), isCloned(false), isUnbuffered(false),
+          hasReservedResource(false), isDepthCurrent(false),
+          isHeightCurrent(false), isNode(false), isInst(false),
+          SchedulingPref(Sched::None) {}
 
     /// Boundary nodes are placeholders for the boundary of the
     /// scheduling region.
@@ -346,32 +356,36 @@ class TargetRegisterInfo;
     /// Assigns the representative SDNode for this SUnit. This may be used
     /// during pre-regalloc scheduling.
     void setNode(SDNode *N) {
-      assert(!Instr && "Setting SDNode of SUnit with MachineInstr!");
+      assert(!isInst && "Setting SDNode of SUnit with MachineInstr!");
       Node = N;
+      isNode = true;
     }
 
     /// Returns the representative SDNode for this SUnit. This may be used
     /// during pre-regalloc scheduling.
     SDNode *getNode() const {
-      assert(!Instr && "Reading SDNode of SUnit with MachineInstr!");
+      assert(!isInst && (isNode || !Instr) &&
+             "Reading SDNode of SUnit without SDNode!");
       return Node;
     }
 
     /// Returns true if this SUnit refers to a machine instruction as
     /// opposed to an SDNode.
-    bool isInstr() const { return Instr; }
+    bool isInstr() const { return isInst && Instr; }
 
     /// Assigns the instruction for the SUnit. This may be used during
     /// post-regalloc scheduling.
     void setInstr(MachineInstr *MI) {
-      assert(!Node && "Setting MachineInstr of SUnit with SDNode!");
+      assert(!isNode && "Setting MachineInstr of SUnit with SDNode!");
       Instr = MI;
+      isInst = true;
     }
 
     /// Returns the representative MachineInstr for this SUnit. This may be used
     /// during post-regalloc scheduling.
     MachineInstr *getInstr() const {
-      assert(!Node && "Reading MachineInstr of SUnit with SDNode!");
+      assert(!isNode && (isInst || !Node) &&
+             "Reading MachineInstr of SUnit without MachineInstr!");
       return Instr;
     }
 
@@ -553,7 +567,7 @@ class TargetRegisterInfo;
 
   class ScheduleDAG {
   public:
-    const LLVMTargetMachine &TM;        ///< Target processor
+    const TargetMachine &TM;            ///< Target processor
     const TargetInstrInfo *TII;         ///< Target instruction information
     const TargetRegisterInfo *TRI;      ///< Target processor register info
     MachineFunction &MF;                ///< Machine function

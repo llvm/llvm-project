@@ -11,19 +11,12 @@
 ;     C[i] = D[i] * E[i];
 ;   }
 
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.10.0"
-
-define void @f(ptr  %a,
-               ptr  %b,
-               ptr noalias %c,
-               ptr noalias %d,
-               ptr noalias %e) {
-entry:
-  br label %for.body
-
+define void @f(ptr %a, ptr %b, ptr noalias %c, ptr noalias %d, ptr noalias %e) {
+; CHECK-LABEL: @f(
 ; CHECK-NOT: memcheck:
 ; CHECK: mul <4 x i32>
+entry:
+  br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %ind = phi i64 [ 0, %entry ], [ %add, %for.body ]

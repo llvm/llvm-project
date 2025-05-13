@@ -424,7 +424,7 @@ namespace llvm {
     }
 
     /// getVNInfoBefore - Return the VNInfo that is live up to but not
-    /// necessarilly including Idx, or NULL. Use this to find the reaching def
+    /// necessarily including Idx, or NULL. Use this to find the reaching def
     /// used by an instruction at this SlotIndex position.
     VNInfo *getVNInfoBefore(SlotIndex Idx) const {
       const_iterator I = FindSegmentContaining(Idx.getPrevSlot());
@@ -662,9 +662,9 @@ namespace llvm {
     ///
     /// Note that this is a no-op when asserts are disabled.
 #ifdef NDEBUG
-    void verify() const {}
+    [[nodiscard]] bool verify() const { return true; }
 #else
-    void verify() const;
+    [[nodiscard]] bool verify() const;
 #endif
 
   protected:
@@ -720,7 +720,7 @@ namespace llvm {
     void incrementWeight(float Inc) { Weight += Inc; }
     void setWeight(float Value) { Weight = Value; }
 
-    LiveInterval(unsigned Reg, float Weight) : Reg(Reg), Weight(Weight) {}
+    LiveInterval(Register Reg, float Weight) : Reg(Reg), Weight(Weight) {}
 
     ~LiveInterval() {
       clearSubRanges();
@@ -893,9 +893,11 @@ namespace llvm {
     ///
     /// Note that this is a no-op when asserts are disabled.
 #ifdef NDEBUG
-    void verify(const MachineRegisterInfo *MRI = nullptr) const {}
+    [[nodiscard]] bool verify(const MachineRegisterInfo *MRI = nullptr) const {
+      return true;
+    }
 #else
-    void verify(const MachineRegisterInfo *MRI = nullptr) const;
+    [[nodiscard]] bool verify(const MachineRegisterInfo *MRI = nullptr) const;
 #endif
 
   private:

@@ -6,7 +6,7 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks that DWARF5 .debug_line is handled correctly.
+## This test checks that DWARF5 .debug_line is handled correctly.
 
 # PRECHECK: version: 5
 # PRECHECK: include_directories[  0] =  .debug_line_str

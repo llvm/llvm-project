@@ -110,8 +110,8 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   CIOpts.VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   CIOpts.CC1Args = CC1Args;
   CIOpts.RecoverOnError = true;
-  CIOpts.Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions, &D, false);
+  CIOpts.Diags = CompilerInstance::createDiagnostics(
+      *CIOpts.VFS, new DiagnosticOptions, &D, false);
   CIOpts.ProbePrecompiled = false;
   std::unique_ptr<CompilerInvocation> CI = createInvocation(ArgStrs, CIOpts);
   if (!CI)
@@ -145,10 +145,8 @@ prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
         CI->getFrontendOpts().Inputs[0].getFile(), Buffer.get());
   }
 
-  auto Clang = std::make_unique<CompilerInstance>(
-      std::make_shared<PCHContainerOperations>());
-  Clang->setInvocation(std::move(CI));
-  Clang->createDiagnostics(&DiagsClient, false);
+  auto Clang = std::make_unique<CompilerInstance>(std::move(CI));
+  Clang->createDiagnostics(*VFS, &DiagsClient, false);
 
   if (auto VFSWithRemapping = createVFSFromCompilerInvocation(
           Clang->getInvocation(), Clang->getDiagnostics(), VFS))

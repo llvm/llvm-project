@@ -15,7 +15,6 @@
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
 #include "PPCInstrInfo.h"
-#include "PPCTargetMachine.h"
 
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -33,9 +32,7 @@ public:
   const PPCRegisterInfo *TRI;
   static char ID;
 
-  PPCExpandAtomicPseudo() : MachineFunctionPass(ID) {
-    initializePPCExpandAtomicPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  PPCExpandAtomicPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

@@ -1304,7 +1304,7 @@ return: ret void
 define void @phi_node_trouble(ptr %s) {
 ; CHECK-LABEL: phi_node_trouble:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB13_1: # %header
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testq %rdi, %rdi
@@ -2563,7 +2563,7 @@ define i32 @pr27135(i32 %i) {
 ; NOOPT-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
 ; NOOPT-NEXT:    retq
 entry:
-  br i1 undef, label %sw, label %end
+  br i1 poison, label %sw, label %end
 sw:
   switch i32 %i, label %end [
     i32 99,  label %sw.bb

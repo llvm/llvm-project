@@ -1,0 +1,7 @@
+macros:
+  __STDC_VERSION_ASSERT_H__:
+    c-definition: 7.2.1
+  assert:
+    c-definition: 7.2.1
+    in-latest-posix: ''
+

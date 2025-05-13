@@ -1,0 +1,69 @@
+# RUN: llvm-mc -triple=riscv64 -disassemble -show-inst --mattr=+v %s \
+# RUN:   --M no-aliases | FileCheck %s
+
+# Check if there is a MCOperand for the carry-in mask.
+
+[0x57,0x04,0x4a,0x5c]
+# CHECK: <MCInst #{{[0-9]+}} VMERGE_VVM
+# CHECK-COUNT-4: MCOperand Reg
+
+[0x57,0x44,0x45,0x5c]
+# CHECK: <MCInst #{{[0-9]+}} VMERGE_VXM
+# CHECK-COUNT-4: MCOperand Reg
+
+[0x57,0xb4,0x47,0x5c]
+# CHECK: <MCInst #{{[0-9]+}} VMERGE_VIM
+# CHECK-NEXT: MCOperand Reg
+# CHECK-NEXT: MCOperand Reg
+# CHECK-NEXT: MCOperand Imm
+# CHECK-NEXT: MCOperand Reg
+
+[0x57,0x04,0x4a,0x40]
+# CHECK: <MCInst #{{[0-9]+}} VADC_VVM
+# CHECK-COUNT-4: MCOperand Reg
+
+[0x57,0x44,0x45,0x40]
+# CHECK: <MCInst #{{[0-9]+}} VADC_VXM
+# CHECK-COUNT-4: MCOperand Reg
+
+[0x57,0xb4,0x47,0x40]
+# CHECK: <MCInst #{{[0-9]+}} VADC_VIM
+# CHECK-NEXT: MCOperand Reg
+# CHECK-NEXT: MCOperand Reg
+# CHECK-NEXT: MCOperand Imm
+# CHECK-NEXT: MCOperand Reg
+
+[0x57,0x04,0x4a,0x44]
+# CHECK: <MCInst #{{[0-9]+}} VMADC_VVM
+# CHECK-COUNT-4: MCOperand Reg
+
+[0x57,0x44,0x45,0x44]
+# CHECK: <MCInst #{{[0-9]+}} VMADC_VXM
+# CHECK-COUNT-4: MCOperand Reg
+
+[0x57,0xb4,0x47,0x44]
+# CHECK: <MCInst #{{[0-9]+}} VMADC_VIM
+# CHECK-NEXT: MCOperand Reg
+# CHECK-NEXT: MCOperand Reg
+# CHECK-NEXT: MCOperand Imm
+# CHECK-NEXT: MCOperand Reg
+
+[0x57,0x04,0x4a,0x48]
+# CHECK: <MCInst #{{[0-9]+}} VSBC_VVM
+# CHECK-COUNT-4: MCOperand Reg
+
+[0x57,0x44,0x45,0x48]
+# CHECK: <MCInst #{{[0-9]+}} VSBC_VXM
+# CHECK-COUNT-4: MCOperand Reg
+
+[0x57,0x04,0x4a,0x4c]
+# CHECK: <MCInst #{{[0-9]+}} VMSBC_VVM
+# CHECK-COUNT-4: MCOperand Reg
+
+[0x57,0x44,0x45,0x4c]
+# CHECK: <MCInst #{{[0-9]+}} VMSBC_VXM
+# CHECK-COUNT-4: MCOperand Reg
+
+[0x57,0x54,0x45,0x5c]
+# CHECK: <MCInst #{{[0-9]+}} VFMERGE_VFM
+# CHECK-COUNT-4: MCOperand Reg

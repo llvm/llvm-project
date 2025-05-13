@@ -42,9 +42,11 @@ public:
     SM_Compatible = 1 << 1,   // aarch64_pstate_sm_compatible
     SM_Body = 1 << 2,         // aarch64_pstate_sm_body
     SME_ABI_Routine = 1 << 3, // Used for SME ABI routines to avoid lazy saves
-    ZA_Shift = 4,
+    ZA_State_Agnostic = 1 << 4,
+    ZT0_Undef = 1 << 5,       // Use to mark ZT0 as undef to avoid spills
+    ZA_Shift = 6,
     ZA_Mask = 0b111 << ZA_Shift,
-    ZT0_Shift = 7,
+    ZT0_Shift = 9,
     ZT0_Mask = 0b111 << ZT0_Shift
   };
 
@@ -96,8 +98,11 @@ public:
     return State == StateValue::In || State == StateValue::Out ||
            State == StateValue::InOut || State == StateValue::Preserved;
   }
+  bool hasAgnosticZAInterface() const { return Bitmask & ZA_State_Agnostic; }
   bool hasSharedZAInterface() const { return sharesZA() || sharesZT0(); }
-  bool hasPrivateZAInterface() const { return !hasSharedZAInterface(); }
+  bool hasPrivateZAInterface() const {
+    return !hasSharedZAInterface() && !hasAgnosticZAInterface();
+  }
   bool hasZAState() const { return isNewZA() || sharesZA(); }
   bool requiresLazySave(const SMEAttrs &Callee) const {
     return hasZAState() && Callee.hasPrivateZAInterface() &&
@@ -121,6 +126,7 @@ public:
   bool isPreservesZT0() const {
     return decodeZT0State(Bitmask) == StateValue::Preserved;
   }
+  bool isUndefZT0() const { return Bitmask & ZT0_Undef; }
   bool sharesZT0() const {
     StateValue State = decodeZT0State(Bitmask);
     return State == StateValue::In || State == StateValue::Out ||
@@ -128,7 +134,8 @@ public:
   }
   bool hasZT0State() const { return isNewZT0() || sharesZT0(); }
   bool requiresPreservingZT0(const SMEAttrs &Callee) const {
-    return hasZT0State() && !Callee.sharesZT0();
+    return hasZT0State() && !Callee.isUndefZT0() && !Callee.sharesZT0() &&
+           !Callee.hasAgnosticZAInterface();
   }
   bool requiresDisablingZABeforeCall(const SMEAttrs &Callee) const {
     return hasZT0State() && !hasZAState() && Callee.hasPrivateZAInterface() &&
@@ -136,6 +143,10 @@ public:
   }
   bool requiresEnablingZAAfterCall(const SMEAttrs &Callee) const {
     return requiresLazySave(Callee) || requiresDisablingZABeforeCall(Callee);
+  }
+  bool requiresPreservingAllZAState(const SMEAttrs &Callee) const {
+    return hasAgnosticZAInterface() && !Callee.hasAgnosticZAInterface() &&
+           !(Callee.Bitmask & SME_ABI_Routine);
   }
 };
 

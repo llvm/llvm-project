@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: callr {{r[0-9]+}}
 
 %s.0 = type { [1 x %s.1], [4 x ptr] }

@@ -450,8 +450,8 @@ define i32 @n19_oneuse9(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 
 define <2 x i32> @t20_ult_slt_vec_splat(<2 x i32> %x, <2 x i32> %replacement_low, <2 x i32> %replacement_high) {
 ; CHECK-LABEL: @t20_ult_slt_vec_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 -16, i32 -16>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i32> [[X]], <i32 127, i32 127>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], splat (i32 -16)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i32> [[X]], splat (i32 127)
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[REPLACEMENT_LOW:%.*]], <2 x i32> [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[REPLACEMENT_HIGH:%.*]], <2 x i32> [[TMP3]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
@@ -486,9 +486,9 @@ declare void @use2xi1(<2 x i1>)
 declare void @use(<2 x i1>)
 define <2 x i32> @t22_uge_slt(<2 x i32> %x, <2 x i32> %replacement_low, <2 x i32> %replacement_high) {
 ; CHECK-LABEL: @t22_uge_slt(
-; CHECK-NEXT:    [[T0:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 128, i32 128>
+; CHECK-NEXT:    [[T0:%.*]] = icmp slt <2 x i32> [[X:%.*]], splat (i32 128)
 ; CHECK-NEXT:    [[T1:%.*]] = select <2 x i1> [[T0]], <2 x i32> [[REPLACEMENT_LOW:%.*]], <2 x i32> [[REPLACEMENT_HIGH:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[X]], <i32 16, i32 16>
+; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[X]], splat (i32 16)
 ; CHECK-NEXT:    [[T3:%.*]] = icmp uge <2 x i32> [[T2]], <i32 144, i32 0>
 ; CHECK-NEXT:    call void @use2xi1(<2 x i1> [[T3]])
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T3]], <2 x i32> [[T1]], <2 x i32> [[X]]

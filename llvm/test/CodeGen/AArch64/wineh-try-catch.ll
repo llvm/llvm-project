@@ -41,7 +41,7 @@
 ; CHECK-LABEL: .Ltmp0:
 ; CHECK:       bl      "?func2@@YAHXZ
 
-; CHECK:        [[CATCHRETDEST:.LBB0_[0-9]+]]:      // %catchret.dest
+; CHECK:        [[CATCHRETDEST:.LBB0_[0-9]+]]:      // Block address taken
 
 ; Check the catch funclet.
 ; CHECK-LABEL: "?catch$4@?0??func@@YAHXZ@4HA":
@@ -76,11 +76,11 @@
 ; CHECK-LABEL:        "$cppxdata$?func@@YAHXZ":
 ; CHECK-NEXT:         .word   429065506               // MagicNumber
 ; CHECK-NEXT:         .word   2                       // MaxState
-; CHECK-NEXT:         .word   ("$stateUnwindMap$?func@@YAHXZ")@IMGREL // UnwindMap
+; CHECK-NEXT:         .word   "$stateUnwindMap$?func@@YAHXZ"@IMGREL // UnwindMap
 ; CHECK-NEXT:         .word   1                       // NumTryBlocks
-; CHECK-NEXT:         .word   ("$tryMap$?func@@YAHXZ")@IMGREL // TryBlockMap
+; CHECK-NEXT:         .word   "$tryMap$?func@@YAHXZ"@IMGREL // TryBlockMap
 ; CHECK-NEXT:         .word   4                       // IPMapEntries
-; CHECK-NEXT:         .word   ("$ip2state$?func@@YAHXZ")@IMGREL // IPToStateXData
+; CHECK-NEXT:         .word   "$ip2state$?func@@YAHXZ"@IMGREL // IPToStateXData
 ; CHECK-NEXT:         .word   -16                     // UnwindHelp
 
 ; UNWIND: Function: ?func@@YAHXZ (0x0)

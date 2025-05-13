@@ -27,7 +27,7 @@ bb5:		; preds = %entry
 define i32 @term_Sharing(ptr %Term) nounwind {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@term_Sharing
-; CHECK-SAME: (ptr nocapture nofree readnone [[TERM:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[TERM:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[BB_I:%.*]], label [[BB14:%.*]]
 ; CHECK:       bb.i:

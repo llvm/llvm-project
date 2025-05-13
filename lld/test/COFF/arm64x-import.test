@@ -1,0 +1,533 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows func12-thunks-arm64ec.s -o func12-thunks-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows func12-thunks-arm64.s -o func12-thunks-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows func12-arm64ec.s -o func12-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows func123-arm64.s -o func123-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows func123-arm64ec.s -o func123-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows func12-arm64.s -o func12-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows func234-arm64.s -o func234-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows func12o-arm64ec.s -o func12o-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows func34-arm64.s -o func34-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows func34o-arm64.s -o func34o-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows funco-arm64.s -o funco-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows icall.s -o icall.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
+RUN: llvm-lib -machine:arm64ec -def:imp.def -out:imp-arm64ec.lib
+RUN: llvm-lib -machine:arm64 -def:imp.def -out:imp-arm64.lib
+RUN: llvm-lib -machine:arm64x -def:imp.def -defArm64Native:imp.def -out:imp-arm64x.lib
+RUN: llvm-lib -machine:arm64x -def:imp-ord10.def -defArm64Native:imp.def -out:imp-ecord.lib
+RUN: llvm-lib -machine:arm64x -def:imp-ord10.def -defArm64Native:imp-ord20.def -out:imp-ecord.lib
+RUN: llvm-lib -machine:arm64x -def:imp2.def -defArm64Native:imp2.def -out:imp2.lib
+RUN: llvm-lib -machine:arm64x -def:noname-ec.def -defArm64Native:noname-native.def -out:noname.lib
+RUN: llvm-lib -machine:arm64x -def:dup-ec.def -defArm64Native:dup-native.def -out:dup.lib
+
+
+# Link to the imported func1, func2, and func1's thunks from both native and EC code.
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:test-12-thunks.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          icall.obj func12-thunks-arm64ec.obj func12-thunks-arm64.obj imp-arm64ec.lib imp-arm64.lib
+
+RUN: llvm-objdump -d test-12-thunks.dll | FileCheck --check-prefix=DISASM-12T %s
+DISASM-12T:      0000000180001000 <.text>:
+DISASM-12T-NEXT: 180001000: f0000010     adrp    x16, 0x180004000
+DISASM-12T-NEXT: 180001004: f9400610     ldr     x16, [x16, #0x8]
+DISASM-12T-NEXT: 180001008: d61f0200     br      x16
+DISASM-12T-NEXT:                 ...
+DISASM-12T-NEXT: 180002000: 52800040     mov     w0, #0x2                // =2
+DISASM-12T-NEXT: 180002004: d65f03c0     ret
+DISASM-12T-NEXT: 180002008: 90000030     adrp    x16, 0x180006000
+DISASM-12T-NEXT: 18000200c: f9400210     ldr     x16, [x16]
+DISASM-12T-NEXT: 180002010: d61f0200     br      x16
+DISASM-12T-NEXT: 180002014: d000000b     adrp    x11, 0x180004000
+DISASM-12T-NEXT: 180002018: f940016b     ldr     x11, [x11]
+DISASM-12T-NEXT: 18000201c: 9000000a     adrp    x10, 0x180002000 <.text+0x1000>
+DISASM-12T-NEXT: 180002020: 9100f14a     add     x10, x10, #0x3c
+DISASM-12T-NEXT: 180002024: 17fffff7     b       0x180002000 <.text+0x1000>
+DISASM-12T-NEXT: 180002028: d000000b     adrp    x11, 0x180004000
+DISASM-12T-NEXT: 18000202c: f940056b     ldr     x11, [x11, #0x8]
+DISASM-12T-NEXT: 180002030: d0ffffea     adrp    x10, 0x180000000
+DISASM-12T-NEXT: 180002034: 9100014a     add     x10, x10, #0x0
+DISASM-12T-NEXT: 180002038: 17fffff2     b       0x180002000 <.text+0x1000>
+DISASM-12T-NEXT: 18000203c: 52800060     mov     w0, #0x3                // =3
+DISASM-12T-NEXT: 180002040: d65f03c0     ret
+DISASM-12T-NEXT:                 ...
+DISASM-12T-NEXT: 180003000: ff 25 fa 0f 00 00            jmpq    *0xffa(%rip)            # 0x180004000
+
+RUN: llvm-readobj --coff-imports test-12-thunks.dll | FileCheck --check-prefix=IMPORTS-12 %s
+IMPORTS-12:      Import {
+IMPORTS-12-NEXT:   Name: test.dll
+IMPORTS-12-NEXT:   ImportLookupTableRVA: 0x5348
+IMPORTS-12-NEXT:   ImportAddressTableRVA: 0x4000
+IMPORTS-12-NEXT:   Symbol: func1 (0)
+IMPORTS-12-NEXT:   Symbol: func2 (0)
+IMPORTS-12-NEXT: }
+IMPORTS-12-NEXT: HybridObject {
+IMPORTS-12:        Import {
+IMPORTS-12-NEXT:     Name: test.dll
+IMPORTS-12-NEXT:     ImportLookupTableRVA: 0x5348
+IMPORTS-12-NEXT:     ImportAddressTableRVA: 0x4000
+IMPORTS-12-NEXT:     Symbol: func1 (0)
+IMPORTS-12-NEXT:     Symbol: func2 (0)
+IMPORTS-12-NEXT:   }
+IMPORTS-12-NEXT: }
+
+RUN: llvm-readobj --hex-dump=.test test-12-thunks.dll | FileCheck --check-prefix=FUNC-12-THUNKS %s
+FUNC-12-THUNKS:      0x180009000 00600000 00400000 00300000 08200000
+FUNC-12-THUNKS-NEXT: 0x180009010 08600000 08400000
+
+RUN: llvm-readobj --hex-dump=.testa test-12-thunks.dll | FileCheck --check-prefix=FUNC-12-THUNKSA %s
+FUNC-12-THUNKSA: 0x18000a000 00400000 08400000 00100000
+
+
+# If the ordinals of named imports don't match, use the EC value.
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:test-12-thunks-ord.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          icall.obj func12-thunks-arm64ec.obj func12-thunks-arm64.obj imp-ecord.lib
+RUN: llvm-readobj --coff-imports test-12-thunks-ord.dll | FileCheck --check-prefix=IMPORTS-ORD %s
+
+IMPORTS-ORD:      Format: COFF-ARM64X
+IMPORTS-ORD-NEXT: Arch: aarch64
+IMPORTS-ORD-NEXT: AddressSize: 64bit
+IMPORTS-ORD-NEXT: Import {
+IMPORTS-ORD-NEXT:   Name: test.dll
+IMPORTS-ORD-NEXT:   ImportLookupTableRVA: 0x5348
+IMPORTS-ORD-NEXT:   ImportAddressTableRVA: 0x4000
+IMPORTS-ORD-NEXT:   Symbol: func1 (11)
+IMPORTS-ORD-NEXT:   Symbol: func2 (12)
+IMPORTS-ORD-NEXT: }
+IMPORTS-ORD-NEXT: HybridObject {
+IMPORTS-ORD-NEXT:   Format: COFF-ARM64EC
+IMPORTS-ORD-NEXT:   Arch: aarch64
+IMPORTS-ORD-NEXT:   AddressSize: 64bit
+IMPORTS-ORD-NEXT:   Import {
+IMPORTS-ORD-NEXT:     Name: test.dll
+IMPORTS-ORD-NEXT:     ImportLookupTableRVA: 0x5348
+IMPORTS-ORD-NEXT:     ImportAddressTableRVA: 0x4000
+IMPORTS-ORD-NEXT:     Symbol: func1 (11)
+IMPORTS-ORD-NEXT:     Symbol: func2 (12)
+IMPORTS-ORD-NEXT:   }
+IMPORTS-ORD-NEXT: }
+
+
+# Link to NONAME imports.
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:test-noname.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          icall.obj func12-thunks-arm64ec.obj func12-thunks-arm64.obj noname.lib
+RUN: llvm-readobj --coff-imports test-noname.dll | FileCheck --check-prefix=IMPORTS-ORD2 %s
+
+IMPORTS-ORD2:      Format: COFF-ARM64X
+IMPORTS-ORD2-NEXT: Arch: aarch64
+IMPORTS-ORD2-NEXT: AddressSize: 64bit
+IMPORTS-ORD2-NEXT: Import {
+IMPORTS-ORD2-NEXT:   Name: test.dll
+IMPORTS-ORD2-NEXT:   ImportLookupTableRVA: 0x5348
+IMPORTS-ORD2-NEXT:   ImportAddressTableRVA: 0x4000
+IMPORTS-ORD2-NEXT:   Symbol:  (12)
+IMPORTS-ORD2-NEXT:   Symbol:  (11)
+IMPORTS-ORD2-NEXT: }
+IMPORTS-ORD2-NEXT: HybridObject {
+IMPORTS-ORD2-NEXT:   Format: COFF-ARM64EC
+IMPORTS-ORD2-NEXT:   Arch: aarch64
+IMPORTS-ORD2-NEXT:   AddressSize: 64bit
+IMPORTS-ORD2-NEXT:   Import {
+IMPORTS-ORD2-NEXT:     Name: test.dll
+IMPORTS-ORD2-NEXT:     ImportLookupTableRVA: 0x5350
+IMPORTS-ORD2-NEXT:     ImportAddressTableRVA: 0x4008
+IMPORTS-ORD2-NEXT:     Symbol:  (11)
+IMPORTS-ORD2-NEXT:     Symbol:  (10)
+IMPORTS-ORD2-NEXT:   }
+IMPORTS-ORD2-NEXT: }
+
+# Link to the imported func1 and func2 from both native and EC code, and func3 from native code.
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:test2.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          icall.obj func12-arm64ec.obj func123-arm64.obj imp-arm64x.lib
+
+RUN: llvm-readobj --coff-imports test2.dll | FileCheck --check-prefix=IMPORTS-123-12 %s
+IMPORTS-123-12:      Import {
+IMPORTS-123-12-NEXT:   Name: test.dll
+IMPORTS-123-12-NEXT:   ImportLookupTableRVA: 0x3338
+IMPORTS-123-12-NEXT:   ImportAddressTableRVA: 0x2000
+IMPORTS-123-12-NEXT:   Symbol: func3 (0)
+IMPORTS-123-12-NEXT:   Symbol: func1 (0)
+IMPORTS-123-12-NEXT:   Symbol: func2 (0)
+IMPORTS-123-12-NEXT: }
+IMPORTS-123-12-NEXT: HybridObject {
+IMPORTS-123-12:        Import {
+IMPORTS-123-12-NEXT:     Name: test.dll
+IMPORTS-123-12-NEXT:     ImportLookupTableRVA: 0x3340
+IMPORTS-123-12-NEXT:     ImportAddressTableRVA: 0x2008
+IMPORTS-123-12-NEXT:     Symbol: func1 (0)
+IMPORTS-123-12-NEXT:     Symbol: func2 (0)
+IMPORTS-123-12-NEXT:   }
+IMPORTS-123-12-NEXT: }
+
+RUN: llvm-readobj --hex-dump=.test test2.dll | FileCheck --check-prefix=TEST-123-12 %s
+TEST-123-12: 0x180007000 08400000 08200000 10400000 10200000
+
+RUN: llvm-readobj --hex-dump=.testa test2.dll | FileCheck --check-prefix=TEST-123-12A %s
+TEST-123-12A: 0x180008000 08200000 10200000 00200000
+
+RUN: llvm-readobj --hex-dump=.rdata test2.dll | FileCheck --check-prefix=TEST-123-12AUX %s
+TEST-123-12AUX:      0x180004000 00000000 00000000 08100080 01000000
+TEST-123-12AUX-NEXT: 0x180004010 1c100080 01000000 00000000 00000000
+
+
+# Link to the imported func1 and func2 from both native and EC code, and func3 from EC code.
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:func-12-123.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          icall.obj func123-arm64ec.obj func12-arm64.obj imp-arm64x.lib
+
+RUN: llvm-readobj --coff-imports func-12-123.dll | FileCheck --check-prefix=IMPORTS-12-123 %s
+IMPORTS-12-123:      Import {
+IMPORTS-12-123-NEXT:   Name: test.dll
+IMPORTS-12-123-NEXT:   ImportLookupTableRVA: 0x3338
+IMPORTS-12-123-NEXT:   ImportAddressTableRVA: 0x2000
+IMPORTS-12-123-NEXT:   Symbol: func1 (0)
+IMPORTS-12-123-NEXT:   Symbol: func2 (0)
+IMPORTS-12-123-NEXT: }
+IMPORTS-12-123-NEXT: HybridObject {
+IMPORTS-12-123:        Import {
+IMPORTS-12-123-NEXT:     Name: test.dll
+IMPORTS-12-123-NEXT:     ImportLookupTableRVA: 0x3338
+IMPORTS-12-123-NEXT:     ImportAddressTableRVA: 0x2000
+IMPORTS-12-123-NEXT:     Symbol: func1 (0)
+IMPORTS-12-123-NEXT:     Symbol: func2 (0)
+IMPORTS-12-123-NEXT:     Symbol: func3 (0)
+IMPORTS-12-123-NEXT:   }
+IMPORTS-12-123-NEXT: }
+
+RUN: llvm-readobj --hex-dump=.test func-12-123.dll | FileCheck --check-prefix=TEST-12-123 %s
+TEST-12-123:      0x180007000 00400000 00200000 08400000 08200000
+TEST-12-123-NEXT: 0x180007010 10400000 10200000
+
+RUN: llvm-readobj --hex-dump=.testa func-12-123.dll | FileCheck --check-prefix=TEST-12-123A %s
+TEST-12-123A: 0x180008000 00200000 08200000
+
+RUN: llvm-readobj --hex-dump=.rdata func-12-123.dll | FileCheck --check-prefix=TEST-12-123AUX %s
+TEST-12-123AUX:      0x180004000 08100080 01000000 1c100080 01000000
+TEST-12-123AUX-NEXT: 0x180004010 30100080 01000000 00000000 00000000
+
+
+# Link to the imported func2 and func3 from both native and EC code, func4 from native code,
+# and func1 from EC code.
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:test-234-123.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          icall.obj func123-arm64ec.obj func234-arm64.obj imp-arm64x.lib
+
+RUN: llvm-readobj --coff-imports test-234-123.dll | FileCheck --check-prefix=IMPORTS-234-123 %s
+IMPORTS-234-123:      Import {
+IMPORTS-234-123-NEXT:   Name: test.dll
+IMPORTS-234-123-NEXT:   ImportLookupTableRVA: 0x3338
+IMPORTS-234-123-NEXT:   ImportAddressTableRVA: 0x2000
+IMPORTS-234-123-NEXT:   Symbol: func4 (0)
+IMPORTS-234-123-NEXT:   Symbol: func2 (0)
+IMPORTS-234-123-NEXT:   Symbol: func3 (0)
+IMPORTS-234-123-NEXT: }
+IMPORTS-234-123-NEXT: HybridObject {
+IMPORTS-234-123:        Import {
+IMPORTS-234-123-NEXT:     Name: test.dll
+IMPORTS-234-123-NEXT:     ImportLookupTableRVA: 0x3340
+IMPORTS-234-123-NEXT:     ImportAddressTableRVA: 0x2008
+IMPORTS-234-123-NEXT:     Symbol: func2 (0)
+IMPORTS-234-123-NEXT:     Symbol: func3 (0)
+IMPORTS-234-123-NEXT:     Symbol: func1 (0)
+IMPORTS-234-123-NEXT:   }
+IMPORTS-234-123-NEXT: }
+
+RUN: llvm-readobj --hex-dump=.test test-234-123.dll | FileCheck --check-prefix=TEST-234-123 %s
+TEST-234-123:      0x180007000 18400000 18200000 08400000 08200000
+TEST-234-123-NEXT: 0x180007010 10400000 1020000
+
+RUN: llvm-readobj --hex-dump=.testa test-234-123.dll | FileCheck --check-prefix=TEST-234-123A %s
+TEST-234-123A: 0x180008000 08200000 10200000 00200000
+
+
+# Link to the imported func3 and func4 from native code, and func1 and func2 from EC code.
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:test-34-12.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          icall.obj func12o-arm64ec.obj func34o-arm64.obj imp-arm64x.lib imp2.lib
+
+RUN: llvm-readobj --coff-imports test-34-12.dll | FileCheck --check-prefix=IMPORTS-34-12 %s
+IMPORTS-34-12:      Import {
+IMPORTS-34-12-NEXT:   Name: test.dll
+IMPORTS-34-12-NEXT:   ImportLookupTableRVA: 0x3350
+IMPORTS-34-12-NEXT:   ImportAddressTableRVA: 0x2000
+IMPORTS-34-12-NEXT:   Symbol: func3 (0)
+IMPORTS-34-12-NEXT:   Symbol: func4 (0)
+IMPORTS-34-12-NEXT: }
+IMPORTS-34-12-NEXT: Import {
+IMPORTS-34-12-NEXT:   Name: test2.dll
+IMPORTS-34-12-NEXT:   ImportLookupTableRVA: 0x3378
+IMPORTS-34-12-NEXT:   ImportAddressTableRVA: 0x2028
+IMPORTS-34-12-NEXT:   Symbol: otherfunc (0)
+IMPORTS-34-12-NEXT: }
+IMPORTS-34-12-NEXT: HybridObject {
+IMPORTS-34-12:        Import {
+IMPORTS-34-12-NEXT:     Name: test.dll
+IMPORTS-34-12-NEXT:     ImportLookupTableRVA: 0x3360
+IMPORTS-34-12-NEXT:     ImportAddressTableRVA: 0x2010
+IMPORTS-34-12-NEXT:     Symbol: func1 (0)
+IMPORTS-34-12-NEXT:     Symbol: func2 (0)
+IMPORTS-34-12-NEXT:   }
+IMPORTS-34-12-NEXT:   Import {
+IMPORTS-34-12-NEXT:     Name: test2.dll
+IMPORTS-34-12-NEXT:     ImportLookupTableRVA: 0x3378
+IMPORTS-34-12-NEXT:     ImportAddressTableRVA: 0x2028
+IMPORTS-34-12-NEXT:     Symbol: otherfunc (0)
+IMPORTS-34-12-NEXT:   }
+IMPORTS-34-12-NEXT: }
+
+RUN: llvm-readobj --hex-dump=.test test-34-12.dll | FileCheck --check-prefix=TEST-23-12 %s
+TEST-23-12:      0x180007000 10400000 10200000 18400000 18200000
+TEST-23-12-NEXT: 0x180007010 28400000 28200000
+
+RUN: llvm-readobj --hex-dump=.testa test-34-12.dll | FileCheck --check-prefix=TEST-23-12A %s
+TEST-23-12A: 0x180008000 00200000 08200000 28200000
+
+
+# Link only to imported EC functions, with no native imports.
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:test-ec12.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          icall.obj func12-arm64ec.obj funco-arm64.obj imp-arm64x.lib imp2.lib
+
+RUN: llvm-readobj --coff-imports test-ec12.dll | FileCheck --check-prefix=IMPORTS-EC12 %s
+
+IMPORTS-EC12:      File: test-ec12.dll
+IMPORTS-EC12-NEXT: Format: COFF-ARM64X
+IMPORTS-EC12-NEXT: Arch: aarch64
+IMPORTS-EC12-NEXT: AddressSize: 64bit
+IMPORTS-EC12-NEXT: Import {
+IMPORTS-EC12-NEXT:   Name: test.dll
+IMPORTS-EC12-NEXT:   ImportLookupTableRVA: 0x3350
+IMPORTS-EC12-NEXT:   ImportAddressTableRVA: 0x2000
+IMPORTS-EC12-NEXT: }
+IMPORTS-EC12-NEXT: Import {
+IMPORTS-EC12-NEXT:   Name: test2.dll
+IMPORTS-EC12-NEXT:   ImportLookupTableRVA: 0x3368
+IMPORTS-EC12-NEXT:   ImportAddressTableRVA: 0x2018
+IMPORTS-EC12-NEXT:   Symbol: otherfunc (0)
+IMPORTS-EC12-NEXT: }
+IMPORTS-EC12-NEXT: HybridObject {
+IMPORTS-EC12-NEXT:   Format: COFF-ARM64EC
+IMPORTS-EC12-NEXT:   Arch: aarch64
+IMPORTS-EC12-NEXT:   AddressSize: 64bit
+IMPORTS-EC12-NEXT:   Import {
+IMPORTS-EC12-NEXT:     Name: test.dll
+IMPORTS-EC12-NEXT:     ImportLookupTableRVA: 0x3350
+IMPORTS-EC12-NEXT:     ImportAddressTableRVA: 0x2000
+IMPORTS-EC12-NEXT:     Symbol: func1 (0)
+IMPORTS-EC12-NEXT:     Symbol: func2 (0)
+IMPORTS-EC12-NEXT:   }
+IMPORTS-EC12-NEXT:   Import {
+IMPORTS-EC12-NEXT:     Name: test2.dll
+IMPORTS-EC12-NEXT:     ImportLookupTableRVA: 0x3370
+IMPORTS-EC12-NEXT:     ImportAddressTableRVA: 0x2020
+IMPORTS-EC12-NEXT:   }
+IMPORTS-EC12-NEXT: }
+
+
+# Link only to imported native functions, with no EC imports.
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:test-n12.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          func12-arm64.obj imp-arm64x.lib
+
+RUN: llvm-readobj --coff-imports test-n12.dll | FileCheck --check-prefix=IMPORTS-N12 %s
+
+IMPORTS-N12:      Arch: aarch64
+IMPORTS-N12-NEXT: AddressSize: 64bit
+IMPORTS-N12-NEXT: Import {
+IMPORTS-N12-NEXT:   Name: test.dll
+IMPORTS-N12-NEXT:   ImportLookupTableRVA: 0x2330
+IMPORTS-N12-NEXT:   ImportAddressTableRVA: 0x1000
+IMPORTS-N12-NEXT:   Symbol: func1 (0)
+IMPORTS-N12-NEXT:   Symbol: func2 (0)
+IMPORTS-N12-NEXT: }
+IMPORTS-N12-NEXT: HybridObject {
+IMPORTS-N12-NEXT:   Format: COFF-ARM64EC
+IMPORTS-N12-NEXT:   Arch: aarch64
+IMPORTS-N12-NEXT:   AddressSize: 64bit
+IMPORTS-N12-NEXT:   Import {
+IMPORTS-N12-NEXT:     Name: test.dll
+IMPORTS-N12-NEXT:     ImportLookupTableRVA: 0x2340
+IMPORTS-N12-NEXT:     ImportAddressTableRVA: 0x1010
+IMPORTS-N12-NEXT:   }
+IMPORTS-N12-NEXT: }
+
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:test-dup.dll loadconfig-arm64.obj loadconfig-arm64ec.obj icall.obj \
+RUN:          func12-arm64ec.obj func34-arm64.obj dup.lib
+
+RUN: llvm-readobj --coff-imports test-dup.dll | FileCheck --check-prefix=IMPORTS-DUP %s
+IMPORTS-DUP:      Format: COFF-ARM64X
+IMPORTS-DUP-NEXT: Arch: aarch64
+IMPORTS-DUP-NEXT: AddressSize: 64bit
+IMPORTS-DUP-NEXT: Import {
+IMPORTS-DUP-NEXT:   Name: test.dll
+IMPORTS-DUP-NEXT:   ImportLookupTableRVA: 0x3338
+IMPORTS-DUP-NEXT:   ImportAddressTableRVA: 0x2000
+IMPORTS-DUP-NEXT:   Symbol: func4 (0)
+IMPORTS-DUP-NEXT:   Symbol: func4 (0)
+IMPORTS-DUP-NEXT: }
+IMPORTS-DUP-NEXT: HybridObject {
+IMPORTS-DUP-NEXT:   Format: COFF-ARM64EC
+IMPORTS-DUP-NEXT:   Arch: aarch64
+IMPORTS-DUP-NEXT:   AddressSize: 64bit
+IMPORTS-DUP-NEXT:   Import {
+IMPORTS-DUP-NEXT:     Name: test.dll
+IMPORTS-DUP-NEXT:     ImportLookupTableRVA: 0x3348
+IMPORTS-DUP-NEXT:     ImportAddressTableRVA: 0x2010
+IMPORTS-DUP-NEXT:     Symbol: func1 (0)
+IMPORTS-DUP-NEXT:     Symbol: func1 (0)
+IMPORTS-DUP-NEXT:   }
+IMPORTS-DUP-NEXT: }
+
+#--- func12-thunks-arm64ec.s
+    .section .test, "r"
+    .rva __imp_func1
+    .rva __imp_aux_func1
+    .rva func1
+    .rva "#func1"
+    .rva __imp_func2
+    .rva __imp_aux_func2
+
+#--- func12-thunks-arm64.s
+    .section .testa, "r"
+    .rva __imp_func1
+    .rva __imp_func2
+    .rva func2
+
+#--- func12-arm64ec.s
+    .section .test, "r"
+    .rva __imp_func1
+    .rva __imp_aux_func1
+    .rva __imp_func2
+    .rva __imp_aux_func2
+
+#--- func123-arm64.s
+    .section .testa, "r"
+    .rva __imp_func1
+    .rva __imp_func2
+    .rva __imp_func3
+
+#--- func123-arm64ec.s
+    .section .test, "r"
+    .rva __imp_func1
+    .rva __imp_aux_func1
+    .rva __imp_func2
+    .rva __imp_aux_func2
+    .rva __imp_func3
+    .rva __imp_aux_func3
+
+#--- func12-arm64.s
+    .section .testa, "r"
+    .rva __imp_func1
+    .rva __imp_func2
+
+#--- func234-arm64.s
+    .section .testa, "r"
+    .rva __imp_func2
+    .rva __imp_func3
+    .rva __imp_func4
+
+#--- func12o-arm64ec.s
+    .section .test, "r"
+    .rva __imp_func1
+    .rva __imp_aux_func1
+    .rva __imp_func2
+    .rva __imp_aux_func2
+    .rva __imp_otherfunc
+    .rva __imp_aux_otherfunc
+
+#--- func34-arm64.s
+    .section .testa, "r"
+    .rva __imp_func3
+    .rva __imp_func4
+
+#--- func34o-arm64.s
+    .section .testa, "r"
+    .rva __imp_func3
+    .rva __imp_func4
+    .rva __imp_otherfunc
+
+#--- funco-arm64.s
+    .section .testa, "r"
+    .rva __imp_otherfunc
+
+#--- icall.s
+    .text
+    .globl __icall_helper_arm64ec
+    .p2align 2, 0x0
+__icall_helper_arm64ec:
+    mov w0, #2
+    ret
+
+    .section .hybmp$x, "yi"
+    .symidx __imp_func1
+    .symidx func1_exit_thunk
+    .word 4
+
+    .section .wowthk$aa,"xr",discard,func1_exit_thunk
+    .globl func1_exit_thunk
+func1_exit_thunk:
+    mov w0, #3
+    ret
+
+#--- imp.def
+NAME test.dll
+EXPORTS
+    data_sym DATA
+    func1
+    func2
+    func3
+    func4
+
+#--- imp-ord10.def
+NAME test.dll
+EXPORTS
+    data_sym DATA @10
+    func1 @11
+    func2 @12
+    func3 @13
+    func4 @14
+
+#--- imp-ord20.def
+NAME test.dll
+EXPORTS
+    data_sym DATA @10
+    func1 @21
+    func2 @22
+    func3 @23
+    func4 @24
+
+#--- imp2.def
+NAME test2.dll
+EXPORTS
+    otherfunc
+
+#--- noname-ec.def
+NAME test.dll
+EXPORTS
+    func1 @10 NONAME
+    func2 @11 NONAME
+
+#--- noname-native.def
+NAME test.dll
+EXPORTS
+    func1 @12 NONAME
+    func2 @11 NONAME
+
+#--- dup-ec.def
+NAME test.dll
+EXPORTS
+    func1
+    func2 EXPORTAS func1
+
+#--- dup-native.def
+NAME test.dll
+EXPORTS
+    func3 EXPORTAS func4
+    func4

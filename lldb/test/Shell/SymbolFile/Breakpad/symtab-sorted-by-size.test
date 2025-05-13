@@ -1,5 +1,5 @@
-# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %T/symtab.out
-# RUN: %lldb %T/symtab.out -o "target symbols add -s symtab.out %S/Inputs/symtab.syms" \
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %T/symtab-sorted-by-size.out
+# RUN: %lldb %T/symtab-sorted-by-size.out -o "target symbols add -s symtab-sorted-by-size.out %S/Inputs/symtab.syms" \
 # RUN:   -s %s | FileCheck %s
 
 # CHECK: num_symbols = 4 (sorted by size):
@@ -8,4 +8,4 @@
 # CHECK: [    2]      0   X Code            0x00000000004000b0                    0x0000000000000010 0x00000000 f1
 # CHECK: [    3]      0   X Code            0x00000000004000c0                    0x0000000000000010 0x00000000 f2
 
-image dump symtab -s size symtab.out
+image dump symtab -s size symtab-sorted-by-size.out

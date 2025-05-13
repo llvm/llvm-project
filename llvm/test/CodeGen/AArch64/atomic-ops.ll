@@ -558,7 +558,6 @@ define dso_local i64 @test_atomic_load_xor_i64(i64 %offset) nounwind {
 define dso_local i8 @test_atomic_load_xchg_i8(i8 %offset) nounwind {
 ; INLINE_ATOMICS-LABEL: test_atomic_load_xchg_i8:
 ; INLINE_ATOMICS:       // %bb.0:
-; INLINE_ATOMICS-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; INLINE_ATOMICS-NEXT:    adrp x9, var8
 ; INLINE_ATOMICS-NEXT:    add x9, x9, :lo12:var8
 ; INLINE_ATOMICS-NEXT:  .LBB20_1: // %atomicrmw.start
@@ -585,7 +584,6 @@ define dso_local i8 @test_atomic_load_xchg_i8(i8 %offset) nounwind {
 define dso_local i16 @test_atomic_load_xchg_i16(i16 %offset) nounwind {
 ; INLINE_ATOMICS-LABEL: test_atomic_load_xchg_i16:
 ; INLINE_ATOMICS:       // %bb.0:
-; INLINE_ATOMICS-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; INLINE_ATOMICS-NEXT:    adrp x9, var16
 ; INLINE_ATOMICS-NEXT:    add x9, x9, :lo12:var16
 ; INLINE_ATOMICS-NEXT:  .LBB21_1: // %atomicrmw.start
@@ -978,7 +976,6 @@ define dso_local i64 @test_atomic_load_umax_i64(i64 %offset) nounwind {
 define dso_local i8 @test_atomic_cmpxchg_i8(i8 %wanted, i8 %new) nounwind {
 ; INLINE_ATOMICS-LABEL: test_atomic_cmpxchg_i8:
 ; INLINE_ATOMICS:       // %bb.0:
-; INLINE_ATOMICS-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; INLINE_ATOMICS-NEXT:    and w8, w0, #0xff
 ; INLINE_ATOMICS-NEXT:    adrp x9, var8
 ; INLINE_ATOMICS-NEXT:    add x9, x9, :lo12:var8
@@ -1015,7 +1012,6 @@ define dso_local i8 @test_atomic_cmpxchg_i8(i8 %wanted, i8 %new) nounwind {
 define dso_local i16 @test_atomic_cmpxchg_i16(i16 %wanted, i16 %new) nounwind {
 ; INLINE_ATOMICS-LABEL: test_atomic_cmpxchg_i16:
 ; INLINE_ATOMICS:       // %bb.0:
-; INLINE_ATOMICS-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; INLINE_ATOMICS-NEXT:    and w8, w0, #0xffff
 ; INLINE_ATOMICS-NEXT:    adrp x9, var16
 ; INLINE_ATOMICS-NEXT:    add x9, x9, :lo12:var16

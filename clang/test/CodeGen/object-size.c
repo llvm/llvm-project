@@ -34,7 +34,7 @@ void test2(void) {
 
 // CHECK-LABEL: define{{.*}} void @test3
 void test3(void) {
-  // CHECK:     = call ptr @__strcpy_chk(ptr getelementptr inbounds ([63 x i8], ptr @gbuf, i64 1, i64 37), ptr @.str, i64 0)
+  // CHECK:     = call ptr @__strcpy_chk(ptr getelementptr inbounds ([63 x i8], ptr @gbuf, i64 0, i64 100), ptr @.str, i64 0)
   strcpy(&gbuf[100], "Hi there");
 }
 
@@ -592,7 +592,7 @@ void PR30346(void) {
 
 extern char incomplete_char_array[];
 // CHECK-LABEL: @incomplete_and_function_types
-int incomplete_and_function_types(void) {
+void incomplete_and_function_types(void) {
   // CHECK: call i64 @llvm.objectsize.i64.p0
   gi = OBJECT_SIZE_BUILTIN(incomplete_char_array, 0);
   // CHECK: call i64 @llvm.objectsize.i64.p0

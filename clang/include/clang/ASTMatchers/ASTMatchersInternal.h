@@ -121,7 +121,7 @@ template <typename T> struct TypeListContainsSuperOf<EmptyTypeList, T> {
 template <typename ResultT, typename ArgT,
           ResultT (*Func)(ArrayRef<const ArgT *>)>
 struct VariadicFunction {
-  ResultT operator()() const { return Func(std::nullopt); }
+  ResultT operator()() const { return Func({}); }
 
   template <typename... ArgsT>
   ResultT operator()(const ArgT &Arg1, const ArgsT &... Args) const {
@@ -160,6 +160,9 @@ inline QualType getUnderlyingType(const FriendDecl &Node) {
 }
 inline QualType getUnderlyingType(const CXXBaseSpecifier &Node) {
   return Node.getType();
+}
+inline QualType getUnderlyingType(const ObjCInterfaceDecl &Node) {
+  return Node.getTypeForDecl()->getPointeeType();
 }
 
 /// Unifies obtaining a `TypeSourceInfo` from different node types.
@@ -868,30 +871,19 @@ IteratorT matchesFirstInPointerRange(const MatcherT &Matcher, IteratorT Start,
   return End;
 }
 
-template <typename T, std::enable_if_t<!std::is_base_of<FunctionDecl, T>::value>
-                          * = nullptr>
-inline bool isDefaultedHelper(const T *) {
+template <typename T> inline bool isDefaultedHelper(const T *FD) {
+  if constexpr (std::is_base_of_v<FunctionDecl, T>)
+    return FD->isDefaulted();
   return false;
-}
-inline bool isDefaultedHelper(const FunctionDecl *FD) {
-  return FD->isDefaulted();
 }
 
 // Metafunction to determine if type T has a member called getDecl.
-template <typename Ty>
-class has_getDecl {
-  using yes = char[1];
-  using no = char[2];
+template <typename T>
+using check_has_getDecl = decltype(std::declval<T &>().getDecl());
 
-  template <typename Inner>
-  static yes& test(Inner *I, decltype(I->getDecl()) * = nullptr);
-
-  template <typename>
-  static no& test(...);
-
-public:
-  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
-};
+template <typename T>
+static constexpr bool has_getDecl =
+    llvm::is_detected<check_has_getDecl, T>::value;
 
 /// Matches overloaded operators with a specific name.
 ///
@@ -1113,6 +1105,11 @@ private:
     return matchesDecl(Node.getDecl(), Finder, Builder);
   }
 
+  bool matchesSpecialized(const ObjCInterfaceDecl &Node, ASTMatchFinder *Finder,
+                          BoundNodesTreeBuilder *Builder) const {
+    return matchesDecl(Node.getCanonicalDecl(), Finder, Builder);
+  }
+
   /// Extracts the operator new of the new call and returns whether the
   /// inner matcher matches on it.
   bool matchesSpecialized(const CXXNewExpr &Node,
@@ -1213,7 +1210,7 @@ using HasDeclarationSupportedTypes =
              ElaboratedType, InjectedClassNameType, LabelStmt, AddrLabelExpr,
              MemberExpr, QualType, RecordType, TagType,
              TemplateSpecializationType, TemplateTypeParmType, TypedefType,
-             UnresolvedUsingType, ObjCIvarRefExpr>;
+             UnresolvedUsingType, ObjCIvarRefExpr, ObjCInterfaceDecl>;
 
 /// A Matcher that allows binding the node it matches to an id.
 ///
@@ -1725,9 +1722,10 @@ public:
 template <typename T, typename ValueT>
 class ValueEqualsMatcher : public SingleNodeMatcherInterface<T> {
   static_assert(std::is_base_of<CharacterLiteral, T>::value ||
-                std::is_base_of<CXXBoolLiteralExpr, T>::value ||
-                std::is_base_of<FloatingLiteral, T>::value ||
-                std::is_base_of<IntegerLiteral, T>::value,
+                    std::is_base_of<CXXBoolLiteralExpr, T>::value ||
+                    std::is_base_of<FloatingLiteral, T>::value ||
+                    std::is_base_of<IntegerLiteral, T>::value ||
+                    std::is_base_of<FixedPointLiteral, T>::value,
                 "the node must have a getValue method");
 
 public:
@@ -1796,7 +1794,7 @@ private:
 ///
 /// Used to implement the \c loc() matcher.
 class TypeLocTypeMatcher : public MatcherInterface<TypeLoc> {
-  DynTypedMatcher InnerMatcher;
+  Matcher<QualType> InnerMatcher;
 
 public:
   explicit TypeLocTypeMatcher(const Matcher<QualType> &InnerMatcher)
@@ -1806,8 +1804,7 @@ public:
                BoundNodesTreeBuilder *Builder) const override {
     if (!Node)
       return false;
-    return this->InnerMatcher.matches(DynTypedNode::create(Node.getType()),
-                                      Finder, Builder);
+    return this->InnerMatcher.matches(Node.getType(), Finder, Builder);
   }
 };
 
@@ -1949,35 +1946,35 @@ inline ArrayRef<TemplateArgument>
 getTemplateSpecializationArgs(const FunctionDecl &FD) {
   if (const auto* TemplateArgs = FD.getTemplateSpecializationArgs())
     return TemplateArgs->asArray();
-  return std::nullopt;
+  return {};
 }
 
 inline ArrayRef<TemplateArgumentLoc>
 getTemplateArgsWritten(const ClassTemplateSpecializationDecl &D) {
   if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
     return Args->arguments();
-  return std::nullopt;
+  return {};
 }
 
 inline ArrayRef<TemplateArgumentLoc>
 getTemplateArgsWritten(const VarTemplateSpecializationDecl &D) {
   if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
     return Args->arguments();
-  return std::nullopt;
+  return {};
 }
 
 inline ArrayRef<TemplateArgumentLoc>
 getTemplateArgsWritten(const FunctionDecl &FD) {
   if (const auto *Args = FD.getTemplateSpecializationArgsAsWritten())
     return Args->arguments();
-  return std::nullopt;
+  return {};
 }
 
 inline ArrayRef<TemplateArgumentLoc>
 getTemplateArgsWritten(const DeclRefExpr &DRE) {
   if (const auto *Args = DRE.getTemplateArgs())
     return {Args, DRE.getNumTemplateArgs()};
-  return std::nullopt;
+  return {};
 }
 
 inline SmallVector<TemplateArgumentLoc>
@@ -2333,6 +2330,14 @@ MatchTemplateArgLocAt(const TemplateSpecializationTypeLoc &Node,
                       internal::BoundNodesTreeBuilder *Builder) {
   return !Node.isNull() && Index < Node.getNumArgs() &&
          InnerMatcher.matches(Node.getArgLoc(Index), Finder, Builder);
+}
+
+inline std::string getDependentName(const DependentScopeDeclRefExpr &node) {
+  return node.getDeclName().getAsString();
+}
+
+inline std::string getDependentName(const DependentNameType &node) {
+  return node.getIdentifier()->getName().str();
 }
 
 } // namespace internal

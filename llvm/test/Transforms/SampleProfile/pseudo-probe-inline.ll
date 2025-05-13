@@ -98,7 +98,7 @@ if.end:
 ;YAML-NEXT:    - String:          '(cost='
 ;YAML-NEXT:    - Cost:            '15'
 ;YAML-NEXT:    - String:          ', threshold='
-;YAML-NEXT:    - Threshold:       '2147483647'
+;YAML-NEXT:    - Threshold:       '3000'
 ;YAML-NEXT:    - String:          ')'
 ;YAML-NEXT:    - String:          ' at callsite '
 ;YAML-NEXT:    - String:          foo
@@ -106,8 +106,6 @@ if.end:
 ;YAML-NEXT:    - Line:            '1'
 ;YAML-NEXT:    - String:          ':'
 ;YAML-NEXT:    - Column:          '11'
-;YAML-NEXT:    - String:          .
-;YAML-NEXT:    - Disc:            '2'
 ;YAML-NEXT:    - String:          ';'
 ;YAML-NEXT:  ...
 ;YAML:  --- !Analysis

@@ -1517,3 +1517,66 @@ define <4 x i32> @subhn2_4s_natural(<2 x i32> %low, ptr %A, ptr %B) nounwind {
         %res = shufflevector <2 x i32> %low, <2 x i32> %narrowed, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
         ret <4 x i32> %res
 }
+
+define <16 x i8> @neg_narrow_i8(<16 x i16> %a) {
+; CHECK-SD-LABEL: neg_narrow_i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    subhn v0.8b, v2.8h, v0.8h
+; CHECK-SD-NEXT:    subhn2 v0.16b, v2.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neg_narrow_i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    mvn v1.16b, v1.16b
+; CHECK-GI-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-GI-NEXT:    shrn2 v0.16b, v1.8h, #8
+; CHECK-GI-NEXT:    ret
+  %not.i = xor <16 x i16> %a, splat (i16 -1)
+  %s = lshr <16 x i16> %not.i, splat (i16 8)
+  %vshrn_n = trunc nuw <16 x i16> %s to <16 x i8>
+  ret <16 x i8> %vshrn_n
+}
+
+define <8 x i16> @neg_narrow_i16(<8 x i32> %a) {
+; CHECK-SD-LABEL: neg_narrow_i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    subhn v0.4h, v2.4s, v0.4s
+; CHECK-SD-NEXT:    subhn2 v0.8h, v2.4s, v1.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neg_narrow_i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    mvn v1.16b, v1.16b
+; CHECK-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #16
+; CHECK-GI-NEXT:    ret
+  %not.i = xor <8 x i32> %a, splat (i32 -1)
+  %s = lshr <8 x i32> %not.i, splat (i32 16)
+  %vshrn_n = trunc nuw <8 x i32> %s to <8 x i16>
+  ret <8 x i16> %vshrn_n
+}
+
+define <4 x i32> @neg_narrow_i32(<4 x i64> %a) {
+; CHECK-SD-LABEL: neg_narrow_i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    subhn v0.2s, v2.2d, v0.2d
+; CHECK-SD-NEXT:    subhn2 v0.4s, v2.2d, v1.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neg_narrow_i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    mvn v1.16b, v1.16b
+; CHECK-GI-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-GI-NEXT:    shrn2 v0.4s, v1.2d, #32
+; CHECK-GI-NEXT:    ret
+  %not.i = xor <4 x i64> %a, splat (i64 -1)
+  %s = lshr <4 x i64> %not.i, splat (i64 32)
+  %vshrn_n = trunc nuw <4 x i64> %s to <4 x i32>
+  ret <4 x i32> %vshrn_n
+}

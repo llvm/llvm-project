@@ -21,7 +21,7 @@ struct Int {
 
 
 // CHECK-LABEL: define dso_local void @_Z1AP4Tail
-// CHECK-SAME: (ptr nocapture noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: (ptr noundef captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i16, ptr [[P]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = add i16 [[BF_LOAD]], 1
@@ -33,9 +33,9 @@ void A (Tail *p) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z1BP4Tail
-// CHECK-SAME: (ptr nocapture noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: (ptr noundef captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
+// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[B]], align 2
 // CHECK-NEXT:    [[INC:%.*]] = add i8 [[BF_LOAD]], 1
 // CHECK-NEXT:    store i8 [[INC]], ptr [[B]], align 2
@@ -46,7 +46,7 @@ void B (Tail *p) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z1AP4Char
-// CHECK-SAME: (ptr nocapture noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: (ptr noundef captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i16, ptr [[P]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = add i16 [[BF_LOAD]], 1
@@ -58,9 +58,9 @@ void A (Char *p) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z1BP4Char
-// CHECK-SAME: (ptr nocapture noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: (ptr noundef captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
+// CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[B]], align 2
 // CHECK-NEXT:    [[INC:%.*]] = add i8 [[BF_LOAD]], 1
 // CHECK-NEXT:    store i8 [[INC]], ptr [[B]], align 2
@@ -71,7 +71,7 @@ void B (Char *p) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z1AP3Int
-// CHECK-SAME: (ptr nocapture noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: (ptr noundef captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i32, ptr [[P]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = add i32 [[BF_LOAD]], 1
@@ -86,7 +86,7 @@ void A (Int *p) {
 }
 
 // CHECK-LABEL: define dso_local void @_Z1BP3Int
-// CHECK-SAME: (ptr nocapture noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: (ptr noundef captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i32, ptr [[P]], align 4
 // CHECK-NEXT:    [[BF_VALUE:%.*]] = add i32 [[BF_LOAD]], 65536

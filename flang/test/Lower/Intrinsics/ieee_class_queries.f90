@@ -1,4 +1,6 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! REQUIRES: flang-supports-f128-math
+! REQUIRES: x86_64-registered-target
+! RUN: bbc -target x86_64-unknown-linux-gnu -emit-fir -o - %s | FileCheck %s
 
   ! CHECK-LABEL: func @_QQmain
   use ieee_arithmetic, only: ieee_is_finite, ieee_is_nan, ieee_is_negative, &
@@ -7,7 +9,6 @@
   real(3) :: x3 = -3.0
   real(4) :: x4 = -4.0
   real(8) :: x8 = -8.0
-  real(10) :: x10 = -10.0
   real(16) :: x16 = -16.0
 
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 504 : i32}> : (f16) -> i1

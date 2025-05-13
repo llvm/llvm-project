@@ -1,5 +1,5 @@
-; RUN: llc -march=nvptx64 -verify-machineinstrs < %s | FileCheck %s
-; RUN: %if ptxas %{ llc -march=nvptx64 -verify-machineinstrs < %s | %ptxas-verify %}
+; RUN: llc -mtriple=nvptx64 -verify-machineinstrs < %s | FileCheck %s
+; RUN: %if ptxas %{ llc -mtriple=nvptx64 -verify-machineinstrs < %s | %ptxas-verify %}
 
 ; Tests the following pattern:
 ; (X & 8) != 0 --> (X & 8) >> 3

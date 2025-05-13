@@ -84,6 +84,7 @@
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -195,15 +196,13 @@ bool WasmEHPrepareImpl::prepareThrows(Function &F) {
   bool Changed = false;
 
   // wasm.throw() intinsic, which will be lowered to wasm 'throw' instruction.
-  ThrowF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_throw);
+  ThrowF = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_throw);
   // Insert an unreachable instruction after a call to @llvm.wasm.throw and
   // delete all following instructions within the BB, and delete all the dead
   // children of the BB as well.
   for (User *U : ThrowF->users()) {
-    // A call to @llvm.wasm.throw() is only generated from __cxa_throw()
-    // builtin call within libcxxabi, and cannot be an InvokeInst.
-    auto *ThrowI = cast<CallInst>(U);
-    if (ThrowI->getFunction() != &F)
+    auto *ThrowI = dyn_cast<CallInst>(U);
+    if (!ThrowI || ThrowI->getFunction() != &F)
       continue;
     Changed = true;
     auto *BB = ThrowI->getParent();
@@ -226,7 +225,7 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   for (BasicBlock &BB : F) {
     if (!BB.isEHPad())
       continue;
-    auto *Pad = BB.getFirstNonPHI();
+    BasicBlock::iterator Pad = BB.getFirstNonPHIIt();
     if (isa<CatchPadInst>(Pad))
       CatchPads.push_back(&BB);
     else if (isa<CleanupPadInst>(Pad))
@@ -252,26 +251,28 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
       M.getOrInsertGlobal("__wasm_lpad_context", LPadContextTy));
   LPadContextGV->setThreadLocalMode(GlobalValue::GeneralDynamicTLSModel);
 
-  LPadIndexField = IRB.CreateConstGEP2_32(LPadContextTy, LPadContextGV, 0, 0,
-                                          "lpad_index_gep");
-  LSDAField =
-      IRB.CreateConstGEP2_32(LPadContextTy, LPadContextGV, 0, 1, "lsda_gep");
-  SelectorField = IRB.CreateConstGEP2_32(LPadContextTy, LPadContextGV, 0, 2,
-                                         "selector_gep");
+  LPadIndexField = LPadContextGV;
+  LSDAField = IRB.CreateConstInBoundsGEP2_32(LPadContextTy, LPadContextGV, 0, 1,
+                                             "lsda_gep");
+  SelectorField = IRB.CreateConstInBoundsGEP2_32(LPadContextTy, LPadContextGV,
+                                                 0, 2, "selector_gep");
 
   // wasm.landingpad.index() intrinsic, which is to specify landingpad index
-  LPadIndexF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_landingpad_index);
+  LPadIndexF =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_landingpad_index);
   // wasm.lsda() intrinsic. Returns the address of LSDA table for the current
   // function.
-  LSDAF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_lsda);
+  LSDAF = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_lsda);
   // wasm.get.exception() and wasm.get.ehselector() intrinsics. Calls to these
   // are generated in clang.
-  GetExnF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_get_exception);
-  GetSelectorF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_get_ehselector);
+  GetExnF =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_get_exception);
+  GetSelectorF =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_get_ehselector);
 
   // wasm.catch() will be lowered down to wasm 'catch' instruction in
   // instruction selection.
-  CatchF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_catch);
+  CatchF = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_catch);
 
   // _Unwind_CallPersonality() wrapper function, which calls the personality
   CallPersonalityF = M.getOrInsertFunction("_Unwind_CallPersonality",
@@ -281,7 +282,7 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
 
   unsigned Index = 0;
   for (auto *BB : CatchPads) {
-    auto *CPI = cast<CatchPadInst>(BB->getFirstNonPHI());
+    auto *CPI = cast<CatchPadInst>(BB->getFirstNonPHIIt());
     // In case of a single catch (...), we don't need to emit a personalify
     // function call
     if (CPI->arg_size() == 1 &&
@@ -306,7 +307,7 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   IRBuilder<> IRB(BB->getContext());
   IRB.SetInsertPoint(BB, BB->getFirstInsertionPt());
 
-  auto *FPI = cast<FuncletPadInst>(BB->getFirstNonPHI());
+  auto *FPI = cast<FuncletPadInst>(BB->getFirstNonPHIIt());
   Instruction *GetExnCI = nullptr, *GetSelectorCI = nullptr;
   for (auto &U : FPI->uses()) {
     if (auto *CI = dyn_cast<CallInst>(U.getUser())) {
@@ -385,13 +386,13 @@ void llvm::calculateWasmEHInfo(const Function *F, WasmEHFuncInfo &EHInfo) {
   for (const auto &BB : *F) {
     if (!BB.isEHPad())
       continue;
-    const Instruction *Pad = BB.getFirstNonPHI();
+    const Instruction *Pad = &*BB.getFirstNonPHIIt();
 
     if (const auto *CatchPad = dyn_cast<CatchPadInst>(Pad)) {
       const auto *UnwindBB = CatchPad->getCatchSwitch()->getUnwindDest();
       if (!UnwindBB)
         continue;
-      const Instruction *UnwindPad = UnwindBB->getFirstNonPHI();
+      const Instruction *UnwindPad = &*UnwindBB->getFirstNonPHIIt();
       if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(UnwindPad))
         // Currently there should be only one handler per a catchswitch.
         EHInfo.setUnwindDest(&BB, *CatchSwitch->handlers().begin());

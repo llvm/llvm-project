@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 include "llvm/Target/Target.td"
+include "llvm/TableGen/SearchableTable.td"
 
 //===----------------------------------------------------------------------===//
 // SPARC Subtarget features.
@@ -33,6 +34,9 @@ def FeatureNoFMULS
 def FeatureV9
   : SubtargetFeature<"v9", "IsV9", "true",
                      "Enable SPARC-V9 instructions">;
+def FeatureV8Plus
+  : SubtargetFeature<"v8plus", "IsV8Plus", "true",
+                     "Enable V8+ mode, allowing use of 64-bit V9 instructions in 32-bit code">;
 def FeatureV8Deprecated
   : SubtargetFeature<"deprecated-v8", "UseV8DeprecatedInsts", "true",
                      "Enable deprecated V8 instructions in V9 mode">;
@@ -45,6 +49,12 @@ def FeatureVIS2
 def FeatureVIS3
   : SubtargetFeature<"vis3", "IsVIS3", "true",
                      "Enable Visual Instruction Set extensions III">;
+def FeatureUA2005
+  : SubtargetFeature<"ua2005", "IsUA2005", "true",
+                     "Enable UltraSPARC Architecture 2005 extensions">;
+def FeatureUA2007
+  : SubtargetFeature<"ua2007", "IsUA2007", "true",
+                     "Enable UltraSPARC Architecture 2007 extensions">;
 def FeatureLeon
   : SubtargetFeature<"leon", "IsLeon", "true",
                      "Enable LEON extensions">;
@@ -91,6 +101,7 @@ foreach i = 0 ... 5 in
 //===----------------------------------------------------------------------===//
 
 include "SparcASITags.td"
+include "SparcPrefetchTags.td"
 include "SparcRegisterInfo.td"
 include "SparcCallingConv.td"
 include "SparcSchedule.td"
@@ -147,13 +158,15 @@ def : Proc<"ultrasparc3",     [FeatureV9, FeatureV8Deprecated, FeatureVIS,
                                FeatureVIS2],
                               [TuneSlowRDPC]>;
 def : Proc<"niagara",         [FeatureV9, FeatureV8Deprecated, FeatureVIS,
-                               FeatureVIS2]>;
+                               FeatureVIS2, FeatureUA2005]>;
 def : Proc<"niagara2",        [FeatureV9, FeatureV8Deprecated, UsePopc,
-                               FeatureVIS, FeatureVIS2]>;
+                               FeatureVIS, FeatureVIS2, FeatureUA2005]>;
 def : Proc<"niagara3",        [FeatureV9, FeatureV8Deprecated, UsePopc,
-                               FeatureVIS, FeatureVIS2]>;
+                               FeatureVIS, FeatureVIS2, FeatureVIS3,
+                               FeatureUA2005, FeatureUA2007]>;
 def : Proc<"niagara4",        [FeatureV9, FeatureV8Deprecated, UsePopc,
-                               FeatureVIS, FeatureVIS2, FeatureVIS3]>;
+                               FeatureVIS, FeatureVIS2, FeatureVIS3,
+                               FeatureUA2005, FeatureUA2007]>;
 
 // LEON 2 FT generic
 def : Processor<"leon2", LEON2Itineraries,

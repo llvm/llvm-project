@@ -3,8 +3,8 @@ add_mlir_library(MLIRArmNeonTestPasses
   TestLowerToArmNeon.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRArmNeonTestPasses PUBLIC
   MLIRArmNeonDialect
   MLIRArmNeonTransforms
   MLIRIR

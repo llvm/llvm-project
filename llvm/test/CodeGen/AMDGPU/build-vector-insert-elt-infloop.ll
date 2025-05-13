@@ -15,7 +15,7 @@ bb1:
   %tmp2 = phi half [ 0xH0000, %bb ], [ %tmp8, %bb1 ]
   %tmp3 = load volatile half, ptr null, align 536870912
   %tmp4 = bitcast half %tmp3 to i16
-  %tmp5 = insertelement <2 x i16> <i16 0, i16 undef>, i16 %tmp4, i32 1
+  %tmp5 = insertelement <2 x i16> <i16 0, i16 poison>, i16 %tmp4, i32 1
   store volatile half %tmp2, ptr %arg, align 2
   %tmp7 = bitcast <2 x i16> %tmp to <2 x half>
   %tmp8 = extractelement <2 x half> %tmp7, i32 0

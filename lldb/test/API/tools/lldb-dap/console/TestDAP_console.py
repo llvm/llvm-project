@@ -19,6 +19,7 @@ def get_subprocess(root_process, process_name):
 
     self.assertTrue(False, "No subprocess with name %s found" % process_name)
 
+
 class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
     def check_lldb_command(
         self, lldb_command, contains_string, assert_msg, command_escape_prefix="`"
@@ -37,7 +38,6 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             ),
         )
 
-    @skipIfWindows
     def test_scopes_variables_setVariable_evaluate(self):
         """
         Tests that the "scopes" request causes the currently selected
@@ -53,7 +53,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         character.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(program, stopOnEntry=True)
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         lines = [breakpoint1_line]
@@ -80,10 +80,9 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
 
         self.check_lldb_command("frame select", "frame #1", "frame 1 is selected")
 
-    @skipIfWindows
     def test_custom_escape_prefix(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, commandEscapePrefix="::")
+        self.build_and_launch(program, stopOnEntry=True, commandEscapePrefix="::")
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         breakpoint_ids = self.set_source_breakpoints(source, [breakpoint1_line])
@@ -96,10 +95,9 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             command_escape_prefix="::",
         )
 
-    @skipIfWindows
     def test_empty_escape_prefix(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, commandEscapePrefix="")
+        self.build_and_launch(program, stopOnEntry=True, commandEscapePrefix="")
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         breakpoint_ids = self.set_source_breakpoints(source, [breakpoint1_line])
@@ -116,7 +114,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
     def test_exit_status_message_sigterm(self):
         source = "main.cpp"
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, commandEscapePrefix="")
+        self.build_and_launch(program, stopOnEntry=True, commandEscapePrefix="")
         breakpoint1_line = line_number(source, "// breakpoint 1")
         breakpoint_ids = self.set_source_breakpoints(source, [breakpoint1_line])
         self.continue_to_breakpoints(breakpoint_ids)
@@ -140,7 +138,9 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         process.wait()
 
         # Get the console output
-        console_output = self.collect_console(1.0)
+        console_output = self.collect_console(
+            timeout_secs=10.0, pattern="exited with status"
+        )
 
         # Verify the exit status message is printed.
         self.assertIn(
@@ -149,19 +149,36 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
             "Exit status does not contain message 'exited with status'",
         )
 
-    @skipIfWindows
     def test_exit_status_message_ok(self):
-        source = "main.cpp"
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, commandEscapePrefix="")
         self.continue_to_exit()
 
         # Get the console output
-        console_output = self.collect_console(1.0)
+        console_output = self.collect_console(
+            timeout_secs=10.0, pattern="exited with status"
+        )
 
         # Verify the exit status message is printed.
         self.assertIn(
             "exited with status = 0 (0x00000000)",
             console_output,
             "Exit status does not contain message 'exited with status'",
+        )
+
+    def test_diagnositcs(self):
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program, stopOnEntry=True)
+
+        core = self.getBuildArtifact("minidump.core")
+        self.yaml2obj("minidump.yaml", core)
+        self.dap_server.request_evaluate(
+            f"target create --core  {core}", context="repl"
+        )
+
+        output = self.get_important()
+        self.assertIn(
+            "warning: unable to retrieve process ID from minidump file",
+            output,
+            "diagnostic found in important output",
         )

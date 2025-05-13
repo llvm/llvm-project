@@ -19,10 +19,10 @@ main:
 LBB0:
   andl $0xf, %ecx
   cmpb $0x4, %cl
-  # exit through abort in main.cold.1, registers cold fragment the regular way
+  ## exit through abort in main.cold.1, registers cold fragment the regular way
   ja main.cold.1
 
-# jump table dispatch, jumping to label indexed by val in %ecx
+## jump table dispatch, jumping to label indexed by val in %ecx
 LBB1:
   leaq JUMP_TABLE(%rip), %r8
   movzbl %cl, %ecx
@@ -37,8 +37,8 @@ LBB3:
   ret
 .size main, .-main
 
-# Insert padding between functions, so that the next instruction cannot be
-# treated as __builtin_unreachable destination for the jump table.
+## Insert padding between functions, so that the next instruction cannot be
+## treated as __builtin_unreachable destination for the jump table.
   .quad 0
 
   .globl main.cold.1
@@ -50,7 +50,7 @@ LBB4:
 .size main.cold.1, .-main.cold.1
 
   .rodata
-# jmp table, entries must be R_X86_64_PC32 relocs
+## jmp table, entries must be R_X86_64_PC32 relocs
   .globl JUMP_TABLE
 JUMP_TABLE:
   .long LBB2-JUMP_TABLE

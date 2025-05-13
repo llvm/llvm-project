@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-unknown-unknown"
@@ -20,15 +20,15 @@ for.body:
   %idxprom = sext i32 %i.06 to i64
   %arrayidx = getelementptr inbounds float, ptr %input, i64 %idxprom
   %0 = load float, ptr %arrayidx, align 4
-; CHECK: ld.f32
+; CHECK: ld.b32
   %arrayidx2 = getelementptr inbounds float, ptr %output, i64 %idxprom
   store float %0, ptr %arrayidx2, align 4
-; CHECK: st.f32
+; CHECK: st.b32
   %inc = add nuw nsw i32 %i.06, 1
   %exitcond = icmp eq i32 %inc, 2
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !0
-; CHECK-NOT: ld.f32
-; CHECK-NOT: st.f32
+; CHECK-NOT: ld.b32
+; CHECK-NOT: st.b32
 
 for.end:
   ret void
@@ -50,15 +50,15 @@ for.body:
   %idxprom = sext i32 %i.06 to i64
   %arrayidx = getelementptr inbounds float, ptr %input, i64 %idxprom
   %0 = load float, ptr %arrayidx, align 4
-; CHECK: ld.f32
+; CHECK: ld.b32
   %arrayidx2 = getelementptr inbounds float, ptr %output, i64 %idxprom
   store float %0, ptr %arrayidx2, align 4
-; CHECK: st.f32
+; CHECK: st.b32
   %inc = add nuw nsw i32 %i.06, 1
   %exitcond = icmp eq i32 %inc, 2
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !2
-; CHECK-NOT: ld.f32
-; CHECK-NOT: st.f32
+; CHECK-NOT: ld.b32
+; CHECK-NOT: st.b32
 
 for.end:
   ret void

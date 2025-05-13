@@ -41,9 +41,9 @@ add_llvm_target(PowerPCCodeGen
   PPCMachineFunctionInfo.cpp
   PPCMachineScheduler.cpp
   PPCMacroFusion.cpp
-  PPCMergeStringPool.cpp
   PPCMIPeephole.cpp
   PPCRegisterInfo.cpp
+  PPCSelectionDAGInfo.cpp
   PPCSubtarget.cpp
   PPCTargetMachine.cpp
   PPCTargetObjectFile.cpp
@@ -54,7 +54,6 @@ add_llvm_target(PowerPCCodeGen
   PPCReduceCRLogicals.cpp
   PPCVSXFMAMutate.cpp
   PPCVSXSwapRemoval.cpp
-  PPCExpandISEL.cpp
   PPCPreEmitPeephole.cpp
   PPCLowerMASSVEntries.cpp
   PPCGenScalarMASSEntries.cpp

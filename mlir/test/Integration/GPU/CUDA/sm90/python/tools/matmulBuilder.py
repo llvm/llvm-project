@@ -182,7 +182,7 @@ def generate_matmul_ws(
     assert K % BLOCK_K == 0
 
     module = ir.Module.create()
-    token_ty = ir.Type.parse("!gpu.async.token")
+    token_ty = gpu.AsyncTokenType.get()
     a_elem_ty = get_mlir_ty(input_type)
     b_elem_ty = get_mlir_ty(input_type)
     c_elem_ty = get_mlir_ty(output_type)
@@ -568,9 +568,7 @@ def generate_matmul_ws(
                                 barId,
                                 predicate=consumerPrimaryThread,
                             )
-                            nvgpu.mbarrier_arrive(
-                                ir.Type.parse("!nvgpu.mbarrier.token"), mbarDONE, barId
-                            )
+                            nvgpu.mbarrier_arrive(mbarDONE, barId)
                             debug_print(
                                 "[cons] iv={}  | mbarDONE[{}] arrive [done]",
                                 iv,
@@ -589,14 +587,9 @@ def generate_matmul_ws(
                         # Step 6.3.5. Yield
                         scf.yield_([new_acc, phaseParity])
 
-                    # Step 6.3. Wait All WGMMA
-                    nvvm.WgmmaWaitGroupSyncOp(0)
-
                     with ir.InsertionPoint(scf.IfOp(consumerPrimaryThread).then_block):
                         barId = c((K // BLOCK_K) % num_stages)
-                        nvgpu.mbarrier_arrive(
-                            ir.Type.parse("!nvgpu.mbarrier.token"), mbarDONE, barId
-                        )
+                        nvgpu.mbarrier_arrive(mbarDONE, barId)
                         scf.yield_([])
 
                     # Step 6.4. Epilogue (registers --> shared memory)
@@ -682,7 +675,7 @@ def generate_matmul_multistage(
     assert K % BLOCK_K == 0
 
     module = ir.Module.create()
-    token_ty = ir.Type.parse("!gpu.async.token")
+    token_ty = gpu.AsyncTokenType.get()
     a_elem_ty = get_mlir_ty(input_type)
     b_elem_ty = get_mlir_ty(input_type)
     c_elem_ty = get_mlir_ty(output_type)

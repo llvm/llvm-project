@@ -12,8 +12,12 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-/// Swaps tensor.extract_slice(linalg.fill(%cst, %init)) into linalg.fill(%cst,
-/// tensor.extract_slice(%init)) when the linalg.fill op have no other users.
+/// swaps:
+///      `tensor.extract_slice(linalg.fill(%cst, %init))`
+/// with:
+///      `linalg.fill(%cst, tensor.extract_slice(%init))`
+///
+/// when the linalg.fill op have no other users.
 /// This helps to reduce the fill footprint.
 struct SwapExtractSliceOfFill final
     : public OpRewritePattern<tensor::ExtractSliceOp> {

@@ -12,6 +12,27 @@ define i64 @test_ptrauth_nop(ptr %p) {
   ret i64 %authed
 }
 
+declare void @foo()
+declare void @bar()
+
+define i64 @test_ptrauth_nop_constant() {
+; CHECK-LABEL: @test_ptrauth_nop_constant(
+; CHECK-NEXT:    ret i64 ptrtoint (ptr @foo to i64)
+;
+  %authed = call i64 @llvm.ptrauth.auth(i64 ptrtoint(ptr ptrauth(ptr @foo, i32 1, i64 1234) to i64), i32 1, i64 1234)
+  ret i64 %authed
+}
+
+define i64 @test_ptrauth_nop_constant_addrdisc() {
+; CHECK-LABEL: @test_ptrauth_nop_constant_addrdisc(
+; CHECK-NEXT:    ret i64 ptrtoint (ptr @foo to i64)
+;
+  %addr = ptrtoint ptr @foo to i64
+  %blended = call i64 @llvm.ptrauth.blend(i64 %addr, i64 1234)
+  %authed = call i64 @llvm.ptrauth.auth(i64 ptrtoint(ptr ptrauth(ptr @foo, i32 1, i64 1234, ptr @foo) to i64), i32 1, i64 %blended)
+  ret i64 %authed
+}
+
 define i64 @test_ptrauth_nop_mismatch(ptr %p) {
 ; CHECK-LABEL: @test_ptrauth_nop_mismatch(
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[P:%.*]] to i64
@@ -87,6 +108,59 @@ define i64 @test_ptrauth_resign_auth_mismatch(ptr %p) {
   ret i64 %authed
 }
 
+define i64 @test_ptrauth_nop_constant_mismatch() {
+; CHECK-LABEL: @test_ptrauth_nop_constant_mismatch(
+; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 ptrtoint (ptr ptrauth (ptr @foo, i32 1, i64 1234) to i64), i32 1, i64 12)
+; CHECK-NEXT:    ret i64 [[AUTHED]]
+;
+  %authed = call i64 @llvm.ptrauth.auth(i64 ptrtoint(ptr ptrauth(ptr @foo, i32 1, i64 1234) to i64), i32 1, i64 12)
+  ret i64 %authed
+}
+
+define i64 @test_ptrauth_nop_constant_mismatch_key() {
+; CHECK-LABEL: @test_ptrauth_nop_constant_mismatch_key(
+; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 ptrtoint (ptr ptrauth (ptr @foo, i32 1, i64 1234) to i64), i32 0, i64 1234)
+; CHECK-NEXT:    ret i64 [[AUTHED]]
+;
+  %authed = call i64 @llvm.ptrauth.auth(i64 ptrtoint(ptr ptrauth(ptr @foo, i32 1, i64 1234) to i64), i32 0, i64 1234)
+  ret i64 %authed
+}
+
+define i64 @test_ptrauth_nop_constant_addrdisc_mismatch() {
+; CHECK-LABEL: @test_ptrauth_nop_constant_addrdisc_mismatch(
+; CHECK-NEXT:    [[BLENDED:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr @foo to i64), i64 12)
+; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 ptrtoint (ptr ptrauth (ptr @foo, i32 1, i64 1234, ptr @foo) to i64), i32 1, i64 [[BLENDED]])
+; CHECK-NEXT:    ret i64 [[AUTHED]]
+;
+  %addr = ptrtoint ptr @foo to i64
+  %blended = call i64 @llvm.ptrauth.blend(i64 %addr, i64 12)
+  %authed = call i64 @llvm.ptrauth.auth(i64 ptrtoint(ptr ptrauth(ptr @foo, i32 1, i64 1234, ptr @foo) to i64), i32 1, i64 %blended)
+  ret i64 %authed
+}
+
+define i64 @test_ptrauth_nop_constant_addrdisc_mismatch2() {
+; CHECK-LABEL: @test_ptrauth_nop_constant_addrdisc_mismatch2(
+; CHECK-NEXT:    [[BLENDED:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr @bar to i64), i64 1234)
+; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 ptrtoint (ptr ptrauth (ptr @foo, i32 1, i64 1234, ptr @foo) to i64), i32 1, i64 [[BLENDED]])
+; CHECK-NEXT:    ret i64 [[AUTHED]]
+;
+  %addr = ptrtoint ptr @bar to i64
+  %blended = call i64 @llvm.ptrauth.blend(i64 %addr, i64 1234)
+  %authed = call i64 @llvm.ptrauth.auth(i64 ptrtoint(ptr ptrauth(ptr @foo, i32 1, i64 1234, ptr @foo) to i64), i32 1, i64 %blended)
+  ret i64 %authed
+}
+
+define i64 @test_ptrauth_resign_ptrauth_constant(ptr %p) {
+; CHECK-LABEL: @test_ptrauth_resign_ptrauth_constant(
+; CHECK-NEXT:    ret i64 ptrtoint (ptr ptrauth (ptr @foo, i32 0, i64 42) to i64)
+;
+
+  %tmp0 = ptrtoint ptr %p to i64
+  %authed = call i64 @llvm.ptrauth.resign(i64 ptrtoint(ptr ptrauth(ptr @foo, i32 1, i64 1234) to i64), i32 1, i64 1234, i32 0, i64 42)
+  ret i64 %authed
+}
+
 declare i64 @llvm.ptrauth.auth(i64, i32, i64)
 declare i64 @llvm.ptrauth.sign(i64, i32, i64)
 declare i64 @llvm.ptrauth.resign(i64, i32, i64, i32, i64)
+declare i64 @llvm.ptrauth.blend(i64, i64)

@@ -163,8 +163,8 @@ public:
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     mlir::Type typeInTuple = fir::dyn_cast_ptrEleTy(args.addrInTuple.getType());
     assert(typeInTuple && "addrInTuple must be an address");
-    mlir::Value castBox = builder.createConvert(args.loc, typeInTuple,
-                                                fir::getBase(args.hostValue));
+    mlir::Value castBox = builder.createConvertWithVolatileCast(
+        args.loc, typeInTuple, fir::getBase(args.hostValue));
     builder.create<fir::StoreOp>(args.loc, castBox, args.addrInTuple);
   }
 
@@ -194,8 +194,8 @@ public:
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     mlir::Type typeInTuple = fir::dyn_cast_ptrEleTy(args.addrInTuple.getType());
     assert(typeInTuple && "addrInTuple must be an address");
-    mlir::Value castBox = builder.createConvert(args.loc, typeInTuple,
-                                                fir::getBase(args.hostValue));
+    mlir::Value castBox = builder.createConvertWithVolatileCast(
+        args.loc, typeInTuple, fir::getBase(args.hostValue));
     builder.create<fir::StoreOp>(args.loc, castBox, args.addrInTuple);
   }
 
@@ -265,8 +265,8 @@ public:
     mlir::Location loc = args.loc;
     mlir::Type typeInTuple = fir::dyn_cast_ptrEleTy(args.addrInTuple.getType());
     assert(typeInTuple && "addrInTuple must be an address");
-    mlir::Value castBox = builder.createConvert(args.loc, typeInTuple,
-                                                fir::getBase(args.hostValue));
+    mlir::Value castBox = builder.createConvertWithVolatileCast(
+        args.loc, typeInTuple, fir::getBase(args.hostValue));
     if (Fortran::semantics::IsOptional(sym)) {
       auto isPresent =
           builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), castBox);
@@ -329,8 +329,8 @@ public:
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     mlir::Type typeInTuple = fir::dyn_cast_ptrEleTy(args.addrInTuple.getType());
     assert(typeInTuple && "addrInTuple must be an address");
-    mlir::Value castBox = builder.createConvert(args.loc, typeInTuple,
-                                                fir::getBase(args.hostValue));
+    mlir::Value castBox = builder.createConvertWithVolatileCast(
+        args.loc, typeInTuple, fir::getBase(args.hostValue));
     builder.create<fir::StoreOp>(args.loc, castBox, args.addrInTuple);
   }
   static void getFromTuple(const GetFromTuple &args,
@@ -366,7 +366,8 @@ public:
   }
 };
 
-/// Class defining how arrays are captured inside internal procedures.
+/// Class defining how arrays, including assumed-ranks, are captured inside
+/// internal procedures.
 /// Array are captured via a `fir.box<fir.array<T>>` descriptor that belongs to
 /// the host tuple. This allows capturing lower bounds, which can be done by
 /// providing a ShapeShiftOp argument to the EmboxOp.
@@ -430,7 +431,7 @@ public:
     mlir::Value box = args.valueInTuple;
     mlir::IndexType idxTy = builder.getIndexType();
     llvm::SmallVector<mlir::Value> lbounds;
-    if (!ba.lboundIsAllOnes()) {
+    if (!ba.lboundIsAllOnes() && !Fortran::evaluate::IsAssumedRank(sym)) {
       if (ba.isStaticArray()) {
         for (std::int64_t lb : ba.staticLBound())
           lbounds.emplace_back(builder.createIntegerConstant(loc, idxTy, lb));
@@ -488,7 +489,8 @@ private:
     const Fortran::semantics::DeclTypeSpec *type = sym.GetType();
     bool isPolymorphic = type && type->IsPolymorphic();
     return isScalarOrContiguous && !isPolymorphic &&
-           !isDerivedWithLenParameters(sym);
+           !isDerivedWithLenParameters(sym) &&
+           !Fortran::evaluate::IsAssumedRank(sym);
   }
 };
 } // namespace
@@ -514,7 +516,7 @@ walkCaptureCategories(T visitor, Fortran::lower::AbstractConverter &converter,
   if (Fortran::semantics::IsAllocatableOrPointer(sym) ||
       sym.GetUltimate().test(Fortran::semantics::Symbol::Flag::CrayPointee))
     return CapturedAllocatableAndPointer::visit(visitor, converter, sym, ba);
-  if (ba.isArray())
+  if (ba.isArray()) // include assumed-ranks.
     return CapturedArrays::visit(visitor, converter, sym, ba);
   if (Fortran::semantics::IsPolymorphic(sym))
     return CapturedPolymorphicScalar::visit(visitor, converter, sym, ba);

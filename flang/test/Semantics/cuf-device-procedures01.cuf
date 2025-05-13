@@ -28,8 +28,17 @@ end
 ! CHECK: threadfence_system (Subroutine): Use from threadfence_system in cudadevice
 
 subroutine host()
+  real(4) :: af
+  real(8) :: ad
+  integer(4) :: ai
+  integer(8) :: al
   call syncthreads()
+  ai = atomicadd(ai, 1_4)
+  al = atomicadd(al, 1_8)
+  af = atomicadd(af, 1.0_4)
+  ad = atomicadd(ad, 1.0_8)
 end subroutine
 
 ! CHECK-LABEL: Subprogram scope: host
+! CHECK: atomicadd, EXTERNAL: HostAssoc{{$}}
 ! CHECK: syncthreads, EXTERNAL: HostAssoc{{$}}

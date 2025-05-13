@@ -420,7 +420,7 @@ template <typename> struct CT2 {
 template <typename T> int CT2<int>::X<>; // expected-error {{template parameter list matching the non-templated nested type 'CT2<int>' should be empty}}
 
 namespace DependentTemplateIdWithNoArgs {
-  template<typename T> void f() { T::template f(); }
+  template<typename T> void f() { T::template f(); } // expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
   struct X {
     template<int = 0> static void f();
   };
@@ -431,7 +431,7 @@ namespace DependentUnresolvedUsingTemplate {
   template<typename T>
   struct X : T {
     using T::foo;
-    void f() { this->template foo(); } // expected-error {{does not refer to a template}}
+    void f() { this->template foo(); } // expected-error {{does not refer to a template}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
     void g() { this->template foo<>(); } // expected-error {{does not refer to a template}}
     void h() { this->template foo<int>(); } // expected-error {{does not refer to a template}}
   };
@@ -450,7 +450,7 @@ namespace DependentUnresolvedUsingTemplate {
 namespace PR37680 {
   template <class a> struct b : a {
     using a::add;
-    template<int> int add() { return this->template add(0); }
+    template<int> int add() { return this->template add(0); } // expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
   };
   struct a {
     template<typename T = void> int add(...);
@@ -458,3 +458,26 @@ namespace PR37680 {
   };
   int f(b<a> ba) { return ba.add<0>(); }
 }
+
+namespace TransformDependentTemplates {
+  template <class T> struct Test1 {
+    template <class T2>
+      using Arg = typename T::template Arg<T2>;
+    void f(Arg<void>);
+    void f(Arg<int>);
+  };
+} // namespace TransformDependentTemplates
+
+namespace TransformNestedName {
+  enum class S { kA };
+
+  template <class T> struct N {
+    using State = S;
+    template <typename T::template X<State::kA> = 0>
+    void F();
+  };
+
+  template <class T>
+  template <typename T::template X<N<T>::State::kA>>
+  inline void N<T>::F() {}
+} // namespace TransformNestedName

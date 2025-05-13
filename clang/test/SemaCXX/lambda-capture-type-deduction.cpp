@@ -297,3 +297,55 @@ void __trans_tmp_1() {
 }
 
 }
+
+namespace GH115931 {
+
+struct Range {};
+
+template <Range>
+struct LengthPercentage {};
+
+void reflectSum() {
+  Range resultR;
+  [&] (auto) -> LengthPercentage<resultR> { 
+    return {};
+  }(0);
+}
+
+} // namespace GH115931
+
+namespace GH47400 {
+
+struct Foo {};
+
+template <int, Foo> struct Arr {};
+
+template <int> struct S {};
+
+constexpr void foo() {
+  constexpr Foo f;
+  [&]<int is>() {
+    [&](Arr<is, f>) {}({}); // f constitutes an ODR-use
+  }.template operator()<42>();
+
+  constexpr int C = 1;
+  [] {
+    [](S<C>) { }({}); // ... while C doesn't
+  }();
+}
+
+} // namespace GH47400
+
+namespace GH84961 {
+
+template <typename T> void g(const T &t) {}
+
+template <typename T> void f(const T &t) {
+  [t] { g(t); }();
+}
+
+void h() {
+  f(h);
+}
+
+} // namespace GH84961

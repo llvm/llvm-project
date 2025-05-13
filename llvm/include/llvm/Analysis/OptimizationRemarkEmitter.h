@@ -16,13 +16,12 @@
 
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include <optional>
 
 namespace llvm {
-class Function;
-class Value;
 
 /// The optimization diagnostic interface.
 ///
@@ -70,6 +69,9 @@ public:
   /// Output the remark via the diagnostic handler and to the
   /// optimization record file.
   void emit(DiagnosticInfoOptimizationBase &OptDiag);
+  /// Also allow r-value for OptDiag to allow emitting a temporarily-constructed
+  /// diagnostic.
+  void emit(DiagnosticInfoOptimizationBase &&OptDiag) { emit(OptDiag); }
 
   /// Take a lambda that returns a remark which will be emitted.  Second
   /// argument is only used to restrict this to functions.
@@ -173,5 +175,5 @@ public:
   /// Run the analysis pass over a function and produce BFI.
   Result run(Function &F, FunctionAnalysisManager &AM);
 };
-}
+} // namespace llvm
 #endif // LLVM_ANALYSIS_OPTIMIZATIONREMARKEMITTER_H

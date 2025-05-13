@@ -26,19 +26,20 @@ public:
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    mlir::ModuleOp mod = builder.create<mlir::ModuleOp>(loc);
-    mlir::func::FuncOp func = mlir::func::FuncOp::create(
+    moduleOp = builder.create<mlir::ModuleOp>(loc);
+    builder.setInsertionPointToStart(moduleOp->getBody());
+    mlir::func::FuncOp func = builder.create<mlir::func::FuncOp>(
         loc, "func1", builder.getFunctionType(std::nullopt, std::nullopt));
     auto *entryBlock = func.addEntryBlock();
-    mod.push_back(mod);
     builder.setInsertionPointToStart(entryBlock);
 
-    firBuilder = std::make_unique<fir::FirOpBuilder>(mod, kindMap);
+    firBuilder = std::make_unique<fir::FirOpBuilder>(builder, kindMap);
   }
 
   fir::FirOpBuilder &getBuilder() { return *firBuilder; }
 
   mlir::MLIRContext context;
+  mlir::OwningOpRef<mlir::ModuleOp> moduleOp;
   std::unique_ptr<fir::FirOpBuilder> firBuilder;
 };
 
@@ -145,7 +146,7 @@ TEST_F(FIRBuilderTest, createRealZeroConstant) {
   auto builder = getBuilder();
   auto ctx = builder.getContext();
   auto loc = builder.getUnknownLoc();
-  auto realTy = mlir::FloatType::getF64(ctx);
+  auto realTy = mlir::Float64Type::get(ctx);
   auto cst = builder.createRealZeroConstant(loc, realTy);
   EXPECT_TRUE(mlir::isa<arith::ConstantOp>(cst.getDefiningOp()));
   auto cstOp = dyn_cast<arith::ConstantOp>(cst.getDefiningOp());
@@ -433,7 +434,7 @@ TEST_F(FIRBuilderTest, createZeroValue) {
   auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(cst.getValue());
   EXPECT_TRUE(intAttr && intAttr.getInt() == 0);
 
-  mlir::Type f32Ty = mlir::FloatType::getF32(builder.getContext());
+  mlir::Type f32Ty = mlir::Float32Type::get(builder.getContext());
   mlir::Value zeroFloat = fir::factory::createZeroValue(builder, loc, f32Ty);
   EXPECT_TRUE(zeroFloat.getType() == f32Ty);
   auto cst2 = mlir::dyn_cast_or_null<mlir::arith::ConstantOp>(
@@ -493,7 +494,7 @@ TEST_F(FIRBuilderTest, getBaseTypeOf) {
     return {scalars, arrays};
   };
 
-  auto f32Ty = mlir::FloatType::getF32(builder.getContext());
+  auto f32Ty = mlir::Float32Type::get(builder.getContext());
   mlir::Type f32SeqTy = builder.getVarLenSeqTy(f32Ty);
   auto [f32Scalars, f32Arrays] = makeExv(f32Ty, f32SeqTy);
   for (const auto &scalar : f32Scalars) {
@@ -536,7 +537,7 @@ TEST_F(FIRBuilderTest, genArithFastMath) {
   auto ctx = builder.getContext();
   auto loc = builder.getUnknownLoc();
 
-  auto realTy = mlir::FloatType::getF32(ctx);
+  auto realTy = mlir::Float32Type::get(ctx);
   auto arg = builder.create<fir::UndefOp>(loc, realTy);
 
   // Test that FastMathFlags is 'none' by default.
@@ -584,4 +585,63 @@ TEST_F(FIRBuilderTest, genArithFastMath) {
   EXPECT_TRUE(op4_fmi);
   auto op4_fmf = op4_fmi.getFastMathFlagsAttr().getValue();
   EXPECT_EQ(op4_fmf, FMF1);
+}
+
+TEST_F(FIRBuilderTest, genArithIntegerOverflow) {
+  auto builder = getBuilder();
+  auto ctx = builder.getContext();
+  auto loc = builder.getUnknownLoc();
+
+  auto intTy = IntegerType::get(ctx, 32);
+  auto arg = builder.create<fir::UndefOp>(loc, intTy);
+
+  // Test that IntegerOverflowFlags is 'none' by default.
+  mlir::Operation *op1 = builder.create<mlir::arith::AddIOp>(loc, arg, arg);
+  auto op1_iofi =
+      mlir::dyn_cast_or_null<mlir::arith::ArithIntegerOverflowFlagsInterface>(
+          op1);
+  EXPECT_TRUE(op1_iofi);
+  auto op1_ioff = op1_iofi.getOverflowAttr().getValue();
+  EXPECT_EQ(op1_ioff, arith::IntegerOverflowFlags::none);
+
+  // Test that the builder is copied properly.
+  fir::FirOpBuilder builder_copy(builder);
+
+  arith::IntegerOverflowFlags nsw = arith::IntegerOverflowFlags::nsw;
+  builder.setIntegerOverflowFlags(nsw);
+  arith::IntegerOverflowFlags nuw = arith::IntegerOverflowFlags::nuw;
+  builder_copy.setIntegerOverflowFlags(nuw);
+
+  // Modifying IntegerOverflowFlags for the copy must not affect the original
+  // builder.
+  mlir::Operation *op2 = builder.create<mlir::arith::AddIOp>(loc, arg, arg);
+  auto op2_iofi =
+      mlir::dyn_cast_or_null<mlir::arith::ArithIntegerOverflowFlagsInterface>(
+          op2);
+  EXPECT_TRUE(op2_iofi);
+  auto op2_ioff = op2_iofi.getOverflowAttr().getValue();
+  EXPECT_EQ(op2_ioff, nsw);
+
+  // Modifying IntegerOverflowFlags for the original builder must not affect the
+  // copy.
+  mlir::Operation *op3 =
+      builder_copy.create<mlir::arith::AddIOp>(loc, arg, arg);
+  auto op3_iofi =
+      mlir::dyn_cast_or_null<mlir::arith::ArithIntegerOverflowFlagsInterface>(
+          op3);
+  EXPECT_TRUE(op3_iofi);
+  auto op3_ioff = op3_iofi.getOverflowAttr().getValue();
+  EXPECT_EQ(op3_ioff, nuw);
+
+  // Test that the builder copy inherits IntegerOverflowFlags from the original.
+  fir::FirOpBuilder builder_copy2(builder);
+
+  mlir::Operation *op4 =
+      builder_copy2.create<mlir::arith::AddIOp>(loc, arg, arg);
+  auto op4_iofi =
+      mlir::dyn_cast_or_null<mlir::arith::ArithIntegerOverflowFlagsInterface>(
+          op4);
+  EXPECT_TRUE(op4_iofi);
+  auto op4_ioff = op4_iofi.getOverflowAttr().getValue();
+  EXPECT_EQ(op4_ioff, nsw);
 }

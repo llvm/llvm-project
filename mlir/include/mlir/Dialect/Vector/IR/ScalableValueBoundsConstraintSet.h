@@ -33,8 +33,9 @@ struct ScalableValueBoundsConstraintSet
       MLIRContext *context,
       ValueBoundsConstraintSet::StopConditionFn stopCondition,
       unsigned vscaleMin, unsigned vscaleMax)
-      : RTTIExtends(context, stopCondition), vscaleMin(vscaleMin),
-        vscaleMax(vscaleMax) {};
+      : RTTIExtends(context, stopCondition,
+                    /*addConservativeSemiAffineBounds=*/true),
+        vscaleMin(vscaleMin), vscaleMax(vscaleMax) {};
 
   using RTTIExtends::bound;
   using RTTIExtends::StopConditionFn;

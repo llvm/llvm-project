@@ -271,10 +271,10 @@ define zeroext i1 @f14(ptr %ptr0) {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -168
 ; CHECK-NEXT:    .cfi_def_cfa_offset 328
-; CHECK-NEXT:    l %r6, 0(%r2)
-; CHECK-NEXT:    l %r13, 8(%r2)
-; CHECK-NEXT:    l %r12, 16(%r2)
-; CHECK-NEXT:    l %r7, 24(%r2)
+; CHECK-NEXT:    l %r7, 0(%r2)
+; CHECK-NEXT:    l %r6, 8(%r2)
+; CHECK-NEXT:    l %r13, 16(%r2)
+; CHECK-NEXT:    l %r12, 24(%r2)
 ; CHECK-NEXT:    l %r8, 32(%r2)
 ; CHECK-NEXT:    l %r9, 40(%r2)
 ; CHECK-NEXT:    l %r10, 48(%r2)
@@ -282,16 +282,16 @@ define zeroext i1 @f14(ptr %ptr0) {
 ; CHECK-NEXT:    mvc 160(4,%r15), 64(%r2) # 4-byte Folded Spill
 ; CHECK-NEXT:    mvc 164(4,%r15), 72(%r2) # 4-byte Folded Spill
 ; CHECK-NEXT:    brasl %r14, foo@PLT
-; CHECK-NEXT:    alr %r2, %r6
+; CHECK-NEXT:    alr %r2, %r7
 ; CHECK-NEXT:    ipm %r0
 ; CHECK-NEXT:    risbg %r0, %r0, 63, 191, 35
+; CHECK-NEXT:    alr %r2, %r6
+; CHECK-NEXT:    ipm %r1
+; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 35
 ; CHECK-NEXT:    alr %r2, %r13
 ; CHECK-NEXT:    ipm %r1
 ; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 35
 ; CHECK-NEXT:    alr %r2, %r12
-; CHECK-NEXT:    ipm %r1
-; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 35
-; CHECK-NEXT:    alr %r2, %r7
 ; CHECK-NEXT:    ipm %r1
 ; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 35
 ; CHECK-NEXT:    alr %r2, %r8

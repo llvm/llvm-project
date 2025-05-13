@@ -19,8 +19,17 @@ f5 *e;
 f6 *f;
 f7 *g;
 
+enum E : long;
+int efunc(enum E);
+
+// Produce the underlying `long` type implicitly.
+enum E2 { big = __LONG_MAX__ };
+int e2func(enum E2);
+
 void foo(void) {
   a = (f1 *)x;
+  a = (f1 *)efunc; // enum is just type system sugar, still passed as a long.
+  a = (f1 *)e2func; // enum is just type system sugar, still passed as a long.
   b = (f2 *)x; /* expected-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}} */
   c = (f3 *)x;
   d = (f4 *)x; /* expected-warning {{cast from 'int (*)(long)' to 'f4 *' (aka 'void (*)()') converts to incompatible function type}} */

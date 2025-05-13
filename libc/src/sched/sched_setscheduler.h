@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SCHED_SCHED_SETSCHEDULER_H
 #define LLVM_LIBC_SRC_SCHED_SCHED_SETSCHEDULER_H
 
+#include "src/__support/macros/config.h"
 #include <sched.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int sched_setscheduler(pid_t tid, int policy, const struct sched_param *param);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SCHED_SCHED_SETSCHEDULER_H

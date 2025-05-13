@@ -5,6 +5,13 @@ emitc.include "myheader.h"
 // CHECK: #include <myheader.h>
 emitc.include <"myheader.h">
 
+// CHECK: void test_include() {
+func.func @test_include() {
+  // CHECK: #include "myheader.h"
+  emitc.include "myheader.h"
+  return
+}
+
 // CHECK: void test_foo_print() {
 func.func @test_foo_print() {
   // CHECK: [[V1:[^ ]*]] = foo::constant({0, 1});
@@ -82,12 +89,20 @@ func.func @opaque_types(%arg0: !emitc.opaque<"bool">, %arg1: !emitc.opaque<"char
   return %2 : !emitc.opaque<"status_t">
 }
 
-func.func @apply(%arg0: i32) -> !emitc.ptr<i32> {
-  // CHECK: int32_t* [[V2]] = &[[V1]];
-  %0 = emitc.apply "&"(%arg0) : (i32) -> !emitc.ptr<i32>
-  // CHECK: int32_t [[V3]] = *[[V2]];
-  %1 = emitc.apply "*"(%0) : (!emitc.ptr<i32>) -> (i32)
-  return %0 : !emitc.ptr<i32>
+// CHECK-LABEL: int32_t* apply() {
+func.func @apply() -> !emitc.ptr<i32> {
+  // CHECK-NEXT: int32_t [[V1:[^ ]*]];
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  // CHECK-NEXT: int32_t* [[V2:[^ ]*]] = &[[V1]];
+  %1 = emitc.apply "&"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+  // CHECK-NEXT: int32_t [[V3:[^ ]*]];
+  %2 = "emitc.variable"() {value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32>
+  // CHECK-NEXT: int32_t [[V4:[^ ]*]] = *[[V2]];
+  %3 = emitc.apply "*"(%1) : (!emitc.ptr<i32>) -> i32
+  // CHECK-NEXT: [[V3]] = [[V4]];
+  emitc.assign %3 : i32 to %2 : !emitc.lvalue<i32>
+  // CHECK-NEXT: return [[V2]];
+  return %1 : !emitc.ptr<i32>
 }
 
 // CHECK: void array_type(int32_t v1[3], float v2[10][20])

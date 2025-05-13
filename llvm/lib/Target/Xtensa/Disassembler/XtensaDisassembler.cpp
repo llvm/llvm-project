@@ -38,9 +38,7 @@ public:
   XtensaDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx, bool isLE)
       : MCDisassembler(STI, Ctx), IsLittleEndian(isLE) {}
 
-  bool hasDensity() const {
-    return STI.hasFeature(Xtensa::FeatureDensity);
-  }
+  bool hasDensity() const { return STI.hasFeature(Xtensa::FeatureDensity); }
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -59,7 +57,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaDisassembler() {
                                          createXtensaDisassembler);
 }
 
-static const unsigned ARDecoderTable[] = {
+const MCPhysReg ARDecoderTable[] = {
     Xtensa::A0,  Xtensa::SP,  Xtensa::A2,  Xtensa::A3, Xtensa::A4,  Xtensa::A5,
     Xtensa::A6,  Xtensa::A7,  Xtensa::A8,  Xtensa::A9, Xtensa::A10, Xtensa::A11,
     Xtensa::A12, Xtensa::A13, Xtensa::A14, Xtensa::A15};
@@ -70,22 +68,70 @@ static DecodeStatus DecodeARRegisterClass(MCInst &Inst, uint64_t RegNo,
   if (RegNo >= std::size(ARDecoderTable))
     return MCDisassembler::Fail;
 
-  unsigned Reg = ARDecoderTable[RegNo];
+  MCPhysReg Reg = ARDecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
 
-static const unsigned SRDecoderTable[] = {Xtensa::SAR, 3};
+static const MCPhysReg MRDecoderTable[] = {Xtensa::M0, Xtensa::M1, Xtensa::M2,
+                                           Xtensa::M3};
+
+static DecodeStatus DecodeMRRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                          uint64_t Address,
+                                          const void *Decoder) {
+  if (RegNo >= std::size(MRDecoderTable))
+    return MCDisassembler::Fail;
+
+  MCPhysReg Reg = MRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static const MCPhysReg MR01DecoderTable[] = {Xtensa::M0, Xtensa::M1};
+
+static DecodeStatus DecodeMR01RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  if (RegNo > 2)
+    return MCDisassembler::Fail;
+
+  MCPhysReg Reg = MR01DecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static const MCPhysReg MR23DecoderTable[] = {Xtensa::M2, Xtensa::M3};
+
+static DecodeStatus DecodeMR23RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  if (RegNo != 2 && RegNo != 3)
+    return MCDisassembler::Fail;
+
+  MCPhysReg Reg = MR23DecoderTable[RegNo - 2];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+const MCPhysReg SRDecoderTable[] = {
+    Xtensa::SAR, 3,  Xtensa::ACCLO,      16, Xtensa::ACCHI,       17,
+    Xtensa::M0,  32, Xtensa::M1,         33, Xtensa::M2,          34,
+    Xtensa::M3,  35, Xtensa::WINDOWBASE, 72, Xtensa::WINDOWSTART, 73};
 
 static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                           uint64_t Address,
-                                          const void *Decoder) {
+                                          const MCDisassembler *Decoder) {
   if (RegNo > 255)
     return MCDisassembler::Fail;
 
   for (unsigned i = 0; i < std::size(SRDecoderTable); i += 2) {
     if (SRDecoderTable[i + 1] == RegNo) {
-      unsigned Reg = SRDecoderTable[i];
+      MCPhysReg Reg = SRDecoderTable[i];
+
+      if (!Xtensa::checkRegister(Reg,
+                                 Decoder->getSubtargetInfo().getFeatureBits()))
+        return MCDisassembler::Fail;
+
       Inst.addOperand(MCOperand::createReg(Reg));
       return MCDisassembler::Success;
     }
@@ -94,19 +140,36 @@ static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Fail;
 }
 
+const MCPhysReg BRDecoderTable[] = {
+    Xtensa::B0,  Xtensa::B1,  Xtensa::B2,  Xtensa::B3, Xtensa::B4,  Xtensa::B5,
+    Xtensa::B6,  Xtensa::B7,  Xtensa::B8,  Xtensa::B9, Xtensa::B10, Xtensa::B11,
+    Xtensa::B12, Xtensa::B13, Xtensa::B14, Xtensa::B15};
+
+static DecodeStatus DecodeBRRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                          uint64_t Address,
+                                          const void *Decoder) {
+  if (RegNo >= std::size(BRDecoderTable))
+    return MCDisassembler::Fail;
+
+  MCPhysReg Reg = BRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static bool tryAddingSymbolicOperand(int64_t Value, bool isBranch,
                                      uint64_t Address, uint64_t Offset,
                                      uint64_t InstSize, MCInst &MI,
                                      const void *Decoder) {
   const MCDisassembler *Dis = static_cast<const MCDisassembler *>(Decoder);
-  return Dis->tryAddingSymbolicOperand(MI, Value, Address, isBranch, Offset, /*OpSize=*/0,
-                                       InstSize);
+  return Dis->tryAddingSymbolicOperand(MI, Value, Address, isBranch, Offset,
+                                       /*OpSize=*/0, InstSize);
 }
 
 static DecodeStatus decodeCallOperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address, const void *Decoder) {
   assert(isUInt<18>(Imm) && "Invalid immediate");
-  Inst.addOperand(MCOperand::createImm(SignExtend64<20>(Imm << 2)));
+  Inst.addOperand(
+      MCOperand::createImm(SignExtend64<20>(Imm << 2) + (Address & 0x3)));
   return MCDisassembler::Success;
 }
 
@@ -135,6 +198,16 @@ static DecodeStatus decodeBranchOperand(MCInst &Inst, uint64_t Imm,
                                   Address, 0, 3, Inst, Decoder))
       Inst.addOperand(MCOperand::createImm(SignExtend64<8>(Imm)));
   }
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeLoopOperand(MCInst &Inst, uint64_t Imm,
+                                      int64_t Address, const void *Decoder) {
+
+  assert(isUInt<8>(Imm) && "Invalid immediate");
+  if (!tryAddingSymbolicOperand(Imm + 4 + Address, true, Address, 0, 3, Inst,
+                                Decoder))
+    Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
 
@@ -190,6 +263,51 @@ static DecodeStatus decodeImm1_16Operand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeImm1n_15Operand(MCInst &Inst, uint64_t Imm,
+                                          int64_t Address,
+                                          const void *Decoder) {
+  assert(isUInt<4>(Imm) && "Invalid immediate");
+  if (!Imm)
+    Inst.addOperand(MCOperand::createImm(-1));
+  else
+    Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeImm32n_95Operand(MCInst &Inst, uint64_t Imm,
+                                           int64_t Address,
+                                           const void *Decoder) {
+  assert(isUInt<7>(Imm) && "Invalid immediate");
+  if ((Imm & 0x60) == 0x60)
+    Inst.addOperand(MCOperand::createImm((~0x1f) | Imm));
+  else
+    Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeImm8n_7Operand(MCInst &Inst, uint64_t Imm,
+                                         int64_t Address, const void *Decoder) {
+  assert(isUInt<4>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm > 7 ? Imm - 16 : Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeImm64n_4nOperand(MCInst &Inst, uint64_t Imm,
+                                           int64_t Address,
+                                           const void *Decoder) {
+  assert(isUInt<6>(Imm) && ((Imm & 0x3) == 0) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm((~0x3f) | (Imm)));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeEntry_Imm12OpValue(MCInst &Inst, uint64_t Imm,
+                                             int64_t Address,
+                                             const void *Decoder) {
+  assert(isUInt<15>(Imm) && ((Imm & 0x7) == 0) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeShimm1_31Operand(MCInst &Inst, uint64_t Imm,
                                            int64_t Address,
                                            const void *Decoder) {
@@ -219,6 +337,13 @@ static DecodeStatus decodeB4constuOperand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeImm7_22Operand(MCInst &Inst, uint64_t Imm,
+                                         int64_t Address, const void *Decoder) {
+  assert(isUInt<4>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm + 7));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeMem8Operand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address, const void *Decoder) {
   assert(isUInt<12>(Imm) && "Invalid immediate");
@@ -243,9 +368,37 @@ static DecodeStatus decodeMem32Operand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeMem32nOperand(MCInst &Inst, uint64_t Imm,
+                                        int64_t Address, const void *Decoder) {
+  assert(isUInt<8>(Imm) && "Invalid immediate");
+  DecodeARRegisterClass(Inst, Imm & 0xf, Address, Decoder);
+  Inst.addOperand(MCOperand::createImm((Imm >> 2) & 0x3c));
+  return MCDisassembler::Success;
+}
+
+/// Read two bytes from the ArrayRef and return 16 bit data sorted
+/// according to the given endianness.
+static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                      uint64_t &Size, uint64_t &Insn,
+                                      bool IsLittleEndian) {
+  // We want to read exactly 2 Bytes of data.
+  if (Bytes.size() < 2) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  if (!IsLittleEndian) {
+    report_fatal_error("Big-endian mode currently is not supported!");
+  } else {
+    Insn = (Bytes[1] << 8) | Bytes[0];
+  }
+
+  return MCDisassembler::Success;
+}
+
 /// Read three bytes from the ArrayRef and return 24 bit data
 static DecodeStatus readInstruction24(ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                      uint64_t &Size, uint32_t &Insn,
+                                      uint64_t &Size, uint64_t &Insn,
                                       bool IsLittleEndian) {
   // We want to read exactly 3 Bytes of data.
   if (Bytes.size() < 3) {
@@ -259,7 +412,6 @@ static DecodeStatus readInstruction24(ArrayRef<uint8_t> Bytes, uint64_t Address,
     Insn = (Bytes[2] << 16) | (Bytes[1] << 8) | (Bytes[0] << 0);
   }
 
-  Size = 3;
   return MCDisassembler::Success;
 }
 
@@ -269,13 +421,31 @@ DecodeStatus XtensaDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes,
                                                 uint64_t Address,
                                                 raw_ostream &CS) const {
-  uint32_t Insn;
+  uint64_t Insn;
   DecodeStatus Result;
 
+  // Parse 16-bit instructions
+  if (hasDensity()) {
+    Result = readInstruction16(Bytes, Address, Size, Insn, IsLittleEndian);
+    if (Result == MCDisassembler::Fail)
+      return MCDisassembler::Fail;
+    LLVM_DEBUG(dbgs() << "Trying Xtensa 16-bit instruction table :\n");
+    Result = decodeInstruction(DecoderTable16, MI, Insn, Address, this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 2;
+      return Result;
+    }
+  }
+
+  // Parse Core 24-bit instructions
   Result = readInstruction24(Bytes, Address, Size, Insn, IsLittleEndian);
   if (Result == MCDisassembler::Fail)
     return MCDisassembler::Fail;
   LLVM_DEBUG(dbgs() << "Trying Xtensa 24-bit instruction table :\n");
   Result = decodeInstruction(DecoderTable24, MI, Insn, Address, this, STI);
+  if (Result != MCDisassembler::Fail) {
+    Size = 3;
+    return Result;
+  }
   return Result;
 }

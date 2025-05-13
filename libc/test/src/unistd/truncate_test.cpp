@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
-#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/read.h"
 #include "src/unistd/truncate.h"
 #include "src/unistd/unlink.h"
 #include "src/unistd/write.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -21,7 +21,9 @@
 
 namespace cpp = LIBC_NAMESPACE::cpp;
 
-TEST(LlvmLibcTruncateTest, CreateAndTruncate) {
+using LlvmLibcTruncateTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcTruncateTest, CreateAndTruncate) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *FILENAME = "truncate.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
@@ -34,7 +36,6 @@ TEST(LlvmLibcTruncateTest, CreateAndTruncate) {
   //   2. Read it to make sure what was written is actually in the file.
   //   3. Truncate to 1 byte.
   //   4. Try to read more than 1 byte and fail.
-  LIBC_NAMESPACE::libc_errno = 0;
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
@@ -61,7 +62,7 @@ TEST(LlvmLibcTruncateTest, CreateAndTruncate) {
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));
 }
 
-TEST(LlvmLibcTruncateTest, TruncateNonExistentFile) {
+TEST_F(LlvmLibcTruncateTest, TruncateNonExistentFile) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   ASSERT_THAT(
       LIBC_NAMESPACE::truncate("non-existent-dir/non-existent-file", off_t(1)),

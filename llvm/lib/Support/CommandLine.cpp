@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -54,18 +55,18 @@ using namespace cl;
 //
 namespace llvm {
 namespace cl {
-template class basic_parser<bool>;
-template class basic_parser<boolOrDefault>;
-template class basic_parser<int>;
-template class basic_parser<long>;
-template class basic_parser<long long>;
-template class basic_parser<unsigned>;
-template class basic_parser<unsigned long>;
-template class basic_parser<unsigned long long>;
-template class basic_parser<double>;
-template class basic_parser<float>;
-template class basic_parser<std::string>;
-template class basic_parser<char>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<bool>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<boolOrDefault>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<int>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<long long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<unsigned>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<unsigned long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<unsigned long long>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<double>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<float>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<std::string>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<char>;
 
 template class opt<unsigned>;
 template class opt<int>;
@@ -404,6 +405,22 @@ private:
 
 static ManagedStatic<CommandLineParser> GlobalParser;
 
+template <typename T, T TrueVal, T FalseVal>
+static bool parseBool(Option &O, StringRef ArgName, StringRef Arg, T &Value) {
+  if (Arg == "" || Arg == "true" || Arg == "TRUE" || Arg == "True" ||
+      Arg == "1") {
+    Value = TrueVal;
+    return false;
+  }
+
+  if (Arg == "false" || Arg == "FALSE" || Arg == "False" || Arg == "0") {
+    Value = FalseVal;
+    return false;
+  }
+  return O.error("'" + Arg +
+                 "' is invalid value for boolean argument! Try 0 or 1");
+}
+
 void cl::AddLiteralOption(Option &O, StringRef Name) {
   GlobalParser->addLiteralOption(O, Name);
 }
@@ -455,10 +472,10 @@ void OptionCategory::registerCategory() {
 // initialization because it is referenced from cl::opt constructors, which run
 // dynamically in an arbitrary order.
 LLVM_REQUIRE_CONSTANT_INITIALIZATION
-ManagedStatic<SubCommand> llvm::cl::TopLevelSubCommand;
+static ManagedStatic<SubCommand> TopLevelSubCommand;
 
 // A special subcommand that can be used to put an option into all subcommands.
-ManagedStatic<SubCommand> llvm::cl::AllSubCommands;
+static ManagedStatic<SubCommand> AllSubCommands;
 
 SubCommand &SubCommand::getTopLevel() { return *TopLevelSubCommand; }
 
@@ -710,7 +727,7 @@ static Option *getOptionPred(StringRef Name, size_t &Length,
   // characters in it (so that the next iteration will not be the empty
   // string.
   while (OMI == OptionsMap.end() && Name.size() > 1) {
-    Name = Name.substr(0, Name.size() - 1); // Chop off the last character.
+    Name = Name.drop_back();
     OMI = OptionsMap.find(Name);
     if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
       OMI = OptionsMap.end();
@@ -1733,9 +1750,9 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   } else if (!ConsumeAfterOpt) {
     // Positional args have already been handled if ConsumeAfter is specified.
     unsigned ValNo = 0, NumVals = static_cast<unsigned>(PositionalVals.size());
-    for (size_t i = 0, e = PositionalOpts.size(); i != e; ++i) {
-      if (RequiresValue(PositionalOpts[i])) {
-        ProvidePositionalOption(PositionalOpts[i], PositionalVals[ValNo].first,
+    for (Option *Opt : PositionalOpts) {
+      if (RequiresValue(Opt)) {
+        ProvidePositionalOption(Opt, PositionalVals[ValNo].first,
                                 PositionalVals[ValNo].second);
         ValNo++;
         --NumPositionalRequired; // We fulfilled our duty...
@@ -1745,16 +1762,15 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       // do not give it values that others need.  'Done' controls whether the
       // option even _WANTS_ any more.
       //
-      bool Done = PositionalOpts[i]->getNumOccurrencesFlag() == cl::Required;
+      bool Done = Opt->getNumOccurrencesFlag() == cl::Required;
       while (NumVals - ValNo > NumPositionalRequired && !Done) {
-        switch (PositionalOpts[i]->getNumOccurrencesFlag()) {
+        switch (Opt->getNumOccurrencesFlag()) {
         case cl::Optional:
           Done = true; // Optional arguments want _at most_ one value
           [[fallthrough]];
         case cl::ZeroOrMore: // Zero or more will take all they can get...
         case cl::OneOrMore:  // One or more will take all they can get...
-          ProvidePositionalOption(PositionalOpts[i],
-                                  PositionalVals[ValNo].first,
+          ProvidePositionalOption(Opt, PositionalVals[ValNo].first,
                                   PositionalVals[ValNo].second);
           ValNo++;
           break;
@@ -1767,11 +1783,10 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   } else {
     assert(ConsumeAfterOpt && NumPositionalRequired <= PositionalVals.size());
     unsigned ValNo = 0;
-    for (size_t J = 0, E = PositionalOpts.size(); J != E; ++J)
-      if (RequiresValue(PositionalOpts[J])) {
-        ErrorParsing |= ProvidePositionalOption(PositionalOpts[J],
-                                                PositionalVals[ValNo].first,
-                                                PositionalVals[ValNo].second);
+    for (Option *Opt : PositionalOpts)
+      if (RequiresValue(Opt)) {
+        ErrorParsing |= ProvidePositionalOption(
+            Opt, PositionalVals[ValNo].first, PositionalVals[ValNo].second);
         ValNo++;
       }
 
@@ -1956,36 +1971,14 @@ void basic_parser_impl::printOptionName(const Option &O,
 //
 bool parser<bool>::parse(Option &O, StringRef ArgName, StringRef Arg,
                          bool &Value) {
-  if (Arg == "" || Arg == "true" || Arg == "TRUE" || Arg == "True" ||
-      Arg == "1") {
-    Value = true;
-    return false;
-  }
-
-  if (Arg == "false" || Arg == "FALSE" || Arg == "False" || Arg == "0") {
-    Value = false;
-    return false;
-  }
-  return O.error("'" + Arg +
-                 "' is invalid value for boolean argument! Try 0 or 1");
+  return parseBool<bool, true, false>(O, ArgName, Arg, Value);
 }
 
 // parser<boolOrDefault> implementation
 //
 bool parser<boolOrDefault>::parse(Option &O, StringRef ArgName, StringRef Arg,
                                   boolOrDefault &Value) {
-  if (Arg == "" || Arg == "true" || Arg == "TRUE" || Arg == "True" ||
-      Arg == "1") {
-    Value = BOU_TRUE;
-    return false;
-  }
-  if (Arg == "false" || Arg == "FALSE" || Arg == "False" || Arg == "0") {
-    Value = BOU_FALSE;
-    return false;
-  }
-
-  return O.error("'" + Arg +
-                 "' is invalid value for boolean argument! Try 0 or 1");
+  return parseBool<boolOrDefault, BOU_TRUE, BOU_FALSE>(O, ArgName, Arg, Value);
 }
 
 // parser<int> implementation
@@ -2443,8 +2436,8 @@ protected:
 
     // Collect registered option categories into vector in preparation for
     // sorting.
-    for (OptionCategory *Category : GlobalParser->RegisteredOptionCategories)
-      SortedCategories.push_back(Category);
+    llvm::append_range(SortedCategories,
+                       GlobalParser->RegisteredOptionCategories);
 
     // Sort the different option categories alphabetically.
     assert(SortedCategories.size() > 0 && "No option categories registered!");

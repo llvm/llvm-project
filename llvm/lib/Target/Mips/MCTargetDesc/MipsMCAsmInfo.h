@@ -13,17 +13,25 @@
 #ifndef LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCASMINFO_H
 #define LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCASMINFO_H
 
+#include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCAsmInfoELF.h"
 
 namespace llvm {
 class Triple;
 
-class MipsMCAsmInfo : public MCAsmInfoELF {
+class MipsELFMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit MipsMCAsmInfo(const Triple &TheTriple,
-                         const MCTargetOptions &Options);
+  explicit MipsELFMCAsmInfo(const Triple &TheTriple,
+                            const MCTargetOptions &Options);
+};
+
+class MipsCOFFMCAsmInfo : public MCAsmInfoGNUCOFF {
+  void anchor() override;
+
+public:
+  explicit MipsCOFFMCAsmInfo();
 };
 
 } // namespace llvm

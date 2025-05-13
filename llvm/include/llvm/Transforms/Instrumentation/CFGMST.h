@@ -19,6 +19,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/BranchProbability.h"
@@ -52,9 +53,13 @@ template <class Edge, class BBInfo> class CFGMST {
 
   BranchProbabilityInfo *const BPI;
   BlockFrequencyInfo *const BFI;
+  LoopInfo *const LI;
 
   // If function entry will be always instrumented.
   const bool InstrumentFuncEntry;
+
+  // If true loop entries will be always instrumented.
+  const bool InstrumentLoopEntries;
 
   // Find the root group of the G and compress the path from G to the root.
   BBInfo *findAndCompressGroup(BBInfo *G) {
@@ -154,6 +159,16 @@ template <class Edge, class BBInfo> class CFGMST {
           }
           if (BPI != nullptr)
             Weight = BPI->getEdgeProbability(&BB, TargetBB).scale(scaleFactor);
+          // If InstrumentLoopEntries is on and the current edge leads to a loop
+          // (i.e., TargetBB is a loop head and BB is outside its loop), set
+          // Weight to be minimal, so that the edge won't be chosen for the MST
+          // and will be instrumented.
+          if (InstrumentLoopEntries && LI->isLoopHeader(TargetBB)) {
+            Loop *TargetLoop = LI->getLoopFor(TargetBB);
+            assert(TargetLoop);
+            if (!TargetLoop->contains(&BB))
+              Weight = 0;
+          }
           if (Weight == 0)
             Weight++;
           auto *E = &addEdge(&BB, TargetBB, Weight);
@@ -252,6 +267,19 @@ template <class Edge, class BBInfo> class CFGMST {
     }
   }
 
+  [[maybe_unused]] bool validateLoopEntryInstrumentation() {
+    if (!InstrumentLoopEntries)
+      return true;
+    for (auto &Ei : AllEdges) {
+      if (Ei->Removed)
+        continue;
+      if (Ei->DestBB && LI->isLoopHeader(Ei->DestBB) &&
+          !LI->getLoopFor(Ei->DestBB)->contains(Ei->SrcBB) && Ei->InMST)
+        return false;
+    }
+    return true;
+  }
+
 public:
   // Dump the Debug information about the instrumentation.
   void dumpEdges(raw_ostream &OS, const Twine &Message) const {
@@ -280,24 +308,31 @@ public:
     std::tie(Iter, Inserted) = BBInfos.insert(std::make_pair(Src, nullptr));
     if (Inserted) {
       // Newly inserted, update the real info.
-      Iter->second = std::move(std::make_unique<BBInfo>(Index));
+      Iter->second = std::make_unique<BBInfo>(Index);
       Index++;
     }
     std::tie(Iter, Inserted) = BBInfos.insert(std::make_pair(Dest, nullptr));
     if (Inserted)
       // Newly inserted, update the real info.
-      Iter->second = std::move(std::make_unique<BBInfo>(Index));
+      Iter->second = std::make_unique<BBInfo>(Index);
     AllEdges.emplace_back(new Edge(Src, Dest, W));
     return *AllEdges.back();
   }
 
-  CFGMST(Function &Func, bool InstrumentFuncEntry,
+  CFGMST(Function &Func, bool InstrumentFuncEntry, bool InstrumentLoopEntries,
          BranchProbabilityInfo *BPI = nullptr,
-         BlockFrequencyInfo *BFI = nullptr)
-      : F(Func), BPI(BPI), BFI(BFI), InstrumentFuncEntry(InstrumentFuncEntry) {
+         BlockFrequencyInfo *BFI = nullptr, LoopInfo *LI = nullptr)
+      : F(Func), BPI(BPI), BFI(BFI), LI(LI),
+        InstrumentFuncEntry(InstrumentFuncEntry),
+        InstrumentLoopEntries(InstrumentLoopEntries) {
+    assert(!(InstrumentLoopEntries && !LI) &&
+           "expected a LoopInfo to instrumenting loop entries");
     buildEdges();
     sortEdgesByWeight();
     computeMinimumSpanningTree();
+    assert(validateLoopEntryInstrumentation() &&
+           "Loop entries should not be in MST when "
+           "InstrumentLoopEntries is on");
     if (AllEdges.size() > 1 && InstrumentFuncEntry)
       std::iter_swap(std::move(AllEdges.begin()),
                      std::move(AllEdges.begin() + AllEdges.size() - 1));

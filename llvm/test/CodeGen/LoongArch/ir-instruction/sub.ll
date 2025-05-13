@@ -7,12 +7,12 @@
 define i1 @sub_i1(i1 %x, i1 %y) {
 ; LA32-LABEL: sub_i1:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    sub.w $a0, $a0, $a1
+; LA32-NEXT:    xor $a0, $a0, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: sub_i1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    sub.d $a0, $a0, $a1
+; LA64-NEXT:    xor $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %sub = sub i1 %x, %y
   ret i1 %sub
@@ -54,7 +54,7 @@ define i32 @sub_i32(i32 %x, i32 %y) {
 ;
 ; LA64-LABEL: sub_i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    sub.d $a0, $a0, $a1
+; LA64-NEXT:    sub.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %sub = sub i32 %x, %y
   ret i32 %sub

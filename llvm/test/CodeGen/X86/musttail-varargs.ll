@@ -228,11 +228,13 @@ define void @f_thunk(ptr %this, ...) {
 ; WINDOWS-NEXT:    movq %rbx, %rdx
 ; WINDOWS-NEXT:    movq %rdi, %r8
 ; WINDOWS-NEXT:    movq %rsi, %r9
+; WINDOWS-NEXT:    .seh_startepilogue
 ; WINDOWS-NEXT:    addq $72, %rsp
 ; WINDOWS-NEXT:    popq %rbx
 ; WINDOWS-NEXT:    popq %rdi
 ; WINDOWS-NEXT:    popq %rsi
 ; WINDOWS-NEXT:    popq %r14
+; WINDOWS-NEXT:    .seh_endepilogue
 ; WINDOWS-NEXT:    rex64 jmpq *%rax # TAILCALL
 ; WINDOWS-NEXT:    .seh_endproc
 ;

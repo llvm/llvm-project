@@ -387,3 +387,381 @@ if.then:
 if.else:
   ret void
 }
+
+; Different sizes / types
+
+define <vscale x 16 x i8> @load_v16i8_store_v4i32_forward_load(ptr %p, <vscale x 4 x i32> %x)  {
+; CHECK-LABEL: @load_v16i8_store_v4i32_forward_load(
+; CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = bitcast <vscale x 4 x i32> [[X]] to <vscale x 16 x i8>
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[LOAD]]
+;
+  store <vscale x 4 x i32> %x, ptr %p
+  %load = load <vscale x 16 x i8>, ptr %p
+  ret <vscale x 16 x i8> %load
+}
+
+define <vscale x 4 x float> @load_v4f32_store_v4i32_forward_load(ptr %p, <vscale x 4 x i32> %x)  {
+; CHECK-LABEL: @load_v4f32_store_v4i32_forward_load(
+; CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = bitcast <vscale x 4 x i32> [[X]] to <vscale x 4 x float>
+; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD]]
+;
+  store <vscale x 4 x i32> %x, ptr %p
+  %load = load <vscale x 4 x float>, ptr %p
+  ret <vscale x 4 x float> %load
+}
+
+define <vscale x 4 x float> @load_v4f32_store_v16i8_forward_load(ptr %p, <vscale x 16 x i8> %x)  {
+; CHECK-LABEL: @load_v4f32_store_v16i8_forward_load(
+; CHECK-NEXT:    store <vscale x 16 x i8> [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = bitcast <vscale x 16 x i8> [[X]] to <vscale x 4 x float>
+; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD]]
+;
+  store <vscale x 16 x i8> %x, ptr %p
+  %load = load <vscale x 4 x float>, ptr %p
+  ret <vscale x 4 x float> %load
+}
+
+define <vscale x 4 x i32> @load_v4i32_store_v4f32_forward_load(ptr %p, <vscale x 4 x float> %x)  {
+; CHECK-LABEL: @load_v4i32_store_v4f32_forward_load(
+; CHECK-NEXT:    store <vscale x 4 x float> [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = bitcast <vscale x 4 x float> [[X]] to <vscale x 4 x i32>
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[LOAD]]
+;
+  store <vscale x 4 x float> %x, ptr %p
+  %load = load <vscale x 4 x i32>, ptr %p
+  ret <vscale x 4 x i32> %load
+}
+
+define <vscale x 4 x i32> @load_v4i32_store_v4i64_forward_load(ptr %p, <vscale x 4 x i64> %x)  {
+; CHECK-LABEL: @load_v4i32_store_v4i64_forward_load(
+; CHECK-NEXT:    store <vscale x 4 x i64> [[X:%.*]], ptr [[P:%.*]], align 32
+; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[P]], align 16
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[LOAD]]
+;
+  store <vscale x 4 x i64> %x, ptr %p
+  %load = load <vscale x 4 x i32>, ptr %p
+  ret <vscale x 4 x i32> %load
+}
+
+define <vscale x 4 x i64> @load_v4i64_store_v4i32_forward_load(ptr %p, <vscale x 4 x i32> %x)  {
+; CHECK-LABEL: @load_v4i64_store_v4i32_forward_load(
+; CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 4 x i64>, ptr [[P]], align 32
+; CHECK-NEXT:    ret <vscale x 4 x i64> [[LOAD]]
+;
+  store <vscale x 4 x i32> %x, ptr %p
+  %load = load <vscale x 4 x i64>, ptr %p
+  ret <vscale x 4 x i64> %load
+}
+
+define <vscale x 2 x i32> @load_v2i32_store_v4i32_forward_load(ptr %p, <vscale x 4 x i32> %x)  {
+; CHECK-LABEL: @load_v2i32_store_v4i32_forward_load(
+; CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[P]], align 8
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[LOAD]]
+;
+  store <vscale x 4 x i32> %x, ptr %p
+  %load = load <vscale x 2 x i32>, ptr %p
+  ret <vscale x 2 x i32> %load
+}
+
+define <vscale x 2 x i32> @load_v2i32_store_v4i32_forward_load_offsets(ptr %p, <vscale x 4 x i32> %x)  {
+; CHECK-LABEL: @load_v2i32_store_v4i32_forward_load_offsets(
+; CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr <vscale x 2 x i32>, ptr [[P]], i64 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[Q]], align 8
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[LOAD]]
+;
+  store <vscale x 4 x i32> %x, ptr %p
+  %q = getelementptr <vscale x 2 x i32>, ptr %p, i64 1
+  %load = load <vscale x 2 x i32>, ptr %q
+  ret <vscale x 2 x i32> %load
+}
+
+define <vscale x 2 x i32> @load_v2i32_store_v4i32_forward_load_offsetc(ptr %p, <vscale x 4 x i32> %x)  {
+; CHECK-LABEL: @load_v2i32_store_v4i32_forward_load_offsetc(
+; CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr <2 x i32>, ptr [[P]], i64 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[Q]], align 8
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[LOAD]]
+;
+  store <vscale x 4 x i32> %x, ptr %p
+  %q = getelementptr <2 x i32>, ptr %p, i64 1
+  %load = load <vscale x 2 x i32>, ptr %q
+  ret <vscale x 2 x i32> %load
+}
+
+define <vscale x 2 x ptr> @load_v2p0_store_v4i32_forward_load(ptr %p, <vscale x 4 x i32> %x)  {
+; CHECK-LABEL: @load_v2p0_store_v4i32_forward_load(
+; CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32> [[X]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[LOAD:%.*]] = inttoptr <vscale x 2 x i64> [[TMP1]] to <vscale x 2 x ptr>
+; CHECK-NEXT:    ret <vscale x 2 x ptr> [[LOAD]]
+;
+  store <vscale x 4 x i32> %x, ptr %p
+  %load = load <vscale x 2 x ptr>, ptr %p
+  ret <vscale x 2 x ptr> %load
+}
+
+define <vscale x 2 x i64> @load_v2i64_store_v2p0_forward_load(ptr %p, <vscale x 2 x ptr> %x)  {
+; CHECK-LABEL: @load_v2i64_store_v2p0_forward_load(
+; CHECK-NEXT:    store <vscale x 2 x ptr> [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = ptrtoint <vscale x 2 x ptr> [[X]] to <vscale x 2 x i64>
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[LOAD]]
+;
+  store <vscale x 2 x ptr> %x, ptr %p
+  %load = load <vscale x 2 x i64>, ptr %p
+  ret <vscale x 2 x i64> %load
+}
+
+define <vscale x 16 x i8> @load_nxv16i8_store_v4i32_forward_load(ptr %p, <4 x i32> %x)  {
+; CHECK-LABEL: @load_nxv16i8_store_v4i32_forward_load(
+; CHECK-NEXT:    store <4 x i32> [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[P]], align 16
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[LOAD]]
+;
+  store <4 x i32> %x, ptr %p
+  %load = load <vscale x 16 x i8>, ptr %p
+  ret <vscale x 16 x i8> %load
+}
+
+define <16 x i8> @load_v16i8_store_nxv4i32_forward_load(ptr %p, <vscale x 4 x i32> %x)  {
+; CHECK-LABEL: @load_v16i8_store_nxv4i32_forward_load(
+; CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[P]], align 16
+; CHECK-NEXT:    ret <16 x i8> [[LOAD]]
+;
+  store <vscale x 4 x i32> %x, ptr %p
+  %load = load <16 x i8>, ptr %p
+  ret <16 x i8> %load
+}
+
+define <vscale x 16 x i8> @load_v16i8_store_v4i32_forward_constant(ptr %p)  {
+; CHECK-LABEL: @load_v16i8_store_v4i32_forward_constant(
+; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 4), ptr [[P:%.*]], align 16
+; CHECK-NEXT:    ret <vscale x 16 x i8> bitcast (<vscale x 4 x i32> splat (i32 4) to <vscale x 16 x i8>)
+;
+  store <vscale x 4 x i32> splat (i32 4), ptr %p
+  %load = load <vscale x 16 x i8>, ptr %p
+  ret <vscale x 16 x i8> %load
+}
+
+define <vscale x 16 x i8> @load_v16i8_struct_store_v4i32_forward_load(ptr %p, { <vscale x 4 x i32> } %x)  {
+; CHECK-LABEL: @load_v16i8_struct_store_v4i32_forward_load(
+; CHECK-NEXT:    store { <vscale x 4 x i32> } [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[P]], align 16
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[LOAD]]
+;
+  store { <vscale x 4 x i32> } %x, ptr %p
+  %load = load <vscale x 16 x i8>, ptr %p
+  ret <vscale x 16 x i8> %load
+}
+
+define {<vscale x 16 x i8>} @load_v16i8_store_v4i32_struct_forward_load(ptr %p, <vscale x 4 x i32> %x)  {
+; CHECK-LABEL: @load_v16i8_store_v4i32_struct_forward_load(
+; CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = load { <vscale x 16 x i8> }, ptr [[P]], align 16
+; CHECK-NEXT:    ret { <vscale x 16 x i8> } [[LOAD]]
+;
+  store <vscale x 4 x i32> %x, ptr %p
+  %load = load { <vscale x 16 x i8> }, ptr %p
+  ret { <vscale x 16 x i8> } %load
+}
+
+define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @bigexample({ <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %a) vscale_range(1,16) {
+; CHECK-LABEL: @bigexample(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[REF_TMP:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull [[REF_TMP]])
+; CHECK-NEXT:    [[A_ELT:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[A:%.*]], 0
+; CHECK-NEXT:    store <vscale x 4 x i32> [[A_ELT]], ptr [[REF_TMP]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[REF_TMP_REPACK1:%.*]] = getelementptr inbounds i8, ptr [[REF_TMP]], i64 [[TMP1]]
+; CHECK-NEXT:    [[A_ELT2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[A]], 1
+; CHECK-NEXT:    store <vscale x 4 x i32> [[A_ELT2]], ptr [[REF_TMP_REPACK1]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 5
+; CHECK-NEXT:    [[REF_TMP_REPACK3:%.*]] = getelementptr inbounds i8, ptr [[REF_TMP]], i64 [[TMP3]]
+; CHECK-NEXT:    [[A_ELT4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[A]], 2
+; CHECK-NEXT:    store <vscale x 4 x i32> [[A_ELT4]], ptr [[REF_TMP_REPACK3]], align 16
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP0]], 48
+; CHECK-NEXT:    [[REF_TMP_REPACK5:%.*]] = getelementptr inbounds i8, ptr [[REF_TMP]], i64 [[TMP5]]
+; CHECK-NEXT:    [[A_ELT6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[A]], 3
+; CHECK-NEXT:    store <vscale x 4 x i32> [[A_ELT6]], ptr [[REF_TMP_REPACK5]], align 16
+; CHECK-NEXT:    [[DOTUNPACK:%.*]] = bitcast <vscale x 4 x i32> [[A_ELT]] to <vscale x 16 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[DOTUNPACK]], 0
+; CHECK-NEXT:    [[DOTUNPACK8:%.*]] = bitcast <vscale x 4 x i32> [[A_ELT2]] to <vscale x 16 x i8>
+; CHECK-NEXT:    [[TMP9:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP6]], <vscale x 16 x i8> [[DOTUNPACK8]], 1
+; CHECK-NEXT:    [[DOTUNPACK10:%.*]] = bitcast <vscale x 4 x i32> [[A_ELT4]] to <vscale x 16 x i8>
+; CHECK-NEXT:    [[TMP12:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]], <vscale x 16 x i8> [[DOTUNPACK10]], 2
+; CHECK-NEXT:    [[DOTUNPACK12:%.*]] = bitcast <vscale x 4 x i32> [[A_ELT6]] to <vscale x 16 x i8>
+; CHECK-NEXT:    [[TMP15:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP12]], <vscale x 16 x i8> [[DOTUNPACK12]], 3
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull [[REF_TMP]])
+; CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP15]]
+;
+entry:
+  %ref.tmp = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+  call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull %ref.tmp)
+  %a.elt = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %a, 0
+  store <vscale x 4 x i32> %a.elt, ptr %ref.tmp, align 16
+  %0 = call i64 @llvm.vscale.i64()
+  %1 = shl i64 %0, 4
+  %ref.tmp.repack1 = getelementptr inbounds i8, ptr %ref.tmp, i64 %1
+  %a.elt2 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %a, 1
+  store <vscale x 4 x i32> %a.elt2, ptr %ref.tmp.repack1, align 16
+  %2 = call i64 @llvm.vscale.i64()
+  %3 = shl i64 %2, 5
+  %ref.tmp.repack3 = getelementptr inbounds i8, ptr %ref.tmp, i64 %3
+  %a.elt4 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %a, 2
+  store <vscale x 4 x i32> %a.elt4, ptr %ref.tmp.repack3, align 16
+  %4 = call i64 @llvm.vscale.i64()
+  %5 = mul i64 %4, 48
+  %ref.tmp.repack5 = getelementptr inbounds i8, ptr %ref.tmp, i64 %5
+  %a.elt6 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %a, 3
+  store <vscale x 4 x i32> %a.elt6, ptr %ref.tmp.repack5, align 16
+  %.unpack = load <vscale x 16 x i8>, ptr %ref.tmp, align 16
+  %6 = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> %.unpack, 0
+  %7 = call i64 @llvm.vscale.i64()
+  %8 = shl i64 %7, 4
+  %.elt7 = getelementptr inbounds i8, ptr %ref.tmp, i64 %8
+  %.unpack8 = load <vscale x 16 x i8>, ptr %.elt7, align 16
+  %9 = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %6, <vscale x 16 x i8> %.unpack8, 1
+  %10 = call i64 @llvm.vscale.i64()
+  %11 = shl i64 %10, 5
+  %.elt9 = getelementptr inbounds i8, ptr %ref.tmp, i64 %11
+  %.unpack10 = load <vscale x 16 x i8>, ptr %.elt9, align 16
+  %12 = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %9, <vscale x 16 x i8> %.unpack10, 2
+  %13 = call i64 @llvm.vscale.i64()
+  %14 = mul i64 %13, 48
+  %.elt11 = getelementptr inbounds i8, ptr %ref.tmp, i64 %14
+  %.unpack12 = load <vscale x 16 x i8>, ptr %.elt11, align 16
+  %15 = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %12, <vscale x 16 x i8> %.unpack12, 3
+  call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull %ref.tmp)
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %15
+}
+
+define <vscale x 4 x float> @scalable_store_to_fixed_load(<vscale x 4 x float> %.coerce) vscale_range(4,4) {
+; CHECK-LABEL: @scalable_store_to_fixed_load(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <16 x float> }, align 64
+; CHECK-NEXT:    [[TMP0:%.*]] = fadd <vscale x 4 x float> [[DOTCOERCE:%.*]], [[DOTCOERCE]]
+; CHECK-NEXT:    store <vscale x 4 x float> [[TMP0]], ptr [[RETVAL]], align 16
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
+;
+entry:
+  %retval = alloca { <16 x float> }
+  %0 = fadd <vscale x 4 x float> %.coerce, %.coerce
+  store <vscale x 4 x float> %0, ptr %retval
+  %1 = load <16 x float>, ptr %retval
+  %cast.scalable = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v16f32(<vscale x 4 x float> poison, <16 x float> %1, i64 0)
+  ret <vscale x 4 x float> %cast.scalable
+}
+
+; Here, only the lower bound for the vscale is known, but this is enough to allow a forward to a load to 16 elements.
+define <vscale x 4 x float> @scalable_store_to_fixed_load_only_lower_bound(<vscale x 4 x float> %a) vscale_range(4) {
+; CHECK-LABEL: @scalable_store_to_fixed_load_only_lower_bound(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float> }, align 16
+; CHECK-NEXT:    store <vscale x 4 x float> [[A:%.*]], ptr [[RETVAL]], align 16
+; CHECK-NEXT:    ret <vscale x 4 x float> [[A]]
+;
+entry:
+  %retval = alloca { <vscale x 4 x float> }
+  store <vscale x 4 x float> %a, ptr %retval
+  %1 = load <16 x float>, ptr %retval
+  %cast.scalable = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v16f32(<vscale x 4 x float> poison, <16 x float> %1, i64 0)
+  ret <vscale x 4 x float> %cast.scalable
+}
+
+define <vscale x 4 x float> @scalable_store_to_fixed_load_with_offset(<vscale x 4 x float> %a) vscale_range(4,4) {
+; CHECK-LABEL: @scalable_store_to_fixed_load_with_offset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PTR:%.*]] = alloca { <32 x float> }, align 128
+; CHECK-NEXT:    store <vscale x 4 x float> [[A:%.*]], ptr [[PTR]], align 16
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[GEP]], align 64
+; CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v16f32(<vscale x 4 x float> poison, <16 x float> [[TMP0]], i64 0)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[CAST_SCALABLE]]
+;
+entry:
+  %ptr = alloca { <32 x float> }
+  store <vscale x 4 x float> %a, ptr %ptr
+  %gep = getelementptr inbounds i8, ptr %ptr, i64 8
+  %1 = load <16 x float>, ptr %gep
+  %cast.scalable = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v16f32(<vscale x 4 x float> poison, <16 x float> %1, i64 0)
+  ret <vscale x 4 x float> %cast.scalable
+}
+
+define <vscale x 4 x float> @scalable_store_to_fixed_load_unknown_vscale(<vscale x 4 x float> %.coerce) {
+; CHECK-LABEL: @scalable_store_to_fixed_load_unknown_vscale(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <16 x float> }, align 64
+; CHECK-NEXT:    [[TMP0:%.*]] = fadd <vscale x 4 x float> [[DOTCOERCE:%.*]], [[DOTCOERCE]]
+; CHECK-NEXT:    store <vscale x 4 x float> [[TMP0]], ptr [[RETVAL]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x float>, ptr [[RETVAL]], align 64
+; CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v16f32(<vscale x 4 x float> poison, <16 x float> [[TMP1]], i64 0)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[CAST_SCALABLE]]
+;
+entry:
+  %retval = alloca { <16 x float> }
+  %0 = fadd <vscale x 4 x float> %.coerce, %.coerce
+  store <vscale x 4 x float> %0, ptr %retval
+  %1 = load <16 x float>, ptr %retval
+  %cast.scalable = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v16f32(<vscale x 4 x float> poison, <16 x float> %1, i64 0)
+  ret <vscale x 4 x float> %cast.scalable
+}
+
+define <vscale x 4 x float> @scalable_store_to_fixed_load_size_missmatch(<vscale x 4 x float> %.coerce) vscale_range(4,4) {
+; CHECK-LABEL: @scalable_store_to_fixed_load_size_missmatch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <32 x float> }, align 128
+; CHECK-NEXT:    [[TMP0:%.*]] = fadd <vscale x 4 x float> [[DOTCOERCE:%.*]], [[DOTCOERCE]]
+; CHECK-NEXT:    store <vscale x 4 x float> [[TMP0]], ptr [[RETVAL]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x float>, ptr [[RETVAL]], align 128
+; CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v32f32(<vscale x 4 x float> poison, <32 x float> [[TMP1]], i64 0)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[CAST_SCALABLE]]
+;
+entry:
+  %retval = alloca { <32 x float> }
+  %0 = fadd <vscale x 4 x float> %.coerce, %.coerce
+  store <vscale x 4 x float> %0, ptr %retval
+  %1 = load <32 x float>, ptr %retval
+  %cast.scalable = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v32f32(<vscale x 4 x float> poison, <32 x float> %1, i64 0)
+  ret <vscale x 4 x float> %cast.scalable
+}
+
+define <vscale x 4 x i32> @scalable_store_to_fixed_load_different_types(<vscale x 4 x float> %a) vscale_range(4,4) {
+; CHECK-LABEL: @scalable_store_to_fixed_load_different_types(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PTR:%.*]] = alloca { <16 x float> }, align 64
+; CHECK-NEXT:    store <vscale x 4 x float> [[A:%.*]], ptr [[PTR]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[PTR]], align 64
+; CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> poison, <16 x i32> [[TMP0]], i64 0)
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[CAST_SCALABLE]]
+;
+entry:
+  %ptr = alloca { <16 x float> }
+  store <vscale x 4 x float> %a, ptr %ptr
+  %1 = load <16 x i32>, ptr %ptr
+  %cast.scalable = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> poison, <16 x i32> %1, i64 0)
+  ret <vscale x 4 x i32> %cast.scalable
+}
+
+; This function does not have a fixed vscale, but the loaded vector is still known
+; to be smaller or equal in size compared to the stored vector.
+define <4 x float> @scalable_store_to_small_fixed_load(<vscale x 4 x float> %a) {
+; CHECK-LABEL: @scalable_store_to_small_fixed_load(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PTR:%.*]] = alloca <vscale x 4 x float>, align 16
+; CHECK-NEXT:    store <vscale x 4 x float> [[A:%.*]], ptr [[PTR]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float> [[A]], i64 0)
+; CHECK-NEXT:    ret <4 x float> [[TMP0]]
+;
+entry:
+  %ptr = alloca <vscale x 4 x float>
+  store <vscale x 4 x float> %a, ptr %ptr
+  %1 = load <4 x float>, ptr %ptr
+  ret <4 x float> %1
+}

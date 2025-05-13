@@ -2,6 +2,10 @@
 
 // Test that a signal is not delivered when it is blocked.
 
+// FIXME: Very flaky on PPC with COMPILER_RT_DEBUG.
+// https://github.com/google/sanitizers/issues/1792
+// UNSUPPORTED: !compiler-rt-optimized && ppc
+
 #include "test.h"
 #include <semaphore.h>
 #include <signal.h>

@@ -67,8 +67,8 @@ declare i32 @k() readnone
 define void @intrinsic(ptr %dest, ptr %src, i32 %len) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@intrinsic
-; CHECK-SAME: (ptr nocapture nofree writeonly [[DEST:%.*]], ptr nocapture nofree readonly [[SRC:%.*]], i32 [[LEN:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nocapture nofree writeonly [[DEST]], ptr nocapture nofree readonly [[SRC]], i32 [[LEN]], i1 noundef false) #[[ATTR10:[0-9]+]]
+; CHECK-SAME: (ptr nofree writeonly captures(none) [[DEST:%.*]], ptr nofree readonly captures(none) [[SRC:%.*]], i32 [[LEN:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nofree writeonly captures(none) [[DEST]], ptr nofree readonly captures(none) [[SRC]], i32 [[LEN]], i1 noundef false) #[[ATTR10:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i32(ptr %dest, ptr %src, i32 %len, i1 false)
@@ -217,7 +217,7 @@ define linkonce_odr i32 @leaf_redefinable() {
 ; Call through a function pointer
 define i32 @eval_func1(ptr , i32) local_unnamed_addr {
 ; CHECK-LABEL: define {{[^@]+}}@eval_func1
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull [[TMP0:%.*]], i32 [[TMP1:%.*]]) local_unnamed_addr {
+; CHECK-SAME: (ptr nofree noundef nonnull captures(none) [[TMP0:%.*]], i32 [[TMP1:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 [[TMP0]](i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -228,7 +228,7 @@ define i32 @eval_func1(ptr , i32) local_unnamed_addr {
 define i32 @eval_func2(ptr , i32) local_unnamed_addr null_pointer_is_valid{
 ; CHECK: Function Attrs: null_pointer_is_valid
 ; CHECK-LABEL: define {{[^@]+}}@eval_func2
-; CHECK-SAME: (ptr nocapture nofree noundef [[TMP0:%.*]], i32 [[TMP1:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef captures(none) [[TMP0:%.*]], i32 [[TMP1:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 [[TMP0]](i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;

@@ -19,9 +19,12 @@ namespace llvm {
 template <typename T, unsigned N>
 class SmallVector;
 class StringRef;
-}
+} // namespace llvm
 
 namespace mlir {
+namespace func {
+class FuncOp;
+} // namespace func
 class Location;
 class Type;
 class ModuleOp;
@@ -31,9 +34,13 @@ class Value;
 
 namespace fir {
 class FirOpBuilder;
-}
+} // namespace fir
 
 namespace Fortran {
+namespace evaluate {
+struct ProcedureDesignator;
+} // namespace evaluate
+
 namespace parser {
 struct AccClauseList;
 struct OpenACCConstruct;
@@ -42,9 +49,10 @@ struct OpenACCRoutineConstruct;
 } // namespace parser
 
 namespace semantics {
+class OpenACCRoutineInfo;
 class SemanticsContext;
 class Symbol;
-}
+} // namespace semantics
 
 namespace lower {
 
@@ -54,9 +62,6 @@ class StatementContext;
 namespace pft {
 struct Evaluation;
 } // namespace pft
-
-using AccRoutineInfoMappingList =
-    llvm::SmallVector<std::pair<std::string, mlir::SymbolRefAttr>>;
 
 static constexpr llvm::StringRef declarePostAllocSuffix =
     "_acc_declare_update_desc_post_alloc";
@@ -71,19 +76,12 @@ mlir::Value genOpenACCConstruct(AbstractConverter &,
                                 Fortran::semantics::SemanticsContext &,
                                 pft::Evaluation &,
                                 const parser::OpenACCConstruct &);
-void genOpenACCDeclarativeConstruct(AbstractConverter &,
-                                    Fortran::semantics::SemanticsContext &,
-                                    StatementContext &,
-                                    const parser::OpenACCDeclarativeConstruct &,
-                                    AccRoutineInfoMappingList &);
-void genOpenACCRoutineConstruct(AbstractConverter &,
-                                Fortran::semantics::SemanticsContext &,
-                                mlir::ModuleOp &,
-                                const parser::OpenACCRoutineConstruct &,
-                                AccRoutineInfoMappingList &);
-
-void finalizeOpenACCRoutineAttachment(mlir::ModuleOp &,
-                                      AccRoutineInfoMappingList &);
+void genOpenACCDeclarativeConstruct(
+    AbstractConverter &, Fortran::semantics::SemanticsContext &,
+    StatementContext &, const parser::OpenACCDeclarativeConstruct &);
+void genOpenACCRoutineConstruct(
+    AbstractConverter &, mlir::ModuleOp, mlir::func::FuncOp,
+    const std::vector<Fortran::semantics::OpenACCRoutineInfo> &);
 
 /// Get a acc.private.recipe op for the given type or create it if it does not
 /// exist yet.

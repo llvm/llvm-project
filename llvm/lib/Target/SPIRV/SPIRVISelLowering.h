@@ -43,9 +43,7 @@ public:
 
   // This is to prevent sexts of non-i64 vector indices which are generated
   // within general IRTranslator hence type generation for it is omitted.
-  MVT getVectorIdxTy(const DataLayout &DL) const override {
-    return MVT::getIntegerVT(32);
-  }
+  unsigned getVectorIdxWidth(const DataLayout &DL) const override { return 32; }
   unsigned getNumRegistersForCallingConv(LLVMContext &Context,
                                          CallingConv::ID CC,
                                          EVT VT) const override;
@@ -68,6 +66,16 @@ public:
   // extra instructions required to preserve validity of SPIR-V code imposed by
   // the standard.
   void finalizeLowering(MachineFunction &MF) const override;
+
+  MVT getPreferredSwitchConditionType(LLVMContext &Context,
+                                      EVT ConditionVT) const override {
+    return ConditionVT.getSimpleVT();
+  }
+
+  bool enforcePtrTypeCompatibility(MachineInstr &I, unsigned PtrOpIdx,
+                                   unsigned OpIdx) const;
+  bool insertLogicalCopyOnResult(MachineInstr &I,
+                                 SPIRVType *NewResultType) const;
 };
 } // namespace llvm
 

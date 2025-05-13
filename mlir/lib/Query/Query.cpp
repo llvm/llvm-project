@@ -12,7 +12,6 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Query/Matcher/MatchFinder.h"
 #include "mlir/Query/QuerySession.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -55,12 +54,10 @@ static Operation *extractFunction(std::vector<Operation *> &ops,
       slice.push_back(op);
 
     // All results are returned by the extracted function.
-    outputTypes.insert(outputTypes.end(), op->getResults().getTypes().begin(),
-                       op->getResults().getTypes().end());
+    llvm::append_range(outputTypes, op->getResults().getTypes());
 
     // Track all values that need to be taken as input to function.
-    values.insert(values.end(), op->getOperands().begin(),
-                  op->getOperands().end());
+    llvm::append_range(values, op->getOperands());
   }
 
   // Create the function
@@ -91,10 +88,11 @@ static Operation *extractFunction(std::vector<Operation *> &ops,
   // Remove unused function arguments
   size_t currentIndex = 0;
   while (currentIndex < funcOp.getNumArguments()) {
+    // Erase if possible.
     if (funcOp.getArgument(currentIndex).use_empty())
-      funcOp.eraseArgument(currentIndex);
-    else
-      ++currentIndex;
+      if (succeeded(funcOp.eraseArgument(currentIndex)))
+        continue;
+    ++currentIndex;
   }
 
   return funcOp;
@@ -102,19 +100,16 @@ static Operation *extractFunction(std::vector<Operation *> &ops,
 
 Query::~Query() = default;
 
-mlir::LogicalResult InvalidQuery::run(llvm::raw_ostream &os,
-                                      QuerySession &qs) const {
+LogicalResult InvalidQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   os << errStr << "\n";
   return mlir::failure();
 }
 
-mlir::LogicalResult NoOpQuery::run(llvm::raw_ostream &os,
-                                   QuerySession &qs) const {
+LogicalResult NoOpQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   return mlir::success();
 }
 
-mlir::LogicalResult HelpQuery::run(llvm::raw_ostream &os,
-                                   QuerySession &qs) const {
+LogicalResult HelpQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   os << "Available commands:\n\n"
         "  match MATCHER, m MATCHER      "
         "Match the mlir against the given matcher.\n"
@@ -123,14 +118,12 @@ mlir::LogicalResult HelpQuery::run(llvm::raw_ostream &os,
   return mlir::success();
 }
 
-mlir::LogicalResult QuitQuery::run(llvm::raw_ostream &os,
-                                   QuerySession &qs) const {
+LogicalResult QuitQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   qs.terminate = true;
   return mlir::success();
 }
 
-mlir::LogicalResult MatchQuery::run(llvm::raw_ostream &os,
-                                    QuerySession &qs) const {
+LogicalResult MatchQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   Operation *rootOp = qs.getRootOp();
   int matchCount = 0;
   std::vector<Operation *> matches =

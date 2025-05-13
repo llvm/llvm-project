@@ -12,16 +12,39 @@
 #include "clang/AST/Comment.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Error.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Mutex.h"
 
 namespace clang {
 namespace doc {
+
+static llvm::StringSet<> USRVisited;
+static llvm::sys::SmartMutex<true> USRVisitedGuard;
+
+template <typename T> static bool isTypedefAnonRecord(const T *D) {
+  if (const auto *C = dyn_cast<CXXRecordDecl>(D)) {
+    return C->getTypedefNameForAnonDecl();
+  }
+  return false;
+}
+
+Location MapASTVisitor::getDeclLocation(const NamedDecl *D) const {
+  bool IsFileInRootDir;
+  llvm::SmallString<128> File =
+      getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
+  SourceManager &SM = D->getASTContext().getSourceManager();
+  int Start = SM.getPresumedLoc(D->getBeginLoc()).getLine();
+  int End = SM.getPresumedLoc(D->getEndLoc()).getLine();
+
+  return Location(Start, End, File, IsFileInRootDir);
+}
 
 void MapASTVisitor::HandleTranslationUnit(ASTContext &Context) {
   TraverseDecl(Context.getTranslationUnitDecl());
 }
 
-template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
+template <typename T>
+bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
   // If we're looking a decl not in user files, skip this decl.
   if (D->getASTContext().getSourceManager().isInSystemHeader(D->getLocation()))
     return true;
@@ -34,49 +57,63 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
   // If there is an error generating a USR for the decl, skip this decl.
   if (index::generateUSRForDecl(D, USR))
     return true;
+  // Prevent Visiting USR twice
+  {
+    llvm::sys::SmartScopedLock<true> Guard(USRVisitedGuard);
+    StringRef Visited = USR.str();
+    if (USRVisited.count(Visited) && !isTypedefAnonRecord<T>(D))
+      return true;
+    // We considered a USR to be visited only when its defined
+    if (IsDefinition)
+      USRVisited.insert(Visited);
+  }
   bool IsFileInRootDir;
   llvm::SmallString<128> File =
       getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
-  auto I = serialize::emitInfo(D, getComment(D, D->getASTContext()),
-                               getLine(D, D->getASTContext()), File,
-                               IsFileInRootDir, CDCtx.PublicOnly);
+  auto [Child, Parent] =
+      serialize::emitInfo(D, getComment(D, D->getASTContext()),
+                          getDeclLocation(D), CDCtx.PublicOnly);
 
-  // A null in place of I indicates that the serializer is skipping this decl
-  // for some reason (e.g. we're only reporting public decls).
-  if (I.first)
-    CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(I.first->USR)),
-                             serialize::serialize(I.first));
-  if (I.second)
-    CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(I.second->USR)),
-                             serialize::serialize(I.second));
+  // A null in place of a valid Info indicates that the serializer is skipping
+  // this decl for some reason (e.g. we're only reporting public decls).
+  if (Child)
+    CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(Child->USR)),
+                             serialize::serialize(Child));
+  if (Parent)
+    CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(Parent->USR)),
+                             serialize::serialize(Parent));
   return true;
 }
 
 bool MapASTVisitor::VisitNamespaceDecl(const NamespaceDecl *D) {
-  return mapDecl(D);
+  return mapDecl(D, /*isDefinition=*/true);
 }
 
-bool MapASTVisitor::VisitRecordDecl(const RecordDecl *D) { return mapDecl(D); }
+bool MapASTVisitor::VisitRecordDecl(const RecordDecl *D) {
+  return mapDecl(D, D->isThisDeclarationADefinition());
+}
 
-bool MapASTVisitor::VisitEnumDecl(const EnumDecl *D) { return mapDecl(D); }
+bool MapASTVisitor::VisitEnumDecl(const EnumDecl *D) {
+  return mapDecl(D, D->isThisDeclarationADefinition());
+}
 
 bool MapASTVisitor::VisitCXXMethodDecl(const CXXMethodDecl *D) {
-  return mapDecl(D);
+  return mapDecl(D, D->isThisDeclarationADefinition());
 }
 
 bool MapASTVisitor::VisitFunctionDecl(const FunctionDecl *D) {
   // Don't visit CXXMethodDecls twice
   if (isa<CXXMethodDecl>(D))
     return true;
-  return mapDecl(D);
+  return mapDecl(D, D->isThisDeclarationADefinition());
 }
 
 bool MapASTVisitor::VisitTypedefDecl(const TypedefDecl *D) {
-  return mapDecl(D);
+  return mapDecl(D, /*isDefinition=*/true);
 }
 
 bool MapASTVisitor::VisitTypeAliasDecl(const TypeAliasDecl *D) {
-  return mapDecl(D);
+  return mapDecl(D, /*isDefinition=*/true);
 }
 
 comments::FullComment *

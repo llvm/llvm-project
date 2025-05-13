@@ -25,6 +25,11 @@
 #  include "asan_thread.h"
 #  include "lsan/lsan_common.h"
 
+namespace __sanitizer {
+// ASan doesn't need to do anything else special in the startup hook.
+void EarlySanitizerInit() {}
+}  // namespace __sanitizer
+
 namespace __asan {
 
 // The system already set up the shadow memory for us.
@@ -121,8 +126,7 @@ static AsanThread *CreateAsanThread(StackTrace *stack, u32 parent_tid,
   // In lieu of AsanThread::Create.
   AsanThread *thread = (AsanThread *)MmapOrDie(AsanThreadMmapSize(), __func__);
 
-  AsanThreadContext::CreateThreadContextArgs args = {thread, stack};
-  u32 tid = asanThreadRegistry().CreateThread(0, detached, parent_tid, &args);
+  u32 tid = asanThreadRegistry().CreateThread(0, detached, parent_tid, thread);
   asanThreadRegistry().SetThreadName(tid, name);
 
   return thread;

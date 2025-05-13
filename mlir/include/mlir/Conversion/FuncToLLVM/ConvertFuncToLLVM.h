@@ -15,7 +15,6 @@
 #define MLIR_CONVERSION_FUNCTOLLVM_CONVERTFUNCTOLLVM_H
 
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
 
@@ -40,8 +39,8 @@ convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
 /// `emitCWrappers` is set, the pattern will also produce functions
 /// that pass memref descriptors by pointer-to-structure in addition to the
 /// default unpacked form.
-void populateFuncToLLVMFuncOpConversionPattern(LLVMTypeConverter &converter,
-                                               RewritePatternSet &patterns);
+void populateFuncToLLVMFuncOpConversionPattern(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns);
 
 /// Collect the patterns to convert from the Func dialect to LLVM. The
 /// conversion patterns capture the LLVMTypeConverter and the LowerToLLVMOptions
@@ -57,7 +56,7 @@ void populateFuncToLLVMFuncOpConversionPattern(LLVMTypeConverter &converter,
 /// needed if `converter.getOptions().useBarePtrCallConv` is `true`, but it's
 /// not an error to provide it anyway.
 void populateFuncToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     const SymbolTable *symbolTable = nullptr);
 
 void registerConvertFuncToLLVMInterface(DialectRegistry &registry);

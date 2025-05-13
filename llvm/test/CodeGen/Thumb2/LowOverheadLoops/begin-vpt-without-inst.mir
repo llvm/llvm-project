@@ -57,30 +57,37 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
-  ; CHECK:   liveins: $r0
-  ; CHECK:   tCBZ $r0, %bb.3
-  ; CHECK: bb.1.vector.ph.preheader:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   liveins: $r0
-  ; CHECK:   renamable $r1 = tLEApcrel %const.0, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 3, 0, $noreg, $noreg, undef renamable $q0
-  ; CHECK:   renamable $q1 = MVE_VLDRWU32 killed renamable $r1, 0, 0, $noreg, $noreg :: (load (s128) from constant-pool, align 8)
-  ; CHECK:   $r1 = t2MOVi16 target-flags(arm-lo16) @arr, 14 /* CC::al */, $noreg
-  ; CHECK:   $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @arr, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $vpr = MVE_VCMPu32 killed renamable $q0, killed renamable $q1, 8, 0, $noreg, $noreg
-  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 2, 0, $noreg, $noreg, undef renamable $q0
-  ; CHECK: bb.2.vector.ph:
-  ; CHECK:   successors: %bb.3(0x04000000), %bb.2(0x7c000000)
-  ; CHECK:   liveins: $vpr, $q0, $r0, $r1
-  ; CHECK:   renamable $r0, $cpsr = tADDi8 killed renamable $r0, 1, 14 /* CC::al */, $noreg
-  ; CHECK:   MVE_VPST 8, implicit $vpr
-  ; CHECK:   MVE_VSTRWU32 renamable $q0, renamable $r1, 0, 1, renamable $vpr, $noreg :: (store (s128) into @arr, align 4)
-  ; CHECK:   tBcc %bb.2, 3 /* CC::lo */, killed $cpsr
-  ; CHECK: bb.3.for.end5:
-  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
-  ; CHECK: bb.4 (align 8):
-  ; CHECK:   CONSTPOOL_ENTRY 0, %const.0, 16
+  ; CHECK-NEXT:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
+  ; CHECK-NEXT:   liveins: $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   tCBZ $r0, %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.vector.ph.preheader:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r1 = tLEApcrel %const.0, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $q0 = MVE_VMOVimmi32 3, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK-NEXT:   renamable $q1 = MVE_VLDRWU32 killed renamable $r1, 0, 0, $noreg, $noreg :: (load (s128) from constant-pool, align 8)
+  ; CHECK-NEXT:   $r1 = t2MOVi16 target-flags(arm-lo16) @arr, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @arr, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $vpr = MVE_VCMPu32 killed renamable $q0, killed renamable $q1, 8, 0, $noreg, $noreg
+  ; CHECK-NEXT:   renamable $q0 = MVE_VMOVimmi32 2, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.vector.ph:
+  ; CHECK-NEXT:   successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+  ; CHECK-NEXT:   liveins: $vpr, $q0, $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0, $cpsr = tADDi8 killed renamable $r0, 1, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   MVE_VPST 8, implicit $vpr
+  ; CHECK-NEXT:   MVE_VSTRWU32 renamable $q0, renamable $r1, 0, 1, renamable $vpr, $noreg :: (store (s128) into @arr, align 4)
+  ; CHECK-NEXT:   tBcc %bb.2, 3 /* CC::lo */, killed $cpsr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.for.end5:
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4 (align 8):
+  ; CHECK-NEXT:   CONSTPOOL_ENTRY 0, %const.0, 16
   bb.0.entry:
     successors: %bb.3(0x30000000), %bb.1(0x50000000)
     liveins: $r0

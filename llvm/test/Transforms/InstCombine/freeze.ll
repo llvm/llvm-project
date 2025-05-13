@@ -90,7 +90,7 @@ define void @or_select_multipleuses_logical(i32 %x, i1 %y) {
 
 define <3 x i4> @partial_undef_vec() {
 ; CHECK-LABEL: @partial_undef_vec(
-; CHECK-NEXT:    ret <3 x i4> <i4 0, i4 1, i4 0>
+; CHECK-NEXT:    ret <3 x i4> splat (i4 1)
 ;
   %f = freeze <3 x i4> <i4 poison, i4 1, i4 undef>
   ret <3 x i4> %f
@@ -1158,6 +1158,39 @@ define i32 @propagate_drop_flags_trunc(i64 %arg) {
   %v1 = trunc nsw nuw i64 %arg to i32
   %v1.fr = freeze i32 %v1
   ret i32 %v1.fr
+}
+
+define ptr @propagate_drop_flags_gep_nusw(ptr %p) {
+; CHECK-LABEL: @propagate_drop_flags_gep_nusw(
+; CHECK-NEXT:    [[P_FR:%.*]] = freeze ptr [[P:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P_FR]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nusw i8, ptr %p, i64 1
+  %gep.fr = freeze ptr %gep
+  ret ptr %gep.fr
+}
+
+define ptr @propagate_drop_flags_gep_nuw(ptr %p) {
+; CHECK-LABEL: @propagate_drop_flags_gep_nuw(
+; CHECK-NEXT:    [[P_FR:%.*]] = freeze ptr [[P:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P_FR]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nuw i8, ptr %p, i64 1
+  %gep.fr = freeze ptr %gep
+  ret ptr %gep.fr
+}
+
+define i1 @propagate_drop_flags_icmp(i32 %a, i32 %b) {
+; CHECK-LABEL: @propagate_drop_flags_icmp(
+; CHECK-NEXT:    [[A_FR:%.*]] = freeze i32 [[A:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i32 [[A_FR]], 3
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ret = icmp samesign ult i32 %a, 3
+  %ret.fr = freeze i1 %ret
+  ret i1 %ret.fr
 }
 
 declare i32 @llvm.umax.i32(i32 %a, i32 %b)

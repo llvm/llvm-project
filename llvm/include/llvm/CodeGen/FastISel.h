@@ -275,7 +275,7 @@ public:
 
   /// This is a wrapper around getRegForValue that also takes care of
   /// truncating or sign-extending the given getelementptr index value.
-  Register getRegForGEPIndex(const Value *Idx);
+  Register getRegForGEPIndex(MVT PtrVT, const Value *Idx);
 
   /// We're checking to see if we can fold \p LI into \p FoldInst. Note
   /// that we could have a sequence where multiple LLVM IR instructions are
@@ -348,21 +348,21 @@ protected:
 
   /// This method is called by target-independent code to request that an
   /// instruction with the given type and opcode be emitted.
-  virtual unsigned fastEmit_(MVT VT, MVT RetVT, unsigned Opcode);
+  virtual Register fastEmit_(MVT VT, MVT RetVT, unsigned Opcode);
 
   /// This method is called by target-independent code to request that an
   /// instruction with the given type, opcode, and register operand be emitted.
-  virtual unsigned fastEmit_r(MVT VT, MVT RetVT, unsigned Opcode, unsigned Op0);
+  virtual Register fastEmit_r(MVT VT, MVT RetVT, unsigned Opcode, Register Op0);
 
   /// This method is called by target-independent code to request that an
   /// instruction with the given type, opcode, and register operands be emitted.
-  virtual unsigned fastEmit_rr(MVT VT, MVT RetVT, unsigned Opcode, unsigned Op0,
-                               unsigned Op1);
+  virtual Register fastEmit_rr(MVT VT, MVT RetVT, unsigned Opcode, Register Op0,
+                               Register Op1);
 
   /// This method is called by target-independent code to request that an
   /// instruction with the given type, opcode, and register and immediate
   /// operands be emitted.
-  virtual unsigned fastEmit_ri(MVT VT, MVT RetVT, unsigned Opcode, unsigned Op0,
+  virtual Register fastEmit_ri(MVT VT, MVT RetVT, unsigned Opcode, Register Op0,
                                uint64_t Imm);
 
   /// This method is a wrapper of fastEmit_ri.
@@ -370,17 +370,17 @@ protected:
   /// It first tries to emit an instruction with an immediate operand using
   /// fastEmit_ri.  If that fails, it materializes the immediate into a register
   /// and try fastEmit_rr instead.
-  Register fastEmit_ri_(MVT VT, unsigned Opcode, unsigned Op0, uint64_t Imm,
+  Register fastEmit_ri_(MVT VT, unsigned Opcode, Register Op0, uint64_t Imm,
                         MVT ImmType);
 
   /// This method is called by target-independent code to request that an
   /// instruction with the given type, opcode, and immediate operand be emitted.
-  virtual unsigned fastEmit_i(MVT VT, MVT RetVT, unsigned Opcode, uint64_t Imm);
+  virtual Register fastEmit_i(MVT VT, MVT RetVT, unsigned Opcode, uint64_t Imm);
 
   /// This method is called by target-independent code to request that an
   /// instruction with the given type, opcode, and floating-point immediate
   /// operand be emitted.
-  virtual unsigned fastEmit_f(MVT VT, MVT RetVT, unsigned Opcode,
+  virtual Register fastEmit_f(MVT VT, MVT RetVT, unsigned Opcode,
                               const ConstantFP *FPImm);
 
   /// Emit a MachineInstr with no operands and a result register in the
@@ -391,30 +391,30 @@ protected:
   /// Emit a MachineInstr with one register operand and a result register
   /// in the given register class.
   Register fastEmitInst_r(unsigned MachineInstOpcode,
-                          const TargetRegisterClass *RC, unsigned Op0);
+                          const TargetRegisterClass *RC, Register Op0);
 
   /// Emit a MachineInstr with two register operands and a result
   /// register in the given register class.
   Register fastEmitInst_rr(unsigned MachineInstOpcode,
-                           const TargetRegisterClass *RC, unsigned Op0,
-                           unsigned Op1);
+                           const TargetRegisterClass *RC, Register Op0,
+                           Register Op1);
 
   /// Emit a MachineInstr with three register operands and a result
   /// register in the given register class.
   Register fastEmitInst_rrr(unsigned MachineInstOpcode,
-                            const TargetRegisterClass *RC, unsigned Op0,
-                            unsigned Op1, unsigned Op2);
+                            const TargetRegisterClass *RC, Register Op0,
+                            Register Op1, Register Op2);
 
   /// Emit a MachineInstr with a register operand, an immediate, and a
   /// result register in the given register class.
   Register fastEmitInst_ri(unsigned MachineInstOpcode,
-                           const TargetRegisterClass *RC, unsigned Op0,
+                           const TargetRegisterClass *RC, Register Op0,
                            uint64_t Imm);
 
   /// Emit a MachineInstr with one register operand and two immediate
   /// operands.
   Register fastEmitInst_rii(unsigned MachineInstOpcode,
-                            const TargetRegisterClass *RC, unsigned Op0,
+                            const TargetRegisterClass *RC, Register Op0,
                             uint64_t Imm1, uint64_t Imm2);
 
   /// Emit a MachineInstr with a floating point immediate, and a result
@@ -426,8 +426,8 @@ protected:
   /// Emit a MachineInstr with two register operands, an immediate, and a
   /// result register in the given register class.
   Register fastEmitInst_rri(unsigned MachineInstOpcode,
-                            const TargetRegisterClass *RC, unsigned Op0,
-                            unsigned Op1, uint64_t Imm);
+                            const TargetRegisterClass *RC, Register Op0,
+                            Register Op1, uint64_t Imm);
 
   /// Emit a MachineInstr with a single immediate operand, and a result
   /// register in the given register class.
@@ -436,11 +436,11 @@ protected:
 
   /// Emit a MachineInstr for an extract_subreg from a specified index of
   /// a superregister to a specified type.
-  Register fastEmitInst_extractsubreg(MVT RetVT, unsigned Op0, uint32_t Idx);
+  Register fastEmitInst_extractsubreg(MVT RetVT, Register Op0, uint32_t Idx);
 
   /// Emit MachineInstrs to compute the value of Op with all but the
   /// least significant bit set to zero.
-  Register fastEmitZExtFromI1(MVT VT, unsigned Op0);
+  Register fastEmitZExtFromI1(MVT VT, Register Op0);
 
   /// Emit an unconditional branch to the given block, unless it is the
   /// immediate (fall-through) successor, and update the CFG.
@@ -470,15 +470,19 @@ protected:
 
   /// Emit a constant in a register using target-specific logic, such as
   /// constant pool loads.
-  virtual unsigned fastMaterializeConstant(const Constant *C) { return 0; }
+  virtual Register fastMaterializeConstant(const Constant *C) {
+    return Register();
+  }
 
   /// Emit an alloca address in a register using target-specific logic.
-  virtual unsigned fastMaterializeAlloca(const AllocaInst *C) { return 0; }
+  virtual Register fastMaterializeAlloca(const AllocaInst *C) {
+    return Register();
+  }
 
   /// Emit the floating-point constant +0.0 in a register using target-
   /// specific logic.
-  virtual unsigned fastMaterializeFloatZero(const ConstantFP *CF) {
-    return 0;
+  virtual Register fastMaterializeFloatZero(const ConstantFP *CF) {
+    return Register();
   }
 
   /// Check if \c Add is an add that can be safely folded into \c GEP.

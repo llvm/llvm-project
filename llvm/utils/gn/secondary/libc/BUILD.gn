@@ -1,0 +1,8 @@
+config("common_utils_config") {
+  include_dirs = [ "." ]
+  defines = [ "LIBC_NAMESPACE=__llvm_libc_common_utils" ]
+}
+
+group("common_utils") {
+  public_configs = [ ":common_utils_config" ]
+}

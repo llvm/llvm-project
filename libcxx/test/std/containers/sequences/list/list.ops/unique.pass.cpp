@@ -17,34 +17,33 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     int a1[] = {2, 1, 1, 4, 4, 4, 4, 3, 3};
     int a2[] = {2, 1, 4, 3};
     typedef std::list<int> L;
-    L c(a1, a1+sizeof(a1)/sizeof(a1[0]));
+    L c(a1, a1 + sizeof(a1) / sizeof(a1[0]));
 #if TEST_STD_VER > 17
     ASSERT_SAME_TYPE(L::size_type, decltype(c.unique()));
     assert(c.unique() == 5);
 #else
-    ASSERT_SAME_TYPE(void,         decltype(c.unique()));
+    ASSERT_SAME_TYPE(void, decltype(c.unique()));
     c.unique();
 #endif
-    assert(c == std::list<int>(a2, a2+4));
-    }
+    assert(c == std::list<int>(a2, a2 + 4));
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     int a1[] = {2, 1, 1, 4, 4, 4, 4, 3, 3};
     int a2[] = {2, 1, 4, 3};
-    std::list<int, min_allocator<int>> c(a1, a1+sizeof(a1)/sizeof(a1[0]));
-#if TEST_STD_VER > 17
+    std::list<int, min_allocator<int>> c(a1, a1 + sizeof(a1) / sizeof(a1[0]));
+#  if TEST_STD_VER > 17
     assert(c.unique() == 5);
-#else
+#  else
     c.unique();
-#endif
-    assert((c == std::list<int, min_allocator<int>>(a2, a2+4)));
-    }
+#  endif
+    assert((c == std::list<int, min_allocator<int>>(a2, a2 + 4)));
+  }
 #endif
 
   return 0;

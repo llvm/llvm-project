@@ -8,19 +8,21 @@
 
 #include "MemoryHistoryASan.h"
 
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/MemoryHistory.h"
 
+#include "Plugins/InstrumentationRuntime/Utility/Utility.h"
 #include "Plugins/Process/Utility/HistoryThread.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-private.h"
 
 #include <sstream>
@@ -107,7 +109,7 @@ static void CreateHistoryThreadFromValueObject(ProcessSP process_sp,
     return;
 
   int count = count_sp->GetValueAsUnsigned(0);
-  tid_t tid = tid_sp->GetValueAsUnsigned(0) + 1;
+  lldb::tid_t tid = tid_sp->GetValueAsUnsigned(0) + 1;
 
   if (count <= 0)
     return;
@@ -162,7 +164,6 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   ExecutionContext exe_ctx(frame_sp);
   ValueObjectSP return_value_sp;
   StreamString expr;
-  Status eval_error;
   expr.Printf(memory_history_asan_command_format, address, address);
 
   EvaluateExpressionOptions options;
@@ -175,12 +176,19 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
 
+  if (auto m = GetPreferredAsanModule(process_sp->GetTarget())) {
+    SymbolContextList sc_list;
+    sc_list.Append(SymbolContext(std::move(m)));
+    options.SetPreferredSymbolContexts(std::move(sc_list));
+  }
+
   ExpressionResults expr_result = UserExpression::Evaluate(
-      exe_ctx, options, expr.GetString(), "", return_value_sp, eval_error);
+      exe_ctx, options, expr.GetString(), "", return_value_sp);
   if (expr_result != eExpressionCompleted) {
     StreamString ss;
     ss << "cannot evaluate AddressSanitizer expression:\n";
-    ss << eval_error.AsCString();
+    if (return_value_sp)
+      ss << return_value_sp->GetError().AsCString();
     Debugger::ReportWarning(ss.GetString().str(),
                             process_sp->GetTarget().GetDebugger().GetID());
     return result;

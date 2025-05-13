@@ -4,18 +4,28 @@
 // CHECK: @[[STR:.*]] = private unnamed_addr constant [45 x i8] c"_Generic selection expression should be fine\00", section "llvm.metadata"
 // CHECK-NEXT: @[[FILENAME:.*]] = private unnamed_addr constant {{.*}}, section "llvm.metadata"
 // CHECK-NEXT: @[[ARGS:.*]] = private unnamed_addr constant { i32 } zeroinitializer, section "llvm.metadata"
+// CHECK-NEXT: @[[STR2:.*]] = private unnamed_addr constant [14 x i8] c"void is undef\00", section "llvm.metadata"
+// CHECK-NEXT: @[[ARGS3:.*]] = private unnamed_addr constant { i8, i8, i32 } { i8 undef, i8 undef, i32 7 }, section "llvm.metadata"
+
+
 
 // CHECK-LABEL: @_Z1fv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[N:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[J:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[K:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 10, ptr [[N]], align 4
 // CHECK-NEXT:    call void @llvm.var.annotation.p0.p0(ptr [[J]], ptr @[[STR]], ptr @[[FILENAME]], i32 {{.*}}, ptr @[[ARGS]])
 // CHECK-NEXT:    store i32 0, ptr [[J]], align 4
+// CHECK-NEXT:    call void @llvm.var.annotation.p0.p0(ptr [[K]], ptr @[[STR2]], ptr @[[FILENAME]], i32 {{.*}}, ptr @[[ARGS3]])
+// CHECK-NEXT:    store i32 0, ptr [[K]], align 4
 // CHECK-NEXT:    ret void
 //
 void f() {
   int n = 10;
   [[clang::annotate("_Generic selection expression should be fine", _Generic(n, int : 0, default : 1))]]
   int j = 0; // second arg should resolve to 0 fine
+
+  [[clang::annotate("void is undef", (void)2, (void)4, 7)]]
+  int k = 0;
 }

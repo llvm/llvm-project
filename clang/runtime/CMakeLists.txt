@@ -122,7 +122,7 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
                            COMPONENT compiler-rt)
 
   # Add top-level targets that build specific compiler-rt runtimes.
-  set(COMPILER_RT_RUNTIMES fuzzer asan builtins dfsan lsan msan profile tsan ubsan ubsan-minimal)
+  set(COMPILER_RT_RUNTIMES fuzzer asan builtins dfsan lsan msan profile tsan tysan ubsan ubsan-minimal)
   foreach(runtime ${COMPILER_RT_RUNTIMES})
     get_ext_project_build_command(build_runtime_cmd ${runtime})
     add_custom_target(${runtime}

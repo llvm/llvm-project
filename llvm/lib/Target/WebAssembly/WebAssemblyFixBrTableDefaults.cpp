@@ -42,7 +42,7 @@ public:
 
 char WebAssemblyFixBrTableDefaults::ID = 0;
 
-// Target indepedent selection dag assumes that it is ok to use PointerTy
+// Target independent selection dag assumes that it is ok to use PointerTy
 // as the index for a "switch", whereas Wasm so far only has a 32-bit br_table.
 // See e.g. SelectionDAGBuilder::visitJumpTableHeader
 // We have a 64-bit br_table in the tablegen defs as a result, which does get

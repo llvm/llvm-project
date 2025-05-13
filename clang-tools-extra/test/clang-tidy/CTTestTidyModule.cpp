@@ -1,5 +1,5 @@
 // REQUIRES: plugins
-// RUN: clang-tidy -checks='-*,mytest*' --list-checks -load %llvmshlibdir/CTTestTidyModule%pluginext -load %llvmshlibdir/LLVMHello%pluginext | FileCheck --check-prefix=CHECK-LIST %s
+// RUN: clang-tidy -checks='-*,mytest*' --list-checks -load %llvmshlibdir/CTTestTidyModule%pluginext | FileCheck --check-prefix=CHECK-LIST %s
 // CHECK-LIST: Enabled checks:
 // CHECK-LIST-NEXT:    mytest1
 // CHECK-LIST-NEXT:    mytest2

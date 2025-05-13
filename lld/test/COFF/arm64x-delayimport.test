@@ -1,0 +1,363 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows test-arm64ec.s -o test-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows test-arm64.s -o test-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-helper.s -o arm64ec-helper.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows arm64-helper.s -o arm64-helper.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
+RUN: llvm-lib -machine:arm64ec -def:test.def -out:test-arm64ec.lib
+RUN: llvm-lib -machine:arm64 -def:test.def -out:test-arm64.lib
+
+# Test delayed-load import from both native and EC code.
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:out.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          arm64-helper.obj arm64ec-helper.obj test-arm64.obj test-arm64ec.obj test-arm64.lib test-arm64ec.lib -delayload:test.dll
+
+RUN: llvm-readobj --coff-imports out.dll | FileCheck --check-prefix=IMPORTS %s
+IMPORTS:      DelayImport {
+IMPORTS-NEXT:   Name: test.dll
+IMPORTS-NEXT:   Attributes: 0x1
+IMPORTS-NEXT:   ModuleHandle: 0x6080
+IMPORTS-NEXT:   ImportAddressTable: 0x6088
+IMPORTS-NEXT:   ImportNameTable: 0x4390
+IMPORTS-NEXT:   BoundDelayImportTable: 0x0
+IMPORTS-NEXT:   UnloadDelayImportTable: 0x0
+IMPORTS-NEXT:   Import {
+IMPORTS-NEXT:     Symbol: func (0)
+IMPORTS-NEXT:     Address: 0x180001014
+IMPORTS-NEXT:   }
+IMPORTS-NEXT: }
+IMPORTS-NEXT: HybridObject {
+IMPORTS:        DelayImport {
+IMPORTS-NEXT:     Name: test.dll
+IMPORTS-NEXT:     Attributes: 0x1
+IMPORTS-NEXT:     ModuleHandle: 0x6080
+IMPORTS-NEXT:     ImportAddressTable: 0x6098
+IMPORTS-NEXT:     ImportNameTable: 0x43A0
+IMPORTS-NEXT:     BoundDelayImportTable: 0x0
+IMPORTS-NEXT:     UnloadDelayImportTable: 0x0
+IMPORTS-NEXT:     Import {
+IMPORTS-NEXT:       Symbol: func (0)
+IMPORTS-NEXT:       Address: 0x180003006
+IMPORTS-NEXT:     }
+IMPORTS-NEXT:   }
+IMPORTS-NEXT: }
+
+RUN: llvm-readobj --hex-dump=.test out.dll | FileCheck --check-prefix=TESTSEC %s
+TESTSEC: 0x180009000 10500000 98600000 00300000 10200000
+
+RUN: llvm-readobj --hex-dump=.testa out.dll | FileCheck --check-prefix=TESTSECA %s
+TESTSECA: 0x18000a000 88600000 08100000
+
+RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
+DISASM:      0000000180001000 <.text>:
+DISASM-NEXT: 180001000: 52800060     mov     w0, #0x3                // =3
+DISASM-NEXT: 180001004: d65f03c0     ret
+DISASM-NEXT: 180001008: b0000030     adrp    x16, 0x180006000
+DISASM-NEXT: 18000100c: f9404610     ldr     x16, [x16, #0x88]
+DISASM-NEXT: 180001010: d61f0200     br      x16
+DISASM-NEXT: 180001014: b0000031     adrp    x17, 0x180006000
+DISASM-NEXT: 180001018: 91022231     add     x17, x17, #0x88
+DISASM-NEXT: 18000101c: 14000001     b       0x180001020 <.text+0x20>
+DISASM-NEXT: 180001020: a9b37bfd     stp     x29, x30, [sp, #-0xd0]!
+DISASM-NEXT: 180001024: 910003fd     mov     x29, sp
+DISASM-NEXT: 180001028: a90107e0     stp     x0, x1, [sp, #0x10]
+DISASM-NEXT: 18000102c: a9020fe2     stp     x2, x3, [sp, #0x20]
+DISASM-NEXT: 180001030: a90317e4     stp     x4, x5, [sp, #0x30]
+DISASM-NEXT: 180001034: a9041fe6     stp     x6, x7, [sp, #0x40]
+DISASM-NEXT: 180001038: ad0287e0     stp     q0, q1, [sp, #0x50]
+DISASM-NEXT: 18000103c: ad038fe2     stp     q2, q3, [sp, #0x70]
+DISASM-NEXT: 180001040: ad0497e4     stp     q4, q5, [sp, #0x90]
+DISASM-NEXT: 180001044: ad059fe6     stp     q6, q7, [sp, #0xb0]
+DISASM-NEXT: 180001048: aa1103e1     mov     x1, x17
+DISASM-NEXT: 18000104c: f0000000     adrp    x0, 0x180004000
+DISASM-NEXT: 180001050: 910d4000     add     x0, x0, #0x350
+DISASM-NEXT: 180001054: 97ffffeb     bl      0x180001000 <.text>
+DISASM-NEXT: 180001058: aa0003f0     mov     x16, x0
+DISASM-NEXT: 18000105c: ad459fe6     ldp     q6, q7, [sp, #0xb0]
+DISASM-NEXT: 180001060: ad4497e4     ldp     q4, q5, [sp, #0x90]
+DISASM-NEXT: 180001064: ad438fe2     ldp     q2, q3, [sp, #0x70]
+DISASM-NEXT: 180001068: ad4287e0     ldp     q0, q1, [sp, #0x50]
+DISASM-NEXT: 18000106c: a9441fe6     ldp     x6, x7, [sp, #0x40]
+DISASM-NEXT: 180001070: a94317e4     ldp     x4, x5, [sp, #0x30]
+DISASM-NEXT: 180001074: a9420fe2     ldp     x2, x3, [sp, #0x20]
+DISASM-NEXT: 180001078: a94107e0     ldp     x0, x1, [sp, #0x10]
+DISASM-NEXT: 18000107c: a8cd7bfd     ldp     x29, x30, [sp], #0xd0
+DISASM-NEXT: 180001080: d61f0200     br      x16
+DISASM-NEXT:                 ...
+DISASM-NEXT: 180002000: 52800040     mov     w0, #0x2                // =2
+DISASM-NEXT: 180002004: d65f03c0     ret
+DISASM-NEXT: 180002008: 52800060     mov     w0, #0x3                // =3
+DISASM-NEXT: 18000200c: d65f03c0     ret
+DISASM-NEXT: 180002010: f0000010     adrp    x16, 0x180005000
+DISASM-NEXT: 180002014: f9400a10     ldr     x16, [x16, #0x10]
+DISASM-NEXT: 180002018: d61f0200     br      x16
+DISASM-NEXT: 18000201c: 9000002b     adrp    x11, 0x180006000
+DISASM-NEXT: 180002020: f9404d6b     ldr     x11, [x11, #0x98]
+DISASM-NEXT: 180002024: 9000000a     adrp    x10, 0x180002000 <.text+0x1000>
+DISASM-NEXT: 180002028: 9100c14a     add     x10, x10, #0x30
+DISASM-NEXT: 18000202c: 17fffff5     b       0x180002000 <.text+0x1000>
+DISASM-NEXT: 180002030: 52800080     mov     w0, #0x4                // =4
+DISASM-NEXT: 180002034: d65f03c0     ret
+DISASM-NEXT:                 ...
+DISASM-NEXT: 180003000: ff 25 92 30 00 00            jmpq    *0x3092(%rip)           # 0x180006098
+DISASM-NEXT: 180003006: 48 8d 05 8b 30 00 00         leaq    0x308b(%rip), %rax      # 0x180006098
+DISASM-NEXT: 18000300d: e9 00 00 00 00               jmp     0x180003012 <.text+0x2012>
+DISASM-NEXT: 180003012: 51                           pushq   %rcx
+DISASM-NEXT: 180003013: 52                           pushq   %rdx
+DISASM-NEXT: 180003014: 41 50                        pushq   %r8
+DISASM-NEXT: 180003016: 41 51                        pushq   %r9
+DISASM-NEXT: 180003018: 48 83 ec 48                  subq    $0x48, %rsp
+DISASM-NEXT: 18000301c: 66 0f 7f 04 24               movdqa  %xmm0, (%rsp)
+DISASM-NEXT: 180003021: 66 0f 7f 4c 24 10            movdqa  %xmm1, 0x10(%rsp)
+DISASM-NEXT: 180003027: 66 0f 7f 54 24 20            movdqa  %xmm2, 0x20(%rsp)
+DISASM-NEXT: 18000302d: 66 0f 7f 5c 24 30            movdqa  %xmm3, 0x30(%rsp)
+DISASM-NEXT: 180003033: 48 8b d0                     movq    %rax, %rdx
+DISASM-NEXT: 180003036: 48 8d 0d 13 13 00 00         leaq    0x1313(%rip), %rcx # 0x180004350
+DISASM-NEXT: 18000303d: e8 c6 ef ff ff               callq   0x180002008 <.text+0x1008>
+DISASM-NEXT: 180003042: 66 0f 6f 04 24               movdqa  (%rsp), %xmm0
+DISASM-NEXT: 180003047: 66 0f 6f 4c 24 10            movdqa  0x10(%rsp), %xmm1
+DISASM-NEXT: 18000304d: 66 0f 6f 54 24 20            movdqa  0x20(%rsp), %xmm2
+DISASM-NEXT: 180003053: 66 0f 6f 5c 24 30            movdqa  0x30(%rsp), %xmm3
+DISASM-NEXT: 180003059: 48 83 c4 48                  addq    $0x48, %rsp
+DISASM-NEXT: 18000305d: 41 59                        popq    %r9
+DISASM-NEXT: 18000305f: 41 58                        popq    %r8
+DISASM-NEXT: 180003061: 5a                           popq    %rdx
+DISASM-NEXT: 180003062: 59                           popq    %rcx
+DISASM-NEXT: 180003063: ff e0                        jmpq    *%rax
+
+RUN: llvm-readobj --coff-load-config out.dll | FileCheck --check-prefix=LOADCFG %s
+LOADCFG:      AuxiliaryDelayloadIAT: 0x5000
+LOADCFG-NEXT: AuxiliaryDelayloadIATCopy: 0x4140
+
+RUN: llvm-readobj --hex-dump=.rdata out.dll | FileCheck --check-prefix=AUXIAT %s
+AUXIAT:      0x180005000 00000000 00000000 00000000 00000000
+AUXIAT-NEXT: 0x180005010 1c200080 01000000 00000000 00000000
+
+
+# Test delayed-load import from native code only.
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:out-native.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          arm64-helper.obj arm64ec-helper.obj test-arm64.obj test-arm64.lib test-arm64ec.lib -delayload:test.dll
+
+RUN: llvm-readobj --coff-imports out-native.dll | FileCheck --check-prefix=NATIVE-IMPORTS %s
+NATIVE-IMPORTS:      DelayImport {
+NATIVE-IMPORTS-NEXT:   Name: test.dll
+NATIVE-IMPORTS-NEXT:   Attributes: 0x1
+NATIVE-IMPORTS-NEXT:   ModuleHandle: 0x5080
+NATIVE-IMPORTS-NEXT:   ImportAddressTable: 0x5088
+NATIVE-IMPORTS-NEXT:   ImportNameTable: 0x3370
+NATIVE-IMPORTS-NEXT:   BoundDelayImportTable: 0x0
+NATIVE-IMPORTS-NEXT:   UnloadDelayImportTable: 0x0
+NATIVE-IMPORTS-NEXT:   Import {
+NATIVE-IMPORTS-NEXT:     Symbol: func (0)
+NATIVE-IMPORTS-NEXT:     Address: 0x180001014
+NATIVE-IMPORTS-NEXT:   }
+NATIVE-IMPORTS-NEXT: }
+NATIVE-IMPORTS-NEXT: HybridObject {
+NATIVE-IMPORTS-NEXT:   Format: COFF-ARM64EC
+NATIVE-IMPORTS-NEXT:   Arch: aarch64
+NATIVE-IMPORTS-NEXT:   AddressSize: 64bit
+NATIVE-IMPORTS-NEXT:   DelayImport {
+NATIVE-IMPORTS-NEXT:     Name: test.dll
+NATIVE-IMPORTS-NEXT:     Attributes: 0x1
+NATIVE-IMPORTS-NEXT:     ModuleHandle: 0x5080
+NATIVE-IMPORTS-NEXT:     ImportAddressTable: 0x5098
+NATIVE-IMPORTS-NEXT:     ImportNameTable: 0x3380
+NATIVE-IMPORTS-NEXT:     BoundDelayImportTable: 0x0
+NATIVE-IMPORTS-NEXT:     UnloadDelayImportTable: 0x0
+NATIVE-IMPORTS-NEXT:   }
+NATIVE-IMPORTS-NEXT: }
+
+RUN: llvm-readobj --hex-dump=.testa out-native.dll | FileCheck --check-prefix=NATIVE-TESTSECA %s
+NATIVE-TESTSECA: 0x180007000 88500000 08100000
+
+RUN: llvm-objdump -d out-native.dll | FileCheck --check-prefix=NATIVE-DISASM %s
+NATIVE-DISASM:      0000000180001000 <.text>:
+NATIVE-DISASM-NEXT: 180001000: 52800060     mov     w0, #0x3                // =3
+NATIVE-DISASM-NEXT: 180001004: d65f03c0     ret
+NATIVE-DISASM-NEXT: 180001008: 90000030     adrp    x16, 0x180005000
+NATIVE-DISASM-NEXT: 18000100c: f9404610     ldr     x16, [x16, #0x88]
+NATIVE-DISASM-NEXT: 180001010: d61f0200     br      x16
+NATIVE-DISASM-NEXT: 180001014: 90000031     adrp    x17, 0x180005000
+NATIVE-DISASM-NEXT: 180001018: 91022231     add     x17, x17, #0x88
+NATIVE-DISASM-NEXT: 18000101c: 14000001     b       0x180001020 <.text+0x20>
+NATIVE-DISASM-NEXT: 180001020: a9b37bfd     stp     x29, x30, [sp, #-0xd0]!
+NATIVE-DISASM-NEXT: 180001024: 910003fd     mov     x29, sp
+NATIVE-DISASM-NEXT: 180001028: a90107e0     stp     x0, x1, [sp, #0x10]
+NATIVE-DISASM-NEXT: 18000102c: a9020fe2     stp     x2, x3, [sp, #0x20]
+NATIVE-DISASM-NEXT: 180001030: a90317e4     stp     x4, x5, [sp, #0x30]
+NATIVE-DISASM-NEXT: 180001034: a9041fe6     stp     x6, x7, [sp, #0x40]
+NATIVE-DISASM-NEXT: 180001038: ad0287e0     stp     q0, q1, [sp, #0x50]
+NATIVE-DISASM-NEXT: 18000103c: ad038fe2     stp     q2, q3, [sp, #0x70]
+NATIVE-DISASM-NEXT: 180001040: ad0497e4     stp     q4, q5, [sp, #0x90]
+NATIVE-DISASM-NEXT: 180001044: ad059fe6     stp     q6, q7, [sp, #0xb0]
+NATIVE-DISASM-NEXT: 180001048: aa1103e1     mov     x1, x17
+NATIVE-DISASM-NEXT: 18000104c: d0000000     adrp    x0, 0x180003000
+NATIVE-DISASM-NEXT: 180001050: 910cc000     add     x0, x0, #0x330
+NATIVE-DISASM-NEXT: 180001054: 97ffffeb     bl      0x180001000 <.text>
+NATIVE-DISASM-NEXT: 180001058: aa0003f0     mov     x16, x0
+NATIVE-DISASM-NEXT: 18000105c: ad459fe6     ldp     q6, q7, [sp, #0xb0]
+NATIVE-DISASM-NEXT: 180001060: ad4497e4     ldp     q4, q5, [sp, #0x90]
+NATIVE-DISASM-NEXT: 180001064: ad438fe2     ldp     q2, q3, [sp, #0x70]
+NATIVE-DISASM-NEXT: 180001068: ad4287e0     ldp     q0, q1, [sp, #0x50]
+NATIVE-DISASM-NEXT: 18000106c: a9441fe6     ldp     x6, x7, [sp, #0x40]
+NATIVE-DISASM-NEXT: 180001070: a94317e4     ldp     x4, x5, [sp, #0x30]
+NATIVE-DISASM-NEXT: 180001074: a9420fe2     ldp     x2, x3, [sp, #0x20]
+NATIVE-DISASM-NEXT: 180001078: a94107e0     ldp     x0, x1, [sp, #0x10]
+NATIVE-DISASM-NEXT: 18000107c: a8cd7bfd     ldp     x29, x30, [sp], #0xd0
+NATIVE-DISASM-NEXT: 180001080: d61f0200     br      x16
+
+RUN: llvm-readobj --coff-load-config out-native.dll | FileCheck --check-prefix=NATIVE-LOADCFG %s
+NATIVE-LOADCFG:      AuxiliaryDelayloadIAT: 0x4000
+NATIVE-LOADCFG-NEXT: AuxiliaryDelayloadIATCopy: 0x3140
+
+RUN: llvm-readobj --hex-dump=.rdata out-native.dll | FileCheck --check-prefix=NATIVE-AUXIAT %s
+NATIVE-AUXIAT:      0x180004000 00000000 00000000 00000000 00000000
+NATIVE-AUXIAT-NEXT: 0x180004010 00000000 00000000
+
+
+# Test delayed-load import from EC code only.
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:out-ec.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          arm64-helper.obj arm64ec-helper.obj test-arm64ec.obj test-arm64.lib test-arm64ec.lib -delayload:test.dll
+
+RUN: llvm-readobj --coff-imports out-ec.dll | FileCheck --check-prefix=EC-IMPORTS %s
+EC-IMPORTS:      DelayImport {
+EC-IMPORTS-NEXT:   Name: test.dll
+EC-IMPORTS-NEXT:   Attributes: 0x1
+EC-IMPORTS-NEXT:   ModuleHandle: 0x6080
+EC-IMPORTS-NEXT:   ImportAddressTable: 0x6088
+EC-IMPORTS-NEXT:   ImportNameTable: 0x4388
+EC-IMPORTS-NEXT:   BoundDelayImportTable: 0x0
+EC-IMPORTS-NEXT:   UnloadDelayImportTable: 0x0
+EC-IMPORTS-NEXT: }
+EC-IMPORTS-NEXT: HybridObject {
+EC-IMPORTS-NEXT:   Format: COFF-ARM64EC
+EC-IMPORTS-NEXT:   Arch: aarch64
+EC-IMPORTS-NEXT:   AddressSize: 64bit
+EC-IMPORTS-NEXT:   DelayImport {
+EC-IMPORTS-NEXT:     Name: test.dll
+EC-IMPORTS-NEXT:     Attributes: 0x1
+EC-IMPORTS-NEXT:     ModuleHandle: 0x6080
+EC-IMPORTS-NEXT:     ImportAddressTable: 0x6090
+EC-IMPORTS-NEXT:     ImportNameTable: 0x4390
+EC-IMPORTS-NEXT:     BoundDelayImportTable: 0x0
+EC-IMPORTS-NEXT:     UnloadDelayImportTable: 0x0
+EC-IMPORTS-NEXT:     Import {
+EC-IMPORTS-NEXT:       Symbol: func (0)
+EC-IMPORTS-NEXT:       Address: 0x180003006
+EC-IMPORTS-NEXT:     }
+EC-IMPORTS-NEXT:   }
+EC-IMPORTS-NEXT: }
+
+RUN: llvm-readobj --hex-dump=.test out-ec.dll | FileCheck --check-prefix=EC-TESTSEC %s
+EC-TESTSEC: 0x180009000 08500000 90600000 00300000 10200000
+
+RUN: llvm-objdump -d out-ec.dll | FileCheck --check-prefix=EC-DISASM %s
+EC-DISASM:      0000000180001000 <.text>:
+EC-DISASM-NEXT: 180001000: 52800060     mov     w0, #0x3                // =3
+EC-DISASM-NEXT: 180001004: d65f03c0     ret
+EC-DISASM-NEXT:                 ...
+EC-DISASM-NEXT: 180002000: 52800040     mov     w0, #0x2                // =2
+EC-DISASM-NEXT: 180002004: d65f03c0     ret
+EC-DISASM-NEXT: 180002008: 52800060     mov     w0, #0x3                // =3
+EC-DISASM-NEXT: 18000200c: d65f03c0     ret
+EC-DISASM-NEXT: 180002010: f0000010     adrp    x16, 0x180005000
+EC-DISASM-NEXT: 180002014: f9400610     ldr     x16, [x16, #0x8]
+EC-DISASM-NEXT: 180002018: d61f0200     br      x16
+EC-DISASM-NEXT: 18000201c: 9000002b     adrp    x11, 0x180006000
+EC-DISASM-NEXT: 180002020: f940496b     ldr     x11, [x11, #0x90]
+EC-DISASM-NEXT: 180002024: 9000000a     adrp    x10, 0x180002000 <.text+0x1000>
+EC-DISASM-NEXT: 180002028: 9100c14a     add     x10, x10, #0x30
+EC-DISASM-NEXT: 18000202c: 17fffff5     b       0x180002000 <.text+0x1000>
+EC-DISASM-NEXT: 180002030: 52800080     mov     w0, #0x4                // =4
+EC-DISASM-NEXT: 180002034: d65f03c0     ret
+EC-DISASM-NEXT:                 ...
+EC-DISASM-NEXT: 180003000: ff 25 8a 30 00 00            jmpq    *0x308a(%rip)           # 0x180006090
+EC-DISASM-NEXT: 180003006: 48 8d 05 83 30 00 00         leaq    0x3083(%rip), %rax      # 0x180006090
+EC-DISASM-NEXT: 18000300d: e9 00 00 00 00               jmp     0x180003012 <.text+0x2012>
+EC-DISASM-NEXT: 180003012: 51                           pushq   %rcx
+EC-DISASM-NEXT: 180003013: 52                           pushq   %rdx
+EC-DISASM-NEXT: 180003014: 41 50                        pushq   %r8
+EC-DISASM-NEXT: 180003016: 41 51                        pushq   %r9
+EC-DISASM-NEXT: 180003018: 48 83 ec 48                  subq    $0x48, %rsp
+EC-DISASM-NEXT: 18000301c: 66 0f 7f 04 24               movdqa  %xmm0, (%rsp)
+EC-DISASM-NEXT: 180003021: 66 0f 7f 4c 24 10            movdqa  %xmm1, 0x10(%rsp)
+EC-DISASM-NEXT: 180003027: 66 0f 7f 54 24 20            movdqa  %xmm2, 0x20(%rsp)
+EC-DISASM-NEXT: 18000302d: 66 0f 7f 5c 24 30            movdqa  %xmm3, 0x30(%rsp)
+EC-DISASM-NEXT: 180003033: 48 8b d0                     movq    %rax, %rdx
+EC-DISASM-NEXT: 180003036: 48 8d 0d 0b 13 00 00         leaq    0x130b(%rip), %rcx      # 0x180004348
+EC-DISASM-NEXT: 18000303d: e8 c6 ef ff ff               callq   0x180002008 <.text+0x1008>
+EC-DISASM-NEXT: 180003042: 66 0f 6f 04 24               movdqa  (%rsp), %xmm0
+EC-DISASM-NEXT: 180003047: 66 0f 6f 4c 24 10            movdqa  0x10(%rsp), %xmm1
+EC-DISASM-NEXT: 18000304d: 66 0f 6f 54 24 20            movdqa  0x20(%rsp), %xmm2
+EC-DISASM-NEXT: 180003053: 66 0f 6f 5c 24 30            movdqa  0x30(%rsp), %xmm3
+EC-DISASM-NEXT: 180003059: 48 83 c4 48                  addq    $0x48, %rsp
+EC-DISASM-NEXT: 18000305d: 41 59                        popq    %r9
+EC-DISASM-NEXT: 18000305f: 41 58                        popq    %r8
+EC-DISASM-NEXT: 180003061: 5a                           popq    %rdx
+EC-DISASM-NEXT: 180003062: 59                           popq    %rcx
+EC-DISASM-NEXT: 180003063: ff e0                        jmpq    *%rax
+
+RUN: llvm-readobj --coff-load-config out-ec.dll | FileCheck --check-prefix=EC-LOADCFG %s
+EC-LOADCFG:      AuxiliaryDelayloadIAT: 0x5000
+EC-LOADCFG-NEXT: AuxiliaryDelayloadIATCopy: 0x4140
+
+RUN: llvm-readobj --hex-dump=.rdata out-ec.dll | FileCheck --check-prefix=EC-AUXIAT %s
+EC-AUXIAT:      0x180005000 00000000 00000000 1c200080 01000000
+EC-AUXIAT-NEXT: 0x180005010 00000000 00000000
+
+
+#--- test-arm64ec.s
+    .section .test, "rd"
+    .rva __imp_func
+    .rva __imp_aux_func
+    .rva func
+    .rva "#func"
+
+#--- test-arm64.s
+    .section .testa, "rd"
+    .rva __imp_func
+    .rva func
+
+#--- arm64ec-helper.s
+    .section .text,"xr",discard,__icall_helper_arm64ec
+    .globl __icall_helper_arm64ec
+    .p2align 2, 0x0
+__icall_helper_arm64ec:
+    mov w0, #2
+    ret
+
+    .section .text,"xr",discard,"#__delayLoadHelper2"
+    .globl "#__delayLoadHelper2"
+    .p2align 2, 0x0
+"#__delayLoadHelper2":
+    mov w0, #3
+    ret
+
+    .section .hybmp$x, "yi"
+    .symidx __imp_func
+    .symidx func_exit_thunk
+    .word 4
+
+    .section .wowthk$aa,"xr",discard,func_exit_thunk
+    .globl func_exit_thunk
+func_exit_thunk:
+    mov w0, #4
+    ret
+
+#--- arm64-helper.s
+    .section .text,"xr",discard,__delayLoadHelper2
+    .globl __delayLoadHelper2
+    .p2align 2, 0x0
+__delayLoadHelper2:
+    mov w0, #3
+    ret
+
+#--- test.def
+NAME test.dll
+EXPORTS
+    func

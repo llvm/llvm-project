@@ -1114,26 +1114,26 @@ void fCXX11MemberInitTest1() {
   CXX11MemberInitTest1();
 }
 
-#ifdef PEDANTIC
 struct CXX11MemberInitTest2 {
   struct RecordType {
-    int a; // expected-note {{uninitialized field 'this->a'}}
-    int b; // expected-note {{uninitialized field 'this->b'}}
+    // TODO: we'd expect the note: {{uninitialized field 'this->rec.a'}}
+    int a; // no-note
+    // TODO: we'd expect the note: {{uninitialized field 'this->rec.b'}}
+    int b; // no-note
 
     RecordType(int) {}
   };
 
-  RecordType rec = RecordType(int()); // expected-warning {{2 uninitialized fields}}
+  RecordType rec = RecordType(int());
   int dontGetFilteredByNonPedanticMode = 0;
 
   CXX11MemberInitTest2() {}
 };
 
 void fCXX11MemberInitTest2() {
+  // TODO: we'd expect the warning: {{2 uninitializeds field}}
   CXX11MemberInitTest2(); // no-warning
 }
-
-#endif // PEDANTIC
 
 //===----------------------------------------------------------------------===//
 // "Esoteric" primitive type tests.
@@ -1181,4 +1181,25 @@ void fComplexTest() {
 
   // TODO: we should emit a warning for x2.x and x2.y.
   ComplexUninitTest x2;
+}
+
+struct PaddingBitfieldTest {
+  int a;
+  long long : 7; // padding, previously flagged as uninitialized
+  PaddingBitfieldTest(int a) : a(a) {}
+};
+
+void fPaddingBitfieldTest() {
+  PaddingBitfieldTest pb(42);
+  // no-warning: Unnamed bitfield is now ignored, fixing false positive
+}
+
+struct NamedBitfieldTest {
+  int b; 
+  long long named : 7; // expected-note{{uninitialized field 'this->named'}}
+  NamedBitfieldTest(int b) : b(b) {} // expected-warning{{1 uninitialized field at the end of the constructor call}}
+};
+
+void fNamedBitfieldTest() {
+  NamedBitfieldTest nb(42); 
 }

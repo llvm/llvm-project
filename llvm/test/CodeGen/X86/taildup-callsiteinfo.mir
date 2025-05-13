@@ -68,8 +68,9 @@ body:             |
     liveins: $ecx
 
     CALL64pcrel32 @alloc, csr_win64, implicit $rsp, implicit $ssp, implicit $ecx, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
-    SEH_Epilogue
+    SEH_BeginEpilogue
     $rsp = frame-destroy ADD64ri8 $rsp, 40, implicit-def dead $eflags
+    SEH_EndEpilogue
     TAILJMPd64 @f2, csr_win64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp
 
 ...

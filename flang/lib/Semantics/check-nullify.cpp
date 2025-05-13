@@ -31,7 +31,8 @@ void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
                       .Say(name.source,
                           "'%s' may not appear in NULLIFY"_err_en_US,
                           name.source)
-                      .Attach(std::move(*whyNot));
+                      .Attach(std::move(
+                          whyNot->set_severity(parser::Severity::Because)));
                 }
               }
             },
@@ -44,7 +45,8 @@ void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
                         *checkedExpr)}) {
                   context_.messages()
                       .Say(at, "'%s' may not appear in NULLIFY"_err_en_US, at)
-                      .Attach(std::move(*whyNot));
+                      .Attach(std::move(
+                          whyNot->set_severity(parser::Severity::Because)));
                 }
               }
             },

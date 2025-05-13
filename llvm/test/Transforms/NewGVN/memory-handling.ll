@@ -22,7 +22,7 @@ declare ptr @__ctype_b_loc() local_unnamed_addr #1
 ; Function Attrs: nounwind uwtable
 define void @BuildMask(ptr nocapture readonly) local_unnamed_addr #0 {
 ; CHECK-LABEL: define void @BuildMask(
-; CHECK-SAME: ptr nocapture readonly [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 16 @alPhrase, i8 0, i64 416, i1 false)
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 16 @aqMainMask, i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 16 @aqMainSign, i8 0, i64 16, i1 false)
@@ -35,17 +35,17 @@ define void @BuildMask(ptr nocapture readonly) local_unnamed_addr #0 {
 ; CHECK:       2:
 ; CHECK-NEXT:    [[DOT1:%.*]] = phi ptr [ [[DOT0]], [[DOTSINK_SPLIT]] ], [ [[TMP3]], [[TMP6:%.*]] ]
 ; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i8, ptr [[DOT1]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[DOT1]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[DOT1]], align 1, !tbaa [[TBAA5:![0-9]+]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[DOTPREHEADER_PREHEADER:%.*]], label [[TMP6]]
 ; CHECK:       .preheader.preheader:
 ; CHECK-NEXT:    br label [[DOTPREHEADER:%.*]]
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = tail call ptr @__ctype_b_loc() #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 8, !tbaa [[TBAA5:![0-9]+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 8, !tbaa [[TBAA6:![0-9]+]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext i8 [[TMP4]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load i16, ptr [[TMP10]], align 2, !tbaa [[TBAA7:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = load i16, ptr [[TMP10]], align 2, !tbaa [[TBAA8:![0-9]+]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = and i16 [[TMP11]], 1024
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i16 [[TMP12]], 0
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP2]], label [[TMP14]]
@@ -55,9 +55,9 @@ define void @BuildMask(ptr nocapture readonly) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP17:%.*]] = add nsw i32 [[TMP16]], -97
 ; CHECK-NEXT:    [[TMP18:%.*]] = sext i32 [[TMP17]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [26 x %struct.Letter], ptr @alPhrase, i64 0, i64 [[TMP18]], i32 0
-; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP19]], align 16, !tbaa [[TBAA9:![0-9]+]]
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP19]], align 16, !tbaa [[TBAA10:![0-9]+]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = add i32 [[TMP20]], 1
-; CHECK-NEXT:    store i32 [[TMP21]], ptr [[TMP19]], align 16, !tbaa [[TBAA9]]
+; CHECK-NEXT:    store i32 [[TMP21]], ptr [[TMP19]], align 16, !tbaa [[TBAA10]]
 ; CHECK-NEXT:    [[TMP22]] = add nsw i32 [[DOTSINK]], 1
 ; CHECK-NEXT:    br label [[DOTSINK_SPLIT]]
 ; CHECK:       .preheader:
@@ -65,7 +65,7 @@ define void @BuildMask(ptr nocapture readonly) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[DOT04961:%.*]] = phi i32 [ [[DOT2:%.*]], [[TMP57]] ], [ 0, [[DOTPREHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[DOT05160:%.*]] = phi i32 [ [[DOT253:%.*]], [[TMP57]] ], [ 0, [[DOTPREHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [26 x %struct.Letter], ptr @alPhrase, i64 0, i64 [[INDVARS_IV]], i32 0
-; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 16, !tbaa [[TBAA9]]
+; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 16, !tbaa [[TBAA10]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i32 [[TMP24]], 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [26 x i32], ptr @auGlobalFrequency, i64 0, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[TMP27:%.*]], label [[TMP28:%.*]]
@@ -106,25 +106,25 @@ define void @BuildMask(ptr nocapture readonly) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP40:%.*]] = add i64 [[DOT046_LCSSA]], 4294967295
 ; CHECK-NEXT:    [[TMP41:%.*]] = trunc i64 [[TMP40]] to i32
 ; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [26 x %struct.Letter], ptr @alPhrase, i64 0, i64 [[INDVARS_IV]], i32 2
-; CHECK-NEXT:    store i32 [[TMP41]], ptr [[TMP42]], align 8, !tbaa [[TBAA11:![0-9]+]]
+; CHECK-NEXT:    store i32 [[TMP41]], ptr [[TMP42]], align 8, !tbaa [[TBAA12:![0-9]+]]
 ; CHECK-NEXT:    [[TMP43:%.*]] = zext i32 [[DOT150]] to i64
 ; CHECK-NEXT:    [[DOT046_:%.*]] = shl i64 [[DOT046_LCSSA]], [[TMP43]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = zext i32 [[DOT152]] to i64
 ; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [2 x i64], ptr @aqMainSign, i64 0, i64 [[TMP44]]
-; CHECK-NEXT:    [[TMP46:%.*]] = load i64, ptr [[TMP45]], align 8, !tbaa [[TBAA12:![0-9]+]]
+; CHECK-NEXT:    [[TMP46:%.*]] = load i64, ptr [[TMP45]], align 8, !tbaa [[TBAA13:![0-9]+]]
 ; CHECK-NEXT:    [[TMP47:%.*]] = or i64 [[TMP46]], [[DOT046_]]
-; CHECK-NEXT:    store i64 [[TMP47]], ptr [[TMP45]], align 8, !tbaa [[TBAA12]]
-; CHECK-NEXT:    [[TMP48:%.*]] = load i32, ptr [[TMP23]], align 16, !tbaa [[TBAA9]]
+; CHECK-NEXT:    store i64 [[TMP47]], ptr [[TMP45]], align 8, !tbaa [[TBAA13]]
+; CHECK-NEXT:    [[TMP48:%.*]] = load i32, ptr [[TMP23]], align 16, !tbaa [[TBAA10]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = zext i32 [[TMP48]] to i64
 ; CHECK-NEXT:    [[TMP50:%.*]] = shl i64 [[TMP49]], [[TMP43]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [2 x i64], ptr @aqMainMask, i64 0, i64 [[TMP44]]
-; CHECK-NEXT:    [[TMP52:%.*]] = load i64, ptr [[TMP51]], align 8, !tbaa [[TBAA12]]
+; CHECK-NEXT:    [[TMP52:%.*]] = load i64, ptr [[TMP51]], align 8, !tbaa [[TBAA13]]
 ; CHECK-NEXT:    [[TMP53:%.*]] = or i64 [[TMP50]], [[TMP52]]
-; CHECK-NEXT:    store i64 [[TMP53]], ptr [[TMP51]], align 8, !tbaa [[TBAA12]]
+; CHECK-NEXT:    store i64 [[TMP53]], ptr [[TMP51]], align 8, !tbaa [[TBAA13]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = getelementptr inbounds [26 x %struct.Letter], ptr @alPhrase, i64 0, i64 [[INDVARS_IV]], i32 1
-; CHECK-NEXT:    store i32 [[DOT150]], ptr [[TMP54]], align 4, !tbaa [[TBAA14:![0-9]+]]
+; CHECK-NEXT:    store i32 [[DOT150]], ptr [[TMP54]], align 4, !tbaa [[TBAA15:![0-9]+]]
 ; CHECK-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [26 x %struct.Letter], ptr @alPhrase, i64 0, i64 [[INDVARS_IV]], i32 3
-; CHECK-NEXT:    store i32 [[DOT152]], ptr [[TMP55]], align 4, !tbaa [[TBAA15:![0-9]+]]
+; CHECK-NEXT:    store i32 [[DOT152]], ptr [[TMP55]], align 4, !tbaa [[TBAA16:![0-9]+]]
 ; CHECK-NEXT:    [[TMP56:%.*]] = add nsw i32 [[DOT150]], [[DOT048_LCSSA]]
 ; CHECK-NEXT:    br label [[TMP57]]
 ; CHECK:       57:
@@ -313,15 +313,16 @@ attributes #5 = { nounwind readonly }
 ; CHECK: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
 ; CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
 ; CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
-; CHECK: [[TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
-; CHECK: [[META6]] = !{!"any pointer", [[META3]], i64 0}
-; CHECK: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-; CHECK: [[META8]] = !{!"short", [[META3]], i64 0}
-; CHECK: [[TBAA9]] = !{[[META10:![0-9]+]], [[META2]], i64 0}
-; CHECK: [[META10]] = !{!"", [[META2]], i64 0, [[META2]], i64 4, [[META2]], i64 8, [[META2]], i64 12}
-; CHECK: [[TBAA11]] = !{[[META10]], [[META2]], i64 8}
-; CHECK: [[TBAA12]] = !{[[META13:![0-9]+]], [[META13]], i64 0}
-; CHECK: [[META13]] = !{!"long", [[META3]], i64 0}
-; CHECK: [[TBAA14]] = !{[[META10]], [[META2]], i64 4}
-; CHECK: [[TBAA15]] = !{[[META10]], [[META2]], i64 12}
+; CHECK: [[TBAA5]] = !{[[META3]], [[META3]], i64 0}
+; CHECK: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+; CHECK: [[META7]] = !{!"any pointer", [[META3]], i64 0}
+; CHECK: [[TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
+; CHECK: [[META9]] = !{!"short", [[META3]], i64 0}
+; CHECK: [[TBAA10]] = !{[[META11:![0-9]+]], [[META2]], i64 0}
+; CHECK: [[META11]] = !{!"", [[META2]], i64 0, [[META2]], i64 4, [[META2]], i64 8, [[META2]], i64 12}
+; CHECK: [[TBAA12]] = !{[[META11]], [[META2]], i64 8}
+; CHECK: [[TBAA13]] = !{[[META14:![0-9]+]], [[META14]], i64 0}
+; CHECK: [[META14]] = !{!"long", [[META3]], i64 0}
+; CHECK: [[TBAA15]] = !{[[META11]], [[META2]], i64 4}
+; CHECK: [[TBAA16]] = !{[[META11]], [[META2]], i64 12}
 ;.

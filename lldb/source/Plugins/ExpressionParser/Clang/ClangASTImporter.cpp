@@ -84,8 +84,7 @@ clang::Decl *ClangASTImporter::CopyDecl(clang::ASTContext *dst_ast,
     LLDB_LOG_ERROR(log, result.takeError(), "Couldn't import decl: {0}");
     if (log) {
       lldb::user_id_t user_id = LLDB_INVALID_UID;
-      ClangASTMetadata *metadata = GetDeclMetadata(decl);
-      if (metadata)
+      if (std::optional<ClangASTMetadata> metadata = GetDeclMetadata(decl))
         user_id = metadata->GetUserID();
 
       if (NamedDecl *named_decl = dyn_cast<NamedDecl>(decl))
@@ -950,7 +949,8 @@ bool ClangASTImporter::RequireCompleteType(clang::QualType type) {
   return true;
 }
 
-ClangASTMetadata *ClangASTImporter::GetDeclMetadata(const clang::Decl *decl) {
+std::optional<ClangASTMetadata>
+ClangASTImporter::GetDeclMetadata(const clang::Decl *decl) {
   DeclOrigin decl_origin = GetDeclOrigin(decl);
 
   if (decl_origin.Valid()) {
@@ -1105,7 +1105,7 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
 
   // If we have a forcefully completed type, try to find an actual definition
   // for it in other modules.
-  const ClangASTMetadata *md = m_main.GetDeclMetadata(From);
+  std::optional<ClangASTMetadata> md = m_main.GetDeclMetadata(From);
   auto *td = dyn_cast<TagDecl>(From);
   if (td && md && md->IsForcefullyCompleted()) {
     Log *log = GetLog(LLDBLog::Expressions);
@@ -1136,6 +1136,29 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
 
 void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
     clang::Decl *to, clang::Decl *from) {
+  Log *log = GetLog(LLDBLog::Expressions);
+
+  auto getDeclName = [](Decl const *decl) {
+    std::string name_string;
+    if (auto const *from_named_decl = dyn_cast<clang::NamedDecl>(decl)) {
+      llvm::raw_string_ostream name_stream(name_string);
+      from_named_decl->printName(name_stream);
+    }
+
+    return name_string;
+  };
+
+  if (log) {
+    if (auto *D = GetAlreadyImportedOrNull(from); D && D != to) {
+      LLDB_LOG(
+          log,
+          "[ClangASTImporter] ERROR: overwriting an already imported decl "
+          "'{0:x}' ('{1}') from '{2:x}' with '{3:x}'. Likely due to a name "
+          "conflict when importing '{1}'.",
+          D, getDeclName(from), from, to);
+    }
+  }
+
   // We might have a forward declaration from a shared library that we
   // gave external lexical storage so that Clang asks us about the full
   // definition when it needs it. In this case the ASTImporter isn't aware
@@ -1144,8 +1167,6 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
   // We want that 'to' is actually complete after this function so let's
   // tell the ASTImporter that 'to' was imported from 'from'.
   MapImported(from, to);
-
-  Log *log = GetLog(LLDBLog::Expressions);
 
   if (llvm::Error err = ImportDefinition(from)) {
     LLDB_LOG_ERROR(log, std::move(err),
@@ -1158,19 +1179,13 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
       to_tag->setCompleteDefinition(from_tag->isCompleteDefinition());
 
       if (Log *log_ast = GetLog(LLDBLog::AST)) {
-        std::string name_string;
-        if (NamedDecl *from_named_decl = dyn_cast<clang::NamedDecl>(from)) {
-          llvm::raw_string_ostream name_stream(name_string);
-          from_named_decl->printName(name_stream);
-          name_stream.flush();
-        }
         LLDB_LOG(log_ast,
                  "==== [ClangASTImporter][TUDecl: {0:x}] Imported "
                  "({1}Decl*){2:x}, named {3} (from "
                  "(Decl*){4:x})",
                  static_cast<void *>(to->getTranslationUnitDecl()),
-                 from->getDeclKindName(), static_cast<void *>(to), name_string,
-                 static_cast<void *>(from));
+                 from->getDeclKindName(), static_cast<void *>(to),
+                 getDeclName(from), static_cast<void *>(from));
 
         // Log the AST of the TU.
         std::string ast_string;
@@ -1284,8 +1299,7 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
   }
 
   lldb::user_id_t user_id = LLDB_INVALID_UID;
-  ClangASTMetadata *metadata = m_main.GetDeclMetadata(from);
-  if (metadata)
+  if (std::optional<ClangASTMetadata> metadata = m_main.GetDeclMetadata(from))
     user_id = metadata->GetUserID();
 
   if (log) {
@@ -1293,7 +1307,6 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
       std::string name_string;
       llvm::raw_string_ostream name_stream(name_string);
       from_named_decl->printName(name_stream);
-      name_stream.flush();
 
       LLDB_LOG(
           log,

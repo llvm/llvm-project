@@ -20,10 +20,11 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Support/GenericDomTree.h"
-#include "llvm/Support/GenericDomTreeConstruction.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 
 namespace llvm {
 class AnalysisUsage;
@@ -39,101 +40,58 @@ inline void DominatorTreeBase<MachineBasicBlock, false>::addRoot(
 
 extern template class DomTreeNodeBase<MachineBasicBlock>;
 extern template class DominatorTreeBase<MachineBasicBlock, false>; // DomTree
-extern template class DominatorTreeBase<MachineBasicBlock, true>; // PostDomTree
 
-using MachineDomTree = DomTreeBase<MachineBasicBlock>;
 using MachineDomTreeNode = DomTreeNodeBase<MachineBasicBlock>;
+
+namespace DomTreeBuilder {
+using MBBDomTree = DomTreeBase<MachineBasicBlock>;
+using MBBUpdates = ArrayRef<llvm::cfg::Update<MachineBasicBlock *>>;
+using MBBDomTreeGraphDiff = GraphDiff<MachineBasicBlock *, false>;
+
+extern template void Calculate<MBBDomTree>(MBBDomTree &DT);
+extern template void CalculateWithUpdates<MBBDomTree>(MBBDomTree &DT,
+                                                      MBBUpdates U);
+
+extern template void InsertEdge<MBBDomTree>(MBBDomTree &DT,
+                                            MachineBasicBlock *From,
+                                            MachineBasicBlock *To);
+
+extern template void DeleteEdge<MBBDomTree>(MBBDomTree &DT,
+                                            MachineBasicBlock *From,
+                                            MachineBasicBlock *To);
+
+extern template void ApplyUpdates<MBBDomTree>(MBBDomTree &DT,
+                                              MBBDomTreeGraphDiff &,
+                                              MBBDomTreeGraphDiff *);
+
+extern template bool Verify<MBBDomTree>(const MBBDomTree &DT,
+                                        MBBDomTree::VerificationLevel VL);
+} // namespace DomTreeBuilder
 
 //===-------------------------------------
 /// DominatorTree Class - Concrete subclass of DominatorTreeBase that is used to
 /// compute a normal dominator tree.
 ///
-class MachineDominatorTree : public MachineFunctionPass {
-  /// Helper structure used to hold all the basic blocks
-  /// involved in the split of a critical edge.
-  struct CriticalEdge {
-    MachineBasicBlock *FromBB;
-    MachineBasicBlock *ToBB;
-    MachineBasicBlock *NewBB;
-  };
-
-  /// Pile up all the critical edges to be split.
-  /// The splitting of a critical edge is local and thus, it is possible
-  /// to apply several of those changes at the same time.
-  mutable SmallVector<CriticalEdge, 32> CriticalEdgesToSplit;
-
-  /// Remember all the basic blocks that are inserted during
-  /// edge splitting.
-  /// Invariant: NewBBs == all the basic blocks contained in the NewBB
-  /// field of all the elements of CriticalEdgesToSplit.
-  /// I.e., forall elt in CriticalEdgesToSplit, it exists BB in NewBBs
-  /// such as BB == elt.NewBB.
-  mutable SmallSet<MachineBasicBlock *, 32> NewBBs;
-
-  /// The DominatorTreeBase that is used to compute a normal dominator tree.
-  std::unique_ptr<MachineDomTree> DT;
-
-  /// Apply all the recorded critical edges to the DT.
-  /// This updates the underlying DT information in a way that uses
-  /// the fast query path of DT as much as possible.
-  ///
-  /// \post CriticalEdgesToSplit.empty().
-  void applySplitCriticalEdges() const;
+class MachineDominatorTree : public DomTreeBase<MachineBasicBlock> {
 
 public:
-  static char ID; // Pass ID, replacement for typeid
+  using Base = DomTreeBase<MachineBasicBlock>;
 
-  MachineDominatorTree();
-  explicit MachineDominatorTree(MachineFunction &MF) : MachineFunctionPass(ID) {
-    calculate(MF);
-  }
+  MachineDominatorTree() = default;
+  explicit MachineDominatorTree(MachineFunction &MF) { recalculate(MF); }
 
-  MachineDomTree &getBase() {
-    if (!DT)
-      DT.reset(new MachineDomTree());
-    applySplitCriticalEdges();
-    return *DT;
-  }
+  /// Handle invalidation explicitly.
+  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &);
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  MachineBasicBlock *getRoot() const {
-    applySplitCriticalEdges();
-    return DT->getRoot();
-  }
-
-  MachineDomTreeNode *getRootNode() const {
-    applySplitCriticalEdges();
-    return DT->getRootNode();
-  }
-
-  bool runOnMachineFunction(MachineFunction &F) override;
-
-  void calculate(MachineFunction &F);
-
-  bool dominates(const MachineDomTreeNode *A,
-                 const MachineDomTreeNode *B) const {
-    applySplitCriticalEdges();
-    return DT->dominates(A, B);
-  }
-
-  void getDescendants(MachineBasicBlock *A,
-                      SmallVectorImpl<MachineBasicBlock *> &Result) {
-    applySplitCriticalEdges();
-    DT->getDescendants(A, Result);
-  }
-
-  bool dominates(const MachineBasicBlock *A, const MachineBasicBlock *B) const {
-    applySplitCriticalEdges();
-    return DT->dominates(A, B);
-  }
+  using Base::dominates;
 
   // dominates - Return true if A dominates B. This performs the
   // special checks necessary if A and B are in the same basic block.
   bool dominates(const MachineInstr *A, const MachineInstr *B) const {
-    applySplitCriticalEdges();
     const MachineBasicBlock *BBA = A->getParent(), *BBB = B->getParent();
-    if (BBA != BBB) return DT->dominates(BBA, BBB);
+    if (BBA != BBB)
+      return Base::dominates(BBA, BBB);
 
     // Loop through the basic block until we find A or B.
     MachineBasicBlock::const_iterator I = BBA->begin();
@@ -142,113 +100,59 @@ public:
 
     return &*I == A;
   }
+};
 
-  bool properlyDominates(const MachineDomTreeNode *A,
-                         const MachineDomTreeNode *B) const {
-    applySplitCriticalEdges();
-    return DT->properlyDominates(A, B);
-  }
+/// \brief Analysis pass which computes a \c MachineDominatorTree.
+class MachineDominatorTreeAnalysis
+    : public AnalysisInfoMixin<MachineDominatorTreeAnalysis> {
+  friend AnalysisInfoMixin<MachineDominatorTreeAnalysis>;
 
-  bool properlyDominates(const MachineBasicBlock *A,
-                         const MachineBasicBlock *B) const {
-    applySplitCriticalEdges();
-    return DT->properlyDominates(A, B);
-  }
+  static AnalysisKey Key;
 
-  /// findNearestCommonDominator - Find nearest common dominator basic block
-  /// for basic block A and B. If there is no such block then return NULL.
-  MachineBasicBlock *findNearestCommonDominator(MachineBasicBlock *A,
-                                                MachineBasicBlock *B) {
-    applySplitCriticalEdges();
-    return DT->findNearestCommonDominator(A, B);
-  }
+public:
+  using Result = MachineDominatorTree;
 
-  MachineDomTreeNode *operator[](MachineBasicBlock *BB) const {
-    applySplitCriticalEdges();
-    return DT->getNode(BB);
-  }
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+};
 
-  /// getNode - return the (Post)DominatorTree node for the specified basic
-  /// block.  This is the same as using operator[] on this class.
-  ///
-  MachineDomTreeNode *getNode(MachineBasicBlock *BB) const {
-    applySplitCriticalEdges();
-    return DT->getNode(BB);
-  }
+/// \brief Machine function pass which print \c MachineDominatorTree.
+class MachineDominatorTreePrinterPass
+    : public PassInfoMixin<MachineDominatorTreePrinterPass> {
+  raw_ostream &OS;
 
-  /// addNewBlock - Add a new node to the dominator tree information.  This
-  /// creates a new node as a child of DomBB dominator node,linking it into
-  /// the children list of the immediate dominator.
-  MachineDomTreeNode *addNewBlock(MachineBasicBlock *BB,
-                                  MachineBasicBlock *DomBB) {
-    applySplitCriticalEdges();
-    return DT->addNewBlock(BB, DomBB);
-  }
+public:
+  explicit MachineDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
 
-  /// changeImmediateDominator - This method is used to update the dominator
-  /// tree information when a node's immediate dominator changes.
-  ///
-  void changeImmediateDominator(MachineBasicBlock *N,
-                                MachineBasicBlock *NewIDom) {
-    applySplitCriticalEdges();
-    DT->changeImmediateDominator(N, NewIDom);
-  }
+/// \brief Analysis pass which computes a \c MachineDominatorTree.
+class MachineDominatorTreeWrapperPass : public MachineFunctionPass {
+  // MachineFunctionPass may verify the analysis result without running pass,
+  // e.g. when `F.hasAvailableExternallyLinkage` is true.
+  std::optional<MachineDominatorTree> DT;
 
-  void changeImmediateDominator(MachineDomTreeNode *N,
-                                MachineDomTreeNode *NewIDom) {
-    applySplitCriticalEdges();
-    DT->changeImmediateDominator(N, NewIDom);
-  }
+public:
+  static char ID;
 
-  /// eraseNode - Removes a node from  the dominator tree. Block must not
-  /// dominate any other blocks. Removes node from its immediate dominator's
-  /// children list. Deletes dominator node associated with basic block BB.
-  void eraseNode(MachineBasicBlock *BB) {
-    applySplitCriticalEdges();
-    DT->eraseNode(BB);
-  }
+  MachineDominatorTreeWrapperPass();
 
-  /// splitBlock - BB is split and now it has one successor. Update dominator
-  /// tree to reflect this change.
-  void splitBlock(MachineBasicBlock* NewBB) {
-    applySplitCriticalEdges();
-    DT->splitBlock(NewBB);
-  }
+  MachineDominatorTree &getDomTree() { return *DT; }
+  const MachineDominatorTree &getDomTree() const { return *DT; }
 
-  /// isReachableFromEntry - Return true if A is dominated by the entry
-  /// block of the function containing it.
-  bool isReachableFromEntry(const MachineBasicBlock *A) {
-    applySplitCriticalEdges();
-    return DT->isReachableFromEntry(A);
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void verifyAnalysis() const override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   void releaseMemory() override;
 
-  void verifyAnalysis() const override;
-
-  void print(raw_ostream &OS, const Module*) const override;
-
-  /// Record that the critical edge (FromBB, ToBB) has been
-  /// split with NewBB.
-  /// This is best to use this method instead of directly update the
-  /// underlying information, because this helps mitigating the
-  /// number of time the DT information is invalidated.
-  ///
-  /// \note Do not use this method with regular edges.
-  ///
-  /// \note To benefit from the compile time improvement incurred by this
-  /// method, the users of this method have to limit the queries to the DT
-  /// interface between two edges splitting. In other words, they have to
-  /// pack the splitting of critical edges as much as possible.
-  void recordSplitCriticalEdge(MachineBasicBlock *FromBB,
-                              MachineBasicBlock *ToBB,
-                              MachineBasicBlock *NewBB) {
-    bool Inserted = NewBBs.insert(NewBB).second;
-    (void)Inserted;
-    assert(Inserted &&
-           "A basic block inserted via edge splitting cannot appear twice");
-    CriticalEdgesToSplit.push_back({FromBB, ToBB, NewBB});
-  }
+  void print(raw_ostream &OS, const Module *M = nullptr) const override;
 };
 
 //===-------------------------------------

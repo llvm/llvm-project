@@ -35,6 +35,7 @@ use omp_lib
   a = a + 1
   !ERROR: expected 'UPDATE'
   !ERROR: expected 'WRITE'
+  !ERROR: expected 'COMPARE'
   !ERROR: expected 'CAPTURE'
   !ERROR: expected 'READ'
   !$omp atomic num_threads(4)
@@ -49,6 +50,7 @@ use omp_lib
 
   !ERROR: expected 'UPDATE'
   !ERROR: expected 'WRITE'
+  !ERROR: expected 'COMPARE'
   !ERROR: expected 'CAPTURE'
   !ERROR: expected 'READ'
   !$omp atomic num_threads write

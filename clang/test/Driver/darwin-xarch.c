@@ -1,6 +1,6 @@
 // RUN: %clang --target=x86_64-apple-darwin10 -### \
-// RUN:   -arch i386 -Xarch_i386 -mmacosx-version-min=10.4 \
-// RUN:   -arch x86_64 -Xarch_x86_64 -mmacosx-version-min=10.5 \
+// RUN:   -arch i386 -Xarch_i386 -mmacos-version-min=10.4 \
+// RUN:   -arch x86_64 -Xarch_x86_64 -mmacos-version-min=10.5 \
 // RUN:   -c %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-COMPILE < %t %s
 //

@@ -210,7 +210,7 @@ void Fortran::lower::genPointerAssociate(fir::FirOpBuilder &builder,
       fir::runtime::getRuntimeFunc<mkRTKey(PointerAssociate)>(loc, builder);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, func.getFunctionType(), pointer, target);
-  builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  builder.create<fir::CallOp>(loc, func, args);
 }
 
 void Fortran::lower::genPointerAssociateRemapping(fir::FirOpBuilder &builder,
@@ -228,7 +228,7 @@ void Fortran::lower::genPointerAssociateRemapping(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, func.getFunctionType(), pointer, target, bounds, sourceFile,
       sourceLine);
-  builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  builder.create<fir::CallOp>(loc, func, args);
 }
 
 void Fortran::lower::genPointerAssociateLowerBounds(fir::FirOpBuilder &builder,
@@ -241,5 +241,5 @@ void Fortran::lower::genPointerAssociateLowerBounds(fir::FirOpBuilder &builder,
           loc, builder);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, func.getFunctionType(), pointer, target, lbounds);
-  builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  builder.create<fir::CallOp>(loc, func, args);
 }

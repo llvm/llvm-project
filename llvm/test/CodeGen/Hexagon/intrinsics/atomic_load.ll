@@ -1,7 +1,7 @@
-; RUN: sed -e "s/ORDER/unordered/" %s | llc -march=hexagon -disable-hexagon-amodeopt=0 | FileCheck %s
-; RUN: sed -e "s/ORDER/monotonic/" %s | llc -march=hexagon -disable-hexagon-amodeopt=0 | FileCheck %s
-; RUN: sed -e "s/ORDER/acquire/" %s | llc -march=hexagon -disable-hexagon-amodeopt=0 | FileCheck %s
-; RUN: sed -e "s/ORDER/seq_cst/" %s | llc -march=hexagon -disable-hexagon-amodeopt=0 | FileCheck %s
+; RUN: sed -e "s/ORDER/unordered/" %s | llc -mtriple=hexagon -disable-hexagon-amodeopt=0 | FileCheck %s
+; RUN: sed -e "s/ORDER/monotonic/" %s | llc -mtriple=hexagon -disable-hexagon-amodeopt=0 | FileCheck %s
+; RUN: sed -e "s/ORDER/acquire/" %s | llc -mtriple=hexagon -disable-hexagon-amodeopt=0 | FileCheck %s
+; RUN: sed -e "s/ORDER/seq_cst/" %s | llc -mtriple=hexagon -disable-hexagon-amodeopt=0 | FileCheck %s
 
 %struct.Obj = type { [100 x i32] }
 

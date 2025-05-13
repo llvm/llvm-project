@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=static -mips32-function-mask=10 -mips-os16 < %s | FileCheck %s -check-prefix=fmask1
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -relocation-model=static -mips32-function-mask=10 -mips-os16 < %s | FileCheck %s -check-prefix=fmask1
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=static -mips32-function-mask=01 -mips-os16 < %s | FileCheck %s -check-prefix=fmask2
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -relocation-model=static -mips32-function-mask=01 -mips-os16 < %s | FileCheck %s -check-prefix=fmask2
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=static -mips32-function-mask=10. -mips-os16 < %s | FileCheck %s -check-prefix=fmask1nr
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -relocation-model=static -mips32-function-mask=10. -mips-os16 < %s | FileCheck %s -check-prefix=fmask1nr
 
 ; Function Attrs: nounwind optsize readnone
 define void @foo1()  {

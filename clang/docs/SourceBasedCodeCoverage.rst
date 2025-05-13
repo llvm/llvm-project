@@ -94,6 +94,11 @@ directory structure will be created.  Additionally, the following special
   not specified (i.e the pattern is "%m"), it's assumed that ``N = 1``. The
   merge pool specifier can only occur once per filename pattern.
 
+* "%b" expands out to the binary ID (build ID). It can be used with "%Nm" to
+  avoid binary signature collisions. To use it, the program should be compiled
+  with the build ID linker option (``--build-id`` for GNU ld or LLD,
+  ``/build-id`` for lld-link on Windows). Linux, Windows and AIX are supported.
+
 * "%c" expands out to nothing, but enables a mode in which profile counter
   updates are continuously synced to a file. This means that if the
   instrumented program crashes, or is killed by a signal, perfect coverage
@@ -484,10 +489,31 @@ MC/DC Instrumentation
 ---------------------
 
 When instrumenting for Modified Condition/Decision Coverage (MC/DC) using the
-clang option ``-fcoverage-mcdc``, users are limited to at most **six** leaf-level
-conditions in a boolean expression.  A warning will be generated for boolean
-expressions that contain more than six, and they will not be instrumented for
-MC/DC.
+clang option ``-fcoverage-mcdc``, there are two hard limits.
+
+The maximum number of terms is limited to 32767, which is practical for
+handwritten expressions. To be more restrictive in order to enforce coding rules,
+use ``-Xclang -fmcdc-max-conditions=n``. Expressions with exceeded condition
+counts ``n`` will generate warnings and will be excluded in the MC/DC coverage.
+
+The number of test vectors (the maximum number of possible combinations of
+expressions) is limited to 2,147,483,646. In this case, approximately
+256MiB (==2GiB/8) is used to record test vectors.
+
+To reduce memory usage, users can limit the maximum number of test vectors per
+expression with ``-Xclang -fmcdc-max-test-vectors=m``.
+If the number of test vectors resulting from the analysis of an expression
+exceeds ``m``, a warning will be issued and the expression will be excluded
+from the MC/DC coverage.
+
+The number of test vectors ``m``, for ``n`` terms in an expression, can be
+``m <= 2^n`` in the theoretical worst case, but is usually much smaller.
+In simple cases, such as expressions consisting of a sequence of single
+operators, ``m == n+1``. For example, ``(a && b && c && d && e && f && g)``
+requires 8 test vectors.
+
+Expressions such as ``((a0 && b0) || (a1 && b1) || ...)`` can cause the
+number of test vectors to increase exponentially.
 
 Also, if a boolean expression is embedded in the nest of another boolean
 expression but separated by a non-logical operator, this is also not supported.

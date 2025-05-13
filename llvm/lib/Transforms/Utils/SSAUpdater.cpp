@@ -23,7 +23,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -136,9 +135,9 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
     }
   }
 
-  // If there are no predecessors, just return undef.
+  // If there are no predecessors, just return poison.
   if (PredValues.empty())
-    return UndefValue::get(ProtoType);
+    return PoisonValue::get(ProtoType);
 
   // Otherwise, if all the merged values are the same, just use it.
   if (SingularValue)
@@ -167,15 +166,15 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
   // See if the PHI node can be merged to a single value.  This can happen in
   // loop cases when we get a PHI of itself and one other value.
   if (Value *V =
-          simplifyInstruction(InsertedPHI, BB->getModule()->getDataLayout())) {
+          simplifyInstruction(InsertedPHI, BB->getDataLayout())) {
     InsertedPHI->eraseFromParent();
     return V;
   }
 
   // Set the DebugLoc of the inserted PHI, if available.
   DebugLoc DL;
-  if (const Instruction *I = BB->getFirstNonPHI())
-      DL = I->getDebugLoc();
+  if (BasicBlock::iterator It = BB->getFirstNonPHIIt(); It != BB->end())
+    DL = It->getDebugLoc();
   InsertedPHI->setDebugLoc(DL);
 
   // If the client wants to know about all new instructions, tell it.
@@ -307,10 +306,10 @@ public:
       append_range(*Preds, predecessors(BB));
   }
 
-  /// GetUndefVal - Get an undefined value of the same type as the value
+  /// GetPoisonVal - Get a poison value of the same type as the value
   /// being handled.
-  static Value *GetUndefVal(BasicBlock *BB, SSAUpdater *Updater) {
-    return UndefValue::get(Updater->ProtoType);
+  static Value *GetPoisonVal(BasicBlock *BB, SSAUpdater *Updater) {
+    return PoisonValue::get(Updater->ProtoType);
   }
 
   /// CreateEmptyPHI - Create a new PHI instruction in the specified block.
@@ -413,9 +412,13 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
       if (StoreInst *SI = dyn_cast<StoreInst>(User)) {
         updateDebugInfo(SI);
         SSA.AddAvailableValue(BB, SI->getOperand(0));
-      } else
+      } else if (auto *AI = dyn_cast<AllocaInst>(User)) {
+        // We treat AllocaInst as a store of an getValueToUseForAlloca value.
+        SSA.AddAvailableValue(BB, getValueToUseForAlloca(AI));
+      } else {
         // Otherwise it is a load, queue it to rewrite as a live-in load.
         LiveInLoads.push_back(cast<LoadInst>(User));
+      }
       BlockUses.clear();
       continue;
     }
@@ -423,15 +426,13 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
     // Otherwise, check to see if this block is all loads.
     bool HasStore = false;
     for (Instruction *I : BlockUses) {
-      if (isa<StoreInst>(I)) {
+      if (isa<StoreInst>(I) || isa<AllocaInst>(I)) {
         HasStore = true;
         break;
       }
     }
 
-    // If so, we can queue them all as live in loads.  We don't have an
-    // efficient way to tell which on is first in the block and don't want to
-    // scan large blocks, so just add all loads as live ins.
+    // If so, we can queue them all as live in loads.
     if (!HasStore) {
       for (Instruction *I : BlockUses)
         LiveInLoads.push_back(cast<LoadInst>(I));
@@ -439,17 +440,20 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
       continue;
     }
 
+    // Sort all of the interesting instructions in the block so that we don't
+    // have to scan a large block just to find a few instructions.
+    llvm::sort(
+        BlockUses.begin(), BlockUses.end(),
+        [](Instruction *A, Instruction *B) { return A->comesBefore(B); });
+
     // Otherwise, we have mixed loads and stores (or just a bunch of stores).
     // Since SSAUpdater is purely for cross-block values, we need to determine
     // the order of these instructions in the block.  If the first use in the
     // block is a load, then it uses the live in value.  The last store defines
-    // the live out value.  We handle this by doing a linear scan of the block.
+    // the live out value.
     Value *StoredValue = nullptr;
-    for (Instruction &I : *BB) {
-      if (LoadInst *L = dyn_cast<LoadInst>(&I)) {
-        // If this is a load from an unrelated pointer, ignore it.
-        if (!isInstInList(L, Insts)) continue;
-
+    for (Instruction *I : BlockUses) {
+      if (LoadInst *L = dyn_cast<LoadInst>(I)) {
         // If we haven't seen a store yet, this is a live in use, otherwise
         // use the stored value.
         if (StoredValue) {
@@ -462,13 +466,15 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
         continue;
       }
 
-      if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-        // If this is a store to an unrelated pointer, ignore it.
-        if (!isInstInList(SI, Insts)) continue;
+      if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
         updateDebugInfo(SI);
 
         // Remember that this is the active value in the block.
         StoredValue = SI->getOperand(0);
+      } else if (auto *AI = dyn_cast<AllocaInst>(I)) {
+        // Check if this an alloca, in which case we treat it as a store of
+        // getValueToUseForAlloca.
+        StoredValue = getValueToUseForAlloca(AI);
       }
     }
 
@@ -523,11 +529,4 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
     instructionDeleted(User);
     User->eraseFromParent();
   }
-}
-
-bool
-LoadAndStorePromoter::isInstInList(Instruction *I,
-                                   const SmallVectorImpl<Instruction *> &Insts)
-                                   const {
-  return is_contained(Insts, I);
 }

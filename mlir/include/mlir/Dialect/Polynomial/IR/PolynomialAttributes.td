@@ -161,29 +161,62 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
 
     The coefficient and polynomial modulus parameters are optional, and the
     coefficient modulus is only allowed if the coefficient type is integral.
+
+    The coefficient modulus, if specified, should be positive and not larger
+    than `2 ** width(coefficientType)`.
+
+    If the coefficient modulus is not specified, the handling of coefficients
+    overflows is determined by subsequent lowering passes, which may choose to
+    wrap around or widen the overflow at their discretion.
+
+    Note that coefficient modulus is contained in `i64` by default, which is signed.
+    To specify a 64 bit number without intepreting it as a negative number, its container
+    type should be manually specified like `coefficientModulus=18446744073709551615:i128`.
   }];
 
   let parameters = (ins
     "Type": $coefficientType,
     OptionalParameter<"::mlir::IntegerAttr">: $coefficientModulus,
-    OptionalParameter<"::mlir::polynomial::IntPolynomialAttr">: $polynomialModulus,
-    OptionalParameter<"::mlir::IntegerAttr">: $primitiveRoot
+    OptionalParameter<"::mlir::polynomial::IntPolynomialAttr">: $polynomialModulus
   );
+  let genVerifyDecl = 1;
   let assemblyFormat = "`<` struct(params) `>`";
   let builders = [
     AttrBuilderWithInferredContext<
         (ins "::mlir::Type":$coefficientTy,
               CArg<"::mlir::IntegerAttr", "nullptr"> :$coefficientModulusAttr,
-              CArg<"::mlir::polynomial::IntPolynomialAttr", "nullptr"> :$polynomialModulusAttr,
-              CArg<"::mlir::IntegerAttr", "nullptr"> :$primitiveRootAttr), [{
+              CArg<"::mlir::polynomial::IntPolynomialAttr", "nullptr"> :$polynomialModulusAttr), [{
       return $_get(
         coefficientTy.getContext(),
         coefficientTy,
         coefficientModulusAttr,
-        polynomialModulusAttr,
-        primitiveRootAttr);
+        polynomialModulusAttr);
     }]>,
   ];
 }
+
+def Polynomial_PrimitiveRootAttr: Polynomial_Attr<"PrimitiveRoot", "primitive_root"> {
+  let summary = "an attribute containing an integer and its degree as a root of unity";
+  let description = [{
+    A primitive root attribute stores an integer root `value` and an integer
+    `degree`, corresponding to a primitive root of unity of the given degree in
+    an unspecified ring.
+
+    This is used as an attribute on `polynomial.ntt` and `polynomial.intt` ops
+    to specify the root of unity used in lowering the transform.
+
+    Example:
+
+    ```mlir
+    #poly = #polynomial.primitive_root<value=123 : i32, degree : 7 index>
+    ```
+  }];
+  let parameters = (ins
+    "::mlir::IntegerAttr":$value,
+    "::mlir::IntegerAttr":$degree
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 
 #endif // POLYNOMIAL_ATTRIBUTES

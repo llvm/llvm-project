@@ -16,8 +16,8 @@
 // CHECK: note: previous definition is here
 // CHECK: #define X 4
 
-// CHECK-VAL: error: __OPTIMIZE__ predefined macro was enabled in PCH file but is currently disabled
-// CHECK-VAL: error: definition of macro 'X' differs between the precompiled header ('4') and the command line ('5')
+// CHECK-VAL: error: __OPTIMIZE__ predefined macro was enabled in AST file '{{.*}}' but is currently disabled
+// CHECK-VAL: error: definition of macro 'X' differs between the AST file '{{.*}}' ('4') and the command line ('5')
 
 void test(void) {
   int a = ONE;

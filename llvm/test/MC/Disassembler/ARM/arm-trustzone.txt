@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=armv7-apple-darwin -mcpu=cortex-a8 -disassemble -mattr=-trustzone < %s | FileCheck %s -check-prefix=NOTZ
+# RUN: llvm-mc -triple=armv7-apple-darwin -mcpu=cortex-a8 -disassemble -mattr=-trustzone %s 2>&1 | FileCheck %s -check-prefix=NOTZ
 # RUN: llvm-mc -triple=armv7-apple-darwin -mcpu=cortex-a8 -disassemble -mattr=trustzone < %s | FileCheck %s -check-prefix=TZ
 
 
@@ -9,8 +9,7 @@
 0x7f 0x00 0x60 0xe1
 0x70 0x00 0x60 0x01
 
-# NOTZ-NOT: smc #15
-# NOTZ-NOT: smceq #0
+# NOTZ-COUNT-2: warning: invalid instruction encoding
 # TZ: smc #15
 # TZ: smceq #0
 

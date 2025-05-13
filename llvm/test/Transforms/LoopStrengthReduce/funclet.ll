@@ -63,7 +63,7 @@ loop_body:                                        ; preds = %iter, %pad
 
 iter:                                             ; preds = %loop_body
   %tmp101 = getelementptr inbounds i8, ptr %tmp99, i32 1
-  br i1 undef, label %unwind_out, label %loop_body
+  br i1 true, label %unwind_out, label %loop_body
 
 unwind_out:                                       ; preds = %iter, %loop_body
   cleanupret from %cleanuppadi4.i.i.i unwind to caller
@@ -130,7 +130,7 @@ loop_body:                                        ; preds = %iter, %pad
 
 iter:                                             ; preds = %loop_body
   %tmp101 = getelementptr inbounds i8, ptr %tmp99, i32 1
-  br i1 undef, label %unwind_out, label %loop_body
+  br i1 true, label %unwind_out, label %loop_body
 }
 
 define void @h() personality ptr @_except_handler3 {
@@ -194,7 +194,7 @@ loop_body:                                        ; preds = %iter, %pad
 
 iter:                                             ; preds = %loop_body
   %tmp101 = getelementptr inbounds i8, ptr %tmp99, i32 1
-  br i1 undef, label %unwind_out, label %loop_body
+  br i1 true, label %unwind_out, label %loop_body
 }
 
 define void @i() personality ptr @_except_handler3 {
@@ -255,7 +255,7 @@ loop_body:                                        ; preds = %iter, %catchpad
 
 iter:                                             ; preds = %loop_body
   %tmp101 = getelementptr inbounds i8, ptr %tmp99, i32 1
-  br i1 undef, label %unwind_out, label %loop_body
+  br i1 true, label %unwind_out, label %loop_body
 
 unwind_out:                                       ; preds = %iter, %loop_body
   unreachable

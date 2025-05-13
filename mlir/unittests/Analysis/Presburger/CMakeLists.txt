@@ -6,7 +6,6 @@ add_mlir_unittest(MLIRPresburgerTests
   IntegerRelationTest.cpp
   LinearTransformTest.cpp
   MatrixTest.cpp
-  MPIntTest.cpp
   Parser.h
   ParserTest.cpp
   PresburgerSetTest.cpp
@@ -18,7 +17,7 @@ add_mlir_unittest(MLIRPresburgerTests
   UtilsTest.cpp
 )
 
-target_link_libraries(MLIRPresburgerTests
+mlir_target_link_libraries(MLIRPresburgerTests
   PRIVATE MLIRPresburger
   MLIRAffineAnalysis
   MLIRParser

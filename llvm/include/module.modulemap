@@ -96,6 +96,7 @@ module LLVM_BinaryFormat {
     textual header "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
     textual header "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
     textual header "llvm/BinaryFormat/ELFRelocs/RISCV.def"
+    textual header "llvm/BinaryFormat/ELFRelocs/RISCV_nonstandard.def"
     textual header "llvm/BinaryFormat/ELFRelocs/Sparc.def"
     textual header "llvm/BinaryFormat/ELFRelocs/SystemZ.def"
     textual header "llvm/BinaryFormat/ELFRelocs/VE.def"
@@ -346,6 +347,8 @@ extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
 // TargetParser module before building the TargetParser module itself.
 module TargetParserGen {
   module AArch64TargetParserDef {
+    textual header "llvm/TargetParser/AArch64CPUFeatures.inc"
+    textual header "llvm/TargetParser/AArch64FeatPriorities.inc"
     header "llvm/TargetParser/AArch64TargetParser.h"
     extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
     export *
@@ -425,4 +428,13 @@ module LLVM_WindowsManifest {
   requires cplusplus
   umbrella "llvm/WindowsManifest"
   module * { export * }
+}
+
+module LLVM_SandboxIR {
+  requires cplusplus
+
+  umbrella "llvm/SandboxIR"
+  module * { export * }
+
+  textual header "llvm/SandboxIR/Values.def"
 }

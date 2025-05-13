@@ -63,7 +63,7 @@ define float @ldexp_by_5_if_0_oeq_zero_f32(float %x) {
 define <2 x float> @ldexp_by_5_if_0_oeq_zero_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @ldexp_by_5_if_0_oeq_zero_v2f32(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq <2 x float> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[SCALED_X:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[X]], <2 x i32> <i32 5, i32 5>)
+; CHECK-NEXT:    [[SCALED_X:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[X]], <2 x i32> splat (i32 5))
 ; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = select <2 x i1> [[X_IS_ZERO]], <2 x float> [[SCALED_X]], <2 x float> [[X]]
 ; CHECK-NEXT:    ret <2 x float> [[SCALED_IF_DENORMAL]]
 ;
@@ -428,7 +428,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32(float %x, float %y) {
 ; CHECK-LABEL: @fmul_by_var_if_0_oeq_zero_f32(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[Y:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -442,7 +442,7 @@ define float @fmul_by_fabs_var_if_0_oeq_zero_f32(float %x, float %y) {
 ; CHECK-NEXT:    [[Y_FABS:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[Y_FABS]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %y.fabs = call float @llvm.fabs.f32(float %y)
@@ -468,7 +468,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_nsz_fmul(float %x, float %y) {
 ; CHECK-LABEL: @fmul_by_var_if_0_oeq_zero_f32_nsz_fmul(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[Y:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nsz float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -482,7 +482,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_nsz_ninf_fmul(float %x, float %y) {
 ; CHECK-LABEL: @fmul_by_var_if_0_oeq_zero_f32_nsz_ninf_fmul(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[Y:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul ninf nsz float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -496,7 +496,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_nsz_nnan_fmul(float %x, float %y) {
 ; CHECK-LABEL: @fmul_by_var_if_0_oeq_zero_f32_nsz_nnan_fmul(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[Y:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan nsz float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -510,7 +510,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_nnan_ninf_fmul(float %x, float %y) {
 ; CHECK-LABEL: @fmul_by_var_if_0_oeq_zero_f32_nnan_ninf_fmul(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[Y:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan ninf float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -524,7 +524,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_nsz_nnan_ninf_select(float %x, float
 ; CHECK-LABEL: @fmul_by_var_if_0_oeq_zero_f32_nsz_nnan_ninf_select(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan ninf nsz i1 [[X_IS_ZERO]], float [[Y:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -559,7 +559,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_fmul_nnan_ninf_nsz(float %x, float %
 ; CHECK-LABEL: @fmul_by_var_if_0_oeq_zero_f32_fmul_nnan_ninf_nsz(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[Y:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan ninf nsz float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -572,7 +572,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_fmul_nnan_ninf_nsz_commuted(float %x
 ; CHECK-LABEL: @fmul_by_var_if_0_oeq_zero_f32_fmul_nnan_ninf_nsz_commuted(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[Y:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan ninf nsz float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -586,7 +586,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_fmul_nnan_ninf_select_known_never_ne
 ; CHECK-LABEL: @fmul_by_var_if_0_oeq_zero_f32_fmul_nnan_ninf_select_known_never_negzero(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[Y:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan ninf float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -599,7 +599,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_fmul_nnan_ninf_select_known_never_ne
 ; CHECK-LABEL: @fmul_by_var_if_0_oeq_zero_f32_fmul_nnan_ninf_select_known_never_negzero_negsub(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[Y:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan ninf float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -623,7 +623,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_fmul_known_never_nan_inf_negzero(flo
 ; CHECK-LABEL: @fmul_by_var_if_0_oeq_zero_f32_fmul_known_never_nan_inf_negzero(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[Y:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -636,7 +636,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_fmul_known_never_nan_inf_negzero_nsu
 ; CHECK-LABEL: @fmul_by_var_if_0_oeq_zero_f32_fmul_known_never_nan_inf_negzero_nsub(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[Y:%.*]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -693,7 +693,7 @@ define float @fmul_by_self_if_0_oeq_zero_f32(float %x) {
 ; CHECK-LABEL: @fmul_by_self_if_0_oeq_zero_f32(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[X]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -706,7 +706,7 @@ define float @fmul_by_self_if_0_oeq_zero_f32_fmul_nnan_ninf_nsz(float %x) {
 ; CHECK-LABEL: @fmul_by_self_if_0_oeq_zero_f32_fmul_nnan_ninf_nsz(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan i1 [[X_IS_ZERO]], float [[X]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan ninf nsz float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul nnan float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
@@ -719,7 +719,7 @@ define float @fmul_by_self_if_0_oeq_zero_f32_select_nnan_ninf_nsz(float %x) {
 ; CHECK-LABEL: @fmul_by_self_if_0_oeq_zero_f32_select_nnan_ninf_nsz(
 ; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SCALED_X:%.*]] = select nnan ninf nsz i1 [[X_IS_ZERO]], float [[X]], float 1.000000e+00
-; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[SCALED_X]], [[X]]
+; CHECK-NEXT:    [[SCALED_IF_DENORMAL:%.*]] = fmul float [[X]], [[SCALED_X]]
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0

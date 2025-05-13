@@ -34,17 +34,6 @@ Type AbstractType::replaceImmediateSubElements(Type type,
 
 MLIRContext *Type::getContext() const { return getDialect().getContext(); }
 
-bool Type::isFloat8E5M2() const { return llvm::isa<Float8E5M2Type>(*this); }
-bool Type::isFloat8E4M3FN() const { return llvm::isa<Float8E4M3FNType>(*this); }
-bool Type::isFloat8E5M2FNUZ() const {
-  return llvm::isa<Float8E5M2FNUZType>(*this);
-}
-bool Type::isFloat8E4M3FNUZ() const {
-  return llvm::isa<Float8E4M3FNUZType>(*this);
-}
-bool Type::isFloat8E4M3B11FNUZ() const {
-  return llvm::isa<Float8E4M3B11FNUZType>(*this);
-}
 bool Type::isBF16() const { return llvm::isa<BFloat16Type>(*this); }
 bool Type::isF16() const { return llvm::isa<Float16Type>(*this); }
 bool Type::isTF32() const { return llvm::isa<FloatTF32Type>(*this); }
@@ -53,11 +42,19 @@ bool Type::isF64() const { return llvm::isa<Float64Type>(*this); }
 bool Type::isF80() const { return llvm::isa<Float80Type>(*this); }
 bool Type::isF128() const { return llvm::isa<Float128Type>(*this); }
 
+bool Type::isFloat() const { return llvm::isa<FloatType>(*this); }
+
+/// Return true if this is a float type with the specified width.
+bool Type::isFloat(unsigned width) const {
+  if (auto fltTy = llvm::dyn_cast<FloatType>(*this))
+    return fltTy.getWidth() == width;
+  return false;
+}
+
 bool Type::isIndex() const { return llvm::isa<IndexType>(*this); }
 
 bool Type::isInteger() const { return llvm::isa<IntegerType>(*this); }
 
-/// Return true if this is an integer type with the specified width.
 bool Type::isInteger(unsigned width) const {
   if (auto intTy = llvm::dyn_cast<IntegerType>(*this))
     return intTy.getWidth() == width;

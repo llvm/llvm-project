@@ -23,13 +23,13 @@ define i1 @foo(<vscale x 16 x i8> %x, i64 %y) {
 ; CHECK-NEXT:    slli a2, a2, 4
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    andi sp, sp, -64
-; CHECK-NEXT:    addi a2, sp, 64
-; CHECK-NEXT:    add a0, a2, a0
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, a2, a1
-; CHECK-NEXT:    vsetvli a3, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    addi a2, sp, 64
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    add a1, a2, a1
 ; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
 ; CHECK-NEXT:    vs8r.v v24, (a1)
 ; CHECK-NEXT:    vmv1r.v v0, v8
@@ -37,9 +37,13 @@ define i1 @foo(<vscale x 16 x i8> %x, i64 %y) {
 ; CHECK-NEXT:    vs8r.v v8, (a2)
 ; CHECK-NEXT:    lbu a0, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %a = bitcast <vscale x 16 x i8> %x to <vscale x 128 x i1>
   %b = extractelement <vscale x 128 x i1> %a, i64 %y
@@ -49,8 +53,8 @@ define i1 @foo(<vscale x 16 x i8> %x, i64 %y) {
 define i8 @bar(<vscale x 128 x i1> %x, i64 %y) {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m2, ta, ma
+; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vslidedown.vx v8, v0, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret

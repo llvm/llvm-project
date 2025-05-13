@@ -9,6 +9,7 @@
 #include "llvm/CodeGen/MachineModuleSlotTracker.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 
@@ -63,10 +64,11 @@ void MachineModuleSlotTracker::collectMachineMDNodes(
 }
 
 MachineModuleSlotTracker::MachineModuleSlotTracker(
-    const MachineFunction *MF, bool ShouldInitializeAllMetadata)
+    const MachineModuleInfo &MMI, const MachineFunction *MF,
+    bool ShouldInitializeAllMetadata)
     : ModuleSlotTracker(MF->getFunction().getParent(),
                         ShouldInitializeAllMetadata),
-      TheFunction(MF->getFunction()), TheMMI(MF->getMMI()) {
+      TheFunction(MF->getFunction()), TheMMI(MMI) {
   setProcessHook([this](AbstractSlotTrackerStorage *AST, const Module *M,
                         bool ShouldInitializeAllMetadata) {
     this->processMachineModule(AST, M, ShouldInitializeAllMetadata);

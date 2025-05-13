@@ -9,6 +9,7 @@ package(default_visibility = ["//visibility:public"])
         name = "%s.test" % src,
         srcs = [src],
         data = [
+            "Vector/vector-sink-transform.mlir",
             "//llvm:llvm-symbolizer",
             "//mlir:mlir-opt",
             "//mlir:mlir-pdll",
@@ -17,8 +18,9 @@ package(default_visibility = ["//visibility:public"])
             "//mlir/test:lit_data",
         ] + glob([
             "IRDL/*.irdl.mlir",
-            "LLVM/*-symbol-def.mlir",
+            "Linalg/td/*.mlir",
             "Linalg/transpose-matmul-*.mlir",
+            "LLVM/*-symbol-def.mlir",
             "Transform/include/**/*.mlir",
         ]),
     )
@@ -26,10 +28,12 @@ package(default_visibility = ["//visibility:public"])
         include = ["**/*.mlir"],
         exclude = [
             "IRDL/*.irdl.mlir",
-            "LLVM/*-symbol-def.mlir",
+            "Linalg/td/*.mlir",
             "Linalg/transpose-matmul-*.mlir",
+            "LLVM/*-symbol-def.mlir",
             "Transform/*-symbol-decl-and-schedule.mlir",
             "Transform/include/**/*.mlir",
+            "Vector/vector-sink-transform.mlir",
         ],
     )
 ]

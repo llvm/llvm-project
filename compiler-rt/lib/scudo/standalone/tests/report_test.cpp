@@ -8,6 +8,7 @@
 
 #include "tests/scudo_unit_test.h"
 
+#include "chunk.h"
 #include "report.h"
 
 TEST(ScudoReportDeathTest, Check) {
@@ -20,9 +21,11 @@ TEST(ScudoReportDeathTest, Check) {
 TEST(ScudoReportDeathTest, Generic) {
   // Potentially unused if EXPECT_DEATH isn't defined.
   UNUSED void *P = reinterpret_cast<void *>(0x42424242U);
+  UNUSED scudo::Chunk::PackedHeader Header = {};
   EXPECT_DEATH(scudo::reportError("TEST123"), "Scudo ERROR.*TEST123");
   EXPECT_DEATH(scudo::reportInvalidFlag("ABC", "DEF"), "Scudo ERROR.*ABC.*DEF");
-  EXPECT_DEATH(scudo::reportHeaderCorruption(P), "Scudo ERROR.*42424242");
+  EXPECT_DEATH(scudo::reportHeaderCorruption(&Header, P),
+               "Scudo ERROR.*42424242");
   EXPECT_DEATH(scudo::reportSanityCheckError("XYZ"), "Scudo ERROR.*XYZ");
   EXPECT_DEATH(scudo::reportAlignmentTooBig(123, 456), "Scudo ERROR.*123.*456");
   EXPECT_DEATH(scudo::reportAllocationSizeTooBig(123, 456, 789),
@@ -52,6 +55,19 @@ TEST(ScudoReportDeathTest, CSpecific) {
   EXPECT_DEATH(scudo::reportPvallocOverflow(123), "Scudo ERROR.*123");
   EXPECT_DEATH(scudo::reportInvalidAlignedAllocAlignment(123, 456),
                "Scudo ERROR.*123.*456");
+}
+
+TEST(ScudoReportDeathTest, HeaderCorruption) {
+  UNUSED void *P = reinterpret_cast<void *>(0x42424242U);
+  UNUSED scudo::Chunk::PackedHeader Header = {};
+  EXPECT_DEATH(scudo::reportHeaderCorruption(&Header, P),
+               "Scudo ERROR.*corrupted chunk header at address 0x.*42424242: "
+               "chunk header is zero and might indicate memory "
+               "corruption or a double free");
+  Header = 10U;
+  EXPECT_DEATH(scudo::reportHeaderCorruption(&Header, P),
+               "Scudo ERROR.*corrupted chunk header at address 0x.*42424242: "
+               "most likely due to memory corruption");
 }
 
 #if SCUDO_LINUX || SCUDO_TRUSTY || SCUDO_ANDROID

@@ -17,6 +17,7 @@ TEST(LlvmLibcStdcLeadingZerosUsTest, Zero) {
 
 TEST(LlvmLibcStdcLeadingZerosUsTest, OneHot) {
   for (unsigned i = 0U; i != USHRT_WIDTH; ++i)
-    EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_zeros_us(1U << i),
+    EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_zeros_us(
+                  static_cast<unsigned short>(1U << i)),
               USHRT_WIDTH - i - 1U);
 }

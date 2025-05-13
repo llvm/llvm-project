@@ -12,9 +12,10 @@
 #include "hdr/time_macros.h"
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/CPP/expected.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/time/units.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 // We use AbsTimeout to remind ourselves that the timeout is an absolute time.
 // This is a simple wrapper around the timespec struct that also keeps track of
@@ -33,17 +34,17 @@ public:
   from_timespec(timespec ts, bool realtime) {
     using namespace time_units;
     if (ts.tv_nsec < 0 || ts.tv_nsec >= 1_s_ns)
-      return cpp::unexpected<Error>(Error::Invalid);
+      return cpp::unexpected(Error::Invalid);
 
     // POSIX allows tv_sec to be negative. We interpret this as an expired
     // timeout.
     if (ts.tv_sec < 0)
-      return cpp::unexpected<Error>(Error::BeforeEpoch);
+      return cpp::unexpected(Error::BeforeEpoch);
 
     return AbsTimeout{ts, realtime};
   }
 };
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_ABS_TIMEOUT_H

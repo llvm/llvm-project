@@ -8,9 +8,6 @@
 // OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000100
 // OBJDUMP-NEXT: 0030 0000ac00 80000000 00000000 00000000
 
-.text
-// ASM: .text
-
 .amdgcn_target "amdgcn-amd-amdhsa--gfx90a:xnack+"
 // ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx90a:xnack+"
 
@@ -55,6 +52,8 @@ minimal:
 // ASM-NEXT: .amdhsa_next_free_vgpr 0
 // ASM-NEXT: .amdhsa_next_free_sgpr 0
 // ASM-NEXT: .amdhsa_accum_offset 4
+// ASM-NEXT: .amdhsa_reserve_vcc 1
+// ASM-NEXT: .amdhsa_reserve_flat_scratch 1
 // ASM-NEXT: .amdhsa_reserve_xnack_mask 1
 // ASM-NEXT: .amdhsa_float_round_mode_32 0
 // ASM-NEXT: .amdhsa_float_round_mode_16_64 0

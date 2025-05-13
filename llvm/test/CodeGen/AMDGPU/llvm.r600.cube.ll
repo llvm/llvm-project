@@ -18,7 +18,7 @@ main_body:
   %tmp8 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 9)
   %tmp9 = extractelement <4 x float> %tmp8, i32 2
   %tmp10 = fdiv float %tmp9, %tmp1
-  %tmp11 = insertelement <4 x float> undef, float %tmp4, i32 0
+  %tmp11 = insertelement <4 x float> poison, float %tmp4, i32 0
   %tmp12 = insertelement <4 x float> %tmp11, float %tmp7, i32 1
   %tmp13 = insertelement <4 x float> %tmp12, float %tmp10, i32 2
   %tmp14 = insertelement <4 x float> %tmp13, float 1.000000e+00, i32 3
@@ -33,7 +33,7 @@ main_body:
   %tmp23 = fadd float %tmp22, 1.500000e+00
   %tmp24 = fmul float %tmp17, %tmp21
   %tmp25 = fadd float %tmp24, 1.500000e+00
-  %tmp26 = insertelement <4 x float> undef, float %tmp25, i32 0
+  %tmp26 = insertelement <4 x float> poison, float %tmp25, i32 0
   %tmp27 = insertelement <4 x float> %tmp26, float %tmp23, i32 1
   %tmp28 = insertelement <4 x float> %tmp27, float %tmp19, i32 2
   %tmp29 = insertelement <4 x float> %tmp28, float %tmp25, i32 3

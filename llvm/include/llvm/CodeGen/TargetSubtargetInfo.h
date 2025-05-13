@@ -63,7 +63,8 @@ class Triple;
 class TargetSubtargetInfo : public MCSubtargetInfo {
 protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                      StringRef FS, ArrayRef<SubtargetFeatureKV> PF,
+                      StringRef FS, ArrayRef<StringRef> PN,
+                      ArrayRef<SubtargetFeatureKV> PF,
                       ArrayRef<SubtargetSubTypeKV> PD,
                       const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
@@ -123,9 +124,8 @@ public:
 
   virtual const LegalizerInfo *getLegalizerInfo() const { return nullptr; }
 
-  /// getRegisterInfo - If register information is available, return it.  If
-  /// not, return null.
-  virtual const TargetRegisterInfo *getRegisterInfo() const { return nullptr; }
+  /// Return the target's register information.
+  virtual const TargetRegisterInfo *getRegisterInfo() const = 0;
 
   /// If the information for the register banks is available, return it.
   /// Otherwise return nullptr.
@@ -199,6 +199,9 @@ public:
   /// True if the subtarget should run MachinePipeliner
   virtual bool enableMachinePipeliner() const { return true; };
 
+  /// True if the subtarget should run WindowScheduler.
+  virtual bool enableWindowScheduler() const { return true; }
+
   /// True if the subtarget should enable joining global copies.
   ///
   /// By default this is enabled if the machine scheduler is enabled, but
@@ -228,6 +231,16 @@ public:
   /// changes to the generic scheduling policy.
   virtual void overrideSchedPolicy(MachineSchedPolicy &Policy,
                                    unsigned NumRegionInstrs) const {}
+
+  /// Override generic post-ra scheduling policy within a region.
+  ///
+  /// This is a convenient way for targets that don't provide any custom
+  /// scheduling heuristics (no custom MachineSchedStrategy) to make
+  /// changes to the generic  post-ra scheduling policy.
+  /// Note that some options like tracking register pressure won't take effect
+  /// in post-ra scheduling.
+  virtual void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                         unsigned NumRegionInstrs) const {}
 
   // Perform target-specific adjustments to the latency of a schedule
   // dependency.
@@ -310,7 +323,7 @@ public:
   /// written in the tablegen descriptions, false if it should allocate
   /// the specified physical register later if is it callee-saved.
   virtual bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                           unsigned PhysReg) const {
+                                           MCRegister PhysReg) const {
     return false;
   }
 
@@ -330,13 +343,15 @@ public:
   /// Get the list of MacroFusion predicates.
   virtual std::vector<MacroFusionPredTy> getMacroFusions() const { return {}; };
 
-  /// supportsInitUndef is used to determine if an architecture supports
-  /// the Init Undef Pass. By default, it is assumed that it will not support
-  /// the pass, with architecture specific overrides providing the information
-  /// where they are implemented.
-  virtual bool supportsInitUndef() const { return false; }
-};
+  /// Whether the target has instructions where an early-clobber result
+  /// operand cannot overlap with an undef input operand.
+  virtual bool requiresDisjointEarlyClobberAndUndef() const {
+    // Conservatively assume such instructions exist by default.
+    return true;
+  }
 
+  virtual bool isRegisterReservedByUser(Register R) const { return false; }
+};
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_TARGETSUBTARGETINFO_H

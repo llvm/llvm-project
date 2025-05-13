@@ -6,7 +6,7 @@
 // Check that dbg.assign intrinsics get a !dbg with with the same scope as
 // their variable.
 
-// CHECK: call void @llvm.dbg.assign({{.+}}, metadata [[local:![0-9]+]], {{.+}}, {{.+}}, {{.+}}), !dbg [[dbg:![0-9]+]]
+// CHECK: #dbg_assign({{.+}}, [[local:![0-9]+]], {{.+}}, {{.+}}, {{.+}},  [[dbg:![0-9]+]]
 // CHECK-DAG: [[local]] = !DILocalVariable(name: "local", scope: [[scope:![0-9]+]],
 // CHECK-DAG: [[dbg]] = !DILocation({{.+}}, scope: [[scope]])
 // CHECK-DAG: [[scope]] = distinct !DILexicalBlock

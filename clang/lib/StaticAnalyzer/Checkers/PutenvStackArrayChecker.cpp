@@ -44,9 +44,17 @@ void PutenvStackArrayChecker::checkPostCall(const CallEvent &Call,
 
   SVal ArgV = Call.getArgSVal(0);
   const Expr *ArgExpr = Call.getArgExpr(0);
-  const MemSpaceRegion *MSR = ArgV.getAsRegion()->getMemorySpace();
 
-  if (!isa<StackSpaceRegion>(MSR))
+  if (!ArgV.getAsRegion())
+    return;
+
+  const auto *SSR =
+      ArgV.getAsRegion()->getMemorySpaceAs<StackSpaceRegion>(C.getState());
+  if (!SSR)
+    return;
+  const auto *StackFrameFuncD =
+      dyn_cast_or_null<FunctionDecl>(SSR->getStackFrame()->getDecl());
+  if (StackFrameFuncD && StackFrameFuncD->isMain())
     return;
 
   StringRef ErrorMsg = "The 'putenv' function should not be called with "

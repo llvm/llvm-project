@@ -5,12 +5,14 @@
 ; RUN: yaml2obj %S/Inputs/Simple/Simple.yaml -o %t/Simple 
 
 ; RUN: not clang-installapi -target x86_64h-apple-macos10.12 \
-; RUN: -install_name Simple -current_version 3 -compatibility_version 2 \
+; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
+; RUN: -current_version 3 -compatibility_version 2 \
 ; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=ARCHITECTURE %s
 ; ARCHITECTURE: error: architectures do not match: 'x86_64h' (provided) vs 'x86_64' (found)
 
 ; RUN: not clang-installapi -target x86_64-apple-macos10.12 \
-; RUN: -install_name Simple -current_version 3 -compatibility_version 2 \
+; RUN: -install_name Simple -dynamiclib \
+; RUN: -current_version 3 -compatibility_version 2 \
 ; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=INSTALL_NAME %s
 ; INSTALL_NAME: error: install_name does not match: 'Simple' (provided) vs '/System/Library/Frameworks/Simple.framework/Versions/A/Simple' (found)
 

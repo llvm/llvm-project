@@ -37,6 +37,7 @@ void create_detached_thread() {
   pthread_mutex_lock(&mutex);
   int res = pthread_create(&thread_id, &attr, func, arg);
   assert(res == 0);
+  pthread_attr_destroy(&attr);
 }
 
 int main() {

@@ -6,6 +6,8 @@
 ; RUN: llvm-readobj %t.a | FileCheck --check-prefix=ARM %s
 ; RUN: llvm-dlltool -m arm64 -d %s -l %t.a
 ; RUN: llvm-readobj %t.a | FileCheck --check-prefix=ARM64 %s
+; RUN: llvm-dlltool -m r4000 -d %s -l %t.a
+; RUN: llvm-readobj %t.a | FileCheck --check-prefix=MIPS %s
 
 LIBRARY test.dll
 EXPORTS
@@ -15,3 +17,4 @@ TestFunction
 ; X86_64: Format: COFF-x86-64
 ; ARM: Format: COFF-ARM{{$}}
 ; ARM64: Format: COFF-ARM64
+; MIPS: Format: COFF-MIPS

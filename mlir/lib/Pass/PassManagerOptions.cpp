@@ -61,7 +61,8 @@ struct PassManagerOptions {
   llvm::cl::opt<std::string> printTreeDir{
       "mlir-print-ir-tree-dir",
       llvm::cl::desc("When printing the IR before/after a pass, print file "
-                     "tree rooted at this directory")};
+                     "tree rooted at this directory. Use in conjunction with "
+                     "mlir-print-ir-* flags")};
 
   /// Add an IR printing instrumentation if enabled by any 'print-ir' flags.
   void addPrinterInstrumentation(PassManager &pm);

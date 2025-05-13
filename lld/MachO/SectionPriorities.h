@@ -11,6 +11,7 @@
 
 #include "InputSection.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 
 namespace lld::macho {
 
@@ -52,24 +53,20 @@ public:
   //
   // Each section gets assigned the priority of the highest-priority symbol it
   // contains.
-  llvm::DenseMap<const InputSection *, size_t> buildInputSectionPriorities();
+  llvm::DenseMap<const InputSection *, int> buildInputSectionPriorities();
 
 private:
-  // The symbol with the highest priority should be ordered first in the output
-  // section (modulo input section contiguity constraints). Using priority
-  // (highest first) instead of order (lowest first) has the convenient property
-  // that the default-constructed zero priority -- for symbols/sections without
-  // a user-defined order -- naturally ends up putting them at the end of the
-  // output.
+  // The symbol with the smallest priority should be ordered first in the output
+  // section (modulo input section contiguity constraints).
   struct SymbolPriorityEntry {
     // The priority given to a matching symbol, regardless of which object file
     // it originated from.
-    size_t anyObjectFile = 0;
+    int anyObjectFile = 0;
     // The priority given to a matching symbol from a particular object file.
-    llvm::DenseMap<llvm::StringRef, size_t> objectFiles;
+    llvm::DenseMap<llvm::StringRef, int> objectFiles;
   };
 
-  std::optional<size_t> getSymbolPriority(const Defined *sym);
+  std::optional<int> getSymbolPriority(const Defined *sym);
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
   llvm::MapVector<SectionPair, uint64_t> callGraphProfile;
 };

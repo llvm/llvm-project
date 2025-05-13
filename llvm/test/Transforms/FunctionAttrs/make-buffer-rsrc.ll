@@ -8,31 +8,31 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 define amdgpu_kernel void @test_make_buffer_rsrc(ptr %p, ptr %q) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; FNATTRS-LABEL: define {{[^@]+}}@test_make_buffer_rsrc
-; FNATTRS-SAME: (ptr nocapture readonly [[P:%.*]], ptr nocapture writeonly [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
-; FNATTRS-NEXT:    [[P_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr [[P]], i16 0, i32 4, i32 822243328)
-; FNATTRS-NEXT:    [[Q_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr [[Q]], i16 0, i32 4, i32 822243328)
+; FNATTRS-SAME: (ptr readonly captures(none) [[P:%.*]], ptr writeonly captures(none) [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
+; FNATTRS-NEXT:    [[P_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr [[P]], i16 0, i32 4, i32 822243328)
+; FNATTRS-NEXT:    [[Q_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr [[Q]], i16 0, i32 4, i32 822243328)
 ; FNATTRS-NEXT:    [[V:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) [[P_RSRC]], i32 0, i32 0, i32 0)
 ; FNATTRS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[V]], ptr addrspace(8) [[Q_RSRC]], i32 0, i32 0, i32 0)
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_make_buffer_rsrc
-; ATTRIBUTOR-SAME: (ptr nocapture nofree readonly [[P:%.*]], ptr nocapture nofree writeonly [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    [[P_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr [[P]], i16 0, i32 4, i32 822243328) #[[ATTR4:[0-9]+]]
-; ATTRIBUTOR-NEXT:    [[Q_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr [[Q]], i16 0, i32 4, i32 822243328) #[[ATTR4]]
-; ATTRIBUTOR-NEXT:    [[V:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) nocapture readonly [[P_RSRC]], i32 0, i32 0, i32 0) #[[ATTR5:[0-9]+]]
-; ATTRIBUTOR-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[V]], ptr addrspace(8) nocapture writeonly [[Q_RSRC]], i32 0, i32 0, i32 0) #[[ATTR6:[0-9]+]]
+; ATTRIBUTOR-SAME: (ptr nofree readonly captures(none) [[P:%.*]], ptr nofree writeonly captures(none) [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
+; ATTRIBUTOR-NEXT:    [[P_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr [[P]], i16 0, i32 4, i32 822243328) #[[ATTR4:[0-9]+]]
+; ATTRIBUTOR-NEXT:    [[Q_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr [[Q]], i16 0, i32 4, i32 822243328) #[[ATTR4]]
+; ATTRIBUTOR-NEXT:    [[V:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) readonly captures(none) [[P_RSRC]], i32 0, i32 0, i32 0) #[[ATTR5:[0-9]+]]
+; ATTRIBUTOR-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[V]], ptr addrspace(8) writeonly captures(none) [[Q_RSRC]], i32 0, i32 0, i32 0) #[[ATTR6:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
-  %p.rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr %p, i16 0, i32 4, i32 822243328)
-  %q.rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr %q, i16 0, i32 4, i32 822243328)
+  %p.rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %p, i16 0, i32 4, i32 822243328)
+  %q.rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %q, i16 0, i32 4, i32 822243328)
   %v = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) %p.rsrc, i32 0, i32 0, i32 0)
   call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 %v, ptr addrspace(8) %q.rsrc, i32 0, i32 0, i32 0)
   ret void
 }
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr readnone, i16, i32, i32) #0
+declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr readnone, i16, i32, i32) #0
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: read)
 declare i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) nocapture readonly, i32, i32, i32 immarg) #1

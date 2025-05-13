@@ -58,7 +58,7 @@ static gpu::GPUModuleOp genGPUModule(OpBuilder &builder, ModuleOp topModule) {
   for (auto op : topModule.getBodyRegion().getOps<gpu::GPUModuleOp>())
     return op; // existing
   markAsGPUContainer(topModule);
-  builder.setInsertionPointToStart(&topModule.getBodyRegion().front());
+  builder.setInsertionPointToStart(topModule.getBody());
   return builder.create<gpu::GPUModuleOp>(topModule->getLoc(),
                                           "sparse_kernels");
 }
@@ -75,7 +75,7 @@ static gpu::GPUFuncOp genGPUFunc(OpBuilder &builder, gpu::GPUModuleOp gpuModule,
     ("kernel" + Twine(kernelNumber++)).toStringRef(kernelName);
   } while (gpuModule.lookupSymbol(kernelName));
   // Then we insert a new kernel with given arguments into the module.
-  builder.setInsertionPointToStart(&gpuModule.getBodyRegion().front());
+  builder.setInsertionPointToStart(gpuModule.getBody());
   SmallVector<Type> argsTp;
   for (auto arg : args)
     argsTp.push_back(arg.getType());
@@ -1031,7 +1031,6 @@ static LogicalResult rewrite2To4SpMM(PatternRewriter &rewriter,
               .getAsyncToken();
   token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnC)
               .getAsyncToken();
-  SmallVector<Value> newDynamicSizes;
   token = genDeallocMemRef(rewriter, loc, buffer1, token);
   token = genDeallocMemRef(rewriter, loc, buffer2, token);
   token = genDeallocMemRef(rewriter, loc, buffer3, token);
@@ -1269,7 +1268,7 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
     AffineExpr i, j, k;
     bindDims(getContext(), i, j, k);
 
-    // TODO: more robust patterns, tranposed versions, more kernels,
+    // TODO: more robust patterns, transposed versions, more kernels,
     //       identify alpha and beta and pass them to the CUDA calls.
 
     // Recognize a SpMV kernel.

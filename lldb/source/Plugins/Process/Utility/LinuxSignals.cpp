@@ -8,7 +8,11 @@
 
 #include "LinuxSignals.h"
 
-#ifdef __linux__
+// mips-linux debugging is not supported and mips uses different numbers for
+// some signals (e.g. SIGBUS) on linux, so we skip the static checks below. The
+// definitions here can be used for debugging non-mips targets on a mips-hosted
+// lldb.
+#if defined(__linux__) && !defined(__mips__)
 #include <csignal>
 
 #ifndef SEGV_BNDERR
@@ -20,6 +24,9 @@
 #ifndef SEGV_MTESERR
 #define SEGV_MTESERR 9
 #endif
+#ifndef SEGV_CPERR
+#define SEGV_CPERR 10
+#endif
 
 #define ADD_SIGCODE(signal_name, signal_value, code_name, code_value, ...)     \
   static_assert(signal_name == signal_value,                                   \
@@ -30,7 +37,7 @@
 #else
 #define ADD_SIGCODE(signal_name, signal_value, code_name, code_value, ...)     \
   AddSignalCode(signal_value, code_value, __VA_ARGS__)
-#endif /* ifdef __linux__ */
+#endif /* if defined(__linux__) && !defined(__mips__) */
 
 using namespace lldb_private;
 
@@ -82,6 +89,7 @@ void LinuxSignals::Reset() {
   ADD_SIGCODE(SIGSEGV, 11, SEGV_BNDERR,  3, "failed address bounds checks", SignalCodePrintOption::Bounds);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MTEAERR, 8, "async tag check fault");
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MTESERR, 9, "sync tag check fault", SignalCodePrintOption::Address);
+  ADD_SIGCODE(SIGSEGV, 11, SEGV_CPERR,  10, "control protection fault");
   // Some platforms will occasionally send nonstandard spurious SI_KERNEL
   // codes. One way to get this is via unaligned SIMD loads. Treat it as invalid address.
   ADD_SIGCODE(SIGSEGV, 11, SI_KERNEL, 0x80, "invalid address", SignalCodePrintOption::Address);

@@ -132,8 +132,7 @@ public:
     CI->getFrontendOpts().DisableFree = false;
     CI->getPreprocessorOpts().addRemappedFile(
         FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
-    CompilerInstance Compiler;
-    Compiler.setInvocation(std::move(CI));
+    CompilerInstance Compiler(std::move(CI));
     Compiler.setDiagnostics(Diags.get());
     Compiler.setFileManager(FileMgr.get());
     Compiler.setSourceManager(SourceMgr.get());
@@ -374,9 +373,22 @@ TEST_F(TokenCollectorTest, Locations) {
 
   auto StartLoc = SourceMgr->getLocForStartOfFile(SourceMgr->getMainFileID());
   for (auto &R : Code.ranges()) {
-    EXPECT_THAT(Buffer.spelledTokenAt(StartLoc.getLocWithOffset(R.Begin)),
-                Pointee(RangeIs(R)));
+    EXPECT_THAT(
+        Buffer.spelledTokenContaining(StartLoc.getLocWithOffset(R.Begin)),
+        Pointee(RangeIs(R)));
   }
+}
+
+TEST_F(TokenCollectorTest, LocationInMiddleOfSpelledToken) {
+  llvm::Annotations Code(R"cpp(
+    int foo = [[baa^aar]];
+  )cpp");
+  recordTokens(Code.code());
+  // Check spelled tokens.
+  auto StartLoc = SourceMgr->getLocForStartOfFile(SourceMgr->getMainFileID());
+  EXPECT_THAT(
+      Buffer.spelledTokenContaining(StartLoc.getLocWithOffset(Code.point())),
+      Pointee(RangeIs(Code.range())));
 }
 
 TEST_F(TokenCollectorTest, MacroDirectives) {

@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-exceptions
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11}}
 
-// Prior to http://llvm.org/D123580, there was a bug with how the max_size()
-// was calculated. That was inlined into some functions in the dylib, which leads
-// to failures when running this test against an older system dylib.
-// XFAIL: stdlib=apple-libc++ && target=arm64-apple-macosx{{11.0|12.0}}
+// After changing the alignment of the allocated pointer from 16 to 8, the exception
+// thrown is no longer `bad_alloc` but instead length_error on systems using new
+// headers but a dylib that doesn't contain 04ce0ba.
+//
+// XFAIL: using-built-library-before-llvm-19
 
 // <string>
 

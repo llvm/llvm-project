@@ -18,8 +18,8 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
-#include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/identity.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
@@ -51,15 +51,15 @@ namespace llvm {
 
   /// An individual mapping from virtual register number to SUnit.
   struct VReg2SUnit {
-    unsigned VirtReg;
+    Register VirtReg;
     LaneBitmask LaneMask;
     SUnit *SU;
 
-    VReg2SUnit(unsigned VReg, LaneBitmask LaneMask, SUnit *SU)
+    VReg2SUnit(Register VReg, LaneBitmask LaneMask, SUnit *SU)
       : VirtReg(VReg), LaneMask(LaneMask), SU(SU) {}
 
     unsigned getSparseSetIndex() const {
-      return Register::virtReg2Index(VirtReg);
+      return VirtReg.virtRegIndex();
     }
   };
 
@@ -67,7 +67,7 @@ namespace llvm {
   struct VReg2SUnitOperIdx : public VReg2SUnit {
     unsigned OperandIndex;
 
-    VReg2SUnitOperIdx(unsigned VReg, LaneBitmask LaneMask,
+    VReg2SUnitOperIdx(Register VReg, LaneBitmask LaneMask,
                       unsigned OperandIndex, SUnit *SU)
       : VReg2SUnit(VReg, LaneMask, SU), OperandIndex(OperandIndex) {}
   };
@@ -90,12 +90,6 @@ namespace llvm {
   /// without any frees.
   using RegUnit2SUnitsMap =
       SparseMultiSet<PhysRegSUOper, identity<unsigned>, uint16_t>;
-
-  /// Use SparseSet as a SparseMap by relying on the fact that it never
-  /// compares ValueT's, only unsigned keys. This allows the set to be cleared
-  /// between scheduling regions in constant time as long as ValueT does not
-  /// require a destructor.
-  using VReg2SUnitMap = SparseSet<VReg2SUnit, VirtReg2IndexFunctor>;
 
   /// Track local uses of virtual registers. These uses are gathered by the DAG
   /// builder and may be consulted by the scheduler to avoid iterating an entire
@@ -129,6 +123,9 @@ namespace llvm {
     /// True if the DAG builder should remove kill flags (in preparation for
     /// rescheduling).
     bool RemoveKillFlags;
+
+    /// True if regions with a single MI should be scheduled.
+    bool ScheduleSingleMIRegions = false;
 
     /// The standard DAG builder does not normally include terminators as DAG
     /// nodes because it does not create the necessary dependencies to prevent
@@ -176,7 +173,7 @@ namespace llvm {
     /// Tracks the last instructions in this region using each virtual register.
     VReg2SUnitOperIdxMultiMap CurrentVRegUses;
 
-    AAResults *AAForDep = nullptr;
+    mutable std::optional<BatchAAResults> AAForDep;
 
     /// Remember a generic side-effecting instruction as we proceed.
     /// No other SU ever gets scheduled around it (except in the special
@@ -207,6 +204,13 @@ namespace llvm {
     /// A map from ValueType to SUList, used during DAG construction, as
     /// a means of remembering which SUs depend on which memory locations.
     class Value2SUsMap;
+
+    /// Returns a (possibly null) pointer to the current BatchAAResults.
+    BatchAAResults *getAAForDep() const {
+      if (AAForDep.has_value())
+        return &AAForDep.value();
+      return nullptr;
+    }
 
     /// Reduces maps in FIFO order, by N SUs. This is better than turning
     /// every Nth memory SU into BarrierChain in buildSchedGraph(), since
@@ -285,6 +289,11 @@ namespace llvm {
     /// IsReachable - Checks if SU is reachable from TargetSU.
     bool IsReachable(SUnit *SU, SUnit *TargetSU) {
       return Topo.IsReachable(SU, TargetSU);
+    }
+
+    /// Whether regions with a single MI should be scheduled.
+    bool shouldScheduleSingleMIRegions() const {
+      return ScheduleSingleMIRegions;
     }
 
     /// Returns an iterator to the top of the current scheduling region.

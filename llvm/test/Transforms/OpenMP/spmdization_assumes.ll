@@ -28,7 +28,7 @@ target triple = "nvptx64"
 ; CHECK: @__omp_offloading_fd02_404433c2_main_l5_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; CHECK: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ;.
-define weak void @__omp_offloading_fd02_404433c2_main_l5(ptr %dyn, ptr nonnull align 8 dereferenceable(8) %x) local_unnamed_addr #0 {
+define weak ptx_kernel void @__omp_offloading_fd02_404433c2_main_l5(ptr %dyn, ptr nonnull align 8 dereferenceable(8) %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_fd02_404433c2_main_l5
 ; CHECK-SAME: (ptr [[DYN:%.*]], ptr nonnull align 8 dereferenceable(8) [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -47,7 +47,7 @@ define weak void @__omp_offloading_fd02_404433c2_main_l5(ptr %dyn, ptr nonnull a
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
 ; CHECK:       region.guarded:
-; CHECK-NEXT:    store double [[CALL_I]], ptr [[X]], align 8, !tbaa [[TBAA8:![0-9]+]]
+; CHECK-NEXT:    store double [[CALL_I]], ptr [[X]], align 8, !tbaa [[TBAA7:![0-9]+]]
 ; CHECK-NEXT:    br label [[REGION_GUARDED_END:%.*]]
 ; CHECK:       region.guarded.end:
 ; CHECK-NEXT:    br label [[REGION_BARRIER]]
@@ -82,7 +82,7 @@ declare i32 @__kmpc_target_init(ptr, ptr) local_unnamed_addr
 ; Function Attrs: alwaysinline mustprogress nofree norecurse nosync nounwind readnone willreturn
 define internal void @__omp_outlined__(ptr noalias nocapture %.global_tid., ptr noalias nocapture %.bound_tid.) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__
-; CHECK-SAME: (ptr noalias nocapture [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr noalias captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias captures(none) [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;
@@ -127,12 +127,10 @@ attributes #5 = { convergent "frame-pointer"="all" "no-trapping-math"="true" "st
 attributes #6 = { convergent nounwind "llvm.assume"="ompx_spmd_amenable" }
 
 !omp_offload.info = !{!0}
-!nvvm.annotations = !{!1}
 !llvm.module.flags = !{!2, !3, !4, !5, !6}
 !llvm.ident = !{!7}
 
 !0 = !{i32 0, i32 64770, i32 1078211522, !"main", i32 5, i32 0}
-!1 = !{ptr @__omp_offloading_fd02_404433c2_main_l5, !"kernel", i32 1}
 !2 = !{i32 1, !"wchar_size", i32 4}
 !3 = !{i32 7, !"openmp", i32 50}
 !4 = !{i32 7, !"openmp-device", i32 50}
@@ -154,15 +152,14 @@ attributes #6 = { convergent nounwind "llvm.assume"="ompx_spmd_amenable" }
 ; CHECK: attributes #[[ATTR7]] = { convergent nounwind "llvm.assume"="ompx_spmd_amenable" }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 64770, i32 1078211522, !"main", i32 5, i32 0}
-; CHECK: [[META1:![0-9]+]] = !{ptr @__omp_offloading_fd02_404433c2_main_l5, !"kernel", i32 1}
-; CHECK: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; CHECK: [[META3:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; CHECK: [[META4:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META5:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
-; CHECK: [[META6:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
-; CHECK: [[META7:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-; CHECK: [[TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
-; CHECK: [[META9]] = !{!"double", [[META10:![0-9]+]], i64 0}
-; CHECK: [[META10]] = !{!"omnipotent char", [[META11:![0-9]+]], i64 0}
-; CHECK: [[META11]] = !{!"Simple C/C++ TBAA"}
+; CHECK: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; CHECK: [[META2:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; CHECK: [[META3:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; CHECK: [[META4:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
+; CHECK: [[META5:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
+; CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+; CHECK: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
+; CHECK: [[META8]] = !{!"double", [[META9:![0-9]+]], i64 0}
+; CHECK: [[META9]] = !{!"omnipotent char", [[META10:![0-9]+]], i64 0}
+; CHECK: [[META10]] = !{!"Simple C/C++ TBAA"}
 ;.

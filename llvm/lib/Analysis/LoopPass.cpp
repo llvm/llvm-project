@@ -16,6 +16,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/PrintPasses.h"
@@ -59,7 +60,7 @@ public:
 };
 
 char PrintLoopPassWrapper::ID = 0;
-}
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // LPPassManager
@@ -387,9 +388,7 @@ bool LoopPass::skipLoop(const Loop *L) const {
   return false;
 }
 
-LCSSAVerificationPass::LCSSAVerificationPass() : FunctionPass(ID) {
-  initializeLCSSAVerificationPassPass(*PassRegistry::getPassRegistry());
-}
+LCSSAVerificationPass::LCSSAVerificationPass() : FunctionPass(ID) {}
 
 char LCSSAVerificationPass::ID = 0;
 INITIALIZE_PASS(LCSSAVerificationPass, "lcssa-verification", "LCSSA Verifier",

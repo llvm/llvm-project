@@ -180,6 +180,8 @@ inline constexpr bool IsValidFortranTokenCharacter(char ch) {
   case '>':
   case '[':
   case ']':
+  case '{': // Used in OpenMP context selector specification
+  case '}': //
     return true;
   default:
     return IsLegalIdentifierStart(ch) || IsDecimalDigit(ch);

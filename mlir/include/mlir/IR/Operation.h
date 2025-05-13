@@ -322,6 +322,11 @@ public:
   void print(raw_ostream &os, AsmState &state);
   void dump();
 
+  // Dump pretty printed IR. This method is helpful for better readability if
+  // the Operation is not verified because it won't disable custom printers to
+  // fall back to the generic one.
+  LLVM_DUMP_METHOD void dumpPretty();
+
   //===--------------------------------------------------------------------===//
   // Operands
   //===--------------------------------------------------------------------===//
@@ -674,8 +679,7 @@ public:
     if (numRegions == 0)
       return MutableArrayRef<Region>();
 
-    auto *regions = getTrailingObjects<Region>();
-    return {regions, numRegions};
+    return getTrailingObjects<Region>(numRegions);
   }
 
   /// Returns the region held by this operation at position 'index'.
@@ -689,7 +693,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   MutableArrayRef<BlockOperand> getBlockOperands() {
-    return {getTrailingObjects<BlockOperand>(), numSuccs};
+    return getTrailingObjects<BlockOperand>(numSuccs);
   }
 
   // Successor iteration.

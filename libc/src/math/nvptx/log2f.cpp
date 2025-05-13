@@ -10,9 +10,10 @@
 #include "src/__support/common.h"
 
 #include "declarations.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, log2f, (float x)) { return __nv_log2f(x); }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

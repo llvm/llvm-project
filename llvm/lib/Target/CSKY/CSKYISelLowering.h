@@ -14,30 +14,13 @@
 #ifndef LLVM_LIB_TARGET_CSKY_CSKYISELLOWERING_H
 #define LLVM_LIB_TARGET_CSKY_CSKYISELLOWERING_H
 
+#include "CSKYSelectionDAGInfo.h"
 #include "MCTargetDesc/CSKYBaseInfo.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/TargetLowering.h"
 
 namespace llvm {
 class CSKYSubtarget;
-
-namespace CSKYISD {
-enum NodeType : unsigned {
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  NIE,
-  NIR,
-  RET,
-  CALL,
-  CALLReg,
-  TAIL,
-  TAILReg,
-  LOAD_ADDR,
-  // i32, i32 <-- f64
-  BITCAST_TO_LOHI,
-  // f64 < -- i32, i32
-  BITCAST_FROM_LOHI,
-};
-}
 
 class CSKYTargetLowering : public TargetLowering {
   const CSKYSubtarget &Subtarget;
@@ -61,7 +44,7 @@ private:
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -70,8 +53,6 @@ private:
 
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
-
-  const char *getTargetNodeName(unsigned Opcode) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.

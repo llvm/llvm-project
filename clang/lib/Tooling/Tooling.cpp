@@ -198,7 +198,7 @@ getSyntaxOnlyToolArgs(const Twine &ToolName,
   std::vector<std::string> Args;
   Args.push_back(ToolName.str());
   Args.push_back("-fsyntax-only");
-  Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
+  llvm::append_range(Args, ExtraArgs);
   Args.push_back(FileName.str());
   return Args;
 }
@@ -387,7 +387,8 @@ bool ToolInvocation::run() {
   TextDiagnosticPrinter DiagnosticPrinter(llvm::errs(), DiagOpts);
   IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics =
       CompilerInstance::createDiagnostics(
-          &*DiagOpts, DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
+          Files->getVirtualFileSystem(), &*DiagOpts,
+          DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
   // Although `Diagnostics` are used only for command-line parsing, the custom
   // `DiagConsumer` might expect a `SourceManager` to be present.
   SourceManager SrcMgr(*Diagnostics, *Files);
@@ -446,8 +447,7 @@ bool FrontendActionFactory::runInvocation(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     DiagnosticConsumer *DiagConsumer) {
   // Create a compiler instance to handle the actual work.
-  CompilerInstance Compiler(std::move(PCHContainerOps));
-  Compiler.setInvocation(std::move(Invocation));
+  CompilerInstance Compiler(std::move(Invocation), std::move(PCHContainerOps));
   Compiler.setFileManager(Files);
 
   // The FrontendAction can have lifetime requirements for Compiler or its
@@ -456,7 +456,8 @@ bool FrontendActionFactory::runInvocation(
   std::unique_ptr<FrontendAction> ScopedToolAction(create());
 
   // Create the compiler's actual diagnostics engine.
-  Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+  Compiler.createDiagnostics(Files->getVirtualFileSystem(), DiagConsumer,
+                             /*ShouldOwnClient=*/false);
   if (!Compiler.hasDiagnostics())
     return false;
 
@@ -652,7 +653,8 @@ public:
                      DiagnosticConsumer *DiagConsumer) override {
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCompilerInvocation(
         Invocation, std::move(PCHContainerOps),
-        CompilerInstance::createDiagnostics(&Invocation->getDiagnosticOpts(),
+        CompilerInstance::createDiagnostics(Files->getVirtualFileSystem(),
+                                            &Invocation->getDiagnosticOpts(),
                                             DiagConsumer,
                                             /*ShouldOwnClient=*/false),
         Files);
@@ -689,11 +691,12 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     StringRef Code, const std::vector<std::string> &Args, StringRef FileName,
     StringRef ToolName, std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     ArgumentsAdjuster Adjuster, const FileContentMappings &VirtualMappedFiles,
-    DiagnosticConsumer *DiagConsumer) {
+    DiagnosticConsumer *DiagConsumer,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
   ASTBuilderAction Action(ASTs);
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
-      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+      new llvm::vfs::OverlayFileSystem(std::move(BaseFS)));
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);

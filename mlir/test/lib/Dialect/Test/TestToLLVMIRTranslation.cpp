@@ -22,6 +22,7 @@
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 
 using namespace mlir;
 
@@ -122,6 +123,7 @@ void registerTestToLLVMIR() {
         if (!llvmModule)
           return failure();
 
+        llvmModule->removeDebugIntrinsicDeclarations();
         llvmModule->print(output, nullptr);
         return success();
       },

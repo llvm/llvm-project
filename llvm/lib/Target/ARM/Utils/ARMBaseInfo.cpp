@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "ARMBaseInfo.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 
 using namespace llvm;
 namespace llvm {
@@ -64,13 +62,13 @@ const MClassSysReg *lookupMClassSysRegBy8bitSYSmValue(unsigned SYSm) {
   return ARMSysReg::lookupMClassSysRegByM2M3Encoding8((1<<8)|(SYSm & 0xFF));
 }
 
-#define GET_MCLASSSYSREG_IMPL
+#define GET_MClassSysRegsList_IMPL
 #include "ARMGenSystemRegister.inc"
 
 } // end namespace ARMSysReg
 
 namespace ARMBankedReg {
-#define GET_BANKEDREG_IMPL
+#define GET_BankedRegsList_IMPL
 #include "ARMGenSystemRegister.inc"
 } // end namespce ARMSysReg
 } // end namespace llvm

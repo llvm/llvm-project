@@ -67,7 +67,7 @@ def : Pat<(i64 0), (COPY (i64 G0))>,
 // The ALU instructions want their simm13 operands as i32 immediates.
 // FIXME: This is no longer true, they are now pointer-sized.
 def as_i32imm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 def : Pat<(i64 simm13:$val), (ORri (i64 G0), (as_i32imm $val))>;
 def : Pat<(i64 SETHIimm:$val), (SETHIi (HI22 $val))>;
@@ -91,8 +91,8 @@ def HIX22 : SDNodeXForm<imm, [{
 }]>;
 // Bits 0-9 with ones in bits 10-31. Same as assembler's %lox.
 def LOX10 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(~(~N->getZExtValue() & 0x3ff), SDLoc(N),
-                                   MVT::i32);
+  return CurDAG->getSignedTargetConstant(~(~N->getZExtValue() & 0x3ff),
+                                         SDLoc(N), MVT::i32);
 }]>;
 def : Pat<(i64 nimm33:$val), (XORri (SETHIi (HIX22 $val)), (LOX10 $val))>,
       Requires<[Is64Bit]>;
@@ -157,9 +157,11 @@ def : Pat<(and i64:$lhs, (not i64:$rhs)), (ANDNrr $lhs, $rhs)>;
 def : Pat<(or  i64:$lhs, (not i64:$rhs)), (ORNrr  $lhs, $rhs)>;
 def : Pat<(not (xor i64:$lhs, i64:$rhs)), (XNORrr $lhs, $rhs)>;
 
+def : Pat<(addc i64:$lhs, i64:$rhs), (ADDCCrr $lhs, $rhs)>, Requires<[HasVIS3]>;
 def : Pat<(add i64:$lhs, i64:$rhs), (ADDrr $lhs, $rhs)>;
 def : Pat<(sub i64:$lhs, i64:$rhs), (SUBrr $lhs, $rhs)>;
 
+def : Pat<(addc i64:$lhs, (i64 simm13:$rhs)), (ADDCCri $lhs, imm:$rhs)>, Requires<[HasVIS3]>;
 def : Pat<(add i64:$lhs, (i64 simm13:$rhs)), (ADDri $lhs, imm:$rhs)>;
 def : Pat<(sub i64:$lhs, (i64 simm13:$rhs)), (SUBri $lhs, imm:$rhs)>;
 
@@ -178,37 +180,13 @@ def : Pat<(i64 (ctpop i64:$src)), (POPCrr $src)>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [Is64Bit] in {
-
-def MULXrr : F3_1<2, 0b001001,
-                  (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2),
-                  "mulx $rs1, $rs2, $rd",
-                  [(set i64:$rd, (mul i64:$rs1, i64:$rs2))]>;
-def MULXri : F3_2<2, 0b001001,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, i64imm:$simm13),
-                  "mulx $rs1, $simm13, $rd",
-                  [(set i64:$rd, (mul i64:$rs1, (i64 simm13:$simm13)))]>;
+defm MULX    : F3_12<"mulx", 0b001001, mul, I64Regs, i64, i64imm>;
 
 // Division can trap.
 let hasSideEffects = 1 in {
-def SDIVXrr : F3_1<2, 0b101101,
-                   (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2),
-                   "sdivx $rs1, $rs2, $rd",
-                   [(set i64:$rd, (sdiv i64:$rs1, i64:$rs2))]>;
-def SDIVXri : F3_2<2, 0b101101,
-                   (outs IntRegs:$rd), (ins IntRegs:$rs1, i64imm:$simm13),
-                   "sdivx $rs1, $simm13, $rd",
-                   [(set i64:$rd, (sdiv i64:$rs1, (i64 simm13:$simm13)))]>;
-
-def UDIVXrr : F3_1<2, 0b001101,
-                   (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2),
-                   "udivx $rs1, $rs2, $rd",
-                   [(set i64:$rd, (udiv i64:$rs1, i64:$rs2))]>;
-def UDIVXri : F3_2<2, 0b001101,
-                   (outs IntRegs:$rd), (ins IntRegs:$rs1, i64imm:$simm13),
-                   "udivx $rs1, $simm13, $rd",
-                   [(set i64:$rd, (udiv i64:$rs1, (i64 simm13:$simm13)))]>;
+defm SDIVX    : F3_12<"sdivx", 0b101101, sdiv, I64Regs, i64, i64imm>;
+defm UDIVX    : F3_12<"udivx", 0b001101, udiv, I64Regs, i64, i64imm>;
 } // hasSideEffects = 1
-
 } // Predicates = [Is64Bit]
 
 
@@ -470,15 +448,15 @@ let Predicates = [Is64Bit, HasV9], Constraints = "$swap = $rd" in {
 
 let Predicates = [Is64Bit] in {
 
-// atomic_load_64 addr -> load addr
-def : Pat<(i64 (atomic_load_64 ADDRrr:$src)), (LDXrr ADDRrr:$src)>;
-def : Pat<(i64 (atomic_load_64 ADDRri:$src)), (LDXri ADDRri:$src)>;
+// atomic_load_nonext_64 addr -> load addr
+def : Pat<(i64 (atomic_load_nonext_64 ADDRrr:$src)), (LDXrr ADDRrr:$src)>;
+def : Pat<(i64 (atomic_load_nonext_64 ADDRri:$src)), (LDXri ADDRri:$src)>;
 
 // atomic_store_64 val, addr -> store val, addr
 def : Pat<(atomic_store_64 i64:$val, ADDRrr:$dst), (STXrr ADDRrr:$dst, $val)>;
 def : Pat<(atomic_store_64 i64:$val, ADDRri:$dst), (STXri ADDRri:$dst, $val)>;
 
-def : Pat<(atomic_cmp_swap_64 i64:$rs1, i64:$rs2, i64:$swap),
+def : Pat<(atomic_cmp_swap_i64 i64:$rs1, i64:$rs2, i64:$swap),
           (CASXArr $rs1, $rs2, $swap, 0x80)>;
 
 } // Predicates = [Is64Bit]

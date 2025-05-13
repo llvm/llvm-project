@@ -5,6 +5,9 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-freebsd %s -o %t.o
 # RUN: ld.lld --icf=all %t.o -o /dev/null --print-icf-sections 2>&1 | FileCheck %s
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o --crel
+# RUN: ld.lld --icf=all %t.o -o /dev/null --print-icf-sections 2>&1 | FileCheck %s
+
 # Checks that ICF does not merge 2 sections the offset of
 # the relocations of which differ.
 

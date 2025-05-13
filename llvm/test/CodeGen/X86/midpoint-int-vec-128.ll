@@ -848,19 +848,19 @@ define <2 x i64> @vec128_i64_signed_reg_reg(<2 x i64> %a1, <2 x i64> %a2) nounwi
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [1,1]
 ; SSE2-NEXT:    por %xmm2, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm3
-; SSE2-NEXT:    psubq %xmm3, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    movdqa %xmm2, %xmm4
+; SSE2-NEXT:    psubq %xmm3, %xmm4
+; SSE2-NEXT:    movdqa %xmm4, %xmm3
 ; SSE2-NEXT:    psrlq $1, %xmm3
-; SSE2-NEXT:    psrlq $33, %xmm2
-; SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    psrlq $32, %xmm4
-; SSE2-NEXT:    pmuludq %xmm3, %xmm4
-; SSE2-NEXT:    paddq %xmm2, %xmm4
-; SSE2-NEXT:    psllq $32, %xmm4
+; SSE2-NEXT:    psrlq $33, %xmm4
+; SSE2-NEXT:    pmuludq %xmm1, %xmm4
+; SSE2-NEXT:    psrlq $32, %xmm2
+; SSE2-NEXT:    pmuludq %xmm3, %xmm2
+; SSE2-NEXT:    paddq %xmm4, %xmm2
+; SSE2-NEXT:    psllq $32, %xmm2
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm3
 ; SSE2-NEXT:    paddq %xmm3, %xmm0
-; SSE2-NEXT:    paddq %xmm4, %xmm0
+; SSE2-NEXT:    paddq %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: vec128_i64_signed_reg_reg:
@@ -881,19 +881,19 @@ define <2 x i64> @vec128_i64_signed_reg_reg(<2 x i64> %a1, <2 x i64> %a2) nounwi
 ; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm1 = [1,1]
 ; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    pxor %xmm2, %xmm3
-; SSE41-NEXT:    psubq %xmm3, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm3
+; SSE41-NEXT:    movdqa %xmm2, %xmm4
+; SSE41-NEXT:    psubq %xmm3, %xmm4
+; SSE41-NEXT:    movdqa %xmm4, %xmm3
 ; SSE41-NEXT:    psrlq $1, %xmm3
-; SSE41-NEXT:    psrlq $33, %xmm2
-; SSE41-NEXT:    pmuludq %xmm1, %xmm2
-; SSE41-NEXT:    movdqa %xmm1, %xmm4
-; SSE41-NEXT:    psrlq $32, %xmm4
-; SSE41-NEXT:    pmuludq %xmm3, %xmm4
-; SSE41-NEXT:    paddq %xmm2, %xmm4
-; SSE41-NEXT:    psllq $32, %xmm4
+; SSE41-NEXT:    psrlq $33, %xmm4
+; SSE41-NEXT:    pmuludq %xmm1, %xmm4
+; SSE41-NEXT:    psrlq $32, %xmm2
+; SSE41-NEXT:    pmuludq %xmm3, %xmm2
+; SSE41-NEXT:    paddq %xmm4, %xmm2
+; SSE41-NEXT:    psllq $32, %xmm2
 ; SSE41-NEXT:    pmuludq %xmm1, %xmm3
 ; SSE41-NEXT:    paddq %xmm3, %xmm0
-; SSE41-NEXT:    paddq %xmm4, %xmm0
+; SSE41-NEXT:    paddq %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vec128_i64_signed_reg_reg:
@@ -903,14 +903,14 @@ define <2 x i64> @vec128_i64_signed_reg_reg(<2 x i64> %a1, <2 x i64> %a2) nounwi
 ; AVX-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
 ; AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpsrlq $1, %xmm1, %xmm2
+; AVX-NEXT:    vpsrlq $1, %xmm1, %xmm4
 ; AVX-NEXT:    vpsrlq $33, %xmm1, %xmm1
 ; AVX-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; AVX-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; AVX-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; AVX-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
+; AVX-NEXT:    vpsrlq $32, %xmm2, %xmm2
+; AVX-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
+; AVX-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; AVX-NEXT:    vpmuludq %xmm3, %xmm4, %xmm2
 ; AVX-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -922,14 +922,14 @@ define <2 x i64> @vec128_i64_signed_reg_reg(<2 x i64> %a1, <2 x i64> %a2) nounwi
 ; XOP-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
 ; XOP-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; XOP-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
-; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm2
+; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm4
 ; XOP-NEXT:    vpsrlq $33, %xmm1, %xmm1
 ; XOP-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; XOP-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; XOP-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; XOP-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
+; XOP-NEXT:    vpsrlq $32, %xmm2, %xmm2
+; XOP-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
+; XOP-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; XOP-NEXT:    vpsllq $32, %xmm1, %xmm1
-; XOP-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; XOP-NEXT:    vpmuludq %xmm3, %xmm4, %xmm2
 ; XOP-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; XOP-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
@@ -1023,19 +1023,19 @@ define <2 x i64> @vec128_i64_unsigned_reg_reg(<2 x i64> %a1, <2 x i64> %a2) noun
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [1,1]
 ; SSE2-NEXT:    por %xmm2, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm3
-; SSE2-NEXT:    psubq %xmm3, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    movdqa %xmm2, %xmm4
+; SSE2-NEXT:    psubq %xmm3, %xmm4
+; SSE2-NEXT:    movdqa %xmm4, %xmm3
 ; SSE2-NEXT:    psrlq $1, %xmm3
-; SSE2-NEXT:    psrlq $33, %xmm2
-; SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    psrlq $32, %xmm4
-; SSE2-NEXT:    pmuludq %xmm3, %xmm4
-; SSE2-NEXT:    paddq %xmm2, %xmm4
-; SSE2-NEXT:    psllq $32, %xmm4
+; SSE2-NEXT:    psrlq $33, %xmm4
+; SSE2-NEXT:    pmuludq %xmm1, %xmm4
+; SSE2-NEXT:    psrlq $32, %xmm2
+; SSE2-NEXT:    pmuludq %xmm3, %xmm2
+; SSE2-NEXT:    paddq %xmm4, %xmm2
+; SSE2-NEXT:    psllq $32, %xmm2
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm3
 ; SSE2-NEXT:    paddq %xmm3, %xmm0
-; SSE2-NEXT:    paddq %xmm4, %xmm0
+; SSE2-NEXT:    paddq %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: vec128_i64_unsigned_reg_reg:
@@ -1056,19 +1056,19 @@ define <2 x i64> @vec128_i64_unsigned_reg_reg(<2 x i64> %a1, <2 x i64> %a2) noun
 ; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm1 = [1,1]
 ; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    pxor %xmm2, %xmm3
-; SSE41-NEXT:    psubq %xmm3, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm3
+; SSE41-NEXT:    movdqa %xmm2, %xmm4
+; SSE41-NEXT:    psubq %xmm3, %xmm4
+; SSE41-NEXT:    movdqa %xmm4, %xmm3
 ; SSE41-NEXT:    psrlq $1, %xmm3
-; SSE41-NEXT:    psrlq $33, %xmm2
-; SSE41-NEXT:    pmuludq %xmm1, %xmm2
-; SSE41-NEXT:    movdqa %xmm1, %xmm4
-; SSE41-NEXT:    psrlq $32, %xmm4
-; SSE41-NEXT:    pmuludq %xmm3, %xmm4
-; SSE41-NEXT:    paddq %xmm2, %xmm4
-; SSE41-NEXT:    psllq $32, %xmm4
+; SSE41-NEXT:    psrlq $33, %xmm4
+; SSE41-NEXT:    pmuludq %xmm1, %xmm4
+; SSE41-NEXT:    psrlq $32, %xmm2
+; SSE41-NEXT:    pmuludq %xmm3, %xmm2
+; SSE41-NEXT:    paddq %xmm4, %xmm2
+; SSE41-NEXT:    psllq $32, %xmm2
 ; SSE41-NEXT:    pmuludq %xmm1, %xmm3
 ; SSE41-NEXT:    paddq %xmm3, %xmm0
-; SSE41-NEXT:    paddq %xmm4, %xmm0
+; SSE41-NEXT:    paddq %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: vec128_i64_unsigned_reg_reg:
@@ -1082,14 +1082,14 @@ define <2 x i64> @vec128_i64_unsigned_reg_reg(<2 x i64> %a1, <2 x i64> %a2) noun
 ; AVX1-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
 ; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm2
+; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm4
 ; AVX1-NEXT:    vpsrlq $33, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; AVX1-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; AVX1-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vpsrlq $32, %xmm2, %xmm2
+; AVX1-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX1-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpmuludq %xmm3, %xmm4, %xmm2
 ; AVX1-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -1104,14 +1104,14 @@ define <2 x i64> @vec128_i64_unsigned_reg_reg(<2 x i64> %a1, <2 x i64> %a2) noun
 ; AVX2-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
-; AVX2-NEXT:    vpsrlq $1, %xmm1, %xmm2
+; AVX2-NEXT:    vpsrlq $1, %xmm1, %xmm4
 ; AVX2-NEXT:    vpsrlq $33, %xmm1, %xmm1
 ; AVX2-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; AVX2-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; AVX2-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; AVX2-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
+; AVX2-NEXT:    vpsrlq $32, %xmm2, %xmm2
+; AVX2-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
+; AVX2-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX2-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vpmuludq %xmm3, %xmm4, %xmm2
 ; AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
@@ -1123,14 +1123,14 @@ define <2 x i64> @vec128_i64_unsigned_reg_reg(<2 x i64> %a1, <2 x i64> %a2) noun
 ; XOP-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
 ; XOP-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; XOP-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
-; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm2
+; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm4
 ; XOP-NEXT:    vpsrlq $33, %xmm1, %xmm1
 ; XOP-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; XOP-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; XOP-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; XOP-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
+; XOP-NEXT:    vpsrlq $32, %xmm2, %xmm2
+; XOP-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
+; XOP-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; XOP-NEXT:    vpsllq $32, %xmm1, %xmm1
-; XOP-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; XOP-NEXT:    vpmuludq %xmm3, %xmm4, %xmm2
 ; XOP-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; XOP-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
@@ -1227,19 +1227,19 @@ define <2 x i64> @vec128_i64_signed_mem_reg(ptr %a1_addr, <2 x i64> %a2) nounwin
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1,1]
 ; SSE2-NEXT:    por %xmm2, %xmm4
 ; SSE2-NEXT:    pxor %xmm2, %xmm3
-; SSE2-NEXT:    psubq %xmm3, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psubq %xmm3, %xmm5
+; SSE2-NEXT:    movdqa %xmm5, %xmm0
 ; SSE2-NEXT:    psrlq $1, %xmm0
-; SSE2-NEXT:    psrlq $33, %xmm2
-; SSE2-NEXT:    pmuludq %xmm4, %xmm2
-; SSE2-NEXT:    movdqa %xmm4, %xmm3
-; SSE2-NEXT:    psrlq $32, %xmm3
-; SSE2-NEXT:    pmuludq %xmm0, %xmm3
-; SSE2-NEXT:    paddq %xmm2, %xmm3
-; SSE2-NEXT:    psllq $32, %xmm3
+; SSE2-NEXT:    psrlq $33, %xmm5
+; SSE2-NEXT:    pmuludq %xmm4, %xmm5
+; SSE2-NEXT:    psrlq $32, %xmm2
+; SSE2-NEXT:    pmuludq %xmm0, %xmm2
+; SSE2-NEXT:    paddq %xmm5, %xmm2
+; SSE2-NEXT:    psllq $32, %xmm2
 ; SSE2-NEXT:    pmuludq %xmm4, %xmm0
 ; SSE2-NEXT:    paddq %xmm1, %xmm0
-; SSE2-NEXT:    paddq %xmm3, %xmm0
+; SSE2-NEXT:    paddq %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: vec128_i64_signed_mem_reg:
@@ -1261,19 +1261,19 @@ define <2 x i64> @vec128_i64_signed_mem_reg(ptr %a1_addr, <2 x i64> %a2) nounwin
 ; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm4 = [1,1]
 ; SSE41-NEXT:    por %xmm2, %xmm4
 ; SSE41-NEXT:    pxor %xmm2, %xmm3
-; SSE41-NEXT:    psubq %xmm3, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    movdqa %xmm2, %xmm5
+; SSE41-NEXT:    psubq %xmm3, %xmm5
+; SSE41-NEXT:    movdqa %xmm5, %xmm0
 ; SSE41-NEXT:    psrlq $1, %xmm0
-; SSE41-NEXT:    psrlq $33, %xmm2
-; SSE41-NEXT:    pmuludq %xmm4, %xmm2
-; SSE41-NEXT:    movdqa %xmm4, %xmm3
-; SSE41-NEXT:    psrlq $32, %xmm3
-; SSE41-NEXT:    pmuludq %xmm0, %xmm3
-; SSE41-NEXT:    paddq %xmm2, %xmm3
-; SSE41-NEXT:    psllq $32, %xmm3
+; SSE41-NEXT:    psrlq $33, %xmm5
+; SSE41-NEXT:    pmuludq %xmm4, %xmm5
+; SSE41-NEXT:    psrlq $32, %xmm2
+; SSE41-NEXT:    pmuludq %xmm0, %xmm2
+; SSE41-NEXT:    paddq %xmm5, %xmm2
+; SSE41-NEXT:    psllq $32, %xmm2
 ; SSE41-NEXT:    pmuludq %xmm4, %xmm0
 ; SSE41-NEXT:    paddq %xmm1, %xmm0
-; SSE41-NEXT:    paddq %xmm3, %xmm0
+; SSE41-NEXT:    paddq %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vec128_i64_signed_mem_reg:
@@ -1284,14 +1284,14 @@ define <2 x i64> @vec128_i64_signed_mem_reg(ptr %a1_addr, <2 x i64> %a2) nounwin
 ; AVX-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpsubq %xmm0, %xmm2, %xmm0
-; AVX-NEXT:    vpsrlq $1, %xmm0, %xmm2
+; AVX-NEXT:    vpsrlq $1, %xmm0, %xmm4
 ; AVX-NEXT:    vpsrlq $33, %xmm0, %xmm0
 ; AVX-NEXT:    vpmuludq %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; AVX-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; AVX-NEXT:    vpaddq %xmm0, %xmm4, %xmm0
+; AVX-NEXT:    vpsrlq $32, %xmm2, %xmm2
+; AVX-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
+; AVX-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; AVX-NEXT:    vpmuludq %xmm3, %xmm4, %xmm2
 ; AVX-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
@@ -1304,14 +1304,14 @@ define <2 x i64> @vec128_i64_signed_mem_reg(ptr %a1_addr, <2 x i64> %a2) nounwin
 ; XOP-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
 ; XOP-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; XOP-NEXT:    vpsubq %xmm0, %xmm2, %xmm0
-; XOP-NEXT:    vpsrlq $1, %xmm0, %xmm2
+; XOP-NEXT:    vpsrlq $1, %xmm0, %xmm4
 ; XOP-NEXT:    vpsrlq $33, %xmm0, %xmm0
 ; XOP-NEXT:    vpmuludq %xmm3, %xmm0, %xmm0
-; XOP-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; XOP-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; XOP-NEXT:    vpaddq %xmm0, %xmm4, %xmm0
+; XOP-NEXT:    vpsrlq $32, %xmm2, %xmm2
+; XOP-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
+; XOP-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; XOP-NEXT:    vpsllq $32, %xmm0, %xmm0
-; XOP-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; XOP-NEXT:    vpmuludq %xmm3, %xmm4, %xmm2
 ; XOP-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; XOP-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
 ; XOP-NEXT:    retq
@@ -1409,19 +1409,19 @@ define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, ptr %a2_addr) nounwin
 ; SSE2-NEXT:    movdqa %xmm0, %xmm4
 ; SSE2-NEXT:    psubq %xmm1, %xmm4
 ; SSE2-NEXT:    pxor %xmm3, %xmm4
-; SSE2-NEXT:    psubq %xmm4, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm1
-; SSE2-NEXT:    psrlq $1, %xmm1
-; SSE2-NEXT:    psrlq $33, %xmm3
-; SSE2-NEXT:    pmuludq %xmm2, %xmm3
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    psrlq $32, %xmm4
-; SSE2-NEXT:    pmuludq %xmm1, %xmm4
-; SSE2-NEXT:    paddq %xmm3, %xmm4
-; SSE2-NEXT:    psllq $32, %xmm4
+; SSE2-NEXT:    psubq %xmm4, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm4
+; SSE2-NEXT:    psrlq $1, %xmm4
+; SSE2-NEXT:    psrlq $33, %xmm1
 ; SSE2-NEXT:    pmuludq %xmm2, %xmm1
-; SSE2-NEXT:    paddq %xmm1, %xmm0
+; SSE2-NEXT:    psrlq $32, %xmm3
+; SSE2-NEXT:    pmuludq %xmm4, %xmm3
+; SSE2-NEXT:    paddq %xmm1, %xmm3
+; SSE2-NEXT:    psllq $32, %xmm3
+; SSE2-NEXT:    pmuludq %xmm2, %xmm4
 ; SSE2-NEXT:    paddq %xmm4, %xmm0
+; SSE2-NEXT:    paddq %xmm3, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: vec128_i64_signed_reg_mem:
@@ -1444,19 +1444,19 @@ define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, ptr %a2_addr) nounwin
 ; SSE41-NEXT:    movdqa %xmm0, %xmm4
 ; SSE41-NEXT:    psubq %xmm1, %xmm4
 ; SSE41-NEXT:    pxor %xmm3, %xmm4
-; SSE41-NEXT:    psubq %xmm4, %xmm3
 ; SSE41-NEXT:    movdqa %xmm3, %xmm1
-; SSE41-NEXT:    psrlq $1, %xmm1
-; SSE41-NEXT:    psrlq $33, %xmm3
-; SSE41-NEXT:    pmuludq %xmm2, %xmm3
-; SSE41-NEXT:    movdqa %xmm2, %xmm4
-; SSE41-NEXT:    psrlq $32, %xmm4
-; SSE41-NEXT:    pmuludq %xmm1, %xmm4
-; SSE41-NEXT:    paddq %xmm3, %xmm4
-; SSE41-NEXT:    psllq $32, %xmm4
+; SSE41-NEXT:    psubq %xmm4, %xmm1
+; SSE41-NEXT:    movdqa %xmm1, %xmm4
+; SSE41-NEXT:    psrlq $1, %xmm4
+; SSE41-NEXT:    psrlq $33, %xmm1
 ; SSE41-NEXT:    pmuludq %xmm2, %xmm1
-; SSE41-NEXT:    paddq %xmm1, %xmm0
+; SSE41-NEXT:    psrlq $32, %xmm3
+; SSE41-NEXT:    pmuludq %xmm4, %xmm3
+; SSE41-NEXT:    paddq %xmm1, %xmm3
+; SSE41-NEXT:    psllq $32, %xmm3
+; SSE41-NEXT:    pmuludq %xmm2, %xmm4
 ; SSE41-NEXT:    paddq %xmm4, %xmm0
+; SSE41-NEXT:    paddq %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vec128_i64_signed_reg_mem:
@@ -1467,14 +1467,14 @@ define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, ptr %a2_addr) nounwin
 ; AVX-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
 ; AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpsrlq $1, %xmm1, %xmm2
+; AVX-NEXT:    vpsrlq $1, %xmm1, %xmm4
 ; AVX-NEXT:    vpsrlq $33, %xmm1, %xmm1
 ; AVX-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; AVX-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; AVX-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; AVX-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
+; AVX-NEXT:    vpsrlq $32, %xmm2, %xmm2
+; AVX-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
+; AVX-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; AVX-NEXT:    vpmuludq %xmm3, %xmm4, %xmm2
 ; AVX-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -1487,14 +1487,14 @@ define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, ptr %a2_addr) nounwin
 ; XOP-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
 ; XOP-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; XOP-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
-; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm2
+; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm4
 ; XOP-NEXT:    vpsrlq $33, %xmm1, %xmm1
 ; XOP-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; XOP-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; XOP-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; XOP-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
+; XOP-NEXT:    vpsrlq $32, %xmm2, %xmm2
+; XOP-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
+; XOP-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; XOP-NEXT:    vpsllq $32, %xmm1, %xmm1
-; XOP-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; XOP-NEXT:    vpmuludq %xmm3, %xmm4, %xmm2
 ; XOP-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; XOP-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
@@ -1592,19 +1592,19 @@ define <2 x i64> @vec128_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1,1]
 ; SSE2-NEXT:    por %xmm2, %xmm4
 ; SSE2-NEXT:    pxor %xmm2, %xmm3
-; SSE2-NEXT:    psubq %xmm3, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    psubq %xmm3, %xmm5
+; SSE2-NEXT:    movdqa %xmm5, %xmm0
 ; SSE2-NEXT:    psrlq $1, %xmm0
-; SSE2-NEXT:    psrlq $33, %xmm2
-; SSE2-NEXT:    pmuludq %xmm4, %xmm2
-; SSE2-NEXT:    movdqa %xmm4, %xmm3
-; SSE2-NEXT:    psrlq $32, %xmm3
-; SSE2-NEXT:    pmuludq %xmm0, %xmm3
-; SSE2-NEXT:    paddq %xmm2, %xmm3
-; SSE2-NEXT:    psllq $32, %xmm3
+; SSE2-NEXT:    psrlq $33, %xmm5
+; SSE2-NEXT:    pmuludq %xmm4, %xmm5
+; SSE2-NEXT:    psrlq $32, %xmm2
+; SSE2-NEXT:    pmuludq %xmm0, %xmm2
+; SSE2-NEXT:    paddq %xmm5, %xmm2
+; SSE2-NEXT:    psllq $32, %xmm2
 ; SSE2-NEXT:    pmuludq %xmm4, %xmm0
 ; SSE2-NEXT:    paddq %xmm1, %xmm0
-; SSE2-NEXT:    paddq %xmm3, %xmm0
+; SSE2-NEXT:    paddq %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: vec128_i64_signed_mem_mem:
@@ -1627,19 +1627,19 @@ define <2 x i64> @vec128_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm4 = [1,1]
 ; SSE41-NEXT:    por %xmm2, %xmm4
 ; SSE41-NEXT:    pxor %xmm2, %xmm3
-; SSE41-NEXT:    psubq %xmm3, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    movdqa %xmm2, %xmm5
+; SSE41-NEXT:    psubq %xmm3, %xmm5
+; SSE41-NEXT:    movdqa %xmm5, %xmm0
 ; SSE41-NEXT:    psrlq $1, %xmm0
-; SSE41-NEXT:    psrlq $33, %xmm2
-; SSE41-NEXT:    pmuludq %xmm4, %xmm2
-; SSE41-NEXT:    movdqa %xmm4, %xmm3
-; SSE41-NEXT:    psrlq $32, %xmm3
-; SSE41-NEXT:    pmuludq %xmm0, %xmm3
-; SSE41-NEXT:    paddq %xmm2, %xmm3
-; SSE41-NEXT:    psllq $32, %xmm3
+; SSE41-NEXT:    psrlq $33, %xmm5
+; SSE41-NEXT:    pmuludq %xmm4, %xmm5
+; SSE41-NEXT:    psrlq $32, %xmm2
+; SSE41-NEXT:    pmuludq %xmm0, %xmm2
+; SSE41-NEXT:    paddq %xmm5, %xmm2
+; SSE41-NEXT:    psllq $32, %xmm2
 ; SSE41-NEXT:    pmuludq %xmm4, %xmm0
 ; SSE41-NEXT:    paddq %xmm1, %xmm0
-; SSE41-NEXT:    paddq %xmm3, %xmm0
+; SSE41-NEXT:    paddq %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vec128_i64_signed_mem_mem:
@@ -1651,14 +1651,14 @@ define <2 x i64> @vec128_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; AVX-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
 ; AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpsrlq $1, %xmm1, %xmm2
+; AVX-NEXT:    vpsrlq $1, %xmm1, %xmm4
 ; AVX-NEXT:    vpsrlq $33, %xmm1, %xmm1
 ; AVX-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; AVX-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; AVX-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; AVX-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
+; AVX-NEXT:    vpsrlq $32, %xmm2, %xmm2
+; AVX-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
+; AVX-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; AVX-NEXT:    vpmuludq %xmm3, %xmm4, %xmm2
 ; AVX-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -1672,14 +1672,14 @@ define <2 x i64> @vec128_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; XOP-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
 ; XOP-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; XOP-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
-; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm2
+; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm4
 ; XOP-NEXT:    vpsrlq $33, %xmm1, %xmm1
 ; XOP-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; XOP-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; XOP-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; XOP-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
+; XOP-NEXT:    vpsrlq $32, %xmm2, %xmm2
+; XOP-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
+; XOP-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; XOP-NEXT:    vpsllq $32, %xmm1, %xmm1
-; XOP-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; XOP-NEXT:    vpmuludq %xmm3, %xmm4, %xmm2
 ; XOP-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; XOP-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
@@ -1928,7 +1928,7 @@ define <8 x i16> @vec128_i16_unsigned_reg_reg(<8 x i16> %a1, <8 x i16> %a2) noun
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpminuw %xmm1, %xmm0, %xmm2
 ; AVX512F-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm3
-; AVX512F-NEXT:    vpternlogq $15, %zmm3, %zmm3, %zmm3
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm3 = ~zmm3
 ; AVX512F-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
 ; AVX512F-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm1
 ; AVX512F-NEXT:    vpsubw %xmm2, %xmm1, %xmm1
@@ -1945,7 +1945,7 @@ define <8 x i16> @vec128_i16_unsigned_reg_reg(<8 x i16> %a1, <8 x i16> %a2) noun
 ; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm2, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %xmm2, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogq {{.*#+}} xmm2 = ~xmm2
 ; AVX512VL-FALLBACK-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm2, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
@@ -2368,17 +2368,17 @@ define <16 x i8> @vec128_i8_signed_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounwin
 ; SSE41-NEXT:    psubb %xmm3, %xmm1
 ; SSE41-NEXT:    psrlw $1, %xmm1
 ; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm3 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; SSE41-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; SSE41-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE41-NEXT:    pmullw %xmm1, %xmm2
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
-; SSE41-NEXT:    pand %xmm1, %xmm2
-; SSE41-NEXT:    pmullw %xmm4, %xmm3
-; SSE41-NEXT:    pand %xmm1, %xmm3
-; SSE41-NEXT:    packuswb %xmm2, %xmm3
-; SSE41-NEXT:    paddb %xmm3, %xmm0
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    movdqa %xmm2, %xmm4
+; SSE41-NEXT:    pand %xmm3, %xmm4
+; SSE41-NEXT:    movdqa %xmm1, %xmm5
+; SSE41-NEXT:    pmaddubsw %xmm4, %xmm5
+; SSE41-NEXT:    pand %xmm3, %xmm5
+; SSE41-NEXT:    pandn %xmm2, %xmm3
+; SSE41-NEXT:    pmaddubsw %xmm3, %xmm1
+; SSE41-NEXT:    psllw $8, %xmm1
+; SSE41-NEXT:    por %xmm1, %xmm5
+; SSE41-NEXT:    paddb %xmm5, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: vec128_i8_signed_reg_reg:
@@ -2390,16 +2390,14 @@ define <16 x i8> @vec128_i8_signed_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounwin
 ; AVX1-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
-; AVX1-NEXT:    vpand %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; AVX1-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpand %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vpmaddubsw %xmm4, %xmm1, %xmm4
+; AVX1-NEXT:    vpand %xmm3, %xmm4, %xmm4
+; AVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpsllw $8, %xmm1, %xmm1
+; AVX1-NEXT:    vpor %xmm1, %xmm4, %xmm1
 ; AVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -2431,13 +2429,12 @@ define <16 x i8> @vec128_i8_signed_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounwin
 ; XOP-FALLBACK-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
 ; XOP-FALLBACK-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; XOP-FALLBACK-NEXT:    vpshlb %xmm3, %xmm1, %xmm1
-; XOP-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOP-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOP-FALLBACK-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; XOP-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; XOP-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; XOP-FALLBACK-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
-; XOP-FALLBACK-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0,2,4,6,8,10,12,14],xmm3[0,2,4,6,8,10,12,14]
+; XOP-FALLBACK-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; XOP-FALLBACK-NEXT:    vpandn %xmm2, %xmm3, %xmm4
+; XOP-FALLBACK-NEXT:    vpmaddubsw %xmm4, %xmm1, %xmm4
+; XOP-FALLBACK-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; XOP-FALLBACK-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; XOP-FALLBACK-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[2],xmm4[2],xmm1[4],xmm4[4],xmm1[6],xmm4[6],xmm1[8],xmm4[8],xmm1[10],xmm4[10],xmm1[12],xmm4[12],xmm1[14],xmm4[14]
 ; XOP-FALLBACK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; XOP-FALLBACK-NEXT:    retq
 ;
@@ -2450,13 +2447,12 @@ define <16 x i8> @vec128_i8_signed_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounwin
 ; XOPAVX1-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOPAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOPAVX1-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; XOPAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; XOPAVX1-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0,2,4,6,8,10,12,14],xmm3[0,2,4,6,8,10,12,14]
+; XOPAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; XOPAVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm4
+; XOPAVX1-NEXT:    vpmaddubsw %xmm4, %xmm1, %xmm4
+; XOPAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[2],xmm4[2],xmm1[4],xmm4[4],xmm1[6],xmm4[6],xmm1[8],xmm4[8],xmm1[10],xmm4[10],xmm1[12],xmm4[12],xmm1[14],xmm4[14]
 ; XOPAVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; XOPAVX1-NEXT:    retq
 ;
@@ -2504,7 +2500,7 @@ define <16 x i8> @vec128_i8_signed_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounwin
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm3, %xmm2
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
 ; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogd {{.*#+}} xmm2 = xmm1 ^ (xmm2 & mem)
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    retq
@@ -2584,28 +2580,28 @@ define <16 x i8> @vec128_i8_unsigned_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounw
 ;
 ; SSE41-LABEL: vec128_i8_unsigned_reg_reg:
 ; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pminub %xmm1, %xmm2
 ; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pminub %xmm1, %xmm3
-; SSE41-NEXT:    movdqa %xmm0, %xmm4
-; SSE41-NEXT:    pcmpeqb %xmm3, %xmm4
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE41-NEXT:    pxor %xmm4, %xmm2
-; SSE41-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE41-NEXT:    pcmpeqb %xmm2, %xmm3
+; SSE41-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE41-NEXT:    pxor %xmm3, %xmm4
+; SSE41-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
 ; SSE41-NEXT:    pmaxub %xmm0, %xmm1
-; SSE41-NEXT:    psubb %xmm3, %xmm1
+; SSE41-NEXT:    psubb %xmm2, %xmm1
 ; SSE41-NEXT:    psrlw $1, %xmm1
 ; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm3 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; SSE41-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; SSE41-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE41-NEXT:    pmullw %xmm1, %xmm2
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
-; SSE41-NEXT:    pand %xmm1, %xmm2
-; SSE41-NEXT:    pmullw %xmm4, %xmm3
-; SSE41-NEXT:    pand %xmm1, %xmm3
-; SSE41-NEXT:    packuswb %xmm2, %xmm3
-; SSE41-NEXT:    paddb %xmm3, %xmm0
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    movdqa %xmm4, %xmm3
+; SSE41-NEXT:    pand %xmm2, %xmm3
+; SSE41-NEXT:    movdqa %xmm1, %xmm5
+; SSE41-NEXT:    pmaddubsw %xmm3, %xmm5
+; SSE41-NEXT:    pand %xmm2, %xmm5
+; SSE41-NEXT:    pandn %xmm4, %xmm2
+; SSE41-NEXT:    pmaddubsw %xmm2, %xmm1
+; SSE41-NEXT:    psllw $8, %xmm1
+; SSE41-NEXT:    por %xmm1, %xmm5
+; SSE41-NEXT:    paddb %xmm5, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: vec128_i8_unsigned_reg_reg:
@@ -2619,16 +2615,14 @@ define <16 x i8> @vec128_i8_unsigned_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounw
 ; AVX1-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm2 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vpmullw %xmm4, %xmm2, %xmm2
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
-; AVX1-NEXT:    vpand %xmm4, %xmm2, %xmm2
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero
-; AVX1-NEXT:    vpmullw %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpand %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vpand %xmm2, %xmm3, %xmm4
+; AVX1-NEXT:    vpmaddubsw %xmm4, %xmm1, %xmm4
+; AVX1-NEXT:    vpand %xmm2, %xmm4, %xmm4
+; AVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpsllw $8, %xmm1, %xmm1
+; AVX1-NEXT:    vpor %xmm1, %xmm4, %xmm1
 ; AVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -2662,13 +2656,12 @@ define <16 x i8> @vec128_i8_unsigned_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounw
 ; XOP-FALLBACK-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
 ; XOP-FALLBACK-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; XOP-FALLBACK-NEXT:    vpshlb %xmm3, %xmm1, %xmm1
-; XOP-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOP-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOP-FALLBACK-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; XOP-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; XOP-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; XOP-FALLBACK-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
-; XOP-FALLBACK-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0,2,4,6,8,10,12,14],xmm3[0,2,4,6,8,10,12,14]
+; XOP-FALLBACK-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; XOP-FALLBACK-NEXT:    vpandn %xmm2, %xmm3, %xmm4
+; XOP-FALLBACK-NEXT:    vpmaddubsw %xmm4, %xmm1, %xmm4
+; XOP-FALLBACK-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; XOP-FALLBACK-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; XOP-FALLBACK-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[2],xmm4[2],xmm1[4],xmm4[4],xmm1[6],xmm4[6],xmm1[8],xmm4[8],xmm1[10],xmm4[10],xmm1[12],xmm4[12],xmm1[14],xmm4[14]
 ; XOP-FALLBACK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; XOP-FALLBACK-NEXT:    retq
 ;
@@ -2681,13 +2674,12 @@ define <16 x i8> @vec128_i8_unsigned_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounw
 ; XOPAVX1-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOPAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOPAVX1-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; XOPAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; XOPAVX1-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0,2,4,6,8,10,12,14],xmm3[0,2,4,6,8,10,12,14]
+; XOPAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; XOPAVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm4
+; XOPAVX1-NEXT:    vpmaddubsw %xmm4, %xmm1, %xmm4
+; XOPAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[2],xmm4[2],xmm1[4],xmm4[4],xmm1[6],xmm4[6],xmm1[8],xmm4[8],xmm1[10],xmm4[10],xmm1[12],xmm4[12],xmm1[14],xmm4[14]
 ; XOPAVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; XOPAVX1-NEXT:    retq
 ;
@@ -2714,7 +2706,7 @@ define <16 x i8> @vec128_i8_unsigned_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounw
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpminub %xmm1, %xmm0, %xmm2
 ; AVX512F-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm3
-; AVX512F-NEXT:    vpternlogq $15, %zmm3, %zmm3, %zmm3
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm3 = ~zmm3
 ; AVX512F-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
 ; AVX512F-NEXT:    vpmaxub %xmm1, %xmm0, %xmm1
 ; AVX512F-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
@@ -2736,8 +2728,8 @@ define <16 x i8> @vec128_i8_unsigned_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounw
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %xmm2, %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm2, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpternlogq {{.*#+}} xmm2 = ~xmm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm2 ^ (xmm1 & mem)
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    retq
@@ -2820,28 +2812,27 @@ define <16 x i8> @vec128_i8_signed_mem_reg(ptr %a1_addr, <16 x i8> %a2) nounwind
 ;
 ; SSE41-LABEL: vec128_i8_signed_mem_reg:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa (%rdi), %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm3
-; SSE41-NEXT:    pcmpgtb %xmm0, %xmm3
-; SSE41-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE41-NEXT:    movdqa %xmm2, %xmm1
-; SSE41-NEXT:    pminsb %xmm0, %xmm1
-; SSE41-NEXT:    pmaxsb %xmm2, %xmm0
-; SSE41-NEXT:    psubb %xmm1, %xmm0
+; SSE41-NEXT:    movdqa (%rdi), %xmm1
+; SSE41-NEXT:    movdqa %xmm1, %xmm2
+; SSE41-NEXT:    pcmpgtb %xmm0, %xmm2
+; SSE41-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE41-NEXT:    movdqa %xmm1, %xmm3
+; SSE41-NEXT:    pminsb %xmm0, %xmm3
+; SSE41-NEXT:    pmaxsb %xmm1, %xmm0
+; SSE41-NEXT:    psubb %xmm3, %xmm0
 ; SSE41-NEXT:    psrlw $1, %xmm0
 ; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; SSE41-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero
-; SSE41-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE41-NEXT:    pmullw %xmm0, %xmm3
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255]
-; SSE41-NEXT:    pand %xmm0, %xmm3
-; SSE41-NEXT:    pmullw %xmm4, %xmm1
-; SSE41-NEXT:    pand %xmm0, %xmm1
-; SSE41-NEXT:    packuswb %xmm3, %xmm1
-; SSE41-NEXT:    paddb %xmm2, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    movdqa %xmm2, %xmm4
+; SSE41-NEXT:    pand %xmm3, %xmm4
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
+; SSE41-NEXT:    pmaddubsw %xmm4, %xmm5
+; SSE41-NEXT:    pand %xmm3, %xmm5
+; SSE41-NEXT:    pandn %xmm2, %xmm3
+; SSE41-NEXT:    pmaddubsw %xmm3, %xmm0
+; SSE41-NEXT:    psllw $8, %xmm0
+; SSE41-NEXT:    por %xmm5, %xmm0
+; SSE41-NEXT:    paddb %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: vec128_i8_signed_mem_reg:
@@ -2854,16 +2845,14 @@ define <16 x i8> @vec128_i8_signed_mem_reg(ptr %a1_addr, <16 x i8> %a2) nounwind
 ; AVX1-NEXT:    vpsubb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
-; AVX1-NEXT:    vpand %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; AVX1-NEXT:    vpmullw %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vpmaddubsw %xmm4, %xmm0, %xmm4
+; AVX1-NEXT:    vpand %xmm3, %xmm4, %xmm4
+; AVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpsllw $8, %xmm0, %xmm0
+; AVX1-NEXT:    vpor %xmm0, %xmm4, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -2897,13 +2886,12 @@ define <16 x i8> @vec128_i8_signed_mem_reg(ptr %a1_addr, <16 x i8> %a2) nounwind
 ; XOP-FALLBACK-NEXT:    vpsubb %xmm3, %xmm0, %xmm0
 ; XOP-FALLBACK-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; XOP-FALLBACK-NEXT:    vpshlb %xmm3, %xmm0, %xmm0
-; XOP-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOP-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOP-FALLBACK-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; XOP-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; XOP-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; XOP-FALLBACK-NEXT:    vpmullw %xmm2, %xmm0, %xmm0
-; XOP-FALLBACK-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14],xmm3[0,2,4,6,8,10,12,14]
+; XOP-FALLBACK-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; XOP-FALLBACK-NEXT:    vpandn %xmm2, %xmm3, %xmm4
+; XOP-FALLBACK-NEXT:    vpmaddubsw %xmm4, %xmm0, %xmm4
+; XOP-FALLBACK-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; XOP-FALLBACK-NEXT:    vpmaddubsw %xmm2, %xmm0, %xmm0
+; XOP-FALLBACK-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[2],xmm4[2],xmm0[4],xmm4[4],xmm0[6],xmm4[6],xmm0[8],xmm4[8],xmm0[10],xmm4[10],xmm0[12],xmm4[12],xmm0[14],xmm4[14]
 ; XOP-FALLBACK-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; XOP-FALLBACK-NEXT:    retq
 ;
@@ -2917,13 +2905,12 @@ define <16 x i8> @vec128_i8_signed_mem_reg(ptr %a1_addr, <16 x i8> %a2) nounwind
 ; XOPAVX1-NEXT:    vpsubb %xmm3, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOPAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOPAVX1-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; XOPAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; XOPAVX1-NEXT:    vpmullw %xmm2, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14],xmm3[0,2,4,6,8,10,12,14]
+; XOPAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; XOPAVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm4
+; XOPAVX1-NEXT:    vpmaddubsw %xmm4, %xmm0, %xmm4
+; XOPAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vpmaddubsw %xmm2, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[2],xmm4[2],xmm0[4],xmm4[4],xmm0[6],xmm4[6],xmm0[8],xmm4[8],xmm0[10],xmm4[10],xmm0[12],xmm4[12],xmm0[14],xmm4[14]
 ; XOPAVX1-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    retq
 ;
@@ -2974,7 +2961,7 @@ define <16 x i8> @vec128_i8_signed_mem_reg(ptr %a1_addr, <16 x i8> %a2) nounwind
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm3, %xmm2
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
 ; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
-; AVX512VL-FALLBACK-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogd {{.*#+}} xmm2 = xmm0 ^ (xmm2 & mem)
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm0, %xmm2, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    retq
@@ -3056,27 +3043,27 @@ define <16 x i8> @vec128_i8_signed_reg_mem(<16 x i8> %a1, ptr %a2_addr) nounwind
 ;
 ; SSE41-LABEL: vec128_i8_signed_reg_mem:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa (%rdi), %xmm2
-; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    pcmpgtb %xmm2, %xmm1
-; SSE41-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    movdqa (%rdi), %xmm1
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pcmpgtb %xmm1, %xmm2
+; SSE41-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pminsb %xmm2, %xmm3
-; SSE41-NEXT:    pmaxsb %xmm0, %xmm2
-; SSE41-NEXT:    psubb %xmm3, %xmm2
-; SSE41-NEXT:    psrlw $1, %xmm2
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; SSE41-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; SSE41-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE41-NEXT:    pmullw %xmm2, %xmm1
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; SSE41-NEXT:    pand %xmm2, %xmm1
-; SSE41-NEXT:    pmullw %xmm4, %xmm3
-; SSE41-NEXT:    pand %xmm2, %xmm3
-; SSE41-NEXT:    packuswb %xmm1, %xmm3
-; SSE41-NEXT:    paddb %xmm3, %xmm0
+; SSE41-NEXT:    pminsb %xmm1, %xmm3
+; SSE41-NEXT:    pmaxsb %xmm0, %xmm1
+; SSE41-NEXT:    psubb %xmm3, %xmm1
+; SSE41-NEXT:    psrlw $1, %xmm1
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    movdqa %xmm2, %xmm4
+; SSE41-NEXT:    pand %xmm3, %xmm4
+; SSE41-NEXT:    movdqa %xmm1, %xmm5
+; SSE41-NEXT:    pmaddubsw %xmm4, %xmm5
+; SSE41-NEXT:    pand %xmm3, %xmm5
+; SSE41-NEXT:    pandn %xmm2, %xmm3
+; SSE41-NEXT:    pmaddubsw %xmm3, %xmm1
+; SSE41-NEXT:    psllw $8, %xmm1
+; SSE41-NEXT:    por %xmm5, %xmm1
+; SSE41-NEXT:    paddb %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: vec128_i8_signed_reg_mem:
@@ -3089,16 +3076,14 @@ define <16 x i8> @vec128_i8_signed_reg_mem(<16 x i8> %a1, ptr %a2_addr) nounwind
 ; AVX1-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
-; AVX1-NEXT:    vpand %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; AVX1-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpand %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vpmaddubsw %xmm4, %xmm1, %xmm4
+; AVX1-NEXT:    vpand %xmm3, %xmm4, %xmm4
+; AVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpsllw $8, %xmm1, %xmm1
+; AVX1-NEXT:    vpor %xmm1, %xmm4, %xmm1
 ; AVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -3132,13 +3117,12 @@ define <16 x i8> @vec128_i8_signed_reg_mem(<16 x i8> %a1, ptr %a2_addr) nounwind
 ; XOP-FALLBACK-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
 ; XOP-FALLBACK-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; XOP-FALLBACK-NEXT:    vpshlb %xmm3, %xmm1, %xmm1
-; XOP-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOP-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOP-FALLBACK-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; XOP-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; XOP-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; XOP-FALLBACK-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
-; XOP-FALLBACK-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0,2,4,6,8,10,12,14],xmm3[0,2,4,6,8,10,12,14]
+; XOP-FALLBACK-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; XOP-FALLBACK-NEXT:    vpandn %xmm2, %xmm3, %xmm4
+; XOP-FALLBACK-NEXT:    vpmaddubsw %xmm4, %xmm1, %xmm4
+; XOP-FALLBACK-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; XOP-FALLBACK-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; XOP-FALLBACK-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[2],xmm4[2],xmm1[4],xmm4[4],xmm1[6],xmm4[6],xmm1[8],xmm4[8],xmm1[10],xmm4[10],xmm1[12],xmm4[12],xmm1[14],xmm4[14]
 ; XOP-FALLBACK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; XOP-FALLBACK-NEXT:    retq
 ;
@@ -3152,13 +3136,12 @@ define <16 x i8> @vec128_i8_signed_reg_mem(<16 x i8> %a1, ptr %a2_addr) nounwind
 ; XOPAVX1-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOPAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOPAVX1-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; XOPAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; XOPAVX1-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0,2,4,6,8,10,12,14],xmm3[0,2,4,6,8,10,12,14]
+; XOPAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; XOPAVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm4
+; XOPAVX1-NEXT:    vpmaddubsw %xmm4, %xmm1, %xmm4
+; XOPAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[2],xmm4[2],xmm1[4],xmm4[4],xmm1[6],xmm4[6],xmm1[8],xmm4[8],xmm1[10],xmm4[10],xmm1[12],xmm4[12],xmm1[14],xmm4[14]
 ; XOPAVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; XOPAVX1-NEXT:    retq
 ;
@@ -3209,7 +3192,7 @@ define <16 x i8> @vec128_i8_signed_reg_mem(<16 x i8> %a1, ptr %a2_addr) nounwind
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm3, %xmm2
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
 ; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogd {{.*#+}} xmm2 = xmm1 ^ (xmm2 & mem)
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    retq
@@ -3293,26 +3276,26 @@ define <16 x i8> @vec128_i8_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind 
 ; SSE41-LABEL: vec128_i8_signed_mem_mem:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa (%rdi), %xmm1
-; SSE41-NEXT:    movdqa (%rsi), %xmm3
+; SSE41-NEXT:    movdqa (%rsi), %xmm0
 ; SSE41-NEXT:    movdqa %xmm1, %xmm2
-; SSE41-NEXT:    pcmpgtb %xmm3, %xmm2
+; SSE41-NEXT:    pcmpgtb %xmm0, %xmm2
 ; SSE41-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
-; SSE41-NEXT:    pminsb %xmm3, %xmm0
-; SSE41-NEXT:    pmaxsb %xmm1, %xmm3
-; SSE41-NEXT:    psubb %xmm0, %xmm3
-; SSE41-NEXT:    psrlw $1, %xmm3
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero
-; SSE41-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; SSE41-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE41-NEXT:    pmullw %xmm3, %xmm2
+; SSE41-NEXT:    movdqa %xmm1, %xmm3
+; SSE41-NEXT:    pminsb %xmm0, %xmm3
+; SSE41-NEXT:    pmaxsb %xmm1, %xmm0
+; SSE41-NEXT:    psubb %xmm3, %xmm0
+; SSE41-NEXT:    psrlw $1, %xmm0
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
-; SSE41-NEXT:    pand %xmm3, %xmm2
-; SSE41-NEXT:    pmullw %xmm4, %xmm0
-; SSE41-NEXT:    pand %xmm3, %xmm0
-; SSE41-NEXT:    packuswb %xmm2, %xmm0
+; SSE41-NEXT:    movdqa %xmm2, %xmm4
+; SSE41-NEXT:    pand %xmm3, %xmm4
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
+; SSE41-NEXT:    pmaddubsw %xmm4, %xmm5
+; SSE41-NEXT:    pand %xmm3, %xmm5
+; SSE41-NEXT:    pandn %xmm2, %xmm3
+; SSE41-NEXT:    pmaddubsw %xmm3, %xmm0
+; SSE41-NEXT:    psllw $8, %xmm0
+; SSE41-NEXT:    por %xmm5, %xmm0
 ; SSE41-NEXT:    paddb %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -3327,16 +3310,14 @@ define <16 x i8> @vec128_i8_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind 
 ; AVX1-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; AVX1-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
-; AVX1-NEXT:    vpand %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; AVX1-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpand %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vpmaddubsw %xmm4, %xmm1, %xmm4
+; AVX1-NEXT:    vpand %xmm3, %xmm4, %xmm4
+; AVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpsllw $8, %xmm1, %xmm1
+; AVX1-NEXT:    vpor %xmm1, %xmm4, %xmm1
 ; AVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -3372,13 +3353,12 @@ define <16 x i8> @vec128_i8_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind 
 ; XOP-FALLBACK-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
 ; XOP-FALLBACK-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; XOP-FALLBACK-NEXT:    vpshlb %xmm3, %xmm1, %xmm1
-; XOP-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOP-FALLBACK-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOP-FALLBACK-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; XOP-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; XOP-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; XOP-FALLBACK-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
-; XOP-FALLBACK-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0,2,4,6,8,10,12,14],xmm3[0,2,4,6,8,10,12,14]
+; XOP-FALLBACK-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; XOP-FALLBACK-NEXT:    vpandn %xmm2, %xmm3, %xmm4
+; XOP-FALLBACK-NEXT:    vpmaddubsw %xmm4, %xmm1, %xmm4
+; XOP-FALLBACK-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; XOP-FALLBACK-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; XOP-FALLBACK-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[2],xmm4[2],xmm1[4],xmm4[4],xmm1[6],xmm4[6],xmm1[8],xmm4[8],xmm1[10],xmm4[10],xmm1[12],xmm4[12],xmm1[14],xmm4[14]
 ; XOP-FALLBACK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; XOP-FALLBACK-NEXT:    retq
 ;
@@ -3393,13 +3373,12 @@ define <16 x i8> @vec128_i8_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind 
 ; XOPAVX1-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOPAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; XOPAVX1-NEXT:    vpmullw %xmm4, %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; XOPAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; XOPAVX1-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0,2,4,6,8,10,12,14],xmm3[0,2,4,6,8,10,12,14]
+; XOPAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; XOPAVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm4
+; XOPAVX1-NEXT:    vpmaddubsw %xmm4, %xmm1, %xmm4
+; XOPAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[2],xmm4[2],xmm1[4],xmm4[4],xmm1[6],xmm4[6],xmm1[8],xmm4[8],xmm1[10],xmm4[10],xmm1[12],xmm4[12],xmm1[14],xmm4[14]
 ; XOPAVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; XOPAVX1-NEXT:    retq
 ;
@@ -3453,7 +3432,7 @@ define <16 x i8> @vec128_i8_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind 
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm3, %xmm2
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
 ; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogd {{.*#+}} xmm2 = xmm1 ^ (xmm2 & mem)
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    retq

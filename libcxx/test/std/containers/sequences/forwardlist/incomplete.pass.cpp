@@ -33,19 +33,18 @@ struct B {
 };
 #endif
 
-int main(int, char**)
-{
+int main(int, char**) {
   {
     A a;
     assert(a.d.empty());
-    a.it = a.d.begin();
+    a.it  = a.d.begin();
     a.it2 = a.d.cbefore_begin();
   }
 #if TEST_STD_VER >= 11
   {
     B b;
     assert(b.d.empty());
-    b.it = b.d.begin();
+    b.it  = b.d.begin();
     b.it2 = b.d.cbefore_begin();
   }
 #endif

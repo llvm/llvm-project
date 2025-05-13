@@ -1,0 +1,177 @@
+name: CI Checks
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      # When a PR is closed, we still start this workflow, but then skip
+      # all the jobs, which makes it effectively a no-op.  The reason to
+      # do this is that it allows us to take advantage of concurrency groups
+      # to cancel in progress CI jobs whenever the PR is closed.
+      - closed
+  push:
+    branches:
+      - 'main'
+      - 'release/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  premerge-checks-linux:
+    name: Build and Test Linux (Test Only - Please Ignore Results)
+    if: >-
+        github.repository_owner == 'llvm' &&
+        (github.event_name != 'pull_request' || github.event.action != 'closed')
+    runs-on: llvm-premerge-linux-runners
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 2
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
+        with:
+          max-size: "2000M"
+      - name: Build and Test
+        # Mark the job as a success even if the step fails so that people do
+        # not get notified while the new premerge pipeline is in an
+        # experimental state.
+        # TODO(boomanaiden154): Remove this once the pipeline is stable and we
+        # are ready for people to start recieving notifications.
+        continue-on-error: true
+        run: |
+          git config --global --add safe.directory '*'
+
+          source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
+
+          if [[ "${projects_to_build}" == "" ]]; then
+            echo "No projects to build"
+            exit 0
+          fi
+
+          echo "Building projects: ${projects_to_build}"
+          echo "Running project checks targets: ${project_check_targets}"
+          echo "Building runtimes: ${runtimes_to_build}"
+          echo "Running runtimes checks targets: ${runtimes_check_targets}"
+
+          export CC=/opt/llvm/bin/clang
+          export CXX=/opt/llvm/bin/clang++
+
+          ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}"
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: Premerge Artifacts (Linux)
+          path: artifacts/
+          retention-days: 5
+          include-hidden-files: 'true'
+
+  premerge-checks-windows:
+    name: Build and Test Windows (Test Only - Please Ignore Results)
+    if: >-
+        github.repository_owner == 'llvm' &&
+        (github.event_name != 'pull_request' || github.event.action != 'closed')
+    runs-on: llvm-premerge-windows-runners
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 2
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
+        with:
+          variant: "sccache"
+          max-size: "2000M"
+      - name: Compute Projects
+        id: vars
+        run: |
+          source <(git diff --name-only HEAD~1...HEAD | python .ci/compute_projects.py)
+
+          if [[ "${projects_to_build}" == "" ]]; then
+            echo "No projects to build"
+          fi
+
+          echo "Building projects: ${projects_to_build}"
+          echo "Running project checks targets: ${project_check_targets}"
+
+          echo "windows-projects=${projects_to_build}" >> $GITHUB_OUTPUT
+          echo "windows-check-targets=${project_check_targets}" >> $GITHUB_OUTPUT
+      - name: Build and Test
+        # Mark the job as a success even if the step fails so that people do
+        # not get notified while the new premerge pipeline is in an
+        # experimental state.
+        # TODO(boomanaiden154): Remove this once the pipeline is stable and we
+        # are ready for people to start recieving notifications.
+        continue-on-error: true
+        if: ${{ steps.vars.outputs.windows-projects != '' }}
+        shell: cmd
+        run: |
+          set MAX_PARALLEL_COMPILE_JOBS=64
+          set MAX_PARALLEL_LINK_JOBS=64
+          call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
+          bash .ci/monolithic-windows.sh "${{ steps.vars.outputs.windows-projects }}" "${{ steps.vars.outputs.windows-check-targets }}"
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: Premerge Artifacts (Windows)
+          path: artifacts/
+          retention-days: 5
+          include-hidden-files: 'true'
+
+  premerge-check-macos:
+    name: MacOS Premerge Checks
+    runs-on: macos-14
+    if: >-
+      github.repository_owner == 'llvm' &&
+      (startswith(github.ref_name, 'release/') ||
+       startswith(github.base_ref, 'release/')) &&
+      (github.event_name != 'pull_request' || github.event.action != 'closed')
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 2
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
+        with:
+          max-size: "2000M"
+      - name: Install Ninja
+        uses: llvm/actions/install-ninja@main
+      - name: Build and Test
+        run: |
+          source <(git diff --name-only HEAD~2..HEAD | python3 .ci/compute_projects.py)
+
+          if [[ "${projects_to_build}" == "" ]]; then
+            echo "No projects to build"
+            exit 0
+          fi
+
+          echo "Building projects: ${projects_to_build}"
+          echo "Running project checks targets: ${project_check_targets}"
+
+          # -DLLVM_DISABLE_ASSEMBLY_FILES=ON is for
+          # https://github.com/llvm/llvm-project/issues/81967
+          # Disable sharding in lit so that the LIT_XFAIL environment var works.
+          cmake -G Ninja \
+                -B build \
+                -S llvm \
+                -DLLVM_ENABLE_PROJECTS="${projects_to_build}" \
+                -DLLVM_DISABLE_ASSEMBLY_FILES=ON \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DLLDB_INCLUDE_TESTS=OFF \
+                -DLLVM_ENABLE_ASSERTIONS=ON \
+                -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+          # The libcxx tests fail, so we are skipping the runtime targets.
+          ninja -C build ${project_check_targets}

@@ -706,7 +706,7 @@ define void @atomic8_nand_monotonic(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection16:
 ; O1-NEXT:    movzbl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB16_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -727,7 +727,7 @@ define void @atomic8_nand_monotonic(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection16:
 ; O2-NEXT:    movzbl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB16_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -748,7 +748,7 @@ define void @atomic8_nand_monotonic(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection16:
 ; O3-NEXT:    movzbl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB16_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -1044,7 +1044,7 @@ define void @atomic8_nand_acquire(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection27:
 ; O1-NEXT:    movzbl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB23_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -1065,7 +1065,7 @@ define void @atomic8_nand_acquire(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection27:
 ; O2-NEXT:    movzbl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB23_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -1086,7 +1086,7 @@ define void @atomic8_nand_acquire(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection27:
 ; O3-NEXT:    movzbl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB23_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -1382,7 +1382,7 @@ define void @atomic8_nand_release(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection38:
 ; O1-NEXT:    movzbl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB30_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -1403,7 +1403,7 @@ define void @atomic8_nand_release(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection38:
 ; O2-NEXT:    movzbl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB30_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -1424,7 +1424,7 @@ define void @atomic8_nand_release(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection38:
 ; O3-NEXT:    movzbl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB30_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -1720,7 +1720,7 @@ define void @atomic8_nand_acq_rel(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection49:
 ; O1-NEXT:    movzbl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB37_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -1741,7 +1741,7 @@ define void @atomic8_nand_acq_rel(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection49:
 ; O2-NEXT:    movzbl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB37_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -1762,7 +1762,7 @@ define void @atomic8_nand_acq_rel(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection49:
 ; O3-NEXT:    movzbl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB37_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -2058,7 +2058,7 @@ define void @atomic8_nand_seq_cst(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection60:
 ; O1-NEXT:    movzbl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB44_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -2079,7 +2079,7 @@ define void @atomic8_nand_seq_cst(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection60:
 ; O2-NEXT:    movzbl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB44_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -2100,7 +2100,7 @@ define void @atomic8_nand_seq_cst(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection60:
 ; O3-NEXT:    movzbl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB44_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -3151,7 +3151,7 @@ define void @atomic16_nand_monotonic(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection109:
 ; O1-NEXT:    movzwl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB64_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -3176,7 +3176,7 @@ define void @atomic16_nand_monotonic(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection109:
 ; O2-NEXT:    movzwl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB64_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -3201,7 +3201,7 @@ define void @atomic16_nand_monotonic(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection109:
 ; O3-NEXT:    movzwl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB64_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -3505,7 +3505,7 @@ define void @atomic16_nand_acquire(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection122:
 ; O1-NEXT:    movzwl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB71_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -3530,7 +3530,7 @@ define void @atomic16_nand_acquire(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection122:
 ; O2-NEXT:    movzwl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB71_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -3555,7 +3555,7 @@ define void @atomic16_nand_acquire(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection122:
 ; O3-NEXT:    movzwl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB71_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -3859,7 +3859,7 @@ define void @atomic16_nand_release(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection135:
 ; O1-NEXT:    movzwl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB78_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -3884,7 +3884,7 @@ define void @atomic16_nand_release(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection135:
 ; O2-NEXT:    movzwl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB78_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -3909,7 +3909,7 @@ define void @atomic16_nand_release(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection135:
 ; O3-NEXT:    movzwl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB78_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -4213,7 +4213,7 @@ define void @atomic16_nand_acq_rel(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection148:
 ; O1-NEXT:    movzwl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB85_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -4238,7 +4238,7 @@ define void @atomic16_nand_acq_rel(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection148:
 ; O2-NEXT:    movzwl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB85_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -4263,7 +4263,7 @@ define void @atomic16_nand_acq_rel(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection148:
 ; O3-NEXT:    movzwl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB85_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -4567,7 +4567,7 @@ define void @atomic16_nand_seq_cst(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection161:
 ; O1-NEXT:    movzwl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB92_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -4592,7 +4592,7 @@ define void @atomic16_nand_seq_cst(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection161:
 ; O2-NEXT:    movzwl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB92_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -4617,7 +4617,7 @@ define void @atomic16_nand_seq_cst(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection161:
 ; O3-NEXT:    movzwl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB92_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -5623,7 +5623,7 @@ define void @atomic32_nand_monotonic(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection197:
 ; O1-NEXT:    movl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB112_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -5644,7 +5644,7 @@ define void @atomic32_nand_monotonic(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection197:
 ; O2-NEXT:    movl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB112_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -5665,7 +5665,7 @@ define void @atomic32_nand_monotonic(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection197:
 ; O3-NEXT:    movl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB112_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -5961,7 +5961,7 @@ define void @atomic32_nand_acquire(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection208:
 ; O1-NEXT:    movl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB119_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -5982,7 +5982,7 @@ define void @atomic32_nand_acquire(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection208:
 ; O2-NEXT:    movl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB119_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -6003,7 +6003,7 @@ define void @atomic32_nand_acquire(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection208:
 ; O3-NEXT:    movl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB119_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -6299,7 +6299,7 @@ define void @atomic32_nand_release(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection219:
 ; O1-NEXT:    movl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB126_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -6320,7 +6320,7 @@ define void @atomic32_nand_release(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection219:
 ; O2-NEXT:    movl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB126_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -6341,7 +6341,7 @@ define void @atomic32_nand_release(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection219:
 ; O3-NEXT:    movl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB126_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -6637,7 +6637,7 @@ define void @atomic32_nand_acq_rel(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection230:
 ; O1-NEXT:    movl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB133_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -6658,7 +6658,7 @@ define void @atomic32_nand_acq_rel(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection230:
 ; O2-NEXT:    movl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB133_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -6679,7 +6679,7 @@ define void @atomic32_nand_acq_rel(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection230:
 ; O3-NEXT:    movl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB133_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -6975,7 +6975,7 @@ define void @atomic32_nand_seq_cst(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection241:
 ; O1-NEXT:    movl (%rdi), %eax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB140_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -6996,7 +6996,7 @@ define void @atomic32_nand_seq_cst(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection241:
 ; O2-NEXT:    movl (%rdi), %eax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB140_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -7017,7 +7017,7 @@ define void @atomic32_nand_seq_cst(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection241:
 ; O3-NEXT:    movl (%rdi), %eax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB140_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -8145,7 +8145,7 @@ define void @atomic64_nand_monotonic(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection292:
 ; O1-NEXT:    movq (%rdi), %rax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB162_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -8166,7 +8166,7 @@ define void @atomic64_nand_monotonic(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection292:
 ; O2-NEXT:    movq (%rdi), %rax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB162_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -8187,7 +8187,7 @@ define void @atomic64_nand_monotonic(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection292:
 ; O3-NEXT:    movq (%rdi), %rax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB162_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -8486,7 +8486,7 @@ define void @atomic64_nand_acquire(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection303:
 ; O1-NEXT:    movq (%rdi), %rax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB169_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -8507,7 +8507,7 @@ define void @atomic64_nand_acquire(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection303:
 ; O2-NEXT:    movq (%rdi), %rax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB169_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -8528,7 +8528,7 @@ define void @atomic64_nand_acquire(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection303:
 ; O3-NEXT:    movq (%rdi), %rax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB169_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -8827,7 +8827,7 @@ define void @atomic64_nand_release(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection314:
 ; O1-NEXT:    movq (%rdi), %rax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB176_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -8848,7 +8848,7 @@ define void @atomic64_nand_release(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection314:
 ; O2-NEXT:    movq (%rdi), %rax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB176_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -8869,7 +8869,7 @@ define void @atomic64_nand_release(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection314:
 ; O3-NEXT:    movq (%rdi), %rax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB176_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -9168,7 +9168,7 @@ define void @atomic64_nand_acq_rel(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection325:
 ; O1-NEXT:    movq (%rdi), %rax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB183_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -9189,7 +9189,7 @@ define void @atomic64_nand_acq_rel(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection325:
 ; O2-NEXT:    movq (%rdi), %rax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB183_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -9210,7 +9210,7 @@ define void @atomic64_nand_acq_rel(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection325:
 ; O3-NEXT:    movq (%rdi), %rax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB183_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -9509,7 +9509,7 @@ define void @atomic64_nand_seq_cst(ptr %a) {
 ; O1-NEXT:    movq foo(%rip), %rax
 ; O1-NEXT:  .Lpcsection336:
 ; O1-NEXT:    movq (%rdi), %rax
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB190_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ecx
@@ -9530,7 +9530,7 @@ define void @atomic64_nand_seq_cst(ptr %a) {
 ; O2-NEXT:    movq foo(%rip), %rax
 ; O2-NEXT:  .Lpcsection336:
 ; O2-NEXT:    movq (%rdi), %rax
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB190_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ecx
@@ -9551,7 +9551,7 @@ define void @atomic64_nand_seq_cst(ptr %a) {
 ; O3-NEXT:    movq foo(%rip), %rax
 ; O3-NEXT:  .Lpcsection336:
 ; O3-NEXT:    movq (%rdi), %rax
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB190_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ecx
@@ -10561,7 +10561,7 @@ define void @atomic128_store_unordered(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection396:
 ; O1-NEXT:    movl $42, %ebx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB203_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:  .Lpcsection397:
@@ -10588,7 +10588,7 @@ define void @atomic128_store_unordered(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection396:
 ; O2-NEXT:    movl $42, %ebx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB203_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:  .Lpcsection397:
@@ -10615,7 +10615,7 @@ define void @atomic128_store_unordered(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection396:
 ; O3-NEXT:    movl $42, %ebx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB203_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:  .Lpcsection397:
@@ -10688,7 +10688,7 @@ define void @atomic128_store_monotonic(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection402:
 ; O1-NEXT:    movl $42, %ebx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB204_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:  .Lpcsection403:
@@ -10715,7 +10715,7 @@ define void @atomic128_store_monotonic(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection402:
 ; O2-NEXT:    movl $42, %ebx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB204_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:  .Lpcsection403:
@@ -10742,7 +10742,7 @@ define void @atomic128_store_monotonic(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection402:
 ; O3-NEXT:    movl $42, %ebx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB204_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:  .Lpcsection403:
@@ -10815,7 +10815,7 @@ define void @atomic128_store_release(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection408:
 ; O1-NEXT:    movl $42, %ebx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB205_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:  .Lpcsection409:
@@ -10842,7 +10842,7 @@ define void @atomic128_store_release(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection408:
 ; O2-NEXT:    movl $42, %ebx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB205_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:  .Lpcsection409:
@@ -10869,7 +10869,7 @@ define void @atomic128_store_release(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection408:
 ; O3-NEXT:    movl $42, %ebx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB205_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:  .Lpcsection409:
@@ -10942,7 +10942,7 @@ define void @atomic128_store_seq_cst(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection414:
 ; O1-NEXT:    movl $42, %ebx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB206_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:  .Lpcsection415:
@@ -10969,7 +10969,7 @@ define void @atomic128_store_seq_cst(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection414:
 ; O2-NEXT:    movl $42, %ebx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB206_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:  .Lpcsection415:
@@ -10996,7 +10996,7 @@ define void @atomic128_store_seq_cst(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection414:
 ; O3-NEXT:    movl $42, %ebx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB206_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:  .Lpcsection415:
@@ -11108,7 +11108,7 @@ define void @atomic128_xchg_monotonic(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection421:
 ; O1-NEXT:    movl $42, %ebx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB208_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:  .Lpcsection422:
@@ -11135,7 +11135,7 @@ define void @atomic128_xchg_monotonic(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection421:
 ; O2-NEXT:    movl $42, %ebx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB208_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:  .Lpcsection422:
@@ -11162,7 +11162,7 @@ define void @atomic128_xchg_monotonic(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection421:
 ; O3-NEXT:    movl $42, %ebx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB208_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:  .Lpcsection422:
@@ -11233,7 +11233,7 @@ define void @atomic128_add_monotonic(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection426:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB209_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -11262,7 +11262,7 @@ define void @atomic128_add_monotonic(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection426:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB209_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -11291,7 +11291,7 @@ define void @atomic128_add_monotonic(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection426:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB209_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -11366,7 +11366,7 @@ define void @atomic128_sub_monotonic(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection432:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB210_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -11395,7 +11395,7 @@ define void @atomic128_sub_monotonic(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection432:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB210_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -11424,7 +11424,7 @@ define void @atomic128_sub_monotonic(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection432:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB210_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -11501,7 +11501,7 @@ define void @atomic128_and_monotonic(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection438:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB211_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ebx
@@ -11529,7 +11529,7 @@ define void @atomic128_and_monotonic(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection438:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB211_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ebx
@@ -11557,7 +11557,7 @@ define void @atomic128_and_monotonic(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection438:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB211_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ebx
@@ -11629,7 +11629,7 @@ define void @atomic128_or_monotonic(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection444:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB212_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -11656,7 +11656,7 @@ define void @atomic128_or_monotonic(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection444:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB212_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -11683,7 +11683,7 @@ define void @atomic128_or_monotonic(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection444:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB212_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -11754,7 +11754,7 @@ define void @atomic128_xor_monotonic(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection449:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB213_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -11781,7 +11781,7 @@ define void @atomic128_xor_monotonic(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection449:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB213_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -11808,7 +11808,7 @@ define void @atomic128_xor_monotonic(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection449:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB213_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -11887,7 +11887,7 @@ define void @atomic128_nand_monotonic(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection455:
 ; O1-NEXT:    movq $-1, %rcx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB214_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ebx
@@ -11917,7 +11917,7 @@ define void @atomic128_nand_monotonic(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection455:
 ; O2-NEXT:    movq $-1, %rcx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB214_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ebx
@@ -11947,7 +11947,7 @@ define void @atomic128_nand_monotonic(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection455:
 ; O3-NEXT:    movq $-1, %rcx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB214_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ebx
@@ -12023,7 +12023,7 @@ define void @atomic128_xchg_acquire(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection462:
 ; O1-NEXT:    movl $42, %ebx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB215_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:  .Lpcsection463:
@@ -12050,7 +12050,7 @@ define void @atomic128_xchg_acquire(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection462:
 ; O2-NEXT:    movl $42, %ebx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB215_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:  .Lpcsection463:
@@ -12077,7 +12077,7 @@ define void @atomic128_xchg_acquire(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection462:
 ; O3-NEXT:    movl $42, %ebx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB215_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:  .Lpcsection463:
@@ -12148,7 +12148,7 @@ define void @atomic128_add_acquire(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection467:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB216_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -12177,7 +12177,7 @@ define void @atomic128_add_acquire(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection467:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB216_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -12206,7 +12206,7 @@ define void @atomic128_add_acquire(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection467:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB216_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -12281,7 +12281,7 @@ define void @atomic128_sub_acquire(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection473:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB217_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -12310,7 +12310,7 @@ define void @atomic128_sub_acquire(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection473:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB217_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -12339,7 +12339,7 @@ define void @atomic128_sub_acquire(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection473:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB217_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -12416,7 +12416,7 @@ define void @atomic128_and_acquire(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection479:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB218_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ebx
@@ -12444,7 +12444,7 @@ define void @atomic128_and_acquire(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection479:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB218_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ebx
@@ -12472,7 +12472,7 @@ define void @atomic128_and_acquire(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection479:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB218_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ebx
@@ -12544,7 +12544,7 @@ define void @atomic128_or_acquire(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection485:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB219_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -12571,7 +12571,7 @@ define void @atomic128_or_acquire(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection485:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB219_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -12598,7 +12598,7 @@ define void @atomic128_or_acquire(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection485:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB219_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -12669,7 +12669,7 @@ define void @atomic128_xor_acquire(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection490:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB220_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -12696,7 +12696,7 @@ define void @atomic128_xor_acquire(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection490:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB220_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -12723,7 +12723,7 @@ define void @atomic128_xor_acquire(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection490:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB220_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -12802,7 +12802,7 @@ define void @atomic128_nand_acquire(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection496:
 ; O1-NEXT:    movq $-1, %rcx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB221_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ebx
@@ -12832,7 +12832,7 @@ define void @atomic128_nand_acquire(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection496:
 ; O2-NEXT:    movq $-1, %rcx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB221_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ebx
@@ -12862,7 +12862,7 @@ define void @atomic128_nand_acquire(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection496:
 ; O3-NEXT:    movq $-1, %rcx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB221_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ebx
@@ -12938,7 +12938,7 @@ define void @atomic128_xchg_release(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection503:
 ; O1-NEXT:    movl $42, %ebx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB222_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:  .Lpcsection504:
@@ -12965,7 +12965,7 @@ define void @atomic128_xchg_release(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection503:
 ; O2-NEXT:    movl $42, %ebx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB222_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:  .Lpcsection504:
@@ -12992,7 +12992,7 @@ define void @atomic128_xchg_release(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection503:
 ; O3-NEXT:    movl $42, %ebx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB222_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:  .Lpcsection504:
@@ -13062,7 +13062,7 @@ define void @atomic128_add_release(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection508:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB223_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -13091,7 +13091,7 @@ define void @atomic128_add_release(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection508:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB223_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -13120,7 +13120,7 @@ define void @atomic128_add_release(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection508:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB223_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -13195,7 +13195,7 @@ define void @atomic128_sub_release(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection514:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB224_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -13224,7 +13224,7 @@ define void @atomic128_sub_release(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection514:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB224_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -13253,7 +13253,7 @@ define void @atomic128_sub_release(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection514:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB224_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -13330,7 +13330,7 @@ define void @atomic128_and_release(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection520:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB225_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ebx
@@ -13358,7 +13358,7 @@ define void @atomic128_and_release(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection520:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB225_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ebx
@@ -13386,7 +13386,7 @@ define void @atomic128_and_release(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection520:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB225_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ebx
@@ -13458,7 +13458,7 @@ define void @atomic128_or_release(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection526:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB226_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -13485,7 +13485,7 @@ define void @atomic128_or_release(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection526:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB226_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -13512,7 +13512,7 @@ define void @atomic128_or_release(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection526:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB226_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -13583,7 +13583,7 @@ define void @atomic128_xor_release(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection531:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB227_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -13610,7 +13610,7 @@ define void @atomic128_xor_release(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection531:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB227_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -13637,7 +13637,7 @@ define void @atomic128_xor_release(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection531:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB227_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -13716,7 +13716,7 @@ define void @atomic128_nand_release(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection537:
 ; O1-NEXT:    movq $-1, %rcx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB228_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ebx
@@ -13746,7 +13746,7 @@ define void @atomic128_nand_release(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection537:
 ; O2-NEXT:    movq $-1, %rcx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB228_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ebx
@@ -13776,7 +13776,7 @@ define void @atomic128_nand_release(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection537:
 ; O3-NEXT:    movq $-1, %rcx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB228_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ebx
@@ -13852,7 +13852,7 @@ define void @atomic128_xchg_acq_rel(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection544:
 ; O1-NEXT:    movl $42, %ebx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB229_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:  .Lpcsection545:
@@ -13879,7 +13879,7 @@ define void @atomic128_xchg_acq_rel(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection544:
 ; O2-NEXT:    movl $42, %ebx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB229_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:  .Lpcsection545:
@@ -13906,7 +13906,7 @@ define void @atomic128_xchg_acq_rel(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection544:
 ; O3-NEXT:    movl $42, %ebx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB229_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:  .Lpcsection545:
@@ -13977,7 +13977,7 @@ define void @atomic128_add_acq_rel(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection549:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB230_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -14006,7 +14006,7 @@ define void @atomic128_add_acq_rel(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection549:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB230_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -14035,7 +14035,7 @@ define void @atomic128_add_acq_rel(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection549:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB230_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -14110,7 +14110,7 @@ define void @atomic128_sub_acq_rel(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection555:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB231_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -14139,7 +14139,7 @@ define void @atomic128_sub_acq_rel(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection555:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB231_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -14168,7 +14168,7 @@ define void @atomic128_sub_acq_rel(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection555:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB231_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -14245,7 +14245,7 @@ define void @atomic128_and_acq_rel(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection561:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB232_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ebx
@@ -14273,7 +14273,7 @@ define void @atomic128_and_acq_rel(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection561:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB232_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ebx
@@ -14301,7 +14301,7 @@ define void @atomic128_and_acq_rel(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection561:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB232_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ebx
@@ -14373,7 +14373,7 @@ define void @atomic128_or_acq_rel(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection567:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB233_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -14400,7 +14400,7 @@ define void @atomic128_or_acq_rel(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection567:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB233_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -14427,7 +14427,7 @@ define void @atomic128_or_acq_rel(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection567:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB233_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -14498,7 +14498,7 @@ define void @atomic128_xor_acq_rel(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection572:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB234_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -14525,7 +14525,7 @@ define void @atomic128_xor_acq_rel(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection572:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB234_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -14552,7 +14552,7 @@ define void @atomic128_xor_acq_rel(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection572:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB234_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -14631,7 +14631,7 @@ define void @atomic128_nand_acq_rel(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection578:
 ; O1-NEXT:    movq $-1, %rcx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB235_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ebx
@@ -14661,7 +14661,7 @@ define void @atomic128_nand_acq_rel(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection578:
 ; O2-NEXT:    movq $-1, %rcx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB235_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ebx
@@ -14691,7 +14691,7 @@ define void @atomic128_nand_acq_rel(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection578:
 ; O3-NEXT:    movq $-1, %rcx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB235_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ebx
@@ -14767,7 +14767,7 @@ define void @atomic128_xchg_seq_cst(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection585:
 ; O1-NEXT:    movl $42, %ebx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB236_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:  .Lpcsection586:
@@ -14794,7 +14794,7 @@ define void @atomic128_xchg_seq_cst(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection585:
 ; O2-NEXT:    movl $42, %ebx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB236_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:  .Lpcsection586:
@@ -14821,7 +14821,7 @@ define void @atomic128_xchg_seq_cst(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection585:
 ; O3-NEXT:    movl $42, %ebx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB236_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:  .Lpcsection586:
@@ -14892,7 +14892,7 @@ define void @atomic128_add_seq_cst(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection590:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB237_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -14921,7 +14921,7 @@ define void @atomic128_add_seq_cst(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection590:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB237_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -14950,7 +14950,7 @@ define void @atomic128_add_seq_cst(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection590:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB237_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -15025,7 +15025,7 @@ define void @atomic128_sub_seq_cst(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection596:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB238_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -15054,7 +15054,7 @@ define void @atomic128_sub_seq_cst(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection596:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB238_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -15083,7 +15083,7 @@ define void @atomic128_sub_seq_cst(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection596:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB238_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -15160,7 +15160,7 @@ define void @atomic128_and_seq_cst(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection602:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB239_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ebx
@@ -15188,7 +15188,7 @@ define void @atomic128_and_seq_cst(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection602:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB239_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ebx
@@ -15216,7 +15216,7 @@ define void @atomic128_and_seq_cst(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection602:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB239_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ebx
@@ -15288,7 +15288,7 @@ define void @atomic128_or_seq_cst(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection608:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB240_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -15315,7 +15315,7 @@ define void @atomic128_or_seq_cst(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection608:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB240_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -15342,7 +15342,7 @@ define void @atomic128_or_seq_cst(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection608:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB240_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -15413,7 +15413,7 @@ define void @atomic128_xor_seq_cst(ptr %a) {
 ; O1-NEXT:    movq (%rdi), %rax
 ; O1-NEXT:  .Lpcsection613:
 ; O1-NEXT:    movq 8(%rdi), %rdx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB241_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movq %rax, %rbx
@@ -15440,7 +15440,7 @@ define void @atomic128_xor_seq_cst(ptr %a) {
 ; O2-NEXT:    movq (%rdi), %rax
 ; O2-NEXT:  .Lpcsection613:
 ; O2-NEXT:    movq 8(%rdi), %rdx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB241_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movq %rax, %rbx
@@ -15467,7 +15467,7 @@ define void @atomic128_xor_seq_cst(ptr %a) {
 ; O3-NEXT:    movq (%rdi), %rax
 ; O3-NEXT:  .Lpcsection613:
 ; O3-NEXT:    movq 8(%rdi), %rdx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB241_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movq %rax, %rbx
@@ -15546,7 +15546,7 @@ define void @atomic128_nand_seq_cst(ptr %a) {
 ; O1-NEXT:    movq 8(%rdi), %rdx
 ; O1-NEXT:  .Lpcsection619:
 ; O1-NEXT:    movq $-1, %rcx
-; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:    .p2align 4
 ; O1-NEXT:  .LBB242_1: # %atomicrmw.start
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O1-NEXT:    movl %eax, %ebx
@@ -15576,7 +15576,7 @@ define void @atomic128_nand_seq_cst(ptr %a) {
 ; O2-NEXT:    movq 8(%rdi), %rdx
 ; O2-NEXT:  .Lpcsection619:
 ; O2-NEXT:    movq $-1, %rcx
-; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:    .p2align 4
 ; O2-NEXT:  .LBB242_1: # %atomicrmw.start
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O2-NEXT:    movl %eax, %ebx
@@ -15606,7 +15606,7 @@ define void @atomic128_nand_seq_cst(ptr %a) {
 ; O3-NEXT:    movq 8(%rdi), %rdx
 ; O3-NEXT:  .Lpcsection619:
 ; O3-NEXT:    movq $-1, %rcx
-; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:    .p2align 4
 ; O3-NEXT:  .LBB242_1: # %atomicrmw.start
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
 ; O3-NEXT:    movl %eax, %ebx

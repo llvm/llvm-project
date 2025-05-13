@@ -9,6 +9,9 @@
 // XFAIL: !has-64-bit-atomics
 // XFAIL: !has-1024-bit-atomics
 
+// MSVC warning C4310: cast truncates constant value
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4310
+
 // bool compare_exchange_strong(T&, T, memory_order, memory_order) const noexcept;
 // bool compare_exchange_strong(T&, T, memory_order = memory_order::seq_cst) const noexcept;
 

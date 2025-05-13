@@ -180,9 +180,9 @@ define void @correlate(ptr nocapture noundef readonly %ID, ptr nocapture noundef
 ; CHECK-NEXT:    @ in Loop: Header=BB4_4 Depth=1
 ; CHECK-NEXT:    ldr r1, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r2, r9, r10
-; CHECK-NEXT:    sub.w r5, r8, r9
 ; CHECK-NEXT:    add.w r7, r1, r9, lsl #1
 ; CHECK-NEXT:    add.w r2, r1, r2, lsl #1
+; CHECK-NEXT:    sub.w r5, r8, r9
 ; CHECK-NEXT:    dlstp.32 lr, r5
 ; CHECK-NEXT:  .LBB4_11: @ %vec.epilog.vector.body
 ; CHECK-NEXT:    @ Parent Loop BB4_4 Depth=1

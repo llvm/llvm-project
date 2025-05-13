@@ -342,15 +342,15 @@ func.func @loop_bounds(%N : index) {
 
 // CHECK-LABEL: func @ifinst(%{{.*}}: index) {
 func.func @ifinst(%N: index) {
-  %c = arith.constant 200 : index // CHECK   %{{.*}} = arith.constant 200
-  affine.for %i = 1 to 10 {           // CHECK   affine.for %{{.*}} = 1 to 10 {
-    affine.if #set0(%i)[%N, %c] {     // CHECK     affine.if #set0(%{{.*}})[%{{.*}}, %{{.*}}] {
+  %c = arith.constant 200 : index // CHECK:  %{{.*}} = arith.constant 200
+  affine.for %i = 1 to 10 {           // CHECK:  affine.for %{{.*}} = 1 to 10 {
+    affine.if #set0(%i)[%N, %c] {     // CHECK:    affine.if #set(%{{.*}})[%{{.*}}, %{{.*}}] {
       %x = arith.constant 1 : i32
        // CHECK: %{{.*}} = arith.constant 1 : i32
       %y = "add"(%x, %i) : (i32, index) -> i32 // CHECK: %{{.*}} = "add"(%{{.*}}, %{{.*}}) : (i32, index) -> i32
       %z = "mul"(%y, %y) : (i32, i32) -> i32 // CHECK: %{{.*}} = "mul"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
     } else { // CHECK } else {
-      affine.if affine_set<(i)[N] : (i - 2 >= 0, 4 - i >= 0)>(%i)[%N]  {      // CHECK  affine.if (#set1(%{{.*}})[%{{.*}}]) {
+      affine.if affine_set<(i)[N] : (i - 2 >= 0, 4 - i >= 0)>(%i)[%N]  {      // CHECK: affine.if #set1(%{{.*}})[%{{.*}}] {
         // CHECK: %{{.*}} = arith.constant 1 : index
         %u = arith.constant 1 : index
         // CHECK: %{{.*}} = affine.apply #map{{.*}}(%{{.*}}, %{{.*}})[%{{.*}}]
@@ -358,24 +358,24 @@ func.func @ifinst(%N: index) {
       } else {            // CHECK     } else {
         %v = arith.constant 3 : i32 // %c3_i32 = arith.constant 3 : i32
       }
-    }       // CHECK     }
-  }         // CHECK   }
-  return    // CHECK   return
-}           // CHECK }
+    }       // CHECK:    }
+  }         // CHECK:  }
+  return    // CHECK:  return
+}           // CHECK:}
 
 // CHECK-LABEL: func @simple_ifinst(%{{.*}}: index) {
 func.func @simple_ifinst(%N: index) {
-  %c = arith.constant 200 : index // CHECK   %{{.*}} = arith.constant 200
-  affine.for %i = 1 to 10 {           // CHECK   affine.for %{{.*}} = 1 to 10 {
-    affine.if #set0(%i)[%N, %c] {     // CHECK     affine.if #set0(%{{.*}})[%{{.*}}, %{{.*}}] {
+  %c = arith.constant 200 : index // CHECK:  %{{.*}} = arith.constant 200
+  affine.for %i = 1 to 10 {           // CHECK:  affine.for %{{.*}} = 1 to 10 {
+    affine.if #set0(%i)[%N, %c] {     // CHECK:    affine.if #set(%{{.*}})[%{{.*}}, %{{.*}}] {
       %x = arith.constant 1 : i32
        // CHECK: %{{.*}} = arith.constant 1 : i32
       %y = "add"(%x, %i) : (i32, index) -> i32 // CHECK: %{{.*}} = "add"(%{{.*}}, %{{.*}}) : (i32, index) -> i32
       %z = "mul"(%y, %y) : (i32, i32) -> i32 // CHECK: %{{.*}} = "mul"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
-    }       // CHECK     }
-  }         // CHECK   }
-  return    // CHECK   return
-}           // CHECK }
+    }       // CHECK:    }
+  }         // CHECK:  }
+  return    // CHECK:  return
+}           // CHECK:}
 
 // CHECK-LABEL: func @attributes() {
 func.func @attributes() {
@@ -730,6 +730,10 @@ func.func @densetensorattr() -> () {
   "complex_attr"(){bar = dense<(1.000000e+00,0.000000e+00)> : tensor<complex<f32>>} : () -> ()
   // CHECK: dense<[(1.000000e+00,0.000000e+00), (2.000000e+00,2.000000e+00)]> : tensor<2xcomplex<f32>>
   "complex_attr"(){bar = dense<[(1.000000e+00,0.000000e+00), (2.000000e+00,2.000000e+00)]> : tensor<2xcomplex<f32>>} : () -> ()
+  // CHECK: dense<> : tensor<0xcomplex<i64>>
+  "complex_attr"(){bar = dense<> : tensor<0xcomplex<i64>>} : () -> ()
+  // CHECK: dense<> : tensor<2x0xcomplex<i64>>
+  "complex_attr"(){bar = dense<> : tensor<2x0xcomplex<i64>>} : () -> ()
   return
 }
 
@@ -1165,6 +1169,15 @@ func.func @op_with_region_args() {
   return
 }
 
+// Test parsing an operation name from within another op custom syntax.
+
+// CHECK-LABEL: @custom_name_api
+func.func @custom_name_api() {
+  // CHECK: test.parse_custom_operation_name_api(builtin.module)
+  test.parse_custom_operation_name_api(builtin.module)
+  return
+}
+
 // Test allowing different name scopes for regions isolated from above.
 
 // CHECK-LABEL: func @op_with_passthrough_region_args
@@ -1464,4 +1477,3 @@ test.dialect_custom_format_fallback custom_format_fallback
 // Check that an op with an optional result parses f80 as type.
 // CHECK: test.format_optional_result_d_op : f80
 test.format_optional_result_d_op : f80
-

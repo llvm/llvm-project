@@ -52,9 +52,10 @@ __attribute__((noinline)) void func4_amb(int &sink, int x) {
   //%     expect_cmd_failure=True)
   //% self.filecheck("expr sink", "main.cpp","-check-prefix=FUNC4-EXPR",
   //%     expect_cmd_failure=True)
-  // FUNC4-EXPR-FAIL: couldn't get the value of variable x: Could not evaluate
-  // DW_OP_entry_value. FUNC4-EXPR: couldn't get the value of variable sink:
-  // Could not evaluate DW_OP_entry_value.
+  // clang-format off
+  // FUNC4-EXPR-FAIL: couldn't get the value of variable x: could not evaluate DW_OP_entry_value: no matching call site param found
+  // FUNC4-EXPR: couldn't get the value of variable sink: could not evaluate DW_OP_entry_value: no matching call site param found
+  // clang-format on
 }
 
 __attribute__((noinline)) void func5_amb() {}
@@ -69,8 +70,8 @@ __attribute__((noinline)) void func6(int &sink, int x) {
 __attribute__((noinline)) void func7(int &sink, int x) {
   //% self.filecheck("bt", "main.cpp", "-check-prefix=FUNC7-BT")
   // FUNC7-BT: func7
-  // FUNC7-BT-NEXT: [inlined] func8_inlined
-  // FUNC7-BT-NEXT: [inlined] func9_inlined
+  // FUNC7-BT-NEXT: func8_inlined
+  // FUNC7-BT-NEXT: func9_inlined
   // FUNC7-BT-NEXT: func10
   use<int &, int>(sink, x);
   use<int &, int>(dummy, 0);

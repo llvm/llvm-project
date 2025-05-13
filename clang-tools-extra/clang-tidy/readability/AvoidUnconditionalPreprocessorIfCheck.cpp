@@ -84,7 +84,8 @@ struct AvoidUnconditionalPreprocessorIfPPCallbacks : public PPCallbacks {
       return (Tok.getRawIdentifier() == "true" ||
               Tok.getRawIdentifier() == "false");
     default:
-      return Tok.getKind() >= tok::l_square && Tok.getKind() <= tok::caretcaret;
+      return Tok.getKind() >= tok::l_square &&
+             Tok.getKind() <= tok::greatergreatergreater;
     }
   }
 
