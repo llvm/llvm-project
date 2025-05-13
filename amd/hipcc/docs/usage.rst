@@ -8,8 +8,7 @@
 Using HIPCC
 ******************************************
 
-The built executables can be used the same way as the ``hipcc`` and ``hipconfig`` Perl scripts. 
-To use the newly built executables from the build folder use ``./`` in front of the executable name. 
+To use the newly built the ``hipcc`` and ``hipconfig`` executables from the build folder use ``./`` in front of the executable name.
 For example:
 
 .. code-block:: shell
@@ -18,4 +17,3 @@ For example:
     ./hipcc --help
     ./hipcc --version
     ./hipconfig --full
-
