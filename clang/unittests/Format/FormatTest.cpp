@@ -5527,7 +5527,6 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
                "        x; \\\n"
                "    }",
                style);
-
   style.PPIndentWidth = 2;
   verifyFormat("#ifdef foo\n"
                "#define bar() \\\n"
@@ -5547,22 +5546,55 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
                "#endif",
                style);
 
+  style.IndentPPDirectives = FormatStyle::PPDIS_Leave;
+  style.IndentWidth = 4;
+  verifyNoChange("#ifndef foo\n"
+                 "#define foo\n"
+                 "if (emacs) {\n"
+                 "#ifdef is\n"
+                 "#define lit           \\\n"
+                 "    if (af) {         \\\n"
+                 "        return duh(); \\\n"
+                 "    }\n"
+                 "#endif\n"
+                 "}\n"
+                 "#endif",
+                 style);
+  verifyNoChange("#ifndef foo\n"
+                 "  #define foo\n"
+                 "if (emacs) {\n"
+                 "  #ifdef is\n"
+                 "#define lit           \\\n"
+                 "    if (af) {         \\\n"
+                 "        return duh(); \\\n"
+                 "    }\n"
+                 "  #endif\n"
+                 "}\n"
+                 "#endif",
+                 style);
+  verifyNoChange("  #ifndef foo\n"
+                 "#  define foo\n"
+                 "if (emacs) {\n"
+                 "#ifdef is\n"
+                 "  #  define lit       \\\n"
+                 "    if (af) {         \\\n"
+                 "        return duh(); \\\n"
+                 "    }\n"
+                 "#endif\n"
+                 "}\n"
+                 "  #endif",
+                 style);
+
   style.IndentWidth = 1;
   style.PPIndentWidth = 4;
-  verifyFormat("#if 1\n"
-               "#define X \\\n"
-               " {        \\\n"
-               "  x;      \\\n"
-               "  x;      \\\n"
-               " }\n"
-               "#endif",
-               style);
-  verifyFormat("#define X \\\n"
-               " {        \\\n"
-               "  x;      \\\n"
-               "  x;      \\\n"
-               " }",
-               style);
+  verifyNoChange("# if 1\n"
+                 "  #define X \\\n"
+                 " {          \\\n"
+                 "  x;        \\\n"
+                 "  x;        \\\n"
+                 " }\n"
+                 "# endif",
+                 style);
 
   style.IndentWidth = 4;
   style.PPIndentWidth = 1;
@@ -25595,6 +25627,20 @@ TEST_F(FormatTest, SkipMacroDefinitionBody) {
                  "a a \\\n"
                  "a        \\\n"
                  "a",
+                 Style);
+
+  Style.IndentPPDirectives = FormatStyle::PPDIS_Leave;
+  verifyNoChange("#if A\n"
+                 "#define A a\n"
+                 "#endif",
+                 Style);
+  verifyNoChange("#if A\n"
+                 "  #define A a\n"
+                 "#endif",
+                 Style);
+  verifyNoChange("#if A\n"
+                 "#  define A a\n"
+                 "#endif",
                  Style);
 
   // Adjust indendations but don't change the definition.
