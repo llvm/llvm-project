@@ -42,7 +42,7 @@ defm REF_TEST_FUNCREF :
     (outs),
     (ins TypeIndex:$type),
     [],
-    "ref.test_func\t$type, $ref", "ref.test_func $type", 0xfb14>;
+    "ref.test\t$type, $ref", "ref.test $type", 0xfb14>;
 
 defm "" : REF_I<FUNCREF, funcref, "func">;
 defm "" : REF_I<EXTERNREF, externref, "extern">;

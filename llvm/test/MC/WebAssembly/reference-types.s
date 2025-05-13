@@ -37,9 +37,9 @@ ref_null_test:
 ref_test_test:
   .functype ref_test_test () -> (i32, i32)
   ref.null_func
-  ref.test_func () -> ()
+  ref.test () -> ()
   ref.null_func
-  ref.test_func () -> (i32)
+  ref.test () -> (i32)
   end_function
 
 # CHECK-LABEL: ref_sig_test_funcref:

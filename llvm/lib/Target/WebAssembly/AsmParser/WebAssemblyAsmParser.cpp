@@ -668,7 +668,7 @@ public:
       if (parseFunctionTableOperand(&FunctionTable))
         return true;
       ExpectFuncType = true;
-    } else if (Name == "ref.test_func") {
+    } else if (Name == "ref.test") {
       ExpectFuncType = true;
     }
 
