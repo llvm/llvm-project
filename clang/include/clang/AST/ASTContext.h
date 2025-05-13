@@ -221,7 +221,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<DependentDecltypeType, ASTContext &>
       DependentDecltypeTypes;
 
-  mutable llvm::FoldingSet<PackIndexingType> DependentPackIndexingTypes;
+  mutable llvm::ContextualFoldingSet<PackIndexingType, ASTContext &>
+      DependentPackIndexingTypes;
 
   mutable llvm::FoldingSet<TemplateTypeParmType> TemplateTypeParmTypes;
   mutable llvm::FoldingSet<ObjCTypeParamType> ObjCTypeParamTypes;
@@ -243,8 +244,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<PackExpansionType> PackExpansionTypes;
   mutable llvm::FoldingSet<ObjCObjectTypeImpl> ObjCObjectTypes;
   mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
-  mutable llvm::FoldingSet<DependentUnaryTransformType>
-    DependentUnaryTransformTypes;
+  mutable llvm::FoldingSet<UnaryTransformType> UnaryTransformTypes;
   // An AutoType can have a dependency on another AutoType via its template
   // arguments. Since both dependent and dependency are on the same set,
   // we can end up in an infinite recursion when looking for a node if we used
@@ -328,6 +328,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   ///
   /// This is lazily created.  This is intentionally not serialized.
   mutable llvm::StringMap<StringLiteral *> StringLiteralCache;
+
+  mutable llvm::DenseSet<const FunctionDecl *> DestroyingOperatorDeletes;
+  mutable llvm::DenseSet<const FunctionDecl *> TypeAwareOperatorNewAndDeletes;
 
   /// The next string literal "version" to allocate during constant evaluation.
   /// This is used to distinguish between repeated evaluations of the same
@@ -614,6 +617,20 @@ private:
   /// that value exceeds the bitfield size of ParmVarDeclBits.ParameterIndex.
   using ParameterIndexTable = llvm::DenseMap<const VarDecl *, unsigned>;
   ParameterIndexTable ParamIndices;
+
+public:
+  struct CXXRecordDeclRelocationInfo {
+    unsigned IsRelocatable;
+    unsigned IsReplaceable;
+  };
+  std::optional<CXXRecordDeclRelocationInfo>
+  getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
+  void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
+                                     CXXRecordDeclRelocationInfo);
+
+private:
+  llvm::DenseMap<const CXXRecordDecl *, CXXRecordDeclRelocationInfo>
+      RelocatableClasses;
 
   ImportDecl *FirstLocalImport = nullptr;
   ImportDecl *LastLocalImport = nullptr;
@@ -1562,8 +1579,8 @@ public:
   /// Return a non-unique reference to the type for a variable array of
   /// the specified element type.
   QualType getVariableArrayType(QualType EltTy, Expr *NumElts,
-                                ArraySizeModifier ASM, unsigned IndexTypeQuals,
-                                SourceRange Brackets) const;
+                                ArraySizeModifier ASM,
+                                unsigned IndexTypeQuals) const;
 
   /// Return a non-unique reference to the type for a dependently-sized
   /// array of the specified element type.
@@ -1572,8 +1589,7 @@ public:
   /// point.
   QualType getDependentSizedArrayType(QualType EltTy, Expr *NumElts,
                                       ArraySizeModifier ASM,
-                                      unsigned IndexTypeQuals,
-                                      SourceRange Brackets) const;
+                                      unsigned IndexTypeQuals) const;
 
   /// Return a unique reference to the type for an incomplete array of
   /// the specified element type.
@@ -2955,6 +2971,11 @@ public:
   TemplateTemplateParmDecl *insertCanonicalTemplateTemplateParmDeclInternal(
       TemplateTemplateParmDecl *CanonTTP) const;
 
+  /// Determine whether the given template arguments \p Arg1 and \p Arg2 are
+  /// equivalent.
+  bool isSameTemplateArgument(const TemplateArgument &Arg1,
+                              const TemplateArgument &Arg2) const;
+
   /// Type Query functions.  If the type is an instance of the specified class,
   /// return the Type pointer for the underlying maximally pretty type.  This
   /// is a member of ASTContext because this may need to do some amount of
@@ -3146,6 +3167,7 @@ public:
   QualType mergeTransparentUnionType(QualType, QualType,
                                      bool OfBlockPointer=false,
                                      bool Unqualified = false);
+  QualType mergeTagDefinitions(QualType, QualType);
 
   QualType mergeObjCGCQualifiers(QualType, QualType);
 
@@ -3355,6 +3377,15 @@ public:
 
   void setStaticLocalNumber(const VarDecl *VD, unsigned Number);
   unsigned getStaticLocalNumber(const VarDecl *VD) const;
+
+  bool hasSeenTypeAwareOperatorNewOrDelete() const {
+    return !TypeAwareOperatorNewAndDeletes.empty();
+  }
+  void setIsDestroyingOperatorDelete(const FunctionDecl *FD, bool IsDestroying);
+  bool isDestroyingOperatorDelete(const FunctionDecl *FD) const;
+  void setIsTypeAwareOperatorNewOrDelete(const FunctionDecl *FD,
+                                         bool IsTypeAware);
+  bool isTypeAwareOperatorNewOrDelete(const FunctionDecl *FD) const;
 
   /// Retrieve the context for computing mangling numbers in the given
   /// DeclContext.

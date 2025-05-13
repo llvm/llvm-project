@@ -61,6 +61,7 @@ getIntrinsicEffects(mlir::Operation *self,
   // }
   for (mlir::OpOperand &operand : self->getOpOperands()) {
     mlir::Type opTy = operand.get().getType();
+    fir::addVolatileMemoryEffects({opTy}, effects);
     if (fir::isa_ref_type(opTy) || fir::isa_box_type(opTy))
       effects.emplace_back(mlir::MemoryEffects::Read::get(), &operand,
                            mlir::SideEffects::DefaultResource::get());
@@ -95,7 +96,7 @@ static llvm::LogicalResult areMatchingTypes(Op &op, mlir::Type type1,
 }
 
 //===----------------------------------------------------------------------===//
-// DeclareOp
+// AssignOp
 //===----------------------------------------------------------------------===//
 
 /// Is this a fir.[ref/ptr/heap]<fir.[box/class]<fir.heap<T>>> type?
@@ -164,6 +165,8 @@ void hlfir::AssignOp::getEffects(
     }
   }
 
+  fir::addVolatileMemoryEffects({lhsType, rhsType}, effects);
+
   if (getRealloc()) {
     // Reallocation of the data cannot be precisely described by this API.
     effects.emplace_back(mlir::MemoryEffects::Free::get(),
@@ -195,13 +198,39 @@ mlir::Type hlfir::DeclareOp::getHLFIRVariableType(mlir::Type inputType,
   bool hasDynamicLengthParams = fir::characterWithDynamicLen(eleType) ||
                                 fir::isRecordWithTypeParameters(eleType);
   if (hasExplicitLowerBounds || hasDynamicExtents || hasDynamicLengthParams)
-    return fir::BoxType::get(type);
+    return fir::BoxType::get(type, fir::isa_volatile_type(inputType));
   return inputType;
 }
 
 static bool hasExplicitLowerBounds(mlir::Value shape) {
   return shape &&
          mlir::isa<fir::ShapeShiftType, fir::ShiftType>(shape.getType());
+}
+
+static std::pair<mlir::Type, mlir::Value> updateDeclareInputTypeWithVolatility(
+    mlir::Type inputType, mlir::Value memref, mlir::OpBuilder &builder,
+    fir::FortranVariableFlagsAttr fortran_attrs) {
+  if (fortran_attrs &&
+      bitEnumContainsAny(fortran_attrs.getFlags(),
+                         fir::FortranVariableFlagsEnum::fortran_volatile)) {
+    const bool isPointer = bitEnumContainsAny(
+        fortran_attrs.getFlags(), fir::FortranVariableFlagsEnum::pointer);
+    auto updateType = [&](auto t) {
+      using FIRT = decltype(t);
+      // A volatile pointer's pointee is volatile.
+      auto elementType = t.getEleTy();
+      const bool elementTypeIsVolatile =
+          isPointer || fir::isa_volatile_type(elementType);
+      auto newEleTy =
+          fir::updateTypeWithVolatility(elementType, elementTypeIsVolatile);
+      inputType = FIRT::get(newEleTy, true);
+    };
+    llvm::TypeSwitch<mlir::Type>(inputType)
+        .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>(updateType);
+    memref =
+        builder.create<fir::VolatileCastOp>(memref.getLoc(), inputType, memref);
+  }
+  return std::make_pair(inputType, memref);
 }
 
 void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
@@ -214,6 +243,8 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
+  std::tie(inputType, memref) = updateDeclareInputTypeWithVolatility(
+      inputType, memref, builder, fortran_attrs);
   mlir::Type hlfirVariableType =
       getHLFIRVariableType(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, inputType}, memref, shape,
@@ -390,6 +421,13 @@ llvm::LogicalResult hlfir::DesignateOp::verify() {
   unsigned outputRank = 0;
   mlir::Type outputElementType;
   bool hasBoxComponent;
+  if (fir::useStrictVolatileVerification() &&
+      fir::isa_volatile_type(memrefType) !=
+          fir::isa_volatile_type(getResult().getType())) {
+    return emitOpError("volatility mismatch between memref and result type")
+           << " memref type: " << memrefType
+           << " result type: " << getResult().getType();
+  }
   if (getComponent()) {
     auto component = getComponent().value();
     auto recType = mlir::dyn_cast<fir::RecordType>(baseElementType);

@@ -57,6 +57,22 @@ llvm.func @fold_extractvalue() -> i32 {
 
 // -----
 
+// CHECK-LABEL: fold_extractvalue(
+//  CHECK-SAME:     %[[arg1:.*]]: i32, %[[arg2:.*]]: i32, %[[arg3:.*]]: i32)
+//  CHECK-NEXT:   llvm.return %[[arg1]] : i32
+llvm.func @fold_extractvalue(%arg1: i32, %arg2: i32, %arg3: i32) -> i32{
+  %3 = llvm.mlir.undef : !llvm.struct<(struct<(i32, i32, i32)>, struct<(i32, i32)>)>
+  %5 = llvm.mlir.undef : !llvm.struct<(i32, i32, i32)>
+  %6 = llvm.insertvalue %arg1, %5[0] : !llvm.struct<(i32, i32, i32)>
+  %7 = llvm.insertvalue %arg1, %6[1] : !llvm.struct<(i32, i32, i32)>
+  %8 = llvm.insertvalue %arg1, %7[2] : !llvm.struct<(i32, i32, i32)>
+  %11 = llvm.insertvalue %8, %3[0] : !llvm.struct<(struct<(i32, i32, i32)>, struct<(i32, i32)>)>
+  %13 = llvm.extractvalue %11[0, 0] : !llvm.struct<(struct<(i32, i32, i32)>, struct<(i32, i32)>)>
+  llvm.return %13 : i32
+}
+
+// -----
+
 // CHECK-LABEL: no_fold_extractvalue
 llvm.func @no_fold_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
   %f0 = arith.constant 0.0 : f32
