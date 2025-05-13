@@ -52,9 +52,8 @@ static bool CheckWasmBuiltinArgIsInteger(Sema &S, CallExpr *E,
 }
 
 bool SemaWasm::BuiltinWasmRefNullExtern(CallExpr *TheCall) {
-  if (SemaRef.checkArgCount(TheCall, 0)) {
+  if (SemaRef.checkArgCount(TheCall, /*DesiredArgCount=*/0))
     return true;
-  }
   TheCall->setType(getASTContext().getWebAssemblyExternrefType());
 
   return false;
@@ -78,9 +77,8 @@ bool SemaWasm::BuiltinWasmRefIsNullExtern(CallExpr *TheCall) {
 
 bool SemaWasm::BuiltinWasmRefNullFunc(CallExpr *TheCall) {
   ASTContext &Context = getASTContext();
-  if (SemaRef.checkArgCount(TheCall, 0)) {
+  if (SemaRef.checkArgCount(TheCall, /*DesiredArgCount=*/0))
     return true;
-  }
 
   // This custom type checking code ensures that the nodes are as expected
   // in order to later on generate the necessary builtin.

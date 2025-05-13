@@ -210,7 +210,8 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
   }];
   let constructor = "::fir::createAddDebugInfoPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect",
+    "mlir::DLTIDialect"
   ];
   let options = [
     Option<"debugLevel", "debug-level",
@@ -355,7 +356,7 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     an array has element sized stride. The element sizes stride allows some
     loops to be vectorized as well as other loop optimizations.
   }];
-  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
 }
 
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
@@ -435,7 +436,7 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::gpu::GPUDialect"
+    "fir::FIROpsDialect", "mlir::gpu::GPUDialect", "mlir::DLTIDialect"
   ];
 }
 
@@ -450,14 +451,14 @@ def CUFDeviceGlobal :
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
-    "cuf::CUFDialect", "mlir::func::FuncDialect"
+    "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect"
   ];
 }
 
 def CUFGPUToLLVMConversion : Pass<"cuf-gpu-convert-to-llvm", "mlir::ModuleOp"> {
   let summary = "Convert some GPU operations lowered from CUF to runtime calls";
   let dependentDialects = [
-    "mlir::LLVM::LLVMDialect"
+    "mlir::LLVM::LLVMDialect", "mlir::DLTIDialect"
   ];
 }
 
@@ -471,7 +472,10 @@ def CUFComputeSharedMemoryOffsetsAndSize
     the global and set it.
   }];
 
-  let dependentDialects = ["cuf::CUFDialect", "fir::FIROpsDialect"];
+  let dependentDialects = [
+    "cuf::CUFDialect", "fir::FIROpsDialect", "mlir::gpu::GPUDialect",
+    "mlir::DLTIDialect"
+  ];
 }
 
 def SetRuntimeCallAttributes

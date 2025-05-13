@@ -345,11 +345,10 @@ define amdgpu_kernel void @half8_inselt(ptr addrspace(1) %out, <8 x half> %vec, 
 ; GCN-NEXT:    v_mov_b32_e32 v1, s7
 ; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GCN-NEXT:    s_cmp_lg_u32 s6, 6
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
+; GCN-NEXT:    v_cndmask_b32_sdwa v1, v0, v1, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GCN-NEXT:    v_mov_b32_e32 v2, s3
 ; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GCN-NEXT:    s_lshr_b32 s3, s2, 16
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v0, v2, vcc
 ; GCN-NEXT:    s_cmp_lg_u32 s6, 5
 ; GCN-NEXT:    v_or_b32_sdwa v3, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD

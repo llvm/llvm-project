@@ -352,22 +352,21 @@ multiclass VOP2eInstAliases<VOP2_Pseudo ps, VOP2_Real inst> {
 }
 
 class VOP_MADK_Base<ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
-  string AsmVOPDXDeferred = ?;
+  string AsmVOPDX_immX = ?;
 }
 
 class VOP_MADAK <ValueType vt> : VOP_MADK_Base<vt> {
   field Operand ImmOpType = !if(!eq(vt.Size, 32), KImmFP32, KImmFP16);
   field dag Ins32 = !if(!eq(vt.Size, 32),
-                        (ins VSrc_f32_Deferred:$src0, VGPR_32:$src1, ImmOpType:$imm),
-                        (ins VSrc_f16_Deferred:$src0, VGPR_32:$src1, ImmOpType:$imm));
-  field dag InsVOPDX = (ins VSrc_f32_Deferred:$src0X, VGPR_32:$vsrc1X, ImmOpType:$imm);
-  // Note that both src0X and imm are deferred
-  let InsVOPDXDeferred = (ins VSrc_f32_Deferred:$src0X, VGPR_32:$vsrc1X, ImmOpType:$immDeferred);
-  field dag InsVOPDY = (ins VSrc_f32_Deferred:$src0Y, VGPR_32:$vsrc1Y, ImmOpType:$imm);
+                        (ins VSrc_f32:$src0, VGPR_32:$src1, ImmOpType:$imm),
+                        (ins VSrc_f16:$src0, VGPR_32:$src1, ImmOpType:$imm));
+  field dag InsVOPDX = (ins VSrc_f32:$src0X, VGPR_32:$vsrc1X, ImmOpType:$imm);
+  let InsVOPDX_immX = (ins VSrc_f32:$src0X, VGPR_32:$vsrc1X, ImmOpType:$immX);
+  field dag InsVOPDY = (ins VSrc_f32:$src0Y, VGPR_32:$vsrc1Y, ImmOpType:$imm);
 
   field string Asm32 = "$vdst, $src0, $src1, $imm";
   field string AsmVOPDX = "$vdstX, $src0X, $vsrc1X, $imm";
-  let AsmVOPDXDeferred = "$vdstX, $src0X, $vsrc1X, $immDeferred";
+  let AsmVOPDX_immX = "$vdstX, $src0X, $vsrc1X, $immX";
   field string AsmVOPDY = "$vdstY, $src0Y, $vsrc1Y, $imm";
   field bit HasExt = 0;
   let IsSingle = 1;
@@ -378,27 +377,27 @@ def VOP_MADAK_F16_t16 : VOP_MADAK <f16> {
   let IsTrue16 = 1;
   let IsRealTrue16 = 1;
   let DstRC = getVALUDstForVT<DstVT, 1/*IsTrue16*/, 0/*IsVOP3Encoding*/>.ret;
-  let Ins32 = (ins VSrcT_f16_Lo128_Deferred:$src0, VGPRSrc_16_Lo128:$src1, ImmOpType:$imm);
+  let Ins32 = (ins VSrcT_f16_Lo128:$src0, VGPRSrc_16_Lo128:$src1, ImmOpType:$imm);
 }
 def VOP_MADAK_F16_fake16 : VOP_MADAK <f16> {
   let IsTrue16 = 1;
   let DstRC = getVALUDstForVT_fake16<DstVT>.ret;
-  let Ins32 = (ins VSrcFake16_f16_Lo128_Deferred:$src0, VGPRSrc_32_Lo128:$src1, ImmOpType:$imm);
+  let Ins32 = (ins VSrcFake16_f16_Lo128:$src0, VGPRSrc_32_Lo128:$src1, ImmOpType:$imm);
 }
 def VOP_MADAK_F32 : VOP_MADAK <f32>;
 
 class VOP_MADMK <ValueType vt> : VOP_MADK_Base<vt> {
   field Operand ImmOpType = !if(!eq(vt.Size, 32), KImmFP32, KImmFP16);
   field dag Ins32 = !if(!eq(vt.Size, 32),
-                        (ins VSrc_f32_Deferred:$src0, ImmOpType:$imm, VGPR_32:$src1),
-                        (ins VSrc_f16_Deferred:$src0, ImmOpType:$imm, VGPR_32:$src1));
-  field dag InsVOPDX = (ins VSrc_f32_Deferred:$src0X, ImmOpType:$imm, VGPR_32:$vsrc1X);
-  let InsVOPDXDeferred = (ins VSrc_f32_Deferred:$src0X, ImmOpType:$immDeferred, VGPR_32:$vsrc1X);
-  field dag InsVOPDY = (ins VSrc_f32_Deferred:$src0Y, ImmOpType:$imm, VGPR_32:$vsrc1Y);
+                        (ins VSrc_f32:$src0, ImmOpType:$imm, VGPR_32:$src1),
+                        (ins VSrc_f16:$src0, ImmOpType:$imm, VGPR_32:$src1));
+  field dag InsVOPDX = (ins VSrc_f32:$src0X, ImmOpType:$imm, VGPR_32:$vsrc1X);
+  let InsVOPDX_immX = (ins VSrc_f32:$src0X, ImmOpType:$immX, VGPR_32:$vsrc1X);
+  field dag InsVOPDY = (ins VSrc_f32:$src0Y, ImmOpType:$imm, VGPR_32:$vsrc1Y);
 
   field string Asm32 = "$vdst, $src0, $imm, $src1";
   field string AsmVOPDX = "$vdstX, $src0X, $imm, $vsrc1X";
-  let AsmVOPDXDeferred = "$vdstX, $src0X, $immDeferred, $vsrc1X";
+  let AsmVOPDX_immX = "$vdstX, $src0X, $immX, $vsrc1X";
   field string AsmVOPDY = "$vdstY, $src0Y, $imm, $vsrc1Y";
   field bit HasExt = 0;
   let IsSingle = 1;
@@ -409,12 +408,12 @@ def VOP_MADMK_F16_t16 : VOP_MADMK <f16> {
   let IsTrue16 = 1;
   let IsRealTrue16 = 1;
   let DstRC = getVALUDstForVT<DstVT, 1/*IsTrue16*/, 0/*IsVOP3Encoding*/>.ret;
-  let Ins32 = (ins VSrcT_f16_Lo128_Deferred:$src0, ImmOpType:$imm, VGPRSrc_16_Lo128:$src1);
+  let Ins32 = (ins VSrcT_f16_Lo128:$src0, ImmOpType:$imm, VGPRSrc_16_Lo128:$src1);
 }
 def VOP_MADMK_F16_fake16 : VOP_MADMK <f16> {
   let IsTrue16 = 1;
   let DstRC = getVALUDstForVT_fake16<DstVT>.ret;
-  let Ins32 = (ins VSrcFake16_f16_Lo128_Deferred:$src0, ImmOpType:$imm, VGPRSrc_32_Lo128:$src1);
+  let Ins32 = (ins VSrcFake16_f16_Lo128:$src0, ImmOpType:$imm, VGPRSrc_32_Lo128:$src1);
 }
 def VOP_MADMK_F32 : VOP_MADMK <f32>;
 
@@ -453,13 +452,7 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
                        Src0ModVOP3DPP, Src1ModVOP3DPP, Src2Mod, HasOpSel>.ret;
   // We need a dummy src2 tied to dst to track the use of that register for s_delay_alu
   let InsVOPDX = (ins Src0RC32:$src0X, Src1RC32:$vsrc1X, VGPRSrc_32:$src2X);
-  let InsVOPDXDeferred =
-    (ins !if(!eq(Src0VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0X,
-         VGPR_32:$vsrc1X, VGPRSrc_32:$src2X);
   let InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y, VGPRSrc_32:$src2Y);
-  let InsVOPDYDeferred =
-    (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y,
-         VGPR_32:$vsrc1Y, VGPRSrc_32:$src2Y);
 
   let InsDPP8 = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                      Src1ModDPP:$src1_modifiers, Src1DPP:$src1,

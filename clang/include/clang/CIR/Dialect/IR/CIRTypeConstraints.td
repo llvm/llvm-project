@@ -141,4 +141,56 @@ def CIR_AnyIntOrFloatType : AnyTypeOf<[CIR_AnyFloatType, CIR_AnyIntType],
     let cppFunctionName = "isAnyIntegerOrFloatingPointType";
 }
 
+//===----------------------------------------------------------------------===//
+// Pointer Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyPtrType : CIR_TypeBase<"::cir::PointerType", "pointer type">;
+
+// Pointer to type constraint bases
+class CIR_IsPtrToPred<code type> : CPred<"$_self.isPtrTo<" # type # ">()">;
+
+class CIR_PtrTo<code type, string summary>
+    : CIR_ConfinedType<CIR_AnyPtrType, [CIR_IsPtrToPred<type>],
+        "pointer to " # summary>;
+
+// Pointer to pointer constraint bases
+class CIR_IsPtrToPtrToPred<code type>
+    : CPred<"$_self.isPtrToPtrTo<" # type # ">()">;
+
+class CIR_PtrToPtrTo<code type, string summary>
+    : CIR_ConfinedType<CIR_AnyPtrType, [CIR_IsPtrToPtrToPred<type>],
+        "pointer to pointer to " # summary>;
+
+// Void pointer type constraints
+def CIR_VoidPtrType
+    : CIR_PtrTo<"::cir::VoidType", "void type">,
+      BuildableType<"$_builder.getType<" # cppType # ">("
+        "cir::VoidType::get($_builder.getContext()))">;
+
+def CIR_PtrToVoidPtrType
+    : CIR_PtrToPtrTo<"::cir::VoidType", "void type">,
+      BuildableType<"$_builder.getType<" # cppType # ">("
+        "$_builder.getType<" # cppType # ">("
+        "cir::VoidType::get($_builder.getContext())))">;
+
+//===----------------------------------------------------------------------===//
+// Vector Type predicates
+//===----------------------------------------------------------------------===//
+
+// Vector of integral type
+def IntegerVector : Type<
+    And<[
+      CPred<"::mlir::isa<::cir::VectorType>($_self)">,
+      CPred<"::mlir::isa<::cir::IntType>("
+            "::mlir::cast<::cir::VectorType>($_self).getElementType())">,
+      CPred<"::mlir::cast<::cir::IntType>("
+            "::mlir::cast<::cir::VectorType>($_self).getElementType())"
+            ".isFundamental()">
+    ]>, "!cir.vector of !cir.int"> {
+}
+
+// Any Integer or Vector of Integer Constraints
+def CIR_AnyIntOrVecOfInt: AnyTypeOf<[CIR_AnyIntType, IntegerVector]>;
+
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPECONSTRAINTS_TD

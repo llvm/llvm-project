@@ -384,8 +384,6 @@ def AllocaOp : CIR_Op<"alloca", [
     `]`
     ($annotations^)? attr-dict
   }];
-
-  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1403,18 +1401,20 @@ def ShiftOp : CIR_Op<"shift", [Pure]> {
     The `cir.shift` operation performs a bitwise shift, either to the left or to
     the right, based on the first operand. The second operand specifies the
     value to be shifted, and the third operand determines the number of
-    positions by which the shift is applied. Both the second and third operands
-    are required to be integers.
+    positions by which the shift is applied, They must be either all vector of
+    integer type, or all integer type. If they are vectors, each vector element of
+    the shift target is shifted by the corresponding shift amount in
+    the shift amount vector.
 
     ```mlir
-    %7 = cir.shift(left, %1 : !u64i, %4 : !s32i) -> !u64i
+    %res = cir.shift(left, %lhs : !u64i, %amount : !s32i) -> !u64i
+    %new_vec = cir.shift(left, %lhs : !cir.vector<2 x !s32i>, %rhs :
+        !cir.vector<2 x !s32i>) -> !cir.vector<2 x !s32i>
     ```
   }];
 
-  // TODO(cir): Support vectors. CIR_IntType -> CIR_AnyIntOrVecOfInt. Also
-  // update the description above.
-  let results = (outs CIR_IntType:$result);
-  let arguments = (ins CIR_IntType:$value, CIR_IntType:$amount,
+  let results = (outs CIR_AnyIntOrVecOfInt:$result);
+  let arguments = (ins CIR_AnyIntOrVecOfInt:$value, CIR_AnyIntOrVecOfInt:$amount,
                        UnitAttr:$isShiftleft);
 
   let assemblyFormat = [{
@@ -1464,6 +1464,8 @@ def SelectOp : CIR_Op<"select", [Pure,
       qualified(type($false_value))
     `)` `->` qualified(type($result)) attr-dict
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1511,9 +1513,6 @@ def TernaryOp : CIR_Op<"ternary",
       "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$falseBuilder)
       >
   ];
-
-  // All constraints already verified elsewhere.
-  let hasVerifier = 0;
 
   let assemblyFormat = [{
     `(` $cond `,`
@@ -1652,9 +1651,6 @@ def GetGlobalOp : CIR_Op<"get_global",
   let assemblyFormat = [{
     $name `:` qualified(type($addr)) attr-dict
   }];
-
-  // `GetGlobalOp` is fully verified by its traits.
-  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1837,7 +1833,6 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
-  let hasVerifier = 0;
 
   // TODO(cir): for now cir.call is just a tiny shell of what it will become.
   // More attributes, arguments, and properties will be added in the future as
@@ -1974,6 +1969,72 @@ def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
   }];
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VecInsertOp
+//===----------------------------------------------------------------------===//
+
+def VecInsertOp : CIR_Op<"vec.insert", [Pure,
+  TypesMatchWith<"argument type matches vector element type", "vec", "value",
+                 "cast<VectorType>($_self).getElementType()">,
+  AllTypesMatch<["result", "vec"]>]> {
+
+  let summary = "Insert one element into a vector object";
+  let description = [{
+    The `cir.vec.insert` operation produces a new vector by replacing
+    the element of the input vector at `index` with `value`.
+
+    ```mlir
+    %value = cir.const #cir.int<5> : !s32i
+    %index = cir.const #cir.int<2> : !s32i
+    %vec_tmp = cir.load %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+    %new_vec = cir.vec.insert %value, %vec_tmp[%index : !s32i] : !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VectorType:$vec,
+    AnyType:$value,
+    CIR_AnyFundamentalIntType:$index
+  );
+
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    $value `,` $vec `[` $index `:` type($index) `]` attr-dict `:`
+    qualified(type($vec))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VecExtractOp
+//===----------------------------------------------------------------------===//
+
+def VecExtractOp : CIR_Op<"vec.extract", [Pure,
+  TypesMatchWith<"type of 'result' matches element type of 'vec'", "vec",
+                 "result", "cast<VectorType>($_self).getElementType()">]> {
+
+  let summary = "Extract one element from a vector object";
+  let description = [{
+    The `cir.vec.extract` operation extracts the element at the given index
+    from a vector object.
+
+    ```mlir
+    %tmp = cir.load %vec : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+    %idx = cir.const #cir.int<1> : !s32i
+    %element = cir.vec.extract %tmp[%idx : !s32i] : !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_VectorType:$vec, CIR_AnyFundamentalIntType:$index);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    $vec `[` $index `:` type($index) `]` attr-dict `:` qualified(type($vec))
+  }];
+
+  let hasFolder = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

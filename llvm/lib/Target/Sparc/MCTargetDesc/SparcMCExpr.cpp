@@ -141,26 +141,6 @@ bool SparcMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
-  if (Res.isAbsolute()) {
-    std::optional<int64_t> V;
-    auto C = (uint64_t)Res.getConstant();
-    switch (uint16_t(specifier)) {
-    case ELF::R_SPARC_H44:
-      V = (C >> 22) & 0x3fffff;
-      break;
-    case ELF::R_SPARC_M44:
-      V = (C >> 12) & 0x3ff;
-      break;
-    case ELF::R_SPARC_L44:
-      V = C & 0xfff;
-      break;
-    }
-    if (V) {
-      Res = MCValue::get(*V);
-      return true;
-    }
-  }
-
   Res.setSpecifier(specifier);
   return true;
 }

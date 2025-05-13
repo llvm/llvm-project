@@ -12,10 +12,20 @@ tablegen("SparcGenDAGISel") {
   td_file = "Sparc.td"
 }
 
+tablegen("SparcGenSDNodeInfo") {
+  visibility = [ ":LLVMSparcCodeGen" ]
+  args = [
+    "-gen-sd-node-info",
+    "-sdnode-namespace=SPISD",
+  ]
+  td_file = "Sparc.td"
+}
+
 static_library("LLVMSparcCodeGen") {
   deps = [
     ":SparcGenCallingConv",
     ":SparcGenDAGISel",
+    ":SparcGenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -39,6 +49,7 @@ static_library("LLVMSparcCodeGen") {
     "SparcInstrInfo.cpp",
     "SparcMachineFunctionInfo.cpp",
     "SparcRegisterInfo.cpp",
+    "SparcSelectionDAGInfo.cpp",
     "SparcSubtarget.cpp",
     "SparcTargetMachine.cpp",
     "SparcTargetObjectFile.cpp",

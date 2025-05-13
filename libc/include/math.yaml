@@ -8,6 +8,12 @@ types:
 enums: []
 objects: []
 functions:
+  - name: acos
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: acosf
     standards:
       - stdc

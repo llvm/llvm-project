@@ -258,7 +258,7 @@ public:
   void Profile(FoldingSetNodeID &ID) const;
 
   ArrayRef<const Record *> getClasses() const {
-    return ArrayRef(getTrailingObjects<const Record *>(), NumClasses);
+    return getTrailingObjects(NumClasses);
   }
 
   using const_record_iterator = const Record *const *;
@@ -632,10 +632,9 @@ public:
 
   const Init *resolveReferences(Resolver &R) const override;
 
-  const Init *getBit(unsigned Bit) const override {
-    assert(Bit < NumBits && "Bit index out of range!");
-    return getTrailingObjects<const Init *>()[Bit];
-  }
+  ArrayRef<const Init *> getBits() const { return getTrailingObjects(NumBits); }
+
+  const Init *getBit(unsigned Bit) const override { return getBits()[Bit]; }
 };
 
 /// '7' - Represent an initialization by a literal integer value.
@@ -744,9 +743,7 @@ public:
       return "[{" + Value.str() + "}]";
   }
 
-  std::string getAsUnquotedString() const override {
-    return std::string(Value);
-  }
+  std::string getAsUnquotedString() const override { return Value.str(); }
 
   const Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off string");
@@ -781,10 +778,12 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  const Init *getElement(unsigned i) const {
-    assert(i < NumValues && "List element index out of range!");
-    return getTrailingObjects<const Init *>()[i];
+  ArrayRef<const Init *> getValues() const {
+    return ArrayRef(getTrailingObjects(), NumValues);
   }
+
+  const Init *getElement(unsigned Index) const { return getValues()[Index]; }
+
   const RecTy *getElementType() const {
     return cast<ListRecTy>(getType())->getElementType();
   }
@@ -804,12 +803,8 @@ public:
   bool isConcrete() const override;
   std::string getAsString() const override;
 
-  ArrayRef<const Init *> getValues() const {
-    return ArrayRef(getTrailingObjects<const Init *>(), NumValues);
-  }
-
-  const_iterator begin() const { return getTrailingObjects<const Init *>(); }
-  const_iterator end  () const { return begin() + NumValues; }
+  const_iterator begin() const { return getValues().begin(); }
+  const_iterator end() const { return getValues().end(); }
 
   size_t         size () const { return NumValues;  }
   bool           empty() const { return NumValues == 0; }
@@ -1027,10 +1022,6 @@ class CondOpInit final : public TypedInit,
   CondOpInit(ArrayRef<const Init *> Conds, ArrayRef<const Init *> Values,
              const RecTy *Type);
 
-  size_t numTrailingObjects(OverloadToken<Init *>) const {
-    return 2*NumConds;
-  }
-
 public:
   CondOpInit(const CondOpInit &) = delete;
   CondOpInit &operator=(const CondOpInit &) = delete;
@@ -1054,11 +1045,11 @@ public:
   const Init *getVal(unsigned Num) const { return getVals()[Num]; }
 
   ArrayRef<const Init *> getConds() const {
-    return ArrayRef(getTrailingObjects<const Init *>(), NumConds);
+    return getTrailingObjects(NumConds);
   }
 
   ArrayRef<const Init *> getVals() const {
-    return ArrayRef(getTrailingObjects<const Init *>() + NumConds, NumConds);
+    return ArrayRef(getTrailingObjects() + NumConds, NumConds);
   }
 
   const Init *Fold(const Record *CurRec) const;
@@ -1376,7 +1367,7 @@ public:
   bool           args_empty() const { return NumArgs == 0; }
 
   ArrayRef<const ArgumentInit *> args() const {
-    return ArrayRef(getTrailingObjects<const ArgumentInit *>(), NumArgs);
+    return getTrailingObjects(NumArgs);
   }
 
   const Init *getBit(unsigned Bit) const override {
@@ -1489,11 +1480,11 @@ public:
   }
 
   ArrayRef<const Init *> getArgs() const {
-    return ArrayRef(getTrailingObjects<const Init *>(), NumArgs);
+    return getTrailingObjects<const Init *>(NumArgs);
   }
 
   ArrayRef<const StringInit *> getArgNames() const {
-    return ArrayRef(getTrailingObjects<const StringInit *>(), NumArgs);
+    return getTrailingObjects<const StringInit *>(NumArgs);
   }
 
   const Init *resolveReferences(Resolver &R) const override;
