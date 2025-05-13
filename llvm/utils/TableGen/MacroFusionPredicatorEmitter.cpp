@@ -263,10 +263,11 @@ void MacroFusionPredicatorEmitter::emitBothPredicate(const Record *Predicate,
       OS.indent(2) << "  return false;";
     }
     OS << "\n";
-  } else
+  } else {
     PrintFatalError(Predicate->getLoc(),
                     "Unsupported predicate for both instruction: " +
                         Predicate->getType()->getAsString());
+  }
 }
 
 void MacroFusionPredicatorEmitter::run(raw_ostream &OS) {

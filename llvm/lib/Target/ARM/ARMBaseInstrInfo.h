@@ -409,16 +409,6 @@ private:
                           MachineBasicBlock::iterator It, bool CFI,
                           bool Auth) const;
 
-  /// Emit CFI instructions into the MachineBasicBlock \p MBB at position \p It,
-  /// for the case when the LR is saved in the register \p Reg.
-  void emitCFIForLRSaveToReg(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator It,
-                             Register Reg) const;
-
-  /// Emit CFI instructions into the MachineBasicBlock \p MBB at position \p It,
-  /// after the LR is was restored from a register.
-  void emitCFIForLRRestoreFromReg(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator It) const;
   /// \brief Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
   ///

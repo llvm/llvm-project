@@ -252,7 +252,7 @@ public:
   const Record *getValueType() const { return Ty; }
   unsigned getNumOperands() const { return NumOperands; }
   const std::string &getSelectFunc() const { return SelectFunc; }
-  const ArrayRef<const Record *> getRootNodes() const { return RootNodes; }
+  ArrayRef<const Record *> getRootNodes() const { return RootNodes; }
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
   unsigned getComplexity() const { return Complexity; }
   bool wantsRoot() const { return WantsRoot; }

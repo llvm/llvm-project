@@ -12,6 +12,7 @@
 
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "ConstantEmitter.h"
@@ -1155,9 +1156,8 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
     assert(typeValue && "fell into catch-all case!");
     // With opaque ptrs, only the address space can be a mismatch.
     if (typeValue->getType() != argTy)
-      typeValue =
-        CGF.getTargetHooks().performAddrSpaceCast(CGF, typeValue, globAS,
-                                                  LangAS::Default, argTy);
+      typeValue = CGF.getTargetHooks().performAddrSpaceCast(CGF, typeValue,
+                                                            globAS, argTy);
 
     // Figure out the next block.
     bool nextIsEnd;

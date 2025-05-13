@@ -9,13 +9,13 @@ package(default_visibility = ["//visibility:public"])
         name = "%s.test" % src,
         srcs = [src],
         data = [
+            "Vector/vector-sink-transform.mlir",
             "//llvm:llvm-symbolizer",
             "//mlir:mlir-opt",
             "//mlir:mlir-pdll",
             "//mlir:mlir-reduce",
             "//mlir:mlir-translate",
             "//mlir/test:lit_data",
-            "Vector/vector-sink-transform.mlir",
         ] + glob([
             "IRDL/*.irdl.mlir",
             "Linalg/td/*.mlir",

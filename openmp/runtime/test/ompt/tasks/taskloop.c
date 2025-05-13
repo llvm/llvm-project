@@ -38,7 +38,7 @@ int main() {
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_taskloop_begin:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]]
   // CHECK-SAME: task_id=[[IMPLICIT_TASK_ID1]]
-  // CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]], count=2
+  // CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]], count=2
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
   // CHECK-SAME: parent_task_id=[[IMPLICIT_TASK_ID1]]
   // CHECK-SAME: new_task_id=[[TASK_ID1:[0-9]+]]

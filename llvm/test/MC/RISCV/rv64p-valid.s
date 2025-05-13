@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-p -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-p -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-p < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-p -M no-aliases -d -r - \

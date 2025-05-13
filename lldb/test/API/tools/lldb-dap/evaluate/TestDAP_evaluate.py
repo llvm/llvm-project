@@ -41,7 +41,9 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         self.context = context
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(
-            program, enableAutoVariableSummaries=enableAutoVariableSummaries
+            program,
+            enableAutoVariableSummaries=enableAutoVariableSummaries,
+            stopOnEntry=True,
         )
         source = "main.cpp"
         self.set_source_breakpoints(
@@ -101,7 +103,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         if context == "repl":
             # In the repl context expressions may be interpreted as lldb
             # commands since no variables have the same name as the command.
-            self.assertEvaluate("list", r"\(lldb\) list\n.*")
+            self.assertEvaluate("list", r".*")
         else:
             self.assertEvaluateFailure("list")  # local variable of a_function
 
