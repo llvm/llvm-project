@@ -66,7 +66,7 @@ extern cl::opt<bool> UpdateDebugSections;
 extern cl::opt<unsigned> Verbosity;
 
 extern bool BinaryAnalysisMode;
-extern bool HeatmapMode;
+extern HeatmapModeKind HeatmapMode;
 extern bool processAllFunctions();
 
 static cl::opt<bool> CheckEncoding(
