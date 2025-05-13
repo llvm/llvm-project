@@ -1,5 +1,5 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc --triple=loongarch32 -mattr=+relax --filetype=obj \
+# RUN: llvm-mc --triple=loongarch32 -mattr=+32s,+relax --filetype=obj \
 # RUN:     -o %t/la32_reloc_addsub.o %s
 # RUN: llvm-jitlink --noexec --check %s %t/la32_reloc_addsub.o \
 # RUN:     --slab-allocate=1Mb --slab-address=0x1000 --slab-page-size=0x4000
@@ -27,7 +27,10 @@ main:
 .L0:
 # Referencing named_data symbol to avoid the following relocations be
 # skipped. This macro instruction will be expand to two instructions
-# (pcalau12i + ld.w/d).
+# 32bit:
+#   (pcaddu12i + ld.w)
+# 64bit:
+#   (pcalau12i + ld.d)
   la.global $t0, named_data
 .L1:
 

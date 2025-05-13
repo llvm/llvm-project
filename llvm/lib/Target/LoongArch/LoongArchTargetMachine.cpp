@@ -79,8 +79,8 @@ getEffectiveLoongArchCodeModel(const Triple &TT,
 
   switch (*CM) {
   case CodeModel::Small:
-    return *CM;
   case CodeModel::Medium:
+    return *CM;
   case CodeModel::Large:
     if (!TT.isArch64Bit())
       report_fatal_error("Medium/Large code model requires LA64");
