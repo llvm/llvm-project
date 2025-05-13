@@ -49,9 +49,9 @@ public:
   // Constructor that can be called from the constructor of a checker object.
   // At that point the checker name is not yet available, but we can save a
   // pointer to the checker and use that to query the name.
-  BugType(const CheckerFrontend *CF, StringRef Desc,
+  BugType(const CheckerFrontend *Checker, StringRef Desc,
           StringRef Cat = categories::LogicError, bool SuppressOnSink = false)
-      : CheckerName(CF), Description(Desc), Category(Cat),
+      : CheckerName(Checker), Description(Desc), Category(Cat),
         SuppressOnSink(SuppressOnSink) {}
   virtual ~BugType() = default;
 
