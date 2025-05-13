@@ -323,7 +323,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       // Only expand llvm.memcpy.inline with non-constant length in this
       // codepath, leaving the current SelectionDAG expansion for constant
       // length memcpy intrinsics undisturbed.
-      auto *Memcpy = cast<MemCpyInlineInst>(Inst);
+      auto *Memcpy = cast<MemCpyInst>(Inst);
       if (isa<ConstantInt>(Memcpy->getLength()))
         break;
 
@@ -371,7 +371,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       // Only expand llvm.memset.inline with non-constant length in this
       // codepath, leaving the current SelectionDAG expansion for constant
       // length memset intrinsics undisturbed.
-      auto *Memset = cast<MemSetInlineInst>(Inst);
+      auto *Memset = cast<MemSetInst>(Inst);
       if (isa<ConstantInt>(Memset->getLength()))
         break;
 
@@ -518,6 +518,16 @@ bool expandProtectedFieldPtr(Function &Intr) {
             FindLoadsStores(P);
           continue;
         }
+        // Comparisons against null cannot be used to recover the original
+        // pointer so we allow them.
+        if (auto *CI = dyn_cast<ICmpInst>(U.getUser())) {
+          if (auto *Op = dyn_cast<Constant>(CI->getOperand(0)))
+            if (Op->isNullValue())
+              continue;
+          if (auto *Op = dyn_cast<Constant>(CI->getOperand(1)))
+            if (Op->isNullValue())
+              continue;
+        }
         NonPFPFields.insert(FieldName);
       }
     };
@@ -612,8 +622,7 @@ bool expandProtectedFieldPtr(Function &Intr) {
       }
       LI->replaceAllUsesWith(B.CreateIntToPtr(Auth, B.getPtrTy()));
       LIInt->setOperand(0, LI);
-    } else {
-      auto *SI = cast<StoreInst>(I);
+    } else if (auto *SI = dyn_cast<StoreInst>(I)) {
       IRBuilder<> B(SI);
       auto *FieldAddr = SI->getPointerOperand();
       auto *SIValInt =

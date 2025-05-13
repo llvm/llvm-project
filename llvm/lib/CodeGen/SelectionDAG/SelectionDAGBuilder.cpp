@@ -1818,7 +1818,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       return DAG.getConstantFP(*CFP, getCurSDLoc(), VT);
 
     if (isa<UndefValue>(C) && !V->getType()->isAggregateType())
-      return DAG.getUNDEF(VT);
+      return isa<PoisonValue>(C) ? DAG.getPOISON(VT) : DAG.getUNDEF(VT);
 
     if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
       visit(CE->getOpcode(), *CE);
@@ -3019,8 +3019,7 @@ static SDValue getLoadStackGuard(SelectionDAG &DAG, const SDLoc &DL,
     auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
                  MachineMemOperand::MODereferenceable;
     MachineMemOperand *MemRef = MF.getMachineMemOperand(
-        MPInfo, Flags, LocationSize::precise(PtrTy.getSizeInBits() / 8),
-        DAG.getEVTAlign(PtrTy));
+        MPInfo, Flags, PtrTy.getSizeInBits() / 8, DAG.getEVTAlign(PtrTy));
     DAG.setNodeMemRefs(Node, {MemRef});
   }
   if (PtrTy != PtrMemTy)
@@ -3163,8 +3162,8 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
   if (!TLI.isTypeLegal(VT)) {
     UsePtrType = true;
   } else {
-    for (unsigned i = 0, e = B.Cases.size(); i != e; ++i)
-      if (!isUIntN(VT.getSizeInBits(), B.Cases[i].Mask)) {
+    for (const BitTestCase &Case : B.Cases)
+      if (!isUIntN(VT.getSizeInBits(), Case.Mask)) {
         // Switch table case range are encoded into series of masks.
         // Just use pointer type, it's guaranteed to fit.
         UsePtrType = true;
@@ -5047,9 +5046,9 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags,
-      LocationSize::precise(MemVT.getStoreSize()), DAG.getEVTAlign(MemVT),
-      AAMDNodes(), nullptr, SSID, SuccessOrdering, FailureOrdering);
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, SuccessOrdering,
+      FailureOrdering);
 
   SDValue L = DAG.getAtomicCmpSwap(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS,
                                    dl, MemVT, VTs, InChain,
@@ -5083,6 +5082,12 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   case AtomicRMWInst::FSub: NT = ISD::ATOMIC_LOAD_FSUB; break;
   case AtomicRMWInst::FMax: NT = ISD::ATOMIC_LOAD_FMAX; break;
   case AtomicRMWInst::FMin: NT = ISD::ATOMIC_LOAD_FMIN; break;
+  case AtomicRMWInst::FMaximum:
+    NT = ISD::ATOMIC_LOAD_FMAXIMUM;
+    break;
+  case AtomicRMWInst::FMinimum:
+    NT = ISD::ATOMIC_LOAD_FMINIMUM;
+    break;
   case AtomicRMWInst::UIncWrap:
     NT = ISD::ATOMIC_LOAD_UINC_WRAP;
     break;
@@ -5107,9 +5112,8 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags,
-      LocationSize::precise(MemVT.getStoreSize()), DAG.getEVTAlign(MemVT),
-      AAMDNodes(), nullptr, SSID, Ordering);
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, Ordering);
 
   SDValue L =
     DAG.getAtomic(NT, dl, MemVT, InChain,
@@ -5153,16 +5157,16 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
 
   auto Flags = TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
 
+  const MDNode *Ranges = getRangeMetadata(I);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags,
-      LocationSize::precise(MemVT.getStoreSize()), I.getAlign(), AAMDNodes(),
-      nullptr, SSID, Order);
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      I.getAlign(), AAMDNodes(), Ranges, SSID, Order);
 
   InChain = TLI.prepareVolatileOrAtomicLoad(InChain, dl, DAG);
 
   SDValue Ptr = getValue(I.getPointerOperand());
-  SDValue L = DAG.getAtomic(ISD::ATOMIC_LOAD, dl, MemVT, MemVT, InChain,
-                            Ptr, MMO);
+  SDValue L =
+      DAG.getAtomicLoad(ISD::NON_EXTLOAD, dl, MemVT, MemVT, InChain, Ptr, MMO);
 
   SDValue OutChain = L.getValue(1);
   if (MemVT != VT)
@@ -5192,9 +5196,8 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags,
-      LocationSize::precise(MemVT.getStoreSize()), I.getAlign(), AAMDNodes(),
-      nullptr, SSID, Ordering);
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      I.getAlign(), AAMDNodes(), nullptr, SSID, Ordering);
 
   SDValue Val = getValue(I.getValueOperand());
   if (Val.getValueType() != MemVT)
@@ -5310,9 +5313,9 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
       MPI = MachinePointerInfo(Info.ptrVal, Info.offset);
     else if (Info.fallbackAddressSpace)
       MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
-    Result = DAG.getMemIntrinsicNode(Info.opc, getCurSDLoc(), VTs, Ops,
-                                     Info.memVT, MPI, Info.align, Info.flags,
-                                     Info.size, I.getAAMetadata());
+    Result = DAG.getMemIntrinsicNode(
+        Info.opc, getCurSDLoc(), VTs, Ops, Info.memVT, MPI, Info.align,
+        Info.flags, LocationSize::precise(Info.size), I.getAAMetadata());
   } else if (!HasChain) {
     Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VTs, Ops);
   } else if (!I.getType()->isVoidTy()) {
@@ -6466,33 +6469,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                             RegName, getValue(RegValue)));
     return;
   }
-  case Intrinsic::memcpy: {
-    const auto &MCI = cast<MemCpyInst>(I);
-    SDValue Op1 = getValue(I.getArgOperand(0));
-    SDValue Op2 = getValue(I.getArgOperand(1));
-    SDValue Op3 = getValue(I.getArgOperand(2));
-    // @llvm.memcpy defines 0 and 1 to both mean no alignment.
-    Align DstAlign = MCI.getDestAlign().valueOrOne();
-    Align SrcAlign = MCI.getSourceAlign().valueOrOne();
-    Align Alignment = std::min(DstAlign, SrcAlign);
-    bool isVol = MCI.isVolatile();
-    // FIXME: Support passing different dest/src alignments to the memcpy DAG
-    // node.
-    SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MC = DAG.getMemcpy(Root, sdl, Op1, Op2, Op3, Alignment, isVol,
-                               /* AlwaysInline */ false, &I, std::nullopt,
-                               MachinePointerInfo(I.getArgOperand(0)),
-                               MachinePointerInfo(I.getArgOperand(1)),
-                               I.getAAMetadata(), BatchAA);
-    updateDAGForMaybeTailCall(MC);
-    return;
-  }
+  case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline: {
-    const auto &MCI = cast<MemCpyInlineInst>(I);
+    const auto &MCI = cast<MemCpyInst>(I);
     SDValue Dst = getValue(I.getArgOperand(0));
     SDValue Src = getValue(I.getArgOperand(1));
     SDValue Size = getValue(I.getArgOperand(2));
-    assert(isa<ConstantSDNode>(Size) && "memcpy_inline needs constant size");
+    assert((!MCI.isForceInlined() || isa<ConstantSDNode>(Size)) &&
+           "memcpy_inline needs constant size");
     // @llvm.memcpy.inline defines 0 and 1 to both mean no alignment.
     Align DstAlign = MCI.getDestAlign().valueOrOne();
     Align SrcAlign = MCI.getSourceAlign().valueOrOne();
@@ -6500,43 +6484,30 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     bool isVol = MCI.isVolatile();
     // FIXME: Support passing different dest/src alignments to the memcpy DAG
     // node.
-    SDValue MC = DAG.getMemcpy(getRoot(), sdl, Dst, Src, Size, Alignment, isVol,
-                               /* AlwaysInline */ true, &I, std::nullopt,
+    SDValue Root = isVol ? getRoot() : getMemoryRoot();
+    SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, Alignment, isVol,
+                               MCI.isForceInlined(), &I, std::nullopt,
                                MachinePointerInfo(I.getArgOperand(0)),
                                MachinePointerInfo(I.getArgOperand(1)),
                                I.getAAMetadata(), BatchAA);
     updateDAGForMaybeTailCall(MC);
     return;
   }
-  case Intrinsic::memset: {
-    const auto &MSI = cast<MemSetInst>(I);
-    SDValue Op1 = getValue(I.getArgOperand(0));
-    SDValue Op2 = getValue(I.getArgOperand(1));
-    SDValue Op3 = getValue(I.getArgOperand(2));
-    // @llvm.memset defines 0 and 1 to both mean no alignment.
-    Align Alignment = MSI.getDestAlign().valueOrOne();
-    bool isVol = MSI.isVolatile();
-    SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MS = DAG.getMemset(
-        Root, sdl, Op1, Op2, Op3, Alignment, isVol, /* AlwaysInline */ false,
-        &I, MachinePointerInfo(I.getArgOperand(0)), I.getAAMetadata());
-    updateDAGForMaybeTailCall(MS);
-    return;
-  }
+  case Intrinsic::memset:
   case Intrinsic::memset_inline: {
-    const auto &MSII = cast<MemSetInlineInst>(I);
+    const auto &MSII = cast<MemSetInst>(I);
     SDValue Dst = getValue(I.getArgOperand(0));
     SDValue Value = getValue(I.getArgOperand(1));
     SDValue Size = getValue(I.getArgOperand(2));
-    assert(isa<ConstantSDNode>(Size) && "memset_inline needs constant size");
+    assert((!MSII.isForceInlined() || isa<ConstantSDNode>(Size)) &&
+           "memset_inline needs constant size");
     // @llvm.memset defines 0 and 1 to both mean no alignment.
     Align DstAlign = MSII.getDestAlign().valueOrOne();
     bool isVol = MSII.isVolatile();
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MC = DAG.getMemset(Root, sdl, Dst, Value, Size, DstAlign, isVol,
-                               /* AlwaysInline */ true, &I,
-                               MachinePointerInfo(I.getArgOperand(0)),
-                               I.getAAMetadata());
+    SDValue MC = DAG.getMemset(
+        Root, sdl, Dst, Value, Size, DstAlign, isVol, MSII.isForceInlined(),
+        &I, MachinePointerInfo(I.getArgOperand(0)), I.getAAMetadata());
     updateDAGForMaybeTailCall(MC);
     return;
   }
@@ -6562,7 +6533,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::memcpy_element_unordered_atomic: {
-    const AtomicMemCpyInst &MI = cast<AtomicMemCpyInst>(I);
+    auto &MI = cast<AnyMemCpyInst>(I);
     SDValue Dst = getValue(MI.getRawDest());
     SDValue Src = getValue(MI.getRawSource());
     SDValue Length = getValue(MI.getLength());
@@ -6578,7 +6549,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::memmove_element_unordered_atomic: {
-    auto &MI = cast<AtomicMemMoveInst>(I);
+    auto &MI = cast<AnyMemMoveInst>(I);
     SDValue Dst = getValue(MI.getRawDest());
     SDValue Src = getValue(MI.getRawSource());
     SDValue Length = getValue(MI.getLength());
@@ -6594,7 +6565,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::memset_element_unordered_atomic: {
-    auto &MI = cast<AtomicMemSetInst>(I);
+    auto &MI = cast<AnyMemSetInst>(I);
     SDValue Dst = getValue(MI.getRawDest());
     SDValue Val = getValue(MI.getValue());
     SDValue Length = getValue(MI.getLength());
@@ -10061,7 +10032,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
   std::vector<SDValue> AsmNodeOperands;
   AsmNodeOperands.push_back(SDValue());  // reserve space for input chain
   AsmNodeOperands.push_back(DAG.getTargetExternalSymbol(
-      IA->getAsmString().c_str(), TLI.getProgramPointerTy(DAG.getDataLayout())));
+      IA->getAsmString().data(), TLI.getProgramPointerTy(DAG.getDataLayout())));
 
   // If we have a !srcloc metadata node associated with it, we want to attach
   // this to the ultimately generated inline asm machineinstr.  To do this, we

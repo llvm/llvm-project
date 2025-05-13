@@ -277,6 +277,36 @@ func.func @sample_implicit_proj_dref(%arg0 : !spirv.sampled_image<!spirv.image<f
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.ImageOperands: Bias
+//===----------------------------------------------------------------------===//
+
+func.func @bias_too_many_arguments(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : f32, %arg2 : f32) -> () {
+  // expected-error @+1 {{too many image operand arguments have been provided}}
+  %0 = spirv.ImageSampleImplicitLod %arg0, %arg1 ["Bias"], %arg2, %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, f32, f32, f32 -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @bias_too_many_arguments(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : f32, %arg2 : i32) -> () {
+  // expected-error @+1 {{Bias must be a floating-point type scalar}}
+  %0 = spirv.ImageSampleImplicitLod %arg0, %arg1 ["Bias"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, f32, i32 -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @bias_with_rect(%arg0 : !spirv.sampled_image<!spirv.image<f32, Rect, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : f32, %arg2 : f32) -> () {
+  // expected-error @+1 {{Bias must only be used with an image type that has a dim operand of 1D, 2D, 3D, or Cube}}
+  %0 = spirv.ImageSampleImplicitLod %arg0, %arg1 ["Bias"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Rect, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, f32, f32 -> vector<4xf32>
+  spirv.Return
+}
+
+// TODO: We cannot currently test Bias with MS != 0 as all implemented implicit operations already check for that.
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.ImageOperands: Lod
 //===----------------------------------------------------------------------===//
 
@@ -305,7 +335,7 @@ func.func @lod_too_many_arguments(%arg0 : !spirv.sampled_image<!spirv.image<f32,
 // -----
 
 func.func @lod_with_rect(%arg0 : !spirv.sampled_image<!spirv.image<f32, Rect, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : f32) -> () {
-  // expected-error @+1 {{Lod only be used with an image type that has a dim operand of 1D, 2D, 3D, or Cube}}
+  // expected-error @+1 {{Lod must only be used with an image type that has a dim operand of 1D, 2D, 3D, or Cube}}
   %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Lod"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Rect, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, f32 -> vector<4xf32>
   spirv.Return
 }

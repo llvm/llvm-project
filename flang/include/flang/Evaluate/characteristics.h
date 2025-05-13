@@ -220,7 +220,7 @@ protected:
 // 15.3.2.2
 struct DummyDataObject {
   ENUM_CLASS(Attr, Optional, Allocatable, Asynchronous, Contiguous, Value,
-      Volatile, Pointer, Target, DeducedFromActual)
+      Volatile, Pointer, Target, DeducedFromActual, OnlyIntrinsicInquiry)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   static bool IdenticalSignificantAttrs(const Attrs &x, const Attrs &y) {
     return (x - Attr::DeducedFromActual) == (y - Attr::DeducedFromActual);

@@ -175,7 +175,7 @@ bool EliminateDuplicatePHINodes(BasicBlock *BB);
 bool EliminateDuplicatePHINodes(BasicBlock *BB,
                                 SmallPtrSetImpl<PHINode *> &ToRemove);
 
-bool shouldFoldLoadStoreWithPointerOperandThroughPhi(Value *Ptr);
+bool shouldFoldLoadStoreWithPointerOperandThroughPhi(const Value *Ptr);
 
 /// This function is used to do simplification of a CFG.  For example, it
 /// adjusts branches to branches to eliminate the extra hop, it eliminates

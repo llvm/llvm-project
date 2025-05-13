@@ -14,6 +14,7 @@
 #include <__config>
 #include <__cstddef/nullptr_t.h>
 #include <__exception/exception.h>
+#include <__force_nonstandard_layout>
 #include <__functional/binary_function.h>
 #include <__functional/invoke.h>
 #include <__functional/unary_function.h>
@@ -71,7 +72,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~bad_function_call() _NOEXCEPT override {}
 #  endif
 
-#  ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
+#  if _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
   const char* what() const _NOEXCEPT override;
 #  endif
 };
@@ -86,7 +87,7 @@ _LIBCPP_DIAGNOSTIC_POP
 }
 
 template <class _Fp>
-class _LIBCPP_TEMPLATE_VIS function; // undefined
+class function; // undefined
 
 namespace __function {
 
@@ -234,7 +235,7 @@ public:
 // __base provides an abstract interface for copyable functors.
 
 template <class _Fp>
-class _LIBCPP_TEMPLATE_VIS __base;
+class __base;
 
 template <class _Rp, class... _ArgTypes>
 class __base<_Rp(_ArgTypes...)> {
@@ -827,7 +828,7 @@ public:
 } // namespace __function
 
 template <class _Rp, class... _ArgTypes>
-class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>
+class function<_Rp(_ArgTypes...)>
     : public __function::__maybe_derive_from_unary_function<_Rp(_ArgTypes...)>,
       public __function::__maybe_derive_from_binary_function<_Rp(_ArgTypes...)> {
 #  ifndef _LIBCPP_ABI_OPTIMIZED_FUNCTION

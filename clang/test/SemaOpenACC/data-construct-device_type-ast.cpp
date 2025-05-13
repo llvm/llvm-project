@@ -13,12 +13,12 @@ void TemplUses() {
   // CHECK-NEXT: FunctionDecl{{.*}}TemplUses
   // CHECK-NEXT: CompoundStmt
 
-#pragma acc data default(none) device_type(T) dtype(T)
+#pragma acc data default(none) device_type(host) dtype(multicore)
   ;
   // CHECK-NEXT: OpenACCDataConstruct{{.*}} data
   // CHECK-NEXT: default(none)
-  // CHECK-NEXT: device_type(T)
-  // CHECK-NEXT: dtype(T)
+  // CHECK-NEXT: device_type(host)
+  // CHECK-NEXT: dtype(multicore)
   // CHECK-NEXT: NullStmt
 
   // Instantiations
@@ -30,8 +30,8 @@ void TemplUses() {
   // Argument to 'device-type' is just an identifier, so we don't transform it.
   // CHECK-NEXT: OpenACCDataConstruct{{.*}} data
   // CHECK-NEXT: default(none)
-  // CHECK-NEXT: device_type(T)
-  // CHECK-NEXT: dtype(T)
+  // CHECK-NEXT: device_type(host)
+  // CHECK-NEXT: dtype(multicore)
   // CHECK-NEXT: NullStmt
 }
 void Inst() {

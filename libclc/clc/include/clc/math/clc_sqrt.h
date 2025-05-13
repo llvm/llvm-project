@@ -14,7 +14,6 @@
 
 #include <clc/math/gentype.inc>
 
-#undef __CLC_BODY
 #undef __CLC_FUNCTION
 
 #endif // __CLC_MATH_CLC_SQRT_H__

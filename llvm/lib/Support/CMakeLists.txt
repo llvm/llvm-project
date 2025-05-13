@@ -207,6 +207,7 @@ add_llvm_component_library(LLVMSupport
   IntervalMap.cpp
   JSON.cpp
   KnownBits.cpp
+  KnownFPClass.cpp
   LEB128.cpp
   LineIterator.cpp
   Locale.cpp
@@ -220,7 +221,7 @@ add_llvm_component_library(LLVMSupport
   MD5.cpp
   MSP430Attributes.cpp
   MSP430AttributeParser.cpp
-  Mustache.cpp      
+  Mustache.cpp
   NativeFormatting.cpp
   OptimizedStructLayout.cpp
   Optional.cpp
@@ -294,6 +295,7 @@ add_llvm_component_library(LLVMSupport
   Path.cpp
   Process.cpp
   Program.cpp
+  ProgramStack.cpp
   RWMutex.cpp
   Signals.cpp
   Threading.cpp
@@ -368,3 +370,8 @@ if(LLVM_WITH_Z3)
     ${Z3_INCLUDE_DIR}
     )
 endif()
+
+target_include_directories(LLVMSupport SYSTEM
+  PRIVATE
+  ${LLVM_THIRD_PARTY_DIR}/siphash/include
+  )

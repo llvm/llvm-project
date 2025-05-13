@@ -82,9 +82,7 @@ private:
 
 public:
   static char ID; // Pass identification, replacement for typeid.
-  explicit AArch64AdvSIMDScalar() : MachineFunctionPass(ID) {
-    initializeAArch64AdvSIMDScalarPass(*PassRegistry::getPassRegistry());
-  }
+  explicit AArch64AdvSIMDScalar() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 

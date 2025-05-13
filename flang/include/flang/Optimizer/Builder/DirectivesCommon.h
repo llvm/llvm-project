@@ -203,7 +203,8 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
 template <typename BoundsOp, typename BoundsType>
 llvm::SmallVector<mlir::Value>
 genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
-                 fir::ExtendedValue dataExv, bool isAssumedSize) {
+                 fir::ExtendedValue dataExv, bool isAssumedSize,
+                 bool strideIncludeLowerExtent = false) {
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<BoundsType>();
   llvm::SmallVector<mlir::Value> bounds;
@@ -213,26 +214,44 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
   const unsigned rank = dataExv.rank();
+  mlir::Value cumulativeExtent = one;
   for (unsigned dim = 0; dim < rank; ++dim) {
     mlir::Value baseLb =
         fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
     mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
     mlir::Value ub;
     mlir::Value lb = zero;
-    mlir::Value ext = fir::factory::readExtent(builder, loc, dataExv, dim);
+    mlir::Value extent = fir::factory::readExtent(builder, loc, dataExv, dim);
     if (isAssumedSize && dim + 1 == rank) {
-      ext = zero;
+      extent = zero;
       ub = lb;
     } else {
       // ub = extent - 1
-      ub = builder.create<mlir::arith::SubIOp>(loc, ext, one);
+      ub = builder.create<mlir::arith::SubIOp>(loc, extent, one);
+    }
+    mlir::Value stride = one;
+    if (strideIncludeLowerExtent) {
+      stride = cumulativeExtent;
+      cumulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
+          loc, cumulativeExtent, extent);
     }
 
-    mlir::Value bound =
-        builder.create<BoundsOp>(loc, boundTy, lb, ub, ext, one, false, baseLb);
+    mlir::Value bound = builder.create<BoundsOp>(loc, boundTy, lb, ub, extent,
+                                                 stride, false, baseLb);
     bounds.push_back(bound);
   }
   return bounds;
+}
+
+/// Checks if an argument is optional based on the fortran attributes
+/// that are tied to it.
+inline bool isOptionalArgument(mlir::Operation *op) {
+  if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(op))
+    if (declareOp.getFortranAttrs() &&
+        bitEnumContainsAny(*declareOp.getFortranAttrs(),
+                           fir::FortranVariableFlagsEnum::optional))
+      return true;
+  return false;
 }
 
 template <typename BoundsOp, typename BoundsType>
