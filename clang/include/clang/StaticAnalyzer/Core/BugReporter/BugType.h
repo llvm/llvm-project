@@ -77,15 +77,12 @@ public:
 ///   BugType LongCheckerFrontendNameBug{LongCheckerFrontendName, "..."};
 /// ```
 /// we can use `CheckerFrontendWithBugType LongCheckerFrontendName{"..."}`.
-class CheckerFrontendWithBugType : public CheckerFrontend {
-  BugType BT;
-
+class CheckerFrontendWithBugType : public CheckerFrontend, public BugType {
 public:
   CheckerFrontendWithBugType(StringRef Desc,
                              StringRef Cat = categories::LogicError,
                              bool SuppressOnSink = false)
-      : BT(this, Desc, Cat, SuppressOnSink) {}
-  const BugType &getBT() const { return BT; }
+      : BugType(this, Desc, Cat, SuppressOnSink) {}
 };
 
 } // namespace ento

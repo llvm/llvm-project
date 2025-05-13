@@ -56,8 +56,8 @@ void DivZeroChecker::reportBug(StringRef Msg, ProgramStateRef StateZero,
   if (!DivideZeroChecker.isEnabled())
     return;
   if (ExplodedNode *N = C.generateErrorNode(StateZero)) {
-    auto R = std::make_unique<PathSensitiveBugReport>(DivideZeroChecker.getBT(),
-                                                      Msg, N);
+    auto R =
+        std::make_unique<PathSensitiveBugReport>(DivideZeroChecker, Msg, N);
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
     C.emitReport(std::move(R));
   }
@@ -69,8 +69,8 @@ void DivZeroChecker::reportTaintBug(
   if (!TaintedDivChecker.isEnabled())
     return;
   if (ExplodedNode *N = C.generateNonFatalErrorNode(StateZero)) {
-    auto R = std::make_unique<PathSensitiveBugReport>(TaintedDivChecker.getBT(),
-                                                      Msg, N);
+    auto R =
+        std::make_unique<PathSensitiveBugReport>(TaintedDivChecker, Msg, N);
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
     for (auto Sym : TaintedSyms)
       R->markInteresting(Sym);
