@@ -694,9 +694,15 @@ void SwiftLanguageRuntime::GetGenericParameterNamesForFunction(
         break;
       CompilerType generic_type =
           ts->CreateGenericTypeParamType(depth, index, flavor);
-      CompilerType bound_type =
+      llvm::Expected<CompilerType> bound_type_or_err =
           runtime->BindGenericTypeParameters(*frame, generic_type);
-      type_name = bound_type.GetDisplayTypeName();
+      if (!bound_type_or_err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions | LLDBLog::Types),
+                       bound_type_or_err.takeError(), "{0}");
+        break;
+      }
+
+      type_name = bound_type_or_err->GetDisplayTypeName();
       break;
     }
 

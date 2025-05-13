@@ -498,8 +498,10 @@ SwiftLanguageRuntime::GetMemberVariableOffsetRemoteMirrors(
   auto frame = instance ? instance->GetExecutionContextRef().GetFrameSP().get()
                         : nullptr;
   auto ti_or_err = GetSwiftRuntimeTypeInfo(instance_type, frame);
-  if (!ti_or_err)
+  if (!ti_or_err) {
     LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), ti_or_err.takeError(), "{0}");
+    return {};
+  }
   auto *ti = &*ti_or_err;
   if (auto *rti =
           llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti)) {
@@ -2637,7 +2639,7 @@ CompilerType SwiftLanguageRuntime::BindGenericTypeParameters(
           unbound_type.GetMangledTypeName()));
 }
 
-CompilerType
+llvm::Expected<CompilerType>
 SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
                                                 TypeSystemSwiftTypeRef &ts,
                                                 ConstString mangled_name) {
@@ -2645,12 +2647,8 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
   using namespace swift::Demangle;
 
   ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
-  if (!reflection_ctx) {
-    LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
-             "No reflection context available.");
-    return ts.GetTypeFromMangledTypename(mangled_name);
-  }
-
+  if (!reflection_ctx)
+    return llvm::createStringError("no reflection context");
 
   ConstString func_name = stack_frame.GetSymbolContext(eSymbolContextFunction)
                               .GetFunctionName(Mangled::ePreferMangled);
@@ -2707,24 +2705,17 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
   // Build a TypeRef from the demangle tree.
   auto type_ref_or_err =
       reflection_ctx->GetTypeRef(dem, canonical, ts.GetDescriptorFinder());
-  if (!type_ref_or_err) {
-    LLDB_LOG_ERROR(
-        GetLog(LLDBLog::Expressions | LLDBLog::Types),
-        type_ref_or_err.takeError(),
-        "Couldn't get type ref when binding generic type parameters: {0}");
-    return get_canonical();
-  }
+  if (!type_ref_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError("cannot bind generic parameters"),
+        type_ref_or_err.takeError());
 
   // Apply the substitutions.
   auto bound_type_ref_or_err = reflection_ctx->ApplySubstitutions(
       *type_ref_or_err, substitutions, ts.GetDescriptorFinder());
-  if (!bound_type_ref_or_err) {
-    LLDB_LOG_ERROR(
-        GetLog(LLDBLog::Expressions | LLDBLog::Types),
-        bound_type_ref_or_err.takeError(),
-        "Couldn't get type ref when binding generic type parameters: {0}");
-    return get_canonical();
-  }
+  if (!bound_type_ref_or_err)
+    return bound_type_ref_or_err.takeError();
+
   NodePointer node = bound_type_ref_or_err->getDemangling(dem);
 
   // Import the type into the scratch context. Subsequent conversions
@@ -2736,29 +2727,24 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
   // the original context as to resolve type aliases correctly.
   auto &target = GetProcess().GetTarget();
   auto scratch_ctx = TypeSystemSwiftTypeRefForExpressions::GetForTarget(target);
-  if (!scratch_ctx) {
-    LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
-             "No scratch context available.");
-    return ts.GetTypeFromMangledTypename(mangled_name);
-  }
+  if (!scratch_ctx)
+    return llvm::createStringError("No scratch context available.");
+
   CompilerType bound_type = scratch_ctx->RemangleAsType(dem, node, flavor);
   LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types), "Bound {0} -> {1}.",
            mangled_name, bound_type.GetMangledTypeName());
 
   if (generic_signature && generic_signature->HasPacks()) {
     auto bound_type_or_err = BindGenericPackType(stack_frame, bound_type);
-    if (!bound_type_or_err) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions | LLDBLog::Types),
-                     bound_type_or_err.takeError(), "{0}");
-      return bound_type;
-    }
+    if (!bound_type_or_err)
+      return bound_type_or_err.takeError();
     bound_type = *bound_type_or_err;
   }
 
   return bound_type;
 }
 
-CompilerType
+llvm::Expected<CompilerType>
 SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
                                                 CompilerType base_type) {
   // If this is a TypeRef type, bind that.
@@ -3241,7 +3227,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
       if (!frame)
         return false;
 
-      bound_type = BindGenericTypeParameters(*frame.get(), val_type);
+      bound_type = llvm::expectedToOptional(
+                       BindGenericTypeParameters(*frame.get(), val_type))
+                       .value_or(CompilerType());
       if (!bound_type)
         return false;
     } else {
@@ -3495,7 +3483,10 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
     if (StackFrame *frame = exe_scope->CalculateStackFrame().get()) {
       ExecutionContext exe_ctx;
       frame->CalculateExecutionContext(exe_ctx);
-      type = BindGenericTypeParameters(*frame, type);
+      auto bound_type_or_err = BindGenericTypeParameters(*frame, type);
+      if (!bound_type_or_err)
+        return bound_type_or_err.takeError();
+      type = *bound_type_or_err;
     }
 
   // BindGenericTypeParameters imports the type into the scratch

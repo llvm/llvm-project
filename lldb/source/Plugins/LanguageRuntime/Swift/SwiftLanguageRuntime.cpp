@@ -868,8 +868,14 @@ std::string SwiftLanguageRuntime::GetObjectDescriptionExpr_Copy(
 
   auto swift_ast_ctx =
       static_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
-  if (swift_ast_ctx)
-    static_type = BindGenericTypeParameters(*frame_sp, static_type);
+  if (swift_ast_ctx) {
+    auto bound_type_or_err = BindGenericTypeParameters(*frame_sp, static_type);
+    if (!bound_type_or_err) {
+      LLDB_LOG_ERROR(log, bound_type_or_err.takeError(), "{0}");
+      return {};
+    }
+    static_type = *bound_type_or_err;
+  }
 
   auto stride = 0;
   auto opt_stride = static_type.GetByteStride(frame_sp.get());

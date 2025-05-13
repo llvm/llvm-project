@@ -370,8 +370,8 @@ public:
   /// version of \p base_type that replaces all generic type
   /// parameters with bound generic types. If a generic type parameter
   /// cannot be resolved, the input type is returned.
-  CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
-                                         CompilerType base_type);
+  llvm::Expected<CompilerType>
+  BindGenericTypeParameters(StackFrame &stack_frame, CompilerType base_type);
 
   bool IsStoredInlineInBuffer(CompilerType type) override;
 
@@ -591,13 +591,14 @@ protected:
   GetRemoteASTContext(SwiftASTContext &swift_ast_ctx);
 
   /// Like \p BindGenericTypeParameters but for TypeSystemSwiftTypeRef.
-  CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
-                                         TypeSystemSwiftTypeRef &ts,
-                                         ConstString mangled_name);
+  llvm::Expected<CompilerType>
+  BindGenericTypeParameters(StackFrame &stack_frame, TypeSystemSwiftTypeRef &ts,
+                            ConstString mangled_name);
 
   /// Like \p BindGenericTypeParameters but for RemoteAST.
-  CompilerType BindGenericTypeParametersRemoteAST(StackFrame &stack_frame,
-                                                  CompilerType base_type);
+  llvm::Expected<CompilerType>
+  BindGenericTypeParametersRemoteAST(StackFrame &stack_frame,
+                                     CompilerType base_type);
 
   bool GetDynamicTypeAndAddress_Pack(ValueObject &in_value,
                                      CompilerType pack_type,

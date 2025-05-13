@@ -470,7 +470,9 @@ static CompilerType GetSwiftTypeForVariableValueObject(
   if (!result)
     return {};
   if (SwiftASTManipulator::ShouldBindGenericTypes(bind_generic_types))
-    result = runtime->BindGenericTypeParameters(*stack_frame_sp, result);
+    result = llvm::expectedToOptional(
+                 runtime->BindGenericTypeParameters(*stack_frame_sp, result))
+                 .value_or(CompilerType());
   if (!result)
     return {};
   if (!result.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
@@ -606,12 +608,17 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
   auto *stack_frame = stack_frame_sp.get();
   if (SwiftASTManipulator::ShouldBindGenericTypes(bind_generic_types)) {
-    imported_self_type = swift_runtime->BindGenericTypeParameters(
+    auto bound_type_or_err = swift_runtime->BindGenericTypeParameters(
         *stack_frame, imported_self_type);
-    if (!imported_self_type)
-      return llvm::createStringError(
-          "Unable to add the aliases the expression needs because the Swift "
-          "expression parser couldn't bind the type parameters for self.");
+    if (!bound_type_or_err)
+      return llvm::joinErrors(
+          llvm::createStringError(
+              "Unable to add the aliases the expression needs because the "
+              "Swift expression parser couldn't bind the type parameters for "
+              "self."),
+          bound_type_or_err.takeError());
+
+    imported_self_type = *bound_type_or_err;
   }
 
   {
@@ -1224,16 +1231,17 @@ AddArchetypeTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
     auto flavor = SwiftLanguageRuntime::GetManglingFlavor(type_name);
     auto dependent_type = typeref_typesystem->CreateGenericTypeParamType(
         info.depth, info.index, flavor);
-    auto bound_type =
+    auto bound_type_or_err =
         runtime->BindGenericTypeParameters(stack_frame, dependent_type);
-    if (!bound_type) {
-      LLDB_LOG(
-          log,
+    if (!bound_type_or_err) {
+      LLDB_LOG_ERROR(
+          log, bound_type_or_err.takeError(),
           "[AddArchetypeTypeAliases] Could not bind dependent generic param "
-          "type {0}",
+          "type {1}: {0}",
           dependent_type.GetMangledTypeName());
       continue;
     }
+    auto bound_type = *bound_type_or_err;
 
     LLDB_LOG(log,
              "[AddArchetypeTypeAliases] Binding dependent generic param "

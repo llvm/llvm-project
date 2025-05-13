@@ -5863,7 +5863,9 @@ BindGenericTypeParameters(CompilerType type, ExecutionContextScope *exe_scope) {
     return type;
   ExecutionContext exe_ctx;
   exe_scope->CalculateExecutionContext(exe_ctx);
-  if (auto bound = runtime->BindGenericTypeParameters(*frame, type))
+  if (auto bound = llvm::expectedToOptional(
+                       runtime->BindGenericTypeParameters(*frame, type))
+                       .value_or(CompilerType()))
     return bound;
   return type;
 }

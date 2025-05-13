@@ -132,7 +132,9 @@ std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffsetRemoteAST(
     // Bind generic parameters if necessary.
     if (instance && swift_type->hasTypeParameter())
       if (auto *frame = instance->GetExecutionContextRef().GetFrameSP().get())
-        if (auto bound = BindGenericTypeParameters(*frame, instance_type)) {
+        if (auto bound = llvm::expectedToOptional(
+                             BindGenericTypeParameters(*frame, instance_type))
+                             .value_or(CompilerType())) {
           LLDB_LOGF(
               GetLog(LLDBLog::Types),
               "[MemberVariableOffsetResolver] resolved non-class type = %s",
@@ -265,7 +267,8 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ExistentialRemoteAST(
 }
 #endif
 
-CompilerType SwiftLanguageRuntime::BindGenericTypeParametersRemoteAST(
+llvm::Expected<CompilerType>
+SwiftLanguageRuntime::BindGenericTypeParametersRemoteAST(
     StackFrame &stack_frame, CompilerType base_type) {
   LLDB_SCOPED_TIMER();
 
