@@ -226,9 +226,8 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
   NativeLowPrecisionMode = false;
   if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("dx.nativelowprec")))
-    if (MMDI.ShaderModelVersion >= VersionTuple(6, 2) &&
-        NativeLowPrec->getValue() != 0)
-      NativeLowPrecisionMode = true;
+    if (MMDI.ShaderModelVersion >= VersionTuple(6, 2))
+      NativeLowPrecisionMode = NativeLowPrec->getValue().getBoolValue();
 
   CallGraph CG(M);
 
