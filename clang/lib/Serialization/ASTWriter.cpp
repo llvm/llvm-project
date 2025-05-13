@@ -1237,7 +1237,7 @@ ASTWriter::createSignature() const {
   Hasher.update(
       AllBytes.slice(UnhashedControlBlockRange.second, ASTBlockRange.first));
   //  3. After the AST block.
-  Hasher.update(AllBytes.slice(ASTBlockRange.second, StringRef::npos));
+  Hasher.update(AllBytes.substr(ASTBlockRange.second));
   ASTFileSignature Signature = ASTFileSignature::create(Hasher.result());
 
   return std::make_pair(ASTBlockHash, Signature);
