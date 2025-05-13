@@ -164,6 +164,10 @@ void DataAggregator::findPerfExecutable() {
 void DataAggregator::start() {
   outs() << "PERF2BOLT: Starting data aggregation job for " << Filename << "\n";
 
+  // Turn on heatmap building if requested by --heatmap flag.
+  if (!opts::HeatmapMode && opts::HeatmapOutput.getNumOccurrences())
+    opts::HeatmapMode = opts::HeatmapModeKind::HM_Optional;
+
   // Don't launch perf for pre-aggregated files or when perf input is specified
   // by the user.
   if (opts::ReadPreAggregated || !opts::ReadPerfEvents.empty())
@@ -502,24 +506,25 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     errs() << "PERF2BOLT: failed to parse samples\n";
 
   // Special handling for memory events
-  if (prepareToParse("mem events", MemEventsPPI, MemEventsErrorCallback))
-    return Error::success();
-
-  if (const std::error_code EC = parseMemEvents())
-    errs() << "PERF2BOLT: failed to parse memory events: " << EC.message()
-           << '\n';
+  if (!prepareToParse("mem events", MemEventsPPI, MemEventsErrorCallback))
+    if (const std::error_code EC = parseMemEvents())
+      errs() << "PERF2BOLT: failed to parse memory events: " << EC.message()
+             << '\n';
 
   deleteTempFiles();
 
 heatmap:
-  if (opts::HeatmapMode) {
-    if (std::error_code EC = printLBRHeatMap()) {
-      errs() << "ERROR: failed to print heat map: " << EC.message() << '\n';
-      exit(1);
-    }
-    exit(0);
-  }
-  return Error::success();
+  if (!opts::HeatmapMode)
+    return Error::success();
+
+  if (std::error_code EC = printLBRHeatMap())
+    return errorCodeToError(EC);
+
+  if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Optional)
+    return Error::success();
+
+  assert(opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive);
+  exit(0);
 }
 
 Error DataAggregator::readProfile(BinaryContext &BC) {
@@ -1351,15 +1356,14 @@ std::error_code DataAggregator::printLBRHeatMap() {
     exit(1);
   }
 
-  HM.print(opts::OutputFilename);
-  if (opts::OutputFilename == "-")
-    HM.printCDF(opts::OutputFilename);
-  else
-    HM.printCDF(opts::OutputFilename + ".csv");
-  if (opts::OutputFilename == "-")
-    HM.printSectionHotness(opts::OutputFilename);
-  else
-    HM.printSectionHotness(opts::OutputFilename + "-section-hotness.csv");
+  HM.print(opts::HeatmapOutput);
+  if (opts::HeatmapOutput == "-") {
+    HM.printCDF(opts::HeatmapOutput);
+    HM.printSectionHotness(opts::HeatmapOutput);
+  } else {
+    HM.printCDF(opts::HeatmapOutput + ".csv");
+    HM.printSectionHotness(opts::HeatmapOutput + "-section-hotness.csv");
+  }
 
   return std::error_code();
 }
@@ -1386,7 +1390,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
       const uint64_t TraceTo = NextLBR->From;
       const BinaryFunction *TraceBF =
           getBinaryFunctionContainingAddress(TraceFrom);
-      if (opts::HeatmapMode) {
+      if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive) {
         FTInfo &Info = FallthroughLBRs[Trace(TraceFrom, TraceTo)];
         ++Info.InternCount;
       } else if (TraceBF && TraceBF->containsAddress(TraceTo)) {
@@ -1424,7 +1428,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     NextLBR = &LBR;
 
     // Record branches outside binary functions for heatmap.
-    if (opts::HeatmapMode) {
+    if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive) {
       TakenBranchInfo &Info = BranchLBRs[Trace(LBR.From, LBR.To)];
       ++Info.TakenCount;
       continue;
@@ -1439,7 +1443,8 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
   }
   // Record LBR addresses not covered by fallthroughs (bottom-of-stack source
   // and top-of-stack target) as basic samples for heatmap.
-  if (opts::HeatmapMode && !Sample.LBR.empty()) {
+  if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive &&
+      !Sample.LBR.empty()) {
     ++BasicSamples[Sample.LBR.front().To];
     ++BasicSamples[Sample.LBR.back().From];
   }
