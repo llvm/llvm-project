@@ -5205,6 +5205,55 @@ getMachineMemOperandForType(const SelectionDAG &DAG,
                                                        LLT(VT));
 }
 
+// These are Combiner rules for expanding v2f32 load results when they are
+// really being used as their individual f32 components. Now that v2f32 is a
+// legal type for a register, LowerFormalArguments() and ReplaceLoadVector()
+// will pack two f32s into a single 64-bit register, leading to ld.b64 instead
+// of ld.v2.f32 or ld.v2.b64 instead of ld.v4.f32. Sometimes this is ideal if
+// the results stay packed because they're passed to another instruction that
+// supports packed f32s (e.g. fmul.f32x2) or (rarely) if v2f32 really is being
+// reinterpreted as an i64, and then stored.
+//
+// Otherwise, SelectionDAG will unpack the results with a sequence of bitcasts,
+// extensions, and extracts if they go through any other kind of instruction.
+// This is not ideal, so we undo these patterns and rewrite the load to output
+// twice as many registers: two f32s for every one i64. This preserves PTX
+// codegen for programs that don't use packed f32s.
+//
+// Also, LowerFormalArguments() and ReplaceLoadVector() happen too early for us
+// to know whether the def-use chain for a particular load will eventually
+// include instructions supporting packed f32s. That is why we prefer to resolve
+// this problem within DAG Combiner.
+//
+// This rule proceeds in three general steps:
+//
+// 1. Identify the pattern, by traversing the def-use chain.
+// 2. Rewrite the load, by splitting each 64-bit result into two f32 registers.
+// 3. Rewrite all uses of the load, including chain and glue uses.
+//
+// This has the effect of combining multiple instructions into a single load.
+// For example:
+//
+// (before, ex1)
+// v: v2f32 = LoadParam [p]
+// f1: f32 = extractelt v, 0
+// f2: f32 = extractelt v, 1
+// r = add.f32 f1, f2
+//
+// ...or...
+//
+// (before, ex2)
+// i: i64 = LoadParam [p]
+// v: v2f32 = bitcast i
+// f1: f32 = extractelt v, 0
+// f2: f32 = extractelt v, 1
+// r = add.f32 f1, f2
+//
+// ...will become...
+//
+// (after for both)
+// vf: f32,f32 = LoadParamV2 [p]
+// r = add.f32 vf:0, vf:1
 static SDValue PerformLoadCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI) {
   if (DCI.DAG.getOptLevel() == CodeGenOptLevel::None)
@@ -5223,6 +5272,7 @@ static SDValue PerformLoadCombine(SDNode *N,
         return VT == MVT::i64 || VT == MVT::f32 || VT.isVector();
       });
 
+  // (1) All we are doing here is looking for patterns.
   SmallDenseMap<SDNode *, unsigned> ExtractElts;
   SmallVector<SDNode *> ProxyRegs(OrigNumResults, nullptr);
   SmallVector<std::pair<SDNode *, unsigned>> WorkList{{N, {}}};
@@ -5274,24 +5324,18 @@ static SDValue PerformLoadCombine(SDNode *N,
     ProcessingInitialLoad = false;
   }
 
-  // (2) If the load's value is only used as f32 elements, replace all
-  // extractelts with individual elements of the newly-created load. If there's
-  // a ProxyReg, handle that too. After this check, we'll proceed in the
-  // following way:
-  //   1. Determine which type of load to create, which will split the results
-  //      of the original load into f32 components.
-  //   2. If there's a ProxyReg, split that too.
-  //   3. Replace all extractelts with references to the new load / proxy reg.
-  //   4. Replace all glue/chain references with references to the new load /
-  //      proxy reg.
+  // Did we find any patterns? All patterns we're interested in end with an
+  // extractelt.
   if (ExtractElts.empty())
     return SDValue();
+
+  // (2) Now, we will decide what load to create.
 
   // Do we have to tweak the opcode for an NVPTXISD::Load* or do we have to
   // rewrite an ISD::LOAD?
   std::optional<NVPTXISD::NodeType> NewOpcode;
 
-  // LoadV's are handled slightly different in ISelDAGToDAG.
+  // LoadV's are handled slightly different in ISelDAGToDAG. See below.
   bool IsLoadV = false;
   switch (N->getOpcode()) {
   case NVPTXISD::LoadV2:
@@ -5306,7 +5350,15 @@ static SDValue PerformLoadCombine(SDNode *N,
     break;
   }
 
-  SDValue OldChain, OldGlue;
+  // We haven't created the new load yet, but we're saving some information
+  // about the old load because we will need to replace all uses of it later.
+  // Because our pattern is generic, we're matching ISD::LOAD and
+  // NVPTXISD::Load*, and we just search for the chain and glue outputs rather
+  // than have a case for each type of load.
+  const bool HaveProxyRegs =
+      llvm::any_of(ProxyRegs, [](const SDNode *PR) { return PR != nullptr; });
+
+  SDValue OldChain, OldGlue /* optional */;
   for (unsigned I = 0, E = N->getNumValues(); I != E; ++I) {
     if (N->getValueType(I) == MVT::Other)
       OldChain = SDValue(N, I);
@@ -5316,7 +5368,8 @@ static SDValue PerformLoadCombine(SDNode *N,
 
   SDValue NewLoad, NewChain, NewGlue /* (optional) */;
   unsigned NumElts = 0;
-  if (NewOpcode) { // tweak NVPTXISD::Load* opcode
+  if (NewOpcode) {
+    // Here, we are tweaking a NVPTXISD::Load* opcode to output N*2 results.
     SmallVector<EVT> VTs;
 
     // should always be non-null after this
@@ -5357,6 +5410,15 @@ static SDValue PerformLoadCombine(SDNode *N,
     if (NewGlueIdx)
       NewGlue = NewLoad.getValue(*NewGlueIdx);
   } else if (N->getOpcode() == ISD::LOAD) { // rewrite a load
+    // Here, we are lowering an ISD::LOAD to an NVPTXISD::Load*. For example:
+    //
+    // (before)
+    // v2f32,ch,glue = ISD::LOAD [p]
+    //
+    // ...becomes...
+    //
+    // (after)
+    // f32,f32,ch,glue = NVPTXISD::LoadV2 [p]
     std::optional<EVT> CastToType;
     EVT ResVT = N->getValueType(0);
     if (ResVT == MVT::i64) {
@@ -5374,23 +5436,41 @@ static SDValue PerformLoadCombine(SDNode *N,
     }
   }
 
+  // If this was some other type of load we couldn't handle, we bail.
   if (!NewLoad)
-    return SDValue(); // could not match pattern
+    return SDValue();
 
-  // (3) begin rewriting uses
+  // (3) We successfully rewrote the load. Now we must rewrite all uses of the
+  // old load.
   SmallVector<SDValue> NewOutputsF32;
 
-  if (llvm::any_of(ProxyRegs, [](const SDNode *PR) { return PR != nullptr; })) {
-    // scalarize proxy regs, but first rewrite all uses of chain and glue from
-    // the old load to the new load
+  if (!HaveProxyRegs) {
+    // The case without proxy registers in the def-use chain is simple. Each
+    // extractelt is matched to an output of the new load (see calls to
+    // DCI.CombineTo() below).
+    for (unsigned I = 0, E = NumElts; I != E; ++I)
+      if (NewLoad->getValueType(I) == MVT::f32)
+        NewOutputsF32.push_back(NewLoad.getValue(I));
+
+    // replace all glue and chain nodes
+    DCI.DAG.ReplaceAllUsesOfValueWith(OldChain, NewChain);
+    if (OldGlue)
+      DCI.DAG.ReplaceAllUsesOfValueWith(OldGlue, NewGlue);
+  } else {
+    // The case with proxy registers is slightly more complicated. We have to
+    // expand those too.
+
+    // First,  rewrite all uses of chain and glue from the old load to the new
+    // load. This is one less thing to worry about.
     DCI.DAG.ReplaceAllUsesOfValueWith(OldChain, NewChain);
     DCI.DAG.ReplaceAllUsesOfValueWith(OldGlue, NewGlue);
 
+    // Now we will expand all the proxy registers for each output.
     for (unsigned ProxyI = 0, ProxyE = ProxyRegs.size(); ProxyI != ProxyE;
          ++ProxyI) {
       SDNode *ProxyReg = ProxyRegs[ProxyI];
 
-      // no proxy reg might mean this result is unused
+      // No proxy reg might mean this result is unused.
       if (!ProxyReg)
         continue;
 
@@ -5404,12 +5484,12 @@ static SDValue PerformLoadCombine(SDNode *N,
       if (SDValue OldInGlue = ProxyReg->getOperand(2); OldInGlue.getNode() != N)
         NewGlue = OldInGlue;
 
-      // update OldChain, OldGlue to the outputs of ProxyReg, which we will
-      // replace later
+      // Update OldChain, OldGlue to the outputs of ProxyReg, which we will
+      // replace later.
       OldChain = SDValue(ProxyReg, 1);
       OldGlue = SDValue(ProxyReg, 2);
 
-      // generate the scalar proxy regs
+      // Generate the scalar proxy regs.
       for (unsigned I = 0, E = 2; I != E; ++I) {
         SDValue ProxyRegElem = DCI.DAG.getNode(
             NVPTXISD::ProxyReg, SDLoc(ProxyReg),
@@ -5424,18 +5504,10 @@ static SDValue PerformLoadCombine(SDNode *N,
       DCI.DAG.ReplaceAllUsesOfValueWith(OldChain, NewChain);
       DCI.DAG.ReplaceAllUsesOfValueWith(OldGlue, NewGlue);
     }
-  } else {
-    for (unsigned I = 0, E = NumElts; I != E; ++I)
-      if (NewLoad->getValueType(I) == MVT::f32)
-        NewOutputsF32.push_back(NewLoad.getValue(I));
-
-    // replace all glue and chain nodes
-    DCI.DAG.ReplaceAllUsesOfValueWith(OldChain, NewChain);
-    if (OldGlue)
-      DCI.DAG.ReplaceAllUsesOfValueWith(OldGlue, NewGlue);
   }
 
-  // replace all extractelts with the new outputs
+  // Replace all extractelts with the new outputs. This leaves the old load and
+  // unpacking instructions dead.
   for (auto &[Extract, Index] : ExtractElts)
     DCI.CombineTo(Extract, NewOutputsF32[Index], false);
 
