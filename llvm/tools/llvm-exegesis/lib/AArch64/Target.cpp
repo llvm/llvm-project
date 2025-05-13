@@ -223,11 +223,8 @@ private:
       // Hence the guard for switching.
       errno = 0;
       unsigned long PacKeys = prctl_wrapper(PR_PAC_GET_ENABLED_KEYS);
-      if ((long)PacKeys < 0) {
-        if (errno == EINVAL)
-          return nullptr;
-        return "Failed to get PAC key status";
-      }
+      if ((long)PacKeys < 0 || errno == EINVAL)
+        return nullptr;
 
       // Disable all PAC keys. Note that while we expect the measurements to
       // be the same with PAC keys disabled, they could potentially be lower
