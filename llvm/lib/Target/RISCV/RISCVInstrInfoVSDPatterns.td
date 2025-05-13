@@ -912,6 +912,29 @@ defm : VPatWidenBinarySDNode_VV_VX_WV_WX<add, sext_oneuse, "PseudoVWADD">;
 defm : VPatWidenBinarySDNode_VV_VX_WV_WX<add, zext_oneuse, "PseudoVWADDU">;
 defm : VPatWidenBinarySDNode_VV_VX_WV_WX<add, anyext_oneuse, "PseudoVWADDU">;
 
+// DAGCombiner::hoistLogicOpWithSameOpcodeHands may hoist disjoint ors
+// to (ext (or disjoint (a, b)))
+multiclass VPatWidenOrDisjoint_VV_VX<SDNode extop, string instruction_name> {
+  foreach vtiToWti = AllWidenableIntVectors in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<wti>.Predicates) in {
+      def : Pat<(wti.Vector (extop (vti.Vector (or_is_add vti.RegClass:$rs2, vti.RegClass:$rs1)))),
+                (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX)
+                   (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                   vti.RegClass:$rs1, vti.AVL, vti.Log2SEW, TA_MA)>;
+      def : Pat<(wti.Vector (extop (vti.Vector (or_is_add vti.RegClass:$rs2, (SplatPat (XLenVT GPR:$rs1)))))),
+                (!cast<Instruction>(instruction_name#"_VX_"#vti.LMul.MX)
+                   (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                   GPR:$rs1, vti.AVL, vti.Log2SEW, TA_MA)>;
+    }
+  }
+}
+defm : VPatWidenOrDisjoint_VV_VX<sext, "PseudoVWADD">;
+defm : VPatWidenOrDisjoint_VV_VX<zext, "PseudoVWADDU">;
+defm : VPatWidenOrDisjoint_VV_VX<anyext, "PseudoVWADDU">;
+
 defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, sext_oneuse, "PseudoVWSUB">;
 defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, zext_oneuse, "PseudoVWSUBU">;
 defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, anyext_oneuse, "PseudoVWSUBU">;
@@ -1337,6 +1360,8 @@ foreach vti = AllFloatVectors in {
 // 13.11. Vector Floating-Point MIN/MAX Instructions
 defm : VPatBinaryFPSDNode_VV_VF<fminnum, "PseudoVFMIN", isSEWAware=1>;
 defm : VPatBinaryFPSDNode_VV_VF<fmaxnum, "PseudoVFMAX", isSEWAware=1>;
+defm : VPatBinaryFPSDNode_VV_VF<fminimumnum, "PseudoVFMIN", isSEWAware=1>;
+defm : VPatBinaryFPSDNode_VV_VF<fmaximumnum, "PseudoVFMAX", isSEWAware=1>;
 
 // 13.13. Vector Floating-Point Compare Instructions
 defm : VPatFPSetCCSDNode_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;

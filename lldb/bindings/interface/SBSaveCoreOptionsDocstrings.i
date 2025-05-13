@@ -64,5 +64,10 @@ Note that currently ELF Core files are not supported."
 ) lldb::SBSaveCoreOptions::GetThreadsToSave;
 
 %feature("docstring", "
+    Get the current total number of bytes the core is expected to have, excluding the overhead of the core file format.
+    Requires both a Process and a Style to be specified. An error will be returned if the provided options would result in no data being saved."
+) lldb::SBSaveCoreOptions::GetCurrentSizeInBytes;
+
+%feature("docstring", "
     Unset all options."
 ) lldb::SBSaveCoreOptions::Clear;

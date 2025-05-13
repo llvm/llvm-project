@@ -723,9 +723,7 @@ ImmutablePass *llvm::createTypeBasedAAWrapperPass() {
   return new TypeBasedAAWrapperPass();
 }
 
-TypeBasedAAWrapperPass::TypeBasedAAWrapperPass() : ImmutablePass(ID) {
-  initializeTypeBasedAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+TypeBasedAAWrapperPass::TypeBasedAAWrapperPass() : ImmutablePass(ID) {}
 
 bool TypeBasedAAWrapperPass::doInitialization(Module &M) {
   Result.reset(new TypeBasedAAResult(/*UsingTypeSanitizer=*/false));
