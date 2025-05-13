@@ -4755,8 +4755,16 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
         return;
     }
   } else {
-    Diag(New->getLocation(), diag::warn_cxx_compat_tentative_definition) << New;
-    Diag(Old->getLocation(), diag::note_previous_declaration);
+    // C++ may not have a tentative definition rule, but it has a different
+    // rule about what constitutes a definition in the first place. See
+    // [basic.def]p2 for details, but the basic idea is: if the old declaration
+    // contains the extern specifier and doesn't have an initializer, it's fine
+    // in C++.
+    if (Old->getStorageClass() != SC_Extern || Old->hasInit()) {
+      Diag(New->getLocation(), diag::warn_cxx_compat_tentative_definition)
+          << New;
+      Diag(Old->getLocation(), diag::note_previous_declaration);
+    }
   }
 
   if (haveIncompatibleLanguageLinkages(Old, New)) {

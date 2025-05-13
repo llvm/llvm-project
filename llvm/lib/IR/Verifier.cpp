@@ -6584,7 +6584,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       for (BasicBlock *ColorFirstBB : CV)
         if (auto It = ColorFirstBB->getFirstNonPHIIt();
             It != ColorFirstBB->end())
-          if (dyn_cast_or_null<FuncletPadInst>(&*It))
+          if (isa_and_nonnull<FuncletPadInst>(&*It))
             InEHFunclet = true;
 
       // Check for funclet operand bundle
@@ -7283,11 +7283,13 @@ void Verifier::verifyAttachedCallBundle(const CallBase &Call,
 
   if (IID) {
     Check((IID == Intrinsic::objc_retainAutoreleasedReturnValue ||
+           IID == Intrinsic::objc_claimAutoreleasedReturnValue ||
            IID == Intrinsic::objc_unsafeClaimAutoreleasedReturnValue),
           "invalid function argument", Call);
   } else {
     StringRef FnName = Fn->getName();
     Check((FnName == "objc_retainAutoreleasedReturnValue" ||
+           FnName == "objc_claimAutoreleasedReturnValue" ||
            FnName == "objc_unsafeClaimAutoreleasedReturnValue"),
           "invalid function argument", Call);
   }

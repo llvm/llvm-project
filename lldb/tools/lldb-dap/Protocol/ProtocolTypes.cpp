@@ -69,6 +69,16 @@ llvm::json::Value toJSON(const Source &S) {
   return result;
 }
 
+bool fromJSON(const llvm::json::Value &Params, ExceptionBreakpointsFilter &EBF,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("filter", EBF.filter) && O.map("label", EBF.label) &&
+         O.mapOptional("description", EBF.description) &&
+         O.mapOptional("default", EBF.defaultState) &&
+         O.mapOptional("supportsCondition", EBF.supportsCondition) &&
+         O.mapOptional("conditionDescription", EBF.conditionDescription);
+}
+
 json::Value toJSON(const ExceptionBreakpointsFilter &EBF) {
   json::Object result{{"filter", EBF.filter}, {"label", EBF.label}};
 

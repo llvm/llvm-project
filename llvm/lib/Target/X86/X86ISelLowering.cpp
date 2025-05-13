@@ -56712,6 +56712,34 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
 
   if (DCI.isBeforeLegalize()) {
     unsigned IndexWidth = Index.getScalarValueSizeInBits();
+    // Attempt to move shifted index into the address scale, allows further
+    // index truncation below.
+    if (Index.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Scale)) {
+      unsigned ScaleAmt = Scale->getAsZExtVal();
+      assert(isPowerOf2_32(ScaleAmt) && "Scale must be a power of 2");
+      unsigned Log2ScaleAmt = Log2_32(ScaleAmt);
+      unsigned MaskBits = IndexWidth - Log2ScaleAmt;
+      APInt DemandedBits = APInt::getLowBitsSet(IndexWidth, MaskBits);
+      if (TLI.SimplifyDemandedBits(Index, DemandedBits, DCI)) {
+        if (N->getOpcode() != ISD::DELETED_NODE)
+          DCI.AddToWorklist(N);
+        return SDValue(N, 0);
+      }
+      if (auto MinShAmt = DAG.getValidMinimumShiftAmount(Index)) {
+        if (*MinShAmt >= 1 && (*MinShAmt + Log2ScaleAmt) < 4 &&
+            DAG.ComputeNumSignBits(Index.getOperand(0)) > 1) {
+          SDValue ShAmt = Index.getOperand(1);
+          SDValue NewShAmt =
+              DAG.getNode(ISD::SUB, DL, ShAmt.getValueType(), ShAmt,
+                          DAG.getConstant(1, DL, ShAmt.getValueType()));
+          SDValue NewIndex = DAG.getNode(ISD::SHL, DL, Index.getValueType(),
+                                         Index.getOperand(0), NewShAmt);
+          SDValue NewScale =
+              DAG.getConstant(ScaleAmt * 2, DL, Scale.getValueType());
+          return rebuildGatherScatter(GorS, NewIndex, Base, NewScale, DAG);
+        }
+      }
+    }
 
     // Shrink indices if they are larger than 32-bits.
     // Only do this before legalize types since v2i64 could become v2i32.
@@ -56722,8 +56750,8 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
 
       // FIXME: We could support more than just constant fold, but we need to
       // careful with costing. A truncate that can be optimized out would be
-      // fine. Otherwise we might only want to create a truncate if it avoids a
-      // split.
+      // fine. Otherwise we might only want to create a truncate if it avoids
+      // a split.
       if (SDValue TruncIndex =
               DAG.FoldConstantArithmetic(ISD::TRUNCATE, DL, NewVT, Index))
         return rebuildGatherScatter(GorS, TruncIndex, Base, Scale, DAG);
@@ -56734,6 +56762,12 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
       if ((Index.getOpcode() == ISD::SIGN_EXTEND ||
            Index.getOpcode() == ISD::ZERO_EXTEND) &&
           Index.getOperand(0).getScalarValueSizeInBits() <= 32) {
+        Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
+        return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
+      }
+
+      // Shrink if we remove an illegal type.
+      if (!TLI.isTypeLegal(Index.getValueType()) && TLI.isTypeLegal(NewVT)) {
         Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
         return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
       }

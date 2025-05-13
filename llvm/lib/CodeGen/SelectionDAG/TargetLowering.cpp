@@ -8490,9 +8490,7 @@ TargetLowering::createSelectForFMINNUM_FMAXNUM(SDNode *Node,
     SDValue Op1 = Node->getOperand(0);
     SDValue Op2 = Node->getOperand(1);
     SDValue SelCC = DAG.getSelectCC(SDLoc(Node), Op1, Op2, Op1, Op2, Pred);
-    // Copy FMF flags, but always set the no-signed-zeros flag
-    // as this is implied by the FMINNUM/FMAXNUM semantics.
-    SelCC->setFlags(Node->getFlags() | SDNodeFlags::NoSignedZeros);
+    SelCC->setFlags(Node->getFlags());
     return SelCC;
   }
 

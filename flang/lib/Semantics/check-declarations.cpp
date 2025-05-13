@@ -949,8 +949,8 @@ void CheckHelper::CheckObjectEntity(
       !IsFunctionResult(symbol) /*ditto*/) {
     // Check automatically deallocated local variables for possible
     // problems with finalization in PURE.
-    if (auto whyNot{
-            WhyNotDefinable(symbol.name(), symbol.owner(), {}, symbol)}) {
+    if (auto whyNot{WhyNotDefinable(symbol.name(), symbol.owner(),
+            {DefinabilityFlag::PotentialDeallocation}, symbol)}) {
       if (auto *msg{messages_.Say(
               "'%s' may not be a local variable in a pure subprogram"_err_en_US,
               symbol.name())}) {

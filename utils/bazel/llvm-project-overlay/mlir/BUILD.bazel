@@ -5313,6 +5313,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":AMDGPUDialect",
         ":AffineDialect",
         ":ArithDialect",
         ":DialectUtils",
@@ -5543,6 +5544,7 @@ cc_library(
     hdrs = ["include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"],
     includes = ["include"],
     deps = [
+        ":AMDGPUDialect",
         ":AMDGPUToROCDL",
         ":ArithTransforms",
         ":ControlFlowDialect",
