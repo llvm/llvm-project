@@ -1564,6 +1564,9 @@ class FixedPointLiteral : public Expr, public APIntStorage {
   /// Returns an empty fixed-point literal.
   static FixedPointLiteral *Create(const ASTContext &C, EmptyShell Empty);
 
+  /// Returns an internal integer representation of the literal.
+  llvm::APInt getValue() const { return APIntStorage::getValue(); }
+
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return Loc; }
 
@@ -4958,6 +4961,9 @@ private:
 /// Stores data related to a single #embed directive.
 struct EmbedDataStorage {
   StringLiteral *BinaryData;
+  // FileName string already includes braces, i.e. it is <files/my_file> for a
+  // directive #embed <files/my_file>.
+  StringRef FileName;
   size_t getDataElementCount() const { return BinaryData->getByteLength(); }
 };
 
@@ -5004,6 +5010,7 @@ public:
   SourceLocation getEndLoc() const { return EmbedKeywordLoc; }
 
   StringLiteral *getDataStringLiteral() const { return Data->BinaryData; }
+  StringRef getFileName() const { return Data->FileName; }
   EmbedDataStorage *getData() const { return Data; }
 
   unsigned getStartingElementPos() const { return Begin; }
@@ -6757,7 +6764,7 @@ public:
 /// and corresponding __opencl_atomic_* for OpenCL 2.0.
 /// All of these instructions take one primary pointer, at least one memory
 /// order. The instructions for which getScopeModel returns non-null value
-/// take one synch scope.
+/// take one sync scope.
 class AtomicExpr : public Expr {
 public:
   enum AtomicOp {
@@ -7378,6 +7385,14 @@ private:
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 };
+
+/// Insertion operator for diagnostics.  This allows sending
+/// Expr into a diagnostic with <<.
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const Expr *E) {
+  DB.AddTaggedVal(reinterpret_cast<uint64_t>(E), DiagnosticsEngine::ak_expr);
+  return DB;
+}
 
 } // end namespace clang
 

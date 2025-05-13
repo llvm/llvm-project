@@ -736,6 +736,10 @@ def OpGroupFMax: OpGroup<"FMax", 269>;
 def OpGroupUMax: OpGroup<"UMax", 270>;
 def OpGroupSMax: OpGroup<"SMax", 271>;
 
+def OpSubgroupMatrixMultiplyAccumulateINTEL: Op<6237, (outs ID:$res),
+        (ins TYPE:$ty, ID:$KDim, ID:$A, ID:$B, ID:$C, variable_ops),
+                  "$res = OpSubgroupMatrixMultiplyAccumulateINTEL $ty $KDim $A $B $C">;
+
 // TODO: 3.42.22. Device-Side Enqueue Instructions
 def OpEnqueueKernel: Op<292, (outs ID:$res), (ins TYPE:$type, ID:$queue, ID:$flags, ID:$NDR, ID:$nevents, ID:$wevents,
                                               ID:$revent, ID:$invoke, ID:$param, ID:$psize, ID:$palign, variable_ops),
@@ -928,3 +932,7 @@ def OpAliasScopeDeclINTEL: Op<5912, (outs ID:$res), (ins ID:$AliasDomain, variab
                   "$res = OpAliasScopeDeclINTEL $AliasDomain">;
 def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
                   "$res = OpAliasScopeListDeclINTEL">;
+
+// SPV_INTEL_ternary_bitwise_function
+def OpBitwiseFunctionINTEL: Op<6242, (outs ID:$res), (ins TYPE:$type, ID:$a, ID:$b, ID:$c, ID:$lut_index),
+                  "$res = OpBitwiseFunctionINTEL $type $a $b $c $lut_index">;

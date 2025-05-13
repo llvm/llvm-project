@@ -125,9 +125,11 @@ public:
 /// VOLATILE_PTRDECL is the same as above, but for volatile pointers;
 ///
 /// MUTEXDECL takes one parameter, the name of a field that is a mutex.
-#define CTXPROF_FUNCTION_DATA(PTRDECL, VOLATILE_PTRDECL, MUTEXDECL)            \
+#define CTXPROF_FUNCTION_DATA(PTRDECL, CONTEXT_PTR, VOLATILE_PTRDECL,          \
+                              MUTEXDECL)                                       \
   PTRDECL(FunctionData, Next)                                                  \
-  VOLATILE_PTRDECL(ContextRoot, CtxRoot)                                       \
+  VOLATILE_PTRDECL(void, EntryAddress)                                         \
+  CONTEXT_PTR                                                                  \
   VOLATILE_PTRDECL(ContextNode, FlatCtx)                                       \
   MUTEXDECL(Mutex)
 

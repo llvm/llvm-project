@@ -13,7 +13,6 @@
 #define _LIBCPP___CXX03___BIT_POPCOUNT_H
 
 #include <__cxx03/__bit/rotate.h>
-#include <__cxx03/__concepts/arithmetic.h>
 #include <__cxx03/__config>
 #include <__cxx03/limits>
 
@@ -37,32 +36,6 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_popcount(unsigned lo
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_popcount(unsigned long long __x) _NOEXCEPT {
   return __builtin_popcountll(__x);
 }
-
-#if _LIBCPP_STD_VER >= 20
-
-template <__libcpp_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int popcount(_Tp __t) noexcept {
-#  if __has_builtin(__builtin_popcountg)
-  return __builtin_popcountg(__t);
-#  else  // __has_builtin(__builtin_popcountg)
-  if (sizeof(_Tp) <= sizeof(unsigned int))
-    return std::__libcpp_popcount(static_cast<unsigned int>(__t));
-  else if (sizeof(_Tp) <= sizeof(unsigned long))
-    return std::__libcpp_popcount(static_cast<unsigned long>(__t));
-  else if (sizeof(_Tp) <= sizeof(unsigned long long))
-    return std::__libcpp_popcount(static_cast<unsigned long long>(__t));
-  else {
-    int __ret = 0;
-    while (__t != 0) {
-      __ret += std::__libcpp_popcount(static_cast<unsigned long long>(__t));
-      __t >>= numeric_limits<unsigned long long>::digits;
-    }
-    return __ret;
-  }
-#  endif // __has_builtin(__builtin_popcountg)
-}
-
-#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

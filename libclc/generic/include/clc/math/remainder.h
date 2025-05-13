@@ -7,6 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #define __CLC_FUNCTION remainder
-#define __CLC_BODY <clc/math/binary_decl_tt.inc>
+#define __CLC_BODY <clc/shared/binary_decl.inc>
 #include <clc/math/gentype.inc>
 #undef __CLC_FUNCTION

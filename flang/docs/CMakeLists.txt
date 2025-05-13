@@ -48,14 +48,6 @@ if (LLVM_ENABLE_DOXYGEN)
     set(flang_doxygen_qhp_cust_filter_attrs "")
   endif()
 
-  option(LLVM_DOXYGEN_SVG
-    "Use svg instead of png files for doxygen graphs." OFF)
-  if (LLVM_DOXYGEN_SVG)
-    set(DOT_IMAGE_FORMAT "svg")
-  else()
-    set(DOT_IMAGE_FORMAT "png")
-  endif()
-
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doxygen.cfg.in
     ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg @ONLY)
 
@@ -73,7 +65,6 @@ if (LLVM_ENABLE_DOXYGEN)
   set(flang_doxygen_qhelpgenerator_path)
   set(flang_doxygen_qhp_cust_filter_name)
   set(flang_doxygen_qhp_cust_filter_attrs)
-  set(DOT_IMAGE_FORMAT)
 
   add_custom_target(doxygen-flang
     COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg
@@ -100,6 +91,15 @@ function (gen_rst_file_from_td output_file td_option source docs_target)
   list(APPEND LLVM_TABLEGEN_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/../../clang/include/clang/Driver/")
   clang_tablegen(Source/${output_file} ${td_option} SOURCE ${source} TARGET "gen-${output_file}")
   add_dependencies(${docs_target} "gen-${output_file}")
+
+  # clang_tablegen() does not create the output directory automatically,
+  # so we have to create it explicitly. Note that copy-flang-src-docs below
+  # does create the output directory, but it is not necessarily run
+  # before RST generation.
+  add_custom_target(create-flang-rst-output-dir
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/Source
+  )
+  add_dependencies("gen-${output_file}" create-flang-rst-output-dir)
 endfunction()
 
 if (LLVM_ENABLE_SPHINX)
