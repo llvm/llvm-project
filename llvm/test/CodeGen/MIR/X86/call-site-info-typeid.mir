@@ -10,7 +10,7 @@
 --- |
   declare void @foo(i8 signext %a)
   
-  define dso_local i32 @main() {
+  define i32 @main() {
   entry:
     %retval = alloca i32, align 4
     %fp = alloca ptr, align 8
