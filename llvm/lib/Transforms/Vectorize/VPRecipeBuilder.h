@@ -90,6 +90,10 @@ class VPRecipeBuilder {
   /// A mapping of partial reduction exit instructions to their scaling factor.
   DenseMap<const Instruction *, unsigned> ScaledReductionMap;
 
+  /// Loop versioning instance for getting noalias metadata guaranteed by
+  /// runtime checks.
+  LoopVersioning *LVer;
+
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
   /// Range. The function should not be called for memory instructions or calls.
@@ -155,9 +159,10 @@ public:
                   const TargetTransformInfo *TTI,
                   LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM,
-                  PredicatedScalarEvolution &PSE, VPBuilder &Builder)
+                  PredicatedScalarEvolution &PSE, VPBuilder &Builder,
+                  LoopVersioning *LVer)
       : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
-        CM(CM), PSE(PSE), Builder(Builder) {}
+        CM(CM), PSE(PSE), Builder(Builder), LVer(LVer) {}
 
   std::optional<unsigned> getScalingForReduction(const Instruction *ExitInst) {
     auto It = ScaledReductionMap.find(ExitInst);

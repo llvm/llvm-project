@@ -1152,7 +1152,7 @@ class RegOrImmOperand <RegisterClass RegClass, string OperandTypeName>
   : RegisterOperand<RegClass> {
     let OperandNamespace = "AMDGPU";
     let OperandType = OperandTypeName;
-    let ParserMatchClass = RegImmMatcher<!subst("_Deferred", "", NAME)>;
+    let ParserMatchClass = RegImmMatcher<NAME>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1180,19 +1180,6 @@ def SSrc_f32 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_FP32">;
 def SSrc_b64 : SrcRegOrImm9 <SReg_64, "OPERAND_REG_IMM_INT64">;
 
 def SSrcOrLds_b32 : SrcRegOrImm9 <SRegOrLds_32, "OPERAND_REG_IMM_INT32">;
-
-//===----------------------------------------------------------------------===//
-//  SSrc_32_Deferred Operands with an SGPR or a 32-bit immediate for use with
-//  FMAMK/FMAAK
-//===----------------------------------------------------------------------===//
-
-class SrcRegOrImmDeferred9<RegisterClass regClass, string operandType>
-    : RegOrImmOperand<regClass, operandType> {
-  string DecoderMethodName = "decodeSrcRegOrImmDeferred9";
-  let DecoderMethod = DecoderMethodName # "<" # regClass.Size # ">";
-}
-
-def SSrc_f32_Deferred : SrcRegOrImmDeferred9<SReg_32, "OPERAND_REG_IMM_FP32_DEFERRED">;
 
 //===----------------------------------------------------------------------===//
 //  SCSrc_* Operands with an SGPR or a inline constant
@@ -1241,28 +1228,6 @@ def VSrc_v2b32 : SrcRegOrImm9 <VS_64, "OPERAND_REG_IMM_V2INT32">;
 def VSrc_v2f32 : SrcRegOrImm9 <VS_64, "OPERAND_REG_IMM_V2FP32">;
 
 def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_V2FP16">;
-
-//===----------------------------------------------------------------------===//
-//  VSrc_*_Deferred Operands with an SGPR, VGPR or a 32-bit immediate for use
-//  with FMAMK/FMAAK
-//===----------------------------------------------------------------------===//
-
-def VSrc_bf16_Deferred : SrcRegOrImmDeferred9<VS_32, "OPERAND_REG_IMM_BF16_DEFERRED">;
-def VSrc_f16_Deferred : SrcRegOrImmDeferred9<VS_32, "OPERAND_REG_IMM_FP16_DEFERRED">;
-def VSrc_f32_Deferred : SrcRegOrImmDeferred9<VS_32, "OPERAND_REG_IMM_FP32_DEFERRED">;
-def VSrc_f64_Deferred : SrcRegOrImmDeferred9<VS_64, "OPERAND_REG_IMM_FP64_DEFERRED">;
-
-// True 16 Operands
-def VSrcT_f16_Lo128_Deferred : SrcRegOrImmDeferred9<VS_16_Lo128,
-                                                   "OPERAND_REG_IMM_FP16_DEFERRED"> {
-  let DecoderMethodName = "decodeOperand_VSrcT16_Lo128_Deferred";
-  let EncoderMethod = "getMachineOpValueT16Lo128";
-}
-
-def VSrcFake16_bf16_Lo128_Deferred
-  : SrcRegOrImmDeferred9<VS_32_Lo128, "OPERAND_REG_IMM_BF16_DEFERRED">;
-def VSrcFake16_f16_Lo128_Deferred
-  : SrcRegOrImmDeferred9<VS_32_Lo128, "OPERAND_REG_IMM_FP16_DEFERRED">;
 
 //===----------------------------------------------------------------------===//
 //  VRegSrc_* Operands with a VGPR

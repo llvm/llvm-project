@@ -89,3 +89,19 @@ body: |
     %passthru:vr = COPY $v8
     %x:vr = PseudoVADD_VV_MF4 %passthru, $noreg, $noreg, 4, 4 /* e16 */, 0 /* tu, mu */
     %y:vr = PseudoVMV_V_V_MF8 %passthru, %x, 4, 3 /* e8 */, 0 /* tu, mu */
+...
+---
+name: kill_flag
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: kill_flag
+    ; CHECK: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY [[PseudoVADD_VV_M1_]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vr = COPY [[PseudoVADD_VV_M1_]]
+    %0:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    %1:vr = PseudoVMV_V_V_M1 $noreg, %0, -1, 4 /* e16 */, 0 /* tu, mu */
+    %2:vr = COPY killed %1
+    %3:vr = COPY %0
+...
+---

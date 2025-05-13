@@ -651,6 +651,50 @@ mlir::LogicalResult CIRToLLVMReturnOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+static mlir::LogicalResult
+rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
+                    mlir::ConversionPatternRewriter &rewriter,
+                    const mlir::TypeConverter *converter,
+                    mlir::FlatSymbolRefAttr calleeAttr) {
+  llvm::SmallVector<mlir::Type, 8> llvmResults;
+  mlir::ValueTypeRange<mlir::ResultRange> cirResults = op->getResultTypes();
+
+  if (converter->convertTypes(cirResults, llvmResults).failed())
+    return mlir::failure();
+
+  assert(!cir::MissingFeatures::opCallCallConv());
+  assert(!cir::MissingFeatures::opCallSideEffect());
+
+  mlir::LLVM::LLVMFunctionType llvmFnTy;
+  if (calleeAttr) { // direct call
+    mlir::FunctionOpInterface fn =
+        mlir::SymbolTable::lookupNearestSymbolFrom<mlir::FunctionOpInterface>(
+            op, calleeAttr);
+    assert(fn && "Did not find function for call");
+    llvmFnTy = cast<mlir::LLVM::LLVMFunctionType>(
+        converter->convertType(fn.getFunctionType()));
+  } else { // indirect call
+    assert(!cir::MissingFeatures::opCallIndirect());
+    return op->emitError("Indirect calls are NYI");
+  }
+
+  assert(!cir::MissingFeatures::opCallLandingPad());
+  assert(!cir::MissingFeatures::opCallContinueBlock());
+  assert(!cir::MissingFeatures::opCallCallConv());
+  assert(!cir::MissingFeatures::opCallSideEffect());
+
+  rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(op, llvmFnTy, calleeAttr,
+                                                  callOperands);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMCallOpLowering::matchAndRewrite(
+    cir::CallOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return rewriteCallOrInvoke(op.getOperation(), adaptor.getOperands(), rewriter,
+                             getTypeConverter(), op.getCalleeAttr());
+}
+
 mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
     cir::LoadOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1589,6 +1633,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMBinOpLowering,
                CIRToLLVMBrCondOpLowering,
                CIRToLLVMBrOpLowering,
+               CIRToLLVMCallOpLowering,
                CIRToLLVMCmpOpLowering,
                CIRToLLVMConstantOpLowering,
                CIRToLLVMFuncOpLowering,
