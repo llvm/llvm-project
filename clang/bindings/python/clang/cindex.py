@@ -1555,6 +1555,18 @@ class Cursor(Structure):
 
     _tu: TranslationUnit
 
+    # This ensures that no operations are possible on null cursors
+    # by guarding all method calls with a not-null assert
+    def __getattribute__(self, key: str) -> object:
+        value = super().__getattribute__(key)
+        is_property = isinstance(getattr(Cursor, key, None), property)
+        # Don't guard the is_null method, since it is part of the guard
+        # and leads to infinite recursion otherwise
+        if is_property or callable(value):
+            if key != "is_null" and self.is_null():
+                raise Exception("Tried calling method on a null-cursor.")
+        return value
+
     @staticmethod
     def from_location(tu: TranslationUnit, location: SourceLocation) -> Cursor:
         # We store a reference to the TU in the instance so the TU won't get
@@ -1574,6 +1586,9 @@ class Cursor(Structure):
 
     def __hash__(self) -> int:
         return self.hash
+
+    def is_null(self) -> bool:
+        return self == conf.null_cursor
 
     def is_definition(self) -> bool:
         """
@@ -2124,8 +2139,7 @@ class Cursor(Structure):
         # FIXME: Expose iteration from CIndex, PR6125.
         def visitor(child: Cursor, _: Cursor, children: list[Cursor]) -> int:
             # FIXME: Document this assertion in API.
-            # FIXME: There should just be an isNull method.
-            assert child != conf.lib.clang_getNullCursor()
+            assert not child.is_null()
 
             # Create reference to TU so it isn't GC'd before Cursor.
             child._tu = self._tu
@@ -2210,7 +2224,7 @@ class Cursor(Structure):
     def from_result(res: Cursor, arg: Cursor | TranslationUnit | Type) -> Cursor | None:
         assert isinstance(res, Cursor)
         # FIXME: There should just be an isNull method.
-        if res == conf.lib.clang_getNullCursor():
+        if res.is_null():
             return None
 
         # Store a reference to the TU in the Python object so it won't get GC'd
@@ -2229,7 +2243,7 @@ class Cursor(Structure):
     @staticmethod
     def from_cursor_result(res: Cursor, arg: Cursor) -> Cursor | None:
         assert isinstance(res, Cursor)
-        if res == conf.lib.clang_getNullCursor():
+        if res.is_null():
             return None
 
         res._tu = arg._tu
@@ -2728,7 +2742,7 @@ class Type(Structure):
         """Return an iterator for accessing the fields of this type."""
 
         def visitor(field, children):
-            assert field != conf.lib.clang_getNullCursor()
+            assert not field.is_null()
 
             # Create reference to TU so it isn't GC'd before Cursor.
             field._tu = self._tu
@@ -2743,7 +2757,7 @@ class Type(Structure):
         """Return an iterator for accessing the base classes of this type."""
 
         def visitor(base, children):
-            assert base != conf.lib.clang_getNullCursor()
+            assert not base.is_null()
 
             # Create reference to TU so it isn't GC'd before Cursor.
             base._tu = self._tu
@@ -2758,7 +2772,7 @@ class Type(Structure):
         """Return an iterator for accessing the methods of this type."""
 
         def visitor(method, children):
-            assert method != conf.lib.clang_getNullCursor()
+            assert not method.is_null()
 
             # Create reference to TU so it isn't GC'd before Cursor.
             method._tu = self._tu
@@ -4228,6 +4242,7 @@ class Config:
     def lib(self) -> CDLL:
         lib = self.get_cindex_library()
         register_functions(lib, not Config.compatibility_check)
+        self.null_cursor = lib.clang_getNullCursor()
         Config.loaded = True
         return lib
 
