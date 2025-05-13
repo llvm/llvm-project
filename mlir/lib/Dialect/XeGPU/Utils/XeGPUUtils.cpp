@@ -215,8 +215,8 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
     // LayoutAttr
 
     auto computeTileShapeAndCount = [&](ArrayRef<int64_t> shape,
-                                        DenseI32ArrayAttr sgDataAttr,
-                                        DenseI32ArrayAttr sgLayoutAttr) {
+                                          DenseI32ArrayAttr sgDataAttr,
+                                          DenseI32ArrayAttr sgLayoutAttr) {
       SmallVector<int64_t> tileShape;
       auto sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
       if (sgDataAttr)
@@ -224,8 +224,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
       else
         tileShape = computeShapeRatio(shape, sgLayout).value_or(tileShape);
       assert(tileShape.size() && "failed to compute tileShape");
-      SmallVector<int64_t> distUnit =
-          computeElementwiseMul(sgLayout, tileShape);
+      SmallVector<int64_t> distUnit = computeElementwiseMul(sgLayout, tileShape);
       int count = computeProduct(shape) / computeProduct(distUnit);
       return std::make_pair(tileShape, count);
     };
@@ -249,8 +248,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
             if (layout.isWgLayout()) {
               // for WgToSg, the subShape is either from sgData or computed as
               // shape/sgLayout
-              std::tie(subShape, count) = computeTileShapeAndCount(
-                  shape, layout.getSgData(), layout.getSgLayout());
+              std::tie(subShape, count) = computeTileShapeAndCount(shape, layout.getSgData(), layout.getSgLayout());
             } else if (DenseI32ArrayAttr instData = layout.getInstData()) {
               // for unrolling, the subShape is determined by inst_data
               subShape = llvm::to_vector_of<int64_t>(instData.asArrayRef());
@@ -280,8 +278,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
             if (layout.isWgLayout()) {
               // for WgToSg, the subShape is either from sgData or computed as
               // shape/sgLayout
-              std::tie(subShape, count) = computeTileShapeAndCount(
-                  shape, layout.getSgData(), layout.getSgLayout());
+              std::tie(subShape, count) = computeTileShapeAndCount(shape, layout.getSgData(), layout.getSgLayout());
               layout = layout.dropSgLayoutAndData();
             } else if (DenseI32ArrayAttr instData = layout.getInstData()) {
               // for unrolling, the subShape is determined by inst_data
@@ -298,7 +295,11 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(Operation *op) {
         });
 
     converter.addSourceMaterialization(materializeCast);
-    converter.addTargetMaterialization(materializeCast);
+    converter.addTargetMaterialization([&](OpBuilder &builder, TypeRange type,
+                                        ValueRange inputs, Location loc) {
+      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+          .getResults();
+    });
 
     mlir::ConversionTarget target(*context);
     target.addLegalOp<UnrealizedConversionCastOp>();

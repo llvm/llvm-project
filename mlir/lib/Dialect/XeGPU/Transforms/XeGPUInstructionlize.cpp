@@ -120,18 +120,22 @@ bool XeGPUInstructionlizePass::needsUnroll(Operation *op) const {
 
 void XeGPUInstructionlizePass::runOnOperation() {
   MLIRContext *ctx = &getContext();
+  Operation *op = getOperation();
+
+  // first perform type conversion for SCF control folow ops
+  xegpu::doSCFStructuralTypeConversionWithTensorType(op);
+
   xegpu::UnrollOptions options;
   options.setFilterConstraint([&](Operation *op) -> LogicalResult {
     return needsUnroll(op) ? success() : failure();
   });
 
-  options.setNativeShapeFn(
-      [&](Operation *op) -> std::optional<SmallVector<int64_t>> {
+  options.setNativeShapeFn([&](Operation *op) {
         return getTileShape(op);
       });
 
   options.setUnrolledTypesFn(
-      [&](ShapedType type, ArrayRef<int64_t> tileShape) -> SmallVector<Type> {
+      [&](ShapedType type, ArrayRef<int64_t> tileShape) {
         Type elemTy = type.getElementType();
         Type newTy;
 
@@ -149,8 +153,10 @@ void XeGPUInstructionlizePass::runOnOperation() {
         return SmallVector<Type>(computeProduct(*ratio), newTy);
       });
 
-  RewritePatternSet patterns(ctx);
+  GreedyRewriteConfig config;
+  config.setStrictness(GreedyRewriteStrictness::ExistingOps);
 
+  RewritePatternSet patterns(ctx);
   populateXeGPUUnrollPatterns(patterns, options);
-  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
 }
