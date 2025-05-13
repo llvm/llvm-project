@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
+#include <clc/geometric/clc_distance.h>
 
-#define __CLC_BODY <distance.inc>
-#include <clc/geometric/floatn.inc>
+#define FUNCTION distance
+#define __CLC_BODY <clc/geometric/binary_def.inc>
+#include <clc/math/gentype.inc>

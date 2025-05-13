@@ -541,8 +541,7 @@ class OpenACCWaitClause final
     auto *Exprs = getTrailingObjects<Expr *>();
     llvm::uninitialized_copy(ArrayRef(DevNumExpr), Exprs);
     llvm::uninitialized_copy(QueueIdExprs, Exprs + 1);
-    setExprs(
-        MutableArrayRef(getTrailingObjects<Expr *>(), QueueIdExprs.size() + 1));
+    setExprs(getTrailingObjects<Expr *>(QueueIdExprs.size() + 1));
   }
 
 public:
@@ -580,7 +579,7 @@ class OpenACCNumGangsClause final
       : OpenACCClauseWithExprs(OpenACCClauseKind::NumGangs, BeginLoc, LParenLoc,
                                EndLoc) {
     llvm::uninitialized_copy(IntExprs, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), IntExprs.size()));
+    setExprs(getTrailingObjects<Expr *>(IntExprs.size()));
   }
 
 public:
@@ -609,7 +608,7 @@ class OpenACCTileClause final
       : OpenACCClauseWithExprs(OpenACCClauseKind::Tile, BeginLoc, LParenLoc,
                                EndLoc) {
     llvm::uninitialized_copy(SizeExprs, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), SizeExprs.size()));
+    setExprs(getTrailingObjects<Expr *>(SizeExprs.size()));
   }
 
 public:
@@ -847,7 +846,7 @@ class OpenACCPrivateClause final
       : OpenACCClauseWithVarList(OpenACCClauseKind::Private, BeginLoc,
                                  LParenLoc, EndLoc) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -869,7 +868,7 @@ class OpenACCFirstPrivateClause final
       : OpenACCClauseWithVarList(OpenACCClauseKind::FirstPrivate, BeginLoc,
                                  LParenLoc, EndLoc) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -891,7 +890,7 @@ class OpenACCDevicePtrClause final
       : OpenACCClauseWithVarList(OpenACCClauseKind::DevicePtr, BeginLoc,
                                  LParenLoc, EndLoc) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -913,7 +912,7 @@ class OpenACCAttachClause final
       : OpenACCClauseWithVarList(OpenACCClauseKind::Attach, BeginLoc, LParenLoc,
                                  EndLoc) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -935,7 +934,7 @@ class OpenACCDetachClause final
       : OpenACCClauseWithVarList(OpenACCClauseKind::Detach, BeginLoc, LParenLoc,
                                  EndLoc) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -957,7 +956,7 @@ class OpenACCDeleteClause final
       : OpenACCClauseWithVarList(OpenACCClauseKind::Delete, BeginLoc, LParenLoc,
                                  EndLoc) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -979,7 +978,7 @@ class OpenACCUseDeviceClause final
       : OpenACCClauseWithVarList(OpenACCClauseKind::UseDevice, BeginLoc,
                                  LParenLoc, EndLoc) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -1001,7 +1000,7 @@ class OpenACCNoCreateClause final
       : OpenACCClauseWithVarList(OpenACCClauseKind::NoCreate, BeginLoc,
                                  LParenLoc, EndLoc) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -1023,7 +1022,7 @@ class OpenACCPresentClause final
       : OpenACCClauseWithVarList(OpenACCClauseKind::Present, BeginLoc,
                                  LParenLoc, EndLoc) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -1044,7 +1043,7 @@ class OpenACCHostClause final
       : OpenACCClauseWithVarList(OpenACCClauseKind::Host, BeginLoc, LParenLoc,
                                  EndLoc) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -1067,7 +1066,7 @@ class OpenACCDeviceClause final
       : OpenACCClauseWithVarList(OpenACCClauseKind::Device, BeginLoc, LParenLoc,
                                  EndLoc) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -1095,7 +1094,7 @@ class OpenACCCopyClause final
             Spelling == OpenACCClauseKind::PresentOrCopy) &&
            "Invalid clause kind for copy-clause");
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -1129,7 +1128,7 @@ class OpenACCCopyInClause final
             Spelling == OpenACCClauseKind::PresentOrCopyIn) &&
            "Invalid clause kind for copyin-clause");
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -1162,7 +1161,7 @@ class OpenACCCopyOutClause final
             Spelling == OpenACCClauseKind::PresentOrCopyOut) &&
            "Invalid clause kind for copyout-clause");
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -1195,7 +1194,7 @@ class OpenACCCreateClause final
             Spelling == OpenACCClauseKind::PresentOrCreate) &&
            "Invalid clause kind for create-clause");
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -1225,7 +1224,7 @@ class OpenACCReductionClause final
                                  LParenLoc, EndLoc),
         Op(Operator) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -1251,7 +1250,7 @@ class OpenACCLinkClause final
       : OpenACCClauseWithVarList(OpenACCClauseKind::Link, BeginLoc, LParenLoc,
                                  EndLoc) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:
@@ -1275,7 +1274,7 @@ class OpenACCDeviceResidentClause final
       : OpenACCClauseWithVarList(OpenACCClauseKind::DeviceResident, BeginLoc,
                                  LParenLoc, EndLoc) {
     llvm::uninitialized_copy(VarList, getTrailingObjects<Expr *>());
-    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+    setExprs(getTrailingObjects<Expr *>(VarList.size()));
   }
 
 public:

@@ -6232,6 +6232,36 @@ foreach vti = AllIntegerVectors in {
   }
 }
 
+// (add v, C) -> (sub v, -C) if -C cheaper to materialize
+defvar I64IntegerVectors = !filter(vti, AllIntegerVectors, !eq(vti.SEW, 64));
+foreach vti = I64IntegerVectors in {
+  let Predicates = [HasVInstructionsI64] in {
+    def : Pat<(vti.Vector (int_riscv_vadd (vti.Vector vti.RegClass:$passthru),
+                                          (vti.Vector vti.RegClass:$rs1),
+                                          (i64 negImm:$rs2),
+                                          VLOpFrag)),
+              (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX)
+                                             vti.RegClass:$passthru,
+                                             vti.RegClass:$rs1,
+                                             negImm:$rs2,
+                                             GPR:$vl, vti.Log2SEW, TU_MU)>;
+    def : Pat<(vti.Vector (int_riscv_vadd_mask (vti.Vector vti.RegClass:$passthru),
+                                               (vti.Vector vti.RegClass:$rs1),
+                                               (i64 negImm:$rs2),
+                                               (vti.Mask VMV0:$vm),
+                                               VLOpFrag,
+                                               (i64 timm:$policy))),
+              (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX#"_MASK")
+                                             vti.RegClass:$passthru,
+                                             vti.RegClass:$rs1,
+                                             negImm:$rs2,
+                                             (vti.Mask VMV0:$vm),
+                                             GPR:$vl,
+                                             vti.Log2SEW,
+                                             (i64 timm:$policy))>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // 11.2. Vector Widening Integer Add/Subtract
 //===----------------------------------------------------------------------===//
