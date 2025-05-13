@@ -6,5 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_BODY <clc/geometric/length.inc>
-#include <clc/geometric/floatn.inc>
+#define __CLC_FUNCTION length
+#define __CLC_BODY <clc/geometric/unary_decl.inc>
+
+#include <clc/math/gentype.inc>
+
+#undef __CLC_FUNCTION
