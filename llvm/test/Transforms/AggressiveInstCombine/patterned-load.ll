@@ -140,6 +140,20 @@ define i32 @gep_load_i32_align2_const_offset_wrap(i64 %idx){
   ret i32 %3
 }
 
+define i32 @gep_load_i32_align2_const_offset_nusw(i64 %idx){
+; CHECK-LABEL: @gep_load_i32_align2_const_offset_nusw(
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i16, ptr @constarray2, i64 -2
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nusw [3 x i16], ptr [[TMP1]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 2
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = getelementptr nusw i16, ptr @constarray2, i64 -2
+  %2 = getelementptr nusw [3 x i16], ptr %1, i64 %idx
+  %3 = load i32, ptr %2, align 2
+  ret i32 %3
+}
+
+
 define i32 @inbounds_gep_i32_load_i32_const_ptr_array(i64 %idx){
 ; CHECK-LABEL: @inbounds_gep_i32_load_i32_const_ptr_array(
 ; CHECK-NEXT:    ret i32 42
