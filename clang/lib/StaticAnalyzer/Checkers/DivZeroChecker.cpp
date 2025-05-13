@@ -39,9 +39,8 @@ public:
 
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
 
-  /// Identifies this checker family for debugging purposes. For backwards
-  /// compatibility, this is the name of the older sub-checker.
-  StringRef getTagDescription() const override { return "core.DivideZero"; }
+  /// Identifies this checker family for debugging purposes.
+  StringRef getTagDescription() const override { return "DivZeroChecker"; }
 };
 } // end anonymous namespace
 
