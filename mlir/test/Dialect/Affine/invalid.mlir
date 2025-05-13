@@ -544,6 +544,34 @@ func.func @dynamic_dimension_index() {
 
 // -----
 
+func.func @dynamic_linearized_index() {
+  "unknown.region"() ({
+    %idx = "unknown.test"() : () -> (index)
+    %memref = "unknown.test"() : () -> memref<?xf32>
+    %pos = affine.linearize_index [%idx, %idx] by (8) : index
+    // expected-error@below {{op operand cannot be used as a dimension id}}
+    affine.load %memref[%pos] : memref<?xf32>
+    "unknown.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @dynamic_delinearized_index() {
+  "unknown.region"() ({
+    %idx = "unknown.test"() : () -> (index)
+    %memref = "unknown.test"() : () -> memref<?x?xf32>
+    %pos0, %pos1 = affine.delinearize_index %idx into (8) : index, index
+    // expected-error@below {{op operand cannot be used as a dimension id}}
+    affine.load %memref[%pos0, %pos1] : memref<?x?xf32>
+    "unknown.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
 #map = affine_map<() -> ()>
 #map1 = affine_map<() -> (1)>
 func.func @no_lower_bound() {
