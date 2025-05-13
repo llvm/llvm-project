@@ -4613,12 +4613,6 @@ uint64_t ASTWriter::WriteSpecializationInfoLookupTable(
   return Offset;
 }
 
-bool ASTWriter::isLookupResultExternal(StoredDeclsList &Result,
-                                       DeclContext *DC) {
-  return Result.hasExternalDecls() &&
-         DC->hasNeedToReconcileExternalVisibleStorage();
-}
-
 /// Returns ture if all of the lookup result are either external, not emitted or
 /// predefined. In such cases, the lookup result is not interesting and we don't
 /// need to record the result in the current being written module. Return false
@@ -4684,15 +4678,8 @@ void ASTWriter::GenerateNameLookupTable(
     // Also in reduced BMI, we'd like to avoid writing unreachable
     // declarations in GMF, so we need to avoid writing declarations
     // that entirely external or unreachable.
-    //
-    // FIMXE: It looks sufficient to test
-    // isLookupResultNotInteresting here. But due to bug we have
-    // to test isLookupResultExternal here. See
-    // https://github.com/llvm/llvm-project/issues/61065 for details.
-    if ((GeneratingReducedBMI || isLookupResultExternal(Result, DC)) &&
-        isLookupResultNotInteresting(*this, Result))
+    if (GeneratingReducedBMI && isLookupResultNotInteresting(*this, Result))
       continue;
-
     // We also skip empty results. If any of the results could be external and
     // the currently available results are empty, then all of the results are
     // external and we skip it above. So the only way we get here with an empty
@@ -4751,13 +4738,11 @@ void ASTWriter::GenerateNameLookupTable(
             continue;
           break;
         }
-        // We should include lookup results for this name.
         if (AddedNames.insert(Name).second)
           Names.push_back(Name);
       }
     }
   }
-
   // Next we need to do a lookup with each name into this decl context to fully
   // populate any results from external sources. We don't actually use the
   // results of these lookups because we only want to use the results after all
