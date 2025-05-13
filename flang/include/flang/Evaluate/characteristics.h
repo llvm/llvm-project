@@ -174,6 +174,14 @@ public:
   }
   const std::optional<Shape> &shape() const { return shape_; }
   const Attrs &attrs() const { return attrs_; }
+  Attrs &attrs() { return attrs_; }
+  bool isPossibleSequenceAssociation() const {
+    return isPossibleSequenceAssociation_;
+  }
+  TypeAndShape &set_isPossibleSequenceAssociation(bool yes) {
+    isPossibleSequenceAssociation_ = yes;
+    return *this;
+  }
   int corank() const { return corank_; }
   void set_corank(int n) { corank_ = n; }
 
@@ -209,11 +217,11 @@ private:
   void AcquireLEN();
   void AcquireLEN(const semantics::Symbol &);
 
-protected:
   DynamicType type_;
   std::optional<Expr<SubscriptInteger>> LEN_;
   std::optional<Shape> shape_;
   Attrs attrs_;
+  bool isPossibleSequenceAssociation_{false};
   int corank_{0};
 };
 
