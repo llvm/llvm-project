@@ -69,6 +69,7 @@ math/clc_half_sin.cl
 math/clc_half_sqrt.cl
 math/clc_half_tan.cl
 math/clc_hypot.cl
+math/clc_ilogb.cl
 math/clc_ldexp.cl
 math/clc_lgamma.cl
 math/clc_lgamma_r.cl
@@ -76,6 +77,7 @@ math/clc_log.cl
 math/clc_log10.cl
 math/clc_log1p.cl
 math/clc_log2.cl
+math/clc_logb.cl
 math/clc_mad.cl
 math/clc_maxmag.cl
 math/clc_minmag.cl
