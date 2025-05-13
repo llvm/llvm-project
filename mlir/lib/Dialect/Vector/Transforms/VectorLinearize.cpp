@@ -488,16 +488,16 @@ struct LinearizeVectorCreateMask final
     // the second operand of create_mask to get the 1D mask.
     auto firstOperand = adaptor.getOperands().front();
     auto zero = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
-    auto isNonZero = rewriter.create<mlir::arith::CmpIOp>(
+    auto isNonZero = rewriter.createOrFold<mlir::arith::CmpIOp>(
         loc, mlir::arith::CmpIPredicate::sgt, firstOperand, zero);
-    auto isNonZeroIndex = rewriter.create<mlir::arith::IndexCastOp>(
+    auto isNonZeroIndex = rewriter.createOrFold<mlir::arith::IndexCastOp>(
         loc, rewriter.getIndexType(), isNonZero);
     auto secondOperand = adaptor.getOperands().back();
-    auto maskSize = rewriter.create<mlir::arith::MulIOp>(
+    auto maskSize = rewriter.createOrFold<mlir::arith::AndIOp>(
         loc, rewriter.getIndexType(), isNonZeroIndex, secondOperand);
 
     auto newMask = rewriter.create<mlir::vector::CreateMaskOp>(
-        loc, dstTy, maskSize.getResult());
+        loc, dstTy, maskSize);
     rewriter.replaceOp(createMaskOp, newMask);
     return success();
   }
