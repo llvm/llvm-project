@@ -2482,8 +2482,13 @@ def Vector_MaskOp : Vector_Op<"mask", [
     masked. Values used within the region are captured from above. Only one
     *maskable* operation can be masked with a `vector.mask` operation at a time.
     An operation is *maskable* if it implements the `MaskableOpInterface`. The
-    terminator yields all results of the maskable operation to the result of
-    this operation.
+    terminator yields all results from the maskable operation to the result of
+    this operation. No other values are allowed to be yielded.
+
+    An empty `vector.mask` operation is considered ill-formed but legal to
+    facilitate optimizations across the `vector.mask` operation. It is considered
+    a no-op regardless of its returned values and will be removed by the
+    canonicalizer.
 
     The vector mask argument holds a bit for each vector lane and determines
     which vector lanes should execute the maskable operation and which ones
