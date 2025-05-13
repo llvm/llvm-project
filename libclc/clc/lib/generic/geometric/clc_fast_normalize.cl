@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/geometric/clc_normalize.h>
 #include <clc/geometric/clc_dot.h>
+#include <clc/geometric/clc_normalize.h>
 #include <clc/math/clc_half_rsqrt.h>
 
 #define __FLOAT_ONLY
