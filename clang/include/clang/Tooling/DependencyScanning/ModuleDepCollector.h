@@ -225,6 +225,11 @@ struct ModuleDeps {
   /// module. Does not include argv[0].
   const std::vector<std::string> &getBuildArguments() const;
 
+  /// Experimental: get a copy of the underlying CompilerInvocation before
+  /// calling `getBuildArguments`. This provides a short cut to inspect/modify
+  /// the compiler invocation state.
+  CowCompilerInvocation getUnderlyingCompilerInvocation() const;
+
 private:
   friend class ModuleDepCollector;
   friend class ModuleDepCollectorPP;
