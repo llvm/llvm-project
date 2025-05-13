@@ -77,7 +77,7 @@ static int countSymbols(Lang Language) {
   }
   }
 #undef SYMBOL
-  return llvm::DenseSet<StringRef>(Symbols.begin(), Symbols.end()).size();
+  return llvm::DenseSet<StringRef>(llvm::from_range, Symbols).size();
 }
 
 static int initialize(Lang Language) {

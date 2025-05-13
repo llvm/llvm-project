@@ -31,3 +31,8 @@ namespace ReplaceableAlloc {
   static_assert(foo()); // both-error {{not an integral constant expression}} \
                         // both-note {{in call to}}
 }
+
+constexpr int a = 12;
+constexpr const int *b = &a;
+constexpr int *f = (int*)(void*)b;
+static_assert(*f == 12);

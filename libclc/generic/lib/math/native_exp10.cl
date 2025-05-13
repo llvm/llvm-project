@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
+#include <clc/math/clc_native_exp10.h>
 
-#define __CLC_BODY <native_exp10.inc>
 #define __FLOAT_ONLY
+#define FUNCTION native_exp10
+#define __CLC_BODY <clc/shared/unary_def.inc>
+
 #include <clc/math/gentype.inc>

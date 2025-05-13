@@ -29,6 +29,7 @@ MlirContext mlirRewriterBaseGetContext(MlirRewriterBase rewriter) {
 
 //===----------------------------------------------------------------------===//
 /// Insertion points methods
+//===----------------------------------------------------------------------===//
 
 void mlirRewriterBaseClearInsertionPoint(MlirRewriterBase rewriter) {
   unwrap(rewriter)->clearInsertionPoint();
@@ -69,6 +70,7 @@ MlirBlock mlirRewriterBaseGetBlock(MlirRewriterBase rewriter) {
 
 //===----------------------------------------------------------------------===//
 /// Block and operation creation/insertion/cloning
+//===----------------------------------------------------------------------===//
 
 MlirBlock mlirRewriterBaseCreateBlockBefore(MlirRewriterBase rewriter,
                                             MlirBlock insertBefore,
