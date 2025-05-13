@@ -223,6 +223,7 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
   // NativeLowPrecision can only be set when the command line option
   // -enable-16bit-types is provided. This is indicated by the dx.nativelowprec
   // module flag being set
+  NativeLowPrecisionAvailable = false;
   if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("dx.nativelowprec")))
     if (MMDI.ShaderModelVersion >= VersionTuple(6, 2) &&
