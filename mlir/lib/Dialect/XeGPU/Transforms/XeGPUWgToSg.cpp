@@ -151,9 +151,9 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       return failure();
     Type elemTy = tdescTy.getElementType();
     ArrayRef<int64_t> wgShape = tdescTy.getShape();
-    ArrayRef<int64_t> sgShape =
+    SmallVector<int64_t> sgShape =
         llvm::to_vector_of<int64_t>(layout.getSgData().asArrayRef());
-    ArrayRef<int64_t> sgLayout =
+    SmallVector<int64_t> sgLayout =
         llvm::to_vector_of<int64_t>(layout.getSgLayout().asArrayRef());
 
     // TODO : Handle order attribute
@@ -188,7 +188,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
         xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
                                    layout.dropSgLayoutAndData());
     SmallVector<Value> newCreateNdOps;
-    for (const SmallVector<int64_t> &distUnitBaseAddr :
+    for (SmallVector<int64_t> distUnitBaseAddr :
          StaticTileOffsetRange(wgShape, distUnitShape)) {
       SmallVector<OpFoldResult> globalOffsets = calculateGlobalOffsets(
           rewriter, loc, originalOffsets, localOffset, distUnitBaseAddr);
