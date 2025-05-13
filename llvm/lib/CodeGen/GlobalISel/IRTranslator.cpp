@@ -1058,18 +1058,15 @@ bool IRTranslator::lowerJumpTableWorkItem(SwitchCG::SwitchWorkListItem W,
   }
   return true;
 }
-bool IRTranslator::lowerSwitchRangeWorkItem(SwitchCG::CaseClusterIt I,
-                                            Value *Cond,
-                                            MachineBasicBlock *Fallthrough,
-                                            bool FallthroughUnreachable,
-                                            BranchProbability UnhandledProbs,
-                                            MachineBasicBlock *CurMBB,
-                                            MachineIRBuilder &MIB,
-                                            MachineBasicBlock *SwitchMBB) {
+bool IRTranslator::lowerSwitchAndOrRangeWorkItem(
+    SwitchCG::CaseClusterIt I, Value *Cond, MachineBasicBlock *Fallthrough,
+    bool FallthroughUnreachable, BranchProbability UnhandledProbs,
+    MachineBasicBlock *CurMBB, MachineIRBuilder &MIB,
+    MachineBasicBlock *SwitchMBB) {
   using namespace SwitchCG;
   const Value *RHS, *LHS, *MHS;
   CmpInst::Predicate Pred;
-  if (I->Low == I->High) {
+  if (I->Low == I->High || I->Kind == CC_And) {
     // Check Cond == I->Low.
     Pred = CmpInst::ICMP_EQ;
     LHS = Cond;
@@ -1087,6 +1084,7 @@ bool IRTranslator::lowerSwitchRangeWorkItem(SwitchCG::CaseClusterIt I,
   // The false probability is the sum of all unhandled cases.
   CaseBlock CB(Pred, FallthroughUnreachable, LHS, RHS, MHS, I->MBB, Fallthrough,
                CurMBB, MIB.getDebugLoc(), I->Prob, UnhandledProbs);
+  CB.EmitAnd = I->Kind == CC_And;
 
   emitSwitchCase(CB, SwitchMBB, MIB);
   return true;
@@ -1326,10 +1324,11 @@ bool IRTranslator::lowerSwitchWorkItem(SwitchCG::SwitchWorkListItem W,
       }
       break;
     }
+    case CC_And:
     case CC_Range: {
-      if (!lowerSwitchRangeWorkItem(I, Cond, Fallthrough,
-                                    FallthroughUnreachable, UnhandledProbs,
-                                    CurMBB, MIB, SwitchMBB)) {
+      if (!lowerSwitchAndOrRangeWorkItem(I, Cond, Fallthrough,
+                                         FallthroughUnreachable, UnhandledProbs,
+                                         CurMBB, MIB, SwitchMBB)) {
         LLVM_DEBUG(dbgs() << "Failed to lower switch range");
         return false;
       }

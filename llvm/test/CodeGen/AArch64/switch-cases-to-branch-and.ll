@@ -5,57 +5,47 @@
 define i32 @switch_with_matching_dests_0_and_pow2_3_cases(i8 %v) {
 ; CHECK-LABEL: switch_with_matching_dests_0_and_pow2_3_cases:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov w9, #100 ; =0x64
-; CHECK-NEXT:    mov w8, #20 ; =0x14
+; CHECK-NEXT:    mov w8, #100 ; =0x64
+; CHECK-NEXT:    mov w9, #223 ; =0xdf
 ; CHECK-NEXT:  LBB0_1: ; %loop.header
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ands w10, w0, #0xff
-; CHECK-NEXT:    b.eq LBB0_6
+; CHECK-NEXT:    tst w0, w9
+; CHECK-NEXT:    b.eq LBB0_4
 ; CHECK-NEXT:  ; %bb.2: ; %loop.header
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    cmp w10, #32
-; CHECK-NEXT:    b.eq LBB0_6
-; CHECK-NEXT:  ; %bb.3: ; %loop.header
-; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    and w10, w0, #0xff
 ; CHECK-NEXT:    cmp w10, #124
-; CHECK-NEXT:    b.eq LBB0_7
-; CHECK-NEXT:  ; %bb.4: ; %loop.latch
+; CHECK-NEXT:    b.eq LBB0_5
+; CHECK-NEXT:  ; %bb.3: ; %loop.latch
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    subs w9, w9, #1
+; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    b.ne LBB0_1
-; CHECK-NEXT:  ; %bb.5:
-; CHECK-NEXT:    mov w8, #20 ; =0x14
-; CHECK-NEXT:  LBB0_6: ; %common.ret
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:  LBB0_4:
+; CHECK-NEXT:    mov w0, #20 ; =0x14
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB0_7: ; %e2
+; CHECK-NEXT:  LBB0_5: ; %e2
 ; CHECK-NEXT:    mov w0, #30 ; =0x1e
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: switch_with_matching_dests_0_and_pow2_3_cases:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    mov w8, w0
+; GISEL-NEXT:    mov w8, #100 ; =0x64
+; GISEL-NEXT:    and w9, w0, #0xff
 ; GISEL-NEXT:    mov w0, #20 ; =0x14
-; GISEL-NEXT:    mov w9, #100 ; =0x64
 ; GISEL-NEXT:  LBB0_1: ; %loop.header
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    ands w10, w8, #0xff
-; GISEL-NEXT:    b.eq LBB0_5
+; GISEL-NEXT:    tbnz wzr, #0, LBB0_4
 ; GISEL-NEXT:  ; %bb.2: ; %loop.header
 ; GISEL-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; GISEL-NEXT:    cmp w10, #32
+; GISEL-NEXT:    cmp w9, #124
 ; GISEL-NEXT:    b.eq LBB0_5
-; GISEL-NEXT:  ; %bb.3: ; %loop.header
+; GISEL-NEXT:  ; %bb.3: ; %loop.latch
 ; GISEL-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; GISEL-NEXT:    cmp w10, #124
-; GISEL-NEXT:    b.eq LBB0_6
-; GISEL-NEXT:  ; %bb.4: ; %loop.latch
-; GISEL-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; GISEL-NEXT:    subs w9, w9, #1
+; GISEL-NEXT:    subs w8, w8, #1
 ; GISEL-NEXT:    b.ne LBB0_1
-; GISEL-NEXT:  LBB0_5: ; %common.ret
+; GISEL-NEXT:  LBB0_4: ; %common.ret
 ; GISEL-NEXT:    ret
-; GISEL-NEXT:  LBB0_6: ; %e2
+; GISEL-NEXT:  LBB0_5: ; %e2
 ; GISEL-NEXT:    mov w0, #30 ; =0x1e
 ; GISEL-NEXT:    ret
 entry:
@@ -84,59 +74,53 @@ e2:
 define i32 @switch_with_matching_dests_0_and_pow2_3_cases_swapped(i8 %v) {
 ; CHECK-LABEL: switch_with_matching_dests_0_and_pow2_3_cases_swapped:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov w9, #100 ; =0x64
-; CHECK-NEXT:    mov w8, #20 ; =0x14
+; CHECK-NEXT:    mov w8, #100 ; =0x64
+; CHECK-NEXT:    mov w9, #223 ; =0xdf
 ; CHECK-NEXT:  LBB1_1: ; %loop.header
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ands w10, w0, #0xff
-; CHECK-NEXT:    b.eq LBB1_6
+; CHECK-NEXT:    tst w0, w9
+; CHECK-NEXT:    b.eq LBB1_5
 ; CHECK-NEXT:  ; %bb.2: ; %loop.header
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    cmp w10, #32
-; CHECK-NEXT:    b.eq LBB1_6
-; CHECK-NEXT:  ; %bb.3: ; %loop.header
-; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    and w10, w0, #0xff
 ; CHECK-NEXT:    cmp w10, #124
-; CHECK-NEXT:    b.eq LBB1_7
-; CHECK-NEXT:  ; %bb.4: ; %loop.latch
+; CHECK-NEXT:    b.eq LBB1_6
+; CHECK-NEXT:  ; %bb.3: ; %loop.latch
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    subs w9, w9, #1
+; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    b.ne LBB1_1
-; CHECK-NEXT:  ; %bb.5:
-; CHECK-NEXT:    mov w8, #10 ; =0xa
-; CHECK-NEXT:  LBB1_6: ; %common.ret
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:  ; %bb.4:
+; CHECK-NEXT:    mov w0, #10 ; =0xa
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB1_7: ; %e2
+; CHECK-NEXT:  LBB1_5:
+; CHECK-NEXT:    mov w0, #20 ; =0x14
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB1_6: ; %e2
 ; CHECK-NEXT:    mov w0, #30 ; =0x1e
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: switch_with_matching_dests_0_and_pow2_3_cases_swapped:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    mov w9, #100 ; =0x64
-; GISEL-NEXT:    mov w8, #20 ; =0x14
+; GISEL-NEXT:    mov w8, #100 ; =0x64
+; GISEL-NEXT:    and w9, w0, #0xff
 ; GISEL-NEXT:  LBB1_1: ; %loop.header
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    ands w10, w0, #0xff
-; GISEL-NEXT:    b.eq LBB1_6
+; GISEL-NEXT:    tbnz wzr, #0, LBB1_5
 ; GISEL-NEXT:  ; %bb.2: ; %loop.header
 ; GISEL-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; GISEL-NEXT:    cmp w10, #32
+; GISEL-NEXT:    cmp w9, #124
 ; GISEL-NEXT:    b.eq LBB1_6
-; GISEL-NEXT:  ; %bb.3: ; %loop.header
+; GISEL-NEXT:  ; %bb.3: ; %loop.latch
 ; GISEL-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; GISEL-NEXT:    cmp w10, #124
-; GISEL-NEXT:    b.eq LBB1_7
-; GISEL-NEXT:  ; %bb.4: ; %loop.latch
-; GISEL-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; GISEL-NEXT:    subs w9, w9, #1
+; GISEL-NEXT:    subs w8, w8, #1
 ; GISEL-NEXT:    b.ne LBB1_1
-; GISEL-NEXT:  ; %bb.5:
-; GISEL-NEXT:    mov w8, #10 ; =0xa
-; GISEL-NEXT:  LBB1_6: ; %common.ret
-; GISEL-NEXT:    mov w0, w8
+; GISEL-NEXT:  ; %bb.4:
+; GISEL-NEXT:    mov w0, #10 ; =0xa
 ; GISEL-NEXT:    ret
-; GISEL-NEXT:  LBB1_7: ; %e2
+; GISEL-NEXT:  LBB1_5:
+; GISEL-NEXT:    mov w0, #20 ; =0x14
+; GISEL-NEXT:    ret
+; GISEL-NEXT:  LBB1_6: ; %e2
 ; GISEL-NEXT:    mov w0, #30 ; =0x1e
 ; GISEL-NEXT:    ret
 entry:
@@ -168,65 +152,61 @@ e2:
 define i32 @switch_with_matching_dests_0_and_pow2_3_cases_with_phi(i8 %v, i1 %c) {
 ; CHECK-LABEL: switch_with_matching_dests_0_and_pow2_3_cases_with_phi:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    tbz w1, #0, LBB2_8
+; CHECK-NEXT:    tbz w1, #0, LBB2_6
 ; CHECK-NEXT:  ; %bb.1: ; %loop.header.preheader
-; CHECK-NEXT:    mov w9, #100 ; =0x64
-; CHECK-NEXT:    mov w8, #20 ; =0x14
+; CHECK-NEXT:    mov w8, #100 ; =0x64
+; CHECK-NEXT:    mov w9, #223 ; =0xdf
 ; CHECK-NEXT:  LBB2_2: ; %loop.header
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ands w10, w0, #0xff
+; CHECK-NEXT:    tst w0, w9
 ; CHECK-NEXT:    b.eq LBB2_7
 ; CHECK-NEXT:  ; %bb.3: ; %loop.header
 ; CHECK-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; CHECK-NEXT:    cmp w10, #32
-; CHECK-NEXT:    b.eq LBB2_7
-; CHECK-NEXT:  ; %bb.4: ; %loop.header
-; CHECK-NEXT:    ; in Loop: Header=BB2_2 Depth=1
+; CHECK-NEXT:    and w10, w0, #0xff
 ; CHECK-NEXT:    cmp w10, #124
-; CHECK-NEXT:    b.eq LBB2_9
-; CHECK-NEXT:  ; %bb.5: ; %loop.latch
+; CHECK-NEXT:    b.eq LBB2_8
+; CHECK-NEXT:  ; %bb.4: ; %loop.latch
 ; CHECK-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; CHECK-NEXT:    subs w9, w9, #1
+; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    b.ne LBB2_2
-; CHECK-NEXT:  ; %bb.6:
-; CHECK-NEXT:    mov w8, #10 ; =0xa
-; CHECK-NEXT:  LBB2_7: ; %common.ret
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:  ; %bb.5:
+; CHECK-NEXT:    mov w0, #10 ; =0xa
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB2_8:
+; CHECK-NEXT:  LBB2_6:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB2_9: ; %e2
+; CHECK-NEXT:  LBB2_7:
+; CHECK-NEXT:    mov w0, #20 ; =0x14
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB2_8: ; %e2
 ; CHECK-NEXT:    mov w0, #30 ; =0x1e
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: switch_with_matching_dests_0_and_pow2_3_cases_with_phi:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    mov w8, wzr
-; GISEL-NEXT:    tbz w1, #0, LBB2_7
+; GISEL-NEXT:    mov w8, w0
+; GISEL-NEXT:    mov w0, wzr
+; GISEL-NEXT:    tbz w1, #0, LBB2_6
 ; GISEL-NEXT:  ; %bb.1: ; %loop.header.preheader
 ; GISEL-NEXT:    mov w9, #100 ; =0x64
-; GISEL-NEXT:    mov w8, #20 ; =0x14
+; GISEL-NEXT:    and w8, w8, #0xff
 ; GISEL-NEXT:  LBB2_2: ; %loop.header
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    ands w10, w0, #0xff
-; GISEL-NEXT:    b.eq LBB2_7
+; GISEL-NEXT:    tbnz wzr, #0, LBB2_7
 ; GISEL-NEXT:  ; %bb.3: ; %loop.header
 ; GISEL-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; GISEL-NEXT:    cmp w10, #32
-; GISEL-NEXT:    b.eq LBB2_7
-; GISEL-NEXT:  ; %bb.4: ; %loop.header
-; GISEL-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; GISEL-NEXT:    cmp w10, #124
+; GISEL-NEXT:    cmp w8, #124
 ; GISEL-NEXT:    b.eq LBB2_8
-; GISEL-NEXT:  ; %bb.5: ; %loop.latch
+; GISEL-NEXT:  ; %bb.4: ; %loop.latch
 ; GISEL-NEXT:    ; in Loop: Header=BB2_2 Depth=1
 ; GISEL-NEXT:    subs w9, w9, #1
 ; GISEL-NEXT:    b.ne LBB2_2
-; GISEL-NEXT:  ; %bb.6:
-; GISEL-NEXT:    mov w8, #10 ; =0xa
-; GISEL-NEXT:  LBB2_7: ; %common.ret
-; GISEL-NEXT:    mov w0, w8
+; GISEL-NEXT:  ; %bb.5:
+; GISEL-NEXT:    mov w0, #10 ; =0xa
+; GISEL-NEXT:  LBB2_6: ; %common.ret
+; GISEL-NEXT:    ret
+; GISEL-NEXT:  LBB2_7:
+; GISEL-NEXT:    mov w0, #20 ; =0x14
 ; GISEL-NEXT:    ret
 ; GISEL-NEXT:  LBB2_8: ; %e2
 ; GISEL-NEXT:    mov w0, #30 ; =0x1e
@@ -361,20 +341,17 @@ define i32 @switch_in_loop_with_matching_dests_0_and_pow2_3_cases(ptr %start) {
 ; CHECK-NEXT:  LBB4_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrb w9, [x8], #1
-; CHECK-NEXT:    cbz w9, LBB4_4
+; CHECK-NEXT:    tst w9, #0xffffffdf
+; CHECK-NEXT:    b.eq LBB4_4
 ; CHECK-NEXT:  ; %bb.2: ; %loop
 ; CHECK-NEXT:    ; in Loop: Header=BB4_1 Depth=1
 ; CHECK-NEXT:    cmp w9, #124
-; CHECK-NEXT:    b.eq LBB4_5
-; CHECK-NEXT:  ; %bb.3: ; %loop
-; CHECK-NEXT:    ; in Loop: Header=BB4_1 Depth=1
-; CHECK-NEXT:    cmp w9, #32
 ; CHECK-NEXT:    b.ne LBB4_1
+; CHECK-NEXT:  ; %bb.3: ; %e2.loopexit
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB4_4: ; %e1
 ; CHECK-NEXT:    mov w0, #-1 ; =0xffffffff
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB4_5: ; %e2.loopexit
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: switch_in_loop_with_matching_dests_0_and_pow2_3_cases:
@@ -382,21 +359,17 @@ define i32 @switch_in_loop_with_matching_dests_0_and_pow2_3_cases(ptr %start) {
 ; GISEL-NEXT:    add x8, x0, #1
 ; GISEL-NEXT:  LBB4_1: ; %loop
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    ldrb w9, [x8], #1
-; GISEL-NEXT:    cbz w9, LBB4_4
+; GISEL-NEXT:    tbnz wzr, #0, LBB4_4
 ; GISEL-NEXT:  ; %bb.2: ; %loop
 ; GISEL-NEXT:    ; in Loop: Header=BB4_1 Depth=1
+; GISEL-NEXT:    ldrb w9, [x8], #1
 ; GISEL-NEXT:    cmp w9, #124
-; GISEL-NEXT:    b.eq LBB4_5
-; GISEL-NEXT:  ; %bb.3: ; %loop
-; GISEL-NEXT:    ; in Loop: Header=BB4_1 Depth=1
-; GISEL-NEXT:    cmp w9, #32
 ; GISEL-NEXT:    b.ne LBB4_1
+; GISEL-NEXT:  ; %bb.3: ; %e2.loopexit
+; GISEL-NEXT:    mov w0, wzr
+; GISEL-NEXT:    ret
 ; GISEL-NEXT:  LBB4_4: ; %e1
 ; GISEL-NEXT:    mov w0, #-1 ; =0xffffffff
-; GISEL-NEXT:    ret
-; GISEL-NEXT:  LBB4_5: ; %e2.loopexit
-; GISEL-NEXT:    mov w0, wzr
 ; GISEL-NEXT:    ret
 entry:
   br label %loop
@@ -581,13 +554,9 @@ define void @test_successor_with_loop_phi(ptr %A, ptr %B) {
 ; GISEL-NEXT:    ldr w8, [x0]
 ; GISEL-NEXT:    str wzr, [x0]
 ; GISEL-NEXT:    mov x0, x1
-; GISEL-NEXT:    cbz w8, LBB7_1
-; GISEL-NEXT:  ; %bb.2: ; %loop
-; GISEL-NEXT:    ; in Loop: Header=BB7_1 Depth=1
-; GISEL-NEXT:    cmp w8, #4
-; GISEL-NEXT:    mov x0, x1
+; GISEL-NEXT:    cmn w8, #5
 ; GISEL-NEXT:    b.eq LBB7_1
-; GISEL-NEXT:  ; %bb.3: ; %exit
+; GISEL-NEXT:  ; %bb.2: ; %exit
 ; GISEL-NEXT:    ret
 entry:
   br label %loop
@@ -842,42 +811,38 @@ e1:
 define void @merge_with_stores(ptr %A, i16 %v) {
 ; CHECK-LABEL: merge_with_stores:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    and w8, w1, #0xffff
-; CHECK-NEXT:    sub w9, w8, #10
-; CHECK-NEXT:    cmp w9, #2
-; CHECK-NEXT:    b.lo LBB11_4
+; CHECK-NEXT:    mov w8, #65533 ; =0xfffd
+; CHECK-NEXT:    tst w1, w8
+; CHECK-NEXT:    b.eq LBB11_3
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    cbz w8, LBB11_5
-; CHECK-NEXT:  ; %bb.2: ; %entry
+; CHECK-NEXT:    and w8, w1, #0xffff
+; CHECK-NEXT:    sub w8, w8, #10
 ; CHECK-NEXT:    cmp w8, #2
-; CHECK-NEXT:    b.eq LBB11_5
-; CHECK-NEXT:  ; %bb.3: ; %default.dst
-; CHECK-NEXT:    strh wzr, [x0]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB11_4: ; %other.dst
+; CHECK-NEXT:    b.hs LBB11_4
+; CHECK-NEXT:  ; %bb.2: ; %other.dst
 ; CHECK-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-NEXT:    strh w8, [x0, #36]
-; CHECK-NEXT:  LBB11_5: ; %pow2.dst
+; CHECK-NEXT:  LBB11_3: ; %pow2.dst
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB11_4: ; %default.dst
+; CHECK-NEXT:    strh wzr, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: merge_with_stores:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    and w8, w1, #0xffff
-; GISEL-NEXT:    sub w9, w8, #10
-; GISEL-NEXT:    cmp w9, #1
-; GISEL-NEXT:    b.ls LBB11_4
+; GISEL-NEXT:    tbnz wzr, #0, LBB11_3
 ; GISEL-NEXT:  ; %bb.1: ; %entry
-; GISEL-NEXT:    cbz w8, LBB11_5
-; GISEL-NEXT:  ; %bb.2: ; %entry
-; GISEL-NEXT:    cmp w8, #2
-; GISEL-NEXT:    b.eq LBB11_5
-; GISEL-NEXT:  ; %bb.3: ; %default.dst
-; GISEL-NEXT:    strh wzr, [x0]
-; GISEL-NEXT:    ret
-; GISEL-NEXT:  LBB11_4: ; %other.dst
+; GISEL-NEXT:    mov w8, #-10 ; =0xfffffff6
+; GISEL-NEXT:    add w8, w8, w1, uxth
+; GISEL-NEXT:    cmp w8, #1
+; GISEL-NEXT:    b.hi LBB11_4
+; GISEL-NEXT:  ; %bb.2: ; %other.dst
 ; GISEL-NEXT:    mov w8, #1 ; =0x1
 ; GISEL-NEXT:    strh w8, [x0, #36]
-; GISEL-NEXT:  LBB11_5: ; %pow2.dst
+; GISEL-NEXT:  LBB11_3: ; %pow2.dst
+; GISEL-NEXT:    ret
+; GISEL-NEXT:  LBB11_4: ; %default.dst
+; GISEL-NEXT:    strh wzr, [x0]
 ; GISEL-NEXT:    ret
 entry:
   switch i16 %v, label %default.dst [
@@ -903,62 +868,55 @@ pow2.dst:
 define void @switch_large_enough_for_clustering(i32 %x, ptr %dst) {
 ; CHECK-LABEL: switch_large_enough_for_clustering:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #1
-; CHECK-NEXT:    b.le LBB12_5
+; CHECK-NEXT:    cmp w0, #3
+; CHECK-NEXT:    b.gt LBB12_4
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    cmp w0, #7
-; CHECK-NEXT:    b.eq LBB12_9
-; CHECK-NEXT:  ; %bb.2: ; %entry
-; CHECK-NEXT:    cmp w0, #4
-; CHECK-NEXT:    b.eq LBB12_7
-; CHECK-NEXT:  ; %bb.3: ; %entry
-; CHECK-NEXT:    cmp w0, #2
-; CHECK-NEXT:    b.eq LBB12_8
-; CHECK-NEXT:  LBB12_4: ; %exit
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB12_5: ; %entry
-; CHECK-NEXT:    cbz w0, LBB12_8
-; CHECK-NEXT:  ; %bb.6: ; %entry
-; CHECK-NEXT:    cmp w0, #1
-; CHECK-NEXT:    b.ne LBB12_4
-; CHECK-NEXT:  LBB12_7: ; %succ.2
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB12_8: ; %succ.1
+; CHECK-NEXT:    tst w0, #0xfffffffd
+; CHECK-NEXT:    b.ne LBB12_7
+; CHECK-NEXT:  ; %bb.2: ; %succ.1
 ; CHECK-NEXT:    strb wzr, [x1]
+; CHECK-NEXT:  LBB12_3: ; %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB12_9: ; %succ.3
+; CHECK-NEXT:  LBB12_4: ; %entry
+; CHECK-NEXT:    cmp w0, #4
+; CHECK-NEXT:    b.eq LBB12_8
+; CHECK-NEXT:  ; %bb.5: ; %entry
+; CHECK-NEXT:    cmp w0, #7
+; CHECK-NEXT:    b.ne LBB12_3
+; CHECK-NEXT:  ; %bb.6: ; %succ.3
 ; CHECK-NEXT:    strh wzr, [x1]
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB12_7: ; %entry
+; CHECK-NEXT:    cmp w0, #1
+; CHECK-NEXT:    b.ne LBB12_3
+; CHECK-NEXT:  LBB12_8: ; %succ.2
+; CHECK-NEXT:    str wzr, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: switch_large_enough_for_clustering:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    cmp w0, #2
-; GISEL-NEXT:    b.lt LBB12_5
-; GISEL-NEXT:  ; %bb.1: ; %entry
-; GISEL-NEXT:    cmp w0, #7
-; GISEL-NEXT:    b.eq LBB12_9
-; GISEL-NEXT:  ; %bb.2: ; %entry
 ; GISEL-NEXT:    cmp w0, #4
-; GISEL-NEXT:    b.eq LBB12_7
-; GISEL-NEXT:  ; %bb.3: ; %entry
-; GISEL-NEXT:    cmp w0, #2
-; GISEL-NEXT:    b.eq LBB12_8
-; GISEL-NEXT:  LBB12_4: ; %exit
-; GISEL-NEXT:    ret
-; GISEL-NEXT:  LBB12_5: ; %entry
-; GISEL-NEXT:    cbz w0, LBB12_8
-; GISEL-NEXT:  ; %bb.6: ; %entry
-; GISEL-NEXT:    cmp w0, #1
-; GISEL-NEXT:    b.ne LBB12_4
-; GISEL-NEXT:  LBB12_7: ; %succ.2
-; GISEL-NEXT:    str wzr, [x1]
-; GISEL-NEXT:    ret
-; GISEL-NEXT:  LBB12_8: ; %succ.1
+; GISEL-NEXT:    b.ge LBB12_4
+; GISEL-NEXT:  ; %bb.1: ; %entry
+; GISEL-NEXT:    cmn w0, #3
+; GISEL-NEXT:    b.ne LBB12_7
+; GISEL-NEXT:  ; %bb.2: ; %succ.1
 ; GISEL-NEXT:    strb wzr, [x1]
+; GISEL-NEXT:  LBB12_3: ; %exit
 ; GISEL-NEXT:    ret
-; GISEL-NEXT:  LBB12_9: ; %succ.3
+; GISEL-NEXT:  LBB12_4: ; %entry
+; GISEL-NEXT:    b.eq LBB12_8
+; GISEL-NEXT:  ; %bb.5: ; %entry
+; GISEL-NEXT:    cmp w0, #7
+; GISEL-NEXT:    b.ne LBB12_3
+; GISEL-NEXT:  ; %bb.6: ; %succ.3
 ; GISEL-NEXT:    strh wzr, [x1]
+; GISEL-NEXT:    ret
+; GISEL-NEXT:  LBB12_7: ; %entry
+; GISEL-NEXT:    cmp w0, #1
+; GISEL-NEXT:    b.ne LBB12_3
+; GISEL-NEXT:  LBB12_8: ; %succ.2
+; GISEL-NEXT:    str wzr, [x1]
 ; GISEL-NEXT:    ret
 entry:
   switch i32 %x, label %exit [
