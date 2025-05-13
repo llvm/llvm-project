@@ -4874,10 +4874,13 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
-  if (unsigned BuiltinID = E->getBuiltinCallee())
-    return VisitBuiltinCallExpr(E, BuiltinID);
-
   const FunctionDecl *FuncDecl = E->getDirectCallee();
+
+  if (FuncDecl) {
+    if (unsigned BuiltinID = FuncDecl->getBuiltinID())
+      return VisitBuiltinCallExpr(E, BuiltinID);
+  }
+
   // Calls to replaceable operator new/operator delete.
   if (FuncDecl &&
       FuncDecl->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
