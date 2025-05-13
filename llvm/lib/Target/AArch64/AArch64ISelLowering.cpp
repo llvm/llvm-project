@@ -29537,6 +29537,11 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
 SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
+  bool Scalable = Op.getValueType().isScalableVector();
+  if (Scalable && !Subtarget->isSVEorStreamingSVEAvailable())
+    return SDValue();
+  if (!Scalable && (!Subtarget->isNeonAvailable() || !Subtarget->hasDotProd()))
+    return SDValue();
 
   SDLoc DL(Op);
 
@@ -29544,13 +29549,19 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
   EVT ResultVT = Op.getValueType();
-  assert(ResultVT == MVT::nxv2i64 && LHS.getValueType() == MVT::nxv16i8);
 
-  SDValue DotNode = DAG.getNode(Op.getOpcode(), DL, MVT::nxv4i32,
-                                DAG.getConstant(0, DL, MVT::nxv4i32), LHS, RHS);
+  assert((Scalable && ResultVT == MVT::nxv2i64 &&
+          LHS.getValueType() == MVT::nxv16i8) ||
+         (!Scalable && ResultVT == MVT::v2i64 &&
+          LHS.getValueType() == MVT::v16i8));
+
+  EVT DotVT = Scalable ? MVT::nxv4i32 : MVT::v4i32;
+  SDValue DotNode = DAG.getNode(Op.getOpcode(), DL, DotVT,
+                                DAG.getConstant(0, DL, DotVT), LHS, RHS);
 
   bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
-  if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
+  if (Scalable &&
+      (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())) {
     unsigned LoOpcode = IsUnsigned ? AArch64ISD::UADDWB : AArch64ISD::SADDWB;
     unsigned HiOpcode = IsUnsigned ? AArch64ISD::UADDWT : AArch64ISD::SADDWT;
     SDValue Lo = DAG.getNode(LoOpcode, DL, ResultVT, Acc, DotNode);
