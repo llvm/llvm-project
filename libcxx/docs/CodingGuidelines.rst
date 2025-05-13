@@ -124,7 +124,7 @@ Write SFINAE with ``requires`` clauses in C++20-only code
 subsume other concepts. This means that overloads based on traits can be written without negating more general cases.
 They also show intent better.
 
-Write ``enable_if`` as ``enable_if_t<conditon, int> = 0``
+Write ``enable_if`` as ``enable_if_t<condition, int> = 0``
 =========================================================
 
 The form ``enable_if_t<condition, int> = 0`` is the only one that works in every language mode and for overload sets
