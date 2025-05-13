@@ -162,7 +162,8 @@ UnwrappedLineParser::UnwrappedLineParser(
       LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords),
       CommentPragmasRegex(Style.CommentPragmas), Tokens(nullptr),
       Callback(Callback), AllTokens(Tokens), PPBranchLevel(-1),
-      IncludeGuard(Style.IndentPPDirectives == FormatStyle::PPDIS_None
+      IncludeGuard((Style.IndentPPDirectives == FormatStyle::PPDIS_None ||
+                    Style.IndentPPDirectives == FormatStyle::PPDIS_Leave)
                        ? IG_Rejected
                        : IG_Inited),
       IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),
@@ -170,7 +171,8 @@ UnwrappedLineParser::UnwrappedLineParser(
 
 void UnwrappedLineParser::reset() {
   PPBranchLevel = -1;
-  IncludeGuard = Style.IndentPPDirectives == FormatStyle::PPDIS_None
+  IncludeGuard = Style.IndentPPDirectives == FormatStyle::PPDIS_None ||
+                         Style.IndentPPDirectives == FormatStyle::PPDIS_Leave
                      ? IG_Rejected
                      : IG_Inited;
   IncludeGuardToken = nullptr;
@@ -1140,7 +1142,8 @@ void UnwrappedLineParser::parsePPEndIf() {
   // If the #endif of a potential include guard is the last thing in the file,
   // then we found an include guard.
   if (IncludeGuard == IG_Defined && PPBranchLevel == -1 && Tokens->isEOF() &&
-      Style.IndentPPDirectives != FormatStyle::PPDIS_None) {
+      !(Style.IndentPPDirectives == FormatStyle::PPDIS_None ||
+        Style.IndentPPDirectives == FormatStyle::PPDIS_Leave)) {
     IncludeGuard = IG_Found;
   }
 }
