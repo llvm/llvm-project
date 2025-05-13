@@ -127,29 +127,6 @@ void elf::reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
   }
 }
 
-// Build a bitmask with one bit set for each 64 subset of RelExpr.
-static constexpr uint64_t buildMask() { return 0; }
-
-template <typename... Tails>
-static constexpr uint64_t buildMask(int head, Tails... tails) {
-  return (0 <= head && head < 64 ? uint64_t(1) << head : 0) |
-         buildMask(tails...);
-}
-
-// Return true if `Expr` is one of `Exprs`.
-// There are more than 64 but less than 128 RelExprs, so we divide the set of
-// exprs into [0, 64) and [64, 128) and represent each range as a constant
-// 64-bit mask. Then we decide which mask to test depending on the value of
-// expr and use a simple shift and bitwise-and to test for membership.
-template <RelExpr... Exprs> static bool oneof(RelExpr expr) {
-  assert(0 <= expr && (int)expr < 128 &&
-         "RelExpr is too large for 128-bit mask!");
-
-  if (expr >= 64)
-    return (uint64_t(1) << (expr - 64)) & buildMask((Exprs - 64)...);
-  return (uint64_t(1) << expr) & buildMask(Exprs...);
-}
-
 static RelType getMipsPairType(RelType type, bool isLocal) {
   switch (type) {
   case R_MIPS_HI16:
@@ -194,15 +171,6 @@ static bool needsPlt(RelExpr expr) {
   return oneof<R_PLT, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT, R_GOTPLT_GOTREL,
                R_GOTPLT_PC, RE_LOONGARCH_PLT_PAGE_PC, RE_PPC32_PLTREL,
                RE_PPC64_CALL_PLT>(expr);
-}
-
-bool lld::elf::needsGot(RelExpr expr) {
-  return oneof<R_GOT, RE_AARCH64_AUTH_GOT, RE_AARCH64_AUTH_GOT_PC, R_GOT_OFF,
-               RE_MIPS_GOT_LOCAL_PAGE, RE_MIPS_GOT_OFF, RE_MIPS_GOT_OFF32,
-               RE_AARCH64_GOT_PAGE_PC, RE_AARCH64_AUTH_GOT_PAGE_PC,
-               RE_AARCH64_AUTH_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
-               RE_AARCH64_GOT_PAGE, RE_LOONGARCH_GOT, RE_LOONGARCH_GOT_PAGE_PC>(
-      expr);
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
@@ -403,49 +371,6 @@ template <class ELFT> static void addCopyRelSymbol(Ctx &ctx, SharedSymbol &ss) {
 //
 // For sections other than .eh_frame, this class doesn't do anything.
 namespace {
-class OffsetGetter {
-public:
-  OffsetGetter() = default;
-  explicit OffsetGetter(InputSectionBase &sec) {
-    if (auto *eh = dyn_cast<EhInputSection>(&sec)) {
-      cies = eh->cies;
-      fdes = eh->fdes;
-      i = cies.begin();
-      j = fdes.begin();
-    }
-  }
-
-  // Translates offsets in input sections to offsets in output sections.
-  // Given offset must increase monotonically. We assume that Piece is
-  // sorted by inputOff.
-  uint64_t get(Ctx &ctx, uint64_t off) {
-    if (cies.empty())
-      return off;
-
-    while (j != fdes.end() && j->inputOff <= off)
-      ++j;
-    auto it = j;
-    if (j == fdes.begin() || j[-1].inputOff + j[-1].size <= off) {
-      while (i != cies.end() && i->inputOff <= off)
-        ++i;
-      if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off) {
-        Err(ctx) << ".eh_frame: relocation is not in any piece";
-        return 0;
-      }
-      it = i;
-    }
-
-    // Offset -1 means that the piece is dead (i.e. garbage collected).
-    if (it[-1].outputOff == -1)
-      return -1;
-    return it[-1].outputOff + (off - it[-1].inputOff);
-  }
-
-private:
-  ArrayRef<EhSectionPiece> cies, fdes;
-  ArrayRef<EhSectionPiece>::iterator i, j;
-};
-
 // This class encapsulates states needed to scan relocations for one
 // InputSectionBase.
 class RelocationScanner {
@@ -1593,7 +1518,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
   //
   // Some RISCV TLSDESC relocations reference a local NOTYPE symbol,
   // but we need to process them in handleTlsRelocation.
-  if (sym.isTls() || oneof<R_TLSDESC_PC, R_TLSDESC_CALL>(expr)) {
+  if (needsTls(sym, expr)) {
     if (unsigned processed =
             handleTlsRelocation(expr, type, offset, sym, addend)) {
       i += processed - 1;

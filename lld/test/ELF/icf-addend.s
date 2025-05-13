@@ -1,13 +1,17 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: ld.lld %t.o -o /dev/null --icf=all --print-icf-sections | FileCheck --allow-empty %s
+# RUN: rm -rf %t && split-file %s %t && cd %t
 
-# Check that ICF doesn't fold sections containing functions that references
-# unmergeable symbols. We should only merge symbols of two relocations when
-# their addends are same.
+#--- trivial-relocation.s
+# For trivial relocations, merging two equivalent sections is allowed but we must not
+# merge their symbols if addends are different.
 
-# CHECK-NOT: selected section {{.*}}:(.text.f1)
-# CHECK-NOT:   removing identical section {{.*}}:(.text.f2)
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux trivial-relocation.s -o trivial.o
+# RUN: ld.lld trivial.o -o /dev/null --icf=all --print-icf-sections | FileCheck %s
+
+# CHECK: selected section {{.*}}:(.text.f1)
+# CHECK:   removing identical section {{.*}}:(.text.f2)
+# CHECK-NOT: redirecting 'y' in symtab to x
+# CHECK-NOT: redirecting 'y' to 'x'
 
 .globl x, y
 
@@ -30,3 +34,36 @@ movq y(%rip), %rax
 _start:
 call f1
 call f2
+
+#--- non-trivial-relocation.s
+# For non-trivial relocations, we must not merge sections if addends are different.
+# Not merging sections would automatically disable symbol merging.
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux trivial-relocation.s -o trivial.o
+# RUN: ld.lld trivial.o -o /dev/null --icf=all --print-icf-sections | FileCheck %s
+
+# CHECK-NOT: selected section {{.*}}:(.text.f1)
+# CHECK-NOT:   removing identical section {{.*}}:(.text.f2)
+
+.globl x, y
+
+.section .rodata,"a",@progbits
+x:
+.long 11
+y:
+.long 12
+
+.section .text.f1,"ax",@progbits
+f1:
+movq x+4@GOTPCREL(%rip), %rax
+
+.section .text.f2,"ax",@progbits
+f2:
+movq y@GOTPCREL(%rip), %rax
+
+.section .text._start,"ax",@progbits
+.globl _start
+_start:
+call f1
+call f2
+
