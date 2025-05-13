@@ -342,6 +342,54 @@ const char *GetEnv(const char *name) { return getenv(name); }
 
 tid_t GetTid() { return thread_self(); }
 
+uptr ReadBinaryName(char *buf, uptr buf_len) {
+  struct stat statData;
+  struct psinfo psinfoData;
+
+  char FilePsinfo[100] = {};
+  internal_snprintf(FilePsinfo, 100, "/proc/%d/psinfo", internal_getpid());
+  CHECK_EQ(internal_stat(FilePsinfo, &statData), 0);
+
+  const int fd = internal_open(FilePsinfo, O_RDONLY);
+  ssize_t readNum = internal_read(fd, &psinfoData, sizeof(psinfoData));
+  CHECK_GE(readNum, 0);
+
+  internal_close(fd);
+  char *binary_name = (reinterpret_cast<char ***>(psinfoData.pr_argv))[0][0];
+
+  // This is an absulate path.
+  if (binary_name[0] == '/')
+    return internal_snprintf(buf, buf_len, "%s", binary_name);
+
+  // This is a relative path to the binary, starts with ./ or ../
+  if (binary_name[0] == '.') {
+    char *path = nullptr;
+    if ((path = internal_getcwd(buf, buf_len)) != nullptr)
+      return internal_snprintf(buf + internal_strlen(path),
+                               buf_len - internal_strlen(path), "/%s",
+                               binary_name) +
+             internal_strlen(path);
+  }
+
+  // This is running a raw binary in the dir where it is from.
+  char *path = nullptr;
+  if ((path = internal_getcwd(buf, buf_len)) != nullptr) {
+    char fullName[kMaxPathLength] = {};
+    internal_snprintf(fullName, kMaxPathLength, "%s/%s", path, binary_name);
+    if (FileExists(fullName))
+      return internal_snprintf(buf + internal_strlen(path),
+                               buf_len - internal_strlen(path), "/%s",
+                               binary_name) +
+             internal_strlen(path);
+  }
+
+  // Find the binary in the env PATH.
+  if ((path = FindPathToBinary(binary_name)) != nullptr)
+    return internal_snprintf(buf, buf_len, "%s", path);
+
+  return 0;
+}
+
 // https://www.ibm.com/docs/en/aix/7.3?topic=concepts-system-memory-allocation-using-malloc-subsystem
 uptr GetMaxVirtualAddress() {
 #  if SANITIZER_WORDSIZE == 64
@@ -352,6 +400,10 @@ uptr GetMaxVirtualAddress() {
 }
 
 uptr GetMaxUserVirtualAddress() { return GetMaxVirtualAddress(); }
+
+uptr ReadLongProcessName(/*out*/ char *buf, uptr buf_len) {
+  return ReadBinaryName(buf, buf_len);
+}
 
 void InitializePlatformCommonFlags(CommonFlags *cf) {}
 
