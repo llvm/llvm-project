@@ -3102,28 +3102,20 @@ def CALL_PROTOTYPE :
             "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
 
 def SDTDynAllocaOp :
-  SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisInt<2>]>;
+  SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisInt<1>, SDTCisVT<2, i32>]>;
 
 def dyn_alloca :
   SDNode<"NVPTXISD::DYNAMIC_STACKALLOC", SDTDynAllocaOp,
          [SDNPHasChain, SDNPSideEffect]>;
 
-def DYNAMIC_STACKALLOC32 :
-  NVPTXInst<(outs Int32Regs:$ptr),
-            (ins Int32Regs:$size, i32imm:$align),
-            "alloca.u32 \t$ptr, $size, $align;\n\t"
-            "cvta.local.u32 \t$ptr, $ptr;",
-            [(set i32:$ptr, (dyn_alloca i32:$size, (i32 timm:$align)))]>,
-            Requires<[hasPTX<73>, hasSM<52>]>;
-
-def DYNAMIC_STACKALLOC64 :
-  NVPTXInst<(outs Int64Regs:$ptr),
-            (ins Int64Regs:$size, i32imm:$align),
-            "alloca.u64 \t$ptr, $size, $align;\n\t"
-            "cvta.local.u64 \t$ptr, $ptr;",
-            [(set i64:$ptr, (dyn_alloca i64:$size, (i32 timm:$align)))]>,
-            Requires<[hasPTX<73>, hasSM<52>]>;
-
+foreach t = [I32RT, I64RT] in {
+  def DYNAMIC_STACKALLOC # t.Size :
+    NVPTXInst<(outs t.RC:$ptr),
+              (ins t.RC:$size, i32imm:$align),
+              "alloca.u" # t.Size # " \t$ptr, $size, $align;",
+              [(set t.Ty:$ptr, (dyn_alloca t.Ty:$size, timm:$align))]>,
+              Requires<[hasPTX<73>, hasSM<52>]>;
+}
 
 //
 // BRX

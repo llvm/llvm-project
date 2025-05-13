@@ -2056,18 +2056,28 @@ SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     return DAG.getMergeValues(Ops, SDLoc());
   }
 
+  SDLoc DL(Op.getNode());
   SDValue Chain = Op.getOperand(0);
   SDValue Size = Op.getOperand(1);
-  uint64_t Align = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
-  SDLoc DL(Op.getNode());
+  uint64_t Align = Op.getConstantOperandVal(2);
+
+  // The alignment on a ISD::DYNAMIC_STACKALLOC node may be 0 to indicate that
+  // the default stack alignment should be used.
+  if (Align == 0)
+    Align = DAG.getSubtarget().getFrameLowering()->getStackAlign().value();
 
   // The size for ptx alloca instruction is 64-bit for m64 and 32-bit for m32.
-  MVT ValueSizeTy = nvTM->is64Bit() ? MVT::i64 : MVT::i32;
+  const MVT LocalVT = getPointerTy(DAG.getDataLayout(), ADDRESS_SPACE_LOCAL);
 
-  SDValue AllocOps[] = {Chain, DAG.getZExtOrTrunc(Size, DL, ValueSizeTy),
-                        DAG.getTargetConstant(Align, DL, MVT::i32)};
-  EVT RetTypes[] = {ValueSizeTy, MVT::Other};
-  return DAG.getNode(NVPTXISD::DYNAMIC_STACKALLOC, DL, RetTypes, AllocOps);
+  SDValue Alloc =
+      DAG.getNode(NVPTXISD::DYNAMIC_STACKALLOC, DL, {LocalVT, MVT::Other},
+                  {Chain, DAG.getZExtOrTrunc(Size, DL, LocalVT),
+                   DAG.getTargetConstant(Align, DL, MVT::i32)});
+
+  SDValue ASC = DAG.getAddrSpaceCast(
+      DL, Op.getValueType(), Alloc, ADDRESS_SPACE_LOCAL, ADDRESS_SPACE_GENERIC);
+
+  return DAG.getMergeValues({ASC, SDValue(Alloc.getNode(), 1)}, DL);
 }
 
 SDValue NVPTXTargetLowering::LowerSTACKRESTORE(SDValue Op,
