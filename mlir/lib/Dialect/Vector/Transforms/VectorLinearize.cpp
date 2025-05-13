@@ -496,8 +496,8 @@ struct LinearizeVectorCreateMask final
     auto maskSize = rewriter.createOrFold<mlir::arith::AndIOp>(
         loc, rewriter.getIndexType(), isNonZeroIndex, secondOperand);
 
-    auto newMask = rewriter.create<mlir::vector::CreateMaskOp>(
-        loc, dstTy, maskSize);
+    auto newMask =
+        rewriter.create<mlir::vector::CreateMaskOp>(loc, dstTy, maskSize);
     rewriter.replaceOp(createMaskOp, newMask);
     return success();
   }
