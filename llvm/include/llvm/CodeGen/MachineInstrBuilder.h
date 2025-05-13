@@ -270,9 +270,8 @@ public:
   }
 
   const MachineInstrBuilder &add(ArrayRef<MachineOperand> MOs) const {
-    for (const MachineOperand &MO : MOs) {
+    for (const MachineOperand &MO : MOs)
       MI->addOperand(*MF, MO);
-    }
     return *this;
   }
 
@@ -408,9 +407,8 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
   MachineFunction &MF = *BB.getParent();
   MachineInstr *MI = MF.CreateMachineInstr(MCID, MIMD.getDL());
   BB.insert(I, MI);
-  return MachineInstrBuilder(MF, MI)
-      .copyMIMetadata(MIMD)
-      .addReg(DestReg, RegState::Define);
+  return MachineInstrBuilder(MF, MI).copyMIMetadata(MIMD).addReg(
+      DestReg, RegState::Define);
 }
 
 /// This version of the builder inserts the newly-built instruction before
@@ -426,9 +424,8 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
   MachineFunction &MF = *BB.getParent();
   MachineInstr *MI = MF.CreateMachineInstr(MCID, MIMD.getDL());
   BB.insert(I, MI);
-  return MachineInstrBuilder(MF, MI)
-      .copyMIMetadata(MIMD)
-      .addReg(DestReg, RegState::Define);
+  return MachineInstrBuilder(MF, MI).copyMIMetadata(MIMD).addReg(
+      DestReg, RegState::Define);
 }
 
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB, MachineInstr &I,
@@ -458,8 +455,7 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
   MachineFunction &MF = *BB.getParent();
   MachineInstr *MI = MF.CreateMachineInstr(MCID, MIMD.getDL());
   BB.insert(I, MI);
-  return MachineInstrBuilder(MF, MI)
-      .copyMIMetadata(MIMD);
+  return MachineInstrBuilder(MF, MI).copyMIMetadata(MIMD);
 }
 
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
@@ -469,8 +465,7 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
   MachineFunction &MF = *BB.getParent();
   MachineInstr *MI = MF.CreateMachineInstr(MCID, MIMD.getDL());
   BB.insert(I, MI);
-  return MachineInstrBuilder(MF, MI)
-      .copyMIMetadata(MIMD);
+  return MachineInstrBuilder(MF, MI).copyMIMetadata(MIMD);
 }
 
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB, MachineInstr &I,

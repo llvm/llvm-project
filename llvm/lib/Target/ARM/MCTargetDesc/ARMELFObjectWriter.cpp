@@ -80,9 +80,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
                                                bool IsPCRel,
                                                MCContext &Ctx) const {
   unsigned Kind = Fixup.getTargetKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
-  uint8_t Specifier = Target.getAccessVariant();
+  uint8_t Specifier = Target.getSpecifier();
   auto CheckFDPIC = [&](uint32_t Type) {
     if (getOSABI() != ELF::ELFOSABI_ARM_FDPIC)
       Ctx.reportError(Fixup.getLoc(),
@@ -103,8 +101,8 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   case ARMMCExpr::VK_TLSLDM_FDPIC:
   case ARMMCExpr::VK_TLSLDO:
   case ARMMCExpr::VK_TPOFF:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -122,10 +120,10 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
                         "invalid fixup for 4-byte pc-relative data relocation");
         return ELF::R_ARM_NONE;
       case ARMMCExpr::VK_None: {
-        if (const MCSymbolRefExpr *SymRef = Target.getSymA()) {
+        if (const auto *SA = Target.getAddSym()) {
           // For GNU AS compatibility expressions such as
           // _GLOBAL_OFFSET_TABLE_ - label emit a R_ARM_BASE_PREL relocation.
-          if (SymRef->getSymbol().getName() == "_GLOBAL_OFFSET_TABLE_")
+          if (SA->getName() == "_GLOBAL_OFFSET_TABLE_")
             return ELF::R_ARM_BASE_PREL;
         }
         return ELF::R_ARM_REL32;

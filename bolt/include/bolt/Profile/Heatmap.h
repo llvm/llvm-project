@@ -57,9 +57,9 @@ public:
   }
 
   /// Register a single sample at \p Address.
-  void registerAddress(uint64_t Address) {
+  void registerAddress(uint64_t Address, uint64_t Count) {
     if (!ignoreAddress(Address))
-      ++Map[Address / BucketSize];
+      Map[Address / BucketSize] += Count;
   }
 
   /// Register \p Count samples at [\p StartAddress, \p EndAddress ].

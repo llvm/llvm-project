@@ -561,36 +561,46 @@ void ScriptParser::readSearchDir() {
 // https://sourceware.org/binutils/docs/ld/Overlay-Description.html#Overlay-Description
 SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
   Expr addrExpr;
-  if (consume(":")) {
-    addrExpr = [s = ctx.script] { return s->getDot(); };
-  } else {
+  if (!consume(":")) {
     addrExpr = readExpr();
     expect(":");
   }
-  // When AT is omitted, LMA should equal VMA. script->getDot() when evaluating
-  // lmaExpr will ensure this, even if the start address is specified.
-  Expr lmaExpr = consume("AT") ? readParenExpr()
-                               : [s = ctx.script] { return s->getDot(); };
+  bool noCrossRefs = consume("NOCROSSREFS");
+  Expr lmaExpr = consume("AT") ? readParenExpr() : Expr{};
   expect("{");
 
   SmallVector<SectionCommand *, 0> v;
   OutputSection *prev = nullptr;
   while (!errCount(ctx) && !consume("}")) {
     // VA is the same for all sections. The LMAs are consecutive in memory
-    // starting from the base load address specified.
+    // starting from the base load address.
     OutputDesc *osd = readOverlaySectionDescription();
     osd->osec.addrExpr = addrExpr;
     if (prev) {
       osd->osec.lmaExpr = [=] { return prev->getLMA() + prev->size; };
     } else {
       osd->osec.lmaExpr = lmaExpr;
-      // Use first section address for subsequent sections as initial addrExpr
-      // can be DOT. Ensure the first section, even if empty, is not discarded.
+      // Use first section address for subsequent sections. Ensure the first
+      // section, even if empty, is not discarded.
       osd->osec.usedInExpression = true;
       addrExpr = [=]() -> ExprValue { return {&osd->osec, false, 0, ""}; };
     }
     v.push_back(osd);
     prev = &osd->osec;
+  }
+  if (!v.empty())
+    static_cast<OutputDesc *>(v.front())->osec.firstInOverlay = true;
+  if (consume(">")) {
+    StringRef regionName = readName();
+    for (SectionCommand *od : v)
+      static_cast<OutputDesc *>(od)->osec.memoryRegionName =
+          std::string(regionName);
+  }
+  if (noCrossRefs) {
+    NoCrossRefCommand cmd;
+    for (SectionCommand *od : v)
+      cmd.outputSections.push_back(static_cast<OutputDesc *>(od)->osec.name);
+    ctx.script->noCrossRefs.push_back(std::move(cmd));
   }
 
   // According to the specification, at the end of the overlay, the location

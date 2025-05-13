@@ -42,9 +42,6 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[PREDS]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], zeroinitializer
@@ -52,11 +49,14 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 1
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr float, ptr [[TMP11]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP29]], i64 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 2
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr float, ptr [[TMP13]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP30]], i64 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 3
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[TMP15]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr float, ptr [[TMP15]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP31]], i64 12
 ; CHECK-NEXT:    [[TMP17:%.*]] = load float, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = load float, ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = load float, ptr [[TMP14]], align 4

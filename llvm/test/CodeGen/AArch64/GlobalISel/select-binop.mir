@@ -548,7 +548,7 @@ body:             |
     ; CHECK: liveins: $w0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64all = COPY $x1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]].sub_32
     ; CHECK-NEXT: [[LSLVWr:%[0-9]+]]:gpr32 = LSLVWr [[COPY]], [[COPY2]]
     ; CHECK-NEXT: $w0 = COPY [[LSLVWr]]
