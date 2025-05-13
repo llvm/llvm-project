@@ -116,13 +116,10 @@ entry:
 define i32 @ctz1_nusw(i32 %x) {
 ; CHECK-LABEL: @ctz1_nusw(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[AND]], 125613361
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 27
-; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[SHR]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr nusw [32 x i8], ptr @ctz7.table, i64 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;

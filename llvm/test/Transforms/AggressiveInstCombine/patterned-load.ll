@@ -141,11 +141,11 @@ define i32 @gep_load_i32_align2_const_offset_wrap(i64 %idx){
 }
 
 define i32 @gep_load_i32_align2_const_offset_nusw(i64 %idx){
-; CHECK-LABEL: @gep_load_i32_align2_const_offset_nusw(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw i16, ptr @constarray2, i64 -2
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nusw [3 x i16], ptr [[TMP1]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 2
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; LE-LABEL: @gep_load_i32_align2_const_offset_nusw(
+; LE-NEXT:    ret i32 65537
+;
+; BE-LABEL: @gep_load_i32_align2_const_offset_nusw(
+; BE-NEXT:    ret i32 16777472
 ;
   %1 = getelementptr nusw i16, ptr @constarray2, i64 -2
   %2 = getelementptr nusw [3 x i16], ptr %1, i64 %idx
