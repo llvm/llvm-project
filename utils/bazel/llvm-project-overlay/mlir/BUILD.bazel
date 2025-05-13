@@ -6159,96 +6159,6 @@ gentbl_cc_library(
     deps = [":PDLInterpOpsTdFiles"],
 )
 
-cc_library(
-    name = "PolynomialDialect",
-    srcs = glob([
-        "lib/Dialect/Polynomial/IR/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/mlir/Dialect/Polynomial/IR/*.h",
-    ]),
-    includes = ["include"],
-    deps = [
-        ":ArithDialect",
-        ":IR",
-        ":InferTypeOpInterface",
-        ":PolynomialAttributesIncGen",
-        ":PolynomialCanonicalizationIncGen",
-        ":PolynomialIncGen",
-        ":Support",
-        "//llvm:Support",
-    ],
-)
-
-td_library(
-    name = "PolynomialTdFiles",
-    srcs = glob(["include/mlir/Dialect/Polynomial/IR/*.td"]),
-    includes = ["include"],
-    deps = [
-        ":BuiltinDialectTdFiles",
-        ":InferTypeOpInterfaceTdFiles",
-        ":OpBaseTdFiles",
-        ":SideEffectInterfacesTdFiles",
-    ],
-)
-
-gentbl_cc_library(
-    name = "PolynomialIncGen",
-    tbl_outs = {
-        "include/mlir/Dialect/Polynomial/IR/Polynomial.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/Polynomial/IR/Polynomial.cpp.inc": ["-gen-op-defs"],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialDialect.h.inc": [
-            "-gen-dialect-decls",
-            "-dialect=polynomial",
-        ],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialDialect.cpp.inc": [
-            "-gen-dialect-defs",
-            "-dialect=polynomial",
-        ],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialTypes.h.inc": [
-            "--gen-typedef-decls",
-            "-typedefs-dialect=polynomial",
-        ],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialTypes.cpp.inc": [
-            "--gen-typedef-defs",
-            "-typedefs-dialect=polynomial",
-        ],
-        "g3doc/Dialects/Polynomial/Polynomial.md": ["-gen-op-doc"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Polynomial/IR/Polynomial.td",
-    deps = [":PolynomialTdFiles"],
-)
-
-gentbl_cc_library(
-    name = "PolynomialAttributesIncGen",
-    tbl_outs = {
-        "include/mlir/Dialect/Polynomial/IR/PolynomialAttributes.h.inc": [
-            "-gen-attrdef-decls",
-            "-attrdefs-dialect=polynomial",
-        ],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialAttributes.cpp.inc": [
-            "-gen-attrdef-defs",
-            "-attrdefs-dialect=polynomial",
-        ],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Polynomial/IR/Polynomial.td",
-    deps = [":PolynomialTdFiles"],
-)
-
-gentbl_cc_library(
-    name = "PolynomialCanonicalizationIncGen",
-    strip_include_prefix = "include/mlir/Dialect/Polynomial/IR",
-    tbl_outs = {"include/mlir/Dialect/Polynomial/IR/PolynomialCanonicalization.inc": ["-gen-rewriters"]},
-    tblgen = ":mlir-tblgen",
-    td_file = "lib/Dialect/Polynomial/IR/PolynomialCanonicalization.td",
-    deps = [
-        ":ArithOpsTdFiles",
-        ":PolynomialTdFiles",
-    ],
-)
-
 td_library(
     name = "PtrTdFiles",
     srcs = [
@@ -8867,7 +8777,6 @@ cc_library(
         ":PDLDialect",
         ":PDLInterpDialect",
         ":PDLToPDLInterp",
-        ":PolynomialDialect",
         ":PtrDialect",
         ":QuantOps",
         ":QuantTransforms",
