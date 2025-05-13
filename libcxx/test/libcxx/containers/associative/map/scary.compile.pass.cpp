@@ -6,22 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <set>
+// <map>
 
-// class set class multiset
+// class map
+// class multimap
 
-// Extension:  SCARY/N2913 iterator compatibility between set and multiset
+// Extension: SCARY/N2913 iterator compatibility between map and multimap
 
-#include <set>
+#include <map>
 
 #include "test_macros.h"
 
-int main(int, char**) {
-  typedef std::set<int> M1;
-  typedef std::multiset<int> M2;
-  M2::iterator i;
-  M1::iterator j = i;
-  ((void)j);
+void test() {
+  typedef std::map<int, int> M1;
+  typedef std::multimap<int, int> M2;
 
-  return 0;
+  ASSERT_SAME_TYPE(M1::iterator, M2::iterator);
+  ASSERT_SAME_TYPE(M1::const_iterator, M2::const_iterator);
 }
