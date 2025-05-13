@@ -2683,12 +2683,13 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 }
 
 static mlir::omp::CoexecuteOp
-genCoexecuteOp(Fortran::lower::AbstractConverter &converter,
-               Fortran::lower::pft::Evaluation &eval,
-               mlir::Location currentLocation,
-               const Fortran::parser::OmpClauseList &clauseList) {
+genCoexecuteOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
+            semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+            mlir::Location loc, const ConstructQueue &queue,
+            ConstructQueue::const_iterator item) {
   return genOpWithBody<mlir::omp::CoexecuteOp>(
-      converter, eval, currentLocation, /*outerCombined=*/false, &clauseList);
+    OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+                      llvm::omp::Directive::OMPD_coexecute), queue, item);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3306,7 +3307,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
                        item);
     break;
   case llvm::omp::Directive::OMPD_coexecute:
-    newOp = genCoexecuteOp(converter, eval, currentLocation, beginClauseList);
+    newOp = genCoexecuteOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_tile:
   case llvm::omp::Directive::OMPD_unroll: {

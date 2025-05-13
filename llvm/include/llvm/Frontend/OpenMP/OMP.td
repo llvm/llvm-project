@@ -2217,29 +2217,28 @@ def OMP_TargetTeams : Directive<[Spelling<"target teams">]> {
 }
 def OMP_TargetTeamsCoexecute : Directive<"target teams coexecute"> {
   let allowedClauses = [
-    VersionedClause<OMPC_If>,
-    VersionedClause<OMPC_Map>,
-    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_FirstPrivate>,
-    VersionedClause<OMPC_IsDevicePtr>,
     VersionedClause<OMPC_HasDeviceAddr, 51>,
-    VersionedClause<OMPC_Reduction>,
-    VersionedClause<OMPC_Allocate>,
-    VersionedClause<OMPC_UsesAllocators, 50>,
-    VersionedClause<OMPC_Shared>,
+    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_IsDevicePtr>,
+    VersionedClause<OMPC_Map>,
     VersionedClause<OMPC_OMPX_Attribute>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_Shared>,
+    VersionedClause<OMPC_UsesAllocators, 50>,
   ];
-
   let allowedOnceClauses = [
+    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_DefaultMap>,
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_NoWait>,
-    VersionedClause<OMPC_DefaultMap>,
-    VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_NumTeams>,
-    VersionedClause<OMPC_ThreadLimit>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_OMPX_Bare>,
+    VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_Coexecute];
   let category = CA_Executable;
@@ -2532,20 +2531,20 @@ def OMP_TaskLoopSimd : Directive<[Spelling<"taskloop simd">]> {
 }
 def OMP_TeamsCoexecute : Directive<"teams coexecute"> {
   let allowedClauses = [
-    VersionedClause<OMPC_Private>,
-    VersionedClause<OMPC_FirstPrivate>,
-    VersionedClause<OMPC_Shared>,
-    VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_OMPX_Attribute>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_Shared>,
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_If, 52>,
     VersionedClause<OMPC_NumTeams>,
-    VersionedClause<OMPC_ThreadLimit>
+    VersionedClause<OMPC_ThreadLimit>,
   ];
-  let leafConstructs = [OMP_Target, OMP_Teams];
+  let leafConstructs = [OMP_Teams, OMP_Coexecute];
   let category = CA_Executable;
 }
 def OMP_TeamsDistribute : Directive<"teams distribute"> {
