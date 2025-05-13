@@ -537,6 +537,9 @@ struct ClangDocContext {
   std::vector<std::string> JsScripts;
   // Base directory for remote repositories.
   StringRef Base;
+  // Maps mustache template types to specific mustache template files.
+  // Ex.    comment-template -> /path/to/comment-template.mustache
+  llvm::StringMap<std::string> MustacheTemplates;
   Index Idx;
 };
 

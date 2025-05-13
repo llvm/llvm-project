@@ -608,6 +608,7 @@ cc_library(
         ":DebugInfo",
         ":DebugInfoBTF",
         ":DebugInfoDWARF",
+        ":DebugInfoGSYM",
         ":DebugInfoPDB",
         ":Demangle",
         ":Object",

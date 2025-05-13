@@ -2945,7 +2945,7 @@ public:
 
   /// Retrieve the argument types.
   ArrayRef<TypeSourceInfo *> getArgs() const {
-    return llvm::ArrayRef(getTrailingObjects<TypeSourceInfo *>(), getNumArgs());
+    return getTrailingObjects<TypeSourceInfo *>(getNumArgs());
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
@@ -3619,7 +3619,7 @@ public:
                                   ArrayRef<CleanupObject> objects);
 
   ArrayRef<CleanupObject> getObjects() const {
-    return llvm::ArrayRef(getTrailingObjects<CleanupObject>(), getNumObjects());
+    return getTrailingObjects<CleanupObject>(getNumObjects());
   }
 
   unsigned getNumObjects() const { return ExprWithCleanupsBits.NumObjects; }
@@ -5126,19 +5126,19 @@ public:
   void updateDependence() { setDependence(computeDependence(this)); }
 
   MutableArrayRef<Expr *> getInitExprs() {
-    return MutableArrayRef(getTrailingObjects<Expr *>(), NumExprs);
+    return getTrailingObjects<Expr *>(NumExprs);
   }
 
   const ArrayRef<Expr *> getInitExprs() const {
-    return ArrayRef(getTrailingObjects<Expr *>(), NumExprs);
+    return getTrailingObjects<Expr *>(NumExprs);
   }
 
   ArrayRef<Expr *> getUserSpecifiedInitExprs() {
-    return ArrayRef(getTrailingObjects<Expr *>(), NumUserSpecifiedExprs);
+    return getTrailingObjects<Expr *>(NumUserSpecifiedExprs);
   }
 
   const ArrayRef<Expr *> getUserSpecifiedInitExprs() const {
-    return ArrayRef(getTrailingObjects<Expr *>(), NumUserSpecifiedExprs);
+    return getTrailingObjects<Expr *>(NumUserSpecifiedExprs);
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return LParenLoc; }

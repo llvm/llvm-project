@@ -2307,7 +2307,7 @@ bool SemaOpenMP::isInOpenMPTargetExecutionDirective() const {
 
 bool SemaOpenMP::isOpenMPRebuildMemberExpr(ValueDecl *D) {
   // Only rebuild for Field.
-  if (!dyn_cast<FieldDecl>(D))
+  if (!isa<FieldDecl>(D))
     return false;
   DSAStackTy::DSAVarData DVarPrivate = DSAStack->hasDSA(
       D,
@@ -14551,7 +14551,10 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
 
   const auto *SizesClause =
       OMPExecutableDirective::getSingleClause<OMPSizesClause>(Clauses);
-  if (!SizesClause || llvm::is_contained(SizesClause->getSizesRefs(), nullptr))
+  if (!SizesClause ||
+      llvm::any_of(SizesClause->getSizesRefs(), [](const Expr *SizeExpr) {
+        return !SizeExpr || SizeExpr->containsErrors();
+      }))
     return StmtError();
   unsigned NumLoops = SizesClause->getNumSizes();
 
