@@ -1803,6 +1803,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecExtractOpLowering,
                CIRToLLVMVecInsertOpLowering,
                CIRToLLVMVecCmpOpLowering,
+               CIRToLLVMVecSplatOpLowering,
                CIRToLLVMVecShuffleOpLowering,
                CIRToLLVMVecShuffleDynamicOpLowering,
                CIRToLLVMVecTernaryOpLowering
@@ -1953,6 +1954,61 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
   // must be sign-extended to the correct result type.
   rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(
       op, typeConverter->convertType(op.getType()), bitResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
+    cir::VecSplatOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // Vector splat can be implemented with an `insertelement` and a
+  // `shufflevector`, which is better than an `insertelement` for each
+  // element in the vector. Start with an undef vector. Insert the value into
+  // the first element. Then use a `shufflevector` with a mask of all 0 to
+  // fill out the entire vector with that value.
+  const auto vecTy = mlir::cast<cir::VectorType>(op.getType());
+  const mlir::Type llvmTy = typeConverter->convertType(vecTy);
+  const mlir::Location loc = op.getLoc();
+  const mlir::Value poison = rewriter.create<mlir::LLVM::PoisonOp>(loc, llvmTy);
+
+  const mlir::Value elementValue = adaptor.getValue();
+  if (mlir::isa<mlir::LLVM::PoisonOp>(elementValue.getDefiningOp())) {
+    // If the splat value is poison, then we can just use poison value
+    // for the entire vector.
+    rewriter.replaceOp(op, poison);
+    return mlir::success();
+  }
+
+  if (auto constValue =
+          dyn_cast<mlir::LLVM::ConstantOp>(elementValue.getDefiningOp())) {
+    if (auto intAttr = dyn_cast<mlir::IntegerAttr>(constValue.getValue())) {
+      mlir::DenseIntElementsAttr denseVec = mlir::DenseIntElementsAttr::get(
+          mlir::cast<mlir::ShapedType>(llvmTy), intAttr.getValue());
+
+      const mlir::Value indexValue = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, denseVec.getType(), denseVec);
+      rewriter.replaceOp(op, indexValue);
+      return mlir::success();
+    }
+
+    if (auto fpAttr = dyn_cast<mlir::FloatAttr>(constValue.getValue())) {
+      mlir::DenseFPElementsAttr denseVec = mlir::DenseFPElementsAttr::get(
+          mlir::cast<mlir::ShapedType>(llvmTy), fpAttr.getValue());
+
+      const mlir::Value indexValue = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, denseVec.getType(), denseVec);
+      rewriter.replaceOp(op, indexValue);
+      return mlir::success();
+    }
+  }
+
+  const mlir::Value indexValue =
+      rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), 0);
+  const mlir::Value oneElement = rewriter.create<mlir::LLVM::InsertElementOp>(
+      loc, poison, elementValue, indexValue);
+  const SmallVector<int32_t> zeroValues(vecTy.getSize(), 0);
+  const mlir::Value shuffled = rewriter.create<mlir::LLVM::ShuffleVectorOp>(
+      loc, oneElement, poison, zeroValues);
+  rewriter.replaceOp(op, shuffled);
   return mlir::success();
 }
 
