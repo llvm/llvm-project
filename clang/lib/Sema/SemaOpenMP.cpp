@@ -9648,6 +9648,13 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
                 DSAStackTy &DSA,
                 SemaOpenMP::VarsWithInheritedDSAType &VarsWithImplicitDSA,
                 OMPLoopBasedDirective::HelperExprs &Built) {
+  // If either of the loop expressions exist and contain errors, we bail out
+  // early because diagnostics have already been emitted and we can't reliably
+  // check more about the loop.
+  if ((CollapseLoopCountExpr && CollapseLoopCountExpr->containsErrors()) ||
+      (OrderedLoopCountExpr && OrderedLoopCountExpr->containsErrors()))
+    return 0;
+
   unsigned NestedLoopCount = 1;
   bool SupportsNonPerfectlyNested = (SemaRef.LangOpts.OpenMP >= 50) &&
                                     !isOpenMPLoopTransformationDirective(DKind);
@@ -15937,6 +15944,13 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
         << E->getSourceRange();
     return ExprError();
   }
+
+  if (!Result.isRepresentableByInt64()) {
+    Diag(E->getExprLoc(), diag::err_omp_large_expression_in_clause)
+        << getOpenMPClauseNameForDiag(CKind) << E->getSourceRange();
+    return ExprError();
+  }
+
   if (CKind == OMPC_collapse && DSAStack->getAssociatedLoops() == 1)
     DSAStack->setAssociatedLoops(Result.getExtValue());
   else if (CKind == OMPC_ordered)

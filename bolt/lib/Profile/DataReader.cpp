@@ -358,12 +358,12 @@ void DataReader::readProfile(BinaryFunction &BF) {
     return;
 
   if (!hasLBR()) {
-    BF.ProfileFlags = BinaryFunction::PF_IP;
+    BF.ProfileFlags = BinaryFunction::PF_BASIC;
     readBasicSampleData(BF);
     return;
   }
 
-  BF.ProfileFlags = BinaryFunction::PF_LBR;
+  BF.ProfileFlags = BinaryFunction::PF_BRANCH;
 
   // Possibly assign/re-assign branch profile data.
   matchProfileData(BF);
@@ -1035,9 +1035,8 @@ ErrorOr<BasicSampleInfo> DataReader::parseSampleInfo() {
 }
 
 ErrorOr<bool> DataReader::maybeParseNoLBRFlag() {
-  if (ParsingBuf.size() < 6 || ParsingBuf.substr(0, 6) != "no_lbr")
+  if (!ParsingBuf.consume_front("no_lbr"))
     return false;
-  ParsingBuf = ParsingBuf.drop_front(6);
   Col += 6;
 
   if (ParsingBuf.size() > 0 && ParsingBuf[0] == ' ')
@@ -1058,9 +1057,8 @@ ErrorOr<bool> DataReader::maybeParseNoLBRFlag() {
 }
 
 ErrorOr<bool> DataReader::maybeParseBATFlag() {
-  if (ParsingBuf.size() < 16 || ParsingBuf.substr(0, 16) != "boltedcollection")
+  if (!ParsingBuf.consume_front("boltedcollection"))
     return false;
-  ParsingBuf = ParsingBuf.drop_front(16);
   Col += 16;
 
   if (!checkAndConsumeNewLine()) {

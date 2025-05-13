@@ -224,7 +224,7 @@ static Value getMemRefOperand(LoadOrStoreOpTy op) {
 }
 
 static Value getMemRefOperand(vector::TransferReadOp op) {
-  return op.getSource();
+  return op.getBase();
 }
 
 static Value getMemRefOperand(nvgpu::LdMatrixOp op) {
@@ -240,7 +240,7 @@ static Value getMemRefOperand(vector::MaskedLoadOp op) { return op.getBase(); }
 static Value getMemRefOperand(vector::MaskedStoreOp op) { return op.getBase(); }
 
 static Value getMemRefOperand(vector::TransferWriteOp op) {
-  return op.getSource();
+  return op.getBase();
 }
 
 static Value getMemRefOperand(gpu::SubgroupMmaLoadMatrixOp op) {
