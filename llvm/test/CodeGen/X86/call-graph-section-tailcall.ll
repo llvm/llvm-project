@@ -9,7 +9,7 @@ entry:
   ret i32 %call
 }
 
-define dso_local i32 @main(i32 %argc) local_unnamed_addr !type !3 {
+define i32 @main(i32 %argc) local_unnamed_addr !type !3 {
 entry:
   %0 = and i32 %argc, 1
   %cmp = icmp eq i32 %0, 0

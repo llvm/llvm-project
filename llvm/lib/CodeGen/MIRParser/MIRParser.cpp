@@ -518,7 +518,7 @@ bool MIRParserImpl::initializeCallSiteInfo(
 
   if (!YamlMF.CallSitesInfo.empty() &&
       !(TM.Options.EmitCallSiteInfo || TM.Options.EmitCallGraphSection))
-    return error(Twine("call site info provided but not used"));
+    return error("call site info provided but not used");
   return false;
 }
 

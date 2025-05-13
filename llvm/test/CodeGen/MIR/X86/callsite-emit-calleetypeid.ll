@@ -81,13 +81,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @foo(i8 signext %a) !type !3 {
+define void @foo(i8 signext %a) !type !3 {
 entry:
   ret void
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32 @main() !type !4 {
+define i32 @main() !type !4 {
 entry:
   %retval = alloca i32, align 4
   %fp = alloca ptr, align 8
