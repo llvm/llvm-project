@@ -31,4 +31,4 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ; DXC-NEXT:          Descriptor:
 ; DXC-NEXT:            RegisterSpace: 2
 ; DXC-NEXT:            ShaderRegister: 1
-; DXC:            DATA_VOLATILE: true
+; DXC-NEXT:            DATA_VOLATILE: true
