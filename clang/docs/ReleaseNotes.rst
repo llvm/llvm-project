@@ -291,6 +291,8 @@ Non-comprehensive list of changes in this release
   different than before.
 - Fixed a crash when a VLA with an invalid size expression was used within a
   ``sizeof`` or ``typeof`` expression. (#GH138444)
+- Added `__builtin_get_vtable_pointer` to directly load the primary vtable pointer from a
+  polymorphic object.
 
 New Compiler Flags
 ------------------
