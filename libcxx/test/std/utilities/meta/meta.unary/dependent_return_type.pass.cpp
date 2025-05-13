@@ -168,3 +168,6 @@ void instantiate() {
   void_t<int>();
 #endif
 }
+
+// This is not a .compile.pass.cpp, because GCC only complains in CodeGen about incorrect builtins usage
+int main() {}

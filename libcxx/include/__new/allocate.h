@@ -33,7 +33,7 @@ _LIBCPP_CONSTEXPR inline _LIBCPP_HIDE_FROM_ABI bool __is_overaligned_for_new(siz
 
 template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI void* __libcpp_operator_new(_Args... __args) {
-#if __has_builtin(__builtin_operator_new) && __has_builtin(__builtin_operator_delete)
+#if __has_builtin(__builtin_operator_new) && __has_builtin(__builtin_operator_delete) && !defined(_LIBCPP_COMPILER_GCC)
   return __builtin_operator_new(__args...);
 #else
   return ::operator new(__args...);
@@ -42,7 +42,7 @@ _LIBCPP_HIDE_FROM_ABI void* __libcpp_operator_new(_Args... __args) {
 
 template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI void __libcpp_operator_delete(_Args... __args) _NOEXCEPT {
-#if __has_builtin(__builtin_operator_new) && __has_builtin(__builtin_operator_delete)
+#if __has_builtin(__builtin_operator_new) && __has_builtin(__builtin_operator_delete) && !defined(_LIBCPP_COMPILER_GCC)
   __builtin_operator_delete(__args...);
 #else
   ::operator delete(__args...);
