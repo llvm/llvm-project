@@ -261,8 +261,9 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
     const CIRGenFunctionInfo &fi = getTypes().arrangeCIRFunctionInfo(
         noProto->getReturnType(), {}, RequiredArgs::All);
     funcType = getTypes().getFunctionType(fi);
-  } else
+  } else {
     funcType = cast<cir::FuncType>(convertType(funcDecl->getType()));
+  }
 
   cir::FuncOp funcOp = dyn_cast_if_present<cir::FuncOp>(op);
   if (!funcOp || funcOp.getFunctionType() != funcType) {
