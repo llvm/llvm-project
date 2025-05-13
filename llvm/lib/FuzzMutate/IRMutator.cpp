@@ -356,7 +356,13 @@ static uint64_t getUniqueCaseValue(SmallSet<uint64_t, 4> &CasesTaken,
   return tmp;
 }
 
-bool InsertFunctionStrategy::isUnsupportedFunction(Function *F) {
+/// Determines whether a function is unsupported by the current mutator's
+/// implementation. The function returns true if any of the following criteria
+/// are met:
+///   * The function accepts metadata or token types as arguments.
+///   * The function has ABI attributes that could cause UB.
+///   * The function uses a non-callable CC that may result in UB.
+static bool isUnsupportedFunction(Function *F) {
   // Some functions accept metadata type or token type as arguments.
   // We don't call those functions for now.
   // For example, `@llvm.dbg.declare(metadata, metadata, metadata)`
@@ -368,6 +374,34 @@ bool InsertFunctionStrategy::isUnsupportedFunction(Function *F) {
   if (IsUnsupportedTy(F->getReturnType()) ||
       any_of(F->getFunctionType()->params(), IsUnsupportedTy)) {
     return true;
+  }
+
+  // ABI attributes must be specified both at the function
+  // declaration/definition and call-site, otherwise the
+  // behavior may be undefined.
+  // We don't call those functions for now to prevent UB from happening.
+  auto IsABIAttribute = [](AttributeSet A) {
+    static const Attribute::AttrKind ABIAttrs[] = {
+        Attribute::StructRet,      Attribute::ByVal,
+        Attribute::InAlloca,       Attribute::InReg,
+        Attribute::StackAlignment, Attribute::SwiftSelf,
+        Attribute::SwiftAsync,     Attribute::SwiftError,
+        Attribute::Preallocated,   Attribute::ByRef,
+        Attribute::ZExt,           Attribute::SExt};
+
+    return std::any_of(
+        std::begin(ABIAttrs), std::end(ABIAttrs),
+        [&](Attribute::AttrKind kind) { return A.hasAttribute(kind); });
+  };
+
+  auto FuncAttrs = F->getAttributes();
+  if (IsABIAttribute(FuncAttrs.getRetAttrs())) {
+    return true;
+  }
+  for (size_t i = 0; i < F->arg_size(); i++) {
+    if (IsABIAttribute(FuncAttrs.getParamAttrs(i))) {
+      return true;
+    }
   }
 
   // If it is not satisfied, the IR will be invalid.
