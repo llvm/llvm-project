@@ -18,9 +18,9 @@ declare void @llvm.amdgcn.s.barrier() #2
 ; SI-ALLOCA: v_lshlrev_b32_e32 [[SIZE_SCALE:v[0-9]+]], 2, [[LOAD_A]]
 
 ; SI-ALLOCA: v_mov_b32_e32 [[PTRREG:v[0-9]+]], [[SIZE_SCALE]]
-; SI-ALLOCA: buffer_store_dword {{v[0-9]+}}, [[PTRREG]], s[{{[0-9]+:[0-9]+}}], 0 offen offset:64
+; SI-ALLOCA: buffer_store_dword {{v[0-9]+}}, [[PTRREG]], s[{{[0-9]+:[0-9]+}}], 0 offen
 ; SI-ALLOCA: s_barrier
-; SI-ALLOCA: buffer_load_dword {{v[0-9]+}}, [[PTRREG]], s[{{[0-9]+:[0-9]+}}], 0 offen offset:64
+; SI-ALLOCA: buffer_load_dword {{v[0-9]+}}, [[PTRREG]], s[{{[0-9]+:[0-9]+}}], 0 offen
 ;
 ; SI-PROMOTE: LDSByteSize: 0
 define amdgpu_kernel void @test_private_array_ptr_calc(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %inA, ptr addrspace(1) noalias %inB) #0 {
@@ -32,7 +32,7 @@ define amdgpu_kernel void @test_private_array_ptr_calc(ptr addrspace(1) noalias 
   %a = load i32, ptr addrspace(1) %a_ptr, !range !0, !noundef !{}
   %b = load i32, ptr addrspace(1) %b_ptr, !range !0, !noundef !{}
   %result = add i32 %a, %b
-  %alloca_ptr = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 1, i32 %b
+  %alloca_ptr = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %b
   store i32 %result, ptr addrspace(5) %alloca_ptr, align 4
   ; Dummy call
   call void @llvm.amdgcn.s.barrier()

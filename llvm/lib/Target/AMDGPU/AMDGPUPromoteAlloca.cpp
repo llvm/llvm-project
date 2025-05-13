@@ -438,7 +438,8 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   SmallMapVector<Value *, APInt, 4> VarOffsets;
   APInt ConstOffset(BW, 0);
   if (GEP->getPointerOperand()->stripPointerCasts() != Alloca ||
-      !GEP->collectOffset(DL, BW, VarOffsets, ConstOffset))
+      !GEP->collectOffset(DL, BW, VarOffsets, ConstOffset) ||
+      ConstOffset.getZExtValue() >= Alloca->getAllocationSize(DL))
     return nullptr;
 
   unsigned VecElemSize = DL.getTypeAllocSize(VecElemTy);
