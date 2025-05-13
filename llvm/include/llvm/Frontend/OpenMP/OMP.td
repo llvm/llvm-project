@@ -271,6 +271,10 @@ def OMPC_Linear : Clause<"linear"> {
 def OMPC_Link : Clause<"link"> {
   let flangClass = "OmpObjectList";
 }
+def OMPC_LoopRange : Clause<"looprange"> {
+  let clangClass = "OMPLoopRangeClause";
+  let flangClass = "OmpLoopRangeClause";
+}
 def OMPC_Map : Clause<"map"> {
   let clangClass = "OMPMapClause";
   let flangClass = "OmpMapClause";
@@ -838,6 +842,13 @@ def OMP_For : Directive<"for"> {
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_Schedule>,
+  ];
+  let association = AS_Loop;
+  let category = CA_Executable;
+}
+def OMP_Fuse : Directive<"fuse"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_LoopRange, 60>
   ];
   let association = AS_Loop;
   let category = CA_Executable;
