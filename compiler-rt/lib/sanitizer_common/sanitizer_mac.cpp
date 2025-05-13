@@ -38,13 +38,6 @@
 extern char **environ;
 #  endif
 
-#  if defined(__has_include) && __has_include(<os/trace.h>)
-#    define SANITIZER_OS_TRACE 1
-#    include <os/trace.h>
-#  else
-#    define SANITIZER_OS_TRACE 0
-#  endif
-
 // Integrate with CrashReporter library if available
 #  if defined(__has_include) && __has_include(<CrashReporterClient.h>)
 #    define HAVE_CRASHREPORTERCLIENT_H 1
@@ -844,9 +837,7 @@ void LogMessageOnPrintf(const char *str) {
 
 void LogFullErrorReport(const char *buffer) {
 #if !SANITIZER_GO
-#    if SANITIZER_OS_TRACE
   // Log with os_log_error. This will make it into the crash log.
-  if (GetMacosAlignedVersion() >= MacosVersion(10, 12)) {
     if (internal_strncmp(SanitizerToolName, "AddressSanitizer",
                          sizeof("AddressSanitizer") - 1) == 0)
       os_log_error(OS_LOG_DEFAULT, "Address Sanitizer reported a failure.");
@@ -862,8 +853,6 @@ void LogFullErrorReport(const char *buffer) {
 
     if (common_flags()->log_to_syslog)
       os_log_error(OS_LOG_DEFAULT, "Consult syslog for more information.");
-  }
-#    endif  // SANITIZER_OS_TRACE
 
   // Log to syslog.
   // The logging on OS X may call pthread_create so we need the threading
