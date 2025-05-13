@@ -3680,19 +3680,15 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     if (!UnderRuntimeAssumptions)
       return std::make_unique<Dependence>(Src, Dst,
                                           SCEVUnionPredicate(Assume, *SE));
-    if (Assumptions.empty()) {
-      Assumptions.append(Assume.begin(), Assume.end());
-    } else {
-      // Add non-redundant assumptions.
-      unsigned N = Assumptions.size();
-      for (const SCEVPredicate *P : Assume) {
-        bool Implied = false;
-        for (unsigned I = 0; I != N && !Implied; I++)
-          if (Assumptions[I]->implies(P, *SE))
-            Implied = true;
-        if (!Implied)
-          Assumptions.push_back(P);
-      }
+    // Add non-redundant assumptions.
+    unsigned N = Assumptions.size();
+    for (const SCEVPredicate *P : Assume) {
+      bool Implied = false;
+      for (unsigned I = 0; I != N && !Implied; I++)
+        if (Assumptions[I]->implies(P, *SE))
+          Implied = true;
+      if (!Implied)
+        Assumptions.push_back(P);
     }
   }
 
