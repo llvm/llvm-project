@@ -103,7 +103,6 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
                                   memref::CollapseShapeOp collapseShapeOp,
                                   ValueRange indices,
                                   SmallVectorImpl<Value> &sourceIndices) {
-  MemRefType sourceType = collapseShapeOp.getSrcType();
   // Note: collapse_shape requires a strided memref, we can do this.
   auto metadata = rewriter.create<memref::ExtractStridedMetadataOp>(
       loc, collapseShapeOp.getSrc());
