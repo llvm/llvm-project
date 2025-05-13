@@ -142,6 +142,13 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     }
   }
 
+  if (CSF.LowPrecisionPresent) {
+    if (NativeLowPrecisionAvailable)
+      CSF.NativeLowPrecision = true;
+    else
+      CSF.MinimumPrecision = true;
+  }
+
   if (!CSF.Int64Ops)
     CSF.Int64Ops = I.getType()->isIntegerTy(64);
 
@@ -206,13 +213,20 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
                                    const ModuleMetadataInfo &MMDI) {
 
   CanSetResMayNotAlias = MMDI.DXILVersion >= VersionTuple(1, 7);
-
-  // Check if -res-may-alias was provided on the command line.
-  // The command line option will set the dx.resmayalias module flag to 1.
+  // The command line option -res-may-alias will set the dx.resmayalias module
+  // flag to 1 and disable the ability to set the ResMayNotAlias flag
   if (auto *RMA = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("dx.resmayalias")))
     if (RMA->getValue() != 0)
       CanSetResMayNotAlias = false;
+
+  // Set UseNativeLowPrecision using the dx.nativelowprec module flag set by
+  // the command line option -enable-16bit-types
+  if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("dx.nativelowprec")))
+    if (MMDI.ShaderModelVersion >= VersionTuple(6, 2) &&
+        NativeLowPrec->getValue() != 0)
+      NativeLowPrecisionAvailable = true;
 
   CallGraph CG(M);
 
@@ -242,13 +256,6 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
       // are UAVs present globally.
       if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
         SCCSF.ResMayNotAlias = !DRM.uavs().empty();
-
-      // Set UseNativeLowPrecision using dx.nativelowprec module metadata
-      if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
-              M.getModuleFlag("dx.nativelowprec")))
-        if (MMDI.ShaderModelVersion >= VersionTuple(6, 2) &&
-            NativeLowPrec->getValue() != 0)
-          SCCSF.UseNativeLowPrecision = true;
 
       ComputedShaderFlags CSF;
       for (const auto &BB : *F)
@@ -295,14 +302,6 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
       NumUAVs += UAV.getBinding().Size;
   if (NumUAVs > 8)
     CombinedSFMask.Max64UAVs = true;
-
-  // Set the Shader Feature Info flags related to low-precision datatypes
-  if (CombinedSFMask.LowPrecisionPresent) {
-    if (CombinedSFMask.UseNativeLowPrecision)
-      CombinedSFMask.NativeLowPrecision = true;
-    else
-      CombinedSFMask.MinimumPrecision = true;
-  }
 
   CombinedSFMask.UAVsAtEveryStage = hasUAVsAtEveryStage(DRM, MMDI);
 }

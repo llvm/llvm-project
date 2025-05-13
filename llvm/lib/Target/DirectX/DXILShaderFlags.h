@@ -92,6 +92,7 @@ struct ModuleShaderFlags {
 
 private:
   bool CanSetResMayNotAlias;
+  bool NativeLowPrecisionAvailable;
   /// Map of Function-Shader Flag Mask pairs representing properties of each of
   /// the functions in the module. Shader Flags of each function represent both
   /// module-level and function-level flags

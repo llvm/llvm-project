@@ -14,7 +14,6 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ;CHECK-NEXT: ;       Use native low precision
 ;CHECK-NEXT: ; Note: extra DXIL module flags:
 ;CHECK-NEXT: ;       Low-precision data types
-;CHECK-NEXT: ;       Use native low precision
 ;CHECK-NEXT: ;
 ;CHECK-NEXT: ; Shader Flags for Module Functions
 
@@ -24,10 +23,10 @@ define i16 @add_i16(i16 %a, i16 %b) "hlsl.export" {
   ret i16 %sum
 }
 
-; NOTE: The flag for native low precision (0x80000) is set for every function
-; in the module regardless of whether or not the function uses low precision
-; data types (flag 0x20). This matches the behavior in DXC
-;CHECK-LABEL: ; Function add_i32 : 0x00800000
+; NOTE: In DXC, the flag for native low precision (0x80000) is set for every
+; function in the module regardless of whether or not the function uses low
+; precision data types (flag 0x20). However, this will not be the case for Clang
+;CHECK-LABEL: ; Function add_i32 : 0x00000000
 define i32 @add_i32(i32 %a, i32 %b) "hlsl.export" {
   %sum = add i32 %a, %b
   ret i32 %sum
