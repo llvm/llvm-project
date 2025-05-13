@@ -2796,8 +2796,7 @@ static SDValue convertFromScalableVector(EVT VT, SDValue V, SelectionDAG &DAG,
   assert(V.getValueType().isScalableVector() &&
          "Expected a scalable vector operand!");
   SDLoc DL(V);
-  SDValue Zero = DAG.getConstant(0, DL, Subtarget.getXLenVT());
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, V, Zero);
+  return DAG.getExtractSubvector(DL, VT, V, 0);
 }
 
 /// Return the type of the mask type suitable for masking the provided
@@ -3906,8 +3905,7 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
       // our final mask.
       assert(IntegerViaVecVT == MVT::v1i8 && "Unexpected mask vector type");
       Vec = DAG.getBitcast(MVT::v8i1, Vec);
-      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Vec,
-                        DAG.getConstant(0, DL, XLenVT));
+      Vec = DAG.getExtractSubvector(DL, VT, Vec, 0);
     } else {
       // Else we must have produced an integer type with the same size as the
       // mask type; bitcast for the final result.
@@ -3970,9 +3968,7 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
                               DAG.getSignedConstant(SplatValue, DL, XLenVT),
                               DAG.getVectorIdxConstant(0, DL));
     if (ViaVecLen != 1)
-      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL,
-                        MVT::getVectorVT(ViaIntVT, 1), Vec,
-                        DAG.getConstant(0, DL, XLenVT));
+      Vec = DAG.getExtractSubvector(DL, MVT::getVectorVT(ViaIntVT, 1), Vec, 0);
     return DAG.getBitcast(VT, Vec);
   }
 
@@ -4040,9 +4036,8 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
                       DAG.getSignedConstant(SplatValue, DL, XLenVT), ViaVL);
       Splat = convertFromScalableVector(ViaVecVT, Splat, DAG, Subtarget);
       if (ViaVecLen != RequiredVL)
-        Splat = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL,
-                            MVT::getVectorVT(ViaIntVT, RequiredVL), Splat,
-                            DAG.getConstant(0, DL, XLenVT));
+        Splat = DAG.getExtractSubvector(
+            DL, MVT::getVectorVT(ViaIntVT, RequiredVL), Splat, 0);
       return DAG.getBitcast(VT, Splat);
     }
   }
@@ -4876,10 +4871,8 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
       getVSlidedown(DAG, Subtarget, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
                     convertToScalableVector(ContainerVT, Src, DAG, Subtarget),
                     DAG.getConstant(NewMask[0], DL, XLenVT), TrueMask, VL);
-  return DAG.getNode(
-      ISD::EXTRACT_SUBVECTOR, DL, VT,
-      convertFromScalableVector(SrcVT, Slidedown, DAG, Subtarget),
-      DAG.getConstant(0, DL, XLenVT));
+  return DAG.getExtractSubvector(
+      DL, VT, convertFromScalableVector(SrcVT, Slidedown, DAG, Subtarget), 0);
 }
 
 // Because vslideup leaves the destination elements at the start intact, we can
@@ -6078,12 +6071,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       SDValue SubVec = DAG.getNode(GatherVVOpc, DL, M1VT, SubV1, SubIndex,
                                    DAG.getUNDEF(M1VT), InnerTrueMask, InnerVL);
       SDValue Gather = DAG.getUNDEF(ContainerVT);
-      for (int i = 0; i < N; i++) {
-        SDValue SubIdx =
-            DAG.getVectorIdxConstant(M1VT.getVectorMinNumElements() * i, DL);
-        Gather = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Gather,
-                             SubVec, SubIdx);
-      }
+      for (int i = 0; i < N; i++)
+        Gather = DAG.getInsertSubvector(DL, Gather, SubVec,
+                                        M1VT.getVectorMinNumElements() * i);
       return convertFromScalableVector(VT, Gather, DAG, Subtarget);
     }
 
@@ -6107,10 +6097,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         SDValue SubVec =
             DAG.getNode(GatherVVOpc, DL, M1VT, SubV1, SubIndex,
                         DAG.getUNDEF(M1VT), InnerTrueMask, InnerVL);
-        SDValue SubIdx =
-            DAG.getVectorIdxConstant(M1VT.getVectorMinNumElements() * i, DL);
-        Gather = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Gather,
-                             SubVec, SubIdx);
+        Gather = DAG.getInsertSubvector(DL, Gather, SubVec,
+                                        M1VT.getVectorMinNumElements() * i);
       }
       return convertFromScalableVector(VT, Gather, DAG, Subtarget);
     }
@@ -9623,7 +9611,6 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
 
   // If we know the index we're going to insert at, we can shrink Vec so that
   // we're performing the scalar inserts and slideup on a smaller LMUL.
-  MVT OrigContainerVT = ContainerVT;
   SDValue OrigVec = Vec;
   std::optional<unsigned> AlignedIdx;
   if (auto *IdxC = dyn_cast<ConstantSDNode>(Idx)) {
@@ -11211,8 +11198,7 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
       assert(VLen);
       unsigned Vscale = *VLen / RISCV::RVVBitsPerBlock;
       SDValue Insert =
-          DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVecVT, Vec, SubVec,
-                      DAG.getConstant(OrigIdx / Vscale, DL, XLenVT));
+          DAG.getInsertSubvector(DL, Vec, SubVec, OrigIdx / Vscale);
       if (VecVT.isFixedLengthVector())
         Insert = convertFromScalableVector(VecVT, Insert, DAG, Subtarget);
       return Insert;
@@ -11408,8 +11394,8 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
     if (SubVecVT.isFixedLengthVector()) {
       assert(VLen);
       unsigned Vscale = *VLen / RISCV::RVVBitsPerBlock;
-      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerSubVecVT, Vec,
-                        DAG.getConstant(OrigIdx / Vscale, DL, XLenVT));
+      Vec =
+          DAG.getExtractSubvector(DL, ContainerSubVecVT, Vec, OrigIdx / Vscale);
       return convertFromScalableVector(SubVecVT, Vec, DAG, Subtarget);
     }
     return Op;
@@ -11436,8 +11422,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
       Idx /= *VLen / RISCV::RVVBitsPerBlock;
     }
     InterSubVT = getLMUL1VT(VecVT);
-    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InterSubVT, Vec,
-                      DAG.getConstant(Idx, DL, XLenVT));
+    Vec = DAG.getExtractSubvector(DL, InterSubVT, Vec, Idx);
   }
 
   // Slide this vector register down by the desired number of elements in order

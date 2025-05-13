@@ -303,6 +303,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMVecExtractOpLowering
+    : public mlir::OpConversionPattern<cir::VecExtractOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecExtractOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecExtractOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 } // namespace direct
 } // namespace cir
 
