@@ -2040,7 +2040,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
   if (windowsRequiresStackProbe(MF, NumBytes + RealignmentPadding)) {
     if (AFI->getSVECalleeSavedStackSize())
-      report_fatal_error("SVE callee saves not yet supported with stack probing");
+      report_fatal_error(
+          "SVE callee saves not yet supported with stack probing");
     uint64_t NumWords = (NumBytes + RealignmentPadding) >> 4;
     if (NeedsWinCFI) {
       HasWinCFI = true;
@@ -2686,7 +2687,8 @@ AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
   bool FPAfterSVECalleeSaves =
       isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
   if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
-    if (FPAfterSVECalleeSaves && -ObjectOffset <= AFI->getSVECalleeSavedStackSize())
+    if (FPAfterSVECalleeSaves &&
+        -ObjectOffset <= (int64_t)AFI->getSVECalleeSavedStackSize())
       return StackOffset::get(0, ObjectOffset);
     return StackOffset::get(-((int64_t)AFI->getCalleeSavedStackSize()),
                             ObjectOffset);
@@ -2844,6 +2846,8 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       isTargetWindows(MF) && AFI->getSVECalleeSavedStackSize();
 
   if (isSVE) {
+    assert(-ObjectOffset > (int64_t)AFI->getSVECalleeSavedStackSize() &&
+          "Math isn't correct for CSRs with FPAfterSVECalleeSaves");
     StackOffset FPOffset =
         StackOffset::get(-AFI->getCalleeSaveBaseToFrameRecordOffset(), ObjectOffset);
     StackOffset SPOffset =
