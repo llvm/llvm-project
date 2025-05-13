@@ -17,23 +17,23 @@
 #include <tuple>
 
 #include "TestTraits.h"
-#include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 
+// generated files require above includes to come first
 #include "TestAttrInterfaces.h.inc"
 #include "TestOpEnums.h.inc"
-#include "mlir/IR/DialectResourceBlobManager.h"
 
 namespace test {
 class TestDialect;
 // Payload class for the CopyCountAttr.
 class CopyCount {
-public:
+ public:
   CopyCount(std::string value) : value(value) {}
   CopyCount(const CopyCount &rhs);
   CopyCount &operator=(const CopyCount &rhs);
@@ -48,9 +48,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 /// A handle used to reference external elements instances.
 using TestDialectResourceBlobHandle =
     mlir::DialectResourceBlobHandle<TestDialect>;
-} // namespace test
+}  // namespace test
 
 #define GET_ATTRDEF_CLASSES
 #include "TestAttrDefs.h.inc"
 
-#endif // MLIR_TESTATTRIBUTES_H
+#endif  // MLIR_TESTATTRIBUTES_H
