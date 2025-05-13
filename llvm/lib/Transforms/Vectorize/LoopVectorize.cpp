@@ -7788,12 +7788,12 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
          "Trying to execute plan with unsupported VF");
   assert(BestVPlan.hasUF(BestUF) &&
          "Trying to execute plan with unsupported UF");
-  VPlanTransforms::materializeStepVectors(BestVPlan);
+  VPlanTransforms::runPass(VPlanTransforms::materializeStepVectors, BestVPlan);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
                            OrigLoop->getHeader()->getContext());
-  VPlanTransforms::materializeBroadcasts(BestVPlan);
+  VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
   VPlanTransforms::narrowInterleaveGroups(
@@ -9100,7 +9100,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       if (!HasScalarVF)
         VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
                                  *Plan, CM.getMinimalBitwidths());
-      VPlanTransforms::optimize(*Plan);
+      VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
       // TODO: try to put it close to addActiveLaneMask().
       // Discard the plan if it is not EVL-compatible
       if (CM.foldTailWithEVL() && !HasScalarVF &&

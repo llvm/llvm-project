@@ -94,6 +94,28 @@ json::Value toJSON(const ExceptionBreakpointsFilter &EBF) {
   return result;
 }
 
+bool fromJSON(const json::Value &Params, ColumnType &CT, json::Path P) {
+  auto rawColumnType = Params.getAsString();
+  if (!rawColumnType) {
+    P.report("expected a string");
+    return false;
+  }
+  std::optional<ColumnType> columnType =
+      StringSwitch<std::optional<ColumnType>>(*rawColumnType)
+          .Case("string", eColumnTypeString)
+          .Case("number", eColumnTypeNumber)
+          .Case("boolean", eColumnTypeBoolean)
+          .Case("unixTimestampUTC ", eColumnTypeTimestamp)
+          .Default(std::nullopt);
+  if (!columnType) {
+    P.report("unexpected value, expected 'string', 'number',  'boolean', or "
+             "'unixTimestampUTC'");
+    return false;
+  }
+  CT = *columnType;
+  return true;
+}
+
 json::Value toJSON(const ColumnType &T) {
   switch (T) {
   case eColumnTypeString:
@@ -106,6 +128,14 @@ json::Value toJSON(const ColumnType &T) {
     return "unixTimestampUTC";
   }
   llvm_unreachable("unhandled column type.");
+}
+
+bool fromJSON(const llvm::json::Value &Params, ColumnDescriptor &CD,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("attributeName", CD.attributeName) &&
+         O.map("label", CD.label) && O.mapOptional("format", CD.format) &&
+         O.mapOptional("type", CD.type) && O.mapOptional("width", CD.width);
 }
 
 json::Value toJSON(const ColumnDescriptor &CD) {
@@ -149,6 +179,30 @@ json::Value toJSON(const BreakpointModeApplicability &BMA) {
   llvm_unreachable("unhandled breakpoint mode applicability.");
 }
 
+bool fromJSON(const llvm::json::Value &Params, BreakpointModeApplicability &BMA,
+              llvm::json::Path P) {
+  auto rawApplicability = Params.getAsString();
+  if (!rawApplicability) {
+    P.report("expected a string");
+    return false;
+  }
+  std::optional<BreakpointModeApplicability> applicability =
+      llvm::StringSwitch<std::optional<BreakpointModeApplicability>>(
+          *rawApplicability)
+          .Case("source", eBreakpointModeApplicabilitySource)
+          .Case("exception", eBreakpointModeApplicabilityException)
+          .Case("data", eBreakpointModeApplicabilityData)
+          .Case("instruction", eBreakpointModeApplicabilityInstruction)
+          .Default(std::nullopt);
+  if (!applicability) {
+    P.report("unexpected value, expected 'source', 'exception', 'data', or "
+             "'instruction'");
+    return false;
+  }
+  BMA = *applicability;
+  return true;
+}
+
 json::Value toJSON(const BreakpointMode &BM) {
   json::Object result{
       {"mode", BM.mode},
@@ -160,6 +214,14 @@ json::Value toJSON(const BreakpointMode &BM) {
     result.insert({"description", *BM.description});
 
   return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, BreakpointMode &BM,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("mode", BM.mode) && O.map("label", BM.label) &&
+         O.mapOptional("description", BM.description) &&
+         O.map("appliesTo", BM.appliesTo);
 }
 
 static llvm::StringLiteral ToString(AdapterFeature feature) {
@@ -320,6 +382,26 @@ llvm::json::Value toJSON(const BreakpointReason &BR) {
   llvm_unreachable("unhandled breakpoint reason.");
 }
 
+bool fromJSON(const llvm::json::Value &Params, BreakpointReason &BR,
+              llvm::json::Path P) {
+  auto rawReason = Params.getAsString();
+  if (!rawReason) {
+    P.report("expected a string");
+    return false;
+  }
+  std::optional<BreakpointReason> reason =
+      llvm::StringSwitch<std::optional<BreakpointReason>>(*rawReason)
+          .Case("pending", BreakpointReason::eBreakpointReasonPending)
+          .Case("failed", BreakpointReason::eBreakpointReasonFailed)
+          .Default(std::nullopt);
+  if (!reason) {
+    P.report("unexpected value, expected 'pending' or 'failed'");
+    return false;
+  }
+  BR = *reason;
+  return true;
+}
+
 json::Value toJSON(const Breakpoint &BP) {
   json::Object result{{"verified", BP.verified}};
 
@@ -346,6 +428,20 @@ json::Value toJSON(const Breakpoint &BP) {
   }
 
   return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, Breakpoint &BP,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.mapOptional("id", BP.id) && O.map("verified", BP.verified) &&
+         O.mapOptional("message", BP.message) &&
+         O.mapOptional("source", BP.source) && O.mapOptional("line", BP.line) &&
+         O.mapOptional("column", BP.column) &&
+         O.mapOptional("endLine", BP.endLine) &&
+         O.mapOptional("endColumn", BP.endColumn) &&
+         O.mapOptional("instructionReference", BP.instructionReference) &&
+         O.mapOptional("offset", BP.offset) &&
+         O.mapOptional("reason", BP.reason);
 }
 
 bool fromJSON(const llvm::json::Value &Params, SourceBreakpoint &SB,
