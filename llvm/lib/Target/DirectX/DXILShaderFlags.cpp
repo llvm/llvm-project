@@ -143,7 +143,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
   }
 
   if (CSF.LowPrecisionPresent) {
-    if (NativeLowPrecisionAvailable)
+    if (NativeLowPrecisionMode)
       CSF.NativeLowPrecision = true;
     else
       CSF.MinimumPrecision = true;
@@ -220,15 +220,15 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
     if (RMA->getValue() != 0)
       CanSetResMayNotAlias = false;
 
-  // NativeLowPrecision can only be set when the command line option
+  // NativeLowPrecisionMode can only be set when the command line option
   // -enable-16bit-types is provided. This is indicated by the dx.nativelowprec
   // module flag being set
-  NativeLowPrecisionAvailable = false;
+  NativeLowPrecisionMode = false;
   if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("dx.nativelowprec")))
     if (MMDI.ShaderModelVersion >= VersionTuple(6, 2) &&
         NativeLowPrec->getValue() != 0)
-      NativeLowPrecisionAvailable = true;
+      NativeLowPrecisionMode = true;
 
   CallGraph CG(M);
 
@@ -253,11 +253,6 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
                "DXIL Shader Flag analysis should not be run post-lowering.");
         continue;
       }
-
-      // Set ResMayNotAlias to true if DXIL validator version < 1.8 and there
-      // are UAVs present globally.
-      if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
-        SCCSF.ResMayNotAlias = !DRM.uavs().empty();
 
       ComputedShaderFlags CSF;
       for (const auto &BB : *F)
@@ -294,6 +289,17 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         EntryFunProps.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
             *(EntryFunProps.Entry), "Inconsistent optnone attribute "));
   }
+
+  // Set ResMayNotAlias to true if DXIL validator version < 1.8 and there
+  // are UAVs present globally.
+  if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
+    CombinedSFMask.ResMayNotAlias = !DRM.uavs().empty();
+
+  // Set the module flag that enables native low-precision execution mode. This
+  // is needed even if the module does not use 16-bit types because a
+  // corresponding debug module may include 16-bit types, and tools that use the
+  // debug module may expect it to have the same flags as the original
+  CombinedSFMask.NativeLowPrecisionMode = NativeLowPrecisionMode;
 
   // Set the Max64UAVs flag if the number of UAVs is > 8
   uint32_t NumUAVs = 0;
