@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "DXILRootSignature.h"
 #include "DirectX.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -30,6 +31,7 @@
 #include <cstdint>
 #include <optional>
 #include <utility>
+#include <variant>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -217,6 +219,19 @@ static bool verifyVersion(uint32_t Version) {
   return (Version == 1 || Version == 2);
 }
 
+static bool verifyRegisterValue(uint32_t RegisterValue) {
+  return !(RegisterValue == 0xFFFFFFFF);
+}
+
+static bool verifyRegisterSpace(uint32_t RegisterSpace) {
+  return !(RegisterSpace >= 0xFFFFFFF0 && RegisterSpace <= 0xFFFFFFFF);
+}
+
+static bool verifyDescriptorFlag(uint32_t Flags) {
+  return (Flags & ~0xE) == 0;
+}
+
+
 static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
 
   if (!verifyVersion(RSD.Version)) {
@@ -234,6 +249,38 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
 
     assert(dxbc::isValidParameterType(Info.Header.ParameterType) &&
            "Invalid value for ParameterType");
+    
+    
+    auto P = RSD.ParametersContainer.getParameter(&Info);
+    if(!P)
+        return reportError(Ctx, "Cannot locate parameter from Header Info");
+    
+    if( std::holds_alternative<const dxbc::RTS0::v1::RootDescriptor *>(*P)){
+      auto *Descriptor = std::get<const dxbc::RTS0::v1::RootDescriptor *>(P.value());
+
+      if(!verifyRegisterValue(Descriptor->ShaderRegister))
+        return reportValueError(Ctx, "ShaderRegister",
+                                Descriptor->ShaderRegister);
+      
+      if(!verifyRegisterSpace(Descriptor->RegisterSpace))
+        return reportValueError(Ctx, "RegisterSpace",
+                                Descriptor->RegisterSpace);
+
+    } else if( std::holds_alternative<const dxbc::RTS0::v2::RootDescriptor *>(*P)){
+      auto *Descriptor = std::get<const dxbc::RTS0::v2::RootDescriptor *>(P.value());
+
+      if(!verifyRegisterValue(Descriptor->ShaderRegister))
+        return reportValueError(Ctx, "ShaderRegister",
+                                Descriptor->ShaderRegister);
+      
+      if(!verifyRegisterSpace(Descriptor->RegisterSpace))
+        return reportValueError(Ctx, "RegisterSpace",
+                                Descriptor->RegisterSpace);
+
+      if(!verifyDescriptorFlag(Descriptor->Flags))
+        return reportValueError(Ctx, "DescriptorFlag",
+                                Descriptor->Flags);
+    }
   }
 
   return false;
@@ -370,6 +417,20 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
            << "Shader Register: " << Constants->ShaderRegister << "\n";
         OS << indent(Space + 2)
            << "Num 32 Bit Values: " << Constants->Num32BitValues << "\n";
+      } else if (std::holds_alternative<const dxbc::RTS0::v1::RootDescriptor *>(*P)) {
+        auto *Constants = std::get<const dxbc::RTS0::v1::RootDescriptor *>(*P);
+        OS << indent(Space + 2)
+           << "Register Space: " << Constants->RegisterSpace << "\n";
+        OS << indent(Space + 2)
+           << "Shader Register: " << Constants->ShaderRegister << "\n";
+      } else if (std::holds_alternative<const dxbc::RTS0::v2::RootDescriptor *>(*P)) {
+        auto *Constants = std::get<const dxbc::RTS0::v2::RootDescriptor *>(*P);
+        OS << indent(Space + 2)
+           << "Register Space: " << Constants->RegisterSpace << "\n";
+        OS << indent(Space + 2)
+           << "Shader Register: " << Constants->ShaderRegister << "\n";
+        OS << indent(Space + 2)
+           << "Flags: " << Constants->Flags << "\n";
       }
     }
     Space--;

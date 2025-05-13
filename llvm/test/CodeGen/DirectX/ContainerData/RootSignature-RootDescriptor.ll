@@ -15,7 +15,7 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 !dx.rootsignatures = !{!2} ; list of function/root signature pairs
 !2 = !{ ptr @main, !3 } ; function, root signature
 !3 = !{ !5 } ; list of root signature elements
-!5 = !{ !"RootCBV", i32 0, i32 1, i32 2, i32 3  }
+!5 = !{ !"RootCBV", i32 0, i32 1, i32 2, i32 8  }
 
 ; DXC:  - Name:            RTS0
 ; DXC-NEXT:    Size:            48
@@ -31,4 +31,4 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ; DXC-NEXT:          Descriptor:
 ; DXC-NEXT:            RegisterSpace: 2
 ; DXC-NEXT:            ShaderRegister: 1
-; DXC-NEXT:            DATA_VOLATILE: true
+; DXC-NEXT:            DATA_STATIC: true
