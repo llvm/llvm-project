@@ -1,4 +1,4 @@
-//===- ExtraMatchers.h - Various common matchers --------------------------===//
+//===- SliceMatchers.h - Matchers for slicing analysis ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides matchers for MLIRQuery with more involved pattern-matching
-// logic.
+// This file provides matchers for MLIRQuery that peform slicing analysis
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_MLIRQUERY_MATCHERS_EXTRAMATCHERS_H
-#define MLIR_TOOLS_MLIRQUERY_MATCHERS_EXTRAMATCHERS_H
+#ifndef MLIR_TOOLS_MLIRQUERY_MATCHERS_SLICEMATCHERS_H
+#define MLIR_TOOLS_MLIRQUERY_MATCHERS_SLICEMATCHERS_H
 
 #include "mlir/Analysis/SliceAnalysis.h"
 
@@ -139,4 +138,4 @@ inline BackwardSliceMatcher<Matcher> m_GetAllDefinitions(Matcher innerMatcher,
 
 } // namespace mlir::query::matcher
 
-#endif // MLIR_TOOLS_MLIRQUERY_MATCHERS_EXTRAMATCHERS_H
+#endif // MLIR_TOOLS_MLIRQUERY_MATCHERS_SLICEMATCHERS_H
