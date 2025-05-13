@@ -635,6 +635,75 @@ private:
   MlirOpOperand opOperand;
 };
 
+#if !defined(Py_GIL_DISABLED)
+inline void enableTryIncRef(nb::handle obj) noexcept {}
+inline bool tryIncRef(nb::handle obj) noexcept {
+  if (Py_REFCNT(obj.ptr()) > 0) {
+    Py_INCREF(obj.ptr());
+    return true;
+  }
+  return false;
+}
+
+#elif PY_VERSION_HEX >= 0x030E00A5
+
+// CPython 3.14 provides an unstable API for these.
+inline void enableTryIncRef(nb::handle obj) noexcept {
+  PyUnstable_EnableTryIncRef(obj.ptr());
+}
+inline bool tryIncRef(nb::handle obj) noexcept {
+  return PyUnstable_TryIncRef(obj.ptr());
+}
+
+#else
+
+// For CPython 3.13 there is no API for this, and so we must implement our own.
+// This code originates from https://github.com/wjakob/nanobind/pull/865/files.
+void enableTryIncRef(nb::handle h) noexcept {
+  // Since this is called during object construction, we know that we have
+  // the only reference to the object and can use a non-atomic write.
+  PyObject *obj = h.ptr();
+  assert(h->ob_ref_shared == 0);
+  h->ob_ref_shared = _Py_REF_MAYBE_WEAKREF;
+}
+
+bool tryIncRef(nb::handle h) noexcept {
+  PyObject *obj = h.ptr();
+  // See
+  // https://github.com/python/cpython/blob/d05140f9f77d7dfc753dd1e5ac3a5962aaa03eff/Include/internal/pycore_object.h#L761
+  uint32_t local = _Py_atomic_load_uint32_relaxed(&obj->ob_ref_local);
+  local += 1;
+  if (local == 0) {
+    // immortal
+    return true;
+  }
+  if (_Py_IsOwnedByCurrentThread(obj)) {
+    _Py_atomic_store_uint32_relaxed(&obj->ob_ref_local, local);
+#ifdef Py_REF_DEBUG
+    _Py_INCREF_IncRefTotal();
+#endif
+    return true;
+  }
+  Py_ssize_t shared = _Py_atomic_load_ssize_relaxed(&obj->ob_ref_shared);
+  for (;;) {
+    // If the shared refcount is zero and the object is either merged
+    // or may not have weak references, then we cannot incref it.
+    if (shared == 0 || shared == _Py_REF_MERGED) {
+      return false;
+    }
+
+    if (_Py_atomic_compare_exchange_ssize(&obj->ob_ref_shared, &shared,
+                                          shared +
+                                              (1 << _Py_REF_SHARED_SHIFT))) {
+#ifdef Py_REF_DEBUG
+      _Py_INCREF_IncRefTotal();
+#endif
+      return true;
+    }
+  }
+}
+#endif
+
 } // namespace
 
 //------------------------------------------------------------------------------
@@ -706,11 +775,17 @@ size_t PyMlirContext::getLiveOperationCount() {
   return liveOperations.size();
 }
 
-std::vector<PyOperation *> PyMlirContext::getLiveOperationObjects() {
-  std::vector<PyOperation *> liveObjects;
+std::vector<nb::object> PyMlirContext::getLiveOperationObjects() {
+  std::vector<nb::object> liveObjects;
   nb::ft_lock_guard lock(liveOperationsMutex);
-  for (auto &entry : liveOperations)
-    liveObjects.push_back(entry.second.second);
+  for (auto &entry : liveOperations) {
+    // It is not safe to unconditionally increment the reference count here
+    // because an operation that is in the process of being deleted by another
+    // thread may still be present in the map.
+    if (tryIncRef(entry.second.first)) {
+      liveObjects.push_back(nb::steal(entry.second.first));
+    }
+  }
   return liveObjects;
 }
 
@@ -720,25 +795,26 @@ size_t PyMlirContext::clearLiveOperations() {
   {
     nb::ft_lock_guard lock(liveOperationsMutex);
     std::swap(operations, liveOperations);
+    for (auto &op : operations)
+      op.second.second->setInvalidLocked();
   }
-  for (auto &op : operations)
-    op.second.second->setInvalid();
   size_t numInvalidated = operations.size();
   return numInvalidated;
 }
 
-void PyMlirContext::clearOperation(MlirOperation op) {
-  PyOperation *py_op;
-  {
-    nb::ft_lock_guard lock(liveOperationsMutex);
-    auto it = liveOperations.find(op.ptr);
-    if (it == liveOperations.end()) {
-      return;
-    }
-    py_op = it->second.second;
-    liveOperations.erase(it);
+void PyMlirContext::clearOperationLocked(MlirOperation op) {
+  auto it = liveOperations.find(op.ptr);
+  if (it == liveOperations.end()) {
+    return;
   }
-  py_op->setInvalid();
+  PyOperation *py_op = it->second.second;
+  py_op->setInvalidLocked();
+  liveOperations.erase(it);
+}
+
+void PyMlirContext::clearOperation(MlirOperation op) {
+  nb::ft_lock_guard lock(liveOperationsMutex);
+  clearOperationLocked(op);
 }
 
 void PyMlirContext::clearOperationsInside(PyOperationBase &op) {
@@ -766,14 +842,14 @@ void PyMlirContext::clearOperationsInside(MlirOperation op) {
   clearOperationsInside(opRef->getOperation());
 }
 
-void PyMlirContext::clearOperationAndInside(PyOperationBase &op) {
+void PyMlirContext::clearOperationAndInsideLocked(PyOperationBase &op) {
   MlirOperationWalkCallback invalidatingCallback = [](MlirOperation op,
                                                       void *userData) {
     PyMlirContextRef &contextRef = *static_cast<PyMlirContextRef *>(userData);
-    contextRef->clearOperation(op);
+    contextRef->clearOperationLocked(op);
     return MlirWalkResult::MlirWalkResultAdvance;
   };
-  mlirOperationWalk(op.getOperation(), invalidatingCallback,
+  mlirOperationWalk(op.getOperation().getLocked(), invalidatingCallback,
                     &op.getOperation().getContext(), MlirWalkPreOrder);
 }
 
@@ -1203,6 +1279,8 @@ PyOperation::PyOperation(PyMlirContextRef contextRef, MlirOperation operation)
     : BaseContextObject(std::move(contextRef)), operation(operation) {}
 
 PyOperation::~PyOperation() {
+  PyMlirContextRef context = getContext();
+  nb::ft_lock_guard lock(context->liveOperationsMutex);
   // If the operation has already been invalidated there is nothing to do.
   if (!valid)
     return;
@@ -1210,12 +1288,14 @@ PyOperation::~PyOperation() {
   // Otherwise, invalidate the operation and remove it from live map when it is
   // attached.
   if (isAttached()) {
-    getContext()->clearOperation(*this);
+    // Since the operation was valid, we know that it is this object present
+    // in the map, not some other object.
+    context->liveOperations.erase(operation.ptr);
   } else {
     // And destroy it when it is detached, i.e. owned by Python, in which case
     // all nested operations must be invalidated at removed from the live map as
     // well.
-    erase();
+    eraseLocked();
   }
 }
 
@@ -1241,6 +1321,7 @@ PyOperationRef PyOperation::createInstance(PyMlirContextRef contextRef,
   // Create.
   PyOperationRef unownedOperation =
       makeObjectRef<PyOperation>(std::move(contextRef), operation);
+  enableTryIncRef(unownedOperation.getObject());
   unownedOperation->handle = unownedOperation.getObject();
   if (parentKeepAlive) {
     unownedOperation->parentKeepAlive = std::move(parentKeepAlive);
@@ -1254,18 +1335,26 @@ PyOperationRef PyOperation::forOperation(PyMlirContextRef contextRef,
   nb::ft_lock_guard lock(contextRef->liveOperationsMutex);
   auto &liveOperations = contextRef->liveOperations;
   auto it = liveOperations.find(operation.ptr);
-  if (it == liveOperations.end()) {
-    // Create.
-    PyOperationRef result = createInstance(std::move(contextRef), operation,
-                                           std::move(parentKeepAlive));
-    liveOperations[operation.ptr] =
-        std::make_pair(result.getObject(), result.get());
-    return result;
+  if (it != liveOperations.end()) {
+    PyOperation *existing = it->second.second;
+    nb::handle pyRef = it->second.first;
+
+    // Try to increment the reference count of the existing entry. This can fail
+    // if the object is in the process of being destroyed by another thread.
+    if (tryIncRef(pyRef)) {
+      return PyOperationRef(existing, nb::steal<nb::object>(pyRef));
+    }
+
+    // Mark the existing entry as invalid, since we are about to replace it.
+    existing->setInvalidLocked();
   }
-  // Use existing.
-  PyOperation *existing = it->second.second;
-  nb::object pyRef = nb::borrow<nb::object>(it->second.first);
-  return PyOperationRef(existing, std::move(pyRef));
+
+  // Create a new wrapper object.
+  PyOperationRef result = createInstance(std::move(contextRef), operation,
+                                         std::move(parentKeepAlive));
+  liveOperations[operation.ptr] =
+      std::make_pair(result.getObject(), result.get());
+  return result;
 }
 
 PyOperationRef PyOperation::createDetached(PyMlirContextRef contextRef,
@@ -1297,6 +1386,11 @@ PyOperationRef PyOperation::parse(PyMlirContextRef contextRef,
 }
 
 void PyOperation::checkValid() const {
+  nb::ft_lock_guard lock(getContext()->liveOperationsMutex);
+  checkValidLocked();
+}
+
+void PyOperation::checkValidLocked() const {
   if (!valid) {
     throw std::runtime_error("the operation has been invalidated");
   }
@@ -1638,10 +1732,15 @@ nb::object PyOperation::createOpView() {
   return nb::cast(PyOpView(getRef().getObject()));
 }
 
-void PyOperation::erase() {
-  checkValid();
-  getContext()->clearOperationAndInside(*this);
+void PyOperation::eraseLocked() {
+  checkValidLocked();
+  getContext()->clearOperationAndInsideLocked(*this);
   mlirOperationDestroy(operation);
+}
+
+void PyOperation::erase() {
+  nb::ft_lock_guard lock(getContext()->liveOperationsMutex);
+  eraseLocked();
 }
 
 namespace {
@@ -2324,7 +2423,7 @@ void PySymbolTable::erase(PyOperationBase &symbol) {
   // The operation is also erased, so we must invalidate it. There may be Python
   // references to this operation so we don't want to delete it from the list of
   // live operations here.
-  symbol.getOperation().valid = false;
+  symbol.getOperation().setInvalid();
 }
 
 void PySymbolTable::dunderDel(const std::string &name) {
