@@ -302,7 +302,8 @@ protected:
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
                      const Expr *E);
-  bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init);
+  bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
+                          std::optional<PrimType> InitT);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
