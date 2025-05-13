@@ -1251,12 +1251,11 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
 
 void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
                        const APSInt &Value) {
-  llvm::APInt Min;
-  llvm::APInt Max;
-
   if (S.EvaluatingDecl && !S.EvaluatingDecl->isConstexpr())
     return;
 
+  llvm::APInt Min;
+  llvm::APInt Max;
   ED->getValueRange(Max, Min);
   --Max;
 
