@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @_QMhelperPfn(%arg0: !fir.ref<!fir.array<5x?xi32>> {fir.bindc_name = "a1"}, %arg1: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "a2"}, %arg2: !fir.ref<!fir.array<2x?xi32>> {fir.bindc_name = "a3"}) {
     %c5 = arith.constant 5 : index
     %c1 = arith.constant 1 : index

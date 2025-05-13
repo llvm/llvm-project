@@ -55,6 +55,7 @@ builtins_sources = [
   "divti3.c",
   "extendhfsf2.c",
   "extendsfdf2.c",
+  "extendhfdf2.c",
   "ffsdi2.c",
   "ffssi2.c",
   "ffsti2.c",

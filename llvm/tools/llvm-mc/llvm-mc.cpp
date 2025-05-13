@@ -519,10 +519,10 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
 
-  MCInstPrinter *IP = nullptr;
+  std::unique_ptr<MCInstPrinter> IP;
   if (FileType == OFT_AssemblyFile) {
-    IP = TheTarget->createMCInstPrinter(Triple(TripleName), OutputAsmVariant,
-                                        *MAI, *MCII, *MRI);
+    IP.reset(TheTarget->createMCInstPrinter(
+        Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
 
     if (!IP) {
       WithColor::error()
@@ -541,6 +541,17 @@ int main(int argc, char **argv) {
     // Set the display preference for hex vs. decimal immediates.
     IP->setPrintImmHex(PrintImmHex);
 
+    switch (Action) {
+    case AC_MDisassemble:
+      IP->setUseMarkup(true);
+      break;
+    case AC_CDisassemble:
+      IP->setUseColor(true);
+      break;
+    default:
+      break;
+    }
+
     // Set up the AsmStreamer.
     std::unique_ptr<MCCodeEmitter> CE;
     if (ShowEncoding)
@@ -549,7 +560,7 @@ int main(int argc, char **argv) {
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(*OS);
-    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), IP,
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), std::move(IP),
                                            std::move(CE), std::move(MAB)));
 
   } else if (FileType == OFT_Null) {
@@ -586,13 +597,7 @@ int main(int argc, char **argv) {
                         *MCII, MCOptions);
     break;
   case AC_MDisassemble:
-    IP->setUseMarkup(true);
-    disassemble = true;
-    break;
   case AC_CDisassemble:
-    IP->setUseColor(true);
-    disassemble = true;
-    break;
   case AC_Disassemble:
     disassemble = true;
     break;

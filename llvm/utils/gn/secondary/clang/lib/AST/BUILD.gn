@@ -29,6 +29,7 @@ static_library("AST") {
     "//clang/lib/Basic",
     "//clang/lib/Lex",
     "//llvm/lib/BinaryFormat",
+    "//llvm/lib/Frontend/HLSL",
     "//llvm/lib/Frontend/OpenMP",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",

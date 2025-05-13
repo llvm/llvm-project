@@ -45,7 +45,7 @@ static cl::opt<unsigned>
 
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
-                                      TTI::TargetCostKind CostKind) {
+                                      TTI::TargetCostKind CostKind) const {
   // Check if the type is valid for all CostKind
   if (!VT.isVector())
     return InstructionCost::getInvalid();
@@ -133,8 +133,9 @@ static InstructionCost getIntImmCostImpl(const DataLayout &DL,
                                     /*CompressionCost=*/false, FreeZeroes);
 }
 
-InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                                            TTI::TargetCostKind CostKind) {
+InstructionCost
+RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
+                            TTI::TargetCostKind CostKind) const {
   return getIntImmCostImpl(getDataLayout(), getST(), Imm, Ty, CostKind, false);
 }
 
@@ -168,7 +169,7 @@ static bool canUseShiftPair(Instruction *Inst, const APInt &Imm) {
 InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                                 const APInt &Imm, Type *Ty,
                                                 TTI::TargetCostKind CostKind,
-                                                Instruction *Inst) {
+                                                Instruction *Inst) const {
   assert(Ty->isIntegerTy() &&
          "getIntImmCost can only estimate cost of materialising integers");
 
@@ -276,7 +277,7 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
 InstructionCost
 RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                   const APInt &Imm, Type *Ty,
-                                  TTI::TargetCostKind CostKind) {
+                                  TTI::TargetCostKind CostKind) const {
   // Prevent hoisting in unknown cases.
   return TTI::TCC_Free;
 }
@@ -286,7 +287,7 @@ bool RISCVTTIImpl::hasActiveVectorLength(unsigned, Type *DataTy, Align) const {
 }
 
 TargetTransformInfo::PopcntSupportKind
-RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) {
+RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) const {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
   return ST->hasStdExtZbb() || (ST->hasVendorXCVbitmanip() && !ST->is64Bit())
              ? TTI::PSK_FastHardware
@@ -343,7 +344,8 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
 }
 
 InstructionCost
-RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,  TTI::TargetCostKind CostKind) {
+RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,
+                                      TTI::TargetCostKind CostKind) const {
   // Add a cost of address generation + the cost of the load. The address
   // is expected to be a PC relative offset to a constant pool entry
   // using auipc/addi.
@@ -383,6 +385,62 @@ static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
   return cast<VectorType>(EVT(IndexVT).getTypeForEVT(C));
 }
 
+/// Attempt to approximate the cost of a shuffle which will require splitting
+/// during legalization.  Note that processShuffleMasks is not an exact proxy
+/// for the algorithm used in LegalizeVectorTypes, but hopefully it's a
+/// reasonably close upperbound.
+static InstructionCost costShuffleViaSplitting(const RISCVTTIImpl &TTI,
+                                               MVT LegalVT, VectorType *Tp,
+                                               ArrayRef<int> Mask,
+                                               TTI::TargetCostKind CostKind) {
+  assert(LegalVT.isFixedLengthVector() && !Mask.empty() &&
+         "Expected fixed vector type and non-empty mask");
+  unsigned LegalNumElts = LegalVT.getVectorNumElements();
+  // Number of destination vectors after legalization:
+  unsigned NumOfDests = divideCeil(Mask.size(), LegalNumElts);
+  // We are going to permute multiple sources and the result will be in
+  // multiple destinations. Providing an accurate cost only for splits where
+  // the element type remains the same.
+  if (NumOfDests <= 1 ||
+      LegalVT.getVectorElementType().getSizeInBits() !=
+          Tp->getElementType()->getPrimitiveSizeInBits() ||
+      LegalNumElts >= Tp->getElementCount().getFixedValue())
+    return InstructionCost::getInvalid();
+
+  unsigned VecTySize = TTI.getDataLayout().getTypeStoreSize(Tp);
+  unsigned LegalVTSize = LegalVT.getStoreSize();
+  // Number of source vectors after legalization:
+  unsigned NumOfSrcs = divideCeil(VecTySize, LegalVTSize);
+
+  auto *SingleOpTy = FixedVectorType::get(Tp->getElementType(), LegalNumElts);
+
+  unsigned NormalizedVF = LegalNumElts * std::max(NumOfSrcs, NumOfDests);
+  unsigned NumOfSrcRegs = NormalizedVF / LegalNumElts;
+  unsigned NumOfDestRegs = NormalizedVF / LegalNumElts;
+  SmallVector<int> NormalizedMask(NormalizedVF, PoisonMaskElem);
+  assert(NormalizedVF >= Mask.size() &&
+         "Normalized mask expected to be not shorter than original mask.");
+  copy(Mask, NormalizedMask.begin());
+  InstructionCost Cost = 0;
+  SmallDenseSet<std::pair<ArrayRef<int>, unsigned>> ReusedSingleSrcShuffles;
+  processShuffleMasks(
+      NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
+      [&](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
+        if (ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size()))
+          return;
+        if (!ReusedSingleSrcShuffles.insert(std::make_pair(RegMask, SrcReg))
+                 .second)
+          return;
+        Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
+                                   RegMask, CostKind, 0, nullptr);
+      },
+      [&](ArrayRef<int> RegMask, unsigned Idx1, unsigned Idx2, bool NewReg) {
+        Cost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
+                                   CostKind, 0, nullptr);
+      });
+  return Cost;
+}
+
 /// Try to perform better estimation of the permutation.
 /// 1. Split the source/destination vectors into real registers.
 /// 2. Do the mask analysis to identify which real registers are
@@ -397,7 +455,7 @@ static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
 /// TTI::TCC_Basic). If the source register is just reused, the cost for
 /// this operation is 0.
 static InstructionCost
-costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
+costShuffleViaVRegSplitting(const RISCVTTIImpl &TTI, MVT LegalVT,
                             std::optional<unsigned> VLen, VectorType *Tp,
                             ArrayRef<int> Mask, TTI::TargetCostKind CostKind) {
   assert(LegalVT.isFixedLengthVector());
@@ -425,7 +483,7 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
   auto *SingleOpTy = FixedVectorType::get(Tp->getElementType(),
                                           LegalVT.getVectorNumElements());
 
-  unsigned E = *NumOfDests.getValue();
+  unsigned E = NumOfDests.getValue();
   unsigned NormalizedVF =
       LegalVT.getVectorNumElements() * std::max(NumOfSrcs, E);
   unsigned NumOfSrcRegs = NormalizedVF / LegalVT.getVectorNumElements();
@@ -466,7 +524,7 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
 
 InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
                                            ArrayRef<int> Mask,
-                                           TTI::TargetCostKind CostKind) {
+                                           TTI::TargetCostKind CostKind) const {
   // Avoid missing masks and length changing shuffles
   if (Mask.size() <= 2 || Mask.size() != Tp->getNumElements())
     return InstructionCost::getInvalid();
@@ -527,7 +585,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              TTI::TargetCostKind CostKind,
                                              int Index, VectorType *SubTp,
                                              ArrayRef<const Value *> Args,
-                                             const Instruction *CxtI) {
+                                             const Instruction *CxtI) const {
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
 
@@ -645,48 +703,13 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         return true;
       }
     };
-    // We are going to permute multiple sources and the result will be in
-    // multiple destinations. Providing an accurate cost only for splits where
-    // the element type remains the same.
-    if (!Mask.empty() && LT.first.isValid() && LT.first != 1 &&
-        shouldSplit(Kind) &&
-        LT.second.getVectorElementType().getSizeInBits() ==
-        Tp->getElementType()->getPrimitiveSizeInBits() &&
-        LT.second.getVectorNumElements() <
-        cast<FixedVectorType>(Tp)->getNumElements() &&
-        divideCeil(Mask.size(),
-                   cast<FixedVectorType>(Tp)->getNumElements()) ==
-        static_cast<unsigned>(*LT.first.getValue())) {
-      unsigned NumRegs = *LT.first.getValue();
-      unsigned VF = cast<FixedVectorType>(Tp)->getNumElements();
-      unsigned SubVF = PowerOf2Ceil(VF / NumRegs);
-      auto *SubVecTy = FixedVectorType::get(Tp->getElementType(), SubVF);
 
-      InstructionCost Cost = 0;
-      for (unsigned I = 0, NumSrcRegs = divideCeil(Mask.size(), SubVF);
-           I < NumSrcRegs; ++I) {
-        bool IsSingleVector = true;
-        SmallVector<int> SubMask(SubVF, PoisonMaskElem);
-        transform(
-                  Mask.slice(I * SubVF,
-                             I == NumSrcRegs - 1 ? Mask.size() % SubVF : SubVF),
-                  SubMask.begin(), [&](int I) -> int {
-                    if (I == PoisonMaskElem)
-                      return PoisonMaskElem;
-                    bool SingleSubVector = I / VF == 0;
-                    IsSingleVector &= SingleSubVector;
-                    return (SingleSubVector ? 0 : 1) * SubVF + (I % VF) % SubVF;
-                  });
-        if (all_of(enumerate(SubMask), [](auto &&P) {
-          return P.value() == PoisonMaskElem ||
-            static_cast<unsigned>(P.value()) == P.index();
-        }))
-          continue;
-        Cost += getShuffleCost(IsSingleVector ? TTI::SK_PermuteSingleSrc
-                               : TTI::SK_PermuteTwoSrc,
-                               SubVecTy, SubMask, CostKind, 0, nullptr);
-      }
-      return Cost;
+    if (!Mask.empty() && LT.first.isValid() && LT.first != 1 &&
+        shouldSplit(Kind)) {
+      InstructionCost SplitCost =
+          costShuffleViaSplitting(*this, LT.second, FVTp, Mask, CostKind);
+      if (SplitCost.isValid())
+        return SplitCost;
     }
   }
 
@@ -837,7 +860,8 @@ static unsigned isM1OrSmaller(MVT VT) {
 
 InstructionCost RISCVTTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
 
@@ -875,7 +899,7 @@ InstructionCost RISCVTTIImpl::getScalarizationOverhead(
 InstructionCost
 RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                     unsigned AddressSpace,
-                                    TTI::TargetCostKind CostKind) {
+                                    TTI::TargetCostKind CostKind) const {
   if (!isLegalMaskedLoadStore(Src, Alignment) ||
       CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
@@ -887,7 +911,7 @@ RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
 InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) {
+    bool UseMaskForCond, bool UseMaskForGaps) const {
 
   // The interleaved memory access pass will lower interleaved memory ops (i.e
   // a load and store followed by a specific shuffle) to vlseg/vsseg
@@ -983,7 +1007,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
 
 InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
@@ -1008,7 +1032,7 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
 
 InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
     unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
-    TTI::TargetCostKind CostKind, const Instruction *I) {
+    TTI::TargetCostKind CostKind, const Instruction *I) const {
   bool IsLegal = (Opcode == Instruction::Store &&
                   isLegalMaskedCompressStore(DataTy, Alignment)) ||
                  (Opcode == Instruction::Load &&
@@ -1046,7 +1070,7 @@ InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
 
 InstructionCost RISCVTTIImpl::getStridedMemoryOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
   if (((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
        !isLegalStridedLoadStore(DataTy, Alignment)) ||
       (Opcode != Instruction::Load && Opcode != Instruction::Store))
@@ -1068,7 +1092,7 @@ InstructionCost RISCVTTIImpl::getStridedMemoryOpCost(
 }
 
 InstructionCost
-RISCVTTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
+RISCVTTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
   // FIXME: This is a property of the default vector convention, not
   // all possible calling conventions.  Fixing that will require
   // some TTI API and SLP rework.
@@ -1167,7 +1191,7 @@ static unsigned getISDForVPIntrinsicID(Intrinsic::ID ID) {
 
 InstructionCost
 RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                    TTI::TargetCostKind CostKind) {
+                                    TTI::TargetCostKind CostKind) const {
   auto *RetTy = ICA.getReturnType();
   switch (ICA.getID()) {
   case Intrinsic::lrint:
@@ -1470,7 +1494,7 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                Type *Src,
                                                TTI::CastContextHint CCH,
                                                TTI::TargetCostKind CostKind,
-                                               const Instruction *I) {
+                                               const Instruction *I) const {
   bool IsVectorType = isa<VectorType>(Dst) && isa<VectorType>(Src);
   if (!IsVectorType)
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
@@ -1661,7 +1685,7 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 }
 
-unsigned RISCVTTIImpl::getEstimatedVLFor(VectorType *Ty) {
+unsigned RISCVTTIImpl::getEstimatedVLFor(VectorType *Ty) const {
   if (isa<ScalableVectorType>(Ty)) {
     const unsigned EltSize = DL.getTypeSizeInBits(Ty->getElementType());
     const unsigned MinSize = DL.getTypeSizeInBits(Ty).getKnownMinValue();
@@ -1674,7 +1698,7 @@ unsigned RISCVTTIImpl::getEstimatedVLFor(VectorType *Ty) {
 InstructionCost
 RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                      FastMathFlags FMF,
-                                     TTI::TargetCostKind CostKind) {
+                                     TTI::TargetCostKind CostKind) const {
   if (isa<FixedVectorType>(Ty) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 
@@ -1780,7 +1804,7 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
 InstructionCost
 RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                          std::optional<FastMathFlags> FMF,
-                                         TTI::TargetCostKind CostKind) {
+                                         TTI::TargetCostKind CostKind) const {
   if (isa<FixedVectorType>(Ty) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
@@ -1874,9 +1898,8 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     break;
   case ISD::FADD:
     // We can't promote f16/bf16 fadd reductions.
-    if ((LT.second.getVectorElementType() == MVT::f16 &&
-         !ST->hasVInstructionsF16()) ||
-        LT.second.getVectorElementType() == MVT::bf16)
+    if ((LT.second.getScalarType() == MVT::f16 && !ST->hasVInstructionsF16()) ||
+        LT.second.getScalarType() == MVT::bf16)
       return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
     if (TTI::requiresOrderedReduction(FMF)) {
       Opcodes.push_back(RISCV::VFMV_S_F);
@@ -1899,7 +1922,7 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
 
 InstructionCost RISCVTTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
-    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) const {
   if (isa<FixedVectorType>(ValTy) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getExtendedReductionCost(Opcode, IsUnsigned, ResTy, ValTy,
                                            FMF, CostKind);
@@ -1931,9 +1954,9 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
          getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 }
 
-InstructionCost RISCVTTIImpl::getStoreImmCost(Type *Ty,
-                                              TTI::OperandValueInfo OpInfo,
-                                              TTI::TargetCostKind CostKind) {
+InstructionCost
+RISCVTTIImpl::getStoreImmCost(Type *Ty, TTI::OperandValueInfo OpInfo,
+                              TTI::TargetCostKind CostKind) const {
   assert(OpInfo.isConstant() && "non constant operand?");
   if (!isa<VectorType>(Ty))
     // FIXME: We need to account for immediate materialization here, but doing
@@ -1950,13 +1973,12 @@ InstructionCost RISCVTTIImpl::getStoreImmCost(Type *Ty,
   return getConstantPoolLoadCost(Ty, CostKind);
 }
 
-
 InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                              MaybeAlign Alignment,
+                                              Align Alignment,
                                               unsigned AddressSpace,
                                               TTI::TargetCostKind CostKind,
                                               TTI::OperandValueInfo OpInfo,
-                                              const Instruction *I) {
+                                              const Instruction *I) const {
   EVT VT = TLI->getValueType(DL, Src, true);
   // Type legalization can't handle structs
   if (VT == MVT::Other)
@@ -1994,13 +2016,12 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (LT.second.isVector() && CostKind != TTI::TCK_CodeSize)
     BaseCost *= TLI->getLMULCost(LT.second);
   return Cost + BaseCost;
-
 }
 
 InstructionCost RISCVTTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
-    TTI::OperandValueInfo Op2Info, const Instruction *I) {
+    TTI::OperandValueInfo Op2Info, const Instruction *I) const {
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                      Op1Info, Op2Info, I);
@@ -2159,7 +2180,7 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(
 
 InstructionCost RISCVTTIImpl::getCFInstrCost(unsigned Opcode,
                                              TTI::TargetCostKind CostKind,
-                                             const Instruction *I) {
+                                             const Instruction *I) const {
   if (CostKind != TTI::TCK_RecipThroughput)
     return Opcode == Instruction::PHI ? 0 : 1;
   // Branches are assumed to be predicted.
@@ -2168,8 +2189,9 @@ InstructionCost RISCVTTIImpl::getCFInstrCost(unsigned Opcode,
 
 InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                  TTI::TargetCostKind CostKind,
-                                                 unsigned Index, Value *Op0,
-                                                 Value *Op1) {
+                                                 unsigned Index,
+                                                 const Value *Op0,
+                                                 const Value *Op1) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   if (Opcode != Instruction::ExtractElement &&
@@ -2316,7 +2338,7 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) {
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -2446,7 +2468,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
 InstructionCost RISCVTTIImpl::getPointersChainCost(
     ArrayRef<const Value *> Ptrs, const Value *Base,
     const TTI::PointersChainInfo &Info, Type *AccessTy,
-    TTI::TargetCostKind CostKind) {
+    TTI::TargetCostKind CostKind) const {
   InstructionCost Cost = TTI::TCC_Free;
   // In the basic model we take into account GEP instructions only
   // (although here can come alloca instruction, a value, constants and/or
@@ -2490,9 +2512,9 @@ InstructionCost RISCVTTIImpl::getPointersChainCost(
   return Cost;
 }
 
-void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                           TTI::UnrollingPreferences &UP,
-                                           OptimizationRemarkEmitter *ORE) {
+void RISCVTTIImpl::getUnrollingPreferences(
+    Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP,
+    OptimizationRemarkEmitter *ORE) const {
   // TODO: More tuning on benchmarks and metrics with changes as needed
   //       would apply to all settings below to enable performance.
 
@@ -2568,7 +2590,7 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 }
 
 void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                         TTI::PeelingPreferences &PP) {
+                                         TTI::PeelingPreferences &PP) const {
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
@@ -2622,7 +2644,7 @@ RISCVTTIImpl::getPreferredAddressingMode(const Loop *L,
 }
 
 bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
-                                 const TargetTransformInfo::LSRCost &C2) {
+                                 const TargetTransformInfo::LSRCost &C2) const {
   // RISC-V specific here are "instruction number 1st priority".
   // If we need to emit adds inside the loop to add up base registers, then
   // we need at least one extra temporary register.
@@ -2636,7 +2658,8 @@ bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                   C2.ScaleCost, C2.ImmCost, C2.SetupCost);
 }
 
-bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) {
+bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
+                                           Align Alignment) const {
   auto *VTy = dyn_cast<VectorType>(DataTy);
   if (!VTy || VTy->isScalableTy())
     return false;
@@ -2653,7 +2676,8 @@ bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) {
   return true;
 }
 
-bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
+bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy,
+                                              Align Alignment) const {
   auto *VTy = dyn_cast<VectorType>(DataTy);
   if (!VTy || VTy->isScalableTy())
     return false;
@@ -2669,7 +2693,7 @@ bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
 /// sext instructions that sign extended the same initial value. A getelementptr
 /// is considered as "complex" if it has more than 2 operands.
 bool RISCVTTIImpl::shouldConsiderAddressTypePromotion(
-    const Instruction &I, bool &AllowPromotionWithoutCommonHeader) {
+    const Instruction &I, bool &AllowPromotionWithoutCommonHeader) const {
   bool Considerable = false;
   AllowPromotionWithoutCommonHeader = false;
   if (!isa<SExtInst>(&I))
@@ -2846,8 +2870,11 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
     if (!Op || any_of(Ops, [&](Use *U) { return U->get() == Op; }))
       continue;
 
-    // We are looking for a splat that can be sunk.
-    if (!match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
+    // We are looking for a splat/vp.splat that can be sunk.
+    bool IsVPSplat = match(Op, m_Intrinsic<Intrinsic::experimental_vp_splat>(
+                                   m_Value(), m_Value(), m_Value()));
+    if (!IsVPSplat &&
+        !match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
                              m_Undef(), m_ZeroMask())))
       continue;
 
@@ -2863,12 +2890,17 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
         return false;
     }
 
-    Use *InsertEltUse = &Op->getOperandUse(0);
     // Sink any fpexts since they might be used in a widening fp pattern.
-    auto *InsertElt = cast<InsertElementInst>(InsertEltUse);
-    if (isa<FPExtInst>(InsertElt->getOperand(1)))
-      Ops.push_back(&InsertElt->getOperandUse(1));
-    Ops.push_back(InsertEltUse);
+    if (IsVPSplat) {
+      if (isa<FPExtInst>(Op->getOperand(0)))
+        Ops.push_back(&Op->getOperandUse(0));
+    } else {
+      Use *InsertEltUse = &Op->getOperandUse(0);
+      auto *InsertElt = cast<InsertElementInst>(InsertEltUse);
+      if (isa<FPExtInst>(InsertElt->getOperand(1)))
+        Ops.push_back(&InsertElt->getOperandUse(1));
+      Ops.push_back(InsertEltUse);
+    }
     Ops.push_back(&OpIdx.value());
   }
   return true;
