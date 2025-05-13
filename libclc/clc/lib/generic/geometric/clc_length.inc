@@ -43,7 +43,9 @@ _CLC_OVERLOAD _CLC_DEF __CLC_SCALAR_GENTYPE __clc_length(__CLC_GENTYPE p) {
   if (l2 < __CLC_GENTYPE_MIN) {
     p *= __CLC_GENTYPE_MIN_SCALE_UP;
     return __clc_sqrt(__clc_dot(p, p)) * __CLC_GENTYPE_MIN_SCALE_DOWN;
-  } else if (l2 == INFINITY) {
+  }
+
+  if (l2 == INFINITY) {
     p *= __CLC_GENTYPE_INF_SCALE_DOWN;
     return __clc_sqrt(__clc_dot(p, p)) * __CLC_GENTYPE_INF_SCALE_UP;
   }
