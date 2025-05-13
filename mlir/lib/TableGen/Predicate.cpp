@@ -141,14 +141,14 @@ static void performSubstitutions(std::string &str,
                                  ArrayRef<Subst> substitutions) {
   // Apply all parent substitutions from innermost to outermost.
   for (const auto &subst : llvm::reverse(substitutions)) {
-    auto pos = str.find(std::string(subst.first));
-    while (pos != std::string::npos) {
+    auto pos = StringRef(str).find(subst.first);
+    while (pos != StringRef::npos) {
       str.replace(pos, subst.first.size(), std::string(subst.second));
       // Skip the newly inserted substring, which itself may consider the
       // pattern to match.
       pos += subst.second.size();
       // Find the next possible match position.
-      pos = str.find(std::string(subst.first), pos);
+      pos = StringRef(str).find(subst.first, pos);
     }
   }
 }
