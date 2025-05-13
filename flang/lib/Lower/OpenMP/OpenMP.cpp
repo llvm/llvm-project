@@ -217,27 +217,8 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
   assert(args.isValid() && "invalid args");
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  auto bindSingleMapLike = [&converter,
-                            &firOpBuilder](const semantics::Symbol &sym,
-                                           const mlir::BlockArgument &arg) {
-    // Clones the `bounds` placing them inside the entry block and returns
-    // them.
-    auto cloneBound = [&](mlir::Value bound) {
-      if (mlir::isMemoryEffectFree(bound.getDefiningOp())) {
-        mlir::Operation *clonedOp = firOpBuilder.clone(*bound.getDefiningOp());
-        return clonedOp->getResult(0);
-      }
-      TODO(converter.getCurrentLocation(),
-           "target map-like clause operand unsupported bound type");
-    };
-
-    auto cloneBounds = [cloneBound](llvm::ArrayRef<mlir::Value> bounds) {
-      llvm::SmallVector<mlir::Value> clonedBounds;
-      llvm::transform(bounds, std::back_inserter(clonedBounds),
-                      [&](mlir::Value bound) { return cloneBound(bound); });
-      return clonedBounds;
-    };
-
+  auto bindSingleMapLike = [&converter](const semantics::Symbol &sym,
+                                        const mlir::BlockArgument &arg) {
     fir::ExtendedValue extVal = converter.getSymbolExtendedValue(sym);
     auto refType = mlir::dyn_cast<fir::ReferenceType>(arg.getType());
     if (refType && fir::isa_builtin_cptr_type(refType.getElementType())) {
@@ -245,31 +226,27 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
     } else {
       extVal.match(
           [&](const fir::BoxValue &v) {
-            converter.bindSymbol(sym,
-                                 fir::BoxValue(arg, cloneBounds(v.getLBounds()),
-                                               v.getExplicitParameters(),
-                                               v.getExplicitExtents()));
+            converter.bindSymbol(sym, fir::BoxValue(arg, v.getLBounds(),
+                                                    v.getExplicitParameters(),
+                                                    v.getExplicitExtents()));
           },
           [&](const fir::MutableBoxValue &v) {
             converter.bindSymbol(
-                sym, fir::MutableBoxValue(arg, cloneBounds(v.getLBounds()),
+                sym, fir::MutableBoxValue(arg, v.getLBounds(),
                                           v.getMutableProperties()));
           },
           [&](const fir::ArrayBoxValue &v) {
-            converter.bindSymbol(
-                sym, fir::ArrayBoxValue(arg, cloneBounds(v.getExtents()),
-                                        cloneBounds(v.getLBounds()),
-                                        v.getSourceBox()));
+            converter.bindSymbol(sym, fir::ArrayBoxValue(arg, v.getExtents(),
+                                                         v.getLBounds(),
+                                                         v.getSourceBox()));
           },
           [&](const fir::CharArrayBoxValue &v) {
-            converter.bindSymbol(
-                sym, fir::CharArrayBoxValue(arg, cloneBound(v.getLen()),
-                                            cloneBounds(v.getExtents()),
-                                            cloneBounds(v.getLBounds())));
+            converter.bindSymbol(sym, fir::CharArrayBoxValue(arg, v.getLen(),
+                                                             v.getExtents(),
+                                                             v.getLBounds()));
           },
           [&](const fir::CharBoxValue &v) {
-            converter.bindSymbol(
-                sym, fir::CharBoxValue(arg, cloneBound(v.getLen())));
+            converter.bindSymbol(sym, fir::CharBoxValue(arg, v.getLen()));
           },
           [&](const fir::UnboxedValue &v) { converter.bindSymbol(sym, arg); },
           [&](const auto &) {
@@ -1487,14 +1464,13 @@ static void genBodyOfTargetOp(
   while (!valuesDefinedAbove.empty()) {
     for (mlir::Value val : valuesDefinedAbove) {
       mlir::Operation *valOp = val.getDefiningOp();
-      assert(valOp != nullptr);
 
       // NOTE: We skip BoxDimsOp's as the lesser of two evils is to map the
       // indices separately, as the alternative is to eventually map the Box,
       // which comes with a fairly large overhead comparatively. We could be
       // more robust about this and check using a BackwardsSlice to see if we
       // run the risk of mapping a box.
-      if (mlir::isMemoryEffectFree(valOp) &&
+      if (valOp && mlir::isMemoryEffectFree(valOp) &&
           !mlir::isa<fir::BoxDimsOp>(valOp)) {
         mlir::Operation *clonedOp = valOp->clone();
         entryBlock->push_front(clonedOp);
@@ -1507,7 +1483,13 @@ static void genBodyOfTargetOp(
         valOp->replaceUsesWithIf(clonedOp, replace);
       } else {
         auto savedIP = firOpBuilder.getInsertionPoint();
-        firOpBuilder.setInsertionPointAfter(valOp);
+
+        if (valOp)
+          firOpBuilder.setInsertionPointAfter(valOp);
+        else
+          // This means val is a block argument
+          firOpBuilder.setInsertionPoint(targetOp);
+
         auto copyVal =
             firOpBuilder.createTemporary(val.getLoc(), val.getType());
         firOpBuilder.createStoreWithConvert(copyVal.getLoc(), val, copyVal);
