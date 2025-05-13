@@ -5,12 +5,28 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 \
 ; RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK-VECTOR %s
 
+
+declare half @llvm.experimental.constrained.fptrunc.f16.f64(double, metadata, metadata)
+
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
+declare half @llvm.experimental.constrained.fptrunc.f16.f128(fp128, metadata, metadata)
 declare float @llvm.experimental.constrained.fptrunc.f32.f128(fp128, metadata, metadata)
 declare double @llvm.experimental.constrained.fptrunc.f64.f128(fp128, metadata, metadata)
 
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)
+
+; Test f64->f16.
+define half @f0(double %d1, double %d2) #0 {
+; CHECK-LABEL: f0:
+; CHECK: brasl %r14, __truncdfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.experimental.constrained.fptrunc.f16.f64(
+                                               double %d2,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret half %res
+}
 
 ; Test f64->f32.
 define float @f1(double %d1, double %d2) #0 {
@@ -23,6 +39,19 @@ define float @f1(double %d1, double %d2) #0 {
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
   ret float %res
+}
+
+; Test f128->f16.
+define half @f2_half(ptr %ptr) #0 {
+; CHECK-LABEL: f2_half:
+; CHECK: brasl %r14, __trunctfhf2@PLT
+; CHECK: br %r14
+  %val = load fp128, ptr %ptr
+  %res = call half @llvm.experimental.constrained.fptrunc.f16.f128(
+                                               fp128 %val,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret half %res
 }
 
 ; Test f128->f32.

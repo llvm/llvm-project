@@ -228,6 +228,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xd14", "cortex-r82ae")
         .Case("0xd02", "cortex-a34")
         .Case("0xd04", "cortex-a35")
+        .Case("0xd8f", "cortex-a320")
         .Case("0xd03", "cortex-a53")
         .Case("0xd05", "cortex-a55")
         .Case("0xd46", "cortex-a510")
@@ -430,7 +431,7 @@ StringRef getCPUNameFromS390Model(unsigned int Id, bool HaveVectorSupport) {
     case 9175:
     case 9176:
     default:
-      return HaveVectorSupport? "arch15" : "zEC12";
+      return HaveVectorSupport? "z17" : "zEC12";
   }
 }
 } // end anonymous namespace

@@ -1043,7 +1043,7 @@ bool TargetInstrInfo::getAccumulatorReassociationPatterns(
 
   // Check if the MBB this instruction is a part of contains any other chains.
   // If so, don't apply it.
-  SmallSet<Register, 32> ReductionChain(Chain.begin(), Chain.end());
+  SmallSet<Register, 32> ReductionChain(llvm::from_range, Chain);
   for (const auto &I : MBB) {
     if (I.getOpcode() == Opc &&
         !ReductionChain.contains(I.getOperand(0).getReg()))
@@ -1716,7 +1716,7 @@ bool TargetInstrInfo::getMemOperandWithOffset(
     const MachineInstr &MI, const MachineOperand *&BaseOp, int64_t &Offset,
     bool &OffsetIsScalable, const TargetRegisterInfo *TRI) const {
   SmallVector<const MachineOperand *, 4> BaseOps;
-  LocationSize Width = 0;
+  LocationSize Width = LocationSize::precise(0);
   if (!getMemOperandsWithOffsetWidth(MI, BaseOps, Offset, OffsetIsScalable,
                                      Width, TRI) ||
       BaseOps.size() != 1)
