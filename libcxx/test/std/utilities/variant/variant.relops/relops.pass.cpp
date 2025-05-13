@@ -47,40 +47,46 @@
 // Test SFINAE.
 
 // ==
-static_assert(HasOperatorEqual<std::variant<int>>);
 static_assert(HasOperatorEqual<std::variant<EqualityComparable>>);
+static_assert(HasOperatorEqual<std::variant<EqualityComparable, int, long>>);
 
 static_assert(!HasOperatorEqual<std::variant<NonComparable>>);
+static_assert(!HasOperatorEqual<std::variant<NonComparable, EqualityComparable>>);
 
 // >
-static_assert(HasOperatorGreaterThan<std::variant<int>>);
 static_assert(HasOperatorGreaterThan<std::variant<ThreeWayComparable>>);
+static_assert(HasOperatorGreaterThan<std::variant<ThreeWayComparable, int, long>>);
 
 static_assert(!HasOperatorGreaterThan<std::variant<NonComparable>>);
+static_assert(!HasOperatorGreaterThan<std::variant<NonComparable, ThreeWayComparable>>);
 
 // >=
-static_assert(HasOperatorGreaterThanEqual<std::variant<int>>);
 static_assert(HasOperatorGreaterThanEqual<std::variant<ThreeWayComparable>>);
+static_assert(HasOperatorGreaterThanEqual<std::variant<ThreeWayComparable, int, long>>);
 
 static_assert(!HasOperatorGreaterThanEqual<std::variant<NonComparable>>);
+static_assert(!HasOperatorGreaterThanEqual<std::variant<NonComparable, ThreeWayComparable>>);
 
 // <
-static_assert(HasOperatorLessThan<std::variant<int>>);
 static_assert(HasOperatorLessThan<std::variant<ThreeWayComparable>>);
+static_assert(HasOperatorLessThan<std::variant<ThreeWayComparable, int, long>>);
 
 static_assert(!HasOperatorLessThan<std::variant<NonComparable>>);
+static_assert(!HasOperatorLessThan<std::variant<NonComparable, ThreeWayComparable>>);
 
 // <=
-static_assert(HasOperatorLessThanEqual<std::variant<int>>);
 static_assert(HasOperatorLessThanEqual<std::variant<ThreeWayComparable>>);
+static_assert(HasOperatorLessThanEqual<std::variant<ThreeWayComparable, int, long>>);
 
 static_assert(!HasOperatorLessThanEqual<std::variant<NonComparable>>);
+static_assert(!HasOperatorLessThanEqual<std::variant<NonComparable, ThreeWayComparable>>);
 
 // !=
-static_assert(HasOperatorNotEqual<std::variant<int>>);
 static_assert(HasOperatorNotEqual<std::variant<EqualityComparable>>);
+static_assert(HasOperatorNotEqual<std::variant<EqualityComparable, int, long>>);
 
 static_assert(!HasOperatorNotEqual<std::variant<NonComparable>>);
+static_assert(!HasOperatorNotEqual<std::variant<NonComparable, EqualityComparable>>);
 
 #endif
 
