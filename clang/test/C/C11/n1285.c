@@ -32,8 +32,8 @@ void sink(int *);
 
 int func_return(void) {
   int *p = f().a; // expected-warning {{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
-  p = f().a;      // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
-  p = g().a;      // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
+  p = f().a;      // expected-warning {{object backing the pointer 'p' will be destroyed at the end of the full-expression}}
+  p = g().a;      // expected-warning {{object backing the pointer 'p' will be destroyed at the end of the full-expression}}
   sink(f().a);    // Ok
   return *f().a;  // Ok
 }
@@ -41,7 +41,7 @@ int func_return(void) {
 int ternary(void) {
   int *p = (1 ? (struct X){ 0 } : f()).a; // expected-warning {{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
   int *r = (1 ? (union U){ 0 } : g()).a;  // expected-warning {{temporary whose address is used as value of local variable 'r' will be destroyed at the end of the full-expression}}
-  p = (1 ? (struct X){ 0 } : f()).a;      // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
+  p = (1 ? (struct X){ 0 } : f()).a;      // expected-warning {{object backing the pointer 'p' will be destroyed at the end of the full-expression}}
   sink((1 ? (struct X){ 0 } : f()).a);    // Ok
 
   // This intentionally gets one diagnostic in C and two in C++. In C, the
@@ -49,10 +49,10 @@ int ternary(void) {
   // only one branch results in a temporary in C but both branches do in C++.
   int *q = 1 ? (struct X){ 0 }.a : f().a; // expected-warning {{temporary whose address is used as value of local variable 'q' will be destroyed at the end of the full-expression}} \
                                              cpp-warning {{temporary whose address is used as value of local variable 'q' will be destroyed at the end of the full-expression}}
-  q = 1 ? (struct X){ 0 }.a : f().a; // expected-warning {{object backing the pointer q will be destroyed at the end of the full-expression}} \
-                                        cpp-warning {{object backing the pointer q will be destroyed at the end of the full-expression}}
-  q = 1 ? (struct X){ 0 }.a : g().a; // expected-warning {{object backing the pointer q will be destroyed at the end of the full-expression}} \
-                                        cpp-warning {{object backing the pointer q will be destroyed at the end of the full-expression}}
+  q = 1 ? (struct X){ 0 }.a : f().a; // expected-warning {{object backing the pointer 'q' will be destroyed at the end of the full-expression}} \
+                                        cpp-warning {{object backing the pointer 'q' will be destroyed at the end of the full-expression}}
+  q = 1 ? (struct X){ 0 }.a : g().a; // expected-warning {{object backing the pointer 'q' will be destroyed at the end of the full-expression}} \
+                                        cpp-warning {{object backing the pointer 'q' will be destroyed at the end of the full-expression}}
   sink(1 ? (struct X){ 0 }.a : f().a); // Ok
   return *(1 ? (struct X){ 0 }.a : f().a); // Ok
 }
@@ -60,7 +60,7 @@ int ternary(void) {
 int comma(void) {
   struct X x;
   int *p = ((void)0, x).a; // c-warning {{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
-  p = ((void)0, x).a;      // c-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
+  p = ((void)0, x).a;      // c-warning {{object backing the pointer 'p' will be destroyed at the end of the full-expression}}
   sink(((void)0, x).a);    // Ok
   return *(((void)0, x).a);// Ok
 }
@@ -68,7 +68,7 @@ int comma(void) {
 int cast(void) {
   struct X x;
   int *p = ((struct X)x).a;  // expected-warning {{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
-  p = ((struct X)x).a;       // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
+  p = ((struct X)x).a;       // expected-warning {{object backing the pointer 'p' will be destroyed at the end of the full-expression}}
   sink(((struct X)x).a);     // Ok
   return *(((struct X)x).a); // Ok
 }
@@ -76,7 +76,7 @@ int cast(void) {
 int assign(void) {
   struct X x, s;
   int *p = (x = s).a;  // c-warning {{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
-  p = (x = s).a;       // c-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
+  p = (x = s).a;       // c-warning {{object backing the pointer 'p' will be destroyed at the end of the full-expression}}
   sink((x = s).a);     // Ok
   return *((x = s).a); // Ok
 }

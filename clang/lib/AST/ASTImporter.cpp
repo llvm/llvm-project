@@ -1295,12 +1295,11 @@ ASTNodeImporter::VisitVariableArrayType(const VariableArrayType *T) {
   Error Err = Error::success();
   QualType ToElementType = importChecked(Err, T->getElementType());
   Expr *ToSizeExpr = importChecked(Err, T->getSizeExpr());
-  SourceRange ToBracketsRange = importChecked(Err, T->getBracketsRange());
   if (Err)
     return std::move(Err);
   return Importer.getToContext().getVariableArrayType(
       ToElementType, ToSizeExpr, T->getSizeModifier(),
-      T->getIndexTypeCVRQualifiers(), ToBracketsRange);
+      T->getIndexTypeCVRQualifiers());
 }
 
 ExpectedType ASTNodeImporter::VisitDependentSizedArrayType(
@@ -1308,7 +1307,6 @@ ExpectedType ASTNodeImporter::VisitDependentSizedArrayType(
   Error Err = Error::success();
   QualType ToElementType = importChecked(Err, T->getElementType());
   Expr *ToSizeExpr = importChecked(Err, T->getSizeExpr());
-  SourceRange ToBracketsRange = importChecked(Err, T->getBracketsRange());
   if (Err)
     return std::move(Err);
   // SizeExpr may be null if size is not specified directly.
@@ -1316,7 +1314,7 @@ ExpectedType ASTNodeImporter::VisitDependentSizedArrayType(
 
   return Importer.getToContext().getDependentSizedArrayType(
       ToElementType, ToSizeExpr, T->getSizeModifier(),
-      T->getIndexTypeCVRQualifiers(), ToBracketsRange);
+      T->getIndexTypeCVRQualifiers());
 }
 
 ExpectedType ASTNodeImporter::VisitDependentSizedExtVectorType(
@@ -1661,11 +1659,8 @@ ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
           ImportTemplateArguments(T->template_arguments(), ToTemplateArgs))
     return std::move(Err);
 
-  if (T->isCanonicalUnqualified())
-    return Importer.getToContext().getCanonicalTemplateSpecializationType(
-        *ToTemplateOrErr, ToTemplateArgs);
-
-  ExpectedType ToUnderlyingOrErr = import(T->desugar());
+  ExpectedType ToUnderlyingOrErr =
+      T->isCanonicalUnqualified() ? QualType() : import(T->desugar());
   if (!ToUnderlyingOrErr)
     return ToUnderlyingOrErr.takeError();
   return Importer.getToContext().getTemplateSpecializationType(
@@ -2487,8 +2482,9 @@ bool ASTNodeImporter::IsStructuralMatch(Decl *From, Decl *To, bool Complain,
   }
 
   StructuralEquivalenceContext Ctx(
-      Importer.getFromContext(), Importer.getToContext(),
-      Importer.getNonEquivalentDecls(), getStructuralEquivalenceKind(Importer),
+      Importer.getToContext().getLangOpts(), Importer.getFromContext(),
+      Importer.getToContext(), Importer.getNonEquivalentDecls(),
+      getStructuralEquivalenceKind(Importer),
       /*StrictTypeSpelling=*/false, Complain, /*ErrorOnTagTypeMismatch=*/false,
       IgnoreTemplateParmDepth);
   return Ctx.IsEquivalent(From, To);
@@ -2632,11 +2628,12 @@ ExpectedDecl ASTNodeImporter::VisitNamespaceDecl(NamespaceDecl *D) {
   if (!Name) {
     // This is an anonymous namespace. Adopt an existing anonymous
     // namespace if we can.
-    // FIXME: Not testable.
-    if (auto *TU = dyn_cast<TranslationUnitDecl>(DC))
+    DeclContext *EnclosingDC = DC->getEnclosingNamespaceContext();
+    if (auto *TU = dyn_cast<TranslationUnitDecl>(EnclosingDC))
       MergeWithNamespace = TU->getAnonymousNamespace();
     else
-      MergeWithNamespace = cast<NamespaceDecl>(DC)->getAnonymousNamespace();
+      MergeWithNamespace =
+          cast<NamespaceDecl>(EnclosingDC)->getAnonymousNamespace();
   } else {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     auto FoundDecls = Importer.findDeclsInToCtx(DC, Name);
@@ -4042,6 +4039,9 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   ToFunction->setDeletedAsWritten(D->isDeletedAsWritten());
   ToFunction->setFriendConstraintRefersToEnclosingTemplate(
       D->FriendConstraintRefersToEnclosingTemplate());
+  ToFunction->setIsDestroyingOperatorDelete(D->isDestroyingOperatorDelete());
+  ToFunction->setIsTypeAwareOperatorNewOrDelete(
+      D->isTypeAwareOperatorNewOrDelete());
   ToFunction->setRangeEnd(ToEndLoc);
   ToFunction->setDefaultLoc(ToDefaultLoc);
 
@@ -4343,7 +4343,8 @@ static bool IsEquivalentFriend(ASTImporter &Importer, FriendDecl *FD1,
 
   ASTImporter::NonEquivalentDeclSet NonEquivalentDecls;
   StructuralEquivalenceContext Ctx(
-      FD1->getASTContext(), FD2->getASTContext(), NonEquivalentDecls,
+      Importer.getToContext().getLangOpts(), FD1->getASTContext(),
+      FD2->getASTContext(), NonEquivalentDecls,
       StructuralEquivalenceKind::Default,
       /* StrictTypeSpelling = */ false, /* Complain = */ false);
   return Ctx.IsEquivalent(FD1, FD2);
@@ -8338,10 +8339,10 @@ ExpectedStmt ASTNodeImporter::VisitCXXNewExpr(CXXNewExpr *E) {
 
   return CXXNewExpr::Create(
       Importer.getToContext(), E->isGlobalNew(), ToOperatorNew,
-      ToOperatorDelete, E->passAlignment(), E->doesUsualArrayDeleteWantSize(),
-      ToPlacementArgs, ToTypeIdParens, ToArraySize, E->getInitializationStyle(),
-      ToInitializer, ToType, ToAllocatedTypeSourceInfo, ToSourceRange,
-      ToDirectInitRange);
+      ToOperatorDelete, E->implicitAllocationParameters(),
+      E->doesUsualArrayDeleteWantSize(), ToPlacementArgs, ToTypeIdParens,
+      ToArraySize, E->getInitializationStyle(), ToInitializer, ToType,
+      ToAllocatedTypeSourceInfo, ToSourceRange, ToDirectInitRange);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXDeleteExpr(CXXDeleteExpr *E) {
@@ -8936,14 +8937,14 @@ ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmExpr(
     SubstNonTypeTemplateParmExpr *E) {
   Error Err = Error::success();
   auto ToType = importChecked(Err, E->getType());
-  auto ToExprLoc = importChecked(Err, E->getExprLoc());
+  auto ToNameLoc = importChecked(Err, E->getNameLoc());
   auto ToAssociatedDecl = importChecked(Err, E->getAssociatedDecl());
   auto ToReplacement = importChecked(Err, E->getReplacement());
   if (Err)
     return std::move(Err);
 
   return new (Importer.getToContext()) SubstNonTypeTemplateParmExpr(
-      ToType, E->getValueKind(), ToExprLoc, ToReplacement, ToAssociatedDecl,
+      ToType, E->getValueKind(), ToNameLoc, ToReplacement, ToAssociatedDecl,
       E->getIndex(), E->getPackIndex(), E->isReferenceParameter(),
       E->getFinal());
 }
@@ -9423,34 +9424,6 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
   case attr::AcquiredBefore: {
     const auto *From = cast<AcquiredBeforeAttr>(FromAttr);
     AI.importAttr(From,
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::AssertExclusiveLock: {
-    const auto *From = cast<AssertExclusiveLockAttr>(FromAttr);
-    AI.importAttr(From,
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::AssertSharedLock: {
-    const auto *From = cast<AssertSharedLockAttr>(FromAttr);
-    AI.importAttr(From,
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::ExclusiveTrylockFunction: {
-    const auto *From = cast<ExclusiveTrylockFunctionAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getSuccessValue()).value(),
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::SharedTrylockFunction: {
-    const auto *From = cast<SharedTrylockFunctionAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getSuccessValue()).value(),
                   AI.importArrayArg(From->args(), From->args_size()).value(),
                   From->args_size());
     break;
@@ -10570,8 +10543,8 @@ bool ASTImporter::IsStructurallyEquivalent(QualType From, QualType To,
     }
   }
 
-  StructuralEquivalenceContext Ctx(FromContext, ToContext, NonEquivalentDecls,
-                                   getStructuralEquivalenceKind(*this), false,
-                                   Complain);
+  StructuralEquivalenceContext Ctx(
+      getToContext().getLangOpts(), FromContext, ToContext, NonEquivalentDecls,
+      getStructuralEquivalenceKind(*this), false, Complain);
   return Ctx.IsEquivalent(From, To);
 }

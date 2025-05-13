@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_NO_SPECIALIZATIONS is_pod : public integral_constant<bool, __is_pod(_Tp)> {};
+struct _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_NO_SPECIALIZATIONS is_pod : integral_constant<bool, __is_pod(_Tp)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>

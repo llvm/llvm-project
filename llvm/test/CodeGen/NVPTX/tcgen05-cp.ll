@@ -10,8 +10,8 @@ define void @test_tcgen05_cp_64x128_v1(ptr addrspace(6) %addr, i64 %sdesc) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_64x128_v1_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_64x128_v1_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_64x128_v1_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_64x128_v1_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.64x128b.warpx2::02_13 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.64x128b.warpx2::02_13 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -29,8 +29,8 @@ define void @test_tcgen05_cp_64x128_v2(ptr addrspace(6) %addr, i64 %sdesc) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_64x128_v2_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_64x128_v2_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_64x128_v2_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_64x128_v2_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.64x128b.warpx2::01_23 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.64x128b.warpx2::01_23 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -48,8 +48,8 @@ define void @test_tcgen05_cp_32x128(ptr addrspace(6) %addr, i64 %sdesc) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_32x128_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_32x128_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_32x128_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_32x128_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.32x128b.warpx4 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.32x128b.warpx4 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -68,8 +68,8 @@ define void @test_tcgen05_cp_128x128b(ptr addrspace(6) %addr, i64 %sdesc) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_128x128b_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_128x128b_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_128x128b_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_128x128b_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.128x128b [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.128x128b [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -87,8 +87,8 @@ define void @test_tcgen05_cp_128x256b(ptr addrspace(6) %addr, i64 %sdesc) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_128x256b_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_128x256b_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_128x256b_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_128x256b_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.128x256b [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.128x256b [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -106,8 +106,8 @@ define void @test_tcgen05_cp_4x256b(ptr addrspace(6) %addr, i64 %sdesc) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_4x256b_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_4x256b_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_4x256b_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_4x256b_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.4x256b [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.4x256b [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -126,8 +126,8 @@ define void @test_tcgen05_cp_128x256b_b6x16_p32(ptr addrspace(6) %addr, i64 %sde
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_128x256b_b6x16_p32_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_128x256b_b6x16_p32_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_128x256b_b6x16_p32_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_128x256b_b6x16_p32_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.128x256b.b8x16.b6x16_p32 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.128x256b.b8x16.b6x16_p32 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -145,8 +145,8 @@ define void @test_tcgen05_cp_4x256b_b6x16_p32(ptr addrspace(6) %addr, i64 %sdesc
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_4x256b_b6x16_p32_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_4x256b_b6x16_p32_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_4x256b_b6x16_p32_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_4x256b_b6x16_p32_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.4x256b.b8x16.b6x16_p32 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.4x256b.b8x16.b6x16_p32 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -164,8 +164,8 @@ define void @test_tcgen05_cp_128x128b_b6x16_p32(ptr addrspace(6) %addr, i64 %sde
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_128x128b_b6x16_p32_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_128x128b_b6x16_p32_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_128x128b_b6x16_p32_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_128x128b_b6x16_p32_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.128x128b.b8x16.b6x16_p32 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.128x128b.b8x16.b6x16_p32 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -183,8 +183,8 @@ define void @test_tcgen05_cp_64x128_v1_b6x16_p32(ptr addrspace(6) %addr, i64 %sd
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_64x128_v1_b6x16_p32_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_64x128_v1_b6x16_p32_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_64x128_v1_b6x16_p32_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_64x128_v1_b6x16_p32_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.64x128b.warpx2::02_13.b8x16.b6x16_p32 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.64x128b.warpx2::02_13.b8x16.b6x16_p32 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -202,8 +202,8 @@ define void @test_tcgen05_cp_64x128_v2_b6x16_p32(ptr addrspace(6) %addr, i64 %sd
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_64x128_v2_b6x16_p32_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_64x128_v2_b6x16_p32_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_64x128_v2_b6x16_p32_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_64x128_v2_b6x16_p32_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.64x128b.warpx2::01_23.b8x16.b6x16_p32 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.64x128b.warpx2::01_23.b8x16.b6x16_p32 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -221,8 +221,8 @@ define void @test_tcgen05_cp_32x128_b6x16_p32(ptr addrspace(6) %addr, i64 %sdesc
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_32x128_b6x16_p32_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_32x128_b6x16_p32_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_32x128_b6x16_p32_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_32x128_b6x16_p32_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.32x128b.warpx4.b8x16.b6x16_p32 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.32x128b.warpx4.b8x16.b6x16_p32 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -241,8 +241,8 @@ define void @test_tcgen05_cp_128x256b_b4x16_p64(ptr addrspace(6) %addr, i64 %sde
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_128x256b_b4x16_p64_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_128x256b_b4x16_p64_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_128x256b_b4x16_p64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_128x256b_b4x16_p64_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.128x256b.b8x16.b4x16_p64 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.128x256b.b8x16.b4x16_p64 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -260,8 +260,8 @@ define void @test_tcgen05_cp_4x256b_b4x16_p64(ptr addrspace(6) %addr, i64 %sdesc
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_4x256b_b4x16_p64_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_4x256b_b4x16_p64_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_4x256b_b4x16_p64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_4x256b_b4x16_p64_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.4x256b.b8x16.b4x16_p64 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.4x256b.b8x16.b4x16_p64 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -279,8 +279,8 @@ define void @test_tcgen05_cp_128x128b_b4x16_p64(ptr addrspace(6) %addr, i64 %sde
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_128x128b_b4x16_p64_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_128x128b_b4x16_p64_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_128x128b_b4x16_p64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_128x128b_b4x16_p64_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.128x128b.b8x16.b4x16_p64 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.128x128b.b8x16.b4x16_p64 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -298,8 +298,8 @@ define void @test_tcgen05_cp_64x128_v1_b4x16_p64(ptr addrspace(6) %addr, i64 %sd
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_64x128_v1_b4x16_p64_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_64x128_v1_b4x16_p64_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_64x128_v1_b4x16_p64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_64x128_v1_b4x16_p64_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.64x128b.warpx2::02_13.b8x16.b4x16_p64 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.64x128b.warpx2::02_13.b8x16.b4x16_p64 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -317,8 +317,8 @@ define void @test_tcgen05_cp_64x128_v2_b4x16_p64(ptr addrspace(6) %addr, i64 %sd
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_64x128_v2_b4x16_p64_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_64x128_v2_b4x16_p64_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_64x128_v2_b4x16_p64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_64x128_v2_b4x16_p64_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.64x128b.warpx2::01_23.b8x16.b4x16_p64 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.64x128b.warpx2::01_23.b8x16.b4x16_p64 [%r1], %rd1;
 ; CHECK-NEXT:    ret;
@@ -336,8 +336,8 @@ define void @test_tcgen05_cp_32x128_b4x16_p64(ptr addrspace(6) %addr, i64 %sdesc
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_tcgen05_cp_32x128_b4x16_p64_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_tcgen05_cp_32x128_b4x16_p64_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_cp_32x128_b4x16_p64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_tcgen05_cp_32x128_b4x16_p64_param_1];
 ; CHECK-NEXT:    tcgen05.cp.cta_group::1.32x128b.warpx4.b8x16.b4x16_p64 [%r1], %rd1;
 ; CHECK-NEXT:    tcgen05.cp.cta_group::2.32x128b.warpx4.b8x16.b4x16_p64 [%r1], %rd1;
 ; CHECK-NEXT:    ret;

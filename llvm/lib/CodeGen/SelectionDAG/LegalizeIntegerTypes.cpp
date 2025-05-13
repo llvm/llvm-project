@@ -381,29 +381,26 @@ SDValue DAGTypeLegalizer::PromoteIntRes_AssertZext(SDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntRes_Atomic0(AtomicSDNode *N) {
   EVT ResVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  SDValue Res = DAG.getAtomic(N->getOpcode(), SDLoc(N),
-                              N->getMemoryVT(), ResVT,
-                              N->getChain(), N->getBasePtr(),
-                              N->getMemOperand());
-  if (N->getOpcode() == ISD::ATOMIC_LOAD) {
-    ISD::LoadExtType ETy = cast<AtomicSDNode>(N)->getExtensionType();
-    if (ETy == ISD::NON_EXTLOAD) {
-      switch (TLI.getExtendForAtomicOps()) {
-      case ISD::SIGN_EXTEND:
-        ETy = ISD::SEXTLOAD;
-        break;
-      case ISD::ZERO_EXTEND:
-        ETy = ISD::ZEXTLOAD;
-        break;
-      case ISD::ANY_EXTEND:
-        ETy = ISD::EXTLOAD;
-        break;
-      default:
-        llvm_unreachable("Invalid atomic op extension");
-      }
+  ISD::LoadExtType ExtType = N->getExtensionType();
+  if (ExtType == ISD::NON_EXTLOAD) {
+    switch (TLI.getExtendForAtomicOps()) {
+    case ISD::SIGN_EXTEND:
+      ExtType = ISD::SEXTLOAD;
+      break;
+    case ISD::ZERO_EXTEND:
+      ExtType = ISD::ZEXTLOAD;
+      break;
+    case ISD::ANY_EXTEND:
+      ExtType = ISD::EXTLOAD;
+      break;
+    default:
+      llvm_unreachable("Invalid atomic op extension");
     }
-    cast<AtomicSDNode>(Res)->setExtensionType(ETy);
   }
+
+  SDValue Res =
+      DAG.getAtomicLoad(ExtType, SDLoc(N), N->getMemoryVT(), ResVT,
+                        N->getChain(), N->getBasePtr(), N->getMemOperand());
 
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
@@ -983,9 +980,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VP_LOAD(VPLoadSDNode *N) {
                                  : N->getExtensionType();
   SDLoc dl(N);
   SDValue Res =
-      DAG.getLoadVP(N->getAddressingMode(), ExtType, NVT, dl, N->getChain(),
-                    N->getBasePtr(), N->getOffset(), N->getMask(),
-                    N->getVectorLength(), N->getMemoryVT(), N->getMemOperand());
+      DAG.getExtLoadVP(ExtType, dl, NVT, N->getChain(), N->getBasePtr(),
+                       N->getMask(), N->getVectorLength(), N->getMemoryVT(),
+                       N->getMemOperand(), N->isExpandingLoad());
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
@@ -4015,15 +4012,35 @@ void DAGTypeLegalizer::ExpandIntRes_ABD(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SplitInteger(Result, Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N,
-                                          SDValue &Lo, SDValue &Hi) {
-  SDLoc dl(N);
+void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Op = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  if (TLI.getOperationAction(ISD::CTPOP, VT) == TargetLoweringBase::LibCall) {
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+    if (VT == MVT::i32)
+      LC = RTLIB::CTPOP_I32;
+    else if (VT == MVT::i64)
+      LC = RTLIB::CTPOP_I64;
+    else if (VT == MVT::i128)
+      LC = RTLIB::CTPOP_I128;
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && TLI.getLibcallName(LC) &&
+           "LibCall explicitly requested, but not available");
+    TargetLowering::MakeLibCallOptions CallOptions;
+    EVT IntVT =
+        EVT::getIntegerVT(*DAG.getContext(), DAG.getLibInfo().getIntSize());
+    SDValue Res = TLI.makeLibCall(DAG, LC, IntVT, Op, CallOptions, DL).first;
+    SplitInteger(DAG.getSExtOrTrunc(Res, DL, VT), Lo, Hi);
+    return;
+  }
+
   // ctpop(HiLo) -> ctpop(Hi)+ctpop(Lo)
-  GetExpandedInteger(N->getOperand(0), Lo, Hi);
+  GetExpandedInteger(Op, Lo, Hi);
   EVT NVT = Lo.getValueType();
-  Lo = DAG.getNode(ISD::ADD, dl, NVT, DAG.getNode(ISD::CTPOP, dl, NVT, Lo),
-                   DAG.getNode(ISD::CTPOP, dl, NVT, Hi));
-  Hi = DAG.getConstant(0, dl, NVT);
+  Lo = DAG.getNode(ISD::ADD, DL, NVT, DAG.getNode(ISD::CTPOP, DL, NVT, Lo),
+                   DAG.getNode(ISD::CTPOP, DL, NVT, Hi));
+  Hi = DAG.getConstant(0, DL, NVT);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_CTTZ(SDNode *N,

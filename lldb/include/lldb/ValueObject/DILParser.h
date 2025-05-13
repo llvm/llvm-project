@@ -43,7 +43,7 @@ public:
         m_detail(std::move(detail)) {}
 
   DILDiagnosticError(llvm::StringRef expr, const std::string &message,
-                     uint32_t loc, uint16_t err_len);
+                     uint32_t loc, uint16_t err_len = 1);
 
   std::unique_ptr<CloneableError> Clone() const override {
     return std::make_unique<DILDiagnosticError>(m_detail);
@@ -83,6 +83,7 @@ private:
   ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
+  ASTNodeUP ParseUnaryExpression();
   ASTNodeUP ParsePrimaryExpression();
 
   std::string ParseNestedNameSpecifier();

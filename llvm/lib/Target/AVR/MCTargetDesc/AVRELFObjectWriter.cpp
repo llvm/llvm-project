@@ -37,9 +37,6 @@ AVRELFObjectWriter::AVRELFObjectWriter(uint8_t OSABI)
 unsigned AVRELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
-  const unsigned Kind = Fixup.getTargetKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
   auto Modifier = AVRMCExpr::Specifier(Target.getSpecifier());
   switch ((unsigned)Fixup.getKind()) {
   case FK_Data_1:

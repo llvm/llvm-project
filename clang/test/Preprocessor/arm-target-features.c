@@ -1027,3 +1027,25 @@
 // CHECK-R52-NEXT: #define __ARM_VFPV4__ 1
 // CHECK-R52-NOT: #define __ARM_NEON 1
 // CHECK-R52-NOT: #define __ARM_NEON__
+
+// Check that on AArch32, Neon is correctly activated when the target supports the feature
+// RUN:  %clang -target arm-none-eabi -march=armv8-a -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-SIMD %s
+// RUN:  %clang -target arm-none-eabi -mcpu=cortex-r52 -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-SIMD %s
+// RUN:  %clang -target arm-none-eabi -mcpu=cortex-a57 -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-SIMD %s
+// CHECK-SIMD: #define __ARM_NEON 1
+// CHECK-SIMD: #define __ARM_NEON_FP 0x6
+// CHECK-SIMD: #define __ARM_NEON__ 1
+
+// Check that on AArch32 appropriate targets, +nosimd correctly disables NEON instructions. All features that rely on NEON should also be disabled.
+// RUN:  %clang -target arm-none-eabi -march=armv9.6-a+nosimd -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-NOSIMD %s
+// RUN:  %clang -target arm-none-eabi -mcpu=cortex-r52+nosimd -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-NOSIMD %s
+// RUN:  %clang -target arm-none-eabi -mcpu=cortex-a57+nosimd -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-NOSIMD %s
+// CHECK-NOSIMD-NOT: #define __ARM_FEATURE_BF16 1
+// CHECK-NOSIMD-NOT: #define __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1
+// CHECK-NOSIMD-NOT: #define __ARM_FEATURE_AES 1
+// CHECK-NOSIMD-NOT: #define __ARM_FEATURE_CRYPTO 1
+// CHECK-NOSIMD-NOT: #define __ARM_FEATURE_DOTPROD 1
+// CHECK-NOSIMD-NOT: #define __ARM_FEATURE_SHA2 1
+// CHECK-NOSIMD-NOT: #define __ARM_NEON 1
+// CHECK-NOSIMD-NOT: #define __ARM_NEON_FP 0x6
+// CHECK-NOSIMD-NOT: #define __ARM_NEON__ 1

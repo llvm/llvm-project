@@ -159,9 +159,6 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
                                            bool IsPCRel) const {
   // Determine the type of the relocation.
   unsigned Kind = Fixup.getTargetKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
-
   switch (Target.getSpecifier()) {
   case MipsMCExpr::MEK_DTPREL:
   case MipsMCExpr::MEK_DTPREL_HI:

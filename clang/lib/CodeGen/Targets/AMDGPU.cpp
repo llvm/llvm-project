@@ -198,14 +198,10 @@ ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
         /*ToAS=*/getContext().getTargetAddressSpace(LangAS::cuda_device));
   }
 
-  // FIXME: Should also use this for OpenCL, but it requires addressing the
-  // problem of kernels being called.
-  //
   // FIXME: This doesn't apply the optimization of coercing pointers in structs
   // to global address space when using byref. This would require implementing a
   // new kind of coercion of the in-memory type when for indirect arguments.
-  if (!getContext().getLangOpts().OpenCL && LTy == OrigLTy &&
-      isAggregateTypeForABI(Ty)) {
+  if (LTy == OrigLTy && isAggregateTypeForABI(Ty)) {
     return ABIArgInfo::getIndirectAliased(
         getContext().getTypeAlignInChars(Ty),
         getContext().getTargetAddressSpace(LangAS::opencl_constant),

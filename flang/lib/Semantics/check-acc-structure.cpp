@@ -374,7 +374,6 @@ void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {
 
 // Clause checkers
 CHECK_SIMPLE_CLAUSE(Auto, ACCC_auto)
-CHECK_SIMPLE_CLAUSE(Async, ACCC_async)
 CHECK_SIMPLE_CLAUSE(Attach, ACCC_attach)
 CHECK_SIMPLE_CLAUSE(Bind, ACCC_bind)
 CHECK_SIMPLE_CLAUSE(Capture, ACCC_capture)
@@ -442,6 +441,12 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
     const parser::AccObjectListWithModifier &list, llvm::acc::Clause clause) {
   const auto &objectList = std::get<Fortran::parser::AccObjectList>(list.t);
   CheckMultipleOccurrenceInDeclare(objectList, clause);
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Async &c) {
+  llvm::acc::Clause crtClause = llvm::acc::Clause::ACCC_async;
+  CheckAllowed(crtClause);
+  CheckAllowedOncePerGroup(crtClause, llvm::acc::Clause::ACCC_device_type);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Create &c) {

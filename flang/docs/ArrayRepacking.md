@@ -205,7 +205,7 @@ Arguments:
   * `max-element-size` - constant integer attribute specifying the maximum byte element-size of an array that is eligible for repacking.
   * `min-stride` - constant integer attribute specifying the minimum byte stride of the innermost dimension of an array that is eligible for repacking.
 * `typeparams` - type parameters of the element type.
-* `*.temp_copy_is_safe`: a list of attributes implementing `TempCopyIsSafe` attribute interface for generating a boolean value indicating whether using a temporary copy instead of the original array is safe in the current context.
+* `is-safe`: a list of attributes implementing `fir::SafeTempArrayCopyAttrInterface` attribute interface for generating a boolean value indicating whether using a temporary copy instead of the original array is safe in the current context.
 
 Memory effects are conservative, assuming that an allocation and copy may happen:
 
@@ -243,7 +243,7 @@ Memory effects are conservative, assuming that a copy and deallocation may happe
 
 ### New attribute interface
 
-The `TempCopyIsSafe` attribute interface provides means to generate programming model specific predicates saying whether repacking is safe or not at the point where it needs to be done. For example the OpenMP MLIR dialect may provide an attribute implementing this interface to generate a runtime check at the point of packing array `x` inside subroutine `repacking`. A conservative implementation might look like this:
+The `fir::SafeTempArrayCopyAttrInterface` attribute interface provides means to generate programming model specific predicates saying whether repacking is safe or not at the point where it needs to be done. For example the OpenMP MLIR dialect may provide an attribute implementing this interface to generate a runtime check at the point of packing array `x` inside subroutine `repacking`. A conservative implementation might look like this:
 
 ```C
   repacking_is_safe = omp_get_num_team() == 1 && omp_get_num_threads() == 1;
@@ -297,7 +297,7 @@ end program main
 
 So the most conservative implementation of the predicate generator may be to always produce `false` value. Flang lowering may attach any number of such attributes to `fir.pack_array` depending on the compilation context and options.
 
-[TBD] define `TempCopyIsSafe` attribute interface so that OpenACC/OpenMP dialects can provide their specific attributes, which can be used to generate static/runtime checks for safety of the temporary copy in particular context.
+`fir::SafeTempArrayCopyAttrInterface` is defined in `flang/include/flang/Optimizer/Dialect/SafeTempArrayCopyAttrInterface.td`. The OpenACC-specific implementation is defined in `lib/Optimizer/OpenACC/FIROpenACCAttributes.cpp`. The OpenMP-specific implementation is defined in `lib/Optimizer/OpenMP/Support/FIROpenMPAttributes.cpp`
 
 #### Alternatives/additions to the attribute interface
 
@@ -305,7 +305,7 @@ The following ideas were expressed during the review, and they are worth conside
 
 | |
 | - |
-| For OpenACC/OpenMP runtime to be able to detect/handle the presence of the original array and the temporary copy in the device data environment, descriptor flags/properties might be used to mark the copy's descriptor as such and provide a link to the original array (or its descriptor). It may be problematic to maintain such flags/properties, in general, because of the repacking that may happen, especially, in C code, where the flags/properties might be dropped. Moreover, a copy array might be repacked into another copy array multiple times, so a descriptor might need to keep a chain of associated arrays and it will have to be maintained as well.<br>An alternative to tracking the original-copy "association" might be compiler generated code notifying the OpenACC/OpenMP offload runtime about the copy being created/deleted for the original array, so that the offload runtime can disallow repacking or report an error when the repacking is definitely causing the program to behave incorrectly. The compiler may report the "association" to the runtime through callbacks provided by `TempCopyIsSafe` attribute interface, and this will require proper bookkeeping in the runtime specific to the array repacking. |
+| For OpenACC/OpenMP runtime to be able to detect/handle the presence of the original array and the temporary copy in the device data environment, descriptor flags/properties might be used to mark the copy's descriptor as such and provide a link to the original array (or its descriptor). It may be problematic to maintain such flags/properties, in general, because of the repacking that may happen, especially, in C code, where the flags/properties might be dropped. Moreover, a copy array might be repacked into another copy array multiple times, so a descriptor might need to keep a chain of associated arrays and it will have to be maintained as well.<br>An alternative to tracking the original-copy "association" might be compiler generated code notifying the OpenACC/OpenMP offload runtime about the copy being created/deleted for the original array, so that the offload runtime can disallow repacking or report an error when the repacking is definitely causing the program to behave incorrectly. The compiler may report the "association" to the runtime through callbacks provided by `fir::SafeTempArrayCopyAttrInterface` attribute interface, and this will require proper bookkeeping in the runtime specific to the array repacking. |
 | There may be some uses for an API allowing to statically determine whether a given descriptor (SSA value) represent the repacked copy of the original array. For example, it may be in the form of an API in the OpenACC `MappableType` interface. This can be done with some limitations for the values produced by `fir.pack_array` that are dynamic (i.e. the copy is created conditionally based on the runtime checks). |
 | The compiler can also try to statically determine the conditions where the array repacking might be unsafe, e.g. a presence of memory barriers or operations carrying implicit memory barriers, presence of atomic operations between the `pack/unpack` operations may indicate non-trivial handling of the array memory. Such checks may result in the removal of `pack/unpack` operations, and they can probably be done in a mandatory pass (not an optimization pass). At the same time, the result of the checks may depend on other optimization passes (e.g. inlining), so the behavior may be inconsistent between different optimization levels. |
 
@@ -373,7 +373,7 @@ Lowering of the new operations (after all the optimizations) might be done in a 
 `fir.pack_array` lowering might be done in the following steps:
 
 * If there are dynamic constraints, generate a boolean `p1` that is set to true if repacking has to be done (depending on the constraints values and the original array descriptor). The IR might be cleaner if we generate a Fortran runtime call here.
-* If there are attributes implementing `TempCopyIsSafe` attribute interface, then use the interface method to generate boolean predicates for each such attribute: `p2`, ..., `pn`.
+* If there are attributes implementing `fir::SafeTempArrayCopyAttrInterface` attribute interface, then use the interface method to generate boolean predicates for each such attribute: `p2`, ..., `pn`.
   * [TBD] it seems that the runtime checks for the target offload programs will require a pure `PointerLike` value for the array start and the total byte size of the array (e.g. as `index` value).
 * Compute `p = p1 && p2 && ... && pn`.
 * Compute the total size of the temporary `required_size` (in elements).

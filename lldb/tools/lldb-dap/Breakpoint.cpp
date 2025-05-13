@@ -14,7 +14,6 @@
 #include "lldb/API/SBLineEntry.h"
 #include "lldb/API/SBMutex.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/JSON.h"
 #include <cstddef>
 #include <cstdint>
 #include <mutex>
@@ -30,13 +29,16 @@ void Breakpoint::SetHitCondition() {
     m_bp.SetIgnoreCount(hitCount - 1);
 }
 
-void Breakpoint::CreateJsonObject(llvm::json::Object &object) {
+protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
+  protocol::Breakpoint breakpoint;
+
   // Each breakpoint location is treated as a separate breakpoint for VS code.
   // They don't have the notion of a single breakpoint with multiple locations.
   if (!m_bp.IsValid())
-    return;
-  object.try_emplace("verified", m_bp.GetNumResolvedLocations() > 0);
-  object.try_emplace("id", m_bp.GetID());
+    return breakpoint;
+
+  breakpoint.verified = m_bp.GetNumResolvedLocations() > 0;
+  breakpoint.id = m_bp.GetID();
   // VS Code DAP doesn't currently allow one breakpoint to have multiple
   // locations so we just report the first one. If we report all locations
   // then the IDE starts showing the wrong line numbers and locations for
@@ -60,16 +62,18 @@ void Breakpoint::CreateJsonObject(llvm::json::Object &object) {
   if (bp_addr.IsValid()) {
     std::string formatted_addr =
         "0x" + llvm::utohexstr(bp_addr.GetLoadAddress(m_bp.GetTarget()));
-    object.try_emplace("instructionReference", formatted_addr);
+    breakpoint.instructionReference = formatted_addr;
     auto line_entry = bp_addr.GetLineEntry();
     const auto line = line_entry.GetLine();
     if (line != UINT32_MAX)
-      object.try_emplace("line", line);
+      breakpoint.line = line;
     const auto column = line_entry.GetColumn();
     if (column != 0)
-      object.try_emplace("column", column);
-    object.try_emplace("source", CreateSource(line_entry));
+      breakpoint.column = column;
+    breakpoint.source = CreateSource(line_entry);
   }
+
+  return breakpoint;
 }
 
 bool Breakpoint::MatchesName(const char *name) {

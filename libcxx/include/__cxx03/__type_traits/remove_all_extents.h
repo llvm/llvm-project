@@ -44,11 +44,6 @@ template <class _Tp>
 using __remove_all_extents_t = typename remove_all_extents<_Tp>::type;
 #endif // __has_builtin(__remove_all_extents)
 
-#if _LIBCPP_STD_VER >= 14
-template <class _Tp>
-using remove_all_extents_t = __remove_all_extents_t<_Tp>;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_ALL_EXTENTS_H
