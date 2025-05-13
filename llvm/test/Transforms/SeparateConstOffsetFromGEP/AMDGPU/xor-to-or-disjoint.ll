@@ -3,142 +3,152 @@
 ; RUN: -S < %s | FileCheck %s
 
 
-; Test with GEP user and known bits: Ensure the transformation occurs when the xor has a GEP user
-define ptr @test_with_gep_user(ptr %ptr) {
-; CHECK-LABEL: define ptr @test_with_gep_user(
-; CHECK-SAME: ptr [[PTR:%.*]]) {
+; Test a simple case of xor to or disjoint transformation
+define void @test_basic_transformation(ptr %ptr, i64 %input) {
+; CHECK-LABEL: define void @test_basic_transformation(
+; CHECK-SAME: ptr [[PTR:%.*]], i64 [[INPUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[BASE:%.*]] = add i64 0, 0
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[BASE]], 8
-; CHECK-NEXT:    [[XOR21:%.*]] = or disjoint i64 [[XOR1]], 16
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[XOR21]]
-; CHECK-NEXT:    ret ptr [[GEP]]
+; CHECK-NEXT:    [[BASE:%.*]] = and i64 [[INPUT]], -8192
+; CHECK-NEXT:    [[ADDR1:%.*]] = xor i64 [[BASE]], 32
+; CHECK-NEXT:    [[ADDR2_OR_DISJOINT:%.*]] = or disjoint i64 [[ADDR1]], 2048
+; CHECK-NEXT:    [[ADDR3_OR_DISJOINT:%.*]] = or disjoint i64 [[ADDR1]], 4096
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ADDR1]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ADDR2_OR_DISJOINT]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ADDR3_OR_DISJOINT]]
+; CHECK-NEXT:    [[VAL1:%.*]] = load half, ptr [[GEP1]], align 2
+; CHECK-NEXT:    [[VAL2:%.*]] = load half, ptr [[GEP2]], align 2
+; CHECK-NEXT:    [[VAL3:%.*]] = load half, ptr [[GEP3]], align 2
+; CHECK-NEXT:    ret void
 ;
 entry:
-  %base = add i64 0,0
-  %xor1 = xor i64 %base, 8
-  %xor2 = xor i64 %base, 24  ; Should be replaced with OR of %xor1 and 16
-  %gep = getelementptr i8, ptr %ptr, i64 %xor2
-  ret ptr %gep
+  %base = and i64 %input, -8192    ; Clear low bits
+  %addr1 = xor i64 %base, 32
+  %addr2 = xor i64 %base, 2080
+  %addr3 = xor i64 %base, 4128
+  %gep1 = getelementptr i8, ptr %ptr, i64 %addr1
+  %gep2 = getelementptr i8, ptr %ptr, i64 %addr2
+  %gep3 = getelementptr i8, ptr %ptr, i64 %addr3
+  %val1 = load half, ptr %gep1
+  %val2 = load half, ptr %gep2
+  %val3 = load half, ptr %gep3
+  ret void
 }
 
 
-; Test with non-GEP user: Ensure the transformation does not occur
-define i32 @test_with_non_gep_user(ptr %ptr) {
-; CHECK-LABEL: define i32 @test_with_non_gep_user(
-; CHECK-SAME: ptr [[PTR:%.*]]) {
+; Test the decreasing order of offset xor to or disjoint transformation
+define void @test_descending_offset_transformation(ptr %ptr, i64 %input) {
+; CHECK-LABEL: define void @test_descending_offset_transformation(
+; CHECK-SAME: ptr [[PTR:%.*]], i64 [[INPUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[BASE:%.*]] = add i32 0, 0
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[BASE]], 8
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[BASE]], 24
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[XOR2]], 5
-; CHECK-NEXT:    ret i32 [[ADD]]
+; CHECK-NEXT:    [[BASE:%.*]] = and i64 [[INPUT]], -8192
+; CHECK-NEXT:    [[ADDR3_DOM_CLONE:%.*]] = xor i64 [[BASE]], 32
+; CHECK-NEXT:    [[ADDR1_OR_DISJOINT:%.*]] = or disjoint i64 [[ADDR3_DOM_CLONE]], 4096
+; CHECK-NEXT:    [[ADDR2_OR_DISJOINT:%.*]] = or disjoint i64 [[ADDR3_DOM_CLONE]], 2048
+; CHECK-NEXT:    [[ADDR3_OR_DISJOINT:%.*]] = or disjoint i64 [[ADDR3_DOM_CLONE]], 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ADDR1_OR_DISJOINT]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ADDR2_OR_DISJOINT]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ADDR3_OR_DISJOINT]]
+; CHECK-NEXT:    [[VAL1:%.*]] = load half, ptr [[GEP1]], align 2
+; CHECK-NEXT:    [[VAL2:%.*]] = load half, ptr [[GEP2]], align 2
+; CHECK-NEXT:    [[VAL3:%.*]] = load half, ptr [[GEP3]], align 2
+; CHECK-NEXT:    ret void
 ;
 entry:
-  %base = add i32 0,0
-  %xor1 = xor i32 %base, 8
-  %xor2 = xor i32 %base, 24
-  %add = add i32 %xor2, 5
-  ret i32 %add
-}
-
-; Test with non-constant operand: Ensure the transformation does not occur
-define ptr @test_with_non_constant_operand(i64 %val, i64 %val2, ptr %ptr) {
-; CHECK-LABEL: define ptr @test_with_non_constant_operand(
-; CHECK-SAME: i64 [[VAL:%.*]], i64 [[VAL2:%.*]], ptr [[PTR:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[VAL]], [[VAL2]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i64 [[VAL]], 24
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[XOR2]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-entry:
-  %xor1 = xor i64 %val, %val2  ; Non-constant operand
-  %xor2 = xor i64 %val, 24
-  %gep = getelementptr i8, ptr %ptr, i64 %xor2
-  ret ptr %gep
-}
-
-; Test with unknown disjoint bits: Ensure the transformation does not occur
-define ptr @test_with_unknown_disjoint_bits(i64 %base, ptr %ptr) {
-; CHECK-LABEL: define ptr @test_with_unknown_disjoint_bits(
-; CHECK-SAME: i64 [[BASE:%.*]], ptr [[PTR:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[BASE]], 8
-; CHECK-NEXT:    [[XOR21:%.*]] = or disjoint i64 [[XOR1]], 16
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[XOR21]]
-; CHECK-NEXT:    ret ptr [[GEP]]
-;
-entry:
-  %xor1 = xor i64 %base, 8
-  %xor2 = xor i64 %base, 24
-  %gep = getelementptr i8, ptr %ptr, i64 %xor2
-  ret ptr %gep
-}
-
-; Test with multiple xor operations in sequence
-define ptr @test_multiple_xors(ptr %ptr) {
-; CHECK-LABEL: define ptr @test_multiple_xors(
-; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[BASE:%.*]] = add i64 2, 0
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[BASE]], 8
-; CHECK-NEXT:    [[XOR21:%.*]] = or disjoint i64 [[XOR1]], 16
-; CHECK-NEXT:    [[XOR32:%.*]] = or disjoint i64 [[XOR1]], 24
-; CHECK-NEXT:    [[XOR43:%.*]] = or disjoint i64 [[XOR1]], 64
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[XOR21]]
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[XOR32]]
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[XOR43]]
-; CHECK-NEXT:    ret ptr [[GEP4]]
-;
-entry:
-  %base = add i64 2,0
-  %xor1 = xor i64 %base, 8
-  %xor2 = xor i64 %base, 24    ; Should be replaced with OR
-  %xor3 = xor i64 %base, 32
-  %xor4 = xor i64 %base, 72    ; Should be replaced with OR
-  %gep2 = getelementptr i8, ptr %ptr, i64 %xor2
-  %gep3 = getelementptr i8, ptr %ptr, i64 %xor3
-  %gep4 = getelementptr i8, ptr %ptr, i64 %xor4
-  ret ptr %gep4
+  %base = and i64 %input, -8192    ; Clear low bits
+  %addr1 = xor i64 %base, 4128
+  %addr2 = xor i64 %base, 2080
+  %addr3 = xor i64 %base, 32
+  %gep1 = getelementptr i8, ptr %ptr, i64 %addr1
+  %gep2 = getelementptr i8, ptr %ptr, i64 %addr2
+  %gep3 = getelementptr i8, ptr %ptr, i64 %addr3
+  %val1 = load half, ptr %gep1
+  %val2 = load half, ptr %gep2
+  %val3 = load half, ptr %gep3
+  ret void
 }
 
 
-; Test with operand order variations
-define ptr @test_operand_order(ptr %ptr) {
-; CHECK-LABEL: define ptr @test_operand_order(
-; CHECK-SAME: ptr [[PTR:%.*]]) {
+; Test that %addr2 is not transformed to or disjoint.
+define void @test_no_transfomation(ptr %ptr, i64 %input) {
+; CHECK-LABEL: define void @test_no_transfomation(
+; CHECK-SAME: ptr [[PTR:%.*]], i64 [[INPUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[BASE:%.*]] = add i64 2, 0
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[BASE]], 12
-; CHECK-NEXT:    [[XOR21:%.*]] = or disjoint i64 [[XOR1]], 12
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[XOR21]]
-; CHECK-NEXT:    ret ptr [[GEP]]
+; CHECK-NEXT:    [[BASE:%.*]] = and i64 [[INPUT]], -8192
+; CHECK-NEXT:    [[ADDR1:%.*]] = xor i64 [[BASE]], 32
+; CHECK-NEXT:    [[ADDR2:%.*]] = xor i64 [[BASE]], 64
+; CHECK-NEXT:    [[ADDR3_OR_DISJOINT:%.*]] = or disjoint i64 [[ADDR1]], 2048
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ADDR1]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ADDR2]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ADDR3_OR_DISJOINT]]
+; CHECK-NEXT:    [[VAL1:%.*]] = load half, ptr [[GEP1]], align 2
+; CHECK-NEXT:    [[VAL2:%.*]] = load half, ptr [[GEP2]], align 2
+; CHECK-NEXT:    [[VAL3:%.*]] = load half, ptr [[GEP3]], align 2
+; CHECK-NEXT:    ret void
 ;
 entry:
-  %base = add i64 2,0
-  %xor1 = xor i64 %base, 12
-  %xor2 = xor i64 24, %base    ; Operands reversed, should still be replaced
-  %gep = getelementptr i8, ptr %ptr, i64 %xor2
-  ret ptr %gep
+  %base = and i64 %input, -8192    ; Clear low bits
+  %addr1 = xor i64 %base, 32
+  %addr2 = xor i64 %base, 64  ; Should not be transformed
+  %addr3 = xor i64 %base, 2080
+  %gep1 = getelementptr i8, ptr %ptr, i64 %addr1
+  %gep2 = getelementptr i8, ptr %ptr, i64 %addr2
+  %gep3 = getelementptr i8, ptr %ptr, i64 %addr3
+  %val1 = load half, ptr %gep1
+  %val2 = load half, ptr %gep2
+  %val3 = load half, ptr %gep3
+  ret void
 }
 
 
-; Test with multiple xor operations in sequence
-define ptr @test_negative_offset(ptr %ptr) {
-; CHECK-LABEL: define ptr @test_negative_offset(
-; CHECK-SAME: ptr [[PTR:%.*]]) {
+; Test case with xor instructions in different basic blocks
+define void @test_dom_tree(ptr %ptr, i64 %input, i1 %cond) {
+; CHECK-LABEL: define void @test_dom_tree(
+; CHECK-SAME: ptr [[PTR:%.*]], i64 [[INPUT:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[BASE:%.*]] = add i64 2, 0
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[BASE]], 72
-; CHECK-NEXT:    [[XOR21:%.*]] = or disjoint i64 [[XOR1]], -48
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[XOR21]]
-; CHECK-NEXT:    ret ptr [[GEP]]
+; CHECK-NEXT:    [[BASE:%.*]] = and i64 [[INPUT]], -8192
+; CHECK-NEXT:    [[ADDR1:%.*]] = xor i64 [[BASE]], 16
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ADDR1]]
+; CHECK-NEXT:    [[VAL1:%.*]] = load half, ptr [[GEP1]], align 2
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[ADDR2_OR_DISJOINT:%.*]] = or disjoint i64 [[ADDR1]], 32
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ADDR2_OR_DISJOINT]]
+; CHECK-NEXT:    [[VAL2:%.*]] = load half, ptr [[GEP2]], align 2
+; CHECK-NEXT:    br label %[[MERGE:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[ADDR3_OR_DISJOINT:%.*]] = or disjoint i64 [[ADDR1]], 96
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ADDR3_OR_DISJOINT]]
+; CHECK-NEXT:    [[VAL3:%.*]] = load half, ptr [[GEP3]], align 2
+; CHECK-NEXT:    br label %[[MERGE]]
+; CHECK:       [[MERGE]]:
+; CHECK-NEXT:    [[ADDR4_OR_DISJOINT:%.*]] = or disjoint i64 [[ADDR1]], 224
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[ADDR4_OR_DISJOINT]]
+; CHECK-NEXT:    [[VAL4:%.*]] = load half, ptr [[GEP4]], align 2
+; CHECK-NEXT:    ret void
 ;
 entry:
-  %base = add i64 2,0
-  %xor1 = xor i64 %base, 72
-  %xor2 = xor i64 %base, 24    ; Should be replaced with OR
-  %gep = getelementptr i8, ptr %ptr, i64 %xor2
-  ret ptr %gep
+  %base = and i64 %input, -8192   ; Clear low bits
+  %addr1 = xor i64 %base,16
+  %gep1 = getelementptr i8, ptr %ptr, i64 %addr1
+  %val1 = load half, ptr %gep1
+  br i1 %cond, label %then, label %else
+
+then:
+  %addr2 = xor i64 %base, 48
+  %gep2 = getelementptr i8, ptr %ptr, i64 %addr2
+  %val2 = load half, ptr %gep2
+  br label %merge
+
+else:
+  %addr3 = xor i64 %base, 112
+  %gep3 = getelementptr i8, ptr %ptr, i64 %addr3
+  %val3 = load half, ptr %gep3
+  br label %merge
+
+merge:
+  %addr4 = xor i64 %base, 240
+  %gep4 = getelementptr i8, ptr %ptr, i64 %addr4
+  %val4 = load half, ptr %gep4
+  ret void
 }
+
