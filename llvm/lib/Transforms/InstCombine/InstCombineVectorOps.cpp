@@ -1978,7 +1978,6 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps,
                                 DestTy);
     }
     case Instruction::GetElementPtr: {
-      llvm_unreachable("Foo");
       Value *Ptr = NewOps[0];
       ArrayRef<Value*> Idx = NewOps.slice(1);
       return Builder.CreateGEP(cast<GEPOperator>(I)->getSourceElementType(),
