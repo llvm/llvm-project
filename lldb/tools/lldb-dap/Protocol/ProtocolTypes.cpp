@@ -25,9 +25,9 @@ bool fromJSON(const json::Value &Params, Source::PresentationHint &PH,
   }
   std::optional<Source::PresentationHint> hint =
       StringSwitch<std::optional<Source::PresentationHint>>(*rawHint)
-          .Case("normal", Source::ePresentationHintNormal)
-          .Case("emphasize", Source::ePresentationHintEmphasize)
-          .Case("deemphasize", Source::ePresentationHintDeemphasize)
+          .Case("normal", Source::eSourcePresentationHintNormal)
+          .Case("emphasize", Source::eSourcePresentationHintEmphasize)
+          .Case("deemphasize", Source::eSourcePresentationHintDeemphasize)
           .Default(std::nullopt);
   if (!hint) {
     P.report("unexpected value");
@@ -43,13 +43,14 @@ bool fromJSON(const json::Value &Params, Source &S, json::Path P) {
          O.map("presentationHint", S.presentationHint) &&
          O.map("sourceReference", S.sourceReference);
 }
+
 llvm::json::Value toJSON(Source::PresentationHint hint) {
   switch (hint) {
-  case Source::ePresentationHintNormal:
+  case Source::eSourcePresentationHintNormal:
     return "normal";
-  case Source::ePresentationHintEmphasize:
+  case Source::eSourcePresentationHintEmphasize:
     return "emphasize";
-  case Source::ePresentationHintDeemphasize:
+  case Source::eSourcePresentationHintDeemphasize:
     return "deemphasize";
   }
   llvm_unreachable("unhandled presentation hint.");
@@ -435,6 +436,41 @@ json::Value toJSON(const Capabilities &C) {
   return result;
 }
 
+bool fromJSON(const json::Value &Params, Scope::PresentationHint &PH,
+              json::Path P) {
+  auto rawHint = Params.getAsString();
+  if (!rawHint) {
+    P.report("expected a string");
+    return false;
+  }
+  const std::optional<Scope::PresentationHint> hint =
+      StringSwitch<std::optional<Scope::PresentationHint>>(*rawHint)
+          .Case("arguments", Scope::eScopePresentationHintArguments)
+          .Case("locals", Scope::eScopePresentationHintLocals)
+          .Case("registers", Scope::eScopePresentationHintRegisters)
+          .Case("returnValue", Scope::eScopePresentationHintReturnValue)
+          .Default(std::nullopt);
+  if (!hint) {
+    P.report("unexpected value");
+    return false;
+  }
+  PH = *hint;
+  return true;
+}
+
+bool fromJSON(const json::Value &Params, Scope &S, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("name", S.name) &&
+         O.mapOptional("presentationHint", S.presentationHint) &&
+         O.map("variablesReference", S.variablesReference) &&
+         O.mapOptional("namedVariables", S.namedVariables) &&
+         O.map("indexedVariables", S.indexedVariables) &&
+         O.mapOptional("source", S.source) && O.map("expensive", S.expensive) &&
+         O.mapOptional("line", S.line) && O.mapOptional("column", S.column) &&
+         O.mapOptional("endLine", S.endLine) &&
+         O.mapOptional("endColumn", S.endColumn);
+}
+
 llvm::json::Value toJSON(const Scope &SC) {
   llvm::json::Object result{{"name", SC.name},
                             {"variablesReference", SC.variablesReference},
@@ -443,16 +479,16 @@ llvm::json::Value toJSON(const Scope &SC) {
   if (SC.presentationHint.has_value()) {
     llvm::StringRef presentationHint;
     switch (*SC.presentationHint) {
-    case Scope::ePresentationHintArguments:
+    case Scope::eScopePresentationHintArguments:
       presentationHint = "arguments";
       break;
-    case Scope::ePresentationHintLocals:
+    case Scope::eScopePresentationHintLocals:
       presentationHint = "locals";
       break;
-    case Scope::ePresentationHintRegisters:
+    case Scope::eScopePresentationHintRegisters:
       presentationHint = "registers";
       break;
-    case Scope::ePresentationHintReturnValue:
+    case Scope::eScopePresentationHintReturnValue:
       presentationHint = "returnValue";
       break;
     }

@@ -50,7 +50,7 @@ TEST(ProtocolTypesTest, Source) {
   source.name = "testName";
   source.path = "/path/to/source";
   source.sourceReference = 12345;
-  source.presentationHint = ePresentationHintEmphasize;
+  source.presentationHint = Source::eSourcePresentationHintEmphasize;
 
   llvm::Expected<Source> deserialized_source = roundtrip(source);
   ASSERT_THAT_EXPECTED(deserialized_source, llvm::Succeeded());
@@ -290,6 +290,47 @@ TEST(ProtocolTypesTest, Capabilities) {
   ASSERT_TRUE(deserialized_capabilities->lldbExtVersion.has_value());
   EXPECT_EQ(capabilities.lldbExtVersion,
             deserialized_capabilities->lldbExtVersion);
+}
+
+TEST(ProtocolTypesTest, Scope) {
+  Scope scope;
+  scope.name = "Locals";
+  scope.presentationHint = Scope::eScopePresentationHintLocals;
+  scope.variablesReference = 1;
+  scope.namedVariables = 2;
+  scope.indexedVariables = std::nullopt;
+  scope.expensive = false;
+  scope.line = 2;
+  scope.column = 3;
+  scope.endLine = 10;
+  scope.endColumn = 20;
+
+  scope.source =
+      Source{.name = "testName",
+             .path = "/path/to/source",
+             .sourceReference = 12345,
+             .presentationHint = Source::eSourcePresentationHintNormal};
+
+  llvm::Expected<Scope> deserialized_scope = roundtrip(scope);
+  ASSERT_THAT_EXPECTED(deserialized_scope, llvm::Succeeded());
+  EXPECT_EQ(scope.name, deserialized_scope->name);
+  EXPECT_EQ(scope.presentationHint, deserialized_scope->presentationHint);
+  EXPECT_EQ(scope.variablesReference, deserialized_scope->variablesReference);
+  EXPECT_EQ(scope.namedVariables, deserialized_scope->namedVariables);
+  EXPECT_EQ(scope.indexedVariables, deserialized_scope->indexedVariables);
+  EXPECT_EQ(scope.expensive, deserialized_scope->expensive);
+  EXPECT_EQ(scope.line, deserialized_scope->line);
+  EXPECT_EQ(scope.column, deserialized_scope->column);
+  EXPECT_EQ(scope.endLine, deserialized_scope->endLine);
+  EXPECT_EQ(scope.endColumn, deserialized_scope->endColumn);
+
+  EXPECT_THAT(deserialized_scope->source.has_value(), true);
+  const Source &source = scope.source.value();
+  const Source &deserialized_source = deserialized_scope->source.value();
+
+  EXPECT_EQ(source.path, deserialized_source.path);
+  EXPECT_EQ(source.sourceReference, deserialized_source.sourceReference);
+  EXPECT_EQ(source.presentationHint, deserialized_source.presentationHint);
 }
 
 TEST(ProtocolTypesTest, PresentationHint) {

@@ -41,9 +41,9 @@ static Scope CreateScope(const llvm::StringRef name, int64_t variablesReference,
   // as the locals scope will not be expanded. It becomes more annoying when
   // the scope has arguments, return_value and locals.
   if (variablesReference == VARREF_LOCALS)
-    scope.presentationHint = Scope::ePresentationHintLocals;
+    scope.presentationHint = Scope::eScopePresentationHintLocals;
   else if (variablesReference == VARREF_REGS)
-    scope.presentationHint = Scope::ePresentationHintRegisters;
+    scope.presentationHint = Scope::eScopePresentationHintRegisters;
 
   scope.variablesReference = variablesReference;
   scope.namedVariables = namedVariables;

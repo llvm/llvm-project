@@ -290,9 +290,9 @@ llvm::json::Value toJSON(const Capabilities &);
 /// breakpoints.
 struct Source {
   enum PresentationHint : unsigned {
-    ePresentationHintNormal,
-    ePresentationHintEmphasize,
-    ePresentationHintDeemphasize,
+    eSourcePresentationHintNormal,
+    eSourcePresentationHintEmphasize,
+    eSourcePresentationHintDeemphasize,
   };
 
   /// The short name of the source. Every source returned from the debug adapter
@@ -326,10 +326,10 @@ llvm::json::Value toJSON(const Source &);
 /// a source or a range within a source.
 struct Scope {
   enum PresentationHint : unsigned {
-    ePresentationHintArguments,
-    ePresentationHintLocals,
-    ePresentationHintRegisters,
-    ePresentationHintReturnValue
+    eScopePresentationHintArguments,
+    eScopePresentationHintLocals,
+    eScopePresentationHintRegisters,
+    eScopePresentationHintReturnValue
   };
   /// Name of the scope such as 'Arguments', 'Locals', or 'Registers'. This
   /// string is shown in the UI as is and can be translated.
@@ -387,6 +387,9 @@ struct Scope {
   /// it is 0- or 1-based.
   std::optional<uint64_t> endColumn;
 };
+bool fromJSON(const llvm::json::Value &Params, Scope::PresentationHint &PH,
+              llvm::json::Path);
+bool fromJSON(const llvm::json::Value &, Scope &, llvm::json::Path);
 llvm::json::Value toJSON(const Scope &);
 
 /// The granularity of one `step` in the stepping requests `next`, `stepIn`,
