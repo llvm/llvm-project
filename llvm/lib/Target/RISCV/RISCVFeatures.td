@@ -1469,7 +1469,7 @@ def HasVendorXqcilo
                          "'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)">;
 
 def FeatureVendorXqccmp
-    : RISCVExperimentalExtension<0, 1,
+    : RISCVExperimentalExtension<0, 3,
                                  "Qualcomm 16-bit Push/Pop and Double Moves",
                                  [FeatureStdExtZca]>;
 def HasVendorXqccmp : Predicate<"Subtarget->hasVendorXqccmp()">,
