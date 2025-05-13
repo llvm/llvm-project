@@ -167,7 +167,7 @@ OpenACCGangClause::OpenACCGangClause(SourceLocation BeginLoc,
                              EndLoc) {
   assert(GangKinds.size() == IntExprs.size() && "Mismatch exprs/kind?");
   llvm::uninitialized_copy(IntExprs, getTrailingObjects<Expr *>());
-  setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), IntExprs.size()));
+  setExprs(getTrailingObjects<Expr *>(IntExprs.size()));
   llvm::uninitialized_copy(GangKinds, getTrailingObjects<OpenACCGangKind>());
 }
 
