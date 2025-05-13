@@ -290,7 +290,8 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
 
   // Use the QC_E_ADDI instruction from the Xqcilia extension that can take a
   // signed 26-bit immediate. Avoid anything which can be done with a single lui
-  // as it might be compressible.
+  // (4 bytes) since it will be better than using QC_E_ADDI (6 bytes). It could
+  // also be compressible in certain cases.
   if (ST.hasVendorXqcilia() && isInt<26>(Val) && (Val & 0xFFF) != 0) {
     BuildMI(MBB, II, DL, TII->get(RISCV::QC_E_ADDI), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrcReg))
