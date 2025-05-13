@@ -795,9 +795,9 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   // In the non-virtual path, the function pointer is actually a
   // function pointer.
   CGF.EmitBlock(FnNonVirtual);
-
   llvm::Value *NonVirtualFn =
       Builder.CreateIntToPtr(FnAsInt, CGF.UnqualPtrTy, "memptr.nonvirtualfn");
+
   // Check the function pointer if CFI on member function pointers is enabled.
   if (ShouldEmitCFICheck) {
     CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
