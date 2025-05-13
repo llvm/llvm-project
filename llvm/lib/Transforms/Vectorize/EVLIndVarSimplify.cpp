@@ -50,7 +50,7 @@ struct EVLIndVarSimplifyImpl {
                         OptimizationRemarkEmitter *ORE)
       : SE(LAR.SE), ORE(ORE) {}
 
-  // Returns true if modify the loop.
+  /// Returns true if modify the loop.
   bool run(Loop &L);
 };
 } // anonymous namespace
@@ -188,7 +188,7 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   auto IntrinsicMatch = m_Intrinsic<Intrinsic::experimental_get_vector_length>(
       m_Value(RemTC), m_SpecificInt(VF),
       /*Scalable=*/m_SpecificInt(1));
-  for (auto &PN : BB->phis()) {
+  for (PHINode &PN : BB->phis()) {
     if (&PN == IndVar)
       continue;
 
