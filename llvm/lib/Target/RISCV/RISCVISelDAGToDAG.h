@@ -142,6 +142,7 @@ public:
   bool selectVSplatSimm5Plus1(SDValue N, SDValue &SplatVal);
   bool selectVSplatSimm5Plus1NoDec(SDValue N, SDValue &SplatVal);
   bool selectVSplatSimm5Plus1NonZero(SDValue N, SDValue &SplatVal);
+  bool selectVSplatImm64Neg(SDValue N, SDValue &SplatVal);
   // Matches the splat of a value which can be extended or truncated, such that
   // only the bottom 8 bits are preserved.
   bool selectLow8BitsVSplat(SDValue N, SDValue &SplatVal);
