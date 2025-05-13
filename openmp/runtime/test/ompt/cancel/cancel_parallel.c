@@ -29,11 +29,11 @@ int main() {
 
   // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_initial_task_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, actual_parallelism=1, index=1, flags=1 
-  // CHECK-DAG: {{^}}[[MASTER_ID]]: ompt_event_cancel: task_data=[[TASK_ID:[0-9]+]], flags=ompt_cancel_parallel|ompt_cancel_activated=17, codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}}
+  // CHECK-DAG: {{^}}[[MASTER_ID]]: ompt_event_cancel: task_data=[[TASK_ID:[0-9]+]], flags=ompt_cancel_parallel|ompt_cancel_activated=17, codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]{{[0-f][0-f]}}
   // CHECK-DAG: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
 
   // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_implicit_task_begin
-  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_cancel: task_data=[[TASK_ID:[0-9]+]], flags=ompt_cancel_parallel|ompt_cancel_detected=33, codeptr_ra=[[OTHER_RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}}
+  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_cancel: task_data=[[TASK_ID:[0-9]+]], flags=ompt_cancel_parallel|ompt_cancel_detected=33, codeptr_ra=[[OTHER_RETURN_ADDRESS:(0x)?[0-f]+]]{{[0-f][0-f]}}
   // CHECK-DAG: {{^}}[[THREAD_ID]]: fuzzy_address={{.*}}[[OTHER_RETURN_ADDRESS]]
 
   return 0;

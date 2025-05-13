@@ -163,8 +163,8 @@ public:
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     mlir::Type typeInTuple = fir::dyn_cast_ptrEleTy(args.addrInTuple.getType());
     assert(typeInTuple && "addrInTuple must be an address");
-    mlir::Value castBox = builder.createConvert(args.loc, typeInTuple,
-                                                fir::getBase(args.hostValue));
+    mlir::Value castBox = builder.createConvertWithVolatileCast(
+        args.loc, typeInTuple, fir::getBase(args.hostValue));
     builder.create<fir::StoreOp>(args.loc, castBox, args.addrInTuple);
   }
 

@@ -230,9 +230,7 @@ defm V_NOP : VOP1Inst <"v_nop", VOP_NOP_PROFILE>;
 
 def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
   let InsVOPDX = (ins Src0RC32:$src0X);
-  let InsVOPDXDeferred = (ins VSrc_f32_Deferred:$src0X);
   let InsVOPDY = (ins Src0RC32:$src0Y);
-  let InsVOPDYDeferred = (ins VSrc_f32_Deferred:$src0Y);
 }
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
@@ -1472,16 +1470,9 @@ def : GCNPat <
 
 } // End OtherPredicates = [isGFX8Plus, p]
 
-let True16Predicate = UseFakeTrue16Insts in {
-def : GCNPat<
-  (i32 (DivergentUnaryFrag<anyext> i16:$src)),
-  (COPY $src)
->;
-} // End True16Predicate = UseFakeTrue16Insts
-
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat<
-  (i32 (UniformUnaryFrag<anyext> (i16 SReg_32:$src))),
+  (i32 (UniformUnaryFrag<anyext> i16:$src)),
   (COPY $src)
 >;
 

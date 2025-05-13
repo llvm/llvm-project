@@ -126,7 +126,7 @@ end
   and `DO CONCURRENT`.
 * A non-definable actual argument, including the case of a vector
   subscript, may be associated with an `ASYNCHRONOUS` or `VOLATILE`
-  dummy argument, F'2023 15.5.2.5 p31 notwithstanding.
+  dummy argument, F'2023 15.5.2.5 p21 notwithstanding.
   The effects of these attributes are scoped over the lifetime of
   the procedure reference, and they can by added by internal subprograms
   and `BLOCK` constructs within the procedure.
