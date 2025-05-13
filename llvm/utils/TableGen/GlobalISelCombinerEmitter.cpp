@@ -1277,8 +1277,9 @@ bool CombineRuleBuilder::checkSemantics() {
                    "patterns");
         return false;
       }
-    } else
+    } else {
       IsUsingCXXPatterns = isa<CXXPattern>(Pat);
+    }
 
     assert(Pat);
     const auto *IP = dyn_cast<InstructionPattern>(Pat);
@@ -1610,8 +1611,9 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
       return false;
   } else if (isa<BuiltinPattern>(&IP)) {
     llvm_unreachable("No match builtins known!");
-  } else
+  } else {
     llvm_unreachable("Unknown kind of InstructionPattern!");
+  }
 
   // Emit remaining patterns
   const bool IsUsingCustomCXXAction = hasOnlyCXXApplyPatterns();
@@ -2608,9 +2610,9 @@ void GICombinerEmitter::emitTestSimplePredicate(raw_ostream &OS) {
     // That way we can just get the RuleID from the enum by subtracting
     // (GICXXPred_Invalid + 1).
     unsigned ExpectedID = 0;
-    (void)ExpectedID;
     for (const auto &ID : keys(AllCombineRules)) {
-      assert(ExpectedID++ == ID && "combine rules are not ordered!");
+      assert(ExpectedID == ID && "combine rules are not ordered!");
+      ++ExpectedID;
       OS << "  " << getIsEnabledPredicateEnumName(ID) << EnumeratorSeparator;
       EnumeratorSeparator = ",\n";
     }
