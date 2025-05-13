@@ -8,9 +8,8 @@
 
 # CHECK: selected section {{.*}}:(.text.f1)
 # CHECK:   removing identical section {{.*}}:(.text.f2)
-# CHECK:   removing identical section {{.*}}:(.text.f3)
-# CHECK: selected section {{.*}}:(.text.f4)
-# CHECK:   removing identical section {{.*}}:(.text.f5)
+# CHECK: redirecting 'd_alias' in symtab to 'd'
+# CHECK: redirecting 'd_alias' to 'd'
 
 .globl d, d_alias, fu, f1, f2, f3, f4, f5
 
