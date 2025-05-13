@@ -100,6 +100,12 @@ enable or disable extended libc++ behavior.
   warning saying that `std::auto_ptr` is deprecated. If the macro is defined,
   no warning will be emitted. By default, this macro is not defined.
 
+**_LIBCPP_DISABLE_NODISCARD_EXPECTED**:
+  This macro disables warnings when discarding the value of a `std::expected`
+  object without checking for error. If the macro is defined, no warning will
+  be emitted when discarding `std::expected`. By default, this macro is not
+  defined.
+
 **_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
   This macro is used to disable all visibility annotations inside libc++.
   Defining this macro and then building libc++ with hidden visibility gives a

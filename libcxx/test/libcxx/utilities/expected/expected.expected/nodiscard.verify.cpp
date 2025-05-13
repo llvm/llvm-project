@@ -17,7 +17,25 @@
 std::expected<int, int> returns_expected();
 std::expected<void, int> returns_expected_void();
 
+std::expected<int, int> and_then(int);
+std::expected<void, int> and_then_void();
+std::expected<int, int> or_else(int);
+std::expected<void, int> or_else_void(int);
+int transform(int);
+void transform_void();
+int transform_error(int);
+int transform_error_void(int);
+
 void test() {
   returns_expected();      // expected-warning {{ignoring return value of type 'expected<int, int>'}}
   returns_expected_void(); // expected-warning {{ignoring return value of type 'expected<void, int>'}}
+
+  returns_expected().and_then(and_then);                         // expected-warning {{ignoring return value of type 'expected<int, int>'}}
+  returns_expected_void().and_then(and_then_void);               // expected-warning {{ignoring return value of type 'expected<void, int>'}}
+  returns_expected().or_else(or_else);                           // expected-warning {{ignoring return value of type 'expected<int, int>'}}
+  returns_expected_void().or_else(or_else_void);                 // expected-warning {{ignoring return value of type 'expected<void, int>'}}
+  returns_expected().transform(transform);                       // expected-warning {{ignoring return value of type 'expected<int, int>'}}
+  returns_expected_void().transform(transform_void);             // expected-warning {{ignoring return value of type 'expected<void, int>'}}
+  returns_expected().transform_error(transform_error);           // expected-warning {{ignoring return value of type 'expected<int, int>'}}
+  returns_expected_void().transform_error(transform_error_void); // expected-warning {{ignoring return value of type 'expected<void, int>'}}
 }

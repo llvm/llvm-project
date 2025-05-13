@@ -352,6 +352,12 @@ typedef __char32_t char32_t;
 
 #  define _LIBCPP_ALWAYS_INLINE __attribute__((__always_inline__))
 
+#  if defined(_LIBCPP_DISABLE_NODISCARD_EXPECTED)
+#    define _LIBCPP_NODISCARD_EXPECTED
+#  else
+#    define _LIBCPP_NODISCARD_EXPECTED [[nodiscard]]
+#  endif
+
 #  if defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
 #    ifdef _DLL
