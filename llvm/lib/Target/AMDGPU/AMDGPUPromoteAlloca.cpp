@@ -438,8 +438,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   SmallMapVector<Value *, APInt, 4> VarOffsets;
   APInt ConstOffset(BW, 0);
   if (GEP->getPointerOperand()->stripPointerCasts() != Alloca ||
-      !GEP->collectOffset(DL, BW, VarOffsets, ConstOffset) ||
-      ConstOffset.getZExtValue() >= Alloca->getAllocationSize(DL))
+      !GEP->collectOffset(DL, BW, VarOffsets, ConstOffset))
     return nullptr;
 
   unsigned VecElemSize = DL.getTypeAllocSize(VecElemTy);
@@ -920,6 +919,12 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       Value *Index = GEPToVectorIndex(GEP, &Alloca, VecEltTy, *DL, NewGEPInsts);
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
+      // Alternatively, if there is a constant index for which we already know
+      // that it will be out-of-bounds, we also don't want to promote this
+      // alloca to vector.
+      if (ConstantInt *I = dyn_cast<ConstantInt>(Index);
+          I && I->getZExtValue() >= Alloca.getAllocationSize(*DL))
+        return RejectUser(Inst, "GEP constant index out-of-bounds");
 
       GEPVectorIdx[GEP] = Index;
       UsersToRemove.push_back(Inst);
