@@ -2975,59 +2975,6 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
   }
 }
 
-bool LoopVectorizationLegality::isMaskRequired(Instruction *I,
-                                               bool FoldTailByMasking) const {
-  // TODO: We can use the loop-preheader as context point here and get
-  // context sensitive reasoning for isSafeToSpeculativelyExecute.
-  if (isSafeToSpeculativelyExecute(I) ||
-      (isa<LoadInst, StoreInst, CallInst>(I) && !isMasked(I)) ||
-      isa<BranchInst, SwitchInst, PHINode, AllocaInst>(I))
-    return false;
-
-  // If the instruction was executed conditionally in the original scalar loop,
-  // predication is needed with a mask whose lanes are all possibly inactive.
-  if (blockNeedsPredication(I->getParent()))
-    return true;
-
-  // If we're not folding the tail by masking, predication is unnecessary.
-  if (!FoldTailByMasking)
-    return false;
-
-  // All that remain are instructions with side-effects originally executed in
-  // the loop unconditionally, but now execute under a tail-fold mask (only)
-  // having at least one active lane (the first). If the side-effects of the
-  // instruction are invariant, executing it w/o (the tail-folding) mask is safe
-  // - it will cause the same side-effects as when masked.
-  switch (I->getOpcode()) {
-  default:
-    llvm_unreachable(
-        "instruction should have been considered by earlier checks");
-  case Instruction::Call:
-    // Side-effects of a Call are assumed to be non-invariant, needing a
-    // (fold-tail) mask.
-    assert(isMasked(I) &&
-           "should have returned earlier for calls not needing a mask");
-    return true;
-  case Instruction::Load:
-    // If the address is loop invariant no predication is needed.
-    return !isInvariant(getLoadStorePointerOperand(I));
-  case Instruction::Store: {
-    // For stores, we need to prove both speculation safety (which follows from
-    // the same argument as loads), but also must prove the value being stored
-    // is correct.  The easiest form of the later is to require that all values
-    // stored are the same.
-    return !(isInvariant(getLoadStorePointerOperand(I)) &&
-             TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()));
-  }
-  case Instruction::UDiv:
-  case Instruction::SDiv:
-  case Instruction::SRem:
-  case Instruction::URem:
-    // If the divisor is loop-invariant no predication is needed.
-    return !isInvariant(I->getOperand(1));
-  }
-}
-
 std::pair<InstructionCost, InstructionCost>
 LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
                                                     ElementCount VF) const {
