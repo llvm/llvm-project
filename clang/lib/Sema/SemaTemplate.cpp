@@ -4353,6 +4353,38 @@ struct PartialSpecMatchResult {
   VarTemplatePartialSpecializationDecl *Partial;
   TemplateArgumentList *Args;
 };
+
+// HACK 2025-05-13: workaround std::format_kind since libstdc++ 15.1 (2025-04)
+// See GH139067 / https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120190
+static bool IsLibstdcxxStdFormatKind(Preprocessor &PP, VarDecl *Var) {
+  if (Var->getName() != "format_kind" ||
+      !Var->getDeclContext()->isStdNamespace())
+    return false;
+
+  MacroInfo *MacroGLIBCXX =
+      PP.getMacroInfo(PP.getIdentifierInfo("__GLIBCXX__"));
+
+  if (!MacroGLIBCXX || MacroGLIBCXX->getNumTokens() != 1)
+    return false;
+
+  const Token &RevisionDateTok = MacroGLIBCXX->getReplacementToken(0);
+  bool Invalid = false;
+  std::string RevisionDate = PP.getSpelling(RevisionDateTok, &Invalid);
+  StringRef FixDate = "30251231";
+
+  if (Invalid)
+    return false;
+
+  // The format of the revision date is in compressed ISO date format.
+  // See https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_macros.html
+  // So we can use string comparison.
+  //
+  // Checking old versions of libstdc++ is not needed because 15.1 is the first
+  // release in which users can access std::format_kind.
+  //
+  // FIXME: Correct FixDate once the issue is fixed.
+  return RevisionDate.size() == 8 && RevisionDate <= FixDate;
+}
 } // end anonymous namespace
 
 DeclResult
@@ -4383,12 +4415,9 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
     };
 
     if (VarDecl *Var = Template->getTemplatedDecl();
-        // Skipping std::format_kind in libstdc++ is a hack for
-        // GH139067 / https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120190
-        !(Var->getName() == "format_kind" &&
-          Var->getDeclContext()->isStdNamespace() &&
-          PP.isMacroDefined("__GLIBCXX__")) &&
         ParsingInitForAutoVars.count(Var) &&
+        // See comments on this function definition
+        !IsLibstdcxxStdFormatKind(PP, Var) &&
         llvm::equal(
             CTAI.CanonicalConverted,
             Template->getTemplateParameters()->getInjectedTemplateArgs(Context),
