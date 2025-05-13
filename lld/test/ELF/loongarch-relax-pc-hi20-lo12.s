@@ -1,6 +1,6 @@
 # REQUIRES: loongarch
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+relax %s -o %t.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+32s,+relax %s -o %t.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 -mattr=+relax %s -o %t.64.o
 
 # RUN: ld.lld --section-start=.text=0x10000 --section-start=.data=0x14000 %t.32.o -o %t.32

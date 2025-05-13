@@ -713,6 +713,61 @@ static Relocation *getRISCVPCRelHi20(Ctx &ctx, const InputSectionBase *loSec,
   return nullptr;
 }
 
+// For RE_LARCH_PC_INDIRECT (R_LARCH_PCADD_LO12_I), the symbol actually
+// points the corresponding R_LARCH_PCADD_*_HI20 relocation, and the target VA
+// is calculated using PCADD_HI20's symbol.
+//
+// This function returns the R_LARCH_PCADD_*_HI20 relocation from the
+// R_LARCH_PCADD_LO12 relocation.
+static Relocation *getLoongArchPCAddHi20(Ctx &ctx,
+                                         const InputSectionBase *loSec,
+                                         const Relocation &loReloc) {
+  int64_t addend = loReloc.addend;
+  Symbol *sym = loReloc.sym;
+
+  const Defined *d = cast<Defined>(sym);
+  if (!d->section) {
+    Err(ctx) << loSec->getLocation(loReloc.offset)
+             << ": R_LARCH_PCADD_LO12 relocation points to an absolute symbol: "
+             << sym->getName();
+    return nullptr;
+  }
+  InputSection *hiSec = cast<InputSection>(d->section);
+
+  if (hiSec != loSec)
+    Err(ctx) << loSec->getLocation(loReloc.offset)
+             << ": R_LARCH_PCADD_LO12 relocation points to a symbol '"
+             << sym->getName() << "' in a different section '" << hiSec->name
+             << "'";
+
+  if (addend != 0)
+    Warn(ctx) << loSec->getLocation(loReloc.offset)
+              << ": non-zero addend in R_LARCH_PCADD_LO12 relocation to "
+              << hiSec->getObjMsg(d->value) << " is ignored";
+
+  // Relocations are sorted by offset, so we can use std::equal_range to do
+  // binary search.
+  Relocation hiReloc;
+  hiReloc.offset = d->value + addend;
+  auto range =
+      std::equal_range(hiSec->relocs().begin(), hiSec->relocs().end(), hiReloc,
+                       [](const Relocation &lhs, const Relocation &rhs) {
+                         return lhs.offset < rhs.offset;
+                       });
+
+  for (auto it = range.first; it != range.second; ++it)
+    if (it->type == R_LARCH_PCADD_HI20 || it->type == R_LARCH_PCADD_GOT_HI20 ||
+        it->type == R_LARCH_PCADD_TLS_IE_HI20 ||
+        it->type == R_LARCH_PCADD_TLS_DESC_HI20)
+      return &*it;
+
+  Err(ctx) << loSec->getLocation(loReloc.offset)
+           << ": R_LARCH_PCADD_LO12 relocation points to "
+           << hiSec->getObjMsg(d->value)
+           << " without an associated R_LARCH_PCADD_HI20 relocation";
+  return nullptr;
+}
+
 // A TLS symbol's virtual address is relative to the TLS segment. Add a
 // target-specific adjustment to produce a thread-pointer-relative offset.
 static int64_t getTlsTpOffset(Ctx &ctx, const Symbol &s) {
@@ -882,6 +937,11 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case RE_RISCV_PC_INDIRECT: {
     if (const Relocation *hiRel = getRISCVPCRelHi20(ctx, this, r))
       return getRelocTargetVA(ctx, *hiRel, r.sym->getVA(ctx));
+    return 0;
+  }
+  case RE_LOONGARCH_PC_INDIRECT: {
+    if (const Relocation *hiRel = getLoongArchPCAddHi20(ctx, this, r))
+      return getRelocTargetVA(ctx, *hiRel, r.sym->getVA(ctx, a));
     return 0;
   }
   case RE_LOONGARCH_PAGE_PC:
