@@ -489,8 +489,8 @@ The given criteria describes the debug line state machine registers.
    =Discriminator: Line that has a discriminator.
    =EndSequence: Marks the end in the sequence of lines.
    =EpilogueBegin: Marks the start of a function epilogue.
-   =LineDebug: Lines that correspond to debug lines.
    =LineAssembler: Lines that correspond to disassembly text.
+   =LineDebug: Lines that correspond to debug lines.
    =NeverStepInto: marks a never step into.
    =NewStatement: Marks a new statement.
    =PrologueEnd: Marks the end of a function prologue.
