@@ -1,4 +1,3 @@
-
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
 
 %"bucket<string, double, '\\b'>::Iterator" = type { ptr, i64, i64 }
