@@ -6,4 +6,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_FLOAT length(__CLC_FLOATN p0);
+_CLC_OVERLOAD _CLC_DECL __CLC_INTN __CLC_FUNCTION(__CLC_GENTYPE x);
