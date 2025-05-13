@@ -4868,7 +4868,7 @@ static bool checkVAStartABI(Sema &S, unsigned BuiltinID, Expr *Fn) {
   bool IsX64 = TT.getArch() == llvm::Triple::x86_64;
   bool IsAArch64 = (TT.getArch() == llvm::Triple::aarch64 ||
                     TT.getArch() == llvm::Triple::aarch64_32);
-  bool IsWindows = TT.isOSWindows();
+  bool IsWindowsOrUEFI = TT.isOSWindows() || TT.isUEFI();
   bool IsMSVAStart = BuiltinID == Builtin::BI__builtin_ms_va_start;
   if (IsX64 || IsAArch64) {
     CallingConv CC = CC_C;
@@ -4876,7 +4876,7 @@ static bool checkVAStartABI(Sema &S, unsigned BuiltinID, Expr *Fn) {
       CC = FD->getType()->castAs<FunctionType>()->getCallConv();
     if (IsMSVAStart) {
       // Don't allow this in System V ABI functions.
-      if (CC == CC_X86_64SysV || (!IsWindows && CC != CC_Win64))
+      if (CC == CC_X86_64SysV || (!IsWindowsOrUEFI && CC != CC_Win64))
         return S.Diag(Fn->getBeginLoc(),
                       diag::err_ms_va_start_used_in_sysv_function);
     } else {
@@ -4884,11 +4884,11 @@ static bool checkVAStartABI(Sema &S, unsigned BuiltinID, Expr *Fn) {
       // On x64 Windows, don't allow this in System V ABI functions.
       // (Yes, that means there's no corresponding way to support variadic
       // System V ABI functions on Windows.)
-      if ((IsWindows && CC == CC_X86_64SysV) ||
-          (!IsWindows && CC == CC_Win64))
+      if ((IsWindowsOrUEFI && CC == CC_X86_64SysV) ||
+          (!IsWindowsOrUEFI && CC == CC_Win64))
         return S.Diag(Fn->getBeginLoc(),
                       diag::err_va_start_used_in_wrong_abi_function)
-               << !IsWindows;
+               << !IsWindowsOrUEFI;
     }
     return false;
   }
@@ -10052,9 +10052,10 @@ void CheckFreeArgumentsAddressof(Sema &S, const std::string &CalleeName,
                                  const UnaryOperator *UnaryExpr) {
   if (const auto *Lvalue = dyn_cast<DeclRefExpr>(UnaryExpr->getSubExpr())) {
     const Decl *D = Lvalue->getDecl();
-    if (isa<DeclaratorDecl>(D))
-      if (!dyn_cast<DeclaratorDecl>(D)->getType()->isReferenceType())
+    if (auto *DD = dyn_cast<DeclaratorDecl>(D)) {
+      if (!DD->getType()->isReferenceType())
         return CheckFreeArgumentsOnLvalue(S, CalleeName, UnaryExpr, D);
+    }
   }
 
   if (const auto *Lvalue = dyn_cast<MemberExpr>(UnaryExpr->getSubExpr()))
@@ -11647,6 +11648,15 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
   }
 }
 
+static void CheckCommaOperand(Sema &S, Expr *E, QualType T, SourceLocation CC,
+                              bool ExtraCheckForImplicitConversion) {
+  E = E->IgnoreParenImpCasts();
+  AnalyzeImplicitConversions(S, E, CC);
+
+  if (ExtraCheckForImplicitConversion && E->getType() != T)
+    S.CheckImplicitConversion(E, T, CC);
+}
+
 /// Analyze the given compound assignment for the possible losing of
 /// floating-point precision.
 static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
@@ -12464,7 +12474,7 @@ static void AnalyzeImplicitConversions(
           << OrigE->getSourceRange() << T->isBooleanType()
           << FixItHint::CreateReplacement(UO->getBeginLoc(), "!");
 
-  if (const auto *BO = dyn_cast<BinaryOperator>(SourceExpr))
+  if (auto *BO = dyn_cast<BinaryOperator>(SourceExpr)) {
     if ((BO->getOpcode() == BO_And || BO->getOpcode() == BO_Or) &&
         BO->getLHS()->isKnownToHaveBooleanValue() &&
         BO->getRHS()->isKnownToHaveBooleanValue() &&
@@ -12490,7 +12500,21 @@ static void AnalyzeImplicitConversions(
                    (BO->getOpcode() == BO_And ? "&&" : "||"));
         S.Diag(BO->getBeginLoc(), diag::note_cast_operand_to_int);
       }
+    } else if (BO->isCommaOp() && !S.getLangOpts().CPlusPlus) {
+      /// Analyze the given comma operator. The basic idea behind the analysis
+      /// is to analyze the left and right operands slightly differently. The
+      /// left operand needs to check whether the operand itself has an implicit
+      /// conversion, but not whether the left operand induces an implicit
+      /// conversion for the entire comma expression itself. This is similar to
+      /// how CheckConditionalOperand behaves; it's as-if the correct operand
+      /// were directly used for the implicit conversion check.
+      CheckCommaOperand(S, BO->getLHS(), T, BO->getOperatorLoc(),
+                        /*ExtraCheckForImplicitConversion=*/false);
+      CheckCommaOperand(S, BO->getRHS(), T, BO->getOperatorLoc(),
+                        /*ExtraCheckForImplicitConversion=*/true);
+      return;
     }
+  }
 
   // For conditional operators, we analyze the arguments as if they
   // were being fed directly into the output.

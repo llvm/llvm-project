@@ -18,17 +18,17 @@ define i32 @test_distributed_shared_cluster_common(ptr %ptr, ptr addrspace(3) %s
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_distributed_shared_cluster_common_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [test_distributed_shared_cluster_common_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_distributed_shared_cluster_common_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_distributed_shared_cluster_common_param_1];
 ; CHECK-NEXT:    mov.u32 %r1, %ctaid.x;
 ; CHECK-NEXT:    xor.b32 %r2, %r1, 1;
 ; CHECK-NEXT:    isspacep.shared::cluster %p1, %rd1;
 ; CHECK-NEXT:    mapa.u64 %rd3, %rd1, %r2;
 ; CHECK-NEXT:    isspacep.shared::cluster %p2, %rd3;
 ; CHECK-NEXT:    mapa.shared::cluster.u64 %rd4, %rd2, %r2;
-; CHECK-NEXT:    ld.shared::cluster.u32 %r3, [%rd4];
+; CHECK-NEXT:    ld.shared::cluster.b32 %r3, [%rd4];
 ; CHECK-NEXT:    add.s32 %r4, %r3, 42;
-; CHECK-NEXT:    st.shared::cluster.u32 [%rd4], %r4;
+; CHECK-NEXT:    st.shared::cluster.b32 [%rd4], %r4;
 ; CHECK-NEXT:    selp.b32 %r5, 1, 0, %p1;
 ; CHECK-NEXT:    selp.b32 %r6, 1, 0, %p2;
 ; CHECK-NEXT:    add.s32 %r7, %r5, %r6;
@@ -64,7 +64,7 @@ define void @test_distributed_shared_cluster_float_atomic(ptr addrspace(7) %dsme
 ; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_distributed_shared_cluster_float_atomic_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_distributed_shared_cluster_float_atomic_param_0];
 ; CHECK-NEXT:    mov.b16 %rs1, 0x3C00;
 ; CHECK-NEXT:    atom.shared::cluster.add.noftz.f16 %rs2, [%rd1], %rs1;
 ; CHECK-NEXT:    mov.b16 %rs3, 0x3F80;
@@ -90,7 +90,7 @@ define void @test_distributed_shared_cluster_int_atomic(ptr addrspace(7) %dsmem_
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_distributed_shared_cluster_int_atomic_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_distributed_shared_cluster_int_atomic_param_0];
 ; CHECK-NEXT:    atom.shared::cluster.add.u32 %r1, [%rd1], 1;
 ; CHECK-NEXT:    atom.shared::cluster.add.u64 %rd2, [%rd1], 1;
 ; CHECK-NEXT:    atom.shared::cluster.exch.b32 %r2, [%rd1], 1;
@@ -142,7 +142,7 @@ define void @test_distributed_shared_cluster_bitwise_atomic(ptr addrspace(7) %ds
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_distributed_shared_cluster_bitwise_atomic_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_distributed_shared_cluster_bitwise_atomic_param_0];
 ; CHECK-NEXT:    atom.shared::cluster.and.b32 %r1, [%rd1], 1;
 ; CHECK-NEXT:    atom.shared::cluster.and.b64 %rd2, [%rd1], 1;
 ; CHECK-NEXT:    atom.shared::cluster.or.b32 %r2, [%rd1], 1;
@@ -171,7 +171,7 @@ define void @test_distributed_shared_cluster_cmpxchg(ptr addrspace(7) %dsmem_ptr
 ; CHECK-NEXT:    .reg .b64 %rd<12>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.u64 %rd2, [test_distributed_shared_cluster_cmpxchg_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_distributed_shared_cluster_cmpxchg_param_0];
 ; CHECK-NEXT:    atom.relaxed.shared::cluster.cas.b32 %r24, [%rd2], 1, 0;
 ; CHECK-NEXT:    atom.acquire.shared::cluster.cas.b32 %r25, [%rd2], 1, 0;
 ; CHECK-NEXT:    atom.acquire.shared::cluster.cas.b32 %r26, [%rd2], 1, 0;
@@ -205,7 +205,7 @@ define void @test_distributed_shared_cluster_cmpxchg(ptr addrspace(7) %dsmem_ptr
 ; CHECK-NEXT:    not.b32 %r2, %r36;
 ; CHECK-NEXT:    mov.b32 %r37, 1;
 ; CHECK-NEXT:    shl.b32 %r3, %r37, %r1;
-; CHECK-NEXT:    ld.shared::cluster.u32 %r38, [%rd1];
+; CHECK-NEXT:    ld.shared::cluster.b32 %r38, [%rd1];
 ; CHECK-NEXT:    and.b32 %r48, %r38, %r2;
 ; CHECK-NEXT:  $L__BB4_1: // %partword.cmpxchg.loop33
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -220,7 +220,7 @@ define void @test_distributed_shared_cluster_cmpxchg(ptr addrspace(7) %dsmem_ptr
 ; CHECK-NEXT:    mov.b32 %r48, %r7;
 ; CHECK-NEXT:    @%p2 bra $L__BB4_1;
 ; CHECK-NEXT:  $L__BB4_3: // %partword.cmpxchg.end31
-; CHECK-NEXT:    ld.shared::cluster.u32 %r40, [%rd1];
+; CHECK-NEXT:    ld.shared::cluster.b32 %r40, [%rd1];
 ; CHECK-NEXT:    and.b32 %r49, %r40, %r2;
 ; CHECK-NEXT:  $L__BB4_4: // %partword.cmpxchg.loop23
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -237,7 +237,7 @@ define void @test_distributed_shared_cluster_cmpxchg(ptr addrspace(7) %dsmem_ptr
 ; CHECK-NEXT:  $L__BB4_6: // %partword.cmpxchg.end21
 ; CHECK-NEXT:    fence.acq_rel.sys;
 ; CHECK-NEXT:    fence.acq_rel.sys;
-; CHECK-NEXT:    ld.shared::cluster.u32 %r42, [%rd1];
+; CHECK-NEXT:    ld.shared::cluster.b32 %r42, [%rd1];
 ; CHECK-NEXT:    and.b32 %r50, %r42, %r2;
 ; CHECK-NEXT:  $L__BB4_7: // %partword.cmpxchg.loop13
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -253,7 +253,7 @@ define void @test_distributed_shared_cluster_cmpxchg(ptr addrspace(7) %dsmem_ptr
 ; CHECK-NEXT:    @%p6 bra $L__BB4_7;
 ; CHECK-NEXT:  $L__BB4_9: // %partword.cmpxchg.end11
 ; CHECK-NEXT:    fence.acq_rel.sys;
-; CHECK-NEXT:    ld.shared::cluster.u32 %r44, [%rd1];
+; CHECK-NEXT:    ld.shared::cluster.b32 %r44, [%rd1];
 ; CHECK-NEXT:    and.b32 %r51, %r44, %r2;
 ; CHECK-NEXT:  $L__BB4_10: // %partword.cmpxchg.loop3
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -270,7 +270,7 @@ define void @test_distributed_shared_cluster_cmpxchg(ptr addrspace(7) %dsmem_ptr
 ; CHECK-NEXT:  $L__BB4_12: // %partword.cmpxchg.end1
 ; CHECK-NEXT:    fence.acq_rel.sys;
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.shared::cluster.u32 %r46, [%rd1];
+; CHECK-NEXT:    ld.shared::cluster.b32 %r46, [%rd1];
 ; CHECK-NEXT:    and.b32 %r52, %r46, %r2;
 ; CHECK-NEXT:  $L__BB4_13: // %partword.cmpxchg.loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1

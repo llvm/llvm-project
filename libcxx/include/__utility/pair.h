@@ -32,6 +32,8 @@
 #include <__type_traits/is_implicitly_default_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_replaceable.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/nat.h>
@@ -100,6 +102,7 @@ struct pair
       __conditional_t<__libcpp_is_trivially_relocatable<_T1>::value && __libcpp_is_trivially_relocatable<_T2>::value,
                       pair,
                       void>;
+  using __replaceable _LIBCPP_NODEBUG = __conditional_t<__is_replaceable_v<_T1> && __is_replaceable_v<_T2>, pair, void>;
 
   _LIBCPP_HIDE_FROM_ABI pair(pair const&) = default;
   _LIBCPP_HIDE_FROM_ABI pair(pair&&)      = default;
@@ -651,42 +654,42 @@ get(const pair<_T1, _T2>&& __p) _NOEXCEPT {
 #if _LIBCPP_STD_VER >= 14
 template <class _T1, class _T2>
 inline _LIBCPP_HIDE_FROM_ABI constexpr _T1& get(pair<_T1, _T2>& __p) _NOEXCEPT {
-  return __get_pair<0>::get(__p);
+  return __p.first;
 }
 
 template <class _T1, class _T2>
 inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const& get(pair<_T1, _T2> const& __p) _NOEXCEPT {
-  return __get_pair<0>::get(__p);
+  return __p.first;
 }
 
 template <class _T1, class _T2>
 inline _LIBCPP_HIDE_FROM_ABI constexpr _T1&& get(pair<_T1, _T2>&& __p) _NOEXCEPT {
-  return __get_pair<0>::get(std::move(__p));
+  return std::forward<_T1&&>(__p.first);
 }
 
 template <class _T1, class _T2>
 inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const&& get(pair<_T1, _T2> const&& __p) _NOEXCEPT {
-  return __get_pair<0>::get(std::move(__p));
+  return std::forward<_T1 const&&>(__p.first);
 }
 
-template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1& get(pair<_T2, _T1>& __p) _NOEXCEPT {
-  return __get_pair<1>::get(__p);
+template <class _T2, class _T1>
+inline _LIBCPP_HIDE_FROM_ABI constexpr _T2& get(pair<_T1, _T2>& __p) _NOEXCEPT {
+  return __p.second;
 }
 
-template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const& get(pair<_T2, _T1> const& __p) _NOEXCEPT {
-  return __get_pair<1>::get(__p);
+template <class _T2, class _T1>
+inline _LIBCPP_HIDE_FROM_ABI constexpr _T2 const& get(pair<_T1, _T2> const& __p) _NOEXCEPT {
+  return __p.second;
 }
 
-template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1&& get(pair<_T2, _T1>&& __p) _NOEXCEPT {
-  return __get_pair<1>::get(std::move(__p));
+template <class _T2, class _T1>
+inline _LIBCPP_HIDE_FROM_ABI constexpr _T2&& get(pair<_T1, _T2>&& __p) _NOEXCEPT {
+  return std::forward<_T2&&>(__p.second);
 }
 
-template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const&& get(pair<_T2, _T1> const&& __p) _NOEXCEPT {
-  return __get_pair<1>::get(std::move(__p));
+template <class _T2, class _T1>
+inline _LIBCPP_HIDE_FROM_ABI constexpr _T2 const&& get(pair<_T1, _T2> const&& __p) _NOEXCEPT {
+  return std::forward<_T2 const&&>(__p.second);
 }
 
 #endif // _LIBCPP_STD_VER >= 14

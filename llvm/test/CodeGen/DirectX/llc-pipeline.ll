@@ -14,6 +14,8 @@
 
 ; CHECK-NEXT: ModulePass Manager
 ; CHECK-NEXT:   DXIL Finalize Linkage
+; CHECK-NEXT:   DXIL Resource Binding Analysis
+; CHECK-NEXT:   DXIL Resource Implicit Binding
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     DXIL Resource Access
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
@@ -29,6 +31,7 @@
 ; CHECK-NEXT:   DXIL Module Metadata analysis
 ; CHECK-NEXT:   DXIL Shader Flag Analysis
 ; CHECK-NEXT:   DXIL Translate Metadata
+; CHECK-NEXT:   DXIL Post Optimization Validation
 ; CHECK-NEXT:   DXIL Op Lowering
 ; CHECK-NEXT:   DXIL Prepare Module
 

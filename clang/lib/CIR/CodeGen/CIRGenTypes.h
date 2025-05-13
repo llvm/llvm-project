@@ -120,13 +120,22 @@ public:
   /// Return whether a type can be zero-initialized (in the C++ sense) with an
   /// LLVM zeroinitializer.
   bool isZeroInitializable(clang::QualType ty);
+  bool isZeroInitializable(const RecordDecl *rd);
 
   const CIRGenFunctionInfo &arrangeFreeFunctionCall(const CallArgList &args,
                                                     const FunctionType *fnType);
 
   const CIRGenFunctionInfo &
   arrangeCIRFunctionInfo(CanQualType returnType,
-                         llvm::ArrayRef<clang::CanQualType> argTypes);
+                         llvm::ArrayRef<CanQualType> argTypes,
+                         RequiredArgs required);
+
+  const CIRGenFunctionInfo &
+  arrangeFreeFunctionType(CanQual<FunctionProtoType> fpt);
+  const CIRGenFunctionInfo &
+  arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt);
+
+  cir::FuncType getFunctionType(const CIRGenFunctionInfo &fi);
 };
 
 } // namespace clang::CIRGen

@@ -1632,10 +1632,8 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
   auto SpirvTy = getOrCreateSPIRVType(Ty, MIRBuilder, AQ, false, true);
 
   // Handle "type*" or  "type* vector[N]".
-  if (TypeStr.starts_with("*")) {
+  if (TypeStr.consume_front("*"))
     SpirvTy = getOrCreateSPIRVPointerType(Ty, MIRBuilder, SC);
-    TypeStr = TypeStr.substr(strlen("*"));
-  }
 
   // Handle "typeN*" or  "type vector[N]*".
   bool IsPtrToVec = TypeStr.consume_back("*");
@@ -2062,8 +2060,8 @@ void SPIRVGlobalRegistry::updateAssignType(CallInst *AssignCI, Value *Arg,
 
 void SPIRVGlobalRegistry::addStructOffsetDecorations(
     Register Reg, StructType *Ty, MachineIRBuilder &MIRBuilder) {
-  ArrayRef<TypeSize> Offsets =
-      DataLayout().getStructLayout(Ty)->getMemberOffsets();
+  DataLayout DL;
+  ArrayRef<TypeSize> Offsets = DL.getStructLayout(Ty)->getMemberOffsets();
   for (uint32_t I = 0; I < Ty->getNumElements(); ++I) {
     buildOpMemberDecorate(Reg, MIRBuilder, SPIRV::Decoration::Offset, I,
                           {static_cast<uint32_t>(Offsets[I])});

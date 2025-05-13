@@ -325,7 +325,7 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
       auto file = HS.lookupModuleMapFile(*dir, is_framework);
       if (!file)
         return error();
-      if (!HS.loadModuleMapFile(*file, is_system))
+      if (!HS.parseAndLoadModuleMapFile(*file, is_system))
         return error();
     }
   }
