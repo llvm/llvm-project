@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify %s
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify %s
 
 typedef vector<float, 3> float3;
 typedef vector<double, 2> double2;
@@ -60,13 +60,13 @@ RWBuffer<TemplatedVector<int> > r9;
 // arrays not allowed
 // expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
 // expected-note@*:* {{because 'half[4]' does not satisfy '__is_typed_resource_element_compatible'}}
-// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(__fp16[4])' evaluated to false}}
+// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(half[4])' evaluated to false}}
 RWBuffer<half[4]> r10;
 
 typedef vector<int, 8> int8;
 // expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
 // expected-note@*:* {{because 'vector<int, 8>' (vector of 8 'int' values) does not satisfy '__is_typed_resource_element_compatible'}}
-// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(int __attribute__((ext_vector_type(8))))' evaluated to false}}
+// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(vector<int, 8>)' evaluated to false}}
 RWBuffer<int8> r11;
 
 typedef int MyInt;
@@ -74,12 +74,12 @@ RWBuffer<MyInt> r12;
 
 // expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
 // expected-note@*:* {{because 'bool' does not satisfy '__is_typed_resource_element_compatible'}}
-// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(_Bool)' evaluated to false}}
+// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(bool)' evaluated to false}}
 RWBuffer<bool> r13;
 
 // expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
 // expected-note@*:* {{because 'vector<bool, 2>' (vector of 2 'bool' values) does not satisfy '__is_typed_resource_element_compatible'}}
-// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(_Bool __attribute__((ext_vector_type(2))))' evaluated to false}}
+// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(vector<bool, 2>)' evaluated to false}}
 RWBuffer<vector<bool, 2>> r14;
 
 enum numbers { one, two, three };
@@ -91,7 +91,7 @@ RWBuffer<numbers> r15;
 
 // expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
 // expected-note@*:* {{because 'vector<double, 3>' (vector of 3 'double' values) does not satisfy '__is_typed_resource_element_compatible'}}
-// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(double __attribute__((ext_vector_type(3))))' evaluated to false}}
+// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(vector<double, 3>)' evaluated to false}}
 RWBuffer<double3> r16;
 
 

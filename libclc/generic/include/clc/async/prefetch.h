@@ -7,5 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #define __CLC_BODY <clc/async/prefetch.inc>
-#include <clc/async/gentype.inc>
-#undef __CLC_BODY
+#include <clc/integer/gentype.inc>
+
+#define __CLC_BODY <clc/async/prefetch.inc>
+#include <clc/math/gentype.inc>

@@ -27,3 +27,44 @@ module {
 // CHECK:  ^bb[[#EXIT]]:
 // CHECK:    cir.return
 // CHECK:  }
+
+  // Test while cir.loop operation lowering.
+  cir.func @testWhile(%arg0 : !cir.bool) {
+    cir.while {
+      cir.condition(%arg0)
+    } do {
+      cir.yield
+    }
+    cir.return
+  }
+
+// CHECK:  cir.func @testWhile(%arg0: !cir.bool) {
+// CHECK:    cir.br ^bb[[#COND:]]
+// CHECK:  ^bb[[#COND]]:
+// CHECK:    cir.brcond %arg0 ^bb[[#BODY:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BODY]]:
+// CHECK:    cir.br ^bb[[#COND:]]
+// CHECK:  ^bb[[#EXIT]]:
+// CHECK:    cir.return
+// CHECK:  }
+
+
+  // Test do-while cir.loop operation lowering.
+  cir.func @testDoWhile(%arg0 : !cir.bool) {
+    cir.do {
+      cir.yield
+    } while {
+      cir.condition(%arg0)
+    }
+    cir.return
+  }
+
+// CHECK:  cir.func @testDoWhile(%arg0: !cir.bool) {
+// CHECK:    cir.br ^bb[[#BODY:]]
+// CHECK:  ^bb[[#COND]]:
+// CHECK:    cir.brcond %arg0 ^bb[[#BODY:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BODY]]:
+// CHECK:    cir.br ^bb[[#COND:]]
+// CHECK:  ^bb[[#EXIT]]:
+// CHECK:    cir.return
+// CHECK:  }

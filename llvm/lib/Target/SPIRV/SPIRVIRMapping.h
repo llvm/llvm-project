@@ -65,6 +65,8 @@ enum SpecialTypeKind {
   STK_Type,
   STK_Value,
   STK_MachineInstr,
+  STK_VkBuffer,
+  STK_ExplictLayoutType,
   STK_Last = -1
 };
 
@@ -142,6 +144,18 @@ inline IRHandle irhandle_ptr(const void *Ptr, unsigned Arg,
   return std::make_tuple(Ptr, Arg, STK);
 }
 
+inline IRHandle irhandle_vkbuffer(const Type *ElementType,
+                                  StorageClass::StorageClass SC,
+                                  bool IsWriteable) {
+  return std::make_tuple(ElementType, (SC << 1) | IsWriteable,
+                         SpecialTypeKind::STK_VkBuffer);
+}
+
+inline IRHandle irhandle_explict_layout_type(const Type *Ty) {
+  const Type *WrpTy = unifyPtrType(Ty);
+  return irhandle_ptr(WrpTy, Ty->getTypeID(), STK_ExplictLayoutType);
+}
+
 inline IRHandle handle(const Type *Ty) {
   const Type *WrpTy = unifyPtrType(Ty);
   return irhandle_ptr(WrpTy, Ty->getTypeID(), STK_Type);
@@ -153,6 +167,10 @@ inline IRHandle handle(const Value *V) {
 
 inline IRHandle handle(const MachineInstr *KeyMI) {
   return irhandle_ptr(KeyMI, SPIRV::to_hash(KeyMI), STK_MachineInstr);
+}
+
+inline bool type_has_layout_decoration(const Type *T) {
+  return (isa<StructType>(T) || isa<ArrayType>(T));
 }
 
 } // namespace SPIRV
@@ -208,7 +226,7 @@ public:
       erase(MI);
       return nullptr;
     }
-    assert(Defs.find(MI) != Defs.end() && Defs.find(MI)->second == HandleMF);
+    assert(Defs.contains(MI) && Defs.find(MI)->second == HandleMF);
     return MI;
   }
   Register find(SPIRV::IRHandle Handle, const MachineFunction *MF) {
@@ -230,14 +248,49 @@ public:
     return findMI(SPIRV::irhandle_pointee(PointeeTy, AddressSpace), MF);
   }
 
-  template <typename T> bool add(const T *Obj, const MachineInstr *MI) {
+  bool add(const Value *V, const MachineInstr *MI) {
+    return add(SPIRV::handle(V), MI);
+  }
+
+  bool add(const Type *T, bool RequiresExplicitLayout, const MachineInstr *MI) {
+    if (RequiresExplicitLayout && SPIRV::type_has_layout_decoration(T)) {
+      return add(SPIRV::irhandle_explict_layout_type(T), MI);
+    }
+    return add(SPIRV::handle(T), MI);
+  }
+
+  bool add(const MachineInstr *Obj, const MachineInstr *MI) {
     return add(SPIRV::handle(Obj), MI);
   }
-  template <typename T> Register find(const T *Obj, const MachineFunction *MF) {
-    return find(SPIRV::handle(Obj), MF);
+
+  Register find(const Value *V, const MachineFunction *MF) {
+    return find(SPIRV::handle(V), MF);
   }
-  template <typename T>
-  const MachineInstr *findMI(const T *Obj, const MachineFunction *MF) {
+
+  Register find(const Type *T, bool RequiresExplicitLayout,
+                const MachineFunction *MF) {
+    if (RequiresExplicitLayout && SPIRV::type_has_layout_decoration(T))
+      return find(SPIRV::irhandle_explict_layout_type(T), MF);
+    return find(SPIRV::handle(T), MF);
+  }
+
+  Register find(const MachineInstr *MI, const MachineFunction *MF) {
+    return find(SPIRV::handle(MI), MF);
+  }
+
+  const MachineInstr *findMI(const Value *Obj, const MachineFunction *MF) {
+    return findMI(SPIRV::handle(Obj), MF);
+  }
+
+  const MachineInstr *findMI(const Type *T, bool RequiresExplicitLayout,
+                             const MachineFunction *MF) {
+    if (RequiresExplicitLayout && SPIRV::type_has_layout_decoration(T))
+      return findMI(SPIRV::irhandle_explict_layout_type(T), MF);
+    return findMI(SPIRV::handle(T), MF);
+  }
+
+  const MachineInstr *findMI(const MachineInstr *Obj,
+                             const MachineFunction *MF) {
     return findMI(SPIRV::handle(Obj), MF);
   }
 };
