@@ -27,9 +27,9 @@
 
 using namespace llvm;
 
-char llvm::GISelValueTrackingAnalysis::ID = 0;
+char llvm::GISelValueTrackingAnalysisLegacy::ID = 0;
 
-INITIALIZE_PASS(GISelValueTrackingAnalysis, DEBUG_TYPE,
+INITIALIZE_PASS(GISelValueTrackingAnalysisLegacy, DEBUG_TYPE,
                 "Analysis for ComputingKnownBits", false, true)
 
 GISelValueTracking::GISelValueTracking(MachineFunction &MF, unsigned MaxDepth)
@@ -485,7 +485,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     else {
       SrcBitWidth = SrcTy.isPointer()
                         ? DL.getIndexSizeInBits(SrcTy.getAddressSpace())
-                        : SrcTy.getSizeInBits();
+                        : SrcTy.getScalarSizeInBits();
     }
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
     Known = Known.zextOrTrunc(SrcBitWidth);
@@ -889,24 +889,54 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
 unsigned GISelValueTracking::computeNumSignBits(Register R, unsigned Depth) {
   LLT Ty = MRI.getType(R);
   APInt DemandedElts =
-      Ty.isVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
+      Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
   return computeNumSignBits(R, DemandedElts, Depth);
 }
 
-void GISelValueTrackingAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
+void GISelValueTrackingAnalysisLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool GISelValueTrackingAnalysis::runOnMachineFunction(MachineFunction &MF) {
+bool GISelValueTrackingAnalysisLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
   return false;
 }
 
-GISelValueTracking &GISelValueTrackingAnalysis::get(MachineFunction &MF) {
+GISelValueTracking &GISelValueTrackingAnalysisLegacy::get(MachineFunction &MF) {
   if (!Info) {
     unsigned MaxDepth =
         MF.getTarget().getOptLevel() == CodeGenOptLevel::None ? 2 : 6;
     Info = std::make_unique<GISelValueTracking>(MF, MaxDepth);
   }
   return *Info;
+}
+
+AnalysisKey GISelValueTrackingAnalysis::Key;
+
+GISelValueTracking
+GISelValueTrackingAnalysis::run(MachineFunction &MF,
+                                MachineFunctionAnalysisManager &MFAM) {
+  return Result(MF);
+}
+
+PreservedAnalyses
+GISelValueTrackingPrinterPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  auto &VTA = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
+  OS << "name: " << MF.getName() << "\n";
+  for (MachineBasicBlock &BB : MF) {
+    for (MachineInstr &MI : BB) {
+      for (MachineOperand &MO : MI.defs()) {
+        if (!MO.isReg() || MO.getReg().isPhysical())
+          continue;
+        KnownBits Known = VTA.getKnownBits(MO.getReg());
+        unsigned SignedBits = VTA.computeNumSignBits(MO.getReg());
+        OS << "KnownBits:" << Known << " SignBits:" << SignedBits << " for "
+           << MO << "\n";
+      };
+    }
+  }
+  return PreservedAnalyses::all();
 }
