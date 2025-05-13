@@ -13084,8 +13084,8 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
     // uops even if the original vector load is not eliminated.
 
     // Reduce the vector load and shuffle to a broadcasted scalar load.
-    LoadSDNode *Ld = cast<LoadSDNode>(V);
-    SDValue BaseAddr = Ld->getOperand(1);
+    auto *Ld = cast<LoadSDNode>(V);
+    SDValue BaseAddr = Ld->getBasePtr();
     MVT SVT = VT.getScalarType();
     unsigned Offset = BroadcastIdx * SVT.getStoreSize();
     assert((int)(Offset * 8) == BitOffset && "Unexpected bit-offset");
