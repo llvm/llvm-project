@@ -1777,6 +1777,9 @@ CreatePackType(swift::Demangle::Demangler &dem, TypeSystemSwiftTypeRef &ts,
 llvm::Expected<CompilerType>
 SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
                                           CompilerType pack_type, bool *is_indirect) {
+  // This mode is used only by GetDynamicTypeAndAddress_Pack(). It would be
+  // cleaner if we could get rid of it.
+  bool rewrite_indirect_packs = (is_indirect != nullptr);
   swift::Demangle::Demangler dem;
   Target &target = GetProcess().GetTarget();
   size_t ptr_size = GetProcess().GetAddressByteSize();
@@ -1798,9 +1801,10 @@ SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
         "cannot decode pack_expansion type: failed to decode generic signature "
         "from function name");
 
-  auto expand_pack_type = [&](ConstString mangled_pack_type, bool indirect,
+  auto expand_pack_type = [&](ConstString mangled_pack_type,
+                              bool rewrite_indirect,
                               swift::Mangle::ManglingFlavor flavor)
-    -> llvm::Expected<swift::Demangle::NodePointer> {
+      -> llvm::Expected<swift::Demangle::NodePointer> {
     // Find pack_type in the pack_expansions.
     unsigned i = 0;
     SwiftLanguageRuntime::GenericSignature::PackExpansion *pack_expansion =
@@ -1933,30 +1937,31 @@ SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
       // Add the substituted type to the tuple.
       elements.push_back({{}, type});
     }
-    if (indirect) {
+
+    // TODO: Could we get rid of this code path?
+    if (rewrite_indirect) {
       // Create a tuple type with all the concrete types in the pack.
       CompilerType tuple = ts->CreateTupleType(elements);
       // TODO: Remove unnecessary mangling roundtrip.
       // Wrap the type inside a SILPackType to mark it for GetChildAtIndex.
-      CompilerType sil_pack_type = ts->CreateSILPackType(tuple, indirect);
+      CompilerType sil_pack_type = ts->CreateSILPackType(tuple, rewrite_indirect);
       swift::Demangle::NodePointer global =
           dem.demangleSymbol(sil_pack_type.GetMangledTypeName().GetStringRef());
       using Kind = Node::Kind;
       auto *dem_sil_pack_type =
           swift_demangle::ChildAtPath(global, {Kind::TypeMangling, Kind::Type});
       return dem_sil_pack_type;
-    } else {
-      return CreatePackType(dem, *ts, elements);
     }
+    return CreatePackType(dem, *ts, elements);
   };
 
   swift::Demangle::Context dem_ctx;
   auto node = dem_ctx.demangleSymbolAsNode(
       pack_type.GetMangledTypeName().GetStringRef());
 
+  bool indirect = false;
   auto flavor =
       SwiftLanguageRuntime::GetManglingFlavor(pack_type.GetMangledTypeName());
-  bool indirect = false;
 
   // Expand all the pack types that appear in the incoming type,
   // either at the root level or as arguments of bound generic types.
@@ -1978,13 +1983,16 @@ SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
         ConstString mangled_pack_type = pack_type.GetMangledTypeName();
         LLDB_LOG(GetLog(LLDBLog::Types), "decoded pack_expansion type: {0}",
                  mangled_pack_type);
-        return expand_pack_type(mangled_pack_type, indirect, flavor);
+        return expand_pack_type(mangled_pack_type,
+                                rewrite_indirect_packs && indirect, flavor);
       });
 
   if (!transformed)
     return transformed.takeError();
+
   if (is_indirect)
     *is_indirect = indirect;
+
   return ts->RemangleAsType(dem, *transformed, flavor);
 }
 
@@ -2636,7 +2644,6 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
   LLDB_SCOPED_TIMER();
   using namespace swift::Demangle;
 
-  Status error;
   ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
   if (!reflection_ctx) {
     LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types),
@@ -2644,6 +2651,12 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
     return ts.GetTypeFromMangledTypename(mangled_name);
   }
 
+
+  ConstString func_name = stack_frame.GetSymbolContext(eSymbolContextFunction)
+                              .GetFunctionName(Mangled::ePreferMangled);
+  // Extract the generic signature from the function symbol.
+  auto generic_signature =
+      SwiftLanguageRuntime::GetGenericSignature(func_name.GetStringRef(), ts);
   Demangler dem;
 
   NodePointer canonical = TypeSystemSwiftTypeRef::GetStaticSelfType(
@@ -2654,6 +2667,9 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
   swift::reflection::GenericArgumentMap substitutions;
   ForEachGenericParameter(canonical, [&](unsigned depth, unsigned index) {
     if (substitutions.count({depth, index}))
+      return;
+    // Packs will be substituted in a second pass.
+    if (generic_signature && generic_signature->IsPack(depth, index))
       return;
     StreamString mdvar_name;
     mdvar_name.Printf(u8"$\u03C4_%d_%d", depth, index);
@@ -2684,7 +2700,8 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
       return CompilerType();
     return ts.GetTypeFromMangledTypename(ConstString(mangling.result()));
   };
-  if (substitutions.empty())
+  if (substitutions.empty() &&
+      !(generic_signature && generic_signature->HasPacks()))
     return get_canonical();
 
   // Build a TypeRef from the demangle tree.
@@ -2727,6 +2744,17 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
   CompilerType bound_type = scratch_ctx->RemangleAsType(dem, node, flavor);
   LLDB_LOG(GetLog(LLDBLog::Expressions | LLDBLog::Types), "Bound {0} -> {1}.",
            mangled_name, bound_type.GetMangledTypeName());
+
+  if (generic_signature && generic_signature->HasPacks()) {
+    auto bound_type_or_err = BindGenericPackType(stack_frame, bound_type);
+    if (!bound_type_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions | LLDBLog::Types),
+                     bound_type_or_err.takeError(), "{0}");
+      return bound_type;
+    }
+    bound_type = *bound_type_or_err;
+  }
+
   return bound_type;
 }
 
@@ -3458,7 +3486,7 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
     // GetCanonicalType() returned an Expected.
     return llvm::createStringError(
         "could not get canonical type (possibly due to unresolved typealias)");
-}
+  }
 
   // Resolve all generic type parameters in the type for the current
   // frame. Generic parameter binding has to happen in the scratch

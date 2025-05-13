@@ -346,12 +346,20 @@ public:
     unsigned dependent_generic_param_count = 0;
     unsigned num_counts = 0;
 
-    unsigned GetNumValuePacks() { return count_for_value_pack.size(); }
-    unsigned GetNumTypePacks() { return count_for_type_pack.size(); }
-    unsigned GetCountForValuePack(unsigned i) {
+    unsigned GetNumValuePacks() const { return count_for_value_pack.size(); }
+    unsigned GetNumTypePacks() const { return count_for_type_pack.size(); }
+    unsigned GetCountForValuePack(unsigned i) const {
       return count_for_value_pack[i];
     }
-    unsigned GetCountForTypePack(unsigned i) { return count_for_type_pack[i]; }
+    unsigned GetCountForTypePack(unsigned i) const { return count_for_type_pack[i]; }
+    bool HasPacks() const { return pack_expansions.size(); }
+    bool IsPack(unsigned depth, unsigned index) const {
+      if (HasPacks())
+        for (auto param : generic_params)
+          if (param.depth == depth && param.index == index)
+            return param.is_pack;
+      return false;
+    }
   };
   /// Extract the generic signature out of a mangled Swift function name.
   static std::optional<GenericSignature>
