@@ -2399,6 +2399,77 @@ static bool generateBlockingPipesInst(const SPIRV::IncomingCall *Call,
   return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
 }
 
+static bool buildAPFixedPointInst(const SPIRV::IncomingCall *Call,
+                                  unsigned Opcode, MachineIRBuilder &MIRBuilder,
+                                  SPIRVGlobalRegistry *GR) {
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  SmallVector<uint32_t, 1> ImmArgs;
+  Register InputReg = Call->Arguments[0];
+  const Type *RetTy = GR->getTypeForSPIRVType(Call->ReturnType);
+  bool IsSRet = RetTy->isVoidTy();
+
+  if (IsSRet) {
+    const LLT ValTy = MRI->getType(InputReg);
+    Register ActualRetValReg = MRI->createGenericVirtualRegister(ValTy);
+    SPIRVType *InstructionType =
+        GR->getPointeeType(GR->getSPIRVTypeForVReg(InputReg));
+    InputReg = Call->Arguments[1];
+    auto InputType = GR->getTypeForSPIRVType(GR->getSPIRVTypeForVReg(InputReg));
+    Register PtrInputReg;
+    if (InputType->getTypeID() == llvm::Type::TypeID::TypedPointerTyID) {
+      LLT InputLLT = MRI->getType(InputReg);
+      PtrInputReg = MRI->createGenericVirtualRegister(InputLLT);
+      SPIRVType *PtrType =
+          GR->getPointeeType(GR->getSPIRVTypeForVReg(InputReg));
+      MachineMemOperand *MMO1 = MIRBuilder.getMF().getMachineMemOperand(
+          MachinePointerInfo(), MachineMemOperand::MOLoad,
+          InputLLT.getSizeInBytes(), Align(4));
+      MIRBuilder.buildLoad(PtrInputReg, InputReg, *MMO1);
+      MRI->setRegClass(PtrInputReg, &SPIRV::iIDRegClass);
+      GR->assignSPIRVTypeToVReg(PtrType, PtrInputReg, MIRBuilder.getMF());
+    }
+
+    for (unsigned index = 2; index < 7; index++) {
+      ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[index], MRI));
+    }
+
+    // Emit the instruction
+    auto MIB = MIRBuilder.buildInstr(Opcode)
+                   .addDef(ActualRetValReg)
+                   .addUse(GR->getSPIRVTypeID(InstructionType));
+    if (PtrInputReg)
+      MIB.addUse(PtrInputReg);
+    else
+      MIB.addUse(InputReg);
+
+    for (uint32_t Imm : ImmArgs)
+      MIB.addImm(Imm);
+    unsigned Size = ValTy.getSizeInBytes();
+    // Store result to the pointer passed in Arg[0]
+    MachineMemOperand *MMO = MIRBuilder.getMF().getMachineMemOperand(
+        MachinePointerInfo(), MachineMemOperand::MOStore, Size, Align(4));
+    MRI->setRegClass(ActualRetValReg, &SPIRV::pIDRegClass);
+    MIRBuilder.buildStore(ActualRetValReg, Call->Arguments[0], *MMO);
+    return true;
+  } else {
+    for (unsigned index = 1; index < 6; index++)
+      ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[index], MRI));
+
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType), ImmArgs);
+  }
+}
+
+static bool generateAPFixedPointInst(const SPIRV::IncomingCall *Call,
+                                     MachineIRBuilder &MIRBuilder,
+                                     SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  return buildAPFixedPointInst(Call, Opcode, MIRBuilder, GR);
+}
+
 static bool
 generateTernaryBitwiseFunctionINTELInst(const SPIRV::IncomingCall *Call,
                                         MachineIRBuilder &MIRBuilder,
@@ -3051,6 +3122,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateExtendedBitOpsInst(Call.get(), MIRBuilder, GR);
   case SPIRV::BindlessINTEL:
     return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::ArbitraryPrecisionFixedPoint:
+    return generateAPFixedPointInst(Call.get(), MIRBuilder, GR);
   case SPIRV::TernaryBitwiseINTEL:
     return generateTernaryBitwiseFunctionINTELInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Block2DLoadStore:
