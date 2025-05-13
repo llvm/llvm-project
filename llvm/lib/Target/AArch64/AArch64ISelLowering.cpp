@@ -18140,12 +18140,12 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
 static SDValue
 performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              const AArch64Subtarget *ST) {
+  if (DCI.isBeforeLegalize())
+    return SDValue();
+
   if (SDValue While = optimizeIncrementingWhile(N, DCI.DAG, /*IsSigned=*/false,
                                                 /*IsEqual=*/false))
     return While;
-
-  if (DCI.isBeforeLegalize())
-    return SDValue();
 
   if (!ST->hasSVE2p1())
     return SDValue();
@@ -29551,9 +29551,12 @@ AArch64TargetLowering::LowerGET_ACTIVE_LANE_MASK(SDValue Op,
   EVT VT = Op.getValueType();
   assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
 
-  // We can use the SVE whilelo instruction to lower this intrinsic by
-  // creating the appropriate sequence of scalable vector operations and
-  // then extracting a fixed-width subvector from the scalable vector.
+  auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+         "Lowering fixed length get_active_lane_mask requires SVE!");
+
+  // There are no dedicated fixed-length instructions for GET_ACTIVE_LANE_MASK,
+  // but we can use SVE when available.
 
   SDLoc DL(Op);
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
