@@ -41,9 +41,7 @@ public:
   const LoongArchInstrInfo *TII;
   static char ID;
 
-  LoongArchPreRAExpandPseudo() : MachineFunctionPass(ID) {
-    initializeLoongArchPreRAExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  LoongArchPreRAExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -656,9 +654,7 @@ public:
   const LoongArchInstrInfo *TII;
   static char ID;
 
-  LoongArchExpandPseudo() : MachineFunctionPass(ID) {
-    initializeLoongArchExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  LoongArchExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

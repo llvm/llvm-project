@@ -228,7 +228,7 @@ void ScriptInterpreterLua::ExecuteInterpreterLoop() {
 bool ScriptInterpreterLua::LoadScriptingModule(
     const char *filename, const LoadScriptOptions &options,
     lldb_private::Status &error, StructuredData::ObjectSP *module_sp,
-    FileSpec extra_search_dir) {
+    FileSpec extra_search_dir, lldb::TargetSP loaded_into_target_sp) {
 
   if (llvm::Error e = m_lua->LoadModule(filename)) {
     error = Status::FromErrorStringWithFormatv(

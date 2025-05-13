@@ -17,7 +17,9 @@
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPUMachineFunction.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
+#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Constants.h"
@@ -43,24 +45,24 @@ AMDGPUMCInstLower::AMDGPUMCInstLower(MCContext &ctx,
                                      const AsmPrinter &ap):
   Ctx(ctx), ST(st), AP(ap) { }
 
-static MCSymbolRefExpr::VariantKind getVariantKind(unsigned MOFlags) {
+static AMDGPUMCExpr::Specifier getSpecifier(unsigned MOFlags) {
   switch (MOFlags) {
   default:
-    return MCSymbolRefExpr::VK_None;
+    return AMDGPUMCExpr::S_None;
   case SIInstrInfo::MO_GOTPCREL:
-    return MCSymbolRefExpr::VK_GOTPCREL;
+    return AMDGPUMCExpr::S_GOTPCREL;
   case SIInstrInfo::MO_GOTPCREL32_LO:
-    return MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_LO;
+    return AMDGPUMCExpr::S_GOTPCREL32_LO;
   case SIInstrInfo::MO_GOTPCREL32_HI:
-    return MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_HI;
+    return AMDGPUMCExpr::S_GOTPCREL32_HI;
   case SIInstrInfo::MO_REL32_LO:
-    return MCSymbolRefExpr::VK_AMDGPU_REL32_LO;
+    return AMDGPUMCExpr::S_REL32_LO;
   case SIInstrInfo::MO_REL32_HI:
-    return MCSymbolRefExpr::VK_AMDGPU_REL32_HI;
+    return AMDGPUMCExpr::S_REL32_HI;
   case SIInstrInfo::MO_ABS32_LO:
-    return MCSymbolRefExpr::VK_AMDGPU_ABS32_LO;
+    return AMDGPUMCExpr::S_ABS32_LO;
   case SIInstrInfo::MO_ABS32_HI:
-    return MCSymbolRefExpr::VK_AMDGPU_ABS32_HI;
+    return AMDGPUMCExpr::S_ABS32_HI;
   }
 }
 
@@ -85,7 +87,7 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
     AP.getNameWithPrefix(SymbolName, GV);
     MCSymbol *Sym = Ctx.getOrCreateSymbol(SymbolName);
     const MCExpr *Expr =
-      MCSymbolRefExpr::create(Sym, getVariantKind(MO.getTargetFlags()),Ctx);
+        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
     int64_t Offset = MO.getOffset();
     if (Offset != 0) {
       Expr = MCBinaryExpr::createAdd(Expr,
@@ -223,20 +225,53 @@ bool AMDGPUAsmPrinter::lowerOperand(const MachineOperand &MO,
   return MCInstLowering.lowerOperand(MO, MCOp);
 }
 
-const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
+const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV,
+                                              const Constant *BaseCV,
+                                              uint64_t Offset) {
 
   // Intercept LDS variables with known addresses
   if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(CV)) {
     if (std::optional<uint32_t> Address =
             AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
       auto *IntTy = Type::getInt32Ty(CV->getContext());
-      return AsmPrinter::lowerConstant(ConstantInt::get(IntTy, *Address));
+      return AsmPrinter::lowerConstant(ConstantInt::get(IntTy, *Address),
+                                       BaseCV, Offset);
     }
   }
 
   if (const MCExpr *E = lowerAddrSpaceCast(TM, CV, OutContext))
     return E;
-  return AsmPrinter::lowerConstant(CV);
+  return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
+}
+
+static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
+                                 const TargetRegisterInfo *TRI,
+                                 const SIMachineFunctionInfo *MFI,
+                                 MCStreamer &OS) {
+  // The instruction will only transfer a subset of the registers in the block,
+  // based on the mask that is stored in m0. We could search for the instruction
+  // that sets m0, but most of the time we'll already have the mask stored in
+  // the machine function info. Try to use that. This assumes that we only use
+  // block loads/stores for CSR spills.
+  Register RegBlock =
+      TII->getNamedOperand(*MI, MI->mayLoad() ? AMDGPU::OpName::vdst
+                                              : AMDGPU::OpName::vdata)
+          ->getReg();
+  Register FirstRegInBlock = TRI->getSubReg(RegBlock, AMDGPU::sub0);
+  uint32_t Mask = MFI->getMaskForVGPRBlockOps(RegBlock);
+
+  if (!Mask)
+    return; // Nothing to report
+
+  SmallString<512> TransferredRegs;
+  for (unsigned I = 0; I < sizeof(Mask) * 8; ++I) {
+    if (Mask & (1 << I)) {
+      (llvm::Twine(" ") + TRI->getRegAsmName(FirstRegInBlock + I))
+          .toVector(TransferredRegs);
+    }
+  }
+
+  OS.emitRawComment(" transferring at most " + TransferredRegs);
 }
 
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
@@ -326,6 +361,12 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         OutStreamer->emitRawComment(" meta instruction");
       return;
     }
+
+    if (isVerbose())
+      if (STI.getInstrInfo()->isBlockLoadStore(MI->getOpcode()))
+        emitVGPRBlockComment(MI, STI.getInstrInfo(), STI.getRegisterInfo(),
+                             MF->getInfo<SIMachineFunctionInfo>(),
+                             *OutStreamer);
 
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);

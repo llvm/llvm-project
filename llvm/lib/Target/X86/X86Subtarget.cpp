@@ -361,6 +361,9 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
   InstSelector.reset(createX86InstructionSelector(TM, *this, *RBI));
 }
 
+// Define the virtual destructor out-of-line for build efficiency.
+X86Subtarget::~X86Subtarget() = default;
+
 const CallLowering *X86Subtarget::getCallLowering() const {
   return CallLoweringInfo.get();
 }

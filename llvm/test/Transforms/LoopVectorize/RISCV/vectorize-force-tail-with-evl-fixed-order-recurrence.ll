@@ -56,14 +56,10 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IF-EVL-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
-; IF-EVL-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP22:%.*]] = mul i32 [[TMP21]], 4
-; IF-EVL-NEXT:    [[TMP23:%.*]] = sub i32 [[TMP22]], 1
-; IF-EVL-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 4 x i32> [[VP_OP_LOAD]], i32 [[TMP23]]
-; IF-EVL-NEXT:    br i1 true, label %[[FOR_END:.*]], label %[[SCALAR_PH]]
+; IF-EVL-NEXT:    br label %[[FOR_END:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 33, %[[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 33, %[[ENTRY]] ]
 ; IF-EVL-NEXT:    br label %[[FOR_BODY:.*]]
 ; IF-EVL:       [[FOR_BODY]]:
 ; IF-EVL-NEXT:    [[INDVARS:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -75,7 +71,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; IF-EVL-NEXT:    [[INDVARS_NEXT]] = add nuw nsw i64 [[INDVARS]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_NEXT]], [[TC]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       [[FOR_END]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -205,26 +201,18 @@ define void @second_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP23]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
-; IF-EVL-NEXT:    [[TMP25:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP26:%.*]] = mul i32 [[TMP25]], 4
-; IF-EVL-NEXT:    [[TMP27:%.*]] = sub i32 [[TMP26]], 1
-; IF-EVL-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 4 x i32> [[VP_OP_LOAD]], i32 [[TMP27]]
-; IF-EVL-NEXT:    [[TMP28:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP29:%.*]] = mul i32 [[TMP28]], 4
-; IF-EVL-NEXT:    [[TMP30:%.*]] = sub i32 [[TMP29]], 1
-; IF-EVL-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <vscale x 4 x i32> [[TMP19]], i32 [[TMP30]]
-; IF-EVL-NEXT:    br i1 true, label %[[FOR_END:.*]], label %[[SCALAR_PH]]
+; IF-EVL-NEXT:    br label %[[FOR_END:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 33, %[[ENTRY]] ]
-; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT4:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT3]], %[[MIDDLE_BLOCK]] ], [ 22, %[[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 33, %[[ENTRY]] ]
+; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT3:%.*]] = phi i32 [ 22, %[[ENTRY]] ]
 ; IF-EVL-NEXT:    br label %[[FOR_BODY:.*]]
 ; IF-EVL:       [[FOR_BODY]]:
 ; IF-EVL-NEXT:    [[INDVARS:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_NEXT:%.*]], %[[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[FOR1:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP31:%.*]], %[[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[FOR2:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT4]], %[[SCALAR_PH]] ], [ [[FOR1]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[FOR2:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT3]], %[[SCALAR_PH]] ], [ [[FOR1]], %[[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[INDVARS]]
 ; IF-EVL-NEXT:    [[TMP31]] = load i32, ptr [[ARRAYIDX]], align 4
 ; IF-EVL-NEXT:    [[ADD:%.*]] = add nsw i32 [[FOR1]], [[FOR2]]
@@ -232,7 +220,7 @@ define void @second_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; IF-EVL-NEXT:    [[INDVARS_NEXT]] = add nuw nsw i64 [[INDVARS]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_NEXT]], [[TC]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IF-EVL:       [[FOR_END]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -382,32 +370,20 @@ define void @third_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP27]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
 ; IF-EVL-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP28]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP28]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
-; IF-EVL-NEXT:    [[TMP29:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP30:%.*]] = mul i32 [[TMP29]], 4
-; IF-EVL-NEXT:    [[TMP31:%.*]] = sub i32 [[TMP30]], 1
-; IF-EVL-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 4 x i32> [[VP_OP_LOAD]], i32 [[TMP31]]
-; IF-EVL-NEXT:    [[TMP32:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP33:%.*]] = mul i32 [[TMP32]], 4
-; IF-EVL-NEXT:    [[TMP34:%.*]] = sub i32 [[TMP33]], 1
-; IF-EVL-NEXT:    [[VECTOR_RECUR_EXTRACT6:%.*]] = extractelement <vscale x 4 x i32> [[TMP22]], i32 [[TMP34]]
-; IF-EVL-NEXT:    [[TMP35:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP36:%.*]] = mul i32 [[TMP35]], 4
-; IF-EVL-NEXT:    [[TMP37:%.*]] = sub i32 [[TMP36]], 1
-; IF-EVL-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <vscale x 4 x i32> [[TMP23]], i32 [[TMP37]]
-; IF-EVL-NEXT:    br i1 true, label %[[FOR_END:.*]], label %[[SCALAR_PH]]
+; IF-EVL-NEXT:    br label %[[FOR_END:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 33, %[[ENTRY]] ]
-; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT7:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT6]], %[[MIDDLE_BLOCK]] ], [ 22, %[[ENTRY]] ]
-; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT8:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT7]], %[[MIDDLE_BLOCK]] ], [ 11, %[[ENTRY]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 33, %[[ENTRY]] ]
+; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT5:%.*]] = phi i32 [ 22, %[[ENTRY]] ]
+; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT6:%.*]] = phi i32 [ 11, %[[ENTRY]] ]
 ; IF-EVL-NEXT:    br label %[[FOR_BODY:.*]]
 ; IF-EVL:       [[FOR_BODY]]:
 ; IF-EVL-NEXT:    [[INDVARS:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_NEXT:%.*]], %[[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[FOR1:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP38:%.*]], %[[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[FOR2:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT7]], %[[SCALAR_PH]] ], [ [[FOR1]], %[[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[FOR3:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT8]], %[[SCALAR_PH]] ], [ [[FOR2]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[FOR2:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT5]], %[[SCALAR_PH]] ], [ [[FOR1]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[FOR3:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT6]], %[[SCALAR_PH]] ], [ [[FOR2]], %[[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[INDVARS]]
 ; IF-EVL-NEXT:    [[TMP38]] = load i32, ptr [[ARRAYIDX]], align 4
 ; IF-EVL-NEXT:    [[ADD:%.*]] = add nsw i32 [[FOR2]], [[FOR3]]
@@ -416,7 +392,7 @@ define void @third_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    store i32 [[ADD1]], ptr [[ARRAYIDX2]], align 4
 ; IF-EVL-NEXT:    [[INDVARS_NEXT]] = add nuw nsw i64 [[INDVARS]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_NEXT]], [[TC]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; IF-EVL:       [[FOR_END]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -541,7 +517,7 @@ define i32 @FOR_reduction(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; IF-EVL-NEXT:    [[INDVARS_NEXT]] = add nuw nsw i64 [[INDVARS]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_NEXT]], [[TC]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; IF-EVL:       [[FOR_END]]:
 ; IF-EVL-NEXT:    [[FOR1_LCSSA:%.*]] = phi i32 [ [[FOR1]], %[[FOR_BODY]] ]
 ; IF-EVL-NEXT:    ret i32 [[FOR1_LCSSA]]
@@ -631,16 +607,17 @@ for.end:
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.enable", i1 true}
 ;.
-; IF-EVL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; IF-EVL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; IF-EVL: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; IF-EVL: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; IF-EVL: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; IF-EVL: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; IF-EVL: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; IF-EVL: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
-; IF-EVL: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]]}
-; IF-EVL: [[META9]] = !{!"llvm.loop.vectorize.enable", i1 true}
+; IF-EVL: [[META2]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
+; IF-EVL: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]]}
+; IF-EVL: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}
+; IF-EVL: [[LOOP6]] = distinct !{[[LOOP6]], [[META3]], [[META1]]}
+; IF-EVL: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]]}
+; IF-EVL: [[LOOP8]] = distinct !{[[LOOP8]], [[META3]], [[META1]]}
+; IF-EVL: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]]}
+; IF-EVL: [[META10]] = !{!"llvm.loop.vectorize.enable", i1 true}
 ;.
 ; NO-VP: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; NO-VP: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

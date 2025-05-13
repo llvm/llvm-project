@@ -1938,12 +1938,12 @@ define <4 x half> @test_fmaximumnum_v4f16(<4 x half> %x, <4 x half> %y) nounwind
 ; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
 ; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX512-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm4[3,3,3,3,4,5,6,7]
+; AVX512-NEXT:    vpsrlq $48, %xmm4, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    setp %al
 ; AVX512-NEXT:    kmovw %eax, %k1
-; AVX512-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm8[3,3,3,3,4,5,6,7]
+; AVX512-NEXT:    vpsrlq $48, %xmm8, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    vucomiss %xmm1, %xmm1
 ; AVX512-NEXT:    setp %al
@@ -1996,12 +1996,12 @@ define <4 x half> @test_fmaximumnum_v4f16(<4 x half> %x, <4 x half> %y) nounwind
 ; AVX512-NEXT:    seta %al
 ; AVX512-NEXT:    kmovw %eax, %k1
 ; AVX512-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm4[1,1,1,1,4,5,6,7]
+; AVX512-NEXT:    vpsrld $16, %xmm4, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    vucomiss %xmm1, %xmm1
 ; AVX512-NEXT:    setp %al
 ; AVX512-NEXT:    kmovw %eax, %k1
-; AVX512-NEXT:    vpshuflw {{.*#+}} xmm4 = xmm8[1,1,1,1,4,5,6,7]
+; AVX512-NEXT:    vpsrld $16, %xmm8, %xmm4
 ; AVX512-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; AVX512-NEXT:    vucomiss %xmm4, %xmm4
 ; AVX512-NEXT:    setp %al
