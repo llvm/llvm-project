@@ -294,6 +294,28 @@ bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
 /// field is required.
 using LaunchResponseBody = VoidResponse;
 
+/// Arguments for `continue` request.
+struct ContinueArguments {
+  /// Specifies the active thread. If the debug adapter supports single thread
+  /// execution (see `supportsSingleThreadExecutionRequests`) and the argument
+  /// `singleThread` is true, only the thread with this ID is resumed.
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
+
+  /// If this flag is true, execution is resumed only for the thread with given
+  /// `threadId`.
+  bool singleThread = false;
+};
+bool fromJSON(const llvm::json::Value &, ContinueArguments &, llvm::json::Path);
+
+/// Response to `continue` request.
+struct ContinueResponseBody {
+  // If omitted or set to `true`, this response signals to the client that all
+  // threads have been resumed. The value `false` indicates that not all threads
+  // were resumed.
+  bool allThreadsContinued = true;
+};
+llvm::json::Value toJSON(const ContinueResponseBody &);
+
 /// Arguments for `setVariable` request.
 struct SetVariableArguments {
   /// The reference of the variable container. The `variablesReference` must
@@ -390,7 +412,7 @@ llvm::json::Value toJSON(const SourceResponseBody &);
 struct NextArguments {
   /// Specifies the thread for which to resume execution for one step (of the
   /// given granularity).
-  uint64_t threadId = LLDB_INVALID_THREAD_ID;
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
 
   /// If this flag is true, all other suspended threads are not resumed.
   bool singleThread = false;
@@ -409,7 +431,7 @@ using NextResponse = VoidResponse;
 struct StepInArguments {
   /// Specifies the thread for which to resume execution for one step-into (of
   /// the given granularity).
-  uint64_t threadId = LLDB_INVALID_THREAD_ID;
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
 
   /// If this flag is true, all other suspended threads are not resumed.
   bool singleThread = false;
@@ -431,7 +453,7 @@ using StepInResponse = VoidResponse;
 struct StepOutArguments {
   /// Specifies the thread for which to resume execution for one step-out (of
   /// the given granularity).
-  uint64_t threadId = LLDB_INVALID_THREAD_ID;
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
 
   /// If this flag is true, all other suspended threads are not resumed.
   std::optional<bool> singleThread;

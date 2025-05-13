@@ -1,4 +1,4 @@
-//=== i386.h - Generic JITLink i386 edge kinds, utilities -*- C++ -*-===//
+//===----- x86.h - Generic JITLink x86 edge kinds, utilities ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Generic utilities for graphs representing i386 objects.
+// Generic utilities for graphs representing x86 objects.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_JITLINK_I386_H
-#define LLVM_EXECUTIONENGINE_JITLINK_I386_H
+#ifndef LLVM_EXECUTIONENGINE_JITLINK_X86_H
+#define LLVM_EXECUTIONENGINE_JITLINK_X86_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/TableManager.h"
 
-namespace llvm::jitlink::i386 {
-/// Represets i386 fixups
-enum EdgeKind_i386 : Edge::Kind {
+namespace llvm::jitlink::x86 {
+
+/// Represets x86 fixups
+enum EdgeKind_x86 : Edge::Kind {
 
   /// A plain 32-bit pointer value relocation.
   ///
@@ -174,14 +175,13 @@ enum EdgeKind_i386 : Edge::Kind {
   BranchPCRel32ToPtrJumpStubBypassable,
 };
 
-/// Returns a string name for the given i386 edge. For debugging purposes
+/// Returns a string name for the given x86 edge. For debugging purposes
 /// only
 const char *getEdgeKindName(Edge::Kind K);
 
 /// Apply fixup expression for edge to block content.
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
                         const Symbol *GOTSymbol) {
-  using namespace i386;
   using namespace llvm::support;
 
   char *BlockWorkingMem = B.getAlreadyMutableContent().data();
@@ -189,19 +189,19 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   auto FixupAddress = B.getAddress() + E.getOffset();
 
   switch (E.getKind()) {
-  case i386::Pointer32: {
+  case Pointer32: {
     uint32_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
     *(ulittle32_t *)FixupPtr = Value;
     break;
   }
 
-  case i386::PCRel32: {
+  case PCRel32: {
     int32_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
     *(little32_t *)FixupPtr = Value;
     break;
   }
 
-  case i386::Pointer16: {
+  case Pointer16: {
     uint32_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
     if (LLVM_LIKELY(isUInt<16>(Value)))
       *(ulittle16_t *)FixupPtr = Value;
@@ -210,7 +210,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     break;
   }
 
-  case i386::PCRel16: {
+  case PCRel16: {
     int32_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
     if (LLVM_LIKELY(isInt<16>(Value)))
       *(little16_t *)FixupPtr = Value;
@@ -219,13 +219,13 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     break;
   }
 
-  case i386::Delta32: {
+  case Delta32: {
     int32_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
     *(little32_t *)FixupPtr = Value;
     break;
   }
 
-  case i386::Delta32FromGOT: {
+  case Delta32FromGOT: {
     assert(GOTSymbol && "No GOT section symbol");
     int32_t Value =
         E.getTarget().getAddress() - GOTSymbol->getAddress() + E.getAddend();
@@ -233,9 +233,9 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     break;
   }
 
-  case i386::BranchPCRel32:
-  case i386::BranchPCRel32ToPtrJumpStub:
-  case i386::BranchPCRel32ToPtrJumpStubBypassable: {
+  case BranchPCRel32:
+  case BranchPCRel32ToPtrJumpStub:
+  case BranchPCRel32ToPtrJumpStubBypassable: {
     int32_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
     *(little32_t *)FixupPtr = Value;
     break;
@@ -250,13 +250,13 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   return Error::success();
 }
 
-/// i386 pointer size.
+/// x86 pointer size.
 constexpr uint32_t PointerSize = 4;
 
-/// i386 null pointer content.
+/// x86 null pointer content.
 extern const char NullPointerContent[PointerSize];
 
-/// i386 pointer jump stub content.
+/// x86 pointer jump stub content.
 ///
 /// Contains the instruction sequence for an indirect jump via an in-memory
 /// pointer:
@@ -321,14 +321,14 @@ public:
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     Edge::Kind KindToSet = Edge::Invalid;
     switch (E.getKind()) {
-    case i386::Delta32FromGOT: {
+    case Delta32FromGOT: {
       // we need to make sure that the GOT section exists, but don't otherwise
       // need to fix up this edge
       getGOTSection(G);
       return false;
     }
-    case i386::RequestGOTAndTransformToDelta32FromGOT:
-      KindToSet = i386::Delta32FromGOT;
+    case RequestGOTAndTransformToDelta32FromGOT:
+      KindToSet = Delta32FromGOT;
       break;
     default:
       return false;
@@ -367,7 +367,7 @@ public:
   static StringRef getSectionName() { return "$__STUBS"; }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
-    if (E.getKind() == i386::BranchPCRel32 && !E.getTarget().isDefined()) {
+    if (E.getKind() == BranchPCRel32 && !E.getTarget().isDefined()) {
       DEBUG_WITH_TYPE("jitlink", {
         dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
                << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
@@ -375,7 +375,7 @@ public:
       });
       // Set the edge kind to Branch32ToPtrJumpStubBypassable to enable it to
       // be optimized when the target is in-range.
-      E.setKind(i386::BranchPCRel32ToPtrJumpStubBypassable);
+      E.setKind(BranchPCRel32ToPtrJumpStubBypassable);
       E.setTarget(getEntryForTarget(G, E.getTarget()));
       return true;
     }
@@ -407,6 +407,6 @@ public:
 /// target
 Error optimizeGOTAndStubAccesses(LinkGraph &G);
 
-} // namespace llvm::jitlink::i386
+} // namespace llvm::jitlink::x86
 
-#endif // LLVM_EXECUTIONENGINE_JITLINK_I386_H
+#endif // LLVM_EXECUTIONENGINE_JITLINK_X86_H
