@@ -238,7 +238,7 @@ struct DIDumpOptions {
 
 class DIContext {
 public:
-  enum DIContextKind { CK_DWARF, CK_PDB, CK_BTF, CK_GSYM };
+  enum DIContextKind { CK_DWARF, CK_PDB, CK_BTF };
 
   DIContext(DIContextKind K) : Kind(K) {}
   virtual ~DIContext() = default;
