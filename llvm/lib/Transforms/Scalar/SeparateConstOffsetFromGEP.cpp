@@ -488,9 +488,6 @@ private:
 
   DenseMap<ExprKey, SmallVector<Instruction *, 2>> DominatingAdds;
   DenseMap<ExprKey, SmallVector<Instruction *, 2>> DominatingSubs;
-
-  bool decomposeXor(Function &F);
-  Value *tryFoldXorToOrDisjoint(Instruction &I);
 };
 
 /// A helper class that aims to convert xor operations into or operations when
