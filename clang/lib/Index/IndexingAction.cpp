@@ -919,10 +919,6 @@ public:
           // undesirable dependency on an intermediate build byproduct.
           if (FE->getName().ends_with("module.modulemap"))
             return;
-          // Not reporting SDKSettings.json so that test checks can remain
-          // (mostly) platform-agnostic.
-          if (FE->getName().ends_with("SDKSettings.json"))
-            return;
 
           visitor(*FE, isSystem);
         });
