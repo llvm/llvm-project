@@ -61,8 +61,9 @@ namespace PR44325 {
 
 namespace GH137452 {
 struct comparable_t {
-    __attribute__((vector_size(32))) double numbers;
+    __attribute__((vector_size(32))) double numbers;           // expected-note {{declared here}}
     auto operator<=>(const comparable_t& rhs) const = default; // expected-warning {{explicitly defaulted three-way comparison operator is implicitly deleted}} \
-                                                                  expected-note {{replace 'default' with 'delete'}}
+                                                                  expected-note {{replace 'default' with 'delete'}} \
+                                                                  expected-note {{defaulted 'operator<=>' is implicitly deleted because defaulted comparison of vector types is not supported}}
 };
 } // namespace GH137452
