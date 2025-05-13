@@ -262,14 +262,14 @@ _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(degrees)
 //===----------------------------------------------------------------------===//
 
 template <typename T, uint N>
-constexpr __detail::enable_if_t<(N > 1 && N <= 4), T> dot(
-    vector<T, N> V1, T V2) {
+constexpr __detail::enable_if_t<(N > 1 && N <= 4), T> dot(vector<T, N> V1,
+                                                          T V2) {
   return dot(V1, (vector<T, N>)V2);
 }
 
 template <typename T, uint N>
-constexpr __detail::enable_if_t<(N > 1 && N <= 4), T> dot(
-    T V1, vector<T, N> V2) {
+constexpr __detail::enable_if_t<(N > 1 && N <= 4), T> dot(T V1,
+                                                          vector<T, N> V2) {
   return dot((vector<T, N>)V1, V2);
 }
 
