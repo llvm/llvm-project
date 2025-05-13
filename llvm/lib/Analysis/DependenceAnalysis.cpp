@@ -3633,7 +3633,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     break; // The underlying objects alias; test accesses for dependence.
   }
 
-  if (DstLoc.Size != SrcLoc.Size) {
+  if (DstLoc.Size != SrcLoc.Size || DstLoc.Size.mayBeBeforePointer() ||
+      SrcLoc.Size.mayBeBeforePointer()) {
     // The dependence test gets confused if the size of the memory accesses
     // differ.
     LLVM_DEBUG(dbgs() << "can't analyze must alias with different sizes\n");
