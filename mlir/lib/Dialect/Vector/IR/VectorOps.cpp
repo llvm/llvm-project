@@ -314,7 +314,7 @@ bool mlir::vector::isDisjointTransferIndices(
 bool mlir::vector::isDisjointTransferSet(VectorTransferOpInterface transferA,
                                          VectorTransferOpInterface transferB,
                                          bool testDynamicValueUsingBounds) {
-  if (transferA.getSource() != transferB.getSource())
+  if (transferA.getBase() != transferB.getBase())
     return false;
   return isDisjointTransferIndices(transferA, transferB,
                                    testDynamicValueUsingBounds);
@@ -4205,7 +4205,7 @@ static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
 }
 
 void TransferReadOp::print(OpAsmPrinter &p) {
-  p << " " << getSource() << "[" << getIndices() << "], " << getPadding();
+  p << " " << getBase() << "[" << getIndices() << "], " << getPadding();
   if (getMask())
     p << ", " << getMask();
   printTransferAttrs(p, *this);
@@ -4464,7 +4464,7 @@ static LogicalResult foldTransferFullMask(TransferOp op) {
 static Value foldRAW(TransferReadOp readOp) {
   if (!llvm::isa<RankedTensorType>(readOp.getShapedType()))
     return {};
-  auto defWrite = readOp.getSource().getDefiningOp<vector::TransferWriteOp>();
+  auto defWrite = readOp.getBase().getDefiningOp<vector::TransferWriteOp>();
   while (defWrite) {
     if (checkSameValueRAW(defWrite, readOp))
       return defWrite.getVector();
@@ -4472,7 +4472,7 @@ static Value foldRAW(TransferReadOp readOp) {
             cast<VectorTransferOpInterface>(defWrite.getOperation()),
             cast<VectorTransferOpInterface>(readOp.getOperation())))
       break;
-    defWrite = defWrite.getSource().getDefiningOp<vector::TransferWriteOp>();
+    defWrite = defWrite.getBase().getDefiningOp<vector::TransferWriteOp>();
   }
   return {};
 }
@@ -4500,7 +4500,7 @@ void TransferReadOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   if (llvm::isa<MemRefType>(getShapedType()))
-    effects.emplace_back(MemoryEffects::Read::get(), &getSourceMutable(),
+    effects.emplace_back(MemoryEffects::Read::get(), &getBaseMutable(),
                          SideEffects::DefaultResource::get());
 }
 
@@ -4542,7 +4542,7 @@ struct TransferReadAfterWriteToBroadcast
     if (readOp.hasOutOfBoundsDim() ||
         !llvm::isa<RankedTensorType>(readOp.getShapedType()))
       return failure();
-    auto defWrite = readOp.getSource().getDefiningOp<vector::TransferWriteOp>();
+    auto defWrite = readOp.getBase().getDefiningOp<vector::TransferWriteOp>();
     if (!defWrite)
       return failure();
     // TODO: If the written transfer chunk is a superset of the read transfer
@@ -4727,7 +4727,7 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
 }
 
 void TransferWriteOp::print(OpAsmPrinter &p) {
-  p << " " << getVector() << ", " << getSource() << "[" << getIndices() << "]";
+  p << " " << getVector() << ", " << getBase() << "[" << getIndices() << "]";
   if (getMask())
     p << ", " << getMask();
   printTransferAttrs(p, *this);
@@ -4806,7 +4806,7 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
   if (write.getTransferRank() == 0)
     return failure();
   auto rankedTensorType =
-      llvm::dyn_cast<RankedTensorType>(write.getSource().getType());
+      llvm::dyn_cast<RankedTensorType>(write.getBase().getType());
   // If not operating on tensors, bail.
   if (!rankedTensorType)
     return failure();
@@ -4828,7 +4828,7 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
   if (read.hasOutOfBoundsDim() || write.hasOutOfBoundsDim())
     return failure();
   // Tensor types must be the same.
-  if (read.getSource().getType() != rankedTensorType)
+  if (read.getBase().getType() != rankedTensorType)
     return failure();
   // Vector types must be the same.
   if (read.getVectorType() != write.getVectorType())
@@ -4845,13 +4845,13 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
       llvm::any_of(write.getIndices(), isNotConstantZero))
     return failure();
   // Success.
-  results.push_back(read.getSource());
+  results.push_back(read.getBase());
   return success();
 }
 
 static bool checkSameValueWAR(vector::TransferReadOp read,
                               vector::TransferWriteOp write) {
-  return read.getSource() == write.getSource() &&
+  return read.getBase() == write.getBase() &&
          read.getIndices() == write.getIndices() &&
          read.getPermutationMap() == write.getPermutationMap() &&
          read.getVectorType() == write.getVectorType() && !read.getMask() &&
@@ -4873,7 +4873,7 @@ static bool checkSameValueWAR(vector::TransferReadOp read,
 /// ```
 static LogicalResult foldWAR(TransferWriteOp write,
                              SmallVectorImpl<OpFoldResult> &results) {
-  if (!llvm::isa<RankedTensorType>(write.getSource().getType()))
+  if (!llvm::isa<RankedTensorType>(write.getBase().getType()))
     return failure();
   auto read = write.getVector().getDefiningOp<vector::TransferReadOp>();
   if (!read)
@@ -4881,7 +4881,7 @@ static LogicalResult foldWAR(TransferWriteOp write,
 
   if (!checkSameValueWAR(read, write))
     return failure();
-  results.push_back(read.getSource());
+  results.push_back(read.getBase());
   return success();
 }
 
@@ -4953,12 +4953,11 @@ public:
       return failure();
     vector::TransferWriteOp writeToModify = writeOp;
 
-    auto defWrite =
-        writeOp.getSource().getDefiningOp<vector::TransferWriteOp>();
+    auto defWrite = writeOp.getBase().getDefiningOp<vector::TransferWriteOp>();
     while (defWrite) {
       if (checkSameValueWAW(writeOp, defWrite)) {
         rewriter.modifyOpInPlace(writeToModify, [&]() {
-          writeToModify.getSourceMutable().assign(defWrite.getSource());
+          writeToModify.getBaseMutable().assign(defWrite.getBase());
         });
         return success();
       }
@@ -4971,7 +4970,7 @@ public:
       if (!defWrite->hasOneUse())
         break;
       writeToModify = defWrite;
-      defWrite = defWrite.getSource().getDefiningOp<vector::TransferWriteOp>();
+      defWrite = defWrite.getBase().getDefiningOp<vector::TransferWriteOp>();
     }
     return failure();
   }
