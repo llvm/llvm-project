@@ -1409,7 +1409,7 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
             ("%basename_t", tmpBaseName),
             ("%T", tmpDir),
             ("%{s:basename}", sourceBaseName),
-            ("%{t:stem}", tmpBaseName)
+            ("%{t:stem}", tmpBaseName),
         ]
     )
 
