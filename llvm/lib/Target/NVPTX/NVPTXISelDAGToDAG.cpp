@@ -1460,10 +1460,8 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   const unsigned TotalWidth = StoreVT.getSimpleVT().getSizeInBits();
 
   unsigned NumElts = getLoadStoreVectorNumElts(N);
-  SmallVector<SDValue, 16> Ops;
-  // Append the operands from 1 to NumElts, inclusive
-  const SDUse *FirstStoredVal = N->ops().begin() + 1;
-  Ops.append(FirstStoredVal, FirstStoredVal + NumElts);
+
+  SmallVector<SDValue, 16> Ops(N->ops().slice(1, NumElts));
   SDValue N2 = N->getOperand(NumElts + 1);
   unsigned ToTypeWidth = TotalWidth / NumElts;
 
