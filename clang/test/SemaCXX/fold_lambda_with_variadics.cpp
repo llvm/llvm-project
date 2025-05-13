@@ -18,8 +18,8 @@ template <class = void> void f() {
   }(1, 2) == 3);
 
   []<class... Is>(Is... x) {
-    return ([](auto y = Is()) { return y + 1; }() + ...); // expected-error@15 {{pack expansion does not contain any unexpanded parameter packs}} \
-                                                          // expected-error@16 {{invalid operands to binary expression ('void' and 'int')}}
+    return ([](auto y = Is()) { return y + 1; }() + ...); // expected-error@17 {{pack expansion does not contain any unexpanded parameter packs}} \
+                                                          // expected-error@18 {{invalid operands to binary expression ('void' and 'int')}}
   }(1);
 
   []<class... Is>() {
@@ -96,7 +96,7 @@ template <class = void> void f() {
 #endif
 }
 
-template void f(); // #instantiate-f expected-note@93 {{in instantiation of function template specialization 'GH85667::f<void>' requested here}}
+template void f(); // #instantiate-f expected-note@99 {{in instantiation of function template specialization 'GH85667::f<void>' requested here}}
 
 } // namespace GH85667
 
@@ -119,8 +119,8 @@ int Cartesian1(auto x, auto y) {
 int Cartesian2(auto x, auto y) {
   return apply(
       [&](auto... xs) {
-        return (apply([zs = xs](auto... ys) { return (ys + ...); }, y) + ...); // expected-error@103 {{cannot initialize return object of type 'int' with an rvalue of type 'void'}}
-        // expected-note@114 {{in instantiation of function template specialization 'GH99877::apply}}
+        return (apply([zs = xs](auto... ys) { return (ys + ...); }, y) + ...); // expected-error@109 {{cannot initialize return object of type 'int' with an rvalue of type 'void'}}
+        // expected-note@120 {{in instantiation of function template specialization 'GH99877::apply}}
       },
       x);
 }
@@ -142,7 +142,7 @@ template <int... x> int Cartesian3(auto y) {
                  y) +
            ...);
     // - non-type template parameters,
-    return (apply([]<int = xs>(auto... ys) { return (ys + ...); }, y) + ...); // expected-error@116 {{pack expansion does not contain any unexpanded parameter packs}}
+    return (apply([]<int = xs>(auto... ys) { return (ys + ...); }, y) + ...); // expected-error@122 {{pack expansion does not contain any unexpanded parameter packs}}
   }(Ints<x...>());
 }
 
@@ -175,7 +175,7 @@ void foo() {
   auto x = tuple({1, 2, 3});
   auto y = tuple({4, 5, 6});
   Cartesian1(x, y);
-  Cartesian2(x, y); // expected-note@172 {{in instantiation of function template specialization 'GH99877::Cartesian2<GH99877::tuple, GH99877::tuple>' requested here}}
+  Cartesian2(x, y); // expected-note@178 {{in instantiation of function template specialization 'GH99877::Cartesian2<GH99877::tuple, GH99877::tuple>' requested here}}
   Cartesian3<1, 2, 3>(y);
   Cartesian4<1, 2, 3>(y);
 #if 0
