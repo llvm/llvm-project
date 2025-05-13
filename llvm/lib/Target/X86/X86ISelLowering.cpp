@@ -9988,19 +9988,29 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
         MaskSize == (int)ExpectedOp.getNumOperands())
       return Op.getOperand(Idx) == ExpectedOp.getOperand(ExpectedIdx);
     break;
-  case ISD::BITCAST:
-    if (Op == ExpectedOp && (int)VT.getVectorNumElements() == MaskSize) {
-      SDValue Src = peekThroughBitcasts(Op);
-      EVT SrcVT = Src.getValueType();
-      if (SrcVT.isVector() &&
-          (SrcVT.getScalarSizeInBits() % VT.getScalarSizeInBits()) == 0) {
+  case ISD::BITCAST: {
+    SDValue Src = peekThroughBitcasts(Op);
+    EVT SrcVT = Src.getValueType();
+    if (Op == ExpectedOp && SrcVT.isVector() &&
+        (int)VT.getVectorNumElements() == MaskSize) {
+      if ((SrcVT.getScalarSizeInBits() % VT.getScalarSizeInBits()) == 0) {
         unsigned Scale = SrcVT.getScalarSizeInBits() / VT.getScalarSizeInBits();
         return (Idx % Scale) == (ExpectedIdx % Scale) &&
                IsElementEquivalent(SrcVT.getVectorNumElements(), Src, Src,
                                    Idx / Scale, ExpectedIdx / Scale);
       }
+      if ((VT.getScalarSizeInBits() % SrcVT.getScalarSizeInBits()) == 0) {
+        unsigned Scale = VT.getScalarSizeInBits() / SrcVT.getScalarSizeInBits();
+        bool AllEquiv = true;
+        for (unsigned I = 0; I != Scale && AllEquiv; ++I)
+          AllEquiv &=
+              IsElementEquivalent(SrcVT.getVectorNumElements(), Src, Src,
+                                  (Idx * Scale) + I, (ExpectedIdx * Scale) + I);
+        return AllEquiv;
+      }
     }
     break;
+  }
   case ISD::VECTOR_SHUFFLE: {
     auto *SVN = cast<ShuffleVectorSDNode>(Op);
     return Op == ExpectedOp && (int)VT.getVectorNumElements() == MaskSize &&
