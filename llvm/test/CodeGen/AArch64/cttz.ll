@@ -16,10 +16,9 @@ define void @v2i8(ptr %p1) {
 ; CHECK-SD-NEXT:    movi v1.2s, #32
 ; CHECK-SD-NEXT:    clz v0.2s, v0.2s
 ; CHECK-SD-NEXT:    sub v0.2s, v1.2s, v0.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strb w9, [x0]
-; CHECK-SD-NEXT:    strb w8, [x0, #1]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    str b0, [x0]
+; CHECK-SD-NEXT:    stur b1, [x0, #1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i8:
@@ -59,11 +58,11 @@ define void @v3i8(ptr %p1) {
 ; CHECK-SD-NEXT:    clz v0.4h, v0.4h
 ; CHECK-SD-NEXT:    sub v0.4h, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    umov w8, v0.h[2]
+; CHECK-SD-NEXT:    mov h0, v0.h[2]
 ; CHECK-SD-NEXT:    str s1, [sp, #12]
-; CHECK-SD-NEXT:    ldrh w9, [sp, #12]
-; CHECK-SD-NEXT:    strb w8, [x0, #2]
-; CHECK-SD-NEXT:    strh w9, [x0]
+; CHECK-SD-NEXT:    ldrh w8, [sp, #12]
+; CHECK-SD-NEXT:    stur b0, [x0, #2]
+; CHECK-SD-NEXT:    strh w8, [x0]
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
 ;
@@ -263,14 +262,14 @@ define void @v3i16(ptr %p1) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v0.4h, #1
 ; CHECK-SD-NEXT:    ldr d1, [x0]
-; CHECK-SD-NEXT:    add x8, x0, #4
 ; CHECK-SD-NEXT:    sub v0.4h, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    bic v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    movi v1.4h, #16
 ; CHECK-SD-NEXT:    clz v0.4h, v0.4h
 ; CHECK-SD-NEXT:    sub v0.4h, v1.4h, v0.4h
-; CHECK-SD-NEXT:    st1 { v0.h }[2], [x8]
+; CHECK-SD-NEXT:    mov h1, v0.h[2]
 ; CHECK-SD-NEXT:    str s0, [x0]
+; CHECK-SD-NEXT:    str h1, [x0, #4]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3i16:

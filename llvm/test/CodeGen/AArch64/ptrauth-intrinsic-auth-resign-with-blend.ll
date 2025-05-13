@@ -39,9 +39,8 @@ define i64 @test_auth_blend(i64 %arg, i64 %arg1) {
 ; UNCHECKED-DARWIN-NEXT: movk x17, #65535, lsl #48
 ; UNCHECKED-DARWIN-NEXT: autda x16, x17
 ; UNCHECKED-DARWIN-NEXT: mov x0, x16
-; UNCHECKED-ELF-NEXT:    mov x8, x1
-; UNCHECKED-ELF-NEXT:    movk x8, #65535, lsl #48
-; UNCHECKED-ELF-NEXT:    autda x0, x8
+; UNCHECKED-ELF-NEXT:    movk x1, #65535, lsl #48
+; UNCHECKED-ELF-NEXT:    autda x0, x1
 ; UNCHECKED-NEXT:        ret
 ;
 ; CHECKED-LABEL: test_auth_blend:
@@ -51,9 +50,8 @@ define i64 @test_auth_blend(i64 %arg, i64 %arg1) {
 ; CHECKED-DARWIN-NEXT: movk x17, #65535, lsl #48
 ; CHECKED-DARWIN-NEXT: autda x16, x17
 ; CHECKED-DARWIN-NEXT: mov x0, x16
-; CHECKED-ELF-NEXT:    mov x8, x1
-; CHECKED-ELF-NEXT:    movk x8, #65535, lsl #48
-; CHECKED-ELF-NEXT:    autda x0, x8
+; CHECKED-ELF-NEXT:    movk x1, #65535, lsl #48
+; CHECKED-ELF-NEXT:    autda x0, x1
 ; CHECKED-NEXT:    ret
 ;
 ; TRAP-LABEL: test_auth_blend:
@@ -152,7 +150,7 @@ define i64 @test_resign_blend_and_const(i64 %arg, i64 %arg1) {
 ; CHECKED-NEXT:    mov x17, x16
 ; CHECKED-NEXT:    xpacd x17
 ; CHECKED-NEXT:    cmp x16, x17
-; CHECKED-NEXT:    b.eq [[L]]auth_success_[[N2:[0-9]]]
+; CHECKED-NEXT:    b.eq [[L]]auth_success_[[N2:[0-9]+]]
 ; CHECKED-NEXT:    mov x16, x17
 ; CHECKED-NEXT:    b [[L]]resign_end_1
 ; CHECKED-NEXT:  Lauth_success_[[N2]]:

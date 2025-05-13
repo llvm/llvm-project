@@ -32,8 +32,8 @@
 
  ; IF-EVL: <x1> vector loop: {
  ; IF-EVL-NEXT:   vector.body:
- ; IF-EVL-NEXT:     EMIT vp<[[IV:%.+]]> = phi ir<0>, vp<[[IV_NEXT_EXIT:%.+]]>
- ; IF-EVL-NEXT:     EMIT vp<[[EVL_PHI:%.+]]>  = phi ir<0>, vp<[[IV_NEX:%.+]]>
+ ; IF-EVL-NEXT:     EMIT vp<[[IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[IV_NEXT_EXIT:%.+]]>, vector.body ]
+ ; IF-EVL-NEXT:     EMIT vp<[[EVL_PHI:%.+]]>  = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[IV_NEX:%.+]]>, vector.body ]
  ; IF-EVL-NEXT:     EMIT vp<[[AVL:%.+]]> = sub ir<%N>, vp<[[EVL_PHI]]>
  ; IF-EVL-NEXT:     EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
  ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[EVL_PHI]]>
@@ -49,7 +49,7 @@
  ; IF-EVL-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[EVL_PHI]]>
  ; IF-EVL-NEXT:     vp<[[PTR3:%.+]]> = vector-pointer ir<[[GEP3]]>
  ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR3]]>, ir<[[ADD]]>, vp<[[EVL]]>
- ; IF-EVL-NEXT:     SCALAR-CAST vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
+ ; IF-EVL-NEXT:     EMIT vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
  ; IF-EVL-NEXT:     EMIT vp<[[IV_NEX]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
  ; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT_EXIT]]> = add vp<[[IV]]>, ir<[[VFUF]]>
  ; IF-EVL-NEXT:     EMIT branch-on-count vp<[[IV_NEXT_EXIT]]>,  ir<[[VTC]]>

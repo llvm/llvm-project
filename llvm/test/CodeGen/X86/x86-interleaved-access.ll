@@ -1605,20 +1605,20 @@ define void @interleaved_store_vf64_i8_stride4(<64 x i8> %a, <64 x i8> %b, <64 x
 ; AVX512-NEXT:    vextracti32x4 $2, %zmm1, %xmm6
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm3, %ymm7
 ; AVX512-NEXT:    vinserti128 $1, %xmm6, %ymm7, %ymm6
-; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm8
-; AVX512-NEXT:    vextracti64x4 $1, %zmm4, %ymm9
-; AVX512-NEXT:    vinserti128 $1, %xmm8, %ymm9, %ymm8
+; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm7
+; AVX512-NEXT:    vextracti64x4 $1, %zmm4, %ymm8
+; AVX512-NEXT:    vinserti128 $1, %xmm7, %ymm8, %ymm7
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm5, %zmm2, %zmm2
-; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm4
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm3
-; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm3 = zmm3[2,3,6,7],zmm4[2,3,6,7]
-; AVX512-NEXT:    vinserti64x4 $1, %ymm8, %zmm6, %zmm4
-; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm9[0,1,2,3],zmm0[4,5,6,7]
-; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm7[0,1,2,3],zmm1[4,5,6,7]
+; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm5
+; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm8
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm5 = zmm8[2,3,6,7],zmm5[2,3,6,7]
+; AVX512-NEXT:    vinserti64x4 $1, %ymm7, %zmm6, %zmm6
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm4[4,5,6,7],zmm0[4,5,6,7]
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm3[4,5,6,7],zmm1[4,5,6,7]
 ; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[2,3,6,7],zmm0[2,3,6,7]
-; AVX512-NEXT:    vmovdqa64 %zmm3, 64(%rdi)
 ; AVX512-NEXT:    vmovdqa64 %zmm0, 192(%rdi)
-; AVX512-NEXT:    vmovdqa64 %zmm4, 128(%rdi)
+; AVX512-NEXT:    vmovdqa64 %zmm5, 64(%rdi)
+; AVX512-NEXT:    vmovdqa64 %zmm6, 128(%rdi)
 ; AVX512-NEXT:    vmovdqa64 %zmm2, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

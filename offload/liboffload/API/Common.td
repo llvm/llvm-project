@@ -62,6 +62,27 @@ def : Handle {
   let desc = "Handle of context object";
 }
 
+def : Handle {
+  let name = "ol_queue_handle_t";
+  let desc = "Handle of queue object";
+}
+
+def : Handle {
+  let name = "ol_event_handle_t";
+  let desc = "Handle of event object";
+}
+
+def : Handle {
+  let name = "ol_program_handle_t";
+  let desc = "Handle of program object";
+}
+
+def : Typedef {
+  let name = "ol_kernel_handle_t";
+  let desc = "Handle of kernel object";
+  let value = "void *";
+}
+
 def : Enum {
   let name = "ol_errc_t";
   let desc = "Defines Return/Error codes";
@@ -69,12 +90,11 @@ def : Enum {
     Etor<"SUCCESS", "Success">,
     Etor<"INVALID_VALUE", "Invalid Value">,
     Etor<"INVALID_PLATFORM", "Invalid platform">,
-    Etor<"DEVICE_NOT_FOUND", "Device not found">,
     Etor<"INVALID_DEVICE", "Invalid device">,
-    Etor<"DEVICE_LOST", "Device hung, reset, was removed, or driver update occurred">,
-    Etor<"UNINITIALIZED", "plugin is not initialized or specific entry-point is not implemented">,
+    Etor<"INVALID_QUEUE", "Invalid queue">,
+    Etor<"INVALID_EVENT", "Invalid event">,
+    Etor<"INVALID_KERNEL_NAME", "Named kernel not found in the program binary">,
     Etor<"OUT_OF_RESOURCES", "Out of resources">,
-    Etor<"UNSUPPORTED_VERSION", "generic error code for unsupported versions">,
     Etor<"UNSUPPORTED_FEATURE", "generic error code for unsupported features">,
     Etor<"INVALID_ARGUMENT", "generic error code for invalid arguments">,
     Etor<"INVALID_NULL_HANDLE", "handle argument is not valid">,

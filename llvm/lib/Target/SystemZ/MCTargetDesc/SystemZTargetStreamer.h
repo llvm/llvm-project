@@ -54,7 +54,7 @@ public:
 
   void emitConstantPools() override;
 
-  virtual void emitMachine(StringRef CPU) {};
+  virtual void emitMachine(StringRef CPUOrCommand) {};
 
   virtual void emitExtern(StringRef Str) {};
 
@@ -85,7 +85,7 @@ public:
 class SystemZTargetELFStreamer : public SystemZTargetStreamer {
 public:
   SystemZTargetELFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
-  void emitMachine(StringRef CPU) override {}
+  void emitMachine(StringRef CPUOrCommand) override {}
 };
 
 class SystemZTargetGNUStreamer : public SystemZTargetStreamer {
@@ -94,8 +94,8 @@ class SystemZTargetGNUStreamer : public SystemZTargetStreamer {
 public:
   SystemZTargetGNUStreamer(MCStreamer &S, formatted_raw_ostream &OS)
       : SystemZTargetStreamer(S), OS(OS) {}
-  void emitMachine(StringRef CPU) override {
-    OS << "\t.machine " << CPU << "\n";
+  void emitMachine(StringRef CPUOrCommand) override {
+    OS << "\t.machine " << CPUOrCommand << "\n";
   }
 };
 

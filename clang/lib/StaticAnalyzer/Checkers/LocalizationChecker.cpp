@@ -972,7 +972,6 @@ void NonLocalizedStringChecker::checkPostObjCMessage(const ObjCMethodCall &msg,
   const IdentifierInfo *odInfo = OD->getIdentifier();
 
   Selector S = msg.getSelector();
-  std::string SelectorName = S.getAsString();
 
   std::pair<const IdentifierInfo *, Selector> MethodDescription = {odInfo, S};
 
