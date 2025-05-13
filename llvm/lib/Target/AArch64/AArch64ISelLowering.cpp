@@ -9545,10 +9545,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.insert(Ops.begin() + 1, GA);
 
     // We may or may not need to emit both the marker and the retain/claim call.
-    // Do what the frontend tells us: if the rvmarker module flag is present,
-    // emit the marker.  Always emit the call regardless.
     // Tell the pseudo expansion using an additional boolean op.
-    SDValue DoEmitMarker = DAG.getTargetConstant(true, DL, MVT::i32);
+    bool ShouldEmitMarker = objcarc::attachedCallOpBundleNeedsMarker(CLI.CB);
+    SDValue DoEmitMarker =
+        DAG.getTargetConstant(ShouldEmitMarker, DL, MVT::i32);
     Ops.insert(Ops.begin() + 2, DoEmitMarker);
   } else if (CallConv == CallingConv::ARM64EC_Thunk_X64) {
     Opc = AArch64ISD::CALL_ARM64EC_TO_X64;
