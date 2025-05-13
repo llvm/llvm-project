@@ -193,7 +193,7 @@ static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
 void coro::Shape::analyze(Function &F,
                           SmallVectorImpl<CoroFrameInst *> &CoroFrames,
                           SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
-                          SmallVectorImpl<CoroPromiseInst *> &CoroPromises) {
+                          CoroPromiseInst *&CoroPromise) {
   clear();
 
   bool HasFinalSuspend = false;
@@ -288,7 +288,7 @@ void coro::Shape::analyze(Function &F,
         }
         break;
       case Intrinsic::coro_promise:
-        CoroPromises.push_back(cast<CoroPromiseInst>(II));
+        CoroPromise = cast<CoroPromiseInst>(II);
         break;
       }
     }
@@ -481,8 +481,7 @@ void coro::AnyRetconABI::init() {
 
 void coro::Shape::cleanCoroutine(
     SmallVectorImpl<CoroFrameInst *> &CoroFrames,
-    SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
-    SmallVectorImpl<CoroPromiseInst *> &CoroPromises) {
+    SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves, CoroPromiseInst *PI) {
   // The coro.frame intrinsic is always lowered to the result of coro.begin.
   for (CoroFrameInst *CF : CoroFrames) {
     CF->replaceAllUsesWith(CoroBegin);
@@ -495,10 +494,10 @@ void coro::Shape::cleanCoroutine(
     CoroSave->eraseFromParent();
   UnusedCoroSaves.clear();
 
-  auto *AI = getPromiseAlloca();
-  for (auto *PI : CoroPromises) {
-    PI->replaceAllUsesWith(PI->isFromPromise() ? cast<Value>(CoroBegin)
-                                               : cast<Value>(AI));
+  if (PI) {
+    PI->replaceAllUsesWith(PI->isFromPromise()
+                               ? cast<Value>(CoroBegin)
+                               : cast<Value>(getPromiseAlloca()));
     PI->eraseFromParent();
   }
 }

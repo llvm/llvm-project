@@ -18,7 +18,6 @@ resume:
   br label %suspend
 
 suspend:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
 ; load value when resume
 ; CHECK: %null = load ptr, ptr %promise.addr, align 8
   %null = load ptr, ptr %__promise, align 8

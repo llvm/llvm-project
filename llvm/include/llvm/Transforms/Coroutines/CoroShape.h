@@ -80,7 +80,7 @@ struct Shape {
   // Scan the function and collect the above intrinsics for later processing
   void analyze(Function &F, SmallVectorImpl<CoroFrameInst *> &CoroFrames,
                SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
-               SmallVectorImpl<CoroPromiseInst *> &CoroPromises);
+               CoroPromiseInst *&CoroPromise);
   // If for some reason, we were not able to find coro.begin, bailout.
   void invalidateCoroutine(Function &F,
                            SmallVectorImpl<CoroFrameInst *> &CoroFrames);
@@ -89,7 +89,7 @@ struct Shape {
   // Remove orphaned and unnecessary intrinsics
   void cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
                       SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
-                      SmallVectorImpl<CoroPromiseInst *> &CoroPromises);
+                      CoroPromiseInst *CoroPromise);
 
   // Field indexes for special fields in the switch lowering.
   struct SwitchFieldIndex {
@@ -267,14 +267,14 @@ struct Shape {
   explicit Shape(Function &F) {
     SmallVector<CoroFrameInst *, 8> CoroFrames;
     SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
-    SmallVector<CoroPromiseInst *, 2> CoroPromises;
+    CoroPromiseInst * CoroPromise = nullptr;
 
-    analyze(F, CoroFrames, UnusedCoroSaves, CoroPromises);
+    analyze(F, CoroFrames, UnusedCoroSaves, CoroPromise);
     if (!CoroBegin) {
       invalidateCoroutine(F, CoroFrames);
       return;
     }
-    cleanCoroutine(CoroFrames, UnusedCoroSaves, CoroPromises);
+    cleanCoroutine(CoroFrames, UnusedCoroSaves, CoroPromise);
   }
 };
 
