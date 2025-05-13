@@ -504,7 +504,7 @@ public:
     assert(!Name && "Checker part registered twice!");
     Name = Mgr.getCurrentCheckerName();
   }
-  bool isEnabled() const { return static_cast<bool>(Name); }
+  bool isEnabled() const { return Name.has_value(); }
   CheckerNameRef getName() const { return *Name; }
 };
 
@@ -529,17 +529,6 @@ public:
   StringRef getTagDescription() const override;
 };
 
-// Template magic to implement the static method `_register()` which registers
-// the `Checker` or `CheckerFamily` for all the implemented callbacks.
-template <typename CHECKER, typename CHECK1, typename... CHECKs>
-static void registerImpl(CHECKER *Chk, CheckerManager &Mgr) {
-  CHECK1::_register(Chk, Mgr);
-  registerImpl<CHECKER, CHECKs...>(Chk, Mgr);
-}
-
-template <typename CHECKER>
-static void registerImpl(CHECKER *Chk, CheckerManager &Mgr) {}
-
 /// Simple checker classes that implement one frontend (i.e. checker name)
 /// should derive from this template and specify all the implemented callbacks
 /// (i.e. classes like `check::PreStmt` or `eval::Call`) as template arguments
@@ -549,7 +538,7 @@ class Checker : public CheckerBase, public CHECKs... {
 public:
   template <typename CHECKER>
   static void _register(CHECKER *Chk, CheckerManager &Mgr) {
-    registerImpl<CHECKER, CHECKs...>(Chk, Mgr);
+    (CHECKs::_register(Chk, Mgr), ...);
   }
 };
 
@@ -564,7 +553,7 @@ class CheckerFamily : public CheckerBackend, public CHECKs... {
 public:
   template <typename CHECKER>
   static void _register(CHECKER *Chk, CheckerManager &Mgr) {
-    registerImpl<CHECKER, CHECKs...>(Chk, Mgr);
+    (CHECKs::_register(Chk, Mgr), ...);
   }
 };
 
