@@ -5848,6 +5848,38 @@ bool HLSLBufferDecl::buffer_decls_empty() {
 }
 
 //===----------------------------------------------------------------------===//
+// HLSLRootSignatureDecl Implementation
+//===----------------------------------------------------------------------===//
+
+HLSLRootSignatureDecl::HLSLRootSignatureDecl(DeclContext *DC,
+                                             SourceLocation Loc,
+                                             IdentifierInfo *ID,
+                                             unsigned NumElems)
+    : NamedDecl(Decl::Kind::HLSLRootSignature, DC, Loc, DeclarationName(ID)),
+      NumElems(NumElems) {}
+
+HLSLRootSignatureDecl *HLSLRootSignatureDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+    ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements) {
+  HLSLRootSignatureDecl *RSDecl =
+      new (C, DC,
+           additionalSizeToAlloc<llvm::hlsl::rootsig::RootElement>(
+               RootElements.size()))
+          HLSLRootSignatureDecl(DC, Loc, ID, RootElements.size());
+  auto *StoredElems = RSDecl->getElems();
+  std::uninitialized_copy(RootElements.begin(), RootElements.end(),
+                          StoredElems);
+  return RSDecl;
+}
+
+HLSLRootSignatureDecl *
+HLSLRootSignatureDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
+  HLSLRootSignatureDecl *Result = new (C, ID)
+      HLSLRootSignatureDecl(nullptr, SourceLocation(), nullptr, /*NumElems=*/0);
+  return Result;
+}
+
+//===----------------------------------------------------------------------===//
 // ImportDecl Implementation
 //===----------------------------------------------------------------------===//
 

@@ -1797,7 +1797,7 @@ public:
   /// As opposed to the normal scheme of p = phi (0, a) which allows the select
   /// to be pulled out of the loop. If the select(.., add, ..) can be predicated
   /// by the target, this can lead to cleaner code generation.
-  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const;
+  bool preferPredicatedReductionSelect() const;
 
   /// Return true if the loop vectorizer should consider vectorizing an
   /// otherwise scalar epilogue loop.
