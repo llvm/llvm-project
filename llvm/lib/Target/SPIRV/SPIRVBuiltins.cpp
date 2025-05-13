@@ -1439,15 +1439,15 @@ static bool generateKernelClockInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
-// These queries ask for a single size_t result for a given dimension index, e.g
-// size_t get_global_id(uint dimindex). In SPIR-V, the builtins corresonding to
-// these values are all vec3 types, so we need to extract the correct index or
-// return defaultVal (0 or 1 depending on the query). We also handle extending
-// or tuncating in case size_t does not match the expected result type's
-// bitwidth.
+// These queries ask for a single size_t result for a given dimension index,
+// e.g. size_t get_global_id(uint dimindex). In SPIR-V, the builtins
+// corresponding to these values are all vec3 types, so we need to extract the
+// correct index or return DefaultValue (0 or 1 depending on the query). We also
+// handle extending or truncating in case size_t does not match the expected
+// result type's bitwidth.
 //
 // For a constant index >= 3 we generate:
-//  %res = OpConstant %SizeT 0
+//  %res = OpConstant %SizeT DefaultValue
 //
 // For other indices we generate:
 //  %g = OpVariable %ptr_V3_SizeT Input
@@ -1461,7 +1461,7 @@ static bool generateKernelClockInst(const SPIRV::IncomingCall *Call,
 //  If the index is dynamic, we generate:
 //    %tmp = OpVectorExtractDynamic %SizeT %loadedVec %idx
 //    %cmp = OpULessThan %bool %idx %const_3
-//    %res = OpSelect %SizeT %cmp %tmp %const_0
+//    %res = OpSelect %SizeT %cmp %tmp %const_<DefaultValue>
 //
 //  If the bitwidth of %res does not match the expected return type, we add an
 //  extend or truncate.
@@ -1840,11 +1840,11 @@ static bool generateGetQueryInst(const SPIRV::IncomingCall *Call,
   // Lookup the builtin record.
   SPIRV::BuiltIn::BuiltIn Value =
       SPIRV::lookupGetBuiltin(Call->Builtin->Name, Call->Builtin->Set)->Value;
-  uint64_t IsDefault = (Value == SPIRV::BuiltIn::GlobalSize ||
-                        Value == SPIRV::BuiltIn::NumWorkgroups ||
-                        Value == SPIRV::BuiltIn::WorkgroupSize ||
-                        Value == SPIRV::BuiltIn::EnqueuedWorkgroupSize);
-  return genWorkgroupQuery(Call, MIRBuilder, GR, Value, IsDefault ? 1 : 0);
+  const bool IsDefaultOne = (Value == SPIRV::BuiltIn::GlobalSize ||
+                             Value == SPIRV::BuiltIn::NumWorkgroups ||
+                             Value == SPIRV::BuiltIn::WorkgroupSize ||
+                             Value == SPIRV::BuiltIn::EnqueuedWorkgroupSize);
+  return genWorkgroupQuery(Call, MIRBuilder, GR, Value, IsDefaultOne ? 1 : 0);
 }
 
 static bool generateImageSizeQueryInst(const SPIRV::IncomingCall *Call,
