@@ -342,8 +342,6 @@ void KernelInfo::updateForBB(const BasicBlock &BB, BlockFrequencyInfo &BFI,
         ++FlatAddrspaceAccesses;
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
-      // TODO: Because there is a read and write, should we double the bytes
-      // moved count?
       HandleFloatingPointBytesMoved();
     } else if (const AtomicCmpXchgInst *At = dyn_cast<AtomicCmpXchgInst>(&I)) {
       if (At->getPointerAddressSpace() == FlatAddrspace) {
