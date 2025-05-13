@@ -3505,7 +3505,7 @@ bool UpdateOp::hasAsyncOnly() {
 }
 
 bool UpdateOp::hasAsyncOnly(mlir::acc::DeviceType deviceType) {
-  return hasDeviceType(getAsync(), deviceType);
+  return hasDeviceType(getAsyncOnly(), deviceType);
 }
 
 mlir::Value UpdateOp::getAsyncValue() {
@@ -3659,32 +3659,30 @@ mlir::acc::getBounds(mlir::Operation *accDataClauseOp) {
 }
 
 mlir::SmallVector<mlir::Value>
-mlir::acc::getAsyncOperands(mlir::Operation *accDataClauseOp) {
+mlir::acc::getAsyncOperands(mlir::Operation *accOp) {
   return llvm::TypeSwitch<mlir::Operation *, mlir::SmallVector<mlir::Value>>(
-             accDataClauseOp)
-      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClause) {
-        return mlir::SmallVector<mlir::Value>(
-            dataClause.getAsyncOperands().begin(),
-            dataClause.getAsyncOperands().end());
-      })
+             accOp)
+      .Case<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::DataOp, mlir::acc::UpdateOp>(
+          [&](auto op) {
+            return mlir::SmallVector<mlir::Value>(op.getAsyncOperands().begin(),
+                                                  op.getAsyncOperands().end());
+          })
       .Default([&](mlir::Operation *) {
         return mlir::SmallVector<mlir::Value, 0>();
       });
 }
 
-mlir::ArrayAttr
-mlir::acc::getAsyncOperandsDeviceType(mlir::Operation *accDataClauseOp) {
-  return llvm::TypeSwitch<mlir::Operation *, mlir::ArrayAttr>(accDataClauseOp)
-      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClause) {
-        return dataClause.getAsyncOperandsDeviceTypeAttr();
-      })
+mlir::ArrayAttr mlir::acc::getAsyncOperandsDeviceType(mlir::Operation *accOp) {
+  return llvm::TypeSwitch<mlir::Operation *, mlir::ArrayAttr>(accOp)
+      .Case<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::DataOp, mlir::acc::UpdateOp>(
+          [&](auto op) { return op.getAsyncOperandsDeviceTypeAttr(); })
       .Default([&](mlir::Operation *) { return mlir::ArrayAttr{}; });
 }
 
-mlir::ArrayAttr mlir::acc::getAsyncOnly(mlir::Operation *accDataClauseOp) {
-  return llvm::TypeSwitch<mlir::Operation *, mlir::ArrayAttr>(accDataClauseOp)
-      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>(
-          [&](auto dataClause) { return dataClause.getAsyncOnlyAttr(); })
+mlir::ArrayAttr mlir::acc::getAsyncOnly(mlir::Operation *accOp) {
+  return llvm::TypeSwitch<mlir::Operation *, mlir::ArrayAttr>(accOp)
+      .Case<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::DataOp, mlir::acc::UpdateOp>(
+          [&](auto op) { return op.getAsyncOnlyAttr(); })
       .Default([&](mlir::Operation *) { return mlir::ArrayAttr{}; });
 }
 

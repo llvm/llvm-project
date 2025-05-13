@@ -117,19 +117,19 @@ mlir::Value getVarPtrPtr(mlir::Operation *accDataClauseOp);
 /// Returns an empty vector if there are no bounds.
 mlir::SmallVector<mlir::Value> getBounds(mlir::Operation *accDataClauseOp);
 
-/// Used to obtain `async` operands from an acc data clause operation.
+/// Used to obtain `async` operands from an acc operation.
 /// Returns an empty vector if there are no such operands.
 mlir::SmallVector<mlir::Value>
 getAsyncOperands(mlir::Operation *accDataClauseOp);
 
 /// Returns an array of acc:DeviceTypeAttr attributes attached to
-/// an acc data clause operation, that correspond to the device types
-/// associated with the async clauses with an async-value.
+/// an acc operation, that correspond to the device types associated with the
+/// async clauses with an async-value.
 mlir::ArrayAttr getAsyncOperandsDeviceType(mlir::Operation *accDataClauseOp);
 
 /// Returns an array of acc:DeviceTypeAttr attributes attached to
-/// an acc data clause operation, that correspond to the device types
-/// associated with the async clauses without an async-value.
+/// an acc operation, that correspond to the device types associated with the
+/// async clauses without an async-value.
 mlir::ArrayAttr getAsyncOnly(mlir::Operation *accDataClauseOp);
 
 /// Used to obtain the `name` from an acc operation.
