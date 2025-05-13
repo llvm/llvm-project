@@ -38,8 +38,7 @@ class TestBranchIslandStepping(TestBase):
         sym_addr = island_sym_ctx.symbol.addr
         resolved_name = sym_addr.symbol.name
         if resolved_name != "foo.island":
-            return
-
+            self.skipTest("Encountered overlapping symbol linker bug")
         thread.StepInto()
         stop_frame = thread.frames[0]
         self.assertIn("foo", stop_frame.name, "Stepped into foo")
