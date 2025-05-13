@@ -77,7 +77,7 @@ private:
   unsigned getPtrLoadStoreOp(const LLT &Ty, const RegisterBank &RB,
                              unsigned Opc) const;
 
-  bool checkMemoryOpSize(const MachineInstr &MI, unsigned NumBytes) const;
+  bool checkMemoryOpSize(const MachineInstr &MI, LLT Sz) const;
 
   bool selectLoadStoreOp(MachineInstr &I, MachineRegisterInfo &MRI,
                          MachineFunction &MF) const;
@@ -358,12 +358,10 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
 }
 
 bool X86InstructionSelector::checkMemoryOpSize(const MachineInstr &MI,
-                                               unsigned NumBytes) const {
-  if (!MI.mayLoadOrStore())
-    return false;
+                                               LLT Sz) const {
   assert(MI.hasOneMemOperand() &&
          "Expected load/store to have only one mem op!");
-  return (*MI.memoperands_begin())->getSize() == NumBytes;
+  return (*MI.memoperands_begin())->getMemoryType() == Sz;
 }
 
 bool X86InstructionSelector::select(MachineInstr &I) {

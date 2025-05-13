@@ -491,46 +491,38 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       });
 
   getActionDefinitionsBuilder(G_SITOFP)
-      .legalIf([=](const LegalityQuery &Query) {
-        return (HasSSE1 &&
-                (typePairInSet(0, 1, {{s32, s32}})(Query) ||
-                 (Is64Bit && typePairInSet(0, 1, {{s32, s64}})(Query)))) ||
-               (HasSSE2 &&
-                (typePairInSet(0, 1, {{s64, s32}})(Query) ||
-                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query))));
-      })
-      .customIf([=](const LegalityQuery &Query) -> bool {
-        if (!UseX87)
-          return false;
-        if ((typeIs(0, s32)(Query) && HasSSE1) ||
-            (typeIs(0, s64)(Query) && HasSSE2))
-          return false;
-        return typeInSet(0, {s32, s64, s80})(Query) &&
-               typeInSet(1, {s16, s32, s64})(Query);
-      })
+      .legalFor(HasSSE1, {s32, s32})
+      .legalFor(HasSSE1 && Is64Bit, {s32, s64})
+      .legalFor(HasSSE2, {s64, s32})
+      .legalFor(HasSSE2 && Is64Bit, {s64, s64})
+      .customFor(UseX87, {{s32, s16},
+                          {s32, s32},
+                          {s32, s64},
+                          {s64, s16},
+                          {s64, s32},
+                          {s64, s64},
+                          {s80, s16},
+                          {s80, s32},
+                          {s80, s64}})
       .clampScalar(1, (UseX87 && !HasSSE1) ? s16 : s32, sMaxScalar)
       .widenScalarToNextPow2(1)
       .clampScalar(0, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder(G_FPTOSI)
-      .legalIf([=](const LegalityQuery &Query) {
-        return (HasSSE1 &&
-                (typePairInSet(0, 1, {{s32, s32}})(Query) ||
-                 (Is64Bit && typePairInSet(0, 1, {{s64, s32}})(Query)))) ||
-               (HasSSE2 &&
-                (typePairInSet(0, 1, {{s32, s64}})(Query) ||
-                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query))));
-      })
-      .customIf([=](const LegalityQuery &Query) -> bool {
-        if (!UseX87)
-          return false;
-        if ((typeIs(1, s32)(Query) && HasSSE1) ||
-            (typeIs(1, s64)(Query) && HasSSE2))
-          return false;
-        return typeInSet(0, {s16, s32, s64})(Query) &&
-               typeInSet(1, {s32, s64, s80})(Query);
-      })
+      .legalFor(HasSSE1, {s32, s32})
+      .legalFor(HasSSE1 && Is64Bit, {s64, s32})
+      .legalFor(HasSSE2, {s32, s64})
+      .legalFor(HasSSE2 && Is64Bit, {s64, s64})
+      .customFor(UseX87, {{s16, s32},
+                          {s16, s64},
+                          {s16, s80},
+                          {s32, s32},
+                          {s32, s64},
+                          {s32, s80},
+                          {s64, s32},
+                          {s64, s64},
+                          {s64, s80}})
       .clampScalar(0, (UseX87 && !HasSSE1) ? s16 : s32, sMaxScalar)
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, HasSSE2 ? s64 : s32)
@@ -709,13 +701,10 @@ bool X86LegalizerInfo::legalizeSITOFP(MachineInstr &MI,
           SrcTy.getSizeInBits() == 64) &&
          "Unexpected source type for SITOFP in X87 mode.");
 
-  const LLT p0 = LLT::pointer(0, MF.getTarget().getPointerSizeInBits(0));
-  int MemSize = SrcTy.getSizeInBytes();
-  int StackSlot =
-      MF.getFrameInfo().CreateStackObject(MemSize, Align(MemSize), false);
-
-  auto SlotPointer = MIRBuilder.buildFrameIndex(p0, StackSlot);
-  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, StackSlot);
+  TypeSize MemSize = SrcTy.getSizeInBytes();
+  MachinePointerInfo PtrInfo;
+  Align Alignmt = Helper.getStackTemporaryAlignment(SrcTy);
+  auto SlotPointer = Helper.createStackTemporary(MemSize, Alignmt, PtrInfo);
   MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
       PtrInfo, MachineMemOperand::MOStore, MemSize, Align(MemSize));
 
@@ -738,16 +727,12 @@ bool X86LegalizerInfo::legalizeFPTOSI(MachineInstr &MI,
                                       LegalizerHelper &Helper) const {
   MachineFunction &MF = *MI.getMF();
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
-  const LLT p0 = LLT::pointer(0, MF.getTarget().getPointerSizeInBits(0));
   auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
 
-  unsigned MemSize = DstTy.getSizeInBytes();
-  int StackSlot =
-      MF.getFrameInfo().CreateStackObject(MemSize, Align(MemSize), false);
-
-  auto SlotPointer = MIRBuilder.buildFrameIndex(p0, StackSlot);
-
-  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, StackSlot);
+  TypeSize MemSize = DstTy.getSizeInBytes();
+  MachinePointerInfo PtrInfo;
+  Align Alignmt = Helper.getStackTemporaryAlignment(DstTy);
+  auto SlotPointer = Helper.createStackTemporary(MemSize, Alignmt, PtrInfo);
   MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
       PtrInfo, MachineMemOperand::MOStore, MemSize, Align(MemSize));
 
