@@ -8603,7 +8603,11 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
 
   // fminimum/fmaximum requires -0.0 less than +0.0
   if (!MinMaxMustRespectOrderedZero && !N->getFlags().hasNoSignedZeros() &&
-      !DAG.isKnownNeverZeroFloat(RHS) && !DAG.isKnownNeverZeroFloat(LHS)) {
+      !DAG.isKnownNeverZeroFloat(RHS) && !DAG.isKnownNeverZeroFloat(LHS) &&
+      !(DAG.isKnownNeverZeroFloat(RHS, fcNegZero) &&
+        DAG.isKnownNeverZeroFloat(LHS, fcNegZero)) &&
+      !(DAG.isKnownNeverZeroFloat(RHS, fcPosZero) &&
+        DAG.isKnownNeverZeroFloat(LHS, fcPosZero))) {
     SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
                                   DAG.getConstantFP(0.0, DL, VT), ISD::SETOEQ);
     SDValue TestZero =
