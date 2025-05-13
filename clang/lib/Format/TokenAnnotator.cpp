@@ -5685,27 +5685,10 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     if (Right.is(tok::r_brace) && Left.is(tok::l_brace) &&
         !Left.Children.empty()) {
       // Support AllowShortFunctionsOnASingleLine for JavaScript.
-      const auto &shortFuncConfig = Style.AllowShortFunctionsOnASingleLine;
-
-      // SFS_All
-      if (shortFuncConfig.isAll())
-        return false;
-
-      // SFS_None and SFS_Empty
-      if (shortFuncConfig == FormatStyle::ShortFunctionStyle{})
-        return true;
-
-      // SFS_Empty
-      if (shortFuncConfig == FormatStyle::ShortFunctionStyle{/*Empty=*/true,
-                                                             /*Inline=*/false,
-                                                             /*Other=*/false}) {
-        return true;
-      }
-
       if (Left.NestingLevel == 0 && Line.Level == 0)
-        return shortFuncConfig.Inline && !shortFuncConfig.Other;
-
-      return shortFuncConfig.Other;
+        return !Style.AllowShortFunctionsOnASingleLine.Other;
+      
+      return !Style.AllowShortFunctionsOnASingleLine.Inline;
     }
   } else if (Style.isJava()) {
     if (Right.is(tok::plus) && Left.is(tok::string_literal) && AfterRight &&
