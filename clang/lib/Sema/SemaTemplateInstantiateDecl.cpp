@@ -5753,14 +5753,12 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   } else {
     DeclContext *DC = Function->getLexicalDeclContext();
     std::optional<ArrayRef<TemplateArgument>> Innermost;
-    bool NeedDCFromPrimaryTemplate =
-        !isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function) &&
-        Function->getTemplateSpecializationKind() !=
-            TSK_ExplicitSpecialization &&
-        !PatternDecl->getDependentSpecializationInfo();
 
     if (auto *Primary = Function->getPrimaryTemplate();
-        Primary && NeedDCFromPrimaryTemplate) {
+        Primary &&
+        !isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function) &&
+        Function->getTemplateSpecializationKind() !=
+            TSK_ExplicitSpecialization) {
       auto It = llvm::find_if(Primary->redecls(),
                               [](const RedeclarableTemplateDecl *RTD) {
                                 return cast<FunctionTemplateDecl>(RTD)

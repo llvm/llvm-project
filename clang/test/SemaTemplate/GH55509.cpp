@@ -119,7 +119,7 @@ template <typename T>
 class BinaryTree;
 
 template <typename T>
-FakeStream& operator<<(FakeStream& os, BinaryTree<T>& b); // #1
+FakeStream& operator<<(FakeStream& os, BinaryTree<T>& b);
 
 template <typename T>
 FakeStream& operator>>(FakeStream& os, BinaryTree<T>& b) {
@@ -129,9 +129,6 @@ FakeStream& operator>>(FakeStream& os, BinaryTree<T>& b) {
 template <typename T>
 struct BinaryTree {
   T* root{};
-  // This template is described using a DependentSpecializationInfo, and its instantiations
-  // are tracked with TSK_ImplicitInstantiation kind.
-  // The primary template is declared at #1.
   friend FakeStream& operator<< <T>(FakeStream& os, BinaryTree&) {
     // expected-error@-1 {{friend function specialization cannot be defined}}
     return os;
