@@ -2997,6 +2997,18 @@ bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
           0);
       return true;
     }
+    // Same as the addi case above but for larger immediates (signed 26-bit) use
+    // the QC_E_ADDI instruction from the Xqcilia extension, if available. Avoid
+    // anything which can be done with a single lui as it might be compressible.
+    if (Subtarget->hasVendorXqcilia() && isInt<26>(CVal) &&
+        (CVal & 0xFFF) != 0) {
+      Val = SDValue(
+          CurDAG->getMachineNode(
+              RISCV::QC_E_ADDI, DL, N->getValueType(0), LHS,
+              CurDAG->getSignedTargetConstant(-CVal, DL, N->getValueType(0))),
+          0);
+      return true;
+    }
   }
 
   // If nothing else we can XOR the LHS and RHS to produce zero if they are
