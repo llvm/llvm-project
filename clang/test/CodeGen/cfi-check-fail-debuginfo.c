@@ -39,7 +39,7 @@ void caller(void (*f)(void)) {
 // CHECK: [[META18]] = !{i64 0, i64 2451761621477796417}
 // CHECK: [[META19]] = !DILocation(line: 0, scope: [[DBG7]])
 // CHECK: [[DBG20]] = !DILocation(line: 0, scope: [[META21:![0-9]+]], inlinedAt: [[DBG23]])
-// CHECK: [[META21]] = distinct !DISubprogram(name: "__ubsan_check_cfi-icall", scope: [[META8]], file: [[META8]], type: [[META22:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK: [[META21]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META8]], file: [[META8]], type: [[META22:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // CHECK: [[META22]] = !DISubroutineType(types: null)
 // CHECK: [[DBG23]] = !DILocation(line: 23, column: 3, scope: [[DBG7]])
 // CHECK: [[META24]] = !{}

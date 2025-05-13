@@ -1219,7 +1219,7 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
 
 llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
     SanitizerKind::SanitizerOrdinal CheckKindOrdinal) {
-  StringRef Label;
+  std::string Label;
   switch (CheckKindOrdinal) {
 #define SANITIZER(NAME, ID)                                                    \
   case SanitizerKind::SO_##ID:                                                 \
@@ -1229,6 +1229,11 @@ llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
   default:
     llvm_unreachable("unexpected sanitizer kind");
   }
+
+  // Sanitize label
+  for (unsigned int i = 0; i < Label.length(); i++)
+    if (!std::isalpha(Label[i]))
+      Label[i] = '_';
 
   llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
   // TODO: deprecate ClArrayBoundsPseudoFn

@@ -85,7 +85,7 @@ void g(int** (*fp)(const char *, const char **)) {
 // UNGENERALIZED: [[META32]] = !{i64 0, !"_ZTSFvPvE.generalized"}
 // UNGENERALIZED: [[META33]] = !DILocation(line: 0, scope: [[DBG25]])
 // UNGENERALIZED: [[DBG34]] = !DILocation(line: 0, scope: [[META35:![0-9]+]], inlinedAt: [[DBG37]])
-// UNGENERALIZED: [[META35]] = distinct !DISubprogram(name: "__ubsan_check_cfi-icall", scope: [[META11]], file: [[META11]], type: [[META36:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// UNGENERALIZED: [[META35]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META11]], file: [[META11]], type: [[META36:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // UNGENERALIZED: [[META36]] = !DISubroutineType(types: null)
 // UNGENERALIZED: [[DBG37]] = !DILocation(line: 53, column: 3, scope: [[DBG25]])
 // UNGENERALIZED: [[META38]] = !{}
@@ -123,7 +123,7 @@ void g(int** (*fp)(const char *, const char **)) {
 // GENERALIZED: [[META32]] = !{i64 0, !"_ZTSFvPvE.generalized"}
 // GENERALIZED: [[META33]] = !DILocation(line: 0, scope: [[DBG25]])
 // GENERALIZED: [[DBG34]] = !DILocation(line: 0, scope: [[META35:![0-9]+]], inlinedAt: [[DBG37]])
-// GENERALIZED: [[META35]] = distinct !DISubprogram(name: "__ubsan_check_cfi-icall", scope: [[META11]], file: [[META11]], type: [[META36:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// GENERALIZED: [[META35]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META11]], file: [[META11]], type: [[META36:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // GENERALIZED: [[META36]] = !DISubroutineType(types: null)
 // GENERALIZED: [[DBG37]] = !DILocation(line: 53, column: 3, scope: [[DBG25]])
 // GENERALIZED: [[META38]] = !{}

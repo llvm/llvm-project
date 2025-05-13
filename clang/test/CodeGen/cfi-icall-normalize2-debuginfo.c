@@ -82,7 +82,7 @@ void baz(void (*fn)(int, int, int), int arg1, int arg2, int arg3) {
 // CHECK: [[META19]] = !{i64 0, !"_ZTSFvPvu3i32E.normalized.generalized"}
 // CHECK: [[META20]] = !DILocation(line: 0, scope: [[DBG7]])
 // CHECK: [[DBG21]] = !DILocation(line: 0, scope: [[META22:![0-9]+]], inlinedAt: [[DBG24]])
-// CHECK: [[META22]] = distinct !DISubprogram(name: "__ubsan_check_cfi-icall", scope: [[META8]], file: [[META8]], type: [[META23:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK: [[META22]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall", scope: [[META8]], file: [[META8]], type: [[META23:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // CHECK: [[META23]] = !DISubroutineType(types: null)
 // CHECK: [[DBG24]] = !DILocation(line: 25, column: 5, scope: [[DBG7]])
 // CHECK: [[META25]] = !{}

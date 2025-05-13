@@ -68,9 +68,9 @@ double f1(int b, int i) {
 
 //.
 // CHECK-TRAP: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// CHECK-TRAP: [[META1]] = !DIFile(filename: "<stdin>", directory: {{.*}})
+// CHECK-TRAP: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // CHECK-TRAP: [[DBG4]] = distinct !DISubprogram(name: "f1", scope: [[META5:![0-9]+]], file: [[META5]], line: 63, type: [[META6:![0-9]+]], scopeLine: 63, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META10]])
-// CHECK-TRAP: [[META5]] = !DIFile(filename: "bounds-checking-debuginfo.c", directory: {{.*}})
+// CHECK-TRAP: [[META5]] = !DIFile(filename: "{{.*}}bounds-checking-debuginfo.c", directory: {{.*}})
 // CHECK-TRAP: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
 // CHECK-TRAP: [[META7]] = !{[[META8:![0-9]+]], [[META9:![0-9]+]], [[META9]]}
 // CHECK-TRAP: [[META8]] = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)
@@ -89,16 +89,16 @@ double f1(int b, int i) {
 // CHECK-TRAP: [[DBG21]] = !DILocation(line: 65, column: 3, scope: [[DBG4]])
 // CHECK-TRAP: [[DBG22]] = !DILocation(line: 66, column: 12, scope: [[DBG4]])
 // CHECK-TRAP: [[DBG23]] = !DILocation(line: 0, scope: [[META24:![0-9]+]], inlinedAt: [[DBG26]])
-// CHECK-TRAP: [[META24]] = distinct !DISubprogram(name: "__ubsan_check_array-bounds", scope: [[META5]], file: [[META5]], type: [[META25:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK-TRAP: [[META24]] = distinct !DISubprogram(name: "__ubsan_check_array_bounds", scope: [[META5]], file: [[META5]], type: [[META25:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // CHECK-TRAP: [[META25]] = !DISubroutineType(types: null)
 // CHECK-TRAP: [[DBG26]] = !DILocation(line: 66, column: 10, scope: [[DBG4]])
 // CHECK-TRAP: [[PROF27]] = !{!"branch_weights", i32 1048575, i32 1}
 // CHECK-TRAP: [[DBG28]] = !DILocation(line: 66, column: 3, scope: [[DBG4]])
 //.
 // CHECK-NOTRAP: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// CHECK-NOTRAP: [[META1]] = !DIFile(filename: "<stdin>", directory: {{.*}})
+// CHECK-NOTRAP: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // CHECK-NOTRAP: [[DBG4]] = distinct !DISubprogram(name: "f1", scope: [[META5:![0-9]+]], file: [[META5]], line: 63, type: [[META6:![0-9]+]], scopeLine: 63, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META10]])
-// CHECK-NOTRAP: [[META5]] = !DIFile(filename: "bounds-checking-debuginfo.c", directory: {{.*}})
+// CHECK-NOTRAP: [[META5]] = !DIFile(filename: "{{.*}}bounds-checking-debuginfo.c", directory: {{.*}})
 // CHECK-NOTRAP: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
 // CHECK-NOTRAP: [[META7]] = !{[[META8:![0-9]+]], [[META9:![0-9]+]], [[META9]]}
 // CHECK-NOTRAP: [[META8]] = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)
@@ -117,7 +117,7 @@ double f1(int b, int i) {
 // CHECK-NOTRAP: [[DBG21]] = !DILocation(line: 65, column: 3, scope: [[DBG4]])
 // CHECK-NOTRAP: [[DBG22]] = !DILocation(line: 66, column: 12, scope: [[DBG4]])
 // CHECK-NOTRAP: [[DBG23]] = !DILocation(line: 0, scope: [[META24:![0-9]+]], inlinedAt: [[DBG26]])
-// CHECK-NOTRAP: [[META24]] = distinct !DISubprogram(name: "__ubsan_check_array-bounds", scope: [[META5]], file: [[META5]], type: [[META25:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK-NOTRAP: [[META24]] = distinct !DISubprogram(name: "__ubsan_check_array_bounds", scope: [[META5]], file: [[META5]], type: [[META25:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // CHECK-NOTRAP: [[META25]] = !DISubroutineType(types: null)
 // CHECK-NOTRAP: [[DBG26]] = !DILocation(line: 66, column: 10, scope: [[DBG4]])
 // CHECK-NOTRAP: [[PROF27]] = !{!"branch_weights", i32 1048575, i32 1}
