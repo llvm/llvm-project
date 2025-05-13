@@ -119,8 +119,10 @@ public:
     Counter.CurrChunkIdx = State.ChunkIdx;
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Dump or print the current counter set into llvm::dbgs().
-  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   LLVM_ABI void print(raw_ostream &OS) const;
 

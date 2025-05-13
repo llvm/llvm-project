@@ -1896,8 +1896,10 @@ public:
   ///  FoldingSets.
   void Profile(FoldingSetNodeID &id) const;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// debug method
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   /// Returns whether this instance allocated memory.
   bool needsCleanup() const { return !isSingleWord(); }

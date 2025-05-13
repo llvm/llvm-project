@@ -317,7 +317,9 @@ raw_ostream &ScaledNumberBase::print(raw_ostream &OS, uint64_t D, int16_t E,
   return OS << toString(D, E, Width, Precision);
 }
 
-void ScaledNumberBase::dump(uint64_t D, int16_t E, int Width) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void ScaledNumberBase::dump(uint64_t D, int16_t E, int Width) {
   print(dbgs(), D, E, Width, 0) << "[" << Width << ":" << D << "*2^" << E
                                 << "]";
 }
+#endif
