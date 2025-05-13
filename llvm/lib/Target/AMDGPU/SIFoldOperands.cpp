@@ -442,8 +442,7 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(FoldCandidate &Fold) const {
       }
 
       // This check is only useful for integer instructions
-      if (OpType == AMDGPU::OPERAND_REG_IMM_V2INT16 ||
-          OpType == AMDGPU::OPERAND_REG_INLINE_AC_V2INT16) {
+      if (OpType == AMDGPU::OPERAND_REG_IMM_V2INT16) {
         if (AMDGPU::isInlinableLiteralV216(Lo << 16, OpType)) {
           Mod.setImm(NewModVal | SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1);
           Old.ChangeToImmediate(static_cast<uint32_t>(Lo) << 16);

@@ -3775,12 +3775,10 @@ TypeResult Sema::ActOnTemplateIdType(
       NestedNameSpecifier *NNS =
           NestedNameSpecifier::Create(Context, SS.getScopeRep(), TemplateII);
       if (AllowImplicitTypename == ImplicitTypenameContext::Yes) {
-        if (getLangOpts().CPlusPlus20)
-          Diag(SS.getBeginLoc(), diag::warn_cxx17_compat_implicit_typename);
-        else
-          Diag(SS.getBeginLoc(), diag::ext_implicit_typename)
-              << NNS
-              << FixItHint::CreateInsertion(SS.getBeginLoc(), "typename ");
+        auto DB = DiagCompat(SS.getBeginLoc(), diag_compat::implicit_typename)
+                  << NNS;
+        if (!getLangOpts().CPlusPlus20)
+          DB << FixItHint::CreateInsertion(SS.getBeginLoc(), "typename ");
       } else
         Diag(SS.getBeginLoc(), diag::err_typename_missing_template) << NNS;
 

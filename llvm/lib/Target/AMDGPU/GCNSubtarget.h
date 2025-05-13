@@ -1670,6 +1670,9 @@ public:
   /// \returns Reserved number of SGPRs for given function \p F.
   unsigned getReservedNumSGPRs(const Function &F) const;
 
+  /// \returns Maximum number of preloaded SGPRs for the subtarget.
+  unsigned getMaxNumPreloadedSGPRs() const;
+
   /// \returns max num SGPRs. This is the common utility
   /// function called by MachineFunction and Function
   /// variants of getMaxNumSGPRs.
@@ -1740,10 +1743,10 @@ public:
 
   /// \returns max num VGPRs. This is the common utility function
   /// called by MachineFunction and Function variants of getMaxNumVGPRs.
-  /// The NumExcludedVGPRs is for the lane-shared VGPRs in wavegroup mode.
-  unsigned getBaseMaxNumVGPRs(const Function &F,
-                              std::pair<unsigned, unsigned> WavesPerEU,
-                              const unsigned NumExcludedVGPRs = 0) const;
+  unsigned
+  getBaseMaxNumVGPRs(const Function &F,
+                     std::pair<unsigned, unsigned> NumVGPRBounds) const;
+
   /// \returns Maximum number of VGPRs that meets number of waves per execution
   /// unit requirement for function \p F, or number of VGPRs explicitly
   /// requested using "amdgpu-num-vgpr" attribute attached to function \p F.
@@ -1752,7 +1755,7 @@ public:
   /// if explicitly requested value cannot be converted to integer, violates
   /// subtarget's specifications, or does not meet number of waves per execution
   /// unit requirement.
-  unsigned getMaxNumVGPRs(const Function &F) const;
+  unsigned getMaxNumVGPRs(const Function &F, unsigned NumExcludedVGPRs = 0) const;
 
   unsigned getMaxNumAGPRs(const Function &F) const {
     return getMaxNumVGPRs(F);

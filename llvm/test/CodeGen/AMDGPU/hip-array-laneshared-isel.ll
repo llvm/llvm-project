@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 -amdgpu-promote-lane-shared=false -stop-after=finalize-isel -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 -max-vgprs-for-laneshared=0 -stop-after=finalize-isel -verify-machineinstrs -o - %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 -verify-machineinstrs -stop-after=finalize-isel -o - %s | FileCheck -check-prefix=VIDX %s
 target datalayout = "A5"
 
 @exchange = external addrspace(10) global [70 x float], align 4
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
-define amdgpu_kernel void @_Z3foov() noinline optnone {
+define amdgpu_kernel void @_Z3foov() noinline optnone "amdgpu-wavegroup-enable" {
 entry:
   %array.ascast = alloca [10 x float], align 4, addrspace(5)
   %i.ascast = alloca i32, align 4, addrspace(5)

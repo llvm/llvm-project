@@ -71,6 +71,7 @@ private:
   // expected, or, there is a lexing error
 
   /// Root Element parse methods:
+  std::optional<llvm::hlsl::rootsig::RootConstants> parseRootConstants();
   std::optional<llvm::hlsl::rootsig::DescriptorTable> parseDescriptorTable();
   std::optional<llvm::hlsl::rootsig::DescriptorTableClause>
   parseDescriptorTableClause();

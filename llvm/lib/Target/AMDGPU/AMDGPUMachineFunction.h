@@ -26,12 +26,6 @@ class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// A map to keep track of local memory objects and their offsets within the
   /// local memory space.
   SmallDenseMap<const GlobalValue *, unsigned, 4> LocalMemoryObjects;
-  /// A map to keep track of lane-shared objects and their offsets
-  /// mapping to the lane-shared-memory space.
-  SmallDenseMap<const GlobalValue *, unsigned, 4> LaneSharedMemoryObjects;
-  /// A map to keep track of lane-shared objects and their offsets
-  /// mapping to the lane-shared-vgpr space.
-  SmallDenseMap<const GlobalValue *, unsigned, 4> LaneSharedVGPRObjects;
   /// A map to keep track of private objects and their offsets
   /// mapping to the VGPR space.
   SmallDenseMap<const AllocaInst *, unsigned, 4> PrivateVGPRObjects;
@@ -163,7 +157,8 @@ public:
   unsigned allocatePrivateInVGPR(const DataLayout &DL, AllocaInst &Alloca);
 
   static std::optional<uint32_t> getLDSKernelIdMetadata(const Function &F);
-  static std::optional<uint32_t> getLDSAbsoluteAddress(const GlobalValue &GV);
+  static std::optional<uint32_t> getAbsoluteAddress(const GlobalValue &GV,
+                                                    unsigned AS);
 
   Align getDynLDSAlign() const { return DynLDSAlign; }
 

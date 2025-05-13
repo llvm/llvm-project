@@ -77,7 +77,9 @@ unsigned getExpcntBitShift(unsigned VersionMajor) {
 }
 
 /// \returns Expcnt bit width.
-unsigned getExpcntBitWidth(unsigned VersionMajor) { return 3; }
+unsigned getExpcntBitWidth(unsigned VersionMajor) {
+  return VersionMajor >= 13 ? 4 : 3;
+}
 
 /// \returns Lgkmcnt bit shift.
 unsigned getLgkmcntBitShift(unsigned VersionMajor) {
@@ -1456,6 +1458,8 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
 
   return IsWave32 ? 8 : 4;
 }
+
+unsigned getArchVGPRAllocGranule() { return 4; }
 
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
@@ -2902,10 +2906,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
-  case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
-  case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP64_DEFERRED:
     return true;
@@ -3336,15 +3337,12 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
     return getInlineEncodingV216(false, Literal).has_value();
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
     return getInlineEncodingV216(true, Literal).has_value();
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2BF16:
     return isInlinableLiteralV2BF16(Literal);
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     return false;
@@ -3609,24 +3607,24 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
 #define DEFAULT_VALUES_3                                                       \
   AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::NUM_OPERAND_NAMES,        \
       AMDGPU::OpName::NUM_OPERAND_NAMES
-  static const AMDGPU::OpName VOPOps[7] = {
+  static const AMDGPU::OpName VOPOps[VGPRLoweringOperandTableNumOps] = {
       AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2,
       AMDGPU::OpName::vdst, DEFAULT_VALUES_3};
-  static const AMDGPU::OpName VDSOps[7] = {
+  static const AMDGPU::OpName VDSOps[VGPRLoweringOperandTableNumOps] = {
       AMDGPU::OpName::addr, AMDGPU::OpName::data0, AMDGPU::OpName::data1,
       AMDGPU::OpName::vdst, DEFAULT_VALUES_3};
-  static const AMDGPU::OpName FLATOps[7] = {
+  static const AMDGPU::OpName FLATOps[VGPRLoweringOperandTableNumOps] = {
       AMDGPU::OpName::vaddr, AMDGPU::OpName::vdata,
       AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::vdst,
       DEFAULT_VALUES_3};
-  static const AMDGPU::OpName BUFOps[7] = {
+  static const AMDGPU::OpName BUFOps[VGPRLoweringOperandTableNumOps] = {
       AMDGPU::OpName::vaddr, AMDGPU::OpName::NUM_OPERAND_NAMES,
       AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::vdata,
       DEFAULT_VALUES_3};
-  static const AMDGPU::OpName VIMGOps[7] = {
+  static const AMDGPU::OpName VIMGOps[VGPRLoweringOperandTableNumOps] = {
       AMDGPU::OpName::vaddr0, AMDGPU::OpName::vaddr1, AMDGPU::OpName::vaddr2,
       AMDGPU::OpName::vdata, DEFAULT_VALUES_3};
-  static const AMDGPU::OpName VEXPOps[7] = {
+  static const AMDGPU::OpName VEXPOps[VGPRLoweringOperandTableNumOps] = {
       AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::NUM_OPERAND_NAMES,
       AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::NUM_OPERAND_NAMES,
       DEFAULT_VALUES_3};
@@ -3634,16 +3632,16 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
   // For VOPD instructions MSB of a corresponding Y component operand VGPR
   // address is supposed to match X operand, otherwise VOPD shall not be
   // combined.
-  static const AMDGPU::OpName VOPDOpsX[7] = {
+  static const AMDGPU::OpName VOPDOpsX[VGPRLoweringOperandTableNumOps] = {
       AMDGPU::OpName::src0X, AMDGPU::OpName::vsrc1X, AMDGPU::OpName::vsrc2X,
       AMDGPU::OpName::vdstX, DEFAULT_VALUES_3};
-  static const AMDGPU::OpName VOPDOpsY[7] = {
+  static const AMDGPU::OpName VOPDOpsY[VGPRLoweringOperandTableNumOps] = {
       AMDGPU::OpName::src0Y, AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vsrc2Y,
       AMDGPU::OpName::vdstY, DEFAULT_VALUES_3};
 
   // Most VOPM instructions use srcN, where N is integer, but WMMA use different
   // naming scheme.
-  static const AMDGPU::OpName VOPMWMMAOps[7] = {
+  static const AMDGPU::OpName VOPMWMMAOps[VGPRLoweringOperandTableNumOps] = {
       AMDGPU::OpName::vdst,
       AMDGPU::OpName::srcC,
       AMDGPU::OpName::srcA,
@@ -3651,7 +3649,7 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
       AMDGPU::OpName::src3,
       AMDGPU::OpName::src4,
       AMDGPU::OpName::NUM_OPERAND_NAMES};
-  static const AMDGPU::OpName VOPMOtherOps[7] = {
+  static const AMDGPU::OpName VOPMOtherOps[VGPRLoweringOperandTableNumOps] = {
       AMDGPU::OpName::vdst, AMDGPU::OpName::src0, AMDGPU::OpName::src1,
       AMDGPU::OpName::src2, AMDGPU::OpName::src3, AMDGPU::OpName::src4,
       AMDGPU::OpName::src5};
@@ -3695,7 +3693,7 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
     llvm_unreachable("Sample VGPR lowering is not implemented and"
                      " these instructions are not expected on gfx1250");
 
-  if (isVOPMPseudo(Desc.getOpcode())) {
+  if (isVOPMPseudo(Desc.getOpcode()) || isVOPMAsmOnly(Desc.getOpcode())) {
     if (TSFlags & (SIInstrFlags::IsWMMA | SIInstrFlags::IsSWMMAC))
       return {VOPMWMMAOps, nullptr};
     else

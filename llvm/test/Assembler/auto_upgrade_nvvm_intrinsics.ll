@@ -58,8 +58,10 @@ declare i32 @llvm.nvvm.ldg.global.i.i32.p0(ptr, i32)
 declare ptr @llvm.nvvm.ldg.global.p.p0(ptr, i32)
 declare float @llvm.nvvm.ldg.global.f.f32.p0(ptr, i32)
 
-declare i32 @llvm.nvvm.atomic.load.inc.32(ptr, i32)
-declare i32 @llvm.nvvm.atomic.load.dec.32(ptr, i32)
+declare i32 @llvm.nvvm.atomic.load.inc.32.p0(ptr, i32)
+declare i32 @llvm.nvvm.atomic.load.dec.32.p0(ptr, i32)
+declare i32 @llvm.nvvm.atomic.load.add.f32.p0(ptr, float)
+declare i32 @llvm.nvvm.atomic.load.add.f64.p0(ptr, double)
 
 declare ptr addrspace(3) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3), i32)
 
@@ -267,12 +269,16 @@ define void @ldg(ptr %p0, ptr addrspace(1) %p1) {
 }
 
 ; CHECK-LABEL: @atomics
-define i32 @atomics(ptr %p0, i32 %a) {
+define i32 @atomics(ptr %p0, i32 %a, float %b, double %c) {
 ; CHECK: %1 = atomicrmw uinc_wrap ptr %p0, i32 %a seq_cst
 ; CHECK: %2 = atomicrmw udec_wrap ptr %p0, i32 %a seq_cst
+; CHECK: %3 = atomicrmw fadd ptr %p0, float %b seq_cst
+; CHECK: %4 = atomicrmw fadd ptr %p0, double %c seq_cst
 
-  %r1 = call i32 @llvm.nvvm.atomic.load.inc.32(ptr %p0, i32 %a)
-  %r2 = call i32 @llvm.nvvm.atomic.load.dec.32(ptr %p0, i32 %a)
+  %r1 = call i32 @llvm.nvvm.atomic.load.inc.32.p0(ptr %p0, i32 %a)
+  %r2 = call i32 @llvm.nvvm.atomic.load.dec.32.p0(ptr %p0, i32 %a)
+  %r3 = call float @llvm.nvvm.atomic.load.add.f32.p0(ptr %p0, float %b)
+  %r4 = call double @llvm.nvvm.atomic.load.add.f64.p0(ptr %p0, double %c)
   ret i32 %r2
 }
 

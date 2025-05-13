@@ -800,14 +800,6 @@ def VOPProfileMAI_F32_V8BF16_X4     : VOPProfileMAI<VOP_V4F32_V8BF16_V8BF16_V4F3
 def VOPProfileMAI_F32_V8BF16_X4_VCD : VOPProfileMAI<VOP_V4F32_V8BF16_V8BF16_V4F32,     VISrc_128_f32,  VDst_128, AVSrc_128>;
 
 
-// For i32_16x16x64_i8
-def VOPProfileMAI_I32_V4I32_V4I32_X128     : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32,    AISrc_128_f32,  ADst_128, AVSrc_128>;
-def VOPProfileMAI_I32_V4I32_V4I32_X128_VCD : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32,    VISrc_128_f32,  VDst_128, AVSrc_128>;
-
-// For i32_32x32x32_i8
-def VOPProfileMAI_I32_V4I32_V4I32_X16     : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    AISrc_512_b32,  ADst_512, AVSrc_128>;
-def VOPProfileMAI_I32_V4I32_V4I32_X16_VCD : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    VISrc_512_b32,  VDst_512, AVSrc_128>;
-
 let HasAbid = false in {
 // For f32_16x16x128_f8f6f4 - f8 x f8 case
 def VOPProfileMAI_F32_V8I32_V8I32_X128     : VOPProfileMAI<VOP_V4F32_V8I32_V8I32_V4F32,    AISrc_128_f32,  ADst_128, AVSrc_256>;
@@ -881,6 +873,7 @@ def VOPProfileMAI_F32_V4I32_V6I32_X512_VCD : VOPProfileMAI<VOP_V16F32_V4I32_V6I3
 def VOPProfileMAI_F32_V4I32_V4I32_X512     : VOPProfileMAI<VOP_V16F32_V4I32_V4I32_V16F32,    AISrc_512_f32,  ADst_512, AVSrc_128, AVSrc_128>;
 def VOPProfileMAI_F32_V4I32_V4I32_X512_VCD : VOPProfileMAI<VOP_V16F32_V4I32_V4I32_V16F32,    VISrc_512_f32,  VDst_512, AVSrc_128, AVSrc_128>;
 }
+
 
 // For i32_16x16x64_i8
 def VOPProfileMAI_I32_V4I32_X128     : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32,    AISrc_128_f32,  ADst_128, AVSrc_128>;
@@ -1119,9 +1112,9 @@ let SubtargetPredicate = HasGFX950Insts, is_gfx940_xdl = 1 in {
 defm V_MFMA_F32_16X16X32_F16   : MAIInst<"v_mfma_f32_16x16x32f16",    "F32_V8F16_X32", int_amdgcn_mfma_f32_16x16x32_f16>;
 defm V_MFMA_F32_32X32X16_F16   : MAIInst<"v_mfma_f32_32x32x16f16",    "F32_V8F16_X16", int_amdgcn_mfma_f32_32x32x16_f16>;
 defm V_MFMA_F32_16X16X32_BF16  : MAIInst<"v_mfma_f32_16x16x32bf16",   "F32_V8BF16_X4", int_amdgcn_mfma_f32_16x16x32_bf16>;
-defm V_MFMA_I32_16X16X64_I8    : MAIInst<"v_mfma_i32_16x16x64i8",     "I32_V4I32_V4I32_X128", int_amdgcn_mfma_i32_16x16x64_i8>;
+defm V_MFMA_I32_16X16X64_I8    : MAIInst<"v_mfma_i32_16x16x64i8",     "I32_V4I32_X128", int_amdgcn_mfma_i32_16x16x64_i8>;
 defm V_MFMA_F32_32X32X16_BF16  : MAIInst<"v_mfma_f32_32x32x16bf16",   "F32_V8BF16_X16", int_amdgcn_mfma_f32_32x32x16_bf16>;
-defm V_MFMA_I32_32X32X32_I8    : MAIInst<"v_mfma_i32_32x32x32i8",     "I32_V4I32_V4I32_X16", int_amdgcn_mfma_i32_32x32x32_i8>;
+defm V_MFMA_I32_32X32X32_I8    : MAIInst<"v_mfma_i32_32x32x32i8",     "I32_V4I32_X16", int_amdgcn_mfma_i32_32x32x32_i8>;
 
 defm V_MFMA_F32_16X16X128_F8F6F4 : MAIInst_SrcFormats_mc<"v_mfma_f32_16x16x128f8f6f4",
   "_X128", mfma_f32_16x16x128_f8f6f4>;
