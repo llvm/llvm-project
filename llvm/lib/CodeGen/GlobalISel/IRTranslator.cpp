@@ -1587,7 +1587,7 @@ bool IRTranslator::translatePtrToAddr(const User &U,
                                       MachineIRBuilder &MIRBuilder) {
   Register Op = getOrCreateVReg(*U.getOperand(0));
   Type *PtrTy = U.getOperand(0)->getType();
-  LLT AddrTy = getLLTForType(*DL->getIndexType(PtrTy), *DL);
+  LLT AddrTy = getLLTForType(*DL->getAddressType(PtrTy), *DL);
   auto IntPtrTy = getLLTForType(*DL->getIntPtrType(PtrTy), *DL);
   auto PtrToInt = MIRBuilder.buildPtrToInt(IntPtrTy, Op);
   auto Addr = PtrToInt;
