@@ -65,6 +65,11 @@ std::string getLayoutName(OpOperand &opr);
 /// Retrieves the name for the LayoutAttr associated with a given OpResult.
 std::string getLayoutName(OpResult res);
 
+/// Do type conversion for SCF structural ops, e.g., scf.for. Since VectorType
+/// cannot carry the layout attribute, they are converted into RankedTensorType
+/// first, which will convert back to VectorType in the second round.
+void doSCFStructuralTypeConversionWithTensorType(Operation *op);
+
 } // namespace xegpu
 
 } // namespace mlir
