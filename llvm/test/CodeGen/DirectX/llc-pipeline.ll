@@ -14,6 +14,8 @@
 
 ; CHECK-NEXT: ModulePass Manager
 ; CHECK-NEXT:   DXIL Finalize Linkage
+; CHECK-NEXT:   DXIL Resource Binding Analysis
+; CHECK-NEXT:   DXIL Resource Implicit Binding
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
 ; CHECK-NEXT:   DXIL CBuffer Access
 ; CHECK-NEXT:   DXIL Data Scalarization
