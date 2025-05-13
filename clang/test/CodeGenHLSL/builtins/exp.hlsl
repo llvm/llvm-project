@@ -50,20 +50,3 @@ float3 test_exp_float3(float3 p0) { return exp(p0); }
 // CHECK: %elt.exp = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.exp.v4f32
 // CHECK: ret <4 x float> %elt.exp
 float4 test_exp_float4(float4 p0) { return exp(p0); }
-
-// CHECK-LABEL: define noundef nofpclass(nan inf) float {{.*}}test_exp_double
-// CHECK: %elt.exp = call reassoc nnan ninf nsz arcp afn float @llvm.exp.f32(
-// CHECK: ret float %elt.exp
-float test_exp_double(double p0) { return exp(p0); }
-// CHECK-LABEL: define noundef nofpclass(nan inf) <2 x float> {{.*}}test_exp_double2
-// CHECK: %elt.exp = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.exp.v2f32
-// CHECK: ret <2 x float> %elt.exp
-float2 test_exp_double2(double2 p0) { return exp(p0); }
-// CHECK-LABEL: define noundef nofpclass(nan inf) <3 x float> {{.*}}test_exp_double3
-// CHECK: %elt.exp = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.exp.v3f32
-// CHECK: ret <3 x float> %elt.exp
-float3 test_exp_double3(double3 p0) { return exp(p0); }
-// CHECK-LABEL: define noundef nofpclass(nan inf) <4 x float> {{.*}}test_exp_double4
-// CHECK: %elt.exp = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.exp.v4f32
-// CHECK: ret <4 x float> %elt.exp
-float4 test_exp_double4(double4 p0) { return exp(p0); }
