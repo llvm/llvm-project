@@ -1453,7 +1453,7 @@ void RewriteInstance::updateRtFiniReloc() {
 }
 
 void RewriteInstance::registerFragments() {
-  if (!BC->HasSplitFunctions)
+  if (!BC->HasSplitFunctions || opts::HeatmapMode)
     return;
 
   // Process fragments with ambiguous parents separately as they are typically a
