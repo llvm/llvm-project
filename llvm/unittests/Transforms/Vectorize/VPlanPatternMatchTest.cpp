@@ -36,10 +36,18 @@ TEST_F(VPPatternMatchTest, ScalarIVSteps) {
   VPValue *Steps = Builder.createScalarIVSteps(
       Instruction::Add, nullptr, CanonicalIVPHI, Inc, VF, DebugLoc());
 
+  VPValue *Inc2 = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 2));
+  VPValue *Steps2 = Builder.createScalarIVSteps(
+      Instruction::Add, nullptr, CanonicalIVPHI, Inc2, VF, DebugLoc());
+
   using namespace VPlanPatternMatch;
 
   ASSERT_TRUE(match(Steps, m_ScalarIVSteps(m_Specific(CanonicalIVPHI),
                                            m_SpecificInt(1), m_Specific(VF))));
+  ASSERT_FALSE(match(Steps2, m_ScalarIVSteps(m_Specific(CanonicalIVPHI),
+                                            m_SpecificInt(1), m_Specific(VF))));
+  ASSERT_TRUE(match(Steps2, m_ScalarIVSteps(m_Specific(CanonicalIVPHI),
+                                            m_SpecificInt(2), m_Specific(VF))));
 }
 
 } // namespace
