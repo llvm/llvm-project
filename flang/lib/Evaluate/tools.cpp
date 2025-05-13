@@ -1318,17 +1318,39 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
   return msg;
 }
 
-const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(const DataRef &dataRef) {
-  if (const SymbolRef * p{std::get_if<SymbolRef>(&dataRef.u)}) {
-    return &p->get();
-  } else if (const Component * c{std::get_if<Component>(&dataRef.u)}) {
-    if (c->base().Rank() == 0) {
-      return &c->GetLastSymbol();
-    }
-  } else if (const CoarrayRef * c{std::get_if<CoarrayRef>(&dataRef.u)}) {
-    return UnwrapWholeSymbolOrComponentOrCoarrayRef(c->base());
+const Symbol *UnwrapWholeSymbolDataRef(const DataRef &dataRef) {
+  const SymbolRef *p{std::get_if<SymbolRef>(&dataRef.u)};
+  return p ? &p->get() : nullptr;
+}
+
+const Symbol *UnwrapWholeSymbolDataRef(const std::optional<DataRef> &dataRef) {
+  return dataRef ? UnwrapWholeSymbolDataRef(*dataRef) : nullptr;
+}
+
+const Symbol *UnwrapWholeSymbolOrComponentDataRef(const DataRef &dataRef) {
+  if (const Component * c{std::get_if<Component>(&dataRef.u)}) {
+    return c->base().Rank() == 0 ? &c->GetLastSymbol() : nullptr;
+  } else {
+    return UnwrapWholeSymbolDataRef(dataRef);
   }
-  return nullptr;
+}
+
+const Symbol *UnwrapWholeSymbolOrComponentDataRef(
+    const std::optional<DataRef> &dataRef) {
+  return dataRef ? UnwrapWholeSymbolOrComponentDataRef(*dataRef) : nullptr;
+}
+
+const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(const DataRef &dataRef) {
+  if (const CoarrayRef * c{std::get_if<CoarrayRef>(&dataRef.u)}) {
+    return UnwrapWholeSymbolOrComponentOrCoarrayRef(c->base());
+  } else {
+    return UnwrapWholeSymbolOrComponentDataRef(dataRef);
+  }
+}
+
+const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(
+    const std::optional<DataRef> &dataRef) {
+  return dataRef ? UnwrapWholeSymbolOrComponentOrCoarrayRef(*dataRef) : nullptr;
 }
 
 // GetLastPointerSymbol()
