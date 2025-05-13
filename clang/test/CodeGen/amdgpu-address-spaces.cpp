@@ -29,7 +29,6 @@ int [[clang::address_space(999)]] bbb = 1234;
 // CHECK: @u = addrspace(5) global i32 undef, align 4
 // CHECK: @aaa = addrspace(6) global i32 1000, align 4
 // CHECK: @bbb = addrspace(999) global i32 1234, align 4
-// CHECK: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
 //.
 // CHECK-LABEL: define dso_local amdgpu_kernel void @foo(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -60,3 +59,10 @@ extern "C" [[clang::amdgpu_kernel]] void foo() {
   aaa = 0;
   bbb = 0;
 }
+//.
+// CHECK: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+//.
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
+// CHECK: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// CHECK: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+//.

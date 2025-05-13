@@ -50,16 +50,19 @@ enum UniformityLLTOpPredicateID {
   DivS64,
 
   // pointers
+  P0,
   P1,
   P3,
   P4,
   P5,
 
+  UniP0,
   UniP1,
   UniP3,
   UniP4,
   UniP5,
 
+  DivP0,
   DivP1,
   DivP3,
   DivP4,
@@ -124,6 +127,7 @@ enum RegBankLLTMappingApplyID {
   // vgpr scalars, pointers, vectors and B-types
   Vgpr32,
   Vgpr64,
+  VgprP0,
   VgprP1,
   VgprP3,
   VgprP4,
@@ -162,6 +166,7 @@ enum RegBankLLTMappingApplyID {
 // vgpr. Lower it to two S32 vgpr ANDs.
 enum LoweringMethodID {
   DoNotLower,
+  VccExtToSel,
   UniExtToSel,
   VgprToVccCopy,
   SplitTo32,

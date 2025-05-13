@@ -228,8 +228,8 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
       CPU = "cyclone";
   }
 
-  TargetMachine *target = march->createTargetMachine(
-      Triple.str(), CPU, FeatureStr, options, std::nullopt);
+  TargetMachine *target = march->createTargetMachine(Triple, CPU, FeatureStr,
+                                                     options, std::nullopt);
 
   std::unique_ptr<LTOModule> Ret(new LTOModule(std::move(M), Buffer, target));
   Ret->parseSymbols();

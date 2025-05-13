@@ -44,8 +44,8 @@ bb23:                                             ; preds = %bb23, %bb
   %tmp30 = sub i32 %tmp24, %tmp29
   %tmp31 = add i32 %tmp30, %arg16
   %tmp37 = icmp ult i32 %tmp31, %arg13
-  %tmp44 = load float, ptr addrspace(1) undef, align 4
-  store float %tmp44, ptr addrspace(3) undef, align 4
+  %tmp44 = load float, ptr addrspace(1) poison, align 4
+  store float %tmp44, ptr addrspace(3) poison, align 4
   %tmp47 = add i32 %tmp24, %arg2
   br i1 %tmp37, label %bb23, label %.loopexit
 }
@@ -170,17 +170,17 @@ define void @slsr1_0(i32 %b.arg, i32 %s.arg) #0 {
   %mul0 = mul i32 %b, %s
 ; CHECK: mul i32
 ; CHECK-NOT: mul i32
-  store volatile i32 %mul0, ptr addrspace(1) undef
+  store volatile i32 %mul0, ptr addrspace(1) poison
 
   ; foo((b + 1) * s);
   %b1 = add i32 %b, 1
   %mul1 = mul i32 %b1, %s
-  store volatile i32 %mul1, ptr addrspace(1) undef
+  store volatile i32 %mul1, ptr addrspace(1) poison
 
   ; foo((b + 2) * s);
   %b2 = add i32 %b, 2
   %mul2 = mul i32 %b2, %s
-  store volatile i32 %mul2, ptr addrspace(1) undef
+  store volatile i32 %mul2, ptr addrspace(1) poison
   ret void
 }
 

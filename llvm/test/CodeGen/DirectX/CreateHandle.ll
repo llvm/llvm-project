@@ -3,10 +3,10 @@
 
 ; CHECK-PRETTY:       Type  Format         Dim      ID      HLSL Bind     Count
 ; CHECK-PRETTY: ---------- ------- ----------- ------- -------------- ---------
-; CHECK-PRETTY:        SRV     f32         buf      T0      t7        unbounded
-; CHECK-PRETTY:        SRV    byte         r/o      T1      t8,space1         1
-; CHECK-PRETTY:        SRV  struct         r/o      T2      t2,space4         1
-; CHECK-PRETTY:        SRV     u32         buf      T3      t3,space5        24
+; CHECK-PRETTY:    texture     f32         buf      T0      t7        unbounded
+; CHECK-PRETTY:    texture    byte         r/o      T1      t8,space1         1
+; CHECK-PRETTY:    texture  struct         r/o      T2      t2,space4         1
+; CHECK-PRETTY:    texture     u32         buf      T3      t3,space5        24
 ; CHECK-PRETTY:        UAV     i32         buf      U0      u7,space2         1
 ; CHECK-PRETTY:        UAV     f32         buf      U1      u5,space3         1
 

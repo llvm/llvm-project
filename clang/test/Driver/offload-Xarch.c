@@ -1,5 +1,3 @@
-// UNSUPPORTED: target={{.*darwin.*}}
-
 // RUN: %clang --target=x86_64-unknown-linux-gnu -x cuda %s -Xarch_nvptx64 -O3 -S -nogpulib -nogpuinc -### 2>&1 | FileCheck -check-prefix=O3ONCE %s
 // RUN: %clang -x cuda %s -Xarch_device -O3 -S -nogpulib -nogpuinc -### 2>&1 | FileCheck -check-prefix=O3ONCE %s
 // RUN: %clang -x hip %s -Xarch_amdgcn -O3 -S -nogpulib -nogpuinc -### 2>&1 | FileCheck -check-prefix=O3ONCE %s
@@ -15,6 +13,10 @@
 // RUN: %clang -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda,amdgcn-amd-amdhsa -nogpulib \
 // RUN:   --target=x86_64-unknown-linux-gnu -Xopenmp-target=nvptx64-nvidia-cuda --offload-arch=sm_52,sm_60 -nogpuinc \
 // RUN:   -Xopenmp-target=amdgcn-amd-amdhsa --offload-arch=gfx90a,gfx1030 -ccc-print-bindings -### %s 2>&1 \
+// RUN: | FileCheck -check-prefix=OPENMP %s
+// RUN: %clang -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda,amdgcn-amd-amdhsa -nogpulib \
+// RUN:   --target=x86_64-unknown-linux-gnu -Xarch_nvptx64 --offload-arch=sm_52,sm_60 -nogpuinc \
+// RUN:   -Xarch_amdgcn --offload-arch=gfx90a,gfx1030 -ccc-print-bindings -### %s 2>&1 \
 // RUN: | FileCheck -check-prefix=OPENMP %s
 
 // OPENMP: # "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HOST_BC:.+]]"

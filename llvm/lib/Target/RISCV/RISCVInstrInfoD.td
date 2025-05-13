@@ -22,9 +22,9 @@ def SDT_RISCVSplitF64     : SDTypeProfile<2, 1, [SDTCisVT<0, i32>,
                                                  SDTCisVT<1, i32>,
                                                  SDTCisVT<2, f64>]>;
 
-def RISCVBuildPairF64 : SDNode<"RISCVISD::BuildPairF64", SDT_RISCVBuildPairF64>;
+def RISCVBuildPairF64 : RVSDNode<"BuildPairF64", SDT_RISCVBuildPairF64>;
 def : GINodeEquiv<G_MERGE_VALUES, RISCVBuildPairF64>;
-def RISCVSplitF64     : SDNode<"RISCVISD::SplitF64", SDT_RISCVSplitF64>;
+def RISCVSplitF64     : RVSDNode<"SplitF64", SDT_RISCVSplitF64>;
 def : GINodeEquiv<G_UNMERGE_VALUES, RISCVSplitF64>;
 
 def AddrRegImmINX : ComplexPattern<iPTR, 2, "SelectAddrRegImmRV32Zdinx">;
@@ -62,7 +62,7 @@ def DExt       : ExtInfo<"", "", [HasStdExtD], f64, FPR64, FPR32, FPR64, ?>;
 
 def ZdinxExt   : ExtInfo<"_INX", "Zfinx", [HasStdExtZdinx, IsRV64],
                          f64, FPR64INX, FPR32INX, FPR64INX, ?>;
-def Zdinx32Ext : ExtInfo<"_IN32X", "ZdinxRV32GPRPair", [HasStdExtZdinx, IsRV32],
+def Zdinx32Ext : ExtInfo<"_IN32X", "ZdinxRV32Only", [HasStdExtZdinx, IsRV32],
                          f64, FPR64IN32X, FPR32INX, FPR64IN32X, ?>;
 
 defvar DExts     = [DExt, ZdinxExt, Zdinx32Ext];
@@ -144,12 +144,14 @@ foreach Ext = DExts in {
                                      "fcvt.wu.d">,
                    Sched<[WriteFCvtF64ToI32, ReadFCvtF64ToI32]>;
 
-  defm FCVT_D_W : FPUnaryOp_r_frmlegacy_m<0b1101001, 0b00000, Ext, Ext.PrimaryTy, GPR,
-                                          "fcvt.d.w">,
+  let mayRaiseFPException = 0 in
+  defm FCVT_D_W : FPUnaryOp_r_frmlegacy_m<0b1101001, 0b00000, Ext,
+                                          Ext.PrimaryTy, GPR, "fcvt.d.w">,
                   Sched<[WriteFCvtI32ToF64, ReadFCvtI32ToF64]>;
 
-  defm FCVT_D_WU : FPUnaryOp_r_frmlegacy_m<0b1101001, 0b00001, Ext, Ext.PrimaryTy, GPR,
-                                           "fcvt.d.wu">,
+  let mayRaiseFPException = 0 in
+  defm FCVT_D_WU : FPUnaryOp_r_frmlegacy_m<0b1101001, 0b00001, Ext,
+                                           Ext.PrimaryTy, GPR, "fcvt.d.wu">,
                    Sched<[WriteFCvtI32ToF64, ReadFCvtI32ToF64]>;
 } // foreach Ext = DExts
 

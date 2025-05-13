@@ -36,6 +36,7 @@ public:
       : Bug(this, description, "WebKit coding guidelines") {}
 
   virtual std::optional<bool> isUnsafePtr(QualType) const = 0;
+  virtual bool isPtrType(const std::string &) const = 0;
   virtual const char *ptrKind(QualType QT) const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -66,6 +67,15 @@ public:
         if (CXXMD->isInstance())
           ClsType = CXXMD->getThisType();
         return DynamicRecursiveASTVisitor::TraverseCXXMethodDecl(CXXMD);
+      }
+
+      bool TraverseObjCMethodDecl(ObjCMethodDecl *OCMD) override {
+        llvm::SaveAndRestore SavedDecl(ClsType);
+        if (OCMD && OCMD->isInstanceMethod()) {
+          if (auto *ImplParamDecl = OCMD->getSelfDecl())
+            ClsType = ImplParamDecl->getType();
+        }
+        return DynamicRecursiveASTVisitor::TraverseObjCMethodDecl(OCMD);
       }
 
       bool VisitTypedefDecl(TypedefDecl *TD) override {
@@ -117,13 +127,22 @@ public:
         return true;
       }
 
-      // WTF::switchOn(T, F... f) is a variadic template function and couldn't
-      // be annotated with NOESCAPE. We hard code it here to workaround that.
       bool shouldTreatAllArgAsNoEscape(FunctionDecl *Decl) {
         auto *NsDecl = Decl->getParent();
         if (!NsDecl || !isa<NamespaceDecl>(NsDecl))
           return false;
-        return safeGetName(NsDecl) == "WTF" && safeGetName(Decl) == "switchOn";
+        // WTF::switchOn(T, F... f) is a variadic template function and couldn't
+        // be annotated with NOESCAPE. We hard code it here to workaround that.
+        if (safeGetName(NsDecl) == "WTF" && safeGetName(Decl) == "switchOn")
+          return true;
+        // Treat every argument of functions in std::ranges as noescape.
+        if (safeGetName(NsDecl) == "ranges") {
+          if (auto *OuterDecl = NsDecl->getParent();
+              OuterDecl && isa<NamespaceDecl>(OuterDecl) &&
+              safeGetName(OuterDecl) == "std")
+            return true;
+        }
+        return false;
       }
 
       bool VisitCXXConstructExpr(CXXConstructExpr *CE) override {
@@ -253,8 +272,6 @@ public:
           return;
         DeclRefExprsToIgnore.insert(ArgRef);
         LambdasToIgnore.insert(L);
-        Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L),
-                                 ClsType, /* ignoreParamVarDecl */ true);
       }
 
       bool hasProtectedThis(LambdaExpr *L) {
@@ -275,22 +292,44 @@ public:
         auto *VD = dyn_cast<VarDecl>(ValueDecl);
         if (!VD)
           return false;
-        auto *Init = VD->getInit()->IgnoreParenCasts();
+        auto *Init = VD->getInit();
         if (!Init)
           return false;
-        const Expr *Arg = Init;
+        const Expr *Arg = Init->IgnoreParenCasts();
         do {
           if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Arg))
             Arg = BTE->getSubExpr()->IgnoreParenCasts();
-          if (auto *CE = dyn_cast_or_null<CXXConstructExpr>(Arg)) {
+          if (auto *CE = dyn_cast<CXXConstructExpr>(Arg)) {
             auto *Ctor = CE->getConstructor();
             if (!Ctor)
               return false;
             auto clsName = safeGetName(Ctor->getParent());
-            if (!isRefType(clsName) || !CE->getNumArgs())
-              return false;
-            Arg = CE->getArg(0)->IgnoreParenCasts();
-            continue;
+            if (Checker->isPtrType(clsName) && CE->getNumArgs()) {
+              Arg = CE->getArg(0)->IgnoreParenCasts();
+              continue;
+            }
+            if (auto *Type = ClsType.getTypePtrOrNull()) {
+              if (auto *CXXR = Type->getPointeeCXXRecordDecl()) {
+                if (CXXR == Ctor->getParent() && Ctor->isMoveConstructor() &&
+                    CE->getNumArgs() == 1) {
+                  Arg = CE->getArg(0)->IgnoreParenCasts();
+                  continue;
+                }
+              }
+            }
+            return false;
+          }
+          if (auto *CE = dyn_cast<CallExpr>(Arg)) {
+            if (CE->isCallToStdMove() && CE->getNumArgs() == 1) {
+              Arg = CE->getArg(0)->IgnoreParenCasts();
+              continue;
+            }
+            if (auto *Callee = CE->getDirectCallee()) {
+              if (isCtorOfSafePtr(Callee) && CE->getNumArgs() == 1) {
+                Arg = CE->getArg(0)->IgnoreParenCasts();
+                continue;
+              }
+            }
           }
           if (auto *OpCE = dyn_cast<CXXOperatorCallExpr>(Arg)) {
             auto OpCode = OpCE->getOperator();
@@ -299,7 +338,7 @@ public:
               if (!Callee)
                 return false;
               auto clsName = safeGetName(Callee->getParent());
-              if (!isRefType(clsName) || !OpCE->getNumArgs())
+              if (!Checker->isPtrType(clsName) || !OpCE->getNumArgs())
                 return false;
               Arg = OpCE->getArg(0)->IgnoreParenCasts();
               continue;
@@ -314,8 +353,15 @@ public:
           }
           break;
         } while (Arg);
-        if (auto *DRE = dyn_cast<DeclRefExpr>(Arg))
-          return ProtectedThisDecls.contains(DRE->getDecl());
+        if (auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
+          auto *Decl = DRE->getDecl();
+          if (auto *ImplicitParam = dyn_cast<ImplicitParamDecl>(Decl)) {
+            auto kind = ImplicitParam->getParameterKind();
+            return kind == ImplicitParamKind::ObjCSelf ||
+                   kind == ImplicitParamKind::CXXThis;
+          }
+          return ProtectedThisDecls.contains(Decl);
+        }
         return isa<CXXThisExpr>(Arg);
       }
     };
@@ -335,10 +381,20 @@ public:
         ValueDecl *CapturedVar = C.getCapturedVar();
         if (ignoreParamVarDecl && isa<ParmVarDecl>(CapturedVar))
           continue;
+        if (auto *ImplicitParam = dyn_cast<ImplicitParamDecl>(CapturedVar)) {
+          auto kind = ImplicitParam->getParameterKind();
+          if ((kind == ImplicitParamKind::ObjCSelf ||
+               kind == ImplicitParamKind::CXXThis) &&
+              !shouldCheckThis)
+            continue;
+        }
         QualType CapturedVarQualType = CapturedVar->getType();
         auto IsUncountedPtr = isUnsafePtr(CapturedVar->getType());
+        if (C.getCaptureKind() == LCK_ByCopy &&
+            CapturedVarQualType->isReferenceType())
+          continue;
         if (IsUncountedPtr && *IsUncountedPtr)
-          reportBug(C, CapturedVar, CapturedVarQualType);
+          reportBug(C, CapturedVar, CapturedVarQualType, L);
       } else if (C.capturesThis() && shouldCheckThis) {
         if (ignoreParamVarDecl) // this is always a parameter to this function.
           continue;
@@ -348,11 +404,12 @@ public:
   }
 
   void reportBug(const LambdaCapture &Capture, ValueDecl *CapturedVar,
-                 const QualType T) const {
+                 const QualType T, LambdaExpr *L) const {
     assert(CapturedVar);
 
-    if (isa<ImplicitParamDecl>(CapturedVar) && !Capture.getLocation().isValid())
-      return; // Ignore implicit captruing of self.
+    auto Location = Capture.getLocation();
+    if (isa<ImplicitParamDecl>(CapturedVar) && !Location.isValid())
+      Location = L->getBeginLoc();
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
@@ -371,7 +428,7 @@ public:
     printQuotedQualifiedName(Os, CapturedVar);
     Os << " to " << ptrKind(T) << " type is unsafe.";
 
-    PathDiagnosticLocation BSLoc(Capture.getLocation(), BR->getSourceManager());
+    PathDiagnosticLocation BSLoc(Location, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     BR->emitReport(std::move(Report));
   }
@@ -413,6 +470,10 @@ public:
     return result2;
   }
 
+  virtual bool isPtrType(const std::string &Name) const final {
+    return isRefType(Name) || isCheckedPtr(Name);
+  }
+
   const char *ptrKind(QualType QT) const final {
     if (isUncounted(QT))
       return "uncounted";
@@ -430,6 +491,10 @@ public:
 
   std::optional<bool> isUnsafePtr(QualType QT) const final {
     return RTC->isUnretained(QT);
+  }
+
+  virtual bool isPtrType(const std::string &Name) const final {
+    return isRetainPtr(Name);
   }
 
   const char *ptrKind(QualType QT) const final { return "unretained"; }

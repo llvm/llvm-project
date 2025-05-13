@@ -21,6 +21,14 @@ void foo(int v, int x) {
 #pragma acc atomic read
   v = x;
 
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic read
+// CHECK-NEXT: BinaryOperator{{.*}} 'int' lvalue '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+_Pragma("acc atomic read")
+  v = x;
+
 // CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic write
 // CHECK-NEXT: BinaryOperator{{.*}} 'int' lvalue '='
 // CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
@@ -60,6 +68,90 @@ void foo(int v, int x) {
 #pragma acc atomic capture
   { x--; v = x; }
 
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic read
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: BinaryOperator{{.*}} 'int' lvalue '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+#pragma acc atomic read if (v < x)
+  v = x;
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic write
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: BinaryOperator{{.*}} 'int' lvalue '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: BinaryOperator{{.*}}'int' '+'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: IntegerLiteral{{.*}} 'int' 1
+_Pragma("acc atomic write if (v < x)")
+  v = x + 1;
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update 
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: UnaryOperator{{.*}} 'int' postfix '++'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+#pragma acc atomic update if (v < x)
+  x++;
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic <none>
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: UnaryOperator{{.*}} 'int' postfix '--'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+#pragma acc atomic if (v < x)
+  x--;
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic capture
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: BinaryOperator{{.*}} 'int' lvalue '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: UnaryOperator{{.*}} 'int' postfix '++'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+#pragma acc atomic capture if (v < x)
+  v = x++;
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic capture
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: UnaryOperator{{.*}} 'int' postfix '--'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: BinaryOperator{{.*}} 'int' lvalue '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+#pragma acc atomic capture if (v < x)
+  { x--; v = x; }
 }
 
 template<typename T, int I>
@@ -116,6 +208,76 @@ void templ_foo(T v, T x) {
 #pragma acc atomic capture
   { x--; v = x; }
 
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic read
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'<dependent type>' '<'
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'T'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
+// CHECK-NEXT: BinaryOperator{{.*}} '<dependent type>' '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'T'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
+#pragma acc atomic read if (v < x)
+  v = x;
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic write
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'<dependent type>' '<'
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'T'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
+// CHECK-NEXT: BinaryOperator{{.*}} '<dependent type>' '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'T'
+// CHECK-NEXT: BinaryOperator{{.*}}'<dependent type>' '+'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
+// CHECK-NEXT: DeclRefExpr{{.*}} 'I' 'int'
+_Pragma("acc atomic write if (v < x)")
+  v = x + I;
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update 
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'<dependent type>' '<'
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'T'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
+// CHECK-NEXT: UnaryOperator{{.*}} '<dependent type>' postfix '++'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
+#pragma acc atomic update if (v < x)
+  x++;
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic <none>
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'<dependent type>' '<'
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'T'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
+// CHECK-NEXT: UnaryOperator{{.*}} '<dependent type>' postfix '--'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
+#pragma acc atomic if (v < x)
+  x--;
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic capture
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'<dependent type>' '<'
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'T'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
+// CHECK-NEXT: BinaryOperator{{.*}} '<dependent type>' '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'T'
+// CHECK-NEXT: UnaryOperator{{.*}} '<dependent type>' postfix '++'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
+#pragma acc atomic capture if (v < x)
+  v = x++;
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic capture
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'<dependent type>' '<'
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'T'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: UnaryOperator{{.*}} '<dependent type>' postfix '--'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
+// CHECK-NEXT: BinaryOperator{{.*}} '<dependent type>' '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'T'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
+#pragma acc atomic capture if (v < x)
+  { x--; v = x; }
+
   // CHECK-NEXT: FunctionDecl{{.*}} templ_foo 'void (int, int)' implicit_instantiation
   // CHECK-NEXT: TemplateArgument type 'int'
   // CHECK-NEXT: BuiltinType{{.*}} 'int'
@@ -155,6 +317,81 @@ void templ_foo(T v, T x) {
 // CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
 
 // CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic capture
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: UnaryOperator{{.*}} 'int' postfix '--'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: BinaryOperator{{.*}} 'int' lvalue '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic read
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: BinaryOperator{{.*}} 'int' lvalue '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic write
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: BinaryOperator{{.*}} 'int' lvalue '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: BinaryOperator{{.*}}'int' '+'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}} 'int'
+// CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} 'int'{{.*}}I
+// CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update 
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: UnaryOperator{{.*}} 'int' postfix '++'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic <none>
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: UnaryOperator{{.*}} 'int' postfix '--'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic capture
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+// CHECK-NEXT: BinaryOperator{{.*}} 'int' lvalue '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: UnaryOperator{{.*}} 'int' postfix '++'
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic capture
+// CHECK-NEXT: if clause
+// CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: UnaryOperator{{.*}} 'int' postfix '--'
 // CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'

@@ -1886,18 +1886,23 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        LazyBool lazy_add_to_history,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
+  // These are assigned later in the function but they must be declared before
+  // the ScopedDispatcher object because we need their destructions to occur
+  // after the dispatcher's dtor call, which may reference them.
+  // TODO: This function could be refactored?
+  std::string parsed_command_args;
+  CommandObject *cmd_obj = nullptr;
+
   telemetry::ScopedDispatcher<telemetry::CommandInfo> helper(&m_debugger);
   const bool detailed_command_telemetry =
       telemetry::TelemetryManager::GetInstance()
           ->GetConfig()
           ->detailed_command_telemetry;
-  const int command_id = telemetry::CommandInfo::GetNextId();
+  const int command_id = telemetry::CommandInfo::GetNextID();
 
   std::string command_string(command_line);
   std::string original_command_string(command_string);
   std::string real_original_command_string(command_string);
-  std::string parsed_command_args;
-  CommandObject *cmd_obj = nullptr;
 
   helper.DispatchNow([&](lldb_private::telemetry::CommandInfo *info) {
     info->command_id = command_id;
@@ -1913,7 +1918,9 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     // Those will be collected by the on-exit-callback.
   });
 
-  helper.DispatchOnExit([&](lldb_private::telemetry::CommandInfo *info) {
+  helper.DispatchOnExit([&cmd_obj, &parsed_command_args, &result,
+                         detailed_command_telemetry, command_id](
+                            lldb_private::telemetry::CommandInfo *info) {
     // TODO: this is logging the time the command-handler finishes.
     // But we may want a finer-grain durations too?
     // (ie., the execute_time recorded below?)
@@ -2229,10 +2236,15 @@ CommandInterpreter::GetAutoSuggestionForCommand(llvm::StringRef line) {
 void CommandInterpreter::UpdatePrompt(llvm::StringRef new_prompt) {
   EventSP prompt_change_event_sp(
       new Event(eBroadcastBitResetPrompt, new EventDataBytes(new_prompt)));
-  ;
+
   BroadcastEvent(prompt_change_event_sp);
   if (m_command_io_handler_sp)
     m_command_io_handler_sp->SetPrompt(new_prompt);
+}
+
+void CommandInterpreter::UpdateUseColor(bool use_color) {
+  if (m_command_io_handler_sp)
+    m_command_io_handler_sp->SetUseColor(use_color);
 }
 
 bool CommandInterpreter::Confirm(llvm::StringRef message, bool default_answer) {
@@ -2603,7 +2615,8 @@ bool CommandInterpreter::DidProcessStopAbnormally() const {
     const StopReason reason = stop_info->GetStopReason();
     if (reason == eStopReasonException ||
         reason == eStopReasonInstrumentation ||
-        reason == eStopReasonProcessorTrace || reason == eStopReasonInterrupt)
+        reason == eStopReasonProcessorTrace || reason == eStopReasonInterrupt ||
+        reason == eStopReasonHistoryBoundary)
       return true;
 
     if (reason == eStopReasonSignal) {

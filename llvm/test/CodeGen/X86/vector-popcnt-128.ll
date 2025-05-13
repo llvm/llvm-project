@@ -803,11 +803,10 @@ define <2 x i64> @eq_1_v2i64(<2 x i64> %0) {
 ; BITALG-LABEL: eq_1_v2i64:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; BITALG-NEXT:    vpaddq %xmm1, %xmm0, %xmm1
-; BITALG-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpminuq %xmm1, %xmm0, %xmm1
-; BITALG-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
+; BITALG-NEXT:    vpaddq %xmm1, %xmm0, %xmm2
+; BITALG-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleuq %xmm2, %xmm0, %k1
+; BITALG-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp eq <2 x i64> %2, <i64 1, i64 1>
@@ -883,10 +882,10 @@ define <2 x i64> @ne_1_v2i64(<2 x i64> %0) {
 ; BITALG-LABEL: ne_1_v2i64:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; BITALG-NEXT:    vpaddq %xmm1, %xmm0, %xmm1
-; BITALG-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpminuq %xmm1, %xmm0, %xmm1
-; BITALG-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpaddq %xmm1, %xmm0, %xmm2
+; BITALG-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpleuq %xmm2, %xmm0, %k1
+; BITALG-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   %3 = icmp ne <2 x i64> %2, <i64 1, i64 1>
@@ -982,11 +981,10 @@ define <4 x i32> @eq_1_v4i32(<4 x i32> %0) {
 ; BITALG-LABEL: eq_1_v4i32:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; BITALG-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; BITALG-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpminud %xmm1, %xmm0, %xmm1
-; BITALG-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
+; BITALG-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
+; BITALG-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpnleud %xmm2, %xmm0, %k1
+; BITALG-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp eq <4 x i32> %2, <i32 1, i32 1, i32 1, i32 1>
@@ -1085,10 +1083,10 @@ define <4 x i32> @ne_1_v4i32(<4 x i32> %0) {
 ; BITALG-LABEL: ne_1_v4i32:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; BITALG-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; BITALG-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; BITALG-NEXT:    vpminud %xmm1, %xmm0, %xmm1
-; BITALG-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
+; BITALG-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; BITALG-NEXT:    vpcmpleud %xmm2, %xmm0, %k1
+; BITALG-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1} {z}
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   %3 = icmp ne <4 x i32> %2, <i32 1, i32 1, i32 1, i32 1>

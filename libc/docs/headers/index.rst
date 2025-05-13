@@ -10,10 +10,12 @@ Implementation Status
    complex
    cpio
    ctype
+   dirent
    endian
    errno
    fenv
    float
+   glob
    inttypes
    locale
    math/index.rst
@@ -33,6 +35,7 @@ Implementation Status
    sys/stat
    sys/statvfs
    sys/time
+   sys/utsname
    sys/wait
    termios
    threads

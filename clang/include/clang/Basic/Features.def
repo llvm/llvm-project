@@ -107,6 +107,7 @@ FEATURE(thread_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Thread))
 FEATURE(dataflow_sanitizer, LangOpts.Sanitize.has(SanitizerKind::DataFlow))
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
 FEATURE(ptrauth_intrinsics, LangOpts.PointerAuthIntrinsics)
+EXTENSION(ptrauth_qualifier, LangOpts.PointerAuthIntrinsics)
 FEATURE(ptrauth_calls, LangOpts.PointerAuthCalls)
 FEATURE(ptrauth_returns, LangOpts.PointerAuthReturns)
 FEATURE(ptrauth_vtable_pointer_address_discrimination, LangOpts.PointerAuthVTPtrAddressDiscrimination)
@@ -166,6 +167,8 @@ FEATURE(c_static_assert, LangOpts.C11)
 FEATURE(c_thread_local, LangOpts.C11 &&PP.getTargetInfo().isTLSSupported())
 // C23 features
 FEATURE(c_fixed_enum, LangOpts.C23)
+// C2y features
+FEATURE(c_countof, LangOpts.C2y)
 // C++11 features
 FEATURE(cxx_access_control_sfinae, LangOpts.CPlusPlus11)
 FEATURE(cxx_alias_templates, LangOpts.CPlusPlus11)
@@ -274,6 +277,8 @@ EXTENSION(c_thread_local, PP.getTargetInfo().isTLSSupported())
 // C23 features supported by other languages as extensions
 EXTENSION(c_attributes, true)
 EXTENSION(c_fixed_enum, true)
+// C2y features supported by other languages as extensions
+EXTENSION(c_countof, !LangOpts.C2y && !LangOpts.CPlusPlus)
 // C++11 features supported by other languages as extensions.
 EXTENSION(cxx_atomic, LangOpts.CPlusPlus)
 EXTENSION(cxx_default_function_template_args, LangOpts.CPlusPlus)
@@ -306,6 +311,7 @@ EXTENSION(statement_attributes_with_gnu_syntax, true)
 EXTENSION(gnu_asm, LangOpts.GNUAsm)
 EXTENSION(gnu_asm_goto_with_outputs, LangOpts.GNUAsm)
 EXTENSION(gnu_asm_goto_with_outputs_full, LangOpts.GNUAsm)
+EXTENSION(gnu_asm_constexpr_strings, LangOpts.GNUAsm && LangOpts.CPlusPlus11)
 EXTENSION(matrix_types, LangOpts.MatrixTypes)
 EXTENSION(matrix_types_scalar_division, true)
 EXTENSION(cxx_attributes_on_using_declarations, LangOpts.CPlusPlus11)

@@ -613,8 +613,8 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_agent_scope_
 ; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1132-NEXT:    s_and_not1_b32 s0, s0, s1
 ; GFX1132-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_max_f32_e64 v2, s2, s2
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_min_f32_e32 v1, v1, v2
 ; GFX1132-NEXT:    s_cbranch_scc1 .LBB1_1
 ; GFX1132-NEXT:  ; %bb.2: ; %ComputeEnd
@@ -1652,8 +1652,8 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_one_as_scope
 ; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1132-NEXT:    s_and_not1_b32 s0, s0, s1
 ; GFX1132-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_max_f32_e64 v2, s2, s2
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_min_f32_e32 v1, v1, v2
 ; GFX1132-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX1132-NEXT:  ; %bb.2: ; %ComputeEnd
@@ -2691,8 +2691,8 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_div_value_default_scop
 ; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1132-NEXT:    s_and_not1_b32 s0, s0, s1
 ; GFX1132-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_max_f32_e64 v2, s2, s2
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_min_f32_e32 v1, v1, v2
 ; GFX1132-NEXT:    s_cbranch_scc1 .LBB5_1
 ; GFX1132-NEXT:  ; %bb.2: ; %ComputeEnd
@@ -4597,11 +4597,10 @@ define amdgpu_kernel void @global_atomic_fmin_double_uni_address_div_value_agent
 ; GFX1132-NEXT:    v_readlane_b32 s3, v1, s1
 ; GFX1132-NEXT:    v_readlane_b32 s2, v0, s1
 ; GFX1132-NEXT:    s_lshl_b32 s1, 1, s1
-; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    s_and_not1_b32 s0, s0, s1
 ; GFX1132-NEXT:    v_max_f64 v[4:5], s[2:3], s[2:3]
 ; GFX1132-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_min_f64 v[2:3], v[2:3], v[4:5]
 ; GFX1132-NEXT:    s_cbranch_scc1 .LBB7_1
 ; GFX1132-NEXT:  ; %bb.2: ; %ComputeEnd
@@ -6120,11 +6119,10 @@ define amdgpu_kernel void @global_atomic_fmin_double_uni_address_div_value_one_a
 ; GFX1132-NEXT:    v_readlane_b32 s3, v1, s1
 ; GFX1132-NEXT:    v_readlane_b32 s2, v0, s1
 ; GFX1132-NEXT:    s_lshl_b32 s1, 1, s1
-; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    s_and_not1_b32 s0, s0, s1
 ; GFX1132-NEXT:    v_max_f64 v[4:5], s[2:3], s[2:3]
 ; GFX1132-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_min_f64 v[4:5], v[2:3], v[4:5]
 ; GFX1132-NEXT:    s_cbranch_scc1 .LBB9_1
 ; GFX1132-NEXT:  ; %bb.2: ; %ComputeEnd
@@ -8145,11 +8143,10 @@ define amdgpu_kernel void @global_atomic_fmin_double_uni_address_div_value_defau
 ; GFX1132-NEXT:    v_readlane_b32 s3, v1, s1
 ; GFX1132-NEXT:    v_readlane_b32 s2, v0, s1
 ; GFX1132-NEXT:    s_lshl_b32 s1, 1, s1
-; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    s_and_not1_b32 s0, s0, s1
 ; GFX1132-NEXT:    v_max_f64 v[4:5], s[2:3], s[2:3]
 ; GFX1132-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_min_f64 v[2:3], v[2:3], v[4:5]
 ; GFX1132-NEXT:    s_cbranch_scc1 .LBB11_1
 ; GFX1132-NEXT:  ; %bb.2: ; %ComputeEnd
@@ -9468,6 +9465,4 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_uni_value_system_scope
 
 attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 !1 = !{}

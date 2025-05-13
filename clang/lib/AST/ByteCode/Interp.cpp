@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Interp.h"
+#include "Compiler.h"
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpShared.h"
@@ -89,9 +90,6 @@ static bool BCP(InterpState &S, CodePtr &RealPC, int32_t Offset, PrimType PT) {
       assert(S.Stk.size() == StackSizeBefore);
       S.Stk.push<Integral<32, true>>(
           Integral<32, true>::from(CheckBCPResult(S, Ptr)));
-    } else if (PT == PT_FnPtr) {
-      S.Stk.discard<FunctionPointer>();
-      S.Stk.push<Integral<32, true>>(Integral<32, true>::from(0));
     } else {
       // Pop the result from the stack and return success.
       TYPE_SWITCH(PT, S.Stk.pop<T>(););
@@ -202,8 +200,121 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
   S.Note(VD->getLocation(), diag::note_declared_at);
 }
 
-static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                        AccessKinds AK) {
+static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                           AccessKinds AK) {
+  if (auto ID = Ptr.getDeclID()) {
+    if (!Ptr.isStaticTemporary())
+      return true;
+
+    const auto *MTE = dyn_cast_if_present<MaterializeTemporaryExpr>(
+        Ptr.getDeclDesc()->asExpr());
+    if (!MTE)
+      return true;
+
+    // FIXME(perf): Since we do this check on every Load from a static
+    // temporary, it might make sense to cache the value of the
+    // isUsableInConstantExpressions call.
+    if (!MTE->isUsableInConstantExpressions(S.getASTContext()) &&
+        Ptr.block()->getEvalID() != S.Ctx.getEvalID()) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
+      S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
+      return false;
+    }
+  }
+  return true;
+}
+
+static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (auto ID = Ptr.getDeclID()) {
+    if (!Ptr.isStatic())
+      return true;
+
+    if (S.P.getCurrentDecl() == ID)
+      return true;
+
+    S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_modify_global);
+    return false;
+  }
+  return true;
+}
+
+namespace clang {
+namespace interp {
+static void popArg(InterpState &S, const Expr *Arg) {
+  PrimType Ty = S.getContext().classify(Arg).value_or(PT_Ptr);
+  TYPE_SWITCH(Ty, S.Stk.discard<T>());
+}
+
+void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
+                              const Function *Func) {
+  assert(S.Current);
+  assert(Func);
+
+  if (S.Current->Caller && Func->isVariadic()) {
+    // CallExpr we're look for is at the return PC of the current function, i.e.
+    // in the caller.
+    // This code path should be executed very rarely.
+    unsigned NumVarArgs;
+    const Expr *const *Args = nullptr;
+    unsigned NumArgs = 0;
+    const Expr *CallSite = S.Current->Caller->getExpr(S.Current->getRetPC());
+    if (const auto *CE = dyn_cast<CallExpr>(CallSite)) {
+      Args = CE->getArgs();
+      NumArgs = CE->getNumArgs();
+    } else if (const auto *CE = dyn_cast<CXXConstructExpr>(CallSite)) {
+      Args = CE->getArgs();
+      NumArgs = CE->getNumArgs();
+    } else
+      assert(false && "Can't get arguments from that expression type");
+
+    assert(NumArgs >= Func->getNumWrittenParams());
+    NumVarArgs = NumArgs - (Func->getNumWrittenParams() +
+                            isa<CXXOperatorCallExpr>(CallSite));
+    for (unsigned I = 0; I != NumVarArgs; ++I) {
+      const Expr *A = Args[NumArgs - 1 - I];
+      popArg(S, A);
+    }
+  }
+
+  // And in any case, remove the fixed parameters (the non-variadic ones)
+  // at the end.
+  for (PrimType Ty : Func->args_reverse())
+    TYPE_SWITCH(Ty, S.Stk.discard<T>());
+}
+
+bool isConstexprUnknown(const Pointer &P) {
+  if (!P.isBlockPointer())
+    return false;
+
+  if (P.isDummy())
+    return isa_and_nonnull<ParmVarDecl>(P.getDeclDesc()->asValueDecl());
+
+  return P.getDeclDesc()->IsConstexprUnknown;
+}
+
+bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
+  if (Ptr.isDummy())
+    return false;
+  if (Ptr.isZero())
+    return true;
+  if (Ptr.isFunctionPointer())
+    return false;
+  if (Ptr.isIntegralPointer())
+    return true;
+  if (Ptr.isTypeidPointer())
+    return true;
+
+  if (Ptr.getType()->isAnyComplexType())
+    return true;
+
+  if (const Expr *Base = Ptr.getDeclDesc()->asExpr())
+    return isa<StringLiteral>(Base) && Ptr.getIndex() == 0;
+  return false;
+}
+
+bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                 AccessKinds AK) {
   if (Ptr.isActive())
     return true;
 
@@ -264,121 +375,6 @@ static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
-static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                           AccessKinds AK) {
-  if (auto ID = Ptr.getDeclID()) {
-    if (!Ptr.isStaticTemporary())
-      return true;
-
-    const auto *MTE = dyn_cast_if_present<MaterializeTemporaryExpr>(
-        Ptr.getDeclDesc()->asExpr());
-    if (!MTE)
-      return true;
-
-    // FIXME(perf): Since we do this check on every Load from a static
-    // temporary, it might make sense to cache the value of the
-    // isUsableInConstantExpressions call.
-    if (!MTE->isUsableInConstantExpressions(S.getASTContext()) &&
-        Ptr.block()->getEvalID() != S.Ctx.getEvalID()) {
-      const SourceInfo &E = S.Current->getSource(OpPC);
-      S.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
-      S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
-      return false;
-    }
-  }
-  return true;
-}
-
-static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (auto ID = Ptr.getDeclID()) {
-    if (!Ptr.isStatic())
-      return true;
-
-    if (S.P.getCurrentDecl() == ID)
-      return true;
-
-    S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_modify_global);
-    return false;
-  }
-  return true;
-}
-
-namespace clang {
-namespace interp {
-static void popArg(InterpState &S, const Expr *Arg) {
-  PrimType Ty = S.getContext().classify(Arg).value_or(PT_Ptr);
-  TYPE_SWITCH(Ty, S.Stk.discard<T>());
-}
-
-void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
-                              const Function *Func) {
-  assert(S.Current);
-  assert(Func);
-
-  if (Func->isUnevaluatedBuiltin())
-    return;
-
-  // Some builtin functions require us to only look at the call site, since
-  // the classified parameter types do not match.
-  if (unsigned BID = Func->getBuiltinID();
-      BID && S.getASTContext().BuiltinInfo.hasCustomTypechecking(BID)) {
-    const auto *CE =
-        cast<CallExpr>(S.Current->Caller->getExpr(S.Current->getRetPC()));
-    for (int32_t I = CE->getNumArgs() - 1; I >= 0; --I) {
-      const Expr *A = CE->getArg(I);
-      popArg(S, A);
-    }
-    return;
-  }
-
-  if (S.Current->Caller && Func->isVariadic()) {
-    // CallExpr we're look for is at the return PC of the current function, i.e.
-    // in the caller.
-    // This code path should be executed very rarely.
-    unsigned NumVarArgs;
-    const Expr *const *Args = nullptr;
-    unsigned NumArgs = 0;
-    const Expr *CallSite = S.Current->Caller->getExpr(S.Current->getRetPC());
-    if (const auto *CE = dyn_cast<CallExpr>(CallSite)) {
-      Args = CE->getArgs();
-      NumArgs = CE->getNumArgs();
-    } else if (const auto *CE = dyn_cast<CXXConstructExpr>(CallSite)) {
-      Args = CE->getArgs();
-      NumArgs = CE->getNumArgs();
-    } else
-      assert(false && "Can't get arguments from that expression type");
-
-    assert(NumArgs >= Func->getNumWrittenParams());
-    NumVarArgs = NumArgs - (Func->getNumWrittenParams() +
-                            isa<CXXOperatorCallExpr>(CallSite));
-    for (unsigned I = 0; I != NumVarArgs; ++I) {
-      const Expr *A = Args[NumArgs - 1 - I];
-      popArg(S, A);
-    }
-  }
-
-  // And in any case, remove the fixed parameters (the non-variadic ones)
-  // at the end.
-  for (PrimType Ty : Func->args_reverse())
-    TYPE_SWITCH(Ty, S.Stk.discard<T>());
-}
-
-bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
-  if (Ptr.isDummy())
-    return false;
-  if (Ptr.isZero())
-    return true;
-  if (Ptr.isIntegralPointer())
-    return true;
-  if (Ptr.isTypeidPointer())
-    return true;
-
-  if (const Expr *Base = Ptr.getDeclDesc()->asExpr())
-    return isa<StringLiteral>(Base);
-
-  return false;
-}
-
 bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
@@ -387,10 +383,12 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
       (Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl))
     return true;
 
-  if (!S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus) {
-    const auto *VD = Ptr.getDeclDesc()->asValueDecl();
-    diagnoseNonConstVariable(S, OpPC, VD);
-  }
+  if (S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus &&
+      Ptr.isConst())
+    return false;
+
+  const auto *VD = Ptr.getDeclDesc()->asValueDecl();
+  diagnoseNonConstVariable(S, OpPC, VD);
   return false;
 }
 
@@ -497,6 +495,8 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isStatic() || !Ptr.isBlockPointer())
     return true;
+  if (!Ptr.getDeclID())
+    return true;
   return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
 
@@ -600,8 +600,15 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   // In C++14 onwards, it is permitted to read a mutable member whose
   // lifetime began within the evaluation.
   if (S.getLangOpts().CPlusPlus14 &&
-      Ptr.block()->getEvalID() == S.Ctx.getEvalID())
+      Ptr.block()->getEvalID() == S.Ctx.getEvalID()) {
+    // FIXME: This check is necessary because (of the way) we revisit
+    // variables in Compiler.cpp:visitDeclRef. Revisiting a so far
+    // unknown variable will get the same EvalID and we end up allowing
+    // reads from mutable members of it.
+    if (!S.inConstantContext() && isConstexprUnknown(Ptr))
+      return false;
     return true;
+  }
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   const FieldDecl *Field = Ptr.getField();
@@ -614,20 +621,42 @@ static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                           AccessKinds AK) {
   assert(Ptr.isLive());
 
-  // FIXME: This check here might be kinda expensive. Maybe it would be better
-  // to have another field in InlineDescriptor for this?
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isVolatile())
     return true;
 
-  QualType PtrType = Ptr.getType();
-  if (!PtrType.isVolatileQualified())
-    return true;
+  if (!S.getLangOpts().CPlusPlus)
+    return Invalid(S, OpPC);
 
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-  if (S.getLangOpts().CPlusPlus)
-    S.FFDiag(Loc, diag::note_constexpr_access_volatile_type) << AK << PtrType;
-  else
-    S.FFDiag(Loc);
+  // The reason why Ptr is volatile might be further up the hierarchy.
+  // Find that pointer.
+  Pointer P = Ptr;
+  while (!P.isRoot()) {
+    if (P.getType().isVolatileQualified())
+      break;
+    P = P.getBase();
+  }
+
+  const NamedDecl *ND = nullptr;
+  int DiagKind;
+  SourceLocation Loc;
+  if (const auto *F = P.getField()) {
+    DiagKind = 2;
+    Loc = F->getLocation();
+    ND = F;
+  } else if (auto *VD = P.getFieldDesc()->asValueDecl()) {
+    DiagKind = 1;
+    Loc = VD->getLocation();
+    ND = VD;
+  } else {
+    DiagKind = 0;
+    if (const auto *E = P.getFieldDesc()->asExpr())
+      Loc = E->getExprLoc();
+  }
+
+  S.FFDiag(S.Current->getLocation(OpPC),
+           diag::note_constexpr_access_volatile_obj, 1)
+      << AK << DiagKind << ND;
+  S.Note(Loc, diag::note_constexpr_volatile_here) << DiagKind;
   return false;
 }
 
@@ -703,11 +732,11 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK) {
   if (!CheckLive(S, OpPC, Ptr, AK))
     return false;
+  if (!CheckExtern(S, OpPC, Ptr))
+    return false;
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
   if (!CheckDummy(S, OpPC, Ptr, AK))
-    return false;
-  if (!CheckExtern(S, OpPC, Ptr))
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK))
     return false;
@@ -772,6 +801,8 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckConst(S, OpPC, Ptr))
     return false;
+  if (!S.inConstantContext() && isConstexprUnknown(Ptr))
+    return false;
   return true;
 }
 
@@ -802,6 +833,12 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     S.CCEDiag(Loc, diag::note_constexpr_virtual_call);
     return false;
   }
+
+  // Bail out if the function declaration itself is invalid.  We will
+  // have produced a relevant diagnostic while parsing it, so just
+  // note the problematic sub-expression.
+  if (F->getDecl()->isInvalidDecl())
+    return Invalid(S, OpPC);
 
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
     return false;
@@ -905,15 +942,6 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
   return false;
 }
 
-bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
-  if (!MD->isPureVirtual())
-    return true;
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << MD;
-  S.Note(MD->getLocation(), diag::note_declared_at);
-  return false;
-}
-
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
                       APFloat::opStatus Status, FPOptions FPO) {
   // [expr.pre]p4:
@@ -977,17 +1005,7 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
   if (AllocForm == DeleteForm)
     return true;
 
-  QualType TypeToDiagnose;
-  // We need to shuffle things around a bit here to get a better diagnostic,
-  // because the expression we allocated the block for was of type int*,
-  // but we want to get the array size right.
-  if (D->isArray()) {
-    QualType ElemQT = D->getType()->getPointeeType();
-    TypeToDiagnose = S.getASTContext().getConstantArrayType(
-        ElemQT, APInt(64, static_cast<uint64_t>(D->getNumElems()), false),
-        nullptr, ArraySizeModifier::Normal, 0);
-  } else
-    TypeToDiagnose = D->getType()->getPointeeType();
+  QualType TypeToDiagnose = D->getDataType(S.getASTContext());
 
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.FFDiag(E, diag::note_constexpr_new_delete_mismatch)
@@ -1044,8 +1062,7 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (AK == AK_Read || AK == AK_Increment || AK == AK_Decrement)
     return diagnoseUnknownDecl(S, OpPC, D);
 
-  assert(AK == AK_Assign);
-  if (S.getLangOpts().CPlusPlus14) {
+  if (AK == AK_Destroy || S.getLangOpts().CPlusPlus14) {
     const SourceInfo &E = S.Current->getSource(OpPC);
     S.FFDiag(E, diag::note_constexpr_modify_global);
   }
@@ -1196,7 +1213,8 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       if (const FunctionDecl *VirtualDelete =
               getVirtualOperatorDelete(AllocType);
           VirtualDelete &&
-          !VirtualDelete->isReplaceableGlobalAllocationFunction()) {
+          !VirtualDelete
+               ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
         S.FFDiag(S.Current->getSource(OpPC),
                  diag::note_constexpr_new_non_replaceable)
             << isa<CXXMethodDecl>(VirtualDelete) << VirtualDelete;
@@ -1293,8 +1311,6 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
       !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
 
-  if (!CheckExtern(S, OpPC, Ptr))
-    return false;
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
   if (!CheckArray(S, OpPC, Ptr))
@@ -1317,7 +1333,7 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   }
 
-  if (Off > Ptr.block()->getSize())
+  if ((Ptr.getByteOffset() + Off) >= Ptr.block()->getSize())
     return false;
 
   S.Stk.push<Pointer>(Ptr.atField(Off));
@@ -1355,6 +1371,25 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
   return false;
 }
 
+bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckLive(S, OpPC, Ptr, AK_Destroy))
+    return false;
+
+  // Can't call a dtor on a global variable.
+  if (Ptr.block()->isStatic()) {
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.FFDiag(E, diag::note_constexpr_modify_global);
+    return false;
+  }
+  return CheckActive(S, OpPC, Ptr, AK_Destroy);
+}
+
+static void compileFunction(InterpState &S, const Function *Func) {
+  Compiler<ByteCodeEmitter>(S.getContext(), S.P)
+      .compileFunc(Func->getDecl()->getMostRecentDecl(),
+                   const_cast<Function *>(Func));
+}
+
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
              uint32_t VarArgSize) {
   if (Func->hasThisPointer()) {
@@ -1376,6 +1411,9 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
     if (S.checkingPotentialConstantExpression())
       return false;
   }
+
+  if (!Func->isFullyCompiled())
+    compileFunction(S, Func);
 
   if (!CheckCallable(S, OpPC, Func))
     return false;
@@ -1401,7 +1439,6 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = FrameBefore;
   return false;
 }
-
 bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize) {
   assert(Func);
@@ -1433,14 +1470,20 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     } else {
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return cleanup();
-      if (!Func->isConstructor() &&
+      if (!Func->isConstructor() && !Func->isDestructor() &&
+          !Func->isCopyOrMoveOperator() &&
           !CheckActive(S, OpPC, ThisPtr, AK_MemberCall))
         return false;
     }
 
     if (Func->isConstructor() && !checkConstructor(S, OpPC, Func, ThisPtr))
       return false;
+    if (Func->isDestructor() && !CheckDestructor(S, OpPC, ThisPtr))
+      return false;
   }
+
+  if (!Func->isFullyCompiled())
+    compileFunction(S, Func);
 
   if (!CheckCallable(S, OpPC, Func))
     return cleanup();
@@ -1483,6 +1526,9 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   size_t ThisOffset = ArgSize - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
   Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
   const FunctionDecl *Callee = Func->getDecl();
+
+  if (!Func->isFullyCompiled())
+    compileFunction(S, Func);
 
   // C++2a [class.abstract]p6:
   //   the effect of making a virtual call to a pure virtual function [...] is
@@ -1561,48 +1607,37 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   return true;
 }
 
-bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
-            const CallExpr *CE, uint32_t BuiltinID) {
+bool CallBI(InterpState &S, CodePtr OpPC, const CallExpr *CE,
+            uint32_t BuiltinID) {
   // A little arbitrary, but the current interpreter allows evaluation
   // of builtin functions in this mode, with some exceptions.
   if (BuiltinID == Builtin::BI__builtin_operator_new &&
       S.checkingPotentialConstantExpression())
     return false;
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC);
 
-  InterpFrame *FrameBefore = S.Current;
-  S.Current = NewFrame.get();
-
-  if (InterpretBuiltin(S, OpPC, Func, CE, BuiltinID)) {
-    // Release ownership of NewFrame to prevent it from being deleted.
-    NewFrame.release(); // Frame was deleted already.
-    // Ensure that S.Current is correctly reset to the previous frame.
-    assert(S.Current == FrameBefore);
-    return true;
-  }
-
-  // Interpreting the function failed somehow. Reset to
-  // previous state.
-  S.Current = FrameBefore;
-  return false;
+  return InterpretBuiltin(S, OpPC, CE, BuiltinID);
 }
 
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE) {
-  const FunctionPointer &FuncPtr = S.Stk.pop<FunctionPointer>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  const Function *F = FuncPtr.getFunction();
-  if (!F) {
+  if (Ptr.isZero()) {
     const auto *E = cast<CallExpr>(S.Current->getExpr(OpPC));
     S.FFDiag(E, diag::note_constexpr_null_callee)
         << const_cast<Expr *>(E->getCallee()) << E->getSourceRange();
     return false;
   }
 
-  if (!FuncPtr.isValid() || !F->getDecl())
+  if (!Ptr.isFunctionPointer())
     return Invalid(S, OpPC);
 
+  const FunctionPointer &FuncPtr = Ptr.asFunctionPointer();
+  const Function *F = FuncPtr.getFunction();
   assert(F);
+  // Don't allow calling block pointers.
+  if (!F->getDecl())
+    return Invalid(S, OpPC);
 
   // This happens when the call expression has been cast to
   // something else, but we don't support that.
@@ -1641,15 +1676,7 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     return false;
 
   const auto *NewExpr = cast<CXXNewExpr>(E);
-  QualType StorageType = Ptr.getType();
-
-  if ((isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr()) ||
-       isa_and_nonnull<CXXMemberCallExpr>(Ptr.getFieldDesc()->asExpr())) &&
-      StorageType->isPointerType()) {
-    // FIXME: Are there other cases where this is a problem?
-    StorageType = StorageType->getPointeeType();
-  }
-
+  QualType StorageType = Ptr.getFieldDesc()->getDataType(S.getASTContext());
   const ASTContext &ASTCtx = S.getASTContext();
   QualType AllocType;
   if (ArraySize) {
@@ -1696,7 +1723,9 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
         return true;
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_placement)
           << /*C++26 feature*/ 1 << E->getSourceRange();
-    } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
+    } else if (
+        !OperatorNew
+             ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
       S.FFDiag(S.Current->getSource(OpPC),
                diag::note_constexpr_new_non_replaceable)
           << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
@@ -1714,7 +1743,8 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
   } else {
     const auto *DeleteExpr = cast<CXXDeleteExpr>(E);
     const FunctionDecl *OperatorDelete = DeleteExpr->getOperatorDelete();
-    if (!OperatorDelete->isReplaceableGlobalAllocationFunction()) {
+    if (!OperatorDelete
+             ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
       S.FFDiag(S.Current->getSource(OpPC),
                diag::note_constexpr_new_non_replaceable)
           << isa<CXXMethodDecl>(OperatorDelete) << OperatorDelete;
@@ -1750,6 +1780,8 @@ bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, unsigned BitWidth) {
   if (Ptr.isDummy())
     return false;
+  if (Ptr.isFunctionPointer())
+    return true;
 
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.CCEDiag(E, diag::note_constexpr_invalid_cast)
@@ -1815,7 +1847,23 @@ bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType) {
   if (!P.isBlockPointer())
     return false;
 
-  S.Stk.push<Pointer>(P.getType().getTypePtr(), TypeInfoType);
+  // Pick the most-derived type.
+  const Type *T = P.getDeclPtr().getType().getTypePtr();
+  // ... unless we're currently constructing this object.
+  // FIXME: We have a similar check to this in more places.
+  if (S.Current->getFunction()) {
+    for (const InterpFrame *Frame = S.Current; Frame; Frame = Frame->Caller) {
+      if (const Function *Func = Frame->getFunction();
+          Func && (Func->isConstructor() || Func->isDestructor()) &&
+          P.block() == Frame->getThis().block()) {
+        T = Func->getParentDecl()->getTypeForDecl();
+        break;
+      }
+    }
+  }
+
+  S.Stk.push<Pointer>(T->getCanonicalTypeUnqualified().getTypePtr(),
+                      TypeInfoType);
   return true;
 }
 

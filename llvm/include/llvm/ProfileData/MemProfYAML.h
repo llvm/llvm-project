@@ -1,6 +1,7 @@
 #ifndef LLVM_PROFILEDATA_MEMPROFYAML_H_
 #define LLVM_PROFILEDATA_MEMPROFYAML_H_
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -28,8 +29,9 @@ struct AllMemProfData {
 namespace yaml {
 template <> struct ScalarTraits<memprof::GUIDHex64> {
   static void output(const memprof::GUIDHex64 &Val, void *, raw_ostream &Out) {
-    // Print GUID as a 16-digit hexadecimal number.
-    Out << format("0x%016" PRIx64, (uint64_t)Val);
+    // Print GUID as a hexadecimal number with 0x prefix, no padding to keep
+    // test strings compact.
+    Out << format("0x%" PRIx64, (uint64_t)Val);
   }
   static StringRef input(StringRef Scalar, void *, memprof::GUIDHex64 &Val) {
     // Reject decimal GUIDs.
@@ -155,6 +157,47 @@ template <> struct MappingTraits<memprof::AllocationInfo> {
 // In YAML, we use GUIDMemProfRecordPair instead of MemProfRecord so that we can
 // treat the GUID and the fields within MemProfRecord at the same level as if
 // the GUID were part of MemProfRecord.
+template <> struct MappingTraits<memprof::CallSiteInfo> {
+  // Helper class to normalize CalleeGuids to use GUIDHex64 for YAML I/O.
+  class CallSiteInfoWithHex64Guids {
+  public:
+    CallSiteInfoWithHex64Guids(IO &) {}
+    CallSiteInfoWithHex64Guids(IO &, const memprof::CallSiteInfo &CS)
+        : Frames(CS.Frames) {
+      // Convert uint64_t GUIDs to GUIDHex64 for serialization.
+      CalleeGuids.reserve(CS.CalleeGuids.size());
+      for (uint64_t Guid : CS.CalleeGuids)
+        CalleeGuids.push_back(memprof::GUIDHex64(Guid));
+    }
+
+    memprof::CallSiteInfo denormalize(IO &) {
+      memprof::CallSiteInfo CS;
+      CS.Frames = Frames;
+      // Convert GUIDHex64 back to uint64_t GUIDs after deserialization.
+      CS.CalleeGuids.reserve(CalleeGuids.size());
+      for (memprof::GUIDHex64 HexGuid : CalleeGuids)
+        CS.CalleeGuids.push_back(HexGuid.value);
+      return CS;
+    }
+
+    // Keep Frames as is, since MappingTraits<memprof::Frame> handles its
+    // Function GUID.
+    decltype(memprof::CallSiteInfo::Frames) Frames;
+    // Use a vector of GUIDHex64 for CalleeGuids to leverage its ScalarTraits.
+    SmallVector<memprof::GUIDHex64> CalleeGuids;
+  };
+
+  static void mapping(IO &Io, memprof::CallSiteInfo &CS) {
+    // Use MappingNormalization to handle the conversion between
+    // memprof::CallSiteInfo and CallSiteInfoWithHex64Guids.
+    MappingNormalization<CallSiteInfoWithHex64Guids, memprof::CallSiteInfo>
+        Keys(Io, CS);
+    Io.mapRequired("Frames", Keys->Frames);
+    // Map the normalized CalleeGuids (which are now GUIDHex64).
+    Io.mapOptional("CalleeGuids", Keys->CalleeGuids);
+  }
+};
+
 template <> struct MappingTraits<memprof::GUIDMemProfRecordPair> {
   static void mapping(IO &Io, memprof::GUIDMemProfRecordPair &Pair) {
     Io.mapRequired("GUID", Pair.GUID);
@@ -168,12 +211,28 @@ template <> struct MappingTraits<memprof::AllMemProfData> {
     Io.mapRequired("HeapProfileRecords", Data.HeapProfileRecords);
   }
 };
+
+template <> struct SequenceTraits<SmallVector<memprof::GUIDHex64>> {
+  static size_t size(IO &io, SmallVector<memprof::GUIDHex64> &Seq) {
+    return Seq.size();
+  }
+  static memprof::GUIDHex64 &
+  element(IO &io, SmallVector<memprof::GUIDHex64> &Seq, size_t Index) {
+    if (Index >= Seq.size())
+      Seq.resize(Index + 1);
+    return Seq[Index];
+  }
+  static const bool flow = true;
+};
+
 } // namespace yaml
 } // namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::Frame)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::vector<memprof::Frame>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::AllocationInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::CallSiteInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::GUIDMemProfRecordPair)
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::GUIDHex64) // Used for CalleeGuids
 
 #endif // LLVM_PROFILEDATA_MEMPROFYAML_H_

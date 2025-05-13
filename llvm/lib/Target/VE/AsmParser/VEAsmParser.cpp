@@ -73,9 +73,7 @@ class VEAsmParser : public MCTargetAsmParser {
   ParseStatus parseVEAsmOperand(std::unique_ptr<VEOperand> &Operand);
 
   // Helper function to parse expression with a symbol.
-  const MCExpr *extractModifierFromExpr(const MCExpr *E,
-                                        VEMCExpr::VariantKind &Variant);
-  const MCExpr *fixupVariantKind(const MCExpr *E);
+  const MCExpr *extractSpecifier(const MCExpr *E, VEMCExpr::Specifier &Variant);
   bool parseExpression(const MCExpr *&EVal);
 
   // Split the mnemonic stripping conditional code and quantifiers
@@ -1035,17 +1033,16 @@ bool VEAsmParser::parseLiteralValues(unsigned Size, SMLoc L) {
   return (parseMany(parseOne));
 }
 
-/// Extract \code @lo32/@hi32/etc \endcode modifier from expression.
-/// Recursively scan the expression and check for VK_VE_HI32/LO32/etc
+/// Extract \code @lo32/@hi32/etc \endcode specifier from expression.
+/// Recursively scan the expression and check for VK_HI32/LO32/etc
 /// symbol variants.  If all symbols with modifier use the same
-/// variant, return the corresponding VEMCExpr::VariantKind,
+/// variant, return the corresponding VEMCExpr::Specifier,
 /// and a modified expression using the default symbol variant.
 /// Otherwise, return NULL.
-const MCExpr *
-VEAsmParser::extractModifierFromExpr(const MCExpr *E,
-                                     VEMCExpr::VariantKind &Variant) {
+const MCExpr *VEAsmParser::extractSpecifier(const MCExpr *E,
+                                            VEMCExpr::Specifier &Variant) {
   MCContext &Context = getParser().getContext();
-  Variant = VEMCExpr::VK_VE_None;
+  Variant = VEMCExpr::VK_None;
 
   switch (E->getKind()) {
   case MCExpr::Target:
@@ -1055,52 +1052,52 @@ VEAsmParser::extractModifierFromExpr(const MCExpr *E,
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
 
-    switch (SRE->getKind()) {
-    case MCSymbolRefExpr::VK_None:
-      // Use VK_VE_REFLONG to a symbol without modifiers.
-      Variant = VEMCExpr::VK_VE_REFLONG;
+    switch (getSpecifier(SRE)) {
+    case VEMCExpr::VK_None:
+      // Use VK_REFLONG to a symbol without modifiers.
+      Variant = VEMCExpr::VK_REFLONG;
       break;
-    case MCSymbolRefExpr::VK_VE_HI32:
-      Variant = VEMCExpr::VK_VE_HI32;
+    case VEMCExpr::VK_HI32:
+      Variant = VEMCExpr::VK_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_LO32:
-      Variant = VEMCExpr::VK_VE_LO32;
+    case VEMCExpr::VK_LO32:
+      Variant = VEMCExpr::VK_LO32;
       break;
-    case MCSymbolRefExpr::VK_VE_PC_HI32:
-      Variant = VEMCExpr::VK_VE_PC_HI32;
+    case VEMCExpr::VK_PC_HI32:
+      Variant = VEMCExpr::VK_PC_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_PC_LO32:
-      Variant = VEMCExpr::VK_VE_PC_LO32;
+    case VEMCExpr::VK_PC_LO32:
+      Variant = VEMCExpr::VK_PC_LO32;
       break;
-    case MCSymbolRefExpr::VK_VE_GOT_HI32:
-      Variant = VEMCExpr::VK_VE_GOT_HI32;
+    case VEMCExpr::VK_GOT_HI32:
+      Variant = VEMCExpr::VK_GOT_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_GOT_LO32:
-      Variant = VEMCExpr::VK_VE_GOT_LO32;
+    case VEMCExpr::VK_GOT_LO32:
+      Variant = VEMCExpr::VK_GOT_LO32;
       break;
-    case MCSymbolRefExpr::VK_VE_GOTOFF_HI32:
-      Variant = VEMCExpr::VK_VE_GOTOFF_HI32;
+    case VEMCExpr::VK_GOTOFF_HI32:
+      Variant = VEMCExpr::VK_GOTOFF_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_GOTOFF_LO32:
-      Variant = VEMCExpr::VK_VE_GOTOFF_LO32;
+    case VEMCExpr::VK_GOTOFF_LO32:
+      Variant = VEMCExpr::VK_GOTOFF_LO32;
       break;
-    case MCSymbolRefExpr::VK_VE_PLT_HI32:
-      Variant = VEMCExpr::VK_VE_PLT_HI32;
+    case VEMCExpr::VK_PLT_HI32:
+      Variant = VEMCExpr::VK_PLT_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_PLT_LO32:
-      Variant = VEMCExpr::VK_VE_PLT_LO32;
+    case VEMCExpr::VK_PLT_LO32:
+      Variant = VEMCExpr::VK_PLT_LO32;
       break;
-    case MCSymbolRefExpr::VK_VE_TLS_GD_HI32:
-      Variant = VEMCExpr::VK_VE_TLS_GD_HI32;
+    case VEMCExpr::VK_TLS_GD_HI32:
+      Variant = VEMCExpr::VK_TLS_GD_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_TLS_GD_LO32:
-      Variant = VEMCExpr::VK_VE_TLS_GD_LO32;
+    case VEMCExpr::VK_TLS_GD_LO32:
+      Variant = VEMCExpr::VK_TLS_GD_LO32;
       break;
-    case MCSymbolRefExpr::VK_VE_TPOFF_HI32:
-      Variant = VEMCExpr::VK_VE_TPOFF_HI32;
+    case VEMCExpr::VK_TPOFF_HI32:
+      Variant = VEMCExpr::VK_TPOFF_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_TPOFF_LO32:
-      Variant = VEMCExpr::VK_VE_TPOFF_LO32;
+    case VEMCExpr::VK_TPOFF_LO32:
+      Variant = VEMCExpr::VK_TPOFF_LO32;
       break;
     default:
       return nullptr;
@@ -1111,7 +1108,7 @@ VEAsmParser::extractModifierFromExpr(const MCExpr *E,
 
   case MCExpr::Unary: {
     const MCUnaryExpr *UE = cast<MCUnaryExpr>(E);
-    const MCExpr *Sub = extractModifierFromExpr(UE->getSubExpr(), Variant);
+    const MCExpr *Sub = extractSpecifier(UE->getSubExpr(), Variant);
     if (!Sub)
       return nullptr;
     return MCUnaryExpr::create(UE->getOpcode(), Sub, Context);
@@ -1119,9 +1116,9 @@ VEAsmParser::extractModifierFromExpr(const MCExpr *E,
 
   case MCExpr::Binary: {
     const MCBinaryExpr *BE = cast<MCBinaryExpr>(E);
-    VEMCExpr::VariantKind LHSVariant, RHSVariant;
-    const MCExpr *LHS = extractModifierFromExpr(BE->getLHS(), LHSVariant);
-    const MCExpr *RHS = extractModifierFromExpr(BE->getRHS(), RHSVariant);
+    VEMCExpr::Specifier LHSVariant, RHSVariant;
+    const MCExpr *LHS = extractSpecifier(BE->getLHS(), LHSVariant);
+    const MCExpr *RHS = extractSpecifier(BE->getRHS(), RHSVariant);
 
     if (!LHS && !RHS)
       return nullptr;
@@ -1131,9 +1128,9 @@ VEAsmParser::extractModifierFromExpr(const MCExpr *E,
     if (!RHS)
       RHS = BE->getRHS();
 
-    if (LHSVariant == VEMCExpr::VK_VE_None)
+    if (LHSVariant == VEMCExpr::VK_None)
       Variant = RHSVariant;
-    else if (RHSVariant == VEMCExpr::VK_VE_None)
+    else if (RHSVariant == VEMCExpr::VK_None)
       Variant = LHSVariant;
     else if (LHSVariant == RHSVariant)
       Variant = LHSVariant;
@@ -1147,49 +1144,18 @@ VEAsmParser::extractModifierFromExpr(const MCExpr *E,
   llvm_unreachable("Invalid expression kind!");
 }
 
-const MCExpr *VEAsmParser::fixupVariantKind(const MCExpr *E) {
-  MCContext &Context = getParser().getContext();
-
-  switch (E->getKind()) {
-  case MCExpr::Target:
-  case MCExpr::Constant:
-  case MCExpr::SymbolRef:
-    return E;
-
-  case MCExpr::Unary: {
-    const MCUnaryExpr *UE = cast<MCUnaryExpr>(E);
-    const MCExpr *Sub = fixupVariantKind(UE->getSubExpr());
-    if (Sub == UE->getSubExpr())
-      return E;
-    return MCUnaryExpr::create(UE->getOpcode(), Sub, Context);
-  }
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = cast<MCBinaryExpr>(E);
-    const MCExpr *LHS = fixupVariantKind(BE->getLHS());
-    const MCExpr *RHS = fixupVariantKind(BE->getRHS());
-    if (LHS == BE->getLHS() && RHS == BE->getRHS())
-      return E;
-    return MCBinaryExpr::create(BE->getOpcode(), LHS, RHS, Context);
-  }
-  }
-
-  llvm_unreachable("Invalid expression kind!");
-}
-
-/// ParseExpression.  This differs from the default "parseExpression" in that
-/// it handles modifiers.
+/// This differs from the default "parseExpression" in that it handles
+/// relocation specifiers.
 bool VEAsmParser::parseExpression(const MCExpr *&EVal) {
   // Handle \code symbol @lo32/@hi32/etc \endcode.
   if (getParser().parseExpression(EVal))
     return true;
 
   // Convert MCSymbolRefExpr with VK_* to MCExpr with VK_*.
-  EVal = fixupVariantKind(EVal);
-  VEMCExpr::VariantKind Variant;
-  const MCExpr *E = extractModifierFromExpr(EVal, Variant);
+  VEMCExpr::Specifier Specifier;
+  const MCExpr *E = extractSpecifier(EVal, Specifier);
   if (E)
-    EVal = VEMCExpr::create(Variant, E, getParser().getContext());
+    EVal = VEMCExpr::create(Specifier, E, getParser().getContext());
 
   return false;
 }

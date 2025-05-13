@@ -511,6 +511,7 @@ define i32 @f4() !guid !3 {
     [
     {
       "Guid": 1000,
+      "TotalRootEntryCount": 1,
       "Counters": [1],
       "Callsites": [
         [{ "Guid": 1001,
@@ -525,6 +526,7 @@ define i32 @f4() !guid !3 {
     },
     {
       "Guid": 1005,
+      "TotalRootEntryCount": 1,
       "Counters": [2],
       "Callsites": [
         [{ "Guid": 1000,
@@ -575,6 +577,7 @@ define i32 @f4() !guid !3 {
   const char *Expected = R"yaml(
 Contexts:
   - Guid:            1000
+    TotalRootEntryCount: 1
     Counters:        [ 1, 11, 22 ]
     Callsites:
       - - Guid:            1001
@@ -587,6 +590,7 @@ Contexts:
             - - Guid:            1004
                 Counters:        [ 13 ]
   - Guid:            1005
+    TotalRootEntryCount: 1
     Counters:        [ 2 ]
     Callsites:
       - - Guid:            1000

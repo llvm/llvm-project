@@ -19,7 +19,7 @@ inline void has_static_locals_external() {
   // Mutable
   static int disallowedStatic1 = 0; // hidden-warning {{'disallowedStatic1' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
   // Initialization might run more than once
-  static const double disallowedStatic2 = disallowedStatic1++; // hidden-warning {{initializeation of 'disallowedStatic2' may run twice when built into a shared library: it has hidden visibility and external linkage}}
+  static const double disallowedStatic2 = disallowedStatic1++; // hidden-warning {{initialization of 'disallowedStatic2' may run twice when built into a shared library: it has hidden visibility and external linkage}}
   
   // OK, because immutable and compile-time-initialized
   static constexpr int allowedStatic1 = 0;
@@ -112,7 +112,7 @@ namespace GlobalTest {
   inline float disallowedGlobal1 = 3.14; // hidden-warning {{'disallowedGlobal1' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
   
   // Initialization might run more than once
-  inline const double disallowedGlobal5 = disallowedGlobal1++; // hidden-warning {{initializeation of 'disallowedGlobal5' may run twice when built into a shared library: it has hidden visibility and external linkage}}
+  inline const double disallowedGlobal5 = disallowedGlobal1++; // hidden-warning {{initialization of 'disallowedGlobal5' may run twice when built into a shared library: it has hidden visibility and external linkage}}
 
   // OK because internal linkage, so duplication is intended
   static float allowedGlobal1 = 3.14;

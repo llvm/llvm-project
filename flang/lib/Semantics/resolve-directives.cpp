@@ -356,6 +356,7 @@ public:
     return true;
   }
   void Post(const parser::OmpDirectiveSpecification &) { PopContext(); }
+
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_metadirective);
     return true;
@@ -397,8 +398,13 @@ public:
 
   bool Pre(const parser::OpenMPDepobjConstruct &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_depobj);
-    auto &object{std::get<parser::OmpObject>(x.t)};
-    ResolveOmpObject(object, Symbol::Flag::OmpDependObject);
+    for (auto &arg : x.v.Arguments().v) {
+      if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
+        if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
+          ResolveOmpObject(*object, Symbol::Flag::OmpDependObject);
+        }
+      }
+    }
     return true;
   }
   void Post(const parser::OpenMPDepobjConstruct &) { PopContext(); }
@@ -410,7 +416,7 @@ public:
 
     // Gather information from the clauses.
     Flags flags;
-    std::optional<common::OmpAtomicDefaultMemOrderType> memOrder;
+    std::optional<common::OmpMemoryOrderType> memOrder;
     for (const auto &clause : std::get<parser::OmpClauseList>(x.t).v) {
       flags |= common::visit(
           common::visitors{
@@ -521,6 +527,12 @@ public:
   bool Pre(const parser::OmpLinearClause &x) {
     auto &objects{std::get<parser::OmpObjectList>(x.t)};
     ResolveOmpObjectList(objects, Symbol::Flag::OmpLinear);
+    return false;
+  }
+
+  bool Pre(const parser::OmpInReductionClause &x) {
+    auto &objects{std::get<parser::OmpObjectList>(x.t)};
+    ResolveOmpObjectList(objects, Symbol::Flag::OmpInReduction);
     return false;
   }
 
@@ -793,7 +805,7 @@ private:
   std::int64_t ordCollapseLevel{0};
 
   void AddOmpRequiresToScope(Scope &, WithOmpDeclarative::RequiresFlags,
-      std::optional<common::OmpAtomicDefaultMemOrderType>);
+      std::optional<common::OmpMemoryOrderType>);
   void IssueNonConformanceWarning(
       llvm::omp::Directive D, parser::CharBlock source);
 
@@ -947,7 +959,14 @@ void AccAttributeVisitor::Post(
   const auto &clauseList = std::get<parser::AccClauseList>(x.t);
   for (const auto &clause : clauseList.v) {
     // Restriction - line 2414
-    DoNotAllowAssumedSizedArray(GetAccObjectList(clause));
+    // We assume the restriction is present because clauses that require
+    // moving data would require the size of the data to be present, but
+    // the deviceptr and present clauses do not require moving data and
+    // thus we permit them.
+    if (!std::holds_alternative<parser::AccClause::Deviceptr>(clause.u) &&
+        !std::holds_alternative<parser::AccClause::Present>(clause.u)) {
+      DoNotAllowAssumedSizedArray(GetAccObjectList(clause));
+    }
   }
 }
 
@@ -1028,88 +1047,78 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
     Symbol &symbol, const parser::OpenACCRoutineConstruct &x) {
   if (symbol.has<SubprogramDetails>()) {
     Fortran::semantics::OpenACCRoutineInfo info;
-    const auto &clauses = std::get<Fortran::parser::AccClauseList>(x.t);
+    std::vector<OpenACCRoutineDeviceTypeInfo *> currentDevices;
+    currentDevices.push_back(&info);
+    const auto &clauses{std::get<Fortran::parser::AccClauseList>(x.t)};
     for (const Fortran::parser::AccClause &clause : clauses.v) {
-      if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
-        if (info.deviceTypeInfos().empty()) {
-          info.set_isSeq();
-        } else {
-          info.deviceTypeInfos().back().set_isSeq();
-        }
-      } else if (const auto *gangClause =
-                     std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
-        if (info.deviceTypeInfos().empty()) {
-          info.set_isGang();
-        } else {
-          info.deviceTypeInfos().back().set_isGang();
-        }
-        if (gangClause->v) {
-          const Fortran::parser::AccGangArgList &x = *gangClause->v;
-          for (const Fortran::parser::AccGangArg &gangArg : x.v) {
-            if (const auto *dim =
-                    std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)) {
-              if (const auto v{EvaluateInt64(context_, dim->v)}) {
-                if (info.deviceTypeInfos().empty()) {
-                  info.set_gangDim(*v);
-                } else {
-                  info.deviceTypeInfos().back().set_gangDim(*v);
-                }
-              }
-            }
-          }
-        }
-      } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
-        if (info.deviceTypeInfos().empty()) {
-          info.set_isVector();
-        } else {
-          info.deviceTypeInfos().back().set_isVector();
-        }
-      } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
-        if (info.deviceTypeInfos().empty()) {
-          info.set_isWorker();
-        } else {
-          info.deviceTypeInfos().back().set_isWorker();
+      if (const auto *dTypeClause{
+              std::get_if<Fortran::parser::AccClause::DeviceType>(&clause.u)}) {
+        currentDevices.clear();
+        for (const auto &deviceTypeExpr : dTypeClause->v.v) {
+          currentDevices.push_back(&info.add_deviceTypeInfo(deviceTypeExpr.v));
         }
       } else if (std::get_if<Fortran::parser::AccClause::Nohost>(&clause.u)) {
         info.set_isNohost();
-      } else if (const auto *bindClause =
-                     std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
-        if (const auto *name =
-                std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
-          if (Symbol *sym = ResolveFctName(*name)) {
-            if (info.deviceTypeInfos().empty()) {
-              info.set_bindName(sym->name().ToString());
-            } else {
-              info.deviceTypeInfos().back().set_bindName(
-                  sym->name().ToString());
+      } else if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
+        for (auto &device : currentDevices) {
+          device->set_isSeq();
+        }
+      } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
+        for (auto &device : currentDevices) {
+          device->set_isVector();
+        }
+      } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
+        for (auto &device : currentDevices) {
+          device->set_isWorker();
+        }
+      } else if (const auto *gangClause{
+                     std::get_if<Fortran::parser::AccClause::Gang>(
+                         &clause.u)}) {
+        for (auto &device : currentDevices) {
+          device->set_isGang();
+        }
+        if (gangClause->v) {
+          const Fortran::parser::AccGangArgList &x = *gangClause->v;
+          int numArgs{0};
+          for (const Fortran::parser::AccGangArg &gangArg : x.v) {
+            CHECK(numArgs <= 1 && "expecting 0 or 1 gang dim args");
+            if (const auto *dim{std::get_if<Fortran::parser::AccGangArg::Dim>(
+                    &gangArg.u)}) {
+              if (const auto v{EvaluateInt64(context_, dim->v)}) {
+                for (auto &device : currentDevices) {
+                  device->set_gangDim(*v);
+                }
+              }
+            }
+            numArgs++;
+          }
+        }
+      } else if (const auto *bindClause{
+                     std::get_if<Fortran::parser::AccClause::Bind>(
+                         &clause.u)}) {
+        if (const auto *name{
+                std::get_if<Fortran::parser::Name>(&bindClause->v.u)}) {
+          if (Symbol * sym{ResolveFctName(*name)}) {
+            Symbol &ultimate{sym->GetUltimate()};
+            for (auto &device : currentDevices) {
+              device->set_bindName(SymbolRef{ultimate});
             }
           } else {
             context_.Say((*name).source,
                 "No function or subroutine declared for '%s'"_err_en_US,
                 (*name).source);
           }
-        } else if (const auto charExpr =
+        } else if (const auto charExpr{
                        std::get_if<Fortran::parser::ScalarDefaultCharExpr>(
-                           &bindClause->v.u)) {
-          auto *charConst =
+                           &bindClause->v.u)}) {
+          auto *charConst{
               Fortran::parser::Unwrap<Fortran::parser::CharLiteralConstant>(
-                  *charExpr);
+                  *charExpr)};
           std::string str{std::get<std::string>(charConst->t)};
-          std::stringstream bindName;
-          bindName << "\"" << str << "\"";
-          if (info.deviceTypeInfos().empty()) {
-            info.set_bindName(bindName.str());
-          } else {
-            info.deviceTypeInfos().back().set_bindName(bindName.str());
+          for (auto &device : currentDevices) {
+            device->set_bindName(std::string(str));
           }
         }
-      } else if (const auto *dType =
-                     std::get_if<Fortran::parser::AccClause::DeviceType>(
-                         &clause.u)) {
-        const parser::AccDeviceTypeExprList &deviceTypeExprList = dType->v;
-        OpenACCRoutineDeviceTypeInfo dtypeInfo;
-        dtypeInfo.set_dType(deviceTypeExprList.v.front().v);
-        info.add_deviceTypeInfo(dtypeInfo);
       }
     }
     symbol.get<SubprogramDetails>().add_openACCRoutineInfo(info);
@@ -1652,8 +1661,7 @@ void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
-  const auto &standaloneDir{
-      std::get<parser::OmpSimpleStandaloneDirective>(x.t)};
+  const auto &standaloneDir{std::get<parser::OmpDirectiveName>(x.v.t)};
   switch (standaloneDir.v) {
   case llvm::omp::Directive::OMPD_barrier:
   case llvm::omp::Directive::OMPD_ordered:
@@ -1869,6 +1877,7 @@ std::int64_t OmpAttributeVisitor::GetAssociatedLoopLevelFromClauses(
 //     construct with multiple associated do-loops are lastprivate.
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     const parser::OpenMPLoopConstruct &x) {
+  unsigned version{context_.langOptions().OpenMPVersion};
   std::int64_t level{GetContext().associatedLoopLevel};
   if (level <= 0) {
     return;
@@ -1904,7 +1913,8 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     context_.Say(GetContext().directiveSource,
         "A DO loop must follow the %s directive"_err_en_US,
         parser::ToUpperCaseLetters(
-            llvm::omp::getOpenMPDirectiveName(GetContext().directive).str()));
+            llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
+                .str()));
   }
 }
 void OmpAttributeVisitor::CheckAssocLoopLevel(
@@ -2296,12 +2306,12 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         if (symbol != found) {
           name.symbol = found; // adjust the symbol within region
         } else if (GetContext().defaultDSA == Symbol::Flag::OmpNone &&
-            !symbol->test(Symbol::Flag::OmpThreadprivate) &&
+            !symbol->GetUltimate().test(Symbol::Flag::OmpThreadprivate) &&
             // Exclude indices of sequential loops that are privatised in
             // the scope of the parallel region, and not in this scope.
             // TODO: check whether this should be caught in IsObjectWithDSA
             !symbol->test(Symbol::Flag::OmpPrivate)) {
-          if (symbol->test(Symbol::Flag::CrayPointee)) {
+          if (symbol->GetUltimate().test(Symbol::Flag::CrayPointee)) {
             std::string crayPtrName{
                 semantics::GetCrayPointer(*symbol).name().ToString()};
             if (!IsObjectWithDSA(*currScope().FindSymbol(crayPtrName)))
@@ -2404,8 +2414,27 @@ void OmpAttributeVisitor::ResolveOmpObjectList(
   }
 }
 
+/// True if either symbol is in a namelist or some other symbol in the same
+/// equivalence set as symbol is in a namelist.
+static bool SymbolOrEquivalentIsInNamelist(const Symbol &symbol) {
+  auto isInNamelist{[](const Symbol &sym) {
+    const Symbol &ultimate{sym.GetUltimate()};
+    return ultimate.test(Symbol::Flag::InNamelist);
+  }};
+
+  const EquivalenceSet *eqv{FindEquivalenceSet(symbol)};
+  if (!eqv) {
+    return isInNamelist(symbol);
+  }
+
+  return llvm::any_of(*eqv, [isInNamelist](const EquivalenceObject &obj) {
+    return isInNamelist(obj.symbol);
+  });
+}
+
 void OmpAttributeVisitor::ResolveOmpObject(
     const parser::OmpObject &ompObject, Symbol::Flag ompFlag) {
+  unsigned version{context_.langOptions().OpenMPVersion};
   common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
@@ -2428,7 +2457,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
                             Symbol::OmpFlagToClauseName(secondOmpFlag),
                             parser::ToUpperCaseLetters(
                                 llvm::omp::getOpenMPDirectiveName(
-                                    GetContext().directive)
+                                    GetContext().directive, version)
                                     .str()));
                       }
                     };
@@ -2464,11 +2493,10 @@ void OmpAttributeVisitor::ResolveOmpObject(
                       "in which the %s directive appears"_err_en_US,
                       parser::ToUpperCaseLetters(
                           llvm::omp::getOpenMPDirectiveName(
-                              GetContext().directive)
+                              GetContext().directive, version)
                               .str()));
                 }
                 if (ompFlag == Symbol::Flag::OmpReduction) {
-                  const Symbol &ultimateSymbol{symbol->GetUltimate()};
                   // Using variables inside of a namelist in OpenMP reductions
                   // is allowed by the standard, but is not allowed for
                   // privatisation. This looks like an oversight. If the
@@ -2476,7 +2504,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   // mapping for the reduction variable: resulting in incorrect
                   // results. Disabling this hoisting could make some real
                   // production code go slower. See discussion in #109303
-                  if (ultimateSymbol.test(Symbol::Flag::InNamelist)) {
+                  if (SymbolOrEquivalentIsInNamelist(*symbol)) {
                     context_.Say(name->source,
                         "Variable '%s' in NAMELIST cannot be in a REDUCTION clause"_err_en_US,
                         name->ToString());
@@ -2490,6 +2518,15 @@ void OmpAttributeVisitor::ResolveOmpObject(
                         "with the INSCAN modifier of the parent "
                         "directive"_err_en_US,
                         name->ToString());
+                  }
+                }
+                if (ompFlag == Symbol::Flag::OmpDeclareTarget) {
+                  if (symbol->IsFuncResult()) {
+                    if (Symbol * func{currScope().symbol()}) {
+                      CHECK(func->IsSubprogram());
+                      func->set(ompFlag);
+                      name->symbol = func;
+                    }
                   }
                 }
                 if (GetContext().directive ==
@@ -2683,7 +2720,7 @@ void ResolveOmpTopLevelParts(
   // program units. Modules are skipped because their REQUIRES clauses should be
   // propagated via USE statements instead.
   WithOmpDeclarative::RequiresFlags combinedFlags;
-  std::optional<common::OmpAtomicDefaultMemOrderType> combinedMemOrder;
+  std::optional<common::OmpMemoryOrderType> combinedMemOrder;
 
   // Function to go through non-module top level program units and extract
   // REQUIRES information to be processed by a function-like argument.
@@ -2726,7 +2763,7 @@ void ResolveOmpTopLevelParts(
         flags{details.ompRequires()}) {
       combinedFlags |= *flags;
     }
-    if (const common::OmpAtomicDefaultMemOrderType *
+    if (const common::OmpMemoryOrderType *
         memOrder{details.ompAtomicDefaultMemOrder()}) {
       if (combinedMemOrder && *combinedMemOrder != *memOrder) {
         context.Say(symbol.scope()->sourceRange(),
@@ -2838,7 +2875,7 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
     clauseName = "LASTPRIVATE";
   }
 
-  if (ultimateSymbol.test(Symbol::Flag::InNamelist)) {
+  if (SymbolOrEquivalentIsInNamelist(symbol)) {
     context_.Say(name.source,
         "Variable '%s' in NAMELIST cannot be in a %s clause"_err_en_US,
         name.ToString(), clauseName.str());
@@ -2880,6 +2917,7 @@ void OmpAttributeVisitor::CheckSourceLabel(const parser::Label &label) {
 void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
     const parser::CharBlock target, std::optional<DirContext> sourceContext,
     std::optional<DirContext> targetContext) {
+  unsigned version{context_.langOptions().OpenMPVersion};
   if (targetContext &&
       (!sourceContext ||
           (sourceContext->scope != targetContext->scope &&
@@ -2888,8 +2926,8 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
     context_
         .Say(source, "invalid branch into an OpenMP structured block"_err_en_US)
         .Attach(target, "In the enclosing %s directive branched into"_en_US,
-            parser::ToUpperCaseLetters(
-                llvm::omp::getOpenMPDirectiveName(targetContext->directive)
+            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                targetContext->directive, version)
                     .str()));
   }
   if (sourceContext &&
@@ -2901,8 +2939,8 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
         .Say(source,
             "invalid branch leaving an OpenMP structured block"_err_en_US)
         .Attach(target, "Outside the enclosing %s directive"_en_US,
-            parser::ToUpperCaseLetters(
-                llvm::omp::getOpenMPDirectiveName(sourceContext->directive)
+            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                sourceContext->directive, version)
                     .str()));
   }
 }
@@ -2935,17 +2973,19 @@ void OmpAttributeVisitor::CheckNameInAllocateStmt(
       }
     }
   }
+  unsigned version{context_.langOptions().OpenMPVersion};
   context_.Say(source,
       "Object '%s' in %s directive not "
       "found in corresponding ALLOCATE statement"_err_en_US,
       name.ToString(),
       parser::ToUpperCaseLetters(
-          llvm::omp::getOpenMPDirectiveName(GetContext().directive).str()));
+          llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
+              .str()));
 }
 
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
     WithOmpDeclarative::RequiresFlags flags,
-    std::optional<common::OmpAtomicDefaultMemOrderType> memOrder) {
+    std::optional<common::OmpMemoryOrderType> memOrder) {
   Scope *scopeIter = &scope;
   do {
     if (Symbol * symbol{scopeIter->symbol()}) {
@@ -2986,9 +3026,10 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(
     llvm::omp::Directive D, parser::CharBlock source) {
   std::string warnStr;
   llvm::raw_string_ostream warnStrOS(warnStr);
+  unsigned version{context_.langOptions().OpenMPVersion};
   warnStrOS << "OpenMP directive "
             << parser::ToUpperCaseLetters(
-                   llvm::omp::getOpenMPDirectiveName(D).str())
+                   llvm::omp::getOpenMPDirectiveName(D, version).str())
             << " has been deprecated";
 
   auto setAlternativeStr = [&warnStrOS](llvm::StringRef alt) {

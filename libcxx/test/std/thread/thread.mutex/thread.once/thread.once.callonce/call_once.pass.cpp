@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: no-threads
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // <mutex>
 
 // struct once_flag;
@@ -21,6 +23,7 @@
 
 #include "make_test_thread.h"
 #include "test_macros.h"
+#include "operator_hijacker.h"
 
 typedef std::chrono::milliseconds ms;
 
@@ -253,7 +256,19 @@ int main(int, char**)
         std::call_once(f2, std::move(rq));
         assert(rq.rv_called == 1);
     }
+    {
+      std::once_flag flag;
+      auto f = [](const operator_hijacker&) {};
+      std::call_once(flag, f, operator_hijacker{});
+    }
+
 #endif // TEST_STD_VER >= 11
 
-  return 0;
+    {
+      std::once_flag flag;
+      operator_hijacker f;
+      std::call_once(flag, f);
+    }
+
+    return 0;
 }

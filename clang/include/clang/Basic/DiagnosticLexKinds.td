@@ -52,14 +52,8 @@ def ext_multi_line_line_comment : Extension<"multi-line // comment">,
 def ext_line_comment : Extension<
   "// comments are not allowed in this language">,
   InGroup<Comment>;
-def ext_no_newline_eof : Extension<"no newline at end of file">,
-  InGroup<NewlineEOF>;
 def warn_no_newline_eof : Warning<"no newline at end of file">,
   InGroup<NewlineEOF>, DefaultIgnore;
-
-def warn_cxx98_compat_no_newline_eof : Warning<
-  "C++98 requires newline at end of file">,
-  InGroup<CXX98CompatPedantic>, DefaultIgnore;
 
 def ext_dollar_in_identifier : Extension<"'$' in identifier">,
   InGroup<DiagGroup<"dollar-in-identifier-extension">>;
@@ -148,14 +142,14 @@ def ext_mathematical_notation : ExtWarn<
   InGroup<DiagGroup<"mathematical-notation-identifier-extension">>;
 
 def ext_delimited_escape_sequence : Extension<
-  "%select{delimited|named}0 escape sequences are a "
-  "%select{Clang|C++23}1 extension">,
-  InGroup<DiagGroup<"delimited-escape-sequence-extension">>;
-
+  "%select{delimited|named}0 escape sequences are a %select{C++23|C2y|Clang}1 "
+  "extension">, InGroup<DiagGroup<"delimited-escape-sequence-extension">>;
 def warn_cxx23_delimited_escape_sequence : Warning<
-  "%select{delimited|named}0 escape sequences are "
-  "incompatible with C++ standards before C++23">,
-  InGroup<CXXPre23Compat>, DefaultIgnore;
+  "%select{delimited|named}0 escape sequences are incompatible with C++ "
+  "standards before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
+def warn_c2y_delimited_escape_sequence : Warning<
+  "delimited escape sequences are incompatible with C standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
 
 def err_delimited_escape_empty : Error<
   "delimited escape sequence cannot be empty">;
@@ -256,6 +250,17 @@ def warn_cxx17_hex_literal : Warning<
   "hexadecimal floating literals are incompatible with "
   "C++ standards before C++17">,
   InGroup<CXXPre17CompatPedantic>, DefaultIgnore;
+def ext_octal_literal : Extension<
+  "octal integer literals are a C2y extension">, InGroup<C2y>;
+def ext_cpp_octal_literal : Extension<
+  "octal integer literals are a Clang extension">,
+  InGroup<DiagGroup<"octal-prefix-extension">>;
+def warn_c2y_compat_octal_literal : Warning<
+  "octal integer literals are incompatible with standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
+def warn_unprefixed_octal_deprecated : Warning<
+  "octal literals without a '0o' prefix are deprecated">,
+  InGroup<DeprecatedOctalLiterals>;
 def ext_binary_literal : Extension<
   "binary integer literals are a C23 extension">, InGroup<C23>;
 def warn_c23_compat_binary_literal : Warning<
@@ -416,6 +421,9 @@ def warn_pp_macro_is_reserved_attribute_id : Warning<
 def warn_pp_objc_macro_redef_ignored : Warning<
   "ignoring redefinition of Objective-C qualifier macro">,
   InGroup<DiagGroup<"objc-macro-redefinition">>;
+def warn_pp_identifier_is_cpp_keyword : Warning<
+  "identifier %0 conflicts with a C++ keyword">,
+  InGroup<CppKeywordInC>, DefaultIgnore;
 
 def pp_invalid_string_literal : Warning<
   "invalid string literal, ignoring final '\\'">;
@@ -453,6 +461,8 @@ def warn_compat_pp_embed_directive : Warning<
   InGroup<CPre23Compat>, DefaultIgnore;
 def err_pp_embed_dup_params : Error<
   "cannot specify parameter '%0' twice in the same '#embed' directive">;
+def err_pp_embed_device_file : Error<
+  "device files are not yet supported by '#embed' directive">;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;
@@ -831,6 +841,12 @@ def warn_pp_date_time : Warning<
   ShowInSystemHeader, DefaultIgnore, InGroup<DiagGroup<"date-time">>;
 
 // Module map parsing
+def remark_mmap_parse : Remark<
+  "parsing modulemap '%0'">, ShowInSystemHeader, InGroup<ModuleMap>;
+def remark_mmap_load : Remark<
+  "loading modulemap '%0'">, ShowInSystemHeader, InGroup<ModuleMap>;
+def remark_mmap_load_module : Remark<
+  "loading parsed module '%0'">, ShowInSystemHeader, InGroup<ModuleMap>;
 def err_mmap_unknown_token : Error<"skipping stray token">;
 def err_mmap_expected_module : Error<"expected module declaration">;
 def err_mmap_expected_module_name : Error<"expected module name">;

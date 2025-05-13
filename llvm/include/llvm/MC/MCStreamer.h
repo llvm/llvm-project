@@ -255,11 +255,8 @@ class MCStreamer {
   bool AllowAutoPadding = false;
 
 protected:
-  // True if we are processing SEH directives in an epilogue.
-  bool InEpilogCFI = false;
-
   // Symbol of the current epilog for which we are processing SEH directives.
-  MCSymbol *CurrentEpilog = nullptr;
+  WinEH::FrameInfo::Epilog *CurrentWinEpilog = nullptr;
 
   MCFragment *CurFrag = nullptr;
 
@@ -342,9 +339,11 @@ public:
     return WinFrameInfos;
   }
 
-  MCSymbol *getCurrentEpilog() const { return CurrentEpilog; }
+  WinEH::FrameInfo::Epilog *getCurrentWinEpilog() const {
+    return CurrentWinEpilog;
+  }
 
-  bool isInEpilogCFI() const { return InEpilogCFI; }
+  bool isInEpilogCFI() const { return CurrentWinEpilog; }
 
   void generateCompactUnwindEncodings(MCAsmBackend *MAB);
 
@@ -681,7 +680,7 @@ public:
   /// \param ByteAlignment - The alignment of the zerofill symbol.
   virtual void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                             uint64_t Size = 0, Align ByteAlignment = Align(1),
-                            SMLoc Loc = SMLoc()) = 0;
+                            SMLoc Loc = SMLoc());
 
   /// Emit a thread local bss (.tbss) symbol.
   ///
@@ -887,7 +886,8 @@ public:
   virtual void emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                      unsigned Column, unsigned Flags,
                                      unsigned Isa, unsigned Discriminator,
-                                     StringRef FileName);
+                                     StringRef FileName,
+                                     StringRef Comment = {});
 
   /// This implements the '.loc_label Name' directive.
   virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name);
@@ -1025,6 +1025,8 @@ public:
   virtual void emitWinCFIEndProlog(SMLoc Loc = SMLoc());
   virtual void emitWinCFIBeginEpilogue(SMLoc Loc = SMLoc());
   virtual void emitWinCFIEndEpilogue(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIUnwindV2Start(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc = SMLoc());
   virtual void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                                 SMLoc Loc = SMLoc());
   virtual void emitWinEHHandlerData(SMLoc Loc = SMLoc());

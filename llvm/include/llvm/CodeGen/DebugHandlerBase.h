@@ -30,7 +30,7 @@ class MachineModuleInfo;
 /// Represents the location at which a variable is stored.
 struct DbgVariableLocation {
   /// Base register.
-  unsigned Register;
+  MCRegister Register;
 
   /// Chain of offsetted loads necessary to load the value if it lives in
   /// memory. Every load except for the last is pointer-sized.

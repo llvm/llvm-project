@@ -55,7 +55,7 @@ define <2 x i32> @select_sdiv_lhs_const_v2i32(i1 %cond) {
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0x594
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %select = select i1 %cond, <2 x i32> <i32 5, i32 undef>, <2 x i32> <i32 6, i32 7>
+  %select = select i1 %cond, <2 x i32> <i32 5, i32 poison>, <2 x i32> <i32 6, i32 7>
   %op = sdiv <2 x i32> <i32 3333, i32 9999>, %select
   ret <2 x i32> %op
 }
@@ -387,12 +387,15 @@ define i32 @select_mul_rhs_const_i32(i1 %cond) {
 define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
 ; IR-LABEL: @select_add_lhs_const_i16(
 ; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i16 128, i16 131
-; IR-NEXT:    store i16 [[OP]], ptr addrspace(1) undef, align 2
+; IR-NEXT:    store i16 [[OP]], ptr addrspace(1) poison, align 2
 ; IR-NEXT:    ret void
 ;
 ; GCN-LABEL: select_add_lhs_const_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s0, s[8:9], 0x0
+; GCN-NEXT:    s_add_i32 s12, s12, s17
+; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s0, 0
 ; GCN-NEXT:    s_movk_i32 s0, 0x80
@@ -402,7 +405,7 @@ define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
 ; GCN-NEXT:    s_endpgm
   %select = select i1 %cond, i16 5, i16 8
   %op = add i16 %select, 123
-  store i16 %op, ptr addrspace(1) undef
+  store i16 %op, ptr addrspace(1) poison
   ret void
 }
 

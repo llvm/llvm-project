@@ -30,7 +30,6 @@ public:
     return createSPIRVObjectTargetWriter();
   }
 
-  unsigned getNumFixupKinds() const override { return 1; }
 
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override {

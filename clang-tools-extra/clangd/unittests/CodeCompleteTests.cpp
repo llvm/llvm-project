@@ -882,7 +882,7 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
               ElementsAre(AllOf(named("X"), insertInclude("\"bar.h\""))));
   // Can be disabled via option.
   CodeCompleteOptions NoInsertion;
-  NoInsertion.InsertIncludes = CodeCompleteOptions::NeverInsert;
+  NoInsertion.InsertIncludes = Config::HeaderInsertionPolicy::NeverInsert;
   Results = completions(TU, Test.point(), {Sym}, NoInsertion);
   EXPECT_THAT(Results.Completions,
               ElementsAre(AllOf(named("X"), Not(insertInclude()))));
@@ -1191,7 +1191,7 @@ TEST(CompletionTest, CommentsOnMembersFromHeaderOverloadBundling) {
       int delta(int i);
 
       void epsilon(long l);
-      
+
       /// This one has a comment.
       void epsilon(int i);
     };
@@ -3324,6 +3324,40 @@ TEST(CompletionTest, AllScopesCompletion) {
                                  kind(CompletionItemKind::Class)),
                            AllOf(qualifier("C::"), named("Clangd5"),
                                  kind(CompletionItemKind::EnumMember))));
+}
+
+TEST(CompletionTest, NoCodePatternsIfDisabled) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.EnableSnippets = true;
+  Opts.CodePatterns = Config::CodePatternsPolicy::None;
+
+  auto Results = completions(R"cpp(
+    void function() {
+      /// Trying to trigger "for (init-statement; condition; inc-expression)
+      /// {statements}~" code pattern
+      for^
+    }
+  )cpp",
+                             {}, Opts);
+
+  EXPECT_THAT(Results.Completions,
+              Not(Contains(kind(CompletionItemKind::Snippet))));
+}
+
+TEST(CompletionTest, CompleteIncludeIfCodePatternsNone) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.EnableSnippets = true;
+  Opts.CodePatterns = Config::CodePatternsPolicy::None;
+
+  Annotations Test(R"cpp(#include "^)cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["foo/bar.h"] = "";
+  TU.ExtraArgs.push_back("-I" + testPath("foo"));
+
+  auto Results = completions(TU, Test.point(), {}, Opts);
+  EXPECT_THAT(Results.Completions,
+              AllOf(has("foo/", CompletionItemKind::Folder),
+                    has("bar.h\"", CompletionItemKind::File)));
 }
 
 TEST(CompletionTest, NoQualifierIfShadowed) {

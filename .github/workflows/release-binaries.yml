@@ -16,6 +16,8 @@ on:
         description: "Runner to use for the build"
         required: true
         type: choice
+        # We use ubuntu-22.04 rather than the latest version to make the built
+        # binaries more portable (eg functional aginast older glibc).
         options:
           - ubuntu-22.04
           - ubuntu-22.04-arm
@@ -276,7 +278,7 @@ jobs:
     if: >-
       github.event_name != 'pull_request' &&
       needs.prepare.outputs.upload == 'true'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write # For release uploads
       id-token: write     # For artifact attestations

@@ -188,12 +188,6 @@ static void getRegisterPressures(
   Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = NewPressure.getAGPRNum();
 }
 
-// Return true if the instruction is mutually exclusive with all non-IGLP DAG
-// mutations, requiring all other mutations to be disabled.
-static bool isIGLPMutationOnly(unsigned Opcode) {
-  return Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
-}
-
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
                                      bool AtTop,
                                      const RegPressureTracker &RPTracker,
@@ -873,6 +867,8 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
       Pressure[CurRegion] = RPTracker.moveMaxPressure();
       if (CurRegion-- == RegionIdx)
         break;
+      auto &Rgn = Regions[CurRegion];
+      NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
     }
     RPTracker.advanceToNext();
     RPTracker.advanceBeforeNext();
@@ -1159,9 +1155,10 @@ bool GCNSchedStage::initGCNRegion() {
   Unsched.reserve(DAG.NumRegionInstrs);
   if (StageID == GCNSchedStageID::OccInitialSchedule ||
       StageID == GCNSchedStageID::ILPInitialSchedule) {
+    const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(DAG.TII);
     for (auto &I : DAG) {
       Unsched.push_back(&I);
-      if (isIGLPMutationOnly(I.getOpcode()))
+      if (SII->isIGLPMutationOnly(I.getOpcode()))
         DAG.RegionsWithIGLPInstrs[RegionIdx] = true;
     }
   } else {
@@ -1452,6 +1449,16 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
   if (WavesAfter < DAG.MinOccupancy)
     return true;
 
+  // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
+  if (ST.isDynamicVGPREnabled()) {
+    unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
+        &ST, PressureBefore.getVGPRNum(false));
+    unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
+        &ST, PressureAfter.getVGPRNum(false));
+    if (BlocksAfter > BlocksBefore)
+      return true;
+  }
+
   return false;
 }
 
@@ -1567,8 +1574,7 @@ void GCNSchedStage::revertScheduling() {
     }
 
     if (MI->getIterator() != DAG.RegionEnd) {
-      DAG.BB->remove(MI);
-      DAG.BB->insert(DAG.RegionEnd, MI);
+      DAG.BB->splice(DAG.RegionEnd, DAG.BB, MI);
       if (!MI->isDebugInstr())
         DAG.LIS->handleMove(*MI, true);
     }
@@ -1784,7 +1790,7 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
   // Collect only regions that has a rematerializable def as a live-in.
   SmallSet<unsigned, 16> ImpactedRegions;
   for (const auto &It : RematDefToLiveInRegions)
-    ImpactedRegions.insert(It.second.begin(), It.second.end());
+    ImpactedRegions.insert_range(It.second);
 
   // Make copies of register pressure and live-ins cache that will be updated
   // as we rematerialize.
@@ -2036,8 +2042,9 @@ void GCNScheduleDAGMILive::updateRegionBoundaries(
 }
 
 static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
-  return any_of(*DAG, [](MachineBasicBlock::iterator MI) {
-    return isIGLPMutationOnly(MI->getOpcode());
+  const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(DAG->TII);
+  return any_of(*DAG, [SII](MachineBasicBlock::iterator MI) {
+    return SII->isIGLPMutationOnly(MI->getOpcode());
   });
 }
 

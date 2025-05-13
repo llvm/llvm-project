@@ -214,7 +214,7 @@ TEST(StandaloneToolTest, SimpleActionWithResult) {
   auto KVs = Executor.getToolResults()->AllKVResults();
   ASSERT_EQ(KVs.size(), 1u);
   EXPECT_EQ("f", KVs[0].first);
-  // Currently the standlone executor returns empty corpus, revision, and
+  // Currently the standalone executor returns empty corpus, revision, and
   // compilation unit.
   EXPECT_EQ("::/1", KVs[0].second);
 

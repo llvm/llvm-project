@@ -81,7 +81,7 @@ func.func @insert_too_many_indices(%arg0: f32, %arg1: tensor<?xf32>) {
 // -----
 
 func.func @tensor.from_elements_wrong_result_type() {
-  // expected-error@+2 {{'tensor.from_elements' invalid kind of type specified}}
+  // expected-error@+2 {{'tensor.from_elements' invalid kind of type specified: expected builtin.tensor, but found 'tensor<*xi32>'}}
   %c0 = arith.constant 0 : i32
   %0 = tensor.from_elements %c0 : tensor<*xi32>
   return
@@ -258,6 +258,22 @@ func.func @illegal_num_offsets(%arg0 : tensor<?x?x?xf32>, %arg1 : index, %arg2 :
 
 // -----
 
+func.func @extract_slice_offset_out_of_bounds(%arg0: tensor<10xf32>) {
+  // expected-error@+1 {{offset 0 is out-of-bounds: 10 >= 10}}
+  %0 = tensor.extract_slice %arg0 [10][1][1] : tensor<10xf32> to tensor<1xf32>
+  return
+}
+
+// -----
+
+func.func @extract_slice_runs_out_of_bounds(%arg0: tensor<9xf32>) {
+  // expected-error@+1 {{slice along dimension 0 runs out-of-bounds: 9 >= 9}}
+  %0 = tensor.extract_slice %arg0 [3][4][2] : tensor<9xf32> to tensor<4xf32>
+  return
+}
+
+// -----
+
 func.func @insert_slice_wrong_result_rank(%t1: tensor<?xf32>, %t2: tensor<?x?xf32>, %idx : index) {
   // expected-error @+1 {{expected rank to be smaller or equal to the other rank.}}
   %0 = tensor.insert_slice %t2 into %t1[0][4][1] : tensor<?x?xf32> into tensor<?xf32>
@@ -291,6 +307,22 @@ func.func @insert_slice_wrong_dynamic_type(%t1: tensor<?x4x4xf32>, %t2: tensor<8
   %0 = tensor.insert_slice %t1 into %t2[0, 2, 0][4, 4, 4][1, 1, 1]
     : tensor<?x4x4xf32> into tensor<8x16x4xf32>
 
+  return
+}
+
+// -----
+
+func.func @insert_slice_offset_out_of_bounds(%arg0: tensor<1xf32>, %arg1: tensor<10xf32>) {
+  // expected-error@+1 {{offset 0 is out-of-bounds: 10 >= 10}}
+  %0 = tensor.insert_slice %arg0 into %arg1 [10][1][1] : tensor<1xf32> into tensor<10xf32>
+  return
+}
+
+// -----
+
+func.func @insert_slice_runs_out_of_bounds(%arg0: tensor<4xf32>, %arg1: tensor<9xf32>) {
+  // expected-error@+1 {{slice along dimension 0 runs out-of-bounds: 9 >= 9}}
+  %0 = tensor.insert_slice %arg0 into %arg1 [3][4][2] : tensor<4xf32> into tensor<9xf32>
   return
 }
 
@@ -427,7 +459,7 @@ func.func @pad_yield_type(%arg0: tensor<?x4xi32>, %arg1: i8) -> tensor<?x9xi32> 
 // -----
 
 func.func @invalid_splat(%v : f32) {
-  // expected-error@+1 {{invalid kind of type specified}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.tensor, but found 'memref<8xf32>'}}
   tensor.splat %v : memref<8xf32>
   return
 }

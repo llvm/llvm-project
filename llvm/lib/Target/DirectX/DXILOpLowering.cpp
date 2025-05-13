@@ -8,9 +8,7 @@
 
 #include "DXILOpLowering.h"
 #include "DXILConstants.h"
-#include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
-#include "DXILResourceAnalysis.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
@@ -28,65 +26,24 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "dxil-op-lower"
 
 using namespace llvm;
 using namespace llvm::dxil;
 
-static bool isVectorArgExpansion(Function &F) {
-  switch (F.getIntrinsicID()) {
-  case Intrinsic::dx_dot2:
-  case Intrinsic::dx_dot3:
-  case Intrinsic::dx_dot4:
-    return true;
-  }
-  return false;
-}
-
-static SmallVector<Value *> populateOperands(Value *Arg, IRBuilder<> &Builder) {
-  SmallVector<Value *> ExtractedElements;
-  auto *VecArg = dyn_cast<FixedVectorType>(Arg->getType());
-  for (unsigned I = 0; I < VecArg->getNumElements(); ++I) {
-    Value *Index = ConstantInt::get(Type::getInt32Ty(Arg->getContext()), I);
-    Value *ExtractedElement = Builder.CreateExtractElement(Arg, Index);
-    ExtractedElements.push_back(ExtractedElement);
-  }
-  return ExtractedElements;
-}
-
-static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
-                                             IRBuilder<> &Builder) {
-  // Note: arg[NumOperands-1] is a pointer and is not needed by our flattening.
-  unsigned NumOperands = Orig->getNumOperands() - 1;
-  assert(NumOperands > 0);
-  Value *Arg0 = Orig->getOperand(0);
-  [[maybe_unused]] auto *VecArg0 = dyn_cast<FixedVectorType>(Arg0->getType());
-  assert(VecArg0);
-  SmallVector<Value *> NewOperands = populateOperands(Arg0, Builder);
-  for (unsigned I = 1; I < NumOperands; ++I) {
-    Value *Arg = Orig->getOperand(I);
-    [[maybe_unused]] auto *VecArg = dyn_cast<FixedVectorType>(Arg->getType());
-    assert(VecArg);
-    assert(VecArg0->getElementType() == VecArg->getElementType());
-    assert(VecArg0->getNumElements() == VecArg->getNumElements());
-    auto NextOperandList = populateOperands(Arg, Builder);
-    NewOperands.append(NextOperandList.begin(), NextOperandList.end());
-  }
-  return NewOperands;
-}
-
 namespace {
 class OpLowerer {
   Module &M;
   DXILOpBuilder OpBuilder;
-  DXILBindingMap &DBM;
+  DXILResourceMap &DRM;
   DXILResourceTypeMap &DRTM;
   SmallVector<CallInst *> CleanupCasts;
 
 public:
-  OpLowerer(Module &M, DXILBindingMap &DBM, DXILResourceTypeMap &DRTM)
-      : M(M), OpBuilder(M), DBM(DBM), DRTM(DRTM) {}
+  OpLowerer(Module &M, DXILResourceMap &DRM, DXILResourceTypeMap &DRTM)
+      : M(M), OpBuilder(M), DRM(DRM), DRTM(DRTM) {}
 
   /// Replace every call to \c F using \c ReplaceCall, and then erase \c F. If
   /// there is an error replacing a call, we emit a diagnostic and return true.
@@ -147,9 +104,6 @@ public:
   [[nodiscard]] bool
   replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
                         ArrayRef<IntrinArgSelect> ArgSelects) {
-    bool IsVectorArgExpansion = isVectorArgExpansion(F);
-    assert(!(IsVectorArgExpansion && ArgSelects.size()) &&
-           "Cann't do vector arg expansion when using arg selects.");
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       OpBuilder.getIRB().SetInsertPoint(CI);
       SmallVector<Value *> Args;
@@ -167,8 +121,6 @@ public:
             break;
           }
         }
-      } else if (IsVectorArgExpansion) {
-        Args = argVectorFlatten(CI, OpBuilder.getIRB());
       } else {
         Args.append(CI->arg_begin(), CI->arg_end());
       }
@@ -267,9 +219,9 @@ public:
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      auto *It = DBM.find(CI);
-      assert(It != DBM.end() && "Resource not in map?");
-      dxil::ResourceBindingInfo &RI = *It;
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
       dxil::ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
@@ -305,9 +257,9 @@ public:
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      auto *It = DBM.find(CI);
-      assert(It != DBM.end() && "Resource not in map?");
-      dxil::ResourceBindingInfo &RI = *It;
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
       dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
@@ -356,7 +308,7 @@ public:
 
   /// Lower `dx.resource.handlefrombinding` intrinsics depending on the shader
   /// model and taking into account binding information from
-  /// DXILResourceBindingAnalysis.
+  /// DXILResourceAnalysis.
   bool lowerHandleFromBinding(Function &F) {
     const Triple &TT = M.getTargetTriple();
     if (TT.getDXILVersion() < VersionTuple(1, 6))
@@ -483,7 +435,7 @@ public:
         if (!Extracts[I])
           Extracts[I] = IRB.CreateExtractValue(Op, I);
 
-      Value *Vec = UndefValue::get(OldTy);
+      Value *Vec = PoisonValue::get(OldTy);
       for (int I = 0, E = N; I != E; ++I)
         Vec = IRB.CreateInsertElement(Vec, Extracts[I], I);
       OldResult->replaceAllUsesWith(Vec);
@@ -787,6 +739,50 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerIsFPClass(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *RetTy = IRB.getInt1Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      SmallVector<Value *> Args;
+      Value *Fl = CI->getArgOperand(0);
+      Args.push_back(Fl);
+
+      dxil::OpCode OpCode;
+      Value *T = CI->getArgOperand(1);
+      auto *TCI = dyn_cast<ConstantInt>(T);
+      switch (TCI->getZExtValue()) {
+      case FPClassTest::fcInf:
+        OpCode = dxil::OpCode::IsInf;
+        break;
+      case FPClassTest::fcNan:
+        OpCode = dxil::OpCode::IsNaN;
+        break;
+      case FPClassTest::fcNormal:
+        OpCode = dxil::OpCode::IsNormal;
+        break;
+      case FPClassTest::fcFinite:
+        OpCode = dxil::OpCode::IsFinite;
+        break;
+      default:
+        SmallString<128> Msg =
+            formatv("Unsupported FPClassTest {0} for DXIL Op Lowering",
+                    TCI->getZExtValue());
+        return make_error<StringError>(Msg, inconvertibleErrorCode());
+      }
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode, Args, CI->getName(), RetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   bool lowerIntrinsics() {
     bool Updated = false;
     bool HasErrors = false;
@@ -801,15 +797,23 @@ public:
       case Intrinsic::dx_resource_casthandle:
       // NOTE: llvm.dbg.value is supported as is in DXIL.
       case Intrinsic::dbg_value:
+      case Intrinsic::lifetime_start:
+      case Intrinsic::lifetime_end:
       case Intrinsic::not_intrinsic:
+        if (F.use_empty())
+          F.eraseFromParent();
         continue;
-      default: {
-        DiagnosticInfoUnsupported Diag(
-            F, "Unsupported intrinsic for DXIL lowering");
-        M.getContext().diagnose(Diag);
-        HasErrors |= true;
+      default:
+        if (F.use_empty())
+          F.eraseFromParent();
+        else {
+          SmallString<128> Msg = formatv(
+              "Unsupported intrinsic {0} for DXIL lowering", F.getName());
+          M.getContext().emitError(Msg);
+          HasErrors |= true;
+        }
         break;
-      }
+
 #define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
     HasErrors |= replaceFunctionWithOp(                                        \
@@ -845,6 +849,9 @@ public:
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);
         break;
+      case Intrinsic::is_fpclass:
+        HasErrors |= lowerIsFPClass(F);
+        break;
       }
       Updated = true;
     }
@@ -857,14 +864,14 @@ public:
 } // namespace
 
 PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
-  DXILBindingMap &DBM = MAM.getResult<DXILResourceBindingAnalysis>(M);
+  DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
 
-  bool MadeChanges = OpLowerer(M, DBM, DRTM).lowerIntrinsics();
+  bool MadeChanges = OpLowerer(M, DRM, DRTM).lowerIntrinsics();
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
-  PA.preserve<DXILResourceBindingAnalysis>();
+  PA.preserve<DXILResourceAnalysis>();
   PA.preserve<DXILMetadataAnalysis>();
   PA.preserve<ShaderFlagsAnalysis>();
   return PA;
@@ -874,12 +881,12 @@ namespace {
 class DXILOpLoweringLegacy : public ModulePass {
 public:
   bool runOnModule(Module &M) override {
-    DXILBindingMap &DBM =
-        getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+    DXILResourceMap &DRM =
+        getAnalysis<DXILResourceWrapperPass>().getResourceMap();
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
-    return OpLowerer(M, DBM, DRTM).lowerIntrinsics();
+    return OpLowerer(M, DRM, DRTM).lowerIntrinsics();
   }
   StringRef getPassName() const override { return "DXIL Op Lowering"; }
   DXILOpLoweringLegacy() : ModulePass(ID) {}
@@ -887,9 +894,8 @@ public:
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceTypeWrapperPass>();
-    AU.addRequired<DXILResourceBindingWrapperPass>();
-    AU.addPreserved<DXILResourceBindingWrapperPass>();
-    AU.addPreserved<DXILResourceMDWrapper>();
+    AU.addRequired<DXILResourceWrapperPass>();
+    AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }
@@ -900,7 +906,7 @@ char DXILOpLoweringLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_END(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering", false,
                     false)
 

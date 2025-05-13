@@ -875,8 +875,38 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
         IeeeFeature::Divide)};
   } else if (name == "__builtin_ieee_support_flag") {
-    return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
-        IeeeFeature::Flags)};
+    if (context.targetCharacteristics().ieeeFeatures().test(
+            IeeeFeature::Flags)) {
+      if (args[0]) {
+        if (const auto *cst{UnwrapExpr<Constant<SomeDerived>>(args[0])}) {
+          if (auto constr{cst->GetScalarValue()}) {
+            if (StructureConstructorValues & values{constr->values()};
+                values.size() == 1) {
+              const Expr<SomeType> &value{values.begin()->second.value()};
+              if (auto flag{ToInt64(value)}) {
+                if (flag != _FORTRAN_RUNTIME_IEEE_DENORM) {
+                  // Check for suppport for standard exceptions.
+                  return Expr<T>{
+                      context.targetCharacteristics().ieeeFeatures().test(
+                          IeeeFeature::Flags)};
+                } else if (args[1]) {
+                  // Check for nonstandard ieee_denorm exception support for
+                  // a given kind.
+                  return Expr<T>{context.targetCharacteristics()
+                          .hasSubnormalExceptionSupport(
+                              args[1]->GetType().value().kind())};
+                } else {
+                  // Check for nonstandard ieee_denorm exception support for
+                  // all kinds.
+                  return Expr<T>{context.targetCharacteristics()
+                          .hasSubnormalExceptionSupport()};
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   } else if (name == "__builtin_ieee_support_halting") {
     if (!context.targetCharacteristics()
             .haltingSupportIsUnknownAtCompileTime()) {

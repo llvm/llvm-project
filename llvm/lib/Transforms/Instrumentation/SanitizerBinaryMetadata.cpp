@@ -133,8 +133,7 @@ public:
         VersionStr(utostr(getVersion())), IRB(M.getContext()) {
     // FIXME: Make it work with other formats.
     assert(TargetTriple.isOSBinFormatELF() && "ELF only");
-    assert(!(TargetTriple.isNVPTX() || TargetTriple.isAMDGPU()) &&
-           "Device targets are not supported");
+    assert(!TargetTriple.isGPU() && "Device targets are not supported");
   }
 
   bool run();
@@ -393,8 +392,8 @@ bool maybeSharedMutable(const Value *Addr) {
   if (!Addr)
     return true;
 
-  if (isa<AllocaInst>(getUnderlyingObject(Addr)) &&
-      !PointerMayBeCaptured(Addr, /*ReturnCaptures=*/true))
+  const AllocaInst *AI = findAllocaForValue(Addr);
+  if (AI && !PointerMayBeCaptured(AI, /*ReturnCaptures=*/true))
     return false; // Object is on stack but does not escape.
 
   Addr = Addr->stripInBoundsOffsets();
@@ -440,7 +439,7 @@ bool SanitizerBinaryMetadata::runOn(Instruction &I, MetadataInfoSet &MIS,
 
   // Attach MD_pcsections to instruction.
   if (!InstMetadata.empty()) {
-    MIS.insert(InstMetadata.begin(), InstMetadata.end());
+    MIS.insert_range(InstMetadata);
     SmallVector<MDBuilder::PCSection, 1> Sections;
     for (const auto &MI : InstMetadata)
       Sections.push_back({getSectionName(MI->SectionSuffix), {}});

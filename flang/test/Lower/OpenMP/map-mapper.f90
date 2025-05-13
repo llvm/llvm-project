@@ -12,7 +12,7 @@ program p
    !CHECK-LABEL: omp.declare_mapper @_QQFxx : !fir.type<_QFTt1{x:!fir.array<256xi32>}>
 
    type(t1) :: a, b
-   !CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) mapper(@_QQFxx) map_clauses(tofrom) capture(ByRef) -> {{.*}} {name = "a"}
+   !CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(tofrom) capture(ByRef) mapper(@_QQFxx) -> {{.*}} {name = "a"}
    !CHECK: omp.target map_entries(%[[MAP_A]] -> %{{.*}}, %{{.*}} -> %{{.*}} : {{.*}}, {{.*}}) {
    !$omp target map(mapper(xx) : a)
    do i = 1, n
@@ -20,7 +20,7 @@ program p
    end do
    !$omp end target
 
-   !CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) mapper(@_QQFt1.default) map_clauses(tofrom) capture(ByRef) -> {{.*}} {name = "b"}
+   !CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(tofrom) capture(ByRef) mapper(@_QQFt1.default) -> {{.*}} {name = "b"}
    !CHECK: omp.target map_entries(%[[MAP_B]] -> %{{.*}}, %{{.*}} -> %{{.*}} : {{.*}}, {{.*}}) {
    !$omp target map(mapper(default) : b)
    do i = 1, n

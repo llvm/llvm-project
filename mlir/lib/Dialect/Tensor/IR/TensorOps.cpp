@@ -27,6 +27,7 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -59,7 +60,6 @@ Operation *TensorDialect::materializeConstant(OpBuilder &builder,
 OpFoldResult tensor::getMixedSize(OpBuilder &builder, Location loc, Value value,
                                   int64_t dim) {
   auto tensorType = llvm::cast<RankedTensorType>(value.getType());
-  SmallVector<OpFoldResult> result;
   if (tensorType.isDynamicDim(dim))
     return builder.createOrFold<tensor::DimOp>(loc, value, dim);
 
@@ -1702,7 +1702,6 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
       if (auto dimOp = element.getDefiningOp<tensor::DimOp>()) {
         dynamicNoop &= dimOp.getSource() == source;
 
-        APSInt dim;
         auto cst = getConstantIntValue(dimOp.getIndex());
         dynamicNoop &=
             cst.has_value() && cst.value() == static_cast<int64_t>(id);
@@ -1985,90 +1984,6 @@ struct FoldCollapseOfCastOp : public OpRewritePattern<CollapseShapeOp> {
   }
 };
 
-struct FoldDimOfExpandShape : public OpRewritePattern<DimOp> {
-  using OpRewritePattern<DimOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(DimOp dimOp,
-                                PatternRewriter &rewriter) const override {
-    auto expandShapeOp = dimOp.getSource().getDefiningOp<ExpandShapeOp>();
-    if (!expandShapeOp)
-      return failure();
-
-    // Only constant dimension values are supported.
-    std::optional<int64_t> dim = dimOp.getConstantIndex();
-    if (!dim.has_value())
-      return failure();
-
-    // Skip static dims. These are folded to constant ops.
-    RankedTensorType resultType = expandShapeOp.getResultType();
-    if (!resultType.isDynamicDim(*dim))
-      return failure();
-
-    // Find reassociation group that contains this result dimension.
-    int64_t srcDim = expandShapeOp.getCorrespondingSourceDim(*dim);
-
-    // `dim` is the only dynamic dimension in `group`. (Otherwise, the
-    // ExpandShapeOp would be ambiguous.)
-    int64_t product = 1;
-    ReassociationIndices grp = expandShapeOp.getReassociationIndices()[srcDim];
-    for (int64_t d : grp) {
-      if (d != dim) {
-        assert(!resultType.isDynamicDim(d) && "expected static dim");
-        product *= resultType.getDimSize(d);
-      }
-    }
-
-    // result dim size = src dim size / (product(other dims in reassoc group))
-    Value srcDimSz =
-        rewriter.create<DimOp>(dimOp.getLoc(), expandShapeOp.getSrc(), srcDim);
-    AffineExpr expr;
-    bindSymbols(dimOp.getContext(), expr);
-    rewriter.replaceOpWithNewOp<affine::AffineApplyOp>(
-        dimOp, expr.floorDiv(product), srcDimSz);
-    return success();
-  }
-};
-
-struct FoldDimOfCollapseShape : public OpRewritePattern<DimOp> {
-  using OpRewritePattern<DimOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(DimOp dimOp,
-                                PatternRewriter &rewriter) const override {
-    auto collapseShapeOp = dimOp.getSource().getDefiningOp<CollapseShapeOp>();
-    if (!collapseShapeOp)
-      return failure();
-
-    // Only constant dimension values are supported.
-    std::optional<int64_t> dim = dimOp.getConstantIndex();
-    if (!dim.has_value() ||
-        dim.value() >= collapseShapeOp.getResultType().getRank())
-      return failure();
-
-    // Skip static dims. These are folded to constant ops.
-    RankedTensorType resultType = collapseShapeOp.getResultType();
-    if (!resultType.isDynamicDim(*dim))
-      return failure();
-
-    // Get reassociation group of the result dimension.
-    ReassociationIndices group =
-        collapseShapeOp.getReassociationIndices()[*dim];
-
-    // result dim size = product(dims in reassoc group)
-    SmallVector<Value> srcDimSizes;
-    SmallVector<AffineExpr> syms;
-    AffineExpr product;
-    for (const auto &it : llvm::enumerate(group)) {
-      srcDimSizes.push_back(rewriter.create<DimOp>(
-          dimOp.getLoc(), collapseShapeOp.getSrc(), it.value()));
-      syms.push_back(rewriter.getAffineSymbolExpr(it.index()));
-      product = product ? product * syms.back() : syms.back();
-    }
-    rewriter.replaceOpWithNewOp<affine::AffineApplyOp>(dimOp, product,
-                                                       srcDimSizes);
-    return success();
-  }
-};
-
 /// Fold/sink a producer `tensor.cast` with a consumer `tensor.expand_shape` by
 /// matching constant output_shape operands of the expand. This makes the
 /// `tensor.expand_shape` more static and creates a consumer cast that can be
@@ -2157,8 +2072,7 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
       ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
       ConvertToStaticExpandShape, FoldReshapeWithConstant<ExpandShapeOp>,
       FoldReshapeWithSplat<ExpandShapeOp>,
-      FoldReshapeWithFromElements<ExpandShapeOp>, FoldDimOfExpandShape,
-      FoldDimOfCollapseShape>(context);
+      FoldReshapeWithFromElements<ExpandShapeOp>>(context);
 }
 
 void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -2354,11 +2268,24 @@ static LogicalResult produceSliceErrorMsg(SliceVerificationResult result,
 
 /// Verifier for ExtractSliceOp.
 LogicalResult ExtractSliceOp::verify() {
+  RankedTensorType sourceType = getSourceType();
+
   // Verify result type against inferred type.
   RankedTensorType expectedType = ExtractSliceOp::inferResultType(
-      getSourceType(), getMixedOffsets(), getMixedSizes(), getMixedStrides());
+      sourceType, getMixedOffsets(), getMixedSizes(), getMixedStrides());
   SliceVerificationResult result = isRankReducedType(expectedType, getType());
-  return produceSliceErrorMsg(result, *this, expectedType);
+  if (result != SliceVerificationResult::Success)
+    return produceSliceErrorMsg(result, *this, expectedType);
+
+  // Verify that offsets, sizes, strides do not run out-of-bounds with respect
+  // to the source tensor.
+  SliceBoundsVerificationResult boundsResult = verifyInBoundsSlice(
+      sourceType.getShape(), getStaticOffsets(), getStaticSizes(),
+      getStaticStrides(), /*generateErrorMessage=*/true);
+  if (!boundsResult.isValid)
+    return getOperation()->emitError(boundsResult.errorMessage);
+
+  return success();
 }
 
 llvm::SmallBitVector ExtractSliceOp::getDroppedDims() {
@@ -2431,14 +2358,20 @@ public:
     if (!canFoldIntoConsumerOp(castOp))
       return failure();
 
+    // Pattern does not apply if the produced op would not verify.
+    SliceBoundsVerificationResult sliceResult = verifyInBoundsSlice(
+        cast<RankedTensorType>(castOp.getSource().getType()).getShape(),
+        sliceOp.getStaticOffsets(), sliceOp.getStaticSizes(),
+        sliceOp.getStaticStrides());
+    if (!sliceResult.isValid)
+      return failure();
+
     // Create folded extract.
     Location loc = sliceOp.getLoc();
     Value newResult = rewriter.create<ExtractSliceOp>(
         loc, sliceOp.getType(), castOp.getSource(), sliceOp.getOffsets(),
         sliceOp.getSizes(), sliceOp.getStrides(), sliceOp.getStaticOffsets(),
         sliceOp.getStaticSizes(), sliceOp.getStaticStrides());
-    if (newResult.getType() != sliceOp.getType())
-      newResult = rewriter.create<CastOp>(loc, sliceOp.getType(), newResult);
     rewriter.replaceOp(sliceOp, newResult);
     return success();
   }
@@ -2729,11 +2662,23 @@ static SliceVerificationResult verifyInsertSliceOp(
 
 /// Verifier for InsertSliceOp.
 LogicalResult InsertSliceOp::verify() {
+  // Verify result type against inferred type.
   RankedTensorType expectedType;
   SliceVerificationResult result =
       verifyInsertSliceOp(getSourceType(), getType(), getStaticOffsets(),
                           getStaticSizes(), getStaticStrides(), &expectedType);
-  return produceSliceErrorMsg(result, *this, expectedType);
+  if (result != SliceVerificationResult::Success)
+    return produceSliceErrorMsg(result, *this, expectedType);
+
+  // Verify that offsets, sizes, strides do not run out-of-bounds with respect
+  // to the destination tensor.
+  SliceBoundsVerificationResult boundsResult = verifyInBoundsSlice(
+      getDestType().getShape(), getStaticOffsets(), getStaticSizes(),
+      getStaticStrides(), /*generateErrorMessage=*/true);
+  if (!boundsResult.isValid)
+    return getOperation()->emitError(boundsResult.errorMessage);
+
+  return success();
 }
 
 /// If we have two consecutive InsertSliceOp writing to the same slice, we
@@ -2826,6 +2771,13 @@ public:
     if (failed(foldDynamicOffsetSizeList(mixedOffsets)) &&
         failed(foldDynamicOffsetSizeList(mixedSizes)) &&
         failed(foldDynamicStrideList(mixedStrides)))
+      return failure();
+
+    // Pattern does not apply if the produced op would not verify.
+    SliceBoundsVerificationResult sliceResult =
+        verifyInBoundsSlice(insertSliceOp.getDest().getType().getShape(),
+                            mixedOffsets, mixedSizes, mixedStrides);
+    if (!sliceResult.isValid)
       return failure();
 
     // Create the new op in canonical form.
@@ -2925,9 +2877,16 @@ struct InsertSliceOpCastFolder final : public OpRewritePattern<InsertOpTy> {
         size = srcType.getDimSize(rankReducedIdx++);
       }
     }
+
+    // Pattern does not apply if the produced op would not verify.
     if (verifyInsertSliceOp(srcType, dstType, insertSliceOp.getStaticOffsets(),
                             staticSizes, insertSliceOp.getStaticStrides()) !=
         SliceVerificationResult::Success)
+      return failure();
+    SliceBoundsVerificationResult sliceResult =
+        verifyInBoundsSlice(dstType.getShape(), insertSliceOp.getMixedOffsets(),
+                            mixedSizes, insertSliceOp.getMixedStrides());
+    if (!sliceResult.isValid)
       return failure();
 
     Operation *replacement = rewriter.create<InsertOpTy>(
@@ -3747,11 +3706,23 @@ LogicalResult ParallelInsertSliceOp::verify() {
     return this->emitError("expected ParallelCombiningOpInterface parent, got:")
            << *(getOperation()->getParentOp());
 
+  // Verify result type against inferred type.
   RankedTensorType expectedType;
   SliceVerificationResult result =
       verifyInsertSliceOp(getSourceType(), getDestType(), getStaticOffsets(),
                           getStaticSizes(), getStaticStrides(), &expectedType);
-  return produceSliceErrorMsg(result, *this, expectedType);
+  if (result != SliceVerificationResult::Success)
+    return produceSliceErrorMsg(result, *this, expectedType);
+
+  // Verify that offsets, sizes, strides do not run out-of-bounds with respect
+  // to the destination tensor.
+  SliceBoundsVerificationResult boundsResult = verifyInBoundsSlice(
+      getDestType().getShape(), getStaticOffsets(), getStaticSizes(),
+      getStaticStrides(), /*generateErrorMessage=*/true);
+  if (!boundsResult.isValid)
+    return getOperation()->emitError(boundsResult.errorMessage);
+
+  return success();
 }
 
 void ParallelInsertSliceOp::getCanonicalizationPatterns(

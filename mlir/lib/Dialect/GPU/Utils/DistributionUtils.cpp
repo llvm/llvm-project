@@ -73,7 +73,7 @@ WarpDistributionPattern::moveRegionToNewWarpOpAndAppendReturns(
       }
     }
   }
-  yieldValues.insert(newYieldedValues.begin(), newYieldedValues.end());
+  yieldValues.insert_range(newYieldedValues);
   WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
       rewriter, warpOp, yieldValues.getArrayRef(), types);
   rewriter.replaceOp(warpOp,

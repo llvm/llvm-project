@@ -17,15 +17,13 @@ define void @single_incoming_phi_no_blend_mask(i64 %a, i64 %b) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDEX]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = add i16 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [32 x i16], ptr @src, i16 0, i16 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [32 x i16], ptr @src, i16 0, i16 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[TMP3]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i16>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP5]], <2 x i16> splat (i16 1), <2 x i16> [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, ptr [[TMP6]], i32 0
 ; CHECK-NEXT:    store <2 x i16> [[PREDPHI]], ptr [[TMP7]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -102,11 +100,9 @@ define void @single_incoming_phi_with_blend_mask(i64 %a, i64 %b) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDEX]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = add i16 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [32 x i16], ptr @src, i16 0, i16 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [32 x i16], ptr @src, i16 0, i16 [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i16>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
@@ -114,7 +110,7 @@ define void @single_incoming_phi_with_blend_mask(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor <2 x i1> [[TMP3]], splat (i1 true)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP8]], <2 x i16> zeroinitializer, <2 x i16> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <2 x i1> [[TMP7]], <2 x i16> splat (i16 1), <2 x i16> [[PREDPHI]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    store <2 x i16> [[PREDPHI1]], ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -193,7 +189,6 @@ define void @multiple_incoming_phi_with_blend_mask(i64 %a, ptr noalias %dst) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND3:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT4:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i16> [[VEC_IND3]], <2 x i16> [[VEC_IND1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 0
@@ -204,7 +199,7 @@ define void @multiple_incoming_phi_with_blend_mask(i64 %a, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i16> poison, i16 [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> [[TMP8]], i16 [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[DST:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[DST:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    store <2 x i16> [[TMP9]], ptr [[TMP11]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -278,7 +273,6 @@ define void @single_incoming_needs_predication(i64 %a, i64 %b) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE2:%.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE2]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDEX]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
@@ -306,7 +300,7 @@ define void @single_incoming_needs_predication(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP17]], <2 x i16> zeroinitializer, <2 x i16> [[TMP14]]
 ; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <2 x i1> [[TMP16]], <2 x i16> splat (i16 1), <2 x i16> [[PREDPHI]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i16, ptr [[TMP18]], i32 0
 ; CHECK-NEXT:    store <2 x i16> [[PREDPHI3]], ptr [[TMP19]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -382,8 +376,7 @@ define void @duplicated_incoming_blocks_blend(i32 %x, ptr %ptr) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    store <2 x i32> [[VEC_IND]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2

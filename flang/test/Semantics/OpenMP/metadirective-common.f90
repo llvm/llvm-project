@@ -21,6 +21,11 @@ subroutine f02
   !$omp & when(user={condition(score(-2): .true.)}: nothing)
 end
 
+subroutine f02_zero_score
+  !$omp metadirective &
+  !$omp & when(user={condition(score(0): .true.)}: nothing)
+end
+
 subroutine f03(x)
   integer :: x
   !$omp metadirective &

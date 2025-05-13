@@ -3,10 +3,12 @@ import * as util from "util";
 import * as vscode from "vscode";
 import * as child_process from "child_process";
 import * as fs from "node:fs/promises";
+import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
+import { ErrorWithNotification } from "./ui/error-with-notification";
 
 const exec = util.promisify(child_process.execFile);
 
-export async function isExecutable(path: string): Promise<Boolean> {
+async function isExecutable(path: string): Promise<Boolean> {
   try {
     await fs.access(path, fs.constants.X_OK);
   } catch {
@@ -25,7 +27,7 @@ async function findWithXcrun(executable: string): Promise<string | undefined> {
       if (stdout) {
         return stdout.toString().trimEnd();
       }
-    } catch (error) { }
+    } catch (error) {}
   }
   return undefined;
 }
@@ -65,32 +67,127 @@ async function findDAPExecutable(): Promise<string | undefined> {
   return undefined;
 }
 
+/**
+ * Retrieves the lldb-dap executable path either from settings or the provided
+ * {@link vscode.DebugConfiguration}.
+ *
+ * @param workspaceFolder The {@link vscode.WorkspaceFolder} that the debug session will be launched within
+ * @param configuration The {@link vscode.DebugConfiguration} that will be launched
+ * @throws An {@link ErrorWithNotification} if something went wrong
+ * @returns The path to the lldb-dap executable
+ */
 async function getDAPExecutable(
-  session: vscode.DebugSession,
-): Promise<string | undefined> {
+  workspaceFolder: vscode.WorkspaceFolder | undefined,
+  configuration: vscode.DebugConfiguration,
+): Promise<string> {
   // Check if the executable was provided in the launch configuration.
-  const launchConfigPath = session.configuration["debugAdapterExecutable"];
+  const launchConfigPath = configuration["debugAdapterExecutable"];
   if (typeof launchConfigPath === "string" && launchConfigPath.length !== 0) {
+    if (!(await isExecutable(launchConfigPath))) {
+      throw new ErrorWithNotification(
+        `Debug adapter path "${launchConfigPath}" is not a valid file. The path comes from your launch configuration.`,
+        new ConfigureButton(),
+      );
+    }
     return launchConfigPath;
   }
 
   // Check if the executable was provided in the extension's configuration.
-  const config = vscode.workspace.getConfiguration(
-    "lldb-dap",
-    session.workspaceFolder,
-  );
+  const config = vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
   const configPath = config.get<string>("executable-path");
   if (configPath && configPath.length !== 0) {
+    if (!(await isExecutable(configPath))) {
+      throw new ErrorWithNotification(
+        `Debug adapter path "${configPath}" is not a valid file. The path comes from your settings.`,
+        new OpenSettingsButton("lldb-dap.executable-path"),
+      );
+    }
     return configPath;
   }
 
   // Try finding the lldb-dap binary.
   const foundPath = await findDAPExecutable();
   if (foundPath) {
+    if (!(await isExecutable(foundPath))) {
+      throw new ErrorWithNotification(
+        `Found a potential debug adapter on your system at "${configPath}", but it is not a valid file.`,
+        new OpenSettingsButton("lldb-dap.executable-path"),
+      );
+    }
     return foundPath;
   }
 
-  return undefined;
+  throw new ErrorWithNotification(
+    "Unable to find the path to the LLDB debug adapter executable.",
+    new OpenSettingsButton("lldb-dap.executable-path"),
+  );
+}
+
+/**
+ * Retrieves the arguments that will be provided to lldb-dap either from settings or the provided
+ * {@link vscode.DebugConfiguration}.
+ *
+ * @param workspaceFolder The {@link vscode.WorkspaceFolder} that the debug session will be launched within
+ * @param configuration The {@link vscode.DebugConfiguration} that will be launched
+ * @throws An {@link ErrorWithNotification} if something went wrong
+ * @returns The arguments that will be provided to lldb-dap
+ */
+async function getDAPArguments(
+  workspaceFolder: vscode.WorkspaceFolder | undefined,
+  configuration: vscode.DebugConfiguration,
+): Promise<string[]> {
+  // Check the debug configuration for arguments first.
+  const debugConfigArgs = configuration.debugAdapterArgs;
+  if (debugConfigArgs) {
+    if (
+      !Array.isArray(debugConfigArgs) ||
+      debugConfigArgs.findIndex((entry) => typeof entry !== "string") !== -1
+    ) {
+      throw new ErrorWithNotification(
+        "The debugAdapterArgs property must be an array of string values. Please update your launch configuration",
+        new ConfigureButton(),
+      );
+    }
+    return debugConfigArgs;
+  }
+  // Fall back on the workspace configuration.
+  return vscode.workspace
+    .getConfiguration("lldb-dap", workspaceFolder)
+    .get<string[]>("arguments", []);
+}
+
+/**
+ * Creates a new {@link vscode.DebugAdapterExecutable} based on the provided workspace folder and
+ * debug configuration. Assumes that the given debug configuration is for a local launch of lldb-dap.
+ *
+ * @param workspaceFolder The {@link vscode.WorkspaceFolder} that the debug session will be launched within
+ * @param configuration The {@link vscode.DebugConfiguration} that will be launched
+ * @throws An {@link ErrorWithNotification} if something went wrong
+ * @returns The {@link vscode.DebugAdapterExecutable} that can be used to launch lldb-dap
+ */
+export async function createDebugAdapterExecutable(
+  workspaceFolder: vscode.WorkspaceFolder | undefined,
+  configuration: vscode.DebugConfiguration,
+): Promise<vscode.DebugAdapterExecutable> {
+  const config = vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
+  const log_path = config.get<string>("log-path");
+  let env: { [key: string]: string } = {};
+  if (log_path) {
+    env["LLDBDAP_LOG"] = log_path;
+  }
+  const configEnvironment =
+    config.get<{ [key: string]: string }>("environment") || {};
+  const dapPath = await getDAPExecutable(workspaceFolder, configuration);
+
+  const dbgOptions = {
+    env: {
+      ...configEnvironment,
+      ...env,
+    },
+  };
+  const dbgArgs = await getDAPArguments(workspaceFolder, configuration);
+
+  return new vscode.DebugAdapterExecutable(dapPath, dbgArgs, dbgOptions);
 }
 
 /**
@@ -98,104 +195,29 @@ async function getDAPExecutable(
  * depending on the session configuration.
  */
 export class LLDBDapDescriptorFactory
-  implements vscode.DebugAdapterDescriptorFactory, vscode.Disposable {
-  private server?: Promise<{ process: child_process.ChildProcess, host: string, port: number }>;
-
-  dispose() {
-    this.server?.then(({ process }) => {
-      process.kill();
-    });
-  }
-
+  implements vscode.DebugAdapterDescriptorFactory
+{
   async createDebugAdapterDescriptor(
     session: vscode.DebugSession,
     executable: vscode.DebugAdapterExecutable | undefined,
   ): Promise<vscode.DebugAdapterDescriptor | undefined> {
-    const config = vscode.workspace.getConfiguration(
-      "lldb-dap",
+    if (executable) {
+      throw new Error(
+        "Setting the debug adapter executable in the package.json is not supported.",
+      );
+    }
+
+    // Use a server connection if the debugAdapterPort is provided
+    if (session.configuration.debugAdapterPort) {
+      return new vscode.DebugAdapterServer(
+        session.configuration.debugAdapterPort,
+        session.configuration.debugAdapterHostname,
+      );
+    }
+
+    return createDebugAdapterExecutable(
       session.workspaceFolder,
+      session.configuration,
     );
-
-    const log_path = config.get<string>("log-path");
-    let env: { [key: string]: string } = {};
-    if (log_path) {
-      env["LLDBDAP_LOG"] = log_path;
-    }
-    const configEnvironment =
-      config.get<{ [key: string]: string }>("environment") || {};
-    const dapPath = (await getDAPExecutable(session)) ?? executable?.command;
-
-    if (!dapPath) {
-      LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage();
-      return undefined;
-    }
-
-    if (!(await isExecutable(dapPath))) {
-      LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(dapPath);
-      return;
-    }
-
-    const dbgOptions = {
-      env: {
-        ...executable?.options?.env,
-        ...configEnvironment,
-        ...env,
-      },
-    };
-    const dbgArgs = executable?.args ?? [];
-
-    const serverMode = config.get<boolean>('serverMode', false);
-    if (serverMode) {
-      const { host, port } = await this.startServer(dapPath, dbgArgs, dbgOptions);
-      return new vscode.DebugAdapterServer(port, host);
-    }
-
-    return new vscode.DebugAdapterExecutable(dapPath, dbgArgs, dbgOptions);
-  }
-
-  startServer(dapPath: string, args: string[], options: child_process.CommonSpawnOptions): Promise<{ host: string, port: number }> {
-    if (this.server) return this.server;
-
-    this.server = new Promise(resolve => {
-      args.push(
-        '--connection',
-        'connect://localhost:0'
-      );
-      const server = child_process.spawn(dapPath, args, options);
-      server.stdout!.setEncoding('utf8').once('data', (data: string) => {
-        const connection = /connection:\/\/\[([^\]]+)\]:(\d+)/.exec(data);
-        if (connection) {
-          const host = connection[1];
-          const port = Number(connection[2]);
-          resolve({ process: server, host, port });
-        }
-      });
-      server.on('exit', () => {
-        this.server = undefined;
-      })
-    });
-    return this.server;
-  }
-
-  /**
-   * Shows a message box when the debug adapter's path is not found
-   */
-  static async showLLDBDapNotFoundMessage(path?: string) {
-    const message =
-      path
-        ? `Debug adapter path: ${path} is not a valid file.`
-        : "Unable to find the path to the LLDB debug adapter executable.";
-    const openSettingsAction = "Open Settings";
-    const callbackValue = await vscode.window.showErrorMessage(
-      message,
-      openSettingsAction,
-    );
-
-    if (openSettingsAction === callbackValue) {
-      vscode.commands.executeCommand(
-        "workbench.action.openSettings",
-        "lldb-dap.executable-path",
-      );
-    }
   }
 }

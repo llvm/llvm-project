@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/MipsFixupKinds.h"
+#include "MCTargetDesc/MipsMCExpr.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -158,8 +159,21 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
                                            bool IsPCRel) const {
   // Determine the type of the relocation.
   unsigned Kind = Fixup.getTargetKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
+  switch (Target.getSpecifier()) {
+  case MipsMCExpr::MEK_DTPREL:
+  case MipsMCExpr::MEK_DTPREL_HI:
+  case MipsMCExpr::MEK_DTPREL_LO:
+  case MipsMCExpr::MEK_TLSLDM:
+  case MipsMCExpr::MEK_TLSGD:
+  case MipsMCExpr::MEK_GOTTPREL:
+  case MipsMCExpr::MEK_TPREL_HI:
+  case MipsMCExpr::MEK_TPREL_LO:
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
 
   switch (Kind) {
   case FK_NONE:

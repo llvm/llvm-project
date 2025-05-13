@@ -121,7 +121,7 @@ define amdgpu_ps i32 @s_trunc_v2i32_to_v2i16(<2 x i32> inreg %src) {
 ; ; FIXME: G_INSERT mishandled
 ; define <2 x i32> @v_trunc_v3i32_to_v3i16(<3 x i32> %src) {
 ;   %trunc = trunc <3 x i32> %src to <3 x i16>
-;   %ext = shufflevector <3 x i16> %trunc, <3 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+;   %ext = shufflevector <3 x i16> %trunc, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ;   %cast = bitcast <4 x i16> %ext to <2 x i32>
 ;   ret <2 x i32> %cast
 ; }
@@ -129,7 +129,7 @@ define amdgpu_ps i32 @s_trunc_v2i32_to_v2i16(<2 x i32> inreg %src) {
 ; ; FIXME: G_INSERT mishandled
 ; define amdgpu_ps <2 x i32> @s_trunc_v3i32_to_v3i16(<3 x i32> inreg %src) {
 ;   %trunc = trunc <3 x i32> %src to <3 x i16>
-;   %ext = shufflevector <3 x i16> %trunc, <3 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+;   %ext = shufflevector <3 x i16> %trunc, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ;   %cast = bitcast <4 x i16> %ext to <2 x i32>
 ;   ret <2 x i32> %cast
 ; }

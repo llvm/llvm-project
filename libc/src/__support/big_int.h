@@ -866,7 +866,7 @@ public:
   LIBC_INLINE constexpr BigInt operator~() const {
     BigInt result;
     for (size_t i = 0; i < WORD_COUNT; ++i)
-      result[i] = ~val[i];
+      result[i] = static_cast<WordType>(~val[i]);
     return result;
   }
 
@@ -967,7 +967,7 @@ private:
 
   LIBC_INLINE constexpr void bitwise_not() {
     for (auto &part : val)
-      part = ~part;
+      part = static_cast<WordType>(~part);
   }
 
   LIBC_INLINE constexpr void negate() {

@@ -76,6 +76,40 @@ void IRBuilderBase::SetInstDebugLocation(Instruction *I) const {
     }
 }
 
+Value *IRBuilderBase::CreateAggregateCast(Value *V, Type *DestTy) {
+  Type *SrcTy = V->getType();
+  if (SrcTy == DestTy)
+    return V;
+
+  if (SrcTy->isAggregateType()) {
+    unsigned NumElements;
+    if (SrcTy->isStructTy()) {
+      assert(DestTy->isStructTy() && "Expected StructType");
+      assert(SrcTy->getStructNumElements() == DestTy->getStructNumElements() &&
+             "Expected StructTypes with equal number of elements");
+      NumElements = SrcTy->getStructNumElements();
+    } else {
+      assert(SrcTy->isArrayTy() && DestTy->isArrayTy() && "Expected ArrayType");
+      assert(SrcTy->getArrayNumElements() == DestTy->getArrayNumElements() &&
+             "Expected ArrayTypes with equal number of elements");
+      NumElements = SrcTy->getArrayNumElements();
+    }
+
+    Value *Result = PoisonValue::get(DestTy);
+    for (unsigned I = 0; I < NumElements; ++I) {
+      Type *ElementTy = SrcTy->isStructTy() ? DestTy->getStructElementType(I)
+                                            : DestTy->getArrayElementType();
+      Value *Element =
+          CreateAggregateCast(CreateExtractValue(V, ArrayRef(I)), ElementTy);
+
+      Result = CreateInsertValue(Result, Element, ArrayRef(I));
+    }
+    return Result;
+  }
+
+  return CreateBitOrPointerCast(V, DestTy);
+}
+
 CallInst *
 IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
                                 const Twine &Name, FMFSource FMFSource,
@@ -169,7 +203,7 @@ CallInst *IRBuilderBase::CreateMemSetInline(Value *Dst, MaybeAlign DstAlign,
   CallInst *CI = CreateIntrinsic(Intrinsic::memset_inline, Tys, Ops);
 
   if (DstAlign)
-    cast<MemSetInlineInst>(CI)->setDestAlignment(*DstAlign);
+    cast<MemSetInst>(CI)->setDestAlignment(*DstAlign);
 
   // Set the TBAA info if present.
   if (TBAATag)
@@ -194,7 +228,7 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemSet(
   CallInst *CI =
       CreateIntrinsic(Intrinsic::memset_element_unordered_atomic, Tys, Ops);
 
-  cast<AtomicMemSetInst>(CI)->setDestAlignment(Alignment);
+  cast<AnyMemSetInst>(CI)->setDestAlignment(Alignment);
 
   // Set the TBAA info if present.
   if (TBAATag)
@@ -259,7 +293,7 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
       CreateIntrinsic(Intrinsic::memcpy_element_unordered_atomic, Tys, Ops);
 
   // Set the alignment of the pointer args.
-  auto *AMCI = cast<AtomicMemCpyInst>(CI);
+  auto *AMCI = cast<AnyMemCpyInst>(CI);
   AMCI->setDestAlignment(DstAlign);
   AMCI->setSourceAlignment(SrcAlign);
 
@@ -713,21 +747,13 @@ getStatepointBundles(std::optional<ArrayRef<T1>> TransitionArgs,
                      std::optional<ArrayRef<T2>> DeoptArgs,
                      ArrayRef<T3> GCArgs) {
   std::vector<OperandBundleDef> Rval;
-  if (DeoptArgs) {
-    SmallVector<Value*, 16> DeoptValues;
-    llvm::append_range(DeoptValues, *DeoptArgs);
-    Rval.emplace_back("deopt", DeoptValues);
-  }
-  if (TransitionArgs) {
-    SmallVector<Value*, 16> TransitionValues;
-    llvm::append_range(TransitionValues, *TransitionArgs);
-    Rval.emplace_back("gc-transition", TransitionValues);
-  }
-  if (GCArgs.size()) {
-    SmallVector<Value*, 16> LiveValues;
-    llvm::append_range(LiveValues, GCArgs);
-    Rval.emplace_back("gc-live", LiveValues);
-  }
+  if (DeoptArgs)
+    Rval.emplace_back("deopt", SmallVector<Value *, 16>(*DeoptArgs));
+  if (TransitionArgs)
+    Rval.emplace_back("gc-transition",
+                      SmallVector<Value *, 16>(*TransitionArgs));
+  if (GCArgs.size())
+    Rval.emplace_back("gc-live", SmallVector<Value *, 16>(GCArgs));
   return Rval;
 }
 
@@ -950,6 +976,26 @@ CallInst *IRBuilderBase::CreateConstrainedFPBinOp(
   return C;
 }
 
+CallInst *IRBuilderBase::CreateConstrainedFPIntrinsic(
+    Intrinsic::ID ID, ArrayRef<Type *> Types, ArrayRef<Value *> Args,
+    FMFSource FMFSource, const Twine &Name, MDNode *FPMathTag,
+    std::optional<RoundingMode> Rounding,
+    std::optional<fp::ExceptionBehavior> Except) {
+  Value *RoundingV = getConstrainedFPRounding(Rounding);
+  Value *ExceptV = getConstrainedFPExcept(Except);
+
+  FastMathFlags UseFMF = FMFSource.get(FMF);
+
+  llvm::SmallVector<Value *, 5> ExtArgs(Args);
+  ExtArgs.push_back(RoundingV);
+  ExtArgs.push_back(ExceptV);
+
+  CallInst *C = CreateIntrinsic(ID, Types, ExtArgs, nullptr, Name);
+  setConstrainedFPCallAttr(C);
+  setFPAttrs(C, FPMathTag, UseFMF);
+  return C;
+}
+
 CallInst *IRBuilderBase::CreateConstrainedFPUnroundedBinOp(
     Intrinsic::ID ID, Value *L, Value *R, FMFSource FMFSource,
     const Twine &Name, MDNode *FPMathTag,
@@ -1037,9 +1083,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPCall(
     Function *Callee, ArrayRef<Value *> Args, const Twine &Name,
     std::optional<RoundingMode> Rounding,
     std::optional<fp::ExceptionBehavior> Except) {
-  llvm::SmallVector<Value *, 6> UseArgs;
-
-  append_range(UseArgs, Args);
+  llvm::SmallVector<Value *, 6> UseArgs(Args);
 
   if (Intrinsic::hasConstrainedFPRoundingModeOperand(Callee->getIntrinsicID()))
     UseArgs.push_back(getConstrainedFPRounding(Rounding));

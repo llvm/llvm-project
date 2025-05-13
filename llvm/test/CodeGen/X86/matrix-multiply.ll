@@ -131,7 +131,7 @@ define <4 x double> @test_mul2x2_f64(<4 x double> %a0, <4 x double> %a1) nounwin
 ; AVX2-LABEL: test_mul2x2_f64:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vshufpd {{.*#+}} ymm2 = ymm1[1,1,3,3]
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm0[2,3,2,3]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[2,3,2,3]
 ; AVX2-NEXT:    vmulpd %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vmovddup {{.*#+}} ymm1 = ymm1[0,0,2,2]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,1]
@@ -142,7 +142,7 @@ define <4 x double> @test_mul2x2_f64(<4 x double> %a0, <4 x double> %a1) nounwin
 ; AVX512-LABEL: test_mul2x2_f64:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vshufpd {{.*#+}} ymm2 = ymm1[1,1,3,3]
-; AVX512-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm0[2,3,2,3]
+; AVX512-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[2,3,2,3]
 ; AVX512-NEXT:    vmulpd %ymm2, %ymm3, %ymm2
 ; AVX512-NEXT:    vmovddup {{.*#+}} ymm1 = ymm1[0,0,2,2]
 ; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,1]
@@ -974,42 +974,68 @@ define <16 x float> @test_mul4x4_f32(<16 x float> %a0, <16 x float> %a1) nounwin
 ; SSE-NEXT:    movaps %xmm5, %xmm2
 ; SSE-NEXT:    retq
 ;
-; AVX1OR2-LABEL: test_mul4x4_f32:
-; AVX1OR2:       # %bb.0: # %entry
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm4 = ymm2[1,1,1,1,5,5,5,5]
-; AVX1OR2-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm0[2,3,2,3]
-; AVX1OR2-NEXT:    vmulps %ymm4, %ymm5, %ymm4
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm6
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm0 = ymm2[0,0,0,0,4,4,4,4]
-; AVX1OR2-NEXT:    vmulps %ymm0, %ymm6, %ymm0
-; AVX1OR2-NEXT:    vaddps %ymm4, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm4
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm7 = ymm2[2,2,2,2,6,6,6,6]
-; AVX1OR2-NEXT:    vmulps %ymm7, %ymm4, %ymm7
-; AVX1OR2-NEXT:    vaddps %ymm7, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm2 = ymm2[3,3,3,3,7,7,7,7]
-; AVX1OR2-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3,2,3]
-; AVX1OR2-NEXT:    vmulps %ymm2, %ymm1, %ymm2
-; AVX1OR2-NEXT:    vaddps %ymm2, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm2 = ymm3[1,1,1,1,5,5,5,5]
-; AVX1OR2-NEXT:    vmulps %ymm2, %ymm5, %ymm2
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm5 = ymm3[0,0,0,0,4,4,4,4]
-; AVX1OR2-NEXT:    vmulps %ymm5, %ymm6, %ymm5
-; AVX1OR2-NEXT:    vaddps %ymm2, %ymm5, %ymm2
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm5 = ymm3[2,2,2,2,6,6,6,6]
-; AVX1OR2-NEXT:    vmulps %ymm5, %ymm4, %ymm4
-; AVX1OR2-NEXT:    vaddps %ymm4, %ymm2, %ymm2
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm3 = ymm3[3,3,3,3,7,7,7,7]
-; AVX1OR2-NEXT:    vmulps %ymm3, %ymm1, %ymm1
-; AVX1OR2-NEXT:    vaddps %ymm1, %ymm2, %ymm1
-; AVX1OR2-NEXT:    retq
+; AVX1-LABEL: test_mul4x4_f32:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vshufps {{.*#+}} ymm4 = ymm2[1,1,1,1,5,5,5,5]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm0[2,3,2,3]
+; AVX1-NEXT:    vmulps %ymm4, %ymm5, %ymm4
+; AVX1-NEXT:    vshufps {{.*#+}} ymm6 = ymm2[0,0,0,0,4,4,4,4]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm7
+; AVX1-NEXT:    vmulps %ymm6, %ymm7, %ymm0
+; AVX1-NEXT:    vaddps %ymm4, %ymm0, %ymm0
+; AVX1-NEXT:    vshufps {{.*#+}} ymm4 = ymm2[2,2,2,2,6,6,6,6]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm6
+; AVX1-NEXT:    vmulps %ymm4, %ymm6, %ymm4
+; AVX1-NEXT:    vaddps %ymm4, %ymm0, %ymm0
+; AVX1-NEXT:    vshufps {{.*#+}} ymm2 = ymm2[3,3,3,3,7,7,7,7]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3,2,3]
+; AVX1-NEXT:    vmulps %ymm2, %ymm1, %ymm2
+; AVX1-NEXT:    vaddps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vshufps {{.*#+}} ymm2 = ymm3[1,1,1,1,5,5,5,5]
+; AVX1-NEXT:    vmulps %ymm2, %ymm5, %ymm2
+; AVX1-NEXT:    vshufps {{.*#+}} ymm4 = ymm3[0,0,0,0,4,4,4,4]
+; AVX1-NEXT:    vmulps %ymm4, %ymm7, %ymm4
+; AVX1-NEXT:    vaddps %ymm2, %ymm4, %ymm2
+; AVX1-NEXT:    vshufps {{.*#+}} ymm4 = ymm3[2,2,2,2,6,6,6,6]
+; AVX1-NEXT:    vmulps %ymm4, %ymm6, %ymm4
+; AVX1-NEXT:    vaddps %ymm4, %ymm2, %ymm2
+; AVX1-NEXT:    vshufps {{.*#+}} ymm3 = ymm3[3,3,3,3,7,7,7,7]
+; AVX1-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; AVX1-NEXT:    vaddps %ymm1, %ymm2, %ymm1
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_mul4x4_f32:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vshufps {{.*#+}} ymm4 = ymm2[1,1,1,1,5,5,5,5]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm5 = ymm0[2,3,2,3]
+; AVX2-NEXT:    vmulps %ymm4, %ymm5, %ymm4
+; AVX2-NEXT:    vshufps {{.*#+}} ymm6 = ymm2[0,0,0,0,4,4,4,4]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm7 = ymm0[0,1,0,1]
+; AVX2-NEXT:    vmulps %ymm6, %ymm7, %ymm0
+; AVX2-NEXT:    vaddps %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vshufps {{.*#+}} ymm4 = ymm2[2,2,2,2,6,6,6,6]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm6 = ymm1[0,1,0,1]
+; AVX2-NEXT:    vmulps %ymm4, %ymm6, %ymm4
+; AVX2-NEXT:    vaddps %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vshufps {{.*#+}} ymm2 = ymm2[3,3,3,3,7,7,7,7]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,3,2,3]
+; AVX2-NEXT:    vmulps %ymm2, %ymm1, %ymm2
+; AVX2-NEXT:    vaddps %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vshufps {{.*#+}} ymm2 = ymm3[1,1,1,1,5,5,5,5]
+; AVX2-NEXT:    vmulps %ymm2, %ymm5, %ymm2
+; AVX2-NEXT:    vshufps {{.*#+}} ymm4 = ymm3[0,0,0,0,4,4,4,4]
+; AVX2-NEXT:    vmulps %ymm4, %ymm7, %ymm4
+; AVX2-NEXT:    vaddps %ymm2, %ymm4, %ymm2
+; AVX2-NEXT:    vshufps {{.*#+}} ymm4 = ymm3[2,2,2,2,6,6,6,6]
+; AVX2-NEXT:    vmulps %ymm4, %ymm6, %ymm4
+; AVX2-NEXT:    vaddps %ymm4, %ymm2, %ymm2
+; AVX2-NEXT:    vshufps {{.*#+}} ymm3 = ymm3[3,3,3,3,7,7,7,7]
+; AVX2-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vaddps %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_mul4x4_f32:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vextractf32x4 $2, %zmm1, %xmm2
-; AVX512-NEXT:    vextractf32x4 $3, %zmm1, %xmm3
-; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm1, %zmm1
 ; AVX512-NEXT:    vshufps {{.*#+}} zmm2 = zmm1[1,1,1,1,5,5,5,5,9,9,9,9,13,13,13,13]
 ; AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm3 = zmm0[2,3,2,3,2,3,2,3]
 ; AVX512-NEXT:    vmulps %zmm2, %zmm3, %zmm2
@@ -1321,35 +1347,28 @@ define <16 x double> @test_mul4x4_f64(<16 x double> %a0, <16 x double> %a1) noun
 ;
 ; AVX512-LABEL: test_mul4x4_f64:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vbroadcastsd %xmm2, %ymm4
-; AVX512-NEXT:    vmulpd %ymm4, %ymm0, %ymm4
-; AVX512-NEXT:    vextractf64x4 $1, %zmm2, %ymm5
-; AVX512-NEXT:    vbroadcastsd %xmm5, %ymm5
-; AVX512-NEXT:    vmulpd %ymm5, %ymm0, %ymm5
-; AVX512-NEXT:    vbroadcastsd %xmm3, %ymm6
-; AVX512-NEXT:    vmulpd %ymm6, %ymm0, %ymm6
-; AVX512-NEXT:    vextractf64x4 $1, %zmm3, %ymm7
-; AVX512-NEXT:    vbroadcastsd %xmm7, %ymm7
-; AVX512-NEXT:    vmulpd %ymm7, %ymm0, %ymm7
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm5, %zmm4, %zmm4
-; AVX512-NEXT:    vpermpd {{.*#+}} zmm5 = zmm2[1,1,1,1,5,5,5,5]
-; AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm8 = zmm0[4,5,6,7,4,5,6,7]
-; AVX512-NEXT:    vmulpd %zmm5, %zmm8, %zmm0
-; AVX512-NEXT:    vaddpd %zmm0, %zmm4, %zmm0
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm1, %zmm4
-; AVX512-NEXT:    vpermpd {{.*#+}} zmm5 = zmm2[2,2,2,2,6,6,6,6]
-; AVX512-NEXT:    vmulpd %zmm5, %zmm4, %zmm5
-; AVX512-NEXT:    vaddpd %zmm5, %zmm0, %zmm0
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm4 = zmm2[1,1,1,1,5,5,5,5]
+; AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm5 = zmm0[4,5,6,7,4,5,6,7]
+; AVX512-NEXT:    vmulpd %zmm4, %zmm5, %zmm4
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm6 = zmm2[0,0,0,0,4,4,4,4]
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm7
+; AVX512-NEXT:    vmulpd %zmm6, %zmm7, %zmm0
+; AVX512-NEXT:    vaddpd %zmm4, %zmm0, %zmm0
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm4 = zmm2[2,2,2,2,6,6,6,6]
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm1, %zmm6
+; AVX512-NEXT:    vmulpd %zmm4, %zmm6, %zmm4
+; AVX512-NEXT:    vaddpd %zmm4, %zmm0, %zmm0
 ; AVX512-NEXT:    vpermpd {{.*#+}} zmm2 = zmm2[3,3,3,3,7,7,7,7]
 ; AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm1 = zmm1[4,5,6,7,4,5,6,7]
 ; AVX512-NEXT:    vmulpd %zmm2, %zmm1, %zmm2
 ; AVX512-NEXT:    vaddpd %zmm2, %zmm0, %zmm0
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm7, %zmm6, %zmm2
-; AVX512-NEXT:    vpermpd {{.*#+}} zmm5 = zmm3[1,1,1,1,5,5,5,5]
-; AVX512-NEXT:    vmulpd %zmm5, %zmm8, %zmm5
-; AVX512-NEXT:    vaddpd %zmm5, %zmm2, %zmm2
-; AVX512-NEXT:    vpermpd {{.*#+}} zmm5 = zmm3[2,2,2,2,6,6,6,6]
-; AVX512-NEXT:    vmulpd %zmm5, %zmm4, %zmm4
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm2 = zmm3[1,1,1,1,5,5,5,5]
+; AVX512-NEXT:    vmulpd %zmm2, %zmm5, %zmm2
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm4 = zmm3[0,0,0,0,4,4,4,4]
+; AVX512-NEXT:    vmulpd %zmm4, %zmm7, %zmm4
+; AVX512-NEXT:    vaddpd %zmm2, %zmm4, %zmm2
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm4 = zmm3[2,2,2,2,6,6,6,6]
+; AVX512-NEXT:    vmulpd %zmm4, %zmm6, %zmm4
 ; AVX512-NEXT:    vaddpd %zmm4, %zmm2, %zmm2
 ; AVX512-NEXT:    vpermpd {{.*#+}} zmm3 = zmm3[3,3,3,3,7,7,7,7]
 ; AVX512-NEXT:    vmulpd %zmm3, %zmm1, %zmm1
@@ -2126,530 +2145,125 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; AVX1OR2-NEXT:    vzeroupper
 ; AVX1OR2-NEXT:    retq
 ;
-; AVX512F-LABEL: test_mul8x8_f32:
-; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, %ymm11
-; AVX512F-NEXT:    vextractf64x4 $1, %zmm1, %ymm10
-; AVX512F-NEXT:    vextractf64x4 $1, %zmm2, %ymm9
-; AVX512F-NEXT:    vextractf64x4 $1, %zmm3, %ymm8
-; AVX512F-NEXT:    vbroadcastss %xmm4, %ymm12
-; AVX512F-NEXT:    vmulps %ymm0, %ymm12, %ymm12
-; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm13 = xmm4[1,1,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm13, %ymm13
-; AVX512F-NEXT:    vmulps %ymm13, %ymm11, %ymm13
-; AVX512F-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512F-NEXT:    vshufpd {{.*#+}} xmm13 = xmm4[1,0]
-; AVX512F-NEXT:    vbroadcastss %xmm13, %ymm13
-; AVX512F-NEXT:    vmulps %ymm1, %ymm13, %ymm13
-; AVX512F-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm13 = xmm4[3,3,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm13, %ymm13
-; AVX512F-NEXT:    vmulps %ymm13, %ymm10, %ymm13
-; AVX512F-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512F-NEXT:    vextractf128 $1, %ymm4, %xmm13
-; AVX512F-NEXT:    vbroadcastss %xmm13, %ymm13
-; AVX512F-NEXT:    vmulps %ymm2, %ymm13, %ymm13
-; AVX512F-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512F-NEXT:    vmovshdup {{.*#+}} ymm13 = ymm4[1,1,3,3,5,5,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm13 = ymm13[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm13, %ymm9, %ymm13
-; AVX512F-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm13 = ymm4[2,2,2,2,6,6,6,6]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm13 = ymm13[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm3, %ymm13, %ymm13
-; AVX512F-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm13 = ymm4[3,3,3,3,7,7,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm13 = ymm13[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm13, %ymm8, %ymm13
-; AVX512F-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512F-NEXT:    vmovups %zmm12, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512F-NEXT:    vextractf64x4 $1, %zmm4, %ymm13
-; AVX512F-NEXT:    vextractf32x4 $2, %zmm4, %xmm14
-; AVX512F-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512F-NEXT:    vmulps %ymm0, %ymm14, %ymm14
-; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm15 = xmm13[1,1,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512F-NEXT:    vmulps %ymm15, %ymm11, %ymm15
-; AVX512F-NEXT:    vaddps %ymm15, %ymm14, %ymm14
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm15 = xmm13[2,2,2,2]
-; AVX512F-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512F-NEXT:    vmulps %ymm1, %ymm15, %ymm15
-; AVX512F-NEXT:    vaddps %ymm15, %ymm14, %ymm14
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm15 = xmm13[3,3,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512F-NEXT:    vmulps %ymm15, %ymm10, %ymm15
-; AVX512F-NEXT:    vaddps %ymm15, %ymm14, %ymm14
-; AVX512F-NEXT:    vextractf32x4 $3, %zmm4, %xmm4
-; AVX512F-NEXT:    vbroadcastss %xmm4, %ymm4
-; AVX512F-NEXT:    vmulps %ymm4, %ymm2, %ymm4
-; AVX512F-NEXT:    vaddps %ymm4, %ymm14, %ymm4
-; AVX512F-NEXT:    vmovshdup {{.*#+}} ymm14 = ymm13[1,1,3,3,5,5,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm14, %ymm9, %ymm14
-; AVX512F-NEXT:    vaddps %ymm4, %ymm14, %ymm4
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm14 = ymm13[2,2,2,2,6,6,6,6]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm3, %ymm14, %ymm14
-; AVX512F-NEXT:    vaddps %ymm4, %ymm14, %ymm4
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm13 = ymm13[3,3,3,3,7,7,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm13 = ymm13[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm13, %ymm8, %ymm13
-; AVX512F-NEXT:    vaddps %ymm4, %ymm13, %ymm4
-; AVX512F-NEXT:    vmovups %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512F-NEXT:    vbroadcastss %xmm5, %ymm13
-; AVX512F-NEXT:    vmulps %ymm0, %ymm13, %ymm13
-; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm14 = xmm5[1,1,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512F-NEXT:    vmulps %ymm14, %ymm11, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512F-NEXT:    vshufpd {{.*#+}} xmm14 = xmm5[1,0]
-; AVX512F-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512F-NEXT:    vmulps %ymm1, %ymm14, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm14 = xmm5[3,3,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512F-NEXT:    vmulps %ymm14, %ymm10, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512F-NEXT:    vextractf128 $1, %ymm5, %xmm14
-; AVX512F-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512F-NEXT:    vmulps %ymm2, %ymm14, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512F-NEXT:    vmovshdup {{.*#+}} ymm14 = ymm5[1,1,3,3,5,5,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm14, %ymm9, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm14 = ymm5[2,2,2,2,6,6,6,6]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm3, %ymm14, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm14 = ymm5[3,3,3,3,7,7,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm14, %ymm8, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512F-NEXT:    vextractf64x4 $1, %zmm5, %ymm14
-; AVX512F-NEXT:    vextractf32x4 $2, %zmm5, %xmm15
-; AVX512F-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512F-NEXT:    vmulps %ymm0, %ymm15, %ymm15
-; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm12 = xmm14[1,1,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm12, %ymm12
-; AVX512F-NEXT:    vmulps %ymm12, %ymm11, %ymm12
-; AVX512F-NEXT:    vaddps %ymm12, %ymm15, %ymm12
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm15 = xmm14[2,2,2,2]
-; AVX512F-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512F-NEXT:    vmulps %ymm1, %ymm15, %ymm15
-; AVX512F-NEXT:    vaddps %ymm15, %ymm12, %ymm12
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm15 = xmm14[3,3,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512F-NEXT:    vmulps %ymm15, %ymm10, %ymm15
-; AVX512F-NEXT:    vaddps %ymm15, %ymm12, %ymm12
-; AVX512F-NEXT:    vextractf32x4 $3, %zmm5, %xmm5
-; AVX512F-NEXT:    vbroadcastss %xmm5, %ymm5
-; AVX512F-NEXT:    vmulps %ymm5, %ymm2, %ymm5
-; AVX512F-NEXT:    vaddps %ymm5, %ymm12, %ymm5
-; AVX512F-NEXT:    vmovshdup {{.*#+}} ymm12 = ymm14[1,1,3,3,5,5,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm12 = ymm12[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm12, %ymm9, %ymm12
-; AVX512F-NEXT:    vaddps %ymm5, %ymm12, %ymm5
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm12 = ymm14[2,2,2,2,6,6,6,6]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm12 = ymm12[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm3, %ymm12, %ymm12
-; AVX512F-NEXT:    vaddps %ymm5, %ymm12, %ymm5
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm12 = ymm14[3,3,3,3,7,7,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm12 = ymm12[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm12, %ymm8, %ymm12
-; AVX512F-NEXT:    vaddps %ymm5, %ymm12, %ymm5
-; AVX512F-NEXT:    vbroadcastss %xmm6, %ymm12
-; AVX512F-NEXT:    vmulps %ymm0, %ymm12, %ymm12
-; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm14 = xmm6[1,1,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512F-NEXT:    vmulps %ymm14, %ymm11, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm12, %ymm12
-; AVX512F-NEXT:    vshufpd {{.*#+}} xmm14 = xmm6[1,0]
-; AVX512F-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512F-NEXT:    vmulps %ymm1, %ymm14, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm12, %ymm12
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm14 = xmm6[3,3,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512F-NEXT:    vmulps %ymm14, %ymm10, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm12, %ymm12
-; AVX512F-NEXT:    vextractf128 $1, %ymm6, %xmm14
-; AVX512F-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512F-NEXT:    vmulps %ymm2, %ymm14, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm12, %ymm12
-; AVX512F-NEXT:    vmovshdup {{.*#+}} ymm14 = ymm6[1,1,3,3,5,5,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm14, %ymm9, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm12, %ymm12
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm14 = ymm6[2,2,2,2,6,6,6,6]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm3, %ymm14, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm12, %ymm12
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm14 = ymm6[3,3,3,3,7,7,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm14, %ymm8, %ymm14
-; AVX512F-NEXT:    vaddps %ymm14, %ymm12, %ymm14
-; AVX512F-NEXT:    vextractf32x4 $2, %zmm6, %xmm12
-; AVX512F-NEXT:    vbroadcastss %xmm12, %ymm12
-; AVX512F-NEXT:    vmulps %ymm0, %ymm12, %ymm12
-; AVX512F-NEXT:    vextractf64x4 $1, %zmm6, %ymm15
-; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm15[1,1,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm4, %ymm4
-; AVX512F-NEXT:    vmulps %ymm4, %ymm11, %ymm4
-; AVX512F-NEXT:    vaddps %ymm4, %ymm12, %ymm4
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm12 = xmm15[2,2,2,2]
-; AVX512F-NEXT:    vbroadcastss %xmm12, %ymm12
-; AVX512F-NEXT:    vmulps %ymm1, %ymm12, %ymm12
-; AVX512F-NEXT:    vaddps %ymm4, %ymm12, %ymm4
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm12 = xmm15[3,3,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm12, %ymm12
-; AVX512F-NEXT:    vmulps %ymm12, %ymm10, %ymm12
-; AVX512F-NEXT:    vaddps %ymm4, %ymm12, %ymm4
-; AVX512F-NEXT:    vextractf32x4 $3, %zmm6, %xmm6
-; AVX512F-NEXT:    vbroadcastss %xmm6, %ymm6
-; AVX512F-NEXT:    vmulps %ymm6, %ymm2, %ymm6
-; AVX512F-NEXT:    vaddps %ymm6, %ymm4, %ymm4
-; AVX512F-NEXT:    vmovshdup {{.*#+}} ymm6 = ymm15[1,1,3,3,5,5,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm6 = ymm6[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm6, %ymm9, %ymm6
-; AVX512F-NEXT:    vaddps %ymm6, %ymm4, %ymm4
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm6 = ymm15[2,2,2,2,6,6,6,6]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm6 = ymm6[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm6, %ymm3, %ymm6
-; AVX512F-NEXT:    vaddps %ymm6, %ymm4, %ymm4
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm6 = ymm15[3,3,3,3,7,7,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm6 = ymm6[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm6, %ymm8, %ymm6
-; AVX512F-NEXT:    vaddps %ymm6, %ymm4, %ymm6
-; AVX512F-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
-; AVX512F-NEXT:    vinsertf64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm4, %zmm4 # 32-byte Folded Reload
-; AVX512F-NEXT:    vbroadcastss %xmm7, %ymm12
-; AVX512F-NEXT:    vmulps %ymm0, %ymm12, %ymm12
-; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm15 = xmm7[1,1,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512F-NEXT:    vmulps %ymm15, %ymm11, %ymm15
-; AVX512F-NEXT:    vaddps %ymm15, %ymm12, %ymm12
-; AVX512F-NEXT:    vshufpd {{.*#+}} xmm15 = xmm7[1,0]
-; AVX512F-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512F-NEXT:    vmulps %ymm1, %ymm15, %ymm15
-; AVX512F-NEXT:    vaddps %ymm15, %ymm12, %ymm12
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm15 = xmm7[3,3,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512F-NEXT:    vmulps %ymm15, %ymm10, %ymm15
-; AVX512F-NEXT:    vaddps %ymm15, %ymm12, %ymm12
-; AVX512F-NEXT:    vextractf128 $1, %ymm7, %xmm15
-; AVX512F-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512F-NEXT:    vmulps %ymm2, %ymm15, %ymm15
-; AVX512F-NEXT:    vaddps %ymm15, %ymm12, %ymm12
-; AVX512F-NEXT:    vmovshdup {{.*#+}} ymm15 = ymm7[1,1,3,3,5,5,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm15 = ymm15[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm15, %ymm9, %ymm15
-; AVX512F-NEXT:    vaddps %ymm15, %ymm12, %ymm12
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm15 = ymm7[2,2,2,2,6,6,6,6]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm15 = ymm15[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm3, %ymm15, %ymm15
-; AVX512F-NEXT:    vaddps %ymm15, %ymm12, %ymm12
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm15 = ymm7[3,3,3,3,7,7,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm15 = ymm15[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm15, %ymm8, %ymm15
-; AVX512F-NEXT:    vaddps %ymm15, %ymm12, %ymm12
-; AVX512F-NEXT:    vinsertf64x4 $1, %ymm5, %zmm13, %zmm5
-; AVX512F-NEXT:    vextractf64x4 $1, %zmm7, %ymm13
-; AVX512F-NEXT:    vextractf32x4 $2, %zmm7, %xmm15
-; AVX512F-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512F-NEXT:    vmulps %ymm0, %ymm15, %ymm0
-; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm15 = xmm13[1,1,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512F-NEXT:    vmulps %ymm15, %ymm11, %ymm11
-; AVX512F-NEXT:    vaddps %ymm0, %ymm11, %ymm0
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm11 = xmm13[2,2,2,2]
-; AVX512F-NEXT:    vbroadcastss %xmm11, %ymm11
-; AVX512F-NEXT:    vmulps %ymm1, %ymm11, %ymm1
-; AVX512F-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm1 = xmm13[3,3,3,3]
-; AVX512F-NEXT:    vbroadcastss %xmm1, %ymm1
-; AVX512F-NEXT:    vmulps %ymm1, %ymm10, %ymm1
-; AVX512F-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vextractf32x4 $3, %zmm7, %xmm1
-; AVX512F-NEXT:    vbroadcastss %xmm1, %ymm1
-; AVX512F-NEXT:    vmulps %ymm1, %ymm2, %ymm1
-; AVX512F-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vmovshdup {{.*#+}} ymm1 = ymm13[1,1,3,3,5,5,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm1, %ymm9, %ymm1
-; AVX512F-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm1 = ymm13[2,2,2,2,6,6,6,6]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm1, %ymm3, %ymm1
-; AVX512F-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vshufps {{.*#+}} ymm1 = ymm13[3,3,3,3,7,7,7,7]
-; AVX512F-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,2,2,2]
-; AVX512F-NEXT:    vmulps %ymm1, %ymm8, %ymm1
-; AVX512F-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vinsertf64x4 $1, %ymm6, %zmm14, %zmm2
-; AVX512F-NEXT:    vinsertf64x4 $1, %ymm0, %zmm12, %zmm3
-; AVX512F-NEXT:    vmovaps %zmm4, %zmm0
-; AVX512F-NEXT:    vmovaps %zmm5, %zmm1
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: test_mul8x8_f32:
-; AVX512VL:       # %bb.0: # %entry
-; AVX512VL-NEXT:    vextractf64x4 $1, %zmm0, %ymm11
-; AVX512VL-NEXT:    vextractf64x4 $1, %zmm1, %ymm10
-; AVX512VL-NEXT:    vextractf64x4 $1, %zmm2, %ymm9
-; AVX512VL-NEXT:    vextractf64x4 $1, %zmm3, %ymm8
-; AVX512VL-NEXT:    vbroadcastss %xmm4, %ymm12
-; AVX512VL-NEXT:    vmulps %ymm0, %ymm12, %ymm12
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm13 = xmm4[1,1,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm13, %ymm13
-; AVX512VL-NEXT:    vmulps %ymm13, %ymm11, %ymm13
-; AVX512VL-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm13 = xmm4[1,0]
-; AVX512VL-NEXT:    vbroadcastss %xmm13, %ymm13
-; AVX512VL-NEXT:    vmulps %ymm1, %ymm13, %ymm13
-; AVX512VL-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm13 = xmm4[3,3,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm13, %ymm13
-; AVX512VL-NEXT:    vmulps %ymm13, %ymm10, %ymm13
-; AVX512VL-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512VL-NEXT:    vextractf128 $1, %ymm4, %xmm13
-; AVX512VL-NEXT:    vbroadcastss %xmm13, %ymm13
-; AVX512VL-NEXT:    vmulps %ymm2, %ymm13, %ymm13
-; AVX512VL-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} ymm13 = ymm4[1,1,3,3,5,5,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm13 = ymm13[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm13, %ymm9, %ymm13
-; AVX512VL-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm13 = ymm4[2,2,2,2,6,6,6,6]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm13 = ymm13[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm3, %ymm13, %ymm13
-; AVX512VL-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm13 = ymm4[3,3,3,3,7,7,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm13 = ymm13[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm13, %ymm8, %ymm13
-; AVX512VL-NEXT:    vaddps %ymm13, %ymm12, %ymm12
-; AVX512VL-NEXT:    vextractf64x4 $1, %zmm4, %ymm13
-; AVX512VL-NEXT:    vextractf32x4 $2, %zmm4, %xmm14
-; AVX512VL-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512VL-NEXT:    vmulps %ymm0, %ymm14, %ymm14
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm15 = xmm13[1,1,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512VL-NEXT:    vmulps %ymm15, %ymm11, %ymm15
-; AVX512VL-NEXT:    vaddps %ymm15, %ymm14, %ymm14
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm15 = xmm13[2,2,2,2]
-; AVX512VL-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512VL-NEXT:    vmulps %ymm1, %ymm15, %ymm15
-; AVX512VL-NEXT:    vaddps %ymm15, %ymm14, %ymm14
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm15 = xmm13[3,3,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512VL-NEXT:    vmulps %ymm15, %ymm10, %ymm15
-; AVX512VL-NEXT:    vaddps %ymm15, %ymm14, %ymm14
-; AVX512VL-NEXT:    vextractf32x4 $3, %zmm4, %xmm4
-; AVX512VL-NEXT:    vbroadcastss %xmm4, %ymm4
-; AVX512VL-NEXT:    vmulps %ymm4, %ymm2, %ymm4
-; AVX512VL-NEXT:    vaddps %ymm4, %ymm14, %ymm4
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} ymm14 = ymm13[1,1,3,3,5,5,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm14, %ymm9, %ymm14
-; AVX512VL-NEXT:    vaddps %ymm4, %ymm14, %ymm4
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm14 = ymm13[2,2,2,2,6,6,6,6]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm3, %ymm14, %ymm14
-; AVX512VL-NEXT:    vaddps %ymm4, %ymm14, %ymm4
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm13 = ymm13[3,3,3,3,7,7,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm13 = ymm13[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm13, %ymm8, %ymm13
-; AVX512VL-NEXT:    vaddps %ymm4, %ymm13, %ymm4
-; AVX512VL-NEXT:    vbroadcastss %xmm5, %ymm13
-; AVX512VL-NEXT:    vmulps %ymm0, %ymm13, %ymm13
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm14 = xmm5[1,1,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512VL-NEXT:    vmulps %ymm14, %ymm11, %ymm14
-; AVX512VL-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm14 = xmm5[1,0]
-; AVX512VL-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512VL-NEXT:    vmulps %ymm1, %ymm14, %ymm14
-; AVX512VL-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm14 = xmm5[3,3,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512VL-NEXT:    vmulps %ymm14, %ymm10, %ymm14
-; AVX512VL-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512VL-NEXT:    vextractf128 $1, %ymm5, %xmm14
-; AVX512VL-NEXT:    vbroadcastss %xmm14, %ymm14
-; AVX512VL-NEXT:    vmulps %ymm2, %ymm14, %ymm14
-; AVX512VL-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} ymm14 = ymm5[1,1,3,3,5,5,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm14, %ymm9, %ymm14
-; AVX512VL-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm14 = ymm5[2,2,2,2,6,6,6,6]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm3, %ymm14, %ymm14
-; AVX512VL-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm14 = ymm5[3,3,3,3,7,7,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm14, %ymm8, %ymm14
-; AVX512VL-NEXT:    vaddps %ymm14, %ymm13, %ymm13
-; AVX512VL-NEXT:    vextractf64x4 $1, %zmm5, %ymm14
-; AVX512VL-NEXT:    vextractf32x4 $2, %zmm5, %xmm15
-; AVX512VL-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512VL-NEXT:    vmulps %ymm0, %ymm15, %ymm15
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm16 = xmm14[1,1,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm16, %ymm16
-; AVX512VL-NEXT:    vmulps %ymm16, %ymm11, %ymm16
-; AVX512VL-NEXT:    vaddps %ymm16, %ymm15, %ymm15
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm16 = xmm14[2,2,2,2]
-; AVX512VL-NEXT:    vbroadcastss %xmm16, %ymm16
-; AVX512VL-NEXT:    vmulps %ymm16, %ymm1, %ymm16
-; AVX512VL-NEXT:    vaddps %ymm16, %ymm15, %ymm15
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm16 = xmm14[3,3,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm16, %ymm16
-; AVX512VL-NEXT:    vmulps %ymm16, %ymm10, %ymm16
-; AVX512VL-NEXT:    vaddps %ymm16, %ymm15, %ymm15
-; AVX512VL-NEXT:    vextractf32x4 $3, %zmm5, %xmm5
-; AVX512VL-NEXT:    vbroadcastss %xmm5, %ymm5
-; AVX512VL-NEXT:    vmulps %ymm5, %ymm2, %ymm5
-; AVX512VL-NEXT:    vaddps %ymm5, %ymm15, %ymm5
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} ymm15 = ymm14[1,1,3,3,5,5,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm15 = ymm15[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm15, %ymm9, %ymm15
-; AVX512VL-NEXT:    vaddps %ymm5, %ymm15, %ymm5
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm15 = ymm14[2,2,2,2,6,6,6,6]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm15 = ymm15[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm3, %ymm15, %ymm15
-; AVX512VL-NEXT:    vaddps %ymm5, %ymm15, %ymm5
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm14 = ymm14[3,3,3,3,7,7,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm14 = ymm14[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm14, %ymm8, %ymm14
-; AVX512VL-NEXT:    vaddps %ymm5, %ymm14, %ymm5
-; AVX512VL-NEXT:    vbroadcastss %xmm6, %ymm14
-; AVX512VL-NEXT:    vmulps %ymm0, %ymm14, %ymm14
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm15 = xmm6[1,1,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512VL-NEXT:    vmulps %ymm15, %ymm11, %ymm15
-; AVX512VL-NEXT:    vaddps %ymm15, %ymm14, %ymm14
-; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm15 = xmm6[1,0]
-; AVX512VL-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512VL-NEXT:    vmulps %ymm1, %ymm15, %ymm15
-; AVX512VL-NEXT:    vaddps %ymm15, %ymm14, %ymm14
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm15 = xmm6[3,3,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512VL-NEXT:    vmulps %ymm15, %ymm10, %ymm15
-; AVX512VL-NEXT:    vaddps %ymm15, %ymm14, %ymm14
-; AVX512VL-NEXT:    vextractf128 $1, %ymm6, %xmm15
-; AVX512VL-NEXT:    vbroadcastss %xmm15, %ymm15
-; AVX512VL-NEXT:    vmulps %ymm2, %ymm15, %ymm15
-; AVX512VL-NEXT:    vaddps %ymm15, %ymm14, %ymm14
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} ymm15 = ymm6[1,1,3,3,5,5,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm15 = ymm15[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm15, %ymm9, %ymm15
-; AVX512VL-NEXT:    vaddps %ymm15, %ymm14, %ymm14
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm15 = ymm6[2,2,2,2,6,6,6,6]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm15 = ymm15[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm3, %ymm15, %ymm15
-; AVX512VL-NEXT:    vaddps %ymm15, %ymm14, %ymm14
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm15 = ymm6[3,3,3,3,7,7,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm15 = ymm15[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm15, %ymm8, %ymm15
-; AVX512VL-NEXT:    vaddps %ymm15, %ymm14, %ymm14
-; AVX512VL-NEXT:    vextractf64x4 $1, %zmm6, %ymm15
-; AVX512VL-NEXT:    vextractf32x4 $2, %zmm6, %xmm16
-; AVX512VL-NEXT:    vbroadcastss %xmm16, %ymm16
-; AVX512VL-NEXT:    vmulps %ymm16, %ymm0, %ymm16
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm17 = xmm15[1,1,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm17, %ymm17
-; AVX512VL-NEXT:    vmulps %ymm17, %ymm11, %ymm17
-; AVX512VL-NEXT:    vaddps %ymm17, %ymm16, %ymm16
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm17 = xmm15[2,2,2,2]
-; AVX512VL-NEXT:    vbroadcastss %xmm17, %ymm17
-; AVX512VL-NEXT:    vmulps %ymm17, %ymm1, %ymm17
-; AVX512VL-NEXT:    vaddps %ymm17, %ymm16, %ymm16
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm17 = xmm15[3,3,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm17, %ymm17
-; AVX512VL-NEXT:    vmulps %ymm17, %ymm10, %ymm17
-; AVX512VL-NEXT:    vaddps %ymm17, %ymm16, %ymm16
-; AVX512VL-NEXT:    vextractf32x4 $3, %zmm6, %xmm6
-; AVX512VL-NEXT:    vbroadcastss %xmm6, %ymm6
-; AVX512VL-NEXT:    vmulps %ymm6, %ymm2, %ymm6
-; AVX512VL-NEXT:    vaddps %ymm6, %ymm16, %ymm6
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} ymm16 = ymm15[1,1,3,3,5,5,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm16 = ymm16[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm16, %ymm9, %ymm16
-; AVX512VL-NEXT:    vaddps %ymm16, %ymm6, %ymm6
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm16 = ymm15[2,2,2,2,6,6,6,6]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm16 = ymm16[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm16, %ymm3, %ymm16
-; AVX512VL-NEXT:    vaddps %ymm16, %ymm6, %ymm6
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm15 = ymm15[3,3,3,3,7,7,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm15 = ymm15[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm15, %ymm8, %ymm15
-; AVX512VL-NEXT:    vaddps %ymm6, %ymm15, %ymm6
-; AVX512VL-NEXT:    vbroadcastss %xmm7, %ymm15
-; AVX512VL-NEXT:    vmulps %ymm0, %ymm15, %ymm15
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm16 = xmm7[1,1,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm16, %ymm16
-; AVX512VL-NEXT:    vmulps %ymm16, %ymm11, %ymm16
-; AVX512VL-NEXT:    vaddps %ymm16, %ymm15, %ymm15
-; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm16 = xmm7[1,0]
-; AVX512VL-NEXT:    vbroadcastss %xmm16, %ymm16
-; AVX512VL-NEXT:    vmulps %ymm16, %ymm1, %ymm16
-; AVX512VL-NEXT:    vaddps %ymm16, %ymm15, %ymm15
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm16 = xmm7[3,3,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm16, %ymm16
-; AVX512VL-NEXT:    vmulps %ymm16, %ymm10, %ymm16
-; AVX512VL-NEXT:    vaddps %ymm16, %ymm15, %ymm15
-; AVX512VL-NEXT:    vextractf32x4 $1, %ymm7, %xmm16
-; AVX512VL-NEXT:    vbroadcastss %xmm16, %ymm16
-; AVX512VL-NEXT:    vmulps %ymm16, %ymm2, %ymm16
-; AVX512VL-NEXT:    vaddps %ymm16, %ymm15, %ymm15
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} ymm16 = ymm7[1,1,3,3,5,5,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm16 = ymm16[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm16, %ymm9, %ymm16
-; AVX512VL-NEXT:    vaddps %ymm16, %ymm15, %ymm15
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm16 = ymm7[2,2,2,2,6,6,6,6]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm16 = ymm16[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm16, %ymm3, %ymm16
-; AVX512VL-NEXT:    vaddps %ymm16, %ymm15, %ymm15
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm16 = ymm7[3,3,3,3,7,7,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm16 = ymm16[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm16, %ymm8, %ymm16
-; AVX512VL-NEXT:    vaddps %ymm16, %ymm15, %ymm15
-; AVX512VL-NEXT:    vextractf64x4 $1, %zmm7, %ymm16
-; AVX512VL-NEXT:    vextractf32x4 $2, %zmm7, %xmm17
-; AVX512VL-NEXT:    vbroadcastss %xmm17, %ymm17
-; AVX512VL-NEXT:    vmulps %ymm17, %ymm0, %ymm0
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm17 = xmm16[1,1,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm17, %ymm17
-; AVX512VL-NEXT:    vmulps %ymm17, %ymm11, %ymm11
-; AVX512VL-NEXT:    vaddps %ymm0, %ymm11, %ymm0
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm11 = xmm16[2,2,2,2]
-; AVX512VL-NEXT:    vbroadcastss %xmm11, %ymm11
-; AVX512VL-NEXT:    vmulps %ymm1, %ymm11, %ymm1
-; AVX512VL-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vshufps {{.*#+}} xmm1 = xmm16[3,3,3,3]
-; AVX512VL-NEXT:    vbroadcastss %xmm1, %ymm1
-; AVX512VL-NEXT:    vmulps %ymm1, %ymm10, %ymm1
-; AVX512VL-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vextractf32x4 $3, %zmm7, %xmm1
-; AVX512VL-NEXT:    vbroadcastss %xmm1, %ymm1
-; AVX512VL-NEXT:    vmulps %ymm1, %ymm2, %ymm1
-; AVX512VL-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} ymm1 = ymm16[1,1,3,3,5,5,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm1, %ymm9, %ymm1
-; AVX512VL-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm1 = ymm16[2,2,2,2,6,6,6,6]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm1, %ymm3, %ymm1
-; AVX512VL-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vshufps {{.*#+}} ymm1 = ymm16[3,3,3,3,7,7,7,7]
-; AVX512VL-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,2,2,2]
-; AVX512VL-NEXT:    vmulps %ymm1, %ymm8, %ymm1
-; AVX512VL-NEXT:    vaddps %ymm1, %ymm0, %ymm3
-; AVX512VL-NEXT:    vinsertf64x4 $1, %ymm4, %zmm12, %zmm0
-; AVX512VL-NEXT:    vinsertf64x4 $1, %ymm5, %zmm13, %zmm1
-; AVX512VL-NEXT:    vinsertf64x4 $1, %ymm6, %zmm14, %zmm2
-; AVX512VL-NEXT:    vinsertf64x4 $1, %ymm3, %zmm15, %zmm3
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: test_mul8x8_f32:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vshufps {{.*#+}} zmm12 = zmm4[1,1,1,1,5,5,5,5,9,9,9,9,13,13,13,13]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm9 = zmm12[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm8 = zmm0[4,5,6,7,4,5,6,7]
+; AVX512-NEXT:    vmulps %zmm9, %zmm8, %zmm10
+; AVX512-NEXT:    vshufps {{.*#+}} zmm11 = zmm4[0,0,0,0,4,4,4,4,8,8,8,8,12,12,12,12]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm13 = zmm11[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm9
+; AVX512-NEXT:    vmulps %zmm13, %zmm9, %zmm0
+; AVX512-NEXT:    vaddps %zmm10, %zmm0, %zmm0
+; AVX512-NEXT:    vshufps {{.*#+}} zmm13 = zmm4[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm14 = zmm13[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm1, %zmm10
+; AVX512-NEXT:    vmulps %zmm14, %zmm10, %zmm14
+; AVX512-NEXT:    vaddps %zmm14, %zmm0, %zmm0
+; AVX512-NEXT:    vshufps {{.*#+}} zmm14 = zmm4[3,3,3,3,7,7,7,7,11,11,11,11,15,15,15,15]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm15 = zmm14[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm4 = zmm1[4,5,6,7,4,5,6,7]
+; AVX512-NEXT:    vmulps %zmm15, %zmm4, %zmm1
+; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm1 = zmm11[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm2, %zmm11
+; AVX512-NEXT:    vmulps %zmm1, %zmm11, %zmm1
+; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm1 = zmm12[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm12 = zmm2[4,5,6,7,4,5,6,7]
+; AVX512-NEXT:    vmulps %zmm1, %zmm12, %zmm1
+; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm1 = zmm13[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm3, %zmm3, %zmm13
+; AVX512-NEXT:    vmulps %zmm1, %zmm13, %zmm1
+; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm1 = zmm14[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm3 = zmm3[4,5,6,7,4,5,6,7]
+; AVX512-NEXT:    vmulps %zmm1, %zmm3, %zmm1
+; AVX512-NEXT:    vaddps %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vshufps {{.*#+}} zmm1 = zmm5[1,1,1,1,5,5,5,5,9,9,9,9,13,13,13,13]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm2 = zmm1[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vmulps %zmm2, %zmm8, %zmm2
+; AVX512-NEXT:    vshufps {{.*#+}} zmm14 = zmm5[0,0,0,0,4,4,4,4,8,8,8,8,12,12,12,12]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm15 = zmm14[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vmulps %zmm15, %zmm9, %zmm15
+; AVX512-NEXT:    vaddps %zmm2, %zmm15, %zmm2
+; AVX512-NEXT:    vshufps {{.*#+}} zmm15 = zmm5[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm16 = zmm15[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vmulps %zmm16, %zmm10, %zmm16
+; AVX512-NEXT:    vaddps %zmm16, %zmm2, %zmm2
+; AVX512-NEXT:    vshufps {{.*#+}} zmm5 = zmm5[3,3,3,3,7,7,7,7,11,11,11,11,15,15,15,15]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm16 = zmm5[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vmulps %zmm16, %zmm4, %zmm16
+; AVX512-NEXT:    vaddps %zmm16, %zmm2, %zmm2
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm14 = zmm14[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vmulps %zmm14, %zmm11, %zmm14
+; AVX512-NEXT:    vaddps %zmm14, %zmm2, %zmm2
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm1 = zmm1[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vmulps %zmm1, %zmm12, %zmm1
+; AVX512-NEXT:    vaddps %zmm1, %zmm2, %zmm1
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm2 = zmm15[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vmulps %zmm2, %zmm13, %zmm2
+; AVX512-NEXT:    vaddps %zmm2, %zmm1, %zmm1
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm2 = zmm5[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vmulps %zmm2, %zmm3, %zmm2
+; AVX512-NEXT:    vaddps %zmm2, %zmm1, %zmm1
+; AVX512-NEXT:    vshufps {{.*#+}} zmm2 = zmm6[1,1,1,1,5,5,5,5,9,9,9,9,13,13,13,13]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm5 = zmm2[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vmulps %zmm5, %zmm8, %zmm5
+; AVX512-NEXT:    vshufps {{.*#+}} zmm14 = zmm6[0,0,0,0,4,4,4,4,8,8,8,8,12,12,12,12]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm15 = zmm14[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vmulps %zmm15, %zmm9, %zmm15
+; AVX512-NEXT:    vaddps %zmm5, %zmm15, %zmm5
+; AVX512-NEXT:    vshufps {{.*#+}} zmm15 = zmm6[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm16 = zmm15[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vmulps %zmm16, %zmm10, %zmm16
+; AVX512-NEXT:    vaddps %zmm16, %zmm5, %zmm5
+; AVX512-NEXT:    vshufps {{.*#+}} zmm6 = zmm6[3,3,3,3,7,7,7,7,11,11,11,11,15,15,15,15]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm16 = zmm6[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vmulps %zmm16, %zmm4, %zmm16
+; AVX512-NEXT:    vaddps %zmm16, %zmm5, %zmm5
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm14 = zmm14[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vmulps %zmm14, %zmm11, %zmm14
+; AVX512-NEXT:    vaddps %zmm14, %zmm5, %zmm5
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm2 = zmm2[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vmulps %zmm2, %zmm12, %zmm2
+; AVX512-NEXT:    vaddps %zmm2, %zmm5, %zmm2
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm5 = zmm15[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vmulps %zmm5, %zmm13, %zmm5
+; AVX512-NEXT:    vaddps %zmm5, %zmm2, %zmm2
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm5 = zmm6[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vmulps %zmm5, %zmm3, %zmm5
+; AVX512-NEXT:    vaddps %zmm5, %zmm2, %zmm2
+; AVX512-NEXT:    vshufps {{.*#+}} zmm5 = zmm7[1,1,1,1,5,5,5,5,9,9,9,9,13,13,13,13]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm6 = zmm5[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vmulps %zmm6, %zmm8, %zmm6
+; AVX512-NEXT:    vshufps {{.*#+}} zmm8 = zmm7[0,0,0,0,4,4,4,4,8,8,8,8,12,12,12,12]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm14 = zmm8[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vmulps %zmm14, %zmm9, %zmm9
+; AVX512-NEXT:    vaddps %zmm6, %zmm9, %zmm6
+; AVX512-NEXT:    vshufps {{.*#+}} zmm9 = zmm7[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm14 = zmm9[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vmulps %zmm14, %zmm10, %zmm10
+; AVX512-NEXT:    vaddps %zmm10, %zmm6, %zmm6
+; AVX512-NEXT:    vshufps {{.*#+}} zmm7 = zmm7[3,3,3,3,7,7,7,7,11,11,11,11,15,15,15,15]
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm10 = zmm7[0,1,0,1,4,5,4,5]
+; AVX512-NEXT:    vmulps %zmm10, %zmm4, %zmm4
+; AVX512-NEXT:    vaddps %zmm4, %zmm6, %zmm4
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm6 = zmm8[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vmulps %zmm6, %zmm11, %zmm6
+; AVX512-NEXT:    vaddps %zmm6, %zmm4, %zmm4
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm5 = zmm5[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vmulps %zmm5, %zmm12, %zmm5
+; AVX512-NEXT:    vaddps %zmm5, %zmm4, %zmm4
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm5 = zmm9[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vmulps %zmm5, %zmm13, %zmm5
+; AVX512-NEXT:    vaddps %zmm5, %zmm4, %zmm4
+; AVX512-NEXT:    vpermpd {{.*#+}} zmm5 = zmm7[2,3,2,3,6,7,6,7]
+; AVX512-NEXT:    vmulps %zmm5, %zmm3, %zmm3
+; AVX512-NEXT:    vaddps %zmm3, %zmm4, %zmm3
+; AVX512-NEXT:    retq
 entry:
   %split = shufflevector <64 x float> %a0, <64 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %split1 = shufflevector <64 x float> %a0, <64 x float> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

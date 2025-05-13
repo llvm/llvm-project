@@ -40,7 +40,6 @@ define void @test_writelane_p0(ptr addrspace(1) %out, ptr %src, i32 %src1) {
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s1, v4
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v6, s0, s1
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v5, s2, s1
 ; GFX1100-SDAG-NEXT:    global_store_b64 v[0:1], v[5:6], off
@@ -119,7 +118,6 @@ define void @test_writelane_v3p0(ptr addrspace(1) %out, <3 x ptr> %src, i32 %src
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v7
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s2, v6
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v14, s0, s1
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v12, s3, s1
@@ -169,7 +167,6 @@ define void @test_writelane_p3(ptr addrspace(1) %out, ptr addrspace(3) %src, i32
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v4, s0, s1
 ; GFX1100-SDAG-NEXT:    global_store_b32 v[0:1], v4, off
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -221,10 +218,8 @@ define void @test_writelane_v3p3(ptr addrspace(1) %out, <3 x ptr addrspace(3)> %
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s2, v3
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s3, v2
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v8, s0, s1
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v7, s2, s1
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v6, s3, s1
 ; GFX1100-SDAG-NEXT:    global_store_b96 v[0:1], v[6:8], off
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -266,7 +261,6 @@ define void @test_writelane_p5(ptr addrspace(1) %out, ptr addrspace(5) %src, i32
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v4, s0, s1
 ; GFX1100-SDAG-NEXT:    global_store_b32 v[0:1], v4, off
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -318,10 +312,8 @@ define void @test_writelane_v3p5(ptr addrspace(1) %out, <3 x ptr addrspace(5)> %
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s2, v3
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s3, v2
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v8, s0, s1
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v7, s2, s1
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v6, s3, s1
 ; GFX1100-SDAG-NEXT:    global_store_b96 v[0:1], v[6:8], off
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -363,7 +355,6 @@ define void @test_writelane_p6(ptr addrspace(1) %out, ptr addrspace(6) %src, i32
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v4, s0, s1
 ; GFX1100-SDAG-NEXT:    global_store_b32 v[0:1], v4, off
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -415,10 +406,8 @@ define void @test_writelane_v3p6(ptr addrspace(1) %out, <3 x ptr addrspace(6)> %
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s2, v3
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s3, v2
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v8, s0, s1
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v7, s2, s1
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v6, s3, s1
 ; GFX1100-SDAG-NEXT:    global_store_b96 v[0:1], v[6:8], off
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]

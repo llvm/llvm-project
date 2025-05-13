@@ -125,8 +125,12 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     // Perform signature modification
     rewriter.modifyOpInPlace(
         gpuFuncOp, [gpuFuncOp, &argIndices, &argTypes, &argAttrs, &argLocs]() {
-          static_cast<FunctionOpInterface>(gpuFuncOp).insertArguments(
-              argIndices, argTypes, argAttrs, argLocs);
+          LogicalResult inserted =
+              static_cast<FunctionOpInterface>(gpuFuncOp).insertArguments(
+                  argIndices, argTypes, argAttrs, argLocs);
+          (void)inserted;
+          assert(succeeded(inserted) &&
+                 "expected GPU funcs to support inserting any argument");
         });
   } else {
     workgroupBuffers.reserve(gpuFuncOp.getNumWorkgroupAttributions());
@@ -274,7 +278,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         // and canonicalize that away later.
         Value attribution = gpuFuncOp.getWorkgroupAttributions()[idx];
         auto type = cast<MemRefType>(attribution.getType());
-        auto descr = MemRefDescriptor::fromStaticShape(
+        Value descr = MemRefDescriptor::fromStaticShape(
             rewriter, loc, *getTypeConverter(), type, memory);
         signatureConversion.remapInput(numProperArguments + idx, descr);
       }
@@ -303,7 +307,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         alignment = alignAttr.getInt();
       Value allocated = rewriter.create<LLVM::AllocaOp>(
           gpuFuncOp.getLoc(), ptrType, elementType, numElements, alignment);
-      auto descr = MemRefDescriptor::fromStaticShape(
+      Value descr = MemRefDescriptor::fromStaticShape(
           rewriter, loc, *getTypeConverter(), type, allocated);
       signatureConversion.remapInput(
           numProperArguments + numWorkgroupAttributions + idx, descr);

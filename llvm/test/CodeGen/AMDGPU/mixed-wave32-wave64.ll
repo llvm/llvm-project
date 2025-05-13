@@ -12,8 +12,8 @@ define amdgpu_hs void @_amdgpu_hs_main() #0 {
 
 define amdgpu_ps void @_amdgpu_ps_main(i32 %arg) local_unnamed_addr #1 {
 .entry:
-  %tmp = tail call float @llvm.amdgcn.interp.p2(float undef, float undef, i32 1, i32 0, i32 %arg) #2
-  %tmp1 = tail call float @llvm.amdgcn.image.sample.2d.f32.f32(i32 1, float undef, float %tmp, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0)
+  %tmp = tail call float @llvm.amdgcn.interp.p2(float poison, float poison, i32 1, i32 0, i32 %arg) #2
+  %tmp1 = tail call float @llvm.amdgcn.image.sample.2d.f32.f32(i32 1, float poison, float %tmp, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
   %tmp2 = fcmp olt float %tmp1, 5.000000e-01
   br i1 %tmp2, label %bb, label %l
 

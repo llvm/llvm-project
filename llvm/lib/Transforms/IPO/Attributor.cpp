@@ -199,7 +199,7 @@ ChangeStatus &llvm::operator&=(ChangeStatus &L, ChangeStatus R) {
 
 bool AA::isGPU(const Module &M) {
   Triple T(M.getTargetTriple());
-  return T.isAMDGPU() || T.isNVPTX();
+  return T.isGPU();
 }
 
 bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
@@ -583,9 +583,9 @@ static bool getPotentialCopiesOfMemoryValue(
       UsedAssumedInformation = true;
     A.recordDependence(*PI, QueryingAA, DepClassTy::OPTIONAL);
   }
-  PotentialCopies.insert(NewCopies.begin(), NewCopies.end());
+  PotentialCopies.insert_range(NewCopies);
   if (PotentialValueOrigins)
-    PotentialValueOrigins->insert(NewCopyOrigins.begin(), NewCopyOrigins.end());
+    PotentialValueOrigins->insert_range(NewCopyOrigins);
 
   return true;
 }
@@ -1769,6 +1769,9 @@ bool Attributor::checkForAllUses(
     if (!CB(*this, &QueryingAA))
       return false;
 
+  if (isa<ConstantData>(V))
+    return false;
+
   // Check the trivial case first as it catches void values.
   if (V.use_empty())
     return true;
@@ -1933,9 +1936,6 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
       LLVM_DEBUG(dbgs() << "[Attributor] Function " << Fn.getName()
                         << " has non call site use " << *U.get() << " in "
                         << *U.getUser() << "\n");
-      // BlockAddress users are allowed.
-      if (isa<BlockAddress>(U.getUser()))
-        continue;
       return false;
     }
 
@@ -2123,7 +2123,7 @@ void Attributor::runTillFixpoint() {
 
   SmallVector<AbstractAttribute *, 32> ChangedAAs;
   SetVector<AbstractAttribute *> Worklist, InvalidAAs;
-  Worklist.insert(DG.SyntheticRoot.begin(), DG.SyntheticRoot.end());
+  Worklist.insert_range(DG.SyntheticRoot);
 
   do {
     // Remember the size to determine new attributes.
@@ -2200,9 +2200,8 @@ void Attributor::runTillFixpoint() {
     // Reset the work list and repopulate with the changed abstract attributes.
     // Note that dependent ones are added above.
     Worklist.clear();
-    Worklist.insert(ChangedAAs.begin(), ChangedAAs.end());
-    Worklist.insert(QueryAAsAwaitingUpdate.begin(),
-                    QueryAAsAwaitingUpdate.end());
+    Worklist.insert_range(ChangedAAs);
+    Worklist.insert_range(QueryAAsAwaitingUpdate);
     QueryAAsAwaitingUpdate.clear();
 
   } while (!Worklist.empty() && (IterationCounter++ < MaxIterations));
@@ -3059,14 +3058,6 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     // function empty.
     NewFn->splice(NewFn->begin(), OldFn);
 
-    // Fixup block addresses to reference new function.
-    SmallVector<BlockAddress *, 8u> BlockAddresses;
-    for (User *U : OldFn->users())
-      if (auto *BA = dyn_cast<BlockAddress>(U))
-        BlockAddresses.push_back(BA);
-    for (auto *BA : BlockAddresses)
-      BA->replaceAllUsesWith(BlockAddress::get(NewFn, BA->getBasicBlock()));
-
     // Set of all "call-like" instructions that invoke the old function mapped
     // to their new replacements.
     SmallVector<std::pair<CallBase *, CallBase *>, 8> CallSitePairs;
@@ -3294,14 +3285,14 @@ InformationCache::FunctionInfo::~FunctionInfo() {
     It.getSecond()->~InstructionVectorTy();
 }
 
-const ArrayRef<Function *>
+ArrayRef<Function *>
 InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
   assert(A.isClosedWorldModule() && "Cannot see all indirect callees!");
   return IndirectlyCallableFunctions;
 }
 
 std::optional<unsigned> InformationCache::getFlatAddressSpace() const {
-  if (TargetTriple.isAMDGPU() || TargetTriple.isNVPTX())
+  if (TargetTriple.isGPU())
     return 0;
   return std::nullopt;
 }
@@ -3862,7 +3853,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
     unsigned FunSize = Functions.size();
     for (unsigned u = 0; u < FunSize; u++) {
       Function *F = Functions[u];
-      if (!F->isDeclaration() && !F->isDefinitionExact() && F->getNumUses() &&
+      if (!F->isDeclaration() && !F->isDefinitionExact() && !F->use_empty() &&
           !GlobalValue::isInterposableLinkage(F->getLinkage())) {
         Function *NewF = Attributor::internalizeFunction(*F);
         assert(NewF && "Could not internalize function.");

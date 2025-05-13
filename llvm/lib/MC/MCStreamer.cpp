@@ -238,7 +238,7 @@ void MCStreamer::emitCFIMTETaggedFrame() {
 void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                        unsigned Column, unsigned Flags,
                                        unsigned Isa, unsigned Discriminator,
-                                       StringRef FileName) {
+                                       StringRef FileName, StringRef Comment) {
   getContext().setCurrentDwarfLoc(FileNo, Line, Column, Flags, Isa,
                                   Discriminator);
 }
@@ -743,6 +743,7 @@ void MCStreamer::emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) {
       std::make_unique<WinEH::FrameInfo>(Symbol, StartProc));
   CurrentWinFrameInfo = WinFrameInfos.back().get();
   CurrentWinFrameInfo->TextSection = getCurrentSectionOnly();
+  CurrentWinFrameInfo->FunctionLoc = Loc;
 }
 
 void MCStreamer::emitWinCFIEndProc(SMLoc Loc) {
@@ -1000,8 +1001,12 @@ void MCStreamer::emitWinCFIBeginEpilogue(SMLoc Loc) {
              "(.seh_endprologue) in " +
                  CurFrame->Function->getName());
 
-  InEpilogCFI = true;
-  CurrentEpilog = emitCFILabel();
+  MCSymbol *Label = emitCFILabel();
+  CurrentWinEpilog =
+      &CurFrame->EpilogMap.insert_or_assign(Label, WinEH::FrameInfo::Epilog())
+           .first->second;
+  CurrentWinEpilog->Start = Label;
+  CurrentWinEpilog->Loc = Loc;
 }
 
 void MCStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
@@ -1009,14 +1014,50 @@ void MCStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
   if (!CurFrame)
     return;
 
-  if (!InEpilogCFI)
+  if (!CurrentWinEpilog)
     return getContext().reportError(Loc, "Stray .seh_endepilogue in " +
                                              CurFrame->Function->getName());
 
-  InEpilogCFI = false;
+  if ((CurFrame->Version >= 2) && !CurrentWinEpilog->UnwindV2Start)
+    return getContext().reportError(Loc, "Missing .seh_unwindv2start in " +
+                                             CurFrame->Function->getName());
+
+  CurrentWinEpilog->End = emitCFILabel();
+  CurrentWinEpilog = nullptr;
+}
+
+void MCStreamer::emitWinCFIUnwindV2Start(SMLoc Loc) {
+  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
+  if (!CurFrame)
+    return;
+
+  if (!CurrentWinEpilog)
+    return getContext().reportError(Loc, "Stray .seh_unwindv2start in " +
+                                             CurFrame->Function->getName());
+
+  if (CurrentWinEpilog->UnwindV2Start)
+    return getContext().reportError(Loc, "Duplicate .seh_unwindv2start in " +
+                                             CurFrame->Function->getName());
+
   MCSymbol *Label = emitCFILabel();
-  CurFrame->EpilogMap[CurrentEpilog].End = Label;
-  CurrentEpilog = nullptr;
+  CurrentWinEpilog->UnwindV2Start = Label;
+}
+
+void MCStreamer::emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) {
+  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
+  if (!CurFrame)
+    return;
+
+  if (CurFrame->Version != WinEH::FrameInfo::DefaultVersion)
+    return getContext().reportError(Loc, "Duplicate .seh_unwindversion in " +
+                                             CurFrame->Function->getName());
+
+  if (Version != 2)
+    return getContext().reportError(
+        Loc, "Unsupported version specified in .seh_unwindversion in " +
+                 CurFrame->Function->getName());
+
+  CurFrame->Version = Version;
 }
 
 void MCStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {}
@@ -1262,6 +1303,8 @@ void MCStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
                                         StringRef Name, bool KeepOriginalSym) {}
 void MCStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {}
+void MCStreamer::emitZerofill(MCSection *, MCSymbol *, uint64_t, Align, SMLoc) {
+}
 void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                 uint64_t Size, Align ByteAlignment) {}
 void MCStreamer::changeSection(MCSection *Section, uint32_t) {

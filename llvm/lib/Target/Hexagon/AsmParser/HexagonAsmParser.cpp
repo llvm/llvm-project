@@ -1247,11 +1247,11 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
               Expr, MCConstantExpr::create(0xffff, Context), Context);
       } else {
         MCValue Value;
-        if (Expr->evaluateAsRelocatable(Value, nullptr, nullptr)) {
+        if (Expr->evaluateAsRelocatable(Value, nullptr)) {
           if (!Value.isAbsolute()) {
-            switch (Value.getAccessVariant()) {
-            case MCSymbolRefExpr::VariantKind::VK_TPREL:
-            case MCSymbolRefExpr::VariantKind::VK_DTPREL:
+            switch (HexagonMCExpr::VariantKind(Value.getSpecifier())) {
+            case HexagonMCExpr::VK_TPREL:
+            case HexagonMCExpr::VK_DTPREL:
               // Don't lazy extend these expression variants
               MustNotExtend = !MustExtend;
               break;
@@ -1348,7 +1348,6 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   MCContext &Context = getParser().getContext();
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
   const std::string r = "r";
-  const std::string v = "v";
   const std::string Colon = ":";
   using RegPairVals = std::pair<unsigned, unsigned>;
   auto GetRegPair = [this, r](RegPairVals RegPair) {

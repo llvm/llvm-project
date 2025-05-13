@@ -72,17 +72,17 @@ float2 test_builtin_mad_int_vect_to_float_vec_promotion(int2 p0, float p1) {
 
 float builtin_bool_to_float_type_promotion(float p0, bool p1) {
   return __builtin_hlsl_mad(p0, p0, p1);
-  // expected-error@-1 {{3rd argument must be a floating point type (was 'bool')}}
+  // expected-error@-1 {{3rd argument must be a scalar or vector of floating-point types (was 'bool')}}
 }
 
 float builtin_bool_to_float_type_promotion2(bool p0, float p1) {
   return __builtin_hlsl_mad(p1, p0, p1);
-  // expected-error@-1 {{2nd argument must be a floating point type (was 'bool')}}
+  // expected-error@-1 {{2nd argument must be a scalar or vector of floating-point types (was 'bool')}}
 }
 
 float builtin_mad_int_to_float_promotion(float p0, int p1) {
   return __builtin_hlsl_mad(p0, p0, p1);
-  // expected-error@-1 {{3rd argument must be a floating point type (was 'int')}}
+  // expected-error@-1 {{3rd argument must be a scalar or vector of floating-point types (was 'int')}}
 }
 
 int builtin_mad_mixed_enums() {

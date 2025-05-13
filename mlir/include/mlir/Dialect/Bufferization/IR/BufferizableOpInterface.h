@@ -315,16 +315,6 @@ struct BufferizationOptions {
   // outside of the parallel region will be given a new buffer.
   bool checkParallelRegions = true;
 
-  /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
-  /// If this flag is set to `false`, those invariants are no longer enforced
-  /// with buffer copies.
-  ///
-  /// Note: Deactivating this flag can lead to incorrect bufferization results
-  /// when used incorrectly. This flag is useful with
-  /// `AlwaysCopyAnalysisState` which bufferizes all writing tensor
-  /// OpOperands out-of-place.
-  bool enforceAliasingInvariants = true;
-
   /// This function controls buffer types on function signatures. Sets
   /// `functionArgTypeConverterFn` and `inferFunctionResultLayout` accordingly.
   ///

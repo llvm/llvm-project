@@ -14,6 +14,7 @@
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -156,6 +157,45 @@ static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
 enum class RootElementFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
+
+#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = 1ull << Num,
+enum class RootDescriptorFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define ROOT_PARAMETER(Val, Enum) Enum = Val,
+enum class RootParameterType : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
+
+#define ROOT_PARAMETER(Val, Enum)                                              \
+  case Val:                                                                    \
+    return true;
+inline bool isValidParameterType(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define SHADER_VISIBILITY(Val, Enum) Enum = Val,
+enum class ShaderVisibility : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
+
+#define SHADER_VISIBILITY(Val, Enum)                                           \
+  case Val:                                                                    \
+    return true;
+inline bool isValidShaderVisibility(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
 
 PartType parsePartType(StringRef S);
 
@@ -320,7 +360,7 @@ ArrayRef<EnumEntry<ResourceKind>> getResourceKinds();
 
 #define RESOURCE_FLAG(Index, Enum) bool Enum = false;
 struct ResourceFlags {
-  ResourceFlags() {};
+  ResourceFlags() : Flags(0U) {};
   struct FlagsBits {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   };
@@ -545,16 +585,76 @@ struct ProgramSignatureElement {
 
 static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
+namespace RTS0 {
+namespace v1 {
+struct RootDescriptor {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  void swapBytes() {
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+  }
+};
+} // namespace v1
 
-struct RootSignatureValidations {
+namespace v2 {
+struct RootDescriptor : public v1::RootDescriptor {
+  uint32_t Flags;
 
-  static bool isValidRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
+  RootDescriptor() = default;
+  RootDescriptor(v1::RootDescriptor &Base)
+      : v1::RootDescriptor(Base), Flags(0u) {}
 
-  static bool isValidVersion(uint32_t Version) {
-    return (Version == 1 || Version == 2);
+  void swapBytes() {
+    v1::RootDescriptor::swapBytes();
+    sys::swapByteOrder(Flags);
+  }
+};
+} // namespace v2
+} // namespace RTS0
+// following dx12 naming
+// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_constants
+struct RootConstants {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Num32BitValues;
+
+  void swapBytes() {
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(Num32BitValues);
   }
 };
 
+struct RootParameterHeader {
+  uint32_t ParameterType;
+  uint32_t ShaderVisibility;
+  uint32_t ParameterOffset;
+
+  void swapBytes() {
+    sys::swapByteOrder(ParameterType);
+    sys::swapByteOrder(ShaderVisibility);
+    sys::swapByteOrder(ParameterOffset);
+  }
+};
+
+struct RootSignatureHeader {
+  uint32_t Version;
+  uint32_t NumParameters;
+  uint32_t ParametersOffset;
+  uint32_t NumStaticSamplers;
+  uint32_t StaticSamplerOffset;
+  uint32_t Flags;
+
+  void swapBytes() {
+    sys::swapByteOrder(Version);
+    sys::swapByteOrder(NumParameters);
+    sys::swapByteOrder(ParametersOffset);
+    sys::swapByteOrder(NumStaticSamplers);
+    sys::swapByteOrder(StaticSamplerOffset);
+    sys::swapByteOrder(Flags);
+  }
+};
 } // namespace dxbc
 } // namespace llvm
 

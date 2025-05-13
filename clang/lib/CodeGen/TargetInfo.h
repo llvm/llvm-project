@@ -316,8 +316,7 @@ public:
   virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
 
   Address performAddrSpaceCast(CodeGen::CodeGenFunction &CGF, Address Addr,
-                               LangAS SrcAddr, LangAS DestAddr,
-                               llvm::Type *DestTy,
+                               LangAS SrcAddr, llvm::Type *DestTy,
                                bool IsNonNull = false) const;
 
   /// Perform address space cast of an expression of pointer type.
@@ -328,7 +327,7 @@ public:
   /// \param IsNonNull is the flag indicating \p V is known to be non null.
   virtual llvm::Value *performAddrSpaceCast(CodeGen::CodeGenFunction &CGF,
                                             llvm::Value *V, LangAS SrcAddr,
-                                            LangAS DestAddr, llvm::Type *DestTy,
+                                            llvm::Type *DestTy,
                                             bool IsNonNull = false) const;
 
   /// Perform address space cast of a constant expression of pointer type.
@@ -338,7 +337,7 @@ public:
   /// \param DestTy is the destination LLVM pointer type.
   virtual llvm::Constant *performAddrSpaceCast(CodeGenModule &CGM,
                                                llvm::Constant *V,
-                                               LangAS SrcAddr, LangAS DestAddr,
+                                               LangAS SrcAddr,
                                                llvm::Type *DestTy) const;
 
   /// Get address space of pointer parameter for __cxa_atexit.
@@ -400,7 +399,7 @@ public:
   virtual bool shouldEmitDWARFBitFieldSeparators() const { return false; }
 
   virtual void setCUDAKernelCallingConvention(const FunctionType *&FT) const {}
-
+  virtual void setOCLKernelStubCallingConvention(const FunctionType *&FT) const;
   /// Return the device-side type for the CUDA device builtin surface type.
   virtual llvm::Type *getCUDADeviceBuiltinSurfaceDeviceType() const {
     // By default, no change from the original one.
@@ -441,7 +440,7 @@ public:
   /// Return an LLVM type that corresponds to a HLSL type
   virtual llvm::Type *
   getHLSLType(CodeGenModule &CGM, const Type *T,
-              const SmallVector<unsigned> *Packoffsets = nullptr) const {
+              const SmallVector<int32_t> *Packoffsets = nullptr) const {
     return nullptr;
   }
 

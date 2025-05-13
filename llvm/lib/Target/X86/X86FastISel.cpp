@@ -124,6 +124,7 @@ private:
   bool X86SelectSIToFP(const Instruction *I);
   bool X86SelectUIToFP(const Instruction *I);
   bool X86SelectIntToFP(const Instruction *I, bool IsSigned);
+  bool X86SelectBitCast(const Instruction *I);
 
   const X86InstrInfo *getInstrInfo() const {
     return Subtarget->getInstrInfo();
@@ -2546,6 +2547,36 @@ bool X86FastISel::X86SelectTrunc(const Instruction *I) {
   return true;
 }
 
+bool X86FastISel::X86SelectBitCast(const Instruction *I) {
+  // Select SSE2/AVX bitcasts between 128/256/512 bit vector types.
+  MVT SrcVT, DstVT;
+  if (!Subtarget->hasSSE2() ||
+      !isTypeLegal(I->getOperand(0)->getType(), SrcVT) ||
+      !isTypeLegal(I->getType(), DstVT))
+    return false;
+
+  // Only allow vectors that use xmm/ymm/zmm.
+  if (!SrcVT.isVector() || !DstVT.isVector() ||
+      SrcVT.getVectorElementType() == MVT::i1 ||
+      DstVT.getVectorElementType() == MVT::i1)
+    return false;
+
+  Register Reg = getRegForValue(I->getOperand(0));
+  if (!Reg)
+    return false;
+
+  // Emit a reg-reg copy so we don't propagate cached known bits information
+  // with the wrong VT if we fall out of fast isel after selecting this.
+  const TargetRegisterClass *DstClass = TLI.getRegClassFor(DstVT);
+  Register ResultReg = createResultReg(DstClass);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+          ResultReg)
+      .addReg(Reg);
+
+  updateValueMap(I, ResultReg);
+  return true;
+}
+
 bool X86FastISel::IsMemcpySmall(uint64_t Len) {
   return Len <= (Subtarget->is64Bit() ? 32 : 16);
 }
@@ -2684,7 +2715,7 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     MFI.setFrameAddressIsTaken(true);
 
     const X86RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
-    unsigned FrameReg = RegInfo->getPtrSizedFrameRegister(*MF);
+    Register FrameReg = RegInfo->getPtrSizedFrameRegister(*MF);
     assert(((FrameReg == X86::RBP && VT == MVT::i64) ||
             (FrameReg == X86::EBP && VT == MVT::i32)) &&
            "Invalid Frame Register!");
@@ -3478,7 +3509,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // ELF / PIC requires GOT in the EBX register before function calls via PLT
   // GOT pointer.
   if (Subtarget->isPICStyleGOT()) {
-    unsigned Base = getInstrInfo()->getGlobalBaseReg(FuncInfo.MF);
+    Register Base = getInstrInfo()->getGlobalBaseReg(FuncInfo.MF);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(TargetOpcode::COPY), X86::EBX).addReg(Base);
   }
@@ -3510,11 +3541,11 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (!X86SelectCallAddress(Callee, CalleeAM))
     return false;
 
-  unsigned CalleeOp = 0;
+  Register CalleeOp;
   const GlobalValue *GV = nullptr;
   if (CalleeAM.GV != nullptr) {
     GV = CalleeAM.GV;
-  } else if (CalleeAM.Base.Reg != 0) {
+  } else if (CalleeAM.Base.Reg) {
     CalleeOp = CalleeAM.Base.Reg;
   } else
     return false;
@@ -3693,36 +3724,8 @@ X86FastISel::fastSelectInstruction(const Instruction *I)  {
     updateValueMap(I, Reg);
     return true;
   }
-  case Instruction::BitCast: {
-    // Select SSE2/AVX bitcasts between 128/256/512 bit vector types.
-    if (!Subtarget->hasSSE2())
-      return false;
-
-    MVT SrcVT, DstVT;
-    if (!isTypeLegal(I->getOperand(0)->getType(), SrcVT) ||
-        !isTypeLegal(I->getType(), DstVT))
-      return false;
-
-    // Only allow vectors that use xmm/ymm/zmm.
-    if (!SrcVT.isVector() || !DstVT.isVector() ||
-        SrcVT.getVectorElementType() == MVT::i1 ||
-        DstVT.getVectorElementType() == MVT::i1)
-      return false;
-
-    Register Reg = getRegForValue(I->getOperand(0));
-    if (!Reg)
-      return false;
-
-    // Emit a reg-reg copy so we don't propagate cached known bits information
-    // with the wrong VT if we fall out of fast isel after selecting this.
-    const TargetRegisterClass *DstClass = TLI.getRegClassFor(DstVT);
-    Register ResultReg = createResultReg(DstClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(TargetOpcode::COPY), ResultReg).addReg(Reg);
-
-    updateValueMap(I, ResultReg);
-    return true;
-  }
+  case Instruction::BitCast:
+    return X86SelectBitCast(I);
   }
 
   return false;
@@ -3816,7 +3819,7 @@ Register X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
   Align Alignment = DL.getPrefTypeAlign(CFP->getType());
 
   // x86-32 PIC requires a PIC base register for constant pools.
-  unsigned PICBase = 0;
+  Register PICBase;
   unsigned char OpFlag = Subtarget->classifyLocalReference(nullptr);
   if (OpFlag == X86II::MO_PIC_BASE_OFFSET)
     PICBase = getInstrInfo()->getGlobalBaseReg(FuncInfo.MF);

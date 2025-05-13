@@ -22,7 +22,7 @@ entry:
   br i1 %c, label %if.true, label %endif
 
 if.true:
-  %val = load volatile i32, ptr addrspace(1) undef
+  %val = load volatile i32, ptr addrspace(1) poison
   br label %endif
 
 endif:
@@ -53,7 +53,7 @@ endif:
   ret i32 %v
 
 if.true:
-  %val = load volatile i32, ptr addrspace(1) undef
+  %val = load volatile i32, ptr addrspace(1) poison
   br label %endif
 }
 
@@ -78,7 +78,7 @@ entry:
   br i1 %c, label %if.true, label %endif
 
 if.true:
-  %val = load volatile i32, ptr addrspace(1) undef
+  %val = load volatile i32, ptr addrspace(1) poison
   br label %endif
 
 endif:
@@ -110,7 +110,7 @@ entry:
   br i1 %c, label %if.true, label %endif
 
 if.true:
-  %val = load volatile i32, ptr addrspace(1) undef
+  %val = load volatile i32, ptr addrspace(1) poison
   br label %endif
 
 endif:
@@ -183,7 +183,7 @@ bb8:
   br i1 %tmp10, label %bb11, label %bb12
 
 bb11:
-  store float 4.0, ptr addrspace(5) undef, align 4
+  store float 4.0, ptr addrspace(5) poison, align 4
   br label %bb12
 
 bb12:
@@ -231,13 +231,13 @@ bb:
   br label %bb1
 
 bb1:
-  %lsr.iv = phi i32 [ undef, %bb ], [ %lsr.iv.next, %bb4 ]
+  %lsr.iv = phi i32 [ poison, %bb ], [ %lsr.iv.next, %bb4 ]
   %lsr.iv.next = add i32 %lsr.iv, 1
   %cmp0 = icmp slt i32 %lsr.iv.next, 0
   br i1 %cmp0, label %bb4, label %bb9
 
 bb4:
-  %load = load volatile i32, ptr addrspace(1) undef, align 4
+  %load = load volatile i32, ptr addrspace(1) poison, align 4
   %cmp1 = icmp slt i32 %tmp, %load
   br i1 %cmp1, label %bb1, label %bb9
 

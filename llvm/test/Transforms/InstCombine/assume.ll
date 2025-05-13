@@ -2,8 +2,6 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck --check-prefixes=CHECK,DEFAULT %s
 ; RUN: opt < %s -passes=instcombine --enable-knowledge-retention -S | FileCheck --check-prefixes=CHECK,BUNDLES %s
 
-; RUN: opt < %s -passes=instcombine -S --try-experimental-debuginfo-iterators | FileCheck --check-prefixes=CHECK,DEFAULT %s
-; RUN: opt < %s -passes=instcombine --enable-knowledge-retention -S --try-experimental-debuginfo-iterators | FileCheck --check-prefixes=CHECK,BUNDLES %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -1009,6 +1007,31 @@ define i1 @not_cond_use(i8 %x) {
   tail call void @llvm.assume(i1 %not)
   %rval = icmp eq i8 %x, 0
   ret i1 %rval
+}
+
+define i1 @assume_trunc_nuw_eq_one(i8 %x) {
+; CHECK-LABEL: @assume_trunc_nuw_eq_one(
+; CHECK-NEXT:    [[A:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
+; CHECK-NEXT:    ret i1 true
+;
+  %a = trunc nuw i8 %x to i1
+  call void @llvm.assume(i1 %a)
+  %q = icmp eq i8 %x, 1
+  ret i1 %q
+}
+
+define i1 @neg_assume_trunc_eq_one(i8 %x) {
+; CHECK-LABEL: @neg_assume_trunc_eq_one(
+; CHECK-NEXT:    [[A:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
+; CHECK-NEXT:    [[Q:%.*]] = icmp eq i8 [[X]], 1
+; CHECK-NEXT:    ret i1 [[Q]]
+;
+  %a = trunc i8 %x to i1
+  call void @llvm.assume(i1 %a)
+  %q = icmp eq i8 %x, 1
+  ret i1 %q
 }
 
 declare void @use(i1)

@@ -1,8 +1,6 @@
 ; RUN: llc -O0 -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOOPT %s
 ; RUN: llc -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,OPT %s
 
-; RUN: llc -O0 -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s --try-experimental-debuginfo-iterators | FileCheck -check-prefixes=GCN,NOOPT %s
-; RUN: llc -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s --try-experimental-debuginfo-iterators | FileCheck -check-prefixes=GCN,OPT %s
 
 ; GCN-LABEL: {{^}}test_debug_value:
 ; NOOPT: .loc	1 1 42 prologue_end     ; /tmp/test_debug_value.cl:1:42
@@ -29,7 +27,7 @@ entry:
 ; OPT: s_endpgm
 define amdgpu_kernel void @only_undef_dbg_value() #1 {
 bb:
-  call void @llvm.dbg.value(metadata <4 x float> undef, metadata !10, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !14
+  call void @llvm.dbg.value(metadata <4 x float> poison, metadata !10, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !14
   ret void, !dbg !14
 }
 
