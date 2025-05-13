@@ -1476,7 +1476,7 @@ static bool checkForRightSrcRootAccess(MachineInstr *Def0MI,
       Def1DstUnused->getImm() != AMDGPU::SDWA::DstUnused::UNUSED_PAD)
     return false;
 
-  const auto checkSrcSel = [&](MachineInstr *DefMI, AMDGPU::OpName SrcName,
+  const auto CheckSrcSel = [&](MachineInstr *DefMI, AMDGPU::OpName SrcName,
                                AMDGPU::OpName SrcSelName,
                                AMDGPU::SDWA::SdwaSel SdwaSel) -> bool {
     MachineOperand *DefSrc = TII->getNamedOperand(*DefMI, SrcName);
@@ -1495,27 +1495,16 @@ static bool checkForRightSrcRootAccess(MachineInstr *Def0MI,
     return false;
   };
 
-  const auto checkForDef0MIAccess = [&]() -> bool {
-    if (checkSrcSel(Def0MI, AMDGPU::OpName::src0, AMDGPU::OpName::src0_sel,
-                    AMDGPU::SDWA::SdwaSel::WORD_0))
-      return true;
-    if (checkSrcSel(Def0MI, AMDGPU::OpName::src1, AMDGPU::OpName::src1_sel,
-                    AMDGPU::SDWA::SdwaSel::WORD_0))
-      return true;
+  if (!CheckSrcSel(Def1MI, AMDGPU::OpName::src0, AMDGPU::OpName::src0_sel,
+                   AMDGPU::SDWA::SdwaSel::WORD_1) &&
+      !CheckSrcSel(Def1MI, AMDGPU::OpName::src1, AMDGPU::OpName::src1_sel,
+                   AMDGPU::SDWA::SdwaSel::WORD_1))
     return false;
-  };
 
-  if (checkSrcSel(Def1MI, AMDGPU::OpName::src0, AMDGPU::OpName::src0_sel,
-                  AMDGPU::SDWA::SdwaSel::WORD_1))
-    if (checkForDef0MIAccess())
-      return true;
-
-  if (checkSrcSel(Def1MI, AMDGPU::OpName::src1, AMDGPU::OpName::src1_sel,
-                  AMDGPU::SDWA::SdwaSel::WORD_1))
-    if (checkForDef0MIAccess())
-      return true;
-
-  return false;
+  return CheckSrcSel(Def0MI, AMDGPU::OpName::src0, AMDGPU::OpName::src0_sel,
+                     AMDGPU::SDWA::SdwaSel::WORD_0) ||
+         CheckSrcSel(Def0MI, AMDGPU::OpName::src1, AMDGPU::OpName::src1_sel,
+                     AMDGPU::SDWA::SdwaSel::WORD_0);
 }
 
 /// Given A and B are in the same MBB, returns true if A comes before B.
@@ -1579,7 +1568,7 @@ void SIPeepholeSDWA::convertMIToSDWAWithOpsel(MachineInstr *MI,
   MI->addOperand(NewSrcImplitMO);
   MI->tieOperands(PreserveDstIdx, MI->getNumOperands() - 1);
 
-  auto modifySrcSelIntoOpSel = [&](AMDGPU::OpName SrcName,
+  auto ModifySrcSelIntoOpSel = [&](AMDGPU::OpName SrcName,
                                    AMDGPU::OpName SrcSelName) -> bool {
     MachineOperand *Src = TII->getNamedOperand(*MI, SrcName);
     assert(Src && AMDGPU::hasNamedOperand(SDWAOpcode, SrcName));
@@ -1595,10 +1584,10 @@ void SIPeepholeSDWA::convertMIToSDWAWithOpsel(MachineInstr *MI,
     return false;
   };
 
-  if (modifySrcSelIntoOpSel(AMDGPU::OpName::src0, AMDGPU::OpName::src0_sel))
+  if (ModifySrcSelIntoOpSel(AMDGPU::OpName::src0, AMDGPU::OpName::src0_sel))
     return;
 
-  if (modifySrcSelIntoOpSel(AMDGPU::OpName::src1, AMDGPU::OpName::src1_sel))
+  if (ModifySrcSelIntoOpSel(AMDGPU::OpName::src1, AMDGPU::OpName::src1_sel))
     return;
 }
 
