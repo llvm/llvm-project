@@ -358,12 +358,12 @@ void DataReader::readProfile(BinaryFunction &BF) {
     return;
 
   if (!hasLBR()) {
-    BF.ProfileFlags = BinaryFunction::PF_IP;
+    BF.ProfileFlags = BinaryFunction::PF_BASIC;
     readBasicSampleData(BF);
     return;
   }
 
-  BF.ProfileFlags = BinaryFunction::PF_LBR;
+  BF.ProfileFlags = BinaryFunction::PF_BRANCH;
 
   // Possibly assign/re-assign branch profile data.
   matchProfileData(BF);
