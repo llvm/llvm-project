@@ -505,9 +505,7 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
 #endif
 
     const SIInstrInfo *TII = static_cast<const SIInstrInfo *>(DAG->TII);
-    MachineInstr *MI = SU->getInstr();
-    bool IsXDL = MI ? TII->isXDL(*SU->getInstr()) : false;
-    bool IsALU = MI ? TII->isVALU(*SU->getInstr()) || TII->isSALU(*SU->getInstr()) : false;
+    bool IsXDL = TII->isXDL(*SU->getInstr());
     unsigned Cycles = SU->Latency;
     if (IsXDL) {
       // FIXME: Hack since XDL is only actually occupying for 24 cycles with 8
@@ -516,10 +514,8 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
         Cycles -= 2;
       XDLProcRes.reset();
       XDLProcRes.reserve(Cycles);
-    } else if (IsALU) {
-      XDLProcRes.release(Cycles);
     } else {
-      XDLProcRes.release(1);
+      XDLProcRes.release(Cycles);
     }
 
     LLVM_DEBUG(dbgs() << "OldXDLProcRes: " << XDLCyclesBefore
@@ -780,11 +776,7 @@ bool GCNSchedStrategy::tryXDL(SchedCandidate &Cand, SchedCandidate &TryCand,
                               SchedBoundary *Zone) const {
   assert(Zone->isTop());
   MachineInstr *CInst = Cand.SU->getInstr();
-  if (!CInst)
-    return false;
   MachineInstr *TCInst = TryCand.SU->getInstr();
-  if (!TCInst)
-    return false;
   const SIInstrInfo *TII = DAG->MF.getSubtarget<GCNSubtarget>().getInstrInfo();
 
   bool CandIsXDL = TII->isXDL(*CInst);
@@ -821,10 +813,7 @@ bool GCNSchedStrategy::tryXDL(SchedCandidate &Cand, SchedCandidate &TryCand,
         if (!CandSeenSuccs.insert(SuccSU).second)
           continue;
 
-        MachineInstr *SuccMI = SuccSU->getInstr();
-        if (!SuccMI)
-          continue;
-        if (TII->isVALU(*SuccMI) && SuccSU->NumPredsLeft == 1) {
+        if (TII->isVALU(*SuccSU->getInstr()) && SuccSU->NumPredsLeft == 1) {
           ++CandReadyVALUSuccs;
         }
       }
@@ -835,10 +824,7 @@ bool GCNSchedStrategy::tryXDL(SchedCandidate &Cand, SchedCandidate &TryCand,
         if (!TrySeenSuccs.insert(SuccSU).second)
           continue;
 
-        MachineInstr *SuccMI = SuccSU->getInstr();
-        if (!SuccMI)
-          continue;
-        if (TII->isVALU(*SuccMI) && SuccSU->NumPredsLeft == 1) {
+        if (TII->isVALU(*SuccSU->getInstr()) && SuccSU->NumPredsLeft == 1) {
           ++TryReadyVALUSuccs;
         }
       }
@@ -874,10 +860,7 @@ bool GCNSchedStrategy::tryXDL(SchedCandidate &Cand, SchedCandidate &TryCand,
         SUnit *SuccSU = Succ.getSUnit();
         if (!CandSeenSuccs.insert(SuccSU).second)
           continue;
-        MachineInstr *SuccMI = SuccSU->getInstr();
-        if (!SuccMI)
-          continue;
-        if (TII->isVALU(*SuccMI))
+        if (TII->isVALU(*SuccSU->getInstr()))
           ++CandVALUSuccs;
       }
 
@@ -885,10 +868,7 @@ bool GCNSchedStrategy::tryXDL(SchedCandidate &Cand, SchedCandidate &TryCand,
         SUnit *SuccSU = Succ.getSUnit();
         if (!TrySeenSuccs.insert(SuccSU).second)
           continue;
-        MachineInstr *SuccMI = SuccSU->getInstr();
-        if (!SuccMI)
-          continue;
-        if (TII->isVALU(*SuccMI))
+        if (TII->isVALU(*SuccSU->getInstr()))
           ++TryVALUSuccs;
       }
 
@@ -930,10 +910,7 @@ bool GCNSchedStrategy::tryXDL(SchedCandidate &Cand, SchedCandidate &TryCand,
       if (!CandSeenSuccs.insert(SuccSU).second)
         continue;
 
-      MachineInstr *SuccMI = SuccSU->getInstr();
-      if (!SuccMI)
-        continue;
-      if (TII->isVALU(*SuccMI) && SuccSU->NumPredsLeft == 1) {
+      if (TII->isVALU(*SuccSU->getInstr()) && SuccSU->NumPredsLeft == 1) {
         ++CandReadyVALUSuccs;
       }
     }
@@ -944,10 +921,7 @@ bool GCNSchedStrategy::tryXDL(SchedCandidate &Cand, SchedCandidate &TryCand,
       if (!TrySeenSuccs.insert(SuccSU).second)
         continue;
 
-      MachineInstr *SuccMI = SuccSU->getInstr();
-      if (!SuccMI)
-        continue;
-      if (TII->isVALU(*SuccMI) && SuccSU->NumPredsLeft == 1) {
+      if (TII->isVALU(*SuccSU->getInstr()) && SuccSU->NumPredsLeft == 1) {
         ++TryReadyVALUSuccs;
       }
     }
@@ -986,10 +960,7 @@ bool GCNSchedStrategy::tryXDL(SchedCandidate &Cand, SchedCandidate &TryCand,
       if (!CandSeenSuccs.insert(SuccSU).second)
         continue;
 
-      MachineInstr *SuccMI = SuccSU->getInstr();
-      if (!SuccMI)
-        continue;
-      if (TII->isVALU(*SuccMI) && SuccSU->NumPredsLeft == 1) {
+      if (TII->isVALU(*SuccSU->getInstr()) && SuccSU->NumPredsLeft == 1) {
         ++CandReadyVALUSuccs;
       }
     }
@@ -1000,10 +971,7 @@ bool GCNSchedStrategy::tryXDL(SchedCandidate &Cand, SchedCandidate &TryCand,
       if (!TrySeenSuccs.insert(SuccSU).second)
         continue;
 
-      MachineInstr *SuccMI = SuccSU->getInstr();
-      if (!SuccMI)
-        continue;
-      if (TII->isVALU(*SuccMI) && SuccSU->NumPredsLeft == 1) {
+      if (TII->isVALU(*SuccSU->getInstr()) && SuccSU->NumPredsLeft == 1) {
         ++TryReadyVALUSuccs;
       }
     }
@@ -2828,9 +2796,7 @@ SUnit *GCNPostSchedStrategy::pickNode(bool &IsTopNode) {
 #endif
 
     const SIInstrInfo *TII = static_cast<const SIInstrInfo *>(DAG->TII);
-    MachineInstr *MI = SU->getInstr();
-    bool IsXDL = MI ? TII->isXDL(*SU->getInstr()) : false;
-    bool IsALU = MI ? TII->isVALU(*SU->getInstr()) || TII->isSALU(*SU->getInstr()) : false;
+    bool IsXDL = TII->isXDL(*SU->getInstr());
     unsigned Cycles = SU->Latency;
     if (IsXDL) {
       // FIXME: Hack since XDL is only actually occupying for 24 cycles with 8
@@ -2839,10 +2805,8 @@ SUnit *GCNPostSchedStrategy::pickNode(bool &IsTopNode) {
         Cycles -= 2;
       XDLProcRes.reset();
       XDLProcRes.reserve(Cycles);
-    } else if (IsALU) {
-      XDLProcRes.release(Cycles);
     } else {
-      XDLProcRes.release(1);
+      XDLProcRes.release(Cycles);
     }
 
     LLVM_DEBUG(dbgs() << "OldXDLProcRes: " << XDLCyclesBefore
@@ -2858,11 +2822,7 @@ SUnit *GCNPostSchedStrategy::pickNode(bool &IsTopNode) {
 bool GCNPostSchedStrategy::tryXDL(SchedCandidate &Cand,
                                   SchedCandidate &TryCand) {
   MachineInstr *CInst = Cand.SU->getInstr();
-  if (!CInst)
-    return false;
   MachineInstr *TCInst = TryCand.SU->getInstr();
-  if (!TCInst)
-    return false;
   const SIInstrInfo *TII = DAG->MF.getSubtarget<GCNSubtarget>().getInstrInfo();
 
   bool CandIsXDL = TII->isXDL(*CInst);
@@ -2899,10 +2859,7 @@ bool GCNPostSchedStrategy::tryXDL(SchedCandidate &Cand,
         if (!CandSeenSuccs.insert(SuccSU).second)
           continue;
 
-        MachineInstr *SuccMI = SuccSU->getInstr();
-        if (!SuccMI)
-          continue;
-        if (TII->isVALU(*SuccMI) && SuccSU->NumPredsLeft == 1) {
+        if (TII->isVALU(*SuccSU->getInstr()) && SuccSU->NumPredsLeft == 1) {
           ++CandReadyVALUSuccs;
         }
       }
@@ -2913,10 +2870,7 @@ bool GCNPostSchedStrategy::tryXDL(SchedCandidate &Cand,
         if (!TrySeenSuccs.insert(SuccSU).second)
           continue;
 
-        MachineInstr *SuccMI = SuccSU->getInstr();
-        if (!SuccMI)
-          continue;
-        if (TII->isVALU(*SuccMI) && SuccSU->NumPredsLeft == 1) {
+        if (TII->isVALU(*SuccSU->getInstr()) && SuccSU->NumPredsLeft == 1) {
           ++TryReadyVALUSuccs;
         }
       }
@@ -2952,10 +2906,7 @@ bool GCNPostSchedStrategy::tryXDL(SchedCandidate &Cand,
         SUnit *SuccSU = Succ.getSUnit();
         if (!CandSeenSuccs.insert(SuccSU).second)
           continue;
-        MachineInstr *SuccMI = SuccSU->getInstr();
-        if (!SuccMI)
-          continue;
-        if (TII->isVALU(*SuccMI))
+        if (TII->isVALU(*SuccSU->getInstr()))
           ++CandVALUSuccs;
       }
 
@@ -2963,10 +2914,7 @@ bool GCNPostSchedStrategy::tryXDL(SchedCandidate &Cand,
         SUnit *SuccSU = Succ.getSUnit();
         if (!TrySeenSuccs.insert(SuccSU).second)
           continue;
-        MachineInstr *SuccMI = SuccSU->getInstr();
-        if (!SuccMI)
-          continue;
-        if (TII->isVALU(*SuccMI))
+        if (TII->isVALU(*SuccSU->getInstr()))
           ++TryVALUSuccs;
       }
 
@@ -3008,10 +2956,7 @@ bool GCNPostSchedStrategy::tryXDL(SchedCandidate &Cand,
       if (!CandSeenSuccs.insert(SuccSU).second)
         continue;
 
-      MachineInstr *SuccMI = SuccSU->getInstr();
-      if (!SuccMI)
-        continue;
-      if (TII->isVALU(*SuccMI) && SuccSU->NumPredsLeft == 1) {
+      if (TII->isVALU(*SuccSU->getInstr()) && SuccSU->NumPredsLeft == 1) {
         ++CandReadyVALUSuccs;
       }
     }
@@ -3022,10 +2967,7 @@ bool GCNPostSchedStrategy::tryXDL(SchedCandidate &Cand,
       if (!TrySeenSuccs.insert(SuccSU).second)
         continue;
 
-      MachineInstr *SuccMI = SuccSU->getInstr();
-      if (!SuccMI)
-        continue;
-      if (TII->isVALU(*SuccMI) && SuccSU->NumPredsLeft == 1) {
+      if (TII->isVALU(*SuccSU->getInstr()) && SuccSU->NumPredsLeft == 1) {
         ++TryReadyVALUSuccs;
       }
     }
@@ -3064,10 +3006,7 @@ bool GCNPostSchedStrategy::tryXDL(SchedCandidate &Cand,
       if (!CandSeenSuccs.insert(SuccSU).second)
         continue;
 
-      MachineInstr *SuccMI = SuccSU->getInstr();
-      if (!SuccMI)
-        continue;
-      if (TII->isVALU(*SuccMI) && SuccSU->NumPredsLeft == 1) {
+      if (TII->isVALU(*SuccSU->getInstr()) && SuccSU->NumPredsLeft == 1) {
         ++CandReadyVALUSuccs;
       }
     }
@@ -3078,10 +3017,7 @@ bool GCNPostSchedStrategy::tryXDL(SchedCandidate &Cand,
       if (!TrySeenSuccs.insert(SuccSU).second)
         continue;
 
-      MachineInstr *SuccMI = SuccSU->getInstr();
-      if (!SuccMI)
-        continue;
-      if (TII->isVALU(*SuccMI) && SuccSU->NumPredsLeft == 1) {
+      if (TII->isVALU(*SuccSU->getInstr()) && SuccSU->NumPredsLeft == 1) {
         ++TryReadyVALUSuccs;
       }
     }
@@ -3194,7 +3130,7 @@ bool GCNPostSchedStrategy::tryCandidate(SchedCandidate &Cand,
 }
 
 GCNPostScheduleDAGMILive::GCNPostScheduleDAGMILive(
-    MachineSchedContext *C, std::unique_ptr<MachineSchedStrategy> S,
+    MachineSchedContext *C, std::unique_ptr<GCNPostSchedStrategy> S,
     bool RemoveKillFlags)
     : ScheduleDAGMI(C, std::move(S), RemoveKillFlags) {}
 

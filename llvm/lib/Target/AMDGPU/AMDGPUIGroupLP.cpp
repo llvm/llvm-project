@@ -2667,6 +2667,12 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
 bool IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
   IGLPStrategyID StrategyID =
       (IGLPStrategyID)SU.getInstr()->getOperand(0).getImm();
+  if (StrategyID == 10) {
+    for (auto &SU : DAG->SUnits)
+      SU.hasReservedResource = false;
+
+    return false;
+  }
   auto S = createIGLPStrategy(StrategyID, DAG, TII);
   if (!S->shouldApplyStrategy(DAG, Phase))
     return false;

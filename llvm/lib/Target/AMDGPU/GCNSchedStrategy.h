@@ -945,7 +945,7 @@ public:
   void finalizeSchedule() override;
 
   GCNPostScheduleDAGMILive(MachineSchedContext *C,
-                           std::unique_ptr<MachineSchedStrategy> S,
+                           std::unique_ptr<GCNPostSchedStrategy> S,
                            bool RemoveKillFlags);
 };
 

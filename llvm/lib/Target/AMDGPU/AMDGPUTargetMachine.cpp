@@ -1118,7 +1118,7 @@ GCNTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 ScheduleDAGInstrs *
 GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
   ScheduleDAGMI *DAG =
-      new GCNPostScheduleDAGMILive(C, std::make_unique<PostGenericScheduler>(C),
+      new GCNPostScheduleDAGMILive(C, std::make_unique<GCNPostSchedStrategy>(C),
                                    /*RemoveKillFlags=*/true);
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
