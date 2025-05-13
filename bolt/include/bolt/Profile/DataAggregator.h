@@ -257,7 +257,8 @@ private:
 
   /// Semantic actions - parser hooks to interpret parsed perf samples
   /// Register a sample (non-LBR mode), i.e. a new hit at \p Address
-  bool doSample(BinaryFunction &Func, const uint64_t Address, uint64_t Count);
+  bool doBasicSample(BinaryFunction &Func, const uint64_t Address,
+                     uint64_t Count);
 
   /// Register an intraprocedural branch \p Branch.
   bool doIntraBranch(BinaryFunction &Func, uint64_t From, uint64_t To,
