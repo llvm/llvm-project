@@ -267,7 +267,7 @@ struct Shape {
   explicit Shape(Function &F) {
     SmallVector<CoroFrameInst *, 8> CoroFrames;
     SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
-    CoroPromiseInst * CoroPromise = nullptr;
+    CoroPromiseInst *CoroPromise = nullptr;
 
     analyze(F, CoroFrames, UnusedCoroSaves, CoroPromise);
     if (!CoroBegin) {
