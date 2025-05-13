@@ -1355,7 +1355,8 @@ define <2 x double> @minnum_snan_op1_vec(<2 x double> %x) {
 
 define <2 x double> @maxnum_snan_qnan_op0_vec(<2 x double> %x) {
 ; CHECK-LABEL: @maxnum_snan_qnan_op0_vec(
-; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.maxnum.v2f64(<2 x double> <double 0x7FF4000000000000, double 0x7FFF000000000000>, <2 x double> [[X1:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[X]]
 ;
   %r = call <2 x double> @llvm.maxnum.v2f64(<2 x double> <double 0x7ff4000000000000, double 0x7fff000000000000>, <2 x double> %x)
   ret <2 x double> %r
@@ -1363,7 +1364,8 @@ define <2 x double> @maxnum_snan_qnan_op0_vec(<2 x double> %x) {
 
 define <2 x double> @maxnum_snan_qnan_op1_vec(<2 x double> %x) {
 ; CHECK-LABEL: @maxnum_snan_qnan_op1_vec(
-; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.maxnum.v2f64(<2 x double> [[X1:%.*]], <2 x double> <double 0x7FF400000000DEAD, double 0x7FFF000000000000>)
+; CHECK-NEXT:    ret <2 x double> [[X]]
 ;
   %r = call <2 x double> @llvm.maxnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400000000dead, double 0x7fff000000000000>)
   ret <2 x double> %r
@@ -1371,7 +1373,8 @@ define <2 x double> @maxnum_snan_qnan_op1_vec(<2 x double> %x) {
 
 define <2 x double> @minnum_snan_qnan_op0_vec(<2 x double> %x) {
 ; CHECK-LABEL: @minnum_snan_qnan_op0_vec(
-; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0x7FF4000DEAD00000, double 0x7FFF000000000000>, <2 x double> [[X1:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[X]]
 ;
   %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0x7ff4000dead00000, double 0x7fff000000000000>, <2 x double> %x)
   ret <2 x double> %r
@@ -1379,7 +1382,8 @@ define <2 x double> @minnum_snan_qnan_op0_vec(<2 x double> %x) {
 
 define <2 x double> @minnum_snan_qnan_op1_vec(<2 x double> %x) {
 ; CHECK-LABEL: @minnum_snan_qnan_op1_vec(
-; CHECK-NEXT:    ret <2 x double> [[X:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> [[X1:%.*]], <2 x double> <double 0x7FF400DEAD00DEAD, double 0x7FFF00DEAD00DEAD>)
+; CHECK-NEXT:    ret <2 x double> [[X]]
 ;
   %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff400dead00dead, double 0x7fff00dead00dead>)
   ret <2 x double> %r
