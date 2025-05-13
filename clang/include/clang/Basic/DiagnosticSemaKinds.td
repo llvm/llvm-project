@@ -6541,6 +6541,13 @@ def note_change_bitfield_sign : Note<
   "consider making the bit-field type %select{unsigned|signed}0">;
 def note_bitfield_preferred_type
     : Note<"preferred type for bit-field %0 specified here">;
+def warn_ms_bitfield_mismatched_storage_packing : Warning<
+  "bit-field %0 of type %1 has a different storage size than the "
+  "preceding bit-field (%2 vs %3 bytes) and will not be packed under "
+  "the Microsoft ABI">,
+  InGroup<MSBitfieldCompatibility>, DefaultIgnore;
+def note_ms_bitfield_mismatched_storage_size_previous : Note<
+  "preceding bit-field %0 declared here with type %1">;
 
 def warn_missing_braces : Warning<
   "suggest braces around initialization of subobject">,

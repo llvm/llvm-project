@@ -690,6 +690,52 @@ def Packed : DiagGroup<"packed", [PackedNonPod]>;
 def PaddedBitField : DiagGroup<"padded-bitfield">;
 def Padded : DiagGroup<"padded", [PaddedBitField]>;
 def UnalignedAccess : DiagGroup<"unaligned-access">;
+def MSBitfieldCompatibility : DiagGroup<"ms-bitfield-padding"> {
+  code Documentation = [{
+    Under the Microsoft ABI, adjacent bit-fields are not packed if the
+    underlying type has a different storage size. This warning indicates that a
+    pair of adjacent bit-fields may not pack in the same way due to this behavioural
+    difference.
+
+    This can occur when mixing different types explicitly:
+
+    .. code-block:: c++
+
+      struct S {
+        uint16_t field1 : 1;
+        uint32_t field2 : 1;
+      };
+
+    or more subtly through enums
+
+    .. code-block:: c++
+
+      enum Enum1 { /* ... */ };
+      enum class Enum2 : unsigned char { /* ... */ };
+      struct S {
+        Enum1 field1 : 1;
+        Enum2 field2 : 1;
+      };
+
+    In each of these cases under the Microsoft ABI the second bit-field
+    will not be packed with the preceding bit-field, and instead will be aligned
+    as if the fields were each separately defined integer fields of their respective
+    storage size. For binary compatibility this is obviously and observably
+    incompatible, however where bit-fields are being used solely for memory use
+    reduction this incomplete packing may silently increase the size of objects vs
+    what is expected.
+
+    This issue can be addressed by ensuring the storage type of each bit-field is
+    the same, either by explicitly using the same integer type, or in the case of
+    enum types declaring the enum types with the same storage size. For enum types
+    where you cannot specify the underlying type, the options are to either switch
+    to int sized storage for all specifiers or to resort to declaring the
+    bit-fields with explicit integer storage types and cast in and out of the field.
+    If such a solution is required the
+    :ref:`preferred_type <langext-preferred_type_documentation>` attribute can be
+    used to convey the actual field type to debuggers and other tooling.
+  }];
+}
 
 def PessimizingMove : DiagGroup<"pessimizing-move">;
 def ReturnStdMove : DiagGroup<"return-std-move">;
