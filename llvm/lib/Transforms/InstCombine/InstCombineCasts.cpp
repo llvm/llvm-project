@@ -329,7 +329,7 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
       // MSBs are not going to be used.
       if (auto *Trunc = dyn_cast<TruncInst>(V->user_back())) {
         auto DemandedBits = Trunc->getType()->getScalarSizeInBits();
-        if (MaxShiftAmt.ule(BitWidth - DemandedBits))
+        if ((MaxShiftAmt + DemandedBits).ule(BitWidth))
           return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
                  canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
       }
