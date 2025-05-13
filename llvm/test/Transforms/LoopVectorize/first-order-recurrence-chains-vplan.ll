@@ -37,8 +37,8 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]>.1 = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.+]]> = extract-last-element ir<%for.1.next>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]>.1 = extract-last-element vp<[[FOR1_SPLICE]]>
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -117,9 +117,9 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]>.1 = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[RESUME_3:%.+]]>.2 = extract-from-end vp<[[FOR2_SPLICE]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.+]]> = extract-last-element ir<%for.1.next>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]>.1 = extract-last-element vp<[[FOR1_SPLICE]]>
+; CHECK-NEXT:    EMIT vp<[[RESUME_3:%.+]]>.2 = extract-last-element vp<[[FOR2_SPLICE]]>
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -203,8 +203,8 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[EXT_X:%.+]]> = extract-from-end ir<%for.x.next>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[EXT_Y:%.+]]>.1 = extract-from-end ir<%for.x.prev>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[EXT_X:%.+]]> = extract-last-element ir<%for.x.next>
+; CHECK-NEXT:   EMIT vp<[[EXT_Y:%.+]]>.1 = extract-last-element ir<%for.x.prev>
 ; CHECK-NEXT:   EMIT vp<[[MIDDLE_C:%.+]]> = icmp eq ir<4098>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<ret>, scalar.ph
@@ -282,8 +282,8 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[EXT_X:%.+]]> = extract-from-end ir<%for.x.next>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[EXT_Y:%.+]]>.1 = extract-from-end ir<%for.x.prev>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[EXT_X:%.+]]> = extract-last-element ir<%for.x.next>
+; CHECK-NEXT:   EMIT vp<[[EXT_Y:%.+]]>.1 = extract-last-element ir<%for.x.prev>
 ; CHECK-NEXT:   EMIT vp<[[MIDDLE_C:%.+]]> = icmp eq ir<4098>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<ret>, scalar.ph

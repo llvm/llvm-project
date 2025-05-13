@@ -93,15 +93,7 @@ public:
   virtual void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                          uint32_t dump_mask) = 0;
 
-  // TODO: make this function pure virtual after implementing it in all
-  // child classes.
-  virtual llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) {
-    // Return nullptr which will create a llvm::json::Value() that is a NULL
-    // value. No setting should ever really have a NULL value in JSON. This
-    // indicates an error occurred and if/when we add a FromJSON() it will know
-    // to fail if someone tries to set it with a NULL JSON value.
-    return nullptr;
-  }
+  virtual llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) const = 0;
 
   virtual Status
   SetValueFromString(llvm::StringRef value,

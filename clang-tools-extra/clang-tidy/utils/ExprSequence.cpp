@@ -71,12 +71,12 @@ bool isDescendantOfArgs(const Stmt *Descendant, const CallExpr *Call,
 
 llvm::SmallVector<const InitListExpr *>
 getAllInitListForms(const InitListExpr *InitList) {
-  llvm::SmallVector<const InitListExpr *> result = {InitList};
+  llvm::SmallVector<const InitListExpr *> Result = {InitList};
   if (const InitListExpr *AltForm = InitList->getSyntacticForm())
-    result.push_back(AltForm);
+    Result.push_back(AltForm);
   if (const InitListExpr *AltForm = InitList->getSemanticForm())
-    result.push_back(AltForm);
-  return result;
+    Result.push_back(AltForm);
+  return Result;
 }
 
 } // namespace

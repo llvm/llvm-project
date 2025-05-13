@@ -367,7 +367,7 @@ void IRNormalizer::foldInstructionName(Instruction *I) const {
   }
 
   // Don't fold if it is an output instruction or has no op prefix.
-  if (isOutput(I) || I->getName().substr(0, 2) != "op")
+  if (isOutput(I) || !I->getName().starts_with("op"))
     return;
 
   // Instruction operands.
@@ -375,8 +375,8 @@ void IRNormalizer::foldInstructionName(Instruction *I) const {
 
   for (auto &Op : I->operands()) {
     if (const auto *I = dyn_cast<Instruction>(Op)) {
-      bool HasNormalName = I->getName().substr(0, 2) == "op" ||
-                           I->getName().substr(0, 2) == "vl";
+      bool HasNormalName =
+          I->getName().starts_with("op") || I->getName().starts_with("vl");
 
       Operands.push_back(HasNormalName ? I->getName().substr(0, 7)
                                        : I->getName());

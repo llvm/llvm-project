@@ -130,14 +130,13 @@ define void @store_i16_stride4_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ;
 ; AVX512BW-FCP-LABEL: store_i16_stride4_vf2:
 ; AVX512BW-FCP:       # %bb.0:
-; AVX512BW-FCP-NEXT:    vmovdqa (%rdx), %xmm0
-; AVX512BW-FCP-NEXT:    vmovdqa (%rcx), %xmm1
-; AVX512BW-FCP-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [8,24,0,16,9,25,1,17]
-; AVX512BW-FCP-NEXT:    vinserti128 $1, (%rsi), %ymm1, %ymm1
-; AVX512BW-FCP-NEXT:    vinserti128 $1, (%rdi), %ymm0, %ymm0
-; AVX512BW-FCP-NEXT:    vpermt2w %ymm1, %ymm2, %ymm0
-; AVX512BW-FCP-NEXT:    vmovdqa %xmm0, (%r8)
-; AVX512BW-FCP-NEXT:    vzeroupper
+; AVX512BW-FCP-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX512BW-FCP-NEXT:    vmovdqa (%rdx), %xmm1
+; AVX512BW-FCP-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; AVX512BW-FCP-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
+; AVX512BW-FCP-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [0,2,8,10,1,3,9,11]
+; AVX512BW-FCP-NEXT:    vpermi2w %xmm1, %xmm0, %xmm2
+; AVX512BW-FCP-NEXT:    vmovdqa %xmm2, (%r8)
 ; AVX512BW-FCP-NEXT:    retq
 ;
 ; AVX512DQ-BW-LABEL: store_i16_stride4_vf2:
@@ -153,14 +152,13 @@ define void @store_i16_stride4_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ;
 ; AVX512DQ-BW-FCP-LABEL: store_i16_stride4_vf2:
 ; AVX512DQ-BW-FCP:       # %bb.0:
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa (%rdx), %xmm0
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa (%rcx), %xmm1
-; AVX512DQ-BW-FCP-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [8,24,0,16,9,25,1,17]
-; AVX512DQ-BW-FCP-NEXT:    vinserti128 $1, (%rsi), %ymm1, %ymm1
-; AVX512DQ-BW-FCP-NEXT:    vinserti128 $1, (%rdi), %ymm0, %ymm0
-; AVX512DQ-BW-FCP-NEXT:    vpermt2w %ymm1, %ymm2, %ymm0
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa %xmm0, (%r8)
-; AVX512DQ-BW-FCP-NEXT:    vzeroupper
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa (%rdx), %xmm1
+; AVX512DQ-BW-FCP-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; AVX512DQ-BW-FCP-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
+; AVX512DQ-BW-FCP-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [0,2,8,10,1,3,9,11]
+; AVX512DQ-BW-FCP-NEXT:    vpermi2w %xmm1, %xmm0, %xmm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa %xmm2, (%r8)
 ; AVX512DQ-BW-FCP-NEXT:    retq
   %in.vec0 = load <2 x i16>, ptr %in.vecptr0, align 64
   %in.vec1 = load <2 x i16>, ptr %in.vecptr1, align 64

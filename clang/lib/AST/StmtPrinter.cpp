@@ -737,7 +737,9 @@ void StmtPrinter::VisitOMPCanonicalLoop(OMPCanonicalLoop *Node) {
 
 void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                               bool ForceNoStmt) {
-  OMPClausePrinter Printer(OS, Policy);
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  OMPClausePrinter Printer(OS, Policy, OpenMPVersion);
   ArrayRef<OMPClause *> Clauses = S->clauses();
   for (auto *Clause : Clauses)
     if (Clause && !Clause->isImplicit()) {
@@ -964,14 +966,18 @@ void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
 
 void StmtPrinter::VisitOMPCancellationPointDirective(
     OMPCancellationPointDirective *Node) {
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancellation point "
-           << getOpenMPDirectiveName(Node->getCancelRegion());
+           << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancel "
-           << getOpenMPDirectiveName(Node->getCancelRegion());
+           << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1284,7 +1290,11 @@ void StmtPrinter::VisitSourceLocExpr(SourceLocExpr *Node) {
 }
 
 void StmtPrinter::VisitEmbedExpr(EmbedExpr *Node) {
-  llvm::report_fatal_error("Not implemented");
+  // FIXME: Embed parameters are not reflected in the AST, so there is no way to
+  // print them yet.
+  OS << "#embed ";
+  OS << Node->getFileName();
+  OS << NL;
 }
 
 void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {
@@ -1305,9 +1315,13 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
     Qualifier->print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
+
+  bool ForceAnonymous =
+      Policy.PrintAsCanonical && VD->getKind() == Decl::NonTypeTemplateParm;
   DeclarationNameInfo NameInfo = Node->getNameInfo();
   if (IdentifierInfo *ID = NameInfo.getName().getAsIdentifierInfo();
-      ID || NameInfo.getName().getNameKind() != DeclarationName::Identifier) {
+      !ForceAnonymous &&
+      (ID || NameInfo.getName().getNameKind() != DeclarationName::Identifier)) {
     if (Policy.CleanUglifiedParameters &&
         isa<ParmVarDecl, NonTypeTemplateParmDecl>(VD) && ID)
       OS << ID->deuglifiedName();

@@ -8,10 +8,9 @@ mechanism which abstracts implementation details and properties that are common
 across many different attributes/operations/types/etc.. `Traits` may be used to
 specify special properties and constraints of the object, including whether an
 operation has side effects or that its output has the same type as the input.
-Some examples of operation traits are `Commutative`, `SingleResult`,
-`Terminator`, etc. See the more comprehensive list of
-[operation traits](#operation-traits-list) below for more examples of what is
-possible.
+Some examples of operation traits are `Commutative`, `Terminator`, etc. See the
+more comprehensive list of [operation traits](#operation-traits-list) below for
+more examples of what is possible.
 
 ## Defining a Trait
 

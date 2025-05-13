@@ -474,6 +474,7 @@ private:
   bool optimizeURem(Instruction *Rem);
   bool combineToUSubWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool combineToUAddWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
+  bool unfoldPowerOf2Test(CmpInst *Cmp);
   void verifyBFIUpdates(Function &F);
   bool _run(Function &F);
 };
@@ -834,9 +835,8 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F, DominatorTree *DT) {
   // Scan all of the blocks in the function, except for the entry block.
   // Use a temporary array to avoid iterator being invalidated when
   // deleting blocks.
-  SmallVector<WeakTrackingVH, 16> Blocks;
-  for (auto &Block : llvm::drop_begin(F))
-    Blocks.push_back(&Block);
+  SmallVector<WeakTrackingVH, 16> Blocks(
+      llvm::make_pointer_range(llvm::drop_begin(F)));
 
   SmallSet<WeakTrackingVH, 16> Preds;
   for (auto &Block : Blocks) {
@@ -1763,6 +1763,75 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
   return true;
 }
 
+// Decanonicalizes icmp+ctpop power-of-two test if ctpop is slow.
+// The same transformation exists in DAG combiner, but we repeat it here because
+// DAG builder can break the pattern by moving icmp into a successor block.
+bool CodeGenPrepare::unfoldPowerOf2Test(CmpInst *Cmp) {
+  CmpPredicate Pred;
+  Value *X;
+  const APInt *C;
+
+  // (icmp (ctpop x), c)
+  if (!match(Cmp, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
+                         m_APIntAllowPoison(C))))
+    return false;
+
+  // We're only interested in "is power of 2 [or zero]" patterns.
+  bool IsStrictlyPowerOf2Test = ICmpInst::isEquality(Pred) && *C == 1;
+  bool IsPowerOf2OrZeroTest = (Pred == CmpInst::ICMP_ULT && *C == 2) ||
+                              (Pred == CmpInst::ICMP_UGT && *C == 1);
+  if (!IsStrictlyPowerOf2Test && !IsPowerOf2OrZeroTest)
+    return false;
+
+  // Some targets have better codegen for `ctpop(x) u</u>= 2/1`than for
+  // `ctpop(x) ==/!= 1`. If ctpop is fast, only try changing the comparison,
+  // and otherwise expand ctpop into a few simple instructions.
+  Type *OpTy = X->getType();
+  if (TLI->isCtpopFast(TLI->getValueType(*DL, OpTy))) {
+    // Look for `ctpop(x) ==/!= 1`, where `ctpop(x)` is known to be non-zero.
+    if (!IsStrictlyPowerOf2Test || !isKnownNonZero(Cmp->getOperand(0), *DL))
+      return false;
+
+    // ctpop(x) == 1 -> ctpop(x) u< 2
+    // ctpop(x) != 1 -> ctpop(x) u> 1
+    if (Pred == ICmpInst::ICMP_EQ) {
+      Cmp->setOperand(1, ConstantInt::get(OpTy, 2));
+      Cmp->setPredicate(ICmpInst::ICMP_ULT);
+    } else {
+      Cmp->setPredicate(ICmpInst::ICMP_UGT);
+    }
+    return true;
+  }
+
+  Value *NewCmp;
+  if (IsPowerOf2OrZeroTest ||
+      (IsStrictlyPowerOf2Test && isKnownNonZero(Cmp->getOperand(0), *DL))) {
+    // ctpop(x) u< 2 -> (x & (x - 1)) == 0
+    // ctpop(x) u> 1 -> (x & (x - 1)) != 0
+    IRBuilder<> Builder(Cmp);
+    Value *Sub = Builder.CreateAdd(X, Constant::getAllOnesValue(OpTy));
+    Value *And = Builder.CreateAnd(X, Sub);
+    CmpInst::Predicate NewPred =
+        (Pred == CmpInst::ICMP_ULT || Pred == CmpInst::ICMP_EQ)
+            ? CmpInst::ICMP_EQ
+            : CmpInst::ICMP_NE;
+    NewCmp = Builder.CreateICmp(NewPred, And, ConstantInt::getNullValue(OpTy));
+  } else {
+    // ctpop(x) == 1 -> (x ^ (x - 1)) u> (x - 1)
+    // ctpop(x) != 1 -> (x ^ (x - 1)) u<= (x - 1)
+    IRBuilder<> Builder(Cmp);
+    Value *Sub = Builder.CreateAdd(X, Constant::getAllOnesValue(OpTy));
+    Value *Xor = Builder.CreateXor(X, Sub);
+    CmpInst::Predicate NewPred =
+        Pred == CmpInst::ICMP_EQ ? CmpInst::ICMP_UGT : CmpInst::ICMP_ULE;
+    NewCmp = Builder.CreateICmp(NewPred, Xor, Sub);
+  }
+
+  Cmp->replaceAllUsesWith(NewCmp);
+  RecursivelyDeleteTriviallyDeadInstructions(Cmp);
+  return true;
+}
+
 /// Sink the given CmpInst into user blocks to reduce the number of virtual
 /// registers that must be created and coalesced. This is a clear win except on
 /// targets with multiple condition code registers (PowerPC), where it might
@@ -2149,31 +2218,6 @@ bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
   return false;
 }
 
-/// Some targets have better codegen for `ctpop(X) u< 2` than `ctpop(X) == 1`.
-/// This function converts `ctpop(X) ==/!= 1` into `ctpop(X) u</u> 2/1` if the
-/// result cannot be zero.
-static bool adjustIsPower2Test(CmpInst *Cmp, const TargetLowering &TLI,
-                               const TargetTransformInfo &TTI,
-                               const DataLayout &DL) {
-  CmpPredicate Pred;
-  if (!match(Cmp, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(), m_One())))
-    return false;
-  if (!ICmpInst::isEquality(Pred))
-    return false;
-  auto *II = cast<IntrinsicInst>(Cmp->getOperand(0));
-
-  if (isKnownNonZero(II, DL)) {
-    if (Pred == ICmpInst::ICMP_EQ) {
-      Cmp->setOperand(1, ConstantInt::get(II->getType(), 2));
-      Cmp->setPredicate(ICmpInst::ICMP_ULT);
-    } else {
-      Cmp->setPredicate(ICmpInst::ICMP_UGT);
-    }
-    return true;
-  }
-  return false;
-}
-
 bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
   if (sinkCmpExpression(Cmp, *TLI))
     return true;
@@ -2184,6 +2228,9 @@ bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
   if (combineToUSubWithOverflow(Cmp, ModifiedDT))
     return true;
 
+  if (unfoldPowerOf2Test(Cmp))
+    return true;
+
   if (foldICmpWithDominatingICmp(Cmp, *TLI))
     return true;
 
@@ -2191,9 +2238,6 @@ bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
     return true;
 
   if (foldFCmpToFPClassTest(Cmp, *TLI, *DL))
-    return true;
-
-  if (adjustIsPower2Test(Cmp, *TLI, *TTI, *DL))
     return true;
 
   return false;
@@ -2508,9 +2552,9 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
       (IntrinsicID == Intrinsic::ctlz && TLI->isCheapToSpeculateCtlz(Ty)))
     return false;
 
-  // Only handle legal scalar cases. Anything else requires too much work.
+  // Only handle scalar cases. Anything else requires too much work.
   unsigned SizeInBits = Ty->getScalarSizeInBits();
-  if (Ty->isVectorTy() || SizeInBits > DL->getLargestLegalIntTypeSizeInBits())
+  if (Ty->isVectorTy())
     return false;
 
   // Bail if the value is never zero.
@@ -4195,7 +4239,7 @@ private:
   /// `CommonValue` may be a placeholder inserted by us.
   /// If the placeholder is not used, we should remove this dead instruction.
   void eraseCommonValueIfDead() {
-    if (CommonValue && CommonValue->getNumUses() == 0)
+    if (CommonValue && CommonValue->use_empty())
       if (Instruction *CommonInst = dyn_cast<Instruction>(CommonValue))
         CommonInst->eraseFromParent();
   }
@@ -8547,6 +8591,9 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
     return false;
 
   Value *X = Cmp->getOperand(0);
+  if (!X->hasUseList())
+    return false;
+
   APInt CmpC = cast<ConstantInt>(Cmp->getOperand(1))->getValue();
 
   for (auto *U : X->users()) {
