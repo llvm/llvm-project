@@ -738,6 +738,7 @@ def SplatPat_simm5_plus1_nodec
     : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1NoDec", [], [], 3>;
 def SplatPat_simm5_plus1_nonzero
     : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1NonZero", [], [], 3>;
+def SplatPat_imm64_neg : ComplexPattern<vAny, 1, "selectVSplatImm64Neg", [], [], 3>;
 
 // Selects extends or truncates of splats where we only care about the lowest 8
 // bits of each element.
@@ -2119,6 +2120,19 @@ foreach vti = AllIntegerVectors in {
                      vti.RegClass:$passthru, vti.RegClass:$rs1,
                      (NegImm simm5_plus1:$rs2), (vti.Mask VMV0:$vm),
                      GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+  }
+}
+
+// (add v, C) -> (sub v, -C) if -C cheaper to materialize
+foreach vti = I64IntegerVectors in {
+  let Predicates = [HasVInstructionsI64] in {
+    def : Pat<(riscv_add_vl (vti.Vector vti.RegClass:$rs1),
+                            (vti.Vector (SplatPat_imm64_neg i64:$rs2)),
+                            vti.RegClass:$passthru, (vti.Mask VMV0:$vm), VLOpFrag),
+              (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX#"_MASK")
+                   vti.RegClass:$passthru, vti.RegClass:$rs1,
+                   negImm:$rs2, (vti.Mask VMV0:$vm),
+                   GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   }
 }
 
