@@ -2385,6 +2385,64 @@ static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
   return success();
 }
 
+static LogicalResult
+rewriteFromElementsAsShapeCast(FromElementsOp fromElementsOp,
+                               PatternRewriter &rewriter) {
+
+  mlir::OperandRange elements = fromElementsOp.getElements();
+  const size_t nbElements = elements.size();
+  assert(nbElements > 0 && "must be at least one element");
+
+  // https://en.wikipedia.org/wiki/List_of_prime_numbers
+  const int prime = 5387;
+  bool pseudoRandomOrder = nbElements < prime;
+
+  Value source;
+  ArrayRef<int64_t> shape;
+  for (size_t elementIndex = 0ULL; elementIndex < nbElements; elementIndex++) {
+
+    // Rather than iterating through the elements in ascending order, we might
+    // be able to exit quickly if we go through in pseudo-random order. Use
+    // fact that (i * p) % a is a bijection for i in [0, a) if p is prime and
+    // a < p.
+    int currentIndex =
+        pseudoRandomOrder ? elementIndex : (elementIndex * prime) % nbElements;
+    Value element = elements[currentIndex];
+
+    // From an extract on the same source as the other elements.
+    auto extractOp =
+        dyn_cast_if_present<vector::ExtractOp>(element.getDefiningOp());
+    if (!extractOp)
+      return failure();
+    Value currentSource = extractOp.getVector();
+    if (!source) {
+      source = currentSource;
+      shape = extractOp.getSourceVectorType().getShape();
+    } else if (currentSource != source) {
+      return failure();
+    }
+
+    ArrayRef<int64_t> position = extractOp.getStaticPosition();
+    assert(position.size() == shape.size());
+
+    int64_t stride{1};
+    int64_t offset{0};
+    for (auto [pos, size] :
+         llvm::zip(llvm::reverse(position), llvm::reverse(shape))) {
+      if (pos == ShapedType::kDynamic)
+        return failure();
+      offset += pos * stride;
+      stride *= size;
+    }
+    if (offset != currentIndex)
+      return failure();
+  }
+
+  // Can replace with a shape_cast.
+  rewriter.replaceOpWithNewOp<ShapeCastOp>(fromElementsOp,
+                                           fromElementsOp.getType(), source);
+}
+
 void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
   results.add(rewriteFromElementsAsSplat);
