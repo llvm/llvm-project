@@ -10,13 +10,13 @@
 
 --- |  
   
-  declare !type !0 noundef i32 @_Z3addii(i32 noundef, i32 noundef)
+  declare !type !0 i32 @_Z3addii(i32, i32)
 
-  declare !type !0 noundef i32 @_Z8multiplyii(i32 noundef, i32 noundef)
+  declare !type !0 i32 @_Z8multiplyii(i32, i32)
   
-  declare !type !1 noundef ptr @_Z13get_operationb(i1 noundef zeroext %is_addition)
+  declare !type !1 ptr @_Z13get_operationb(i1 zeroext %is_addition)
   
-  define dso_local noundef i32 @main(i32 noundef %argc) !type !2 {
+  define i32 @main(i32 %argc) !type !2 {
   entry:
     %retval = alloca i32, align 4
     %argc.addr = alloca i32, align 4
@@ -30,12 +30,12 @@
     %argc_val = load i32, ptr %argc.addr, align 4
     %rem = srem i32 %argc_val, 2
     %cmp = icmp eq i32 %rem, 0
-    %call = call noundef ptr @_Z13get_operationb(i1 noundef zeroext %cmp)
+    %call = call ptr @_Z13get_operationb(i1 zeroext %cmp)
     store ptr %call, ptr %op, align 8
     %op_val = load ptr, ptr %op, align 8
     %x_val = load i32, ptr %x, align 4
     %y_val = load i32, ptr %y, align 4
-    %call1 = call noundef i32 %op_val(i32 noundef %x_val, i32 noundef %y_val), !callee_type !3
+    %call1 = call i32 %op_val(i32 %x_val, i32 %y_val), !callee_type !3
     ret i32 %call1
   }
   
