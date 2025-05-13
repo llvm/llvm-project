@@ -6742,14 +6742,22 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
     // minnum(x, qnan) -> x
     // maxnum(x, qnan) -> x
-    // minnum(x, snan) -> qnan (or x for vectors mixing snans and qnans)
-    // maxnum(x, snan) -> qnan (or x for vectors mixing snans and qnans)
+    // minnum(x, snan) -> qnan
+    // maxnum(x, snan) -> qnan
     // minimum(X, nan) -> qnan
     // maximum(X, nan) -> qnan
-    if (PropagateSNaN && match(Op1, m_sNaN()))
+    if (PropagateSNaN && match(Op1, m_sNaN())) {
       return propagateNaN(cast<Constant>(Op1));
-    else if (match(Op1, m_NaN()))
-      return PropagateNaN ? propagateNaN(cast<Constant>(Op1)) : Op0;
+    } else if (match(Op1, m_NaN())) {
+      if (PropagateNaN)
+        return propagateNaN(cast<Constant>(Op1));
+      // In cases like mixed <sNaN, qNaN> vectors, avoid the optimization to
+      // allow correct sNaN propagation where necessary.
+      else if (PropagateSNaN && !match(Op1, m_qNaN()))
+        break;
+      else
+        return Op0;
+    }
 
     // In the following folds, inf can be replaced with the largest finite
     // float, if the ninf flag is set.
