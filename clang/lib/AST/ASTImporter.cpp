@@ -1833,8 +1833,6 @@ ExpectedType clang::ASTNodeImporter::VisitHLSLInlineSpirvType(
   uint32_t ToSize = T->getSize();
   uint32_t ToAlignment = T->getAlignment();
 
-  size_t NumOperands = T->getOperands().size();
-
   llvm::SmallVector<SpirvOperand> ToOperands;
 
   for (auto &Operand : T->getOperands()) {

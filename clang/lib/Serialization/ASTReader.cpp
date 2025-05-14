@@ -9827,8 +9827,12 @@ TypeCoupledDeclRefInfo ASTRecordReader::readTypeCoupledDeclRefInfo() {
 }
 
 SpirvOperand ASTRecordReader::readHLSLSpirvOperand() {
-  return SpirvOperand(SpirvOperand::SpirvOperandKind(readInt()), readQualType(),
-                      readAPInt());
+  auto Kind = readInt();
+  auto ResultType = readQualType();
+  auto Value = readAPInt();
+  SpirvOperand Op(SpirvOperand::SpirvOperandKind(Kind), ResultType, Value);
+  assert(Op.isValid());
+  return Op;
 }
 
 void ASTRecordReader::readQualifierInfo(QualifierInfo &Info) {
