@@ -101,9 +101,9 @@ private:
   DenseMap<const Function *, ComputedShaderFlags> FunctionFlags;
   /// Combined Shader Flag Mask of all functions of the module
   ComputedShaderFlags CombinedSFMask{};
-  void gatherGlobalModuleFlags(ComputedShaderFlags &, const Module &M,
-                               const DXILResourceMap &,
-                               const ModuleMetadataInfo &);
+  ComputedShaderFlags gatherGlobalModuleFlags(const Module &M,
+                                              const DXILResourceMap &,
+                                              const ModuleMetadataInfo &);
   void updateFunctionFlags(ComputedShaderFlags &, const Instruction &,
                            DXILResourceTypeMap &, const ModuleMetadataInfo &);
 };

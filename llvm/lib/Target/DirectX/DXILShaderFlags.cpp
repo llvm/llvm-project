@@ -208,9 +208,12 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
 }
 
 /// Set shader flags that apply to all functions within the module
-void ModuleShaderFlags::gatherGlobalModuleFlags(
-    ComputedShaderFlags &CSF, const Module &M, const DXILResourceMap &DRM,
-    const ModuleMetadataInfo &MMDI) {
+ComputedShaderFlags
+ModuleShaderFlags::gatherGlobalModuleFlags(const Module &M,
+                                           const DXILResourceMap &DRM,
+                                           const ModuleMetadataInfo &MMDI) {
+
+  ComputedShaderFlags CSF;
 
   // Set DisableOptimizations flag based on the presence of OptimizeNone
   // attribute of entry functions.
@@ -249,6 +252,19 @@ void ModuleShaderFlags::gatherGlobalModuleFlags(
     if (MMDI.ShaderModelVersion >= VersionTuple(6, 2))
       CSF.NativeLowPrecisionMode = NativeLowPrec->getValue().getBoolValue();
 
+  // Set ResMayNotAlias to true if DXIL validator version < 1.8 and there
+  // are UAVs present globally.
+  if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
+    CSF.ResMayNotAlias = !DRM.uavs().empty();
+
+  return CSF;
+}
+
+/// Construct ModuleShaderFlags for module Module M
+void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
+                                   const DXILResourceMap &DRM,
+                                   const ModuleMetadataInfo &MMDI) {
+
   CanSetResMayNotAlias = MMDI.DXILVersion >= VersionTuple(1, 7);
   // The command line option -res-may-alias will set the dx.resmayalias module
   // flag to 1, thereby disabling the ability to set the ResMayNotAlias flag
@@ -257,19 +273,7 @@ void ModuleShaderFlags::gatherGlobalModuleFlags(
     if (ResMayAlias->getValue().getBoolValue())
       CanSetResMayNotAlias = false;
 
-  // Set ResMayNotAlias to true if DXIL validator version < 1.8 and there
-  // are UAVs present globally.
-  if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
-    CSF.ResMayNotAlias = !DRM.uavs().empty();
-}
-
-/// Construct ModuleShaderFlags for module Module M
-void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
-                                   const DXILResourceMap &DRM,
-                                   const ModuleMetadataInfo &MMDI) {
-
-  ComputedShaderFlags GlobalSFMask;
-  gatherGlobalModuleFlags(GlobalSFMask, M, DRM, MMDI);
+  ComputedShaderFlags GlobalSFMask = gatherGlobalModuleFlags(M, DRM, MMDI);
 
   CallGraph CG(M);
 
