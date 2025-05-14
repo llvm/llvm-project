@@ -19,6 +19,7 @@
 #include "DemangleConfig.h"
 #include "StringViewExtras.h"
 #include "Utility.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -164,18 +165,18 @@ class NodeArray;
 // traversed by the printLeft/Right functions to produce a demangled string.
 class Node {
 public:
-  enum Kind : unsigned char {
+  enum Kind : unsigned {
 #define NODE(NodeKind) K##NodeKind,
 #include "ItaniumNodes.def"
   };
 
   /// Three-way bool to track a cached value. Unknown is possible if this node
   /// has an unexpanded parameter pack below it that may affect this cache.
-  enum class Cache : unsigned char { Yes, No, Unknown, };
+  enum class Cache : unsigned { Yes, No, Unknown, };
 
   /// Operator precedence for expression nodes. Used to determine required
   /// parens in expression emission.
-  enum class Prec {
+  enum class Prec : unsigned {
     Primary,
     Postfix,
     Unary,
@@ -2995,7 +2996,8 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     };
     char Enc[2];      // Encoding
     OIKind Kind;      // Kind of operator
-    bool Flag : 1;    // Entry-specific flag
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned Flag : 1;   // Entry-specific flag
     Node::Prec Prec : 7; // Precedence
     const char *Name; // Spelling
 
