@@ -178,7 +178,7 @@ int main(void) {
   }
   total_errors += checkUserDefinedReduction();
   total_errors += performComplexReduction();
-  #pragma omp parallel num_threads(4)
+#pragma omp parallel num_threads(4)
   {
     std::complex<double> result(1, 0);
     result = doComplexReduction(arr);
