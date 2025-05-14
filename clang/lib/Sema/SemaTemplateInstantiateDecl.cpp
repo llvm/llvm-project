@@ -5758,7 +5758,6 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   } else {
     DeclContext *DC = Function->getLexicalDeclContext();
     std::optional<ArrayRef<TemplateArgument>> Innermost;
-
     if (auto *Primary = Function->getPrimaryTemplate();
         Primary &&
         !isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function) &&
