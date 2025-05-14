@@ -10,7 +10,7 @@
 #define _HLSL_HLSL_INTRINSIC_HELPERS_H_
 
 namespace hlsl {
-namespace __dETAil {
+namespace __detail {
 
 constexpr vector<uint, 4> d3d_color_to_ubyte4_impl(vector<float, 4> V) {
   // Use the same scaling factor used by FXC, and DXC for DXIL
@@ -73,10 +73,8 @@ constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
 
 template <typename T> constexpr T refract_impl(T I, T N, T Eta) {
   T K = 1 - Eta * Eta * (1 - (N * I * N * I));
-  if (K < 0)
-    return 0;
-  else
-    return (Eta * I - (Eta * N * I + sqrt(K)) * N);
+  T Result = (Eta * I - (Eta * N * I + sqrt(K)) * N);
+  return select<T>(K < 0, static_cast<T>(0), Result);
 }
 
 template <typename T, int L>
@@ -85,12 +83,11 @@ constexpr vector<T, L> refract_vec_impl(vector<T, L> I, vector<T, L> N, T Eta) {
   return __builtin_spirv_refract(I, N, Eta);
 #else
   vector<T, L> K = 1 - Eta * Eta * (1 - dot(N, I) * dot(N, I));
-  if (K < 0)
-    return 0;
-  else
-    return (Eta * I - (Eta * dot(N, I) + sqrt(K)) * N);
+  vector<T, L> Result = (Eta * I - (Eta * dot(N, I) + sqrt(K)) * N);
+  return select<vector<T, L>>(K < 0, vector<T, L>(0), Result);
 #endif
 }
+
 
 template <typename T> constexpr T fmod_impl(T X, T Y) {
 #if !defined(__DIRECTX__)
