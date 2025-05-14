@@ -7769,7 +7769,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, StoredVal,
                                DAG.getTargetConstant(1, DL, MVT::i32));
 
-      return DAG.getMemIntrinsicNode(
+     return DAG.getMemIntrinsicNode(
           RISCVISD::SD_RV32, DL, DAG.getVTList(MVT::Other),
           {Store->getChain(), Lo, Hi, Store->getBasePtr()}, MVT::i64,
           Store->getMemOperand());
@@ -13746,14 +13746,14 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       if (!Subtarget.enableUnalignedScalarMem() && Ld->getAlign() < 8)
         return;
 
-      SDLoc dl(N);
+      SDLoc DL(N);
       SDValue Result = DAG.getMemIntrinsicNode(
-          RISCVISD::LD_RV32, dl,
+          RISCVISD::LD_RV32, DL,
           DAG.getVTList({MVT::i32, MVT::i32, MVT::Other}),
           {Ld->getChain(), Ld->getBasePtr()}, MVT::i64, Ld->getMemOperand());
       SDValue Lo = Result.getValue(0);
       SDValue Hi = Result.getValue(1);
-      SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi);
+      SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);
       Results.append({Pair, Result.getValue(2)});
       return;
     }
