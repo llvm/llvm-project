@@ -22,6 +22,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/APInt.h"
 #include <numeric>
 
 using namespace mlir;
@@ -975,7 +976,7 @@ void cir::SwitchFlatOp::build(OpBuilder &builder, OperationState &result,
                               ArrayRef<ValueRange> caseOperands) {
 
   std::vector<mlir::Attribute> caseValuesAttrs;
-  for (auto &val : caseValues) {
+  for (const APInt &val : caseValues) {
     caseValuesAttrs.push_back(cir::IntAttr::get(value.getType(), val));
   }
   mlir::ArrayAttr attrs = ArrayAttr::get(builder.getContext(), caseValuesAttrs);
