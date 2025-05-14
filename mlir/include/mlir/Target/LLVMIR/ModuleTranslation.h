@@ -151,7 +151,7 @@ public:
     (void)result;
     assert(
         result.second &&
-        "attempting to map a blockaddress attritbute that is already mapped");
+        "attempting to map a blockaddress attribute that is already mapped");
   }
 
   /// Finds the LLVM basic block that corresponds to the given BlockAddressAttr.
