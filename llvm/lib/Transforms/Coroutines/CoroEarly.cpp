@@ -30,6 +30,7 @@ class Lowerer : public coro::LowererBase {
   void lowerCoroPromise(CoroPromiseInst *Intrin);
   void lowerCoroDone(IntrinsicInst *II);
   void lowerCoroNoop(IntrinsicInst *II);
+  void hidePromiseAlloca(CoroIdInst *CoroId, CoroBeginInst *CoroBegin);
 
 public:
   Lowerer(Module &M)
@@ -153,6 +154,27 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
   II->eraseFromParent();
 }
 
+// Later middle-end passes will assume promise alloca dead after coroutine
+// suspend, leading to misoptimizations. We hide promise alloca using
+// coro.promise and will lower it back to alloca at CoroSplit.
+void Lowerer::hidePromiseAlloca(CoroIdInst *CoroId, CoroBeginInst *CoroBegin) {
+  auto *PA = CoroId->getPromise();
+  if (!PA || !CoroBegin)
+    return;
+  Builder.SetInsertPoint(*CoroBegin->getInsertionPointAfterDef());
+
+  auto *Alignment = Builder.getInt32(PA->getAlign().value());
+  auto *FromPromise = Builder.getInt1(false);
+  SmallVector<Value *, 3> Arg{CoroBegin, Alignment, FromPromise};
+  auto *PI = Builder.CreateIntrinsic(
+      Builder.getPtrTy(), Intrinsic::coro_promise, Arg, {}, "promise.addr");
+  PA->replaceUsesWithIf(PI, [CoroId](Use &U) {
+    bool IsBitcast = U == U.getUser()->stripPointerCasts();
+    bool IsCoroId = U.getUser() == CoroId;
+    return !IsBitcast && !IsCoroId;
+  });
+}
+
 // Prior to CoroSplit, calls to coro.begin needs to be marked as NoDuplicate,
 // as CoroSplit assumes there is exactly one coro.begin. After CoroSplit,
 // NoDuplicate attribute will be removed from coro.begin otherwise, it will
@@ -252,22 +274,7 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
     for (CoroFreeInst *CF : CoroFrees)
       CF->setArgOperand(0, CoroId);
 
-    auto *PA = CoroId->getPromise();
-    if (PA && CoroBegin) {
-      assert(isa<AllocaInst>(PA) && "Must pass alloca to coro.id");
-      Builder.SetInsertPoint(*CoroBegin->getInsertionPointAfterDef());
-
-      auto *Alignment = Builder.getInt32(PA->getAlign().value());
-      auto *FromPromise = Builder.getInt1(false);
-      SmallVector<Value *, 3> Arg{CoroBegin, Alignment, FromPromise};
-      auto *PI = Builder.CreateIntrinsic(
-          Builder.getPtrTy(), Intrinsic::coro_promise, Arg, {}, "promise.addr");
-      PA->replaceUsesWithIf(PI, [CoroId](Use &U) {
-        bool IsBitcast = U == U.getUser()->stripPointerCasts();
-        bool IsCoroId = U.getUser() == CoroId;
-        return !IsBitcast && !IsCoroId;
-      });
-    }
+    hidePromiseAlloca(CoroId, CoroBegin);
   }
 
   // Coroutine suspention could potentially lead to any argument modified
