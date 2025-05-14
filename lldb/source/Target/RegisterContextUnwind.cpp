@@ -1256,7 +1256,7 @@ bool RegisterContextUnwind::IsTrapHandlerSymbol(
 //
 // If there is no unwind rule for a non-volatile (callee-preserved)
 // register, the returned AbstractRegisterLocation will be IsSame.
-// In frame 0, IsSame means get the  value from the live register context.
+// In frame 0, IsSame means get the value from the live register context.
 // Else it means to continue descending down the stack to more-live frames
 // looking for a location/value.
 //
@@ -1394,42 +1394,32 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
       }
 
       if (return_address_regnum != LLDB_INVALID_REGNUM) {
-        UnwindPlan::Row::AbstractRegisterLocation scratch;
-        // This is a sigtramp/interrupt handler - treat a
-        // request for "pc" and "ra" as distinct.
-        if (m_frame_type == eTrapHandlerFrame && active_row &&
-            active_row->GetRegisterInfo(pc_regnum.GetAsKind(kind), scratch)) {
-          UnwindLogMsg("Providing pc register instead of rewriting to "
-                       "RA reg because this is a trap handler and there is "
-                       "a location for the saved pc register value.");
+        // This is a normal function, there's no rule for
+        // finding the caller's pc value, look for the caller's
+        // return address register value.
+        return_address_reg.init(m_thread,
+                                m_full_unwind_plan_sp->GetRegisterKind(),
+                                return_address_regnum);
+        regnum = return_address_reg;
+        UnwindLogMsg("requested caller's saved PC but this UnwindPlan uses a "
+                     "RA reg; getting %s (%d) instead",
+                     return_address_reg.GetName(),
+                     return_address_reg.GetAsKind(eRegisterKindLLDB));
+        if (active_row && active_row->GetRegisterInfo(regnum.GetAsKind(kind),
+                                                      unwindplan_regloc)) {
+          UnwindLogMsg("supplying caller's saved %s (%d)'s location using "
+                       "%s UnwindPlan",
+                       regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB),
+                       m_full_unwind_plan_sp->GetSourceName().GetCString());
+          if (unwindplan_regloc.IsSame())
+            unwindplan_regloc.SetInRegister(regnum.GetAsKind(kind));
+          return unwindplan_regloc;
         } else {
-          // This is a normal function, there's no rule for
-          // finding the caller's pc value, look for the caller's
-          // return address register value.
-          return_address_reg.init(m_thread,
-                                  m_full_unwind_plan_sp->GetRegisterKind(),
-                                  return_address_regnum);
-          regnum = return_address_reg;
-          UnwindLogMsg("requested caller's saved PC but this UnwindPlan uses a "
-                       "RA reg; getting %s (%d) instead",
-                       return_address_reg.GetName(),
-                       return_address_reg.GetAsKind(eRegisterKindLLDB));
-          if (active_row && active_row->GetRegisterInfo(regnum.GetAsKind(kind),
-                                                        unwindplan_regloc)) {
-            UnwindLogMsg("supplying caller's saved %s (%d)'s location using "
-                         "%s UnwindPlan",
-                         regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB),
-                         m_full_unwind_plan_sp->GetSourceName().GetCString());
-            if (unwindplan_regloc.IsSame())
-              unwindplan_regloc.SetInRegister(regnum.GetAsKind(kind));
+          // No unwind rule for the return address reg on frame
+          // 0 means that the caller's address is still in RA reg.
+          if (BehavesLikeZerothFrame()) {
+            unwindplan_regloc.SetInRegister(regnum.GetAsKind(kind));
             return unwindplan_regloc;
-          } else {
-            // No unwind rule for the return address reg on frame
-            // 0 means that the caller's address is still in RA reg.
-            if (BehavesLikeZerothFrame()) {
-              unwindplan_regloc.SetInRegister(regnum.GetAsKind(kind));
-              return unwindplan_regloc;
-            }
           }
         }
       }
