@@ -1,7 +1,14 @@
 // RUN: mlir-tblgen -gen-dialect-decls -I %S/../../include %s | FileCheck %s --check-prefix=DIALECT
 // RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck %s --check-prefix=OP
 // RUN: mlir-tblgen -gen-typedef-decls -I %S/../../include %s | FileCheck %s --check-prefix=TYPE
+// RUN: mlir-tblgen -gen-attrdef-decls -I %S/../../include %s | FileCheck %s --check-prefix=ATTR
+// RUN: mlir-tblgen -gen-attr-interface-decls -I %S/../../include %s | FileCheck %s --check-prefix=ATTR-INTERFACE
+// RUN: mlir-tblgen -gen-op-interface-decls -I %S/../../include %s | FileCheck %s --check-prefix=OP-INTERFACE
+// RUN: mlir-tblgen -gen-type-interface-decls -I %S/../../include %s | FileCheck %s --check-prefix=TYPE-INTERFACE
+// RUN: mlir-tblgen -gen-enum-decls -I %S/../../include %s | FileCheck %s --check-prefix=ENUM
 
+include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
 // check dialect with summary and description
@@ -52,10 +59,7 @@ def A_SomeOp2 : Op<A_Dialect, "some_op2", []>{
 // OP-NEXT: class SomeOp2;
 }
 
-class AType<string name> : TypeDef<A_Dialect, name> { }
-
-
-def A_TensorType : AType<"Tensor"> {
+def A_TensorType : TypeDef<A_Dialect,"Tensor"> {
   let typeName = "a.simple_a_tensor";
 
   let summary = "Tensor Type A summary";
@@ -71,4 +75,65 @@ def A_TensorType : AType<"Tensor"> {
 // TYPE: /// Tensor Type A summary
 // TYPE-NEXT: /// Tensor Type A description
 // TYPE-NEXT: class TensorType;
+}
+
+def A_SimpleAttr : AttrDef<A_Dialect,"SimpleA"> {
+  let attrName = "a.simple_attr";
+  let summary = "Simple Attr A summary";
+
+  let description = [{
+      Simple Attr A description
+  }];
+// ATTR: /// Simple Attr A summary
+// ATTR-NEXT: /// Simple Attr A description
+// ATTR-NEXT: class SimpleAAttr;
+}
+
+def EncodingTrait : AttrInterface<"EncodingTrait"> {
+  let cppNamespace = "mlir::a::traits";
+  let description = [{
+    Common trait for all layouts.
+  }];
+  let methods = [
+  ];
+// ATTR-INTERFACE: namespace mlir
+// ATTR-INTERFACE-NEXT: namespace a
+// ATTR-INTERFACE-NEXT: namespace traits
+// ATTR-INTERFACE-NEXT: /// Common trait for all layouts.
+// ATTR-INTERFACE-NEXT: class EncodingTrait;
+}
+
+def SimpleEncodingTrait : AttrInterface<"SimpleEncodingTrait"> {
+  let cppNamespace = "a::traits";
+// ATTR-INTERFACE: namespace a {
+// ATTR-INTERFACE-NEXT: namespace traits {
+// ATTR-INTERFACE-NEXT: class SimpleEncodingTrait;
+}
+
+def SimpleOpInterface : OpInterface<"SimpleOpInterface"> {
+  let cppNamespace = "a::traits";
+  let description = [{
+
+    Simple Op Interface description
+    }];
+// OP-INTERFACE: namespace a {
+// OP-INTERFACE-NEXT: namespace traits {
+// OP-INTERFACE-NEXT: /// Simple Op Interface description
+// OP-INTERFACE-NEXT: class SimpleOpInterface;
+}
+
+def SimpleTypeInterface : TypeInterface<"SimpleTypeInterface"> {
+  let description = [{
+    Simple Type Interface description
+  }];
+// TYPE-INTERFACE: /// Simple Type Interface description
+// TYPE-INTERFACE-NEXT: class SimpleTypeInterface;
+}
+
+def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
+                           [I32BitEnumCaseBit<"Bit0", 0, "tagged">,
+                           I32BitEnumCaseBit<"Bit1", 1>]> {
+  let genSpecializedAttr = 0;
+// ENUM: // An example bit enum
+// ENUM-NEXT: enum class MyBitEnum
 }
