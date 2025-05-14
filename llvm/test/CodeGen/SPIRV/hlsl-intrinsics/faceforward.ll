@@ -53,6 +53,20 @@ entry:
   ret <4 x float> %spv.faceforward
 }
 
+define internal noundef float @faceforward_instcombine_float(float noundef %a, float noundef %b, float noundef %c) {
+entry:
+  ; CHECK: %[[#]] = OpFunction %[[#float_32]] None %[[#]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#arg2:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext_glsl]] FaceForward %[[#arg0]] %[[#arg1]] %[[#arg2]]
+  %fmul= fmul float %b, %c
+  %fcmp = fcmp olt float %fmul, 0.000000e+00
+  %fneg = fneg float %a
+  %select = select i1 %fcmp, float %a, float %fneg
+  ret float %select
+ }
+
 define internal noundef <4 x float> @faceforward_instcombine_float4(<4 x float> noundef %a, <4 x float> noundef %b, <4 x float> noundef %c) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#vec4_float_32]] None %[[#]]
