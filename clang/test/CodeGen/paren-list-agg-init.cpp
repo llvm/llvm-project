@@ -390,9 +390,9 @@ namespace gh61145 {
   // CHECK-NEXT: [[V:%.*v.*]] = alloca [[STRUCT_VEC]], align 1
   // CHECK-NEXT: [[AGG_TMP_ENSURED:%.*agg.tmp.ensured.*]] = alloca [[STRUCT_S1]], align 1
   // a.k.a. Vec::Vec()
-  // CHECK-NEXT: call void @_ZN7gh611453VecC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[V]])
+  // CHECK-NEXT: call void @_ZN7gh611453VecC1Ev(ptr noalias noundef nonnull align 1 dereferenceable(1) [[V]])
   // a.k.a. Vec::Vec(Vec&&)
-  // CHECK-NEXT: call void @_ZN7gh611453VecC1EOS0_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]], ptr noundef nonnull align 1 dereferenceable(1) [[V]])
+  // CHECK-NEXT: call void @_ZN7gh611453VecC1EOS0_(ptr noalias noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]], ptr noundef nonnull align 1 dereferenceable(1) [[V]])
   // a.k.a. S1::~S1()
   // CHECK-NEXT: call void @_ZN7gh611452S1D1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]])
   // a.k.a.Vec::~Vec()
@@ -410,9 +410,9 @@ namespace gh61145 {
   // CHECK-NEXT: [[V:%.*v.*]] = alloca [[STRUCT_VEC]], align 1
   // CHECK-NEXT: [[AGG_TMP_ENSURED:%.*agg.tmp.ensured.*]] = alloca [[STRUCT_S2]], align 1
   // a.k.a. Vec::Vec()
-  // CHECK-NEXT: call void @_ZN7gh611453VecC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[V]])
+  // CHECK-NEXT: call void @_ZN7gh611453VecC1Ev(ptr noalias noundef nonnull align 1 dereferenceable(1) [[V]])
   // a.k.a. Vec::Vec(Vec&&)
-  // CHECK-NEXT: call void @_ZN7gh611453VecC1EOS0_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]], ptr noundef nonnull align 1 dereferenceable(1) [[V]])
+  // CHECK-NEXT: call void @_ZN7gh611453VecC1EOS0_(ptr noalias noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]], ptr noundef nonnull align 1 dereferenceable(1) [[V]])
   // CHECK-NEXT: [[C:%.*c.*]] = getelementptr inbounds nuw [[STRUCT_S2]], ptr [[AGG_TMP_ENSURED]], i32 0, i32
   // CHECK-NEXT: store i8 0, ptr [[C]], align 1
   // a.k.a. S2::~S2()

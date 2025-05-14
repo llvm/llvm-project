@@ -44,7 +44,7 @@ public:
 // CHECK-NEXT:    store i8 [[X:%.*]], ptr [[X_ADDR]], align 1
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[X_ADDR]], align 1
-// CHECK-NEXT:    call void @_ZN3FooIcEC2Ec(ptr noundef nonnull align 1 dereferenceable(1) [[THIS1]], i8 noundef signext [[TMP0]])
+// CHECK-NEXT:    call void @_ZN3FooIcEC2Ec(ptr noalias noundef nonnull align 1 dereferenceable(1) [[THIS1]], i8 noundef signext [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3FooIcED1Ev(
@@ -86,7 +86,7 @@ template struct Foo<char>;
 // CHECK-NEXT:    store i16 [[X:%.*]], ptr [[X_ADDR]], align 2
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[X_ADDR]], align 2
-// CHECK-NEXT:    call void @_ZN3FooIsEC2Es(ptr noundef nonnull align 2 dereferenceable(2) [[THIS1]], i16 noundef signext [[TMP0]])
+// CHECK-NEXT:    call void @_ZN3FooIsEC2Es(ptr noalias noundef nonnull align 2 dereferenceable(2) [[THIS1]], i16 noundef signext [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3FooIsED1Ev(
@@ -131,7 +131,7 @@ template struct Foo<short>;
 // CHECK-NEXT:    store i32 [[X:%.*]], ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
-// CHECK-NEXT:    call void @_ZN3BarIiEC2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK-NEXT:    call void @_ZN3BarIiEC2Ei(ptr noalias noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3BarIiED1Ev(
@@ -176,7 +176,7 @@ template struct Bar<int>;
 // CHECK-NEXT:    store i64 [[X:%.*]], ptr [[X_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[X_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN3BazIlEC2El(ptr noundef nonnull align 8 dereferenceable(8) [[THIS1]], i64 noundef [[TMP0]])
+// CHECK-NEXT:    call void @_ZN3BazIlEC2El(ptr noalias noundef nonnull align 8 dereferenceable(8) [[THIS1]], i64 noundef [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-LABEL: @_ZN3BazIlED1Ev(

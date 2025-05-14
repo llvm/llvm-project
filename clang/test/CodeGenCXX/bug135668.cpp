@@ -26,7 +26,7 @@ int Foo::test_method() {
 // CHECK: store ptr %this, ptr [[THIS_ADDR]], align 8
 // CHECK: [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK: [[ALLOCATION:%.*]] = call noundef ptr @_ZN9TestClassnwEm(i64 noundef 4)
-// CHECK: [[INITIALIZEDOBJ:%.*]] = invoke noundef ptr @_ZN9TestClassC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ALLOCATION]])
+// CHECK: [[INITIALIZEDOBJ:%.*]] = invoke noundef ptr @_ZN9TestClassC1Ev(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ALLOCATION]])
 // CHECK-NEXT:  to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
 // CHECK: [[INVOKE_CONT]]:
 // CHECK: store ptr [[ALLOCATION]], ptr [[OBJ]], align 8

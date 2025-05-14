@@ -70,15 +70,15 @@ namespace PR18097 {
     };
 
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei(ptr noundef {{[^,]*}} @_ZN7PR180977dynamic1aE, i32 noundef 1)
+    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei(ptr noalias noundef {{[^,]*}} @_ZN7PR180977dynamic1aE, i32 noundef 1)
     _Atomic(X) a = X(1);
 
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei(ptr noundef {{[^,]*}} @_ZN7PR180977dynamic1bE, i32 noundef 2)
+    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei(ptr noalias noundef {{[^,]*}} @_ZN7PR180977dynamic1bE, i32 noundef 2)
     _Atomic(X) b(X(2));
 
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
-    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei(ptr noundef {{[^,]*}} @_ZN7PR180977dynamic1cE, i32 noundef 3)
+    // CHECK: call void @_ZN7PR180977dynamic1XC1Ei(ptr noalias noundef {{[^,]*}} @_ZN7PR180977dynamic1cE, i32 noundef 3)
     _Atomic(X) c{X(3)};
 
     struct Y {

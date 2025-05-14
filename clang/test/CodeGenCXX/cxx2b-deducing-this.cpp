@@ -106,7 +106,7 @@ void test_temporary() {
 //CHECK: define dso_local void @_Z14test_temporaryv(){{.*}}
 //CHECK-NEXT: entry:
 //CHECK:    %ref.tmp = alloca %struct.MaterializedTemporary, align 1
-//CHECK:    call void @_ZN21MaterializedTemporaryC1Ev(ptr noundef nonnull align 1 dereferenceable(1) %ref.tmp){{.*}}
+//CHECK:    call void @_ZN21MaterializedTemporaryC1Ev(ptr noalias noundef nonnull align 1 dereferenceable(1) %ref.tmp){{.*}}
 //CHECK     invoke void @_ZNH21MaterializedTemporary3fooEOS_(ptr noundef nonnull align 1 dereferenceable(1) %ref.tmp){{.*}}
 
 namespace GH86399 {

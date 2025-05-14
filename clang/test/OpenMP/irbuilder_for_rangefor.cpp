@@ -54,7 +54,7 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN7MyRangeC1Ei(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]], i32 noundef 42)
+// CHECK-NEXT:    call void @_ZN7MyRangeC1Ei(ptr noalias noundef nonnull align 1 dereferenceable(1) [[REF_TMP]], i32 noundef 42)
 // CHECK-NEXT:    store ptr [[REF_TMP]], ptr [[__RANGE2]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__RANGE2]], align 8
 // CHECK-NEXT:    call void @_ZN7MyRange5beginEv(ptr dead_on_unwind writable sret([[STRUCT_MYITERATOR]]) align 1 [[__BEGIN2]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]])
@@ -66,7 +66,7 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    store ptr [[__BEGIN2]], ptr [[TMP2]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 1
 // CHECK-NEXT:    store ptr [[__END2]], ptr [[TMP3]], align 8
-// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_CAPTURED1]], ptr noundef nonnull align 1 dereferenceable(1) [[__BEGIN2]])
+// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(ptr noalias noundef nonnull align 1 dereferenceable(1) [[AGG_CAPTURED1]], ptr noundef nonnull align 1 dereferenceable(1) [[__BEGIN2]])
 // CHECK-NEXT:    call void @__captured_stmt(ptr [[DOTCOUNT_ADDR]], ptr [[AGG_CAPTURED]])
 // CHECK-NEXT:    [[DOTCOUNT:%.*]] = load i64, ptr [[DOTCOUNT_ADDR]], align 8
 // CHECK-NEXT:    br label [[OMP_LOOP_PREHEADER:%.*]]
@@ -133,10 +133,10 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[DOTSTART]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP2]])
+// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(ptr noalias noundef nonnull align 1 dereferenceable(1) [[DOTSTART]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP2]])
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[TMP0]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 8
-// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[DOTSTOP]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP4]])
+// CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(ptr noalias noundef nonnull align 1 dereferenceable(1) [[DOTSTOP]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP4]])
 // CHECK-NEXT:    store i64 1, ptr [[DOTSTEP]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[DOTSTEP]], align 8
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[TMP5]], 0

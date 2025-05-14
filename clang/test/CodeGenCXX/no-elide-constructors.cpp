@@ -27,7 +27,7 @@ X Test()
   // CHECK-CXX98: call void @_ZN1XC1ERKS_(
   // CHECK-CXX11: call void @_ZN1XC1EOS_(
   // CHECK-CXX11-NONZEROALLOCAAS: [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[AGG_RESULT]] to ptr
-  // CHECK-CXX11-NONZEROALLOCAAS-NEXT: call void @_ZN1XC1EOS_(ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]]
+  // CHECK-CXX11-NONZEROALLOCAAS-NEXT: call void @_ZN1XC1EOS_(ptr noalias noundef nonnull align 1 dereferenceable(1) [[TMP0]]
   // CHECK-CXX98-ELIDE-NOT: call void @_ZN1XC1ERKS_(
   // CHECK-CXX11-ELIDE-NOT: call void @_ZN1XC1EOS_(
   // CHECK-CXX11-NONZEROALLOCAAS-ELIDE-NOT: call void @_ZN1XC1EOS_(

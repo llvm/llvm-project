@@ -29,11 +29,11 @@ export void foo() {
 // Buf1 initialization part 1 - global init function that calls ByteAddressBuffer C1 constructor with explicit binding
 // CHECK: define internal void @__cxx_global_var_init()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @_ZN4hlsl17ByteAddressBufferC1Ejjij(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf1,
+// CHECK-NEXT: call void @_ZN4hlsl17ByteAddressBufferC1Ejjij(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL4Buf1,
 // CHECK-SAME: i32 noundef 1, i32 noundef 2, i32 noundef 1, i32 noundef 0)
 
 // Buf1 initialization part 2 - body of ByteAddressBuffer C1 constructor with explicit binding that calls the C2 constructor
-// CHECK: define linkonce_odr void @_ZN4hlsl17ByteAddressBufferC1Ejjij(ptr noundef nonnull align 4 dereferenceable(4) %this,
+// CHECK: define linkonce_odr void @_ZN4hlsl17ByteAddressBufferC1Ejjij(ptr noalias noundef nonnull align 4 dereferenceable(4) %this,
 // CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index)
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %this.addr = alloca ptr, align 4
@@ -51,7 +51,7 @@ export void foo() {
 // CHECK-NEXT: %1 = load i32, ptr %spaceNo.addr, align 4
 // CHECK-NEXT: %2 = load i32, ptr %range.addr, align 4
 // CHECK-NEXT: %3 = load i32, ptr %index.addr, align 4
-// CHECK: call void @_ZN4hlsl17ByteAddressBufferC2Ejjij(ptr noundef nonnull align 4 dereferenceable(4) %this1, 
+// CHECK: call void @_ZN4hlsl17ByteAddressBufferC2Ejjij(ptr noalias noundef nonnull align 4 dereferenceable(4) %this1, 
 // CHECK-SAME: i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 noundef %3)
 // CHECK-NEXT: ret void
 
@@ -59,28 +59,28 @@ export void foo() {
 // the global init function currently calls the default RWByteAddressBuffer C1 constructor
 // CHECK: define internal void @__cxx_global_var_init.1()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @_ZN4hlsl19RWByteAddressBufferC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf2)
+// CHECK-NEXT: call void @_ZN4hlsl19RWByteAddressBufferC1Ev(ptr noalias noundef nonnull align 4 dereferenceable(4) @_ZL4Buf2)
 
 // Buf3 initialization part 1 - local variable declared in function foo() is initialized by 
 // RasterizerOrderedByteAddressBuffer C1 default constructor
 // CHECK: define void @_Z3foov() #2 {
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %Buf3 = alloca %"class.hlsl::RasterizerOrderedByteAddressBuffer", align 4
-// CHECK-NEXT: call void @_ZN4hlsl34RasterizerOrderedByteAddressBufferC1Ev(ptr noundef nonnull align 4 dereferenceable(4) %Buf3)
+// CHECK-NEXT: call void @_ZN4hlsl34RasterizerOrderedByteAddressBufferC1Ev(ptr noalias noundef nonnull align 4 dereferenceable(4) %Buf3)
 
 // Buf3 initialization part 2 - body of RasterizerOrderedByteAddressBuffer default C1 constructor that
 // calls the default C2 constructor
-// CHECK: define linkonce_odr void @_ZN4hlsl34RasterizerOrderedByteAddressBufferC1Ev(ptr noundef nonnull align 4 dereferenceable(4) %this)
+// CHECK: define linkonce_odr void @_ZN4hlsl34RasterizerOrderedByteAddressBufferC1Ev(ptr noalias noundef nonnull align 4 dereferenceable(4) %this)
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %this.addr = alloca ptr, align 4
 // CHECK-NEXT: store ptr %this, ptr %this.addr, align 4
 // CHECK-NEXT: %this1 = load ptr, ptr %this.addr, align 4
-// CHECK: call void @_ZN4hlsl34RasterizerOrderedByteAddressBufferC2Ev(ptr noundef nonnull align 4 dereferenceable(4) %this1)
+// CHECK: call void @_ZN4hlsl34RasterizerOrderedByteAddressBufferC2Ev(ptr noalias noundef nonnull align 4 dereferenceable(4) %this1)
 // CHECK-NEXT: ret void
 
 // Buf1 initialization part 3 - ByteAddressBuffer C2 constructor with explicit binding that initializes
 // handle with @llvm.dx.resource.handlefrombinding
-// CHECK: define linkonce_odr void @_ZN4hlsl17ByteAddressBufferC2Ejjij(ptr noundef nonnull align 4 dereferenceable(4) %this,
+// CHECK: define linkonce_odr void @_ZN4hlsl17ByteAddressBufferC2Ejjij(ptr noalias noundef nonnull align 4 dereferenceable(4) %this,
 // CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index)
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %this.addr = alloca ptr, align 4
@@ -106,7 +106,7 @@ export void foo() {
 
 // Buf3 initialization part 3 - body of RasterizerOrderedByteAddressBuffer default C2 constructor that
 // initializes handle to poison
-// CHECK: define linkonce_odr void @_ZN4hlsl34RasterizerOrderedByteAddressBufferC2Ev(ptr noundef nonnull align 4 dereferenceable(4) %this)
+// CHECK: define linkonce_odr void @_ZN4hlsl34RasterizerOrderedByteAddressBufferC2Ev(ptr noalias noundef nonnull align 4 dereferenceable(4) %this)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedByteAddressBuffer", ptr %this1, i32 0, i32 0
 // CHECK: store target("dx.RawBuffer", i8, 1, 1) poison, ptr %__handle, align 4
 

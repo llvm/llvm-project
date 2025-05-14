@@ -129,7 +129,7 @@ void testMoveAssignment(SI a) {
   t = static_cast<SI &&>(a);
 }
 
-// CHECK: define linkonce_odr {{.*}}@_ZN2SAC2ERKS_(ptr noundef nonnull align 8 dereferenceable(16) %[[THIS:.*]], ptr noundef nonnull align 8 dereferenceable(16) %0)
+// CHECK: define linkonce_odr {{.*}}@_ZN2SAC2ERKS_(ptr noalias noundef nonnull align 8 dereferenceable(16) %[[THIS:.*]], ptr noundef nonnull align 8 dereferenceable(16) %0)
 // IOS: %[[RETVAL:.*]] = alloca ptr, align 8
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // CHECK: %[[_ADDR:.*]] = alloca ptr, align 8
@@ -148,7 +148,7 @@ void testMoveAssignment(SI a) {
 // CHECK: %[[V8:.*]] = ptrtoint ptr %[[V2]] to i64
 // CHECK: %[[V9:.*]] = call i64 @llvm.ptrauth.resign(i64 %[[V8]], i32 1, i64 %[[V4]], i32 1, i64 %[[V6]])
 
-// CHECK: define linkonce_odr {{.*}}@_ZN2SAC2EOS_(ptr noundef nonnull align 8 dereferenceable(16) %[[THIS:.*]], ptr noundef nonnull align 8 dereferenceable(16) %0)
+// CHECK: define linkonce_odr {{.*}}@_ZN2SAC2EOS_(ptr noalias noundef nonnull align 8 dereferenceable(16) %[[THIS:.*]], ptr noundef nonnull align 8 dereferenceable(16) %0)
 // IOS: %[[RETVAL:.*]] = alloca ptr, align 8
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // CHECK: %[[_ADDR:.*]] = alloca ptr, align 8
