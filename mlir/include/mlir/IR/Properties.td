@@ -554,7 +554,7 @@ class ArrayProp<Property elem = Property<>, string newSummary = ""> :
           return }] # !subst("$_storage", "propStorage", elem.hashProperty) # [{;
         };
         auto mapped = ::llvm::map_range($_storage, getElemHash);
-        return ::llvm::hash_combine_range(mapped.begin(), mapped.end());
+        return ::llvm::hash_combine_range(mapped);
       }()
     }]);
 }

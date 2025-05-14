@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  opts::HeatmapMode = true;
+  opts::HeatmapMode = opts::HM_Exclusive;
   opts::AggregateOnly = true;
   if (!sys::fs::exists(opts::InputFilename))
     report_error(opts::InputFilename, errc::no_such_file_or_directory);
@@ -74,6 +74,7 @@ int main(int argc, char **argv) {
   // Output to stdout by default
   if (opts::OutputFilename.empty())
     opts::OutputFilename = "-";
+  opts::HeatmapOutput.assign(opts::OutputFilename);
 
   // Initialize targets and assembly printers/parsers.
 #define BOLT_TARGET(target)                                                    \
