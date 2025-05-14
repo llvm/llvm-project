@@ -1450,8 +1450,9 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
     }
   }
 
-  // We have no AbstractRegisterRule, and the ABI says this is a
-  // non-volatile / callee-preserved register.
+  // We have no AbstractRegisterLocation, and the ABI says this is a
+  // non-volatile / callee-preserved register.  Continue down the stack
+  // or to frame 0 & the live RegisterContext.
   std::string unwindplan_name;
   if (m_full_unwind_plan_sp) {
     unwindplan_name += "via '";
