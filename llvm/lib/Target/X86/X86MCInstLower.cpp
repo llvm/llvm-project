@@ -1568,9 +1568,23 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
   if (isa<UndefValue>(COp)) {
     CS << "u";
   } else if (auto *CI = dyn_cast<ConstantInt>(COp)) {
-    printConstant(CI->getValue(), CS, PrintZero);
+    if (auto VTy = dyn_cast<FixedVectorType>(CI->getType())) {
+      for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
+        if (I != 0)
+          CS << ',';
+        printConstant(CI->getValue(), CS, PrintZero);
+      }
+    } else
+      printConstant(CI->getValue(), CS, PrintZero);
   } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
-    printConstant(CF->getValueAPF(), CS, PrintZero);
+    if (auto VTy = dyn_cast<FixedVectorType>(CF->getType())) {
+      for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
+        if (I != 0)
+          CS << ',';
+        printConstant(CF->getValueAPF(), CS, PrintZero);
+      }
+    } else
+      printConstant(CF->getValueAPF(), CS, PrintZero);
   } else if (auto *CDS = dyn_cast<ConstantDataSequential>(COp)) {
     Type *EltTy = CDS->getElementType();
     bool IsInteger = EltTy->isIntegerTy();
@@ -1784,6 +1798,14 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
 
   case X86::SEH_EndEpilogue:
     OutStreamer->emitWinCFIEndEpilogue();
+    break;
+
+  case X86::SEH_UnwindV2Start:
+    OutStreamer->emitWinCFIUnwindV2Start();
+    break;
+
+  case X86::SEH_UnwindVersion:
+    OutStreamer->emitWinCFIUnwindVersion(MI->getOperand(0).getImm());
     break;
 
   default:
@@ -2428,6 +2450,8 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::SEH_PushFrame:
   case X86::SEH_EndPrologue:
   case X86::SEH_EndEpilogue:
+  case X86::SEH_UnwindV2Start:
+  case X86::SEH_UnwindVersion:
     EmitSEHInstruction(MI);
     return;
 

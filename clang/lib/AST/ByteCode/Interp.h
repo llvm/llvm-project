@@ -114,9 +114,6 @@ bool CheckCallDepth(InterpState &S, CodePtr OpPC);
 /// Checks the 'this' pointer.
 bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This);
 
-/// Checks if a method is pure virtual.
-bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
-
 /// Checks if all the arguments annotated as 'nonnull' are in fact not null.
 bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *CE, unsigned ArgSize);
@@ -3029,10 +3026,11 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool CheckEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED) {
   assert(ED);
   assert(!ED->isFixed());
-  const APSInt Val = S.Stk.peek<T>().toAPSInt();
 
-  if (S.inConstantContext())
+  if (S.inConstantContext()) {
+    const APSInt Val = S.Stk.peek<T>().toAPSInt();
     diagnoseEnumValue(S, OpPC, ED, Val);
+  }
   return true;
 }
 
