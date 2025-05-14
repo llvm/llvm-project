@@ -3736,13 +3736,14 @@ void Parser::ParseDeclarationSpecifiers(
     }
 
     case tok::kw___is_signed:
-      // GNU libstdc++ 4.4 uses __is_signed as an identifier, but Clang
-      // typically treats it as a trait. If we see __is_signed as it appears
-      // in libstdc++, e.g.,
+      // HACK: before 2022-12, libstdc++ uses __is_signed as an identifier,
+      // but Clang typically treats it as a trait.
+      // If we see __is_signed as it appears in libstdc++, e.g.,
       //
       //   static const bool __is_signed;
       //
       // then treat __is_signed as an identifier rather than as a keyword.
+      // This was fixed by libstdc++ in December 2022.
       if (DS.getTypeSpecType() == TST_bool &&
           DS.getTypeQualifiers() == DeclSpec::TQ_const &&
           DS.getStorageClassSpec() == DeclSpec::SCS_static)
