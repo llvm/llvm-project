@@ -65,6 +65,8 @@ enum ColumnType : unsigned {
   eColumnTypeBoolean,
   eColumnTypeTimestamp
 };
+bool fromJSON(const llvm::json::Value &, ColumnType &, llvm::json::Path);
+llvm::json::Value toJSON(const ColumnType &);
 
 /// A ColumnDescriptor specifies what module attribute to show in a column of
 /// the modules view, how to format it, and what the column’s label should be.
@@ -89,6 +91,7 @@ struct ColumnDescriptor {
   /// Width of this column in characters (hint only).
   std::optional<int> width;
 };
+bool fromJSON(const llvm::json::Value &, ColumnDescriptor &, llvm::json::Path);
 llvm::json::Value toJSON(const ColumnDescriptor &);
 
 /// Names of checksum algorithms that may be supported by a debug adapter.
@@ -99,6 +102,7 @@ enum ChecksumAlgorithm : unsigned {
   eChecksumAlgorithmSHA256,
   eChecksumAlgorithmTimestamp
 };
+bool fromJSON(const llvm::json::Value &, ChecksumAlgorithm &, llvm::json::Path);
 llvm::json::Value toJSON(const ChecksumAlgorithm &);
 
 /// Describes one or more type of breakpoint a BreakpointMode applies to. This
@@ -114,6 +118,8 @@ enum BreakpointModeApplicability : unsigned {
   /// In `InstructionBreakpoint`'s.
   eBreakpointModeApplicabilityInstruction
 };
+bool fromJSON(const llvm::json::Value &, BreakpointModeApplicability &,
+              llvm::json::Path);
 llvm::json::Value toJSON(const BreakpointModeApplicability &);
 
 /// A `BreakpointMode` is provided as a option when setting breakpoints on
@@ -133,6 +139,7 @@ struct BreakpointMode {
   /// Describes one or more type of breakpoint this mode applies to.
   std::vector<BreakpointModeApplicability> appliesTo;
 };
+bool fromJSON(const llvm::json::Value &, BreakpointMode &, llvm::json::Path);
 llvm::json::Value toJSON(const BreakpointMode &);
 
 /// Debug Adapter Features flags supported by lldb-dap.
@@ -231,7 +238,11 @@ enum AdapterFeature : unsigned {
   /// The debug adapter supports the `terminateDebuggee` attribute on the
   /// `disconnect` request.
   eAdapterFeatureTerminateDebuggee,
+  eAdapterFeatureFirst = eAdapterFeatureANSIStyling,
+  eAdapterFeatureLast = eAdapterFeatureTerminateDebuggee,
 };
+bool fromJSON(const llvm::json::Value &, AdapterFeature &, llvm::json::Path);
+llvm::json::Value toJSON(const AdapterFeature &);
 
 /// Information about the capabilities of a debug adapter.
 struct Capabilities {
@@ -269,13 +280,15 @@ struct Capabilities {
 
   /// @}
 };
+bool fromJSON(const llvm::json::Value &, Capabilities &, llvm::json::Path);
 llvm::json::Value toJSON(const Capabilities &);
 
 enum PresentationHint : unsigned {
   ePresentationHintNormal,
   ePresentationHintEmphasize,
-  ePresentationHintDeemphasize,
+  ePresentationHintDeemphasize
 };
+bool fromJSON(const llvm::json::Value &, PresentationHint &, llvm::json::Path);
 llvm::json::Value toJSON(PresentationHint hint);
 
 /// A `Source` is a descriptor for source code. It is returned from the debug
@@ -326,6 +339,7 @@ enum SteppingGranularity : unsigned {
 };
 bool fromJSON(const llvm::json::Value &, SteppingGranularity &,
               llvm::json::Path);
+llvm::json::Value toJSON(const SteppingGranularity &);
 
 /// Provides formatting information for a value.
 struct ValueFormat {
@@ -364,6 +378,7 @@ enum class BreakpointReason : unsigned {
   /// adapter does not believe it can be verified without intervention.
   eBreakpointReasonFailed,
 };
+bool fromJSON(const llvm::json::Value &, BreakpointReason &, llvm::json::Path);
 llvm::json::Value toJSON(const BreakpointReason &);
 
 /// Information about a breakpoint created in `setBreakpoints`,
@@ -415,6 +430,7 @@ struct Breakpoint {
   /// should omit this property.
   std::optional<BreakpointReason> reason;
 };
+bool fromJSON(const llvm::json::Value &, Breakpoint &, llvm::json::Path);
 llvm::json::Value toJSON(const Breakpoint &);
 
 /// Properties of a breakpoint or logpoint passed to the `setBreakpoints`
@@ -456,6 +472,7 @@ struct SourceBreakpoint {
   std::optional<std::string> mode;
 };
 bool fromJSON(const llvm::json::Value &, SourceBreakpoint &, llvm::json::Path);
+llvm::json::Value toJSON(const SourceBreakpoint &);
 
 /// Properties of a breakpoint passed to the `setFunctionBreakpoints` request.
 struct FunctionBreakpoint {
@@ -475,6 +492,7 @@ struct FunctionBreakpoint {
 };
 bool fromJSON(const llvm::json::Value &, FunctionBreakpoint &,
               llvm::json::Path);
+llvm::json::Value toJSON(const FunctionBreakpoint &);
 
 /// This enumeration defines all possible access types for data breakpoints.
 /// Values: ‘read’, ‘write’, ‘readWrite’
@@ -488,7 +506,7 @@ bool fromJSON(const llvm::json::Value &, DataBreakpointAccessType &,
 llvm::json::Value toJSON(const DataBreakpointAccessType &);
 
 /// Properties of a data breakpoint passed to the `setDataBreakpoints` request.
-struct DataBreakpointInfo {
+struct DataBreakpoint {
   /// An id representing the data. This id is returned from the
   /// `dataBreakpointInfo` request.
   std::string dataId;
@@ -503,8 +521,8 @@ struct DataBreakpointInfo {
   /// The debug adapter is expected to interpret the expression as needed.
   std::optional<std::string> hitCondition;
 };
-bool fromJSON(const llvm::json::Value &, DataBreakpointInfo &,
-              llvm::json::Path);
+bool fromJSON(const llvm::json::Value &, DataBreakpoint &, llvm::json::Path);
+llvm::json::Value toJSON(const DataBreakpoint &);
 
 /// Properties of a breakpoint passed to the `setInstructionBreakpoints` request
 struct InstructionBreakpoint {

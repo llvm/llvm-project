@@ -17,7 +17,7 @@
 #include <string>
 
 namespace lldb_dap {
-Watchpoint::Watchpoint(DAP &d, const protocol::DataBreakpointInfo &breakpoint)
+Watchpoint::Watchpoint(DAP &d, const protocol::DataBreakpoint &breakpoint)
     : BreakpointBase(d, breakpoint.condition, breakpoint.hitCondition) {
   llvm::StringRef dataId = breakpoint.dataId;
   auto [addr_str, size_str] = dataId.split('/');

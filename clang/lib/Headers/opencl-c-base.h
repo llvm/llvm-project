@@ -47,6 +47,7 @@
 #define __opencl_c_ext_fp32_local_atomic_min_max 1
 #define __opencl_c_ext_image_raw10_raw12 1
 #define __opencl_c_ext_image_unorm_int_2_101010 1
+#define __opencl_c_ext_image_unsigned_10x6_12x4_14x2 1
 #define cl_khr_kernel_clock 1
 #define __opencl_c_kernel_clock_scope_device 1
 #define __opencl_c_kernel_clock_scope_work_group 1
@@ -490,6 +491,14 @@ typedef enum memory_order
 #ifdef __opencl_c_ext_image_unorm_int_2_101010
 #define CLK_UNORM_INT_2_101010_EXT 0x10E5
 #endif // __opencl_c_ext_image_unorm_int_2_101010
+#ifdef __opencl_c_ext_image_unsigned_10x6_12x4_14x2
+#define CLK_UNSIGNED_INT10X6_EXT 0x10E6
+#define CLK_UNSIGNED_INT12X4_EXT 0x10E7
+#define CLK_UNSIGNED_INT14X2_EXT 0x10E8
+#define CLK_UNORM_10X6_EXT 0x10E1
+#define CLK_UNORM_12X4_EXT 0x10E9
+#define CLK_UNORM_14X2_EXT 0x10EA
+#endif // __opencl_c_ext_image_unsigned_10x6_12x4_14x2
 
 // Channel order, numbering must be aligned with cl_channel_order in cl.h
 //
