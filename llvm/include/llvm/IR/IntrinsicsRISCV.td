@@ -1704,19 +1704,27 @@ let TargetPrefix = "riscv" in {
   }
 
   // Segment loads/stores for fixed vectors.
+  // Note: we only have the masked variants because RISCVVectorPeephole
+  // would lower any instructions with all-ones mask into unmasked version
+  // anyway.
   foreach nf = [2, 3, 4, 5, 6, 7, 8] in {
-    def int_riscv_seg # nf # _load
+    // Input: (pointer, mask, vl)
+    def int_riscv_seg # nf # _load_mask
           : DefaultAttrsIntrinsic<!listconcat([llvm_anyvector_ty],
                                               !listsplat(LLVMMatchType<0>,
                                               !add(nf, -1))),
-                                  [llvm_anyptr_ty, llvm_anyint_ty],
+                                  [llvm_ptr_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                   llvm_anyint_ty],
                                   [NoCapture<ArgIndex<0>>, IntrReadMem]>;
-    def int_riscv_seg # nf # _store
+
+    // Input: (<stored values>..., pointer, mask, vl)
+    def int_riscv_seg # nf # _store_mask
           : DefaultAttrsIntrinsic<[],
                                   !listconcat([llvm_anyvector_ty],
                                               !listsplat(LLVMMatchType<0>,
                                                           !add(nf, -1)),
-                                              [llvm_anyptr_ty, llvm_anyint_ty]),
+                                              [llvm_ptr_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                               llvm_anyint_ty]),
                                   [NoCapture<ArgIndex<nf>>, IntrWriteMem]>;
   }
 

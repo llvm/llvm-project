@@ -25,10 +25,6 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> KernargPreloadCount(
-    "amdgpu-kernarg-preload-count",
-    cl::desc("How many kernel arguments to preload onto SGPRs"), cl::init(0));
-
 static cl::opt<unsigned> IndirectCallSpecializationThreshold(
     "amdgpu-indirect-call-specialization-threshold",
     cl::desc(
@@ -1327,21 +1323,6 @@ struct AAAMDGPUNoAGPR
 
 const char AAAMDGPUNoAGPR::ID = 0;
 
-static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
-  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  for (unsigned I = 0;
-       I < F.arg_size() &&
-       I < std::min(KernargPreloadCount.getValue(), ST.getMaxNumUserSGPRs());
-       ++I) {
-    Argument &Arg = *F.getArg(I);
-    // Check for incompatible attributes.
-    if (Arg.hasByRefAttr() || Arg.hasNestAttr())
-      break;
-
-    Arg.addAttr(Attribute::InReg);
-  }
-}
-
 static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
                     AMDGPUAttributorOptions Options,
                     ThinOrFullLTOPhase LTOPhase) {
@@ -1396,8 +1377,6 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     if (!AMDGPU::isEntryFunctionCC(CC)) {
       A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(*F));
       A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(*F));
-    } else if (CC == CallingConv::AMDGPU_KERNEL) {
-      addPreloadKernArgHint(*F, TM);
     }
 
     for (auto &I : instructions(F)) {

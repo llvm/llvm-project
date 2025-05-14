@@ -283,20 +283,15 @@ public:
   static const openmode in     = 0x08;
   static const openmode out    = 0x10;
   static const openmode trunc  = 0x20;
-#  if _LIBCPP_STD_VER >= 23
-  static const openmode noreplace = 0x40;
-#  endif
 
   enum seekdir { beg, cur, end };
 
-#  if _LIBCPP_STD_VER <= 14
   typedef iostate io_state;
   typedef openmode open_mode;
   typedef seekdir seek_dir;
 
   typedef std::streamoff streamoff;
   typedef std::streampos streampos;
-#  endif
 
   class _LIBCPP_EXPORTED_FROM_ABI Init;
 
@@ -416,10 +411,8 @@ _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(io_errc)
 template <>
 struct _LIBCPP_TEMPLATE_VIS is_error_code_enum<io_errc> : public true_type {};
 
-#  ifdef _LIBCPP_CXX03_LANG
 template <>
 struct _LIBCPP_TEMPLATE_VIS is_error_code_enum<io_errc::__lx> : public true_type {};
-#  endif
 
 _LIBCPP_EXPORTED_FROM_ABI const error_category& iostream_category() _NOEXCEPT;
 
@@ -565,13 +558,9 @@ public:
   static_assert(is_same<_CharT, typename traits_type::char_type>::value,
                 "traits_type::char_type must be the same type as CharT");
 
-#  ifdef _LIBCPP_CXX03_LANG
   // Preserve the ability to compare with literal 0,
   // and implicitly convert to bool, but not implicitly convert to int.
   _LIBCPP_HIDE_FROM_ABI operator void*() const { return fail() ? nullptr : (void*)this; }
-#  else
-  _LIBCPP_HIDE_FROM_ABI explicit operator bool() const { return !fail(); }
-#  endif
 
   _LIBCPP_HIDE_FROM_ABI bool operator!() const { return fail(); }
   _LIBCPP_HIDE_FROM_ABI iostate rdstate() const { return ios_base::rdstate(); }
@@ -870,7 +859,7 @@ _LIBCPP_POP_MACROS
 
 #endif // !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/atomic>
 #  include <__cxx03/cstddef>
 #  include <__cxx03/cstdlib>

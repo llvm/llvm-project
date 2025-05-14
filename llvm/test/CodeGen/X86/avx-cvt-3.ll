@@ -48,17 +48,13 @@ define <8 x float> @sitofp_shuffle_zero_v8i32(<8 x i32> %a0) {
 define <8 x float> @sitofp_insert_allbits_v8i32(<8 x i32> %a0) {
 ; X86-LABEL: sitofp_insert_allbits_v8i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
-; X86-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4,5],ymm0[6,7]
+; X86-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_insert_allbits_v8i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
-; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4,5],ymm0[6,7]
+; X64-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; X64-NEXT:    retq
   %1 = insertelement <8 x i32> %a0, i32 -1, i32 0

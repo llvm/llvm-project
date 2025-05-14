@@ -872,12 +872,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // Report legal for any types we can handle anywhere. For the cases only legal
   // on the SALU, RegBankSelect will be able to re-legalize.
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
-    .legalFor({S32, S1, S64, V2S32, S16, V2S16, V4S16})
-    .clampScalar(0, S32, S64)
-    .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-    .fewerElementsIf(vectorWiderThan(0, 64), fewerEltsToSize64Vector(0))
-    .widenScalarToNextPow2(0)
-    .scalarize(0);
+      .legalFor({S32, S1, S64, V2S32, S16, V2S16, V4S16})
+      .clampScalar(0, S32, S64)
+      .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+      .fewerElementsIf(
+          all(vectorWiderThan(0, 64), scalarOrEltNarrowerThan(0, 64)),
+          fewerEltsToSize64Vector(0))
+      .widenScalarToNextPow2(0)
+      .scalarize(0);
 
   getActionDefinitionsBuilder(
       {G_UADDO, G_USUBO, G_UADDE, G_SADDE, G_USUBE, G_SSUBE})
@@ -2014,7 +2016,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
   // RegBankSelect.
   auto &SextInReg = getActionDefinitionsBuilder(G_SEXT_INREG)
-    .legalFor({{S32}, {S64}});
+                        .legalFor({{S32}, {S64}})
+                        .clampScalar(0, S32, S64);
 
   if (ST.hasVOP3PInsts()) {
     SextInReg.lowerFor({{V2S16}})

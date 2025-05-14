@@ -230,6 +230,9 @@ set(GENERIC_TF_SOURCES
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (these should normally be provided by a shared library)"
   On)
+option(COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS
+  "Skip the standard C library provided arm aeabi builtins from compiler-rt)"
+  Off)
 
 if(NOT FUCHSIA AND NOT COMPILER_RT_BAREMETAL_BUILD AND NOT COMPILER_RT_GPU_BUILD)
   set(GENERIC_SOURCES
@@ -450,7 +453,7 @@ set(thumb1_base_SOURCES
   ${GENERIC_SOURCES}
 )
 
-set(arm_EABI_SOURCES
+set(arm_EABI_RT_SOURCES
   arm/aeabi_cdcmp.S
   arm/aeabi_cdcmpeq_check_nan.c
   arm/aeabi_cfcmp.S
@@ -462,13 +465,28 @@ set(arm_EABI_SOURCES
   arm/aeabi_frsub.c
   arm/aeabi_idivmod.S
   arm/aeabi_ldivmod.S
+  arm/aeabi_uidivmod.S
+  arm/aeabi_uldivmod.S
+)
+
+set(arm_EABI_CLIB_SOURCES
   arm/aeabi_memcmp.S
   arm/aeabi_memcpy.S
   arm/aeabi_memmove.S
   arm/aeabi_memset.S
-  arm/aeabi_uidivmod.S
-  arm/aeabi_uldivmod.S
 )
+
+if(NOT COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS)
+  set(arm_EABI_SOURCES
+    ${arm_EABI_RT_SOURCES}
+    ${arm_EABI_CLIB_SOURCES}
+  )
+else()
+  message(STATUS "COMPILER_RT_EXCLUDE_LIBC_PROVIDED_ARM_AEABI_BUILTINS is ON, so skipping __aeabi_memcmp, __aeabi_memcpy, __aeabi_memmove and __aeabi_memset Sources")
+  set(arm_EABI_SOURCES
+    ${arm_EABI_RT_SOURCES}
+  )
+endif()
 
 set(arm_Thumb1_JT_SOURCES
   arm/switch16.S

@@ -1838,6 +1838,10 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   for (std::string Sanitizer : Values)
     GenerateArg(Consumer, OPT_fsanitize_skip_hot_cutoff_EQ, Sanitizer);
 
+  for (StringRef Sanitizer :
+       serializeSanitizerKinds(Opts.SanitizeAnnotateDebugInfo))
+    GenerateArg(Consumer, OPT_fsanitize_annotate_debug_info_EQ, Sanitizer);
+
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
 
@@ -2331,6 +2335,11 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   Opts.SanitizeSkipHotCutoffs = parseSanitizerWeightedKinds(
       "-fsanitize-skip-hot-cutoff=",
       Args.getAllArgValues(OPT_fsanitize_skip_hot_cutoff_EQ), Diags);
+
+  parseSanitizerKinds(
+      "-fsanitize-annotate-debug-info=",
+      Args.getAllArgValues(OPT_fsanitize_annotate_debug_info_EQ), Diags,
+      Opts.SanitizeAnnotateDebugInfo);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
@@ -3364,6 +3373,8 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
                            : OPT_internal_externc_isystem;
     GenerateArg(Consumer, Opt, It->Path);
   }
+  for (; It < End && Matches(*It, {frontend::System}, true, true); ++It)
+    GenerateArg(Consumer, OPT_internal_iframework, It->Path);
 
   assert(It == End && "Unhandled HeaderSearchOption::Entry.");
 
@@ -3496,6 +3507,8 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
       Group = frontend::ExternCSystem;
     Opts.AddPath(A->getValue(), Group, false, true);
   }
+  for (const auto *A : Args.filtered(OPT_internal_iframework))
+    Opts.AddPath(A->getValue(), frontend::System, true, true);
 
   // Add the path prefixes which are implicitly treated as being system headers.
   for (const auto *A :

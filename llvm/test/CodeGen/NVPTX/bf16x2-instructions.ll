@@ -157,7 +157,7 @@ define <2 x bfloat> @test_fneg(<2 x bfloat> %a) #0 {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_fneg_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_fneg_param_0];
 ; CHECK-NEXT:    xor.b32 %r2, %r1, -2147450880;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -172,9 +172,9 @@ define void @test_ldst_v2bf16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldst_v2bf16_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldst_v2bf16_param_0];
 ; CHECK-NEXT:    ld.b32 %r1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [test_ldst_v2bf16_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_ldst_v2bf16_param_1];
 ; CHECK-NEXT:    st.b32 [%rd2], %r1;
 ; CHECK-NEXT:    ret;
   %t1 = load <2 x bfloat>, ptr %a
@@ -190,11 +190,11 @@ define void @test_ldst_v3bf16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldst_v3bf16_param_0];
-; CHECK-NEXT:    ld.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldst_v3bf16_param_0];
+; CHECK-NEXT:    ld.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    mov.b64 {_, %r1}, %rd2;
-; CHECK-NEXT:    ld.param.u64 %rd3, [test_ldst_v3bf16_param_1];
-; CHECK-NEXT:    st.u32 [%rd3], %rd2;
+; CHECK-NEXT:    ld.param.b64 %rd3, [test_ldst_v3bf16_param_1];
+; CHECK-NEXT:    st.b32 [%rd3], %rd2;
 ; CHECK-NEXT:    mov.b32 {%rs1, _}, %r1;
 ; CHECK-NEXT:    st.b16 [%rd3+4], %rs1;
 ; CHECK-NEXT:    ret;
@@ -241,7 +241,7 @@ define <2 x bfloat> @test_select(<2 x bfloat> %a, <2 x bfloat> %b, i1 zeroext %c
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [test_select_param_2];
+; CHECK-NEXT:    ld.param.b8 %rs1, [test_select_param_2];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_select_param_1];
@@ -315,7 +315,7 @@ define <2 x float> @test_select_cc_f32_bf16(<2 x float> %a, <2 x float> %b,
 ; SM80-NEXT:    .reg .b32 %f<11>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
-; SM80-NEXT:    ld.param.v2.f32 {%f1, %f2}, [test_select_cc_f32_bf16_param_0];
+; SM80-NEXT:    ld.param.v2.b32 {%f1, %f2}, [test_select_cc_f32_bf16_param_0];
 ; SM80-NEXT:    ld.param.b32 %r1, [test_select_cc_f32_bf16_param_2];
 ; SM80-NEXT:    ld.param.b32 %r2, [test_select_cc_f32_bf16_param_3];
 ; SM80-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
@@ -326,10 +326,10 @@ define <2 x float> @test_select_cc_f32_bf16(<2 x float> %a, <2 x float> %b,
 ; SM80-NEXT:    cvt.f32.bf16 %f5, %rs2;
 ; SM80-NEXT:    cvt.f32.bf16 %f6, %rs4;
 ; SM80-NEXT:    setp.neu.f32 %p2, %f6, %f5;
-; SM80-NEXT:    ld.param.v2.f32 {%f7, %f8}, [test_select_cc_f32_bf16_param_1];
+; SM80-NEXT:    ld.param.v2.b32 {%f7, %f8}, [test_select_cc_f32_bf16_param_1];
 ; SM80-NEXT:    selp.f32 %f9, %f2, %f8, %p2;
 ; SM80-NEXT:    selp.f32 %f10, %f1, %f7, %p1;
-; SM80-NEXT:    st.param.v2.f32 [func_retval0], {%f10, %f9};
+; SM80-NEXT:    st.param.v2.b32 [func_retval0], {%f10, %f9};
 ; SM80-NEXT:    ret;
 ;
 ; SM90-LABEL: test_select_cc_f32_bf16(
@@ -339,14 +339,14 @@ define <2 x float> @test_select_cc_f32_bf16(<2 x float> %a, <2 x float> %b,
 ; SM90-NEXT:    .reg .b32 %f<7>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.v2.f32 {%f1, %f2}, [test_select_cc_f32_bf16_param_0];
+; SM90-NEXT:    ld.param.v2.b32 {%f1, %f2}, [test_select_cc_f32_bf16_param_0];
 ; SM90-NEXT:    ld.param.b32 %r1, [test_select_cc_f32_bf16_param_3];
 ; SM90-NEXT:    ld.param.b32 %r2, [test_select_cc_f32_bf16_param_2];
 ; SM90-NEXT:    setp.neu.bf16x2 %p1|%p2, %r2, %r1;
-; SM90-NEXT:    ld.param.v2.f32 {%f3, %f4}, [test_select_cc_f32_bf16_param_1];
+; SM90-NEXT:    ld.param.v2.b32 {%f3, %f4}, [test_select_cc_f32_bf16_param_1];
 ; SM90-NEXT:    selp.f32 %f5, %f2, %f4, %p2;
 ; SM90-NEXT:    selp.f32 %f6, %f1, %f3, %p1;
-; SM90-NEXT:    st.param.v2.f32 [func_retval0], {%f6, %f5};
+; SM90-NEXT:    st.param.v2.b32 [func_retval0], {%f6, %f5};
 ; SM90-NEXT:    ret;
                                            <2 x bfloat> %c, <2 x bfloat> %d) #0 {
   %cc = fcmp une <2 x bfloat> %c, %d
@@ -365,8 +365,8 @@ define <2 x bfloat> @test_select_cc_bf16_f32(<2 x bfloat> %a, <2 x bfloat> %b,
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_select_cc_bf16_f32_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [test_select_cc_bf16_f32_param_1];
-; CHECK-NEXT:    ld.param.v2.f32 {%f1, %f2}, [test_select_cc_bf16_f32_param_2];
-; CHECK-NEXT:    ld.param.v2.f32 {%f3, %f4}, [test_select_cc_bf16_f32_param_3];
+; CHECK-NEXT:    ld.param.v2.b32 {%f1, %f2}, [test_select_cc_bf16_f32_param_2];
+; CHECK-NEXT:    ld.param.v2.b32 {%f3, %f4}, [test_select_cc_bf16_f32_param_3];
 ; CHECK-NEXT:    setp.neu.f32 %p1, %f1, %f3;
 ; CHECK-NEXT:    setp.neu.f32 %p2, %f2, %f4;
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
@@ -389,7 +389,7 @@ define <2 x bfloat> @test_fptrunc_2xfloat(<2 x float> %a) #0 {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.f32 {%f1, %f2}, [test_fptrunc_2xfloat_param_0];
+; CHECK-NEXT:    ld.param.v2.b32 {%f1, %f2}, [test_fptrunc_2xfloat_param_0];
 ; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r1, %f2, %f1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -409,7 +409,7 @@ define <2 x float> @test_fpext_2xfloat(<2 x bfloat> %a) #0 {
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NEXT:    cvt.f32.bf16 %f1, %rs2;
 ; CHECK-NEXT:    cvt.f32.bf16 %f2, %rs1;
-; CHECK-NEXT:    st.param.v2.f32 [func_retval0], {%f2, %f1};
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%f2, %f1};
 ; CHECK-NEXT:    ret;
   %r = fpext <2 x bfloat> %a to <2 x float>
   ret <2 x float> %r
@@ -421,7 +421,7 @@ define <2 x i16> @test_bitcast_2xbf16_to_2xi16(<2 x bfloat> %a) #0 {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_bitcast_2xbf16_to_2xi16_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_bitcast_2xbf16_to_2xi16_param_0];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %r = bitcast <2 x bfloat> %a to <2 x i16>
@@ -507,7 +507,7 @@ define <2 x bfloat> @test_fabs(<2 x bfloat> %a) #0 {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_fabs_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_fabs_param_0];
 ; CHECK-NEXT:    and.b32 %r2, %r1, 2147450879;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;

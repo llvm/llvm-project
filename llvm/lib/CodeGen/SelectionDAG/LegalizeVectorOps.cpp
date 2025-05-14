@@ -1385,8 +1385,7 @@ SDValue VectorLegalizer::ExpandANY_EXTEND_VECTOR_INREG(SDNode *Node) {
     NumSrcElements = VT.getSizeInBits() / SrcVT.getScalarSizeInBits();
     SrcVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getScalarType(),
                              NumSrcElements);
-    Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, SrcVT, DAG.getUNDEF(SrcVT),
-                      Src, DAG.getVectorIdxConstant(0, DL));
+    Src = DAG.getInsertSubvector(DL, DAG.getUNDEF(SrcVT), Src, 0);
   }
 
   // Build a base mask of undef shuffles.
@@ -1444,8 +1443,7 @@ SDValue VectorLegalizer::ExpandZERO_EXTEND_VECTOR_INREG(SDNode *Node) {
     NumSrcElements = VT.getSizeInBits() / SrcVT.getScalarSizeInBits();
     SrcVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getScalarType(),
                              NumSrcElements);
-    Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, SrcVT, DAG.getUNDEF(SrcVT),
-                      Src, DAG.getVectorIdxConstant(0, DL));
+    Src = DAG.getInsertSubvector(DL, DAG.getUNDEF(SrcVT), Src, 0);
   }
 
   // Build up a zero vector to blend into this one.

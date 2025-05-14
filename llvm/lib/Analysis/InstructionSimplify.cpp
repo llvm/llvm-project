@@ -6377,15 +6377,6 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     if (isSplatValue(Op0))
       return Op0;
     break;
-  case Intrinsic::frexp: {
-    // Frexp is idempotent with the added complication of the struct return.
-    if (match(Op0, m_ExtractValue<0>(m_Value(X)))) {
-      if (match(X, m_Intrinsic<Intrinsic::frexp>(m_Value())))
-        return X;
-    }
-
-    break;
-  }
   default:
     break;
   }
