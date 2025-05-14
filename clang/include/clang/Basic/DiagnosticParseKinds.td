@@ -1469,7 +1469,8 @@ def err_acc_expected_reduction_operator
 def err_acc_invalid_reduction_operator
     : Error<"invalid reduction operator,  expected '+', '*', 'max', 'min', "
             "'&', '|', '^', '&&', or '||'">;
-def err_acc_incorrect_bind_arg : Error<"expected identifier or string literal">;
+def err_acc_incorrect_bind_arg
+    : Error<"expected identifier or string literal in OpenACC 'bind' clause">;
 def err_acc_modifier
     : Error<"%enum_select<ACCModifier>{%Unknown{unknown}|%Duplicate{duplicate}}"
             "0 modifier %1 in OpenACC modifier-list on '%2' clause">;

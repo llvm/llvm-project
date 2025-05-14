@@ -2400,6 +2400,12 @@ class VLDG_G_ELE_V4<string TyStr, NVPTXRegClass regclass> :
             (ins ADDR:$src),
             "ld.global.nc.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
 
+class VLDG_G_ELE_V8<string TyStr, NVPTXRegClass regclass> :
+  NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4,
+                  regclass:$dst5, regclass:$dst6, regclass:$dst7, regclass:$dst8),
+             (ins ADDR:$src),
+             "ld.global.nc.v8." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, [$src];", []>;
+
 // FIXME: 8-bit LDG should be fixed once LDG/LDU nodes are made into proper loads.
 def INT_PTX_LDG_G_v2i8_ELE : VLDG_G_ELE_V2<"b8", Int16Regs>;
 def INT_PTX_LDG_G_v2i16_ELE : VLDG_G_ELE_V2<"b16", Int16Regs>;
@@ -2413,6 +2419,10 @@ def INT_PTX_LDG_G_v4i16_ELE : VLDG_G_ELE_V4<"b16", Int16Regs>;
 def INT_PTX_LDG_G_v4i32_ELE : VLDG_G_ELE_V4<"b32", Int32Regs>;
 def INT_PTX_LDG_G_v4f32_ELE : VLDG_G_ELE_V4<"b32", Float32Regs>;
 
+def INT_PTX_LDG_G_v4i64_ELE : VLDG_G_ELE_V4<"b64", Int64Regs>;
+def INT_PTX_LDG_G_v4f64_ELE : VLDG_G_ELE_V4<"b64", Float64Regs>;
+def INT_PTX_LDG_G_v8i32_ELE : VLDG_G_ELE_V8<"b32", Int32Regs>;
+def INT_PTX_LDG_G_v8f32_ELE : VLDG_G_ELE_V8<"b32", Float32Regs>;
 
 multiclass NG_TO_G<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
   if Supports32 then

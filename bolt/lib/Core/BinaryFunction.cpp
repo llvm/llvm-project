@@ -66,7 +66,7 @@ extern cl::opt<bool> UpdateDebugSections;
 extern cl::opt<unsigned> Verbosity;
 
 extern bool BinaryAnalysisMode;
-extern bool HeatmapMode;
+extern HeatmapModeKind HeatmapMode;
 extern bool processAllFunctions();
 
 static cl::opt<bool> CheckEncoding(
@@ -473,7 +473,7 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Image       : 0x" << Twine::utohexstr(getImageAddress());
   if (ExecutionCount != COUNT_NO_PROFILE) {
     OS << "\n  Exec Count  : " << ExecutionCount;
-    OS << "\n  Branch Count: " << RawBranchCount;
+    OS << "\n  Sample Count: " << RawSampleCount;
     OS << "\n  Profile Acc : " << format("%.1f%%", ProfileMatchRatio * 100.0f);
   }
 

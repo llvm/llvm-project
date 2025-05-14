@@ -305,6 +305,8 @@ bool mlir::affine::isValidDim(Value value) {
 // *) It is valid as a symbol.
 // *) It is an induction variable.
 // *) It is the result of an affine apply operation with dimension id operands.
+// *) It is the result of a more specialized index transformation (ex.
+// delinearize_index or linearize_index) with dimension id operands.
 bool mlir::affine::isValidDim(Value value, Region *region) {
   // The value must be an index type.
   if (!value.getType().isIndex())
@@ -325,6 +327,11 @@ bool mlir::affine::isValidDim(Value value, Region *region) {
   // Affine apply operation is ok if all of its operands are ok.
   if (auto applyOp = dyn_cast<AffineApplyOp>(op))
     return applyOp.isValidDim(region);
+  // delinearize_index and linearize_index are special forms of apply
+  // and so are valid dimensions if all their arguments are valid dimensions.
+  if (isa<AffineDelinearizeIndexOp, AffineLinearizeIndexOp>(op))
+    return llvm::all_of(op->getOperands(),
+                        [&](Value arg) { return ::isValidDim(arg, region); });
   // The dim op is okay if its operand memref/tensor is defined at the top
   // level.
   if (auto dimOp = dyn_cast<ShapedDimOpInterface>(op))
@@ -2194,7 +2201,7 @@ static void printBound(AffineMapAttr boundMap,
     // Print bound that consists of a single SSA symbol if the map is over a
     // single symbol.
     if (map.getNumDims() == 0 && map.getNumSymbols() == 1) {
-      if (dyn_cast<AffineSymbolExpr>(expr)) {
+      if (isa<AffineSymbolExpr>(expr)) {
         p.printOperand(*boundOperands.begin());
         return;
       }

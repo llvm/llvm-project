@@ -16619,6 +16619,25 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
 }
 } // End anonymous namespace.
 
+static SDValue simplifyOp_VL(SDNode *N) {
+  // TODO: Extend this to other binops using generic identity logic
+  assert(N->getOpcode() == RISCVISD::ADD_VL);
+  SDValue A = N->getOperand(0);
+  SDValue B = N->getOperand(1);
+  SDValue Passthru = N->getOperand(2);
+  if (!Passthru.isUndef())
+    // TODO:This could be a vmerge instead
+    return SDValue();
+  ;
+  if (ISD::isConstantSplatVectorAllZeros(B.getNode()))
+    return A;
+  // Peek through fixed to scalable
+  if (B.getOpcode() == ISD::INSERT_SUBVECTOR && B.getOperand(0).isUndef() &&
+      ISD::isConstantSplatVectorAllZeros(B.getOperand(1).getNode()))
+    return A;
+  return SDValue();
+}
+
 /// Combine a binary or FMA operation to its equivalent VW or VW_W form.
 /// The supported combines are:
 /// add | add_vl | or disjoint | or_vl disjoint -> vwadd(u) | vwadd(u)_w
@@ -18408,7 +18427,6 @@ static SDValue performVECTOR_SHUFFLECombine(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
                                const RISCVSubtarget &Subtarget) {
-
   assert(N->getOpcode() == RISCVISD::ADD_VL || N->getOpcode() == ISD::ADD);
 
   if (N->getValueType(0).isFixedLengthVector())
@@ -18472,9 +18490,64 @@ static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opc, DL, VT, Ops);
 }
 
-static bool legalizeScatterGatherIndexType(SDLoc DL, SDValue &Index,
-                                           ISD::MemIndexType &IndexType,
-                                           RISCVTargetLowering::DAGCombinerInfo &DCI) {
+static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
+
+  assert(N->getOpcode() == RISCVISD::ADD_VL);
+
+  if (!N->getValueType(0).isVector())
+    return SDValue();
+
+  SDValue Addend = N->getOperand(0);
+  SDValue DotOp = N->getOperand(1);
+
+  SDValue AddPassthruOp = N->getOperand(2);
+  if (!AddPassthruOp.isUndef())
+    return SDValue();
+
+  auto IsVqdotqOpc = [](unsigned Opc) {
+    switch (Opc) {
+    case RISCVISD::VQDOT_VL:
+    case RISCVISD::VQDOTU_VL:
+    case RISCVISD::VQDOTSU_VL:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  if (!IsVqdotqOpc(DotOp.getOpcode()))
+    std::swap(Addend, DotOp);
+
+  if (!IsVqdotqOpc(DotOp.getOpcode()))
+    return SDValue();
+
+  SDValue AddMask = N->getOperand(3);
+  SDValue AddVL = N->getOperand(4);
+
+  SDValue MulVL = DotOp.getOperand(4);
+  if (AddVL != MulVL)
+    return SDValue();
+
+  if (AddMask.getOpcode() != RISCVISD::VMSET_VL ||
+      AddMask.getOperand(0) != MulVL)
+    return SDValue();
+
+  SDValue AccumOp = DotOp.getOperand(2);
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  Addend = DAG.getNode(RISCVISD::ADD_VL, DL, VT, Addend, AccumOp,
+                       DAG.getUNDEF(VT), AddMask, AddVL);
+
+  SDValue Ops[] = {DotOp.getOperand(0), DotOp.getOperand(1), Addend,
+                   DotOp.getOperand(3), DotOp->getOperand(4)};
+  return DAG.getNode(DotOp->getOpcode(), DL, VT, Ops);
+}
+
+static bool
+legalizeScatterGatherIndexType(SDLoc DL, SDValue &Index,
+                               ISD::MemIndexType &IndexType,
+                               RISCVTargetLowering::DAGCombinerInfo &DCI) {
   if (!DCI.isBeforeLegalize())
     return false;
 
@@ -19593,7 +19666,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case RISCVISD::ADD_VL:
+    if (SDValue V = simplifyOp_VL(N))
+      return V;
     if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
+      return V;
+    if (SDValue V = combineVqdotAccum(N, DAG, Subtarget))
       return V;
     return combineToVWMACC(N, DAG, Subtarget);
   case RISCVISD::VWADD_W_VL:
@@ -23351,6 +23428,11 @@ bool RISCVTargetLowering::isLegalInterleavedAccessType(
 
   MVT ContainerVT = VT.getSimpleVT();
 
+  // The intrinsics are not (yet) overloaded on pointer type and can only handle
+  // the default address space.
+  if (AddrSpace)
+    return false;
+
   if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
     if (!Subtarget.useRVVForFixedLengthVectors())
       return false;
@@ -23360,11 +23442,6 @@ bool RISCVTargetLowering::isLegalInterleavedAccessType(
       return false;
 
     ContainerVT = getContainerForFixedLengthVector(VT.getSimpleVT());
-  } else {
-    // The intrinsics for scalable vectors are not overloaded on pointer type
-    // and can only handle the default address space.
-    if (AddrSpace)
-      return false;
   }
 
   // Need to make sure that EMUL * NFIELDS ≤ 8

@@ -1453,7 +1453,8 @@ void RewriteInstance::updateRtFiniReloc() {
 }
 
 void RewriteInstance::registerFragments() {
-  if (!BC->HasSplitFunctions)
+  if (!BC->HasSplitFunctions ||
+      opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive)
     return;
 
   // Process fragments with ambiguous parents separately as they are typically a
@@ -1998,7 +1999,7 @@ Error RewriteInstance::readSpecialSections() {
           BC->getUniqueSectionByName(BoltAddressTranslation::SECTION_NAME)) {
     BC->HasBATSection = true;
     // Do not read BAT when plotting a heatmap
-    if (!opts::HeatmapMode) {
+    if (opts::HeatmapMode != opts::HeatmapModeKind::HM_Exclusive) {
       if (std::error_code EC = BAT->parse(BC->outs(), BATSec->getContents())) {
         BC->errs() << "BOLT-ERROR: failed to parse BOLT address translation "
                       "table.\n";
@@ -2037,7 +2038,7 @@ Error RewriteInstance::readSpecialSections() {
   }
 
   // Force non-relocation mode for heatmap generation
-  if (opts::HeatmapMode)
+  if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive)
     BC->HasRelocations = false;
 
   if (BC->HasRelocations)
