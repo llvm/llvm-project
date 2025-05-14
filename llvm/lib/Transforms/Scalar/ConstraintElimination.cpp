@@ -1563,8 +1563,12 @@ removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
 static bool checkOrAndOpImpliedByOther(
     FactOrCheck &CB, ConstraintInfo &Info, Module *ReproducerModule,
     SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
-    SmallVectorImpl<StackEntry> &DFSInStack) {
+    SmallVectorImpl<StackEntry> &DFSInStack,
+    SmallVectorImpl<Instruction *> &ToRemove) {
   Instruction *JoinOp = CB.getContextInst();
+  if (JoinOp->use_empty())
+    return false;
+
   CmpInst *CmpToCheck = cast<CmpInst>(CB.getInstructionToSimplify());
   unsigned OtherOpIdx = JoinOp->getOperand(0) == CmpToCheck ? 1 : 0;
 
@@ -1611,15 +1615,12 @@ static bool checkOrAndOpImpliedByOther(
   if (auto ImpliedCondition =
           checkCondition(CmpToCheck->getPredicate(), CmpToCheck->getOperand(0),
                          CmpToCheck->getOperand(1), CmpToCheck, Info)) {
-    if (IsOr && isa<SelectInst>(JoinOp)) {
-      JoinOp->setOperand(
-          OtherOpIdx == 0 ? 2 : 0,
+    if (IsOr == *ImpliedCondition)
+      JoinOp->replaceAllUsesWith(
           ConstantInt::getBool(JoinOp->getType(), *ImpliedCondition));
-    } else
-      JoinOp->setOperand(
-          1 - OtherOpIdx,
-          ConstantInt::getBool(JoinOp->getType(), *ImpliedCondition));
-
+    else
+      JoinOp->replaceAllUsesWith(JoinOp->getOperand(OtherOpIdx));
+    ToRemove.push_back(JoinOp);
     return true;
   }
 
@@ -1852,9 +1853,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
             ReproducerModule.get(), ReproducerCondStack, S.DT, ToRemove);
         if (!Simplified &&
             match(CB.getContextInst(), m_LogicalOp(m_Value(), m_Value()))) {
-          Simplified =
-              checkOrAndOpImpliedByOther(CB, Info, ReproducerModule.get(),
-                                         ReproducerCondStack, DFSInStack);
+          Simplified = checkOrAndOpImpliedByOther(
+              CB, Info, ReproducerModule.get(), ReproducerCondStack, DFSInStack,
+              ToRemove);
         }
         Changed |= Simplified;
       } else if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Inst)) {
