@@ -16,6 +16,7 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanHelpers.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -95,6 +96,18 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       RecipeI->dump();
 #endif
       return false;
+    }
+
+    // Check if the recipe operands match the number of predecessors.
+    // TODO Extend to other phi-like recipes.
+    if (auto *PhiIRI = dyn_cast<VPIRPhi>(&*RecipeI)) {
+      if (PhiIRI->getNumOperands() != VPBB->getNumPredecessors()) {
+        errs() << "Phi-like recipe with different number of operands and "
+                  "predecessors.\n";
+        // TODO: Print broken recipe. At the moment printing an ill-formed
+        // phi-like recipe may crash.
+        return false;
+      }
     }
 
     RecipeI++;
@@ -218,17 +231,22 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         // If the user is in the same block, check it comes after R in the
         // block.
         if (UI->getParent() == VPBB) {
-          if (RecipeNumbering[UI] < RecipeNumbering[&R]) {
-            errs() << "Use before def!\n";
-            return false;
-          }
-          continue;
+          if (RecipeNumbering[UI] >= RecipeNumbering[&R])
+            continue;
+        } else {
+          if (VPDT.dominates(VPBB, UI->getParent()))
+            continue;
         }
 
-        if (!VPDT.dominates(VPBB, UI->getParent())) {
-          errs() << "Use before def!\n";
-          return false;
-        }
+        errs() << "Use before def!\n";
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+        VPSlotTracker Tracker(VPBB->getPlan());
+        UI->print(errs(), "  ", Tracker);
+        errs() << "\n  before\n";
+        R.print(errs(), "  ", Tracker);
+        errs() << "\n";
+#endif
+        return false;
       }
     }
     if (const auto *EVL = dyn_cast<VPInstruction>(&R)) {

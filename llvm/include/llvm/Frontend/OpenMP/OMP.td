@@ -43,6 +43,7 @@ def OMPC_AcqRel : Clause<"acq_rel"> {
   let clangClass = "OMPAcqRelClause";
 }
 def OMPC_AdjustArgs : Clause<"adjust_args"> {
+  let flangClass = "OmpAdjustArgsClause";
 }
 def OMPC_Affinity : Clause<"affinity"> {
   let clangClass = "OMPAffinityClause";
@@ -65,6 +66,7 @@ def OMPC_Allocator : Clause<"allocator"> {
   let flangClass = "ScalarIntExpr";
 }
 def OMPC_AppendArgs : Clause<"append_args"> {
+  let flangClass = "OmpAppendArgsClause";
 }
 def OMPC_At : Clause<"at"> {
   let clangClass = "OMPAtClause";
@@ -492,7 +494,6 @@ def OMPC_ThreadLimit : Clause<"thread_limit"> {
   let flangClass = "ScalarIntExpr";
 }
 def OMPC_ThreadPrivate : Clause<"threadprivate"> {
-  let alternativeName = "threadprivate or thread local";
   let isImplicit = true;
 }
 def OMPC_Threads : Clause<"threads"> {
@@ -525,6 +526,7 @@ def OMPC_Untied : Clause<"untied"> {
 def OMPC_Update : Clause<"update"> {
   let clangClass = "OMPUpdateClause";
   let flangClass = "OmpUpdateClause";
+  let isValueOptional = true;
 }
 def OMPC_Use : Clause<"use"> {
   let clangClass = "OMPUseClause";
@@ -721,10 +723,10 @@ def OMP_EndDeclareTarget : Directive<"end declare target"> {
 }
 def OMP_DeclareVariant : Directive<"declare variant"> {
   let allowedClauses = [
-    VersionedClause<OMPC_Match>,
-  ];
-  let allowedExclusiveClauses = [
     VersionedClause<OMPC_AdjustArgs, 51>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Match>,
     VersionedClause<OMPC_AppendArgs, 51>,
   ];
   let association = AS_Declaration;
@@ -1138,7 +1140,6 @@ def OMP_Task : Directive<"task"> {
     VersionedClause<OMPC_Affinity, 50>,
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
-    VersionedClause<OMPC_Detach, 50>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_InReduction>,
     VersionedClause<OMPC_Mergeable>,
@@ -1148,6 +1149,7 @@ def OMP_Task : Directive<"task"> {
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_Detach, 50>,
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Priority>,

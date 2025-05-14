@@ -370,8 +370,6 @@ std::optional<bool> isUnsafePtr(const QualType T, bool IsArcEnabled) {
 std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   assert(M);
 
-  std::optional<RetainTypeChecker> RTC;
-
   if (isa<CXXMethodDecl>(M)) {
     const CXXRecordDecl *calleeMethodsClass = M->getParent();
     auto className = safeGetName(calleeMethodsClass);

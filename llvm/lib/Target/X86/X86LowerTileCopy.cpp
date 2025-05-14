@@ -75,6 +75,8 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  assert(ST.hasAMXTILE() && "Only supported on AMXTILE targets");
+
   const X86InstrInfo *TII = ST.getInstrInfo();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   BitVector GR64Regs =
