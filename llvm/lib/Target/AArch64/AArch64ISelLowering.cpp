@@ -28169,8 +28169,8 @@ bool AArch64TargetLowering::shouldNormalizeToSelectSequence(LLVMContext &,
 
 static Value *UseTlsOffset(IRBuilderBase &IRB, unsigned Offset) {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  Function *ThreadPointerFunc =
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::thread_pointer);
+  Function *ThreadPointerFunc = Intrinsic::getOrInsertDeclaration(
+      M, Intrinsic::thread_pointer, IRB.getPtrTy());
   return IRB.CreatePointerCast(
       IRB.CreateConstGEP1_32(IRB.getInt8Ty(), IRB.CreateCall(ThreadPointerFunc),
                              Offset),
