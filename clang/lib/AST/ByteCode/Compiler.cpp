@@ -2435,7 +2435,7 @@ bool Compiler<Emitter>::VisitStringLiteral(const StringLiteral *E) {
   // emitted. Read only the array length from the string literal.
   unsigned ArraySize = CAT->getZExtSize();
   unsigned N = std::min(ArraySize, E->getLength());
-  size_t CharWidth = E->getCharByteWidth();
+  unsigned CharWidth = E->getCharByteWidth();
 
   for (unsigned I = 0; I != N; ++I) {
     uint32_t CodeUnit = E->getCodeUnit(I);
