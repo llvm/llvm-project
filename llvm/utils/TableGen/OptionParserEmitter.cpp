@@ -24,9 +24,9 @@ using namespace llvm;
 static std::string getOptionName(const Record &R) {
   // Use the record name unless EnumName is defined.
   if (isa<UnsetInit>(R.getValueInit("EnumName")))
-    return std::string(R.getName());
+    return R.getName().str();
 
-  return std::string(R.getValueAsString("EnumName"));
+  return R.getValueAsString("EnumName").str();
 }
 
 static raw_ostream &writeStrTableOffset(raw_ostream &OS,
@@ -389,8 +389,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       OS << ",\n";
       OS << "       ";
       writeCstring(OS, R.getValueAsString("HelpText"));
-    } else
+    } else {
       OS << ", nullptr";
+    }
 
     // Not using Visibility specific text for group help.
     emitHelpTextsForVariants(OS, {});
@@ -428,8 +429,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       GroupFlags = DI->getDef()->getValueAsListInit("Flags");
       GroupVis = DI->getDef()->getValueAsListInit("Visibility");
       OS << getOptionName(*DI->getDef());
-    } else
+    } else {
       OS << "INVALID";
+    }
 
     // The option alias (if any).
     OS << ", ";
@@ -490,8 +492,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       OS << ",\n";
       OS << "       ";
       writeCstring(OS, R.getValueAsString("HelpText"));
-    } else
+    } else {
       OS << ", nullptr";
+    }
 
     std::vector<std::pair<std::vector<std::string>, StringRef>>
         HelpTextsForVariants;
@@ -522,8 +525,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       writeCstring(OS, R.getValueAsString("Values"));
     else if (!isa<UnsetInit>(R.getValueInit("ValuesCode"))) {
       OS << getOptionName(R) << "_Values";
-    } else
+    } else {
       OS << "nullptr";
+    }
   };
 
   auto IsMarshallingOption = [](const Record &R) {

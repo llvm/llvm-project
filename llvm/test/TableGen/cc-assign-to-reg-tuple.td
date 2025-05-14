@@ -1,6 +1,6 @@
-// RUN: llvm-tblgen --gen-callingconv -I %p/../../include -I %p/Common %s 2>&1 | FileCheck %s
-// RUN: not llvm-tblgen -DERROR1 --gen-callingconv -I %p/../../include -I %p/Common %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR1 %s
-// RUN: not llvm-tblgen -DERROR2 --gen-callingconv -I %p/../../include -I %p/Common %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR2 %s
+// RUN: llvm-tblgen -gen-callingconv -I %p/../../include -I %p/Common %s | FileCheck %s
+// RUN: not llvm-tblgen -gen-callingconv -DERROR1 -I %p/../../include -I %p/Common %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR1 %s
+// RUN: not llvm-tblgen -gen-callingconv -DERROR2 -I %p/../../include -I %p/Common %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR2 %s
 
 include "reg-with-subregs-common.td"
 
