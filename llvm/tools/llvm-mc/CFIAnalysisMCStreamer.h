@@ -3,7 +3,6 @@
 
 #include "CFIAnalysis.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -20,13 +19,12 @@ class CFIAnalysisMCStreamer : public MCStreamer {
   std::unique_ptr<MCInstrAnalysis> MCIA;
 
   struct CFIDirectivesState {
-    int FrameIndex; // TODO remove it, no need for it
     int DirectiveIndex;
 
-    CFIDirectivesState() : FrameIndex(-1), DirectiveIndex(0) {}
+    CFIDirectivesState() : DirectiveIndex(0) {}
 
     CFIDirectivesState(int FrameIndex, int InstructionIndex)
-        : FrameIndex(FrameIndex), DirectiveIndex(InstructionIndex) {}
+        : DirectiveIndex(InstructionIndex) {}
   } LastCFIDirectivesState;
   std::vector<int> FrameIndices;
   std::vector<CFIAnalysis> CFIAs;
@@ -53,16 +51,12 @@ class CFIAnalysisMCStreamer : public MCStreamer {
             ? CFIDirectivesState(
                   FrameIndex, DwarfFrameInfos[FrameIndex].Instructions.size())
             : CFIDirectivesState();
-    assert(CurrentCFIDirectiveState.FrameIndex ==
-           LastCFIDirectivesState.FrameIndex);
     assert(CurrentCFIDirectiveState.DirectiveIndex >=
            LastCFIDirectivesState.DirectiveIndex);
 
-    std::pair<unsigned, unsigned> CFIDirectivesRange;
-    if (LastCFIDirectivesState.FrameIndex >= 0) {
-      CFIDirectivesRange = {LastCFIDirectivesState.DirectiveIndex,
-                            CurrentCFIDirectiveState.DirectiveIndex};
-    }
+    std::pair<unsigned, unsigned> CFIDirectivesRange(
+        LastCFIDirectivesState.DirectiveIndex,
+        CurrentCFIDirectiveState.DirectiveIndex);
 
     LastCFIDirectivesState = CurrentCFIDirectiveState;
     return ICFI(LastInstruction.value(), CFIDirectivesRange);
@@ -82,8 +76,12 @@ class CFIAnalysisMCStreamer : public MCStreamer {
 
     if (auto ICFI = getLastICFI()) {
       assert(!CFIAs.empty());
-      CFIAs.back().update(*LastDwarfFrameInfo, ICFI->Instruction,
-                          ICFI->CFIDirectivesRange);
+      ArrayRef<MCCFIInstruction> CFIDirectives(
+          LastDwarfFrameInfo->Instructions);
+      CFIDirectives = CFIDirectives.drop_front(ICFI->CFIDirectivesRange.first)
+                          .drop_back(LastDwarfFrameInfo->Instructions.size() -
+                                     ICFI->CFIDirectivesRange.second);
+      CFIAs.back().update(ICFI->Instruction, CFIDirectives);
     }
   }
 
@@ -94,9 +92,6 @@ public:
         LastCFIDirectivesState(), LastInstruction(std::nullopt) {
     FrameIndices.push_back(-1);
   }
-
-  /// @name MCStreamer Interface
-  /// @{
 
   bool hasRawTextSupport() const override { return true; }
   void emitRawTextImpl(StringRef String) override {}
@@ -121,9 +116,9 @@ public:
     LastInstruction = Inst;
     if (hasUnfinishedDwarfFrameInfo())
       LastDwarfFrameInfo =
-          &getDwarfFrameInfos()
-              [FrameIndices.back()]; // FIXME get this from emit yourself,
-                                     // instead of getting it in this way
+          &getDwarfFrameInfos()[FrameIndices.back()]; // TODO get this from emit
+                                                      // yourself, instead of
+                                                      // getting it in this way
     else
       LastDwarfFrameInfo = nullptr;
   }
@@ -134,7 +129,6 @@ public:
     CFIAs.emplace_back(getContext(), MCII, MCIA.get());
     LastInstruction = std::nullopt;
     LastDwarfFrameInfo = nullptr;
-    LastCFIDirectivesState.FrameIndex = FrameIndices.back();
     LastCFIDirectivesState.DirectiveIndex = 0;
     MCStreamer::emitCFIStartProcImpl(Frame);
   }
@@ -146,12 +140,10 @@ public:
     CFIAs.pop_back();
     LastInstruction = std::nullopt;
     LastDwarfFrameInfo = nullptr;
-    LastCFIDirectivesState.FrameIndex = FrameIndices.back();
+    auto FrameIndex = FrameIndices.back();
     LastCFIDirectivesState.DirectiveIndex =
-        LastCFIDirectivesState.FrameIndex >= 0
-            ? getDwarfFrameInfos()[LastCFIDirectivesState.FrameIndex]
-                  .Instructions.size()
-            : 0;
+        FrameIndex >= 0 ? getDwarfFrameInfos()[FrameIndex].Instructions.size()
+                        : 0;
     MCStreamer::emitCFIEndProcImpl(CurFrame);
   }
 };
