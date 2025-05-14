@@ -466,7 +466,6 @@ def NDS_VD4DOTSU_VV : NDSRVInstVD4DOT<0b000101, "nds.vd4dotsu">;
 
 let Predicates = [HasVendorXAndesPerf] in {
 
-def : Pat<(sext_inreg (XLenVT GPR:$rs1), i32), (NDS_BFOS GPR:$rs1, 31, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (NDS_BFOS GPR:$rs1, 15, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (NDS_BFOS GPR:$rs1, 7, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i1), (NDS_BFOS GPR:$rs1, 0, 0)>;
