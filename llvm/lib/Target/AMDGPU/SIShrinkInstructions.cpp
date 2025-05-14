@@ -51,6 +51,10 @@ class SIShrinkInstructions {
                     unsigned SubReg) const;
   bool instModifiesReg(const MachineInstr *MI, unsigned Reg,
                        unsigned SubReg) const;
+  Register trySwapCndOperands(MachineInstr &MI) const;
+  bool shouldSwapCndOperands(Register Reg,
+                             std::vector<MachineInstr *> &UsesToProcess) const;
+  unsigned getInverseCompareOpcode(MachineInstr &MI) const;
   TargetInstrInfo::RegSubRegPair getSubRegForIndex(Register Reg, unsigned Sub,
                                                    unsigned I) const;
   void dropInstructionKeepingImpDefs(MachineInstr &MI) const;
@@ -831,6 +835,215 @@ bool SIShrinkInstructions::tryReplaceDeadSDST(MachineInstr &MI) const {
   return true;
 }
 
+unsigned SIShrinkInstructions::getInverseCompareOpcode(MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  // int 32
+  case AMDGPU::V_CMP_EQ_I32_e64:
+    return AMDGPU::V_CMP_NE_I32_e64;
+  case AMDGPU::V_CMP_NE_I32_e64:
+    return AMDGPU::V_CMP_EQ_I32_e64;
+  case AMDGPU::V_CMP_GE_I32_e64:
+    return AMDGPU::V_CMP_LT_I32_e64;
+  case AMDGPU::V_CMP_LE_I32_e64:
+    return AMDGPU::V_CMP_GT_I32_e64;
+  case AMDGPU::V_CMP_GT_I32_e64:
+    return AMDGPU::V_CMP_LE_I32_e64;
+  case AMDGPU::V_CMP_LT_I32_e64:
+    return AMDGPU::V_CMP_GE_I32_e64;
+  // int 64
+  case AMDGPU::V_CMP_EQ_I64_e64:
+    return AMDGPU::V_CMP_NE_I64_e64;
+  case AMDGPU::V_CMP_NE_I64_e64:
+    return AMDGPU::V_CMP_EQ_I64_e64;
+  case AMDGPU::V_CMP_GE_I64_e64:
+    return AMDGPU::V_CMP_LT_I64_e64;
+  case AMDGPU::V_CMP_LE_I64_e64:
+    return AMDGPU::V_CMP_GT_I64_e64;
+  case AMDGPU::V_CMP_GT_I64_e64:
+    return AMDGPU::V_CMP_LE_I64_e64;
+  case AMDGPU::V_CMP_LT_I64_e64:
+    return AMDGPU::V_CMP_GE_I64_e64;
+  // unsigned 32
+  case AMDGPU::V_CMP_EQ_U32_e64:
+    return AMDGPU::V_CMP_NE_U32_e64;
+  case AMDGPU::V_CMP_NE_U32_e64:
+    return AMDGPU::V_CMP_EQ_U32_e64;
+  case AMDGPU::V_CMP_GE_U32_e64:
+    return AMDGPU::V_CMP_LT_U32_e64;
+  case AMDGPU::V_CMP_LE_U32_e64:
+    return AMDGPU::V_CMP_GT_U32_e64;
+  case AMDGPU::V_CMP_GT_U32_e64:
+    return AMDGPU::V_CMP_LE_U32_e64;
+  case AMDGPU::V_CMP_LT_U32_e64:
+    return AMDGPU::V_CMP_GE_U32_e64;
+  // unsigned 64
+  case AMDGPU::V_CMP_EQ_U64_e64:
+    return AMDGPU::V_CMP_NE_U64_e64;
+  case AMDGPU::V_CMP_NE_U64_e64:
+    return AMDGPU::V_CMP_EQ_U64_e64;
+  case AMDGPU::V_CMP_GE_U64_e64:
+    return AMDGPU::V_CMP_LT_U64_e64;
+  case AMDGPU::V_CMP_LE_U64_e64:
+    return AMDGPU::V_CMP_GT_U64_e64;
+  case AMDGPU::V_CMP_GT_U64_e64:
+    return AMDGPU::V_CMP_LE_U64_e64;
+  case AMDGPU::V_CMP_LT_U64_e64:
+    return AMDGPU::V_CMP_GE_U64_e64;
+  // float 32
+  case AMDGPU::V_CMP_EQ_F32_e64:
+    return AMDGPU::V_CMP_NEQ_F32_e64;
+  case AMDGPU::V_CMP_NEQ_F32_e64:
+    return AMDGPU::V_CMP_EQ_F32_e64;
+  case AMDGPU::V_CMP_GE_F32_e64:
+    return AMDGPU::V_CMP_NGE_F32_e64;
+  case AMDGPU::V_CMP_NGE_F32_e64:
+    return AMDGPU::V_CMP_GE_F32_e64;
+  case AMDGPU::V_CMP_LE_F32_e64:
+    return AMDGPU::V_CMP_NLE_F32_e64;
+  case AMDGPU::V_CMP_NLE_F32_e64:
+    return AMDGPU::V_CMP_LE_F32_e64;
+  case AMDGPU::V_CMP_GT_F32_e64:
+    return AMDGPU::V_CMP_NGT_F32_e64;
+  case AMDGPU::V_CMP_NGT_F32_e64:
+    return AMDGPU::V_CMP_GT_F32_e64;
+  case AMDGPU::V_CMP_LT_F32_e64:
+    return AMDGPU::V_CMP_NLT_F32_e64;
+  case AMDGPU::V_CMP_NLT_F32_e64:
+    return AMDGPU::V_CMP_LT_F32_e64;
+  case AMDGPU::V_CMP_LG_F32_e64:
+    return AMDGPU::V_CMP_NLG_F32_e64;
+  case AMDGPU::V_CMP_NLG_F32_e64:
+    return AMDGPU::V_CMP_LG_F32_e64;
+  case AMDGPU::V_CMP_O_F32_e64:
+    return AMDGPU::V_CMP_U_F32_e64;
+  case AMDGPU::V_CMP_U_F32_e64:
+    return AMDGPU::V_CMP_O_F32_e64;
+  // float 64
+  case AMDGPU::V_CMP_EQ_F64_e64:
+    return AMDGPU::V_CMP_NEQ_F64_e64;
+  case AMDGPU::V_CMP_NEQ_F64_e64:
+    return AMDGPU::V_CMP_EQ_F64_e64;
+  case AMDGPU::V_CMP_GE_F64_e64:
+    return AMDGPU::V_CMP_NGE_F64_e64;
+  case AMDGPU::V_CMP_NGE_F64_e64:
+    return AMDGPU::V_CMP_GE_F64_e64;
+  case AMDGPU::V_CMP_LE_F64_e64:
+    return AMDGPU::V_CMP_NLE_F64_e64;
+  case AMDGPU::V_CMP_NLE_F64_e64:
+    return AMDGPU::V_CMP_LE_F64_e64;
+  case AMDGPU::V_CMP_GT_F64_e64:
+    return AMDGPU::V_CMP_NGT_F64_e64;
+  case AMDGPU::V_CMP_NGT_F64_e64:
+    return AMDGPU::V_CMP_GT_F32_e64;
+  case AMDGPU::V_CMP_LT_F64_e64:
+    return AMDGPU::V_CMP_NLT_F64_e64;
+  case AMDGPU::V_CMP_NLT_F64_e64:
+    return AMDGPU::V_CMP_LT_F64_e64;
+  case AMDGPU::V_CMP_LG_F64_e64:
+    return AMDGPU::V_CMP_NLG_F64_e64;
+  case AMDGPU::V_CMP_NLG_F64_e64:
+    return AMDGPU::V_CMP_LG_F64_e64;
+  case AMDGPU::V_CMP_O_F64_e64:
+    return AMDGPU::V_CMP_U_F64_e64;
+  case AMDGPU::V_CMP_U_F64_e64:
+    return AMDGPU::V_CMP_O_F64_e64;
+  default:
+    return 0;
+  }
+}
+
+bool SIShrinkInstructions::shouldSwapCndOperands(
+    Register Reg, std::vector<MachineInstr *> &UsesToProcess) const {
+  auto AllUses = MRI->use_nodbg_instructions(Reg);
+  int InstsToSwap = 0;
+
+  for (auto &UseInst : AllUses) {
+    if (UseInst.getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
+      return false;
+
+    UsesToProcess.push_back(&UseInst);
+
+    MachineOperand &Src0 = UseInst.getOperand(2);
+    MachineOperand &Src1 = UseInst.getOperand(4);
+
+    //if instruction has source modifiers it cannot be converted to VOP2
+    if (UseInst.getOperand(1).getImm() != SISrcMods::NONE ||
+        UseInst.getOperand(3).getImm() != SISrcMods::NONE)
+      continue;
+
+    bool Src0IsVGPR = Src0.isReg() && TRI->isVGPR(*MRI, Src0.getReg());
+    bool Src1IsVGPR = Src1.isReg() && TRI->isVGPR(*MRI, Src1.getReg());
+
+    //Src1 always has to be VGPR in VOP2
+    if (!Src0IsVGPR && Src1IsVGPR)
+      InstsToSwap--;
+    else if (Src0IsVGPR && !Src1IsVGPR)
+      InstsToSwap++;
+  }
+  return InstsToSwap > 0;
+}
+
+static void swapCndOperands(MachineInstr &MI) {
+  MachineOperand &Op2 = MI.getOperand(2);
+  MachineOperand Op4 = MI.getOperand(4);
+
+  if (Op2.isReg()) {
+    MI.getOperand(4).ChangeToRegister(
+        Op2.getReg(), Op2.isDef(), Op2.isImplicit(), Op2.isKill(), Op2.isDead(),
+        Op2.isUndef(), Op2.isDebug());
+    MI.getOperand(4).setSubReg(Op2.getSubReg());
+  } else if (Op2.isImm()) {
+    MI.getOperand(4).ChangeToImmediate(Op2.getImm());
+  }
+
+  if (Op4.isReg()) {
+    Op2.ChangeToRegister(Op4.getReg(), Op4.isDef(), Op4.isImplicit(),
+                         Op4.isKill(), Op4.isDead(), Op4.isUndef(),
+                         Op4.isDebug());
+    Op2.setSubReg(Op4.getSubReg());
+  } else if (Op4.isImm()) {
+    Op2.ChangeToImmediate(Op4.getImm());
+  }
+
+  auto Op1Imm = MI.getOperand(1).getImm();
+  auto Op3Imm = MI.getOperand(3).getImm();
+  MI.getOperand(1).setImm(Op3Imm);
+  MI.getOperand(3).setImm(Op1Imm);
+}
+
+Register SIShrinkInstructions::trySwapCndOperands(MachineInstr &MI) const {
+  Register Reg = MI.getOperand(0).getReg();
+
+  unsigned Opcode = getInverseCompareOpcode(MI);
+  std::vector<MachineInstr *> UsesToProcess;
+  if (!Opcode ||
+      !SIShrinkInstructions::shouldSwapCndOperands(Reg, UsesToProcess))
+    return Reg;
+
+  auto DL = MI.getDebugLoc();
+  Register NewVCC = MRI->createVirtualRegister(MRI->getRegClass(Reg));
+
+  MachineInstrBuilder InverseCompare =
+      BuildMI(*MI.getParent(), MI, DL, TII->get(Opcode), NewVCC);
+  InverseCompare->setFlags(MI.getFlags());
+
+  unsigned OpNum = MI.getNumExplicitOperands();
+  for (unsigned Idx = 1; Idx < OpNum; Idx++) {
+    MachineOperand &Op = MI.getOperand(Idx);
+    InverseCompare.add(Op);
+    if (Op.isReg() && Op.isKill())
+      InverseCompare->getOperand(Idx).setIsKill(false);
+  }
+
+  for (auto Use : UsesToProcess) {
+    swapCndOperands(*Use);
+  }
+
+  MRI->replaceRegWith(Reg, NewVCC);
+  MI.eraseFromParent();
+  return NewVCC;
+}
+
 bool SIShrinkInstructions::run(MachineFunction &MF) {
 
   this->MF = &MF;
@@ -999,6 +1212,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           // dst.
           Register DstReg = Op0.getReg();
           if (DstReg.isVirtual()) {
+            DstReg = trySwapCndOperands(MI);
             // VOPC instructions can only write to the VCC register. We can't
             // force them to use VCC here, because this is only one register and
             // cannot deal with sequences which would require multiple copies of

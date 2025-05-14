@@ -12317,9 +12317,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_offset(ptr %out, i64 %in, i64 %old
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cndmask_b32_e64 v1, v1, s3, vcc_lo
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, v0, s2, vcc_lo
+; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[4:5], v[0:1]
+; GFX12-NEXT:    v_cndmask_b32_e32 v1, s3, v1, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, s2, v0, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
@@ -12468,9 +12468,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_soffset(ptr %out, i64 %in, i64 %ol
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cndmask_b32_e64 v1, v1, s3, vcc_lo
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, v0, s2, vcc_lo
+; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[4:5], v[0:1]
+; GFX12-NEXT:    v_cndmask_b32_e32 v1, s3, v1, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, s2, v0, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
@@ -12614,9 +12614,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_offset(ptr %out, ptr %out2, i6
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[6:7], v[0:1]
-; GFX12-NEXT:    v_cndmask_b32_e64 v3, v1, s5, vcc_lo
-; GFX12-NEXT:    v_cndmask_b32_e64 v2, v0, s4, vcc_lo
+; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[6:7], v[0:1]
+; GFX12-NEXT:    v_cndmask_b32_e32 v3, s5, v1, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v2, s4, v0, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB92_4: ; %atomicrmw.end
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
@@ -12775,9 +12775,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64_offset(ptr %out, i64 %in, i
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[6:7], v[0:1]
-; GFX12-NEXT:    v_cndmask_b32_e64 v1, v1, s3, vcc_lo
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, v0, s2, vcc_lo
+; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[6:7], v[0:1]
+; GFX12-NEXT:    v_cndmask_b32_e32 v1, s3, v1, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, s2, v0, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
@@ -12935,9 +12935,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(ptr %out, ptr %o
 ; GFX12-NEXT:    s_cselect_b32 s2, s2, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s2
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[0:1], v[0:1]
-; GFX12-NEXT:    v_cndmask_b32_e64 v3, v1, s13, vcc_lo
-; GFX12-NEXT:    v_cndmask_b32_e64 v2, v0, s12, vcc_lo
+; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[0:1], v[0:1]
+; GFX12-NEXT:    v_cndmask_b32_e32 v3, s13, v1, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v2, s12, v0, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s2
 ; GFX12-NEXT:  .LBB94_4: ; %atomicrmw.end
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s10 :: v_dual_mov_b32 v3, s11
@@ -13087,9 +13087,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i64(ptr %out, i64 %in, i64 %old) {
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cndmask_b32_e64 v1, v1, s3, vcc_lo
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, v0, s2, vcc_lo
+; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[4:5], v[0:1]
+; GFX12-NEXT:    v_cndmask_b32_e32 v1, s3, v1, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, s2, v0, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
@@ -13227,9 +13227,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret(ptr %out, ptr %out2, i64 %in, 
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[6:7], v[0:1]
-; GFX12-NEXT:    v_cndmask_b32_e64 v3, v1, s5, vcc_lo
-; GFX12-NEXT:    v_cndmask_b32_e64 v2, v0, s4, vcc_lo
+; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[6:7], v[0:1]
+; GFX12-NEXT:    v_cndmask_b32_e32 v3, s5, v1, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v2, s4, v0, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB96_4: ; %atomicrmw.end
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
@@ -13382,9 +13382,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64(ptr %out, i64 %in, i64 %ind
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[6:7], v[0:1]
-; GFX12-NEXT:    v_cndmask_b32_e64 v1, v1, s3, vcc_lo
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, v0, s2, vcc_lo
+; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[6:7], v[0:1]
+; GFX12-NEXT:    v_cndmask_b32_e32 v1, s3, v1, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, s2, v0, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:    s_endpgm
 entry:
@@ -13536,9 +13536,9 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64(ptr %out, ptr %out2, i6
 ; GFX12-NEXT:    s_cselect_b32 s2, s2, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s2
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[0:1], v[0:1]
-; GFX12-NEXT:    v_cndmask_b32_e64 v3, v1, s13, vcc_lo
-; GFX12-NEXT:    v_cndmask_b32_e64 v2, v0, s12, vcc_lo
+; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[0:1], v[0:1]
+; GFX12-NEXT:    v_cndmask_b32_e32 v3, s13, v1, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v2, s12, v0, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s2
 ; GFX12-NEXT:  .LBB98_4: ; %atomicrmw.end
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s10 :: v_dual_mov_b32 v3, s11

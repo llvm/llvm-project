@@ -607,8 +607,8 @@ define amdgpu_ps half @fneg_fadd_0_f16(half inreg %tmp2, half inreg %tmp6, <4 x 
 ; SI-SAFE-NEXT:    v_cmp_nlt_f32_e32 vcc, v0, v1
 ; SI-SAFE-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
 ; SI-SAFE-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; SI-SAFE-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; SI-SAFE-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
+; SI-SAFE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
+; SI-SAFE-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; SI-SAFE-NEXT:    ; return to shader part epilog
 ;
 ; SI-NSZ-LABEL: fneg_fadd_0_f16:
@@ -635,8 +635,8 @@ define amdgpu_ps half @fneg_fadd_0_f16(half inreg %tmp2, half inreg %tmp6, <4 x 
 ; SI-NSZ-NEXT:    v_cmp_nlt_f32_e64 vcc, -v0, v1
 ; SI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; SI-NSZ-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; SI-NSZ-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; SI-NSZ-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
+; SI-NSZ-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
+; SI-NSZ-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; SI-NSZ-NEXT:    ; return to shader part epilog
 ;
 ; VI-SAFE-LABEL: fneg_fadd_0_f16:
@@ -744,8 +744,8 @@ define amdgpu_ps half @fneg_fadd_0_nsz_f16(half inreg %tmp2, half inreg %tmp6, <
 ; SI-SAFE-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
 ; SI-SAFE-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-SAFE-NEXT:    v_min_legacy_f32_e32 v0, 0, v0
-; SI-SAFE-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
-; SI-SAFE-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
+; SI-SAFE-NEXT:    v_cmp_gt_f32_e32 vcc, s0, v0
+; SI-SAFE-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; SI-SAFE-NEXT:    ; return to shader part epilog
 ;
 ; SI-NSZ-LABEL: fneg_fadd_0_nsz_f16:
@@ -759,8 +759,8 @@ define amdgpu_ps half @fneg_fadd_0_nsz_f16(half inreg %tmp2, half inreg %tmp6, <
 ; SI-NSZ-NEXT:    v_mul_f32_e32 v0, 0x80000000, v0
 ; SI-NSZ-NEXT:    v_cmp_nlt_f32_e64 vcc, -v0, v1
 ; SI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; SI-NSZ-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; SI-NSZ-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
+; SI-NSZ-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
+; SI-NSZ-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
 ; SI-NSZ-NEXT:    ; return to shader part epilog
 ;
 ; VI-SAFE-LABEL: fneg_fadd_0_nsz_f16:
