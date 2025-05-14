@@ -2385,8 +2385,7 @@ static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
   return success();
 }
 
-
-/// Rewrite a vecor.from_elements as a vector.shape_cast, if possible. 
+/// Rewrite vector.from_elements as vector.shape_cast, if possible.
 ///
 /// Example:
 ///   %0 = vector.extract %source[0, 0] : i8 from vector<1x2xi8>
@@ -2400,8 +2399,8 @@ rewriteFromElementsAsShapeCast(FromElementsOp fromElementsOp,
                                PatternRewriter &rewriter) {
 
   // The common source of vector.extract operations (if one exists), as well
-  // as its shape and rank. Set in the first iteration of the loop over the
-  // operands of `fromElementsOp`.
+  // as its shape and rank. These are set in the first iteration of the loop
+  // over the operands (elements) of `fromElementsOp`.
   Value source;
   ArrayRef<int64_t> shape;
   int64_t rank;
@@ -2426,9 +2425,8 @@ rewriteFromElementsAsShapeCast(FromElementsOp fromElementsOp,
     // Check that the (linearized) index of extraction is the same as the index
     // in the result of `fromElementsOp`.
     ArrayRef<int64_t> position = extractOp.getStaticPosition();
-    if (position.size() != rank)
-      return failure();
-
+    assert(position.size() == rank &&
+           "scalar extract must have full rank position");
     int64_t stride{1};
     int64_t offset{0};
     for (auto [pos, size] :
