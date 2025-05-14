@@ -31,7 +31,7 @@ int main(int, char**) {
     of the context with additional padding and adjustments as specified by the format specifiers.
   */
 
-  // TODO(stacktrace23): needs `formatter`
+  // TODO: stacktrace formatter: https://github.com/llvm/llvm-project/issues/105257
 
   return 0;
 }

@@ -275,7 +275,7 @@ _LIBCPP_EXPORTED_FROM_ABI inline ostream& operator<<(ostream& __os, const basic_
 // (19.6.5)
 // Formatting support [stacktrace.format]
 
-// TODO(stacktrace23): needs `formatter`
+// TODO: stacktrace formatter: https://github.com/llvm/llvm-project/issues/105257
 template <class _Allocator>
 struct _LIBCPP_EXPORTED_FROM_ABI formatter<basic_stacktrace<_Allocator>>;
 

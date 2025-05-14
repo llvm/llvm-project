@@ -146,7 +146,7 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void context::do_stacktrace(size_t skip, 
   gauntlet below should result in one of each of the above functions: (1) collector, (2) mod_ident, (3) resolver, (4)
   symbolizer.  If any are missing or duplicated that is still fine; we work with zero or all the available utilities.
 
-  All these classes do their best to provide any of the requested fields they can: (symbol, filename, source line),
+  All these classes do their best to provide any of the requested fields they can: symbol, filename, source line,
   substituting if needed with something reasonable.  For example, if the source filename and line are not available
   then we will at least report that the address and symbol are in the module `foo.exe`.
 
