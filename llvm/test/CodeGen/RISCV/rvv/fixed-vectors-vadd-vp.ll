@@ -1445,10 +1445,9 @@ define <2 x i64> @vadd_vx_v2i64_to_sub(<2 x i64> %va, <2 x i1> %m, i32 zeroext %
 ; RV64-LABEL: vadd_vx_v2i64_to_sub:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a1, -1
-; RV64-NEXT:    slli a1, a1, 40
-; RV64-NEXT:    addi a1, a1, 1
+; RV64-NEXT:    srli a1, a1, 24
 ; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV64-NEXT:    vadd.vx v8, v8, a1, v0.t
+; RV64-NEXT:    vsub.vx v8, v8, a1, v0.t
 ; RV64-NEXT:    ret
   %v = call <2 x i64> @llvm.vp.add.v2i64(<2 x i64> splat (i64 -1099511627775), <2 x i64> %va, <2 x i1> %m, i32 %evl)
   ret <2 x i64> %v
@@ -1473,10 +1472,9 @@ define <2 x i64> @vadd_vx_v2i64_to_sub_swapped(<2 x i64> %va, <2 x i1> %m, i32 z
 ; RV64-LABEL: vadd_vx_v2i64_to_sub_swapped:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a1, -1
-; RV64-NEXT:    slli a1, a1, 40
-; RV64-NEXT:    addi a1, a1, 1
+; RV64-NEXT:    srli a1, a1, 24
 ; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV64-NEXT:    vadd.vx v8, v8, a1, v0.t
+; RV64-NEXT:    vsub.vx v8, v8, a1, v0.t
 ; RV64-NEXT:    ret
   %v = call <2 x i64> @llvm.vp.add.v2i64(<2 x i64> %va, <2 x i64> splat (i64 -1099511627775), <2 x i1> %m, i32 %evl)
   ret <2 x i64> %v

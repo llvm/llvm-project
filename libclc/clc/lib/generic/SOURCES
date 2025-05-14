@@ -2,7 +2,12 @@ common/clc_degrees.cl
 common/clc_radians.cl
 common/clc_sign.cl
 common/clc_smoothstep.cl
+geometric/clc_cross.cl
+geometric/clc_distance.cl
 geometric/clc_dot.cl
+geometric/clc_fast_distance.cl
+geometric/clc_fast_length.cl
+geometric/clc_length.cl
 integer/clc_abs.cl
 integer/clc_abs_diff.cl
 integer/clc_add_sat.cl
@@ -65,6 +70,7 @@ math/clc_half_sin.cl
 math/clc_half_sqrt.cl
 math/clc_half_tan.cl
 math/clc_hypot.cl
+math/clc_ilogb.cl
 math/clc_ldexp.cl
 math/clc_lgamma.cl
 math/clc_lgamma_r.cl
@@ -72,6 +78,7 @@ math/clc_log.cl
 math/clc_log10.cl
 math/clc_log1p.cl
 math/clc_log2.cl
+math/clc_logb.cl
 math/clc_mad.cl
 math/clc_maxmag.cl
 math/clc_minmag.cl

@@ -396,7 +396,7 @@ std::optional<DataRef> ExtractDataRef(const ActualArgument &,
 
 // Predicate: is an expression is an array element reference?
 template <typename T>
-bool IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
+const Symbol *IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
     bool skipComponents = false) {
   if (auto dataRef{ExtractDataRef(expr, intoSubstring)}) {
     for (const DataRef *ref{&*dataRef}; ref;) {
@@ -404,12 +404,14 @@ bool IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
         ref = skipComponents ? &component->base() : nullptr;
       } else if (const auto *coarrayRef{std::get_if<CoarrayRef>(&ref->u)}) {
         ref = &coarrayRef->base();
+      } else if (const auto *arrayRef{std::get_if<ArrayRef>(&ref->u)}) {
+        return &arrayRef->GetLastSymbol();
       } else {
-        return std::holds_alternative<ArrayRef>(ref->u);
+        break;
       }
     }
   }
-  return false;
+  return nullptr;
 }
 
 template <typename A>
@@ -502,42 +504,31 @@ template <typename A> std::optional<Substring> ExtractSubstring(const A &x) {
 
 // If an expression is simply a whole symbol data designator,
 // extract and return that symbol, else null.
+const Symbol *UnwrapWholeSymbolDataRef(const DataRef &);
+const Symbol *UnwrapWholeSymbolDataRef(const std::optional<DataRef> &);
 template <typename A> const Symbol *UnwrapWholeSymbolDataRef(const A &x) {
-  if (auto dataRef{ExtractDataRef(x)}) {
-    if (const SymbolRef * p{std::get_if<SymbolRef>(&dataRef->u)}) {
-      return &p->get();
-    }
-  }
-  return nullptr;
+  return UnwrapWholeSymbolDataRef(ExtractDataRef(x));
 }
 
 // If an expression is a whole symbol or a whole component desginator,
 // extract and return that symbol, else null.
+const Symbol *UnwrapWholeSymbolOrComponentDataRef(const DataRef &);
+const Symbol *UnwrapWholeSymbolOrComponentDataRef(
+    const std::optional<DataRef> &);
 template <typename A>
 const Symbol *UnwrapWholeSymbolOrComponentDataRef(const A &x) {
-  if (auto dataRef{ExtractDataRef(x)}) {
-    if (const SymbolRef * p{std::get_if<SymbolRef>(&dataRef->u)}) {
-      return &p->get();
-    } else if (const Component * c{std::get_if<Component>(&dataRef->u)}) {
-      if (c->base().Rank() == 0) {
-        return &c->GetLastSymbol();
-      }
-    }
-  }
-  return nullptr;
+  return UnwrapWholeSymbolOrComponentDataRef(ExtractDataRef(x));
 }
 
 // If an expression is a whole symbol or a whole component designator,
 // potentially followed by an image selector, extract and return that symbol,
 // else null.
 const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(const DataRef &);
+const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(
+    const std::optional<DataRef> &);
 template <typename A>
 const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(const A &x) {
-  if (auto dataRef{ExtractDataRef(x)}) {
-    return UnwrapWholeSymbolOrComponentOrCoarrayRef(*dataRef);
-  } else {
-    return nullptr;
-  }
+  return UnwrapWholeSymbolOrComponentOrCoarrayRef(ExtractDataRef(x));
 }
 
 // GetFirstSymbol(A%B%C[I]%D) -> A
