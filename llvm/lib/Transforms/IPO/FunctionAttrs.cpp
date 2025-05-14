@@ -2059,8 +2059,49 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
   AI.run(SCCNodes, Changed);
 }
 
+/// Returns true if N or any function it (transitively) calls makes a call
+/// to an unknown external function: either an indirect call or a declaration
+/// without the NoCallback attribute.
+static bool callsUnknownExternal(LazyCallGraph::Node *N) {
+  std::deque<LazyCallGraph::Node *> Worklist;
+  DenseSet<LazyCallGraph::Node *> Visited;
+  Worklist.push_back(N);
+  Visited.insert(N);
+
+  while (!Worklist.empty()) {
+    auto *Cur = Worklist.front();
+    Worklist.pop_front();
+
+    Function &F = Cur->getFunction();
+    for (auto &BB : F) {
+      for (auto &I : BB.instructionsWithoutDebug()) {
+        if (auto *CB = dyn_cast<CallBase>(&I)) {
+          const Function *Callee = CB->getCalledFunction();
+          // Indirect call, treat as unknown external function.
+          if (!Callee)
+            return true;
+          // Extern declaration without NoCallback attribute
+          if (Callee->isDeclaration() &&
+              !Callee->hasFnAttribute(Attribute::NoCallback))
+            return true;
+        }
+      }
+    }
+
+    // Enqueue all direct call-edge successors for further scanning
+    for (auto &Edge : Cur->populate().calls()) {
+      LazyCallGraph::Node *Succ = &Edge.getNode();
+      if (Visited.insert(Succ).second)
+        Worklist.push_back(Succ);
+    }
+  }
+
+  return false;
+}
+
 static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
-                              SmallSet<Function *, 8> &Changed) {
+                              SmallSet<Function *, 8> &Changed,
+                              LazyCallGraph &CG) {
   // Try and identify functions that do not recurse.
 
   // If the SCC contains multiple nodes we know for sure there is recursion.
@@ -2071,24 +2112,35 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
   if (!F || !F->hasExactDefinition() || F->doesNotRecurse())
     return;
 
-  // If all of the calls in F are identifiable and are to norecurse functions, F
-  // is norecurse. This check also detects self-recursion as F is not currently
-  // marked norecurse, so any called from F to F will not be marked norecurse.
-  for (auto &BB : *F)
-    for (auto &I : BB.instructionsWithoutDebug())
+  // If all of the calls in F are identifiable and can be proven to not
+  // callback F, F is norecurse. This check also detects self-recursion
+  // as F is not currently marked norecurse, so any call from F to F
+  // will not be marked norecurse.
+  for (auto &BB : *F) {
+    for (auto &I : BB.instructionsWithoutDebug()) {
       if (auto *CB = dyn_cast<CallBase>(&I)) {
         Function *Callee = CB->getCalledFunction();
-        if (!Callee || Callee == F ||
-            (!Callee->doesNotRecurse() &&
-             !(Callee->isDeclaration() &&
-               Callee->hasFnAttribute(Attribute::NoCallback))))
-          // Function calls a potentially recursive function.
-          return;
-      }
 
-  // Every call was to a non-recursive function other than this function, and
-  // we have no indirect recursion as the SCC size is one. This function cannot
-  // recurse.
+        if (!Callee || Callee == F)
+          return;
+
+        // External call with NoCallback attribute.
+        if (Callee->isDeclaration()) {
+          if (Callee->hasFnAttribute(Attribute::NoCallback))
+            continue;
+          return;
+        }
+
+        if (auto *CNode = CG.lookup(*Callee))
+          if (callsUnknownExternal(CNode))
+            return;
+      }
+    }
+  }
+
+  // Every call was either to an external function guaranteed to not make a
+  // call to this function or a direct call to internal function and we have no
+  // indirect recursion as the SCC size is one. This function cannot recurse.
   F->setDoesNotRecurse();
   ++NumNoRecurse;
   Changed.insert(F);
@@ -2248,7 +2300,7 @@ static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
 template <typename AARGetterT>
 static SmallSet<Function *, 8>
 deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
-                       bool ArgAttrsOnly) {
+                       bool ArgAttrsOnly, LazyCallGraph &CG) {
   SCCNodesResult Nodes = createSCCNodeSet(Functions);
 
   // Bail if the SCC only contains optnone functions.
@@ -2279,7 +2331,7 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
     addNoAliasAttrs(Nodes.SCCNodes, Changed);
     addNonNullAttrs(Nodes.SCCNodes, Changed);
     inferAttrsFromFunctionBodies(Nodes.SCCNodes, Changed);
-    addNoRecurseAttrs(Nodes.SCCNodes, Changed);
+    addNoRecurseAttrs(Nodes.SCCNodes, Changed, CG);
   }
 
   // Finally, infer the maximal set of attributes from the ones we've inferred
@@ -2323,7 +2375,7 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
   }
 
   auto ChangedFunctions =
-      deriveAttrsInPostOrder(Functions, AARGetter, ArgAttrsOnly);
+      deriveAttrsInPostOrder(Functions, AARGetter, ArgAttrsOnly, CG);
   if (ChangedFunctions.empty())
     return PreservedAnalyses::all();
 
