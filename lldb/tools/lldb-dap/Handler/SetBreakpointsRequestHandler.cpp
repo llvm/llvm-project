@@ -12,8 +12,6 @@
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
-#include <cstdint>
-#include <utility>
 #include <vector>
 
 namespace lldb_dap {
