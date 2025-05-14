@@ -68,9 +68,7 @@ public:
   /// The ID of this node
   IDT Id;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump(raw_ostream &OS) const;
-#endif
+  LLVM_ABI void dump(raw_ostream &OS) const;
 
 protected:
   /// The list of utility nodes associated with this node
