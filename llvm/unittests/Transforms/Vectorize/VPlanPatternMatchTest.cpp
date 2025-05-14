@@ -44,8 +44,9 @@ TEST_F(VPPatternMatchTest, ScalarIVSteps) {
 
   ASSERT_TRUE(match(Steps, m_ScalarIVSteps(m_Specific(CanonicalIVPHI),
                                            m_SpecificInt(1), m_Specific(VF))));
-  ASSERT_FALSE(match(Steps2, m_ScalarIVSteps(m_Specific(CanonicalIVPHI),
-                                            m_SpecificInt(1), m_Specific(VF))));
+  ASSERT_FALSE(
+      match(Steps2, m_ScalarIVSteps(m_Specific(CanonicalIVPHI),
+                                    m_SpecificInt(1), m_Specific(VF))));
   ASSERT_TRUE(match(Steps2, m_ScalarIVSteps(m_Specific(CanonicalIVPHI),
                                             m_SpecificInt(2), m_Specific(VF))));
 }
