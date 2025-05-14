@@ -31,9 +31,6 @@ multiclass B_priv<string name> {
 def align   : P<"align", "Section alignment">;
 def aligncomm : P<"aligncomm", "Set common symbol alignment">;
 def alternatename : P<"alternatename", "Define weak alias">;
-def arm64xsameaddress
-    : P<"arm64xsameaddress", "Generate a thunk for the symbol with the same "
-                             "address in both native and EC views on ARM64X.">;
 def base    : P<"base", "Base address of the program">;
 def color_diagnostics: Flag<["--"], "color-diagnostics">,
     HelpText<"Alias for --color-diagnostics=always">;
@@ -359,3 +356,4 @@ def tlbid : P_priv<"tlbid">;
 def tlbout : P_priv<"tlbout">;
 def verbose_all : P_priv<"verbose">;
 def guardsym : P_priv<"guardsym">;
+def arm64xsameaddress : P_priv<"arm64xsameaddress">;
