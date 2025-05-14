@@ -41,7 +41,7 @@ bool NativeThreadAIX::GetStopReason(ThreadStopInfo &stop_info,
 
 Status NativeThreadAIX::SetWatchpoint(lldb::addr_t addr, size_t size,
                                       uint32_t watch_flags, bool hardware) {
-  return Status();
+  return Status("Unable to Set hardware watchpoint.");
 }
 
 Status NativeThreadAIX::RemoveWatchpoint(lldb::addr_t addr) {
@@ -49,7 +49,7 @@ Status NativeThreadAIX::RemoveWatchpoint(lldb::addr_t addr) {
 }
 
 Status NativeThreadAIX::SetHardwareBreakpoint(lldb::addr_t addr, size_t size) {
-  return Status();
+  return Status("Unable to set hardware breakpoint.");
 }
 
 Status NativeThreadAIX::RemoveHardwareBreakpoint(lldb::addr_t addr) {
