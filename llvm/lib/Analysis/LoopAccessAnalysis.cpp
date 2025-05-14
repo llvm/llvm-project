@@ -1612,7 +1612,7 @@ std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
 
 bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
                            const DataLayout &DL, ScalarEvolution &SE,
-                           SmallVectorImpl<uint64_t> &SortedIndices) {
+                           SmallVectorImpl<unsigned> &SortedIndices) {
   assert(llvm::all_of(
              VL, [](const Value *V) { return V->getType()->isPointerTy(); }) &&
          "Expected list of pointer operands.");
@@ -1620,7 +1620,7 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
   // first pointer in the array.
   Value *Ptr0 = VL[0];
 
-  using DistOrdPair = std::pair<int64_t, uint64_t>;
+  using DistOrdPair = std::pair<int64_t, unsigned>;
   auto Compare = llvm::less_first();
   std::set<DistOrdPair, decltype(Compare)> Offsets(Compare);
   Offsets.emplace(0, 0);

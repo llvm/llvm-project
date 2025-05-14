@@ -870,7 +870,7 @@ getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB, Value *PtrB,
 /// \p SortedIndices as <1,2,0,3>
 bool sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy, const DataLayout &DL,
                      ScalarEvolution &SE,
-                     SmallVectorImpl<uint64_t> &SortedIndices);
+                     SmallVectorImpl<unsigned> &SortedIndices);
 
 /// Returns true if the memory operations \p A and \p B are consecutive.
 /// This is a simple API that does not depend on the analysis pass.
