@@ -100,6 +100,20 @@ int performComplexReduction() {
   }
   return error;
 }
+
+std::complex<double> doComplexReduction(std::complex<double> *arr) {
+  std::complex<double> result(1, 0);
+
+#pragma omp declare reduction(* : std::complex<double> : omp_out *= omp_in)    \
+    initializer(omp_priv = std::complex<double>(1, 0))
+
+#pragma omp for reduction(original(private), * : result)
+  for (int i = 0; i < N; ++i)
+    result *= arr[i];
+
+  return result;
+}
+
 void performReductions(int n_elements, const int *input_values,
                        int &sum_val_out, int &prod_val_out,
                        float &float_sum_val_out) {
@@ -127,6 +141,14 @@ int main(void) {
   const float kExpectedFsum = kPiVal * N; // 3.14f * 10
   const int kExpectedMin = 3;
   const int kExpectedMax = 12;
+  std::complex<double> arr[N];
+  std::complex<double> kExpectedComplex(1, 0);
+  // Initialize the array
+  for (int i = 1; i <= N; ++i) {
+    arr[i - 1] = std::complex<double>(
+        1.0 + 0.1 * i, 0.5 * i); // Avoid zero to prevent multiplication by zero
+    kExpectedComplex *= arr[i - 1];
+  }
 
   for (int i = 0; i < N; i++)
     input_array[i] = i;
@@ -156,6 +178,15 @@ int main(void) {
   }
   total_errors += checkUserDefinedReduction();
   total_errors += performComplexReduction();
+  #pragma omp parallel num_threads(4)
+  {
+    std::complex<double> result(1, 0);
+    result = doComplexReduction(arr);
+    if (std::abs(result.real() - kExpectedComplex.real()) > 1e-6 ||
+        std::abs(result.imag() - kExpectedComplex.imag()) > 1e-6) {
+      total_errors++;
+    }
+  }
   if (total_errors != 0)
     fprintf(stderr, "ERROR: reduction on private variable  %d\n", total_errors);
 
