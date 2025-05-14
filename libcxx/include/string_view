@@ -952,6 +952,7 @@ _LIBCPP_POP_MACROS
 #    include <concepts>
 #    include <cstdlib>
 #    include <iterator>
+#    include <optional>
 #    include <type_traits>
 #  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

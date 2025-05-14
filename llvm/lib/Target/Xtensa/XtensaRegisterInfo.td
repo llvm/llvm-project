@@ -73,6 +73,11 @@ class SRReg<bits<8> num, string n, list<string> alt = []> : XtensaReg<n> {
   let AltNames = alt;
 }
 
+// Loop Option Registers
+def LBEG : SRReg<0, "lbeg", ["LBEG", "0"]>;
+def LEND : SRReg<1, "lend", ["LEND", "1"]>;
+def LCOUNT : SRReg<2, "lcount", ["LCOUNT", "2"]>;
+
 // Shift Amount Register
 def SAR : SRReg<3, "sar", ["SAR","3"]>;
 
@@ -95,8 +100,8 @@ def MR01 :  RegisterClass<"Xtensa", [i32], 32, (add M0, M1)>;
 def MR23 :  RegisterClass<"Xtensa", [i32], 32, (add M2, M3)>;
 def MR   :  RegisterClass<"Xtensa", [i32], 32, (add MR01, MR23)>;
 
-def SR :  RegisterClass<"Xtensa", [i32], 32, (add SAR, BREG, MR,
-  WINDOWBASE, WINDOWSTART)>;
+def SR :  RegisterClass<"Xtensa", [i32], 32, (add
+  LBEG, LEND, LCOUNT, SAR, BREG, MR, WINDOWBASE, WINDOWSTART)>;
 
 //===----------------------------------------------------------------------===//
 // Boolean registers

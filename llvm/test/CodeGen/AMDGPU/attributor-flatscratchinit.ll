@@ -849,21 +849,6 @@ define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) %ptr) 
   ret void
 }
 
-define amdgpu_kernel void @call_calls_intrin_ascast_cc_kernel(ptr addrspace(3) %ptr) {
-; GFX9-LABEL: define amdgpu_kernel void @call_calls_intrin_ascast_cc_kernel(
-; GFX9-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
-; GFX9-NEXT:    call void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) [[PTR]])
-; GFX9-NEXT:    ret void
-;
-; GFX10-LABEL: define amdgpu_kernel void @call_calls_intrin_ascast_cc_kernel(
-; GFX10-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
-; GFX10-NEXT:    call void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) [[PTR]])
-; GFX10-NEXT:    ret void
-;
-  call void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) %ptr)
-  ret void
-}
-
 define amdgpu_kernel void @with_inline_asm() {
 ; GFX9-LABEL: define amdgpu_kernel void @with_inline_asm(
 ; GFX9-SAME: ) #[[ATTR3]] {

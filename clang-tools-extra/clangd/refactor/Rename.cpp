@@ -906,7 +906,7 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
   for (auto &FileAndOccurrences : AffectedFiles) {
     auto &Ranges = FileAndOccurrences.getValue();
     llvm::sort(Ranges);
-    Ranges.erase(std::unique(Ranges.begin(), Ranges.end()), Ranges.end());
+    Ranges.erase(llvm::unique(Ranges), Ranges.end());
 
     SPAN_ATTACH(Tracer, FileAndOccurrences.first(),
                 static_cast<int64_t>(Ranges.size()));
@@ -1210,8 +1210,7 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
               static_cast<int64_t>(Occurrences.size()));
 
   assert(llvm::is_sorted(Occurrences));
-  assert(std::unique(Occurrences.begin(), Occurrences.end()) ==
-             Occurrences.end() &&
+  assert(llvm::unique(Occurrences) == Occurrences.end() &&
          "Occurrences must be unique");
 
   // These two always correspond to the same position.

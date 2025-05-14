@@ -44,8 +44,7 @@ OpenACCLoopConstruct::OpenACCLoopConstruct(unsigned NumClauses)
   std::uninitialized_value_construct(
       getTrailingObjects<const OpenACCClause *>(),
       getTrailingObjects<const OpenACCClause *>() + NumClauses);
-  setClauseList(
-      MutableArrayRef(getTrailingObjects<const OpenACCClause *>(), NumClauses));
+  setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
 }
 
 OpenACCLoopConstruct::OpenACCLoopConstruct(
@@ -61,11 +60,10 @@ OpenACCLoopConstruct::OpenACCLoopConstruct(
   assert((Loop == nullptr || isa<ForStmt, CXXForRangeStmt>(Loop)) &&
          "Associated Loop not a for loop?");
   // Initialize the trailing storage.
-  std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                          getTrailingObjects<const OpenACCClause *>());
+  llvm::uninitialized_copy(Clauses,
+                           getTrailingObjects<const OpenACCClause *>());
 
-  setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                Clauses.size()));
+  setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
 }
 
 OpenACCLoopConstruct *OpenACCLoopConstruct::CreateEmpty(const ASTContext &C,

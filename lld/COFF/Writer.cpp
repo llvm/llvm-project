@@ -215,6 +215,7 @@ private:
   void appendImportThunks();
   void locateImportTables();
   void createExportTable();
+  void mergeSection(const std::map<StringRef, StringRef>::value_type &p);
   void mergeSections();
   void sortECChunks();
   void appendECImportTables();
@@ -239,6 +240,7 @@ private:
   void createRuntimePseudoRelocs();
   void createECChunks();
   void insertCtorDtorSymbols();
+  void insertBssDataStartEndSymbols();
   void markSymbolsWithRelocations(ObjFile *file, SymbolRVASet &usedSymbols);
   void createGuardCFTables();
   void markSymbolsForRVATable(ObjFile *file,
@@ -314,6 +316,7 @@ private:
 
   OutputSection *textSec;
   OutputSection *hexpthkSec;
+  OutputSection *bssSec;
   OutputSection *rdataSec;
   OutputSection *buildidSec;
   OutputSection *dataSec;
@@ -581,7 +584,7 @@ bool Writer::createThunks(OutputSection *os, int margin) {
 
 // Create a code map for CHPE metadata.
 void Writer::createECCodeMap() {
-  if (!ctx.symtabEC)
+  if (!ctx.symtab.isEC())
     return;
 
   // Clear the map in case we were're recomputing the map after adding
@@ -617,8 +620,7 @@ void Writer::createECCodeMap() {
 
   closeRange();
 
-  Symbol *tableCountSym =
-      ctx.symtabEC->findUnderscore("__hybrid_code_map_count");
+  Symbol *tableCountSym = ctx.symtab.findUnderscore("__hybrid_code_map_count");
   cast<DefinedAbsolute>(tableCountSym)->setVA(codeMap.size());
 }
 
@@ -1077,7 +1079,7 @@ void Writer::createSections() {
   textSec = createSection(".text", code | r | x);
   if (isArm64EC(ctx.config.machine))
     hexpthkSec = createSection(".hexpthk", code | r | x);
-  createSection(".bss", bss | r | w);
+  bssSec = createSection(".bss", bss | r | w);
   rdataSec = createSection(".rdata", data | r);
   buildidSec = createSection(".buildid", data | r);
   dataSec = createSection(".data", data | r | w);
@@ -1260,8 +1262,10 @@ void Writer::createMiscChunks() {
   if (config->autoImport)
     createRuntimePseudoRelocs();
 
-  if (config->mingw)
+  if (config->mingw) {
     insertCtorDtorSymbols();
+    insertBssDataStartEndSymbols();
+  }
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -1567,6 +1571,30 @@ void Writer::createSymbolAndStringTable() {
   fileSize = alignTo(fileOff, ctx.config.fileAlign);
 }
 
+void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
+  StringRef toName = p.second;
+  if (p.first == toName)
+    return;
+  StringSet<> names;
+  while (true) {
+    if (!names.insert(toName).second)
+      Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
+    auto i = ctx.config.merge.find(toName);
+    if (i == ctx.config.merge.end())
+      break;
+    toName = i->second;
+  }
+  OutputSection *from = findSection(p.first);
+  OutputSection *to = findSection(toName);
+  if (!from)
+    return;
+  if (!to) {
+    from->name = toName;
+    return;
+  }
+  to->merge(from);
+}
+
 void Writer::mergeSections() {
   llvm::TimeTraceScope timeScope("Merge sections");
   if (!pdataSec->chunks.empty()) {
@@ -1595,28 +1623,16 @@ void Writer::mergeSections() {
   }
 
   for (auto &p : ctx.config.merge) {
-    StringRef toName = p.second;
-    if (p.first == toName)
-      continue;
-    StringSet<> names;
-    while (true) {
-      if (!names.insert(toName).second)
-        Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
-      auto i = ctx.config.merge.find(toName);
-      if (i == ctx.config.merge.end())
-        break;
-      toName = i->second;
-    }
-    OutputSection *from = findSection(p.first);
-    OutputSection *to = findSection(toName);
-    if (!from)
-      continue;
-    if (!to) {
-      from->name = toName;
-      continue;
-    }
-    to->merge(from);
+    if (p.first != ".bss")
+      mergeSection(p);
   }
+
+  // Because .bss contains all zeros, it should be merged at the end of
+  // whatever section it is being merged into (usually .data) so that the image
+  // need not actually contain all of the zeros.
+  auto it = ctx.config.merge.find(".bss");
+  if (it != ctx.config.merge.end())
+    mergeSection(*it);
 }
 
 // EC targets may have chunks of various architectures mixed together at this
@@ -2234,11 +2250,10 @@ void Writer::maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
 
 // Create CHPE metadata chunks.
 void Writer::createECChunks() {
-  SymbolTable *symtab = ctx.symtabEC;
-  if (!symtab)
+  if (!ctx.symtab.isEC())
     return;
 
-  for (Symbol *s : symtab->expSymbols) {
+  for (Symbol *s : ctx.symtab.expSymbols) {
     auto sym = dyn_cast<Defined>(s);
     if (!sym || !sym->getChunk())
       continue;
@@ -2257,9 +2272,9 @@ void Writer::createECChunks() {
       // we should use the #foo$hp_target symbol as the redirection target.
       // First, try to look up the $hp_target symbol. If it can't be found,
       // assume it's a regular function and look for #foo instead.
-      Symbol *targetSym = symtab->find((targetName + "$hp_target").str());
+      Symbol *targetSym = ctx.symtab.find((targetName + "$hp_target").str());
       if (!targetSym)
-        targetSym = symtab->find(targetName);
+        targetSym = ctx.symtab.find(targetName);
       Defined *t = dyn_cast_or_null<Defined>(targetSym);
       if (t && isArm64EC(t->getChunk()->getMachine()))
         exportThunks.push_back({chunk, t});
@@ -2268,20 +2283,20 @@ void Writer::createECChunks() {
 
   auto codeMapChunk = make<ECCodeMapChunk>(codeMap);
   rdataSec->addChunk(codeMapChunk);
-  Symbol *codeMapSym = symtab->findUnderscore("__hybrid_code_map");
+  Symbol *codeMapSym = ctx.symtab.findUnderscore("__hybrid_code_map");
   replaceSymbol<DefinedSynthetic>(codeMapSym, codeMapSym->getName(),
                                   codeMapChunk);
 
   CHPECodeRangesChunk *ranges = make<CHPECodeRangesChunk>(exportThunks);
   rdataSec->addChunk(ranges);
   Symbol *rangesSym =
-      symtab->findUnderscore("__x64_code_ranges_to_entry_points");
+      ctx.symtab.findUnderscore("__x64_code_ranges_to_entry_points");
   replaceSymbol<DefinedSynthetic>(rangesSym, rangesSym->getName(), ranges);
 
   CHPERedirectionChunk *entryPoints = make<CHPERedirectionChunk>(exportThunks);
   a64xrmSec->addChunk(entryPoints);
   Symbol *entryPointsSym =
-      symtab->findUnderscore("__arm64x_redirection_metadata");
+      ctx.symtab.findUnderscore("__arm64x_redirection_metadata");
   replaceSymbol<DefinedSynthetic>(entryPointsSym, entryPointsSym->getName(),
                                   entryPoints);
 }
@@ -2370,6 +2385,31 @@ void Writer::insertCtorDtorSymbols() {
   }
 }
 
+// MinGW (really, Cygwin) specific.
+// The Cygwin startup code uses __data_start__ __data_end__ __bss_start__
+// and __bss_end__ to know what to copy during fork emulation.
+void Writer::insertBssDataStartEndSymbols() {
+  if (!dataSec->chunks.empty()) {
+    Symbol *dataStartSym = ctx.symtab.find("__data_start__");
+    Symbol *dataEndSym = ctx.symtab.find("__data_end__");
+    Chunk *endChunk = dataSec->chunks.back();
+    replaceSymbol<DefinedSynthetic>(dataStartSym, dataStartSym->getName(),
+                                    dataSec->chunks.front());
+    replaceSymbol<DefinedSynthetic>(dataEndSym, dataEndSym->getName(), endChunk,
+                                    endChunk->getSize());
+  }
+
+  if (!bssSec->chunks.empty()) {
+    Symbol *bssStartSym = ctx.symtab.find("__bss_start__");
+    Symbol *bssEndSym = ctx.symtab.find("__bss_end__");
+    Chunk *endChunk = bssSec->chunks.back();
+    replaceSymbol<DefinedSynthetic>(bssStartSym, bssStartSym->getName(),
+                                    bssSec->chunks.front());
+    replaceSymbol<DefinedSynthetic>(bssEndSym, bssEndSym->getName(), endChunk,
+                                    endChunk->getSize());
+  }
+}
+
 // Handles /section options to allow users to overwrite
 // section attributes.
 void Writer::setSectionPermissions() {
@@ -2385,8 +2425,7 @@ void Writer::setSectionPermissions() {
 
 // Set symbols used by ARM64EC metadata.
 void Writer::setECSymbols() {
-  SymbolTable *symtab = ctx.symtabEC;
-  if (!symtab)
+  if (!ctx.symtab.isEC())
     return;
 
   llvm::stable_sort(exportThunks, [](const std::pair<Chunk *, Defined *> &a,
@@ -2395,45 +2434,45 @@ void Writer::setECSymbols() {
   });
 
   ChunkRange &chpePdata = ctx.hybridSymtab ? hybridPdata : pdata;
-  Symbol *rfeTableSym = symtab->findUnderscore("__arm64x_extra_rfe_table");
+  Symbol *rfeTableSym = ctx.symtab.findUnderscore("__arm64x_extra_rfe_table");
   replaceSymbol<DefinedSynthetic>(rfeTableSym, "__arm64x_extra_rfe_table",
                                   chpePdata.first);
 
   if (chpePdata.first) {
     Symbol *rfeSizeSym =
-        symtab->findUnderscore("__arm64x_extra_rfe_table_size");
+        ctx.symtab.findUnderscore("__arm64x_extra_rfe_table_size");
     cast<DefinedAbsolute>(rfeSizeSym)
         ->setVA(chpePdata.last->getRVA() + chpePdata.last->getSize() -
                 chpePdata.first->getRVA());
   }
 
   Symbol *rangesCountSym =
-      symtab->findUnderscore("__x64_code_ranges_to_entry_points_count");
+      ctx.symtab.findUnderscore("__x64_code_ranges_to_entry_points_count");
   cast<DefinedAbsolute>(rangesCountSym)->setVA(exportThunks.size());
 
   Symbol *entryPointCountSym =
-      symtab->findUnderscore("__arm64x_redirection_metadata_count");
+      ctx.symtab.findUnderscore("__arm64x_redirection_metadata_count");
   cast<DefinedAbsolute>(entryPointCountSym)->setVA(exportThunks.size());
 
-  Symbol *iatSym = symtab->findUnderscore("__hybrid_auxiliary_iat");
+  Symbol *iatSym = ctx.symtab.findUnderscore("__hybrid_auxiliary_iat");
   replaceSymbol<DefinedSynthetic>(iatSym, "__hybrid_auxiliary_iat",
                                   idata.auxIat.empty() ? nullptr
                                                        : idata.auxIat.front());
 
-  Symbol *iatCopySym = symtab->findUnderscore("__hybrid_auxiliary_iat_copy");
+  Symbol *iatCopySym = ctx.symtab.findUnderscore("__hybrid_auxiliary_iat_copy");
   replaceSymbol<DefinedSynthetic>(
       iatCopySym, "__hybrid_auxiliary_iat_copy",
       idata.auxIatCopy.empty() ? nullptr : idata.auxIatCopy.front());
 
   Symbol *delayIatSym =
-      symtab->findUnderscore("__hybrid_auxiliary_delayload_iat");
+      ctx.symtab.findUnderscore("__hybrid_auxiliary_delayload_iat");
   replaceSymbol<DefinedSynthetic>(
       delayIatSym, "__hybrid_auxiliary_delayload_iat",
       delayIdata.getAuxIat().empty() ? nullptr
                                      : delayIdata.getAuxIat().front());
 
   Symbol *delayIatCopySym =
-      symtab->findUnderscore("__hybrid_auxiliary_delayload_iat_copy");
+      ctx.symtab.findUnderscore("__hybrid_auxiliary_delayload_iat_copy");
   replaceSymbol<DefinedSynthetic>(
       delayIatCopySym, "__hybrid_auxiliary_delayload_iat_copy",
       delayIdata.getAuxIatCopy().empty() ? nullptr
@@ -2448,16 +2487,16 @@ void Writer::setECSymbols() {
       if (auto thunkChunk =
               dyn_cast<ECExportThunkChunk>(altEntrySym->getChunk()))
         altEntrySym = thunkChunk->target;
-      symtab->findUnderscore("__arm64x_native_entrypoint")
+      ctx.symtab.findUnderscore("__arm64x_native_entrypoint")
           ->replaceKeepingName(altEntrySym, sizeof(SymbolUnion));
     }
 
-    if (symtab->edataStart)
+    if (ctx.symtab.edataStart)
       ctx.dynamicRelocs->set(
           dataDirOffset64 + EXPORT_TABLE * sizeof(data_directory) +
               offsetof(data_directory, Size),
-          symtab->edataEnd->getRVA() - symtab->edataStart->getRVA() +
-              symtab->edataEnd->getSize());
+          ctx.symtab.edataEnd->getRVA() - ctx.symtab.edataStart->getRVA() +
+              ctx.symtab.edataEnd->getSize());
     if (hybridPdata.first) {
       ctx.dynamicRelocs->set(
           dataDirOffset64 + EXCEPTION_TABLE * sizeof(data_directory) +

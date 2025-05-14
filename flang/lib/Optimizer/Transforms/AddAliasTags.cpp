@@ -43,13 +43,10 @@ static llvm::cl::opt<bool>
 static llvm::cl::opt<bool>
     enableDirect("direct-tbaa", llvm::cl::init(true), llvm::cl::Hidden,
                  llvm::cl::desc("Add TBAA tags to direct variables"));
-// This is **known unsafe** (misscompare in spec2017/wrf_r). It should
-// not be enabled by default.
-// The code is kept so that these may be tried with new benchmarks to see if
-// this is worth fixing in the future.
-static llvm::cl::opt<bool> enableLocalAllocs(
-    "local-alloc-tbaa", llvm::cl::init(false), llvm::cl::Hidden,
-    llvm::cl::desc("Add TBAA tags to local allocations. UNSAFE."));
+static llvm::cl::opt<bool>
+    enableLocalAllocs("local-alloc-tbaa", llvm::cl::init(true),
+                      llvm::cl::Hidden,
+                      llvm::cl::desc("Add TBAA tags to local allocations."));
 
 namespace {
 
@@ -198,12 +195,6 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   LLVM_DEBUG(llvm::dbgs() << "Analysing " << op << "\n");
 
   const fir::AliasAnalysis::Source &source = state.getSource(memref);
-  if (source.isTargetOrPointer()) {
-    LLVM_DEBUG(llvm::dbgs().indent(2) << "Skipping TARGET/POINTER\n");
-    // These will get an "any data access" tag in TBAABuilder (CodeGen): causing
-    // them to "MayAlias" with all non-box accesses
-    return;
-  }
 
   // Process the scopes, if not processed yet.
   state.processFunctionScopes(func);
@@ -228,15 +219,21 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to dummy argument at " << *op << "\n");
     std::string name = getFuncArgName(llvm::cast<mlir::Value>(source.origin.u));
-    if (!name.empty())
+    // If it is a TARGET or POINTER, then we do not care about the name,
+    // because the tag points to the root of the subtree currently.
+    if (source.isTargetOrPointer()) {
+      tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
+    } else if (!name.empty()) {
       tag = state.getFuncTreeWithScope(func, scopeOp)
                 .dummyArgDataTree.getTag(name);
-    else
+    } else {
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "WARN: couldn't find a name for dummy argument " << *op
                  << "\n");
+      tag = state.getFuncTreeWithScope(func, scopeOp).dummyArgDataTree.getTag();
+    }
 
-    // TBAA for global variables
+    // TBAA for global variables without descriptors
   } else if (enableGlobals &&
              source.kind == fir::AliasAnalysis::SourceKind::Global &&
              !source.isBoxData()) {
@@ -244,9 +241,13 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     const char *name = glbl.getRootReference().data();
     LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to global " << name
                                       << " at " << *op << "\n");
-    tag = state.getFuncTreeWithScope(func, scopeOp).globalDataTree.getTag(name);
+    if (source.isPointer())
+      tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
+    else
+      tag =
+          state.getFuncTreeWithScope(func, scopeOp).globalDataTree.getTag(name);
 
-    // TBAA for SourceKind::Direct
+    // TBAA for global variables with descriptors
   } else if (enableDirect &&
              source.kind == fir::AliasAnalysis::SourceKind::Global &&
              source.isBoxData()) {
@@ -254,11 +255,12 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       const char *name = glbl.getRootReference().data();
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to direct " << name
                                         << " at " << *op << "\n");
-      tag =
-          state.getFuncTreeWithScope(func, scopeOp).directDataTree.getTag(name);
+      if (source.isPointer())
+        tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
+      else
+        tag = state.getFuncTreeWithScope(func, scopeOp)
+                  .directDataTree.getTag(name);
     } else {
-      // SourceKind::Direct is likely to be extended to cases which are not a
-      // SymbolRefAttr in the future
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Can't get name for direct "
                                         << source << " at " << *op << "\n");
     }
@@ -269,11 +271,23 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     std::optional<llvm::StringRef> name;
     mlir::Operation *sourceOp =
         llvm::cast<mlir::Value>(source.origin.u).getDefiningOp();
+    bool unknownAllocOp = false;
     if (auto alloc = mlir::dyn_cast_or_null<fir::AllocaOp>(sourceOp))
       name = alloc.getUniqName();
     else if (auto alloc = mlir::dyn_cast_or_null<fir::AllocMemOp>(sourceOp))
       name = alloc.getUniqName();
-    if (name) {
+    else
+      unknownAllocOp = true;
+
+    if (unknownAllocOp) {
+      LLVM_DEBUG(llvm::dbgs().indent(2)
+                 << "WARN: unknown defining op for SourceKind::Allocate " << *op
+                 << "\n");
+    } else if (source.isPointer()) {
+      LLVM_DEBUG(llvm::dbgs().indent(2)
+                 << "Found reference to allocation at " << *op << "\n");
+      tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
+    } else if (name) {
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to allocation "
                                         << name << " at " << *op << "\n");
       tag = state.getFuncTreeWithScope(func, scopeOp)
@@ -282,6 +296,8 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "WARN: couldn't find a name for allocation " << *op
                  << "\n");
+      tag =
+          state.getFuncTreeWithScope(func, scopeOp).allocatedDataTree.getTag();
     }
   } else {
     if (source.kind != fir::AliasAnalysis::SourceKind::Argument &&

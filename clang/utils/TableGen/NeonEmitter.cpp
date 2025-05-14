@@ -492,11 +492,8 @@ public:
 
   bool operator<(const Intrinsic &Other) const {
     // Sort lexicographically on a three-tuple (ArchGuard, TargetGuard, Name)
-    if (ArchGuard != Other.ArchGuard)
-      return ArchGuard < Other.ArchGuard;
-    if (TargetGuard != Other.TargetGuard)
-      return TargetGuard < Other.TargetGuard;
-    return Name < Other.Name;
+    return std::tie(ArchGuard, TargetGuard, Name) <
+           std::tie(Other.ArchGuard, Other.TargetGuard, Other.Name);
   }
 
   ClassKind getClassKind(bool UseClassBIfScalar = false) {
@@ -2029,8 +2026,8 @@ void NeonEmitter::createIntrinsic(const Record *R,
   std::vector<TypeSpec> TypeSpecs = TypeSpec::fromTypeSpecs(Types);
 
   ClassKind CK = ClassNone;
-  if (R->getSuperClasses().size() >= 2)
-    CK = ClassMap[R->getSuperClasses()[1].first];
+  if (!R->getDirectSuperClasses().empty())
+    CK = ClassMap[R->getDirectSuperClasses()[0].first];
 
   std::vector<std::pair<TypeSpec, TypeSpec>> NewTypeSpecs;
   if (!CartesianProductWith.empty()) {
@@ -2052,8 +2049,7 @@ void NeonEmitter::createIntrinsic(const Record *R,
   }
 
   sort(NewTypeSpecs);
-  NewTypeSpecs.erase(std::unique(NewTypeSpecs.begin(), NewTypeSpecs.end()),
-		     NewTypeSpecs.end());
+  NewTypeSpecs.erase(llvm::unique(NewTypeSpecs), NewTypeSpecs.end());
   auto &Entry = IntrinsicMap[Name];
 
   for (auto &I : NewTypeSpecs) {

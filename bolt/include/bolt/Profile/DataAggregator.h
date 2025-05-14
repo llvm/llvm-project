@@ -92,16 +92,6 @@ private:
     uint64_t Addr;
   };
 
-  /// Used for parsing specific pre-aggregated input files.
-  struct AggregatedLBREntry {
-    enum Type : char { BRANCH = 0, FT, FT_EXTERNAL_ORIGIN, TRACE };
-    Location From;
-    Location To;
-    uint64_t Count;
-    uint64_t Mispreds;
-    Type EntryType;
-  };
-
   struct Trace {
     uint64_t From;
     uint64_t To;
@@ -131,7 +121,6 @@ private:
   /// and use them later for processing and assigning profile.
   std::unordered_map<Trace, TakenBranchInfo, TraceHash> BranchLBRs;
   std::unordered_map<Trace, FTInfo, TraceHash> FallthroughLBRs;
-  std::vector<AggregatedLBREntry> AggregatedLBRs;
   std::unordered_map<uint64_t, uint64_t> BasicSamples;
   std::vector<PerfMemSample> MemSamples;
 
@@ -197,10 +186,6 @@ private:
 
   BoltAddressTranslation *BAT{nullptr};
 
-  /// Whether pre-aggregated profile needs to convert branch profile into call
-  /// to continuation fallthrough profile.
-  bool NeedsConvertRetProfileToCallCont{false};
-
   /// Update function execution profile with a recorded trace.
   /// A trace is region of code executed between two LBR entries supplied in
   /// execution order.
@@ -223,14 +208,11 @@ private:
   bool recordExit(BinaryFunction &BF, uint64_t From, bool Mispred,
                   uint64_t Count = 1) const;
 
-  /// Aggregation statistics
+  /// Branch stacks aggregation statistics
+  uint64_t NumTraces{0};
   uint64_t NumInvalidTraces{0};
   uint64_t NumLongRangeTraces{0};
-  /// Specifies how many samples were recorded in cold areas if we are dealing
-  /// with profiling data collected in a bolted binary. For LBRs, incremented
-  /// for the source of the branch to avoid counting cold activity twice (one
-  /// for source and another for destination).
-  uint64_t NumColdSamples{0};
+  uint64_t NumTotalSamples{0};
 
   /// Looks into system PATH for Linux Perf and set up the aggregator to use it
   void findPerfExecutable();
@@ -259,7 +241,8 @@ private:
 
   /// Semantic actions - parser hooks to interpret parsed perf samples
   /// Register a sample (non-LBR mode), i.e. a new hit at \p Address
-  bool doSample(BinaryFunction &Func, const uint64_t Address, uint64_t Count);
+  bool doBasicSample(BinaryFunction &Func, const uint64_t Address,
+                     uint64_t Count);
 
   /// Register an intraprocedural branch \p Branch.
   bool doIntraBranch(BinaryFunction &Func, uint64_t From, uint64_t To,
@@ -327,8 +310,8 @@ private:
   /// Parse a single LBR entry as output by perf script -Fbrstack
   ErrorOr<LBREntry> parseLBREntry();
 
-  /// Parse LBR sample, returns the number of traces.
-  uint64_t parseLBRSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
+  /// Parse LBR sample.
+  void parseLBRSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
 
   /// Parse and pre-aggregate branch events.
   std::error_code parseBranchEvents();
@@ -424,9 +407,6 @@ private:
   /// an external tool.
   std::error_code parsePreAggregatedLBRSamples();
 
-  /// Process parsed pre-aggregated data.
-  void processPreAggregated();
-
   /// If \p Address falls into the binary address space based on memory
   /// mapping info \p MMI, then adjust it for further processing by subtracting
   /// the base load address. External addresses, i.e. addresses that do not
@@ -486,6 +466,12 @@ private:
   void dump(const LBREntry &LBR) const;
   void dump(const PerfBranchSample &Sample) const;
   void dump(const PerfMemSample &Sample) const;
+
+  /// Profile diagnostics print methods
+  void printLongRangeTracesDiagnostic() const;
+  void printBranchSamplesDiagnostics() const;
+  void printBasicSamplesDiagnostics(uint64_t OutOfRangeSamples) const;
+  void printBranchStacksDiagnostics(uint64_t IgnoredSamples) const;
 
 public:
   /// If perf.data was collected without build ids, the buildid-list may contain

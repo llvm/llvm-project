@@ -129,12 +129,17 @@ public:
       return false;
     if (isIntegralPointer())
       return P.asIntPointer().Value == asIntPointer().Value &&
-             Offset == P.Offset;
+             P.asIntPointer().Desc == asIntPointer().Desc && P.Offset == Offset;
+
+    if (isFunctionPointer())
+      return P.asFunctionPointer().getFunction() ==
+                 asFunctionPointer().getFunction() &&
+             P.Offset == Offset;
 
     assert(isBlockPointer());
     return P.asBlockPointer().Pointee == asBlockPointer().Pointee &&
            P.asBlockPointer().Base == asBlockPointer().Base &&
-           Offset == P.Offset;
+           P.Offset == Offset;
   }
 
   bool operator!=(const Pointer &P) const { return !(P == *this); }
@@ -487,7 +492,11 @@ public:
     return ElemDesc ? ElemDesc->ElemRecord : nullptr;
   }
   /// Returns the field information.
-  const FieldDecl *getField() const { return getFieldDesc()->asFieldDecl(); }
+  const FieldDecl *getField() const {
+    if (const Descriptor *FD = getFieldDesc())
+      return FD->asFieldDecl();
+    return nullptr;
+  }
 
   /// Checks if the storage is extern.
   bool isExtern() const {
@@ -568,6 +577,13 @@ public:
     return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
 
+  /// Checks if an object or a subfield is volatile.
+  bool isVolatile() const {
+    if (!isBlockPointer())
+      return false;
+    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
+  }
+
   /// Returns the declaration ID.
   std::optional<unsigned> getDeclID() const {
     if (isBlockPointer()) {
@@ -596,6 +612,13 @@ public:
   }
 
   const Block *block() const { return asBlockPointer().Pointee; }
+
+  /// If backed by actual data (i.e. a block pointer), return
+  /// an address to that data.
+  const std::byte *getRawAddress() const {
+    assert(isBlockPointer());
+    return asBlockPointer().Pointee->rawData() + Offset;
+  }
 
   /// Returns the index into an array.
   int64_t getIndex() const {
@@ -718,6 +741,9 @@ public:
   static bool hasSameArray(const Pointer &A, const Pointer &B);
   /// Checks if both given pointers point to the same block.
   static bool pointToSameBlock(const Pointer &A, const Pointer &B);
+
+  static std::optional<std::pair<Pointer, Pointer>>
+  computeSplitPoint(const Pointer &A, const Pointer &B);
 
   /// Whether this points to a block that's been created for a "literal lvalue",
   /// i.e. a non-MaterializeTemporaryExpr Expr.

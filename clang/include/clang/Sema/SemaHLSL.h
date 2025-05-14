@@ -105,6 +105,7 @@ public:
                          HLSLParamModifierAttr::Spelling Spelling);
   void ActOnTopLevelFunction(FunctionDecl *FD);
   void ActOnVariableDeclarator(VarDecl *VD);
+  bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
@@ -118,6 +119,7 @@ public:
                                        bool IsCompAssign);
   void emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS, BinaryOperatorKind Opc);
 
+  void handleRootSignatureAttr(Decl *D, const ParsedAttr &AL);
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
@@ -151,8 +153,7 @@ public:
 
   QualType getInoutParameterType(QualType Ty);
 
-  bool TransformInitList(const InitializedEntity &Entity,
-                         const InitializationKind &Kind, InitListExpr *Init);
+  bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
 
   void deduceAddressSpace(VarDecl *Decl);
 

@@ -480,8 +480,6 @@ through clang using the command line flag:
 
    $ clang -fno-slp-vectorize file.c
 
-.. _sandbox-vectorizer:
-
 The Sandbox Vectorizer
 ======================
 .. toctree::

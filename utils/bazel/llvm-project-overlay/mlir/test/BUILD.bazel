@@ -110,6 +110,7 @@ td_library(
     name = "TestOpTdFiles",
     srcs = glob(["lib/Dialect/Test/*.td"]),
     deps = [
+        "//mlir:BufferizationTypeInterfacesTdFiles",
         "//mlir:BuiltinDialectTdFiles",
         "//mlir:CallInterfacesTdFiles",
         "//mlir:ControlFlowInterfacesTdFiles",
@@ -123,7 +124,6 @@ td_library(
         "//mlir:LinalgStructuredOpsTdFiles",
         "//mlir:MemorySlotInterfacesTdFiles",
         "//mlir:OpBaseTdFiles",
-        "//mlir:PolynomialTdFiles",
         "//mlir:PtrTdFiles",
         "//mlir:SideEffectInterfacesTdFiles",
     ],
@@ -240,6 +240,7 @@ gentbl_cc_library(
     test = True,
     deps = [
         ":TestOpTdFiles",
+        "//mlir:BufferizationTypeInterfacesTdFiles",
         "//mlir:BuiltinDialectTdFiles",
     ],
 )
@@ -342,6 +343,7 @@ cc_library(
         "//llvm:IRReader",
         "//llvm:Support",
         "//mlir:ArithDialect",
+        "//mlir:BufferizationInterfaces",
         "//mlir:BytecodeOpInterface",
         "//mlir:CallOpInterfaces",
         "//mlir:ControlFlowInterfaces",
@@ -367,7 +369,6 @@ cc_library(
         "//mlir:LoopLikeInterface",
         "//mlir:MemorySlotInterfaces",
         "//mlir:Pass",
-        "//mlir:PolynomialDialect",
         "//mlir:PtrDialect",
         "//mlir:Reducer",
         "//mlir:SideEffectInterfaces",
@@ -404,6 +405,7 @@ cc_library(
         "//llvm:Support",
         "//mlir:Analysis",
         "//mlir:ArithDialect",
+        "//mlir:BufferizationInterfaces",
         "//mlir:BytecodeOpInterface",
         "//mlir:BytecodeReader",
         "//mlir:BytecodeWriter",
@@ -612,23 +614,6 @@ cc_library(
 )
 
 cc_library(
-    name = "TestOneToNTypeConversion",
-    srcs = glob(["lib/Conversion/OneToNTypeConversion/*.cpp"]),
-    includes = ["lib/Dialect/Test"],
-    deps = [
-        ":TestDialect",
-        "//mlir:FuncDialect",
-        "//mlir:FuncTransforms",
-        "//mlir:IR",
-        "//mlir:Pass",
-        "//mlir:SCFDialect",
-        "//mlir:SCFTransforms",
-        "//mlir:TransformUtils",
-        "//mlir:Transforms",
-    ],
-)
-
-cc_library(
     name = "TestVectorToSPIRV",
     srcs = glob(["lib/Conversion/VectorToSPIRV/*.cpp"]),
     deps = [
@@ -711,6 +696,8 @@ cc_library(
     deps = [
         "//llvm:NVPTXCodeGen",
         "//llvm:Support",
+        "//mlir:AMDGPUDialect",
+        "//mlir:AMDGPUUtils",
         "//mlir:AffineDialect",
         "//mlir:AffineToStandard",
         "//mlir:ArithDialect",
@@ -734,6 +721,7 @@ cc_library(
         "//mlir:NVVMToLLVM",
         "//mlir:NVVMToLLVMIRTranslation",
         "//mlir:Pass",
+        "//mlir:ROCDLDialect",
         "//mlir:ROCDLToLLVMIRTranslation",
         "//mlir:ReconcileUnrealizedCasts",
         "//mlir:SCFDialect",
@@ -986,8 +974,11 @@ cc_library(
     srcs = glob(["lib/Dialect/Bufferization/*.cpp"]),
     includes = ["lib/Dialect/Test"],
     deps = [
+        ":TestDialect",
         "//mlir:BufferizationDialect",
+        "//mlir:BufferizationInterfaces",
         "//mlir:BufferizationTransforms",
+        "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:Pass",
     ],
@@ -1164,5 +1155,21 @@ cc_library(
         "//mlir:Support",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
+    ],
+)
+
+cc_library(
+    name = "TestXeGPU",
+    srcs = glob(["lib/Dialect/XeGPU/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//mlir:GPUDialect",
+        "//mlir:IR",
+        "//mlir:MemRefDialect",
+        "//mlir:Pass",
+        "//mlir:TransformUtils",
+        "//mlir:VectorTransforms",
+        "//mlir:XeGPUDialect",
+        "//mlir:XeGPUTransforms",
     ],
 )

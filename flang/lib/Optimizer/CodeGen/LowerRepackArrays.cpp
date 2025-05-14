@@ -357,8 +357,8 @@ public:
     patterns.insert<PackArrayConversion>(context);
     patterns.insert<UnpackArrayConversion>(context);
     mlir::GreedyRewriteConfig config;
-    config.enableRegionSimplification =
-        mlir::GreedySimplifyRegionLevel::Disabled;
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
     (void)applyPatternsGreedily(module, std::move(patterns), config);
   }
 

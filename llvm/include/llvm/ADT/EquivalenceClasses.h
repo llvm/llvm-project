@@ -79,11 +79,15 @@ template <class ElemTy> class EquivalenceClasses {
     // ECValue ctor - Start out with EndOfList pointing to this node, Next is
     // Null, isLeader = true.
     ECValue(const ElemTy &Elt)
-      : Leader(this), Next((ECValue*)(intptr_t)1), Data(Elt) {}
+        : Leader(this),
+          Next(reinterpret_cast<ECValue *>(static_cast<intptr_t>(1))),
+          Data(Elt) {}
 
     const ECValue *getLeader() const {
-      if (isLeader()) return this;
-      if (Leader->isLeader()) return Leader;
+      if (isLeader())
+        return this;
+      if (Leader->isLeader())
+        return Leader;
       // Path compression.
       return Leader = Leader->getLeader();
     }
@@ -95,12 +99,16 @@ template <class ElemTy> class EquivalenceClasses {
 
     void setNext(const ECValue *NewNext) const {
       assert(getNext() == nullptr && "Already has a next pointer!");
-      Next = (const ECValue*)((intptr_t)NewNext | (intptr_t)isLeader());
+      Next = reinterpret_cast<const ECValue *>(
+          reinterpret_cast<intptr_t>(NewNext) |
+          static_cast<intptr_t>(isLeader()));
     }
 
   public:
-    ECValue(const ECValue &RHS) : Leader(this), Next((ECValue*)(intptr_t)1),
-                                  Data(RHS.Data) {
+    ECValue(const ECValue &RHS)
+        : Leader(this),
+          Next(reinterpret_cast<ECValue *>(static_cast<intptr_t>(1))),
+          Data(RHS.Data) {
       // Only support copying of singleton nodes.
       assert(RHS.isLeader() && RHS.getNext() == nullptr && "Not a singleton!");
     }
@@ -109,7 +117,8 @@ template <class ElemTy> class EquivalenceClasses {
     const ElemTy &getData() const { return Data; }
 
     const ECValue *getNext() const {
-      return (ECValue*)((intptr_t)Next & ~(intptr_t)1);
+      return reinterpret_cast<ECValue *>(reinterpret_cast<intptr_t>(Next) &
+                                         ~static_cast<intptr_t>(1));
     }
   };
 
@@ -124,9 +133,7 @@ template <class ElemTy> class EquivalenceClasses {
 
 public:
   EquivalenceClasses() = default;
-  EquivalenceClasses(const EquivalenceClasses &RHS) {
-    operator=(RHS);
-  }
+  EquivalenceClasses(const EquivalenceClasses &RHS) { operator=(RHS); }
 
   EquivalenceClasses &operator=(const EquivalenceClasses &RHS) {
     TheMapping.clear();
@@ -160,9 +167,7 @@ public:
     return member_iterator(ECV.isLeader() ? &ECV : nullptr);
   }
 
-  member_iterator member_end() const {
-    return member_iterator(nullptr);
-  }
+  member_iterator member_end() const { return member_iterator(nullptr); }
 
   iterator_range<member_iterator> members(const ECValue &ECV) const {
     return make_range(member_begin(ECV), member_end());
@@ -294,7 +299,8 @@ public:
   }
   member_iterator unionSets(member_iterator L1, member_iterator L2) {
     assert(L1 != member_end() && L2 != member_end() && "Illegal inputs!");
-    if (L1 == L2) return L1;   // Unifying the same two sets, noop.
+    if (L1 == L2)
+      return L1; // Unifying the same two sets, noop.
 
     // Otherwise, this is a real union operation.  Set the end of the L1 list to
     // point to the L2 leader node.
@@ -350,7 +356,7 @@ public:
       return *this;
     }
 
-    member_iterator operator++(int) {    // postincrement operators.
+    member_iterator operator++(int) { // postincrement operators.
       member_iterator tmp = *this;
       ++*this;
       return tmp;

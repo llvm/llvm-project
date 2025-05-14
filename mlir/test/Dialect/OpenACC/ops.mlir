@@ -1862,22 +1862,26 @@ func.func @acc_num_gangs() {
 
 // CHECK-LABEL: func.func @acc_combined
 func.func @acc_combined() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+
   acc.parallel combined(loop) {
-    acc.loop combined(parallel) {
+    acc.loop combined(parallel) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
     }
     acc.terminator
   }
 
   acc.kernels combined(loop) {
-    acc.loop combined(kernels) {
+    acc.loop combined(kernels) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
     }
     acc.terminator
   }
 
   acc.serial combined(loop) {
-    acc.loop combined(serial) {
+    acc.loop combined(serial) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
     }
     acc.terminator
@@ -1933,3 +1937,45 @@ acc.private.recipe @privatization_memref_i32 : memref<i32> init {
 
 // CHECK-LABEL: acc.private.recipe @privatization_memref_i32
 // CHECK:       memref.alloca
+
+// -----
+
+func.func @acc_loop_container() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  acc.loop {
+    scf.for %arg4 = %c0 to %c10 step %c1 {
+      scf.yield
+    }
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @acc_loop_container
+// CHECK:       acc.loop
+// CHECK:       scf.for
+
+// -----
+
+func.func @acc_loop_container() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  acc.loop {
+    scf.for %arg4 = %c0 to %c10 step %c1 {
+      scf.for %arg5 = %c0 to %c10 step %c1 {
+        scf.yield
+      }
+      scf.yield
+    }
+    acc.yield
+  } attributes { collapse = [2], collapseDeviceType = [#acc.device_type<none>] }
+  return
+}
+
+// CHECK-LABEL: func.func @acc_loop_container
+// CHECK:       acc.loop
+// CHECK:       scf.for
+// CHECK:       scf.for

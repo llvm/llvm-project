@@ -466,7 +466,7 @@ llvm::Value *CodeGenFunction::EmitFP8NeonFDOTCall(
   if (ExtendLaneArg) {
     auto *VT = llvm::FixedVectorType::get(Int8Ty, 16);
     Ops[2] = Builder.CreateInsertVector(VT, PoisonValue::get(VT), Ops[2],
-                                        Builder.getInt64(0));
+                                        uint64_t(0));
   }
   return EmitFP8NeonCall(IID, Tys, Ops, E, name);
 }
@@ -478,7 +478,7 @@ llvm::Value *CodeGenFunction::EmitFP8NeonFMLACall(
   if (ExtendLaneArg) {
     auto *VT = llvm::FixedVectorType::get(Int8Ty, 16);
     Ops[2] = Builder.CreateInsertVector(VT, PoisonValue::get(VT), Ops[2],
-                                        Builder.getInt64(0));
+                                        uint64_t(0));
   }
   const unsigned ElemCount = Ops[0]->getType()->getPrimitiveSizeInBits() /
                              RetTy->getPrimitiveSizeInBits();
@@ -502,7 +502,7 @@ Value *CodeGenFunction::EmitFP8NeonCvtCall(unsigned IID, llvm::Type *Ty0,
     // Op[0] is mfloat8x16_t, but the intrinsic converts only the lower part of
     // the vector.
     Tys[1] = llvm::FixedVectorType::get(Int8Ty, 8);
-    Ops[0] = Builder.CreateExtractVector(Tys[1], Ops[0], Builder.getInt64(0));
+    Ops[0] = Builder.CreateExtractVector(Tys[1], Ops[0], uint64_t(0));
   }
   return EmitFP8NeonCall(IID, Tys, Ops, E, name);
 }
@@ -4727,7 +4727,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
 
     llvm::Type *OverloadedTy = getSVEVectorForElementType(EltTy);
     Value *InsertSubVec = Builder.CreateInsertVector(
-        OverloadedTy, PoisonValue::get(OverloadedTy), Vec, Builder.getInt64(0));
+        OverloadedTy, PoisonValue::get(OverloadedTy), Vec, uint64_t(0));
 
     Function *F =
         CGM.getIntrinsic(Intrinsic::aarch64_sve_dupq_lane, OverloadedTy);
@@ -4810,7 +4810,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svset_neonq_f32:
   case SVE::BI__builtin_sve_svset_neonq_f64:
   case SVE::BI__builtin_sve_svset_neonq_bf16: {
-    return Builder.CreateInsertVector(Ty, Ops[0], Ops[1], Builder.getInt64(0));
+    return Builder.CreateInsertVector(Ty, Ops[0], Ops[1], uint64_t(0));
   }
 
   case SVE::BI__builtin_sve_svget_neonq_s8:
@@ -4825,7 +4825,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svget_neonq_f32:
   case SVE::BI__builtin_sve_svget_neonq_f64:
   case SVE::BI__builtin_sve_svget_neonq_bf16: {
-    return Builder.CreateExtractVector(Ty, Ops[0], Builder.getInt64(0));
+    return Builder.CreateExtractVector(Ty, Ops[0], uint64_t(0));
   }
 
   case SVE::BI__builtin_sve_svdup_neonq_s8:
@@ -4841,7 +4841,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svdup_neonq_f64:
   case SVE::BI__builtin_sve_svdup_neonq_bf16: {
     Value *Insert = Builder.CreateInsertVector(Ty, PoisonValue::get(Ty), Ops[0],
-                                               Builder.getInt64(0));
+                                               uint64_t(0));
     return Builder.CreateIntrinsic(Intrinsic::aarch64_sve_dupq_lane, {Ty},
                                    {Insert, Builder.getInt64(0)});
   }
@@ -7767,7 +7767,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vcvt_high_mf8_f32_fpm: {
     llvm::Type *Ty = llvm::FixedVectorType::get(Int8Ty, 16);
     Ops[0] = Builder.CreateInsertVector(Ty, PoisonValue::get(Ty), Ops[0],
-                                        Builder.getInt64(0));
+                                        uint64_t(0));
     return EmitFP8NeonCvtCall(Intrinsic::aarch64_neon_fp8_fcvtn2, Ty,
                               Ops[1]->getType(), false, Ops, E, "vfcvtn2");
   }

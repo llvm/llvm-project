@@ -32,6 +32,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.acos();
   case Operation::Acosh:
     return mpfrInput.acosh();
+  case Operation::Acospi:
+    return mpfrInput.acospi();
   case Operation::Asin:
     return mpfrInput.asin();
   case Operation::Asinh:

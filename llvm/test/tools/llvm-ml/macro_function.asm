@@ -103,14 +103,20 @@ expr_recursive_test PROC
   ret
 expr_recursive_test ENDP
 
-custom_strcat MACRO arg1, arg2
-  EXITM <arg1&arg2>
-ENDM
-
-expand_as_directive_test custom_strcat(P, ROC)
+expand_as_directive_test @CatStr(P, RO, C)
 ; CHECK-LABEL: expand_as_directive_test:
 
   ret
 expand_as_directive_test ENDP
+
+custom_strcat MACRO arg1, arg2
+  EXITM <arg1&arg2>
+ENDM
+
+expand_as_directive_custom_test custom_strcat(P, ROC)
+; CHECK-LABEL: expand_as_directive_custom_test:
+
+  ret
+expand_as_directive_custom_test ENDP
 
 end

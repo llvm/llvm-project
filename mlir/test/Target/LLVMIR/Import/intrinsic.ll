@@ -235,15 +235,23 @@ define void @nearbyint_test(float %0, double %1, <8 x float> %2, <8 x double> %3
   ret void
 }
 ; CHECK-LABEL: llvm.func @lround_test
-define void @lround_test(float %0, double %1) {
+define void @lround_test(float %0, double %1, <2 x float> %2, <2 x double> %3) {
   ; CHECK: llvm.intr.lround(%{{.*}}) : (f32) -> i32
-  %3 = call i32 @llvm.lround.i32.f32(float %0)
+  %5 = call i32 @llvm.lround.i32.f32(float %0)
   ; CHECK: llvm.intr.lround(%{{.*}}) : (f32) -> i64
-  %4 = call i64 @llvm.lround.i64.f32(float %0)
+  %6 = call i64 @llvm.lround.i64.f32(float %0)
   ; CHECK: llvm.intr.lround(%{{.*}}) : (f64) -> i32
-  %5 = call i32 @llvm.lround.i32.f64(double %1)
+  %7 = call i32 @llvm.lround.i32.f64(double %1)
   ; CHECK: llvm.intr.lround(%{{.*}}) : (f64) -> i64
-  %6 = call i64 @llvm.lround.i64.f64(double %1)
+  %8 = call i64 @llvm.lround.i64.f64(double %1)
+  ; CHECK: llvm.intr.lround(%{{.*}}) : (vector<2xf32>) -> vector<2xi32>
+  %9 = call <2 x i32> @llvm.lround.v2i32.v2f32(<2 x float> %2)
+  ; CHECK: llvm.intr.lround(%{{.*}}) : (vector<2xf64>) -> vector<2xi32>
+  %10 = call <2 x i32> @llvm.lround.v2i32.v2f64(<2 x double> %3)
+  ; CHECK: llvm.intr.lround(%{{.*}}) : (vector<2xf32>) -> vector<2xi64>
+  %11 = call <2 x i64> @llvm.lround.v2i64.v2f32(<2 x float> %2)
+  ; CHECK: llvm.intr.lround(%{{.*}}) : (vector<2xf64>) -> vector<2xi64>
+  %12 = call <2 x i64> @llvm.lround.v2i64.v2f64(<2 x double> %3)
   ret void
 }
 ; CHECK-LABEL: llvm.func @llround_test
@@ -255,23 +263,35 @@ define void @llround_test(float %0, double %1) {
   ret void
 }
 ; CHECK-LABEL: llvm.func @lrint_test
-define void @lrint_test(float %0, double %1) {
+define void @lrint_test(float %0, double %1, <2 x float> %2, <2 x double> %3) {
   ; CHECK: llvm.intr.lrint(%{{.*}}) : (f32) -> i32
-  %3 = call i32 @llvm.lrint.i32.f32(float %0)
+  %5 = call i32 @llvm.lrint.i32.f32(float %0)
   ; CHECK: llvm.intr.lrint(%{{.*}}) : (f32) -> i64
-  %4 = call i64 @llvm.lrint.i64.f32(float %0)
+  %6 = call i64 @llvm.lrint.i64.f32(float %0)
   ; CHECK: llvm.intr.lrint(%{{.*}}) : (f64) -> i32
-  %5 = call i32 @llvm.lrint.i32.f64(double %1)
+  %7 = call i32 @llvm.lrint.i32.f64(double %1)
   ; CHECK: llvm.intr.lrint(%{{.*}}) : (f64) -> i64
-  %6 = call i64 @llvm.lrint.i64.f64(double %1)
+  %8 = call i64 @llvm.lrint.i64.f64(double %1)
+  ; CHECK: llvm.intr.lrint(%{{.*}}) : (vector<2xf32>) -> vector<2xi32>
+  %9 = call <2 x i32> @llvm.lrint.v2i32.v2f32(<2 x float> %2)
+  ; CHECK: llvm.intr.lrint(%{{.*}}) : (vector<2xf64>) -> vector<2xi32>
+  %10 = call <2 x i32> @llvm.lrint.v2i32.v2f64(<2 x double> %3)
+  ; CHECK: llvm.intr.lrint(%{{.*}}) : (vector<2xf32>) -> vector<2xi64>
+  %11 = call <2 x i64> @llvm.lrint.v2i64.v2f32(<2 x float> %2)
+  ; CHECK: llvm.intr.lrint(%{{.*}}) : (vector<2xf64>) -> vector<2xi64>
+  %12 = call <2 x i64> @llvm.lrint.v2i64.v2f64(<2 x double> %3)
   ret void
 }
 ; CHECK-LABEL: llvm.func @llrint_test
-define void @llrint_test(float %0, double %1) {
+define void @llrint_test(float %0, double %1, <2 x float> %2, <2 x double> %3) {
   ; CHECK: llvm.intr.llrint(%{{.*}}) : (f32) -> i64
-  %3 = call i64 @llvm.llrint.i64.f32(float %0)
+  %5 = call i64 @llvm.llrint.i64.f32(float %0)
   ; CHECK: llvm.intr.llrint(%{{.*}}) : (f64) -> i64
-  %4 = call i64 @llvm.llrint.i64.f64(double %1)
+  %6 = call i64 @llvm.llrint.i64.f64(double %1)
+  ; CHECK: llvm.intr.llrint(%{{.*}}) : (vector<2xf32>) -> vector<2xi64>
+  %7 = call <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float> %2)
+  ; CHECK: llvm.intr.llrint(%{{.*}}) : (vector<2xf64>) -> vector<2xi64>
+  %8 = call <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double> %3)
   ret void
 }
 
