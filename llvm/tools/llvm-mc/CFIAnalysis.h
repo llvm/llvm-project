@@ -2,6 +2,7 @@
 #define LLVM_TOOLS_LLVM_MC_CFI_ANALYSIS_H
 
 #include "CFIState.h"
+#include "ExtendedMCInstrAnalysis.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -18,7 +19,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <memory>
@@ -26,24 +26,6 @@
 #include <set>
 
 namespace llvm {
-
-bolt::MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
-                                         const MCInstrAnalysis *Analysis,
-                                         const MCInstrInfo *Info,
-                                         const MCRegisterInfo *RegInfo,
-                                         const MCSubtargetInfo *STI) {
-  dbgs() << "arch: " << Arch << ", and expected " << Triple::x86_64 << "\n";
-  if (Arch == Triple::x86_64)
-    return bolt::createX86MCPlusBuilder(Analysis, Info, RegInfo, STI);
-
-  // if (Arch == Triple::aarch64)
-  //   return createAArch64MCPlusBuilder(Analysis, Info, RegInfo, STI);
-
-  // if (Arch == Triple::riscv64)
-  //   return createRISCVMCPlusBuilder(Analysis, Info, RegInfo, STI);
-
-  llvm_unreachable("architecture unsupported by MCPlusBuilder");
-}
 
 // TODO remove it, it's just for debug purposes.
 void printUntilNextLine(const char *Str) {
@@ -54,8 +36,8 @@ void printUntilNextLine(const char *Str) {
 class CFIAnalysis {
   MCContext &Context;
   MCInstrInfo const &MCII;
-  std::unique_ptr<bolt::MCPlusBuilder> MCPB;
   MCRegisterInfo const *MCRI;
+  std::unique_ptr<ExtendedMCInstrAnalysis> EMCIA;
   CFIState State;
 
 public:
@@ -65,14 +47,12 @@ public:
     // TODO it should look at the prologue directives and setup the
     // registers' previous value state here, but for now, it's assumed that all
     // values are by default `samevalue`.
-    MCPB.reset(createMCPlusBuilder(Context.getTargetTriple().getArch(), MCIA,
-                                   &MCII, Context.getRegisterInfo(),
-                                   Context.getSubtargetInfo()));
+    EMCIA.reset(new ExtendedMCInstrAnalysis(Context, MCII, MCIA));
 
     // TODO CFA offset should be the slot size, but for now I don't have any
     // access to it, maybe can be read from the prologue
     // TODO check what should be passed as EH?
-    State = CFIState(MCRI->getDwarfRegNum(MCPB->getStackPointer(), false), 8);
+    State = CFIState(MCRI->getDwarfRegNum(EMCIA->getStackPointer(), false), 8);
     for (unsigned I = 0; I < MCRI->getNumRegs(); I++) {
       DWARFRegType DwarfI = MCRI->getDwarfRegNum(I, false);
       State.RegisterCFIStates[DwarfI] = RegisterCFIState::createSameValue();
@@ -84,23 +64,23 @@ public:
                                                  false)] =
         RegisterCFIState::createUndefined(); // For now, we don't care about the
                                              // PC
-    State.RegisterCFIStates[MCRI->getDwarfRegNum(MCPB->getStackPointer(),
+    State.RegisterCFIStates[MCRI->getDwarfRegNum(EMCIA->getStackPointer(),
                                                  false)] =
         RegisterCFIState::createOffsetFromCFAVal(0); // sp's old value is CFA
   }
 
   bool doesConstantChange(const MCInst &Inst, MCPhysReg Reg, int64_t &HowMuch) {
-    if (MCPB->isPush(Inst) && Reg == MCPB->getStackPointer()) {
+    if (EMCIA->isPush(Inst) && Reg == EMCIA->getStackPointer()) {
       // TODO should get the stack direction here, now it assumes that it goes
       // down.
-      HowMuch = -MCPB->getPushSize(Inst);
+      HowMuch = -EMCIA->getPushSize(Inst);
       return true;
     }
 
-    if (MCPB->isPop(Inst) && Reg == MCPB->getStackPointer()) {
+    if (EMCIA->isPop(Inst) && Reg == EMCIA->getStackPointer()) {
       // TODO should get the stack direction here, now it assumes that it goes
       // down.
-      HowMuch = MCPB->getPushSize(Inst);
+      HowMuch = EMCIA->getPushSize(Inst);
       return true;
     }
 
@@ -114,7 +94,7 @@ public:
     {
       MCPhysReg From;
       MCPhysReg To;
-      if (MCPB->isRegToRegMove(Inst, From, To) && From == Reg2 && To == Reg1) {
+      if (EMCIA->isRegToRegMove(Inst, From, To) && From == Reg2 && To == Reg1) {
         Diff = 0;
         return true;
       }
@@ -174,7 +154,8 @@ public:
     }
     // The CFA register is changed.
     // TODO move it up
-    MCPhysReg OldCFAReg = MCRI->getLLVMRegNum(PrevState.CFARegister, false).value();
+    MCPhysReg OldCFAReg =
+        MCRI->getLLVMRegNum(PrevState.CFARegister, false).value();
     MCPhysReg NewCFAReg =
         MCRI->getLLVMRegNum(NextState.CFARegister, false).value();
     if (!Writes.count(NextState.CFARegister)) {
@@ -201,24 +182,17 @@ public:
       return;
     }
     if (Diff != OffsetDiff) {
-      Context.reportError(
-          Inst.getLoc(), formatv("After changing the CFA register, the CFA "
-                                 "offset should be {0}, but it is {1}.",
-                                 PrevState.CFAOffset - Diff, NextState.CFAOffset));
+      Context.reportError(Inst.getLoc(),
+                          formatv("After changing the CFA register, the CFA "
+                                  "offset should be {0}, but it is {1}.",
+                                  PrevState.CFAOffset - Diff,
+                                  NextState.CFAOffset));
       return;
     }
     // Everything is OK!
   }
 
-  void update(const MCDwarfFrameInfo &DwarfFrame, MCInst &Inst,
-              std::pair<unsigned, unsigned>
-                  CFIDirectivesRange) { // FIXME this should not be a pair,
-                                        // but an ArrayRef
-    ArrayRef<MCCFIInstruction> CFIDirectives(DwarfFrame.Instructions);
-    CFIDirectives = CFIDirectives.drop_front(CFIDirectivesRange.first)
-                        .drop_back(DwarfFrame.Instructions.size() -
-                                   CFIDirectivesRange.second);
-
+  void update(MCInst &Inst, ArrayRef<MCCFIInstruction> CFIDirectives) {
     const MCInstrDesc &MCInstInfo = MCII.get(Inst.getOpcode());
     CFIState AfterState(State);
     for (auto &&CFIDirective : CFIDirectives)
@@ -227,9 +201,6 @@ public:
             CFIDirective.getLoc(),
             "I don't support this CFI directive, I assume this does nothing "
             "(which will probably break other things)");
-    auto CFAReg = MCRI->getLLVMRegNum(DwarfFrame.CurrentCfaRegister, false);
-    assert(DwarfFrame.CurrentCfaRegister == AfterState.CFARegister &&
-           "Checking if the CFA tracking is working");
 
     std::set<DWARFRegType> Writes, Reads;
     for (unsigned I = 0; I < MCInstInfo.NumImplicitUses; I++)
@@ -246,23 +217,6 @@ public:
           Reads.insert(MCRI->getDwarfRegNum(Operand.getReg(), false));
       }
     }
-
-    bool ChangedCFA = Writes.count(CFAReg->id());
-    bool GoingToChangeCFA = false;
-    for (auto CFIDirective : CFIDirectives) {
-      auto Op = CFIDirective.getOperation();
-      GoingToChangeCFA |= (Op == MCCFIInstruction::OpDefCfa ||
-                           Op == MCCFIInstruction::OpDefCfaOffset ||
-                           Op == MCCFIInstruction::OpDefCfaRegister ||
-                           Op == MCCFIInstruction::OpAdjustCfaOffset ||
-                           Op == MCCFIInstruction::OpLLVMDefAspaceCfa);
-    }
-    if (ChangedCFA && !GoingToChangeCFA) {
-      Context.reportError(Inst.getLoc(),
-                          "The instruction changes CFA register value, but the "
-                          "CFI directives don't update the CFA.");
-    }
-
     ///////////// being diffing the CFI states
     checkCFADiff(Inst, State, AfterState, Reads, Writes);
     ///////////// end diffing the CFI states
@@ -276,9 +230,9 @@ public:
     // for (unsigned I = 0; I < Inst.getNumOperands(); I++) {
     //   dbgs() << "Operand #" << I << ", which will be "
     //          << (I < DefCount ? "defined" : "used") << ", is a";
-    //   if (I == MCPB->getMemoryOperandNo(Inst)) {
+    //   if (I == EMCIA->getMemoryOperandNo(Inst)) {
     //     dbgs() << " memory access, details are:\n";
-    //     auto X86MemoryOperand = MCPB->evaluateX86MemoryOperand(Inst);
+    //     auto X86MemoryOperand = EMCIA->evaluateX86MemoryOperand(Inst);
     //     dbgs() << "  Base Register{ reg#" << X86MemoryOperand->BaseRegNum
     //            << " }";
     //     dbgs() << " + (Index Register{ reg#" << X86MemoryOperand->IndexRegNum
@@ -323,21 +277,21 @@ public:
     // {   // move
     //   { // Reg2Reg
     //     MCPhysReg From, To;
-    //     if (MCPB->isRegToRegMove(Inst, From, To)) {
-    //       dbgs() << "It's a reg to reg move.\nFrom reg#" << From << " to
-    //       reg#"
+    //     if (EMCIA->isRegToRegMove(Inst, From, To)) {
+    //       dbgs() << "It's a reg to reg move.\nFrom reg#" << From << " to reg
+    //       #"
     //              << To << "\n";
     //     } else if (MCInstInfo.isMoveReg()) {
     //       dbgs() << "It's reg to reg move from MCInstInfo view but not from "
     //                 "MCPlus view.\n";
     //     }
     //   }
-    //   if (MCPB->isConditionalMove(Inst)) {
+    //   if (EMCIA->isConditionalMove(Inst)) {
     //     dbgs() << "Its a conditional move.\n";
     //   }
-    //   if (MCPB->isMoveMem2Reg(Inst)) {
+    //   if (EMCIA->isMoveMem2Reg(Inst)) {
     //     dbgs() << "It's a move from memory to register\n";
-    //     assert(MCPB->getMemoryOperandNo(Inst) == 1);
+    //     assert(EMCIA->getMemoryOperandNo(Inst) == 1);
     //   }
     // }
 
@@ -353,9 +307,9 @@ public:
     //   bool IsLoad = false;
     //   bool IsStore = false;
     //   bool IsStoreFromReg = false;
-    //   if (MCPB->isStackAccess(Inst, IsLoad, IsStore, IsStoreFromReg, Reg,
-    //                           SrcImm, StackPtrReg, StackOffset, Size,
-    //                           IsSimple, IsIndexed)) {
+    //   if (EMCIA->isStackAccess(Inst, IsLoad, IsStore, IsStoreFromReg, Reg,
+    //                            SrcImm, StackPtrReg, StackOffset, Size,
+    //                            IsSimple, IsIndexed)) {
     //     dbgs() << "This instruction accesses the stack, the details are:\n";
     //     dbgs() << "  Source immediate: " << SrcImm << "\n";
     //     dbgs() << "  Source reg#" << Reg << "\n";
@@ -369,28 +323,29 @@ public:
     //     dbgs() << "  Is store from reg: " << (IsStoreFromReg ? "yes" : "no")
     //            << "\n";
     //   }
-    //   if (MCPB->isPush(Inst)) {
+    //   if (EMCIA->isPush(Inst)) {
     //     dbgs() << "This is a push instruction with size "
-    //            << MCPB->getPushSize(Inst) << "\n";
+    //            << EMCIA->getPushSize(Inst) << "\n";
     //   }
-    //   if (MCPB->isPop(Inst)) {
+    //   if (EMCIA->isPop(Inst)) {
     //     dbgs() << "This is a pop instruction with size "
-    //            << MCPB->getPopSize(Inst) << "\n";
+    //            << EMCIA->getPopSize(Inst) << "\n";
     //   }
     // }
 
     // dbgs() << "---------------Arith Info----------------\n";
     // { // arith
-    //   MutableArrayRef<MCInst> MAR = {Inst};
+    //   /* MutableArrayRef<MCInst> MAR = {Inst};
     //   if (MCPB->matchAdd(MCPB->matchAnyOperand(), MCPB->matchAnyOperand())
     //           ->match(*MCRI, *MCPB, MutableArrayRef<MCInst>(), -1)) {
     //     dbgs() << "It is an addition instruction.\n";
-    //   } else if (MCInstInfo.isAdd()) {
-    //     dbgs() << "It is an addition from MCInstInfo view but not from MCPlus
-    //     "
+    //   } else */
+    //   if (MCInstInfo.isAdd()) {
+    //     dbgs() << "It is an addition from MCInstInfo view but not from
+    //     MCPlus"
     //               "view.\n";
     //   }
-    //   if (MCPB->isSUB(Inst)) {
+    //   if (EMCIA->isSUB(Inst)) {
     //     dbgs() << "This is a subtraction.\n";
     //   }
     // }
