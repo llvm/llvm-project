@@ -3659,7 +3659,12 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   Value *Op0 = State.get(getOperand(0));
   Type *VecTy = Op0->getType();
-  Value *VecPhi = State.Builder.CreatePHI(VecTy, 2, Name);
+  Instruction *VecPhi = State.Builder.CreatePHI(VecTy, 2, Name);
+  // Manually move it with the other PHIs in case PHI recipes above this one
+  // also inserted non-phi instructions.
+  // TODO: Remove once VPWidenPointerInductionRecipe is also expanded in
+  // convertToConcreteRecipes.
+  VecPhi->moveBefore(State.Builder.GetInsertBlock()->getFirstNonPHIIt());
   State.set(this, VecPhi);
 }
 
