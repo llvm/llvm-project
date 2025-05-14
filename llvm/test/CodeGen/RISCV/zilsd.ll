@@ -93,3 +93,29 @@ define void @store_unaligned(ptr %p, i64 %v) {
   store i64 %v, ptr %p, align 1
   ret void
 }
+
+@g = dso_local global i64 0, align 8
+
+define i64 @load_g() nounwind {
+; CHECK-LABEL: load_g:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a0, %hi(g)
+; CHECK-NEXT:    ld a0, %lo(g)(a0)
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i64, ptr @g
+  ret i64 %0
+}
+
+define void @store_g() nounwind {
+; CHECK-LABEL: store_g:
+; CHECK:       # %bb.0: # %entyr
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    lui a2, %hi(g)
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    sd a0, %lo(g)(a2)
+; CHECK-NEXT:    ret
+entyr:
+  store i64 0, ptr @g
+  ret void
+}
