@@ -25,6 +25,7 @@ class DisconnectRequestHandlerTest : public DAPTestBase {};
 
 TEST_F(DisconnectRequestHandlerTest, DisconnectingTriggersTerminated) {
   DisconnectRequestHandler handler(*dap);
+  EXPECT_FALSE(dap->disconnecting);
   ASSERT_THAT_ERROR(handler.Run(std::nullopt), Succeeded());
   EXPECT_TRUE(dap->disconnecting);
   std::vector<Message> messages = DrainOutput();
