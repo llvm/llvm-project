@@ -12,6 +12,7 @@
 
 #include "clang/CIR/Dialect/OpenACC/CIROpenACCTypeInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 namespace cir::acc {
 

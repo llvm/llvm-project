@@ -14,7 +14,6 @@
 #define CLANG_CIR_DIALECT_OPENACC_CIROPENACCTYPEINTERFACES_H
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 namespace cir::acc {
 
