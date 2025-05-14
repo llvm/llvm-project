@@ -29551,8 +29551,7 @@ AArch64TargetLowering::LowerGET_ACTIVE_LANE_MASK(SDValue Op,
   EVT VT = Op.getValueType();
   assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
 
-  auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
-  assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+  assert(Subtarget->isSVEorStreamingSVEAvailable() &&
          "Lowering fixed length get_active_lane_mask requires SVE!");
 
   // There are no dedicated fixed-length instructions for GET_ACTIVE_LANE_MASK,
