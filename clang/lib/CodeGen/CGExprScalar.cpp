@@ -1906,7 +1906,7 @@ Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
 
   SmallVector<int, 32> Indices;
   for (unsigned i = 2; i < E->getNumSubExprs(); ++i) {
-    llvm::APSInt Idx = E->getShuffleMaskIdx(CGF.getContext(), i-2);
+    llvm::APSInt Idx = E->getShuffleMaskIdx(i - 2);
     // Check for -1 and output it as undef in the IR.
     if (Idx.isSigned() && Idx.isAllOnes())
       Indices.push_back(-1);
