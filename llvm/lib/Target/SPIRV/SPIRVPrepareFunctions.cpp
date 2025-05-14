@@ -215,9 +215,8 @@ static SmallVector<Metadata *> parseAnnotation(Value *I,
         Item = Item.substr(1, Item.length() - 2);
         static const std::regex NumberRegex(R"(\b\d+\b)");
         std::sregex_token_iterator It(Item.begin(), Item.end(), NumberRegex);
-        std::sregex_token_iterator End;
         bool FoundNumber = false;
-        while (It != End) {
+        while (It != std::sregex_token_iterator{}) {
           MDsItem.push_back(ConstantAsMetadata::get(
               ConstantInt::get(Int32Ty, std::stoi(*It))));
           ++It;
