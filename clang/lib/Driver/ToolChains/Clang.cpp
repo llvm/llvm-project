@@ -25,6 +25,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
+#include "clang/Driver/BoundsSafetyArgs.h" // TO_UPSTREAM(BoundsSafety)
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/InputInfo.h"
@@ -7603,6 +7604,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
       Args.addAllArgs(
           CmdArgs, {options::OPT_fbounds_safety_bringup_missing_checks_EQ,
                     options::OPT_fno_bounds_safety_bringup_missing_checks_EQ});
+
+      // Validate the `-fbounds-safety-bringup-missing-checks` flags and emit
+      // warnings for disabled checks. We do this here because if we emit
+      // warnings in CC1 (where `ParseBoundsSafetyNewChecksMaskFromArgs` is also
+      // called) they cannot be suppressed and ignore `-Werror`
+      // (rdar://152730261).
+      (void)ParseBoundsSafetyNewChecksMaskFromArgs(
+          Args, &D.getDiags(),
+          /*DiagnoseMissingChecks=*/true);
     }
   }
 

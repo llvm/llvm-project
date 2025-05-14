@@ -402,6 +402,36 @@ def warn_bounds_safety_adoption_mode_ignored : Warning<
   "-fbounds-safety-adoption-mode without -fbounds-safety is "
   "ignored">,
   InGroup<BoundsSafetyAdoptionModeIgnored>;
+
+def warn_bounds_safety_new_checks_none : Warning<
+  "compiling with legacy -fbounds-safety bounds checks is deprecated;"
+  " compile with -fbounds-safety-bringup-missing-checks=%0 to use the "
+  "new bound checks">,
+  InGroup<BoundsSafetyLegacyChecksEnabled>;
+def warn_bounds_safety_new_checks_mixed : Warning<
+  "compiling with \"%select{"
+    "access_size|" // BS_CHK_AccessSize
+    "indirect_count_update|" // BS_CHK_IndirectCountUpdate
+    "return_size|" // BS_CHK_ReturnSize
+    "ended_by_lower_bound|" // BS_CHK_EndedByLowerBound
+    "compound_literal_init|" // BS_CHK_CompoundLiteralInit
+    "libc_attributes|" // BS_CHK_LibCAttributes
+    "array_subscript_agg" // BS_CHK_ArraySubscriptAgg
+  "}0\" bounds check disabled is deprecated;"
+  " %select{"
+    "compile with -fbounds-safety-bringup-missing-checks=%2|"
+    "remove -fno-bounds-safety-bringup-missing-checks=%select{"
+      "access_size|" // BS_CHK_AccessSize
+      "indirect_count_update|" // BS_CHK_IndirectCountUpdate
+      "return_size|" // BS_CHK_ReturnSize
+      "ended_by_lower_bound|" // BS_CHK_EndedByLowerBound
+      "compound_literal_init|" // BS_CHK_CompoundLiteralInit
+      "libc_attributes|" // BS_CHK_LibCAttributes
+      "array_subscript_agg" // BS_CHK_ArraySubscriptAgg
+      "}0"
+    "|}1"
+  " to enable the new bound checks">,
+  InGroup<BoundsSafetyLegacyChecksEnabled>;
 // TO_UPSTREAM(BoundsSafety) OFF
 
 let CategoryName = "Instrumentation Issue" in {
