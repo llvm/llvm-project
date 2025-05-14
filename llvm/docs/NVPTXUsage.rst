@@ -568,6 +568,36 @@ to left-shift the found bit into the most-significant bit position, otherwise
 the result is the shift amount needed to right-shift the found bit into the
 least-significant bit position. 0xffffffff is returned if no 1 bit is found.
 
+'``llvm.nvvm.{zext,sext}.{wrap,clamp}``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.zext.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.zext.clamp(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.sext.wrap(i32 %a, i32 %b)
+    declare i32 @llvm.nvvm.sext.clamp(i32 %a, i32 %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.{zext,sext}.{wrap,clamp}``' family of intrinsics extracts the
+low bits of the input value, and zero- or sign-extends them back to the original
+width.
+
+Semantics:
+""""""""""
+
+The '``llvm.nvvm.{zext,sext}.{wrap,clamp}``' family of intrinsics returns
+extension of N lowest bits of operand %a. For the '``wrap``' variants, N is the
+value of operand %b modulo 32. For the '``clamp``' variants, N is the value of
+operand %b clamped to the range [0, 32]. The N lowest bits are then
+zero-extended the case of the '``zext``' variants, or sign-extended the case of
+the '``sext``' variants. If N is 0, the result is 0.
+
 TMA family of Intrinsics
 ------------------------
 

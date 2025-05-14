@@ -70,6 +70,7 @@ class StepScriptedTestCase(TestBase):
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual("foo", frame.GetFunctionName())
 
+    @skipIf(archs=no_match(["x86_64"]))
     def test_step_single_instruction_with_step_over(self):
         (target, process, thread, bkpt) = self.run_until_branch_instruction()
 
