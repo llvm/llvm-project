@@ -269,7 +269,7 @@ ShapedType mesh::shardShapedType(ShapedType shape, MeshOp mesh,
 
 Type mesh::shardType(Type type, MeshOp mesh, MeshSharding sharding) {
   RankedTensorType rankedTensorType = dyn_cast<RankedTensorType>(type);
-  if (rankedTensorType) {
+  if (rankedTensorType && !rankedTensorType.getShape().empty()) {
     return shardShapedType(rankedTensorType, mesh, sharding);
   }
   return type;
@@ -693,10 +693,7 @@ bool MeshSharding::equalSplitAndPartialAxes(const MeshSharding &rhs) const {
 
   if (getPartialAxes().size() != rhs.getPartialAxes().size() ||
       (!getPartialAxes().empty() && getPartialType() != rhs.getPartialType()) ||
-      !llvm::equal(
-          llvm::make_range(getPartialAxes().begin(), getPartialAxes().end()),
-          llvm::make_range(rhs.getPartialAxes().begin(),
-                           rhs.getPartialAxes().end()))) {
+      !llvm::equal(getPartialAxes(), rhs.getPartialAxes())) {
     return false;
   }
 
@@ -708,11 +705,9 @@ bool MeshSharding::equalSplitAndPartialAxes(const MeshSharding &rhs) const {
     return false;
   }
 
-  return llvm::all_of(llvm::make_range(getSplitAxes().begin() + minSize,
-                                       getSplitAxes().end()),
+  return llvm::all_of(llvm::drop_begin(getSplitAxes(), minSize),
                       std::mem_fn(&MeshAxesAttr::empty)) &&
-         llvm::all_of(llvm::make_range(rhs.getSplitAxes().begin() + minSize,
-                                       rhs.getSplitAxes().end()),
+         llvm::all_of(llvm::drop_begin(rhs.getSplitAxes(), minSize),
                       std::mem_fn(&MeshAxesAttr::empty));
 }
 
@@ -723,19 +718,14 @@ bool MeshSharding::equalHaloAndShardSizes(const MeshSharding &rhs) const {
 bool MeshSharding::equalShardSizes(const MeshSharding &rhs) const {
   if (rhs.getStaticShardedDimsOffsets().size() !=
           getStaticShardedDimsOffsets().size() ||
-      !llvm::equal(llvm::make_range(getStaticShardedDimsOffsets().begin(),
-                                    getStaticShardedDimsOffsets().end()),
-                   llvm::make_range(rhs.getStaticShardedDimsOffsets().begin(),
-                                    rhs.getStaticShardedDimsOffsets().end()))) {
+      !llvm::equal(getStaticShardedDimsOffsets(),
+                   rhs.getStaticShardedDimsOffsets())) {
     return false;
   }
   if (rhs.getDynamicShardedDimsOffsets().size() !=
           getDynamicShardedDimsOffsets().size() ||
-      !llvm::equal(
-          llvm::make_range(getDynamicShardedDimsOffsets().begin(),
-                           getDynamicShardedDimsOffsets().end()),
-          llvm::make_range(rhs.getDynamicShardedDimsOffsets().begin(),
-                           rhs.getDynamicShardedDimsOffsets().end()))) {
+      !llvm::equal(getDynamicShardedDimsOffsets(),
+                   rhs.getDynamicShardedDimsOffsets())) {
     return false;
   }
   return true;
@@ -743,17 +733,11 @@ bool MeshSharding::equalShardSizes(const MeshSharding &rhs) const {
 
 bool MeshSharding::equalHaloSizes(const MeshSharding &rhs) const {
   if (rhs.getStaticHaloSizes().size() != getStaticHaloSizes().size() ||
-      !llvm::equal(llvm::make_range(getStaticHaloSizes().begin(),
-                                    getStaticHaloSizes().end()),
-                   llvm::make_range(rhs.getStaticHaloSizes().begin(),
-                                    rhs.getStaticHaloSizes().end()))) {
+      !llvm::equal(getStaticHaloSizes(), rhs.getStaticHaloSizes())) {
     return false;
   }
   if (rhs.getDynamicHaloSizes().size() != getDynamicHaloSizes().size() ||
-      !llvm::equal(llvm::make_range(getDynamicHaloSizes().begin(),
-                                    getDynamicHaloSizes().end()),
-                   llvm::make_range(rhs.getDynamicHaloSizes().begin(),
-                                    rhs.getDynamicHaloSizes().end()))) {
+      !llvm::equal(getDynamicHaloSizes(), rhs.getDynamicHaloSizes())) {
     return false;
   }
   return true;
@@ -831,12 +815,19 @@ MeshSharding MeshSharding::get(::mlir::FlatSymbolRefAttr mesh_,
 // mesh.shard_shape
 //===----------------------------------------------------------------------===//
 
+void ShardShapeOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult()[0], "shard_shape");
+}
+
 void ShardShapeOp::build(::mlir::OpBuilder &odsBuilder,
                          ::mlir::OperationState &odsState,
-                         ::llvm::ArrayRef<int64_t> shape,
-                         ::mlir::Value sharding, ::mlir::Value device) {
-  SmallVector<mlir::Type> resType(shape.size(), odsBuilder.getIndexType());
-  build(odsBuilder, odsState, resType, shape, sharding, device);
+                         ::llvm::ArrayRef<int64_t> dims,
+                         ArrayRef<Value> dims_dyn, ::mlir::Value sharding,
+                         ::mlir::ValueRange device) {
+  SmallVector<mlir::Type> resType(dims.size(), odsBuilder.getIndexType());
+  build(odsBuilder, odsState, resType, dims, dims_dyn, sharding,
+        SmallVector<int64_t>(device.size(), ShapedType::kDynamic), device);
 }
 
 //===----------------------------------------------------------------------===//

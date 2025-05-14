@@ -164,7 +164,8 @@ SlabTuple indexMainDecls(ParsedAST &AST);
 /// included headers.
 SlabTuple indexHeaderSymbols(llvm::StringRef Version, ASTContext &AST,
                              Preprocessor &PP,
-                             const include_cleaner::PragmaIncludes &PI);
+                             const include_cleaner::PragmaIncludes &PI,
+                             SymbolOrigin Origin);
 
 /// Takes slabs coming from a TU (multiple files) and shards them per
 /// declaration location.

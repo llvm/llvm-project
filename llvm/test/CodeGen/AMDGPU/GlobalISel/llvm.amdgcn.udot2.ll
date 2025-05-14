@@ -306,7 +306,7 @@ define i32 @v_udot2_shuffle10_a(<2 x i16> %a, <2 x i16> %b, i32 %c) {
 ; GFX10-NEXT:    v_alignbit_b32 v0, v0, v0, 16
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-  %shuf.a = shufflevector <2 x i16> %a, <2 x i16> undef, <2 x i32> <i32 1, i32 0>
+  %shuf.a = shufflevector <2 x i16> %a, <2 x i16> poison, <2 x i32> <i32 1, i32 0>
   %r = call i32 @llvm.amdgcn.udot2(<2 x i16> %shuf.a, <2 x i16> %b, i32 %c, i1 false)
   ret i32 %r
 }
@@ -332,7 +332,7 @@ define i32 @v_udot2_shuffle10_b(<2 x i16> %a, <2 x i16> %b, i32 %c) {
 ; GFX10-NEXT:    v_alignbit_b32 v1, v1, v1, 16
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-  %shuf.b = shufflevector <2 x i16> %b, <2 x i16> undef, <2 x i32> <i32 1, i32 0>
+  %shuf.b = shufflevector <2 x i16> %b, <2 x i16> poison, <2 x i32> <i32 1, i32 0>
   %r = call i32 @llvm.amdgcn.udot2(<2 x i16> %a, <2 x i16> %shuf.b, i32 %c, i1 false)
   ret i32 %r
 }

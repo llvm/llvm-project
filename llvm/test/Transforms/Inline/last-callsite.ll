@@ -261,9 +261,11 @@ entry:
   ; a second use. If this part starts failing we need to use more complex
   ; constant expressions to reference a particular function with them.
   %sink = alloca i64
-  store volatile i64 mul (i64 ptrtoint (ptr @test4_g to i64), i64 ptrtoint(ptr @test4_g to i64)), ptr %sink
+  %mul = mul i64 ptrtoint (ptr @test4_g to i64), ptrtoint(ptr @test4_g to i64)
+  store volatile i64 %mul, ptr %sink
   call void @test4_g(i1 true)
-; CHECK: store volatile i64 mul (i64 ptrtoint (ptr @test4_g to i64), i64 ptrtoint (ptr @test4_g to i64)), ptr %sink
+; CHECK: %mul = mul i64 ptrtoint (ptr @test4_g to i64), ptrtoint (ptr @test4_g to i64)
+; CHECK: store volatile i64 %mul, ptr %sink
 ; CHECK: call void @test4_g(i1 true)
 
   ret void

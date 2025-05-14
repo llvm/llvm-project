@@ -286,6 +286,26 @@ Example Usage
       basePtr->virtualFunction(); // Allowed since obj is constructed in device code
    }
 
+Host and Device Attributes of Default Destructors
+===================================================
+
+If a default destructor does not have explicit host or device attributes,
+clang infers these attributes based on the destructors of its data members
+and base classes. If any conflicts are detected among these destructors,
+clang diagnoses the issue. Otherwise, clang adds an implicit host or device
+attribute according to whether the data members's and base classes's
+destructors can execute on the host or device side.
+
+For explicit template classes with virtual destructors, which must be emitted,
+the inference adopts a conservative approach. In this case, implicit host or
+device attributes from member and base class destructors are ignored. This
+precaution is necessary because, although a constexpr destructor carries
+implicit host or device attributes, a constexpr function may call a
+non-constexpr function, which is by default a host function.
+
+Users can override the inferred host and device attributes of default
+destructors by adding explicit host and device attributes to them.
+
 C++ Standard Parallelism Offload Support: Compiler And Runtime
 ==============================================================
 
@@ -498,7 +518,7 @@ Predefined Macros
    * - ``__HIPSTDPAR__``
      - Defined when Clang is compiling code in algorithm offload mode, enabled
        with the ``--hipstdpar`` compiler option.
-   * - ``__HIPSTDPAR_INTERPOSE_ALLOC__``
+   * - ``__HIPSTDPAR_INTERPOSE_ALLOC__`` / ``__HIPSTDPAR_INTERPOSE_ALLOC_V1__``
      - Defined only when compiling in algorithm offload mode, when the user
        enables interposition mode with the ``--hipstdpar-interpose-alloc``
        compiler option, indicating that all dynamic memory allocation /
@@ -684,7 +704,7 @@ Open Questions / Future Developments
 SPIR-V Support on HIPAMD ToolChain
 ==================================
 
-The HIPAMD ToolChain supports targetting
+The HIPAMD ToolChain supports targeting
 `AMDGCN Flavoured SPIR-V <https://llvm.org/docs/SPIRVUsage.html#target-triples>`_.
 The support for SPIR-V in the ROCm and HIPAMD ToolChain is under active
 development.

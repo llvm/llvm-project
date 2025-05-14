@@ -72,7 +72,7 @@ entry:
   %e = getelementptr [2 x i32], ptr addrspace(5) %v1, i32 0, i32 %idx
   %x = load i32, ptr addrspace(5) %e
   %xf = bitcast i32 %x to float
-  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %xf, ptr addrspace(8) undef, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %xf, ptr addrspace(8) poison, i32 0, i32 0, i32 0)
   ret void
 }
 
@@ -86,7 +86,7 @@ declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32,
 ; PAL-NEXT: amdpal.pipelines:
 ; PAL-NEXT:   - .hardware_stages:
 ; PAL-NEXT:       .cs:
-; PAL-NEXT:         .entry_point:    _amdgpu_cs
+; PAL-NEXT:         .entry_point:    _amdgpu_cs_main
 ; PAL-NEXT:         .entry_point_symbol:    scratch2_cs
 ; PAL-NEXT:         .scratch_memory_size: 0x10
 ; PAL-NEXT:         .sgpr_count:     0x

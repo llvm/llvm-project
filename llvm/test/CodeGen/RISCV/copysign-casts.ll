@@ -702,17 +702,17 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ; RV32IFD-LABEL: fold_demote_h_d:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fmv.x.w a0, fa0
 ; RV32IFD-NEXT:    fsd fa1, 8(sp)
-; RV32IFD-NEXT:    lui a1, 524288
-; RV32IFD-NEXT:    lw a2, 12(sp)
-; RV32IFD-NEXT:    and a1, a2, a1
+; RV32IFD-NEXT:    lw a0, 12(sp)
+; RV32IFD-NEXT:    fmv.x.w a1, fa0
+; RV32IFD-NEXT:    lui a2, 524288
+; RV32IFD-NEXT:    and a0, a0, a2
 ; RV32IFD-NEXT:    lui a2, 1048560
-; RV32IFD-NEXT:    slli a0, a0, 17
-; RV32IFD-NEXT:    srli a0, a0, 17
-; RV32IFD-NEXT:    srli a1, a1, 16
-; RV32IFD-NEXT:    or a0, a0, a2
-; RV32IFD-NEXT:    or a0, a0, a1
+; RV32IFD-NEXT:    slli a1, a1, 17
+; RV32IFD-NEXT:    srli a1, a1, 17
+; RV32IFD-NEXT:    srli a0, a0, 16
+; RV32IFD-NEXT:    or a1, a1, a2
+; RV32IFD-NEXT:    or a0, a1, a0
 ; RV32IFD-NEXT:    fmv.w.x fa0, a0
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret

@@ -26,7 +26,7 @@ bb3:                                              ; preds = %bb2, %bb
   br i1 %tmp, label %bb4, label %bb6
 
 bb4:                                              ; preds = %bb3
-  %val = load volatile i32, ptr addrspace(1) undef
+  %val = load volatile i32, ptr addrspace(1) poison
   %tmp5 = mul i32 %val, %arg
   br label %bb6
 
@@ -52,7 +52,7 @@ false:
   br label %exit
 
 exit:
-  %c = phi <2 x i1> [ undef, %entry ], [ %cmp, %false ]
+  %c = phi <2 x i1> [ poison, %entry ], [ %cmp, %false ]
   %ret = select <2 x i1> %c, <2 x float> <float 2.0, float 2.0>, <2 x float> <float 4.0, float 4.0>
   ret <2 x float> %ret
 }

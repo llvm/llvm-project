@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include <optional>
 
 namespace fir {
@@ -60,7 +61,7 @@ public:
   bool isVariable() const { return !isValue(); }
   bool isMutableBox() const { return hlfir::isBoxAddressType(getType()); }
   bool isProcedurePointer() const {
-    return fir::isBoxProcAddressType(getType());
+    return hlfir::isFortranProcedurePointerType(getType());
   }
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
@@ -249,8 +250,11 @@ mlir::Value genVariableBoxChar(mlir::Location loc, fir::FirOpBuilder &builder,
                                hlfir::Entity var);
 
 /// Get or create a fir.box or fir.class from a variable.
+/// A fir.box with different attributes that \p var can be created
+/// using \p forceBoxType.
 hlfir::Entity genVariableBox(mlir::Location loc, fir::FirOpBuilder &builder,
-                             hlfir::Entity var);
+                             hlfir::Entity var,
+                             fir::BaseBoxType forceBoxType = {});
 
 /// If the entity is a variable, load its value (dereference pointers and
 /// allocatables if needed). Do nothing if the entity is already a value, and
@@ -516,6 +520,25 @@ Entity loadElementAt(mlir::Location loc, fir::FirOpBuilder &builder,
 /// after itself.
 llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
 genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
+
+/// Generate an hlfir.designate that produces an 1D section
+/// of \p array using \p oneBasedIndices and \p dim:
+///   i = oneBasedIndices
+///   result => array(i(1), ..., i(dim-1), :, i(dim+1), ..., i(n))
+///
+/// The caller provides the pre-computed \p lbounds, \p extents
+/// and \p typeParams of the array.
+Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
+                    Entity array, int64_t dim,
+                    mlir::ArrayRef<mlir::Value> lbounds,
+                    mlir::ArrayRef<mlir::Value> extents,
+                    mlir::ValueRange oneBasedIndices,
+                    mlir::ArrayRef<mlir::Value> typeParams);
+
+/// Return true iff the given hlfir.designate produces
+/// a contiguous part of the memref object given that it is
+/// contiguous.
+bool designatePreservesContinuity(hlfir::DesignateOp op);
 
 } // namespace hlfir
 

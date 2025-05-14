@@ -78,3 +78,9 @@ nop
 bar:
 # CHECK: 60: c.nop
 nop
+
+# CHECK-LABEL: 00011000 <far>:
+.org 0x11000
+far:
+# CHECK: jalr ra, 0x0(ra) <foo>
+call foo

@@ -39,6 +39,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/CheckerRegistryData.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
@@ -54,7 +55,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -82,19 +82,19 @@ using namespace llvm;
 
 #define DEBUG_TYPE "BugReporter"
 
-STATISTIC(MaxBugClassSize,
-          "The maximum number of bug reports in the same equivalence class");
-STATISTIC(MaxValidBugClassSize,
-          "The maximum number of bug reports in the same equivalence class "
-          "where at least one report is valid (not suppressed)");
+STAT_MAX(MaxBugClassSize,
+         "The maximum number of bug reports in the same equivalence class");
+STAT_MAX(MaxValidBugClassSize,
+         "The maximum number of bug reports in the same equivalence class "
+         "where at least one report is valid (not suppressed)");
 
-STATISTIC(NumTimesReportPassesZ3, "Number of reports passed Z3");
-STATISTIC(NumTimesReportRefuted, "Number of reports refuted by Z3");
-STATISTIC(NumTimesReportEQClassAborted,
-          "Number of times a report equivalence class was aborted by the Z3 "
-          "oracle heuristic");
-STATISTIC(NumTimesReportEQClassWasExhausted,
-          "Number of times all reports of an equivalence class was refuted");
+STAT_COUNTER(NumTimesReportPassesZ3, "Number of reports passed Z3");
+STAT_COUNTER(NumTimesReportRefuted, "Number of reports refuted by Z3");
+STAT_COUNTER(NumTimesReportEQClassAborted,
+             "Number of times a report equivalence class was aborted by the Z3 "
+             "oracle heuristic");
+STAT_COUNTER(NumTimesReportEQClassWasExhausted,
+             "Number of times all reports of an equivalence class was refuted");
 
 BugReporterVisitor::~BugReporterVisitor() = default;
 
@@ -2827,7 +2827,7 @@ static void CompactMacroExpandedPieces(PathPieces &path,
   // Now take the pieces and construct a new PathDiagnostic.
   path.clear();
 
-  path.insert(path.end(), Pieces.begin(), Pieces.end());
+  llvm::append_range(path, Pieces);
 }
 
 /// Generate notes from all visitors.
@@ -2958,7 +2958,7 @@ std::optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
 
 std::unique_ptr<DiagnosticForConsumerMapTy>
 PathSensitiveBugReporter::generatePathDiagnostics(
-    ArrayRef<PathDiagnosticConsumer *> consumers,
+    ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
     ArrayRef<PathSensitiveBugReport *> &bugReports) {
   assert(!bugReports.empty());
 
@@ -2968,9 +2968,9 @@ PathSensitiveBugReporter::generatePathDiagnostics(
       PathDiagnosticBuilder::findValidReport(bugReports, *this);
 
   if (PDB) {
-    for (PathDiagnosticConsumer *PC : consumers) {
-      if (std::unique_ptr<PathDiagnostic> PD = PDB->generate(PC)) {
-        (*Out)[PC] = std::move(PD);
+    for (const auto &PC : consumers) {
+      if (std::unique_ptr<PathDiagnostic> PD = PDB->generate(PC.get())) {
+        (*Out)[PC.get()] = std::move(PD);
       }
     }
   }
@@ -3164,7 +3164,7 @@ void BugReporter::FlushReport(BugReportEquivClass &EQ) {
       return;
   }
 
-  ArrayRef<PathDiagnosticConsumer*> Consumers = getPathDiagnosticConsumers();
+  ArrayRef Consumers = getPathDiagnosticConsumers();
   std::unique_ptr<DiagnosticForConsumerMapTy> Diagnostics =
       generateDiagnosticForConsumerMap(report, Consumers, bugReports);
 
@@ -3298,12 +3298,13 @@ findExecutedLines(const SourceManager &SM, const ExplodedNode *N) {
 
 std::unique_ptr<DiagnosticForConsumerMapTy>
 BugReporter::generateDiagnosticForConsumerMap(
-    BugReport *exampleReport, ArrayRef<PathDiagnosticConsumer *> consumers,
+    BugReport *exampleReport,
+    ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
     ArrayRef<BugReport *> bugReports) {
   auto *basicReport = cast<BasicBugReport>(exampleReport);
   auto Out = std::make_unique<DiagnosticForConsumerMapTy>();
-  for (auto *Consumer : consumers)
-    (*Out)[Consumer] =
+  for (const auto &Consumer : consumers)
+    (*Out)[Consumer.get()] =
         generateDiagnosticForBasicReport(basicReport, AnalysisEntryPoint);
   return Out;
 }
@@ -3371,14 +3372,11 @@ static void resetDiagnosticLocationToMainFile(PathDiagnostic &PD) {
   }
 }
 
-
-
 std::unique_ptr<DiagnosticForConsumerMapTy>
 PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
-    BugReport *exampleReport, ArrayRef<PathDiagnosticConsumer *> consumers,
+    BugReport *exampleReport,
+    ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
     ArrayRef<BugReport *> bugReports) {
-  std::vector<BasicBugReport *> BasicBugReports;
-  std::vector<PathSensitiveBugReport *> PathSensitiveBugReports;
   if (isa<BasicBugReport>(exampleReport))
     return BugReporter::generateDiagnosticForConsumerMap(exampleReport,
                                                          consumers, bugReports);
@@ -3418,8 +3416,8 @@ void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
                                   PathDiagnosticLocation Loc,
                                   ArrayRef<SourceRange> Ranges,
                                   ArrayRef<FixItHint> Fixits) {
-  EmitBasicReport(DeclWithIssue, Checker->getCheckerName(), Name, Category, Str,
-                  Loc, Ranges, Fixits);
+  EmitBasicReport(DeclWithIssue, Checker->getName(), Name, Category, Str, Loc,
+                  Ranges, Fixits);
 }
 
 void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
@@ -3442,8 +3440,8 @@ void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
 BugType *BugReporter::getBugTypeForName(CheckerNameRef CheckName,
                                         StringRef name, StringRef category) {
   SmallString<136> fullDesc;
-  llvm::raw_svector_ostream(fullDesc) << CheckName.getName() << ":" << name
-                                      << ":" << category;
+  llvm::raw_svector_ostream(fullDesc)
+      << CheckName << ":" << name << ":" << category;
   std::unique_ptr<BugType> &BT = StrBugTypes[fullDesc];
   if (!BT)
     BT = std::make_unique<BugType>(CheckName, name, category);

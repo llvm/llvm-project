@@ -32,11 +32,144 @@ using fputil::TripleDouble;
 
 namespace {
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+alignas(16) constexpr DoubleDouble LOG2_R_DD[128] = {
+    {0.0, 0.0},
+    {-0x1.177c23362928cp-25, 0x1.72c8p-7},
+    {-0x1.179e0caa9c9abp-22, 0x1.744p-6},
+    {-0x1.c6cea541f5b7p-23, 0x1.184cp-5},
+    {-0x1.66c4d4e554434p-22, 0x1.773ap-5},
+    {-0x1.70700a00fdd55p-24, 0x1.d6ecp-5},
+    {0x1.53002a4e86631p-23, 0x1.1bb3p-4},
+    {0x1.fcd15f101c142p-25, 0x1.4c56p-4},
+    {0x1.25b3eed319cedp-22, 0x1.7d6p-4},
+    {-0x1.4195120d8486fp-22, 0x1.960dp-4},
+    {0x1.45b878e27d0d9p-23, 0x1.c7b5p-4},
+    {0x1.770744593a4cbp-22, 0x1.f9c9p-4},
+    {0x1.c673032495d24p-22, 0x1.097ep-3},
+    {-0x1.1eaa65b49696ep-22, 0x1.22dbp-3},
+    {0x1.b2866f2850b22p-22, 0x1.3c6f8p-3},
+    {0x1.8ee37cd2ea9d3p-25, 0x1.494f8p-3},
+    {0x1.7e86f9c2154fbp-24, 0x1.633a8p-3},
+    {0x1.8e3cfc25f0ce6p-26, 0x1.7046p-3},
+    {0x1.57f7a64ccd537p-28, 0x1.8a898p-3},
+    {-0x1.a761c09fbd2aep-22, 0x1.97c2p-3},
+    {0x1.24bea9a2c66f3p-22, 0x1.b26p-3},
+    {-0x1.60002ccfe43f5p-25, 0x1.bfc68p-3},
+    {0x1.69f220e97f22cp-22, 0x1.dac2p-3},
+    {-0x1.6164f64c210ep-22, 0x1.e858p-3},
+    {-0x1.0c1678ae89767p-24, 0x1.01d9cp-2},
+    {-0x1.f26a05c813d57p-22, 0x1.08bdp-2},
+    {0x1.4d8fc561c8d44p-24, 0x1.169cp-2},
+    {-0x1.362ad8f7ca2dp-22, 0x1.1d984p-2},
+    {0x1.2b13cd6c4d042p-22, 0x1.249ccp-2},
+    {-0x1.1c8f11979a5dbp-22, 0x1.32cp-2},
+    {0x1.c2ab3edefe569p-23, 0x1.39de8p-2},
+    {0x1.7c3eca28e69cap-26, 0x1.4106p-2},
+    {-0x1.34c4e99e1c6c6p-24, 0x1.4f6fcp-2},
+    {-0x1.194a871b63619p-22, 0x1.56b24p-2},
+    {0x1.e3dd5c1c885aep-23, 0x1.5dfdcp-2},
+    {-0x1.6ccf3b1129b7cp-23, 0x1.6552cp-2},
+    {-0x1.2f346e2bf924bp-23, 0x1.6cb1p-2},
+    {-0x1.fa61aaa59c1d8p-23, 0x1.7b8ap-2},
+    {0x1.90c11fd32a3abp-22, 0x1.8304cp-2},
+    {0x1.57f7a64ccd537p-27, 0x1.8a898p-2},
+    {0x1.249ba76fee235p-27, 0x1.9218p-2},
+    {-0x1.aad2729b21ae5p-23, 0x1.99b08p-2},
+    {0x1.71810a5e1818p-22, 0x1.a8ff8p-2},
+    {-0x1.6172fe015e13cp-27, 0x1.b0b68p-2},
+    {0x1.5ec6c1bfbf89ap-24, 0x1.b877cp-2},
+    {0x1.678bf6cdedf51p-24, 0x1.c0438p-2},
+    {0x1.c2d45fe43895ep-22, 0x1.c819cp-2},
+    {-0x1.9ee52ed49d71dp-22, 0x1.cffbp-2},
+    {0x1.5786af187a96bp-27, 0x1.d7e6cp-2},
+    {0x1.3ab0dc56138c9p-23, 0x1.dfdd8p-2},
+    {0x1.fe538ab34efb5p-22, 0x1.e7df4p-2},
+    {-0x1.e4fee07aa4b68p-22, 0x1.efec8p-2},
+    {-0x1.172f32fe67287p-22, 0x1.f804cp-2},
+    {-0x1.9a83ff9ab9cc8p-22, 0x1.00144p-1},
+    {-0x1.68cb06cece193p-22, 0x1.042bep-1},
+    {0x1.8cd71ddf82e2p-22, 0x1.08494p-1},
+    {0x1.5e18ab2df3ae6p-22, 0x1.0c6cap-1},
+    {0x1.5dee4d9d8a273p-25, 0x1.1096p-1},
+    {0x1.fcd15f101c142p-26, 0x1.14c56p-1},
+    {-0x1.2474b0f992ba1p-23, 0x1.18faep-1},
+    {0x1.4b5a92a606047p-24, 0x1.1d368p-1},
+    {0x1.16186fcf54bbdp-22, 0x1.21786p-1},
+    {0x1.18efabeb7d722p-27, 0x1.25c0ap-1},
+    {-0x1.e5fc7d238691dp-24, 0x1.2a0f4p-1},
+    {0x1.f5809faf6283cp-22, 0x1.2e644p-1},
+    {0x1.f5809faf6283cp-22, 0x1.2e644p-1},
+    {0x1.c6e1dcd0cb449p-22, 0x1.32bfep-1},
+    {0x1.76e0e8f74b4d5p-22, 0x1.37222p-1},
+    {-0x1.cb82c89692d99p-24, 0x1.3b8b2p-1},
+    {-0x1.63161c5432aebp-22, 0x1.3ffaep-1},
+    {0x1.458104c41b901p-22, 0x1.44716p-1},
+    {0x1.458104c41b901p-22, 0x1.44716p-1},
+    {-0x1.cd9d0cde578d5p-22, 0x1.48efp-1},
+    {0x1.b9884591add87p-26, 0x1.4d738p-1},
+    {0x1.c6042978605ffp-22, 0x1.51ff2p-1},
+    {-0x1.fc4c96b37dcf6p-22, 0x1.56922p-1},
+    {-0x1.2f346e2bf924bp-24, 0x1.5b2c4p-1},
+    {-0x1.2f346e2bf924bp-24, 0x1.5b2c4p-1},
+    {0x1.c4e4fbb68a4d1p-22, 0x1.5fcdcp-1},
+    {-0x1.9d499bd9b3226p-23, 0x1.6476ep-1},
+    {-0x1.f89b355ede26fp-23, 0x1.69278p-1},
+    {-0x1.f89b355ede26fp-23, 0x1.69278p-1},
+    {0x1.53c7e319f6e92p-24, 0x1.6ddfcp-1},
+    {-0x1.b291f070528c7p-22, 0x1.729fep-1},
+    {0x1.2967a451a7b48p-25, 0x1.7767cp-1},
+    {0x1.2967a451a7b48p-25, 0x1.7767cp-1},
+    {0x1.244fcff690fcep-22, 0x1.7c37ap-1},
+    {0x1.46fd97f5dc572p-23, 0x1.810fap-1},
+    {0x1.46fd97f5dc572p-23, 0x1.810fap-1},
+    {-0x1.f3a7352663e5p-22, 0x1.85efep-1},
+    {0x1.b3cda690370b5p-23, 0x1.8ad84p-1},
+    {0x1.b3cda690370b5p-23, 0x1.8ad84p-1},
+    {0x1.3226b211bf1d9p-23, 0x1.8fc92p-1},
+    {0x1.d24b136c101eep-23, 0x1.94c28p-1},
+    {0x1.d24b136c101eep-23, 0x1.94c28p-1},
+    {0x1.7c40c7907e82ap-22, 0x1.99c48p-1},
+    {-0x1.e81781d97ee91p-22, 0x1.9ecf6p-1},
+    {-0x1.e81781d97ee91p-22, 0x1.9ecf6p-1},
+    {-0x1.6a77813f94e01p-22, 0x1.a3e3p-1},
+    {-0x1.1cfdeb43cfdp-22, 0x1.a8ffap-1},
+    {-0x1.1cfdeb43cfdp-22, 0x1.a8ffap-1},
+    {-0x1.f983f74d3138fp-23, 0x1.ae256p-1},
+    {-0x1.e278ae1a1f51fp-23, 0x1.b3546p-1},
+    {-0x1.e278ae1a1f51fp-23, 0x1.b3546p-1},
+    {-0x1.97552b7b5ea45p-23, 0x1.b88ccp-1},
+    {-0x1.97552b7b5ea45p-23, 0x1.b88ccp-1},
+    {-0x1.19b4f3c72c4f8p-24, 0x1.bdceap-1},
+    {0x1.f7402d26f1a12p-23, 0x1.c31a2p-1},
+    {0x1.f7402d26f1a12p-23, 0x1.c31a2p-1},
+    {-0x1.2056d5dd31d96p-23, 0x1.c86f8p-1},
+    {-0x1.2056d5dd31d96p-23, 0x1.c86f8p-1},
+    {-0x1.6e46335aae723p-24, 0x1.cdcecp-1},
+    {-0x1.beb244c59f331p-22, 0x1.d3382p-1},
+    {-0x1.beb244c59f331p-22, 0x1.d3382p-1},
+    {0x1.16c071e93fd97p-27, 0x1.d8abap-1},
+    {0x1.16c071e93fd97p-27, 0x1.d8abap-1},
+    {0x1.d8175819530c2p-22, 0x1.de298p-1},
+    {0x1.d8175819530c2p-22, 0x1.de298p-1},
+    {0x1.51bd552842c1cp-23, 0x1.e3b2p-1},
+    {0x1.51bd552842c1cp-23, 0x1.e3b2p-1},
+    {0x1.914e204f19d94p-22, 0x1.e9452p-1},
+    {0x1.914e204f19d94p-22, 0x1.e9452p-1},
+    {0x1.c55d997da24fdp-22, 0x1.eee32p-1},
+    {0x1.c55d997da24fdp-22, 0x1.eee32p-1},
+    {-0x1.685c2d2298a6ep-22, 0x1.f48c4p-1},
+    {-0x1.685c2d2298a6ep-22, 0x1.f48c4p-1},
+    {0x1.7a4887bd74039p-22, 0x1.fa406p-1},
+    {0.0, 1.0},
+};
+#else
+
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 constexpr uint64_t ERR = 64;
 #else
 constexpr uint64_t ERR = 128;
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 // We choose the precision of the high part to be 53 - 24 - 8, so that when
 //   y * (e_x + LOG2_R_DD[i].hi) is exact.
@@ -384,6 +517,7 @@ static constexpr DoubleDouble LOG2_R2_DD[] = {
     {0x1.3d979ddf4746cp-61, 0x1.6cf6ddd2611d4p-7},
     {-0x1.dc930484501f8p-63, 0x1.6fdf461d2e4f8p-7},
 };
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LIBC_INLINE bool is_odd_integer(float x) {
   using FPBits = typename fputil::FPBits<float>;
@@ -407,6 +541,7 @@ LIBC_INLINE bool is_integer(float x) {
   return (x_e + lsb >= UNIT_EXPONENT);
 }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 LIBC_INLINE bool larger_exponent(double a, double b) {
   using DoubleBits = typename fputil::FPBits<double>;
   return DoubleBits(a).get_biased_exponent() >=
@@ -506,6 +641,7 @@ double powf_double_double(int idx_x, double dx, double y6, double lo6_hi,
 
   return cpp::bit_cast<double>(r_bits);
 }
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 } // namespace
 
@@ -528,6 +664,12 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   //   |y * log2(x)| = 0 or > 151.
   // Hence x^y will either overflow or underflow if x is not zero.
   if (LIBC_UNLIKELY((y_abs & 0x0007'ffff) == 0) || (y_abs > 0x4f170000)) {
+    // y is signaling NaN
+    if (xbits.is_signaling_nan() || ybits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FloatBits::quiet_nan().get_val();
+    }
+
     // Exceptional exponents.
     if (y == 0.0f)
       return 1.0f;
@@ -600,8 +742,8 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         }
       }
       if (y_abs > 0x4f17'0000) {
+        // if y is NaN
         if (y_abs > 0x7f80'0000) {
-          // y is NaN
           if (x_u == 0x3f80'0000) { // x = 1.0f
             // pow(1, NaN) = 1
             return 1.0f;
@@ -623,16 +765,24 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   // y is finite and non-zero.
   if (LIBC_UNLIKELY(((x_u & 0x801f'ffffU) == 0) || x_u >= 0x7f80'0000U ||
                     x_u < 0x0080'0000U)) {
+    // if x is signaling NaN
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FloatBits::quiet_nan().get_val();
+    }
+
     switch (x_u) {
     case 0x3f80'0000: // x = 1.0f
       return 1.0f;
     // TODO: Put these 2 entrypoint dependency under control flag.
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     case 0x4000'0000: // x = 2.0f
       // pow(2, y) = exp2(y)
       return generic::exp2f(y);
     case 0x4120'0000: // x = 10.0f
       // pow(10, y) = exp10(y)
       return generic::exp10f(y);
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     }
 
     const bool x_is_neg = x_u >= FloatBits::SIGN_MASK;
@@ -713,11 +863,11 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   //   log2(m_x) = log2( (1 + dx) / r )
   //             = log2(1 + dx) - log2(r).
   double dx;
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
   dx = static_cast<double>(fputil::multiply_add(m_x, R[idx_x], -1.0f)); // Exact
 #else
   dx = fputil::multiply_add(static_cast<double>(m_x), RD[idx_x], -1.0); // Exact
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 
   // Degree-5 polynomial approximation:
   //   dx * P(dx) ~ log2(1 + dx)
@@ -782,6 +932,16 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   //   lo6 = 2^6 * lo = 2^6 * (y - (hi + mid)) = y6 * log2(x) - hm.
   double y6 = static_cast<double>(y * 0x1.0p6f); // Exact.
   double hm = fputil::nearest_integer(s * y6);
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  // lo6 = 2^6 * lo.
+  double lo6_hi =
+      fputil::multiply_add(y6, e_x + LOG2_R_DD[idx_x].hi, -hm); // Exact
+  // Error bounds:
+  //   | (y*log2(x) - hm * 2^-6 - lo) / y| < err(dx * p) + err(LOG2_R_DD.lo)
+  //                                       < 2^-51 + 2^-75
+  double lo6 = fputil::multiply_add(
+      y6, fputil::multiply_add(dx, p, LOG2_R_DD[idx_x].lo), lo6_hi);
+#else
   // lo6 = 2^6 * lo.
   double lo6_hi =
       fputil::multiply_add(y6, e_x + LOG2_R_TD[idx_x].hi, -hm); // Exact
@@ -790,6 +950,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   //                                       < 2^-51 + 2^-75
   double lo6 = fputil::multiply_add(
       y6, fputil::multiply_add(dx, p, LOG2_R_TD[idx_x].mid), lo6_hi);
+#endif
 
   // |2^(hi + mid) - exp2_hi_mid| <= ulp(exp2_hi_mid) / 2
   // Clamp the exponent part into smaller range that fits double precision.
@@ -830,6 +991,9 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
 
   double r = pp * exp2_hi_mid;
 
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  return static_cast<float>(r);
+#else
   // Ziv accuracy test.
   uint64_t r_u = cpp::bit_cast<uint64_t>(r);
   float r_upper = static_cast<float>(cpp::bit_cast<double>(r_u + ERR));
@@ -861,6 +1025,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   double r_dd = powf_double_double(idx_x, dx, y6, lo6_hi, exp2_hi_mid_dd);
 
   return static_cast<float>(r_dd);
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 }
 
 } // namespace LIBC_NAMESPACE_DECL

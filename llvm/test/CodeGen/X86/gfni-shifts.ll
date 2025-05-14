@@ -1232,21 +1232,19 @@ define <32 x i8> @constant_shl_v32i8(<32 x i8> %a) nounwind {
 ;
 ; GFNIAVX1-LABEL: constant_shl_v32i8:
 ; GFNIAVX1:       # %bb.0:
-; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; GFNIAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = [1,4,16,64,128,32,8,2]
-; GFNIAVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm3
-; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
-; GFNIAVX1-NEXT:    vpand %xmm4, %xmm3, %xmm3
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1]
-; GFNIAVX1-NEXT:    vpmaddubsw %xmm5, %xmm1, %xmm1
+; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1]
+; GFNIAVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm2
+; GFNIAVX1-NEXT:    vpsllw $8, %xmm2, %xmm2
+; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; GFNIAVX1-NEXT:    vpmaddubsw %xmm1, %xmm3, %xmm1
 ; GFNIAVX1-NEXT:    vpsllw $8, %xmm1, %xmm1
-; GFNIAVX1-NEXT:    vpor %xmm1, %xmm3, %xmm1
-; GFNIAVX1-NEXT:    vpmaddubsw %xmm2, %xmm0, %xmm2
-; GFNIAVX1-NEXT:    vpand %xmm4, %xmm2, %xmm2
-; GFNIAVX1-NEXT:    vpmaddubsw %xmm5, %xmm0, %xmm0
-; GFNIAVX1-NEXT:    vpsllw $8, %xmm0, %xmm0
-; GFNIAVX1-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; GFNIAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; GFNIAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; GFNIAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = [1,4,16,64,128,32,8,2]
+; GFNIAVX1-NEXT:    vpmaddubsw %xmm2, %xmm3, %xmm3
+; GFNIAVX1-NEXT:    vpmaddubsw %xmm2, %xmm0, %xmm0
+; GFNIAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; GFNIAVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; GFNIAVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; GFNIAVX1-NEXT:    retq
 ;
 ; GFNIAVX2-LABEL: constant_shl_v32i8:
@@ -2575,33 +2573,31 @@ define <64 x i8> @constant_shl_v64i8(<64 x i8> %a) nounwind {
 ;
 ; GFNIAVX1-LABEL: constant_shl_v64i8:
 ; GFNIAVX1:       # %bb.0:
-; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; GFNIAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm3 = [1,4,16,64,128,32,8,2]
-; GFNIAVX1-NEXT:    vpmaddubsw %xmm3, %xmm2, %xmm4
-; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
-; GFNIAVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1]
-; GFNIAVX1-NEXT:    vpmaddubsw %xmm6, %xmm2, %xmm2
+; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1]
+; GFNIAVX1-NEXT:    vpmaddubsw %xmm2, %xmm0, %xmm3
+; GFNIAVX1-NEXT:    vpsllw $8, %xmm3, %xmm3
+; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; GFNIAVX1-NEXT:    vpmaddubsw %xmm2, %xmm4, %xmm5
+; GFNIAVX1-NEXT:    vpsllw $8, %xmm5, %xmm5
+; GFNIAVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm3, %ymm3
+; GFNIAVX1-NEXT:    vpmovzxbw {{.*#+}} xmm5 = [1,4,16,64,128,32,8,2]
+; GFNIAVX1-NEXT:    vpmaddubsw %xmm5, %xmm4, %xmm4
+; GFNIAVX1-NEXT:    vpmaddubsw %xmm5, %xmm0, %xmm0
+; GFNIAVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} ymm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; GFNIAVX1-NEXT:    vandps %ymm4, %ymm0, %ymm0
+; GFNIAVX1-NEXT:    vorps %ymm3, %ymm0, %ymm0
+; GFNIAVX1-NEXT:    vpmaddubsw %xmm2, %xmm1, %xmm3
+; GFNIAVX1-NEXT:    vpsllw $8, %xmm3, %xmm3
+; GFNIAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm6
+; GFNIAVX1-NEXT:    vpmaddubsw %xmm2, %xmm6, %xmm2
 ; GFNIAVX1-NEXT:    vpsllw $8, %xmm2, %xmm2
-; GFNIAVX1-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; GFNIAVX1-NEXT:    vpmaddubsw %xmm3, %xmm0, %xmm4
-; GFNIAVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
-; GFNIAVX1-NEXT:    vpmaddubsw %xmm6, %xmm0, %xmm0
-; GFNIAVX1-NEXT:    vpsllw $8, %xmm0, %xmm0
-; GFNIAVX1-NEXT:    vpor %xmm0, %xmm4, %xmm0
-; GFNIAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; GFNIAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; GFNIAVX1-NEXT:    vpmaddubsw %xmm3, %xmm2, %xmm4
-; GFNIAVX1-NEXT:    vpand %xmm5, %xmm4, %xmm4
-; GFNIAVX1-NEXT:    vpmaddubsw %xmm6, %xmm2, %xmm2
-; GFNIAVX1-NEXT:    vpsllw $8, %xmm2, %xmm2
-; GFNIAVX1-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; GFNIAVX1-NEXT:    vpmaddubsw %xmm3, %xmm1, %xmm3
-; GFNIAVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
-; GFNIAVX1-NEXT:    vpmaddubsw %xmm6, %xmm1, %xmm1
-; GFNIAVX1-NEXT:    vpsllw $8, %xmm1, %xmm1
-; GFNIAVX1-NEXT:    vpor %xmm1, %xmm3, %xmm1
-; GFNIAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; GFNIAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
+; GFNIAVX1-NEXT:    vpmaddubsw %xmm5, %xmm6, %xmm3
+; GFNIAVX1-NEXT:    vpmaddubsw %xmm5, %xmm1, %xmm1
+; GFNIAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; GFNIAVX1-NEXT:    vandps %ymm4, %ymm1, %ymm1
+; GFNIAVX1-NEXT:    vorps %ymm2, %ymm1, %ymm1
 ; GFNIAVX1-NEXT:    retq
 ;
 ; GFNIAVX2-LABEL: constant_shl_v64i8:

@@ -13,9 +13,7 @@
 #include "SPIRVInstPrinter.h"
 #include "SPIRV.h"
 #include "SPIRVBaseInfo.h"
-#include "SPIRVInstrInfo.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -51,7 +49,7 @@ void SPIRVInstPrinter::printRemainingVariableOps(const MCInst *MI,
 void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
                                              unsigned StartIndex,
                                              raw_ostream &O) {
-  unsigned IsBitwidth16 = MI->getFlags() & SPIRV::ASM_PRINTER_WIDTH16;
+  unsigned IsBitwidth16 = MI->getFlags() & SPIRV::INST_PRINTER_WIDTH16;
   const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
 
   assert((NumVarOps == 1 || NumVarOps == 2) &&
@@ -98,7 +96,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
 }
 
 void SPIRVInstPrinter::recordOpExtInstImport(const MCInst *MI) {
-  Register Reg = MI->getOperand(0).getReg();
+  MCRegister Reg = MI->getOperand(0).getReg();
   auto Name = getSPIRVStringOperand(*MI, 1);
   auto Set = getExtInstSetFromString(Name);
   ExtInstSetIDs.insert({Reg, Set});
@@ -116,6 +114,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     recordOpExtInstImport(MI);
   } else if (OpCode == SPIRV::OpExtInst) {
     printOpExtInst(MI, OS);
+  } else if (OpCode == SPIRV::UNKNOWN_type) {
+    printUnknownType(MI, OS);
   } else {
     // Print any extra operands for variadic instructions.
     const MCInstrDesc &MCDesc = MII.get(OpCode);
@@ -144,6 +144,9 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           printRemainingVariableOps(MI, NumFixedOps, OS, false, true);
           break;
         }
+        case SPIRV::OpMemberDecorate:
+          printRemainingVariableOps(MI, NumFixedOps, OS);
+          break;
         case SPIRV::OpExecutionMode:
         case SPIRV::OpExecutionModeId:
         case SPIRV::OpLoopMerge: {
@@ -314,6 +317,31 @@ void SPIRVInstPrinter::printOpDecorate(const MCInst *MI, raw_ostream &O) {
   }
 }
 
+void SPIRVInstPrinter::printUnknownType(const MCInst *MI, raw_ostream &O) {
+  const auto EnumOperand = MI->getOperand(1);
+  assert(EnumOperand.isImm() &&
+         "second operand of UNKNOWN_type must be opcode!");
+
+  const auto Enumerant = EnumOperand.getImm();
+  const auto NumOps = MI->getNumOperands();
+
+  // Print the opcode using the spirv-as unknown opcode syntax
+  O << "OpUnknown(" << Enumerant << ", " << NumOps << ") ";
+
+  // The result ID must be printed after the opcode when using this syntax
+  printOperand(MI, 0, O);
+
+  O << " ";
+
+  const MCInstrDesc &MCDesc = MII.get(MI->getOpcode());
+  unsigned NumFixedOps = MCDesc.getNumOperands();
+  if (NumOps == NumFixedOps)
+    return;
+
+  // Print the rest of the operands
+  printRemainingVariableOps(MI, NumFixedOps, O, true);
+}
+
 static void printExpr(const MCExpr *Expr, raw_ostream &O) {
 #ifndef NDEBUG
   const MCSymbolRefExpr *SRE;
@@ -331,12 +359,11 @@ static void printExpr(const MCExpr *Expr, raw_ostream &O) {
 }
 
 void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                    raw_ostream &O, const char *Modifier) {
-  assert((Modifier == 0 || Modifier[0] == 0) && "No modifiers supported");
+                                    raw_ostream &O) {
   if (OpNo < MI->getNumOperands()) {
     const MCOperand &Op = MI->getOperand(OpNo);
     if (Op.isReg())
-      O << '%' << (Register::virtReg2Index(Op.getReg()) + 1);
+      O << '%' << (getIDFromRegister(Op.getReg().id()) + 1);
     else if (Op.isImm())
       O << formatImm((int64_t)Op.getImm());
     else if (Op.isDFPImm())

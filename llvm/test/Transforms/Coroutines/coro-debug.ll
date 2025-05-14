@@ -1,6 +1,5 @@
 ; Tests that debug information is sane after coro-split
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 source_filename = "simple-repro.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -30,8 +29,8 @@ sw.bb:                                            ; preds = %entry
   %direct = load i32, ptr %x.addr, align 4, !dbg !14
   %gep = getelementptr inbounds [16 x i8], ptr undef, i32 %direct, !dbg !14
   call void @llvm.dbg.declare(metadata ptr %gep, metadata !27, metadata !13), !dbg !14
-  call void @llvm.dbg.declare(metadata i32 %conv, metadata !26, metadata !13), !dbg !14
-  call void @llvm.dbg.declare(metadata i32 %direct, metadata !25, metadata !13), !dbg !14
+  call void @llvm.dbg.value(metadata i32 %conv, metadata !26, metadata !13), !dbg !14
+  call void @llvm.dbg.value(metadata i32 %direct, metadata !25, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !12, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata ptr %coro_hdl, metadata !15, metadata !13), !dbg !16
   call void @llvm.dbg.declare(metadata ptr %late_local, metadata !29, metadata !13), !dbg !16
@@ -67,7 +66,7 @@ coro_Cleanup:                                     ; preds = %sw.epilog, %sw.bb1
   %5 = load ptr, ptr %coro_hdl, align 8, !dbg !24
   %6 = call ptr @llvm.coro.free(token %0, ptr %5), !dbg !24
   call void @free(ptr %6), !dbg !24
-  call void @llvm.dbg.declare(metadata i32 %asm_res, metadata !32, metadata !13), !dbg !16
+  call void @llvm.dbg.value(metadata i32 %asm_res, metadata !32, metadata !13), !dbg !16
   br label %coro_Suspend, !dbg !24
 
 coro_Suspend:                                     ; preds = %coro_Cleanup, %sw.default
@@ -177,14 +176,14 @@ attributes #7 = { noduplicate }
 ; CHECK: %[[DBG_PTR:.*]] = alloca ptr
 ; CHECK: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_COROHDL:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst,
 ; CHECK: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_X:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL:.*]])
-; CHECK: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_DIRECT:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL]])
 ; CHECK: store ptr {{.*}}, ptr %[[DBG_PTR]]
 ; CHECK-NOT: alloca ptr
-; CHECK: #dbg_declare(i8 0, ![[RESUME_CONST:[0-9]+]], !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed),
+; CHECK: call void @coro.devirt.trigger(ptr null)
+; CHECK: #dbg_value(i8 0, ![[RESUME_CONST:[0-9]+]], !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed),
+; CHECK: #dbg_value(ptr %[[DBG_PTR]], ![[RESUME_DIRECT:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref),
 ; Note that keeping the undef value here could be acceptable, too.
 ; CHECK-NOT: #dbg_declare(ptr undef, !{{[0-9]+}}, !DIExpression(),
-; CHECK: call void @coro.devirt.trigger(ptr null)
-; CHECK: #dbg_value(ptr {{.*}}, ![[RESUME_DIRECT_VALUE:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref),
+; CHECK: #dbg_value(ptr %[[DBG_PTR]], ![[RESUME_DIRECT_VALUE:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref),
 ; Check that the dbg.declare intrinsic of invoke instruction is hanled correctly.
 ; CHECK: %[[ALLOCATED_STORAGE:.+]] = invoke ptr @allocate()
 ; CHECK-NEXT: to label %[[NORMAL_DEST:.+]] unwind
@@ -194,7 +193,7 @@ attributes #7 = { noduplicate }
 ; CHECK-NEXT: to label %[[DEFAULT_DEST:.+]] [label
 ; CHECK: [[DEFAULT_DEST]]:
 ; CHECK-NOT: {{.*}}:
-; CHECK: #dbg_declare(i32 %[[CALLBR_RES]]
+; CHECK: #dbg_value(i32 %[[CALLBR_RES]]
 ; CHECK: define internal fastcc void @f.destroy(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
 ; CHECK: define internal fastcc void @f.cleanup(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
 
@@ -203,8 +202,8 @@ attributes #7 = { noduplicate }
 ; CHECK: ![[RESUME]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 ; CHECK: ![[RESUME_COROHDL]] = !DILocalVariable(name: "coro_hdl", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_X]] = !DILocalVariable(name: "x", arg: 1, scope: ![[RESUME]]
-; CHECK: ![[RESUME_DIRECT]] = !DILocalVariable(name: "direct_mem", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_CONST]] = !DILocalVariable(name: "direct_const", scope: ![[RESUME]]
+; CHECK: ![[RESUME_DIRECT]] = !DILocalVariable(name: "direct_mem", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_DIRECT_VALUE]] = !DILocalVariable(name: "direct_value", scope: ![[RESUME]]
 
 ; CHECK: ![[DESTROY]] = distinct !DISubprogram(name: "f", linkageName: "flink"

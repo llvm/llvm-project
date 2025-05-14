@@ -11,8 +11,8 @@
 define i8 @abd_ext_i8(i8 %a, i8 %b) nounwind {
 ; RV32I-LABEL: abd_ext_i8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a1, a1, 255
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a1, a1
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    srai a1, a0, 31
 ; RV32I-NEXT:    xor a0, a0, a1
@@ -21,8 +21,8 @@ define i8 @abd_ext_i8(i8 %a, i8 %b) nounwind {
 ;
 ; RV64I-LABEL: abd_ext_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 255
-; RV64I-NEXT:    andi a1, a1, 255
+; RV64I-NEXT:    zext.b a0, a0
+; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    srai a1, a0, 63
 ; RV64I-NEXT:    xor a0, a0, a1
@@ -31,8 +31,8 @@ define i8 @abd_ext_i8(i8 %a, i8 %b) nounwind {
 ;
 ; RV32ZBB-LABEL: abd_ext_i8:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    andi a1, a1, 255
-; RV32ZBB-NEXT:    andi a0, a0, 255
+; RV32ZBB-NEXT:    zext.b a1, a1
+; RV32ZBB-NEXT:    zext.b a0, a0
 ; RV32ZBB-NEXT:    maxu a2, a0, a1
 ; RV32ZBB-NEXT:    minu a0, a0, a1
 ; RV32ZBB-NEXT:    sub a0, a0, a2
@@ -40,8 +40,8 @@ define i8 @abd_ext_i8(i8 %a, i8 %b) nounwind {
 ;
 ; RV64ZBB-LABEL: abd_ext_i8:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    andi a0, a0, 255
-; RV64ZBB-NEXT:    andi a1, a1, 255
+; RV64ZBB-NEXT:    zext.b a0, a0
+; RV64ZBB-NEXT:    zext.b a1, a1
 ; RV64ZBB-NEXT:    sub a0, a0, a1
 ; RV64ZBB-NEXT:    neg a1, a0
 ; RV64ZBB-NEXT:    min a0, a0, a1
@@ -60,7 +60,7 @@ define i8 @abd_ext_i8_i16(i8 %a, i16 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a1, 16
 ; RV32I-NEXT:    srli a1, a1, 16
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    srai a1, a0, 31
 ; RV32I-NEXT:    xor a0, a0, a1
@@ -69,7 +69,7 @@ define i8 @abd_ext_i8_i16(i8 %a, i16 %b) nounwind {
 ;
 ; RV64I-LABEL: abd_ext_i8_i16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    sub a0, a0, a1
@@ -81,7 +81,7 @@ define i8 @abd_ext_i8_i16(i8 %a, i16 %b) nounwind {
 ; RV32ZBB-LABEL: abd_ext_i8_i16:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    zext.h a1, a1
-; RV32ZBB-NEXT:    andi a0, a0, 255
+; RV32ZBB-NEXT:    zext.b a0, a0
 ; RV32ZBB-NEXT:    maxu a2, a0, a1
 ; RV32ZBB-NEXT:    minu a0, a0, a1
 ; RV32ZBB-NEXT:    sub a0, a0, a2
@@ -89,7 +89,7 @@ define i8 @abd_ext_i8_i16(i8 %a, i16 %b) nounwind {
 ;
 ; RV64ZBB-LABEL: abd_ext_i8_i16:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    andi a0, a0, 255
+; RV64ZBB-NEXT:    zext.b a0, a0
 ; RV64ZBB-NEXT:    zext.h a1, a1
 ; RV64ZBB-NEXT:    sub a0, a0, a1
 ; RV64ZBB-NEXT:    neg a1, a0
@@ -107,8 +107,8 @@ define i8 @abd_ext_i8_i16(i8 %a, i16 %b) nounwind {
 define i8 @abd_ext_i8_undef(i8 %a, i8 %b) nounwind {
 ; RV32I-LABEL: abd_ext_i8_undef:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a1, a1, 255
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a1, a1
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    srai a1, a0, 31
 ; RV32I-NEXT:    xor a0, a0, a1
@@ -117,8 +117,8 @@ define i8 @abd_ext_i8_undef(i8 %a, i8 %b) nounwind {
 ;
 ; RV64I-LABEL: abd_ext_i8_undef:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 255
-; RV64I-NEXT:    andi a1, a1, 255
+; RV64I-NEXT:    zext.b a0, a0
+; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    srai a1, a0, 63
 ; RV64I-NEXT:    xor a0, a0, a1
@@ -127,8 +127,8 @@ define i8 @abd_ext_i8_undef(i8 %a, i8 %b) nounwind {
 ;
 ; RV32ZBB-LABEL: abd_ext_i8_undef:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    andi a1, a1, 255
-; RV32ZBB-NEXT:    andi a0, a0, 255
+; RV32ZBB-NEXT:    zext.b a1, a1
+; RV32ZBB-NEXT:    zext.b a0, a0
 ; RV32ZBB-NEXT:    maxu a2, a0, a1
 ; RV32ZBB-NEXT:    minu a0, a0, a1
 ; RV32ZBB-NEXT:    sub a0, a0, a2
@@ -136,8 +136,8 @@ define i8 @abd_ext_i8_undef(i8 %a, i8 %b) nounwind {
 ;
 ; RV64ZBB-LABEL: abd_ext_i8_undef:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    andi a0, a0, 255
-; RV64ZBB-NEXT:    andi a1, a1, 255
+; RV64ZBB-NEXT:    zext.b a0, a0
+; RV64ZBB-NEXT:    zext.b a1, a1
 ; RV64ZBB-NEXT:    sub a0, a0, a1
 ; RV64ZBB-NEXT:    neg a1, a0
 ; RV64ZBB-NEXT:    min a0, a0, a1
@@ -624,24 +624,24 @@ define i64 @abd_ext_i64_undef(i64 %a, i64 %b) nounwind {
 define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-LABEL: abd_ext_i128:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lw a4, 0(a2)
+; RV32I-NEXT:    lw a5, 0(a2)
 ; RV32I-NEXT:    lw a7, 4(a2)
 ; RV32I-NEXT:    lw a3, 8(a2)
 ; RV32I-NEXT:    lw t1, 12(a2)
+; RV32I-NEXT:    lw a4, 8(a1)
+; RV32I-NEXT:    lw a6, 12(a1)
 ; RV32I-NEXT:    lw a2, 0(a1)
 ; RV32I-NEXT:    lw t0, 4(a1)
-; RV32I-NEXT:    lw a5, 8(a1)
-; RV32I-NEXT:    lw a6, 12(a1)
-; RV32I-NEXT:    sltu a1, a5, a3
+; RV32I-NEXT:    sltu a1, a4, a3
 ; RV32I-NEXT:    sub t1, a6, t1
+; RV32I-NEXT:    sltu t2, a2, a5
 ; RV32I-NEXT:    sub a1, t1, a1
-; RV32I-NEXT:    sltu t2, a2, a4
 ; RV32I-NEXT:    mv t1, t2
 ; RV32I-NEXT:    beq t0, a7, .LBB11_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    sltu t1, t0, a7
 ; RV32I-NEXT:  .LBB11_2:
-; RV32I-NEXT:    sub a3, a5, a3
+; RV32I-NEXT:    sub a3, a4, a3
 ; RV32I-NEXT:    sltu t3, a3, t1
 ; RV32I-NEXT:    sub a1, a1, t3
 ; RV32I-NEXT:    sub a3, a3, t1
@@ -650,27 +650,27 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    sltu t1, a6, a1
 ; RV32I-NEXT:    j .LBB11_5
 ; RV32I-NEXT:  .LBB11_4:
-; RV32I-NEXT:    sltu t1, a5, a3
+; RV32I-NEXT:    sltu t1, a4, a3
 ; RV32I-NEXT:  .LBB11_5:
 ; RV32I-NEXT:    sub a7, t0, a7
 ; RV32I-NEXT:    sub a7, a7, t2
-; RV32I-NEXT:    sub t2, a2, a4
+; RV32I-NEXT:    sub a5, a2, a5
 ; RV32I-NEXT:    beq a7, t0, .LBB11_7
 ; RV32I-NEXT:  # %bb.6:
 ; RV32I-NEXT:    sltu a2, t0, a7
 ; RV32I-NEXT:    j .LBB11_8
 ; RV32I-NEXT:  .LBB11_7:
-; RV32I-NEXT:    sltu a2, a2, t2
+; RV32I-NEXT:    sltu a2, a2, a5
 ; RV32I-NEXT:  .LBB11_8:
-; RV32I-NEXT:    xor a4, a1, a6
-; RV32I-NEXT:    xor a5, a3, a5
-; RV32I-NEXT:    or a4, a5, a4
+; RV32I-NEXT:    xor a6, a1, a6
+; RV32I-NEXT:    xor a4, a3, a4
+; RV32I-NEXT:    or a4, a4, a6
 ; RV32I-NEXT:    beqz a4, .LBB11_10
 ; RV32I-NEXT:  # %bb.9:
 ; RV32I-NEXT:    mv a2, t1
 ; RV32I-NEXT:  .LBB11_10:
 ; RV32I-NEXT:    neg a4, a2
-; RV32I-NEXT:    xor t0, t2, a4
+; RV32I-NEXT:    xor t0, a5, a4
 ; RV32I-NEXT:    xor t3, a7, a4
 ; RV32I-NEXT:    sltu a5, t0, a4
 ; RV32I-NEXT:    add a6, t3, a2
@@ -736,24 +736,24 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ;
 ; RV32ZBB-LABEL: abd_ext_i128:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    lw a4, 0(a2)
+; RV32ZBB-NEXT:    lw a5, 0(a2)
 ; RV32ZBB-NEXT:    lw a7, 4(a2)
 ; RV32ZBB-NEXT:    lw a3, 8(a2)
 ; RV32ZBB-NEXT:    lw t1, 12(a2)
+; RV32ZBB-NEXT:    lw a4, 8(a1)
+; RV32ZBB-NEXT:    lw a6, 12(a1)
 ; RV32ZBB-NEXT:    lw a2, 0(a1)
 ; RV32ZBB-NEXT:    lw t0, 4(a1)
-; RV32ZBB-NEXT:    lw a5, 8(a1)
-; RV32ZBB-NEXT:    lw a6, 12(a1)
-; RV32ZBB-NEXT:    sltu a1, a5, a3
+; RV32ZBB-NEXT:    sltu a1, a4, a3
 ; RV32ZBB-NEXT:    sub t1, a6, t1
+; RV32ZBB-NEXT:    sltu t2, a2, a5
 ; RV32ZBB-NEXT:    sub a1, t1, a1
-; RV32ZBB-NEXT:    sltu t2, a2, a4
 ; RV32ZBB-NEXT:    mv t1, t2
 ; RV32ZBB-NEXT:    beq t0, a7, .LBB11_2
 ; RV32ZBB-NEXT:  # %bb.1:
 ; RV32ZBB-NEXT:    sltu t1, t0, a7
 ; RV32ZBB-NEXT:  .LBB11_2:
-; RV32ZBB-NEXT:    sub a3, a5, a3
+; RV32ZBB-NEXT:    sub a3, a4, a3
 ; RV32ZBB-NEXT:    sltu t3, a3, t1
 ; RV32ZBB-NEXT:    sub a1, a1, t3
 ; RV32ZBB-NEXT:    sub a3, a3, t1
@@ -762,27 +762,27 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    sltu t1, a6, a1
 ; RV32ZBB-NEXT:    j .LBB11_5
 ; RV32ZBB-NEXT:  .LBB11_4:
-; RV32ZBB-NEXT:    sltu t1, a5, a3
+; RV32ZBB-NEXT:    sltu t1, a4, a3
 ; RV32ZBB-NEXT:  .LBB11_5:
 ; RV32ZBB-NEXT:    sub a7, t0, a7
 ; RV32ZBB-NEXT:    sub a7, a7, t2
-; RV32ZBB-NEXT:    sub t2, a2, a4
+; RV32ZBB-NEXT:    sub a5, a2, a5
 ; RV32ZBB-NEXT:    beq a7, t0, .LBB11_7
 ; RV32ZBB-NEXT:  # %bb.6:
 ; RV32ZBB-NEXT:    sltu a2, t0, a7
 ; RV32ZBB-NEXT:    j .LBB11_8
 ; RV32ZBB-NEXT:  .LBB11_7:
-; RV32ZBB-NEXT:    sltu a2, a2, t2
+; RV32ZBB-NEXT:    sltu a2, a2, a5
 ; RV32ZBB-NEXT:  .LBB11_8:
-; RV32ZBB-NEXT:    xor a4, a1, a6
-; RV32ZBB-NEXT:    xor a5, a3, a5
-; RV32ZBB-NEXT:    or a4, a5, a4
+; RV32ZBB-NEXT:    xor a6, a1, a6
+; RV32ZBB-NEXT:    xor a4, a3, a4
+; RV32ZBB-NEXT:    or a4, a4, a6
 ; RV32ZBB-NEXT:    beqz a4, .LBB11_10
 ; RV32ZBB-NEXT:  # %bb.9:
 ; RV32ZBB-NEXT:    mv a2, t1
 ; RV32ZBB-NEXT:  .LBB11_10:
 ; RV32ZBB-NEXT:    neg a4, a2
-; RV32ZBB-NEXT:    xor t0, t2, a4
+; RV32ZBB-NEXT:    xor t0, a5, a4
 ; RV32ZBB-NEXT:    xor t3, a7, a4
 ; RV32ZBB-NEXT:    sltu a5, t0, a4
 ; RV32ZBB-NEXT:    add a6, t3, a2
@@ -857,24 +857,24 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; RV32I-LABEL: abd_ext_i128_undef:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lw a4, 0(a2)
+; RV32I-NEXT:    lw a5, 0(a2)
 ; RV32I-NEXT:    lw a7, 4(a2)
 ; RV32I-NEXT:    lw a3, 8(a2)
 ; RV32I-NEXT:    lw t1, 12(a2)
+; RV32I-NEXT:    lw a4, 8(a1)
+; RV32I-NEXT:    lw a6, 12(a1)
 ; RV32I-NEXT:    lw a2, 0(a1)
 ; RV32I-NEXT:    lw t0, 4(a1)
-; RV32I-NEXT:    lw a5, 8(a1)
-; RV32I-NEXT:    lw a6, 12(a1)
-; RV32I-NEXT:    sltu a1, a5, a3
+; RV32I-NEXT:    sltu a1, a4, a3
 ; RV32I-NEXT:    sub t1, a6, t1
+; RV32I-NEXT:    sltu t2, a2, a5
 ; RV32I-NEXT:    sub a1, t1, a1
-; RV32I-NEXT:    sltu t2, a2, a4
 ; RV32I-NEXT:    mv t1, t2
 ; RV32I-NEXT:    beq t0, a7, .LBB12_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    sltu t1, t0, a7
 ; RV32I-NEXT:  .LBB12_2:
-; RV32I-NEXT:    sub a3, a5, a3
+; RV32I-NEXT:    sub a3, a4, a3
 ; RV32I-NEXT:    sltu t3, a3, t1
 ; RV32I-NEXT:    sub a1, a1, t3
 ; RV32I-NEXT:    sub a3, a3, t1
@@ -883,27 +883,27 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    sltu t1, a6, a1
 ; RV32I-NEXT:    j .LBB12_5
 ; RV32I-NEXT:  .LBB12_4:
-; RV32I-NEXT:    sltu t1, a5, a3
+; RV32I-NEXT:    sltu t1, a4, a3
 ; RV32I-NEXT:  .LBB12_5:
 ; RV32I-NEXT:    sub a7, t0, a7
 ; RV32I-NEXT:    sub a7, a7, t2
-; RV32I-NEXT:    sub t2, a2, a4
+; RV32I-NEXT:    sub a5, a2, a5
 ; RV32I-NEXT:    beq a7, t0, .LBB12_7
 ; RV32I-NEXT:  # %bb.6:
 ; RV32I-NEXT:    sltu a2, t0, a7
 ; RV32I-NEXT:    j .LBB12_8
 ; RV32I-NEXT:  .LBB12_7:
-; RV32I-NEXT:    sltu a2, a2, t2
+; RV32I-NEXT:    sltu a2, a2, a5
 ; RV32I-NEXT:  .LBB12_8:
-; RV32I-NEXT:    xor a4, a1, a6
-; RV32I-NEXT:    xor a5, a3, a5
-; RV32I-NEXT:    or a4, a5, a4
+; RV32I-NEXT:    xor a6, a1, a6
+; RV32I-NEXT:    xor a4, a3, a4
+; RV32I-NEXT:    or a4, a4, a6
 ; RV32I-NEXT:    beqz a4, .LBB12_10
 ; RV32I-NEXT:  # %bb.9:
 ; RV32I-NEXT:    mv a2, t1
 ; RV32I-NEXT:  .LBB12_10:
 ; RV32I-NEXT:    neg a4, a2
-; RV32I-NEXT:    xor t0, t2, a4
+; RV32I-NEXT:    xor t0, a5, a4
 ; RV32I-NEXT:    xor t3, a7, a4
 ; RV32I-NEXT:    sltu a5, t0, a4
 ; RV32I-NEXT:    add a6, t3, a2
@@ -969,24 +969,24 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ;
 ; RV32ZBB-LABEL: abd_ext_i128_undef:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    lw a4, 0(a2)
+; RV32ZBB-NEXT:    lw a5, 0(a2)
 ; RV32ZBB-NEXT:    lw a7, 4(a2)
 ; RV32ZBB-NEXT:    lw a3, 8(a2)
 ; RV32ZBB-NEXT:    lw t1, 12(a2)
+; RV32ZBB-NEXT:    lw a4, 8(a1)
+; RV32ZBB-NEXT:    lw a6, 12(a1)
 ; RV32ZBB-NEXT:    lw a2, 0(a1)
 ; RV32ZBB-NEXT:    lw t0, 4(a1)
-; RV32ZBB-NEXT:    lw a5, 8(a1)
-; RV32ZBB-NEXT:    lw a6, 12(a1)
-; RV32ZBB-NEXT:    sltu a1, a5, a3
+; RV32ZBB-NEXT:    sltu a1, a4, a3
 ; RV32ZBB-NEXT:    sub t1, a6, t1
+; RV32ZBB-NEXT:    sltu t2, a2, a5
 ; RV32ZBB-NEXT:    sub a1, t1, a1
-; RV32ZBB-NEXT:    sltu t2, a2, a4
 ; RV32ZBB-NEXT:    mv t1, t2
 ; RV32ZBB-NEXT:    beq t0, a7, .LBB12_2
 ; RV32ZBB-NEXT:  # %bb.1:
 ; RV32ZBB-NEXT:    sltu t1, t0, a7
 ; RV32ZBB-NEXT:  .LBB12_2:
-; RV32ZBB-NEXT:    sub a3, a5, a3
+; RV32ZBB-NEXT:    sub a3, a4, a3
 ; RV32ZBB-NEXT:    sltu t3, a3, t1
 ; RV32ZBB-NEXT:    sub a1, a1, t3
 ; RV32ZBB-NEXT:    sub a3, a3, t1
@@ -995,27 +995,27 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    sltu t1, a6, a1
 ; RV32ZBB-NEXT:    j .LBB12_5
 ; RV32ZBB-NEXT:  .LBB12_4:
-; RV32ZBB-NEXT:    sltu t1, a5, a3
+; RV32ZBB-NEXT:    sltu t1, a4, a3
 ; RV32ZBB-NEXT:  .LBB12_5:
 ; RV32ZBB-NEXT:    sub a7, t0, a7
 ; RV32ZBB-NEXT:    sub a7, a7, t2
-; RV32ZBB-NEXT:    sub t2, a2, a4
+; RV32ZBB-NEXT:    sub a5, a2, a5
 ; RV32ZBB-NEXT:    beq a7, t0, .LBB12_7
 ; RV32ZBB-NEXT:  # %bb.6:
 ; RV32ZBB-NEXT:    sltu a2, t0, a7
 ; RV32ZBB-NEXT:    j .LBB12_8
 ; RV32ZBB-NEXT:  .LBB12_7:
-; RV32ZBB-NEXT:    sltu a2, a2, t2
+; RV32ZBB-NEXT:    sltu a2, a2, a5
 ; RV32ZBB-NEXT:  .LBB12_8:
-; RV32ZBB-NEXT:    xor a4, a1, a6
-; RV32ZBB-NEXT:    xor a5, a3, a5
-; RV32ZBB-NEXT:    or a4, a5, a4
+; RV32ZBB-NEXT:    xor a6, a1, a6
+; RV32ZBB-NEXT:    xor a4, a3, a4
+; RV32ZBB-NEXT:    or a4, a4, a6
 ; RV32ZBB-NEXT:    beqz a4, .LBB12_10
 ; RV32ZBB-NEXT:  # %bb.9:
 ; RV32ZBB-NEXT:    mv a2, t1
 ; RV32ZBB-NEXT:  .LBB12_10:
 ; RV32ZBB-NEXT:    neg a4, a2
-; RV32ZBB-NEXT:    xor t0, t2, a4
+; RV32ZBB-NEXT:    xor t0, a5, a4
 ; RV32ZBB-NEXT:    xor t3, a7, a4
 ; RV32ZBB-NEXT:    sltu a5, t0, a4
 ; RV32ZBB-NEXT:    add a6, t3, a2
@@ -1094,8 +1094,8 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 define i8 @abd_minmax_i8(i8 %a, i8 %b) nounwind {
 ; NOZBB-LABEL: abd_minmax_i8:
 ; NOZBB:       # %bb.0:
-; NOZBB-NEXT:    andi a1, a1, 255
-; NOZBB-NEXT:    andi a0, a0, 255
+; NOZBB-NEXT:    zext.b a1, a1
+; NOZBB-NEXT:    zext.b a0, a0
 ; NOZBB-NEXT:    mv a2, a0
 ; NOZBB-NEXT:    bgeu a0, a1, .LBB13_3
 ; NOZBB-NEXT:  # %bb.1:
@@ -1112,8 +1112,8 @@ define i8 @abd_minmax_i8(i8 %a, i8 %b) nounwind {
 ;
 ; ZBB-LABEL: abd_minmax_i8:
 ; ZBB:       # %bb.0:
-; ZBB-NEXT:    andi a1, a1, 255
-; ZBB-NEXT:    andi a0, a0, 255
+; ZBB-NEXT:    zext.b a1, a1
+; ZBB-NEXT:    zext.b a0, a0
 ; ZBB-NEXT:    minu a2, a0, a1
 ; ZBB-NEXT:    maxu a0, a0, a1
 ; ZBB-NEXT:    sub a0, a2, a0
@@ -1335,30 +1335,30 @@ define i64 @abd_minmax_i64(i64 %a, i64 %b) nounwind {
 define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-LABEL: abd_minmax_i128:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lw a5, 4(a2)
-; RV32I-NEXT:    lw a6, 8(a2)
+; RV32I-NEXT:    lw a6, 4(a2)
+; RV32I-NEXT:    lw a7, 8(a2)
 ; RV32I-NEXT:    lw t0, 12(a2)
+; RV32I-NEXT:    lw a5, 12(a1)
 ; RV32I-NEXT:    lw a3, 4(a1)
 ; RV32I-NEXT:    lw a4, 8(a1)
-; RV32I-NEXT:    lw a7, 12(a1)
-; RV32I-NEXT:    beq a7, t0, .LBB17_2
+; RV32I-NEXT:    beq a5, t0, .LBB17_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    sltu t1, a7, t0
+; RV32I-NEXT:    sltu t1, a5, t0
 ; RV32I-NEXT:    j .LBB17_3
 ; RV32I-NEXT:  .LBB17_2:
-; RV32I-NEXT:    sltu t1, a4, a6
+; RV32I-NEXT:    sltu t1, a4, a7
 ; RV32I-NEXT:  .LBB17_3:
 ; RV32I-NEXT:    lw t2, 0(a2)
 ; RV32I-NEXT:    lw a1, 0(a1)
-; RV32I-NEXT:    beq a3, a5, .LBB17_5
+; RV32I-NEXT:    beq a3, a6, .LBB17_5
 ; RV32I-NEXT:  # %bb.4:
-; RV32I-NEXT:    sltu t6, a3, a5
+; RV32I-NEXT:    sltu t6, a3, a6
 ; RV32I-NEXT:    j .LBB17_6
 ; RV32I-NEXT:  .LBB17_5:
 ; RV32I-NEXT:    sltu t6, a1, t2
 ; RV32I-NEXT:  .LBB17_6:
-; RV32I-NEXT:    xor a2, a7, t0
-; RV32I-NEXT:    xor t3, a4, a6
+; RV32I-NEXT:    xor a2, a5, t0
+; RV32I-NEXT:    xor t3, a4, a7
 ; RV32I-NEXT:    or t5, t3, a2
 ; RV32I-NEXT:    beqz t5, .LBB17_8
 ; RV32I-NEXT:  # %bb.7:
@@ -1366,27 +1366,27 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:  .LBB17_8:
 ; RV32I-NEXT:    mv a2, a1
 ; RV32I-NEXT:    mv t1, a3
-; RV32I-NEXT:    mv t4, a7
+; RV32I-NEXT:    mv t4, a5
 ; RV32I-NEXT:    mv t3, a4
 ; RV32I-NEXT:    bnez t6, .LBB17_10
 ; RV32I-NEXT:  # %bb.9:
 ; RV32I-NEXT:    mv a2, t2
-; RV32I-NEXT:    mv t1, a5
+; RV32I-NEXT:    mv t1, a6
 ; RV32I-NEXT:    mv t4, t0
-; RV32I-NEXT:    mv t3, a6
+; RV32I-NEXT:    mv t3, a7
 ; RV32I-NEXT:  .LBB17_10:
-; RV32I-NEXT:    beq a7, t0, .LBB17_12
+; RV32I-NEXT:    beq a5, t0, .LBB17_12
 ; RV32I-NEXT:  # %bb.11:
-; RV32I-NEXT:    sltu t6, t0, a7
+; RV32I-NEXT:    sltu t6, t0, a5
 ; RV32I-NEXT:    j .LBB17_13
 ; RV32I-NEXT:  .LBB17_12:
-; RV32I-NEXT:    sltu t6, a6, a4
+; RV32I-NEXT:    sltu t6, a7, a4
 ; RV32I-NEXT:  .LBB17_13:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    beq a3, a5, .LBB17_15
+; RV32I-NEXT:    beq a3, a6, .LBB17_15
 ; RV32I-NEXT:  # %bb.14:
-; RV32I-NEXT:    sltu s0, a5, a3
+; RV32I-NEXT:    sltu s0, a6, a3
 ; RV32I-NEXT:    bnez t5, .LBB17_16
 ; RV32I-NEXT:    j .LBB17_17
 ; RV32I-NEXT:  .LBB17_15:
@@ -1398,14 +1398,14 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    bnez s0, .LBB17_19
 ; RV32I-NEXT:  # %bb.18:
 ; RV32I-NEXT:    mv a1, t2
-; RV32I-NEXT:    mv a3, a5
-; RV32I-NEXT:    mv a7, t0
-; RV32I-NEXT:    mv a4, a6
+; RV32I-NEXT:    mv a3, a6
+; RV32I-NEXT:    mv a5, t0
+; RV32I-NEXT:    mv a4, a7
 ; RV32I-NEXT:  .LBB17_19:
-; RV32I-NEXT:    sltu a5, t3, a4
-; RV32I-NEXT:    sub a6, t4, a7
-; RV32I-NEXT:    sub a5, a6, a5
+; RV32I-NEXT:    sltu a7, t3, a4
+; RV32I-NEXT:    sub a5, t4, a5
 ; RV32I-NEXT:    sltu a6, a2, a1
+; RV32I-NEXT:    sub a5, a5, a7
 ; RV32I-NEXT:    mv a7, a6
 ; RV32I-NEXT:    beq t1, a3, .LBB17_21
 ; RV32I-NEXT:  # %bb.20:
@@ -1462,30 +1462,30 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ;
 ; RV32ZBB-LABEL: abd_minmax_i128:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    lw a5, 4(a2)
-; RV32ZBB-NEXT:    lw a6, 8(a2)
+; RV32ZBB-NEXT:    lw a6, 4(a2)
+; RV32ZBB-NEXT:    lw a7, 8(a2)
 ; RV32ZBB-NEXT:    lw t0, 12(a2)
+; RV32ZBB-NEXT:    lw a5, 12(a1)
 ; RV32ZBB-NEXT:    lw a3, 4(a1)
 ; RV32ZBB-NEXT:    lw a4, 8(a1)
-; RV32ZBB-NEXT:    lw a7, 12(a1)
-; RV32ZBB-NEXT:    beq a7, t0, .LBB17_2
+; RV32ZBB-NEXT:    beq a5, t0, .LBB17_2
 ; RV32ZBB-NEXT:  # %bb.1:
-; RV32ZBB-NEXT:    sltu t1, a7, t0
+; RV32ZBB-NEXT:    sltu t1, a5, t0
 ; RV32ZBB-NEXT:    j .LBB17_3
 ; RV32ZBB-NEXT:  .LBB17_2:
-; RV32ZBB-NEXT:    sltu t1, a4, a6
+; RV32ZBB-NEXT:    sltu t1, a4, a7
 ; RV32ZBB-NEXT:  .LBB17_3:
 ; RV32ZBB-NEXT:    lw t2, 0(a2)
 ; RV32ZBB-NEXT:    lw a1, 0(a1)
-; RV32ZBB-NEXT:    beq a3, a5, .LBB17_5
+; RV32ZBB-NEXT:    beq a3, a6, .LBB17_5
 ; RV32ZBB-NEXT:  # %bb.4:
-; RV32ZBB-NEXT:    sltu t6, a3, a5
+; RV32ZBB-NEXT:    sltu t6, a3, a6
 ; RV32ZBB-NEXT:    j .LBB17_6
 ; RV32ZBB-NEXT:  .LBB17_5:
 ; RV32ZBB-NEXT:    sltu t6, a1, t2
 ; RV32ZBB-NEXT:  .LBB17_6:
-; RV32ZBB-NEXT:    xor a2, a7, t0
-; RV32ZBB-NEXT:    xor t3, a4, a6
+; RV32ZBB-NEXT:    xor a2, a5, t0
+; RV32ZBB-NEXT:    xor t3, a4, a7
 ; RV32ZBB-NEXT:    or t5, t3, a2
 ; RV32ZBB-NEXT:    beqz t5, .LBB17_8
 ; RV32ZBB-NEXT:  # %bb.7:
@@ -1493,27 +1493,27 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:  .LBB17_8:
 ; RV32ZBB-NEXT:    mv a2, a1
 ; RV32ZBB-NEXT:    mv t1, a3
-; RV32ZBB-NEXT:    mv t4, a7
+; RV32ZBB-NEXT:    mv t4, a5
 ; RV32ZBB-NEXT:    mv t3, a4
 ; RV32ZBB-NEXT:    bnez t6, .LBB17_10
 ; RV32ZBB-NEXT:  # %bb.9:
 ; RV32ZBB-NEXT:    mv a2, t2
-; RV32ZBB-NEXT:    mv t1, a5
+; RV32ZBB-NEXT:    mv t1, a6
 ; RV32ZBB-NEXT:    mv t4, t0
-; RV32ZBB-NEXT:    mv t3, a6
+; RV32ZBB-NEXT:    mv t3, a7
 ; RV32ZBB-NEXT:  .LBB17_10:
-; RV32ZBB-NEXT:    beq a7, t0, .LBB17_12
+; RV32ZBB-NEXT:    beq a5, t0, .LBB17_12
 ; RV32ZBB-NEXT:  # %bb.11:
-; RV32ZBB-NEXT:    sltu t6, t0, a7
+; RV32ZBB-NEXT:    sltu t6, t0, a5
 ; RV32ZBB-NEXT:    j .LBB17_13
 ; RV32ZBB-NEXT:  .LBB17_12:
-; RV32ZBB-NEXT:    sltu t6, a6, a4
+; RV32ZBB-NEXT:    sltu t6, a7, a4
 ; RV32ZBB-NEXT:  .LBB17_13:
 ; RV32ZBB-NEXT:    addi sp, sp, -16
 ; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
-; RV32ZBB-NEXT:    beq a3, a5, .LBB17_15
+; RV32ZBB-NEXT:    beq a3, a6, .LBB17_15
 ; RV32ZBB-NEXT:  # %bb.14:
-; RV32ZBB-NEXT:    sltu s0, a5, a3
+; RV32ZBB-NEXT:    sltu s0, a6, a3
 ; RV32ZBB-NEXT:    bnez t5, .LBB17_16
 ; RV32ZBB-NEXT:    j .LBB17_17
 ; RV32ZBB-NEXT:  .LBB17_15:
@@ -1525,14 +1525,14 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    bnez s0, .LBB17_19
 ; RV32ZBB-NEXT:  # %bb.18:
 ; RV32ZBB-NEXT:    mv a1, t2
-; RV32ZBB-NEXT:    mv a3, a5
-; RV32ZBB-NEXT:    mv a7, t0
-; RV32ZBB-NEXT:    mv a4, a6
+; RV32ZBB-NEXT:    mv a3, a6
+; RV32ZBB-NEXT:    mv a5, t0
+; RV32ZBB-NEXT:    mv a4, a7
 ; RV32ZBB-NEXT:  .LBB17_19:
-; RV32ZBB-NEXT:    sltu a5, t3, a4
-; RV32ZBB-NEXT:    sub a6, t4, a7
-; RV32ZBB-NEXT:    sub a5, a6, a5
+; RV32ZBB-NEXT:    sltu a7, t3, a4
+; RV32ZBB-NEXT:    sub a5, t4, a5
 ; RV32ZBB-NEXT:    sltu a6, a2, a1
+; RV32ZBB-NEXT:    sub a5, a5, a7
 ; RV32ZBB-NEXT:    mv a7, a6
 ; RV32ZBB-NEXT:    beq t1, a3, .LBB17_21
 ; RV32ZBB-NEXT:  # %bb.20:
@@ -1599,8 +1599,8 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 define i8 @abd_cmp_i8(i8 %a, i8 %b) nounwind {
 ; NOZBB-LABEL: abd_cmp_i8:
 ; NOZBB:       # %bb.0:
-; NOZBB-NEXT:    andi a2, a0, 255
-; NOZBB-NEXT:    andi a3, a1, 255
+; NOZBB-NEXT:    zext.b a2, a0
+; NOZBB-NEXT:    zext.b a3, a1
 ; NOZBB-NEXT:    bgeu a3, a2, .LBB18_2
 ; NOZBB-NEXT:  # %bb.1:
 ; NOZBB-NEXT:    sub a0, a1, a0
@@ -1611,8 +1611,8 @@ define i8 @abd_cmp_i8(i8 %a, i8 %b) nounwind {
 ;
 ; ZBB-LABEL: abd_cmp_i8:
 ; ZBB:       # %bb.0:
-; ZBB-NEXT:    andi a2, a0, 255
-; ZBB-NEXT:    andi a3, a1, 255
+; ZBB-NEXT:    zext.b a2, a0
+; ZBB-NEXT:    zext.b a3, a1
 ; ZBB-NEXT:    bgeu a3, a2, .LBB18_2
 ; ZBB-NEXT:  # %bb.1:
 ; ZBB-NEXT:    sub a0, a1, a0
@@ -1799,26 +1799,26 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a3, 0(a2)
 ; RV32I-NEXT:    lw a4, 4(a2)
-; RV32I-NEXT:    lw a6, 8(a2)
-; RV32I-NEXT:    lw t0, 12(a2)
+; RV32I-NEXT:    lw a5, 8(a2)
+; RV32I-NEXT:    lw a7, 12(a2)
+; RV32I-NEXT:    lw a6, 8(a1)
+; RV32I-NEXT:    lw t0, 12(a1)
 ; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    lw a5, 4(a1)
-; RV32I-NEXT:    lw a7, 8(a1)
-; RV32I-NEXT:    lw t1, 12(a1)
-; RV32I-NEXT:    sltu a1, a7, a6
-; RV32I-NEXT:    mv t4, a1
-; RV32I-NEXT:    beq t1, t0, .LBB22_2
+; RV32I-NEXT:    lw a1, 4(a1)
+; RV32I-NEXT:    sltu t1, a6, a5
+; RV32I-NEXT:    mv t4, t1
+; RV32I-NEXT:    beq t0, a7, .LBB22_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    sltu t4, t1, t0
+; RV32I-NEXT:    sltu t4, t0, a7
 ; RV32I-NEXT:  .LBB22_2:
 ; RV32I-NEXT:    sltu t2, a2, a3
 ; RV32I-NEXT:    mv t3, t2
-; RV32I-NEXT:    beq a5, a4, .LBB22_4
+; RV32I-NEXT:    beq a1, a4, .LBB22_4
 ; RV32I-NEXT:  # %bb.3:
-; RV32I-NEXT:    sltu t3, a5, a4
+; RV32I-NEXT:    sltu t3, a1, a4
 ; RV32I-NEXT:  .LBB22_4:
-; RV32I-NEXT:    xor t5, t1, t0
-; RV32I-NEXT:    xor t6, a7, a6
+; RV32I-NEXT:    xor t5, t0, a7
+; RV32I-NEXT:    xor t6, a6, a5
 ; RV32I-NEXT:    or t5, t6, t5
 ; RV32I-NEXT:    mv t6, t3
 ; RV32I-NEXT:    beqz t5, .LBB22_6
@@ -1827,32 +1827,32 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:  .LBB22_6:
 ; RV32I-NEXT:    sltu t4, a3, a2
 ; RV32I-NEXT:    mv t5, t4
-; RV32I-NEXT:    beq a5, a4, .LBB22_8
+; RV32I-NEXT:    beq a1, a4, .LBB22_8
 ; RV32I-NEXT:  # %bb.7:
-; RV32I-NEXT:    sltu t5, a4, a5
+; RV32I-NEXT:    sltu t5, a4, a1
 ; RV32I-NEXT:  .LBB22_8:
 ; RV32I-NEXT:    bnez t6, .LBB22_10
 ; RV32I-NEXT:  # %bb.9:
-; RV32I-NEXT:    sltu a1, a6, a7
-; RV32I-NEXT:    sub t0, t0, t1
-; RV32I-NEXT:    sub a6, a6, a7
-; RV32I-NEXT:    sub a4, a4, a5
-; RV32I-NEXT:    sub a7, t0, a1
-; RV32I-NEXT:    sltu t0, a6, t5
-; RV32I-NEXT:    sub a1, a6, t5
+; RV32I-NEXT:    sltu t1, a5, a6
+; RV32I-NEXT:    sub a7, a7, t0
+; RV32I-NEXT:    sub a5, a5, a6
+; RV32I-NEXT:    sub a4, a4, a1
+; RV32I-NEXT:    sub a6, a7, t1
+; RV32I-NEXT:    sltu a7, a5, t5
+; RV32I-NEXT:    sub a1, a5, t5
 ; RV32I-NEXT:    sub a5, a4, t4
-; RV32I-NEXT:    sub a4, a7, t0
+; RV32I-NEXT:    sub a4, a6, a7
 ; RV32I-NEXT:    sub a2, a3, a2
 ; RV32I-NEXT:    j .LBB22_11
 ; RV32I-NEXT:  .LBB22_10:
-; RV32I-NEXT:    sub t0, t1, t0
-; RV32I-NEXT:    sub a6, a7, a6
-; RV32I-NEXT:    sub a5, a5, a4
-; RV32I-NEXT:    sub a4, t0, a1
-; RV32I-NEXT:    sltu a7, a6, t3
-; RV32I-NEXT:    sub a1, a6, t3
-; RV32I-NEXT:    sub a5, a5, t2
-; RV32I-NEXT:    sub a4, a4, a7
+; RV32I-NEXT:    sub a7, t0, a7
+; RV32I-NEXT:    sub a5, a6, a5
+; RV32I-NEXT:    sub a4, a1, a4
+; RV32I-NEXT:    sub a6, a7, t1
+; RV32I-NEXT:    sltu a7, a5, t3
+; RV32I-NEXT:    sub a1, a5, t3
+; RV32I-NEXT:    sub a5, a4, t2
+; RV32I-NEXT:    sub a4, a6, a7
 ; RV32I-NEXT:    sub a2, a2, a3
 ; RV32I-NEXT:  .LBB22_11:
 ; RV32I-NEXT:    sw a2, 0(a0)
@@ -1886,26 +1886,26 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    lw a3, 0(a2)
 ; RV32ZBB-NEXT:    lw a4, 4(a2)
-; RV32ZBB-NEXT:    lw a6, 8(a2)
-; RV32ZBB-NEXT:    lw t0, 12(a2)
+; RV32ZBB-NEXT:    lw a5, 8(a2)
+; RV32ZBB-NEXT:    lw a7, 12(a2)
+; RV32ZBB-NEXT:    lw a6, 8(a1)
+; RV32ZBB-NEXT:    lw t0, 12(a1)
 ; RV32ZBB-NEXT:    lw a2, 0(a1)
-; RV32ZBB-NEXT:    lw a5, 4(a1)
-; RV32ZBB-NEXT:    lw a7, 8(a1)
-; RV32ZBB-NEXT:    lw t1, 12(a1)
-; RV32ZBB-NEXT:    sltu a1, a7, a6
-; RV32ZBB-NEXT:    mv t4, a1
-; RV32ZBB-NEXT:    beq t1, t0, .LBB22_2
+; RV32ZBB-NEXT:    lw a1, 4(a1)
+; RV32ZBB-NEXT:    sltu t1, a6, a5
+; RV32ZBB-NEXT:    mv t4, t1
+; RV32ZBB-NEXT:    beq t0, a7, .LBB22_2
 ; RV32ZBB-NEXT:  # %bb.1:
-; RV32ZBB-NEXT:    sltu t4, t1, t0
+; RV32ZBB-NEXT:    sltu t4, t0, a7
 ; RV32ZBB-NEXT:  .LBB22_2:
 ; RV32ZBB-NEXT:    sltu t2, a2, a3
 ; RV32ZBB-NEXT:    mv t3, t2
-; RV32ZBB-NEXT:    beq a5, a4, .LBB22_4
+; RV32ZBB-NEXT:    beq a1, a4, .LBB22_4
 ; RV32ZBB-NEXT:  # %bb.3:
-; RV32ZBB-NEXT:    sltu t3, a5, a4
+; RV32ZBB-NEXT:    sltu t3, a1, a4
 ; RV32ZBB-NEXT:  .LBB22_4:
-; RV32ZBB-NEXT:    xor t5, t1, t0
-; RV32ZBB-NEXT:    xor t6, a7, a6
+; RV32ZBB-NEXT:    xor t5, t0, a7
+; RV32ZBB-NEXT:    xor t6, a6, a5
 ; RV32ZBB-NEXT:    or t5, t6, t5
 ; RV32ZBB-NEXT:    mv t6, t3
 ; RV32ZBB-NEXT:    beqz t5, .LBB22_6
@@ -1914,32 +1914,32 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:  .LBB22_6:
 ; RV32ZBB-NEXT:    sltu t4, a3, a2
 ; RV32ZBB-NEXT:    mv t5, t4
-; RV32ZBB-NEXT:    beq a5, a4, .LBB22_8
+; RV32ZBB-NEXT:    beq a1, a4, .LBB22_8
 ; RV32ZBB-NEXT:  # %bb.7:
-; RV32ZBB-NEXT:    sltu t5, a4, a5
+; RV32ZBB-NEXT:    sltu t5, a4, a1
 ; RV32ZBB-NEXT:  .LBB22_8:
 ; RV32ZBB-NEXT:    bnez t6, .LBB22_10
 ; RV32ZBB-NEXT:  # %bb.9:
-; RV32ZBB-NEXT:    sltu a1, a6, a7
-; RV32ZBB-NEXT:    sub t0, t0, t1
-; RV32ZBB-NEXT:    sub a6, a6, a7
-; RV32ZBB-NEXT:    sub a4, a4, a5
-; RV32ZBB-NEXT:    sub a7, t0, a1
-; RV32ZBB-NEXT:    sltu t0, a6, t5
-; RV32ZBB-NEXT:    sub a1, a6, t5
+; RV32ZBB-NEXT:    sltu t1, a5, a6
+; RV32ZBB-NEXT:    sub a7, a7, t0
+; RV32ZBB-NEXT:    sub a5, a5, a6
+; RV32ZBB-NEXT:    sub a4, a4, a1
+; RV32ZBB-NEXT:    sub a6, a7, t1
+; RV32ZBB-NEXT:    sltu a7, a5, t5
+; RV32ZBB-NEXT:    sub a1, a5, t5
 ; RV32ZBB-NEXT:    sub a5, a4, t4
-; RV32ZBB-NEXT:    sub a4, a7, t0
+; RV32ZBB-NEXT:    sub a4, a6, a7
 ; RV32ZBB-NEXT:    sub a2, a3, a2
 ; RV32ZBB-NEXT:    j .LBB22_11
 ; RV32ZBB-NEXT:  .LBB22_10:
-; RV32ZBB-NEXT:    sub t0, t1, t0
-; RV32ZBB-NEXT:    sub a6, a7, a6
-; RV32ZBB-NEXT:    sub a5, a5, a4
-; RV32ZBB-NEXT:    sub a4, t0, a1
-; RV32ZBB-NEXT:    sltu a7, a6, t3
-; RV32ZBB-NEXT:    sub a1, a6, t3
-; RV32ZBB-NEXT:    sub a5, a5, t2
-; RV32ZBB-NEXT:    sub a4, a4, a7
+; RV32ZBB-NEXT:    sub a7, t0, a7
+; RV32ZBB-NEXT:    sub a5, a6, a5
+; RV32ZBB-NEXT:    sub a4, a1, a4
+; RV32ZBB-NEXT:    sub a6, a7, t1
+; RV32ZBB-NEXT:    sltu a7, a5, t3
+; RV32ZBB-NEXT:    sub a1, a5, t3
+; RV32ZBB-NEXT:    sub a5, a4, t2
+; RV32ZBB-NEXT:    sub a4, a6, a7
 ; RV32ZBB-NEXT:    sub a2, a2, a3
 ; RV32ZBB-NEXT:  .LBB22_11:
 ; RV32ZBB-NEXT:    sw a2, 0(a0)

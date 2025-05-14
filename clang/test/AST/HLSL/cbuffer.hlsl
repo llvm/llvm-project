@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -ast-dump -o - %s | FileCheck %s
 
 struct EmptyStruct {
 };
@@ -44,9 +44,8 @@ struct TwoFloats {
   float b;
 };
 
-// CHECK: HLSLBufferDecl {{.*}} line:50:9 cbuffer CB
+// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 2]]:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
   // CHECK: VarDecl {{.*}} used a1 'hlsl_constant float'
   float a1;
@@ -56,15 +55,14 @@ cbuffer CB {
 }
 _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(OneFloat, __cblayout_CB), "");
 
-// Check that buffer layout struct does not include resources or empty types 
-// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 3]]:9 cbuffer CB
+// Check that buffer layout struct does not include resources or empty types
+// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 2]]:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
   // CHECK: VarDecl {{.*}} used a2 'hlsl_constant float'
   float a2;
   // CHECK: VarDecl {{.*}} b2 'RWBuffer<float>':'hlsl::RWBuffer<float>'
-  RWBuffer<float> b2; 
+  RWBuffer<float> b2;
   // CHECK: VarDecl {{.*}} c2 'EmptyStruct'
   EmptyStruct c2;
   // CHECK: VarDecl {{.*}} d2 'float[0]'
@@ -85,9 +83,8 @@ cbuffer CB {
 _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __cblayout_CB_1), "");
 
 // Check that layout struct is created for B and the empty struct C is removed
-// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 3]]:9 cbuffer CB
+// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 2]]:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
   // CHECK: VarDecl {{.*}} used s1 'hlsl_constant A'
   A s1;
@@ -108,9 +105,8 @@ _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(OneFloat, __cblayo
 _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __cblayout_CB_2), "");
 
 // check that layout struct is created for D because of its base struct
-// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 3]]:9 cbuffer CB
+// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 2]]:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
   // CHECK: VarDecl {{.*}} s4 'hlsl_constant D'
   D s4;
@@ -127,10 +123,9 @@ _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __cblay
 
 // check that layout struct is created for E because because its base struct
 // is empty and should be eliminated, and BTypedef should reuse the previously
-// defined '__cblayout_B' 
-// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 3]]:9 cbuffer CB
+// defined '__cblayout_B'
+// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 2]]:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
   // CHECK: VarDecl {{.*}}  s5 'hlsl_constant E'
   E s5;
@@ -149,17 +144,16 @@ _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(OneFloat, __cblayo
 _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __cblayout_CB_4), "");
 
 // check that this produces empty layout struct
-// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 3]]:9 cbuffer CB
+// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 2]]:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
   // CHECK: FunctionDecl {{.*}} f 'void ()'
   void f() {}
-  // CHECK: VarDecl {{.*}} SV 'float' static
+  // CHECK: VarDecl {{.*}} SV 'hlsl_private float' static
   static float SV;
   // CHECK: VarDecl {{.*}} s7 'EmptyStruct' callinit
   EmptyStruct s7;
-  // CHECK: VarDecl {{.*}} Buf 'RWBuffer<float>':'hlsl::RWBuffer<float>' callinit
+  // CHECK: VarDecl {{.*}} Buf 'RWBuffer<float>':'hlsl::RWBuffer<float>' static callinit
   RWBuffer<float> Buf;
   // CHECK: VarDecl {{.*}} ea 'EmptyArrayTypedef':'float[10][0]'
   EmptyArrayTypedef ea;
@@ -169,9 +163,8 @@ cbuffer CB {
 }
 
 // check host layout struct with compatible base struct
-// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 3]]:9 cbuffer CB
+// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 2]]:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
   // CHECK: VarDecl {{.*}} s8 'hlsl_constant F'
   F s8;
@@ -186,9 +179,8 @@ _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(OneFloat, __cblayo
 _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(OneFloat, __cblayout_CB_6), "");
 
 // anonymous structs
-// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 3]]:9 cbuffer CB
+// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 2]]:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
   // CHECK: CXXRecordDecl {{.*}} struct definition
   struct {

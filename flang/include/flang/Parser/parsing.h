@@ -9,40 +9,17 @@
 #ifndef FORTRAN_PARSER_PARSING_H_
 #define FORTRAN_PARSER_PARSING_H_
 
-#include "characters.h"
 #include "instrumented-parser.h"
 #include "message.h"
+#include "options.h"
 #include "parse-tree.h"
 #include "provenance.h"
 #include "flang/Parser/preprocessor.h"
-#include "flang/Support/Fortran-features.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>
-#include <utility>
-#include <vector>
 
 namespace Fortran::parser {
-
-struct Options {
-  Options() {}
-
-  using Predefinition = std::pair<std::string, std::optional<std::string>>;
-
-  bool isFixedForm{false};
-  int fixedFormColumns{72};
-  common::LanguageFeatureControl features;
-  std::vector<std::string> searchDirectories;
-  std::vector<std::string> intrinsicModuleDirectories;
-  std::vector<Predefinition> predefinitions;
-  bool instrumentedParse{false};
-  bool isModuleFile{false};
-  bool needProvenanceRangeToCharBlockMappings{false};
-  Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
-  bool prescanAndReformat{false}; // -E
-  bool expandIncludeLinesInPreprocessedOutput{true};
-  bool showColors{false};
-};
 
 class Parsing {
 public:

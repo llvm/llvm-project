@@ -34,21 +34,21 @@ define i32 @constraint_r(i32 %a) nounwind {
 define i32 @constraint_r_zero(i32 %a) nounwind {
 ; RV32I-LABEL: constraint_r_zero:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a0, 0
-; RV32I-NEXT:    lui a1, %hi(gi)
-; RV32I-NEXT:    lw a1, %lo(gi)(a1)
+; RV32I-NEXT:    lui a0, %hi(gi)
+; RV32I-NEXT:    lw a0, %lo(gi)(a0)
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    #APP
-; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    #NO_APP
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: constraint_r_zero:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a0, 0
-; RV64I-NEXT:    lui a1, %hi(gi)
-; RV64I-NEXT:    lw a1, %lo(gi)(a1)
+; RV64I-NEXT:    lui a0, %hi(gi)
+; RV64I-NEXT:    lw a0, %lo(gi)(a0)
+; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    #APP
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ret
   %1 = load i32, ptr @gi

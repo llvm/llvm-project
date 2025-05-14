@@ -98,6 +98,7 @@ class Builtin_CachedFloatType<string name, string mnemonic,
 
 //===----------------------------------------------------------------------===//
 // Float8E5M2Type
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2"> {
   let summary = "8-bit floating point with 2 bit mantissa";
@@ -119,6 +120,7 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2"> {
 
 //===----------------------------------------------------------------------===//
 // Float8E4M3Type
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float8E4M3 : Builtin_FloatType<"Float8E4M3", "f8E4M3"> {
   let summary = "8-bit floating point with 3 bit mantissa";
@@ -138,6 +140,7 @@ def Builtin_Float8E4M3 : Builtin_FloatType<"Float8E4M3", "f8E4M3"> {
 
 //===----------------------------------------------------------------------===//
 // Float8E4M3FNType
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN"> {
   let summary = "8-bit floating point with 3 bit mantissa";
@@ -160,6 +163,7 @@ def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN"> {
 
 //===----------------------------------------------------------------------===//
 // Float8E5M2FNUZType
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float8E5M2FNUZ : Builtin_FloatType<"Float8E5M2FNUZ", "f8E5M2FNUZ"> {
   let summary = "8-bit floating point with 2 bit mantissa";
@@ -182,6 +186,7 @@ def Builtin_Float8E5M2FNUZ : Builtin_FloatType<"Float8E5M2FNUZ", "f8E5M2FNUZ"> {
 
 //===----------------------------------------------------------------------===//
 // Float8E4M3FNUZType
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float8E4M3FNUZ : Builtin_FloatType<"Float8E4M3FNUZ", "f8E4M3FNUZ"> {
   let summary = "8-bit floating point with 3 bit mantissa";
@@ -204,6 +209,7 @@ def Builtin_Float8E4M3FNUZ : Builtin_FloatType<"Float8E4M3FNUZ", "f8E4M3FNUZ"> {
 
 //===----------------------------------------------------------------------===//
 // Float8E4M3B11FNUZType
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float8E4M3B11FNUZ : Builtin_FloatType<"Float8E4M3B11FNUZ", "f8E4M3B11FNUZ"> {
   let summary = "8-bit floating point with 3 bit mantissa";
@@ -226,6 +232,7 @@ def Builtin_Float8E4M3B11FNUZ : Builtin_FloatType<"Float8E4M3B11FNUZ", "f8E4M3B1
 
 //===----------------------------------------------------------------------===//
 // Float8E3M4Type
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float8E3M4 : Builtin_FloatType<"Float8E3M4", "f8E3M4"> {
   let summary = "8-bit floating point with 3 bits exponent and 4 bit mantissa";
@@ -245,6 +252,7 @@ def Builtin_Float8E3M4 : Builtin_FloatType<"Float8E3M4", "f8E3M4"> {
 
 //===----------------------------------------------------------------------===//
 // Float4E2M1FNType
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float4E2M1FN : Builtin_FloatType<"Float4E2M1FN", "f4E2M1FN"> {
   let summary = "4-bit floating point with 2-bit exponent and 1-bit mantissa";
@@ -266,6 +274,7 @@ def Builtin_Float4E2M1FN : Builtin_FloatType<"Float4E2M1FN", "f4E2M1FN"> {
 
 //===----------------------------------------------------------------------===//
 // Float6E2M3FNType
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float6E2M3FN : Builtin_FloatType<"Float6E2M3FN", "f6E2M3FN"> {
   let summary = "6-bit floating point with 2-bit exponent and 3-bit mantissa";
@@ -287,6 +296,7 @@ def Builtin_Float6E2M3FN : Builtin_FloatType<"Float6E2M3FN", "f6E2M3FN"> {
 
 //===----------------------------------------------------------------------===//
 // Float6E3M2FNType
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float6E3M2FN : Builtin_FloatType<"Float6E3M2FN", "f6E3M2FN"> {
   let summary = "6-bit floating point with 3-bit exponent and 2-bit mantissa";
@@ -308,6 +318,7 @@ def Builtin_Float6E3M2FN : Builtin_FloatType<"Float6E3M2FN", "f6E3M2FN"> {
 
 //===----------------------------------------------------------------------===//
 // Float8E8M0FNUType
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float8E8M0FNU : Builtin_FloatType<"Float8E8M0FNU", "f8E8M0FNU"> {
   let summary = "8-bit floating point with 8-bit exponent, no mantissa or sign";
@@ -331,6 +342,7 @@ def Builtin_Float8E8M0FNU : Builtin_FloatType<"Float8E8M0FNU", "f8E8M0FNU"> {
 
 //===----------------------------------------------------------------------===//
 // BFloat16Type
+//===----------------------------------------------------------------------===//
 
 def Builtin_BFloat16 : Builtin_CachedFloatType<"BFloat16", "bf16",
     /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
@@ -339,6 +351,7 @@ def Builtin_BFloat16 : Builtin_CachedFloatType<"BFloat16", "bf16",
 
 //===----------------------------------------------------------------------===//
 // Float16Type
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float16 : Builtin_CachedFloatType<"Float16", "f16",
     /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
@@ -347,6 +360,7 @@ def Builtin_Float16 : Builtin_CachedFloatType<"Float16", "f16",
 
 //===----------------------------------------------------------------------===//
 // FloatTF32Type
+//===----------------------------------------------------------------------===//
 
 def Builtin_FloatTF32 : Builtin_CachedFloatType<"FloatTF32", "tf32"> {
   let summary = "TF32 floating-point type";
@@ -354,6 +368,7 @@ def Builtin_FloatTF32 : Builtin_CachedFloatType<"FloatTF32", "tf32"> {
 
 //===----------------------------------------------------------------------===//
 // Float32Type
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float32 : Builtin_CachedFloatType<"Float32", "f32",
     /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
@@ -362,6 +377,7 @@ def Builtin_Float32 : Builtin_CachedFloatType<"Float32", "f32",
 
 //===----------------------------------------------------------------------===//
 // Float64Type
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float64 : Builtin_CachedFloatType<"Float64", "f64"> {
   let summary = "64-bit floating-point type";
@@ -369,6 +385,7 @@ def Builtin_Float64 : Builtin_CachedFloatType<"Float64", "f64"> {
 
 //===----------------------------------------------------------------------===//
 // Float80Type
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float80 : Builtin_CachedFloatType<"Float80", "f80"> {
   let summary = "80-bit floating-point type";
@@ -376,6 +393,7 @@ def Builtin_Float80 : Builtin_CachedFloatType<"Float80", "f80"> {
 
 //===----------------------------------------------------------------------===//
 // Float128Type
+//===----------------------------------------------------------------------===//
 
 def Builtin_Float128 : Builtin_CachedFloatType<"Float128", "f128"> {
   let summary = "128-bit floating-point type";
@@ -447,7 +465,8 @@ def Builtin_Function : Builtin_Type<"Function", "function"> {
 // IndexType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Index : Builtin_Type<"Index", "index"> {
+def Builtin_Index : Builtin_Type<"Index", "index",
+    [VectorElementTypeInterface]> {
   let summary = "Integer-like type with unknown platform-dependent bit width";
   let description = [{
     Syntax:
@@ -477,7 +496,8 @@ def Builtin_Index : Builtin_Type<"Index", "index"> {
 // IntegerType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Integer : Builtin_Type<"Integer", "integer"> {
+def Builtin_Integer : Builtin_Type<"Integer", "integer",
+    [VectorElementTypeInterface]> {
   let summary = "Integer type with arbitrary precision up to a fixed limit";
   let description = [{
     Syntax:
@@ -1035,6 +1055,17 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "tensor", [
     RankedTensorType clone(::mlir::Type elementType) {
       return ::llvm::cast<RankedTensorType>(cloneWith(getShape(), elementType));
     }
+
+    /// Return a clone of this type without the encoding.
+    RankedTensorType dropEncoding() {
+      return RankedTensorType::get(getShape(), getElementType());
+    }
+
+    /// Return a clone of this type with the given new encoding and the same
+    /// shape and element type as this type.
+    RankedTensorType cloneWithEncoding(::mlir::Attribute encoding) {
+      return RankedTensorType::get(getShape(), getElementType(), encoding);
+    }
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
@@ -1238,7 +1269,11 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "unranked_tensor", [
 // VectorType
 //===----------------------------------------------------------------------===//
 
-def Builtin_VectorTypeElementType : AnyTypeOf<[AnyInteger, Index, AnyFloat]> {
+// Note: VectorType uses this type constraint instead of a plain
+// VectorElementTypeInterface, so that methods with mlir::Type are generated.
+// We may want to drop this in future and require VectorElementTypeInterface
+// for all methods.
+def Builtin_VectorTypeElementType : AnyTypeOf<[VectorElementTypeInterface]> {
   let cppFunctionName = "isValidVectorTypeElementType";
 }
 

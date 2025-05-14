@@ -51,42 +51,53 @@ constexpr void test_iterators() {
   }
 }
 
-// Make sure std::ranges::fill_n behaves properly with std::vector<bool> iterators with custom
-// size types. See https://github.com/llvm/llvm-project/pull/122410.
-//
 // The `ranges::{fill, fill_n}` algorithms require `vector<bool, Alloc>::iterator` to satisfy
 // the `std::indirectly_writable` concept when used with `vector<bool, Alloc>`, which is only
 // satisfied since C++23.
 #if TEST_STD_VER >= 23
-TEST_CONSTEXPR_CXX20 void test_bititer_with_custom_sized_types() {
-  {
-    using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
-    std::vector<bool, Alloc> in(100, false, Alloc(1));
-    std::vector<bool, Alloc> expected(100, true, Alloc(1));
-    std::ranges::fill_n(std::ranges::begin(in), in.size(), true);
-    assert(in == expected);
+constexpr bool test_vector_bool(std::size_t N) {
+  {   // Test cases validating leading/trailing bits unfilled remain unchanged
+    { // Leading bits are not filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      expected[0] = expected[1] = false;
+      std::ranges::fill_n(std::ranges::begin(in) + 2, N - 2, true);
+      assert(in == expected);
+    }
+    { // Trailing bits are not filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      expected[N - 1] = expected[N - 2] = false;
+      std::ranges::fill_n(std::ranges::begin(in), N - 2, true);
+      assert(in == expected);
+    }
+    { // Leading and trailing bits are not filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      expected[0] = expected[1] = expected[N - 1] = expected[N - 2] = false;
+      std::ranges::fill_n(std::ranges::begin(in) + 2, N - 4, true);
+      assert(in == expected);
+    }
   }
-  {
-    using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
-    std::vector<bool, Alloc> in(200, false, Alloc(1));
-    std::vector<bool, Alloc> expected(200, true, Alloc(1));
-    std::ranges::fill_n(std::ranges::begin(in), in.size(), true);
-    assert(in == expected);
+
+  {   // Test cases with full or partial bytes filled
+    { // Full bytes filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      std::ranges::fill_n(std::ranges::begin(in), N, true);
+      assert(in == expected);
+    }
+    { // Partial bytes with offset filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      std::ranges::fill_n(std::ranges::begin(in) + 4, N - 8, true);
+      std::ranges::fill_n(std::ranges::begin(expected), 4, false);
+      std::ranges::fill_n(std::ranges::end(expected) - 4, 4, false);
+      assert(in == expected);
+    }
   }
-  {
-    using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
-    std::vector<bool, Alloc> in(200, false, Alloc(1));
-    std::vector<bool, Alloc> expected(200, true, Alloc(1));
-    std::ranges::fill_n(std::ranges::begin(in), in.size(), true);
-    assert(in == expected);
-  }
-  {
-    using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
-    std::vector<bool, Alloc> in(200, false, Alloc(1));
-    std::vector<bool, Alloc> expected(200, true, Alloc(1));
-    std::ranges::fill_n(std::ranges::begin(in), in.size(), true);
-    assert(in == expected);
-  }
+
+  return true;
 }
 #endif
 
@@ -122,7 +133,46 @@ constexpr bool test() {
   }
 
 #if TEST_STD_VER >= 23
-  test_bititer_with_custom_sized_types();
+  { // Test vector<bool>::iterator optimization
+    assert(test_vector_bool(8));
+    assert(test_vector_bool(19));
+    assert(test_vector_bool(32));
+    assert(test_vector_bool(49));
+    assert(test_vector_bool(64));
+    assert(test_vector_bool(199));
+    assert(test_vector_bool(256));
+
+    // Make sure std::ranges::fill_n behaves properly with std::vector<bool> iterators with custom
+    // size types. See https://github.com/llvm/llvm-project/pull/122410.
+    {
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(100, false, Alloc(1));
+      std::vector<bool, Alloc> expected(100, true, Alloc(1));
+      std::ranges::fill_n(std::ranges::begin(in), in.size(), true);
+      assert(in == expected);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(200, false, Alloc(1));
+      std::vector<bool, Alloc> expected(200, true, Alloc(1));
+      std::ranges::fill_n(std::ranges::begin(in), in.size(), true);
+      assert(in == expected);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
+      std::vector<bool, Alloc> in(200, false, Alloc(1));
+      std::vector<bool, Alloc> expected(200, true, Alloc(1));
+      std::ranges::fill_n(std::ranges::begin(in), in.size(), true);
+      assert(in == expected);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
+      std::vector<bool, Alloc> in(200, false, Alloc(1));
+      std::vector<bool, Alloc> expected(200, true, Alloc(1));
+      std::ranges::fill_n(std::ranges::begin(in), in.size(), true);
+      assert(in == expected);
+    }
+  }
 #endif
 
   return true;

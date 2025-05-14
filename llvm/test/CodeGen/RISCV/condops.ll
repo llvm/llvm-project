@@ -1348,13 +1348,13 @@ define i64 @seteq(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    xor a1, a1, a3
 ; RV32I-NEXT:    xor a0, a0, a2
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    beqz a0, .LBB23_2
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    mv a0, a4
+; RV32I-NEXT:    beqz a1, .LBB23_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a4, a6
+; RV32I-NEXT:    mv a0, a6
 ; RV32I-NEXT:    mv a5, a7
 ; RV32I-NEXT:  .LBB23_2:
-; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
 ; RV32I-NEXT:    ret
 ;
@@ -1425,13 +1425,13 @@ define i64 @setne(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    xor a1, a1, a3
 ; RV32I-NEXT:    xor a0, a0, a2
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    bnez a0, .LBB24_2
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    mv a0, a4
+; RV32I-NEXT:    bnez a1, .LBB24_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a4, a6
+; RV32I-NEXT:    mv a0, a6
 ; RV32I-NEXT:    mv a5, a7
 ; RV32I-NEXT:  .LBB24_2:
-; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
 ; RV32I-NEXT:    ret
 ;
@@ -2196,13 +2196,13 @@ define i64 @setule(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
 define i64 @seteq_zero(i64 %a, i64 %rs1, i64 %rs2) {
 ; RV32I-LABEL: seteq_zero:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    beqz a0, .LBB33_2
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beqz a1, .LBB33_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a2, a4
+; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a3, a5
 ; RV32I-NEXT:  .LBB33_2:
-; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    mv a1, a3
 ; RV32I-NEXT:    ret
 ;
@@ -2264,13 +2264,13 @@ define i64 @seteq_zero(i64 %a, i64 %rs1, i64 %rs2) {
 define i64 @setne_zero(i64 %a, i64 %rs1, i64 %rs2) {
 ; RV32I-LABEL: setne_zero:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    bnez a0, .LBB34_2
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bnez a1, .LBB34_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a2, a4
+; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a3, a5
 ; RV32I-NEXT:  .LBB34_2:
-; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    mv a1, a3
 ; RV32I-NEXT:    ret
 ;
@@ -2333,13 +2333,13 @@ define i64 @seteq_constant(i64 %a, i64 %rs1, i64 %rs2) {
 ; RV32I-LABEL: seteq_constant:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    xori a0, a0, 123
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    beqz a0, .LBB35_2
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beqz a1, .LBB35_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a2, a4
+; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a3, a5
 ; RV32I-NEXT:  .LBB35_2:
-; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    mv a1, a3
 ; RV32I-NEXT:    ret
 ;
@@ -2408,13 +2408,13 @@ define i64 @setne_constant(i64 %a, i64 %rs1, i64 %rs2) {
 ; RV32I-LABEL: setne_constant:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    xori a0, a0, 456
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    bnez a0, .LBB36_2
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bnez a1, .LBB36_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a2, a4
+; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a3, a5
 ; RV32I-NEXT:  .LBB36_2:
-; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    mv a1, a3
 ; RV32I-NEXT:    ret
 ;
@@ -2483,13 +2483,13 @@ define i64 @seteq_2048(i64 %a, i64 %rs1, i64 %rs2) {
 ; RV32I-LABEL: seteq_2048:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    binvi a0, a0, 11
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    beqz a0, .LBB37_2
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beqz a1, .LBB37_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a2, a4
+; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a3, a5
 ; RV32I-NEXT:  .LBB37_2:
-; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    mv a1, a3
 ; RV32I-NEXT:    ret
 ;
@@ -2559,13 +2559,13 @@ define i64 @seteq_neg2048(i64 %a, i64 %rs1, i64 %rs2) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    not a1, a1
 ; RV32I-NEXT:    xori a0, a0, -2048
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    beqz a0, .LBB38_2
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beqz a1, .LBB38_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a2, a4
+; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a3, a5
 ; RV32I-NEXT:  .LBB38_2:
-; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    mv a1, a3
 ; RV32I-NEXT:    ret
 ;
@@ -2637,13 +2637,13 @@ define i64 @setne_neg2048(i64 %a, i64 %rs1, i64 %rs2) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    not a1, a1
 ; RV32I-NEXT:    xori a0, a0, -2048
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    bnez a0, .LBB39_2
+; RV32I-NEXT:    or a1, a0, a1
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bnez a1, .LBB39_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a2, a4
+; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a3, a5
 ; RV32I-NEXT:  .LBB39_2:
-; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    mv a1, a3
 ; RV32I-NEXT:    ret
 ;

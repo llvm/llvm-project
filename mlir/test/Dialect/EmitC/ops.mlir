@@ -39,6 +39,11 @@ func.func @cast(%arg0: i32) {
   return
 }
 
+func.func @cast_array_to_pointer(%arg0: !emitc.array<3xi32>) {
+  %1 = emitc.cast %arg0: !emitc.array<3xi32> to !emitc.ptr<i32>
+  return
+}
+
 func.func @c() {
   %1 = "emitc.constant"(){value = 42 : i32} : () -> i32
   %2 = "emitc.constant"(){value = 42 : index} : () -> !emitc.size_t
@@ -238,6 +243,18 @@ emitc.verbatim "#endif  // __cplusplus"
 emitc.verbatim "typedef int32_t i32;"
 emitc.verbatim "typedef float f32;"
 
+// The value is not interpreted as format string if there are no operands.
+emitc.verbatim "{} {  }"
+
+func.func @test_verbatim(%arg0 : !emitc.ptr<i32>, %arg1 : i32) {
+  emitc.verbatim "{} + {};" args %arg0, %arg1 : !emitc.ptr<i32>, i32
+
+  // Check there is no ambiguity whether %a is the argument to the emitc.verbatim op.
+  emitc.verbatim "a"
+  %a = "emitc.constant"(){value = 42 : i32} : () -> i32
+
+  return
+}
 
 emitc.global @uninit : i32
 emitc.global @myglobal_int : i32 = 4

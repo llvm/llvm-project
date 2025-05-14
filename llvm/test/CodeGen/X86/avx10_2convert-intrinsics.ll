@@ -50,7 +50,7 @@ define <16 x half> @test_int_x86_avx10_vcvt2ps2phx256(<8 x float> %A, <8 x float
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvt2ps2phx %ymm1, %ymm0, %ymm0 # encoding: [0x62,0xf2,0x7d,0x28,0x67,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %ret = call <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(<8 x float> %A, <8 x float> %B, <16 x half> zeroinitializer, i16 -1, i32 4)
+  %ret = call <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(<8 x float> %A, <8 x float> %B, <16 x half> zeroinitializer, i16 -1)
   ret <16 x half> %ret
 }
 
@@ -66,7 +66,7 @@ define <16 x half> @test_int_x86_avx10_vcvt2ps2phx256_mask(<16 x half> %W, i16 %
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvt2ps2phx %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x75,0x29,0x67,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(<8 x float> %A, <8 x float> %B, <16 x half> %W, i16 %U, i32 4)
+  %ret = call <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(<8 x float> %A, <8 x float> %B, <16 x half> %W, i16 %U)
   ret <16 x half> %ret
 }
 
@@ -82,52 +82,11 @@ define <16 x half> @test_int_x86_avx10_vcvt2ps2phx256_maskz(<16 x half> %W, i16 
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvt2ps2phx %ymm2, %ymm1, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x75,0xa9,0x67,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(<8 x float> %A, <8 x float> %B, <16 x half> zeroinitializer, i16 %U, i32 4)
+  %ret = call <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(<8 x float> %A, <8 x float> %B, <16 x half> zeroinitializer, i16 %U)
   ret <16 x half> %ret
 }
 
-define <16 x half> @test_int_x86_avx10_vcvt2ps2phx256_round(<8 x float> %A, <8 x float> %B) {
-; CHECK-LABEL: test_int_x86_avx10_vcvt2ps2phx256_round:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvt2ps2phx {rz-sae}, %ymm1, %ymm0, %ymm0 # encoding: [0x62,0xf2,0x79,0x78,0x67,0xc1]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %ret = call <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(<8 x float> %A, <8 x float> %B, <16 x half> zeroinitializer, i16 -1, i32 11)
-  ret <16 x half> %ret
-}
-
-define <16 x half> @test_int_x86_avx10_vcvt2ps2phx256_round_mask(<16 x half> %W, i16 %U, <8 x float> %A, <8 x float> %B) {
-; X64-LABEL: test_int_x86_avx10_vcvt2ps2phx256_round_mask:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvt2ps2phx {rz-sae}, %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x71,0x79,0x67,0xc2]
-; X64-NEXT:    retq # encoding: [0xc3]
-;
-; X86-LABEL: test_int_x86_avx10_vcvt2ps2phx256_round_mask:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvt2ps2phx {rz-sae}, %ymm2, %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x71,0x79,0x67,0xc2]
-; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(<8 x float> %A, <8 x float> %B, <16 x half> %W, i16 %U, i32 11)
-  ret <16 x half> %ret
-}
-
-define <16 x half> @test_int_x86_avx10_vcvt2ps2phx256_round_maskz(i16 %U, <8 x float> %A, <8 x float> %B) {
-; X64-LABEL: test_int_x86_avx10_vcvt2ps2phx256_round_maskz:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vcvt2ps2phx {rz-sae}, %ymm1, %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x79,0xf9,0x67,0xc1]
-; X64-NEXT:    retq # encoding: [0xc3]
-;
-; X86-LABEL: test_int_x86_avx10_vcvt2ps2phx256_round_maskz:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vcvt2ps2phx {rz-sae}, %ymm1, %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x79,0xf9,0x67,0xc1]
-; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(<8 x float> %A, <8 x float> %B, <16 x half> zeroinitializer, i16 %U, i32 11)
-  ret <16 x half> %ret
-}
-
-declare <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(<8 x float>, <8 x float>, <16 x half>, i16, i32)
+declare <16 x half> @llvm.x86.avx10.mask.vcvt2ps2phx.256(<8 x float>, <8 x float>, <16 x half>, i16)
 
 define <16 x i8> @test_int_x86_avx10_vcvtbiasph2bf8128(<16 x i8> %A, <8 x half> %B) nounwind {
 ; CHECK-LABEL: test_int_x86_avx10_vcvtbiasph2bf8128:

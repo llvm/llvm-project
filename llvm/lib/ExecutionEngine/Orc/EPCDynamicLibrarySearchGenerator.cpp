@@ -42,6 +42,18 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
              << Symbols << "\n";
     });
 
+  // If there's no handle then resolve all requested symbols to null.
+  if (!H) {
+    assert(Allow && "No handle or filter?");
+    SymbolMap Nulls;
+    for (auto &[Name, LookupFlags] : Symbols) {
+      if (Allow(Name))
+        Nulls[Name] = {};
+    }
+    return addAbsolutes(JD, std::move(Nulls));
+  }
+
+  // Otherwise proceed with lookup in the remote.
   SymbolLookupSet LookupSymbols;
 
   for (auto &KV : Symbols) {
@@ -51,7 +63,7 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
     LookupSymbols.add(KV.first, SymbolLookupFlags::WeaklyReferencedSymbol);
   }
 
-  DylibManager::LookupRequest Request(H, LookupSymbols);
+  DylibManager::LookupRequest Request(*H, LookupSymbols);
   // Copy-capture LookupSymbols, since LookupRequest keeps a reference.
   EPC.getDylibMgr().lookupSymbolsAsync(Request, [this, &JD, LS = std::move(LS),
                                                  LookupSymbols](
@@ -85,14 +97,18 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
       return LS.continueLookup(Error::success());
 
     // Define resolved symbols.
-    Error Err = AddAbsoluteSymbols
-                    ? AddAbsoluteSymbols(JD, std::move(NewSymbols))
-                    : JD.define(absoluteSymbols(std::move(NewSymbols)));
+    Error Err = addAbsolutes(JD, std::move(NewSymbols));
 
     LS.continueLookup(std::move(Err));
   });
 
   return Error::success();
+}
+
+Error EPCDynamicLibrarySearchGenerator::addAbsolutes(JITDylib &JD,
+                                                     SymbolMap Symbols) {
+  return AddAbsoluteSymbols ? AddAbsoluteSymbols(JD, std::move(Symbols))
+                            : JD.define(absoluteSymbols(std::move(Symbols)));
 }
 
 } // end namespace orc

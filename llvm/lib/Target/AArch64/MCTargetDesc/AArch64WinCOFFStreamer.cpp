@@ -74,7 +74,7 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinUnwindCode(unsigned UnwindCode,
     return;
   auto Inst = WinEH::Instruction(UnwindCode, /*Label=*/nullptr, Reg, Offset);
   if (S.isInEpilogCFI())
-    CurFrame->EpilogMap[S.getCurrentEpilog()].Instructions.push_back(Inst);
+    S.getCurrentWinEpilog()->Instructions.push_back(Inst);
   else
     CurFrame->Instructions.push_back(Inst);
 }
@@ -195,7 +195,7 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFIEpilogEnd() {
   if (S.isInEpilogCFI()) {
     WinEH::Instruction Inst =
         WinEH::Instruction(Win64EH::UOP_End, /*Label=*/nullptr, -1, 0);
-    CurFrame->EpilogMap[S.getCurrentEpilog()].Instructions.push_back(Inst);
+    S.getCurrentWinEpilog()->Instructions.push_back(Inst);
   }
   S.emitWinCFIEndEpilogue();
 }
@@ -284,11 +284,25 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveAnyRegQPX(unsigned Reg,
   emitARM64WinUnwindCode(Win64EH::UOP_SaveAnyRegQPX, Reg, Offset);
 }
 
-MCWinCOFFStreamer *
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIAllocZ(int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_AllocZ, 0, Offset);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveZReg(unsigned Reg,
+                                                           int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveZReg, Reg, Offset);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISavePReg(unsigned Reg,
+                                                           int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_SavePReg, Reg, Offset);
+}
+
+MCStreamer *
 llvm::createAArch64WinCOFFStreamer(MCContext &Context,
-                                   std::unique_ptr<MCAsmBackend> MAB,
-                                   std::unique_ptr<MCObjectWriter> OW,
-                                   std::unique_ptr<MCCodeEmitter> Emitter) {
+                                   std::unique_ptr<MCAsmBackend> &&MAB,
+                                   std::unique_ptr<MCObjectWriter> &&OW,
+                                   std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return new AArch64WinCOFFStreamer(Context, std::move(MAB), std::move(Emitter),
                                     std::move(OW));
 }

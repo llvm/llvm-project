@@ -13,7 +13,6 @@
 #define _LIBCPP___CXX03___BIT_COUNTR_H
 
 #include <__cxx03/__bit/rotate.h>
-#include <__cxx03/__concepts/arithmetic.h>
 #include <__cxx03/__config>
 #include <__cxx03/limits>
 
@@ -62,20 +61,6 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __coun
   }
 #endif // __has_builtin(__builtin_ctzg)
 }
-
-#if _LIBCPP_STD_VER >= 20
-
-template <__libcpp_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int countr_zero(_Tp __t) noexcept {
-  return std::__countr_zero(__t);
-}
-
-template <__libcpp_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int countr_one(_Tp __t) noexcept {
-  return __t != numeric_limits<_Tp>::max() ? std::countr_zero(static_cast<_Tp>(~__t)) : numeric_limits<_Tp>::digits;
-}
-
-#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

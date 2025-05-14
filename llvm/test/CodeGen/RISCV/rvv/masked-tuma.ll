@@ -32,7 +32,7 @@ declare { <vscale x 1 x i64>, iXLen } @llvm.riscv.vleff.mask.nxv1i64(
   <vscale x 1 x i1>,
   iXLen,
   iXLen)
-define <vscale x 1 x i64> @intrinsic_vleff_mask_v_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, ptr %1, <vscale x 1 x i1> %2, iXLen %3, iXLen* %4) nounwind {
+define <vscale x 1 x i64> @intrinsic_vleff_mask_v_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, ptr %1, <vscale x 1 x i1> %2, iXLen %3, ptr %4) nounwind {
 ; RV32-LABEL: intrinsic_vleff_mask_v_nxv1i64_nxv1i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetvli zero, a1, e64, m1, tu, ma
@@ -56,7 +56,7 @@ entry:
     iXLen %3, iXLen 2)
   %b = extractvalue { <vscale x 1 x i64>, iXLen } %a, 0
   %c = extractvalue { <vscale x 1 x i64>, iXLen } %a, 1
-  store iXLen %c, iXLen* %4
+  store iXLen %c, ptr %4
 
   ret <vscale x 1 x i64> %b
 }

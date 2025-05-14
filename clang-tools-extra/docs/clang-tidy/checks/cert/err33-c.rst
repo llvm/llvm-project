@@ -190,7 +190,7 @@ This check is an alias of check :doc:`bugprone-unused-return-value <../bugprone/
 with a fixed set of functions.
 
 Suppressing issues by casting to ``void`` is enabled by default and can be
-disabled by setting `AllowCastToVoid` option to ``false``.
+disabled by setting `AllowCastToVoid` option to `false`.
 
 The check corresponds to a part of CERT C Coding Standard rule `ERR33-C.
 Detect and handle standard library errors

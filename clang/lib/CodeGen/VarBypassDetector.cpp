@@ -8,6 +8,7 @@
 
 #include "VarBypassDetector.h"
 
+#include "CodeGenModule.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
@@ -17,13 +18,13 @@ using namespace CodeGen;
 
 /// Clear the object and pre-process for the given statement, usually function
 /// body statement.
-void VarBypassDetector::Init(const Stmt *Body) {
+void VarBypassDetector::Init(CodeGenModule &CGM, const Stmt *Body) {
   FromScopes.clear();
   ToScopes.clear();
   Bypasses.clear();
   Scopes = {{~0U, nullptr}};
   unsigned ParentScope = 0;
-  AlwaysBypassed = !BuildScopeInformation(Body, ParentScope);
+  AlwaysBypassed = !BuildScopeInformation(CGM, Body, ParentScope);
   if (!AlwaysBypassed)
     Detect();
 }
@@ -31,7 +32,7 @@ void VarBypassDetector::Init(const Stmt *Body) {
 /// Build scope information for a declaration that is part of a DeclStmt.
 /// Returns false if we failed to build scope information and can't tell for
 /// which vars are being bypassed.
-bool VarBypassDetector::BuildScopeInformation(const Decl *D,
+bool VarBypassDetector::BuildScopeInformation(CodeGenModule &CGM, const Decl *D,
                                               unsigned &ParentScope) {
   const VarDecl *VD = dyn_cast<VarDecl>(D);
   if (VD && VD->hasLocalStorage()) {
@@ -41,7 +42,7 @@ bool VarBypassDetector::BuildScopeInformation(const Decl *D,
 
   if (const VarDecl *VD = dyn_cast<VarDecl>(D))
     if (const Expr *Init = VD->getInit())
-      return BuildScopeInformation(Init, ParentScope);
+      return BuildScopeInformation(CGM, Init, ParentScope);
 
   return true;
 }
@@ -50,7 +51,7 @@ bool VarBypassDetector::BuildScopeInformation(const Decl *D,
 /// LabelAndGotoScopes and recursively walking the AST as needed.
 /// Returns false if we failed to build scope information and can't tell for
 /// which vars are being bypassed.
-bool VarBypassDetector::BuildScopeInformation(const Stmt *S,
+bool VarBypassDetector::BuildScopeInformation(CodeGenModule &CGM, const Stmt *S,
                                               unsigned &origParentScope) {
   // If this is a statement, rather than an expression, scopes within it don't
   // propagate out into the enclosing scope. Otherwise we have to worry about
@@ -68,12 +69,12 @@ bool VarBypassDetector::BuildScopeInformation(const Stmt *S,
 
   case Stmt::SwitchStmtClass:
     if (const Stmt *Init = cast<SwitchStmt>(S)->getInit()) {
-      if (!BuildScopeInformation(Init, ParentScope))
+      if (!BuildScopeInformation(CGM, Init, ParentScope))
         return false;
       ++StmtsToSkip;
     }
     if (const VarDecl *Var = cast<SwitchStmt>(S)->getConditionVariable()) {
-      if (!BuildScopeInformation(Var, ParentScope))
+      if (!BuildScopeInformation(CGM, Var, ParentScope))
         return false;
       ++StmtsToSkip;
     }
@@ -86,7 +87,7 @@ bool VarBypassDetector::BuildScopeInformation(const Stmt *S,
   case Stmt::DeclStmtClass: {
     const DeclStmt *DS = cast<DeclStmt>(S);
     for (auto *I : DS->decls())
-      if (!BuildScopeInformation(I, origParentScope))
+      if (!BuildScopeInformation(CGM, I, origParentScope))
         return false;
     return true;
   }
@@ -126,7 +127,11 @@ bool VarBypassDetector::BuildScopeInformation(const Stmt *S,
     }
 
     // Recursively walk the AST.
-    if (!BuildScopeInformation(SubStmt, ParentScope))
+    bool Result;
+    CGM.runWithSufficientStackSpace(S->getEndLoc(), [&] {
+      Result = BuildScopeInformation(CGM, SubStmt, ParentScope);
+    });
+    if (!Result)
       return false;
   }
   return true;

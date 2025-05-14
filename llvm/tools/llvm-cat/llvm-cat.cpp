@@ -32,7 +32,7 @@
 
 using namespace llvm;
 
-cl::OptionCategory CatCategory("llvm-cat Options");
+static cl::OptionCategory CatCategory("llvm-cat Options");
 
 static cl::opt<bool>
     BinaryCat("b", cl::desc("Whether to perform binary concatenation"),

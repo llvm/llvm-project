@@ -725,28 +725,6 @@ Pass *CallGraphSCCPass::createPrinterPass(raw_ostream &OS,
   return new PrintCallGraphPass(Banner, OS);
 }
 
-static std::string getDescription(const CallGraphSCC &SCC) {
-  std::string Desc = "SCC (";
-  ListSeparator LS;
-  for (CallGraphNode *CGN : SCC) {
-    Desc += LS;
-    Function *F = CGN->getFunction();
-    if (F)
-      Desc += F->getName();
-    else
-      Desc += "<<null function>>";
-  }
-  Desc += ")";
-  return Desc;
-}
-
-bool CallGraphSCCPass::skipSCC(CallGraphSCC &SCC) const {
-  OptPassGate &Gate =
-      SCC.getCallGraph().getModule().getContext().getOptPassGate();
-  return Gate.isEnabled() &&
-         !Gate.shouldRunPass(this->getPassName(), getDescription(SCC));
-}
-
 char DummyCGSCCPass::ID = 0;
 
 INITIALIZE_PASS(DummyCGSCCPass, "DummyCGSCCPass", "DummyCGSCCPass", false,

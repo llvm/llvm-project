@@ -863,14 +863,14 @@ define i64 @extractelt_nxv16i64_neg1(<vscale x 16 x i64> %v) {
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    addi a0, sp, 64
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    vs8r.v v8, (a0)
-; CHECK-NEXT:    slli a1, a2, 3
-; CHECK-NEXT:    add a1, a0, a1
-; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    li a1, -1
+; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    slli a3, a2, 3
 ; CHECK-NEXT:    srli a1, a1, 32
 ; CHECK-NEXT:    slli a2, a2, 1
+; CHECK-NEXT:    add a3, a0, a3
 ; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    vs8r.v v16, (a3)
 ; CHECK-NEXT:    bltu a2, a1, .LBB74_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1

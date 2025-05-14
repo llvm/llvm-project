@@ -19,6 +19,7 @@
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace mlir {
@@ -34,6 +35,8 @@ using DataLayoutEntryList = llvm::SmallVector<DataLayoutEntryInterface, 4>;
 using DataLayoutEntryListRef = llvm::ArrayRef<DataLayoutEntryInterface>;
 using TargetDeviceSpecListRef = llvm::ArrayRef<TargetDeviceSpecInterface>;
 using TargetDeviceSpecEntry = std::pair<StringAttr, TargetDeviceSpecInterface>;
+using DataLayoutIdentifiedEntryMap =
+    ::llvm::MapVector<::mlir::StringAttr, ::mlir::DataLayoutEntryInterface>;
 class DataLayoutOpInterface;
 class DataLayoutSpecInterface;
 class ModuleOp;
@@ -74,9 +77,17 @@ getDefaultIndexBitwidth(Type type, const DataLayout &dataLayout,
 /// DataLayoutInterface if specified, otherwise returns the default.
 Attribute getDefaultEndianness(DataLayoutEntryInterface entry);
 
+/// Default handler for the default memory space request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultMemorySpace(DataLayoutEntryInterface entry);
+
 /// Default handler for alloca memory space request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
 Attribute getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry);
+
+/// Default handler for mangling mode request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultManglingMode(DataLayoutEntryInterface entry);
 
 /// Default handler for program memory space request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
@@ -227,8 +238,14 @@ public:
   /// Returns the specified endianness.
   Attribute getEndianness() const;
 
+  /// Returns the default memory space used for memory operations.
+  Attribute getDefaultMemorySpace() const;
+
   /// Returns the memory space used for AllocaOps.
   Attribute getAllocaMemorySpace() const;
+
+  /// Returns the mangling mode.
+  Attribute getManglingMode() const;
 
   /// Returns the memory space used for program memory operations.
   Attribute getProgramMemorySpace() const;
@@ -276,7 +293,10 @@ private:
 
   /// Cache for the endianness.
   mutable std::optional<Attribute> endianness;
-  /// Cache for alloca, global, and program memory spaces.
+  /// Cache for the mangling mode.
+  mutable std::optional<Attribute> manglingMode;
+  /// Cache for default, alloca, global, and program memory spaces.
+  mutable std::optional<Attribute> defaultMemorySpace;
   mutable std::optional<Attribute> allocaMemorySpace;
   mutable std::optional<Attribute> programMemorySpace;
   mutable std::optional<Attribute> globalMemorySpace;

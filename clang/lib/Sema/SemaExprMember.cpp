@@ -772,7 +772,7 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
             BaseExpr, BaseExpr->getType(), OpLoc, IsArrow, SS, SourceLocation(),
             nullptr, R, nullptr, nullptr);
       },
-      Sema::CTK_ErrorRecovery, DC);
+      CorrectTypoKind::ErrorRecovery, DC);
 
   return false;
 }
@@ -1136,7 +1136,6 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     if (Converted.isInvalid())
       return true;
     BaseExpr = Converted.get();
-    DiagnoseDiscardedExprMarkedNodiscard(BaseExpr);
     return false;
   };
   auto ConvertBaseExprToGLValue = [&] {
@@ -1458,7 +1457,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
       Validator.IsObjCIvarLookup = IsArrow;
       if (TypoCorrection Corrected = S.CorrectTypo(
               R.getLookupNameInfo(), Sema::LookupMemberName, nullptr, nullptr,
-              Validator, Sema::CTK_ErrorRecovery, IDecl)) {
+              Validator, CorrectTypoKind::ErrorRecovery, IDecl)) {
         IV = Corrected.getCorrectionDeclAs<ObjCIvarDecl>();
         S.diagnoseTypo(
             Corrected,
@@ -1697,7 +1696,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
         QualType(), false);
   }
 
-  if (BaseType->isExtVectorBoolType()) {
+  if (BaseType->isPackedVectorBoolType(S.Context)) {
     // We disallow element access for ext_vector_type bool.  There is no way to
     // materialize a reference to a vector element as a pointer (each element is
     // one bit in the vector).

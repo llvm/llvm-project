@@ -309,14 +309,14 @@ define i128 @fptoui_sat_f16_to_i128(half %a) nounwind {
 ; RV64IZFH-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64IZFH-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64IZFH-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64IZFH-NEXT:    fcvt.s.h fa0, fa0
 ; RV64IZFH-NEXT:    lui a0, %hi(.LCPI5_0)
-; RV64IZFH-NEXT:    fmv.w.x fa5, zero
-; RV64IZFH-NEXT:    fle.s a1, fa5, fa0
 ; RV64IZFH-NEXT:    flw fa5, %lo(.LCPI5_0)(a0)
-; RV64IZFH-NEXT:    flt.s a0, fa5, fa0
-; RV64IZFH-NEXT:    neg s0, a0
-; RV64IZFH-NEXT:    neg s1, a1
+; RV64IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV64IZFH-NEXT:    fmv.w.x fa4, zero
+; RV64IZFH-NEXT:    fle.s a0, fa4, fa0
+; RV64IZFH-NEXT:    flt.s a1, fa5, fa0
+; RV64IZFH-NEXT:    neg s0, a1
+; RV64IZFH-NEXT:    neg s1, a0
 ; RV64IZFH-NEXT:    call __fixunssfti
 ; RV64IZFH-NEXT:    and a0, s1, a0
 ; RV64IZFH-NEXT:    and a1, s1, a1

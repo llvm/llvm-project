@@ -545,22 +545,22 @@ define i32 @i32_select_fcmp_oeq(double %a, double %b, i32 %c, i32 %d) nounwind {
 ;
 ; CHECKRV32ZDINX-LABEL: i32_select_fcmp_oeq:
 ; CHECKRV32ZDINX:       # %bb.0:
-; CHECKRV32ZDINX-NEXT:    feq.d a0, a0, a2
-; CHECKRV32ZDINX-NEXT:    bnez a0, .LBB16_2
-; CHECKRV32ZDINX-NEXT:  # %bb.1:
-; CHECKRV32ZDINX-NEXT:    mv a4, a5
-; CHECKRV32ZDINX-NEXT:  .LBB16_2:
+; CHECKRV32ZDINX-NEXT:    feq.d a1, a0, a2
 ; CHECKRV32ZDINX-NEXT:    mv a0, a4
+; CHECKRV32ZDINX-NEXT:    bnez a1, .LBB16_2
+; CHECKRV32ZDINX-NEXT:  # %bb.1:
+; CHECKRV32ZDINX-NEXT:    mv a0, a5
+; CHECKRV32ZDINX-NEXT:  .LBB16_2:
 ; CHECKRV32ZDINX-NEXT:    ret
 ;
 ; CHECKRV64ZDINX-LABEL: i32_select_fcmp_oeq:
 ; CHECKRV64ZDINX:       # %bb.0:
-; CHECKRV64ZDINX-NEXT:    feq.d a0, a0, a1
-; CHECKRV64ZDINX-NEXT:    bnez a0, .LBB16_2
-; CHECKRV64ZDINX-NEXT:  # %bb.1:
-; CHECKRV64ZDINX-NEXT:    mv a2, a3
-; CHECKRV64ZDINX-NEXT:  .LBB16_2:
+; CHECKRV64ZDINX-NEXT:    feq.d a1, a0, a1
 ; CHECKRV64ZDINX-NEXT:    mv a0, a2
+; CHECKRV64ZDINX-NEXT:    bnez a1, .LBB16_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a3
+; CHECKRV64ZDINX-NEXT:  .LBB16_2:
 ; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp oeq double %a, %b
   %2 = select i1 %1, i32 %c, i32 %d
@@ -577,9 +577,9 @@ define i32 @select_fcmp_oeq_1_2(double %a, double %b) {
 ;
 ; CHECKRV32ZDINX-LABEL: select_fcmp_oeq_1_2:
 ; CHECKRV32ZDINX:       # %bb.0:
+; CHECKRV32ZDINX-NEXT:    li a4, 2
 ; CHECKRV32ZDINX-NEXT:    feq.d a0, a0, a2
-; CHECKRV32ZDINX-NEXT:    li a1, 2
-; CHECKRV32ZDINX-NEXT:    sub a0, a1, a0
+; CHECKRV32ZDINX-NEXT:    sub a0, a4, a0
 ; CHECKRV32ZDINX-NEXT:    ret
 ;
 ; CHECKRV64ZDINX-LABEL: select_fcmp_oeq_1_2:

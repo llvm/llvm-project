@@ -7841,7 +7841,7 @@ let Uses = [MXCSR], mayRaiseFPException = 1 in {
 }
 // Conversion with SAE - suppress all exceptions
 multiclass avx512_vcvt_fp_sae<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
-                              X86VectorVTInfo _Src, SDPatternOperator OpNodeSAE,
+                              X86VectorVTInfo _Src, SDNode OpNodeSAE,
                               X86FoldableSchedWrite sched> {
   let Uses = [MXCSR] in
   defm rrb : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
@@ -12036,7 +12036,8 @@ multiclass avx512_fixupimm_packed<bits<8> opc, string OpcodeStr,
 
 multiclass avx512_fixupimm_packed_sae<bits<8> opc, string OpcodeStr,
                                       X86FoldableSchedWrite sched,
-                                      X86VectorVTInfo _, X86VectorVTInfo TblVT> {
+                                      X86VectorVTInfo _, X86VectorVTInfo TblVT>
+  : avx512_fixupimm_packed<opc, OpcodeStr, sched, _, TblVT> {
 let Constraints = "$src1 = $dst", ExeDomain = _.ExeDomain, Uses = [MXCSR] in {
   defm rrib : AVX512_maskable_3src<opc, MRMSrcReg, _, (outs _.RC:$dst),
                       (ins _.RC:$src2, _.RC:$src3, i32u8imm:$src4),
@@ -12088,8 +12089,7 @@ multiclass avx512_fixupimm_packed_all<X86SchedWriteWidths sched,
                                       AVX512VLVectorVTInfo _Vec,
                                       AVX512VLVectorVTInfo _Tbl> {
   let Predicates = [HasAVX512] in
-    defm Z    : avx512_fixupimm_packed<0x54, "vfixupimm", sched.ZMM, _Vec.info512, _Tbl.info512>,
-                avx512_fixupimm_packed_sae<0x54, "vfixupimm", sched.ZMM,
+    defm Z    : avx512_fixupimm_packed_sae<0x54, "vfixupimm", sched.ZMM,
                                 _Vec.info512, _Tbl.info512>, AVX512AIi8Base,
                                 EVEX, VVVV, EVEX_V512;
   let Predicates = [HasAVX512, HasVLX] in {
@@ -13143,6 +13143,26 @@ defm VCVTTPH2UQQ : avx512_cvttph2qq<0x78, "vcvttph2uqq", X86any_cvttp2ui,
                                  SchedWriteCvtPS2DQ>, T_MAP5, PD,
                                  EVEX_CD8<16, CD8VQ>;
 
+let Predicates = [HasFP16, HasVLX] in {
+  def : Pat<(v8i16 (lrint (v8f16 VR128X:$src))), (VCVTPH2WZ128rr VR128X:$src)>;
+  def : Pat<(v8i16 (lrint (loadv8f16 addr:$src))), (VCVTPH2WZ128rm addr:$src)>;
+  def : Pat<(v16i16 (lrint (v16f16 VR256X:$src))), (VCVTPH2WZ256rr VR256X:$src)>;
+  def : Pat<(v16i16 (lrint (loadv16f16 addr:$src))), (VCVTPH2WZ256rm addr:$src)>;
+  def : Pat<(v8i32 (lrint (v8f16 VR128X:$src))), (VCVTPH2DQZ256rr VR128X:$src)>;
+  def : Pat<(v8i32 (lrint (loadv8f16 addr:$src))), (VCVTPH2DQZ256rm addr:$src)>;
+}
+
+let Predicates = [HasFP16] in {
+  def : Pat<(v32i16 (lrint (v32f16 VR512:$src))), (VCVTPH2WZrr VR512:$src)>;
+  def : Pat<(v32i16 (lrint (loadv32f16 addr:$src))), (VCVTPH2WZrm addr:$src)>;
+  def : Pat<(v16i32 (lrint (v16f16 VR256X:$src))), (VCVTPH2DQZrr VR256X:$src)>;
+  def : Pat<(v16i32 (lrint (loadv16f16 addr:$src))), (VCVTPH2DQZrm addr:$src)>;
+  def : Pat<(v8i64 (lrint (v8f16 VR128X:$src))), (VCVTPH2QQZrr VR128X:$src)>;
+  def : Pat<(v8i64 (lrint (loadv8f16 addr:$src))), (VCVTPH2QQZrm addr:$src)>;
+  def : Pat<(v8i64 (llrint (v8f16 VR128X:$src))), (VCVTPH2QQZrr VR128X:$src)>;
+  def : Pat<(v8i64 (llrint (loadv8f16 addr:$src))), (VCVTPH2QQZrm addr:$src)>;
+}
+
 // Convert Signed/Unsigned Quardword to Half
 multiclass avx512_cvtqq2ph<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                            SDPatternOperator MaskOpNode, SDNode OpNodeRnd,
@@ -13268,6 +13288,19 @@ defm VCVTTSH2USIZ: avx512_cvt_s_all<0x78, "vcvttsh2usi", f16x_info, i32x_info,
 defm VCVTTSH2USI64Z: avx512_cvt_s_all<0x78, "vcvttsh2usi", f16x_info, i64x_info,
                         any_fp_to_uint, X86cvtts2UInt, X86cvtts2UIntSAE, WriteCvtSS2I,
                         "{q}", HasFP16>, T_MAP5, XS, REX_W, EVEX_CD8<16, CD8VT1>;
+
+let Predicates = [HasFP16] in {
+  def : Pat<(i16 (lrint FR16:$src)), (EXTRACT_SUBREG (VCVTTSH2SIZrr FR16:$src), sub_16bit)>;
+  def : Pat<(i32 (lrint FR16:$src)), (VCVTTSH2SIZrr FR16:$src)>;
+  def : Pat<(i32 (lrint (loadf16 addr:$src))), (VCVTTSH2SIZrm addr:$src)>;
+}
+
+let Predicates = [HasFP16, In64BitMode] in {
+  def : Pat<(i64 (lrint FR16:$src)), (VCVTTSH2SI64Zrr FR16:$src)>;
+  def : Pat<(i64 (lrint (loadf16 addr:$src))), (VCVTTSH2SI64Zrm addr:$src)>;
+  def : Pat<(i64 (llrint FR16:$src)), (VCVTTSH2SI64Zrr FR16:$src)>;
+  def : Pat<(i64 (llrint (loadf16 addr:$src))), (VCVTTSH2SI64Zrm addr:$src)>;
+}
 
 let Predicates = [HasFP16] in {
   defm VCVTSI2SHZ  : avx512_vcvtsi_common<0x2A,  X86SintToFp, X86SintToFpRnd, WriteCvtI2SS, GR32,

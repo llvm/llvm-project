@@ -253,8 +253,8 @@ MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
     // Create an empty module when the MIR file is empty.
     NoMIRDocuments = true;
     auto M = std::make_unique<Module>(Filename, Context);
-    if (auto LayoutOverride =
-            DataLayoutCallback(M->getTargetTriple(), M->getDataLayoutStr()))
+    if (auto LayoutOverride = DataLayoutCallback(M->getTargetTriple().str(),
+                                                 M->getDataLayoutStr()))
       M->setDataLayout(*LayoutOverride);
     return M;
   }
@@ -277,8 +277,8 @@ MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
   } else {
     // Create an new, empty module.
     M = std::make_unique<Module>(Filename, Context);
-    if (auto LayoutOverride =
-            DataLayoutCallback(M->getTargetTriple(), M->getDataLayoutStr()))
+    if (auto LayoutOverride = DataLayoutCallback(M->getTargetTriple().str(),
+                                                 M->getDataLayoutStr()))
       M->setDataLayout(*LayoutOverride);
     NoLLVMIR = true;
   }
@@ -551,7 +551,7 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
 
   MF.setCallsEHReturn(YamlMF.CallsEHReturn);
   MF.setCallsUnwindInit(YamlMF.CallsUnwindInit);
-  MF.setHasEHCatchret(YamlMF.HasEHCatchret);
+  MF.setHasEHContTarget(YamlMF.HasEHContTarget);
   MF.setHasEHScopes(YamlMF.HasEHScopes);
   MF.setHasEHFunclets(YamlMF.HasEHFunclets);
   MF.setIsOutlined(YamlMF.IsOutlined);
@@ -751,7 +751,7 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
       Register Reg;
       if (parseNamedRegisterReference(PFS, Reg, RegSource.Value, Error))
         return error(Error, RegSource.SourceRange);
-      CalleeSavedRegisters.push_back(Reg);
+      CalleeSavedRegisters.push_back(Reg.id());
     }
     RegInfo.setCalleeSavedRegs(CalleeSavedRegisters);
   }
@@ -767,7 +767,7 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
 
   bool Error = false;
   // Create VRegs
-  auto populateVRegInfo = [&](const VRegInfo &Info, Twine Name) {
+  auto populateVRegInfo = [&](const VRegInfo &Info, const Twine &Name) {
     Register Reg = Info.VReg;
     switch (Info.Kind) {
     case VRegInfo::UNKNOWN:
@@ -803,7 +803,7 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
 
   for (auto P : PFS.VRegInfos) {
     const VRegInfo &Info = *P.second;
-    populateVRegInfo(Info, Twine(P.first));
+    populateVRegInfo(Info, Twine(P.first.id()));
   }
 
   // Compute MachineRegisterInfo::UsedPhysRegMask

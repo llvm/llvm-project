@@ -29,6 +29,7 @@ config.suffixes = [
     ".c",
     ".cpp",
     ".i",
+    ".cir",
     ".cppm",
     ".m",
     ".mm",
@@ -85,6 +86,7 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 tools = [
     "apinotes-test",
     "c-index-test",
+    "cir-opt",
     "clang-diff",
     "clang-format",
     "clang-repl",
@@ -184,6 +186,14 @@ if config.clang_staticanalyzer:
         )
     )
 
+    csv2json_path = os.path.join(config.test_source_root, "Analysis", "csv2json.py")
+    config.substitutions.append(
+        (
+            "%csv2json",
+            '"%s" %s' % (config.python_executable, csv2json_path),
+        )
+    )
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 config.substitutions.append(
@@ -214,6 +224,11 @@ config.substitutions.append(("%host_cxx", config.host_cxx))
 # Determine whether the test target is compatible with execution on the host.
 if "aarch64" in config.host_arch:
     config.available_features.add("aarch64-host")
+
+# Some tests are sensitive to whether clang is statically or dynamically linked
+# to other libraries.
+if not (config.build_shared_libs or config.link_llvm_dylib or config.link_clang_dylib):
+    config.available_features.add("static-libs")
 
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:
@@ -251,6 +266,7 @@ if platform.system() not in ["Darwin", "Fuchsia"]:
 
 
 def is_filesystem_case_insensitive():
+    os.makedirs(config.test_exec_root, exist_ok=True)
     handle, path = tempfile.mkstemp(prefix="case-test", dir=config.test_exec_root)
     isInsensitive = os.path.exists(
         os.path.join(os.path.dirname(path), os.path.basename(path).upper())

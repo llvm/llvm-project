@@ -103,7 +103,7 @@ main_body:
 ;CHECK: buffer_atomic_add v0,
 define amdgpu_ps float @test4() {
 main_body:
-  %v = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 1, <4 x i32> undef, i32 4, i32 0, i32 0)
+  %v = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 1, <4 x i32> poison, i32 4, i32 0, i32 0)
   %v.float = bitcast i32 %v to float
   ret float %v.float
 }

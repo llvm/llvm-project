@@ -449,10 +449,9 @@ define <33 x i8> @test_ldnp_v33i8(ptr %A) {
 ; CHECK-LABEL: test_ldnp_v33i8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ldnp q0, q1, [x0]
-; CHECK-NEXT:    add x9, x8, #32
 ; CHECK-NEXT:    ldr b2, [x0, #32]
 ; CHECK-NEXT:    stp q0, q1, [x8]
-; CHECK-NEXT:    st1.b { v2 }[0], [x9]
+; CHECK-NEXT:    stur b2, [x8, #32]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_ldnp_v33i8:
@@ -612,12 +611,11 @@ define <16 x double> @test_ldnp_v16f64(ptr %A) {
 define <vscale x 20 x float> @test_ldnp_v20f32_vscale(ptr %A) {
 ; CHECK-LABEL: test_ldnp_v20f32_vscale:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, #2, mul vl]
-; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x0, #3, mul vl]
-; CHECK-NEXT:    ld1w { z4.s }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [x0, #2, mul vl]
+; CHECK-NEXT:    ldr z3, [x0, #3, mul vl]
+; CHECK-NEXT:    ldr z4, [x0, #4, mul vl]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_ldnp_v20f32_vscale:

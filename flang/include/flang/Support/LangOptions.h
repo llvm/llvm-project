@@ -62,7 +62,10 @@ public:
 #define LANGOPT(Name, Bits, Default)
 #define ENUM_LANGOPT(Name, Type, Bits, Default) \
   Type get##Name() const { return static_cast<Type>(Name); } \
-  void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
+  void set##Name(Type Value) { \
+    assert(static_cast<unsigned>(Value) < (1u << Bits)); \
+    Name = static_cast<unsigned>(Value); \
+  }
 #include "LangOptions.def"
 
   /// Name of the IR file that contains the result of the OpenMP target

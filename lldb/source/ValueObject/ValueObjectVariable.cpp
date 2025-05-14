@@ -110,14 +110,10 @@ ValueObjectVariable::CalculateNumChildren(uint32_t max) {
   return *child_count <= max ? *child_count : max;
 }
 
-std::optional<uint64_t> ValueObjectVariable::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectVariable::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
   CompilerType type(GetCompilerType());
-
-  if (!type.IsValid())
-    return {};
-
   return type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
 }
 

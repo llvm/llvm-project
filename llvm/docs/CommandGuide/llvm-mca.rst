@@ -197,13 +197,31 @@ option specifies "``-``", then the output will also be sent to standard output.
 
   Enable all the view.
 
-.. option:: -instruction-tables
+.. option:: -instruction-tables=<level>
 
   Prints resource pressure information based on the static information
   available from the processor model. This differs from the resource pressure
   view because it doesn't require that the code is simulated. It instead prints
   the theoretical uniform distribution of resource pressure for every
   instruction in sequence.
+
+  The choice of `<level>` controls number of printed information.
+  `<level>` may be `none` (default), `normal`, `full`.
+  Note: If the option is used without `<label>`, default is `normal` (legacy).
+
+  When `<level>` is `full`, additional information are:
+  - `<Bypass Latency>`: Latency when a bypass is implemented between operands
+  in pipelines (see SchedReadAdvance).
+  - `<LLVM Opcode Name>`: mnemonic plus operands identifier.
+  - `<Resources units>`: Used resources associated with LLVM Opcode.
+  - `<instruction comment>`: reports comment if any from source assembly.
+
+  `<Resources units>` syntax can be:
+  - <Resource Name>: ReleaseAtCycle is 1.
+  - <Resource Name>[<ReleaseAtCycle>]: ReleaseAtCycle is greater than 1
+  and AcquireAtCycle is 0.
+  - <Resource Name>[<AcquireAtCycle>,<ReleaseAtCycle>]: ReleaseAtCycle
+  is greater than 1 and AcquireAtCycle is greater than 0.
 
 .. option:: -bottleneck-analysis
 

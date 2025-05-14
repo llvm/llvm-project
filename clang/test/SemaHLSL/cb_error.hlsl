@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
 // expected-note@+1 {{declared here}}
 cbuffer a {
@@ -46,4 +46,16 @@ cbuffer a {
 tbuffer B {
   // expected-error@+1 {{unknown type name 'flaot'}}
   flaot f;
+}
+
+// None of these should produce an error!
+cbuffer EmptyCBuffer {}
+
+cbuffer EmptyDeclCBuffer {
+  ;
+}
+
+cbuffer EmptyDecl2CBuffer {
+  ;
+  int X;
 }

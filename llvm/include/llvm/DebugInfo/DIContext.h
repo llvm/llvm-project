@@ -238,7 +238,7 @@ struct DIDumpOptions {
 
 class DIContext {
 public:
-  enum DIContextKind { CK_DWARF, CK_PDB, CK_BTF };
+  enum DIContextKind { CK_DWARF, CK_PDB, CK_BTF, CK_GSYM };
 
   DIContext(DIContextKind K) : Kind(K) {}
   virtual ~DIContext() = default;
@@ -252,10 +252,12 @@ public:
     return true;
   }
 
-  virtual DILineInfo getLineInfoForAddress(
+  // For getLineInfoForAddress and getLineInfoForDataAddress, std::nullopt is
+  // returned when debug info is missing for the given address.
+  virtual std::optional<DILineInfo> getLineInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
-  virtual DILineInfo
+  virtual std::optional<DILineInfo>
   getLineInfoForDataAddress(object::SectionedAddress Address) = 0;
   virtual DILineInfoTable getLineInfoForAddressRange(
       object::SectionedAddress Address, uint64_t Size,

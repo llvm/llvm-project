@@ -601,9 +601,9 @@ define dso_local <vscale x 4 x float> @dupq_f32_repeat_complex(float %x, float %
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    ret
-  %1 = insertelement <4 x float> undef, float %x, i64 0
+  %1 = insertelement <4 x float> poison, float %x, i64 0
   %2 = insertelement <4 x float> %1, float %y, i64 1
-  %3 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %2, i64 0)
+  %3 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %2, i64 0)
   %4 = bitcast <vscale x 4 x float> %3 to <vscale x 2 x double>
   %5 = shufflevector <vscale x 2 x double> %4, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
   %6 = bitcast <vscale x 2 x double> %5 to <vscale x 4 x float>
@@ -618,9 +618,9 @@ define dso_local <vscale x 8 x half> @dupq_f16_repeat_complex(half %x, half %y) 
 ; CHECK-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    ret
-  %1 = insertelement <8 x half> undef, half %x, i64 0
+  %1 = insertelement <8 x half> poison, half %x, i64 0
   %2 = insertelement <8 x half> %1, half %y, i64 1
-  %3 = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> %2, i64 0)
+  %3 = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> poison, <8 x half> %2, i64 0)
   %4 = bitcast <vscale x 8 x half> %3 to <vscale x 4 x float>
   %5 = shufflevector <vscale x 4 x float> %4, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
   %6 = bitcast <vscale x 4 x float> %5 to <vscale x 8 x half>

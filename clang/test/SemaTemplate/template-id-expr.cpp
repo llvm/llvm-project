@@ -19,7 +19,7 @@ template<typename T>
 struct X0 {
   template<typename U>
   void f1();
-  
+
   template<typename U>
   void f2(U) {
     f1<U>();
@@ -39,9 +39,9 @@ struct Y {
 template<int I>
 struct X {
   X(int, int);
-  void f() { 
-    Y<X<I> >(X<I>(0, 0)); 
-    Y<X<I> >(::X<I>(0, 0)); 
+  void f() {
+    Y<X<I> >(X<I>(0, 0));
+    Y<X<I> >(::X<I>(0, 0));
   }
 };
 
@@ -184,7 +184,7 @@ class E {
 #if __cplusplus <= 199711L
 // expected-warning@+2 {{extension}}
 #endif
-template<typename T> using D = int; // expected-note {{declared here}} 
+template<typename T> using D = int; // expected-note {{declared here}}
 E<D> ed; // expected-note {{instantiation of}}
 
 namespace non_functions {
@@ -202,7 +202,7 @@ struct P {
 struct Q {
   template <typename T> int foo() {
     return T::template I<int>;
-    // expected-error@-1 {{'P::I' is expected to be a non-type template, but instantiated to a type alias template}}
+    // expected-error@-1 {{'P::template I' is expected to be a non-type template, but instantiated to a type alias template}}
     // expected-note@#TypeAlias {{type alias template declared here}}
   }
 };
@@ -251,18 +251,18 @@ template <typename T1> struct A {
 
   void foo() {
     C<T1>::template Type<2>;
-    // expected-error@-1 {{'C<float>::Type' is expected to be a non-type template, but instantiated to a class template}}}
+    // expected-error@-1 {{'C<float>::template Type' is expected to be a non-type template, but instantiated to a class template}}}
     // expected-note@#ClassTemplate {{class template declared here}}
 
     foo(C<T1>::Type<2>); // expected-error {{expected expression}}
 
     foo(C<T1>::template Type<2>);
-    // expected-error@-1 {{'C<float>::Type' is expected to be a non-type template, but instantiated to a class template}}
+    // expected-error@-1 {{'C<float>::template Type' is expected to be a non-type template, but instantiated to a class template}}
     // expected-note@#ClassTemplate {{class template declared here}}
 
     foo(C<T1>::template Type<2>());
-    // expected-error@-1 {{'C<float>::Type' is expected to be a non-type template, but instantiated to a class template}}
-    // expected-error@-2 {{called object type '<dependent type>' is not a function or function pointer}}
+    // expected-error@-1 {{'C<float>::template Type' is expected to be a non-type template, but instantiated to a class template}}
+    // expected-error@-2 {{called object type 'C<float>::template Type<2>' is not a function or function pointer}}
     // expected-note@#ClassTemplate {{class template declared here}}
 
     foo(typename C<T1>::template Type<2>());

@@ -126,16 +126,13 @@ let Features = "rdseed", Attributes = [NoThrow] in {
   def rdseed64_step : X86Builtin<"unsigned int(unsigned long long int *)">;
 }
 
-let Features = "lzcnt", Attributes = [NoThrow, Const, Constexpr] in {
-  def lzcnt_u64 : X86Builtin<"unsigned long long int(unsigned long long int)">;
-}
-
 let Features = "bmi", Attributes = [NoThrow, Const, Constexpr] in {
   def bextr_u64 : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
 }
 
 let Attributes = [NoThrow, Const, Constexpr] in {
   def tzcnt_u64 : X86Builtin<"unsigned long long int(unsigned long long int)">;
+  def lzcnt_u64 : X86Builtin<"unsigned long long int(unsigned long long int)">;
 }
 
 let Features = "bmi2", Attributes = [NoThrow, Const, Constexpr] in {

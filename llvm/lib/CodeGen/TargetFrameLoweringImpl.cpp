@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
@@ -180,5 +181,39 @@ TargetFrameLowering::getInitialCFARegister(const MachineFunction &MF) const {
 TargetFrameLowering::DwarfFrameBase
 TargetFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
-  return DwarfFrameBase{DwarfFrameBase::Register, {RI->getFrameRegister(MF)}};
+  return DwarfFrameBase{DwarfFrameBase::Register, {RI->getFrameRegister(MF).id()}};
+}
+
+void TargetFrameLowering::spillCalleeSavedRegister(
+    MachineBasicBlock &SaveBlock, MachineBasicBlock::iterator MI,
+    const CalleeSavedInfo &CS, const TargetInstrInfo *TII,
+    const TargetRegisterInfo *TRI) const {
+  // Insert the spill to the stack frame.
+  MCRegister Reg = CS.getReg();
+
+  if (CS.isSpilledToReg()) {
+    BuildMI(SaveBlock, MI, DebugLoc(), TII->get(TargetOpcode::COPY),
+            CS.getDstReg())
+        .addReg(Reg, getKillRegState(true));
+  } else {
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    TII->storeRegToStackSlot(SaveBlock, MI, Reg, true, CS.getFrameIdx(), RC,
+                             TRI, Register());
+  }
+}
+
+void TargetFrameLowering::restoreCalleeSavedRegister(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    const CalleeSavedInfo &CS, const TargetInstrInfo *TII,
+    const TargetRegisterInfo *TRI) const {
+  MCRegister Reg = CS.getReg();
+  if (CS.isSpilledToReg()) {
+    BuildMI(MBB, MI, DebugLoc(), TII->get(TargetOpcode::COPY), Reg)
+        .addReg(CS.getDstReg(), getKillRegState(true));
+  } else {
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    TII->loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI,
+                              Register());
+    assert(MI != MBB.begin() && "loadRegFromStackSlot didn't insert any code!");
+  }
 }

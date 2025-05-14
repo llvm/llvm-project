@@ -57,7 +57,8 @@ static llvm::LogicalResult checkCudaAttr(Op op) {
   if (op.getDataAttr() == cuf::DataAttribute::Device ||
       op.getDataAttr() == cuf::DataAttribute::Managed ||
       op.getDataAttr() == cuf::DataAttribute::Unified ||
-      op.getDataAttr() == cuf::DataAttribute::Pinned)
+      op.getDataAttr() == cuf::DataAttribute::Pinned ||
+      op.getDataAttr() == cuf::DataAttribute::Shared)
     return mlir::success();
   return op.emitOpError()
          << "expect device, managed, pinned or unified cuda attribute";
@@ -136,6 +137,24 @@ llvm::LogicalResult cuf::DeallocateOp::verify() {
   if (getErrmsg() && !getHasStat())
     return emitOpError("expect stat attribute when errmsg is provided");
   return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// KernelLaunchOp
+//===----------------------------------------------------------------------===//
+
+template <typename OpTy>
+static llvm::LogicalResult checkStreamType(OpTy op) {
+  if (!op.getStream())
+    return mlir::success();
+  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(op.getStream().getType()))
+    if (!refTy.getEleTy().isInteger(64))
+      return op.emitOpError("stream is expected to be an i64 reference");
+  return mlir::success();
+}
+
+llvm::LogicalResult cuf::KernelLaunchOp::verify() {
+  return checkStreamType(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -252,7 +271,7 @@ llvm::LogicalResult cuf::KernelOp::verify() {
         return emitOpError("expect reduce attributes to be ReduceAttr");
     }
   }
-  return mlir::success();
+  return checkStreamType(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -297,6 +316,33 @@ mlir::LogicalResult cuf::RegisterKernelOp::verify() {
     return mlir::success();
   }
   return emitOpError("device function not found");
+}
+
+//===----------------------------------------------------------------------===//
+// SharedMemoryOp
+//===----------------------------------------------------------------------===//
+
+void cuf::SharedMemoryOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &result, mlir::Type inType,
+    llvm::StringRef uniqName, llvm::StringRef bindcName,
+    mlir::ValueRange typeparams, mlir::ValueRange shape,
+    llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  mlir::StringAttr nameAttr =
+      uniqName.empty() ? mlir::StringAttr{} : builder.getStringAttr(uniqName);
+  mlir::StringAttr bindcAttr =
+      bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
+  build(builder, result, wrapAllocaResultType(inType),
+        mlir::TypeAttr::get(inType), nameAttr, bindcAttr, typeparams, shape,
+        /*offset=*/mlir::Value{});
+  result.addAttributes(attributes);
+}
+
+//===----------------------------------------------------------------------===//
+// StreamCastOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult cuf::StreamCastOp::verify() {
+  return checkStreamType(*this);
 }
 
 // Tablegen operators

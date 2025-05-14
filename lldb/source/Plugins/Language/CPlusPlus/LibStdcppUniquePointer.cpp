@@ -32,9 +32,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
   bool GetSummary(Stream &stream, const TypeSummaryOptions &options);
 
@@ -103,7 +101,8 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   // storage due to no_unique_address, so infer the actual size from the total
   // size of the unique_ptr class. If sizeof(unique_ptr) == sizeof(void*) then
   // the deleter is empty and should be hidden.
-  if (tuple_sp->GetByteSize() > ptr_obj->GetByteSize()) {
+  if (llvm::expectedToOptional(tuple_sp->GetByteSize()).value_or(0) >
+      llvm::expectedToOptional(ptr_obj->GetByteSize()).value_or(0)) {
     ValueObjectSP del_obj = tuple_frontend->GetChildAtIndex(1);
     if (del_obj)
       m_del_obj = del_obj->Clone(ConstString("deleter")).get();
@@ -112,8 +111,6 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
 
   return lldb::ChildCacheState::eRefetch;
 }
-
-bool LibStdcppUniquePtrSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 lldb::ValueObjectSP
 LibStdcppUniquePtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
@@ -142,15 +139,16 @@ LibStdcppUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
   return 1;
 }
 
-size_t LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+llvm::Expected<size_t>
+LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "ptr" || name == "pointer")
     return 0;
   if (name == "del" || name == "deleter")
     return 1;
   if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 bool LibStdcppUniquePtrSyntheticFrontEnd::GetSummary(

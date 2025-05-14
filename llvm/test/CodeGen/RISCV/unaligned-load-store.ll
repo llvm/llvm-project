@@ -26,10 +26,10 @@ define i8 @load_i8(ptr %p) {
 define i16 @load_i16(ptr %p) {
 ; SLOW-LABEL: load_i16:
 ; SLOW:       # %bb.0:
-; SLOW-NEXT:    lbu a1, 0(a0)
-; SLOW-NEXT:    lbu a0, 1(a0)
-; SLOW-NEXT:    slli a0, a0, 8
-; SLOW-NEXT:    or a0, a0, a1
+; SLOW-NEXT:    lbu a1, 1(a0)
+; SLOW-NEXT:    lbu a0, 0(a0)
+; SLOW-NEXT:    slli a1, a1, 8
+; SLOW-NEXT:    or a0, a1, a0
 ; SLOW-NEXT:    ret
 ;
 ; FAST-LABEL: load_i16:
@@ -43,11 +43,11 @@ define i16 @load_i16(ptr %p) {
 define i24 @load_i24(ptr %p) {
 ; SLOWBASE-LABEL: load_i24:
 ; SLOWBASE:       # %bb.0:
-; SLOWBASE-NEXT:    lbu a1, 0(a0)
-; SLOWBASE-NEXT:    lbu a2, 1(a0)
+; SLOWBASE-NEXT:    lbu a1, 1(a0)
+; SLOWBASE-NEXT:    lbu a2, 0(a0)
 ; SLOWBASE-NEXT:    lbu a0, 2(a0)
-; SLOWBASE-NEXT:    slli a2, a2, 8
-; SLOWBASE-NEXT:    or a1, a2, a1
+; SLOWBASE-NEXT:    slli a1, a1, 8
+; SLOWBASE-NEXT:    or a1, a1, a2
 ; SLOWBASE-NEXT:    slli a0, a0, 16
 ; SLOWBASE-NEXT:    or a0, a1, a0
 ; SLOWBASE-NEXT:    ret
@@ -73,10 +73,10 @@ define i24 @load_i24(ptr %p) {
 ;
 ; FAST-LABEL: load_i24:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    lhu a1, 0(a0)
-; FAST-NEXT:    lbu a0, 2(a0)
-; FAST-NEXT:    slli a0, a0, 16
-; FAST-NEXT:    or a0, a1, a0
+; FAST-NEXT:    lbu a1, 2(a0)
+; FAST-NEXT:    lhu a0, 0(a0)
+; FAST-NEXT:    slli a1, a1, 16
+; FAST-NEXT:    or a0, a0, a1
 ; FAST-NEXT:    ret
   %res = load i24, ptr %p, align 1
   ret i24 %res
@@ -85,12 +85,12 @@ define i24 @load_i24(ptr %p) {
 define i32 @load_i32(ptr %p) {
 ; SLOWBASE-LABEL: load_i32:
 ; SLOWBASE:       # %bb.0:
-; SLOWBASE-NEXT:    lbu a1, 0(a0)
-; SLOWBASE-NEXT:    lbu a2, 1(a0)
+; SLOWBASE-NEXT:    lbu a1, 1(a0)
+; SLOWBASE-NEXT:    lbu a2, 0(a0)
 ; SLOWBASE-NEXT:    lbu a3, 2(a0)
 ; SLOWBASE-NEXT:    lbu a0, 3(a0)
-; SLOWBASE-NEXT:    slli a2, a2, 8
-; SLOWBASE-NEXT:    or a1, a2, a1
+; SLOWBASE-NEXT:    slli a1, a1, 8
+; SLOWBASE-NEXT:    or a1, a1, a2
 ; SLOWBASE-NEXT:    slli a3, a3, 16
 ; SLOWBASE-NEXT:    slli a0, a0, 24
 ; SLOWBASE-NEXT:    or a0, a0, a3
@@ -99,13 +99,13 @@ define i32 @load_i32(ptr %p) {
 ;
 ; RV32IZBKB-LABEL: load_i32:
 ; RV32IZBKB:       # %bb.0:
-; RV32IZBKB-NEXT:    lbu a1, 0(a0)
-; RV32IZBKB-NEXT:    lbu a2, 1(a0)
-; RV32IZBKB-NEXT:    lbu a3, 2(a0)
-; RV32IZBKB-NEXT:    lbu a0, 3(a0)
-; RV32IZBKB-NEXT:    packh a0, a3, a0
-; RV32IZBKB-NEXT:    packh a1, a1, a2
-; RV32IZBKB-NEXT:    pack a0, a1, a0
+; RV32IZBKB-NEXT:    lbu a1, 1(a0)
+; RV32IZBKB-NEXT:    lbu a2, 2(a0)
+; RV32IZBKB-NEXT:    lbu a3, 3(a0)
+; RV32IZBKB-NEXT:    lbu a0, 0(a0)
+; RV32IZBKB-NEXT:    packh a2, a2, a3
+; RV32IZBKB-NEXT:    packh a0, a0, a1
+; RV32IZBKB-NEXT:    pack a0, a0, a2
 ; RV32IZBKB-NEXT:    ret
 ;
 ; RV64IZBKB-LABEL: load_i32:
@@ -132,50 +132,50 @@ define i32 @load_i32(ptr %p) {
 define i64 @load_i64(ptr %p) {
 ; RV32I-LABEL: load_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lbu a1, 0(a0)
-; RV32I-NEXT:    lbu a2, 1(a0)
-; RV32I-NEXT:    lbu a3, 2(a0)
-; RV32I-NEXT:    lbu a4, 3(a0)
-; RV32I-NEXT:    slli a2, a2, 8
-; RV32I-NEXT:    slli a3, a3, 16
-; RV32I-NEXT:    slli a4, a4, 24
-; RV32I-NEXT:    or a1, a2, a1
-; RV32I-NEXT:    or a3, a4, a3
-; RV32I-NEXT:    lbu a2, 4(a0)
-; RV32I-NEXT:    lbu a4, 5(a0)
-; RV32I-NEXT:    lbu a5, 6(a0)
+; RV32I-NEXT:    lbu a1, 1(a0)
+; RV32I-NEXT:    lbu a2, 2(a0)
+; RV32I-NEXT:    lbu a3, 3(a0)
+; RV32I-NEXT:    lbu a4, 0(a0)
+; RV32I-NEXT:    slli a1, a1, 8
+; RV32I-NEXT:    slli a2, a2, 16
+; RV32I-NEXT:    slli a3, a3, 24
+; RV32I-NEXT:    or a1, a1, a4
+; RV32I-NEXT:    lbu a4, 4(a0)
+; RV32I-NEXT:    lbu a5, 5(a0)
+; RV32I-NEXT:    or a2, a3, a2
+; RV32I-NEXT:    lbu a3, 6(a0)
 ; RV32I-NEXT:    lbu a0, 7(a0)
-; RV32I-NEXT:    slli a4, a4, 8
-; RV32I-NEXT:    or a2, a4, a2
-; RV32I-NEXT:    slli a5, a5, 16
+; RV32I-NEXT:    slli a5, a5, 8
+; RV32I-NEXT:    or a4, a5, a4
+; RV32I-NEXT:    slli a3, a3, 16
 ; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    or a5, a0, a5
-; RV32I-NEXT:    or a0, a3, a1
-; RV32I-NEXT:    or a1, a5, a2
+; RV32I-NEXT:    or a3, a0, a3
+; RV32I-NEXT:    or a0, a2, a1
+; RV32I-NEXT:    or a1, a3, a4
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: load_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lbu a1, 0(a0)
-; RV64I-NEXT:    lbu a2, 1(a0)
-; RV64I-NEXT:    lbu a3, 2(a0)
-; RV64I-NEXT:    lbu a4, 3(a0)
-; RV64I-NEXT:    slli a2, a2, 8
-; RV64I-NEXT:    slli a3, a3, 16
-; RV64I-NEXT:    slli a4, a4, 24
-; RV64I-NEXT:    or a1, a2, a1
-; RV64I-NEXT:    or a3, a4, a3
-; RV64I-NEXT:    lbu a2, 4(a0)
-; RV64I-NEXT:    lbu a4, 5(a0)
-; RV64I-NEXT:    lbu a5, 6(a0)
+; RV64I-NEXT:    lbu a1, 1(a0)
+; RV64I-NEXT:    lbu a2, 2(a0)
+; RV64I-NEXT:    lbu a3, 3(a0)
+; RV64I-NEXT:    lbu a4, 0(a0)
+; RV64I-NEXT:    slli a1, a1, 8
+; RV64I-NEXT:    slli a2, a2, 16
+; RV64I-NEXT:    slli a3, a3, 24
+; RV64I-NEXT:    or a1, a1, a4
+; RV64I-NEXT:    lbu a4, 4(a0)
+; RV64I-NEXT:    lbu a5, 5(a0)
+; RV64I-NEXT:    or a2, a3, a2
+; RV64I-NEXT:    lbu a3, 6(a0)
 ; RV64I-NEXT:    lbu a0, 7(a0)
-; RV64I-NEXT:    slli a4, a4, 8
-; RV64I-NEXT:    or a2, a4, a2
-; RV64I-NEXT:    slli a5, a5, 16
+; RV64I-NEXT:    slli a5, a5, 8
+; RV64I-NEXT:    or a4, a5, a4
+; RV64I-NEXT:    slli a3, a3, 16
 ; RV64I-NEXT:    slli a0, a0, 24
-; RV64I-NEXT:    or a0, a0, a5
-; RV64I-NEXT:    or a1, a3, a1
-; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    or a1, a2, a1
+; RV64I-NEXT:    or a0, a0, a4
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -186,16 +186,16 @@ define i64 @load_i64(ptr %p) {
 ; RV32IZBKB-NEXT:    lbu a2, 1(a0)
 ; RV32IZBKB-NEXT:    lbu a3, 2(a0)
 ; RV32IZBKB-NEXT:    lbu a4, 3(a0)
+; RV32IZBKB-NEXT:    lbu a5, 5(a0)
+; RV32IZBKB-NEXT:    lbu a6, 6(a0)
+; RV32IZBKB-NEXT:    lbu a7, 7(a0)
+; RV32IZBKB-NEXT:    lbu a0, 4(a0)
 ; RV32IZBKB-NEXT:    packh a3, a3, a4
 ; RV32IZBKB-NEXT:    packh a1, a1, a2
-; RV32IZBKB-NEXT:    lbu a2, 4(a0)
-; RV32IZBKB-NEXT:    lbu a4, 5(a0)
-; RV32IZBKB-NEXT:    lbu a5, 6(a0)
-; RV32IZBKB-NEXT:    lbu a0, 7(a0)
-; RV32IZBKB-NEXT:    packh a5, a5, a0
-; RV32IZBKB-NEXT:    packh a2, a2, a4
+; RV32IZBKB-NEXT:    packh a2, a6, a7
+; RV32IZBKB-NEXT:    packh a4, a0, a5
 ; RV32IZBKB-NEXT:    pack a0, a1, a3
-; RV32IZBKB-NEXT:    pack a1, a2, a5
+; RV32IZBKB-NEXT:    pack a1, a4, a2
 ; RV32IZBKB-NEXT:    ret
 ;
 ; RV64IZBKB-LABEL: load_i64:
@@ -204,14 +204,14 @@ define i64 @load_i64(ptr %p) {
 ; RV64IZBKB-NEXT:    lbu a2, 5(a0)
 ; RV64IZBKB-NEXT:    lbu a3, 6(a0)
 ; RV64IZBKB-NEXT:    lbu a4, 7(a0)
+; RV64IZBKB-NEXT:    lbu a5, 0(a0)
+; RV64IZBKB-NEXT:    lbu a6, 1(a0)
+; RV64IZBKB-NEXT:    lbu a7, 2(a0)
+; RV64IZBKB-NEXT:    lbu a0, 3(a0)
 ; RV64IZBKB-NEXT:    packh a1, a1, a2
 ; RV64IZBKB-NEXT:    packh a2, a3, a4
-; RV64IZBKB-NEXT:    lbu a3, 0(a0)
-; RV64IZBKB-NEXT:    lbu a4, 1(a0)
-; RV64IZBKB-NEXT:    lbu a5, 2(a0)
-; RV64IZBKB-NEXT:    lbu a0, 3(a0)
-; RV64IZBKB-NEXT:    packh a3, a3, a4
-; RV64IZBKB-NEXT:    packh a0, a5, a0
+; RV64IZBKB-NEXT:    packh a3, a5, a6
+; RV64IZBKB-NEXT:    packh a0, a7, a0
 ; RV64IZBKB-NEXT:    slli a2, a2, 16
 ; RV64IZBKB-NEXT:    slli a0, a0, 16
 ; RV64IZBKB-NEXT:    or a1, a2, a1

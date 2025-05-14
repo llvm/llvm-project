@@ -22,20 +22,20 @@ using namespace clang::CodeGen;
 using namespace llvm;
 
 MDNode *
-LoopInfo::createLoopPropertiesMetadata(ArrayRef<Metadata *> LoopProperties) {
+LoopInfo::createFollowupMetadata(const char *FollowupName,
+                                 ArrayRef<llvm::Metadata *> LoopProperties) {
   LLVMContext &Ctx = Header->getContext();
-  SmallVector<Metadata *, 4> NewLoopProperties;
-  NewLoopProperties.push_back(nullptr);
-  NewLoopProperties.append(LoopProperties.begin(), LoopProperties.end());
 
-  MDNode *LoopID = MDNode::getDistinct(Ctx, NewLoopProperties);
-  LoopID->replaceOperandWith(0, LoopID);
-  return LoopID;
+  SmallVector<Metadata *, 4> Args;
+  Args.push_back(MDString::get(Ctx, FollowupName));
+  Args.append(LoopProperties.begin(), LoopProperties.end());
+  return MDNode::get(Ctx, Args);
 }
 
-MDNode *LoopInfo::createPipeliningMetadata(const LoopAttributes &Attrs,
-                                           ArrayRef<Metadata *> LoopProperties,
-                                           bool &HasUserTransforms) {
+SmallVector<Metadata *, 4>
+LoopInfo::createPipeliningMetadata(const LoopAttributes &Attrs,
+                                   ArrayRef<Metadata *> LoopProperties,
+                                   bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
   std::optional<bool> Enabled;
@@ -44,22 +44,18 @@ MDNode *LoopInfo::createPipeliningMetadata(const LoopAttributes &Attrs,
   else if (Attrs.PipelineInitiationInterval != 0)
     Enabled = true;
 
+  SmallVector<Metadata *, 4> Args;
+  Args.append(LoopProperties.begin(), LoopProperties.end());
+
   if (Enabled != true) {
-    SmallVector<Metadata *, 4> NewLoopProperties;
     if (Enabled == false) {
-      NewLoopProperties.append(LoopProperties.begin(), LoopProperties.end());
-      NewLoopProperties.push_back(
+      Args.push_back(
           MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.pipeline.disable"),
                             ConstantAsMetadata::get(ConstantInt::get(
                                 llvm::Type::getInt1Ty(Ctx), 1))}));
-      LoopProperties = NewLoopProperties;
     }
-    return createLoopPropertiesMetadata(LoopProperties);
+    return Args;
   }
-
-  SmallVector<Metadata *, 4> Args;
-  Args.push_back(nullptr);
-  Args.append(LoopProperties.begin(), LoopProperties.end());
 
   if (Attrs.PipelineInitiationInterval > 0) {
     Metadata *Vals[] = {
@@ -71,13 +67,11 @@ MDNode *LoopInfo::createPipeliningMetadata(const LoopAttributes &Attrs,
 
   // No follow-up: This is the last transformation.
 
-  MDNode *LoopID = MDNode::getDistinct(Ctx, Args);
-  LoopID->replaceOperandWith(0, LoopID);
   HasUserTransforms = true;
-  return LoopID;
+  return Args;
 }
 
-MDNode *
+SmallVector<Metadata *, 4>
 LoopInfo::createPartialUnrollMetadata(const LoopAttributes &Attrs,
                                       ArrayRef<Metadata *> LoopProperties,
                                       bool &HasUserTransforms) {
@@ -108,11 +102,10 @@ LoopInfo::createPartialUnrollMetadata(const LoopAttributes &Attrs,
       MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.unroll.disable")));
 
   bool FollowupHasTransforms = false;
-  MDNode *Followup = createPipeliningMetadata(Attrs, FollowupLoopProperties,
-                                              FollowupHasTransforms);
+  SmallVector<Metadata *, 4> Followup = createPipeliningMetadata(
+      Attrs, FollowupLoopProperties, FollowupHasTransforms);
 
   SmallVector<Metadata *, 4> Args;
-  Args.push_back(nullptr);
   Args.append(LoopProperties.begin(), LoopProperties.end());
 
   // Setting unroll.count
@@ -130,16 +123,14 @@ LoopInfo::createPartialUnrollMetadata(const LoopAttributes &Attrs,
   }
 
   if (FollowupHasTransforms)
-    Args.push_back(MDNode::get(
-        Ctx, {MDString::get(Ctx, "llvm.loop.unroll.followup_all"), Followup}));
+    Args.push_back(
+        createFollowupMetadata("llvm.loop.unroll.followup_all", Followup));
 
-  MDNode *LoopID = MDNode::getDistinct(Ctx, Args);
-  LoopID->replaceOperandWith(0, LoopID);
   HasUserTransforms = true;
-  return LoopID;
+  return Args;
 }
 
-MDNode *
+SmallVector<Metadata *, 4>
 LoopInfo::createUnrollAndJamMetadata(const LoopAttributes &Attrs,
                                      ArrayRef<Metadata *> LoopProperties,
                                      bool &HasUserTransforms) {
@@ -170,11 +161,10 @@ LoopInfo::createUnrollAndJamMetadata(const LoopAttributes &Attrs,
       MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.unroll_and_jam.disable")));
 
   bool FollowupHasTransforms = false;
-  MDNode *Followup = createPartialUnrollMetadata(Attrs, FollowupLoopProperties,
-                                                 FollowupHasTransforms);
+  SmallVector<Metadata *, 4> Followup = createPartialUnrollMetadata(
+      Attrs, FollowupLoopProperties, FollowupHasTransforms);
 
   SmallVector<Metadata *, 4> Args;
-  Args.push_back(nullptr);
   Args.append(LoopProperties.begin(), LoopProperties.end());
 
   // Setting unroll_and_jam.count
@@ -192,22 +182,18 @@ LoopInfo::createUnrollAndJamMetadata(const LoopAttributes &Attrs,
   }
 
   if (FollowupHasTransforms)
-    Args.push_back(MDNode::get(
-        Ctx, {MDString::get(Ctx, "llvm.loop.unroll_and_jam.followup_outer"),
-              Followup}));
+    Args.push_back(createFollowupMetadata(
+        "llvm.loop.unroll_and_jam.followup_outer", Followup));
 
-  if (UnrollAndJamInnerFollowup)
-    Args.push_back(MDNode::get(
-        Ctx, {MDString::get(Ctx, "llvm.loop.unroll_and_jam.followup_inner"),
-              UnrollAndJamInnerFollowup}));
+  if (UnrollAndJamInnerFollowup.has_value())
+    Args.push_back(createFollowupMetadata(
+        "llvm.loop.unroll_and_jam.followup_inner", *UnrollAndJamInnerFollowup));
 
-  MDNode *LoopID = MDNode::getDistinct(Ctx, Args);
-  LoopID->replaceOperandWith(0, LoopID);
   HasUserTransforms = true;
-  return LoopID;
+  return Args;
 }
 
-MDNode *
+SmallVector<Metadata *, 4>
 LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
                                       ArrayRef<Metadata *> LoopProperties,
                                       bool &HasUserTransforms) {
@@ -244,11 +230,10 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
       MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.isvectorized")));
 
   bool FollowupHasTransforms = false;
-  MDNode *Followup = createUnrollAndJamMetadata(Attrs, FollowupLoopProperties,
-                                                FollowupHasTransforms);
+  SmallVector<Metadata *, 4> Followup = createUnrollAndJamMetadata(
+      Attrs, FollowupLoopProperties, FollowupHasTransforms);
 
   SmallVector<Metadata *, 4> Args;
-  Args.push_back(nullptr);
   Args.append(LoopProperties.begin(), LoopProperties.end());
 
   // Setting vectorize.predicate when it has been specified and vectorization
@@ -315,17 +300,14 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
   }
 
   if (FollowupHasTransforms)
-    Args.push_back(MDNode::get(
-        Ctx,
-        {MDString::get(Ctx, "llvm.loop.vectorize.followup_all"), Followup}));
+    Args.push_back(
+        createFollowupMetadata("llvm.loop.vectorize.followup_all", Followup));
 
-  MDNode *LoopID = MDNode::getDistinct(Ctx, Args);
-  LoopID->replaceOperandWith(0, LoopID);
   HasUserTransforms = true;
-  return LoopID;
+  return Args;
 }
 
-MDNode *
+SmallVector<Metadata *, 4>
 LoopInfo::createLoopDistributeMetadata(const LoopAttributes &Attrs,
                                        ArrayRef<Metadata *> LoopProperties,
                                        bool &HasUserTransforms) {
@@ -352,11 +334,10 @@ LoopInfo::createLoopDistributeMetadata(const LoopAttributes &Attrs,
   }
 
   bool FollowupHasTransforms = false;
-  MDNode *Followup =
+  SmallVector<Metadata *, 4> Followup =
       createLoopVectorizeMetadata(Attrs, LoopProperties, FollowupHasTransforms);
 
   SmallVector<Metadata *, 4> Args;
-  Args.push_back(nullptr);
   Args.append(LoopProperties.begin(), LoopProperties.end());
 
   Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.distribute.enable"),
@@ -366,19 +347,17 @@ LoopInfo::createLoopDistributeMetadata(const LoopAttributes &Attrs,
   Args.push_back(MDNode::get(Ctx, Vals));
 
   if (FollowupHasTransforms)
-    Args.push_back(MDNode::get(
-        Ctx,
-        {MDString::get(Ctx, "llvm.loop.distribute.followup_all"), Followup}));
+    Args.push_back(
+        createFollowupMetadata("llvm.loop.distribute.followup_all", Followup));
 
-  MDNode *LoopID = MDNode::getDistinct(Ctx, Args);
-  LoopID->replaceOperandWith(0, LoopID);
   HasUserTransforms = true;
-  return LoopID;
+  return Args;
 }
 
-MDNode *LoopInfo::createFullUnrollMetadata(const LoopAttributes &Attrs,
-                                           ArrayRef<Metadata *> LoopProperties,
-                                           bool &HasUserTransforms) {
+SmallVector<Metadata *, 4>
+LoopInfo::createFullUnrollMetadata(const LoopAttributes &Attrs,
+                                   ArrayRef<Metadata *> LoopProperties,
+                                   bool &HasUserTransforms) {
   LLVMContext &Ctx = Header->getContext();
 
   std::optional<bool> Enabled;
@@ -400,20 +379,17 @@ MDNode *LoopInfo::createFullUnrollMetadata(const LoopAttributes &Attrs,
   }
 
   SmallVector<Metadata *, 4> Args;
-  Args.push_back(nullptr);
   Args.append(LoopProperties.begin(), LoopProperties.end());
   Args.push_back(MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.unroll.full")));
 
   // No follow-up: there is no loop after full unrolling.
   // TODO: Warn if there are transformations after full unrolling.
 
-  MDNode *LoopID = MDNode::getDistinct(Ctx, Args);
-  LoopID->replaceOperandWith(0, LoopID);
   HasUserTransforms = true;
-  return LoopID;
+  return Args;
 }
 
-MDNode *LoopInfo::createMetadata(
+SmallVector<Metadata *, 4> LoopInfo::createMetadata(
     const LoopAttributes &Attrs,
     llvm::ArrayRef<llvm::Metadata *> AdditionalLoopProperties,
     bool &HasUserTransforms) {
@@ -448,8 +424,7 @@ MDNode *LoopInfo::createMetadata(
     LoopProperties.push_back(MDNode::get(Ctx, Vals));
   }
 
-  LoopProperties.insert(LoopProperties.end(), AdditionalLoopProperties.begin(),
-                        AdditionalLoopProperties.end());
+  llvm::append_range(LoopProperties, AdditionalLoopProperties);
   return createFullUnrollMetadata(Attrs, LoopProperties, HasUserTransforms);
 }
 
@@ -579,8 +554,8 @@ void LoopInfo::finish() {
             MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.isvectorized")));
 
       bool InnerFollowupHasTransform = false;
-      MDNode *InnerFollowup = createMetadata(AfterJam, BeforeLoopProperties,
-                                             InnerFollowupHasTransform);
+      SmallVector<Metadata *, 4> InnerFollowup = createMetadata(
+          AfterJam, BeforeLoopProperties, InnerFollowupHasTransform);
       if (InnerFollowupHasTransform)
         Parent->UnrollAndJamInnerFollowup = InnerFollowup;
     }
@@ -589,7 +564,14 @@ void LoopInfo::finish() {
   }
 
   bool HasUserTransforms = false;
-  LoopID = createMetadata(CurLoopAttr, {}, HasUserTransforms);
+  SmallVector<Metadata *, 4> Properties =
+      createMetadata(CurLoopAttr, {}, HasUserTransforms);
+  SmallVector<Metadata *, 4> Args;
+  Args.push_back(nullptr);
+  Args.append(Properties.begin(), Properties.end());
+  LoopID = MDNode::getDistinct(Ctx, Args);
+  LoopID->replaceOperandWith(0, LoopID);
+
   TempLoopID->replaceAllUsesWith(LoopID);
 }
 

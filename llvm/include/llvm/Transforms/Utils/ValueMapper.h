@@ -37,6 +37,7 @@ class Value;
 using ValueToValueMapTy = ValueMap<const Value *, WeakTrackingVH>;
 using DbgRecordIterator = simple_ilist<DbgRecord>::iterator;
 using MetadataSetTy = SmallPtrSet<const Metadata *, 16>;
+using MetadataPredicate = std::function<bool(const Metadata *)>;
 
 /// This is a class that can be implemented by clients to remap types when
 /// cloning constants and instructions.
@@ -104,6 +105,13 @@ enum RemapFlags {
   /// Any global values not in value map are mapped to null instead of mapping
   /// to self.  Illegal if RF_IgnoreMissingLocals is also set.
   RF_NullMapMissingGlobalValues = 8,
+
+  /// Do not remap source location atoms. Only safe if to do this if the cloned
+  /// instructions being remapped are inserted into a new function, or an
+  /// existing function where the inlined-at fields are updated. If in doubt,
+  /// don't use this flag. It's used when remapping is known to be un-necessary
+  /// to save some compile-time.
+  RF_DoNotRemapAtoms = 16,
 };
 
 inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
@@ -138,8 +146,8 @@ inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
 /// alternate \a ValueToValueMapTy and \a ValueMaterializer and returns a ID to
 /// pass into the schedule*() functions.
 ///
-/// If an \a IdentityMD set is optionally provided, \a Metadata inside this set
-/// will be mapped onto itself in \a VM on first use.
+/// If an \a IdentityMD predicate is optionally provided, \a Metadata for which
+/// the predicate returns true will be mapped onto itself in \a VM on first use.
 ///
 /// TODO: lib/Linker really doesn't need the \a ValueHandle in the \a
 /// ValueToValueMapTy.  We should template \a ValueMapper (and its
@@ -158,7 +166,7 @@ public:
   ValueMapper(ValueToValueMapTy &VM, RemapFlags Flags = RF_None,
               ValueMapTypeRemapper *TypeMapper = nullptr,
               ValueMaterializer *Materializer = nullptr,
-              const MetadataSetTy *IdentityMD = nullptr);
+              const MetadataPredicate *IdentityMD = nullptr);
   ValueMapper(ValueMapper &&) = delete;
   ValueMapper(const ValueMapper &) = delete;
   ValueMapper &operator=(ValueMapper &&) = delete;
@@ -225,7 +233,7 @@ inline Value *MapValue(const Value *V, ValueToValueMapTy &VM,
                        RemapFlags Flags = RF_None,
                        ValueMapTypeRemapper *TypeMapper = nullptr,
                        ValueMaterializer *Materializer = nullptr,
-                       const MetadataSetTy *IdentityMD = nullptr) {
+                       const MetadataPredicate *IdentityMD = nullptr) {
   return ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
       .mapValue(*V);
 }
@@ -239,8 +247,8 @@ inline Value *MapValue(const Value *V, ValueToValueMapTy &VM,
 ///     \c MD.
 ///  3. Else if \c MD is a \a ConstantAsMetadata, call \a MapValue() and
 ///     re-wrap its return (returning nullptr on nullptr).
-///  4. Else if \c MD is in \c IdentityMD then add an identity mapping for it
-///     and return it.
+///  4. Else if \c IdentityMD predicate returns true for \c MD then add an
+///     identity mapping for it and return it.
 ///  5. Else, \c MD is an \a MDNode.  These are remapped, along with their
 ///     transitive operands.  Distinct nodes are duplicated or moved depending
 ///     on \a RF_MoveDistinctNodes.  Uniqued nodes are remapped like constants.
@@ -251,7 +259,7 @@ inline Metadata *MapMetadata(const Metadata *MD, ValueToValueMapTy &VM,
                              RemapFlags Flags = RF_None,
                              ValueMapTypeRemapper *TypeMapper = nullptr,
                              ValueMaterializer *Materializer = nullptr,
-                             const MetadataSetTy *IdentityMD = nullptr) {
+                             const MetadataPredicate *IdentityMD = nullptr) {
   return ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
       .mapMetadata(*MD);
 }
@@ -261,7 +269,7 @@ inline MDNode *MapMetadata(const MDNode *MD, ValueToValueMapTy &VM,
                            RemapFlags Flags = RF_None,
                            ValueMapTypeRemapper *TypeMapper = nullptr,
                            ValueMaterializer *Materializer = nullptr,
-                           const MetadataSetTy *IdentityMD = nullptr) {
+                           const MetadataPredicate *IdentityMD = nullptr) {
   return ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
       .mapMDNode(*MD);
 }
@@ -278,10 +286,16 @@ inline void RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
                              RemapFlags Flags = RF_None,
                              ValueMapTypeRemapper *TypeMapper = nullptr,
                              ValueMaterializer *Materializer = nullptr,
-                             const MetadataSetTy *IdentityMD = nullptr) {
+                             const MetadataPredicate *IdentityMD = nullptr) {
   ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
       .remapInstruction(*I);
 }
+
+/// Remap source location atom. Called by RemapInstruction. This updates the
+/// instruction's atom group number if it has been mapped (e.g. with
+/// llvm::mapAtomInstance), which is necessary to distinguish source code
+/// atoms on duplicated code paths.
+void RemapSourceAtom(Instruction *I, ValueToValueMapTy &VM);
 
 /// Remap the Values used in the DbgRecord \a DR using the value map \a
 /// VM.
@@ -289,7 +303,7 @@ inline void RemapDbgRecord(Module *M, DbgRecord *DR, ValueToValueMapTy &VM,
                            RemapFlags Flags = RF_None,
                            ValueMapTypeRemapper *TypeMapper = nullptr,
                            ValueMaterializer *Materializer = nullptr,
-                           const MetadataSetTy *IdentityMD = nullptr) {
+                           const MetadataPredicate *IdentityMD = nullptr) {
   ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
       .remapDbgRecord(M, *DR);
 }
@@ -302,7 +316,7 @@ inline void RemapDbgRecordRange(Module *M,
                                 RemapFlags Flags = RF_None,
                                 ValueMapTypeRemapper *TypeMapper = nullptr,
                                 ValueMaterializer *Materializer = nullptr,
-                                const MetadataSetTy *IdentityMD = nullptr) {
+                                const MetadataPredicate *IdentityMD = nullptr) {
   ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
       .remapDbgRecordRange(M, Range);
 }
@@ -317,7 +331,7 @@ inline void RemapFunction(Function &F, ValueToValueMapTy &VM,
                           RemapFlags Flags = RF_None,
                           ValueMapTypeRemapper *TypeMapper = nullptr,
                           ValueMaterializer *Materializer = nullptr,
-                          const MetadataSetTy *IdentityMD = nullptr) {
+                          const MetadataPredicate *IdentityMD = nullptr) {
   ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD).remapFunction(F);
 }
 
@@ -326,7 +340,7 @@ inline Constant *MapValue(const Constant *V, ValueToValueMapTy &VM,
                           RemapFlags Flags = RF_None,
                           ValueMapTypeRemapper *TypeMapper = nullptr,
                           ValueMaterializer *Materializer = nullptr,
-                          const MetadataSetTy *IdentityMD = nullptr) {
+                          const MetadataPredicate *IdentityMD = nullptr) {
   return ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
       .mapConstant(*V);
 }

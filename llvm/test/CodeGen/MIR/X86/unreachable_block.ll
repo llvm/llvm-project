@@ -35,7 +35,7 @@
 ; CHECK-NOT: %bb.{{[0-9]+}}.split.true
 ; CHECK-LABEL: bb.{{[0-9]+}}.split.true:
 define void @foo(ptr %bar) {
-  br i1 undef, label %true, label %false
+  br i1 poison, label %true, label %false
 true:
   %v = load i32, ptr %bar
   br label %split.true

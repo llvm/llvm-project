@@ -91,7 +91,7 @@ private:
       ScopedHashTable<MachineInstr *, unsigned, MachineInstrExpressionTrait,
                       AllocatorTy>;
   using ScopeType = ScopedHTType::ScopeTy;
-  using PhysDefVector = SmallVector<std::pair<unsigned, unsigned>, 2>;
+  using PhysDefVector = SmallVector<std::pair<unsigned, Register>, 2>;
 
   unsigned LookAheadLimit = 0;
   DenseMap<MachineBasicBlock *, ScopeType *> ScopeMap;
@@ -110,8 +110,8 @@ private:
                              SmallSet<MCRegister, 8> &PhysRefs,
                              PhysDefVector &PhysDefs, bool &PhysUseDef) const;
   bool PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
-                        SmallSet<MCRegister, 8> &PhysRefs,
-                        PhysDefVector &PhysDefs, bool &NonLocal) const;
+                        const SmallSet<MCRegister, 8> &PhysRefs,
+                        const PhysDefVector &PhysDefs, bool &NonLocal) const;
   bool isCSECandidate(MachineInstr *MI);
   bool isProfitableToCSE(Register CSReg, Register Reg, MachineBasicBlock *CSBB,
                          MachineInstr *MI);
@@ -321,21 +321,20 @@ bool MachineCSEImpl::hasLivePhysRegDefUses(const MachineInstr *MI,
     // common since this pass is run before livevariables. We can scan
     // forward a few instructions and check if it is obviously dead.
     if (!MO.isDead() && !isPhysDefTriviallyDead(Reg.asMCReg(), I, MBB->end()))
-      PhysDefs.push_back(std::make_pair(MOP.index(), Reg));
+      PhysDefs.emplace_back(MOP.index(), Reg);
   }
 
   // Finally, add all defs to PhysRefs as well.
-  for (unsigned i = 0, e = PhysDefs.size(); i != e; ++i)
-    for (MCRegAliasIterator AI(PhysDefs[i].second, TRI, true); AI.isValid();
-         ++AI)
+  for (const auto &Def : PhysDefs)
+    for (MCRegAliasIterator AI(Def.second, TRI, true); AI.isValid(); ++AI)
       PhysRefs.insert(*AI);
 
   return !PhysRefs.empty();
 }
 
 bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
-                                      SmallSet<MCRegister, 8> &PhysRefs,
-                                      PhysDefVector &PhysDefs,
+                                      const SmallSet<MCRegister, 8> &PhysRefs,
+                                      const PhysDefVector &PhysDefs,
                                       bool &NonLocal) const {
   // For now conservatively returns false if the common subexpression is
   // not in the same basic block as the given instruction. The only exception
@@ -348,9 +347,8 @@ bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
     if (MBB->pred_size() != 1 || *MBB->pred_begin() != CSMBB)
       return false;
 
-    for (unsigned i = 0, e = PhysDefs.size(); i != e; ++i) {
-      if (MRI->isAllocatable(PhysDefs[i].second) ||
-          MRI->isReserved(PhysDefs[i].second))
+    for (const auto &PhysDef : PhysDefs) {
+      if (MRI->isAllocatable(PhysDef.second) || MRI->isReserved(PhysDef.second))
         // Avoid extending live range of physical registers if they are
         //allocatable or reserved.
         return false;
@@ -531,9 +529,9 @@ void MachineCSEImpl::ExitScope(MachineBasicBlock *MBB) {
 bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
   bool Changed = false;
 
-  SmallVector<std::pair<unsigned, unsigned>, 8> CSEPairs;
+  SmallVector<std::pair<Register, Register>, 8> CSEPairs;
   SmallVector<unsigned, 2> ImplicitDefsToUpdate;
-  SmallVector<unsigned, 2> ImplicitDefs;
+  SmallVector<Register, 2> ImplicitDefs;
   for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
     if (!isCSECandidate(&MI))
       continue;
@@ -667,15 +665,15 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
         break;
       }
 
-      CSEPairs.push_back(std::make_pair(OldReg, NewReg));
+      CSEPairs.emplace_back(OldReg, NewReg);
       --NumDefs;
     }
 
     // Actually perform the elimination.
     if (DoCSE) {
-      for (const std::pair<unsigned, unsigned> &CSEPair : CSEPairs) {
-        unsigned OldReg = CSEPair.first;
-        unsigned NewReg = CSEPair.second;
+      for (const std::pair<Register, Register> &CSEPair : CSEPairs) {
+        Register OldReg = CSEPair.first;
+        Register NewReg = CSEPair.second;
         // OldReg may have been unused but is used now, clear the Dead flag
         MachineInstr *Def = MRI->getUniqueVRegDef(NewReg);
         assert(Def != nullptr && "CSEd register has no unique definition?");

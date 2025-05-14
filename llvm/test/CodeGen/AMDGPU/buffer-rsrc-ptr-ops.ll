@@ -49,7 +49,7 @@ main_body:
   %buf1.int = ptrtoint ptr addrspace(8) %buf1 to i128
   %buf1.vec = bitcast i128 %buf1.int to <4 x i32>
   call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> %buf1.vec, ptr addrspace(8) %buf2, i32 0, i32 0, i32 0)
-  %shuffled = shufflevector <2 x ptr addrspace(8)> %buffers, <2 x ptr addrspace(8)> undef, <2 x i32> <i32 1, i32 0>
+  %shuffled = shufflevector <2 x ptr addrspace(8)> %buffers, <2 x ptr addrspace(8)> poison, <2 x i32> <i32 1, i32 0>
   %somewhere.next = getelementptr <2 x ptr addrspace(8)>, ptr addrspace(1) %somewhere, i64 1
   store <2 x ptr addrspace(8)> %shuffled, ptr addrspace(1) %somewhere.next
   ret void

@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/PEI.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -77,21 +78,7 @@ STATISTIC(NumFuncSeen, "Number of functions seen in PEI");
 
 namespace {
 
-class PEI : public MachineFunctionPass {
-public:
-  static char ID;
-
-  PEI() : MachineFunctionPass(ID) {
-    initializePEIPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  /// runOnMachineFunction - Insert prolog/epilog code and replace abstract
-  /// frame indexes with appropriate references.
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-private:
+class PEIImpl {
   RegScavenger *RS = nullptr;
 
   // MinCSFrameIndex, MaxCSFrameIndex - Keeps the range of callee saved
@@ -137,31 +124,50 @@ private:
 
   void insertPrologEpilogCode(MachineFunction &MF);
   void insertZeroCallUsedRegs(MachineFunction &MF);
+
+public:
+  PEIImpl(MachineOptimizationRemarkEmitter *ORE) : ORE(ORE) {}
+  bool run(MachineFunction &MF);
+};
+
+class PEILegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  PEILegacy() : MachineFunctionPass(ID) {
+    initializePEILegacyPass(*PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  /// runOnMachineFunction - Insert prolog/epilog code and replace abstract
+  /// frame indexes with appropriate references.
+  bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
 } // end anonymous namespace
 
-char PEI::ID = 0;
+char PEILegacy::ID = 0;
 
-char &llvm::PrologEpilogCodeInserterID = PEI::ID;
+char &llvm::PrologEpilogCodeInserterID = PEILegacy::ID;
 
-INITIALIZE_PASS_BEGIN(PEI, DEBUG_TYPE, "Prologue/Epilogue Insertion", false,
-                      false)
+INITIALIZE_PASS_BEGIN(PEILegacy, DEBUG_TYPE, "Prologue/Epilogue Insertion",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
-INITIALIZE_PASS_END(PEI, DEBUG_TYPE,
+INITIALIZE_PASS_END(PEILegacy, DEBUG_TYPE,
                     "Prologue/Epilogue Insertion & Frame Finalization", false,
                     false)
 
 MachineFunctionPass *llvm::createPrologEpilogInserterPass() {
-  return new PEI();
+  return new PEILegacy();
 }
 
 STATISTIC(NumBytesStackSpace,
           "Number of bytes used for stack in all functions");
 
-void PEI::getAnalysisUsage(AnalysisUsage &AU) const {
+void PEILegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -213,9 +219,7 @@ static void stashEntryDbgValues(MachineBasicBlock &MBB,
       MI->removeFromParent();
 }
 
-/// runOnMachineFunction - Insert prolog/epilog code and replace abstract
-/// frame indexes with appropriate references.
-bool PEI::runOnMachineFunction(MachineFunction &MF) {
+bool PEIImpl::run(MachineFunction &MF) {
   NumFuncSeen++;
   const Function &F = MF.getFunction();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
@@ -223,7 +227,6 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
 
   RS = TRI->requiresRegisterScavenging(MF) ? new RegScavenger() : nullptr;
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(MF);
-  ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
   // Spill frame pointer and/or base pointer registers if they are clobbered.
   // It is placed before call frame instruction elimination so it will not mess
@@ -354,9 +357,31 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
+/// runOnMachineFunction - Insert prolog/epilog code and replace abstract
+/// frame indexes with appropriate references.
+bool PEILegacy::runOnMachineFunction(MachineFunction &MF) {
+  MachineOptimizationRemarkEmitter *ORE =
+      &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+  return PEIImpl(ORE).run(MF);
+}
+
+PreservedAnalyses
+PrologEpilogInserterPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  MachineOptimizationRemarkEmitter &ORE =
+      MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
+  if (!PEIImpl(&ORE).run(MF))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<MachineDominatorTreeAnalysis>()
+      .preserve<MachineLoopAnalysis>();
+}
+
 /// Calculate the MaxCallFrameSize variable for the function's frame
 /// information and eliminate call frame pseudo instructions.
-void PEI::calculateCallFrameInfo(MachineFunction &MF) {
+void PEIImpl::calculateCallFrameInfo(MachineFunction &MF) {
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -397,7 +422,7 @@ void PEI::calculateCallFrameInfo(MachineFunction &MF) {
 
 /// Compute the sets of entry and return blocks for saving and restoring
 /// callee-saved registers, and placing prolog and epilog code.
-void PEI::calculateSaveRestoreBlocks(MachineFunction &MF) {
+void PEIImpl::calculateSaveRestoreBlocks(MachineFunction &MF) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Even when we do not change any CSR, we still want to insert the
@@ -476,12 +501,12 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
     // Now that we know which registers need to be saved and restored, allocate
     // stack slots for them.
     for (auto &CS : CSI) {
-      // If the target has spilled this register to another register, we don't
-      // need to allocate a stack slot.
+      // If the target has spilled this register to another register or already
+      // handled it , we don't need to allocate a stack slot.
       if (CS.isSpilledToReg())
         continue;
 
-      unsigned Reg = CS.getReg();
+      MCRegister Reg = CS.getReg();
       const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
 
       int FrameIdx;
@@ -570,7 +595,7 @@ static void updateLiveness(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   for (const CalleeSavedInfo &I : CSI) {
     for (MachineBasicBlock *MBB : Visited) {
-      MCPhysReg Reg = I.getReg();
+      MCRegister Reg = I.getReg();
       // Add the callee-saved register as live-in.
       // It's killed at the spill.
       if (!MRI.isReserved(Reg) && !MBB->isLiveIn(Reg))
@@ -585,7 +610,7 @@ static void updateLiveness(MachineFunction &MF) {
       for (MachineBasicBlock &MBB : MF) {
         if (Visited.count(&MBB))
           continue;
-        MCPhysReg DstReg = I.getDstReg();
+        MCRegister DstReg = I.getDstReg();
         if (!MBB.isLiveIn(DstReg))
           MBB.addLiveIn(DstReg);
       }
@@ -597,25 +622,14 @@ static void updateLiveness(MachineFunction &MF) {
 static void insertCSRSaves(MachineBasicBlock &SaveBlock,
                            ArrayRef<CalleeSavedInfo> CSI) {
   MachineFunction &MF = *SaveBlock.getParent();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
   MachineBasicBlock::iterator I = SaveBlock.begin();
   if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CS : CSI) {
-      // Insert the spill to the stack frame.
-      unsigned Reg = CS.getReg();
-
-      if (CS.isSpilledToReg()) {
-        BuildMI(SaveBlock, I, DebugLoc(),
-                TII.get(TargetOpcode::COPY), CS.getDstReg())
-          .addReg(Reg, getKillRegState(true));
-      } else {
-        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-        TII.storeRegToStackSlot(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,
-                                TRI, Register());
-      }
+      TFI->spillCalleeSavedRegister(SaveBlock, I, CS, TII, TRI);
     }
   }
 }
@@ -624,7 +638,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
 static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
                               std::vector<CalleeSavedInfo> &CSI) {
   MachineFunction &MF = *RestoreBlock.getParent();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
@@ -634,24 +648,12 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
 
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
-      unsigned Reg = CI.getReg();
-      if (CI.isSpilledToReg()) {
-        BuildMI(RestoreBlock, I, DebugLoc(), TII.get(TargetOpcode::COPY), Reg)
-          .addReg(CI.getDstReg(), getKillRegState(true));
-      } else {
-        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-        TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC,
-                                 TRI, Register());
-        assert(I != RestoreBlock.begin() &&
-               "loadRegFromStackSlot didn't insert any code!");
-        // Insert in reverse order.  loadRegFromStackSlot can insert
-        // multiple instructions.
-      }
+      TFI->restoreCalleeSavedRegister(RestoreBlock, I, CI, TII, TRI);
     }
   }
 }
 
-void PEI::spillCalleeSavedRegs(MachineFunction &MF) {
+void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
   // We can't list this requirement in getRequiredProperties because some
   // targets (WebAssembly) use virtual registers past this point, and the pass
   // pipeline is set up without giving the passes a chance to look at the
@@ -843,7 +845,7 @@ static void AssignProtectedObjSet(const StackObjSet &UnassignedObjs,
 
 /// calculateFrameObjectOffsets - Calculate actual frame offsets for all of the
 /// abstract stack objects.
-void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
+void PEIImpl::calculateFrameObjectOffsets(MachineFunction &MF) {
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
 
   bool StackGrowsDown =
@@ -1158,7 +1160,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
 /// insertPrologEpilogCode - Scan the function for modified callee saved
 /// registers, insert spill code for these callee saved registers, then add
 /// prolog and epilog code to the function.
-void PEI::insertPrologEpilogCode(MachineFunction &MF) {
+void PEIImpl::insertPrologEpilogCode(MachineFunction &MF) {
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
 
   // Add prologue to the function...
@@ -1195,7 +1197,7 @@ void PEI::insertPrologEpilogCode(MachineFunction &MF) {
 }
 
 /// insertZeroCallUsedRegs - Zero out call used registers.
-void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
+void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
   const Function &F = MF.getFunction();
 
   if (!F.hasFnAttribute("zero-call-used-regs"))
@@ -1338,7 +1340,7 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
 
 /// Replace all FrameIndex operands with physical register references and actual
 /// offsets.
-void PEI::replaceFrameIndicesBackward(MachineFunction &MF) {
+void PEIImpl::replaceFrameIndicesBackward(MachineFunction &MF) {
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
 
   for (auto &MBB : MF) {
@@ -1366,7 +1368,7 @@ void PEI::replaceFrameIndicesBackward(MachineFunction &MF) {
 
 /// replaceFrameIndices - Replace all MO_FrameIndex operands with physical
 /// register references and actual offsets.
-void PEI::replaceFrameIndices(MachineFunction &MF) {
+void PEIImpl::replaceFrameIndices(MachineFunction &MF) {
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
 
   for (auto &MBB : MF) {
@@ -1382,8 +1384,8 @@ void PEI::replaceFrameIndices(MachineFunction &MF) {
   }
 }
 
-bool PEI::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
-                                      unsigned OpIdx, int SPAdj) {
+bool PEIImpl::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
+                                          unsigned OpIdx, int SPAdj) {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   if (MI.isDebugValue()) {
@@ -1464,8 +1466,8 @@ bool PEI::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
   return false;
 }
 
-void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
-                                      MachineFunction &MF, int &SPAdj) {
+void PEIImpl::replaceFrameIndicesBackward(MachineBasicBlock *BB,
+                                          MachineFunction &MF, int &SPAdj) {
   assert(MF.getSubtarget().getRegisterInfo() &&
          "getRegisterInfo() must be implemented!");
 
@@ -1509,8 +1511,8 @@ void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
   }
 }
 
-void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
-                              int &SPAdj) {
+void PEIImpl::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
+                                  int &SPAdj) {
   assert(MF.getSubtarget().getRegisterInfo() &&
          "getRegisterInfo() must be implemented!");
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();

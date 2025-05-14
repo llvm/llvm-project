@@ -175,6 +175,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
+  case CortexA320:
   case CortexA510:
   case CortexA520:
     PrefFunctionAlignment = Align(16);
@@ -349,6 +350,15 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     break;
+  case Olympus:
+    EpilogueVectorizationMinVF = 8;
+    MaxInterleaveFactor = 4;
+    ScatterOverhead = 13;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(32);
+    MaxBytesForLoopAlignment = 16;
+    VScaleForTuning = 1;
+    break;
   }
 
   if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)
@@ -394,8 +404,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   RegBankInfo.reset(RBI);
 
   auto TRI = getRegisterInfo();
-  StringSet<> ReservedRegNames;
-  ReservedRegNames.insert(ReservedRegsForRA.begin(), ReservedRegsForRA.end());
+  StringSet<> ReservedRegNames(llvm::from_range, ReservedRegsForRA);
   for (unsigned i = 0; i < 29; ++i) {
     if (ReservedRegNames.count(TRI->getName(AArch64::X0 + i)))
       ReserveXRegisterForRA.set(i);

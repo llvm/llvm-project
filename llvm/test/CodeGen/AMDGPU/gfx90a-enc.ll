@@ -10,11 +10,11 @@ define amdgpu_kernel void @test(<4 x i32> %x) #0 {
   %.x.int = bitcast <4 x i32> %x to i128
   %.x.ptr = inttoptr i128 %.x.int to ptr addrspace(8)
   %r1 = tail call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) %.x.ptr, i32 %id, i32 0, i32 0, i32 0)
-  store volatile <4 x float> %r1, ptr undef
+  store volatile <4 x float> %r1, ptr poison
   %r2 = tail call <4 x half> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f16(ptr addrspace(8) %.x.ptr, i32 %id, i32 0, i32 0, i32 0)
-  store volatile <4 x half> %r2, ptr undef
+  store volatile <4 x half> %r2, ptr poison
   %r3 = tail call <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32 1, i32 2, <4 x i32> %x, i32 0, i32 0, i32 0)
-  store <4 x i32> %r3, ptr undef
+  store <4 x i32> %r3, ptr poison
   ret void
 }
 

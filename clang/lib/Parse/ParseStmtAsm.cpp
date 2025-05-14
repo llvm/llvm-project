@@ -601,7 +601,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
 
   std::unique_ptr<llvm::MCStreamer> Str(createNullStreamer(Ctx));
   std::unique_ptr<llvm::MCAsmParser> Parser(
-      createMCAsmParser(TempSrcMgr, Ctx, *Str.get(), *MAI));
+      createMCAsmParser(TempSrcMgr, Ctx, *Str, *MAI));
 
   std::unique_ptr<llvm::MCTargetAsmParser> TargetParser(
       TheTarget->createMCAsmParser(*STI, *Parser, *MII, MCOptions));
@@ -617,7 +617,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
 
   // Change to the Intel dialect.
   Parser->setAssemblerDialect(1);
-  Parser->setTargetParser(*TargetParser.get());
+  Parser->setTargetParser(*TargetParser);
   Parser->setParsingMSInlineAsm(true);
   TargetParser->setParsingMSInlineAsm(true);
 
@@ -645,7 +645,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   });
 
   // Build the vector of clobber StringRefs.
-  ClobberRefs.insert(ClobberRefs.end(), Clobbers.begin(), Clobbers.end());
+  llvm::append_range(ClobberRefs, Clobbers);
 
   // Recast the void pointers and build the vector of constraint StringRefs.
   unsigned NumExprs = NumOutputs + NumInputs;
@@ -809,7 +809,7 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
       ConsumeToken();
     }
     // Parse the asm-string list for clobbers if present.
-    if (!AteExtraColon && isTokenStringLiteral()) {
+    if (!AteExtraColon && (isTokenStringLiteral() || Tok.is(tok::l_paren))) {
       while (true) {
         ExprResult Clobber(ParseAsmStringLiteral(/*ForAsmLabel*/ false));
 
@@ -884,8 +884,8 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
 bool Parser::ParseAsmOperandsOpt(SmallVectorImpl<IdentifierInfo *> &Names,
                                  SmallVectorImpl<Expr *> &Constraints,
                                  SmallVectorImpl<Expr *> &Exprs) {
-  // 'asm-operands' isn't present?
-  if (!isTokenStringLiteral() && Tok.isNot(tok::l_square))
+  // 'asm-operands' isn't present
+  if (Tok.isOneOf(tok::colon, tok::coloncolon, tok::r_paren))
     return false;
 
   while (true) {

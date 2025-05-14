@@ -8,8 +8,10 @@
 
 #include "MemoryHistoryASan.h"
 
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/MemoryHistory.h"
 
+#include "Plugins/InstrumentationRuntime/Utility/Utility.h"
 #include "Plugins/Process/Utility/HistoryThread.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -173,6 +175,12 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   options.SetPrefix(memory_history_asan_command_prefix);
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
+
+  if (auto m = GetPreferredAsanModule(process_sp->GetTarget())) {
+    SymbolContextList sc_list;
+    sc_list.Append(SymbolContext(std::move(m)));
+    options.SetPreferredSymbolContexts(std::move(sc_list));
+  }
 
   ExpressionResults expr_result = UserExpression::Evaluate(
       exe_ctx, options, expr.GetString(), "", return_value_sp);

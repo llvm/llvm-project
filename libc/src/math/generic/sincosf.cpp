@@ -19,6 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Exceptional values
 static constexpr int N_EXCEPTS = 6;
 
@@ -48,6 +49,7 @@ static constexpr uint32_t EXCEPT_OUTPUTS_COS[N_EXCEPTS][4] = {
     {0x3f78142e, 1, 0, 1}, // x = 0x1.2b9622p67, cos(x) = 0x1.f0285cp-1 (RZ)
     {0x3f08a21c, 1, 0, 0}, // x = 0x1.ddebdep120, cos(x) = 0x1.114438p-1 (RZ)
 };
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -130,19 +132,25 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
     // |x| < 2^-125. For targets without FMA instructions, we simply use
     // double for intermediate results as it is more efficient than using an
     // emulated version of FMA.
-#if defined(LIBC_TARGET_CPU_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
     *sinp = fputil::multiply_add(x, -0x1.0p-25f, x);
     *cosp = fputil::multiply_add(FPBits(x_abs).get_val(), -0x1.0p-25f, 1.0f);
 #else
     *sinp = static_cast<float>(fputil::multiply_add(xd, -0x1.0p-25, xd));
     *cosp = static_cast<float>(fputil::multiply_add(
         static_cast<double>(FPBits(x_abs).get_val()), -0x1.0p-25, 1.0));
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
     return;
   }
 
   // x is inf or nan.
   if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      *sinp = *cosp = FPBits::quiet_nan().get_val();
+      return;
+    }
+
     if (x_abs == 0x7f80'0000U) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
@@ -152,6 +160,7 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
     return;
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Check exceptional values.
   for (int i = 0; i < N_EXCEPTS; ++i) {
     if (LIBC_UNLIKELY(x_abs == EXCEPT_INPUTS[i])) {
@@ -178,6 +187,7 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
       return;
     }
   }
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // Combine the results with the sine and cosine of sum formulas:
   //   sin(x) = sin((k + y)*pi/32)

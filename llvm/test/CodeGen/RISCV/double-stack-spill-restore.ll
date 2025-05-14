@@ -39,9 +39,9 @@ define double @func(double %d, i32 %n) nounwind {
 ;
 ; RV64IFD-LABEL: func:
 ; RV64IFD:       # %bb.0: # %entry
+; RV64IFD-NEXT:    sext.w a2, a1
 ; RV64IFD-NEXT:    fmv.d.x fa5, a0
-; RV64IFD-NEXT:    sext.w a0, a1
-; RV64IFD-NEXT:    beqz a0, .LBB0_2
+; RV64IFD-NEXT:    beqz a2, .LBB0_2
 ; RV64IFD-NEXT:  # %bb.1: # %if.else
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill

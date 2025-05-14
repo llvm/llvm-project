@@ -635,11 +635,12 @@ void MachOPlatform::pushInitializersLoop(
       Worklist.pop_back();
 
       // If we've already visited this JITDylib on this iteration then continue.
-      if (JDDepMap.count(DepJD))
+      auto [It, Inserted] = JDDepMap.try_emplace(DepJD);
+      if (!Inserted)
         continue;
 
       // Add dep info.
-      auto &DM = JDDepMap[DepJD];
+      auto &DM = It->second;
       DepJD->withLinkOrderDo([&](const JITDylibSearchOrder &O) {
         for (auto &KV : O) {
           if (KV.first == DepJD)
@@ -1675,10 +1676,8 @@ Error MachOPlatform::MachOPlatformPlugin::prepareSymbolTableRegistration(
   // those names.
   {
     SmallVector<jitlink::Symbol *> SymsToProcess;
-    for (auto *Sym : G.defined_symbols())
-      SymsToProcess.push_back(Sym);
-    for (auto *Sym : G.absolute_symbols())
-      SymsToProcess.push_back(Sym);
+    llvm::append_range(SymsToProcess, G.defined_symbols());
+    llvm::append_range(SymsToProcess, G.absolute_symbols());
 
     for (auto *Sym : SymsToProcess) {
       if (!Sym->hasName())
@@ -1762,9 +1761,22 @@ jitlink::Block &createHeaderBlock(MachOPlatform &MOP,
   for (auto &BV : Opts.BuildVersions)
     B.template addLoadCommand<MachO::LC_BUILD_VERSION>(
         BV.Platform, BV.MinOS, BV.SDK, static_cast<uint32_t>(0));
-  for (auto &D : Opts.LoadDylibs)
-    B.template addLoadCommand<MachO::LC_LOAD_DYLIB>(
-        D.Name, D.Timestamp, D.CurrentVersion, D.CompatibilityVersion);
+
+  using LoadKind = MachOPlatform::HeaderOptions::LoadDylibCmd::LoadKind;
+  for (auto &LD : Opts.LoadDylibs) {
+    switch (LD.K) {
+    case LoadKind::Default:
+      B.template addLoadCommand<MachO::LC_LOAD_DYLIB>(
+          LD.D.Name, LD.D.Timestamp, LD.D.CurrentVersion,
+          LD.D.CompatibilityVersion);
+      break;
+    case LoadKind::Weak:
+      B.template addLoadCommand<MachO::LC_LOAD_WEAK_DYLIB>(
+          LD.D.Name, LD.D.Timestamp, LD.D.CurrentVersion,
+          LD.D.CompatibilityVersion);
+      break;
+    }
+  }
   for (auto &P : Opts.RPaths)
     B.template addLoadCommand<MachO::LC_RPATH>(P);
 

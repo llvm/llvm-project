@@ -218,7 +218,7 @@ static const char DiamondOfTrianglesRefGraph[] =
      "}\n";
 
 static LazyCallGraph buildCG(Module &M) {
-  TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
+  TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   auto GetTLI = [&TLI](Function &F) -> TargetLibraryInfo & { return TLI; };
 
@@ -1155,7 +1155,7 @@ TEST(LazyCallGraphTest, InlineAndDeleteFunction) {
   ASSERT_EQ(&D2F, D1Call->getCalledFunction());
   C1Call->setCalledFunction(&D3.getFunction());
   D1Call->setCalledFunction(&D3.getFunction());
-  ASSERT_EQ(0u, D2F.getNumUses());
+  ASSERT_TRUE(D2F.use_empty());
 
   // Insert new edges first.
   CRC.insertTrivialCallEdge(C1, D3);

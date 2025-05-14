@@ -19,3 +19,21 @@ def SPIRVLength : Builtin {
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
+
+def SPIRVReflect : Builtin {
+  let Spellings = ["__builtin_spirv_reflect"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def SPIRVSmoothStep : Builtin {
+  let Spellings = ["__builtin_spirv_smoothstep"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def SPIRVFaceForward : Builtin {
+  let Spellings = ["__builtin_spirv_faceforward"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}

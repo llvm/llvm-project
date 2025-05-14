@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/fchdir.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/fcntl_macros.h"
 
-TEST(LlvmLibcChdirTest, ChangeAndOpen) {
+using LlvmLibcChdirTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcChdirTest, ChangeAndOpen) {
   // The idea of this test is that we will first open an existing test file
   // without changing the directory to make sure it exists. Next, we change
   // directory and open the same file to make sure that the "fchdir" operation
@@ -27,7 +29,6 @@ TEST(LlvmLibcChdirTest, ChangeAndOpen) {
   auto TEST_FILE = libc_make_test_file_path(FILENAME2);
   constexpr const char *FILENAME3 = "fchdir.test";
   auto TEST_FILE_BASE = libc_make_test_file_path(FILENAME3);
-  LIBC_NAMESPACE::libc_errno = 0;
 
   int dir_fd = LIBC_NAMESPACE::open(TEST_DIR, O_DIRECTORY);
   ASSERT_GT(dir_fd, 0);
@@ -45,10 +46,7 @@ TEST(LlvmLibcChdirTest, ChangeAndOpen) {
   ASSERT_THAT(LIBC_NAMESPACE::close(dir_fd), Succeeds(0));
 }
 
-TEST(LlvmLibcChdirTest, ChangeToNonExistentDir) {
-  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  LIBC_NAMESPACE::libc_errno = 0;
+TEST_F(LlvmLibcChdirTest, ChangeToNonExistentDir) {
   ASSERT_EQ(LIBC_NAMESPACE::fchdir(0), -1);
   ASSERT_ERRNO_FAILURE();
-  LIBC_NAMESPACE::libc_errno = 0;
 }

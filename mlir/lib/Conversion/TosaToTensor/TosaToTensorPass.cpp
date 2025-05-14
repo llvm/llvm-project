@@ -22,7 +22,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_TOSATOTENSOR
+#define GEN_PASS_DEF_TOSATOTENSORPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -30,7 +30,7 @@ using namespace mlir;
 using namespace tosa;
 
 namespace {
-struct TosaToTensor : public impl::TosaToTensorBase<TosaToTensor> {
+struct TosaToTensor : public impl::TosaToTensorPassBase<TosaToTensor> {
 public:
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -53,7 +53,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::tosa::createTosaToTensor() {
-  return std::make_unique<TosaToTensor>();
-}

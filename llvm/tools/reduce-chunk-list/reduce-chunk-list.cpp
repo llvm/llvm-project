@@ -18,11 +18,11 @@
 
 using namespace llvm;
 
-cl::opt<std::string> ReproductionCmd(cl::Positional, cl::Required);
+static cl::opt<std::string> ReproductionCmd(cl::Positional, cl::Required);
 
-cl::opt<std::string> StartChunks(cl::Positional, cl::Required);
+static cl::opt<std::string> StartChunks(cl::Positional, cl::Required);
 
-cl::opt<bool> Pessimist("pessimist", cl::init(false));
+static cl::opt<bool> Pessimist("pessimist", cl::init(false));
 
 using Chunk = DebugCounter::Chunk;
 

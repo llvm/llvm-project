@@ -151,9 +151,8 @@ define hidden i64 @i64_mac_s32(ptr nocapture noundef readonly %a, ptr nocapture 
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i32x4.mul
-; MAX-BANDWIDTH: i64x2.extend_low_i32x4_s
+; MAX-BANDWIDTH: i64x2.extend_high_i32x4_s
 ; MAX-BANDWIDTH: i64x2.add
-; MAX-BANDWIDTH: i8x16.shuffle	8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
 ; MAX-BANDWIDTH: i64x2.extend_low_i32x4_s
 ; MAX-BANDWIDTH: i64x2.add
 
@@ -272,11 +271,9 @@ define hidden i32 @i32_mac_u16_s16(ptr nocapture noundef readonly %a, ptr nocapt
 ; CHECK:    i32x4.add
 
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
+; MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
+; MAX-BANDWIDTH: i32x4.extend_high_i16x8_u
 ; MAX-BANDWIDTH: i32x4.mul
 ; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
 ; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
@@ -377,9 +374,8 @@ define hidden i64 @i64_mac_u32(ptr nocapture noundef readonly %a, ptr nocapture 
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i32x4.mul
-; MAX-BANDWIDTH: i64x2.extend_low_i32x4_u
+; MAX-BANDWIDTH: i64x2.extend_high_i32x4_u
 ; MAX-BANDWIDTH: i64x2.add
-; MAX-BANDWIDTH: i8x16.shuffle	8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
 ; MAX-BANDWIDTH: i64x2.extend_low_i32x4_u
 ; MAX-BANDWIDTH: i64x2.add
 

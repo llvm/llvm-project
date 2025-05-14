@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/isatty.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -17,11 +17,11 @@
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LlvmLibcIsATTYTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcIsATTYTest, StdInOutTests) {
+TEST_F(LlvmLibcIsATTYTest, StdInOutTests) {
   // If stdin is connected to a terminal, assume that all of the standard i/o
   // fds are.
-  LIBC_NAMESPACE::libc_errno = 0;
   if (LIBC_NAMESPACE::isatty(0)) {
     EXPECT_THAT(LIBC_NAMESPACE::isatty(0), Succeeds(1)); // stdin
     EXPECT_THAT(LIBC_NAMESPACE::isatty(1), Succeeds(1)); // stdout
@@ -33,27 +33,26 @@ TEST(LlvmLibcIsATTYTest, StdInOutTests) {
   }
 }
 
-TEST(LlvmLibcIsATTYTest, BadFdTest) {
-  LIBC_NAMESPACE::libc_errno = 0;
+TEST_F(LlvmLibcIsATTYTest, BadFdTest) {
   EXPECT_THAT(LIBC_NAMESPACE::isatty(-1), Fails(EBADF, 0)); // invalid fd
 }
 
-TEST(LlvmLibcIsATTYTest, DevTTYTest) {
+TEST_F(LlvmLibcIsATTYTest, DevTTYTest) {
   constexpr const char *FILENAME = "/dev/tty";
   auto TTY_FILE = libc_make_test_file_path(FILENAME);
-  LIBC_NAMESPACE::libc_errno = 0;
   int fd = LIBC_NAMESPACE::open(TTY_FILE, O_RDONLY);
   if (fd > 0) {
     ASSERT_ERRNO_SUCCESS();
     EXPECT_THAT(LIBC_NAMESPACE::isatty(fd), Succeeds(1));
     ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+  } else {
+    ASSERT_ERRNO_FAILURE();
   }
 }
 
-TEST(LlvmLibcIsATTYTest, FileTest) {
+TEST_F(LlvmLibcIsATTYTest, FileTest) {
   constexpr const char *FILENAME = "isatty.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
-  LIBC_NAMESPACE::libc_errno = 0;
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);

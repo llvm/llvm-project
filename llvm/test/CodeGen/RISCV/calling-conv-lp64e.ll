@@ -118,10 +118,10 @@ define i64 @caller_float_on_stack() nounwind {
 ; RV64I-LP64E-FPELIM-NEXT:    li a3, 4
 ; RV64I-LP64E-FPELIM-NEXT:    li a0, 1
 ; RV64I-LP64E-FPELIM-NEXT:    li a2, 2
+; RV64I-LP64E-FPELIM-NEXT:    li a4, 3
 ; RV64I-LP64E-FPELIM-NEXT:    sd a3, 0(sp)
 ; RV64I-LP64E-FPELIM-NEXT:    sd zero, 8(sp)
 ; RV64I-LP64E-FPELIM-NEXT:    sd a1, 16(sp)
-; RV64I-LP64E-FPELIM-NEXT:    li a4, 3
 ; RV64I-LP64E-FPELIM-NEXT:    li a1, 0
 ; RV64I-LP64E-FPELIM-NEXT:    li a3, 0
 ; RV64I-LP64E-FPELIM-NEXT:    li a5, 0
@@ -143,10 +143,10 @@ define i64 @caller_float_on_stack() nounwind {
 ; RV64I-LP64E-WITHFP-NEXT:    li a3, 4
 ; RV64I-LP64E-WITHFP-NEXT:    li a0, 1
 ; RV64I-LP64E-WITHFP-NEXT:    li a2, 2
+; RV64I-LP64E-WITHFP-NEXT:    li a4, 3
 ; RV64I-LP64E-WITHFP-NEXT:    sd a3, 0(sp)
 ; RV64I-LP64E-WITHFP-NEXT:    sd zero, 8(sp)
 ; RV64I-LP64E-WITHFP-NEXT:    sd a1, 16(sp)
-; RV64I-LP64E-WITHFP-NEXT:    li a4, 3
 ; RV64I-LP64E-WITHFP-NEXT:    li a1, 0
 ; RV64I-LP64E-WITHFP-NEXT:    li a3, 0
 ; RV64I-LP64E-WITHFP-NEXT:    li a5, 0

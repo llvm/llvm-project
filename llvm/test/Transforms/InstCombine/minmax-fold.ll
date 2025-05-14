@@ -346,9 +346,9 @@ define i32 @test75(i32 %x) {
 
 define i32 @clamp_signed1(i32 %x) {
 ; CHECK-LABEL: @clamp_signed1(
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 255)
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.smax.i32(i32 [[MIN]], i32 15)
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.smax.i32(i32 [[MIN:%.*]], i32 15)
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.smin.i32(i32 [[R]], i32 255)
+; CHECK-NEXT:    ret i32 [[R1]]
 ;
   %cmp2 = icmp slt i32 %x, 255
   %min = select i1 %cmp2, i32 %x, i32 255
@@ -376,9 +376,9 @@ define i32 @clamp_signed2(i32 %x) {
 
 define i32 @clamp_signed3(i32 %x) {
 ; CHECK-LABEL: @clamp_signed3(
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 255)
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.smax.i32(i32 [[MIN]], i32 15)
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.smax.i32(i32 [[MIN:%.*]], i32 15)
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.smin.i32(i32 [[R]], i32 255)
+; CHECK-NEXT:    ret i32 [[R1]]
 ;
   %cmp2 = icmp slt i32 %x, 255
   %min = select i1 %cmp2, i32 %x, i32 255
@@ -406,9 +406,9 @@ define i32 @clamp_signed4(i32 %x) {
 
 define i32 @clamp_unsigned1(i32 %x) {
 ; CHECK-LABEL: @clamp_unsigned1(
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 255)
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umax.i32(i32 [[MIN]], i32 15)
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umax.i32(i32 [[MIN:%.*]], i32 15)
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.umin.i32(i32 [[R]], i32 255)
+; CHECK-NEXT:    ret i32 [[R1]]
 ;
   %cmp2 = icmp ult i32 %x, 255
   %min = select i1 %cmp2, i32 %x, i32 255
@@ -436,9 +436,9 @@ define i32 @clamp_unsigned2(i32 %x) {
 
 define i32 @clamp_unsigned3(i32 %x) {
 ; CHECK-LABEL: @clamp_unsigned3(
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 255)
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umax.i32(i32 [[MIN]], i32 15)
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umax.i32(i32 [[MIN:%.*]], i32 15)
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.umin.i32(i32 [[R]], i32 255)
+; CHECK-NEXT:    ret i32 [[R1]]
 ;
   %cmp2 = icmp ult i32 %x, 255
   %min = select i1 %cmp2, i32 %x, i32 255
@@ -467,9 +467,9 @@ define i32 @clamp_unsigned4(i32 %x) {
 ; (icmp sgt smin(PositiveA, B) 0) -> (icmp sgt B 0)
 define i32 @clamp_check_for_no_infinite_loop1(i32 %i) {
 ; CHECK-LABEL: @clamp_check_for_no_infinite_loop1(
-; CHECK-NEXT:    [[SEL1:%.*]] = call i32 @llvm.smin.i32(i32 [[I:%.*]], i32 255)
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.smax.i32(i32 [[SEL1]], i32 0)
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.smax.i32(i32 [[SEL1:%.*]], i32 0)
+; CHECK-NEXT:    [[RES1:%.*]] = call i32 @llvm.smin.i32(i32 [[RES]], i32 255)
+; CHECK-NEXT:    ret i32 [[RES1]]
 ;
   %cmp1 = icmp slt i32 %i, 255
   %sel1 = select i1 %cmp1, i32 %i, i32 255
@@ -1429,8 +1429,8 @@ define i8 @PR46271(<2 x i8> %x) {
 define i32 @twoway_clamp_lt(i32 %num) {
 ; CHECK-LABEL: @twoway_clamp_lt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[NUM:%.*]], 13767
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP0]], i32 13768, i32 13767
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i32 [[NUM:%.*]], 13768
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP0]], i32 13767, i32 13768
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:

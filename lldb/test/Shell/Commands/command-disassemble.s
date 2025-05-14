@@ -84,7 +84,7 @@
 # CHECK-NEXT: command-disassemble.s.tmp[0x2044] <+0>: int    $0x32
 # CHECK-NEXT: warning: Not disassembling a function because it is very large [0x0000000000002046-0x0000000000004046). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
 # CHECK-NEXT: (lldb) disassemble --name case3
-# CHECK-NEXT: error: Not disassembling a function because it is very large [0x0000000000006046-0x0000000000007046)[0x0000000000009046-0x000000000000a046). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
+# CHECK-NEXT: error: Not disassembling a function because it is very large [0x0000000000006046-0x0000000000007046)[0x0000000000009046-0x000000000000a050). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
 # CHECK-NEXT: Not disassembling a function because it is very large [0x0000000000004046-0x0000000000006046). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
 # CHECK-NEXT: (lldb) disassemble --name case3 --count 3
 # CHECK-NEXT: command-disassemble.s.tmp`n2::case3:
@@ -93,9 +93,9 @@
 # CHECK-NEXT: command-disassemble.s.tmp[0x604a] <-12284>: int    $0x2a
 # CHECK-EMPTY:
 # CHECK-NEXT: command-disassemble.s.tmp`n2::case3:
-# CHECK-NEXT: command-disassemble.s.tmp[0x9046] <+0>: int    $0x2a
-# CHECK-NEXT: command-disassemble.s.tmp[0x9048] <+2>: int    $0x2a
-# CHECK-NEXT: command-disassemble.s.tmp[0x904a] <+4>: int    $0x2a
+# CHECK-NEXT: command-disassemble.s.tmp[0x9046] <+0>: jmp 0x6046 ; <-12288>
+# CHECK-NEXT: command-disassemble.s.tmp[0x904b] <+5>: jmp 0x7046 ; middle_of_case3
+# CHECK-NEXT: command-disassemble.s.tmp[0x9050] <+10>: int    $0x2a
 # CHECK-EMPTY:
 # CHECK-NEXT: command-disassemble.s.tmp`n1::case3:
 # CHECK-NEXT: command-disassemble.s.tmp[0x4046] <+0>: int    $0x2a
@@ -171,12 +171,14 @@ _ZN2n15case3Ev:
         .endr
 .L_ZN2n25case3Ev.__part.1_end:
 
-.Lpadding:
+middle_of_case3:
         .rept 0x1000
         int $42
         .endr
 
 _ZN2n25case3Ev:
+        jmp .L_ZN2n25case3Ev.__part.1
+        jmp middle_of_case3
         .rept 0x800
         int $42
         .endr

@@ -17,8 +17,8 @@ define void @vecaddr_straightline(i32 zeroext %a, ptr %p) {
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (s0)
 ; RV32-NEXT:    vadd.vi v8, v8, 1
-; RV32-NEXT:    vse32.v v8, (s0)
 ; RV32-NEXT:    li a1, 57
+; RV32-NEXT:    vse32.v v8, (s0)
 ; RV32-NEXT:    beq a0, a1, .LBB0_2
 ; RV32-NEXT:  # %bb.1: # %do_call
 ; RV32-NEXT:    call foo
@@ -47,8 +47,8 @@ define void @vecaddr_straightline(i32 zeroext %a, ptr %p) {
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vle32.v v8, (s0)
 ; RV64-NEXT:    vadd.vi v8, v8, 1
-; RV64-NEXT:    vse32.v v8, (s0)
 ; RV64-NEXT:    li a1, 57
+; RV64-NEXT:    vse32.v v8, (s0)
 ; RV64-NEXT:    beq a0, a1, .LBB0_2
 ; RV64-NEXT:  # %bb.1: # %do_call
 ; RV64-NEXT:    call foo
@@ -97,8 +97,8 @@ define void @vecaddr_loop(i32 zeroext %a, ptr %p) {
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vle32.v v8, (s0)
 ; RV32-NEXT:    vadd.vi v8, v8, 1
-; RV32-NEXT:    vse32.v v8, (s0)
 ; RV32-NEXT:    li a1, 57
+; RV32-NEXT:    vse32.v v8, (s0)
 ; RV32-NEXT:    beq a0, a1, .LBB1_2
 ; RV32-NEXT:  .LBB1_1: # %do_call
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -129,8 +129,8 @@ define void @vecaddr_loop(i32 zeroext %a, ptr %p) {
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vle32.v v8, (s0)
 ; RV64-NEXT:    vadd.vi v8, v8, 1
-; RV64-NEXT:    vse32.v v8, (s0)
 ; RV64-NEXT:    li a1, 57
+; RV64-NEXT:    vse32.v v8, (s0)
 ; RV64-NEXT:    beq a0, a1, .LBB1_2
 ; RV64-NEXT:  .LBB1_1: # %do_call
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1

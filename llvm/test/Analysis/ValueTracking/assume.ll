@@ -57,7 +57,7 @@ define dso_local i1 @test2(ptr readonly %0) {
   ret i1 %2
 }
 
-define dso_local i32 @test4(ptr readonly %0, i1 %cond) {
+define dso_local i32 @test4(ptr readonly %0, i1 %cond) nofree nosync {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0:%.*]], i32 4) ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
@@ -91,7 +91,7 @@ A:
   ret i32 %6
 }
 
-define dso_local i32 @test4a(ptr readonly %0, i1 %cond) {
+define dso_local i32 @test4a(ptr readonly %0, i1 %cond) nofree nosync {
 ; CHECK-LABEL: @test4a(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0:%.*]], i32 4), "align"(ptr [[TMP0]], i32 8) ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]

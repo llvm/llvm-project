@@ -2144,7 +2144,7 @@ static void CMSEPushCalleeSaves(const TargetInstrInfo &TII,
 
 static void CMSEPopCalleeSaves(const TargetInstrInfo &TII,
                                MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI, int JumpReg,
+                               MachineBasicBlock::iterator MBBI,
                                bool Thumb1Only) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   if (Thumb1Only) {
@@ -2418,7 +2418,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       CMSERestoreFPRegs(MBB, MBBI, DL, OriginalClearRegs); // restore FP registers
 
-      CMSEPopCalleeSaves(*TII, MBB, MBBI, JumpReg, AFI->isThumb1OnlyFunction());
+      CMSEPopCalleeSaves(*TII, MBB, MBBI, AFI->isThumb1OnlyFunction());
 
       MI.eraseFromParent();
       return true;

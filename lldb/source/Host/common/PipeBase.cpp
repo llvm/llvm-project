@@ -11,19 +11,3 @@
 using namespace lldb_private;
 
 PipeBase::~PipeBase() = default;
-
-Status PipeBase::OpenAsWriter(llvm::StringRef name,
-                              bool child_process_inherit) {
-  return OpenAsWriterWithTimeout(name, child_process_inherit,
-                                 std::chrono::microseconds::zero());
-}
-
-Status PipeBase::Write(const void *buf, size_t size, size_t &bytes_written) {
-  return WriteWithTimeout(buf, size, std::chrono::microseconds::zero(),
-                          bytes_written);
-}
-
-Status PipeBase::Read(void *buf, size_t size, size_t &bytes_read) {
-  return ReadWithTimeout(buf, size, std::chrono::microseconds::zero(),
-                         bytes_read);
-}

@@ -58,6 +58,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE COMP_EVEX_NAME
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 namespace {
 // Including the generated EVEX compression tables.
 #define GET_X86_COMPRESS_EVEX_TABLE
@@ -83,7 +85,7 @@ public:
 char CompressEVEXPass::ID = 0;
 
 static bool usesExtendedRegister(const MachineInstr &MI) {
-  auto isHiRegIdx = [](unsigned Reg) {
+  auto isHiRegIdx = [](MCRegister Reg) {
     // Check for XMM register with indexes between 16 - 31.
     if (Reg >= X86::XMM16 && Reg <= X86::XMM31)
       return true;
@@ -102,7 +104,7 @@ static bool usesExtendedRegister(const MachineInstr &MI) {
     if (!MO.isReg())
       continue;
 
-    Register Reg = MO.getReg();
+    MCRegister Reg = MO.getReg().asMCReg();
     assert(!X86II::isZMMReg(Reg) &&
            "ZMM instructions should not be in the EVEX->VEX tables");
     if (isHiRegIdx(Reg))
@@ -237,6 +239,30 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
       return 0;
     return I->NewOpc;
   };
+
+  // Redundant NDD ops cannot be safely compressed if either:
+  // - the legacy op would introduce a partial write that BreakFalseDeps
+  // identified as a potential stall, or
+  // - the op is writing to a subregister of a live register, i.e. the
+  // full (zeroed) result is used.
+  // Both cases are indicated by an implicit def of the superregister.
+  if (IsRedundantNDD) {
+    Register Dst = MI.getOperand(0).getReg();
+    if (Dst &&
+        (X86::GR16RegClass.contains(Dst) || X86::GR8RegClass.contains(Dst))) {
+      Register Super = getX86SubSuperRegister(Dst, 64);
+      if (MI.definesRegister(Super, /*TRI=*/nullptr))
+        IsRedundantNDD = false;
+    }
+
+    // ADDrm/mr instructions with NDD + relocation had been transformed to the
+    // instructions without NDD in X86SuppressAPXForRelocation pass. That is to
+    // keep backward compatibility with linkers without APX support.
+    if (!X86EnableAPXForRelocation)
+      assert(!isAddMemInstrWithRelocation(MI) &&
+             "Unexpected NDD instruction with relocation!");
+  }
+
   // NonNF -> NF only if it's not a compressible NDD instruction and eflags is
   // dead.
   unsigned NewOpc = IsRedundantNDD

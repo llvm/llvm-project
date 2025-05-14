@@ -57,7 +57,8 @@ template <typename T> using int_type_of_v = typename int_type_of<T>::type;
     if (!temp.has_value()) {                                                   \
       section.has_conv = false;                                                \
     } else {                                                                   \
-      dst = cpp::bit_cast<int_type_of_v<arg_type>>(temp.value());              \
+      dst = static_cast<decltype(dst)>(                                        \
+          cpp::bit_cast<int_type_of_v<arg_type>>(temp.value()));               \
     }                                                                          \
   }
 #else
@@ -130,7 +131,7 @@ public:
       } else if (internal::isdigit(str[cur_pos])) {
         auto result = internal::strtointeger<int>(str + cur_pos, 10);
         section.min_width = result.value;
-        cur_pos = cur_pos + result.parsed_len;
+        cur_pos = cur_pos + static_cast<size_t>(result.parsed_len);
       }
       if (section.min_width < 0) {
         section.min_width =
@@ -153,7 +154,7 @@ public:
         } else if (internal::isdigit(str[cur_pos])) {
           auto result = internal::strtointeger<int>(str + cur_pos, 10);
           section.precision = result.value;
-          cur_pos = cur_pos + result.parsed_len;
+          cur_pos = cur_pos + static_cast<size_t>(result.parsed_len);
         }
       }
 
@@ -265,7 +266,8 @@ public:
       case ('m'):
         // %m is an odd conversion in that it doesn't consume an argument, it
         // just takes the current value of errno as its argument.
-        section.conv_val_raw = static_cast<int>(libc_errno);
+        section.conv_val_raw =
+            static_cast<fputil::FPBits<double>::StorageType>(libc_errno);
         break;
 #endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
@@ -356,7 +358,7 @@ private:
       }
       if (internal::isdigit(str[*local_pos])) {
         const auto result = internal::strtointeger<int>(str + *local_pos, 10);
-        *local_pos += result.parsed_len;
+        *local_pos += static_cast<size_t>(result.parsed_len);
         return {lm, static_cast<size_t>(cpp::max(0, result.value))};
       }
       return {lm, 0};
@@ -405,10 +407,10 @@ private:
   LIBC_INLINE size_t parse_index(size_t *local_pos) {
     if (internal::isdigit(str[*local_pos])) {
       auto result = internal::strtointeger<int>(str + *local_pos, 10);
-      size_t index = result.value;
-      if (str[*local_pos + result.parsed_len] != '$')
+      size_t index = static_cast<size_t>(result.value);
+      if (str[*local_pos + static_cast<size_t>(result.parsed_len)] != '$')
         return 0;
-      *local_pos = 1 + result.parsed_len + *local_pos;
+      *local_pos = static_cast<size_t>(1 + result.parsed_len) + *local_pos;
       return index;
     }
     return 0;

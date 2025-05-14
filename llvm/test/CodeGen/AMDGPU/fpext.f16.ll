@@ -393,10 +393,8 @@ define amdgpu_kernel void @s_fneg_fpext_f16_to_f32(ptr addrspace(1) %r, i32 %a) 
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
 ; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -765,7 +763,7 @@ entry:
   %a.neg = fsub half -0.0, %a.val
   %r.val = fpext half %a.neg to float
   store volatile float %r.val, ptr addrspace(1) %r
-  store volatile half %a.neg, ptr addrspace(1) undef
+  store volatile half %a.neg, ptr addrspace(1) poison
   ret void
 }
 
@@ -830,13 +828,11 @@ define amdgpu_kernel void @fneg_multi_foldable_use_fpext_f16_to_f32(
 ; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[8:11], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mul_f16_e64 v0.h, -v0.l, v0.l
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e64 v1, -v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GFX11-TRUE16-NEXT:    buffer_store_b32 v1, off, s[4:7], 0 dlc
+; GFX11-TRUE16-NEXT:    v_mul_f16_e64 v1.l, -v0.l, v0.l
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e64 v0, -v0.l
+; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0 dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[4:7], 0 dlc
+; GFX11-TRUE16-NEXT:    buffer_store_b16 v1, off, s[4:7], 0 dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -869,7 +865,7 @@ entry:
   %r.val = fpext half %a.neg to float
   %mul = fmul half %a.neg, %a.val
   store volatile float %r.val, ptr addrspace(1) %r
-  store volatile half %mul, ptr addrspace(1) undef
+  store volatile half %mul, ptr addrspace(1) poison
   ret void
 }
 
@@ -970,7 +966,7 @@ entry:
   %a.fabs = call half @llvm.fabs.f16(half %a.val)
   %r.val = fpext half %a.fabs to float
   store volatile float %r.val, ptr addrspace(1) %r
-  store volatile half %a.fabs, ptr addrspace(1) undef
+  store volatile half %a.fabs, ptr addrspace(1) poison
   ret void
 }
 
@@ -1035,13 +1031,11 @@ define amdgpu_kernel void @fabs_multi_foldable_use_fpext_f16_to_f32(
 ; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[8:11], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mul_f16_e64 v0.h, |v0.l|, v0.l
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e64 v1, |v0.l|
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GFX11-TRUE16-NEXT:    buffer_store_b32 v1, off, s[4:7], 0 dlc
+; GFX11-TRUE16-NEXT:    v_mul_f16_e64 v1.l, |v0.l|, v0.l
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e64 v0, |v0.l|
+; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0 dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[4:7], 0 dlc
+; GFX11-TRUE16-NEXT:    buffer_store_b16 v1, off, s[4:7], 0 dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -1074,7 +1068,7 @@ entry:
   %r.val = fpext half %a.fabs to float
   %mul = fmul half %a.fabs, %a.val
   store volatile float %r.val, ptr addrspace(1) %r
-  store volatile half %mul, ptr addrspace(1) undef
+  store volatile half %mul, ptr addrspace(1) poison
   ret void
 }
 
@@ -1176,7 +1170,7 @@ entry:
   %a.fneg.fabs = fsub half -0.0, %a.fabs
   %r.val = fpext half %a.fneg.fabs to float
   store volatile float %r.val, ptr addrspace(1) %r
-  store volatile half %a.fneg.fabs, ptr addrspace(1) undef
+  store volatile half %a.fneg.fabs, ptr addrspace(1) poison
   ret void
 }
 
@@ -1241,13 +1235,11 @@ define amdgpu_kernel void @fabs_fneg_multi_foldable_use_fpext_f16_to_f32(
 ; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[8:11], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mul_f16_e64 v0.h, -|v0.l|, v0.l
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e64 v1, -|v0.l|
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GFX11-TRUE16-NEXT:    buffer_store_b32 v1, off, s[4:7], 0 dlc
+; GFX11-TRUE16-NEXT:    v_mul_f16_e64 v1.l, -|v0.l|, v0.l
+; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e64 v0, -|v0.l|
+; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0 dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[4:7], 0 dlc
+; GFX11-TRUE16-NEXT:    buffer_store_b16 v1, off, s[4:7], 0 dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -1281,7 +1273,7 @@ entry:
   %r.val = fpext half %a.fneg.fabs to float
   %mul = fmul half %a.fneg.fabs, %a.val
   store volatile float %r.val, ptr addrspace(1) %r
-  store volatile half %mul, ptr addrspace(1) undef
+  store volatile half %mul, ptr addrspace(1) poison
   ret void
 }
 

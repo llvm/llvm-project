@@ -37,6 +37,24 @@
 using namespace mlir;
 using namespace mlir::dataflow;
 
+namespace mlir::dataflow {
+LogicalResult staticallyNonNegative(DataFlowSolver &solver, Value v) {
+  auto *result = solver.lookupState<IntegerValueRangeLattice>(v);
+  if (!result || result->getValue().isUninitialized())
+    return failure();
+  const ConstantIntRanges &range = result->getValue().getValue();
+  return success(range.smin().isNonNegative());
+}
+
+LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op) {
+  auto nonNegativePred = [&solver](Value v) -> bool {
+    return succeeded(staticallyNonNegative(solver, v));
+  };
+  return success(llvm::all_of(op->getOperands(), nonNegativePred) &&
+                 llvm::all_of(op->getResults(), nonNegativePred));
+}
+} // namespace mlir::dataflow
+
 void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
   Lattice::onUpdate(solver);
 

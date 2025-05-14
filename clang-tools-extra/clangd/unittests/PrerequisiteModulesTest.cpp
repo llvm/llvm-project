@@ -27,12 +27,41 @@
 namespace clang::clangd {
 namespace {
 
+class GlobalScanningCounterProjectModules : public ProjectModules {
+public:
+  GlobalScanningCounterProjectModules(
+      std::unique_ptr<ProjectModules> Underlying, std::atomic<unsigned> &Count)
+      : Underlying(std::move(Underlying)), Count(Count) {}
+
+  std::vector<std::string> getRequiredModules(PathRef File) override {
+    return Underlying->getRequiredModules(File);
+  }
+
+  std::string getModuleNameForSource(PathRef File) override {
+    return Underlying->getModuleNameForSource(File);
+  }
+
+  void setCommandMangler(CommandMangler Mangler) override {
+    Underlying->setCommandMangler(std::move(Mangler));
+  }
+
+  std::string getSourceForModuleName(llvm::StringRef ModuleName,
+                                     PathRef RequiredSrcFile) override {
+    Count++;
+    return Underlying->getSourceForModuleName(ModuleName, RequiredSrcFile);
+  }
+
+private:
+  std::unique_ptr<ProjectModules> Underlying;
+  std::atomic<unsigned> &Count;
+};
+
 class MockDirectoryCompilationDatabase : public MockCompilationDatabase {
 public:
   MockDirectoryCompilationDatabase(StringRef TestDir, const ThreadsafeFS &TFS)
       : MockCompilationDatabase(TestDir),
         MockedCDBPtr(std::make_shared<MockClangCompilationDatabase>(*this)),
-        TFS(TFS) {
+        TFS(TFS), GlobalScanningCount(0) {
     this->ExtraClangFlags.push_back("-std=c++20");
     this->ExtraClangFlags.push_back("-c");
   }
@@ -40,8 +69,11 @@ public:
   void addFile(llvm::StringRef Path, llvm::StringRef Contents);
 
   std::unique_ptr<ProjectModules> getProjectModules(PathRef) const override {
-    return scanningProjectModules(MockedCDBPtr, TFS);
+    return std::make_unique<GlobalScanningCounterProjectModules>(
+        scanningProjectModules(MockedCDBPtr, TFS), GlobalScanningCount);
   }
+
+  unsigned getGlobalScanningCount() const { return GlobalScanningCount; }
 
 private:
   class MockClangCompilationDatabase : public tooling::CompilationDatabase {
@@ -68,6 +100,8 @@ private:
 
   std::shared_ptr<MockClangCompilationDatabase> MockedCDBPtr;
   const ThreadsafeFS &TFS;
+
+  mutable std::atomic<unsigned> GlobalScanningCount;
 };
 
 // Add files to the working testing directory and the compilation database.
@@ -511,8 +545,8 @@ void func() {
   EXPECT_TRUE(Preamble);
   EXPECT_TRUE(Preamble->RequiredModules);
 
-  auto Result = signatureHelp(getFullPath("Use.cpp"), Test.point(),
-                              *Preamble.get(), Use, MarkupKind::PlainText);
+  auto Result = signatureHelp(getFullPath("Use.cpp"), Test.point(), *Preamble,
+                              Use, MarkupKind::PlainText);
   EXPECT_FALSE(Result.signatures.empty());
   EXPECT_EQ(Result.signatures[0].label, "printA(int a) -> void");
   EXPECT_EQ(Result.signatures[0].parameters[0].labelString, "int a");
@@ -588,6 +622,28 @@ export constexpr int M = 43;
   EXPECT_EQ(NewHSOptsA.PrebuiltModuleFiles, NewHSOptsB.PrebuiltModuleFiles);
   // Check that we didn't reuse the old and stale module files.
   EXPECT_NE(NewHSOptsA.PrebuiltModuleFiles, HSOptsA.PrebuiltModuleFiles);
+}
+
+TEST_F(PrerequisiteModulesTests, ScanningCacheTest) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+  )cpp");
+  CDB.addFile("B.cppm", R"cpp(
+export module B;
+import M;
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  Builder.buildPrerequisiteModulesFor(getFullPath("B.cppm"), FS);
+  EXPECT_EQ(CDB.getGlobalScanningCount(), 1u);
 }
 
 } // namespace

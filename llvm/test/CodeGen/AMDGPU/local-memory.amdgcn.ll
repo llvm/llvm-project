@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s -check-prefixes=GCN,SI
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s -check-prefixes=GCN,CI
 
-@local_memory.local_mem = internal unnamed_addr addrspace(3) global [128 x i32] undef, align 4
+@local_memory.local_mem = internal unnamed_addr addrspace(3) global [128 x i32] poison, align 4
 
 define amdgpu_kernel void @local_memory(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: local_memory:
@@ -39,8 +39,8 @@ entry:
   ret void
 }
 
-@local_memory_two_objects.local_mem0 = internal unnamed_addr addrspace(3) global [4 x i32] undef, align 4
-@local_memory_two_objects.local_mem1 = internal unnamed_addr addrspace(3) global [4 x i32] undef, align 4
+@local_memory_two_objects.local_mem0 = internal unnamed_addr addrspace(3) global [4 x i32] poison, align 4
+@local_memory_two_objects.local_mem1 = internal unnamed_addr addrspace(3) global [4 x i32] poison, align 4
 
 ; Check that the LDS size emitted correctly
 define amdgpu_kernel void @local_memory_two_objects(ptr addrspace(1) %out) #0 {

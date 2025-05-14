@@ -8,8 +8,7 @@ subroutine test
   integer :: team_index
   integer :: statvar
   character(len=50) :: errvar
-  integer, codimension[*] :: co_team_number
-  integer, codimension[*] :: co_team_index
+  integer, codimension[*], save :: co_team_number, co_team_index
   type(team_type), dimension(1) :: array_team
   integer, dimension(1) :: array_team_number
   integer, dimension(1) :: array_team_index

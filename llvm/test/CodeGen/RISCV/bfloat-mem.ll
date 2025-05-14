@@ -7,11 +7,11 @@
 define bfloat @flh(ptr %a) nounwind {
 ; CHECK-LABEL: flh:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    flh fa5, 0(a0)
-; CHECK-NEXT:    flh fa4, 6(a0)
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
+; CHECK-NEXT:    flh fa5, 6(a0)
+; CHECK-NEXT:    flh fa4, 0(a0)
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
-; CHECK-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
+; CHECK-NEXT:    fadd.s fa5, fa4, fa5
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %1 = load bfloat, ptr %a

@@ -167,6 +167,8 @@ define void @ctpop_v2i64(ptr %x, ptr %y) {
 ;
 ; RV64-LABEL: ctpop_v2i64:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 349525
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
@@ -183,8 +185,6 @@ define void @ctpop_v2i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    add a3, a3, a5
 ; RV64-NEXT:    slli a5, a4, 32
 ; RV64-NEXT:    add a4, a4, a5
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    vsrl.vi v9, v8, 1
 ; RV64-NEXT:    vand.vx v9, v9, a1
 ; RV64-NEXT:    vsub.vv v8, v8, v9
@@ -473,6 +473,8 @@ define void @ctpop_v4i64(ptr %x, ptr %y) {
 ;
 ; RV64-LABEL: ctpop_v4i64:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 349525
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
@@ -489,8 +491,6 @@ define void @ctpop_v4i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    add a3, a3, a5
 ; RV64-NEXT:    slli a5, a4, 32
 ; RV64-NEXT:    add a4, a4, a5
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    vsrl.vi v10, v8, 1
 ; RV64-NEXT:    vand.vx v10, v10, a1
 ; RV64-NEXT:    vsub.vv v8, v8, v10

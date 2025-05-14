@@ -13,6 +13,7 @@
 #include "MCTargetDesc/LoongArchMatInt.h"
 #include "MCTargetDesc/LoongArchTargetStreamer.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -45,10 +46,8 @@ class LoongArchAsmParser : public MCTargetAsmParser {
 
   struct Inst {
     unsigned Opc;
-    LoongArchMCExpr::VariantKind VK;
-    Inst(unsigned Opc,
-         LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None)
-        : Opc(Opc), VK(VK) {}
+    uint16_t Specifier;
+    Inst(unsigned Opc, uint16_t VK = 0) : Opc(Opc), Specifier(VK) {}
   };
   using InstSeq = SmallVector<Inst>;
 
@@ -189,7 +188,7 @@ public:
   };
 
   static bool classifySymbolRef(const MCExpr *Expr,
-                                LoongArchMCExpr::VariantKind &Kind);
+                                LoongArchMCExpr::Specifier &Kind);
 
   LoongArchAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                      const MCInstrInfo &MII, const MCTargetOptions &Options)
@@ -242,9 +241,9 @@ public:
   }
 
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
-                                  LoongArchMCExpr::VariantKind &VK) {
+                                  LoongArchMCExpr::Specifier &VK) {
     if (auto *LE = dyn_cast<LoongArchMCExpr>(Expr)) {
-      VK = LE->getKind();
+      VK = LE->getSpecifier();
       return false;
     }
 
@@ -261,10 +260,10 @@ public:
       return false;
 
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isUInt<N>(Imm - P) &&
-           VK == LoongArchMCExpr::VK_LoongArch_None;
+           VK == LoongArchMCExpr::VK_None;
   }
 
   template <unsigned N, unsigned S = 0> bool isSImm() const {
@@ -272,30 +271,30 @@ public:
       return false;
 
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isShiftedInt<N, S>(Imm) &&
-           VK == LoongArchMCExpr::VK_LoongArch_None;
+           VK == LoongArchMCExpr::VK_None;
   }
 
   bool isBareSymbol() const {
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     // Must be of 'immediate' type but not a constant.
     if (!isImm() || evaluateConstantImm(getImm(), Imm, VK))
       return false;
     return LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
-           VK == LoongArchMCExpr::VK_LoongArch_None;
+           VK == LoongArchMCExpr::VK_None;
   }
 
   bool isTPRelAddSymbol() const {
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     // Must be of 'immediate' type but not a constant.
     if (!isImm() || evaluateConstantImm(getImm(), Imm, VK))
       return false;
     return LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
-           VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_ADD_R;
+           VK == ELF::R_LARCH_TLS_LE_ADD_R;
   }
 
   bool isUImm1() const { return isUImm<1>(); }
@@ -323,15 +322,13 @@ public:
       return false;
 
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
-                       VK == LoongArchMCExpr::VK_LoongArch_PCALA_LO12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_LO12_R ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_LO12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD;
+    bool IsValidKind =
+        VK == LoongArchMCExpr::VK_None || VK == ELF::R_LARCH_PCALA_LO12 ||
+        VK == ELF::R_LARCH_GOT_PC_LO12 || VK == ELF::R_LARCH_TLS_IE_PC_LO12 ||
+        VK == ELF::R_LARCH_TLS_LE_LO12_R ||
+        VK == ELF::R_LARCH_TLS_DESC_PC_LO12 || VK == ELF::R_LARCH_TLS_DESC_LD;
     return IsConstantImm
                ? isInt<12>(Imm) && IsValidKind
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -343,18 +340,16 @@ public:
       return false;
 
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
-                       VK == LoongArchMCExpr::VK_LoongArch_ABS64_HI12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_PCALA64_HI12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_GOT64_HI12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_GOT64_PC_HI12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE64_HI12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE64_HI12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE64_PC_HI12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC64_HI12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_HI12;
+    bool IsValidKind =
+        VK == LoongArchMCExpr::VK_None || VK == ELF::R_LARCH_ABS64_HI12 ||
+        VK == ELF::R_LARCH_PCALA64_HI12 || VK == ELF::R_LARCH_GOT64_HI12 ||
+        VK == ELF::R_LARCH_GOT64_PC_HI12 || VK == ELF::R_LARCH_TLS_LE64_HI12 ||
+        VK == ELF::R_LARCH_TLS_IE64_HI12 ||
+        VK == ELF::R_LARCH_TLS_IE64_PC_HI12 ||
+        VK == ELF::R_LARCH_TLS_DESC64_HI12 ||
+        VK == ELF::R_LARCH_TLS_DESC64_PC_HI12;
     return IsConstantImm
                ? isInt<12>(Imm) && IsValidKind
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -368,17 +363,14 @@ public:
       return false;
 
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
-                       VK == LoongArchMCExpr::VK_LoongArch_ABS_LO12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_PCALA_LO12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_GOT_LO12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_LO12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_LO12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_LO12;
+    bool IsValidKind =
+        VK == LoongArchMCExpr::VK_None || VK == ELF::R_LARCH_ABS_LO12 ||
+        VK == ELF::R_LARCH_PCALA_LO12 || VK == ELF::R_LARCH_GOT_LO12 ||
+        VK == ELF::R_LARCH_GOT_PC_LO12 || VK == ELF::R_LARCH_TLS_LE_LO12 ||
+        VK == ELF::R_LARCH_TLS_IE_LO12 || VK == ELF::R_LARCH_TLS_IE_PC_LO12 ||
+        VK == ELF::R_LARCH_TLS_DESC_LO12;
     return IsConstantImm
                ? isUInt<12>(Imm) && IsValidKind
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -397,12 +389,11 @@ public:
       return false;
 
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
-                       VK == LoongArchMCExpr::VK_LoongArch_B16 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_PCALA_LO12 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL;
+    bool IsValidKind =
+        VK == LoongArchMCExpr::VK_None || VK == ELF::R_LARCH_B16 ||
+        VK == ELF::R_LARCH_PCALA_LO12 || VK == ELF::R_LARCH_TLS_DESC_CALL;
     return IsConstantImm
                ? isShiftedInt<16, 2>(Imm) && IsValidKind
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -416,15 +407,14 @@ public:
       return false;
 
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
-                       VK == LoongArchMCExpr::VK_LoongArch_PCALA_HI20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_GOT_PC_HI20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_HI20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LD_PC_HI20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_GD_PC_HI20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_HI20;
+    bool IsValidKind =
+        VK == LoongArchMCExpr::VK_None || VK == ELF::R_LARCH_PCALA_HI20 ||
+        VK == ELF::R_LARCH_GOT_PC_HI20 || VK == ELF::R_LARCH_TLS_IE_PC_HI20 ||
+        VK == ELF::R_LARCH_TLS_LD_PC_HI20 ||
+        VK == ELF::R_LARCH_TLS_GD_PC_HI20 ||
+        VK == ELF::R_LARCH_TLS_DESC_PC_HI20;
     return IsConstantImm
                ? isInt<20>(Imm) && IsValidKind
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -436,17 +426,14 @@ public:
       return false;
 
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
-                       VK == LoongArchMCExpr::VK_LoongArch_ABS_HI20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_GOT_HI20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_GD_HI20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LD_HI20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_HI20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20_R ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_HI20;
+    bool IsValidKind =
+        VK == LoongArchMCExpr::VK_None || VK == ELF::R_LARCH_ABS_HI20 ||
+        VK == ELF::R_LARCH_GOT_HI20 || VK == ELF::R_LARCH_TLS_GD_HI20 ||
+        VK == ELF::R_LARCH_TLS_LD_HI20 || VK == ELF::R_LARCH_TLS_IE_HI20 ||
+        VK == ELF::R_LARCH_TLS_LE_HI20 || VK == ELF::R_LARCH_TLS_LE_HI20_R ||
+        VK == ELF::R_LARCH_TLS_DESC_HI20;
     return IsConstantImm
                ? isInt<20>(Imm) && IsValidKind
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -458,18 +445,16 @@ public:
       return false;
 
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
-                       VK == LoongArchMCExpr::VK_LoongArch_ABS64_LO20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_PCALA64_LO20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_GOT64_LO20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_GOT64_PC_LO20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE64_LO20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE64_PC_LO20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE64_LO20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_LO20 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC64_LO20;
+    bool IsValidKind =
+        VK == LoongArchMCExpr::VK_None || VK == ELF::R_LARCH_ABS64_LO20 ||
+        VK == ELF::R_LARCH_PCALA64_LO20 || VK == ELF::R_LARCH_GOT64_LO20 ||
+        VK == ELF::R_LARCH_GOT64_PC_LO20 || VK == ELF::R_LARCH_TLS_IE64_LO20 ||
+        VK == ELF::R_LARCH_TLS_IE64_PC_LO20 ||
+        VK == ELF::R_LARCH_TLS_LE64_LO20 ||
+        VK == ELF::R_LARCH_TLS_DESC64_PC_LO20 ||
+        VK == ELF::R_LARCH_TLS_DESC64_LO20;
 
     return IsConstantImm
                ? isInt<20>(Imm) && IsValidKind
@@ -482,10 +467,10 @@ public:
       return false;
 
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
-                       VK == LoongArchMCExpr::VK_LoongArch_CALL36;
+    bool IsValidKind =
+        VK == LoongArchMCExpr::VK_None || VK == ELF::R_LARCH_CALL36;
 
     return IsConstantImm
                ? isInt<20>(Imm) && IsValidKind
@@ -498,13 +483,13 @@ public:
       return false;
 
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
-                       VK == LoongArchMCExpr::VK_LoongArch_PCREL20_S2 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LD_PCREL20_S2 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_GD_PCREL20_S2 ||
-                       VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_PCREL20_S2;
+    bool IsValidKind = VK == LoongArchMCExpr::VK_None ||
+                       VK == ELF::R_LARCH_PCREL20_S2 ||
+                       VK == ELF::R_LARCH_TLS_LD_PCREL20_S2 ||
+                       VK == ELF::R_LARCH_TLS_GD_PCREL20_S2 ||
+                       VK == ELF::R_LARCH_TLS_DESC_PCREL20_S2;
     return IsConstantImm
                ? isInt<20>(Imm) && IsValidKind
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -516,10 +501,9 @@ public:
       return false;
 
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
-                       VK == LoongArchMCExpr::VK_LoongArch_B21;
+    bool IsValidKind = VK == LoongArchMCExpr::VK_None || VK == ELF::R_LARCH_B21;
     return IsConstantImm
                ? isShiftedInt<21, 2>(Imm) && IsValidKind
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -531,12 +515,9 @@ public:
       return false;
 
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
-                       VK == LoongArchMCExpr::VK_LoongArch_CALL ||
-                       VK == LoongArchMCExpr::VK_LoongArch_CALL_PLT ||
-                       VK == LoongArchMCExpr::VK_LoongArch_B26;
+    bool IsValidKind = VK == LoongArchMCExpr::VK_None || VK == ELF::R_LARCH_B26;
     return IsConstantImm
                ? isShiftedInt<26, 2>(Imm) && IsValidKind
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -548,9 +529,9 @@ public:
     if (!isImm())
       return false;
     int64_t Imm;
-    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && VK == LoongArchMCExpr::VK_LoongArch_None;
+    return IsConstantImm && VK == LoongArchMCExpr::VK_None;
   }
 
   /// Gets location of the first token of this operand.
@@ -699,17 +680,17 @@ ParseStatus LoongArchAsmParser::tryParseRegister(MCRegister &Reg,
 }
 
 bool LoongArchAsmParser::classifySymbolRef(const MCExpr *Expr,
-                                           LoongArchMCExpr::VariantKind &Kind) {
-  Kind = LoongArchMCExpr::VK_LoongArch_None;
+                                           LoongArchMCExpr::Specifier &Kind) {
+  Kind = LoongArchMCExpr::VK_None;
 
   if (const LoongArchMCExpr *RE = dyn_cast<LoongArchMCExpr>(Expr)) {
-    Kind = RE->getKind();
+    Kind = RE->getSpecifier();
     Expr = RE->getSubExpr();
   }
 
   MCValue Res;
-  if (Expr->evaluateAsRelocatable(Res, nullptr, nullptr))
-    return Res.getRefKind() == LoongArchMCExpr::VK_LoongArch_None;
+  if (Expr->evaluateAsRelocatable(Res, nullptr))
+    return Res.getSpecifier() == LoongArchMCExpr::VK_None;
   return false;
 }
 
@@ -774,10 +755,9 @@ LoongArchAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::Identifier)
     return Error(getLoc(), "expected valid identifier for operand modifier");
   StringRef Identifier = getParser().getTok().getIdentifier();
-  LoongArchMCExpr::VariantKind VK =
-      LoongArchMCExpr::getVariantKindForName(Identifier);
-  if (VK == LoongArchMCExpr::VK_LoongArch_Invalid)
-    return Error(getLoc(), "unrecognized operand modifier");
+  LoongArchMCExpr::Specifier VK = LoongArchMCExpr::parseSpecifier(Identifier);
+  if (VK == LoongArchMCExpr::VK_None)
+    return Error(getLoc(), "invalid relocation specifier");
 
   getParser().Lex(); // Eat the identifier
   if (getLexer().getKind() != AsmToken::LParen)
@@ -810,9 +790,7 @@ ParseStatus LoongArchAsmParser::parseSImm26Operand(OperandVector &Operands) {
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-  Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
-  Res = LoongArchMCExpr::create(Res, LoongArchMCExpr::VK_LoongArch_CALL,
-                                getContext());
+  Res = MCSymbolRefExpr::create(Sym, getContext());
   Operands.push_back(LoongArchOperand::createImm(Res, S, E));
   return ParseStatus::Success;
 }
@@ -892,7 +870,7 @@ void LoongArchAsmParser::emitLAInstSeq(MCRegister DestReg, MCRegister TmpReg,
   MCContext &Ctx = getContext();
   for (LoongArchAsmParser::Inst &Inst : Insts) {
     unsigned Opc = Inst.Opc;
-    LoongArchMCExpr::VariantKind VK = Inst.VK;
+    auto VK = LoongArchMCExpr::Specifier(Inst.Specifier);
     const LoongArchMCExpr *LE =
         LoongArchMCExpr::create(Symbol, VK, Ctx, RelaxHint);
     switch (Opc) {
@@ -907,12 +885,12 @@ void LoongArchAsmParser::emitLAInstSeq(MCRegister DestReg, MCRegister TmpReg,
     case LoongArch::ADDI_W:
     case LoongArch::LD_W:
     case LoongArch::LD_D: {
-      if (VK == LoongArchMCExpr::VK_LoongArch_None) {
+      if (VK == LoongArchMCExpr::VK_None) {
         Out.emitInstruction(
             MCInstBuilder(Opc).addReg(DestReg).addReg(DestReg).addImm(0),
             getSTI());
         continue;
-      } else if (VK == LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD) {
+      } else if (VK == ELF::R_LARCH_TLS_DESC_LD) {
         Out.emitInstruction(MCInstBuilder(Opc)
                                 .addReg(LoongArch::R1)
                                 .addReg(DestReg)
@@ -978,16 +956,16 @@ void LoongArchAsmParser::emitLoadAddressAbs(MCInst &Inst, SMLoc IDLoc,
                              : Inst.getOperand(2).getExpr();
   InstSeq Insts;
 
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU12I_W, LoongArchMCExpr::VK_LoongArch_ABS_HI20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::ORI, LoongArchMCExpr::VK_LoongArch_ABS_LO12));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::LU12I_W, ELF::R_LARCH_ABS_HI20));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::ORI, ELF::R_LARCH_ABS_LO12));
 
   if (is64Bit()) {
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_ABS64_LO20));
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_ABS64_HI12));
+    Insts.push_back(
+        LoongArchAsmParser::Inst(LoongArch::LU32I_D, ELF::R_LARCH_ABS64_LO20));
+    Insts.push_back(
+        LoongArchAsmParser::Inst(LoongArch::LU52I_D, ELF::R_LARCH_ABS64_HI12));
   }
 
   emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
@@ -1004,10 +982,9 @@ void LoongArchAsmParser::emitLoadAddressPcrel(MCInst &Inst, SMLoc IDLoc,
   InstSeq Insts;
   unsigned ADDI = is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
 
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_PCALA_HI20));
   Insts.push_back(
-      LoongArchAsmParser::Inst(ADDI, LoongArchMCExpr::VK_LoongArch_PCALA_LO12));
+      LoongArchAsmParser::Inst(LoongArch::PCALAU12I, ELF::R_LARCH_PCALA_HI20));
+  Insts.push_back(LoongArchAsmParser::Inst(ADDI, ELF::R_LARCH_PCALA_LO12));
 
   emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
                 /*RelaxHint=*/true);
@@ -1027,14 +1004,14 @@ void LoongArchAsmParser::emitLoadAddressPcrelLarge(MCInst &Inst, SMLoc IDLoc,
   const MCExpr *Symbol = Inst.getOperand(2).getExpr();
   InstSeq Insts;
 
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_PCALA_HI20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::ADDI_D, LoongArchMCExpr::VK_LoongArch_PCALA_LO12));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_PCALA64_LO20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_PCALA64_HI12));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::PCALAU12I, ELF::R_LARCH_PCALA_HI20));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::ADDI_D, ELF::R_LARCH_PCALA_LO12));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::LU32I_D, ELF::R_LARCH_PCALA64_LO20));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::LU52I_D, ELF::R_LARCH_PCALA64_HI12));
   Insts.push_back(LoongArchAsmParser::Inst(LoongArch::ADD_D));
 
   emitLAInstSeq(DestReg, TmpReg, Symbol, Insts, IDLoc, Out);
@@ -1061,16 +1038,16 @@ void LoongArchAsmParser::emitLoadAddressGot(MCInst &Inst, SMLoc IDLoc,
     //   lu32i.d $rd, %got64_lo20(sym)
     //   lu52i.d $rd, $rd, %got64_hi12(sym)
     //   ld.d    $rd, $rd, 0
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::LU12I_W, LoongArchMCExpr::VK_LoongArch_GOT_HI20));
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::ORI, LoongArchMCExpr::VK_LoongArch_GOT_LO12));
+    Insts.push_back(
+        LoongArchAsmParser::Inst(LoongArch::LU12I_W, ELF::R_LARCH_GOT_HI20));
+    Insts.push_back(
+        LoongArchAsmParser::Inst(LoongArch::ORI, ELF::R_LARCH_GOT_LO12));
 
     if (is64Bit()) {
-      Insts.push_back(LoongArchAsmParser::Inst(
-          LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_GOT64_LO20));
-      Insts.push_back(LoongArchAsmParser::Inst(
-          LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_GOT64_HI12));
+      Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU32I_D,
+                                               ELF::R_LARCH_GOT64_LO20));
+      Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU52I_D,
+                                               ELF::R_LARCH_GOT64_HI12));
     }
     Insts.push_back(LoongArchAsmParser::Inst(LD));
     emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
@@ -1079,10 +1056,9 @@ void LoongArchAsmParser::emitLoadAddressGot(MCInst &Inst, SMLoc IDLoc,
   // expands to:
   //   pcalau12i $rd, %got_pc_hi20(sym)
   //   ld.w/d    $rd, $rd, %got_pc_lo12(sym)
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_GOT_PC_HI20));
   Insts.push_back(
-      LoongArchAsmParser::Inst(LD, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
+      LoongArchAsmParser::Inst(LoongArch::PCALAU12I, ELF::R_LARCH_GOT_PC_HI20));
+  Insts.push_back(LoongArchAsmParser::Inst(LD, ELF::R_LARCH_GOT_PC_LO12));
 
   emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
                 /*RelaxHint=*/true);
@@ -1102,14 +1078,14 @@ void LoongArchAsmParser::emitLoadAddressGotLarge(MCInst &Inst, SMLoc IDLoc,
   const MCExpr *Symbol = Inst.getOperand(2).getExpr();
   InstSeq Insts;
 
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_GOT_PC_HI20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::ADDI_D, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_GOT64_PC_LO20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_GOT64_PC_HI12));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::PCALAU12I, ELF::R_LARCH_GOT_PC_HI20));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::ADDI_D, ELF::R_LARCH_GOT_PC_LO12));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::LU32I_D, ELF::R_LARCH_GOT64_PC_LO20));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::LU52I_D, ELF::R_LARCH_GOT64_PC_HI12));
   Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LDX_D));
 
   emitLAInstSeq(DestReg, TmpReg, Symbol, Insts, IDLoc, Out);
@@ -1125,10 +1101,10 @@ void LoongArchAsmParser::emitLoadAddressTLSLE(MCInst &Inst, SMLoc IDLoc,
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   InstSeq Insts;
 
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU12I_W, LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::ORI, LoongArchMCExpr::VK_LoongArch_TLS_LE_LO12));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::LU12I_W, ELF::R_LARCH_TLS_LE_HI20));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::ORI, ELF::R_LARCH_TLS_LE_LO12));
 
   emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
 }
@@ -1154,16 +1130,16 @@ void LoongArchAsmParser::emitLoadAddressTLSIE(MCInst &Inst, SMLoc IDLoc,
     //   lu32i.d $rd, %ie64_lo20(sym)
     //   lu52i.d $rd, $rd, %ie64_hi12(sym)
     //   ld.d    $rd, $rd, 0
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::LU12I_W, LoongArchMCExpr::VK_LoongArch_TLS_IE_HI20));
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::ORI, LoongArchMCExpr::VK_LoongArch_TLS_IE_LO12));
+    Insts.push_back(
+        LoongArchAsmParser::Inst(LoongArch::LU12I_W, ELF::R_LARCH_TLS_IE_HI20));
+    Insts.push_back(
+        LoongArchAsmParser::Inst(LoongArch::ORI, ELF::R_LARCH_TLS_IE_LO12));
 
     if (is64Bit()) {
-      Insts.push_back(LoongArchAsmParser::Inst(
-          LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_TLS_IE64_LO20));
-      Insts.push_back(LoongArchAsmParser::Inst(
-          LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_TLS_IE64_HI12));
+      Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU32I_D,
+                                               ELF::R_LARCH_TLS_IE64_LO20));
+      Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU52I_D,
+                                               ELF::R_LARCH_TLS_IE64_HI12));
     }
     Insts.push_back(LoongArchAsmParser::Inst(LD));
     emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
@@ -1173,10 +1149,9 @@ void LoongArchAsmParser::emitLoadAddressTLSIE(MCInst &Inst, SMLoc IDLoc,
   // expands to:
   //   pcalau12i $rd, %ie_pc_hi20(sym)
   //   ld.w/d    $rd, $rd, %ie_pc_lo12(sym)
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_HI20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LD, LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12));
+  Insts.push_back(LoongArchAsmParser::Inst(LoongArch::PCALAU12I,
+                                           ELF::R_LARCH_TLS_IE_PC_HI20));
+  Insts.push_back(LoongArchAsmParser::Inst(LD, ELF::R_LARCH_TLS_IE_PC_LO12));
 
   emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
                 /*RelaxHint=*/true);
@@ -1196,14 +1171,14 @@ void LoongArchAsmParser::emitLoadAddressTLSIELarge(MCInst &Inst, SMLoc IDLoc,
   const MCExpr *Symbol = Inst.getOperand(2).getExpr();
   InstSeq Insts;
 
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_HI20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::ADDI_D, LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_TLS_IE64_PC_LO20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_TLS_IE64_PC_HI12));
+  Insts.push_back(LoongArchAsmParser::Inst(LoongArch::PCALAU12I,
+                                           ELF::R_LARCH_TLS_IE_PC_HI20));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::ADDI_D, ELF::R_LARCH_TLS_IE_PC_LO12));
+  Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU32I_D,
+                                           ELF::R_LARCH_TLS_IE64_PC_LO20));
+  Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU52I_D,
+                                           ELF::R_LARCH_TLS_IE64_PC_HI12));
   Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LDX_D));
 
   emitLAInstSeq(DestReg, TmpReg, Symbol, Insts, IDLoc, Out);
@@ -1228,16 +1203,16 @@ void LoongArchAsmParser::emitLoadAddressTLSLD(MCInst &Inst, SMLoc IDLoc,
     //   ori     $rd, $rd, %got_lo12(sym)
     //   lu32i.d $rd, %got64_lo20(sym)
     //   lu52i.d $rd, $rd, %got64_hi12(sym)
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::LU12I_W, LoongArchMCExpr::VK_LoongArch_TLS_LD_HI20));
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::ORI, LoongArchMCExpr::VK_LoongArch_GOT_LO12));
+    Insts.push_back(
+        LoongArchAsmParser::Inst(LoongArch::LU12I_W, ELF::R_LARCH_TLS_LD_HI20));
+    Insts.push_back(
+        LoongArchAsmParser::Inst(LoongArch::ORI, ELF::R_LARCH_GOT_LO12));
 
     if (is64Bit()) {
-      Insts.push_back(LoongArchAsmParser::Inst(
-          LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_GOT64_LO20));
-      Insts.push_back(LoongArchAsmParser::Inst(
-          LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_GOT64_HI12));
+      Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU32I_D,
+                                               ELF::R_LARCH_GOT64_LO20));
+      Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU52I_D,
+                                               ELF::R_LARCH_GOT64_HI12));
     }
     emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
     return;
@@ -1246,10 +1221,9 @@ void LoongArchAsmParser::emitLoadAddressTLSLD(MCInst &Inst, SMLoc IDLoc,
   // expands to:
   //   pcalau12i $rd, %ld_pc_hi20(sym)
   //   addi.w/d  $rd, $rd, %got_pc_lo12(sym)
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_TLS_LD_PC_HI20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      ADDI, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
+  Insts.push_back(LoongArchAsmParser::Inst(LoongArch::PCALAU12I,
+                                           ELF::R_LARCH_TLS_LD_PC_HI20));
+  Insts.push_back(LoongArchAsmParser::Inst(ADDI, ELF::R_LARCH_GOT_PC_LO12));
 
   emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
                 /*RelaxHint=*/true);
@@ -1269,14 +1243,14 @@ void LoongArchAsmParser::emitLoadAddressTLSLDLarge(MCInst &Inst, SMLoc IDLoc,
   const MCExpr *Symbol = Inst.getOperand(2).getExpr();
   InstSeq Insts;
 
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_TLS_LD_PC_HI20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::ADDI_D, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_GOT64_PC_LO20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_GOT64_PC_HI12));
+  Insts.push_back(LoongArchAsmParser::Inst(LoongArch::PCALAU12I,
+                                           ELF::R_LARCH_TLS_LD_PC_HI20));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::ADDI_D, ELF::R_LARCH_GOT_PC_LO12));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::LU32I_D, ELF::R_LARCH_GOT64_PC_LO20));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::LU52I_D, ELF::R_LARCH_GOT64_PC_HI12));
   Insts.push_back(LoongArchAsmParser::Inst(LoongArch::ADD_D));
 
   emitLAInstSeq(DestReg, TmpReg, Symbol, Insts, IDLoc, Out);
@@ -1301,16 +1275,16 @@ void LoongArchAsmParser::emitLoadAddressTLSGD(MCInst &Inst, SMLoc IDLoc,
     //   ori     $rd, $rd, %got_lo12(sym)
     //   lu32i.d $rd, %got64_lo20(sym)
     //   lu52i.d $rd, $rd, %got64_hi12(sym)
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::LU12I_W, LoongArchMCExpr::VK_LoongArch_TLS_GD_HI20));
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::ORI, LoongArchMCExpr::VK_LoongArch_GOT_LO12));
+    Insts.push_back(
+        LoongArchAsmParser::Inst(LoongArch::LU12I_W, ELF::R_LARCH_TLS_GD_HI20));
+    Insts.push_back(
+        LoongArchAsmParser::Inst(LoongArch::ORI, ELF::R_LARCH_GOT_LO12));
 
     if (is64Bit()) {
-      Insts.push_back(LoongArchAsmParser::Inst(
-          LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_GOT64_LO20));
-      Insts.push_back(LoongArchAsmParser::Inst(
-          LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_GOT64_HI12));
+      Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU32I_D,
+                                               ELF::R_LARCH_GOT64_LO20));
+      Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU52I_D,
+                                               ELF::R_LARCH_GOT64_HI12));
     }
     emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
     return;
@@ -1319,10 +1293,9 @@ void LoongArchAsmParser::emitLoadAddressTLSGD(MCInst &Inst, SMLoc IDLoc,
   // expands to:
   //   pcalau12i $rd, %gd_pc_hi20(sym)
   //   addi.w/d  $rd, $rd, %got_pc_lo12(sym)
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_TLS_GD_PC_HI20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      ADDI, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
+  Insts.push_back(LoongArchAsmParser::Inst(LoongArch::PCALAU12I,
+                                           ELF::R_LARCH_TLS_GD_PC_HI20));
+  Insts.push_back(LoongArchAsmParser::Inst(ADDI, ELF::R_LARCH_GOT_PC_LO12));
 
   emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
                 /*RelaxHint=*/true);
@@ -1342,14 +1315,14 @@ void LoongArchAsmParser::emitLoadAddressTLSGDLarge(MCInst &Inst, SMLoc IDLoc,
   const MCExpr *Symbol = Inst.getOperand(2).getExpr();
   InstSeq Insts;
 
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_TLS_GD_PC_HI20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::ADDI_D, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_GOT64_PC_LO20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_GOT64_PC_HI12));
+  Insts.push_back(LoongArchAsmParser::Inst(LoongArch::PCALAU12I,
+                                           ELF::R_LARCH_TLS_GD_PC_HI20));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::ADDI_D, ELF::R_LARCH_GOT_PC_LO12));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::LU32I_D, ELF::R_LARCH_GOT64_PC_LO20));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::LU52I_D, ELF::R_LARCH_GOT64_PC_HI12));
   Insts.push_back(LoongArchAsmParser::Inst(LoongArch::ADD_D));
 
   emitLAInstSeq(DestReg, TmpReg, Symbol, Insts, IDLoc, Out);
@@ -1379,22 +1352,21 @@ void LoongArchAsmParser::emitLoadAddressTLSDesc(MCInst &Inst, SMLoc IDLoc,
     //   lu52i.d $rd, $rd, %desc64_hi12(sym)
     //   ld.d    $ra, $rd, %desc_ld(sym)
     //   jirl    $ra, $ra, %desc_call(sym)
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::LU12I_W, LoongArchMCExpr::VK_LoongArch_TLS_DESC_HI20));
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::ORI, LoongArchMCExpr::VK_LoongArch_TLS_DESC_LO12));
+    Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU12I_W,
+                                             ELF::R_LARCH_TLS_DESC_HI20));
+    Insts.push_back(
+        LoongArchAsmParser::Inst(LoongArch::ORI, ELF::R_LARCH_TLS_DESC_LO12));
 
     if (is64Bit()) {
-      Insts.push_back(LoongArchAsmParser::Inst(
-          LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_TLS_DESC64_LO20));
-      Insts.push_back(LoongArchAsmParser::Inst(
-          LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_TLS_DESC64_HI12));
+      Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU32I_D,
+                                               ELF::R_LARCH_TLS_DESC64_LO20));
+      Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU52I_D,
+                                               ELF::R_LARCH_TLS_DESC64_HI12));
     }
 
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LD, LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD));
-    Insts.push_back(LoongArchAsmParser::Inst(
-        LoongArch::JIRL, LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL));
+    Insts.push_back(LoongArchAsmParser::Inst(LD, ELF::R_LARCH_TLS_DESC_LD));
+    Insts.push_back(
+        LoongArchAsmParser::Inst(LoongArch::JIRL, ELF::R_LARCH_TLS_DESC_CALL));
 
     emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
     return;
@@ -1405,14 +1377,13 @@ void LoongArchAsmParser::emitLoadAddressTLSDesc(MCInst &Inst, SMLoc IDLoc,
   //   addi.w/d  $rd, $rd, %desc_pc_lo12(sym)
   //   ld.w/d    $ra, $rd, %desc_ld(sym)
   //   jirl      $ra, $ra, %desc_call(sym)
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_HI20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      ADDI, LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_LO12));
+  Insts.push_back(LoongArchAsmParser::Inst(LoongArch::PCALAU12I,
+                                           ELF::R_LARCH_TLS_DESC_PC_HI20));
   Insts.push_back(
-      LoongArchAsmParser::Inst(LD, LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::JIRL, LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL));
+      LoongArchAsmParser::Inst(ADDI, ELF::R_LARCH_TLS_DESC_PC_LO12));
+  Insts.push_back(LoongArchAsmParser::Inst(LD, ELF::R_LARCH_TLS_DESC_LD));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::JIRL, ELF::R_LARCH_TLS_DESC_CALL));
 
   emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
                 /*RelaxHint=*/true);
@@ -1434,19 +1405,19 @@ void LoongArchAsmParser::emitLoadAddressTLSDescLarge(MCInst &Inst, SMLoc IDLoc,
   const MCExpr *Symbol = Inst.getOperand(2).getExpr();
   InstSeq Insts;
 
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::PCALAU12I, LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_HI20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::ADDI_D, LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_LO12));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU32I_D, LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_LO20));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LU52I_D, LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_HI12));
+  Insts.push_back(LoongArchAsmParser::Inst(LoongArch::PCALAU12I,
+                                           ELF::R_LARCH_TLS_DESC_PC_HI20));
+  Insts.push_back(LoongArchAsmParser::Inst(LoongArch::ADDI_D,
+                                           ELF::R_LARCH_TLS_DESC_PC_LO12));
+  Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU32I_D,
+                                           ELF::R_LARCH_TLS_DESC64_PC_LO20));
+  Insts.push_back(LoongArchAsmParser::Inst(LoongArch::LU52I_D,
+                                           ELF::R_LARCH_TLS_DESC64_PC_HI12));
   Insts.push_back(LoongArchAsmParser::Inst(LoongArch::ADD_D));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::LD_D, LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD));
-  Insts.push_back(LoongArchAsmParser::Inst(
-      LoongArch::JIRL, LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::LD_D, ELF::R_LARCH_TLS_DESC_LD));
+  Insts.push_back(
+      LoongArchAsmParser::Inst(LoongArch::JIRL, ELF::R_LARCH_TLS_DESC_CALL));
 
   emitLAInstSeq(DestReg, TmpReg, Symbol, Insts, IDLoc, Out);
 }
@@ -1506,9 +1477,8 @@ void LoongArchAsmParser::emitFuncCall36(MCInst &Inst, SMLoc IDLoc,
       IsTailCall ? Inst.getOperand(0).getReg() : MCRegister(LoongArch::R1);
   const MCExpr *Sym =
       IsTailCall ? Inst.getOperand(1).getExpr() : Inst.getOperand(0).getExpr();
-  const LoongArchMCExpr *LE =
-      LoongArchMCExpr::create(Sym, llvm::LoongArchMCExpr::VK_LoongArch_CALL36,
-                              getContext(), /*RelaxHint=*/true);
+  const LoongArchMCExpr *LE = LoongArchMCExpr::create(
+      Sym, ELF::R_LARCH_CALL36, getContext(), /*RelaxHint=*/true);
 
   Out.emitInstruction(
       MCInstBuilder(LoongArch::PCADDU18I).addReg(ScratchReg).addExpr(LE),

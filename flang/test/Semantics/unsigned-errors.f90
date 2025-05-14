@@ -64,7 +64,7 @@ u = 1
 !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types INTEGER(4) and UNSIGNED(4)
 j = 1u
 
-!ERROR: Must have INTEGER type, but is UNSIGNED(4)
+!ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type UNSIGNED(4)
 write(6u,*) 'hi'
 
 !ERROR: ARITHMETIC IF expression must not be an UNSIGNED expression

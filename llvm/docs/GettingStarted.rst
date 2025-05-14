@@ -545,7 +545,7 @@ Local LLVM Configuration
 ------------------------
 
 Once checked out repository, the LLVM suite source code must be configured
-before being built. This process uses CMake.  Unlinke the normal ``configure``
+before being built. This process uses CMake.  Unlike the normal ``configure``
 script, CMake generates the build files in whatever format you request as well
 as various ``*.inc`` files, and ``llvm/include/llvm/Config/config.h.cmake``.
 

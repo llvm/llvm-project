@@ -66,12 +66,12 @@ bool SparcInstPrinter::printSparcAliasInstr(const MCInst *MI,
       return false;
     if (!MI->getOperand(0).isReg())
       return false;
-    switch (MI->getOperand(0).getReg()) {
+    switch (MI->getOperand(0).getReg().id()) {
     default: return false;
     case SP::G0: // jmp $addr | ret | retl
       if (MI->getOperand(2).isImm() &&
           MI->getOperand(2).getImm() == 8) {
-        switch(MI->getOperand(1).getReg()) {
+        switch (MI->getOperand(1).getReg().id()) {
         default: break;
         case SP::I7: O << "\tret"; return true;
         case SP::O7: O << "\tretl"; return true;
@@ -115,7 +115,7 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
   const MCOperand &MO = MI->getOperand (opNum);
 
   if (MO.isReg()) {
-    unsigned Reg = MO.getReg();
+    MCRegister Reg = MO.getReg();
     if (isV9(STI))
       printRegName(O, Reg, SP::RegNamesStateReg);
     else
@@ -126,7 +126,7 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
   if (MO.isImm()) {
     switch (MI->getOpcode()) {
       default:
-        O << (int)MO.getImm();
+        markup(O, Markup::Immediate) << formatImm(int32_t(MO.getImm()));
         return;
 
       case SP::TICCri: // Fall through
@@ -192,8 +192,8 @@ void SparcInstPrinter::printCCOperand(const MCInst *MI, int opNum,
     // Make sure CC is a fp conditional flag.
     CC = (CC < SPCC::FCC_BEGIN) ? (CC + SPCC::FCC_BEGIN) : CC;
     break;
-  case SP::CBCOND:
-  case SP::CBCONDA:
+  case SP::CPBCOND:
+  case SP::CPBCONDA:
     // Make sure CC is a cp conditional flag.
     CC = (CC < SPCC::CPCC_BEGIN) ? (CC + SPCC::CPCC_BEGIN) : CC;
     break;

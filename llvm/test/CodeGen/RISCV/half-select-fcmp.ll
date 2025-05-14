@@ -737,12 +737,12 @@ define i32 @i32_select_fcmp_oeq(half %a, half %b, i32 %c, i32 %d) nounwind {
 ;
 ; CHECKIZHINX-LABEL: i32_select_fcmp_oeq:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    feq.h a0, a0, a1
-; CHECKIZHINX-NEXT:    bnez a0, .LBB16_2
-; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    mv a2, a3
-; CHECKIZHINX-NEXT:  .LBB16_2:
+; CHECKIZHINX-NEXT:    feq.h a1, a0, a1
 ; CHECKIZHINX-NEXT:    mv a0, a2
+; CHECKIZHINX-NEXT:    bnez a1, .LBB16_2
+; CHECKIZHINX-NEXT:  # %bb.1:
+; CHECKIZHINX-NEXT:    mv a0, a3
+; CHECKIZHINX-NEXT:  .LBB16_2:
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKIZFHMIN-LABEL: i32_select_fcmp_oeq:
@@ -760,12 +760,12 @@ define i32 @i32_select_fcmp_oeq(half %a, half %b, i32 %c, i32 %d) nounwind {
 ; CHECKIZHINXMIN:       # %bb.0:
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECKIZHINXMIN-NEXT:    feq.s a0, a0, a1
-; CHECKIZHINXMIN-NEXT:    bnez a0, .LBB16_2
-; CHECKIZHINXMIN-NEXT:  # %bb.1:
-; CHECKIZHINXMIN-NEXT:    mv a2, a3
-; CHECKIZHINXMIN-NEXT:  .LBB16_2:
+; CHECKIZHINXMIN-NEXT:    feq.s a1, a0, a1
 ; CHECKIZHINXMIN-NEXT:    mv a0, a2
+; CHECKIZHINXMIN-NEXT:    bnez a1, .LBB16_2
+; CHECKIZHINXMIN-NEXT:  # %bb.1:
+; CHECKIZHINXMIN-NEXT:    mv a0, a3
+; CHECKIZHINXMIN-NEXT:  .LBB16_2:
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = fcmp oeq half %a, %b
   %2 = select i1 %1, i32 %c, i32 %d

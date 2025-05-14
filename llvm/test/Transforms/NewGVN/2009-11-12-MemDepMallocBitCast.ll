@@ -5,12 +5,14 @@
 
 define i64 @test() {
 ; CHECK-LABEL: define i64 @test() {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @malloc(i64 mul (i64 4, i64 ptrtoint (ptr getelementptr (i64, ptr null, i64 1) to i64)))
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 4, ptrtoint (ptr getelementptr (i64, ptr null, i64 1) to i64)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @malloc(i64 [[MUL]])
 ; CHECK-NEXT:    store i8 42, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[Y:%.*]] = load i64, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret i64 [[Y]]
 ;
-  %1 = tail call ptr @malloc(i64 mul (i64 4, i64 ptrtoint (ptr getelementptr (i64, ptr null, i64 1) to i64))) ; <ptr> [#uses=2]
+  %mul = mul i64 4, ptrtoint (ptr getelementptr (i64, ptr null, i64 1) to i64)
+  %1 = tail call ptr @malloc(i64 %mul)
   store i8 42, ptr %1
   %Y = load i64, ptr %1                               ; <i64> [#uses=1]
   ret i64 %Y

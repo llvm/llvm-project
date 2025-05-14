@@ -34,6 +34,7 @@ def OpenMP : DirectiveLanguage {
 
 def OMPC_Absent : Clause<"absent"> {
   let clangClass = "OMPAbsentClause";
+  let flangClass = "OmpAbsentClause";
 }
 def OMPC_Acquire : Clause<"acquire"> {
   let clangClass = "OMPAcquireClause";
@@ -42,6 +43,7 @@ def OMPC_AcqRel : Clause<"acq_rel"> {
   let clangClass = "OMPAcqRelClause";
 }
 def OMPC_AdjustArgs : Clause<"adjust_args"> {
+  let flangClass = "OmpAdjustArgsClause";
 }
 def OMPC_Affinity : Clause<"affinity"> {
   let clangClass = "OMPAffinityClause";
@@ -64,6 +66,7 @@ def OMPC_Allocator : Clause<"allocator"> {
   let flangClass = "ScalarIntExpr";
 }
 def OMPC_AppendArgs : Clause<"append_args"> {
+  let flangClass = "OmpAppendArgsClause";
 }
 def OMPC_At : Clause<"at"> {
   let clangClass = "OMPAtClause";
@@ -104,9 +107,12 @@ def OMPC_CancellationConstructType : Clause<"cancellation_construct_type"> {
     OMP_CANCELLATION_CONSTRUCT_Taskgroup,
     OMP_CANCELLATION_CONSTRUCT_None
   ];
+  let flangClass = "OmpCancellationConstructTypeClause";
+  let skipFlangUnparser = true;
 }
 def OMPC_Contains : Clause<"contains"> {
   let clangClass = "OMPContainsClause";
+  let flangClass = "OmpContainsClause";
 }
 def OMPC_Capture : Clause<"capture"> {
   let clangClass = "OMPCaptureClause";
@@ -221,10 +227,11 @@ def OMPC_HasDeviceAddr : Clause<"has_device_addr"> {
 }
 def OMPC_Hint : Clause<"hint"> {
   let clangClass = "OMPHintClause";
-  let flangClass = "ConstantExpr";
+  let flangClass = "OmpHintClause";
 }
 def OMPC_Holds : Clause<"holds"> {
   let clangClass = "OMPHoldsClause";
+  let flangClass = "OmpHoldsClause";
 }
 def OMPC_If : Clause<"if"> {
   let clangClass = "OMPIfClause";
@@ -240,6 +247,10 @@ def OMPC_Indirect : Clause<"indirect"> {
 }
 def OMPC_Init : Clause<"init"> {
   let clangClass = "OMPInitClause";
+  let flangClass = "OmpInitClause";
+}
+def OMPC_Initializer : Clause<"initializer"> {
+  let flangClass = "OmpInitializerClause";
 }
 def OMPC_InReduction : Clause<"in_reduction"> {
   let clangClass = "OMPInReductionClause";
@@ -483,7 +494,6 @@ def OMPC_ThreadLimit : Clause<"thread_limit"> {
   let flangClass = "ScalarIntExpr";
 }
 def OMPC_ThreadPrivate : Clause<"threadprivate"> {
-  let alternativeName = "threadprivate or thread local";
   let isImplicit = true;
 }
 def OMPC_Threads : Clause<"threads"> {
@@ -499,6 +509,9 @@ def OMPC_UnifiedAddress : Clause<"unified_address"> {
 def OMPC_UnifiedSharedMemory : Clause<"unified_shared_memory"> {
   let clangClass = "OMPUnifiedSharedMemoryClause";
 }
+def OMPC_SelfMaps : Clause<"self_maps"> {
+  let clangClass = "OMPSelfMapsClause";
+}
 def OMPC_Uniform : Clause<"uniform"> {
   let flangClass = "Name";
   let isValueList = true;
@@ -513,9 +526,11 @@ def OMPC_Untied : Clause<"untied"> {
 def OMPC_Update : Clause<"update"> {
   let clangClass = "OMPUpdateClause";
   let flangClass = "OmpUpdateClause";
+  let isValueOptional = true;
 }
 def OMPC_Use : Clause<"use"> {
   let clangClass = "OMPUseClause";
+  let flangClass = "OmpUseClause";
 }
 def OMPC_UsesAllocators : Clause<"uses_allocators"> {
   let clangClass = "OMPUsesAllocatorsClause";
@@ -562,6 +577,14 @@ def OMP_Allocators : Directive<"allocators"> {
 def OMP_Assumes : Directive<"assumes"> {
   let association = AS_None;
   let category = CA_Informational;
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Absent, 51>,
+    VersionedClause<OMPC_Contains, 51>,
+    VersionedClause<OMPC_Holds, 51>,
+    VersionedClause<OMPC_NoOpenMP, 51>,
+    VersionedClause<OMPC_NoOpenMPRoutines, 51>,
+    VersionedClause<OMPC_NoParallelism, 51>,
+  ];
 }
 def OMP_EndAssumes : Directive<"end assumes"> {
   let association = AS_Delimited;
@@ -581,22 +604,20 @@ def OMP_Assume : Directive<"assume"> {
   ];
 }
 def OMP_Atomic : Directive<"atomic"> {
-  let allowedClauses = [
-    VersionedClause<OMPC_Capture>,
-    VersionedClause<OMPC_Compare, 51>,
-    VersionedClause<OMPC_Read>,
-    VersionedClause<OMPC_Update>,
-    VersionedClause<OMPC_Write>,
-  ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_AcqRel, 50>,
     VersionedClause<OMPC_Acquire, 50>,
+    VersionedClause<OMPC_Capture>,
+    VersionedClause<OMPC_Compare, 51>,
     VersionedClause<OMPC_Fail, 51>,
     VersionedClause<OMPC_Hint, 50>,
+    VersionedClause<OMPC_Read>,
     VersionedClause<OMPC_Relaxed, 50>,
     VersionedClause<OMPC_Release, 50>,
     VersionedClause<OMPC_SeqCst>,
+    VersionedClause<OMPC_Update>,
     VersionedClause<OMPC_Weak, 51>,
+    VersionedClause<OMPC_Write>,
   ];
   let association = AS_Block;
   let category = CA_Executable;
@@ -608,6 +629,14 @@ def OMP_Barrier : Directive<"barrier"> {
 def OMP_BeginAssumes : Directive<"begin assumes"> {
   let association = AS_Delimited;
   let category = CA_Informational;
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Absent, 51>,
+    VersionedClause<OMPC_Contains, 51>,
+    VersionedClause<OMPC_Holds, 51>,
+    VersionedClause<OMPC_NoOpenMP, 51>,
+    VersionedClause<OMPC_NoOpenMPRoutines, 51>,
+    VersionedClause<OMPC_NoParallelism, 51>,
+  ];
 }
 def OMP_BeginDeclareTarget : Directive<"begin declare target"> {
   let allowedClauses = [
@@ -625,17 +654,21 @@ def OMP_BeginDeclareVariant : Directive<"begin declare variant"> {
 }
 def OMP_Cancel : Directive<"cancel"> {
   let allowedOnceClauses = [
+    VersionedClause<OMPC_CancellationConstructType>,
     VersionedClause<OMPC_If>,
   ];
   let association = AS_None;
   let category = CA_Executable;
 }
 def OMP_CancellationPoint : Directive<"cancellation point"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_CancellationConstructType>,
+  ];
   let association = AS_None;
   let category = CA_Executable;
 }
 def OMP_Critical : Directive<"critical"> {
-  let allowedClauses = [
+  let allowedOnceClauses = [
     VersionedClause<OMPC_Hint>,
   ];
   let association = AS_Block;
@@ -649,6 +682,9 @@ def OMP_DeclareMapper : Directive<"declare mapper"> {
   let category = CA_Declarative;
 }
 def OMP_DeclareReduction : Directive<"declare reduction"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Initializer>,
+  ];
   let association = AS_None;
   let category = CA_Declarative;
 }
@@ -687,10 +723,10 @@ def OMP_EndDeclareTarget : Directive<"end declare target"> {
 }
 def OMP_DeclareVariant : Directive<"declare variant"> {
   let allowedClauses = [
-    VersionedClause<OMPC_Match>,
-  ];
-  let allowedExclusiveClauses = [
     VersionedClause<OMPC_AdjustArgs, 51>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Match>,
     VersionedClause<OMPC_AppendArgs, 51>,
   ];
   let association = AS_Declaration;
@@ -910,7 +946,7 @@ def OMP_Requires : Directive<"requires"> {
     // TODO: Correct this supprted version number whenever complete
     // implementation of reverse_offload is available.
     VersionedClause<OMPC_AtomicDefaultMemOrder>,
-    VersionedClause<OMPC_DynamicAllocators>,
+    VersionedClause<OMPC_DynamicAllocators>, VersionedClause<OMPC_SelfMaps>,
     VersionedClause<OMPC_ReverseOffload, 99>,
   ];
   let association = AS_None;
@@ -998,8 +1034,10 @@ def OMP_Single : Directive<"single"> {
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_CopyPrivate>,
     VersionedClause<OMPC_FirstPrivate>,
-    VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_Private>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>,
   ];
   let association = AS_Block;
   let category = CA_Executable;
@@ -1102,7 +1140,6 @@ def OMP_Task : Directive<"task"> {
     VersionedClause<OMPC_Affinity, 50>,
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
-    VersionedClause<OMPC_Detach, 50>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_InReduction>,
     VersionedClause<OMPC_Mergeable>,
@@ -1112,6 +1149,7 @@ def OMP_Task : Directive<"task"> {
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_Detach, 50>,
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Priority>,
@@ -1191,6 +1229,13 @@ def OMP_ThreadPrivate : Directive<"threadprivate"> {
 def OMP_Tile : Directive<"tile"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Sizes, 51>,
+  ];
+  let association = AS_Loop;
+  let category = CA_Executable;
+}
+def OMP_Stripe : Directive<"stripe"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Sizes, 60>,
   ];
   let association = AS_Loop;
   let category = CA_Executable;

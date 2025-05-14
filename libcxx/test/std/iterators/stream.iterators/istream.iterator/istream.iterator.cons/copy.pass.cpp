@@ -10,9 +10,7 @@
 
 // class istream_iterator
 
-// istream_iterator(const istream_iterator& x);
-//  C++17 says:  If is_trivially_copy_constructible_v<T> is true, then
-//     this constructor is a trivial copy constructor.
+// istream_iterator(const istream_iterator& x) noexcept(see below);
 
 #include <iterator>
 #include <sstream>
@@ -20,12 +18,37 @@
 
 #include "test_macros.h"
 
+// The copy constructor is constexpr in C++11, but that is not easy to test.
+// The comparison of the class is not constexpr so this is only a compile test.
+TEST_CONSTEXPR_CXX14 bool test_constexpr() {
+  std::istream_iterator<int> io;
+  [[maybe_unused]] std::istream_iterator<int> i = io;
+
+  return true;
+}
+
+struct thowing_copy_constructor {
+  thowing_copy_constructor() {}
+  thowing_copy_constructor(const thowing_copy_constructor&) TEST_NOEXCEPT_FALSE {}
+};
+
 int main(int, char**)
 {
     {
         std::istream_iterator<int> io;
         std::istream_iterator<int> i = io;
         assert(i == std::istream_iterator<int>());
+#if TEST_STD_VER >= 11
+        static_assert(std::is_nothrow_copy_constructible<std::istream_iterator<int>>::value, "");
+#endif
+    }
+    {
+      std::istream_iterator<thowing_copy_constructor> io;
+      std::istream_iterator<thowing_copy_constructor> i = io;
+      assert(i == std::istream_iterator<thowing_copy_constructor>());
+#if TEST_STD_VER >= 11
+      static_assert(!std::is_nothrow_copy_constructible<std::istream_iterator<thowing_copy_constructor>>::value, "");
+#endif
     }
     {
         std::istringstream inf(" 1 23");
@@ -37,5 +60,9 @@ int main(int, char**)
         assert(j == 1);
     }
 
-  return 0;
+#if TEST_STD_VER >= 14
+    static_assert(test_constexpr(), "");
+#endif
+
+    return 0;
 }

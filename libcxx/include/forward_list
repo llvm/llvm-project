@@ -295,7 +295,6 @@ struct __forward_node_traits {
                 "the _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB macro to silence this diagnostic.");
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI static __begin_node_pointer __as_iter_node(__begin_node_pointer __p) { return __p; }
   _LIBCPP_HIDE_FROM_ABI static __begin_node_pointer __as_iter_node(__node_pointer __p) {
     return static_cast<__begin_node_pointer>(static_cast<__void_pointer>(__p));
   }
@@ -351,12 +350,12 @@ public:
 };
 
 template <class _Tp, class _Alloc = allocator<_Tp> >
-class _LIBCPP_TEMPLATE_VIS forward_list;
+class forward_list;
 template <class _NodeConstPtr>
-class _LIBCPP_TEMPLATE_VIS __forward_list_const_iterator;
+class __forward_list_const_iterator;
 
 template <class _NodePtr>
-class _LIBCPP_TEMPLATE_VIS __forward_list_iterator {
+class __forward_list_iterator {
   typedef __forward_node_traits<_NodePtr> __traits;
   typedef typename __traits::__node_pointer __node_pointer;
   typedef typename __traits::__begin_node_pointer __begin_node_pointer;
@@ -373,16 +372,15 @@ class _LIBCPP_TEMPLATE_VIS __forward_list_iterator {
 
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_iterator(nullptr_t) _NOEXCEPT : __ptr_(nullptr) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit __forward_list_iterator(__begin_node_pointer __p) _NOEXCEPT
-      : __ptr_(__traits::__as_iter_node(__p)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __forward_list_iterator(__begin_node_pointer __p) _NOEXCEPT : __ptr_(__p) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_iterator(__node_pointer __p) _NOEXCEPT
       : __ptr_(__traits::__as_iter_node(__p)) {}
 
   template <class, class>
-  friend class _LIBCPP_TEMPLATE_VIS forward_list;
+  friend class forward_list;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __forward_list_const_iterator;
+  friend class __forward_list_const_iterator;
 
 public:
   typedef forward_iterator_tag iterator_category;
@@ -417,7 +415,7 @@ public:
 };
 
 template <class _NodeConstPtr>
-class _LIBCPP_TEMPLATE_VIS __forward_list_const_iterator {
+class __forward_list_const_iterator {
   static_assert(!is_const<typename pointer_traits<_NodeConstPtr>::element_type>::value, "");
   typedef _NodeConstPtr _NodePtr;
 
@@ -438,8 +436,7 @@ class _LIBCPP_TEMPLATE_VIS __forward_list_const_iterator {
 
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_const_iterator(nullptr_t) _NOEXCEPT : __ptr_(nullptr) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit __forward_list_const_iterator(__begin_node_pointer __p) _NOEXCEPT
-      : __ptr_(__traits::__as_iter_node(__p)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __forward_list_const_iterator(__begin_node_pointer __p) _NOEXCEPT : __ptr_(__p) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_const_iterator(__node_pointer __p) _NOEXCEPT
       : __ptr_(__traits::__as_iter_node(__p)) {}
@@ -640,7 +637,7 @@ void __forward_list_base<_Tp, _Alloc>::clear() _NOEXCEPT {
 }
 
 template <class _Tp, class _Alloc /*= allocator<_Tp>*/>
-class _LIBCPP_TEMPLATE_VIS forward_list : private __forward_list_base<_Tp, _Alloc> {
+class forward_list : private __forward_list_base<_Tp, _Alloc> {
   typedef __forward_list_base<_Tp, _Alloc> __base;
   typedef typename __base::__node_allocator __node_allocator;
   typedef typename __base::__node_type __node_type;
@@ -1557,7 +1554,7 @@ erase_if(forward_list<_Tp, _Allocator>& __c, _Predicate __pred) {
 template <class _Tp, class _Allocator, class _Up>
 inline _LIBCPP_HIDE_FROM_ABI typename forward_list<_Tp, _Allocator>::size_type
 erase(forward_list<_Tp, _Allocator>& __c, const _Up& __v) {
-  return std::erase_if(__c, [&](auto& __elem) { return __elem == __v; });
+  return std::erase_if(__c, [&](const auto& __elem) -> bool { return __elem == __v; });
 }
 #  endif
 
