@@ -1000,6 +1000,14 @@ static bool isCheapImmediate(const MachineInstr &MI, unsigned BitSize) {
   return Is.size() <= 2;
 }
 
+static bool isFPR(const MachineRegisterInfo &MRI, Register Reg) {
+  return AArch64::FPR8RegClass.hasSubClassEq(MRI.getRegClass(Reg)) ||
+         AArch64::FPR16RegClass.hasSubClassEq(MRI.getRegClass(Reg)) ||
+         AArch64::FPR32RegClass.hasSubClassEq(MRI.getRegClass(Reg)) ||
+         AArch64::FPR64RegClass.hasSubClassEq(MRI.getRegClass(Reg)) ||
+         AArch64::FPR128RegClass.hasSubClassEq(MRI.getRegClass(Reg));
+}
+
 // FIXME: this implementation should be micro-architecture dependent, so a
 // micro-architecture target hook should be introduced here in future.
 bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
@@ -1026,6 +1034,15 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
     return isCheapImmediate(MI, 32);
   case AArch64::MOVi64imm:
     return isCheapImmediate(MI, 64);
+
+  case TargetOpcode::COPY: {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    if (!DstReg.isVirtual() || !SrcReg.isVirtual())
+      return MI.isAsCheapAsAMove();
+    return isFPR(MRI, DstReg) == isFPR(MRI, SrcReg);
+  }
   }
 }
 
