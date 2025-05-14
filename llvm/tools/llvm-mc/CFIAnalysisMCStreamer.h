@@ -33,14 +33,14 @@ class CFIAnalysisMCStreamer : public MCStreamer {
 
   struct ICFI {
     MCInst Instruction;
-    ArrayRef<MCCFIInstruction> CFIDirectives;
+    std::pair<unsigned, unsigned> CFIDirectivesRange;
 
-    ICFI(MCInst Instruction, ArrayRef<MCCFIInstruction> CFIDirectives)
-        : Instruction(Instruction), CFIDirectives(CFIDirectives) {}
+    ICFI(MCInst Instruction, std::pair<unsigned, unsigned> CFIDirectives)
+        : Instruction(Instruction), CFIDirectivesRange(CFIDirectives) {}
   };
 
   std::optional<MCInst> LastInstruction;
-  std::optional<MCDwarfFrameInfo> LastDwarfFrameInfo;
+  MCDwarfFrameInfo const *LastDwarfFrameInfo;
 
   std::optional<ICFI> getLastICFI() {
     if (!LastInstruction)
@@ -58,16 +58,14 @@ class CFIAnalysisMCStreamer : public MCStreamer {
     assert(CurrentCFIDirectiveState.DirectiveIndex >=
            LastCFIDirectivesState.DirectiveIndex);
 
-    std::vector<MCCFIInstruction> CFIDirectives;
+    std::pair<unsigned, unsigned> CFIDirectivesRange;
     if (LastCFIDirectivesState.FrameIndex >= 0) {
-      auto CFIInstructions = DwarfFrameInfos[FrameIndex].Instructions;
-      CFIDirectives = std::vector<MCCFIInstruction>(
-          CFIInstructions.begin() + LastCFIDirectivesState.DirectiveIndex,
-          CFIInstructions.begin() + CurrentCFIDirectiveState.DirectiveIndex);
+      CFIDirectivesRange = {LastCFIDirectivesState.DirectiveIndex,
+                            CurrentCFIDirectiveState.DirectiveIndex};
     }
 
     LastCFIDirectivesState = CurrentCFIDirectiveState;
-    return ICFI(LastInstruction.value(), CFIDirectives);
+    return ICFI(LastInstruction.value(), CFIDirectivesRange);
   }
 
   void feedCFIA() {
@@ -77,14 +75,15 @@ class CFIAnalysisMCStreamer : public MCStreamer {
       // adding cfi directives for a instruction. Then this would cause to
       // ignore the instruction.
       auto LastICFI = getLastICFI();
-      assert(!LastICFI || LastICFI->CFIDirectives.empty());
+      assert(!LastICFI || LastICFI->CFIDirectivesRange.first ==
+                              LastICFI->CFIDirectivesRange.second);
       return;
     }
 
     if (auto ICFI = getLastICFI()) {
       assert(!CFIAs.empty());
-      CFIAs.back().update(LastDwarfFrameInfo.value(), ICFI->Instruction,
-                          ICFI->CFIDirectives);
+      CFIAs.back().update(*LastDwarfFrameInfo, ICFI->Instruction,
+                          ICFI->CFIDirectivesRange);
     }
   }
 
@@ -121,9 +120,12 @@ public:
     feedCFIA();
     LastInstruction = Inst;
     if (hasUnfinishedDwarfFrameInfo())
-      LastDwarfFrameInfo = getDwarfFrameInfos()[FrameIndices.back()];
+      LastDwarfFrameInfo =
+          &getDwarfFrameInfos()
+              [FrameIndices.back()]; // FIXME get this from emit yourself,
+                                     // instead of getting it in this way
     else
-      LastDwarfFrameInfo = std::nullopt;
+      LastDwarfFrameInfo = nullptr;
   }
 
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override {
@@ -131,7 +133,7 @@ public:
     FrameIndices.push_back(getNumFrameInfos());
     CFIAs.emplace_back(getContext(), MCII, MCIA.get());
     LastInstruction = std::nullopt;
-    LastDwarfFrameInfo = std::nullopt;
+    LastDwarfFrameInfo = nullptr;
     LastCFIDirectivesState.FrameIndex = FrameIndices.back();
     LastCFIDirectivesState.DirectiveIndex = 0;
     MCStreamer::emitCFIStartProcImpl(Frame);
@@ -143,7 +145,7 @@ public:
     FrameIndices.pop_back();
     CFIAs.pop_back();
     LastInstruction = std::nullopt;
-    LastDwarfFrameInfo = std::nullopt;
+    LastDwarfFrameInfo = nullptr;
     LastCFIDirectivesState.FrameIndex = FrameIndices.back();
     LastCFIDirectivesState.DirectiveIndex =
         LastCFIDirectivesState.FrameIndex >= 0
