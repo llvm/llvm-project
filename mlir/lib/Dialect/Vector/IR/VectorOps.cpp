@@ -6550,17 +6550,19 @@ void mlir::vector::MaskOp::print(OpAsmPrinter &p) {
 }
 
 void MaskOp::ensureTerminator(Region &region, Builder &builder, Location loc) {
-  // Create default terminator if there are no ops to mask.
+  // 1. For an empty `vector.mask`, create a default terminator.
   if (region.empty() || region.front().empty()) {
     OpTrait::SingleBlockImplicitTerminator<vector::YieldOp>::Impl<
         MaskOp>::ensureTerminator(region, builder, loc);
     return;
   }
 
-  // If  region has an explicit terminator, we don't modify it.
+  // 2. For a non-empty `vector.mask` with an explicit terminator, do nothing.
   Block &block = region.front();
   if (isa<vector::YieldOp>(block.back()))
     return;
+
+  // 3. For a non-empty `vector.mask` without an explicit terminator:
 
   // Create default terminator if the number of masked operations is not
   // one. This case will trigger a verification failure.
@@ -6610,9 +6612,8 @@ LogicalResult MaskOp::verify() {
                        "number of results");
 
   if (!llvm::equal(maskableOp->getResults(), terminator.getOperands()))
-    return emitOpError(
-        "expects all the results from the MaskableOpInterface to "
-        "be returned by the terminator");
+    return emitOpError("expects all the results from the MaskableOpInterface "
+                       "to match all the values returned by the terminator");
 
   if (!llvm::equal(maskableOp->getResultTypes(), getResultTypes()))
     return emitOpError(
