@@ -218,14 +218,9 @@ f_unreachable_instruction:
 // CHECK-LABEL: GS-PAUTH: Warning: the function has unreachable basic blocks (possibly incomplete CFG) in function f_unreachable_instruction, basic block {{[0-9a-zA-Z.]+}}, at address
 // CHECK-NEXT:    The instruction is     {{[0-9a-f]+}}:       add     x0, x1, x2
 // CHECK-NOT:   instructions that write to the affected registers after any authentication are:
-// CHECK-LABEL: GS-PAUTH: non-protected ret found in function f_unreachable_instruction, basic block {{[0-9a-zA-Z.]+}}, at address
-// CHECK-NEXT:    The instruction is     {{[0-9a-f]+}}:       ret
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
         b       1f
         add     x0, x1, x2
 1:
-        // "ret" is reported as unprotected, as LR is pessimistically assumed
-        // unsafe at "add x0, x1, x2", thus it is unsafe at "ret" as well.
         ret
         .size f_unreachable_instruction, .-f_unreachable_instruction
 
