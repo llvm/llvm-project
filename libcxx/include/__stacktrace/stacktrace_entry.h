@@ -99,7 +99,7 @@ _LIBCPP_EXPORTED_FROM_ABI ostream& operator<<(ostream& __os, const stacktrace_en
 // (19.6.5)
 // Formatting support [stacktrace.format]
 
-// TODO(stacktrace23): needs `formatter`
+// TODO: stacktrace formatter: https://github.com/llvm/llvm-project/issues/105257
 template <>
 struct _LIBCPP_EXPORTED_FROM_ABI formatter<stacktrace_entry>;
 
