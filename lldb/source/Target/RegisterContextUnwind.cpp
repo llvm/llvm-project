@@ -1441,7 +1441,8 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
     const RegisterInfo *reg_info =
         GetRegisterInfoAtIndex(regnum.GetAsKind(eRegisterKindLLDB));
     if (reg_info &&
-        abi->GetFallbackRegisterLocation(reg_info, unwindplan_regloc)) {
+        abi->GetFallbackRegisterLocation(reg_info, unwindplan_regloc) &&
+        !unwindplan_regloc.IsUndefined()) {
       UnwindLogMsg(
           "supplying caller's saved %s (%d)'s location using ABI default",
           regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
