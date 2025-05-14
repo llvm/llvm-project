@@ -683,7 +683,7 @@ func.func @load_and_assume(
     %arg0: memref<?x?xf32, strided<[?, ?], offset: ?>>,
     %i0: index, %i1: index)
     -> f32 {
-  memref.assume_alignment %arg0, 16 : memref<?x?xf32, strided<[?, ?], offset: ?>>
-  %2 = memref.load %arg0[%i0, %i1] : memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %arg0_align = memref.assume_alignment %arg0, 16 : memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %2 = memref.load %arg0_align[%i0, %i1] : memref<?x?xf32, strided<[?, ?], offset: ?>>
   func.return %2 : f32
 }

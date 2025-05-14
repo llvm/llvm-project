@@ -526,11 +526,6 @@ LogicalResult AssumeAlignmentOp::verify() {
     return emitOpError("alignment must be power of 2");
   return success();
 }
-void AssumeAlignmentOp::getEffects(
-  SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-      &effects) {
-effects.emplace_back(MemoryEffects::Write::get());
-}
 
 //===----------------------------------------------------------------------===//
 // CastOp

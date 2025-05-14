@@ -13,8 +13,8 @@ func.func @func_with_assert(%arg0: index, %arg1: index) {
 }
 
 // CHECK-LABEL: func @func_with_assume_alignment(
-//       CHECK: memref.assume_alignment %arg0, 64 : memref<128xi8>
+//       CHECK: %0 = memref.assume_alignment %arg0, 64 : memref<128xi8>
 func.func @func_with_assume_alignment(%arg0: memref<128xi8>) {
-  memref.assume_alignment %arg0, 64 : memref<128xi8>
+  %0 = memref.assume_alignment %arg0, 64 : memref<128xi8>
   return
 }
