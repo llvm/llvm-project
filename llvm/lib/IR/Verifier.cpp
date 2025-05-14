@@ -6418,7 +6418,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "SGPR arguments must have the `inreg` attribute", &Call);
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
-    Check(isa_and_present<UnreachableInst>(Call.getNextNode()),
+
+    auto *Next = Call.getNextNonDebugInstruction();
+    bool IsAMDUnreachable = Next && isa<IntrinsicInst>(Next) &&
+                            cast<IntrinsicInst>(Next)->getIntrinsicID() ==
+                                Intrinsic::amdgcn_unreachable;
+    Check(Next && (isa<UnreachableInst>(Next) || IsAMDUnreachable),
           "llvm.amdgcn.cs.chain must be followed by unreachable", &Call);
     break;
   }
@@ -6545,6 +6550,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(DL.getIndexTypeSizeInBits(Ty0) == Ty1->getScalarSizeInBits(),
           "llvm.ptrmask intrinsic second argument bitwidth must match "
           "pointer index type size of first argument",
+          &Call);
+    break;
+  }
+  case Intrinsic::thread_pointer: {
+    Check(Call.getType()->getPointerAddressSpace() ==
+              DL.getDefaultGlobalsAddressSpace(),
+          "llvm.thread.pointer intrinsic return type must be for the globals "
+          "address space",
           &Call);
     break;
   }

@@ -194,3 +194,298 @@ TEST(ProtocolTypesTest, DataBreakpoint) {
   EXPECT_EQ(data_breakpoint_info.hitCondition,
             deserialized_data_breakpoint_info->hitCondition);
 }
+
+TEST(ProtocolTypesTest, Capabilities) {
+  Capabilities capabilities;
+
+  // Populate supported features.
+  capabilities.supportedFeatures.insert(eAdapterFeatureANSIStyling);
+  capabilities.supportedFeatures.insert(
+      eAdapterFeatureBreakpointLocationsRequest);
+
+  // Populate optional fields.
+  capabilities.exceptionBreakpointFilters = {
+      {{"filter1", "Filter 1", "Description 1", true, true, "Condition 1"},
+       {"filter2", "Filter 2", "Description 2", false, false, "Condition 2"}}};
+
+  capabilities.completionTriggerCharacters = {".", "->"};
+  capabilities.additionalModuleColumns = {
+      {"moduleName", "Module Name", "uppercase", eColumnTypeString, 20}};
+  capabilities.supportedChecksumAlgorithms = {eChecksumAlgorithmMD5,
+                                              eChecksumAlgorithmSHA256};
+  capabilities.breakpointModes = {{"hardware",
+                                   "Hardware Breakpoint",
+                                   "Description",
+                                   {eBreakpointModeApplicabilitySource}}};
+  capabilities.lldbExtVersion = "1.0.0";
+
+  // Perform roundtrip serialization and deserialization.
+  llvm::Expected<Capabilities> deserialized_capabilities =
+      roundtrip(capabilities);
+  ASSERT_THAT_EXPECTED(deserialized_capabilities, llvm::Succeeded());
+
+  // Verify supported features.
+  EXPECT_EQ(capabilities.supportedFeatures,
+            deserialized_capabilities->supportedFeatures);
+
+  // Verify exception breakpoint filters.
+  ASSERT_TRUE(
+      deserialized_capabilities->exceptionBreakpointFilters.has_value());
+  EXPECT_EQ(capabilities.exceptionBreakpointFilters->size(),
+            deserialized_capabilities->exceptionBreakpointFilters->size());
+  for (size_t i = 0; i < capabilities.exceptionBreakpointFilters->size(); ++i) {
+    const auto &original = capabilities.exceptionBreakpointFilters->at(i);
+    const auto &deserialized =
+        deserialized_capabilities->exceptionBreakpointFilters->at(i);
+    EXPECT_EQ(original.filter, deserialized.filter);
+    EXPECT_EQ(original.label, deserialized.label);
+    EXPECT_EQ(original.description, deserialized.description);
+    EXPECT_EQ(original.defaultState, deserialized.defaultState);
+    EXPECT_EQ(original.supportsCondition, deserialized.supportsCondition);
+    EXPECT_EQ(original.conditionDescription, deserialized.conditionDescription);
+  }
+
+  // Verify completion trigger characters.
+  ASSERT_TRUE(
+      deserialized_capabilities->completionTriggerCharacters.has_value());
+  EXPECT_EQ(capabilities.completionTriggerCharacters,
+            deserialized_capabilities->completionTriggerCharacters);
+
+  // Verify additional module columns.
+  ASSERT_TRUE(deserialized_capabilities->additionalModuleColumns.has_value());
+  EXPECT_EQ(capabilities.additionalModuleColumns->size(),
+            deserialized_capabilities->additionalModuleColumns->size());
+  for (size_t i = 0; i < capabilities.additionalModuleColumns->size(); ++i) {
+    const auto &original = capabilities.additionalModuleColumns->at(i);
+    const auto &deserialized =
+        deserialized_capabilities->additionalModuleColumns->at(i);
+    EXPECT_EQ(original.attributeName, deserialized.attributeName);
+    EXPECT_EQ(original.label, deserialized.label);
+    EXPECT_EQ(original.format, deserialized.format);
+    EXPECT_EQ(original.type, deserialized.type);
+    EXPECT_EQ(original.width, deserialized.width);
+  }
+
+  // Verify supported checksum algorithms.
+  ASSERT_TRUE(
+      deserialized_capabilities->supportedChecksumAlgorithms.has_value());
+  EXPECT_EQ(capabilities.supportedChecksumAlgorithms,
+            deserialized_capabilities->supportedChecksumAlgorithms);
+
+  // Verify breakpoint modes.
+  ASSERT_TRUE(deserialized_capabilities->breakpointModes.has_value());
+  EXPECT_EQ(capabilities.breakpointModes->size(),
+            deserialized_capabilities->breakpointModes->size());
+  for (size_t i = 0; i < capabilities.breakpointModes->size(); ++i) {
+    const auto &original = capabilities.breakpointModes->at(i);
+    const auto &deserialized =
+        deserialized_capabilities->breakpointModes->at(i);
+    EXPECT_EQ(original.mode, deserialized.mode);
+    EXPECT_EQ(original.label, deserialized.label);
+    EXPECT_EQ(original.description, deserialized.description);
+    EXPECT_EQ(original.appliesTo, deserialized.appliesTo);
+  }
+
+  // Verify lldb extension version.
+  ASSERT_TRUE(deserialized_capabilities->lldbExtVersion.has_value());
+  EXPECT_EQ(capabilities.lldbExtVersion,
+            deserialized_capabilities->lldbExtVersion);
+}
+
+TEST(ProtocolTypesTest, PresentationHint) {
+  // Test all PresentationHint values.
+  std::vector<std::pair<PresentationHint, llvm::StringRef>> test_cases = {
+      {ePresentationHintNormal, "normal"},
+      {ePresentationHintEmphasize, "emphasize"},
+      {ePresentationHintDeemphasize, "deemphasize"}};
+
+  for (const auto &test_case : test_cases) {
+    // Serialize the PresentationHint to JSON.
+    llvm::json::Value serialized = toJSON(test_case.first);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), test_case.second);
+
+    // Deserialize the JSON back to PresentationHint.
+    PresentationHint deserialized;
+    llvm::json::Path::Root root;
+    ASSERT_TRUE(fromJSON(serialized, deserialized, root))
+        << llvm::toString(root.getError());
+    EXPECT_EQ(deserialized, test_case.first);
+  }
+
+  // Test invalid value.
+  llvm::json::Value invalid_value = "invalid_hint";
+  PresentationHint deserialized_invalid;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(invalid_value, deserialized_invalid, root));
+}
+
+TEST(ProtocolTypesTest, SteppingGranularity) {
+  // Test all SteppingGranularity values.
+  std::vector<std::pair<SteppingGranularity, llvm::StringRef>> test_cases = {
+      {eSteppingGranularityStatement, "statement"},
+      {eSteppingGranularityLine, "line"},
+      {eSteppingGranularityInstruction, "instruction"}};
+
+  for (const auto &test_case : test_cases) {
+    // Serialize the SteppingGranularity to JSON.
+    llvm::json::Value serialized = toJSON(test_case.first);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), test_case.second);
+
+    // Deserialize the JSON back to SteppingGranularity.
+    SteppingGranularity deserialized;
+    llvm::json::Path::Root root;
+    ASSERT_TRUE(fromJSON(serialized, deserialized, root))
+        << llvm::toString(root.getError());
+    EXPECT_EQ(deserialized, test_case.first);
+  }
+
+  // Test invalid value.
+  llvm::json::Value invalid_value = "invalid_granularity";
+  SteppingGranularity deserialized_invalid;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(invalid_value, deserialized_invalid, root));
+}
+
+TEST(ProtocolTypesTest, BreakpointReason) {
+  // Test all BreakpointReason values.
+  std::vector<std::pair<BreakpointReason, llvm::StringRef>> test_cases = {
+      {BreakpointReason::eBreakpointReasonPending, "pending"},
+      {BreakpointReason::eBreakpointReasonFailed, "failed"}};
+
+  for (const auto &test_case : test_cases) {
+    // Serialize the BreakpointReason to JSON.
+    llvm::json::Value serialized = toJSON(test_case.first);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), test_case.second);
+
+    // Deserialize the JSON back to BreakpointReason.
+    BreakpointReason deserialized;
+    llvm::json::Path::Root root;
+    ASSERT_TRUE(fromJSON(serialized, deserialized, root))
+        << llvm::toString(root.getError());
+    EXPECT_EQ(deserialized, test_case.first);
+  }
+
+  // Test invalid value.
+  llvm::json::Value invalid_value = "invalid_reason";
+  BreakpointReason deserialized_invalid;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(invalid_value, deserialized_invalid, root));
+}
+
+TEST(ProtocolTypesTest, DataBreakpointAccessType) {
+  // Test all DataBreakpointAccessType values.
+  std::vector<std::pair<DataBreakpointAccessType, llvm::StringRef>> test_cases =
+      {{eDataBreakpointAccessTypeRead, "read"},
+       {eDataBreakpointAccessTypeWrite, "write"},
+       {eDataBreakpointAccessTypeReadWrite, "readWrite"}};
+
+  for (const auto &test_case : test_cases) {
+    // Serialize the DataBreakpointAccessType to JSON.
+    llvm::json::Value serialized = toJSON(test_case.first);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), test_case.second);
+
+    // Deserialize the JSON back to DataBreakpointAccessType.
+    DataBreakpointAccessType deserialized;
+    llvm::json::Path::Root root;
+    ASSERT_TRUE(fromJSON(serialized, deserialized, root))
+        << llvm::toString(root.getError());
+    EXPECT_EQ(deserialized, test_case.first);
+  }
+
+  // Test invalid value
+  llvm::json::Value invalid_value = "invalid_access_type";
+  DataBreakpointAccessType deserialized_invalid;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(invalid_value, deserialized_invalid, root));
+}
+
+TEST(ProtocolTypesTest, ColumnType) {
+  // Test all ColumnType values.
+  std::vector<std::pair<ColumnType, llvm::StringRef>> test_cases = {
+      {eColumnTypeString, "string"},
+      {eColumnTypeNumber, "number"},
+      {eColumnTypeBoolean, "boolean"},
+      {eColumnTypeTimestamp, "unixTimestampUTC"}};
+
+  for (const auto &test_case : test_cases) {
+    // Serialize the ColumnType to JSON.
+    llvm::json::Value serialized = toJSON(test_case.first);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), test_case.second);
+
+    // Deserialize the JSON back to ColumnType.
+    ColumnType deserialized;
+    llvm::json::Path::Root root;
+    ASSERT_TRUE(fromJSON(serialized, deserialized, root))
+        << llvm::toString(root.getError());
+    EXPECT_EQ(deserialized, test_case.first);
+  }
+
+  // Test invalid value.
+  llvm::json::Value invalid_value = "invalid_column_type";
+  ColumnType deserialized_invalid;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(invalid_value, deserialized_invalid, root));
+}
+
+TEST(ProtocolTypesTest, BreakpointModeApplicability) {
+  // Test all BreakpointModeApplicability values.
+  std::vector<std::pair<BreakpointModeApplicability, llvm::StringRef>>
+      test_cases = {{eBreakpointModeApplicabilitySource, "source"},
+                    {eBreakpointModeApplicabilityException, "exception"},
+                    {eBreakpointModeApplicabilityData, "data"},
+                    {eBreakpointModeApplicabilityInstruction, "instruction"}};
+
+  for (const auto &test_case : test_cases) {
+    // Serialize the BreakpointModeApplicability to JSON.
+    llvm::json::Value serialized = toJSON(test_case.first);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), test_case.second);
+
+    // Deserialize the JSON back to BreakpointModeApplicability.
+    BreakpointModeApplicability deserialized;
+    llvm::json::Path::Root root;
+    ASSERT_TRUE(fromJSON(serialized, deserialized, root))
+        << llvm::toString(root.getError());
+    EXPECT_EQ(deserialized, test_case.first);
+  }
+
+  // Test invalid value.
+  llvm::json::Value invalid_value = "invalid_applicability";
+  BreakpointModeApplicability deserialized_invalid;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(invalid_value, deserialized_invalid, root));
+}
+
+TEST(ProtocolTypesTest, ChecksumAlgorithm) {
+  // Test all ChecksumAlgorithm values.
+  std::vector<std::pair<ChecksumAlgorithm, llvm::StringRef>> test_cases = {
+      {eChecksumAlgorithmMD5, "MD5"},
+      {eChecksumAlgorithmSHA1, "SHA1"},
+      {eChecksumAlgorithmSHA256, "SHA256"},
+      {eChecksumAlgorithmTimestamp, "timestamp"}};
+
+  for (const auto &test_case : test_cases) {
+    // Serialize the ChecksumAlgorithm to JSON.
+    llvm::json::Value serialized = toJSON(test_case.first);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), test_case.second);
+
+    // Deserialize the JSON back to ChecksumAlgorithm.
+    ChecksumAlgorithm deserialized;
+    llvm::json::Path::Root root;
+    ASSERT_TRUE(fromJSON(serialized, deserialized, root))
+        << llvm::toString(root.getError());
+    EXPECT_EQ(deserialized, test_case.first);
+  }
+
+  // Test invalid value.
+  llvm::json::Value invalid_value = "invalid_algorithm";
+  ChecksumAlgorithm deserialized_invalid;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(invalid_value, deserialized_invalid, root));
+}

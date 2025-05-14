@@ -1605,361 +1605,159 @@ foreach Index = 0-31 in {
 // FIXME: Why do only some of these type combinations for SReg and
 // VReg?
 // 16-bit bitcast
-def : BitConvert <i16, f16, VGPR_32>;
-def : BitConvert <f16, i16, VGPR_32>;
-def : BitConvert <f16, bf16, VGPR_32>;
-def : BitConvert <bf16, f16, VGPR_32>;
-
-def : BitConvert <i16, f16, SReg_32>;
-def : BitConvert <f16, i16, SReg_32>;
-def : BitConvert <f16, bf16, SReg_32>;
-def : BitConvert <bf16, f16, SReg_32>;
-
-def : BitConvert <i16, bf16, VGPR_32>;
-def : BitConvert <bf16, i16, VGPR_32>;
-def : BitConvert <i16, bf16, SReg_32>;
-def : BitConvert <bf16, i16, SReg_32>;
+foreach vt = Reg16Types.types in {
+  foreach st = Reg16Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VGPR_32>;
+      def : BitConvert <vt, st, SReg_32>;
+    }
+  }
+}
 
 // 32-bit bitcast
-def : BitConvert <i32, f32, VGPR_32>;
-def : BitConvert <f32, i32, VGPR_32>;
-def : BitConvert <i32, f32, SReg_32>;
-def : BitConvert <f32, i32, SReg_32>;
-def : BitConvert <v2i16, i32, SReg_32>;
-def : BitConvert <i32, v2i16, SReg_32>;
-def : BitConvert <v2f16, i32, SReg_32>;
-def : BitConvert <i32, v2f16, SReg_32>;
-def : BitConvert <v2i16, v2f16, SReg_32>;
-def : BitConvert <v2f16, v2i16, SReg_32>;
-def : BitConvert <v2f16, f32, SReg_32>;
-def : BitConvert <f32, v2f16, SReg_32>;
-def : BitConvert <v2i16, f32, SReg_32>;
-def : BitConvert <f32, v2i16, SReg_32>;
-def : BitConvert <v2bf16, i32, SReg_32>;
-def : BitConvert <i32, v2bf16, SReg_32>;
-def : BitConvert <v2bf16, i32, VGPR_32>;
-def : BitConvert <i32, v2bf16, VGPR_32>;
-def : BitConvert <v2bf16, v2i16, SReg_32>;
-def : BitConvert <v2i16, v2bf16, SReg_32>;
-def : BitConvert <v2bf16, v2i16, VGPR_32>;
-def : BitConvert <v2i16, v2bf16, VGPR_32>;
-def : BitConvert <v2bf16, v2f16, SReg_32>;
-def : BitConvert <v2f16, v2bf16, SReg_32>;
-def : BitConvert <v2bf16, v2f16, VGPR_32>;
-def : BitConvert <v2f16, v2bf16, VGPR_32>;
-def : BitConvert <f32, v2bf16, VGPR_32>;
-def : BitConvert <v2bf16, f32, VGPR_32>;
-def : BitConvert <f32, v2bf16, SReg_32>;
-def : BitConvert <v2bf16, f32, SReg_32>;
+foreach vt = Reg32DataTypes.types in {
+  foreach st = Reg32DataTypes.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VGPR_32>;
+      def : BitConvert <vt, st, SReg_32>;
+    }
+  }
+}
 
 
 // 64-bit bitcast
-def : BitConvert <i64, f64, VReg_64>;
-def : BitConvert <f64, i64, VReg_64>;
-def : BitConvert <v2i32, v2f32, VReg_64>;
-def : BitConvert <v2f32, v2i32, VReg_64>;
-def : BitConvert <i64, v2i32, VReg_64>;
-def : BitConvert <v2i32, i64, VReg_64>;
-def : BitConvert <i64, v2f32, VReg_64>;
-def : BitConvert <v2f32, i64, VReg_64>;
-def : BitConvert <f64, v2f32, VReg_64>;
-def : BitConvert <v2f32, f64, VReg_64>;
-def : BitConvert <f64, v2i32, VReg_64>;
-def : BitConvert <v2i32, f64, VReg_64>;
-def : BitConvert <v4i16, v4f16, VReg_64>;
-def : BitConvert <v4f16, v4i16, VReg_64>;
-def : BitConvert <v4bf16, v2i32, VReg_64>;
-def : BitConvert <v2i32, v4bf16, VReg_64>;
-def : BitConvert <v4bf16, i64, VReg_64>;
-def : BitConvert <i64, v4bf16, VReg_64>;
-def : BitConvert <v4bf16, v4i16, VReg_64>;
-def : BitConvert <v4i16, v4bf16, VReg_64>;
-def : BitConvert <v4bf16, v4f16, VReg_64>;
-def : BitConvert <v4f16, v4bf16, VReg_64>;
-def : BitConvert <v4bf16, v2f32, VReg_64>;
-def : BitConvert <v2f32, v4bf16, VReg_64>;
-def : BitConvert <v4bf16, f64, VReg_64>;
-def : BitConvert <f64, v4bf16, VReg_64>;
+foreach vt = Reg64DataTypes.types in {
+  foreach st = Reg64DataTypes.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_64>;
+    }
+  }
+}
 
-
-// FIXME: Make SGPR
-def : BitConvert <v2i32, v4f16, VReg_64>;
-def : BitConvert <v4f16, v2i32, VReg_64>;
-def : BitConvert <v2i32, v4f16, VReg_64>;
-def : BitConvert <v2i32, v4i16, VReg_64>;
-def : BitConvert <v4i16, v2i32, VReg_64>;
-def : BitConvert <v2f32, v4f16, VReg_64>;
-def : BitConvert <v4f16, v2f32, VReg_64>;
-def : BitConvert <v2f32, v4i16, VReg_64>;
-def : BitConvert <v4i16, v2f32, VReg_64>;
-def : BitConvert <v4i16, f64, VReg_64>;
-def : BitConvert <v4f16, f64, VReg_64>;
-def : BitConvert <f64, v4i16, VReg_64>;
-def : BitConvert <f64, v4f16, VReg_64>;
-def : BitConvert <v4i16, i64, VReg_64>;
-def : BitConvert <v4f16, i64, VReg_64>;
-def : BitConvert <i64, v4i16, VReg_64>;
-def : BitConvert <i64, v4f16, VReg_64>;
-
-def : BitConvert <v4i32, v4f32, VReg_128>;
-def : BitConvert <v4f32, v4i32, VReg_128>;
 
 // 96-bit bitcast
-def : BitConvert <v3i32, v3f32, SGPR_96>;
-def : BitConvert <v3f32, v3i32, SGPR_96>;
+foreach vt = Reg96Types.types in {
+  foreach st = Reg96Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, SGPR_96>;
+    }
+  }
+}
+
 
 // 128-bit bitcast
-def : BitConvert <v2i64, v4i32, SReg_128>;
-def : BitConvert <v4i32, v2i64, SReg_128>;
-def : BitConvert <v2f64, v4f32, VReg_128>;
-def : BitConvert <v2f64, v4i32, VReg_128>;
-def : BitConvert <v4f32, v2f64, VReg_128>;
-def : BitConvert <v4i32, v2f64, VReg_128>;
-def : BitConvert <v2i64, v2f64, VReg_128>;
-def : BitConvert <v2f64, v2i64, VReg_128>;
-def : BitConvert <v4f32, v2i64, VReg_128>;
-def : BitConvert <v2i64, v4f32, VReg_128>;
-def : BitConvert <v8i16, v4i32, SReg_128>;
-def : BitConvert <v4i32, v8i16, SReg_128>;
-def : BitConvert <v8f16, v4f32, VReg_128>;
-def : BitConvert <v8f16, v4i32, VReg_128>;
-def : BitConvert <v4f32, v8f16, VReg_128>;
-def : BitConvert <v4i32, v8f16, VReg_128>;
-def : BitConvert <v8i16, v8f16, VReg_128>;
-def : BitConvert <v8f16, v8i16, VReg_128>;
-def : BitConvert <v4f32, v8i16, VReg_128>;
-def : BitConvert <v8i16, v4f32, VReg_128>;
-def : BitConvert <v8i16, v8f16, SReg_128>;
-def : BitConvert <v8i16, v2i64, SReg_128>;
-def : BitConvert <v8i16, v2f64, SReg_128>;
-def : BitConvert <v8f16, v2i64, SReg_128>;
-def : BitConvert <v8f16, v2f64, SReg_128>;
-def : BitConvert <v8f16, v8i16, SReg_128>;
-def : BitConvert <v2i64, v8i16, SReg_128>;
-def : BitConvert <v2f64, v8i16, SReg_128>;
-def : BitConvert <v2i64, v8f16, SReg_128>;
-def : BitConvert <v2f64, v8f16, SReg_128>;
-
-def : BitConvert <v4i32, v8bf16, SReg_128>;
-def : BitConvert <v8bf16, v4i32, SReg_128>;
-def : BitConvert <v4i32, v8bf16, VReg_128>;
-def : BitConvert <v8bf16, v4i32, VReg_128>;
-
-def : BitConvert <v4f32, v8bf16, SReg_128>;
-def : BitConvert <v8bf16, v4f32, SReg_128>;
-def : BitConvert <v4f32, v8bf16, VReg_128>;
-def : BitConvert <v8bf16, v4f32, VReg_128>;
-
-def : BitConvert <v8i16, v8bf16, SReg_128>;
-def : BitConvert <v8bf16, v8i16, SReg_128>;
-def : BitConvert <v8i16, v8bf16, VReg_128>;
-def : BitConvert <v8bf16, v8i16, VReg_128>;
-
-def : BitConvert <v8f16, v8bf16, SReg_128>;
-def : BitConvert <v8bf16, v8f16, SReg_128>;
-def : BitConvert <v8f16, v8bf16, VReg_128>;
-def : BitConvert <v8bf16, v8f16, VReg_128>;
-
-def : BitConvert <v2f64, v8bf16, SReg_128>;
-def : BitConvert <v8bf16, v2f64, SReg_128>;
-def : BitConvert <v2f64, v8bf16, VReg_128>;
-def : BitConvert <v8bf16, v2f64, VReg_128>;
-
-def : BitConvert <v2i64, v8bf16, SReg_128>;
-def : BitConvert <v8bf16, v2i64, SReg_128>;
-def : BitConvert <v2i64, v8bf16, VReg_128>;
-def : BitConvert <v8bf16, v2i64, VReg_128>;
+foreach vt = Reg128Types.types in {
+  foreach st = Reg128Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_128>;
+      def : BitConvert <vt, st, SReg_128>;
+    }
+  }
+}
 
 
 // 160-bit bitcast
-def : BitConvert <v5i32, v5f32, SReg_160>;
-def : BitConvert <v5f32, v5i32, SReg_160>;
-def : BitConvert <v5i32, v5f32, VReg_160>;
-def : BitConvert <v5f32, v5i32, VReg_160>;
+foreach vt = Reg160Types.types in {
+  foreach st = Reg160Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_160>;
+      def : BitConvert <vt, st, SReg_160>;
+    }
+  }
+}
 
 // 192-bit bitcast
-def : BitConvert <v6i32, v6f32, SReg_192>;
-def : BitConvert <v6f32, v6i32, SReg_192>;
-def : BitConvert <v6i32, v6f32, VReg_192>;
-def : BitConvert <v6f32, v6i32, VReg_192>;
-def : BitConvert <v3i64, v3f64, VReg_192>;
-def : BitConvert <v3f64, v3i64, VReg_192>;
-def : BitConvert <v3i64, v6i32, VReg_192>;
-def : BitConvert <v3i64, v6f32, VReg_192>;
-def : BitConvert <v3f64, v6i32, VReg_192>;
-def : BitConvert <v3f64, v6f32, VReg_192>;
-def : BitConvert <v6i32, v3i64, VReg_192>;
-def : BitConvert <v6f32, v3i64, VReg_192>;
-def : BitConvert <v6i32, v3f64, VReg_192>;
-def : BitConvert <v6f32, v3f64, VReg_192>;
+foreach vt = Reg192Types.types in {
+  foreach st = Reg192Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_192>;
+      def : BitConvert <vt, st, SReg_192>;
+    }
+  }
+}
 
 // 224-bit bitcast
-def : BitConvert <v7i32, v7f32, SReg_224>;
-def : BitConvert <v7f32, v7i32, SReg_224>;
-def : BitConvert <v7i32, v7f32, VReg_224>;
-def : BitConvert <v7f32, v7i32, VReg_224>;
+foreach vt = Reg224Types.types in {
+  foreach st = Reg224Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_224>;
+      def : BitConvert <vt, st, SReg_224>;
+    }
+  }
+}
+
 
 // 256-bit bitcast
-def : BitConvert <v8i32, v8f32, SReg_256>;
-def : BitConvert <v8f32, v8i32, SReg_256>;
-def : BitConvert <v8i32, v8f32, VReg_256>;
-def : BitConvert <v8f32, v8i32, VReg_256>;
-def : BitConvert <v4i64, v4f64, VReg_256>;
-def : BitConvert <v4f64, v4i64, VReg_256>;
-def : BitConvert <v4i64, v8i32, VReg_256>;
-def : BitConvert <v4i64, v8f32, VReg_256>;
-def : BitConvert <v4f64, v8i32, VReg_256>;
-def : BitConvert <v4f64, v8f32, VReg_256>;
-def : BitConvert <v8i32, v4i64, VReg_256>;
-def : BitConvert <v8f32, v4i64, VReg_256>;
-def : BitConvert <v8i32, v4f64, VReg_256>;
-def : BitConvert <v8f32, v4f64, VReg_256>;
-def : BitConvert <v16i16, v16f16, SReg_256>;
-def : BitConvert <v16f16, v16i16, SReg_256>;
-def : BitConvert <v16i16, v16f16, VReg_256>;
-def : BitConvert <v16f16, v16i16, VReg_256>;
-def : BitConvert <v16f16, v8i32, VReg_256>;
-def : BitConvert <v16i16, v8i32, VReg_256>;
-def : BitConvert <v16f16, v8f32, VReg_256>;
-def : BitConvert <v16i16, v8f32, VReg_256>;
-def : BitConvert <v8i32, v16f16, VReg_256>;
-def : BitConvert <v8i32, v16i16, VReg_256>;
-def : BitConvert <v8f32, v16f16, VReg_256>;
-def : BitConvert <v8f32, v16i16, VReg_256>;
-def : BitConvert <v16f16, v4i64, VReg_256>;
-def : BitConvert <v16i16, v4i64, VReg_256>;
-def : BitConvert <v16f16, v4f64, VReg_256>;
-def : BitConvert <v16i16, v4f64, VReg_256>;
-def : BitConvert <v4i64, v16f16, VReg_256>;
-def : BitConvert <v4i64, v16i16, VReg_256>;
-def : BitConvert <v4f64, v16f16, VReg_256>;
-def : BitConvert <v4f64, v16i16, VReg_256>;
-
-
-def : BitConvert <v8i32, v16bf16, VReg_256>;
-def : BitConvert <v16bf16, v8i32, VReg_256>;
-def : BitConvert <v8f32, v16bf16, VReg_256>;
-def : BitConvert <v16bf16, v8f32, VReg_256>;
-def : BitConvert <v4i64, v16bf16, VReg_256>;
-def : BitConvert <v16bf16, v4i64, VReg_256>;
-def : BitConvert <v4f64, v16bf16, VReg_256>;
-def : BitConvert <v16bf16, v4f64, VReg_256>;
-
-
-
-def : BitConvert <v16i16, v16bf16, SReg_256>;
-def : BitConvert <v16bf16, v16i16, SReg_256>;
-def : BitConvert <v16i16, v16bf16, VReg_256>;
-def : BitConvert <v16bf16, v16i16, VReg_256>;
-
-def : BitConvert <v16f16, v16bf16, SReg_256>;
-def : BitConvert <v16bf16, v16f16, SReg_256>;
-def : BitConvert <v16f16, v16bf16, VReg_256>;
-def : BitConvert <v16bf16, v16f16, VReg_256>;
-
-
+foreach vt = Reg256Types.types in {
+  foreach st = Reg256Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_256>;
+      def : BitConvert <vt, st, SReg_256>;
+    }
+  }
+}
 
 
 // 288-bit bitcast
-def : BitConvert <v9i32, v9f32, SReg_288>;
-def : BitConvert <v9f32, v9i32, SReg_288>;
-def : BitConvert <v9i32, v9f32, VReg_288>;
-def : BitConvert <v9f32, v9i32, VReg_288>;
+foreach vt = Reg288Types.types in {
+  foreach st = Reg288Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_288>;
+      def : BitConvert <vt, st, SReg_288>;
+    }
+  }
+}
 
 // 320-bit bitcast
-def : BitConvert <v10i32, v10f32, SReg_320>;
-def : BitConvert <v10f32, v10i32, SReg_320>;
-def : BitConvert <v10i32, v10f32, VReg_320>;
-def : BitConvert <v10f32, v10i32, VReg_320>;
+foreach vt = Reg320Types.types in {
+  foreach st = Reg320Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_320>;
+      def : BitConvert <vt, st, SReg_320>;
+    }
+  }
+}
 
 // 320-bit bitcast
-def : BitConvert <v11i32, v11f32, SReg_352>;
-def : BitConvert <v11f32, v11i32, SReg_352>;
-def : BitConvert <v11i32, v11f32, VReg_352>;
-def : BitConvert <v11f32, v11i32, VReg_352>;
+foreach vt = Reg352Types.types in {
+  foreach st = Reg352Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_352>;
+      def : BitConvert <vt, st, SReg_352>;
+    }
+  }
+}
 
 // 384-bit bitcast
-def : BitConvert <v12i32, v12f32, SReg_384>;
-def : BitConvert <v12f32, v12i32, SReg_384>;
-def : BitConvert <v12i32, v12f32, VReg_384>;
-def : BitConvert <v12f32, v12i32, VReg_384>;
+foreach vt = Reg384Types.types in {
+  foreach st = Reg384Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_384>;
+      def : BitConvert <vt, st, SReg_384>;
+    }
+  }
+}
 
 // 512-bit bitcast
-def : BitConvert <v32f16, v32i16, VReg_512>;
-def : BitConvert <v32i16, v32f16, VReg_512>;
-def : BitConvert <v32f16, v16i32, VReg_512>;
-def : BitConvert <v32f16, v16f32, VReg_512>;
-def : BitConvert <v16f32, v32f16, VReg_512>;
-def : BitConvert <v16i32, v32f16, VReg_512>;
-def : BitConvert <v32i16, v16i32, VReg_512>;
-def : BitConvert <v32i16, v16f32, VReg_512>;
-def : BitConvert <v16f32, v32i16, VReg_512>;
-def : BitConvert <v16i32, v32i16, VReg_512>;
-def : BitConvert <v16i32, v16f32, VReg_512>;
-def : BitConvert <v16f32, v16i32, VReg_512>;
-def : BitConvert <v8i64,  v8f64,  VReg_512>;
-def : BitConvert <v8f64,  v8i64,  VReg_512>;
-def : BitConvert <v8i64,  v16i32, VReg_512>;
-def : BitConvert <v8f64,  v16i32, VReg_512>;
-def : BitConvert <v16i32, v8i64,  VReg_512>;
-def : BitConvert <v16i32, v8f64,  VReg_512>;
-def : BitConvert <v8i64,  v16f32, VReg_512>;
-def : BitConvert <v8f64,  v16f32, VReg_512>;
-def : BitConvert <v16f32, v8i64,  VReg_512>;
-def : BitConvert <v16f32, v8f64,  VReg_512>;
-def : BitConvert <v8i64,  v32f16, VReg_512>;
-def : BitConvert <v8i64,  v32i16, VReg_512>;
-def : BitConvert <v8f64,  v32f16, VReg_512>;
-def : BitConvert <v8f64,  v32i16, VReg_512>;
-def : BitConvert <v32f16, v8i64,  VReg_512>;
-def : BitConvert <v32f16, v8f64,  VReg_512>;
-def : BitConvert <v32i16, v8i64,  VReg_512>;
-def : BitConvert <v32i16, v8f64,  VReg_512>;
+foreach vt = Reg512Types.types in {
+  foreach st = Reg512Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_512>;
+      def : BitConvert <vt, st, SReg_512>;
+    }
+  }
+}
 
-
-def : BitConvert <v32bf16, v32i16, VReg_512>;
-def : BitConvert <v32i16, v32bf16, VReg_512>;
-def : BitConvert <v32bf16, v32i16, SReg_512>;
-def : BitConvert <v32i16, v32bf16, SReg_512>;
-
-def : BitConvert <v32bf16, v32f16, VReg_512>;
-def : BitConvert <v32f16, v32bf16, VReg_512>;
-def : BitConvert <v32bf16, v32f16, SReg_512>;
-def : BitConvert <v32f16, v32bf16, SReg_512>;
-
-def : BitConvert <v32bf16, v16i32, VReg_512>;
-def : BitConvert <v16i32, v32bf16, VReg_512>;
-def : BitConvert <v32bf16, v16i32, SReg_512>;
-def : BitConvert <v16i32, v32bf16, SReg_512>;
-
-def : BitConvert <v32bf16, v16f32, VReg_512>;
-def : BitConvert <v16f32, v32bf16, VReg_512>;
-def : BitConvert <v32bf16, v16f32, SReg_512>;
-def : BitConvert <v16f32, v32bf16, SReg_512>;
-
-def : BitConvert <v32bf16, v8f64, VReg_512>;
-def : BitConvert <v8f64, v32bf16, VReg_512>;
-def : BitConvert <v32bf16, v8f64, SReg_512>;
-def : BitConvert <v8f64, v32bf16, SReg_512>;
-
-def : BitConvert <v32bf16, v8i64, VReg_512>;
-def : BitConvert <v8i64, v32bf16, VReg_512>;
-def : BitConvert <v32bf16, v8i64, SReg_512>;
-def : BitConvert <v8i64, v32bf16, SReg_512>;
 
 // 1024-bit bitcast
-def : BitConvert <v32i32, v32f32, VReg_1024>;
-def : BitConvert <v32f32, v32i32, VReg_1024>;
-def : BitConvert <v16i64, v16f64, VReg_1024>;
-def : BitConvert <v16f64, v16i64, VReg_1024>;
-def : BitConvert <v16i64, v32i32, VReg_1024>;
-def : BitConvert <v32i32, v16i64, VReg_1024>;
-def : BitConvert <v16f64, v32f32, VReg_1024>;
-def : BitConvert <v32f32, v16f64, VReg_1024>;
-def : BitConvert <v16i64, v32f32, VReg_1024>;
-def : BitConvert <v32i32, v16f64, VReg_1024>;
-def : BitConvert <v16f64, v32i32, VReg_1024>;
-def : BitConvert <v32f32, v16i64, VReg_1024>;
+foreach vt = Reg1024Types.types in {
+  foreach st = Reg1024Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_1024>;
+      def : BitConvert <vt, st, SReg_1024>;
+    }
+  }
+}
 
 
 /********** =================== **********/

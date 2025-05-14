@@ -142,6 +142,13 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     }
   }
 
+  if (CSF.LowPrecisionPresent) {
+    if (CanSetNativeLowPrecisionMode)
+      CSF.NativeLowPrecision = true;
+    else
+      CSF.MinimumPrecision = true;
+  }
+
   if (!CSF.Int64Ops)
     CSF.Int64Ops = I.getType()->isIntegerTy(64);
 
@@ -206,13 +213,20 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
                                    const ModuleMetadataInfo &MMDI) {
 
   CanSetResMayNotAlias = MMDI.DXILVersion >= VersionTuple(1, 7);
-
-  // Check if -res-may-alias was provided on the command line.
-  // The command line option will set the dx.resmayalias module flag to 1.
-  if (auto *RMA = mdconst::extract_or_null<ConstantInt>(
+  // The command line option -res-may-alias will set the dx.resmayalias module
+  // flag to 1, thereby disabling the ability to set the ResMayNotAlias flag
+  if (auto *ResMayAlias = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("dx.resmayalias")))
-    if (RMA->getValue() != 0)
-      CanSetResMayNotAlias = false;
+    CanSetResMayNotAlias = !ResMayAlias->getValue().getBoolValue();
+
+  // NativeLowPrecisionMode can only be set when the command line option
+  // -enable-16bit-types is provided. This is indicated by the dx.nativelowprec
+  // module flag being set
+  CanSetNativeLowPrecisionMode = false;
+  if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("dx.nativelowprec")))
+    if (MMDI.ShaderModelVersion >= VersionTuple(6, 2))
+      CanSetNativeLowPrecisionMode = NativeLowPrec->getValue().getBoolValue();
 
   CallGraph CG(M);
 
@@ -237,18 +251,6 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
                "DXIL Shader Flag analysis should not be run post-lowering.");
         continue;
       }
-
-      // Set ResMayNotAlias to true if DXIL validator version < 1.8 and there
-      // are UAVs present globally.
-      if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
-        SCCSF.ResMayNotAlias = !DRM.uavs().empty();
-
-      // Set UseNativeLowPrecision using dx.nativelowprec module metadata
-      if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
-              M.getModuleFlag("dx.nativelowprec")))
-        if (MMDI.ShaderModelVersion >= VersionTuple(6, 2) &&
-            NativeLowPrec->getValue() != 0)
-          SCCSF.UseNativeLowPrecision = true;
 
       ComputedShaderFlags CSF;
       for (const auto &BB : *F)
@@ -285,6 +287,17 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         EntryFunProps.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
             *(EntryFunProps.Entry), "Inconsistent optnone attribute "));
   }
+
+  // Set ResMayNotAlias to true if DXIL validator version < 1.8 and there
+  // are UAVs present globally.
+  if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
+    CombinedSFMask.ResMayNotAlias = !DRM.uavs().empty();
+
+  // Set the module flag that enables native low-precision execution mode. This
+  // is needed even if the module does not use 16-bit types because a
+  // corresponding debug module may include 16-bit types, and tools that use the
+  // debug module may expect it to have the same flags as the original
+  CombinedSFMask.NativeLowPrecisionMode = CanSetNativeLowPrecisionMode;
 
   // Set the Max64UAVs flag if the number of UAVs is > 8
   uint32_t NumUAVs = 0;

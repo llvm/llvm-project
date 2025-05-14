@@ -535,6 +535,11 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 1, Size = 8, isCodeGenOnly = 1 i
 def PseudoRV32ZdinxSD : Pseudo<(outs), (ins GPRPair:$rs2, GPRNoX0:$rs1, simm12:$imm12), []>;
 } // Predicates = [HasStdExtZdinx, IsRV32]
 
+let Predicates = [HasStdExtZdinx, HasStdExtZilsd, IsRV32] in {
+def : LdPat<load, LD_RV32, f64>;
+def : StPat<store, SD_RV32, GPRPair, f64>;
+}
+
 let Predicates = [HasStdExtD, IsRV32] in {
 
 // double->[u]int. Round-to-zero must be used.

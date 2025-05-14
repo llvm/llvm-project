@@ -318,6 +318,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       !(Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()))
     setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
 
+  if (Subtarget.hasStdExtZilsd() && !Subtarget.is64Bit()) {
+    setOperationAction(ISD::LOAD, MVT::i64, Custom);
+    setOperationAction(ISD::STORE, MVT::i64, Custom);
+  }
+
   if (Subtarget.is64Bit()) {
     setOperationAction(ISD::EH_DWARF_CFA, MVT::i64, Custom);
 
@@ -581,7 +586,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     if (!Subtarget.is64Bit())
       setOperationAction(ISD::BITCAST, MVT::i64, Custom);
 
-    if (Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit()) {
+    if (Subtarget.hasStdExtZdinx() && !Subtarget.hasStdExtZilsd() &&
+        !Subtarget.is64Bit()) {
       setOperationAction(ISD::LOAD, MVT::f64, Custom);
       setOperationAction(ISD::STORE, MVT::f64, Custom);
     }
@@ -7712,8 +7718,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     auto *Load = cast<LoadSDNode>(Op);
     EVT VT = Load->getValueType(0);
     if (VT == MVT::f64) {
-      assert(Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit() &&
-             "Unexpected custom legalisation");
+      assert(Subtarget.hasStdExtZdinx() && !Subtarget.hasStdExtZilsd() &&
+             !Subtarget.is64Bit() && "Unexpected custom legalisation");
 
       // Replace a double precision load with two i32 loads and a BuildPairF64.
       SDLoc DL(Op);
@@ -7778,8 +7784,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     SDValue StoredVal = Store->getValue();
     EVT VT = StoredVal.getValueType();
     if (VT == MVT::f64) {
-      assert(Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit() &&
-             "Unexpected custom legalisation");
+      assert(Subtarget.hasStdExtZdinx() && !Subtarget.hasStdExtZilsd() &&
+             !Subtarget.is64Bit() && "Unexpected custom legalisation");
 
       // Replace a double precision store with a SplitF64 and i32 stores.
       SDValue DL(Op);
@@ -7797,6 +7803,26 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                 Store->getOriginalAlign(),
                                 Store->getMemOperand()->getFlags());
       return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
+    }
+    if (VT == MVT::i64) {
+      assert(Subtarget.hasStdExtZilsd() && !Subtarget.is64Bit() &&
+             "Unexpected custom legalisation");
+      if (Store->isTruncatingStore())
+        return SDValue();
+
+      if (!Subtarget.enableUnalignedScalarMem() && Store->getAlign() < 8)
+        return SDValue();
+
+      SDLoc DL(Op);
+      SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, StoredVal,
+                               DAG.getTargetConstant(0, DL, MVT::i32));
+      SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, StoredVal,
+                               DAG.getTargetConstant(1, DL, MVT::i32));
+
+      return DAG.getMemIntrinsicNode(
+          RISCVISD::SD_RV32, DL, DAG.getVTList(MVT::Other),
+          {Store->getChain(), Lo, Hi, Store->getBasePtr()}, MVT::i64,
+          Store->getMemOperand());
     }
     // Handle normal vector tuple store.
     if (VT.isRISCVVectorTuple()) {
@@ -13762,6 +13788,28 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // Use a SEXTLOAD instead of the default EXTLOAD. Similar to the
     // sext_inreg we emit for ADD/SUB/MUL/SLLI.
     LoadSDNode *Ld = cast<LoadSDNode>(N);
+
+    if (N->getValueType(0) == MVT::i64) {
+      assert(Subtarget.hasStdExtZilsd() && !Subtarget.is64Bit() &&
+             "Unexpected custom legalisation");
+
+      if (!Subtarget.enableUnalignedScalarMem() && Ld->getAlign() < 8)
+        return;
+
+      SDLoc DL(N);
+      SDValue Result = DAG.getMemIntrinsicNode(
+          RISCVISD::LD_RV32, DL,
+          DAG.getVTList({MVT::i32, MVT::i32, MVT::Other}),
+          {Ld->getChain(), Ld->getBasePtr()}, MVT::i64, Ld->getMemOperand());
+      SDValue Lo = Result.getValue(0);
+      SDValue Hi = Result.getValue(1);
+      SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);
+      Results.append({Pair, Result.getValue(2)});
+      return;
+    }
+
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
 
     SDLoc dl(N);
     SDValue Res = DAG.getExtLoad(ISD::SEXTLOAD, dl, MVT::i64, Ld->getChain(),
@@ -23433,8 +23481,8 @@ bool RISCVTargetLowering::preferScalarizeSplat(SDNode *N) const {
 
 static Value *useTpOffset(IRBuilderBase &IRB, unsigned Offset) {
   Module *M = IRB.GetInsertBlock()->getModule();
-  Function *ThreadPointerFunc =
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::thread_pointer);
+  Function *ThreadPointerFunc = Intrinsic::getOrInsertDeclaration(
+      M, Intrinsic::thread_pointer, IRB.getPtrTy());
   return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
                                 IRB.CreateCall(ThreadPointerFunc), Offset);
 }

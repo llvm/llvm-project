@@ -1293,10 +1293,19 @@ let TargetPrefix = "nvvm" in {
     }
   }
 
+  // FP4 conversions.
+  foreach relu = ["", "_relu"] in {
+    def int_nvvm_ff_to_e2m1x2_rn # relu # _satfinite : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+
+    def int_nvvm_e2m1x2_to_f16x2_rn # relu : NVVMBuiltin,
+        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  }
+  
   // UE8M0x2 conversions.
   foreach rmode = ["_rz", "_rp"] in {
     foreach satmode = ["", "_satfinite"] in {
-      defvar suffix = !strconcat(rmode, satmode);
+      defvar suffix = rmode # satmode;
       def int_nvvm_ff_to_ue8m0x2 # suffix : NVVMBuiltin,
           DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
 

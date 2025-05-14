@@ -365,33 +365,30 @@ FuncUnwinders::GetAssemblyUnwindPlan(Target &target, Thread &thread) {
 LazyBool FuncUnwinders::CompareUnwindPlansForIdenticalInitialPCLocation(
     Thread &thread, const std::shared_ptr<const UnwindPlan> &a,
     const std::shared_ptr<const UnwindPlan> &b) {
-  LazyBool plans_are_identical = eLazyBoolCalculate;
+  if (!a || !b)
+    return eLazyBoolCalculate;
+
+  const UnwindPlan::Row *a_first_row = a->GetRowAtIndex(0);
+  const UnwindPlan::Row *b_first_row = b->GetRowAtIndex(0);
+  if (!a_first_row || !b_first_row)
+    return eLazyBoolCalculate;
 
   RegisterNumber pc_reg(thread, eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  uint32_t pc_reg_lldb_regnum = pc_reg.GetAsKind(eRegisterKindLLDB);
+  uint32_t a_pc_regnum = pc_reg.GetAsKind(a->GetRegisterKind());
+  uint32_t b_pc_regnum = pc_reg.GetAsKind(b->GetRegisterKind());
 
-  if (a && b) {
-    const UnwindPlan::Row *a_first_row = a->GetRowAtIndex(0);
-    const UnwindPlan::Row *b_first_row = b->GetRowAtIndex(0);
+  UnwindPlan::Row::AbstractRegisterLocation a_pc_regloc;
+  UnwindPlan::Row::AbstractRegisterLocation b_pc_regloc;
 
-    if (a_first_row && b_first_row) {
-      UnwindPlan::Row::AbstractRegisterLocation a_pc_regloc;
-      UnwindPlan::Row::AbstractRegisterLocation b_pc_regloc;
+  a_first_row->GetRegisterInfo(a_pc_regnum, a_pc_regloc);
+  b_first_row->GetRegisterInfo(b_pc_regnum, b_pc_regloc);
 
-      a_first_row->GetRegisterInfo(pc_reg_lldb_regnum, a_pc_regloc);
-      b_first_row->GetRegisterInfo(pc_reg_lldb_regnum, b_pc_regloc);
+  if (a_first_row->GetCFAValue() != b_first_row->GetCFAValue())
+    return eLazyBoolNo;
+  if (a_pc_regloc != b_pc_regloc)
+    return eLazyBoolNo;
 
-      plans_are_identical = eLazyBoolYes;
-
-      if (a_first_row->GetCFAValue() != b_first_row->GetCFAValue()) {
-        plans_are_identical = eLazyBoolNo;
-      }
-      if (a_pc_regloc != b_pc_regloc) {
-        plans_are_identical = eLazyBoolNo;
-      }
-    }
-  }
-  return plans_are_identical;
+  return eLazyBoolYes;
 }
 
 std::shared_ptr<const UnwindPlan>
