@@ -9,7 +9,6 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include <cstdint>
 #include <limits>
-#include <variant>
 
 namespace llvm {
 
@@ -26,11 +25,6 @@ struct RootParameterInfo {
       : Header(H), Location(L) {}
 };
 
-using RootDescriptor = std::variant<dxbc::RTS0::v1::RootDescriptor,
-                                    dxbc::RTS0::v2::RootDescriptor>;
-using ParametersView = std::variant<const dxbc::RootConstants *,
-                                    const dxbc::RTS0::v1::RootDescriptor *,
-                                    const dxbc::RTS0::v2::RootDescriptor *>;
 struct RootParametersContainer {
   SmallVector<RootParameterInfo> ParametersInfo;
 
