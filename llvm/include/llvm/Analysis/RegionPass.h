@@ -15,6 +15,7 @@
 #ifndef LLVM_ANALYSIS_REGIONPASS_H
 #define LLVM_ANALYSIS_REGIONPASS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/LegacyPassManagers.h"
 #include "llvm/Pass.h"
 #include <deque>
@@ -29,7 +30,7 @@ class RegionInfo;
 /// A pass that runs on each Region in a function.
 ///
 /// RegionPass is managed by RGPassManager.
-class RegionPass : public Pass {
+class LLVM_ABI RegionPass : public Pass {
 public:
   explicit RegionPass(char &pid) : Pass(PT_Region, pid) {}
 
@@ -84,7 +85,7 @@ protected:
 };
 
 /// The pass manager to schedule RegionPasses.
-class RGPassManager : public FunctionPass, public PMDataManager {
+class LLVM_ABI RGPassManager : public FunctionPass, public PMDataManager {
   std::deque<Region*> RQ;
   RegionInfo *RI;
   Region *CurrentRegion;

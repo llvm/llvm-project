@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_OPTIMIZATIONREMARKEMITTER_H
 #define LLVM_ANALYSIS_OPTIMIZATIONREMARKEMITTER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -45,7 +46,7 @@ public:
   /// operation since BFI and all its required analyses are computed.  This is
   /// for example useful for CGSCC passes that can't use function analyses
   /// passes in the old PM.
-  OptimizationRemarkEmitter(const Function *F);
+  LLVM_ABI OptimizationRemarkEmitter(const Function *F);
 
   OptimizationRemarkEmitter(OptimizationRemarkEmitter &&Arg)
       : F(Arg.F), BFI(Arg.BFI) {}
@@ -57,7 +58,7 @@ public:
   }
 
   /// Handle invalidation events in the new pass manager.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &Inv);
 
   /// Return true iff at least *some* remarks are enabled.
@@ -68,7 +69,7 @@ public:
 
   /// Output the remark via the diagnostic handler and to the
   /// optimization record file.
-  void emit(DiagnosticInfoOptimizationBase &OptDiag);
+  LLVM_ABI void emit(DiagnosticInfoOptimizationBase &OptDiag);
   /// Also allow r-value for OptDiag to allow emitting a temporarily-constructed
   /// diagnostic.
   void emit(DiagnosticInfoOptimizationBase &&OptDiag) { emit(OptDiag); }
@@ -145,7 +146,7 @@ using setExtraArgs = DiagnosticInfoOptimizationBase::setExtraArgs;
 /// Note that this pass shouldn't generally be marked as preserved by other
 /// passes.  It's holding onto BFI, so if the pass does not preserve BFI, BFI
 /// could be freed.
-class OptimizationRemarkEmitterWrapperPass : public FunctionPass {
+class LLVM_ABI OptimizationRemarkEmitterWrapperPass : public FunctionPass {
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
 public:
@@ -173,7 +174,7 @@ public:
   typedef OptimizationRemarkEmitter Result;
 
   /// Run the analysis pass over a function and produce BFI.
-  Result run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI Result run(Function &F, FunctionAnalysisManager &AM);
 };
 } // namespace llvm
 #endif // LLVM_ANALYSIS_OPTIMIZATIONREMARKEMITTER_H

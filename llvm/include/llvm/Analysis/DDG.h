@@ -13,6 +13,7 @@
 #ifndef LLVM_ANALYSIS_DDG_H
 #define LLVM_ANALYSIS_DDG_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DirectedGraph.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -41,7 +42,7 @@ class LPMUpdater;
 ///    nodes. The root node cannot be part of a pi-block.
 /// 4. Root node is a special node that connects to all components such that
 ///    there is always a path from it to any node in the graph.
-class DDGNode : public DDGNodeBase {
+class LLVM_ABI DDGNode : public DDGNodeBase {
 public:
   using InstructionListType = SmallVectorImpl<Instruction *>;
 
@@ -105,7 +106,7 @@ public:
 };
 
 /// Subclass of DDGNode representing single or multi-instruction nodes.
-class SimpleDDGNode : public DDGNode {
+class LLVM_ABI SimpleDDGNode : public DDGNode {
   friend class DDGBuilder;
 
 public:
@@ -167,7 +168,7 @@ private:
 /// {a -> b}, {b -> c, d}, {c -> a}
 /// the cycle a -> b -> c -> a is abstracted into a pi-block "p" as follows:
 /// {p -> d} with "p" containing: {a -> b}, {b -> c}, {c -> a}
-class PiBlockDDGNode : public DDGNode {
+class LLVM_ABI PiBlockDDGNode : public DDGNode {
 public:
   using PiNodeList = SmallVector<DDGNode *, 4>;
 
@@ -303,7 +304,7 @@ protected:
 using DDGInfo = DependenceGraphInfo<DDGNode>;
 
 /// Data Dependency Graph
-class DataDependenceGraph : public DDGBase, public DDGInfo {
+class LLVM_ABI DataDependenceGraph : public DDGBase, public DDGInfo {
   friend AbstractDependenceGraphBuilder<DataDependenceGraph>;
   friend class DDGBuilder;
 
@@ -343,7 +344,7 @@ private:
 ///
 /// For information about time complexity of the build algorithm see the
 /// comments near the declaration of AbstractDependenceGraphBuilder.
-class DDGBuilder : public AbstractDependenceGraphBuilder<DataDependenceGraph> {
+class LLVM_ABI DDGBuilder : public AbstractDependenceGraphBuilder<DataDependenceGraph> {
 public:
   DDGBuilder(DataDependenceGraph &G, DependenceInfo &D,
              const BasicBlockListType &BBs)
@@ -400,11 +401,11 @@ public:
   bool shouldCreatePiBlocks() const final;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const DDGNode &N);
-raw_ostream &operator<<(raw_ostream &OS, const DDGNode::NodeKind K);
-raw_ostream &operator<<(raw_ostream &OS, const DDGEdge &E);
-raw_ostream &operator<<(raw_ostream &OS, const DDGEdge::EdgeKind K);
-raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DDGNode &N);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DDGNode::NodeKind K);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DDGEdge &E);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DDGEdge::EdgeKind K);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
 
 //===--------------------------------------------------------------------===//
 // DDG Analysis Passes
@@ -414,7 +415,7 @@ raw_ostream &operator<<(raw_ostream &OS, const DataDependenceGraph &G);
 class DDGAnalysis : public AnalysisInfoMixin<DDGAnalysis> {
 public:
   using Result = std::unique_ptr<DataDependenceGraph>;
-  Result run(Loop &L, LoopAnalysisManager &AM, LoopStandardAnalysisResults &AR);
+  LLVM_ABI Result run(Loop &L, LoopAnalysisManager &AM, LoopStandardAnalysisResults &AR);
 
 private:
   friend AnalysisInfoMixin<DDGAnalysis>;
@@ -425,7 +426,7 @@ private:
 class DDGAnalysisPrinterPass : public PassInfoMixin<DDGAnalysisPrinterPass> {
 public:
   explicit DDGAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
   static bool isRequired() { return true; }
 

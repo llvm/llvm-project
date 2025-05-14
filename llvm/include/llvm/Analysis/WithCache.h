@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_WITHCACHE_H
 #define LLVM_ANALYSIS_WITHCACHE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/KnownBits.h"
@@ -21,7 +22,7 @@
 
 namespace llvm {
 struct SimplifyQuery;
-KnownBits computeKnownBits(const Value *V, unsigned Depth,
+LLVM_ABI KnownBits computeKnownBits(const Value *V, unsigned Depth,
                            const SimplifyQuery &Q);
 
 template <typename Arg> class WithCache {

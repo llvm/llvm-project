@@ -10,6 +10,7 @@
 #ifndef LLVM_ANALYSIS_NOINFERENCEMODELRUNNER_H
 #define LLVM_ANALYSIS_NOINFERENCEMODELRUNNER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Analysis/MLModelRunner.h"
 namespace llvm {
 class TensorSpec;
@@ -19,7 +20,7 @@ class TensorSpec;
 /// 'run'.
 class NoInferenceModelRunner : public MLModelRunner {
 public:
-  NoInferenceModelRunner(LLVMContext &Ctx,
+  LLVM_ABI NoInferenceModelRunner(LLVMContext &Ctx,
                          const std::vector<TensorSpec> &Inputs);
 
   static bool classof(const MLModelRunner *R) {
