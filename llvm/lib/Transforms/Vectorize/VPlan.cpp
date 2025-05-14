@@ -1441,7 +1441,10 @@ void VPSlotTracker::assignName(const VPValue *V) {
   std::string Name;
   if (UV) {
     raw_string_ostream S(Name);
-    UV->printAsOperand(S, false);
+    if (MST)
+      UV->printAsOperand(S, false, *MST);
+    else
+      UV->printAsOperand(S, false);
   } else
     Name = VPI->getName();
 
