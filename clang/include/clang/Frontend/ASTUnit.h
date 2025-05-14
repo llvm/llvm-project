@@ -107,6 +107,10 @@ public:
 
 private:
   std::unique_ptr<LangOptions> LangOpts;
+  // FIXME: The documentation on \c LoadFrom* member functions states that the
+  // DiagnosticsEngine (and therefore DiagnosticOptions) must outlive the
+  // returned ASTUnit. This is not the case. Enfore it by storing non-owning
+  // pointers here.
   std::shared_ptr<DiagnosticOptions> DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine>   Diagnostics;
   IntrusiveRefCntPtr<FileManager>         FileMgr;
