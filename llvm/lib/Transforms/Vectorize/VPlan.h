@@ -1135,13 +1135,8 @@ public:
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
   /// Returns the number of incoming values, also number of incoming blocks.
-  /// Note that at the moment, VPWidenIntOrFpInductionRecipes only have a single
-  /// incoming value, its start value.
-  unsigned getNumIncoming() const {
-    const VPRecipeBase *R = getAsRecipe();
-    return R->getVPDefID() == VPDef::VPWidenIntOrFpInductionSC
-               ? 1
-               : getAsRecipe()->getNumOperands();
+  virtual unsigned getNumIncoming() const {
+    return getAsRecipe()->getNumOperands();
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1991,6 +1986,11 @@ public:
     // increment.
     return isUnrolled() ? getOperand(getNumOperands() - 2) : nullptr;
   }
+
+  /// Returns the number of incoming values, also number of incoming blocks.
+  /// Note that at the moment, VPWidenIntOrFpInductionRecipes only have a single
+  /// incoming value, its start value.
+  unsigned getNumIncoming() const override { return 1; }
 
   /// Returns the first defined value as TruncInst, if it is one or nullptr
   /// otherwise.
@@ -3310,9 +3310,6 @@ struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
 
   using Self = CastInfo<VPPhiAccessors, const VPRecipeBase *>;
 
-  using CastReturnType =
-      typename cast_retty<VPPhiAccessors, VPRecipeBase *>::ret_type;
-
   static inline VPPhiAccessors *doCast(const VPRecipeBase *R) {
     return const_cast<VPPhiAccessors *>([R]() -> const VPPhiAccessors * {
       switch (R->getVPDefID()) {
@@ -3328,11 +3325,9 @@ struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
     }());
   }
 
-  static inline VPPhiAccessors *castFailed() { return nullptr; }
-
   static inline VPPhiAccessors *doCastIfPossible(const VPRecipeBase *f) {
     if (!Self::isPossible(f))
-      return castFailed();
+      return nullptr;
     return doCast(f);
   }
 };

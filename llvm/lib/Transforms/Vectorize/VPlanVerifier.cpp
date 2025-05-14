@@ -222,10 +222,10 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         if (auto *Phi = dyn_cast<VPPhiAccessors>(UI)) {
           for (unsigned Idx = 0; Idx != Phi->getNumIncoming(); ++Idx) {
             VPValue *IncVPV = Phi->getIncomingValue(Idx);
-            const VPBasicBlock *IncVPBB = Phi->getIncomingBlock(Idx);
             if (IncVPV != V)
               continue;
-            if (IncVPBB != VPBB && !VPDT.dominates(VPBB, IncVPBB)) {
+            const VPBasicBlock *IncVPBB = Phi->getIncomingBlock(Idx);
+            if (!VPDT.dominates(VPBB, IncVPBB)) {
               errs() << "Incoming def at index " << Idx
                      << " does not dominate incoming block!\n";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -240,6 +240,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           }
           continue;
         }
+        // TODO: Also verify VPPredInstPHIRecipe.
         if (isa<VPPredInstPHIRecipe>(UI))
           continue;
 
