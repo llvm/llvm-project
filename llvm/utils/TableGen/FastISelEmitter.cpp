@@ -158,8 +158,9 @@ struct OperandsSignature {
   OperandsSignature getWithoutImmCodes() const {
     OperandsSignature Result;
     Result.Operands.resize(Operands.size());
-    for (auto [RO, O] : zip_equal(Result.Operands, Operands))
-      RO = O.isImm() ? OpKind::getImm(0) : O;
+    llvm::transform(Operands, Result.Operands.begin(), [](OpKind Kind) {
+      return Kind.isImm() ? OpKind::getImm(0) : Kind;
+    });
     return Result;
   }
 
@@ -295,7 +296,7 @@ struct OperandsSignature {
 
   void PrintParameters(raw_ostream &OS) const {
     ListSeparator LS;
-    for (const auto [Idx, Opnd] : enumerate(Operands)) {
+    for (auto [Idx, Opnd] : enumerate(Operands)) {
       OS << LS;
       if (Opnd.isReg())
         OS << "Register Op" << Idx;
@@ -310,8 +311,8 @@ struct OperandsSignature {
 
   void PrintArguments(raw_ostream &OS, ArrayRef<std::string> PhyRegs) const {
     ListSeparator LS;
-    for (const auto [Idx, Opnd, PhyReg] : enumerate(Operands, PhyRegs)) {
-      if (PhyReg != "") {
+    for (auto [Idx, Opnd, PhyReg] : enumerate(Operands, PhyRegs)) {
+      if (!PhyReg.empty()) {
         // Implicit physical register operand.
         continue;
       }
@@ -330,7 +331,7 @@ struct OperandsSignature {
 
   void PrintArguments(raw_ostream &OS) const {
     ListSeparator LS;
-    for (const auto [Idx, Opnd] : enumerate(Operands)) {
+    for (auto [Idx, Opnd] : enumerate(Operands)) {
       OS << LS;
       if (Opnd.isReg())
         OS << "Op" << Idx;
@@ -346,8 +347,8 @@ struct OperandsSignature {
   void PrintManglingSuffix(raw_ostream &OS, ArrayRef<std::string> PhyRegs,
                            ImmPredicateSet &ImmPredicates,
                            bool StripImmCodes = false) const {
-    for (const auto [PR, Opnd] : zip_equal(PhyRegs, Operands)) {
-      if (PR != "") {
+    for (auto [PhyReg, Opnd] : zip_equal(PhyRegs, Operands)) {
+      if (!PhyReg.empty()) {
         // Implicit physical register operand. e.g. Instruction::Mul expect to
         // select to a binary op. On x86, mul may take a single operand with
         // the other operand being implicit. We must emit something that looks
@@ -361,7 +362,7 @@ struct OperandsSignature {
 
   void PrintManglingSuffix(raw_ostream &OS, ImmPredicateSet &ImmPredicates,
                            bool StripImmCodes = false) const {
-    for (const OpKind Opnd : Operands)
+    for (OpKind Opnd : Operands)
       Opnd.printManglingSuffix(OS, ImmPredicates, StripImmCodes);
   }
 };
@@ -637,8 +638,8 @@ void FastISelMap::emitInstructionCode(raw_ostream &OS,
       OS << "  ";
     }
 
-    for (const auto [Idx, PhyReg] : enumerate(Memo.PhysRegs)) {
-      if (PhyReg != "")
+    for (auto [Idx, PhyReg] : enumerate(Memo.PhysRegs)) {
+      if (!PhyReg.empty())
         OS << "  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, "
            << "TII.get(TargetOpcode::COPY), " << PhyReg << ").addReg(Op" << Idx
            << ");\n";
